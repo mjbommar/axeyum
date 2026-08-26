@@ -915,6 +915,16 @@ pub struct CRealPrelude {
     /// fixed-rate form the `Converges` predicate states) `converges_comp`
     /// needed.
     pub converges_lower_bound: NameId,
+    /// `CReal.converges_lower_bound_shift : ∀ s a f L, (∀ n, le a (f
+    /// (Nat.add n s))) → Converges f L → le a L`.
+    ///
+    /// The EVENTUAL form [`Self::converges_lower_bound`] cannot supply: that
+    /// one needs its pointwise bound at literally every `n`, including `n =
+    /// 0`, which a bound established only from monotonicity past some point
+    /// (e.g. `CReal.e`'s partial sums, zero at `n = 0`) does not have. See
+    /// `creal/convergence.rs`'s own doc on the declaration for the shift +
+    /// re-weaken telescope.
+    pub converges_lower_bound_shift: NameId,
     /// `CReal.converges_upper_bound : ∀ f L b, (∀ n, le (f n) b) →
     /// Converges f L → le L b`. The mirror of
     /// [`Self::converges_lower_bound`].
@@ -1431,6 +1441,14 @@ pub struct CRealPrelude {
     /// [`crate::RatPrelude::lt_of_sq_lt`], the strict companion to
     /// `ratSqLe` this required.
     pub sqrt_sq: NameId,
+    /// `CReal.sqrt_nonneg : ∀ x, CReal.le CReal.zero (sqrt x)`.
+    ///
+    /// Unconditional, unlike `sqrt_sq`/the still-open `mul_self_sqrt` gap
+    /// (`Equiv (mul (sqrt x) (sqrt x)) x`, needed for `CReal.sqrt_mul` and
+    /// hence `Complex.abs_mul`): this never relates `sqrt x` back to `x`
+    /// itself, only to `sqrtApprox`'s own clamp-then-`natSqrt` shape, which
+    /// is nonneg regardless of `x`'s sign. See `creal/sqrt.rs`.
+    pub sqrt_nonneg: NameId,
 
     // --- Bishop's speed-up combinator (creal/speedup.rs) ----------------------
     /// `CReal.KRegular : (Nat → Rat) → Nat → Prop` — Bishop regularity up to a
@@ -2694,6 +2712,30 @@ pub struct CRealPrelude {
     /// `CReal.regular_of_scaled_cauchy`. See
     /// `creal/exponential.rs::declare_e`.
     pub e: NameId,
+    /// `CReal.e_converges : Converges expSeriesPartial e` — `e`'s own
+    /// defining property, and the missing link every OTHER property of `e`
+    /// (`two_le_e`, `e_le_four`, …) is built on. See
+    /// `creal/exponential.rs::declare_e_converges`.
+    pub e_converges: NameId,
+    /// `CReal.two_le_e : le two e` — the first NUMERIC bound on Euler's
+    /// number. Needs an EVENTUAL argument
+    /// ([`Self::converges_lower_bound_shift`]), not
+    /// [`Self::converges_lower_bound`] directly: `expSeriesPartial 0 = 0 <
+    /// 2`, so the bound only holds from index `2` on, where monotonicity
+    /// (`CReal.sumRange_mono_outer` at the nonnegative summand `expTerm`)
+    /// takes over. See `creal/exponential.rs::declare_two_le_e`.
+    pub two_le_e: NameId,
+    /// `CReal.e_le_four : le e four` — an upper bound on Euler's number, from
+    /// the SAME domination `expTerm n ≤ expDominant n` this file already
+    /// built for the Cauchy argument, summed via `CReal.sumRange_le` and the
+    /// closed form `CReal.sumRange_pow_half_closed_form`: `Σ expDominant n =
+    /// 2·Σ(1/2)ⁱ = 2·(2·(1−(1/2)ⁿ)) ≤ 4`. No shift needed — this bound holds
+    /// at every `n`, including `n = 0`, unlike [`Self::two_le_e`]. See
+    /// `creal/exponential.rs::declare_e_le_four` for why `4`, not the
+    /// classically sharper `3`: the bound as built doubles a bound that is
+    /// already loose by a factor of `2·(1/2)⁰ = 2` at `n = 0`/`1`, and
+    /// tightening it needs an index-`2` split this slice does not attempt.
+    pub e_le_four: NameId,
     /// `CReal.sumRange_const : ∀ w m,
     /// Equiv (sumRange (fun _ => w) (Nat.succ m)) (mul (ofNat (Nat.succ m))
     /// w)` (`creal/monotone.rs`) — a constant summed `succ m` times is
@@ -3268,6 +3310,36 @@ pub struct CRealPrelude {
     /// three-leg telescope and exactly what remains (an arbitrary-pair
     /// common-refinement construction) to reach `CReal.integral` itself.
     pub shared_index_to_canonical: NameId,
+    /// `CReal.riemannSum_sharedAccuracyClose : ∀ F a b e k1 k2, le a b →
+    /// UniformlyContinuousOn F a b → ∀ p q j1 j2 : Nat, Within
+    /// (Rat.sub (seq (riemannSum F a b m1) p) (seq (riemannSum F a b m2) q))
+    /// (BND1 j1 + BND2 j2)`, `m1 := Nat.add deep k1`, `m2 := Nat.add deep
+    /// k2` (SAME `deep`, i.e. `m1`/`m2` are two counts both "deep enough"
+    /// for the SAME chosen accuracy `e`) (`creal/integral.rs`).
+    ///
+    /// The common-refinement construction `riemannSum_cauchy`'s and
+    /// `sharedIndexToCanonical`'s own doc comments name as the remaining gap
+    /// toward `CReal.integral`: two [`Self`]-independent `Nat.succ_mul`
+    /// refinements of `m1`/`m2` (`integral.rs`'s private `common_refinement`,
+    /// identifying the two via `Nat.mul_comm`) land at the SAME shared
+    /// refinement target, so `riemannSum_cauchy` applied twice plus
+    /// `sharedIndexToCanonical` applied twice telescope `riemannSum F a b
+    /// m1` and `riemannSum F a b m2` together directly, with no rewrite
+    /// beyond the one `Nat.mul_comm`-derived equality that `common_refinement`
+    /// itself already supplies.
+    ///
+    /// **Not yet `CReal.Cauchy`/`RegularSeq` for the RAW-indexed sequence
+    /// `fun n => riemannSum F a b n`, and precisely why not**: this
+    /// theorem's `m1`/`m2` share ONE accuracy `e`, so its bound does not
+    /// shrink as `m1`/`m2` grow past the point needed for that fixed `e` —
+    /// exactly the rate `CReal.Cauchy`'s existential `K` needs. Reaching
+    /// that needs `e` to grow with the sequence's OWN index (reindexing via
+    /// `deep` rather than comparing at raw counts) PLUS a genuinely new
+    /// CReal-magnitude bound turning `riemannSum_cauchy`'s `totalEps` sample
+    /// into a closed-form rational — see `creal/integral.rs`'s
+    /// `declare_shared_index_to_canonical` doc comment for both pieces,
+    /// sized precisely rather than gestured at.
+    pub riemann_sum_shared_accuracy_close: NameId,
 }
 
 impl CRealPrelude {
@@ -3448,6 +3520,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         converges_sub: kernel.name_str(creal, "converges_sub"),
         converges_squeeze: kernel.name_str(creal, "converges_squeeze"),
         converges_lower_bound: kernel.name_str(creal, "converges_lower_bound"),
+        converges_lower_bound_shift: kernel.name_str(creal, "converges_lower_bound_shift"),
         converges_upper_bound: kernel.name_str(creal, "converges_upper_bound"),
         bounded: kernel.name_str(creal, "Bounded"),
         converges_bounded: kernel.name_str(creal, "converges_bounded"),
@@ -3506,6 +3579,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sqrt_zero: kernel.name_str(creal, "sqrt_zero"),
         sqrt_le_sqrt: kernel.name_str(creal, "sqrt_le_sqrt"),
         sqrt_sq: kernel.name_str(creal, "sqrt_sq"),
+        sqrt_nonneg: kernel.name_str(creal, "sqrt_nonneg"),
         k_regular_pred: kernel.name_str(creal, "KRegular"),
         speedup: kernel.name_str(creal, "speedup"),
         regular_of_kregular: kernel.name_str(creal, "regular_of_kregular"),
@@ -3620,6 +3694,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         exp_dominant_cauchy: kernel.name_str(creal, "expDominantCauchy"),
         exp_series_partial_converges: kernel.name_str(creal, "expSeriesPartialConverges"),
         e: kernel.name_str(creal, "e"),
+        e_converges: kernel.name_str(creal, "e_converges"),
+        two_le_e: kernel.name_str(creal, "two_le_e"),
+        e_le_four: kernel.name_str(creal, "e_le_four"),
         sum_range_const: kernel.name_str(creal, "sumRange_const"),
         mesh_count_width: kernel.name_str(creal, "mesh_count_width"),
         subdivision_point_in_bounds: kernel.name_str(creal, "subdivisionPoint_in_bounds"),
@@ -3659,6 +3736,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         riemann_sum_reblock_close: kernel.name_str(creal, "riemannSum_reblock_close"),
         riemann_sum_cauchy: kernel.name_str(creal, "riemannSum_cauchy"),
         shared_index_to_canonical: kernel.name_str(creal, "sharedIndexToCanonical"),
+        riemann_sum_shared_accuracy_close: kernel.name_str(creal, "riemannSum_sharedAccuracyClose"),
     }
 }
 
@@ -3809,6 +3887,11 @@ pub(crate) fn build_creal_prelude_uncached(
         // far earlier) and `RatPrelude::lt_of_sq_lt` (built as part of
         // `rat_prelude`, upstream of this whole prelude).
         sqrt::declare_sqrt_sq(&mut d, prelude)?;
+        // `sqrt_nonneg` needs only `sqrt`/`sqrt_approx` (above); it is
+        // unconditional and does not depend on `sqrt_sq`, but is placed
+        // right after it since both round out "the laws sqrt.rs's own doc
+        // names as reachable now" from the same landing.
+        sqrt::declare_sqrt_nonneg(&mut d, prelude)?;
         convergence::declare_cauchy_convergence(&mut d, prelude)?;
         series::declare_series(&mut d, prelude)?;
         // `CReal.mag_bound_le_sum_range_of_lt` needs `CReal.sumRange`
@@ -3929,6 +4012,12 @@ pub(crate) fn build_creal_prelude_uncached(
         // `chain_within3` helper -- nothing from `riemannSum_cauchy` itself
         // -- but lands here as the building block motivated by it.
         integral::declare_shared_index_to_canonical(&mut d, prelude)?;
+        // `riemannSum_sharedAccuracyClose` (the common-refinement
+        // construction both declarations just above name as the remaining
+        // gap toward `CReal.integral`) needs `riemannSum_cauchy` and
+        // `sharedIndexToCanonical` (both just above) plus `series.rs`'s
+        // `within_symm`, so it cannot land any earlier than this call site.
+        integral::declare_riemann_sum_shared_accuracy_close(&mut d, prelude)?;
         // `order_reflect_of_pos_deriv` needs only `strict_mono_of_pos_deriv`
         // (just declared above) plus `lt_trans`/`lt_irrefl`/`apart` (all far
         // above); nothing later depends on it, so it lands right after its

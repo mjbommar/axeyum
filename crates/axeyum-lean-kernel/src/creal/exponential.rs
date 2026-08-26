@@ -147,7 +147,10 @@
 //! So the shipped construction uses **both**: route (b) for the one-shot
 //! comparison, route (a)'s `CReal.pow` shape for everything built since.
 
-use super::convergence::{converges_applied, exists_elim, exists_ty};
+use super::convergence::{
+    converges_applied, converges_predicate, div_succ_at, exists_elim, exists_intro, exists_ty,
+    kregular_of_cauchy_proof,
+};
 use super::product::{index_le, mul_index, mul_shift, regular_between};
 use super::series::{
     assoc_rev_eq, exists_nat_intro, fuse_same_index, sum_range_cauchy_body, within_symm,
@@ -911,65 +914,77 @@ fn declare_exp_term_nonneg(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ke
     })
 }
 
+/// `le zero half`, via `Rat.zero_le_natDivSucc 1 1` and `CReal.of_rat_le`.
+///
+/// Extracted from [`declare_exp_dominant_nonneg`] so [`declare_e_le_four`] can
+/// reuse it without re-deriving.
+fn half_nonneg_proof(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let rp = p.rat;
+    let zero_rat = crate::rat_prelude::ops::rzero(d, rp);
+    let one_nat = d.num(1);
+    let half_le_zero = d.lemma(rp.zero_le_nat_div_succ, &[one_nat, one_nat]);
+    let hr = half_rat(d, p);
+    d.lemma(p.of_rat_le, &[zero_rat, hr, half_le_zero])
+}
+
+/// `le zero two`: `two_r := normalize 2 1 h1` (the SAME construction
+/// [`two`]/[`exp_dominant_at`] use), by `expterm_nonneg_proof`'s
+/// cross-multiplication technique with numerator `2` and denominator `1`.
+///
+/// Extracted from [`declare_exp_dominant_nonneg`] so [`declare_e_le_four`] can
+/// reuse it without re-deriving.
+fn two_nonneg_proof(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let rp = p.rat;
+    let zero_rat = crate::rat_prelude::ops::rzero(d, rp);
+    let (two_r, two_z, h1) = two_normalize(d, p);
+    let value = two_r;
+    let denom_pos = h1;
+    let actual = num(d, value);
+    let actual_den = den(d, value);
+    let actual_den_z = den_z(d, value);
+    let one = d.num(1);
+    let denominator_z = d.of_nat(one);
+    let zero = d.izero();
+    let cross = d.lemma(rp.normalize_cross, &[two_z, one, denom_pos]);
+    let product = d.imul(two_z, actual_den_z);
+    let product_nonneg = {
+        let two_nat = d.num(2);
+        let magnitude = NatOps::mul(d, two_nat, actual_den);
+        d.lemma(rp.int_zero_le_of_nat, &[magnitude])
+    };
+    let scaled = d.imul(actual, denominator_z);
+    let back = d.isymm(scaled, product, cross);
+    let scaled_nonneg = d.int_eq_rewrite(product, scaled, back, product_nonneg, &|d, x| {
+        d.ile(zero, x)
+    });
+    let zero_scaled = d.imul(zero, denominator_z);
+    let restore = d.lemma(rp.int_zero_mul, &[denominator_z]);
+    let rebalanced = {
+        let inverse = d.isymm(zero_scaled, zero, restore);
+        d.int_eq_rewrite(zero, zero_scaled, inverse, scaled_nonneg, &|d, x| {
+            d.ile(x, scaled)
+        })
+    };
+    let cancelled = d.lemma(
+        rp.int_le_of_mul_le_mul_right,
+        &[zero, actual, one, denom_pos, rebalanced],
+    );
+    let proof = d.const_app(rp.nonneg_of_int_nonneg, &[value, cancelled]);
+    d.lemma(p.of_rat_le, &[zero_rat, value, proof])
+}
+
 /// `CReal.exp_dominant_nonneg : ∀ n, le zero (expDominant n)` — from
-/// [`CRealPrelude::mul_nonneg`], `0 ≤ two` and [`CRealPrelude::pow_nonneg`]
-/// at `0 ≤ half` (both via `Rat.zero_le_natDivSucc` + `CReal.of_rat_le`).
+/// [`CRealPrelude::mul_nonneg`], `0 ≤ two` ([`two_nonneg_proof`]) and
+/// [`CRealPrelude::pow_nonneg`] at `0 ≤ half` ([`half_nonneg_proof`]).
 fn declare_exp_dominant_nonneg(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
     let nat = d.nat_ty();
     let n_fv = d.fresh_fvar();
     let n = d.kernel().fvar(n_fv);
 
-    let rp = p.rat;
-    let zero_rat = crate::rat_prelude::ops::rzero(d, rp);
-
-    // `0 ≤ half`, via `Rat.zero_le_natDivSucc 1 1` and `CReal.of_rat_le`.
-    let one_nat = d.num(1);
-    let half_le_zero = d.lemma(rp.zero_le_nat_div_succ, &[one_nat, one_nat]);
-    let hr = half_rat(d, p);
-    let half_nonneg = d.lemma(p.of_rat_le, &[zero_rat, hr, half_le_zero]);
-
-    // `0 ≤ two`: `two_r := normalize 2 1 h1` (the SAME construction
-    // [`two`]/[`exp_dominant_at`] use), by `expterm_nonneg_proof`'s
-    // cross-multiplication technique with numerator `2` and denominator `1`.
+    let half_nonneg = half_nonneg_proof(d, p);
     let h = half(d, p);
-    let (two_r, two_z, h1) = two_normalize(d, p);
-    let t = embed(d, p, two_r);
-    let two_nonneg = {
-        let value = two_r;
-        let denom_pos = h1;
-        let actual = num(d, value);
-        let actual_den = den(d, value);
-        let actual_den_z = den_z(d, value);
-        let one = d.num(1);
-        let denominator_z = d.of_nat(one);
-        let zero = d.izero();
-        let cross = d.lemma(rp.normalize_cross, &[two_z, one, denom_pos]);
-        let product = d.imul(two_z, actual_den_z);
-        let product_nonneg = {
-            let two_nat = d.num(2);
-            let magnitude = NatOps::mul(d, two_nat, actual_den);
-            d.lemma(rp.int_zero_le_of_nat, &[magnitude])
-        };
-        let scaled = d.imul(actual, denominator_z);
-        let back = d.isymm(scaled, product, cross);
-        let scaled_nonneg = d.int_eq_rewrite(product, scaled, back, product_nonneg, &|d, x| {
-            d.ile(zero, x)
-        });
-        let zero_scaled = d.imul(zero, denominator_z);
-        let restore = d.lemma(rp.int_zero_mul, &[denominator_z]);
-        let rebalanced = {
-            let inverse = d.isymm(zero_scaled, zero, restore);
-            d.int_eq_rewrite(zero, zero_scaled, inverse, scaled_nonneg, &|d, x| {
-                d.ile(x, scaled)
-            })
-        };
-        let cancelled = d.lemma(
-            rp.int_le_of_mul_le_mul_right,
-            &[zero, actual, one, denom_pos, rebalanced],
-        );
-        let proof = d.const_app(rp.nonneg_of_int_nonneg, &[value, cancelled]);
-        d.lemma(p.of_rat_le, &[zero_rat, value, proof])
-    };
+    let two_nonneg = two_nonneg_proof(d, p);
+    let t = two(d, p);
 
     // `0 ≤ pow half n`, then `0 ≤ mul two (pow half n)`.
     let pow_nonneg = d.lemma(p.pow_nonneg, &[h, half_nonneg, n]);
@@ -3208,11 +3223,34 @@ fn cauchy_body_transport(
 /// `CReal.sumRange_cauchy_of_dominated`'s own case split, which relies on
 /// exactly this defeq rather than re-deriving `K'`'s closed form by hand).
 ///
-/// # Errors
+/// The shared ingredients `CReal.e`'s definition AND `CReal.e_converges`'s
+/// proof both need: `(raw, k_final, exp_series_partial_body)`, where `raw :=
+/// diagonal expSeriesPartial`, `k_final` is the Cauchy witness `e`'s
+/// definition speeds up by, and `exp_series_partial_body :
+/// sum_range_cauchy_body (expSeriesPartial, k_final)`.
 ///
-/// Returns the trusted gate's rejection. An `Err` here means the kernel
-/// **refused** a proof, not that a script gave up.
-fn declare_e(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+/// **MUST be called EXACTLY ONCE, by `declare_e_family`, and the resulting
+/// `ExprId`s threaded as PARAMETERS into both [`declare_e`] and
+/// [`declare_e_converges`]** -- one derivation, not two, is simply the right
+/// hygiene. NOTE, since it is easy to over-credit this: sharing the
+/// `ExprId`s does NOT by itself fix the stack overflow a previous version of
+/// this file had. That overflow's actual cause and fix are documented on
+/// [`declare_e_converges`] (building generically over a bound `K` rather
+/// than the concrete `k_final`); this function's job is only to make sure
+/// both callers start from the identical witness.
+///
+/// Bisection method used to isolate the fault (2026-08-26):
+/// `creal::creal_tests::creal_prelude_builds` with `declare_e_family`'s
+/// dispatch calls disabled one at a time (`declare_e` alone: ~15s, matching
+/// the untouched baseline; adding `declare_e_converges` reproduced the
+/// overflow), then a probe that declared each of `declare_e_converges`'s
+/// intermediate terms against its OWN freshly-inferred type -- fast at
+/// every step up to and including the per-`n` `Within` proof, narrowing the
+/// fault to the FINAL `converges_predicate`/`exists_intro` ascription --
+/// and finally a direct, timed `Kernel::def_eq(speedup_n, seq(target, n))`
+/// call, which hung regardless of whether `target` was the named `e` or a
+/// freshly, independently, or identically re-derived local `mk(...)` value.
+fn e_ingredients(d: &mut IntDev<'_>, p: CRealPrelude) -> (ExprId, ExprId, ExprId) {
     // `k_dom` is `exp_dominant_cauchy_body_concrete`'s RETURNED witness for
     // `Cauchy (sumRange expDominant)` -- already `K_G + 2` (the `+2` from its
     // own internal `cauchy_body_transport`), not the raw `K_G` for `G` alone.
@@ -3247,8 +3285,29 @@ fn declare_e(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
     let exp_series_partial_body =
         promote_ordered_half_to_full(d, p, exp_series_partial_const, k_final, &ordered_half);
 
-    let diag = diagonal_seq(d, p, exp_series_partial_const);
-    let speedup_term = d.const_app(p.speedup, &[diag, k_final]);
+    let raw = diagonal_seq(d, p, exp_series_partial_const);
+    (raw, k_final, exp_series_partial_body)
+}
+
+/// `raw`/`k_final`/`exp_series_partial_body` are the CALLER's — see
+/// [`declare_e_family`]'s own doc for why these must be the SAME `ExprId`s
+/// [`declare_e_converges`] uses, not a second, independently-derived
+/// (merely value-equal) copy.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_e(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    raw: ExprId,
+    k_final: ExprId,
+    exp_series_partial_body: ExprId,
+) -> Result<(), KernelError> {
+    let exp_series_partial_const = d.kernel().const_(p.exp_series_partial, vec![]);
+
+    let speedup_term = d.const_app(p.speedup, &[raw, k_final]);
     let regularity_proof = d.lemma(
         p.regular_of_scaled_cauchy,
         &[exp_series_partial_const, k_final, exp_series_partial_body],
@@ -3267,7 +3326,485 @@ fn declare_e(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
     })
 }
 
-/// Admit `CReal.e`. Run **after** [`declare_exp_convergence`] (shares
+/// `CReal.e_converges : Converges expSeriesPartial e` — `e`'s own defining
+/// property, and the missing link every property of `e` needs
+/// (`converges_lower_bound`/`converges_lower_bound_shift`/
+/// `converges_upper_bound` all consume a `Converges` hypothesis, not a bare
+/// `Cauchy` one).
+///
+/// Built by reproducing [`super::convergence::declare_converges_of_cauchy`]'s
+/// own `minor` closure directly against CONCRETE data (`k_final`,
+/// `exp_series_partial_body` from [`e_ingredients`]) instead of running it
+/// through that theorem's `Exists`-elimination over an abstract `Cauchy`
+/// witness: the existential route can only produce `Converges f L` for an
+/// OPAQUE `L` bound inside the proof, never for the literal declared `e`, and
+/// `Exists.rec` is `Prop`-only so `L` cannot be extracted as data afterward
+/// either. `e`'s own `seq` projection ignores which `Regular` proof `CReal.mk`
+/// was given (the projector only reads the first field), so the concrete
+/// witness built here needs no separate proof that it matches `e`'s own
+/// `regularity_proof` — only `raw`/`k_final` need to match, and
+/// [`e_ingredients`] guarantees that structurally.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_e_converges(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    raw: ExprId,
+    k_final: ExprId,
+    exp_series_partial_body: ExprId,
+) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let nat = d.nat_ty();
+    let exp_series_partial_const = d.kernel().const_(p.exp_series_partial, vec![]);
+    let e_const = d.kernel().const_(p.e, vec![]);
+
+    // Build the proof GENERICALLY over a BOUND `(k : Nat) (h :
+    // sum_range_cauchy_body (expSeriesPartial, k))`, exactly mirroring
+    // `declare_converges_of_cauchy`'s own `minor` closure shape, and apply
+    // it at the CONCRETE `(k_final, exp_series_partial_body)` only at the
+    // very end.
+    //
+    // Measured root cause (2026-08-26): building the per-`n` proof directly
+    // against the CONCRETE `k_final` makes `speedup(raw, k_final)` a
+    // partially-concrete Nat expression (concrete in `k_final`, symbolic in
+    // `n`). The kernel's lazy-delta `is_def_eq`, forced to compare
+    // `speedup_term(n)` against `seq(l_val, n)` inside `exists_intro`'s
+    // argument check, unfolds `speedup` and `seq` in lock-step (their names
+    // differ, so neither side's unfold is deferred to let the other catch
+    // up) and the two sides never re-synchronize at the point where they
+    // ARE equal -- both race forward, and because the Nat.mul/Nat.add
+    // building the reindexed sample index has `k_final` concrete enough to
+    // fire (unlike a fully symbolic `k`, which cannot fire at all against a
+    // free variable), that race partially evaluates `sumRange` at a
+    // symbolic index, driving recursion depth into the thousands and
+    // overflowing a 1 GiB RELEASE stack (confirmed by isolating and timing
+    // `Kernel::def_eq(speedup_n, seq(l_val, n))` directly: it alone hangs,
+    // with or without an independently-recomputed `e_ingredients`).
+    //
+    // With `k` and `h` BOUND (Pi/lambda variables, not yet substituted),
+    // every `Nat.mul`/`Nat.add` built from them stays stuck against BOTH
+    // fvars simultaneously -- exactly why `declare_converges_of_cauchy`
+    // itself (which never concretizes its own `K` before `add_declaration`
+    // time) has never hit this. `Kernel::infer` on the finished lambda only
+    // needs to type-check its BODY once, generically; substituting the
+    // concrete `(k_final, exp_series_partial_body)` afterward is then a
+    // plain Pi-application (codomain substitution), never re-entering the
+    // per-`n` comparison.
+    let generic = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hp_ty = sum_range_cauchy_body(d, p, exp_series_partial_const, k);
+        let hp_fv = d.fresh_fvar();
+        let hp = d.kernel().fvar(hp_fv);
+
+        let kregular_proof = kregular_of_cauchy_proof(d, p, raw, k, hp);
+        let speedup_term = d.const_app(p.speedup, &[raw, k]);
+        let sc = d.const_app(p.speedup_close, &[raw, k, kregular_proof]);
+
+        let regularity_proof = d.lemma(
+            p.regular_of_scaled_cauchy,
+            &[exp_series_partial_const, k, hp],
+        );
+        let constructor = d.kernel().const_(p.mk, vec![]);
+        let l_val = d.apply(constructor, &[speedup_term, regularity_proof]);
+
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let raw_n = d.apply(raw, &[n]);
+        let speedup_n = d.apply(speedup_term, &[n]);
+        let diff_n = rsub(d, rat, raw_n, speedup_n);
+
+        let succ_k = d.succ(k);
+        let one_nat = d.num(1);
+        let bound_left_n = div_succ_at(d, p, succ_k, n);
+        let bound_right_n = div_succ_at(d, p, one_nat, n);
+        let sc_n_bound = radd(d, bound_left_n, bound_right_n);
+
+        let sc_n = d.apply(sc, &[n]);
+
+        let fuse = d.lemma(rat.nat_div_succ_add, &[succ_k, one_nat, n]);
+        let k2 = NatOps::add(d, succ_k, one_nat);
+        let target_bound_n = div_succ_at(d, p, k2, n);
+        let step = rat_eq_rewrite(d, sc_n_bound, target_bound_n, fuse, sc_n, &|d, t| {
+            within(d, p, diff_n, t)
+        });
+
+        let over_n = d.lam_fv(n_fv, nat, step);
+        let converges_pred = converges_predicate(d, p, exp_series_partial_const, l_val);
+        let converges_proof = exists_intro(d, p, nat, converges_pred, k2, over_n);
+
+        let with_hp = d.lam_fv(hp_fv, hp_ty, converges_proof);
+        d.lam_fv(k_fv, nat, with_hp)
+    };
+
+    let value = d.apply(generic, &[k_final, exp_series_partial_body]);
+
+    let ty = converges_applied(d, p, exp_series_partial_const, e_const);
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.e_converges,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.two_le_e : le two e`.
+///
+/// **The eventual argument.** `expSeriesPartial 0 = 0 < 2`, so
+/// `converges_lower_bound` cannot apply directly — the bound only holds from
+/// index `2` on. Two pieces close it:
+///
+/// - `CReal.sumRange_mono_outer` at `f := expTerm` (nonnegative by
+///   [`CRealPrelude::exp_term_nonneg`]) gives `∀ m n, Nat.le m n → le
+///   (expSeriesPartial m) (expSeriesPartial n)`, so in particular `∀ n, le
+///   (expSeriesPartial 2) (expSeriesPartial (Nat.add n 2))` (`Nat.le 2
+///   (Nat.add n 2)` via `Nat.zero_le`/`Nat.add_le_add_right`).
+/// - `expSeriesPartial 2` reduces, by the SAME `Kernel::def_eq` ι-chain
+///   `creal_tests.rs`'s own `exp_series_partial_computes_its_first_few_values`
+///   exercises, to the identical `Rat.mk` normal form as [`two`] — so
+///   `CReal.le_refl` at `two`, ascribed at `le two (expSeriesPartial 2)`, type-
+///   checks by that same defeq with no explicit rewrite needed.
+///
+/// Chaining those via `CReal.le_trans` gives `∀ n, le two (expSeriesPartial
+/// (Nat.add n 2))`, exactly [`CRealPrelude::converges_lower_bound_shift`]'s
+/// hypothesis at shift `s := 2`; applied with [`CRealPrelude::e_converges`]
+/// closes `le two e`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_two_le_e(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let exp_term_const = d.kernel().const_(p.exp_term, vec![]);
+    let exp_series_partial_const = d.kernel().const_(p.exp_series_partial, vec![]);
+    let exp_term_nonneg_const = d.kernel().const_(p.exp_term_nonneg, vec![]);
+    let e_const = d.kernel().const_(p.e, vec![]);
+    let e_converges_proof = d.kernel().const_(p.e_converges, vec![]);
+    let two_creal = two(d, p);
+    let two_nat = d.num(2);
+
+    // exp_series_partial_at_2 : expSeriesPartial 2 -- defeq to `two` (same
+    // Kernel::def_eq chain `creal_tests.rs`'s concrete test already exercises).
+    let exp_series_partial_at_2 = d.const_app(p.exp_series_partial, &[two_nat]);
+    let base = d.lemma(p.le_refl, &[two_creal]);
+
+    // h1_shift : ∀ n, le two (expSeriesPartial (Nat.add n 2)).
+    let h1_shift = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let shifted_n = NatOps::add(d, n, two_nat);
+
+        let zero_nat = d.num(0);
+        let zero_le_n = d.lemma(p.rat.int.nat.zero_le, &[n]);
+        let two_le_shifted = d.lemma(
+            p.rat.int.nat.add_le_add_right,
+            &[two_nat, zero_nat, n, zero_le_n],
+        ); // Le (Nat.add 0 2) (Nat.add n 2) -- defeq to Le 2 (Nat.add n 2).
+
+        let mono2 = d.const_app(
+            p.sum_range_mono_outer,
+            &[
+                exp_term_const,
+                exp_term_nonneg_const,
+                two_nat,
+                shifted_n,
+                two_le_shifted,
+            ],
+        );
+        // mono2 : le (sumRange expTerm 2) (sumRange expTerm shifted_n)
+        //       = le (expSeriesPartial 2) (expSeriesPartial shifted_n), by delta.
+
+        let exp_series_partial_shifted = d.const_app(p.exp_series_partial, &[shifted_n]);
+        let step = d.lemma(
+            p.le_trans,
+            &[
+                two_creal,
+                exp_series_partial_at_2,
+                exp_series_partial_shifted,
+                base,
+                mono2,
+            ],
+        );
+        d.lam_fv(n_fv, nat, step)
+    };
+
+    let value = d.const_app(
+        p.converges_lower_bound_shift,
+        &[
+            two_nat,
+            two_creal,
+            exp_series_partial_const,
+            e_const,
+            h1_shift,
+            e_converges_proof,
+        ],
+    );
+    let ty = cle(d, p, two_creal, e_const);
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.two_le_e,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Equiv (neg zero) zero` — reproduced verbatim from `series.rs`'s own
+/// private `neg_zero_equiv` (that module's own precedent for reusing a
+/// sibling's private helper by reproduction rather than widening its
+/// visibility, e.g. [`diagonal_seq`] above).
+fn neg_zero_equiv_local(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let zero_c = czero(d, p);
+    let nz = cneg(d, p, zero_c);
+    let padded = cadd(d, p, nz, zero_c);
+    let flipped = cadd(d, p, zero_c, nz);
+    let h1 = d.lemma(p.add_zero, &[nz]); // Equiv padded nz
+    let step1 = d.lemma(p.equiv_symm, &[padded, nz, h1]); // Equiv nz padded
+    let h2 = d.lemma(p.add_comm, &[nz, zero_c]); // Equiv padded flipped
+    let h3 = d.lemma(p.add_neg, &[zero_c]); // Equiv flipped zero_c
+    let t1 = d.lemma(p.equiv_trans, &[nz, padded, flipped, step1, h2]);
+    d.lemma(p.equiv_trans, &[nz, flipped, zero_c, t1, h3])
+}
+
+/// `CReal.e_le_four : le e four`, `four := mul two two`.
+///
+/// **Why `4`, not the classically sharper `3`.** The domination this file
+/// already built is `expTerm n ≤ expDominant n := mul two (pow half n)` —
+/// deliberately UNIFORM in `n`, including `n = 0`/`1` where the true ratio
+/// `1/n! : (1/2)ⁿ` is `1:1` and `2:1`, not yet the geometric decay that makes
+/// the bound tight. Summing the uniform bound therefore doubles a quantity
+/// that is already loose by a factor of `2` at the first two terms: `Σ
+/// expDominant = 2·Σ(1/2)ⁱ = 2·(2·(1−(1/2)ⁿ)) ≤ 4`. The classical `e ≤ 3`
+/// bound splits off the first two terms (`1 + 1`) exactly and only bounds the
+/// TAIL (`n ≥ 2`) by the geometric series, which needs a domination
+/// re-indexed to start at `2`, not a direct application of
+/// `sumRange_pow_half_closed_form` to the existing `expDominant`. That is
+/// more than a corollary of what exists here and is not attempted in this
+/// slice; `4` is what the current development actually supports.
+///
+/// Chain: `expSeriesPartial n = sumRange expTerm n ≤ sumRange expDominant n`
+/// (`CReal.sumRange_le` at the pointwise bound `CReal.exp_term_le_dominant`)
+/// `~ mul two (sumRange (pow half ·) n)` (`CReal.mul_sumRange`, symm) `~ mul
+/// two (mul two (add one (neg (pow half n))))`
+/// (`CReal.sumRange_pow_half_closed_form`, congruence) `~ mul four (add one
+/// (neg (pow half n)))` (`CReal.mul_assoc`) `≤ mul four one` (`add one (neg
+/// (pow half n)) ≤ one`, since `pow half n ≥ 0`, via
+/// `CReal.neg_le_neg`/[`neg_zero_equiv_local`]/`CReal.add_le_add`) `~ four`
+/// (`CReal.mul_one`). Holds at every `n` including `n = 0` — no shift needed,
+/// unlike [`declare_two_le_e`] — then `CReal.converges_upper_bound` closes it
+/// against [`CRealPrelude::e_converges`].
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_e_le_four(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let exp_term_const = d.kernel().const_(p.exp_term, vec![]);
+    let exp_dominant_const = d.kernel().const_(p.exp_dominant, vec![]);
+    let exp_series_partial_const = d.kernel().const_(p.exp_series_partial, vec![]);
+    let exp_term_le_dominant_const = d.kernel().const_(p.exp_term_le_dominant, vec![]);
+    let e_const = d.kernel().const_(p.e, vec![]);
+    let e_converges_proof = d.kernel().const_(p.e_converges, vec![]);
+
+    let zero_c = czero(d, p);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let two_creal = two(d, p);
+    let half_val = half(d, p);
+    let four = cmul(d, p, two_creal, two_creal);
+    let four_nonneg = {
+        let two_nonneg = two_nonneg_proof(d, p);
+        d.lemma(
+            p.mul_nonneg,
+            &[two_creal, two_creal, two_nonneg, two_nonneg],
+        )
+    };
+
+    // per_n : le (sumRange expTerm n) four, for a bound (Nat-level) `n`.
+    let per_n = |d: &mut IntDev<'_>, n: ExprId| -> ExprId {
+        // Step A: le (sumRange expTerm n) (sumRange expDominant n).
+        let ptwise = {
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let lt_fv = d.fresh_fvar();
+            let lt_ty = d.lt(i, n);
+            let body = d.apply(exp_term_le_dominant_const, &[i]);
+            let with_lt = d.lam_fv(lt_fv, lt_ty, body);
+            d.lam_fv(i_fv, nat, with_lt)
+        };
+        let step_a = d.const_app(
+            p.sum_range_le,
+            &[exp_term_const, exp_dominant_const, n, ptwise],
+        );
+
+        // Equiv (sumRange expDominant n) (mul four y_n), y_n := add one (neg (pow half n)).
+        let pow_half_fn_ = pow_half_fn(d, p);
+        let sum_pow_half_n = d.const_app(p.sum_range, &[pow_half_fn_, n]);
+        let sum_expdom_n = d.const_app(p.sum_range, &[exp_dominant_const, n]);
+        let mul_two_sum = cmul(d, p, two_creal, sum_pow_half_n);
+        let mul_sum_eq = d.lemma(p.mul_sum_range, &[two_creal, pow_half_fn_, n]);
+        // mul_sum_eq : Equiv mul_two_sum sum_expdom_n (RHS defeq to `sumRange
+        // expDominant n` via `expDominant`'s own delta-unfold).
+        let mul_sum_eq_symm = d.lemma(p.equiv_symm, &[mul_two_sum, sum_expdom_n, mul_sum_eq]);
+
+        let n_pow = cpow(d, p, half_val, n);
+        let neg_pow = cneg(d, p, n_pow);
+        let y_n = cadd(d, p, one_c, neg_pow);
+        // mul_two_y := mul two y_n -- `sum_pow_half_closed_form`'s own RHS.
+        let mul_two_y = cmul(d, p, two_creal, y_n);
+        let closed_form = d.const_app(p.sum_pow_half_closed_form, &[n]);
+        // closed_form : Equiv sum_pow_half_n mul_two_y
+        let refl_two = d.lemma(p.equiv_refl, &[two_creal]);
+        // mul_two_mul_two_y := mul two mul_two_y = mul two (mul two y_n) --
+        // ONE MORE `mul two` wrapper than `mul_two_y` itself, since `mul_congr`
+        // here scales `closed_form`'s WHOLE equivalence (sum_pow_half_n ~
+        // mul_two_y) by the outer `two` already in `mul_two_sum`.
+        let mul_two_mul_two_y = cmul(d, p, two_creal, mul_two_y);
+        let step_congr = d.lemma(
+            p.mul_congr,
+            &[
+                two_creal,
+                two_creal,
+                sum_pow_half_n,
+                mul_two_y,
+                refl_two,
+                closed_form,
+            ],
+        );
+        // step_congr : Equiv mul_two_sum mul_two_mul_two_y
+
+        let four_raw = cmul(d, p, four, y_n);
+        let assoc = d.lemma(p.mul_assoc, &[two_creal, two_creal, y_n]);
+        // assoc : Equiv four_raw mul_two_mul_two_y
+        let assoc_symm = d.lemma(p.equiv_symm, &[four_raw, mul_two_mul_two_y, assoc]);
+
+        let eq_sum_four = {
+            let t1 = d.lemma(
+                p.equiv_trans,
+                &[
+                    sum_expdom_n,
+                    mul_two_sum,
+                    mul_two_mul_two_y,
+                    mul_sum_eq_symm,
+                    step_congr,
+                ],
+            );
+            d.lemma(
+                p.equiv_trans,
+                &[sum_expdom_n, mul_two_mul_two_y, four_raw, t1, assoc_symm],
+            )
+        };
+        // eq_sum_four : Equiv sum_expdom_n four_raw
+
+        // y_n <= one, from 0 <= pow half n.
+        let half_nonneg = half_nonneg_proof(d, p);
+        let pow_nonneg_n = d.lemma(p.pow_nonneg, &[half_val, half_nonneg, n]);
+        let neg_le_neg_step = d.lemma(p.neg_le_neg, &[zero_c, n_pow, pow_nonneg_n]);
+        let neg_zero_c = cneg(d, p, zero_c);
+        let nz_equiv = neg_zero_equiv_local(d, p);
+        let refl_neg_pow = d.lemma(p.equiv_refl, &[neg_pow]);
+        let neg_pow_le_zero = d.lemma(
+            p.le_congr,
+            &[
+                neg_pow,
+                neg_pow,
+                neg_zero_c,
+                zero_c,
+                refl_neg_pow,
+                nz_equiv,
+                neg_le_neg_step,
+            ],
+        );
+        let refl_one = d.lemma(p.le_refl, &[one_c]);
+        let grown_y = d.lemma(
+            p.add_le_add,
+            &[one_c, one_c, neg_pow, zero_c, refl_one, neg_pow_le_zero],
+        );
+        let padded_one = cadd(d, p, one_c, zero_c);
+        let add_zero_eq = d.lemma(p.add_zero, &[one_c]);
+        let refl_y = d.lemma(p.equiv_refl, &[y_n]);
+        let y_le_one = d.lemma(
+            p.le_congr,
+            &[y_n, y_n, padded_one, one_c, refl_y, add_zero_eq, grown_y],
+        );
+
+        // mul four y_n <= mul four one ~ four.
+        let mul_le = d.lemma(
+            p.mul_le_mul_of_nonneg_left,
+            &[four, y_n, one_c, four_nonneg, y_le_one],
+        );
+        let mul_four_one = cmul(d, p, four, one_c);
+        let mul_one_eq = d.lemma(p.mul_one, &[four]);
+        let refl_four_raw = d.lemma(p.equiv_refl, &[four_raw]);
+        let four_raw_le_four = d.lemma(
+            p.le_congr,
+            &[
+                four_raw,
+                four_raw,
+                mul_four_one,
+                four,
+                refl_four_raw,
+                mul_one_eq,
+                mul_le,
+            ],
+        );
+
+        let eq_sum_four_symm = d.lemma(p.equiv_symm, &[sum_expdom_n, four_raw, eq_sum_four]);
+        let refl_four = d.lemma(p.equiv_refl, &[four]);
+        let sum_le_four = d.lemma(
+            p.le_congr,
+            &[
+                four_raw,
+                sum_expdom_n,
+                four,
+                four,
+                eq_sum_four_symm,
+                refl_four,
+                four_raw_le_four,
+            ],
+        );
+
+        let sum_expterm_n = d.const_app(p.sum_range, &[exp_term_const, n]);
+        d.lemma(
+            p.le_trans,
+            &[sum_expterm_n, sum_expdom_n, four, step_a, sum_le_four],
+        )
+    };
+
+    let ptwise_upper = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let body = per_n(d, n);
+        d.lam_fv(n_fv, nat, body)
+    };
+    // ptwise_upper : ∀ n, le (expSeriesPartial n) four (by delta).
+
+    let value = d.const_app(
+        p.converges_upper_bound,
+        &[
+            exp_series_partial_const,
+            e_const,
+            four,
+            ptwise_upper,
+            e_converges_proof,
+        ],
+    );
+    let ty = cle(d, p, e_const, four);
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.e_le_four,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Admit `CReal.e`, `CReal.e_converges`, `CReal.two_le_e` and
+/// `CReal.e_le_four`. Run **after** [`declare_exp_convergence`] (shares
 /// `exp_dominant_cauchy_body_concrete`'s dependencies:
 /// `geomCauchy_ordered_half`, `exp_term_abs_le_dominant`,
 /// `sum_range_cauchy_dominated_ordered_normalized`, `regular_of_scaled_cauchy`
@@ -3277,5 +3814,22 @@ fn declare_e(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
 ///
 /// Returns the trusted gate's rejection.
 pub(super) fn declare_e_family(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
-    declare_e(d, p)
+    // `e_ingredients` runs EXACTLY ONCE here, and the resulting `(raw,
+    // k_final, exp_series_partial_body)` `ExprId`s are threaded into BOTH
+    // `declare_e` and `declare_e_converges` -- NOT re-derived by a second,
+    // independent call. This alone is NOT what fixes the stack overflow
+    // below (an earlier hypothesis, disproven by measurement: sharing these
+    // `ExprId`s and even routing the whole proof through a LOCALLY-built
+    // `mk(...)` value instead of the named `e` both left the overflow fully
+    // reproducible) -- see `declare_e_converges`'s own doc for the actual
+    // root cause and fix (build generically over a BOUND `K`, substitute the
+    // concrete `k_final` only in the very last step). Sharing is kept
+    // because it is still the right hygiene (one derivation, not two) and
+    // because `declare_two_le_e`/`declare_e_le_four` need the SAME `e` the
+    // shared `k_final` builds, via `CRealPrelude::e_converges`.
+    let (raw, k_final, exp_series_partial_body) = e_ingredients(d, p);
+    declare_e(d, p, raw, k_final, exp_series_partial_body)?;
+    declare_e_converges(d, p, raw, k_final, exp_series_partial_body)?;
+    declare_two_le_e(d, p)?;
+    declare_e_le_four(d, p)
 }

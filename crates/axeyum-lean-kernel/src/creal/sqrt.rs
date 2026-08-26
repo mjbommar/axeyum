@@ -3605,6 +3605,100 @@ pub(super) fn declare_sqrt_sq(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(),
     })
 }
 
+/// `CReal.sqrt_nonneg : ∀ x, CReal.le CReal.zero (sqrt x)`.
+///
+/// **Unconditional** — unlike `sqrt_sq`/the `mul_self_sqrt` gap this file's
+/// own doc names, this fact never relates `sqrt x` back to `x` itself, only
+/// to `sqrtApprox`'s own output shape: `sqrtApprox` clamps every sample to
+/// `Rat.max _ 0` before taking a `Nat` square root, so the sample is always
+/// a cast `Nat` value, nonneg regardless of `x`'s sign.
+///
+/// This is `Complex::declare_abs_nonneg`'s exact argument, generalized: that
+/// proof already established `0 <= sqrt (normSq z)` this same way, but sits
+/// outside `creal` and so hand-reconstructs `sqrtApprox`'s recipe
+/// (`sqrt_approx_witness`/`sqrt_speedup_index`) from public
+/// `CRealPrelude`/`RatPrelude` fields alone. Here, with direct access to
+/// `CRealPrelude`'s fields, the reconstruction is inlined once, at an
+/// arbitrary `x` rather than `normSq z` — `Complex.abs`'s wrapper played no
+/// role in the original proof, so nothing about the argument actually needed
+/// `Complex` at all.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_sqrt_nonneg(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let carrier = creal_ty(d, p);
+    let nat_ty = d.nat_ty();
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let sqrt_x = d.const_app(p.sqrt, &[x]);
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let one_nat_lit = d.num(1);
+    let m = mul_index(d, one_nat_lit, n);
+
+    // Rebuild the witness `sqrtApprox x m` reduces to: `s := natSqrt k`,
+    // `k` the scaled clamped sample at the bracket's own deep index `j`.
+    let dd = d.succ(m);
+    let j = NatOps::mul(d, dd, dd);
+    let sample_q = sample(d, p, x, j);
+    let zero_rat = rzero(d, rat);
+    let q_pos = d.const_app(rat.max, &[sample_q, zero_rat]);
+    let numerator = num(d, q_pos);
+    let a = d.const_app(rat.int.nat_abs, &[numerator]);
+    let b = den(d, q_pos);
+    let scaled = NatOps::mul(d, a, j);
+    let k = NatOps::div(d, scaled, b);
+    let s = d.const_app(p.nat_sqrt, &[k]);
+
+    // a_nonneg : Rat.le Rat.zero (Rat.natDivSucc s m) -- defeq
+    // `Rat.le Rat.zero (sqrtApprox x m)`.
+    let a_nonneg = d.lemma(rat.zero_le_nat_div_succ, &[s, m]);
+    let big_a = d.const_app(p.sqrt_approx, &[x, m]);
+    let neg_a = rneg(d, big_a);
+
+    let neg_nonpos = d.lemma(rat.neg_nonpos_of_nonneg, &[big_a, a_nonneg]);
+
+    let two = d.num(2);
+    let bound = d.const_app(rat.nat_div_succ, &[two, n]);
+    let bound_nonneg = d.lemma(rat.zero_le_nat_div_succ, &[two, n]);
+
+    let chain = d.lemma(
+        rat.le_trans,
+        &[neg_a, zero_rat, bound, neg_nonpos, bound_nonneg],
+    );
+
+    // Rewrite along `Rat.zero_add (Rat.neg big_a)` to land on the shape
+    // `Rat.sub Rat.zero big_a` unfolds to, matching `CReal.le`'s own body.
+    let add_zero_neg_a = radd(d, zero_rat, neg_a);
+    let zero_add_eq = d.lemma(rat.zero_add, &[neg_a]);
+    let symm_eq = rsymm(d, add_zero_neg_a, neg_a, zero_add_eq);
+    let body_at_n = rat_eq_rewrite(d, neg_a, add_zero_neg_a, symm_eq, chain, &|d, t| {
+        rle(d, rat, t, bound)
+    });
+
+    let value = {
+        let body = d.lam_fv(n_fv, nat_ty, body_at_n);
+        d.lam_fv(x_fv, carrier, body)
+    };
+    let ty = {
+        let zero_real = d.kernel().const_(p.zero, vec![]);
+        let claim = d.const_app(p.le, &[zero_real, sqrt_x]);
+        d.pi_fv(x_fv, carrier, claim)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sqrt_nonneg,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 #[cfg(test)]
 mod bridging_smoke_tests {
     use super::*;

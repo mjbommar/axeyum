@@ -247,6 +247,7 @@ pub(super) fn declare_convergence(d: &mut IntDev<'_>, p: CRealPrelude) -> Result
     declare_converges_sub(d, p)?;
     declare_converges_squeeze(d, p)?;
     declare_converges_lower_bound(d, p)?;
+    declare_converges_lower_bound_shift(d, p)?;
     declare_converges_upper_bound(d, p)?;
     declare_bounded(d, p)?;
     declare_converges_bounded(d, p)?;
@@ -269,7 +270,7 @@ fn seq_fn_ty(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
 }
 
 /// `Rat.natDivSucc k j`, with a **symbolic** `Nat` numerator `k`.
-fn div_succ_at(d: &mut IntDev<'_>, p: CRealPrelude, k: ExprId, j: ExprId) -> ExprId {
+pub(super) fn div_succ_at(d: &mut IntDev<'_>, p: CRealPrelude, k: ExprId, j: ExprId) -> ExprId {
     d.const_app(p.rat.nat_div_succ, &[k, j])
 }
 
@@ -305,7 +306,13 @@ pub(super) fn exists_ty(
 }
 
 /// `Exists.intro elem_ty predicate witness proof`.
-fn exists_intro(
+///
+/// `pub(super)`: reused by `creal/exponential.rs`'s `declare_e_converges`,
+/// which builds a CONCRETE `Converges expSeriesPartial e` directly (not
+/// through [`declare_converges_of_cauchy`]'s own `Exists`-wrapped route,
+/// since the witness there must be the exact declared `e`, not an opaque
+/// existential) and needs this exact constructor.
+pub(super) fn exists_intro(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     elem_ty: ExprId,
@@ -376,7 +383,11 @@ fn converges_body(
 }
 
 /// `λ K, ∀ n, Within (seq (func n) n − seq target n) (natDivSucc K n)`.
-fn converges_predicate(
+///
+/// `pub(super)`: reused by `creal/exponential.rs`'s `declare_e_converges` (see
+/// [`exists_intro`]'s doc for why that declaration cannot go through
+/// [`declare_converges_of_cauchy`]'s own `Exists`-wrapped route).
+pub(super) fn converges_predicate(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     func: ExprId,
@@ -1013,7 +1024,12 @@ fn declare_converges_cauchy(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), K
 /// instance at `(m, n)` by one [`RatPrelude::nat_div_succ_le_add_left`] step
 /// each side (`K ↦ K+1`, additive, no `Nat.sub`) and combines with
 /// `Rat.add_le_add`.
-fn kregular_of_cauchy_proof(
+///
+/// `pub(super)`: reused by `creal/exponential.rs`'s `declare_e_converges`,
+/// which needs `Converges expSeriesPartial e` for the EXACT declared `e` —
+/// see [`exists_intro`]'s doc for why `declare_converges_of_cauchy`'s own
+/// `Exists`-wrapped route cannot supply that directly.
+pub(super) fn kregular_of_cauchy_proof(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     raw: ExprId,
@@ -2437,6 +2453,196 @@ fn declare_converges_lower_bound(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.converges_lower_bound,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.converges_lower_bound_shift : ∀ s a f L, (∀ n, le a (f (Nat.add n
+/// s))) → Converges f L → le a L`.
+///
+/// A genuinely EVENTUAL lower bound, needed because [`declare_converges_lower_bound`]
+/// requires its pointwise hypothesis at literally every `n` (including `n =
+/// 0`), which a bound coming from monotonicity from some point on cannot
+/// supply. Same four-leg telescope as `converges_lower_bound` (`a`'s
+/// regularity, the pointwise bound, the `Converges` witness, `L`'s
+/// regularity), routed through the SHIFTED index `jp := Nat.add j s` in place
+/// of `j` at every leg, then weakened back from `1/(jp+1)` to `1/(j+1)`
+/// (`Nat.le j jp` via `Nat.zero_le`/`Nat.add_le_add_right`, `Rat`'s own
+/// antitone-in-the-denominator fact [`nat_div_succ_antitone_general`]) so the
+/// outer Archimedean squeeze (`Rat.le_of_le_add_nat_div_succ`) still closes on
+/// a bound stated in `j` alone, exactly as `converges_lower_bound` needs.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_converges_lower_bound_shift(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let seq_ty = seq_fn_ty(d, p);
+
+    let s_fv = d.fresh_fvar();
+    let s = d.kernel().fvar(s_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let l_fv = d.fresh_fvar();
+    let l = d.kernel().fvar(l_fv);
+
+    let lower_ty = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let shifted_n = NatOps::add(d, n, s);
+        let fn_term = d.apply(f, &[shifted_n]);
+        let claim = d.const_app(p.le, &[a, fn_term]);
+        d.pi_fv(n_fv, nat, claim)
+    };
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+
+    let converges_fl = converges_applied(d, p, f, l);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+
+    let target_ty = d.const_app(p.le, &[a, l]);
+
+    let predicate = converges_predicate(d, p, f, l);
+    let minor = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hp_ty = converges_body(d, p, f, l, k);
+        let hp_fv = d.fresh_fvar();
+        let hp = d.kernel().fvar(hp_fv);
+        let two_nat = d.num(2);
+
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let head = sample(d, p, a, m);
+        let tail = sample(d, p, l, m);
+        let target = rsub(d, rat, head, tail);
+        let goal_bound = div_succ(d, p, 2, m);
+
+        let hypothesis = {
+            let j_fv = d.fresh_fvar();
+            let j = d.kernel().fvar(j_fv);
+            let jp = NatOps::add(d, j, s);
+
+            let aj = sample(d, p, a, jp);
+            let fj = d.apply(f, &[jp]);
+            let fjj = sample(d, p, fj, jp);
+            let lj = sample(d, p, l, jp);
+
+            // u1 : a_m - a_jp <= modulus(m,jp).
+            let u1 = rsub(d, rat, head, aj);
+            let b1 = modulus(d, p, m, jp);
+            let w1 = d.lemma(p.regular, &[a, m, jp]);
+            let (_, r1) = halves(d, p, u1, b1, w1);
+
+            // u2 : a_jp - f(jp)_jp <= 2/(jp+1). `h1` at `n := j` gives `le a
+            // (f jp)` (`jp` literally `Nat.add j s`); applying THAT at index
+            // `jp` gives the bound at `jp`, not at `j` -- the shift.
+            let u2 = rsub(d, rat, aj, fjj);
+            let b2 = div_succ(d, p, 2, jp);
+            let h1_at_j = d.apply(h1, &[j]);
+            let r2 = d.apply(h1_at_j, &[jp]);
+
+            // u3 : f(jp)_jp - L_jp <= K/(jp+1), the Converges witness's upper half.
+            let u3 = rsub(d, rat, fjj, lj);
+            let b3 = div_succ_at(d, p, k, jp);
+            let w3 = d.apply(hp, &[jp]);
+            let (_, r3) = halves(d, p, u3, b3, w3);
+
+            // u4 : L_jp - L_m <= modulus(jp,m).
+            let u4 = rsub(d, rat, lj, tail);
+            let b4 = modulus(d, p, jp, m);
+            let w4 = d.lemma(p.regular, &[l, jp, m]);
+            let (_, r4) = halves(d, p, u4, b4, w4);
+
+            let s34 = d.lemma(rat.add_le_add, &[u3, b3, u4, b4, r3, r4]);
+            let q34 = radd(d, u3, u4);
+            let c34 = radd(d, b3, b4);
+            let s234 = d.lemma(rat.add_le_add, &[u2, b2, q34, c34, r2, s34]);
+            let q234 = radd(d, u2, q34);
+            let c234 = radd(d, b2, c34);
+            let s1234 = d.lemma(rat.add_le_add, &[u1, b1, q234, c234, r1, s234]);
+            let q1234 = radd(d, u1, q234);
+            let c1234 = radd(d, b1, c234);
+
+            let (_, _, quantity_eq) = telescope_le4(d, p, head, aj, fjj, lj, tail);
+            let at_quantity = rat_eq_rewrite(d, q1234, target, quantity_eq, s1234, &|d, t| {
+                rle(d, rat, t, c1234)
+            });
+
+            // `final_bound = goal_bound + k_total/(jp+1)`.
+            let (final_bound, _, bound_eq) = fuse_bridge_bound(d, p, m, jp, two_nat, k);
+            let moved = rat_eq_rewrite(d, c1234, final_bound, bound_eq, at_quantity, &|d, t| {
+                rle(d, rat, target, t)
+            });
+
+            // Weaken `k_total/(jp+1)` down to `k_total/(j+1)`: `Nat.le j jp`
+            // (`j <= j+s`, directly `Nat.le_add_right`), then `Rat`'s
+            // antitone-in-the-denominator fact.
+            let k_total = bridge_total_numerator(d, two_nat, k);
+            let k_total_at_jp = div_succ_at(d, p, k_total, jp);
+            let k_total_at_j = div_succ_at(d, p, k_total, j);
+            let j_le_jp = d.lemma(rat.int.nat.le_add_right, &[j, s]);
+            let antitone = nat_div_succ_antitone_general(d, p, k_total, j, jp, j_le_jp);
+            let refl_goal = d.lemma(rat.le_refl, &[goal_bound]);
+            let congr = d.lemma(
+                rat.add_le_add,
+                &[
+                    goal_bound,
+                    goal_bound,
+                    k_total_at_jp,
+                    k_total_at_j,
+                    refl_goal,
+                    antitone,
+                ],
+            );
+            let weakened_bound = radd(d, goal_bound, k_total_at_j);
+            let final_hyp = d.lemma(
+                rat.le_trans,
+                &[target, final_bound, weakened_bound, moved, congr],
+            );
+            d.lam_fv(j_fv, nat, final_hyp)
+        };
+        let k_total = bridge_total_numerator(d, two_nat, k);
+        let at_index = d.lemma(
+            rat.le_of_le_add_nat_div_succ,
+            &[target, goal_bound, k_total, hypothesis],
+        );
+        let per_m = d.lam_fv(m_fv, nat, at_index);
+        let with_hp = d.lam_fv(hp_fv, hp_ty, per_m);
+        d.lam_fv(k_fv, nat, with_hp)
+    };
+
+    let proof_body = exists_elim(d, p, nat, predicate, target_ty, h2, minor);
+
+    let value = {
+        let with_h2 = d.lam_fv(h2_fv, converges_fl, proof_body);
+        let with_h1 = d.lam_fv(h1_fv, lower_ty, with_h2);
+        let with_l = d.lam_fv(l_fv, carrier, with_h1);
+        let with_f = d.lam_fv(f_fv, seq_ty, with_l);
+        let with_a = d.lam_fv(a_fv, carrier, with_f);
+        d.lam_fv(s_fv, nat, with_a)
+    };
+    let ty = {
+        let after_h2 = d.arrow(converges_fl, target_ty);
+        let after_h1 = d.arrow(lower_ty, after_h2);
+        let with_l = d.pi_fv(l_fv, carrier, after_h1);
+        let with_f = d.pi_fv(f_fv, seq_ty, with_l);
+        let with_a = d.pi_fv(a_fv, carrier, with_f);
+        d.pi_fv(s_fv, nat, with_a)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.converges_lower_bound_shift,
         uparams: vec![],
         ty,
         value,

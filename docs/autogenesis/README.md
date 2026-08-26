@@ -105,6 +105,7 @@ compounding, not automation theatre.
 | [Imported Nat.ModEq bridge assay](282-imported-nat-modeq-bridge-assay.md) | Which exact Mathlib shortcuts survive empty-footprint source-to-source transport into three frozen arithmetic targets? |
 | [Provider-captured runtime receipts](283-provider-captured-runtime-receipts.md) | How does product health report exact CI execution without treating ancestor results as current-head evidence? |
 | [Natural-congruence semantic coverage](284-natural-congruence-semantic-coverage.md) | How do imported remainder congruence and native balanced-witness congruence share concepts without acquiring an unsound declaration-equivalence edge? |
+| [Imported Nat.mod remainder contract](285-imported-nat-mod-remainder-contract.md) | Can one exact imported remainder behavior theorem cross the empty-footprint transport and independent-admission boundary? |
 | [Constructive-real well-definedness batch](259-kernel-well-definedness-batch.md) | Which representative-independence laws make constructed-real operations meaningful? |
 | [Obstruction capability candidates](260-obstruction-capability-candidates.md) | Which measured producer blockers require a proposed capability rather than another isolated theorem? |
 | [Candidate capability demand](261-capability-candidate-demand.md) | Which proposed capability removes the largest observed obstruction cluster without converting that count into authority? |

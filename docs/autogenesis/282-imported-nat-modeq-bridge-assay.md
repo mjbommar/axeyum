@@ -54,3 +54,9 @@ The likely construction boundary is the imported `Nat.modCore` recursion spine
 already identified by the implementation-demand graph. A useful increment must
 either normalize that spine proof-directedly or prove a behavioral contract for
 it; another name-level correspondence is not enough.
+
+That first increment is now measured in
+[`285-imported-nat-mod-remainder-contract.md`](285-imported-nat-mod-remainder-contract.md):
+a direct empty-footprint `Nat.modCore.go` proof converts the modulus-zero target,
+moving the frozen family to 1/3. Shared periodicity for the two addition targets
+remains the next falsifiable step.

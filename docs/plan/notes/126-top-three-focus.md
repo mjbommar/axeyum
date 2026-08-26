@@ -59,6 +59,22 @@ declaration equivalence, proof transport, or admission authority. The generated
 review queue now makes the remaining boundary visible: 1,281 of 1,287 kernel
 theorems still await semantic review.
 
+## 2026-08-26 imported Nat.mod remainder contract
+
+The tempting public `Nat.mod_self`, `Nat.add_mod_left`, and `Nat.add_mod_right`
+theorems all measured a `propext` footprint. A direct implementation-local
+`modSelf` proof instead follows `Nat.mod`, `Nat.modCore`, and two
+`Nat.modCore.go` reductions. Lean reports no axioms; checked source transport,
+bounded application, and independent Axeyum admission convert the frozen
+modulus-zero sibling with no target dependency. This moves the family from 0/3
+to 1/3 but grants no fact settlement or operation authority. The next contract
+must provide shared periodicity for both addition siblings.
+
+The same increment repaired the provider-observed tier-C wall-budget failure.
+Policy now compares the unrounded monotonic duration, so a sub-millisecond call
+cannot escape a zero-second budget merely because the receipt rounds down to
+zero milliseconds. All 29 focused tier-C tests and Ruff pass.
+
 Current boundary: reusable ModEq production reached 11 facts. Exact retrieval
 then composed `Nat.fib_le_succ` through `Nat.monotone_of_le_succ` into checked
 `Nat.fib_mono`, but remains honestly `no_operation` because its constructor was

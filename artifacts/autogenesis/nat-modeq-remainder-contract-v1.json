@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-nat-modeq-remainder-contract",
+  "state": "one-of-three-diagnostic-no-operation-or-admission-authority",
+  "authority": "This receipt records one independently admitted conversion. It does not settle the fact or authorize an operation until one unchanged producer converts at least three siblings through the transaction path.",
+  "environment": {
+    "lean_version": "4.30.0",
+    "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean4export_version": "3.1.0"
+  },
+  "contract_source": {
+    "path": "scripts/lean/autogenesis_nat_mod_remainder_contract_v1.lean",
+    "sha256": "b6a5efba7ef77fac7690b91a856f5064a894039468cf798cf79112162045f13b",
+    "theorem": "Axeyum.Autogenesis.Candidate.NatModRemainder.modSelf",
+    "statement": "forall n : Nat, n % n = 0",
+    "proof_strategy": "direct reduction of Nat.mod, Nat.modCore, and two Nat.modCore.go steps",
+    "lean_axiom_footprint": []
+  },
+  "external_inputs": [
+    {
+      "role": "candidate",
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/nat-modeq-remainder-v1/candidate-mod-self.ndjson",
+      "bytes": 419007,
+      "sha256": "9b0bf50cc70c158ad4434b549c9ce67d22af0f1d97ead65f693004dc50f49f75"
+    },
+    {
+      "role": "proof-free-target",
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/nat-modeq-remainder-v1/target-modulus-zero.ndjson",
+      "bytes": 379838,
+      "sha256": "d72f1dc259bf5a0eb6dcbf426b5c805f03d03d17d7f58a75f6bf7eea097c0124"
+    }
+  ],
+  "outcome": {
+    "fact_id": "F:ml430-nat-modulus-modeq-zero-fd9af096",
+    "target_definition": "Axeyum.Autogenesis.Statement.NatModEqArithmetic.modulusZero",
+    "candidate": "Axeyum.Autogenesis.Candidate.NatModRemainder.modSelf",
+    "transported": true,
+    "transport_added": 1,
+    "transport_reused": 0,
+    "binders_used": 1,
+    "application_depth": 1,
+    "terms_considered": 3,
+    "axiom_footprint": [],
+    "target_dependency": false,
+    "independently_admitted": true
+  },
+  "census": {
+    "frozen_siblings": 3,
+    "siblings_converted": 1,
+    "remaining_siblings": 2,
+    "operation_registration_bar": 3
+  },
+  "next_falsifiable_step": "Construct one implementation-local periodicity contract for Nat.mod that specializes to both addition siblings, then rerun the unchanged transport probe and require three of three independently admitted conversions."
+}
