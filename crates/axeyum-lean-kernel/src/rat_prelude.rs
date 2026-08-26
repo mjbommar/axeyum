@@ -68,6 +68,7 @@ mod matrix;
 mod model;
 pub(crate) mod ops;
 mod polynomial;
+mod pow_bridge;
 mod probability;
 mod product;
 mod scaling;
@@ -956,6 +957,16 @@ pub struct RatPrelude {
     pub pow_zero: NameId,
     /// `Rat.pow_succ : ∀ a m, pow a (succ m) = mul (pow a m) a` — `Eq.refl`.
     pub pow_succ: NameId,
+    /// `Rat.pow_natDivSucc_two : ∀ n, pow (natDivSucc 1 1) n = normalize
+    /// (ofNat 1) (Nat.pow 2 n) w`, where `w : 1 ≤ Nat.pow 2 n` is
+    /// `Nat.pow_pos 2 n two_pos`.
+    ///
+    /// The bridge `creal/exponential.rs` names as still missing: `pow` (the
+    /// repeated-multiplication form) and `normalize` (the direct
+    /// `2ⁿ`-denominator form) are the same rational, but no lemma related
+    /// the two representations. By induction on `n`, via `normalize_mul_normalize`
+    /// at the step (`(rat_prelude/pow_bridge.rs`).
+    pub pow_nat_div_succ_two: NameId,
     /// `Rat.polyEval : (Nat → Rat) → Nat → Rat → Rat`, `polyEval c n x :=
     /// sumRange (fun i => c i * x^i) n` — a polynomial given as a
     /// coefficient function and an explicit degree bound, evaluated at a
@@ -1808,6 +1819,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         pow: child(kernel, "pow"),
         pow_zero: child(kernel, "pow_zero"),
         pow_succ: child(kernel, "pow_succ"),
+        pow_nat_div_succ_two: child(kernel, "pow_natDivSucc_two"),
         poly_eval: child(kernel, "polyEval"),
         poly_eval_zero: child(kernel, "polyEval_zero"),
         poly_eval_succ: child(kernel, "polyEval_succ"),
@@ -1953,6 +1965,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         sum::declare_sum(&mut d, prelude)?;
         diagonal::declare_diagonal(&mut d, prelude)?;
         polynomial::declare_polynomial(&mut d, prelude)?;
+        pow_bridge::declare_pow_bridge(&mut d, prelude)?;
         bernoulli::declare_bernoulli(&mut d, prelude)?;
         vector::declare_vector(&mut d, prelude)?;
         probability::declare_probability(&mut d, prelude)?;
