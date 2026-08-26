@@ -1732,3 +1732,162 @@ fn declare_riemann_sum_const(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), 
         value: value_full,
     })
 }
+
+// --- `CReal.sumRange_double` -- toward `riemannSum_cauchy` -----------------
+//
+// The refinement estimate `riemannSum_cauchy` needs (see this module's own
+// top-level documentation for the paper estimate) compares `riemannSum f a b
+// m` at two DIFFERENT subdivision counts. The standard route is a common
+// refinement of both partitions; for the special case of doubling the count
+// (`m` pieces vs. `2m` pieces, each of the coarse pieces split into two equal
+// fine pieces), the needed bookkeeping reduces to a single fact about
+// `CReal.sumRange` that mentions no Riemann sum at all: summing `2k` terms of
+// an arbitrary `g : Nat -> CReal` and grouping them two at a time gives the
+// same total as summing the `k` pairwise sums. That fact is
+// [`declare_sum_range_double`], proved directly by induction on `k` (no
+// hypothesis on `g` needed — this is pure regrouping, not an estimate), and
+// it is landed here as a standalone, reusable building block ahead of the
+// error-bound machinery `riemannSum_cauchy` itself still needs (bounding each
+// pair's contribution against the coarse term via
+// `CReal.UniformlyContinuousOn.spec`, at a subdivision count large enough for
+// the outer accuracy via the same magnitude/`e_acc` scaling
+// `monotone_of_nonneg_deriv` uses, then folding the resulting sum-of-bounds
+// via `CReal.sumRange_le` + `CReal.sumRange_const` + `CReal.mesh_count_width`
+// into a single real inequality, and finally converting that real inequality
+// into the `CReal.Within`-shaped bound `CReal.Cauchy` demands at `riemannSum`'s
+// own canonical sample indices — none of which is attempted here).
+
+/// `fun i => add (g (Nat.mul 2 i)) (g (Nat.succ (Nat.mul 2 i)))` — the
+/// `i`-th block of two consecutive `g`-terms, `g(2i) + g(2i+1)`.
+fn double_block(d: &mut IntDev<'_>, p: CRealPrelude, g: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let two = d.num(2);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let two_i = NatOps::mul(d, two, i);
+    let g0 = d.apply(g, &[two_i]);
+    let s2i = d.succ(two_i);
+    let g1 = d.apply(g, &[s2i]);
+    let body = cadd(d, p, g0, g1);
+    d.lam_fv(i_fv, nat, body)
+}
+
+/// `Equiv (sumRange g (Nat.mul 2 k)) (sumRange (double_block g) k)` — the
+/// proof term, by induction on `k`.
+///
+/// `Nat.mul`/`Nat.add` are both `define_binary`, recursing on their SECOND
+/// argument, and the literal `2` (`d.num(2)`) is a genuine `succ (succ
+/// zero)` term (`NatOps::num`'s own definition, not an opaque numeral), so
+/// `Nat.mul 2 (Nat.succ j)` reduces by pure defeq (delta+iota, no lemma) to
+/// `Nat.succ (Nat.succ (Nat.mul 2 j))` — unfold `mul` once on `succ j`
+/// (`define_binary`'s step equation) to `Nat.add (Nat.mul 2 j) 2`, then
+/// unfold `add` twice on the literal `2`'s own two `succ`s. `sumRange`'s own
+/// recursion then unfolds `sumRange g (succ (succ (mul 2 j)))` twice against
+/// that same shape, so the only PROOF content needed is one `add_congr`
+/// (lifting the induction hypothesis one `add` level in) and one
+/// `add_assoc` (re-bracketing the trailing pair together) — no rewriting of
+/// the `Nat` indices themselves.
+fn sum_range_double_proof(d: &mut IntDev<'_>, p: CRealPrelude, g: ExprId, k: ExprId) -> ExprId {
+    let grouped = double_block(d, p, g);
+    let two = d.num(2);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let two_x = NatOps::mul(d, two, x);
+        let lhs = d.const_app(p.sum_range, &[g, two_x]);
+        let rhs = d.const_app(p.sum_range, &[grouped, x]);
+        equiv(d, p, lhs, rhs)
+    };
+
+    d.induct(
+        &motive,
+        &|d| {
+            // motive(zero): both sides reduce (defeq) to `CReal.zero`.
+            let zero_c = czero(d, p);
+            d.lemma(p.equiv_refl, &[zero_c])
+        },
+        &|d, j, ih| {
+            // ih : Equiv (sumRange g (mul 2 j)) (sumRange grouped j)
+            // Goal (defeq unfolded): Equiv
+            //   (add (add (sumRange g (mul 2 j)) (g (mul 2 j))) (g (succ (mul 2 j))))
+            //   (add (sumRange grouped j) (add (g (mul 2 j)) (g (succ (mul 2 j)))))
+            let two_j = NatOps::mul(d, two, j);
+            let gj = d.apply(g, &[two_j]);
+            let s2j = d.succ(two_j);
+            let gj1 = d.apply(g, &[s2j]);
+
+            let sum_g_2j = d.const_app(p.sum_range, &[g, two_j]);
+            let sum_grouped_j = d.const_app(p.sum_range, &[grouped, j]);
+
+            // h1 : Equiv (add sum_g_2j gj) (add sum_grouped_j gj)
+            let refl_gj = d.lemma(p.equiv_refl, &[gj]);
+            let h1 = d.lemma(p.add_congr, &[sum_g_2j, sum_grouped_j, gj, gj, ih, refl_gj]);
+
+            // h2 : Equiv (add (add sum_g_2j gj) gj1) (add (add sum_grouped_j gj) gj1)
+            let lhs1 = cadd(d, p, sum_g_2j, gj);
+            let rhs1 = cadd(d, p, sum_grouped_j, gj);
+            let refl_gj1 = d.lemma(p.equiv_refl, &[gj1]);
+            let h2 = d.lemma(p.add_congr, &[lhs1, rhs1, gj1, gj1, h1, refl_gj1]);
+
+            // h3 : Equiv (add (add sum_grouped_j gj) gj1) (add sum_grouped_j (add gj gj1))
+            let h3 = d.lemma(p.add_assoc, &[sum_grouped_j, gj, gj1]);
+
+            let start = cadd(d, p, lhs1, gj1);
+            let lhs2 = cadd(d, p, rhs1, gj1);
+            let rhs2 = {
+                let inner = cadd(d, p, gj, gj1);
+                cadd(d, p, sum_grouped_j, inner)
+            };
+            d.lemma(p.equiv_trans, &[start, lhs2, rhs2, h2, h3])
+        },
+        k,
+    )
+}
+
+/// `CReal.sumRange_double : ∀ g k, Equiv (sumRange g (Nat.mul 2 k))
+/// (sumRange (fun i => add (g (Nat.mul 2 i)) (g (Nat.succ (Nat.mul 2 i))))
+/// k)`. See this section's own module documentation for what this is for
+/// and precisely what is not yet built on top of it.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_sum_range_double(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let proof = sum_range_double_proof(d, p, g, k);
+
+    let ty = {
+        let two = d.num(2);
+        let two_k = NatOps::mul(d, two, k);
+        let lhs = d.const_app(p.sum_range, &[g, two_k]);
+        let grouped = double_block(d, p, g);
+        let rhs = d.const_app(p.sum_range, &[grouped, k]);
+        equiv(d, p, lhs, rhs)
+    };
+    let ty_full = {
+        let over_k = d.pi_fv(k_fv, nat, ty);
+        d.pi_fv(g_fv, fn_ty, over_k)
+    };
+    let value_full = {
+        let over_k = d.lam_fv(k_fv, nat, proof);
+        d.lam_fv(g_fv, fn_ty, over_k)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sum_range_double,
+        uparams: vec![],
+        ty: ty_full,
+        value: value_full,
+    })
+}

@@ -100,14 +100,82 @@
 //! more work than the index-arithmetic difficulty this task was framed
 //! around, and none of the three exists yet in any file this slice may
 //! touch. **This is the precise remaining blocker for `CReal.geom_cauchy`.**
+//!
+//! ## `geom_tail_within_le` and `geom_pair_within`: the index generalization
+//! and the canonical-index normalization, landed without the harmonic bound
+//!
+//! [`declare_geom_tail_within_le`] is stage 2 of `series.rs`'s pipeline
+//! (`_within_le`), reproduced against `geom_tail_within` instead of
+//! `sum_range_tail_within`: `Nat.le_dest` plus `nat_rewrite_prop` lift the
+//! ordered-pair shape `(m, add m n)` to an arbitrary pair `(a, b)`
+//! constrained only by `a ≤ b`. Purely index bookkeeping, no new real-analysis
+//! content.
+//!
+//! [`declare_geom_pair_within`] is the genuinely new piece: the
+//! canonical-index normalization `series.rs` calls stages 5+6
+//! (`_cauchy_dominated_ordered` + `_ordered_normalized`), landed for this
+//! single sequence *without* going through a separately-witnessed `Cauchy`
+//! hypothesis for a comparison sequence `g` — because there is no such `g`
+//! here. It chains four points `Y → X → W → Z` via [`chain_within3`]
+//! (reproduced from `series.rs::dominated_canonical_at`, private there):
+//! `Y := seq (sumRange f b) b`, `X := seq (sumRange f b) (shift b)`,
+//! `W := seq (sumRange f a) (shift b)`, `Z := seq (sumRange f a) a`. The two
+//! outer legs (`Y−X`, `W−Z`) are [`CRealPrelude::regular`] applied to
+//! `sumRange f b` / `sumRange f a` themselves — a fact true of *any* `CReal`,
+//! needing no domination — and the middle leg (`X−W`) is defeq to
+//! [`declare_geom_tail_within_le`]'s own conclusion at `(a, b)`, by the same
+//! ι/β argument `geom_tail_within`'s own doc comment already gives for why no
+//! separate `Eq` lemma is needed to see `seq (add p (neg q)) k` as `seq p
+//! (shift k) − seq q (shift k)`. The result:
+//!
+//! ```text
+//! CReal.geom_pair_within : ∀ x, 0 ≤ x → ∀ k (h : PosBound (1−x) k) a b,
+//!   a ≤ b → Within (seq (sumRange f b) b − seq (sumRange f a) a)
+//!                  ((modulus (shift b) b + (seq Yₐ b + natDivSucc 2 b))
+//!                   + modulus a (shift b))
+//! ```
+//!
+//! **This closes the "ordering split and normalization" gap the geometric
+//! lane's own diagnosis named, for the ordered pair `a ≤ b`.** What it does
+//! *not* do, and why stopping here is deliberate rather than an oversight:
+//!
+//! 1. **The `seq Yₐ b` leaf is still the undischarged sample this module's
+//!    previous section names** — the harmonic-shaped bound on `Yₘ` uniform in
+//!    `m` remains missing, for the same reason (`pow`-vs-`natDivSucc`
+//!    comparison, base comparison, or Bernoulli — none exist yet). This
+//!    theorem does not need any of them; it only needed `geom_tail_within_le`
+//!    and `CReal.regular`, so landing it does not depend on the missing
+//!    piece, but consuming it toward `Cauchy` still does.
+//! 2. **The `Nat.le_total` case split removing the `a ≤ b` hypothesis is left
+//!    unbuilt, deliberately, matching `series.rs`'s own
+//!    `sum_range_cauchy_dominated_ordered_normalized`, whose doc comment
+//!    explicitly defers exactly this split to "whichever piece assembles
+//!    `sum_range_cauchy_of_dominated` next."** Removing it here would need a
+//!    single closed-form bound symmetric in `a`/`b`, and this development has
+//!    no `Nat.max` (`nat_prelude` deliberately uses `add`-based bounds
+//!    instead, per `creal.rs`'s own `has_derivative_add` doc comment) and no
+//!    generic `Within r q → 0 ≤ q` fact to let a `0 ≤ total(other order)`
+//!    weakening substitute for one. Either is buildable, but neither exists
+//!    yet, and a future consumer that already knows which of `m ≤ n` or
+//!    `n ≤ m` holds (e.g. by running the same `Nat.le_total` split itself) can
+//!    call `geom_pair_within` directly at whichever orientation applies,
+//!    exactly the way `dominated_canonical_at`'s own two callers do.
+//! 3. Leaf-fusion/widening (collapsing the five-leaf bound above into a
+//!    single `natDivSucc` per side the way
+//!    `sum_range_cauchy_dominated_ordered_normalized` does for the dominated
+//!    case) is cosmetic bookkeeping, not attempted here: it would not change
+//!    what is blocked (the `seq Yₐ b` leaf still would not fuse into a
+//!    `natDivSucc` shape without the harmonic bound), so it was not worth the
+//!    machinery for this slice.
 
-use super::{CRealPrelude, and_intro, creal_ty, div_succ, sample, within};
+use super::{CRealPrelude, and_intro, creal_ty, div_succ, halves, modulus, sample, shift, within};
 use crate::KernelError;
 use crate::env::Declaration;
 use crate::expr::ExprId;
-use crate::int_prelude::ops::IntDev;
+use crate::int_prelude::ops::{IntDev, exists_elim};
 use crate::nat_prelude::NatOps;
-use crate::rat_prelude::ops::{radd, rat_eq_rewrite, rle, rneg};
+use crate::rat_prelude::group::rsub;
+use crate::rat_prelude::ops::{nat_rewrite_prop, radd, rat_eq_rewrite, rle, rneg};
 
 // --- small local term builders, verbatim in shape to every other `creal/*`
 // module's own copies (see e.g. `power.rs`, `cancellation.rs`) -------------
@@ -671,7 +739,318 @@ fn declare_geom_tail_within(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), K
     })
 }
 
-/// Admit `CReal.geom_tail_bounded_div` and `CReal.geom_tail_within`.
+// --- `geom_tail_within_le` ---------------------------------------------------
+
+/// `CReal.geom_tail_within_le`. See the field documentation
+/// ([`super::CRealPrelude::geom_tail_within_le`]) for the statement, and this
+/// module's documentation for what it does and does not close.
+///
+/// Verbatim in *technique* to `series.rs::declare_sum_range_tail_within_le`
+/// (private there, so reproduced rather than imported): `Nat.le_dest a b hle
+/// : Exists (fun kk => Eq (add a kk) b)`, apply [`declare_geom_tail_within`]
+/// at `(a, kk)` to land exactly this theorem's target *shape* but indexed at
+/// `add a kk`, then [`nat_rewrite_prop`] carries every occurrence of that
+/// shared index over to `b` along the witness, and [`exists_elim`]
+/// discharges the existential.
+fn declare_geom_tail_within_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let nat_add = d.prelude().add;
+    let nat_le_dest = d.prelude().le_dest;
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let h0_fv = d.fresh_fvar();
+    let h0 = d.kernel().fvar(h0_fv);
+    let bk_fv = d.fresh_fvar();
+    let bk = d.kernel().fvar(bk_fv);
+
+    let one = d.kernel().const_(p.one, vec![]);
+    let neg_x = cneg(d, p, x);
+    let a_real = cadd(d, p, one, neg_x); // a_real = 1 - x
+    let hyp_pos_bound = pos_bound_of(d, p, a_real, bk);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let hyp0 = {
+        let zero_c = czero(d, p);
+        cle(d, p, zero_c, x)
+    };
+
+    let f = pow_fn(d, p, x);
+    let sum_f_a = d.const_app(p.sum_range, &[f, a]);
+    let neg_sum_f_a = cneg(d, p, sum_f_a);
+    let pow_a = d.const_app(p.pow, &[x, a]);
+    let inv_expr = cinv(d, p, a_real, bk, h);
+    let y_a = cmul(d, p, inv_expr, pow_a);
+
+    // `target_at(idx)`: the claim with the shared index left as `idx`, so it
+    // reads directly off `declare_geom_tail_within`'s own conclusion shape at
+    // `idx := add a kk`, and is this theorem's conclusion at `idx := b`.
+    let target_at = |d: &mut IntDev<'_>, idx: ExprId| -> ExprId {
+        let sum_f_idx = d.const_app(p.sum_range, &[f, idx]);
+        let tail_idx = cadd(d, p, sum_f_idx, neg_sum_f_a);
+        let u = sample(d, p, tail_idx, idx);
+        let v = sample(d, p, y_a, idx);
+        let w = div_succ(d, p, 2, idx);
+        let vw = radd(d, v, w);
+        within(d, p, u, vw)
+    };
+    let target = target_at(d, b);
+
+    let hle_ty = d.le(a, b);
+    let hle_fv = d.fresh_fvar();
+    let hle = d.kernel().fvar(hle_fv);
+
+    // pred := λ kk, Eq Nat (add a kk) b.
+    let pred = {
+        let kk_fv = d.fresh_fvar();
+        let kk = d.kernel().fvar(kk_fv);
+        let sum = d.const_app(nat_add, &[a, kk]);
+        let body = d.eq(sum, b);
+        d.lam_fv(kk_fv, nat, body)
+    };
+
+    let represented = d.const_app(nat_le_dest, &[a, b, hle]);
+
+    let minor = {
+        let kk_fv = d.fresh_fvar();
+        let kk = d.kernel().fvar(kk_fv);
+        let a_plus_kk = d.const_app(nat_add, &[a, kk]);
+        let e_ty = d.eq(a_plus_kk, b);
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+
+        // body_at_akk : target_at(add a kk) -- exactly
+        // `geom_tail_within x h0 bk h a kk`'s own conclusion.
+        let body_at_akk = d.lemma(p.geom_tail_within, &[x, h0, bk, h, a, kk]);
+        let rewritten = nat_rewrite_prop(d, a_plus_kk, b, e, body_at_akk, &|d, t| target_at(d, t));
+
+        let with_e = d.lam_fv(e_fv, e_ty, rewritten);
+        d.lam_fv(kk_fv, nat, with_e)
+    };
+
+    let proof_body = exists_elim(d, pred, target, represented, minor);
+
+    let ty = {
+        let after_hle = d.arrow(hle_ty, target);
+        let over_b = d.pi_fv(b_fv, nat, after_hle);
+        let over_a = d.pi_fv(a_fv, nat, over_b);
+        // `h_fv` escapes into `over_a` through `y_a` (via `inv_expr`), so this
+        // Pi must be genuinely dependent (`pi_fv`), not `d.arrow` -- the same
+        // trap `geom_tail_bounded_div`'s own `ty` names.
+        let with_h = d.pi_fv(h_fv, hyp_pos_bound, over_a);
+        let with_bk = d.pi_fv(bk_fv, nat, with_h);
+        let with_h0 = d.arrow(hyp0, with_bk);
+        d.pi_fv(x_fv, carrier, with_h0)
+    };
+    let value = {
+        let with_hle = d.lam_fv(hle_fv, hle_ty, proof_body);
+        let over_b = d.lam_fv(b_fv, nat, with_hle);
+        let over_a = d.lam_fv(a_fv, nat, over_b);
+        let with_h = d.lam_fv(h_fv, hyp_pos_bound, over_a);
+        let with_bk = d.lam_fv(bk_fv, nat, with_h);
+        let with_h0 = d.lam_fv(h0_fv, hyp0, with_bk);
+        d.lam_fv(x_fv, carrier, with_h0)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.geom_tail_within_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- `geom_pair_within` ------------------------------------------------------
+
+/// From `Within (a-b) q`, derive `Within (b-a) q` via `Rat.neg_sub` and
+/// `Rat.bounds_neg`. Verbatim copy of `series.rs::within_symm` (private
+/// there): the generic "swap the two sides of a `Within` difference" helper.
+fn within_symm(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    q: ExprId,
+    pab: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let ab = rsub(d, rat, a, b);
+    let (lower, upper) = halves(d, p, ab, q, pab);
+    let neg_within = d.lemma(rat.bounds_neg, &[ab, q, lower, upper]);
+    let neg_ab = rneg(d, ab);
+    let ba = rsub(d, rat, b, a);
+    let eq = d.lemma(rat.neg_sub, &[a, b]);
+    rat_eq_rewrite(d, neg_ab, ba, eq, neg_within, &|d, t| within(d, p, t, q))
+}
+
+/// From `Within (x−y) bxy`, `Within (y−z) byz`, `Within (z−w) bzw`, derive
+/// `Within (x−w) ((bxy+byz)+bzw)`. Verbatim copy of `series.rs::chain_within3`
+/// (private there): two applications of `Rat.sub_add_sub`.
+#[allow(clippy::too_many_arguments)]
+fn chain_within3(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    z: ExprId,
+    w: ExprId,
+    bxy: ExprId,
+    byz: ExprId,
+    bzw: ExprId,
+    pxy: ExprId,
+    pyz: ExprId,
+    pzw: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+
+    // (x-y)+(y-z) ~ x-z, bound bxy+byz.
+    let xy = rsub(d, rat, x, y);
+    let yz = rsub(d, rat, y, z);
+    let (lxy, rxy) = halves(d, p, xy, bxy, pxy);
+    let (lyz, ryz) = halves(d, p, yz, byz, pyz);
+    let combined1 = d.lemma(rat.bounds_add, &[xy, bxy, yz, byz, lxy, rxy, lyz, ryz]);
+    let xy_plus_yz = radd(d, xy, yz);
+    let xz = rsub(d, rat, x, z);
+    let fuse1 = d.lemma(rat.sub_add_sub, &[x, y, z]); // Eq ((x-y)+(y-z)) (x-z)
+    let bound1 = radd(d, bxy, byz);
+    let at_xz = rat_eq_rewrite(d, xy_plus_yz, xz, fuse1, combined1, &|d, t| {
+        within(d, p, t, bound1)
+    });
+
+    // (x-z)+(z-w) ~ x-w, bound (bxy+byz)+bzw.
+    let (lxz, rxz) = halves(d, p, xz, bound1, at_xz);
+    let zw = rsub(d, rat, z, w);
+    let (lzw, rzw) = halves(d, p, zw, bzw, pzw);
+    let combined2 = d.lemma(rat.bounds_add, &[xz, bound1, zw, bzw, lxz, rxz, lzw, rzw]);
+    let xz_plus_zw = radd(d, xz, zw);
+    let xw = rsub(d, rat, x, w);
+    let fuse2 = d.lemma(rat.sub_add_sub, &[x, z, w]); // Eq ((x-z)+(z-w)) (x-w)
+    let bound2 = radd(d, bound1, bzw);
+    rat_eq_rewrite(d, xz_plus_zw, xw, fuse2, combined2, &|d, t| {
+        within(d, p, t, bound2)
+    })
+}
+
+/// `CReal.geom_pair_within`. See the field documentation
+/// ([`super::CRealPrelude::geom_pair_within`]) and this module's own
+/// documentation for exactly what this theorem does and does not close.
+///
+/// Chains four points `Y → X → W → Z` via [`chain_within3`], mirroring
+/// `series.rs::dominated_canonical_at`'s own construction (private there) —
+/// **except** the middle leg (`X − W`, defeq to
+/// [`declare_geom_tail_within_le`]'s own conclusion at `(a, b)`, by the same
+/// ι/β argument that theorem's own doc comment gives for
+/// `geom_tail_within`) needs no separately-witnessed `Cauchy` hypothesis,
+/// and the two outer legs are [`CRealPrelude::regular`] applied directly to
+/// `sumRange f b` / `sumRange f a` themselves (true of any `CReal`, no
+/// domination needed).
+fn declare_geom_pair_within(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let h0_fv = d.fresh_fvar();
+    let h0 = d.kernel().fvar(h0_fv);
+    let bk_fv = d.fresh_fvar();
+    let bk = d.kernel().fvar(bk_fv);
+
+    let one = d.kernel().const_(p.one, vec![]);
+    let neg_x = cneg(d, p, x);
+    let a_real = cadd(d, p, one, neg_x); // a_real = 1 - x
+    let hyp_pos_bound = pos_bound_of(d, p, a_real, bk);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let hyp0 = {
+        let zero_c = czero(d, p);
+        cle(d, p, zero_c, x)
+    };
+    let hle_ty = d.le(a, b);
+    let hle_fv = d.fresh_fvar();
+    let hle = d.kernel().fvar(hle_fv);
+
+    let f = pow_fn(d, p, x);
+    let sum_f_b = d.const_app(p.sum_range, &[f, b]);
+    let sum_f_a = d.const_app(p.sum_range, &[f, a]);
+    let t = shift(d, b);
+
+    let y_pt = sample(d, p, sum_f_b, b);
+    let x_pt = sample(d, p, sum_f_b, t);
+    let w_pt = sample(d, p, sum_f_a, t);
+    let z_pt = sample(d, p, sum_f_a, a);
+
+    // tail_le : Within (seq (add (sumRange f b) (neg (sumRange f a))) b)
+    //                  (v+w) -- defeq to Within (x_pt - w_pt) (v+w).
+    let tail_le = d.lemma(p.geom_tail_within_le, &[x, h0, bk, h, a, b, hle]);
+
+    let bxy = modulus(d, p, t, b);
+    let bzw = modulus(d, p, a, t);
+    let pow_a = d.const_app(p.pow, &[x, a]);
+    let inv_expr = cinv(d, p, a_real, bk, h);
+    let y_a = cmul(d, p, inv_expr, pow_a);
+    let v = sample(d, p, y_a, b);
+    let w = div_succ(d, p, 2, b);
+    let byz = radd(d, v, w);
+
+    // p_yx : Within (y_pt - x_pt) bxy, from CReal.regular reversed.
+    let reg1 = d.lemma(p.regular, &[sum_f_b, t, b]);
+    let p_yx = within_symm(d, p, x_pt, y_pt, bxy, reg1);
+
+    // p_wz : Within (w_pt - z_pt) bzw, from CReal.regular reversed.
+    let reg2 = d.lemma(p.regular, &[sum_f_a, a, t]);
+    let p_wz = within_symm(d, p, z_pt, w_pt, bzw, reg2);
+
+    let value_body = chain_within3(
+        d, p, y_pt, x_pt, w_pt, z_pt, bxy, byz, bzw, p_yx, tail_le, p_wz,
+    );
+
+    let bxy_byz = radd(d, bxy, byz);
+    let total = radd(d, bxy_byz, bzw);
+    let diff = rsub(d, p.rat, y_pt, z_pt);
+
+    let ty = {
+        let claim = within(d, p, diff, total);
+        let after_hle = d.arrow(hle_ty, claim);
+        let over_b = d.pi_fv(b_fv, nat, after_hle);
+        let over_a = d.pi_fv(a_fv, nat, over_b);
+        // `h_fv` escapes into `over_a` through `y_a`/`inv_expr`, so this Pi
+        // must be genuinely dependent (`pi_fv`), not `d.arrow`.
+        let with_h = d.pi_fv(h_fv, hyp_pos_bound, over_a);
+        let with_bk = d.pi_fv(bk_fv, nat, with_h);
+        let with_h0 = d.arrow(hyp0, with_bk);
+        d.pi_fv(x_fv, carrier, with_h0)
+    };
+    let value = {
+        let with_hle = d.lam_fv(hle_fv, hle_ty, value_body);
+        let over_b = d.lam_fv(b_fv, nat, with_hle);
+        let over_a = d.lam_fv(a_fv, nat, over_b);
+        let with_h = d.lam_fv(h_fv, hyp_pos_bound, over_a);
+        let with_bk = d.lam_fv(bk_fv, nat, with_h);
+        let with_h0 = d.lam_fv(h0_fv, hyp0, with_bk);
+        d.lam_fv(x_fv, carrier, with_h0)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.geom_pair_within,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Admit `CReal.geom_tail_bounded_div`, `CReal.geom_tail_within`,
+/// `CReal.geom_tail_within_le`, and `CReal.geom_pair_within`.
 ///
 /// # Errors
 ///
@@ -679,5 +1058,7 @@ fn declare_geom_tail_within(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), K
 /// **refused** a proof, not that a script gave up.
 pub(super) fn declare_geometric(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
     declare_geom_tail_bounded_div(d, p)?;
-    declare_geom_tail_within(d, p)
+    declare_geom_tail_within(d, p)?;
+    declare_geom_tail_within_le(d, p)?;
+    declare_geom_pair_within(d, p)
 }

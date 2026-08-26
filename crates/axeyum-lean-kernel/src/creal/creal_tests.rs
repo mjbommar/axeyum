@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 234] = [
+    let expected: [(&str, crate::NameId, &str); 237] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -411,6 +411,12 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ),
         ("CReal.geom_tail_within", p.geom_tail_within, "theorem"),
         (
+            "CReal.geom_tail_within_le",
+            p.geom_tail_within_le,
+            "theorem",
+        ),
+        ("CReal.geom_pair_within", p.geom_pair_within, "theorem"),
+        (
             "CReal.one_le_pow_of_one_le",
             p.one_le_pow_of_one_le,
             "theorem",
@@ -508,6 +514,13 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         // itself is not built yet -- see that file's module documentation.
         ("CReal.expTerm", p.exp_term, "def"),
         ("CReal.expSeriesPartial", p.exp_series_partial, "def"),
+        // `CReal.sumRange_double` (creal/integral.rs), registered right
+        // after `integral::declare_integral`: grouping `2k` terms of an
+        // arbitrary `g` into `k` consecutive pairs, exactly. A building
+        // block toward `riemannSum_cauchy`'s doubling-refinement estimate,
+        // not that estimate itself -- see that file's own module
+        // documentation for what still separates the two.
+        ("CReal.sumRange_double", p.sum_range_double, "theorem"),
         // `CReal.monotone_of_nonneg_deriv` and its three supporting lemmas
         // (`creal/monotone.rs`), registered from the pipeline AFTER
         // `integral::declare_integral` (they reuse `CReal.ofNat_le`).
