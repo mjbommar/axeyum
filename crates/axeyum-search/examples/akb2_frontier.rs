@@ -57,7 +57,8 @@
 )]
 
 use std::env;
-use std::fs;
+use std::fs::{self, File};
+use std::io::BufReader;
 use std::path::PathBuf;
 use std::process::ExitCode;
 use std::time::{Duration, Instant};
@@ -65,8 +66,9 @@ use std::time::{Duration, Instant};
 #[cfg(unix)]
 use axeyum_cnf::CacheDroppingWriter;
 use axeyum_cnf::{
-    SatResult, StreamingProofOutcome, TextProofSink, check_drat_backward, parse_drat,
-    solve_with_drat_proof_streaming, solve_with_rustsat_batsat_timeout,
+    SatResult, StreamingProofOutcome, TextProofSink, check_drat_backward,
+    check_drat_backward_reader, parse_drat, solve_with_drat_proof_streaming,
+    solve_with_rustsat_batsat_timeout,
 };
 use axeyum_search::{
     ColouringFamily, MinConflictsOptions, Rado, Witness, cover, harness, min_conflicts,
@@ -229,30 +231,24 @@ fn main() -> ExitCode {
                 formula.variable_count(),
                 formula.clauses().len()
             );
+            // The backward checker must retain a reverse clause plan, but it
+            // does not need a second, fully parsed step vector. This matters
+            // for frontier proofs measured in gigabytes.
+            let file = File::open(&in_drat).expect("open drat");
             let t0 = Instant::now();
-            let text = fs::read_to_string(&in_drat).expect("read drat");
-            let proof = match parse_drat(&text) {
-                Ok(p) => p,
-                Err(e) => {
-                    println!("{{\"status\":\"parse-failed\",\"error\":\"{e:?}\"}}");
-                    return ExitCode::from(3);
-                }
-            };
-            let parse_s = t0.elapsed().as_secs_f64();
-            drop(text);
-            let t1 = Instant::now();
-            let verified = check_drat_backward(&formula, &proof).expect("check");
-            let check_s = t1.elapsed().as_secs_f64();
+            let verified =
+                check_drat_backward_reader(&formula, BufReader::with_capacity(1 << 20, file))
+                    .expect("check");
+            let check_s = t0.elapsed().as_secs_f64();
             println!(
                 "{{\"status\":\"{}\",\"mode\":\"check\",\"a\":{a},\"b\":{b},\"k\":{k},\"n\":{n},\
-                 \"steps\":{},\"drat_bytes\":{bytes},\"parse_s\":{parse_s:.3},\
+                 \"route\":\"file-backed-backward\",\"drat_bytes\":{bytes},\
                  \"check_s\":{check_s:.3}}}",
                 if verified {
                     "verified-unsat"
                 } else {
                     "check-failed"
                 },
-                proof.len(),
             );
             if verified {
                 ExitCode::SUCCESS

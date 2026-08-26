@@ -1468,6 +1468,15 @@ contextual energetic-unit layer; certified edge-finding/not-first/not-last expla
 branch composition are the next materially different lower-bound routes. All seven sustained
 DRCP/DRAT producers remain live.
 
+**Rado frontier file-backed proof consumption, 2026-08-26.** The exact
+`R_5(3(x-y)=2z)@351` producer is still live and its multi-gigabyte DRAT prefix carries no
+credit. Before completion, the independent `akb2_frontier check` path was changed from holding
+both the complete proof text and a parsed step vector to Axeyum's existing file-backed backward
+checker, which retains only the reverse clause plan required by the algorithm. The settled
+`R_3(x-y=z)=14` control regenerated a 25-step / 263-byte proof and the changed command accepted
+it from disk with `route=file-backed-backward`; all-target/all-feature Clippy and
+warning-denied Rustdoc pass. This is checker-readiness, not a result at 351.
+
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
 external-certificate replay runner for all five packages.  It validates checker and artifact
 bytes before execution, hard-kills a timed-out process session, requires an observable finding
