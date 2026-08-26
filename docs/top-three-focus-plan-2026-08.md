@@ -251,6 +251,15 @@ contract-demand graph, connect existing axiom-free behavior theorems and
 receipts, then rerun one unchanged producer across the largest supported
 sibling family.
 
+That exact demand graph now exists. It finds no durable checked contract
+receipt, and exact axiom-free theorem connectivity for only two of 14 source
+identities. `Nat.testBit` ranks first: four affected siblings and five exact
+kernel candidates. `Int.gcd` has six candidates but only one target; the other
+twelve identities first need behavior-theorem construction or exact graph
+links. Next: build the smallest shared `Nat.testBit` contract family, discharge
+its source witnesses independently, and require at least three sibling
+conversions before considering operation authority.
+
 ## Comparative position
 
 Axeyum should not be described as a replacement for any one neighboring
