@@ -1,0 +1,66 @@
+{
+  "authority": "reconstruction planning only; no proof authority, no theorem admission, no operation equivalence, no transport authority, and no fact-transition authority",
+  "candidate": {
+    "alpha_type_expression_sha256": "9b0cf9b6b6b581e5520a76f39d748eab8478da3565863efeee41bff41146b77e",
+    "name": "Nat.testBit_bitwise"
+  },
+  "countermodel_exclusion": {
+    "excluded_by_law": "testBit_succ",
+    "i": 0,
+    "law_lhs": false,
+    "law_rhs": true,
+    "n": 2,
+    "testBit": "is_one"
+  },
+  "kind": "axeyum-autogenesis-semantic-law-demand",
+  "laws": [
+    {
+      "availability": "imported-candidate-dependency-assumption-bearing",
+      "name": "testBit_zero_value",
+      "statement": "forall i, testBit 0 i = false",
+      "source_declaration": "Nat.zero_testBit"
+    },
+    {
+      "availability": "imported-candidate-dependency-assumption-bearing",
+      "name": "testBit_low",
+      "statement": "forall n, testBit n 0 = decide (n % 2 = 1)",
+      "source_declaration": "Nat.testBit_zero"
+    },
+    {
+      "availability": "imported-candidate-dependency-assumption-bearing",
+      "name": "testBit_succ",
+      "statement": "forall n i, testBit n (i + 1) = testBit (n / 2) i",
+      "source_declaration": "Nat.testBit_add_one"
+    },
+    {
+      "availability": "transparent-definition-needs-clean-reconstruction",
+      "name": "bitwise_equation",
+      "statement": "the zero-left, zero-right, and nonzero recursive branches of Nat.bitwise",
+      "source_declaration": "Nat.bitwise"
+    },
+    {
+      "availability": "imported-candidate-dependency-assumption-bearing",
+      "name": "double_add_div",
+      "statement": "the Nat.mul_add_div arithmetic step used by the successor branch",
+      "source_declaration": "Nat.mul_add_div"
+    }
+  ],
+  "operations": [
+    {
+      "content_sha256": "38cd05001a9d7f264cd50692ba43718c4913c3ec80243776fe919cb5c79d91ac",
+      "name": "Nat.bitwise"
+    },
+    {
+      "content_sha256": "f1ff827b59c6a6afbd90487eb8e27aa815bff840aa045de020e69cff9f34d794",
+      "name": "Nat.testBit"
+    }
+  ],
+  "schema_version": 1,
+  "source": {
+    "lean_commit": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "proof_file": "src/Init/Data/Nat/Bitwise/Lemmas.lean",
+    "proof_file_sha256": "fcf68b0ffe341344632929da5b4322e7303ce581125e3935ed92fe0f276a261c",
+    "proof_lines": [401, 424]
+  },
+  "state": "law-interface-required-before-reconstruction"
+}

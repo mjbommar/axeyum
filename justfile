@@ -583,6 +583,10 @@ autogenesis-imported-testbit-bitwise-statement source="/nas3/data/axeyum/autogen
     cargo run -q -p axeyum-lean-import --example statement_adapter_import -- "{{ output }}" Axeyum.Autogenesis.ImportedCandidateGoal
     python3 scripts/check-autogenesis-imported-testbit-bitwise-candidate.py --verify-external
 
+autogenesis-bitwise-semantic-law-demand:
+    uv run --no-sync python -m unittest scripts.tests.test_check_autogenesis_bitwise_semantic_law_demand
+    python3 scripts/check-autogenesis-bitwise-semantic-law-demand.py
+
 autogenesis-non-equality-terminal-census:
     uv run --no-sync python -m unittest scripts.tests.test_measure_autogenesis_open_fixed_palette scripts.tests.test_gen_autogenesis_non_equality_population
     python3 scripts/gen-autogenesis-non-equality-population.py --check

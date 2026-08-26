@@ -455,6 +455,10 @@ were unconstrained, so the proposition is false despite its empty footprint. A
 committed finite countermodel now makes that diagnostic capsule
 execution-ineligible. The next target must carry checked bitwise/test-bit laws;
 importability and footprint alone are insufficient dispatch criteria.
+The follow-on demand artifact now binds five semantic laws to the exact
+candidate and operation identities and verifies that `testBit_succ` excludes
+the committed countermodel. This converts the vague reconstruction request into
+a typed, ordered leaf backlog without granting proof or execution authority.
 
 ### Exit evidence
 

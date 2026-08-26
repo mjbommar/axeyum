@@ -318,6 +318,11 @@ operation parameters admit a concrete `false = true` countermodel. The capsule
 is now explicitly execution-ineligible, and the checker fails closed unless the
 countermodel remains valid. Next: construct and check a law-bearing semantic
 interface before reconstruction dispatch.
+The replacement demand is now machine-readable: five law obligations join the
+exact candidate type to the two exact implementation-graph definition hashes,
+and a checked successor-bit witness proves the interface excludes the earlier
+countermodel. All imported supports remain labeled assumption-bearing; next is
+clean reconstruction of the law leaves, beginning with `testBit_succ`.
 
 <!-- plan-section: landed-changes -->
 

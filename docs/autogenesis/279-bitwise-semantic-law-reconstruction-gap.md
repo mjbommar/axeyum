@@ -28,3 +28,16 @@ only those equations, independently import it, and prove that its hypotheses
 exclude the committed countermodel. Only then may reconstruction run. The
 original imported proof remains candidate metadata and must never be copied
 into the executable capsule.
+
+The first machine-readable demand is
+[`bitwise-semantic-law-demand-v1.json`](../../artifacts/autogenesis/bitwise-semantic-law-demand-v1.json).
+It binds the exact `Nat.testBit` and `Nat.bitwise` content identities from the
+implementation graph, the candidate's alpha-stable type identity, five required
+laws, and the pinned Lean source revision. Its checker also evaluates the
+`testBit_succ` witness at `n = 2, i = 0`, proving that the required interface
+excludes the previously admitted countermodel. The artifact remains
+`reconstruction_eligible = false` until those laws have independently checked
+evidence rather than assumption-bearing imported dependencies.
+
+Run `just autogenesis-bitwise-semantic-law-demand` to validate the join and its
+negative controls.
