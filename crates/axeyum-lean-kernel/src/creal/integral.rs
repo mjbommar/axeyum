@@ -843,6 +843,55 @@ fn add_sub_cancel(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> 
     )
 }
 
+/// `Equiv (add x (neg (add x (neg y)))) y` — `x − (x − y) ~ y`, the mirror
+/// cancellation [`declare_two_sided_of_abs_sub_le`]'s second (`neg_le_abs`)
+/// branch needs. Derived from [`add_sub_cancel`]`(y, x) : Equiv (add y diff)
+/// x` (`diff := add x (neg y)`) by adding `neg diff` to BOTH sides of that
+/// equation and simplifying the left with `add_assoc`/`add_neg`/`add_zero` —
+/// `diff` itself is never unfolded, so this needs no `neg`-distributes-over-
+/// `add` law.
+fn diff_cancel_left(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
+    let ny = cneg(d, p, y);
+    let diff = cadd(d, p, x, ny); // x + (-y)
+    let ndiff = cneg(d, p, diff);
+
+    let cancel_yx = add_sub_cancel(d, p, y, x); // Equiv (add y diff) x
+    let y_diff = cadd(d, p, y, diff);
+    let start = cadd(d, p, y_diff, ndiff); // (y + diff) + (-diff)
+    let target = cadd(d, p, x, ndiff); // x + (-diff)
+
+    let h1 = {
+        // Equiv start target, by congr-ing `cancel_yx` into the left slot.
+        let refl_ndiff = d.lemma(p.equiv_refl, &[ndiff]);
+        d.lemma(
+            p.add_congr,
+            &[y_diff, x, ndiff, ndiff, cancel_yx, refl_ndiff],
+        )
+    };
+
+    let diff_ndiff = cadd(d, p, diff, ndiff); // diff + (-diff)
+    let s1 = cadd(d, p, y, diff_ndiff); // y + (diff + (-diff))
+    let h_assoc = d.lemma(p.add_assoc, &[y, diff, ndiff]); // Equiv start s1
+
+    let zero_c = czero(d, p);
+    let s2 = cadd(d, p, y, zero_c); // y + zero
+    let h_s1_s2 = {
+        let hn = d.lemma(p.add_neg, &[diff]); // Equiv (add diff ndiff) zero
+        let refl_y = d.lemma(p.equiv_refl, &[y]);
+        d.lemma(p.add_congr, &[y, y, diff_ndiff, zero_c, refl_y, hn])
+    };
+
+    let h_s2_y = d.lemma(p.add_zero, &[y]); // Equiv s2 y
+
+    let start_eq_y = echain(d, p, start, &[(s1, h_assoc), (s2, h_s1_s2), (y, h_s2_y)]);
+    // start_eq_y : Equiv start y
+
+    let symm_h1 = d.lemma(p.equiv_symm, &[start, target, h1]); // Equiv target start
+
+    echain(d, p, target, &[(start, symm_h1), (y, start_eq_y)])
+    // : Equiv target y
+}
+
 /// `Equiv (mul (ofNat (Nat.succ m)) (mul width frac)) width`, where `frac :=
 /// embed (Rat.natDivSucc 1 m)` — `n · Δ ~ (b − a)` when `Δ := width · frac`,
 /// exactly (no error term), for every `m`. The width-only case of
@@ -2103,6 +2152,98 @@ pub(super) fn declare_le_add_of_abs_sub_le(
 
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.le_add_of_abs_sub_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.two_sided_of_abs_sub_le : ∀ x y : CReal, ∀ q : Rat, le (abs (add x
+/// (neg y))) (ofRat q) → And (le x (add y (ofRat q))) (le y (add x (ofRat
+/// q)))` — the full abs-splitting lemma the per-block Riemann sum fold's TWO
+/// applications of `sumRange_le` (upper and lower) both need from a single
+/// `close_within` fact, rather than calling [`declare_le_add_of_abs_sub_le`]
+/// twice at swapped arguments (which would need the DIFFERENT hypothesis
+/// `le (abs (add y (neg x))) (ofRat q)`, not what a `close_within x y q`
+/// fact actually gives).
+///
+/// The first conjunct reuses [`CRealPrelude::le_add_of_abs_sub_le`] verbatim.
+/// The second mirrors its route with `neg_le_abs` in place of `le_abs_self`
+/// (`le (neg diff) (abs diff)` rather than `le diff (abs diff)`) and
+/// [`diff_cancel_left`] in place of [`add_sub_cancel`] for the
+/// add-rearrangement step.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_two_sided_of_abs_sub_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let rat_carrier = rat_ty(d);
+    let logic = p.rat.int.logic;
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+
+    let ny = cneg(d, p, y);
+    let diff = cadd(d, p, x, ny); // x + (-y)
+    let ndiff = cneg(d, p, diff);
+    let abs_diff = d.const_app(p.abs, &[diff]);
+    let q_embed = embed(d, p, q);
+    let hyp_ty = cle(d, p, abs_diff, q_embed);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let yq = cadd(d, p, y, q_embed);
+    let xq = cadd(d, p, x, q_embed);
+
+    // left : le x yq, by the already-declared theorem.
+    let left = d.lemma(p.le_add_of_abs_sub_le, &[x, y, q, h]);
+
+    // right : le y xq, the mirror via neg_le_abs.
+    let right = {
+        let neg_self_le = d.lemma(p.neg_le_abs, &[diff]); // le ndiff abs_diff
+        let negd_le_q = d.lemma(p.le_trans, &[ndiff, abs_diff, q_embed, neg_self_le, h]);
+        // negd_le_q : le ndiff q_embed
+
+        let refl_x = d.lemma(p.le_refl, &[x]);
+        let grown = d.lemma(p.add_le_add, &[x, x, ndiff, q_embed, refl_x, negd_le_q]);
+        // grown : le (add x ndiff) xq
+
+        let cancel = diff_cancel_left(d, p, x, y); // Equiv (add x ndiff) y
+        let refl_xq = d.lemma(p.equiv_refl, &[xq]);
+        let x_ndiff = cadd(d, p, x, ndiff);
+        d.lemma(p.le_congr, &[x_ndiff, y, xq, xq, cancel, refl_xq, grown])
+        // : le y xq
+    };
+
+    let left_ty = cle(d, p, x, yq);
+    let right_ty = cle(d, p, y, xq);
+    let conclusion_proof = and_intro(d, p, left_ty, right_ty, left, right);
+
+    let ty = {
+        let and_ty = d.const_app(logic.and, &[left_ty, right_ty]);
+        let after_h = d.arrow(hyp_ty, and_ty);
+        let over_q = d.pi_fv(q_fv, rat_carrier, after_h);
+        let over_y = d.pi_fv(y_fv, carrier, over_q);
+        d.pi_fv(x_fv, carrier, over_y)
+    };
+    let value = {
+        let with_h = d.lam_fv(h_fv, hyp_ty, conclusion_proof);
+        let over_q = d.lam_fv(q_fv, rat_carrier, with_h);
+        let over_y = d.lam_fv(y_fv, carrier, over_q);
+        d.lam_fv(x_fv, carrier, over_y)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.two_sided_of_abs_sub_le,
         uparams: vec![],
         ty,
         value,
@@ -3736,6 +3877,74 @@ mod le_add_of_abs_sub_le_tests {
             result.is_ok(),
             "le_add_of_abs_sub_le must apply at (3, 2, 1) with the expected \
              conclusion type: {:?}",
+            result.err()
+        );
+    }
+}
+
+#[cfg(test)]
+mod two_sided_of_abs_sub_le_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// The mandatory concrete instantiation, same triple as
+    /// `le_add_of_abs_sub_le_applies_at_three_two_and_one`: `x := 3`,
+    /// `y := 2`, `q := 1`, expecting `And (le 3 (2+1)) (le 2 (3+1))` --
+    /// both conjuncts tight (`3 ≤ 3`, and `2 ≤ 4` slack), independently
+    /// reconstructed so a swapped conjunct, or a conclusion built from the
+    /// wrong endpoint, fails to match.
+    #[test]
+    fn two_sided_of_abs_sub_le_applies_at_three_two_and_one() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let logic = p.rat.int.logic;
+
+        let three = d.num(3);
+        let two = d.num(2);
+        let x = d.const_app(p.of_nat, &[three]);
+        let y = d.const_app(p.of_nat, &[two]);
+
+        let one_nat = d.num(1);
+        let zero_nat = d.num(0);
+        let q = d.const_app(p.rat.nat_div_succ, &[one_nat, zero_nat]); // 1/(0+1) = 1
+
+        let ny = cneg(&mut d, p, y);
+        let diff = cadd(&mut d, p, x, ny);
+        let abs_diff = d.const_app(p.abs, &[diff]);
+        let q_embed = embed(&mut d, p, q);
+        let hyp_ty = cle(&mut d, p, abs_diff, q_embed);
+
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        let applied = d.const_app(p.two_sided_of_abs_sub_le, &[x, y, q, h]);
+
+        // Independently reconstruct: And (le x (add y q_embed)) (le y (add x
+        // q_embed)), i.e. `And (3 ≤ 2 + 1) (2 ≤ 3 + 1)`.
+        let yq = cadd(&mut d, p, y, q_embed);
+        let xq = cadd(&mut d, p, x, q_embed);
+        let left_ty = cle(&mut d, p, x, yq);
+        let right_ty = cle(&mut d, p, y, xq);
+        let expected = d.const_app(logic.and, &[left_ty, right_ty]);
+
+        let ty = d.arrow(hyp_ty, expected);
+        let value = d.lam_fv(h_fv, hyp_ty, applied);
+
+        let anon = d.kernel().anon();
+        let name = d
+            .kernel()
+            .name_str(anon, "twoSidedOfAbsSubLeThreeTwoOneSmoke");
+        let result = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(
+            result.is_ok(),
+            "two_sided_of_abs_sub_le must apply at (3, 2, 1) with the \
+             expected conclusion type: {:?}",
             result.err()
         );
     }

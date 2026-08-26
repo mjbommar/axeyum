@@ -72,7 +72,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 271] = [
+    let expected: [(&str, crate::NameId, &str); 272] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -571,6 +571,16 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         (
             "CReal.le_add_of_abs_sub_le",
             p.le_add_of_abs_sub_le,
+            "theorem",
+        ),
+        // The full abs-splitting lemma (`creal/integral.rs`) the per-block
+        // fold's two applications of `sumRange_le` (upper and lower) both
+        // need from a single `close_within` fact: the first conjunct reuses
+        // `le_add_of_abs_sub_le` verbatim, the second mirrors its route with
+        // `neg_le_abs` in place of `le_abs_self`.
+        (
+            "CReal.two_sided_of_abs_sub_le",
+            p.two_sided_of_abs_sub_le,
             "theorem",
         ),
         // The continuity-from-differentiability bridge (creal/monotone.rs),

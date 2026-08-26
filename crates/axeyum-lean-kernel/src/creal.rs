@@ -2248,6 +2248,14 @@ pub struct CRealPrelude {
     /// consumes. Via `le_abs_self`, `le_trans`, `add_le_add`, and the
     /// add-rearrangement identity that folds `y + (x + (-y))` back to `x`.
     pub le_add_of_abs_sub_le: NameId,
+    /// `CReal.two_sided_of_abs_sub_le : ∀ x y : CReal, ∀ q : Rat, le (abs
+    /// (add x (neg y))) (ofRat q) → And (le x (add y (ofRat q))) (le y (add
+    /// x (ofRat q)))` (`creal/integral.rs`) — the full abs-splitting lemma
+    /// the per-block Riemann sum fold's two applications of `sumRange_le`
+    /// (upper and lower) both need from a single `close_within` fact. The
+    /// first conjunct reuses [`Self::le_add_of_abs_sub_le`] verbatim; the
+    /// second mirrors its route with `neg_le_abs` in place of `le_abs_self`.
+    pub two_sided_of_abs_sub_le: NameId,
     /// `CReal.hasDerivative_closeOfEquiv : ∀ F F' a b, HasDerivativeOn F F' a b →
     /// ∀ u v, le a u → le u b → le a v → le v b → Equiv u v → Equiv (F u) (F v)`
     /// — differentiability implies (local) continuity: two `Equiv`-related
@@ -2945,6 +2953,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sum_range_reblock: kernel.name_str(creal, "sumRange_reblock"),
         within_of_two_sided_le: kernel.name_str(creal, "within_of_two_sided_le"),
         le_add_of_abs_sub_le: kernel.name_str(creal, "le_add_of_abs_sub_le"),
+        two_sided_of_abs_sub_le: kernel.name_str(creal, "two_sided_of_abs_sub_le"),
         has_derivative_close_of_equiv: kernel.name_str(creal, "hasDerivative_closeOfEquiv"),
         exp_term: kernel.name_str(creal, "expTerm"),
         exp_series_partial: kernel.name_str(creal, "expSeriesPartial"),
@@ -3106,6 +3115,12 @@ pub(crate) fn build_creal_prelude_uncached(
         // reusable building block as `sumRange_reblock`/
         // `within_of_two_sided_le` just above.
         integral::declare_le_add_of_abs_sub_le(&mut d, prelude)?;
+        // `two_sided_of_abs_sub_le` needs `le_add_of_abs_sub_le` (just above)
+        // for its first conjunct plus `neg_le_abs`/`le_trans`/`add_le_add`
+        // (all far above) and this file's own private `diff_cancel_left` for
+        // the mirror; same standalone-building-block placement as its own
+        // dependency.
+        integral::declare_two_sided_of_abs_sub_le(&mut d, prelude)?;
         // `ofNat_add`/`ofNat_mul` only need `CReal.ofNat`
         // (`archimedean::declare_archimedean`, well above) and the `Rat`-level
         // `ofRat_add`/`ofRat_mul`/`natDivSucc_add`/`natDivSucc_mul` facts that
