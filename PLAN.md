@@ -1108,20 +1108,13 @@ top-three-focus, 2026-08-25). The durable plan is
 the full lane history is in
 [`../notes/126-top-three-focus.md`](docs/plan/notes/126-top-three-focus.md).
 
-Current boundary: durable scheduling admitted three Nat ModEq facts through an
-unchanged reusable producer (multi-target credit 8 → 11). The connected graph
-then retrieved `Nat.fib_le_succ`; a checked, axiom-free
-`Nat.monotone_of_le_succ` combinator composes it into `Nat.fib_mono`, settling
-the corresponding fact with real kernel-observed dependencies. This is genuine
-library compounding but remains correctly classified as `no_operation` because
-the reference constructor was hand-authored. Exact evidence identity now links
-395 kernel theorems to 390 facts, with only four evidence identities left
-explicitly unresolved: three are descriptive IDs and `Rat.normalize` is
-correctly classified as a definition, not a theorem. Every search row now also
-carries its kernel-rendered canonical type through both the artifact and agent
-read tools. Next: expose that
-target-agnostic combinator through an
-authoritative producer, then measure sibling conversion.
+Current boundary: reusable ModEq production reached 11 facts. Exact retrieval
+then composed `Nat.fib_le_succ` through `Nat.monotone_of_le_succ` into checked
+`Nat.fib_mono`, but remains honestly `no_operation` because its constructor was
+hand-authored. The graph links 395 theorems to 390 facts (four identities remain
+explicitly unresolved) and exposes every canonical kernel type through typed
+agent queries, including bounded type-fragment search. Next: dispatch the
+target-agnostic combinator authoritatively and measure sibling conversion.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 

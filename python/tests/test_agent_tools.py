@@ -190,6 +190,13 @@ def test_lemma_neighbourhood_requires_one_query_axis(ctx) -> None:
         tools.lemma_neighbourhood(ctx, name_glob="Nat.*", fact_id="F:any")
 
 
+def test_lemma_neighbourhood_filters_by_canonical_type(ctx) -> None:
+    page = tools.lemma_neighbourhood(ctx, canonical_type_contains="AxNat.fib")
+    assert page.matched > 0
+    assert page.canonical_type_contains == "AxNat.fib"
+    assert all("AxNat.fib" in row.canonical_type for row in page.rows)
+
+
 def test_lemma_candidates_joins_fact_dependencies_to_exact_kernel_links(ctx) -> None:
     page = tools.lemma_candidates(ctx, "F:ml430-nat-fib-mono-cc6afe09")
     assert page.declared_dependency_count == 1
