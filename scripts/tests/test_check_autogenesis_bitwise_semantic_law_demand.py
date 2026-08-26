@@ -70,7 +70,7 @@ class BitwiseSemanticLawDemandTests(unittest.TestCase):
     def test_nat_reification_cannot_gain_unproved_credit(self):
         data = copy.deepcopy(self.data)
         data["native_reification"]["roundtrip_status"] = "proved"
-        with self.assertRaisesRegex(ValueError, "reification roundtrip gained credit"):
+        with self.assertRaisesRegex(ValueError, "reification status changed"):
             MODULE.validate(data)
 
     def test_reification_step_assumption_fails_closed(self):
@@ -107,6 +107,18 @@ class BitwiseSemanticLawDemandTests(unittest.TestCase):
         data = copy.deepcopy(self.data)
         data["native_reification"]["numeric_roundtrip_axiom_footprint_size"] = 1
         with self.assertRaisesRegex(ValueError, "numeric reification roundtrip"):
+            MODULE.validate(data)
+
+    def test_recursive_roundtrip_assumption_fails_closed(self):
+        data = copy.deepcopy(self.data)
+        data["native_reification"]["low_reification_roundtrip_axiom_footprint_size"] = 1
+        with self.assertRaisesRegex(ValueError, "low_reification_roundtrip"):
+            MODULE.validate(data)
+
+    def test_bounded_bitwise_assumption_fails_closed(self):
+        data = copy.deepcopy(self.data)
+        data["native_reification"]["bounded_bitwise_axiom_footprint_size"] = 1
+        with self.assertRaisesRegex(ValueError, "bounded bitwise"):
             MODULE.validate(data)
 
     def test_finite_oracle_receipt_mutation_fails_closed(self):

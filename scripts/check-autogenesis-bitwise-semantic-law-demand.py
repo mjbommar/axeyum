@@ -110,7 +110,7 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
         raise ValueError("native observation algebra gained assumptions")
     if (
         algebra.get("nat_reification_status")
-        != "bounded-construction-base-checked-roundtrip-missing"
+        != "bounded-recursive-theorem-checked-unbounded-missing"
     ):
         raise ValueError("unproved Nat reification gained credit")
     algebra_type = algebra.get("canonical_type", "")
@@ -123,9 +123,9 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
         raise ValueError("bounded reification step gained assumptions")
     if (
         reification.get("roundtrip_status")
-        != "one-bit-checked-general-bounded-roundtrip-missing"
+        != "recursive-general-bounded-roundtrip-checked-weighted-equivalence-missing"
     ):
-        raise ValueError("unproved bounded reification roundtrip gained credit")
+        raise ValueError("bounded reification status changed")
     if "reifyBits" not in reification.get("base_canonical_type", ""):
         raise ValueError("bounded reification base type changed")
     step_type = reification.get("step_canonical_type", "")
@@ -141,6 +141,11 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
     bound_type = reification.get("boolean_digit_bound_canonical_type", "")
     if "AxNat.le" not in bound_type or "boolToBit" not in bound_type:
         raise ValueError("Boolean digit bound type changed")
+    if reification.get("direct_boolean_roundtrip_axiom_footprint_size") != 0:
+        raise ValueError("direct Boolean digit roundtrip gained assumptions")
+    direct_type = reification.get("direct_boolean_roundtrip_canonical_type", "")
+    if "Eq.{1} Bool" not in direct_type or "bitToBool" not in direct_type:
+        raise ValueError("direct Boolean digit roundtrip type changed")
     for prefix, required in (
         ("boolean_digit_divmod", "AxNat.divMod"),
         ("boolean_digit_div", "AxNat.div"),
@@ -167,6 +172,24 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
     numeric_type = reification.get("numeric_roundtrip_canonical_type", "")
     if "AxNat.sumRange" not in numeric_type or "AxNat.testBit" not in numeric_type:
         raise ValueError("numeric reification roundtrip type changed")
+    for prefix in (
+        "low_reification_base",
+        "low_reification_step",
+        "low_reification_roundtrip",
+    ):
+        if reification.get(f"{prefix}_axiom_footprint_size") != 0:
+            raise ValueError(f"{prefix} gained assumptions")
+        if "reifyBitsLow" not in reification.get(f"{prefix}_canonical_type", ""):
+            raise ValueError(f"{prefix} type changed")
+    if reification.get("bounded_bitwise_axiom_footprint_size") != 0:
+        raise ValueError("bounded bitwise theorem gained assumptions")
+    bounded_bitwise_type = reification.get("bounded_bitwise_canonical_type", "")
+    if (
+        "bitwiseReifyLow" not in bounded_bitwise_type
+        or "testBitBool" not in bounded_bitwise_type
+        or "AxNat.lt" not in bounded_bitwise_type
+    ):
+        raise ValueError("bounded bitwise theorem type changed")
 
     exclusion = data.get("countermodel_exclusion", {})
     if exclusion.get("excluded_by_law") != "testBit_succ":
