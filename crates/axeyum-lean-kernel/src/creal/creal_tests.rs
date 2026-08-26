@@ -71,8 +71,36 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 /// footprint, read out of the kernel rather than off the diff.
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
+    on_a_deep_stack_creal(every_creal_declaration_is_checked_and_axiom_free_body);
+}
+
+/// Runs `f` on a 1 GiB stack.
+///
+/// This test rebuilds the whole constructed environment and walks every
+/// declaration's `axiom_footprint`. Once `CReal.e` landed, that recursion
+/// exceeded the default 2 MiB stack and the test SIGABRTed -- a resource
+/// limit, not a soundness problem, and the same class as the one that makes
+/// `prelude_theorem_inventory` require `--release`.
+///
+/// It carries the stack EXPLICITLY rather than relying on an ambient
+/// `RUST_MIN_STACK`. A lane once reported a suite green that only passed
+/// because it had that variable exported from an earlier hand-bisect; the
+/// same test SIGABRTed in a clean shell. A test whose result depends on an
+/// ambient environment variable is a gate on one shell, and this particular
+/// test is the guard that every `CReal` declaration is derived and
+/// axiom-free -- the last one that should silently stop running.
+fn on_a_deep_stack_creal<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> T {
+    std::thread::Builder::new()
+        .stack_size(1024 * 1024 * 1024)
+        .spawn(f)
+        .expect("spawning a deep-stack thread must succeed")
+        .join()
+        .expect("the deep-stack thread must not panic")
+}
+
+fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 311] = [
+    let expected: [(&str, crate::NameId, &str); 325] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -324,6 +352,14 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ),
         ("CReal.bucketClampUpper", p.bucket_clamp_upper, "theorem"),
         ("CReal.bucketClampLower", p.bucket_clamp_lower, "theorem"),
+        ("CReal.bucketIndexBound", p.bucket_index_bound, "theorem"),
+        ("CReal.sampleUpperBound", p.sample_upper_bound, "theorem"),
+        ("CReal.sampleLowerBound", p.sample_lower_bound, "theorem"),
+        (
+            "CReal.bounded_of_uniformly_continuous",
+            p.bounded_of_uniformly_continuous,
+            "theorem",
+        ),
         ("CReal.ratSqLe", p.rat_sq_le, "theorem"),
         ("CReal.ratSqSandwich", p.rat_sq_sandwich, "theorem"),
         (
@@ -369,6 +405,9 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ),
         ("CReal.sqrt", p.sqrt, "def"),
         ("CReal.sqrt_congr", p.sqrt_congr, "theorem"),
+        ("CReal.sqrt_le_sqrt", p.sqrt_le_sqrt, "theorem"),
+        ("CReal.sqrt_one", p.sqrt_one, "theorem"),
+        ("CReal.sqrt_zero", p.sqrt_zero, "theorem"),
         // Bishop's speed-up combinator (creal/speedup.rs).
         ("CReal.KRegular", p.k_regular_pred, "def"),
         ("CReal.speedup", p.speedup, "def"),
@@ -507,6 +546,17 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             p.pow_half_le_nat_div_succ,
             "theorem",
         ),
+        (
+            "CReal.geomHalfInvLeafBound",
+            p.geom_half_inv_leaf_bound,
+            "theorem",
+        ),
+        (
+            "CReal.geomCauchyOrderedHalf",
+            p.geom_cauchy_ordered_half,
+            "theorem",
+        ),
+        ("CReal.geomCauchy", p.geom_cauchy, "theorem"),
         (
             "CReal.one_le_pow_of_one_le",
             p.one_le_pow_of_one_le,
@@ -934,6 +984,28 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             p.sum_pow_half_closed_form,
             "theorem",
         ),
+        // `Cauchy` scaled through `CReal.mul`'s index shift (this lane): the
+        // general "Cauchy transport across a pointwise Equiv" lemma, built to
+        // bridge `CReal.mul_sumRange`'s Equiv rather than re-deriving
+        // `product.rs`'s mulShift/mul_index bookkeeping by hand — see
+        // `exponential.rs`'s module documentation just above
+        // `declare_cauchy_of_pointwise_equiv`.
+        (
+            "CReal.cauchyOfPointwiseEquiv",
+            p.cauchy_of_pointwise_equiv,
+            "theorem",
+        ),
+        ("CReal.expDominantCauchy", p.exp_dominant_cauchy, "theorem"),
+        (
+            "CReal.expSeriesPartialConverges",
+            p.exp_series_partial_converges,
+            "theorem",
+        ),
+        // `CReal.e`, via `CReal.mk` on an explicit regular sequence (never
+        // `Exists`-elimination into data) -- the concrete-witness route
+        // `exponential.rs::declare_e` redoes `CReal.mul`'s own index shift
+        // by hand for exactly this reason.
+        ("CReal.e", p.e, "def"),
         // Found by the coverage assertion above, not by anyone noticing: these
         // seven were live in the prelude and unlisted here, so this test had
         // never checked them. `lt_cotrans`/`apart_cotrans` are Ch 12's
@@ -7679,6 +7751,203 @@ fn bucket_clamp_lower_at_zero_and_zero_reduces_to_zero_minus_three_over_two() {
         });
 }
 
+/// **Mandatory concrete instantiation for `CReal.bucketIndexBound`.** At
+/// `w := CReal.zero`, `bnd := CReal.zero`, `k := 0`,
+/// `hle := CReal.le_refl CReal.zero`: `CReal.bound CReal.zero` samples `seq
+/// CReal.zero 0 = Rat.zero`, so `bound = natAbs (num Rat.zero) + 1 = 0 + 1
+/// = 1`, and the computed bound formula `(succ (bound bnd) + 2) * succ k`
+/// reduces to `(succ 1 + 2) * succ 0 = 4 * 1 = 4`. `bucketIndex CReal.zero
+/// 0` samples at `j = (succ 0)*(succ 0) = 1`, clamps `Rat.zero` to itself,
+/// and floor-divides `natAbs 0 * 1 / 1 = 0`.
+///
+/// The expected type is the RAW literal `Nat.le 0 4` -- no reference to
+/// `bucket_index`, `bound`, or any of the proof's own intermediate terms --
+/// so the kernel has to reduce BOTH sides of the theorem's own statement
+/// (`CReal.bucketIndex czero 0` and the `(bound+3)*(k+1)` scaling formula)
+/// down to these numerals, not merely accept a restatement of the same
+/// unevaluated expression. This is what would catch a transposed `bound
+/// bnd`/`bound w`, an off-by-one in the `+2`/`+3` split (the same slack
+/// [`CRealPrelude::bucket_clamp_upper`]/[`CRealPrelude::bucket_clamp_lower`]
+/// warn about), or a swapped `mul`/`add` in the final scaling.
+#[test]
+fn bucket_index_bound_at_zero_zero_and_zero_computes_to_zero_le_four() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let zero_nat = d.num(0);
+    let four_nat = d.num(4);
+    let czero = d.kernel().const_(p.zero, vec![]);
+
+    let hle = d.lemma(p.le_refl, &[czero]); // CReal.le CReal.zero CReal.zero
+    let proof = d.const_app(p.bucket_index_bound, &[czero, czero, zero_nat, hle]);
+
+    let expected_ty = NatOps::le(&mut d, zero_nat, four_nat);
+
+    let anon = d.kernel().anon();
+    let name = d
+        .kernel()
+        .name_str(anon, "__bucket_index_bound_at_zero_zero_zero");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: expected_ty,
+            value: proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "bucket_index_bound at (CReal.zero, CReal.zero, 0, le_refl) must \
+                 reduce to Nat.le 0 4: {error:?}"
+            )
+        });
+}
+
+/// **Mandatory concrete instantiation for `CReal.sampleUpperBound`.** At
+/// `x := CReal.zero`, `m := 0`: `seq CReal.zero 0 = Rat.zero`,
+/// `Rat.natDivSucc 1 0 = 1/(0+1) = Rat.one`, so the target is
+/// `Rat.zero + Rat.one`, which the kernel must reduce to `Rat.one` itself
+/// (built independently via `rat_prelude::ops::rone`, never referencing
+/// `sample`/`div_succ`/`radd` the way the proof's own statement does) to
+/// accept this ascription.
+#[test]
+fn sample_upper_bound_at_zero_and_zero_types_at_zero_le_ofrat_one() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let zero_nat = d.num(0);
+    let czero = d.kernel().const_(p.zero, vec![]);
+    let proof = d.const_app(p.sample_upper_bound, &[czero, zero_nat]);
+
+    let rat_one = crate::rat_prelude::ops::rone(&mut d, p.rat);
+    let embedded_one = super::embed(&mut d, p, rat_one);
+    let expected_ty = super::cle(&mut d, p, czero, embedded_one);
+
+    let anon = d.kernel().anon();
+    let name = d
+        .kernel()
+        .name_str(anon, "__sample_upper_bound_at_zero_zero");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: expected_ty,
+            value: proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "sample_upper_bound at (CReal.zero, 0) must reduce to \
+                 CReal.le CReal.zero (CReal.ofRat Rat.one): {error:?}"
+            )
+        });
+}
+
+/// **Negative control for `CReal.sampleUpperBound`.** The SAME proof term,
+/// ascribed to the REVERSED statement `CReal.le (CReal.ofRat Rat.one)
+/// CReal.zero` (i.e. `1 ≤ 0`, genuinely false over `ℚ`, not a degenerate
+/// collapse) -- confirming the kernel actually discriminates direction here
+/// rather than accepting any two-argument application of `CReal.le`.
+#[test]
+fn sample_upper_bound_proof_is_rejected_at_the_reversed_statement() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let zero_nat = d.num(0);
+    let czero = d.kernel().const_(p.zero, vec![]);
+    let proof = d.const_app(p.sample_upper_bound, &[czero, zero_nat]);
+
+    let rat_one = crate::rat_prelude::ops::rone(&mut d, p.rat);
+    let embedded_one = super::embed(&mut d, p, rat_one);
+    let reversed_ty = super::cle(&mut d, p, embedded_one, czero);
+
+    let anon = d.kernel().anon();
+    let name = d
+        .kernel()
+        .name_str(anon, "__sample_upper_bound_reversed_must_fail");
+    let outcome = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty: reversed_ty,
+        value: proof,
+    });
+    assert!(
+        outcome.is_err(),
+        "sample_upper_bound's proof must NOT typecheck against the reversed \
+         (false) statement CReal.le (CReal.ofRat Rat.one) CReal.zero"
+    );
+}
+
+/// **Mandatory concrete instantiation for `CReal.sampleLowerBound`.** At
+/// `x := CReal.zero`, `m := 0`: the target is `Rat.zero - Rat.natDivSucc 1
+/// 0 = Rat.zero - Rat.one`, which the kernel must reduce to `Rat.neg
+/// Rat.one` (built independently via `rat_prelude::ops::rone`/`rneg`).
+#[test]
+fn sample_lower_bound_at_zero_and_zero_types_at_neg_one_le_zero() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let zero_nat = d.num(0);
+    let czero = d.kernel().const_(p.zero, vec![]);
+    let proof = d.const_app(p.sample_lower_bound, &[czero, zero_nat]);
+
+    let rat_one = crate::rat_prelude::ops::rone(&mut d, p.rat);
+    let neg_one = crate::rat_prelude::ops::rneg(&mut d, rat_one);
+    let embedded_neg_one = super::embed(&mut d, p, neg_one);
+    let expected_ty = super::cle(&mut d, p, embedded_neg_one, czero);
+
+    let anon = d.kernel().anon();
+    let name = d
+        .kernel()
+        .name_str(anon, "__sample_lower_bound_at_zero_zero");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: expected_ty,
+            value: proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "sample_lower_bound at (CReal.zero, 0) must reduce to \
+                 CReal.le (CReal.ofRat (Rat.neg Rat.one)) CReal.zero: {error:?}"
+            )
+        });
+}
+
+/// **Negative control for `CReal.sampleLowerBound`.** The SAME proof term,
+/// ascribed to the REVERSED statement `CReal.le CReal.zero (CReal.ofRat
+/// (Rat.neg Rat.one))` (i.e. `0 ≤ -1`, genuinely false), confirming the
+/// direction is load-bearing.
+#[test]
+fn sample_lower_bound_proof_is_rejected_at_the_reversed_statement() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let zero_nat = d.num(0);
+    let czero = d.kernel().const_(p.zero, vec![]);
+    let proof = d.const_app(p.sample_lower_bound, &[czero, zero_nat]);
+
+    let rat_one = crate::rat_prelude::ops::rone(&mut d, p.rat);
+    let neg_one = crate::rat_prelude::ops::rneg(&mut d, rat_one);
+    let embedded_neg_one = super::embed(&mut d, p, neg_one);
+    let reversed_ty = super::cle(&mut d, p, czero, embedded_neg_one);
+
+    let anon = d.kernel().anon();
+    let name = d
+        .kernel()
+        .name_str(anon, "__sample_lower_bound_reversed_must_fail");
+    let outcome = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty: reversed_ty,
+        value: proof,
+    });
+    assert!(
+        outcome.is_err(),
+        "sample_lower_bound's proof must NOT typecheck against the reversed \
+         (false) statement CReal.le CReal.zero (CReal.ofRat (Rat.neg Rat.one))"
+    );
+}
+
 /// **Mandatory computation test for `CReal.sqrtApproxSqBracket`.** At
 /// `x := CReal.ofNat 4`, `n := 0`: `d = 1`, `j = 1`, the clamped sample is
 /// `4`, `natSqrt 4 = 2` (`2*2 = 4 ≤ 4`, and `4 < 3*3 = 9`), so the bracket's
@@ -7829,5 +8098,251 @@ fn sqrt_of_ofnat_four_at_index_zero_computes_to_two() {
         "CReal.seq (CReal.sqrt (CReal.ofNat 4)) 0 must NOT check as equal \
          to 3 -- a checker that accepts both 2 and 3 cannot be trusted to \
          have computed anything"
+    );
+}
+
+/// **Mandatory computation test for `CReal.sqrt_one`.** At `n := 0`:
+/// `CReal.seq (CReal.sqrt CReal.one) 0` unfolds through `speedup`'s sampling
+/// index (`mul_index 1 0 = (1+1)*0+1 = 1`) to `sqrtApprox one 1`, which
+/// computes (`d = 2`, `j = 4`, clamped sample `1` since `one`'s sequence is
+/// constant, `natSqrt 4 = 2`) to `Rat.normalize 2 2 _` -- reduced, by
+/// `Rat.normalize`'s own division by the gcd, to the same representative
+/// `Rat.natDivSucc 1 0` (`= 1`) computes to. Checked against an
+/// INDEPENDENTLY built expected value, with a negative control (`2`) the
+/// kernel must reject -- otherwise an always-accepting checker could not be
+/// told apart from this one.
+#[test]
+fn sqrt_of_one_at_index_zero_computes_to_one() {
+    use crate::rat_prelude::ops::{req, rrefl};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+
+    let one_real = d.kernel().const_(p.one, vec![]);
+    let sqrt_one = d.const_app(p.sqrt, &[one_real]);
+    let seq_at_zero = d.const_app(p.seq, &[sqrt_one, zero_nat]);
+
+    let one_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, zero_nat]);
+    let expected_ty = req(&mut d, seq_at_zero, one_rat);
+    let proof = rrefl(&mut d, seq_at_zero);
+
+    let anon = d.kernel().anon();
+    let name = d
+        .kernel()
+        .name_str(anon, "__sqrt_of_one_at_index_zero_computes_to_one");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: expected_ty,
+            value: proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.seq (CReal.sqrt CReal.one) 0 must reduce to \
+                 Rat.natDivSucc 1 0 (= 1): {error:?}"
+            )
+        });
+
+    // Negative control: the same reflexivity proof does NOT check against a
+    // WRONG value (`2`) -- if it did, this checker could not distinguish a
+    // correct computed square root from an arbitrary one.
+    let two_rat = d.const_app(p.rat.nat_div_succ, &[two_nat, zero_nat]);
+    let expected_ty_wrong = req(&mut d, seq_at_zero, two_rat);
+    let proof_wrong = rrefl(&mut d, seq_at_zero);
+    let name_wrong = d
+        .kernel()
+        .name_str(anon, "__sqrt_of_one_wrong_value_must_be_rejected");
+    let result = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_wrong,
+        uparams: vec![],
+        ty: expected_ty_wrong,
+        value: proof_wrong,
+    });
+    assert!(
+        result.is_err(),
+        "CReal.seq (CReal.sqrt CReal.one) 0 must NOT check as equal to 2 \
+         -- a checker that accepts both 1 and 2 cannot be trusted to have \
+         computed anything"
+    );
+}
+
+/// **Mandatory computation test for `CReal.sqrt_zero`.** At `n := 0`:
+/// `CReal.seq (CReal.sqrt CReal.zero) 0` unfolds through `speedup`'s
+/// sampling index (`mul_index 1 0 = 1`) to `sqrtApprox zero 1`, which
+/// computes (`d = 2`, `j = 4`, clamped sample `0` since `zero`'s sequence is
+/// constant, `natSqrt 0 = 0`) to `Rat.normalize 0 2 _` -- reduced, by
+/// `Rat.normalize`'s own division, to the same representative `Rat.zero`
+/// computes to. Checked against an INDEPENDENTLY built expected value, with
+/// a negative control (`Rat.natDivSucc 1 0 = 1`) the kernel must reject.
+#[test]
+fn sqrt_of_zero_at_index_zero_computes_to_zero() {
+    use crate::rat_prelude::ops::{req, rrefl, rzero};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+
+    let zero_real = d.kernel().const_(p.zero, vec![]);
+    let sqrt_zero = d.const_app(p.sqrt, &[zero_real]);
+    let seq_at_zero = d.const_app(p.seq, &[sqrt_zero, zero_nat]);
+
+    let zero_rat = rzero(&mut d, p.rat);
+    let expected_ty = req(&mut d, seq_at_zero, zero_rat);
+    let proof = rrefl(&mut d, seq_at_zero);
+
+    let anon = d.kernel().anon();
+    let name = d
+        .kernel()
+        .name_str(anon, "__sqrt_of_zero_at_index_zero_computes_to_zero");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: expected_ty,
+            value: proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!("CReal.seq (CReal.sqrt CReal.zero) 0 must reduce to Rat.zero: {error:?}")
+        });
+
+    // Negative control: the same reflexivity proof does NOT check against a
+    // WRONG value (`1`).
+    let one_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, zero_nat]);
+    let expected_ty_wrong = req(&mut d, seq_at_zero, one_rat);
+    let proof_wrong = rrefl(&mut d, seq_at_zero);
+    let name_wrong = d
+        .kernel()
+        .name_str(anon, "__sqrt_of_zero_wrong_value_must_be_rejected");
+    let result = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_wrong,
+        uparams: vec![],
+        ty: expected_ty_wrong,
+        value: proof_wrong,
+    });
+    assert!(
+        result.is_err(),
+        "CReal.seq (CReal.sqrt CReal.zero) 0 must NOT check as equal to 1 \
+         -- a checker that accepts both 0 and 1 cannot be trusted to have \
+         computed anything"
+    );
+}
+
+/// `CReal.bounded_of_uniformly_continuous` instantiated at `F := identity`,
+/// `[a,b] := [0, mag_bound 0]` (`= [0,1]`), using
+/// `CReal.uniformly_continuous_id`. `K` is recomputed from scratch here by
+/// literally re-running `declare_bounded_of_uniformly_continuous`'s own
+/// documented formula (`succ(add(succ(bound(F a)), mul(add(succ(bound
+/// bnd)),2)(succ k)))`, `k := add(mul(succ(succ(succ(succ(zero)))), modulus
+/// 0), succ(succ(succ(zero))))`) over PUBLIC `CRealPrelude` fields only --
+/// never by reusing `uniform_continuity.rs`'s own private helpers -- so this
+/// is a genuine independent check that the theorem's declared type still
+/// matches its documentation, not a tautology.
+///
+/// Negative control: the SAME proof term does NOT check against `K` with the
+/// final `succ` dropped (`t_m_bound` instead of `succ(t_m_bound)`) -- a
+/// genuinely different (and non-degenerate: dropping the last
+/// `mag_bound_fuse_succ` step is exactly the off-by-one a hand-written proof
+/// of this shape is most likely to make) Nat value, not a vacuous or
+/// accidentally-true rewording.
+#[test]
+fn bounded_of_uniformly_continuous_instantiates_on_identity() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = super::creal_ty(&mut d, p);
+
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+    let three_nat = d.num(3);
+
+    let czero = d.kernel().const_(p.zero, vec![]);
+    let nds10 = d.const_app(p.rat.nat_div_succ, &[one_nat, zero_nat]);
+    let unit = d.const_app(p.of_rat, &[nds10]);
+
+    let identity = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+    let huc_id = d.const_app(p.uniformly_continuous_id, &[czero, unit]);
+
+    let rzero_expr = crate::rat_prelude::ops::rzero(&mut d, p.rat);
+    let zero_le_nds10 = d.lemma(p.rat.zero_le_nat_div_succ, &[one_nat, zero_nat]);
+    let hab = d.lemma(p.of_rat_le, &[rzero_expr, nds10, zero_le_nds10]);
+
+    // --- recompute `K` from the documented formula, independently. ---------
+    let modulus = d.const_app(p.uc_modulus, &[identity, czero, unit, huc_id]);
+    let m0 = d.apply(modulus, &[zero_nat]);
+    let succ_three = d.succ(three_nat);
+    let mul_km = NatOps::mul(&mut d, succ_three, m0);
+    let k = NatOps::add(&mut d, mul_km, three_nat);
+    let k1 = d.succ(k);
+
+    let f_a = d.apply(identity, &[czero]);
+    let k_bound = d.const_app(p.bound, &[f_a]);
+    let succ_k_bound = d.succ(k_bound);
+
+    let neg_czero = d.const_app(p.neg, &[czero]);
+    let bnd = d.const_app(p.add, &[unit, neg_czero]);
+    let bound_bnd = d.const_app(p.bound, &[bnd]);
+    let succ_bound_bnd = d.succ(bound_bnd);
+    let m_bound_base = NatOps::add(&mut d, succ_bound_bnd, two_nat);
+    let m_bound = NatOps::mul(&mut d, m_bound_base, k1);
+    let t_m_bound = NatOps::add(&mut d, succ_k_bound, m_bound);
+    let k_final = d.succ(t_m_bound);
+
+    let value = d.const_app(
+        p.bounded_of_uniformly_continuous,
+        &[identity, czero, unit, huc_id, hab],
+    );
+    let ty = d.const_app(p.bounded_on, &[identity, czero, unit, k_final]);
+
+    let anon = d.kernel().anon();
+    let name = d
+        .kernel()
+        .name_str(anon, "__bounded_of_uniformly_continuous_id_positive");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "bounded_of_uniformly_continuous applied to identity on \
+                 [0, mag_bound 0] must check against the documented K \
+                 formula, recomputed independently here: {error:?}"
+            )
+        });
+
+    // Negative control: the same proof does NOT check against `t_m_bound`
+    // (K minus the theorem's own final `succ`).
+    let value_again = d.const_app(
+        p.bounded_of_uniformly_continuous,
+        &[identity, czero, unit, huc_id, hab],
+    );
+    let ty_wrong = d.const_app(p.bounded_on, &[identity, czero, unit, t_m_bound]);
+    let name_wrong = d
+        .kernel()
+        .name_str(anon, "__bounded_of_uniformly_continuous_id_off_by_one");
+    let result = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_wrong,
+        uparams: vec![],
+        ty: ty_wrong,
+        value: value_again,
+    });
+    assert!(
+        result.is_err(),
+        "bounded_of_uniformly_continuous applied to identity must NOT check \
+         against K's own predecessor (t_m_bound, without the final succ) \
+         -- a checker that accepts both K and K-1 has not verified the bound"
     );
 }

@@ -1225,6 +1225,68 @@ pub struct CRealPrelude {
     /// falls out as `1 (regularity slack) + 2 (the clamp's own slack)`. See
     /// `creal/uniform_continuity.rs`.
     pub bucket_clamp_lower: NameId,
+    /// `CReal.bucketIndexBound : ∀ (w bnd : CReal) (k : Nat), CReal.le w bnd →
+    /// Nat.le (CReal.bucketIndex w k) (Nat.mul (Nat.add (Nat.succ
+    /// (CReal.bound bnd)) 2) (Nat.succ k))` — step 2 toward
+    /// `bounded_of_uniformly_continuous`: a COMPUTABLE `Nat` bound on
+    /// `bucketIndex w k`, uniform over every `w` known only to satisfy `w ≤
+    /// bnd` (no lower bound on `w` needed at all — see below).
+    ///
+    /// The route is simpler than [`Self::bucket_index_floor_lower`]/
+    /// [`Self::bucket_index_floor_upper`]'s own needed: it does **not**
+    /// reuse [`Self::bucket_clamp_upper`]/[`Self::bucket_clamp_lower`],
+    /// because those relate the clamped sample back to `w`'s own
+    /// regularity, which is exactly the chain a bound on `w` alone lets us
+    /// skip. Instead the clamped sample `q := Rat.max (seq w j) 0` (`j` the
+    /// accuracy index [`Self::bucket_index`] itself samples at) is bounded
+    /// directly: `hle` at index `j` gives `seq w j ≤ seq bnd j + 2/(j+1)`
+    /// (`Rat.le_of_sub_le`), [`Self::bound_within`] `bnd j` gives `seq bnd j
+    /// ≤ (bound bnd + 1)/1`, `2/(j+1) ≤ 2/1` widens via
+    /// `Rat.natDivSucc_le_one` applied twice plus `Rat.natDivSucc_add`, and
+    /// the two fuse into a single integer bound `C := bound bnd + 3` via
+    /// `Rat.natDivSucc_add` again — at which point `Rat.max_le` (using `0 ≤
+    /// C` from `Rat.zero_le_natDivSucc`) gives `q ≤ C` with **no sign
+    /// hypothesis on `w` anywhere**, unlike the clamp lemmas: clamping to
+    /// `≥ 0` only ever needs a sign hypothesis to relate the clamp back
+    /// DOWNWARD to `w` (`bucket_clamp_lower`'s own concern), never to bound
+    /// it from above.
+    ///
+    /// The remaining step inverts [`Self::bucket_index_floor_lower`]
+    /// (`natDivSucc (bucketIndex w k) k ≤ q`) against `q ≤ C` by
+    /// cross-multiplication, the same `Rat.normalize_cross` +
+    /// `Rat.int_le_of_mul_le_mul_right` shape
+    /// [`Self::bucket_index_floor_lower`]'s own proof uses, run in the
+    /// OTHER direction: from a `Rat.le` between two `Rat.normalize`
+    /// representatives (one at denominator `k+1`, one at denominator `1`)
+    /// to a `Nat.le` on the numerator `bucketIndex w k` itself, scaled by
+    /// `k+1`. See `creal/uniform_continuity.rs`.
+    pub bucket_index_bound: NameId,
+    /// `CReal.sampleUpperBound : ∀ x m, CReal.le x (CReal.ofRat (Rat.add
+    /// (CReal.seq x m) (Rat.natDivSucc 1 m)))` — the general
+    /// self-approximation lemma every `CReal` satisfies: it never exceeds
+    /// its own `m`-th sample by more than `1/(m+1)`. Via `x`'s own
+    /// regularity read at `(n, m)` — the same shape
+    /// [`Self::bucket_clamp_upper`] reads at `(n, j)` for the CLAMPED
+    /// sample rather than `x` itself — widened from `1/(n+1)` up to the
+    /// `2/(n+1)` `CReal.le`'s own definition asks for via
+    /// `Rat.natDivSucc_le_add_left`. See `creal/uniform_continuity.rs`.
+    pub sample_upper_bound: NameId,
+    /// `CReal.sampleLowerBound : ∀ x m, CReal.le (CReal.ofRat (Rat.sub
+    /// (CReal.seq x m) (Rat.natDivSucc 1 m))) x` — the other half of
+    /// [`Self::sample_upper_bound`]: `x` is never below its own `m`-th
+    /// sample by more than `1/(m+1)` either. Same route with the
+    /// regularity indices swapped (`(m, n)` rather than `(n, m)`), mirroring
+    /// how [`Self::bucket_clamp_lower`] swaps [`Self::bucket_clamp_upper`]'s
+    /// own `(n, j)` to `(j, n)`. See `creal/uniform_continuity.rs`.
+    pub sample_lower_bound: NameId,
+    /// `CReal.bounded_of_uniformly_continuous : ∀ F a b, UniformlyContinuousOn
+    /// F a b → CReal.le a b → CReal.BoundedOn F a b K` for a COMPUTED `K`
+    /// (never `Exists`-elimination — `K` is one Nat expression built from
+    /// `F`, `a`, `b`, `huc` alone, so it is the SAME constant for every `z`).
+    /// Spivak ch.7: a function uniformly continuous on `[a,b]` is bounded
+    /// there. See `creal/uniform_continuity.rs`'s own
+    /// `declare_bounded_of_uniformly_continuous` for the covering argument.
+    pub bounded_of_uniformly_continuous: NameId,
     /// `CReal.ratSqLe : ∀ (u s : Rat), Rat.le (u*u) (s*s) → Rat.le Rat.zero s
     /// → Rat.le u s` — a purely rational fact (no `CReal` structure), proved
     /// via `Rat.mul_pos` and a difference-of-squares identity rather than a
@@ -1336,6 +1398,29 @@ pub struct CRealPrelude {
     /// `0 ≤ x`/`0 ≤ y` hypothesis — same reason `sqrt` itself needs none.
     /// See `creal/sqrt.rs`.
     pub sqrt_congr: NameId,
+    /// `CReal.sqrt_one : Equiv (sqrt one) one`. `sqrtApprox one` is clamped
+    /// to a CONSTANT sample (`seq one _` beta-reduces to `Rat.one`
+    /// regardless of index), so `sqrt_approx_sq_bracket`'s two halves at
+    /// `x := one` are already bounds against the fixed value `Rat.one` —
+    /// `rat_sq_le` closes each side directly, no cross-index regularity or
+    /// natSqrt-uniqueness argument needed. See `creal/sqrt.rs`.
+    pub sqrt_one: NameId,
+    /// `CReal.sqrt_zero : Equiv (sqrt zero) zero`. The same constant-sample
+    /// shortcut as `sqrt_one`, simpler still: `sqrtApprox zero m` collapses
+    /// to EXACTLY `Rat.zero` via `Rat.le_antisymm`, so `Within (u-0) bound`
+    /// is trivial for any nonnegative bound. See `creal/sqrt.rs`.
+    pub sqrt_zero: NameId,
+    /// `CReal.sqrt_le_sqrt : ∀ x y, le x y → le (sqrt x) (sqrt y)`.
+    ///
+    /// **Total, no `0 ≤ x` hypothesis** — `le x y` alone suffices. This is
+    /// the forward-only, `Rat.le`-only half of `sqrt_congr`'s argument:
+    /// `sqrt_congr` needs a two-sided `Equiv` estimate (built from `Within`,
+    /// hence needing both directions and `And.intro`); `le`'s one-sided
+    /// `∀ n, seq x n − seq y n ≤ 2/(n+1)` instantiates directly at the shared
+    /// deep index, with no `halves` extraction needed, and only the
+    /// "forward" cross-real squeeze is run once (no `Equiv.symm`/backward
+    /// direction, no negation to combine two halves). See `creal/sqrt.rs`.
+    pub sqrt_le_sqrt: NameId,
 
     // --- Bishop's speed-up combinator (creal/speedup.rs) ----------------------
     /// `CReal.KRegular : (Nat → Rat) → Nat → Prop` — Bishop regularity up to a
@@ -1936,6 +2021,61 @@ pub struct CRealPrelude {
     /// never forming `Rat.inv`, matching `bernoulli_harmonic_bound`'s own
     /// design.
     pub pow_half_le_nat_div_succ: NameId,
+    /// `CReal.geomHalfInvLeafBound : ∀ a, le (mul (inv (add one (neg half)) 1
+    /// h) (pow half a)) (ofRat (natDivSucc 2 a))`, `h` built internally (not
+    /// a parameter) — the leaf [`Self::geom_pair_within`]'s own field doc
+    /// names as undischarged (`seq Yₐ b`, `Yₐ := pow half a · inv (add one
+    /// (neg half)) 1 h`), bounded in its full `CReal` form (`Yₐ ≤ 2/(a+1)`,
+    /// not yet sampled at any index `b`).
+    ///
+    /// See `exponential.rs`'s module documentation for the derivation:
+    /// `PosBound half 1` is `le_refl` applied to `half` itself (`half`'s own
+    /// sample is the constant `1/2`); `PosBound (add one (neg half)) 1`
+    /// transports it across `Equiv (add one (neg half)) half` via
+    /// [`Self::le_congr`]; the `inv`-value itself is pinned to the rational
+    /// constant `2` by cancelling `half` from both `Equiv (mul half (inv
+    /// …)) one` ([`Self::mul_inv_cancel`]) and `Equiv (mul half (ofRat 2))
+    /// one` (a `Rat`-level computation) via [`Self::le_of_mul_le_mul_left`]
+    /// run in both directions plus [`Self::equiv_of_le_le`] — never via
+    /// [`Self::inv_congr`]. Multiplying [`Self::pow_half_le_nat_div_succ`]
+    /// through by that constant `2` closes it. `inv` enters only here, for
+    /// this one concrete base; nothing downstream of this declaration
+    /// touches `CReal.inv`/`PosBound` again.
+    pub geom_half_inv_leaf_bound: NameId,
+    /// `CReal.geomCauchyOrderedHalf : ∀ a b, Nat.le a b → Within (seq
+    /// (sumRange (pow half) b) b − seq (sumRange (pow half) a) a)
+    /// (natDivSucc 7 b + natDivSucc 7 a)`.
+    ///
+    /// The ordered-pair, fully-normalized geometric Cauchy bound at the
+    /// concrete base `1/2`. [`Self::geom_half_inv_leaf_bound`] applied at
+    /// index `b` and `Rat.le_of_sub_le`-converted bounds the leaf by
+    /// `natDivSucc 2 a + natDivSucc 2 b`; two `Rat.natDivSucc_le_scaled`
+    /// widenings retire the two `shift b` legs
+    /// `Rat.natDivSucc_le_scaled` widenings retire the two `shift b` legs
+    /// [`Self::geom_pair_within`] carries; and the seven resulting leaves
+    /// (`2×natDivSucc 1 b`, `2×natDivSucc 2 b`, `1×natDivSucc 1 b`,
+    /// `natDivSucc 2 a`, `natDivSucc 1 a`) fuse to `natDivSucc 7 b +
+    /// natDivSucc 7 a` — `7` on the `b` side exactly, `3` padded up to `7` on
+    /// the `a` side via one `Rat.natDivSucc_le_add_left`. `inv` enters only
+    /// here, for this one concrete base; nothing downstream of this
+    /// declaration touches `CReal.inv`/`PosBound` again.
+    pub geom_cauchy_ordered_half: NameId,
+    /// `CReal.geomCauchy : Cauchy (sumRange (fun n => pow half n))` —
+    /// **`CReal.geom_cauchy`**, closing the goal `geometric.rs`'s own module
+    /// documentation named as blocked (the blocker itself was stale — see
+    /// `exponential.rs`'s module documentation for the correction).
+    ///
+    /// [`Self::geom_cauchy_ordered_half`]'s own bound is not symmetric in its
+    /// two indices (the `b`-side leg costs more than the `a`-side one), so
+    /// this eliminates the `Nat.le_total` disjunction — never branching on
+    /// [`Self::le`] itself, which is undecidable — and calls
+    /// `geom_cauchy_ordered_half` at whichever of `(m, n)`/`(n, m)` satisfies
+    /// its own `a ≤ b` side condition, exactly mirroring
+    /// `series.rs::declare_sum_range_cauchy_of_dominated`'s own case split
+    /// (`within_symm` plus one `Rat.add_comm` rewrite in the `m ≤ n` branch,
+    /// no rewrite needed in the `n ≤ m` branch), with the single fixed
+    /// witness `K := 7` in place of that theorem's `k + 8`.
+    pub geom_cauchy: NameId,
     /// `CReal.one_le_pow_of_one_le : ∀ x, le one x → ∀ n, le one (pow x n)` —
     /// the mirror of [`Self::pow_le_one`]: powers of a base at least `1` stay
     /// at least `1`. Induction on `n`, and simpler than `pow_le_one`'s own
@@ -2483,6 +2623,36 @@ pub struct CRealPrelude {
     /// does not unfold `Nat.gcd` by ι even for literal arguments) and why
     /// they were not needed for [`Self::exp_term_le_dominant`].
     pub sum_pow_half_closed_form: NameId,
+    /// `CReal.cauchyOfPointwiseEquiv : ∀ G F, (∀ n, Equiv (G n) (F n)) →
+    /// Cauchy G → Cauchy F` — the general lemma this lane built to scale a
+    /// `Cauchy` witness across a pointwise `Equiv`, e.g. `CReal.mul_sumRange`'s
+    /// index-shifted `mul c (sumRange f n) ~ sumRange (scaled f) n` bridge.
+    /// See `creal/exponential.rs::declare_cauchy_of_pointwise_equiv`.
+    pub cauchy_of_pointwise_equiv: NameId,
+    /// `CReal.expDominantCauchy : Cauchy (sumRange expDominant)` — built via
+    /// `CReal.converges_mul` (a constant sequence times the geometric partial
+    /// sums, both convergent) plus [`Self::cauchy_of_pointwise_equiv`]
+    /// transported across `CReal.mul_sumRange`'s `Equiv`, rather than
+    /// re-deriving `CReal.mul`'s own index-shift bookkeeping by hand. See
+    /// `creal/exponential.rs::declare_exp_dominant_cauchy`.
+    pub exp_dominant_cauchy: NameId,
+    /// `CReal.expSeriesPartialConverges : Exists CReal (fun L => Converges
+    /// expSeriesPartial L)` — [`Self::sum_range_converges_of_dominated`]
+    /// applied to [`Self::exp_term_abs_le_dominant`] and
+    /// [`Self::exp_dominant_cauchy`]. See
+    /// `creal/exponential.rs::declare_exp_series_partial_converges`.
+    pub exp_series_partial_converges: NameId,
+    /// `CReal.e := CReal.mk (speedup (diagonal expSeriesPartial) K) (…)` —
+    /// Euler's number, built via `CReal.mk` on an EXPLICIT regular sequence
+    /// (never an `Exists`-elimination into data): a concrete, non-existential
+    /// `Cauchy` witness for `sumRange expDominant`
+    /// (`exponential.rs::exp_dominant_cauchy_body_concrete`, redone by hand
+    /// through `CReal.mul`'s own index shift, since
+    /// [`Self::exp_dominant_cauchy`]'s existential form cannot supply `K` as
+    /// data) feeds `CReal.sumRange_cauchy_dominated_ordered_normalized` and
+    /// `CReal.regular_of_scaled_cauchy`. See
+    /// `creal/exponential.rs::declare_e`.
+    pub e: NameId,
     /// `CReal.sumRange_const : ∀ w m,
     /// Equiv (sumRange (fun _ => w) (Nat.succ m)) (mul (ofNat (Nat.succ m))
     /// w)` (`creal/monotone.rs`) — a constant summed `succ m` times is
@@ -3252,6 +3422,10 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         bucket_index_floor_upper: kernel.name_str(creal, "bucketIndexFloorUpper"),
         bucket_clamp_upper: kernel.name_str(creal, "bucketClampUpper"),
         bucket_clamp_lower: kernel.name_str(creal, "bucketClampLower"),
+        bucket_index_bound: kernel.name_str(creal, "bucketIndexBound"),
+        sample_upper_bound: kernel.name_str(creal, "sampleUpperBound"),
+        sample_lower_bound: kernel.name_str(creal, "sampleLowerBound"),
+        bounded_of_uniformly_continuous: kernel.name_str(creal, "bounded_of_uniformly_continuous"),
         rat_sq_le: kernel.name_str(creal, "ratSqLe"),
         rat_sq_sandwich: kernel.name_str(creal, "ratSqSandwich"),
         rat_index_ratio_le_one: kernel.name_str(creal, "ratIndexRatioLeOne"),
@@ -3270,6 +3444,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sqrt_approx_kregular: kernel.name_str(creal, "sqrtApproxKRegular"),
         sqrt: kernel.name_str(creal, "sqrt"),
         sqrt_congr: kernel.name_str(creal, "sqrt_congr"),
+        sqrt_one: kernel.name_str(creal, "sqrt_one"),
+        sqrt_zero: kernel.name_str(creal, "sqrt_zero"),
+        sqrt_le_sqrt: kernel.name_str(creal, "sqrt_le_sqrt"),
         k_regular_pred: kernel.name_str(creal, "KRegular"),
         speedup: kernel.name_str(creal, "speedup"),
         regular_of_kregular: kernel.name_str(creal, "regular_of_kregular"),
@@ -3321,6 +3498,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         pow_le_pow_of_base_le: kernel.name_str(creal, "pow_le_pow_of_base_le"),
         of_rat_pow: kernel.name_str(creal, "ofRat_pow"),
         pow_half_le_nat_div_succ: kernel.name_str(creal, "pow_half_le_natDivSucc"),
+        geom_half_inv_leaf_bound: kernel.name_str(creal, "geomHalfInvLeafBound"),
+        geom_cauchy_ordered_half: kernel.name_str(creal, "geomCauchyOrderedHalf"),
+        geom_cauchy: kernel.name_str(creal, "geomCauchy"),
         one_le_pow_of_one_le: kernel.name_str(creal, "one_le_pow_of_one_le"),
         pow_le_pow_of_one_le: kernel.name_str(creal, "pow_le_pow_of_one_le"),
         pow_pos: kernel.name_str(creal, "pow_pos"),
@@ -3375,6 +3555,10 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         exp_dominant_nonneg: kernel.name_str(creal, "exp_dominant_nonneg"),
         exp_term_abs_le_dominant: kernel.name_str(creal, "exp_term_abs_le_dominant"),
         sum_pow_half_closed_form: kernel.name_str(creal, "sumRange_pow_half_closed_form"),
+        cauchy_of_pointwise_equiv: kernel.name_str(creal, "cauchyOfPointwiseEquiv"),
+        exp_dominant_cauchy: kernel.name_str(creal, "expDominantCauchy"),
+        exp_series_partial_converges: kernel.name_str(creal, "expSeriesPartialConverges"),
+        e: kernel.name_str(creal, "e"),
         sum_range_const: kernel.name_str(creal, "sumRange_const"),
         mesh_count_width: kernel.name_str(creal, "mesh_count_width"),
         subdivision_point_in_bounds: kernel.name_str(creal, "subdivisionPoint_in_bounds"),
@@ -3524,6 +3708,13 @@ pub(crate) fn build_creal_prelude_uncached(
         // doc comment for why this cannot instead move earlier, next to
         // `declare_uniform_continuity`.
         uniform_continuity::declare_uniform_continuity_products(&mut d, prelude)?;
+        // `bounded_of_uniformly_continuous` needs `CReal.BoundedOn`
+        // (`derivative::declare_derivative`, above) and everything
+        // `declare_uniform_continuity_products` just declared
+        // (`uniformly_continuous_mul`/`_sq`, `bounded_on_id_unit`), but
+        // nothing from `series.rs`/`monotone.rs` -- so it lands here rather
+        // than waiting for the third `uniform_continuity` entry point below.
+        uniform_continuity::declare_bounded_of_uniformly_continuous(&mut d, prelude)?;
         mul_self_zero::declare_mul_self_zero(&mut d, prelude)?;
         sqrt::declare_sqrt(&mut d, prelude)?;
         speedup::declare_speedup(&mut d, prelude)?;
@@ -3536,6 +3727,20 @@ pub(crate) fn build_creal_prelude_uncached(
         // `sqrt_congr` needs `sqrt` itself (`declare_sqrt_ctor`, just above)
         // plus `sqrt_approx_sq_bracket`/`equiv_symm`, both already declared.
         sqrt::declare_sqrt_congr(&mut d, prelude)?;
+        // `sqrt_le_sqrt` needs `sqrt` (`declare_sqrt_ctor`, above),
+        // `sqrt_approx_sq_bracket`, and `CReal.le` (`declare_order`, far
+        // earlier); it does not depend on `sqrt_congr` but shares its
+        // per-index squeeze machinery, so it is placed right after it.
+        sqrt::declare_sqrt_le_sqrt(&mut d, prelude)?;
+        // `sqrt_one` needs `sqrt`/`sqrt_approx_sq_bracket` (above) and
+        // `rat_sq_le` (`mul_self_zero`, earlier) -- it does not depend on
+        // `sqrt_congr` itself, but is placed right after it since both are
+        // "the laws sqrt.rs's own doc names as reachable now" from the same
+        // landing.
+        sqrt::declare_sqrt_one(&mut d, prelude)?;
+        // `sqrt_zero` needs only `sqrt`/`sqrt_approx_sq_bracket` and
+        // `rat_sq_le`, same as `sqrt_one` just above.
+        sqrt::declare_sqrt_zero(&mut d, prelude)?;
         convergence::declare_cauchy_convergence(&mut d, prelude)?;
         series::declare_series(&mut d, prelude)?;
         // `CReal.mag_bound_le_sum_range_of_lt` needs `CReal.sumRange`
@@ -3674,6 +3879,31 @@ pub(crate) fn build_creal_prelude_uncached(
         // `Rat.normalize`; nothing else in this file depends on them, so they
         // land last.
         exponential::declare_exponential(&mut d, prelude)?;
+        // `geom_cauchy`/`geom_cauchy_ordered_half` need `half`/`half_rat`/
+        // `one_sub_half_equiv_half` (declared as Rust helpers, not kernel
+        // declarations, so no ordering constraint from them) plus
+        // `geom_pair_within`/`pow_half_le_nat_div_succ`
+        // (`geometric::declare_geometric`, well above). Placed after
+        // `exponential::declare_exponential` only because its own private
+        // `half`/`one_sub_half_equiv_half` builders are reused verbatim, not
+        // because anything `exponential` DECLARES is a dependency.
+        exponential::declare_geom_cauchy_family(&mut d, prelude)?;
+        // `cauchyOfPointwiseEquiv`/`expDominantCauchy`/
+        // `expSeriesPartialConverges` need `geomCauchy` (just above),
+        // `CReal.mul_sumRange` (`series::declare_series`, well above) and
+        // `CReal.converges_mul`/`converges_cauchy`/`converges_of_const`/
+        // `converges_of_cauchy` (`convergence::declare_convergence` /
+        // `declare_cauchy_convergence`, both well above).
+        exponential::declare_exp_convergence(&mut d, prelude)?;
+        // `CReal.e` needs `geomCauchy_ordered_half` (just above),
+        // `exp_term_abs_le_dominant`/`sum_range_cauchy_dominated_ordered_normalized`
+        // (`series::declare_series`, well above) and
+        // `regular_of_scaled_cauchy`/`speedup`
+        // (`convergence::declare_cauchy_convergence`/`speedup::declare_speedup`,
+        // both well above) — it does NOT depend on `declare_exp_convergence`
+        // just above, but shares enough of its own dependency reasoning that
+        // it is placed next to it.
+        exponential::declare_e_family(&mut d, prelude)?;
         // `ivt::declare_ivt` needs `CReal.lt_cotrans` (`cotransitivity`, well
         // above), `CReal.mesh_count_width` (`monotone::declare_monotone_of_nonneg_deriv_all`,
         // also above) and ordinary ring/order laws; nothing later depends on

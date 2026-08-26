@@ -1906,7 +1906,7 @@ fn div_succ_var(d: &mut IntDev<'_>, p: CRealPrelude, k: ExprId, j: ExprId) -> Ex
 /// the three legs here already share consecutive endpoints (`x,y` / `y,z` /
 /// `z,w`) in the right order, so each combining step is a direct
 /// `sub_add_sub` rewrite rather than a four-term regrouping.
-fn chain_within3(
+pub(super) fn chain_within3(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     x: ExprId,
@@ -2233,7 +2233,7 @@ fn declare_sum_range_tail_within_cauchy(
 /// [`dominated_canonical_at`] uses to turn each `CReal.regular` leg (which
 /// always bounds "earlier index minus later index") into whichever
 /// orientation its three-leg chain needs.
-fn within_symm(
+pub(super) fn within_symm(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     a: ExprId,
@@ -2510,7 +2510,13 @@ fn assoc_fwd_eq(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId, c: Ex
 }
 
 /// `Eq (a+(b+c)) ((a+b)+c)` — [`assoc_fwd_eq`] read backwards via `rsymm`.
-fn assoc_rev_eq(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId, c: ExprId) -> ExprId {
+pub(super) fn assoc_rev_eq(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+) -> ExprId {
     let ab = radd(d, a, b);
     let lhs = radd(d, ab, c);
     let bc = radd(d, b, c);
@@ -2525,7 +2531,7 @@ fn assoc_rev_eq(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId, c: Ex
 /// normalization runs repeatedly, at whichever pair of same-index leaves its
 /// current reassociation has just brought adjacent. Returns `(fused,
 /// eq_proof)`.
-fn fuse_same_index(
+pub(super) fn fuse_same_index(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     a_num: ExprId,
@@ -3007,7 +3013,12 @@ fn declare_sum_range_cauchy_dominated_ordered_normalized(
 /// scope for this slice) so it is syntactically the predicate `CReal.Cauchy`
 /// itself unfolds to, and a witness/proof built against it type-checks
 /// directly against `Cauchy h` with no explicit rewrite.
-fn sum_range_cauchy_body(d: &mut IntDev<'_>, p: CRealPrelude, h: ExprId, k: ExprId) -> ExprId {
+pub(super) fn sum_range_cauchy_body(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    h: ExprId,
+    k: ExprId,
+) -> ExprId {
     let rat = p.rat;
     let nat = d.nat_ty();
     let m_fv = d.fresh_fvar();
@@ -3452,7 +3463,7 @@ fn declare_sum_range_comparison_test(
 }
 
 /// `Exists.intro Nat predicate witness proof`.
-fn exists_nat_intro(
+pub(super) fn exists_nat_intro(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     predicate: ExprId,

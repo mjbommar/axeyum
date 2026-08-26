@@ -117,6 +117,40 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-26 | `f1e1724e2` | Add held-out-safe tier-R retrieval for reusable target-owned capsule roots, preserving capsule identity, empty footprints, semantic-analogue qualification, and zero operation authority. |
+| 2026-08-26 | `81b5bae31` | Repair the typed agent read surface so structural statement floors, proof-reconstruction eligibility, and clean-definition routing survive the generated index boundary. |
+| 2026-08-26 | `e56f1b339` | Root-export the three clean bitwise siblings as one reproducible external NDJSON capsule; fresh import admits 116 declarations, no axioms, and the same generic dependency for every root. |
+| 2026-08-26 | `282235e82` | Connect the three clean bitwise siblings to their open Mathlib development facts as non-authoritative semantic analogues, preserving zero exact-match and operation credit. |
+| 2026-08-26 | `76817cc3b` | Specialize the clean generic bitwise construction into AND, OR, and difference; all three sibling theorems reuse the same generic proof and retain empty footprints. |
+| 2026-08-26 | `cca5f9678` | Split proof-reconstructible candidate debt from structural statement trust floors; route the exact imported bitwise theorem to clean-definition reconstruction instead of futile proof retries. |
+| 2026-08-26 | `fe531ca30` | Prove with two theorem-free `Eq.refl` controls that exact imported `Nat.testBit` and `Nat.bitwise` statements inherit `propext` from their definition closures, making the empty-footprint boundary structural and explicit. |
+| 2026-08-26 | `32802405d` | Construct a total target-owned bitwise operation and prove its all-index Boolean semantics axiom-free under exactly `f false false = false`. |
+| 2026-08-26 | `08d4da396` | Prove axiom-free that every observation beyond a low-digit reification's width is false, closing the output-side tail of the unbounded bitwise theorem. |
+| 2026-08-26 | `448fc8431` | Prove universal low-digit reification round-trip and specialize it into the first axiom-free bounded bitwise semantic theorem. |
+| 2026-08-26 | `05b92a924` | Prove axiom-free quotient and remainder equations for a Boolean low digit plus twice an arbitrary tail, supplying the recursive decoder for component uniqueness. |
+| 2026-08-26 | `d89a192b7` | Compose the universal reification bound with native bit-sum reconstruction to prove an axiom-free numeric round trip, isolating component uniqueness. |
+| 2026-08-26 | `04ca04a3d` | Prove universally and axiom-free that every bounded Boolean-bit reification is strictly below `2^k`, leaving only observation uniqueness. |
+| 2026-08-26 | `a00743663` | Prove every Boolean reification digit is at most one constructively and axiom-free, supplying the local bound for the universal reifier induction. |
+| 2026-08-26 | `e6d798c06` | Exhaustively validate bounded reification over all 8,191 Boolean vectors through width 12 while preserving the oracle's non-proof authority boundary. |
+| 2026-08-26 | `b1405eff6` | Prove one-bit weighted-sum normalization and its Boolean observation round trip axiom-free; narrow the open theorem to the general bounded case. |
+| 2026-08-26 | `fcdcab1b3` | Prove the Boolean-digit map round-trips through bit zero axiom-free and expose weighted-sum normalization as the next non-definitional arithmetic seam. |
+| 2026-08-26 | `75baf4b2c` | Expose the bounded reifier's axiom-free successor equation as a stable induction interface for the missing observation round trip. |
+| 2026-08-26 | `3bb1207e8` | Construct bounded Boolean-bit reification as a binary weighted sum and check its zero-length base axiom-free; retain the round-trip theorem as missing. |
+| 2026-08-26 | `f0782cc25` | Construct the axiom-free pointwise bitwise observation algebra and isolate Nat reification as the remaining mathematical obligation. |
+| 2026-08-26 | `8935a4045` | Describe imported transparent definitions by exact body/type identities, closure, and footprint; both bitwise operations reach `propext`, ruling out clean grafting. |
+| 2026-08-26 | `b4d64c3ea` | Make the refuted generalized capsule fail closed at emission time unless the caller explicitly opts into diagnostic-only output. |
+| 2026-08-26 | `6eb41d48b` | Construct an axiom-free Boolean view of native numeric bits and prove its successor equation by reflexivity, while withholding imported-definition equivalence credit. |
+| 2026-08-26 | `af86b673a` | Bind existing axiom-free numeric `testBit` analogues while refusing their Bool-valued imported use until a checked observation-transport seam exists. |
+| 2026-08-26 | `99f7b4e32` | Bind five bitwise semantic-law obligations to exact candidate and operation identities, with a checked witness that the interface excludes the prior countermodel. |
+| 2026-08-26 | `70ca259b5` | Refute and execution-block the unconstrained proof-free bitwise target with a checked finite countermodel; require a law-bearing semantic interface before reconstruction. |
+| 2026-08-26 | `0554b6b86` | Materialize the assumption-bearing imported bitwise candidate as a proof-free, axiom-free generalized reconstruction target with exact external receipt validation. |
+| 2026-08-26 | `2397eb08f` | Expose exact imported candidates through a separate ninth tier-R agent tool that preserves footprint-aware reconstruction routing and refuses invalid query shapes. |
+| 2026-08-26 | `1c7cb953e` | Add a machine-readable imported-candidate descriptor and separate footprint-aware search index; assumption-bearing candidates route to reconstruction before execution. |
+| 2026-08-26 | `6e0f87c2d` | Export and independently audit upstream `Nat.testBit_bitwise`; preserve its exact 29-dependency, five-assumption footprint as reconstruct-required guidance rather than contract evidence. |
+| 2026-08-26 | `48ae785e2` | Derive the exact four-target bit-observation contract slice: 103 shared transparent nodes, explicit target deltas, and a non-circular lower-level theorem boundary. |
+| 2026-08-26 | `95587054fd` | Preserve stream-context declaration identities, compact the imported graph through dense node IDs, and derive a checked 113-node reverse-reachability frontier for multi-sibling contract design. |
+| 2026-08-26 | `ebcfd3fb88` | Derive the proof-isolated imported implementation-demand graph for all 14 sliced source identities, retaining structural variants and the checked `Nat.mod` decision/subtraction spine without proof or ledger authority. |
+| 2026-08-26 | `d2d6fc0d0` | Add axiom-free native `Nat.mod_self`, alpha-stable structural retrieval, and a checked native-composition control; fresh imported replay preserves zero credit and exposes the implementation-bound `Nat.mod` transport boundary. |
 | 2026-08-26 | `73800a902` | Project all 51 retrieved-induction outcomes into a digest-bound typed capability backlog; false controls remain observation-only and one-target operation registration is refused. |
 | 2026-08-26 | `e82a1b002` | Replay all 25 import-blocked positive targets through checked type slices, exposing 14 exact semantic-contract demands without proof or ledger credit. |
 | 2026-08-26 | `1e7b3acdf` | Join 14 sliced source identities to exact kernel and durable contract evidence; `Nat.testBit` becomes the first measured multi-sibling contract target. |
@@ -1382,8 +1416,203 @@ every `Nat.testBit` sibling has an unsupported co-abstraction. The shorter
 reachable path is now measured separately. Transparent terminal reduction
 moves all ten imported ModEq positives into equality composition while all six
 controls remain unaccepted; conversion is still 0/13 because the producer does
-not chain typed relation premises. Next: compose the general
-`dvd_refl → mod_eq_zero_of_dvd → ModEq` base and its congruence consumers.
+not yet have the needed remainder-equality contracts. A representation audit
+shows the native existential `Nat.modEq` chain is not the imported Mathlib
+`Nat.ModEq`, which unfolds to equality of remainders. Next: construct
+`Nat.mod_self` and reusable modulo-add equalities, retaining native relation
+composition only as a boundary control, and require unchanged conversion of at
+least three imported siblings.
+Native `Nat.mod_self` is now axiom-free and ranks first by a generic
+alpha-stable statement-shape feature, but a fresh transport probe refuses its
+implementation-bound `div_mod_exec` dependency over Mathlib's different
+`Nat.mod`. Production remains zero. Next: reconstruct the equality inside the
+imported kernel from portable order/decision facts, then test unchanged reuse
+across the additive siblings.
+The imported representation boundary is now a generated knowledge artifact,
+not a prose inference. All 14 exact definitions abstracted by the 25 checked
+type slices expand to 1,363 transparent-definition occurrences and 7,303
+direct dependency edges (1,000 context-bound transparent nodes / 1,734 total
+declaration nodes / 5,421 identity-bound edges), with same-named variants and
+nontransparent trust boundaries retained.
+The checked `Nat.mod` spine explicitly reaches `Nat.decLe`/`Nat.ble`,
+`Nat.modCore`, recursive `Nat.modCore.go`, and subtraction-instance machinery.
+No theorem proof or held-out target is read and the graph grants no contract or
+transport authority. Next: derive a deduplicated reverse-reachability view,
+then use the shared `Nat.testBit` subgraph and the modulus spine to choose the
+smallest multi-sibling contracts rather than writing another target-local
+proof.
+The derived reverse-reachability frontier now replays every root closure and
+ranks 113 near-root `Nat`/`Int`/`List` identities without granting proof
+authority. The four bit-observation siblings share a concrete implementation
+spine including `Nat.land`, `Nat.ble`, `Nat.bitwise`, `Nat.testBit`, and
+`Nat.instAndOp`. Next: separate observation laws from generic infrastructure
+in that intersection and construct one explicit contract interface consumed by
+at least three siblings.
+The exact four-target bit-observation slice now contains 471 union nodes and a
+103-node shared core; target-specific deltas are 106/87/88/87. Its five current
+axiom-free `Nat.testBit` candidates cover zero/successor, bounds, and sums, but
+not the required `Nat.bitwise` or list-lookup commutation. Next: inventory exact
+lower-level recurrence theorems and construct one operator-parametric generic
+law without using a desired target conclusion as its own contract witness.
+Pinned Lean already supplies that generic law as `Nat.testBit_bitwise`, and
+Mathlib's and/or/difference targets are direct specializations. A root-selected
+external export independently imports, but its measured footprint contains
+`propext` and the quotient package, with 29 direct theorem dependencies. It is
+candidate guidance only. Next: add an exact imported-candidate search
+population with footprint-aware `reconstruct-required` routing, then rebuild
+the generic theorem constructively inside the imported kernel before any
+three-sibling production claim.
+The footprint-aware imported-candidate index now provides that separate search
+population. Its first exact row is strategy-eligible but execution-ineligible,
+and a Rust descriptor reproduces canonical/alpha type hashes, declaration and
+dependency identities, 29 theorem dependencies, and the five-member footprint
+from the external stream. Next: expose this index through the candidate-only
+agent read surface and dispatch reconstruction for its row.
+The agent now exposes that index through a separate ninth tier-R tool. Exact
+name/type queries preserve the bitwise candidate's source, five-member
+footprint, 29-dependency count, and `execution_eligible=false`; invalid query
+shapes fail closed and the toolset policy fingerprint moves. Next: implement a
+reconstruction proposal that consumes strategy metadata without importing the
+assumption-bearing proof term.
+The assumption-bearing theorem now materializes as a proof-free 10 KiB
+reconstruction target: 12 declarations, two explicit definition abstractions,
+zero normalization rewrites, and an empty footprint. The source theorem name is
+absent. Next: reconstruct this generalized goal and issue exact specialization
+evidence before attempting the three bitwise siblings.
+Immediate semantic review refuted that generalized proposition: unconstrained
+operation parameters admit a concrete `false = true` countermodel. The capsule
+is now explicitly execution-ineligible, and the checker fails closed unless the
+countermodel remains valid. Next: construct and check a law-bearing semantic
+interface before reconstruction dispatch.
+The replacement demand is now machine-readable: five law obligations join the
+exact candidate type to the two exact implementation-graph definition hashes,
+and a checked successor-bit witness proves the interface excludes the earlier
+countermodel. All imported supports remain labeled assumption-bearing; next is
+clean reconstruction of the law leaves, beginning with `testBit_succ`.
+Exact retrieval found the native successor and zero-bit laws already axiom-free,
+but also caught their result-sort mismatch: native observation is `AxNat`, while
+the imported contract is `Bool`. The demand now binds both native types and
+adds an explicit missing Boolean/numeric observation-transport obligation.
+The native half of that transport now exists: a constructive Boolean view of
+numeric bits preserves the successor equation by reflexivity and has an empty
+kernel footprint. Exact equivalence to the imported Bool-valued definition is
+still missing and explicitly receives zero credit.
+The old capsule command now also fails closed by default: writing the refuted
+statement requires an explicit `--emit-refuted-diagnostic` opt-in, so omitting
+the separate metadata checker cannot accidentally make it a producer target.
+Exact definition descriptors now bind both imported operation bodies, types,
+direct closures, and footprints. Each concrete implementation reaches
+`propext`; `testBit` does so through its typeclass-expanded shift/and/equality
+route, while `bitwise` reaches a private unary worker and `PSigma`. Clean work
+must therefore reconstruct target-owned semantics rather than graft definitions.
+The target-owned pointwise bitwise algebra now checks axiom-free for arbitrary
+Boolean operators. The remaining mathematical obligation is sharply isolated:
+reify that observation function as a natural number, then prove its observations
+round-trip. Observation-level success is explicitly denied theorem credit.
+Bounded reification is now implemented as the binary weighted sum, and its
+zero-length base theorem checks axiom-free. The exact remaining proof is the
+bounded observation round-trip for `i < k`; neither that induction nor the
+unbounded bitwise theorem has received credit.
+The reifier's successor equation now also checks axiom-free, exposing the prefix
+plus one weighted digit as a stable induction interface. The round-trip theorem
+remains the next proof; implementation unfolding is no longer required.
+The Boolean digit map now round-trips through bit zero axiom-free. The kernel
+correctly rejected treating the one-bit weighted sum as definitionally equal to
+that digit, exposing weighted-sum normalization as the next arithmetic lemma
+instead of silently conflating the two.
+That explicit chain now checks: one-bit weighted-sum normalization and the
+transported one-bit observation round trip are both axiom-free. The open proof
+has narrowed to the general `i < k` bounded round trip.
+An exhaustive oracle now checks all 8,191 Boolean vectors through 12 bits,
+covering 90,114 in-range and 8,191 boundary observations. It validates the
+construction but is explicitly non-proof evidence; the universal kernel theorem
+remains open.
+The Boolean coefficient bound `boolToBit b ≤ 1` now checks constructively and
+axiom-free. It supplies the missing local inequality for the universal
+`reifyBits bits k < 2^k` induction.
+The universal size theorem now checks axiom-free: every `k`-bit reification is
+strictly below `2^k`. The remaining universal obligation is observation
+round-trip/uniqueness, not existence or boundedness of the constructed number.
+The bound now composes with native `sum_testBit_lt` and `mod_eq_self_of_lt` to
+prove a universal numeric reconstruction round trip, also axiom-free. The
+remaining seam is componentwise digit uniqueness below `k`, followed by the
+already-checked Boolean transport.
+The low-digit decoder now proves axiom-free that `boolToBit b + 2*n` has
+quotient `n` and remainder `boolToBit b` under division by two, using a
+constructed `divMod` witness and uniqueness against executable division. Next:
+put the bounded reifier into this low-digit-first form and induct the decoder
+to componentwise uniqueness.
+That induction now checks axiom-free: the low-digit-first reifier round-trips at
+every `i < k`. Specializing it to `bitwiseObservation` yields the first bounded
+bitwise theorem with an empty footprint. Next: derive a sufficient input width
+and prove all out-of-range observations are false under `f false false = false`;
+weighted-reifier equivalence and exact imported-operation equivalence remain
+separate, uncredited obligations.
+The output-side tail is now complete as well: zero has only false observations,
+and every bit at `offset+k` of a width-`k` low reification is false, universally
+and axiom-free. The unbounded theorem now needs only an input-side sufficient
+width theorem plus the `f false false = false` join; imported equivalence stays
+separate.
+The input theorem and join now close too. `testBitBool_beyond_bound` proves a
+simple sufficient width directly from divide-by-two recursion; `bitwiseTotal`
+uses width `x+y`; and `testBitBool_bitwiseTotal` proves the desired equation at
+every index under exactly `f false false = false`, axiom-free. The native
+mathematics is complete. Exact equivalence to imported Lean `Nat.testBit` and
+`Nat.bitwise` is now the sole reconstruction blocker and still receives zero
+credit.
+Two `Eq.refl` controls now establish the precise trust boundary: merely naming
+either imported operation in a theorem statement makes the declaration-reached
+footprint `[propext]`, even with zero theorem dependencies. Exact imported
+empty-footprint reconstruction is therefore structurally unavailable under the
+current definitions, not awaiting a cleverer proof. Next: choose the clean
+product boundary deliberately—target-owned operations, clean compatible
+definition reconstruction, or an explicitly weaker upstream-definition route.
+Candidate routing now acts on that distinction: ordinary assumption-bearing
+candidates without a measured statement floor remain eligible for proof
+reconstruction, while `Nat.testBit_bitwise` is classified as
+`clean-definition-reconstruction-required`, exposes `[propext]` as the floor,
+and cannot consume proof-reconstruction budget. Next: specialize the completed
+target-owned law into one reusable bitwise family without claiming exact
+imported-definition identity.
+That specialization now covers AND, OR, and difference. Each target-owned
+operation uses the same `bitwiseTotal` constructor; each observation theorem is
+an instantiation of `testBitBool_bitwiseTotal`, has an empty footprint, and
+records the generic theorem dependency. The three-sibling reuse bar is met
+without one proof per target or a false exact-import claim. Next: expose this
+family as a reusable producer/knowledge operation rather than example-only
+kernel declarations.
+A generated projection now connects the three clean theorems to the three open
+development facts for imported `land`, `lor`, and `ldiff`, while marking every
+edge as semantic analogy rather than exact identity. It reports three clean
+analogues, zero exact matches, and zero operation-eligible targets. The graph
+can now use the connection without closing the wrong proposition. Next: promote
+the target-owned family into a reusable library surface with its own durable
+fact identities before considering producer registration.
+The family is now reusable outside its builder process: a root-selected
+official-format capsule re-imports 116 declarations with no axioms, and all
+three root identities reproduce byte-for-byte from the checked builder. The
+243,235-byte read-only pack stays outside Git; a committed receipt binds its
+hash, population, provenance, and generic-theorem dependencies. Next: expose
+the capsule through held-out-safe agent retrieval as target-owned library
+material while preserving zero exact-imported and autonomous credit.
+An end-to-end read-surface audit found that the typed Python
+`imported_candidates` tool still exposed the obsolete one-dimensional route
+even though the generated index had changed. The model and tool now carry the
+statement axiom floor, proof-reconstruction eligibility, and required clean
+definition route; its test requires `[propext]` and refuses the stale label.
+Next: add the clean capsule roots as a separate target-owned retrieval
+population, never as imported exact candidates.
+The tier-R `target_owned_candidates` surface now does that. It searches exact
+name or canonical type, returns capsule and declaration identities, preserves
+empty footprints and generic dependencies, labels semantic analogue links as
+non-exact/non-authoritative, and removes protected fact IDs through the central
+held-out filter. The focused 35-test tool suite and the broader 105-test agent
+suite pass. A full 1,861-test Python run reached 1,824 passes and exposed one
+failure plus two setup errors already present outside this lane: the repository
+currently violates its standard-library-only `scripts/` test in three existing
+scripts, and the held-out gate rejects newly referenced exclusion lists. Do not
+report the full Python gate green until those concurrent integration defects
+land.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization

@@ -308,6 +308,60 @@ class LemmaCandidatesPage(_Frozen):
     rows: tuple[LemmaCandidateRow, ...]
 
 
+class ImportedCandidateRow(_Frozen):
+    """One exact imported candidate with its non-negotiable routing policy."""
+
+    name: str
+    canonical_type: str
+    alpha_type_expression_sha256: str
+    declaration_content_sha256: str
+    axiom_footprint: tuple[str, ...]
+    direct_theorem_dependency_count: int
+    retrieval_disposition: str
+    statement_axiom_floor: tuple[str, ...]
+    proof_reconstruction_eligible: bool
+    required_route: str | None
+    strategy_eligible: bool
+    execution_eligible: bool
+
+
+class ImportedCandidatesPage(_Frozen):
+    """Candidate-only imported theorem search, separate from native lemmas."""
+
+    name_glob: str
+    canonical_type_contains: str
+    matched: int
+    total_candidates: int
+    rows: tuple[ImportedCandidateRow, ...]
+
+
+class TargetOwnedCandidateRow(_Frozen):
+    """One reusable checked Axeyum theorem root, never an imported identity claim."""
+
+    name: str
+    canonical_type: str
+    declaration_identity: str
+    axiom_footprint: tuple[str, ...]
+    direct_theorem_dependencies: tuple[str, ...]
+    semantic_analogue_fact_ids: tuple[str, ...]
+    capsule_path: str
+    capsule_sha256: str
+    exact_imported_identity: bool
+    reuse_eligible: bool
+    authoritative_operation_eligible: bool
+
+
+class TargetOwnedCandidatesPage(_Frozen):
+    """Held-out-safe search over reusable target-owned theorem capsules."""
+
+    name_glob: str
+    canonical_type_contains: str
+    matched: int
+    total_candidates: int
+    dropped_held_out_fact_links: int
+    rows: tuple[TargetOwnedCandidateRow, ...]
+
+
 class OperationRow(_Frozen):
     operation_id: str
     scope: str

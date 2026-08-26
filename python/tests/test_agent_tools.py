@@ -1,4 +1,4 @@
-"""The eight tier-R tools, and the held-out filter that lives inside them.
+"""The tier-R tools, and the held-out filter that lives inside them.
 
 The central assertion is not "no held-out id appeared". That is what a broken
 filter and a working one both report when the population is empty or the query
@@ -216,6 +216,79 @@ def test_lemma_candidates_reports_unlinked_dependencies_without_guessing(ctx) ->
     assert page.unresolved_dependency_fact_ids
 
 
+def test_imported_candidates_preserve_reconstruction_routing(ctx) -> None:
+    page = tools.imported_candidates(ctx, name_glob="Nat.testBit_*")
+    assert page.total_candidates == 1
+    assert page.matched == 1
+    row = page.rows[0]
+    assert row.name == "Nat.testBit_bitwise"
+    assert row.retrieval_disposition == "clean-definition-reconstruction-required"
+    assert row.statement_axiom_floor == ("propext",)
+    assert not row.proof_reconstruction_eligible
+    assert row.required_route == (
+        "reconstruct-clean-definitions-or-accept-weaker-imported-definition-trust"
+    )
+    assert row.strategy_eligible
+    assert not row.execution_eligible
+    assert row.axiom_footprint == ("Quot", "Quot.lift", "Quot.mk", "Quot.sound", "propext")
+    assert row.direct_theorem_dependency_count == 29
+
+
+def test_imported_candidates_require_one_query_axis(ctx) -> None:
+    with pytest.raises(tools.ToolRefusal):
+        tools.imported_candidates(ctx)
+    with pytest.raises(tools.ToolRefusal):
+        tools.imported_candidates(ctx, name_glob="*", canonical_type_contains="AxNat")
+
+
+def test_imported_candidates_search_canonical_type(ctx) -> None:
+    page = tools.imported_candidates(ctx, canonical_type_contains="AxNat.bitwise")
+    assert page.matched == 1
+    assert "AxNat.bitwise" in page.rows[0].canonical_type
+
+
+def test_target_owned_candidates_expose_clean_reusable_family(ctx) -> None:
+    page = tools.target_owned_candidates(
+        ctx, name_glob="Axeyum.Autogenesis.testBitBool_bitwise*"
+    )
+    assert page.total_candidates == 3
+    assert page.matched == 3
+    assert page.dropped_held_out_fact_links == 0
+    assert all(row.axiom_footprint == () for row in page.rows)
+    assert all(row.reuse_eligible for row in page.rows)
+    assert all(not row.exact_imported_identity for row in page.rows)
+    assert all(not row.authoritative_operation_eligible for row in page.rows)
+    assert all(
+        row.direct_theorem_dependencies
+        == ("Axeyum.Autogenesis.testBitBool_bitwiseTotal",)
+        for row in page.rows
+    )
+    assert all(len(row.semantic_analogue_fact_ids) == 1 for row in page.rows)
+
+
+def test_target_owned_candidates_require_one_query_axis(ctx) -> None:
+    with pytest.raises(tools.ToolRefusal):
+        tools.target_owned_candidates(ctx)
+    with pytest.raises(tools.ToolRefusal):
+        tools.target_owned_candidates(
+            ctx, name_glob="*", canonical_type_contains="bitwiseAnd"
+        )
+
+
+def test_target_owned_candidates_search_canonical_type(ctx) -> None:
+    page = tools.target_owned_candidates(ctx, canonical_type_contains="bitwiseDifference")
+    assert page.matched == 1
+    assert page.rows[0].name.endswith("testBitBool_bitwiseDifference")
+
+
+def test_target_owned_candidates_filter_protected_fact_links(ctx, monkeypatch) -> None:
+    monkeypatch.setattr(tools, "_safe", lambda _root, ids: ((), len(ids)))
+    page = tools.target_owned_candidates(ctx, canonical_type_contains="bitwiseAnd")
+    assert page.matched == 1
+    assert page.dropped_held_out_fact_links == 1
+    assert page.rows[0].semantic_analogue_fact_ids == ()
+
+
 def test_operation_registry_exposes_generality(ctx) -> None:
     view = tools.operation_registry(ctx)
     assert view.total > 0
@@ -237,7 +310,7 @@ def test_overlay_query_filters_by_relation(ctx) -> None:
 
 def test_every_tool_declares_a_tier() -> None:
     # `TIER_R_GUARDED_TOOLS` joined the union in slice A6. It is a THIRD tuple
-    # rather than six-plus-two in `TIER_R_TOOLS` because the two axes are
+    # rather than mixing guarded reads into `TIER_R_TOOLS` because the two axes are
     # different: those tools are tier R by assurance and guarded by
     # availability, and only `build_toolset(with_web=True)` offers them.
     declared = {
@@ -249,8 +322,8 @@ def test_every_tool_declares_a_tier() -> None:
     assert {tools.TOOL_TIERS[f.__name__] for f in tools.TIER_C_TOOLS} == {"checked"}
 
 
-def test_the_toolset_exposes_exactly_the_eight_read_tools() -> None:
-    assert len(tools.TIER_R_TOOLS) == 8
+def test_the_toolset_exposes_exactly_the_ten_read_tools() -> None:
+    assert len(tools.TIER_R_TOOLS) == 10
     tools.build_toolset()  # constructs, so every parameter carries a description
 
 

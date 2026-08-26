@@ -555,6 +555,55 @@ autogenesis-semantic-contract-demand:
     uv run --no-sync python -m unittest scripts.tests.test_gen_autogenesis_semantic_contract_demand
     python3 scripts/gen-autogenesis-semantic-contract-demand.py --check
 
+autogenesis-imported-implementation-demand:
+    uv run --no-sync python -m unittest scripts.tests.test_check_autogenesis_imported_implementation_demand
+    python3 scripts/check-autogenesis-imported-implementation-demand.py
+    uv run --no-sync python -m unittest scripts.tests.test_gen_autogenesis_imported_implementation_frontier
+    python3 scripts/gen-autogenesis-imported-implementation-frontier.py --check
+    uv run --no-sync python -m unittest scripts.tests.test_gen_autogenesis_bit_observation_contract_slice
+    python3 scripts/gen-autogenesis-bit-observation-contract-slice.py --check
+    uv run --no-sync python -m unittest scripts.tests.test_check_autogenesis_imported_testbit_bitwise_candidate
+    python3 scripts/check-autogenesis-imported-testbit-bitwise-candidate.py
+    uv run --no-sync python -m unittest scripts.tests.test_gen_autogenesis_imported_candidate_index
+    python3 scripts/gen-autogenesis-imported-candidate-index.py --check
+
+autogenesis-imported-implementation-demand-reproduce streams="/nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1":
+    cargo run -q -p axeyum-lean-import --example imported_implementation_demand -- --streams "{{ streams }}" --replay artifacts/autogenesis/retrieved-induction-type-slice-replay-v1.json --output artifacts/autogenesis/imported-implementation-demand-v1.json
+    python3 scripts/check-autogenesis-imported-implementation-demand.py
+    python3 scripts/gen-autogenesis-imported-implementation-frontier.py
+    python3 scripts/gen-autogenesis-bit-observation-contract-slice.py
+
+autogenesis-imported-testbit-bitwise-candidate-replay stream="/nas3/data/axeyum/autogenesis/reference-packs/imported-candidates-v1/Nat.testBit_bitwise.ndjson":
+    python3 scripts/check-autogenesis-imported-testbit-bitwise-candidate.py --verify-external
+    cargo run -q -p axeyum-lean-import --example lean4export_import -- "{{ stream }}" Nat.testBit_bitwise
+    cargo run -q -p axeyum-lean-import --example imported_candidate_descriptor -- "{{ stream }}" Nat.testBit_bitwise
+
+autogenesis-imported-testbit-bitwise-statement source="/nas3/data/axeyum/autogenesis/reference-packs/imported-candidates-v1/Nat.testBit_bitwise.ndjson" output="/nas3/data/axeyum/autogenesis/reference-packs/imported-candidate-goals-v1/Nat.testBit_bitwise.statement.ndjson":
+    cargo run -q -p axeyum-lean-import --example imported_candidate_statement_capsule -- "{{ source }}" Nat.testBit_bitwise "{{ output }}" --emit-refuted-diagnostic
+    cargo run -q -p axeyum-lean-import --example statement_adapter_import -- "{{ output }}" Axeyum.Autogenesis.ImportedCandidateGoal
+    python3 scripts/check-autogenesis-imported-testbit-bitwise-candidate.py --verify-external
+
+autogenesis-bitwise-semantic-law-demand:
+    cargo run -q -p axeyum-lean-kernel --example nat_testbit_bool_bridge
+    uv run --no-sync python -m unittest scripts.tests.test_check_autogenesis_bitwise_semantic_law_demand scripts.tests.test_check_autogenesis_imported_definition_reflexivity_footprint scripts.tests.test_gen_autogenesis_bitwise_family_projection scripts.tests.test_check_autogenesis_bitwise_clean_family_capsule
+    python3 scripts/check-autogenesis-bitwise-semantic-law-demand.py
+    python3 scripts/check-autogenesis-imported-definition-reflexivity-footprint.py
+    python3 scripts/gen-autogenesis-bitwise-family-projection.py --check
+    python3 scripts/check-autogenesis-bitwise-clean-family-capsule.py
+
+autogenesis-bitwise-clean-family-capsule-replay output="/tmp/axeyum-bitwise-clean-family-replay.ndjson":
+    cargo run -q -p axeyum-lean-kernel --example nat_testbit_bool_bridge -- --export "{{ output }}"
+    cargo run -q -p axeyum-lean-import --example lean4export_import -- "{{ output }}" Axeyum.Autogenesis.testBitBool_bitwiseAnd
+    cargo run -q -p axeyum-lean-import --example lean4export_import -- "{{ output }}" Axeyum.Autogenesis.testBitBool_bitwiseOr
+    cargo run -q -p axeyum-lean-import --example lean4export_import -- "{{ output }}" Axeyum.Autogenesis.testBitBool_bitwiseDifference
+    python3 scripts/check-autogenesis-bitwise-clean-family-capsule.py --verify-external
+
+autogenesis-imported-definition-reflexivity-footprint-replay stream="/nas3/data/axeyum/autogenesis/reference-packs/imported-candidates-v1/Nat.testBit_bitwise.ndjson":
+    cargo run -q -p axeyum-lean-import --example imported_definition_reflexivity_footprint -- "{{ stream }}"
+
+autogenesis-imported-definition-descriptor stream="/nas3/data/axeyum/autogenesis/reference-packs/imported-candidates-v1/Nat.testBit_bitwise.ndjson" name="Nat.testBit":
+    cargo run -q -p axeyum-lean-import --example imported_definition_descriptor -- "{{ stream }}" "{{ name }}"
+
 autogenesis-non-equality-terminal-census:
     uv run --no-sync python -m unittest scripts.tests.test_measure_autogenesis_open_fixed_palette scripts.tests.test_gen_autogenesis_non_equality_population
     python3 scripts/gen-autogenesis-non-equality-population.py --check

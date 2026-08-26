@@ -21,6 +21,8 @@ submodule            canonical authority
 :mod:`autogenesis`   shape classification (``kind`` has 707 values)
 :mod:`generated`     the dashboards' own headers
 :mod:`lemmas`        kernel-derived theorem dependency and exact fact links
+:mod:`imported_candidates` exact imported theorem candidates and footprint routing
+:mod:`target_owned_candidates` reusable checked Axeyum theorem capsules
 ===================  ===============================================
 
 Three rules hold everywhere in this package:
@@ -45,10 +47,12 @@ from . import (
     facts,
     frontier,
     generated,
+    imported_candidates,
     lemmas,
     nursery,
     operations,
     overlay,
+    target_owned_candidates,
 )
 from ._paths import ScriptError, ScriptRun, repo_root
 
@@ -61,9 +65,11 @@ __all__ = [
     "facts",
     "frontier",
     "generated",
+    "imported_candidates",
     "lemmas",
     "nursery",
     "operations",
     "overlay",
     "repo_root",
+    "target_owned_candidates",
 ]
