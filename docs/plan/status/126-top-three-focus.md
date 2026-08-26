@@ -23,7 +23,11 @@ settled `Nat.add_modEq_left`: the intent-boundary fault changed no fact,
 recovery performed exactly one write, settled replay passed, and the frontier
 advanced to `addRight`. A second independently commit-bound episode has now
 settled `Nat.add_modEq_right` through the same crash/recovery discipline and
-advanced the frontier to `modulusZero`. One registered target remains.
+advanced the frontier to `modulusZero`. The third fresh episode settled
+`Nat.mod_modEq`/`modulusZero`; the family is now 3/3 durable, and the machine
+frontier honestly returns no admissible registered target. Next: use the
+measured zero-admissible boundary to select and register the next reusable
+family, rather than adding one-off proof code.
 
 Priority 3 also repaired the CI-observed sub-millisecond budget escape: policy
 now compares an unrounded monotonic duration while receipts retain integer
@@ -35,6 +39,7 @@ Detail and older landed rows moved to [`../notes/126-top-three-focus.md`](../not
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-26 | `aff331097` | Settle `Nat.mod_modEq` through the third fresh crash-safe episode; the imported Nat.mod family reaches 3/3 durable admissions and the frontier returns zero admissible registered targets. |
 | 2026-08-26 | `04f75cdf9` | Settle `Nat.add_modEq_right` through a fresh crash-safe episode; exact `addModRight` dependency replay passes and `modulusZero` becomes the sole admissible target. |
 | 2026-08-26 | `9db19bb4d` | Settle `Nat.add_modEq_left` through one clean crash-safe autonomous episode; exact proof/dependency replay passes and the durable frontier advances to `addRight`. |
 | 2026-08-26 | `05553bd14` | Remove mutable-ledger coupling from immutable Nat.mod assay receipts, review the exact three gate mentions, and make all three registered targets frontier-admissible without bypassing the safety interlock. |

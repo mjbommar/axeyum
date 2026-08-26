@@ -690,6 +690,26 @@ The live ledger now reports 512 proved facts and 611 evidence rows re-derived
 by two or more independent checkers. The generated capability gap has one
 remaining admissible target.
 
+### Third durable Nat.mod family admission (2026-08-26)
+
+At clean source commit `6fe739e8f2f08fed215f0aef7f9734fff75357cb`,
+frontier `fb2da918…7d2e` selected
+`F:ml430-nat-modulus-modeq-zero-fd9af096`. Execution `bf6495de…fc61`
+reconstructed the exact target axiom-free with proof `85448f6c…ac89` and sole
+retained dependency `Axeyum.Autogenesis.Candidate.NatModRemainder.modSelf`.
+Transaction `cc5d5fb3…3159` survived the intentional post-intent crash and
+recovered to one write. Readiness `cd847760…2499` records `modulusZero`
+leaving and no selected successor. The full audit bundle is retained at
+`/data0/axeyum/autogenesis/nat-modeq-remainder-modulus-zero-2026-08-26-v1/`.
+
+The family is now 3/3 durable across three different clean source commits,
+three independently generated frontier/execution/transaction identities, and
+three fault-and-recovery cycles. The ledger reports 513 proved facts, 451
+axiom-free kernel-lean facts, and 612 evidence rows re-derived by two or more
+checkers. The capability projection reports 101 ready facts but zero
+admissible registered operations: producer/operation coverage, not queue
+availability, is again the measured bottleneck.
+
 | 2026-08-26 | `6fad715d8` | Make the Fibonacci child qualification progress-aware: pin candidate-specific dependency receipts and permit either child to advance only through checked, axiom-free kernel evidence. |
 | 2026-08-26 | `2aedb4d68` | Refresh the generated public example inventory from 163 to the 193 examples canonical discovery actually finds; both guarded planning references now report zero stale markers. |
 | 2026-08-26 | `42e7bdfd1` | Make the complete Python build/test/stub/type/lint recipe part of canonical `just check`; register two orphan controls in both gates and return the reachability ratchet from 16 to its 14-module baseline. |
