@@ -644,3 +644,5 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0571](adr-0571-matrix-tensor-orbits-expose-composable-selectors.md) | Expose typed first-factor orbit selectors for complete proof-carrying search covers | accepted |
 | [0572](adr-0572-job-shop-start-windows-and-orders-are-semantic.md) | Restrict job-shop start domains by exact chain windows and expose typed machine-order selectors | accepted |
 | [0573](adr-0573-proof-sat-branches-only-on-active-variables.md) | Exclude declared-but-unused CNF variables from proof-producing SAT decisions | accepted |
+| [0574](adr-0574-job-shop-detectable-precedences-close-to-a-fixpoint.md) | Propagate only logically forced machine precedences and expose their deterministic closure | accepted |
+| [0575](adr-0575-bounded-job-shop-flatzinc-is-a-proof-interchange.md) | Export exact bounded job-shop models on the solver-and-checker shared DRCP surface | accepted |

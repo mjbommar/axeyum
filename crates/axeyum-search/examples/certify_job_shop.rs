@@ -10,8 +10,10 @@ use axeyum_cnf::{
     CnfAssignment, ProofSolveOutcome, check_drat_backward, check_drat_backward_reader,
 };
 use axeyum_search::job_shop::{
-    JobShopEncoding, JobShopEncodingLimits, JobShopProblem, JobShopSchedule, encode_job_shop,
-    encode_job_shop_with_job_windows,
+    JobShopEncoding, JobShopEncodingLimits, JobShopMachineOrderStatus, JobShopProblem,
+    JobShopSchedule, encode_job_shop, encode_job_shop_with_detectable_precedence,
+    encode_job_shop_with_job_windows, encode_job_shop_with_precedence_closure,
+    job_shop_to_pumpkin_flatzinc,
 };
 
 struct Arguments {
@@ -24,14 +26,17 @@ struct Arguments {
     schedule_out: Option<PathBuf>,
     drat: Option<PathBuf>,
     machine_orders: Option<PathBuf>,
+    flatzinc: Option<PathBuf>,
     job_windows: bool,
+    detectable_precedence: bool,
+    precedence_closure: bool,
 }
 
 fn arguments() -> Arguments {
     let args: Vec<String> = std::env::args().skip(1).collect();
     assert!(
         args.len() >= 2,
-        "usage: certify_job_shop INSTANCE BOUND [SECONDS] [--job-windows] [--dimacs PATH] [--witness JSON] [--model SAT-SOLUTION] [--schedule-out JSON] [--check-drat PATH] [--machine-orders PATH]"
+        "usage: certify_job_shop INSTANCE BOUND [SECONDS] [--job-windows | --detectable-precedence | --precedence-closure] [--dimacs PATH] [--flatzinc PATH] [--witness JSON] [--model SAT-SOLUTION] [--schedule-out JSON] [--check-drat PATH] [--machine-orders PATH]"
     );
     let instance = PathBuf::from(&args[0]);
     let bound = args[1]
@@ -49,10 +54,26 @@ fn arguments() -> Arguments {
     let mut schedule_out = None;
     let mut drat = None;
     let mut machine_orders = None;
+    let mut flatzinc = None;
     let mut job_windows = false;
+    let mut detectable_precedence = false;
+    let mut precedence_closure = false;
     while index < args.len() {
         if args[index] == "--job-windows" {
             job_windows = true;
+            index += 1;
+            continue;
+        }
+        if args[index] == "--detectable-precedence" {
+            job_windows = true;
+            detectable_precedence = true;
+            index += 1;
+            continue;
+        }
+        if args[index] == "--precedence-closure" {
+            job_windows = true;
+            detectable_precedence = true;
+            precedence_closure = true;
             index += 1;
             continue;
         }
@@ -63,6 +84,7 @@ fn arguments() -> Arguments {
             "--schedule-out" => &mut schedule_out,
             "--check-drat" => &mut drat,
             "--machine-orders" => &mut machine_orders,
+            "--flatzinc" => &mut flatzinc,
             other => panic!("unknown argument: {other}"),
         };
         *destination = Some(PathBuf::from(
@@ -80,7 +102,10 @@ fn arguments() -> Arguments {
         schedule_out,
         drat,
         machine_orders,
+        flatzinc,
         job_windows,
+        detectable_precedence,
+        precedence_closure,
     }
 }
 
@@ -118,12 +143,22 @@ fn parse_competition_model(text: &str, variables: usize) -> CnfAssignment {
     )
 }
 
-fn write_machine_order_manifest(path: &PathBuf, encoding: &JobShopEncoding) {
-    let mut text = String::from(
-        "schema=axeyum.job-shop-machine-orders.v1\nindex\tmachine\tleft-job\tleft-operation\tright-job\tright-operation\tselector\n",
-    );
+fn write_machine_order_manifest(
+    path: &PathBuf,
+    encoding: &JobShopEncoding,
+    detectable_precedence: bool,
+) {
+    let mut text = if detectable_precedence {
+        String::from(
+            "schema=axeyum.job-shop-machine-orders.v2\nindex\tmachine\tleft-job\tleft-operation\tright-job\tright-operation\tselector\tstatus\n",
+        )
+    } else {
+        String::from(
+            "schema=axeyum.job-shop-machine-orders.v1\nindex\tmachine\tleft-job\tleft-operation\tright-job\tright-operation\tselector\n",
+        )
+    };
     for (index, order) in encoding.machine_orders().iter().enumerate() {
-        writeln!(
+        write!(
             text,
             "{index}\t{}\t{}\t{}\t{}\t{}\t{}",
             order.machine,
@@ -134,31 +169,93 @@ fn write_machine_order_manifest(path: &PathBuf, encoding: &JobShopEncoding) {
             order.selector.dimacs()
         )
         .expect("write to String");
+        if detectable_precedence {
+            let status = match order.status {
+                JobShopMachineOrderStatus::Free => "free",
+                JobShopMachineOrderStatus::ForcedLeftBeforeRight => "left-before-right",
+                JobShopMachineOrderStatus::ForcedRightBeforeLeft => "right-before-left",
+                JobShopMachineOrderStatus::Infeasible => "infeasible",
+            };
+            write!(text, "\t{status}").expect("write to String");
+        }
+        writeln!(text).expect("write to String");
     }
     std::fs::write(path, text).expect("write machine-order manifest");
 }
 
-fn main() {
-    let args = arguments();
-    let text = std::fs::read_to_string(&args.instance).expect("read instance");
-    let problem = JobShopProblem::parse_orlib(&text).expect("parse OR-Library instance");
-    let encoding = if args.job_windows {
-        encode_job_shop_with_job_windows(&problem, args.bound, JobShopEncodingLimits::default())
-    } else {
-        encode_job_shop(&problem, args.bound, JobShopEncodingLimits::default())
-    }
-    .expect("encoding must fit explicit defaults");
+fn emit_flatzinc(args: &Arguments, problem: &JobShopProblem) -> bool {
+    let Some(path) = &args.flatzinc else {
+        return false;
+    };
+    let model = job_shop_to_pumpkin_flatzinc(problem, args.bound)
+        .expect("bounded FlatZinc model must be well formed");
+    std::fs::write(path, model).expect("write FlatZinc");
+    println!("schema=axeyum.job-shop-bound-run.v1");
+    println!("instance={}", args.instance.display());
+    println!("bound={}", args.bound);
+    println!("flatzinc={}", path.display());
+    println!("verdict=encoded");
+    true
+}
+
+fn print_encoding_metadata(args: &Arguments, problem: &JobShopProblem, encoding: &JobShopEncoding) {
     println!("schema=axeyum.job-shop-bound-run.v1");
     println!("instance={}", args.instance.display());
     println!("jobs={}", problem.jobs.len());
     println!("machines={}", problem.machines);
     println!("bound={}", args.bound);
     println!("job-windows={}", args.job_windows);
+    println!("detectable-precedence={}", args.detectable_precedence);
+    println!("precedence-closure={}", args.precedence_closure);
     println!("variables={}", encoding.formula().variable_count());
     println!("clauses={}", encoding.formula().clauses().len());
     println!("machine-orders={}", encoding.machine_orders().len());
+    if let Some(propagation) = encoding.precedence_propagation() {
+        println!("precedence-rounds={}", propagation.rounds);
+        println!("precedence-infeasible={}", propagation.infeasible);
+        println!(
+            "precedence-forced-orders={}",
+            propagation
+                .machine_orders
+                .iter()
+                .filter(|&&status| status != JobShopMachineOrderStatus::Free)
+                .count()
+        );
+    }
+}
+
+fn encode(args: &Arguments, problem: &JobShopProblem) -> JobShopEncoding {
+    let result = if args.precedence_closure {
+        encode_job_shop_with_precedence_closure(
+            problem,
+            args.bound,
+            JobShopEncodingLimits::default(),
+        )
+    } else if args.detectable_precedence {
+        encode_job_shop_with_detectable_precedence(
+            problem,
+            args.bound,
+            JobShopEncodingLimits::default(),
+        )
+    } else if args.job_windows {
+        encode_job_shop_with_job_windows(problem, args.bound, JobShopEncodingLimits::default())
+    } else {
+        encode_job_shop(problem, args.bound, JobShopEncodingLimits::default())
+    };
+    result.expect("encoding must fit explicit defaults")
+}
+
+fn main() {
+    let args = arguments();
+    let text = std::fs::read_to_string(&args.instance).expect("read instance");
+    let problem = JobShopProblem::parse_orlib(&text).expect("parse OR-Library instance");
+    if emit_flatzinc(&args, &problem) {
+        return;
+    }
+    let encoding = encode(&args, &problem);
+    print_encoding_metadata(&args, &problem, &encoding);
     if let Some(path) = &args.machine_orders {
-        write_machine_order_manifest(path, &encoding);
+        write_machine_order_manifest(path, &encoding, args.detectable_precedence);
         println!("machine-order-manifest={}", path.display());
     }
 
