@@ -1056,6 +1056,20 @@ pub struct CRealPrelude {
     /// discharged concretely via [`Self::bounded_on_id_unit`]. See
     /// `creal/uniform_continuity.rs`.
     pub uniformly_continuous_poly_example: NameId,
+    /// `CReal.mag_bound_le_sum_range_of_lt : ∀ (g : Nat → Nat) (n i : Nat),
+    /// Nat.lt i n → CReal.le (mag_bound (g i)) (CReal.sumRange (fun j =>
+    /// mag_bound (g j)) n)` — a `Nat`-indexed family of magnitude bounds is
+    /// dominated by their running sum, by induction on `n` with no
+    /// comparison of `CReal`s (only `Nat.lt`/`Eq Nat` case splits): the
+    /// `CReal`-valued analogue of `Nat.le_sumRange_of_lt`
+    /// (`nat_prelude/binomial.rs`), needed because `CReal.le` cannot decide
+    /// a maximum by comparison but a sum of nonnegatives still dominates
+    /// each addend. Declared in a THIRD `uniform_continuity.rs` entry point
+    /// (`declare_uniform_continuity_sums`) because it consumes
+    /// `CReal.sumRange`, which `series::declare_series` declares after both
+    /// of this module's earlier entry points. See
+    /// `creal/uniform_continuity.rs`.
+    pub mag_bound_le_sum_range_of_lt: NameId,
     /// `CReal.ratSqLe : ∀ (u s : Rat), Rat.le (u*u) (s*s) → Rat.le Rat.zero s
     /// → Rat.le u s` — a purely rational fact (no `CReal` structure), proved
     /// via `Rat.mul_pos` and a difference-of-squares identity rather than a
@@ -2570,6 +2584,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         bounded_on_id_unit: kernel.name_str(creal, "bounded_on_id_unit"),
         uniformly_continuous_poly_example: kernel
             .name_str(creal, "uniformly_continuous_poly_example"),
+        mag_bound_le_sum_range_of_lt: kernel.name_str(creal, "mag_bound_le_sumRange_of_lt"),
         rat_sq_le: kernel.name_str(creal, "ratSqLe"),
         rat_sq_sandwich: kernel.name_str(creal, "ratSqSandwich"),
         rat_index_ratio_le_one: kernel.name_str(creal, "ratIndexRatioLeOne"),
@@ -2793,6 +2808,12 @@ pub(crate) fn build_creal_prelude_uncached(
         speedup::declare_speedup(&mut d, prelude)?;
         convergence::declare_cauchy_convergence(&mut d, prelude)?;
         series::declare_series(&mut d, prelude)?;
+        // `CReal.mag_bound_le_sum_range_of_lt` needs `CReal.sumRange`
+        // (`series::declare_series`, just above), which is declared after
+        // BOTH of `uniform_continuity`'s earlier entry points -- so it gets
+        // its own, third, entry point here rather than joining
+        // `declare_uniform_continuity`/`declare_uniform_continuity_products`.
+        uniform_continuity::declare_uniform_continuity_sums(&mut d, prelude)?;
         monotone::declare_monotone(&mut d, prelude)?;
         // `riemannSum` is built directly on `sumRange`/`ofNat` and needs
         // nothing from `power`, so it can land right after `series` rather
