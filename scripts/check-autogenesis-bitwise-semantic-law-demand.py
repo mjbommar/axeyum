@@ -141,6 +141,16 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
     bound_type = reification.get("boolean_digit_bound_canonical_type", "")
     if "AxNat.le" not in bound_type or "boolToBit" not in bound_type:
         raise ValueError("Boolean digit bound type changed")
+    for prefix, required in (
+        ("boolean_digit_divmod", "AxNat.divMod"),
+        ("boolean_digit_div", "AxNat.div"),
+        ("boolean_digit_mod", "AxNat.mod"),
+    ):
+        if reification.get(f"{prefix}_axiom_footprint_size") != 0:
+            raise ValueError(f"{prefix} gained assumptions")
+        canonical_type = reification.get(f"{prefix}_canonical_type", "")
+        if required not in canonical_type or "boolToBit" not in canonical_type:
+            raise ValueError(f"{prefix} type changed")
     for prefix in ("one_bit_normalization", "one_bit_roundtrip"):
         if reification.get(f"{prefix}_axiom_footprint_size") != 0:
             raise ValueError(f"{prefix} gained assumptions")

@@ -116,6 +116,15 @@ axiom-free. What remains is componentwise uniqueness—showing the reconstructed
 numeric digit at each `i < k` equals `boolToBit (bits i)`—then transporting
 through the Boolean digit bridge.
 
+The first reusable decoder step now checks axiom-free. For every Boolean `b`
+and tail `n`, `boolToBit b + 2*n` has a checked `divMod 2` witness whose
+quotient is `n` and remainder is `boolToBit b`; comparison with executable
+division proves both equations separately. This is stronger than another
+finite observation: it supplies the exact quotient/remainder equations needed
+to induct over a low-digit-first reifier. The remaining construction is to
+connect the weighted-sum reifier to that recursive shape and carry the decoder
+through every in-range index.
+
 A bounded oracle exhausts every Boolean vector through width 12: 8,191 vectors,
 90,114 in-range observations, and 8,191 first-out-of-range zero observations.
 It confirms the weighted-sum construction has the intended finite semantics.
