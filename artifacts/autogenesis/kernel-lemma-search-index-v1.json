@@ -1,11 +1,11 @@
 {
   "census": {
     "distinct_exactly_linked_facts": 390,
-    "kernel_dependency_edges": 6981,
-    "kernel_theorems": 1241,
+    "kernel_dependency_edges": 7020,
+    "kernel_theorems": 1242,
     "maximum_dependency_depth": 26,
     "theorems_with_exact_fact_links": 395,
-    "theorems_without_exact_fact_links": 846,
+    "theorems_without_exact_fact_links": 847,
     "unresolved_prefixed_kernel_evidence": 4,
     "unresolved_reason_counts": {
       "exact kernel evidence identity is absent from the current projection": 3,
@@ -16,7 +16,7 @@
     "fact_identity_rule": "kernel-term evidence with explicit kernel_declarations or kernel_declaration, falling back for compatibility to an evidence id with exact kernel- or kernel: prefix and an exact current theorem suffix",
     "fact_population": "sorted artifacts/facts/F-*.json",
     "graph_semantics": "accepted theorem-term direct references; dependency depth is the longest direct-theorem path from a theorem with no theorem dependency",
-    "kernel_projection_sha256": "8011f5a4c2844e36bd09b03e79a8d4fa6b047b9b9ff3557154331458bbec28b0",
+    "kernel_projection_sha256": "4db97bd73e30709df447f39d9bcfb5bf9c4e58841de037c884d9b29cc792e2bb",
     "trust_boundary": "search and retrieval only; no concept, applicability, proof, admission, or trusted-kernel authority"
   },
   "kind": "axeyum-kernel-lemma-search-index",
@@ -49,6 +49,7 @@
       "dependency_depth": 0,
       "direct_theorem_dependencies": [],
       "direct_theorem_dependents": [
+        "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
         "CReal.riemannSum_le_on",
         "axeyum.string.2.all_append",
@@ -82,6 +83,7 @@
       "dependency_depth": 0,
       "direct_theorem_dependencies": [],
       "direct_theorem_dependents": [
+        "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
         "CReal.riemannSum_le_on",
         "axeyum.string.2.all_append",
@@ -2872,6 +2874,7 @@
         "CReal.constant_of_zero_deriv",
         "CReal.eq_zero_of_add_eq_zero_of_nonneg",
         "CReal.equiv_zero_of_small",
+        "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
         "CReal.geom_sum_bounded",
         "CReal.geom_tail_bounded",
@@ -3085,6 +3088,7 @@
         "CReal.bounded_on_add",
         "CReal.constant_of_zero_deriv",
         "CReal.equiv_zero_of_small",
+        "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
         "CReal.geom_sum_bounded",
         "CReal.geom_tail_bounded",
@@ -3302,6 +3306,7 @@
         "CReal.bounded_on_add",
         "CReal.constant_of_zero_deriv",
         "CReal.equiv_zero_of_small",
+        "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
         "CReal.geom_sum_bounded",
         "CReal.geom_tail_bounded",
@@ -3451,6 +3456,7 @@
       "dependency_depth": 0,
       "direct_theorem_dependencies": [],
       "direct_theorem_dependents": [
+        "CReal.fineSample_close",
         "CReal.hasDerivative_chain",
         "CReal.hasDerivative_mul",
         "CReal.ivt_approx",
@@ -3478,6 +3484,7 @@
         "CReal.neg_congr"
       ],
       "direct_theorem_dependents": [
+        "CReal.fineSample_close",
         "CReal.hasDerivative_add",
         "CReal.hasDerivative_chain",
         "CReal.hasDerivative_congr",
@@ -3515,6 +3522,7 @@
         "CReal.abs_sumRange_le",
         "CReal.bounded_on_add",
         "CReal.bounded_on_id_unit",
+        "CReal.fineSample_close",
         "CReal.hasDerivative_add",
         "CReal.hasDerivative_chain",
         "CReal.hasDerivative_closeOfEquiv",
@@ -3742,6 +3750,7 @@
         "CReal.antitone_of_nonpos_deriv",
         "CReal.bounded_on_add",
         "CReal.constant_of_zero_deriv",
+        "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
         "CReal.geom_tail_within",
         "CReal.hasDerivative_add",
@@ -3881,6 +3890,7 @@
         "CReal.bounded_on_add",
         "CReal.constant_of_zero_deriv",
         "CReal.equiv_zero_of_small",
+        "CReal.fineSample_close",
         "CReal.geom_sum_bounded",
         "CReal.geom_tail_bounded",
         "CReal.geom_tail_within",
@@ -4061,6 +4071,7 @@
         "CReal.antitone_of_nonpos_deriv",
         "CReal.bounded_on_add",
         "CReal.constant_of_zero_deriv",
+        "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
         "CReal.geom_tail_within",
         "CReal.hasDerivative_add",
@@ -4176,6 +4187,7 @@
         "CReal.bounded_on_add",
         "CReal.eq_zero_of_add_eq_zero_of_nonneg",
         "CReal.equiv_zero_of_small",
+        "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
         "CReal.geom_sum_bounded",
         "CReal.geom_tail_bounded",
@@ -4312,6 +4324,7 @@
         "CReal.bounded_on_add",
         "CReal.constant_of_zero_deriv",
         "CReal.equiv_zero_of_small",
+        "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
         "CReal.geom_sum_bounded",
         "CReal.geom_tail_bounded",
@@ -4530,6 +4543,7 @@
         "CReal.constant_of_zero_deriv",
         "CReal.eq_zero_of_add_eq_zero_of_nonneg",
         "CReal.equiv_zero_of_small",
+        "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
         "CReal.geom_sum_bounded",
         "CReal.geom_tail_bounded",
@@ -5439,6 +5453,61 @@
     },
     {
       "axiom_footprint_size": 0,
+      "canonical_type": "((x0 : ((x0 : CReal) -> CReal)) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat) -> ((x6 : AxNat) -> ((x7 : AxNat) -> ((x8 : CReal.le x1 x2) -> ((x9 : CReal.UniformlyContinuousOn x0 x1 x2) -> ((x10 : AxNat.le x6 x4) -> ((x11 : AxNat.lt x7 (AxNat.succ x5)) -> ((x12 : AxNat.le (AxNat.add (AxNat.mul (AxNat.succ (CReal.bound (CReal.add x2 (CReal.neg x1)))) (CReal.UniformlyContinuousOn.modulus x0 x1 x2 x9 x3)) (CReal.bound (CReal.add x2 (CReal.neg x1)))) x4) -> CReal.le (CReal.abs (CReal.add (x0 (CReal.add (CReal.add x1 (CReal.mul (CReal.ofNat x6) (CReal.mul (CReal.add x2 (CReal.neg x1)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x4))))) (CReal.mul (CReal.ofNat x7) (CReal.mul (CReal.mul (CReal.add x2 (CReal.neg x1)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x4))) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x5)))))) (CReal.neg (x0 (CReal.add x1 (CReal.mul (CReal.ofNat x6) (CReal.mul (CReal.add x2 (CReal.neg x1)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x4))))))))) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x3)))))))))))))))",
+      "dependency_depth": 21,
+      "direct_theorem_dependencies": [
+        "And.left",
+        "And.right",
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.UniformlyContinuousOn.spec",
+        "CReal.abs_congr",
+        "CReal.abs_le",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_le_add",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.fineSample_in_bounds",
+        "CReal.le_congr",
+        "CReal.le_refl",
+        "CReal.le_trans",
+        "CReal.mesh_le_of_ge",
+        "CReal.mul_assoc",
+        "CReal.mul_comm",
+        "CReal.mul_congr",
+        "CReal.mul_le_mul_of_nonneg_left",
+        "CReal.mul_nonneg",
+        "CReal.mul_one",
+        "CReal.neg_le_neg",
+        "CReal.ofNat_le",
+        "CReal.ofRat_le",
+        "CReal.ofRat_mul",
+        "CReal.ratUnitEqOne",
+        "CReal.riemannSum_sample_in_bounds",
+        "Nat.le_succ",
+        "Nat.le_trans",
+        "Nat.lt_succ_of_le",
+        "Nat.mul_one",
+        "Nat.zero_add",
+        "Rat.natDivSucc_mul",
+        "Rat.natDivSucc_scale",
+        "Rat.zero_le_natDivSucc"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.fineSample_close",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "canonical_type": "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat) -> ((x6 : CReal.le x0 x1) -> ((x7 : AxNat.le x4 x2) -> ((x8 : AxNat.lt x5 (AxNat.succ x3)) -> And (CReal.le x0 (CReal.add (CReal.add x0 (CReal.mul (CReal.ofNat x4) (CReal.mul (CReal.add x1 (CReal.neg x0)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x2))))) (CReal.mul (CReal.ofNat x5) (CReal.mul (CReal.mul (CReal.add x1 (CReal.neg x0)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x2))) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x3)))))) (CReal.le (CReal.add (CReal.add x0 (CReal.mul (CReal.ofNat x4) (CReal.mul (CReal.add x1 (CReal.neg x0)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x2))))) (CReal.mul (CReal.ofNat x5) (CReal.mul (CReal.mul (CReal.add x1 (CReal.neg x0)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x2))) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x3))))) x1))))))))))",
       "dependency_depth": 20,
       "direct_theorem_dependencies": [
@@ -5478,7 +5547,9 @@
         "Rat.natDivSucc_scale",
         "Rat.zero_le_natDivSucc"
       ],
-      "direct_theorem_dependents": [],
+      "direct_theorem_dependents": [
+        "CReal.fineSample_close"
+      ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.fineSample_in_bounds",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
@@ -6568,6 +6639,7 @@
         "CReal.constant_of_zero_deriv",
         "CReal.eq_zero_of_add_eq_zero_of_nonneg",
         "CReal.equiv_zero_of_small",
+        "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
         "CReal.geom_sum_bounded",
         "CReal.geom_tail_bounded",
@@ -6853,6 +6925,7 @@
         "CReal.abs_sumRange_le",
         "CReal.eq_zero_of_add_eq_zero_of_nonneg",
         "CReal.equiv_zero_of_small",
+        "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
         "CReal.geom_sum_bounded",
         "CReal.geom_tail_bounded",
@@ -6922,6 +6995,7 @@
         "CReal.bounded_on_id_unit",
         "CReal.eq_zero_of_add_eq_zero_of_nonneg",
         "CReal.equiv_zero_of_small",
+        "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
         "CReal.geom_tail_within",
         "CReal.hasDerivative_add",
@@ -7458,7 +7532,9 @@
         "Rat.sub_le_of_le",
         "Rat.zero_le_natDivSucc"
       ],
-      "direct_theorem_dependents": [],
+      "direct_theorem_dependents": [
+        "CReal.fineSample_close"
+      ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.mesh_le_of_ge",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
@@ -7652,6 +7728,7 @@
         "CPoint.radical_axis_iff_dot",
         "CPoint.thales",
         "CPoint.thales_converse",
+        "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
         "CReal.geom_tail_bounded_div",
         "CReal.hasDerivative_chain",
@@ -7748,6 +7825,7 @@
         "CPoint.thales",
         "CPoint.thales_converse",
         "CReal.abs_mul_le_of_bounds",
+        "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
         "CReal.geom_tail_bounded_div",
         "CReal.hasDerivative_add",
@@ -7891,6 +7969,7 @@
         "CPoint.thales",
         "CPoint.thales_converse",
         "CReal.abs_mul_le_of_bounds",
+        "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
         "CReal.geom_tail_bounded_div",
         "CReal.hasDerivative_add",
@@ -8065,6 +8144,7 @@
       ],
       "direct_theorem_dependents": [
         "CReal.abs_mul_le_of_bounds",
+        "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
         "CReal.geom_tail_bounded_div",
         "CReal.hasDerivative_chain",
@@ -8124,6 +8204,7 @@
       ],
       "direct_theorem_dependents": [
         "CReal.abs_mul_le_of_bounds",
+        "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
         "CReal.geom_tail_within",
         "CReal.hasDerivative_const",
@@ -8196,6 +8277,7 @@
         "CPoint.thales",
         "CPoint.thales_converse",
         "CReal.abs_mul_le_of_bounds",
+        "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
         "CReal.geom_tail_bounded_div",
         "CReal.hasDerivative_chain_id_sq",
@@ -8715,6 +8797,7 @@
         "CReal.antitone_of_nonpos_deriv",
         "CReal.bounded_on_id_unit",
         "CReal.constant_of_zero_deriv",
+        "CReal.fineSample_close",
         "CReal.geom_sum_bounded",
         "CReal.geom_tail_bounded",
         "CReal.geom_tail_within",
@@ -8942,6 +9025,7 @@
         "Rat.natDivSucc_le_add_left"
       ],
       "direct_theorem_dependents": [
+        "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
         "CReal.monotone_of_nonneg_deriv",
         "CReal.riemannSum_sample_in_bounds",
@@ -9028,6 +9112,7 @@
       "direct_theorem_dependents": [
         "CReal.abs_mul_le_of_bounds",
         "CReal.bounded_on_id_unit",
+        "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
         "CReal.hasDerivative_add",
         "CReal.hasDerivative_chain",
@@ -9075,6 +9160,7 @@
       ],
       "direct_theorem_dependents": [
         "CReal.bounded_on_mul",
+        "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
         "CReal.hasDerivative_chain",
         "CReal.hasDerivative_mul",
@@ -9682,6 +9768,7 @@
       ],
       "direct_theorem_dependents": [
         "CReal.eq_zero_of_mul_self_zero",
+        "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
         "CReal.hasDerivative_pow",
         "CReal.ivt_step",
@@ -9995,6 +10082,7 @@
         "Rat.zero_le_natDivSucc"
       ],
       "direct_theorem_dependents": [
+        "CReal.fineSample_close",
         "CReal.riemannSum_le_on"
       ],
       "exact_fact_ids": [],
@@ -22789,6 +22877,7 @@
       "dependency_depth": 0,
       "direct_theorem_dependencies": [],
       "direct_theorem_dependents": [
+        "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
         "CReal.monotone_of_nonneg_deriv",
         "CReal.riemannSum_sample_in_bounds",
@@ -23056,6 +23145,7 @@
       "dependency_depth": 0,
       "direct_theorem_dependencies": [],
       "direct_theorem_dependents": [
+        "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
         "CReal.hasDerivative_chain",
         "CReal.hasDerivative_mul",
@@ -23545,6 +23635,7 @@
         "Nat.le_succ_succ"
       ],
       "direct_theorem_dependents": [
+        "CReal.fineSample_close",
         "Nat.choose_le_two_pow",
         "Nat.restrict_pair_injective",
         "Nat.restrict_pair_maps_into"
@@ -24430,6 +24521,7 @@
         "Nat.zero_add"
       ],
       "direct_theorem_dependents": [
+        "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
         "CReal.hasDerivative_chain",
         "CReal.hasDerivative_mul",
@@ -27839,6 +27931,7 @@
       "direct_theorem_dependents": [
         "CReal.converges_bounded",
         "CReal.eq_zero_of_mul_self_zero",
+        "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
         "CReal.mesh_count_width",
         "CReal.pow_half_le_natDivSucc",
@@ -33055,6 +33148,7 @@
         "CReal.bounded_on_mul",
         "CReal.converges_mul",
         "CReal.eq_zero_of_mul_self_zero",
+        "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
         "CReal.hasDerivative_chain",
         "CReal.hasDerivative_mul",
@@ -33142,6 +33236,7 @@
       ],
       "direct_theorem_dependents": [
         "CReal.eq_zero_of_mul_self_zero",
+        "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
         "CReal.hasDerivative_chain",
         "CReal.hasDerivative_mul",
@@ -35387,6 +35482,7 @@
         "CReal.converges_mul",
         "CReal.converges_of_const",
         "CReal.eq_zero_of_mul_self_zero",
+        "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
         "CReal.hasDerivative_chain",
         "CReal.hasDerivative_closeOfEquiv",
