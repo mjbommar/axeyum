@@ -630,9 +630,7 @@ def imported_candidates(
 
     def body() -> ImportedCandidatesPage:
         if sum(map(bool, (name_glob, canonical_type_contains))) != 1:
-            raise ToolRefusal(
-                "supply exactly one of name_glob or canonical_type_contains"
-            )
+            raise ToolRefusal("supply exactly one of name_glob or canonical_type_contains")
         index = imported_candidates_api.load(ctx.deps.root)
         if name_glob:
             selected = [row for row in index if glob_match(row.name, name_glob)]
@@ -686,9 +684,7 @@ def target_owned_candidates(
 
     def body() -> TargetOwnedCandidatesPage:
         if sum(map(bool, (name_glob, canonical_type_contains))) != 1:
-            raise ToolRefusal(
-                "supply exactly one of name_glob or canonical_type_contains"
-            )
+            raise ToolRefusal("supply exactly one of name_glob or canonical_type_contains")
         root = ctx.deps.root
         index = target_owned_candidates_api.load(root)
         if name_glob:
@@ -1054,8 +1050,7 @@ def resolve_export(root: Path, fact_id: str) -> ExportResolution:
         receipt_documents = [
             document
             for document in _adapter_records(root)
-            if document.get("kind")
-            == "axeyum-proof-isolated-candidate-capsule-receipt"
+            if document.get("kind") == "axeyum-proof-isolated-candidate-capsule-receipt"
         ]
         lemma_index = lemmas_api.load(root) if receipt_documents else None
         for document in receipt_documents:
@@ -1139,9 +1134,7 @@ def resolve_export(root: Path, fact_id: str) -> ExportResolution:
         )
     if not target:
         raise ExportUnavailable(f"the record for this fact names no target definition ({source})")
-    return ExportResolution(
-        fact_id, path, measured, target, source, candidate_declarations
-    )
+    return ExportResolution(fact_id, path, measured, target, source, candidate_declarations)
 
 
 def _sha256_of_render(kernel: Any, expression: Any) -> str:
@@ -1193,10 +1186,7 @@ def run_producer(tool: str, export: ExportResolution) -> dict[str, Any]:
         candidate = producers_api.propose_bounded_application(
             kernel,
             goal,
-            [
-                kernel.name(name, must_exist=True)
-                for name in export.candidate_declarations
-            ],
+            [kernel.name(name, must_exist=True) for name in export.candidate_declarations],
         )
     else:
         propose = (

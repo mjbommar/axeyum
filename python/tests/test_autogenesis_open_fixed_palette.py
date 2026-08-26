@@ -1,17 +1,9 @@
 from __future__ import annotations
 
-import importlib.util
 import unittest
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
-SPEC = importlib.util.spec_from_file_location(
-    "open_fixed_palette",
-    ROOT / "scripts/measure-autogenesis-open-fixed-palette.py",
-)
-assert SPEC and SPEC.loader
-MODULE = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(MODULE)
+from axeyum import autogenesis_open_fixed_palette as MODULE
 
 
 class OpenFixedPaletteTests(unittest.TestCase):

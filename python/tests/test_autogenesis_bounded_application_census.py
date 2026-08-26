@@ -2,18 +2,9 @@
 
 from __future__ import annotations
 
-import importlib.util
-from pathlib import Path
 import unittest
 
-ROOT = Path(__file__).resolve().parents[2]
-SPEC = importlib.util.spec_from_file_location(
-    "bounded_application_census",
-    ROOT / "scripts/gen-autogenesis-bounded-application-census.py",
-)
-assert SPEC and SPEC.loader
-CENSUS = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(CENSUS)
+from axeyum import autogenesis_bounded_application_census as CENSUS
 
 
 class BoundedApplicationCensusTests(unittest.TestCase):
@@ -25,11 +16,11 @@ class BoundedApplicationCensusTests(unittest.TestCase):
         self.assertEqual(
             self.data["census"],
             {
-                "population": 109,
+                "population": 111,
                 "accepted": 6,
-                "declined": 103,
-                "conversion_percent": 5.5,
-                "decline_reasons": {"NoTypedApplication": 103},
+                "declined": 105,
+                "conversion_percent": 5.4,
+                "decline_reasons": {"NoTypedApplication": 105},
             },
         )
 
@@ -40,9 +31,7 @@ class BoundedApplicationCensusTests(unittest.TestCase):
         self.assertTrue(all(len(row["proof_sha256"]) == 64 for row in accepted))
 
     def test_fibonacci_uses_retrieval_without_proof_leakage(self):
-        row = next(
-            row for row in self.data["accepted"] if row["theorem"] == "Nat.fib_mono"
-        )
+        row = next(row for row in self.data["accepted"] if row["theorem"] == "Nat.fib_mono")
         self.assertEqual(row["premise_declarations"], ["Nat.fib_le_succ"])
         self.assertIn("Nat.fib", row["candidate_declarations"])
         self.assertIn("Nat.monotone_of_le_succ", row["candidate_declarations"])
