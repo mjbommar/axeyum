@@ -282,6 +282,12 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             p.uniformly_continuous_poly_example,
             "theorem",
         ),
+        (
+            "CReal.mag_bound_le_sumRange_of_lt",
+            p.mag_bound_le_sum_range_of_lt,
+            "theorem",
+        ),
+        ("CReal.bucketIndex", p.bucket_index, "def"),
         ("CReal.ratSqLe", p.rat_sq_le, "theorem"),
         ("CReal.ratSqSandwich", p.rat_sq_sandwich, "theorem"),
         (

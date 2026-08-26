@@ -136,14 +136,16 @@
 )]
 
 use super::ring_helpers::add4_comm;
-use super::{CRealPrelude, creal_ty};
+use super::{CRealPrelude, creal_ty, sample};
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
-use crate::rat_prelude::ops::{nat_eq_to_rat, nat_rewrite_prop, radd, rat_eq_rewrite};
+use crate::rat_prelude::ops::{
+    den, nat_eq_to_rat, nat_rewrite_prop, num, radd, rat_eq_rewrite, rzero,
+};
 
 /// Admit `CReal.UniformlyContinuousOn` (the carrier and its two
 /// projections), two witnesses (`id` and `const`), and the closure lemma
@@ -165,7 +167,84 @@ pub(super) fn declare_uniform_continuity(
     declare_uniformly_continuous_const(d, p)?;
     declare_uniformly_continuous_add(d, p)?;
     declare_uniformly_continuous_neg(d, p)?;
-    declare_uniformly_continuous_sub(d, p)
+    declare_uniformly_continuous_sub(d, p)?;
+    declare_bucket_index(d, p)
+}
+
+// --- the bucket-index primitive ---------------------------------------------
+//
+// `CReal.bounded_of_uniformly_continuous`'s covering argument (see the
+// module documentation) needs, for a point `z` in `[a, b]` and a target
+// resolution `k` (step `1/(Nat.succ k)`), a COMPUTABLE `Nat` index of the
+// sample point nearest `z − a` from below. `CReal.archimedean`'s own `∃`
+// witness cannot be pulled into `Type` (the identical `Exists`-into-`Type`
+// wall the module documentation's own house rule states), and picking the
+// nearest of infinitely many candidates by comparison is not even
+// well-posed (`CReal.le` is undecidable) -- so this has to be a genuine
+// projection off ONE rational sample, the same move `CReal.bound` makes,
+// not a search.
+
+/// `CReal.bucketIndex w k : Nat` -- the computable "which sample bucket does
+/// `w` fall into" primitive.
+///
+/// Recipe verbatim from `creal/sqrt.rs::declare_sqrt_approx`'s own
+/// `sqrtApprox` (see that declaration's own doc comment for the identical
+/// five-line shape): sample `w` at accuracy index `j := k1*k1` (`k1 :=
+/// Nat.succ k`, so `j` is finer than the target resolution `1/k1` by a full
+/// factor of `k1`), clamp to `≥ 0` via `Rat.max _ Rat.zero` (`Rat.max`
+/// dispatches on the representation, no case split on `w`'s sign), read the
+/// clamped sample's numerator/denominator as `Nat`s (`Int.natAbs` is
+/// *exact* here, not merely an upper bound, because clamping already made
+/// the numerator nonnegative), and floor-divide `numerator * k1` by the
+/// denominator via the total `Nat.div`.
+fn bucket_index(d: &mut IntDev<'_>, p: CRealPrelude, w: ExprId, k: ExprId) -> ExprId {
+    let k1 = d.succ(k);
+    let j = NatOps::mul(d, k1, k1);
+    let sample_w = sample(d, p, w, j);
+    let zero_rat = rzero(d, p.rat);
+    let q_pos = d.const_app(p.rat.max, &[sample_w, zero_rat]);
+    let numerator = num(d, q_pos);
+    let a = d.const_app(p.rat.int.nat_abs, &[numerator]);
+    let b = den(d, q_pos);
+    let scaled = NatOps::mul(d, a, k1);
+    NatOps::div(d, scaled, b)
+}
+
+/// Admit `CReal.bucketIndex : CReal → Nat → Nat`. See the module
+/// documentation and [`bucket_index`]'s own doc comment for the recipe;
+/// **no closeness property is proved for it in this slice** -- see
+/// [`CRealPrelude::bucket_index`]'s own doc comment for exactly what
+/// remains.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_bucket_index(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let w_fv = d.fresh_fvar();
+    let w = d.kernel().fvar(w_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let body = bucket_index(d, p, w, k);
+
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, body);
+        d.lam_fv(w_fv, carrier, with_k)
+    };
+    let ty = {
+        let inner = d.arrow(nat, nat);
+        d.arrow(carrier, inner)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.bucket_index,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(super::DERIVED_HEIGHT + 44),
+    })
 }
 
 /// The `BoundedOn`-hypothesis closure lemmas (`mul`, `sq`) and a concrete
@@ -2488,4 +2567,312 @@ fn declare_uniformly_continuous_poly_example(
         ty,
         value: huc_poly,
     })
+}
+
+// --- the running bound over finitely many sample points ---------------------
+//
+// `CReal.bounded_of_uniformly_continuous` (the boundedness-of-uniformly-
+// continuous-functions theorem, not landed here -- see the module
+// documentation) needs, at its last step, a SINGLE `Nat` `k` bounding
+// `|F(x_i)|` at every one of finitely many sample points `x_0, …, x_N`. Each
+// `|F(x_i)|` is bounded by SOME `mag_bound (g i)` (`g` built from
+// `CReal.bound`, a total computable projection -- no search), but picking
+// the LARGEST of finitely many `Nat`s by comparison is exactly the kind of
+// decision `CReal.le` cannot make (`CReal.le` is undecidable; see the module
+// documentation's own house rule, echoing `CReal.pos_bound_of_lt`'s). A
+// running SUM sidesteps the comparison entirely: a sum of nonnegative reals
+// dominates each addend, and nonnegativity of `mag_bound _` is unconditional
+// (`mag_bound_nonneg`, below) -- no case split on any two samples' relative
+// size is ever needed. This is the finite-sample form of that idea, proved
+// once, independent of where the samples come from.
+
+/// `False.rec (fun _ => target) false_proof : target`. Local copy of the
+/// identical private helper in `creal/sqrt.rs` (itself a copy of several
+/// `nat_prelude` modules' own private `ex_falso`) -- see that copy's own doc
+/// comment for the lineage. Reused here rather than threaded across the
+/// module boundary, matching this file's existing practice for
+/// [`mag_bound`]/[`bounded_on_applied`]/[`rescale_index`] above.
+fn ex_falso(d: &mut IntDev<'_>, p: CRealPrelude, target: ExprId, false_proof: ExprId) -> ExprId {
+    let anon = d.anon_name();
+    let nat_p = p.rat.int.nat;
+    let false_ty = d.kernel().const_(nat_p.logic.false_, vec![]);
+    let motive = d.kernel().lam(anon, false_ty, target, BinderInfo::Default);
+    let level_zero = d.kernel().level_zero();
+    let rec = d.kernel().const_(nat_p.logic.false_rec, vec![level_zero]);
+    d.apply(rec, &[motive, false_proof])
+}
+
+/// `le x (add x w)`, from `hw : le zero w`. Local copy of the identical
+/// private helper in `creal/monotone.rs` (`shift_le_of_nonneg`), duplicated
+/// for the same file-boundary reason as [`ex_falso`] above.
+fn shift_le_of_nonneg(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    w: ExprId,
+    hw: ExprId,
+) -> ExprId {
+    let zero_c = czero(d, p);
+    let refl_x = d.lemma(p.le_refl, &[x]);
+    let grown = d.lemma(p.add_le_add, &[x, x, zero_c, w, refl_x, hw]);
+    let padded = cadd(d, p, x, zero_c);
+    let target = cadd(d, p, x, w);
+    let trim = d.lemma(p.add_zero, &[x]);
+    let refl_target = erefl(d, p, target);
+    d.lemma(
+        p.le_congr,
+        &[padded, x, target, target, trim, refl_target, grown],
+    )
+}
+
+/// `CReal.le CReal.zero (CReal.sumRange f n)`, where `f := fun j => mag_bound
+/// (g j)` for the SAME `g` used by [`declare_mag_bound_le_sum_range_of_lt`].
+///
+/// By induction on `n`: base case `sumRange f 0 ≡ zero` (`Nat.rec`'s own
+/// ι-reduction, matching this file's existing convention — see
+/// [`declare_mag_bound_le_sum_range_of_lt`]'s own module documentation), so
+/// `le_refl zero` closes it directly against the defeq-unfolded goal.
+/// Successor case: `sumRange f (Nat.succ m) ≡ add (sumRange f m) (f m)`
+/// (again by raw ι-reduction, no named `sumRange_succ` lemma needed); both
+/// summands are nonnegative — the accumulated sum by the induction
+/// hypothesis, `f m = mag_bound (g m)` by [`mag_bound_nonneg`] — so
+/// [`shift_le_of_nonneg`] extends `le zero (sumRange f m)` across the new
+/// term and [`CRealPrelude::le_trans`] chains it from `zero`.
+///
+/// This is the nonnegativity fact `mag_bound_le_sum_range_of_lt`'s own
+/// `minor_equal` branch actually needs as its `shift_le_of_nonneg` witness —
+/// nonnegativity of the RUNNING SUM `sum_f_m`, not of the single term
+/// `mag_gm` being added to it (those are different propositions, and using
+/// the latter where the former is required is exactly the `TypeMismatch`
+/// this development hit on its first attempt: `shift_le_of_nonneg(d, p, x,
+/// w, hw)` needs `hw : le zero w`, and at that call site `x = mag_gm`, `w =
+/// sum_f_m`, so `hw` must be nonnegativity of `sum_f_m`).
+fn mag_bound_sum_range_nonneg(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    g: ExprId,
+    f: ExprId,
+    n: ExprId,
+) -> ExprId {
+    let stmt_at = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let zero_c = czero(d, p);
+        let sx = d.const_app(p.sum_range, &[f, x]);
+        d.const_app(p.le, &[zero_c, sx])
+    };
+    d.induct(
+        &stmt_at,
+        &|d: &mut IntDev<'_>| -> ExprId {
+            let zero_c = czero(d, p);
+            d.lemma(p.le_refl, &[zero_c])
+        },
+        &|d: &mut IntDev<'_>, m: ExprId, ih: ExprId| -> ExprId {
+            let gm = d.apply(g, &[m]);
+            let mag_gm = mag_bound(d, p, gm);
+            let sum_f_m = d.const_app(p.sum_range, &[f, m]);
+            let nonneg_fm = mag_bound_nonneg(d, p, gm);
+            // le sum_f_m (add sum_f_m mag_gm) -- defeq `sumRange f (succ m)`.
+            let step = shift_le_of_nonneg(d, p, sum_f_m, mag_gm, nonneg_fm);
+            let zero_c = czero(d, p);
+            let target = cadd(d, p, sum_f_m, mag_gm);
+            d.lemma(p.le_trans, &[zero_c, sum_f_m, target, ih, step])
+        },
+        n,
+    )
+}
+
+/// `CReal.mag_bound_le_sum_range_of_lt : ∀ (g : Nat → Nat) (n i : Nat),
+/// Nat.lt i n → CReal.le (mag_bound (g i)) (CReal.sumRange (fun j =>
+/// mag_bound (g j)) n)`.
+///
+/// The `CReal`-valued analogue of `Nat.le_sumRange_of_lt`
+/// (`nat_prelude/binomial.rs::declare_le_sum_range_of_lt`), whose proof
+/// shape this mirrors almost verbatim: induction on `n` with `i`
+/// generalized inside the motive, successor case split by
+/// `Nat.lt_or_eq_of_le` into a strict branch (extend the outer induction
+/// hypothesis past the new boundary term via [`shift_le_of_nonneg`] +
+/// `CReal.le_trans`) and an equal branch (rewrite the goal's sample index
+/// from `m` to `i` via `Eq Nat i m`, using [`nat_rewrite_prop`] since the
+/// rewritten proposition is `Prop`-valued regardless of the `CReal`-typed
+/// terms it mentions -- `NatOps::congr`'s own `Eq` is hardcoded to `Nat`
+/// and cannot be used to equate two `CReal`s directly).
+///
+/// The base case (`n = 0`) is vacuous (`Nat.lt i 0` is impossible,
+/// `Nat.not_lt_zero`), regardless of what `CReal.sumRange f 0` reduces to.
+///
+/// Every step relies on `CReal.sumRange f (Nat.succ n) ≡ add (sumRange f n)
+/// (f n)` holding by raw `Nat.rec` ι-reduction (`series.rs::sum_range_succ`'s
+/// own proof is `Eq.refl` alone, for the same reason) -- the proof below
+/// never invokes `sumRange_succ` as a named lemma, exactly as
+/// `Nat.le_sumRange_of_lt`'s own proof never invokes `Nat.sumRange_succ`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here
+/// means the kernel **refused** a proof, not that a script gave up.
+fn declare_mag_bound_le_sum_range_of_lt(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let nat_p = p.rat.int.nat;
+    let g_ty = nat_fn_ty(d);
+
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+
+    // f := fun j => mag_bound (g j) : Nat -> CReal.
+    let f = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let gj = d.apply(g, &[j]);
+        let mbj = mag_bound(d, p, gj);
+        d.lam_fv(j_fv, nat, mbj)
+    };
+
+    let stmt_at = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let hyp = d.lt(i, x);
+        let gi = d.apply(g, &[i]);
+        let mbi = mag_bound(d, p, gi);
+        let sx = d.const_app(p.sum_range, &[f, x]);
+        let concl = d.const_app(p.le, &[mbi, sx]);
+        let body = d.arrow(hyp, concl);
+        d.pi_fv(i_fv, nat, body)
+    };
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let stmt = stmt_at(d, n);
+
+    let proof = d.induct(
+        &stmt_at,
+        &|d: &mut IntDev<'_>| -> ExprId {
+            let zero_nat = d.num(0);
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let hyp_ty = d.lt(i, zero_nat);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            let not_lt = d.lemma(nat_p.not_lt_zero, &[i]);
+            let false_proof = d.apply(not_lt, &[h]);
+
+            let gi = d.apply(g, &[i]);
+            let mbi = mag_bound(d, p, gi);
+            let sum0 = d.const_app(p.sum_range, &[f, zero_nat]);
+            let target = d.const_app(p.le, &[mbi, sum0]);
+
+            let body = ex_falso(d, p, target, false_proof);
+            let with_h = d.lam_fv(h_fv, hyp_ty, body);
+            d.lam_fv(i_fv, nat, with_h)
+        },
+        &|d: &mut IntDev<'_>, m: ExprId, ih: ExprId| -> ExprId {
+            let sm = d.succ(m);
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let hyp_ty = d.lt(i, sm);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            // Nat.lt i (succ m) is defeq Nat.le (succ i) (succ m); peel to
+            // Nat.le i m, then split it.
+            let h_le_im = d.lemma(nat_p.le_of_succ_le_succ, &[i, m, h]);
+            let split = d.lemma(nat_p.lt_or_eq_of_le, &[i, m, h_le_im]);
+
+            let strict_ty = d.lt(i, m);
+            let equal_ty = d.eq(i, m);
+
+            let gm = d.apply(g, &[m]);
+            let mag_gm = mag_bound(d, p, gm);
+            let sum_f_m = d.const_app(p.sum_range, &[f, m]);
+            // add sum_f_m mag_gm -- defeq `sumRange f (succ m)`.
+            let lhs2 = cadd(d, p, sum_f_m, mag_gm);
+
+            let gi = d.apply(g, &[i]);
+            let mag_gi = mag_bound(d, p, gi);
+            let target = d.const_app(p.le, &[mag_gi, lhs2]);
+
+            let minor_strict = {
+                let hlt_fv = d.fresh_fvar();
+                let hlt = d.kernel().fvar(hlt_fv);
+                let ih_i = d.apply(ih, &[i, hlt]); // le mag_gi sum_f_m
+                let nonneg_gm = mag_bound_nonneg(d, p, gm);
+                let ext = shift_le_of_nonneg(d, p, sum_f_m, mag_gm, nonneg_gm); // le sum_f_m lhs2
+                let body = d.lemma(p.le_trans, &[mag_gi, sum_f_m, lhs2, ih_i, ext]);
+                d.lam_fv(hlt_fv, strict_ty, body)
+            };
+            let minor_equal = {
+                let heq_fv = d.fresh_fvar();
+                let heq = d.kernel().fvar(heq_fv);
+                let sym_heq = d.symm(i, m, heq); // Eq Nat m i
+
+                let nonneg_sum_f_m = mag_bound_sum_range_nonneg(d, p, g, f, m);
+                // le mag_gm (add mag_gm sum_f_m)
+                let h1 = shift_le_of_nonneg(d, p, mag_gm, sum_f_m, nonneg_sum_f_m);
+                let lhs1 = cadd(d, p, mag_gm, sum_f_m);
+                let hcomm = d.lemma(p.add_comm, &[mag_gm, sum_f_m]); // Equiv lhs1 lhs2
+                let refl_magm = erefl(d, p, mag_gm);
+                // le mag_gm lhs2
+                let h2 = d.lemma(
+                    p.le_congr,
+                    &[mag_gm, mag_gm, lhs1, lhs2, refl_magm, hcomm, h1],
+                );
+
+                let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+                    let gx = d.apply(g, &[x]);
+                    let mbx = mag_bound(d, p, gx);
+                    d.const_app(p.le, &[mbx, lhs2])
+                };
+                let body = nat_rewrite_prop(d, m, i, sym_heq, h2, &motive);
+                d.lam_fv(heq_fv, equal_ty, body)
+            };
+
+            let selected = d.const_app(
+                nat_p.logic.or_elim,
+                &[
+                    strict_ty,
+                    equal_ty,
+                    target,
+                    split,
+                    minor_strict,
+                    minor_equal,
+                ],
+            );
+            let with_h = d.lam_fv(h_fv, hyp_ty, selected);
+            d.lam_fv(i_fv, nat, with_h)
+        },
+        n,
+    );
+
+    let ty = {
+        let over_n = d.pi_fv(n_fv, nat, stmt);
+        d.pi_fv(g_fv, g_ty, over_n)
+    };
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, proof);
+        d.lam_fv(g_fv, g_ty, over_n)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mag_bound_le_sum_range_of_lt,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Admit `CReal.mag_bound_le_sum_range_of_lt`. A THIRD entry point (after
+/// [`declare_uniform_continuity`] and [`declare_uniform_continuity_products`])
+/// because it consumes `CReal.sumRange`, which `series::declare_series`
+/// declares after both of those -- see `creal.rs`'s own wiring comment at
+/// the call site.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+pub(super) fn declare_uniform_continuity_sums(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_mag_bound_le_sum_range_of_lt(d, p)
 }
