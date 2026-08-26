@@ -16,6 +16,8 @@ use axeyum_lean_kernel::{Declaration, Kernel};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
+type NodeKey = (String, String, String, String);
+
 #[derive(Debug)]
 struct Arguments {
     streams: PathBuf,
@@ -53,8 +55,18 @@ fn run() -> Result<(), String> {
             .map_err(|error| format!("cannot read {}: {error}", stream_path.display()))?;
         let completed = import_ndjson(Cursor::new(&stream_bytes), ImportLimits::default())
             .map_err(|error| format!("cannot import {}: {error:?}", root.artifact))?;
-        let (kernel, _) = completed.into_parts();
-        rows.push(describe_root(&kernel, root, &stream_bytes)?);
+        let (kernel, report) = completed.into_parts();
+        let dependency_hashes: BTreeMap<_, _> = report
+            .declaration_identities
+            .into_iter()
+            .map(|identity| (identity.name, identity.dependency_sha256))
+            .collect();
+        rows.push(describe_root(
+            &kernel,
+            &dependency_hashes,
+            root,
+            &stream_bytes,
+        )?);
     }
     rows.sort_by(|left, right| {
         required_string(left, "source_name").cmp(required_string(right, "source_name"))
@@ -67,8 +79,8 @@ fn run() -> Result<(), String> {
         .iter()
         .map(|row| row["edges"].as_array().map_or(0, Vec::len))
         .sum();
-    let mut global_nodes = BTreeMap::<(String, String), Value>::new();
-    let mut global_edges = BTreeSet::<(String, String, String, String, String)>::new();
+    let mut global_nodes = BTreeMap::<NodeKey, String>::new();
+    let mut global_edges = BTreeSet::<(NodeKey, NodeKey)>::new();
     let mut root_rows = Vec::with_capacity(rows.len());
     for row in &rows {
         let mut reachable = Vec::new();
@@ -78,22 +90,33 @@ fn run() -> Result<(), String> {
         {
             let name = required_string(node, "name").to_owned();
             let content = required_string(node, "content_sha256").to_owned();
-            global_nodes
-                .entry((name.clone(), content.clone()))
-                .or_insert_with(|| json!({"name": name, "content_sha256": content}));
-            reachable.push(json!({"name": name, "content_sha256": content}));
+            let dependencies = required_string(node, "dependency_sha256").to_owned();
+            let context_digest = required_string(node, "context_sha256").to_owned();
+            let key = (context_digest, name, content, dependencies);
+            global_nodes.insert(key.clone(), "definition".to_owned());
+            reachable.push(key);
         }
         for edge in row["edges"]
             .as_array()
             .ok_or_else(|| "edge inventory is malformed".to_owned())?
         {
-            global_edges.insert((
+            let source = (
+                required_string(edge, "context_sha256").to_owned(),
                 required_string(edge, "from").to_owned(),
                 required_string(edge, "from_content_sha256").to_owned(),
+                required_string(edge, "from_dependency_sha256").to_owned(),
+            );
+            let target = (
+                required_string(edge, "context_sha256").to_owned(),
                 required_string(edge, "to").to_owned(),
                 required_string(edge, "to_content_sha256").to_owned(),
-                required_string(edge, "to_kind").to_owned(),
-            ));
+                required_string(edge, "to_dependency_sha256").to_owned(),
+            );
+            global_nodes.insert(source.clone(), "definition".to_owned());
+            global_nodes
+                .entry(target.clone())
+                .or_insert_with(|| required_string(edge, "to_kind").to_owned());
+            global_edges.insert((source, target));
         }
         root_rows.push(json!({
             "source_name": row["source_name"],
@@ -101,25 +124,66 @@ fn run() -> Result<(), String> {
             "representative_artifact": row["representative_artifact"],
             "representative_stream_sha256": row["representative_stream_sha256"],
             "affected_fact_ids": row["affected_fact_ids"],
-            "reachable_transparent_nodes": reachable,
+            "reachable_transparent_node_keys": reachable,
             "direct_edge_occurrences": row["edges"].as_array().map_or(0, Vec::len),
         }));
     }
-    let node_rows: Vec<_> = global_nodes.into_values().collect();
+    let node_ids: BTreeMap<_, _> = global_nodes
+        .keys()
+        .cloned()
+        .enumerate()
+        .map(|(node_id, key)| (key, node_id))
+        .collect();
+    let node_rows: Vec<_> = global_nodes
+        .into_iter()
+        .map(|((context_sha256, name, content_sha256, dependency_sha256), kind)| {
+            json!({
+                "node_id": node_ids[&(context_sha256.clone(), name.clone(), content_sha256.clone(), dependency_sha256.clone())],
+                "context_sha256": context_sha256,
+                "name": name,
+                "content_sha256": content_sha256,
+                "dependency_sha256": dependency_sha256,
+                "kind": kind,
+            })
+        })
+        .collect();
     let edge_rows: Vec<_> = global_edges
         .into_iter()
-        .map(
-            |(from, from_content_sha256, to, to_content_sha256, to_kind)| {
-                json!({
-                    "from": from,
-                    "from_content_sha256": from_content_sha256,
-                    "to": to,
-                    "to_content_sha256": to_content_sha256,
-                    "to_kind": to_kind,
-                })
-            },
-        )
+        .map(|(source, target)| json!({"from_node_id": node_ids[&source], "to_node_id": node_ids[&target]}))
         .collect();
+    for row in &mut root_rows {
+        let keys = row["reachable_transparent_node_keys"]
+            .as_array()
+            .ok_or_else(|| "root reachability keys are malformed".to_owned())?;
+        let ids: Vec<_> = keys
+            .iter()
+            .map(|key| {
+                let values = key
+                    .as_array()
+                    .ok_or_else(|| "root node key is malformed".to_owned())?;
+                let key = (
+                    values[0].as_str().unwrap_or("").to_owned(),
+                    values[1].as_str().unwrap_or("").to_owned(),
+                    values[2].as_str().unwrap_or("").to_owned(),
+                    values[3].as_str().unwrap_or("").to_owned(),
+                );
+                node_ids
+                    .get(&key)
+                    .copied()
+                    .ok_or_else(|| "root node identity is absent".to_owned())
+            })
+            .collect::<Result<_, _>>()?;
+        row.as_object_mut()
+            .ok_or_else(|| "root row is malformed".to_owned())?
+            .insert("reachable_transparent_node_ids".to_owned(), json!(ids));
+        row.as_object_mut()
+            .expect("root row was checked")
+            .remove("reachable_transparent_node_keys");
+    }
+    let distinct_transparent_nodes = node_rows
+        .iter()
+        .filter(|row| row["kind"] == "definition")
+        .count();
     let output = json!({
         "schema_version": 1,
         "kind": "axeyum-autogenesis-imported-implementation-demand",
@@ -134,13 +198,14 @@ fn run() -> Result<(), String> {
             "root_definition_identities": rows.len(),
             "transparent_node_occurrences": transparent_nodes,
             "direct_edge_occurrences": edges,
-            "distinct_transparent_nodes": node_rows.len(),
+            "distinct_declaration_nodes": node_rows.len(),
+            "distinct_transparent_nodes": distinct_transparent_nodes,
             "distinct_direct_edges": edge_rows.len(),
         },
         "roots": root_rows,
-        "transparent_nodes": node_rows,
+        "nodes": node_rows,
         "edges": edge_rows,
-        "limitations": "Edges expose transparent implementation demand only. The global view deduplicates identities that have the same name and structural hash across representative streams while roots retain occurrence reachability; neither equality authorizes declaration transport.",
+        "limitations": "Edges expose transparent implementation demand only. Context-bound node identities prevent declarations from separate representative streams from being merged; integer node IDs compact the graph and grant no declaration transport authority.",
     });
     let mut rendered = serde_json::to_string_pretty(&output)
         .map_err(|error| format!("cannot render output: {error}"))?;
@@ -191,7 +256,14 @@ fn collect_roots(replay: &Value) -> Result<BTreeMap<(String, String), Root>, Str
     Ok(roots)
 }
 
-fn describe_root(kernel: &Kernel, root: &Root, stream: &[u8]) -> Result<Value, String> {
+#[allow(clippy::too_many_lines)]
+fn describe_root(
+    kernel: &Kernel,
+    dependency_hashes: &BTreeMap<String, String>,
+    root: &Root,
+    stream: &[u8],
+) -> Result<Value, String> {
+    let context_sha256 = sha256(stream);
     let root_name = kernel
         .environment()
         .iter()
@@ -226,9 +298,14 @@ fn describe_root(kernel: &Kernel, root: &Root, stream: &[u8]) -> Result<Value, S
             continue;
         }
         let source_content_sha256 = canonical_declaration_sha256(kernel, name)?;
+        let source_dependency_sha256 = dependency_hashes
+            .get(&key)
+            .ok_or_else(|| format!("missing dependency identity for {key}"))?;
         nodes.push(json!({
+            "context_sha256": context_sha256,
             "name": key,
             "content_sha256": source_content_sha256,
+            "dependency_sha256": source_dependency_sha256,
         }));
         for dependency in kernel.declaration_dependencies(name) {
             let dependency_name = kernel.display_name(dependency).to_string();
@@ -238,11 +315,17 @@ fn describe_root(kernel: &Kernel, root: &Root, stream: &[u8]) -> Result<Value, S
                 .ok_or_else(|| format!("missing {dependency_name}"))?;
             let dependency_kind = kind(declaration);
             let dependency_content_sha256 = canonical_declaration_sha256(kernel, dependency)?;
+            let dependency_dependency_sha256 = dependency_hashes
+                .get(&dependency_name)
+                .ok_or_else(|| format!("missing dependency identity for {dependency_name}"))?;
             edges.push(json!({
+                "context_sha256": context_sha256,
                 "from": key,
                 "from_content_sha256": source_content_sha256,
+                "from_dependency_sha256": source_dependency_sha256,
                 "to": dependency_name,
                 "to_content_sha256": dependency_content_sha256,
+                "to_dependency_sha256": dependency_dependency_sha256,
                 "to_kind": dependency_kind,
             }));
             if matches!(declaration, Declaration::Definition { .. }) {
@@ -263,10 +346,18 @@ fn describe_root(kernel: &Kernel, root: &Root, stream: &[u8]) -> Result<Value, S
                 required_string(left, "from_content_sha256")
                     .cmp(required_string(right, "from_content_sha256"))
             })
+            .then_with(|| {
+                required_string(left, "from_dependency_sha256")
+                    .cmp(required_string(right, "from_dependency_sha256"))
+            })
             .then_with(|| required_string(left, "to").cmp(required_string(right, "to")))
             .then_with(|| {
                 required_string(left, "to_content_sha256")
                     .cmp(required_string(right, "to_content_sha256"))
+            })
+            .then_with(|| {
+                required_string(left, "to_dependency_sha256")
+                    .cmp(required_string(right, "to_dependency_sha256"))
             })
     });
     let boundary: BTreeMap<_, Vec<_>> = boundary

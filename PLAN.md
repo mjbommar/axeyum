@@ -117,6 +117,8 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-26 | `48ae785e2` | Derive the exact four-target bit-observation contract slice: 103 shared transparent nodes, explicit target deltas, and a non-circular lower-level theorem boundary. |
+| 2026-08-26 | `95587054fd` | Preserve stream-context declaration identities, compact the imported graph through dense node IDs, and derive a checked 113-node reverse-reachability frontier for multi-sibling contract design. |
 | 2026-08-26 | `ebcfd3fb88` | Derive the proof-isolated imported implementation-demand graph for all 14 sliced source identities, retaining structural variants and the checked `Nat.mod` decision/subtraction spine without proof or ledger authority. |
 | 2026-08-26 | `d2d6fc0d0` | Add axiom-free native `Nat.mod_self`, alpha-stable structural retrieval, and a checked native-composition control; fresh imported replay preserves zero credit and exposes the implementation-bound `Nat.mod` transport boundary. |
 | 2026-08-26 | `73800a902` | Project all 51 retrieved-induction outcomes into a digest-bound typed capability backlog; false controls remain observation-only and one-target operation registration is refused. |
@@ -1399,8 +1401,9 @@ across the additive siblings.
 The imported representation boundary is now a generated knowledge artifact,
 not a prose inference. All 14 exact definitions abstracted by the 25 checked
 type slices expand to 1,363 transparent-definition occurrences and 7,303
-direct dependency edges (366 structural identities / 2,219 identity-bound
-edges), with same-named variants and nontransparent trust boundaries retained.
+direct dependency edges (1,000 context-bound transparent nodes / 1,734 total
+declaration nodes / 5,421 identity-bound edges), with same-named variants and
+nontransparent trust boundaries retained.
 The checked `Nat.mod` spine explicitly reaches `Nat.decLe`/`Nat.ble`,
 `Nat.modCore`, recursive `Nat.modCore.go`, and subtraction-instance machinery.
 No theorem proof or held-out target is read and the graph grants no contract or
@@ -1408,6 +1411,19 @@ transport authority. Next: derive a deduplicated reverse-reachability view,
 then use the shared `Nat.testBit` subgraph and the modulus spine to choose the
 smallest multi-sibling contracts rather than writing another target-local
 proof.
+The derived reverse-reachability frontier now replays every root closure and
+ranks 113 near-root `Nat`/`Int`/`List` identities without granting proof
+authority. The four bit-observation siblings share a concrete implementation
+spine including `Nat.land`, `Nat.ble`, `Nat.bitwise`, `Nat.testBit`, and
+`Nat.instAndOp`. Next: separate observation laws from generic infrastructure
+in that intersection and construct one explicit contract interface consumed by
+at least three siblings.
+The exact four-target bit-observation slice now contains 471 union nodes and a
+103-node shared core; target-specific deltas are 106/87/88/87. Its five current
+axiom-free `Nat.testBit` candidates cover zero/successor, bounds, and sums, but
+not the required `Nat.bitwise` or list-lookup commutation. Next: inventory exact
+lower-level recurrence theorems and construct one operator-parametric generic
+law without using a desired target conclusion as its own contract witness.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization
@@ -1500,6 +1516,17 @@ checker, which retains only the reverse clause plan required by the algorithm. T
 `R_3(x-y=z)=14` control regenerated a 25-step / 263-byte proof and the changed command accepted
 it from disk with `route=file-backed-backward`; all-target/all-feature Clippy and
 warning-denied Rustdoc pass. This is checker-readiness, not a result at 351.
+
+**Strict external SAT-model replay boundary, 2026-08-26.** A reusable harness parser now
+imports SAT Competition output only when it contains exactly one `SATISFIABLE` status, a
+terminated complete assignment of the declared width, and no duplicate contradiction,
+out-of-range literal, post-terminator payload, or missing variable. The job-shop importer no
+longer owns a permissive duplicate, and `akb2_frontier check-model` evaluates the imported
+assignment against the regenerated CNF, lifts its one-hot colouring, independently replays the
+defining relation, re-evaluates the lifted witness, and only then writes it. Eight malformed
+controls fail closed; focused tests, all-target/all-feature Clippy, and warning-denied Rustdoc
+pass. The live `n=351` producer has not returned SAT, so this closes an evidence-route gap rather
+than establishing a new bound.
 
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
 external-certificate replay runner for all five packages.  It validates checker and artifact

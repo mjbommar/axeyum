@@ -16,17 +16,18 @@ The checked population contains:
 - 14 exact root-definition identities;
 - 1,363 transparent-definition occurrences; and
 - 7,303 direct dependency-edge occurrences;
-- 366 distinct transparent structural identities; and
-- 2,219 distinct identity-bound direct edges.
+- 1,000 context-bound transparent nodes;
+- 1,734 context-bound declaration nodes including stopped boundaries; and
+- 5,421 context-bound direct edges.
 
 Occurrences intentionally remain per root. This records the environment in
 which each type-slice receipt was independently checked and avoids silently
 turning equal-looking names from separate imports into transport authority.
-Every transparent node and both endpoints of every edge carry canonical
-declaration hashes. Thirty-eight rendered names have more than one structural
-identity across the independently materialized streams, including generic
-operator projections such as `Add.add`, `Div.div`, and `Mod.mod`; those
-variants remain separate rather than being collapsed by name. The graph stops
+Every declaration node carries canonical content and direct-dependency hashes,
+plus the representative stream hash that defines its context. Same-named
+structural variants across independently materialized streams remain separate
+rather than being collapsed by name. Dense integer node IDs keep the committed
+graph near 1 MiB instead of repeating those hashes on every edge. The graph stops
 at inductives, constructors, recursors, theorems, opaque declarations, axioms,
 and quotient primitives and records those as the nontransparent boundary.
 
@@ -77,9 +78,8 @@ that unfolding it is useful or safe.
 
 Immediate sequence:
 
-1. Add a derived, deduplicated node/edge projection with reverse reachability
-   counts so shared primitives can be ranked without scanning the 1.1 MiB raw
-   receipt graph.
+1. Use the derived reverse-reachability projection to rank shared primitives
+   without rescanning the raw receipt graph.
 2. Compare the `Nat.testBit` sibling roots' intersection and difference. Select
    the smallest contract vocabulary that covers at least three siblings,
    including their co-abstractions rather than `Nat.testBit` alone.

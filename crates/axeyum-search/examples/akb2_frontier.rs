@@ -34,6 +34,7 @@
 //! akb2_frontier valuation <a> <b> <k> <n> <out.txt>
 //! akb2_frontier verify    <a> <b> <k> <in.txt>
 //! akb2_frontier check     <a> <b> <k> <n> <in.drat>
+//! akb2_frontier check-model <a> <b> <k> <n> <solver.out> <out.txt>
 //! akb2_frontier climb     <a> <b> <k> <n> <start.txt|-> <out.txt> <seed> <moves>
 //! akb2_frontier sat       <a> <b> <k> <n> <out-witness.txt> <hours>
 //! akb2_frontier solve     <a> <b> <k> <n> <out.drat> <out-witness.txt> <hours>
@@ -174,7 +175,9 @@ fn write_colouring(path: &str, colouring: &[usize]) {
 fn main() -> ExitCode {
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
-        eprintln!("usage: akb2_frontier <valuation|verify|check|climb|sat|solve|cover> ...");
+        eprintln!(
+            "usage: akb2_frontier <valuation|verify|check|check-model|climb|sat|solve|cover> ..."
+        );
         return ExitCode::from(2);
     }
     let mode = args[1].as_str();
@@ -254,6 +257,52 @@ fn main() -> ExitCode {
                 ExitCode::SUCCESS
             } else {
                 ExitCode::from(3)
+            }
+        }
+        "check-model" => {
+            if args.len() < 8 {
+                eprintln!(
+                    "usage: akb2_frontier check-model <a> <b> <k> <n> <solver.out> <out.txt>"
+                );
+                return ExitCode::from(2);
+            }
+            let (a, b, k, n) = (num(2), num(3), num(4), num(5));
+            let family = Rado::new(a, b, k).expect("family");
+            let problem = family.problem(n).expect("problem");
+            let formula = problem.encode().expect("encode");
+            let output = fs::read_to_string(&args[6]).expect("read SAT competition output");
+            let values =
+                match harness::parse_sat_competition_model(&output, formula.variable_count()) {
+                    Ok(values) => values,
+                    Err(error) => {
+                        println!("{{\"status\":\"model-rejected\",\"why\":\"{error}\"}}");
+                        return ExitCode::from(3);
+                    }
+                };
+            if formula.evaluate(&values) != Ok(true) {
+                println!("{{\"status\":\"model-rejected\",\"why\":\"CNF replay failed\"}}");
+                return ExitCode::from(3);
+            }
+            let witness = match problem.decode_model(&values) {
+                Ok(witness) => witness,
+                Err(error) => {
+                    println!("{{\"status\":\"model-rejected\",\"why\":\"{error}\"}}");
+                    return ExitCode::from(3);
+                }
+            };
+            match check_colouring(&family, n, witness.colouring()) {
+                Ok(note) => {
+                    write_colouring(&args[7], witness.colouring());
+                    println!(
+                        "{{\"status\":\"witness-verified\",\"mode\":\"check-model\",\"a\":{a},\
+                         \"b\":{b},\"k\":{k},\"n\":{n},\"note\":\"{note}\"}}"
+                    );
+                    ExitCode::SUCCESS
+                }
+                Err(why) => {
+                    println!("{{\"status\":\"model-rejected\",\"why\":\"{why}\"}}");
+                    ExitCode::from(3)
+                }
             }
         }
         "verify" => {

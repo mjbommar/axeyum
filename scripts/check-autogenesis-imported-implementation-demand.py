@@ -40,50 +40,52 @@ def validate(data: dict[str, Any], replay: dict[str, Any], demand: dict[str, Any
     }
     roots = data.get("roots")
     if not isinstance(roots, list):
-        raise ValueError("root inventory is absent")
+        raise TypeError("root inventory is absent")
     observed = {(row.get("source_name"), row.get("source_content_sha256")) for row in roots}
     if observed != expected:
         raise ValueError("root identities do not exactly match semantic-contract demand")
 
-    global_nodes = data.get("transparent_nodes")
+    global_nodes = data.get("nodes")
     global_edges = data.get("edges")
     if not isinstance(global_nodes, list) or not isinstance(global_edges, list):
-        raise ValueError("global graph inventory is absent")
-    node_keys = [(node.get("name"), node.get("content_sha256")) for node in global_nodes]
-    if node_keys != sorted(node_keys) or len(node_keys) != len(set(node_keys)):
-        raise ValueError("global transparent node order or identity is unstable")
-    edge_keys = [
-        (
-            edge.get("from"),
-            edge.get("from_content_sha256"),
-            edge.get("to"),
-            edge.get("to_content_sha256"),
-            edge.get("to_kind"),
-        )
-        for edge in global_edges
+        raise TypeError("global graph inventory is absent")
+    node_ids = [node.get("node_id") for node in global_nodes]
+    if node_ids != list(range(len(global_nodes))):
+        raise ValueError("global node IDs are not dense and stable")
+    node_keys = [
+        (node.get("context_sha256"), node.get("name"), node.get("content_sha256"), node.get("dependency_sha256"))
+        for node in global_nodes
     ]
+    if node_keys != sorted(node_keys) or len(node_keys) != len(set(node_keys)):
+        raise ValueError("global node order or identity is unstable")
+    edge_keys = [(edge.get("from_node_id"), edge.get("to_node_id")) for edge in global_edges]
     if edge_keys != sorted(edge_keys) or len(edge_keys) != len(set(edge_keys)):
         raise ValueError("global edge order or identity is unstable")
-    node_key_set = set(node_keys)
-    if any((source, source_hash) not in node_key_set for source, source_hash, _target, _target_hash, _kind in edge_keys):
+    if any(source not in node_ids or target not in node_ids for source, target in edge_keys):
+        raise ValueError("global edge endpoint is absent")
+    nodes_by_id = {node["node_id"]: node for node in global_nodes}
+    if any(nodes_by_id[source]["kind"] != "definition" for source, _target in edge_keys):
         raise ValueError("global edge starts outside the transparent graph")
-    if any(kind == "definition" and (target, target_hash) not in node_key_set for _source, _source_hash, target, target_hash, kind in edge_keys):
-        raise ValueError("global graph omits a reachable transparent definition")
 
     node_occurrences = 0
     edge_occurrences = 0
     for row in roots:
-        names = row.get("reachable_transparent_nodes")
-        if not isinstance(names, list):
-            raise ValueError(f"{row.get('source_name')} reachability is malformed")
-        names = [(node.get("name"), node.get("content_sha256")) for node in names]
-        if names != sorted(names) or len(names) != len(set(names)):
+        ids = row.get("reachable_transparent_node_ids")
+        if not isinstance(ids, list):
+            raise TypeError(f"{row.get('source_name')} reachability is malformed")
+        if ids != sorted(ids) or len(ids) != len(set(ids)):
             raise ValueError(f"{row.get('source_name')} node order is unstable")
-        if (row.get("source_name"), row.get("source_content_sha256")) not in names:
+        if not any(
+            nodes_by_id[node_id]["name"] == row.get("source_name")
+            and nodes_by_id[node_id]["content_sha256"] == row.get("source_content_sha256")
+            for node_id in ids
+        ):
             raise ValueError(f"{row.get('source_name')} root is absent from its graph")
-        if not set(names).issubset(node_key_set):
+        if any(node_id not in nodes_by_id for node_id in ids):
             raise ValueError(f"{row.get('source_name')} reaches an absent global node")
-        node_occurrences += len(names)
+        if any(nodes_by_id[node_id]["kind"] != "definition" for node_id in ids):
+            raise ValueError(f"{row.get('source_name')} reaches a nontransparent node")
+        node_occurrences += len(ids)
         edge_occurrences += row.get("direct_edge_occurrences", 0)
 
     required_modulus_edges = {
@@ -95,7 +97,10 @@ def validate(data: dict[str, Any], replay: dict[str, Any], demand: dict[str, Any
         ("Nat.modCore.go", "Nat.modCore.go._f", "definition"),
         ("Nat.modCore.go._f", "instSubNat", "definition"),
     }
-    observed_named_edges = {(source, target, kind) for source, _source_hash, target, _target_hash, kind in edge_keys}
+    observed_named_edges = {
+        (nodes_by_id[source]["name"], nodes_by_id[target]["name"], nodes_by_id[target]["kind"])
+        for source, target in edge_keys
+    }
     if not required_modulus_edges.issubset(observed_named_edges):
         raise ValueError("imported Nat.mod decision/subtraction spine is incomplete")
     census = data.get("census", {})
@@ -103,7 +108,8 @@ def validate(data: dict[str, Any], replay: dict[str, Any], demand: dict[str, Any
         "root_definition_identities": len(roots),
         "transparent_node_occurrences": node_occurrences,
         "direct_edge_occurrences": edge_occurrences,
-        "distinct_transparent_nodes": len(global_nodes),
+        "distinct_declaration_nodes": len(global_nodes),
+        "distinct_transparent_nodes": sum(node["kind"] == "definition" for node in global_nodes),
         "distinct_direct_edges": len(global_edges),
     }
     if census != actual:
@@ -115,7 +121,11 @@ def validate(data: dict[str, Any], replay: dict[str, Any], demand: dict[str, Any
     }
     if {key: actual[key] for key in reviewed_occurrences} != reviewed_occurrences:
         raise ValueError(f"reviewed implementation population changed: {actual}")
-    if actual["distinct_transparent_nodes"] != 366 or actual["distinct_direct_edges"] != 2219:
+    if (
+        actual["distinct_declaration_nodes"] != 1734
+        or actual["distinct_transparent_nodes"] != 1000
+        or actual["distinct_direct_edges"] != 5421
+    ):
         raise ValueError(f"reviewed deduplicated graph changed: {actual}")
     return actual
 
