@@ -41,6 +41,14 @@ specialize the generic theorem, and check the resulting concrete proof. The
 existing semantic-function contract receipt API enforces exactly that shape,
 but no durable receipt currently instantiates it for these 14 definitions.
 
+No target is fully supported yet. Every `Nat.testBit` target also abstracts at
+least one of `Nat.instAndOp`, `Nat.instOrOp`, `Nat.ldiff`, `List.getI`, or
+`Nat.bits`, and none of those co-abstractions has an exact candidate edge. The
+graph records `targets_with_complete_candidate_contract_support: 0` and the
+complete co-abstraction set on every demand node. `Nat.testBit` is therefore
+the best shared **contract prototype**, not yet an executable four-target
+producer family.
+
 `Int.gcd` ranks second with six exact candidates but only one affected target.
 The other twelve nodes remain explicit `find-or-construct-behavior-theorems`
 demands; name similarity is not promoted to an edge.
@@ -51,8 +59,8 @@ demands; name similarity is not promoted to an edge.
 2. Determine the smallest shared contract vocabulary drawn from the five exact
    candidates; each contract must have an independently checked source witness.
 3. Construct one generic theorem family over an abstract bit-observation
-   function and require at least three sibling conversions under the unchanged
-   producer contract.
+   function, then close the exact co-contracts needed by at least three
+   siblings before measuring conversion under the unchanged producer contract.
 4. Issue and replay semantic-function contract receipts, then feed only the
    discharged contracts into the sliced producer environment.
 5. Keep the remaining ten source identities without candidates visible as

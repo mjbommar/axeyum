@@ -555,6 +555,15 @@ autogenesis-semantic-contract-demand:
     uv run --no-sync python -m unittest scripts.tests.test_gen_autogenesis_semantic_contract_demand
     python3 scripts/gen-autogenesis-semantic-contract-demand.py --check
 
+autogenesis-non-equality-terminal-census:
+    uv run --no-sync python -m unittest scripts.tests.test_measure_autogenesis_open_fixed_palette scripts.tests.test_gen_autogenesis_non_equality_population
+    python3 scripts/gen-autogenesis-non-equality-population.py --check
+    uv run --no-sync python scripts/measure-autogenesis-open-fixed-palette.py --population artifacts/autogenesis/non-equality-terminal-population-v1.json --must-decline-population artifacts/autogenesis/must-decline-mutations-v1.json --ranking artifacts/autogenesis/open-lemma-rewrite-support-ranking-v1.json --transport-native-candidates --retrieved-induction --capsule-directory /nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1 --output artifacts/autogenesis/non-equality-retrieved-induction-census-v1.json --check
+
+autogenesis-open-modeq-family-census:
+    uv run --no-sync python -m unittest scripts.tests.test_measure_autogenesis_open_fixed_palette
+    uv run --no-sync python scripts/measure-autogenesis-open-fixed-palette.py --population artifacts/autogenesis/open-ranked-proposition-census-v2.json --must-decline-population artifacts/autogenesis/must-decline-mutations-v1.json --modeq-family --capsule-directory /nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1 --output artifacts/autogenesis/open-modeq-family-census-v1.json --check
+
 autogenesis-proposition-reconciliation-proposals:
     python3 -m unittest scripts.tests.test_prepare_autogenesis_fact_transaction
     python3 scripts/check-autogenesis-proposition-reconciliation-result.py

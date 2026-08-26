@@ -260,6 +260,16 @@ links. Next: build the smallest shared `Nat.testBit` contract family, discharge
 its source witnesses independently, and require at least three sibling
 conversions before considering operation authority.
 
+The graph's joint-requirement audit then prevents an isolated-node mistake:
+zero of the 25 targets has complete candidate contract support. Every
+`Nat.testBit` sibling carries an unsupported co-abstraction, so it remains a
+shared contract prototype rather than the shortest conversion path. In
+parallel, transparent terminal reduction moved ten already-importable ModEq
+goals from `NotEqualityGoal` into checked equality composition, with zero false
+controls accepted, but conversion remained 0/13. Their concrete missing layer
+is typed relation-premise chaining (`dvd_refl` → `mod_eq_zero_of_dvd` → ModEq,
+then congruence), which is now the shorter autonomous-yield path.
+
 ## Comparative position
 
 Axeyum should not be described as a replacement for any one neighboring

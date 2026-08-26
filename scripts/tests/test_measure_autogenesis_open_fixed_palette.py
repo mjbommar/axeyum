@@ -4,7 +4,6 @@ import importlib.util
 import unittest
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location(
     "open_fixed_palette",
@@ -117,6 +116,15 @@ class OpenFixedPaletteTests(unittest.TestCase):
                 None,
                 Path("/packs"),
                 retrieved_induction=True,
+            )
+
+    def test_modeq_family_refuses_ranked_premises(self) -> None:
+        with self.assertRaisesRegex(ValueError, "does not accept ranked premises"):
+            MODULE.measure(
+                None,
+                Path("/packs"),
+                ranking_path=Path("ranking.json"),
+                modeq_family=True,
             )
 
 
