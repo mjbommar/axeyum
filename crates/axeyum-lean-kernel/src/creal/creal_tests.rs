@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 250] = [
+    let expected: [(&str, crate::NameId, &str); 252] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -570,6 +570,16 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         // not that estimate itself -- see that file's own module
         // documentation for what still separates the two.
         ("CReal.sumRange_double", p.sum_range_double, "theorem"),
+        // `CReal.ofNat_add`/`CReal.ofNat_mul` (creal/integral.rs), registered
+        // right after `sumRange_double`: `CReal.ofNat` is a `Nat -> (CReal,
+        // +, .)` homomorphism, direct (no induction) from `CReal.ofRat_add`/
+        // `CReal.ofRat_mul` plus `RatPrelude::natDivSucc_add`/
+        // `natDivSucc_mul` at denominator index `0`. Needed to reconcile
+        // `sumRange_reblock`'s raw global fine index with the per-block local
+        // sample-point arithmetic `riemannSum_cauchy` still needs -- see
+        // `integral.rs`'s own module documentation.
+        ("CReal.ofNat_add", p.of_nat_add, "theorem"),
+        ("CReal.ofNat_mul", p.of_nat_mul, "theorem"),
         // `CReal.monotone_of_nonneg_deriv` and its three supporting lemmas
         // (`creal/monotone.rs`), registered from the pipeline AFTER
         // `integral::declare_integral` (they reuse `CReal.ofNat_le`).
@@ -4181,6 +4191,102 @@ fn of_nat_le_at_one_and_three_proves_le_one_three() {
         });
 }
 
+/// **Mandatory computation test for `CReal.ofNat_add`.** Instantiates it at
+/// explicit small naturals `a := 2`, `b := 3` and checks the kernel accepts
+/// `CReal.ofNat_add 2 3 : Equiv (ofNat 5) (add (ofNat 2) (ofNat 3))` at that
+/// EXACT type, with `5` a literal (not the unevaluated `Nat.add 2 3`) — the
+/// asserted `ty` below is built from `d.num(5)` directly, so this also pins
+/// that `Nat.add 2 3` reduces to the literal `5` by defeq. A transposition
+/// (e.g. proving `Equiv (ofNat 5) (add (ofNat 3) (ofNat 2))`, or `ofNat 6`
+/// instead of `5`) would still type-check as SOME `Equiv` statement but not
+/// this one.
+#[test]
+fn of_nat_add_at_two_and_three_proves_equiv_ofnat_five_add() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let two_nat = d.num(2);
+    let three_nat = d.num(3);
+    let five_nat = d.num(5);
+
+    let value = d.const_app(p.of_nat_add, &[two_nat, three_nat]);
+
+    let of_nat_5 = d.const_app(p.of_nat, &[five_nat]);
+    let of_nat_2 = d.const_app(p.of_nat, &[two_nat]);
+    let of_nat_3 = d.const_app(p.of_nat, &[three_nat]);
+    let sum_real = super::cadd(&mut d, p, of_nat_2, of_nat_3);
+    let ty = super::equiv(&mut d, p, of_nat_5, sum_real);
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(
+        anon,
+        "__of_nat_add_at_two_and_three_proves_equiv_ofnat_five_add",
+    );
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.ofNat_add 2 3 did NOT check against \
+                 Equiv (ofNat 5) (add (ofNat 2) (ofNat 3)) (not merely SOME \
+                 Equiv statement): {error:?}"
+            )
+        });
+}
+
+/// **Mandatory computation test for `CReal.ofNat_mul`.** Instantiates it at
+/// explicit small naturals `a := 2`, `b := 3` and checks the kernel accepts
+/// `CReal.ofNat_mul 2 3 : Equiv (ofNat 6) (mul (ofNat 2) (ofNat 3))` at that
+/// EXACT type, `6` a literal — same rationale as the `ofNat_add` test above,
+/// with `Nat.mul 2 3` reducing to `6` by defeq.
+#[test]
+fn of_nat_mul_at_two_and_three_proves_equiv_ofnat_six_mul() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let two_nat = d.num(2);
+    let three_nat = d.num(3);
+    let six_nat = d.num(6);
+
+    let value = d.const_app(p.of_nat_mul, &[two_nat, three_nat]);
+
+    let of_nat_6 = d.const_app(p.of_nat, &[six_nat]);
+    let of_nat_2 = d.const_app(p.of_nat, &[two_nat]);
+    let of_nat_3 = d.const_app(p.of_nat, &[three_nat]);
+    let prod_real = d.const_app(p.mul, &[of_nat_2, of_nat_3]);
+    let ty = super::equiv(&mut d, p, of_nat_6, prod_real);
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(
+        anon,
+        "__of_nat_mul_at_two_and_three_proves_equiv_ofnat_six_mul",
+    );
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.ofNat_mul 2 3 did NOT check against \
+                 Equiv (ofNat 6) (mul (ofNat 2) (ofNat 3)) (not merely SOME \
+                 Equiv statement): {error:?}"
+            )
+        });
+}
+
 /// **Mandatory computation test for `CReal.riemannSum_sample_in_bounds`.**
 /// Instantiates it at `a := CReal.zero`, `b := CReal.ofNat 3`, `m := 2`
 /// (so `n = succ m = 3`), `i := 1` — the sample point at index `1` of a
@@ -4929,9 +5035,7 @@ fn sum_range_reblock_regroups_zero_through_five_two_ways() {
 
         let stmt_lhs = req(d, lhs_seq, fifteen_seq);
         let proof_lhs = rrefl(d, lhs_seq);
-        let name_lhs = d
-            .kernel()
-            .name_str(anon, format!("__reblock_lhs_{label}").as_str());
+        let name_lhs = d.kernel().name_str(anon, format!("__reblock_lhs_{label}"));
         d.kernel()
             .add_declaration(Declaration::Theorem {
                 name: name_lhs,
@@ -4945,9 +5049,7 @@ fn sum_range_reblock_regroups_zero_through_five_two_ways() {
 
         let stmt_rhs = req(d, rhs_seq, fifteen_seq);
         let proof_rhs = rrefl(d, rhs_seq);
-        let name_rhs = d
-            .kernel()
-            .name_str(anon, format!("__reblock_rhs_{label}").as_str());
+        let name_rhs = d.kernel().name_str(anon, format!("__reblock_rhs_{label}"));
         d.kernel()
             .add_declaration(Declaration::Theorem {
                 name: name_rhs,
