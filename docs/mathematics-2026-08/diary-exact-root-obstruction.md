@@ -242,3 +242,72 @@ zero set) that the general approximate IVT does not assume; this is the
 seventh instance of `docs/mathematics-2026-08/diary-exact-root-obstruction.md`'s
 own closing pattern, in the opposite direction — here a computed projection
 exists and is exactly what proves the desired theorem FALSE.
+
+---
+
+## Correction: the counterexample already refuted its own proposed fix
+
+The addendum above closes by saying an exact root "needs an extra hypothesis
+(e.g. **strict monotonicity**)". **That recommendation is wrong, and its own
+counterexample proves it.**
+
+The counterexample runs on `F := id` over `[−1, 2]`. **`id` is already strictly
+monotone** — derivative identically `1`, so `k = 0` with uniform bound
+`1/(k+1) = 1`. And the diagonal bisection still converges to `1/2` while the
+true root is `0`.
+
+So strict monotonicity does **not** rescue `ivt_bisect_diag`. The defect is not
+a missing hypothesis on `F` at all — it is **algorithmic**: a stationary
+endpoint keeps whatever slack justified its last move, forever, and no property
+of `F` repairs a freezing bug in the recursion.
+
+I then repeated that recommendation in a brief, directing a lane to build on
+`ivt_bisect_diag_lo/_hi`. The lane checked before building, noticed the
+counterexample's own instance was strictly monotone, and said so. **Both the
+original recommendation and my repetition of it were refuted by evidence already
+sitting in this file.**
+
+The generalisable lesson: **when a refutation closes by proposing a fix, check
+whether its own witness already satisfies the proposed hypothesis.** A
+counterexample that happens to lie inside the repair's precondition refutes the
+repair too, and it is easy to miss because the refuting lane is reasoning about
+what went wrong, not about what its instance happens to satisfy.
+
+## What the route actually is
+
+Not the diagonal construction. Instead: the **fixed-slack** `ivt_bisect_lo`/`_hi`
+— which already has a proven invariant (`ivt_bisect_invariant`) — run at
+independent `(n, K(n))` pairs per accuracy, i.e. exactly `ivt_approx`'s existing
+schedule (`bisect_n := M·delta + c`, via `width_le_via_bound`), realised as
+**data** rather than through an `Exists`. Those runs are not nested across `n`,
+but nesting is not required once a genuine magnitude bound is available.
+
+**The quantitative bound, worked out and confirmed:** for `x ≤ y` in `[a,b]`
+with `F' ≥ 1/(k+1)` uniformly, `hd_spec` at accuracy `e := 2k+1` gives
+`F y − F x ≥ (1/(2(k+1)))·(y − x)` — the same halving `strict_mono_of_pos_deriv`
+already performs internally (`half_frac_eq`). Hence
+
+    |x − y| ≤ 2(k+1)·(|F x| + |F y|) ≤ 2(k+1)·(1/(e+1) + 1/(e'+1))
+
+At `F := id`, `[−1,2]`, `k = 0`, `e = 9`, `e' = 19`: `|x − y| ≤ 0.3` (true value
+`0.15`; the general bound reserves half the derivative rate as spec margin).
+
+**So the mathematics works.** Two engineering obstacles remain, both newly
+identified:
+
+1. **The global bound is not exposed.** It exists only *mid-proof* inside
+   `declare_strict_mono_of_pos_deriv` (`monotone.rs`, ~830 lines), and every
+   helper it needs — `half_frac_eq`, `cabs`, `cdiff`, the mesh toolkit — is a
+   private `fn` scoped to that file, not `pub(super)`. Reaching it from `ivt.rs`
+   means duplicating the whole subdivision argument. **A natural fix is to
+   expose the magnitude form as its own declared theorem in `monotone.rs`**,
+   which would serve Chapter 12's inverse-function continuity as well.
+2. **A "continuity transports convergence" lemma does not exist** —
+   `Converges f L → UniformlyContinuousOn F … → Converges (F ∘ f) (F L)`.
+   Grepped for; absent. Without it, `F(x_n) → 0` does not give `F L ~ 0`.
+
+Also worth recording: **`converges_of_cauchy`'s conclusion is itself
+existential**, so obtaining `L` as *data* means inlining its own internal
+`CReal.mk (speedup (diagonal f) K) …` construction — mirroring `sqrtApprox` —
+rather than calling it and projecting. That is the seventh place this kernel's
+`Prop`-only `Exists.rec` has dictated a construction's shape.
