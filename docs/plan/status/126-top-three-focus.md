@@ -347,9 +347,13 @@ Bounded reification is now implemented as the binary weighted sum, and its
 zero-length base theorem checks axiom-free. The exact remaining proof is the
 bounded observation round-trip for `i < k`; neither that induction nor the
 unbounded bitwise theorem has received credit.
+The reifier's successor equation now also checks axiom-free, exposing the prefix
+plus one weighted digit as a stable induction interface. The round-trip theorem
+remains the next proof; implementation unfolding is no longer required.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-26 | `75baf4b2c` | Expose the bounded reifier's axiom-free successor equation as a stable induction interface for the missing observation round trip. |
 | 2026-08-26 | `3bb1207e8` | Construct bounded Boolean-bit reification as a binary weighted sum and check its zero-length base axiom-free; retain the round-trip theorem as missing. |
 | 2026-08-26 | `f0782cc25` | Construct the axiom-free pointwise bitwise observation algebra and isolate Nat reification as the remaining mathematical obligation. |
 | 2026-08-26 | `8935a4045` | Describe imported transparent definitions by exact body/type identities, closure, and footprint; both bitwise operations reach `propext`, ruling out clean grafting. |

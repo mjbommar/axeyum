@@ -119,10 +119,15 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
     reification = data.get("native_reification", {})
     if reification.get("base_axiom_footprint_size") != 0:
         raise ValueError("bounded reification base gained assumptions")
+    if reification.get("step_axiom_footprint_size") != 0:
+        raise ValueError("bounded reification step gained assumptions")
     if reification.get("roundtrip_status") != "missing":
         raise ValueError("unproved bounded reification roundtrip gained credit")
     if "reifyBits" not in reification.get("base_canonical_type", ""):
         raise ValueError("bounded reification base type changed")
+    step_type = reification.get("step_canonical_type", "")
+    if "reifyBits" not in step_type or "boolToBit" not in step_type:
+        raise ValueError("bounded reification step type changed")
 
     exclusion = data.get("countermodel_exclusion", {})
     if exclusion.get("excluded_by_law") != "testBit_succ":

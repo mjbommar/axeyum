@@ -80,5 +80,11 @@ reifier”; it is the bounded round trip: for `i < k`, observing
 `reifyBits bits k` at `i` returns `bits i` (under the Boolean/numeric bridge).
 That theorem is still missing and receives zero credit.
 
+The reifier now exposes an axiom-free successor equation as well:
+`reifyBits bits (k+1)` is the prefix plus
+`boolToBit (bits k) * 2^k`. Base and step both close by computation. This is the
+induction interface for the missing round trip; consumers no longer need to
+unfold `sumRange` or depend on its implementation shape.
+
 Run `just autogenesis-bitwise-semantic-law-demand` to validate the join and its
 negative controls.

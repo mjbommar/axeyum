@@ -72,6 +72,12 @@ class BitwiseSemanticLawDemandTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "reification roundtrip gained credit"):
             MODULE.validate(data)
 
+    def test_reification_step_assumption_fails_closed(self):
+        data = copy.deepcopy(self.data)
+        data["native_reification"]["step_axiom_footprint_size"] = 1
+        with self.assertRaisesRegex(ValueError, "step gained assumptions"):
+            MODULE.validate(data)
+
 
 if __name__ == "__main__":
     unittest.main()

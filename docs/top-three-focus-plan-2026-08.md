@@ -477,6 +477,8 @@ prove test-bit round-trip, rather than conflating that step with Boolean logic.
 The bounded weighted-sum reifier and its empty-footprint zero case now exist.
 The next proof obligation is precise: bounded observation round-trip below the
 chosen bit count, followed by a sufficient-bound argument for both inputs.
+The reifier now has clean base and successor equations, so that round-trip proof
+can proceed against a named induction interface rather than raw `sumRange`.
 
 ### Exit evidence
 

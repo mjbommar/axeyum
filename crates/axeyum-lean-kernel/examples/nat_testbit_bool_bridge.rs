@@ -32,6 +32,7 @@ fn run() -> Result<(), String> {
     let bool_to_bit_name = kernel.name_str(autogenesis, "boolToBit");
     let reify_bits_name = kernel.name_str(autogenesis, "reifyBits");
     let reify_bits_zero_name = kernel.name_str(autogenesis, "reifyBits_zero");
+    let reify_bits_succ_name = kernel.name_str(autogenesis, "reifyBits_succ");
     let bitwise_reify_name = kernel.name_str(autogenesis, "bitwiseReifyBounded");
 
     {
@@ -234,6 +235,28 @@ fn run() -> Result<(), String> {
         d.declare_theorem(reify_bits_zero_name, theorem_type, theorem_value)
             .map_err(|error| format!("reifyBits_zero rejected: {error:?}"))?;
 
+        let bits_fv = d.fresh_fvar();
+        let bits = d.kernel().fvar(bits_fv);
+        let count_fv = d.fresh_fvar();
+        let count = d.kernel().fvar(count_fv);
+        let successor = d.succ(count);
+        let lhs = d.const_app(reify_bits_name, &[bits, successor]);
+        let prefix = d.const_app(reify_bits_name, &[bits, count]);
+        let observed = d.apply(bits, &[count]);
+        let digit = d.const_app(bool_to_bit_name, &[observed]);
+        let two = d.num(2);
+        let place = d.pow(two, count);
+        let term = d.mul(digit, place);
+        let rhs = d.add(prefix, term);
+        let statement = d.eq(lhs, rhs);
+        let proof = d.refl(rhs);
+        let over_count_type = d.pi_fv(count_fv, nat, statement);
+        let over_count_value = d.lam_fv(count_fv, nat, proof);
+        let theorem_type = d.pi_fv(bits_fv, bits_type, over_count_type);
+        let theorem_value = d.lam_fv(bits_fv, bits_type, over_count_value);
+        d.declare_theorem(reify_bits_succ_name, theorem_type, theorem_value)
+            .map_err(|error| format!("reifyBits_succ rejected: {error:?}"))?;
+
         // The bounded Nat candidate associated with the pointwise algebra.
         let reified_bitwise_value = {
             let f_fv = d.fresh_fvar();
@@ -302,11 +325,19 @@ fn run() -> Result<(), String> {
     if !kernel.axiom_footprint(reify_bits_zero_name).is_empty() {
         return Err("bounded reification base gained assumptions".to_owned());
     }
+    let reify_succ_type = match kernel.environment().get(reify_bits_succ_name) {
+        Some(Declaration::Theorem { ty, .. }) => *ty,
+        _ => return Err("reifyBits_succ disappeared".to_owned()),
+    };
+    if !kernel.axiom_footprint(reify_bits_succ_name).is_empty() {
+        return Err("bounded reification step gained assumptions".to_owned());
+    }
     println!(
-        "NAT_TESTBIT_BOOL_BRIDGE_OK|theorem=Axeyum.Autogenesis.testBitBool_succ|axioms=0|type={}|observation_theorem=Axeyum.Autogenesis.bitwiseObservation_apply|observation_axioms=0|observation_type={}|reification_definition=Axeyum.Autogenesis.bitwiseReifyBounded|reification_base_theorem=Axeyum.Autogenesis.reifyBits_zero|reification_base_axioms=0|reification_base_type={}",
+        "NAT_TESTBIT_BOOL_BRIDGE_OK|theorem=Axeyum.Autogenesis.testBitBool_succ|axioms=0|type={}|observation_theorem=Axeyum.Autogenesis.bitwiseObservation_apply|observation_axioms=0|observation_type={}|reification_definition=Axeyum.Autogenesis.bitwiseReifyBounded|reification_base_theorem=Axeyum.Autogenesis.reifyBits_zero|reification_base_axioms=0|reification_base_type={}|reification_step_theorem=Axeyum.Autogenesis.reifyBits_succ|reification_step_axioms=0|reification_step_type={}",
         kernel.render_lean(ty),
         kernel.render_lean(observation_type),
-        kernel.render_lean(reify_zero_type)
+        kernel.render_lean(reify_zero_type),
+        kernel.render_lean(reify_succ_type)
     );
     Ok(())
 }
