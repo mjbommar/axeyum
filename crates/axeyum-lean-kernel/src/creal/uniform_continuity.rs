@@ -1131,7 +1131,11 @@ fn declare_uniformly_continuous_add(
         // target = add error_f error_g;
         // add4_proof : Equiv (add(add fx gx)(add neg_fy neg_gy)) target
         let abs_target = d.const_app(p.abs, &[target]);
-        let triangle = abs_add_le(d, p, error_f, error_g);
+        // Consumes the public `CReal.abs_add_le` directly rather than this
+        // file's own private `abs_add_le` helper (still used at the `mul`
+        // call site below) — the first call site converted to the public
+        // theorem.
+        let triangle = d.lemma(p.abs_add_le, &[error_f, error_g]);
         // triangle : le abs_target (add abs_error_f abs_error_g)
         let sum_bounds = d.lemma(
             p.add_le_add,
