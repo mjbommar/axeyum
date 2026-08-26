@@ -675,6 +675,18 @@ aggregate gates. These figures remain explicitly partial human-reviewed
 mappings; they are not inferred classifications and do not change the 2/138
 general-producer result.
 
+The first exact imported modular-arithmetic bridge assay now prevents a false
+shortcut at the next representation boundary. Eight public Mathlib 4.30
+candidate theorems were exported separately from three proof-free `Nat.ModEq`
+targets and passed through a new source-to-source checked transport probe. Six
+obvious arithmetic shortcuts carry `propext`; `dvd_refl` is axiom-free but its
+closure cannot yet compose into the minimal target capsule; only
+`Nat.ModEq.refl` transports, and bounded application converts 0/3 targets.
+This is a useful hard boundary, not producer progress. Next: construct one
+empty-footprint behavior theorem against the exact imported `Nat.mod`
+implementation and require the unchanged probe to admit all three siblings
+before operation registration.
+
 ## Sequencing
 
 The critical path is not three independent projects:

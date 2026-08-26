@@ -108,6 +108,7 @@ step autogenesis-must-decline-population python3 scripts/check-autogenesis-must-
 step autogenesis-bounded-induction-family python3 scripts/check-autogenesis-bounded-induction-family.py
 step autogenesis-modeq-family python3 scripts/check-autogenesis-modeq-family.py
 step autogenesis-nat-modeq-family python3 scripts/check-autogenesis-nat-modeq-family.py
+step autogenesis-nat-modeq-imported-bridge-assay python3 scripts/check-autogenesis-nat-modeq-imported-bridge-assay.py
 step established-fact-bounded-truth python3 scripts/check-established-facts-bounded-truth.py
 step lane-turn-controls ./scripts/tests/test-check-lane-turn.sh
 step autogenesis-nursery python3 scripts/check-autogenesis-nursery.py
