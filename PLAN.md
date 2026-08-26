@@ -117,6 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-26 | `a00743663` | Prove every Boolean reification digit is at most one constructively and axiom-free, supplying the local bound for the universal reifier induction. |
 | 2026-08-26 | `e6d798c06` | Exhaustively validate bounded reification over all 8,191 Boolean vectors through width 12 while preserving the oracle's non-proof authority boundary. |
 | 2026-08-26 | `b1405eff6` | Prove one-bit weighted-sum normalization and its Boolean observation round trip axiom-free; narrow the open theorem to the general bounded case. |
 | 2026-08-26 | `fcdcab1b3` | Prove the Boolean-digit map round-trips through bit zero axiom-free and expose weighted-sum normalization as the next non-definitional arithmetic seam. |
