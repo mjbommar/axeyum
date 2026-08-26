@@ -101,6 +101,13 @@ case analysis on `b`, with an empty footprint. This is exactly the coefficient
 bound needed to show each newly appended weighted digit contributes at most
 `2^k` in the reifier-bound induction.
 
+That universal bound now checks in the kernel:
+`reifyBits bits k < 2^k` for every `bits` and `k`, with an empty footprint. The
+proof inducts on `k`, uses the coefficient bound for the new term, and closes
+the power step through explicit addition/multiplication normalization. This
+removes the sufficient-size uncertainty from bounded reification; the remaining
+universal theorem is observation round-trip/uniqueness below the bound.
+
 A bounded oracle exhausts every Boolean vector through width 12: 8,191 vectors,
 90,114 in-range observations, and 8,191 first-out-of-range zero observations.
 It confirms the weighted-sum construction has the intended finite semantics.

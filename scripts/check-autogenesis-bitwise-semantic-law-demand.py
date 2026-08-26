@@ -147,6 +147,11 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
         canonical_type = reification.get(f"{prefix}_canonical_type", "")
         if "reifyBits" not in canonical_type:
             raise ValueError(f"{prefix} type changed")
+    if reification.get("reification_bound_axiom_footprint_size") != 0:
+        raise ValueError("universal reification bound gained assumptions")
+    bound_type = reification.get("reification_bound_canonical_type", "")
+    if "AxNat.lt" not in bound_type or "AxNat.pow" not in bound_type:
+        raise ValueError("universal reification bound type changed")
 
     exclusion = data.get("countermodel_exclusion", {})
     if exclusion.get("excluded_by_law") != "testBit_succ":

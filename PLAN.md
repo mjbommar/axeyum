@@ -1517,6 +1517,9 @@ remains open.
 The Boolean coefficient bound `boolToBit b ≤ 1` now checks constructively and
 axiom-free. It supplies the missing local inequality for the universal
 `reifyBits bits k < 2^k` induction.
+The universal size theorem now checks axiom-free: every `k`-bit reification is
+strictly below `2^k`. The remaining universal obligation is observation
+round-trip/uniqueness, not existence or boundedness of the constructed number.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization
