@@ -784,6 +784,36 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   §7.1.2 makes the CLI print `unknown` for an error, so 59 both-sides-decline
   files read as disagreements and the count comes out 193 instead of 134.
   `--confirm` compares in-process, which is the difference.
+- **A TEST THAT PASSES ONLY UNDER AN AMBIENT ENVIRONMENT VARIABLE IS A GATE ON
+  ONE SHELL, AND THE LANE THAT ADDS IT CANNOT SEE THE PROBLEM.** Measured
+  2026-08-26. A lane added a concrete-instantiation test for
+  `riemann_sum_reblock_close`, ran `cargo test --lib creal::`, got **93 passed,
+  0 failed**, and reported -- accurately, from where it stood -- that no
+  deep-stack wrapper was needed for this step. In a clean shell the same test
+  SIGABRTs: `has overflowed its stack`, `signal: 6`.
+
+  The cause is that the lane had `RUST_MIN_STACK` **exported earlier in its own
+  run**, while hand-bisecting the stack requirement of the PREVIOUS step's test.
+  Every later command in that shell inherited it. Real measurement, false
+  conclusion, and nothing in the output hints at the dependency.
+
+  Two rules follow, and the second is the one that generalizes:
+
+  - A test needing a deep stack must **carry it explicitly** -- an
+    `on_a_deep_stack` wrapper spawning a 256 MiB thread (the pattern in
+    `creal_point_tests.rs`, `creal/integral.rs`) -- never rely on the ambient
+    `RUST_MIN_STACK`.
+  - **Verify with `env -u <VAR>` for any variable you have set by hand this
+    session.** A coordinator re-running the lane's command in the coordinator's
+    own shell reproduces the lane's contamination whenever both shells set the
+    same thing. `env -u RUST_MIN_STACK cargo test ...` is what distinguished
+    them here.
+
+  Note the interaction with the entry below: a stack overflow in this kernel
+  looks exactly like a broken tool or an absent declaration (`exit 134`,
+  SIGABRT), which is why `prelude_theorem_inventory` must be run `--release`.
+  The same symptom, two unrelated causes, and neither one is a proof bug.
+
 - **A CONCRETE INSTANTIATION CAN HIDE THE BUG A SYMBOLIC ONE EXPOSES, so the
   mandatory-instantiation rule is NECESSARY AND NOT SUFFICIENT.** Measured
   2026-08-26 in `creal/exponential.rs`. A proof of `2^n <= 2*n!` type-checked at
