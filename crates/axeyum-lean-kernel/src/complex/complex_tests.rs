@@ -199,6 +199,10 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
         ("Complex.pos_bound_conj", p.pos_bound_conj),
         ("Complex.conj_inv", p.conj_inv),
         ("Complex.conj_div", p.conj_div),
+        ("Complex.mul_div_assoc", p.mul_div_assoc),
+        ("Complex.div_mul_cancel", p.div_mul_cancel),
+        ("Complex.add_div", p.add_div),
+        ("Complex.neg_div", p.neg_div),
         ("Complex.pow", p.pow),
         ("Complex.pow_zero", p.pow_zero),
         ("Complex.pow_succ", p.pow_succ),
@@ -853,5 +857,230 @@ fn div_congr_transports_div_self_across_a_conjugate_involution() {
         admitted.is_ok(),
         "div_congr + conj_conj + div_self must derive \
          `Equiv (div (conj (conj I)) I k h) one`: {admitted:?}"
+    );
+}
+
+/// `Complex.mul_div_assoc` instantiated at `z = I`, `w = one`, `w' = I`,
+/// three arguments distinct enough from each other that a transposed side
+/// of the stated `Equiv`, or a swapped `w`/`w'`, would be caught by
+/// `add_declaration`'s own re-check against the exact stated `ty`. `k`/`h`
+/// stay universally quantified, mirroring every division law in this module.
+///
+/// The declaration itself is already the symbolic check: `declare_mul_div_assoc`
+/// builds its proof term entirely from `fresh_fvar` — `z`, `w`, `w'`, `k`, `h`
+/// are never numerals — so its own admission during `build_complex_prelude`
+/// (exercised by [`every_named_complex_declaration_is_checked_and_footprint_free`])
+/// already confirms the term type-checks for genuinely free complex variables.
+/// This test is the complementary concrete check the module's own convention
+/// calls for.
+#[test]
+fn mul_div_assoc_concrete_instantiation() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let i_c = d.kernel().const_(p.i, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    let nat = d.nat_ty();
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let norm_i = d.const_app(p.norm_sq, &[i_c]);
+    let hypothesis = d.const_app(p.creal.pos_bound, &[norm_i, k]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    // Equiv (div (mul I one) I k h) (mul I (div one I k h)).
+    let proof = d.lemma(p.mul_div_assoc, &[i_c, one_c, i_c, k, h]);
+
+    let mul_i_one = d.const_app(p.mul, &[i_c, one_c]);
+    let div_lhs = d.const_app(p.div, &[mul_i_one, i_c, k, h]);
+    let div_one_i = d.const_app(p.div, &[one_c, i_c, k, h]);
+    let mul_i_div = d.const_app(p.mul, &[i_c, div_one_i]);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, proof);
+        d.lam_fv(k_fv, nat, with_h)
+    };
+    let ty = {
+        let conclusion = super::zeq(&mut d, p, div_lhs, mul_i_div);
+        let inner = d.pi_fv(h_fv, hypothesis, conclusion);
+        d.pi_fv(k_fv, nat, inner)
+    };
+    let name = d.kernel().name_str(anon, "Check.mul_div_assoc_concrete");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    });
+    assert!(
+        admitted.is_ok(),
+        "mul_div_assoc at (I, one, I, k, h) must give EXACTLY \
+         Equiv (div (mul I one) I k h) (mul I (div one I k h)): {admitted:?}"
+    );
+}
+
+/// `Complex.div_mul_cancel` instantiated at `z = I`, `w = one`: dividing
+/// `I * one` by `one` must cancel back to exactly `I`, not `one` or some
+/// other rearrangement — `add_declaration`'s re-check against the stated
+/// `ty` is the direction check, the same reliance the module's other
+/// concrete-instantiation tests document.
+#[test]
+fn div_mul_cancel_concrete_instantiation() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let i_c = d.kernel().const_(p.i, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    let nat = d.nat_ty();
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let norm_one = d.const_app(p.norm_sq, &[one_c]);
+    let hypothesis = d.const_app(p.creal.pos_bound, &[norm_one, k]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    // Equiv (div (mul I one) one k h) I.
+    let proof = d.lemma(p.div_mul_cancel, &[i_c, one_c, k, h]);
+
+    let mul_i_one = d.const_app(p.mul, &[i_c, one_c]);
+    let div_lhs = d.const_app(p.div, &[mul_i_one, one_c, k, h]);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, proof);
+        d.lam_fv(k_fv, nat, with_h)
+    };
+    let ty = {
+        let conclusion = super::zeq(&mut d, p, div_lhs, i_c);
+        let inner = d.pi_fv(h_fv, hypothesis, conclusion);
+        d.pi_fv(k_fv, nat, inner)
+    };
+    let name = d.kernel().name_str(anon, "Check.div_mul_cancel_concrete");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    });
+    assert!(
+        admitted.is_ok(),
+        "div_mul_cancel at (I, one, k, h) must give EXACTLY \
+         Equiv (div (mul I one) one k h) I: {admitted:?}"
+    );
+}
+
+/// `Complex.add_div` instantiated at `z = I`, `z' = one`, `w = I`: division
+/// distributes the sum `I + one` across the shared divisor `I`.
+#[test]
+fn add_div_concrete_instantiation() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let i_c = d.kernel().const_(p.i, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    let nat = d.nat_ty();
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let norm_i = d.const_app(p.norm_sq, &[i_c]);
+    let hypothesis = d.const_app(p.creal.pos_bound, &[norm_i, k]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    // Equiv (div (add I one) I k h) (add (div I I k h) (div one I k h)).
+    let proof = d.lemma(p.add_div, &[i_c, one_c, i_c, k, h]);
+
+    let add_i_one = d.const_app(p.add, &[i_c, one_c]);
+    let div_lhs = d.const_app(p.div, &[add_i_one, i_c, k, h]);
+    let div_i_i = d.const_app(p.div, &[i_c, i_c, k, h]);
+    let div_one_i = d.const_app(p.div, &[one_c, i_c, k, h]);
+    let add_divs = d.const_app(p.add, &[div_i_i, div_one_i]);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, proof);
+        d.lam_fv(k_fv, nat, with_h)
+    };
+    let ty = {
+        let conclusion = super::zeq(&mut d, p, div_lhs, add_divs);
+        let inner = d.pi_fv(h_fv, hypothesis, conclusion);
+        d.pi_fv(k_fv, nat, inner)
+    };
+    let name = d.kernel().name_str(anon, "Check.add_div_concrete");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    });
+    assert!(
+        admitted.is_ok(),
+        "add_div at (I, one, I, k, h) must give EXACTLY \
+         Equiv (div (add I one) I k h) (add (div I I k h) (div one I k h)): {admitted:?}"
+    );
+}
+
+/// `Complex.neg_div` instantiated at `z = I`, `w = one`: negation passes
+/// through division of `-I` by `one`.
+#[test]
+fn neg_div_concrete_instantiation() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let i_c = d.kernel().const_(p.i, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    let nat = d.nat_ty();
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let norm_one = d.const_app(p.norm_sq, &[one_c]);
+    let hypothesis = d.const_app(p.creal.pos_bound, &[norm_one, k]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    // Equiv (div (neg I) one k h) (neg (div I one k h)).
+    let proof = d.lemma(p.neg_div, &[i_c, one_c, k, h]);
+
+    let neg_i = d.const_app(p.neg, &[i_c]);
+    let div_lhs = d.const_app(p.div, &[neg_i, one_c, k, h]);
+    let div_i_one = d.const_app(p.div, &[i_c, one_c, k, h]);
+    let neg_rhs = d.const_app(p.neg, &[div_i_one]);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, proof);
+        d.lam_fv(k_fv, nat, with_h)
+    };
+    let ty = {
+        let conclusion = super::zeq(&mut d, p, div_lhs, neg_rhs);
+        let inner = d.pi_fv(h_fv, hypothesis, conclusion);
+        d.pi_fv(k_fv, nat, inner)
+    };
+    let name = d.kernel().name_str(anon, "Check.neg_div_concrete");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    });
+    assert!(
+        admitted.is_ok(),
+        "neg_div at (I, one, k, h) must give EXACTLY \
+         Equiv (div (neg I) one k h) (neg (div I one k h)): {admitted:?}"
     );
 }
