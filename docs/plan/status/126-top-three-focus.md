@@ -268,3 +268,4 @@ that one transition cleanly, and only then claim autonomous production.
 | 2026-08-26 | `2e060c8e6` | Add exact axiom-free native-candidate transport and demonstrate 8/12 ranked premises executable on a real imported modular goal. |
 | 2026-08-26 | `ba3f4acdd` | Expose native transport through Python and measure 210 executable ranked premises reaching 0/24 bounded-application conversion. |
 | 2026-08-26 | `2c86c0604` | Preserve ranked premise order through bounded search; the full census reproduces unchanged, ruling out alphabetical budget starvation as the active limiter. |
+| 2026-08-26 | `b852c4e89` | Compose graph-retrieved equalities through bounded induction and convert the first immutable open-population target axiom-free with zero false-control accepts. |
