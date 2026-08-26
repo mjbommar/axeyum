@@ -401,9 +401,17 @@ empty-footprint reconstruction is therefore structurally unavailable under the
 current definitions, not awaiting a cleverer proof. Next: choose the clean
 product boundary deliberately—target-owned operations, clean compatible
 definition reconstruction, or an explicitly weaker upstream-definition route.
+Candidate routing now acts on that distinction: ordinary assumption-bearing
+candidates without a measured statement floor remain eligible for proof
+reconstruction, while `Nat.testBit_bitwise` is classified as
+`clean-definition-reconstruction-required`, exposes `[propext]` as the floor,
+and cannot consume proof-reconstruction budget. Next: specialize the completed
+target-owned law into one reusable bitwise family without claiming exact
+imported-definition identity.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-26 | `cca5f9678` | Split proof-reconstructible candidate debt from structural statement trust floors; route the exact imported bitwise theorem to clean-definition reconstruction instead of futile proof retries. |
 | 2026-08-26 | `fe531ca30` | Prove with two theorem-free `Eq.refl` controls that exact imported `Nat.testBit` and `Nat.bitwise` statements inherit `propext` from their definition closures, making the empty-footprint boundary structural and explicit. |
 | 2026-08-26 | `32802405d` | Construct a total target-owned bitwise operation and prove its all-index Boolean semantics axiom-free under exactly `f false false = false`. |
 | 2026-08-26 | `08d4da396` | Prove axiom-free that every observation beyond a low-digit reification's width is false, closing the output-side tail of the unbounded bitwise theorem. |
