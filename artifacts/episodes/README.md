@@ -35,6 +35,7 @@ trusted step (plan 03, slice A4) that reads an episode and does not trust it.
 
 ```sh
 python3 scripts/check-agent-episode.py artifacts/episodes
+python3 scripts/check-agent-episode.py artifacts/episodes --production-only
 python3 scripts/check-agent-episode.py artifacts/episodes --require-ancestor
 python3 -m unittest scripts.tests.test_check_agent_episode
 ```
@@ -42,6 +43,11 @@ python3 -m unittest scripts.tests.test_check_agent_episode
 The last line of the output is `EPISODES|checked=N|ok=K|failed=M`, and the exit
 status is nonzero when `M > 0` **and when `N == 0`** — a check that checked
 nothing is not a pass. Read the count, not the exit status.
+
+The aggregate repository gate uses `--production-only`. It excludes directories
+whose names start with `fixtures`, reports the excluded count, and fails if no
+real episodes remain. Fixtures exercise the checker; they are never evidence
+that the autonomous loop ran.
 
 ## Why `--require-ancestor` is opt-in
 

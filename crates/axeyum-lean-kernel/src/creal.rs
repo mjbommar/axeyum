@@ -1680,6 +1680,21 @@ pub struct CRealPrelude {
     /// symmetric in `a`/`b` needs either that or a fresh `Within r q → 0 ≤ q`
     /// generic fact neither of which exists yet).
     pub geom_pair_within: NameId,
+    /// `CReal.pow_le_pow_of_base_le : ∀ x y, le zero x → le x y → ∀ n,
+    /// le (pow x n) (pow y n)` — monotonicity of `pow` in its **base**, for a
+    /// fixed exponent, the comparison [`geometric`](super::geometric)'s own
+    /// module documentation names as missing ("no lemma comparing `pow` at
+    /// two different bases for the same exponent"). Induction on `n`: the
+    /// base case is `le_refl one` up to `pow`'s own `ι`-reduction at `0`; the
+    /// step derives `0 ≤ y` from `0 ≤ x ≤ y` via `le_trans`, multiplies the
+    /// inductive hypothesis `pow x j ≤ pow y j` by the nonnegative `x` on the
+    /// left (commuted into `pow`'s right-recursive shape via `mul_comm` +
+    /// `le_congr`, exactly [`Self::pow_le_one`]'s own technique) to get
+    /// `(pow x j)·x ≤ (pow y j)·x`, multiplies `x ≤ y` by the nonnegative
+    /// `pow y j` on the left to get `(pow y j)·x ≤ (pow y j)·y`, and chains
+    /// the two with `le_trans` to land on `pow x (succ j) ≤ pow y (succ j)`
+    /// up to the same `ι`-reduction.
+    pub pow_le_pow_of_base_le: NameId,
     /// `CReal.one_le_pow_of_one_le : ∀ x, le one x → ∀ n, le one (pow x n)` —
     /// the mirror of [`Self::pow_le_one`]: powers of a base at least `1` stay
     /// at least `1`. Induction on `n`, and simpler than `pow_le_one`'s own
@@ -2252,6 +2267,31 @@ pub struct CRealPrelude {
     /// `[a, b]` makes `F` antitone there, via the same `neg ∘ F` trick
     /// [`Self::constant_of_zero_deriv`] uses for its second direction.
     pub antitone_of_nonpos_deriv: NameId,
+
+    /// `CReal.ivt_iter : ∀ F P0 Q0 eps, lt zero eps → le P0 Q0 → le (F P0)
+    /// eps → le (neg eps) (F Q0) → ∀ n : Nat, ∃ P Q, le P0 P ∧ le P Q ∧ le Q
+    /// Q0 ∧ le (F P) eps ∧ le (neg eps) (F Q) ∧ Equiv (add Q (neg P)) (mul
+    /// (add Q0 (neg P0)) (pow (ofRat (natDivSucc 1 1)) n))` (`creal/ivt.rs`)
+    /// -- [`Self::ivt_step`] iterated `n` times by structural `Nat`
+    /// induction, carrying the six-part invariant with the ORIGINAL
+    /// endpoints `P0, Q0` fixed throughout (`ivt_step`'s own `cp`/`cq` slots
+    /// are always the CURRENT bracket, one level in). The width at step `n`
+    /// is `(Q0 - P0) * (1/2)^n`, tracked via [`Self::pow`] and never via an
+    /// explicit `pow_succ`/`pow_zero` lemma application: `pow`'s own
+    /// `Nat.rec` ι-reduces `pow half (succ j)` to `mul (pow half j) half`
+    /// definitionally (see `power.rs`'s module documentation), so the
+    /// induction step needs only [`Self::mul_assoc`] to regroup, matching
+    /// the house idiom `derivative.rs::pow_two_equiv_sq` and
+    /// `power.rs::declare_pow_nonneg` already use for the same reduction.
+    /// The closing combination with [`Self::uniformly_continuous_on`] and
+    /// the Archimedean property to reach `CReal.ivt_approx` (`∀ e : Nat, ∃
+    /// x, …`) is **not** built here: it needs a quantitative bound relating
+    /// `pow x n` (`0 ≤ x < 1`) to a `natDivSucc`-shaped rational threshold —
+    /// the "geometric-decay-dominates-harmonic-rate estimate this
+    /// development does not yet build" that [`Self::geom_sum_bounded`]'s own
+    /// neighbourhood already flags as missing, not a gap this file's own
+    /// construction leaves behind.
+    pub ivt_iter: NameId,
 }
 
 impl CRealPrelude {
@@ -2516,6 +2556,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         geom_tail_within: kernel.name_str(creal, "geom_tail_within"),
         geom_tail_within_le: kernel.name_str(creal, "geom_tail_within_le"),
         geom_pair_within: kernel.name_str(creal, "geom_pair_within"),
+        pow_le_pow_of_base_le: kernel.name_str(creal, "pow_le_pow_of_base_le"),
         one_le_pow_of_one_le: kernel.name_str(creal, "one_le_pow_of_one_le"),
         pow_le_pow_of_one_le: kernel.name_str(creal, "pow_le_pow_of_one_le"),
         pow_pos: kernel.name_str(creal, "pow_pos"),
@@ -2570,6 +2611,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         ivt_step: kernel.name_str(creal, "ivt_step"),
         constant_of_zero_deriv: kernel.name_str(creal, "constant_of_zero_deriv"),
         antitone_of_nonpos_deriv: kernel.name_str(creal, "antitone_of_nonpos_deriv"),
+        ivt_iter: kernel.name_str(creal, "ivt_iter"),
     }
 }
 

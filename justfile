@@ -55,7 +55,7 @@ axiom-freedom:
 # not hide any of them — the chain still fails — it stops them hiding everything
 # else. Note the earlier claim that `adr-remote-collisions` was already last was
 # wrong: it was #40 of 41, so `local-ci-freshness` sat behind it.
-check: fmt fmt-all facts facts-replay clippy gate-controls axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand tock-log2-maestro-controls
+check: fmt fmt-all facts facts-replay clippy gate-controls axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand tock-log2-maestro-controls
 
 fmt:
     cargo fmt --all --check
@@ -496,6 +496,7 @@ correspondences:
 autogenesis-knowledge-derived-freshness:
     python3 scripts/gen-autogenesis-knowledge-coverage.py --check
     python3 scripts/gen-autogenesis-kernel-dependency-projection.py --check
+    python3 scripts/gen-autogenesis-kernel-lemma-search-index.py --check
     python3 scripts/gen-autogenesis-kernel-semantic-review-queue.py --check
     python3 scripts/gen-autogenesis-obstruction-projection.py --check
     python3 scripts/gen-autogenesis-capability-candidate-demand.py --check
@@ -511,6 +512,10 @@ autogenesis-kernel-projection:
     python3 -m unittest scripts.tests.test_validate_autogenesis_kernel_projection
     python3 scripts/validate-autogenesis-kernel-dependency-projection.py
     python3 scripts/gen-autogenesis-kernel-dependency-projection.py --check
+
+autogenesis-kernel-lemma-index:
+    python3 -m unittest scripts.tests.test_gen_autogenesis_kernel_lemma_search_index
+    python3 scripts/gen-autogenesis-kernel-lemma-search-index.py --check
 
 autogenesis-obstruction-projection:
     python3 -m unittest scripts.tests.test_validate_autogenesis_obstruction_projection
@@ -1478,7 +1483,7 @@ tactic-catalog-controls:
 
 # Check every committed agent episode, then its own control suite.
 episodes:
-    python3 scripts/check-agent-episode.py artifacts/episodes
+    python3 scripts/check-agent-episode.py artifacts/episodes --production-only
     python3 -m unittest scripts.tests.test_check_agent_episode
 
 # The mobility census gate (docs/python-2026-08/07-mobility-census.md, slice A7).

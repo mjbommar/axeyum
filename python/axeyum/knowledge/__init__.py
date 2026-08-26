@@ -20,6 +20,7 @@ submodule            canonical authority
 :mod:`concepts`      ``scripts/validate-foundational-concepts.py``
 :mod:`autogenesis`   shape classification (``kind`` has 707 values)
 :mod:`generated`     the dashboards' own headers
+:mod:`lemmas`        kernel-derived theorem dependency and exact fact links
 ===================  ===============================================
 
 Three rules hold everywhere in this package:
@@ -44,6 +45,7 @@ from . import (
     facts,
     frontier,
     generated,
+    lemmas,
     nursery,
     operations,
     overlay,
@@ -59,6 +61,7 @@ __all__ = [
     "facts",
     "frontier",
     "generated",
+    "lemmas",
     "nursery",
     "operations",
     "overlay",

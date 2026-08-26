@@ -1,4 +1,4 @@
-"""The six tier-R tools, and the held-out filter that lives inside them.
+"""The seven tier-R tools, and the held-out filter that lives inside them.
 
 The central assertion is not "no held-out id appeared". That is what a broken
 filter and a working one both report when the population is empty or the query
@@ -171,7 +171,22 @@ def test_every_declared_prelude_builds(ctx) -> None:
         assert tools.kernel_theorems(ctx, prelude=prelude).total_theorems >= 0
 
 
-# ------------------------------------------------- operation_registry / overlay
+# --------------------------------------- lemma / operation_registry / overlay
+
+
+def test_lemma_neighbourhood_exposes_candidate_dependencies(ctx) -> None:
+    page = tools.lemma_neighbourhood(ctx, name_glob="Nat.add_*")
+    assert page.total_lemmas > 0
+    assert page.matched > 0
+    assert all(row.declaration_id.startswith("Nat.add_") for row in page.rows)
+    assert all(row.axiom_footprint_size == 0 for row in page.rows)
+
+
+def test_lemma_neighbourhood_requires_one_query_axis(ctx) -> None:
+    with pytest.raises(tools.ToolRefusal):
+        tools.lemma_neighbourhood(ctx)
+    with pytest.raises(tools.ToolRefusal):
+        tools.lemma_neighbourhood(ctx, name_glob="Nat.*", fact_id="F:any")
 
 
 def test_operation_registry_exposes_generality(ctx) -> None:
@@ -207,8 +222,8 @@ def test_every_tool_declares_a_tier() -> None:
     assert {tools.TOOL_TIERS[f.__name__] for f in tools.TIER_C_TOOLS} == {"checked"}
 
 
-def test_the_toolset_exposes_exactly_the_six_read_tools() -> None:
-    assert len(tools.TIER_R_TOOLS) == 6
+def test_the_toolset_exposes_exactly_the_seven_read_tools() -> None:
+    assert len(tools.TIER_R_TOOLS) == 7
     tools.build_toolset()  # constructs, so every parameter carries a description
 
 

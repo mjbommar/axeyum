@@ -81,12 +81,17 @@ ancestry cannot be DETERMINED, that is a failure, not a pass.
 Usage::
 
     scripts/check-agent-episode.py artifacts/episodes            # a directory
+    scripts/check-agent-episode.py artifacts/episodes --production-only
     scripts/check-agent-episode.py path/to/episode.json ...      # explicit files
     scripts/check-agent-episode.py artifacts/episodes --require-ancestor
     scripts/check-agent-episode.py ep.json --nursery N.json --facts artifacts/facts
 
 A directory argument is walked for `*.json`; anything else is read as a file.
-Exit status is 0 only when at least one episode was checked and every one passed.
+`--production-only` excludes every path below a directory whose name starts
+with `fixtures`. This is the aggregate evidence mode: illustrative documents
+remain useful checker inputs, but cannot make the production population
+nonempty. Exit status is 0 only when at least one episode was checked and every
+one passed.
 """
 
 from __future__ import annotations
@@ -445,15 +450,28 @@ def check_episode(
 
 # ---------------------------------------------------------------------- main
 
-def episode_paths(arguments: list[str]) -> list[pathlib.Path]:
+def is_fixture_path(path: pathlib.Path) -> bool:
+    """Return whether a path is inside a fixture population."""
+    return any(part.startswith("fixtures") for part in path.parts)
+
+
+def episode_paths(
+    arguments: list[str], *, production_only: bool = False
+) -> tuple[list[pathlib.Path], int]:
     out: list[pathlib.Path] = []
+    excluded = 0
     for argument in arguments:
         path = pathlib.Path(argument)
         if path.is_dir():
-            out += sorted(p for p in path.rglob("*.json"))
+            candidates = sorted(p for p in path.rglob("*.json"))
         else:
-            out.append(path)
-    return out
+            candidates = [path]
+        for candidate in candidates:
+            if production_only and is_fixture_path(candidate):
+                excluded += 1
+            else:
+                out.append(candidate)
+    return (out, excluded)
 
 
 def ledger_fact_ids(facts: pathlib.Path) -> set[str]:
@@ -467,6 +485,11 @@ def main(argv: list[str]) -> int:
                     help="re-derive each saved frontier against the LIVE ledger (opt-in: it rots as the ledger grows)")
     ap.add_argument("--require-ancestor", action="store_true",
                     help="fail when git_commit is not an ancestor of HEAD (see the module docstring)")
+    ap.add_argument(
+        "--production-only",
+        action="store_true",
+        help="exclude paths below fixtures* directories from the evidence population",
+    )
     ap.add_argument("--nursery", type=pathlib.Path, default=NURSERY)
     ap.add_argument("--facts", type=pathlib.Path, default=FACTS)
     args = ap.parse_args(argv)
@@ -493,8 +516,17 @@ def main(argv: list[str]) -> int:
               f"rule unknown-fact-id would reject everything", file=sys.stderr)
         return 2
 
+    paths, excluded = episode_paths(
+        args.episodes, production_only=args.production_only
+    )
+    if args.production_only:
+        print(
+            "EPISODE_DISCOVERY|production_only=true|"
+            f"candidates={len(paths)}|excluded_fixtures={excluded}"
+        )
+
     checked = failed = 0
-    for path in episode_paths(args.episodes):
+    for path in paths:
         checked += 1
         try:
             document = json.loads(path.read_text())
