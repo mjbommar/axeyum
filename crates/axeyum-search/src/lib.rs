@@ -94,6 +94,7 @@ pub mod multiplicative_circuit;
 pub mod offdiag;
 pub mod search;
 pub mod simd;
+pub mod simd_synthesis;
 pub mod tensor_decomposition;
 pub mod vdw;
 

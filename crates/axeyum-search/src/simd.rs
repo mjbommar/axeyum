@@ -1,11 +1,12 @@
 //! Exact byte-tag semantics and proof-carrying lower bounds for a small SIMD
-//! shuffle language.
+//! shuffle languages.
 //!
 //! This module intentionally models a named subset, rather than pretending to
-//! cover an entire ISA.  The current language contains unary AVX2 `vpshufb`
-//! and same-source `vperm2i128`.  Tags record provenance (`Some(input_byte)`)
-//! or an instruction-produced zero (`None`), so exhaustive replay does not
-//! depend on concrete test bytes accidentally being equal.
+//! cover an entire ISA. Tags record provenance (`Some(input_byte)`) or an
+//! instruction-produced zero (`None`), so exhaustive replay does not depend
+//! on concrete test bytes accidentally being equal. The original two-family
+//! calibration remains below; generic multi-step synthesis over five
+//! permutation-preserving unary families lives in [`crate::simd_synthesis`].
 
 use axeyum_cnf::{
     CnfClause, CnfError, CnfFormula, CnfLit, CnfVar, DratError, DratStep, ProofSolveOutcome,
@@ -88,6 +89,15 @@ pub enum Avx2Shuffle {
         /// Selection for output bytes 16 through 31.
         high: HalfSelect,
     },
+    /// `vpermd`: each output dword selects one source dword; bytes retain
+    /// their offset inside the selected dword.
+    PermuteDwords([u8; 8]),
+    /// `vpermq`: each output qword selects one source qword; bytes retain
+    /// their offset inside the selected qword.
+    PermuteQwords([u8; 4]),
+    /// Same-source `vpalignr`: extract from two concatenated copies of each
+    /// 128-bit lane and zero-fill after the concatenation is exhausted.
+    AlignRight(u8),
 }
 
 impl Avx2Shuffle {
@@ -113,6 +123,29 @@ impl Avx2Shuffle {
                     HalfSelect::Low => input.0[offset],
                     HalfSelect::High => input.0[16 + offset],
                     HalfSelect::Zero => None,
+                }
+            })),
+            Self::PermuteDwords(control) => ByteTags(std::array::from_fn(|out| {
+                let output_dword = out / 4;
+                let byte = out % 4;
+                let source_dword = usize::from(control[output_dword] & 7);
+                input.0[source_dword * 4 + byte]
+            })),
+            Self::PermuteQwords(control) => ByteTags(std::array::from_fn(|out| {
+                let output_qword = out / 8;
+                let byte = out % 8;
+                let source_qword = usize::from(control[output_qword] & 3);
+                input.0[source_qword * 8 + byte]
+            })),
+            Self::AlignRight(immediate) => ByteTags(std::array::from_fn(|out| {
+                let shift = usize::from(*immediate);
+                let byte = out % 16;
+                let concatenated = byte + shift;
+                if concatenated < 32 {
+                    let lane = (out / 16) * 16;
+                    input.0[lane + concatenated % 16]
+                } else {
+                    None
                 }
             })),
         }
@@ -319,5 +352,39 @@ mod tests {
         let mut tags = [None; AVX2_BYTES];
         tags[7] = Some(32);
         assert!(ByteTags::new(tags).is_err());
+    }
+
+    #[test]
+    fn word_permutations_preserve_offsets_inside_selected_words() {
+        let dwords =
+            Avx2Shuffle::PermuteDwords([7, 6, 5, 4, 3, 2, 1, 0]).replay(&ByteTags::identity());
+        assert_eq!(dwords.as_array()[0], Some(28));
+        assert_eq!(dwords.as_array()[3], Some(31));
+        assert_eq!(dwords.as_array()[28], Some(0));
+
+        let qwords = Avx2Shuffle::PermuteQwords([3, 2, 1, 0]).replay(&ByteTags::identity());
+        assert_eq!(qwords.as_array()[0], Some(24));
+        assert_eq!(qwords.as_array()[7], Some(31));
+        assert_eq!(qwords.as_array()[24], Some(0));
+    }
+
+    #[test]
+    fn same_source_align_rotates_each_128_bit_lane() {
+        let aligned = Avx2Shuffle::AlignRight(5).replay(&ByteTags::identity());
+        assert_eq!(aligned.as_array()[0], Some(5));
+        assert_eq!(aligned.as_array()[11], Some(0));
+        assert_eq!(aligned.as_array()[16], Some(21));
+        assert_eq!(aligned.as_array()[27], Some(16));
+
+        let partial = Avx2Shuffle::AlignRight(17).replay(&ByteTags::identity());
+        assert_eq!(partial.as_array()[0], Some(1));
+        assert_eq!(partial.as_array()[14], Some(15));
+        assert_eq!(partial.as_array()[15], None);
+        assert_eq!(
+            Avx2Shuffle::AlignRight(32)
+                .replay(&ByteTags::identity())
+                .as_array(),
+            &[None; 32]
+        );
     }
 }

@@ -82,6 +82,16 @@ one-control mutation exits 1 at byte 16. This establishes minimal length 2 only 
 two-family subset and is a calibration, not the open ISA-wide result. Multi-step synthesis
 with lifted controls and additional instruction families remains open.
 
+**SIMD five-family bounded synthesis, 2026-08-26.** ADR-0566 closes that named next step with
+a complete multi-step SAT encoder for permutation-preserving unary `vpshufb`, `vpermd`,
+`vpermq`, same-source `vpalignr`, and same-source `vperm2i128`. Global byte reversal's
+one-step query is 2,663 variables / 87,940 clauses; CaDiCaL's 957,982-byte DRAT proof is
+accepted by Axeyum. The 4,302-variable / 159,912-clause two-step query lifts and independently
+replays a `vpermd; vpshufb` program. A hardware oracle agrees with every modeled family and
+rejects a direction mutation. This proves minimum length two only in the exact unary language;
+LLVM already records a two-operation AVX2 byte reverse, and current Scholar/arXiv/web searches
+do not justify a novelty-priority claim. Multi-source and weighted-cost synthesis remain open.
+
 **Boolean-ANF control route, 2026-08-26.** ADR-0562 adds canonical resource-bounded Boolean
 polynomials, deterministic Bosphorus interchange, and a sparse coefficient-DAG formulation of
 the complete affine-between-AND search. The PRIMATEs-inverse MC=6 control is 738 variables / 759
