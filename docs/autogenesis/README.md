@@ -273,6 +273,7 @@ compounding, not automation theatre.
 | [Agent-effectiveness roadmap](265-agent-effectiveness-roadmap.md) | Grounded in the 2026-08-25 reachability×provability measurement: why the agent proves ~3 of 146 today, and the A→B→C→D producer-capability sequence (B1 congruence → B2 lemma search → B3 LLM-proposed, kernel-checked) that makes it advance the frontier. |
 | [Retrieved induction and connective ranking](268-retrieved-induction-and-connective-ranking.md) | How one open target converted, why one success is not yet a reusable operation, and how the other 50 outcomes become typed capability demand. |
 | [Retrieved-induction type-slice replay](269-retrieved-induction-type-slice-replay.md) | All 25 import-blocked positive targets now have checked proof-free statement receipts; which 14 abstracted definitions need semantic contracts next? |
+| [Semantic-contract demand graph](270-semantic-contract-demand.md) | Which sliced source definitions have exact axiom-free behavior candidates or checked contracts, and why does `Nat.testBit` rank first? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

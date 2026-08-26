@@ -551,6 +551,10 @@ autogenesis-retrieved-induction-type-slice-reproduce:
     cargo run -q -p axeyum-lean-import --example type_slice_replay -- --streams /nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1 --mapping artifacts/autogenesis/retrieved-induction-type-slice-input-v1.json --output artifacts/autogenesis/retrieved-induction-type-slice-replay-v1.json --auto-param-binders-v3
     python3 scripts/check-autogenesis-retrieved-induction-type-slice-replay.py --source-directory /nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1
 
+autogenesis-semantic-contract-demand:
+    uv run --no-sync python -m unittest scripts.tests.test_gen_autogenesis_semantic_contract_demand
+    python3 scripts/gen-autogenesis-semantic-contract-demand.py --check
+
 autogenesis-proposition-reconciliation-proposals:
     python3 -m unittest scripts.tests.test_prepare_autogenesis_fact_transaction
     python3 scripts/check-autogenesis-proposition-reconciliation-result.py
