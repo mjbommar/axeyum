@@ -72,7 +72,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 283] = [
+    let expected: [(&str, crate::NameId, &str); 284] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -615,10 +615,13 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             "theorem",
         ),
         // Euler's number's raw material (creal/exponential.rs): the `n`-th
-        // series term `1/n!` and its `sumRange` partial sums. `CReal.e`
-        // itself is not built yet -- see that file's module documentation.
+        // series term `1/n!` and its `sumRange` partial sums, plus the
+        // domination bound `1/n! ≤ 2·(1/2)ⁿ` the convergence proof needs.
+        // `CReal.e` itself is not built yet -- see that file's module
+        // documentation for exactly what remains.
         ("CReal.expTerm", p.exp_term, "def"),
         ("CReal.expSeriesPartial", p.exp_series_partial, "def"),
+        ("CReal.expTerm_le_geom", p.exp_term_le_geom, "theorem"),
         // `CReal.sumRange_double` (creal/integral.rs), registered right
         // after `integral::declare_integral`: grouping `2k` terms of an
         // arbitrary `g` into `k` consecutive pairs, exactly. A building
@@ -5081,6 +5084,59 @@ fn exp_series_partial_computes_its_first_few_values() {
         "expSeriesPartial 3 must NOT reduce to ofRat 2 -- if it does, this \
          check cannot fail and something is wrong with the harness, not \
          just the theorem"
+    );
+}
+
+/// **Mandatory computation test for `CReal.expTerm_le_geom`.** Instantiates
+/// the universal bound at the closed term `n := 3` and checks, by
+/// `Kernel::infer` + `Kernel::def_eq` (not merely that the application
+/// type-checks), that the inferred statement is EXACTLY `le (ofRat 1/6)
+/// (ofRat 1/4)` -- `expTerm 3 = 1/3! = 1/6` and the geometric bound
+/// `2/2^3 = 2/8` reduces (via `Rat.normalize`'s own `gcd` bookkeeping) to
+/// the same `Rat.mk` normal form as `1/4`, built independently here. A
+/// vacuous or off-by-one statement (e.g. comparing against `1/8`) would
+/// type-check just as well; only forcing both sides through reduction and
+/// checking the LITERAL expected value catches that.
+///
+/// Includes a negative control: `1/4` must not reduce to `1/8` -- a
+/// consistency check that this harness can fail at all.
+#[test]
+fn exp_term_le_geom_concrete_instance_at_three() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let three = d.num(3);
+    let head = d.kernel().const_(p.exp_term_le_geom, vec![]);
+    let instance = d.apply(head, &[three]);
+    let inferred = d
+        .kernel()
+        .infer(instance)
+        .unwrap_or_else(|error| panic!("expTerm_le_geom refused at n=3: {error:?}"));
+
+    let exp_term_3 = d.const_app(p.exp_term, &[three]);
+    let expected_lhs = exp_test_rat_literal(&mut d, 1, 6); // 1/3! = 1/6
+    let expected_rhs = exp_test_rat_literal(&mut d, 1, 4); // 2/2^3 = 2/8 = 1/4
+    let embedded_lhs = d.const_app(p.of_rat, &[expected_lhs]);
+    let embedded_rhs = d.const_app(p.of_rat, &[expected_rhs]);
+    let expected_stmt = d.const_app(p.le, &[embedded_lhs, embedded_rhs]);
+
+    assert!(
+        d.kernel().def_eq(inferred, expected_stmt),
+        "expTerm_le_geom at n=3 must state exactly le (ofRat 1/6) (ofRat 1/4)"
+    );
+    assert!(
+        d.kernel().def_eq(exp_term_3, embedded_lhs),
+        "expTerm 3 should independently reduce to ofRat 1/6"
+    );
+
+    let wrong_rhs = exp_test_rat_literal(&mut d, 1, 8);
+    let embedded_wrong = d.const_app(p.of_rat, &[wrong_rhs]);
+    assert!(
+        !d.kernel().def_eq(embedded_rhs, embedded_wrong),
+        "1/4 must not reduce to 1/8 -- sanity check that this harness can fail"
     );
 }
 
