@@ -6924,3 +6924,118 @@ fn scale_cancel_le_applies_at_one_two_one_and_is_tight() {
             )
         });
 }
+
+/// **Mandatory concrete instantiation** for
+/// `CReal.diff_le_of_strict_mono_magnitude`, kernel-checked rather than
+/// verified on paper: `F := id` (`CReal.hasDerivative_id`, itself already
+/// `∀ a b`, so no bespoke `HasDerivativeOn` witness is needed -- applying it
+/// at `a := zero, b := one` IS the whole instantiation cost), `k := 0`,
+/// `x := 0`, `y := 1`.
+///
+/// The `hderiv` hypothesis this needs is `1/(0+1) = 1 <= F'(z) = 1` -- an
+/// equality dressed as a bound, built the same way
+/// `CReal.of_nat_one_equiv_local`'s (private, out-of-module) route does:
+/// `ofRat (natDivSucc 1 0)` and `CReal.one` each unfold one delta step to an
+/// `embed`, bridged by [`CRealPrelude::rat_unit_eq_one`] at the `Rat` level.
+#[test]
+fn diff_le_of_strict_mono_magnitude_applies_to_the_identity_at_zero_zero_one() {
+    use crate::rat_prelude::ops::{rat_eq_rewrite, rone};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let rat = p.rat;
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let k = d.num(0); // k := 0
+    let one_nat = d.num(1);
+
+    let identity = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+    let one_fn = {
+        let ignore_fv = d.fresh_fvar();
+        d.lam_fv(ignore_fv, carrier, one_c)
+    };
+
+    let hf = d.lemma(p.has_derivative_id, &[zero_c, one_c]);
+
+    // --- hderiv : forall z, le zero z -> le z one -> le (ofRat (natDivSucc 1
+    // k)) (F' z) -- constant in z, since `k := 0` makes the bound exactly
+    // `CReal.one`, matching `F' z`'s own constant value.
+    let c_rat = d.const_app(rat.nat_div_succ, &[one_nat, k]); // natDivSucc 1 0
+    let c = d.const_app(p.of_rat, &[c_rat]);
+    let one_rat = rone(&mut d, rat);
+    let unit_eq_one = d.lemma(p.rat_unit_eq_one, &[]); // Eq Rat c_rat one_rat
+    let refl_start = d.lemma(p.equiv_refl, &[c]);
+    let c_equiv_one = rat_eq_rewrite(&mut d, c_rat, one_rat, unit_eq_one, refl_start, &|d, t| {
+        let embedded = d.const_app(p.of_rat, &[t]);
+        d.const_app(p.equiv, &[c, embedded])
+    });
+    // c_equiv_one : Equiv c (ofRat one_rat) -- defeq Equiv c one_c
+    let embed_one_rat = d.const_app(p.of_rat, &[one_rat]);
+    let hderiv_body = d.lemma(p.le_of_equiv, &[c, embed_one_rat, c_equiv_one]);
+    // hderiv_body : le c embed_one_rat -- defeq le c one_c, matching `le c (F' z)`.
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let haz_ty = d.const_app(p.le, &[zero_c, z]);
+    let haz_fv = d.fresh_fvar();
+    let hzb_ty = d.const_app(p.le, &[z, one_c]);
+    let hzb_fv = d.fresh_fvar();
+    let with_hzb = d.lam_fv(hzb_fv, hzb_ty, hderiv_body);
+    let with_haz = d.lam_fv(haz_fv, haz_ty, with_hzb);
+    let hderiv = d.lam_fv(z_fv, carrier, with_haz);
+
+    // --- x := zero, y := one, a := zero, b := one -------------------------
+    let hax = d.lemma(p.le_refl, &[zero_c]); // le zero zero
+    let lt01 = d.lemma(p.zero_lt_one, &[]);
+    let hxy = d.lemma(p.le_of_lt, &[zero_c, one_c, lt01]); // le zero one
+    let hyb = d.lemma(p.le_refl, &[one_c]); // le one one
+
+    let instance = d.lemma(
+        p.diff_le_of_strict_mono_magnitude,
+        &[
+            identity, one_fn, zero_c, one_c, hf, k, hderiv, zero_c, one_c, hax, hxy, hyb,
+        ],
+    );
+
+    // Independently reconstruct the expected conclusion:
+    // le (add one (neg zero)) (mul (ofNat (Nat.succ (Nat.succ (Nat.mul 2
+    // 0)))) (add (abs (F zero)) (abs (F one)))).
+    let two_nat = d.num(2);
+    let doubled = d.mul(two_nat, k); // Nat.mul 2 0
+    let e_acc = d.succ(doubled); // Nat.succ (Nat.mul 2 0)
+    let sm = d.succ(e_acc); // Nat.succ (Nat.succ (Nat.mul 2 0))
+    let nice_factor = d.const_app(p.of_nat, &[sm]);
+    let fx = d.apply(identity, &[zero_c]);
+    let fy = d.apply(identity, &[one_c]);
+    let abs_fx = d.const_app(p.abs, &[fx]);
+    let abs_fy = d.const_app(p.abs, &[fy]);
+    let sum_fx_fy = d.const_app(p.add, &[abs_fx, abs_fy]);
+    let nice_bound = d.const_app(p.mul, &[nice_factor, sum_fx_fy]);
+    let neg_x = d.const_app(p.neg, &[zero_c]);
+    let diff = d.const_app(p.add, &[one_c, neg_x]);
+    let ty = d.const_app(p.le, &[diff, nice_bound]);
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(anon, "__diff_le_of_strict_mono_magnitude_at_id_0_0_1");
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value: instance,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.diff_le_of_strict_mono_magnitude at (F=id, k=0, x=0, y=1) \
+                 did NOT check against \
+                 le (add one (neg zero)) (mul (ofNat 2) (add (abs zero) (abs one))): \
+                 {error:?}"
+            )
+        });
+}
