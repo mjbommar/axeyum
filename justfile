@@ -517,6 +517,12 @@ autogenesis-kernel-lemma-index:
     python3 -m unittest scripts.tests.test_gen_autogenesis_kernel_lemma_search_index
     python3 scripts/gen-autogenesis-kernel-lemma-search-index.py --check
 
+# Requires the installed Python extension because the census runs the real
+# Rust producer and independently admits every accepted term in the kernel.
+autogenesis-bounded-application-census:
+    uv run --no-sync python -m unittest scripts.tests.test_gen_autogenesis_bounded_application_census
+    uv run --no-sync python scripts/gen-autogenesis-bounded-application-census.py --check
+
 autogenesis-obstruction-projection:
     python3 -m unittest scripts.tests.test_validate_autogenesis_obstruction_projection
     python3 scripts/validate-autogenesis-obstruction-projection.py

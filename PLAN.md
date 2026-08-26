@@ -123,6 +123,7 @@ now. Nothing was deleted.
 | 2026-08-26 | `fa821fc54` | Merge the next constructive-real theorem and advance the same generated search population to 1,243 without clobbering either lane. |
 | 2026-08-26 | `5916d47cc` | Publish stable all-kind direct declaration dependencies through Rust, Python, and the generated kernel projection, with direct-versus-transitive controls. |
 | 2026-08-26 | `17b0c1163` | Split proof-isolated type dependencies from type-plus-value evidence before premise selection could leak a finished theorem's proof. |
+| 2026-08-26 | `710b7cf04` | Publish the reproducible proof-isolated bounded-application census: 6/109 accepted, 103 typed declines, zero accepted axiom footprints. |
 | 2026-08-25 | `beb27f1ba` | **The trusted-core ceiling, raised the way the gate demanded.** Guard C failed at 5,508 past 5,500 with "say why before raising it." The baseline was RE-DERIVED by `git archive` rather than trusted, giving a per-file table summing to exactly +379 (`tc.rs` +347, `inductive.rs` +30, `env.rs` +2). Verdict: real and necessary — a universe-parameter closure fixing declarations **official Lean 4.30.0 refuses but this kernel wrongly admitted**, and `whnf_core` memoisation (138× cost, 1,857 s → 13.4 s) inside `def_eq`. Ceiling 5,900 with headroom matching the original's character; guard C re-verified to fire by injecting 500 lines in a scratch copy. The file's own comment said "5,110" where the real baseline was 5,129 — wrong from day one. |
 | 2026-08-25 | `0f2fb5fcd` | A doc line beginning with `+` is a Markdown list bullet, so ten `doc_list_item` errors pointed at ordinary prose one line below the cause. |
 | 2026-08-25 | `6de1d88f8` | Salvage: **the irrationality of √2** (`Nat.no_rational_sqrt_two`) and **`CReal.geom_tail_within`**, committed on behalf of two lanes killed mid-run by a spend limit. Both verified here: 695 tests, clippy `--all-targets`, axiom-free. |
@@ -1135,7 +1136,10 @@ type row gives bounded search statement vocabulary without proof leakage or a
 transitive flood; for Fibonacci it includes `Nat.fib` but excludes both
 `Nat.fibAux` and the two lemmas used by the checked proof. Next: combine that
 type-only vocabulary with independently retrieved fact dependencies, measure
-the sibling family, then register only the supported operation.
+the sibling family, then register only the supported operation. The first
+proof-isolated census now measures 6/109 accepted (5.5%), all kernel-admitted
+and axiom-free, with 103 typed `NoTypedApplication` declines. This is a
+capability measurement over settled controls, not autonomous yield.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 

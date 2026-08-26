@@ -137,6 +137,19 @@ evidence. The next census must use that exact boundary before an operation
 family is registered; the initial 10 successes are discovery data, not
 autonomous-production credit.
 
+The corrected, reproducible census now applies one fixed seed combinator plus
+type-only target vocabulary plus exact authored fact dependencies to every
+fact-linked theorem visible in the Nat prelude. It accepts 6 of 109 (5.5%) and
+returns `NoTypedApplication` for the other 103. Every accepted term is admitted
+again and has an empty axiom footprint. The accepts are `Nat.fib_mono`,
+`Nat.mul_one`, `Nat.one_mul`, `mt`, `not_not_intro`, and `not_not_not`.
+`Nat.fib_mono` uses exactly the independently retrieved `Nat.fib_le_succ` and
+the fixed `Nat.monotone_of_le_succ` combinator. This is an honest capability
+baseline over already settled controls, not production credit or evidence that
+the current open queue will convert at 5.5%. The next step is to materialize
+proof-isolated candidate capsules for eligible open siblings and run the same
+unchanged operation through the authoritative episode/transaction path.
+
 ## Comparative position
 
 Axeyum should not be described as a replacement for any one neighboring
