@@ -507,6 +507,11 @@ autogenesis-knowledge-derived-freshness:
     python3 scripts/gen-autogenesis-producer-outcome-observations.py --check
     python3 scripts/gen-autogenesis-producer-evaluation-frontier.py --check
     python3 scripts/gen-autogenesis-producer-evaluation-protocol.py --check
+    python3 scripts/gen-autogenesis-open-lemma-candidate-ranking.py --check
+
+autogenesis-open-lemma-candidate-ranking:
+    python3 -m unittest scripts.tests.test_gen_autogenesis_open_lemma_candidate_ranking
+    python3 scripts/gen-autogenesis-open-lemma-candidate-ranking.py --check
 
 autogenesis-kernel-projection:
     python3 -m unittest scripts.tests.test_validate_autogenesis_kernel_projection

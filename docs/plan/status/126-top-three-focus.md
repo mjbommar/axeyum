@@ -51,8 +51,8 @@ measures the honest next boundary: the unchanged 13-declaration palette accepts
 0, 30 targets reach search and type-decline, and 27 fail closed during import because their target
 type closure reaches an unallowlisted trusted declaration. The hashed census is
 measurement only. Do not register the settled three-control family as new
-production. Next: separate an allowlisted checked type environment from proof
-candidates, then add dependency-ranked premise retrieval and rerun this exact
+production. Next: route rich statements through the existing checked type-slice
+boundary, then add dependency-ranked premise retrieval and rerun this exact
 population. The 27 import rejections must use the already implemented ADR-0484
 type-slice/generalization and exact-specialization route; do not create a second
 trusted-support allowlist in the candidate importer.
@@ -61,6 +61,12 @@ proof and read no source proof body, but the attempt itself spent evaluation
 information. The v2 census excludes them before capsule access, records their
 identities, and fails closed on facts absent from the nursery. Do not use the
 superseded 80-row counts.
+A held-out-safe candidate-ranking projection now covers 142 open/conjectured
+Lean goals in train/development with 1,704 proof-isolated kernel-lemma rows; all
+37 held-out IDs are excluded before statement tokenization. The deterministic
+lexical/type/graph score is retrieval context only. Its broad ties demonstrate
+the next need: exact type compatibility and bounded application over ranked
+candidates, with no fuzzy match receiving fact or operation authority.
 The accepted ADR-0541 general SMT-LIB session driver is now also a named
 `axeyum` binary target, not only a discoverability-poor Cargo example. The same
 source remains the historical example control, and the binary's focused check,

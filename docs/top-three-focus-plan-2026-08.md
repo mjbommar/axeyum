@@ -214,6 +214,19 @@ candidates from exact fact and kernel dependencies, and rerun the unchanged
 open population. Only a producer that converts previously open siblings earns
 operation authority.
 
+The first held-out-safe premise-ranking projection now makes the connected
+graph operational without pretending lexical overlap is semantics. It ranks at
+most 12 kernel lemmas for each of 142 open/conjectured Lean goals in train or
+development, using only the visible statement, canonical kernel types, direct
+type dependencies, and graph centrality. All 37 held-out fact IDs are excluded
+before statement tokenization. The artifact contains 1,704 candidate rows and
+grants no applicability or production authority. Its weakness is visible in
+the output: the independently proved `Nat.choose_self` is only third among a
+large tie for the corresponding source fact. The next connective layer is an
+exact type-compatibility filter and type-directed application attempt over
+these candidates, not a larger lexical score or an LLM assertion that one is
+the same theorem.
+
 ## Comparative position
 
 Axeyum should not be described as a replacement for any one neighboring
