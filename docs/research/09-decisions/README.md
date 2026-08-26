@@ -654,3 +654,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0581](adr-0581-polynomial-tensor-search-has-a-strict-artifact-front-door.md) | Full-polynomial GF(2) rank search exports DIMACS and admits SAT or UNSAT artifacts only through replay | accepted |
 | [0582](adr-0582-exact-budget-circuit-search-must-name-its-lower-bound-premise.md) | Exact-budget circuit search must name its lower-bound premise | accepted |
 | [0583](adr-0583-weighted-cnf-composition-precedes-machine-cost-claims.md) | Compose bounded integer costs as checked CNF, lift weighted SIMD models, and keep dependent-latency claims distinct from scheduling | accepted |
+| [0584](adr-0584-multi-source-simd-synthesis-uses-ssa-live-values.md) | Multi-source SIMD synthesis uses SSA live values | accepted |
