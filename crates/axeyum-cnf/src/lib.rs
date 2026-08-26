@@ -53,6 +53,7 @@ mod lrat;
 mod proof_sat;
 mod simplify;
 mod vivify;
+mod weighted;
 mod xor_cdcl;
 mod xor_dpll;
 mod xor_drat;
@@ -107,6 +108,9 @@ pub use proof_sat::{
 };
 pub use simplify::{SubsumeStats, simplify, simplify_within};
 pub use vivify::{VivifyOptions, VivifyOutcome, VivifyStats, vivify, vivify_within};
+pub use weighted::{
+    WeightedAtMostEncoding, WeightedAtMostError, WeightedAtMostLimits, encode_weighted_at_most,
+};
 pub use xor_cdcl::{XorCdclResult, solve_with_xor_cdcl};
 pub use xor_dpll::{XorDpllResult, solve_with_xor};
 pub use xor_drat::{MAX_XOR_WIDTH, XorGaussRefutation, xor_gauss_drat_refutation};
