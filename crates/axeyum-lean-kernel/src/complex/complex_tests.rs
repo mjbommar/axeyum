@@ -5,7 +5,7 @@
 //! or a doc comment.
 
 use super::{ComplexPrelude, build_complex_prelude};
-use crate::{Declaration, Kernel};
+use crate::{Declaration, Kernel, on_a_deep_stack};
 
 /// A built `Complex` kernel, as a **clone of one template**.
 ///
@@ -26,28 +26,6 @@ fn built() -> (Kernel, ComplexPrelude) {
         })
     });
     (kernel.clone(), *prelude)
-}
-
-/// Run `f` on a thread with a **64 MiB stack**.
-///
-/// The default test-thread stack is 2 MiB, and building this prelude overflows
-/// it in a debug build: the roots-of-unity work pushed the accumulated proof
-/// terms past the limit and `cargo test --lib complex` aborted with
-/// `fatal runtime error: stack overflow` (SIGABRT), before any assertion ran.
-///
-/// This is deliberately **not** solved with `RUST_MIN_STACK`. That would make
-/// the suite pass only for whoever remembers to export it — CI runs a bare
-/// `cargo test`, and a gate that needs an undocumented environment variable to
-/// be green is a gate that reports a false red to everyone else. The recursion
-/// is in the kernel's own type checker over a genuinely large term, not a bug to
-/// fix, so the fix is to give it room where it is exercised.
-fn on_a_deep_stack<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> T {
-    std::thread::Builder::new()
-        .stack_size(64 * 1024 * 1024)
-        .spawn(f)
-        .expect("spawning a deep-stack thread must succeed")
-        .join()
-        .expect("the deep-stack thread must not panic")
 }
 
 /// The build itself, with the kernel's rejection **rendered**: a `Debug` of

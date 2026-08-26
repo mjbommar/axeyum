@@ -218,7 +218,7 @@ package retains deterministic compressed CNF/DRAT, hashes, diary, provenance, an
 built LaTeX note. Multi-source live-register semantics and a real scheduler objective remain
 the open SIMD boundary.
 
-**SIMD multi-source live-value synthesis, 2026-08-26.** ADR-0584 replaces the unary
+**SIMD multi-source live-value synthesis, 2026-08-26.** ADR-0585 replaces the unary
 accumulator boundary with a reusable bounded SSA program encoding: the original input and every
 earlier result remain selectable as operands. Its exact fourteen-family AVX2 language adds
 two-source `vpalignr`, nonzero-control `vperm2i128`, all low/high byte/word/dword/qword unpacks,

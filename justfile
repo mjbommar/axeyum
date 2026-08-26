@@ -55,7 +55,7 @@ axiom-freedom:
 # not hide any of them — the chain still fails — it stops them hiding everything
 # else. Note the earlier claim that `adr-remote-collisions` was already last was
 # wrong: it was #40 of 41, so `local-ci-freshness` sat behind it.
-check: fmt fmt-all facts facts-replay clippy gate-controls axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand tock-log2-maestro-controls
+check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand tock-log2-maestro-controls
 
 fmt:
     cargo fmt --all --check
@@ -386,7 +386,14 @@ gate-controls:
     # returns the same empty answer as a strong negative result.
     scripts/tests/test-check-parity-freshness.sh
     scripts/tests/test-new-fact-controls.sh
+    # Controls for `kernel-stack-envelope` below. Six cases: an outgrown budget,
+    # a budget so large it cannot fail, an empty ledger, a missing pin file, a
+    # probe usage error that must NOT be read as "needs more stack", and the
+    # committed pins passing. Each of the checker's five guards was mutated
+    # individually in a scratch tree and kills exactly one control.
+    scripts/tests/test-kernel-stack-envelope.sh
     scripts/tests/test-lane-commit.sh
+    scripts/tests/test-recount-pinned-inventory.sh
     # The lane stamp must PARSE as a git trailer, not merely appear as text:
     # `%(trailers:key=Agent,valueonly)` is the query every attribution check
     # runs, and two commits carried the text without parsing.
@@ -523,19 +530,19 @@ autogenesis-ranked-proposition-census:
     python3 scripts/gen-autogenesis-ranked-proposition-census.py --ranking artifacts/autogenesis/open-lemma-candidate-ranking-post-reconciliation-v1.json --output artifacts/autogenesis/open-ranked-proposition-census-v2.json --allow-population-subset --check
 
 autogenesis-open-fixed-palette-census:
-    uv run --no-sync python -m unittest scripts.tests.test_measure_autogenesis_open_fixed_palette
+    uv run --no-sync python -m unittest python.tests.test_autogenesis_open_fixed_palette
     uv run --no-sync python scripts/measure-autogenesis-open-fixed-palette.py --population artifacts/autogenesis/open-ranked-proposition-census-v2.json --must-decline-population artifacts/autogenesis/must-decline-mutations-v1.json --capsule-directory /nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1 --output artifacts/autogenesis/open-fixed-palette-census-v2.json --check
 
 autogenesis-open-ranked-application-census:
-    uv run --no-sync python -m unittest scripts.tests.test_measure_autogenesis_open_fixed_palette scripts.tests.test_gen_autogenesis_open_lemma_candidate_ranking
+    uv run --no-sync python -m unittest python.tests.test_autogenesis_open_fixed_palette scripts.tests.test_gen_autogenesis_open_lemma_candidate_ranking
     uv run --no-sync python scripts/measure-autogenesis-open-fixed-palette.py --population artifacts/autogenesis/open-ranked-proposition-census-v2.json --must-decline-population artifacts/autogenesis/must-decline-mutations-v1.json --ranking artifacts/autogenesis/open-lemma-candidate-ranking-v1.json --capsule-directory /nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1 --output artifacts/autogenesis/open-ranked-application-census-v1.json --check
 
 autogenesis-open-ranked-transport-census:
-    uv run --no-sync python -m unittest scripts.tests.test_measure_autogenesis_open_fixed_palette scripts.tests.test_gen_autogenesis_open_lemma_candidate_ranking
+    uv run --no-sync python -m unittest python.tests.test_autogenesis_open_fixed_palette scripts.tests.test_gen_autogenesis_open_lemma_candidate_ranking
     uv run --no-sync python scripts/measure-autogenesis-open-fixed-palette.py --population artifacts/autogenesis/open-ranked-proposition-census-v2.json --must-decline-population artifacts/autogenesis/must-decline-mutations-v1.json --ranking artifacts/autogenesis/open-lemma-candidate-ranking-v1.json --transport-native-candidates --capsule-directory /nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1 --output artifacts/autogenesis/open-ranked-transport-application-census-v1.json --check
 
 autogenesis-open-ranked-transport-induction-census:
-    uv run --no-sync python -m unittest scripts.tests.test_measure_autogenesis_open_fixed_palette scripts.tests.test_gen_autogenesis_rewrite_support_ranking
+    uv run --no-sync python -m unittest python.tests.test_autogenesis_open_fixed_palette scripts.tests.test_gen_autogenesis_rewrite_support_ranking
     uv run --no-sync python scripts/measure-autogenesis-open-fixed-palette.py --population artifacts/autogenesis/open-ranked-proposition-census-v2.json --must-decline-population artifacts/autogenesis/must-decline-mutations-v1.json --ranking artifacts/autogenesis/open-lemma-rewrite-support-ranking-v1.json --transport-native-candidates --retrieved-induction --capsule-directory /nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1 --output artifacts/autogenesis/open-ranked-transport-induction-census-v1.json --check
 
 autogenesis-retrieved-induction-obstructions:
@@ -605,12 +612,12 @@ autogenesis-imported-definition-descriptor stream="/nas3/data/axeyum/autogenesis
     cargo run -q -p axeyum-lean-import --example imported_definition_descriptor -- "{{ stream }}" "{{ name }}"
 
 autogenesis-non-equality-terminal-census:
-    uv run --no-sync python -m unittest scripts.tests.test_measure_autogenesis_open_fixed_palette scripts.tests.test_gen_autogenesis_non_equality_population
+    uv run --no-sync python -m unittest python.tests.test_autogenesis_open_fixed_palette scripts.tests.test_gen_autogenesis_non_equality_population
     python3 scripts/gen-autogenesis-non-equality-population.py --check
     uv run --no-sync python scripts/measure-autogenesis-open-fixed-palette.py --population artifacts/autogenesis/non-equality-terminal-population-v1.json --must-decline-population artifacts/autogenesis/must-decline-mutations-v1.json --ranking artifacts/autogenesis/open-lemma-rewrite-support-ranking-v1.json --transport-native-candidates --retrieved-induction --capsule-directory /nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1 --output artifacts/autogenesis/non-equality-retrieved-induction-census-v1.json --check
 
 autogenesis-open-modeq-family-census:
-    uv run --no-sync python -m unittest scripts.tests.test_measure_autogenesis_open_fixed_palette
+    uv run --no-sync python -m unittest python.tests.test_autogenesis_open_fixed_palette
     uv run --no-sync python scripts/measure-autogenesis-open-fixed-palette.py --population artifacts/autogenesis/open-ranked-proposition-census-v2.json --must-decline-population artifacts/autogenesis/must-decline-mutations-v1.json --modeq-family --capsule-directory /nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1 --output artifacts/autogenesis/open-modeq-family-census-v1.json --check
 
 autogenesis-proposition-reconciliation-proposals:
@@ -633,11 +640,11 @@ autogenesis-kernel-lemma-index:
 # Requires the installed Python extension because the census runs the real
 # Rust producer and independently admits every accepted term in the kernel.
 autogenesis-bounded-application-census:
-    uv run --no-sync python -m unittest scripts.tests.test_gen_autogenesis_bounded_application_census
+    uv run --no-sync python -m unittest python.tests.test_autogenesis_bounded_application_census
     uv run --no-sync python scripts/gen-autogenesis-bounded-application-census.py --check
 
 autogenesis-candidate-capsule-controls:
-    uv run --no-sync python -m unittest scripts.tests.test_materialize_autogenesis_candidate_capsule
+    uv run --no-sync python -m unittest python.tests.test_autogenesis_candidate_capsule
 
 autogenesis-obstruction-projection:
     python3 -m unittest scripts.tests.test_validate_autogenesis_obstruction_projection
@@ -803,6 +810,24 @@ check-scope base="main":
 # touch moment / squared-binomial / falling-factorial code.
 moment-proofs:
     cargo test -p axeyum-cas --lib -- --ignored
+
+# ADR-0581: how much STACK the kernel needs to build each prelude, re-derived
+# and checked against `artifacts/kernel-stack-envelope.tsv`.
+#
+# The kernel's type checker recurses over the term with no bound, so a deep
+# enough declaration exhausts the stack and the process ABORTS (SIGABRT, exit
+# 134) -- a symptom this repository has three times mistaken for a broken tool
+# or an absent declaration. `CReal.e` landing is what silently stopped
+# `every_creal_declaration_is_checked_and_axiom_free`, the guard behind the
+# axiom-freedom claim, from running at all. This turns that into a red gate
+# with the number in it.
+#
+# RELEASE by default because a debug `cpoint` probe is ~63 s against ~8 s. The
+# debug rows are the ones that match where `cargo test` runs; check them with
+# `scripts/check-kernel-stack-envelope.sh --profile debug` (~4 min) when a
+# kernel change plausibly deepened a proof term.
+kernel-stack-envelope:
+    ./scripts/check-kernel-stack-envelope.sh --check --profile release
 
 # T6.0.3/TL2.15 seed: deterministic generated coverage of the four currently
 # representable Lean-kernel seams. The workspace `test` recipe also discovers

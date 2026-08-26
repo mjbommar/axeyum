@@ -65,9 +65,7 @@ def _load_cached(root_key: str) -> TargetOwnedCandidateIndex:
                 canonical_type=row["clean_canonical_type"],
                 declaration_identity=capsule_root["declaration_identity"],
                 axiom_footprint=tuple(capsule_root["axiom_footprint"]),
-                direct_theorem_dependencies=tuple(
-                    capsule_root["direct_theorem_dependencies"]
-                ),
+                direct_theorem_dependencies=tuple(capsule_root["direct_theorem_dependencies"]),
                 semantic_analogue_fact_ids=(row["fact_id"],),
                 capsule_path=stream["path"],
                 capsule_sha256=stream["sha256"],

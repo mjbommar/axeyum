@@ -248,9 +248,7 @@ def test_imported_candidates_search_canonical_type(ctx) -> None:
 
 
 def test_target_owned_candidates_expose_clean_reusable_family(ctx) -> None:
-    page = tools.target_owned_candidates(
-        ctx, name_glob="Axeyum.Autogenesis.testBitBool_bitwise*"
-    )
+    page = tools.target_owned_candidates(ctx, name_glob="Axeyum.Autogenesis.testBitBool_bitwise*")
     assert page.total_candidates == 3
     assert page.matched == 3
     assert page.dropped_held_out_fact_links == 0
@@ -259,8 +257,7 @@ def test_target_owned_candidates_expose_clean_reusable_family(ctx) -> None:
     assert all(not row.exact_imported_identity for row in page.rows)
     assert all(not row.authoritative_operation_eligible for row in page.rows)
     assert all(
-        row.direct_theorem_dependencies
-        == ("Axeyum.Autogenesis.testBitBool_bitwiseTotal",)
+        row.direct_theorem_dependencies == ("Axeyum.Autogenesis.testBitBool_bitwiseTotal",)
         for row in page.rows
     )
     assert all(len(row.semantic_analogue_fact_ids) == 1 for row in page.rows)
@@ -270,9 +267,7 @@ def test_target_owned_candidates_require_one_query_axis(ctx) -> None:
     with pytest.raises(tools.ToolRefusal):
         tools.target_owned_candidates(ctx)
     with pytest.raises(tools.ToolRefusal):
-        tools.target_owned_candidates(
-            ctx, name_glob="*", canonical_type_contains="bitwiseAnd"
-        )
+        tools.target_owned_candidates(ctx, name_glob="*", canonical_type_contains="bitwiseAnd")
 
 
 def test_target_owned_candidates_search_canonical_type(ctx) -> None:

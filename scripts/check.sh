@@ -62,6 +62,17 @@ step settled-fact-statement-tests python3 -m unittest scripts.tests.test_settled
 step settled-fact-statements python3 scripts/check-settled-fact-statements.py
 step fact-dag-tests python3 -m unittest scripts.tests.test_check_fact_dag
 step fact-dag python3 scripts/check-fact-dag.py --quiet
+# ADR-0584. The kernel type checker recurses over the term with no bound, so a
+# deep enough declaration exhausts the stack and the process ABORTS -- exit 134,
+# which looks exactly like a broken tool or an absent declaration and has been
+# read as both. This re-derives the required stack per prelude and reds when it
+# outgrows the pin, with the number in the message. Placed HERE, before
+# `fact-depends`, because that checker runs the full constructed environment
+# build and is one of the things a blown envelope silently disables.
+# Release profile (~30 s); `--profile debug` is the ~4 min form that matches
+# where `cargo test` actually runs.
+step kernel-stack-envelope-controls scripts/tests/test-kernel-stack-envelope.sh
+step kernel-stack-envelope scripts/check-kernel-stack-envelope.sh --check --profile release
 step fact-depends-tests python3 -m unittest scripts.tests.test_check_fact_depends_derived
 # `fact-dag` measures the ledger's dependency graph; this one DERIVES it. A
 # kernel-route fact's `depends_on` is read out of the admitted proof term
@@ -268,6 +279,7 @@ step parity-freshness ./scripts/check-parity-freshness.py
 step parity-freshness-controls ./scripts/tests/test-check-parity-freshness.sh
 step new-fact-controls ./scripts/tests/test-new-fact-controls.sh
 step lane-commit-controls ./scripts/tests/test-lane-commit.sh
+step recount-pinned-inventory-controls ./scripts/tests/test-recount-pinned-inventory.sh
 step commit-msg-trailer-controls ./scripts/tests/test-commit-msg-trailer.sh
 step lane-merge-additive-controls python3 -m unittest scripts.tests.test_lane_merge_additive
 step lane-push-controls ./scripts/tests/test-lane-push-target.sh

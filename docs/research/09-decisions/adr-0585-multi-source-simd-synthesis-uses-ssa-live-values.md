@@ -1,4 +1,4 @@
-# ADR-0584: Multi-source SIMD synthesis uses SSA live values
+# ADR-0585: Multi-source SIMD synthesis uses SSA live values
 
 Status: accepted
 Date: 2026-08-26
