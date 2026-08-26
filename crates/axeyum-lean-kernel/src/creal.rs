@@ -1682,7 +1682,7 @@ pub struct CRealPrelude {
     pub geom_pair_within: NameId,
     /// `CReal.pow_le_pow_of_base_le : ∀ x y, le zero x → le x y → ∀ n,
     /// le (pow x n) (pow y n)` — monotonicity of `pow` in its **base**, for a
-    /// fixed exponent, the comparison [`geometric`](super::geometric)'s own
+    /// fixed exponent, the comparison `geometric`'s own
     /// module documentation names as missing ("no lemma comparing `pow` at
     /// two different bases for the same exponent"). Induction on `n`: the
     /// base case is `le_refl one` up to `pow`'s own `ι`-reduction at `0`; the
