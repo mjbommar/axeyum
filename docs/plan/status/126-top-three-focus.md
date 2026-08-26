@@ -465,9 +465,17 @@ settled facts. Those edges are now synchronized from the admitted proof terms:
 `Nat.choose_self` points to `Nat.choose_succ_self_eq_zero`. The derived graph
 authority reports 1,302 edges and zero missing; the DAG now has 388 facts with
 dependents, up from 387, with theorem status and evidence unchanged.
+The canonical gate now includes `py-check` itself instead of leaving the Python
+surface as an optional side recipe. A fresh PyO3 build followed by 1,881 tests,
+stub generation, stub type/runtime comparison, controlled type checking, lint,
+and formatting passes. The statement-adapter and external-certificate controls
+are registered in both aggregate gates, reducing reachable-control drift from
+16 back to the characterized baseline of 14; aggregate scope agrees after its
+obsolete Python-only exceptions were removed.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-26 | `42e7bdfd1` | Make the complete Python build/test/stub/type/lint recipe part of canonical `just check`; register two orphan controls in both gates and return the reachability ratchet from 16 to its 14-module baseline. |
 | 2026-08-26 | `30353a600` | Synchronize three missing fact dependencies from admitted kernel proofs; the 1,302-edge derived authority returns to zero missing edges and one more fact gains downstream connectivity. |
 | 2026-08-26 | `a88fa732f` | Redact all 37 held-out identities from agent-readable rankings and censuses; replace them with count/hash receipts, derive exclusions independently, and restore the 1,881-test Python authority to green. |
 | 2026-08-26 | `7e8fe9b3b` | Restore the standard-library-only script boundary with typed package implementations and stable launchers; fix seven newly exposed diagnostics and refresh honest bounded yield from 6/109 to 6/111. |
