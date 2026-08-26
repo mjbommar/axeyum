@@ -43,6 +43,7 @@ use std::path::PathBuf;
 use axeyum_lean_import::producers::{bounded_application, bounded_induction, modeq_family};
 use axeyum_lean_import::{
     AxiomIdentity, DeclarationDependencyIdentity, DeclarationIdentity, ImportLimits, ImportReport,
+    import_candidate_statement_ndjson as rust_import_candidate_statement_ndjson,
     import_statement_ndjson as rust_import_statement_ndjson,
 };
 use pyo3::create_exception;
@@ -1069,6 +1070,70 @@ fn import_statement_ndjson(
         }),
     }
     .map_err(|error| statement_import_error(py, &error))?;
+    wrap_statement_import(py, completed)
+}
+
+/// Imports a proof-free target plus an exact axiom-free theorem candidate set.
+///
+/// Unlike [`import_statement_ndjson`], this capsule may carry proof-bearing
+/// declarations, but only those whose exact names occur in `candidates`; every
+/// one is independently kernel-checked and must have an empty measured axiom
+/// footprint. The target remains a transparent `definition : Prop`, never a
+/// theorem. The bounded-application producer must still receive the same names
+/// explicitly and cannot scan the returned environment.
+///
+/// `source` is a path (`str` / `os.PathLike`) or the NDJSON `bytes`. `limits`
+/// of `None` uses the Rust `ImportLimits::default()`.
+///
+/// # Errors
+///
+/// Raises `TypeError` for an invalid source, `OSError` for an unreadable path,
+/// and `StatementImportError` for any wire, target-isolation, candidate-identity
+/// or axiom-footprint failure.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.producers")
+)]
+#[pyfunction]
+#[pyo3(signature = (source, limits, target, candidates))]
+fn import_candidate_statement_ndjson(
+    py: Python<'_>,
+    source: &Bound<'_, PyAny>,
+    limits: Option<PyImportLimits>,
+    target: &str,
+    candidates: Vec<String>,
+) -> PyResult<PyStatementImport> {
+    let source = resolve_source(source)?;
+    let limits = limits.map_or_else(ImportLimits::default, |limits| limits.inner);
+    let completed = match source {
+        Source::Path(path) => {
+            let file = File::open(&path)?;
+            py.detach(move || {
+                rust_import_candidate_statement_ndjson(
+                    BufReader::new(file),
+                    limits,
+                    target,
+                    &candidates,
+                )
+            })
+        }
+        Source::Bytes(bytes) => py.detach(move || {
+            rust_import_candidate_statement_ndjson(
+                BufReader::new(Cursor::new(bytes)),
+                limits,
+                target,
+                &candidates,
+            )
+        }),
+    }
+    .map_err(|error| statement_import_error(py, &error))?;
+    wrap_statement_import(py, completed)
+}
+
+fn wrap_statement_import(
+    py: Python<'_>,
+    completed: axeyum_lean_import::CompletedStatementImport,
+) -> PyResult<PyStatementImport> {
     let (kernel, report, target_name, goal) = completed.into_parts();
     let report = build_report(py, &report)?;
     let wrapper = PyKernel::from_kernel(kernel);
@@ -1282,6 +1347,10 @@ pub(crate) fn register<'py>(parent: &Bound<'py, PyModule>) -> PyResult<Bound<'py
     module.add("FORMAT_VERSION", axeyum_lean_import::FORMAT_VERSION)?;
     module.add("IDENTITY_VERSION", axeyum_lean_import::IDENTITY_VERSION)?;
     module.add_function(wrap_pyfunction!(import_statement_ndjson, &module)?)?;
+    module.add_function(wrap_pyfunction!(
+        import_candidate_statement_ndjson,
+        &module
+    )?)?;
     module.add_function(wrap_pyfunction!(propose_bounded_induction, &module)?)?;
     module.add_function(wrap_pyfunction!(propose_bounded_application, &module)?)?;
     module.add_function(wrap_pyfunction!(propose_modeq_family, &module)?)?;

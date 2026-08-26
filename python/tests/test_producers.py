@@ -153,6 +153,40 @@ def test_bounded_application_composes_retrieved_fibonacci_lemmas(
     assert candidate.terms_considered <= P.APPLICATION_MAX_TERMS
 
 
+def test_candidate_capsule_imports_exact_lemmas_without_target_proof() -> None:
+    source = Kernel()
+    source.build_nat_prelude()
+    goal = goal_of(source, "Nat.fib_mono")
+    target_text = "Axeyum.Autogenesis.Statement.Native.fibMono"
+    target = source.name(target_text, must_exist=False)
+    source.add_declaration(Declaration.definition(target, [], source.sort_zero(), goal))
+    candidate_names = [
+        "Nat.monotone_of_le_succ",
+        "Nat.fib",
+        "Nat.fib_le_succ",
+    ]
+    roots = [target, *(source.name(name, must_exist=True) for name in candidate_names)]
+    capsule = source.render_lean4export_ndjson_roots("4.30.0", roots).encode()
+    assert b'"Nat.fib_mono"' not in capsule
+
+    imported = P.import_candidate_statement_ndjson(capsule, None, target_text, candidate_names)
+    kernel = imported.kernel()
+    declarations = [kernel.name(name, must_exist=True) for name in candidate_names]
+    candidate = P.propose_bounded_application(kernel, imported.goal(), declarations)
+    admitted = kernel.name("Axeyum.Test.ImportedBoundedApplicationFibMono", must_exist=False)
+    kernel.add_declaration(Declaration.theorem(admitted, [], imported.goal(), candidate.proof))
+    assert kernel.axiom_footprint(admitted) == []
+    assert kernel.theorem_dependencies(admitted) == [
+        "Nat.fib_le_succ",
+        "Nat.monotone_of_le_succ",
+    ]
+
+    with pytest.raises(P.StatementImportError, match="trusted declaration"):
+        P.import_candidate_statement_ndjson(capsule, None, target_text, [])
+    with pytest.raises(P.StatementImportError, match="contains target"):
+        P.import_candidate_statement_ndjson(capsule, None, target_text, [target_text])
+
+
 def test_bounded_application_declines_without_adjacent_step(
     nat_kernel: Kernel,
 ) -> None:
