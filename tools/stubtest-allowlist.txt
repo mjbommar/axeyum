@@ -19,6 +19,7 @@
 # declared (see `crate::stub_info::stub_exception!`).
 axeyum\._native\.producers\.Declined\.reason
 axeyum\._native\.producers\.StatementImportError\.(variant|debug)
+axeyum\._native\.producers\.CandidateTransportError\.(variant|debug)
 axeyum\._native\.kernel\.KernelError\.(variant|fields|names|debug)
 
 # --------------------------------------------------------------------------

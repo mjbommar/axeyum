@@ -49,6 +49,8 @@ from ._native.producers import (
     ApplicationCandidate,
     AxiomIdentity,
     Candidate,
+    CandidateTransport,
+    CandidateTransportError,
     CircularityAudit,
     DeclarationDependency,
     DeclarationIdentity,
@@ -65,6 +67,7 @@ from ._native.producers import (
     propose_bounded_application,
     propose_bounded_induction,
     propose_modeq_family,
+    transport_native_candidate,
 )
 
 __all__ = [
@@ -79,6 +82,8 @@ __all__ = [
     "ApplicationCandidate",
     "AxiomIdentity",
     "Candidate",
+    "CandidateTransport",
+    "CandidateTransportError",
     "CircularityAudit",
     "DeclarationDependency",
     "DeclarationIdentity",
@@ -95,4 +100,5 @@ __all__ = [
     "propose_bounded_application",
     "propose_bounded_induction",
     "propose_modeq_family",
+    "transport_native_candidate",
 ]

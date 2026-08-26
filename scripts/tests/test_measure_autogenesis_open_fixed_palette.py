@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import importlib.util
-from pathlib import Path
 import unittest
+from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -102,6 +102,14 @@ class OpenFixedPaletteTests(unittest.TestCase):
             MODULE.population_mapping({})
         with self.assertRaisesRegex(ValueError, "fact_id and target_definition"):
             MODULE.population_mapping({"outcomes": [{"fact_id": "F:a"}]})
+
+    def test_native_transport_requires_a_ranked_retrieval_boundary(self) -> None:
+        with self.assertRaisesRegex(ValueError, "requires --ranking"):
+            MODULE.measure(
+                None,
+                Path("/packs"),
+                transport_native_candidates=True,
+            )
 
 
 if __name__ == "__main__":

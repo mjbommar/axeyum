@@ -12,6 +12,8 @@ __all__ = [
     "ApplicationCandidate",
     "AxiomIdentity",
     "Candidate",
+    "CandidateTransport",
+    "CandidateTransportError",
     "CircularityAudit",
     "DeclarationDependency",
     "DeclarationIdentity",
@@ -33,6 +35,7 @@ __all__ = [
     "propose_bounded_application",
     "propose_bounded_induction",
     "propose_modeq_family",
+    "transport_native_candidate",
 ]
 
 APPLICATION_MAX_BINDERS: builtins.int
@@ -118,6 +121,41 @@ class Candidate:
         Structural inductions performed, out of `MAX_INDUCTIONS`.
         """
     def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class CandidateTransport:
+    r"""
+    Checked evidence that one retrieved native theorem is executable in an
+    imported goal kernel.
+    """
+    @property
+    def candidate(self) -> kernel.NameId:
+        r"""Candidate handle belonging to the statement import's same kernel."""
+    @property
+    def disposition(self) -> builtins.str:
+        r"""`"added"` for checked composition or `"reused"` for checked reuse."""
+    @property
+    def source_closure_size(self) -> builtins.int:
+        r"""Root-selected native declaration closure size (zero for reuse)."""
+    @property
+    def added_theorems(self) -> builtins.int:
+        r"""Theorems newly admitted by this transport."""
+    @property
+    def added_definitions(self) -> builtins.int:
+        r"""Definitions newly admitted by this transport."""
+    @property
+    def receipt_sha256(self) -> typing.Optional[builtins.str]:
+        r"""Digest of an added composition receipt; reuse has no aggregate receipt."""
+    def __repr__(self) -> builtins.str: ...
+
+class CandidateTransportError(_native.AxeyumError):
+    r"""A retrieved native theorem could not be checked into the imported goal kernel."""
+    @property
+    def variant(self) -> builtins.str:
+        r"""The Rust composition error variant name. Never match on the message text."""
+    @property
+    def debug(self) -> builtins.str:
+        r"""The full Rust `Debug` rendering of the failure."""
 
 @typing.final
 class CircularityAudit:
@@ -548,4 +586,23 @@ def propose_modeq_family(kernel: kernel.Kernel, goal: kernel.ExprId) -> ModEqCan
     
     Raises `EpochError` if `goal` was interned by another kernel, and `Declined`
     carrying a typed `.reason` when the bounded search does not close the goal.
+    """
+
+def transport_native_candidate(statement: StatementImport, candidate: builtins.str) -> CandidateTransport:
+    r"""
+    Check one retrieved native theorem into an imported goal's private kernel.
+
+    The candidate namespace deterministically selects the independently rebuilt
+    native prelude (`Nat`, `Int`, `Rat`, `CReal`, or `Complex`). Existing target
+    theorems are compatibility-checked; absent ones go through checked theorem
+    composition. The target proof remains absent, and no fact or operation
+    authority is granted. The statement import keeps the same Python `Kernel`
+    object and epoch because composition clones and only extends its arenas, so
+    all previously issued goal/name handles remain valid.
+
+    # Errors
+
+    Raises `CandidateTransportError` with `.variant` and `.debug` when the
+    namespace is unsupported or the exact source root cannot be safely reused
+    or composed. A failure never changes the statement import's kernel.
     """
