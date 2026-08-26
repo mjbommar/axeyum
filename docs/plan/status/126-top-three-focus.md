@@ -415,9 +415,17 @@ records the generic theorem dependency. The three-sibling reuse bar is met
 without one proof per target or a false exact-import claim. Next: expose this
 family as a reusable producer/knowledge operation rather than example-only
 kernel declarations.
+A generated projection now connects the three clean theorems to the three open
+development facts for imported `land`, `lor`, and `ldiff`, while marking every
+edge as semantic analogy rather than exact identity. It reports three clean
+analogues, zero exact matches, and zero operation-eligible targets. The graph
+can now use the connection without closing the wrong proposition. Next: promote
+the target-owned family into a reusable library surface with its own durable
+fact identities before considering producer registration.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-26 | `282235e82` | Connect the three clean bitwise siblings to their open Mathlib development facts as non-authoritative semantic analogues, preserving zero exact-match and operation credit. |
 | 2026-08-26 | `76817cc3b` | Specialize the clean generic bitwise construction into AND, OR, and difference; all three sibling theorems reuse the same generic proof and retain empty footprints. |
 | 2026-08-26 | `cca5f9678` | Split proof-reconstructible candidate debt from structural statement trust floors; route the exact imported bitwise theorem to clean-definition reconstruction instead of futile proof retries. |
 | 2026-08-26 | `fe531ca30` | Prove with two theorem-free `Eq.refl` controls that exact imported `Nat.testBit` and `Nat.bitwise` statements inherit `propext` from their definition closures, making the empty-footprint boundary structural and explicit. |
