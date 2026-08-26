@@ -100,7 +100,7 @@ fn on_a_deep_stack_creal<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'stat
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 335] = [
+    let expected: [(&str, crate::NameId, &str); 336] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -993,6 +993,19 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         (
             "CReal.riemannSum_sharedAccuracyClose",
             p.riemann_sum_shared_accuracy_close,
+            "theorem",
+        ),
+        // The closed-form magnitude lemma `riemannSum_cauchy`'s own doc
+        // comment names as the actual remaining gate on `CReal.integral`
+        // (`creal/integral.rs`): `total_eps ~ mul width (embed (natDivSucc 1
+        // e))` (reusing `riemann_sum_const`'s own mesh-cancellation
+        // rearrangement at a different "constant" factor) composed with
+        // `direct_bound_le` on `width` plus `Rat.natDivSucc_mul`, landing on
+        // a genuine `K/(e+1)` rational bound -- no `le a b` hypothesis
+        // needed anywhere.
+        (
+            "CReal.riemannSumTotalEpsLe",
+            p.riemann_sum_total_eps_le,
             "theorem",
         ),
         // Chapter 18/22: the geometric domination of `expTerm`, ending at the

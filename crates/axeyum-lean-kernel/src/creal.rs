@@ -3340,6 +3340,36 @@ pub struct CRealPrelude {
     /// `declare_shared_index_to_canonical` doc comment for both pieces,
     /// sized precisely rather than gestured at.
     pub riemann_sum_shared_accuracy_close: NameId,
+    /// `CReal.riemannSumTotalEpsLe : ∀ a b e m : Nat's/CReal mix,
+    /// CReal.le (totalEps a b e m) (CReal.ofRat (Rat.natDivSucc magnitude
+    /// e))`, `magnitude := Nat.succ (CReal.bound (CReal.add b (CReal.neg
+    /// a)))`, `totalEps` = `riemannSum_cauchy`'s own internal bound term
+    /// (`creal/integral.rs`'s `total_eps_of`, reconstructed EXTERNALLY
+    /// term-for-term — see that file for the exact shape).
+    ///
+    /// **The closed-form magnitude lemma `riemannSum_cauchy`'s own doc
+    /// comment (and `riemannSum_shared_accuracy_close`'s) name as the
+    /// actual remaining gate on `CReal.integral`**: `totalEps` is an opaque
+    /// CReal SAMPLE until this bound turns it into a genuine
+    /// `K/(e+1)`-shaped rational, independent of `m` and requiring no
+    /// hypothesis on `a`/`b` at all (`CReal.bound` is unconditional; the
+    /// `mul_le_mul_of_nonneg_left` step multiplies through by the
+    /// UNCONDITIONALLY nonnegative `embed (natDivSucc 1 e)`, not by `width`,
+    /// so `le a b` is never needed). Two independent pieces:
+    ///
+    /// 1. `total_eps_of a b e m` is `Equiv`-identical to `mul width (embed
+    ///    (natDivSucc 1 e))` (`width := add b (neg a)`) via
+    ///    `integral.rs`'s private `riemann_sum_const_rearrange` (already
+    ///    proved for [`Self::riemann_sum_const`], reused at `c := embed
+    ///    (natDivSucc 1 e)` — the mesh count's own cancellation identity
+    ///    does not care what its "constant" factor IS) plus one `mul_comm`.
+    /// 2. [`Self::mul_le_mul_of_nonneg_left`] at that nonnegative factor,
+    ///    widening `width` to `direct_bound_le`'s own `ofNat magnitude`
+    ///    bound, then [`Self::of_rat_mul`] plus
+    ///    [`crate::RatPrelude::nat_div_succ_mul`] (`Nat.mul_one`-simplified)
+    ///    collapses the resulting rational product back into a single
+    ///    `natDivSucc`.
+    pub riemann_sum_total_eps_le: NameId,
 }
 
 impl CRealPrelude {
@@ -3737,6 +3767,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         riemann_sum_cauchy: kernel.name_str(creal, "riemannSum_cauchy"),
         shared_index_to_canonical: kernel.name_str(creal, "sharedIndexToCanonical"),
         riemann_sum_shared_accuracy_close: kernel.name_str(creal, "riemannSum_sharedAccuracyClose"),
+        riemann_sum_total_eps_le: kernel.name_str(creal, "riemannSumTotalEpsLe"),
     }
 }
 
@@ -4018,6 +4049,14 @@ pub(crate) fn build_creal_prelude_uncached(
         // `sharedIndexToCanonical` (both just above) plus `series.rs`'s
         // `within_symm`, so it cannot land any earlier than this call site.
         integral::declare_riemann_sum_shared_accuracy_close(&mut d, prelude)?;
+        // `riemannSumTotalEpsLe` (the closed-form magnitude lemma
+        // `riemannSum_cauchy`'s own doc comment names as the actual
+        // remaining gate on `CReal.integral`) needs only `CReal.bound`/
+        // `bound_within` (archimedean.rs, far above), `mul_le_mul_of_nonneg_left`/
+        // `of_rat_mul`/`mul_comm` (order.rs/field.rs, far above) and
+        // `riemann_sum_const`'s own private rearrangement helper (just
+        // above) — nothing from `riemannSum_cauchy` itself.
+        integral::declare_riemann_sum_total_eps_le(&mut d, prelude)?;
         // `order_reflect_of_pos_deriv` needs only `strict_mono_of_pos_deriv`
         // (just declared above) plus `lt_trans`/`lt_irrefl`/`apart` (all far
         // above); nothing later depends on it, so it lands right after its
