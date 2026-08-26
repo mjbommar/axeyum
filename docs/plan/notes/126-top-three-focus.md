@@ -636,6 +636,24 @@ no longer admissible. A broad Ruff run also exposed pre-existing import-order,
 executable-bit, subprocess, and nested-context findings in the touched legacy
 modules; it is not reported as green.
 
+### Imported Nat.mod gate-coupling review (2026-08-26)
+
+The first post-registration frontier refused all three ready targets because
+the operation had reviewed a checker that did not itself name the fact IDs,
+while three historical assay/contract gates did. Two of those gates also
+incorrectly treated their historical zero-conversion censuses as live status
+assertions, so settling a fact would have broken them. The immutable v1 assay
+receipts now remain historical; the v2 operation contract accepts `open` or a
+`proved` fact only when the latter carries this operation's kernel-lean,
+empty-footprint evidence. The mutable `facts_settled` field was removed from
+the receipt manifest so execution evidence does not become stale after its own
+transaction lands. The operation reviews the exact three text-scan mentions.
+
+Evidence: all three historical/current contract checkers pass; the operation
+registry validates at 27 operations; all 31 registry/frontier tests pass; all
+three targets freshly replay; and a fresh machine frontier reports all three
+admissible with `addLeft` selected.
+
 | 2026-08-26 | `6fad715d8` | Make the Fibonacci child qualification progress-aware: pin candidate-specific dependency receipts and permit either child to advance only through checked, axiom-free kernel evidence. |
 | 2026-08-26 | `2aedb4d68` | Refresh the generated public example inventory from 163 to the 193 examples canonical discovery actually finds; both guarded planning references now report zero stale markers. |
 | 2026-08-26 | `42e7bdfd1` | Make the complete Python build/test/stub/type/lint recipe part of canonical `just check`; register two orphan controls in both gates and return the reachability ratchet from 16 to its 14-module baseline. |
