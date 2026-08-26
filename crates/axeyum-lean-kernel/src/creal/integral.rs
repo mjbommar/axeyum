@@ -2155,3 +2155,161 @@ pub(super) fn declare_sum_range_double(
         value: value_full,
     })
 }
+
+// --- the succ-shape bridge -- toward `riemannSum_cauchy`'s common refinement
+//
+// The refinement estimate `riemannSum_cauchy` needs bounds each fine sample
+// point against its enclosing coarse sample via
+// `CReal.UniformlyContinuousOn.spec`, and the domain-membership hypotheses
+// that call needs (`a≤x, x≤b, a≤y, y≤b`) come from `riemannSum_sample_in_bounds`
+// / `subdivisionPoint_in_bounds` -- both stated for a partition of a
+// `Nat.succ`-shaped count (`Nat.lt i (Nat.succ m)` / `Nat.le i (Nat.succ m)`).
+// The fine partition (each of the coarse partition's `Nat.succ n` pieces
+// split into `Nat.succ m` further pieces) has total count `(Nat.succ
+// n)·(Nat.succ m)`, which every fine index genuinely satisfies but not
+// SYNTACTICALLY as `Nat.succ` of anything -- so calling either theorem there
+// needs a bridge exhibiting the count in `Nat.succ _` shape.
+//
+// The needed identity is `(succ n)·(succ m) = succ (n·m + n + m)`,
+// `m_prime := n·m + n + m`. [`succ_mul_succ`] below returns it in COMPUTED
+// form (`m_prime : Nat` plus a proof), not as an `∃ m', succ m' = …`: both
+// `riemannSum_sample_in_bounds` and `subdivisionPoint_in_bounds` take the
+// subdivision count as a plain `Nat` DATA argument, used to build the CReal
+// sample-point term itself (a `Type`-valued position), and `Exists.rec`
+// eliminates only into `Prop` -- an existential witness could not be
+// substituted there at all, only used inside an already-Prop-valued goal.
+// This is exactly the trap this session's own briefing warned about: "a
+// theorem admitted with a type nothing can use."
+
+/// `(Nat.succ n) · (Nat.succ m) = Nat.succ ((n·m + n) + m)` — the succ-shape
+/// bridge above, as a private proof-term builder (not a public
+/// `CRealPrelude` declaration: this is pure `Nat` arithmetic, out of this
+/// file's natural home, but per this session's scope constraints it is
+/// landed here rather than in the shared `nat_prelude` — relocate on
+/// request).
+///
+/// Proof: `Nat.succ_mul n (Nat.succ m) : Eq Nat (mul (succ n) (succ m)) (add
+/// (mul n (succ m)) (succ m))`. `Nat.mul`/`Nat.add` both recurse on their
+/// RIGHT argument (`Nat.mul_succ`/`Nat.add_succ` are `refl`, not induction),
+/// so with `sm := succ m` already `succ`-shaped, `mul n sm` unfolds by pure
+/// defeq to `add (mul n m) n`, and then `add (add (mul n m) n) sm` unfolds
+/// by pure defeq to `succ (add (add (mul n m) n) m)` — i.e. `succ m_prime`.
+/// So `Nat.succ_mul`'s own proof term, with NO further rewrite or congruence
+/// step, already has the stronger stated type up to the kernel's conversion
+/// check; this returns that proof term unchanged.
+///
+/// Returns `(m_prime, proof)`, `proof : Eq Nat (mul (succ n) (succ m)) (succ
+/// m_prime)`, `m_prime := add (add (mul n m) n) m`.
+fn succ_mul_succ(d: &mut IntDev<'_>, n: ExprId, m: ExprId) -> (ExprId, ExprId) {
+    let np = d.prelude();
+    let sm = d.succ(m);
+    let nm = NatOps::mul(d, n, m);
+    let nm_n = d.const_app(np.add, &[nm, n]);
+    let m_prime = d.const_app(np.add, &[nm_n, m]);
+    let proof = d.lemma(np.succ_mul, &[n, sm]);
+    (m_prime, proof)
+}
+
+#[cfg(test)]
+mod succ_shape_bridge_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// Wraps [`succ_mul_succ`] at symbolic `n, m` in a throwaway anonymous
+    /// theorem and lets the kernel accept or reject it — building the Rust
+    /// closures is not evidence the *term* is well-typed, only
+    /// `Kernel::add_declaration`'s trusted checker is (the same idiom as
+    /// `sqrt.rs`'s `bridging_smoke_tests`).
+    #[test]
+    fn succ_mul_succ_type_checks_symbolically() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let nat = d.nat_ty();
+
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+
+        let (m_prime, proof) = succ_mul_succ(&mut d, n, m);
+
+        let sn = d.succ(n);
+        let sm = d.succ(m);
+        let lhs = NatOps::mul(&mut d, sn, sm);
+        let succ_m_prime = d.succ(m_prime);
+        let claim = d.eq(lhs, succ_m_prime);
+
+        let value = {
+            let with_m = d.lam_fv(m_fv, nat, proof);
+            d.lam_fv(n_fv, nat, with_m)
+        };
+        let ty = {
+            let over_m = d.pi_fv(m_fv, nat, claim);
+            d.pi_fv(n_fv, nat, over_m)
+        };
+
+        let anon = d.kernel().anon();
+        let name = d.kernel().name_str(anon, "succShapeBridgeSmoke");
+        let result = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(
+            result.is_ok(),
+            "succ_mul_succ must type-check: {:?}",
+            result.err()
+        );
+    }
+
+    /// The mandatory concrete instantiation `n = 2, m = 3` (`n != m`, per the
+    /// task's own caution that a transposed-argument defect is invisible at
+    /// `n = m`): `3 * 4 = 12 = succ 11`, `m_prime = 6 + 2 + 3 = 11`. Checked
+    /// by `Eq.refl` against the literals `11`/`12` — the kernel's own
+    /// reduction, not a comment, is what "reduces" means here.
+    #[test]
+    fn succ_mul_succ_reduces_at_two_three() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+        let n = d.num(2);
+        let m = d.num(3);
+        let (m_prime, _proof) = succ_mul_succ(&mut d, n, m);
+
+        // m_prime must independently equal the literal 11 (n*m+n+m = 6+2+3).
+        let eleven = d.num(11);
+        let m_prime_eq_eleven = d.eq(m_prime, eleven);
+        let m_prime_refl = d.refl(eleven);
+
+        let twelve = d.num(12);
+        let succ_m_prime = d.succ(m_prime);
+        let succ_m_prime_eq_twelve = d.eq(succ_m_prime, twelve);
+        let succ_m_prime_refl = d.refl(twelve);
+
+        let anon = d.kernel().anon();
+        let name1 = d
+            .kernel()
+            .name_str(anon, "succShapeBridgeSmokeMPrimeEleven");
+        let r1 = d.kernel().add_declaration(Declaration::Theorem {
+            name: name1,
+            uparams: vec![],
+            ty: m_prime_eq_eleven,
+            value: m_prime_refl,
+        });
+        assert!(r1.is_ok(), "m_prime must reduce to 11: {:?}", r1.err());
+
+        let name2 = d
+            .kernel()
+            .name_str(anon, "succShapeBridgeSmokeSuccMPrimeTwelve");
+        let r2 = d.kernel().add_declaration(Declaration::Theorem {
+            name: name2,
+            uparams: vec![],
+            ty: succ_m_prime_eq_twelve,
+            value: succ_m_prime_refl,
+        });
+        assert!(r2.is_ok(), "succ m_prime must reduce to 12: {:?}", r2.err());
+    }
+}
