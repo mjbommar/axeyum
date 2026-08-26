@@ -57,6 +57,7 @@ pub mod algebraic;
 pub mod approx;
 pub mod assumptions;
 pub mod boolean;
+pub mod boolean_anf;
 pub mod boolean_circuit;
 pub mod cofactor_ansatz;
 pub mod combinatorics;

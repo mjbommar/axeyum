@@ -81,3 +81,13 @@ backward checker. A GCC intrinsic oracle agrees on all 32 bytes on AVX2 hardware
 one-control mutation exits 1 at byte 16. This establishes minimal length 2 only in the named
 two-family subset and is a calibration, not the open ISA-wide result. Multi-step synthesis
 with lifted controls and additional instruction families remains open.
+
+**Boolean-ANF control route, 2026-08-26.** ADR-0562 adds canonical resource-bounded Boolean
+polynomials, deterministic Bosphorus interchange, and a sparse coefficient-DAG formulation of
+the complete affine-between-AND search. The PRIMATEs-inverse MC=6 control is 738 variables / 759
+equations / 8,835 monomials before external preprocessing. Bosphorus 1.2.12 reduced it to 586
+free variables / 603 equations / 6,157 monomials and emitted a 5,782-variable / 62,674-clause
+CNF. CaDiCaL on the independent truth CNF and CryptoMiniSat on that external CNF both remained
+undecided after 300 seconds; Bosphorus solve mode overran its requested deadline and was
+interrupted. External rewrites have no UNSAT authority without a checked equivalence chain, so
+the published MC=6 lower control remains unreproduced and MC=7 has not been attempted.
