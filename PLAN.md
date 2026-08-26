@@ -1163,7 +1163,9 @@ type closure reaches an unallowlisted trusted declaration. The hashed census is
 measurement only. Do not register the settled three-control family as new
 production. Next: separate an allowlisted checked type environment from proof
 candidates, then add dependency-ranked premise retrieval and rerun this exact
-population.
+population. The 43 import rejections must use the already implemented ADR-0484
+type-slice/generalization and exact-specialization route; do not create a second
+trusted-support allowlist in the candidate importer.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
