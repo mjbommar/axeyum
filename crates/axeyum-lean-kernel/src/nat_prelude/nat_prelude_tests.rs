@@ -554,6 +554,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.le_of_add_le_add_left,
         p.le_of_add_le_add_right,
         p.mul_le_mul_left,
+        p.mul_succ_add_lt_of_le_of_lt,
         p.le_of_mul_le_mul_left_succ,
         p.le_of_mul_le_mul_left,
         p.mul_left_cancel_of_pos,
@@ -2965,6 +2966,53 @@ fn order_is_monotone_under_left_addition_and_multiplication() {
                 f.explain(&e)
             )
         });
+}
+
+/// **Mandatory concrete instantiation** for `mul_succ_add_lt_of_le_of_lt`
+/// (the "flatten a row-major (block, offset) index" bound `CReal.
+/// samplePoint_reblock`'s own roadmap step 3 will need): `n = 2, m = 3, i =
+/// 1, j = 2` (`n != m` and `i != j`, so a transposed argument or a swapped
+/// `n`/`m` is visible). By hand: `sn = 3`, `sm = 4`, `global_idx = sn*i+j =
+/// 3*1+2 = 5`, `total = sn*sm = 12`, and `5 < 12` genuinely holds. `hle : Le
+/// 1 3` comes from `le_add_right` (`Le 1 (1+2)`, reducing to `Le 1 3`);
+/// `hlt : Lt 2 3` comes from `le_refl` at `3` (`Le 3 3`, reducing to `Lt 2
+/// 3 = Le (succ 2) 3 = Le 3 3`). Declaring the general lemma applied at
+/// these concrete arguments against the INDEPENDENTLY hand-computed
+/// conclusion `Lt 5 12` forces the kernel to check the two sides' `global_idx`/
+/// `total` arithmetic reduces to 5 and 12 -- not merely that SOME instance
+/// type-checks.
+#[test]
+fn row_major_index_bound_computes_five_lt_twelve_at_concrete_args() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let n = f.num(2);
+    let m = f.num(3);
+    let i = f.num(1);
+    let j = f.num(2);
+
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+
+    // hle : Le i m = Le 1 3.
+    let hle = f.lemma(p.le_add_right, &[one, two]);
+    // hlt : Lt j (succ n) = Lt 2 3 = Le 3 3.
+    let hlt = f.lemma(p.le_refl, &[three]);
+
+    let proof = f.lemma(p.mul_succ_add_lt_of_le_of_lt, &[n, m, i, j, hle, hlt]);
+
+    let five = f.num(5);
+    let twelve = f.num(12);
+    let stmt = f.lt(five, twelve);
+    let name = f.name("row_major_index_five_lt_twelve");
+    f.declare_theorem(name, stmt, proof).unwrap_or_else(|e| {
+        panic!(
+            "mul_succ_add_lt_of_le_of_lt did NOT compute 5 < 12 at n=2, m=3, \
+             i=1, j=2 (not merely type-check): {}",
+            f.explain(&e)
+        )
+    });
 }
 
 #[test]
@@ -5942,7 +5990,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        61 + 275,
+        61 + 276,
         "every promised definition and theorem must be rendered"
     );
 }
