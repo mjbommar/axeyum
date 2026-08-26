@@ -72,7 +72,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 306] = [
+    let expected: [(&str, crate::NameId, &str); 308] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -362,6 +362,12 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             p.sqrt_approx_sq_bracket,
             "theorem",
         ),
+        (
+            "CReal.sqrtApproxKRegular",
+            p.sqrt_approx_kregular,
+            "theorem",
+        ),
+        ("CReal.sqrt", p.sqrt, "def"),
         // Bishop's speed-up combinator (creal/speedup.rs).
         ("CReal.KRegular", p.k_regular_pred, "def"),
         ("CReal.speedup", p.speedup, "def"),
@@ -7733,5 +7739,76 @@ fn sqrt_approx_sq_bracket_at_ofnat_four_and_zero_computes_to_four_le_four_and_fo
         "sqrtApproxSqBracket must NOT check against the wrong bound \
          `2*2 <= 3` (4 <= 3 is false) -- a checker that accepts both the \
          right and a wrong bound cannot distinguish them"
+    );
+}
+
+/// **Mandatory computation test for `CReal.sqrt`.** At `x := CReal.ofNat 4`,
+/// `n := 0`: `CReal.seq (CReal.sqrt x) 0` unfolds through `speedup`'s own
+/// sampling index (`mul_index 1 0 = (1+1)*0+1 = 1`) to `sqrtApprox x 1`,
+/// which computes (`d = 2`, `j = 4`, clamped sample `4`, `natSqrt 16 = 4`)
+/// to `Rat.normalize 4 2 _` -- reduced, by `Rat.normalize`'s own division by
+/// the gcd, to the same representative `Rat.natDivSucc 2 0` (`= 2`) computes
+/// to. Checked against an INDEPENDENTLY built expected value (not a reuse of
+/// `sqrtApprox`'s own formula), with a negative control (`3`) the kernel
+/// must reject -- otherwise an always-accepting checker could not be told
+/// apart from this one.
+#[test]
+fn sqrt_of_ofnat_four_at_index_zero_computes_to_two() {
+    use crate::rat_prelude::ops::{req, rrefl};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let four_nat = d.num(4);
+    let zero_nat = d.num(0);
+    let two_nat = d.num(2);
+    let three_nat = d.num(3);
+
+    let x = d.const_app(p.of_nat, &[four_nat]);
+    let sqrt_x = d.const_app(p.sqrt, &[x]);
+    let seq_at_zero = d.const_app(p.seq, &[sqrt_x, zero_nat]);
+
+    let two_rat = d.const_app(p.rat.nat_div_succ, &[two_nat, zero_nat]);
+    let expected_ty = req(&mut d, seq_at_zero, two_rat);
+    let proof = rrefl(&mut d, seq_at_zero);
+
+    let anon = d.kernel().anon();
+    let name = d
+        .kernel()
+        .name_str(anon, "__sqrt_of_ofnat_four_at_index_zero_computes_to_two");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: expected_ty,
+            value: proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.seq (CReal.sqrt (CReal.ofNat 4)) 0 must reduce to \
+                 Rat.natDivSucc 2 0 (= 2): {error:?}"
+            )
+        });
+
+    // Negative control: the same reflexivity proof does NOT check against a
+    // WRONG value (`3`) -- if it did, this checker could not distinguish a
+    // correct computed square root from an arbitrary one.
+    let three_rat = d.const_app(p.rat.nat_div_succ, &[three_nat, zero_nat]);
+    let expected_ty_wrong = req(&mut d, seq_at_zero, three_rat);
+    let proof_wrong = rrefl(&mut d, seq_at_zero);
+    let name_wrong = d
+        .kernel()
+        .name_str(anon, "__sqrt_of_ofnat_four_wrong_value_must_be_rejected");
+    let result = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_wrong,
+        uparams: vec![],
+        ty: expected_ty_wrong,
+        value: proof_wrong,
+    });
+    assert!(
+        result.is_err(),
+        "CReal.seq (CReal.sqrt (CReal.ofNat 4)) 0 must NOT check as equal \
+         to 3 -- a checker that accepts both 2 and 3 cannot be trusted to \
+         have computed anything"
     );
 }
