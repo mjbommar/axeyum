@@ -62,6 +62,17 @@ step settled-fact-statement-tests python3 -m unittest scripts.tests.test_settled
 step settled-fact-statements python3 scripts/check-settled-fact-statements.py
 step fact-dag-tests python3 -m unittest scripts.tests.test_check_fact_dag
 step fact-dag python3 scripts/check-fact-dag.py --quiet
+# ADR-0581. The kernel type checker recurses over the term with no bound, so a
+# deep enough declaration exhausts the stack and the process ABORTS -- exit 134,
+# which looks exactly like a broken tool or an absent declaration and has been
+# read as both. This re-derives the required stack per prelude and reds when it
+# outgrows the pin, with the number in the message. Placed HERE, before
+# `fact-depends`, because that checker runs the full constructed environment
+# build and is one of the things a blown envelope silently disables.
+# Release profile (~30 s); `--profile debug` is the ~4 min form that matches
+# where `cargo test` actually runs.
+step kernel-stack-envelope-controls scripts/tests/test-kernel-stack-envelope.sh
+step kernel-stack-envelope scripts/check-kernel-stack-envelope.sh --check --profile release
 step fact-depends-tests python3 -m unittest scripts.tests.test_check_fact_depends_derived
 # `fact-dag` measures the ledger's dependency graph; this one DERIVES it. A
 # kernel-route fact's `depends_on` is read out of the admitted proof term

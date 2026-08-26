@@ -55,7 +55,7 @@ axiom-freedom:
 # not hide any of them — the chain still fails — it stops them hiding everything
 # else. Note the earlier claim that `adr-remote-collisions` was already last was
 # wrong: it was #40 of 41, so `local-ci-freshness` sat behind it.
-check: fmt fmt-all facts facts-replay clippy gate-controls axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand tock-log2-maestro-controls
+check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand tock-log2-maestro-controls
 
 fmt:
     cargo fmt --all --check
@@ -386,6 +386,12 @@ gate-controls:
     # returns the same empty answer as a strong negative result.
     scripts/tests/test-check-parity-freshness.sh
     scripts/tests/test-new-fact-controls.sh
+    # Controls for `kernel-stack-envelope` below. Six cases: an outgrown budget,
+    # a budget so large it cannot fail, an empty ledger, a missing pin file, a
+    # probe usage error that must NOT be read as "needs more stack", and the
+    # committed pins passing. Each of the checker's five guards was mutated
+    # individually in a scratch tree and kills exactly one control.
+    scripts/tests/test-kernel-stack-envelope.sh
     scripts/tests/test-lane-commit.sh
     # The lane stamp must PARSE as a git trailer, not merely appear as text:
     # `%(trailers:key=Agent,valueonly)` is the query every attribution check
@@ -790,6 +796,24 @@ check-scope base="main":
 # touch moment / squared-binomial / falling-factorial code.
 moment-proofs:
     cargo test -p axeyum-cas --lib -- --ignored
+
+# ADR-0581: how much STACK the kernel needs to build each prelude, re-derived
+# and checked against `artifacts/kernel-stack-envelope.tsv`.
+#
+# The kernel's type checker recurses over the term with no bound, so a deep
+# enough declaration exhausts the stack and the process ABORTS (SIGABRT, exit
+# 134) -- a symptom this repository has three times mistaken for a broken tool
+# or an absent declaration. `CReal.e` landing is what silently stopped
+# `every_creal_declaration_is_checked_and_axiom_free`, the guard behind the
+# axiom-freedom claim, from running at all. This turns that into a red gate
+# with the number in it.
+#
+# RELEASE by default because a debug `cpoint` probe is ~63 s against ~8 s. The
+# debug rows are the ones that match where `cargo test` runs; check them with
+# `scripts/check-kernel-stack-envelope.sh --profile debug` (~4 min) when a
+# kernel change plausibly deepened a proof term.
+kernel-stack-envelope:
+    ./scripts/check-kernel-stack-envelope.sh --check --profile release
 
 # T6.0.3/TL2.15 seed: deterministic generated coverage of the four currently
 # representable Lean-kernel seams. The workspace `test` recipe also discovers
