@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 260] = [
+    let expected: [(&str, crate::NameId, &str); 262] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -651,6 +651,21 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             p.antitone_of_nonpos_deriv,
             "theorem",
         ),
+        // The STRICT mirror of `antitone_of_nonpos_deriv` (creal/monotone.rs),
+        // built the same way from `strict_mono_of_pos_deriv`: a derivative
+        // uniformly bounded above by `-1/(k+1)` makes `F` strictly
+        // decreasing, given a strict input gap `lt x y`.
+        (
+            "CReal.strict_antitone_of_neg_deriv",
+            p.strict_antitone_of_neg_deriv,
+            "theorem",
+        ),
+        // Spivak ch. 12's composition corollary (creal/monotone.rs): a
+        // strictly increasing `F` composed with a strictly increasing `G` is
+        // strictly increasing, stated over the strict-monotonicity
+        // conclusions plus an explicit range hypothesis -- no
+        // `HasDerivativeOn`/chain rule needed.
+        ("CReal.strict_mono_comp", p.strict_mono_comp, "theorem"),
         // `ivt_step` iterated `n` times by structural induction
         // (creal/ivt.rs) -- the bracket-shrinking construction `ivt_approx`
         // needs; the closing Archimedean/continuity combination is not
@@ -5662,6 +5677,254 @@ fn antitone_of_nonpos_deriv_applies_to_negated_identity_on_0_1() {
     assert!(
         rendered.contains("CReal.zero") && rendered.contains("CReal.one"),
         "the endpoints must be zero and one, not some other pair: {rendered}"
+    );
+}
+
+/// **Mandatory concrete instantiation** for `CReal.strict_antitone_of_neg_deriv`:
+/// `F := fun r => neg r` on `[0, 1]`, whose derivative is the constant `neg
+/// one` everywhere (`hasDerivative_neg` applied to `hasDerivative_id`),
+/// uniformly bounded above by `neg (embed (natDivSucc 1 0))` -- i.e. `neg
+/// one` itself, via `ratUnitEqOne` bridging `natDivSucc 1 0` to `Rat.one`
+/// exactly as `strict_mono_of_pos_deriv_applies_to_the_identity_on_0_1`
+/// does -- applied at `x := zero`, `y := one` with the STRICT input gap
+/// `CReal.zero_lt_one`. Distinct `x`/`y` rules out the trivial-by-reflexivity
+/// degenerate case; the expected conclusion is pinned to exactly
+/// `lt (F one) (F zero)`, i.e. `lt (neg one) (neg zero)` -- genuinely
+/// reversed, and strict, not merely `le`.
+#[test]
+fn strict_antitone_of_neg_deriv_applies_to_negated_identity_on_0_1() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::rat_eq_rewrite;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+
+    // identity := fun r => r; const_one := fun _ => one (F' before negation).
+    let identity = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+    let const_one = {
+        let r_fv = d.fresh_fvar();
+        d.lam_fv(r_fv, carrier, one_c)
+    };
+
+    let hf_id = d.lemma(p.has_derivative_id, &[zero_c, one_c]);
+    // hf : HasDerivativeOn (fun r => neg r) (fun r => neg one) zero one.
+    let hf = d.lemma(
+        p.has_derivative_neg,
+        &[identity, const_one, zero_c, one_c, hf_id],
+    );
+
+    let neg_r = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let nr = d.const_app(p.neg, &[r]);
+        d.lam_fv(r_fv, carrier, nr)
+    };
+    let neg_one = {
+        let r_fv = d.fresh_fvar();
+        let no = d.const_app(p.neg, &[one_c]);
+        d.lam_fv(r_fv, carrier, no)
+    };
+
+    // le (embed (natDivSucc 1 0)) one_c, via `CReal.ratUnitEqOne` bridging
+    // `natDivSucc 1 0` to `Rat.one` (same technique
+    // `strict_mono_of_pos_deriv_applies_to_the_identity_on_0_1` uses).
+    let unit_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, zero_nat]);
+    let unit_embed = d.const_app(p.of_rat, &[unit_rat]);
+    let embed_le_one = {
+        let one_rat = d.kernel().const_(p.rat.one, vec![]);
+        let unit_eq_one = d.lemma(p.rat_unit_eq_one, &[]);
+        let refl_start = d.lemma(p.equiv_refl, &[unit_embed]);
+        let bridge = rat_eq_rewrite(
+            &mut d,
+            unit_rat,
+            one_rat,
+            unit_eq_one,
+            refl_start,
+            &|d, t| {
+                let embedded = d.const_app(p.of_rat, &[t]);
+                d.const_app(p.equiv, &[unit_embed, embedded])
+            },
+        );
+        // bridge : Equiv unit_embed (ofRat one_rat), defeq Equiv unit_embed one_c.
+        d.lemma(p.le_of_equiv, &[unit_embed, one_c, bridge])
+    };
+
+    // le (neg one) (neg (embed (natDivSucc 1 0))), from `embed_le_one` via
+    // `neg_le_neg` directly -- no `double_neg` needed since `neg_le_neg`
+    // already lands on `neg (neg a_0)`'s mirror, `neg one`, on the nose.
+    let neg_one_le_neg_a0 = d.lemma(p.neg_le_neg, &[unit_embed, one_c, embed_le_one]);
+
+    // hderiv : ∀ z, le zero z -> le z one -> le (neg_one z) (neg (embed (natDivSucc 1 0))).
+    let hderiv = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let haz_ty = d.const_app(p.le, &[zero_c, z]);
+        let hzb_ty = d.const_app(p.le, &[z, one_c]);
+        let haz_fv = d.fresh_fvar();
+        let hzb_fv = d.fresh_fvar();
+        let with_hzb = d.lam_fv(hzb_fv, hzb_ty, neg_one_le_neg_a0);
+        let with_haz = d.lam_fv(haz_fv, haz_ty, with_hzb);
+        d.lam_fv(z_fv, carrier, with_haz)
+    };
+
+    let hax = d.lemma(p.le_refl, &[zero_c]);
+    let hxy = d.lemma(p.zero_lt_one, &[]);
+    let hyb = d.lemma(p.le_refl, &[one_c]);
+
+    let instance = d.lemma(
+        p.strict_antitone_of_neg_deriv,
+        &[
+            neg_r, neg_one, zero_c, one_c, hf, zero_nat, hderiv, zero_c, one_c, hax, hxy, hyb,
+        ],
+    );
+
+    let ty = d.kernel().infer(instance).unwrap_or_else(|error| {
+        panic!("strict_antitone_of_neg_deriv refused at negated identity on [0,1]: {error:?}")
+    });
+
+    let expected_fy = d.apply(neg_r, &[one_c]);
+    let expected_fx = d.apply(neg_r, &[zero_c]);
+    let expected_ty = d.const_app(p.lt, &[expected_fy, expected_fx]);
+    let rendered = d.kernel().render_lean(ty);
+    let expected_rendered = d.kernel().render_lean(expected_ty);
+    assert_eq!(
+        rendered, expected_rendered,
+        "must conclude exactly `lt (F one) (F zero)` (F is negated identity), not `le`, and not some other CReal.lt statement"
+    );
+    assert!(
+        rendered.contains("CReal.zero") && rendered.contains("CReal.one"),
+        "the endpoints must be zero and one, not some other pair: {rendered}"
+    );
+}
+
+/// **Mandatory concrete instantiation** for `CReal.strict_mono_comp`:
+/// `F := G := fun r => r` (the identity), both strictly increasing on
+/// `[0, 1]` by the trivial witness `fun x y _ hxy _ => hxy` (since
+/// `identity x = x` beta-reduces, the conclusion `lt (F x) (F y)` literally
+/// IS the hypothesis `lt x y`), and the identity trivially maps `[0, 1]`
+/// into itself (`hrange_lo := fun z haz _ => haz`, `hrange_hi := fun z _ hzb
+/// => hzb`). Applied at `x := zero`, `y := one` with the STRICT input gap
+/// `CReal.zero_lt_one`; distinct `x`/`y` rules out the degenerate case. The
+/// expected conclusion, after both identities beta-reduce away, is exactly
+/// `lt zero one`.
+#[test]
+fn strict_mono_comp_applies_to_the_identity_composed_with_itself_on_0_1() {
+    use crate::expr::ExprId;
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    let identity = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+
+    // A strict-monotonicity witness for the identity on [lo, hi]: the
+    // conclusion `lt (identity x) (identity y)` is beta-defeq to `lt x y`,
+    // so the body is just the middle hypothesis itself.
+    let id_strict_mono = |d: &mut IntDev<'_>, lo: ExprId, hi: ExprId| {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let hax_ty = d.const_app(p.le, &[lo, x]);
+        let hax_fv = d.fresh_fvar();
+        let hxy_ty = d.const_app(p.lt, &[x, y]);
+        let hxy_fv = d.fresh_fvar();
+        let hxy = d.kernel().fvar(hxy_fv);
+        let hyb_ty = d.const_app(p.le, &[y, hi]);
+        let hyb_fv = d.fresh_fvar();
+        let with_hyb = d.lam_fv(hyb_fv, hyb_ty, hxy);
+        let with_hxy = d.lam_fv(hxy_fv, hxy_ty, with_hyb);
+        let with_hax = d.lam_fv(hax_fv, hax_ty, with_hxy);
+        let with_y = d.lam_fv(y_fv, carrier, with_hax);
+        d.lam_fv(x_fv, carrier, with_y)
+    };
+    let hf = id_strict_mono(&mut d, zero_c, one_c);
+    let hg = id_strict_mono(&mut d, zero_c, one_c);
+
+    // The identity trivially maps [0, 1] into [0, 1].
+    let hrange_lo = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let haz_ty = d.const_app(p.le, &[zero_c, z]);
+        let haz_fv = d.fresh_fvar();
+        let haz = d.kernel().fvar(haz_fv);
+        let hzb_ty = d.const_app(p.le, &[z, one_c]);
+        let hzb_fv = d.fresh_fvar();
+        let with_hzb = d.lam_fv(hzb_fv, hzb_ty, haz);
+        let with_haz = d.lam_fv(haz_fv, haz_ty, with_hzb);
+        d.lam_fv(z_fv, carrier, with_haz)
+    };
+    let hrange_hi = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let haz_ty = d.const_app(p.le, &[zero_c, z]);
+        let haz_fv = d.fresh_fvar();
+        let hzb_ty = d.const_app(p.le, &[z, one_c]);
+        let hzb_fv = d.fresh_fvar();
+        let hzb = d.kernel().fvar(hzb_fv);
+        let with_hzb = d.lam_fv(hzb_fv, hzb_ty, hzb);
+        let with_haz = d.lam_fv(haz_fv, haz_ty, with_hzb);
+        d.lam_fv(z_fv, carrier, with_haz)
+    };
+
+    let hax = d.lemma(p.le_refl, &[zero_c]);
+    let hxy = d.lemma(p.zero_lt_one, &[]);
+    let hyb = d.lemma(p.le_refl, &[one_c]);
+
+    let instance = d.lemma(
+        p.strict_mono_comp,
+        &[
+            identity, identity, zero_c, one_c, zero_c, one_c, hf, hg, hrange_lo, hrange_hi, zero_c,
+            one_c, hax, hxy, hyb,
+        ],
+    );
+
+    let ty = d.kernel().infer(instance).unwrap_or_else(|error| {
+        panic!("strict_mono_comp refused at identity-composed-with-itself on [0,1]: {error:?}")
+    });
+
+    // The conclusion is `lt (G (F zero)) (G (F one))`, un-reduced (`render_lean`
+    // does not beta-reduce): with `F := G := identity` that is
+    // `lt (identity (identity zero)) (identity (identity one))`, defeq to
+    // (but not syntactically) `lt zero one`.
+    let inner_zero = d.apply(identity, &[zero_c]);
+    let expected_gfzero = d.apply(identity, &[inner_zero]);
+    let inner_one = d.apply(identity, &[one_c]);
+    let expected_gfone = d.apply(identity, &[inner_one]);
+    let expected_ty = d.const_app(p.lt, &[expected_gfzero, expected_gfone]);
+    let rendered = d.kernel().render_lean(ty);
+    let expected_rendered = d.kernel().render_lean(expected_ty);
+    assert_eq!(
+        rendered, expected_rendered,
+        "must conclude exactly `lt (identity (identity zero)) (identity (identity one))`"
+    );
+
+    // And separately confirm it really is defeq to the reduced statement
+    // `lt zero one`, so the theorem did not smuggle in some other pair.
+    let reduced_ty = d.const_app(p.lt, &[zero_c, one_c]);
+    assert!(
+        d.kernel().def_eq(ty, reduced_ty),
+        "the conclusion must be defeq to `lt zero one`, got {rendered}"
     );
 }
 
