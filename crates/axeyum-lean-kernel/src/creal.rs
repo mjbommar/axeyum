@@ -2758,6 +2758,26 @@ pub struct CRealPrelude {
     /// already loose by a factor of `2·(1/2)⁰ = 2` at `n = 0`/`1`, and
     /// tightening it needs an index-`2` split this slice does not attempt.
     pub e_le_four: NameId,
+    /// `CReal.e_le_three : le e three`, `three := add two one` — the classical
+    /// index-2 split sharpening [`Self::e_le_four`]: `e = Σ 1/n! = 1 + 1 +
+    /// Σ_{n≥2} 1/n!`, the first two terms exact, and for `n ≥ 2`, `1/n! ≤
+    /// (1/2)^(n-1)` so the tail is at most `Σ_{k≥1} (1/2)^k = 1`. Built
+    /// WITHOUT any new `Nat`-level factorial fact: the shifted pointwise bound
+    /// `expTerm (k+2) ≤ pow half (k+1)` is [`Self::exp_term_le_dominant`] at
+    /// `k+2` composed with the pure `CReal`-algebra identity `2 · pow half
+    /// (succ m) ~ pow half m` (`pow_succ`'s ι-unfold + `mul_assoc` +
+    /// `mul_comm` + `2·half ~ 1`), and the tail sum is closed by an induction
+    /// proving `∀ k, sumRange expTerm (k+2) + pow half k ≤ three` (the
+    /// telescoping invariant, tight at `k = 0`: `2 + 1 = 3`), then the same
+    /// shifted identity in its ADDITIVE form (`pow half (k+1) + pow half
+    /// (k+1) ~ pow half k`, via `left_distrib` + `half + half ~ 1`) closes the
+    /// step. The top-level statement over ALL `n` (not just `n ≥ 2`) needs a
+    /// genuine case split — `expTerm 0 = expTerm 1 = 1`, not yet geometric —
+    /// so unlike [`Self::e_le_four`] this is NOT one uniform `∀n` bound but a
+    /// nested `Nat.rec` on `{0, 1, k+2}`, matching the mathematical kink at
+    /// index `2` rather than an artifact of the formalization. See
+    /// `creal/exponential.rs::declare_e_le_three`.
+    pub e_le_three: NameId,
     /// `CReal.sumRange_const : ∀ w m,
     /// Equiv (sumRange (fun _ => w) (Nat.succ m)) (mul (ofNat (Nat.succ m))
     /// w)` (`creal/monotone.rs`) — a constant summed `succ m` times is
@@ -3751,6 +3771,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         e_converges: kernel.name_str(creal, "e_converges"),
         two_le_e: kernel.name_str(creal, "two_le_e"),
         e_le_four: kernel.name_str(creal, "e_le_four"),
+        e_le_three: kernel.name_str(creal, "e_le_three"),
         sum_range_const: kernel.name_str(creal, "sumRange_const"),
         mesh_count_width: kernel.name_str(creal, "mesh_count_width"),
         subdivision_point_in_bounds: kernel.name_str(creal, "subdivisionPoint_in_bounds"),

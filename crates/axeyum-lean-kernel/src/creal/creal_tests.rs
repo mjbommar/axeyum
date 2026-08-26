@@ -115,7 +115,7 @@ fn on_a_deep_stack_creal<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'stat
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 338] = [
+    let expected: [(&str, crate::NameId, &str); 339] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -1094,6 +1094,13 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         // every `n` -- no shift needed, unlike `two_le_e`. See
         // `exponential.rs::declare_e_le_four`.
         ("CReal.e_le_four", p.e_le_four, "theorem"),
+        // `e <= 3`, the classical index-2 split sharpening `e_le_four`: the
+        // first two terms of `Σ 1/n!` are exact (`1 + 1 = 2`), and for
+        // `n >= 2`, `1/n! <= (1/2)^(n-1)` sums the tail to at most `1`. A
+        // nested case split on `{0, 1, k+2}` (NOT one uniform bound like
+        // `e_le_four` -- `expTerm 0 = expTerm 1 = 1` is not yet geometric).
+        // See `exponential.rs::declare_e_le_three`.
+        ("CReal.e_le_three", p.e_le_three, "theorem"),
         // Found by the coverage assertion above, not by anyone noticing: these
         // seven were live in the prelude and unlisted here, so this test had
         // never checked them. `lt_cotrans`/`apart_cotrans` are Ch 12's
@@ -5446,6 +5453,63 @@ fn exp_term_le_geom_concrete_instance_at_three() {
     assert!(
         !d.kernel().def_eq(embedded_rhs, embedded_wrong),
         "1/4 must not reduce to 1/8 -- sanity check that this harness can fail"
+    );
+}
+
+/// **Mandatory statement check for `CReal.e_le_three`.** Confirms, by
+/// `Kernel::infer` + `Kernel::def_eq` (not merely that the declaration
+/// type-checked), that `e_le_three`'s inferred type is EXACTLY `le e
+/// (ofRat 3/1)` -- not `le e (ofRat 4/1)` (the OLD, unsharpened bound this
+/// slice replaces) and not the reversed `le (ofRat 3/1) e` (an accidentally
+/// swapped inequality would type-check as a DIFFERENT theorem, not fail).
+///
+/// Includes a negative control: `ofRat 3/1` must not reduce to `ofRat 2/1`
+/// -- a checker that cannot fail is not a checker.
+#[test]
+fn e_le_three_states_exactly_le_e_three() {
+    use crate::int_prelude::ops::IntDev;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let e_le_three_const = d.kernel().const_(p.e_le_three, vec![]);
+    let inferred = d
+        .kernel()
+        .infer(e_le_three_const)
+        .unwrap_or_else(|error| panic!("e_le_three refused: {error:?}"));
+
+    let e_const = d.kernel().const_(p.e, vec![]);
+    let three_lit = exp_test_rat_literal(&mut d, 3, 1);
+    let embedded_three = d.const_app(p.of_rat, &[three_lit]);
+    let expected_stmt = d.const_app(p.le, &[e_const, embedded_three]);
+
+    assert!(
+        d.kernel().def_eq(inferred, expected_stmt),
+        "e_le_three must state exactly le e (ofRat 3/1)"
+    );
+
+    // Negative control: NOT `le e four` -- the bound this slice sharpens.
+    let four_lit = exp_test_rat_literal(&mut d, 4, 1);
+    let embedded_four = d.const_app(p.of_rat, &[four_lit]);
+    let wrong_stmt_four = d.const_app(p.le, &[e_const, embedded_four]);
+    assert!(
+        !d.kernel().def_eq(inferred, wrong_stmt_four),
+        "e_le_three must NOT state le e four -- that is the old, unsharpened bound"
+    );
+
+    // Inverted control: NOT the reversed inequality `le three e`.
+    let wrong_stmt_reversed = d.const_app(p.le, &[embedded_three, e_const]);
+    assert!(
+        !d.kernel().def_eq(inferred, wrong_stmt_reversed),
+        "e_le_three must NOT state le three e -- a swapped inequality is a different theorem"
+    );
+
+    // Sanity: this harness can fail at all.
+    let two_lit = exp_test_rat_literal(&mut d, 2, 1);
+    let embedded_two = d.const_app(p.of_rat, &[two_lit]);
+    assert!(
+        !d.kernel().def_eq(embedded_three, embedded_two),
+        "ofRat 3/1 must not reduce to ofRat 2/1"
     );
 }
 
