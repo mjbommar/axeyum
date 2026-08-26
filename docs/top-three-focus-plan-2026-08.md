@@ -105,6 +105,19 @@ What remains is authoritative agent dispatch, operation registration, and
 episode admission. Until those land, production provenance must continue to
 say `no_operation`.
 
+The import seam required by that dispatch is now explicit rather than silently
+incompatible. Ordinary statement import remains proof-isolated and continues
+to reject every theorem. A separate candidate-capsule import accepts only the
+exact candidate declaration names supplied by retrieval, independently checks
+their proof-bearing transitive closures, requires an empty measured axiom
+footprint for every candidate, and still requires the target to be a
+transparent `definition : Prop`. Duplicate candidates, target-as-candidate,
+unlisted theorems, and assumption-bearing candidates fail closed. A
+root-selected native capsule omitting `Nat.fib_mono`'s proof reproduces the
+bounded composition after a fresh import. This closes the checker/import
+precondition for dispatch; it does not itself register an operation or admit a
+new fact.
+
 ## Comparative position
 
 Axeyum should not be described as a replacement for any one neighboring

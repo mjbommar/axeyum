@@ -103,3 +103,13 @@ admission remains mandatory, and a failed bounded search remains a typed
 decline. This is the intended graph-to-producer boundary; operation dispatch
 and durable episode admission must preserve it rather than widening retrieval
 inside the producer.
+
+There are consequently two import contracts, and they must not be conflated.
+`import_statement_ndjson` is for producers that construct proofs from kernel
+primitives and rejects all proof-bearing declarations. The bounded application
+route instead uses `import_candidate_statement_ndjson`: the target remains a
+proof-free `definition : Prop`, while the exact retrieved candidates and only
+their independently checked transitive proof closures may enter. Every named
+candidate must have an empty kernel-measured axiom footprint. This distinction
+prevents both failure modes: an application producer starved of every reusable
+lemma, and a supposedly proof-free target capsule that smuggles its answer.
