@@ -710,6 +710,24 @@ checkers. The capability projection reports 101 ready facts but zero
 admissible registered operations: producer/operation coverage, not queue
 availability, is again the measured bottleneck.
 
+### Generic authoritative single-fact runner (2026-08-26)
+
+`scripts/run-autogenesis-authoritative-fact.py OUTPUT` packages the exact
+workflow exercised by the three Nat.mod admissions. The caller supplies no
+fact, operation, producer, checker, route, or admission metadata. A fresh
+machine frontier selects the fact; the registry selects execution; the runner
+builds and verifies execution and transaction receipts, injects an exit-75
+post-intent fault, proves the fact stayed byte-identical, recovers once,
+verifies readiness and the settled operation, and rejects any changed path
+besides the selected fact. Receipts are copied to the caller's external output.
+The live journal is created beside the checkout so atomic replacement is
+filesystem-safe; on failure it is deliberately retained and its recovery path
+is printed instead of being destroyed with a temporary directory.
+
+The command is exposed as `just autogenesis-authoritative-fact OUTPUT`. Its
+unit controls run in both aggregate gates; control reachability remains at the
+14-module baseline and aggregate-scope differences remain exactly allowlisted.
+
 | 2026-08-26 | `6fad715d8` | Make the Fibonacci child qualification progress-aware: pin candidate-specific dependency receipts and permit either child to advance only through checked, axiom-free kernel evidence. |
 | 2026-08-26 | `2aedb4d68` | Refresh the generated public example inventory from 163 to the 193 examples canonical discovery actually finds; both guarded planning references now report zero stale markers. |
 | 2026-08-26 | `42e7bdfd1` | Make the complete Python build/test/stub/type/lint recipe part of canonical `just check`; register two orphan controls in both gates and return the reachability ratchet from 16 to its 14-module baseline. |
