@@ -159,6 +159,8 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
         ("Complex.conj_sub", p.conj_sub),
         ("Complex.conj_ofReal", p.conj_of_real),
         ("Complex.conj_I", p.conj_i),
+        ("Complex.conj_zero", p.conj_zero),
+        ("Complex.conj_one", p.conj_one),
         ("Complex.eq_conj_iff_real", p.eq_conj_iff_real),
         ("Complex.normSq", p.norm_sq),
         ("Complex.mul_conj", p.mul_conj),
@@ -199,6 +201,7 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
         ("Complex.pow_zero", p.pow_zero),
         ("Complex.pow_succ", p.pow_succ),
         ("Complex.pow_add", p.pow_add),
+        ("Complex.conj_pow", p.conj_pow),
         ("Complex.sumRange", p.sum_range),
         ("Complex.sumRange_zero", p.sum_range_zero),
         ("Complex.sumRange_succ", p.sum_range_succ),
@@ -553,5 +556,125 @@ fn ptolemy_inequality_sq_is_stated_over_the_ptolemy_products() {
     assert!(
         ty.contains("CReal.le"),
         "the conclusion must be a CReal.le, not an Equiv: {ty}"
+    );
+}
+
+/// `Complex.conj_zero`/`Complex.conj_one` are already fully concrete (no
+/// quantifier to instantiate): read their declared types straight out of the
+/// kernel and check each `def_eq`s **exactly** the claimed statement, in the
+/// claimed direction. A swapped `CExpr::Zero`/`CExpr::One` in either literal
+/// would still type-check (the ring calculus proves either direction of a
+/// true ring identity), so this must compare against a specific expected
+/// term, not merely confirm the declaration exists.
+#[test]
+fn conj_zero_and_conj_one_are_exactly_stated() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let conj_zero = d.const_app(p.conj, &[zero_c]);
+    let conj_one = d.const_app(p.conj, &[one_c]);
+
+    let proof_zero = d.kernel().const_(p.conj_zero, vec![]);
+    let inferred_zero = d
+        .kernel()
+        .infer(proof_zero)
+        .expect("conj_zero must type-check");
+    let expected_zero = super::zeq(&mut d, p, conj_zero, zero_c);
+    assert!(
+        d.kernel().def_eq(inferred_zero, expected_zero),
+        "conj_zero must be EXACTLY Equiv (conj zero) zero, not the reverse \
+         or some other pairing"
+    );
+
+    let proof_one = d.kernel().const_(p.conj_one, vec![]);
+    let inferred_one = d
+        .kernel()
+        .infer(proof_one)
+        .expect("conj_one must type-check");
+    let expected_one = super::zeq(&mut d, p, conj_one, one_c);
+    assert!(
+        d.kernel().def_eq(inferred_one, expected_one),
+        "conj_one must be EXACTLY Equiv (conj one) one, not the reverse or \
+         some other pairing"
+    );
+}
+
+/// `Complex.conj_pow` instantiated at the SAME negative-control witness
+/// [`ptolemy_identity_reduces_at_the_fourth_roots_of_unity`]'s sibling test
+/// uses, `z = I, n = 4`, chained against [`ComplexPrelude::i_is_fourth_root`]
+/// and [`ComplexPrelude::conj_one`] to derive a genuinely new numeric fact
+/// this lemma makes available and no prior declaration states on its own:
+/// **`(−I)` is also a fourth root of unity**, `Equiv (pow (conj I) 4) one`.
+///
+/// This is not a restatement of `conj_pow`'s own type (which type-checking
+/// alone already confirms) — it is an independent computation built by
+/// composing `conj_pow` with two existing facts, and the final `def_eq`
+/// check would fail if `conj_pow`'s conclusion had its two sides transposed,
+/// even though the transposed statement is *also* a true theorem (`Equiv`
+/// is symmetric) and would still have type-checked as a declaration.
+#[test]
+fn conj_pow_gives_conj_i_a_fourth_root_of_unity() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let i_c = d.kernel().const_(p.i, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let four = d.num(4);
+    let pow_i4 = d.const_app(p.pow, &[i_c, four]);
+    let conj_i = d.const_app(p.conj, &[i_c]);
+    let pow_conj_i_4 = d.const_app(p.pow, &[conj_i, four]);
+    let conj_pow_i4 = d.const_app(p.conj, &[pow_i4]);
+    let conj_one = d.const_app(p.conj, &[one_c]);
+
+    // h_root : Equiv (pow I 4) one -- `I_is_fourth_root` unfolds by delta to
+    // exactly this (IsRootOfUnity is a Definition, not a fresh Prop).
+    let h_root = d.kernel().const_(p.i_is_fourth_root, vec![]);
+
+    // h_congr : Equiv (conj (pow I 4)) (conj one), via `conj_congr`.
+    let h_congr = d.lemma(p.conj_congr, &[pow_i4, one_c, h_root]);
+
+    // h_conj_pow : Equiv (conj (pow I 4)) (pow (conj I) 4), via `conj_pow`.
+    let h_conj_pow = d.lemma(p.conj_pow, &[i_c, four]);
+
+    // h_conj_pow_symm : Equiv (pow (conj I) 4) (conj (pow I 4)).
+    let h_conj_pow_symm = d.lemma(p.equiv_symm, &[conj_pow_i4, pow_conj_i_4, h_conj_pow]);
+
+    // h_mid : Equiv (pow (conj I) 4) (conj one).
+    let h_mid = d.lemma(
+        p.equiv_trans,
+        &[
+            pow_conj_i_4,
+            conj_pow_i4,
+            conj_one,
+            h_conj_pow_symm,
+            h_congr,
+        ],
+    );
+
+    // h_conj_one : Equiv (conj one) one.
+    let h_conj_one = d.kernel().const_(p.conj_one, vec![]);
+
+    // h_final : Equiv (pow (conj I) 4) one -- (-I)^4 ~ 1.
+    let h_final = d.lemma(
+        p.equiv_trans,
+        &[pow_conj_i_4, conj_one, one_c, h_mid, h_conj_one],
+    );
+
+    let inferred = d
+        .kernel()
+        .infer(h_final)
+        .expect("the composed (-I)^4 ~ 1 derivation must type-check");
+    let expected = super::zeq(&mut d, p, pow_conj_i_4, one_c);
+    assert!(
+        d.kernel().def_eq(inferred, expected),
+        "the derived fact must be EXACTLY Equiv (pow (conj I) 4) one"
     );
 }
