@@ -67,6 +67,7 @@ def main() -> None:
             "transported_candidates": 3,
             "transport_added": 2,
             "transport_reused": 1,
+            "admitted_declarations": 237,
             "axiom_footprint": [],
             "theorem_dependencies": 1,
             "target_dependency": False,

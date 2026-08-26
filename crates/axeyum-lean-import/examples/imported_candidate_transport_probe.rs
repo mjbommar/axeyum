@@ -68,7 +68,7 @@ fn run() -> Result<(), String> {
         &TARGET_CAPSULE_CANDIDATES.map(str::to_owned),
     )
     .map_err(|error| format!("target-import:{error}"))?;
-    let (mut kernel, _report, target_name, goal) = imported.into_parts();
+    let (mut kernel, report, target_name, goal) = imported.into_parts();
 
     let mut source_bytes = Vec::new();
     File::open(&source_path)
@@ -139,13 +139,14 @@ fn run() -> Result<(), String> {
         ));
     }
     println!(
-        "IMPORTED_CANDIDATE_TRANSPORT|result=accepted|target={target}|roots={}|transported={}|added={added}|reused={reused}|transport_declines={}|binders_used={}|application_depth={}|terms_considered={}|axioms={}|theorem_dependencies={}|target_dependency={target_dependency}|goal_sha256={goal_sha256}|proof_sha256={proof_sha256}|target_content_sha256={target_content_sha256}",
+        "IMPORTED_CANDIDATE_TRANSPORT|result=accepted|target={target}|roots={}|transported={}|added={added}|reused={reused}|transport_declines={}|binders_used={}|application_depth={}|terms_considered={}|declarations={}|axioms={}|theorem_dependencies={}|target_dependency={target_dependency}|goal_sha256={goal_sha256}|proof_sha256={proof_sha256}|target_content_sha256={target_content_sha256}",
         roots.len(),
         candidates.len(),
         declined.len(),
         candidate.binders_used,
         candidate.application_depth,
         candidate.terms_considered,
+        report.admitted_declarations + added,
         footprint.len(),
         theorem_dependencies.len(),
     );
