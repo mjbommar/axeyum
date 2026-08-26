@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 249] = [
+    let expected: [(&str, crate::NameId, &str); 250] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -4929,7 +4929,9 @@ fn sum_range_reblock_regroups_zero_through_five_two_ways() {
 
         let stmt_lhs = req(d, lhs_seq, fifteen_seq);
         let proof_lhs = rrefl(d, lhs_seq);
-        let name_lhs = d.kernel().name_str(anon, &format!("__reblock_lhs_{label}"));
+        let name_lhs = d
+            .kernel()
+            .name_str(anon, format!("__reblock_lhs_{label}").as_str());
         d.kernel()
             .add_declaration(Declaration::Theorem {
                 name: name_lhs,
@@ -4943,7 +4945,9 @@ fn sum_range_reblock_regroups_zero_through_five_two_ways() {
 
         let stmt_rhs = req(d, rhs_seq, fifteen_seq);
         let proof_rhs = rrefl(d, rhs_seq);
-        let name_rhs = d.kernel().name_str(anon, &format!("__reblock_rhs_{label}"));
+        let name_rhs = d
+            .kernel()
+            .name_str(anon, format!("__reblock_rhs_{label}").as_str());
         d.kernel()
             .add_declaration(Declaration::Theorem {
                 name: name_rhs,
