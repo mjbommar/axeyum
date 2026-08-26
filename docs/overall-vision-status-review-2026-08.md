@@ -114,6 +114,12 @@ compounding claim remains small:
 - the same search over 57 train/development open/conjectured arrow-free statements
   with one target-independent elementary palette accepted 0.
 
+The same fixed palette has now been rerun directly on the clean 51-goal
+post-reconciliation population: 27 goals fail closed at statement import, and
+24 import but decline with `NoTypedApplication`; zero are accepted and no
+held-out capsule is accessed. This localizes the next work into two independent
+frontiers instead of treating 0/51 as one undifferentiated producer failure.
+
 The latest concurrent construction adds real axiom-free steps in the CReal
 Riemann-sum programme, Complex division algebra, and the Rat power/normal-form
 bridge. The complete 753-test kernel suite passes on the merged population.

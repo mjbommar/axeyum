@@ -83,12 +83,69 @@ def eligible_mapping(
     return eligible, excluded
 
 
-def measure(mapping_path: Path, capsule_directory: Path) -> dict[str, Any]:
-    mapping_bytes = mapping_path.read_bytes()
-    mapping: dict[str, str] = json.loads(mapping_bytes)
+def population_mapping(population: dict[str, Any]) -> dict[str, str]:
+    outcomes = population.get("outcomes")
+    if not isinstance(outcomes, list):
+        raise ValueError("population must contain an outcomes array")
+    mapping = {}
+    for row in outcomes:
+        if (
+            not isinstance(row, dict)
+            or not isinstance(row.get("fact_id"), str)
+            or not isinstance(row.get("target_definition"), str)
+        ):
+            raise ValueError(
+                "every population outcome must name string fact_id and target_definition"
+            )
+        if row["fact_id"] in mapping:
+            raise ValueError("population contains duplicate fact_id rows")
+        mapping[row["fact_id"]] = row["target_definition"]
+    return mapping
+
+
+def measure(
+    mapping_path: Path | None,
+    capsule_directory: Path,
+    population_path: Path | None = None,
+) -> dict[str, Any]:
+    population_bytes = population_path.read_bytes() if population_path else None
+    if mapping_path is None:
+        if population_bytes is None:
+            raise ValueError("either mapping_path or population_path is required")
+        mapping_bytes = population_bytes
+        mapping = population_mapping(json.loads(population_bytes))
+    else:
+        mapping_bytes = mapping_path.read_bytes()
+        mapping = json.loads(mapping_bytes)
     nursery_bytes = NURSERY.read_bytes()
     nursery = json.loads(nursery_bytes)
     mapping, excluded_held_out = eligible_mapping(mapping, nursery)
+    population_source = None
+    if population_path is not None:
+        assert population_bytes is not None
+        selected_mapping = population_mapping(json.loads(population_bytes))
+        selected = set(selected_mapping)
+        absent = sorted(selected - set(mapping))
+        if absent:
+            raise ValueError(f"population contains facts absent from mapping: {absent}")
+        mapping = {
+            fact_id: target
+            for fact_id, target in mapping.items()
+            if fact_id in selected
+        }
+        mismatched = sorted(
+            fact_id
+            for fact_id, target in mapping.items()
+            if selected_mapping[fact_id] != target
+        )
+        if mismatched:
+            raise ValueError(
+                f"population target definitions disagree with mapping: {mismatched}"
+            )
+        population_source = {
+            "path": str(population_path),
+            "sha256": digest(population_bytes),
+        }
     outcomes = []
     for fact_id, target_definition in sorted(mapping.items()):
         path = capsule_path(capsule_directory, fact_id)
@@ -145,7 +202,7 @@ def measure(mapping_path: Path, capsule_directory: Path) -> dict[str, Any]:
         for row in outcomes
         if row["result"] == "import_rejected"
     )
-    return {
+    result = {
         "schema_version": 2,
         "kind": "axeyum-open-fixed-palette-census",
         "state": "train-development-measurement-held-out-excluded",
@@ -186,17 +243,29 @@ def measure(mapping_path: Path, capsule_directory: Path) -> dict[str, Any]:
         "outcomes": outcomes,
         "limitations": "One fixed elementary palette is a negative baseline, not a general producer evaluation. Held-out rows are excluded before capsule access. Import rejections measure statement-boundary incompatibility, not solver inability or proposition falsehood.",
     }
+    if population_source is not None:
+        result["source"]["population_filter"] = population_source
+    return result
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mapping", type=Path, required=True)
+    parser.add_argument("--mapping", type=Path)
     parser.add_argument("--capsule-directory", type=Path, required=True)
+    parser.add_argument(
+        "--population",
+        type=Path,
+        help="optional committed census whose outcomes define the exact fact subset",
+    )
     parser.add_argument("--output", type=Path, default=OUTPUT)
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
+    if args.mapping is None and args.population is None:
+        parser.error("one of --mapping or --population is required")
     rendered = json.dumps(
-        measure(args.mapping, args.capsule_directory), indent=2, sort_keys=True
+        measure(args.mapping, args.capsule_directory, args.population),
+        indent=2,
+        sort_keys=True,
     ) + "\n"
     if args.check:
         if not args.output.is_file() or args.output.read_text() != rendered:

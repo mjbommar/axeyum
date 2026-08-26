@@ -1291,6 +1291,12 @@ The 51-goal v2 result now also pins an immutable post-reconciliation ranking.
 This separates completed evaluation artifacts from the live theorem dashboard:
 concurrent theorem construction can advance current projections without making
 either the 57-goal v1 or 51-goal v2 experiment stale.
+The fixed-palette producer now runs directly against that committed 51-goal
+population through a backward-compatible population input. The direct result
+is 0 accepted, 24 `NoTypedApplication` declines, 27 statement-import
+rejections, and zero held-out access. Future changes must report the import and
+search denominators separately; retrieval work cannot affect the 27 rejected
+closures, and import work alone cannot affect the 24 grammar declines.
 The accepted ADR-0541 general SMT-LIB session driver is now also a named
 `axeyum` binary target, not only a discoverability-poor Cargo example. The same
 source remains the historical example control, and the binary's focused check,
