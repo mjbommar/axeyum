@@ -56,6 +56,11 @@ candidates, then add dependency-ranked premise retrieval and rerun this exact
 population. The 43 import rejections must use the already implemented ADR-0484
 type-slice/generalization and exact-specialization route; do not create a second
 trusted-support allowlist in the candidate importer.
+The accepted ADR-0541 general SMT-LIB session driver is now also a named
+`axeyum` binary target, not only a discoverability-poor Cargo example. The same
+source remains the historical example control, and the binary's focused check,
+Clippy, file execution, format, link, and exact-SHA pre-push gates pass. It is a
+repository-built front door, not yet a published crate or prebuilt release.
 
 <!-- plan-section: landed-changes -->
 
@@ -80,3 +85,4 @@ trusted-support allowlist in the candidate importer.
 | 2026-08-26 | `bf484f355` | Add a reusable proof-isolated capsule materializer and hash-bound receipts for the three accepted arithmetic controls without vendoring NDJSON. |
 | 2026-08-26 | `8b54237ab` | Teach the agent export/producer boundary to resolve exact candidate-capsule receipts and execute bounded application without widening operation authority. |
 | 2026-08-26 | `30bfc8991` | Make generated statement-adapter names unique across arbitrarily many normalized slug collisions. |
+| 2026-08-26 | `1be7e79b1` | Promote the accepted command-faithful SMT-LIB driver to the named `axeyum` binary while preserving the checked example surface. |
