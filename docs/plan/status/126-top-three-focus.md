@@ -387,9 +387,17 @@ and every bit at `offset+k` of a width-`k` low reification is false, universally
 and axiom-free. The unbounded theorem now needs only an input-side sufficient
 width theorem plus the `f false false = false` join; imported equivalence stays
 separate.
+The input theorem and join now close too. `testBitBool_beyond_bound` proves a
+simple sufficient width directly from divide-by-two recursion; `bitwiseTotal`
+uses width `x+y`; and `testBitBool_bitwiseTotal` proves the desired equation at
+every index under exactly `f false false = false`, axiom-free. The native
+mathematics is complete. Exact equivalence to imported Lean `Nat.testBit` and
+`Nat.bitwise` is now the sole reconstruction blocker and still receives zero
+credit.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-26 | `32802405d` | Construct a total target-owned bitwise operation and prove its all-index Boolean semantics axiom-free under exactly `f false false = false`. |
 | 2026-08-26 | `08d4da396` | Prove axiom-free that every observation beyond a low-digit reification's width is false, closing the output-side tail of the unbounded bitwise theorem. |
 | 2026-08-26 | `448fc8431` | Prove universal low-digit reification round-trip and specialize it into the first axiom-free bounded bitwise semantic theorem. |
 | 2026-08-26 | `05b92a924` | Prove axiom-free quotient and remainder equations for a Boolean low digit plus twice an arbitrary tail, supplying the recursive decoder for component uniqueness. |
