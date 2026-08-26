@@ -515,7 +515,7 @@ autogenesis-open-lemma-candidate-ranking:
 
 autogenesis-ranked-proposition-census:
     cargo build -q -p axeyum-lean-import --example proposition_compatibility_audit
-    python3 scripts/gen-autogenesis-ranked-proposition-census.py --check
+    python3 scripts/gen-autogenesis-ranked-proposition-census.py --ranking artifacts/autogenesis/open-lemma-candidate-ranking-pre-reconciliation-v1.json --check
 
 autogenesis-proposition-reconciliation-proposals:
     python3 -m unittest scripts.tests.test_prepare_autogenesis_fact_transaction
