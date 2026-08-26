@@ -139,10 +139,10 @@
     "excluded_held_out_family_topic_facts": 37,
     "excluded_held_out_formalizations": 0,
     "family_topic_facts": 177,
-    "kernel_semantic_anchors": 3,
-    "qualified_formalization_facts": 9,
+    "kernel_semantic_anchors": 6,
+    "qualified_formalization_facts": 13,
     "with_family_topic": 7,
-    "with_kernel_semantic_anchors": 3,
+    "with_kernel_semantic_anchors": 5,
     "with_qualified_formalizations": 3
   },
   "source_receipts": [
@@ -164,7 +164,7 @@
     },
     {
       "path": "artifacts/autogenesis/concept-coverage-projection-v1.json",
-      "sha256": "a4d34991bc320d122cb910993d93d63e743126abf46e34323f9ed45c7d091e06"
+      "sha256": "abdfa02dabafb0cdbdb1f635dd58be965911a9c7bf3b7bf9b5ca5df8985153e1"
     },
     {
       "path": "justfile",

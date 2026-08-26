@@ -4,10 +4,10 @@
     "excluded_held_out_family_topic_facts": 37,
     "excluded_held_out_formalizations": 0,
     "family_topic_facts": 177,
-    "kernel_semantic_anchors": 3,
-    "qualified_formalization_facts": 9,
+    "kernel_semantic_anchors": 6,
+    "qualified_formalization_facts": 13,
     "with_family_topic": 7,
-    "with_kernel_semantic_anchors": 3,
+    "with_kernel_semantic_anchors": 5,
     "with_qualified_formalizations": 3
   },
   "concepts": [
@@ -102,16 +102,23 @@
     },
     {
       "concept_id": "C:equivalence-relation",
-      "coverage_state": "qualified-facts",
+      "coverage_state": "qualified-facts+kernel-anchors",
       "family_topic_fact_count": 0,
       "family_topic_fact_ids": [],
-      "kernel_semantic_anchor_count": 0,
-      "kernel_semantic_anchor_ids": [],
-      "qualified_formalization_fact_count": 3,
+      "kernel_semantic_anchor_count": 3,
+      "kernel_semantic_anchor_ids": [
+        "Nat.mod_eq_refl",
+        "Nat.mod_eq_symm",
+        "Nat.mod_eq_trans"
+      ],
+      "qualified_formalization_fact_count": 6,
       "qualified_formalization_fact_ids": [
         "F:ml430-int-modeq-refl-30e15520",
         "F:ml430-int-modeq-symm-984a6e67",
-        "F:ml430-int-modeq-trans-6d7863e0"
+        "F:ml430-int-modeq-trans-6d7863e0",
+        "F:ml430-nat-modeq-refl-d870c8f5",
+        "F:ml430-nat-modeq-symm-0a3d4d18",
+        "F:ml430-nat-modeq-trans-ef9d1c46"
       ],
       "trust": "family topics are reviewed guidance; semantic edges are human-reviewed partial mappings; none grants proof, operation, or admission authority"
     },
@@ -260,7 +267,7 @@
     },
     {
       "concept_id": "C:modular-arithmetic",
-      "coverage_state": "family-topic+qualified-facts",
+      "coverage_state": "family-topic+qualified-facts+kernel-anchors",
       "family_topic_fact_count": 40,
       "family_topic_fact_ids": [
         "F:ml430-int-add-modeq-left-ee732b5b",
@@ -304,14 +311,22 @@
         "F:ml430-nat-modeq-trans-ef9d1c46",
         "F:ml430-nat-modulus-modeq-zero-fd9af096"
       ],
-      "kernel_semantic_anchor_count": 0,
-      "kernel_semantic_anchor_ids": [],
-      "qualified_formalization_fact_count": 4,
+      "kernel_semantic_anchor_count": 3,
+      "kernel_semantic_anchor_ids": [
+        "Nat.mod_eq_refl",
+        "Nat.mod_eq_symm",
+        "Nat.mod_eq_trans"
+      ],
+      "qualified_formalization_fact_count": 8,
       "qualified_formalization_fact_ids": [
         "F:ml430-int-modeq-comm-1e4bcc07",
         "F:ml430-int-modeq-refl-30e15520",
         "F:ml430-int-modeq-symm-984a6e67",
-        "F:ml430-int-modeq-trans-6d7863e0"
+        "F:ml430-int-modeq-trans-6d7863e0",
+        "F:ml430-nat-modeq-comm-24b71e7a",
+        "F:ml430-nat-modeq-refl-d870c8f5",
+        "F:ml430-nat-modeq-symm-0a3d4d18",
+        "F:ml430-nat-modeq-trans-ef9d1c46"
       ],
       "trust": "family topics are reviewed guidance; semantic edges are human-reviewed partial mappings; none grants proof, operation, or admission authority"
     },
@@ -367,7 +382,7 @@
       "development",
       "train"
     ],
-    "knowledge_overlay_sha256": "1f106d91c8e6ff75468ef7a1c9e1026cebd286f59d48a3c4c4510e117af87421",
+    "knowledge_overlay_sha256": "105cd3da3bc2c1bb12a65e8a276702ab62645f1315de9b233541919387370200",
     "nursery_sha256": "6d1f2551a612fdcadaf1c6b0096c4eebee304d9687157cb25505f785ee86daa8",
     "trust_boundary": "train/development fact coverage plus local reviewed kernel anchors only; never held-out disclosure, proof, operation, or admission authority"
   },

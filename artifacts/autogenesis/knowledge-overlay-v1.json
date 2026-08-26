@@ -547,6 +547,149 @@
       "reason": "The proof-free imported Mathlib proposition and independently constructed native theorem type are definitionally equal after exact-name translation into a private target kernel.",
       "provenance": { "method": "checker-derived", "sources": ["artifacts/autogenesis/open-ranked-proposition-census-v1.json", "crates/axeyum-lean-import/examples/proposition_compatibility_audit.rs"] },
       "qualifiers": { "fact_status_unchanged": true, "admission_authority": false }
+    },
+    {
+      "id": "L:nat-modeq-refl-formalizes-modular-arithmetic",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-modeq-refl-d870c8f5" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:modular-arithmetic" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "Reflexivity of natural congruence is one exact structural law of modular arithmetic.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-nat-modeq-refl-d870c8f5.json"] },
+      "qualifiers": { "coverage": "relation-law", "law": "reflexive", "representation": "mathlib-remainder-equality", "completeness": "partial", "admission_authority": false }
+    },
+    {
+      "id": "L:nat-modeq-symm-formalizes-modular-arithmetic",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-modeq-symm-0a3d4d18" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:modular-arithmetic" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "Symmetry of natural congruence is one exact structural law of modular arithmetic.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-nat-modeq-symm-0a3d4d18.json"] },
+      "qualifiers": { "coverage": "relation-law", "law": "symmetric", "representation": "mathlib-remainder-equality", "completeness": "partial", "admission_authority": false }
+    },
+    {
+      "id": "L:nat-modeq-trans-formalizes-modular-arithmetic",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-modeq-trans-ef9d1c46" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:modular-arithmetic" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "Transitivity of natural congruence is one exact structural law of modular arithmetic.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-nat-modeq-trans-ef9d1c46.json"] },
+      "qualifiers": { "coverage": "relation-law", "law": "transitive", "representation": "mathlib-remainder-equality", "completeness": "partial", "admission_authority": false }
+    },
+    {
+      "id": "L:nat-modeq-comm-formalizes-modular-arithmetic",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-modeq-comm-24b71e7a" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:modular-arithmetic" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The biconditional commutation law exposes symmetry of natural congruence as a reusable modular-arithmetic equivalence.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-nat-modeq-comm-24b71e7a.json"] },
+      "qualifiers": { "coverage": "derived-relation-law", "law": "commutative-iff", "representation": "mathlib-remainder-equality", "completeness": "partial", "admission_authority": false }
+    },
+    {
+      "id": "L:nat-modeq-refl-formalizes-equivalence-relation",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-modeq-refl-d870c8f5" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:equivalence-relation" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "This theorem supplies the reflexive law for natural congruence viewed as an equivalence relation.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-nat-modeq-refl-d870c8f5.json"] },
+      "qualifiers": { "coverage": "relation-law", "law": "reflexive", "representation": "mathlib-remainder-equality", "completeness": "partial", "admission_authority": false }
+    },
+    {
+      "id": "L:nat-modeq-symm-formalizes-equivalence-relation",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-modeq-symm-0a3d4d18" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:equivalence-relation" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "This theorem supplies the symmetric law for natural congruence viewed as an equivalence relation.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-nat-modeq-symm-0a3d4d18.json"] },
+      "qualifiers": { "coverage": "relation-law", "law": "symmetric", "representation": "mathlib-remainder-equality", "completeness": "partial", "admission_authority": false }
+    },
+    {
+      "id": "L:nat-modeq-trans-formalizes-equivalence-relation",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-modeq-trans-ef9d1c46" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:equivalence-relation" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "This theorem supplies the transitive law for natural congruence viewed as an equivalence relation.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/facts/F-ml430-nat-modeq-trans-ef9d1c46.json"] },
+      "qualifiers": { "coverage": "relation-law", "law": "transitive", "representation": "mathlib-remainder-equality", "completeness": "partial", "admission_authority": false }
+    },
+    {
+      "id": "L:kernel-nat-mod-eq-refl-formalizes-modular-arithmetic",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "Nat.mod_eq_refl" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:modular-arithmetic" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The axiom-free native theorem is the reflexive law for Axeyum's balanced-witness natural congruence relation.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/autogenesis/kernel-lemma-search-index-v1.json"] },
+      "qualifiers": { "coverage": "relation-law", "law": "reflexive", "representation": "axeyum-balanced-witness", "completeness": "partial", "empty_axiom_footprint": true, "declaration_equivalence_claim": false, "admission_authority": false }
+    },
+    {
+      "id": "L:kernel-nat-mod-eq-symm-formalizes-modular-arithmetic",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "Nat.mod_eq_symm" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:modular-arithmetic" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The axiom-free native theorem is the symmetry law for Axeyum's balanced-witness natural congruence relation.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/autogenesis/kernel-lemma-search-index-v1.json"] },
+      "qualifiers": { "coverage": "relation-law", "law": "symmetric", "representation": "axeyum-balanced-witness", "completeness": "partial", "empty_axiom_footprint": true, "declaration_equivalence_claim": false, "admission_authority": false }
+    },
+    {
+      "id": "L:kernel-nat-mod-eq-trans-formalizes-modular-arithmetic",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "Nat.mod_eq_trans" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:modular-arithmetic" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "The axiom-free native theorem is the transitivity law for Axeyum's balanced-witness natural congruence relation.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/autogenesis/kernel-lemma-search-index-v1.json"] },
+      "qualifiers": { "coverage": "relation-law", "law": "transitive", "representation": "axeyum-balanced-witness", "completeness": "partial", "empty_axiom_footprint": true, "declaration_equivalence_claim": false, "admission_authority": false }
+    },
+    {
+      "id": "L:kernel-nat-mod-eq-refl-formalizes-equivalence-relation",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "Nat.mod_eq_refl" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:equivalence-relation" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "This axiom-free native theorem supplies reflexivity for the balanced-witness congruence relation.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/autogenesis/kernel-lemma-search-index-v1.json"] },
+      "qualifiers": { "coverage": "relation-law", "law": "reflexive", "representation": "axeyum-balanced-witness", "completeness": "partial", "empty_axiom_footprint": true, "declaration_equivalence_claim": false, "admission_authority": false }
+    },
+    {
+      "id": "L:kernel-nat-mod-eq-symm-formalizes-equivalence-relation",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "Nat.mod_eq_symm" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:equivalence-relation" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "This axiom-free native theorem supplies symmetry for the balanced-witness congruence relation.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/autogenesis/kernel-lemma-search-index-v1.json"] },
+      "qualifiers": { "coverage": "relation-law", "law": "symmetric", "representation": "axeyum-balanced-witness", "completeness": "partial", "empty_axiom_footprint": true, "declaration_equivalence_claim": false, "admission_authority": false }
+    },
+    {
+      "id": "L:kernel-nat-mod-eq-trans-formalizes-equivalence-relation",
+      "relation": "formalizes",
+      "source": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "Nat.mod_eq_trans" },
+      "target": { "namespace": "axeyum-knowledge", "kind": "concept", "id": "C:equivalence-relation" },
+      "assurance": "human-reviewed",
+      "status": "active",
+      "reason": "This axiom-free native theorem supplies transitivity for the balanced-witness congruence relation.",
+      "provenance": { "method": "human-reviewed", "sources": ["artifacts/autogenesis/kernel-lemma-search-index-v1.json"] },
+      "qualifiers": { "coverage": "relation-law", "law": "transitive", "representation": "axeyum-balanced-witness", "completeness": "partial", "empty_axiom_footprint": true, "declaration_equivalence_claim": false, "admission_authority": false }
     }
   ]
 }

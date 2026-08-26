@@ -1114,6 +1114,12 @@ compose into the minimal target, and reflexivity alone is insufficient. Next:
 capture the post-repair CI run and construct one target-local empty-footprint
 behavior theorem for the exact imported `Nat.mod` spine.
 
+Reviewed natural-congruence coverage now spans 13 settled facts and six
+empty-footprint kernel anchors. The graph deliberately keeps Mathlib's
+remainder-equality representation separate from Axeyum's balanced-witness
+representation; these are semantic links, not transport authority. The review
+queue now records 1,281 of 1,287 kernel theorems as still unreviewed.
+
 Detail and older landed rows moved to [`../notes/126-top-three-focus.md`](docs/plan/notes/126-top-three-focus.md).
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the

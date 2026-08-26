@@ -2,13 +2,13 @@
   "census": {
     "empty_footprint_theorems": 1287,
     "kernel_theorems": 1287,
-    "reviewed_kernel_semantic_anchors": 3,
-    "unreviewed_queue_entries": 1284
+    "reviewed_kernel_semantic_anchors": 6,
+    "unreviewed_queue_entries": 1281
   },
   "derivation": {
     "candidate_rule": "theorem with empty recorded axiom footprint and no active kernel-source formalizes link",
     "kernel_projection_sha256": "46923fd784bac0d4e6e00d85a1aefbf03d07fb787c6690c35476dacae09806e4",
-    "knowledge_overlay_sha256": "1f106d91c8e6ff75468ef7a1c9e1026cebd286f59d48a3c4c4510e117af87421",
+    "knowledge_overlay_sha256": "105cd3da3bc2c1bb12a65e8a276702ab62645f1315de9b233541919387370200",
     "ordering": "descending direct reverse theorem-reference count, descending direct theorem-dependency count, ascending declaration id",
     "trust_boundary": "review planning only; never concept classification, producer dispatch, proof, admission, or trusted-kernel authority"
   },
@@ -16,7 +16,10 @@
   "reviewed_kernel_semantic_anchor_ids": [
     "CPoint.circumcentre_unique",
     "Complex.normSq_pow",
-    "Decidable.em"
+    "Decidable.em",
+    "Nat.mod_eq_refl",
+    "Nat.mod_eq_symm",
+    "Nat.mod_eq_trans"
   ],
   "schema_version": 1,
   "unreviewed_entries": [
@@ -3399,22 +3402,6 @@
     },
     {
       "direct_reverse_theorem_reference_count": 6,
-      "direct_theorem_dependency_count": 3,
-      "kernel_declaration_id": "Nat.mod_eq_trans",
-      "review_status": "unreviewed",
-      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
-      "visible_in": [
-        "characterization",
-        "complex",
-        "cpoint",
-        "creal",
-        "integer",
-        "nat",
-        "rat"
-      ]
-    },
-    {
-      "direct_reverse_theorem_reference_count": 6,
       "direct_theorem_dependency_count": 2,
       "kernel_declaration_id": "Int.subNatNat_add_left",
       "review_status": "unreviewed",
@@ -4532,38 +4519,6 @@
       "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
       "visible_in": [
         "characterization"
-      ]
-    },
-    {
-      "direct_reverse_theorem_reference_count": 4,
-      "direct_theorem_dependency_count": 0,
-      "kernel_declaration_id": "Nat.mod_eq_refl",
-      "review_status": "unreviewed",
-      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
-      "visible_in": [
-        "characterization",
-        "complex",
-        "cpoint",
-        "creal",
-        "integer",
-        "nat",
-        "rat"
-      ]
-    },
-    {
-      "direct_reverse_theorem_reference_count": 4,
-      "direct_theorem_dependency_count": 0,
-      "kernel_declaration_id": "Nat.mod_eq_symm",
-      "review_status": "unreviewed",
-      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
-      "visible_in": [
-        "characterization",
-        "complex",
-        "cpoint",
-        "creal",
-        "integer",
-        "nat",
-        "rat"
       ]
     },
     {

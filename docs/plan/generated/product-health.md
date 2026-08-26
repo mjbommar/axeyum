@@ -17,7 +17,7 @@ This snapshot measures committed evidence populations, static gate reachability,
 | Kernel library | 1,287 theorems; 1,614/1,644 declarations axiom-free | Checked library scale, not autonomous yield |
 | Fact ledger | 698 facts; 510 proved; 179 open | Durable proposition state |
 | Exact lemma links | 397/1,287 (30.8%) | Remaining theorems are searchable but not exactly fact-linked |
-| Reviewed semantic coverage | 9 facts; 3 kernel anchors across 13 projected concepts | Qualified partial mappings, not automated classification |
+| Reviewed semantic coverage | 13 facts; 6 kernel anchors across 13 projected concepts | Qualified partial mappings, not automated classification |
 | Registered producers | 25 authoritative; 2 reusable multi-target | Registration breadth is not conversion rate |
 | Production episodes | 16; 4 fixtures excluded | Nonzero real evidence population |
 | General producer observations | 2/138 admissible | Current measured autonomous-search weakness |

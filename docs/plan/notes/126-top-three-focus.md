@@ -48,6 +48,17 @@ the Lean-completeness inventory and this status file exceeded its generated
 size cap—so both were repaired before the next push. Python timing, concurrent
 Clippy, and concurrent Rustdoc failures remain visible and unclaimed.
 
+## 2026-08-26 natural congruence coverage
+
+The reviewed overlay now connects four settled imported `Nat.ModEq` facts and
+three axiom-free native congruence theorems to modular arithmetic and equivalence
+relations: 13 qualified facts and six kernel anchors in total. It explicitly
+records Mathlib's remainder-equality and Axeyum's balanced-witness definitions
+as different representations, so these links guide discovery without claiming
+declaration equivalence, proof transport, or admission authority. The generated
+review queue now makes the remaining boundary visible: 1,281 of 1,287 kernel
+theorems still await semantic review.
+
 Current boundary: reusable ModEq production reached 11 facts. Exact retrieval
 then composed `Nat.fib_le_succ` through `Nat.monotone_of_le_succ` into checked
 `Nat.fib_mono`, but remains honestly `no_operation` because its constructor was

@@ -16,10 +16,10 @@
 
 | Measure | Count |
 |---|---:|
-| Active qualified `formalizes` links | 15 |
+| Active qualified `formalizes` links | 28 |
 | Axeyum-owned concepts reached | 6 |
-| Fact records with qualified formal content | 9 |
-| Reviewed empty-footprint kernel theorem anchors | 3 |
+| Fact records with qualified formal content | 13 |
+| Reviewed empty-footprint kernel theorem anchors | 6 |
 
 The former sibling-backed namespace remains absent. These rows count only
 self-contained Axeyum concept entities and active, human-reviewed links;

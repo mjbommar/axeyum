@@ -885,7 +885,7 @@
     {
       "kind": "manifest",
       "path": "artifacts/autogenesis/knowledge-overlay-v1.json",
-      "sha256": "559cd93509b83e8fa9a60591bb21e40d073f4f5a739faec5941857e01e707d8b"
+      "sha256": "105cd3da3bc2c1bb12a65e8a276702ab62645f1315de9b233541919387370200"
     },
     {
       "kind": "decline-record",
@@ -925,12 +925,12 @@
     {
       "kind": "manifest",
       "path": "artifacts/autogenesis/must-decline-mutations-v1.json",
-      "sha256": "30a59e1da446a7b74de172641cf94549150d577f3a837004d896b0de1baad233"
+      "sha256": "70d52bb9517419f0caf24958fa7f596bf8486cb3e6f293b673dbe16c486871af"
     },
     {
       "kind": "manifest",
       "path": "artifacts/autogenesis/nursery-v1.json",
-      "sha256": "aa7a2769fcc51bdcf90c360b435e5efed6797751e81ae9931fd52bb89c25e7f1"
+      "sha256": "6d1f2551a612fdcadaf1c6b0096c4eebee304d9687157cb25505f785ee86daa8"
     },
     {
       "kind": "manifest",

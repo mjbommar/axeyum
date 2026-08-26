@@ -698,6 +698,15 @@ failed jobs remain explicit and owned separately. Next: capture a later
 completed run after repairs; never infer current-head green from an ancestor
 receipt.
 
+The connected-knowledge substrate now represents both sides of the natural
+congruence boundary without collapsing them. Four settled imported `Nat.ModEq`
+facts add reviewed modular-arithmetic coverage, three of them add equivalence-
+relation laws, and the axiom-free native reflexive/symmetric/transitive
+theorems add three kernel anchors across the same concepts. Product health moves
+from 9 reviewed facts / 3 anchors to 13 / 6, with zero held-out disclosure. All
+edges record their representation and deny declaration-equivalence authority;
+semantic proximity can guide retrieval but cannot authorize transport.
+
 ## Sequencing
 
 The critical path is not three independent projects:
