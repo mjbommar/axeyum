@@ -136,6 +136,7 @@ now. Nothing was deleted.
 | 2026-08-26 | `16de20475` | Publish the hash-bound 57-goal ranked proposition census: six exact native equivalents, 678 declines, and zero held-out access. |
 | 2026-08-26 | `18ccc487e` | Add six independently checked, non-authoritative fact-to-kernel proposition-match links and document the reconciliation boundary. |
 | 2026-08-26 | `83b3694e8` | Register two missing native binomial facts from kernel inventories and regenerate all dependent knowledge views at 1,253 theorems. |
+| 2026-08-26 | `cd02dbb57` | Add a fail-closed, operation-free proposition-reconciliation transaction with mutation controls and explicit zero autonomous credit. |
 | 2026-08-25 | `beb27f1ba` | **The trusted-core ceiling, raised the way the gate demanded.** Guard C failed at 5,508 past 5,500 with "say why before raising it." The baseline was RE-DERIVED by `git archive` rather than trusted, giving a per-file table summing to exactly +379 (`tc.rs` +347, `inductive.rs` +30, `env.rs` +2). Verdict: real and necessary — a universe-parameter closure fixing declarations **official Lean 4.30.0 refuses but this kernel wrongly admitted**, and `whnf_core` memoisation (138× cost, 1,857 s → 13.4 s) inside `def_eq`. Ceiling 5,900 with headroom matching the original's character; guard C re-verified to fire by injecting 500 lines in a scratch copy. The file's own comment said "5,110" where the real baseline was 5,129 — wrong from day one. |
 | 2026-08-25 | `0f2fb5fcd` | A doc line beginning with `+` is a Markdown list bullet, so ten `doc_list_item` errors pointed at ordinary prose one line below the cause. |
 | 2026-08-25 | `6de1d88f8` | Salvage: **the irrationality of √2** (`Nat.no_rational_sqrt_two`) and **`CReal.geom_tail_within`**, committed on behalf of two lanes killed mid-run by a spend limit. Both verified here: 695 tests, clippy `--all-targets`, axiom-free. |
@@ -1231,6 +1232,15 @@ views were regenerated against the merged 1,253-theorem kernel, and the ranked
 connective-tissue repair, not autonomous yield. Next: specify the reviewed
 reconciliation transaction and its negative controls before settling any of
 the six imported statement records.
+A prepared proposition-reconciliation transaction now requires an open,
+evidence-free source fact; a proved axiom-free native kernel fact; evidence
+binding that native fact to the exact matched declaration; and the exact
+independently checked overlay link with its false admission-authority
+qualifier. Mutations of every boundary fail closed. Each proposal carries
+`no_operation`, `autonomous: false`, and no admission event. All six source
+facts remain open. Next: materialize the six proposals against live hashes,
+version the pre-reconciliation evaluation artifacts, then apply and regenerate
+as one coordinated non-autonomous metadata transition.
 The accepted ADR-0541 general SMT-LIB session driver is now also a named
 `axeyum` binary target, not only a discoverability-poor Cargo example. The same
 source remains the historical example control, and the binary's focused check,

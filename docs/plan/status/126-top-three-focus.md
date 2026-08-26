@@ -112,6 +112,15 @@ views were regenerated against the merged 1,253-theorem kernel, and the ranked
 connective-tissue repair, not autonomous yield. Next: specify the reviewed
 reconciliation transaction and its negative controls before settling any of
 the six imported statement records.
+A prepared proposition-reconciliation transaction now requires an open,
+evidence-free source fact; a proved axiom-free native kernel fact; evidence
+binding that native fact to the exact matched declaration; and the exact
+independently checked overlay link with its false admission-authority
+qualifier. Mutations of every boundary fail closed. Each proposal carries
+`no_operation`, `autonomous: false`, and no admission event. All six source
+facts remain open. Next: materialize the six proposals against live hashes,
+version the pre-reconciliation evaluation artifacts, then apply and regenerate
+as one coordinated non-autonomous metadata transition.
 The accepted ADR-0541 general SMT-LIB session driver is now also a named
 `axeyum` binary target, not only a discoverability-poor Cargo example. The same
 source remains the historical example control, and the binary's focused check,
@@ -150,3 +159,4 @@ repository-built front door, not yet a published crate or prebuilt release.
 | 2026-08-26 | `16de20475` | Publish the hash-bound 57-goal ranked proposition census: six exact native equivalents, 678 declines, and zero held-out access. |
 | 2026-08-26 | `18ccc487e` | Add six independently checked, non-authoritative fact-to-kernel proposition-match links and document the reconciliation boundary. |
 | 2026-08-26 | `83b3694e8` | Register two missing native binomial facts from kernel inventories and regenerate all dependent knowledge views at 1,253 theorems. |
+| 2026-08-26 | `cd02dbb57` | Add a fail-closed, operation-free proposition-reconciliation transaction with mutation controls and explicit zero autonomous credit. |
