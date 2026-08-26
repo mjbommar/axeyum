@@ -140,7 +140,10 @@ def measure(
     population_path: Path | None = None,
     must_decline_path: Path | None = None,
     ranking_path: Path | None = None,
+    transport_native_candidates: bool = False,
 ) -> dict[str, Any]:
+    if transport_native_candidates and ranking_path is None:
+        raise ValueError("native candidate transport requires --ranking")
     population_bytes = population_path.read_bytes() if population_path else None
     if mapping_path is None:
         if population_bytes is None:
@@ -241,13 +244,60 @@ def measure(
         row["candidate_declarations"] = list(candidate_names)
         try:
             imported = producers.import_candidate_statement_ndjson(
-                data, None, target_definition, list(candidate_names)
+                data,
+                None,
+                target_definition,
+                list(CANDIDATES if transport_native_candidates else candidate_names),
             )
             kernel = imported.kernel()
+            if transport_native_candidates:
+                executable_candidates = []
+                transport_outcomes = []
+                for candidate_name in candidate_names:
+                    if kernel.get_declaration(candidate_name) is not None:
+                        executable_candidates.append(
+                            kernel.name(candidate_name, must_exist=True)
+                        )
+                        transport_outcomes.append(
+                            {
+                                "candidate_declaration": candidate_name,
+                                "result": "capsule-existing",
+                            }
+                        )
+                        continue
+                    try:
+                        transported = producers.transport_native_candidate(
+                            imported, candidate_name
+                        )
+                        executable_candidates.append(transported.candidate)
+                        transport_outcomes.append(
+                            {
+                                "candidate_declaration": candidate_name,
+                                "result": transported.disposition,
+                                "source_closure_size": transported.source_closure_size,
+                                "added_theorems": transported.added_theorems,
+                                "added_definitions": transported.added_definitions,
+                                "receipt_sha256": transported.receipt_sha256,
+                            }
+                        )
+                    except producers.CandidateTransportError as error:
+                        transport_outcomes.append(
+                            {
+                                "candidate_declaration": candidate_name,
+                                "result": "transport-declined",
+                                "reason_kind": error.variant,
+                                "debug": error.debug,
+                            }
+                        )
+                row["candidate_transport"] = transport_outcomes
+            else:
+                executable_candidates = [
+                    kernel.name(name, must_exist=True) for name in candidate_names
+                ]
             candidate = producers.propose_bounded_application(
                 kernel,
                 imported.goal(),
-                [kernel.name(name, must_exist=True) for name in candidate_names],
+                executable_candidates,
             )
             admitted = kernel.name("Axeyum.OpenCensus.Verified", must_exist=False)
             kernel.add_declaration(
@@ -283,9 +333,24 @@ def measure(
     result_class_counts = Counter(
         (row["result"], row["evaluation_class"]) for row in outcomes
     )
+    transport_counts = Counter(
+        transport["result"]
+        for row in outcomes
+        for transport in row.get("candidate_transport", [])
+    )
+    transport_decline_reasons = Counter(
+        transport["reason_kind"]
+        for row in outcomes
+        for transport in row.get("candidate_transport", [])
+        if transport["result"] == "transport-declined"
+    )
     result = {
-        "schema_version": 2,
-        "kind": "axeyum-open-fixed-palette-census",
+        "schema_version": 3 if transport_native_candidates else 2,
+        "kind": (
+            "axeyum-open-ranked-transport-application-census"
+            if transport_native_candidates
+            else "axeyum-open-fixed-palette-census"
+        ),
         "state": "train-development-measurement-held-out-excluded",
         "authority": "measurement only; no operation registration or fact admission",
         "supersedes": "the initial 80-row exploratory run, which improperly executed the grammar on 23 held-out targets; it found no proof and read no source proof body, but its held-out outcomes are contaminated and carry no evaluation credit",
@@ -307,10 +372,12 @@ def measure(
             "candidate_declarations": (
                 None if ranking_path is not None else list(CANDIDATES)
             ),
+            "native_candidate_transport": transport_native_candidates,
             "forbidden_inputs": [
                 "target theorem proof",
-                "per-target candidate selection",
-                "name or statement similarity",
+                "held-out goal identities or statements",
+                "per-target hand-authored candidate selection",
+                "candidate theorem proof bodies during retrieval",
                 "transitive declaration closure as search candidates",
             ],
         },
@@ -333,10 +400,18 @@ def measure(
                 }
                 for result in ("accepted", "declined", "import_rejected")
             },
+            "candidate_transport": {
+                "outcomes": dict(sorted(transport_counts.items())),
+                "decline_reasons": dict(sorted(transport_decline_reasons.items())),
+            },
         },
         "excluded_held_out_fact_ids": excluded_held_out,
         "outcomes": outcomes,
-        "limitations": "One fixed elementary palette is a negative baseline, not a general producer evaluation. Held-out rows are excluded before capsule access. Import rejections measure statement-boundary incompatibility, not solver inability or proposition falsehood.",
+        "limitations": (
+            "Ranked native theorem transport makes retrieved premises executable but does not enlarge the bounded application grammar. Held-out rows are excluded before capsule access. Import and transport rejections measure compatibility boundaries, not proposition falsehood."
+            if transport_native_candidates
+            else "One fixed elementary palette is a negative baseline, not a general producer evaluation. Held-out rows are excluded before capsule access. Import rejections measure statement-boundary incompatibility, not solver inability or proposition falsehood."
+        ),
     }
     if population_source is not None:
         result["source"]["population_filter"] = population_source
@@ -362,6 +437,11 @@ def main() -> int:
         help="optional held-out-safe per-goal candidate ranking",
     )
     parser.add_argument(
+        "--transport-native-candidates",
+        action="store_true",
+        help="compose each ranked native theorem independently into the imported goal kernel",
+    )
+    parser.add_argument(
         "--must-decline-population",
         type=Path,
         help="optional independently checked false-control population",
@@ -378,6 +458,7 @@ def main() -> int:
             args.population,
             args.must_decline_population,
             args.ranking,
+            args.transport_native_candidates,
         ),
         indent=2,
         sort_keys=True,

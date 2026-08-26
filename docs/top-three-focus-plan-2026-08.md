@@ -292,9 +292,12 @@ available in the imported kernel: five newly composed and three validated as
 already present. Four declined transport with typed errors. Bounded application
 still found no proof. This is useful separation: executable premise transport
 now works for a real imported goal, while retrieval precision and proof grammar
-remain measured bottlenecks. Next, expose this exact boundary through Python,
-classify every candidate independently across the 51-goal population, and only
-then decide whether to extend retrieval or the application grammar.
+remain measured bottlenecks. The Python/full-population follow-up confirms the
+boundary: 158 candidates were newly composed, 52 were already present, and 78
+declined admission across the 24 importable goals. All 210 executable premises
+reached bounded application, which still returned `NoTypedApplication` on all
+24. Next priority is therefore the application grammar, with the 78 admission
+failures retained as a separate compatibility backlog.
 
 ### Exit evidence
 
