@@ -2184,48 +2184,51 @@ fn sqrt_bracket_pieces(
     (q, u, u_sq, u1, u1_sq, s, lower, upper)
 }
 
+/// The shared per-direction squeeze behind both [`cross_one_sided_bound`]
+/// (the `Equiv`-hypothesis case, `sqrt_congr`) and
+/// [`cross_one_sided_bound_of_le`] (the `le`-hypothesis case,
+/// `sqrt_le_sqrt`): given a proof `reg_upper : Rat.le (sample a_real j -
+/// sample b_real j) dd2j` at the shared deep index `j := (k+1)^2` — however
+/// the caller derived it — returns
+///
 /// `Rat.le (Rat.sub (sqrtApprox a k) (sqrtApprox b k))
 ///         (Rat.add (natDivSucc 1 k) (Rat.add (natDivSucc 1 k) (natDivSucc 1 k)))`
 ///
-/// The cross-real analogue of [`one_sided_bound`]: `a`/`b` are sampled at the
-/// SAME index `k`, and the "how far apart are the two clamped samples"
-/// step — `one_sided_bound`'s own `x`-regularity-between-two-indices call —
-/// is replaced by `hab : Equiv a b` instantiated at the one shared deep index
-/// `j := (k+1)^2`. Everything downstream (the `sum_sq_le_sq_sum` squeeze,
-/// `rat_sq_le`, [`succ_over_index_eq`]) is the identical argument at
-/// `a_idx = b_idx = k`.
+/// The two callers differ ONLY in how `reg_upper` is obtained: `Equiv a b`
+/// needs `halves` to extract the upper side of a two-sided `Within`
+/// estimate; `le a b := ∀ n, Rat.le (seq a n - seq b n) (2/(n+1))` already
+/// has the exact shape at `n := j`, so `reg_upper` is a bare application
+/// with nothing to extract. Everything downstream (the `sub_max_le` clamp
+/// step, the `sum_sq_le_sq_sum` squeeze, `rat_sq_le`,
+/// [`succ_over_index_eq`]) is identical either way.
 #[allow(clippy::too_many_lines)]
-fn cross_one_sided_bound(
+#[allow(clippy::too_many_arguments)]
+fn cross_one_sided_bound_core(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     a_real: ExprId,
     b_real: ExprId,
-    hab: ExprId,
     k: ExprId,
+    dd: ExprId,
+    pos: ExprId,
+    j: ExprId,
+    j_pos: ExprId,
+    dd2j: ExprId,
+    reg_upper: ExprId,
 ) -> ExprId {
     let rat = p.rat;
-    let nat = p.rat.int.nat;
-    let one_nat_lit = d.num(1);
-    let two_nat_lit = d.num(2);
-
-    let dd = d.succ(k);
-    let pos = one_le_succ(d, k);
-    let j = NatOps::mul(d, dd, dd);
-    let j_pos = d.lemma(nat.one_le_mul, &[dd, dd, pos, pos]);
 
     let (q_a, u_a, u_a_sq, _u_a1, _u_a1_sq, _s_a, lower_a, _upper_a) =
         sqrt_bracket_pieces(d, p, a_real, k, dd, pos, j, j_pos);
     let (q_b, u_b, _u_b_sq, u_b1, u_b1_sq, s_b, _lower_b, upper_b) =
         sqrt_bracket_pieces(d, p, b_real, k, dd, pos, j, j_pos);
 
-    // --- delta := q_a - q_b <= natDivSucc 2 j, via `Equiv a b` at `j`. ---
-    let dd2j = div_succ(d, p, 2, j);
-    let hab_at_j = d.apply(hab, &[j]);
-    // hab_at_j : Within (sample a_real j - sample b_real j) dd2j
+    let one_nat_lit = d.num(1);
+    let two_nat_lit = d.num(2);
+
+    // --- delta := q_a - q_b <= natDivSucc 2 j, via `reg_upper` at `j`. ---
     let sample_aj = sample(d, p, a_real, j);
     let sample_bj = sample(d, p, b_real, j);
-    let sample_diff = rsub(d, rat, sample_aj, sample_bj);
-    let (_reg_lower, reg_upper) = halves(d, p, sample_diff, dd2j, hab_at_j);
     // reg_upper : sample a_real j - sample b_real j <= dd2j
 
     let zero_rat = rzero(d, rat);
@@ -2367,6 +2370,72 @@ fn cross_one_sided_bound(
     // : u_a - u_b <= d1 + (d1+d1)
 }
 
+/// `Rat.le (Rat.sub (sqrtApprox a k) (sqrtApprox b k))
+///         (Rat.add (natDivSucc 1 k) (Rat.add (natDivSucc 1 k) (natDivSucc 1 k)))`,
+/// from `hab : Equiv a b`.
+///
+/// The cross-real analogue of [`one_sided_bound`]: `a`/`b` are sampled at the
+/// SAME index `k`, and the "how far apart are the two clamped samples" step
+/// — `one_sided_bound`'s own `x`-regularity-between-two-indices call — is
+/// replaced by `hab` instantiated at the one shared deep index `j :=
+/// (k+1)^2`, with `halves` extracting the upper side of the resulting
+/// `Within`. Everything else is [`cross_one_sided_bound_core`].
+fn cross_one_sided_bound(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a_real: ExprId,
+    b_real: ExprId,
+    hab: ExprId,
+    k: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let nat = p.rat.int.nat;
+
+    let dd = d.succ(k);
+    let pos = one_le_succ(d, k);
+    let j = NatOps::mul(d, dd, dd);
+    let j_pos = d.lemma(nat.one_le_mul, &[dd, dd, pos, pos]);
+
+    let dd2j = div_succ(d, p, 2, j);
+    let hab_at_j = d.apply(hab, &[j]);
+    // hab_at_j : Within (sample a_real j - sample b_real j) dd2j
+    let sample_aj = sample(d, p, a_real, j);
+    let sample_bj = sample(d, p, b_real, j);
+    let sample_diff = rsub(d, rat, sample_aj, sample_bj);
+    let (_reg_lower, reg_upper) = halves(d, p, sample_diff, dd2j, hab_at_j);
+    // reg_upper : sample a_real j - sample b_real j <= dd2j
+
+    cross_one_sided_bound_core(d, p, a_real, b_real, k, dd, pos, j, j_pos, dd2j, reg_upper)
+}
+
+/// The `le`-hypothesis analogue of [`cross_one_sided_bound`], for
+/// `sqrt_le_sqrt`: from `hle : le a b` (`:= ∀ n, Rat.le (seq a n − seq b n)
+/// (2/(n+1))`), instantiating at the shared deep index `j` already IS
+/// `reg_upper` — no `halves` extraction needed, since `le` is one-sided by
+/// definition. Everything else is [`cross_one_sided_bound_core`], identical
+/// to the `Equiv` case.
+fn cross_one_sided_bound_of_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a_real: ExprId,
+    b_real: ExprId,
+    hle: ExprId,
+    k: ExprId,
+) -> ExprId {
+    let nat = p.rat.int.nat;
+
+    let dd = d.succ(k);
+    let pos = one_le_succ(d, k);
+    let j = NatOps::mul(d, dd, dd);
+    let j_pos = d.lemma(nat.one_le_mul, &[dd, dd, pos, pos]);
+
+    let dd2j = div_succ(d, p, 2, j);
+    let reg_upper = d.apply(hle, &[j]);
+    // reg_upper : sample a_real j - sample b_real j <= dd2j
+
+    cross_one_sided_bound_core(d, p, a_real, b_real, k, dd, pos, j, j_pos, dd2j, reg_upper)
+}
+
 /// `CReal.sqrt_congr : ∀ x y, Equiv x y → Equiv (sqrt x) (sqrt y)`.
 ///
 /// At index `n`, `CReal.seq (sqrt x) n` reduces — through `CReal.mk`'s
@@ -2505,6 +2574,136 @@ pub(super) fn declare_sqrt_congr(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.sqrt_congr,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.sqrt_le_sqrt : ∀ x y, le x y → le (sqrt x) (sqrt y)`.
+///
+/// **Total, no `0 ≤ x` hypothesis** — `le x y` alone suffices, for the same
+/// reason `sqrt`/`sqrt_congr` need none: `sqrtApprox` clamps every sample to
+/// `Rat.max _ 0` before comparing, and `Rat.sub_max_le` (used inside
+/// [`cross_one_sided_bound_core`]) relates the two clamped samples from the
+/// RAW samples' one-sided difference alone — it never needs to know either
+/// raw sample's own sign, only that `q_a - q_b <= bound` follows from `a - b
+/// <= bound` (with `bound >= 0`) regardless of whether `a` or `b` is
+/// negative. This is exactly the fact that made `sqrt` itself total in the
+/// first place, reused one level up.
+///
+/// The proof is the forward-only, `Rat.le`-only HALF of [`declare_sqrt_congr`]'s
+/// argument: at index `n`, `CReal.seq (sqrt x) n`/`CReal.seq (sqrt y) n`
+/// reduce to `sqrtApprox x m`/`sqrtApprox y m` (`m := mul_index 1 n`) exactly
+/// as there, so the goal is a single [`cross_one_sided_bound_of_le`] claim at
+/// `m`, widened from `natDivSucc 1 m + natDivSucc 2 m` up to the declared
+/// `natDivSucc 2 n` via the identical `index_le`/`double_div_succ_eq`/
+/// `nat_div_succ_scale` steps `declare_sqrt_congr` uses for its own forward
+/// direction. No `Equiv.symm`/backward direction and no `And.intro`/
+/// `neg_le_neg` combination step are needed, since `le`'s conclusion is
+/// already one-sided.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+#[allow(clippy::too_many_lines)]
+pub(super) fn declare_sqrt_le_sqrt(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let carrier = creal_ty(d, p);
+    let nat_ty = d.nat_ty();
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let one_nat_lit = d.num(1);
+    let m = mul_index(d, one_nat_lit, n);
+
+    let forward = cross_one_sided_bound_of_le(d, p, x, y, h, m);
+    // forward : sqrtApprox x m - sqrtApprox y m <= d1 + (d1+d1)   [d1 := natDivSucc 1 m]
+
+    let d1 = div_succ(d, p, 1, m);
+    let e = radd(d, d1, d1);
+
+    let u_x = {
+        let f = d.const_app(p.sqrt_approx, &[x]);
+        d.apply(f, &[m])
+    };
+    let u_y = {
+        let f = d.const_app(p.sqrt_approx, &[y]);
+        d.apply(f, &[m])
+    };
+    let diff = rsub(d, rat, u_x, u_y);
+
+    // --- widen `d1 + e` up to `natDivSucc 2 n`, identically to
+    // `declare_sqrt_congr`'s forward-direction widening. ---
+    let d1n = div_succ(d, p, 1, n);
+    let dd2n = div_succ(d, p, 2, n);
+    let dd2m = div_succ(d, p, 2, m);
+
+    let eq_e_dd2m = double_div_succ_eq(d, p, m);
+    // eq_e_dd2m : Eq(d1+d1, dd2m)   [e = d1+d1]
+    let scale = d.lemma(rat.nat_div_succ_scale, &[one_nat_lit, n]);
+    // scale : Eq(dd2m, d1n)
+    let (_, e_eq_d1n) = rchain(d, e, &[(dd2m, eq_e_dd2m), (d1n, scale)]);
+    // e_eq_d1n : Eq(e, d1n)
+
+    let raw_bound_rw = rat_eq_rewrite(d, e, d1n, e_eq_d1n, forward, &|d, t| {
+        let b = radd(d, d1, t);
+        rle(d, rat, diff, b)
+    });
+    // raw_bound_rw : diff <= d1+d1n
+
+    let order = {
+        let scaled_index_le = index_le(d, p, one_nat_lit, one_nat_lit, n);
+        // scaled_index_le : Rat.le (natDivSucc 1 (mul_index 1 n)) (natDivSucc 1 n)
+        //                 = Rat.le d1 d1n
+        let refl_d1n = d.lemma(rat.le_refl, &[d1n]);
+        let sum_le = d.lemma(
+            rat.add_le_add,
+            &[d1, d1n, d1n, d1n, scaled_index_le, refl_d1n],
+        );
+        // sum_le : d1+d1n <= d1n+d1n
+        let eq_dd2n = double_div_succ_eq(d, p, n);
+        // eq_dd2n : Eq(d1n+d1n, dd2n)
+        let d1n_plus_d1n = radd(d, d1n, d1n);
+        rat_eq_rewrite(d, d1n_plus_d1n, dd2n, eq_dd2n, sum_le, &|d, t| {
+            let lhs = radd(d, d1, d1n);
+            rle(d, rat, lhs, t)
+        })
+        // : d1+d1n <= dd2n
+    };
+
+    let d1_plus_d1n = radd(d, d1, d1n);
+    let within_final = d.lemma(
+        rat.le_trans,
+        &[diff, d1_plus_d1n, dd2n, raw_bound_rw, order],
+    );
+    // within_final : diff <= dd2n
+
+    let hyp_ty = d.const_app(p.le, &[x, y]);
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat_ty, within_final);
+        let with_h = d.lam_fv(h_fv, hyp_ty, over_n);
+        let with_y = d.lam_fv(y_fv, carrier, with_h);
+        d.lam_fv(x_fv, carrier, with_y)
+    };
+    let ty = {
+        let sqrt_x = d.const_app(p.sqrt, &[x]);
+        let sqrt_y = d.const_app(p.sqrt, &[y]);
+        let conclusion = d.const_app(p.le, &[sqrt_x, sqrt_y]);
+        let inner = d.arrow(hyp_ty, conclusion);
+        let with_y = d.pi_fv(y_fv, carrier, inner);
+        d.pi_fv(x_fv, carrier, with_y)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sqrt_le_sqrt,
         uparams: vec![],
         ty,
         value,

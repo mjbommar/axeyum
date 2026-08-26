@@ -1384,6 +1384,17 @@ pub struct CRealPrelude {
     /// to EXACTLY `Rat.zero` via `Rat.le_antisymm`, so `Within (u-0) bound`
     /// is trivial for any nonnegative bound. See `creal/sqrt.rs`.
     pub sqrt_zero: NameId,
+    /// `CReal.sqrt_le_sqrt : ∀ x y, le x y → le (sqrt x) (sqrt y)`.
+    ///
+    /// **Total, no `0 ≤ x` hypothesis** — `le x y` alone suffices. This is
+    /// the forward-only, `Rat.le`-only half of `sqrt_congr`'s argument:
+    /// `sqrt_congr` needs a two-sided `Equiv` estimate (built from `Within`,
+    /// hence needing both directions and `And.intro`); `le`'s one-sided
+    /// `∀ n, seq x n − seq y n ≤ 2/(n+1)` instantiates directly at the shared
+    /// deep index, with no `halves` extraction needed, and only the
+    /// "forward" cross-real squeeze is run once (no `Equiv.symm`/backward
+    /// direction, no negation to combine two halves). See `creal/sqrt.rs`.
+    pub sqrt_le_sqrt: NameId,
 
     // --- Bishop's speed-up combinator (creal/speedup.rs) ----------------------
     /// `CReal.KRegular : (Nat → Rat) → Nat → Prop` — Bishop regularity up to a
@@ -3376,6 +3387,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sqrt_congr: kernel.name_str(creal, "sqrt_congr"),
         sqrt_one: kernel.name_str(creal, "sqrt_one"),
         sqrt_zero: kernel.name_str(creal, "sqrt_zero"),
+        sqrt_le_sqrt: kernel.name_str(creal, "sqrt_le_sqrt"),
         k_regular_pred: kernel.name_str(creal, "KRegular"),
         speedup: kernel.name_str(creal, "speedup"),
         regular_of_kregular: kernel.name_str(creal, "regular_of_kregular"),
@@ -3645,6 +3657,11 @@ pub(crate) fn build_creal_prelude_uncached(
         // `sqrt_congr` needs `sqrt` itself (`declare_sqrt_ctor`, just above)
         // plus `sqrt_approx_sq_bracket`/`equiv_symm`, both already declared.
         sqrt::declare_sqrt_congr(&mut d, prelude)?;
+        // `sqrt_le_sqrt` needs `sqrt` (`declare_sqrt_ctor`, above),
+        // `sqrt_approx_sq_bracket`, and `CReal.le` (`declare_order`, far
+        // earlier); it does not depend on `sqrt_congr` but shares its
+        // per-index squeeze machinery, so it is placed right after it.
+        sqrt::declare_sqrt_le_sqrt(&mut d, prelude)?;
         // `sqrt_one` needs `sqrt`/`sqrt_approx_sq_bracket` (above) and
         // `rat_sq_le` (`mul_self_zero`, earlier) -- it does not depend on
         // `sqrt_congr` itself, but is placed right after it since both are

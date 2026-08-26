@@ -347,13 +347,21 @@ pub struct ComplexPrelude {
     /// this development reaches.
     ///
     /// **Not** the triangle inequality `‖z+w‖ ≤ ‖z‖+‖w‖` — that is stated on
-    /// the UN-squared norm. `CReal.sqrt`, [`Self::abs`], [`Self::abs_congr`]
-    /// and `CReal.sqrt_one` (hence [`Self::abs_one`]) all exist now, so the
-    /// statement is writable and `abs` is pinned at known values, but
-    /// proving the inequality still needs `CReal.sqrt` MONOTONE
-    /// (`x ≤ y → sqrt x ≤ sqrt y`) — not built in `creal/sqrt.rs` yet — to
-    /// carry this squared bound back across the square root; congruence and
-    /// a known value are not enough on their own. `normSq_add` (this
+    /// the UN-squared norm. `CReal.sqrt`, [`Self::abs`], [`Self::abs_congr`],
+    /// `CReal.sqrt_one` (hence [`Self::abs_one`]) and now `CReal.sqrt_le_sqrt`
+    /// (`x ≤ y → sqrt x ≤ sqrt y`, landed in `creal/sqrt.rs`) all exist, so
+    /// `‖z+w‖ ≤ sqrt(2‖z‖²+2‖w‖²)` is provable from this lemma by
+    /// monotonicity alone. Turning THAT into the classical `‖z+w‖ ≤
+    /// ‖z‖+‖w‖` needs one more fact monotonicity does not supply:
+    /// `CReal.sqrt_sq`/`sq_sqrt` (`sqrt (x*x) ~ x` for `0 ≤ x`, or an
+    /// equivalent), to cancel the square on the target side — monotonicity
+    /// alone only ever produces a bound of the shape `sqrt(something)`, never
+    /// removes a `sqrt` that is already there. `creal/sqrt.rs`'s own module
+    /// doc names `sq_sqrt`/`sqrt_sq` as comparably sized to the whole
+    /// `sqrtApproxKRegular` climb (it goes through `CReal.mul`'s own
+    /// sampling, needing a canonical bound on `sqrt x` itself) and NOT
+    /// attempted there; that is what still stands between this lemma and the
+    /// unsquared triangle inequality, not monotonicity. `normSq_add` (this
     /// module) is the parallelogram law, not subadditivity — it is an
     /// EQUALITY mentioning `normSq (add z (neg w))` as well as `normSq (add z
     /// w)`, and it is [`Self::norm_sq_nonneg`] applied to that SECOND term
@@ -1116,14 +1124,18 @@ pub struct ComplexPrelude {
     /// this module already uses, not a sharper bound derived specially for
     /// this identity. The unsquared metric Ptolemy inequality
     /// (`|AC|·|BD| ≤ |AB|·|CD| + |BC|·|AD|`, on moduli) needed `CReal.sqrt`,
-    /// [`Self::abs`], [`Self::abs_congr`] (`sqrt` respecting `Equiv`) — all
-    /// of which now exist — but not yet `CReal.sqrt` MONOTONE in `≤`, which
-    /// `creal/sqrt.rs` still does not build. That single remaining fact is
-    /// what stands between this squared bound and the unsquared inequality:
-    /// monotonicity turns `‖L‖² ≤ 2‖X‖² + 2‖Y‖²` into `‖L‖ ≤ sqrt(2‖X‖² +
-    /// 2‖Y‖²)`, and combining THAT with the sharp squared form above (which
-    /// itself needs `abs`'s multiplicativity, also not built) is the
-    /// remaining climb to the classical statement.
+    /// [`Self::abs`], [`Self::abs_congr`] (`sqrt` respecting `Equiv`), and
+    /// `CReal.sqrt_le_sqrt` (`x ≤ y → sqrt x ≤ sqrt y`) — all of which now
+    /// exist, so `‖L‖ ≤ sqrt(2‖X‖² + 2‖Y‖²)` is provable outright from this
+    /// lemma by monotonicity. What still stands between THAT and the
+    /// unsquared inequality is `CReal.sqrt_sq`/`sq_sqrt` (`sqrt (x*x) ~ x`
+    /// for `0 ≤ x`), needed to cancel a square that monotonicity alone never
+    /// removes — see [`Self::norm_sq_add_le`]'s own doc for the identical gap
+    /// on the simpler triangle-inequality case. `creal/sqrt.rs`'s own module
+    /// doc names that fact as NOT built and comparably sized to the whole
+    /// `sqrtApproxKRegular` climb. Combining it with the sharp squared form
+    /// above (which itself needs `abs`'s multiplicativity, also not built)
+    /// is the remaining climb to the classical statement.
     pub ptolemy_inequality_sq: NameId,
 
     /// `Complex.abs : Complex → CReal := fun z => CReal.sqrt (normSq z)` —
@@ -1132,17 +1144,23 @@ pub struct ComplexPrelude {
     /// inspects `normSq z`'s sign, even though [`Self::norm_sq_nonneg`]
     /// already gives it for free.
     ///
-    /// **Congruence and the known value at `one` are now proved**
-    /// ([`Self::abs_congr`], [`Self::abs_one`]) — `CReal.sqrt_congr` and
-    /// `CReal.sqrt_one` landed in `creal/sqrt.rs`, closing exactly the two
-    /// facts this doc used to name as missing. **Monotonicity is still
-    /// open**: `CReal.sqrt` respecting `≤` (`x ≤ y → sqrt x ≤ sqrt y`) is
-    /// not built in `creal/sqrt.rs`, and neither is `sq_sqrt`/`sqrt_sq`
-    /// (relating `sqrt x` back to `x` by squaring) — both real-analysis-sized
-    /// gaps, and both needed for the triangle inequality
-    /// ([`Self::norm_sq_add_le`]'s own doc) and the unsquared Ptolemy
-    /// inequality ([`Self::ptolemy_inequality_sq`]'s own doc). Building
-    /// either means editing `creal/sqrt.rs`, which this module does not own.
+    /// **Congruence, the known value at `one`, and monotonicity are now
+    /// proved** ([`Self::abs_congr`], [`Self::abs_one`]) — `CReal.sqrt_congr`,
+    /// `CReal.sqrt_one`, and `CReal.sqrt_le_sqrt` (`x ≤ y → sqrt x ≤ sqrt y`,
+    /// total, no `0 ≤ x` hypothesis) all landed in `creal/sqrt.rs`, closing
+    /// every fact this doc used to name as missing except one. **`sq_sqrt`/
+    /// `sqrt_sq` (relating `sqrt x` back to `x` by squaring, e.g. `sqrt
+    /// (x*x) ~ x` for `0 ≤ x`) is still open** — a real-analysis-sized gap on
+    /// its own (`creal/sqrt.rs`'s own module doc: it goes through
+    /// `CReal.mul`'s own sampling, needing a canonical bound on `sqrt x`
+    /// itself, and is comparably sized to the whole `sqrtApproxKRegular`
+    /// climb) — and it, not monotonicity, is what still blocks the triangle
+    /// inequality ([`Self::norm_sq_add_le`]'s own doc) and the unsquared
+    /// Ptolemy inequality ([`Self::ptolemy_inequality_sq`]'s own doc):
+    /// monotonicity alone only ever produces a bound of the shape
+    /// `sqrt(something)`, and cancelling a square it did NOT introduce needs
+    /// `sq_sqrt`/`sqrt_sq` instead. Building it means editing
+    /// `creal/sqrt.rs`, which this module does not own.
     ///
     /// [`Self::abs_nonneg`] needed none of this: it is a single-index sign
     /// fact about `sqrtApprox`'s own construction (a `Nat` square root, cast
