@@ -167,6 +167,7 @@ now. Nothing was deleted.
 | 2026-08-26 | `ba3f4acdd` | Expose native transport through Python and measure 210 executable ranked premises reaching 0/24 bounded-application conversion. |
 | 2026-08-26 | `2c86c0604` | Preserve ranked premise order through bounded search; the full census reproduces unchanged, ruling out alphabetical budget starvation as the active limiter. |
 | 2026-08-26 | `b852c4e89` | Compose graph-retrieved equalities through bounded induction and convert the first immutable open-population target axiom-free with zero false-control accepts. |
+| 2026-08-26 | `bdfe77340` | One `DEEP_STACK_BYTES` (256 MiB) and one `on_a_deep_stack` replace seven verbatim copies at three unexplained sizes. `examples/kernel_stack_envelope` builds one prelude on an exact stack and answers with its exit status (0/134/2), refusing to run with the prelude cache on because a cache hit type-checks nothing and would report a requirement of ~0. `scripts/check-kernel-stack-envelope.sh` pins the table and halves every budget until the probe FAILS, so a green run has demonstrated it can go red. Six controls; each of the five guards mutation-verified to kill exactly one. |
 | 2026-08-25 | `beb27f1ba` | **The trusted-core ceiling, raised the way the gate demanded.** Guard C failed at 5,508 past 5,500 with "say why before raising it." The baseline was RE-DERIVED by `git archive` rather than trusted, giving a per-file table summing to exactly +379 (`tc.rs` +347, `inductive.rs` +30, `env.rs` +2). Verdict: real and necessary — a universe-parameter closure fixing declarations **official Lean 4.30.0 refuses but this kernel wrongly admitted**, and `whnf_core` memoisation (138× cost, 1,857 s → 13.4 s) inside `def_eq`. Ceiling 5,900 with headroom matching the original's character; guard C re-verified to fire by injecting 500 lines in a scratch copy. The file's own comment said "5,110" where the real baseline was 5,129 — wrong from day one. |
 | 2026-08-25 | `0f2fb5fcd` | A doc line beginning with `+` is a Markdown list bullet, so ten `doc_list_item` errors pointed at ordinary prose one line below the cause. |
 | 2026-08-25 | `6de1d88f8` | Salvage: **the irrationality of √2** (`Nat.no_rational_sqrt_two`) and **`CReal.geom_tail_within`**, committed on behalf of two lanes killed mid-run by a spend limit. Both verified here: 695 tests, clippy `--all-targets`, axiom-free. |
@@ -1827,6 +1828,60 @@ formally verified DRCP route, so no technique novelty is claimed. A full `abz7@6
 is live on `/data0`; only completion plus both checks can establish the lower bound. A
 deterministic makespan-678 schedule has independently replayed and now warms a sustained
 six-hour CP-SAT search for the still-missing 656 witness.
+
+**The kernel's stack requirement is now a measured, pinned, gated number, and
+the numbers say the margin was zero** (`WIP`, kernel-envelope, 2026-08-26).
+
+The trigger was `CReal.e` making
+`every_creal_declaration_is_checked_and_axiom_free` — the single test behind
+this project's axiom-freedom claim — SIGABRT instead of run. Exit 134 is
+indistinguishable from a broken tool or an absent declaration, and this
+repository has read it as both.
+
+Bisected the real requirement (`scripts/check-kernel-stack-envelope.sh
+--measure`): the smallest power-of-two thread stack on which each prelude
+build completes.
+
+| prelude | debug | release | ratio |
+|---|---:|---:|---:|
+| `cpoint` | **33,554,432** | 1,048,576 | 32× |
+| `complex` | 4,194,304 | 262,144 | 16× |
+| `creal` | **2,097,152** | 131,072 | 16× |
+| `rat` | 1,048,576 | 131,072 | 8× |
+
+`creal` in debug needs **exactly** the 2 MiB default a spawned thread gets,
+which is what a `#[test]` runs on — there was never any margin, and one deep
+declaration was always going to end it. `cpoint` needs 32 MiB, so the five
+sites using a 64 MiB `on_a_deep_stack` copy had **2×** headroom, not the
+comfortable margin the number looks like.
+
+**The recursion-depth limit that was proposed is the wrong instrument, and the
+measurements are why** (ADR-0581). Debug frames cost up to 32× release frames
+at *identical* depth, so one constant cannot serve both profiles; the two deep
+recursions cost ~2,250 B and ~576 B per frame, so depth does not predict stack;
+and only `infer_core`/`check_core` return `Result` — `whnf_core`,
+`def_eq_core_uncached`, `instantiate_aux` and `abstract_aux` cannot report one.
+Lean 4.30's own kernel uses a **stack-pointer probe** with a 128 KiB margin
+throwing a catchable `stack_space_exception`; the depth counter arrived only in
+4.34, as a supplement. That design is deferred with its open questions written
+down, not rejected.
+
+**Method note worth more than the numbers.** The first measurement instrumented
+`infer_core`, `whnf_core`, `def_eq_core_uncached` and `instantiate_aux` with a
+stack-pointer probe and reported a `cpoint` peak of 1,681,616 B — **12× too
+small**, and I nearly set the shared constant from it. A probe sees only the
+frames it is installed in, and the deepest recursion of a run need not pass
+through any of them (`Kernel::abstract_aux` recurses over the term and was not
+instrumented). The subprocess bisection measures the process instead of a
+chosen subset of it.
+
+**Next.** (a) `creal/creal_tests.rs` still carries a private 1 GiB helper and a
+doc comment blaming `axiom_footprint`, which is an explicit worklist and cannot
+recurse — another lane owns that file. (b) `creal/integral.rs`'s
+concrete-instantiation tests are the workload that set the 256 MiB constant and
+the only one still unmeasured; they need their own probe mode. (c) The deferred
+headroom probe, if a caller ever needs to survive exhaustion rather than gate
+against it.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
