@@ -42,7 +42,11 @@ rejections, and zero held-out access. The import rejections split across
 `dif_pos` (11), `Quot` (9), `Eq.subst` (3), `Nat.mod_lt` (3), and `propext`
 (1). Thus the honest producer boundary has two denominators: 27 goals are
 blocked before search, while 24 reach the fixed grammar and expose its lack of
-a typed application.
+a typed application. The independently recomputed mutation-control population
+further splits those rows: 20 importable positive targets and four importable
+must-decline controls; 25 import-rejected positive targets and two rejected
+controls. A producer must improve the first count while keeping acceptance of
+all six controls at zero.
 
 ## What is checked
 

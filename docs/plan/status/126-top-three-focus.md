@@ -173,6 +173,11 @@ is 0 accepted, 24 `NoTypedApplication` declines, 27 statement-import
 rejections, and zero held-out access. Future changes must report the import and
 search denominators separately; retrieval work cannot affect the 27 rejected
 closures, and import work alone cannot affect the 24 grammar declines.
+The must-decline gate exposed and now independently refutes a tenth visible
+mutation (`Nat.choose_self = 0` at `n = 0`). The clean census therefore contains
+45 positive targets and six false controls: 20/4 in the importable population
+and 25/2 in the import-rejected population. Control acceptance is a soundness
+failure, never production credit.
 The accepted ADR-0541 general SMT-LIB session driver is now also a named
 `axeyum` binary target, not only a discoverability-poor Cargo example. The same
 source remains the historical example control, and the binary's focused check,

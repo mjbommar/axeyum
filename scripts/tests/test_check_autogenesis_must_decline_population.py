@@ -149,8 +149,8 @@ class MustDeclinePopulationTests(unittest.TestCase):
         # A drop would mean a mutation row silently left the population; a
         # rise means a new one was added without extending the ground truth
         # (which would already fail via the set-mismatch guard).
-        self.assertIn("must_decline=9", out)
-        self.assertIn("ground_truth_verified=9", out)
+        self.assertIn("must_decline=10", out)
+        self.assertIn("ground_truth_verified=10", out)
 
     # --- guard: every input file must exist -------------------------------
     def test_a_missing_nursery_is_an_error(self) -> None:
@@ -379,7 +379,7 @@ class MustDeclineLedgerGuardTests(unittest.TestCase):
             e["fact_id"]
             for e in json.loads(guard.GROUND_TRUTH.read_text())["entries"]
         }
-        self.assertEqual(len(ids), 9)
+        self.assertEqual(len(ids), 10)
         self.assertEqual(guard.scan_ledger(ids, guard.FACTS), [])
 
 

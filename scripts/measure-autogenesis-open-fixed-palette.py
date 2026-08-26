@@ -107,6 +107,7 @@ def measure(
     mapping_path: Path | None,
     capsule_directory: Path,
     population_path: Path | None = None,
+    must_decline_path: Path | None = None,
 ) -> dict[str, Any]:
     population_bytes = population_path.read_bytes() if population_path else None
     if mapping_path is None:
@@ -146,6 +147,24 @@ def measure(
             "path": str(population_path),
             "sha256": digest(population_bytes),
         }
+    must_decline_ids: set[str] = set()
+    must_decline_source = None
+    if must_decline_path is not None:
+        must_decline_bytes = must_decline_path.read_bytes()
+        must_decline = json.loads(must_decline_bytes)
+        entries = must_decline.get("entries")
+        if not isinstance(entries, list):
+            raise ValueError("must-decline population must contain an entries array")
+        for entry in entries:
+            if not isinstance(entry, dict) or not isinstance(entry.get("fact_id"), str):
+                raise ValueError("every must-decline entry must name a string fact_id")
+            if entry["fact_id"] in must_decline_ids:
+                raise ValueError("must-decline population contains duplicate fact_id rows")
+            must_decline_ids.add(entry["fact_id"])
+        must_decline_source = {
+            "path": str(must_decline_path),
+            "sha256": digest(must_decline_bytes),
+        }
     outcomes = []
     for fact_id, target_definition in sorted(mapping.items()):
         path = capsule_path(capsule_directory, fact_id)
@@ -155,6 +174,11 @@ def measure(
             "target_definition": target_definition,
             "capsule_bytes": len(data),
             "capsule_sha256": digest(data),
+            "evaluation_class": (
+                "must-decline-control"
+                if fact_id in must_decline_ids
+                else "positive-target"
+            ),
         }
         try:
             imported = producers.import_candidate_statement_ndjson(
@@ -202,6 +226,10 @@ def measure(
         for row in outcomes
         if row["result"] == "import_rejected"
     )
+    class_counts = Counter(row["evaluation_class"] for row in outcomes)
+    result_class_counts = Counter(
+        (row["result"], row["evaluation_class"]) for row in outcomes
+    )
     result = {
         "schema_version": 2,
         "kind": "axeyum-open-fixed-palette-census",
@@ -238,6 +266,14 @@ def measure(
             ),
             "decline_reasons": dict(sorted(decline_reasons.items())),
             "rejection_declarations": dict(sorted(rejection_declarations.items())),
+            "evaluation_classes": dict(sorted(class_counts.items())),
+            "result_by_evaluation_class": {
+                result: {
+                    classification: result_class_counts[(result, classification)]
+                    for classification in ("positive-target", "must-decline-control")
+                }
+                for result in ("accepted", "declined", "import_rejected")
+            },
         },
         "excluded_held_out_fact_ids": excluded_held_out,
         "outcomes": outcomes,
@@ -245,6 +281,8 @@ def measure(
     }
     if population_source is not None:
         result["source"]["population_filter"] = population_source
+    if must_decline_source is not None:
+        result["source"]["must_decline_population"] = must_decline_source
     return result
 
 
@@ -257,13 +295,23 @@ def main() -> int:
         type=Path,
         help="optional committed census whose outcomes define the exact fact subset",
     )
+    parser.add_argument(
+        "--must-decline-population",
+        type=Path,
+        help="optional independently checked false-control population",
+    )
     parser.add_argument("--output", type=Path, default=OUTPUT)
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
     if args.mapping is None and args.population is None:
         parser.error("one of --mapping or --population is required")
     rendered = json.dumps(
-        measure(args.mapping, args.capsule_directory, args.population),
+        measure(
+            args.mapping,
+            args.capsule_directory,
+            args.population,
+            args.must_decline_population,
+        ),
         indent=2,
         sort_keys=True,
     ) + "\n"
