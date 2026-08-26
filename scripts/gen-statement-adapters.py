@@ -34,15 +34,12 @@ def camel(fact_id: str) -> str:
 
 
 def has_top_level_arrow(stmt: str) -> bool:
-    """True if the statement carries an implication/iff that lean4export 3.1.0
-    cannot freeze.
+    """Classify implication/iff statements for legacy artifact reproduction.
 
-    Measured 2026-08-25 against lean4export 3.1.0 on Mathlib v4.30.0: a
-    proof-free ``def _ : Prop := ∀ vars, P → Q`` (or ``↔``) exits **1 with no
-    stderr and no output** -- the exporter silently declines any statement whose
-    body reaches an arrow, while arrow-free ``∀ vars, atom`` statements export
-    normally. This is a hard constraint on which facts the auto-export path can
-    reach today, so the generator can filter to what will actually freeze.
+    The 2026-08-25 experiment attributed an empty output file to arrow
+    semantics.  A 2026-08-26 stdout-streamed replay against the same Mathlib,
+    Lean and lean4export versions exported and proof-isolated three such goals.
+    Keep this syntactic classifier only because old censuses used it.
     """
     return ("→" in stmt) or ("->" in stmt) or ("↔" in stmt) or ("<->" in stmt)
 
@@ -57,7 +54,10 @@ def main(argv: list[str]) -> int:
     ap.add_argument(
         "--exportable-only",
         action="store_true",
-        help="skip statements with a top-level arrow/iff (lean4export 3.1.0 cannot freeze those)",
+        help=(
+            "legacy replay filter: skip arrow/iff statements as the 2026-08-25 "
+            "census did; arrows are now known to export when stdout is captured correctly"
+        ),
     )
     args = ap.parse_args(argv)
 
@@ -82,9 +82,12 @@ def main(argv: list[str]) -> int:
             continue
         arrow = has_top_level_arrow(stmt)
         if arrow and args.exportable_only:
-            print(f"GEN_ADAPTER|skip|{fid}|arrow-bearing (lean4export 3.1.0 cannot freeze)", file=sys.stderr)
+            print(f"GEN_ADAPTER|skip|{fid}|arrow-bearing (legacy replay filter)", file=sys.stderr)
             continue
-        print(f"GEN_ADAPTER|class|{fid}|{'arrow' if arrow else 'exportable'}", file=sys.stderr)
+        print(
+            f"GEN_ADAPTER|class|{fid}|{'arrow-exportable' if arrow else 'exportable'}",
+            file=sys.stderr,
+        )
         name = camel(fid)
         while name in names_seen:
             name = name + "X"
@@ -97,7 +100,9 @@ def main(argv: list[str]) -> int:
 
     pathlib.Path(args.out_lean).write_text("\n".join(lines) + "\n")
     pathlib.Path(args.out_map).write_text(json.dumps(mapping, indent=2, sort_keys=True) + "\n")
-    print(f"GEN_ADAPTER|module={args.module}|defs={len(mapping)}|lean={args.out_lean}|map={args.out_map}")
+    print(
+        f"GEN_ADAPTER|module={args.module}|defs={len(mapping)}|lean={args.out_lean}|map={args.out_map}"
+    )
     return 0
 
 

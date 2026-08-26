@@ -1,15 +1,15 @@
 {
   "census": {
     "by_partition": {
-      "development": 66,
+      "development": 63,
       "train": 38
     },
-    "candidate_facts": 94,
-    "evaluation_dependency_ready_facts": 104,
+    "candidate_facts": 91,
+    "evaluation_dependency_ready_facts": 101,
     "excluded_held_out_ready_facts": 22,
     "excluded_outside_evaluation_ready_facts": 9,
-    "global_dependency_ready_facts": 135,
-    "groups": 93,
+    "global_dependency_ready_facts": 132,
+    "groups": 90,
     "must_decline_controls": 10
   },
   "derivation": {
@@ -17,8 +17,8 @@
       "development",
       "train"
     ],
-    "frontier_sha256": "eaefa772f1d953af6c8c34fc3cf9e8c2617cc6f336f6a6e302724d66114cef51",
-    "ledger_sha256": "16b154e1d54562baea35e49f344e3e47819e8b1e14cd1107725ebb14099b7181",
+    "frontier_sha256": "553e8a0120a2019d642268da36f68e93eb77d54dd45b15de210c4dd574e832da",
+    "ledger_sha256": "ea04e7fc81b98241761e3cf1e337784866027fb58f9576dde9f063739afa0df5",
     "must_decline_controls_sha256": "70d52bb9517419f0caf24958fa7f596bf8486cb3e6f293b673dbe16c486871af",
     "nursery_sha256": "6d1f2551a612fdcadaf1c6b0096c4eebee304d9687157cb25505f785ee86daa8",
     "reviewed_fact_catalog_sha256": "4a6ac0c9ee34e7c6a09b596e501ba94be4b1d962cf9ed02c7f1ed4dece771117",
@@ -433,40 +433,10 @@
       "statement_shape": "unconditional-relation"
     },
     {
-      "dependency_component_id": "mathlib-v4.30.0-2bd246da70511653",
-      "fact_count": 1,
-      "fact_ids": [
-        "F:ml430-nat-modulus-modeq-zero-fd9af096"
-      ],
-      "family": "natural-modular-equivalence",
-      "partition": "development",
-      "statement_shape": "unconditional-relation"
-    },
-    {
-      "dependency_component_id": "mathlib-v4.30.0-6fc2be2d83334e77",
-      "fact_count": 1,
-      "fact_ids": [
-        "F:ml430-nat-add-modeq-left-e3b1fba9"
-      ],
-      "family": "natural-modular-equivalence",
-      "partition": "development",
-      "statement_shape": "unconditional-relation"
-    },
-    {
       "dependency_component_id": "mathlib-v4.30.0-ce4e3e890bcf8f1c",
       "fact_count": 1,
       "fact_ids": [
         "F:ml430-nat-mod-modeq-436e4c10"
-      ],
-      "family": "natural-modular-equivalence",
-      "partition": "development",
-      "statement_shape": "unconditional-relation"
-    },
-    {
-      "dependency_component_id": "mathlib-v4.30.0-d2b3ae01ee9a9ed0",
-      "fact_count": 1,
-      "fact_ids": [
-        "F:ml430-nat-add-modeq-right-e2f11f21"
       ],
       "family": "natural-modular-equivalence",
       "partition": "development",

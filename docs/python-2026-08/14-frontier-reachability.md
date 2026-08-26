@@ -53,13 +53,15 @@ compiled in one `lake env lean` call, and the arrow-free ones exported to valid
 ~320 KB NDJSON that `import_statement_ndjson` accepts into a proof-isolated
 kernel.
 
-**The tool cap:** lean4export 3.1.0 exits **1, silently (no stderr, no
-output)** on any statement whose body reaches a top-level `→` or `↔`, while
-arrow-free `∀ vars, atom` statements export normally. Of the 24 modeq facts, 10
-are arrow-free (exported) and 14 are arrow-bearing (refused). The generator's
-`--exportable-only` flag classifies and drops the arrow-bearing ones so its
-output matches what will actually freeze; the census counts 41 arrow-free
-open+ready facts, a ~20× expansion of the attemptable set once exported.
+**Correction, 2026-08-26:** this was not a tool cap. The empty-file experiment
+conflated s5 output/storage handling with exporter semantics. Streaming stdout
+off the host, with the exact same lean4export 3.1.0, Lean 4.30.0 and Mathlib
+commit, exported three implication-bearing binomial statements. All three then
+passed Axeyum's proof-isolated importer with zero axioms and zero exposed theorem
+proofs. The generator's `--exportable-only` flag remains solely to reproduce
+the older 41-row census; it must not be used as a current reachability filter.
+See the checked
+[`binomial arrow capability`](../../artifacts/autogenesis/binomial-arrow-export-capability-v1.json).
 
 ## Bottleneck 2 — provability (genuine research, not a gap)
 
@@ -95,6 +97,5 @@ flywheel work, tracked separately from reachability.
 2. A `ModEq`-unfolding producer extension to convert congruence goals to `Eq`
    and close them with a bounded lemma search — lifts *provable* past the refl
    family. Soundness-critical; needs its own soundness-negative tests.
-3. An arrow-capable export path (newer lean4export, or a different freezer) to
-   reach the 14 arrow-bearing modeq facts and the rest of the hypothesis-bearing
-   ledger.
+3. Batch and index the now-exportable arrow-bearing statements using streamed
+   output and hash-bound external packs; do not vendor the NDJSON into Git.

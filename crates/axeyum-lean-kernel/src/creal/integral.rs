@@ -8332,3 +8332,284 @@ pub(super) fn declare_riemann_sum_shared_accuracy_close(
         value,
     })
 }
+
+// --- `CReal.riemannSumTotalEpsLe` -- the closed-form magnitude lemma
+// `riemannSum_cauchy`'s own doc comment (and
+// `riemannSum_shared_accuracy_close`'s) name as the actual remaining gate on
+// `CReal.integral`: `riemannSum_cauchy`'s `total_eps` is an opaque CReal
+// SAMPLE until this turns it into a genuine `K/(e+1)`-shaped rational,
+// independent of `m` and needing no hypothesis on `a`/`b` at all. ----------
+
+/// `mul (ofNat (Nat.succ m)) (mul (embed (natDivSucc 1 e)) (mul width
+/// (embed (natDivSucc 1 m))))`, `width := width_of a b` --
+/// [`declare_riemann_sum_cauchy`]'s own internal `total_eps`, reconstructed
+/// EXTERNALLY term-for-term (same `width_of`/`delta_of`/`embed`/`cmul`
+/// recipe, in the same order) so the two are the SAME `ExprId`, not merely
+/// defeq -- the same idiom [`deep_at`]/[`shared_accuracy_bound`] already use
+/// for the same reason.
+fn total_eps_of(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    e: ExprId,
+    m: ExprId,
+) -> ExprId {
+    let delta_m = delta_of(d, p, a, b, m);
+    let one_nat = d.num(1);
+    let eps_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, e]);
+    let eps_embed = embed(d, p, eps_rat);
+    let eps_term = cmul(d, p, eps_embed, delta_m);
+    let sm = d.succ(m);
+    let sm_real = d.const_app(p.of_nat, &[sm]);
+    cmul(d, p, sm_real, eps_term)
+}
+
+/// `(embed (natDivSucc 1 e), width_of a b, proof)`, `proof : Equiv
+/// (total_eps_of a b e m) (mul width (embed (natDivSucc 1 e)))`.
+///
+/// Piece 1 of [`CRealPrelude::riemann_sum_total_eps_le`]:
+/// `total_eps_of`'s `(succ m)`-scaled mesh fraction cancels EXACTLY like
+/// [`declare_riemann_sum_const`]'s own mesh count does, regardless of what
+/// the "constant" factor multiplying the mesh IS -- here `embed (natDivSucc
+/// 1 e)` rather than an arbitrary `c`. [`riemann_sum_const_rearrange`]
+/// already proves exactly this cancellation generically (its own internal
+/// `a_start` is, term-for-term, `total_eps_of`'s construction: `delta := mul
+/// width frac_m` matches [`delta_of`]; `w := mul c delta` matches
+/// `total_eps_of`'s `eps_term` at `c := eps_embed`; `mul (ofNat (succ m)) w`
+/// matches `total_eps_of`'s outer product) -- this reuses it verbatim and
+/// only needs one further `mul_comm` to match the width-first order this
+/// module's doc comments state.
+fn total_eps_equiv_width_eps(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    e: ExprId,
+    m: ExprId,
+) -> (ExprId, ExprId, ExprId) {
+    let width = width_of(d, p, a, b);
+    let one_nat = d.num(1);
+    let eps_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, e]);
+    let eps_embed = embed(d, p, eps_rat);
+    let frac_m = {
+        let one_nat2 = d.num(1);
+        let rat_frac = d.const_app(p.rat.nat_div_succ, &[one_nat2, m]);
+        embed(d, p, rat_frac)
+    };
+
+    // step_a : Equiv total_eps (mul eps_embed width).
+    let step_a = riemann_sum_const_rearrange(d, p, eps_embed, width, frac_m, m);
+
+    let mul_eps_width = cmul(d, p, eps_embed, width);
+    let mul_width_eps = cmul(d, p, width, eps_embed);
+    let step_b = d.lemma(p.mul_comm, &[eps_embed, width]);
+
+    let total_eps = total_eps_of(d, p, a, b, e, m);
+    let proof = d.lemma(
+        p.equiv_trans,
+        &[total_eps, mul_eps_width, mul_width_eps, step_a, step_b],
+    );
+    (eps_embed, width, proof)
+}
+
+/// `Equiv (mul (ofNat magnitude) (embed (natDivSucc 1 e))) (embed
+/// (natDivSucc magnitude e))` -- for ANY `magnitude`, `e`. The first two
+/// steps of [`magnitude_times_frac_eq_outer`] (`Rat.natDivSucc_mul` then
+/// `Nat.mul_one`) with nothing left to rescale: unlike that lemma, this one
+/// carries no Archimedean threshold (`e` need not relate to `magnitude` at
+/// all), so its own final `Rat.natDivSucc_scale` step is not needed here.
+fn magnitude_times_eps_eq(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    magnitude: ExprId,
+    e: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let nat = rat.int.nat;
+    let one_nat = d.num(1);
+    let zero_nat = d.num(0);
+
+    let mag_rat = d.const_app(rat.nat_div_succ, &[magnitude, zero_nat]);
+    let eps_rat = d.const_app(rat.nat_div_succ, &[one_nat, e]);
+    let mag_real = embed(d, p, mag_rat);
+    let eps_real = embed(d, p, eps_rat);
+    let product_real = cmul(d, p, mag_real, eps_real);
+
+    let product_rat = rmul(d, mag_rat, eps_rat);
+    let fused = {
+        let scaled = NatOps::mul(d, magnitude, one_nat);
+        d.const_app(rat.nat_div_succ, &[scaled, e])
+    };
+    let fuse = d.lemma(rat.nat_div_succ_mul, &[magnitude, one_nat, e]);
+    let collapsed = d.const_app(rat.nat_div_succ, &[magnitude, e]);
+    let collapse = {
+        let scaled = NatOps::mul(d, magnitude, one_nat);
+        let identity = d.lemma(nat.mul_one, &[magnitude]);
+        nat_eq_to_rat(d, scaled, magnitude, identity, &|d, t| {
+            d.const_app(rat.nat_div_succ, &[t, e])
+        })
+    };
+
+    let (_, chain) = rchain(d, product_rat, &[(fused, fuse), (collapsed, collapse)]);
+
+    let of_rat_mul_step = d.lemma(p.of_rat_mul, &[mag_rat, eps_rat]);
+    rat_eq_rewrite(
+        d,
+        product_rat,
+        collapsed,
+        chain,
+        of_rat_mul_step,
+        &|d, t| {
+            let embedded = embed(d, p, t);
+            equiv(d, p, product_real, embedded)
+        },
+    )
+}
+
+/// `le (mul width (embed (natDivSucc 1 e))) (embed (natDivSucc magnitude
+/// e))`, given `width_le_mag : le width (ofNat magnitude)`. Mirrors
+/// [`step_le_outer_bound`]'s exact shape (nonneg factor on the multiplied
+/// side, two `mul_comm` flips, one closing rational identity) with
+/// [`magnitude_times_eps_eq`] in place of [`magnitude_times_frac_eq_outer`]
+/// -- and, unlike that theorem, no `le a b` hypothesis anywhere: `direct_bound_le`
+/// is unconditional and the nonnegative factor here is the RATIONAL `embed
+/// (natDivSucc 1 e)`, never `width` itself.
+fn width_eps_le_magnitude_eps(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    width: ExprId,
+    width_le_mag: ExprId,
+    magnitude: ExprId,
+    e: ExprId,
+) -> ExprId {
+    let one_nat = d.num(1);
+    let eps_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, e]);
+    let eps_embed = embed(d, p, eps_rat);
+    let eps_nonneg = {
+        let rzero_expr = rzero(d, p.rat);
+        let rle_p = d.lemma(p.rat.zero_le_nat_div_succ, &[one_nat, e]);
+        d.lemma(p.of_rat_le, &[rzero_expr, eps_rat, rle_p])
+    };
+
+    let step = cmul(d, p, width, eps_embed);
+    let eps_width = cmul(d, p, eps_embed, width);
+    let comm1 = d.lemma(p.mul_comm, &[width, eps_embed]);
+
+    let om = d.const_app(p.of_nat, &[magnitude]);
+    let eps_mag = cmul(d, p, eps_embed, om);
+    let scaled = d.lemma(
+        p.mul_le_mul_of_nonneg_left,
+        &[eps_embed, width, om, eps_nonneg, width_le_mag],
+    );
+
+    let refl_eps_mag = d.lemma(p.equiv_refl, &[eps_mag]);
+    let comm1_symm = d.lemma(p.equiv_symm, &[step, eps_width, comm1]);
+    let step_le_eps_mag = d.lemma(
+        p.le_congr,
+        &[
+            eps_width,
+            step,
+            eps_mag,
+            eps_mag,
+            comm1_symm,
+            refl_eps_mag,
+            scaled,
+        ],
+    );
+
+    let mag_eps = cmul(d, p, om, eps_embed);
+    let comm2 = d.lemma(p.mul_comm, &[eps_embed, om]);
+    let collapse = magnitude_times_eps_eq(d, p, magnitude, e);
+    let bound_rat = d.const_app(p.rat.nat_div_succ, &[magnitude, e]);
+    let out_bound = embed(d, p, bound_rat);
+    let eps_mag_eq_out = d.lemma(
+        p.equiv_trans,
+        &[eps_mag, mag_eps, out_bound, comm2, collapse],
+    );
+
+    let refl_step = d.lemma(p.equiv_refl, &[step]);
+    d.lemma(
+        p.le_congr,
+        &[
+            step,
+            step,
+            eps_mag,
+            out_bound,
+            refl_step,
+            eps_mag_eq_out,
+            step_le_eps_mag,
+        ],
+    )
+}
+
+/// `CReal.riemannSumTotalEpsLe`. See
+/// [`CRealPrelude::riemann_sum_total_eps_le`] for the full statement and the
+/// two-piece route.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_riemann_sum_total_eps_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let total_eps = total_eps_of(d, p, a, b, e, m);
+    let (eps_embed, width, magnitude_equiv) = total_eps_equiv_width_eps(d, p, a, b, e, m);
+    let mul_width_eps = cmul(d, p, width, eps_embed);
+
+    let (_c, magnitude, width_le) = direct_bound_le(d, p, width);
+    let step_bound = width_eps_le_magnitude_eps(d, p, width, width_le, magnitude, e);
+
+    let bound_rat = d.const_app(p.rat.nat_div_succ, &[magnitude, e]);
+    let final_bound = embed(d, p, bound_rat);
+
+    let hx = d.lemma(p.equiv_symm, &[total_eps, mul_width_eps, magnitude_equiv]);
+    let hy = d.lemma(p.equiv_refl, &[final_bound]);
+    let final_le = d.lemma(
+        p.le_congr,
+        &[
+            mul_width_eps,
+            total_eps,
+            final_bound,
+            final_bound,
+            hx,
+            hy,
+            step_bound,
+        ],
+    );
+
+    let ty = {
+        let concl = cle(d, p, total_eps, final_bound);
+        let over_m = d.pi_fv(m_fv, nat, concl);
+        let over_e = d.pi_fv(e_fv, nat, over_m);
+        let over_b = d.pi_fv(b_fv, carrier, over_e);
+        d.pi_fv(a_fv, carrier, over_b)
+    };
+    let value = {
+        let over_m = d.lam_fv(m_fv, nat, final_le);
+        let over_e = d.lam_fv(e_fv, nat, over_m);
+        let over_b = d.lam_fv(b_fv, carrier, over_e);
+        d.lam_fv(a_fv, carrier, over_b)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.riemann_sum_total_eps_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}

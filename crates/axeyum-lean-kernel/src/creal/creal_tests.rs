@@ -20,12 +20,27 @@ use crate::{Declaration, Kernel};
 fn built() -> (Kernel, CRealPrelude) {
     use std::sync::OnceLock;
     static TEMPLATE: OnceLock<(Kernel, CRealPrelude)> = OnceLock::new();
-    let (kernel, prelude) = TEMPLATE.get_or_init(|| {
-        let mut kernel = Kernel::new();
-        let prelude = build_creal_prelude(&mut kernel).expect("CReal prelude must build");
-        (kernel, prelude)
-    });
-    (kernel.clone(), *prelude)
+    // Run on a deep stack: whichever test happens to be the first (in
+    // execution order, not file order) to call `built()` pays the FULL
+    // `build_creal_prelude` cost on top of the clone below, and after
+    // `CReal.mul_self_sqrt` landed that combination overflows the default
+    // 2 MiB test-thread stack for a test with no reasoning of its own about
+    // `mul_self_sqrt` -- `abs_add_le_at_one_and_neg_one_has_slack` SIGABRTed
+    // this way, on the default stack, in both single- and multi-threaded
+    // runs, and passed clean with a bigger stack and in `--release` (the
+    // discriminator this file's own module docs elsewhere use: a genuine
+    // margin overrun disappears under either, runaway recursion does not).
+    // Every call is wrapped, not just the build -- the clone that runs on
+    // EVERY call is itself not free to assume is shallow just because one
+    // caller's stack happened to survive it.
+    on_a_deep_stack_creal(move || {
+        let (kernel, prelude) = TEMPLATE.get_or_init(|| {
+            let mut kernel = Kernel::new();
+            let prelude = build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+            (kernel, prelude)
+        });
+        (kernel.clone(), *prelude)
+    })
 }
 
 /// The build itself, with the kernel's rejection **rendered**. A `Debug` of
@@ -100,7 +115,7 @@ fn on_a_deep_stack_creal<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'stat
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 335] = [
+    let expected: [(&str, crate::NameId, &str); 338] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -419,6 +434,8 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         ("CReal.sqrt_zero", p.sqrt_zero, "theorem"),
         ("CReal.sqrt_sq", p.sqrt_sq, "theorem"),
         ("CReal.sqrt_nonneg", p.sqrt_nonneg, "theorem"),
+        ("CReal.mul_self_sqrt", p.mul_self_sqrt, "theorem"),
+        ("CReal.sqrt_mul", p.sqrt_mul, "theorem"),
         // Bishop's speed-up combinator (creal/speedup.rs).
         ("CReal.KRegular", p.k_regular_pred, "def"),
         ("CReal.speedup", p.speedup, "def"),
@@ -993,6 +1010,19 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         (
             "CReal.riemannSum_sharedAccuracyClose",
             p.riemann_sum_shared_accuracy_close,
+            "theorem",
+        ),
+        // The closed-form magnitude lemma `riemannSum_cauchy`'s own doc
+        // comment names as the actual remaining gate on `CReal.integral`
+        // (`creal/integral.rs`): `total_eps ~ mul width (embed (natDivSucc 1
+        // e))` (reusing `riemann_sum_const`'s own mesh-cancellation
+        // rearrangement at a different "constant" factor) composed with
+        // `direct_bound_le` on `width` plus `Rat.natDivSucc_mul`, landing on
+        // a genuine `K/(e+1)` rational bound -- no `le a b` hypothesis
+        // needed anywhere.
+        (
+            "CReal.riemannSumTotalEpsLe",
+            p.riemann_sum_total_eps_le,
             "theorem",
         ),
         // Chapter 18/22: the geometric domination of `expTerm`, ending at the
@@ -8156,6 +8186,180 @@ fn sqrt_of_ofnat_four_at_index_zero_computes_to_two() {
         "CReal.seq (CReal.sqrt (CReal.ofNat 4)) 0 must NOT check as equal \
          to 3 -- a checker that accepts both 2 and 3 cannot be trusted to \
          have computed anything"
+    );
+}
+
+/// **Mandatory concrete instantiation of `CReal.mul_self_sqrt`.** `Equiv` is
+/// not decidable by computation (unlike `CReal.seq`'s own reduction, which
+/// the sibling `sqrt_of_ofnat_four...` test above exercises), so the check
+/// here is: instantiate the theorem at a genuinely CONCRETE `x := CReal.ofNat
+/// 4` and `hx : le zero (ofNat 4)` (built the same `of_rat_le`-across-`ofRat`
+/// route `riemann_sample_in_bounds_at_...`'s own `hab` uses), then declare
+/// the application against an INDEPENDENTLY constructed expected type
+/// (`Equiv (mul (sqrt (ofNat 4)) (sqrt (ofNat 4))) (ofNat 4)`) rather than
+/// trusting `Kernel::infer` on the theorem's own instantiation. The negative
+/// control swaps the right-hand side to `ofNat 5`: `CReal.ofNat 4` and
+/// `CReal.ofNat 5` are built from different Nat literals with no reduction
+/// path relating them, so the kernel must refuse the mismatched Prop -- the
+/// same mandatory-instantiation-plus-negative-control shape
+/// `sqrt_of_ofnat_four_at_index_zero_computes_to_two` uses for `CReal.sqrt`
+/// itself, applied here to a law about it instead of to `CReal.seq`'s
+/// reduction.
+#[test]
+fn mul_self_sqrt_at_ofnat_four_type_checks_against_the_independent_statement() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let four_nat = d.num(4);
+    let five_nat = d.num(5);
+    let zero_nat = d.num(0);
+
+    let x4 = d.const_app(p.of_nat, &[four_nat]);
+    let x5 = d.const_app(p.of_nat, &[five_nat]);
+
+    // hx4 : CReal.le CReal.zero (CReal.ofNat 4), via `Rat.zero_le_natDivSucc`
+    // lifted across `CReal.of_rat_le` -- `CReal.zero` and `CReal.ofNat 4` are
+    // each one delta-step from an `ofRat` of a `Rat.natDivSucc`.
+    let hx4 = {
+        let rat_4 = d.const_app(p.rat.nat_div_succ, &[four_nat, zero_nat]);
+        let rzero = d.kernel().const_(p.rat.zero, vec![]);
+        let rle = d.lemma(p.rat.zero_le_nat_div_succ, &[four_nat, zero_nat]);
+        d.lemma(p.of_rat_le, &[rzero, rat_4, rle])
+    };
+
+    let concrete_proof = d.const_app(p.mul_self_sqrt, &[x4, hx4]);
+
+    let sqrt_x4 = d.const_app(p.sqrt, &[x4]);
+    let lhs4 = d.const_app(p.mul, &[sqrt_x4, sqrt_x4]);
+    let expected_ty = d.const_app(p.equiv, &[lhs4, x4]);
+
+    let anon = d.kernel().anon();
+    let name = d
+        .kernel()
+        .name_str(anon, "__mul_self_sqrt_at_ofnat_four_instance");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: expected_ty,
+            value: concrete_proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.mul_self_sqrt (CReal.ofNat 4) hx4 must check against \
+                 Equiv (mul (sqrt (ofNat 4)) (sqrt (ofNat 4))) (ofNat 4): \
+                 {error:?}"
+            )
+        });
+
+    // Negative control: the SAME proof does NOT check against the WRONG
+    // right-hand side `ofNat 5` -- if it did, this checker could not
+    // distinguish `mul_self_sqrt`'s real conclusion from an arbitrary one.
+    let wrong_ty = d.const_app(p.equiv, &[lhs4, x5]);
+    let name_wrong = d.kernel().name_str(
+        anon,
+        "__mul_self_sqrt_at_ofnat_four_wrong_rhs_must_be_rejected",
+    );
+    let result = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_wrong,
+        uparams: vec![],
+        ty: wrong_ty,
+        value: concrete_proof,
+    });
+    assert!(
+        result.is_err(),
+        "CReal.mul_self_sqrt (CReal.ofNat 4) hx4 must NOT check against \
+         Equiv (mul (sqrt (ofNat 4)) (sqrt (ofNat 4))) (ofNat 5) -- a \
+         checker that accepts both 4 and 5 on the right cannot be trusted \
+         to have proved anything about `ofNat 4` specifically"
+    );
+}
+
+/// **Mandatory concrete instantiation of `CReal.sqrt_mul`.** `x := CReal.ofNat
+/// 4`, `y := CReal.ofNat 1`, `hx4`/`hy1` built the same `of_rat_le`-across-
+/// `ofRat` route the `mul_self_sqrt` instance above uses. Checked against an
+/// INDEPENDENTLY constructed `Equiv (sqrt (mul (ofNat 4) (ofNat 1))) (mul
+/// (sqrt (ofNat 4)) (sqrt (ofNat 1)))`, with a negative control that swaps
+/// the right factor to `sqrt (ofNat 4)` again (`mul (sqrt x4) (sqrt x4)`
+/// instead of `mul (sqrt x4) (sqrt y1)`) -- the natural "forgot which
+/// argument this factor comes from" bug a copy-paste of `x` for `y` would
+/// produce.
+#[test]
+fn sqrt_mul_at_ofnat_four_and_one_type_checks_against_the_independent_statement() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let four_nat = d.num(4);
+    let one_nat = d.num(1);
+    let zero_nat = d.num(0);
+
+    let x4 = d.const_app(p.of_nat, &[four_nat]);
+    let y1 = d.const_app(p.of_nat, &[one_nat]);
+
+    let hx4 = {
+        let rat_4 = d.const_app(p.rat.nat_div_succ, &[four_nat, zero_nat]);
+        let rzero = d.kernel().const_(p.rat.zero, vec![]);
+        let rle = d.lemma(p.rat.zero_le_nat_div_succ, &[four_nat, zero_nat]);
+        d.lemma(p.of_rat_le, &[rzero, rat_4, rle])
+    };
+    let hy1 = {
+        let rat_1 = d.const_app(p.rat.nat_div_succ, &[one_nat, zero_nat]);
+        let rzero = d.kernel().const_(p.rat.zero, vec![]);
+        let rle = d.lemma(p.rat.zero_le_nat_div_succ, &[one_nat, zero_nat]);
+        d.lemma(p.of_rat_le, &[rzero, rat_1, rle])
+    };
+
+    let concrete_proof = d.const_app(p.sqrt_mul, &[x4, y1, hx4, hy1]);
+
+    let sqrt_x4 = d.const_app(p.sqrt, &[x4]);
+    let sqrt_y1 = d.const_app(p.sqrt, &[y1]);
+    let xy = d.const_app(p.mul, &[x4, y1]);
+    let sqrt_xy = d.const_app(p.sqrt, &[xy]);
+    let rhs = d.const_app(p.mul, &[sqrt_x4, sqrt_y1]);
+    let expected_ty = d.const_app(p.equiv, &[sqrt_xy, rhs]);
+
+    let anon = d.kernel().anon();
+    let name = d
+        .kernel()
+        .name_str(anon, "__sqrt_mul_at_ofnat_four_and_one_instance");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: expected_ty,
+            value: concrete_proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.sqrt_mul (CReal.ofNat 4) (CReal.ofNat 1) hx4 hy1 must \
+                 check against Equiv (sqrt (mul (ofNat 4) (ofNat 1))) (mul \
+                 (sqrt (ofNat 4)) (sqrt (ofNat 1))): {error:?}"
+            )
+        });
+
+    // Negative control: the SAME proof does NOT check against the WRONG
+    // right-hand side `mul (sqrt (ofNat 4)) (sqrt (ofNat 4))` -- the
+    // "forgot which argument this factor comes from" bug a copy-paste of
+    // `x4` for `y1` would produce.
+    let wrong_rhs = d.const_app(p.mul, &[sqrt_x4, sqrt_x4]);
+    let wrong_ty = d.const_app(p.equiv, &[sqrt_xy, wrong_rhs]);
+    let name_wrong = d.kernel().name_str(
+        anon,
+        "__sqrt_mul_at_ofnat_four_and_one_wrong_rhs_must_be_rejected",
+    );
+    let result = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_wrong,
+        uparams: vec![],
+        ty: wrong_ty,
+        value: concrete_proof,
+    });
+    assert!(
+        result.is_err(),
+        "CReal.sqrt_mul (CReal.ofNat 4) (CReal.ofNat 1) hx4 hy1 must NOT \
+         check against Equiv (sqrt (mul (ofNat 4) (ofNat 1))) (mul (sqrt \
+         (ofNat 4)) (sqrt (ofNat 4))) -- a checker that accepts both the \
+         real second factor and a copy of the first cannot be trusted to \
+         have proved anything about `ofNat 1` specifically"
     );
 }
 

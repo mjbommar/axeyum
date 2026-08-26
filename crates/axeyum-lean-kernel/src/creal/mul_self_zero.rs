@@ -156,7 +156,12 @@ fn lt_of_pos_diff(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId, h: 
 /// difference-of-squares identity, built entirely from named ring laws (never
 /// `Rat.sub`, since `Rat.mul` normalises and touching the representation is
 /// exactly the friction independent work on `Rat.mul_eq_zero` hit).
-fn diff_of_squares(d: &mut IntDev<'_>, p: CRealPrelude, u: ExprId, s: ExprId) -> ExprId {
+///
+/// `pub(super)` (not just this module's own [`declare_rat_sq_le`]): `sqrt.rs`'s
+/// `declare_mul_self_sqrt` reuses this identity at `(u1, u)` to expand the
+/// bracket's width term `u1_sq - u_sq` — the exact reuse this doc comment's
+/// own history predicted.
+pub(super) fn diff_of_squares(d: &mut IntDev<'_>, p: CRealPrelude, u: ExprId, s: ExprId) -> ExprId {
     let rat = p.rat;
     let neg_s = rneg(d, s);
     let a = radd(d, u, neg_s);

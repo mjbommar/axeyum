@@ -550,23 +550,17 @@
     {
       "dependency_component_ids": [
         "mathlib-v4.30.0-08ee032d9058b06c",
-        "mathlib-v4.30.0-2bd246da70511653",
-        "mathlib-v4.30.0-6fc2be2d83334e77",
         "mathlib-v4.30.0-ce4e3e890bcf8f1c",
-        "mathlib-v4.30.0-d2b3ae01ee9a9ed0",
         "mathlib-v4.30.0-f1259356540dba68"
       ],
       "direct_unlock_fact_count": 0,
       "direct_unlock_fact_ids": [],
       "family": "natural-modular-equivalence",
-      "ready_fact_count": 6,
+      "ready_fact_count": 3,
       "ready_fact_ids": [
         "F:ml430-mutation-c86940b52af8159ca9b381d6",
-        "F:ml430-nat-add-modeq-left-e3b1fba9",
-        "F:ml430-nat-add-modeq-right-e2f11f21",
         "F:ml430-nat-mod-modeq-436e4c10",
-        "F:ml430-nat-modeq-one-516d46e8",
-        "F:ml430-nat-modulus-modeq-zero-fd9af096"
+        "F:ml430-nat-modeq-one-516d46e8"
       ],
       "statement_shape": "unconditional-relation",
       "topic_concept_id": "C:modular-arithmetic"
@@ -632,19 +626,19 @@
   ],
   "census": {
     "admissible_facts": 0,
-    "cataloged_ready_facts": 104,
-    "dependency_ready_facts": 104,
+    "cataloged_ready_facts": 101,
+    "dependency_ready_facts": 101,
     "excluded_held_out_ready_facts": 22,
     "excluded_outside_evaluation_ready_facts": 9,
-    "global_dependency_ready_facts": 135,
+    "global_dependency_ready_facts": 132,
     "groups": 2,
     "rejection_reasons": [
       {
-        "fact_count": 2,
+        "fact_count": 5,
         "reason": "gate-coupling-review-required"
       },
       {
-        "fact_count": 104,
+        "fact_count": 101,
         "reason": "no-registered-operation"
       }
     ],
@@ -656,10 +650,10 @@
       "train"
     ],
     "family_concept_crosswalk_path": "artifacts/autogenesis/family-concept-crosswalk-v1.json",
-    "frontier_sha256": "eaefa772f1d953af6c8c34fc3cf9e8c2617cc6f336f6a6e302724d66114cef51",
-    "ledger_sha256": "16b154e1d54562baea35e49f344e3e47819e8b1e14cd1107725ebb14099b7181",
+    "frontier_sha256": "553e8a0120a2019d642268da36f68e93eb77d54dd45b15de210c4dd574e832da",
+    "ledger_sha256": "ea04e7fc81b98241761e3cf1e337784866027fb58f9576dde9f063739afa0df5",
     "nursery_sha256": "6d1f2551a612fdcadaf1c6b0096c4eebee304d9687157cb25505f785ee86daa8",
-    "operation_registry_sha256": "2946dd39994e39b28df3187d55927e633ac9c3d79c2ee5281829aad3a884c974",
+    "operation_registry_sha256": "6620652979e825b3d09a8bc4eb10060e995febba73abba110e7cb2bea7481553",
     "reviewed_fact_catalog_sha256": "d2ebcbd56c70445e3a1be864426ee783021387c5d6c885f182dc2a374855f988",
     "source": "scripts/fact-frontier.py build_machine_frontier",
     "trust_boundary": "train/development ranking and producer-investigation input only; never held-out inspection, proof, or admission authority"
@@ -715,7 +709,7 @@
       "admissible_fact_ids": [],
       "formal_language": "lean4-surface",
       "fragment": "Nat",
-      "ready_fact_count": 78,
+      "ready_fact_count": 75,
       "ready_fact_ids": [
         "F:ml430-mutation-1432b2277cf2cc26c1d11cd6",
         "F:ml430-mutation-5179f333b8333ecff8adc223",
@@ -724,8 +718,6 @@
         "F:ml430-mutation-c20db9b4c60b816ce738bdf2",
         "F:ml430-mutation-c86940b52af8159ca9b381d6",
         "F:ml430-mutation-edb05acf07d9ef3f9f8232fc",
-        "F:ml430-nat-add-modeq-left-e3b1fba9",
-        "F:ml430-nat-add-modeq-right-e2f11f21",
         "F:ml430-nat-bitwise-bit-4c4b28a8",
         "F:ml430-nat-choose-eq-zero-of-lt-92ebab29",
         "F:ml430-nat-choose-le-succ-62ae968b",
@@ -777,7 +769,6 @@
         "F:ml430-nat-modeq-of-dvd-d75cc374",
         "F:ml430-nat-modeq-of-mul-left-88d20bca",
         "F:ml430-nat-modeq-one-516d46e8",
-        "F:ml430-nat-modulus-modeq-zero-fd9af096",
         "F:ml430-nat-multichoose-zero-right-6ef827c8",
         "F:ml430-nat-not-coprime-zero-zero-6c4e8dd8",
         "F:ml430-nat-not-prime-of-dvd-of-ne-4ff592c0",
@@ -799,11 +790,11 @@
       "registered_operation_ids": [],
       "rejection_reasons": [
         {
-          "fact_count": 1,
+          "fact_count": 4,
           "reason": "gate-coupling-review-required"
         },
         {
-          "fact_count": 78,
+          "fact_count": 75,
           "reason": "no-registered-operation"
         }
       ],

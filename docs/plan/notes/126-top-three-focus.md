@@ -654,6 +654,100 @@ registry validates at 27 operations; all 31 registry/frontier tests pass; all
 three targets freshly replay; and a fresh machine frontier reports all three
 admissible with `addLeft` selected.
 
+### First durable Nat.mod family admission (2026-08-26)
+
+At clean source commit `5552e8f1448d7d94caa9923360b2f3cfbe4861d3`,
+frontier `c4768b9b…97ab` selected
+`F:ml430-nat-add-modeq-left-e3b1fba9`. Execution receipt
+`96c15bea…dcc7` independently admitted the exact target with empty footprint,
+proof `59905538…c12`, and the sole retained dependency
+`Axeyum.Autogenesis.Candidate.NatModRemainder.addModLeft`. Transaction
+`d05595d2…7818` was faulted immediately after durable intent; the fact remained
+byte-identical, recovery performed one authoritative write, and readiness
+receipt `4e4bff86…e2b2` records `addLeft` leaving the frontier and `addRight`
+becoming selected. The complete external audit bundle is retained at
+`/data0/axeyum/autogenesis/nat-modeq-remainder-add-left-2026-08-26-v1/`.
+
+The settled operation checker, fact validator, capability-gap projection,
+producer-evaluation frontier, product-health projection, lifecycle contract,
+and all-three-target fresh operation replay pass. Product health now reports
+511 proved facts; its runtime receipt remains explicitly `failed-ancestor`.
+
+### Second durable Nat.mod family admission (2026-08-26)
+
+At clean source commit `4cf9b69c23a1c6a0471c504981f59a264e52fe83`,
+frontier `a3c78d0a…9a46` selected
+`F:ml430-nat-add-modeq-right-e2f11f21`. Execution `55a780a2…f7b0`
+reconstructed the exact target axiom-free with proof `35a1eba6…4478` and sole
+retained dependency
+`Axeyum.Autogenesis.Candidate.NatModRemainder.addModRight`. Transaction
+`27568b5b…87a7` survived the intentional post-intent crash and recovered to one
+write. Readiness `a7931bd5…1f62` records `addRight` leaving and `modulusZero`
+becoming selected. The full audit bundle is retained at
+`/data0/axeyum/autogenesis/nat-modeq-remainder-add-right-2026-08-26-v1/`.
+
+The live ledger now reports 512 proved facts and 611 evidence rows re-derived
+by two or more independent checkers. The generated capability gap has one
+remaining admissible target.
+
+### Third durable Nat.mod family admission (2026-08-26)
+
+At clean source commit `6fe739e8f2f08fed215f0aef7f9734fff75357cb`,
+frontier `fb2da918…7d2e` selected
+`F:ml430-nat-modulus-modeq-zero-fd9af096`. Execution `bf6495de…fc61`
+reconstructed the exact target axiom-free with proof `85448f6c…ac89` and sole
+retained dependency `Axeyum.Autogenesis.Candidate.NatModRemainder.modSelf`.
+Transaction `cc5d5fb3…3159` survived the intentional post-intent crash and
+recovered to one write. Readiness `cd847760…2499` records `modulusZero`
+leaving and no selected successor. The full audit bundle is retained at
+`/data0/axeyum/autogenesis/nat-modeq-remainder-modulus-zero-2026-08-26-v1/`.
+
+The family is now 3/3 durable across three different clean source commits,
+three independently generated frontier/execution/transaction identities, and
+three fault-and-recovery cycles. The ledger reports 513 proved facts, 451
+axiom-free kernel-lean facts, and 612 evidence rows re-derived by two or more
+checkers. The capability projection reports 101 ready facts but zero
+admissible registered operations: producer/operation coverage, not queue
+availability, is again the measured bottleneck.
+
+### Generic authoritative single-fact runner (2026-08-26)
+
+`scripts/run-autogenesis-authoritative-fact.py OUTPUT` packages the exact
+workflow exercised by the three Nat.mod admissions. The caller supplies no
+fact, operation, producer, checker, route, or admission metadata. A fresh
+machine frontier selects the fact; the registry selects execution; the runner
+builds and verifies execution and transaction receipts, injects an exit-75
+post-intent fault, proves the fact stayed byte-identical, recovers once,
+verifies readiness and the settled operation, and rejects any changed path
+besides the selected fact. Receipts are copied to the caller's external output.
+The live journal is created beside the checkout so atomic replacement is
+filesystem-safe; on failure it is deliberately retained and its recovery path
+is printed instead of being destroyed with a temporary directory.
+
+The command is exposed as `just autogenesis-authoritative-fact OUTPUT`. Its
+unit controls run in both aggregate gates; control reachability remains at the
+14-module baseline and aggregate-scope differences remain exactly allowlisted.
+
+### Reusable-family priority projection (2026-08-26)
+
+The generated family queue aggregates the producer-evaluation frontier by
+mathematical family, after excluding all ten answer-bearing mutation controls.
+It joins the retained retrieved-induction outcomes, operation registry, and
+clean bitwise analogue projection. Its ordering is explicit and deterministic:
+operation-ready, expand an already accepted unchanged producer, shared proof
+composition, shared producer grammar, shared statement contract, missing
+measurement, then fragmented obstructions.
+
+The live result contains ten families and 91 non-control ready facts. Only 29
+have measured outcomes; one is accepted; none meets the three-target operation
+bar. Natural binomial ranks first because
+`F:ml430-nat-choose-one-right-7eda8e39` is already accepted axiom-free by the
+retrieved-induction producer. Integer modular equivalence ranks second with a
+five-target terminal-grammar demand. Natural bitwise ranks third despite three
+clean analogues because seven measured ready facts still require exact shared
+statement contracts. The queue therefore makes “two more natural-binomial
+siblings under the unchanged producer” the next falsifiable construction task.
+
 | 2026-08-26 | `6fad715d8` | Make the Fibonacci child qualification progress-aware: pin candidate-specific dependency receipts and permit either child to advance only through checked, axiom-free kernel evidence. |
 | 2026-08-26 | `2aedb4d68` | Refresh the generated public example inventory from 163 to the 193 examples canonical discovery actually finds; both guarded planning references now report zero stale markers. |
 | 2026-08-26 | `42e7bdfd1` | Make the complete Python build/test/stub/type/lint recipe part of canonical `just check`; register two orphan controls in both gates and return the reachability ratchet from 16 to its 14-module baseline. |
@@ -737,3 +831,27 @@ admissible with `addLeft` selected.
 | 2026-08-26 | `ba3f4acdd` | Expose native transport through Python and measure 210 executable ranked premises reaching 0/24 bounded-application conversion. |
 | 2026-08-26 | `2c86c0604` | Preserve ranked premise order through bounded search; the full census reproduces unchanged, ruling out alphabetical budget starvation as the active limiter. |
 | 2026-08-26 | `b852c4e89` | Compose graph-retrieved equalities through bounded induction and convert the first immutable open-population target axiom-free with zero false-control accepts. |
+
+### Arrow reachability correction and complete binomial measurement (2026-08-26)
+
+The earlier `--exportable-only` rationale was falsified against its own pinned
+toolchain. Three proof-free implication-bearing `Nat.choose` definitions were
+compiled under Mathlib `c5ea0035…` / Lean 4.30.0 and exported by lean4export
+3.1.0 by streaming stdout from s5. Each target-only stream passes
+`import_statement_ndjson`: three definitions, zero axioms, zero substituted
+theorems. The reference pack is
+`/nas3/data/axeyum/autogenesis/reference-packs/86688948e-binomial-arrow-statements-v1`;
+the repository receipt binds every source, map, stream, toolchain, target, and
+rendered-goal identity. The compatibility flag remains as a legacy replay
+filter, not a live capability filter.
+
+The producer-ready variants additionally root-export the fixed baseline palette
+without exposing a target proof. The existing held-out-safe ranked transport +
+retrieved-induction pipeline imports all three and executes 59/60 premise
+transports. It accepts none: two terminate at `BinderBudgetExceeded`, and the
+`choose_ne_zero` goal terminates at `NotEqualityGoal`. The family queue now
+contains 32 measured ready facts overall and all eight natural-binomial rows;
+that family decomposes to one accepted, six declined, and one import-rejected.
+This moves the work from speculative exporter replacement to two concrete,
+reusable producer gaps: binder/generalization accounting and negative terminal
+grammar.

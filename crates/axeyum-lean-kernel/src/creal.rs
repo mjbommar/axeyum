@@ -1443,12 +1443,34 @@ pub struct CRealPrelude {
     pub sqrt_sq: NameId,
     /// `CReal.sqrt_nonneg : ∀ x, CReal.le CReal.zero (sqrt x)`.
     ///
-    /// Unconditional, unlike `sqrt_sq`/the still-open `mul_self_sqrt` gap
-    /// (`Equiv (mul (sqrt x) (sqrt x)) x`, needed for `CReal.sqrt_mul` and
-    /// hence `Complex.abs_mul`): this never relates `sqrt x` back to `x`
-    /// itself, only to `sqrtApprox`'s own clamp-then-`natSqrt` shape, which
-    /// is nonneg regardless of `x`'s sign. See `creal/sqrt.rs`.
+    /// Unconditional, unlike `sqrt_sq`/`mul_self_sqrt`: this never relates
+    /// `sqrt x` back to `x` itself, only to `sqrtApprox`'s own
+    /// clamp-then-`natSqrt` shape, which is nonneg regardless of `x`'s sign.
+    /// See `creal/sqrt.rs`.
     pub sqrt_nonneg: NameId,
+    /// `CReal.mul_self_sqrt : ∀ x, CReal.le CReal.zero x → Equiv (mul (sqrt
+    /// x) (sqrt x)) x`.
+    ///
+    /// The direction `sqrt_sq` (`sqrt (mul x x) ~ x`) does NOT give: those
+    /// are different statements, composed only via a third fact that this
+    /// one is. Needed for `CReal.sqrt_mul` and hence `Complex.abs_mul`. The
+    /// upper bound is a direct chain (`sqrt_bracket_pieces`'s lower half plus
+    /// `Rat.max_le` against `x`'s own regularity and the `0 ≤ x` slack); the
+    /// lower bound needs a uniform magnitude bound on `sqrtApprox(x, k)`
+    /// (`CReal.bound_within` + `CReal.rat_sq_le`) and
+    /// `mul_self_zero::diff_of_squares` at `(u1, u)` to expand the bracket's
+    /// width term. See `creal/sqrt.rs`.
+    pub mul_self_sqrt: NameId,
+    /// `CReal.sqrt_mul : ∀ x y, CReal.le CReal.zero x → CReal.le CReal.zero y
+    /// → Equiv (sqrt (mul x y)) (mul (sqrt x) (sqrt y))`.
+    ///
+    /// Composed from already-landed facts, not a new epsilon estimate:
+    /// `mul_self_sqrt(x)`/`mul_self_sqrt(y)` plus a ring rearrangement give
+    /// `(sqrt x·sqrt y)² ~ x·y`; `sqrt_sq` at `t := mul (sqrt x) (sqrt y)`
+    /// (nonneg via `mul_nonneg`/`sqrt_nonneg`) gives `sqrt(t²) ~ t`; and
+    /// `sqrt_congr` carries the first equivalence through `sqrt`, chaining
+    /// to `sqrt (mul x y) ~ mul (sqrt x) (sqrt y)`. See `creal/sqrt.rs`.
+    pub sqrt_mul: NameId,
 
     // --- Bishop's speed-up combinator (creal/speedup.rs) ----------------------
     /// `CReal.KRegular : (Nat → Rat) → Nat → Prop` — Bishop regularity up to a
@@ -3340,6 +3362,36 @@ pub struct CRealPrelude {
     /// `declare_shared_index_to_canonical` doc comment for both pieces,
     /// sized precisely rather than gestured at.
     pub riemann_sum_shared_accuracy_close: NameId,
+    /// `CReal.riemannSumTotalEpsLe : ∀ a b e m : Nat's/CReal mix,
+    /// CReal.le (totalEps a b e m) (CReal.ofRat (Rat.natDivSucc magnitude
+    /// e))`, `magnitude := Nat.succ (CReal.bound (CReal.add b (CReal.neg
+    /// a)))`, `totalEps` = `riemannSum_cauchy`'s own internal bound term
+    /// (`creal/integral.rs`'s `total_eps_of`, reconstructed EXTERNALLY
+    /// term-for-term — see that file for the exact shape).
+    ///
+    /// **The closed-form magnitude lemma `riemannSum_cauchy`'s own doc
+    /// comment (and `riemannSum_shared_accuracy_close`'s) name as the
+    /// actual remaining gate on `CReal.integral`**: `totalEps` is an opaque
+    /// CReal SAMPLE until this bound turns it into a genuine
+    /// `K/(e+1)`-shaped rational, independent of `m` and requiring no
+    /// hypothesis on `a`/`b` at all (`CReal.bound` is unconditional; the
+    /// `mul_le_mul_of_nonneg_left` step multiplies through by the
+    /// UNCONDITIONALLY nonnegative `embed (natDivSucc 1 e)`, not by `width`,
+    /// so `le a b` is never needed). Two independent pieces:
+    ///
+    /// 1. `total_eps_of a b e m` is `Equiv`-identical to `mul width (embed
+    ///    (natDivSucc 1 e))` (`width := add b (neg a)`) via
+    ///    `integral.rs`'s private `riemann_sum_const_rearrange` (already
+    ///    proved for [`Self::riemann_sum_const`], reused at `c := embed
+    ///    (natDivSucc 1 e)` — the mesh count's own cancellation identity
+    ///    does not care what its "constant" factor IS) plus one `mul_comm`.
+    /// 2. [`Self::mul_le_mul_of_nonneg_left`] at that nonnegative factor,
+    ///    widening `width` to `direct_bound_le`'s own `ofNat magnitude`
+    ///    bound, then [`Self::of_rat_mul`] plus
+    ///    [`crate::RatPrelude::nat_div_succ_mul`] (`Nat.mul_one`-simplified)
+    ///    collapses the resulting rational product back into a single
+    ///    `natDivSucc`.
+    pub riemann_sum_total_eps_le: NameId,
 }
 
 impl CRealPrelude {
@@ -3580,6 +3632,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sqrt_le_sqrt: kernel.name_str(creal, "sqrt_le_sqrt"),
         sqrt_sq: kernel.name_str(creal, "sqrt_sq"),
         sqrt_nonneg: kernel.name_str(creal, "sqrt_nonneg"),
+        mul_self_sqrt: kernel.name_str(creal, "mul_self_sqrt"),
+        sqrt_mul: kernel.name_str(creal, "sqrt_mul"),
         k_regular_pred: kernel.name_str(creal, "KRegular"),
         speedup: kernel.name_str(creal, "speedup"),
         regular_of_kregular: kernel.name_str(creal, "regular_of_kregular"),
@@ -3737,6 +3791,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         riemann_sum_cauchy: kernel.name_str(creal, "riemannSum_cauchy"),
         shared_index_to_canonical: kernel.name_str(creal, "sharedIndexToCanonical"),
         riemann_sum_shared_accuracy_close: kernel.name_str(creal, "riemannSum_sharedAccuracyClose"),
+        riemann_sum_total_eps_le: kernel.name_str(creal, "riemannSumTotalEpsLe"),
     }
 }
 
@@ -3892,6 +3947,21 @@ pub(crate) fn build_creal_prelude_uncached(
         // right after it since both round out "the laws sqrt.rs's own doc
         // names as reachable now" from the same landing.
         sqrt::declare_sqrt_nonneg(&mut d, prelude)?;
+        // `mul_self_sqrt` needs `sqrt`/`sqrt_approx_sq_bracket`/`rat_sq_le`
+        // (all above, same as `sqrt_sq`), `bound`/`bound_within`/`mul`/
+        // `mulShift`/`equiv_of_bounded`/`regular_between` (`product.rs`, far
+        // earlier), `CReal.le` (`declare_order`, far earlier), and
+        // `mul_self_zero::diff_of_squares` (widened to `pub(super)`,
+        // upstream of this whole prelude). It does not depend on `sqrt_sq`
+        // itself, but is placed right after it since both round out the
+        // laws relating `sqrt` back to its argument.
+        sqrt::declare_mul_self_sqrt(&mut d, prelude)?;
+        // `sqrt_mul` needs `mul_self_sqrt` (just above), `sqrt_sq`/
+        // `sqrt_congr`/`sqrt_nonneg` (earlier in this file), and
+        // `mul_nonneg`/`mul_comm`/`mul_assoc`/`mul_congr` (`product.rs`, far
+        // earlier) -- no new epsilon estimate, so it is placed right after
+        // `mul_self_sqrt` rather than waiting for anything below.
+        sqrt::declare_sqrt_mul(&mut d, prelude)?;
         convergence::declare_cauchy_convergence(&mut d, prelude)?;
         series::declare_series(&mut d, prelude)?;
         // `CReal.mag_bound_le_sum_range_of_lt` needs `CReal.sumRange`
@@ -4018,6 +4088,14 @@ pub(crate) fn build_creal_prelude_uncached(
         // `sharedIndexToCanonical` (both just above) plus `series.rs`'s
         // `within_symm`, so it cannot land any earlier than this call site.
         integral::declare_riemann_sum_shared_accuracy_close(&mut d, prelude)?;
+        // `riemannSumTotalEpsLe` (the closed-form magnitude lemma
+        // `riemannSum_cauchy`'s own doc comment names as the actual
+        // remaining gate on `CReal.integral`) needs only `CReal.bound`/
+        // `bound_within` (archimedean.rs, far above), `mul_le_mul_of_nonneg_left`/
+        // `of_rat_mul`/`mul_comm` (order.rs/field.rs, far above) and
+        // `riemann_sum_const`'s own private rearrangement helper (just
+        // above) — nothing from `riemannSum_cauchy` itself.
+        integral::declare_riemann_sum_total_eps_le(&mut d, prelude)?;
         // `order_reflect_of_pos_deriv` needs only `strict_mono_of_pos_deriv`
         // (just declared above) plus `lt_trans`/`lt_irrefl`/`apart` (all far
         // above); nothing later depends on it, so it lands right after its
