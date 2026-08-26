@@ -117,6 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-26 | `05b92a924` | Prove axiom-free quotient and remainder equations for a Boolean low digit plus twice an arbitrary tail, supplying the recursive decoder for component uniqueness. |
 | 2026-08-26 | `d89a192b7` | Compose the universal reification bound with native bit-sum reconstruction to prove an axiom-free numeric round trip, isolating component uniqueness. |
 | 2026-08-26 | `04ca04a3d` | Prove universally and axiom-free that every bounded Boolean-bit reification is strictly below `2^k`, leaving only observation uniqueness. |
 | 2026-08-26 | `a00743663` | Prove every Boolean reification digit is at most one constructively and axiom-free, supplying the local bound for the universal reifier induction. |
@@ -1526,6 +1527,11 @@ The bound now composes with native `sum_testBit_lt` and `mod_eq_self_of_lt` to
 prove a universal numeric reconstruction round trip, also axiom-free. The
 remaining seam is componentwise digit uniqueness below `k`, followed by the
 already-checked Boolean transport.
+The low-digit decoder now proves axiom-free that `boolToBit b + 2*n` has
+quotient `n` and remainder `boolToBit b` under division by two, using a
+constructed `divMod` witness and uniqueness against executable division. Next:
+put the bounded reifier into this low-digit-first form and induct the decoder
+to componentwise uniqueness.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization
