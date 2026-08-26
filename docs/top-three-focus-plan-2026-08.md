@@ -284,6 +284,17 @@ remaining foundation is a target-local reconstruction over the imported
 definition (or an independently checked semantic bridge), followed by the same
 three-sibling unchanged-operation bar.
 
+That reconstruction has now crossed the boundary for the first sibling.
+Lean 4.30 reports that its own `Nat.mod_self`, `Nat.add_mod_left`, and
+`Nat.add_mod_right` proofs all carry `propext`; importing those names therefore
+repeats the failed shortcut. A new target-local `modSelf` contract instead
+reduces the exact `Nat.mod` / `Nat.modCore.go` implementation directly. Lean
+reports an empty footprint, source-to-source transport succeeds, bounded
+application closes the proof-free modulus-zero goal, and Axeyum independently
+admits it with no target dependency. Conversion is now 1/3. The remaining
+construction is one implementation-local periodicity law reusable by both
+addition siblings; operation authority still waits for 3/3.
+
 ## Comparative position
 
 Axeyum should not be described as a replacement for any one neighboring
@@ -682,10 +693,13 @@ targets and passed through a new source-to-source checked transport probe. Six
 obvious arithmetic shortcuts carry `propext`; `dvd_refl` is axiom-free but its
 closure cannot yet compose into the minimal target capsule; only
 `Nat.ModEq.refl` transports, and bounded application converts 0/3 targets.
-This is a useful hard boundary, not producer progress. Next: construct one
-empty-footprint behavior theorem against the exact imported `Nat.mod`
-implementation and require the unchanged probe to admit all three siblings
-before operation registration.
+This was a useful hard boundary rather than producer progress. The first exact
+behavior contract now reconstructs `n % n = 0` directly over imported
+`Nat.mod`, transports with an empty footprint, and independently admits the
+modulus-zero sibling. The assay therefore advances from 0/3 to 1/3 without
+settling the fact or registering an operation. Next: construct one shared
+implementation-local periodicity law for the two addition siblings and require
+the unchanged probe to reach 3/3 before operation registration.
 
 Runtime health now has a provider-captured, commit-bound evidence path. The
 first receipt binds canonical GitHub Actions run `33013805820` to tested commit

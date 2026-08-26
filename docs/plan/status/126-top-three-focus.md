@@ -8,22 +8,20 @@ top-three-focus, 2026-08-25). The durable plan is
 the full lane history is in
 [`../notes/126-top-three-focus.md`](../notes/126-top-three-focus.md).
 
-Current boundary: product health now combines committed populations with an
-exact provider-captured CI receipt. Run `33013805820` tested commit
-`08b65942ff9d`: 8/14 jobs succeeded and six failed, so the dashboard says
-`failed-ancestor`, never current-head green. The receipt exposed and drove
-repair of this lane's stale generated example inventory and overlong status.
-Separately, the imported `Nat.ModEq` bridge assay measured 0/3 conversions:
-six public Mathlib shortcuts carry `propext`, one axiom-free closure cannot
-compose into the minimal target, and reflexivity alone is insufficient. Next:
-capture the post-repair CI run and construct one target-local empty-footprint
-behavior theorem for the exact imported `Nat.mod` spine.
+Current boundary: the first exact imported `Nat.mod` behavior contract advances
+the frozen arithmetic `Nat.ModEq` family from 0/3 to 1/3. It reconstructs
+`n % n = 0` directly over `Nat.modCore.go`, transports with an empty footprint,
+and independently admits the proof-free modulus-zero target without depending
+on its declaration. Public `Nat.mod_self` and both public addition laws carry
+`propext`, so they remain rejected. Next: construct one implementation-local
+periodicity law reusable by both addition siblings; operation authority still
+waits for 3/3 and the transaction path.
 
-Reviewed natural-congruence coverage now spans 13 settled facts and six
-empty-footprint kernel anchors. The graph deliberately keeps Mathlib's
-remainder-equality representation separate from Axeyum's balanced-witness
-representation; these are semantic links, not transport authority. The review
-queue now records 1,281 of 1,287 kernel theorems as still unreviewed.
+Priority 3 also repaired the CI-observed sub-millisecond budget escape: policy
+now compares an unrounded monotonic duration while receipts retain integer
+milliseconds. The focused 29-test tier-C suite and Ruff pass. Product health
+still reports the older failed ancestor until a completed provider run is
+captured.
 
 Detail and older landed rows moved to [`../notes/126-top-three-focus.md`](../notes/126-top-three-focus.md).
 
