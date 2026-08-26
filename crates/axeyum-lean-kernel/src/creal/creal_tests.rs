@@ -72,7 +72,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 309] = [
+    let expected: [(&str, crate::NameId, &str); 310] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -368,6 +368,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             "theorem",
         ),
         ("CReal.sqrt", p.sqrt, "def"),
+        ("CReal.sqrt_congr", p.sqrt_congr, "theorem"),
         // Bishop's speed-up combinator (creal/speedup.rs).
         ("CReal.KRegular", p.k_regular_pred, "def"),
         ("CReal.speedup", p.speedup, "def"),
