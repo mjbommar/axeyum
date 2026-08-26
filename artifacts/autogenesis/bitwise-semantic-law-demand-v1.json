@@ -175,6 +175,29 @@
     "total_bitwise_canonical_type": "((x0 : ((x0 : Bool) -> ((x1 : Bool) -> Bool))) -> ((x1 : Eq.{1} Bool (x0 Bool.false Bool.false) Bool.false) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> Eq.{1} Bool (Axeyum.Autogenesis.testBitBool (Axeyum.Autogenesis.bitwiseTotal x0 x2 x3) x4) (x0 (Axeyum.Autogenesis.testBitBool x2 x4) (Axeyum.Autogenesis.testBitBool x3 x4)))))))",
     "total_bitwise_definition": "Axeyum.Autogenesis.bitwiseTotal",
     "total_bitwise_theorem": "Axeyum.Autogenesis.testBitBool_bitwiseTotal",
+    "total_bitwise_specializations": [
+      {
+        "axiom_footprint_size": 0,
+        "canonical_type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} Bool (Axeyum.Autogenesis.testBitBool (Axeyum.Autogenesis.bitwiseAnd x0 x1) x2) (Axeyum.Autogenesis.boolAnd (Axeyum.Autogenesis.testBitBool x0 x2) (Axeyum.Autogenesis.testBitBool x1 x2)))))",
+        "definition": "Axeyum.Autogenesis.bitwiseAnd",
+        "generic_theorem_dependency": "Axeyum.Autogenesis.testBitBool_bitwiseTotal",
+        "theorem": "Axeyum.Autogenesis.testBitBool_bitwiseAnd"
+      },
+      {
+        "axiom_footprint_size": 0,
+        "canonical_type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} Bool (Axeyum.Autogenesis.testBitBool (Axeyum.Autogenesis.bitwiseOr x0 x1) x2) (Axeyum.Autogenesis.boolOr (Axeyum.Autogenesis.testBitBool x0 x2) (Axeyum.Autogenesis.testBitBool x1 x2)))))",
+        "definition": "Axeyum.Autogenesis.bitwiseOr",
+        "generic_theorem_dependency": "Axeyum.Autogenesis.testBitBool_bitwiseTotal",
+        "theorem": "Axeyum.Autogenesis.testBitBool_bitwiseOr"
+      },
+      {
+        "axiom_footprint_size": 0,
+        "canonical_type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} Bool (Axeyum.Autogenesis.testBitBool (Axeyum.Autogenesis.bitwiseDifference x0 x1) x2) (Axeyum.Autogenesis.boolDifference (Axeyum.Autogenesis.testBitBool x0 x2) (Axeyum.Autogenesis.testBitBool x1 x2)))))",
+        "definition": "Axeyum.Autogenesis.bitwiseDifference",
+        "generic_theorem_dependency": "Axeyum.Autogenesis.testBitBool_bitwiseTotal",
+        "theorem": "Axeyum.Autogenesis.testBitBool_bitwiseDifference"
+      }
+    ],
     "definition": "Axeyum.Autogenesis.reifyBits",
     "one_bit_normalization_axiom_footprint_size": 0,
     "one_bit_normalization_canonical_type": "((x0 : ((x0 : AxNat) -> Bool)) -> Eq.{1} AxNat (Axeyum.Autogenesis.reifyBits x0 (AxNat.succ AxNat.zero)) (Axeyum.Autogenesis.boolToBit (x0 AxNat.zero)))",

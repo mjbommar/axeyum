@@ -228,6 +228,26 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
         or "Bool.false" not in total_bitwise_type
     ):
         raise ValueError("total bitwise theorem type changed")
+    specializations = reification.get("total_bitwise_specializations")
+    if not isinstance(specializations, list) or len(specializations) != 3:
+        raise ValueError("total bitwise specialization population changed")
+    expected_specializations = [
+        ("bitwiseAnd", "boolAnd"),
+        ("bitwiseOr", "boolOr"),
+        ("bitwiseDifference", "boolDifference"),
+    ]
+    for specialization, (operation, boolean_operation) in zip(
+        specializations, expected_specializations, strict=True
+    ):
+        if specialization.get("axiom_footprint_size") != 0:
+            raise ValueError("total bitwise specialization gained assumptions")
+        if specialization.get("generic_theorem_dependency") != (
+            "Axeyum.Autogenesis.testBitBool_bitwiseTotal"
+        ):
+            raise ValueError("total bitwise specialization bypassed the generic theorem")
+        canonical_type = specialization.get("canonical_type", "")
+        if operation not in canonical_type or boolean_operation not in canonical_type:
+            raise ValueError("total bitwise specialization type changed")
 
     exclusion = data.get("countermodel_exclusion", {})
     if exclusion.get("excluded_by_law") != "testBit_succ":
@@ -250,6 +270,7 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
         "native_boolean_bridges": 1,
         "native_observation_algebras": 1,
         "native_reifications": 1,
+        "total_bitwise_specializations": len(specializations),
         "operations": len(operations),
     }
 
@@ -303,6 +324,7 @@ def main() -> int:
         f"native_boolean_bridges={result['native_boolean_bridges']}|"
         f"native_observation_algebras={result['native_observation_algebras']}|"
         f"native_reifications={result['native_reifications']}|"
+        f"total_bitwise_specializations={result['total_bitwise_specializations']}|"
         f"finite_vectors={result['finite_vectors']}|"
         "countermodel_excluded=true|reconstruction_eligible=false"
     )

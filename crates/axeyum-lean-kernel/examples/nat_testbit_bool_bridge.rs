@@ -5,9 +5,50 @@
 //! constructively bridgeable and preserves the native successor equation.
 
 use axeyum_lean_kernel::{
-    BinderInfo, Declaration, ExprId, Kernel, NatDev, NatOps, NatPrelude, ReducibilityHint,
+    BinderInfo, Declaration, ExprId, Kernel, NameId, NatDev, NatOps, NatPrelude, ReducibilityHint,
     build_nat_prelude,
 };
+
+#[derive(Clone, Copy)]
+enum BooleanBinaryOperation {
+    And,
+    Or,
+    Difference,
+}
+
+fn bool_select_bool(
+    d: &mut NatDev<'_>,
+    condition: ExprId,
+    false_case: ExprId,
+    true_case: ExprId,
+) -> ExprId {
+    let bool_ty = d.bool_ty();
+    let selector_fv = d.fresh_fvar();
+    let motive = d.lam_fv(selector_fv, bool_ty, bool_ty);
+    let zero = d.kernel().level_zero();
+    let one = d.kernel().level_succ(zero);
+    let bool_rec = d.prelude().logic.bool_rec;
+    let rec = d.kernel().const_(bool_rec, vec![one]);
+    d.apply(rec, &[motive, false_case, true_case, condition])
+}
+
+fn boolean_binary_body(
+    d: &mut NatDev<'_>,
+    operation: BooleanBinaryOperation,
+    left: ExprId,
+    right: ExprId,
+) -> ExprId {
+    let false_value = d.bool_false();
+    let true_value = d.bool_true();
+    match operation {
+        BooleanBinaryOperation::And => bool_select_bool(d, left, false_value, right),
+        BooleanBinaryOperation::Or => bool_select_bool(d, left, right, true_value),
+        BooleanBinaryOperation::Difference => {
+            let not_right = bool_select_bool(d, right, true_value, false_value);
+            bool_select_bool(d, left, false_value, not_right)
+        }
+    }
+}
 
 fn iff_forward(d: &mut NatDev<'_>, left: ExprId, right: ExprId, proof: ExprId) -> ExprId {
     let logic = d.prelude().logic;
@@ -149,6 +190,16 @@ fn run() -> Result<(), String> {
         kernel.name_str(autogenesis, "testBitBool_bitwiseReifyLow");
     let bitwise_total_name = kernel.name_str(autogenesis, "bitwiseTotal");
     let bitwise_total_theorem_name = kernel.name_str(autogenesis, "testBitBool_bitwiseTotal");
+    let bool_and_name = kernel.name_str(autogenesis, "boolAnd");
+    let bool_or_name = kernel.name_str(autogenesis, "boolOr");
+    let bool_difference_name = kernel.name_str(autogenesis, "boolDifference");
+    let bitwise_and_name = kernel.name_str(autogenesis, "bitwiseAnd");
+    let bitwise_or_name = kernel.name_str(autogenesis, "bitwiseOr");
+    let bitwise_difference_name = kernel.name_str(autogenesis, "bitwiseDifference");
+    let bitwise_and_theorem_name = kernel.name_str(autogenesis, "testBitBool_bitwiseAnd");
+    let bitwise_or_theorem_name = kernel.name_str(autogenesis, "testBitBool_bitwiseOr");
+    let bitwise_difference_theorem_name =
+        kernel.name_str(autogenesis, "testBitBool_bitwiseDifference");
     let reify_one_normalize_name = kernel.name_str(autogenesis, "reifyBits_one_normalize");
     let reify_one_roundtrip_name = kernel.name_str(autogenesis, "reifyBits_one_roundtrip_zero");
     let reify_bound_name = kernel.name_str(autogenesis, "reifyBits_lt_pow");
@@ -1399,6 +1450,102 @@ fn run() -> Result<(), String> {
         d.declare_theorem(bitwise_total_theorem_name, theorem_type, theorem_value)
             .map_err(|error| format!("testBitBool_bitwiseTotal rejected: {}", d.explain(&error)))?;
 
+        // Three sibling operations are definitions/specializations of the same
+        // generic construction. No target-specific bit proof is authored here:
+        // each theorem is the universal result above instantiated with a
+        // truth-table function whose false/false side condition computes.
+        let specializations: [(BooleanBinaryOperation, NameId, NameId, NameId); 3] = [
+            (
+                BooleanBinaryOperation::And,
+                bool_and_name,
+                bitwise_and_name,
+                bitwise_and_theorem_name,
+            ),
+            (
+                BooleanBinaryOperation::Or,
+                bool_or_name,
+                bitwise_or_name,
+                bitwise_or_theorem_name,
+            ),
+            (
+                BooleanBinaryOperation::Difference,
+                bool_difference_name,
+                bitwise_difference_name,
+                bitwise_difference_theorem_name,
+            ),
+        ];
+        for (operation, bool_operation_name, nat_operation_name, theorem_name) in specializations {
+            let bool_operation_value = {
+                let left_fv = d.fresh_fvar();
+                let left = d.kernel().fvar(left_fv);
+                let right_fv = d.fresh_fvar();
+                let right = d.kernel().fvar(right_fv);
+                let body = boolean_binary_body(&mut d, operation, left, right);
+                let with_right = d.lam_fv(right_fv, bool_ty, body);
+                d.lam_fv(left_fv, bool_ty, with_right)
+            };
+            d.kernel()
+                .add_declaration(Declaration::Definition {
+                    name: bool_operation_name,
+                    uparams: vec![],
+                    ty: bool_binary,
+                    value: bool_operation_value,
+                    hint: ReducibilityHint::Regular(3),
+                })
+                .map_err(|error| format!("Boolean bitwise operation rejected: {error:?}"))?;
+
+            let nat_operation_value = {
+                let x_fv = d.fresh_fvar();
+                let x = d.kernel().fvar(x_fv);
+                let y_fv = d.fresh_fvar();
+                let y = d.kernel().fvar(y_fv);
+                let f = d.const_app(bool_operation_name, &[]);
+                let body = d.const_app(bitwise_total_name, &[f, x, y]);
+                let with_y = d.lam_fv(y_fv, nat, body);
+                d.lam_fv(x_fv, nat, with_y)
+            };
+            let nat_to_nat = d.arrow(nat, nat);
+            let nat_binary = d.arrow(nat, nat_to_nat);
+            d.kernel()
+                .add_declaration(Declaration::Definition {
+                    name: nat_operation_name,
+                    uparams: vec![],
+                    ty: nat_binary,
+                    value: nat_operation_value,
+                    hint: ReducibilityHint::Regular(5),
+                })
+                .map_err(|error| format!("Nat bitwise operation rejected: {error:?}"))?;
+
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let y_fv = d.fresh_fvar();
+            let y = d.kernel().fvar(y_fv);
+            let index_fv = d.fresh_fvar();
+            let index = d.kernel().fvar(index_fv);
+            let f = d.const_app(bool_operation_name, &[]);
+            let false_value = d.bool_false();
+            let side_lhs = d.apply(f, &[false_value, false_value]);
+            let side = d.bool_refl(false_value);
+            debug_assert!(d.kernel().def_eq(side_lhs, false_value));
+            let proof = d.lemma(bitwise_total_theorem_name, &[f, side, x, y, index]);
+            let result = d.const_app(nat_operation_name, &[x, y]);
+            let observed = d.const_app(test_bit_bool_name, &[result, index]);
+            let x_bit = d.const_app(test_bit_bool_name, &[x, index]);
+            let y_bit = d.const_app(test_bit_bool_name, &[y, index]);
+            let expected = d.apply(f, &[x_bit, y_bit]);
+            let goal = d.bool_eq(observed, expected);
+            let with_index_type = d.pi_fv(index_fv, nat, goal);
+            let with_y_type = d.pi_fv(y_fv, nat, with_index_type);
+            let theorem_type = d.pi_fv(x_fv, nat, with_y_type);
+            let with_index = d.lam_fv(index_fv, nat, proof);
+            let with_y = d.lam_fv(y_fv, nat, with_index);
+            let theorem_value = d.lam_fv(x_fv, nat, with_y);
+            d.declare_theorem(theorem_name, theorem_type, theorem_value)
+                .map_err(|error| {
+                    format!("bitwise specialization rejected: {}", d.explain(&error))
+                })?;
+        }
+
         // The non-definitional arithmetic bridge from the one-element weighted
         // sum to its sole digit.
         let bits_fv = d.fresh_fvar();
@@ -1841,6 +1988,31 @@ fn run() -> Result<(), String> {
     {
         return Err("total bitwise theorem gained assumptions".to_owned());
     }
+    let mut bitwise_specializations = Vec::new();
+    for name in [
+        bitwise_and_theorem_name,
+        bitwise_or_theorem_name,
+        bitwise_difference_theorem_name,
+    ] {
+        let theorem_type = match kernel.environment().get(name) {
+            Some(Declaration::Theorem { ty, .. }) => *ty,
+            _ => return Err("bitwise specialization disappeared".to_owned()),
+        };
+        if !kernel.axiom_footprint(name).is_empty() {
+            return Err("bitwise specialization gained assumptions".to_owned());
+        }
+        if !kernel
+            .theorem_dependencies(name)
+            .contains(&bitwise_total_theorem_name)
+        {
+            return Err("bitwise specialization bypassed the generic theorem".to_owned());
+        }
+        bitwise_specializations.push(format!(
+            "{}:{}",
+            kernel.display_name(name),
+            kernel.render_lean(theorem_type)
+        ));
+    }
     let reify_one_normalize_type = match kernel.environment().get(reify_one_normalize_name) {
         Some(Declaration::Theorem { ty, .. }) => *ty,
         _ => return Err("reifyBits_one_normalize disappeared".to_owned()),
@@ -1869,7 +2041,7 @@ fn run() -> Result<(), String> {
         return Err("numeric reification roundtrip gained assumptions".to_owned());
     }
     println!(
-        "NAT_TESTBIT_BOOL_BRIDGE_OK|theorem=Axeyum.Autogenesis.testBitBool_succ|axioms=0|type={}|zero_observation_theorem=Axeyum.Autogenesis.testBitBool_zero|zero_observation_axioms=0|zero_observation_type={}|input_bound_theorem=Axeyum.Autogenesis.testBitBool_beyond_bound|input_bound_axioms=0|input_bound_type={}|observation_theorem=Axeyum.Autogenesis.bitwiseObservation_apply|observation_axioms=0|observation_type={}|reification_definition=Axeyum.Autogenesis.bitwiseReifyBounded|reification_base_theorem=Axeyum.Autogenesis.reifyBits_zero|reification_base_axioms=0|reification_base_type={}|reification_step_theorem=Axeyum.Autogenesis.reifyBits_succ|reification_step_axioms=0|reification_step_type={}|boolean_digit_roundtrip_theorem=Axeyum.Autogenesis.boolToBit_roundtrip_zero|boolean_digit_roundtrip_axioms=0|boolean_digit_roundtrip_type={}|boolean_digit_bound_theorem=Axeyum.Autogenesis.boolToBit_le_one|boolean_digit_bound_axioms=0|boolean_digit_bound_type={}|direct_boolean_roundtrip_theorem=Axeyum.Autogenesis.bitToBool_boolToBit|direct_boolean_roundtrip_axioms=0|direct_boolean_roundtrip_type={}|boolean_digit_divmod_theorem=Axeyum.Autogenesis.boolDigit_divMod|boolean_digit_divmod_axioms=0|boolean_digit_divmod_type={}|boolean_digit_div_theorem=Axeyum.Autogenesis.boolDigit_div|boolean_digit_div_axioms=0|boolean_digit_div_type={}|boolean_digit_mod_theorem=Axeyum.Autogenesis.boolDigit_mod|boolean_digit_mod_axioms=0|boolean_digit_mod_type={}|low_reification_base_theorem=Axeyum.Autogenesis.reifyBitsLow_zero|low_reification_base_axioms=0|low_reification_base_type={}|low_reification_step_theorem=Axeyum.Autogenesis.reifyBitsLow_succ|low_reification_step_axioms=0|low_reification_step_type={}|low_reification_roundtrip_theorem=Axeyum.Autogenesis.reifyBitsLow_roundtrip|low_reification_roundtrip_axioms=0|low_reification_roundtrip_type={}|low_reification_outside_theorem=Axeyum.Autogenesis.reifyBitsLow_outside|low_reification_outside_axioms=0|low_reification_outside_type={}|bounded_bitwise_theorem=Axeyum.Autogenesis.testBitBool_bitwiseReifyLow|bounded_bitwise_axioms=0|bounded_bitwise_type={}|total_bitwise_theorem=Axeyum.Autogenesis.testBitBool_bitwiseTotal|total_bitwise_axioms=0|total_bitwise_type={}|one_bit_normalization_theorem=Axeyum.Autogenesis.reifyBits_one_normalize|one_bit_normalization_axioms=0|one_bit_normalization_type={}|one_bit_roundtrip_theorem=Axeyum.Autogenesis.reifyBits_one_roundtrip_zero|one_bit_roundtrip_axioms=0|one_bit_roundtrip_type={}|reification_bound_theorem=Axeyum.Autogenesis.reifyBits_lt_pow|reification_bound_axioms=0|reification_bound_type={}|numeric_roundtrip_theorem=Axeyum.Autogenesis.reifyBits_numeric_roundtrip|numeric_roundtrip_axioms=0|numeric_roundtrip_type={}",
+        "NAT_TESTBIT_BOOL_BRIDGE_OK|theorem=Axeyum.Autogenesis.testBitBool_succ|axioms=0|type={}|zero_observation_theorem=Axeyum.Autogenesis.testBitBool_zero|zero_observation_axioms=0|zero_observation_type={}|input_bound_theorem=Axeyum.Autogenesis.testBitBool_beyond_bound|input_bound_axioms=0|input_bound_type={}|observation_theorem=Axeyum.Autogenesis.bitwiseObservation_apply|observation_axioms=0|observation_type={}|reification_definition=Axeyum.Autogenesis.bitwiseReifyBounded|reification_base_theorem=Axeyum.Autogenesis.reifyBits_zero|reification_base_axioms=0|reification_base_type={}|reification_step_theorem=Axeyum.Autogenesis.reifyBits_succ|reification_step_axioms=0|reification_step_type={}|boolean_digit_roundtrip_theorem=Axeyum.Autogenesis.boolToBit_roundtrip_zero|boolean_digit_roundtrip_axioms=0|boolean_digit_roundtrip_type={}|boolean_digit_bound_theorem=Axeyum.Autogenesis.boolToBit_le_one|boolean_digit_bound_axioms=0|boolean_digit_bound_type={}|direct_boolean_roundtrip_theorem=Axeyum.Autogenesis.bitToBool_boolToBit|direct_boolean_roundtrip_axioms=0|direct_boolean_roundtrip_type={}|boolean_digit_divmod_theorem=Axeyum.Autogenesis.boolDigit_divMod|boolean_digit_divmod_axioms=0|boolean_digit_divmod_type={}|boolean_digit_div_theorem=Axeyum.Autogenesis.boolDigit_div|boolean_digit_div_axioms=0|boolean_digit_div_type={}|boolean_digit_mod_theorem=Axeyum.Autogenesis.boolDigit_mod|boolean_digit_mod_axioms=0|boolean_digit_mod_type={}|low_reification_base_theorem=Axeyum.Autogenesis.reifyBitsLow_zero|low_reification_base_axioms=0|low_reification_base_type={}|low_reification_step_theorem=Axeyum.Autogenesis.reifyBitsLow_succ|low_reification_step_axioms=0|low_reification_step_type={}|low_reification_roundtrip_theorem=Axeyum.Autogenesis.reifyBitsLow_roundtrip|low_reification_roundtrip_axioms=0|low_reification_roundtrip_type={}|low_reification_outside_theorem=Axeyum.Autogenesis.reifyBitsLow_outside|low_reification_outside_axioms=0|low_reification_outside_type={}|bounded_bitwise_theorem=Axeyum.Autogenesis.testBitBool_bitwiseReifyLow|bounded_bitwise_axioms=0|bounded_bitwise_type={}|total_bitwise_theorem=Axeyum.Autogenesis.testBitBool_bitwiseTotal|total_bitwise_axioms=0|total_bitwise_type={}|bitwise_specialization_count=3|bitwise_specialization_axioms=0|bitwise_specializations={}|one_bit_normalization_theorem=Axeyum.Autogenesis.reifyBits_one_normalize|one_bit_normalization_axioms=0|one_bit_normalization_type={}|one_bit_roundtrip_theorem=Axeyum.Autogenesis.reifyBits_one_roundtrip_zero|one_bit_roundtrip_axioms=0|one_bit_roundtrip_type={}|reification_bound_theorem=Axeyum.Autogenesis.reifyBits_lt_pow|reification_bound_axioms=0|reification_bound_type={}|numeric_roundtrip_theorem=Axeyum.Autogenesis.reifyBits_numeric_roundtrip|numeric_roundtrip_axioms=0|numeric_roundtrip_type={}",
         kernel.render_lean(ty),
         kernel.render_lean(zero_observation_type),
         kernel.render_lean(beyond_bound_type),
@@ -1888,6 +2060,7 @@ fn run() -> Result<(), String> {
         kernel.render_lean(reify_low_outside_type),
         kernel.render_lean(bitwise_reify_low_roundtrip_type),
         kernel.render_lean(bitwise_total_theorem_type),
+        bitwise_specializations.join(";"),
         kernel.render_lean(reify_one_normalize_type),
         kernel.render_lean(reify_one_roundtrip_type),
         kernel.render_lean(reify_bound_type),

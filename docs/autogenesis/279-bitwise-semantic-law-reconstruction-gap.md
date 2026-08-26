@@ -196,6 +196,15 @@ reconstruction. This candidate instead routes to
 statement floor, and sets `proof_reconstruction_eligible = false`. Thus a
 producer cannot keep retrying proofs for a trust cost that no proof can remove.
 
+The clean route now has sibling evidence rather than only a generic endpoint.
+Three target-owned definitions—`bitwiseAnd`, `bitwiseOr`, and
+`bitwiseDifference`—instantiate the same `bitwiseTotal` construction with
+computational Boolean truth tables. Their three observation theorems all depend
+on `testBitBool_bitwiseTotal`, all have empty footprints, and no sibling has a
+separately authored bit proof. This is reusable family construction, not three
+one-off reconstructions. It intentionally does not claim identity with Lean's
+assumption-bearing `lor`, `land`, or `ldiff` definitions.
+
 A bounded oracle exhausts every Boolean vector through width 12: 8,191 vectors,
 90,114 in-range observations, and 8,191 first-out-of-range zero observations.
 It confirms the weighted-sum construction has the intended finite semantics.

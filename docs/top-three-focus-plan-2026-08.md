@@ -504,6 +504,11 @@ their current closures. The next product decision is therefore whether the
 clean target-owned operations are canonical, whether compatible clean
 definitions are reconstructed under new identities, or whether a separately
 labeled weaker imported-definition route is supported.
+The clean route now demonstrates reuse across three siblings: AND, OR, and
+difference are definitions over the same generic constructor, and their three
+axiom-free observation theorems are specializations of the one generic theorem.
+This meets the multi-target mathematical-family bar without manufacturing
+exact imported-definition identity.
 
 ### Exit evidence
 

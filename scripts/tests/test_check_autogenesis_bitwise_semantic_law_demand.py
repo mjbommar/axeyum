@@ -27,6 +27,7 @@ class BitwiseSemanticLawDemandTests(unittest.TestCase):
                 "native_boolean_bridges": 1,
                 "native_observation_algebras": 1,
                 "native_reifications": 1,
+                "total_bitwise_specializations": 3,
                 "operations": 2,
             },
         )
@@ -143,6 +144,22 @@ class BitwiseSemanticLawDemandTests(unittest.TestCase):
         data = copy.deepcopy(self.data)
         data["native_reification"]["total_bitwise_axiom_footprint_size"] = 1
         with self.assertRaisesRegex(ValueError, "total bitwise"):
+            MODULE.validate(data)
+
+    def test_bitwise_specialization_assumption_fails_closed(self):
+        data = copy.deepcopy(self.data)
+        data["native_reification"]["total_bitwise_specializations"][0][
+            "axiom_footprint_size"
+        ] = 1
+        with self.assertRaisesRegex(ValueError, "specialization gained assumptions"):
+            MODULE.validate(data)
+
+    def test_bitwise_specialization_cannot_bypass_generic_theorem(self):
+        data = copy.deepcopy(self.data)
+        data["native_reification"]["total_bitwise_specializations"][0][
+            "generic_theorem_dependency"
+        ] = "hand-authored"
+        with self.assertRaisesRegex(ValueError, "bypassed"):
             MODULE.validate(data)
 
     def test_finite_oracle_receipt_mutation_fails_closed(self):
