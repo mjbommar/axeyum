@@ -72,7 +72,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 283] = [
+    let expected: [(&str, crate::NameId, &str); 285] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -312,6 +312,16 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             "theorem",
         ),
         ("CReal.bucketIndex", p.bucket_index, "def"),
+        (
+            "CReal.bucketIndexFloorLower",
+            p.bucket_index_floor_lower,
+            "theorem",
+        ),
+        (
+            "CReal.bucketIndexFloorUpper",
+            p.bucket_index_floor_upper,
+            "theorem",
+        ),
         ("CReal.ratSqLe", p.rat_sq_le, "theorem"),
         ("CReal.ratSqSandwich", p.rat_sq_sandwich, "theorem"),
         (
@@ -6978,4 +6988,187 @@ fn converges_comp_eventually_applies_at_x_plus_one_where_the_limit_moves() {
         rendered.contains("Exists"),
         "the instantiated conclusion is not an existential: {rendered}"
     );
+}
+
+/// `CReal.bucketIndex (CReal.ofNat 2) 0` computes to the literal `2`, and the
+/// two floor bounds instantiate to the (trivially true, since `q` lands
+/// exactly ON the grid) statement `Rat.le (natDivSucc 2 0) (natDivSucc 2 0)`
+/// twice over. The on-grid case is the one where a transposed `<`/`<=` or an
+/// off-by-one in `bucket_index`'s own recipe is easiest to miss, because both
+/// directions happen to coincide.
+#[test]
+fn bucket_index_floor_bounds_apply_on_grid_at_ofnat_two_and_zero() {
+    use crate::rat_prelude::ops::{req, rle, rrefl, rzero};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let two_nat = d.num(2);
+    let w = d.const_app(p.of_nat, &[two_nat]);
+    let zero_nat = d.num(0);
+
+    // `bucketIndex (ofNat 2) 0` reduces to the literal `2`: j = 1*1 = 1,
+    // seq w 1 = natDivSucc 2 0 (the constant sequence), q = max(2/1, 0) =
+    // 2/1, a = natAbs 2 = 2, b = 1, scaled = 2*1 = 2, m = Nat.div 2 1 = 2.
+    let m = d.const_app(p.bucket_index, &[w, zero_nat]);
+    let two_nat_again = d.num(2);
+    let m_eq_two = NatOps::eq(&mut d, m, two_nat_again);
+    let m_proof = NatOps::refl(&mut d, m);
+    let anon = d.kernel().anon();
+    let name = d
+        .kernel()
+        .name_str(anon, "__bucket_index_on_grid_reduces_to_two");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: m_eq_two,
+            value: m_proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!("bucketIndex (ofNat 2) 0 must reduce to 2 by refl: {error:?}")
+        });
+
+    // `Rat.max (seq (ofNat 2) 1) Rat.zero` reduces to the literal `natDivSucc
+    // 2 0` -- confirming `q` itself is exactly `2`, not merely that the Nat
+    // arithmetic downstream of it works out.
+    let one_nat = d.num(1);
+    let sample_w1 = d.const_app(p.seq, &[w, one_nat]);
+    let zero_rat = rzero(&mut d, p.rat);
+    let q = d.const_app(p.rat.max, &[sample_w1, zero_rat]);
+    let two_over_one = d.const_app(p.rat.nat_div_succ, &[two_nat, zero_nat]);
+    let q_eq = req(&mut d, q, two_over_one);
+    let q_proof = rrefl(&mut d, q);
+    let name2 = d
+        .kernel()
+        .name_str(anon, "__bucket_index_on_grid_q_reduces_to_two_over_one");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name: name2,
+            uparams: vec![],
+            ty: q_eq,
+            value: q_proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!("Rat.max (seq (ofNat 2) 1) 0 must reduce to natDivSucc 2 0: {error:?}")
+        });
+
+    // The two floor bounds, applied at these concrete `w, k`, both instantiate
+    // to `Rat.le (natDivSucc 2 0) (natDivSucc 2 0)` -- the same statement
+    // twice, because `q` sits exactly on `bucketIndex`'s own grid point here.
+    let lower = d.const_app(p.bucket_index_floor_lower, &[w, zero_nat]);
+    let upper = d.const_app(p.bucket_index_floor_upper, &[w, zero_nat]);
+    // Lower: `natDivSucc m k <= q` at `m = 2` is the tight `2/1 <= 2/1`.
+    let lower_tight_ty = rle(&mut d, p.rat, two_over_one, two_over_one);
+    let name3 = d
+        .kernel()
+        .name_str(anon, "__bucket_index_on_grid_lower_is_tight");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name: name3,
+            uparams: vec![],
+            ty: lower_tight_ty,
+            value: lower,
+        })
+        .unwrap_or_else(|error| {
+            panic!("bucket_index_floor_lower at (ofNat 2, 0) must read as 2/1 <= 2/1: {error:?}")
+        });
+    // Upper: `q <= natDivSucc (succ m) k` compares against `m + 1 = 3`, NOT
+    // `m` -- `q = 2 <= 3`, one full step above the lower bound's own target,
+    // not a second copy of the same tight inequality.
+    let three_nat = d.num(3);
+    let three_over_one = d.const_app(p.rat.nat_div_succ, &[three_nat, zero_nat]);
+    let upper_ty = rle(&mut d, p.rat, two_over_one, three_over_one);
+    let name4 = d
+        .kernel()
+        .name_str(anon, "__bucket_index_on_grid_upper_is_one_step_above");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name: name4,
+            uparams: vec![],
+            ty: upper_ty,
+            value: upper,
+        })
+        .unwrap_or_else(|error| {
+            panic!("bucket_index_floor_upper at (ofNat 2, 0) must read as 2/1 <= 3/1: {error:?}")
+        });
+}
+
+/// `CReal.bucketIndex (CReal.ofRat (1/3)) 1` computes to `0` -- `q = 1/3`
+/// lands STRICTLY between the grid points `0/2` and `1/2`, so this exercises
+/// the genuine floor (not merely the on-grid coincidence the sibling test
+/// above cannot rule out a transposition with).
+#[test]
+fn bucket_index_floor_bounds_apply_strictly_between_grid_points_at_one_third_and_one() {
+    use crate::rat_prelude::ops::rle;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+    let one_third = d.const_app(p.rat.nat_div_succ, &[one_nat, two_nat]); // 1/3
+    let w = d.const_app(p.of_rat, &[one_third]);
+
+    // k := 1, so k1 = 2, step = natDivSucc 1 1 = 1/2, j = 2*2 = 4.
+    let m = d.const_app(p.bucket_index, &[w, one_nat]);
+    let zero_nat = d.num(0);
+    let m_eq_zero = NatOps::eq(&mut d, m, zero_nat);
+    let m_proof = NatOps::refl(&mut d, m);
+    let anon = d.kernel().anon();
+    let name = d
+        .kernel()
+        .name_str(anon, "__bucket_index_between_grid_points_reduces_to_zero");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: m_eq_zero,
+            value: m_proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!("bucketIndex (ofRat 1/3) 1 must reduce to 0 by refl: {error:?}")
+        });
+
+    // The lower bound instantiates to `natDivSucc 0 1 <= q` (i.e. `0 <= 1/3`)
+    // and the upper bound to `q <= natDivSucc 1 1` (i.e. `1/3 <= 1/2`) --
+    // genuinely different rationals on each side, unlike the on-grid case.
+    let lower = d.const_app(p.bucket_index_floor_lower, &[w, one_nat]);
+    let upper = d.const_app(p.bucket_index_floor_upper, &[w, one_nat]);
+
+    let four_nat = d.num(4);
+    let sample_w4 = d.const_app(p.seq, &[w, four_nat]);
+    let zero_rat = crate::rat_prelude::ops::rzero(&mut d, p.rat);
+    let q = d.const_app(p.rat.max, &[sample_w4, zero_rat]);
+    let zero_over_one = d.const_app(p.rat.nat_div_succ, &[zero_nat, one_nat]); // 0/2
+    let one_over_one = d.const_app(p.rat.nat_div_succ, &[one_nat, one_nat]); // 1/2
+
+    let lower_ty = rle(&mut d, p.rat, zero_over_one, q);
+    let name2 = d
+        .kernel()
+        .name_str(anon, "__bucket_index_between_grid_points_lower");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name: name2,
+            uparams: vec![],
+            ty: lower_ty,
+            value: lower,
+        })
+        .unwrap_or_else(|error| {
+            panic!("bucket_index_floor_lower at (1/3, 1) must read as 0/2 <= q: {error:?}")
+        });
+    let upper_ty = rle(&mut d, p.rat, q, one_over_one);
+    let name3 = d
+        .kernel()
+        .name_str(anon, "__bucket_index_between_grid_points_upper");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name: name3,
+            uparams: vec![],
+            ty: upper_ty,
+            value: upper,
+        })
+        .unwrap_or_else(|error| {
+            panic!("bucket_index_floor_upper at (1/3, 1) must read as q <= 1/2: {error:?}")
+        });
 }
