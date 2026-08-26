@@ -5205,3 +5205,71 @@ fn antitone_of_nonpos_deriv_applies_to_negated_identity_on_0_1() {
         "the endpoints must be zero and one, not some other pair: {rendered}"
     );
 }
+
+/// **Mandatory concrete instantiation** for `CReal.hasDerivative_unique`:
+/// `F := fun r => r` (the identity, `hasDerivative_id`) on `[0, 1]`, with
+/// BOTH candidate derivatives the constant `one` -- the same witness
+/// `hasDerivative_id` supplies twice, matching the task's own instruction
+/// ("both derivatives const one"). `a := zero`, `b := one` so `lt a b` is
+/// genuinely DISCHARGED via `CReal.zero_lt_one`, not assumed at a
+/// degenerate interval (`a = b`) the way the refuted naive statement would
+/// need -- that refutation is exactly why this theorem carries `lt a b` at
+/// all. `z := zero` (the left endpoint; `hasDerivative_unique` holds at any
+/// `z` with `le a z` and `le z b`, endpoints included).
+#[test]
+fn has_derivative_unique_applies_to_the_identity_on_0_1() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    let one_fn = {
+        let ignore_fv = d.fresh_fvar();
+        d.lam_fv(ignore_fv, carrier, one_c)
+    };
+
+    let hf1 = d.lemma(p.has_derivative_id, &[zero_c, one_c]);
+    let hf2 = d.lemma(p.has_derivative_id, &[zero_c, one_c]);
+    let hab = d.lemma(p.zero_lt_one, &[]);
+
+    let haz = d.lemma(p.le_refl, &[zero_c]);
+    let hzb = {
+        let lt = d.lemma(p.zero_lt_one, &[]);
+        d.lemma(p.le_of_lt, &[zero_c, one_c, lt])
+    };
+
+    let identity = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+    let instance = d.lemma(
+        p.has_derivative_unique,
+        &[
+            identity, one_fn, one_fn, zero_c, one_c, hf1, hf2, hab, zero_c, haz, hzb,
+        ],
+    );
+
+    let ty = d.kernel().infer(instance).unwrap_or_else(|error| {
+        panic!("hasDerivative_unique refused at the identity on [0,1]: {error:?}")
+    });
+
+    let expected_f1z = d.apply(one_fn, &[zero_c]);
+    let expected_f2z = d.apply(one_fn, &[zero_c]);
+    let expected_ty = d.const_app(p.equiv, &[expected_f1z, expected_f2z]);
+    let rendered = d.kernel().render_lean(ty);
+    let expected_rendered = d.kernel().render_lean(expected_ty);
+    assert_eq!(
+        rendered, expected_rendered,
+        "must conclude exactly `Equiv (F1 zero) (F2 zero)` (both const one), not some other CReal.Equiv statement"
+    );
+    assert!(
+        rendered.contains("CReal.one"),
+        "both candidate derivatives are the constant one: {rendered}"
+    );
+}
