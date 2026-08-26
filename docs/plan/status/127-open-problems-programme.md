@@ -300,6 +300,21 @@ two live leaves interrupted. An adaptive exhaustive cover on variables 2 and 3 h
 two-step covering proof, but all four leaves interrupted at 600 seconds. No model or complete
 leaf-proof set exists, so `[7,8]` is unchanged.
 
+**Premise-explicit exact-budget circuit reduction, 2026-08-26.** ADR-0582 adds a reusable
+normal form for a query known to be at its minimum possible budget: every AND operand has a
+nonconstant term, every AND result is used later, every essential primary input occurs, and
+every varying output coordinate is nonconstant. The ordinary at-most-budget encodings remain
+unchanged; the PRIMATEs driver requires the independently checked MC=6 premise by name before
+adding these clauses to its MC=7 formula. The generic Boolean-ANF/CNF bridge now composes
+validated clauses over source selectors without exposing its private extension variables,
+and pure ANF export refuses the disjunctive mode. All eight exact-MC-one two-input functions
+remain SAT and replay through both direct and portable routes; malformed source indices fail
+closed. The complete MC=7 formula is 20,585 variables / 69,809 clauses with SHA-256
+`176513848d1fa511bca2a7b5c50255f6dabe6ebff696eb9f62abcfad0f43ae76`. Two persistent
+proof-producing CaDiCaL runs have no short cutoff and remain uncredited. Soeken 2020 already
+publishes the corresponding nonconstant/all-used constraints, so no technique novelty is
+claimed and `[7,8]` is unchanged.
+
 **Bilinear complete first-factor orbit cover, 2026-08-26.** ADR-0571 exposes typed canonical
 support/selector descriptors from normalized matrix-tensor encodings, avoiding dependence on
 private CNF allocation. The `<3,2,4>` rank-19 formula reports `[0] -> 495` and `[0,3] -> 496`.

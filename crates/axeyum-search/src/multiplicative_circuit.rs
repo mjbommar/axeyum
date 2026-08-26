@@ -202,6 +202,21 @@ impl MultiplicativeAnfEncoding {
         &self.system
     }
 
+    /// CNF clauses selecting the syntactically irredundant exact-budget form.
+    ///
+    /// Every operand must contain a nonconstant basis term, every AND result
+    /// must be selected by a later operand or an output, every essential input
+    /// must occur, and every nonconstant output coordinate must select a
+    /// nonconstant term. A circuit violating either gate condition has a
+    /// removable AND gate. Consequently the gate clauses preserve
+    /// satisfiability only when an independent lower-budget result establishes
+    /// that the requested budget is minimal; they are not part of the ordinary
+    /// at-most-budget encoding. The input/output clauses are redundant but can
+    /// expose semantic consequences earlier to a SAT solver.
+    pub fn exact_budget_irredundancy_source_clauses(&self) -> Vec<Vec<(usize, bool)>> {
+        exact_budget_irredundancy_clauses(&self.problem, &self.layout)
+    }
+
     /// Selector units that bind this source system to a positive witness.
     ///
     /// Operand pairs are canonicalized under the selected safe symmetry mode.
@@ -276,6 +291,47 @@ impl MultiplicativeEncoding {
     /// Exact synthesis formula.
     pub fn formula(&self) -> &CnfFormula {
         &self.formula
+    }
+
+    /// Restrict this formula to syntactically irredundant exact-budget circuits.
+    ///
+    /// This is complete only together with an independently established proof
+    /// that no circuit at the next lower budget exists. See
+    /// [`MultiplicativeAnfEncoding::exact_budget_irredundancy_source_clauses`].
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed CNF construction error if an internal selector cannot
+    /// be represented.
+    pub fn formula_with_exact_budget_irredundancy(
+        &self,
+    ) -> Result<CnfFormula, MultiplicativeSynthesisError> {
+        let mut formula = self.formula.clone();
+        for clause in exact_budget_irredundancy_clauses(&self.problem, &self.layout) {
+            let literals = clause
+                .into_iter()
+                .map(|(index, positive)| {
+                    let literal = CnfLit::positive(CnfVar::new(index).map_err(|error| {
+                        MultiplicativeSynthesisError::InvalidModel(format!(
+                            "invalid internal irredundancy selector: {error:?}"
+                        ))
+                    })?);
+                    Ok::<_, MultiplicativeSynthesisError>(if positive {
+                        literal
+                    } else {
+                        literal.negated()
+                    })
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            formula
+                .add_clause(CnfClause::new(literals))
+                .map_err(|error| {
+                    MultiplicativeSynthesisError::InvalidModel(format!(
+                        "invalid internal irredundancy clause: {error:?}"
+                    ))
+                })?;
+        }
+        Ok(formula)
     }
 
     /// Lift a satisfying CNF assignment to a portable circuit and replay it.
@@ -353,6 +409,72 @@ impl MultiplicativeEncoding {
         }
         Ok(formula)
     }
+}
+
+fn exact_budget_irredundancy_clauses(
+    problem: &MultiplicativeSynthesisProblem,
+    layout: &SelectorLayout,
+) -> Vec<Vec<(usize, bool)>> {
+    let mut clauses = Vec::with_capacity(
+        problem
+            .and_gates
+            .saturating_mul(3)
+            .saturating_add(problem.input_bits)
+            .saturating_add(problem.output_bits),
+    );
+    for gate in 0..problem.and_gates {
+        // Constant 0 and constant 1 operands both make this AND removable.
+        clauses.push(layout.left[gate][1..].iter().map(|&v| (v, true)).collect());
+        clauses.push(layout.right[gate][1..].iter().map(|&v| (v, true)).collect());
+
+        // A gate not referenced by any later affine form is dead and removable.
+        let selector_offset = 1 + problem.input_bits + gate;
+        let mut uses = Vec::new();
+        for later in gate + 1..problem.and_gates {
+            uses.push((layout.left[later][selector_offset], true));
+            uses.push((layout.right[later][selector_offset], true));
+        }
+        for output in &layout.outputs {
+            uses.push((output[selector_offset], true));
+        }
+        clauses.push(uses);
+    }
+
+    // An essential primary input must occur in some selected affine form.
+    for input in 0..problem.input_bits {
+        let input_mask = 1 << (problem.input_bits - input - 1);
+        let essential = problem
+            .truth_table
+            .iter()
+            .enumerate()
+            .any(|(row, &value)| value != problem.truth_table[row ^ input_mask]);
+        if essential {
+            let selector_offset = 1 + input;
+            let mut uses = Vec::new();
+            for gate in 0..problem.and_gates {
+                uses.push((layout.left[gate][selector_offset], true));
+                uses.push((layout.right[gate][selector_offset], true));
+            }
+            for output in &layout.outputs {
+                uses.push((output[selector_offset], true));
+            }
+            clauses.push(uses);
+        }
+    }
+
+    // A varying output coordinate cannot be a constant affine form.
+    for (output_index, output) in layout.outputs.iter().enumerate() {
+        let shift = problem.output_bits - output_index - 1;
+        let first = (problem.truth_table[0] >> shift) & 1;
+        if problem
+            .truth_table
+            .iter()
+            .any(|value| ((value >> shift) & 1) != first)
+        {
+            clauses.push(output[1..].iter().map(|&v| (v, true)).collect());
+        }
+    }
+    clauses
 }
 
 fn affine_bits(affine: &AffineSelection) -> Vec<bool> {
@@ -1919,6 +2041,86 @@ mod tests {
                 .filter(|gate| gate.op == BooleanGateOp::And)
                 .count(),
             1
+        );
+    }
+
+    #[test]
+    fn exact_budget_irredundancy_preserves_every_one_gate_minimum() {
+        use crate::boolean_anf_cnf::{BooleanAnfCnfLimits, encode_boolean_anf_cnf};
+
+        let limits = MultiplicativeSynthesisLimits::default();
+        let options = MultiplicativeEncodingOptions {
+            eliminate_internal_constants: true,
+            partial_operand_order: false,
+            lexicographic_operand_order: true,
+        };
+        for packed in 0_u16..16 {
+            let quadratic = (packed ^ (packed >> 1) ^ (packed >> 2) ^ (packed >> 3)) & 1 != 0;
+            if !quadratic {
+                continue;
+            }
+            let table: Vec<u64> = (0..4).map(|row| u64::from((packed >> row) & 1)).collect();
+            let target = problem(&table, 1);
+
+            let direct =
+                encode_multiplicative_circuit_with_options(&target, limits, options).unwrap();
+            let direct_formula = direct.formula_with_exact_budget_irredundancy().unwrap();
+            let ProofSolveOutcome::Sat(model) =
+                solve_with_drat_proof_with_limits(&direct_formula, None, limits.max_conflicts)
+            else {
+                panic!("minimum one-gate function lost: packed={packed}");
+            };
+            direct.lift_model(&model).unwrap();
+
+            let source = encode_multiplicative_anf_system(&target, limits, options).unwrap();
+            let bridge =
+                encode_boolean_anf_cnf(source.system(), BooleanAnfCnfLimits::default()).unwrap();
+            let clauses = source.exact_budget_irredundancy_source_clauses();
+            assert_eq!(clauses.len(), 6);
+            let portable = bridge.formula_with_source_clauses(&clauses).unwrap();
+            let ProofSolveOutcome::Sat(model) =
+                solve_with_drat_proof_with_limits(&portable, None, limits.max_conflicts)
+            else {
+                panic!("portable minimum one-gate function lost: packed={packed}");
+            };
+            let assignment = bridge
+                .lift_source_assignment(source.system(), &model)
+                .unwrap();
+            source.lift_assignment(&assignment).unwrap();
+        }
+    }
+
+    #[test]
+    fn exact_budget_irredundancy_rejects_zero_operands_and_dead_gates() {
+        let limits = MultiplicativeSynthesisLimits::default();
+        let target = problem(&[0, 0, 0, 1], 2);
+        let encoding = encode_multiplicative_circuit(&target, limits).unwrap();
+        let clauses = exact_budget_irredundancy_clauses(&target, &encoding.layout);
+        assert_eq!(clauses.len(), 9);
+        assert_eq!(
+            clauses[0],
+            encoding.layout.left[0][1..]
+                .iter()
+                .map(|&variable| (variable, true))
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(
+            clauses[5],
+            encoding
+                .layout
+                .outputs
+                .iter()
+                .map(|output| (output[1 + target.input_bits + 1], true))
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(clauses[6].len(), 5, "x0 use sites");
+        assert_eq!(clauses[7].len(), 5, "x1 use sites");
+        assert_eq!(
+            clauses[8],
+            encoding.layout.outputs[0][1..]
+                .iter()
+                .map(|&v| (v, true))
+                .collect::<Vec<_>>()
         );
     }
 
