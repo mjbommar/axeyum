@@ -279,6 +279,7 @@ step parity-freshness ./scripts/check-parity-freshness.py
 step parity-freshness-controls ./scripts/tests/test-check-parity-freshness.sh
 step new-fact-controls ./scripts/tests/test-new-fact-controls.sh
 step lane-commit-controls ./scripts/tests/test-lane-commit.sh
+step recount-pinned-inventory-controls ./scripts/tests/test-recount-pinned-inventory.sh
 step commit-msg-trailer-controls ./scripts/tests/test-commit-msg-trailer.sh
 step lane-merge-additive-controls python3 -m unittest scripts.tests.test_lane_merge_additive
 step lane-push-controls ./scripts/tests/test-lane-push-target.sh
