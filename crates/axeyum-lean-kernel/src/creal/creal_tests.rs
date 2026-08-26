@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 253] = [
+    let expected: [(&str, crate::NameId, &str); 255] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -593,6 +593,22 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         (
             "CReal.monotone_of_nonneg_deriv",
             p.monotone_of_nonneg_deriv,
+            "theorem",
+        ),
+        // The STRICT companion of `monotone_of_nonneg_deriv` (creal/monotone.rs):
+        // a derivative uniformly bounded away from zero by `1/(k+1)` makes `F`
+        // strictly increasing, given a strict input gap `lt x y`.
+        (
+            "CReal.strict_mono_of_pos_deriv",
+            p.strict_mono_of_pos_deriv,
+            "theorem",
+        ),
+        // Spivak ch. 12's entry point (creal/monotone.rs): a uniformly
+        // positive derivative makes `F` injective on `[a,b]`, in the
+        // constructive (apartness) sense.
+        (
+            "CReal.strict_injective_of_pos_deriv",
+            p.strict_injective_of_pos_deriv,
             "theorem",
         ),
         // The one bisection step of the constructive approximate IVT
@@ -4845,6 +4861,210 @@ fn monotone_of_nonneg_deriv_applies_to_the_identity_on_0_1() {
     assert_eq!(
         rendered, expected_rendered,
         "must conclude exactly `le (F zero) (F one)` (F is the identity), not some other CReal.le statement"
+    );
+    assert!(
+        rendered.contains("CReal.zero") && rendered.contains("CReal.one"),
+        "the endpoints must be zero and one, not some other pair: {rendered}"
+    );
+}
+
+/// **Mandatory concrete instantiation** for `CReal.strict_mono_of_pos_deriv`:
+/// the identity function on `[0, 1]`, whose derivative is the constant `one`
+/// — uniformly bounded below by `1/(0+1) = 1` (`k := 0`) — applied at
+/// `x := zero`, `y := one` with the STRICT input gap `CReal.zero_lt_one`.
+/// Mirrors [`monotone_of_nonneg_deriv_applies_to_the_identity_on_0_1`], but
+/// checks the conclusion is exactly `lt zero one`, not `le zero one`: a
+/// theorem that quietly proved only the non-strict conclusion would still
+/// pass a `le`-shaped check.
+#[test]
+fn strict_mono_of_pos_deriv_applies_to_the_identity_on_0_1() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::rat_eq_rewrite;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+
+    // identity := fun r => r; const_one := fun _ => one.
+    let identity = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+    let const_one = {
+        let r_fv = d.fresh_fvar();
+        d.lam_fv(r_fv, carrier, one_c)
+    };
+
+    let hf = d.lemma(p.has_derivative_id, &[zero_c, one_c]);
+
+    // le (embed (natDivSucc 1 0)) one_c, via `CReal.ratUnitEqOne` bridging
+    // `natDivSucc 1 0` to `Rat.one` (the same technique
+    // `creal/monotone.rs`'s private `of_nat_one_equiv_local` uses, duplicated
+    // here since tests are a sibling module and cannot call it).
+    let embed_le_one = {
+        let unit_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, zero_nat]);
+        let one_rat = d.kernel().const_(p.rat.one, vec![]);
+        let unit_eq_one = d.lemma(p.rat_unit_eq_one, &[]);
+        let unit_embed = d.const_app(p.of_rat, &[unit_rat]);
+        let refl_start = d.lemma(p.equiv_refl, &[unit_embed]);
+        let bridge = rat_eq_rewrite(
+            &mut d,
+            unit_rat,
+            one_rat,
+            unit_eq_one,
+            refl_start,
+            &|d, t| {
+                let embedded = d.const_app(p.of_rat, &[t]);
+                d.const_app(p.equiv, &[unit_embed, embedded])
+            },
+        );
+        // bridge : Equiv unit_embed (ofRat one_rat), defeq Equiv unit_embed one_c.
+        d.lemma(p.le_of_equiv, &[unit_embed, one_c, bridge])
+    };
+
+    // hderiv : ∀ z, le zero z -> le z one -> le (embed (natDivSucc 1 0)) (const_one z).
+    let hderiv = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let haz_ty = d.const_app(p.le, &[zero_c, z]);
+        let hzb_ty = d.const_app(p.le, &[z, one_c]);
+        let haz_fv = d.fresh_fvar();
+        let hzb_fv = d.fresh_fvar();
+        let with_hzb = d.lam_fv(hzb_fv, hzb_ty, embed_le_one);
+        let with_haz = d.lam_fv(haz_fv, haz_ty, with_hzb);
+        d.lam_fv(z_fv, carrier, with_haz)
+    };
+
+    let hax = d.lemma(p.le_refl, &[zero_c]);
+    let hxy = d.lemma(p.zero_lt_one, &[]);
+    let hyb = d.lemma(p.le_refl, &[one_c]);
+
+    let instance = d.lemma(
+        p.strict_mono_of_pos_deriv,
+        &[
+            identity, const_one, zero_c, one_c, hf, zero_nat, hderiv, zero_c, one_c, hax, hxy, hyb,
+        ],
+    );
+
+    let ty = d.kernel().infer(instance).unwrap_or_else(|error| {
+        panic!("strict_mono_of_pos_deriv refused at the identity on [0,1]: {error:?}")
+    });
+
+    let expected_fx = d.apply(identity, &[zero_c]);
+    let expected_fy = d.apply(identity, &[one_c]);
+    let expected_ty = d.const_app(p.lt, &[expected_fx, expected_fy]);
+    let rendered = d.kernel().render_lean(ty);
+    let expected_rendered = d.kernel().render_lean(expected_ty);
+    assert_eq!(
+        rendered, expected_rendered,
+        "must conclude exactly `lt (F zero) (F one)` (F is the identity), not `le`, and not some other CReal.lt statement"
+    );
+    assert!(
+        rendered.contains("CReal.zero") && rendered.contains("CReal.one"),
+        "the endpoints must be zero and one, not some other pair: {rendered}"
+    );
+}
+
+/// **Mandatory concrete instantiation** for
+/// `CReal.strict_injective_of_pos_deriv`: the identity function on `[0, 1]`
+/// again, applied at `x := zero`, `y := one` with `CReal.apart_zero_one` as
+/// the apartness witness. Checks the conclusion is exactly
+/// `Apart (F zero) (F one)`, i.e. `Apart zero one`.
+#[test]
+fn strict_injective_of_pos_deriv_applies_to_the_identity_on_0_1() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::rat_eq_rewrite;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+
+    let identity = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+    let const_one = {
+        let r_fv = d.fresh_fvar();
+        d.lam_fv(r_fv, carrier, one_c)
+    };
+
+    let hf = d.lemma(p.has_derivative_id, &[zero_c, one_c]);
+
+    let embed_le_one = {
+        let unit_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, zero_nat]);
+        let one_rat = d.kernel().const_(p.rat.one, vec![]);
+        let unit_eq_one = d.lemma(p.rat_unit_eq_one, &[]);
+        let unit_embed = d.const_app(p.of_rat, &[unit_rat]);
+        let refl_start = d.lemma(p.equiv_refl, &[unit_embed]);
+        let bridge = rat_eq_rewrite(
+            &mut d,
+            unit_rat,
+            one_rat,
+            unit_eq_one,
+            refl_start,
+            &|d, t| {
+                let embedded = d.const_app(p.of_rat, &[t]);
+                d.const_app(p.equiv, &[unit_embed, embedded])
+            },
+        );
+        d.lemma(p.le_of_equiv, &[unit_embed, one_c, bridge])
+    };
+
+    let hderiv = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let haz_ty = d.const_app(p.le, &[zero_c, z]);
+        let hzb_ty = d.const_app(p.le, &[z, one_c]);
+        let haz_fv = d.fresh_fvar();
+        let hzb_fv = d.fresh_fvar();
+        let with_hzb = d.lam_fv(hzb_fv, hzb_ty, embed_le_one);
+        let with_haz = d.lam_fv(haz_fv, haz_ty, with_hzb);
+        d.lam_fv(z_fv, carrier, with_haz)
+    };
+
+    let hax = d.lemma(p.le_refl, &[zero_c]);
+    let hxb = {
+        let lt = d.lemma(p.zero_lt_one, &[]);
+        d.lemma(p.le_of_lt, &[zero_c, one_c, lt])
+    };
+    let hay = hxb;
+    let hyb = d.lemma(p.le_refl, &[one_c]);
+    let hap = d.lemma(p.apart_zero_one, &[]);
+
+    let instance = d.lemma(
+        p.strict_injective_of_pos_deriv,
+        &[
+            identity, const_one, zero_c, one_c, hf, zero_nat, hderiv, zero_c, one_c, hax, hxb, hay,
+            hyb, hap,
+        ],
+    );
+
+    let ty = d.kernel().infer(instance).unwrap_or_else(|error| {
+        panic!("strict_injective_of_pos_deriv refused at the identity on [0,1]: {error:?}")
+    });
+
+    let expected_fx = d.apply(identity, &[zero_c]);
+    let expected_fy = d.apply(identity, &[one_c]);
+    let expected_ty = d.const_app(p.apart, &[expected_fx, expected_fy]);
+    let rendered = d.kernel().render_lean(ty);
+    let expected_rendered = d.kernel().render_lean(expected_ty);
+    assert_eq!(
+        rendered, expected_rendered,
+        "must conclude exactly `Apart (F zero) (F one)`, not some other CReal.Apart statement"
     );
     assert!(
         rendered.contains("CReal.zero") && rendered.contains("CReal.one"),
