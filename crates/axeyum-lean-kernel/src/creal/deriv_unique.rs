@@ -1482,13 +1482,29 @@ fn finish_lower_with_q(
     // abs_diff_eq_q : Equiv (abs (add y (neg z))) q_emb.
     let diff_yx = cdiff(d, p, y, z);
     let abs_diff_congr = d.lemma(p.abs_congr, &[diff_yx, neg_q_emb, diff_equiv_signed]);
-    let abs_neg_q = abs_neg_equiv(d, p, q_emb); // Equiv (abs neg_q_emb) q_emb
+    // abs_neg_equiv(q_emb) : Equiv (abs neg_q_emb) (abs q_emb) -- NOT q_emb itself;
+    // abs_of_nonneg supplies the missing (abs q_emb) ~ q_emb step.
+    let abs_neg_q = abs_neg_equiv(d, p, q_emb);
+    let abs_q_eq_q = abs_of_nonneg(d, p, q, zero_le_q);
     let abs_diff_yx = cabs(d, p, diff_yx);
     let abs_neg_q_emb = cabs(d, p, neg_q_emb);
-    let abs_diff_eq_q = d.lemma(
-        p.equiv_trans,
-        &[abs_diff_yx, abs_neg_q_emb, q_emb, abs_diff_congr, abs_neg_q],
-    );
+    let abs_q_emb = cabs(d, p, q_emb);
+    let abs_diff_eq_q = {
+        let step1 = d.lemma(
+            p.equiv_trans,
+            &[
+                abs_diff_yx,
+                abs_neg_q_emb,
+                abs_q_emb,
+                abs_diff_congr,
+                abs_neg_q,
+            ],
+        );
+        d.lemma(
+            p.equiv_trans,
+            &[abs_diff_yx, abs_q_emb, q_emb, step1, abs_q_eq_q],
+        )
+    };
 
     finish_common(
         d,
