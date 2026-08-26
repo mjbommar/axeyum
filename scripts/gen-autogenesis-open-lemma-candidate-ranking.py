@@ -80,6 +80,35 @@ def tokens(value: str) -> set[str]:
     return result
 
 
+def surface_structure(value: str) -> set[str]:
+    """Extract small alpha-stable shapes from a visible Lean proposition.
+
+    These are generic statement features, not theorem-name overrides.  They
+    let retrieval distinguish propositions that share the same vocabulary but
+    have materially different argument geometry.
+    """
+    features: set[str] = set()
+    modeq = re.search(
+        r"\b([A-Za-z][A-Za-z0-9_]*)\s*≡\s*(.*?)\[\s*MOD\s+\1\s*\]",
+        value,
+    )
+    if modeq:
+        features.add("modulus-repeats-left")
+        if re.fullmatch(r"\s*0\s*", modeq.group(2)):
+            features.add("zero-right-endpoint")
+    return features
+
+
+def kernel_structure(value: str) -> set[str]:
+    """Extract the corresponding shapes from canonical kernel types."""
+    features: set[str] = set()
+    if re.search(r"AxNat\.mod\s+(x\d+)\s+\1", value):
+        features.add("modulus-repeats-left")
+    if "AxNat.zero" in value:
+        features.add("zero-right-endpoint")
+    return features
+
+
 def eligible_facts(
     facts: dict[str, dict[str, Any]], nursery: dict[str, Any]
 ) -> tuple[list[dict[str, Any]], list[str]]:
@@ -114,6 +143,7 @@ def eligible_facts(
 
 def rank(fact: dict[str, Any], lemmas: list[dict[str, Any]]) -> list[dict[str, Any]]:
     statement_tokens = tokens(fact["formal"]["statement"])
+    statement_structure = surface_structure(fact["formal"]["statement"])
     fragment_tokens = tokens(str(fact["formal"].get("fragment", "")))
     rows = []
     for lemma in lemmas:
@@ -126,11 +156,15 @@ def rank(fact: dict[str, Any], lemmas: list[dict[str, Any]]) -> list[dict[str, A
         fragment_overlap = sorted(
             fragment_tokens & (name_tokens | dependency_tokens | type_tokens)
         )
+        structure_overlap = sorted(
+            statement_structure & kernel_structure(lemma["canonical_type"])
+        )
         score = (
             6 * len(name_overlap)
             + 3 * len(dependency_overlap)
             + len(type_overlap)
             + 2 * len(fragment_overlap)
+            + 8 * len(structure_overlap)
         )
         if score == 0:
             continue
@@ -142,6 +176,7 @@ def rank(fact: dict[str, Any], lemmas: list[dict[str, Any]]) -> list[dict[str, A
                 "type_dependency_token_overlap": dependency_overlap,
                 "canonical_type_token_overlap": type_overlap,
                 "fragment_token_overlap": fragment_overlap,
+                "statement_structure_overlap": structure_overlap,
                 "direct_reverse_theorem_reference_count": len(
                     lemma["direct_theorem_dependents"]
                 ),
@@ -202,7 +237,7 @@ def build() -> dict[str, Any]:
             "nursery_sha256": digest(NURSERY),
             "lemma_index_sha256": digest(LEMMA_INDEX),
             "population_rule": "open or conjectured lean4 fact in train or development",
-            "ranking_rule": "weighted exact token overlap over visible statement, kernel declaration name, canonical type, direct type dependencies, and formal fragment; deterministic graph-centrality tie break",
+            "ranking_rule": "weighted exact token and alpha-stable statement-shape overlap over visible statement, kernel declaration name, canonical type, direct type dependencies, and formal fragment; deterministic graph-centrality tie break",
             "max_candidates_per_goal": MAX_CANDIDATES,
             "forbidden_inputs": [
                 "held-out fact statement or outcome",

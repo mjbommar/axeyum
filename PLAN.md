@@ -117,9 +117,11 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-26 | `d2d6fc0d0` | Add axiom-free native `Nat.mod_self`, alpha-stable structural retrieval, and a checked native-composition control; fresh imported replay preserves zero credit and exposes the implementation-bound `Nat.mod` transport boundary. |
 | 2026-08-26 | `73800a902` | Project all 51 retrieved-induction outcomes into a digest-bound typed capability backlog; false controls remain observation-only and one-target operation registration is refused. |
 | 2026-08-26 | `e82a1b002` | Replay all 25 import-blocked positive targets through checked type slices, exposing 14 exact semantic-contract demands without proof or ledger credit. |
 | 2026-08-26 | `1e7b3acdf` | Join 14 sliced source identities to exact kernel and durable contract evidence; `Nat.testBit` becomes the first measured multi-sibling contract target. |
+| 2026-08-26 | `882dc1a63` | Reduce transparent relation terminals before equality search; ten ModEq goals cross the grammar boundary with zero false accepts, exposing typed relation-premise composition as the next gap. |
 | 2026-08-26 | `228494275` | Expose bounded retrieved-lemma application through the typed Python producer surface with full Python, stub, and type-gate coverage. |
 | 2026-08-26 | `0c261718f` | Add the fail-closed candidate-capsule import boundary required for theorem-composition dispatch. |
 | 2026-08-26 | `ebe2b7b2e` | Re-derive the kernel projection and lemma-search artifacts at 1,242 theorems after rebasing concurrent mathematics work. |
@@ -1376,6 +1378,23 @@ durable contract-receipt population. No checked contract receipt exists. Only
 candidates) have exact axiom-free theorem edges. `Nat.testBit` is therefore the
 first general contract prototype; twelve unmatched identities stay visible
 rather than receiving fuzzy or manually asserted support.
+Joint requirements show zero of the 25 targets fully contract-supported:
+every `Nat.testBit` sibling has an unsupported co-abstraction. The shorter
+reachable path is now measured separately. Transparent terminal reduction
+moves all ten imported ModEq positives into equality composition while all six
+controls remain unaccepted; conversion is still 0/13 because the producer does
+not yet have the needed remainder-equality contracts. A representation audit
+shows the native existential `Nat.modEq` chain is not the imported Mathlib
+`Nat.ModEq`, which unfolds to equality of remainders. Next: construct
+`Nat.mod_self` and reusable modulo-add equalities, retaining native relation
+composition only as a boundary control, and require unchanged conversion of at
+least three imported siblings.
+Native `Nat.mod_self` is now axiom-free and ranks first by a generic
+alpha-stable statement-shape feature, but a fresh transport probe refuses its
+implementation-bound `div_mod_exec` dependency over Mathlib's different
+`Nat.mod`. Production remains zero. Next: reconstruct the equality inside the
+imported kernel from portable order/decision facts, then test unchanged reuse
+across the additive siblings.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization
@@ -1424,6 +1443,41 @@ bounded exhaustive scan evaluates all integer intervals under explicit ceilings.
 required/capacity energy in 0.75 seconds. Repeating after all 256 forced precedences gives exactly
 the same ratio, so no root conflict exists and none is emitted. Conditional conflict composition
 under branch domains is the next required layer; the target lower bound remains open.
+
+**Checked conditional energetic clauses, 2026-08-26.** ADR-0578 adds canonical semantic
+start-bound assumptions, independent conditional-overload replay, and an exact bridge from each
+assumption's negation to the existing operation prefix variables. A bounded deterministic
+producer searches one interval and relaxes its explanation before replay. On the strongest
+`abz7@655` interval it checks 40 candidates and proves that job 2 operation 10 must start after
+532: the contrary domain requires 539 units in 538 available. The 175,170-variable /
+1,690,226-clause precedence-closure formula gains exactly one checked unit. Matched 30-second
+CaDiCaL runs remained unknown, so no speedup or lower-bound claim is made. Fourteen focused
+job-shop tests and all-feature Clippy are green; the next layer is a bounded all-interval unit
+fixpoint before multi-assumption clauses or checked cover composition. All seven full-proof
+producers remain live.
+
+**Exhaustive standalone energetic units, 2026-08-26.** ADR-0579 scans every machine interval
+and both one-sided bounds for every flexible task under explicit resource ceilings, uses monotone
+binary search for the strongest implied unit, and independently replays every retained artifact
+before bulk CNF insertion. The `ft06 = 55` control finds two units and preserves a lifted/replayed
+optimal schedule. On `abz7@655`, 3,222,600 intervals / 128,904,000 candidates / 322,261,348
+task checks complete in 7.49 seconds and retain exactly two deductions: `start(2,10) > 532` and
+`start(7,0) < 24`. The exact formula gains two clauses; a matched 30-second SAT run remains
+unknown. This exhausts standalone units, not contextual propagation under learned bounds, and
+does not change the open lower-bound verdict.
+
+**Contextual energetic fixpoint, 2026-08-26.** ADR-0580 turns replayed unit conflicts into a
+bounded implication chain: semantic start bounds propagate across job chains and detectable
+machine precedences, every contextual overload retains the complete assumption conjunction, and
+each clause is independently replayed before insertion. A single release command reproduces four
+exhaustive `abz7@655` rounds with conflict counts 2/2/1/0 and six final bounds. Forced machine
+orders rise from 256 to 861; 1,289,053,403 exact task-energy checks produce five contextual plus
+two premise clauses, growing the 175,170-variable formula from 1,690,226 to 1,690,233 clauses.
+The closure stabilizes without a precedence or energetic contradiction, and matched 30-second
+CaDiCaL runs remain unknown, so no lower bound or speedup is claimed. This exhausts the current
+contextual energetic-unit layer; certified edge-finding/not-first/not-last explanations or checked
+branch composition are the next materially different lower-bound routes. All seven sustained
+DRCP/DRAT producers remain live.
 
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
 external-certificate replay runner for all five packages.  It validates checker and artifact

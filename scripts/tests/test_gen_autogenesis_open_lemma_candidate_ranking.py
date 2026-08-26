@@ -25,6 +25,49 @@ class OpenLemmaCandidateRankingTests(unittest.TestCase):
             {"add", "mod"},
         )
 
+    def test_modeq_self_zero_shape_is_alpha_stable(self) -> None:
+        self.assertEqual(
+            MODULE.surface_structure("∀ {n : ℕ}, n ≡ 0 [MOD n]"),
+            {"modulus-repeats-left", "zero-right-endpoint"},
+        )
+        self.assertEqual(
+            MODULE.kernel_structure(
+                "((x0 : AxNat) -> Eq.{1} AxNat (AxNat.mod x0 x0) AxNat.zero)"
+            ),
+            {"modulus-repeats-left", "zero-right-endpoint"},
+        )
+
+    def test_modeq_self_zero_shape_outranks_generic_mod_lemmas(self) -> None:
+        fact = {
+            "formal": {"statement": "∀ {n : ℕ}, n ≡ 0 [MOD n]", "fragment": "Nat"}
+        }
+        base = {
+            "direct_type_dependencies": ["Nat", "Nat.mod"],
+            "direct_theorem_dependents": [],
+            "axiom_footprint_size": 0,
+            "exact_fact_ids": [],
+        }
+        rows = MODULE.rank(
+            fact,
+            [
+                {
+                    **base,
+                    "kernel_declaration_id": "Nat.mod_lt",
+                    "canonical_type": "((x0 : AxNat) -> AxNat.lt (AxNat.mod x0 (AxNat.succ x0)) (AxNat.succ x0))",
+                },
+                {
+                    **base,
+                    "kernel_declaration_id": "Nat.mod_self",
+                    "canonical_type": "((x0 : AxNat) -> Eq.{1} AxNat (AxNat.mod x0 x0) AxNat.zero)",
+                },
+            ],
+        )
+        self.assertEqual(rows[0]["kernel_declaration_id"], "Nat.mod_self")
+        self.assertEqual(
+            rows[0]["statement_structure_overlap"],
+            ["modulus-repeats-left", "zero-right-endpoint"],
+        )
+
     def test_held_out_statement_is_never_returned_for_ranking(self) -> None:
         facts = {
             "F:train": {

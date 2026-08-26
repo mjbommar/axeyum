@@ -27,6 +27,16 @@ class SemanticContractDemandTests(unittest.TestCase):
         self.assertEqual(result["demands"][0]["source_name"], "Nat.testBit")
         self.assertEqual(result["demands"][0]["affected_targets"], 4)
         self.assertEqual(result["demands"][0]["exact_axiom_free_kernel_candidate_count"], 5)
+        self.assertEqual(
+            result["census"]["targets_with_complete_candidate_contract_support"], 0
+        )
+        self.assertEqual(
+            result["demands"][0]["co_abstraction_names"],
+            ["List.getI", "Nat.bits", "Nat.instAndOp", "Nat.instOrOp", "Nat.ldiff"],
+        )
+        self.assertEqual(
+            result["demands"][0]["fully_candidate_supported_affected_targets"], 0
+        )
 
     def test_nonaccepted_slice_fails_closed(self):
         replay = copy.deepcopy(self.replay)

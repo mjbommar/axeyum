@@ -142,11 +142,16 @@ def measure(
     ranking_path: Path | None = None,
     transport_native_candidates: bool = False,
     retrieved_induction: bool = False,
+    modeq_family: bool = False,
 ) -> dict[str, Any]:
     if transport_native_candidates and ranking_path is None:
         raise ValueError("native candidate transport requires --ranking")
     if retrieved_induction and not transport_native_candidates:
         raise ValueError("retrieved induction requires --transport-native-candidates")
+    if modeq_family and (
+        ranking_path is not None or transport_native_candidates or retrieved_induction
+    ):
+        raise ValueError("modeq-family measurement does not accept ranked premises")
     population_bytes = population_path.read_bytes() if population_path else None
     if mapping_path is None:
         if population_bytes is None:
@@ -243,17 +248,23 @@ def measure(
                 else "positive-target"
             ),
         }
-        candidate_names = ranked_candidates.get(fact_id, CANDIDATES)
+        candidate_names = () if modeq_family else ranked_candidates.get(fact_id, CANDIDATES)
         row["candidate_declarations"] = list(candidate_names)
         try:
             imported = producers.import_candidate_statement_ndjson(
                 data,
                 None,
                 target_definition,
-                list(CANDIDATES if transport_native_candidates else candidate_names),
+                list(
+                    CANDIDATES
+                    if transport_native_candidates or modeq_family
+                    else candidate_names
+                ),
             )
             kernel = imported.kernel()
-            if transport_native_candidates:
+            if modeq_family:
+                executable_candidates = []
+            elif transport_native_candidates:
                 executable_candidates = []
                 transport_outcomes = []
                 for candidate_name in candidate_names:
@@ -297,7 +308,9 @@ def measure(
                 executable_candidates = [
                     kernel.name(name, must_exist=True) for name in candidate_names
                 ]
-            if retrieved_induction:
+            if modeq_family:
+                candidate = producers.propose_modeq_family(kernel, imported.goal())
+            elif retrieved_induction:
                 candidate = producers.propose_bounded_induction_with_rewrites(
                     kernel,
                     imported.goal(),
@@ -325,6 +338,8 @@ def measure(
                         "application_depth": candidate.application_depth,
                         "terms_considered": candidate.terms_considered,
                     }
+                    if not modeq_family
+                    else {}
                 ),
             )
         except producers.Declined as decline:
@@ -361,14 +376,22 @@ def measure(
         if transport["result"] == "transport-declined"
     )
     result = {
-        "schema_version": 4 if retrieved_induction else (3 if transport_native_candidates else 2),
+        "schema_version": (
+            5
+            if modeq_family
+            else (4 if retrieved_induction else (3 if transport_native_candidates else 2))
+        ),
         "kind": (
-            "axeyum-open-ranked-transport-induction-census"
-            if retrieved_induction
+            "axeyum-open-modeq-family-census"
+            if modeq_family
             else (
-                "axeyum-open-ranked-transport-application-census"
-                if transport_native_candidates
-                else "axeyum-open-fixed-palette-census"
+                "axeyum-open-ranked-transport-induction-census"
+                if retrieved_induction
+                else (
+                    "axeyum-open-ranked-transport-application-census"
+                    if transport_native_candidates
+                    else "axeyum-open-fixed-palette-census"
+                )
             )
         ),
         "state": "train-development-measurement-held-out-excluded",
@@ -384,20 +407,32 @@ def measure(
         },
         "strategy": {
             "producer": (
-                "bounded-induction-with-retrieved-rewrites"
-                if retrieved_induction
-                else "bounded-application"
+                "modeq-definitional-equivalence-family"
+                if modeq_family
+                else (
+                    "bounded-induction-with-retrieved-rewrites"
+                    if retrieved_induction
+                    else "bounded-application"
+                )
             ),
             "candidate_rule": (
-                "held-out-safe deterministic per-goal ranking"
-                if ranking_path is not None
-                else "one fixed target-independent palette for every goal"
+                "no retrieved premises; structural Eq/Iff closure after transparent reduction"
+                if modeq_family
+                else (
+                    "held-out-safe deterministic per-goal ranking"
+                    if ranking_path is not None
+                    else "one fixed target-independent palette for every goal"
+                )
             ),
             "candidate_declarations": (
-                None if ranking_path is not None else list(CANDIDATES)
+                []
+                if modeq_family
+                else (None if ranking_path is not None else list(CANDIDATES))
             ),
+            "import_support_declarations": list(CANDIDATES) if modeq_family else None,
             "native_candidate_transport": transport_native_candidates,
             "retrieved_induction": retrieved_induction,
+            "modeq_family": modeq_family,
             "forbidden_inputs": [
                 "target theorem proof",
                 "held-out goal identities or statements",
@@ -433,12 +468,16 @@ def measure(
         "excluded_held_out_fact_ids": excluded_held_out,
         "outcomes": outcomes,
         "limitations": (
-            "Ranked native theorem transport supplies explicit premises to bounded induction and retrieved equality rewriting. Held-out rows are excluded before capsule access. Import and transport rejections measure compatibility boundaries, not proposition falsehood."
-            if retrieved_induction
+            "The existing target-agnostic definitional-equivalence producer receives no retrieved theorem premise. Held-out rows are excluded before capsule access. Acceptance still requires independent kernel admission; declines outside its Eq/Iff closure are not proposition falsehood."
+            if modeq_family
             else (
-                "Ranked native theorem transport makes retrieved premises executable but does not enlarge the bounded application grammar. Held-out rows are excluded before capsule access. Import and transport rejections measure compatibility boundaries, not proposition falsehood."
-                if transport_native_candidates
-                else "One fixed elementary palette is a negative baseline, not a general producer evaluation. Held-out rows are excluded before capsule access. Import rejections measure statement-boundary incompatibility, not solver inability or proposition falsehood."
+                "Ranked native theorem transport supplies explicit premises to bounded induction and retrieved equality rewriting. Held-out rows are excluded before capsule access. Import and transport rejections measure compatibility boundaries, not proposition falsehood."
+                if retrieved_induction
+                else (
+                    "Ranked native theorem transport makes retrieved premises executable but does not enlarge the bounded application grammar. Held-out rows are excluded before capsule access. Import and transport rejections measure compatibility boundaries, not proposition falsehood."
+                    if transport_native_candidates
+                    else "One fixed elementary palette is a negative baseline, not a general producer evaluation. Held-out rows are excluded before capsule access. Import rejections measure statement-boundary incompatibility, not solver inability or proposition falsehood."
+                )
             )
         ),
     }
@@ -480,6 +519,11 @@ def main() -> int:
         type=Path,
         help="optional independently checked false-control population",
     )
+    parser.add_argument(
+        "--modeq-family",
+        action="store_true",
+        help="run the existing target-agnostic transparent Eq/Iff family producer",
+    )
     parser.add_argument("--output", type=Path, default=OUTPUT)
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
@@ -494,6 +538,7 @@ def main() -> int:
             args.ranking,
             args.transport_native_candidates,
             args.retrieved_induction,
+            args.modeq_family,
         ),
         indent=2,
         sort_keys=True,

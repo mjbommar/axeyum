@@ -319,8 +319,8 @@ pub struct Candidate {
 pub enum DeclineReason {
     /// The goal has more leading `Pi` binders than [`MAX_BINDERS`] allows.
     BinderBudgetExceeded,
-    /// The terminal, non-`Pi` goal is not an exact `Eq` application, so none
-    /// of this producer's equality machinery applies to it.
+    /// The terminal, non-`Pi` goal is not an exact `Eq` application even after
+    /// transparent weak-head reduction, so no equality machinery applies.
     NotEqualityGoal,
     /// The terminal goal is not definitionally equal and no applicable
     /// induction-hypothesis rewrite closed the remaining gap.
@@ -340,7 +340,10 @@ impl std::fmt::Display for DeclineReason {
             Self::BinderBudgetExceeded => {
                 write!(f, "binder budget exceeded: maximum {MAX_BINDERS}")
             }
-            Self::NotEqualityGoal => write!(f, "terminal goal is not an exact Eq application"),
+            Self::NotEqualityGoal => write!(
+                f,
+                "terminal goal is not an exact Eq application after transparent reduction"
+            ),
             Self::TerminalNotDefEqNoRewrite => write!(
                 f,
                 "terminal goal is not definitionally equal and no applicable induction-hypothesis rewrite closed the gap"
@@ -4087,7 +4090,21 @@ impl Search {
         {
             return self.close_terminal(kernel, parsed, hypothesis);
         }
-        // Not an exact `Eq` application — try the sibling terminal shape
+        // A proposition-valued transparent relation may be definitionally an
+        // equality even when its surface head is not `Eq` (the motivating
+        // imported examples are `Nat.ModEq` and `Int.ModEq`).  Reduce the
+        // terminal itself only after the exact fast path declines.  The proof
+        // still has to infer at the caller's original goal, so this grants no
+        // authority to the relation name or to the reduction result.
+        if self.eq_available {
+            let reduced_goal = kernel.whnf(goal);
+            if reduced_goal != goal
+                && let Ok(parsed) = parse_eq_goal(kernel, eqp.eq, reduced_goal)
+            {
+                return self.close_terminal(kernel, parsed, hypothesis);
+            }
+        }
+        // Not an exact or transparently reduced `Eq` application — try the sibling terminal shape
         // ([`OrderGoal`]) before declining. `parse_order_goal` WHNF-reduces
         // `goal` itself (unlike `parse_eq_goal`, which never unfolds
         // anything), so a `<`/`≤` surface goal still typeclass-wrapped at
@@ -4215,7 +4232,7 @@ pub fn propose_bounded_induction_with_rewrites(
 #[cfg(test)]
 mod order_terminal_tests {
     use super::*;
-    use axeyum_lean_kernel::{Kernel, NatPrelude, build_nat_prelude};
+    use axeyum_lean_kernel::{Kernel, NatPrelude, ReducibilityHint, build_nat_prelude};
 
     fn prelude_kernel() -> (Kernel, NatPrelude) {
         let mut kernel = Kernel::new();
@@ -4242,6 +4259,71 @@ mod order_terminal_tests {
         let at_nat = kernel.app(eq, nat);
         let at_a = kernel.app(at_nat, a);
         kernel.app(at_a, b)
+    }
+
+    fn wrapped_eq(kernel: &mut Kernel, p: &NatPrelude, label: &str) -> NameId {
+        let nat = kernel.const_(p.nat, vec![]);
+        let prop = kernel.sort_zero();
+        let anon = kernel.anon();
+        let result_ty = kernel.pi(anon, nat, prop, BinderInfo::Default);
+        let ty = kernel.pi(anon, nat, result_ty, BinderInfo::Default);
+        let a_fv = 91_u64;
+        let b_fv = 92_u64;
+        let a = kernel.fvar(a_fv);
+        let b = kernel.fvar(b_fv);
+        let body = nat_eq(kernel, p, a, b);
+        let body_b = kernel.abstract_fvars(body, &[b_fv]);
+        let inner = kernel.lam(anon, nat, body_b, BinderInfo::Default);
+        let inner_a = kernel.abstract_fvars(inner, &[a_fv]);
+        let value = kernel.lam(anon, nat, inner_a, BinderInfo::Default);
+        let root = kernel.anon();
+        let name = kernel.name_str(root, label);
+        kernel
+            .add_declaration(Declaration::Definition {
+                name,
+                uparams: vec![],
+                ty,
+                value,
+                hint: ReducibilityHint::Regular(0),
+            })
+            .expect("transparent equality wrapper must admit");
+        name
+    }
+
+    #[test]
+    fn transparent_relation_reduces_to_reflexive_equality() {
+        let (mut kernel, p) = prelude_kernel();
+        let relation = wrapped_eq(&mut kernel, &p, "WrappedEq");
+        let nat = kernel.const_(p.nat, vec![]);
+        let n_fv = 93_u64;
+        let n = kernel.fvar(n_fv);
+        let head = kernel.const_(relation, vec![]);
+        let applied = kernel.app(head, n);
+        let body = kernel.app(applied, n);
+        let anon = kernel.anon();
+        let abstracted = kernel.abstract_fvars(body, &[n_fv]);
+        let goal = kernel.pi(anon, nat, abstracted, BinderInfo::Default);
+        let candidate = propose_bounded_induction(&mut kernel, goal)
+            .expect("transparent equality wrapper must close");
+        assert_clean_admission(&mut kernel, goal, &candidate, "wrapped_eq_refl");
+    }
+
+    #[test]
+    fn transparent_relation_does_not_make_false_equality_provable() {
+        let (mut kernel, p) = prelude_kernel();
+        let relation = wrapped_eq(&mut kernel, &p, "WrappedEqFalseControl");
+        let nat = kernel.const_(p.nat, vec![]);
+        let zero = kernel.const_(p.zero, vec![]);
+        let n_fv = 94_u64;
+        let n = kernel.fvar(n_fv);
+        let head = kernel.const_(relation, vec![]);
+        let applied = kernel.app(head, n);
+        let body = kernel.app(applied, zero);
+        let anon = kernel.anon();
+        let abstracted = kernel.abstract_fvars(body, &[n_fv]);
+        let goal = kernel.pi(anon, nat, abstracted, BinderInfo::Default);
+        propose_bounded_induction(&mut kernel, goal)
+            .expect_err("transparent reduction must not admit forall n, n = 0");
     }
 
     /// Independently confirm an ADMITTED candidate the same way the real

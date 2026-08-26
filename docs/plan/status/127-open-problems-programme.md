@@ -50,6 +50,41 @@ required/capacity energy in 0.75 seconds. Repeating after all 256 forced precede
 the same ratio, so no root conflict exists and none is emitted. Conditional conflict composition
 under branch domains is the next required layer; the target lower bound remains open.
 
+**Checked conditional energetic clauses, 2026-08-26.** ADR-0578 adds canonical semantic
+start-bound assumptions, independent conditional-overload replay, and an exact bridge from each
+assumption's negation to the existing operation prefix variables. A bounded deterministic
+producer searches one interval and relaxes its explanation before replay. On the strongest
+`abz7@655` interval it checks 40 candidates and proves that job 2 operation 10 must start after
+532: the contrary domain requires 539 units in 538 available. The 175,170-variable /
+1,690,226-clause precedence-closure formula gains exactly one checked unit. Matched 30-second
+CaDiCaL runs remained unknown, so no speedup or lower-bound claim is made. Fourteen focused
+job-shop tests and all-feature Clippy are green; the next layer is a bounded all-interval unit
+fixpoint before multi-assumption clauses or checked cover composition. All seven full-proof
+producers remain live.
+
+**Exhaustive standalone energetic units, 2026-08-26.** ADR-0579 scans every machine interval
+and both one-sided bounds for every flexible task under explicit resource ceilings, uses monotone
+binary search for the strongest implied unit, and independently replays every retained artifact
+before bulk CNF insertion. The `ft06 = 55` control finds two units and preserves a lifted/replayed
+optimal schedule. On `abz7@655`, 3,222,600 intervals / 128,904,000 candidates / 322,261,348
+task checks complete in 7.49 seconds and retain exactly two deductions: `start(2,10) > 532` and
+`start(7,0) < 24`. The exact formula gains two clauses; a matched 30-second SAT run remains
+unknown. This exhausts standalone units, not contextual propagation under learned bounds, and
+does not change the open lower-bound verdict.
+
+**Contextual energetic fixpoint, 2026-08-26.** ADR-0580 turns replayed unit conflicts into a
+bounded implication chain: semantic start bounds propagate across job chains and detectable
+machine precedences, every contextual overload retains the complete assumption conjunction, and
+each clause is independently replayed before insertion. A single release command reproduces four
+exhaustive `abz7@655` rounds with conflict counts 2/2/1/0 and six final bounds. Forced machine
+orders rise from 256 to 861; 1,289,053,403 exact task-energy checks produce five contextual plus
+two premise clauses, growing the 175,170-variable formula from 1,690,226 to 1,690,233 clauses.
+The closure stabilizes without a precedence or energetic contradiction, and matched 30-second
+CaDiCaL runs remain unknown, so no lower bound or speedup is claimed. This exhausts the current
+contextual energetic-unit layer; certified edge-finding/not-first/not-last explanations or checked
+branch composition are the next materially different lower-bound routes. All seven sustained
+DRCP/DRAT producers remain live.
+
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
 external-certificate replay runner for all five packages.  It validates checker and artifact
 bytes before execution, hard-kills a timed-out process session, requires an observable finding
