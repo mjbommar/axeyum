@@ -28,6 +28,10 @@ The checked transition result is
 and the post-reconciliation rerun is
 [`open-ranked-proposition-census-v2.json`](../../artifacts/autogenesis/open-ranked-proposition-census-v2.json):
 51 goals, 612 candidate pairs, zero exact matches, and zero held-out access.
+It pins
+[`open-lemma-candidate-ranking-post-reconciliation-v1.json`](../../artifacts/autogenesis/open-lemma-candidate-ranking-post-reconciliation-v1.json),
+so later theorem construction updates the live ranking without rewriting this
+completed experiment.
 
 ## What is checked
 

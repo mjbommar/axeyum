@@ -537,7 +537,7 @@
     "external_capsule_directory": "/nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1",
     "population_path": "artifacts/autogenesis/open-fixed-palette-census-v1.json",
     "population_sha256": "039829b2dbd10d84a73212793e5df52c9cf45f4902e2673acbf73cb502d00467",
-    "ranking_path": "artifacts/autogenesis/open-lemma-candidate-ranking-v1.json",
+    "ranking_path": "artifacts/autogenesis/open-lemma-candidate-ranking-post-reconciliation-v1.json",
     "ranking_sha256": "ff767c3dff549b2a601bdcc46464f4bd6b2f3b324a5fc1eff1a5f6ae7cde77ac"
   },
   "state": "diagnostic-only-no-ledger-or-admission-authority"

@@ -1284,6 +1284,10 @@ regenerated again at 1,621 declarations / 1,267 theorems / 7,373 edges. The
 historical authorization artifacts remain pinned to their archived
 pre-transition index, while the post-transition 51-goal census absorbs the new
 kernel state and remains zero exact matches.
+The 51-goal v2 result now also pins an immutable post-reconciliation ranking.
+This separates completed evaluation artifacts from the live theorem dashboard:
+concurrent theorem construction can advance current projections without making
+either the 57-goal v1 or 51-goal v2 experiment stale.
 The accepted ADR-0541 general SMT-LIB session driver is now also a named
 `axeyum` binary target, not only a discoverability-poor Cargo example. The same
 source remains the historical example control, and the binary's focused check,
