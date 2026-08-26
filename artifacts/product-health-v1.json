@@ -1,0 +1,153 @@
+{
+  "autonomous_production": {
+    "authoritative_named_facts": 34,
+    "authoritative_operations": 25,
+    "producer_outcome_census": {
+      "exact_source_facts": 24,
+      "groups": 38,
+      "held_out_observed_facts": 0,
+      "observed_facts": 138,
+      "outcomes": {
+        "admissible-proof": 2,
+        "kernel-rejection:candidate-typecheck-failed": 46,
+        "producer-decline:binder-budget-exceeded": 1,
+        "producer-decline:terminal-not-constant-headed-equality": 40,
+        "producer-decline:terminal-not-exact-equality": 49
+      },
+      "partitions": {
+        "development": 60,
+        "train": 78
+      },
+      "semantic_abstraction_facts": 114
+    },
+    "production_episodes": {
+      "fixture_episodes_excluded": 4,
+      "production_episodes": 16,
+      "schema_version_counts": {
+        "1": 10,
+        "2": 6
+      },
+      "verdict_counts": {
+        "budget-exhausted": 2,
+        "declined": 12,
+        "proved": 2
+      }
+    },
+    "registered_operations": 26,
+    "reusable_multi_target_operations": [
+      {
+        "fact_count": 4,
+        "id": "authoritative-mathlib-bounded-induction-factorial-family-v1"
+      },
+      {
+        "fact_count": 8,
+        "id": "authoritative-mathlib-modeq-family-v1"
+      }
+    ]
+  },
+  "fact_ledger": {
+    "facts": 698,
+    "proof_route_counts": {
+      "cas-certificate": 23,
+      "imported-kernel-lean": 5,
+      "kernel-lean": 450,
+      "search-certificate": 12,
+      "smt-clausal": 9,
+      "smt-term-level": 17
+    },
+    "status_counts": {
+      "computed": 2,
+      "conjectured": 3,
+      "open": 179,
+      "proved": 510,
+      "refuted": 4
+    }
+  },
+  "gate_reachability": {
+    "kernel_projection": {
+      "both": true,
+      "just_check": true,
+      "shell_fallback": true
+    },
+    "production_episodes": {
+      "both": true,
+      "just_check": true,
+      "shell_fallback": true
+    },
+    "python_authority": {
+      "both": true,
+      "just_check": true,
+      "shell_fallback": true
+    }
+  },
+  "kernel_library": {
+    "axiom_free_declarations": 1614,
+    "declaration_kinds": {
+      "axiom": 30,
+      "constructor": 29,
+      "definition": 254,
+      "inductive": 22,
+      "recursor": 22,
+      "theorem": 1287
+    },
+    "declarations": 1644,
+    "direct_theorem_dependency_edges": 7677,
+    "theorems": 1287
+  },
+  "kind": "axeyum-product-health-snapshot",
+  "knowledge_connectivity": {
+    "distinct_exactly_linked_facts": 398,
+    "kernel_dependency_edges": 7677,
+    "kernel_theorems": 1287,
+    "maximum_dependency_depth": 26,
+    "theorems_with_exact_fact_links": 397,
+    "theorems_without_exact_fact_links": 890,
+    "unresolved_prefixed_kernel_evidence": 4,
+    "unresolved_reason_counts": {
+      "exact kernel evidence identity is absent from the current projection": 3,
+      "exact kernel evidence identity resolves to a current definition declaration, not a theorem": 1
+    }
+  },
+  "runtime_gate_status": {
+    "meaning": "This artifact does not claim that just check, CI, or any constituent gate ran successfully.",
+    "state": "not-recorded"
+  },
+  "schema_version": 1,
+  "scope": "committed-populations-and-static-gate-reachability",
+  "source_receipts": [
+    {
+      "path": "artifacts/autogenesis/kernel-dependency-projection-v1.json",
+      "sha256": "46923fd784bac0d4e6e00d85a1aefbf03d07fb787c6690c35476dacae09806e4"
+    },
+    {
+      "path": "artifacts/autogenesis/kernel-lemma-search-index-v1.json",
+      "sha256": "cfd3ccc95249a4085f13a4478faff30d3f270975793e9daa32c501084885fa74"
+    },
+    {
+      "path": "artifacts/autogenesis/operations.json",
+      "sha256": "3975199a16059f98c74c155bbb61e7609ec921081d1e30558eecc34939969c93"
+    },
+    {
+      "path": "artifacts/autogenesis/producer-outcome-observations-v1.json",
+      "sha256": "c81224843b1d7ca551b764c464106c67557684f5473be8046059eac16a32201c"
+    },
+    {
+      "path": "justfile",
+      "sha256": "f2e578a87cbb2b7ad1e6e6751a481e4e7832cead62c739138a565165290f3690"
+    },
+    {
+      "path": "scripts/check.sh",
+      "sha256": "cb0cea14c3439a7d2e952d4fa41d252d9ea5aa3b8c908b9a3916a95d76d015af"
+    },
+    {
+      "path": "artifacts/facts/F-*.json",
+      "population": 698,
+      "sha256": "ecaa872d002bdf157827c9b7d134d1b03ff1ff92038a69770bcc4f5210e455df"
+    },
+    {
+      "path": "artifacts/episodes/**/episode*.json excluding fixtures*",
+      "population": 16,
+      "sha256": "0d1c877e7e782532af1063b93efda690f16aae79751a0ac288e868d960a43dc9"
+    }
+  ]
+}
