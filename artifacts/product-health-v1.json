@@ -168,11 +168,11 @@
     },
     {
       "path": "justfile",
-      "sha256": "b28ac6bedc15524a6742c3d97483483cde77961de3c05b3956d362a7c656fb0b"
+      "sha256": "cb9dbd6a34dac0da6465e8b53157dc53505daa2fea429d45c5776e880efb4d0e"
     },
     {
       "path": "scripts/check.sh",
-      "sha256": "59a9dbb9306d631f5a5a0c349c23ecfd9e2ad270720f05d6963c0bdee3b5c551"
+      "sha256": "d14c772127302e9476fd80352caf774b20f31971794880d52fcbed640fae19a7"
     },
     {
       "path": "artifacts/runtime/ci-latest-v1.json",

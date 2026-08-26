@@ -1,0 +1,107 @@
+{
+  "schema_version": 2,
+  "kind": "axeyum-autogenesis-nat-modeq-remainder-contract",
+  "state": "three-of-three-operation-eligible-not-registered-not-admitted",
+  "authority": "This receipt makes the unchanged contract family eligible for operation registration. It does not settle facts; only authoritative dispatch and the crash-safe transaction may do that.",
+  "environment": {
+    "lean_version": "4.30.0",
+    "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean4export_version": "3.1.0"
+  },
+  "contract_source": {
+    "path": "scripts/lean/autogenesis_nat_mod_remainder_contract_v2.lean",
+    "sha256": "9d622ae3f0f7fd36f9d24bfaaf4fdd2419a01a82e43c7d9f67737f85797b20d0",
+    "candidate_roots": [
+      "Axeyum.Autogenesis.Candidate.NatModRemainder.addModLeft",
+      "Axeyum.Autogenesis.Candidate.NatModRemainder.addModRight",
+      "Axeyum.Autogenesis.Candidate.NatModRemainder.modSelf"
+    ],
+    "shared_spine": [
+      "Axeyum.Autogenesis.Candidate.NatModRemainder.modCoreGoFuelCongr",
+      "Axeyum.Autogenesis.Candidate.NatModRemainder.modCoreEq",
+      "Axeyum.Autogenesis.Candidate.NatModRemainder.modCoreEqMod",
+      "Axeyum.Autogenesis.Candidate.NatModRemainder.modEq"
+    ],
+    "lean_axiom_footprint": []
+  },
+  "external_inputs": [
+    {
+      "role": "candidate-family",
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/nat-modeq-remainder-v1/candidates-v2.ndjson",
+      "bytes": 549652,
+      "sha256": "d94b424c18f21949c861b703ad1040bb6b223d33645d39180ce0f62b84fbcf7e"
+    },
+    {
+      "role": "proof-free-target",
+      "fact_id": "F:ml430-nat-add-modeq-left-e3b1fba9",
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/nat-modeq-remainder-v1/target-add-left.ndjson",
+      "bytes": 379915,
+      "sha256": "735e71fd619b3ed7d2be74a050aa526cacc5cca2d919a21971c3b6cfea1ae6fc"
+    },
+    {
+      "role": "proof-free-target",
+      "fact_id": "F:ml430-nat-add-modeq-right-e2f11f21",
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/nat-modeq-remainder-v1/target-add-right.ndjson",
+      "bytes": 379916,
+      "sha256": "bba13e5fd35e847f0e705697e65527873d4febd04c8c7e6010fcec9b555c89b9"
+    },
+    {
+      "role": "proof-free-target",
+      "fact_id": "F:ml430-nat-modulus-modeq-zero-fd9af096",
+      "path": "/nas3/data/axeyum/autogenesis/reference-packs/nat-modeq-remainder-v1/target-modulus-zero.ndjson",
+      "bytes": 379838,
+      "sha256": "d72f1dc259bf5a0eb6dcbf426b5c805f03d03d17d7f58a75f6bf7eea097c0124"
+    }
+  ],
+  "outcomes": [
+    {
+      "fact_id": "F:ml430-nat-add-modeq-left-e3b1fba9",
+      "target_definition": "Axeyum.Autogenesis.Statement.NatModEqArithmetic.addLeft",
+      "transported_candidates": 3,
+      "transport_added": 2,
+      "transport_reused": 1,
+      "binders_used": 2,
+      "application_depth": 2,
+      "terms_considered": 19,
+      "axiom_footprint": [],
+      "target_dependency": false,
+      "independently_admitted": true
+    },
+    {
+      "fact_id": "F:ml430-nat-add-modeq-right-e2f11f21",
+      "target_definition": "Axeyum.Autogenesis.Statement.NatModEqArithmetic.addRight",
+      "transported_candidates": 3,
+      "transport_added": 2,
+      "transport_reused": 1,
+      "binders_used": 2,
+      "application_depth": 2,
+      "terms_considered": 19,
+      "axiom_footprint": [],
+      "target_dependency": false,
+      "independently_admitted": true
+    },
+    {
+      "fact_id": "F:ml430-nat-modulus-modeq-zero-fd9af096",
+      "target_definition": "Axeyum.Autogenesis.Statement.NatModEqArithmetic.modulusZero",
+      "transported_candidates": 3,
+      "transport_added": 2,
+      "transport_reused": 1,
+      "binders_used": 1,
+      "application_depth": 1,
+      "terms_considered": 7,
+      "axiom_footprint": [],
+      "target_dependency": false,
+      "independently_admitted": true
+    }
+  ],
+  "census": {
+    "frozen_siblings": 3,
+    "siblings_converted": 3,
+    "remaining_siblings": 0,
+    "operation_registration_bar": 3,
+    "operation_registration_eligible": true,
+    "facts_settled": 0
+  },
+  "next_falsifiable_step": "Register this exact three-target family as one authoritative operation, dispatch it through clean episodes, and require crash-safe transactions to settle the facts without changing the candidate set or trusted base."
+}
