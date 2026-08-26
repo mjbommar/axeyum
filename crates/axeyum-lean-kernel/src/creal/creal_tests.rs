@@ -71,6 +71,34 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 /// footprint, read out of the kernel rather than off the diff.
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
+    on_a_deep_stack_creal(every_creal_declaration_is_checked_and_axiom_free_body);
+}
+
+/// Runs `f` on a 1 GiB stack.
+///
+/// This test rebuilds the whole constructed environment and walks every
+/// declaration's `axiom_footprint`. Once `CReal.e` landed, that recursion
+/// exceeded the default 2 MiB stack and the test SIGABRTed -- a resource
+/// limit, not a soundness problem, and the same class as the one that makes
+/// `prelude_theorem_inventory` require `--release`.
+///
+/// It carries the stack EXPLICITLY rather than relying on an ambient
+/// `RUST_MIN_STACK`. A lane once reported a suite green that only passed
+/// because it had that variable exported from an earlier hand-bisect; the
+/// same test SIGABRTed in a clean shell. A test whose result depends on an
+/// ambient environment variable is a gate on one shell, and this particular
+/// test is the guard that every `CReal` declaration is derived and
+/// axiom-free -- the last one that should silently stop running.
+fn on_a_deep_stack_creal<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> T {
+    std::thread::Builder::new()
+        .stack_size(1024 * 1024 * 1024)
+        .spawn(f)
+        .expect("spawning a deep-stack thread must succeed")
+        .join()
+        .expect("the deep-stack thread must not panic")
+}
+
+fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
     let expected: [(&str, crate::NameId, &str); 324] = [
         ("Within", p.within, "def"),
