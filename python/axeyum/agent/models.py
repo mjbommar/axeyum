@@ -335,6 +335,33 @@ class ImportedCandidatesPage(_Frozen):
     rows: tuple[ImportedCandidateRow, ...]
 
 
+class TargetOwnedCandidateRow(_Frozen):
+    """One reusable checked Axeyum theorem root, never an imported identity claim."""
+
+    name: str
+    canonical_type: str
+    declaration_identity: str
+    axiom_footprint: tuple[str, ...]
+    direct_theorem_dependencies: tuple[str, ...]
+    semantic_analogue_fact_ids: tuple[str, ...]
+    capsule_path: str
+    capsule_sha256: str
+    exact_imported_identity: bool
+    reuse_eligible: bool
+    authoritative_operation_eligible: bool
+
+
+class TargetOwnedCandidatesPage(_Frozen):
+    """Held-out-safe search over reusable target-owned theorem capsules."""
+
+    name_glob: str
+    canonical_type_contains: str
+    matched: int
+    total_candidates: int
+    dropped_held_out_fact_links: int
+    rows: tuple[TargetOwnedCandidateRow, ...]
+
+
 class OperationRow(_Frozen):
     operation_id: str
     scope: str
