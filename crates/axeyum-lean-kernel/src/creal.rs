@@ -3210,6 +3210,23 @@ pub struct CRealPrelude {
     /// definition's own canonical-index shape — see `integral.rs`'s own
     /// documentation for why that bridge is separate, unattempted work.
     pub riemann_sum_cauchy: NameId,
+    /// `CReal.sharedIndexToCanonical : ∀ (X Y : CReal) (bound : Nat → Rat),
+    /// (∀ i, Within (seq (add X (neg Y)) i) (bound i)) → ∀ p q j : Nat,
+    /// Within (Rat.sub (seq X p) (seq Y q)) ((modulus p (shift j) + bound j)
+    /// + modulus (shift j) q)`.
+    ///
+    /// **The representative-index bridge** `riemannSum_cauchy`'s own doc
+    /// comment names as the one gap between it and `CReal.integral`:
+    /// `riemannSum_cauchy` (and `series.rs`'s structurally analogous
+    /// `sumRange` case) proves closeness of a difference at an arbitrary
+    /// SHARED index; `RegularSeq`/`Cauchy` compare `X`/`Y` at their OWN,
+    /// generally different, canonical indices. General in `X`, `Y` and the
+    /// bound function — nothing in it is `riemannSum`-specific, so the same
+    /// theorem closes `series.rs`'s analogous gap too. See
+    /// `creal/integral.rs`'s `declare_shared_index_to_canonical` for the
+    /// three-leg telescope and exactly what remains (an arbitrary-pair
+    /// common-refinement construction) to reach `CReal.integral` itself.
+    pub shared_index_to_canonical: NameId,
 }
 
 impl CRealPrelude {
@@ -3597,6 +3614,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         reblock_block_eq_fine_block_sum: kernel.name_str(creal, "reblockBlock_eq_fineBlockSum"),
         riemann_sum_reblock_close: kernel.name_str(creal, "riemannSum_reblock_close"),
         riemann_sum_cauchy: kernel.name_str(creal, "riemannSum_cauchy"),
+        shared_index_to_canonical: kernel.name_str(creal, "sharedIndexToCanonical"),
     }
 }
 
@@ -3854,6 +3872,13 @@ pub(crate) fn build_creal_prelude_uncached(
         // (`integral::declare_within_of_two_sided_le`, well above), so it
         // cannot land any earlier than this call site.
         integral::declare_riemann_sum_cauchy(&mut d, prelude)?;
+        // `sharedIndexToCanonical` (the representative-index bridge
+        // `riemannSum_cauchy`'s own doc names as the gap toward
+        // `CReal.integral`) needs only `CReal.regular`/`add`/`neg` (all far
+        // above, core `CReal` definitions) and `series.rs`'s own
+        // `chain_within3` helper -- nothing from `riemannSum_cauchy` itself
+        // -- but lands here as the building block motivated by it.
+        integral::declare_shared_index_to_canonical(&mut d, prelude)?;
         // `order_reflect_of_pos_deriv` needs only `strict_mono_of_pos_deriv`
         // (just declared above) plus `lt_trans`/`lt_irrefl`/`apart` (all far
         // above); nothing later depends on it, so it lands right after its

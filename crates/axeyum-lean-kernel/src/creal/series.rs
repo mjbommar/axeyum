@@ -344,22 +344,40 @@
 //! Even a landed `sumRange_cauchy_of_dominated` does **not** reach `Σ b`
 //! converges by itself, for a reason independent of the telescope above:
 //!
-//! 1. **There is no bridge from a `K`-scaled `Cauchy` witness to an actual
-//!    limit.** `completeness.rs` builds `CReal.limit`/`CReal.limit_dist`
-//!    only for `CReal.RegularSeq` — the **unscaled**, `K = 1` case
-//!    (`modulus m n = 1/(m+1)+1/(n+1)` literally, not `≤`). Given `Cauchy f`
-//!    with witness `K ≠ 1`, reindexing `f` to make it genuinely `K = 1`
-//!    regular needs an *additional* regularity leg per sample (bounding
-//!    `seq (f (σ n)) n` against `f (σ n)`'s own canonical sample `seq (f
-//!    (σ n)) (σ n)`, for whatever reindexing `σ` is chosen) — a
-//!    second, parametrised completeness construction, comparable in size to
-//!    `completeness.rs` itself, that does not exist anywhere in this
-//!    development yet. This blocks **both** `converges_geometric` (item 2)
-//!    and the comparison test's conclusion (item 3, which needs an actual
+//! 1. **~~There is no bridge from a `K`-scaled `Cauchy` witness to an actual
+//!    limit.~~ STALE as of `convergence.rs`/`speedup.rs` (checked
+//!    2026-08-26): that bridge is landed, just not through
+//!    `completeness.rs`.** `completeness.rs` builds `CReal.limit`/
+//!    `CReal.limit_dist` only for `CReal.RegularSeq` — the **unscaled**,
+//!    `K = 1` case (`modulus m n = 1/(m+1)+1/(n+1)` literally, not `≤`) — and
+//!    routing a `K`-scaled `Cauchy f` through THAT route needs exactly the
+//!    reindexing this item used to describe as absent. But
+//!    [`CRealPrelude::regular_of_scaled_cauchy`] and
+//!    [`CRealPrelude::converges_of_cauchy`] (`creal/convergence.rs`, plus
+//!    [`CRealPrelude::speedup`] in `creal/speedup.rs`) are a DIFFERENT,
+//!    already-landed route to the same destination: they resample the
+//!    **diagonal** `fun n => seq (f n) n` directly via `speedup` rather than
+//!    going through `RegularSeq`/`limit` at all, and both are declared in
+//!    `build_creal_prelude`'s dispatch order BEFORE this module's own
+//!    [`declare_series`] runs — so this environment already had them when
+//!    the paragraph below was written. `CRealPrelude::converges_of_cauchy`'s
+//!    own doc comment names exactly why `RegularSeq`/`limit` is the wrong
+//!    tool here: that route "forces a [`CRealPrelude::regular`] bridge at
+//!    the *shallow* outer index on top of the Cauchy estimate, which costs a
+//!    whole extra `1/(m+1)` per side and overshoots `RegularSeq`'s fixed
+//!    modulus by a factor of two", while `speedup`'s own sample *is* the
+//!    diagonal value and needs no such bridge. So: **not** a gap in this
+//!    development, only in `completeness.rs`'s own more limited route
+//!    through it — do not build a second, parametrised completeness
+//!    construction to close this; call `converges_of_cauchy` instead. This
+//!    still blocks **both** `converges_geometric` (item 2) and the
+//!    comparison test's conclusion (item 3, which needs an actual
 //!    `Converges (sumRange a) L`, not just `Cauchy (sumRange a)`) — the
 //!    comparison test does not avoid this by taking `Converges (sumRange
 //!    b) M` as a hypothesis, because it still has to *produce* a limit for
-//!    `sumRange a`.
+//!    `sumRange a` — but the remaining work is wiring `converges_of_cauchy`
+//!    onto `sumRange_cauchy_of_dominated`'s conclusion, not writing a new
+//!    completeness construction from scratch.
 //! 2. **`converges_geometric` needs a quantitative decay rate that also
 //!    does not exist.** [`CRealPrelude::geom_tail_bounded`] bounds `(1 − x)
 //!    · |tail| ≤ xᵐ`, not `|tail| ≤ xᵐ/(1 − x)` — going from the first to
@@ -374,10 +392,15 @@
 //!
 //! Net: the previous lane's "bounded work of the same shape `limit_dist`
 //! already solved" undercounted by treating the tail-bound conversion as
-//! the only remaining step. It is the first of at least three comparably
-//! sized pieces (the nested telescope above; the `Cauchy`→`Converges`
-//! reindexing bridge; the geometric decay-rate quantification), and none of
-//! the three should be attempted as a single unverified slice.
+//! the only remaining step. It was the first of what this doc used to size
+//! as three comparably sized pieces; checked 2026-08-26, the second (the
+//! `Cauchy`→`Converges` reindexing bridge) is **already landed** as
+//! `CRealPrelude::converges_of_cauchy`/`regular_of_scaled_cauchy` — see item
+//! 1 above — so what remains is the nested telescope above (landed this
+//! slice), wiring `converges_of_cauchy` onto `sumRange_cauchy_of_dominated`'s
+//! conclusion (small — a direct application, no new construction), and the
+//! geometric decay-rate quantification (item 2, still a genuine gap). None
+//! of the three should be attempted as a single unverified slice.
 
 use super::completeness::half_shift_le;
 use super::convergence::{converges_applied, exists_elim as creal_exists_elim, exists_ty};
