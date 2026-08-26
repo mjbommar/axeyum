@@ -538,7 +538,7 @@
     "population_path": "artifacts/autogenesis/open-fixed-palette-census-v1.json",
     "population_sha256": "039829b2dbd10d84a73212793e5df52c9cf45f4902e2673acbf73cb502d00467",
     "ranking_path": "artifacts/autogenesis/open-lemma-candidate-ranking-v1.json",
-    "ranking_sha256": "2148b52e80c34b768e2c9a3d1d8d4446de2141a3863f80f9ce178be9ceb93435"
+    "ranking_sha256": "1df991dba080e050e1b1adcc8a38bb646f2d030513fb9ea5d694de90f5bb25d0"
   },
   "state": "diagnostic-only-no-ledger-or-admission-authority"
 }

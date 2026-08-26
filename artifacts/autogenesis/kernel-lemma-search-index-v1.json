@@ -1,11 +1,11 @@
 {
   "census": {
     "distinct_exactly_linked_facts": 398,
-    "kernel_dependency_edges": 7333,
-    "kernel_theorems": 1261,
+    "kernel_dependency_edges": 7341,
+    "kernel_theorems": 1263,
     "maximum_dependency_depth": 26,
     "theorems_with_exact_fact_links": 397,
-    "theorems_without_exact_fact_links": 864,
+    "theorems_without_exact_fact_links": 866,
     "unresolved_prefixed_kernel_evidence": 4,
     "unresolved_reason_counts": {
       "exact kernel evidence identity is absent from the current projection": 3,
@@ -16,7 +16,7 @@
     "fact_identity_rule": "kernel-term evidence with explicit kernel_declarations or kernel_declaration, falling back for compatibility to an evidence id with exact kernel- or kernel: prefix and an exact current theorem suffix",
     "fact_population": "sorted artifacts/facts/F-*.json",
     "graph_semantics": "accepted theorem-term direct references; dependency depth is the longest direct-theorem path from a theorem with no theorem dependency",
-    "kernel_projection_sha256": "1b8813ef2648d837dd71a7624a5d5f811a76a59bf1e53f3c256dbaea990e620f",
+    "kernel_projection_sha256": "b478ebe0ed18c1534ac6ce9962bef22f59ddee89b7e91dde690e7416094a2c8b",
     "trust_boundary": "search and retrieval only; no concept, applicability, proof, admission, or trusted-kernel authority"
   },
   "kind": "axeyum-kernel-lemma-search-index",
@@ -23479,6 +23479,7 @@
       "direct_theorem_dependents": [
         "Complex.I_is_fourth_root",
         "Complex.add_pow",
+        "Complex.conj_div",
         "Complex.conj_pow",
         "Complex.geom_series_div",
         "Complex.geom_sum_eq_zero_of_root_of_unity",
@@ -23583,6 +23584,7 @@
       "direct_theorem_dependents": [
         "Complex.I_is_fourth_root",
         "Complex.add_pow",
+        "Complex.conj_div",
         "Complex.conj_pow",
         "Complex.geom_series_div",
         "Complex.geom_sum_eq_zero_of_root_of_unity",
@@ -24506,6 +24508,53 @@
     },
     {
       "axiom_footprint_size": 0,
+      "canonical_type": "((x0 : Complex) -> ((x1 : Complex) -> ((x2 : AxNat) -> ((x3 : CReal.PosBound (Complex.normSq x1) x2) -> Complex.Equiv (Complex.conj (Complex.div x0 x1 x2 x3)) (Complex.div (Complex.conj x0) (Complex.conj x1) x2 (Complex.pos_bound_conj x1 x2 x3))))))",
+      "dependency_depth": 21,
+      "direct_declaration_dependencies": [
+        "CReal.PosBound",
+        "Complex",
+        "Complex.Equiv",
+        "Complex.Equiv.refl",
+        "Complex.Equiv.trans",
+        "Complex.conj",
+        "Complex.conj_inv",
+        "Complex.conj_mul",
+        "Complex.div",
+        "Complex.inv",
+        "Complex.mul",
+        "Complex.mul_congr",
+        "Complex.normSq",
+        "Complex.pos_bound_conj",
+        "Nat"
+      ],
+      "direct_theorem_dependencies": [
+        "Complex.Equiv.refl",
+        "Complex.Equiv.trans",
+        "Complex.conj_inv",
+        "Complex.conj_mul",
+        "Complex.mul_congr",
+        "Complex.pos_bound_conj"
+      ],
+      "direct_theorem_dependents": [],
+      "direct_type_dependencies": [
+        "CReal.PosBound",
+        "Complex",
+        "Complex.Equiv",
+        "Complex.conj",
+        "Complex.div",
+        "Complex.normSq",
+        "Complex.pos_bound_conj",
+        "Nat"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Complex.conj_div",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "canonical_type": "((x0 : Complex) -> ((x1 : AxNat) -> ((x2 : CReal.PosBound (Complex.normSq x0) x1) -> Complex.Equiv (Complex.conj (Complex.inv x0 x1 x2)) (Complex.inv (Complex.conj x0) x1 (Complex.pos_bound_conj x0 x1 x2)))))",
       "dependency_depth": 20,
       "direct_declaration_dependencies": [
@@ -24560,7 +24609,9 @@
         "Complex.normSq_conj",
         "Complex.pos_bound_conj"
       ],
-      "direct_theorem_dependents": [],
+      "direct_theorem_dependents": [
+        "Complex.conj_div"
+      ],
       "direct_type_dependencies": [
         "CReal.PosBound",
         "Complex",
@@ -24625,6 +24676,7 @@
         "CReal.neg_congr"
       ],
       "direct_theorem_dependents": [
+        "Complex.conj_div",
         "Complex.conj_pow"
       ],
       "direct_type_dependencies": [
@@ -24864,6 +24916,41 @@
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Complex.conj_zero",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "canonical_type": "((x0 : Complex) -> ((x1 : Complex) -> ((x2 : Complex) -> ((x3 : Complex) -> ((x4 : AxNat) -> ((x5 : AxNat) -> ((x6 : CReal.PosBound (Complex.normSq x2) x4) -> ((x7 : CReal.PosBound (Complex.normSq x3) x5) -> ((x8 : Complex.Equiv x0 x1) -> ((x9 : Complex.Equiv x2 x3) -> Complex.Equiv (Complex.div x0 x2 x4 x6) (Complex.div x1 x3 x5 x7)))))))))))",
+      "dependency_depth": 21,
+      "direct_declaration_dependencies": [
+        "CReal.PosBound",
+        "Complex",
+        "Complex.Equiv",
+        "Complex.div",
+        "Complex.inv",
+        "Complex.inv_congr",
+        "Complex.mul_congr",
+        "Complex.normSq",
+        "Nat"
+      ],
+      "direct_theorem_dependencies": [
+        "Complex.inv_congr",
+        "Complex.mul_congr"
+      ],
+      "direct_theorem_dependents": [],
+      "direct_type_dependencies": [
+        "CReal.PosBound",
+        "Complex",
+        "Complex.Equiv",
+        "Complex.div",
+        "Complex.normSq",
+        "Nat"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Complex.div_congr",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex"
@@ -25271,7 +25358,9 @@
         "CReal.mul_congr",
         "CReal.neg_congr"
       ],
-      "direct_theorem_dependents": [],
+      "direct_theorem_dependents": [
+        "Complex.div_congr"
+      ],
       "direct_type_dependencies": [
         "CReal.PosBound",
         "Complex",
@@ -25615,7 +25704,9 @@
       ],
       "direct_theorem_dependents": [
         "Complex.add_pow",
+        "Complex.conj_div",
         "Complex.conj_pow",
+        "Complex.div_congr",
         "Complex.geom_series_div",
         "Complex.geom_sum_eq_zero_of_root_of_unity",
         "Complex.one_is_root_of_unity",
@@ -27053,6 +27144,7 @@
         "Complex.normSq_conj"
       ],
       "direct_theorem_dependents": [
+        "Complex.conj_div",
         "Complex.conj_inv"
       ],
       "direct_type_dependencies": [

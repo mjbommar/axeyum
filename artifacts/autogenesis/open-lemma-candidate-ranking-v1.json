@@ -13,7 +13,7 @@
       "direct_declaration_dependencies or direct_theorem_dependencies as target evidence",
       "producer outcome"
     ],
-    "lemma_index_sha256": "7d8928e0cd8e4598c9fffbf08e352c74e5a73f9eaeeab3f94beebaaf4cd38362",
+    "lemma_index_sha256": "a670c8e832fb4722a37123ebe62de7dad722c95bd1a699eae87daf205fd1c702",
     "max_candidates_per_goal": 12,
     "nursery_sha256": "6d1f2551a612fdcadaf1c6b0096c4eebee304d9687157cb25505f785ee86daa8",
     "population_rule": "open or conjectured lean4 fact in train or development",
