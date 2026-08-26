@@ -1478,7 +1478,7 @@ pub struct CRealPrelude {
     ///
     /// "Cancel the square" at the `CReal` level — the `CReal` analogue of
     /// [`crate::RatPrelude::lt_of_sq_lt`] (`Rat`, strict), and the step
-    /// [`crate::ComplexPrelude::abs_add_le`] needs to close its own squared
+    /// `Complex.abs_add_le` (not yet declared) needs to close its own squared
     /// bound. Composable from already-landed facts, no new epsilon estimate:
     /// `sqrt_le_sqrt` on the hypothesis gives `sqrt(t·t) ≤ sqrt(s·s)`;
     /// `sqrt_sq` at `t` and at `s` (using the two nonnegativity hypotheses)
