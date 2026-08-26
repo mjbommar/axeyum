@@ -18,6 +18,8 @@ class ProductHealthTests(unittest.TestCase):
         self.assertEqual(document["runtime_gate_status"]["state"], "not-recorded")
         self.assertGreater(document["fact_ledger"]["facts"], 0)
         self.assertGreater(sum(document["fact_ledger"]["proof_route_counts"].values()), 0)
+        self.assertGreater(document["semantic_coverage"]["qualified_formalization_facts"], 0)
+        self.assertGreater(document["semantic_coverage"]["kernel_semantic_anchors"], 0)
         self.assertGreater(
             document["autonomous_production"]["production_episodes"]["production_episodes"],
             0,
@@ -31,6 +33,7 @@ class ProductHealthTests(unittest.TestCase):
         markdown = MODULE.render(MODULE.build())
         self.assertIn("runtime gate status as **not recorded**", markdown)
         self.assertIn("wired does not mean run", markdown)
+        self.assertIn("Reviewed semantic coverage", markdown)
         self.assertNotIn("all gates pass", markdown.lower())
 
 

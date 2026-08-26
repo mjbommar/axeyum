@@ -24,6 +24,7 @@ PROJECTION = ROOT / "artifacts/autogenesis/kernel-dependency-projection-v1.json"
 LEMMA_INDEX = ROOT / "artifacts/autogenesis/kernel-lemma-search-index-v1.json"
 OPERATIONS = ROOT / "artifacts/autogenesis/operations.json"
 OUTCOMES = ROOT / "artifacts/autogenesis/producer-outcome-observations-v1.json"
+CONCEPT_COVERAGE = ROOT / "artifacts/autogenesis/concept-coverage-projection-v1.json"
 JUSTFILE = ROOT / "justfile"
 SHELL_GATE = ROOT / "scripts/check.sh"
 JSON_OUT = ROOT / "artifacts/product-health-v1.json"
@@ -150,6 +151,10 @@ def _gate_wiring() -> dict[str, Any]:
             "autogenesis-kernel-projection" in just_dependencies,
             "step autogenesis-kernel-projection" in shell,
         ),
+        "semantic_coverage": (
+            "autogenesis-concept-coverage" in just_dependencies,
+            "step autogenesis-concept-coverage" in shell,
+        ),
     }
     return {
         name: {"just_check": just_ok, "shell_fallback": shell_ok, "both": just_ok and shell_ok}
@@ -162,13 +167,26 @@ def build() -> dict[str, Any]:
     lemma_index = _load(LEMMA_INDEX)
     operations = _load(OPERATIONS)
     outcomes = _load(OUTCOMES)
+    concept_coverage = _load(CONCEPT_COVERAGE)
     projection_census = projection.get("census")
     lemma_census = lemma_index.get("census")
     outcome_census = outcomes.get("census")
-    if not all(isinstance(row, dict) for row in (projection_census, lemma_census, outcome_census)):
+    concept_census = concept_coverage.get("census")
+    if not all(
+        isinstance(row, dict)
+        for row in (projection_census, lemma_census, outcome_census, concept_census)
+    ):
         raise HealthError("one or more generated authorities have no census object")
 
-    sources = [PROJECTION, LEMMA_INDEX, OPERATIONS, OUTCOMES, JUSTFILE, SHELL_GATE]
+    sources = [
+        PROJECTION,
+        LEMMA_INDEX,
+        OPERATIONS,
+        OUTCOMES,
+        CONCEPT_COVERAGE,
+        JUSTFILE,
+        SHELL_GATE,
+    ]
     fact_paths = sorted(FACTS.glob("F-*.json"))
     production_episode_paths = [
         path
@@ -185,6 +203,7 @@ def build() -> dict[str, Any]:
         },
         "kernel_library": projection_census,
         "knowledge_connectivity": lemma_census,
+        "semantic_coverage": concept_census,
         "fact_ledger": _facts(),
         "autonomous_production": {
             **_operations(operations),
@@ -215,6 +234,7 @@ def _percent(numerator: int, denominator: int) -> str:
 def render(document: dict[str, Any]) -> str:
     kernel = document["kernel_library"]
     links = document["knowledge_connectivity"]
+    semantics = document["semantic_coverage"]
     facts = document["fact_ledger"]
     autonomy = document["autonomous_production"]
     episodes = autonomy["production_episodes"]
@@ -240,6 +260,7 @@ def render(document: dict[str, Any]) -> str:
         f"| Kernel library | {kernel['theorems']:,} theorems; {kernel['axiom_free_declarations']:,}/{kernel['declarations']:,} declarations axiom-free | Checked library scale, not autonomous yield |",
         f"| Fact ledger | {facts['facts']:,} facts; {status_counts.get('proved', 0):,} proved; {status_counts.get('open', 0):,} open | Durable proposition state |",
         f"| Exact lemma links | {links['theorems_with_exact_fact_links']:,}/{links['kernel_theorems']:,} ({_percent(links['theorems_with_exact_fact_links'], links['kernel_theorems'])}%) | Remaining theorems are searchable but not exactly fact-linked |",
+        f"| Reviewed semantic coverage | {semantics['qualified_formalization_facts']:,} facts; {semantics['kernel_semantic_anchors']:,} kernel anchors across {semantics['concepts']:,} projected concepts | Qualified partial mappings, not automated classification |",
         f"| Registered producers | {autonomy['authoritative_operations']:,} authoritative; {len(multi):,} reusable multi-target | Registration breadth is not conversion rate |",
         f"| Production episodes | {episodes['production_episodes']:,}; {episodes['fixture_episodes_excluded']:,} fixtures excluded | Nonzero real evidence population |",
         f"| General producer observations | {outcomes['outcomes'].get('admissible-proof', 0):,}/{outcomes['observed_facts']:,} admissible | Current measured autonomous-search weakness |",
