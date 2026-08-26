@@ -2802,6 +2802,32 @@ pub struct CRealPrelude {
     /// the private `sample_offset_bound` (`creal/integral.rs`). See that
     /// file's own module documentation for the derivation.
     pub fine_sample_close: NameId,
+    /// `CReal.meshReciprocalMul : ∀ n m : Nat,
+    /// Eq Rat (Rat.mul (Rat.natDivSucc 1 n) (Rat.natDivSucc 1 m))
+    ///        (Rat.natDivSucc 1 (Nat.add (Nat.add (Nat.mul n m) n) m))`
+    /// (`creal/integral.rs`) — refining a partition of `succ m` coarse
+    /// pieces into `succ n` further pieces each gives a fine mesh factor
+    /// EXACTLY equal (not merely close) to the single-partition factor at
+    /// `m_prime := ((n·m)+n)+m`, the same witness [`Self::of_nat_add`]'s
+    /// sibling `succ_mul_succ` computes (`Nat.succ m_prime` is
+    /// definitionally `(Nat.succ n)·(Nat.succ m)`). Via
+    /// `RatPrelude::normalize_mul_normalize` plus pure defeq — no rewrite
+    /// step. Toward `riemannSum_cauchy`'s common refinement; see
+    /// `integral.rs`'s module documentation.
+    pub mesh_reciprocal_mul: NameId,
+    /// `CReal.equivAbsDiffLe : ∀ x y : CReal, Equiv x y → ∀ e : Nat,
+    /// le (abs (add x (neg y))) (embed (Rat.natDivSucc 1 e))`
+    /// (`creal/integral.rs`) — two REAL-EQUAL numbers are within ANY chosen
+    /// rational bound of each other, with no Archimedean threshold on `e`:
+    /// `Equiv` already gives arbitrary precision for free. Via `le_of_equiv`
+    /// (both directions), `add_le_add`/`add_neg`/`le_congr`, and a
+    /// cancellation identity showing `neg (add x (neg y))` and `add y (neg
+    /// x)` are both additive inverses of `add x (neg y)`. Toward
+    /// `riemannSum_cauchy`'s common refinement: promotes "the global fine
+    /// sample point IS the local block sample point" (an exact `Equiv`) into
+    /// the explicit bound `UniformlyContinuousOn.spec` needs as a
+    /// hypothesis.
+    pub equiv_abs_diff_le: NameId,
 }
 
 impl CRealPrelude {
@@ -3154,6 +3180,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         mesh_le_of_ge: kernel.name_str(creal, "mesh_le_of_ge"),
         fine_sample_in_bounds: kernel.name_str(creal, "fineSample_in_bounds"),
         fine_sample_close: kernel.name_str(creal, "fineSample_close"),
+        mesh_reciprocal_mul: kernel.name_str(creal, "meshReciprocalMul"),
+        equiv_abs_diff_le: kernel.name_str(creal, "equivAbsDiffLe"),
     }
 }
 
@@ -3344,6 +3372,15 @@ pub(crate) fn build_creal_prelude_uncached(
         // (`integral::declare_two_sided_of_abs_sub_le`, well above), so it
         // cannot land any earlier than this call site.
         integral::declare_fine_block_sum_close(&mut d, prelude)?;
+        // `meshReciprocalMul` and `equivAbsDiffLe` are both standalone
+        // building blocks toward `riemannSum_cauchy`'s common-refinement
+        // step (relating `sumRange_reblock`'s raw global fine index to
+        // `riemannSum`'s own per-block sample-point arithmetic); neither
+        // depends on anything declared in this section, so their landing
+        // here is only about staying next to the roadmap step they serve,
+        // not about a dependency.
+        integral::declare_mesh_reciprocal_mul(&mut d, prelude)?;
+        integral::declare_equiv_abs_diff_le(&mut d, prelude)?;
         // `order_reflect_of_pos_deriv` needs only `strict_mono_of_pos_deriv`
         // (just declared above) plus `lt_trans`/`lt_irrefl`/`apart` (all far
         // above); nothing later depends on it, so it lands right after its

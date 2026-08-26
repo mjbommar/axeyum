@@ -130,8 +130,8 @@ use crate::expr::ExprId;
 use crate::int_prelude::ops::{IntDev, exists_elim};
 use crate::nat_prelude::NatOps;
 use crate::rat_prelude::ops::{
-    nat_eq_to_rat, nat_rewrite_prop, radd, rat_eq_rewrite, rat_ty, rchain, req, rle, rmul, rneg,
-    rone, rzero,
+    nat_eq_to_rat, nat_rewrite_prop, normalize, one_le_succ, radd, rat_eq_rewrite, rat_ty, rchain,
+    req, rle, rmul, rneg, rone, rtrans, rzero,
 };
 
 /// Delta height for `CReal.riemannSum`: above `CReal.sumRange`
@@ -3113,7 +3113,6 @@ pub(super) fn declare_of_nat_hom(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<
 ///
 /// Returns `(m_prime, proof)`, `proof : Eq Nat (mul (succ n) (succ m)) (succ
 /// m_prime)`, `m_prime := add (add (mul n m) n) m`.
-#[allow(dead_code)] // staged for the per-term UC bound (riemannSum_cauchy), not yet landed
 fn succ_mul_succ(d: &mut IntDev<'_>, n: ExprId, m: ExprId) -> (ExprId, ExprId) {
     let np = d.prelude();
     let sm = d.succ(m);
@@ -3122,6 +3121,419 @@ fn succ_mul_succ(d: &mut IntDev<'_>, n: ExprId, m: ExprId) -> (ExprId, ExprId) {
     let m_prime = d.const_app(np.add, &[nm_n, m]);
     let proof = d.lemma(np.succ_mul, &[n, sm]);
     (m_prime, proof)
+}
+
+/// `CReal.meshReciprocalMul : ∀ n m : Nat,
+/// Eq Rat (Rat.mul (Rat.natDivSucc 1 n) (Rat.natDivSucc 1 m))
+///        (Rat.natDivSucc 1 (Nat.add (Nat.add (Nat.mul n m) n) m))` —
+/// refining a partition of `succ m` coarse pieces into `succ n` further
+/// pieces each gives a fine mesh factor `1/(n+1) · 1/(m+1)` EXACTLY equal
+/// (not merely close) to the single-partition factor `1/(m_prime+1)`,
+/// `m_prime := ((n·m)+n)+m` — [`succ_mul_succ`]'s own witness, chosen
+/// exactly so `Nat.succ m_prime` is definitionally `(Nat.succ n)·(Nat.succ
+/// m)`. The reciprocal-mesh multiplicativity `riemannSum_cauchy`'s common
+/// refinement needs, toward reconciling `sumRange_reblock`'s RAW global fine
+/// index against `riemannSum`'s own per-block sample-point arithmetic (see
+/// this module's own documentation).
+///
+/// Route: `Rat.natDivSucc k j := normalize (ofNat k) (succ j) _`
+/// definitionally, so `Rat.mul (natDivSucc 1 n) (natDivSucc 1 m)` unfolds to
+/// `normalize (ofNat 1) (succ n) _ · normalize (ofNat 1) (succ m) _`, and
+/// [`RatPrelude::normalize_mul_normalize`] gives this equal to `normalize
+/// (Int.mul (ofNat 1) (ofNat 1)) (Nat.mul (succ n) (succ m)) _`.
+///
+/// **`Nat.mul (succ n) (succ m)` does NOT ι-reduce to `succ m_prime` on its
+/// own, and a first version of this declaration assumed it did.** `Nat.mul`
+/// recurses on its RIGHT argument, so `mul (succ n) (succ m)` unfolds (right
+/// argument `succ m` is succ-shaped) to `add (mul (succ n) m) (succ n)` —
+/// STUCK at `mul (succ n) m`, a mul with `succ n` (not `n`) on the left,
+/// which cannot reduce further since ITS right argument `m` is symbolic.
+/// `Nat.succ_mul`, which [`succ_mul_succ`] actually calls, avoids this by
+/// peeling the `succ` off the LEFT via an explicit induction-proved theorem
+/// FIRST (`mul (succ n) sm = add (mul n sm) sm`, `sm := succ m`), and only
+/// the resulting `add (mul n sm) sm` — with `n` (not `succ n`) inside the
+/// inner `mul` — unfolds the rest of the way to `succ m_prime` by pure
+/// defeq. So `Nat.mul (succ n) (succ m)` and `succ m_prime` are
+/// PROPOSITIONALLY equal (via [`succ_mul_succ`]'s own witness, valid at
+/// that stronger type for the same reason its own smoke tests confirm) but
+/// NOT definitionally equal, and the two must be bridged by an explicit
+/// rewrite: `Int.mul (ofNat 1) (ofNat 1)` ι-reduces to `ofNat 1` on its own
+/// (both factors are the CONCRETE literal `1`, so `Nat.mul 1 1` fully
+/// computes with no symbolic subterm — this half needs no bridge), lifted
+/// to `Eq Int` via [`IntDev::nat_eq_to_int`] multiplying through by
+/// `ofNat 1`, and [`RatPrelude::normalize_congr`] (cross-multiplication
+/// based, so it needs no defeq between the two denominators at all) closes
+/// the gap between `normalize (Int.mul (ofNat 1) (ofNat 1)) (Nat.mul (succ
+/// n) (succ m)) _` and the declared `natDivSucc 1 m_prime`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_mesh_reciprocal_mul(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let one_nat = d.num(1);
+    let n1 = d.of_nat(one_nat);
+    let sn = d.succ(n);
+    let sm = d.succ(m);
+    let h1 = one_le_succ(d, n);
+    let h2 = one_le_succ(d, m);
+
+    let proof = d.lemma(p.rat.normalize_mul_normalize, &[n1, sn, h1, n1, sm, h2]);
+    // proof : Eq Rat (natDivSucc 1 n * natDivSucc 1 m)
+    //                (normalize (Int.mul n1 n1) (Nat.mul sn sm) pos1)
+
+    let (m_prime, succ_proof) = succ_mul_succ(d, n, m);
+    let sm_prime = d.succ(m_prime);
+
+    // `mul_sn_sm` MUST be built the same way `normalize_mul_normalize`'s own
+    // conclusion computes its denominator (`NatOps::mul(e1, e2)`), so it is
+    // syntactically the SAME term `proof`'s actual type already mentions,
+    // not merely an equal one.
+    let mul_sn_sm = NatOps::mul(d, sn, sm);
+
+    // `succ_proof`'s ACTUAL type is `Eq Nat (mul sn sm) (add (add (mul n m)
+    // n) m)`; its RHS reduces by pure defeq to `Nat.succ m_prime` (`Nat.add`
+    // unfolding once on its own succ-shaped right argument) -- see
+    // `succ_mul_succ`'s doc and this declaration's own doc for why the LHS
+    // needs no reduction at all (same literal term). So `succ_proof` is
+    // directly usable at the stronger type `Eq Nat mul_sn_sm sm_prime`.
+    let nat_bridge = succ_proof;
+
+    // step : Eq Int (n1 * ofNat mul_sn_sm) (n1 * ofNat sm_prime), lifting
+    // `nat_bridge` to `Int` by multiplying both sides by `n1`.
+    let step = d.nat_eq_to_int(mul_sn_sm, sm_prime, nat_bridge, &|d, t| {
+        let ot = d.of_nat(t);
+        d.imul(n1, ot)
+    });
+    let of_mul_sn_sm = d.of_nat(mul_sn_sm);
+    let of_sm_prime = d.of_nat(sm_prime);
+    let lhs_int = d.imul(n1, of_mul_sn_sm);
+    let rhs_int = d.imul(n1, of_sm_prime);
+    // cross_eq : Eq Int (n1 * ofNat sm_prime) (n1 * ofNat mul_sn_sm) --
+    // `normalize_congr`'s own cross-multiplication shape at
+    // (n1' := Int.mul n1 n1, d1' := mul_sn_sm, n2' := n1, d2' := sm_prime),
+    // since `Int.mul n1 n1` is DEFEQ `n1` (both factors the concrete literal
+    // `ofNat 1`, so `Nat.mul 1 1` fully computes -- unlike `Nat.mul sn sm`,
+    // symbolic in `n, m`).
+    let cross_eq = d.isymm(lhs_int, rhs_int, step);
+
+    let pos1 = d.lemma(p.rat.int.nat.one_le_mul, &[sn, sm, h1, h2]);
+    let pos2 = one_le_succ(d, m_prime);
+    let n1_n1 = d.imul(n1, n1);
+
+    let bridge = d.lemma(
+        p.rat.normalize_congr,
+        &[n1_n1, mul_sn_sm, pos1, n1, sm_prime, pos2, cross_eq],
+    );
+    // bridge : Eq Rat (normalize n1_n1 mul_sn_sm pos1) (normalize n1 sm_prime pos2)
+
+    let dn = d.const_app(p.rat.nat_div_succ, &[one_nat, n]);
+    let dm = d.const_app(p.rat.nat_div_succ, &[one_nat, m]);
+    let lhs_nice = rmul(d, dn, dm);
+    let mid = normalize(d, n1_n1, mul_sn_sm, pos1);
+    let rhs_nice = d.const_app(p.rat.nat_div_succ, &[one_nat, m_prime]);
+
+    let full_proof = rtrans(d, lhs_nice, mid, rhs_nice, proof, bridge);
+    let stmt = req(d, lhs_nice, rhs_nice);
+
+    let ty = {
+        let over_m = d.pi_fv(m_fv, nat, stmt);
+        d.pi_fv(n_fv, nat, over_m)
+    };
+    let value = {
+        let over_m = d.lam_fv(m_fv, nat, full_proof);
+        d.lam_fv(n_fv, nat, over_m)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mesh_reciprocal_mul,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// From `h1 : Equiv (add u v) zero` and `h2 : Equiv (add u w) zero`, derive
+/// `Equiv v w` — additive inverses (of the SAME `u`) are unique up to
+/// `Equiv`. Built from `add_assoc`/`add_comm`/`add_zero`/`add_congr` alone
+/// (the standard group-theory cancellation argument), reused by
+/// [`declare_equiv_abs_diff_le`] to identify `neg (add x (neg y))` with
+/// `add y (neg x)` without a separate `neg` distributes-over-`add` law.
+fn cancel_unique(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    u: ExprId,
+    v: ExprId,
+    w: ExprId,
+    h1: ExprId,
+    h2: ExprId,
+) -> ExprId {
+    let zero_c = czero(d, p);
+    let uw = cadd(d, p, u, w);
+
+    // step1 : Equiv v (add v zero).
+    let vz = cadd(d, p, v, zero_c);
+    let step1 = {
+        let trim = d.lemma(p.add_zero, &[v]); // Equiv vz v
+        d.lemma(p.equiv_symm, &[vz, v, trim])
+    };
+
+    // step2 : Equiv (add v zero) (add v uw), via `symm h2 : Equiv zero uw`.
+    let v_uw = cadd(d, p, v, uw);
+    let step2 = {
+        let refl_v = d.lemma(p.equiv_refl, &[v]);
+        let flip = d.lemma(p.equiv_symm, &[uw, zero_c, h2]); // Equiv zero uw
+        d.lemma(p.add_congr, &[v, v, zero_c, uw, refl_v, flip])
+    };
+
+    // step3 : Equiv (add v uw) (add (add v u) w).
+    let vu = cadd(d, p, v, u);
+    let vu_w = cadd(d, p, vu, w);
+    let step3 = {
+        let assoc = d.lemma(p.add_assoc, &[v, u, w]); // Equiv vu_w v_uw
+        d.lemma(p.equiv_symm, &[vu_w, v_uw, assoc])
+    };
+
+    // step4 : Equiv (add (add v u) w) (add (add u v) w).
+    let uv = cadd(d, p, u, v);
+    let uv_w = cadd(d, p, uv, w);
+    let step4 = {
+        let comm = d.lemma(p.add_comm, &[v, u]); // Equiv vu uv
+        let refl_w = d.lemma(p.equiv_refl, &[w]);
+        d.lemma(p.add_congr, &[vu, uv, w, w, comm, refl_w])
+    };
+
+    // step5 : Equiv (add (add u v) w) (add zero w), via h1.
+    let zero_w = cadd(d, p, zero_c, w);
+    let step5 = {
+        let refl_w = d.lemma(p.equiv_refl, &[w]);
+        d.lemma(p.add_congr, &[uv, zero_c, w, w, h1, refl_w])
+    };
+
+    // step6 : Equiv (add zero w) (add w zero).
+    let w_zero = cadd(d, p, w, zero_c);
+    let step6 = d.lemma(p.add_comm, &[zero_c, w]);
+
+    // step7 : Equiv (add w zero) w.
+    let step7 = d.lemma(p.add_zero, &[w]);
+
+    echain(
+        d,
+        p,
+        v,
+        &[
+            (vz, step1),
+            (v_uw, step2),
+            (vu_w, step3),
+            (uv_w, step4),
+            (zero_w, step5),
+            (w_zero, step6),
+            (w, step7),
+        ],
+    )
+}
+
+/// `CReal.equivAbsDiffLe : ∀ x y : CReal, Equiv x y → ∀ e : Nat,
+/// le (abs (add x (neg y))) (embed (Rat.natDivSucc 1 e))` — two REAL-EQUAL
+/// numbers are within ANY chosen rational bound of each other. The general
+/// fact `riemannSum_cauchy`'s common refinement needs to promote "the global
+/// fine sample point IS the local block sample point" (an EXACT `Equiv`,
+/// from pure sample-point arithmetic) into the EXPLICIT, computable distance
+/// bound `UniformlyContinuousOn.spec` demands as a hypothesis — no
+/// Archimedean threshold on `e` at all, since `Equiv` already gives
+/// arbitrary precision for free.
+///
+/// Route: `le_of_equiv` (both directions, the second via `equiv_symm`) gives
+/// `le x y` and `le y x`; each widens (via `add_le_add`/`add_neg`/`le_congr`,
+/// the same shape [`width_nonneg_of`] uses) to `le (add x (neg y)) zero` and
+/// `le (add y (neg x)) zero`; `frac_nonneg` and `le_trans` push both up to
+/// the target bound `embed (natDivSucc 1 e)`. [`cancel_unique`] identifies
+/// `neg (add x (neg y))` with `add y (neg x)` (both are additive inverses of
+/// `add x (neg y)`, so this needs no `neg`-distributes-over-`add` law), and
+/// `le_congr` transports the second bound across that identity; `abs_le`
+/// closes both into one.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_equiv_abs_diff_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+
+    let hxy_ty = equiv(d, p, x, y);
+    let hxy_fv = d.fresh_fvar();
+    let hxy = d.kernel().fvar(hxy_fv);
+
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+
+    let diff = {
+        let ny = cneg(d, p, y);
+        cadd(d, p, x, ny)
+    };
+    let flipped = {
+        let nx = cneg(d, p, x);
+        cadd(d, p, y, nx)
+    };
+    let neg_diff = cneg(d, p, diff);
+    let zero_c = czero(d, p);
+
+    // d1 : le diff zero.
+    let d1 = {
+        let ny = cneg(d, p, y);
+        let hxy_le = d.lemma(p.le_of_equiv, &[x, y, hxy]);
+        let refl_ny = d.lemma(p.le_refl, &[ny]);
+        let y_ny = cadd(d, p, y, ny);
+        let shifted = d.lemma(p.add_le_add, &[x, y, ny, ny, hxy_le, refl_ny]);
+        // shifted : le diff y_ny
+        let hn = d.lemma(p.add_neg, &[y]); // Equiv y_ny zero
+        let refl_diff = d.lemma(p.equiv_refl, &[diff]);
+        d.lemma(
+            p.le_congr,
+            &[diff, diff, y_ny, zero_c, refl_diff, hn, shifted],
+        )
+    };
+
+    // d2 : le flipped zero.
+    let d2 = {
+        let hyx = d.lemma(p.equiv_symm, &[x, y, hxy]);
+        let hyx_le = d.lemma(p.le_of_equiv, &[y, x, hyx]);
+        let nx = cneg(d, p, x);
+        let refl_nx = d.lemma(p.le_refl, &[nx]);
+        let x_nx = cadd(d, p, x, nx);
+        let shifted = d.lemma(p.add_le_add, &[y, x, nx, nx, hyx_le, refl_nx]);
+        // shifted : le flipped x_nx
+        let hn = d.lemma(p.add_neg, &[x]); // Equiv x_nx zero
+        let refl_flipped = d.lemma(p.equiv_refl, &[flipped]);
+        d.lemma(
+            p.le_congr,
+            &[flipped, flipped, x_nx, zero_c, refl_flipped, hn, shifted],
+        )
+    };
+
+    let embed_q = {
+        let one_nat = d.num(1);
+        let q = d.const_app(p.rat.nat_div_succ, &[one_nat, e]);
+        embed(d, p, q)
+    };
+    let q_nonneg = frac_nonneg(d, p, e);
+
+    let upper = d.lemma(p.le_trans, &[diff, zero_c, embed_q, d1, q_nonneg]);
+    let lower_flipped = d.lemma(p.le_trans, &[flipped, zero_c, embed_q, d2, q_nonneg]);
+
+    // neg_diff_eq : Equiv flipped neg_diff, both are additive inverses of
+    // `diff` (`h_sum_zero : Equiv (add diff flipped) zero` below, and
+    // `add_neg(diff) : Equiv (add diff neg_diff) zero`).
+    let h_sum_zero = {
+        let ny = cneg(d, p, y);
+        let nx = cneg(d, p, x);
+        let start = cadd(d, p, diff, flipped); // (x + (-y)) + (y + (-x))
+
+        // s1 := add x (add (neg y) flipped).
+        let inner0 = cadd(d, p, ny, flipped);
+        let s1 = cadd(d, p, x, inner0);
+        let h1 = d.lemma(p.add_assoc, &[x, ny, flipped]); // Equiv start s1 (direct)
+
+        // inner chain: (neg y) + flipped ~ ((neg y)+y) + (neg x) ~ zero + (neg x) ~ neg x.
+        let ny_y = cadd(d, p, ny, y);
+        let inner1 = cadd(d, p, ny_y, nx);
+        let h_inner_assoc = {
+            // add_assoc(neg y, y, neg x) : Equiv inner1 inner0
+            let assoc = d.lemma(p.add_assoc, &[ny, y, nx]);
+            d.lemma(p.equiv_symm, &[inner1, inner0, assoc])
+        };
+        // h_inner_assoc : Equiv inner0 inner1
+
+        let ny_y_zero = {
+            let comm = d.lemma(p.add_comm, &[ny, y]); // Equiv ny_y (add y ny)
+            let y_ny = cadd(d, p, y, ny);
+            let hn = d.lemma(p.add_neg, &[y]); // Equiv y_ny zero
+            d.lemma(p.equiv_trans, &[ny_y, y_ny, zero_c, comm, hn])
+        };
+        // ny_y_zero : Equiv ny_y zero
+
+        let zero_nx = cadd(d, p, zero_c, nx);
+        let h_inner2 = {
+            let refl_nx = d.lemma(p.equiv_refl, &[nx]);
+            d.lemma(p.add_congr, &[ny_y, zero_c, nx, nx, ny_y_zero, refl_nx])
+        };
+        // h_inner2 : Equiv inner1 zero_nx
+
+        let h_inner3 = {
+            let comm = d.lemma(p.add_comm, &[zero_c, nx]); // Equiv zero_nx (add nx zero)
+            let nx_zero = cadd(d, p, nx, zero_c);
+            let trim = d.lemma(p.add_zero, &[nx]); // Equiv nx_zero nx
+            d.lemma(p.equiv_trans, &[zero_nx, nx_zero, nx, comm, trim])
+        };
+        // h_inner3 : Equiv zero_nx nx
+
+        let inner_eq = echain(
+            d,
+            p,
+            inner0,
+            &[(inner1, h_inner_assoc), (zero_nx, h_inner2), (nx, h_inner3)],
+        );
+        // inner_eq : Equiv inner0 nx
+
+        let h6 = {
+            let refl_x = d.lemma(p.equiv_refl, &[x]);
+            d.lemma(p.add_congr, &[x, x, inner0, nx, refl_x, inner_eq])
+        };
+        // h6 : Equiv s1 (add x nx)
+
+        let x_nx = cadd(d, p, x, nx);
+        let h7 = d.lemma(p.add_neg, &[x]); // Equiv x_nx zero
+
+        echain(d, p, start, &[(s1, h1), (x_nx, h6), (zero_c, h7)])
+    };
+    let h_self_zero = d.lemma(p.add_neg, &[diff]); // Equiv (add diff neg_diff) zero
+
+    let raw = cancel_unique(d, p, diff, flipped, neg_diff, h_sum_zero, h_self_zero);
+    // raw : Equiv flipped neg_diff
+
+    let lower = {
+        let refl_q = d.lemma(p.equiv_refl, &[embed_q]);
+        d.lemma(
+            p.le_congr,
+            &[flipped, neg_diff, embed_q, embed_q, raw, refl_q, lower_flipped],
+        )
+    };
+
+    let proof_body = d.lemma(p.abs_le, &[diff, embed_q, upper, lower]);
+
+    let ty = {
+        let abs_diff = d.const_app(p.abs, &[diff]);
+        let concl = cle(d, p, abs_diff, embed_q);
+        let after_e = d.pi_fv(e_fv, nat, concl);
+        let after_hxy = d.arrow(hxy_ty, after_e);
+        let over_y = d.pi_fv(y_fv, carrier, after_hxy);
+        d.pi_fv(x_fv, carrier, over_y)
+    };
+    let value = {
+        let with_e = d.lam_fv(e_fv, nat, proof_body);
+        let with_hxy = d.lam_fv(hxy_fv, hxy_ty, with_e);
+        let over_y = d.lam_fv(y_fv, carrier, with_hxy);
+        d.lam_fv(x_fv, carrier, over_y)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.equiv_abs_diff_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
 }
 
 // --- the archimedean rescaling: Δ_m into a UniformlyContinuousOn-shaped bound
@@ -4602,6 +5014,115 @@ mod fine_block_sum_close_tests {
             result.is_ok(),
             "fine_block_sum_close must apply at (identity, 0, 1, e=0, m=2, \
              n=1, i=1) with the expected conclusion type: {:?}",
+            result.err()
+        );
+    }
+}
+
+#[cfg(test)]
+mod mesh_reciprocal_mul_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// The mandatory concrete instantiation: `n := 1, m := 2` (`n != m`, per
+    /// this slice's own caution about transposed-argument defects). `m_prime
+    /// = (n*m)+n+m = 2+1+2 = 5`, and `(succ n)*(succ m) = 2*3 = 6 = succ 5`,
+    /// so `natDivSucc 1 5 = 1/6` should equal `natDivSucc 1 1 * natDivSucc 1
+    /// 2 = (1/2)*(1/3)`. This test is the load-bearing check on the
+    /// declaration's OWN central claim -- that the kernel's conversion
+    /// checker actually bridges `Nat.mul (succ n) (succ m)` down to `succ
+    /// m_prime` and `Int.mul (ofNat 1) (ofNat 1)` down to `ofNat 1` with no
+    /// extra rewrite step -- applied at concrete literals where every
+    /// intermediate `Nat`/`Int` computation fully reduces, not merely
+    /// symbolically.
+    #[test]
+    fn mesh_reciprocal_mul_applies_at_one_two_and_reduces_to_five() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+        let n = d.num(1);
+        let m = d.num(2);
+        let applied = d.const_app(p.mesh_reciprocal_mul, &[n, m]);
+
+        // Independently reconstruct the expected conclusion at the literal
+        // `m_prime := 5`, NOT by recomputing `((n*m)+n)+m` symbolically --
+        // the whole point is to check the declaration's result against a
+        // literal the test built independently.
+        let one_nat = d.num(1);
+        let five = d.num(5);
+        let dn = d.const_app(p.rat.nat_div_succ, &[one_nat, n]);
+        let dm = d.const_app(p.rat.nat_div_succ, &[one_nat, m]);
+        let lhs = rmul(&mut d, dn, dm);
+        let rhs = d.const_app(p.rat.nat_div_succ, &[one_nat, five]);
+        let expected = req(&mut d, lhs, rhs);
+
+        let anon = d.kernel().anon();
+        let name = d
+            .kernel()
+            .name_str(anon, "meshReciprocalMulOneTwoFiveSmoke");
+        let result = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: expected,
+            value: applied,
+        });
+        assert!(
+            result.is_ok(),
+            "mesh_reciprocal_mul at (1, 2) must have type Eq Rat \
+             (natDivSucc 1 1 * natDivSucc 1 2) (natDivSucc 1 5): {:?}",
+            result.err()
+        );
+    }
+}
+
+#[cfg(test)]
+mod equiv_abs_diff_le_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// The mandatory concrete instantiation: `x := y := ofNat 3` (so `hxy`
+    /// is a REAL proof, `equiv_refl (ofNat 3)`, not an assumed free
+    /// variable) and `e := 0`, expecting `le (abs (add x (neg x))) (embed
+    /// (natDivSucc 1 0))` -- independently reconstructed so a swapped
+    /// argument or a wrong target bound fails to match.
+    #[test]
+    fn equiv_abs_diff_le_applies_at_equal_literals() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+        let three = d.num(3);
+        let x = d.const_app(p.of_nat, &[three]);
+        let hxy = d.lemma(p.equiv_refl, &[x]);
+        let zero_nat = d.num(0);
+
+        let applied = d.const_app(p.equiv_abs_diff_le, &[x, x, hxy, zero_nat]);
+
+        let diff = {
+            let nx = cneg(&mut d, p, x);
+            cadd(&mut d, p, x, nx)
+        };
+        let abs_diff = d.const_app(p.abs, &[diff]);
+        let one_nat = d.num(1);
+        let q = d.const_app(p.rat.nat_div_succ, &[one_nat, zero_nat]);
+        let embed_q = embed(&mut d, p, q);
+        let expected = cle(&mut d, p, abs_diff, embed_q);
+
+        let anon = d.kernel().anon();
+        let name = d
+            .kernel()
+            .name_str(anon, "equivAbsDiffLeEqualLiteralsSmoke");
+        let result = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: expected,
+            value: applied,
+        });
+        assert!(
+            result.is_ok(),
+            "equiv_abs_diff_le at (ofNat 3, ofNat 3, refl, 0) must have the \
+             expected conclusion type: {:?}",
             result.err()
         );
     }

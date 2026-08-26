@@ -72,7 +72,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 283] = [
+    let expected: [(&str, crate::NameId, &str); 285] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -823,6 +823,24 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             p.fine_block_sum_close,
             "theorem",
         ),
+        // Toward `riemannSum_cauchy`'s common refinement (`creal/integral.rs`):
+        // refining a partition of `succ m` coarse pieces into `succ n`
+        // further pieces gives a fine mesh factor `1/(n+1) · 1/(m+1)`
+        // EXACTLY equal to the single-partition factor at `m_prime :=
+        // ((n·m)+n)+m`, via `RatPrelude::normalize_mul_normalize` plus pure
+        // defeq -- no rewrite step.
+        (
+            "CReal.meshReciprocalMul",
+            p.mesh_reciprocal_mul,
+            "theorem",
+        ),
+        // Toward `riemannSum_cauchy`'s common refinement (`creal/integral.rs`):
+        // two REAL-EQUAL numbers are within ANY chosen rational bound of
+        // each other, with no Archimedean threshold -- promotes "the global
+        // fine sample point IS the local block sample point" (an exact
+        // `Equiv`) into the explicit bound `UniformlyContinuousOn.spec`
+        // needs as a hypothesis.
+        ("CReal.equivAbsDiffLe", p.equiv_abs_diff_le, "theorem"),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel
