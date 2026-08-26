@@ -1354,6 +1354,16 @@ only the two hard children again, then their measured hard children, has already
 complete 32-leaf subtrees accepted by the existing flat checker. The full cube-8 tree remains
 live and is not counted until every recursive leaf and cover checks.
 
+**First independently replayed recursive S-box subtree, 2026-08-26.** A completed depth-five
+subtree under top-level cell 8 now passes the root-reconstructing recursive checker: one split,
+32 leaves, 33 nodes, and 249,251,498 proof bytes were accepted in 7:32.11 wall time at 103,936
+KiB peak RSS. The root formula has 20,585 variables / 69,829 clauses and SHA-256
+`9dfec7ea...1914`; the selector-27--31 manifest is hash-bound separately. Omitting one leaf
+proof makes the checker exit 2 and name that path. At the contemporaneous audit, the whole
+cell-8 tree had 636/683 terminal leaves complete and cell 4 had 106/373; all completed statuses
+were UNSAT, but only the named subtree has received this new independent replay. Neither
+top-level cell nor the MC=7 formula is therefore certified, and `[7,8]` is unchanged.
+
 **Regression replay gate made load-stable, 2026-08-26.** The pre-push sweep failed twice on
 different corpus rows because it ran `solve_smtlib` and its direct
 `solve_smtlib_with_model` source projection sequentially under independent one-second
