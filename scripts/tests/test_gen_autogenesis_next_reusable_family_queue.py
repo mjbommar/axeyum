@@ -31,7 +31,15 @@ class NextReusableFamilyQueueTests(unittest.TestCase):
         self.assertTrue(document["rows"])
         self.assertEqual(document["rows"][0]["family"], "natural-binomial")
         self.assertEqual(document["rows"][0]["state"], "expand-unchanged-producer")
-        self.assertEqual(document["rows"][0]["accepted_fact_ids"], ["F:ml430-nat-choose-one-right-7eda8e39"])
+        self.assertEqual(
+            document["rows"][0]["accepted_fact_ids"], ["F:ml430-nat-choose-one-right-7eda8e39"]
+        )
+        self.assertEqual(document["rows"][0]["measured_fact_count"], 8)
+        self.assertEqual(document["rows"][0]["unmeasured_fact_count"], 0)
+        self.assertEqual(document["rows"][0]["capability_demands"]["binder-or-generalization"], 2)
+        self.assertEqual(
+            document["rows"][0]["capability_demands"]["non-equality-terminal-family"], 3
+        )
         self.assertTrue(all(not row["already_registered_fact_ids"] for row in document["rows"]))
 
 

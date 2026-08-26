@@ -3,12 +3,16 @@
   "census": {
     "accepted_ready_facts": 1,
     "families": 10,
-    "measured_facts": 29,
+    "measured_facts": 32,
     "operation_integration_ready_families": 0,
     "ready_non_control_facts": 91,
-    "unmeasured_facts": 62
+    "unmeasured_facts": 59
   },
   "derivation": {
+    "binomial_arrow_retrieved_induction": {
+      "path": "artifacts/autogenesis/binomial-arrow-retrieved-induction-census-v1.json",
+      "sha256": "4c425d5ceb50a40688ec94dd05b91298796abafc4bf4df6e1b0d41398ac66d64"
+    },
     "bitwise_clean_family": {
       "path": "artifacts/autogenesis/bitwise-clean-family-projection-v1.json",
       "sha256": "8dd59dc40e68f23d79070f6dff3482811271f475f42f81b101657c0dfafa6e50"
@@ -37,13 +41,14 @@
       "already_registered_fact_ids": [],
       "capability_demands": {
         "authoritative-operation-integration": 1,
+        "binder-or-generalization": 2,
         "missing-rewrite-or-induction-plan": 1,
-        "non-equality-terminal-family": 2,
+        "non-equality-terminal-family": 3,
         "type-slice-generalization": 1
       },
       "dependency_components": 8,
       "family": "natural-binomial",
-      "measured_fact_count": 5,
+      "measured_fact_count": 8,
       "next_action": "convert two more siblings with the already accepted producer contract",
       "partitions": [
         "development"
@@ -51,7 +56,7 @@
       "priority_class": 1,
       "producer_results": {
         "accepted": 1,
-        "declined": 3,
+        "declined": 6,
         "import_rejected": 1
       },
       "rank": 1,
@@ -73,7 +78,7 @@
         "unconditional-relation"
       ],
       "target_owned_semantic_analogue_fact_ids": [],
-      "unmeasured_fact_count": 3
+      "unmeasured_fact_count": 0
     },
     {
       "accepted_fact_ids": [],

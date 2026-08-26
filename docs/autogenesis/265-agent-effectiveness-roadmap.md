@@ -89,11 +89,15 @@ The agent can only attack a fact with a frozen `lean4export` NDJSON. Today ~3 of
   *attemptable* ~3 → ~43 and gives the LLM obstruction data across the real
   frontier, which Track C consumes.
   Exit: `mobility evaluable ≥ 40`.
-- **A2 — an arrow-capable export path.** lean4export 3.1.0 silently refuses
-  (exit 1, no output) any statement with a top-level `→`/`↔`, which is *most* of
-  the ledger — every hypothesis-bearing lemma. Evaluate a newer lean4export or an
-  alternative freezer.
-  Exit: an arrow-bearing fact imports and is attemptable.
+- **A2 — arrow-capable export path: DONE 2026-08-26.** The earlier diagnosis
+  was an output/storage failure, not an exporter ceiling. With the exporter
+  stdout streamed off s5, the same lean4export 3.1.0 + Lean 4.30.0 combination
+  exported three implication-bearing binomial statements and Axeyum imported
+  each proof-isolated with zero axioms and zero theorem proofs. The checked
+  receipt is
+  [`binomial-arrow-export-capability-v1.json`](../../artifacts/autogenesis/binomial-arrow-export-capability-v1.json).
+  The remaining reachability task is operational: batch, retain, and index the
+  rest without writing large NDJSON into Git.
 
 ## Track B — widen what is *provable* (the real frontier lever)
 

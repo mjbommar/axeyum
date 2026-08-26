@@ -5,8 +5,9 @@ The generator turns a fact's `formal.statement` into a proof-free Lean adapter
 so `lean4export` can freeze its elaborated type -- the artifact the agent's
 tier-C producers consume. These tests pin the two behaviours that matter for
 reachability: names are derived deterministically from fact ids, and the
-`--exportable-only` filter drops exactly the arrow-bearing statements that
-lean4export 3.1.0 silently refuses (measured 2026-08-25).
+deprecated `--exportable-only` filter reproduces the 2026-08-25 arrow-free
+census. The filter is no longer a capability claim: a same-version streamed
+replay exported and proof-isolated arrow statements on 2026-08-26.
 
 Each test writes a tiny fact corpus to a temp dir and runs the script as a
 subprocess, so a regression is a failed assertion rather than a quiet pass.
@@ -71,15 +72,21 @@ class GenerateTests(unittest.TestCase):
             out_map = tdp / "out.map.json"
             cp = subprocess.run(
                 [
-                    sys.executable, str(SCRIPT),
-                    "--facts-dir", str(fdir),
-                    "--module", "TestBatch",
-                    "--out-lean", str(out_lean),
-                    "--out-map", str(out_map),
+                    sys.executable,
+                    str(SCRIPT),
+                    "--facts-dir",
+                    str(fdir),
+                    "--module",
+                    "TestBatch",
+                    "--out-lean",
+                    str(out_lean),
+                    "--out-map",
+                    str(out_map),
                     *extra,
                     *sum((["--fact", f["id"]] for f in facts), []),
                 ],
-                capture_output=True, text=True,
+                capture_output=True,
+                text=True,
             )
             self.assertEqual(cp.returncode, 0, cp.stderr)
             return json.loads(out_map.read_text()), out_lean.read_text(), cp.stderr
@@ -87,17 +94,21 @@ class GenerateTests(unittest.TestCase):
     def test_emits_all_by_default(self) -> None:
         facts = [
             _fact("F:ml430-nat-modeq-refl-aaaaaa", "∀ {n : ℕ} (a : ℕ), a ≡ a [MOD n]"),
-            _fact("F:ml430-int-modeq-neg-bbbbbb", "∀ {n a b : ℤ}, a ≡ b [ZMOD n] → -a ≡ -b [ZMOD n]"),
+            _fact(
+                "F:ml430-int-modeq-neg-bbbbbb", "∀ {n a b : ℤ}, a ≡ b [ZMOD n] → -a ≡ -b [ZMOD n]"
+            ),
         ]
         mapping, lean, _ = self._run(facts, [])
         self.assertEqual(len(mapping), 2)
         self.assertIn("Axeyum.Autogenesis.Statement.Generated.natModeqRefl", mapping.values())
         self.assertIn("def natModeqRefl : Prop :=", lean)
 
-    def test_exportable_only_drops_arrow_bearing(self) -> None:
+    def test_legacy_exportable_only_reproduces_arrow_free_subset(self) -> None:
         facts = [
             _fact("F:ml430-nat-modeq-refl-aaaaaa", "∀ {n : ℕ} (a : ℕ), a ≡ a [MOD n]"),
-            _fact("F:ml430-int-modeq-neg-bbbbbb", "∀ {n a b : ℤ}, a ≡ b [ZMOD n] → -a ≡ -b [ZMOD n]"),
+            _fact(
+                "F:ml430-int-modeq-neg-bbbbbb", "∀ {n a b : ℤ}, a ≡ b [ZMOD n] → -a ≡ -b [ZMOD n]"
+            ),
         ]
         mapping, lean, _ = self._run(facts, ["--exportable-only"])
         self.assertEqual(list(mapping), ["F:ml430-nat-modeq-refl-aaaaaa"])
