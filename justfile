@@ -555,6 +555,14 @@ autogenesis-semantic-contract-demand:
     uv run --no-sync python -m unittest scripts.tests.test_gen_autogenesis_semantic_contract_demand
     python3 scripts/gen-autogenesis-semantic-contract-demand.py --check
 
+autogenesis-imported-implementation-demand:
+    uv run --no-sync python -m unittest scripts.tests.test_check_autogenesis_imported_implementation_demand
+    python3 scripts/check-autogenesis-imported-implementation-demand.py
+
+autogenesis-imported-implementation-demand-reproduce streams="/nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1":
+    cargo run -q -p axeyum-lean-import --example imported_implementation_demand -- --streams "{{ streams }}" --replay artifacts/autogenesis/retrieved-induction-type-slice-replay-v1.json --output artifacts/autogenesis/imported-implementation-demand-v1.json
+    python3 scripts/check-autogenesis-imported-implementation-demand.py
+
 autogenesis-non-equality-terminal-census:
     uv run --no-sync python -m unittest scripts.tests.test_measure_autogenesis_open_fixed_palette scripts.tests.test_gen_autogenesis_non_equality_population
     python3 scripts/gen-autogenesis-non-equality-population.py --check
