@@ -1,6 +1,7 @@
 //! The **constructive approximate Intermediate Value Theorem** (Spivak,
-//! *Calculus*, Ch. 7 "Three Hard Theorems") — the one-step bisection lemma,
-//! `CReal.ivt_step`, and its `n`-fold iteration, `CReal.ivt_iter`.
+//! *Calculus*, Ch. 7 "Three Hard Theorems") — the one-step bisection lemma
+//! `CReal.ivt_step`, its `n`-fold iteration `CReal.ivt_iter`, and the closing
+//! statement `CReal.ivt_approx`.
 //!
 //! ## Why the classical statement is unavailable
 //!
@@ -16,8 +17,8 @@
 //! ## The one-step lemma, worked on paper
 //!
 //! Fix a target slack `eps > 0` (this will end up being half the caller's
-//! accuracy target — see the module documentation this file's sibling
-//! `ivt_approx` slice would add, not landed here) and a bracket `[P, Q]`
+//! accuracy target — see [`CReal.ivt_approx`](super::CRealPrelude::ivt_approx)
+//! below) and a bracket `[P, Q]`
 //! satisfying the **weak sign invariant** `F P ≤ eps` and `−eps ≤ F Q` — note
 //! this is *not* `F P ≤ 0 ≤ F Q`; the slack is what makes the step avoid ever
 //! deciding an exact sign.
@@ -56,11 +57,12 @@
 //! supplies for the target accuracy, continuity turns "the endpoints are
 //! close" into "their `F`-values are close", which combined with the sign
 //! invariant on the two endpoints pins down `|F x| ≤` the target for `x` one
-//! of the two final endpoints. That combination step (`CReal.ivt_approx`,
-//! `∀ e : Nat, ∃ x, …`) needs a quantitative bound relating `pow x n` to a
-//! `natDivSucc`-shaped rational threshold, which is **not** built here or
-//! anywhere else in this development yet — see [`CRealPrelude::ivt_iter`]'s
-//! own doc comment.
+//! of the two final endpoints. That combination step
+//! ([`CReal.ivt_approx`](super::CRealPrelude::ivt_approx), `∀ e : Nat, ∃ x,
+//! …`) needs a quantitative bound relating `pow x n` to a `natDivSucc`-shaped
+//! rational threshold — [`CReal.pow_half_le_natDivSucc`](super::CRealPrelude::pow_half_le_nat_div_succ)
+//! (`geometric.rs`) — and an Archimedean bound on the initial width, both
+//! consumed by `ivt_approx`'s own construction below.
 //!
 //! ## Why not trisection
 //!
@@ -88,25 +90,39 @@
 //! `F Q` is pinned to `[−1/20, 1/10]`, giving `|F Q| ≤ 1/10`) — `x := Q`
 //! is the desired witness, with no case split on any exact sign anywhere.
 //!
-//! ## What this file lands, and what it does not
+//! ## What this file lands
 //!
-//! Landed: [`CReal.ivt_step`](super::CRealPrelude::ivt_step) — the bisection
-//! step above, fully general in `F`, `P`, `Q`, `eps` — and
-//! [`CReal.ivt_iter`](super::CRealPrelude::ivt_iter), `ivt_step` iterated `n`
-//! times by structural `Nat` induction, carrying the same six-part invariant
-//! with the width tracked as `(Q0 − P0)·(1/2)ⁿ` via `CReal.pow`. **Not
-//! landed**: the outer `∀ e : Nat, ∃ x, …` statement (`CReal.ivt_approx`).
-//! Closing it needs, on top of `ivt_iter`: choosing `n` from the
-//! Archimedean property against the width
-//! [`CReal.UniformlyContinuousOn.spec`](super::CRealPrelude::uniformly_continuous_on)'s
-//! modulus supplies, and — the actual obstruction — a quantitative bound
-//! relating `pow x n` (`0 ≤ x < 1`) to a `natDivSucc`-shaped rational
-//! threshold. `CRealPrelude::geom_sum_bounded`'s own neighbourhood already
-//! names this as missing ("the geometric-decay-dominates-harmonic-rate
-//! estimate this development does not yet build"); it is not a gap this
-//! file's own construction leaves behind, and building it is comparable in
-//! size to `power.rs`/`geometric.rs` themselves, not a same-slice extension
-//! of `ivt_iter`.
+//! [`CReal.ivt_step`](super::CRealPrelude::ivt_step) — the bisection step
+//! above, fully general in `F`, `P`, `Q`, `eps`; [`CReal.ivt_iter`](super::CRealPrelude::ivt_iter)
+//! — `ivt_step` iterated `n` times by structural `Nat` induction, carrying
+//! the same six-part invariant with the width tracked as `(Q0 − P0)·(1/2)ⁿ`
+//! via `CReal.pow`; and [`CReal.ivt_approx`](super::CRealPrelude::ivt_approx)
+//! — the outer `∀ e : Nat, ∃ x, …` statement, closing `ivt_iter` against
+//! [`CReal.UniformlyContinuousOn`](super::CRealPrelude::uniformly_continuous_on)
+//! and [`CReal.pow_half_le_natDivSucc`](super::CRealPrelude::pow_half_le_nat_div_succ).
+//!
+//! **The bound `pow_half_le_natDivSucc` supplies is linear (`1/(N+1)`), not
+//! the tight geometric `1/2^N`** — it is a valid but looser upper bound, so
+//! `ivt_approx` needs a bisection depth *proportional to* the target
+//! accuracy rather than to its logarithm: `bisect_n := M·delta + c` for `c :=
+//! CReal.bound (b − a)`, `M := c + 1`, `delta :=` the continuity modulus at
+//! the chosen index (see [`CRealPrelude::ivt_approx`]'s own doc comment for
+//! the full derivation). For `f := id` on `[0, 1]` at `e := 9`: `sgn_eps =
+//! 1/20`, the identity's modulus is itself, so the continuity index is `n =
+//! 19` and `delta = 19` — **not `N = 5`**, which was the right count only
+//! under the never-built `2^N ≥ 20` route this file's earlier documentation
+//! (wrongly) anticipated. `ivt_approx`'s own construction
+//! (`declare_ivt_approx`, [`width_le_via_bound`]) computes `bisect_n`
+//! directly from `CReal.bound`, with no search and no `Exists.rec`.
+//!
+//! **Chapter 12's exact inverse function theorem is now unblocked.** A
+//! previous lane established that exact order-reflection is precisely as
+//! hard as an exact IVT preimage — both need a computable root, which is
+//! exactly what the *approximate* statement here declines to produce. With
+//! `ivt_approx` landed, the *approximate* preimage direction that chapter
+//! needs is available; the exact direction remains genuinely unavailable for
+//! the same reason classical IVT is (see "Why the classical statement is
+//! unavailable", above).
 
 #![allow(
     clippy::too_many_arguments,
