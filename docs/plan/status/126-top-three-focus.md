@@ -422,9 +422,17 @@ analogues, zero exact matches, and zero operation-eligible targets. The graph
 can now use the connection without closing the wrong proposition. Next: promote
 the target-owned family into a reusable library surface with its own durable
 fact identities before considering producer registration.
+The family is now reusable outside its builder process: a root-selected
+official-format capsule re-imports 116 declarations with no axioms, and all
+three root identities reproduce byte-for-byte from the checked builder. The
+243,235-byte read-only pack stays outside Git; a committed receipt binds its
+hash, population, provenance, and generic-theorem dependencies. Next: expose
+the capsule through held-out-safe agent retrieval as target-owned library
+material while preserving zero exact-imported and autonomous credit.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-26 | `e56f1b339` | Root-export the three clean bitwise siblings as one reproducible external NDJSON capsule; fresh import admits 116 declarations, no axioms, and the same generic dependency for every root. |
 | 2026-08-26 | `282235e82` | Connect the three clean bitwise siblings to their open Mathlib development facts as non-authoritative semantic analogues, preserving zero exact-match and operation credit. |
 | 2026-08-26 | `76817cc3b` | Specialize the clean generic bitwise construction into AND, OR, and difference; all three sibling theorems reuse the same generic proof and retain empty footprints. |
 | 2026-08-26 | `cca5f9678` | Split proof-reconstructible candidate debt from structural statement trust floors; route the exact imported bitwise theorem to clean-definition reconstruction instead of futile proof retries. |
