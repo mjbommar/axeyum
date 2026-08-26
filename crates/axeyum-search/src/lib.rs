@@ -91,6 +91,7 @@ pub mod harness;
 pub mod ledger;
 pub mod offdiag;
 pub mod search;
+pub mod simd;
 pub mod vdw;
 
 pub use certify::certify_dumped_cover;
