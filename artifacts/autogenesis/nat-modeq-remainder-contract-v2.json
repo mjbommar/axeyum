@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "kind": "axeyum-autogenesis-nat-modeq-remainder-contract",
-  "state": "three-of-three-operation-registered-not-admitted",
+  "state": "three-of-three-operation-contract",
   "authority": "This receipt makes the unchanged contract family eligible for operation registration. It does not settle facts; only authoritative dispatch and the crash-safe transaction may do that.",
   "environment": {
     "lean_version": "4.30.0",
@@ -76,6 +76,9 @@
       "admitted_declarations": 237,
       "axiom_footprint": [],
       "theorem_dependencies": 1,
+      "theorem_dependency_names": [
+        "Axeyum.Autogenesis.Candidate.NatModRemainder.addModLeft"
+      ],
       "target_dependency": false,
       "goal_sha256": "1b601c208f582f00145f99deb91e89632c3e121fb45264b81791199d554fc2c6",
       "proof_sha256": "5990553800738bab8907f76fc86c529d3d374c006eeef748a1bd56554ee93c12",
@@ -95,6 +98,9 @@
       "admitted_declarations": 237,
       "axiom_footprint": [],
       "theorem_dependencies": 1,
+      "theorem_dependency_names": [
+        "Axeyum.Autogenesis.Candidate.NatModRemainder.addModRight"
+      ],
       "target_dependency": false,
       "goal_sha256": "a0ce8c6d1686ebf5a3191af636c84f5b0e4b1f3fd9574b01223b4f447fadc569",
       "proof_sha256": "35a1eba650da01e632e5d1f6fdd658b0158690a33f84274877ef198e7f1e4478",
@@ -114,6 +120,9 @@
       "admitted_declarations": 237,
       "axiom_footprint": [],
       "theorem_dependencies": 1,
+      "theorem_dependency_names": [
+        "Axeyum.Autogenesis.Candidate.NatModRemainder.modSelf"
+      ],
       "target_dependency": false,
       "goal_sha256": "cf41c009def284a46cdcf22937377af099045ff8d4bddcf6a848f0044d803d8a",
       "proof_sha256": "85448f6c53e67dbcf3070bcda19f3c9e01fd09c5a99baeb8b70b549914d8ac89",
@@ -128,8 +137,7 @@
     "operation_registration_bar": 3,
     "operation_registration_eligible": true,
     "operation_registered": true,
-    "operation_id": "authoritative-mathlib-nat-modeq-remainder-family-v1",
-    "facts_settled": 0
+    "operation_id": "authoritative-mathlib-nat-modeq-remainder-family-v1"
   },
-  "next_falsifiable_step": "Register this exact three-target family as one authoritative operation, dispatch it through clean episodes, and require crash-safe transactions to settle the facts without changing the candidate set or trusted base."
+  "next_falsifiable_step": "Dispatch this exact three-target family through clean episodes and require crash-safe transactions to settle the facts without changing the candidate set or trusted base."
 }

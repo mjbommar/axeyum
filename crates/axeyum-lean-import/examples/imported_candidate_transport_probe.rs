@@ -130,6 +130,11 @@ fn run() -> Result<(), String> {
     let target_dependency = closure.contains(&target_name);
     let footprint = kernel.axiom_footprint(name);
     let theorem_dependencies = kernel.theorem_dependencies(name);
+    let theorem_dependency_names = theorem_dependencies
+        .iter()
+        .map(|dependency| kernel.display_name(*dependency).to_string())
+        .collect::<Vec<_>>()
+        .join(",");
     let target_content_sha256 = canonical_declaration_sha256(&kernel, name)
         .map_err(|error| format!("candidate-audit:declaration-identity:{error}"))?;
     if target_dependency || !footprint.is_empty() {
@@ -139,7 +144,7 @@ fn run() -> Result<(), String> {
         ));
     }
     println!(
-        "IMPORTED_CANDIDATE_TRANSPORT|result=accepted|target={target}|roots={}|transported={}|added={added}|reused={reused}|transport_declines={}|binders_used={}|application_depth={}|terms_considered={}|declarations={}|axioms={}|theorem_dependencies={}|target_dependency={target_dependency}|goal_sha256={goal_sha256}|proof_sha256={proof_sha256}|target_content_sha256={target_content_sha256}",
+        "IMPORTED_CANDIDATE_TRANSPORT|result=accepted|target={target}|roots={}|transported={}|added={added}|reused={reused}|transport_declines={}|binders_used={}|application_depth={}|terms_considered={}|declarations={}|axioms={}|theorem_dependencies={}|theorem_dependency_names={theorem_dependency_names}|target_dependency={target_dependency}|goal_sha256={goal_sha256}|proof_sha256={proof_sha256}|target_content_sha256={target_content_sha256}",
         roots.len(),
         candidates.len(),
         declined.len(),

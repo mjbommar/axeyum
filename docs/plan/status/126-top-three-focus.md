@@ -13,11 +13,14 @@ frozen arithmetic `Nat.ModEq` siblings from 0/3 to 3/3. It rebuilds fuel
 congruence, modulo recurrence, addition periodicity, and self-modulus over the
 exact imported implementation. Every transport and independent admission has
 an empty footprint and no hidden-target dependency. Public shortcuts carrying
-`propext` remain rejected. The family is now operation-eligible, but zero facts
-are settled. It is now the 27th authoritative registered operation, and its
-gate freshly replays all three exact capsules and proof identities. Next:
-extend per-fact execution/transaction receipts to preserve the one checked
-theorem dependency, then dispatch all three through clean crash-safe episodes.
+`propext` remain rejected. It is the 27th authoritative registered operation,
+and the full executor path now preserves each target's immutable stream hashes,
+proof identity, and one named retained theorem dependency through execution,
+transaction construction, and settled-fact replay. Zero facts are settled.
+Its three historical assay/contract gates are now correctly lifecycle-stable,
+and the operation explicitly reviews their coupling; a fresh frontier admits
+all three and selects `addLeft`. Next: dispatch the targets through clean
+crash-safe episodes, one freshly recomputed frontier at a time.
 
 Priority 3 also repaired the CI-observed sub-millisecond budget escape: policy
 now compares an unrounded monotonic duration while receipts retain integer
@@ -29,6 +32,8 @@ Detail and older landed rows moved to [`../notes/126-top-three-focus.md`](../not
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-26 | `05553bd14` | Remove mutable-ledger coupling from immutable Nat.mod assay receipts, review the exact three gate mentions, and make all three registered targets frontier-admissible without bypassing the safety interlock. |
+| 2026-08-26 | `cbaef1a1f` | Authorize the imported Nat.mod candidate family end to end: exact dependency names and immutable input/proof identities now survive execution receipts, fact transactions, and settled replay. |
 | 2026-08-26 | `490c45ac3` | Add held-out-safe reviewed semantic coverage to the generated product-health authority while preserving separate autonomous-yield and runtime-status boundaries. |
 | 2026-08-26 | `681a9b4be` | Add three reviewed local concept families and twelve proposition-level mappings; restore held-out-safe topic, fact-formalization, and kernel-anchor coverage in one checked projection. |
 | 2026-08-26 | `8b3ef15bd` | Restore an actionable semantic-review path with three self-contained local concepts and three strictly qualified empty-footprint kernel anchors, without reviving any sibling-repository dependency. |

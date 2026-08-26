@@ -353,6 +353,49 @@ def check_fact(
                 "admitted_declarations": op["admitted_declarations"],
             }
         )
+    elif executor["driver"] == "axeyum-lean-import/imported-candidate-family-multi-target-v1":
+        executor_module = load_module(
+            "executor_for_fact_operation_imported_candidate_family",
+            EXECUTOR_SCRIPT,
+        )
+        try:
+            target, outcome, target_input, candidate_input = (
+                executor_module.imported_candidate_family_target_contract(
+                    operation, fact
+                )
+            )
+        except executor_module.ExecutionError as error:
+            raise FactOperationError(
+                f"imported-candidate target contract failed: {error}"
+            ) from error
+        manifest = json.loads((ROOT / executor["receipt_manifest"]).read_text())
+        expected_binding.update(
+            {
+                "target_fact_id": fact["id"],
+                "receipt_manifest": executor["receipt_manifest"],
+                "receipt_manifest_sha256": digest(manifest),
+                "target_artifact_sha256": target_input["sha256"],
+                "candidate_artifact_sha256": candidate_input["sha256"],
+                "retained_dependency_set_sha256": digest(
+                    outcome["theorem_dependency_names"]
+                ),
+                "formal_statement_sha256": byte_digest(
+                    fact["formal"]["statement"].encode()
+                ),
+                "target_definition": target["target_definition"],
+                "goal_sha256": outcome["goal_sha256"],
+                "proof_sha256": outcome["proof_sha256"],
+                "target_content_sha256": outcome["target_content_sha256"],
+                "binders_used": outcome["binders_used"],
+                "max_binders": executor["max_binders"],
+                "application_depth": outcome["application_depth"],
+                "terms_considered": outcome["terms_considered"],
+                "admitted_declarations": outcome["admitted_declarations"],
+                "retained_answer_dependencies": outcome[
+                    "theorem_dependency_names"
+                ],
+            }
+        )
     else:
         raise FactOperationError("fact operation uses an unsupported driver")
     if binding != expected_binding:
@@ -379,7 +422,10 @@ def check_fact(
         runner(operation, binding["trigger"])
         if executor["driver"] == "axeyum-lean-kernel/nat-mul-one-episode-apply-v1"
         else runner(operation, fact=fact)
-        if executor["driver"] == "axeyum-lean-import/modeq-family-multi-target-v1"
+        if executor["driver"] in (
+            "axeyum-lean-import/modeq-family-multi-target-v1",
+            "axeyum-lean-import/imported-candidate-family-multi-target-v1",
+        )
         else runner(operation)
     )
     if executor["driver"] == "axeyum-bench/smtcomp-evidence-v1":
@@ -530,6 +576,16 @@ def check_fact(
         )
         expected_observation = executor_module.expected_modeq_family_target_observation(
             operation, fact
+        )
+    elif executor["driver"] == "axeyum-lean-import/imported-candidate-family-multi-target-v1":
+        executor_module = load_module(
+            "executor_for_fact_operation_imported_candidate_observation",
+            EXECUTOR_SCRIPT,
+        )
+        expected_observation = (
+            executor_module.expected_imported_candidate_family_observation(
+                operation, fact
+            )
         )
     else:
         premise_candidate = (

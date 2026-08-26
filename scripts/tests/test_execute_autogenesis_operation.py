@@ -44,6 +44,7 @@ INT_FIB_OF_NONNEG_FACT = "F:ml430-int-fib-of-nonneg-438018c5"
 # suite does not intend to dispatch out of the way of the one it does.
 NAT_MODEQ_SYMM_FACT = "F:ml430-nat-modeq-symm-0a3d4d18"
 NAT_MODEQ_TRANS_FACT = "F:ml430-nat-modeq-trans-ef9d1c46"
+NAT_MODEQ_ADD_LEFT_FACT = "F:ml430-nat-add-modeq-left-e3b1fba9"
 
 
 def settle_reflexivity_fact(facts):
@@ -335,6 +336,54 @@ class OperationExecutionTests(unittest.TestCase):
                 operation=operation,
                 registry=registry,
                 git_commit="b" * 40,
+                observation=changed,
+            )
+
+    def test_imported_candidate_family_receipt_binds_exact_dependency_and_inputs(self):
+        frontier_module = execution.load_module(
+            "frontier_for_imported_candidate_execution_test",
+            execution.FRONTIER_SCRIPT,
+        )
+        facts = frontier_module.load()
+        fact = facts[NAT_MODEQ_ADD_LEFT_FACT]
+        registry = execution.load_module(
+            "registry_for_imported_candidate_execution_test",
+            execution.REGISTRY_SCRIPT,
+        ).load_registry()
+        operation = next(
+            op
+            for op in registry["operations"]
+            if op["id"] == "authoritative-mathlib-nat-modeq-remainder-family-v1"
+        )
+        frontier = frontier_module.build_machine_frontier(facts, registry)
+        observation = execution.expected_imported_candidate_family_observation(
+            operation, fact
+        )
+        receipt = execution.build_receipt(
+            frontier=frontier,
+            fact=fact,
+            operation=operation,
+            registry=registry,
+            git_commit="d" * 40,
+            observation=observation,
+        )
+        self.assertEqual(
+            receipt["result"]["observation"]["retained_answer_dependencies"],
+            ["Axeyum.Autogenesis.Candidate.NatModRemainder.addModLeft"],
+        )
+        self.assertEqual(
+            receipt["identity"]["retained_dependency_set_sha256"],
+            execution.digest(observation["retained_answer_dependencies"]),
+        )
+        changed = copy.deepcopy(observation)
+        changed["retained_answer_dependencies"] = []
+        with self.assertRaisesRegex(execution.ExecutionError, "required"):
+            execution.build_receipt(
+                frontier=frontier,
+                fact=fact,
+                operation=operation,
+                registry=registry,
+                git_commit="d" * 40,
                 observation=changed,
             )
 

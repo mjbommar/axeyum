@@ -1459,7 +1459,9 @@
       "id": "authoritative-mathlib-nat-modeq-remainder-family-v1",
       "scope": "authoritative",
       "reviewed_gate_mentions": [
-        "check-autogenesis-nat-modeq-remainder-operation.py"
+        "check-autogenesis-nat-modeq-imported-bridge-assay.py",
+        "check-autogenesis-nat-modeq-remainder-contract-v2.py",
+        "check-autogenesis-nat-modeq-remainder-contract.py"
       ],
       "applicability": {
         "fact_ids": [
