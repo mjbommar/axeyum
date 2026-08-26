@@ -22,9 +22,9 @@ semantics, evidence, provenance, checking, and compounding knowledge loop.
 - The pure-Rust reasoning stack has real end-to-end SMT, CAS, kernel, program
   verification, and proof-artifact routes, but its coverage and assurance are
   uneven by fragment.
-- The generated kernel projection currently contains 1,588 declarations: 1,240
+- The generated kernel projection currently contains 1,589 declarations: 1,241
   theorems, 245 definitions, 29 constructors, 22 inductives, 22 recursors, and
-  30 axioms. It reports 1,558 axiom-free declarations and 6,946 direct
+  30 axioms. It reports 1,559 axiom-free declarations and 6,981 direct
   theorem-dependency edges. This is a substantial checked library, but it is
   not an autonomous-production count.
 - The fact ledger contains 696 propositions: 502 proved, 4 refuted, 2 computed,
@@ -37,10 +37,10 @@ semantics, evidence, provenance, checking, and compounding knowledge loop.
   frontier.
 - The kernel, fact ledger, tactic catalog, obstruction graph, and concept graph
   are separately useful, but do not yet form one lemma-search substrate.
-- The generated lemma index now covers all 1,240 kernel theorems and their 6,946
+- The generated lemma index now covers all 1,241 kernel theorems and their 6,981
   direct edges, with a kernel-rendered canonical type on every row and a
   bounded type-fragment query in the agent read surface. Exactly 395
-  theorems link to 390 fact records; 845 theorems have
+  theorems link to 390 fact records; 846 theorems have
   no exact fact link. Only four evidence identities remain unresolved: three
   descriptive ordered-ring/Rat IDs and `Rat.normalize`, which resolves exactly
   but is a definition rather than a theorem. The projection now actually
@@ -89,6 +89,17 @@ name similarity. This proves mathematical compounding through the connected
 graph, but not autonomous construction: the reference constructor was written
 by hand and production provenance correctly counts the result among the 472
 settled facts with no authoritative operation.
+
+A bounded, target-agnostic application producer now closes that gap at the
+candidate-construction layer. Given only the retrieved declarations
+`Nat.monotone_of_le_succ`, `Nat.fib`, and `Nat.fib_le_succ`, it constructs a
+term of `Nat.fib_mono` by deterministic type-directed application; the kernel
+admits it axiom-free with the two theorem dependencies observed in the proof.
+Removing the adjacent-step candidate makes the same bounded search decline.
+It neither scans the environment nor receives the target theorem. The remaining
+boundary is Python/agent exposure plus authoritative operation and episode
+admission; until those land, production provenance must continue to say
+`no_operation`.
 
 ## Comparative position
 

@@ -13,8 +13,10 @@ then composed `Nat.fib_le_succ` through `Nat.monotone_of_le_succ` into checked
 `Nat.fib_mono`, but remains honestly `no_operation` because its constructor was
 hand-authored. The graph links 395 theorems to 390 facts (four identities remain
 explicitly unresolved) and exposes every canonical kernel type through typed
-agent queries, including bounded type-fragment search. Next: dispatch the
-target-agnostic combinator authoritatively and measure sibling conversion.
+agent queries. A bounded application producer now reconstructs the Fibonacci
+composition from three retrieved declarations and declines when the adjacent
+lemma is absent. Next: expose and dispatch it authoritatively, then measure
+sibling conversion.
 
 <!-- plan-section: landed-changes -->
 
