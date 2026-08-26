@@ -173,3 +173,16 @@ reproduces the known MC>=7 endpoint and, with the replayed MC<=8 witness, indepe
 checks the published `[7,8]` bracket. It does not decide MC=7. ANF/CNF conversion and the
 lower bound are prior work; incomplete forward-citation access precludes a first-artifact
 novelty claim.
+
+**Splitter-blind cube composition and first MC=7 frontier probe, 2026-08-26.** ADR-0543 is
+accepted and `axeyum-cnf::cube` is now public. The substantial dormant implementation and its
+twelve controls were preserved; the landed increment adds file-backed backward checking and
+deterministic emitter/checker CLIs, bringing the focused suite to fourteen. Every leaf formula
+and the cover CNF are reconstructed from the base formula and literal lists, so no splitter
+formula is trusted. Szeider's July 2026 LRAT-Catcher already composes cube proofs inside Lean,
+so neither the argument nor formal composition is novel. The PRIMATEs-inverse MC=7 portable
+ANF/CNF frontier is 919 variables / 970 equations and 20,585 CNF variables / 69,778 clauses.
+A monolithic 600-second run interrupted. A first cover exposed source variable 1 as forced;
+two live leaves interrupted. An adaptive exhaustive cover on variables 2 and 3 has a checked
+two-step covering proof, but all four leaves interrupted at 600 seconds. No model or complete
+leaf-proof set exists, so `[7,8]` is unchanged.

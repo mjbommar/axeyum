@@ -61,6 +61,10 @@ These are hypotheses until the first vertical slices measure the actual gaps.
   projection/replay, and file-backed checked DRAT. Its retained MC=6 refutation independently
   reproduces the known lower endpoint, so Axeyum now checks the published `[7,8]` bracket;
   the seven-AND frontier itself remains open.
+  ADR-0543 now makes splitter-blind cube composition public in `axeyum-cnf`, including a
+  file-backed retained-proof route. Its first MC=7 application produced and checked exhaustive
+  cover proofs, but the live leaves remained undecided at 600 seconds. This is reusable
+  certification infrastructure and hardness telemetry, not a frontier bound.
 - Exact-rational matrix certificates with dimension/resource admission, fraction-free or
   BigInt arithmetic, independently checked `LDL^T`, and explicit PSD semantics. ADR-0557
   now removes the arithmetic-width blocker: bounded `BigRational` symmetric elimination

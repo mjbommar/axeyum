@@ -1,6 +1,7 @@
 # ADR-0543: Cube-And-Conquer Certificate Composition, With A Splitter-Blind Checker
 
-Status: proposed
+Status: accepted
+Index-summary: Compose per-cube DRAT refutations with an independently checked covering proof
 Date: 2026-08-22
 
 ## Context
@@ -61,6 +62,15 @@ generic combinator. It explicitly does not decide the splitter heuristic
 (T6.3's lookahead splitter), external conquer engines (T6.1), the parallel
 orchestrator (T6.6), or LRAT-scale streaming (T6.5) — those stay open and are
 listed under Consequences.
+
+The through-date literature audit was refreshed when this decision landed. In particular,
+Szeider's *LRAT-Catcher* (arXiv:2607.00815v1, submitted 2026-07-01) already composes
+per-cube refutations and an LRAT cover-completeness certificate entirely inside Lean, with
+Schur `S(4)=44` and Ramsey `R(4,4)=18` evaluations. The Empty Hexagon Lean artifact likewise
+checks a tautology proof plus every cube. Axeyum therefore claims neither the composition
+argument nor formal cube-and-conquer checking as novel. Its narrower contribution is an
+in-tree DRAT implementation sharing Axeyum's existing CNF/checker types and a file-backed
+route usable by its current search encodings.
 
 ## Decision
 
@@ -187,6 +197,22 @@ error in the splitter's covering claim unfalsifiable rather than merely
 un-checkable-until-fixed.
 
 ## Evidence
+
+- Publicly activated in `axeyum-cnf::cube` on 2026-08-26. The substantial implementation and
+  twelve controls already existed as a dormant, unexported source file; this increment
+  preserved them, exported the module, and added the textual file-backed backward route plus
+  deterministic emitter/checker examples. The checker reconstructs every `F AND cube`
+  formula and the covering CNF from the same literal lists; neither route accepts a
+  splitter-supplied formula.
+- Fourteen focused controls now check complete composition, stable Boolean-product order,
+  selector admission, SAT discovery, file-backed equivalence, proof-count mismatch, a
+  missing leaf, a forged or incomplete proof, an empty cover, and an out-of-range literal.
+  Each malformed composition fails closed.
+- The generic emitter first exposed source variable 1 as already forced, then produced an
+  adaptive four-leaf cover of the PRIMATEs-inverse MC=7 frontier over source variables 2 and
+  3. The independently generated covering formula has four clauses, and its two-step DRAT
+  proof checks before any leaf search is credited. All four live leaves interrupted at 600
+  seconds, so the composition is incomplete and no bound is credited.
 
 - `docs/plan/exploration-track/phase-6-parallel/README.md`'s calibration
   table: Boolean Pythagorean Triples' published certificate is literally
