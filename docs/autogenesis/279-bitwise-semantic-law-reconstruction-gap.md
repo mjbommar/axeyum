@@ -108,6 +108,14 @@ the power step through explicit addition/multiplication normalization. This
 removes the sufficient-size uncertainty from bounded reification; the remaining
 universal theorem is observation round-trip/uniqueness below the bound.
 
+The established bound composes with the existing native
+`Nat.sum_testBit_lt`: summing the first `k` native numeric observations of
+`reifyBits bits k` reconstructs that exact number, because the modulus by
+`2^k` is removable. This universal numeric round trip is kernel-checked and
+axiom-free. What remains is componentwise uniqueness—showing the reconstructed
+numeric digit at each `i < k` equals `boolToBit (bits i)`—then transporting
+through the Boolean digit bridge.
+
 A bounded oracle exhausts every Boolean vector through width 12: 8,191 vectors,
 90,114 in-range observations, and 8,191 first-out-of-range zero observations.
 It confirms the weighted-sum construction has the intended finite semantics.

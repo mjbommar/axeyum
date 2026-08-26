@@ -38,6 +38,7 @@ fn run() -> Result<(), String> {
     let reify_one_normalize_name = kernel.name_str(autogenesis, "reifyBits_one_normalize");
     let reify_one_roundtrip_name = kernel.name_str(autogenesis, "reifyBits_one_roundtrip_zero");
     let reify_bound_name = kernel.name_str(autogenesis, "reifyBits_lt_pow");
+    let numeric_roundtrip_name = kernel.name_str(autogenesis, "reifyBits_numeric_roundtrip");
     let bitwise_reify_name = kernel.name_str(autogenesis, "bitwiseReifyBounded");
 
     {
@@ -535,6 +536,40 @@ fn run() -> Result<(), String> {
         d.declare_theorem(reify_bound_name, theorem_type, theorem_value)
             .map_err(|error| format!("reifyBits_lt_pow rejected: {}", d.explain(&error)))?;
 
+        // Reading the native numeric bits of a bounded reification and summing
+        // them back reconstructs the exact same Nat.
+        let count_fv = d.fresh_fvar();
+        let count = d.kernel().fvar(count_fv);
+        let bits_fv = d.fresh_fvar();
+        let bits = d.kernel().fvar(bits_fv);
+        let reified = d.const_app(reify_bits_name, &[bits, count]);
+        let two = d.num(2);
+        let power = d.pow(two, count);
+        let index_fv = d.fresh_fvar();
+        let index = d.kernel().fvar(index_fv);
+        let native_bit = d.const_app(prelude.test_bit, &[reified, index]);
+        let place = d.pow(two, index);
+        let term = d.mul(native_bit, place);
+        let summand = d.lam_fv(index_fv, nat, term);
+        let reconstructed = d.const_app(prelude.sum_range, &[summand, count]);
+        let remainder = d.modulo(reified, power);
+        let partial = d.lemma(prelude.sum_test_bit_lt, &[count, reified]);
+        let bound = d.lemma(reify_bound_name, &[count, bits]);
+        let remove_mod = d.lemma(prelude.mod_eq_self_of_lt, &[reified, power, bound]);
+        let proof = d.trans(reconstructed, remainder, reified, partial, remove_mod);
+        let statement = d.eq(reconstructed, reified);
+        let over_bits_type = d.pi_fv(bits_fv, bits_type, statement);
+        let over_bits_value = d.lam_fv(bits_fv, bits_type, proof);
+        let theorem_type = d.pi_fv(count_fv, nat, over_bits_type);
+        let theorem_value = d.lam_fv(count_fv, nat, over_bits_value);
+        d.declare_theorem(numeric_roundtrip_name, theorem_type, theorem_value)
+            .map_err(|error| {
+                format!(
+                    "reifyBits_numeric_roundtrip rejected: {}",
+                    d.explain(&error)
+                )
+            })?;
+
         // The bounded Nat candidate associated with the pointwise algebra.
         let reified_bitwise_value = {
             let f_fv = d.fresh_fvar();
@@ -647,8 +682,15 @@ fn run() -> Result<(), String> {
     if !kernel.axiom_footprint(reify_bound_name).is_empty() {
         return Err("universal reification bound gained assumptions".to_owned());
     }
+    let numeric_roundtrip_type = match kernel.environment().get(numeric_roundtrip_name) {
+        Some(Declaration::Theorem { ty, .. }) => *ty,
+        _ => return Err("reifyBits_numeric_roundtrip disappeared".to_owned()),
+    };
+    if !kernel.axiom_footprint(numeric_roundtrip_name).is_empty() {
+        return Err("numeric reification roundtrip gained assumptions".to_owned());
+    }
     println!(
-        "NAT_TESTBIT_BOOL_BRIDGE_OK|theorem=Axeyum.Autogenesis.testBitBool_succ|axioms=0|type={}|observation_theorem=Axeyum.Autogenesis.bitwiseObservation_apply|observation_axioms=0|observation_type={}|reification_definition=Axeyum.Autogenesis.bitwiseReifyBounded|reification_base_theorem=Axeyum.Autogenesis.reifyBits_zero|reification_base_axioms=0|reification_base_type={}|reification_step_theorem=Axeyum.Autogenesis.reifyBits_succ|reification_step_axioms=0|reification_step_type={}|boolean_digit_roundtrip_theorem=Axeyum.Autogenesis.boolToBit_roundtrip_zero|boolean_digit_roundtrip_axioms=0|boolean_digit_roundtrip_type={}|boolean_digit_bound_theorem=Axeyum.Autogenesis.boolToBit_le_one|boolean_digit_bound_axioms=0|boolean_digit_bound_type={}|one_bit_normalization_theorem=Axeyum.Autogenesis.reifyBits_one_normalize|one_bit_normalization_axioms=0|one_bit_normalization_type={}|one_bit_roundtrip_theorem=Axeyum.Autogenesis.reifyBits_one_roundtrip_zero|one_bit_roundtrip_axioms=0|one_bit_roundtrip_type={}|reification_bound_theorem=Axeyum.Autogenesis.reifyBits_lt_pow|reification_bound_axioms=0|reification_bound_type={}",
+        "NAT_TESTBIT_BOOL_BRIDGE_OK|theorem=Axeyum.Autogenesis.testBitBool_succ|axioms=0|type={}|observation_theorem=Axeyum.Autogenesis.bitwiseObservation_apply|observation_axioms=0|observation_type={}|reification_definition=Axeyum.Autogenesis.bitwiseReifyBounded|reification_base_theorem=Axeyum.Autogenesis.reifyBits_zero|reification_base_axioms=0|reification_base_type={}|reification_step_theorem=Axeyum.Autogenesis.reifyBits_succ|reification_step_axioms=0|reification_step_type={}|boolean_digit_roundtrip_theorem=Axeyum.Autogenesis.boolToBit_roundtrip_zero|boolean_digit_roundtrip_axioms=0|boolean_digit_roundtrip_type={}|boolean_digit_bound_theorem=Axeyum.Autogenesis.boolToBit_le_one|boolean_digit_bound_axioms=0|boolean_digit_bound_type={}|one_bit_normalization_theorem=Axeyum.Autogenesis.reifyBits_one_normalize|one_bit_normalization_axioms=0|one_bit_normalization_type={}|one_bit_roundtrip_theorem=Axeyum.Autogenesis.reifyBits_one_roundtrip_zero|one_bit_roundtrip_axioms=0|one_bit_roundtrip_type={}|reification_bound_theorem=Axeyum.Autogenesis.reifyBits_lt_pow|reification_bound_axioms=0|reification_bound_type={}|numeric_roundtrip_theorem=Axeyum.Autogenesis.reifyBits_numeric_roundtrip|numeric_roundtrip_axioms=0|numeric_roundtrip_type={}",
         kernel.render_lean(ty),
         kernel.render_lean(observation_type),
         kernel.render_lean(reify_zero_type),
@@ -657,7 +699,8 @@ fn run() -> Result<(), String> {
         kernel.render_lean(bool_to_bit_le_one_type),
         kernel.render_lean(reify_one_normalize_type),
         kernel.render_lean(reify_one_roundtrip_type),
-        kernel.render_lean(reify_bound_type)
+        kernel.render_lean(reify_bound_type),
+        kernel.render_lean(numeric_roundtrip_type)
     );
     Ok(())
 }

@@ -491,6 +491,9 @@ The constructive coefficient bound `boolToBit b ≤ 1` now supplies the local
 inequality needed by the universal reifier-bound induction.
 That induction now lands axiom-free: `reifyBits bits k < 2^k` universally. The
 remaining core is bit-observation uniqueness below the established bound.
+Native `sum_testBit_lt` now composes with that bound to give an axiom-free
+numeric reconstruction round trip. Only componentwise digit uniqueness and its
+Boolean transport remain.
 
 ### Exit evidence
 

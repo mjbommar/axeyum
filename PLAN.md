@@ -1521,6 +1521,10 @@ axiom-free. It supplies the missing local inequality for the universal
 The universal size theorem now checks axiom-free: every `k`-bit reification is
 strictly below `2^k`. The remaining universal obligation is observation
 round-trip/uniqueness, not existence or boundedness of the constructed number.
+The bound now composes with native `sum_testBit_lt` and `mod_eq_self_of_lt` to
+prove a universal numeric reconstruction round trip, also axiom-free. The
+remaining seam is componentwise digit uniqueness below `k`, followed by the
+already-checked Boolean transport.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization

@@ -152,6 +152,11 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
     bound_type = reification.get("reification_bound_canonical_type", "")
     if "AxNat.lt" not in bound_type or "AxNat.pow" not in bound_type:
         raise ValueError("universal reification bound type changed")
+    if reification.get("numeric_roundtrip_axiom_footprint_size") != 0:
+        raise ValueError("numeric reification roundtrip gained assumptions")
+    numeric_type = reification.get("numeric_roundtrip_canonical_type", "")
+    if "AxNat.sumRange" not in numeric_type or "AxNat.testBit" not in numeric_type:
+        raise ValueError("numeric reification roundtrip type changed")
 
     exclusion = data.get("countermodel_exclusion", {})
     if exclusion.get("excluded_by_law") != "testBit_succ":

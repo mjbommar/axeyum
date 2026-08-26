@@ -103,6 +103,12 @@ class BitwiseSemanticLawDemandTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "reification bound gained assumptions"):
             MODULE.validate(data)
 
+    def test_numeric_roundtrip_assumption_fails_closed(self):
+        data = copy.deepcopy(self.data)
+        data["native_reification"]["numeric_roundtrip_axiom_footprint_size"] = 1
+        with self.assertRaisesRegex(ValueError, "numeric reification roundtrip"):
+            MODULE.validate(data)
+
     def test_finite_oracle_receipt_mutation_fails_closed(self):
         data = copy.deepcopy(self.data)
         data["finite_reification_oracle"]["inside_observations"] -= 1
