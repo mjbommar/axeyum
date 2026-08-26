@@ -10,10 +10,12 @@ use axeyum_cnf::{
     CnfAssignment, CnfFormula, ProofSolveOutcome, check_drat_backward, check_drat_backward_reader,
 };
 use axeyum_search::job_shop::{
-    JobShopEncoding, JobShopEncodingLimits, JobShopMachineOrderStatus, JobShopProblem,
-    JobShopSchedule, encode_job_shop, encode_job_shop_with_detectable_precedence,
-    encode_job_shop_with_job_windows, encode_job_shop_with_precedence_closure,
-    job_shop_to_pumpkin_flatzinc, parse_job_shop_machine_orders, schedule_job_shop_machine_orders,
+    JobShopEncoding, JobShopEncodingLimits, JobShopEnergeticConflict, JobShopEnergeticLimits,
+    JobShopMachineOrderStatus, JobShopProblem, JobShopSchedule, check_job_shop_energetic_conflict,
+    encode_job_shop, encode_job_shop_with_detectable_precedence, encode_job_shop_with_job_windows,
+    encode_job_shop_with_precedence_closure, job_shop_to_pumpkin_flatzinc,
+    parse_job_shop_machine_orders, scan_job_shop_energetic_intervals,
+    scan_job_shop_energetic_intervals_with_precedence_closure, schedule_job_shop_machine_orders,
 };
 
 struct Arguments {
@@ -31,13 +33,72 @@ struct Arguments {
     job_windows: bool,
     detectable_precedence: bool,
     precedence_closure: bool,
+    energetic: Option<EnergeticAction>,
+}
+
+enum EnergeticAction {
+    Scan {
+        conflict_out: Option<PathBuf>,
+        precedence_closure: bool,
+    },
+    Check(PathBuf),
+}
+
+fn parse_energetic_option(
+    args: &[String],
+    index: &mut usize,
+    energetic: &mut Option<EnergeticAction>,
+) -> bool {
+    match args[*index].as_str() {
+        "--scan-energetic" => {
+            assert!(
+                energetic.is_none(),
+                "energetic actions are mutually exclusive"
+            );
+            *energetic = Some(EnergeticAction::Scan {
+                conflict_out: None,
+                precedence_closure: false,
+            });
+            *index += 1;
+        }
+        "--energetic-conflict-out" => {
+            let path = PathBuf::from(args.get(*index + 1).expect("option needs a path"));
+            let Some(EnergeticAction::Scan { conflict_out, .. }) = energetic else {
+                panic!("--energetic-conflict-out requires --scan-energetic first");
+            };
+            *conflict_out = Some(path);
+            *index += 2;
+        }
+        "--energetic-precedence-closure" => {
+            let Some(EnergeticAction::Scan {
+                precedence_closure, ..
+            }) = energetic
+            else {
+                panic!("--energetic-precedence-closure requires --scan-energetic first");
+            };
+            *precedence_closure = true;
+            *index += 1;
+        }
+        "--check-energetic-conflict" => {
+            assert!(
+                energetic.is_none(),
+                "energetic actions are mutually exclusive"
+            );
+            *energetic = Some(EnergeticAction::Check(PathBuf::from(
+                args.get(*index + 1).expect("option needs a path"),
+            )));
+            *index += 2;
+        }
+        _ => return false,
+    }
+    true
 }
 
 fn arguments() -> Arguments {
     let args: Vec<String> = std::env::args().skip(1).collect();
     assert!(
         args.len() >= 2,
-        "usage: certify_job_shop INSTANCE BOUND [SECONDS] [--job-windows | --detectable-precedence | --precedence-closure] [--dimacs PATH] [--flatzinc PATH] [--witness JSON | --machine-order-witness TEXT] [--model SAT-SOLUTION] [--schedule-out JSON] [--check-drat PATH] [--machine-orders PATH]"
+        "usage: certify_job_shop INSTANCE BOUND [SECONDS] [--job-windows | --detectable-precedence | --precedence-closure] [--scan-energetic [--energetic-precedence-closure] [--energetic-conflict-out JSON] | --check-energetic-conflict JSON] [--dimacs PATH] [--flatzinc PATH] [--witness JSON | --machine-order-witness TEXT] [--model SAT-SOLUTION] [--schedule-out JSON] [--check-drat PATH] [--machine-orders PATH]"
     );
     let instance = PathBuf::from(&args[0]);
     let bound = args[1]
@@ -60,6 +121,7 @@ fn arguments() -> Arguments {
     let mut job_windows = false;
     let mut detectable_precedence = false;
     let mut precedence_closure = false;
+    let mut energetic = None;
     while index < args.len() {
         if args[index] == "--job-windows" {
             job_windows = true;
@@ -77,6 +139,9 @@ fn arguments() -> Arguments {
             detectable_precedence = true;
             precedence_closure = true;
             index += 1;
+            continue;
+        }
+        if parse_energetic_option(&args, &mut index, &mut energetic) {
             continue;
         }
         let destination = match args[index].as_str() {
@@ -110,6 +175,7 @@ fn arguments() -> Arguments {
         job_windows,
         detectable_precedence,
         precedence_closure,
+        energetic,
     }
 }
 
@@ -284,6 +350,77 @@ fn witness_formula(
     Some(pinned)
 }
 
+fn handle_energetic(args: &Arguments, problem: &JobShopProblem) -> bool {
+    let Some(action) = &args.energetic else {
+        return false;
+    };
+    match action {
+        EnergeticAction::Check(path) => {
+            let bytes = std::fs::read(path).expect("read energetic conflict JSON");
+            let conflict: JobShopEnergeticConflict =
+                serde_json::from_slice(&bytes).expect("parse energetic conflict JSON");
+            let check = check_job_shop_energetic_conflict(problem, args.bound, &conflict)
+                .expect("energetic conflict must independently replay");
+            println!("schema=axeyum.job-shop-bound-run.v1");
+            println!("instance={}", args.instance.display());
+            println!("bound={}", args.bound);
+            println!("energetic-conflict={}", path.display());
+            println!("machine={}", conflict.machine);
+            println!("interval={}..{}", check.interval_start, check.interval_end);
+            println!("required-energy={}", check.required_energy);
+            println!("capacity-energy={}", check.capacity_energy);
+            println!("verdict=unsat-energetic-checked");
+        }
+        EnergeticAction::Scan {
+            conflict_out,
+            precedence_closure,
+        } => {
+            let scan = if *precedence_closure {
+                scan_job_shop_energetic_intervals_with_precedence_closure(
+                    problem,
+                    args.bound,
+                    JobShopEnergeticLimits::default(),
+                )
+            } else {
+                scan_job_shop_energetic_intervals(
+                    problem,
+                    args.bound,
+                    JobShopEnergeticLimits::default(),
+                )
+            }
+            .expect("energetic scan must fit explicit defaults");
+            println!("schema=axeyum.job-shop-energetic-scan.v1");
+            println!("instance={}", args.instance.display());
+            println!("bound={}", args.bound);
+            println!("intervals-checked={}", scan.intervals_checked);
+            println!("task-checks={}", scan.task_checks);
+            println!("strongest-machine={}", scan.machine);
+            println!(
+                "strongest-interval={}..{}",
+                scan.check.interval_start, scan.check.interval_end
+            );
+            println!("required-energy={}", scan.check.required_energy);
+            println!("capacity-energy={}", scan.check.capacity_energy);
+            if let Some(conflict) = scan.conflict {
+                if let Some(path) = conflict_out {
+                    let bytes = serde_json::to_vec_pretty(&conflict)
+                        .expect("serialize energetic conflict JSON");
+                    std::fs::write(path, bytes).expect("write energetic conflict JSON");
+                    println!("energetic-conflict={}", path.display());
+                }
+                println!("verdict=unsat-energetic-checked");
+            } else {
+                assert!(
+                    conflict_out.is_none(),
+                    "no energetic conflict exists to write"
+                );
+                println!("verdict=no-energetic-conflict");
+            }
+        }
+    }
+    true
+}
+
 fn main() {
     let args = arguments();
     assert!(
@@ -292,6 +429,9 @@ fn main() {
     );
     let text = std::fs::read_to_string(&args.instance).expect("read instance");
     let problem = JobShopProblem::parse_orlib(&text).expect("parse OR-Library instance");
+    if handle_energetic(&args, &problem) {
+        return;
+    }
     if emit_flatzinc(&args, &problem) {
         return;
     }

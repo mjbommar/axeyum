@@ -214,9 +214,28 @@ The accepted ADR-0541 general SMT-LIB session driver is now also a named
 source remains the historical example control, and the binary's focused check,
 Clippy, file execution, format, link, and exact-SHA pre-push gates pass. It is a
 repository-built front door, not yet a published crate or prebuilt release.
+Retrieved equality rewriting now extends bounded induction through an additive
+Rust/Python API with explicit caller-owned declarations, fair per-declaration
+typed specialization, closed-numeral normalization, deterministic forward
+chains, fixed budgets, and no retrieved-premise residual recursion. A
+second-hop knowledge projection derives connective lemmas from operator
+vocabulary introduced by the first-stage topical ranking. The immutable
+51-goal census converts `Nat.choose n 1 = n`: one induction, empty axiom
+footprint, and checked dependencies on four retrieved theorems. All six false
+controls remain unaccepted. The honest denominator is 1/20 importable positive
+targets (1/51 overall); 27 rows remain import-blocked and 15 imported rows end
+outside the equality grammar. A digest-bound obstruction projection now turns
+all 51 outcomes into typed capability demand while excluding the six controls
+from scheduling. Among 45 positives: 25 need type-slice generalization, 13 need
+non-equality grammar, five need a missing rewrite/induction plan, one exceeds
+the binder budget, and one is integration-ready. Do not register a one-target
+operation: route the largest blocked population through the existing general
+type-slice boundary and require one unchanged contract to convert at least
+three siblings before it receives operation authority.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-26 | `73800a902` | Project all 51 retrieved-induction outcomes into a digest-bound typed capability backlog; false controls remain observation-only and one-target operation registration is refused. |
 | 2026-08-25 | `efbe6cc82` | Top-three focus plan, production-only episode gate, kernel lemma search index, and typed deterministic query API. |
 | 2026-08-25 | `86431e6cd` | Autonomous-loop read tool exposes held-out-safe kernel lemma neighborhoods as candidate-only context. |
 | 2026-08-25 | `92271d133` | Kernel projection and lemma index advanced together to the then-current 1,185-theorem population. |
@@ -255,3 +274,4 @@ repository-built front door, not yet a published crate or prebuilt release.
 | 2026-08-26 | `2e060c8e6` | Add exact axiom-free native-candidate transport and demonstrate 8/12 ranked premises executable on a real imported modular goal. |
 | 2026-08-26 | `ba3f4acdd` | Expose native transport through Python and measure 210 executable ranked premises reaching 0/24 bounded-application conversion. |
 | 2026-08-26 | `2c86c0604` | Preserve ranked premise order through bounded search; the full census reproduces unchanged, ruling out alphabetical budget starvation as the active limiter. |
+| 2026-08-26 | `b852c4e89` | Compose graph-retrieved equalities through bounded induction and convert the first immutable open-population target axiom-free with zero false-control accepts. |

@@ -111,6 +111,14 @@ class OpenFixedPaletteTests(unittest.TestCase):
                 transport_native_candidates=True,
             )
 
+    def test_retrieved_induction_requires_native_transport(self) -> None:
+        with self.assertRaisesRegex(ValueError, "requires --transport-native-candidates"):
+            MODULE.measure(
+                None,
+                Path("/packs"),
+                retrieved_induction=True,
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

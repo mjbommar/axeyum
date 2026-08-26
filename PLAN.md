@@ -117,6 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-26 | `73800a902` | Project all 51 retrieved-induction outcomes into a digest-bound typed capability backlog; false controls remain observation-only and one-target operation registration is refused. |
 | 2026-08-26 | `228494275` | Expose bounded retrieved-lemma application through the typed Python producer surface with full Python, stub, and type-gate coverage. |
 | 2026-08-26 | `0c261718f` | Add the fail-closed candidate-capsule import boundary required for theorem-composition dispatch. |
 | 2026-08-26 | `ebe2b7b2e` | Re-derive the kernel projection and lemma-search artifacts at 1,242 theorems after rebasing concurrent mathematics work. |
@@ -144,6 +145,7 @@ now. Nothing was deleted.
 | 2026-08-26 | `2e060c8e6` | Add exact axiom-free native-candidate transport and demonstrate 8/12 ranked premises executable on a real imported modular goal. |
 | 2026-08-26 | `ba3f4acdd` | Expose native transport through Python and measure 210 executable ranked premises reaching 0/24 bounded-application conversion. |
 | 2026-08-26 | `2c86c0604` | Preserve ranked premise order through bounded search; the full census reproduces unchanged, ruling out alphabetical budget starvation as the active limiter. |
+| 2026-08-26 | `b852c4e89` | Compose graph-retrieved equalities through bounded induction and convert the first immutable open-population target axiom-free with zero false-control accepts. |
 | 2026-08-25 | `beb27f1ba` | **The trusted-core ceiling, raised the way the gate demanded.** Guard C failed at 5,508 past 5,500 with "say why before raising it." The baseline was RE-DERIVED by `git archive` rather than trusted, giving a per-file table summing to exactly +379 (`tc.rs` +347, `inductive.rs` +30, `env.rs` +2). Verdict: real and necessary — a universe-parameter closure fixing declarations **official Lean 4.30.0 refuses but this kernel wrongly admitted**, and `whnf_core` memoisation (138× cost, 1,857 s → 13.4 s) inside `def_eq`. Ceiling 5,900 with headroom matching the original's character; guard C re-verified to fire by injecting 500 lines in a scratch copy. The file's own comment said "5,110" where the real baseline was 5,129 — wrong from day one. |
 | 2026-08-25 | `0f2fb5fcd` | A doc line beginning with `+` is a Markdown list bullet, so ten `doc_list_item` errors pointed at ordinary prose one line below the cause. |
 | 2026-08-25 | `6de1d88f8` | Salvage: **the irrationality of √2** (`Nat.no_rational_sqrt_two`) and **`CReal.geom_tail_within`**, committed on behalf of two lanes killed mid-run by a spend limit. Both verified here: 695 tests, clippy `--all-targets`, axiom-free. |
@@ -1341,6 +1343,24 @@ The accepted ADR-0541 general SMT-LIB session driver is now also a named
 source remains the historical example control, and the binary's focused check,
 Clippy, file execution, format, link, and exact-SHA pre-push gates pass. It is a
 repository-built front door, not yet a published crate or prebuilt release.
+Retrieved equality rewriting now extends bounded induction through an additive
+Rust/Python API with explicit caller-owned declarations, fair per-declaration
+typed specialization, closed-numeral normalization, deterministic forward
+chains, fixed budgets, and no retrieved-premise residual recursion. A
+second-hop knowledge projection derives connective lemmas from operator
+vocabulary introduced by the first-stage topical ranking. The immutable
+51-goal census converts `Nat.choose n 1 = n`: one induction, empty axiom
+footprint, and checked dependencies on four retrieved theorems. All six false
+controls remain unaccepted. The honest denominator is 1/20 importable positive
+targets (1/51 overall); 27 rows remain import-blocked and 15 imported rows end
+outside the equality grammar. A digest-bound obstruction projection now turns
+all 51 outcomes into typed capability demand while excluding the six controls
+from scheduling. Among 45 positives: 25 need type-slice generalization, 13 need
+non-equality grammar, five need a missing rewrite/induction plan, one exceeds
+the binder budget, and one is integration-ready. Do not register a one-target
+operation: route the largest blocked population through the existing general
+type-slice boundary and require one unchanged contract to convert at least
+three siblings before it receives operation authority.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization
@@ -1367,6 +1387,28 @@ all 300 starts at makespan 656 and returned `sat-replayed` against the 175,770-v
 1,696,774-clause exact-window formula. This closes the upper-bound half and supersedes the local
 657 search as evidence. It does not prove optimality: sustained `abz7@655` DRCP producers remain
 live, and only a completed proof accepted by both calibrated checkers can close the lower half.
+
+**Job-shop FDS gap localization, 2026-08-26.** The current pinned OptalCP 2026.2.0 preview
+benchmark was reproduced on the byte-equivalent `abz7` instance with four workers, seed 1,
+zero gap tolerances, verified solutions, and two level-4 no-overlap / level-3 cumulative FDS
+workers. It internally raised the lower bound to 656 at 59.877 seconds and reported optimum at
+108.466 seconds (5,833,383 branches, 2,636,506 failures). This is strong search-direction
+telemetry, not evidence: its `proof: true` field has no exported proof object, every one of 300
+solution-value slots is null, and no independent checker can replay its inference. A hash-bound
+package receipt records that fail-closed boundary. The generic missing capability is now sharply
+identified as certifiable scheduling propagation/search composition, while all seven independent
+DRCP/DRAT proof producers continue without short cutoffs.
+
+**Checked energetic-overload boundary, 2026-08-26.** ADR-0577 adds a reusable cumulative-task
+window type and exact energetic checker: task membership, domains, duration, demand, capacity,
+and compulsory energy are recomputed with checked arithmetic, and only a strict overload is a
+conflict. Portable job-shop conflicts replay either defining job-chain windows or ADR-0574's
+precedence closure; schema, bound, machine, interval, and energy mutations fail closed. The
+bounded exhaustive scan evaluates all integer intervals under explicit ceilings. On `abz7@655`,
+3,222,600 intervals / 64,452,000 task contributions identify machine 5 `[0,538)` at 533/538
+required/capacity energy in 0.75 seconds. Repeating after all 256 forced precedences gives exactly
+the same ratio, so no root conflict exists and none is emitted. Conditional conflict composition
+under branch domains is the next required layer; the target lower bound remains open.
 
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
 external-certificate replay runner for all five packages.  It validates checker and artifact

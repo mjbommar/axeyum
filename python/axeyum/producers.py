@@ -45,6 +45,7 @@ from ._native.producers import (
     IDENTITY_VERSION,
     MAX_BINDERS,
     MAX_INDUCTIONS,
+    MAX_RETRIEVED_DECLARATIONS,
     MODEQ_MAX_BINDERS,
     ApplicationCandidate,
     AxiomIdentity,
@@ -66,6 +67,7 @@ from ._native.producers import (
     import_statement_ndjson,
     propose_bounded_application,
     propose_bounded_induction,
+    propose_bounded_induction_with_rewrites,
     propose_modeq_family,
     transport_native_candidate,
 )
@@ -78,6 +80,7 @@ __all__ = [
     "IDENTITY_VERSION",
     "MAX_BINDERS",
     "MAX_INDUCTIONS",
+    "MAX_RETRIEVED_DECLARATIONS",
     "MODEQ_MAX_BINDERS",
     "ApplicationCandidate",
     "AxiomIdentity",
@@ -99,6 +102,7 @@ __all__ = [
     "import_statement_ndjson",
     "propose_bounded_application",
     "propose_bounded_induction",
+    "propose_bounded_induction_with_rewrites",
     "propose_modeq_family",
     "transport_native_candidate",
 ]

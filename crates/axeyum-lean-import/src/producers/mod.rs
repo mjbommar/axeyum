@@ -27,5 +27,5 @@ pub mod bounded_induction;
 pub mod modeq_family;
 
 pub use bounded_application::propose_bounded_application;
-pub use bounded_induction::propose_bounded_induction;
+pub use bounded_induction::{propose_bounded_induction, propose_bounded_induction_with_rewrites};
 pub use modeq_family::{CircularityAudit, audit_circularity, propose_modeq_family};

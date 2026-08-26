@@ -28,6 +28,28 @@ all 300 starts at makespan 656 and returned `sat-replayed` against the 175,770-v
 657 search as evidence. It does not prove optimality: sustained `abz7@655` DRCP producers remain
 live, and only a completed proof accepted by both calibrated checkers can close the lower half.
 
+**Job-shop FDS gap localization, 2026-08-26.** The current pinned OptalCP 2026.2.0 preview
+benchmark was reproduced on the byte-equivalent `abz7` instance with four workers, seed 1,
+zero gap tolerances, verified solutions, and two level-4 no-overlap / level-3 cumulative FDS
+workers. It internally raised the lower bound to 656 at 59.877 seconds and reported optimum at
+108.466 seconds (5,833,383 branches, 2,636,506 failures). This is strong search-direction
+telemetry, not evidence: its `proof: true` field has no exported proof object, every one of 300
+solution-value slots is null, and no independent checker can replay its inference. A hash-bound
+package receipt records that fail-closed boundary. The generic missing capability is now sharply
+identified as certifiable scheduling propagation/search composition, while all seven independent
+DRCP/DRAT proof producers continue without short cutoffs.
+
+**Checked energetic-overload boundary, 2026-08-26.** ADR-0577 adds a reusable cumulative-task
+window type and exact energetic checker: task membership, domains, duration, demand, capacity,
+and compulsory energy are recomputed with checked arithmetic, and only a strict overload is a
+conflict. Portable job-shop conflicts replay either defining job-chain windows or ADR-0574's
+precedence closure; schema, bound, machine, interval, and energy mutations fail closed. The
+bounded exhaustive scan evaluates all integer intervals under explicit ceilings. On `abz7@655`,
+3,222,600 intervals / 64,452,000 task contributions identify machine 5 `[0,538)` at 533/538
+required/capacity energy in 0.75 seconds. Repeating after all 256 forced precedences gives exactly
+the same ratio, so no root conflict exists and none is emitted. Conditional conflict composition
+under branch domains is the next required layer; the target lower bound remains open.
+
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
 external-certificate replay runner for all five packages.  It validates checker and artifact
 bytes before execution, hard-kills a timed-out process session, requires an observable finding
