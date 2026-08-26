@@ -23,6 +23,7 @@
     {
       "id": "kernel-add-comm",
       "kind": "kernel-term",
+      "kernel_declaration": "Nat.add_comm",
       "supports": "For all natural numbers a and b, a + b = b + a.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- add_comm 2>/dev/null | grep -Ec '^Nat\\.add_comm[[:space:]]')\" -ge 1",

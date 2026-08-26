@@ -38,9 +38,13 @@ semantics, evidence, provenance, checking, and compounding knowledge loop.
 - The kernel, fact ledger, tactic catalog, obstruction graph, and concept graph
   are separately useful, but do not yet form one lemma-search substrate.
 - The generated lemma index now covers all 1,206 kernel theorems and their 6,838
-  direct edges, but only 346 theorems link exactly to 350 fact records. It keeps
-  53 unresolved evidence IDs explicit rather than guessing, leaving 860
-  theorems without exact fact links.
+  direct edges, but only 382 theorems link exactly to 386 fact records. It keeps
+  17 unresolved evidence IDs explicit rather than guessing, leaving 824
+  theorems without exact fact links. Fourteen of those 17 name CPoint, Int
+  characterization, Nat Peano, or Rat declarations that are absent from the
+  current projection; the remaining three use descriptive ordered-ring/Rat
+  evidence IDs. The next repair belongs in projection coverage or authored
+  evidence identity, not fuzzy matching.
 - The Rust and Python surfaces are broad, but integration churn can leave
   `main` red and evidence fixtures can be mistaken for production populations.
 

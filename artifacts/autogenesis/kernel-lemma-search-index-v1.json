@@ -1,12 +1,12 @@
 {
   "census": {
-    "distinct_exactly_linked_facts": 350,
+    "distinct_exactly_linked_facts": 386,
     "kernel_dependency_edges": 6838,
     "kernel_theorems": 1206,
     "maximum_dependency_depth": 26,
-    "theorems_with_exact_fact_links": 346,
-    "theorems_without_exact_fact_links": 860,
-    "unresolved_prefixed_kernel_evidence": 53
+    "theorems_with_exact_fact_links": 382,
+    "theorems_without_exact_fact_links": 824,
+    "unresolved_prefixed_kernel_evidence": 17
   },
   "derivation": {
     "fact_identity_rule": "kernel-term evidence with an explicit kernel_declaration, falling back for compatibility to an evidence id with exact kernel- or kernel: prefix and an exact current theorem suffix",
@@ -50,7 +50,9 @@
         "demorgan_or_not_and",
         "noncontradiction"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:logic-and-left"
+      ],
       "kernel_declaration_id": "And.left",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -77,7 +79,9 @@
         "demorgan_or_not_and",
         "noncontradiction"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:logic-and-right"
+      ],
       "kernel_declaration_id": "And.right",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -101,7 +105,9 @@
         "Decidable.of_decide_eq_true",
         "Nat.cantor_diagonal"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:logic-bool-false-ne-true"
+      ],
       "kernel_declaration_id": "Bool.false_ne_true",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -128,7 +134,9 @@
         "Nat.cantor_diagonal",
         "Nat.injective_on_p_imp_surjective_on_p"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:logic-bool-true-ne-false"
+      ],
       "kernel_declaration_id": "Bool.true_ne_false",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -12620,7 +12628,9 @@
         "Decidable.of_decide_eq_true"
       ],
       "direct_theorem_dependents": [],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:logic-decidable-decide-eq-true-iff"
+      ],
       "kernel_declaration_id": "Decidable.decide_eq_true_iff",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -12640,7 +12650,9 @@
       "dependency_depth": 0,
       "direct_theorem_dependencies": [],
       "direct_theorem_dependents": [],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:logic-decidable-em"
+      ],
       "kernel_declaration_id": "Decidable.em",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -12662,7 +12674,9 @@
         "Bool.true_ne_false"
       ],
       "direct_theorem_dependents": [],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:logic-decidable-of-decide-eq-false"
+      ],
       "kernel_declaration_id": "Decidable.of_decide_eq_false",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -12686,7 +12700,9 @@
       "direct_theorem_dependents": [
         "Decidable.decide_eq_true_iff"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:logic-decidable-of-decide-eq-true"
+      ],
       "kernel_declaration_id": "Decidable.of_decide_eq_true",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -12741,7 +12757,9 @@
         "Int.wilson_converse",
         "axeyum.string.2.all_iff_All"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:logic-iff-mp"
+      ],
       "kernel_declaration_id": "Iff.mp",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -12776,7 +12794,9 @@
         "Nat.inverseIndex_fixes_last",
         "axeyum.string.2.all_iff_All"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:logic-iff-mpr"
+      ],
       "kernel_declaration_id": "Iff.mpr",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -17001,7 +17021,9 @@
         "Rat.natDivSucc_le_scaled",
         "Rat.nat_gauss"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:nat-add-comm"
+      ],
       "kernel_declaration_id": "Nat.add_comm",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -20561,7 +20583,9 @@
         "Nat.sumDivisors_two_pow_eq_geom_sum",
         "Nat.valuation_at_two_mul_sq"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:nat-le-add-right"
+      ],
       "kernel_declaration_id": "Nat.le_add_right",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -20930,7 +20954,9 @@
         "Nat.sumDivisors_two_pow_eq_geom_sum",
         "Nat.testBit_le_one"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:nat-le-of-succ-le-succ"
+      ],
       "kernel_declaration_id": "Nat.le_of_succ_le_succ",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -21131,7 +21157,9 @@
         "Rat.natDivSucc_scale",
         "Rat.zero_le_natDivSucc"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:nat-le-succ-succ"
+      ],
       "kernel_declaration_id": "Nat.le_succ_succ",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -21437,7 +21465,9 @@
         "Nat.totient_prime",
         "Rat.variance_sumVars"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:nat-lt-irrefl"
+      ],
       "kernel_declaration_id": "Nat.lt_irrefl",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -21615,7 +21645,9 @@
         "Nat.transposition_involutive",
         "Rat.prob_le_one"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:nat-lt-or-eq-of-le"
+      ],
       "kernel_declaration_id": "Nat.lt_or_eq_of_le",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -22940,7 +22972,9 @@
         "Nat.sub_lt",
         "Rat.not_zero_le_neg_of_nat"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:nat-not-succ-le-zero"
+      ],
       "kernel_declaration_id": "Nat.not_succ_le_zero",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -23041,7 +23075,9 @@
         "Rat.normalize_mul_normalize",
         "Rat.sq_nonneg"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:nat-one-le-mul"
+      ],
       "kernel_declaration_id": "Nat.one_le_mul",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -24671,7 +24707,9 @@
         "Nat.succ_mul_choose_eq",
         "Nat.sumDivisors_two_pow_eq_geom_sum"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:nat-succ-add"
+      ],
       "kernel_declaration_id": "Nat.succ_add",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -25697,7 +25735,9 @@
         "Rat.inv_natDivSucc",
         "Rat.natDivSucc_le_one"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:nat-zero-add"
+      ],
       "kernel_declaration_id": "Nat.zero_add",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -25842,7 +25882,9 @@
         "Rat.natDivSucc_scale",
         "Rat.zero_le_natDivSucc"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:nat-zero-le"
+      ],
       "kernel_declaration_id": "Nat.zero_le",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -25953,7 +25995,9 @@
         "Nat.one_le_left_of_mul",
         "Nat.one_mul"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:nat-zero-mul"
+      ],
       "kernel_declaration_id": "Nat.zero_mul",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -25989,7 +26033,9 @@
         "dne_of_em",
         "peirce_of_em"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:logic-or-elim"
+      ],
       "kernel_declaration_id": "Or.elim",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -26011,7 +26057,9 @@
       "direct_theorem_dependents": [
         "Nat.lt_of_not_le"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:logic-or-resolve-left"
+      ],
       "kernel_declaration_id": "Or.resolve_left",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -33937,7 +33985,9 @@
       "dependency_depth": 0,
       "direct_theorem_dependencies": [],
       "direct_theorem_dependents": [],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:logic-demorgan-not-or"
+      ],
       "kernel_declaration_id": "demorgan_not_or",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -33961,7 +34011,9 @@
         "Or.elim"
       ],
       "direct_theorem_dependents": [],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:logic-demorgan-not-or-converse"
+      ],
       "kernel_declaration_id": "demorgan_not_or_converse",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -34007,7 +34059,9 @@
         "Or.elim"
       ],
       "direct_theorem_dependents": [],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:logic-dne-of-em"
+      ],
       "kernel_declaration_id": "dne_of_em",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -34029,7 +34083,9 @@
         "not_not_em"
       ],
       "direct_theorem_dependents": [],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:logic-em-of-dne"
+      ],
       "kernel_declaration_id": "em_of_dne",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -34049,7 +34105,9 @@
       "dependency_depth": 0,
       "direct_theorem_dependencies": [],
       "direct_theorem_dependents": [],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:logic-em-of-peirce"
+      ],
       "kernel_declaration_id": "em_of_peirce",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -34069,7 +34127,9 @@
       "dependency_depth": 0,
       "direct_theorem_dependencies": [],
       "direct_theorem_dependents": [],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:logic-modus-tollens"
+      ],
       "kernel_declaration_id": "mt",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -34092,7 +34152,9 @@
         "And.right"
       ],
       "direct_theorem_dependents": [],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:logic-noncontradiction"
+      ],
       "kernel_declaration_id": "noncontradiction",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -34112,7 +34174,9 @@
       "dependency_depth": 0,
       "direct_theorem_dependencies": [],
       "direct_theorem_dependents": [],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:logic-not-not-and"
+      ],
       "kernel_declaration_id": "not_not_and",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -34134,7 +34198,9 @@
       "direct_theorem_dependents": [
         "em_of_dne"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:logic-not-not-em"
+      ],
       "kernel_declaration_id": "not_not_em",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -34177,7 +34243,9 @@
         "not_not_not",
         "not_not_not_intro"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:logic-not-not-intro"
+      ],
       "kernel_declaration_id": "not_not_intro",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -34199,7 +34267,9 @@
         "not_not_intro"
       ],
       "direct_theorem_dependents": [],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:logic-not-not-not"
+      ],
       "kernel_declaration_id": "not_not_not",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -34243,7 +34313,9 @@
         "Or.elim"
       ],
       "direct_theorem_dependents": [],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:logic-peirce-of-em"
+      ],
       "kernel_declaration_id": "peirce_of_em",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -34346,198 +34418,6 @@
       "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
     },
     {
-      "candidate_declaration_id": "add-comm",
-      "evidence_id": "kernel-add-comm",
-      "fact_id": "F:nat-add-comm",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "le_add_right",
-      "evidence_id": "kernel-le_add_right",
-      "fact_id": "F:nat-le-add-right",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "le_of_succ_le_succ",
-      "evidence_id": "kernel-le_of_succ_le_succ",
-      "fact_id": "F:nat-le-of-succ-le-succ",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "le_succ_succ",
-      "evidence_id": "kernel-le_succ_succ",
-      "fact_id": "F:nat-le-succ-succ",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "logic-and-left",
-      "evidence_id": "kernel-logic-and-left",
-      "fact_id": "F:logic-and-left",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "logic-and-right",
-      "evidence_id": "kernel-logic-and-right",
-      "fact_id": "F:logic-and-right",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "logic-bool-false-ne-true",
-      "evidence_id": "kernel-logic-bool-false-ne-true",
-      "fact_id": "F:logic-bool-false-ne-true",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "logic-bool-true-ne-false",
-      "evidence_id": "kernel-logic-bool-true-ne-false",
-      "fact_id": "F:logic-bool-true-ne-false",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "logic-decidable-decide-eq-true-iff",
-      "evidence_id": "kernel-logic-decidable-decide-eq-true-iff",
-      "fact_id": "F:logic-decidable-decide-eq-true-iff",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "logic-decidable-em",
-      "evidence_id": "kernel-logic-decidable-em",
-      "fact_id": "F:logic-decidable-em",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "logic-decidable-of-decide-eq-false",
-      "evidence_id": "kernel-logic-decidable-of-decide-eq-false",
-      "fact_id": "F:logic-decidable-of-decide-eq-false",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "logic-decidable-of-decide-eq-true",
-      "evidence_id": "kernel-logic-decidable-of-decide-eq-true",
-      "fact_id": "F:logic-decidable-of-decide-eq-true",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "logic-demorgan-not-or",
-      "evidence_id": "kernel-logic-demorgan-not-or",
-      "fact_id": "F:logic-demorgan-not-or",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "logic-demorgan-not-or-converse",
-      "evidence_id": "kernel-logic-demorgan-not-or-converse",
-      "fact_id": "F:logic-demorgan-not-or-converse",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "logic-dne-of-em",
-      "evidence_id": "kernel-logic-dne-of-em",
-      "fact_id": "F:logic-dne-of-em",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "logic-em-of-dne",
-      "evidence_id": "kernel-logic-em-of-dne",
-      "fact_id": "F:logic-em-of-dne",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "logic-em-of-peirce",
-      "evidence_id": "kernel-logic-em-of-peirce",
-      "fact_id": "F:logic-em-of-peirce",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "logic-iff-mp",
-      "evidence_id": "kernel-logic-iff-mp",
-      "fact_id": "F:logic-iff-mp",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "logic-iff-mpr",
-      "evidence_id": "kernel-logic-iff-mpr",
-      "fact_id": "F:logic-iff-mpr",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "logic-modus-tollens",
-      "evidence_id": "kernel-logic-modus-tollens",
-      "fact_id": "F:logic-modus-tollens",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "logic-noncontradiction",
-      "evidence_id": "kernel-logic-noncontradiction",
-      "fact_id": "F:logic-noncontradiction",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "logic-not-not-and",
-      "evidence_id": "kernel-logic-not-not-and",
-      "fact_id": "F:logic-not-not-and",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "logic-not-not-em",
-      "evidence_id": "kernel-logic-not-not-em",
-      "fact_id": "F:logic-not-not-em",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "logic-not-not-intro",
-      "evidence_id": "kernel-logic-not-not-intro",
-      "fact_id": "F:logic-not-not-intro",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "logic-not-not-not",
-      "evidence_id": "kernel-logic-not-not-not",
-      "fact_id": "F:logic-not-not-not",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "logic-or-elim",
-      "evidence_id": "kernel-logic-or-elim",
-      "fact_id": "F:logic-or-elim",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "logic-or-resolve-left",
-      "evidence_id": "kernel-logic-or-resolve-left",
-      "fact_id": "F:logic-or-resolve-left",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "logic-peirce-of-em",
-      "evidence_id": "kernel-logic-peirce-of-em",
-      "fact_id": "F:logic-peirce-of-em",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "lt_irrefl",
-      "evidence_id": "kernel-lt_irrefl",
-      "fact_id": "F:nat-lt-irrefl",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "lt_or_eq_of_le",
-      "evidence_id": "kernel-lt_or_eq_of_le",
-      "fact_id": "F:nat-lt-or-eq-of-le",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "not_succ_le_zero",
-      "evidence_id": "kernel-not_succ_le_zero",
-      "fact_id": "F:nat-not-succ-le-zero",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "one_le_mul",
-      "evidence_id": "kernel-one_le_mul",
-      "fact_id": "F:nat-one-le-mul",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
       "candidate_declaration_id": "ordered-ring-refutation",
       "evidence_id": "kernel-ordered-ring-refutation",
       "fact_id": "F:ordered-ring-farkas-refutation",
@@ -34553,30 +34433,6 @@
       "candidate_declaration_id": "rat-mul-renormalises",
       "evidence_id": "kernel-rat-mul-renormalises",
       "fact_id": "F:rat-mul-renormalises",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "succ-add",
-      "evidence_id": "kernel-succ-add",
-      "fact_id": "F:nat-succ-add",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "zero-add",
-      "evidence_id": "kernel-zero-add",
-      "fact_id": "F:nat-zero-add",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "zero_le",
-      "evidence_id": "kernel-zero_le",
-      "fact_id": "F:nat-zero-le",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "zero_mul",
-      "evidence_id": "kernel-zero_mul",
-      "fact_id": "F:nat-zero-mul",
       "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
     }
   ]

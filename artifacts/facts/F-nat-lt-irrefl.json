@@ -23,6 +23,7 @@
     {
       "id": "kernel-lt_irrefl",
       "kind": "kernel-term",
+      "kernel_declaration": "Nat.lt_irrefl",
       "supports": "Nat.lt_irrefl is admitted by the trusted kernel gate with the type recorded in formal.statement.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- lt_irrefl 2>/dev/null | grep -Ec '^Nat\\.lt_irrefl[[:space:]]')\" -ge 1",

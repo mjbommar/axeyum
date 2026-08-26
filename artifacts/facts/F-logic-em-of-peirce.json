@@ -21,6 +21,7 @@
     {
       "id": "kernel-logic-em-of-peirce",
       "kind": "kernel-term",
+      "kernel_declaration": "em_of_peirce",
       "supports": "If Peirce's law holds for every pair of propositions, then excluded middle holds for every proposition.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- em_of_peirce 2>/dev/null | grep -Ec '^em_of_peirce[[:space:]]')\" -ge 1",

@@ -21,6 +21,7 @@
     {
       "id": "kernel-le_succ_succ",
       "kind": "kernel-term",
+      "kernel_declaration": "Nat.le_succ_succ",
       "supports": "Nat.le_succ_succ is admitted by the trusted kernel gate with the type recorded in formal.statement.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- le_succ_succ 2>/dev/null | grep -Ec '^Nat\\.le_succ_succ[[:space:]]')\" -ge 1",

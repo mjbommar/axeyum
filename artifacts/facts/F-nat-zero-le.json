@@ -19,6 +19,7 @@
     {
       "id": "kernel-zero_le",
       "kind": "kernel-term",
+      "kernel_declaration": "Nat.zero_le",
       "supports": "Nat.zero_le is admitted by the trusted kernel gate with the type recorded in formal.statement.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- zero_le 2>/dev/null | grep -Ec '^Nat\\.zero_le[[:space:]]')\" -ge 1",

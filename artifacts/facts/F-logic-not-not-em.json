@@ -20,6 +20,7 @@
     {
       "id": "kernel-logic-not-not-em",
       "kind": "kernel-term",
+      "kernel_declaration": "not_not_em",
       "supports": "not-(not-(p or not-p)) holds for every proposition p -- excluded middle cannot be refuted, even though it cannot be proved intuitionistically either.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- not_not_em 2>/dev/null | grep -Ec '^not_not_em[[:space:]]')\" -ge 1",

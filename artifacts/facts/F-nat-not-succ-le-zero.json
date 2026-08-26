@@ -20,6 +20,7 @@
     {
       "id": "kernel-not_succ_le_zero",
       "kind": "kernel-term",
+      "kernel_declaration": "Nat.not_succ_le_zero",
       "supports": "Nat.not_succ_le_zero is admitted by the trusted kernel gate with the type recorded in formal.statement.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- not_succ_le_zero 2>/dev/null | grep -Ec '^Nat\\.not_succ_le_zero[[:space:]]')\" -ge 1",
