@@ -514,6 +514,14 @@ external capsule with a committed hash-bound receipt. This converts the
 example-built family into reusable checked library material while keeping
 operation registration and autonomous-production credit at zero.
 
+The repository-wide fact gate subsequently found three authored graph edges
+missing from two settled facts even though their kernel terms already exposed
+them. `Nat.fib_le_succ` directly uses `Nat.le_add_right` and `Nat.zero_le`, and
+`Nat.choose_self` directly uses `Nat.choose_succ_self_eq_zero`. The ledger now
+records all three. The derived authority reports 450 kernel facts, 356 named
+facts, 1,302 graph edges, and zero missing edges; the fact DAG gains one fact
+with dependents without changing theorem status or proof credit.
+
 ### Exit evidence
 
 - Kernel theorem count agrees exactly with the theorem-production authority.

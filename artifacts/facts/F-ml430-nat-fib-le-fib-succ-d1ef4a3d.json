@@ -14,7 +14,9 @@
   "proof_route": "kernel-lean",
   "axiom_footprint": [],
   "depends_on": [
-    "F:ml430-nat-fib-add-two-b86e0c82"
+    "F:ml430-nat-fib-add-two-b86e0c82",
+    "F:nat-le-add-right",
+    "F:nat-zero-le"
   ],
   "evidence": [
     {
