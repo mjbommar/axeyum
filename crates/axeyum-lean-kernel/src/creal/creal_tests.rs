@@ -72,7 +72,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 318] = [
+    let expected: [(&str, crate::NameId, &str); 320] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -325,6 +325,8 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ("CReal.bucketClampUpper", p.bucket_clamp_upper, "theorem"),
         ("CReal.bucketClampLower", p.bucket_clamp_lower, "theorem"),
         ("CReal.bucketIndexBound", p.bucket_index_bound, "theorem"),
+        ("CReal.sampleUpperBound", p.sample_upper_bound, "theorem"),
+        ("CReal.sampleLowerBound", p.sample_lower_bound, "theorem"),
         ("CReal.ratSqLe", p.rat_sq_le, "theorem"),
         ("CReal.ratSqSandwich", p.rat_sq_sandwich, "theorem"),
         (
@@ -7743,6 +7745,152 @@ fn bucket_index_bound_at_zero_zero_and_zero_computes_to_zero_le_four() {
                  reduce to Nat.le 0 4: {error:?}"
             )
         });
+}
+
+/// **Mandatory concrete instantiation for `CReal.sampleUpperBound`.** At
+/// `x := CReal.zero`, `m := 0`: `seq CReal.zero 0 = Rat.zero`,
+/// `Rat.natDivSucc 1 0 = 1/(0+1) = Rat.one`, so the target is
+/// `Rat.zero + Rat.one`, which the kernel must reduce to `Rat.one` itself
+/// (built independently via `rat_prelude::ops::rone`, never referencing
+/// `sample`/`div_succ`/`radd` the way the proof's own statement does) to
+/// accept this ascription.
+#[test]
+fn sample_upper_bound_at_zero_and_zero_types_at_zero_le_ofrat_one() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let zero_nat = d.num(0);
+    let czero = d.kernel().const_(p.zero, vec![]);
+    let proof = d.const_app(p.sample_upper_bound, &[czero, zero_nat]);
+
+    let rat_one = crate::rat_prelude::ops::rone(&mut d, p.rat);
+    let embedded_one = super::embed(&mut d, p, rat_one);
+    let expected_ty = super::cle(&mut d, p, czero, embedded_one);
+
+    let anon = d.kernel().anon();
+    let name = d
+        .kernel()
+        .name_str(anon, "__sample_upper_bound_at_zero_zero");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: expected_ty,
+            value: proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "sample_upper_bound at (CReal.zero, 0) must reduce to \
+                 CReal.le CReal.zero (CReal.ofRat Rat.one): {error:?}"
+            )
+        });
+}
+
+/// **Negative control for `CReal.sampleUpperBound`.** The SAME proof term,
+/// ascribed to the REVERSED statement `CReal.le (CReal.ofRat Rat.one)
+/// CReal.zero` (i.e. `1 ≤ 0`, genuinely false over `ℚ`, not a degenerate
+/// collapse) -- confirming the kernel actually discriminates direction here
+/// rather than accepting any two-argument application of `CReal.le`.
+#[test]
+fn sample_upper_bound_proof_is_rejected_at_the_reversed_statement() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let zero_nat = d.num(0);
+    let czero = d.kernel().const_(p.zero, vec![]);
+    let proof = d.const_app(p.sample_upper_bound, &[czero, zero_nat]);
+
+    let rat_one = crate::rat_prelude::ops::rone(&mut d, p.rat);
+    let embedded_one = super::embed(&mut d, p, rat_one);
+    let reversed_ty = super::cle(&mut d, p, embedded_one, czero);
+
+    let anon = d.kernel().anon();
+    let name = d
+        .kernel()
+        .name_str(anon, "__sample_upper_bound_reversed_must_fail");
+    let outcome = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty: reversed_ty,
+        value: proof,
+    });
+    assert!(
+        outcome.is_err(),
+        "sample_upper_bound's proof must NOT typecheck against the reversed \
+         (false) statement CReal.le (CReal.ofRat Rat.one) CReal.zero"
+    );
+}
+
+/// **Mandatory concrete instantiation for `CReal.sampleLowerBound`.** At
+/// `x := CReal.zero`, `m := 0`: the target is `Rat.zero - Rat.natDivSucc 1
+/// 0 = Rat.zero - Rat.one`, which the kernel must reduce to `Rat.neg
+/// Rat.one` (built independently via `rat_prelude::ops::rone`/`rneg`).
+#[test]
+fn sample_lower_bound_at_zero_and_zero_types_at_neg_one_le_zero() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let zero_nat = d.num(0);
+    let czero = d.kernel().const_(p.zero, vec![]);
+    let proof = d.const_app(p.sample_lower_bound, &[czero, zero_nat]);
+
+    let rat_one = crate::rat_prelude::ops::rone(&mut d, p.rat);
+    let neg_one = crate::rat_prelude::ops::rneg(&mut d, rat_one);
+    let embedded_neg_one = super::embed(&mut d, p, neg_one);
+    let expected_ty = super::cle(&mut d, p, embedded_neg_one, czero);
+
+    let anon = d.kernel().anon();
+    let name = d
+        .kernel()
+        .name_str(anon, "__sample_lower_bound_at_zero_zero");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: expected_ty,
+            value: proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "sample_lower_bound at (CReal.zero, 0) must reduce to \
+                 CReal.le (CReal.ofRat (Rat.neg Rat.one)) CReal.zero: {error:?}"
+            )
+        });
+}
+
+/// **Negative control for `CReal.sampleLowerBound`.** The SAME proof term,
+/// ascribed to the REVERSED statement `CReal.le CReal.zero (CReal.ofRat
+/// (Rat.neg Rat.one))` (i.e. `0 ≤ -1`, genuinely false), confirming the
+/// direction is load-bearing.
+#[test]
+fn sample_lower_bound_proof_is_rejected_at_the_reversed_statement() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let zero_nat = d.num(0);
+    let czero = d.kernel().const_(p.zero, vec![]);
+    let proof = d.const_app(p.sample_lower_bound, &[czero, zero_nat]);
+
+    let rat_one = crate::rat_prelude::ops::rone(&mut d, p.rat);
+    let neg_one = crate::rat_prelude::ops::rneg(&mut d, rat_one);
+    let embedded_neg_one = super::embed(&mut d, p, neg_one);
+    let reversed_ty = super::cle(&mut d, p, czero, embedded_neg_one);
+
+    let anon = d.kernel().anon();
+    let name = d
+        .kernel()
+        .name_str(anon, "__sample_lower_bound_reversed_must_fail");
+    let outcome = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty: reversed_ty,
+        value: proof,
+    });
+    assert!(
+        outcome.is_err(),
+        "sample_lower_bound's proof must NOT typecheck against the reversed \
+         (false) statement CReal.le CReal.zero (CReal.ofRat (Rat.neg Rat.one))"
+    );
 }
 
 /// **Mandatory computation test for `CReal.sqrtApproxSqBracket`.** At

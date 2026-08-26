@@ -1261,6 +1261,24 @@ pub struct CRealPrelude {
     /// to a `Nat.le` on the numerator `bucketIndex w k` itself, scaled by
     /// `k+1`. See `creal/uniform_continuity.rs`.
     pub bucket_index_bound: NameId,
+    /// `CReal.sampleUpperBound : ∀ x m, CReal.le x (CReal.ofRat (Rat.add
+    /// (CReal.seq x m) (Rat.natDivSucc 1 m)))` — the general
+    /// self-approximation lemma every `CReal` satisfies: it never exceeds
+    /// its own `m`-th sample by more than `1/(m+1)`. Via `x`'s own
+    /// regularity read at `(n, m)` — the same shape
+    /// [`Self::bucket_clamp_upper`] reads at `(n, j)` for the CLAMPED
+    /// sample rather than `x` itself — widened from `1/(n+1)` up to the
+    /// `2/(n+1)` `CReal.le`'s own definition asks for via
+    /// `Rat.natDivSucc_le_add_left`. See `creal/uniform_continuity.rs`.
+    pub sample_upper_bound: NameId,
+    /// `CReal.sampleLowerBound : ∀ x m, CReal.le (CReal.ofRat (Rat.sub
+    /// (CReal.seq x m) (Rat.natDivSucc 1 m))) x` — the other half of
+    /// [`Self::sample_upper_bound`]: `x` is never below its own `m`-th
+    /// sample by more than `1/(m+1)` either. Same route with the
+    /// regularity indices swapped (`(m, n)` rather than `(n, m)`), mirroring
+    /// how [`Self::bucket_clamp_lower`] swaps [`Self::bucket_clamp_upper`]'s
+    /// own `(n, j)` to `(j, n)`. See `creal/uniform_continuity.rs`.
+    pub sample_lower_bound: NameId,
     /// `CReal.ratSqLe : ∀ (u s : Rat), Rat.le (u*u) (s*s) → Rat.le Rat.zero s
     /// → Rat.le u s` — a purely rational fact (no `CReal` structure), proved
     /// via `Rat.mul_pos` and a difference-of-squares identity rather than a
@@ -3367,6 +3385,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         bucket_clamp_upper: kernel.name_str(creal, "bucketClampUpper"),
         bucket_clamp_lower: kernel.name_str(creal, "bucketClampLower"),
         bucket_index_bound: kernel.name_str(creal, "bucketIndexBound"),
+        sample_upper_bound: kernel.name_str(creal, "sampleUpperBound"),
+        sample_lower_bound: kernel.name_str(creal, "sampleLowerBound"),
         rat_sq_le: kernel.name_str(creal, "ratSqLe"),
         rat_sq_sandwich: kernel.name_str(creal, "ratSqSandwich"),
         rat_index_ratio_le_one: kernel.name_str(creal, "ratIndexRatioLeOne"),
