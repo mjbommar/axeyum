@@ -3229,12 +3229,27 @@ fn cauchy_body_transport(
 /// definition speeds up by, and `exp_series_partial_body :
 /// sum_range_cauchy_body (expSeriesPartial, k_final)`.
 ///
-/// Extracted so [`declare_e`] and [`declare_e_converges`] build from the
-/// IDENTICAL closed terms rather than two independently-derived (merely
-/// value-equal) ones — `e`'s own `speedup (diagonal expSeriesPartial)
-/// k_final` must appear, after unfolding `e`, EXACTLY where
-/// `declare_e_converges`'s proof puts it, and sharing this constructor is
-/// simpler than relying on defeq to reconcile two derivations.
+/// **MUST be called EXACTLY ONCE, by `declare_e_family`, and the resulting
+/// `ExprId`s threaded as PARAMETERS into both [`declare_e`] and
+/// [`declare_e_converges`]** -- one derivation, not two, is simply the right
+/// hygiene. NOTE, since it is easy to over-credit this: sharing the
+/// `ExprId`s does NOT by itself fix the stack overflow a previous version of
+/// this file had. That overflow's actual cause and fix are documented on
+/// [`declare_e_converges`] (building generically over a bound `K` rather
+/// than the concrete `k_final`); this function's job is only to make sure
+/// both callers start from the identical witness.
+///
+/// Bisection method used to isolate the fault (2026-08-26):
+/// `creal::creal_tests::creal_prelude_builds` with `declare_e_family`'s
+/// dispatch calls disabled one at a time (`declare_e` alone: ~15s, matching
+/// the untouched baseline; adding `declare_e_converges` reproduced the
+/// overflow), then a probe that declared each of `declare_e_converges`'s
+/// intermediate terms against its OWN freshly-inferred type -- fast at
+/// every step up to and including the per-`n` `Within` proof, narrowing the
+/// fault to the FINAL `converges_predicate`/`exists_intro` ascription --
+/// and finally a direct, timed `Kernel::def_eq(speedup_n, seq(target, n))`
+/// call, which hung regardless of whether `target` was the named `e` or a
+/// freshly, independently, or identically re-derived local `mk(...)` value.
 fn e_ingredients(d: &mut IntDev<'_>, p: CRealPrelude) -> (ExprId, ExprId, ExprId) {
     // `k_dom` is `exp_dominant_cauchy_body_concrete`'s RETURNED witness for
     // `Cauchy (sumRange expDominant)` -- already `K_G + 2` (the `+2` from its
@@ -3274,12 +3289,22 @@ fn e_ingredients(d: &mut IntDev<'_>, p: CRealPrelude) -> (ExprId, ExprId, ExprId
     (raw, k_final, exp_series_partial_body)
 }
 
+/// `raw`/`k_final`/`exp_series_partial_body` are the CALLER's — see
+/// [`declare_e_family`]'s own doc for why these must be the SAME `ExprId`s
+/// [`declare_e_converges`] uses, not a second, independently-derived
+/// (merely value-equal) copy.
+///
 /// # Errors
 ///
 /// Returns the trusted gate's rejection. An `Err` here means the kernel
 /// **refused** a proof, not that a script gave up.
-fn declare_e(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
-    let (raw, k_final, exp_series_partial_body) = e_ingredients(d, p);
+fn declare_e(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    raw: ExprId,
+    k_final: ExprId,
+    exp_series_partial_body: ExprId,
+) -> Result<(), KernelError> {
     let exp_series_partial_const = d.kernel().const_(p.exp_series_partial, vec![]);
 
     let speedup_term = d.const_app(p.speedup, &[raw, k_final]);
@@ -3324,43 +3349,98 @@ fn declare_e(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
 ///
 /// Returns the trusted gate's rejection. An `Err` here means the kernel
 /// **refused** a proof, not that a script gave up.
-fn declare_e_converges(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+fn declare_e_converges(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    raw: ExprId,
+    k_final: ExprId,
+    exp_series_partial_body: ExprId,
+) -> Result<(), KernelError> {
     let rat = p.rat;
     let nat = d.nat_ty();
-    let (raw, k_final, exp_series_partial_body) = e_ingredients(d, p);
     let exp_series_partial_const = d.kernel().const_(p.exp_series_partial, vec![]);
     let e_const = d.kernel().const_(p.e, vec![]);
 
-    let kregular_proof = kregular_of_cauchy_proof(d, p, raw, k_final, exp_series_partial_body);
-    let speedup_term = d.const_app(p.speedup, &[raw, k_final]);
-    let sc = d.const_app(p.speedup_close, &[raw, k_final, kregular_proof]);
+    // Build the proof GENERICALLY over a BOUND `(k : Nat) (h :
+    // sum_range_cauchy_body (expSeriesPartial, k))`, exactly mirroring
+    // `declare_converges_of_cauchy`'s own `minor` closure shape, and apply
+    // it at the CONCRETE `(k_final, exp_series_partial_body)` only at the
+    // very end.
+    //
+    // Measured root cause (2026-08-26): building the per-`n` proof directly
+    // against the CONCRETE `k_final` makes `speedup(raw, k_final)` a
+    // partially-concrete Nat expression (concrete in `k_final`, symbolic in
+    // `n`). The kernel's lazy-delta `is_def_eq`, forced to compare
+    // `speedup_term(n)` against `seq(l_val, n)` inside `exists_intro`'s
+    // argument check, unfolds `speedup` and `seq` in lock-step (their names
+    // differ, so neither side's unfold is deferred to let the other catch
+    // up) and the two sides never re-synchronize at the point where they
+    // ARE equal -- both race forward, and because the Nat.mul/Nat.add
+    // building the reindexed sample index has `k_final` concrete enough to
+    // fire (unlike a fully symbolic `k`, which cannot fire at all against a
+    // free variable), that race partially evaluates `sumRange` at a
+    // symbolic index, driving recursion depth into the thousands and
+    // overflowing a 1 GiB RELEASE stack (confirmed by isolating and timing
+    // `Kernel::def_eq(speedup_n, seq(l_val, n))` directly: it alone hangs,
+    // with or without an independently-recomputed `e_ingredients`).
+    //
+    // With `k` and `h` BOUND (Pi/lambda variables, not yet substituted),
+    // every `Nat.mul`/`Nat.add` built from them stays stuck against BOTH
+    // fvars simultaneously -- exactly why `declare_converges_of_cauchy`
+    // itself (which never concretizes its own `K` before `add_declaration`
+    // time) has never hit this. `Kernel::infer` on the finished lambda only
+    // needs to type-check its BODY once, generically; substituting the
+    // concrete `(k_final, exp_series_partial_body)` afterward is then a
+    // plain Pi-application (codomain substitution), never re-entering the
+    // per-`n` comparison.
+    let generic = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hp_ty = sum_range_cauchy_body(d, p, exp_series_partial_const, k);
+        let hp_fv = d.fresh_fvar();
+        let hp = d.kernel().fvar(hp_fv);
 
-    let n_fv = d.fresh_fvar();
-    let n = d.kernel().fvar(n_fv);
-    let raw_n = d.apply(raw, &[n]);
-    let speedup_n = d.apply(speedup_term, &[n]);
-    let diff_n = rsub(d, rat, raw_n, speedup_n);
+        let kregular_proof = kregular_of_cauchy_proof(d, p, raw, k, hp);
+        let speedup_term = d.const_app(p.speedup, &[raw, k]);
+        let sc = d.const_app(p.speedup_close, &[raw, k, kregular_proof]);
 
-    let succ_k = d.succ(k_final);
-    let one_nat = d.num(1);
-    let bound_left_n = div_succ_at(d, p, succ_k, n);
-    let bound_right_n = div_succ_at(d, p, one_nat, n);
-    let sc_n_bound = radd(d, bound_left_n, bound_right_n);
+        let regularity_proof = d.lemma(
+            p.regular_of_scaled_cauchy,
+            &[exp_series_partial_const, k, hp],
+        );
+        let constructor = d.kernel().const_(p.mk, vec![]);
+        let l_val = d.apply(constructor, &[speedup_term, regularity_proof]);
 
-    let sc_n = d.apply(sc, &[n]);
-    // sc_n : Within diff_n sc_n_bound
-    //      = Within (seq (expSeriesPartial n) n - seq e n) sc_n_bound, by beta/iota.
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let raw_n = d.apply(raw, &[n]);
+        let speedup_n = d.apply(speedup_term, &[n]);
+        let diff_n = rsub(d, rat, raw_n, speedup_n);
 
-    let fuse = d.lemma(rat.nat_div_succ_add, &[succ_k, one_nat, n]);
-    let k2 = NatOps::add(d, succ_k, one_nat);
-    let target_bound_n = div_succ_at(d, p, k2, n);
-    let step = rat_eq_rewrite(d, sc_n_bound, target_bound_n, fuse, sc_n, &|d, t| {
-        within(d, p, diff_n, t)
-    });
+        let succ_k = d.succ(k);
+        let one_nat = d.num(1);
+        let bound_left_n = div_succ_at(d, p, succ_k, n);
+        let bound_right_n = div_succ_at(d, p, one_nat, n);
+        let sc_n_bound = radd(d, bound_left_n, bound_right_n);
 
-    let over_n = d.lam_fv(n_fv, nat, step);
-    let converges_pred = converges_predicate(d, p, exp_series_partial_const, e_const);
-    let value = exists_intro(d, p, nat, converges_pred, k2, over_n);
+        let sc_n = d.apply(sc, &[n]);
+
+        let fuse = d.lemma(rat.nat_div_succ_add, &[succ_k, one_nat, n]);
+        let k2 = NatOps::add(d, succ_k, one_nat);
+        let target_bound_n = div_succ_at(d, p, k2, n);
+        let step = rat_eq_rewrite(d, sc_n_bound, target_bound_n, fuse, sc_n, &|d, t| {
+            within(d, p, diff_n, t)
+        });
+
+        let over_n = d.lam_fv(n_fv, nat, step);
+        let converges_pred = converges_predicate(d, p, exp_series_partial_const, l_val);
+        let converges_proof = exists_intro(d, p, nat, converges_pred, k2, over_n);
+
+        let with_hp = d.lam_fv(hp_fv, hp_ty, converges_proof);
+        d.lam_fv(k_fv, nat, with_hp)
+    };
+
+    let value = d.apply(generic, &[k_final, exp_series_partial_body]);
 
     let ty = converges_applied(d, p, exp_series_partial_const, e_const);
     d.kernel().add_declaration(Declaration::Theorem {
@@ -3734,8 +3814,22 @@ fn declare_e_le_four(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelEr
 ///
 /// Returns the trusted gate's rejection.
 pub(super) fn declare_e_family(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
-    declare_e(d, p)?;
-    declare_e_converges(d, p)?;
+    // `e_ingredients` runs EXACTLY ONCE here, and the resulting `(raw,
+    // k_final, exp_series_partial_body)` `ExprId`s are threaded into BOTH
+    // `declare_e` and `declare_e_converges` -- NOT re-derived by a second,
+    // independent call. This alone is NOT what fixes the stack overflow
+    // below (an earlier hypothesis, disproven by measurement: sharing these
+    // `ExprId`s and even routing the whole proof through a LOCALLY-built
+    // `mk(...)` value instead of the named `e` both left the overflow fully
+    // reproducible) -- see `declare_e_converges`'s own doc for the actual
+    // root cause and fix (build generically over a BOUND `K`, substitute the
+    // concrete `k_final` only in the very last step). Sharing is kept
+    // because it is still the right hygiene (one derivation, not two) and
+    // because `declare_two_le_e`/`declare_e_le_four` need the SAME `e` the
+    // shared `k_final` builds, via `CRealPrelude::e_converges`.
+    let (raw, k_final, exp_series_partial_body) = e_ingredients(d, p);
+    declare_e(d, p, raw, k_final, exp_series_partial_body)?;
+    declare_e_converges(d, p, raw, k_final, exp_series_partial_body)?;
     declare_two_le_e(d, p)?;
     declare_e_le_four(d, p)
 }
