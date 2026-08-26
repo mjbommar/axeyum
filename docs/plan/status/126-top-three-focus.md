@@ -68,4 +68,4 @@ authority remain deliberately separate.
 | 2026-08-26 | `17b0c1163` | Split proof-isolated type dependencies from type-plus-value evidence before premise selection could leak a finished theorem's proof. |
 | 2026-08-26 | `710b7cf04` | Publish the reproducible proof-isolated bounded-application census: 6/109 accepted, 103 typed declines, zero accepted axiom footprints. |
 | 2026-08-26 | `bf484f355` | Add a reusable proof-isolated capsule materializer and hash-bound receipts for the three accepted arithmetic controls without vendoring NDJSON. |
-| 2026-08-26 | pending | Teach the agent export/producer boundary to resolve exact candidate-capsule receipts and execute bounded application without widening operation authority. |
+| 2026-08-26 | `8b54237ab` | Teach the agent export/producer boundary to resolve exact candidate-capsule receipts and execute bounded application without widening operation authority. |
