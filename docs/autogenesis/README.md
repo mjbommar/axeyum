@@ -274,6 +274,7 @@ compounding, not automation theatre.
 | [Retrieved induction and connective ranking](268-retrieved-induction-and-connective-ranking.md) | How one open target converted, why one success is not yet a reusable operation, and how the other 50 outcomes become typed capability demand. |
 | [Retrieved-induction type-slice replay](269-retrieved-induction-type-slice-replay.md) | All 25 import-blocked positive targets now have checked proof-free statement receipts; which 14 abstracted definitions need semantic contracts next? |
 | [Semantic-contract demand graph](270-semantic-contract-demand.md) | Which sliced source definitions have exact axiom-free behavior candidates or checked contracts, and why does `Nat.testBit` rank first? |
+| [Transparent relation terminal result](271-transparent-relation-terminal-result.md) | Ten ModEq goals now reach equality composition but still convert 0/13; which typed relation-premise chain is actually missing? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

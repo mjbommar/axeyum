@@ -5,7 +5,8 @@
     "distinct_source_identities": 14,
     "exact_axiom_free_kernel_candidates": 11,
     "identities_with_checked_contract_receipts": 0,
-    "identities_with_exact_kernel_candidates": 2
+    "identities_with_exact_kernel_candidates": 2,
+    "targets_with_complete_candidate_contract_support": 0
   },
   "demands": [
     {
@@ -18,6 +19,13 @@
       "affected_targets": 4,
       "checked_contract_receipt_count": 0,
       "checked_contract_receipts": [],
+      "co_abstraction_names": [
+        "List.getI",
+        "Nat.bits",
+        "Nat.instAndOp",
+        "Nat.instOrOp",
+        "Nat.ldiff"
+      ],
       "exact_axiom_free_kernel_candidate_count": 5,
       "exact_axiom_free_kernel_candidates": [
         {
@@ -76,6 +84,8 @@
           "kernel_declaration_id": "Nat.testBit_zero"
         }
       ],
+      "fully_candidate_supported_affected_fact_ids": [],
+      "fully_candidate_supported_affected_targets": 0,
       "next_action": "construct-and-check-generic-contract",
       "partitions": [
         "development"
@@ -94,6 +104,10 @@
       "affected_targets": 1,
       "checked_contract_receipt_count": 0,
       "checked_contract_receipts": [],
+      "co_abstraction_names": [
+        "Int.gcdA",
+        "Int.gcdB"
+      ],
       "exact_axiom_free_kernel_candidate_count": 6,
       "exact_axiom_free_kernel_candidates": [
         {
@@ -167,6 +181,8 @@
           "kernel_declaration_id": "Int.gcd_zero_right"
         }
       ],
+      "fully_candidate_supported_affected_fact_ids": [],
+      "fully_candidate_supported_affected_targets": 0,
       "next_action": "construct-and-check-generic-contract",
       "partitions": [
         "train"
@@ -188,8 +204,11 @@
       "affected_targets": 4,
       "checked_contract_receipt_count": 0,
       "checked_contract_receipts": [],
+      "co_abstraction_names": [],
       "exact_axiom_free_kernel_candidate_count": 0,
       "exact_axiom_free_kernel_candidates": [],
+      "fully_candidate_supported_affected_fact_ids": [],
+      "fully_candidate_supported_affected_targets": 0,
       "next_action": "find-or-construct-behavior-theorems",
       "partitions": [
         "train"
@@ -211,8 +230,13 @@
       "affected_targets": 4,
       "checked_contract_receipt_count": 0,
       "checked_contract_receipts": [],
+      "co_abstraction_names": [
+        "Nat.testBit"
+      ],
       "exact_axiom_free_kernel_candidate_count": 0,
       "exact_axiom_free_kernel_candidates": [],
+      "fully_candidate_supported_affected_fact_ids": [],
+      "fully_candidate_supported_affected_targets": 0,
       "next_action": "find-or-construct-behavior-theorems",
       "partitions": [
         "development"
@@ -234,8 +258,13 @@
       "affected_targets": 4,
       "checked_contract_receipt_count": 0,
       "checked_contract_receipts": [],
+      "co_abstraction_names": [
+        "Nat.testBit"
+      ],
       "exact_axiom_free_kernel_candidate_count": 0,
       "exact_axiom_free_kernel_candidates": [],
+      "fully_candidate_supported_affected_fact_ids": [],
+      "fully_candidate_supported_affected_targets": 0,
       "next_action": "find-or-construct-behavior-theorems",
       "partitions": [
         "development"
@@ -256,8 +285,11 @@
       "affected_targets": 3,
       "checked_contract_receipt_count": 0,
       "checked_contract_receipts": [],
+      "co_abstraction_names": [],
       "exact_axiom_free_kernel_candidate_count": 0,
       "exact_axiom_free_kernel_candidates": [],
+      "fully_candidate_supported_affected_fact_ids": [],
+      "fully_candidate_supported_affected_targets": 0,
       "next_action": "find-or-construct-behavior-theorems",
       "partitions": [
         "development",
@@ -279,8 +311,11 @@
       "affected_targets": 3,
       "checked_contract_receipt_count": 0,
       "checked_contract_receipts": [],
+      "co_abstraction_names": [],
       "exact_axiom_free_kernel_candidate_count": 0,
       "exact_axiom_free_kernel_candidates": [],
+      "fully_candidate_supported_affected_fact_ids": [],
+      "fully_candidate_supported_affected_targets": 0,
       "next_action": "find-or-construct-behavior-theorems",
       "partitions": [
         "development"
@@ -300,8 +335,11 @@
       "affected_targets": 2,
       "checked_contract_receipt_count": 0,
       "checked_contract_receipts": [],
+      "co_abstraction_names": [],
       "exact_axiom_free_kernel_candidate_count": 0,
       "exact_axiom_free_kernel_candidates": [],
+      "fully_candidate_supported_affected_fact_ids": [],
+      "fully_candidate_supported_affected_targets": 0,
       "next_action": "find-or-construct-behavior-theorems",
       "partitions": [
         "development"
@@ -321,8 +359,13 @@
       "affected_targets": 2,
       "checked_contract_receipt_count": 0,
       "checked_contract_receipts": [],
+      "co_abstraction_names": [
+        "Nat.testBit"
+      ],
       "exact_axiom_free_kernel_candidate_count": 0,
       "exact_axiom_free_kernel_candidates": [],
+      "fully_candidate_supported_affected_fact_ids": [],
+      "fully_candidate_supported_affected_targets": 0,
       "next_action": "find-or-construct-behavior-theorems",
       "partitions": [
         "development"
@@ -341,8 +384,14 @@
       "affected_targets": 1,
       "checked_contract_receipt_count": 0,
       "checked_contract_receipts": [],
+      "co_abstraction_names": [
+        "Int.gcd",
+        "Int.gcdB"
+      ],
       "exact_axiom_free_kernel_candidate_count": 0,
       "exact_axiom_free_kernel_candidates": [],
+      "fully_candidate_supported_affected_fact_ids": [],
+      "fully_candidate_supported_affected_targets": 0,
       "next_action": "find-or-construct-behavior-theorems",
       "partitions": [
         "train"
@@ -361,8 +410,14 @@
       "affected_targets": 1,
       "checked_contract_receipt_count": 0,
       "checked_contract_receipts": [],
+      "co_abstraction_names": [
+        "Int.gcd",
+        "Int.gcdA"
+      ],
       "exact_axiom_free_kernel_candidate_count": 0,
       "exact_axiom_free_kernel_candidates": [],
+      "fully_candidate_supported_affected_fact_ids": [],
+      "fully_candidate_supported_affected_targets": 0,
       "next_action": "find-or-construct-behavior-theorems",
       "partitions": [
         "train"
@@ -381,8 +436,14 @@
       "affected_targets": 1,
       "checked_contract_receipt_count": 0,
       "checked_contract_receipts": [],
+      "co_abstraction_names": [
+        "Nat.bits",
+        "Nat.testBit"
+      ],
       "exact_axiom_free_kernel_candidate_count": 0,
       "exact_axiom_free_kernel_candidates": [],
+      "fully_candidate_supported_affected_fact_ids": [],
+      "fully_candidate_supported_affected_targets": 0,
       "next_action": "find-or-construct-behavior-theorems",
       "partitions": [
         "development"
@@ -401,8 +462,14 @@
       "affected_targets": 1,
       "checked_contract_receipt_count": 0,
       "checked_contract_receipts": [],
+      "co_abstraction_names": [
+        "List.getI",
+        "Nat.testBit"
+      ],
       "exact_axiom_free_kernel_candidate_count": 0,
       "exact_axiom_free_kernel_candidates": [],
+      "fully_candidate_supported_affected_fact_ids": [],
+      "fully_candidate_supported_affected_targets": 0,
       "next_action": "find-or-construct-behavior-theorems",
       "partitions": [
         "development"
@@ -421,8 +488,11 @@
       "affected_targets": 1,
       "checked_contract_receipt_count": 0,
       "checked_contract_receipts": [],
+      "co_abstraction_names": [],
       "exact_axiom_free_kernel_candidate_count": 0,
       "exact_axiom_free_kernel_candidates": [],
+      "fully_candidate_supported_affected_fact_ids": [],
+      "fully_candidate_supported_affected_targets": 0,
       "next_action": "find-or-construct-behavior-theorems",
       "partitions": [
         "train"

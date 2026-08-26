@@ -69,6 +69,7 @@ def build(replay: dict[str, Any], lemma_index: dict[str, Any]) -> dict[str, Any]
     if lemma_index.get("kind") != "axeyum-kernel-lemma-search-index":
         raise ValueError("input is not the kernel lemma-search index")
     groups: dict[tuple[str, str], dict[str, Any]] = {}
+    requirements_by_fact: dict[str, set[tuple[str, str]]] = defaultdict(set)
     for row in replay["rows"]:
         if row.get("outcome") != "accepted-receipt":
             raise ValueError("type-slice replay contains a non-accepted row")
@@ -76,6 +77,7 @@ def build(replay: dict[str, Any], lemma_index: dict[str, Any]) -> dict[str, Any]
             name = abstraction["source_name"]
             source_hash = abstraction["source_content_sha256"]
             key = (name, source_hash)
+            requirements_by_fact[row["fact_id"]].add(key)
             group = groups.setdefault(
                 key,
                 {
@@ -134,6 +136,32 @@ def build(replay: dict[str, Any], lemma_index: dict[str, Any]) -> dict[str, Any]
                 "strategy_eligible": True,
             }
         )
+    demand_by_key = {
+        (row["source_name"], row["source_content_sha256"]): row for row in demands
+    }
+    supported = {
+        key
+        for key, row in demand_by_key.items()
+        if row["checked_contract_receipt_count"] > 0
+        or row["exact_axiom_free_kernel_candidate_count"] > 0
+    }
+    fully_supported_facts = {
+        fact_id
+        for fact_id, requirements in requirements_by_fact.items()
+        if requirements.issubset(supported)
+    }
+    for key, row in demand_by_key.items():
+        affected = set(row["affected_fact_ids"])
+        co_requirements = set().union(
+            *(requirements_by_fact[fact_id] for fact_id in affected)
+        ) - {key}
+        row["co_abstraction_names"] = sorted(name for name, _hash in co_requirements)
+        row["fully_candidate_supported_affected_fact_ids"] = sorted(
+            affected & fully_supported_facts
+        )
+        row["fully_candidate_supported_affected_targets"] = len(
+            affected & fully_supported_facts
+        )
     demands.sort(
         key=lambda row: (
             -int(row["checked_contract_receipt_count"] > 0),
@@ -168,6 +196,9 @@ def build(replay: dict[str, Any], lemma_index: dict[str, Any]) -> dict[str, Any]
             ),
             "exact_axiom_free_kernel_candidates": sum(
                 row["exact_axiom_free_kernel_candidate_count"] for row in demands
+            ),
+            "targets_with_complete_candidate_contract_support": len(
+                fully_supported_facts
             ),
         },
         "demands": demands,
