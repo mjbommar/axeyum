@@ -1,30 +1,73 @@
 {
-  "schema_version": 1,
-  "id": "F:ml430-nat-add-modeq-left-e3b1fba9",
-  "title": "Mathlib v4.30 source proposition Nat.add_modEq_left",
-  "statement": "The proposition declared as `Nat.add_modEq_left` in the pinned Mathlib v4.30 source.",
-  "formal": {
-    "language": "lean4-surface",
-    "statement": "∀ {n a : ℕ}, n + a ≡ a [MOD n]",
-    "fragment": "Nat"
-  },
-  "epistemic_status": "open",
-  "external_status": "proved",
+  "axiom_footprint": [],
   "depends_on": [],
-  "evidence": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "artifact": "sha256:96c15beac5b4082e251b1a46b804bf71f20c7306b117d28dee5d1039c2c4dcc7",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-autogenesis-fact-operation.py --fact artifacts/facts/F-ml430-nat-add-modeq-left-e3b1fba9.json",
+      "checker_operation": {
+        "admitted_declarations": 237,
+        "application_depth": 2,
+        "binders_used": 2,
+        "candidate_artifact_sha256": "d94b424c18f21949c861b703ad1040bb6b223d33645d39180ce0f62b84fbcf7e",
+        "execution_sha256": "96c15beac5b4082e251b1a46b804bf71f20c7306b117d28dee5d1039c2c4dcc7",
+        "formal_statement_sha256": "b9f57462c5e59311615e5c49b653c779c2ddd6a53fff8db07144b5abe06a4cf8",
+        "frontier_sha256": "c4768b9bd57346198b9847c0673a4dd57584137e20a4d208c228d06efdbc97ab",
+        "goal_sha256": "1b601c208f582f00145f99deb91e89632c3e121fb45264b81791199d554fc2c6",
+        "id": "authoritative-mathlib-nat-modeq-remainder-family-v1",
+        "max_binders": 2,
+        "operation_sha256": "cc868669229a7ce96eb8b2991fee1dbf8b994ef23d383128acf7bcc06435a746",
+        "proof_sha256": "5990553800738bab8907f76fc86c529d3d374c006eeef748a1bd56554ee93c12",
+        "receipt_manifest": "artifacts/autogenesis/nat-modeq-remainder-contract-v2.json",
+        "receipt_manifest_sha256": "a17e2940e4964ef7948f9b773657ef19175e078d8cca18f8f3c913d78242a6f7",
+        "registry_sha256_at_execution": "6620652979e825b3d09a8bc4eb10060e995febba73abba110e7cb2bea7481553",
+        "retained_answer_dependencies": [
+          "Axeyum.Autogenesis.Candidate.NatModRemainder.addModLeft"
+        ],
+        "retained_dependency_set_sha256": "17cfeb4350124d0b8562c1ab34d4a174280e2c015ba61a7355f609e67288179b",
+        "target_artifact_sha256": "735e71fd619b3ed7d2be74a050aa526cacc5cca2d919a21971c3b6cfea1ae6fc",
+        "target_content_sha256": "6547029f3acbea0b074757291012df37aed8a71c9c465b6bd490bd2517233916",
+        "target_definition": "Axeyum.Autogenesis.Statement.NatModEqArithmetic.addLeft",
+        "target_fact_id": "F:ml430-nat-add-modeq-left-e3b1fba9",
+        "terms_considered": 19
+      },
+      "checkers": [
+        "bounded-type-directed-application-v1",
+        "axeyum-lean-import/imported-candidate-transport-v1",
+        "axeyum-lean-import/imported-candidate-family-multi-target-v1"
+      ],
+      "id": "autogenesis-operation-96c15beac5b4082e",
+      "kind": "kernel-term",
+      "notes": "Derived from a clean-commit typed execution receipt. The registered fact-operation checker replays the resolves immutable target and candidate streams through the operation's reviewed checker and requires the exact kernel-checked proof, one named retained theorem dependency, and no target dependency; no caller-authored route, footprint, checker, or shell command is accepted.",
+      "supports": "The proposition declared as `Nat.add_modEq_left` in the pinned Mathlib v4.30 source."
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "language": "lean4-surface",
+    "statement": "\u2200 {n a : \u2115}, n + a \u2261 a [MOD n]"
+  },
+  "id": "F:ml430-nat-add-modeq-left-e3b1fba9",
+  "notes": "CLOSED BY AXEYUM AUTOGENESIS. The machine frontier selected this exact fact for registered operation `authoritative-mathlib-nat-modeq-remainder-family-v1`; execution receipt `96c15beac5b4082e251b1a46b804bf71f20c7306b117d28dee5d1039c2c4dcc7` produced a fresh-import axiom-free imported-candidate family target proof, and the typed transaction derived this status, route, footprint, evidence row, checker, and provenance without caller-authored admission metadata.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+  "proof_route": "kernel-lean",
   "provenance": {
     "date": "2026-08-18",
-    "established_by": "not established in this ledger",
-    "source": "statement-only extraction of `Nat.add_modEq_left` from Mathlib v4.30.0; no proof value was exposed",
+    "established_by": "axeyum-autogenesis execution 872151eac5b04ed14827697940c408f77658cbcdc79a977ba72bce2045736b7d",
     "prior_art": [
       {
-        "who": "the Mathlib contributors",
+        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted",
         "what": "the theorem declaration `Nat.add_modEq_left`",
         "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
-        "year": 2026,
-        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted"
+        "who": "the Mathlib contributors",
+        "year": 2026
       }
-    ]
+    ],
+    "source": "statement-only extraction of `Nat.add_modEq_left` from Mathlib v4.30.0; no proof value was exposed"
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "schema_version": 1,
+  "statement": "The proposition declared as `Nat.add_modEq_left` in the pinned Mathlib v4.30 source.",
+  "title": "Mathlib v4.30 source proposition Nat.add_modEq_left"
 }

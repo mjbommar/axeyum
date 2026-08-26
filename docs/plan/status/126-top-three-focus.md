@@ -17,10 +17,12 @@ an empty footprint and no hidden-target dependency. Public shortcuts carrying
 and the full executor path now preserves each target's immutable stream hashes,
 proof identity, and one named retained theorem dependency through execution,
 transaction construction, and settled-fact replay. Zero facts are settled.
-Its three historical assay/contract gates are now correctly lifecycle-stable,
-and the operation explicitly reviews their coupling; a fresh frontier admits
-all three and selects `addLeft`. Next: dispatch the targets through clean
-crash-safe episodes, one freshly recomputed frontier at a time.
+Its three historical assay/contract gates are correctly lifecycle-stable, and
+the operation explicitly reviews their coupling. The first production episode
+settled `Nat.add_modEq_left`: the intent-boundary fault changed no fact,
+recovery performed exactly one write, settled replay passed, and the frontier
+advanced to `addRight`. Two registered targets remain. Next: commit-bound and
+dispatch `addRight`, then recompute again for `modulusZero`.
 
 Priority 3 also repaired the CI-observed sub-millisecond budget escape: policy
 now compares an unrounded monotonic duration while receipts retain integer
@@ -32,6 +34,7 @@ Detail and older landed rows moved to [`../notes/126-top-three-focus.md`](../not
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-26 | `9db19bb4d` | Settle `Nat.add_modEq_left` through one clean crash-safe autonomous episode; exact proof/dependency replay passes and the durable frontier advances to `addRight`. |
 | 2026-08-26 | `05553bd14` | Remove mutable-ledger coupling from immutable Nat.mod assay receipts, review the exact three gate mentions, and make all three registered targets frontier-admissible without bypassing the safety interlock. |
 | 2026-08-26 | `cbaef1a1f` | Authorize the imported Nat.mod candidate family end to end: exact dependency names and immutable input/proof identities now survive execution receipts, fact transactions, and settled replay. |
 | 2026-08-26 | `490c45ac3` | Add held-out-safe reviewed semantic coverage to the generated product-health authority while preserving separate autonomous-yield and runtime-status boundaries. |

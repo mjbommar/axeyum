@@ -654,6 +654,25 @@ registry validates at 27 operations; all 31 registry/frontier tests pass; all
 three targets freshly replay; and a fresh machine frontier reports all three
 admissible with `addLeft` selected.
 
+### First durable Nat.mod family admission (2026-08-26)
+
+At clean source commit `5552e8f1448d7d94caa9923360b2f3cfbe4861d3`,
+frontier `c4768b9b…97ab` selected
+`F:ml430-nat-add-modeq-left-e3b1fba9`. Execution receipt
+`96c15bea…dcc7` independently admitted the exact target with empty footprint,
+proof `59905538…c12`, and the sole retained dependency
+`Axeyum.Autogenesis.Candidate.NatModRemainder.addModLeft`. Transaction
+`d05595d2…7818` was faulted immediately after durable intent; the fact remained
+byte-identical, recovery performed one authoritative write, and readiness
+receipt `4e4bff86…e2b2` records `addLeft` leaving the frontier and `addRight`
+becoming selected. The complete external audit bundle is retained at
+`/data0/axeyum/autogenesis/nat-modeq-remainder-add-left-2026-08-26-v1/`.
+
+The settled operation checker, fact validator, capability-gap projection,
+producer-evaluation frontier, product-health projection, lifecycle contract,
+and all-three-target fresh operation replay pass. Product health now reports
+511 proved facts; its runtime receipt remains explicitly `failed-ancestor`.
+
 | 2026-08-26 | `6fad715d8` | Make the Fibonacci child qualification progress-aware: pin candidate-specific dependency receipts and permit either child to advance only through checked, axiom-free kernel evidence. |
 | 2026-08-26 | `2aedb4d68` | Refresh the generated public example inventory from 163 to the 193 examples canonical discovery actually finds; both guarded planning references now report zero stale markers. |
 | 2026-08-26 | `42e7bdfd1` | Make the complete Python build/test/stub/type/lint recipe part of canonical `just check`; register two orphan controls in both gates and return the reachability ratchet from 16 to its 14-module baseline. |
