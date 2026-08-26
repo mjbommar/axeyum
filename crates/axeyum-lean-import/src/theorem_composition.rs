@@ -15,7 +15,10 @@ use axeyum_lean_kernel::{
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
-use crate::{canonical_declaration_sha256, canonical_kernel_type_shape_sha256};
+use crate::{
+    canonical_alpha_expression_sha256, canonical_declaration_sha256,
+    canonical_kernel_type_shape_sha256,
+};
 
 /// Version of the checked theorem-composition receipt and compatibility policy.
 pub const CHECKED_THEOREM_COMPOSITION_VERSION: &str = "axeyum.checked-theorem-composition.v5";
@@ -66,6 +69,26 @@ pub struct ReusedDeclarationReceipt {
     /// Kernel-relevant target type-shape identity.
     pub target_type_shape_sha256: String,
     /// Checked compatibility relation that authorized this reuse attempt.
+    pub compatibility: ReusedTypeCompatibility,
+}
+
+/// Checked compatibility between two closed proposition expressions.
+///
+/// Unlike [`ReusedDeclarationReceipt`], this compares the propositions
+/// themselves rather than the declarations' outer types. It is the diagnostic
+/// boundary needed for a proof-free `definition : Prop := statement`, whose
+/// declaration type alone is merely `Prop`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PropositionCompatibilityReceipt {
+    /// Alpha-stable identity of the source proposition.
+    pub source_proposition_sha256: String,
+    /// Alpha-stable identity of the target proposition.
+    pub target_proposition_sha256: String,
+    /// Kernel-relevant source proposition shape.
+    pub source_shape_sha256: String,
+    /// Kernel-relevant target proposition shape.
+    pub target_shape_sha256: String,
+    /// Checked cross-kernel relation.
     pub compatibility: ReusedTypeCompatibility,
 }
 
@@ -261,6 +284,12 @@ pub enum CheckedTheoremCompositionError {
         source_sha256: String,
         /// Target type-shape digest.
         target_sha256: String,
+    },
+    /// One expression supplied to proposition compatibility does not infer to
+    /// `Prop` in its owning kernel.
+    ExpressionNotProposition {
+        /// Stable side name.
+        side: &'static str,
     },
     /// The current schema admits only missing definitions, checked theorems,
     /// complete non-recursive singleton inductive packages, and the exact
@@ -599,6 +628,67 @@ pub fn checked_reused_declaration_compatibility(
                 "named compatibility check produced no receipt".to_owned(),
             )
         })
+}
+
+/// Compare two closed propositions across independently owned kernels.
+///
+/// The source expression is translated by exact rendered declaration names
+/// into a private clone of the target, independently inferred there, and
+/// compared by target-kernel definitional equality. This reads no theorem proof
+/// value and mutates neither input. A successful receipt authorizes only a
+/// later proof/reuse attempt; it is not fact or admission evidence.
+///
+/// # Errors
+///
+/// Returns a typed composition diagnostic if either expression is not a closed
+/// proposition, translation fails, or the translated propositions differ.
+pub fn checked_proposition_compatibility(
+    source: &Kernel,
+    source_proposition: ExprId,
+    target: &Kernel,
+    target_proposition: ExprId,
+) -> Result<PropositionCompatibilityReceipt, CheckedTheoremCompositionError> {
+    let mut source_check = source.clone();
+    let source_type = source_check
+        .infer(source_proposition)
+        .map_err(|_| CheckedTheoremCompositionError::ExpressionNotProposition { side: "source" })?;
+    let source_zero = source_check.level_zero();
+    let source_prop = source_check.sort(source_zero);
+    if !source_check.def_eq(source_type, source_prop) {
+        return Err(CheckedTheoremCompositionError::ExpressionNotProposition { side: "source" });
+    }
+
+    let mut target_check = target.clone();
+    let target_type = target_check
+        .infer(target_proposition)
+        .map_err(|_| CheckedTheoremCompositionError::ExpressionNotProposition { side: "target" })?;
+    let target_zero = target_check.level_zero();
+    let target_prop = target_check.sort(target_zero);
+    if !target_check.def_eq(target_type, target_prop) {
+        return Err(CheckedTheoremCompositionError::ExpressionNotProposition { side: "target" });
+    }
+
+    let mut translated_target = target.clone();
+    let mut translator = ExpressionTranslator::new(source, &mut translated_target);
+    let translated = translator.expr(source_proposition)?;
+    if translator.target.infer(translated).is_err()
+        || !translator.target.def_eq(translated, target_proposition)
+    {
+        return Err(CheckedTheoremCompositionError::TypeShapeMismatch {
+            name: "<proposition>".to_owned(),
+            source_sha256: type_shape(source, source_proposition)?,
+            target_sha256: type_shape(target, target_proposition)?,
+        });
+    }
+    Ok(PropositionCompatibilityReceipt {
+        source_proposition_sha256: canonical_alpha_expression_sha256(source, source_proposition)
+            .map_err(CheckedTheoremCompositionError::Identity)?,
+        target_proposition_sha256: canonical_alpha_expression_sha256(target, target_proposition)
+            .map_err(CheckedTheoremCompositionError::Identity)?,
+        source_shape_sha256: type_shape(source, source_proposition)?,
+        target_shape_sha256: type_shape(target, target_proposition)?,
+        compatibility: ReusedTypeCompatibility::TranslatedDefinitionalEquality,
+    })
 }
 
 fn select_closure(

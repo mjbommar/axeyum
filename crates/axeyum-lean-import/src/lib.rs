@@ -86,7 +86,8 @@ pub use theorem_composition::{
     AddedDefinitionReceipt, AddedSingletonInductiveReceipt, AddedTheoremReceipt,
     CHECKED_TARGET_LEAF_THEOREM_COMPOSITION_VERSION, CHECKED_THEOREM_COMPOSITION_VERSION,
     CheckedTheoremCompositionError, CheckedTheoremCompositionReceipt, CompletedTheoremComposition,
-    ReusedDeclarationReceipt, ReusedTypeCompatibility, checked_reused_declaration_compatibility,
+    PropositionCompatibilityReceipt, ReusedDeclarationReceipt, ReusedTypeCompatibility,
+    checked_proposition_compatibility, checked_reused_declaration_compatibility,
     compose_checked_theorem_slice, compose_checked_theorem_slice_with_target_leaves,
     verify_checked_theorem_composition, verify_checked_theorem_composition_with_target_leaves,
 };
