@@ -2421,6 +2421,44 @@ pub struct CRealPrelude {
     /// multiplication proof (`creal/exponential.rs`), reducing to the `Nat`
     /// fact `2ⁿ ≤ 2·n!` — never touches `CReal.pow` or `CReal.inv`.
     pub exp_term_le_geom: NameId,
+    /// `CReal.expDominant : Nat → CReal := fun n => mul two (pow half n)` —
+    /// the `CReal.pow`-based reading of [`Self::exp_term_le_geom`]'s own
+    /// bound `2·(1/2)ⁿ`, `half := ofRat (natDivSucc 1 1)`,
+    /// `two := ofRat (normalize 2 1 _)`. See `creal/exponential.rs`.
+    pub exp_dominant: NameId,
+    /// `CReal.exp_term_le_dominant : ∀ n, le (expTerm n) (expDominant n)` —
+    /// [`Self::exp_term_le_geom`], transported along `Rat.pow_natDivSucc_two`
+    /// lifted through [`Self::of_rat_pow`] and rescaled by an explicit `2`,
+    /// into the `CReal.pow`-based reading `expDominant` needs for
+    /// [`Self::mul_sub_one_geom`]/[`Self::pow_half_le_nat_div_succ`]-style
+    /// consumers. See `creal/exponential.rs::exp_dominant_equiv_r`.
+    pub exp_term_le_dominant: NameId,
+    /// `CReal.exp_term_nonneg : ∀ n, le zero (expTerm n)` — `1/n! ≥ 0`, by
+    /// `rat_prelude/group.rs::zero_le_natDivSucc`'s own cross-multiplication
+    /// technique, generalized off `natDivSucc`'s fixed denominator shape to
+    /// the arbitrary positive denominator `Nat.factorial n`.
+    pub exp_term_nonneg: NameId,
+    /// `CReal.exp_dominant_nonneg : ∀ n, le zero (expDominant n)` — from
+    /// [`Self::mul_nonneg`], `0 ≤ two`, and [`Self::pow_nonneg`] at
+    /// `0 ≤ half`.
+    pub exp_dominant_nonneg: NameId,
+    /// `CReal.exp_term_abs_le_dominant : ∀ n, le (abs (expTerm n)) (expDominant n)`
+    /// — [`Self::exp_term_le_dominant`] plus nonnegativity of both sides via
+    /// [`Self::abs_le`], the exact domination shape
+    /// [`Self::sum_range_cauchy_of_dominated`] and
+    /// [`Self::sum_range_converges_of_dominated`] need.
+    pub exp_term_abs_le_dominant: NameId,
+    /// `CReal.sumRange_pow_half_closed_form : ∀ n, Equiv (sumRange (fun i =>
+    /// pow half i) n) (mul two (add one (neg (pow half n))))` — the closed
+    /// form of the base-`1/2` geometric partial sum, derived **without**
+    /// `CReal.inv`/`PosBound`/`geometric.rs::geom_pair_within`: multiply
+    /// [`Self::mul_sub_one_geom`]'s conclusion through by `two` and cancel
+    /// `mul two (1 − half)` down to `one`. See `creal/exponential.rs`'s
+    /// module documentation for the two new concrete `Rat` facts this needed
+    /// (`2·(1/2)=1`, `1/2+1/2=1` — neither holds by `Eq.refl`; `Rat.normalize`
+    /// does not unfold `Nat.gcd` by ι even for literal arguments) and why
+    /// they were not needed for [`Self::exp_term_le_dominant`].
+    pub sum_pow_half_closed_form: NameId,
     /// `CReal.sumRange_const : ∀ w m,
     /// Equiv (sumRange (fun _ => w) (Nat.succ m)) (mul (ofNat (Nat.succ m))
     /// w)` (`creal/monotone.rs`) — a constant summed `succ m` times is
@@ -2946,6 +2984,23 @@ pub struct CRealPrelude {
     /// outer fold over all `Nat.succ m` coarse blocks) and step 5 (assembly
     /// into `riemannSum_cauchy`) are NOT attempted here.
     pub reblock_block_eq_fine_block_sum: NameId,
+    /// `CReal.riemannSum_reblock_close : ∀ F a b e m n, le a b →
+    /// UniformlyContinuousOn F a b → Nat.le deep m → And (le (riemannSum F a
+    /// b m_prime) (add (riemannSum F a b m) (mul (ofNat (Nat.succ m))
+    /// epsTerm))) (le (riemannSum F a b m) (add (riemannSum F a b m_prime)
+    /// (mul (ofNat (Nat.succ m)) epsTerm)))` (`creal/integral.rs`), `m_prime
+    /// := succ_mul_succ`'s witness (`Nat.succ m_prime` definitionally
+    /// `(Nat.succ n)·(Nat.succ m)`) and `epsTerm := mul (embed (Rat.natDivSucc
+    /// 1 e)) delta_m` — roadmap step 4 toward `riemannSum_cauchy`: folding
+    /// [`Self::reblock_block_eq_fine_block_sum`]'s exact per-block identity
+    /// (via [`Self::sum_range_reblock`], transported along `succ_mul_succ`,
+    /// to glue the REFINED `riemannSum` to the reblocked sum) against
+    /// [`Self::fine_block_sum_close`]'s own `≤`-bound, summed over all
+    /// `Nat.succ m` coarse blocks with [`Self::sum_range_le`] +
+    /// [`Self::sum_range_add`] + [`Self::sum_range_const`]. Roadmap step 5
+    /// (assembling this into `riemannSum_cauchy` via
+    /// [`Self::within_of_two_sided_le`]) is NOT attempted here.
+    pub riemann_sum_reblock_close: NameId,
 }
 
 impl CRealPrelude {
@@ -3272,6 +3327,12 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         exp_term: kernel.name_str(creal, "expTerm"),
         exp_series_partial: kernel.name_str(creal, "expSeriesPartial"),
         exp_term_le_geom: kernel.name_str(creal, "expTerm_le_geom"),
+        exp_dominant: kernel.name_str(creal, "expDominant"),
+        exp_term_le_dominant: kernel.name_str(creal, "exp_term_le_dominant"),
+        exp_term_nonneg: kernel.name_str(creal, "exp_term_nonneg"),
+        exp_dominant_nonneg: kernel.name_str(creal, "exp_dominant_nonneg"),
+        exp_term_abs_le_dominant: kernel.name_str(creal, "exp_term_abs_le_dominant"),
+        sum_pow_half_closed_form: kernel.name_str(creal, "sumRange_pow_half_closed_form"),
         sum_range_const: kernel.name_str(creal, "sumRange_const"),
         mesh_count_width: kernel.name_str(creal, "mesh_count_width"),
         subdivision_point_in_bounds: kernel.name_str(creal, "subdivisionPoint_in_bounds"),
@@ -3308,6 +3369,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         equiv_abs_diff_le: kernel.name_str(creal, "equivAbsDiffLe"),
         sample_point_reblock: kernel.name_str(creal, "samplePoint_reblock"),
         reblock_block_eq_fine_block_sum: kernel.name_str(creal, "reblockBlock_eq_fineBlockSum"),
+        riemann_sum_reblock_close: kernel.name_str(creal, "riemannSum_reblock_close"),
     }
 }
 
@@ -3523,6 +3585,13 @@ pub(crate) fn build_creal_prelude_uncached(
         // (further above still), so it cannot land any earlier than this
         // call site.
         integral::declare_reblock_block_eq_fine_block_sum(&mut d, prelude)?;
+        // `riemannSum_reblock_close` (roadmap step 4: the outer fold over all
+        // `Nat.succ m` coarse blocks) needs `reblockBlock_eq_fineBlockSum`
+        // (just above), `sumRange_reblock` (`integral::declare_sum_range_reblock`,
+        // well above) and `fineBlockSum_close`
+        // (`integral::declare_fine_block_sum_close`, well above), so it
+        // cannot land any earlier than this call site.
+        integral::declare_riemann_sum_reblock_close(&mut d, prelude)?;
         // `order_reflect_of_pos_deriv` needs only `strict_mono_of_pos_deriv`
         // (just declared above) plus `lt_trans`/`lt_irrefl`/`apart` (all far
         // above); nothing later depends on it, so it lands right after its

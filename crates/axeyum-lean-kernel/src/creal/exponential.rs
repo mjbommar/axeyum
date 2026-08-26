@@ -80,14 +80,17 @@
 //! bound `g n := ofRat (2 / 2ⁿ)` directly (the route this file's domination
 //! bound now takes).
 
-use super::{CRealPrelude, DERIVED_HEIGHT, creal_ty, embed};
+use super::{CRealPrelude, DERIVED_HEIGHT, creal_ty, div_succ, embed, equiv};
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
 use crate::rat_prelude::RatPrelude;
-use crate::rat_prelude::ops::{den, den_z, iregroup4, normalize, num};
+use crate::rat_prelude::ops::{
+    den, den_z, iregroup4, nat_rewrite_prop, normalize, num, radd, rat_eq_rewrite, rchain, rmul,
+    rone, rpow,
+};
 
 /// Height for `expTerm`/`expSeriesPartial`: both are thin definitional
 /// wrappers (one `ofRat` application, one partial application of
@@ -105,7 +108,25 @@ const EXP_HEIGHT: u16 = DERIVED_HEIGHT + 1;
 pub(super) fn declare_exponential(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
     declare_exp_term(d, p)?;
     declare_exp_series_partial(d, p)?;
-    declare_exp_term_le_geom(d, p)
+    declare_exp_term_le_geom(d, p)?;
+    declare_exp_dominant(d, p)?;
+    declare_exp_term_le_dominant(d, p)?;
+    declare_exp_term_nonneg(d, p)?;
+    declare_exp_dominant_nonneg(d, p)?;
+    declare_exp_term_abs_le_dominant(d, p)
+    // `declare_sum_pow_half_closed_form` is NOT wired in yet: it broke the
+    // whole prelude build (`TypeMismatch` at the top-level `add_declaration`,
+    // every `creal::` test failing identically at `built()`) and the exact
+    // failing step was not isolated before this lane's time ran out. The
+    // Rat-level facts it depends on (`rat_two_mul_half_eq_one`,
+    // `rat_half_add_half_eq_one`, both via `rat_normalize_self_eq_one`) and
+    // the CReal-level group chain (`one_sub_half_equiv_half`,
+    // `two_mul_one_sub_half_equiv_one`) are ALL still defined below, unused,
+    // for the next lane to bisect via `Kernel::infer` per step against a
+    // free fvar (per this repo's own advice for exactly this situation) --
+    // start with `two_mul_one_sub_half_equiv_one` in isolation (build it as
+    // its own throwaway `Theorem` with an explicit `ty` ascription) before
+    // re-wiring `declare_sum_pow_half_closed_form`.
 }
 
 /// `Rat.normalize (Int.ofNat (Nat.succ Nat.zero)) (Nat.factorial n)
@@ -488,6 +509,943 @@ fn declare_exp_term_le_geom(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), K
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.exp_term_le_geom,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// ============================================================================
+// This lane: the domination bound `expTerm_le_geom` bridged to `CReal.pow`
+// (`CReal.expDominant`, `CReal.exp_term_le_dominant`), and nonnegativity of
+// `expTerm`/`expDominant` (`CReal.exp_term_nonneg`,
+// `CReal.exp_dominant_nonneg`), combined into the `abs`-domination shape
+// `CReal.sumRange_cauchy_of_dominated` needs.
+// ============================================================================
+
+/// `CReal.mul x y`.
+fn cmul(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
+    d.const_app(p.mul, &[x, y])
+}
+
+/// `CReal.neg x`.
+fn cneg(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+    d.const_app(p.neg, &[x])
+}
+
+/// `CReal.zero`.
+fn czero(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    d.kernel().const_(p.zero, vec![])
+}
+
+/// `CReal.abs x`.
+fn cabs(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+    d.const_app(p.abs, &[x])
+}
+
+/// `CReal.pow x n`.
+fn cpow(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, n: ExprId) -> ExprId {
+    d.const_app(p.pow, &[x, n])
+}
+
+/// `Rat.natDivSucc 1 1` — `1/2`, as a `Rat` term.
+fn half_rat(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let one_nat = d.num(1);
+    div_succ(d, p, 1, one_nat)
+}
+
+/// `CReal.ofRat (Rat.natDivSucc 1 1)` — the constant `1/2`.
+fn half(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let hr = half_rat(d, p);
+    embed(d, p, hr)
+}
+
+/// `Rat.normalize (Int.ofNat 2) (Nat.succ Nat.zero) h`, `h : Nat.le 1 1` —
+/// `2`, built directly through `normalize` (not `Rat.natDivSucc`) so it
+/// matches `Rat.normalize_mul_normalize`'s own argument shape on the nose.
+/// Returns `(rat_term, numerator, denominator_positivity)`.
+fn two_normalize(d: &mut IntDev<'_>, _p: CRealPrelude) -> (ExprId, ExprId, ExprId) {
+    let np = d.prelude();
+    let two_nat = d.num(2);
+    let two_z = d.of_nat(two_nat);
+    let one_nat = d.num(1);
+    let h1 = d.lemma(np.le_refl, &[one_nat]);
+    let r = normalize(d, two_z, one_nat, h1);
+    (r, two_z, h1)
+}
+
+/// `CReal.ofRat` of [`two_normalize`] — `CReal`'s constant `2`.
+fn two(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let (r, _, _) = two_normalize(d, p);
+    embed(d, p, r)
+}
+
+/// `mul two (pow half n)` — the `CReal.pow`-based reading of
+/// [`declare_exp_term_le_geom`]'s own bound, `2 · (1/2)ⁿ`.
+fn exp_dominant_at(d: &mut IntDev<'_>, p: CRealPrelude, n: ExprId) -> ExprId {
+    let h = half(d, p);
+    let t = two(d, p);
+    let pw = cpow(d, p, h, n);
+    cmul(d, p, t, pw)
+}
+
+/// `CReal.expDominant : Nat → CReal := fun n => mul two (pow half n)`.
+fn declare_exp_dominant(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let body = exp_dominant_at(d, p, n);
+    let value = d.lam_fv(n_fv, nat, body);
+    let ty = d.arrow(nat, carrier);
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.exp_dominant,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(EXP_HEIGHT),
+    })
+}
+
+/// `Equiv (ofRat a) (ofRat b)`, from `Eq Rat a b`.
+fn ofrat_congr(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId, eqp: ExprId) -> ExprId {
+    let oa = embed(d, p, a);
+    let refl = d.lemma(p.equiv_refl, &[oa]);
+    rat_eq_rewrite(d, a, b, eqp, refl, &|d, t| {
+        let ot = embed(d, p, t);
+        equiv(d, p, oa, ot)
+    })
+}
+
+/// `Equiv (expDominant n) (ofRat r)`, `r := Rat.normalize 2 (2ⁿ) h2` — the
+/// EXACT rational [`exp_term_le_dominant_rat`] builds (same `d2`, `h2`).
+///
+/// Chain: `pow half n ≈ ofRat (Rat.pow half_rat n)` ([`CRealPrelude::of_rat_pow`])
+/// `= ofRat (normalize 1 (2ⁿ) h2)` (`Rat.pow_natDivSucc_two`, reusing `h2`
+/// for its internal witness — both prove `1 ≤ 2ⁿ`, and `Rat.normalize`'s
+/// witness slot is a `Prop`, so proof irrelevance identifies the two forms).
+/// Multiplying both sides by `two` and simplifying
+/// `Rat.mul (natDivSucc 2 0) (normalize 1 (2ⁿ) h2) = normalize 2 (2ⁿ) h2`
+/// (`Rat.normalize_mul_normalize` + `Rat.normalize_congr`) lands on `r`.
+///
+/// Returns `(r, equiv_proof : Equiv (expDominant n) (ofRat r))`.
+fn exp_dominant_equiv_r(d: &mut IntDev<'_>, p: CRealPrelude, n: ExprId) -> (ExprId, ExprId) {
+    let rp = p.rat;
+    let np = d.prelude();
+
+    let two_nat = d.num(2);
+    let d2 = d.pow(two_nat, n);
+    let h2 = {
+        let lt02 = one_le_two_nat(d);
+        d.lemma(np.pow_pos, &[two_nat, n, lt02])
+    };
+    let one_nat = d.num(1);
+    let one_z = d.of_nat(one_nat);
+    let (two_r, two_z, h1) = two_normalize(d, p);
+
+    // A: `Equiv (pow half n) (ofRat (Rat.pow half_rat n))`.
+    let hr = half_rat(d, p);
+    let h_val = half(d, p);
+    let pow_h_n = cpow(d, p, h_val, n);
+    let rat_pow_h_n = rpow(d, rp, hr, n);
+    let a_equiv = d.lemma(p.of_rat_pow, &[hr, n]);
+
+    // B: `Rat.pow half_rat n = normalize 1 (2ⁿ) h2`.
+    let target = normalize(d, one_z, d2, h2);
+    let bridge_eq = d.lemma(rp.pow_nat_div_succ_two, &[n]);
+    let b_step = ofrat_congr(d, p, rat_pow_h_n, target, bridge_eq);
+    let ofrat_pow = embed(d, p, rat_pow_h_n);
+    let ofrat_target = embed(d, p, target);
+    let ab_equiv = d.lemma(
+        p.equiv_trans,
+        &[pow_h_n, ofrat_pow, ofrat_target, a_equiv, b_step],
+    );
+
+    // C: multiply both sides by `two`.
+    let dominant = exp_dominant_at(d, p, n);
+    let ofrat_two = embed(d, p, two_r);
+    let refl_two = d.lemma(p.equiv_refl, &[ofrat_two]);
+    let c_equiv = d.lemma(
+        p.mul_congr,
+        &[
+            ofrat_two,
+            ofrat_two,
+            pow_h_n,
+            ofrat_target,
+            refl_two,
+            ab_equiv,
+        ],
+    );
+    let mul_two_target = cmul(d, p, ofrat_two, ofrat_target);
+
+    // D: `Equiv (mul (ofRat two_r) (ofRat target)) (ofRat (Rat.mul two_r target))`.
+    let d_step = d.lemma(p.of_rat_mul, &[two_r, target]);
+    let rat_mul_two_target = rmul(d, two_r, target);
+    let ofrat_mul = embed(d, p, rat_mul_two_target);
+    let d_equiv = d.lemma(
+        p.equiv_trans,
+        &[dominant, mul_two_target, ofrat_mul, c_equiv, d_step],
+    );
+
+    // E: `Rat.mul two_r target = Rat.normalize 2 (2ⁿ) h2`.
+    let nat_mul_1_d2 = NatOps::mul(d, one_nat, d2);
+    let step_mul_norm = d.lemma(
+        rp.normalize_mul_normalize,
+        &[two_z, one_nat, h1, one_z, d2, h2],
+    );
+    let one_mul_eq = d.lemma(np.one_mul, &[d2]);
+    let one_mul_rev = NatOps::symm(d, nat_mul_1_d2, d2, one_mul_eq);
+    let h3 = nat_rewrite_prop(d, d2, nat_mul_1_d2, one_mul_rev, h2, &|d, t| {
+        d.le(one_nat, t)
+    });
+    let one_mul_int = d.nat_eq_to_int(nat_mul_1_d2, d2, one_mul_eq, &|d, t| d.of_nat(t));
+    let d2_z = d.of_nat(d2);
+    let nat_mul_1_d2_z = d.of_nat(nat_mul_1_d2);
+    let cross_fwd = d.icongr(nat_mul_1_d2_z, d2_z, one_mul_int, &|d, t| d.imul(two_z, t));
+    let lhs_cross = d.imul(two_z, nat_mul_1_d2_z);
+    let rhs_cross = d.imul(two_z, d2_z);
+    let cross = d.isymm(lhs_cross, rhs_cross, cross_fwd);
+    let e_congr = d.lemma(
+        rp.normalize_congr,
+        &[two_z, nat_mul_1_d2, h3, two_z, d2, h2, cross],
+    );
+    let r = normalize(d, two_z, d2, h2);
+    let normalize_mid = normalize(d, two_z, nat_mul_1_d2, h3);
+    let (_, e_eq) = rchain(
+        d,
+        rat_mul_two_target,
+        &[(normalize_mid, step_mul_norm), (r, e_congr)],
+    );
+
+    let e_equiv = ofrat_congr(d, p, rat_mul_two_target, r, e_eq);
+    let ofrat_r = embed(d, p, r);
+    let final_equiv = d.lemma(
+        p.equiv_trans,
+        &[dominant, ofrat_mul, ofrat_r, d_equiv, e_equiv],
+    );
+    (r, final_equiv)
+}
+
+/// `CReal.exp_term_le_dominant : ∀ n, le (expTerm n) (expDominant n)` —
+/// [`declare_exp_term_le_geom`]'s bound, transported along
+/// [`exp_dominant_equiv_r`]'s `Equiv` into the `CReal.pow`-based reading.
+fn declare_exp_term_le_dominant(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let exp_term_n = {
+        let exp_term = d.kernel().const_(p.exp_term, vec![]);
+        d.kernel().app(exp_term, n)
+    };
+    let (r, dom_equiv) = exp_dominant_equiv_r(d, p, n);
+    let rhs = embed(d, p, r);
+    let dominant = exp_dominant_at(d, p, n);
+
+    let le_geom = d.lemma(p.exp_term_le_geom, &[n]);
+    let refl_term = d.lemma(p.equiv_refl, &[exp_term_n]);
+    let dom_equiv_rev = d.lemma(p.equiv_symm, &[dominant, rhs, dom_equiv]);
+    let concl = d.lemma(
+        p.le_congr,
+        &[
+            exp_term_n,
+            exp_term_n,
+            rhs,
+            dominant,
+            refl_term,
+            dom_equiv_rev,
+            le_geom,
+        ],
+    );
+
+    let value = d.lam_fv(n_fv, nat, concl);
+    let ty = {
+        let stmt = cle(d, p, exp_term_n, dominant);
+        d.pi_fv(n_fv, nat, stmt)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.exp_term_le_dominant,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Rat.le Rat.zero (Rat.normalize 1 n! h)`, mirroring
+/// `rat_prelude/group.rs`'s `zero_le_natDivSucc` cross-multiplication
+/// technique, generalized off `natDivSucc`'s fixed `succ j` denominator
+/// shape to an arbitrary positive denominator (`Nat.factorial n`, witnessed
+/// by `Nat.one_le_factorial`).
+fn expterm_nonneg_proof(d: &mut IntDev<'_>, p: CRealPrelude, n: ExprId) -> (ExprId, ExprId) {
+    let rp = p.rat;
+    let np = d.prelude();
+    let one_nat = d.num(1);
+    let one_z = d.of_nat(one_nat);
+    let factorial_n = d.factorial(n);
+    let positive = d.lemma(np.one_le_factorial, &[n]);
+    let value = normalize(d, one_z, factorial_n, positive);
+
+    let actual = num(d, value);
+    let actual_den = den(d, value);
+    let actual_den_z = den_z(d, value);
+    let denominator_z = d.of_nat(factorial_n);
+    let zero = d.izero();
+
+    let cross = d.lemma(rp.normalize_cross, &[one_z, factorial_n, positive]);
+    let product = d.imul(one_z, actual_den_z);
+    let product_nonneg = {
+        let magnitude = NatOps::mul(d, one_nat, actual_den);
+        d.lemma(rp.int_zero_le_of_nat, &[magnitude])
+    };
+    let scaled = d.imul(actual, denominator_z);
+    let back = d.isymm(scaled, product, cross);
+    let scaled_nonneg = d.int_eq_rewrite(product, scaled, back, product_nonneg, &|d, x| {
+        d.ile(zero, x)
+    });
+    let zero_scaled = d.imul(zero, denominator_z);
+    let restore = d.lemma(rp.int_zero_mul, &[denominator_z]);
+    let rebalanced = {
+        let inverse = d.isymm(zero_scaled, zero, restore);
+        d.int_eq_rewrite(zero, zero_scaled, inverse, scaled_nonneg, &|d, x| {
+            d.ile(x, scaled)
+        })
+    };
+    let cancelled = d.lemma(
+        rp.int_le_of_mul_le_mul_right,
+        &[zero, actual, factorial_n, positive, rebalanced],
+    );
+    let proof = d.const_app(rp.nonneg_of_int_nonneg, &[value, cancelled]);
+    (value, proof)
+}
+
+/// `CReal.exp_term_nonneg : ∀ n, le zero (expTerm n)`.
+fn declare_exp_term_nonneg(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let (rat_value, rat_nonneg) = expterm_nonneg_proof(d, p, n);
+    let zero_rat = crate::rat_prelude::ops::rzero(d, p.rat);
+    let creal_nonneg = d.lemma(p.of_rat_le, &[zero_rat, rat_value, rat_nonneg]);
+
+    let exp_term_n = {
+        let exp_term = d.kernel().const_(p.exp_term, vec![]);
+        d.kernel().app(exp_term, n)
+    };
+
+    let proof_value = d.lam_fv(n_fv, nat, creal_nonneg);
+    let ty = {
+        let z = czero(d, p);
+        let stmt = cle(d, p, z, exp_term_n);
+        d.pi_fv(n_fv, nat, stmt)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.exp_term_nonneg,
+        uparams: vec![],
+        ty,
+        value: proof_value,
+    })
+}
+
+/// `CReal.exp_dominant_nonneg : ∀ n, le zero (expDominant n)` — from
+/// [`CRealPrelude::mul_nonneg`], `0 ≤ two` and [`CRealPrelude::pow_nonneg`]
+/// at `0 ≤ half` (both via `Rat.zero_le_natDivSucc` + `CReal.of_rat_le`).
+fn declare_exp_dominant_nonneg(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let rp = p.rat;
+    let zero_rat = crate::rat_prelude::ops::rzero(d, rp);
+
+    // `0 ≤ half`, via `Rat.zero_le_natDivSucc 1 1` and `CReal.of_rat_le`.
+    let one_nat = d.num(1);
+    let half_le_zero = d.lemma(rp.zero_le_nat_div_succ, &[one_nat, one_nat]);
+    let hr = half_rat(d, p);
+    let half_nonneg = d.lemma(p.of_rat_le, &[zero_rat, hr, half_le_zero]);
+
+    // `0 ≤ two`: `two_r := normalize 2 1 h1` (the SAME construction
+    // [`two`]/[`exp_dominant_at`] use), by `expterm_nonneg_proof`'s
+    // cross-multiplication technique with numerator `2` and denominator `1`.
+    let h = half(d, p);
+    let (two_r, two_z, h1) = two_normalize(d, p);
+    let t = embed(d, p, two_r);
+    let two_nonneg = {
+        let value = two_r;
+        let denom_pos = h1;
+        let actual = num(d, value);
+        let actual_den = den(d, value);
+        let actual_den_z = den_z(d, value);
+        let one = d.num(1);
+        let denominator_z = d.of_nat(one);
+        let zero = d.izero();
+        let cross = d.lemma(rp.normalize_cross, &[two_z, one, denom_pos]);
+        let product = d.imul(two_z, actual_den_z);
+        let product_nonneg = {
+            let two_nat = d.num(2);
+            let magnitude = NatOps::mul(d, two_nat, actual_den);
+            d.lemma(rp.int_zero_le_of_nat, &[magnitude])
+        };
+        let scaled = d.imul(actual, denominator_z);
+        let back = d.isymm(scaled, product, cross);
+        let scaled_nonneg = d.int_eq_rewrite(product, scaled, back, product_nonneg, &|d, x| {
+            d.ile(zero, x)
+        });
+        let zero_scaled = d.imul(zero, denominator_z);
+        let restore = d.lemma(rp.int_zero_mul, &[denominator_z]);
+        let rebalanced = {
+            let inverse = d.isymm(zero_scaled, zero, restore);
+            d.int_eq_rewrite(zero, zero_scaled, inverse, scaled_nonneg, &|d, x| {
+                d.ile(x, scaled)
+            })
+        };
+        let cancelled = d.lemma(
+            rp.int_le_of_mul_le_mul_right,
+            &[zero, actual, one, denom_pos, rebalanced],
+        );
+        let proof = d.const_app(rp.nonneg_of_int_nonneg, &[value, cancelled]);
+        d.lemma(p.of_rat_le, &[zero_rat, value, proof])
+    };
+
+    // `0 ≤ pow half n`, then `0 ≤ mul two (pow half n)`.
+    let pow_nonneg = d.lemma(p.pow_nonneg, &[h, half_nonneg, n]);
+    let pow_h_n = cpow(d, p, h, n);
+    let mul_nonneg = d.lemma(p.mul_nonneg, &[t, pow_h_n, two_nonneg, pow_nonneg]);
+
+    let dominant = exp_dominant_at(d, p, n);
+    let proof_value = d.lam_fv(n_fv, nat, mul_nonneg);
+    let ty = {
+        let z = czero(d, p);
+        let stmt = cle(d, p, z, dominant);
+        d.pi_fv(n_fv, nat, stmt)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.exp_dominant_nonneg,
+        uparams: vec![],
+        ty,
+        value: proof_value,
+    })
+}
+
+/// `CReal.exp_term_abs_le_dominant : ∀ n, le (abs (expTerm n)) (expDominant n)`
+/// — the exact `abs`-domination shape [`CRealPrelude::sum_range_cauchy_of_dominated`]
+/// and [`CRealPrelude::sum_range_converges_of_dominated`] need. From
+/// [`declare_exp_term_le_dominant`] and nonnegativity via
+/// [`CRealPrelude::abs_le`]: `neg (expTerm n) ≤ 0 ≤ expDominant n`.
+fn declare_exp_term_abs_le_dominant(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let exp_term_n = {
+        let exp_term = d.kernel().const_(p.exp_term, vec![]);
+        d.kernel().app(exp_term, n)
+    };
+    let dominant = exp_dominant_at(d, p, n);
+
+    let le_dom = d.lemma(p.exp_term_le_dominant, &[n]);
+    let term_nonneg = d.lemma(p.exp_term_nonneg, &[n]);
+    let dom_nonneg = d.lemma(p.exp_dominant_nonneg, &[n]);
+
+    // `neg (expTerm n) ≤ neg zero`, then `neg zero ≈ zero ≤ expDominant n`.
+    let zero = czero(d, p);
+    let neg_le = d.lemma(p.neg_le_neg, &[zero, exp_term_n, term_nonneg]);
+    let neg_zero = cneg(d, p, zero);
+    let zero_rat = crate::rat_prelude::ops::rzero(d, p.rat);
+    let nz_equiv = d.lemma(p.of_rat_neg, &[zero_rat]);
+    // `nz_equiv : Equiv (neg zero) (ofRat (Rat.neg Rat.zero))`, and
+    // `Rat.neg Rat.zero` is defeq `Rat.zero` (`Int.neg Int.zero ≡
+    // Int.zero`), so this already is, up to defeq, `Equiv (neg zero) zero`.
+    let refl_dom = d.lemma(p.equiv_refl, &[dominant]);
+    let neg_zero_le_dom = d.lemma(
+        p.le_congr,
+        &[
+            neg_zero, zero, dominant, dominant, nz_equiv, refl_dom, dom_nonneg,
+        ],
+    );
+    let neg_exp_term_n = cneg(d, p, exp_term_n);
+    let neg_term_le_dom = d.lemma(
+        p.le_trans,
+        &[neg_exp_term_n, neg_zero, dominant, neg_le, neg_zero_le_dom],
+    );
+
+    let abs_le = d.lemma(p.abs_le, &[exp_term_n, dominant, le_dom, neg_term_le_dom]);
+
+    let value = d.lam_fv(n_fv, nat, abs_le);
+    let ty = {
+        let abs_term = cabs(d, p, exp_term_n);
+        let stmt = cle(d, p, abs_term, dominant);
+        d.pi_fv(n_fv, nat, stmt)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.exp_term_abs_le_dominant,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// ============================================================================
+// Toward `Cauchy (sumRange expTerm)`/`Converges expSeriesPartial`: a closed
+// form for `sumRange (pow half)` (needing `2 · (1 − 1/2) ≈ 1`, an honest new
+// concrete `Rat` fact — see [`rat_two_mul_half_eq_one`]'s own doc for why the
+// obvious `Eq.refl` does NOT close it), and `pow half n → 0`.
+// ============================================================================
+
+/// `Rat.mul (Rat.normalize 2 1 h_a) (Rat.normalize 1 2 h_b) = Rat.one`, i.e.
+/// `2 · (1/2) = 1`.
+///
+/// **This does NOT hold by `Eq.refl`** — confirmed empirically (a throwaway
+/// probe declaration built exactly this claim via `rrefl` and the kernel
+/// rejected it with `TypeMismatch`): `Rat.normalize`'s reduction to lowest
+/// terms goes through `Nat.gcd`, which (unlike `Nat.pow`/`Nat.mul`/`Nat.add`
+/// on LITERAL arguments) does not unfold via ι alone, even for concrete
+/// inputs. So `Rat.normalize (Int.ofNat 2) 2 h` is not *definitionally*
+/// `Rat.one`, and closing this needs an actual argument.
+///
+/// Route: [`RatPrelude::normalize_mul_normalize`] turns the product into
+/// `Rat.normalize (Int.mul 2 1) (Nat.mul 1 2) h_c` — both `Int.mul 2 1` and
+/// `Nat.mul 1 2` are LITERAL-LITERAL and reduce by ι alone (no symbolic
+/// operand, so the "symbolic side" trap does not apply), landing on
+/// `Rat.normalize 2 2 h_c`. Then `Rat.normalize 2 2 h_c = Rat.one` by
+/// [`RatPrelude::eq_of_cross`]: `Rat.one` is a **direct** `Rat.mk` (not
+/// itself built through `normalize` — `rat_prelude/defs.rs::declare_constants`
+/// — so `num`/`den` project off it by ι alone, unlike the `Nat.gcd`-bound
+/// projections off `Rat.normalize 2 2 h_c`), and the cross condition reduces
+/// to `num (normalize 2 2 h_c) = den_z (normalize 2 2 h_c)`, itself gotten
+/// from [`RatPrelude::normalize_cross`] (`num · 2 = 2 · den_z`) by
+/// [`RatPrelude::int_mul_right_cancel`] (cancelling the shared `2`).
+///
+/// Returns `(two_r, half_r, proof : Eq Rat (Rat.mul two_r half_r) Rat.one)`.
+/// `Rat.normalize (Int.ofNat k) k h_k = Rat.one`, for any concrete `k` with
+/// `h_k : 1 ≤ k` — the reusable engine [`rat_two_mul_half_eq_one`] and
+/// [`rat_half_add_half_eq_one`] both instantiate (`k := 2`, `k := 4`).
+///
+/// By cross-multiplication: `Rat.one` is a **direct** `Rat.mk` (not itself
+/// built through `normalize` — `rat_prelude/defs.rs::declare_constants` —
+/// so `num`/`den` project off it by ι alone, unlike the `Nat.gcd`-bound
+/// projections off `Rat.normalize k k h_k`), and the cross condition reduces
+/// to `num (normalize k k h_k) = den_z (normalize k k h_k)`, itself gotten
+/// from [`RatPrelude::normalize_cross`] (`num · k = k · den_z`) by
+/// [`RatPrelude::int_mul_right_cancel`] (cancelling the shared `k`).
+#[allow(dead_code)]
+fn rat_normalize_self_eq_one(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    k_nat: ExprId,
+    h_k: ExprId,
+) -> ExprId {
+    let rp = p.rat;
+    let np = d.prelude();
+    let one_nat = d.num(1);
+    let k_z = d.of_nat(k_nat);
+    let value = normalize(d, k_z, k_nat, h_k);
+
+    let n = num(d, value);
+    let dd = den(d, value);
+    let dz = den_z(d, value);
+    let cross = d.lemma(rp.normalize_cross, &[k_z, k_nat, h_k]);
+    let comm = d.lemma(rp.int.mul_comm, &[k_z, dz]);
+    let lhs0 = d.imul(n, k_z);
+    let mid0 = d.imul(k_z, dz);
+    let rhs0 = d.imul(dz, k_z);
+    let (_, cr2) = d.ichain(lhs0, &[(mid0, cross), (rhs0, comm)]);
+    // cr2 : n*k_z = dz*k_z
+    let nd_eq = d.lemma(rp.int_mul_right_cancel, &[n, dz, k_nat, h_k, cr2]);
+    // nd_eq : Eq Int n dz
+
+    let one_z = d.of_nat(one_nat);
+    let one = rone(d, rp);
+    let lhs_goal = d.imul(n, one_z);
+    let lhs_mid = d.imul(dz, one_z);
+    let lhs_congr = d.icongr(n, dz, nd_eq, &|d, t| d.imul(t, one_z));
+    let mul_one_dd = d.lemma(np.mul_one, &[dd]);
+    let dd_one = NatOps::mul(d, dd, one_nat);
+    let mul_one_dd_int = d.nat_eq_to_int(dd_one, dd, mul_one_dd, &|d, t| d.of_nat(t));
+    let (_, lhs_final) = d.ichain(lhs_goal, &[(lhs_mid, lhs_congr), (dz, mul_one_dd_int)]);
+    // lhs_final : n*one_z = dz
+
+    let rhs_goal = d.imul(one_z, dz);
+    let one_mul_dd = d.lemma(np.one_mul, &[dd]);
+    let one_dd = NatOps::mul(d, one_nat, dd);
+    let one_mul_dd_int = d.nat_eq_to_int(one_dd, dd, one_mul_dd, &|d, t| d.of_nat(t));
+    let dz_eq_rhs = d.isymm(rhs_goal, dz, one_mul_dd_int);
+    // dz_eq_rhs : dz = one_z*dz
+
+    let (_, full_cross) = d.ichain(lhs_goal, &[(dz, lhs_final), (rhs_goal, dz_eq_rhs)]);
+    // full_cross : n*one_z = one_z*dz
+    //            = num(value)*ofNat(den(one)) = num(one)*ofNat(den(value))
+    //   (up to defeq: den(one) ≡ one_nat, num(one) ≡ one_z, both by ι on
+    //   `Rat.one`'s own `mk` projections).
+    d.lemma(rp.eq_of_cross, &[value, one, full_cross])
+}
+
+/// `Rat.mul (Rat.normalize 2 1 h_a) (Rat.normalize 1 2 h_b) = Rat.one`, i.e.
+/// `2 · (1/2) = 1`.
+///
+/// **This does NOT hold by `Eq.refl`** — confirmed empirically (a throwaway
+/// probe declaration built exactly this claim via `rrefl` and the kernel
+/// rejected it with `TypeMismatch`): `Rat.normalize`'s reduction to lowest
+/// terms goes through `Nat.gcd`, which (unlike `Nat.pow`/`Nat.mul`/`Nat.add`
+/// on LITERAL arguments) does not unfold via ι alone, even for concrete
+/// inputs. So `Rat.normalize (Int.ofNat 2) 2 h` is not *definitionally*
+/// `Rat.one`, and closing this needs an actual argument.
+///
+/// Route: [`RatPrelude::normalize_mul_normalize`] turns the product into
+/// `Rat.normalize (Int.mul 2 1) (Nat.mul 1 2) h_c` — both `Int.mul 2 1` and
+/// `Nat.mul 1 2` are LITERAL-LITERAL and reduce by ι alone (no symbolic
+/// operand, so the "symbolic side" trap does not apply), landing on
+/// `Rat.normalize 2 2 h_c`; [`rat_normalize_self_eq_one`] closes the rest.
+///
+/// Returns `(two_r, half_r, proof : Eq Rat (Rat.mul two_r half_r) Rat.one)`.
+#[allow(dead_code)]
+fn rat_two_mul_half_eq_one(d: &mut IntDev<'_>, p: CRealPrelude) -> (ExprId, ExprId, ExprId) {
+    let rp = p.rat;
+    let np = d.prelude();
+
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+    let two_z = d.of_nat(two_nat);
+    let one_z = d.of_nat(one_nat);
+
+    let h_a = d.lemma(np.le_refl, &[one_nat]); // 1 ≤ 1
+    let two_r = normalize(d, two_z, one_nat, h_a);
+    let h_b = d.lemma(np.le_succ, &[one_nat]); // 1 ≤ 2
+    let half_r = normalize(d, one_z, two_nat, h_b);
+
+    let step_mul_norm = d.lemma(
+        rp.normalize_mul_normalize,
+        &[two_z, one_nat, h_a, one_z, two_nat, h_b],
+    );
+    // step_mul_norm : Eq (mul two_r half_r) (normalize (Int.mul two_z one_z)
+    // (Nat.mul one_nat two_nat) _) -- both LITERAL-LITERAL, ι-reduce to
+    // `two_z`/`two_nat`, so this is already, up to defeq, `Eq (mul two_r
+    // half_r) (normalize two_z two_nat h_c)` for any witness `h_c`.
+    let h_c = d.lemma(np.le_succ, &[one_nat]); // 1 ≤ 2, a fresh witness
+    let value = normalize(d, two_z, two_nat, h_c);
+    let value_eq_one = rat_normalize_self_eq_one(d, p, two_nat, h_c);
+
+    let one = rone(d, rp);
+    let mul_two_half = rmul(d, two_r, half_r);
+    let (_, proof) = rchain(
+        d,
+        mul_two_half,
+        &[(value, step_mul_norm), (one, value_eq_one)],
+    );
+    (two_r, half_r, proof)
+}
+
+/// `Rat.add half_r half_r = Rat.one`, i.e. `1/2 + 1/2 = 1` — the same
+/// engine as [`rat_two_mul_half_eq_one`], via
+/// [`RatPrelude::normalize_add_normalize`] in place of `_mul_normalize`,
+/// landing on `Rat.normalize 4 4 _` instead of `2 2`.
+///
+/// Returns `(half_r, proof : Eq Rat (Rat.add half_r half_r) Rat.one)`.
+#[allow(dead_code)]
+fn rat_half_add_half_eq_one(d: &mut IntDev<'_>, p: CRealPrelude) -> (ExprId, ExprId) {
+    let rp = p.rat;
+    let np = d.prelude();
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+    let one_z = d.of_nat(one_nat);
+    let h_b = d.lemma(np.le_succ, &[one_nat]); // 1 ≤ 2
+    let half_r = normalize(d, one_z, two_nat, h_b);
+
+    let step_add_norm = d.lemma(
+        rp.normalize_add_normalize,
+        &[one_z, two_nat, h_b, one_z, two_nat, h_b],
+    );
+    // step_add_norm : Eq (add half_r half_r) (normalize
+    //   (Int.mul one_z (ofNat two_nat) + Int.mul one_z (ofNat two_nat))
+    //   (Nat.mul two_nat two_nat) h_d)
+    // numerator: 1*2+1*2 (LITERAL-LITERAL throughout) ι-reduces to 4;
+    // denominator: 2*2 ι-reduces to 4. So this is already, up to defeq,
+    // `Eq (add half_r half_r) (normalize 4 4 h_d)` for any witness `h_d`.
+    let four_nat = d.num(4);
+    let four_z = d.of_nat(four_nat);
+    // `1 ≤ 4`, via `1 ≤ 2 ≤ 3 ≤ 4` (chained `le_succ`/`le_trans`).
+    let two_nat2 = d.num(2);
+    let three_nat = d.num(3);
+    let s1 = d.lemma(np.le_succ, &[two_nat2]); // 2 ≤ 3
+    let s2 = d.lemma(np.le_succ, &[three_nat]); // 3 ≤ 4
+    let two_le_four = d.lemma(np.le_trans, &[two_nat2, three_nat, four_nat, s1, s2]);
+    let h_d = d.lemma(np.le_trans, &[one_nat, two_nat, four_nat, h_b, two_le_four]);
+    let value = normalize(d, four_z, four_nat, h_d);
+    let value_eq_one = rat_normalize_self_eq_one(d, p, four_nat, h_d);
+
+    let one = rone(d, rp);
+    let add_hh = radd(d, half_r, half_r);
+    let (_, proof) = rchain(d, add_hh, &[(value, step_add_norm), (one, value_eq_one)]);
+    (half_r, proof)
+}
+
+/// `CReal.add x y`.
+#[allow(dead_code)]
+fn cadd(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
+    d.const_app(p.add, &[x, y])
+}
+
+/// `Equiv` chain composition, verbatim in shape to every other `creal/*`
+/// module's own private `echain` (see e.g. `geometric.rs::echain`).
+#[allow(dead_code)]
+fn echain(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    start: ExprId,
+    steps: &[(ExprId, ExprId)],
+) -> ExprId {
+    let mut current = start;
+    let mut proof = d.lemma(p.equiv_refl, &[start]);
+    for &(next, step) in steps {
+        proof = d.lemma(p.equiv_trans, &[start, current, next, proof, step]);
+        current = next;
+    }
+    proof
+}
+
+/// `Equiv (add x (neg x)) zero` reproduced at `x := half`, chained through
+/// `add_comm` so it applies to `add (neg half) half` (the order `add_neg`
+/// itself does not cover).
+#[allow(dead_code)]
+fn neg_half_add_half_equiv_zero(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let h = half(d, p);
+    let neg_h = cneg(d, p, h);
+    let comm = d.lemma(p.add_comm, &[neg_h, h]); // Equiv (add neg_h h) (add h neg_h)
+    let an = d.lemma(p.add_neg, &[h]); // Equiv (add h neg_h) zero
+    let start = cadd(d, p, neg_h, h);
+    let mid = cadd(d, p, h, neg_h);
+    let zero = czero(d, p);
+    echain(d, p, start, &[(mid, comm), (zero, an)])
+}
+
+/// `Equiv (add one (neg half)) half` — from the group tautology
+/// `Equiv (add (add one (neg half)) half) one` (true for *any* constant in
+/// place of `half`, via `add_assoc`/`add_neg`/`add_zero`) combined with
+/// `Equiv (add half half) one` ([`rat_half_add_half_eq_one`] lifted through
+/// `CReal.ofRat_add`), then cancelling the shared `half` on the right by
+/// adding `neg half` to both sides.
+#[allow(dead_code)]
+fn one_sub_half_equiv_half(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let h = half(d, p);
+    let neg_h = cneg(d, p, h);
+    let a = cadd(d, p, one_c, neg_h); // a := 1 - half
+    let zero = czero(d, p);
+    let nh_h = cadd(d, p, neg_h, h);
+    let hh = cadd(d, p, h, h);
+    let a_h = cadd(d, p, a, h);
+
+    // g_taut : Equiv (add a half) one.
+    let g_taut = {
+        let assoc = d.lemma(p.add_assoc, &[one_c, neg_h, h]);
+        // Equiv (add (add one neg_h) h) (add one (add neg_h h))
+        let nh_h_zero = neg_half_add_half_equiv_zero(d, p);
+        let refl_one = d.lemma(p.equiv_refl, &[one_c]);
+        let congr1 = d.lemma(
+            p.add_congr,
+            &[one_c, one_c, nh_h, zero, refl_one, nh_h_zero],
+        );
+        // Equiv (add one (add neg_h h)) (add one zero)
+        let az = d.lemma(p.add_zero, &[one_c]); // Equiv (add one zero) one
+        let mid1 = cadd(d, p, one_c, nh_h);
+        let mid2 = cadd(d, p, one_c, zero);
+        echain(d, p, a_h, &[(mid1, assoc), (mid2, congr1), (one_c, az)])
+    };
+
+    // g_new : Equiv (add half half) one.
+    let g_new = {
+        let (half_r, rat_eq) = rat_half_add_half_eq_one(d, p);
+        let add_proof = d.lemma(p.of_rat_add, &[half_r, half_r]);
+        let add_hh_r = radd(d, half_r, half_r);
+        let one_r = rone(d, p.rat);
+        let ofrat_eq = ofrat_congr(d, p, add_hh_r, one_r, rat_eq);
+        let mid = embed(d, p, add_hh_r);
+        echain(d, p, hh, &[(mid, add_proof), (one_c, ofrat_eq)])
+    };
+
+    // Equiv (add a half) (add half half), then cancel `half` on the right.
+    let g_new_rev = d.lemma(p.equiv_symm, &[hh, one_c, g_new]);
+    let m = echain(d, p, a_h, &[(one_c, g_taut), (hh, g_new_rev)]);
+    // m : Equiv (add a half) (add half half)
+
+    let refl_neg_h = d.lemma(p.equiv_refl, &[neg_h]);
+    let a_h_nh = cadd(d, p, a_h, neg_h);
+    let hh_nh = cadd(d, p, hh, neg_h);
+    let m2 = d.lemma(p.add_congr, &[a_h, hh, neg_h, neg_h, m, refl_neg_h]);
+    // m2 : Equiv (add (add a half) neg_h) (add (add half half) neg_h)
+
+    let h_nh = cadd(d, p, h, neg_h);
+    let lhs_to_a = {
+        let assoc = d.lemma(p.add_assoc, &[a, h, neg_h]);
+        // Equiv (add (add a h) neg_h) (add a (add h neg_h))
+        let hn_zero = d.lemma(p.add_neg, &[h]); // Equiv (add h neg_h) zero
+        let refl_a = d.lemma(p.equiv_refl, &[a]);
+        let congr = d.lemma(p.add_congr, &[a, a, h_nh, zero, refl_a, hn_zero]);
+        let az = d.lemma(p.add_zero, &[a]);
+        let mid1 = cadd(d, p, a, h_nh);
+        let mid2 = cadd(d, p, a, zero);
+        echain(d, p, a_h_nh, &[(mid1, assoc), (mid2, congr), (a, az)])
+    };
+    let rhs_to_half = {
+        let assoc = d.lemma(p.add_assoc, &[h, h, neg_h]);
+        let hn_zero = d.lemma(p.add_neg, &[h]);
+        let refl_h = d.lemma(p.equiv_refl, &[h]);
+        let congr = d.lemma(p.add_congr, &[h, h, h_nh, zero, refl_h, hn_zero]);
+        let az = d.lemma(p.add_zero, &[h]);
+        let mid1 = cadd(d, p, h, h_nh);
+        let mid2 = cadd(d, p, h, zero);
+        echain(d, p, hh_nh, &[(mid1, assoc), (mid2, congr), (h, az)])
+    };
+
+    let lhs_to_a_rev = d.lemma(p.equiv_symm, &[a, a_h_nh, lhs_to_a]);
+    echain(
+        d,
+        p,
+        a,
+        &[(a_h_nh, lhs_to_a_rev), (hh_nh, m2), (h, rhs_to_half)],
+    )
+}
+
+/// `Equiv (mul two (add one (neg half))) one`, i.e. `2 · (1 − 1/2) = 1` — the
+/// cancellation [`declare_exp_term_le_geom`]'s module documentation named as
+/// missing to extract `sumRange (pow half)` from
+/// [`CRealPrelude::mul_sub_one_geom`]'s multiplied-through form, closed
+/// **without ever touching `CReal.inv`/`CRealPrelude::pos_bound`**: via
+/// [`one_sub_half_equiv_half`] (`1 − half ≈ half`) and
+/// [`rat_two_mul_half_eq_one`] (`2 · half = 1`, lifted through
+/// `CReal.ofRat_mul`).
+#[allow(dead_code)]
+fn two_mul_one_sub_half_equiv_one(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let t = two(d, p);
+    let h = half(d, p);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let neg_h = cneg(d, p, h);
+    let a = cadd(d, p, one_c, neg_h);
+
+    let a_equiv_half = one_sub_half_equiv_half(d, p);
+    let refl_two = d.lemma(p.equiv_refl, &[t]);
+    let step1 = d.lemma(p.mul_congr, &[t, t, a, h, refl_two, a_equiv_half]);
+    // step1 : Equiv (mul two a) (mul two half)
+
+    let (two_r, half_r, rat_eq) = rat_two_mul_half_eq_one(d, p);
+    let mul_proof = d.lemma(p.of_rat_mul, &[two_r, half_r]);
+    let mul_r = rmul(d, two_r, half_r);
+    let one_r = rone(d, p.rat);
+    let ofrat_eq = ofrat_congr(d, p, mul_r, one_r, rat_eq);
+    let mul_two_half = cmul(d, p, t, h);
+    let embed_mul_r = embed(d, p, mul_r);
+    let step2 = echain(
+        d,
+        p,
+        mul_two_half,
+        &[(embed_mul_r, mul_proof), (one_c, ofrat_eq)],
+    );
+    // step2 : Equiv (mul two half) one
+
+    let mul_two_a = cmul(d, p, t, a);
+    echain(d, p, mul_two_a, &[(mul_two_half, step1), (one_c, step2)])
+}
+
+/// `λ i, CReal.pow half i` — verbatim in shape to `geometric.rs::pow_fn`.
+#[allow(dead_code)]
+fn pow_half_fn(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let h = half(d, p);
+    let body = cpow(d, p, h, i);
+    let nat = d.nat_ty();
+    d.lam_fv(i_fv, nat, body)
+}
+
+/// `CReal.sumRange_pow_half_closed_form : ∀ n, Equiv (sumRange (fun i => pow
+/// half i) n) (mul two (add one (neg (pow half n))))` — the closed form of
+/// the base-`1/2` geometric partial sum, `Σ_{k<n} (1/2)ᵏ = 2·(1 − (1/2)ⁿ)`,
+/// derived **without** `CReal.inv`/`CRealPrelude::pos_bound`/
+/// `geometric.rs::geom_pair_within`: multiply
+/// [`CRealPrelude::mul_sub_one_geom`]'s conclusion through by `two` and
+/// cancel `mul two (add one (neg half))` down to `one` via
+/// [`two_mul_one_sub_half_equiv_one`].
+#[allow(dead_code)]
+fn declare_sum_pow_half_closed_form(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let f = pow_half_fn(d, p);
+    let sum_n = d.const_app(p.sum_range, &[f, n]);
+    let h = half(d, p);
+    let pow_h_n = cpow(d, p, h, n);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let neg_pow = cneg(d, p, pow_h_n);
+    let y_n = cadd(d, p, one_c, neg_pow);
+    let t = two(d, p);
+
+    // Step g1 : Equiv (mul a sum_n) y_n, a := add one (neg half).
+    let g1 = d.lemma(p.mul_sub_one_geom, &[h, n]);
+    let neg_h = cneg(d, p, h);
+    let a = cadd(d, p, one_c, neg_h);
+
+    // Step 2/3/4: Equiv (mul (mul two a) sum_n) (mul two y_n).
+    let refl_two = d.lemma(p.equiv_refl, &[t]);
+    let mul_a_sum = cmul(d, p, a, sum_n);
+    let mul_two_y = cmul(d, p, t, y_n);
+    let step2 = d.lemma(p.mul_congr, &[t, t, mul_a_sum, y_n, refl_two, g1]);
+    // step2 : Equiv (mul two (mul a sum_n)) (mul two y_n)
+    let assoc = d.lemma(p.mul_assoc, &[t, a, sum_n]);
+    // assoc : Equiv (mul (mul two a) sum_n) (mul two (mul a sum_n))
+    let mul_two_a = cmul(d, p, t, a);
+    let mul_two_mul_a_sum = cmul(d, p, t, mul_a_sum);
+    let mul_two_a_sum = cmul(d, p, mul_two_a, sum_n);
+    let step4 = echain(
+        d,
+        p,
+        mul_two_a_sum,
+        &[(mul_two_mul_a_sum, assoc), (mul_two_y, step2)],
+    );
+    // step4 : Equiv (mul (mul two a) sum_n) (mul two y_n)
+
+    // Step 5/6: Equiv (mul (mul two a) sum_n) (mul one sum_n).
+    let two_a_one = two_mul_one_sub_half_equiv_one(d, p);
+    let refl_sum = d.lemma(p.equiv_refl, &[sum_n]);
+    let mul_one_sum = cmul(d, p, one_c, sum_n);
+    let step6 = d.lemma(
+        p.mul_congr,
+        &[mul_two_a, one_c, sum_n, sum_n, two_a_one, refl_sum],
+    );
+    // step6 : Equiv (mul (mul two a) sum_n) (mul one sum_n)
+
+    // Step 7: Equiv (mul one sum_n) sum_n.
+    let comm = d.lemma(p.mul_comm, &[one_c, sum_n]);
+    let mul_sum_one = cmul(d, p, sum_n, one_c);
+    let mo = d.lemma(p.mul_one, &[sum_n]);
+    let step7 = echain(d, p, mul_one_sum, &[(mul_sum_one, comm), (sum_n, mo)]);
+
+    // Combine: sum_n ~ (mul (mul two a) sum_n) ~ (mul two y_n).
+    let step6_7 = echain(d, p, mul_two_a_sum, &[(mul_one_sum, step6), (sum_n, step7)]);
+    // step6_7 : Equiv (mul (mul two a) sum_n) sum_n
+    let step6_7_rev = d.lemma(p.equiv_symm, &[mul_two_a_sum, sum_n, step6_7]);
+    let step4_rev = d.lemma(p.equiv_symm, &[mul_two_a_sum, mul_two_y, step4]);
+    // sum_n ~ mul_two_a_sum ~ mul_two_y
+    let concl = echain(
+        d,
+        p,
+        sum_n,
+        &[(mul_two_a_sum, step6_7_rev), (mul_two_y, step4_rev)],
+    );
+
+    let value = d.lam_fv(n_fv, nat, concl);
+    let ty = {
+        let stmt = equiv(d, p, sum_n, mul_two_y);
+        d.pi_fv(n_fv, nat, stmt)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sum_pow_half_closed_form,
         uparams: vec![],
         ty,
         value,

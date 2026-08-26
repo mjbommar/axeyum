@@ -72,7 +72,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 293] = [
+    let expected: [(&str, crate::NameId, &str); 306] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -878,7 +878,79 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             p.reblock_block_eq_fine_block_sum,
             "theorem",
         ),
+        // Roadmap step 4 toward `riemannSum_cauchy` (`creal/integral.rs`):
+        // the outer fold over all `Nat.succ m` coarse blocks, gluing the
+        // REFINED `riemannSum F a b m_prime` to the coarse `riemannSum F a b
+        // m` via `sumRange_reblock` (transported along `succ_mul_succ`),
+        // `reblockBlock_eq_fineBlockSum` folded with `sum_range_congr_lt_proof`,
+        // and `fineBlockSum_close`'s own `±eps` sandwich folded with
+        // `sum_range_le`/`sum_range_add`/`sum_range_const`.
+        (
+            "CReal.riemannSum_reblock_close",
+            p.riemann_sum_reblock_close,
+            "theorem",
+        ),
+        // Chapter 18/22: the geometric domination of `expTerm`, ending at the
+        // `abs`-shaped form `sumRange_cauchy_of_dominated` consumes.
+        ("CReal.expDominant", p.exp_dominant, "def"),
+        (
+            "CReal.exp_term_le_dominant",
+            p.exp_term_le_dominant,
+            "theorem",
+        ),
+        ("CReal.exp_term_nonneg", p.exp_term_nonneg, "theorem"),
+        (
+            "CReal.exp_dominant_nonneg",
+            p.exp_dominant_nonneg,
+            "theorem",
+        ),
+        (
+            "CReal.exp_term_abs_le_dominant",
+            p.exp_term_abs_le_dominant,
+            "theorem",
+        ),
+        // Found by the coverage assertion above, not by anyone noticing: these
+        // seven were live in the prelude and unlisted here, so this test had
+        // never checked them. `lt_cotrans`/`apart_cotrans` are Ch 12's
+        // cotransitivity (`creal/cotransitivity.rs`); the `limit*` family is
+        // Bishop completeness (`creal/completeness.rs`), Ch 8's constructive
+        // substitute for the least-upper-bound property.
+        ("CReal.lt_cotrans", p.lt_cotrans, "theorem"),
+        ("CReal.apart_cotrans", p.apart_cotrans, "theorem"),
+        ("CReal.RegularSeq", p.regular_seq, "def"),
+        ("CReal.limitSeq", p.limit_seq, "def"),
+        ("CReal.limitSeq_regular", p.limit_seq_regular, "theorem"),
+        ("CReal.limit", p.limit, "def"),
+        ("CReal.limit_dist", p.limit_dist, "theorem"),
     ];
+    // COVERAGE, checked against the ENVIRONMENT rather than against this list.
+    //
+    // Without this, the loop below only ever inspects declarations someone
+    // remembered to add here, while the test's name promises *every* `CReal`
+    // declaration. Measured 2026-08-26: five declarations (`CReal.expDominant`
+    // and its four domination lemmas) were live in the prelude and absent from
+    // `expected`, so they received no `Theorem`-kind check and no
+    // axiom-footprint check at all -- and every run was green, because a list
+    // cannot notice what is missing from it.
+    //
+    // The pinned length alone does not catch this either: it constrains the
+    // list against itself, not against what was declared.
+    let listed: std::collections::BTreeSet<crate::NameId> =
+        expected.iter().map(|(_, name, _)| *name).collect();
+    let declared: Vec<crate::NameId> = kernel.environment().iter().map(|(name, _)| *name).collect();
+    let unlisted: Vec<String> = declared
+        .into_iter()
+        .map(|name| (name, kernel.display_name(name).to_string()))
+        .filter(|(name, shown)| shown.starts_with("CReal") && !listed.contains(name))
+        .map(|(_, shown)| shown)
+        .collect();
+    assert!(
+        unlisted.is_empty(),
+        "these `CReal` declarations are live in the prelude but absent from \
+         `expected`, so nothing checks that they are derived and axiom-free: \
+         {unlisted:?}. Add them here -- do not delete this assertion."
+    );
+
     for (label, name, kind) in expected {
         let declaration = kernel
             .environment()
