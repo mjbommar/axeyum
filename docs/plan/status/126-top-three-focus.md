@@ -18,6 +18,10 @@ without treating retrieval as applicability or proof authority. Product
 stability follow-through: Python CI now installs the `[agent]` extra its suite
 imports, and the pinned-nightly MIR contract fixture was regenerated as one
 authenticated unit after its lockfile drift made `--locked` fail in CI.
+The next CI run exposed and the lane repaired a separate dependency gate: move
+`anyhow` to the published 1.0.103 soundness fix, allow the OSI-approved
+Unicode-DFS-2016 data license, and narrowly document six unmaintained
+build-time-only rust-unic advisories inherited from the current stub generator.
 
 <!-- plan-section: landed-changes -->
 
