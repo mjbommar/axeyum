@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-statement-adapter",
+  "state": "independent-kernel-goal-admitted-proof-free",
+  "source_fact_id": "F:ml430-nat-modeq-comm-24b71e7a",
+  "source_statement_sha256": "dc2839b0a5fb08366172b72d77517bce107da7d433e7758c43f7e7689d636267",
+  "adapter_source": {
+    "path": "scripts/lean/autogenesis_statement_adapter_modeq_family_development_v1.lean",
+    "sha256": "779e3bd4761c21505472edb32ea21770e85abdb3ed1b335b2d29be08ba077d43",
+    "target_definition": "Axeyum.Autogenesis.Statement.NatModEqFamily.natModEqComm",
+    "encoding": "transparent-definition-of-prop",
+    "proof_declarations_allowed": false
+  },
+  "toolchain": {
+    "lean_version": "4.30.0",
+    "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean4export_version": "3.1.0",
+    "lean4export_commit": "a3e35a584f59b390667db7269cd37fca8575e4bf"
+  },
+  "external_artifact": {
+    "path": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-modeq-family-v1/nat-modeq-comm.ndjson",
+    "sha256": "9ed43e533ed850970cdf1a373cb90c33c65c3cc1f805ecd3a47f56aac047e1fc",
+    "bytes": 315460,
+    "records": 5846,
+    "mode": "0777"
+  },
+  "independent_import": {
+    "goal_sha256": "6984bdb728178fff2e42bbf66c1227c65097c9cc4bde2829d569b628c68e2ab0",
+    "target_content_sha256": "3516f9fb4798ac87c568e21ba2af04ce297c0963840c50f261f4431adf0e078b",
+    "direct_dependencies": 3,
+    "admitted_declarations": 196,
+    "axioms": 0
+  },
+  "reproduction": {
+    "host_profile": "s5 pinned Mathlib v4.30.0 checkout",
+    "export": "copy the tracked adapter source to the pinned Mathlib root as AxeyumAutogenesisNatModEqFamilyV1.lean; lake env lean -o .lake/build/lib/lean/AxeyumAutogenesisNatModEqFamilyV1.olean -i .lake/build/lib/lean/AxeyumAutogenesisNatModEqFamilyV1.ilean AxeyumAutogenesisNatModEqFamilyV1.lean; lake env /home/mjbommar/lean-import-scale/lean4export/.lake/build/bin/lean4export AxeyumAutogenesisNatModEqFamilyV1 -- Axeyum.Autogenesis.Statement.NatModEqFamily.natModEqComm",
+    "check": "python3 scripts/check-autogenesis-nat-modeq-family.py"
+  },
+  "limitations": "This adapts the development proposition F:ml430-nat-modeq-comm-24b71e7a into a checked goal after its ledger dependency became established. It exposes no Mathlib proof and grants no proof credit before authoritative execution."
+}

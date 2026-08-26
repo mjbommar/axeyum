@@ -18,6 +18,17 @@
     "required_dependency": "F:ml430-nat-modeq-symm-0a3d4d18",
     "reason": "It is not dependency-ready until the selected symmetry fact is settled."
   },
+  "follow_through": {
+    "measured_on": "2026-08-25",
+    "selected_facts_settled": [
+      "F:ml430-nat-modeq-refl-d870c8f5",
+      "F:ml430-nat-modeq-symm-0a3d4d18",
+      "F:ml430-nat-modeq-trans-ef9d1c46"
+    ],
+    "newly_dependency_ready_fact": "F:ml430-nat-modeq-comm-24b71e7a",
+    "extended_operation": "authoritative-mathlib-modeq-family-v1",
+    "meaning": "The deferred target entered the same operation only after the authoritative symmetry admission made a recomputed frontier report it dependency-ready."
+  },
   "selection_evidence": {
     "capability_gap_projection": "artifacts/autogenesis/capability-gap-projection-v1.json",
     "cluster": {
@@ -34,6 +45,6 @@
     "Do not broaden the existing Int operation's applicability by assertion alone.",
     "Use new source-bound statement adapters and independently checked receipts for every selected fact.",
     "Require a fixed producer implementation with no selected fact ID or target theorem name in executable proof logic.",
-    "Keep the deferred commutativity fact out of any initial operation until its ledger dependency is settled and a new frontier measurement is recorded."
+    "Keep the deferred commutativity fact out of any initial operation until its ledger dependency is settled and a new frontier measurement is recorded; the follow_through block records that this condition has now been met."
   ]
 }

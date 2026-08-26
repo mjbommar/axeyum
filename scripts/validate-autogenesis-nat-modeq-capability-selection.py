@@ -13,16 +13,20 @@ def validate(d):
  if 'cannot dispatch' not in d.get('trust_boundary',''):errors.append('selection lacks authority boundary')
  for fid in SELECTED:
   f=fact(fid)
-  if f.get('epistemic_status')!='open' or f.get('depends_on')!=[] or f.get('formal',{}).get('fragment')!='Nat':errors.append(f'{fid}: no longer an open dependency-ready Nat target')
+  if f.get('epistemic_status')!='proved' or f.get('depends_on')!=[] or f.get('formal',{}).get('fragment')!='Nat':errors.append(f'{fid}: not a proved dependency-free Nat target after follow-through')
  deferred=fact(DEFERRED)
  if deferred.get('depends_on')!=[SELECTED[1]]:errors.append('deferred commutativity dependency changed')
  ops=json.loads(OPS.read_text())['operations']
- if any(fid in o.get('applicability',{}).get('fact_ids',[]) for o in ops for fid in SELECTED):errors.append('a selected fact is already operation-covered; selection is stale')
+ operation=next((o for o in ops if o.get('id')=='authoritative-mathlib-modeq-family-v1'),None)
+ covered=set((operation or {}).get('applicability',{}).get('fact_ids',[]))
+ if not set(SELECTED+[DEFERRED])<=covered:errors.append('follow-through facts are not all covered by the reusable operation')
+ follow=d.get('follow_through',{})
+ if follow.get('selected_facts_settled')!=SELECTED or follow.get('newly_dependency_ready_fact')!=DEFERRED or follow.get('extended_operation')!='authoritative-mathlib-modeq-family-v1':errors.append('follow-through identity disagrees')
  return errors
 def main():
  try:d=json.loads(P.read_text());errors=validate(d)
  except (OSError,json.JSONDecodeError,KeyError) as e:errors=[str(e)]
  for e in errors:print('AUTOGENESIS_NAT_MODEQ_SELECTION_ERROR|'+e,file=sys.stderr)
  if errors:return 1
- print('AUTOGENESIS_NAT_MODEQ_SELECTION_OK|selected=3|deferred=1|registered_operations=0');return 0
+ print('AUTOGENESIS_NAT_MODEQ_SELECTION_OK|selected=3|settled=3|promoted_after_unlock=1|registered_operations=1');return 0
 if __name__=='__main__':raise SystemExit(main())

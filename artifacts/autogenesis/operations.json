@@ -1357,7 +1357,8 @@
           "F:ml430-int-modeq-comm-1e4bcc07",
           "F:ml430-nat-modeq-refl-d870c8f5",
           "F:ml430-nat-modeq-symm-0a3d4d18",
-          "F:ml430-nat-modeq-trans-ef9d1c46"
+          "F:ml430-nat-modeq-trans-ef9d1c46",
+          "F:ml430-nat-modeq-comm-24b71e7a"
         ],
         "formal_languages": [
           "lean4-surface"
@@ -1389,7 +1390,8 @@
           "F:ml430-int-modeq-comm-1e4bcc07",
           "F:ml430-nat-modeq-refl-d870c8f5",
           "F:ml430-nat-modeq-symm-0a3d4d18",
-          "F:ml430-nat-modeq-trans-ef9d1c46"
+          "F:ml430-nat-modeq-trans-ef9d1c46",
+          "F:ml430-nat-modeq-comm-24b71e7a"
         ],
         "targets": [
           {
@@ -1433,6 +1435,12 @@
             "statement_adapter_manifest": "artifacts/autogenesis/mathlib-nat-modeq-family-trans-statement-adapter-v1.json",
             "modeq_manifest": "artifacts/autogenesis/mathlib-nat-modeq-family-trans-v1.json",
             "target_definition": "Axeyum.Autogenesis.Statement.NatModEqFamily.natModEqTrans"
+          },
+          {
+            "fact_id": "F:ml430-nat-modeq-comm-24b71e7a",
+            "statement_adapter_manifest": "artifacts/autogenesis/mathlib-nat-modeq-family-comm-statement-adapter-v1.json",
+            "modeq_manifest": "artifacts/autogenesis/mathlib-nat-modeq-family-comm-v1.json",
+            "target_definition": "Axeyum.Autogenesis.Statement.NatModEqFamily.natModEqComm"
           }
         ],
         "max_binders": 8,
