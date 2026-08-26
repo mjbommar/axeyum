@@ -55,7 +55,7 @@ axiom-freedom:
 # not hide any of them — the chain still fails — it stops them hiding everything
 # else. Note the earlier claim that `adr-remote-collisions` was already last was
 # wrong: it was #40 of 41, so `local-ci-freshness` sat behind it.
-check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls
+check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls
 
 fmt:
     cargo fmt --all --check
@@ -218,6 +218,11 @@ autogenesis-mathlib-facts:
 # from a clean checkout and retain its independently checkable receipts.
 autogenesis-authoritative-chain output:
     python3 scripts/run-autogenesis-authoritative-chain.py "{{ output }}"
+
+# Run exactly the fact selected by the current authoritative frontier. The
+# caller supplies no fact, operation, producer, checker, or admission metadata.
+autogenesis-authoritative-fact output:
+    python3 scripts/run-autogenesis-authoritative-fact.py "{{ output }}"
 
 # Credit requires two independently retained runs from the same exact source.
 autogenesis-authoritative-compare first second output:
@@ -696,6 +701,10 @@ autogenesis-producer-evaluation-frontier:
     python3 scripts/validate-autogenesis-producer-evaluation-frontier.py
     python3 scripts/gen-autogenesis-producer-evaluation-frontier.py --check
 
+autogenesis-next-reusable-family:
+    python3 -m unittest scripts.tests.test_gen_autogenesis_next_reusable_family_queue
+    python3 scripts/gen-autogenesis-next-reusable-family-queue.py --check
+
 autogenesis-producer-evaluation-protocol:
     python3 -m unittest scripts.tests.test_validate_autogenesis_producer_evaluation_protocol
     python3 scripts/validate-autogenesis-producer-evaluation-protocol.py
@@ -715,6 +724,7 @@ autogenesis-apply-search:
 
 autogenesis-result:
     python3 -m unittest scripts.tests.test_compare_autogenesis_authoritative_chains
+    python3 -m unittest scripts.tests.test_run_autogenesis_authoritative_fact
     python3 -m unittest scripts.tests.test_check_autogenesis_1_result
     python3 scripts/check-autogenesis-1-result.py
 

@@ -1,0 +1,434 @@
+{
+  "authority": "planning projection only; no proof, operation applicability, dispatch, or admission authority",
+  "census": {
+    "accepted_ready_facts": 1,
+    "families": 10,
+    "measured_facts": 29,
+    "operation_integration_ready_families": 0,
+    "ready_non_control_facts": 91,
+    "unmeasured_facts": 62
+  },
+  "derivation": {
+    "bitwise_clean_family": {
+      "path": "artifacts/autogenesis/bitwise-clean-family-projection-v1.json",
+      "sha256": "8dd59dc40e68f23d79070f6dff3482811271f475f42f81b101657c0dfafa6e50"
+    },
+    "operations": {
+      "path": "artifacts/autogenesis/operations.json",
+      "sha256": "7886695d03a39974f24554cd1e9e8a600638a565d29bb864d4278b1e24461a46"
+    },
+    "ordering": "priority class, accepted count descending, measured count descending, ready count descending, family",
+    "producer_evaluation_frontier": {
+      "path": "artifacts/autogenesis/producer-evaluation-frontier-v1.json",
+      "sha256": "6e4130832747160de5499667a5ce1d6b65b1c9a31fdd4d4027f82d5b5083e583"
+    },
+    "retrieved_induction_obstructions": {
+      "path": "artifacts/autogenesis/retrieved-induction-obstruction-projection-v1.json",
+      "sha256": "e400b11171000f32249f8e4bab9507af2e45507de75f59edb828ce0efadef641"
+    },
+    "reusable_operation_bar": 3
+  },
+  "kind": "axeyum-autogenesis-next-reusable-family-queue",
+  "rows": [
+    {
+      "accepted_fact_ids": [
+        "F:ml430-nat-choose-one-right-7eda8e39"
+      ],
+      "already_registered_fact_ids": [],
+      "capability_demands": {
+        "authoritative-operation-integration": 1,
+        "missing-rewrite-or-induction-plan": 1,
+        "non-equality-terminal-family": 2,
+        "type-slice-generalization": 1
+      },
+      "dependency_components": 8,
+      "family": "natural-binomial",
+      "measured_fact_count": 5,
+      "next_action": "convert two more siblings with the already accepted producer contract",
+      "partitions": [
+        "development"
+      ],
+      "priority_class": 1,
+      "producer_results": {
+        "accepted": 1,
+        "declined": 3,
+        "import_rejected": 1
+      },
+      "rank": 1,
+      "ready_fact_count": 8,
+      "ready_fact_ids": [
+        "F:ml430-nat-choose-eq-zero-of-lt-92ebab29",
+        "F:ml430-nat-choose-le-succ-62ae968b",
+        "F:ml430-nat-choose-ne-zero-49c3d3cb",
+        "F:ml430-nat-choose-one-right-7eda8e39",
+        "F:ml430-nat-choose-symm-of-eq-add-9b5f9a20",
+        "F:ml430-nat-factorial-dvd-ascfactorial-44a4e641",
+        "F:ml430-nat-factorial-dvd-descfactorial-bbf6124f",
+        "F:ml430-nat-multichoose-zero-right-6ef827c8"
+      ],
+      "state": "expand-unchanged-producer",
+      "statement_shapes": [
+        "conditional-proposition",
+        "unconditional-equality",
+        "unconditional-relation"
+      ],
+      "target_owned_semantic_analogue_fact_ids": [],
+      "unmeasured_fact_count": 3
+    },
+    {
+      "accepted_fact_ids": [],
+      "already_registered_fact_ids": [],
+      "capability_demands": {
+        "non-equality-terminal-family": 5
+      },
+      "dependency_components": 10,
+      "family": "integer-modular-equivalence",
+      "measured_fact_count": 5,
+      "next_action": "add one reusable terminal relation family and rerun unchanged retrieval",
+      "partitions": [
+        "train"
+      ],
+      "priority_class": 3,
+      "producer_results": {
+        "declined": 5
+      },
+      "rank": 2,
+      "ready_fact_count": 12,
+      "ready_fact_ids": [
+        "F:ml430-int-add-modeq-left-ee732b5b",
+        "F:ml430-int-add-modeq-right-e58108ee",
+        "F:ml430-int-mod-modeq-6bec7847",
+        "F:ml430-int-modeq-add-left-6e17c69a",
+        "F:ml430-int-modeq-add-left-cancel-062ad5fe",
+        "F:ml430-int-modeq-dvd-iff-b7ffeff8",
+        "F:ml430-int-modeq-neg-f649f6c5",
+        "F:ml430-int-modeq-of-dvd-b9c41fce",
+        "F:ml430-int-modeq-of-mul-left-c4ccd51e",
+        "F:ml430-int-modeq-sub-3148f130",
+        "F:ml430-int-modulus-modeq-zero-5b57a898",
+        "F:ml430-int-neg-modeq-neg-30d98479"
+      ],
+      "state": "shared-producer-grammar",
+      "statement_shapes": [
+        "biconditional",
+        "conditional-proposition",
+        "unconditional-relation"
+      ],
+      "target_owned_semantic_analogue_fact_ids": [],
+      "unmeasured_fact_count": 7
+    },
+    {
+      "accepted_fact_ids": [],
+      "already_registered_fact_ids": [],
+      "capability_demands": {
+        "type-slice-generalization": 7
+      },
+      "dependency_components": 10,
+      "family": "natural-bitwise",
+      "measured_fact_count": 7,
+      "next_action": "complete one shared semantic contract and rerun the family",
+      "partitions": [
+        "development"
+      ],
+      "priority_class": 4,
+      "producer_results": {
+        "import_rejected": 7
+      },
+      "rank": 3,
+      "ready_fact_count": 12,
+      "ready_fact_ids": [
+        "F:ml430-nat-bitwise-bit-4c4b28a8",
+        "F:ml430-nat-even-xor-78a39432",
+        "F:ml430-nat-land-bit-b9ab7475",
+        "F:ml430-nat-ldiff-bit-6be49bb8",
+        "F:ml430-nat-lor-bit-a2f98c7c",
+        "F:ml430-nat-lt-of-testbit-72f64ab8",
+        "F:ml430-nat-lt-xor-cases-c43a1e85",
+        "F:ml430-nat-testbit-eq-inth-ffa07392",
+        "F:ml430-nat-testbit-land-dfef7ca4",
+        "F:ml430-nat-testbit-ldiff-16f94162",
+        "F:ml430-nat-testbit-lor-7644e067",
+        "F:ml430-nat-zero-of-testbit-eq-false-e244c9a1"
+      ],
+      "state": "shared-statement-contract",
+      "statement_shapes": [
+        "biconditional",
+        "conditional-proposition",
+        "higher-order-property",
+        "unconditional-equality"
+      ],
+      "target_owned_semantic_analogue_fact_ids": [
+        "F:ml430-nat-testbit-land-dfef7ca4",
+        "F:ml430-nat-testbit-ldiff-16f94162",
+        "F:ml430-nat-testbit-lor-7644e067"
+      ],
+      "unmeasured_fact_count": 5
+    },
+    {
+      "accepted_fact_ids": [],
+      "already_registered_fact_ids": [],
+      "capability_demands": {},
+      "dependency_components": 14,
+      "family": "natural-primes",
+      "measured_fact_count": 0,
+      "next_action": "run the current producer protocol over every ready sibling before implementation",
+      "partitions": [
+        "development"
+      ],
+      "priority_class": 5,
+      "producer_results": {},
+      "rank": 4,
+      "ready_fact_count": 14,
+      "ready_fact_ids": [
+        "F:ml430-nat-coprime-of-dvd-6f652673",
+        "F:ml430-nat-coprime-of-lt-minfac-0f79bdba",
+        "F:ml430-nat-coprime-primes-5769049f",
+        "F:ml430-nat-coprime-two-left-1b47e7c4",
+        "F:ml430-nat-dvd-of-forall-prime-mul-dvd-5898723b",
+        "F:ml430-nat-not-prime-of-dvd-of-ne-4ff592c0",
+        "F:ml430-nat-prime-dvd-iff-not-coprime-77854741",
+        "F:ml430-nat-prime-dvd-of-dvd-pow-e76f834a",
+        "F:ml430-nat-prime-even-iff-d068ec82",
+        "F:ml430-nat-prime-five-le-of-ne-two-of-ne-three-c069e786",
+        "F:ml430-nat-prime-not-dvd-mul-cb3a915e",
+        "F:ml430-nat-prime-odd-of-ne-two-91e1195f",
+        "F:ml430-nat-prime-pred-pos-4e67ac4c",
+        "F:ml430-nat-succ-pred-prime-4feb123f"
+      ],
+      "state": "measurement-missing",
+      "statement_shapes": [
+        "biconditional",
+        "conditional-proposition"
+      ],
+      "target_owned_semantic_analogue_fact_ids": [],
+      "unmeasured_fact_count": 14
+    },
+    {
+      "accepted_fact_ids": [],
+      "already_registered_fact_ids": [],
+      "capability_demands": {
+        "missing-rewrite-or-induction-plan": 2,
+        "non-equality-terminal-family": 1
+      },
+      "dependency_components": 5,
+      "family": "natural-factorial",
+      "measured_fact_count": 3,
+      "next_action": "retain the measured declines until one obstruction reaches three siblings",
+      "partitions": [
+        "train"
+      ],
+      "priority_class": 6,
+      "producer_results": {
+        "declined": 3
+      },
+      "rank": 5,
+      "ready_fact_count": 7,
+      "ready_fact_ids": [
+        "F:ml430-nat-descfactorial-le-2b8cc09a",
+        "F:ml430-nat-descfactorial-of-lt-fbcf5d26",
+        "F:ml430-nat-descfactorial-self-899fc0e0",
+        "F:ml430-nat-factorial-dvd-factorial-e9d14845",
+        "F:ml430-nat-factorial-lt-of-lt-d6c2125d",
+        "F:ml430-nat-factorial-ne-zero-5fc0b0a1",
+        "F:ml430-nat-self-le-factorial-cfdffc69"
+      ],
+      "state": "fragmented-obstructions",
+      "statement_shapes": [
+        "conditional-proposition",
+        "unconditional-equality",
+        "unconditional-relation"
+      ],
+      "target_owned_semantic_analogue_fact_ids": [],
+      "unmeasured_fact_count": 4
+    },
+    {
+      "accepted_fact_ids": [],
+      "already_registered_fact_ids": [],
+      "capability_demands": {
+        "type-slice-generalization": 2
+      },
+      "dependency_components": 14,
+      "family": "natural-gcd",
+      "measured_fact_count": 2,
+      "next_action": "retain the measured declines until one obstruction reaches three siblings",
+      "partitions": [
+        "development"
+      ],
+      "priority_class": 6,
+      "producer_results": {
+        "import_rejected": 2
+      },
+      "rank": 6,
+      "ready_fact_count": 15,
+      "ready_fact_ids": [
+        "F:ml430-nat-coprime-add-self-left-5e93448c",
+        "F:ml430-nat-coprime-add-self-right-c3ed0f45",
+        "F:ml430-nat-coprime-iff-isrelprime-0c08eb25",
+        "F:ml430-nat-coprime-of-dvd-left-b0e2aa94",
+        "F:ml430-nat-coprime-of-dvd-right-a640bd56",
+        "F:ml430-nat-coprime-one-left-iff-45945e80",
+        "F:ml430-nat-coprime-one-right-iff-42fed4ce",
+        "F:ml430-nat-coprime-self-add-left-51351fa1",
+        "F:ml430-nat-coprime-symmetric-9b5cfa12",
+        "F:ml430-nat-div-dvd-div-left-b56f6f7c",
+        "F:ml430-nat-dvd-lcm-of-dvd-left-141a64bb",
+        "F:ml430-nat-dvd-lcm-of-dvd-right-61a50fc3",
+        "F:ml430-nat-dvd-of-lcm-left-dvd-d6b2407c",
+        "F:ml430-nat-dvd-of-lcm-right-dvd-61bd1a60",
+        "F:ml430-nat-not-coprime-zero-zero-6c4e8dd8"
+      ],
+      "state": "fragmented-obstructions",
+      "statement_shapes": [
+        "biconditional",
+        "conditional-proposition",
+        "higher-order-property",
+        "negated-proposition"
+      ],
+      "target_owned_semantic_analogue_fact_ids": [],
+      "unmeasured_fact_count": 13
+    },
+    {
+      "accepted_fact_ids": [],
+      "already_registered_fact_ids": [],
+      "capability_demands": {
+        "non-equality-terminal-family": 2
+      },
+      "dependency_components": 6,
+      "family": "natural-modular-equivalence",
+      "measured_fact_count": 2,
+      "next_action": "retain the measured declines until one obstruction reaches three siblings",
+      "partitions": [
+        "development"
+      ],
+      "priority_class": 6,
+      "producer_results": {
+        "declined": 2
+      },
+      "rank": 7,
+      "ready_fact_count": 9,
+      "ready_fact_ids": [
+        "F:ml430-nat-mod-lcm-ee6bdd41",
+        "F:ml430-nat-mod-modeq-436e4c10",
+        "F:ml430-nat-modeq-add-left-cancel-e5287cf6",
+        "F:ml430-nat-modeq-add-left-e83f0700",
+        "F:ml430-nat-modeq-add-right-8e2ca0cc",
+        "F:ml430-nat-modeq-add-right-cancel-e871facf",
+        "F:ml430-nat-modeq-of-dvd-d75cc374",
+        "F:ml430-nat-modeq-of-mul-left-88d20bca",
+        "F:ml430-nat-modeq-one-516d46e8"
+      ],
+      "state": "fragmented-obstructions",
+      "statement_shapes": [
+        "conditional-proposition",
+        "unconditional-relation"
+      ],
+      "target_owned_semantic_analogue_fact_ids": [],
+      "unmeasured_fact_count": 7
+    },
+    {
+      "accepted_fact_ids": [],
+      "already_registered_fact_ids": [],
+      "capability_demands": {
+        "type-slice-generalization": 2
+      },
+      "dependency_components": 3,
+      "family": "integer-fibonacci",
+      "measured_fact_count": 2,
+      "next_action": "retain the measured declines until one obstruction reaches three siblings",
+      "partitions": [
+        "train"
+      ],
+      "priority_class": 6,
+      "producer_results": {
+        "import_rejected": 2
+      },
+      "rank": 8,
+      "ready_fact_count": 3,
+      "ready_fact_ids": [
+        "F:ml430-int-fib-add-181b6a2c",
+        "F:ml430-int-fib-of-odd-66560495",
+        "F:ml430-int-fib-two-mul-add-one-pos-8977f65f"
+      ],
+      "state": "fragmented-obstructions",
+      "statement_shapes": [
+        "conditional-proposition",
+        "unconditional-equality",
+        "unconditional-relation"
+      ],
+      "target_owned_semantic_analogue_fact_ids": [],
+      "unmeasured_fact_count": 1
+    },
+    {
+      "accepted_fact_ids": [],
+      "already_registered_fact_ids": [],
+      "capability_demands": {
+        "type-slice-generalization": 2
+      },
+      "dependency_components": 3,
+      "family": "natural-fibonacci",
+      "measured_fact_count": 2,
+      "next_action": "retain the measured declines until one obstruction reaches three siblings",
+      "partitions": [
+        "train"
+      ],
+      "priority_class": 6,
+      "producer_results": {
+        "import_rejected": 2
+      },
+      "rank": 9,
+      "ready_fact_count": 3,
+      "ready_fact_ids": [
+        "F:ml430-nat-fastfib-eq-cde11774",
+        "F:ml430-nat-fib-add-two-strictmono-c1e86d4d",
+        "F:ml430-nat-le-fib-self-0cbccb4d"
+      ],
+      "state": "fragmented-obstructions",
+      "statement_shapes": [
+        "conditional-proposition",
+        "higher-order-property",
+        "unconditional-equality"
+      ],
+      "target_owned_semantic_analogue_fact_ids": [],
+      "unmeasured_fact_count": 1
+    },
+    {
+      "accepted_fact_ids": [],
+      "already_registered_fact_ids": [],
+      "capability_demands": {
+        "type-slice-generalization": 1
+      },
+      "dependency_components": 8,
+      "family": "integer-gcd",
+      "measured_fact_count": 1,
+      "next_action": "retain the measured declines until one obstruction reaches three siblings",
+      "partitions": [
+        "train"
+      ],
+      "priority_class": 6,
+      "producer_results": {
+        "import_rejected": 1
+      },
+      "rank": 10,
+      "ready_fact_count": 8,
+      "ready_fact_ids": [
+        "F:ml430-int-gcd-div-5e01872f",
+        "F:ml430-int-gcd-div-gcd-div-gcd-2db608dc",
+        "F:ml430-int-gcd-eq-gcd-ab-63005aef",
+        "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-left-8533eb82",
+        "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-right-a9b19222",
+        "F:ml430-int-gcd-greatest-5b31c5fe",
+        "F:ml430-int-ne-zero-of-gcd-f71f00df",
+        "F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e"
+      ],
+      "state": "fragmented-obstructions",
+      "statement_shapes": [
+        "conditional-proposition",
+        "existential-witness",
+        "unconditional-equality"
+      ],
+      "target_owned_semantic_analogue_fact_ids": [],
+      "unmeasured_fact_count": 7
+    }
+  ],
+  "schema_version": 1
+}
