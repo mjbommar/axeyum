@@ -58,8 +58,21 @@ def split_identifier(value: str) -> list[str]:
 
 
 def tokens(value: str) -> set[str]:
+    value = (
+        value.replace("ℕ", " Nat ")
+        .replace("ℤ", " Int ")
+        .replace("≡", " ModEq ")
+        .replace("%", " Mod ")
+        .replace("+", " Add ")
+        .replace("*", " Mul ")
+        .replace("∣", " Dvd ")
+        .replace("≤", " Le ")
+        .replace("≥", " Ge ")
+        .replace("<", " Lt ")
+        .replace(">", " Gt ")
+    )
     result = set()
-    for raw in split_identifier(value.replace("ℕ", " Nat ").replace("ℤ", " Int ")):
+    for raw in split_identifier(value):
         token = raw.lower()
         token = {"axnat": "nat", "axint": "int"}.get(token, token)
         if token not in STOP and len(token) > 1 and not re.fullmatch(r"x\d+", token):

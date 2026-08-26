@@ -48,6 +48,34 @@ must-decline controls; 25 import-rejected positive targets and two rejected
 controls. A producer must improve the first count while keeping acceptance of
 all six controls at zero.
 
+Operator-aware retrieval now ranks additive modular lemmas ahead of generic
+Nat/Int declarations, but a direct ranked-application census exposes the next
+boundary. All 51 rows fail before proof search: 48 because the selected native
+kernel declaration occurs zero times in the imported Mathlib goal capsule, and
+three because the attempted candidate closure reaches a trusted declaration.
+The result is
+[`open-ranked-application-census-v1.json`](../../artifacts/autogenesis/open-ranked-application-census-v1.json).
+This is not evidence that the ranked lemmas are mathematically irrelevant. It
+is evidence that graph retrieval currently returns names from an independently
+constructed kernel without a proof-isolated declaration transport into the
+goal kernel. Candidate materialization/composition must precede any claim that
+ranked bounded application was evaluated.
+
+That transport experiment is now complete. The typed Python boundary rebuilds
+the native `Nat`, `Int`, `Rat`, `CReal`, or `Complex` prelude selected by the
+exact candidate namespace, validates existing target reuse or composes a
+missing theorem closure, and preserves the imported goal's kernel epoch. The
+hash-bound result is
+[`open-ranked-transport-application-census-v1.json`](../../artifacts/autogenesis/open-ranked-transport-application-census-v1.json).
+Of 288 ranked candidates across the 24 importable goals, 158 were newly
+composed, 52 were already present, and 78 declined at independent admission.
+Thus 210 executable premise handles reached bounded application. It still
+accepted 0/24 and returned `NoTypedApplication` on every row; all four
+importable false controls remained rejected. Transport is no longer the
+dominant explanation for zero construction. The next experiment must extend
+the type-directed application grammar while retaining this exact population
+and the separate 78-row composition-rejection diagnostic.
+
 ## What is checked
 
 [`checked_proposition_compatibility`](../../crates/axeyum-lean-import/src/theorem_composition.rs)

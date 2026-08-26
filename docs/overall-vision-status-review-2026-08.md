@@ -62,13 +62,13 @@ kernel and rejects unsupported or contaminated streams explicitly.
 
 The generated current projection measures:
 
-- 1,628 declarations;
-- 1,274 theorems;
+- 1,629 declarations;
+- 1,275 theorems;
 - 251 definitions;
 - 29 constructors, 22 inductives, and 22 recursors;
 - 30 declared axioms, all in the retained `AxReal` negative-control package;
-- 1,598 declarations with an empty measured footprint; and
-- 7,436 direct theorem-dependency edges.
+- 1,599 declarations with an empty measured footprint; and
+- 7,458 direct theorem-dependency edges.
 
 The constructive Nat, Int, Rat, CReal, Complex, logic, and string packages have
 zero measured trusted declarations. This is a narrower, differently engineered
@@ -94,8 +94,8 @@ Lean theorem does not upgrade a proofless SMT route.
 
 The ledger contains 698 propositions: 510 proved, 4 refuted, 2 computed, 179
 open, and 3 conjectured. Validation re-derives evidence and reports 609 rows
-with two or more independent checks. The lemma index covers all 1,274 kernel
-theorems and 7,436 direct edges; 397 theorems now link exactly to 398 ledger
+with two or more independent checks. The lemma index covers all 1,275 kernel
+theorems and 7,458 direct edges; 397 theorems now link exactly to 398 ledger
 facts. Six previously open Mathlib-derived records were reconciled to exact
 native theorem propositions through independently checked, operation-free
 transactions. This raised proved counts but received zero autonomous-production
@@ -124,13 +124,22 @@ two import-rejected), leaving 20 importable and 25 import-rejected positive
 targets. Sound producer progress must never count acceptance of a control as
 conversion.
 
+The live ranker now preserves semantic vocabulary from surface operators, so
+relevant Nat additive-congruence lemmas occupy the first two candidate slots.
+A direct ranked-application run nevertheless reaches proof search on 0/51:
+48 selected native declarations are absent from the foreign goal capsule and
+three candidate closures reach a trusted declaration. The graph can retrieve
+relevant names, but there is not yet a general proof-isolated bridge from the
+native kernel library into an imported Mathlib goal kernel. This transport gap
+now precedes grammar quality in the ranked path.
+
 The latest concurrent construction adds real axiom-free steps in the CReal
 Riemann-sum programme, Complex division algebra, and the Rat power/normal-form
 bridge. The complete 753-test kernel suite passes on the merged population.
 These are credible library advances, but they are manually authored: they do
 not change the autonomous-production numerator. They also sharpen the graph
-gap: all 1,274 theorems are mechanically indexed, while only 397 have exact
-ledger links and the semantic-review projection still reports 1,274 unreviewed
+gap: all 1,275 theorems are mechanically indexed, while only 397 have exact
+ledger links and the semantic-review projection still reports 1,275 unreviewed
 theorems.
 
 Of those 57, 30 reached search and returned `NoTypedApplication`; 27 failed

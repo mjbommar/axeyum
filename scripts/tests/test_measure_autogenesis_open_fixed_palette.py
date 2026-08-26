@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import importlib.util
-from pathlib import Path
 import unittest
+from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -42,6 +42,39 @@ class OpenFixedPaletteTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "absent from the nursery"):
             MODULE.eligible_mapping({"F:unknown": "T"}, {"entries": []})
 
+    def test_candidate_absence_is_a_typed_import_rejection(self) -> None:
+        self.assertEqual(
+            MODULE.classify_statement_import_error(
+                'candidate declaration "Nat.mod_eq_add_left" occurs 0 times; expected one'
+            ),
+            {
+                "reason_kind": "CandidateDeclarationUnavailable",
+                "candidate_declaration": "Nat.mod_eq_add_left",
+                "candidate_occurrence_count": 0,
+            },
+        )
+
+    def test_unknown_import_error_is_not_misclassified(self) -> None:
+        self.assertEqual(
+            MODULE.classify_statement_import_error("new failure shape"),
+            {
+                "reason_kind": "UnclassifiedStatementImportError",
+                "message": "new failure shape",
+            },
+        )
+
+    def test_candidate_trusted_closure_is_a_typed_import_rejection(self) -> None:
+        self.assertEqual(
+            MODULE.classify_statement_import_error(
+                'candidate declaration "Int.add_assoc" reaches 1 trusted declaration(s)'
+            ),
+            {
+                "reason_kind": "CandidateClosureReachesTrustedDeclaration",
+                "candidate_declaration": "Int.add_assoc",
+                "candidate_trusted_declaration_count": 1,
+            },
+        )
+
     def test_population_mapping_is_exact_and_unique(self) -> None:
         self.assertEqual(
             MODULE.population_mapping(
@@ -69,6 +102,14 @@ class OpenFixedPaletteTests(unittest.TestCase):
             MODULE.population_mapping({})
         with self.assertRaisesRegex(ValueError, "fact_id and target_definition"):
             MODULE.population_mapping({"outcomes": [{"fact_id": "F:a"}]})
+
+    def test_native_transport_requires_a_ranked_retrieval_boundary(self) -> None:
+        with self.assertRaisesRegex(ValueError, "requires --ranking"):
+            MODULE.measure(
+                None,
+                Path("/packs"),
+                transport_native_candidates=True,
+            )
 
 
 if __name__ == "__main__":

@@ -27,9 +27,9 @@ semantics, evidence, provenance, checking, and compounding knowledge loop.
 - The pure-Rust reasoning stack has real end-to-end SMT, CAS, kernel, program
   verification, and proof-artifact routes, but its coverage and assurance are
   uneven by fragment.
-- The generated kernel projection currently contains 1,628 declarations: 1,274
+- The generated kernel projection currently contains 1,629 declarations: 1,275
   theorems, 251 definitions, 29 constructors, 22 inductives, 22 recursors, and
-  30 axioms. It reports 1,598 axiom-free declarations and 7,436 direct
+  30 axioms. It reports 1,599 axiom-free declarations and 7,458 direct
   theorem-dependency edges. This is a substantial checked library, but it is
   not an autonomous-production count.
 - The fact ledger contains 698 propositions: 510 proved, 4 refuted, 2 computed,
@@ -42,10 +42,10 @@ semantics, evidence, provenance, checking, and compounding knowledge loop.
   frontier.
 - The kernel, fact ledger, tactic catalog, obstruction graph, and concept graph
   are separately useful, but do not yet form one lemma-search substrate.
-- The generated lemma index now covers all 1,274 kernel theorems and their 7,436
+- The generated lemma index now covers all 1,275 kernel theorems and their 7,458
   direct edges, with a kernel-rendered canonical type on every row and a
   bounded type-fragment query in the agent read surface. Exactly 397
-  theorems link to 398 fact records; 877 theorems have
+  theorems link to 398 fact records; 878 theorems have
   no exact fact link. Only four evidence identities remain unresolved: three
   descriptive ordered-ring/Rat IDs and `Rat.normalize`, which resolves exactly
   but is a definition rather than a theorem. The projection now actually
@@ -277,6 +277,27 @@ bounded lemma selection, transport, and composition.
    the same kernel and footprint checks retain authority.
 6. Admit successful results through the existing crash-safe transaction and
    repeat from a clean checkout.
+
+### Native-candidate transport checkpoint
+
+Commit `2e060c8e6` turns a retrieved native theorem name into an executable
+premise through the existing checked theorem-composition boundary. A same-name
+theorem already in the imported target is compatibility-checked and required
+to have an empty kernel footprint; an absent theorem is admitted with its
+supported closure into a private clone and checked there. Neither case grants
+fact or operation authority.
+
+On the clean `Nat.add_modEq_left` target, 8 of its 12 ranked candidates became
+available in the imported kernel: five newly composed and three validated as
+already present. Four declined transport with typed errors. Bounded application
+still found no proof. This is useful separation: executable premise transport
+now works for a real imported goal, while retrieval precision and proof grammar
+remain measured bottlenecks. The Python/full-population follow-up confirms the
+boundary: 158 candidates were newly composed, 52 were already present, and 78
+declined admission across the 24 importable goals. All 210 executable premises
+reached bounded application, which still returned `NoTypedApplication` on all
+24. Next priority is therefore the application grammar, with the 78 admission
+failures retained as a separate compatibility backlog.
 
 ### Exit evidence
 

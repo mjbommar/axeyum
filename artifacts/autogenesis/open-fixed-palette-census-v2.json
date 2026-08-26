@@ -41,6 +41,21 @@
   "limitations": "One fixed elementary palette is a negative baseline, not a general producer evaluation. Held-out rows are excluded before capsule access. Import rejections measure statement-boundary incompatibility, not solver inability or proposition falsehood.",
   "outcomes": [
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 399180,
       "capsule_sha256": "b3fa98f2c8a6486008bc79e48ac8b3f4c9e9eb01d21627e80c7239204e140c60",
       "evaluation_class": "positive-target",
@@ -50,6 +65,21 @@
       "target_definition": "Axeyum.Autogenesis.Statement.Generated.intAddModeqLeft"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 399181,
       "capsule_sha256": "50c3ee6d2bf715651c2b0a4bf25a3ba310400604b79af0e5b4a0a1349ada45f7",
       "evaluation_class": "positive-target",
@@ -59,6 +89,21 @@
       "target_definition": "Axeyum.Autogenesis.Statement.Generated.intAddModeqRight"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 9836191,
       "capsule_sha256": "48b366c8483966dde112e765b58a36ab1dc49b626bf3157271d18707769a5a12",
       "evaluation_class": "positive-target",
@@ -70,6 +115,21 @@
       "trusted_declaration_kind": "Quotient"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 9835929,
       "capsule_sha256": "0a2576b799bb510266cc539e283a14a168cc30f5b0d933fa5f8ae44fd908fc5a",
       "evaluation_class": "positive-target",
@@ -81,6 +141,21 @@
       "trusted_declaration_kind": "Quotient"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 9841120,
       "capsule_sha256": "7f5cff249ce8c200c5ba5db56d2442e8caa96f63cae1d8b8fd9395a16209e3ac",
       "evaluation_class": "positive-target",
@@ -92,6 +167,21 @@
       "trusted_declaration_kind": "Quotient"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 9836026,
       "capsule_sha256": "61190007d8dce5a50e1b55eb71464ae71d4ea86e05da0dcfefce7d44a3738a78",
       "evaluation_class": "positive-target",
@@ -103,6 +193,21 @@
       "trusted_declaration_kind": "Quotient"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 595403,
       "capsule_sha256": "1c4f220011cfcab9cfdaa397b702d1ce3342c131dfe64c91b2b023b85e2e337a",
       "evaluation_class": "positive-target",
@@ -114,6 +219,21 @@
       "trusted_declaration_kind": "Axiom"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 392964,
       "capsule_sha256": "6228e6b1f151b3e834e0cf7328b8f2d223babbbff5a13ba2a0e4190a3640ea6b",
       "evaluation_class": "positive-target",
@@ -123,6 +243,21 @@
       "target_definition": "Axeyum.Autogenesis.Statement.Generated.intModModeq"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 409196,
       "capsule_sha256": "cfddd92fec5431ea21241fb357eef07f07228e8d141aa390c431d39169fbf146",
       "evaluation_class": "positive-target",
@@ -132,6 +267,21 @@
       "target_definition": "Axeyum.Autogenesis.Statement.Generated.intModeqSub"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 393560,
       "capsule_sha256": "5f83f3e318c327983ee7c196f90674c4c6d2dd925021f5decd3ba92c4779a672",
       "evaluation_class": "positive-target",
@@ -141,6 +291,21 @@
       "target_definition": "Axeyum.Autogenesis.Statement.Generated.intModulusModeqZero"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 220939,
       "capsule_sha256": "d17ff0010101292d58e06e3b630ea03dd24c501c496de8d9c1c323cf8302c269",
       "evaluation_class": "must-decline-control",
@@ -150,6 +315,21 @@
       "target_definition": "Axeyum.Autogenesis.Statement.Generated.mutationX"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 762278,
       "capsule_sha256": "f975b91d1bc5d03bb028a64524d145c97ca3ca3cfaa3a2f2783bdfe6fca31c61",
       "evaluation_class": "must-decline-control",
@@ -161,6 +341,21 @@
       "trusted_declaration_kind": "Theorem"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 393005,
       "capsule_sha256": "1d50769489e1959d09e84555748c0eb8b85ea0fc1141f0c0b672ddd2850591f2",
       "evaluation_class": "must-decline-control",
@@ -170,6 +365,21 @@
       "target_definition": "Axeyum.Autogenesis.Statement.Generated.mutationXXX"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 515617,
       "capsule_sha256": "6b1680eb0e74cce8455145f4e9a5d43aaff28a466c3760b13ebb5e9e56ea282c",
       "evaluation_class": "must-decline-control",
@@ -181,6 +391,21 @@
       "trusted_declaration_kind": "Theorem"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 379988,
       "capsule_sha256": "a6315ac379629bbe05d9eedb89c40aaa9e5e717e019edaf37073b33c043a8d98",
       "evaluation_class": "must-decline-control",
@@ -190,6 +415,21 @@
       "target_definition": "Axeyum.Autogenesis.Statement.Generated.mutationXXXXX"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 223616,
       "capsule_sha256": "8d32ac4322a331121c92db72438b9cca576f5167a3b2ec09bf50678af5502e7f",
       "evaluation_class": "must-decline-control",
@@ -199,6 +439,21 @@
       "target_definition": "Axeyum.Autogenesis.Statement.Generated.mutationXXXXXXX"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 379914,
       "capsule_sha256": "86491871453070d6f17b3f5f8bc5a505d32a280f05e2f845d0daaff76c271fde",
       "evaluation_class": "positive-target",
@@ -208,6 +463,21 @@
       "target_definition": "Axeyum.Autogenesis.Statement.Generated.natAddModeqLeft"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 379915,
       "capsule_sha256": "80d6111af11f2a42525937da30e2cfa7df2301f423c380238b3ec6252bb61f52",
       "evaluation_class": "positive-target",
@@ -217,6 +487,21 @@
       "target_definition": "Axeyum.Autogenesis.Statement.Generated.natAddModeqRight"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 223557,
       "capsule_sha256": "f172ac4da2c1e3bf380f220336378570d20f267df86e9ad67cc3f898322350c9",
       "evaluation_class": "positive-target",
@@ -226,6 +511,21 @@
       "target_definition": "Axeyum.Autogenesis.Statement.Generated.natChooseLeAdd"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 223485,
       "capsule_sha256": "d3a46369e4d57b388edbf51609e0d9bb1e491cbeef08063cf8909d6d9d2d3b46",
       "evaluation_class": "positive-target",
@@ -235,6 +535,21 @@
       "target_definition": "Axeyum.Autogenesis.Statement.Generated.natChooseLeSucc"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 804898,
       "capsule_sha256": "0bc4814e1d7455f0727261e19534a939ed1cd69835e39ccd572e07925cdb4f49",
       "evaluation_class": "positive-target",
@@ -246,6 +561,21 @@
       "trusted_declaration_kind": "Theorem"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 223618,
       "capsule_sha256": "a77305147e5b0bcd5be6078cbf64556ddfc24883a72c4af3659efc896305ed18",
       "evaluation_class": "positive-target",
@@ -255,6 +585,21 @@
       "target_definition": "Axeyum.Autogenesis.Statement.Generated.natChooseOneRight"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 223735,
       "capsule_sha256": "07647fb42b520f7b24c05a4e35b0936b4f11c8c29726b72189c0e45c0cd796eb",
       "evaluation_class": "positive-target",
@@ -264,6 +609,21 @@
       "target_definition": "Axeyum.Autogenesis.Statement.Generated.natChooseSymmAdd"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 517185,
       "capsule_sha256": "0db1a60058b0021d4666f8c13b0f2bf90d636ca0f8b46ed13747721044ea5060",
       "evaluation_class": "positive-target",
@@ -275,6 +635,21 @@
       "trusted_declaration_kind": "Theorem"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 233954,
       "capsule_sha256": "46674b5b80df152df37c48994c74fa713d139f9b7e2c420cf1fe0c14e18867fc",
       "evaluation_class": "positive-target",
@@ -284,6 +659,21 @@
       "target_definition": "Axeyum.Autogenesis.Statement.Generated.natDescfactorialSelf"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 228637,
       "capsule_sha256": "137aec6f44cff1c587f2ac266157735ab8ead3ac5449001b0d101e40541aba0e",
       "evaluation_class": "positive-target",
@@ -293,6 +683,21 @@
       "target_definition": "Axeyum.Autogenesis.Statement.Generated.natFactorialDvdAscfactorial"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 239411,
       "capsule_sha256": "f59685fdfb4d3c3abd3bc6b09f5e8b2066bad01f8a2acfc720fba26d4de17e98",
       "evaluation_class": "positive-target",
@@ -302,6 +707,21 @@
       "target_definition": "Axeyum.Autogenesis.Statement.Generated.natFactorialDvdDescfactorial"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 221932,
       "capsule_sha256": "ec21056a680f9c7b9bff103127a46bad74b9ef13f890e833734ca358a2022f38",
       "evaluation_class": "positive-target",
@@ -311,6 +731,21 @@
       "target_definition": "Axeyum.Autogenesis.Statement.Generated.natFactorialNeZero"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 1830589,
       "capsule_sha256": "41a72661251a6730aff597124ff014d998c783ffce48b5db236cf8acb4e0d41c",
       "evaluation_class": "positive-target",
@@ -322,6 +757,21 @@
       "trusted_declaration_kind": "Quotient"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 813126,
       "capsule_sha256": "7fa04ada34720f838f2bc571a2063671db93b7f396b98f37b1589511acf3f565",
       "evaluation_class": "positive-target",
@@ -333,6 +783,21 @@
       "trusted_declaration_kind": "Theorem"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 821989,
       "capsule_sha256": "8d10be4f79083e628b32afe803a96b3c66f7bc14f7df44a7a1c9676a359e5070",
       "evaluation_class": "positive-target",
@@ -344,6 +809,21 @@
       "trusted_declaration_kind": "Theorem"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 751692,
       "capsule_sha256": "e4c55794209624d71509f57ffe4b4ca38bbcf9557c783dd640f3cfc865b43cb4",
       "evaluation_class": "positive-target",
@@ -355,6 +835,21 @@
       "trusted_declaration_kind": "Theorem"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 756329,
       "capsule_sha256": "cdc73197d797427f230104d1216e4b8a74aa56e26900f98002eb5611daf40bcd",
       "evaluation_class": "positive-target",
@@ -366,6 +861,21 @@
       "trusted_declaration_kind": "Theorem"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 751482,
       "capsule_sha256": "c845fa2098fc234d53713e8f903ec2e58b3fa93d10d2f8fb3b97db73a6ebd1fa",
       "evaluation_class": "positive-target",
@@ -377,6 +887,21 @@
       "trusted_declaration_kind": "Theorem"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 749371,
       "capsule_sha256": "e33bfdc847e394702f9d1b8dea548292ece99637d73a1de1d62b20f7ccf93d2e",
       "evaluation_class": "positive-target",
@@ -388,6 +913,21 @@
       "trusted_declaration_kind": "Theorem"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 229823,
       "capsule_sha256": "cd63e187dd656829ada36a20642792435af80812075b55a8923f557e6a73bef1",
       "evaluation_class": "positive-target",
@@ -397,6 +937,21 @@
       "target_definition": "Axeyum.Autogenesis.Statement.Generated.natLeFibAddOne"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 751948,
       "capsule_sha256": "855708a36347f735bc2d4394a4acde6a67e48f838bf854837f44f0acf4054960",
       "evaluation_class": "positive-target",
@@ -408,6 +963,21 @@
       "trusted_declaration_kind": "Theorem"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 755181,
       "capsule_sha256": "bca24bc3e307d670bce77998f3cb2a4b5f406d9b5c3fd284ad8204837b7b8d7c",
       "evaluation_class": "positive-target",
@@ -419,6 +989,21 @@
       "trusted_declaration_kind": "Theorem"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 751738,
       "capsule_sha256": "aba66123e61bbd62b899741f601199ac1635b7362571d63f297703c170611d3b",
       "evaluation_class": "positive-target",
@@ -430,6 +1015,21 @@
       "trusted_declaration_kind": "Theorem"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 379946,
       "capsule_sha256": "8451cbd9325ed1acb3573fcdab8276e38dea337bf554740d0d11702842c9d3f9",
       "evaluation_class": "positive-target",
@@ -439,6 +1039,21 @@
       "target_definition": "Axeyum.Autogenesis.Statement.Generated.natModModeq"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 379911,
       "capsule_sha256": "3816414b85576d4e70e6c4806155002083f6105c4d74af096f5fdcf962d4a09d",
       "evaluation_class": "positive-target",
@@ -448,6 +1063,21 @@
       "target_definition": "Axeyum.Autogenesis.Statement.Generated.natModeqOne"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 379837,
       "capsule_sha256": "4c077cb71f976a955f5ef6c8a9eff9136893262e3e4cf7c609b5d6c0b09f84b4",
       "evaluation_class": "positive-target",
@@ -457,6 +1087,21 @@
       "target_definition": "Axeyum.Autogenesis.Statement.Generated.natModulusModeqZero"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 3741312,
       "capsule_sha256": "42ee29a1942dbb282b32400eac607b711d08fec0ef4986b120314c86f38a5249",
       "evaluation_class": "positive-target",
@@ -468,6 +1113,21 @@
       "trusted_declaration_kind": "Quotient"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 3741312,
       "capsule_sha256": "5701c94b26a8c6de2cf78bd67aa2831fe915ca3b6dc9e58a00c81517f7c97453",
       "evaluation_class": "positive-target",
@@ -479,6 +1139,21 @@
       "trusted_declaration_kind": "Quotient"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 3741316,
       "capsule_sha256": "add4de764f9aa6f39090f809ea7288cceca306d007908c7a9b5e7598cda45094",
       "evaluation_class": "positive-target",
@@ -490,6 +1165,21 @@
       "trusted_declaration_kind": "Quotient"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 516656,
       "capsule_sha256": "8e2ba4c431c73a0103f20294887b08e1935f688551a429756c5249f981e4c0ea",
       "evaluation_class": "positive-target",
@@ -501,6 +1191,21 @@
       "trusted_declaration_kind": "Theorem"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 220641,
       "capsule_sha256": "a152289a763bf24d347f5f1b683d20def25f7edfe4f77c5fec5d330245eb1ff6",
       "evaluation_class": "positive-target",
@@ -510,6 +1215,21 @@
       "target_definition": "Axeyum.Autogenesis.Statement.Generated.natSelfLeFactorial"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 1840632,
       "capsule_sha256": "6542330737a48bbc0a2355ab98f3fa610db80514bef753fc8c179bd425b6614c",
       "evaluation_class": "positive-target",
@@ -521,6 +1241,21 @@
       "trusted_declaration_kind": "Quotient"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 771276,
       "capsule_sha256": "6bb63854e0f7ccd7f79998de213306e02e761d136e40b5bc17c0324de774ae96",
       "evaluation_class": "positive-target",
@@ -532,6 +1267,21 @@
       "trusted_declaration_kind": "Theorem"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 771841,
       "capsule_sha256": "441f234302db9cf934408daa782276bbe881bf98d84fb519371ed6c8d88d4f7d",
       "evaluation_class": "positive-target",
@@ -543,6 +1293,21 @@
       "trusted_declaration_kind": "Theorem"
     },
     {
+      "candidate_declarations": [
+        "Eq.refl",
+        "Eq.symm",
+        "Eq.trans",
+        "Nat.add_zero",
+        "Nat.le_refl",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.one_mul",
+        "Nat.succ_le_succ",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "congrArg"
+      ],
       "capsule_bytes": 780371,
       "capsule_sha256": "154e7cb62c5a12ac27e1743125669d0fccc09a50440863bd562ed6b7f6f75489",
       "evaluation_class": "positive-target",

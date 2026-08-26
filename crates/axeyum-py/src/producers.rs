@@ -42,9 +42,14 @@ use std::path::PathBuf;
 
 use axeyum_lean_import::producers::{bounded_application, bounded_induction, modeq_family};
 use axeyum_lean_import::{
-    AxiomIdentity, DeclarationDependencyIdentity, DeclarationIdentity, ImportLimits, ImportReport,
+    AxiomIdentity, CandidateTransportReceipt, DeclarationDependencyIdentity, DeclarationIdentity,
+    ImportLimits, ImportReport,
     import_candidate_statement_ndjson as rust_import_candidate_statement_ndjson,
-    import_statement_ndjson as rust_import_statement_ndjson,
+    import_statement_ndjson as rust_import_statement_ndjson, transport_checked_theorem_candidate,
+};
+use axeyum_lean_kernel::{
+    Kernel, build_complex_prelude, build_creal_prelude, build_int_prelude, build_nat_prelude,
+    build_rat_prelude,
 };
 use pyo3::create_exception;
 use pyo3::exceptions::PyTypeError;
@@ -60,6 +65,13 @@ create_exception!(
     StatementImportError,
     AxeyumError,
     "A `lean4export` NDJSON stream failed the proof-isolated statement contract.\n\nThis is the gate that makes handing an untrusted producer a goal meaningful:\nit rejects every axiom, theorem, opaque and quotient declaration in the stream\nexcept the ones this import itself reconstructed, so the goal arrives with its\ndefinitional dependencies and no proof of itself. The Rust variant name is\ncarried as `.variant`."
+);
+
+create_exception!(
+    axeyum,
+    CandidateTransportError,
+    AxeyumError,
+    "A retrieved native theorem could not be checked into the imported goal kernel.\n\nThe typed Rust composition variant is carried as `.variant`; `.debug` retains the complete diagnostic. No partial target kernel is published on failure."
 );
 
 create_exception!(
@@ -988,6 +1000,74 @@ impl PyStatementImport {
     }
 }
 
+/// Checked evidence that one retrieved native theorem is executable in an
+/// imported goal kernel.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.producers")
+)]
+#[pyclass(
+    frozen,
+    skip_from_py_object,
+    module = "axeyum",
+    name = "CandidateTransport"
+)]
+pub struct PyCandidateTransport {
+    candidate: PyNameId,
+    disposition: &'static str,
+    source_closure_size: usize,
+    added_theorems: usize,
+    added_definitions: usize,
+    receipt_sha256: Option<String>,
+}
+
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
+#[pymethods]
+impl PyCandidateTransport {
+    /// Candidate handle belonging to the statement import's same kernel.
+    #[getter]
+    fn candidate(&self) -> PyNameId {
+        self.candidate
+    }
+
+    /// `"added"` for checked composition or `"reused"` for checked reuse.
+    #[getter]
+    fn disposition(&self) -> &'static str {
+        self.disposition
+    }
+
+    /// Root-selected native declaration closure size (zero for reuse).
+    #[getter]
+    fn source_closure_size(&self) -> usize {
+        self.source_closure_size
+    }
+
+    /// Theorems newly admitted by this transport.
+    #[getter]
+    fn added_theorems(&self) -> usize {
+        self.added_theorems
+    }
+
+    /// Definitions newly admitted by this transport.
+    #[getter]
+    fn added_definitions(&self) -> usize {
+        self.added_definitions
+    }
+
+    /// Digest of an added composition receipt; reuse has no aggregate receipt.
+    #[getter]
+    fn receipt_sha256(&self) -> Option<&str> {
+        self.receipt_sha256.as_deref()
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "CandidateTransport(disposition={:?}, source_closure_size={}, added_theorems={}, added_definitions={})",
+            self.disposition, self.source_closure_size, self.added_theorems, self.added_definitions,
+        )
+    }
+}
+
 /// Where the NDJSON bytes come from.
 enum Source {
     /// A filesystem path.
@@ -1144,6 +1224,115 @@ fn wrap_statement_import(
         report,
         target_name,
         goal,
+    })
+}
+
+/// Projects a checked theorem-composition failure without flattening its
+/// stable Rust variant into the human message.
+fn candidate_transport_error(
+    py: Python<'_>,
+    error: &axeyum_lean_import::CheckedTheoremCompositionError,
+) -> PyErr {
+    let debug = format!("{error:?}");
+    let variant = debug
+        .split(|c: char| !c.is_alphanumeric() && c != '_')
+        .find(|part| !part.is_empty())
+        .unwrap_or("Unknown")
+        .to_owned();
+    let raised = CandidateTransportError::new_err(error.to_string());
+    let value = raised.value(py);
+    if value.setattr("variant", &variant).is_err() || value.setattr("debug", &debug).is_err() {
+        return raised;
+    }
+    raised
+}
+
+/// Build the independently owned native prelude that owns `candidate`.
+fn native_candidate_source(candidate: &str) -> Result<Kernel, String> {
+    let mut source = Kernel::new();
+    let result = if candidate.starts_with("Nat.") {
+        build_nat_prelude(&mut source).map(|_| ())
+    } else if candidate.starts_with("Int.") {
+        build_int_prelude(&mut source).map(|_| ())
+    } else if candidate.starts_with("Rat.") {
+        build_rat_prelude(&mut source).map(|_| ())
+    } else if candidate.starts_with("CReal.") {
+        build_creal_prelude(&mut source).map(|_| ())
+    } else if candidate.starts_with("Complex.") {
+        build_complex_prelude(&mut source).map(|_| ())
+    } else {
+        return Err(format!(
+            "UnsupportedCandidateNamespace: no native prelude owns {candidate:?}"
+        ));
+    };
+    result
+        .map(|()| source)
+        .map_err(|error| format!("NativePreludeBuildFailed: {error:?}"))
+}
+
+/// Check one retrieved native theorem into an imported goal's private kernel.
+///
+/// The candidate namespace deterministically selects the independently rebuilt
+/// native prelude (`Nat`, `Int`, `Rat`, `CReal`, or `Complex`). Existing target
+/// theorems are compatibility-checked; absent ones go through checked theorem
+/// composition. The target proof remains absent, and no fact or operation
+/// authority is granted. The statement import keeps the same Python `Kernel`
+/// object and epoch because composition clones and only extends its arenas, so
+/// all previously issued goal/name handles remain valid.
+///
+/// # Errors
+///
+/// Raises `CandidateTransportError` with `.variant` and `.debug` when the
+/// namespace is unsupported or the exact source root cannot be safely reused
+/// or composed. A failure never changes the statement import's kernel.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.producers")
+)]
+#[pyfunction]
+fn transport_native_candidate(
+    py: Python<'_>,
+    statement: &PyStatementImport,
+    candidate: &str,
+) -> PyResult<PyCandidateTransport> {
+    let source_candidate = candidate.to_owned();
+    let source = py
+        .detach(move || native_candidate_source(&source_candidate))
+        .map_err(|message| {
+            let raised = CandidateTransportError::new_err(message.clone());
+            let value = raised.value(py);
+            let variant = message.split(':').next().unwrap_or("Unknown");
+            if value.setattr("variant", variant).is_ok() {
+                let _ = value.setattr("debug", &message);
+            }
+            raised
+        })?;
+    let target = statement.kernel.borrow(py).inner().clone();
+    let transport_candidate = candidate.to_owned();
+    let completed = py
+        .detach(move || transport_checked_theorem_candidate(&source, &target, &transport_candidate))
+        .map_err(|error| candidate_transport_error(py, &error))?;
+    let (completed_kernel, candidate_id, receipt) = completed.into_parts();
+    let (disposition, source_closure_size, added_theorems, added_definitions, receipt_sha256) =
+        match receipt {
+            CandidateTransportReceipt::Added(receipt) => (
+                "added",
+                receipt.source_closure.len(),
+                receipt.added_theorems.len(),
+                receipt.added_definitions.len(),
+                Some(receipt.receipt_sha256),
+            ),
+            CandidateTransportReceipt::Reused(_) => ("reused", 0, 0, 0, None),
+        };
+    let mut target = statement.kernel.borrow_mut(py);
+    *target.inner_mut() = completed_kernel;
+    Ok(PyCandidateTransport {
+        candidate: target.wrap_name(candidate_id),
+        disposition,
+        source_closure_size,
+        added_theorems,
+        added_definitions,
+        receipt_sha256,
     })
 }
 
@@ -1328,9 +1517,14 @@ pub(crate) fn register<'py>(parent: &Bound<'py, PyModule>) -> PyResult<Bound<'py
     module.add_class::<PyDeclarationIdentity>()?;
     module.add_class::<PyDeclarationDependency>()?;
     module.add_class::<PyStatementImport>()?;
+    module.add_class::<PyCandidateTransport>()?;
     module.add(
         "StatementImportError",
         py.get_type::<StatementImportError>(),
+    )?;
+    module.add(
+        "CandidateTransportError",
+        py.get_type::<CandidateTransportError>(),
     )?;
     module.add("Declined", py.get_type::<Declined>())?;
     // Pinned budgets, exported as constants and reachable through no argument.
@@ -1351,6 +1545,7 @@ pub(crate) fn register<'py>(parent: &Bound<'py, PyModule>) -> PyResult<Bound<'py
         import_candidate_statement_ndjson,
         &module
     )?)?;
+    module.add_function(wrap_pyfunction!(transport_native_candidate, &module)?)?;
     module.add_function(wrap_pyfunction!(propose_bounded_induction, &module)?)?;
     module.add_function(wrap_pyfunction!(propose_bounded_application, &module)?)?;
     module.add_function(wrap_pyfunction!(propose_modeq_family, &module)?)?;
@@ -1385,7 +1580,7 @@ mod tests {
 // `ty` until it was declared here.
 #[cfg(feature = "stub-gen")]
 mod stub {
-    use super::{Declined, PyDeclineReason, StatementImportError};
+    use super::{CandidateTransportError, Declined, PyDeclineReason, StatementImportError};
     use crate::error::AxeyumError;
     use crate::stub_info::stub_exception;
 
@@ -1402,6 +1597,14 @@ mod stub {
         AxeyumError,
         "A `lean4export` statement could not be imported.",
         "variant": String = "The Rust error variant name. Never match on the message text.",
+        "debug": String = "The full Rust `Debug` rendering of the failure.",
+    );
+    stub_exception!(
+        "axeyum._native.producers",
+        CandidateTransportError,
+        AxeyumError,
+        "A retrieved native theorem could not be checked into the imported goal kernel.",
+        "variant": String = "The Rust composition error variant name. Never match on the message text.",
         "debug": String = "The full Rust `Debug` rendering of the failure.",
     );
 }

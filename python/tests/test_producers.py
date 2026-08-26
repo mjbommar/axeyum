@@ -187,6 +187,61 @@ def test_candidate_capsule_imports_exact_lemmas_without_target_proof() -> None:
         P.import_candidate_statement_ndjson(capsule, None, target_text, [target_text])
 
 
+def test_native_candidate_transport_extends_the_same_imported_kernel() -> None:
+    source = Kernel()
+    source.build_nat_prelude()
+    goal = goal_of(source, "Nat.fib_mono")
+    target_text = "Axeyum.Autogenesis.Statement.Transport.fibMono"
+    target = source.name(target_text, must_exist=False)
+    source.add_declaration(Declaration.definition(target, [], source.sort_zero(), goal))
+    capsule = source.render_lean4export_ndjson_roots("4.30.0", [target]).encode()
+    assert b'"Nat.fib_mono"' not in capsule
+    assert b'"Nat.fib_le_succ"' not in capsule
+
+    imported = P.import_statement_ndjson(capsule, None, target_text)
+    kernel = imported.kernel()
+    rendered_goal = kernel.render_lean(imported.goal())
+    monotone = P.transport_native_candidate(imported, "Nat.monotone_of_le_succ")
+    adjacent = P.transport_native_candidate(imported, "Nat.fib_le_succ")
+    assert monotone.disposition == "added"
+    assert adjacent.disposition == "added"
+    assert monotone.added_theorems > 0
+    assert adjacent.receipt_sha256 is not None
+    assert len(adjacent.receipt_sha256) == 64
+    assert imported.kernel() is kernel
+    assert kernel.render_lean(imported.goal()) == rendered_goal
+
+    candidate = P.propose_bounded_application(
+        kernel,
+        imported.goal(),
+        [
+            monotone.candidate,
+            adjacent.candidate,
+            kernel.name("Nat.fib", must_exist=True),
+        ],
+    )
+    admitted = kernel.name("Axeyum.Test.TransportFibMono", must_exist=False)
+    kernel.add_declaration(Declaration.theorem(admitted, [], imported.goal(), candidate.proof))
+    assert kernel.axiom_footprint(admitted) == []
+
+
+def test_native_candidate_transport_failure_does_not_change_the_import() -> None:
+    source = Kernel()
+    source.build_nat_prelude()
+    goal = goal_of(source, "Nat.add_zero")
+    target_text = "Axeyum.Autogenesis.Statement.Transport.addZero"
+    target = source.name(target_text, must_exist=False)
+    source.add_declaration(Declaration.definition(target, [], source.sort_zero(), goal))
+    capsule = source.render_lean4export_ndjson_roots("4.30.0", [target]).encode()
+    imported = P.import_statement_ndjson(capsule, None, target_text)
+    before = imported.kernel().render_lean(imported.goal())
+
+    with pytest.raises(P.CandidateTransportError) as raised:
+        P.transport_native_candidate(imported, "Unknown.not_a_native_candidate")
+    assert raised.value.variant == "UnsupportedCandidateNamespace"
+    assert imported.kernel().render_lean(imported.goal()) == before
+
+
 def test_bounded_application_declines_without_adjacent_step(
     nat_kernel: Kernel,
 ) -> None:
