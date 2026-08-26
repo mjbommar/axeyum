@@ -87,11 +87,17 @@ def test_skip_unreachable_skips_facts_with_no_export_without_spending_a_model(
     unreachable = _an_unreachable_eligible_fact(root)
     status = cli_api.main(
         [
-            "--root", str(root), "run",
-            "--fact", unreachable,
-            "--offline", "--skip-unreachable",
-            "--out", str(tmp_path),
-            "--git-commit", "0" * 40,
+            "--root",
+            str(root),
+            "run",
+            "--fact",
+            unreachable,
+            "--offline",
+            "--skip-unreachable",
+            "--out",
+            str(tmp_path),
+            "--git-commit",
+            "0" * 40,
         ]
     )
     assert status == 0
@@ -117,11 +123,17 @@ def test_skip_unreachable_still_runs_a_reachable_fact(root, tmp_path, capsys) ->
         pytest.skip("no eligible fact has a frozen export")
     status = cli_api.main(
         [
-            "--root", str(root), "run",
-            "--fact", reachable,
-            "--offline", "--skip-unreachable",
-            "--out", str(tmp_path),
-            "--git-commit", "0" * 40,
+            "--root",
+            str(root),
+            "run",
+            "--fact",
+            reachable,
+            "--offline",
+            "--skip-unreachable",
+            "--out",
+            str(tmp_path),
+            "--git-commit",
+            "0" * 40,
         ]
     )
     assert status == 0
