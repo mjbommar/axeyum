@@ -1103,55 +1103,18 @@ not.
 
 **Turn the architecture review into executable product increments** (`WIP`,
 top-three-focus, 2026-08-25). The durable plan is
-[`../../top-three-focus-plan-2026-08.md`](docs/top-three-focus-plan-2026-08.md).
-The first increment separates production episodes from fixtures and derives a
-kernel-authoritative lemma/dependency/fact search index. Next: expose typed,
-deterministic retrieval to the general producer and measure whether it closes
-new sibling facts without per-target proof code. A live high-stack inventory
-also found 1,184 axiom-free theorems and exposed the committed dependency
-projection as stale at 1,100; both derived populations now agree at 1,184.
-After the next mainline construction commits, both advanced together through at
-least 1,195; the generated census remains the live authority as construction
-continues.
-The autonomous loop now has a seventh held-out-safe read tool,
-`lemma_neighbourhood`, which exposes exact dependencies and reverse consumers
-without treating retrieval as applicability or proof authority. Product
-stability follow-through: Python CI now installs the `[agent]` extra its suite
-imports, and the pinned-nightly MIR contract fixture was regenerated as one
-authenticated unit after its lockfile drift made `--locked` fail in CI.
-The next CI run exposed and the lane repaired a separate dependency gate: move
-`anyhow` to the published 1.0.103 soundness fix, allow the OSI-approved
-Unicode-DFS-2016 data license, and narrowly document six unmaintained
-build-time-only rust-unic advisories inherited from the current stub generator.
-The end-to-end code audit now records the live 1,195-theorem/696-fact boundary,
-the exact graph linkage deficit, and Axeyum's comparative position against
-proof assistants, SMT solvers, proof agents, CAS, and program analyzers. A
-newly merged constructive-real comment also exposed a broken public Rustdoc
-link; `2d43f2791` repaired it and the focused warning-denied kernel docs pass.
-The first full flywheel follow-through then admitted `Nat.ModEq.symm` and
-`Nat.ModEq.trans` through the existing reusable producer. Recomputing the
-durable frontier unlocked the previously deferred `Nat.ModEq.comm`; the lane
-added its already-exported source-bound target to the same unchanged producer
-and admitted it through the same typed transaction. Multi-target production
-credit moved 8 → 9 → 10 → 11. This proves durable-state-driven scheduling but
-not yet proof-term compounding: the commutativity candidate uses no theorem
-dependency, so lemma-consuming composition remains next.
-The graph-to-kernel bridge is now concrete: the eighth held-out-safe read tool,
-`lemma_candidates`, resolves authored fact dependencies to exact indexed kernel
-lemmas and keeps absent links explicit. The first live composition target is
-`Nat.fib` monotonicity through the axiom-free `Nat.fib_le_succ` dependency;
-retrieval is landed, while proof construction and admission remain the next
-falsifiable step.
-That reference composition is now checked and admitted: `Nat.fib_mono`
-eliminates an order derivation and its kernel-observed direct dependencies are
-`Nat.fib_le_succ` and the target-agnostic `Nat.monotone_of_le_succ`, with an
-empty axiom footprint. The latter combinator is now independently checked for
-any `Nat → Nat` function, extracting the reusable proof shape from Fibonacci.
-The result settles
-the corresponding fact and demonstrates genuine library compounding. It is
-deliberately not counted as autonomous yield: the constructor is hand-authored,
-the production ledger places it in `no_operation`, and the next step is to
-generalize this exact term shape into a target-agnostic producer.
+[`../../top-three-focus-plan-2026-08.md`](docs/top-three-focus-plan-2026-08.md);
+the full lane history is in
+[`../notes/126-top-three-focus.md`](docs/plan/notes/126-top-three-focus.md).
+
+Current boundary: durable scheduling admitted three Nat ModEq facts through an
+unchanged reusable producer (multi-target credit 8 → 11). The connected graph
+then retrieved `Nat.fib_le_succ`; a checked, axiom-free
+`Nat.monotone_of_le_succ` combinator composes it into `Nat.fib_mono`, settling
+the corresponding fact with real kernel-observed dependencies. This is genuine
+library compounding but remains correctly classified as `no_operation` because
+the reference constructor was hand-authored. Next: expose that target-agnostic
+combinator through an authoritative producer, then measure sibling conversion.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 

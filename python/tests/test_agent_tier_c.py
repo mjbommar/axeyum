@@ -55,6 +55,38 @@ def root() -> Path:
     return resolve_root(None)
 
 
+@pytest.fixture(autouse=True)
+def portable_registered_exports(tmp_path: Path, monkeypatch) -> None:
+    """Keep policy tests independent of fleet-only frozen-export storage."""
+    if _FROZEN.is_file():
+        return
+    source = tmp_path / "portable.ndjson"
+    source.write_text('{"kind":"portable-test-export"}\n')
+    digest = hashlib.sha256(source.read_bytes()).hexdigest()
+    original = tools.resolve_export
+
+    def resolve(root: Path, fact_id: str):
+        if fact_id not in {MANIFEST_FACT, INDEX_FACT}:
+            return original(root, fact_id)
+        return tools.ExportResolution(
+            fact_id=fact_id,
+            path=source,
+            sha256=digest,
+            target_definition=(
+                "Axeyum.Autogenesis.Statement.natDescFactorialOne"
+                if fact_id == MANIFEST_FACT
+                else "Axeyum.Autogenesis.Statement.NatModEqFamily.natModEqComm"
+            ),
+            source=(
+                "statement-adapter-manifest"
+                if fact_id == MANIFEST_FACT
+                else "agent-frozen-export-index-v1"
+            ),
+        )
+
+    monkeypatch.setattr(tools, "resolve_export", resolve)
+
+
 def context(root: Path, deadline: float = 0.0) -> SimpleNamespace:
     deps = tools.AgentDeps(root=root, deadline=deadline)
     return SimpleNamespace(deps=deps, tool_call_id="t0")
