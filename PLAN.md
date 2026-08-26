@@ -117,6 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-26 | `6fad715d8` | Make the Fibonacci child qualification progress-aware: pin candidate-specific dependency receipts and permit either child to advance only through checked, axiom-free kernel evidence. |
 | 2026-08-26 | `2aedb4d68` | Refresh the generated public example inventory from 163 to the 193 examples canonical discovery actually finds; both guarded planning references now report zero stale markers. |
 | 2026-08-26 | `42e7bdfd1` | Make the complete Python build/test/stub/type/lint recipe part of canonical `just check`; register two orphan controls in both gates and return the reachability ratchet from 16 to its 14-module baseline. |
 | 2026-08-26 | `30353a600` | Synchronize three missing fact dependencies from admitted kernel proofs; the 1,302-edge derived authority returns to zero missing edges and one more fact gains downstream connectivity. |
@@ -1649,6 +1650,12 @@ The generated example inventory is also current again: canonical discovery now
 finds 193 checked-in Cargo examples rather than the stale 163 recorded in two
 planning front doors. Both derived documents and `PLAN.md` are regenerated;
 the inventory checker reports two markers and zero stale counts.
+The adopted controls then exposed a qualification artifact that interpreted
+legitimate Fibonacci-child progress as a failure. Its second child now carries
+the three dependencies derived from `Nat.fib_le_succ`, and the checker preserves
+the historical selection while allowing either child to advance only through
+checked, axiom-free kernel evidence. All 51 adopted controls pass again without
+granting the qualification process proof, evaluation, or ledger-write credit.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization

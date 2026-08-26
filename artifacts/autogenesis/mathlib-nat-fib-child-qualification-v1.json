@@ -1,7 +1,7 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "kind": "axeyum-autogenesis-mathlib-nat-fib-child-qualification",
-  "state": "relation-boundary-measured-child-selected-no-proof-credit",
+  "state": "relation-boundary-measured-selection-historical-no-qualification-proof-credit",
   "tooling_commit": "3dac4f57b11ec19bae23c300a78839b6e4ac48c8",
   "tooling": {
     "path": "crates/axeyum-lean-import/examples/relation_goal_probe.rs",
@@ -25,6 +25,9 @@
   "candidates": [
     {
       "fact_id": "F:ml430-nat-fib-coprime-fib-succ-162fc738",
+      "fact_dependencies": [
+        "F:ml430-nat-fib-add-two-b86e0c82"
+      ],
       "source_name": "Nat.fib_coprime_fib_succ",
       "artifact_file": "r082.ndjson",
       "target_definition": "Axeyum.Autogenesis.Coverage.r082",
@@ -39,6 +42,11 @@
     },
     {
       "fact_id": "F:ml430-nat-fib-le-fib-succ-d1ef4a3d",
+      "fact_dependencies": [
+        "F:ml430-nat-fib-add-two-b86e0c82",
+        "F:nat-le-add-right",
+        "F:nat-zero-le"
+      ],
       "source_name": "Nat.fib_le_fib_succ",
       "artifact_file": "r086.ndjson",
       "target_definition": "Axeyum.Autogenesis.Coverage.r086",
