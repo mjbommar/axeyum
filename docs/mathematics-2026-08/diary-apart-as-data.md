@@ -57,3 +57,51 @@ kind — it *manufactures* a disjunction from a strict pair rather than consumin
 a supplied one, which is why the constructive IVT can use it where bisection
 alone fails. See
 [`diary-constructive-ivt.md`](diary-constructive-ivt.md).
+
+---
+
+## Addendum: tightness of apartness is the same wall, a third time
+
+A lane asked whether a strictly monotone `F` reflects **`Equiv`** —
+`Equiv (F x) (F y) → Equiv x y` — hoping it might be reachable where `lt`
+reflection is not, since `Equiv` looks like a negative statement.
+
+**Half of it is free, and the half that is not is the same wall.**
+
+From `h : Equiv (F x) (F y)`, assume `Apart x y`; `strict_injective_of_pos_deriv`
+gives `Apart (F x) (F y)`, which contradicts `h` via `not_equiv_of_apart`. So
+
+    Not (Apart x y)
+
+**is** constructively derivable — proving a negation needs no case split and no
+excluded middle. The blocker is the next step: turning `Not (Apart x y)` into
+`Equiv x y` requires **tightness of apartness**, and this development has only
+the easy direction. A lane checked every `NameId` field in `creal.rs` and found
+`not_equiv_of_apart : Apart x y → Not (Equiv x y)` and no converse.
+
+That absence is not an oversight. **Tightness is `lt`-reflection in `Equiv`'s
+clothing**: a codomain non-apartness fact would have to yield domain positional
+information, with no bisection available to produce it.
+
+So three statements that look independent are one problem:
+
+| Statement | Blocked on |
+|---|---|
+| exact `lt` reflection (`F x < F y → x < y`) | domain position from a codomain fact |
+| exact inverse function theorem (Ch 12) | an exact IVT preimage |
+| tightness (`¬ Apart x y → Equiv x y`) | the same, in `Equiv`'s clothing |
+
+All three wait on `ivt_approx`. That is worth knowing before anyone attempts
+them separately — and it is the fourth time in this session that separate
+reports turned out to describe one cause.
+
+**What IS reachable, and landed**: everything *preserving*.
+`strict_antitone_of_neg_deriv` (the mirror, via `neg ∘ F`), and
+`strict_mono_comp` — composition of strictly increasing maps. The composition
+one carries a finding worth keeping: **`hasDerivative_chain` does not supply its
+hypothesis cheaply**, because the chain rule fixes ONE shared interval `[a,b]`
+for both functions via a self-map hypothesis, which would force `G` strictly
+increasing on `F`'s *domain* rather than on `F`'s *range* — not the composition
+Chapter 12 wants. Stating the corollary over the strict-monotonicity
+*conclusions*, plus an explicit range hypothesis, makes it pure function
+application with no derivative machinery at all.
