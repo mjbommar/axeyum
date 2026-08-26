@@ -547,6 +547,20 @@ unreviewed rather than structurally pinned at zero. Next: add small reviewed
 local concept batches whose definitions Axeyum can adjudicate, never bulk-copy
 or name-match the reference corpus.
 
+The first follow-on batch applies that process to statements already carrying
+strong ledger evidence. Three additional local concepts—factorial products,
+modular arithmetic, and equivalence relations—receive twelve proposition-level
+links from nine settled train/development facts. Each edge was reviewed against
+the fact's formal statement and names its exact base, boundary, bridge, or
+relation law. The concept projection once again joins family-topic guidance,
+qualified fact formalization, and kernel anchors: 13 concepts in the union, 177
+family-topic facts, nine formalized facts, three kernel anchors, and zero
+held-out formalization links. The validator independently joins the overlay and
+nursery and rejects dropped facts, invented anchors, stale source hashes, and
+held-out identities. This is the first useful connective tissue beyond the
+three seed anchors; it remains partial semantic review, not automated
+classification or production credit.
+
 ### Exit evidence
 
 - Kernel theorem count agrees exactly with the theorem-production authority.
