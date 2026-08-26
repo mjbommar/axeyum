@@ -603,6 +603,12 @@ proof-free statement-adapter generator and hash-pinned external-certificate
 runner—also run in both gates; the control reachability ratchet returns to its
 14 characterized legacy orphans rather than accepting growth to 16.
 
+Canonical example discovery now finds 193 checked-in Cargo examples, not the
+stale 163 repeated by two planning front doors. The generated inventory updates
+both references and reports two guarded markers with zero stale counts. This is
+scale bookkeeping rather than capability credit, but keeping it live prevents
+the public surface from silently outrunning its documented/tested inventory.
+
 ## Sequencing
 
 The critical path is not three independent projects:
