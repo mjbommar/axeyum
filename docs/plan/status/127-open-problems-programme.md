@@ -221,7 +221,8 @@ model appears or all leaves and the covering proof check.
 
 **Recursive S-box leaf refinement, 2026-08-26.** ADR-0589 adds a reusable file-backed recursive
 cube checker: every child formula and every covering formula is reconstructed from one trusted
-root, and a missing or invalid leaf names its exact tree path. The first hard top-level leaf
+root, proof files open lazily under per-file and aggregate byte caps, and a missing or invalid
+leaf names its exact tree path. The first hard top-level leaf
 exposed why this is needed: its raw UNSAT search took 79 minutes and the proof-producing replay
 exceeded 1 GiB, while a five-selector refinement closed 30/32 children immediately. Refining
 only the two hard children again, then their measured hard children, has already produced two

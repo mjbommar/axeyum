@@ -46,6 +46,7 @@ in progress and carries no leaf or target verdict until every branch checks.
 ## Consequences
 
 An adaptive producer can preserve easy checked regions and refine only hard leaves without a
-bespoke proof-stitching format. Recursive checking may still be expensive and currently opens
-all leaf readers while constructing a tree; the explicit node, depth, and per-proof byte caps
-make those limits fail closed rather than silently certify partial work.
+bespoke proof-stitching format. Recursive checking may still be expensive. Proof metadata is
+validated while constructing the tree, but each file is opened lazily only when its branch is
+checked; explicit node, depth, per-proof, and aggregate-byte caps make resource limits fail
+closed rather than silently certify partial work or exhaust file descriptors.
