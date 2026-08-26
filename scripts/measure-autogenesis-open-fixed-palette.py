@@ -52,6 +52,37 @@ def capsule_path(directory: Path, fact_id: str) -> Path:
     return directory / f"{fact_id.replace(':', '-', 1)}.ndjson"
 
 
+def classify_statement_import_error(message: str) -> dict[str, Any]:
+    trusted = re.search(r'trusted declaration "([^"]+)" \(([^)]+)\)', message)
+    if trusted:
+        return {
+            "reason_kind": "TrustedDeclarationInStatementClosure",
+            "trusted_declaration": trusted.group(1),
+            "trusted_declaration_kind": trusted.group(2),
+        }
+    candidate = re.search(
+        r'candidate declaration "([^"]+)" occurs (\d+) times; expected one',
+        message,
+    )
+    if candidate:
+        return {
+            "reason_kind": "CandidateDeclarationUnavailable",
+            "candidate_declaration": candidate.group(1),
+            "candidate_occurrence_count": int(candidate.group(2)),
+        }
+    candidate_trusted = re.search(
+        r'candidate declaration "([^"]+)" reaches (\d+) trusted declaration\(s\)',
+        message,
+    )
+    if candidate_trusted:
+        return {
+            "reason_kind": "CandidateClosureReachesTrustedDeclaration",
+            "candidate_declaration": candidate_trusted.group(1),
+            "candidate_trusted_declaration_count": int(candidate_trusted.group(2)),
+        }
+    return {"reason_kind": "UnclassifiedStatementImportError", "message": message}
+
+
 def eligible_mapping(
     mapping: dict[str, str], nursery: dict[str, Any]
 ) -> tuple[dict[str, str], list[str]]:
@@ -108,6 +139,7 @@ def measure(
     capsule_directory: Path,
     population_path: Path | None = None,
     must_decline_path: Path | None = None,
+    ranking_path: Path | None = None,
 ) -> dict[str, Any]:
     population_bytes = population_path.read_bytes() if population_path else None
     if mapping_path is None:
@@ -165,6 +197,31 @@ def measure(
             "path": str(must_decline_path),
             "sha256": digest(must_decline_bytes),
         }
+    ranked_candidates: dict[str, tuple[str, ...]] = {}
+    ranking_source = None
+    if ranking_path is not None:
+        ranking_bytes = ranking_path.read_bytes()
+        ranking = json.loads(ranking_bytes)
+        held_out = set(ranking.get("excluded_held_out_fact_ids", []))
+        for goal in ranking.get("goals", []):
+            if not isinstance(goal, dict) or not isinstance(goal.get("fact_id"), str):
+                raise ValueError("every ranking goal must name a string fact_id")
+            fact_id = goal["fact_id"]
+            if fact_id in held_out:
+                raise ValueError(f"held-out fact appears in ranking goals: {fact_id}")
+            candidates = goal.get("candidates")
+            if not isinstance(candidates, list):
+                raise ValueError(f"ranking goal has no candidate list: {fact_id}")
+            ranked_candidates[fact_id] = tuple(
+                row["kernel_declaration_id"]
+                for row in candidates
+                if isinstance(row, dict)
+                and isinstance(row.get("kernel_declaration_id"), str)
+            )
+        absent = sorted(set(mapping) - set(ranked_candidates))
+        if absent:
+            raise ValueError(f"measured facts are absent from ranking: {absent}")
+        ranking_source = {"path": str(ranking_path), "sha256": digest(ranking_bytes)}
     outcomes = []
     for fact_id, target_definition in sorted(mapping.items()):
         path = capsule_path(capsule_directory, fact_id)
@@ -180,15 +237,17 @@ def measure(
                 else "positive-target"
             ),
         }
+        candidate_names = ranked_candidates.get(fact_id, CANDIDATES)
+        row["candidate_declarations"] = list(candidate_names)
         try:
             imported = producers.import_candidate_statement_ndjson(
-                data, None, target_definition, list(CANDIDATES)
+                data, None, target_definition, list(candidate_names)
             )
             kernel = imported.kernel()
             candidate = producers.propose_bounded_application(
                 kernel,
                 imported.goal(),
-                [kernel.name(name, must_exist=True) for name in CANDIDATES],
+                [kernel.name(name, must_exist=True) for name in candidate_names],
             )
             admitted = kernel.name("Axeyum.OpenCensus.Verified", must_exist=False)
             kernel.add_declaration(
@@ -206,15 +265,7 @@ def measure(
             row.update(result="declined", reason_kind=decline.reason.kind)
         except producers.StatementImportError as error:
             message = str(error)
-            trusted = re.search(
-                r'trusted declaration "([^"]+)" \(([^)]+)\)', message
-            )
-            row.update(
-                result="import_rejected",
-                reason_kind="TrustedDeclarationInStatementClosure",
-                trusted_declaration=(trusted.group(1) if trusted else None),
-                trusted_declaration_kind=(trusted.group(2) if trusted else None),
-            )
+            row.update(result="import_rejected", **classify_statement_import_error(message))
         outcomes.append(row)
 
     counts = Counter(row["result"] for row in outcomes)
@@ -222,7 +273,9 @@ def measure(
         row["reason_kind"] for row in outcomes if row["result"] == "declined"
     )
     rejection_declarations = Counter(
-        row["trusted_declaration"]
+        row.get("trusted_declaration")
+        or row.get("candidate_declaration")
+        or "<unclassified>"
         for row in outcomes
         if row["result"] == "import_rejected"
     )
@@ -246,8 +299,14 @@ def measure(
         },
         "strategy": {
             "producer": "bounded-application",
-            "candidate_rule": "one fixed target-independent palette for every goal",
-            "candidate_declarations": list(CANDIDATES),
+            "candidate_rule": (
+                "held-out-safe deterministic per-goal ranking"
+                if ranking_path is not None
+                else "one fixed target-independent palette for every goal"
+            ),
+            "candidate_declarations": (
+                None if ranking_path is not None else list(CANDIDATES)
+            ),
             "forbidden_inputs": [
                 "target theorem proof",
                 "per-target candidate selection",
@@ -283,6 +342,8 @@ def measure(
         result["source"]["population_filter"] = population_source
     if must_decline_source is not None:
         result["source"]["must_decline_population"] = must_decline_source
+    if ranking_source is not None:
+        result["source"]["candidate_ranking"] = ranking_source
     return result
 
 
@@ -294,6 +355,11 @@ def main() -> int:
         "--population",
         type=Path,
         help="optional committed census whose outcomes define the exact fact subset",
+    )
+    parser.add_argument(
+        "--ranking",
+        type=Path,
+        help="optional held-out-safe per-goal candidate ranking",
     )
     parser.add_argument(
         "--must-decline-population",
@@ -311,6 +377,7 @@ def main() -> int:
             args.capsule_directory,
             args.population,
             args.must_decline_population,
+            args.ranking,
         ),
         indent=2,
         sort_keys=True,

@@ -1302,6 +1302,14 @@ mutation (`Nat.choose_self = 0` at `n = 0`). The clean census therefore contains
 45 positive targets and six false controls: 20/4 in the importable population
 and 25/2 in the import-rejected population. Control acceptance is a soundness
 failure, never production credit.
+Surface-operator normalization now contributes arithmetic, modular, order, and
+divisibility vocabulary to live retrieval; for the two Nat additive ModEq
+goals, `Nat.mod_eq_add_left` and `Nat.mod_eq_add_right` move into slots 1-2.
+The first ranked-application census then fails closed before search on all 51
+rows: 48 selected declarations are absent from the imported goal capsules and
+three candidate closures reach a trusted declaration. Next work is a general
+proof-isolated native-candidate materialization/transport boundary, not a
+larger application grammar pretending graph names are executable lemmas.
 The accepted ADR-0541 general SMT-LIB session driver is now also a named
 `axeyum` binary target, not only a discoverability-poor Cargo example. The same
 source remains the historical example control, and the binary's focused check,

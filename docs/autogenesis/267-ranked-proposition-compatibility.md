@@ -48,6 +48,19 @@ must-decline controls; 25 import-rejected positive targets and two rejected
 controls. A producer must improve the first count while keeping acceptance of
 all six controls at zero.
 
+Operator-aware retrieval now ranks additive modular lemmas ahead of generic
+Nat/Int declarations, but a direct ranked-application census exposes the next
+boundary. All 51 rows fail before proof search: 48 because the selected native
+kernel declaration occurs zero times in the imported Mathlib goal capsule, and
+three because the attempted candidate closure reaches a trusted declaration.
+The result is
+[`open-ranked-application-census-v1.json`](../../artifacts/autogenesis/open-ranked-application-census-v1.json).
+This is not evidence that the ranked lemmas are mathematically irrelevant. It
+is evidence that graph retrieval currently returns names from an independently
+constructed kernel without a proof-isolated declaration transport into the
+goal kernel. Candidate materialization/composition must precede any claim that
+ranked bounded application was evaluated.
+
 ## What is checked
 
 [`checked_proposition_compatibility`](../../crates/axeyum-lean-import/src/theorem_composition.rs)

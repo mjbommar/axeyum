@@ -124,6 +124,15 @@ two import-rejected), leaving 20 importable and 25 import-rejected positive
 targets. Sound producer progress must never count acceptance of a control as
 conversion.
 
+The live ranker now preserves semantic vocabulary from surface operators, so
+relevant Nat additive-congruence lemmas occupy the first two candidate slots.
+A direct ranked-application run nevertheless reaches proof search on 0/51:
+48 selected native declarations are absent from the foreign goal capsule and
+three candidate closures reach a trusted declaration. The graph can retrieve
+relevant names, but there is not yet a general proof-isolated bridge from the
+native kernel library into an imported Mathlib goal kernel. This transport gap
+now precedes grammar quality in the ranked path.
+
 The latest concurrent construction adds real axiom-free steps in the CReal
 Riemann-sum programme, Complex division algebra, and the Rat power/normal-form
 bridge. The complete 753-test kernel suite passes on the merged population.
