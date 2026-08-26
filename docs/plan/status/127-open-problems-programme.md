@@ -208,6 +208,14 @@ the other eight active portfolio cells continue without a wall-clock cutoff. Thi
 partial progress, not a lower bound: `[7,8]` remains unchanged until either a replayed SAT
 model appears or all leaves and the covering proof check.
 
+**Regression replay gate made load-stable, 2026-08-26.** The pre-push sweep failed twice on
+different corpus rows because it ran `solve_smtlib` and its direct
+`solve_smtlib_with_model` source projection sequentially under independent one-second
+wall-clock deadlines; one run decided while the other correctly timed out. The test now runs
+the model-carrying entry point once and replays every SAT result against that same deciding
+run. This directly tests the evidence contract without turning host load into a false API
+divergence. The 152-file sweep replays 44 SAT results and all-target/all-feature Clippy passes.
+
 **SIMD semantic/minimality calibration, 2026-08-26.** ADR-0559 adds exact provenance-tag
 semantics for unary AVX2 `vpshufb` and same-source `vperm2i128`. Global 32-byte reversal
 replays in two instructions; the complete one-step family query is a deterministic
