@@ -784,6 +784,29 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   §7.1.2 makes the CLI print `unknown` for an error, so 59 both-sides-decline
   files read as disagreements and the count comes out 193 instead of 134.
   `--confirm` compares in-process, which is the difference.
+- **A CONCRETE INSTANTIATION CAN HIDE THE BUG A SYMBOLIC ONE EXPOSES, so the
+  mandatory-instantiation rule is NECESSARY AND NOT SUFFICIENT.** Measured
+  2026-08-26 in `creal/exponential.rs`. A proof of `2^n <= 2*n!` type-checked at
+  every concrete `n` tried (2, then 3) and failed with `TypeMismatch` for
+  symbolic `n`. The cause was real: `Int.int_le_of_mul_le_mul_right`'s
+  conclusion is `a * (ofNat c)`, ONE multiplication, while the chain produced
+  `(a * d1z) * d2z`, two left-associated ones -- propositionally equal, not
+  definitionally. At a concrete `n` every term reduces to a numeral and full
+  evaluation papers the associativity hole over.
+
+  This cuts against the instinct the rest of this file builds. Concrete
+  instantiation is what catches a transposed branch, a sign error, and a wrong
+  hand-computed expectation -- three separate defects this session, none of
+  which a symbolic check would have found. But numerals reduce, and reduction
+  hides every defeq-shaped gap. The two checks fail on disjoint defect classes,
+  so a declaration needs BOTH: instantiate at concrete arguments AND confirm the
+  proof term builds against a genuinely free variable.
+
+  The bisect that finds it: run `Kernel::infer` on each intermediate step with a
+  FREE fvar in the position, not a literal, and compare the inferred shape
+  against what the next lemma's conclusion expects. The first step whose shape
+  differs is the one needing an explicit `mul_assoc` (or `add_assoc`) rewrite.
+
 - **A CERTIFICATE MUST CARRY EVERY DISTINCTION ITS PRODUCER MAKES, or the checker
   cannot re-derive the refutation — and mutation testing will not find the gap.**
   Measured 2026-08-20 in `nra_monomial_bound_cert.rs`. The producer distinguished
