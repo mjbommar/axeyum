@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 248] = [
+    let expected: [(&str, crate::NameId, &str); 249] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -596,6 +596,17 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         (
             "CReal.antitone_of_nonpos_deriv",
             p.antitone_of_nonpos_deriv,
+            "theorem",
+        ),
+        // Uniqueness of the derivative on a NONDEGENERATE interval
+        // (`creal/deriv_unique.rs`): the naive statement without `lt a b` is
+        // refuted at a degenerate `a = b`, so this carries that hypothesis.
+        // Built on `CReal.lt_cotrans`, `HasDerivativeOn.spec`, and
+        // `CReal.equiv_zero_of_small` -- no Mean Value Theorem, no
+        // case-split on `CReal.le`.
+        (
+            "CReal.hasDerivative_unique",
+            p.has_derivative_unique,
             "theorem",
         ),
     ];

@@ -2230,6 +2230,17 @@ pub struct CRealPrelude {
     /// `[a, b]` makes `F` antitone there, via the same `neg ∘ F` trick
     /// [`Self::constant_of_zero_deriv`] uses for its second direction.
     pub antitone_of_nonpos_deriv: NameId,
+
+    /// `CReal.hasDerivative_unique : ∀ F F1 F2 a b, HasDerivativeOn F F1 a b
+    /// → HasDerivativeOn F F2 a b → lt a b → ∀ z, le a z → le z b → Equiv
+    /// (F1 z) (F2 z)` (`creal/deriv_unique.rs`) — the derivative of a
+    /// function on `[a,b]` is unique, GIVEN the interval is genuinely
+    /// nondegenerate (`lt a b`, not merely `le a b`). The naive statement
+    /// without that hypothesis is refuted at a degenerate interval `a = b`
+    /// (`id`'s derivative is simultaneously `const zero` and `const one`
+    /// there); see that module's own documentation for the refutation and
+    /// the `lt_cotrans`-based nearby-point construction that replaces it.
+    pub has_derivative_unique: NameId,
 }
 
 impl CRealPrelude {
@@ -2546,6 +2557,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         ivt_step: kernel.name_str(creal, "ivt_step"),
         constant_of_zero_deriv: kernel.name_str(creal, "constant_of_zero_deriv"),
         antitone_of_nonpos_deriv: kernel.name_str(creal, "antitone_of_nonpos_deriv"),
+        has_derivative_unique: kernel.name_str(creal, "hasDerivative_unique"),
     }
 }
 
@@ -2627,6 +2639,13 @@ pub(crate) fn build_creal_prelude_uncached(
         convergence::declare_convergence(&mut d, prelude)?;
         uniform_continuity::declare_uniform_continuity(&mut d, prelude)?;
         derivative::declare_derivative(&mut d, prelude)?;
+        // `hasDerivative_unique` needs only `HasDerivativeOn`/`hd_spec`
+        // (`derivative::declare_derivative`, just above) and `lt_cotrans`
+        // (`cotransitivity::declare_cotransitivity`, well above); it does
+        // not need `BoundedOn`/`abs_mul_le_of_bounds` or anything from
+        // `uniform_continuity`, so it lands right here rather than waiting
+        // for either.
+        deriv_unique::declare_deriv_unique(&mut d, prelude)?;
         // `uniformly_continuous_mul`/`_sq` and the concrete polynomial
         // instantiation consume `CReal.BoundedOn` and
         // `CReal.abs_mul_le_of_bounds`, declared just above by
@@ -3610,6 +3629,7 @@ mod completeness;
 mod convergence;
 mod cotransitivity;
 mod density;
+mod deriv_unique;
 mod derivative;
 mod exponential;
 mod field;
