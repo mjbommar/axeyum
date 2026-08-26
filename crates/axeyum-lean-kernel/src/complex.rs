@@ -55,11 +55,14 @@
 //! # What is *not* claimed
 //!
 //! No order, by design and by [`ComplexPrelude::no_compatible_order`]. No
-//! inverse, no division, no `√`, no completeness, no algebraic closure — each is
-//! a separate development, and none of them is one of the nine. `Complex.normSq`
-//! and [`ComplexPrelude::mul_conj`] land in `CReal`'s **existing** order
+//! completeness, no algebraic closure — each is a separate development, and
+//! none of them is one of the nine. `Complex.normSq` and
+//! [`ComplexPrelude::mul_conj`] land in `CReal`'s **existing** order
 //! (`CReal.le`), which is available precisely because it is a statement about
-//! the components rather than about ℂ.
+//! the components rather than about ℂ. `inv`/`div` (over a supplied
+//! `CReal.PosBound` witness) and [`ComplexPrelude::abs`] (the modulus,
+//! `CReal.sqrt (normSq z)`) exist too, further down this module — see each
+//! one's own doc for exactly what it does and does not give.
 
 // Proof scripts are long, straight-line term constructions with short
 // mathematical names, exactly as in `creal` and `rat_prelude`.
@@ -85,7 +88,7 @@ use crate::expr::ExprId;
 use crate::int_prelude::ops::{IntDev, exists_elim};
 use crate::name::NameId;
 use crate::nat_prelude::{NatOps, NatPrelude};
-use crate::rat_prelude::ops::rat_eq_rewrite;
+use crate::rat_prelude::ops::{den, num, radd, rat_eq_rewrite, rle, rneg, rsymm, rzero};
 use crate::{Kernel, KernelError};
 
 mod ring;
@@ -344,8 +347,10 @@ pub struct ComplexPrelude {
     /// this development reaches.
     ///
     /// **Not** the triangle inequality `‖z+w‖ ≤ ‖z‖+‖w‖` — that is stated on
-    /// the UN-squared norm, and needs `CReal.sqrt`; no `Complex.abs` is
-    /// declared here, so it is not statable at all yet. `normSq_add` (this
+    /// the UN-squared norm. `CReal.sqrt` and [`Self::abs`] now exist, so the
+    /// statement itself is now writable, but proving it needs `abs` facts
+    /// ([`Self::abs`]'s own doc) that do not exist yet, so it is still not
+    /// proved here. `normSq_add` (this
     /// module) is the parallelogram law, not subadditivity — it is an
     /// EQUALITY mentioning `normSq (add z (neg w))` as well as `normSq (add z
     /// w)`, and it is [`Self::norm_sq_nonneg`] applied to that SECOND term
@@ -1107,9 +1112,53 @@ pub struct ComplexPrelude {
     /// subadditivity every other metric consequence in this module already
     /// uses, not a sharper bound derived specially for this identity. The
     /// unsquared metric Ptolemy inequality (`|AC|·|BD| ≤ |AB|·|CD| +
-    /// |BC|·|AD|`, on moduli) needs `CReal.sqrt`, which does not exist in
-    /// this kernel yet.
+    /// |BC|·|AD|`, on moduli) needed `CReal.sqrt`, which now exists
+    /// ([`Self::abs`]) but not yet the *further* facts (`sqrt` respecting
+    /// `Equiv`, or monotone in `≤`) that stating or proving the unsquared
+    /// form needs — see [`Self::abs`]'s own doc for exactly what is still
+    /// missing and why.
     pub ptolemy_inequality_sq: NameId,
+
+    /// `Complex.abs : Complex → CReal := fun z => CReal.sqrt (normSq z)` —
+    /// the modulus. **Total**: `CReal.sqrt` needs no `0 ≤ x` hypothesis (its
+    /// construction clamps every sample to `Rat.max _ 0`), so `abs` never
+    /// inspects `normSq z`'s sign, even though [`Self::norm_sq_nonneg`]
+    /// already gives it for free.
+    ///
+    /// **No congruence, monotonicity, or known-value law is proved for
+    /// `abs` here**, and none is a quick follow-on. All three would need a
+    /// fact `CReal.sqrt` itself does not have yet — `sqrt` respecting
+    /// `CReal.Equiv` (`x ~ y → sqrt x ~ sqrt y`), or `sqrt` monotone
+    /// (`x ≤ y → sqrt x ≤ sqrt y`), or `sqrt` at a known rational value
+    /// (`sqrt 1 ~ 1`, needed to compute `abs I`) — and `creal/sqrt.rs`'s own
+    /// module doc names exactly this class as the remaining obligation
+    /// ("`0 ≤ x` is the hypothesis `sqrt`'s own LAWS need... not the
+    /// definition"), the same real-analysis-sized gap `sq_sqrt`/`sqrt_sq`
+    /// are missing for. Building any of them means editing `creal/sqrt.rs`,
+    /// which this module does not own.
+    ///
+    /// [`Self::abs_nonneg`] is provable WITHOUT any of those: it is a
+    /// single-index sign fact about `sqrtApprox`'s own construction (a
+    /// `Nat` square root, cast to `Rat`, always nonnegative), not an
+    /// estimate relating `sqrt x` back to `x`'s own value.
+    pub abs: NameId,
+    /// `Complex.abs_nonneg : ∀ z, CReal.le CReal.zero (abs z)`.
+    ///
+    /// Proved by unfolding `abs z` down to `CReal.sqrt (normSq z)`'s own
+    /// sample at index `n` — `CReal.sqrtApprox (normSq z) ((1+1)·n+1)`,
+    /// via `CReal.mk`'s projection then `CReal.speedup`'s index shift, both
+    /// plain beta/iota — and observing `CReal.sqrtApprox`'s literal body is
+    /// `Rat.normalize (Int.ofNat s) (succ _) _` for a `Nat` witness `s`,
+    /// exactly the shape `Rat.natDivSucc` builds its own value from
+    /// (`creal/sqrt.rs::declare_sqrt_approx` and
+    /// `rat_prelude/archimedean.rs::declare_nat_div_succ`, side by side —
+    /// same `Rat.normalize`, same `one_le_succ` positivity proof). So
+    /// `Rat.zero_le_natDivSucc` applies directly once `s` is reconstructed
+    /// (`sqrt_approx_witness`, below), with no new `CReal`-level lemma
+    /// needed: `sqrt.rs`'s own helpers are private to `creal`, so this
+    /// rebuilds `sqrtApprox`'s body from public/`pub(crate)` pieces instead
+    /// of importing them.
+    pub abs_nonneg: NameId,
 }
 
 impl ComplexPrelude {
@@ -1271,6 +1320,8 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         ptolemy_identity: kernel.name_str(complex, "ptolemy_identity"),
         norm_sq_congr: kernel.name_str(complex, "normSq_congr"),
         ptolemy_inequality_sq: kernel.name_str(complex, "ptolemy_inequality_sq"),
+        abs: kernel.name_str(complex, "abs"),
+        abs_nonneg: kernel.name_str(complex, "abs_nonneg"),
     }
 }
 
@@ -1374,7 +1425,9 @@ pub fn build_complex_prelude(kernel: &mut Kernel) -> Result<ComplexPrelude, Kern
         declare_root_of_unity_pow(&mut d, prelude)?;
         declare_ptolemy_identity(&mut d, prelude)?;
         declare_norm_sq_congr(&mut d, prelude)?;
-        declare_ptolemy_inequality_sq(&mut d, prelude)
+        declare_ptolemy_inequality_sq(&mut d, prelude)?;
+        declare_abs(&mut d, prelude)?;
+        declare_abs_nonneg(&mut d, prelude)
     })();
     match built {
         Ok(()) => Ok(prelude),
@@ -9907,6 +9960,162 @@ fn declare_ptolemy_inequality_sq(d: &mut IntDev<'_>, p: ComplexPrelude) -> Resul
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.ptolemy_inequality_sq,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// =============================================================================
+// `Complex.abs`, the modulus — `CReal.sqrt (normSq z)`.
+// =============================================================================
+
+/// `Complex.abs z := CReal.sqrt (normSq z)`. See [`ComplexPrelude::abs`] for
+/// what this does and does not give.
+fn declare_abs(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+    let creal_carrier = creal_ty(d, p);
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let norm = d.const_app(p.norm_sq, &[z]);
+    let body = d.const_app(creal.sqrt, &[norm]);
+
+    let value = d.lam_fv(z_fv, carrier, body);
+    let ty = d.arrow(carrier, creal_carrier);
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.abs,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(DERIVED_HEIGHT),
+    })
+}
+
+/// Rebuilds the `Nat` witness `CReal.sqrtApprox x n` computes internally:
+///
+/// ```text
+/// sqrtApprox x n :=
+///   let d := n + 1
+///   let j := d * d
+///   let q := Rat.max (CReal.seq x j) Rat.zero
+///   let a := Int.natAbs (Rat.num q)
+///   let b := Rat.den q
+///   let k := Nat.div (a * j) b
+///   Rat.normalize (Int.ofNat (CReal.natSqrt k)) d (one_le_succ n)
+/// ```
+///
+/// mirroring `creal/sqrt.rs::declare_sqrt_approx` exactly — that function's
+/// own helpers (`sample`, `creal_ty`, …) are private to `creal`, so this is a
+/// from-scratch reconstruction using only public `CRealPrelude`/`RatPrelude`
+/// fields and the `pub(crate)` builders in `rat_prelude::ops`. Returns just
+/// the witness `s := CReal.natSqrt k`, **not** the wrapped `Rat.normalize`
+/// application: [`declare_abs_nonneg`] plugs it into `Rat.natDivSucc` instead,
+/// which builds the identical `Rat.normalize (Int.ofNat s) (succ n) _` term
+/// `sqrtApprox` does (`rat_prelude/archimedean.rs::declare_nat_div_succ`), so
+/// `sqrtApprox x n` and `Rat.natDivSucc (sqrt_approx_witness x n) n` are
+/// definitionally equal without this function ever constructing that shared
+/// tail itself.
+fn sqrt_approx_witness(d: &mut IntDev<'_>, creal: CRealPrelude, x: ExprId, n: ExprId) -> ExprId {
+    let rat = creal.rat;
+    let dd = d.succ(n);
+    let j = NatOps::mul(d, dd, dd);
+    let sample_q = d.const_app(creal.seq, &[x, j]);
+    let zero_rat = rzero(d, rat);
+    let q_pos = d.const_app(rat.max, &[sample_q, zero_rat]);
+    let numerator = num(d, q_pos);
+    let a = d.const_app(rat.int.nat_abs, &[numerator]);
+    let b = den(d, q_pos);
+    let scaled = NatOps::mul(d, a, j);
+    let k = NatOps::div(d, scaled, b);
+    d.const_app(creal.nat_sqrt, &[k])
+}
+
+/// `(1+1)·n + 1` — `CReal.speedup`'s own index shift (`creal/speedup.rs`'s
+/// `mul_index`, private to `creal`, reconstructed here) at the constant `c`
+/// `CReal.sqrt` calls `speedup`/`regular_of_kregular` with. `CReal.sqrt x`'s
+/// sample at index `n` is `CReal.sqrtApprox x` applied to exactly this.
+fn sqrt_speedup_index(d: &mut IntDev<'_>, n: ExprId) -> ExprId {
+    let c = d.num(1);
+    let factor = d.succ(c);
+    let scaled = NatOps::mul(d, factor, n);
+    NatOps::add(d, scaled, c)
+}
+
+/// `Complex.abs_nonneg : ∀ z, CReal.le CReal.zero (abs z)`. See
+/// [`ComplexPrelude::abs_nonneg`] for the argument; this builds it.
+///
+/// `CReal.le CReal.zero y := ∀ n, Rat.le (Rat.sub (seq zero n) (seq y n))
+/// (Rat.natDivSucc 2 n)`. At `y := abs z` and index `n`: `seq zero n` is
+/// `Rat.zero` (`CReal.zero`'s representative is the constant-`0` sequence),
+/// and `seq (abs z) n` is `CReal.sqrtApprox (normSq z) m` for
+/// `m := sqrt_speedup_index n` (both plain beta/iota through `CReal.mk`'s
+/// projection and `CReal.speedup`'s definition). Writing `A` for that
+/// `sqrtApprox` application: `Rat.zero_le_natDivSucc` at the reconstructed
+/// witness gives `0 ≤ A` directly (no estimate — `A` unfolds to a `Nat`
+/// square root cast, and casts are nonnegative); `Rat.neg_nonpos_of_nonneg`
+/// gives `-A ≤ 0`; chaining through `0 ≤ natDivSucc 2 n`
+/// (`Rat.zero_le_natDivSucc` again) via `Rat.le_trans` gives `-A ≤
+/// natDivSucc 2 n`; and `Rat.zero_add` rewrites `-A` to `Rat.zero + (-A)`,
+/// which is what `Rat.sub Rat.zero A` unfolds to. The final
+/// `add_declaration` check does the rest of the unfolding (`Rat.sub`,
+/// `seq`, `abs`, `CReal.zero`) that this proof term never performs by hand.
+fn declare_abs_nonneg(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let rat = creal.rat;
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let norm = d.const_app(p.norm_sq, &[z]);
+    let abs_z = d.const_app(p.abs, &[z]);
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let m = sqrt_speedup_index(d, n);
+    let s = sqrt_approx_witness(d, creal, norm, m);
+
+    // a_nonneg : Rat.le Rat.zero (Rat.natDivSucc s m), definitionally
+    // `Rat.le Rat.zero (CReal.sqrtApprox norm m)`.
+    let a_nonneg = d.lemma(rat.zero_le_nat_div_succ, &[s, m]);
+    let big_a = d.const_app(creal.sqrt_approx, &[norm, m]);
+    let neg_a = rneg(d, big_a);
+
+    // neg_nonpos : Rat.le (Rat.neg A) Rat.zero.
+    let neg_nonpos = d.lemma(rat.neg_nonpos_of_nonneg, &[big_a, a_nonneg]);
+
+    let two = d.num(2);
+    let bound = d.const_app(rat.nat_div_succ, &[two, n]);
+    let bound_nonneg = d.lemma(rat.zero_le_nat_div_succ, &[two, n]);
+    let zero_rat = rzero(d, rat);
+
+    // chain : Rat.le (Rat.neg A) bound.
+    let chain = d.lemma(
+        rat.le_trans,
+        &[neg_a, zero_rat, bound, neg_nonpos, bound_nonneg],
+    );
+
+    // Rewrite along `Rat.zero_add (Rat.neg A) : Rat.add Rat.zero (Rat.neg A)
+    // = Rat.neg A` to land on the shape `Rat.sub Rat.zero A` unfolds to.
+    let add_zero_neg_a = radd(d, zero_rat, neg_a);
+    let zero_add_eq = d.lemma(rat.zero_add, &[neg_a]);
+    let symm_eq = rsymm(d, add_zero_neg_a, neg_a, zero_add_eq);
+    let body_at_n = rat_eq_rewrite(d, neg_a, add_zero_neg_a, symm_eq, chain, &|d, t| {
+        rle(d, rat, t, bound)
+    });
+
+    let body = d.lam_fv(n_fv, nat, body_at_n);
+    let value = d.lam_fv(z_fv, carrier, body);
+    let ty = {
+        let zero_real = d.kernel().const_(creal.zero, vec![]);
+        let claim = d.const_app(creal.le, &[zero_real, abs_z]);
+        d.pi_fv(z_fv, carrier, claim)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.abs_nonneg,
         uparams: vec![],
         ty,
         value,

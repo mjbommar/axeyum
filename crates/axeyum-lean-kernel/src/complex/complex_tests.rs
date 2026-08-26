@@ -253,6 +253,8 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
         ("Complex.ptolemy_identity", p.ptolemy_identity),
         ("Complex.normSq_congr", p.norm_sq_congr),
         ("Complex.ptolemy_inequality_sq", p.ptolemy_inequality_sq),
+        ("Complex.abs", p.abs),
+        ("Complex.abs_nonneg", p.abs_nonneg),
     ];
     for (label, name) in named {
         let declaration = kernel
@@ -319,11 +321,17 @@ fn the_nine_ring_laws_are_distinct_checked_theorems() {
 /// `Complex.div` exist and need no order on `Complex` at all, since the
 /// separating witness is `CReal.PosBound (normSq z) k`, phrased over the
 /// already-ordered `CReal.le` rather than any order on `Complex` itself.
-/// `abs` is what an order on `Complex` would actually be needed for.
+///
+/// `abs` is likewise **not** in this list, and for the same reason, not
+/// because the reasoning above was wrong: `Complex.abs` exists
+/// ([`ComplexPrelude::abs`]) and is `CReal`-valued, so every law it can even
+/// state (`abs_nonneg`, a future triangle inequality) is phrased over
+/// `CReal.le`, never over an order on `Complex` itself. Declaring `abs` did
+/// not need — and did not add — an order on `Complex`.
 #[test]
 fn no_order_relation_is_declared_on_complex() {
     let (kernel, p) = built();
-    for forbidden in ["le", "lt", "abs"] {
+    for forbidden in ["le", "lt"] {
         let mut probe = kernel.clone();
         let name = probe.name_str(p.complex, forbidden);
         assert!(
@@ -1231,5 +1239,125 @@ fn inv_mul_concrete_instantiation() {
         "inv_mul at (neg I, one, k1, h1, k2, h2, k3, h3) must give EXACTLY \
          Equiv (inv (mul (neg I) one) k3 h3) \
          (mul (inv (neg I) k1 h1) (inv one k2 h2)): {admitted:?}"
+    );
+}
+
+/// `Complex.abs`'s declared TYPE is `Complex → CReal`, and its VALUE mentions
+/// both `CReal.sqrt` and `Complex.normSq` — read out of the kernel's own
+/// rendering, not trusted from the source text that built it.
+#[test]
+fn abs_is_creal_sqrt_of_norm_sq() {
+    let (kernel, p) = built();
+    let (ty, value) = match kernel
+        .environment()
+        .get(p.abs)
+        .expect("Complex.abs must be declared")
+    {
+        Declaration::Definition { ty, value, .. } => {
+            (kernel.render_lean(*ty), kernel.render_lean(*value))
+        }
+        other => panic!("{other:?} is not a definition"),
+    };
+    assert!(
+        ty.contains("Complex") && ty.contains("CReal"),
+        "Complex.abs must be typed Complex -> CReal: {ty}"
+    );
+    assert!(
+        value.contains("CReal.sqrt"),
+        "Complex.abs must be built from CReal.sqrt: {value}"
+    );
+    assert!(
+        value.contains("Complex.normSq"),
+        "Complex.abs must apply sqrt to normSq, not some other CReal: {value}"
+    );
+}
+
+/// `Complex.abs_nonneg` is stated `CReal.le CReal.zero (abs z)` — zero on the
+/// LEFT — not the reversed (and generally false) `CReal.le (abs z)
+/// CReal.zero`.
+#[test]
+fn abs_nonneg_is_stated_zero_le_abs() {
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.abs_nonneg)
+        .expect("Complex.abs_nonneg must be declared")
+    {
+        Declaration::Theorem { ty, .. } => kernel.render_lean(*ty),
+        other => panic!("{other:?} is not a theorem"),
+    };
+    assert!(
+        ty.contains("CReal.le CReal.zero"),
+        "abs_nonneg must read `CReal.le CReal.zero ...`, zero first: {ty}"
+    );
+    assert!(
+        ty.contains("Complex.abs"),
+        "abs_nonneg's conclusion must mention Complex.abs: {ty}"
+    );
+}
+
+/// A concrete instantiation of [`ComplexPrelude::abs_nonneg`] at `Complex.I`:
+/// `0 ≤ abs I`, admitted as its own checked theorem.
+#[test]
+fn abs_nonneg_concrete_instantiation() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let i_c = d.kernel().const_(p.i, vec![]);
+    let proof = d.lemma(p.abs_nonneg, &[i_c]);
+
+    let abs_i = d.const_app(p.abs, &[i_c]);
+    let zero_real = d.kernel().const_(p.creal.zero, vec![]);
+    let ty = d.const_app(p.creal.le, &[zero_real, abs_i]);
+
+    let name = d.kernel().name_str(anon, "Check.abs_nonneg_at_I");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value: proof,
+    });
+    assert!(
+        admitted.is_ok(),
+        "abs_nonneg at I must give EXACTLY CReal.le CReal.zero (abs I): {admitted:?}"
+    );
+}
+
+/// Negative control for [`abs_nonneg_concrete_instantiation`]: the SAME proof
+/// term must be REFUSED against the REVERSED claim `abs I le 0`.
+/// `CReal.le` is not symmetric, and this is generally false (`abs I` is not
+/// known to be `~ 0`, and indeed is not) — a checker that accepted it would
+/// be accepting an unrelated statement, not the one `abs_nonneg` proves.
+#[test]
+fn abs_nonneg_direction_is_load_bearing() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let i_c = d.kernel().const_(p.i, vec![]);
+    let proof = d.lemma(p.abs_nonneg, &[i_c]);
+
+    let abs_i = d.const_app(p.abs, &[i_c]);
+    let zero_real = d.kernel().const_(p.creal.zero, vec![]);
+    let wrong_ty = d.const_app(p.creal.le, &[abs_i, zero_real]);
+
+    let name = d.kernel().name_str(anon, "Check.abs_nonneg_reversed");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty: wrong_ty,
+        value: proof,
+    });
+    assert!(
+        admitted.is_err(),
+        "a proof of `0 le abs I` must NOT type-check against the REVERSED \
+         claim `abs I le 0`: {admitted:?}"
     );
 }
