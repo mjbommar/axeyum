@@ -269,6 +269,7 @@ compounding, not automation theatre.
 | [Producer-evaluation result contract](254-producer-evaluation-result-contract.md) | What must a future producer result account for before its funnel or successes can be trusted? |
 | [Held-out contamination by ordinary development](263-holdout-contamination-by-ordinary-development.md) | Ordinary hand development, unrelated to autogenesis, already proved held-out propositions; why the isolation gate could not see it. |
 | [Held-out contamination measurement and repair](264-holdout-contamination-measurement-and-repair.md) | The real count across all 57 pre-repair held-out rows (5), the re-deriving detector that would have caught it, and the `natural-binomial` whole-family repair. |
+| [Agent-effectiveness roadmap](265-agent-effectiveness-roadmap.md) | Grounded in the 2026-08-25 reachability×provability measurement: why the agent proves ~3 of 146 today, and the A→B→C→D producer-capability sequence (B1 congruence → B2 lemma search → B3 LLM-proposed, kernel-checked) that makes it advance the frontier. |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).
