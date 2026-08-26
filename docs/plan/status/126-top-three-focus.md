@@ -308,6 +308,11 @@ footprint, 29-dependency count, and `execution_eligible=false`; invalid query
 shapes fail closed and the toolset policy fingerprint moves. Next: implement a
 reconstruction proposal that consumes strategy metadata without importing the
 assumption-bearing proof term.
+The assumption-bearing theorem now materializes as a proof-free 10 KiB
+reconstruction target: 12 declarations, two explicit definition abstractions,
+zero normalization rewrites, and an empty footprint. The source theorem name is
+absent. Next: reconstruct this generalized goal and issue exact specialization
+evidence before attempting the three bitwise siblings.
 
 <!-- plan-section: landed-changes -->
 

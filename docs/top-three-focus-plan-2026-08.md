@@ -445,6 +445,11 @@ bitwise row remains strategy-eligible but execution-ineligible. Empty/two-axis
 queries decline, and the toolset policy hash changes with the new surface.
 Next: define a reconstruction proposal that consumes the descriptor but never
 the imported proof term, then independently check the newly constructed term.
+That proof-isolation boundary now exists: the generic candidate type becomes a
+10 KiB, 12-declaration, zero-axiom statement capsule with `Nat.testBit` and
+`Nat.bitwise` generalized as two explicit parameters. It leaks no source
+theorem name. Next: run reconstruction against this exact goal and require a
+checked specialization receipt before sibling production.
 
 ### Exit evidence
 
