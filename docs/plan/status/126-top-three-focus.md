@@ -121,6 +121,15 @@ qualifier. Mutations of every boundary fail closed. Each proposal carries
 facts remain open. Next: materialize the six proposals against live hashes,
 version the pre-reconciliation evaluation artifacts, then apply and regenerate
 as one coordinated non-autonomous metadata transition.
+Six live, hash-bound reconciliation proposals now materialize from the exact
+census, lemma index, overlay links, and fact files. They name unique native
+fact endpoints and proposed after-facts while reporting zero ledger writes,
+zero operations, and zero autonomous credit. Two historical native evidence
+rows gained the additive `kernel_declaration` identity required to remove the
+last legacy-ID inference. No source fact changed status. Next: add a crash-safe
+checked apply path for this proposal kind, preserve the current 57-goal census
+as the pre-reconciliation version, then apply all six and regenerate the
+remaining-target v2 population.
 The accepted ADR-0541 general SMT-LIB session driver is now also a named
 `axeyum` binary target, not only a discoverability-poor Cargo example. The same
 source remains the historical example control, and the binary's focused check,
@@ -160,3 +169,4 @@ repository-built front door, not yet a published crate or prebuilt release.
 | 2026-08-26 | `18ccc487e` | Add six independently checked, non-authoritative fact-to-kernel proposition-match links and document the reconciliation boundary. |
 | 2026-08-26 | `83b3694e8` | Register two missing native binomial facts from kernel inventories and regenerate all dependent knowledge views at 1,253 theorems. |
 | 2026-08-26 | `cd02dbb57` | Add a fail-closed, operation-free proposition-reconciliation transaction with mutation controls and explicit zero autonomous credit. |
+| 2026-08-26 | `3d4bb31eb` | Materialize six live hash-bound reconciliation proposals with zero writes, operations, and autonomous credit. |

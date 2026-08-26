@@ -137,6 +137,7 @@ now. Nothing was deleted.
 | 2026-08-26 | `18ccc487e` | Add six independently checked, non-authoritative fact-to-kernel proposition-match links and document the reconciliation boundary. |
 | 2026-08-26 | `83b3694e8` | Register two missing native binomial facts from kernel inventories and regenerate all dependent knowledge views at 1,253 theorems. |
 | 2026-08-26 | `cd02dbb57` | Add a fail-closed, operation-free proposition-reconciliation transaction with mutation controls and explicit zero autonomous credit. |
+| 2026-08-26 | `3d4bb31eb` | Materialize six live hash-bound reconciliation proposals with zero writes, operations, and autonomous credit. |
 | 2026-08-25 | `beb27f1ba` | **The trusted-core ceiling, raised the way the gate demanded.** Guard C failed at 5,508 past 5,500 with "say why before raising it." The baseline was RE-DERIVED by `git archive` rather than trusted, giving a per-file table summing to exactly +379 (`tc.rs` +347, `inductive.rs` +30, `env.rs` +2). Verdict: real and necessary — a universe-parameter closure fixing declarations **official Lean 4.30.0 refuses but this kernel wrongly admitted**, and `whnf_core` memoisation (138× cost, 1,857 s → 13.4 s) inside `def_eq`. Ceiling 5,900 with headroom matching the original's character; guard C re-verified to fire by injecting 500 lines in a scratch copy. The file's own comment said "5,110" where the real baseline was 5,129 — wrong from day one. |
 | 2026-08-25 | `0f2fb5fcd` | A doc line beginning with `+` is a Markdown list bullet, so ten `doc_list_item` errors pointed at ordinary prose one line below the cause. |
 | 2026-08-25 | `6de1d88f8` | Salvage: **the irrationality of √2** (`Nat.no_rational_sqrt_two`) and **`CReal.geom_tail_within`**, committed on behalf of two lanes killed mid-run by a spend limit. Both verified here: 695 tests, clippy `--all-targets`, axiom-free. |
@@ -1241,6 +1242,15 @@ qualifier. Mutations of every boundary fail closed. Each proposal carries
 facts remain open. Next: materialize the six proposals against live hashes,
 version the pre-reconciliation evaluation artifacts, then apply and regenerate
 as one coordinated non-autonomous metadata transition.
+Six live, hash-bound reconciliation proposals now materialize from the exact
+census, lemma index, overlay links, and fact files. They name unique native
+fact endpoints and proposed after-facts while reporting zero ledger writes,
+zero operations, and zero autonomous credit. Two historical native evidence
+rows gained the additive `kernel_declaration` identity required to remove the
+last legacy-ID inference. No source fact changed status. Next: add a crash-safe
+checked apply path for this proposal kind, preserve the current 57-goal census
+as the pre-reconciliation version, then apply all six and regenerate the
+remaining-target v2 population.
 The accepted ADR-0541 general SMT-LIB session driver is now also a named
 `axeyum` binary target, not only a discoverability-poor Cargo example. The same
 source remains the historical example control, and the binary's focused check,
