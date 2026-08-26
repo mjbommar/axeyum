@@ -20,7 +20,12 @@ class BitwiseSemanticLawDemandTests(unittest.TestCase):
     def test_live_artifact(self):
         self.assertEqual(
             MODULE.validate(self.data),
-            {"laws": 6, "native_analogues": 2, "operations": 2},
+            {
+                "laws": 6,
+                "native_analogues": 2,
+                "native_boolean_bridges": 1,
+                "operations": 2,
+            },
         )
 
     def test_missing_law_fails_closed(self):
@@ -45,6 +50,12 @@ class BitwiseSemanticLawDemandTests(unittest.TestCase):
         data = copy.deepcopy(self.data)
         data["native_analogues"][0]["canonical_type"] += " "
         with self.assertRaisesRegex(ValueError, "type identity"):
+            MODULE.validate(data)
+
+    def test_imported_equivalence_cannot_gain_unproved_credit(self):
+        data = copy.deepcopy(self.data)
+        data["native_boolean_bridge"]["imported_equivalence_status"] = "proved"
+        with self.assertRaisesRegex(ValueError, "gained credit"):
             MODULE.validate(data)
 
 

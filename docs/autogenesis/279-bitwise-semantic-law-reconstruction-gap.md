@@ -47,5 +47,13 @@ sixth, currently missing `boolean_numeric_observation_transport` obligation.
 Same-name retrieval cannot cross that result-sort boundary without a checked
 bridge.
 
+The native side of that bridge is now constructive. The
+`nat_testbit_bool_bridge` example defines `testBitBool` by mapping native
+zero/positive bit values to `Bool.false`/`Bool.true`, then admits
+`testBitBool_succ` by reflexivity over the existing numeric recursion. Its
+measured footprint is empty. This proves the result-sort adaptation itself is
+available; equivalence with the exact imported `Nat.testBit` definition remains
+missing and is still denied credit in the artifact.
+
 Run `just autogenesis-bitwise-semantic-law-demand` to validate the join and its
 negative controls.

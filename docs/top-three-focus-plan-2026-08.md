@@ -462,6 +462,9 @@ a typed, ordered leaf backlog without granting proof or execution authority.
 The first leaf lookup found existing axiom-free native zero/successor analogues
 but rejected direct reuse because their observation result is `AxNat`, not the
 imported `Bool`. A sixth typed transport obligation now owns that exact seam.
+Its native half is implemented: `testBitBool` maps numeric bits into `Bool`, and
+its successor law checks axiom-free by reflexivity. The remaining seam is the
+exact imported-definition equivalence, not Boolean adaptation in general.
 
 ### Exit evidence
 

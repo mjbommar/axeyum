@@ -327,6 +327,10 @@ Exact retrieval found the native successor and zero-bit laws already axiom-free,
 but also caught their result-sort mismatch: native observation is `AxNat`, while
 the imported contract is `Bool`. The demand now binds both native types and
 adds an explicit missing Boolean/numeric observation-transport obligation.
+The native half of that transport now exists: a constructive Boolean view of
+numeric bits preserves the successor equation by reflexivity and has an empty
+kernel footprint. Exact equivalence to the imported Bool-valued definition is
+still missing and explicitly receives zero credit.
 
 <!-- plan-section: landed-changes -->
 

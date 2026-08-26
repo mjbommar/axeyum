@@ -83,8 +83,19 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
         if "Eq.{1} AxNat" not in analogue["canonical_type"]:
             raise ValueError("native analogue no longer exposes the numeric result sort")
     transport = laws[3]
-    if transport.get("availability") != "missing-typed-transport":
+    if (
+        transport.get("availability")
+        != "native-view-constructed-imported-equivalence-missing"
+    ):
         raise ValueError("Boolean/numeric observation transport status changed")
+    bridge = data.get("native_boolean_bridge", {})
+    if bridge.get("axiom_footprint_size") != 0:
+        raise ValueError("native Boolean observation bridge gained assumptions")
+    if bridge.get("imported_equivalence_status") != "missing":
+        raise ValueError("unproved imported observation equivalence gained credit")
+    bridge_type = bridge.get("canonical_type", "")
+    if "Eq.{1} Bool" not in bridge_type or "testBitBool" not in bridge_type:
+        raise ValueError("native Boolean observation bridge type changed")
 
     exclusion = data.get("countermodel_exclusion", {})
     if exclusion.get("excluded_by_law") != "testBit_succ":
@@ -102,6 +113,7 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
     return {
         "laws": len(laws),
         "native_analogues": len(analogues),
+        "native_boolean_bridges": 1,
         "operations": len(operations),
     }
 
@@ -119,6 +131,7 @@ def main() -> int:
         "BITWISE_SEMANTIC_LAW_DEMAND_OK|"
         f"laws={result['laws']}|operations={result['operations']}|"
         f"native_analogues={result['native_analogues']}|"
+        f"native_boolean_bridges={result['native_boolean_bridges']}|"
         "countermodel_excluded=true|reconstruction_eligible=false"
     )
     return 0

@@ -584,6 +584,7 @@ autogenesis-imported-testbit-bitwise-statement source="/nas3/data/axeyum/autogen
     python3 scripts/check-autogenesis-imported-testbit-bitwise-candidate.py --verify-external
 
 autogenesis-bitwise-semantic-law-demand:
+    cargo run -q -p axeyum-lean-kernel --example nat_testbit_bool_bridge
     uv run --no-sync python -m unittest scripts.tests.test_check_autogenesis_bitwise_semantic_law_demand
     python3 scripts/check-autogenesis-bitwise-semantic-law-demand.py
 
