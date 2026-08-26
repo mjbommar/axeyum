@@ -150,6 +150,19 @@ the current open queue will convert at 5.5%. The next step is to materialize
 proof-isolated candidate capsules for eligible open siblings and run the same
 unchanged operation through the authoritative episode/transaction path.
 
+The external-input seam is now reproduced for the three arithmetic accepts.
+A generic materializer copies only the target theorem's type into a transparent
+goal definition, root-selects the explicit candidates, rejects any capsule
+whose bytes name the target theorem, fresh-imports the result through the
+candidate-capsule boundary, reruns bounded application, and independently
+admits the proposed term. The resulting 17–35 KiB NDJSON files are read-only
+under `/data0/axeyum/autogenesis/reference-packs/`; Git carries compact receipts
+with their paths, sizes, hashes, proof hashes, dependencies, and empty measured
+footprints. They are deliberately not vendored and do not change fact status.
+This closes materialization for controlled native targets; portable artifact
+distribution and authoritative multi-target receipt/transaction dispatch are
+still the next boundary.
+
 ## Comparative position
 
 Axeyum should not be described as a replacement for any one neighboring

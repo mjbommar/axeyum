@@ -33,6 +33,14 @@ the sibling family, then register only the supported operation. The first
 proof-isolated census now measures 6/109 accepted (5.5%), all kernel-admitted
 and axiom-free, with 103 typed `NoTypedApplication` declines. This is a
 capability measurement over settled controls, not autonomous yield.
+Three proof-isolated native capsules now reproduce the accepted arithmetic
+controls (`Nat.fib_mono`, `Nat.mul_one`, `Nat.one_mul`) from explicit
+candidates. Git retains only hash-bound receipts; the 17–35 KiB NDJSON packs
+live under `/data0/axeyum/autogenesis/reference-packs/`, are read-only, omit
+the target theorem, and fresh-import to the same axiom-free proofs. Next:
+register the unchanged three-target operation and dispatch one eligible target
+through the authoritative receipt/transaction path; do not count these settled
+controls again.
 
 <!-- plan-section: landed-changes -->
 
@@ -54,3 +62,4 @@ capability measurement over settled controls, not autonomous yield.
 | 2026-08-26 | `5916d47cc` | Publish stable all-kind direct declaration dependencies through Rust, Python, and the generated kernel projection, with direct-versus-transitive controls. |
 | 2026-08-26 | `17b0c1163` | Split proof-isolated type dependencies from type-plus-value evidence before premise selection could leak a finished theorem's proof. |
 | 2026-08-26 | `710b7cf04` | Publish the reproducible proof-isolated bounded-application census: 6/109 accepted, 103 typed declines, zero accepted axiom footprints. |
+| 2026-08-26 | pending | Add a reusable proof-isolated capsule materializer and hash-bound receipts for the three accepted arithmetic controls without vendoring NDJSON. |

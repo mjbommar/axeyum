@@ -1,0 +1,27 @@
+{
+  "application_depth": 5,
+  "authority": "candidate and receipt only; no fact admission or autonomous-production credit",
+  "axiom_footprint": [],
+  "binders_used": 3,
+  "candidate_declarations": [
+    "Nat.fib",
+    "Nat.fib_le_succ",
+    "Nat.monotone_of_le_succ"
+  ],
+  "capsule_bytes": 30273,
+  "capsule_sha256": "9d3e14c6940c17b673c21212cde5226205649b361600d0e438cea7c9ef985d51",
+  "external_artifact": {
+    "path": "/data0/axeyum/autogenesis/reference-packs/bounded-application-fib-mono-v1/root.ndjson"
+  },
+  "kind": "axeyum-proof-isolated-candidate-capsule-receipt",
+  "proof_sha256": "496e9a709ba3de7dd459c01a1ad297769ee3c4461dbd7a4c8d924864424cba04",
+  "schema_version": 1,
+  "target": "Nat.fib_mono",
+  "target_definition": "Axeyum.Autogenesis.Statement.Native.fibMono",
+  "target_theorem_bytes_present": false,
+  "terms_considered": 119,
+  "theorem_dependencies": [
+    "Nat.fib_le_succ",
+    "Nat.monotone_of_le_succ"
+  ]
+}
