@@ -614,8 +614,10 @@ def imported_candidates(
 
     Imported candidates remain separate from native kernel lemmas. Every row
     carries its measured footprint and execution eligibility; a
-    ``reconstruct-required`` row is strategy context and must not be sent to a
-    proof-reuse or transport path.
+    non-executable row is strategy context and must not be sent to a proof-reuse
+    or transport path. ``proof-reconstruct-required`` means a different proof
+    may remove the footprint; ``clean-definition-reconstruction-required``
+    carries a statement floor that no replacement proof can remove.
 
     Args:
         name_glob: Shell-style glob over imported candidate names.
@@ -642,6 +644,9 @@ def imported_candidates(
                 axiom_footprint=row.axiom_footprint,
                 direct_theorem_dependency_count=len(row.direct_theorem_dependencies),
                 retrieval_disposition=row.retrieval_disposition,
+                statement_axiom_floor=row.statement_axiom_floor,
+                proof_reconstruction_eligible=row.proof_reconstruction_eligible,
+                required_route=row.required_route,
                 strategy_eligible=row.strategy_eligible,
                 execution_eligible=row.execution_eligible,
             )

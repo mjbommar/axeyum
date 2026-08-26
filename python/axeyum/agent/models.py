@@ -318,6 +318,9 @@ class ImportedCandidateRow(_Frozen):
     axiom_footprint: tuple[str, ...]
     direct_theorem_dependency_count: int
     retrieval_disposition: str
+    statement_axiom_floor: tuple[str, ...]
+    proof_reconstruction_eligible: bool
+    required_route: str | None
     strategy_eligible: bool
     execution_eligible: bool
 

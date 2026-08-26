@@ -222,7 +222,12 @@ def test_imported_candidates_preserve_reconstruction_routing(ctx) -> None:
     assert page.matched == 1
     row = page.rows[0]
     assert row.name == "Nat.testBit_bitwise"
-    assert row.retrieval_disposition == "reconstruct-required"
+    assert row.retrieval_disposition == "clean-definition-reconstruction-required"
+    assert row.statement_axiom_floor == ("propext",)
+    assert not row.proof_reconstruction_eligible
+    assert row.required_route == (
+        "reconstruct-clean-definitions-or-accept-weaker-imported-definition-trust"
+    )
     assert row.strategy_eligible
     assert not row.execution_eligible
     assert row.axiom_footprint == ("Quot", "Quot.lift", "Quot.mk", "Quot.sound", "propext")

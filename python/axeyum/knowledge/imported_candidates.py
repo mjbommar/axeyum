@@ -23,6 +23,9 @@ class ImportedCandidate:
     axiom_footprint: tuple[str, ...]
     direct_theorem_dependencies: tuple[str, ...]
     retrieval_disposition: str
+    statement_axiom_floor: tuple[str, ...]
+    proof_reconstruction_eligible: bool
+    required_route: str | None
     strategy_eligible: bool
     execution_eligible: bool
     raw: dict[str, Any] = field(repr=False, default_factory=dict)
@@ -37,6 +40,9 @@ class ImportedCandidate:
             axiom_footprint=tuple(raw["axiom_footprint"]),
             direct_theorem_dependencies=tuple(raw["direct_theorem_dependencies"]),
             retrieval_disposition=raw["retrieval_disposition"],
+            statement_axiom_floor=tuple(raw["statement_axiom_floor"]),
+            proof_reconstruction_eligible=raw["proof_reconstruction_eligible"],
+            required_route=raw["required_route"],
             strategy_eligible=raw["strategy_eligible"],
             execution_eligible=raw["execution_eligible"],
             raw=raw,
