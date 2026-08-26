@@ -72,7 +72,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 315] = [
+    let expected: [(&str, crate::NameId, &str); 317] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -370,6 +370,8 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ),
         ("CReal.sqrt", p.sqrt, "def"),
         ("CReal.sqrt_congr", p.sqrt_congr, "theorem"),
+        ("CReal.sqrt_one", p.sqrt_one, "theorem"),
+        ("CReal.sqrt_zero", p.sqrt_zero, "theorem"),
         // Bishop's speed-up combinator (creal/speedup.rs).
         ("CReal.KRegular", p.k_regular_pred, "def"),
         ("CReal.speedup", p.speedup, "def"),
@@ -7892,5 +7894,138 @@ fn sqrt_of_ofnat_four_at_index_zero_computes_to_two() {
         "CReal.seq (CReal.sqrt (CReal.ofNat 4)) 0 must NOT check as equal \
          to 3 -- a checker that accepts both 2 and 3 cannot be trusted to \
          have computed anything"
+    );
+}
+
+/// **Mandatory computation test for `CReal.sqrt_one`.** At `n := 0`:
+/// `CReal.seq (CReal.sqrt CReal.one) 0` unfolds through `speedup`'s sampling
+/// index (`mul_index 1 0 = (1+1)*0+1 = 1`) to `sqrtApprox one 1`, which
+/// computes (`d = 2`, `j = 4`, clamped sample `1` since `one`'s sequence is
+/// constant, `natSqrt 4 = 2`) to `Rat.normalize 2 2 _` -- reduced, by
+/// `Rat.normalize`'s own division by the gcd, to the same representative
+/// `Rat.natDivSucc 1 0` (`= 1`) computes to. Checked against an
+/// INDEPENDENTLY built expected value, with a negative control (`2`) the
+/// kernel must reject -- otherwise an always-accepting checker could not be
+/// told apart from this one.
+#[test]
+fn sqrt_of_one_at_index_zero_computes_to_one() {
+    use crate::rat_prelude::ops::{req, rrefl};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+
+    let one_real = d.kernel().const_(p.one, vec![]);
+    let sqrt_one = d.const_app(p.sqrt, &[one_real]);
+    let seq_at_zero = d.const_app(p.seq, &[sqrt_one, zero_nat]);
+
+    let one_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, zero_nat]);
+    let expected_ty = req(&mut d, seq_at_zero, one_rat);
+    let proof = rrefl(&mut d, seq_at_zero);
+
+    let anon = d.kernel().anon();
+    let name = d
+        .kernel()
+        .name_str(anon, "__sqrt_of_one_at_index_zero_computes_to_one");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: expected_ty,
+            value: proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.seq (CReal.sqrt CReal.one) 0 must reduce to \
+                 Rat.natDivSucc 1 0 (= 1): {error:?}"
+            )
+        });
+
+    // Negative control: the same reflexivity proof does NOT check against a
+    // WRONG value (`2`) -- if it did, this checker could not distinguish a
+    // correct computed square root from an arbitrary one.
+    let two_rat = d.const_app(p.rat.nat_div_succ, &[two_nat, zero_nat]);
+    let expected_ty_wrong = req(&mut d, seq_at_zero, two_rat);
+    let proof_wrong = rrefl(&mut d, seq_at_zero);
+    let name_wrong = d
+        .kernel()
+        .name_str(anon, "__sqrt_of_one_wrong_value_must_be_rejected");
+    let result = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_wrong,
+        uparams: vec![],
+        ty: expected_ty_wrong,
+        value: proof_wrong,
+    });
+    assert!(
+        result.is_err(),
+        "CReal.seq (CReal.sqrt CReal.one) 0 must NOT check as equal to 2 \
+         -- a checker that accepts both 1 and 2 cannot be trusted to have \
+         computed anything"
+    );
+}
+
+/// **Mandatory computation test for `CReal.sqrt_zero`.** At `n := 0`:
+/// `CReal.seq (CReal.sqrt CReal.zero) 0` unfolds through `speedup`'s
+/// sampling index (`mul_index 1 0 = 1`) to `sqrtApprox zero 1`, which
+/// computes (`d = 2`, `j = 4`, clamped sample `0` since `zero`'s sequence is
+/// constant, `natSqrt 0 = 0`) to `Rat.normalize 0 2 _` -- reduced, by
+/// `Rat.normalize`'s own division, to the same representative `Rat.zero`
+/// computes to. Checked against an INDEPENDENTLY built expected value, with
+/// a negative control (`Rat.natDivSucc 1 0 = 1`) the kernel must reject.
+#[test]
+fn sqrt_of_zero_at_index_zero_computes_to_zero() {
+    use crate::rat_prelude::ops::{req, rrefl, rzero};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+
+    let zero_real = d.kernel().const_(p.zero, vec![]);
+    let sqrt_zero = d.const_app(p.sqrt, &[zero_real]);
+    let seq_at_zero = d.const_app(p.seq, &[sqrt_zero, zero_nat]);
+
+    let zero_rat = rzero(&mut d, p.rat);
+    let expected_ty = req(&mut d, seq_at_zero, zero_rat);
+    let proof = rrefl(&mut d, seq_at_zero);
+
+    let anon = d.kernel().anon();
+    let name = d
+        .kernel()
+        .name_str(anon, "__sqrt_of_zero_at_index_zero_computes_to_zero");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: expected_ty,
+            value: proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!("CReal.seq (CReal.sqrt CReal.zero) 0 must reduce to Rat.zero: {error:?}")
+        });
+
+    // Negative control: the same reflexivity proof does NOT check against a
+    // WRONG value (`1`).
+    let one_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, zero_nat]);
+    let expected_ty_wrong = req(&mut d, seq_at_zero, one_rat);
+    let proof_wrong = rrefl(&mut d, seq_at_zero);
+    let name_wrong = d
+        .kernel()
+        .name_str(anon, "__sqrt_of_zero_wrong_value_must_be_rejected");
+    let result = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_wrong,
+        uparams: vec![],
+        ty: expected_ty_wrong,
+        value: proof_wrong,
+    });
+    assert!(
+        result.is_err(),
+        "CReal.seq (CReal.sqrt CReal.zero) 0 must NOT check as equal to 1 \
+         -- a checker that accepts both 0 and 1 cannot be trusted to have \
+         computed anything"
     );
 }

@@ -1372,6 +1372,18 @@ pub struct CRealPrelude {
     /// `0 ≤ x`/`0 ≤ y` hypothesis — same reason `sqrt` itself needs none.
     /// See `creal/sqrt.rs`.
     pub sqrt_congr: NameId,
+    /// `CReal.sqrt_one : Equiv (sqrt one) one`. `sqrtApprox one` is clamped
+    /// to a CONSTANT sample (`seq one _` beta-reduces to `Rat.one`
+    /// regardless of index), so `sqrt_approx_sq_bracket`'s two halves at
+    /// `x := one` are already bounds against the fixed value `Rat.one` —
+    /// `rat_sq_le` closes each side directly, no cross-index regularity or
+    /// natSqrt-uniqueness argument needed. See `creal/sqrt.rs`.
+    pub sqrt_one: NameId,
+    /// `CReal.sqrt_zero : Equiv (sqrt zero) zero`. The same constant-sample
+    /// shortcut as `sqrt_one`, simpler still: `sqrtApprox zero m` collapses
+    /// to EXACTLY `Rat.zero` via `Rat.le_antisymm`, so `Within (u-0) bound`
+    /// is trivial for any nonnegative bound. See `creal/sqrt.rs`.
+    pub sqrt_zero: NameId,
 
     // --- Bishop's speed-up combinator (creal/speedup.rs) ----------------------
     /// `CReal.KRegular : (Nat → Rat) → Nat → Prop` — Bishop regularity up to a
@@ -3362,6 +3374,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sqrt_approx_kregular: kernel.name_str(creal, "sqrtApproxKRegular"),
         sqrt: kernel.name_str(creal, "sqrt"),
         sqrt_congr: kernel.name_str(creal, "sqrt_congr"),
+        sqrt_one: kernel.name_str(creal, "sqrt_one"),
+        sqrt_zero: kernel.name_str(creal, "sqrt_zero"),
         k_regular_pred: kernel.name_str(creal, "KRegular"),
         speedup: kernel.name_str(creal, "speedup"),
         regular_of_kregular: kernel.name_str(creal, "regular_of_kregular"),
@@ -3631,6 +3645,15 @@ pub(crate) fn build_creal_prelude_uncached(
         // `sqrt_congr` needs `sqrt` itself (`declare_sqrt_ctor`, just above)
         // plus `sqrt_approx_sq_bracket`/`equiv_symm`, both already declared.
         sqrt::declare_sqrt_congr(&mut d, prelude)?;
+        // `sqrt_one` needs `sqrt`/`sqrt_approx_sq_bracket` (above) and
+        // `rat_sq_le` (`mul_self_zero`, earlier) -- it does not depend on
+        // `sqrt_congr` itself, but is placed right after it since both are
+        // "the laws sqrt.rs's own doc names as reachable now" from the same
+        // landing.
+        sqrt::declare_sqrt_one(&mut d, prelude)?;
+        // `sqrt_zero` needs only `sqrt`/`sqrt_approx_sq_bracket` and
+        // `rat_sq_le`, same as `sqrt_one` just above.
+        sqrt::declare_sqrt_zero(&mut d, prelude)?;
         convergence::declare_cauchy_convergence(&mut d, prelude)?;
         series::declare_series(&mut d, prelude)?;
         // `CReal.mag_bound_le_sum_range_of_lt` needs `CReal.sumRange`
