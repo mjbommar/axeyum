@@ -2200,6 +2200,7 @@ pub(super) fn declare_sum_range_double(
 ///
 /// Returns `(m_prime, proof)`, `proof : Eq Nat (mul (succ n) (succ m)) (succ
 /// m_prime)`, `m_prime := add (add (mul n m) n) m`.
+#[allow(dead_code)] // staged for the per-term UC bound (riemannSum_cauchy), not yet landed
 fn succ_mul_succ(d: &mut IntDev<'_>, n: ExprId, m: ExprId) -> (ExprId, ExprId) {
     let np = d.prelude();
     let sm = d.succ(m);
