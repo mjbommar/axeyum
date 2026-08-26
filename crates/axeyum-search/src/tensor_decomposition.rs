@@ -70,6 +70,15 @@ struct FactorLayout {
     c: Vec<Vec<usize>>,
 }
 
+/// One admitted first-factor stabilizer orbit in a normalized matrix-tensor encoding.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TensorFirstFactorOrbit {
+    /// Support of the canonical matrix-rank normal form in row-major order.
+    pub support: Vec<usize>,
+    /// CNF selector that is true exactly for this normal form.
+    pub selector: CnfVar,
+}
+
 /// Exact CNF question “does `target` have rank at most `budget`?”.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TensorRankEncoding {
@@ -78,7 +87,7 @@ pub struct TensorRankEncoding {
     layout: FactorLayout,
     budget: usize,
     ordered_from: Option<usize>,
-    first_factor_forms: Vec<Vec<usize>>,
+    first_factor_orbits: Vec<TensorFirstFactorOrbit>,
 }
 
 impl TensorRankEncoding {
@@ -90,6 +99,15 @@ impl TensorRankEncoding {
     /// Rank budget represented by the formula.
     pub fn budget(&self) -> usize {
         self.budget
+    }
+
+    /// Complete admitted orbit list for normalized first-factor search.
+    ///
+    /// The list is empty for generic and term-order-only encodings. For a
+    /// normalized matrix tensor, selectors are one-hot and each entry binds
+    /// the canonical row-major support to its exact CNF variable.
+    pub fn first_factor_orbits(&self) -> &[TensorFirstFactorOrbit] {
+        &self.first_factor_orbits
     }
 
     /// Lift and independently replay a satisfying CNF model.
@@ -192,7 +210,7 @@ impl TensorRankEncoding {
                 bits
             });
         }
-        if !self.first_factor_forms.is_empty() {
+        if !self.first_factor_orbits.is_empty() {
             let Some(Some(first)) = supplied_terms.first() else {
                 return Err(TensorRankEncodingError::InvalidWitness(
                     "normalized formula needs a nonzero first summand".to_owned(),
@@ -200,8 +218,9 @@ impl TensorRankEncoding {
             };
             if first.b.is_empty()
                 || first.c.is_empty()
-                || !self.first_factor_forms.iter().any(|form| {
-                    form.len() == first.a.len() && form.iter().all(|index| first.a.contains(index))
+                || !self.first_factor_orbits.iter().any(|orbit| {
+                    orbit.support.len() == first.a.len()
+                        && orbit.support.iter().all(|index| first.a.contains(index))
                 })
             {
                 return Err(TensorRankEncodingError::InvalidWitness(
@@ -432,6 +451,58 @@ pub fn encode_matrix_tensor_rank_with_normalized_first_factor(
     encode_tensor_rank_internal(&target, budget, limits, Some(1), forms)
 }
 
+fn add_first_factor_normalization(
+    builder: &mut Builder,
+    layout: &FactorLayout,
+    forms: Vec<Vec<usize>>,
+) -> Result<Vec<TensorFirstFactorOrbit>, TensorRankEncodingError> {
+    if forms.is_empty() {
+        return Ok(Vec::new());
+    }
+    let selectors = builder.variables(forms.len())?;
+    builder.clause(
+        &selectors
+            .iter()
+            .copied()
+            .map(|selector| (selector, false))
+            .collect::<Vec<_>>(),
+    )?;
+    for left in 0..selectors.len() {
+        for right in left + 1..selectors.len() {
+            builder.clause(&[(selectors[left], true), (selectors[right], true)])?;
+        }
+    }
+    for (form, &selector) in forms.iter().zip(&selectors) {
+        for (index, &variable) in layout.a[0].iter().enumerate() {
+            builder.clause(&[(selector, true), (variable, !form.contains(&index))])?;
+        }
+    }
+    builder.clause(
+        &layout.b[0]
+            .iter()
+            .copied()
+            .map(|variable| (variable, false))
+            .collect::<Vec<_>>(),
+    )?;
+    builder.clause(
+        &layout.c[0]
+            .iter()
+            .copied()
+            .map(|variable| (variable, false))
+            .collect::<Vec<_>>(),
+    )?;
+    forms
+        .into_iter()
+        .zip(selectors)
+        .map(|(support, selector)| {
+            Ok(TensorFirstFactorOrbit {
+                support,
+                selector: cnf_var(selector)?,
+            })
+        })
+        .collect()
+}
+
 fn encode_tensor_rank_internal(
     target: &Gf2Tensor,
     budget: usize,
@@ -462,40 +533,8 @@ fn encode_tensor_rank_internal(
         layout.b.push(builder.variables(target.dimensions[1])?);
         layout.c.push(builder.variables(target.dimensions[2])?);
     }
-    if !first_factor_forms.is_empty() {
-        let selectors = builder.variables(first_factor_forms.len())?;
-        builder.clause(
-            &selectors
-                .iter()
-                .copied()
-                .map(|selector| (selector, false))
-                .collect::<Vec<_>>(),
-        )?;
-        for left in 0..selectors.len() {
-            for right in left + 1..selectors.len() {
-                builder.clause(&[(selectors[left], true), (selectors[right], true)])?;
-            }
-        }
-        for (form, &selector) in first_factor_forms.iter().zip(&selectors) {
-            for (index, &variable) in layout.a[0].iter().enumerate() {
-                builder.clause(&[(selector, true), (variable, !form.contains(&index))])?;
-            }
-        }
-        builder.clause(
-            &layout.b[0]
-                .iter()
-                .copied()
-                .map(|variable| (variable, false))
-                .collect::<Vec<_>>(),
-        )?;
-        builder.clause(
-            &layout.c[0]
-                .iter()
-                .copied()
-                .map(|variable| (variable, false))
-                .collect::<Vec<_>>(),
-        )?;
-    }
+    let first_factor_orbits =
+        add_first_factor_normalization(&mut builder, &layout, first_factor_forms)?;
     if let Some(ordered_from) = ordered_from {
         for term in ordered_from..budget.saturating_sub(1) {
             let left = [
@@ -537,14 +576,17 @@ fn encode_tensor_rank_internal(
         layout,
         budget,
         ordered_from,
-        first_factor_forms,
+        first_factor_orbits,
     })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axeyum_cnf::{SatResult, solve_with_rustsat_batsat};
+    use axeyum_cnf::cube::{boolean_product_cubes, covering_formula};
+    use axeyum_cnf::{
+        ProofSolveOutcome, SatResult, check_drat, solve_with_drat_proof, solve_with_rustsat_batsat,
+    };
 
     fn strassen() -> Gf2TensorDecomposition {
         Gf2TensorDecomposition {
@@ -679,6 +721,27 @@ mod tests {
             TensorRankEncodingLimits::default(),
         )
         .unwrap();
+        assert_eq!(
+            encoding
+                .first_factor_orbits()
+                .iter()
+                .map(|orbit| (orbit.support.clone(), orbit.selector.dimacs()))
+                .collect::<Vec<_>>(),
+            vec![(vec![0], 97), (vec![0, 3], 98)]
+        );
+        let cubes = boolean_product_cubes(
+            &encoding
+                .first_factor_orbits()
+                .iter()
+                .map(|orbit| orbit.selector)
+                .collect::<Vec<_>>(),
+        )
+        .unwrap();
+        let covering = covering_formula(encoding.formula(), &cubes).unwrap();
+        let ProofSolveOutcome::Unsat(covering_proof) = solve_with_drat_proof(&covering) else {
+            panic!("one-hot orbit product must be exhaustive");
+        };
+        assert_eq!(check_drat(&covering, &covering_proof), Ok(true));
         let pinned = encoding.formula_with_witness(&strassen()).unwrap();
         let SatResult::Sat(model) = solve_with_rustsat_batsat(&pinned).unwrap() else {
             panic!("normalized Strassen witness must remain satisfiable");
@@ -724,6 +787,7 @@ mod tests {
         let boundary = Gf2Tensor::matrix_multiplication(3, 2, 4).unwrap();
         let boundary_encoding =
             encode_tensor_rank(&boundary, 19, TensorRankEncodingLimits::default()).unwrap();
+        assert!(boundary_encoding.first_factor_orbits().is_empty());
         assert_eq!(boundary_encoding.formula().variable_count(), 21_806);
         assert_eq!(boundary_encoding.formula().clauses().len(), 85_824);
     }

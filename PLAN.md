@@ -1117,10 +1117,10 @@ Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and 
 bound-certification targets.  The Axeyum-side programme contract is
 `docs/research/10-cas/open-problems-programme-2026-08.md`: pin current literature status,
 generate deterministically, run untrusted search, independently replay/check, bind evidence,
-and reconstruct formal identities into the kernel where applicable.  Next: finish
-primary-source currency checks; then specify the shared
-finite-domain synthesis interface against bilinear, S-box, and shuffle controls before adding
-public surface.  The settled-cell calibration is now green for `R_3(x-y=z)=14` (42 variables,
+and reconstruct formal identities into the kernel where applicable. Next: attack the two live
+`<3,2,4>` rank-19 orbit leaves with finer complete splits or stronger algebraic propagation;
+the current first-factor split is complete but both live leaves remain `UNKNOWN`. The
+settled-cell calibration is green for `R_3(x-y=z)=14` (42 variables,
 356 clauses, 25 checked DRAT steps); a mutated DIMACS header fails closed, and the aggregate
 claim sweep reports 104 claims re-checked / 0 errors / 25 rows explicitly not re-checked.
 Frontier claims remain open.
@@ -1296,6 +1296,20 @@ A monolithic 600-second run interrupted. A first cover exposed source variable 1
 two live leaves interrupted. An adaptive exhaustive cover on variables 2 and 3 has a checked
 two-step covering proof, but all four leaves interrupted at 600 seconds. No model or complete
 leaf-proof set exists, so `[7,8]` is unchanged.
+
+**Bilinear complete first-factor orbit cover, 2026-08-26.** ADR-0571 exposes typed canonical
+support/selector descriptors from normalized matrix-tensor encodings, avoiding dependence on
+private CNF allocation. The `<3,2,4>` rank-19 formula reports `[0] -> 495` and `[0,3] -> 496`.
+Its complete four-cube Boolean-product cover has a checked covering proof; the two leaves
+inconsistent with the base one-hot constraint have independently checked DRAT proofs. The two
+live leaves each returned `UNKNOWN` after 600.01 seconds, and their incomplete 5.29/5.68 GB
+proof streams were deleted. The exact manifest, cover artifacts, and receipt are retained in
+the sibling package. The partition is certified, not the rank bound; `[19,20]` is unchanged.
+Focused CNF/search tests, all-feature Clippy, rustdoc, generated-plan/index checks, and links
+are green. The full `just check` is independently red before reaching Rust tests because the
+settled `Nat.fib_le_succ` fact omits two proof-derived dependencies; correcting those edges
+then exposes a stale historical Autogenesis child-qualification contract. Neither belongs to
+this lane, so no full-gate success is claimed.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 

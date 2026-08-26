@@ -118,6 +118,22 @@ fn main() {
     println!("rank-budget={}", args.rank);
     println!("ordered-terms={}", args.ordered_terms);
     println!("normalized-first-factor={}", args.normalized_first_factor);
+    println!(
+        "first-factor-orbits={}",
+        encoding.first_factor_orbits().len()
+    );
+    for (index, orbit) in encoding.first_factor_orbits().iter().enumerate() {
+        println!(
+            "first-factor-orbit={index}\tsupport={}\tselector={}",
+            orbit
+                .support
+                .iter()
+                .map(usize::to_string)
+                .collect::<Vec<_>>()
+                .join(","),
+            orbit.selector.dimacs()
+        );
+    }
     println!("variables={}", encoding.formula().variable_count());
     println!("clauses={}", encoding.formula().clauses().len());
 
