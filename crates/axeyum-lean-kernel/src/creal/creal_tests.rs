@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 264] = [
+    let expected: [(&str, crate::NameId, &str); 267] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -676,6 +676,15 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         // `CReal.bound` (no `Exists.rec`) -- see `CRealPrelude::ivt_approx`'s
         // own doc comment.
         ("CReal.ivt_approx", p.ivt_approx, "theorem"),
+        // A DATA-VALUED bisection (creal/ivt.rs), replacing `ivt_iter`'s
+        // `Exists`-wrapped bracket with one computed by `Nat.rec` into
+        // `Sort 1`. The branch is read off a rational sample via `Rat.ble`;
+        // the bracket carrier is `Bool -> CReal`, not a new Prod/Sigma.
+        ("CReal.ivt_bisect", p.ivt_bisect, "def"),
+        // `ivt_bisect F P Q n k Bool.false` -- the lower endpoint.
+        ("CReal.ivt_bisect_lo", p.ivt_bisect_lo, "def"),
+        // `ivt_bisect F P Q n k Bool.true` -- the upper endpoint.
+        ("CReal.ivt_bisect_hi", p.ivt_bisect_hi, "def"),
         // Uniqueness of the derivative on a NONDEGENERATE interval
         // (`creal/deriv_unique.rs`): the naive statement without `lt a b` is
         // refuted at a degenerate `a = b`, so this carries that hypothesis.
