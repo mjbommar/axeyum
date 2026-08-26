@@ -72,7 +72,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 270] = [
+    let expected: [(&str, crate::NameId, &str); 273] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -699,6 +699,17 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             p.ivt_bisect_invariant,
             "theorem",
         ),
+        // The DIAGONAL bisection: same `Nat.rec` shape as `ivt_bisect`, but
+        // no external slack parameter -- each step samples at its OWN
+        // recursion depth `j`. Landed as data + a reduction test only: two
+        // kernel-verified counterexamples (see `CRealPrelude::
+        // ivt_bisect_diag`'s doc comment) close off an exact root via either
+        // natural reading of "diagonal" here.
+        ("CReal.ivt_bisect_diag", p.ivt_bisect_diag, "def"),
+        // `ivt_bisect_diag F P Q k Bool.false` -- the lower endpoint.
+        ("CReal.ivt_bisect_diag_lo", p.ivt_bisect_diag_lo, "def"),
+        // `ivt_bisect_diag F P Q k Bool.true` -- the upper endpoint.
+        ("CReal.ivt_bisect_diag_hi", p.ivt_bisect_diag_hi, "def"),
         // Uniqueness of the derivative on a NONDEGENERATE interval
         // (`creal/deriv_unique.rs`): the naive statement without `lt a b` is
         // refuted at a degenerate `a = b`, so this carries that hypothesis.
@@ -5576,6 +5587,17 @@ fn ivt_bisect_rat_eq(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) 
     d.kernel().def_eq(ab, bool_true) && d.kernel().def_eq(ba, bool_true)
 }
 
+/// Whether `a < b` on closed `Rat` terms, checked as `Rat.ble a b = true` AND
+/// `Rat.ble b a = false` (both decided by `Rat.ble`'s own reduction, robust
+/// to shape the same way [`ivt_bisect_rat_eq`] is).
+fn ivt_bisect_rat_lt(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> bool {
+    let bool_true = d.bool_true();
+    let bool_false = d.bool_false();
+    let ab = d.const_app(p.rat.ble, &[a, b]);
+    let ba = d.const_app(p.rat.ble, &[b, a]);
+    d.kernel().def_eq(ab, bool_true) && d.kernel().def_eq(ba, bool_false)
+}
+
 /// **Mandatory concrete instantiation** for `CReal.ivt_bisect_lo`/`_hi`: `F
 /// := id` on the ASYMMETRIC bracket `[-1, 2]` (asymmetric about `zero`, so a
 /// transposed-endpoint defect cannot pass), at `n := 0` (`eps_0 = 1`, sample
@@ -5671,6 +5693,128 @@ fn ivt_bisect_reduces_on_the_identity_bracket_neg_one_two() {
             "bracket width at k={i} did not reduce to the expected rational"
         );
     }
+}
+
+/// **Mandatory concrete instantiation** for `CReal.ivt_bisect_diag_lo`/`_hi`
+/// (the DIAGONAL bisection, [`CRealPrelude::ivt_bisect_diag`]): `F := id` on
+/// the SAME asymmetric bracket `[-1, 2]` [`ivt_bisect_reduces_on_the_identity_bracket_neg_one_two`]
+/// uses, so this exercises a computation the kernel already performs a
+/// fixed-`n` version of, on identical inputs -- a transposed-endpoint defect
+/// still cannot pass either test, and any drift between the two
+/// constructions on their shared first steps would show up as a diff here.
+///
+/// By hand, using THIS construction's own per-step slack (step `j` samples
+/// at `thresh_j := natDivSucc 1 (succ (2*j))`, half of `eps_j := natDivSucc 1
+/// j`): `k=0` is the unmoved bracket `(-1, 2)`. Step `j=0` (`thresh_0 =
+/// 1/2`): `m = -1 + 3*1/2 = 1/2`; `F m = 1/2 <= 1/2`, branch `(m, hi) =
+/// (1/2, 2)`. Step `j=1` (`thresh_1 = 1/4`): `m = 1/2 + 3/2*1/2 = 5/4`; `F m
+/// = 5/4 > 1/4`, branch `(lo, m) = (1/2, 5/4)`. The width halves each step
+/// (`3, 3/2, 3/4`) exactly as `ivt_bisect`'s own test (width halving does not
+/// depend on which threshold was used), AND the slack used at each step
+/// strictly shrinks (`eps_0 = 1 > eps_1 = 1/2`) -- both are checked below,
+/// neither assumed.
+///
+/// This same trace is where the diary's counterexample (1) starts:
+/// continuing past `k=2`, `lo` never moves again (every later step keeps
+/// picking `(lo, m)`), so the bracket converges to `1/2`, not the true root
+/// `0` -- see [`super::CRealPrelude::ivt_bisect_diag`]'s doc comment for the
+/// full argument. Only the three steps this section's task asks for are
+/// checked by kernel reduction here; the eventual limit is a `CReal`, not a
+/// decidable reduction.
+#[test]
+fn ivt_bisect_diag_reduces_on_the_identity_bracket_neg_one_two() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    // F := identity.
+    let identity = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+
+    // P0 := -1, Q0 := 2.
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let p0 = d.const_app(p.neg, &[one_c]);
+    let two_nat = d.num(2);
+    let q0 = d.const_app(p.of_nat, &[two_nat]);
+
+    let idx0 = d.zero(); // every bracket endpoint here is a constant-valued
+    // `CReal`, so the sampling index is irrelevant to the VALUE (only to the
+    // regularity proof, which this test never inspects).
+
+    // (label, k, expected_lo, expected_hi)
+    let cases: [(&str, u32, ExprId, ExprId); 3] = [
+        (
+            "k=0 (unmoved base bracket)",
+            0,
+            ivt_bisect_rat_lit(&mut d, p, 1, 0, true), // -1
+            ivt_bisect_rat_lit(&mut d, p, 2, 0, false), // 2
+        ),
+        (
+            "k=1 (step j=0, thresh_0=1/2: F m = 1/2 <= thresh -> (m, hi))",
+            1,
+            ivt_bisect_rat_lit(&mut d, p, 1, 1, false), // 1/2
+            ivt_bisect_rat_lit(&mut d, p, 2, 0, false), // 2
+        ),
+        (
+            "k=2 (step j=1, thresh_1=1/4: F m = 5/4 > thresh -> (lo, m))",
+            2,
+            ivt_bisect_rat_lit(&mut d, p, 1, 1, false), // 1/2
+            ivt_bisect_rat_lit(&mut d, p, 5, 3, false), // 5/4
+        ),
+    ];
+
+    let mut widths = Vec::new();
+    for (label, k, expected_lo, expected_hi) in cases {
+        let kk = d.num(k);
+        let bracket_lo = d.const_app(p.ivt_bisect_diag_lo, &[identity, p0, q0, kk]);
+        let bracket_hi = d.const_app(p.ivt_bisect_diag_hi, &[identity, p0, q0, kk]);
+        let lo_sample = d.const_app(p.seq, &[bracket_lo, idx0]);
+        let hi_sample = d.const_app(p.seq, &[bracket_hi, idx0]);
+
+        assert!(
+            ivt_bisect_rat_eq(&mut d, p, lo_sample, expected_lo),
+            "{label}: lower endpoint did not reduce to the expected rational"
+        );
+        assert!(
+            ivt_bisect_rat_eq(&mut d, p, hi_sample, expected_hi),
+            "{label}: upper endpoint did not reduce to the expected rational"
+        );
+
+        // width = hi - lo, as a Rat, for the halving check below.
+        let width = crate::rat_prelude::group::rsub(&mut d, p.rat, hi_sample, lo_sample);
+        widths.push(width);
+    }
+
+    // Widths must halve exactly: 3, 3/2, 3/4.
+    let expected_widths = [
+        ivt_bisect_rat_lit(&mut d, p, 3, 0, false), // 3
+        ivt_bisect_rat_lit(&mut d, p, 3, 1, false), // 3/2
+        ivt_bisect_rat_lit(&mut d, p, 3, 3, false), // 3/4
+    ];
+    for (i, (actual, expected)) in widths.iter().zip(expected_widths.iter()).enumerate() {
+        assert!(
+            ivt_bisect_rat_eq(&mut d, p, *actual, *expected),
+            "bracket width at k={i} did not reduce to the expected rational"
+        );
+    }
+
+    // The slack itself -- `eps_j := natDivSucc 1 j` at the two steps this
+    // test exercises -- strictly shrinks (`eps_0 = 1 > eps_1 = 1/2`). This is
+    // the property `ivt_bisect` (a fixed external `n`) never has to
+    // establish, since its `n` never changes within one bisection run; it is
+    // the only genuinely new arithmetic fact this construction introduces.
+    let eps0 = ivt_bisect_rat_lit(&mut d, p, 1, 0, false); // 1
+    let eps1 = ivt_bisect_rat_lit(&mut d, p, 1, 1, false); // 1/2
+    assert!(
+        ivt_bisect_rat_lt(&mut d, p, eps1, eps0),
+        "the per-step slack must strictly shrink: eps_1 = 1/2 must be < eps_0 = 1"
+    );
 }
 
 /// **Mandatory concrete instantiation** for `CReal.sumRange_reblock`
