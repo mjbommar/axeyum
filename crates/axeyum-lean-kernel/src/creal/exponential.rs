@@ -148,6 +148,7 @@
 //! comparison, route (a)'s `CReal.pow` shape for everything built since.
 
 use super::convergence::{converges_applied, exists_elim, exists_ty};
+use super::product::{index_le, mul_index, mul_shift, regular_between};
 use super::series::{
     assoc_rev_eq, exists_nat_intro, fuse_same_index, sum_range_cauchy_body, within_symm,
 };
@@ -164,7 +165,7 @@ use crate::rat_prelude::RatPrelude;
 use crate::rat_prelude::group::rsub;
 use crate::rat_prelude::ops::{
     den, den_z, iregroup4, nat_rewrite_prop, normalize, num, radd, rat_eq_rewrite, rchain, rcongr,
-    rle, rmul, rone, rpow, rzero,
+    rle, rmul, rneg, rone, rpow, rzero,
 };
 
 /// Height for `expTerm`/`expSeriesPartial`: both are thin definitional
@@ -2292,23 +2293,37 @@ pub(super) fn declare_geom_cauchy_family(
 // single-index `Converges` bound, so that helper does not fit verbatim and
 // [`telescope_cauchy_pad2`] rebuilds the combine/reassemble step generically.
 //
-// So: **no bespoke `CReal.mul`-index-shift proof was written for this file.**
-// The general lemma this lane needed and built is `Cauchy` transport across a
-// pointwise `Equiv`; the "scaling by a constant" half of the job was already
+// So: **no bespoke `CReal.mul`-index-shift proof was needed for the
+// EXISTENTIAL `Cauchy (sumRange expDominant)` below.** The general lemma
+// this lane needed and built is `Cauchy` transport across a pointwise
+// `Equiv`; the "scaling by a constant" half of that job was already
 // available off the shelf via `converges_mul`/`converges_of_const`.
+//
+// **`CReal.e` itself needs more than existence, though — it needs the
+// witness `K` as DATA — and route (b) cannot supply that** (`Exists.rec` is
+// Prop-only, so `K` cannot be unwrapped out of `Converges`'s own `∃K, …`).
+// So the later section of this file ("A CONCRETE … `Cauchy` witness…", below
+// [`declare_exp_dominant_cauchy`]) DOES redo route (a) by hand after all —
+// `mul_deshift` — but only for `c := two`, exploiting that `CReal.ofRat`'s
+// representative is a literal constant (so there is no `c`-side regularity
+// gap to bound, unlike a fully general "arbitrary `c`" version, which this
+// file does not attempt).
 
 /// Combine three `Within` proofs telescoping `x − w`:
 ///
-/// - `t1 : Within (x − y) (natDivSucc 2 a)`
+/// - `t1 : Within (x − y) (natDivSucc e a)`
 /// - `t2 : Within (y − z) (natDivSucc k a + natDivSucc k b)`
-/// - `t3 : Within (z − w) (natDivSucc 2 b)`
+/// - `t3 : Within (z − w) (natDivSucc e b)`
 ///
-/// into `Within (x − w) (natDivSucc (k+2) a + natDivSucc (k+2) b)`, returning
-/// `(k+2, proof)`.
+/// into `Within (x − w) (natDivSucc (k+e) a + natDivSucc (k+e) b)`, returning
+/// `(k+e, proof)`.
 ///
-/// [`declare_cauchy_of_pointwise_equiv`] needs this twice (`G`'s `Cauchy`
-/// witness widened by one `Equiv`-derived regularity unit on each of `m`/`n`).
-/// Built the same way `convergence.rs::converges_gap_at` combines a
+/// [`declare_cauchy_of_pointwise_equiv`]/[`cauchy_body_transport`] call this
+/// with `e := 2` (`G`'s `Cauchy` witness widened by one `Equiv`-derived
+/// regularity unit on each of `m`/`n`); [`mul_ordered_half_body`] calls it
+/// with a general `e` (`CReal.mul`'s own de-shift unit, `magnitude_of(c)*2`,
+/// via [`mul_deshift`]) — hence the parameter, rather than a literal `2`
+/// baked in. Built the same way `convergence.rs::converges_gap_at` combines a
 /// `Converges`-shaped middle bound (`fuse_at` + `Rat.sub_add_sub` twice), but
 /// generalized: `converges_gap_at`'s own middle hypothesis is single-index
 /// (`Within (seq u n − seq v n) (natDivSucc k n)`), which is why that helper
@@ -2325,21 +2340,21 @@ fn telescope_cauchy_pad2(
     a: ExprId,
     b: ExprId,
     k: ExprId,
+    e: ExprId,
     t1: ExprId,
     t2: ExprId,
     t3: ExprId,
 ) -> (ExprId, ExprId) {
     let rat = p.rat;
-    let two_nat = d.num(2);
 
     let q1 = rsub(d, rat, x, y);
     let q2 = rsub(d, rat, y, z);
     let q3 = rsub(d, rat, z, w);
-    let bound1 = div_succ(d, p, 2, a);
+    let bound1 = d.const_app(rat.nat_div_succ, &[e, a]);
     let ka = d.const_app(rat.nat_div_succ, &[k, a]);
     let kb = d.const_app(rat.nat_div_succ, &[k, b]);
     let bound2 = radd(d, ka, kb);
-    let bound3 = div_succ(d, p, 2, b);
+    let bound3 = d.const_app(rat.nat_div_succ, &[e, b]);
 
     // combine (x−y) + (y−z).
     let (l1, u1) = halves(d, p, q1, bound1, t1);
@@ -2387,7 +2402,7 @@ fn telescope_cauchy_pad2(
     });
     let bound1_ka_kbbound3 = radd(d, bound1, ka_kbbound3);
 
-    let (fused_b, fuse_b_eq) = fuse_same_index(d, p, k, two_nat, b);
+    let (fused_b, fuse_b_eq) = fuse_same_index(d, p, k, e, b);
     let lift_fuse_b = rcongr(d, kb_bound3, fused_b, fuse_b_eq, &|d, t| {
         let inner = radd(d, ka, t);
         radd(d, bound1, inner)
@@ -2404,7 +2419,7 @@ fn telescope_cauchy_pad2(
     let lift_comm = rcongr(d, bound1_ka, ka_bound1, comm_1, &|d, t| radd(d, t, fused_b));
     let kabound1_fusedb = radd(d, ka_bound1, fused_b);
 
-    let (fused_a, fuse_a_eq) = fuse_same_index(d, p, k, two_nat, a);
+    let (fused_a, fuse_a_eq) = fuse_same_index(d, p, k, e, a);
     let lift_fuse_a = rcongr(d, ka_bound1, fused_a, fuse_a_eq, &|d, t| {
         radd(d, t, fused_b)
     });
@@ -2427,8 +2442,8 @@ fn telescope_cauchy_pad2(
         within(d, p, xw, t)
     });
 
-    let k_plus_2 = d.add(k, two_nat);
-    (k_plus_2, final_proof)
+    let k_plus_e = d.add(k, e);
+    (k_plus_e, final_proof)
 }
 
 /// `CReal.cauchyOfPointwiseEquiv : ∀ G F, (∀ n, Equiv (G n) (F n)) → Cauchy G
@@ -2517,7 +2532,9 @@ fn declare_cauchy_of_pointwise_equiv(
             let heq_n_outer = d.apply(heq, &[n]);
             let t3 = d.apply(heq_n_outer, &[n]);
 
-            let (k_plus_2, proof) = telescope_cauchy_pad2(d, p, x, y, z, w, m, n, k, t1, t2, t3);
+            let two_nat_local = d.num(2);
+            let (k_plus_2, proof) =
+                telescope_cauchy_pad2(d, p, x, y, z, w, m, n, k, two_nat_local, t1, t2, t3);
 
             let over_n = d.lam_fv(n_fv, nat, proof);
             (k_plus_2, d.lam_fv(m_fv, nat, over_n))
@@ -2555,6 +2572,333 @@ fn declare_cauchy_of_pointwise_equiv(
         ty,
         value,
     })
+}
+
+// ----------------------------------------------------------------------------
+// A CONCRETE (non-existential) `Cauchy` witness for `sumRange expDominant`,
+// and from it for `sumRange expTerm` -- what `CReal.e` itself needs.
+// ----------------------------------------------------------------------------
+//
+// [`declare_exp_dominant_cauchy`] above gives `Cauchy (sumRange expDominant)`
+// (an `Exists Nat …`), which is enough for
+// `CReal.sumRange_converges_of_dominated`/`sumRange_cauchy_of_dominated`, but
+// **not** enough to build `CReal.e`: `CReal.mk` needs an explicit `Nat → Rat`
+// sequence, and `speedup (diagonal expSeriesPartial) K` needs `K` as DATA — an
+// `∃K, …` witness cannot be unwrapped into `K` itself (`Exists.rec` is
+// Prop-only). So this section rebuilds `Cauchy (sumRange expDominant)` with an
+// EXPLICIT numerator, by doing the `CReal.mul` index-shift bookkeeping route
+// (a) named (and set aside) in this file's earlier module documentation —
+// there is no way around it once the witness itself, not just its existence,
+// is needed as data.
+//
+// `mul_deshift` de-shifts `CReal.mul`'s own representative for `mul c x`
+// (`c` fixed) back to the "naive" product `q · seq x n` at the SAME index
+// `n`, for `q` any term the caller asserts equals `seq c` everywhere — sound
+// here because `c := two := CReal.ofRat …` has a literally constant
+// representative (`CReal.ofRat`'s value ignores its index entirely), so
+// `seq c high` and `seq c n` are the SAME term (`q`) up to nothing more than
+// unfolding — no `c`-side regularity gap to bound, unlike the fully general
+// "arbitrary `c`" version this file's earlier module documentation
+// considered and did not attempt. `g_ordered_half_body` uses it twice (once
+// per side of an ordered pair) plus `CReal.geomCauchy_ordered_half` scaled by
+// the same trick, combined via [`telescope_cauchy_pad2`]; then
+// `promote_ordered_half_to_full` — the same `Nat.le_total` case-split
+// `CReal.geomCauchy` and `CReal.sumRange_cauchy_of_dominated` both use —
+// turns the ordered pair into the full, concrete `sum_range_cauchy_body`
+// `CReal.e`'s construction needs.
+
+/// `Rat.natDivSucc k idx`, with a symbolic numerator `k`. `div_succ` (already
+/// imported) only takes a literal `u32`.
+fn div_succ_sym(d: &mut IntDev<'_>, p: CRealPrelude, k: ExprId, idx: ExprId) -> ExprId {
+    d.const_app(p.rat.nat_div_succ, &[k, idx])
+}
+
+/// `CReal.bound x`.
+fn bound_of(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+    d.const_app(p.bound, &[x])
+}
+
+/// `CReal.bound x + 1` — reproduced verbatim from `product.rs`'s own private
+/// `magnitude_of` (that module's precedent for reproducing a sibling's
+/// private helper rather than widening its visibility).
+fn magnitude_of(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+    let base = bound_of(d, p, x);
+    d.succ(base)
+}
+
+/// `Eq (a*(b-c)) (a*b - a*c)`, via `Rat.left_distrib` (stated over `+`) and
+/// `Rat.mul_neg` (`a*(-c) = -(a*c)`), bridging `Rat.sub`'s `add … (neg …)`
+/// unfolding the same way this file's other rewrites lean on defeq rather
+/// than an explicit `Rat.sub`-shaped distributivity lemma (there is none).
+fn mul_sub_distrib(d: &mut IntDev<'_>, rat: RatPrelude, a: ExprId, b: ExprId, c: ExprId) -> ExprId {
+    let neg_c = rneg(d, c);
+    let b_minus_c = rsub(d, rat, b, c);
+    let start = rmul(d, a, b_minus_c);
+    let ab = rmul(d, a, b);
+    let a_negc = rmul(d, a, neg_c);
+    let mid = radd(d, ab, a_negc);
+    let ld = d.lemma(rat.left_distrib, &[a, b, neg_c]);
+    let mul_neg_ac = d.lemma(rat.mul_neg, &[a, c]);
+    let ac = rmul(d, a, c);
+    let neg_ac = rneg(d, ac);
+    let target = rsub(d, rat, ab, ac);
+    let lifted = rcongr(d, a_negc, neg_ac, mul_neg_ac, &|d, t| radd(d, ab, t));
+    let (_, chained) = rchain(d, start, &[(mid, ld), (target, lifted)]);
+    chained
+}
+
+/// `Within (q * seq x high - q * seq x n) (natDivSucc (magnitude_of(c) * 2)
+/// n)`, `high := mul_index (mul_shift c x) n` — `CReal.mul`'s own
+/// representative for `mul c x` at `n`, de-shifted back down to the "naive"
+/// product `q * seq x n` at the SAME index. `q` is any term the caller
+/// asserts equals `seq c` at any index — sound for the constant `c := two`
+/// this file uses it for (see the section documentation above), and it is
+/// the ONLY place that assumption is used: everything else here is generic
+/// `CReal.mul`/`CReal.bound_within`/`product::regular_between` bookkeeping.
+///
+/// Returns `(magnitude_of(c) * 2, proof)`.
+fn mul_deshift(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    c: ExprId,
+    q: ExprId,
+    x: ExprId,
+    n: ExprId,
+) -> (ExprId, ExprId) {
+    let rat = p.rat;
+    let zero_nat = d.num(0);
+    let two_nat = d.num(2);
+    let one_nat = d.num(1);
+
+    let shift = mul_shift(d, p, c, x);
+    let high = mul_index(d, shift, n);
+    let high_le = index_le(d, p, one_nat, shift, n);
+    let n_le = {
+        let one_n = div_succ(d, p, 1, n);
+        d.lemma(rat.le_refl, &[one_n])
+    };
+    let reg = regular_between(d, p, x, high, n, high_le, n_le, n);
+
+    let hx = sample(d, p, x, high);
+    let nx = sample(d, p, x, n);
+    let diff_x = rsub(d, rat, hx, nx);
+    let two_at_n = div_succ(d, p, 2, n);
+
+    let c_bound = d.lemma(p.bound_within, &[c, high]);
+    let ka = magnitude_of(d, p, c);
+    let bound_value_c = div_succ_sym(d, p, ka, zero_nat);
+    let ka_nonneg = d.lemma(rat.zero_le_nat_div_succ, &[ka, zero_nat]);
+
+    let (cl, cu) = halves(d, p, q, bound_value_c, c_bound);
+    let (xl, xu) = halves(d, p, diff_x, two_at_n, reg);
+    let scaled = d.lemma(
+        rat.bounds_mul,
+        &[
+            q,
+            bound_value_c,
+            diff_x,
+            two_at_n,
+            ka_nonneg,
+            cl,
+            cu,
+            xl,
+            xu,
+        ],
+    );
+
+    let distrib_eq = mul_sub_distrib(d, rat, q, hx, nx);
+    let quantity_before = rmul(d, q, diff_x);
+    let q_hx = rmul(d, q, hx);
+    let q_nx = rmul(d, q, nx);
+    let quantity_after = rsub(d, rat, q_hx, q_nx);
+    let bound_before = rmul(d, bound_value_c, two_at_n);
+    let distributed = rat_eq_rewrite(
+        d,
+        quantity_before,
+        quantity_after,
+        distrib_eq,
+        scaled,
+        &|d, t| within(d, p, t, bound_before),
+    );
+
+    let ka2 = NatOps::mul(d, ka, two_nat);
+    let fuse = d.lemma(rat.nat_div_succ_mul, &[ka, two_nat, n]);
+    let fused_bound = div_succ_sym(d, p, ka2, n);
+    let final_proof = rat_eq_rewrite(d, bound_before, fused_bound, fuse, distributed, &|d, t| {
+        within(d, p, quantity_after, t)
+    });
+
+    (ka2, final_proof)
+}
+
+/// `Within (seq (mul c (s b)) b - seq (mul c (s a)) a) (natDivSucc K b +
+/// natDivSucc K a)`, `K := magnitude_of(c) * k_s + magnitude_of(c) * 2`,
+/// given `a ≤ b` and `s_ordered_half(a,b,hab) : Within (seq (s b) b - seq (s
+/// a) a) (natDivSucc k_s b + natDivSucc k_s a)`.
+///
+/// The three-bracket telescope `seq(mul c (s b))b − q·seq(s b)b`,
+/// `q·seq(s b)b − q·seq(s a)a`, `q·seq(s a)a − seq(mul c (s a))a`
+/// ([`mul_deshift`] twice, `s_ordered_half` scaled by `q` once, combined by
+/// [`telescope_cauchy_pad2`]) — the concrete-witness analogue of
+/// `CReal.converges_mul`'s role in [`declare_exp_dominant_cauchy`] above,
+/// needed here because that route only ever produces an existential `Cauchy`.
+#[allow(clippy::too_many_arguments)]
+fn mul_ordered_half_body(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    c: ExprId,
+    q: ExprId,
+    s: ExprId,
+    k_s: ExprId,
+    a: ExprId,
+    b: ExprId,
+    s_ordered_half: &dyn Fn(&mut IntDev<'_>, ExprId, ExprId, ExprId) -> ExprId,
+    hab: ExprId,
+) -> (ExprId, ExprId) {
+    let rat = p.rat;
+    let sa = d.apply(s, &[a]);
+    let sb = d.apply(s, &[b]);
+    let g_a = cmul(d, p, c, sa);
+    let g_b = cmul(d, p, c, sb);
+
+    let (ka2, mdb) = mul_deshift(d, p, c, q, sb, b);
+    let (_, mda) = mul_deshift(d, p, c, q, sa, a);
+
+    let sb_b = sample(d, p, sb, b);
+    let sa_a = sample(d, p, sa, a);
+    let q_sb_b = rmul(d, q, sb_b);
+    let q_sa_a = rmul(d, q, sa_a);
+    let g_a_a = sample(d, p, g_a, a);
+    let ka2_at_a = div_succ_sym(d, p, ka2, a);
+    let mda_flip = within_symm(d, p, g_a_a, q_sa_a, ka2_at_a, mda);
+
+    // The middle term: `geomCauchy_ordered_half`(a,b,hab)-shaped, scaled by
+    // `q` the same way `mul_deshift` scales its own regularity gap.
+    let s_gap = s_ordered_half(d, a, b, hab);
+    let ka = magnitude_of(d, p, c);
+    let zero_nat = d.num(0);
+    let bound_value_c = div_succ_sym(d, p, ka, zero_nat);
+    let ka_nonneg = d.lemma(rat.zero_le_nat_div_succ, &[ka, zero_nat]);
+    let c_bound_mid = d.lemma(p.bound_within, &[c, b]);
+    let seven_b = div_succ_sym(d, p, k_s, b);
+    let seven_a = div_succ_sym(d, p, k_s, a);
+    let bnd7 = radd(d, seven_b, seven_a);
+    let diff_s = rsub(d, rat, sb_b, sa_a);
+    let (cl, cu) = halves(d, p, q, bound_value_c, c_bound_mid);
+    let (sl, su) = halves(d, p, diff_s, bnd7, s_gap);
+    let scaled_mid = d.lemma(
+        rat.bounds_mul,
+        &[q, bound_value_c, diff_s, bnd7, ka_nonneg, cl, cu, sl, su],
+    );
+    let distrib_mid = mul_sub_distrib(d, rat, q, sb_b, sa_a);
+    let quantity_mid_before = rmul(d, q, diff_s);
+    let quantity_mid_after = rsub(d, rat, q_sb_b, q_sa_a);
+    let bound_mid_before = rmul(d, bound_value_c, bnd7);
+    let distributed_mid = rat_eq_rewrite(
+        d,
+        quantity_mid_before,
+        quantity_mid_after,
+        distrib_mid,
+        scaled_mid,
+        &|d, t| within(d, p, t, bound_mid_before),
+    );
+
+    let ld_mid = d.lemma(rat.left_distrib, &[bound_value_c, seven_b, seven_a]);
+    let head_mid = rmul(d, bound_value_c, seven_b);
+    let tail_mid = rmul(d, bound_value_c, seven_a);
+    let mid1 = radd(d, head_mid, tail_mid);
+    let fuse_b_mid = d.lemma(rat.nat_div_succ_mul, &[ka, k_s, b]);
+    let fuse_a_mid = d.lemma(rat.nat_div_succ_mul, &[ka, k_s, a]);
+    let kg_num = NatOps::mul(d, ka, k_s);
+    let kg_b = div_succ_sym(d, p, kg_num, b);
+    let kg_a = div_succ_sym(d, p, kg_num, a);
+    let lift_b_mid = rcongr(d, head_mid, kg_b, fuse_b_mid, &|d, t| radd(d, t, tail_mid));
+    let mid2 = radd(d, kg_b, tail_mid);
+    let lift_a_mid = rcongr(d, tail_mid, kg_a, fuse_a_mid, &|d, t| radd(d, kg_b, t));
+    let mid3 = radd(d, kg_b, kg_a);
+    let (_, mid_chain) = rchain(
+        d,
+        bound_mid_before,
+        &[(mid1, ld_mid), (mid2, lift_b_mid), (mid3, lift_a_mid)],
+    );
+    let mid_final = rat_eq_rewrite(
+        d,
+        bound_mid_before,
+        mid3,
+        mid_chain,
+        distributed_mid,
+        &|d, t| within(d, p, quantity_mid_after, t),
+    );
+
+    let g_b_b = sample(d, p, g_b, b);
+    let (k_total, proof) = telescope_cauchy_pad2(
+        d, p, g_b_b, q_sb_b, q_sa_a, g_a_a, b, a, kg_num, ka2, mdb, mid_final, mda_flip,
+    );
+    (k_total, proof)
+}
+
+/// Promote an ordered-pair `Within` bound (`a ≤ b`) into the full, unordered
+/// `sum_range_cauchy_body`-shaped statement `∀ m n, Within (seq (func m) m −
+/// seq (func n) n) (natDivSucc k m + natDivSucc k n)`, via `Nat.le_total`.
+/// Verbatim in technique to `exponential.rs::declare_geom_cauchy`'s own case
+/// split (`within_symm` plus one `Rat.add_comm` rewrite in the `m ≤ n`
+/// branch; the `n ≤ m` branch lands on the target shape directly) —
+/// generalized off the concrete witness `7` so both
+/// [`mul_ordered_half_body`]'s promotion and `CReal.sumRange_cauchy_of_dominated`'s
+/// own analogous step (reproduced here rather than reused — it is a private
+/// `fn` there) can share it.
+fn promote_ordered_half_to_full(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    func: ExprId,
+    k: ExprId,
+    ordered_half: &dyn Fn(&mut IntDev<'_>, ExprId, ExprId, ExprId) -> ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let nat = d.nat_ty();
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let fm = d.apply(func, &[m]);
+    let fn_val = d.apply(func, &[n]);
+    let y_m = sample(d, p, fm, m);
+    let z_n = sample(d, p, fn_val, n);
+    let diff_mn = rsub(d, rat, y_m, z_n);
+    let bm = div_succ_sym(d, p, k, m);
+    let bn = div_succ_sym(d, p, k, n);
+    let bound_mn = radd(d, bm, bn);
+    let claim_mn = within(d, p, diff_mn, bound_mn);
+
+    let left_ty = d.le(m, n);
+    let right_ty = d.le(n, m);
+    let total_mn = {
+        let name = d.prelude().le_total;
+        d.const_app(name, &[m, n])
+    };
+
+    let body = d.or_elim(
+        left_ty,
+        right_ty,
+        claim_mn,
+        total_mn,
+        &|d, hmn| {
+            let raw = ordered_half(d, m, n, hmn);
+            let bn2 = div_succ_sym(d, p, k, n);
+            let bm2 = div_succ_sym(d, p, k, m);
+            let bound_nm = radd(d, bn2, bm2);
+            let flipped = within_symm(d, p, z_n, y_m, bound_nm, raw);
+            let comm_eq = d.lemma(rat.add_comm, &[bn2, bm2]);
+            rat_eq_rewrite(d, bound_nm, bound_mn, comm_eq, flipped, &|d, t| {
+                within(d, p, diff_mn, t)
+            })
+        },
+        &|d, hnm| ordered_half(d, n, m, hnm),
+    );
+    let over_n = d.lam_fv(n_fv, nat, body);
+    d.lam_fv(m_fv, nat, over_n)
 }
 
 /// `CReal.expDominantCauchy : Cauchy (sumRange expDominant)`.
@@ -2716,4 +3060,222 @@ pub(super) fn declare_exp_convergence(
     declare_cauchy_of_pointwise_equiv(d, p)?;
     declare_exp_dominant_cauchy(d, p)?;
     declare_exp_series_partial_converges(d, p)
+}
+
+// ----------------------------------------------------------------------------
+// `CReal.e` — via `CReal.mk` on an explicit regular sequence, never an
+// `Exists`-elimination into data.
+// ----------------------------------------------------------------------------
+
+/// `λ n, CReal.seq (f n) n` — the raw diagonal `regular_of_scaled_cauchy`
+/// consumes. Reproduced verbatim from `convergence.rs`'s own private
+/// `diagonal` (that module's own precedent for reusing a sibling's private
+/// helper by reproduction rather than widening its visibility).
+fn diagonal_seq(d: &mut IntDev<'_>, p: CRealPrelude, f: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let fn_term = d.apply(f, &[n]);
+    let body = sample(d, p, fn_term, n);
+    d.lam_fv(n_fv, nat, body)
+}
+
+/// A CONCRETE `(K, proof : sum_range_cauchy_body (sumRange expDominant) K)`.
+///
+/// Not a kernel declaration on its own — an internal-plumbing artifact
+/// [`declare_e`] consumes directly (the coverage assertion in
+/// `creal_tests.rs` only needs to see what is actually exported). Built via
+/// [`mul_ordered_half_body`] (`c := two`, `q := two`'s own rational,
+/// `s := pow_half_fn`, scaled `CReal.geomCauchy_ordered_half` at `k_s := 7`)
+/// plus [`promote_ordered_half_to_full`]'s `Nat.le_total` promotion.
+fn exp_dominant_cauchy_body_concrete(d: &mut IntDev<'_>, p: CRealPrelude) -> (ExprId, ExprId) {
+    let nat = d.nat_ty();
+    let raw_pow_half = pow_half_fn(d, p);
+    let s_fn = d.const_app(p.sum_range, &[raw_pow_half]);
+    let two_creal = two(d, p);
+    let (two_rat, _, _) = two_normalize(d, p);
+
+    let seven_nat = d.num(7);
+    let two_nat = d.num(2);
+    let ka = magnitude_of(d, p, two_creal);
+    let kg_num = NatOps::mul(d, ka, seven_nat);
+    let ka2 = NatOps::mul(d, ka, two_nat);
+    let k_g = d.add(kg_num, ka2);
+
+    // `G := fun n => mul two (S n)`, `S := sumRange (pow half ·)`.
+    let g_fn = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let sn = d.apply(s_fn, &[n]);
+        let prod = cmul(d, p, two_creal, sn);
+        d.lam_fv(n_fv, nat, prod)
+    };
+
+    let ordered_half = |d: &mut IntDev<'_>, a: ExprId, b: ExprId, hab: ExprId| -> ExprId {
+        let (_, proof) = mul_ordered_half_body(
+            d,
+            p,
+            two_creal,
+            two_rat,
+            s_fn,
+            seven_nat,
+            a,
+            b,
+            &|d, aa, bb, hh| d.lemma(p.geom_cauchy_ordered_half, &[aa, bb, hh]),
+            hab,
+        );
+        proof
+    };
+
+    // Concrete `Cauchy G` at `k_g` -- `G` itself, not yet `sumRange
+    // expDominant` (only `Equiv`, via `CReal.mul_sumRange`).
+    let g_case_proof = promote_ordered_half_to_full(d, p, g_fn, k_g, &ordered_half);
+
+    // Transport across `mul_sumRange`'s `Equiv` onto `F := sumRange
+    // expDominant` -- the same transport [`declare_cauchy_of_pointwise_equiv`]
+    // performs, but concrete (`cauchy_body_transport`, not wrapped in
+    // `Exists`), because `K` is needed as DATA here.
+    let exp_dominant_const = d.kernel().const_(p.exp_dominant, vec![]);
+    let f_fn = d.const_app(p.sum_range, &[exp_dominant_const]);
+    let heq = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let body = d.lemma(p.mul_sum_range, &[two_creal, raw_pow_half, n]);
+        d.lam_fv(n_fv, nat, body)
+    };
+
+    cauchy_body_transport(d, p, g_fn, f_fn, heq, k_g, g_case_proof)
+}
+
+/// Given `heq : ∀n, Equiv (G n) (F n)` and `hbody : sum_range_cauchy_body (G,
+/// k)`, build `(k+2, sum_range_cauchy_body (F, k+2))`. The concrete-witness
+/// core of [`declare_cauchy_of_pointwise_equiv`]'s own case split
+/// (reproduced rather than shared — that declaration is already landed and
+/// kernel-verified; this file's convention elsewhere is to reproduce a small
+/// private helper rather than risk the tested one), extracted so a caller
+/// needing `K` as DATA — not hidden inside `Cauchy`'s own `∃K, …` — can use
+/// it directly. [`exp_dominant_cauchy_body_concrete`] is that caller.
+fn cauchy_body_transport(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    g: ExprId,
+    f: ExprId,
+    heq: ExprId,
+    k: ExprId,
+    hbody: ExprId,
+) -> (ExprId, ExprId) {
+    let nat = d.nat_ty();
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let gm = d.apply(g, &[m]);
+    let gn = d.apply(g, &[n]);
+    let fm = d.apply(f, &[m]);
+    let fn_val = d.apply(f, &[n]);
+
+    let x = sample(d, p, fm, m);
+    let y = sample(d, p, gm, m);
+    let z = sample(d, p, gn, n);
+    let w = sample(d, p, fn_val, n);
+
+    let heq_m_outer = d.apply(heq, &[m]);
+    let heq_m = d.apply(heq_m_outer, &[m]);
+    let two_at_m = div_succ(d, p, 2, m);
+    let t1 = within_symm(d, p, y, x, two_at_m, heq_m);
+
+    let t2 = {
+        let outer = d.apply(hbody, &[m]);
+        d.apply(outer, &[n])
+    };
+
+    let heq_n_outer = d.apply(heq, &[n]);
+    let t3 = d.apply(heq_n_outer, &[n]);
+
+    let two_nat_local = d.num(2);
+    let (k_plus_2, proof) =
+        telescope_cauchy_pad2(d, p, x, y, z, w, m, n, k, two_nat_local, t1, t2, t3);
+
+    let over_n = d.lam_fv(n_fv, nat, proof);
+    (k_plus_2, d.lam_fv(m_fv, nat, over_n))
+}
+
+/// `CReal.e := CReal.mk (speedup (diagonal expSeriesPartial) K) (…)`, `K :=
+/// exp_dominant_cauchy_body_concrete`'s witness `+8` (as 8 nested `Nat.succ`,
+/// matching `CReal.sumRange_cauchy_dominated_ordered_normalized`'s own
+/// internal `K' := k+8` up to defeq — see that theorem's doc and
+/// `CReal.sumRange_cauchy_of_dominated`'s own case split, which relies on
+/// exactly this defeq rather than re-deriving `K'`'s closed form by hand).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_e(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    // `k_dom` is `exp_dominant_cauchy_body_concrete`'s RETURNED witness for
+    // `Cauchy (sumRange expDominant)` -- already `K_G + 2` (the `+2` from its
+    // own internal `cauchy_body_transport`), not the raw `K_G` for `G` alone.
+    let (k_dom, hyp2) = exp_dominant_cauchy_body_concrete(d, p);
+
+    let exp_term_const = d.kernel().const_(p.exp_term, vec![]);
+    let exp_dominant_const = d.kernel().const_(p.exp_dominant, vec![]);
+    let exp_series_partial_const = d.kernel().const_(p.exp_series_partial, vec![]);
+    let hyp1 = d.lemma(p.exp_term_abs_le_dominant, &[]);
+
+    let ordered_half = |d: &mut IntDev<'_>, a: ExprId, b: ExprId, hab: ExprId| -> ExprId {
+        d.lemma(
+            p.sum_range_cauchy_dominated_ordered_normalized,
+            &[
+                exp_term_const,
+                exp_dominant_const,
+                k_dom,
+                a,
+                b,
+                hyp1,
+                hyp2,
+                hab,
+            ],
+        )
+    };
+
+    let mut k_final = k_dom;
+    for _ in 0..8 {
+        k_final = d.succ(k_final);
+    }
+
+    let exp_series_partial_body =
+        promote_ordered_half_to_full(d, p, exp_series_partial_const, k_final, &ordered_half);
+
+    let diag = diagonal_seq(d, p, exp_series_partial_const);
+    let speedup_term = d.const_app(p.speedup, &[diag, k_final]);
+    let regularity_proof = d.lemma(
+        p.regular_of_scaled_cauchy,
+        &[exp_series_partial_const, k_final, exp_series_partial_body],
+    );
+
+    let constructor = d.kernel().const_(p.mk, vec![]);
+    let value = d.apply(constructor, &[speedup_term, regularity_proof]);
+    let ty = creal_ty(d, p);
+
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.e,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(DERIVED_HEIGHT + 40),
+    })
+}
+
+/// Admit `CReal.e`. Run **after** [`declare_exp_convergence`] (shares
+/// `exp_dominant_cauchy_body_concrete`'s dependencies:
+/// `geomCauchy_ordered_half`, `exp_term_abs_le_dominant`,
+/// `sum_range_cauchy_dominated_ordered_normalized`, `regular_of_scaled_cauchy`
+/// — all declared well before `exponential`'s own functions run).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+pub(super) fn declare_e_family(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    declare_e(d, p)
 }

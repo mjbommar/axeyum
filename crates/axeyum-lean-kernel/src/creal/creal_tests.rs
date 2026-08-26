@@ -72,7 +72,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 320] = [
+    let expected: [(&str, crate::NameId, &str); 321] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -965,6 +965,11 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             p.exp_series_partial_converges,
             "theorem",
         ),
+        // `CReal.e`, via `CReal.mk` on an explicit regular sequence (never
+        // `Exists`-elimination into data) -- the concrete-witness route
+        // `exponential.rs::declare_e` redoes `CReal.mul`'s own index shift
+        // by hand for exactly this reason.
+        ("CReal.e", p.e, "def"),
         // Found by the coverage assertion above, not by anyone noticing: these
         // seven were live in the prelude and unlisted here, so this test had
         // never checked them. `lt_cotrans`/`apart_cotrans` are Ch 12's
