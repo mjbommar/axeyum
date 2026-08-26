@@ -609,6 +609,14 @@ both references and reports two guarded markers with zero stale counts. This is
 scale bookkeeping rather than capability credit, but keeping it live prevents
 the public surface from silently outrunning its documented/tested inventory.
 
+The adopted-control sweep also repaired a stale qualification contract rather
+than treating progress as drift. The Fibonacci child-selection artifact now
+pins each candidate's actual dependency set and preserves the original
+selection as historical. Either child may advance only to a checked,
+axiom-free `kernel-lean` proof; an open child must remain free of admission
+fields. This keeps top-down selection evidence stable while allowing bottom-up
+theorem construction to move the ledger forward.
+
 ## Sequencing
 
 The critical path is not three independent projects:
