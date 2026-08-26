@@ -1,0 +1,785 @@
+{
+  "authority": "measurement only; no operation registration or fact admission",
+  "census": {
+    "accepted": 0,
+    "conversion_percent": 0.0,
+    "decline_reasons": {
+      "NoTypedApplication": 37
+    },
+    "declined": 37,
+    "import_rejected": 43,
+    "population": 80,
+    "rejection_declarations": {
+      "And.left": 5,
+      "Eq.subst": 7,
+      "Nat.le_of_lt_add_one": 6,
+      "Nat.mod_lt": 3,
+      "Quot": 9,
+      "dif_pos": 11,
+      "eq_self": 1,
+      "propext": 1
+    }
+  },
+  "kind": "axeyum-open-fixed-palette-census",
+  "outcomes": [
+    {
+      "capsule_bytes": 399180,
+      "capsule_sha256": "b3fa98f2c8a6486008bc79e48ac8b3f4c9e9eb01d21627e80c7239204e140c60",
+      "fact_id": "F:ml430-int-add-modeq-left-ee732b5b",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.intAddModeqLeft"
+    },
+    {
+      "capsule_bytes": 399181,
+      "capsule_sha256": "50c3ee6d2bf715651c2b0a4bf25a3ba310400604b79af0e5b4a0a1349ada45f7",
+      "fact_id": "F:ml430-int-add-modeq-right-e58108ee",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.intAddModeqRight"
+    },
+    {
+      "capsule_bytes": 9836191,
+      "capsule_sha256": "48b366c8483966dde112e765b58a36ab1dc49b626bf3157271d18707769a5a12",
+      "fact_id": "F:ml430-int-fib-add-181b6a2c",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.intFibAdd",
+      "trusted_declaration": "Quot",
+      "trusted_declaration_kind": "Quotient"
+    },
+    {
+      "capsule_bytes": 9835929,
+      "capsule_sha256": "0a2576b799bb510266cc539e283a14a168cc30f5b0d933fa5f8ae44fd908fc5a",
+      "fact_id": "F:ml430-int-fib-two-mul-0e70f3dd",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.intFibTwoMul",
+      "trusted_declaration": "Quot",
+      "trusted_declaration_kind": "Quotient"
+    },
+    {
+      "capsule_bytes": 9841120,
+      "capsule_sha256": "7f5cff249ce8c200c5ba5db56d2442e8caa96f63cae1d8b8fd9395a16209e3ac",
+      "fact_id": "F:ml430-int-fib-two-mul-add-one-pos-8977f65f",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.intFibTwoMulAddOnePos",
+      "trusted_declaration": "Quot",
+      "trusted_declaration_kind": "Quotient"
+    },
+    {
+      "capsule_bytes": 9836026,
+      "capsule_sha256": "61190007d8dce5a50e1b55eb71464ae71d4ea86e05da0dcfefce7d44a3738a78",
+      "fact_id": "F:ml430-int-fib-two-mul-add-two-0ba4a948",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.intFibTwoMulAddTwo",
+      "trusted_declaration": "Quot",
+      "trusted_declaration_kind": "Quotient"
+    },
+    {
+      "capsule_bytes": 595403,
+      "capsule_sha256": "1c4f220011cfcab9cfdaa397b702d1ce3342c131dfe64c91b2b023b85e2e337a",
+      "fact_id": "F:ml430-int-gcd-eq-gcd-ab-63005aef",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.intGcdEqGcdAb",
+      "trusted_declaration": "propext",
+      "trusted_declaration_kind": "Axiom"
+    },
+    {
+      "capsule_bytes": 392964,
+      "capsule_sha256": "6228e6b1f151b3e834e0cf7328b8f2d223babbbff5a13ba2a0e4190a3640ea6b",
+      "fact_id": "F:ml430-int-mod-modeq-6bec7847",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.intModModeq"
+    },
+    {
+      "capsule_bytes": 409196,
+      "capsule_sha256": "cfddd92fec5431ea21241fb357eef07f07228e8d141aa390c431d39169fbf146",
+      "fact_id": "F:ml430-int-modeq-sub-3148f130",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.intModeqSub"
+    },
+    {
+      "capsule_bytes": 393560,
+      "capsule_sha256": "5f83f3e318c327983ee7c196f90674c4c6d2dd925021f5decd3ba92c4779a672",
+      "fact_id": "F:ml430-int-modulus-modeq-zero-5b57a898",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.intModulusModeqZero"
+    },
+    {
+      "capsule_bytes": 408751,
+      "capsule_sha256": "076feab2a03f8af770703a2794d09e77433ba62c7d68fbab5f7aacb4d235e627",
+      "fact_id": "F:ml430-mutation-2086302b3a338591b3179871",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.mutation",
+      "trusted_declaration": "Nat.le_of_lt_add_one",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 220939,
+      "capsule_sha256": "d17ff0010101292d58e06e3b630ea03dd24c501c496de8d9c1c323cf8302c269",
+      "fact_id": "F:ml430-mutation-7afa5ec620720a1501bf349d",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.mutationX"
+    },
+    {
+      "capsule_bytes": 762278,
+      "capsule_sha256": "f975b91d1bc5d03bb028a64524d145c97ca3ca3cfaa3a2f2783bdfe6fca31c61",
+      "fact_id": "F:ml430-mutation-a6dd1759bce60d820292e107",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.mutationXX",
+      "trusted_declaration": "dif_pos",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 393005,
+      "capsule_sha256": "1d50769489e1959d09e84555748c0eb8b85ea0fc1141f0c0b672ddd2850591f2",
+      "fact_id": "F:ml430-mutation-aca37b68d3cdf06f0127def9",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.mutationXXX"
+    },
+    {
+      "capsule_bytes": 515617,
+      "capsule_sha256": "6b1680eb0e74cce8455145f4e9a5d43aaff28a466c3760b13ebb5e9e56ea282c",
+      "fact_id": "F:ml430-mutation-c20db9b4c60b816ce738bdf2",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.mutationXXXX",
+      "trusted_declaration": "Nat.mod_lt",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 379988,
+      "capsule_sha256": "a6315ac379629bbe05d9eedb89c40aaa9e5e717e019edaf37073b33c043a8d98",
+      "fact_id": "F:ml430-mutation-c86940b52af8159ca9b381d6",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.mutationXXXXX"
+    },
+    {
+      "capsule_bytes": 386473,
+      "capsule_sha256": "563389ffc476b0b34ddabc1ae03784bcd8112505ff7cc48ac4f91a430c5f099b",
+      "fact_id": "F:ml430-mutation-e8583599cfae2d40cefae3f0",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.mutationXXXXXX"
+    },
+    {
+      "capsule_bytes": 223616,
+      "capsule_sha256": "8d32ac4322a331121c92db72438b9cca576f5167a3b2ec09bf50678af5502e7f",
+      "fact_id": "F:ml430-mutation-edb05acf07d9ef3f9f8232fc",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.mutationXXXXXXX"
+    },
+    {
+      "capsule_bytes": 379914,
+      "capsule_sha256": "86491871453070d6f17b3f5f8bc5a505d32a280f05e2f845d0daaff76c271fde",
+      "fact_id": "F:ml430-nat-add-modeq-left-e3b1fba9",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natAddModeqLeft"
+    },
+    {
+      "capsule_bytes": 379915,
+      "capsule_sha256": "80d6111af11f2a42525937da30e2cfa7df2301f423c380238b3ec6252bb61f52",
+      "fact_id": "F:ml430-nat-add-modeq-right-e2f11f21",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natAddModeqRight"
+    },
+    {
+      "capsule_bytes": 223557,
+      "capsule_sha256": "f172ac4da2c1e3bf380f220336378570d20f267df86e9ad67cc3f898322350c9",
+      "fact_id": "F:ml430-nat-choose-le-add-9c463139",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natChooseLeAdd"
+    },
+    {
+      "capsule_bytes": 223485,
+      "capsule_sha256": "d3a46369e4d57b388edbf51609e0d9bb1e491cbeef08063cf8909d6d9d2d3b46",
+      "fact_id": "F:ml430-nat-choose-le-succ-62ae968b",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natChooseLeSucc"
+    },
+    {
+      "capsule_bytes": 804898,
+      "capsule_sha256": "0bc4814e1d7455f0727261e19534a939ed1cd69835e39ccd572e07925cdb4f49",
+      "fact_id": "F:ml430-nat-choose-mono-a1af9c18",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natChooseMono",
+      "trusted_declaration": "Eq.subst",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 223618,
+      "capsule_sha256": "a77305147e5b0bcd5be6078cbf64556ddfc24883a72c4af3659efc896305ed18",
+      "fact_id": "F:ml430-nat-choose-one-right-7eda8e39",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natChooseOneRight"
+    },
+    {
+      "capsule_bytes": 223614,
+      "capsule_sha256": "10d8bb5d7e6ff16a17a6dfd42249679453450d6a6a5477c961299688180dba0a",
+      "fact_id": "F:ml430-nat-choose-self-25bb9fb8",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natChooseSelf"
+    },
+    {
+      "capsule_bytes": 223620,
+      "capsule_sha256": "a97938e5b18d47a4e44b89dc0dae55f1aaf791f0e79831adba6e6e0d4c1adb08",
+      "fact_id": "F:ml430-nat-choose-succ-self-e396f6c2",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natChooseSuccSelf"
+    },
+    {
+      "capsule_bytes": 223903,
+      "capsule_sha256": "56572bfb0de51e63c9255f5c977dcfd2489b5e3adc0ecd9d027522ab54805eb9",
+      "fact_id": "F:ml430-nat-choose-succ-succ-671856b6",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natChooseSuccSucc"
+    },
+    {
+      "capsule_bytes": 223735,
+      "capsule_sha256": "07647fb42b520f7b24c05a4e35b0936b4f11c8c29726b72189c0e45c0cd796eb",
+      "fact_id": "F:ml430-nat-choose-symm-add-e4b68161",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natChooseSymmAdd"
+    },
+    {
+      "capsule_bytes": 223621,
+      "capsule_sha256": "8a6b9028a625af6a951e96bf951f818bb9d6a46bffca7f87498c4ec6be1f3809",
+      "fact_id": "F:ml430-nat-choose-zero-right-1ed2802a",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natChooseZeroRight"
+    },
+    {
+      "capsule_bytes": 223624,
+      "capsule_sha256": "03a4e0c29e1e45514ea2769b08ddeb263f7f1a0ee1169c6ae60af3976cc6dc7d",
+      "fact_id": "F:ml430-nat-choose-zero-succ-62c6520b",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natChooseZeroSucc"
+    },
+    {
+      "capsule_bytes": 822377,
+      "capsule_sha256": "b2b6a9a5f9bce3ef8516a26bb35ac359b6d2b8bd1e46910a790e02567d87b0b1",
+      "fact_id": "F:ml430-nat-clog-antitone-left-44a87771",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natClogAntitoneLeft",
+      "trusted_declaration": "Eq.subst",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 813245,
+      "capsule_sha256": "df2da541d7b7b7979ddf38033fd4db429a0fc790a500e446ea2a55fa3e3e8166",
+      "fact_id": "F:ml430-nat-clog-monotone-48fe50c6",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natClogMonotone",
+      "trusted_declaration": "Eq.subst",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 396678,
+      "capsule_sha256": "ccc959c78d4f129400e139c2ade0ecbac60df180f2a377c8d8a908fc24c973d2",
+      "fact_id": "F:ml430-nat-clog-one-left-b496af12",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natClogOneLeft",
+      "trusted_declaration": "And.left",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 396680,
+      "capsule_sha256": "d07037322451a095d784bfb75dc4e32b834c9aedcdeba71315e2320d89031134",
+      "fact_id": "F:ml430-nat-clog-one-right-1ce3d52f",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natClogOneRight",
+      "trusted_declaration": "And.left",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 396679,
+      "capsule_sha256": "e5fec3b3bb2a766243833ebfc476c83be7da1008b486a6cb19c5a09061548728",
+      "fact_id": "F:ml430-nat-clog-zero-left-1c61a5bf",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natClogZeroLeft",
+      "trusted_declaration": "And.left",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 396681,
+      "capsule_sha256": "8695de43c53bd01dcf3c145431237190553bee9b30e2ae0c03c2f4eed4acc44e",
+      "fact_id": "F:ml430-nat-clog-zero-right-d42d47b1",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natClogZeroRight",
+      "trusted_declaration": "And.left",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 517185,
+      "capsule_sha256": "0db1a60058b0021d4666f8c13b0f2bf90d636ca0f8b46ed13747721044ea5060",
+      "fact_id": "F:ml430-nat-coprime-symmetric-9b5cfa12",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natCoprimeSymmetric",
+      "trusted_declaration": "Nat.mod_lt",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 233954,
+      "capsule_sha256": "46674b5b80df152df37c48994c74fa713d139f9b7e2c420cf1fe0c14e18867fc",
+      "fact_id": "F:ml430-nat-descfactorial-self-899fc0e0",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natDescfactorialSelf"
+    },
+    {
+      "capsule_bytes": 228637,
+      "capsule_sha256": "137aec6f44cff1c587f2ac266157735ab8ead3ac5449001b0d101e40541aba0e",
+      "fact_id": "F:ml430-nat-factorial-dvd-ascfactorial-44a4e641",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natFactorialDvdAscfactorial"
+    },
+    {
+      "capsule_bytes": 239411,
+      "capsule_sha256": "f59685fdfb4d3c3abd3bc6b09f5e8b2066bad01f8a2acfc720fba26d4de17e98",
+      "fact_id": "F:ml430-nat-factorial-dvd-descfactorial-bbf6124f",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natFactorialDvdDescfactorial"
+    },
+    {
+      "capsule_bytes": 221932,
+      "capsule_sha256": "ec21056a680f9c7b9bff103127a46bad74b9ef13f890e833734ca358a2022f38",
+      "fact_id": "F:ml430-nat-factorial-ne-zero-5fc0b0a1",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natFactorialNeZero"
+    },
+    {
+      "capsule_bytes": 224011,
+      "capsule_sha256": "ca1958d0f76a5062ef96f57e455b39748c82703c4aa2b4c8b1bb5dfdf0ba7ffc",
+      "fact_id": "F:ml430-nat-factorial-pos-f1dd2405",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natFactorialPos"
+    },
+    {
+      "capsule_bytes": 1830589,
+      "capsule_sha256": "41a72661251a6730aff597124ff014d998c783ffce48b5db236cf8acb4e0d41c",
+      "fact_id": "F:ml430-nat-fastfib-eq-cde11774",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natFastfibEq",
+      "trusted_declaration": "Quot",
+      "trusted_declaration_kind": "Quotient"
+    },
+    {
+      "capsule_bytes": 813126,
+      "capsule_sha256": "7fa04ada34720f838f2bc571a2063671db93b7f396b98f37b1589511acf3f565",
+      "fact_id": "F:ml430-nat-fib-add-two-strictmono-c1e86d4d",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natFibAddTwoStrictmono",
+      "trusted_declaration": "Eq.subst",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 821989,
+      "capsule_sha256": "8d10be4f79083e628b32afe803a96b3c66f7bc14f7df44a7a1c9676a359e5070",
+      "fact_id": "F:ml430-nat-fib-strictmonoon-905810a9",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natFibStrictmonoon",
+      "trusted_declaration": "Eq.subst",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 751692,
+      "capsule_sha256": "e4c55794209624d71509f57ffe4b4ca38bbcf9557c783dd640f3cfc865b43cb4",
+      "fact_id": "F:ml430-nat-land-assoc-ad4775b8",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natLandAssoc",
+      "trusted_declaration": "dif_pos",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 756329,
+      "capsule_sha256": "cdc73197d797427f230104d1216e4b8a74aa56e26900f98002eb5611daf40bcd",
+      "fact_id": "F:ml430-nat-land-bit-b9ab7475",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natLandBit",
+      "trusted_declaration": "dif_pos",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 751482,
+      "capsule_sha256": "c845fa2098fc234d53713e8f903ec2e58b3fa93d10d2f8fb3b97db73a6ebd1fa",
+      "fact_id": "F:ml430-nat-land-comm-7e6ad72e",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natLandComm",
+      "trusted_declaration": "dif_pos",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 749371,
+      "capsule_sha256": "e33bfdc847e394702f9d1b8dea548292ece99637d73a1de1d62b20f7ccf93d2e",
+      "fact_id": "F:ml430-nat-ldiff-bit-6be49bb8",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natLdiffBit",
+      "trusted_declaration": "dif_pos",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 229823,
+      "capsule_sha256": "cd63e187dd656829ada36a20642792435af80812075b55a8923f557e6a73bef1",
+      "fact_id": "F:ml430-nat-le-fib-add-one-5284f0bf",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natLeFibAddOne"
+    },
+    {
+      "capsule_bytes": 821563,
+      "capsule_sha256": "5d867915618a5dfa648c7c2d819861b2115bd85e41720b583724d99cf7667073",
+      "fact_id": "F:ml430-nat-log-antitone-left-20d1326c",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natLogAntitoneLeft",
+      "trusted_declaration": "Eq.subst",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 398746,
+      "capsule_sha256": "4c82baed3596bfed9203e16073a4d86e962bd5ad74c2fad220cd10ff1c7335a0",
+      "fact_id": "F:ml430-nat-log-le-clog-ac8ab2d4",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natLogLeClog",
+      "trusted_declaration": "And.left",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 386416,
+      "capsule_sha256": "a48220c1a21e023f86aa97b8b355ce46dbc9f91c0c9c35243af94e49a339c821",
+      "fact_id": "F:ml430-nat-log-le-self-da387172",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natLogLeSelf"
+    },
+    {
+      "capsule_bytes": 812432,
+      "capsule_sha256": "002284f15e2ae59f2cd7c3b0c8c40d2d19e1b70773ffc42e5a2fc6d8d9f001da",
+      "fact_id": "F:ml430-nat-log-monotone-52fad774",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natLogMonotone",
+      "trusted_declaration": "Eq.subst",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 386548,
+      "capsule_sha256": "92de99a36704320115c44e543cc059519a3cf5d29a49b62568c760c913e7b09b",
+      "fact_id": "F:ml430-nat-log-one-left-73efc119",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natLogOneLeft"
+    },
+    {
+      "capsule_bytes": 386551,
+      "capsule_sha256": "a982ea55b4a950e2e5c91f293e6f5c5ae5e6023e6c1a7c8a3802c8c8769849e6",
+      "fact_id": "F:ml430-nat-log-one-right-282332ef",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natLogOneRight"
+    },
+    {
+      "capsule_bytes": 386549,
+      "capsule_sha256": "581aa526decc46edc38827a5db6d8b741893570fbed5bb08493c59ae7e0e5fa1",
+      "fact_id": "F:ml430-nat-log-zero-left-9ec8541e",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natLogZeroLeft"
+    },
+    {
+      "capsule_bytes": 386552,
+      "capsule_sha256": "ca466231e405b6de72472eb37a90ed309333d9d181a031e1d869ad626bf1cff8",
+      "fact_id": "F:ml430-nat-log-zero-right-8ea186db",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natLogZeroRight"
+    },
+    {
+      "capsule_bytes": 388770,
+      "capsule_sha256": "bcd1404f0ad3d45faaa39331c51676a26984ecb28290d7739eefeaef38b2bbb6",
+      "fact_id": "F:ml430-nat-log2-eq-log-two-28085932",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natLog2EqLogTwo"
+    },
+    {
+      "capsule_bytes": 751948,
+      "capsule_sha256": "855708a36347f735bc2d4394a4acde6a67e48f838bf854837f44f0acf4054960",
+      "fact_id": "F:ml430-nat-lor-assoc-82c4d0fd",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natLorAssoc",
+      "trusted_declaration": "dif_pos",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 755181,
+      "capsule_sha256": "bca24bc3e307d670bce77998f3cb2a4b5f406d9b5c3fd284ad8204837b7b8d7c",
+      "fact_id": "F:ml430-nat-lor-bit-a2f98c7c",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natLorBit",
+      "trusted_declaration": "dif_pos",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 751738,
+      "capsule_sha256": "aba66123e61bbd62b899741f601199ac1635b7362571d63f297703c170611d3b",
+      "fact_id": "F:ml430-nat-lor-comm-2666d7ef",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natLorComm",
+      "trusted_declaration": "dif_pos",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 408551,
+      "capsule_sha256": "0ab003a5b3f3b3c61e0b29a4f952d7cdec266d30b95a309c6b27bb03f68c36a1",
+      "fact_id": "F:ml430-nat-lt-succ-sqrt-39389df2",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natLtSuccSqrt",
+      "trusted_declaration": "Nat.le_of_lt_add_one",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 379946,
+      "capsule_sha256": "8451cbd9325ed1acb3573fcdab8276e38dea337bf554740d0d11702842c9d3f9",
+      "fact_id": "F:ml430-nat-mod-modeq-436e4c10",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natModModeq"
+    },
+    {
+      "capsule_bytes": 379911,
+      "capsule_sha256": "3816414b85576d4e70e6c4806155002083f6105c4d74af096f5fdcf962d4a09d",
+      "fact_id": "F:ml430-nat-modeq-one-516d46e8",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natModeqOne"
+    },
+    {
+      "capsule_bytes": 379837,
+      "capsule_sha256": "4c077cb71f976a955f5ef6c8a9eff9136893262e3e4cf7c609b5d6c0b09f84b4",
+      "fact_id": "F:ml430-nat-modulus-modeq-zero-fd9af096",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natModulusModeqZero"
+    },
+    {
+      "capsule_bytes": 3741312,
+      "capsule_sha256": "42ee29a1942dbb282b32400eac607b711d08fec0ef4986b120314c86f38a5249",
+      "fact_id": "F:ml430-nat-multichoose-one-b210386a",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natMultichooseOne",
+      "trusted_declaration": "Quot",
+      "trusted_declaration_kind": "Quotient"
+    },
+    {
+      "capsule_bytes": 3741312,
+      "capsule_sha256": "5701c94b26a8c6de2cf78bd67aa2831fe915ca3b6dc9e58a00c81517f7c97453",
+      "fact_id": "F:ml430-nat-multichoose-one-right-7755072d",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natMultichooseOneRight",
+      "trusted_declaration": "Quot",
+      "trusted_declaration_kind": "Quotient"
+    },
+    {
+      "capsule_bytes": 3741316,
+      "capsule_sha256": "add4de764f9aa6f39090f809ea7288cceca306d007908c7a9b5e7598cda45094",
+      "fact_id": "F:ml430-nat-multichoose-zero-right-6ef827c8",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natMultichooseZeroRight",
+      "trusted_declaration": "Quot",
+      "trusted_declaration_kind": "Quotient"
+    },
+    {
+      "capsule_bytes": 516656,
+      "capsule_sha256": "8e2ba4c431c73a0103f20294887b08e1935f688551a429756c5249f981e4c0ea",
+      "fact_id": "F:ml430-nat-not-coprime-zero-zero-6c4e8dd8",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natNotCoprimeZeroZero",
+      "trusted_declaration": "Nat.mod_lt",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 220641,
+      "capsule_sha256": "a152289a763bf24d347f5f1b683d20def25f7edfe4f77c5fec5d330245eb1ff6",
+      "fact_id": "F:ml430-nat-self-le-factorial-cfdffc69",
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natSelfLeFactorial"
+    },
+    {
+      "capsule_bytes": 408948,
+      "capsule_sha256": "4dbcbf47341d3651b4be7794367eb5c05931498b1e1dc5e141edfab6e627707c",
+      "fact_id": "F:ml430-nat-sqrt-eq-79ae8eae",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natSqrtEq",
+      "trusted_declaration": "Nat.le_of_lt_add_one",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 769760,
+      "capsule_sha256": "18748b187ccd6b04492aa2170c86122aa42350177f8a1447e340fbbb90c7a93d",
+      "fact_id": "F:ml430-nat-sqrt-eq-c036815b",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natSqrtEqX",
+      "trusted_declaration": "eq_self",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 408545,
+      "capsule_sha256": "b6d558fa61846356f861077633d2d0ee826c5184d08ad0f5c10aebe0b224cb3c",
+      "fact_id": "F:ml430-nat-sqrt-le-7918582b",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natSqrtLe",
+      "trusted_declaration": "Nat.le_of_lt_add_one",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 408704,
+      "capsule_sha256": "93f3ef6c50f063e40a037407578d615e38c0664085b27fcae74e4a74ccf7b0b9",
+      "fact_id": "F:ml430-nat-sqrt-le-self-1ed5eb85",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natSqrtLeSelf",
+      "trusted_declaration": "Nat.le_of_lt_add_one",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 408794,
+      "capsule_sha256": "8e1e7f4d6a7c29b031ba029564bce311f79ebf05f5cedd6dc325b84e3c78a77e",
+      "fact_id": "F:ml430-nat-sqrt-succ-le-succ-sqrt-6b041183",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natSqrtSuccLeSuccSqrt",
+      "trusted_declaration": "Nat.le_of_lt_add_one",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 1840632,
+      "capsule_sha256": "6542330737a48bbc0a2355ab98f3fa610db80514bef753fc8c179bd425b6614c",
+      "fact_id": "F:ml430-nat-testbit-eq-inth-ffa07392",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natTestbitEqInth",
+      "trusted_declaration": "Quot",
+      "trusted_declaration_kind": "Quotient"
+    },
+    {
+      "capsule_bytes": 771276,
+      "capsule_sha256": "6bb63854e0f7ccd7f79998de213306e02e761d136e40b5bc17c0324de774ae96",
+      "fact_id": "F:ml430-nat-testbit-land-dfef7ca4",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natTestbitLand",
+      "trusted_declaration": "dif_pos",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 771841,
+      "capsule_sha256": "441f234302db9cf934408daa782276bbe881bf98d84fb519371ed6c8d88d4f7d",
+      "fact_id": "F:ml430-nat-testbit-ldiff-16f94162",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natTestbitLdiff",
+      "trusted_declaration": "dif_pos",
+      "trusted_declaration_kind": "Theorem"
+    },
+    {
+      "capsule_bytes": 780371,
+      "capsule_sha256": "154e7cb62c5a12ac27e1743125669d0fccc09a50440863bd562ed6b7f6f75489",
+      "fact_id": "F:ml430-nat-testbit-lor-7644e067",
+      "reason_kind": "TrustedDeclarationInStatementClosure",
+      "result": "import_rejected",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natTestbitLor",
+      "trusted_declaration": "dif_pos",
+      "trusted_declaration_kind": "Theorem"
+    }
+  ],
+  "schema_version": 1,
+  "source": {
+    "external_capsule_directory": "/nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1",
+    "lean4export_format": "3.1.0",
+    "lean_version": "4.30.0",
+    "mapping_sha256": "202d3f78a2e2d560321b161b3a23baaede623896c314928039a118118bf2b741",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f"
+  },
+  "strategy": {
+    "candidate_declarations": [
+      "Eq.refl",
+      "Eq.symm",
+      "Eq.trans",
+      "Nat.add_zero",
+      "Nat.le_refl",
+      "Nat.le_trans",
+      "Nat.mul_one",
+      "Nat.not_succ_le_zero",
+      "Nat.one_mul",
+      "Nat.succ_le_succ",
+      "Nat.zero_add",
+      "Nat.zero_le",
+      "congrArg"
+    ],
+    "candidate_rule": "one fixed target-independent palette for every goal",
+    "forbidden_inputs": [
+      "target theorem proof",
+      "per-target candidate selection",
+      "name or statement similarity",
+      "transitive declaration closure as search candidates"
+    ],
+    "producer": "bounded-application"
+  }
+}
