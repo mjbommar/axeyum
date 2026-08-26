@@ -140,9 +140,17 @@ pub fn propose_bounded_application(
     let (binders, terminal) = introduce_binders(kernel, goal)?;
 
     let mut context = local_context(&binders);
-    let mut names = declarations.to_vec();
-    names.sort_by_key(|name| kernel.display_name(*name).to_string());
-    names.dedup();
+    // Retrieval order is part of the bounded search policy: when the term cap
+    // is reached, earlier declarations receive application opportunities
+    // first. Preserve the caller's deterministic ranking while removing
+    // duplicates stably. Sorting by rendered name here used to erase the
+    // ranker's only priority signal and made the 128-term budget alphabetical.
+    let mut names = Vec::with_capacity(declarations.len());
+    for &name in declarations {
+        if !names.contains(&name) {
+            names.push(name);
+        }
+    }
     let mut terms = Vec::new();
     for name in names {
         let Some(declaration) = kernel.environment().get(name) else {
@@ -276,5 +284,37 @@ mod tests {
                 .expect_err("missing adjacent-step evidence must decline"),
             DeclineReason::NoTypedApplication
         );
+    }
+
+    #[test]
+    fn ranked_input_order_is_stable_under_duplicate_candidates() {
+        let mut kernel = Kernel::new();
+        let p = build_nat_prelude(&mut kernel).expect("Nat prelude must build");
+        let goal = kernel
+            .environment()
+            .get(p.fib_mono)
+            .expect("fib_mono must exist")
+            .ty();
+        let baseline = propose_bounded_application(
+            &mut kernel,
+            goal,
+            &[p.monotone_of_le_succ, p.fib, p.fib_le_succ],
+        )
+        .expect("ranked candidates must close");
+        let repeated = propose_bounded_application(
+            &mut kernel,
+            goal,
+            &[
+                p.monotone_of_le_succ,
+                p.monotone_of_le_succ,
+                p.fib,
+                p.fib_le_succ,
+                p.fib,
+            ],
+        )
+        .expect("stable duplicate removal must preserve the same search");
+        assert_eq!(baseline.proof, repeated.proof);
+        assert_eq!(baseline.application_depth, repeated.application_depth);
+        assert_eq!(baseline.terms_considered, repeated.terms_considered);
     }
 }
