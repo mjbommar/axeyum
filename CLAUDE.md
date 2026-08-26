@@ -1167,6 +1167,41 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   nothing ever required length one. Full retrospective:
   `docs/autogenesis/228-capsule-lane-retrospective.md`.
 
+- **A CONCRETE WITNESS CAN COST THE KERNEL MORE THAN A SYMBOLIC ONE, and the
+  symptom is unbounded WORK rather than a stuck term.** Measured 2026-08-26.
+  `declare_e_converges` built its per-`n` proof against the **concrete**
+  `k_final` (an unreduced `Nat.mul`/`Nat.add` expression) and let
+  `exists_intro`'s argument check decide `speedup_term(n) =?= seq(e, n)`. The two
+  sides have different head symbols, so lazy-delta unfolds **both in lockstep**
+  -- and because `k_final` is concrete enough for `Nat.mul`/`Nat.add` to
+  *partially* fire against the still-symbolic `n`, that drives a partial
+  evaluation of `sumRange` at a symbolic index which never re-synchronises.
+
+  `declare_converges_of_cauchy`, the existing pattern it was copying, never hits
+  this: its `K` stays a **bound variable** all the way to `add_declaration`, so
+  the same arithmetic stays stuck against two free variables and simply never
+  runs. **Build generically over a bound `(k, h)` and substitute the concrete
+  pair only in the final Pi-application.**
+
+  The cost is not subtle. The parent commit built the prelude in **14.8 s on the
+  default 2 MiB stack**; the defective one overflowed **1 GiB in RELEASE**,
+  against a measured release budget of 131,072 bytes for `creal` -- roughly
+  8,000x over.
+
+  **The dangerous part is the misdiagnosis, not the bug.** A stack overflow here
+  is indistinguishable from the resource limit that ADR-0584 measures, and the
+  coordinator had *just* measured `creal` at exactly zero margin -- a perfectly
+  plausible explanation, arrived at without testing. Wrapping the test in a
+  bigger stack made it *look* fixed. **A wrapper that silences a real failure is
+  worse than no wrapper**, and it is the checker-that-cannot-fail defect arriving
+  by a route none of the existing guards cover.
+
+  The discriminating test is one command and costs nothing: **run it in
+  `--release`.** Debug frames cost up to 32x release frames, so a genuine
+  margin overrun disappears in release; runaway recursion does not. Do that
+  BEFORE characterising any stack overflow, and bisect against the parent commit
+  rather than reasoning about which explanation fits.
+
 - **`Nat.add` RECURSES ON ITS RIGHT ARGUMENT, so `Nat.add(literal, k)` IS STUCK
   FOR SYMBOLIC `k` — and it fails by not reducing, not by erroring.** Measured
   2026-08-25 while normalizing a `CReal` bound: two fusion steps built
