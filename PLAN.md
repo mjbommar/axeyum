@@ -1839,6 +1839,17 @@ coefficients. An eight-worker proof-free SAT portfolio is live without a wall-cl
 its cells carry no credit until a SAT model passes the full replay route, or every leaf has a
 checked DRAT proof. The interval remains `[7,8]`.
 
+**S-box first checked semantic leaf, 2026-08-26.** ADR-0587 adds the missing strict
+partial-cover front door: given the base DIMACS, Boolean-product selectors, and a cube index,
+Axeyum regenerates the cube and `base AND cube` itself before checking a retained textual DRAT.
+It reports only `leaf-unsat-checked`, never global UNSAT. CaDiCaL refuted index zero, the
+all-zero affine left operand of gate zero, in 0.05 seconds and emitted a 413,418-byte proof;
+the file-backed checker accepts it against the regenerated 20,585-variable / 69,814-clause
+leaf. Removing the final 64 bytes is rejected. Thus one of 32 leaves is now checked, while
+the other eight active portfolio cells continue without a wall-clock cutoff. This is exact
+partial progress, not a lower bound: `[7,8]` remains unchanged until either a replayed SAT
+model appears or all leaves and the covering proof check.
+
 **SIMD semantic/minimality calibration, 2026-08-26.** ADR-0559 adds exact provenance-tag
 semantics for unary AVX2 `vpshufb` and same-source `vperm2i128`. Global 32-byte reversal
 replays in two instructions; the complete one-step family query is a deterministic
