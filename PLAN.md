@@ -1115,9 +1115,9 @@ then retrieved `Nat.fib_le_succ`; a checked, axiom-free
 the corresponding fact with real kernel-observed dependencies. This is genuine
 library compounding but remains correctly classified as `no_operation` because
 the reference constructor was hand-authored. Exact evidence identity now links
-382 kernel theorems to 386 facts, with 17 evidence IDs left explicitly
-unresolved: 16 identities are absent from the projection and `Rat.normalize`
-is correctly classified as a definition, not a theorem. Next: expose that
+395 kernel theorems to 390 facts, with only four evidence identities left
+explicitly unresolved: three are descriptive IDs and `Rat.normalize` is
+correctly classified as a definition, not a theorem. Next: expose that
 target-agnostic combinator through an
 authoritative producer, then measure sibling conversion.
 

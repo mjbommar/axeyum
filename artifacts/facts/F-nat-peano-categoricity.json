@@ -26,6 +26,7 @@
     {
       "id": "kernel-Nat.Peano.categorical",
       "kind": "kernel-term",
+      "kernel_declaration": "Nat.Peano.categorical",
       "supports": "Every Peano structure is in structure-preserving bijection with the constructed Nat, and the axiom footprint of the witness is empty.",
       "check_status": "checked",
       "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && test \"$(printf '%s\\n' \"$out\" | grep -Ec '^nat-categoricity[[:space:]]+Nat[.]Peano[.]categorical[[:space:]]+\\[\\][[:space:]]')\" -ge 1",
@@ -34,6 +35,7 @@
     {
       "id": "kernel-Nat.Peano.zero_ne_succ",
       "kind": "kernel-term",
+      "kernel_declaration": "Nat.Peano.zero_ne_succ",
       "supports": "Peano 1: zero is not a successor. Proved by a Prop-valued Nat.rec discriminator, not assumed.",
       "check_status": "checked",
       "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && test \"$(printf '%s\\n' \"$out\" | grep -Ec '^peano-axiom[[:space:]]+Nat[.]Peano[.]zero_ne_succ[[:space:]]+\\[\\][[:space:]]')\" -ge 1",
@@ -42,6 +44,7 @@
     {
       "id": "kernel-Nat.Peano.iter_unique",
       "kind": "kernel-term",
+      "kernel_declaration": "Nat.Peano.iter_unique",
       "supports": "The comparison map is the UNIQUE structure-preserving map out of Nat, which is what makes the isomorphism canonical rather than merely existent.",
       "check_status": "checked",
       "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && test \"$(printf '%s\\n' \"$out\" | grep -Ec '^nat-universal-property[[:space:]]+Nat[.]Peano[.]iter_unique[[:space:]]+\\[\\][[:space:]]')\" -ge 1",

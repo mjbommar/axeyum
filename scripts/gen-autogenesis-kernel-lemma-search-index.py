@@ -36,19 +36,32 @@ def digest(path: pathlib.Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def exact_kernel_declaration(evidence: object) -> str | None:
+def exact_kernel_declarations(evidence: object) -> tuple[str, ...]:
     if not isinstance(evidence, dict):
-        return None
+        return ()
+    explicit_many = evidence.get("kernel_declarations")
+    if (
+        isinstance(explicit_many, list)
+        and explicit_many
+        and all(isinstance(value, str) and value for value in explicit_many)
+    ):
+        return tuple(explicit_many)
     explicit = evidence.get("kernel_declaration")
     if isinstance(explicit, str) and explicit:
-        return explicit
+        return (explicit,)
     evidence_id = evidence.get("id")
     if not isinstance(evidence_id, str):
-        return None
+        return ()
     for prefix in ("kernel-", "kernel:"):
         if evidence_id.startswith(prefix):
-            return evidence_id[len(prefix) :]
-    return None
+            return (evidence_id[len(prefix) :],)
+    return ()
+
+
+def exact_kernel_declaration(evidence: object) -> str | None:
+    """Compatibility helper for callers expecting at most one declaration."""
+    declarations = exact_kernel_declarations(evidence)
+    return declarations[0] if declarations else None
 
 
 def build() -> dict[str, Any]:
@@ -99,29 +112,30 @@ def build() -> dict[str, Any]:
             if evidence.get("kind") != "kernel-term":
                 continue
             evidence_id = evidence.get("id")
-            declaration = exact_kernel_declaration(evidence)
-            if declaration is None:
+            declarations = exact_kernel_declarations(evidence)
+            if not declarations:
                 continue
-            if declaration in theorem_rows:
-                fact_links[declaration].add(fact_id)
-            else:
-                declaration_row = declaration_rows.get(declaration)
-                if declaration_row is None:
-                    reason = "exact kernel evidence identity is absent from the current projection"
+            for declaration in declarations:
+                if declaration in theorem_rows:
+                    fact_links[declaration].add(fact_id)
                 else:
-                    declaration_kind = declaration_row["declaration_kind"]
-                    reason = (
-                        "exact kernel evidence identity resolves to a current "
-                        f"{declaration_kind} declaration, not a theorem"
+                    declaration_row = declaration_rows.get(declaration)
+                    if declaration_row is None:
+                        reason = "exact kernel evidence identity is absent from the current projection"
+                    else:
+                        declaration_kind = declaration_row["declaration_kind"]
+                        reason = (
+                            "exact kernel evidence identity resolves to a current "
+                            f"{declaration_kind} declaration, not a theorem"
+                        )
+                    unresolved.append(
+                        {
+                            "fact_id": fact_id,
+                            "evidence_id": str(evidence_id),
+                            "candidate_declaration_id": declaration,
+                            "reason": reason,
+                        }
                     )
-                unresolved.append(
-                    {
-                        "fact_id": fact_id,
-                        "evidence_id": str(evidence_id),
-                        "candidate_declaration_id": declaration,
-                        "reason": reason,
-                    }
-                )
 
     unresolved.sort(
         key=lambda row: (row["candidate_declaration_id"], row["fact_id"], row["evidence_id"])
@@ -154,7 +168,7 @@ def build() -> dict[str, Any]:
         "derivation": {
             "kernel_projection_sha256": digest(KERNEL),
             "fact_population": "sorted artifacts/facts/F-*.json",
-            "fact_identity_rule": "kernel-term evidence with an explicit kernel_declaration, falling back for compatibility to an evidence id with exact kernel- or kernel: prefix and an exact current theorem suffix",
+            "fact_identity_rule": "kernel-term evidence with explicit kernel_declarations or kernel_declaration, falling back for compatibility to an evidence id with exact kernel- or kernel: prefix and an exact current theorem suffix",
             "graph_semantics": "accepted theorem-term direct references; dependency depth is the longest direct-theorem path from a theorem with no theorem dependency",
             "trust_boundary": "search and retrieval only; no concept, applicability, proof, admission, or trusted-kernel authority",
         },

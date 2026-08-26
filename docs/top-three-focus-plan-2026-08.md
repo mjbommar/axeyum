@@ -22,9 +22,9 @@ semantics, evidence, provenance, checking, and compounding knowledge loop.
 - The pure-Rust reasoning stack has real end-to-end SMT, CAS, kernel, program
   verification, and proof-artifact routes, but its coverage and assurance are
   uneven by fragment.
-- The generated kernel projection currently contains 1,552 declarations: 1,206
-  theorems, 242 definitions, 29 constructors, 22 inductives, 22 recursors, and
-  30 axioms. It reports 1,522 axiom-free declarations and 6,838 direct
+- The generated kernel projection currently contains 1,588 declarations: 1,240
+  theorems, 245 definitions, 29 constructors, 22 inductives, 22 recursors, and
+  30 axioms. It reports 1,558 axiom-free declarations and 6,946 direct
   theorem-dependency edges. This is a substantial checked library, but it is
   not an autonomous-production count.
 - The fact ledger contains 696 propositions: 502 proved, 4 refuted, 2 computed,
@@ -37,16 +37,15 @@ semantics, evidence, provenance, checking, and compounding knowledge loop.
   frontier.
 - The kernel, fact ledger, tactic catalog, obstruction graph, and concept graph
   are separately useful, but do not yet form one lemma-search substrate.
-- The generated lemma index now covers all 1,206 kernel theorems and their 6,838
-  direct edges, but only 382 theorems link exactly to 386 fact records. It keeps
-  17 unresolved evidence IDs explicit rather than guessing, leaving 824
-  theorems without exact fact links. Thirteen name CPoint, Int
-  characterization, or Nat Peano declarations absent from the current
-  all-prelude projection; three use descriptive ordered-ring/Rat evidence IDs;
-  and `Rat.normalize` resolves exactly but is a definition rather than a
-  theorem. The generated census now distinguishes absence from a non-theorem
-  identity. The next repair belongs in projection/build coverage or authored
-  evidence identity, not fuzzy matching.
+- The generated lemma index now covers all 1,240 kernel theorems and their 6,946
+  direct edges. Exactly 395 theorems link to 390 fact records; 845 theorems have
+  no exact fact link. Only four evidence identities remain unresolved: three
+  descriptive ordered-ring/Rat IDs and `Rat.normalize`, which resolves exactly
+  but is a definition rather than a theorem. The projection now actually
+  includes the public Nat/Int characterization builder, and a plural binding
+  represents the two Ceva directions without a fictitious combined theorem
+  name. Remaining repair belongs in authored evidence identity, not fuzzy
+  matching.
 - The Rust and Python surfaces are broad, but integration churn can leave
   `main` red and evidence fixtures can be mistaken for production populations.
 

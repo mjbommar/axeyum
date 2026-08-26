@@ -39,6 +39,10 @@
     {
       "id": "kernel-CPoint.ceva-both-directions",
       "kind": "kernel-term",
+      "kernel_declarations": [
+        "CPoint.ceva_concurrent_of_ratio_product",
+        "CPoint.ceva_ratio_product_of_concurrent"
+      ],
       "supports": "`CPoint.ceva_concurrent_of_ratio_product` (exhibiting: the meeting point is CONSTRUCTED, not asserted to exist) and `CPoint.ceva_ratio_product_of_concurrent` (the converse). The converse's conclusion is syntactically the forward direction's hypothesis, so the converse relationship is visible in the types rather than asserted in prose. The converse needs strictly more: beyond D != 0 it requires A != B as a witnessed PosBound (distSq A B) k, which is irreducible since A = B degenerates the configuration. Its route runs the forward direction's ring identity backwards; the D*z - 1 correction cancels unconditionally, and multiplying through by D cancels the shared z factor via D*z ~ 1 -- SO z ITSELF NEVER NEEDS TO BE INVERTIBLE, which is what keeps the argument constructive. That leaves (a-b)*defect ~ 0 at both coordinates; squaring and summing gives distSq A B * defect^2 ~ 0, and inverting distSq A B finishes.",
       "check_status": "checked",
       "checkers": [

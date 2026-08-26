@@ -14,8 +14,9 @@ fact records name them exactly?**
 ## Authority boundary
 
 Every theorem row and dependency edge originates in declarations accepted by
-the Axeyum kernel. Fact links use an explicit evidence-level
-`kernel_declaration` when present, then fall back for compatibility to exact
+the Axeyum kernel. Fact links use explicit evidence-level
+`kernel_declarations` or `kernel_declaration` when present, then fall back for
+compatibility to exact
 `kernel-<declaration>` or `kernel:<declaration>` evidence identities. Historical
 evidence IDs therefore remain stable while an exact fully-qualified declaration
 can be added without guessing. Unresolved identities are retained and counted;
@@ -53,7 +54,9 @@ order:
 1. For each exact-but-dangling kernel evidence identity, inspect the evidence's
    actual checker and the live declaration projection. If they identify the
    same theorem, add its fully-qualified ID as `kernel_declaration` on that
-   evidence row. If they do not, leave it unresolved and document which admitted
+   evidence row. If one checker row jointly establishes multiple declarations,
+   record all of them in `kernel_declarations`. If they do not agree, leave it
+   unresolved and document which admitted
    population the evidence targets. Never infer a namespace from the fact's
    fragment or from suffix uniqueness alone;
 2. preserve exact agreement between the projection and production inventory;
@@ -72,6 +75,11 @@ error to paper over: `Rat.normalize`, for example, is a checked definition, so
 it does not belong in the theorem-only lemma search graph. An absent identity
 may instead expose a prelude/build-coverage boundary or a descriptive evidence
 ID; repair that source boundary before adding a link.
+
+The projection's claimed all-prelude scope includes the public
+`build_characterization` surface as well as the ordinary Nat and Int preludes.
+This matters: omitting that builder previously hid 32 checked characterization
+theorems and left 11 exact fact-evidence identities falsely dangling.
 
 The first producer evaluation should then ask whether bounded retrieval from
 this artifact improves held-out conversion without per-target code. That result,
