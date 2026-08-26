@@ -8,11 +8,13 @@ Date: 2026-08-24
 turns the accepted-kernel dependency projection into a reproducible review
 population. At the current snapshot it contains:
 
+<!-- kernel-semantic-review-census:start -->
 | Measure | Count |
 |---|---:|
-| Empty-footprint kernel theorems | 869 |
-| Active reviewed semantic anchors | 3 |
-| Unreviewed queue entries | 866 |
+| Empty-footprint kernel theorems | 1,287 |
+| Active reviewed semantic anchors | 0 |
+| Unreviewed queue entries | 1,287 |
+<!-- kernel-semantic-review-census:end -->
 
 Each entry records only mechanical information already in the kernel
 projection: declaration identity, visibility, direct theorem dependencies, and
