@@ -53,4 +53,4 @@ capability measurement over settled controls, not autonomous yield.
 | 2026-08-26 | `fa821fc54` | Merge the next constructive-real theorem and advance the same generated search population to 1,243 without clobbering either lane. |
 | 2026-08-26 | `5916d47cc` | Publish stable all-kind direct declaration dependencies through Rust, Python, and the generated kernel projection, with direct-versus-transitive controls. |
 | 2026-08-26 | `17b0c1163` | Split proof-isolated type dependencies from type-plus-value evidence before premise selection could leak a finished theorem's proof. |
-| 2026-08-26 | pending | Publish the reproducible proof-isolated bounded-application census: 6/109 accepted, 103 typed declines, zero accepted axiom footprints. |
+| 2026-08-26 | `710b7cf04` | Publish the reproducible proof-isolated bounded-application census: 6/109 accepted, 103 typed declines, zero accepted axiom footprints. |
