@@ -24,7 +24,7 @@ import pytest
 
 pytest.importorskip("pydantic_ai", reason="the [agent] extra is not installed")
 
-from _agent_offline import TEST_COMMIT
+from _agent_offline import TEST_COMMIT, temporarily_open_fact
 from pydantic_ai import ModelSettings
 from pydantic_ai.usage import RunUsage, UsageLimits
 
@@ -53,7 +53,8 @@ STUB = {
 
 @pytest.fixture(scope="module")
 def root() -> Path:
-    return resolve_root(None)
+    with temporarily_open_fact(TARGET):
+        yield resolve_root(None)
 
 
 def a4_state(root: Path, out_dir: Path, fact_id: str = TARGET) -> EpisodeState:

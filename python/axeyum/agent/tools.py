@@ -1,4 +1,4 @@
-"""The seven tier-R tools: everything the loop is allowed to look at, and nothing else.
+"""The eight tier-R tools: everything the loop is allowed to look at, and nothing else.
 
 Tier R is *read*. No tool here writes a ledger, registers an operation, admits a
 declaration, or invokes a checker; the only bytes an R tool causes to be written
@@ -51,6 +51,8 @@ from .models import (
     FactView,
     FrontierPage,
     FrontierRow,
+    LemmaCandidateRow,
+    LemmaCandidatesPage,
     LemmaNeighbourhoodPage,
     LemmaNeighbourhoodRow,
     Neighbourhood,
@@ -77,6 +79,7 @@ TOOL_TIERS: dict[str, Literal["read", "proposed", "checked"]] = {
     "fact_neighbourhood": "read",
     "kernel_theorems": "read",
     "lemma_neighbourhood": "read",
+    "lemma_candidates": "read",
     "operation_registry": "read",
     "overlay_query": "read",
     # Tier R, GUARDED (slice A6). Still `read` -- they read the world and write
@@ -529,6 +532,60 @@ def lemma_neighbourhood(
         )
 
     return _timed("lemma_neighbourhood", ctx, body)
+
+
+def lemma_candidates(
+    ctx: RunContext[AgentDeps],
+    fact_id: str,
+) -> LemmaCandidatesPage:
+    """Resolve a goal fact's declared dependencies to exact kernel lemmas.
+
+    This is the deterministic bridge between the fact DAG and the kernel
+    search index. It does not use names, statement similarity, or an LLM: only
+    authored ``depends_on`` edges and exact evidence-to-declaration links can
+    produce rows. A row is a premise candidate, never an applicability claim.
+
+    Args:
+        fact_id: Open goal whose declared dependencies should be resolved.
+    """
+
+    def body() -> LemmaCandidatesPage:
+        root = ctx.deps.root
+        if fact_id in _held_out(str(root)):
+            raise ToolRefusal("requested fact is not referenceable in this episode")
+        fact = facts_api.load(root).get(fact_id)
+        safe_dependencies, _ = _safe(root, fact.depends_on)
+        index = lemmas_api.load(root)
+        rows: list[LemmaCandidateRow] = []
+        unresolved: list[str] = []
+        linked_dependencies = 0
+        for dependency_fact_id in safe_dependencies:
+            linked = index.for_fact(dependency_fact_id)
+            if not linked:
+                unresolved.append(dependency_fact_id)
+                continue
+            linked_dependencies += 1
+            for lemma in linked:
+                rows.append(
+                    LemmaCandidateRow(
+                        declaration_id=lemma.id,
+                        source_dependency_fact_id=dependency_fact_id,
+                        axiom_footprint_size=lemma.axiom_footprint_size,
+                        visible_in=lemma.visible_in,
+                        dependency_depth=lemma.dependency_depth,
+                    )
+                )
+        rows.sort(key=lambda row: (row.source_dependency_fact_id, row.declaration_id))
+        return LemmaCandidatesPage(
+            fact_id=fact_id,
+            declared_dependency_count=len(safe_dependencies),
+            linked_dependency_count=linked_dependencies,
+            matched=len(rows),
+            unresolved_dependency_fact_ids=tuple(unresolved),
+            rows=tuple(rows[:MAX_ROWS]),
+        )
+
+    return _timed("lemma_candidates", ctx, body)
 
 
 def operation_registry(ctx: RunContext[AgentDeps], fact_id: str = "") -> OperationRegistryView:
@@ -1157,6 +1214,7 @@ TIER_R_TOOLS: tuple[Callable[..., Any], ...] = (
     fact_neighbourhood,
     kernel_theorems,
     lemma_neighbourhood,
+    lemma_candidates,
     operation_registry,
     overlay_query,
 )
@@ -1307,6 +1365,7 @@ __all__ = [
     "independent_check",
     "is_output_tool",
     "kernel_theorems",
+    "lemma_candidates",
     "lemma_neighbourhood",
     "modeq_family",
     "operation_registry",

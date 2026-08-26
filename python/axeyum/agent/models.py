@@ -280,6 +280,27 @@ class LemmaNeighbourhoodPage(_Frozen):
     rows: tuple[LemmaNeighbourhoodRow, ...]
 
 
+class LemmaCandidateRow(_Frozen):
+    """One exact kernel lemma linked to a declared fact dependency."""
+
+    declaration_id: str
+    source_dependency_fact_id: str
+    axiom_footprint_size: int
+    visible_in: tuple[str, ...]
+    dependency_depth: int
+
+
+class LemmaCandidatesPage(_Frozen):
+    """Deterministic proof-context join; every row remains candidate-only."""
+
+    fact_id: str
+    declared_dependency_count: int
+    linked_dependency_count: int
+    matched: int
+    unresolved_dependency_fact_ids: tuple[str, ...]
+    rows: tuple[LemmaCandidateRow, ...]
+
+
 class OperationRow(_Frozen):
     operation_id: str
     scope: str
@@ -599,6 +620,8 @@ __all__ = [
     "FactView",
     "FrontierPage",
     "FrontierRow",
+    "LemmaCandidateRow",
+    "LemmaCandidatesPage",
     "LemmaNeighbourhoodPage",
     "LemmaNeighbourhoodRow",
     "NeighbourRow",
