@@ -123,7 +123,7 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
         raise ValueError("bounded reification step gained assumptions")
     if (
         reification.get("roundtrip_status")
-        != "boolean-digit-checked-weighted-sum-normalization-missing"
+        != "one-bit-checked-general-bounded-roundtrip-missing"
     ):
         raise ValueError("unproved bounded reification roundtrip gained credit")
     if "reifyBits" not in reification.get("base_canonical_type", ""):
@@ -136,6 +136,12 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
     digit_type = reification.get("boolean_digit_roundtrip_canonical_type", "")
     if "Eq.{1} Bool" not in digit_type or "boolToBit" not in digit_type:
         raise ValueError("Boolean digit roundtrip type changed")
+    for prefix in ("one_bit_normalization", "one_bit_roundtrip"):
+        if reification.get(f"{prefix}_axiom_footprint_size") != 0:
+            raise ValueError(f"{prefix} gained assumptions")
+        canonical_type = reification.get(f"{prefix}_canonical_type", "")
+        if "reifyBits" not in canonical_type:
+            raise ValueError(f"{prefix} type changed")
 
     exclusion = data.get("countermodel_exclusion", {})
     if exclusion.get("excluded_by_law") != "testBit_succ":

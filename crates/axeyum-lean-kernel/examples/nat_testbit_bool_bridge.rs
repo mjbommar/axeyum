@@ -34,6 +34,8 @@ fn run() -> Result<(), String> {
     let reify_bits_zero_name = kernel.name_str(autogenesis, "reifyBits_zero");
     let reify_bits_succ_name = kernel.name_str(autogenesis, "reifyBits_succ");
     let bool_to_bit_roundtrip_name = kernel.name_str(autogenesis, "boolToBit_roundtrip_zero");
+    let reify_one_normalize_name = kernel.name_str(autogenesis, "reifyBits_one_normalize");
+    let reify_one_roundtrip_name = kernel.name_str(autogenesis, "reifyBits_one_roundtrip_zero");
     let bitwise_reify_name = kernel.name_str(autogenesis, "bitwiseReifyBounded");
 
     {
@@ -288,6 +290,75 @@ fn run() -> Result<(), String> {
             ));
         }
 
+        // The non-definitional arithmetic bridge from the one-element weighted
+        // sum to its sole digit.
+        let bits_fv = d.fresh_fvar();
+        let bits = d.kernel().fvar(bits_fv);
+        let zero = d.zero();
+        let one_value = d.num(1);
+        let selected = d.apply(bits, &[zero]);
+        let digit = d.const_app(bool_to_bit_name, &[selected]);
+        let reified = d.const_app(reify_bits_name, &[bits, one_value]);
+        let prefix = d.const_app(reify_bits_name, &[bits, zero]);
+        let two = d.num(2);
+        let power = d.pow(two, zero);
+        let weighted = d.mul(digit, power);
+        let expanded = d.add(prefix, weighted);
+        let step_eq = d.lemma(reify_bits_succ_name, &[bits, zero]);
+        let prefix_zero = d.lemma(reify_bits_zero_name, &[bits]);
+        let zero_weighted = d.add(zero, weighted);
+        let replace_prefix = d.congr(prefix, zero, prefix_zero, &|d, value| {
+            d.add(value, weighted)
+        });
+        let power_one = d.lemma(prelude.pow_zero, &[two]);
+        let weighted_one = d.mul(digit, one_value);
+        let zero_weighted_one = d.add(zero, weighted_one);
+        let replace_power = d.congr(power, one_value, power_one, &|d, value| {
+            let product = d.mul(digit, value);
+            d.add(zero, product)
+        });
+        let remove_zero = d.lemma(prelude.zero_add, &[weighted_one]);
+        let remove_one = d.lemma(prelude.mul_one, &[digit]);
+        let (_, normalization) = d.chain(
+            reified,
+            &[
+                (expanded, step_eq),
+                (zero_weighted, replace_prefix),
+                (zero_weighted_one, replace_power),
+                (weighted_one, remove_zero),
+                (digit, remove_one),
+            ],
+        );
+        let normalization_type = d.eq(reified, digit);
+        let theorem_type = d.pi_fv(bits_fv, bits_type, normalization_type);
+        let theorem_value = d.lam_fv(bits_fv, bits_type, normalization);
+        d.declare_theorem(reify_one_normalize_name, theorem_type, theorem_value)
+            .map_err(|error| format!("reifyBits_one_normalize rejected: {error:?}"))?;
+
+        // Transport the Boolean digit round trip across the checked arithmetic
+        // normalization; this is the genuine one-bit weighted-sum round trip.
+        let observed_reified = d.const_app(test_bit_bool_name, &[reified, zero]);
+        let observed_digit = d.const_app(test_bit_bool_name, &[digit, zero]);
+        let motive = d.eq_motive(reified, &|d, value| {
+            let observed = d.const_app(test_bit_bool_name, &[value, zero]);
+            d.bool_eq(observed_reified, observed)
+        });
+        let refl_case = d.bool_refl(observed_reified);
+        let observed_transport = d.transport(reified, motive, refl_case, digit, normalization);
+        let digit_roundtrip = d.lemma(bool_to_bit_roundtrip_name, &[selected]);
+        let roundtrip = d.bool_trans(
+            observed_reified,
+            observed_digit,
+            selected,
+            observed_transport,
+            digit_roundtrip,
+        );
+        let roundtrip_type = d.bool_eq(observed_reified, selected);
+        let theorem_type = d.pi_fv(bits_fv, bits_type, roundtrip_type);
+        let theorem_value = d.lam_fv(bits_fv, bits_type, roundtrip);
+        d.declare_theorem(reify_one_roundtrip_name, theorem_type, theorem_value)
+            .map_err(|error| format!("reifyBits_one_roundtrip_zero rejected: {error:?}"))?;
+
         // The bounded Nat candidate associated with the pointwise algebra.
         let reified_bitwise_value = {
             let f_fv = d.fresh_fvar();
@@ -373,13 +444,28 @@ fn run() -> Result<(), String> {
     {
         return Err("Boolean digit roundtrip gained assumptions".to_owned());
     }
+    let reify_one_normalize_type = match kernel.environment().get(reify_one_normalize_name) {
+        Some(Declaration::Theorem { ty, .. }) => *ty,
+        _ => return Err("reifyBits_one_normalize disappeared".to_owned()),
+    };
+    let reify_one_roundtrip_type = match kernel.environment().get(reify_one_roundtrip_name) {
+        Some(Declaration::Theorem { ty, .. }) => *ty,
+        _ => return Err("reifyBits_one_roundtrip_zero disappeared".to_owned()),
+    };
+    for name in [reify_one_normalize_name, reify_one_roundtrip_name] {
+        if !kernel.axiom_footprint(name).is_empty() {
+            return Err("one-bit weighted-sum evidence gained assumptions".to_owned());
+        }
+    }
     println!(
-        "NAT_TESTBIT_BOOL_BRIDGE_OK|theorem=Axeyum.Autogenesis.testBitBool_succ|axioms=0|type={}|observation_theorem=Axeyum.Autogenesis.bitwiseObservation_apply|observation_axioms=0|observation_type={}|reification_definition=Axeyum.Autogenesis.bitwiseReifyBounded|reification_base_theorem=Axeyum.Autogenesis.reifyBits_zero|reification_base_axioms=0|reification_base_type={}|reification_step_theorem=Axeyum.Autogenesis.reifyBits_succ|reification_step_axioms=0|reification_step_type={}|boolean_digit_roundtrip_theorem=Axeyum.Autogenesis.boolToBit_roundtrip_zero|boolean_digit_roundtrip_axioms=0|boolean_digit_roundtrip_type={}",
+        "NAT_TESTBIT_BOOL_BRIDGE_OK|theorem=Axeyum.Autogenesis.testBitBool_succ|axioms=0|type={}|observation_theorem=Axeyum.Autogenesis.bitwiseObservation_apply|observation_axioms=0|observation_type={}|reification_definition=Axeyum.Autogenesis.bitwiseReifyBounded|reification_base_theorem=Axeyum.Autogenesis.reifyBits_zero|reification_base_axioms=0|reification_base_type={}|reification_step_theorem=Axeyum.Autogenesis.reifyBits_succ|reification_step_axioms=0|reification_step_type={}|boolean_digit_roundtrip_theorem=Axeyum.Autogenesis.boolToBit_roundtrip_zero|boolean_digit_roundtrip_axioms=0|boolean_digit_roundtrip_type={}|one_bit_normalization_theorem=Axeyum.Autogenesis.reifyBits_one_normalize|one_bit_normalization_axioms=0|one_bit_normalization_type={}|one_bit_roundtrip_theorem=Axeyum.Autogenesis.reifyBits_one_roundtrip_zero|one_bit_roundtrip_axioms=0|one_bit_roundtrip_type={}",
         kernel.render_lean(ty),
         kernel.render_lean(observation_type),
         kernel.render_lean(reify_zero_type),
         kernel.render_lean(reify_succ_type),
-        kernel.render_lean(bool_to_bit_roundtrip_type)
+        kernel.render_lean(bool_to_bit_roundtrip_type),
+        kernel.render_lean(reify_one_normalize_type),
+        kernel.render_lean(reify_one_roundtrip_type)
     );
     Ok(())
 }

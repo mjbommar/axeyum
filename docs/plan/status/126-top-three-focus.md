@@ -354,6 +354,9 @@ The Boolean digit map now round-trips through bit zero axiom-free. The kernel
 correctly rejected treating the one-bit weighted sum as definitionally equal to
 that digit, exposing weighted-sum normalization as the next arithmetic lemma
 instead of silently conflating the two.
+That explicit chain now checks: one-bit weighted-sum normalization and the
+transported one-bit observation round trip are both axiom-free. The open proof
+has narrowed to the general `i < k` bounded round trip.
 
 <!-- plan-section: landed-changes -->
 

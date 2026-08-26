@@ -69,7 +69,7 @@ The target-owned observation algebra is now also explicit and axiom-free:
 `f (testBitBool x i) (testBitBool y i)`, and its application theorem closes by
 reflexivity. This cleanly isolates what remains: construct a natural number
 whose Boolean observations equal that function. The artifact records
-`nat_reification_status = missing`; the observation-level theorem alone cannot
+the reification state separately; the observation-level theorem alone cannot
 receive credit for `Nat.testBit_bitwise`.
 
 Bounded Nat reification is now constructive too. `reifyBits bits k` sums
@@ -90,8 +90,11 @@ The Boolean digit seam itself now round-trips too:
 `testBitBool (boolToBit b) 0 = b`, proved constructively by the two `Bool`
 cases with an empty footprint. An attempted jump directly to
 `reifyBits bits 1` was correctly rejected because weighted-sum normalization is
-not definitional for a symbolic bit. That arithmetic bridge remains explicit;
-the smaller Boolean theorem is retained rather than overstated.
+not definitional for a symbolic bit. That arithmetic bridge is now proved from
+the named reifier equations plus `pow_zero`, `zero_add`, and `mul_one`.
+Transporting the Boolean digit theorem across it yields the genuine one-bit
+weighted-sum round trip, also axiom-free. The remaining status is precisely the
+general bounded round trip.
 
 Run `just autogenesis-bitwise-semantic-law-demand` to validate the join and its
 negative controls.

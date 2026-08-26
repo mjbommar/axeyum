@@ -481,7 +481,9 @@ The reifier now has clean base and successor equations, so that round-trip proof
 can proceed against a named induction interface rather than raw `sumRange`.
 The Boolean-to-digit map also round-trips at bit zero. The kernel rejected a
 direct definitional leap from `reifyBits bits 1`, so weighted-sum normalization
-is now an explicit arithmetic obligation rather than hidden conversion.
+became an explicit arithmetic obligation rather than hidden conversion. That
+chain and the resulting one-bit weighted-sum round trip now check axiom-free;
+the unresolved theorem is the general bounded case.
 
 ### Exit evidence
 
