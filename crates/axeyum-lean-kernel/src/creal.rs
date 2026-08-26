@@ -982,6 +982,32 @@ pub struct CRealPrelude {
     /// chain of two existing modulus witnesses, not a new one.
     pub continuous_comp: NameId,
 
+    /// `CReal.converges_comp_eventually : ∀ F a b (u : UniformlyContinuousOn
+    /// F a b) f L, (∀ n, le a (f n)) → (∀ n, le (f n) b) → Converges f L →
+    /// ∀ e, ∃ N, ∀ n, Nat.le N n → close_within (F (f n)) (F L) (natDivSucc
+    /// 1 e)`.
+    ///
+    /// **The repair for `docs/mathematics-2026-08/diary-exact-root-obstruction.md`'s
+    /// refuted `converges_comp`.** The fixed-rate composition (`Converges f
+    /// L → UniformlyContinuousOn F a b → Converges (F ∘ f) (F L)`) is FALSE
+    /// here: `UniformlyContinuousOn`'s `modulus : Nat → Nat` carries no
+    /// growth bound, so composing an `O(1/n)`-convergent sequence through a
+    /// √-shaped modulus genuinely converges at `O(1/√n)`, and no fixed `K'`
+    /// witnesses a faster rate. This *eventual* form is the true statement:
+    /// for each target accuracy `e`, `N := K·(modulus(e)+1)` works, and the
+    /// witness is computed by forward evaluation of `modulus` alone — no
+    /// `Nat` division or search. Conclusion in `close_within` form (the
+    /// shape [`Self::uc_spec`] itself produces), not `Within` (the shape
+    /// [`Self::converges`] uses) — the two differ (one is index-tied to a
+    /// representative, the other a genuine real-valued bound) and the spec
+    /// application is a one-step consumer of exactly `close_within`.
+    ///
+    /// The domain hypotheses `le a L`/`le L b` are not required separately:
+    /// [`Self::converges_lower_bound`]/[`Self::converges_upper_bound`]
+    /// derive them from `(∀n, le a (f n))`/`(∀n, le (f n) b)` plus
+    /// `Converges f L`.
+    pub converges_comp_eventually: NameId,
+
     // --- uniform continuity on an interval (phase R11) -----------------------
     /// `CReal.UniformlyContinuousOn (F : CReal -> CReal) (a b : CReal) : Type :=
     /// mk (modulus : Nat -> Nat) (spec : ...)`.
@@ -2966,6 +2992,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         continuous_add: kernel.name_str(creal, "continuous_add"),
         continuous_mul: kernel.name_str(creal, "continuous_mul"),
         continuous_comp: kernel.name_str(creal, "continuous_comp"),
+        converges_comp_eventually: kernel.name_str(creal, "converges_comp_eventually"),
         uniformly_continuous_on,
         uc_mk: kernel.name_str(uniformly_continuous_on, "mk"),
         uc_rec: kernel.name_str(uniformly_continuous_on, "rec"),
@@ -3216,6 +3243,12 @@ pub(crate) fn build_creal_prelude_uncached(
         // before `monotone::declare_monotone`, its first NEW consumer.
         uniform_continuity::declare_abs_add_le(&mut d, prelude)?;
         uniform_continuity::declare_uniform_continuity(&mut d, prelude)?;
+        // `converges_comp_eventually` needs `UniformlyContinuousOn`/`.spec`/
+        // `.modulus` (`declare_uniform_continuity`, just above) plus
+        // `Converges`/`converges_lower_bound`/`converges_upper_bound`
+        // (`convergence::declare_convergence`, well above) — this is the
+        // earliest point both are available.
+        convergence::declare_converges_comp_eventually(&mut d, prelude)?;
         derivative::declare_derivative(&mut d, prelude)?;
         // `hasDerivative_unique` needs only `HasDerivativeOn`/`hd_spec`
         // (`derivative::declare_derivative`, just above) and `lt_cotrans`

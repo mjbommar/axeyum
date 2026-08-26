@@ -72,7 +72,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 282] = [
+    let expected: [(&str, crate::NameId, &str); 283] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -283,6 +283,11 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         (
             "CReal.uniformly_continuous_sub",
             p.uniformly_continuous_sub,
+            "theorem",
+        ),
+        (
+            "CReal.converges_comp_eventually",
+            p.converges_comp_eventually,
             "theorem",
         ),
         (
@@ -6826,4 +6831,151 @@ fn abs_add_le_at_one_and_one_is_tight() {
                  le (abs (add 1 1)) (add (abs 1) (abs 1)) -- i.e. le (abs 2) 2: {error:?}"
             )
         });
+}
+
+/// The mandatory wiring-check instantiation for
+/// `CReal.converges_comp_eventually`: `F := fun r => r` on `[0, 1]`, `f :=
+/// fun _ => zero`, `L := zero` (`CReal.converges_of_const`) -- `F` is the
+/// identity, so the conclusion collapses to (a weakened form of) the
+/// hypothesis, and this only checks the theorem's own plumbing (the
+/// `UniformlyContinuousOn.spec` application, the `exists_intro`/`exists_elim`
+/// shapes) rather than any genuine rational estimate.
+#[test]
+fn converges_comp_eventually_applies_at_the_identity_and_a_constant_sequence() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let nat = d.nat_ty();
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    let identity_fn = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    let u = d.lemma(p.uniformly_continuous_id, &[zero_c, one_c]);
+
+    // f := fun _ => zero (the constant sequence).
+    let f = {
+        let n_fv = d.fresh_fvar();
+        let _n = d.kernel().fvar(n_fv);
+        d.lam_fv(n_fv, nat, zero_c)
+    };
+    let l = zero_c;
+
+    // h_lo : forall n, le zero (f n) -- reduces to le zero zero, le_refl.
+    let h_lo = {
+        let n_fv = d.fresh_fvar();
+        let _n = d.kernel().fvar(n_fv);
+        let body = d.lemma(p.le_refl, &[zero_c]);
+        d.lam_fv(n_fv, nat, body)
+    };
+    // h_hi : forall n, le (f n) one -- reduces to le zero one, le_of_lt zero_lt_one.
+    let h_hi = {
+        let n_fv = d.fresh_fvar();
+        let _n = d.kernel().fvar(n_fv);
+        let lt01 = d.const_app(p.zero_lt_one, &[]);
+        let body = d.lemma(p.le_of_lt, &[zero_c, one_c, lt01]);
+        d.lam_fv(n_fv, nat, body)
+    };
+    let hconv = d.lemma(p.converges_of_const, &[zero_c]);
+    let e = d.num(3);
+
+    let instance = d.lemma(
+        p.converges_comp_eventually,
+        &[identity_fn, zero_c, one_c, u, f, l, h_lo, h_hi, hconv, e],
+    );
+
+    let inferred = d.kernel().infer(instance);
+    let ty = inferred.unwrap_or_else(|error| {
+        panic!("converges_comp_eventually refused at F := id, f := L := zero, e := 3: {error:?}")
+    });
+    let rendered = kernel.render_lean(ty);
+    assert!(
+        rendered.contains("Exists"),
+        "the instantiated conclusion is not an existential: {rendered}"
+    );
+}
+
+/// The mandatory MOVING-limit instantiation: `F := fun r => add r one`
+/// (`x + 1`, via `uniformly_continuous_add` composing `uniformly_continuous_id`
+/// and `uniformly_continuous_const`), same `f := L := zero`. `F L = one ≠
+/// zero = L`, so this exercises the theorem where the conclusion's target
+/// (`F L`) genuinely differs from the hypothesis' own limit `L` -- unlike the
+/// identity instantiation above, `F L` and `L` transposed would be a
+/// DIFFERENT (and wrong) claim.
+#[test]
+fn converges_comp_eventually_applies_at_x_plus_one_where_the_limit_moves() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let nat = d.nat_ty();
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    let identity_fn = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let const_one_fn = {
+        let ignore_fv = d.fresh_fvar();
+        d.lam_fv(ignore_fv, carrier, one_c)
+    };
+    let f_big = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let added = d.const_app(p.add, &[r, one_c]);
+        d.lam_fv(r_fv, carrier, added)
+    };
+
+    let u_id = d.lemma(p.uniformly_continuous_id, &[zero_c, one_c]);
+    let u_const = d.lemma(p.uniformly_continuous_const, &[one_c, zero_c, one_c]);
+    let u = d.lemma(
+        p.uniformly_continuous_add,
+        &[identity_fn, const_one_fn, zero_c, one_c, u_id, u_const],
+    );
+
+    let f = {
+        let n_fv = d.fresh_fvar();
+        let _n = d.kernel().fvar(n_fv);
+        d.lam_fv(n_fv, nat, zero_c)
+    };
+    let l = zero_c;
+
+    let h_lo = {
+        let n_fv = d.fresh_fvar();
+        let _n = d.kernel().fvar(n_fv);
+        let body = d.lemma(p.le_refl, &[zero_c]);
+        d.lam_fv(n_fv, nat, body)
+    };
+    let h_hi = {
+        let n_fv = d.fresh_fvar();
+        let _n = d.kernel().fvar(n_fv);
+        let lt01 = d.const_app(p.zero_lt_one, &[]);
+        let body = d.lemma(p.le_of_lt, &[zero_c, one_c, lt01]);
+        d.lam_fv(n_fv, nat, body)
+    };
+    let hconv = d.lemma(p.converges_of_const, &[zero_c]);
+    let e = d.num(3);
+
+    let instance = d.lemma(
+        p.converges_comp_eventually,
+        &[f_big, zero_c, one_c, u, f, l, h_lo, h_hi, hconv, e],
+    );
+
+    let inferred = d.kernel().infer(instance);
+    let ty = inferred.unwrap_or_else(|error| {
+        panic!(
+            "converges_comp_eventually refused at F := (fun r => r + 1), \
+             f := L := zero, e := 3: {error:?}"
+        )
+    });
+    let rendered = kernel.render_lean(ty);
+    assert!(
+        rendered.contains("Exists"),
+        "the instantiated conclusion is not an existential: {rendered}"
+    );
 }
