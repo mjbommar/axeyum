@@ -687,6 +687,17 @@ empty-footprint behavior theorem against the exact imported `Nat.mod`
 implementation and require the unchanged probe to admit all three siblings
 before operation registration.
 
+Runtime health now has a provider-captured, commit-bound evidence path. The
+first receipt binds canonical GitHub Actions run `33013805820` to tested commit
+`08b65942ff9d`, the exact workflow bytes, and all 14 completed jobs. It records
+eight successes and six failures, so product health honestly reports
+`failed-ancestor`. Two failures identified integration debt in this lane—the
+new example invalidated a generated completeness inventory, and the lane status
+exceeded its size ceiling—and are repaired in the receipt follow-up. The other
+failed jobs remain explicit and owned separately. Next: capture a later
+completed run after repairs; never infer current-head green from an ancestor
+receipt.
+
 ## Sequencing
 
 The critical path is not three independent projects:

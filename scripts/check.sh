@@ -695,9 +695,9 @@ step tactic-catalog-census python3 scripts/gen-tactic-catalog-census.py --check
 step episodes       python3 scripts/check-agent-episode.py artifacts/episodes --production-only
 step episode-tests  python3 -m unittest scripts.tests.test_check_agent_episode
 
-# Generated product populations and static aggregate-gate reachability. The
-# artifact itself records runtime status as not-recorded; this check only proves
-# that its committed source receipts and rendered dashboard are current.
+# Generated product populations, static aggregate-gate reachability, and the
+# latest commit-bound provider receipt. Ancestor results remain non-transitive.
+step ci-receipt            python3 scripts/check-ci-receipt.py
 step product-health-tests python3 -m unittest scripts.tests.test_gen_product_health
 step product-health       python3 scripts/gen-product-health.py --check
 

@@ -15,7 +15,10 @@ SPEC.loader.exec_module(MODULE)
 class ProductHealthTests(unittest.TestCase):
     def test_live_snapshot_has_an_honest_runtime_boundary(self) -> None:
         document = MODULE.build()
-        self.assertEqual(document["runtime_gate_status"]["state"], "not-recorded")
+        self.assertIn(
+            document["runtime_gate_status"]["state"],
+            {"not-recorded", "passed-ancestor", "failed-ancestor"},
+        )
         self.assertGreater(document["fact_ledger"]["facts"], 0)
         self.assertGreater(sum(document["fact_ledger"]["proof_route_counts"].values()), 0)
         self.assertGreater(document["semantic_coverage"]["qualified_formalization_facts"], 0)
@@ -31,8 +34,8 @@ class ProductHealthTests(unittest.TestCase):
 
     def test_markdown_does_not_turn_static_wiring_into_green_execution(self) -> None:
         markdown = MODULE.render(MODULE.build())
-        self.assertIn("runtime gate status as **not recorded**", markdown)
-        self.assertIn("wired does not mean run", markdown)
+        self.assertIn("Runtime gate receipt", markdown)
+        self.assertIn("not transitive evidence", markdown)
         self.assertIn("Reviewed semantic coverage", markdown)
         self.assertNotIn("all gates pass", markdown.lower())
 

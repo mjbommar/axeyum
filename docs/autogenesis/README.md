@@ -103,6 +103,7 @@ compounding, not automation theatre.
 | [Three-dimensional concept coverage](258-concept-coverage-kernel-anchors.md) | How are topic membership, fact formalization, and kernel semantic anchors reported without collapsing their assurance? |
 | [Local concept vocabulary and restored coverage](281-local-concept-vocabulary-and-coverage.md) | How do reviewed concepts and three-dimensional coverage return without a dependency on the reference repository? |
 | [Imported Nat.ModEq bridge assay](282-imported-nat-modeq-bridge-assay.md) | Which exact Mathlib shortcuts survive empty-footprint source-to-source transport into three frozen arithmetic targets? |
+| [Provider-captured runtime receipts](283-provider-captured-runtime-receipts.md) | How does product health report exact CI execution without treating ancestor results as current-head evidence? |
 | [Constructive-real well-definedness batch](259-kernel-well-definedness-batch.md) | Which representative-independence laws make constructed-real operations meaningful? |
 | [Obstruction capability candidates](260-obstruction-capability-candidates.md) | Which measured producer blockers require a proposed capability rather than another isolated theorem? |
 | [Candidate capability demand](261-capability-candidate-demand.md) | Which proposed capability removes the largest observed obstruction cluster without converting that count into authority? |

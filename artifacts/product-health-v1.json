@@ -114,8 +114,23 @@
     }
   },
   "runtime_gate_status": {
-    "meaning": "This artifact does not claim that just check, CI, or any constituent gate ran successfully.",
-    "state": "not-recorded"
+    "conclusion": "failure",
+    "failed_jobs": [
+      "clippy",
+      "docs resources and links",
+      "python (3.12)",
+      "python (3.13)",
+      "python (3.14)",
+      "rustdoc"
+    ],
+    "jobs": 14,
+    "meaning": "This reports only the provider-captured result for tested_commit; it is not transitive evidence for later commits.",
+    "provider": "github-actions",
+    "run_id": 33013805820,
+    "state": "failed-ancestor",
+    "tested_commit": "08b65942ff9db66f6ab019478ee4c5fd8e1571e3",
+    "url": "https://github.com/mjbommar/axeyum/actions/runs/33013805820",
+    "workflow": "CI"
   },
   "schema_version": 1,
   "scope": "committed-populations-and-static-gate-reachability",
@@ -153,11 +168,15 @@
     },
     {
       "path": "justfile",
-      "sha256": "f2e578a87cbb2b7ad1e6e6751a481e4e7832cead62c739138a565165290f3690"
+      "sha256": "b28ac6bedc15524a6742c3d97483483cde77961de3c05b3956d362a7c656fb0b"
     },
     {
       "path": "scripts/check.sh",
-      "sha256": "cb0cea14c3439a7d2e952d4fa41d252d9ea5aa3b8c908b9a3916a95d76d015af"
+      "sha256": "59a9dbb9306d631f5a5a0c349c23ecfd9e2ad270720f05d6963c0bdee3b5c551"
+    },
+    {
+      "path": "artifacts/runtime/ci-latest-v1.json",
+      "sha256": "f1a191a98345c155b441a9dcdb12882595c068dd232d95eb1994d397850fb044"
     },
     {
       "path": "artifacts/facts/F-*.json",

@@ -1,0 +1,157 @@
+{
+  "authority": "Captured through GitHub's authenticated API. Offline checking binds the workflow bytes, tested commit, and completed job outcomes; --check-online replays the provider response.",
+  "census": {
+    "conclusions": {
+      "failure": 6,
+      "success": 8
+    },
+    "jobs": 14
+  },
+  "jobs": [
+    {
+      "completed_at": "2026-08-26T21:08:44Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/mjbommar/axeyum/actions/runs/33013805820/job/98326669624",
+      "id": 98326669624,
+      "name": "benchmark micro corpus",
+      "started_at": "2026-08-26T21:07:02Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-26T21:07:46Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/mjbommar/axeyum/actions/runs/33013805820/job/98326669445",
+      "id": 98326669445,
+      "name": "build and smoke-test (wasm32 QF_BV profile)",
+      "started_at": "2026-08-26T21:07:01Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-26T21:07:48Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/mjbommar/axeyum/actions/runs/33013805820/job/98326669433",
+      "id": 98326669433,
+      "name": "cargo-deny",
+      "started_at": "2026-08-26T21:07:02Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-26T21:08:01Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/mjbommar/axeyum/actions/runs/33013805820/job/98326669682",
+      "id": 98326669682,
+      "name": "check (MSRV 1.88, default features)",
+      "started_at": "2026-08-26T21:07:02Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-26T21:09:26Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/mjbommar/axeyum/actions/runs/33013805820/job/98326669376",
+      "id": 98326669376,
+      "name": "checked Cargo MIR build (nightly-2026-05-01)",
+      "started_at": "2026-08-26T21:07:03Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-26T21:11:27Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/mjbommar/axeyum/actions/runs/33013805820/job/98326669613",
+      "id": 98326669613,
+      "name": "checked reflection semantics gate",
+      "started_at": "2026-08-26T21:07:02Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-26T21:07:59Z",
+      "conclusion": "failure",
+      "html_url": "https://github.com/mjbommar/axeyum/actions/runs/33013805820/job/98326669666",
+      "id": 98326669666,
+      "name": "clippy",
+      "started_at": "2026-08-26T21:07:02Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-26T21:27:47Z",
+      "conclusion": "failure",
+      "html_url": "https://github.com/mjbommar/axeyum/actions/runs/33013805820/job/98326669628",
+      "id": 98326669628,
+      "name": "docs resources and links",
+      "started_at": "2026-08-26T21:07:02Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-26T21:22:38Z",
+      "conclusion": "failure",
+      "html_url": "https://github.com/mjbommar/axeyum/actions/runs/33013805820/job/98326669547",
+      "id": 98326669547,
+      "name": "python (3.12)",
+      "started_at": "2026-08-26T21:07:02Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-26T21:19:00Z",
+      "conclusion": "failure",
+      "html_url": "https://github.com/mjbommar/axeyum/actions/runs/33013805820/job/98326669727",
+      "id": 98326669727,
+      "name": "python (3.13)",
+      "started_at": "2026-08-26T21:07:02Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-26T21:19:01Z",
+      "conclusion": "failure",
+      "html_url": "https://github.com/mjbommar/axeyum/actions/runs/33013805820/job/98326669501",
+      "id": 98326669501,
+      "name": "python (3.14)",
+      "started_at": "2026-08-26T21:07:02Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-26T21:11:08Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/mjbommar/axeyum/actions/runs/33013805820/job/98326669503",
+      "id": 98326669503,
+      "name": "real Lean kernel + solver-proof cross-check",
+      "started_at": "2026-08-26T21:07:01Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-26T21:07:53Z",
+      "conclusion": "failure",
+      "html_url": "https://github.com/mjbommar/axeyum/actions/runs/33013805820/job/98326669684",
+      "id": 98326669684,
+      "name": "rustdoc",
+      "started_at": "2026-08-26T21:07:02Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-08-26T21:07:34Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/mjbommar/axeyum/actions/runs/33013805820/job/98326669585",
+      "id": 98326669585,
+      "name": "rustfmt",
+      "started_at": "2026-08-26T21:07:02Z",
+      "status": "completed"
+    }
+  ],
+  "kind": "axeyum-github-actions-runtime-receipt",
+  "repository": "mjbommar/axeyum",
+  "run": {
+    "conclusion": "failure",
+    "created_at": "2026-08-26T21:06:59Z",
+    "event": "push",
+    "head_branch": "main",
+    "head_sha": "08b65942ff9db66f6ab019478ee4c5fd8e1571e3",
+    "html_url": "https://github.com/mjbommar/axeyum/actions/runs/33013805820",
+    "id": 33013805820,
+    "name": "CI",
+    "path": ".github/workflows/ci.yml",
+    "run_attempt": 1,
+    "status": "completed",
+    "updated_at": "2026-08-26T21:27:48Z"
+  },
+  "schema_version": 1,
+  "state": "provider-captured-no-transitive-current-head-claim",
+  "workflow_definition_sha256": "96d1b9d01c3b5c244f3aa65c6d10580bc3b7fd5078d2631ac0fb4c41015befdb"
+}
