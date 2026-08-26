@@ -191,11 +191,15 @@ collisions, so arbitrarily many normalized mutation slugs now remain unique.
 
 This changes the immediate sequence. Registering the three-target settled
 control family would duplicate existing provenance and manufacture no new
-knowledge. First extend the importer/exporter contract so rich target types can
-reuse an independently checked, explicitly allowlisted type environment without
-granting that environment as proof candidates. Then rank candidates from exact
-fact and kernel dependencies, and rerun the unchanged open population. Only a
-producer that converts previously open siblings earns operation authority.
+knowledge. The 43 rejections do **not** call for a second importer allowlist:
+Axeyum already implements the safer ADR-0484 type-slice route, which generalizes
+definitions with proof-bearing implementation closures, checks the fresh goal,
+and requires exact specialization back to the source proposition. Route this
+population through that existing boundary, attach independently checked local
+semantic contracts where abstraction erased required behavior, rank proof
+candidates from exact fact and kernel dependencies, and rerun the unchanged
+open population. Only a producer that converts previously open siblings earns
+operation authority.
 
 ## Comparative position
 
