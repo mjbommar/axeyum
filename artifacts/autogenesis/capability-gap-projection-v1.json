@@ -535,20 +535,6 @@
     },
     {
       "dependency_component_ids": [
-        "mathlib-v4.30.0-f1259356540dba68"
-      ],
-      "direct_unlock_fact_count": 0,
-      "direct_unlock_fact_ids": [],
-      "family": "natural-modular-equivalence",
-      "ready_fact_count": 1,
-      "ready_fact_ids": [
-        "F:ml430-nat-modeq-comm-24b71e7a"
-      ],
-      "statement_shape": "biconditional",
-      "topic_concept_id": "C:modular-arithmetic"
-    },
-    {
-      "dependency_component_ids": [
         "mathlib-v4.30.0-c0029d24c3bb7a7f",
         "mathlib-v4.30.0-c2635744801654c7",
         "mathlib-v4.30.0-d4e21b6b7acdcecb",
@@ -657,12 +643,12 @@
     }
   ],
   "census": {
-    "admissible_facts": 1,
-    "cataloged_ready_facts": 108,
-    "dependency_ready_facts": 108,
+    "admissible_facts": 0,
+    "cataloged_ready_facts": 107,
+    "dependency_ready_facts": 107,
     "excluded_held_out_ready_facts": 22,
     "excluded_outside_evaluation_ready_facts": 9,
-    "global_dependency_ready_facts": 139,
+    "global_dependency_ready_facts": 138,
     "groups": 2,
     "rejection_reasons": [
       {
@@ -682,8 +668,8 @@
       "train"
     ],
     "family_concept_crosswalk_path": "artifacts/autogenesis/family-concept-crosswalk-v1.json",
-    "frontier_sha256": "1e3a3df95c390e620670ea91ce60ed0ad975816aad343d79d3ed3e6840185507",
-    "ledger_sha256": "6aced5fdb70e40d5c2c0750c7aa3fa4a51953c9d360797e5731ab75fb55f0d41",
+    "frontier_sha256": "f3a6f3a2f579f96aa3b4b320dcd769cf8b16b1408a185f88d8a9777016c7128a",
+    "ledger_sha256": "c725596fe3c0a92b4ae068eec7a2ff445c01e1d7ca0430d28aff68db28ed271f",
     "nursery_sha256": "6d1f2551a612fdcadaf1c6b0096c4eebee304d9687157cb25505f785ee86daa8",
     "operation_registry_sha256": "2946dd39994e39b28df3187d55927e633ac9c3d79c2ee5281829aad3a884c974",
     "reviewed_fact_catalog_sha256": "d2ebcbd56c70445e3a1be864426ee783021387c5d6c885f182dc2a374855f988",
@@ -738,12 +724,10 @@
       "route_class": "proof-route-only"
     },
     {
-      "admissible_fact_ids": [
-        "F:ml430-nat-modeq-comm-24b71e7a"
-      ],
+      "admissible_fact_ids": [],
       "formal_language": "lean4-surface",
       "fragment": "Nat",
-      "ready_fact_count": 82,
+      "ready_fact_count": 81,
       "ready_fact_ids": [
         "F:ml430-mutation-1432b2277cf2cc26c1d11cd6",
         "F:ml430-mutation-5179f333b8333ecff8adc223",
@@ -806,7 +790,6 @@
         "F:ml430-nat-modeq-add-left-e83f0700",
         "F:ml430-nat-modeq-add-right-8e2ca0cc",
         "F:ml430-nat-modeq-add-right-cancel-e871facf",
-        "F:ml430-nat-modeq-comm-24b71e7a",
         "F:ml430-nat-modeq-of-dvd-d75cc374",
         "F:ml430-nat-modeq-of-mul-left-88d20bca",
         "F:ml430-nat-modeq-one-516d46e8",
@@ -828,9 +811,7 @@
         "F:ml430-nat-testbit-lor-7644e067",
         "F:ml430-nat-zero-of-testbit-eq-false-e244c9a1"
       ],
-      "registered_operation_ids": [
-        "authoritative-mathlib-modeq-family-v1"
-      ],
+      "registered_operation_ids": [],
       "rejection_reasons": [
         {
           "fact_count": 5,

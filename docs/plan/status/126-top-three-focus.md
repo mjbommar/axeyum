@@ -29,6 +29,14 @@ the exact graph linkage deficit, and Axeyum's comparative position against
 proof assistants, SMT solvers, proof agents, CAS, and program analyzers. A
 newly merged constructive-real comment also exposed a broken public Rustdoc
 link; `2d43f2791` repaired it and the focused warning-denied kernel docs pass.
+The first full flywheel follow-through then admitted `Nat.ModEq.symm` and
+`Nat.ModEq.trans` through the existing reusable producer. Recomputing the
+durable frontier unlocked the previously deferred `Nat.ModEq.comm`; the lane
+added its already-exported source-bound target to the same unchanged producer
+and admitted it through the same typed transaction. Multi-target production
+credit moved 8 → 9 → 10 → 11. This proves durable-state-driven scheduling but
+not yet proof-term compounding: the commutativity candidate uses no theorem
+dependency, so lemma-consuming composition remains next.
 
 <!-- plan-section: landed-changes -->
 
@@ -38,3 +46,6 @@ link; `2d43f2791` repaired it and the focused warning-denied kernel docs pass.
 | 2026-08-25 | `d904fa59c` | Python CI installs its agent dependencies; the pinned-nightly MIR fixture and all authentication hashes move together. |
 | 2026-08-25 | `d0037b378` | Restore dependency assurance with the published `anyhow` fix and narrowly documented transitive stub-generator exceptions. |
 | 2026-08-25 | `2d43f2791` | Repair the CReal geometric-series Rustdoc reference exposed by the merged theorem lane. |
+| 2026-08-25 | `9cd07c5f1` | Authoritative frontier/execution/transaction admission settles `Nat.ModEq.symm`; multi-target credit reaches 9. |
+| 2026-08-25 | `b34067dc0` | The recomputed frontier settles `Nat.ModEq.trans` through the same producer; multi-target credit reaches 10. |
+| 2026-08-25 | `43f87f269` | Durable symmetry unlock promotes `Nat.ModEq.comm` into the unchanged family operation with source-bound evidence. |

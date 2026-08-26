@@ -27,8 +27,8 @@ semantics, evidence, provenance, checking, and compounding knowledge loop.
   30 axioms. It reports 1,510 axiom-free declarations and 6,672 direct
   theorem-dependency edges. This is a substantial checked library, but it is
   not an autonomous-production count.
-- The fact ledger contains 696 propositions: 498 proved, 4 refuted, 2 computed,
-  189 open, and 3 conjectured. Its 26 authoritative/counterfactual operation
+- The fact ledger contains 696 propositions: 501 proved, 4 refuted, 2 computed,
+  186 open, and 3 conjectured. Its 26 authoritative/counterfactual operation
   rows contain only 2 reusable multi-target producers and name only 33 fact
   IDs. Most checked theorems therefore remain human-constructed, and most
   ledger facts have no reusable producer assigned.
@@ -43,6 +43,28 @@ semantics, evidence, provenance, checking, and compounding knowledge loop.
   theorems without exact fact links.
 - The Rust and Python surfaces are broad, but integration churn can leave
   `main` red and evidence fixtures can be mistaken for production populations.
+
+### Landed autonomous-loop increment
+
+The first action against this plan moved three facts through the authoritative
+path rather than adding proof code for new targets:
+
+1. the frontier selected open `Nat.ModEq.symm`; the existing multi-target
+   producer reconstructed it, independent checking accepted it, and the
+   crash-safe transaction admitted it;
+2. a fresh frontier selected and admitted `Nat.ModEq.trans` through the same
+   operation;
+3. the durable symmetry admission made `Nat.ModEq.comm` dependency-ready, so
+   the previously deferred target was added to the unchanged producer's
+   source-bound family, selected by a fresh frontier, and admitted.
+
+Reusable multi-target production credit consequently rose from 8 to 11 facts,
+and the family now covers eight Int/Nat targets. This demonstrates durable
+state changing later scheduling. It does **not** yet satisfy the stronger
+proof-compounding exit: the commutativity producer reconstructs Eq/Iff symmetry
+directly and records zero theorem dependencies, so the admitted symmetry fact
+does not occur in its checked proof closure. The next producer increment must
+consume a selected library lemma rather than merely being scheduled by it.
 
 ## Comparative position
 
