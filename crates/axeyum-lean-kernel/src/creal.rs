@@ -2230,6 +2230,31 @@ pub struct CRealPrelude {
     /// `[a, b]` makes `F` antitone there, via the same `neg ∘ F` trick
     /// [`Self::constant_of_zero_deriv`] uses for its second direction.
     pub antitone_of_nonpos_deriv: NameId,
+
+    /// `CReal.ivt_iter : ∀ F P0 Q0 eps, lt zero eps → le P0 Q0 → le (F P0)
+    /// eps → le (neg eps) (F Q0) → ∀ n : Nat, ∃ P Q, le P0 P ∧ le P Q ∧ le Q
+    /// Q0 ∧ le (F P) eps ∧ le (neg eps) (F Q) ∧ Equiv (add Q (neg P)) (mul
+    /// (add Q0 (neg P0)) (pow (ofRat (natDivSucc 1 1)) n))` (`creal/ivt.rs`)
+    /// -- [`Self::ivt_step`] iterated `n` times by structural `Nat`
+    /// induction, carrying the six-part invariant with the ORIGINAL
+    /// endpoints `P0, Q0` fixed throughout (`ivt_step`'s own `cp`/`cq` slots
+    /// are always the CURRENT bracket, one level in). The width at step `n`
+    /// is `(Q0 - P0) * (1/2)^n`, tracked via [`Self::pow`] and never via an
+    /// explicit `pow_succ`/`pow_zero` lemma application: `pow`'s own
+    /// `Nat.rec` ι-reduces `pow half (succ j)` to `mul (pow half j) half`
+    /// definitionally (see `power.rs`'s module documentation), so the
+    /// induction step needs only [`Self::mul_assoc`] to regroup, matching
+    /// the house idiom `derivative.rs::pow_two_equiv_sq` and
+    /// `power.rs::declare_pow_nonneg` already use for the same reduction.
+    /// The closing combination with [`Self::uniformly_continuous_on`] and
+    /// the Archimedean property to reach `CReal.ivt_approx` (`∀ e : Nat, ∃
+    /// x, …`) is **not** built here: it needs a quantitative bound relating
+    /// `pow x n` (`0 ≤ x < 1`) to a `natDivSucc`-shaped rational threshold —
+    /// the "geometric-decay-dominates-harmonic-rate estimate this
+    /// development does not yet build" that [`Self::geom_sum_bounded`]'s own
+    /// neighbourhood already flags as missing, not a gap this file's own
+    /// construction leaves behind.
+    pub ivt_iter: NameId,
 }
 
 impl CRealPrelude {
@@ -2546,6 +2571,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         ivt_step: kernel.name_str(creal, "ivt_step"),
         constant_of_zero_deriv: kernel.name_str(creal, "constant_of_zero_deriv"),
         antitone_of_nonpos_deriv: kernel.name_str(creal, "antitone_of_nonpos_deriv"),
+        ivt_iter: kernel.name_str(creal, "ivt_iter"),
     }
 }
 
