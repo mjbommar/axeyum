@@ -1117,9 +1117,10 @@ Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and 
 bound-certification targets.  The Axeyum-side programme contract is
 `docs/research/10-cas/open-problems-programme-2026-08.md`: pin current literature status,
 generate deterministically, run untrusted search, independently replay/check, bind evidence,
-and reconstruct formal identities into the kernel where applicable. Next: attack the two live
-`<3,2,4>` rank-19 orbit leaves with finer complete splits or stronger algebraic propagation;
-the current first-factor split is complete but both live leaves remain `UNKNOWN`. The
+and reconstruct formal identities into the kernel where applicable. Next: add materially
+stronger scheduling propagation or measured conflict-guided complete splits for `abz7@655`;
+exact job-chain windows and a first semantic order cover are complete, but the monolith and
+all four cover leaves remain `UNKNOWN`. The
 settled-cell calibration is green for `R_3(x-y=z)=14` (42 variables,
 356 clauses, 25 checked DRAT steps); a mutated DIMACS header fails closed, and the aggregate
 claim sweep reports 104 claims re-checked / 0 errors / 25 rows explicitly not re-checked.
@@ -1310,6 +1311,19 @@ are green. The full `just check` is independently red before reaching Rust tests
 settled `Nat.fib_le_succ` fact omits two proof-derived dependencies; correcting those edges
 then exposes a stale historical Autogenesis child-qualification contract. Neither belongs to
 this lane, so no full-gate success is claimed.
+
+**Job-shop exact windows and semantic order cover, 2026-08-26.** ADR-0572 adds an opt-in
+complete operation-domain restriction from exact job-chain earliest/latest starts and exposes
+all machine-order selector variables as typed, deterministic semantic records. `ft06` retains
+its checked 55/54 boundary while shrinking by more than half. `abz7@655` falls from 381,418
+variables / 4,343,486 clauses to 175,170 / 1,689,970, but 600-second lower and upper runs and
+a deterministic 300-second CP-SAT upper run all remained `UNKNOWN`. A checked Boolean-product
+cover over two typed order selectors proves four leaves exhaustive; every leaf remained
+`UNKNOWN` at 120 seconds. ADR-0573 fixes the generic bottleneck this cover exposed: internal
+proof SAT now branches only on variables occurring in clauses, taking the sparse cover from
+more than two minutes without completion to a 3.55-second checked proof. Exact formulas,
+semantic maps, cover proof, manifest, and resource receipt are retained in the sibling package;
+incomplete 4.15 GB leaf proof streams were deleted. `abz7 = 656` remains uncertified.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 

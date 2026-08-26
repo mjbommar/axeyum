@@ -422,6 +422,10 @@ struct Cdcl<'sink, S: DratSink> {
     var_inc: f64,
     /// Saved decision polarity per variable (phase saving).
     phase: Vec<bool>,
+    /// Variables occurring in at least one original clause.
+    /// Variables absent from the formula need no decision and default false in
+    /// a returned total assignment.
+    branchable: Vec<bool>,
     /// Target-phase rephasing (T1.3.1): the decision polarities of the deepest
     /// (largest-trail) conflict-free assignment seen so far — the "closest to a
     /// model" phase. On a restart (when [`Cdcl::use_target_rephase`] is set) the
@@ -562,6 +566,10 @@ impl<'sink, S: DratSink> Cdcl<'sink, S> {
             }
         }
         let num_clauses = headers.len();
+        let mut branchable = vec![false; n];
+        for literal in &arena {
+            branchable[literal.var().index()] = true;
+        }
         let mut cdcl = Self {
             sink,
             arena,
@@ -579,6 +587,7 @@ impl<'sink, S: DratSink> Cdcl<'sink, S> {
             activity: vec![0.0; n],
             var_inc: 1.0,
             phase: vec![false; n],
+            branchable,
             best_phase: vec![false; n],
             best_trail_len: 0,
             use_target_rephase: true,
@@ -606,12 +615,16 @@ impl<'sink, S: DratSink> Cdcl<'sink, S> {
             proof_bytes: 0,
             search_start: Instant::now(),
         };
-        // Seed the order heap with every variable. All activities are 0.0, so
+        // Seed the order heap with every variable that occurs in a clause.
+        // Unused variables default false in a returned total model and must not
+        // delay decisions on a sparse high-numbered projection. All activities are 0.0, so
         // the heap order is purely by index; inserting in ascending index order
         // builds a valid heap (each insert percolates up against equal-activity
         // parents whose index is smaller, so no swaps occur — O(n) total).
         for v in 0..n {
-            cdcl.heap_insert(v);
+            if cdcl.branchable[v] {
+                cdcl.heap_insert(v);
+            }
         }
         cdcl
     }
@@ -1579,7 +1592,7 @@ impl<'sink, S: DratSink> Cdcl<'sink, S> {
                 // into the order heap *only* if it was popped out by `pick_branch`
                 // (lazy deletion): variables still in the heap stay put, avoiding
                 // re-insertion churn. O(log n) per actually-removed variable.
-                if !self.heap_contains(var) {
+                if self.branchable[var] && !self.heap_contains(var) {
                     self.heap_insert(var);
                 }
             }
@@ -2335,7 +2348,7 @@ mod tests {
         fn pick_branch_linear(&self) -> Option<usize> {
             let mut best: Option<usize> = None;
             for v in 0..self.assign.len() {
-                if self.assign[v].is_some() {
+                if !self.branchable[v] || self.assign[v].is_some() {
                     continue;
                 }
                 match best {
@@ -2362,14 +2375,38 @@ mod tests {
                 }
             }
             for v in 0..self.assign.len() {
-                if self.assign[v].is_none() {
+                if self.branchable[v] && self.assign[v].is_none() {
                     assert!(
                         self.heap_contains(v),
                         "every unassigned variable must be in the heap: {v}"
                     );
+                } else if !self.branchable[v] {
+                    assert!(!self.heap_contains(v), "unused variable entered heap: {v}");
                 }
             }
         }
+    }
+
+    #[test]
+    fn unused_low_variables_do_not_delay_sparse_high_projection() {
+        let f = formula(
+            200_000,
+            &[
+                &[199_999, 200_000],
+                &[199_999, -200_000],
+                &[-199_999, 200_000],
+                &[-199_999, -200_000],
+            ],
+        );
+        let mut sink = VecProofSink::new();
+        let cdcl = Cdcl::new(&f, &mut sink);
+        assert_eq!(cdcl.heap, vec![199_998, 199_999]);
+        assert_eq!(cdcl.branchable.iter().filter(|&&active| active).count(), 2);
+        let ProofSolveOutcome::Unsat(proof) = solve_with_drat_proof(&f) else {
+            panic!("four Boolean cells exhaust the two active variables");
+        };
+        assert_eq!(proof.len(), 2);
+        assert_eq!(crate::check_drat(&f, &proof), Ok(true));
     }
 
     /// The order heap returns exactly the variable the O(n) linear scan would,

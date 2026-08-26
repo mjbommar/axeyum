@@ -326,8 +326,26 @@ impl Builder {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct OperationLayout {
+    earliest: usize,
     choices: Vec<usize>,
     prefix: Vec<usize>,
+}
+
+/// One semantic same-machine ordering decision in a job-shop encoding.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct JobShopMachineOrder {
+    /// Machine shared by the two operations.
+    pub machine: usize,
+    /// Job index of the left operation.
+    pub left_job: usize,
+    /// Operation index within the left job.
+    pub left_operation: usize,
+    /// Job index of the right operation.
+    pub right_job: usize,
+    /// Operation index within the right job.
+    pub right_operation: usize,
+    /// CNF selector; true means the left operation finishes before the right starts.
+    pub selector: CnfVar,
 }
 
 /// Exact CNF question “does this instance have makespan at most `bound`?”.
@@ -337,12 +355,22 @@ pub struct JobShopEncoding {
     problem: JobShopProblem,
     bound: usize,
     layout: Vec<Vec<OperationLayout>>,
+    machine_orders: Vec<JobShopMachineOrder>,
 }
 
 impl JobShopEncoding {
     /// Exact deterministic formula.
     pub fn formula(&self) -> &CnfFormula {
         &self.formula
+    }
+
+    /// Complete deterministic list of same-machine order decisions.
+    ///
+    /// Each unordered pair of operations sharing a machine occurs exactly
+    /// once. A true selector orders the left operation before the right; a
+    /// false selector orders the right operation before the left.
+    pub fn machine_orders(&self) -> &[JobShopMachineOrder] {
+        &self.machine_orders
     }
 
     /// Lift a satisfying model and independently replay the schedule.
@@ -371,6 +399,7 @@ impl JobShopEncoding {
                             .choices
                             .iter()
                             .position(|&variable| model.values()[variable])
+                            .map(|offset| operation.earliest + offset)
                             .ok_or_else(|| {
                                 JobShopError::InvalidSchedule(
                                     "operation has no selected start".to_owned(),
@@ -422,7 +451,8 @@ impl JobShopEncoding {
         let mut formula = self.formula.clone();
         for (job_layout, starts) in self.layout.iter().zip(&schedule.starts) {
             for (operation, &start) in job_layout.iter().zip(starts) {
-                for (time, &variable) in operation.choices.iter().enumerate() {
+                for (offset, &variable) in operation.choices.iter().enumerate() {
+                    let time = operation.earliest + offset;
                     let literal =
                         CnfLit::positive(CnfVar::new(variable).map_err(|error| {
                             JobShopError::Cnf(format!("pin variable: {error:?}"))
@@ -445,7 +475,8 @@ fn encode_machine_orders(
     problem: &JobShopProblem,
     layout: &[Vec<OperationLayout>],
     builder: &mut Builder,
-) -> Result<(), JobShopError> {
+) -> Result<Vec<JobShopMachineOrder>, JobShopError> {
+    let mut orders = Vec::new();
     for machine in 0..problem.machines {
         let mut operations_on_machine = Vec::new();
         for (job, operations) in problem.jobs.iter().enumerate() {
@@ -460,31 +491,48 @@ fn encode_machine_orders(
                 let (left_job, left_operation) = operations_on_machine[left];
                 let (right_job, right_operation) = operations_on_machine[right];
                 let order = builder.variable()?;
+                orders.push(JobShopMachineOrder {
+                    machine,
+                    left_job,
+                    left_operation,
+                    right_job,
+                    right_operation,
+                    selector: CnfVar::new(order)
+                        .map_err(|error| JobShopError::Cnf(format!("order variable: {error:?}")))?,
+                });
                 let left_item = problem.jobs[left_job][left_operation];
                 let right_item = problem.jobs[right_job][right_operation];
                 let left_layout = &layout[left_job][left_operation];
                 let right_layout = &layout[right_job][right_operation];
 
-                for (start, &choice) in left_layout.choices.iter().enumerate() {
+                for (offset, &choice) in left_layout.choices.iter().enumerate() {
+                    let start = left_layout.earliest + offset;
                     let cutoff = start + left_item.duration - 1;
-                    let mut clause = vec![(order, true), (choice, true)];
-                    if cutoff + 1 < right_layout.choices.len() {
-                        clause.push((right_layout.prefix[cutoff], true));
+                    if cutoff >= right_layout.earliest {
+                        let mut clause = vec![(order, true), (choice, true)];
+                        let relative = cutoff - right_layout.earliest;
+                        if relative + 1 < right_layout.choices.len() {
+                            clause.push((right_layout.prefix[relative], true));
+                        }
+                        builder.clause(&clause)?;
                     }
-                    builder.clause(&clause)?;
                 }
-                for (start, &choice) in right_layout.choices.iter().enumerate() {
+                for (offset, &choice) in right_layout.choices.iter().enumerate() {
+                    let start = right_layout.earliest + offset;
                     let cutoff = start + right_item.duration - 1;
-                    let mut clause = vec![(order, false), (choice, true)];
-                    if cutoff + 1 < left_layout.choices.len() {
-                        clause.push((left_layout.prefix[cutoff], true));
+                    if cutoff >= left_layout.earliest {
+                        let mut clause = vec![(order, false), (choice, true)];
+                        let relative = cutoff - left_layout.earliest;
+                        if relative + 1 < left_layout.choices.len() {
+                            clause.push((left_layout.prefix[relative], true));
+                        }
+                        builder.clause(&clause)?;
                     }
-                    builder.clause(&clause)?;
                 }
             }
         }
     }
-    Ok(())
+    Ok(orders)
 }
 
 /// Encode the complete bounded-makespan question.
@@ -497,6 +545,84 @@ pub fn encode_job_shop(
     problem: &JobShopProblem,
     bound: usize,
     limits: JobShopEncodingLimits,
+) -> Result<JobShopEncoding, JobShopError> {
+    encode_job_shop_internal(problem, bound, limits, false)
+}
+
+/// Encode the complete bounded-makespan question after intersecting every
+/// operation's start domain with the exact earliest/latest window implied by
+/// its own job chain.
+///
+/// This is equisatisfiable with [`encode_job_shop`], but keeps only starts
+/// between the sum of preceding durations and `bound` minus the sum of this
+/// and following durations. The independent schedule checker and model lifting
+/// remain unchanged.
+///
+/// # Errors
+///
+/// As [`encode_job_shop`]. Duration-sum overflow is rejected as malformed.
+pub fn encode_job_shop_with_job_windows(
+    problem: &JobShopProblem,
+    bound: usize,
+    limits: JobShopEncodingLimits,
+) -> Result<JobShopEncoding, JobShopError> {
+    encode_job_shop_internal(problem, bound, limits, true)
+}
+
+fn encode_operation_layouts(
+    problem: &JobShopProblem,
+    bound: usize,
+    builder: &mut Builder,
+    job_windows: bool,
+) -> Result<Vec<Vec<OperationLayout>>, JobShopError> {
+    let mut layout = Vec::with_capacity(problem.jobs.len());
+    for operations in &problem.jobs {
+        let total_duration = operations.iter().try_fold(0usize, |sum, operation| {
+            sum.checked_add(operation.duration)
+                .ok_or_else(|| JobShopError::Malformed("job duration sum overflow".to_owned()))
+        })?;
+        let mut preceding_duration = 0usize;
+        let mut job_layout = Vec::with_capacity(operations.len());
+        for operation in operations {
+            if operation.machine >= problem.machines || operation.duration == 0 {
+                return Err(JobShopError::Malformed(
+                    "invalid operation machine or duration".to_owned(),
+                ));
+            }
+            let earliest = if job_windows { preceding_duration } else { 0 };
+            let remaining_duration = total_duration - preceding_duration;
+            let latest = if job_windows {
+                bound.checked_sub(remaining_duration)
+            } else {
+                bound.checked_sub(operation.duration)
+            };
+            let count = latest
+                .filter(|&latest| latest >= earliest)
+                .map_or(0, |latest| latest - earliest + 1);
+            let mut choices = Vec::with_capacity(count);
+            for _ in 0..count {
+                choices.push(builder.variable()?);
+            }
+            let prefix = builder.exactly_one(&choices)?;
+            job_layout.push(OperationLayout {
+                earliest,
+                choices,
+                prefix,
+            });
+            preceding_duration = preceding_duration
+                .checked_add(operation.duration)
+                .ok_or_else(|| JobShopError::Malformed("job duration sum overflow".to_owned()))?;
+        }
+        layout.push(job_layout);
+    }
+    Ok(layout)
+}
+
+fn encode_job_shop_internal(
+    problem: &JobShopProblem,
+    bound: usize,
+    limits: JobShopEncodingLimits,
+    job_windows: bool,
 ) -> Result<JobShopEncoding, JobShopError> {
     if problem.jobs.is_empty() || problem.machines == 0 {
         return Err(JobShopError::Malformed("empty problem".to_owned()));
@@ -521,44 +647,31 @@ pub fn encode_job_shop(
         clauses: Vec::new(),
         limits,
     };
-    let mut layout = Vec::with_capacity(problem.jobs.len());
-    for operations in &problem.jobs {
-        let mut job_layout = Vec::with_capacity(operations.len());
-        for operation in operations {
-            if operation.machine >= problem.machines || operation.duration == 0 {
-                return Err(JobShopError::Malformed(
-                    "invalid operation machine or duration".to_owned(),
-                ));
-            }
-            let count = bound
-                .checked_sub(operation.duration)
-                .map_or(0, |latest| latest + 1);
-            let mut choices = Vec::with_capacity(count);
-            for _ in 0..count {
-                choices.push(builder.variable()?);
-            }
-            let prefix = builder.exactly_one(&choices)?;
-            job_layout.push(OperationLayout { choices, prefix });
-        }
-        layout.push(job_layout);
-    }
+    let layout = encode_operation_layouts(problem, bound, &mut builder, job_windows)?;
 
     // Successor at u implies predecessor started no later than u-duration.
     for (operations, job_layout) in problem.jobs.iter().zip(&layout) {
         for index in 1..operations.len() {
             let predecessor = &job_layout[index - 1];
             let duration = operations[index - 1].duration;
-            for (successor_start, &successor_variable) in
+            for (successor_offset, &successor_variable) in
                 job_layout[index].choices.iter().enumerate()
             {
+                let successor_start = job_layout[index].earliest + successor_offset;
                 if successor_start < duration {
                     builder.clause(&[(successor_variable, true)])?;
                 } else {
                     let latest = successor_start - duration;
-                    let implication = if latest + 1 >= predecessor.choices.len() {
+                    let implication = if latest < predecessor.earliest {
+                        builder.clause(&[(successor_variable, true)])?;
+                        continue;
+                    } else if latest - predecessor.earliest + 1 >= predecessor.choices.len() {
                         None
                     } else {
-                        predecessor.prefix.get(latest).copied()
+                        predecessor
+                            .prefix
+                            .get(latest - predecessor.earliest)
+                            .copied()
                     };
                     if let Some(prefix) = implication {
                         builder.clause(&[(successor_variable, true), (prefix, false)])?;
@@ -570,21 +683,23 @@ pub fn encode_job_shop(
 
     // One order bit per same-machine operation pair. Conditional prefix
     // clauses force the selected first operation to finish before the second.
-    encode_machine_orders(problem, &layout, &mut builder)?;
+    let machine_orders = encode_machine_orders(problem, &layout, &mut builder)?;
     let formula = builder.finish()?;
     Ok(JobShopEncoding {
         formula,
         problem: problem.clone(),
         bound,
         layout,
+        machine_orders,
     })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axeyum_cnf::cube::{boolean_product_cubes, covering_formula};
     use axeyum_cnf::{
-        ProofSolveOutcome, SatResult, solve_with_drat_proof, solve_with_rustsat_batsat,
+        ProofSolveOutcome, SatResult, check_drat, solve_with_drat_proof, solve_with_rustsat_batsat,
     };
 
     const TINY: &str = "2 2\n0 2 1 1\n1 2 0 1\n";
@@ -598,6 +713,19 @@ mod tests {
         };
         let schedule = encoding.lift_model(&model).unwrap();
         assert_eq!(schedule.makespan, 3);
+        assert_eq!(encoding.machine_orders().len(), 2);
+        for order in encoding.machine_orders() {
+            let left_start = schedule.starts[order.left_job][order.left_operation];
+            let left_end = left_start + problem.jobs[order.left_job][order.left_operation].duration;
+            let right_start = schedule.starts[order.right_job][order.right_operation];
+            let right_end =
+                right_start + problem.jobs[order.right_job][order.right_operation].duration;
+            if model.values()[order.selector.index()] {
+                assert!(left_end <= right_start);
+            } else {
+                assert!(right_end <= left_start);
+            }
+        }
         assert_eq!(
             check_job_shop_schedule(&problem, &schedule)
                 .unwrap()
@@ -610,6 +738,19 @@ mod tests {
     fn lower_boundary_has_a_checked_refutation() {
         let problem = JobShopProblem::parse_orlib(TINY).unwrap();
         let encoding = encode_job_shop(&problem, 2, JobShopEncodingLimits::default()).unwrap();
+        let cubes = boolean_product_cubes(
+            &encoding
+                .machine_orders()
+                .iter()
+                .map(|order| order.selector)
+                .collect::<Vec<_>>(),
+        )
+        .unwrap();
+        let covering = covering_formula(encoding.formula(), &cubes).unwrap();
+        let ProofSolveOutcome::Unsat(covering_proof) = solve_with_drat_proof(&covering) else {
+            panic!("machine-order product must cover every assignment");
+        };
+        assert_eq!(check_drat(&covering, &covering_proof), Ok(true));
         let ProofSolveOutcome::Unsat(proof) = solve_with_drat_proof(encoding.formula()) else {
             panic!("each job needs three ticks");
         };
@@ -617,6 +758,35 @@ mod tests {
             axeyum_cnf::check_drat_backward(encoding.formula(), &proof),
             Ok(true)
         );
+    }
+
+    #[test]
+    fn job_windows_preserve_boundary_and_lifted_schedules() {
+        let problem = JobShopProblem::parse_orlib(TINY).unwrap();
+        for bound in 0..=5 {
+            let baseline =
+                encode_job_shop(&problem, bound, JobShopEncodingLimits::default()).unwrap();
+            let windowed =
+                encode_job_shop_with_job_windows(&problem, bound, JobShopEncodingLimits::default())
+                    .unwrap();
+            let baseline_result = solve_with_rustsat_batsat(baseline.formula()).unwrap();
+            let windowed_result = solve_with_rustsat_batsat(windowed.formula()).unwrap();
+            assert_eq!(
+                matches!(baseline_result, SatResult::Sat(_)),
+                matches!(windowed_result, SatResult::Sat(_)),
+                "boundary mismatch at {bound}"
+            );
+            if let SatResult::Sat(model) = windowed_result {
+                let schedule = windowed.lift_model(&model).unwrap();
+                assert!(schedule.makespan <= bound);
+            }
+        }
+        let baseline = encode_job_shop(&problem, 3, JobShopEncodingLimits::default()).unwrap();
+        let windowed =
+            encode_job_shop_with_job_windows(&problem, 3, JobShopEncodingLimits::default())
+                .unwrap();
+        assert!(windowed.formula().variable_count() < baseline.formula().variable_count());
+        assert!(windowed.formula().clauses().len() < baseline.formula().clauses().len());
     }
 
     #[test]

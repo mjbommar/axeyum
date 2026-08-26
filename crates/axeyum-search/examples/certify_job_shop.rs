@@ -1,5 +1,6 @@
 //! Encode, solve, and independently certify classical job-shop bounds.
 
+use std::fmt::Write as _;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
@@ -9,7 +10,8 @@ use axeyum_cnf::{
     CnfAssignment, ProofSolveOutcome, check_drat_backward, check_drat_backward_reader,
 };
 use axeyum_search::job_shop::{
-    JobShopEncodingLimits, JobShopProblem, JobShopSchedule, encode_job_shop,
+    JobShopEncoding, JobShopEncodingLimits, JobShopProblem, JobShopSchedule, encode_job_shop,
+    encode_job_shop_with_job_windows,
 };
 
 struct Arguments {
@@ -21,13 +23,15 @@ struct Arguments {
     model: Option<PathBuf>,
     schedule_out: Option<PathBuf>,
     drat: Option<PathBuf>,
+    machine_orders: Option<PathBuf>,
+    job_windows: bool,
 }
 
 fn arguments() -> Arguments {
     let args: Vec<String> = std::env::args().skip(1).collect();
     assert!(
         args.len() >= 2,
-        "usage: certify_job_shop INSTANCE BOUND [SECONDS] [--dimacs PATH] [--witness JSON] [--model SAT-SOLUTION] [--schedule-out JSON] [--check-drat PATH]"
+        "usage: certify_job_shop INSTANCE BOUND [SECONDS] [--job-windows] [--dimacs PATH] [--witness JSON] [--model SAT-SOLUTION] [--schedule-out JSON] [--check-drat PATH] [--machine-orders PATH]"
     );
     let instance = PathBuf::from(&args[0]);
     let bound = args[1]
@@ -44,13 +48,21 @@ fn arguments() -> Arguments {
     let mut model = None;
     let mut schedule_out = None;
     let mut drat = None;
+    let mut machine_orders = None;
+    let mut job_windows = false;
     while index < args.len() {
+        if args[index] == "--job-windows" {
+            job_windows = true;
+            index += 1;
+            continue;
+        }
         let destination = match args[index].as_str() {
             "--dimacs" => &mut dimacs,
             "--witness" => &mut witness,
             "--model" => &mut model,
             "--schedule-out" => &mut schedule_out,
             "--check-drat" => &mut drat,
+            "--machine-orders" => &mut machine_orders,
             other => panic!("unknown argument: {other}"),
         };
         *destination = Some(PathBuf::from(
@@ -67,6 +79,8 @@ fn arguments() -> Arguments {
         model,
         schedule_out,
         drat,
+        machine_orders,
+        job_windows,
     }
 }
 
@@ -104,19 +118,49 @@ fn parse_competition_model(text: &str, variables: usize) -> CnfAssignment {
     )
 }
 
+fn write_machine_order_manifest(path: &PathBuf, encoding: &JobShopEncoding) {
+    let mut text = String::from(
+        "schema=axeyum.job-shop-machine-orders.v1\nindex\tmachine\tleft-job\tleft-operation\tright-job\tright-operation\tselector\n",
+    );
+    for (index, order) in encoding.machine_orders().iter().enumerate() {
+        writeln!(
+            text,
+            "{index}\t{}\t{}\t{}\t{}\t{}\t{}",
+            order.machine,
+            order.left_job,
+            order.left_operation,
+            order.right_job,
+            order.right_operation,
+            order.selector.dimacs()
+        )
+        .expect("write to String");
+    }
+    std::fs::write(path, text).expect("write machine-order manifest");
+}
+
 fn main() {
     let args = arguments();
     let text = std::fs::read_to_string(&args.instance).expect("read instance");
     let problem = JobShopProblem::parse_orlib(&text).expect("parse OR-Library instance");
-    let encoding = encode_job_shop(&problem, args.bound, JobShopEncodingLimits::default())
-        .expect("encoding must fit explicit defaults");
+    let encoding = if args.job_windows {
+        encode_job_shop_with_job_windows(&problem, args.bound, JobShopEncodingLimits::default())
+    } else {
+        encode_job_shop(&problem, args.bound, JobShopEncodingLimits::default())
+    }
+    .expect("encoding must fit explicit defaults");
     println!("schema=axeyum.job-shop-bound-run.v1");
     println!("instance={}", args.instance.display());
     println!("jobs={}", problem.jobs.len());
     println!("machines={}", problem.machines);
     println!("bound={}", args.bound);
+    println!("job-windows={}", args.job_windows);
     println!("variables={}", encoding.formula().variable_count());
     println!("clauses={}", encoding.formula().clauses().len());
+    println!("machine-orders={}", encoding.machine_orders().len());
+    if let Some(path) = &args.machine_orders {
+        write_machine_order_manifest(path, &encoding);
+        println!("machine-order-manifest={}", path.display());
+    }
 
     let formula = if let Some(path) = &args.witness {
         let bytes = std::fs::read(path).expect("read schedule JSON");
