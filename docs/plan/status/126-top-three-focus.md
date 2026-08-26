@@ -92,3 +92,4 @@ repository-built front door, not yet a published crate or prebuilt release.
 | 2026-08-26 | `30bfc8991` | Make generated statement-adapter names unique across arbitrarily many normalized slug collisions. |
 | 2026-08-26 | `1be7e79b1` | Promote the accepted command-faithful SMT-LIB driver to the named `axeyum` binary while preserving the checked example surface. |
 | 2026-08-26 | `1d4eed93a` | Regenerate the merged theorem graph at 1,250 theorems and 7,184 direct edges after concurrent CReal construction. |
+| 2026-08-26 | `eb38cf63a` | Exclude 23 held-out goals before open-census capsule access, disclose the superseded contaminated run, and remeasure 0/57 train/development conversion. |
