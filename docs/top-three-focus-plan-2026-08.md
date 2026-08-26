@@ -594,6 +594,15 @@ references. The complete Python authority collected 1,881 tests: 1,847 passed,
 this commit; it does not imply the independent Rust, docs, or remote-CI gates
 are green.
 
+That Python authority is no longer optional. Canonical `just check` now depends
+on the complete `py-check` recipe: a fresh editable PyO3 build, the 1,881-test
+suite, generated-stub drift, runtime stub comparison, the controlled type
+budget, Ruff lint, and Ruff formatting. The shell fallback and canonical gate
+agree about those commands. Two newly landed but unreachable controls—the
+proof-free statement-adapter generator and hash-pinned external-certificate
+runner—also run in both gates; the control reachability ratchet returns to its
+14 characterized legacy orphans rather than accepting growth to 16.
+
 ## Sequencing
 
 The critical path is not three independent projects:

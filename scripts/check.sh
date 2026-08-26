@@ -188,6 +188,10 @@ step capability-assurance python3 scripts/check-capability-assurance.py --quiet
 # against the routes it describes".
 step capability-routes python3 scripts/check-capability-routes.py
 step capability-routes-controls python3 -m unittest scripts.tests.test_check_capability_routes
+# Two live control modules landed without a runner. Register them before the
+# reachability ratchet so a regression in either boundary can fail this gate.
+step statement-adapter-generator-controls python3 -m unittest scripts.tests.test_gen_statement_adapters
+step external-certificate-controls python3 -m unittest scripts.tests.test_check_external_certificate
 # A control that no gate RUNS cannot fail, so it is not a control. Measured
 # 2026-08-17: 63 of 137 control modules were executed by nothing, and running the
 # 51 that need no cargo found 6 that no longer even import. Ratchet, not a wall.
