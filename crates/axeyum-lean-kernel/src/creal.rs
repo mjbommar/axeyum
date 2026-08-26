@@ -1522,6 +1522,37 @@ pub struct CRealPrelude {
     /// `CReal` has no standalone `neg_add` law of its own, so this is proved
     /// inline rather than declared).
     pub abs_sum_range_le: NameId,
+    /// `CReal.monotone_of_le_succ : ∀ f, (∀ n, le (f n) (f (Nat.succ n))) → ∀
+    /// a b, Nat.le a b → le (f a) (f b)` — the `CReal`-valued analogue of
+    /// `Nat.monotone_of_le_succ` (`nat_prelude/order.rs::declare_order`):
+    /// adjacent-step monotonicity for an arbitrary `Nat → CReal` sequence
+    /// implies full monotonicity across `Nat.le`. Proved by the identical
+    /// scaffold — eliminating the `Nat.le a b` derivation via `Nat.le`'s own
+    /// recursor (accessed through [`crate::nat_prelude::NatOps::prelude`]'s
+    /// `le_rec`), a `Prop`-into-`Prop` elimination and so never restricted by
+    /// `Exists.rec`'s data-elimination ban — with `CReal.le_refl`/
+    /// `CReal.le_trans` standing in for `Nat`'s own. This is genuinely new:
+    /// nothing in `creal/monotone.rs` compares a sequence across two
+    /// **different** outer indices, only same-index Cauchy/regularity facts
+    /// or derivative-driven monotonicity of a continuous `CReal → CReal`
+    /// function — never a bare `Nat`-indexed sequence.
+    pub mono_of_le_succ: NameId,
+    /// `CReal.sumRange_mono_outer : ∀ f, (∀ i, le zero (f i)) → ∀ m n, Nat.le
+    /// m n → le (sumRange f m) (sumRange f n)` — monotonicity of a finite sum
+    /// in the **outer** index (`m`/`n`, the summation bound), for a
+    /// pointwise-nonnegative summand. Distinct in kind from
+    /// [`Self::sum_range_le`], which compares two *different summands* at the
+    /// *same* bound. Built from [`Self::mono_of_le_succ`] applied to
+    /// `sumRange f`, with the adjacent step `le (sumRange f n) (sumRange f
+    /// (Nat.succ n))` proved from `sumRange_succ`'s defeq (`sumRange f (succ
+    /// n) ≡ add (sumRange f n) (f n)`) plus the shift-by-a-nonneg-summand
+    /// shape (`x ≤ x + w` from `w ≥ 0`, via `add_le_add`/`add_zero`/
+    /// `le_congr` — the same three-line argument `creal/monotone.rs`'s
+    /// private `shift_le_of_nonneg` makes, re-derived here rather than
+    /// imported since that helper is not `pub(super)`). This is exactly the
+    /// "monotonicity-in-the-outer-index" lemma `CReal.e`'s own construction
+    /// named as its still-missing prerequisite for `2 ≤ e ≤ 3`.
+    pub sum_range_mono_outer: NameId,
     /// `CReal.sumRange_telescope : ∀ f n, Equiv (sumRange (fun k => add (f
     /// (succ k)) (neg (f k))) n) (add (f n) (neg (f Nat.zero)))` —
     /// `Σ_{k<n} (f(k+1) − f k) ~ f n − f 0`. Induction on `n`; the base case
@@ -3461,6 +3492,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         mul_sum_range: kernel.name_str(creal, "mul_sumRange"),
         sum_range_le: kernel.name_str(creal, "sumRange_le"),
         abs_sum_range_le: kernel.name_str(creal, "abs_sumRange_le"),
+        mono_of_le_succ: kernel.name_str(creal, "monotone_of_le_succ"),
+        sum_range_mono_outer: kernel.name_str(creal, "sumRange_mono_outer"),
         sum_range_telescope: kernel.name_str(creal, "sumRange_telescope"),
         sum_range_split: kernel.name_str(creal, "sumRange_split"),
         sum_range_telescope_ge: kernel.name_str(creal, "sumRange_telescope_ge"),
