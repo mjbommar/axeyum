@@ -123,6 +123,11 @@
             "description": "Each INDEPENDENT re-derivation of this evidence, named. `check_status` alone cannot carry this: across the first 50 evidence rows in this ledger every single one said `checked`, so the field had no discriminating power at all, while one lane had in fact validated each result three separate ways — the producing solve, `Evidence::check` against a fresh parse, and an external z3 run — with all three collapsing into that one token.\n\nCross-oracle agreement is the strongest signal this repository has and it had nowhere to go but prose. List what actually re-derived the result, e.g. [\"producing-solve\", \"Evidence::check-fresh-parse\", \"z3-4.13\"]. Two entries that share an implementation are ONE check wearing two names; the value of the list is independence, not length."
           },
           "checker_command": { "type": "string" },
+          "kernel_declaration": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional exact declaration ID for kernel-term evidence. This is the backwards-compatible identity bridge when the historical evidence id is not itself kernel-<fully-qualified-declaration>. It grants search linkage only; the checker and kernel remain authoritative."
+          },
           "checker_seconds": {
             "type": "integer",
             "minimum": 1,

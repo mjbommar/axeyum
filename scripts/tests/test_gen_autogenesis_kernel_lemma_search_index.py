@@ -61,6 +61,23 @@ class KernelLemmaSearchIndexTests(unittest.TestCase):
             all(row["search_authority"].startswith("candidate-only") for row in self.rows.values())
         )
 
+    def test_explicit_declaration_identity_precedes_legacy_evidence_id(self):
+        self.assertEqual(
+            INDEX.exact_kernel_declaration(
+                {
+                    "id": "kernel-le_trans",
+                    "kernel_declaration": "Nat.le_trans",
+                }
+            ),
+            "Nat.le_trans",
+        )
+
+    def test_legacy_fully_qualified_evidence_id_remains_supported(self):
+        self.assertEqual(
+            INDEX.exact_kernel_declaration({"id": "kernel-Nat.le_trans"}),
+            "Nat.le_trans",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
