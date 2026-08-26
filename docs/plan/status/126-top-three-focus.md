@@ -37,3 +37,4 @@ the ordinary proof-isolated importer remains unchanged.
 | 2026-08-25 | `3cfb80172` | Resolve five manually verified Nat evidence identities; exact links reach 315 theorems and 319 facts without guessing. |
 | 2026-08-26 | `228494275` | Expose bounded retrieved-lemma application through the typed Python producer surface with full Python, stub, and type-gate coverage. |
 | 2026-08-26 | `0c261718f` | Add the fail-closed candidate-capsule import boundary required for theorem-composition dispatch. |
+| 2026-08-26 | `ebe2b7b2e` | Re-derive the kernel projection and lemma-search artifacts at 1,242 theorems after rebasing concurrent mathematics work. |
