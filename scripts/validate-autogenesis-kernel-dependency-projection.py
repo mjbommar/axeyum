@@ -41,6 +41,9 @@ def validate(data: Any) -> list[str]:
             errors.append(f"{ident}: non-theorem declaration carries invented theorem dependencies")
         if not declaration.get("visible_in"):
             errors.append(f"{ident}: declaration has no prelude visibility")
+        canonical_type = declaration.get("canonical_type")
+        if not isinstance(canonical_type, str) or not canonical_type:
+            errors.append(f"{ident}: declaration has no canonical kernel type")
     if len(by_id) < 700:
         errors.append(f"projection covers only {len(by_id)} declarations; wrong or incomplete kernel environment")
     expected = {

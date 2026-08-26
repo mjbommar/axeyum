@@ -30,7 +30,7 @@ def inventory() -> dict[str, dict[str, object]]:
     )
     rows: dict[str, dict[str, object]] = {}
     for line in proc.stdout.splitlines():
-        prelude, kind, name, footprint, dependencies = line.split("\t", 4)
+        prelude, kind, name, footprint, dependencies, canonical_type = line.split("\t", 5)
         direct = [dependency for dependency in dependencies.split(",") if dependency]
         row = {
             "id": name,
@@ -38,12 +38,18 @@ def inventory() -> dict[str, dict[str, object]]:
             "visible_in": [prelude],
             "axiom_footprint_size": int(footprint),
             "direct_theorem_dependencies": direct,
+            "canonical_type": canonical_type,
         }
         prior = rows.get(name)
         if prior is None:
             rows[name] = row
             continue
-        for field in ("declaration_kind", "axiom_footprint_size", "direct_theorem_dependencies"):
+        for field in (
+            "declaration_kind",
+            "axiom_footprint_size",
+            "direct_theorem_dependencies",
+            "canonical_type",
+        ):
             if prior[field] != row[field]:
                 raise ValueError(f"inconsistent {field} for declaration {name}")
         cast = prior["visible_in"]

@@ -34,6 +34,11 @@ class KernelProjectionControls(unittest.TestCase):
             self.assertEqual(rows[theorem]["declaration_kind"], "theorem")
             self.assertIn("characterization", rows[theorem]["visible_in"])
 
+    def test_every_declaration_has_a_kernel_rendered_type(self):
+        self.assertTrue(
+            all(row.get("canonical_type") for row in self.data["declarations"])
+        )
+
     def test_missing_edge_is_rejected(self):
         data = copy.deepcopy(self.data)
         data["direct_theorem_dependency_edges"].pop()

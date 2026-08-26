@@ -1,10 +1,11 @@
 //! Emit the complete constructed-prelude declaration surface for Autogenesis.
 //!
 //! Rows are `prelude<TAB>kind<TAB>name<TAB>axiom-footprint-size<TAB>` followed
-//! by a comma-separated list of *direct theorem dependencies*.  The last field
-//! is deliberately empty for non-theorems: a definition/recursor dependency
-//! closure is not proof-term theorem dependency and must not be conflated with
-//! it by the knowledge overlay.
+//! by a comma-separated list of *direct theorem dependencies* and the
+//! kernel-rendered canonical type. The dependency field is deliberately empty
+//! for non-theorems: a definition/recursor dependency closure is not proof-term
+//! theorem dependency and must not be conflated with it by the knowledge
+//! overlay.
 
 use axeyum_lean_kernel::{
     Declaration, Kernel, build_arith_prelude, build_characterization, build_complex_prelude,
@@ -41,13 +42,26 @@ fn emit(label: &str, kernel: &Kernel) {
             } else {
                 String::new()
             };
+            let canonical_type = kernel.render_lean(declaration.ty());
+            assert!(
+                !canonical_type.contains(['\t', '\n', '\r']),
+                "canonical declaration type must remain one TSV field"
+            );
             let footprint_size = kernel.axiom_footprint(*name).len();
-            (rendered, kind(declaration), footprint_size, direct_theorems)
+            (
+                rendered,
+                kind(declaration),
+                footprint_size,
+                direct_theorems,
+                canonical_type,
+            )
         })
         .collect::<Vec<_>>();
     rows.sort_by(|left, right| left.0.cmp(&right.0));
-    for (name, declaration_kind, footprint_size, dependencies) in rows {
-        println!("{label}\t{declaration_kind}\t{name}\t{footprint_size}\t{dependencies}");
+    for (name, declaration_kind, footprint_size, dependencies, canonical_type) in rows {
+        println!(
+            "{label}\t{declaration_kind}\t{name}\t{footprint_size}\t{dependencies}\t{canonical_type}"
+        );
     }
 }
 

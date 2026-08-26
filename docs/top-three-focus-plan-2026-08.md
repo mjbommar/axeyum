@@ -38,7 +38,8 @@ semantics, evidence, provenance, checking, and compounding knowledge loop.
 - The kernel, fact ledger, tactic catalog, obstruction graph, and concept graph
   are separately useful, but do not yet form one lemma-search substrate.
 - The generated lemma index now covers all 1,240 kernel theorems and their 6,946
-  direct edges. Exactly 395 theorems link to 390 fact records; 845 theorems have
+  direct edges, with a kernel-rendered canonical type on every row. Exactly 395
+  theorems link to 390 fact records; 845 theorems have
   no exact fact link. Only four evidence identities remain unresolved: three
   descriptive ordered-ring/Rat IDs and `Rat.normalize`, which resolves exactly
   but is a definition rather than a theorem. The projection now actually

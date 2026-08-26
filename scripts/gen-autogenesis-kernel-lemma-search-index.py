@@ -147,6 +147,7 @@ def build() -> dict[str, Any]:
         lemmas.append(
             {
                 "kernel_declaration_id": theorem,
+                "canonical_type": row["canonical_type"],
                 "axiom_footprint_size": row["axiom_footprint_size"],
                 "visible_in": row["visible_in"],
                 "direct_theorem_dependencies": row["direct_theorem_dependencies"],
