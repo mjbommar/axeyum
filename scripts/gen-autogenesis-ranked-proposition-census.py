@@ -24,10 +24,17 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--binary", type=Path, default=BINARY)
+    parser.add_argument("--ranking", type=Path, default=RANKING)
+    parser.add_argument("--population", type=Path, default=POPULATION)
+    parser.add_argument("--output", type=Path, default=OUTPUT)
     args = parser.parse_args()
+    args.ranking = args.ranking.resolve()
+    args.population = args.population.resolve()
+    args.output = args.output.resolve()
+    args.binary = args.binary.resolve()
 
-    ranking = json.loads(RANKING.read_text())
-    population = json.loads(POPULATION.read_text())
+    ranking = json.loads(args.ranking.read_text())
+    population = json.loads(args.population.read_text())
     held_out = set(ranking["excluded_held_out_fact_ids"])
     goals = {row["fact_id"]: row for row in ranking["goals"]}
     archive = Path(population["source"]["external_capsule_directory"])
@@ -75,8 +82,10 @@ def main() -> int:
         "kind": "axeyum-open-ranked-proposition-census",
         "state": "diagnostic-only-no-ledger-or-admission-authority",
         "source": {
-            "ranking_sha256": sha256(RANKING),
-            "population_sha256": sha256(POPULATION),
+            "ranking_path": str(args.ranking.relative_to(ROOT)),
+            "ranking_sha256": sha256(args.ranking),
+            "population_path": str(args.population.relative_to(ROOT)),
+            "population_sha256": sha256(args.population),
             "external_capsule_directory": str(archive),
         },
         "census": {
@@ -94,10 +103,10 @@ def main() -> int:
     }
     rendered = json.dumps(observation, indent=2, sort_keys=True) + "\n"
     if args.check:
-        if not OUTPUT.is_file() or OUTPUT.read_text() != rendered:
-            raise SystemExit(f"stale generated artifact: {OUTPUT.relative_to(ROOT)}")
+        if not args.output.is_file() or args.output.read_text() != rendered:
+            raise SystemExit(f"stale generated artifact: {args.output.relative_to(ROOT)}")
     else:
-        OUTPUT.write_text(rendered)
+        args.output.write_text(rendered)
     print(
         f"AUTOGENESIS_RANKED_PROPOSITION_CENSUS_OK|goals={len(rows)}|"
         f"pairs={candidate_count}|matches={len(matches)}|held_out=0"

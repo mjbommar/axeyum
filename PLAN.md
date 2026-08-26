@@ -139,6 +139,7 @@ now. Nothing was deleted.
 | 2026-08-26 | `cd02dbb57` | Add a fail-closed, operation-free proposition-reconciliation transaction with mutation controls and explicit zero autonomous credit. |
 | 2026-08-26 | `3d4bb31eb` | Materialize six live hash-bound reconciliation proposals with zero writes, operations, and autonomous credit. |
 | 2026-08-26 | `6a348363b` | Extend the crash-safe applier with live-rebuilt, operation-free reconciliation events and recovery controls at every durable boundary. |
+| 2026-08-26 | `4e025a444` | Preserve the pre-reconciliation ranking and bind the 57-goal census to its immutable path and hash. |
 | 2026-08-25 | `beb27f1ba` | **The trusted-core ceiling, raised the way the gate demanded.** Guard C failed at 5,508 past 5,500 with "say why before raising it." The baseline was RE-DERIVED by `git archive` rather than trusted, giving a per-file table summing to exactly +379 (`tc.rs` +347, `inductive.rs` +30, `env.rs` +2). Verdict: real and necessary — a universe-parameter closure fixing declarations **official Lean 4.30.0 refuses but this kernel wrongly admitted**, and `whnf_core` memoisation (138× cost, 1,857 s → 13.4 s) inside `def_eq`. Ceiling 5,900 with headroom matching the original's character; guard C re-verified to fire by injecting 500 lines in a scratch copy. The file's own comment said "5,110" where the real baseline was 5,129 — wrong from day one. |
 | 2026-08-25 | `0f2fb5fcd` | A doc line beginning with `+` is a Markdown list bullet, so ten `doc_list_item` errors pointed at ordinary prose one line below the cause. |
 | 2026-08-25 | `6de1d88f8` | Salvage: **the irrationality of √2** (`Nat.no_rational_sqrt_two`) and **`CReal.geom_tail_within`**, committed on behalf of two lanes killed mid-run by a spend limit. Both verified here: 695 tests, clippy `--all-targets`, axiom-free. |
@@ -1260,6 +1261,14 @@ replacement, and event publication is deterministic; all six live proposals
 reconstruct byte-for-byte. No fact status changed in this increment. Next:
 preserve v1 as the explicit pre-reconciliation baseline, then execute the six
 checked transitions and publish a v2 remaining-target census.
+The original 1,704-row candidate ranking is now preserved under an explicit
+pre-reconciliation path, and the 57-goal census pins that path and SHA rather
+than the mutable current ranking. Its six proposals were regenerated against
+the versioned census. This removes the artifact-lifecycle blocker: later
+status-driven ranking refreshes cannot rewrite or invalidate the experiment
+that justified reconciliation. Next: execute the six exact crash-safe
+transitions, regenerate current views, and publish the 51-goal remaining-target
+result separately.
 The accepted ADR-0541 general SMT-LIB session driver is now also a named
 `axeyum` binary target, not only a discoverability-poor Cargo example. The same
 source remains the historical example control, and the binary's focused check,

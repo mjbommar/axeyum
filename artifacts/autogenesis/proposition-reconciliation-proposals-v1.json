@@ -11,7 +11,7 @@
           "epistemic_status": "proved",
           "evidence": [
             {
-              "artifact": "sha256:2b794071ab62df41abbd7df6a406703bd55a6bd31575d91382083b9a2ef27f87",
+              "artifact": "sha256:d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8",
               "check_status": "checked",
               "checkers": [
                 "axeyum-lean-kernel",
@@ -51,18 +51,18 @@
           "statement": "The proposition declared as `Nat.choose_self` in the pinned Mathlib v4.30 source.",
           "title": "Mathlib v4.30 source proposition Nat.choose_self"
         },
-        "after_sha256": "d8a863e7623b4a0d48bdad4efa107c3417aea85a27c866e63cfea06240434c33",
+        "after_sha256": "92d8ebb4f203ca0666d463a105c90d6a219ebb3bee60bf4e874c3f80ee1c3645",
         "before_sha256": "4ca873910df6ce4103ffdc202e5d9cd5d6f6826daa79a0660117c52ccfbf4ef8",
         "path": "artifacts/facts/F-ml430-nat-choose-self-25bb9fb8.json"
       },
       "identity": {
-        "after_fact_sha256": "d8a863e7623b4a0d48bdad4efa107c3417aea85a27c866e63cfea06240434c33",
+        "after_fact_sha256": "92d8ebb4f203ca0666d463a105c90d6a219ebb3bee60bf4e874c3f80ee1c3645",
         "before_fact_sha256": "4ca873910df6ce4103ffdc202e5d9cd5d6f6826daa79a0660117c52ccfbf4ef8",
         "fact_id": "F:ml430-nat-choose-self-25bb9fb8",
         "knowledge_link_id": "L:ml430-nat-choose-self-definitionally-matches-native",
         "native_fact_id": "F:nat-choose-self",
         "native_theorem": "Nat.choose_self",
-        "proposition_census_sha256": "2b794071ab62df41abbd7df6a406703bd55a6bd31575d91382083b9a2ef27f87"
+        "proposition_census_sha256": "d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8"
       },
       "kind": "axeyum-proposition-reconciliation-transaction-proposal",
       "precondition": {
@@ -79,7 +79,7 @@
       },
       "schema_version": 1,
       "state": "prepared",
-      "transaction_sha256": "f735538d64cfc92cd13d40680ca8b51e57ed0b43b3cdc377c67077b67e32ecff"
+      "transaction_sha256": "ffbf5d7aa4c73faae3dbadae54375c160b3db0889d8cb625c0048109e5dd9d23"
     },
     {
       "admission_event": null,
@@ -92,7 +92,7 @@
           "epistemic_status": "proved",
           "evidence": [
             {
-              "artifact": "sha256:2b794071ab62df41abbd7df6a406703bd55a6bd31575d91382083b9a2ef27f87",
+              "artifact": "sha256:d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8",
               "check_status": "checked",
               "checkers": [
                 "axeyum-lean-kernel",
@@ -132,18 +132,18 @@
           "statement": "The proposition declared as `Nat.choose_succ_self` in the pinned Mathlib v4.30 source.",
           "title": "Mathlib v4.30 source proposition Nat.choose_succ_self"
         },
-        "after_sha256": "69c95d425a1910e73f3b613f04b838979b0edb4f6c6011417fc981fca2fada26",
+        "after_sha256": "afb4a8f5211629027fef069510fb741315df6453c2c0cfeffc8f846bb29c67af",
         "before_sha256": "6ba14bc9f97bbf8a0d4a43e7861a7cf2fe32e25366d8d1ad406b9221f6ec8a5d",
         "path": "artifacts/facts/F-ml430-nat-choose-succ-self-e396f6c2.json"
       },
       "identity": {
-        "after_fact_sha256": "69c95d425a1910e73f3b613f04b838979b0edb4f6c6011417fc981fca2fada26",
+        "after_fact_sha256": "afb4a8f5211629027fef069510fb741315df6453c2c0cfeffc8f846bb29c67af",
         "before_fact_sha256": "6ba14bc9f97bbf8a0d4a43e7861a7cf2fe32e25366d8d1ad406b9221f6ec8a5d",
         "fact_id": "F:ml430-nat-choose-succ-self-e396f6c2",
         "knowledge_link_id": "L:ml430-nat-choose-succ-self-definitionally-matches-native",
         "native_fact_id": "F:nat-choose-succ-self-eq-zero",
         "native_theorem": "Nat.choose_succ_self_eq_zero",
-        "proposition_census_sha256": "2b794071ab62df41abbd7df6a406703bd55a6bd31575d91382083b9a2ef27f87"
+        "proposition_census_sha256": "d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8"
       },
       "kind": "axeyum-proposition-reconciliation-transaction-proposal",
       "precondition": {
@@ -160,7 +160,7 @@
       },
       "schema_version": 1,
       "state": "prepared",
-      "transaction_sha256": "eae33b1dd3e9d584ba856883eae3f8bb1829886cf9ceaa850708195aae590c64"
+      "transaction_sha256": "7f0bb3b721ea847e3d8766c064f775c1c86ac119a456b69d3604b80b56ef6d65"
     },
     {
       "admission_event": null,
@@ -171,7 +171,7 @@
           "epistemic_status": "proved",
           "evidence": [
             {
-              "artifact": "sha256:2b794071ab62df41abbd7df6a406703bd55a6bd31575d91382083b9a2ef27f87",
+              "artifact": "sha256:d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8",
               "check_status": "checked",
               "checkers": [
                 "axeyum-lean-kernel",
@@ -211,18 +211,18 @@
           "statement": "The proposition declared as `Nat.choose_succ_succ` in the pinned Mathlib v4.30 source.",
           "title": "Mathlib v4.30 source proposition Nat.choose_succ_succ"
         },
-        "after_sha256": "19d1df749e9d7836adf3cf822af9eb04c6bc35d72ae096f1898226c473f1b8d0",
+        "after_sha256": "a744d2f193ec9ac8c486efe8dc7232559f04a4065ca88e864cef3d5da2901835",
         "before_sha256": "18a7c7220acdb38f72bcc573cbd525e5d8aeac7cf6f637e18a49444ef68c69d8",
         "path": "artifacts/facts/F-ml430-nat-choose-succ-succ-671856b6.json"
       },
       "identity": {
-        "after_fact_sha256": "19d1df749e9d7836adf3cf822af9eb04c6bc35d72ae096f1898226c473f1b8d0",
+        "after_fact_sha256": "a744d2f193ec9ac8c486efe8dc7232559f04a4065ca88e864cef3d5da2901835",
         "before_fact_sha256": "18a7c7220acdb38f72bcc573cbd525e5d8aeac7cf6f637e18a49444ef68c69d8",
         "fact_id": "F:ml430-nat-choose-succ-succ-671856b6",
         "knowledge_link_id": "L:ml430-nat-choose-succ-succ-definitionally-matches-native",
         "native_fact_id": "F:nat-choose-succ-succ",
         "native_theorem": "Nat.choose_succ_succ",
-        "proposition_census_sha256": "2b794071ab62df41abbd7df6a406703bd55a6bd31575d91382083b9a2ef27f87"
+        "proposition_census_sha256": "d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8"
       },
       "kind": "axeyum-proposition-reconciliation-transaction-proposal",
       "precondition": {
@@ -239,7 +239,7 @@
       },
       "schema_version": 1,
       "state": "prepared",
-      "transaction_sha256": "f38283a5d9eafd638d5b730857d2468edfe239999b50ed43b66679fe67e1bb6f"
+      "transaction_sha256": "e0c4f50466d32a825ac729fbb122ea6a21a4f57ceb449356f5fb5a26ca9bb9ed"
     },
     {
       "admission_event": null,
@@ -250,7 +250,7 @@
           "epistemic_status": "proved",
           "evidence": [
             {
-              "artifact": "sha256:2b794071ab62df41abbd7df6a406703bd55a6bd31575d91382083b9a2ef27f87",
+              "artifact": "sha256:d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8",
               "check_status": "checked",
               "checkers": [
                 "axeyum-lean-kernel",
@@ -290,18 +290,18 @@
           "statement": "The proposition declared as `Nat.choose_zero_right` in the pinned Mathlib v4.30 source.",
           "title": "Mathlib v4.30 source proposition Nat.choose_zero_right"
         },
-        "after_sha256": "1bac7b7d9a907700d482960cf20be329c31ddf89c6e59eb9c24dcab33cc5e00d",
+        "after_sha256": "153fe7fd17cc1c14e66ba3a8e70d715b993706f6c5377b9e2dfc471176e208f2",
         "before_sha256": "88d444adf9131a2fe21c61bcc5d8199b0935eda2df51bd5c76a2304c7bcdb9ea",
         "path": "artifacts/facts/F-ml430-nat-choose-zero-right-1ed2802a.json"
       },
       "identity": {
-        "after_fact_sha256": "1bac7b7d9a907700d482960cf20be329c31ddf89c6e59eb9c24dcab33cc5e00d",
+        "after_fact_sha256": "153fe7fd17cc1c14e66ba3a8e70d715b993706f6c5377b9e2dfc471176e208f2",
         "before_fact_sha256": "88d444adf9131a2fe21c61bcc5d8199b0935eda2df51bd5c76a2304c7bcdb9ea",
         "fact_id": "F:ml430-nat-choose-zero-right-1ed2802a",
         "knowledge_link_id": "L:ml430-nat-choose-zero-right-definitionally-matches-native",
         "native_fact_id": "F:nat-choose-zero-right",
         "native_theorem": "Nat.choose_zero_right",
-        "proposition_census_sha256": "2b794071ab62df41abbd7df6a406703bd55a6bd31575d91382083b9a2ef27f87"
+        "proposition_census_sha256": "d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8"
       },
       "kind": "axeyum-proposition-reconciliation-transaction-proposal",
       "precondition": {
@@ -318,7 +318,7 @@
       },
       "schema_version": 1,
       "state": "prepared",
-      "transaction_sha256": "e1a987ff0468a5ea364d0883fd1d471c2161941f3d575de30e111f9ffb2a81d0"
+      "transaction_sha256": "2905cec8219235fb16b5f6482cd6f55af67e14c1adb7cea01a46e70c3dd305dc"
     },
     {
       "admission_event": null,
@@ -329,7 +329,7 @@
           "epistemic_status": "proved",
           "evidence": [
             {
-              "artifact": "sha256:2b794071ab62df41abbd7df6a406703bd55a6bd31575d91382083b9a2ef27f87",
+              "artifact": "sha256:d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8",
               "check_status": "checked",
               "checkers": [
                 "axeyum-lean-kernel",
@@ -369,18 +369,18 @@
           "statement": "The proposition declared as `Nat.choose_zero_succ` in the pinned Mathlib v4.30 source.",
           "title": "Mathlib v4.30 source proposition Nat.choose_zero_succ"
         },
-        "after_sha256": "281a2200b9c93b36a59954764a6a78140ea784533460184eab6887a9b1c91261",
+        "after_sha256": "3bf3cb5688bbb6cd651715b9006d153cdb793663c0c5ed42b3d7195539514b13",
         "before_sha256": "b1936c360fa077b87f3cde0e4c5bec9cfdd3d6f9d8637dcf8f02cc6dbf3e397d",
         "path": "artifacts/facts/F-ml430-nat-choose-zero-succ-62c6520b.json"
       },
       "identity": {
-        "after_fact_sha256": "281a2200b9c93b36a59954764a6a78140ea784533460184eab6887a9b1c91261",
+        "after_fact_sha256": "3bf3cb5688bbb6cd651715b9006d153cdb793663c0c5ed42b3d7195539514b13",
         "before_fact_sha256": "b1936c360fa077b87f3cde0e4c5bec9cfdd3d6f9d8637dcf8f02cc6dbf3e397d",
         "fact_id": "F:ml430-nat-choose-zero-succ-62c6520b",
         "knowledge_link_id": "L:ml430-nat-choose-zero-succ-definitionally-matches-native",
         "native_fact_id": "F:nat-zero-choose-succ",
         "native_theorem": "Nat.zero_choose_succ",
-        "proposition_census_sha256": "2b794071ab62df41abbd7df6a406703bd55a6bd31575d91382083b9a2ef27f87"
+        "proposition_census_sha256": "d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8"
       },
       "kind": "axeyum-proposition-reconciliation-transaction-proposal",
       "precondition": {
@@ -397,7 +397,7 @@
       },
       "schema_version": 1,
       "state": "prepared",
-      "transaction_sha256": "a71bbe567719b3ca9e1e5c5dd05848cd27a990de057cd7b59879fbad211d4a67"
+      "transaction_sha256": "57d5c27515a08ce23517694fa790cb0c6f9da930d453efc01187273c402fcd2a"
     },
     {
       "admission_event": null,
@@ -408,7 +408,7 @@
           "epistemic_status": "proved",
           "evidence": [
             {
-              "artifact": "sha256:2b794071ab62df41abbd7df6a406703bd55a6bd31575d91382083b9a2ef27f87",
+              "artifact": "sha256:d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8",
               "check_status": "checked",
               "checkers": [
                 "axeyum-lean-kernel",
@@ -448,18 +448,18 @@
           "statement": "The proposition declared as `Nat.factorial_pos` in the pinned Mathlib v4.30 source.",
           "title": "Mathlib v4.30 source proposition Nat.factorial_pos"
         },
-        "after_sha256": "cdee8934de17b4dca664f97ba471fe552ef66ad49c5e651eacd836618850a8d1",
+        "after_sha256": "a19384dc8a6ea18026f31ddebd5fbc4f8f3e8757749936c6925f9f2125825d80",
         "before_sha256": "81877372cc34eaa5a0d2b6c12461ca24f7731c528998a2ede446e99adc8b41e9",
         "path": "artifacts/facts/F-ml430-nat-factorial-pos-f1dd2405.json"
       },
       "identity": {
-        "after_fact_sha256": "cdee8934de17b4dca664f97ba471fe552ef66ad49c5e651eacd836618850a8d1",
+        "after_fact_sha256": "a19384dc8a6ea18026f31ddebd5fbc4f8f3e8757749936c6925f9f2125825d80",
         "before_fact_sha256": "81877372cc34eaa5a0d2b6c12461ca24f7731c528998a2ede446e99adc8b41e9",
         "fact_id": "F:ml430-nat-factorial-pos-f1dd2405",
         "knowledge_link_id": "L:ml430-nat-factorial-pos-definitionally-matches-native",
         "native_fact_id": "F:nat-one-le-factorial",
         "native_theorem": "Nat.one_le_factorial",
-        "proposition_census_sha256": "2b794071ab62df41abbd7df6a406703bd55a6bd31575d91382083b9a2ef27f87"
+        "proposition_census_sha256": "d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8"
       },
       "kind": "axeyum-proposition-reconciliation-transaction-proposal",
       "precondition": {
@@ -476,12 +476,12 @@
       },
       "schema_version": 1,
       "state": "prepared",
-      "transaction_sha256": "fc14739dbb39fb62d46f19dee58e4123dab05ec5d442ce2ffbb845e968166226"
+      "transaction_sha256": "b4aaad37aedef97bfdae2cc511616656d8cdbc6d7ad86da6f549447babe95c5b"
     }
   ],
   "schema_version": 1,
   "source": {
-    "census_sha256": "2b794071ab62df41abbd7df6a406703bd55a6bd31575d91382083b9a2ef27f87",
+    "census_sha256": "d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8",
     "kernel_lemma_index_sha256": "e9fd5d16ee4739402bd9985c5c67e3b49b69761c9b004363129b579b06fc0041",
     "knowledge_overlay_sha256": "c165e9fd36d6126c4f0f8c7b3b8b69f0f32c37b7ae1abf26197dfdfa704567fd",
     "transaction_builder_sha256": "cf84ac4154215dcc40aa15388ca3af0f38dc699c986d7487e8c4e569b54ab698"
