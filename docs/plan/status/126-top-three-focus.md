@@ -102,6 +102,16 @@ reconciliation transaction, coordinated regeneration, and a remaining-target
 rerun. Next: add the two missing native fact records from kernel evidence, then
 specify and test the non-autonomous reconciliation transaction before changing
 any imported fact status.
+Two previously unlinked native theorem declarations now have first-class fact
+records derived from exact kernel types, direct dependencies, and theorem-level
+empty footprints: `Nat.choose_succ_self_eq_zero` and
+`Nat.zero_choose_succ`. The ledger reaches 698 facts / 504 proved while open
+remains 185; exact graph linkage reaches 397 theorems / 392 facts. All derived
+views were regenerated against the merged 1,253-theorem kernel, and the ranked
+57-goal census still finds exactly the same six matches. This is metadata and
+connective-tissue repair, not autonomous yield. Next: specify the reviewed
+reconciliation transaction and its negative controls before settling any of
+the six imported statement records.
 The accepted ADR-0541 general SMT-LIB session driver is now also a named
 `axeyum` binary target, not only a discoverability-poor Cargo example. The same
 source remains the historical example control, and the binary's focused check,
@@ -139,3 +149,4 @@ repository-built front door, not yet a published crate or prebuilt release.
 | 2026-08-26 | `dc71a97a1` | Add a proof-free multi-candidate audit and demonstrate exact native equivalence can be distinguished from nearby topical mismatches. |
 | 2026-08-26 | `16de20475` | Publish the hash-bound 57-goal ranked proposition census: six exact native equivalents, 678 declines, and zero held-out access. |
 | 2026-08-26 | `18ccc487e` | Add six independently checked, non-authoritative fact-to-kernel proposition-match links and document the reconciliation boundary. |
+| 2026-08-26 | `83b3694e8` | Register two missing native binomial facts from kernel inventories and regenerate all dependent knowledge views at 1,253 theorems. |
