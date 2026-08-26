@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 246] = [
+    let expected: [(&str, crate::NameId, &str); 248] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -584,6 +584,20 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         // (creal/ivt.rs), registered last: it reuses `CReal.lt_cotrans` and
         // `CReal.mesh_count_width`, both above.
         ("CReal.ivt_step", p.ivt_step, "theorem"),
+        // Spivak ch. 11's other two corollaries of "the significance of the
+        // derivative" (`creal/monotone.rs`), both built on
+        // `monotone_of_nonneg_deriv` via the `neg ∘ F` trick, without the
+        // Mean Value Theorem and without case-splitting on `CReal.le`.
+        (
+            "CReal.constant_of_zero_deriv",
+            p.constant_of_zero_deriv,
+            "theorem",
+        ),
+        (
+            "CReal.antitone_of_nonpos_deriv",
+            p.antitone_of_nonpos_deriv,
+            "theorem",
+        ),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel
@@ -4955,4 +4969,228 @@ fn sum_range_reblock_regroups_zero_through_five_two_ways() {
     check_instance(&mut d, p, g, index, fifteen_seq, 1, 3, "k3_blocksize2");
     // k = 2, block size n+1 = 3 (non-square): two triples, (0+1+2)+(3+4+5).
     check_instance(&mut d, p, g, index, fifteen_seq, 2, 2, "k2_blocksize3");
+}
+
+/// **Mandatory concrete instantiation** for `CReal.constant_of_zero_deriv`:
+/// the constant function `fun _ => one` on `[0, 1]`, whose derivative is the
+/// constant `zero` everywhere (`hasDerivative_const`), applied at `x :=
+/// zero`, `y := one`. `x` and `y` are distinct so a transposed-endpoint
+/// defect (both statements hold trivially by reflexivity at `x = y`) cannot
+/// hide; the expected conclusion is pinned by `render_lean` comparison
+/// against `Equiv (F zero) (F one)` built the SAME way, not just any
+/// `CReal.Equiv` statement.
+#[test]
+fn constant_of_zero_deriv_applies_to_a_constant_on_0_1() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    // const_one_fn := fun _ => one; const_zero_fn := fun _ => zero.
+    let const_one_fn = {
+        let r_fv = d.fresh_fvar();
+        d.lam_fv(r_fv, carrier, one_c)
+    };
+    let const_zero_fn = {
+        let r_fv = d.fresh_fvar();
+        d.lam_fv(r_fv, carrier, zero_c)
+    };
+
+    let hf = d.lemma(p.has_derivative_const, &[one_c, zero_c, one_c]);
+
+    // hderiv : ∀ z, le zero z -> le z one -> Equiv (const_zero_fn z) zero,
+    // i.e. Equiv zero zero regardless of z (const_zero_fn z beta-reduces to
+    // zero) -- `equiv_refl` alone.
+    let hderiv = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let haz_ty = d.const_app(p.le, &[zero_c, z]);
+        let hzb_ty = d.const_app(p.le, &[z, one_c]);
+        let haz_fv = d.fresh_fvar();
+        let hzb_fv = d.fresh_fvar();
+        let refl = d.lemma(p.equiv_refl, &[zero_c]);
+        let with_hzb = d.lam_fv(hzb_fv, hzb_ty, refl);
+        let with_haz = d.lam_fv(haz_fv, haz_ty, with_hzb);
+        d.lam_fv(z_fv, carrier, with_haz)
+    };
+
+    let le_zero_one = {
+        let lt = d.lemma(p.zero_lt_one, &[]);
+        d.lemma(p.le_of_lt, &[zero_c, one_c, lt])
+    };
+    let hax = d.lemma(p.le_refl, &[zero_c]);
+    let hxy = le_zero_one;
+    let hyb = d.lemma(p.le_refl, &[one_c]);
+
+    let instance = d.lemma(
+        p.constant_of_zero_deriv,
+        &[
+            const_one_fn,
+            const_zero_fn,
+            zero_c,
+            one_c,
+            hf,
+            hderiv,
+            zero_c,
+            one_c,
+            hax,
+            hxy,
+            hyb,
+        ],
+    );
+
+    let ty = d.kernel().infer(instance).unwrap_or_else(|error| {
+        panic!("constant_of_zero_deriv refused at the constant function on [0,1]: {error:?}")
+    });
+
+    let expected_fx = d.apply(const_one_fn, &[zero_c]);
+    let expected_fy = d.apply(const_one_fn, &[one_c]);
+    let expected_ty = d.const_app(p.equiv, &[expected_fx, expected_fy]);
+    let rendered = d.kernel().render_lean(ty);
+    let expected_rendered = d.kernel().render_lean(expected_ty);
+    assert_eq!(
+        rendered, expected_rendered,
+        "must conclude exactly `Equiv (F zero) (F one)` (F is the constant one), not some other CReal.Equiv statement"
+    );
+    assert!(
+        rendered.contains("CReal.zero") && rendered.contains("CReal.one"),
+        "the endpoints must be zero and one, not some other pair: {rendered}"
+    );
+}
+
+/// **Mandatory concrete instantiation** for `CReal.antitone_of_nonpos_deriv`:
+/// `F := fun r => neg r` on `[0, 1]`, whose derivative is the constant `neg
+/// one` everywhere (`hasDerivative_neg` applied to `hasDerivative_id`),
+/// applied at `x := zero`, `y := one`. Distinct `x`/`y` again rules out the
+/// trivial-by-reflexivity degenerate case; the expected conclusion is
+/// pinned to `le (F one) (F zero)` (note the endpoints are ALREADY reversed
+/// in the conclusion -- this is the antitone direction, not `monotone`'s).
+#[test]
+fn antitone_of_nonpos_deriv_applies_to_negated_identity_on_0_1() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    // identity := fun r => r; const_one := fun _ => one (F' before negation).
+    let identity = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+    let const_one = {
+        let r_fv = d.fresh_fvar();
+        d.lam_fv(r_fv, carrier, one_c)
+    };
+
+    let hf_id = d.lemma(p.has_derivative_id, &[zero_c, one_c]);
+    // hf : HasDerivativeOn (fun r => neg r) (fun r => neg one) zero one.
+    let hf = d.lemma(
+        p.has_derivative_neg,
+        &[identity, const_one, zero_c, one_c, hf_id],
+    );
+
+    let neg_r = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let nr = d.const_app(p.neg, &[r]);
+        d.lam_fv(r_fv, carrier, nr)
+    };
+    let neg_one = {
+        let r_fv = d.fresh_fvar();
+        let no = d.const_app(p.neg, &[one_c]);
+        d.lam_fv(r_fv, carrier, no)
+    };
+
+    // le (neg one) zero, from `zero_lt_one`/`le_of_lt` and `neg_le_neg`
+    // against `neg_zero_equiv` (built inline, matching the theorem's own
+    // route): le zero one -> le (neg one) (neg zero) -> le (neg one) zero.
+    let le_neg_one_zero = {
+        let lt = d.lemma(p.zero_lt_one, &[]);
+        let le_zero_one = d.lemma(p.le_of_lt, &[zero_c, one_c, lt]);
+        let flipped = d.lemma(p.neg_le_neg, &[zero_c, one_c, le_zero_one]);
+        // flipped : le (neg one) (neg zero)
+        let neg_zero = d.const_app(p.neg, &[zero_c]);
+        let neg_one_c = d.const_app(p.neg, &[one_c]);
+        let nz_symm = {
+            let hn = d.lemma(p.add_zero, &[neg_zero]);
+            let padded = d.const_app(p.add, &[neg_zero, zero_c]);
+            let comm = d.lemma(p.add_comm, &[neg_zero, zero_c]);
+            let flip = d.const_app(p.add, &[zero_c, neg_zero]);
+            let an = d.lemma(p.add_neg, &[zero_c]);
+            let s1 = d.lemma(p.equiv_symm, &[padded, neg_zero, hn]);
+            let s2 = d.lemma(p.equiv_trans, &[neg_zero, padded, flip, s1, comm]);
+            d.lemma(p.equiv_trans, &[neg_zero, flip, zero_c, s2, an])
+        };
+        let refl_neg_one = d.lemma(p.equiv_refl, &[neg_one_c]);
+        d.lemma(
+            p.le_congr,
+            &[
+                neg_one_c,
+                neg_one_c,
+                neg_zero,
+                zero_c,
+                refl_neg_one,
+                nz_symm,
+                flipped,
+            ],
+        )
+    };
+
+    // hderiv : ∀ z, le zero z -> le z one -> le (neg_one z) zero, i.e.
+    // le (neg one) zero regardless of z.
+    let hderiv = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let haz_ty = d.const_app(p.le, &[zero_c, z]);
+        let hzb_ty = d.const_app(p.le, &[z, one_c]);
+        let haz_fv = d.fresh_fvar();
+        let hzb_fv = d.fresh_fvar();
+        let with_hzb = d.lam_fv(hzb_fv, hzb_ty, le_neg_one_zero);
+        let with_haz = d.lam_fv(haz_fv, haz_ty, with_hzb);
+        d.lam_fv(z_fv, carrier, with_haz)
+    };
+
+    let le_zero_one = {
+        let lt = d.lemma(p.zero_lt_one, &[]);
+        d.lemma(p.le_of_lt, &[zero_c, one_c, lt])
+    };
+    let hax = d.lemma(p.le_refl, &[zero_c]);
+    let hxy = le_zero_one;
+    let hyb = d.lemma(p.le_refl, &[one_c]);
+
+    let instance = d.lemma(
+        p.antitone_of_nonpos_deriv,
+        &[
+            neg_r, neg_one, zero_c, one_c, hf, hderiv, zero_c, one_c, hax, hxy, hyb,
+        ],
+    );
+
+    let ty = d.kernel().infer(instance).unwrap_or_else(|error| {
+        panic!("antitone_of_nonpos_deriv refused at negated identity on [0,1]: {error:?}")
+    });
+
+    let expected_fy = d.apply(neg_r, &[zero_c]);
+    let expected_fx = d.apply(neg_r, &[one_c]);
+    let expected_ty = d.const_app(p.le, &[expected_fx, expected_fy]);
+    let rendered = d.kernel().render_lean(ty);
+    let expected_rendered = d.kernel().render_lean(expected_ty);
+    assert_eq!(
+        rendered, expected_rendered,
+        "must conclude exactly `le (F one) (F zero)` (F is negated identity), not some other CReal.le statement"
+    );
+    assert!(
+        rendered.contains("CReal.zero") && rendered.contains("CReal.one"),
+        "the endpoints must be zero and one, not some other pair: {rendered}"
+    );
 }

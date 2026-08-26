@@ -2214,6 +2214,22 @@ pub struct CRealPrelude {
     /// land in whichever half keeps the sign invariant, at exactly half the
     /// width. See that module's documentation for the full paper argument.
     pub ivt_step: NameId,
+    /// `CReal.constant_of_zero_deriv : ∀ F F' a b, HasDerivativeOn F F' a b →
+    /// (∀ z, le a z → le z b → Equiv (F' z) zero) → ∀ x y, le a x → le x y →
+    /// le y b → Equiv (F x) (F y)` (`creal/monotone.rs`) — a vanishing
+    /// derivative on `[a, b]` makes `F` constant there (Spivak ch. 11).
+    /// Applies [`Self::monotone_of_nonneg_deriv`] TWICE — once to `F`
+    /// directly, once to `neg ∘ F` via [`Self::has_derivative_neg`] — and
+    /// closes the resulting `le (F x) (F y)`/`le (F y) (F x)` pair with
+    /// `equiv_of_le_le`. No Mean Value Theorem, no case split on `CReal.le`.
+    pub constant_of_zero_deriv: NameId,
+    /// `CReal.antitone_of_nonpos_deriv : ∀ F F' a b, HasDerivativeOn F F' a
+    /// b → (∀ z, le a z → le z b → le (F' z) zero) → ∀ x y, le a x → le x y
+    /// → le y b → le (F y) (F x)` (`creal/monotone.rs`) — the mirror of
+    /// [`Self::monotone_of_nonneg_deriv`]: a nonpositive derivative on
+    /// `[a, b]` makes `F` antitone there, via the same `neg ∘ F` trick
+    /// [`Self::constant_of_zero_deriv`] uses for its second direction.
+    pub antitone_of_nonpos_deriv: NameId,
 }
 
 impl CRealPrelude {
@@ -2528,6 +2544,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sum_range_double: kernel.name_str(creal, "sumRange_double"),
         monotone_of_nonneg_deriv: kernel.name_str(creal, "monotone_of_nonneg_deriv"),
         ivt_step: kernel.name_str(creal, "ivt_step"),
+        constant_of_zero_deriv: kernel.name_str(creal, "constant_of_zero_deriv"),
+        antitone_of_nonpos_deriv: kernel.name_str(creal, "antitone_of_nonpos_deriv"),
     }
 }
 
