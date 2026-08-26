@@ -172,7 +172,16 @@ pub(super) fn declare_ivt(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
     declare_ivt_bisect(d, p)?;
     declare_ivt_bisect_lo(d, p)?;
     declare_ivt_bisect_hi(d, p)?;
-    declare_ivt_bisect_invariant(d, p)
+    declare_ivt_bisect_invariant(d, p)?;
+    // The DIAGONAL bisection -- one `Nat.rec`, no external slack parameter,
+    // each step sampling at its own recursion depth. See
+    // `CRealPrelude::ivt_bisect_diag`'s own doc comment and this file's
+    // "Diagonal bisection" section (near `declare_ivt_bisect_diag`, below)
+    // for the construction and the two counterexamples that close off an
+    // exact root via this route.
+    declare_ivt_bisect_diag(d, p)?;
+    declare_ivt_bisect_diag_lo(d, p)?;
+    declare_ivt_bisect_diag_hi(d, p)
 }
 
 // --- small shared idiom (private to this module, per the codebase's own
@@ -2953,4 +2962,192 @@ fn declare_ivt_bisect_invariant(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(
         ty,
         value,
     })
+}
+
+// =============================================================================
+// `CReal.ivt_bisect_diag` -- the DIAGONAL bisection, per
+// `docs/mathematics-2026-08/diary-exact-root-obstruction.md`'s "diagonal
+// bisection with shrinking slack" addendum. `CRealPrelude::ivt_bisect_diag`'s
+// own doc comment has the statement and both counterexamples; the summary:
+//
+// `declare_ivt_bisect`'s `step` closure receives the recursion depth `j` as
+// its first argument (`data_induct`'s own `step: ... Fn(&mut IntDev<'_>,
+// ExprId, ExprId) -> ExprId`) and DISCARDS it (`|d, _j, ih| ...`), instead
+// closing over a FIXED `n` computed once outside the recursion. This
+// construction uses `j` itself in place of that fixed `n`: `(sample_idx,
+// thresh_rat) := bisect_sample_index(d, p, j)`, recomputed AT EVERY STEP from
+// the step's own depth. No second `Nat` parameter is needed at all -- the
+// slack shrinks along the SAME diagonal the bisection depth walks, which is
+// what "diagonal" names here.
+//
+// This is NOT a sound route to an exact root, and the diary records why with
+// two independent, kernel-verified counterexamples on `F := id` on `[-1,2]`:
+//
+//   1. THIS construction (shrinking slack folded into one recursion): the
+//      LOWER endpoint is accepted once, against the COARSEST slack
+//      (`thresh_0 = 1/2`, `F(1/2) = 1/2 <= 1/2`), and is never re-examined
+//      against any tighter threshold thereafter (only the endpoint that
+//      MOVES gets tested at the new depth's slack; the stationary one keeps
+//      whatever bound justified its last move). The upper endpoint keeps
+//      moving and the width keeps halving, so the bracket DOES converge --
+//      to `L = 1/2`, not to the true root `0`, and `F(1/2) = 1/2` is bounded
+//      away from `0`.
+//   2. The OTHER natural diagonal reading -- re-run `ivt_bisect` FRESH from
+//      `(P0, Q0)` for `k` steps at slack `n := k` (i.e. `ivt_bisect F P Q k
+//      k`, `ivt_bisect`'s own two-parameter interface with both arguments
+//      set equal) -- fails for the opposite reason: since ALL `k` steps of a
+//      given run share `n`'s SINGLE threshold, a threshold change at one `k`
+//      can flip an EARLY branch decision, and brackets across different `k`
+//      are then NOT nested. Concretely: at `k=3` the bracket is `(1/8, 1/2)`
+//      and at `k=4` it is `(-1/16, 1/8)` -- disjoint interiors, not nested,
+//      so there is no shared refinement for a limit argument to close over.
+//
+// Both natural constructions are closed off for GENERAL `F` satisfying only
+// the one-sided approximate-IVT hypothesis; this file lands the DATA and a
+// concrete reduction test recording counterexample (1) at the kernel level
+// (an exact rational computation, not an informal claim), and stops there --
+// no invariant/exactness theorem is attempted, because none holds.
+// =============================================================================
+
+/// `CReal.ivt_bisect_diag` -- see this section's module documentation and
+/// [`super::CRealPrelude::ivt_bisect_diag`]'s own doc comment for the
+/// construction and the two counterexamples that close off an exact root via
+/// this route.
+fn declare_ivt_bisect_diag(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let fn_ty = d.arrow(carrier, carrier);
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let bracket_ty = d.arrow(bool_ty, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let cp0_fv = d.fresh_fvar();
+    let cp0 = d.kernel().fvar(cp0_fv);
+    let cq0_fv = d.fresh_fvar();
+    let cq0 = d.kernel().fvar(cq0_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let motive_body = |d: &mut IntDev<'_>, _x: ExprId| -> ExprId { d.arrow(bool_ty, carrier) };
+
+    let base = |d: &mut IntDev<'_>| -> ExprId {
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        // b = true -> hi = cq0; b = false -> lo = cp0.
+        let body = bool_select_creal(d, p, carrier, b, cq0, cp0);
+        d.lam_fv(b_fv, bool_ty, body)
+    };
+
+    let step = |d: &mut IntDev<'_>, j: ExprId, ih: ExprId| -> ExprId {
+        let lo = {
+            let fls = d.bool_false();
+            d.apply(ih, &[fls])
+        };
+        let hi = {
+            let tru = d.bool_true();
+            d.apply(ih, &[tru])
+        };
+        let m = midpoint(d, p, lo, hi);
+        let fm = d.apply(f, &[m]);
+        // THE difference from `declare_ivt_bisect`: sample/threshold at THIS
+        // step's own depth `j`, not a fixed external `n` captured outside
+        // the recursion.
+        let (sample_idx, thresh_rat) = bisect_sample_index(d, p, j);
+        let s = sample(d, p, fm, sample_idx);
+        let br = d.const_app(p.rat.ble, &[s, thresh_rat]);
+        let new_lo = bool_select_creal(d, p, carrier, br, m, lo);
+        let new_hi = bool_select_creal(d, p, carrier, br, hi, m);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let body = bool_select_creal(d, p, carrier, b, new_hi, new_lo);
+        d.lam_fv(b_fv, bool_ty, body)
+    };
+
+    let bracket = data_induct(d, &motive_body, &base, &step, k);
+
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, bracket);
+        let with_cq0 = d.lam_fv(cq0_fv, carrier, with_k);
+        let with_cp0 = d.lam_fv(cp0_fv, carrier, with_cq0);
+        d.lam_fv(f_fv, fn_ty, with_cp0)
+    };
+    let ty = {
+        let with_k = d.pi_fv(k_fv, nat, bracket_ty);
+        let with_cq0 = d.pi_fv(cq0_fv, carrier, with_k);
+        let with_cp0 = d.pi_fv(cp0_fv, carrier, with_cq0);
+        d.pi_fv(f_fv, fn_ty, with_cp0)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.ivt_bisect_diag,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(super::DERIVED_HEIGHT + 62),
+    })
+}
+
+/// Shared body for [`declare_ivt_bisect_diag_lo`]/[`declare_ivt_bisect_diag_hi`]:
+/// `fun F P Q k => ivt_bisect_diag F P Q k selector`.
+fn declare_ivt_bisect_diag_projection(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    name: NameId,
+    height: u16,
+    which: bool,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let fn_ty = d.arrow(carrier, carrier);
+    let nat = d.nat_ty();
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let cp0_fv = d.fresh_fvar();
+    let cp0 = d.kernel().fvar(cp0_fv);
+    let cq0_fv = d.fresh_fvar();
+    let cq0 = d.kernel().fvar(cq0_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let selector = if which { d.bool_true() } else { d.bool_false() };
+    let bisect = d.kernel().const_(p.ivt_bisect_diag, vec![]);
+    let applied = d.apply(bisect, &[f, cp0, cq0, k, selector]);
+
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, applied);
+        let with_cq0 = d.lam_fv(cq0_fv, carrier, with_k);
+        let with_cp0 = d.lam_fv(cp0_fv, carrier, with_cq0);
+        d.lam_fv(f_fv, fn_ty, with_cp0)
+    };
+    let ty = {
+        let with_k = d.pi_fv(k_fv, nat, carrier);
+        let with_cq0 = d.pi_fv(cq0_fv, carrier, with_k);
+        let with_cp0 = d.pi_fv(cp0_fv, carrier, with_cq0);
+        d.pi_fv(f_fv, fn_ty, with_cp0)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(height),
+    })
+}
+
+/// `CReal.ivt_bisect_diag_lo := fun F P Q k => ivt_bisect_diag F P Q k
+/// Bool.false`.
+fn declare_ivt_bisect_diag_lo(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    declare_ivt_bisect_diag_projection(
+        d,
+        p,
+        p.ivt_bisect_diag_lo,
+        super::DERIVED_HEIGHT + 63,
+        false,
+    )
+}
+
+/// `CReal.ivt_bisect_diag_hi := fun F P Q k => ivt_bisect_diag F P Q k
+/// Bool.true`.
+fn declare_ivt_bisect_diag_hi(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    declare_ivt_bisect_diag_projection(d, p, p.ivt_bisect_diag_hi, super::DERIVED_HEIGHT + 63, true)
 }
