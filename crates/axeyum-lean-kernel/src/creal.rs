@@ -2182,6 +2182,18 @@ pub struct CRealPrelude {
     /// interpolation endpoints, not only the last one the original two-lane
     /// handoff plan named.
     pub monotone_of_nonneg_deriv: NameId,
+
+    /// `CReal.ivt_step : ∀ F P Q eps, lt zero eps → le P Q → le (F P) eps →
+    /// le (neg eps) (F Q) → ∃ P' Q', le P P' ∧ le P' Q' ∧ le Q' Q ∧
+    /// le (F P') eps ∧ le (neg eps) (F Q') ∧ Equiv (add Q' (neg P')) (mul
+    /// (add Q (neg P)) (ofRat (natDivSucc 1 1)))` (`creal/ivt.rs`) — the one
+    /// bisection step of the constructive approximate Intermediate Value
+    /// Theorem: bisect `[P, Q]` at its midpoint `m`, decide via
+    /// [`Self::lt_cotrans`] applied to the fixed strict pair `neg eps < eps`
+    /// at `F m` (never at the undecidable exact sign of `F m` itself), and
+    /// land in whichever half keeps the sign invariant, at exactly half the
+    /// width. See that module's documentation for the full paper argument.
+    pub ivt_step: NameId,
 }
 
 impl CRealPrelude {
@@ -2493,6 +2505,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         subdivision_point_in_bounds: kernel.name_str(creal, "subdivisionPoint_in_bounds"),
         sum_range_double: kernel.name_str(creal, "sumRange_double"),
         monotone_of_nonneg_deriv: kernel.name_str(creal, "monotone_of_nonneg_deriv"),
+        ivt_step: kernel.name_str(creal, "ivt_step"),
     }
 }
 
@@ -2620,7 +2633,12 @@ pub(crate) fn build_creal_prelude_uncached(
         // `nat_prelude`, consumed here through `IntDev`'s `NatOps` impl) and
         // `Rat.normalize`; nothing else in this file depends on them, so they
         // land last.
-        exponential::declare_exponential(&mut d, prelude)
+        exponential::declare_exponential(&mut d, prelude)?;
+        // `ivt::declare_ivt` needs `CReal.lt_cotrans` (`cotransitivity`, well
+        // above), `CReal.mesh_count_width` (`monotone::declare_monotone_of_nonneg_deriv_all`,
+        // also above) and ordinary ring/order laws; nothing later depends on
+        // it, so it lands last.
+        ivt::declare_ivt(&mut d, prelude)
     })();
     match built {
         Ok(()) => {
@@ -3546,6 +3564,7 @@ mod field;
 mod geometric;
 mod integral;
 mod inverse;
+mod ivt;
 mod lattice;
 mod monotone;
 mod mul_self_zero;
