@@ -1,3 +1,15 @@
+# Spivak, *Calculus* — the spine, and three routes through it
+
+> **2026-08-25 amendment.** This note originally covered Chapter 1 only, split
+> two ways: *solver-decidable* versus *Lean-horizon*. That split is now
+> misleading, because most of the analysis has arrived by a **third route** the
+> note did not name — the constructive kernel (`CReal`, a Bishop setoid,
+> trusted surface 0). The full-spine map is at the bottom; the original
+> Chapter-1 material below is unchanged and still accurate.
+>
+> The important correction: **"Lean-horizon" reads as "not yet", and for
+> Chapter 7 it is closer to "not ever, in this logic."** See the spine table.
+
 # Spivak, *Calculus* — Chapter 1 through the Decidability Lens
 
 Spivak's Chapter 1, "Basic Properties of Numbers," founds the whole book on the
@@ -74,3 +86,70 @@ fixed-degree-polynomial reasoning — i.e. a hand-curated **LRA + NRA benchmark*
 of foundational, human-meaningful theorems. It exercises exactly the arithmetic
 the proof track cares about, and it cleanly separates checked LRA/SOS evidence,
 decision-only or incomplete NRA routes, and the Lean horizon.
+
+
+---
+
+# The spine, end to end (measured 2026-08-25)
+
+Three routes, not two:
+
+- **S — solver-decidable.** LRA/NRA/SOS with a re-checked certificate. This is
+  what the Chapter-1 material above covers.
+- **K — constructive kernel.** Proved in `axeyum-lean-kernel` over `CReal`,
+  axiom-free. Most of the analysis lives here.
+- **X — unavailable in this logic.** Not a gap in effort; the classical
+  statement is not constructively provable, and the entry names its
+  constructive substitute.
+
+Counts are `CReal.*` declarations matching the topic, from
+`prelude_theorem_inventory --release --include-constructed`.
+
+| Spivak | Topic | Route | State |
+|---|---|---|---|
+| 1 | Ordered-field axioms P1–P12, inequalities | **S** | table above; `spivak_inequalities.rs` |
+| 2 | Induction, binomial theorem | **K** | `Nat.add_pow`, `Complex.add_pow` |
+| 3–4 | Functions, graphs | — | no carrier needed |
+| 5 | Limits | **K** | 11 `converges_*`, incl. `converges_of_cauchy`, `converges_unique`, `converges_squeeze` |
+| 6 | Continuous functions | **K** | 9 `continuous_*` / `uniformly_continuous_*` |
+| **7** | **"Three Hard Theorems"** — IVT, EVT, boundedness | **X** | **0.** See below. |
+| 8 | Least upper bounds | **X → K** | classical LUB unavailable; **Bishop completeness** proved instead (`creal/completeness.rs`): every regular sequence of reals has a limit, *constructed* |
+| 9–10 | Derivatives, differentiation rules | **K** | 16 `hasDerivative_*` incl. `_chain`, `_mul`, `_pow` |
+| **11** | Significance of the derivative (MVT) | **X → K** | MVT unavailable (rests on EVT); **`monotone_of_nonneg_deriv` proved without it**, by direct subdivision |
+| 12 | Inverse functions | — | open |
+| 13 | Integrals | **K** | partial — `riemannSum` + 6 laws; the **limit** is not yet built |
+| 14 | Fundamental Theorem of Calculus | — | open, downstream of 13 |
+| 15–17 | Trig, π irrational, planetary motion | — | open; no transcendental functions exist |
+| 18 | Log and exp | **K** | partial — `expTerm`, `expSeriesPartial`; `e` blocked on the geometric Cauchy telescope |
+| 20 | Taylor polynomials | — | open |
+| 21 | `e` is irrational | — | open (√2's irrationality **is** proved, `Nat.no_rational_sqrt_two`) |
+| 22–23 | Sequences and series | **K** | comparison test, dominated convergence, telescoping, geometric tail bounds |
+| 24 | Uniform convergence, power series | — | open |
+| 25–27 | Complex numbers and functions | **K** | ~1,000 `Complex.*` declarations; field, `conj`, `normSq`, roots of unity, Ptolemy |
+| 28 | Fields | **K** | `Rat`, `CReal`, `Complex` field laws |
+| **29** | **Construction of the real numbers** | **K** | **`CReal` *is* this** — Bishop setoid over constructed rationals, trusted surface 0 (ADR-0512) |
+| 30 | Uniqueness of the reals | — | open (needs LUB, so likely **X**) |
+
+## Chapter 7 is the constructive fault line, and that is not a coincidence
+
+Spivak titles Chapter 7 "Three Hard Theorems" for pedagogical reasons — they are
+the first results in the book that genuinely need completeness. They are also,
+almost exactly, the theorems that **fail constructively**:
+
+- **IVT** asserts a root. No algorithm produces one in general: the root's
+  location can be made to depend on an undecidable comparison. The constructive
+  replacement is the **approximate IVT** (`∀ε ∃x, |f x| ≤ ε`), proved by
+  trisection with an overlap using **`CReal.lt_cotrans`** — Bishop's replacement
+  for trichotomy, which exists here precisely because `lt_total` does not.
+- **EVT** asserts an *attained* maximum. Constructively one gets a supremum only
+  under extra hypotheses, and attainment is exactly what is lost.
+- **Boundedness** on `[a,b]` is available for **uniformly** continuous
+  functions — which is why `UniformlyContinuousOn`, not pointwise continuity, is
+  the hypothesis Chapters 13 and 14 run on here.
+
+**MVT (Ch 11) inherits the problem** — it is proved classically via EVT. That is
+why `monotone_of_nonneg_deriv` was proved by direct subdivision instead, and why
+a brief attempting it must say *do not try to prove MVT first*.
+
+So the `X` rows are the interesting ones. A reader who sees "0" there and infers
+missing effort has it backwards: those zeros are where the logic is speaking.
