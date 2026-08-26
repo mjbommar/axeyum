@@ -1,12 +1,12 @@
 {
   "census": {
-    "distinct_exactly_linked_facts": 314,
+    "distinct_exactly_linked_facts": 319,
     "kernel_dependency_edges": 6838,
     "kernel_theorems": 1206,
     "maximum_dependency_depth": 26,
-    "theorems_with_exact_fact_links": 310,
-    "theorems_without_exact_fact_links": 896,
-    "unresolved_prefixed_kernel_evidence": 89
+    "theorems_with_exact_fact_links": 315,
+    "theorems_without_exact_fact_links": 891,
+    "unresolved_prefixed_kernel_evidence": 84
   },
   "derivation": {
     "fact_identity_rule": "kernel-term evidence with an explicit kernel_declaration, falling back for compatibility to an evidence id with exact kernel- or kernel: prefix and an exact current theorem suffix",
@@ -17251,7 +17251,9 @@
         "Nat.mod_eq_cancel",
         "Nat.mul_sub_left_distrib"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:nat-add-right-cancel"
+      ],
       "kernel_declaration_id": "Nat.add_right_cancel",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -17823,7 +17825,9 @@
         "Nat.choose_symm",
         "Nat.succ_mul_choose_eq"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:nat-choose-self"
+      ],
       "kernel_declaration_id": "Nat.choose_self",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -17872,7 +17876,9 @@
         "Nat.choose_symm",
         "Nat.succ_mul_choose_eq"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:nat-choose-succ-succ"
+      ],
       "kernel_declaration_id": "Nat.choose_succ_succ",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -18438,7 +18444,9 @@
         "Nat.sumDivisors_two_pow_eq_geom_sum",
         "Nat.sum_testBit_lt"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:nat-div-mod-exec"
+      ],
       "kernel_declaration_id": "Nat.div_mod_exec",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -19074,7 +19082,9 @@
         "Nat.sumDivisors_prime",
         "Nat.sumDivisors_two_pow_eq_geom_sum"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:nat-dvd-refl"
+      ],
       "kernel_declaration_id": "Nat.dvd_refl",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -34280,30 +34290,6 @@
       "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
     },
     {
-      "candidate_declaration_id": "add_right_cancel",
-      "evidence_id": "kernel-add_right_cancel",
-      "fact_id": "F:nat-add-right-cancel",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "choose_self",
-      "evidence_id": "kernel-choose_self",
-      "fact_id": "F:nat-choose-self",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "choose_succ_succ",
-      "evidence_id": "kernel-choose_succ_succ",
-      "fact_id": "F:nat-choose-succ-succ",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "div_mod_exec",
-      "evidence_id": "kernel-div_mod_exec",
-      "fact_id": "F:nat-div-mod-exec",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
       "candidate_declaration_id": "dvd_add_right_cancel_of_pos",
       "evidence_id": "kernel-dvd_add_right_cancel_of_pos",
       "fact_id": "F:nat-dvd-add-right-cancel-of-pos",
@@ -34331,12 +34317,6 @@
       "candidate_declaration_id": "dvd_mul_right_of_dvd",
       "evidence_id": "kernel-dvd_mul_right_of_dvd",
       "fact_id": "F:nat-dvd-mul-right-of-dvd",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "dvd_refl",
-      "evidence_id": "kernel-dvd_refl",
-      "fact_id": "F:nat-dvd-refl",
       "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
     },
     {

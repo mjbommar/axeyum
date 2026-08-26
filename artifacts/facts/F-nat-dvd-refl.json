@@ -21,6 +21,7 @@
     {
       "id": "kernel-dvd_refl",
       "kind": "kernel-term",
+      "kernel_declaration": "Nat.dvd_refl",
       "supports": "Nat.dvd_refl is admitted by the trusted kernel gate with the type recorded in formal.statement.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- Nat.dvd_refl 2>/dev/null | grep -Ec '^Nat\\.dvd_refl[[:space:]]')\" -ge 1",
