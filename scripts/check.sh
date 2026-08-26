@@ -555,6 +555,7 @@ step autogenesis-operation-registry-tests python3 -m unittest scripts.tests.test
 step autogenesis-authoritative-comparison-tests python3 -m unittest scripts.tests.test_compare_autogenesis_authoritative_chains
 step autogenesis-result python3 scripts/check-autogenesis-1-result.py
 step autogenesis-result-tests python3 -m unittest scripts.tests.test_check_autogenesis_1_result
+step autogenesis-authoritative-fact-tests python3 -m unittest scripts.tests.test_run_autogenesis_authoritative_fact
 step fact-frontier-tests python3 -m unittest scripts.tests.test_fact_frontier
 step autogenesis-operation-execution-tests python3 -m unittest scripts.tests.test_execute_autogenesis_operation
 step autogenesis-fact-operation-tests python3 -m unittest scripts.tests.test_check_autogenesis_fact_operation

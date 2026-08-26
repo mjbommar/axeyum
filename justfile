@@ -219,6 +219,11 @@ autogenesis-mathlib-facts:
 autogenesis-authoritative-chain output:
     python3 scripts/run-autogenesis-authoritative-chain.py "{{ output }}"
 
+# Run exactly the fact selected by the current authoritative frontier. The
+# caller supplies no fact, operation, producer, checker, or admission metadata.
+autogenesis-authoritative-fact output:
+    python3 scripts/run-autogenesis-authoritative-fact.py "{{ output }}"
+
 # Credit requires two independently retained runs from the same exact source.
 autogenesis-authoritative-compare first second output:
     python3 scripts/compare-autogenesis-authoritative-chains.py \
@@ -715,6 +720,7 @@ autogenesis-apply-search:
 
 autogenesis-result:
     python3 -m unittest scripts.tests.test_compare_autogenesis_authoritative_chains
+    python3 -m unittest scripts.tests.test_run_autogenesis_authoritative_fact
     python3 -m unittest scripts.tests.test_check_autogenesis_1_result
     python3 scripts/check-autogenesis-1-result.py
 
