@@ -20,7 +20,7 @@
       "supports": "Monotone Nat.fib",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --release --example nat_theorem_inventory -- fib_mono 2>/dev/null | grep -xFc 'Nat.fib_mono\t3\t((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x0 x1) -> AxNat.le (AxNat.fib x0) (AxNat.fib x1))))')\" -ge 1",
-      "notes": "The kernel re-infers the theorem type from the constructed term. Lean's `Monotone Nat.fib` unfolds to `forall a b, a <= b -> fib a <= fib b`, exactly the rendered core proposition checked here. The proof eliminates the `a <= b` derivation and composes the already admitted `Nat.fib_le_succ` at each step; the kernel-observed dependency closure, not this note, is authoritative."
+      "notes": "The kernel re-infers the theorem type from the constructed term. Lean's `Monotone Nat.fib` unfolds to `forall a b, a <= b -> fib a <= fib b`, exactly the rendered core proposition checked here. The proof specializes the target-agnostic `Nat.monotone_of_le_succ` combinator with the already admitted `Nat.fib_le_succ`; the kernel-observed dependency closure, not this note, is authoritative."
     },
     {
       "id": "footprint-Nat.fib_mono",

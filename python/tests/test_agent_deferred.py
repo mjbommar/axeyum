@@ -96,9 +96,26 @@ def approved(root, tmp_path_factory, module_stub):
 def module_stub():
     """Stub the producer for this module. Nothing here reads a pinned export."""
     original = tools.run_producer
+    original_resolve = tools.resolve_export
+    source = Path(__file__)
+    digest = __import__("hashlib").sha256(source.read_bytes()).hexdigest()
+
+    def resolve(root: Path, fact_id: str):
+        if fact_id != TARGET:
+            return original_resolve(root, fact_id)
+        return tools.ExportResolution(
+            fact_id=fact_id,
+            path=source,
+            sha256=digest,
+            target_definition="Axeyum.Autogenesis.Statement.NatModEqFamily.natModEqSymm",
+            source="portable-test-fixture",
+        )
+
     tools.run_producer = lambda tool, export: dict(STUB)
+    tools.resolve_export = resolve
     yield
     tools.run_producer = original
+    tools.resolve_export = original_resolve
 
 
 # ----------------------------------------------------------- the happy round trip

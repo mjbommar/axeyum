@@ -73,8 +73,11 @@ For `Nat.fib` monotonicity it returned the proved dependency
 `Nat.fib_le_succ` as an axiom-free kernel candidate. A reference composition
 now closes that stronger theorem by eliminating its order derivation and
 chaining the adjacent-step lemma; the kernel records direct dependencies on
-`Nat.fib_le_succ` and `Nat.le_trans`, and the ledger is settled from that
-axiom-free term. Unlinked dependencies remain explicit rather than repaired by
+`Nat.fib_le_succ` and the new target-agnostic
+`Nat.monotone_of_le_succ` combinator, and the ledger is settled from that
+axiom-free term. The combinator itself derives full monotonicity for any
+`Nat → Nat` function from its adjacent-step proof by eliminating the order
+derivation. Unlinked dependencies remain explicit rather than repaired by
 name similarity. This proves mathematical compounding through the connected
 graph, but not autonomous construction: the reference constructor was written
 by hand and production provenance correctly counts the result among the 472
@@ -122,9 +125,9 @@ bounded lemma selection, transport, and composition.
 1. Convert producer declines into a ranked, typed strategy backlog.
 2. Build a kernel-derived lemma-search index with exact dependency and
    visibility information; do not ask an LLM to invent the available library.
-3. Generalize the checked `Nat.fib_mono` reference construction into an
-   operation that recognizes the adjacent-step monotonicity schema without
-   naming Fibonacci or the target theorem.
+3. Expose the checked `Nat.monotone_of_le_succ` combinator through an operation
+   that recognizes the adjacent-step monotonicity schema without naming
+   Fibonacci or the target theorem.
 4. Generalize that implementation into bounded best-first lemma composition.
 5. Let an LLM propose lemma applications only across the untrusted boundary;
    the same kernel and footprint checks retain authority.
