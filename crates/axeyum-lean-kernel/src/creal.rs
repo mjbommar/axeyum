@@ -2091,6 +2091,14 @@ pub struct CRealPrelude {
     /// the derivation and for what still separates this from
     /// `riemannSum_cauchy`.
     pub sum_range_reblock: NameId,
+    /// `CReal.within_of_two_sided_le : ∀ t y : CReal, le t y → le (neg t) y →
+    /// ∀ i : Nat, Within (seq t i) (add (seq y i) (natDivSucc 2 i))`
+    /// (`creal/integral.rs`) — the general form of the "real inequality →
+    /// `Within` at a chosen index" bridge `geometric.rs::geom_tail_within`
+    /// builds bespoke for its own tail bound. See `integral.rs`'s own module
+    /// documentation for the derivation and for why `geom_tail_within`
+    /// could be re-derived from this without editing that file.
+    pub within_of_two_sided_le: NameId,
     /// `CReal.hasDerivative_closeOfEquiv : ∀ F F' a b, HasDerivativeOn F F' a b →
     /// ∀ u v, le a u → le u b → le a v → le v b → Equiv u v → Equiv (F u) (F v)`
     /// — differentiability implies (local) continuity: two `Equiv`-related
@@ -2443,6 +2451,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         riemann_sample_in_bounds: kernel.name_str(creal, "riemannSum_sample_in_bounds"),
         riemann_sum_le_on: kernel.name_str(creal, "riemannSum_le_on"),
         sum_range_reblock: kernel.name_str(creal, "sumRange_reblock"),
+        within_of_two_sided_le: kernel.name_str(creal, "within_of_two_sided_le"),
         has_derivative_close_of_equiv: kernel.name_str(creal, "hasDerivative_closeOfEquiv"),
         exp_term: kernel.name_str(creal, "expTerm"),
         exp_series_partial: kernel.name_str(creal, "expSeriesPartial"),
@@ -2547,6 +2556,12 @@ pub(crate) fn build_creal_prelude_uncached(
         // anything `declare_integral` itself adds, but lives right after it
         // as the same kind of `sumRange`-only building block.
         integral::declare_sum_range_reblock(&mut d, prelude)?;
+        // `within_of_two_sided_le` only needs the basic setoid/order
+        // definitions (`le`, `neg`, `seq`, `Within`) and `Rat`-level facts
+        // that predate `creal` entirely, so it has no dependency on anything
+        // in between; declared here as the same kind of standalone,
+        // reusable building block as `sumRange_reblock` just above.
+        integral::declare_within_of_two_sided_le(&mut d, prelude)?;
         // `monotone_of_nonneg_deriv` and its two supporting lemmas
         // (`sumRange_const`, `mesh_count_width`, `subdivisionPoint_in_bounds`)
         // reuse `CReal.ofNat_le` (`integral::declare_integral`, just above)

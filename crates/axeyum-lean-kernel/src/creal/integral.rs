@@ -120,14 +120,16 @@
 //! `declare_integral`'s caller for that check.
 
 use super::ring_helpers::right_distrib;
-use super::{CRealPrelude, DERIVED_HEIGHT, and_intro, cadd, creal_ty, embed, equiv};
+use super::{
+    CRealPrelude, DERIVED_HEIGHT, and_intro, cadd, creal_ty, div_succ, embed, equiv, sample, within,
+};
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::{IntDev, exists_elim};
 use crate::nat_prelude::NatOps;
 use crate::rat_prelude::ops::{
-    nat_eq_to_rat, nat_rewrite_prop, radd, rat_eq_rewrite, rchain, req, rmul, rone,
+    nat_eq_to_rat, nat_rewrite_prop, radd, rat_eq_rewrite, rchain, req, rle, rmul, rneg, rone,
 };
 
 /// Delta height for `CReal.riemannSum`: above `CReal.sumRange`
@@ -1935,5 +1937,170 @@ pub(super) fn declare_sum_range_reblock(
         uparams: vec![],
         ty: ty_full,
         value: value_full,
+    })
+}
+
+// --- `CReal.within_of_two_sided_le` -- the shared "real inequality → Within
+// at a chosen index" bridge, factored out of `geometric.rs::geom_tail_within`
+// ----------------------------------------------------------------------------
+//
+// Two independent developments needed the same bridge: `geometric.rs`'s
+// `declare_geom_tail_within` repackages a real-valued tail bound as a
+// rational `Within` bound at the tail's own canonical index, and this file's
+// eventual `riemannSum_cauchy` (once the per-block estimate this section's
+// own `sumRange_reblock` doc names is folded into a single real inequality)
+// will need exactly the same repackaging at `riemannSum`'s own canonical
+// sample indices `m`, `n`. `geom_tail_within`'s own derivation, reread with
+// its `pow`/`geom_tail_bounded_div`-specific pieces stripped away, is:
+//
+// 1. From `0 ≤ t` and `t ≤ y` (both real `CReal.le` facts), derive `−t ≤ y`
+//    via `le_trans` through `zero` (`neg_le_neg` + `neg_zero`'s own group
+//    identity) — pure ring/order reasoning, nothing series- or pow-specific.
+// 2. Apply BOTH real inequalities directly to a chosen index `i` — legal
+//    because `CReal.le` is a `Definition` (`le x y := ∀ n, seq x n − seq y n
+//    ≤ 2/(n+1)`), so `.apply(_, &[i])` unfolds it to the per-index `Rat.le`
+//    fact, for ANY `i`, not merely the tail's own canonical `add m n`.
+// 3. Close with `within_of_tail_le` (`series.rs`/`geometric.rs`, both
+//    private, reproduced here as [`within_of_sub_le`]): a RAT-LEVEL lemma
+//    over raw `u, v, w : Rat` that is already fully general and mentions no
+//    `CReal` construction at all.
+//
+// Nothing in steps 1–3 is specific to the geometric tail, or to any one
+// series: step 1 only needs `t`/`y` to be arbitrary `CReal`s related by
+// `0 ≤ t ≤ y`, step 2 works for any real `le` fact at any index, and step 3
+// is already a black box. So the bridge factors out exactly as hypothesized,
+// with ONE refinement: stating it directly from the pair `(le t y, le (neg
+// t) y)` — what step 1 actually produces, and what `within_of_sub_le` (via
+// its two hypotheses `h1`/`h2`) actually consumes — rather than from `0 ≤ t`,
+// makes the lemma STRICTLY more general (a `0 ≤ t` caller reaches `(le t y,
+// le (neg t) y)` in the one `le_trans` step [`declare_geom_tail_within`]
+// already performs; a caller who instead starts from `CReal.abs t ≤ y`
+// reaches the same pair via `CRealPrelude::abs_le`'s own two premises,
+// without ever touching nonnegativity) and needs no `0 ≤ t` hypothesis this
+// file's own eventual `riemannSum_cauchy` use (a signed difference of two
+// Riemann sums) would otherwise have to manufacture for no reason.
+//
+// **Could `geom_tail_within` be RE-DERIVED from this, without editing
+// `geometric.rs`?** Yes, and cleanly: `declare_geom_tail_within`'s own
+// `tail_nonneg`/`h_dom` already give `le zero tail` and `le tail y`
+// (`geometric.rs`'s own naming); one `le_trans` (through `zero`, exactly the
+// `neg_tail_le_y` step already inline there) produces the `le (neg tail) y`
+// this lemma wants, and then `within_of_two_sided_le tail y h_dom
+// neg_tail_le_y (add m n)` is `declare_geom_tail_within`'s entire
+// conclusion. The saving is real but modest: it would delete the local
+// `within_of_tail_le`/`sample`/`div_succ` plumbing from that file's proof
+// (a handful of lines) in exchange for one cross-module call, not a
+// structural simplification — the substantive work in `geom_tail_within`
+// (`geom_tail_bounded_div`, `geom_tail_nonneg`, and the `neg_tail_le_y`
+// derivation) is all UPSTREAM of this bridge and untouched by factoring it
+// out. Not done here per this slice's constraint against editing
+// `geometric.rs` (a live lane).
+
+/// From `Rat.le (Rat.sub u v) w` and `Rat.le (Rat.sub (Rat.neg u) v) w`,
+/// derive `CReal.Within u (Rat.add v w)`. Reproduced verbatim from
+/// `series.rs::within_of_tail_le` / `geometric.rs::within_of_tail_le` (both
+/// private to their own modules) — the RAT-LEVEL half of the bridge, already
+/// fully general over any `u, v, w`.
+fn within_of_sub_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    u: ExprId,
+    v: ExprId,
+    w: ExprId,
+    h1: ExprId,
+    h2: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let vw = radd(d, v, w);
+
+    let upper = d.lemma(rat.le_of_sub_le, &[u, v, w, h1]);
+
+    let neg_u = rneg(d, u);
+    let lower_neg = d.lemma(rat.le_of_sub_le, &[neg_u, v, w, h2]);
+
+    let neg_vw = rneg(d, vw);
+    let neg_neg_u = rneg(d, neg_u);
+    let flipped = d.lemma(rat.neg_le_neg, &[neg_u, vw, lower_neg]);
+
+    let nn = d.lemma(rat.neg_neg, &[u]);
+    let lower = rat_eq_rewrite(d, neg_neg_u, u, nn, flipped, &|d, t| rle(d, rat, neg_vw, t));
+
+    let lower_ty = rle(d, rat, neg_vw, u);
+    let upper_ty = rle(d, rat, u, vw);
+    and_intro(d, p, lower_ty, upper_ty, lower, upper)
+}
+
+/// `CReal.within_of_two_sided_le : ∀ t y : CReal, le t y → le (neg t) y →
+/// ∀ i : Nat, Within (seq t i) (add (seq y i) (natDivSucc 2 i))`. See this
+/// section's own module documentation for the derivation, and for whether
+/// `geometric.rs::geom_tail_within` could be re-derived from this (it could,
+/// without editing that file).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_within_of_two_sided_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+
+    let neg_t = cneg(d, p, t);
+    let hyp1 = cle(d, p, t, y);
+    let hyp2 = cle(d, p, neg_t, y);
+
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+
+    // `CReal.le` is a `Definition` (`le x y := ∀ n, seq x n − seq y n ≤
+    // 2/(n+1)`), so `.apply(_, &[i])` unfolds it directly to the per-index
+    // `Rat.le` fact -- the same idiom `geom_tail_within`'s own proof uses,
+    // just at an arbitrary `i` rather than the tail's own canonical index.
+    let h1_at_i = d.apply(h1, &[i]);
+    let h2_at_i = d.apply(h2, &[i]);
+
+    let u = sample(d, p, t, i);
+    let v = sample(d, p, y, i);
+    let w = div_succ(d, p, 2, i);
+
+    let value_body = within_of_sub_le(d, p, u, v, w, h1_at_i, h2_at_i);
+
+    let ty = {
+        let vw = radd(d, v, w);
+        let claim = within(d, p, u, vw);
+        let inner = d.pi_fv(i_fv, nat, claim);
+        // `h1_fv`/`h2_fv` escape into `inner` through `v`/`w` (via `y`/`i`),
+        // and `t_fv`/`y_fv` escape through `hyp1`/`hyp2` -- all genuinely
+        // dependent Pis (`pi_fv`), never `d.arrow`, the same trap
+        // `geom_tail_within`'s own `ty` names.
+        let with_h2 = d.pi_fv(h2_fv, hyp2, inner);
+        let with_h1 = d.pi_fv(h1_fv, hyp1, with_h2);
+        let with_y = d.pi_fv(y_fv, carrier, with_h1);
+        d.pi_fv(t_fv, carrier, with_y)
+    };
+    let value = {
+        let inner = d.lam_fv(i_fv, nat, value_body);
+        let with_h2 = d.lam_fv(h2_fv, hyp2, inner);
+        let with_h1 = d.lam_fv(h1_fv, hyp1, with_h2);
+        let with_y = d.lam_fv(y_fv, carrier, with_h1);
+        d.lam_fv(t_fv, carrier, with_y)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.within_of_two_sided_le,
+        uparams: vec![],
+        ty,
+        value,
     })
 }

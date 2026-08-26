@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 237] = [
+    let expected: [(&str, crate::NameId, &str); 238] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -507,6 +507,16 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         // `riemannSum_cauchy`'s doubling-refinement estimate, not that
         // estimate itself -- see that file's own module documentation.
         ("CReal.sumRange_reblock", p.sum_range_reblock, "theorem"),
+        // `CReal.within_of_two_sided_le` (creal/integral.rs), registered
+        // right after `sumRange_reblock`: the general form of the "real
+        // inequality -> Within at a chosen index" bridge
+        // `geometric.rs::geom_tail_within` builds bespoke -- see that
+        // file's own module documentation for the derivation.
+        (
+            "CReal.within_of_two_sided_le",
+            p.within_of_two_sided_le,
+            "theorem",
+        ),
         // The continuity-from-differentiability bridge (creal/monotone.rs),
         // the missing piece the monotone_of_nonneg_deriv handoff plan did not
         // name: a `HasDerivativeOn` interpolation endpoint is only ever
