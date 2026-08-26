@@ -6979,3 +6979,215 @@ fn converges_comp_eventually_applies_at_x_plus_one_where_the_limit_moves() {
         "the instantiated conclusion is not an existential: {rendered}"
     );
 }
+
+/// **Mandatory concrete instantiation** for `CReal.scale_cancel_le`, kernel-
+/// checked rather than verified on paper: `m := 1`, `u := 2`, `v := 1`.
+///
+/// Both directions are TIGHT, which is exactly what would catch an off-by-one
+/// factor: the hypothesis is `(1/2)*2 = 1 <= 1` (an equality dressed as a
+/// bound) and the conclusion is `2 <= 2*1 = 2` (likewise). `u` is built as
+/// `CReal.ofRat (Rat.natDivSucc 2 0)` -- the theorem's own `Nat.succ m`
+/// reciprocal shape at `m := 1` -- rather than some other representation of
+/// "2", so the hypothesis proof is exactly the field identity
+/// `declare_scale_cancel_le` itself needs internally
+/// (`Rat.mul_inv_cancel` + `Rat.inv_natDivSucc`), reconstructed here at a
+/// concrete literal instead of the free `m` the production declaration
+/// carries.
+#[test]
+fn scale_cancel_le_applies_at_one_two_one_and_is_tight() {
+    use crate::rat_prelude::ops::{rat_eq_rewrite, req, rmul, rone};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let rat = p.rat;
+
+    let one_nat = d.num(1);
+    let zero_nat = d.num(0);
+    let m = d.num(1); // m := 1
+    let sm = d.succ(m); // Nat.succ 1 = 2
+
+    // c := CReal.ofRat (Rat.natDivSucc 1 1) = 1/2
+    let c_rat = d.const_app(rat.nat_div_succ, &[one_nat, m]);
+    let c = d.const_app(p.of_rat, &[c_rat]);
+    // u := CReal.ofRat (Rat.natDivSucc 2 0) -- defeq `CReal.ofNat 2`.
+    let succ_rat = d.const_app(rat.nat_div_succ, &[sm, zero_nat]);
+    let u = d.const_app(p.of_rat, &[succ_rat]);
+    // v := CReal.ofRat Rat.one -- defeq `CReal.one`.
+    let one_rat = rone(&mut d, rat);
+    let v = d.const_app(p.of_rat, &[one_rat]);
+
+    // --- Rat level: c_rat * succ_rat = Rat.one, exactly (m := 1) -----------
+    let unit_le = d.lemma(rat.int.nat.le_refl, &[one_nat]); // Nat.le 1 1
+    let c_pos = d.lemma(rat.nat_div_succ_pos, &[one_nat, m, unit_le]);
+    // c_pos : Rat.lt Rat.zero c_rat
+    let inv_term = d.const_app(rat.inv, &[c_rat]);
+    let cancel = d.lemma(rat.mul_inv_cancel, &[c_rat, c_pos]);
+    // cancel : Eq Rat (Rat.mul c_rat inv_term) Rat.one
+    let inv_eq = d.lemma(rat.inv_nat_div_succ, &[m]);
+    // inv_eq : Eq Rat inv_term succ_rat
+    let key_rat_eq = rat_eq_rewrite(&mut d, inv_term, succ_rat, inv_eq, cancel, &|d, t| {
+        let prod = rmul(d, c_rat, t);
+        req(d, prod, one_rat)
+    });
+    // key_rat_eq : Eq Rat (Rat.mul c_rat succ_rat) Rat.one
+
+    // --- lift to CReal: Equiv (mul c u) v -----------------------------------
+    let prod_real = d.const_app(p.mul, &[c, u]);
+    let rat_prod = rmul(&mut d, c_rat, succ_rat);
+    let of_rat_mul_proof = d.lemma(p.of_rat_mul, &[c_rat, succ_rat]);
+    // of_rat_mul_proof : Equiv prod_real (ofRat rat_prod)
+    let prod_equiv_v = rat_eq_rewrite(
+        &mut d,
+        rat_prod,
+        one_rat,
+        key_rat_eq,
+        of_rat_mul_proof,
+        &|d, t| {
+            let embedded = d.const_app(p.of_rat, &[t]);
+            d.const_app(p.equiv, &[prod_real, embedded])
+        },
+    );
+    // prod_equiv_v : Equiv prod_real v  (v is syntactically `ofRat one_rat`)
+
+    let hyp_proof = d.lemma(p.le_of_equiv, &[prod_real, v, prod_equiv_v]);
+    // hyp_proof : le (mul c u) v  -- i.e. (1/2)*2 <= 1, tight.
+
+    let instance = d.lemma(p.scale_cancel_le, &[m, u, v, hyp_proof]);
+
+    // Independently reconstruct the expected conclusion:
+    // le u (mul (ofNat (Nat.succ m)) v) = le 2 (mul (ofNat 2) v), tight.
+    let nice_succ_factor = d.const_app(p.of_nat, &[sm]);
+    let nice_bound = d.const_app(p.mul, &[nice_succ_factor, v]);
+    let ty = d.const_app(p.le, &[u, nice_bound]);
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(anon, "__scale_cancel_le_at_1_2_1");
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value: instance,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.scale_cancel_le at (m=1, u=2, v=1) did NOT check against \
+                 le u (mul (ofNat 2) v) -- i.e. le 2 (mul 2 1): {error:?}"
+            )
+        });
+}
+
+/// **Mandatory concrete instantiation** for
+/// `CReal.diff_le_of_strict_mono_magnitude`, kernel-checked rather than
+/// verified on paper: `F := id` (`CReal.hasDerivative_id`, itself already
+/// `∀ a b`, so no bespoke `HasDerivativeOn` witness is needed -- applying it
+/// at `a := zero, b := one` IS the whole instantiation cost), `k := 0`,
+/// `x := 0`, `y := 1`.
+///
+/// The `hderiv` hypothesis this needs is `1/(0+1) = 1 <= F'(z) = 1` -- an
+/// equality dressed as a bound, built the same way
+/// `CReal.of_nat_one_equiv_local`'s (private, out-of-module) route does:
+/// `ofRat (natDivSucc 1 0)` and `CReal.one` each unfold one delta step to an
+/// `embed`, bridged by [`CRealPrelude::rat_unit_eq_one`] at the `Rat` level.
+#[test]
+fn diff_le_of_strict_mono_magnitude_applies_to_the_identity_at_zero_zero_one() {
+    use crate::rat_prelude::ops::{rat_eq_rewrite, rone};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let rat = p.rat;
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let k = d.num(0); // k := 0
+    let one_nat = d.num(1);
+
+    let identity = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+    let one_fn = {
+        let ignore_fv = d.fresh_fvar();
+        d.lam_fv(ignore_fv, carrier, one_c)
+    };
+
+    let hf = d.lemma(p.has_derivative_id, &[zero_c, one_c]);
+
+    // --- hderiv : forall z, le zero z -> le z one -> le (ofRat (natDivSucc 1
+    // k)) (F' z) -- constant in z, since `k := 0` makes the bound exactly
+    // `CReal.one`, matching `F' z`'s own constant value.
+    let c_rat = d.const_app(rat.nat_div_succ, &[one_nat, k]); // natDivSucc 1 0
+    let c = d.const_app(p.of_rat, &[c_rat]);
+    let one_rat = rone(&mut d, rat);
+    let unit_eq_one = d.lemma(p.rat_unit_eq_one, &[]); // Eq Rat c_rat one_rat
+    let refl_start = d.lemma(p.equiv_refl, &[c]);
+    let c_equiv_one = rat_eq_rewrite(&mut d, c_rat, one_rat, unit_eq_one, refl_start, &|d, t| {
+        let embedded = d.const_app(p.of_rat, &[t]);
+        d.const_app(p.equiv, &[c, embedded])
+    });
+    // c_equiv_one : Equiv c (ofRat one_rat) -- defeq Equiv c one_c
+    let embed_one_rat = d.const_app(p.of_rat, &[one_rat]);
+    let hderiv_body = d.lemma(p.le_of_equiv, &[c, embed_one_rat, c_equiv_one]);
+    // hderiv_body : le c embed_one_rat -- defeq le c one_c, matching `le c (F' z)`.
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let haz_ty = d.const_app(p.le, &[zero_c, z]);
+    let haz_fv = d.fresh_fvar();
+    let hzb_ty = d.const_app(p.le, &[z, one_c]);
+    let hzb_fv = d.fresh_fvar();
+    let with_hzb = d.lam_fv(hzb_fv, hzb_ty, hderiv_body);
+    let with_haz = d.lam_fv(haz_fv, haz_ty, with_hzb);
+    let hderiv = d.lam_fv(z_fv, carrier, with_haz);
+
+    // --- x := zero, y := one, a := zero, b := one -------------------------
+    let hax = d.lemma(p.le_refl, &[zero_c]); // le zero zero
+    let lt01 = d.lemma(p.zero_lt_one, &[]);
+    let hxy = d.lemma(p.le_of_lt, &[zero_c, one_c, lt01]); // le zero one
+    let hyb = d.lemma(p.le_refl, &[one_c]); // le one one
+
+    let instance = d.lemma(
+        p.diff_le_of_strict_mono_magnitude,
+        &[
+            identity, one_fn, zero_c, one_c, hf, k, hderiv, zero_c, one_c, hax, hxy, hyb,
+        ],
+    );
+
+    // Independently reconstruct the expected conclusion:
+    // le (add one (neg zero)) (mul (ofNat (Nat.succ (Nat.succ (Nat.mul 2
+    // 0)))) (add (abs (F zero)) (abs (F one)))).
+    let two_nat = d.num(2);
+    let doubled = d.mul(two_nat, k); // Nat.mul 2 0
+    let e_acc = d.succ(doubled); // Nat.succ (Nat.mul 2 0)
+    let sm = d.succ(e_acc); // Nat.succ (Nat.succ (Nat.mul 2 0))
+    let nice_factor = d.const_app(p.of_nat, &[sm]);
+    let fx = d.apply(identity, &[zero_c]);
+    let fy = d.apply(identity, &[one_c]);
+    let abs_fx = d.const_app(p.abs, &[fx]);
+    let abs_fy = d.const_app(p.abs, &[fy]);
+    let sum_fx_fy = d.const_app(p.add, &[abs_fx, abs_fy]);
+    let nice_bound = d.const_app(p.mul, &[nice_factor, sum_fx_fy]);
+    let neg_x = d.const_app(p.neg, &[zero_c]);
+    let diff = d.const_app(p.add, &[one_c, neg_x]);
+    let ty = d.const_app(p.le, &[diff, nice_bound]);
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(anon, "__diff_le_of_strict_mono_magnitude_at_id_0_0_1");
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value: instance,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.diff_le_of_strict_mono_magnitude at (F=id, k=0, x=0, y=1) \
+                 did NOT check against \
+                 le (add one (neg zero)) (mul (ofNat 2) (add (abs zero) (abs one))): \
+                 {error:?}"
+            )
+        });
+}
