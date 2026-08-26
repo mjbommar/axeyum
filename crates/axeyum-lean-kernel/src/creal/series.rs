@@ -411,6 +411,8 @@ pub(super) fn declare_series(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), 
     declare_sum_range_add(d, p)?;
     declare_mul_sum_range(d, p)?;
     declare_sum_range_le(d, p)?;
+    declare_mono_of_le_succ(d, p)?;
+    declare_sum_range_mono_outer(d, p)?;
     declare_abs_sum_range_le(d, p)?;
     declare_sum_range_telescope(d, p)?;
     declare_sum_range_split(d, p)?;
@@ -1190,6 +1192,207 @@ fn declare_sum_range_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kerne
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.sum_range_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.monotone_of_le_succ : ∀ f, (∀ n, le (f n) (f (Nat.succ n))) → ∀ a
+/// b, Nat.le a b → le (f a) (f b)` — the `CReal`-valued analogue of
+/// `Nat.monotone_of_le_succ` (`nat_prelude/order.rs::declare_order`),
+/// identical proof shape: eliminate the `Nat.le a b` derivation through
+/// `Nat.le`'s own recursor (accessed via [`crate::nat_prelude::NatOps::prelude`]'s
+/// `le_rec`) into a `CReal.le`-valued motive — a `Prop`-into-`Prop`
+/// elimination, so this never touches `Exists.rec`'s data-elimination
+/// restriction — with [`CRealPrelude::le_refl`]/[`CRealPrelude::le_trans`]
+/// standing in for `Nat`'s own `le_refl`/`le_trans`.
+fn declare_mono_of_le_succ(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let adjacent_fv = d.fresh_fvar();
+    let adjacent = d.kernel().fvar(adjacent_fv);
+    let adjacent_ty = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let fn_n = d.apply(f, &[n]);
+        let sn = d.succ(n);
+        let fn_sn = d.apply(f, &[sn]);
+        let body = cle(d, p, fn_n, fn_sn);
+        d.pi_fv(n_fv, nat, body)
+    };
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let h_ty = d.le(a, b);
+    let fa = d.apply(f, &[a]);
+    let fb = d.apply(f, &[b]);
+    let conclusion = cle(d, p, fa, fb);
+
+    let anon = d.anon_name();
+    let motive = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let hx_ty = d.le(a, x);
+        let fx = d.apply(f, &[x]);
+        let body = cle(d, p, fa, fx);
+        let inner = d.kernel().lam(anon, hx_ty, body, BinderInfo::Default);
+        d.lam_fv(x_fv, nat, inner)
+    };
+    let minor_refl = d.lemma(p.le_refl, &[fa]);
+    let minor_step = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let hx_fv = d.fresh_fvar();
+        let hx_ty = d.le(a, x);
+        let ih_fv = d.fresh_fvar();
+        let ih = d.kernel().fvar(ih_fv);
+        let fx = d.apply(f, &[x]);
+        let sx = d.succ(x);
+        let fsx = d.apply(f, &[sx]);
+        let ih_ty = cle(d, p, fa, fx);
+        let adjacent_x = d.apply(adjacent, &[x]);
+        let body = d.lemma(p.le_trans, &[fa, fx, fsx, ih, adjacent_x]);
+        let with_ih = d.lam_fv(ih_fv, ih_ty, body);
+        let with_hx = d.lam_fv(hx_fv, hx_ty, with_ih);
+        d.lam_fv(x_fv, nat, with_hx)
+    };
+    let np = d.prelude();
+    let proof = d.const_app(np.le_rec, &[a, motive, minor_refl, minor_step, b, h]);
+
+    let ty = {
+        let out = d.kernel().pi(anon, h_ty, conclusion, BinderInfo::Default);
+        let out = d.pi_fv(b_fv, nat, out);
+        let out = d.pi_fv(a_fv, nat, out);
+        let out = d.pi_fv(adjacent_fv, adjacent_ty, out);
+        d.pi_fv(f_fv, fn_ty, out)
+    };
+    let value = {
+        let out = d.lam_fv(h_fv, h_ty, proof);
+        let out = d.lam_fv(b_fv, nat, out);
+        let out = d.lam_fv(a_fv, nat, out);
+        let out = d.lam_fv(adjacent_fv, adjacent_ty, out);
+        d.lam_fv(f_fv, fn_ty, out)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mono_of_le_succ,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.sumRange_mono_outer : ∀ f, (∀ i, le zero (f i)) → ∀ m n, Nat.le m n
+/// → le (sumRange f m) (sumRange f n)` — monotonicity of a finite sum in the
+/// **outer** index (the summation bound), for a pointwise-nonnegative
+/// summand. Distinct in kind from [`declare_sum_range_le`], which compares
+/// two *different* summands at the *same* bound: this is genuinely new
+/// content, since `CReal.le` is defined only on `CReal` and nothing in
+/// `creal/monotone.rs` compares a bare `Nat`-indexed `CReal` sequence across
+/// two different outer indices (only same-index Cauchy/regularity facts, or
+/// derivative-driven monotonicity of a continuous `CReal → CReal` function).
+///
+/// Built by applying [`declare_mono_of_le_succ`]'s `CReal.monotone_of_le_succ`
+/// to `sumRange f`, with the adjacent step `le (sumRange f n) (sumRange f
+/// (Nat.succ n))` proved from `sumRange_succ`'s own defeq (`sumRange f (succ
+/// n) ≡ add (sumRange f n) (f n)`) plus the shift-by-a-nonneg-summand
+/// argument `x ≤ add x w` from `w ≥ 0` (`add_le_add` against `add x zero`,
+/// rewritten through `add_zero` via `le_congr` — the same three-line shape
+/// `creal/monotone.rs`'s private `shift_le_of_nonneg` builds, re-derived here
+/// since that helper is not `pub(super)`).
+fn declare_sum_range_mono_outer(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let hnn_fv = d.fresh_fvar();
+    let hnn = d.kernel().fvar(hnn_fv);
+    let hnn_ty = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let zero_c = czero(d, p);
+        let fi = d.apply(f, &[i]);
+        let body = cle(d, p, zero_c, fi);
+        d.pi_fv(i_fv, nat, body)
+    };
+
+    // sum_f := fun k => sumRange f k, eta-expanded so `monotone_of_le_succ`
+    // (stated over an arbitrary `Nat -> CReal`) applies to it directly.
+    let sum_f = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let body = d.const_app(p.sum_range, &[f, k]);
+        d.lam_fv(k_fv, nat, body)
+    };
+
+    // adjacent : ∀ n, le (sumRange f n) (sumRange f (succ n)) -- the RHS is
+    // defeq to `add (sumRange f n) (f n)` via `sumRange_succ`'s own
+    // ι-reduction, so the term built below (of that exact type) already
+    // type-checks against the Pi `mono_of_le_succ` expects for `sum_f`.
+    let adjacent = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let sum_f_n = d.const_app(p.sum_range, &[f, n]);
+        let f_n = d.apply(f, &[n]);
+        let hnn_n = d.apply(hnn, &[n]);
+        let zero_c = czero(d, p);
+        let refl_x = d.lemma(p.le_refl, &[sum_f_n]);
+        let grown = d.lemma(
+            p.add_le_add,
+            &[sum_f_n, sum_f_n, zero_c, f_n, refl_x, hnn_n],
+        );
+        let padded = cadd(d, p, sum_f_n, zero_c);
+        let target = cadd(d, p, sum_f_n, f_n);
+        let trim = d.lemma(p.add_zero, &[sum_f_n]);
+        let refl_target = d.lemma(p.equiv_refl, &[target]);
+        let body = d.lemma(
+            p.le_congr,
+            &[padded, sum_f_n, target, target, trim, refl_target, grown],
+        );
+        d.lam_fv(n_fv, nat, body)
+    };
+
+    let mono = d.const_app(p.mono_of_le_succ, &[sum_f, adjacent]);
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let hmn_fv = d.fresh_fvar();
+    let hmn = d.kernel().fvar(hmn_fv);
+    let hmn_ty = d.le(m, n);
+    let applied = d.apply(mono, &[m, n, hmn]);
+
+    let sum_f_m = d.const_app(p.sum_range, &[f, m]);
+    let sum_f_n = d.const_app(p.sum_range, &[f, n]);
+    let conclusion = cle(d, p, sum_f_m, sum_f_n);
+
+    let ty = {
+        let anon = d.anon_name();
+        let out = d.kernel().pi(anon, hmn_ty, conclusion, BinderInfo::Default);
+        let out = d.pi_fv(n_fv, nat, out);
+        let out = d.pi_fv(m_fv, nat, out);
+        let out = d.arrow(hnn_ty, out);
+        d.pi_fv(f_fv, fn_ty, out)
+    };
+    let value = {
+        let out = d.lam_fv(hmn_fv, hmn_ty, applied);
+        let out = d.lam_fv(n_fv, nat, out);
+        let out = d.lam_fv(m_fv, nat, out);
+        let out = d.lam_fv(hnn_fv, hnn_ty, out);
+        d.lam_fv(f_fv, fn_ty, out)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sum_range_mono_outer,
         uparams: vec![],
         ty,
         value,
