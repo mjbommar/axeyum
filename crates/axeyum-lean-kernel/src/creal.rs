@@ -660,6 +660,16 @@ pub struct CRealPrelude {
     /// `CReal.abs_le : ∀ x z, le x z → le (neg x) z → le (abs x) z` —
     /// [`Self::max_le`] verbatim, and the form every estimate consumes.
     pub abs_le: NameId,
+    /// `CReal.abs_add_le : ∀ a b, le (abs (add a b)) (add (abs a) (abs b))` —
+    /// the two-term triangle inequality, from [`Self::abs_le`] with
+    /// [`Self::add_le_add`]/[`Self::le_abs_self`] for the lower branch and
+    /// `neg (add a b) ~ add (neg a) (neg b)` plus [`Self::neg_le_abs`] for the
+    /// upper (negated) branch. This statement was proved as a private helper
+    /// independently in `creal/series.rs`, `creal/derivative.rs`,
+    /// `creal/uniform_continuity.rs` and `creal/deriv_unique.rs` before this
+    /// declaration gave it one public name; each private copy is unchanged
+    /// and still calls its own file-local proof route.
+    pub abs_add_le: NameId,
     /// `CReal.abs_nonneg : ∀ x, le zero (abs x)` — the one lattice fact that is
     /// not a rearrangement of the others; it rests on
     /// [`Rat.zero_le_max_neg`](crate::RatPrelude::zero_le_max_neg), the only
@@ -893,6 +903,22 @@ pub struct CRealPrelude {
     /// and one `Rat.natDivSucc_le_add_left` widening per side to a common
     /// witness `K := (2+K_a)+(2+K_c)`.
     pub converges_squeeze: NameId,
+    /// `CReal.converges_lower_bound : ∀ a f L, (∀ n, le a (f n)) →
+    /// Converges f L → le a L`.
+    ///
+    /// A non-strict lower bound on a convergent sequence bounds its limit
+    /// below — the "compare at an arbitrary third index" idiom
+    /// [`Self::le_trans`] itself uses, routed through `f j` instead of a
+    /// second `CReal`. See `creal/convergence.rs`'s own module documentation
+    /// for why this (and its mirror [`Self::converges_upper_bound`]) answers
+    /// the domain-hypothesis question the (unbuilt, and not provable in the
+    /// fixed-rate form the `Converges` predicate states) `converges_comp`
+    /// needed.
+    pub converges_lower_bound: NameId,
+    /// `CReal.converges_upper_bound : ∀ f L b, (∀ n, le (f n) b) →
+    /// Converges f L → le L b`. The mirror of
+    /// [`Self::converges_lower_bound`].
+    pub converges_upper_bound: NameId,
 
     // --- boundedness of sequences, and sequential continuity (phase R10) ----
     /// `CReal.Bounded (g : Nat → CReal) : Prop :=
@@ -2874,6 +2900,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         le_abs_self: kernel.name_str(creal, "le_abs_self"),
         neg_le_abs: kernel.name_str(creal, "neg_le_abs"),
         abs_le: kernel.name_str(creal, "abs_le"),
+        abs_add_le: kernel.name_str(creal, "abs_add_le"),
         abs_nonneg: kernel.name_str(creal, "abs_nonneg"),
         not_le_zero_neg_one: kernel.name_str(creal, "not_le_zero_neg_one"),
         not_equiv_abs_neg_one: kernel.name_str(creal, "not_equiv_abs_neg_one"),
@@ -2898,6 +2925,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         converges_neg: kernel.name_str(creal, "converges_neg"),
         converges_sub: kernel.name_str(creal, "converges_sub"),
         converges_squeeze: kernel.name_str(creal, "converges_squeeze"),
+        converges_lower_bound: kernel.name_str(creal, "converges_lower_bound"),
+        converges_upper_bound: kernel.name_str(creal, "converges_upper_bound"),
         bounded: kernel.name_str(creal, "Bounded"),
         converges_bounded: kernel.name_str(creal, "converges_bounded"),
         converges_mul: kernel.name_str(creal, "converges_mul"),
@@ -3144,6 +3173,15 @@ pub(crate) fn build_creal_prelude_uncached(
         cotransitivity::declare_cotransitivity(&mut d, prelude)?;
         completeness::declare_completeness(&mut d, prelude)?;
         convergence::declare_convergence(&mut d, prelude)?;
+        // `abs_add_le` needs only `abs_le`/`add_le_add`/`le_abs_self`/
+        // `neg_le_abs`/`le_trans`/`le_of_equiv` (`order_extra`/additive
+        // sections, well above), and must run before the first of its four
+        // current private-copy modules dispatches — `uniform_continuity`'s
+        // own `declare_uniform_continuity`, immediately below, is the
+        // earliest of the three named in that declaration's own doc comment
+        // (`derivative` at the next line, `series` much further down) — and
+        // before `monotone::declare_monotone`, its first NEW consumer.
+        uniform_continuity::declare_abs_add_le(&mut d, prelude)?;
         uniform_continuity::declare_uniform_continuity(&mut d, prelude)?;
         derivative::declare_derivative(&mut d, prelude)?;
         // `hasDerivative_unique` needs only `HasDerivativeOn`/`hd_spec`

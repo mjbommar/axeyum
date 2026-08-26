@@ -311,3 +311,59 @@ existential**, so obtaining `L` as *data* means inlining its own internal
 `CReal.mk (speedup (diagonal f) K) …` construction — mirroring `sqrtApprox` —
 rather than calling it and projecting. That is the seventh place this kernel's
 `Prop`-only `Exists.rec` has dictated a construction's shape.
+
+---
+
+## `converges_comp` as I stated it is FALSE — the modulus has no growth bound
+
+I briefed a lane on "continuity transports convergence":
+
+```text
+Converges f L → UniformlyContinuousOn F a b → Converges (fun n => F (f n)) (F L)
+```
+
+calling it "a Chapter 5/6 staple". **It is not a theorem here**, and the reason
+is a genuine feature of how this development states convergence.
+
+`CReal.Converges f L := ∃ K, ∀ n, Within (seq (f n) n − seq L n) (natDivSucc K n)`
+— **a fixed `O(1/n)` rate**, one `K` for all `n`, not eventual convergence.
+
+To invoke `UniformlyContinuousOn.spec` at output accuracy `e`, the required
+*input* accuracy is `1/(modulus(e)+1)`. For the output to keep an `O(1/n')`
+rate, `e` must grow proportionally to `n'` — but **`modulus` is an arbitrary
+`Nat → Nat` and nothing in `UniformlyContinuousOn`'s type bounds its growth.**
+Give `F` a √-shaped modulus (`modulus(e) ~ e²`) and composing an `O(1/n)`
+sequence through it genuinely converges at `O(1/√n)`. No fixed `K'` exists.
+
+So the classical statement is true and its constructive transcription is not,
+because the constructive `Converges` carries a **rate** that the classical
+definition does not. That is a sharper failure than the usual constructive
+losses: nothing here is undecidable, the theorem is simply about a stronger
+conclusion than the hypotheses support.
+
+**Two real repairs, both bounded:**
+
+1. **Weaken the conclusion** to an eventual `∃ N` form. Provable by forward
+   evaluation, `N := K·(modulus(e)+1)` — and note the lane's correction to an
+   older doc's framing: **no `Nat` division or search is needed**, because
+   `modulus` is only ever *evaluated forward*, never inverted.
+2. **Bound the modulus**: add a Lipschitz/linear hypothesis
+   (`modulus n ≤ c·n + c`) and choose `e` proportional to `n'/(K·c)`.
+
+## What did land
+
+The domain question I asked as an aside turned out to be the answerable part.
+**`le a L` and `le L b` ARE derivable** from the pointwise bounds plus
+convergence — a limit of points in `[a,b]` does stay in `[a,b]` here — and the
+lane proved it rather than asserting it:
+
+- `CReal.converges_lower_bound : ∀ a f L, (∀ n, le a (f n)) → Converges f L → le a L`
+- `CReal.converges_upper_bound : ∀ f L b, (∀ n, le (f n) b) → Converges f L → le L b`
+
+by `le_trans`'s "compare at an arbitrary third index" idiom routed through
+`f j` — a four-term telescope closed by `Rat.le_of_le_add_nat_div_succ`.
+
+**The pattern, for the fourth time**: a target I named was refuted, and the
+refutation came with the true neighbouring statement already built. Briefs that
+ask for a verdict *before* building keep converting my wrong targets into right
+ones instead of into wasted lanes.

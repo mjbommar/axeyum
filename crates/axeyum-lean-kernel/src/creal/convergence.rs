@@ -221,7 +221,7 @@ use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
-use crate::rat_prelude::group::{rsub, rsum, rsum_perm};
+use crate::rat_prelude::group::{rsub, rsum, rsum_append, rsum_perm};
 use crate::rat_prelude::ops::{
     nat_rewrite_prop, radd, rat_eq_rewrite, rchain, rcongr, rle, rneg, rsymm, rzero,
 };
@@ -245,6 +245,8 @@ pub(super) fn declare_convergence(d: &mut IntDev<'_>, p: CRealPrelude) -> Result
     declare_converges_neg(d, p)?;
     declare_converges_sub(d, p)?;
     declare_converges_squeeze(d, p)?;
+    declare_converges_lower_bound(d, p)?;
+    declare_converges_upper_bound(d, p)?;
     declare_bounded(d, p)?;
     declare_converges_bounded(d, p)?;
     declare_converges_mul(d, p)?;
@@ -2092,6 +2094,510 @@ fn declare_converges_squeeze(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), 
     })
 }
 
+// --- `CReal.converges_lower_bound` / `CReal.converges_upper_bound` --------
+//
+// The domain-hypothesis question this section answers: for the intended
+// `converges_comp` (`Converges f L → UniformlyContinuousOn F a b →
+// Converges (F ∘ f) (F L)`), are `le a L`/`le L b` derivable from `∀n, le a
+// (f n)`/`∀n, le (f n) b` plus `Converges f L`, or do they need to be
+// additional hypotheses? **They are derivable**, by the ordinary
+// closed-under-limits argument for a non-strict order, and the two
+// declarations below prove it. Unlike the composition itself (see this
+// file's own analysis further down for why THAT is not provable in the
+// stated form), this needs no inversion of an arbitrary modulus: it is
+// `le_trans`'s own "compare at an arbitrary third index `j`" idiom
+// (`creal.rs`'s `declare_transitivity`), applied to a four-term telescope
+// that routes through `f j` instead of through a second `CReal`.
+//
+// [`fuse_bridge_bound`] is a verbatim re-derivation of `creal.rs`'s private
+// `six_term_bound` (not reusable across the file boundary — same reason
+// `half_shift_le` needed widening rather than a second copy, except here the
+// original stays `le_trans`-local and this is a fresh copy), generalised
+// from two literal-`2` middle terms to two *symbolic* middle numerators —
+// `nat_div_succ_add` is already fully generic in its numerators, so nothing
+// about the fusion algebra changes, only which `Nat` expressions feed it.
+
+/// `1 + (mid1_num + (mid2_num + 1))` — the fused `Nat` numerator
+/// [`fuse_bridge_bound`] produces, computed standalone (cheaply) for the
+/// caller that needs it *outside* the per-`j` proof (as the numerator
+/// argument to `Rat.le_of_le_add_nat_div_succ`) without re-running the whole
+/// bound-fusion proof a second time just to read it off.
+fn bridge_total_numerator(d: &mut IntDev<'_>, mid1_num: ExprId, mid2_num: ExprId) -> ExprId {
+    let one_nat = d.num(1);
+    let s1_num = NatOps::add(d, mid2_num, one_nat);
+    let s2_num = NatOps::add(d, mid1_num, s1_num);
+    NatOps::add(d, one_nat, s2_num)
+}
+
+/// `Eq Rat (modulus outer inner + (natDivSucc mid1_num inner + (natDivSucc
+/// mid2_num inner + modulus inner outer))) (natDivSucc 2 outer + natDivSucc
+/// k_total inner)`, returned as `(final_bound, k_total, proof)`.
+///
+/// The bound-fusion half of the standard Bishop "compare at an arbitrary
+/// third index" estimate: two `modulus` terms contribute the *outer* index's
+/// own `2/(outer+1)` (one `1/(outer+1)` each), and the two middle terms plus
+/// the two `modulus` terms' `1/(inner+1)` halves all land on the *inner*
+/// index, fusing into a single symbolic numerator ([`bridge_total_numerator`]).
+/// See [`declare_converges_lower_bound`] for where the four source facts
+/// (regularity, a pointwise `le`, the `Converges` witness, regularity again)
+/// come from; this helper only ever sees their bounds.
+fn fuse_bridge_bound(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    outer: ExprId,
+    inner: ExprId,
+    mid1_num: ExprId,
+    mid2_num: ExprId,
+) -> (ExprId, ExprId, ExprId) {
+    let rat = p.rat;
+    let one_nat = d.num(1);
+
+    let b1 = modulus(d, p, outer, inner);
+    let b2 = div_succ_at(d, p, mid1_num, inner);
+    let b3 = div_succ_at(d, p, mid2_num, inner);
+    let b4 = modulus(d, p, inner, outer);
+    let c34 = radd(d, b3, b4);
+    let c234 = radd(d, b2, c34);
+    let c1234 = radd(d, b1, c234);
+
+    let atom_a = div_succ(d, p, 1, outer);
+    let atom_b = div_succ(d, p, 1, inner);
+    let flat_atoms = [atom_a, atom_b, b2, b3, atom_b, atom_a];
+    let sorted_atoms = [atom_a, atom_a, atom_b, b2, b3, atom_b];
+    let flatten = rsum_append(d, rat, &flat_atoms[..2], &flat_atoms[2..]);
+    let flat = rsum(d, rat, &flat_atoms);
+    let permute = rsum_perm(d, rat, &flat_atoms, &sorted_atoms);
+    let sorted = rsum(d, rat, &sorted_atoms);
+
+    // innermost pair: b3 + atom_b -> s1
+    let s1_num = NatOps::add(d, mid2_num, one_nat);
+    let s1 = div_succ_at(d, p, s1_num, inner);
+    let fuse_inner = d.lemma(rat.nat_div_succ_add, &[mid2_num, one_nat, inner]);
+    let b3_atomb = radd(d, b3, atom_b);
+    let after_inner = rcongr(d, b3_atomb, s1, fuse_inner, &|d, t| {
+        let level1 = radd(d, b2, t);
+        let level2 = radd(d, atom_b, level1);
+        let level3 = radd(d, atom_a, level2);
+        radd(d, atom_a, level3)
+    });
+    let sorted_1 = {
+        let level1 = radd(d, b2, s1);
+        let level2 = radd(d, atom_b, level1);
+        let level3 = radd(d, atom_a, level2);
+        radd(d, atom_a, level3)
+    };
+
+    // next pair: b2 + s1 -> s2
+    let s2_num = NatOps::add(d, mid1_num, s1_num);
+    let s2 = div_succ_at(d, p, s2_num, inner);
+    let fuse_mid = d.lemma(rat.nat_div_succ_add, &[mid1_num, s1_num, inner]);
+    let b2_s1 = radd(d, b2, s1);
+    let after_mid = rcongr(d, b2_s1, s2, fuse_mid, &|d, t| {
+        let level2 = radd(d, atom_b, t);
+        let level3 = radd(d, atom_a, level2);
+        radd(d, atom_a, level3)
+    });
+    let sorted_2 = {
+        let level2 = radd(d, atom_b, s2);
+        let level3 = radd(d, atom_a, level2);
+        radd(d, atom_a, level3)
+    };
+
+    // next pair: atom_b + s2 -> s3 (this is `k_total`)
+    let s3_num = NatOps::add(d, one_nat, s2_num);
+    let s3 = div_succ_at(d, p, s3_num, inner);
+    let fuse_outer_j = d.lemma(rat.nat_div_succ_add, &[one_nat, s2_num, inner]);
+    let atomb_s2 = radd(d, atom_b, s2);
+    let after_outer_j = rcongr(d, atomb_s2, s3, fuse_outer_j, &|d, t| {
+        let level3 = radd(d, atom_a, t);
+        radd(d, atom_a, level3)
+    });
+    let sorted_3 = {
+        let level3 = radd(d, atom_a, s3);
+        radd(d, atom_a, level3)
+    };
+
+    // regroup a+(a+s3) = (a+a)+s3, then fuse a+a -> natDivSucc 2 outer.
+    let aa = radd(d, atom_a, atom_a);
+    let flat_pair = radd(d, aa, s3);
+    let regroup = {
+        let forward = d.lemma(rat.add_assoc, &[atom_a, atom_a, s3]);
+        rsymm(d, flat_pair, sorted_3, forward)
+    };
+    let fuse_head = d.lemma(rat.nat_div_succ_add, &[one_nat, one_nat, outer]);
+    let goal_bound = div_succ(d, p, 2, outer);
+    let after_head = rcongr(d, aa, goal_bound, fuse_head, &|d, t| radd(d, t, s3));
+    let final_bound = radd(d, goal_bound, s3);
+
+    let (_, bound_chain) = rchain(
+        d,
+        c1234,
+        &[
+            (flat, flatten),
+            (sorted, permute),
+            (sorted_1, after_inner),
+            (sorted_2, after_mid),
+            (sorted_3, after_outer_j),
+            (flat_pair, regroup),
+            (final_bound, after_head),
+        ],
+    );
+    (final_bound, s3_num, bound_chain)
+}
+
+/// `Eq Rat ((head−m1)+((m1−m2)+((m2−m3)+(m3−tail)))) (head−tail)` — the
+/// four-term difference telescope. A local copy of `creal.rs`'s private
+/// `telescope_four` (same reason [`fuse_bridge_bound`] is a local copy of
+/// `six_term_bound`): the shape is identical, only the four intermediate
+/// points differ per call site.
+fn telescope_le4(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    head: ExprId,
+    first_mid: ExprId,
+    second_mid: ExprId,
+    third_mid: ExprId,
+    tail: ExprId,
+) -> (ExprId, ExprId, ExprId) {
+    let rat = p.rat;
+    let u1 = rsub(d, rat, head, first_mid);
+    let u2 = rsub(d, rat, first_mid, second_mid);
+    let u3 = rsub(d, rat, second_mid, third_mid);
+    let u4 = rsub(d, rat, third_mid, tail);
+    let q34 = radd(d, u3, u4);
+    let q234 = radd(d, u2, q34);
+    let q1234 = radd(d, u1, q234);
+    let target = rsub(d, rat, head, tail);
+
+    let mid_second = rsub(d, rat, second_mid, tail);
+    let mid_first = rsub(d, rat, first_mid, tail);
+    let step34 = d.lemma(rat.sub_add_sub, &[second_mid, third_mid, tail]);
+    let step234 = d.lemma(rat.sub_add_sub, &[first_mid, second_mid, tail]);
+    let step1234 = d.lemma(rat.sub_add_sub, &[head, first_mid, tail]);
+    let q234_reduced = radd(d, u2, mid_second);
+    let staged = radd(d, u1, q234_reduced);
+    let first = rcongr(d, q34, mid_second, step34, &|d, t| {
+        let inner = radd(d, u2, t);
+        radd(d, u1, inner)
+    });
+    let second = rcongr(d, q234_reduced, mid_first, step234, &|d, t| radd(d, u1, t));
+    let q1234_reduced = radd(d, u1, mid_first);
+    let (_, quantity) = rchain(
+        d,
+        q1234,
+        &[(staged, first), (q1234_reduced, second), (target, step1234)],
+    );
+    (q1234, target, quantity)
+}
+
+/// `CReal.converges_lower_bound : ∀ a f L, (∀ n, le a (f n)) → Converges f L
+/// → le a L`.
+///
+/// A non-strict lower bound on a convergent sequence bounds its limit
+/// below — the closed-under-limits half of the domain question
+/// `converges_comp` needs. Fix `m` (`le a L`'s own index); at an arbitrary
+/// third index `j`, `a`'s regularity bridges `seq a m` to `seq a j`,
+/// `le a (f j)` (applied at its own index `j`) bridges to `seq (f j) j`,
+/// `Converges f L`'s witness bridges to `seq L j`, and `L`'s regularity
+/// bridges back to `seq L m`. [`telescope_le4`] collapses the four-term sum
+/// to `seq a m − seq L m` exactly, [`fuse_bridge_bound`] collapses the bound
+/// to `2/(m+1) + (K+4)/(j+1)`, and `Rat.le_of_le_add_nat_div_succ` (the
+/// Archimedean squeeze `le_trans` itself runs on) discharges the residual
+/// `(K+4)/(j+1)`, uniformly in `j`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// refused a proof, not that a script gave up.
+fn declare_converges_lower_bound(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let seq_ty = seq_fn_ty(d, p);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let l_fv = d.fresh_fvar();
+    let l = d.kernel().fvar(l_fv);
+
+    let lower_ty = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let fn_term = d.apply(f, &[n]);
+        let claim = d.const_app(p.le, &[a, fn_term]);
+        d.pi_fv(n_fv, nat, claim)
+    };
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+
+    let converges_fl = converges_applied(d, p, f, l);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+
+    let target_ty = d.const_app(p.le, &[a, l]);
+
+    let predicate = converges_predicate(d, p, f, l);
+    let minor = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hp_ty = converges_body(d, p, f, l, k);
+        let hp_fv = d.fresh_fvar();
+        let hp = d.kernel().fvar(hp_fv);
+        let two_nat = d.num(2);
+
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let head = sample(d, p, a, m);
+        let tail = sample(d, p, l, m);
+        let target = rsub(d, rat, head, tail);
+        let goal_bound = div_succ(d, p, 2, m);
+
+        let hypothesis = {
+            let j_fv = d.fresh_fvar();
+            let j = d.kernel().fvar(j_fv);
+
+            let aj = sample(d, p, a, j);
+            let fj = d.apply(f, &[j]);
+            let fjj = sample(d, p, fj, j);
+            let lj = sample(d, p, l, j);
+
+            // u1 : a_m - a_j <= modulus(m,j).
+            let u1 = rsub(d, rat, head, aj);
+            let b1 = modulus(d, p, m, j);
+            let w1 = d.lemma(p.regular, &[a, m, j]);
+            let (_, r1) = halves(d, p, u1, b1, w1);
+
+            // u2 : a_j - fjj <= 2/(j+1), directly from h1 at j, at index j.
+            let u2 = rsub(d, rat, aj, fjj);
+            let b2 = div_succ(d, p, 2, j);
+            let h1_at_j = d.apply(h1, &[j]);
+            let r2 = d.apply(h1_at_j, &[j]);
+
+            // u3 : fjj - lj <= K/(j+1), the Converges witness's upper half.
+            let u3 = rsub(d, rat, fjj, lj);
+            let b3 = div_succ_at(d, p, k, j);
+            let w3 = d.apply(hp, &[j]);
+            let (_, r3) = halves(d, p, u3, b3, w3);
+
+            // u4 : lj - lm <= modulus(j,m).
+            let u4 = rsub(d, rat, lj, tail);
+            let b4 = modulus(d, p, j, m);
+            let w4 = d.lemma(p.regular, &[l, j, m]);
+            let (_, r4) = halves(d, p, u4, b4, w4);
+
+            let s34 = d.lemma(rat.add_le_add, &[u3, b3, u4, b4, r3, r4]);
+            let q34 = radd(d, u3, u4);
+            let c34 = radd(d, b3, b4);
+            let s234 = d.lemma(rat.add_le_add, &[u2, b2, q34, c34, r2, s34]);
+            let q234 = radd(d, u2, q34);
+            let c234 = radd(d, b2, c34);
+            let s1234 = d.lemma(rat.add_le_add, &[u1, b1, q234, c234, r1, s234]);
+            let q1234 = radd(d, u1, q234);
+            let c1234 = radd(d, b1, c234);
+
+            let (_, _, quantity_eq) = telescope_le4(d, p, head, aj, fjj, lj, tail);
+            let at_quantity = rat_eq_rewrite(d, q1234, target, quantity_eq, s1234, &|d, t| {
+                rle(d, rat, t, c1234)
+            });
+
+            let (final_bound, _, bound_eq) = fuse_bridge_bound(d, p, m, j, two_nat, k);
+            let moved = rat_eq_rewrite(d, c1234, final_bound, bound_eq, at_quantity, &|d, t| {
+                rle(d, rat, target, t)
+            });
+            d.lam_fv(j_fv, nat, moved)
+        };
+        let k_total = bridge_total_numerator(d, two_nat, k);
+        let at_index = d.lemma(
+            rat.le_of_le_add_nat_div_succ,
+            &[target, goal_bound, k_total, hypothesis],
+        );
+        let per_m = d.lam_fv(m_fv, nat, at_index);
+        let with_hp = d.lam_fv(hp_fv, hp_ty, per_m);
+        d.lam_fv(k_fv, nat, with_hp)
+    };
+
+    let proof_body = exists_elim(d, p, nat, predicate, target_ty, h2, minor);
+
+    let value = {
+        let with_h2 = d.lam_fv(h2_fv, converges_fl, proof_body);
+        let with_h1 = d.lam_fv(h1_fv, lower_ty, with_h2);
+        let with_l = d.lam_fv(l_fv, carrier, with_h1);
+        let with_f = d.lam_fv(f_fv, seq_ty, with_l);
+        d.lam_fv(a_fv, carrier, with_f)
+    };
+    let ty = {
+        let after_h2 = d.arrow(converges_fl, target_ty);
+        let after_h1 = d.arrow(lower_ty, after_h2);
+        let with_l = d.pi_fv(l_fv, carrier, after_h1);
+        let with_f = d.pi_fv(f_fv, seq_ty, with_l);
+        d.pi_fv(a_fv, carrier, with_f)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.converges_lower_bound,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.converges_upper_bound : ∀ f L b, (∀ n, le (f n) b) → Converges f L
+/// → le L b`.
+///
+/// The mirror of [`declare_converges_lower_bound`]: an upper bound on a
+/// convergent sequence bounds its limit above. Same telescope, run the other
+/// way (`L` to `b`, through `f j`), and the `Converges` term is negated
+/// (`Rat.bounds_neg` plus `halves`) rather than read directly, since the
+/// witness bounds `f j`'s sample *minus* `L`'s, and this telescope needs the
+/// difference the other way round.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_converges_upper_bound(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let seq_ty = seq_fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let l_fv = d.fresh_fvar();
+    let l = d.kernel().fvar(l_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let upper_ty = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let fn_term = d.apply(f, &[n]);
+        let claim = d.const_app(p.le, &[fn_term, b]);
+        d.pi_fv(n_fv, nat, claim)
+    };
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+
+    let converges_fl = converges_applied(d, p, f, l);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+
+    let target_ty = d.const_app(p.le, &[l, b]);
+
+    let predicate = converges_predicate(d, p, f, l);
+    let minor = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hp_ty = converges_body(d, p, f, l, k);
+        let hp_fv = d.fresh_fvar();
+        let hp = d.kernel().fvar(hp_fv);
+        let two_nat = d.num(2);
+
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let head = sample(d, p, l, m);
+        let tail = sample(d, p, b, m);
+        let target = rsub(d, rat, head, tail);
+        let goal_bound = div_succ(d, p, 2, m);
+
+        let hypothesis = {
+            let j_fv = d.fresh_fvar();
+            let j = d.kernel().fvar(j_fv);
+
+            let lj = sample(d, p, l, j);
+            let fj = d.apply(f, &[j]);
+            let fjj = sample(d, p, fj, j);
+            let bj = sample(d, p, b, j);
+
+            // u1 : lm - lj <= modulus(m,j).
+            let u1 = rsub(d, rat, head, lj);
+            let b1 = modulus(d, p, m, j);
+            let w1 = d.lemma(p.regular, &[l, m, j]);
+            let (_, r1) = halves(d, p, u1, b1, w1);
+
+            // u2 : lj - fjj <= K/(j+1), the NEGATED Converges witness. The
+            // witness bounds `fjj - lj`; `Rat.neg_sub` rewrites its negation
+            // to exactly `lj - fjj` (`u2`'s own shape, matching what
+            // `telescope_le4` independently builds for this slot).
+            let diff = rsub(d, rat, fjj, lj);
+            let neg_diff = rneg(d, diff);
+            let u2 = rsub(d, rat, lj, fjj);
+            let b2 = div_succ_at(d, p, k, j);
+            let w_diff = d.apply(hp, &[j]);
+            let (dl, du) = halves(d, p, diff, b2, w_diff);
+            let w_neg = d.lemma(rat.bounds_neg, &[diff, b2, dl, du]);
+            let (_, r2_neg) = halves(d, p, neg_diff, b2, w_neg);
+            let neg_sub_eq = d.lemma(rat.neg_sub, &[fjj, lj]); // Eq neg_diff u2
+            let r2 = rat_eq_rewrite(d, neg_diff, u2, neg_sub_eq, r2_neg, &|d, t| {
+                rle(d, rat, t, b2)
+            });
+
+            // u3 : fjj - bj <= 2/(j+1), directly from h1 at j, at index j.
+            let u3 = rsub(d, rat, fjj, bj);
+            let b3 = div_succ(d, p, 2, j);
+            let h1_at_j = d.apply(h1, &[j]);
+            let r3 = d.apply(h1_at_j, &[j]);
+
+            // u4 : bj - bm <= modulus(j,m).
+            let u4 = rsub(d, rat, bj, tail);
+            let b4 = modulus(d, p, j, m);
+            let w4 = d.lemma(p.regular, &[b, j, m]);
+            let (_, r4) = halves(d, p, u4, b4, w4);
+
+            let s34 = d.lemma(rat.add_le_add, &[u3, b3, u4, b4, r3, r4]);
+            let q34 = radd(d, u3, u4);
+            let c34 = radd(d, b3, b4);
+            let s234 = d.lemma(rat.add_le_add, &[u2, b2, q34, c34, r2, s34]);
+            let q234 = radd(d, u2, q34);
+            let c234 = radd(d, b2, c34);
+            let s1234 = d.lemma(rat.add_le_add, &[u1, b1, q234, c234, r1, s234]);
+            let q1234 = radd(d, u1, q234);
+            let c1234 = radd(d, b1, c234);
+
+            let (_, _, quantity_eq) = telescope_le4(d, p, head, lj, fjj, bj, tail);
+            let at_quantity = rat_eq_rewrite(d, q1234, target, quantity_eq, s1234, &|d, t| {
+                rle(d, rat, t, c1234)
+            });
+
+            let (final_bound, _, bound_eq) = fuse_bridge_bound(d, p, m, j, k, two_nat);
+            let moved = rat_eq_rewrite(d, c1234, final_bound, bound_eq, at_quantity, &|d, t| {
+                rle(d, rat, target, t)
+            });
+            d.lam_fv(j_fv, nat, moved)
+        };
+        let k_total = bridge_total_numerator(d, k, two_nat);
+        let at_index = d.lemma(
+            rat.le_of_le_add_nat_div_succ,
+            &[target, goal_bound, k_total, hypothesis],
+        );
+        let per_m = d.lam_fv(m_fv, nat, at_index);
+        let with_hp = d.lam_fv(hp_fv, hp_ty, per_m);
+        d.lam_fv(k_fv, nat, with_hp)
+    };
+
+    let proof_body = exists_elim(d, p, nat, predicate, target_ty, h2, minor);
+
+    let value = {
+        let with_h2 = d.lam_fv(h2_fv, converges_fl, proof_body);
+        let with_h1 = d.lam_fv(h1_fv, upper_ty, with_h2);
+        let with_b = d.lam_fv(b_fv, carrier, with_h1);
+        let with_l = d.lam_fv(l_fv, carrier, with_b);
+        d.lam_fv(f_fv, seq_ty, with_l)
+    };
+    let ty = {
+        let after_h2 = d.arrow(converges_fl, target_ty);
+        let after_h1 = d.arrow(upper_ty, after_h2);
+        let with_b = d.pi_fv(b_fv, carrier, after_h1);
+        let with_l = d.pi_fv(l_fv, carrier, with_b);
+        d.pi_fv(f_fv, seq_ty, with_l)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.converges_upper_bound,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
 // --- `CReal.Bounded`, and what it turned out to unlock ----------------------
 //
 // `CReal.mul`'s own regularity is a FIXED rate (see `product.rs`'s module
