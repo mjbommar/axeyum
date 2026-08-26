@@ -373,9 +373,31 @@ pub struct ComplexPrelude {
     /// weaker `‖z+w‖ ≤ sqrt(2‖z‖²+2‖w‖²)` — not simplifiable further without
     /// a SHARPER bound on `normSq (z+w)` than the parallelogram-derived one
     /// below, e.g. a Cauchy–Schwarz-style bound on the cross term
-    /// `Re(z·conj w)` against `‖z‖·‖w‖`, which needs `abs`'s multiplicativity
-    /// (`‖z·w‖ = ‖z‖·‖w‖`, not built) or an equivalent — not merely
-    /// `sqrt_sq`. `normSq_add` (this
+    /// `Re(z·conj w)` against `‖z‖·‖w‖`.
+    ///
+    /// **`abs`'s multiplicativity is no longer the missing piece — `abs_mul`
+    /// landed the same day this doc's counterexample did — and
+    /// `CReal.le_of_sq_le` (`creal/sqrt.rs`, 2026-08-26: `t²≤s² → 0≤t → 0≤s →
+    /// t≤s`, composed from `sqrt_le_sqrt`/`sqrt_sq`/`le_congr`) is exactly
+    /// the "cancel the square at the `CReal` level" step [`Self::abs`]'s own
+    /// doc used to name as missing. Neither closes the Cauchy–Schwarz step by
+    /// itself, and the reason is a genuine gap, checked rather than assumed:
+    /// the cross term `Re(z·conj w) = re z·re w + im z·im w` has NO known
+    /// sign, and `le_of_sq_le` needs `0 ≤ t` on the term being bounded — at
+    /// `z := one, w := neg one`, the cross term is `-1 < 0`. Recovering `t ≤
+    /// s` from `t² ≤ s²` and `0 ≤ s` ALONE (no sign hypothesis on `t`) is
+    /// true (`Rat.ratSqLe` proves exactly this at the RATIONAL level, via
+    /// `Rat.le_or_lt`'s DECIDABLE case split), but that proof technique does
+    /// not transfer to `CReal`, which has no decidable order — `CReal` has no
+    /// `le_or_lt`. The route that DOES survive constructively needs an
+    /// unconditional identity relating `sqrt (mul t t)` to `CReal.abs t`
+    /// (equivalently `CReal.mul (abs t) (abs t) ~ mul t t`) — NOT built, and
+    /// a genuinely new result, not a composition of `sqrt_le_sqrt`/`sqrt_sq`/
+    /// `abs_mul`: `sqrt_sq` itself needs `0 ≤ t` for exactly the same
+    /// reason (`sqrt(mul t t) ~ t` is simply false for negative `t`), so the
+    /// `abs`-shaped version needs its own per-sample argument, in the shape
+    /// of `sqrt_sq`'s own construction, not a shortcut through it.**
+    /// `normSq_add` (this
     /// module) is the parallelogram law, not subadditivity — it is an
     /// EQUALITY mentioning `normSq (add z (neg w))` as well as `normSq (add z
     /// w)`, and it is [`Self::norm_sq_nonneg`] applied to that SECOND term
@@ -1151,10 +1173,18 @@ pub struct ComplexPrelude {
     /// 1`).** The identical factor-of-2 slack is present here: `‖L‖ ≤
     /// sqrt(2‖X‖²+2‖Y‖²)` cannot be simplified to `‖L‖ ≤ ‖X‖+‖Y‖` by
     /// `sqrt_sq` alone, for the same reason. Combining a SHARPER squared
-    /// bound (the `‖L‖² ≤ ‖X‖²+2‖X‖‖Y‖+‖Y‖²` form named above, which needs
-    /// `abs`'s multiplicativity, still not built) with `sqrt_sq` is the
-    /// remaining climb to the classical statement — `sqrt_sq` was necessary
-    /// but is not, by itself, sufficient.
+    /// bound (the `‖L‖² ≤ ‖X‖²+2‖X‖‖Y‖+‖Y‖²` form named above) with `sqrt_sq`
+    /// is the remaining climb to the classical statement — `sqrt_sq` was
+    /// necessary but is not, by itself, sufficient.
+    ///
+    /// **`abs`'s multiplicativity is landed (`Self::abs_mul`), and is NOT the
+    /// remaining obstruction — see [`Self::norm_sq_add_le`]'s own doc, which
+    /// carries the up-to-date characterization of what still blocks the
+    /// sharp form here too**: the sharper squared bound's cross term has no
+    /// known sign, and cancelling `t² ≤ s²` into `t ≤ s` without a `0 ≤ t`
+    /// hypothesis needs an unconditional `sqrt (mul t t) ~ abs t` (or
+    /// equivalent) that is not composable from `sqrt_le_sqrt`/`sqrt_sq`/
+    /// `CReal.le_of_sq_le` and is not built.
     pub ptolemy_inequality_sq: NameId,
 
     /// `Complex.abs : Complex → CReal := fun z => CReal.sqrt (normSq z)` —
@@ -1186,10 +1216,24 @@ pub struct ComplexPrelude {
     /// What `sqrt_sq` DOES give outright, combined with `sqrt_le_sqrt`, is
     /// the honest (loose) bound `‖z+w‖ ≤ sqrt(2‖z‖²+2‖w‖²)`. Reaching the
     /// classical inequality needs a SHARPER bound on `normSq(z+w)` first —
-    /// a Cauchy–Schwarz-style estimate on the cross term, which needs
-    /// `abs`'s multiplicativity (`‖z·w‖ = ‖z‖·‖w‖`, not built) or an
-    /// equivalent. That is a genuinely new piece of work, not a rename of
-    /// this one.
+    /// a Cauchy–Schwarz-style estimate on the cross term.
+    ///
+    /// **`abs`'s multiplicativity landed (`Self::abs_mul`) and `CReal`'s own
+    /// "cancel the square" step landed too (`CReal.le_of_sq_le`,
+    /// `creal/sqrt.rs`, 2026-08-26), and NEITHER is, by itself, the
+    /// remaining piece — checked, not assumed.** The Cauchy–Schwarz cross
+    /// term `Re(z·conj w) = re z·re w + im z·im w` has no known sign (e.g.
+    /// negative at `z := one, w := neg one`), and `le_of_sq_le` requires
+    /// `0 ≤` the term it cancels the square of. The rational analogue
+    /// (`Rat.ratSqLe`: `t²≤s² ∧ 0≤s → t≤s`, no sign hypothesis on `t`) uses
+    /// `Rat.le_or_lt`'s DECIDABLE case split, and `CReal` has no such
+    /// decision procedure. What is still missing is an unconditional
+    /// `CReal` identity relating `sqrt (mul t t)` to `CReal.abs t` — not a
+    /// composition of `sqrt_le_sqrt`/`sqrt_sq`/`abs_mul`/`le_of_sq_le`, since
+    /// `sqrt_sq` itself needs `0 ≤ t` for the identical reason
+    /// (`sqrt(mul t t) ~ t` is simply false for negative `t`) — a genuinely
+    /// new piece of work in the shape of `sqrt_sq`'s OWN per-sample
+    /// construction, not a rename of this one.
     ///
     /// [`Self::abs_nonneg`] needed none of this: it is a single-index sign
     /// fact about `sqrtApprox`'s own construction (a `Nat` square root, cast
