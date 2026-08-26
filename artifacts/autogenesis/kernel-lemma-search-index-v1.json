@@ -1,18 +1,18 @@
 {
   "census": {
     "distinct_exactly_linked_facts": 312,
-    "kernel_dependency_edges": 6666,
-    "kernel_theorems": 1193,
+    "kernel_dependency_edges": 6672,
+    "kernel_theorems": 1195,
     "maximum_dependency_depth": 26,
     "theorems_with_exact_fact_links": 308,
-    "theorems_without_exact_fact_links": 885,
+    "theorems_without_exact_fact_links": 887,
     "unresolved_prefixed_kernel_evidence": 90
   },
   "derivation": {
     "fact_identity_rule": "kernel-term evidence id with exact kernel- or kernel: prefix and an exact current theorem suffix",
     "fact_population": "sorted artifacts/facts/F-*.json",
     "graph_semantics": "accepted theorem-term direct references; dependency depth is the longest direct-theorem path from a theorem with no theorem dependency",
-    "kernel_projection_sha256": "41a47213cfbafdd67b26a3794d8d7cdd0985beef4f4d8d45524e5442ddbf401f",
+    "kernel_projection_sha256": "ccd1660e40457addf98bf8f3cb900d5710444f51f1808a45cf881da46e525e3e",
     "trust_boundary": "search and retrieval only; no concept, applicability, proof, admission, or trusted-kernel authority"
   },
   "kind": "axeyum-kernel-lemma-search-index",
@@ -2985,6 +2985,8 @@
         "CReal.not_apart_one_of_pow_succ_eq_one",
         "CReal.not_equiv_mul_one_one_zero",
         "CReal.not_equiv_of_apart",
+        "CReal.ofNat_add",
+        "CReal.ofNat_mul",
         "CReal.one_le_pow_of_one_le",
         "CReal.pos_bound_of_lt",
         "CReal.pos_of_pos_bound",
@@ -8281,6 +8283,24 @@
     },
     {
       "axiom_footprint_size": 0,
+      "dependency_depth": 18,
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.symm",
+        "CReal.ofRat_add",
+        "Rat.natDivSucc_add"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.ofNat_add",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "dependency_depth": 14,
       "direct_theorem_dependencies": [
         "CReal.ofRat_le",
@@ -8303,6 +8323,24 @@
     },
     {
       "axiom_footprint_size": 0,
+      "dependency_depth": 18,
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.symm",
+        "CReal.ofRat_mul",
+        "Rat.natDivSucc_mul"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.ofNat_mul",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "dependency_depth": 17,
       "direct_theorem_dependencies": [
         "CReal.Equiv.of_pointwise"
@@ -8316,6 +8354,7 @@
         "CReal.hasDerivative_pow",
         "CReal.ivt_step",
         "CReal.monotone_of_nonneg_deriv",
+        "CReal.ofNat_add",
         "CReal.riemannSum_const",
         "CReal.sumRange_const",
         "CReal.uniformly_continuous_add",
@@ -8392,6 +8431,7 @@
         "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_pos",
         "CReal.not_equiv_mul_one_one_zero",
+        "CReal.ofNat_mul",
         "CReal.riemannSum_const",
         "CReal.riemannSum_sample_in_bounds",
         "CReal.subdivisionPoint_in_bounds",
@@ -29807,6 +29847,7 @@
         "CReal.mul_congr",
         "CReal.mul_inv_cancel",
         "CReal.mul_one",
+        "CReal.ofNat_add",
         "CReal.rat_approx_lower",
         "CReal.rat_approx_upper",
         "CReal.riemannSum_const",
@@ -30065,6 +30106,7 @@
         "CReal.mul_congr",
         "CReal.mul_inv_cancel",
         "CReal.mul_nonneg",
+        "CReal.ofNat_mul",
         "CReal.riemannSum_const",
         "CReal.riemannSum_sample_in_bounds",
         "CReal.subdivisionPoint_in_bounds",

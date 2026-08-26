@@ -29,7 +29,7 @@ projection still held 1,100. Regenerating both artifacts brought them into exact
 agreement at 1,184. Their separate derivations remain valuable: freshness must
 continue to fail if theorem construction advances only one population.
 After merging the immediately subsequent constructive-real and rational
-theorems, both derived artifacts advanced together to 1,193.
+theorems, both derived artifacts advanced together through at least 1,195.
 
 ## Reproduce and gate
 

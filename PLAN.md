@@ -1104,7 +1104,9 @@ deterministic retrieval to the general producer and measure whether it closes
 new sibling facts without per-target proof code. A live high-stack inventory
 also found 1,184 axiom-free theorems and exposed the committed dependency
 projection as stale at 1,100; both derived populations now agree at 1,184.
-After the next mainline construction commits, both advanced together to 1,193.
+After the next mainline construction commits, both advanced together through at
+least 1,195; the generated census remains the live authority as construction
+continues.
 The autonomous loop now has a seventh held-out-safe read tool,
 `lemma_neighbourhood`, which exposes exact dependencies and reverse consumers
 without treating retrieval as applicability or proof authority. Product

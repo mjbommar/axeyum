@@ -1,17 +1,17 @@
 {
   "census": {
-    "axiom_free_declarations": 1508,
+    "axiom_free_declarations": 1510,
     "declaration_kinds": {
       "axiom": 30,
       "constructor": 29,
       "definition": 242,
       "inductive": 22,
       "recursor": 22,
-      "theorem": 1193
+      "theorem": 1195
     },
-    "declarations": 1538,
-    "direct_theorem_dependency_edges": 6666,
-    "theorems": 1193
+    "declarations": 1540,
+    "direct_theorem_dependency_edges": 6672,
+    "theorems": 1195
   },
   "declarations": [
     {
@@ -5974,11 +5974,41 @@
       "axiom_footprint_size": 0,
       "declaration_kind": "theorem",
       "direct_theorem_dependencies": [
+        "CReal.Equiv.symm",
+        "CReal.ofRat_add",
+        "Rat.natDivSucc_add"
+      ],
+      "id": "CReal.ofNat_add",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
         "CReal.ofRat_le",
         "Nat.le_dest",
         "Rat.natDivSucc_le_add_left"
       ],
       "id": "CReal.ofNat_le",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.symm",
+        "CReal.ofRat_mul",
+        "Rat.natDivSucc_mul"
+      ],
+      "id": "CReal.ofNat_mul",
       "visible_in": [
         "complex",
         "cpoint",
@@ -37407,6 +37437,21 @@
     },
     {
       "relation": "direct-theorem-depends-on",
+      "source": "CReal.ofNat_add",
+      "target": "CReal.Equiv.symm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.ofNat_add",
+      "target": "CReal.ofRat_add"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.ofNat_add",
+      "target": "Rat.natDivSucc_add"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
       "source": "CReal.ofNat_le",
       "target": "CReal.ofRat_le"
     },
@@ -37419,6 +37464,21 @@
       "relation": "direct-theorem-depends-on",
       "source": "CReal.ofNat_le",
       "target": "Rat.natDivSucc_le_add_left"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.ofNat_mul",
+      "target": "CReal.Equiv.symm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.ofNat_mul",
+      "target": "CReal.ofRat_mul"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.ofNat_mul",
+      "target": "Rat.natDivSucc_mul"
     },
     {
       "relation": "direct-theorem-depends-on",
