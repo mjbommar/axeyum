@@ -14,8 +14,10 @@ then retrieved `Nat.fib_le_succ`; a checked, axiom-free
 `Nat.monotone_of_le_succ` combinator composes it into `Nat.fib_mono`, settling
 the corresponding fact with real kernel-observed dependencies. This is genuine
 library compounding but remains correctly classified as `no_operation` because
-the reference constructor was hand-authored. Next: expose that target-agnostic
-combinator through an authoritative producer, then measure sibling conversion.
+the reference constructor was hand-authored. Exact evidence identity now links
+346 kernel theorems to 350 facts, with 53 historical shorthand IDs left
+explicitly unresolved. Next: expose that target-agnostic combinator through an
+authoritative producer, then measure sibling conversion.
 
 <!-- plan-section: landed-changes -->
 
@@ -29,3 +31,4 @@ combinator through an authoritative producer, then measure sibling conversion.
 | 2026-08-25 | `b34067dc0` | The recomputed frontier settles `Nat.ModEq.trans` through the same producer; multi-target credit reaches 10. |
 | 2026-08-25 | `43f87f269` | Durable symmetry unlock promotes `Nat.ModEq.comm` into the unchanged family operation with source-bound evidence. |
 | 2026-08-25 | `3375112a9` | Recomputed scheduling admits `Nat.ModEq.comm`; durable-state-driven multi-target credit reaches 11. |
+| 2026-08-25 | `3cfb80172` | Resolve five manually verified Nat evidence identities; exact links reach 315 theorems and 319 facts without guessing. |

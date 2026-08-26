@@ -25,6 +25,7 @@
     {
       "id": "kernel-mod_eq_add_right",
       "kind": "kernel-term",
+      "kernel_declaration": "Nat.mod_eq_add_right",
       "supports": "Nat.mod_eq_add_right is admitted by the trusted kernel gate with the type recorded in formal.statement.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- Nat.mod_eq_add_right 2>/dev/null | grep -Ec '^Nat\\.mod_eq_add_right[[:space:]]')\" -ge 1",

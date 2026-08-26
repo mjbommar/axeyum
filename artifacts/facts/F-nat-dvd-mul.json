@@ -20,6 +20,7 @@
     {
       "id": "kernel-dvd_mul",
       "kind": "kernel-term",
+      "kernel_declaration": "Nat.dvd_mul",
       "supports": "Nat.dvd_mul is admitted by the trusted kernel gate with the type recorded in formal.statement.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- Nat.dvd_mul 2>/dev/null | grep -Ec '^Nat\\.dvd_mul[[:space:]]')\" -ge 1",

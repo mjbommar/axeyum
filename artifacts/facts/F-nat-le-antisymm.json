@@ -25,6 +25,7 @@
     {
       "id": "kernel-le_antisymm",
       "kind": "kernel-term",
+      "kernel_declaration": "Nat.le_antisymm",
       "supports": "Nat.le_antisymm is admitted by the trusted kernel gate with the type recorded in formal.statement.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- Nat.le_antisymm 2>/dev/null | grep -Ec '^Nat\\.le_antisymm[[:space:]]')\" -ge 1",

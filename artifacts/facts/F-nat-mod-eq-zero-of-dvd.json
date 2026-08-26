@@ -25,6 +25,7 @@
     {
       "id": "kernel-mod_eq_zero_of_dvd",
       "kind": "kernel-term",
+      "kernel_declaration": "Nat.mod_eq_zero_of_dvd",
       "supports": "Nat.mod_eq_zero_of_dvd is admitted by the trusted kernel gate with the type recorded in formal.statement.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- Nat.mod_eq_zero_of_dvd 2>/dev/null | grep -Ec '^Nat\\.mod_eq_zero_of_dvd[[:space:]]')\" -ge 1",

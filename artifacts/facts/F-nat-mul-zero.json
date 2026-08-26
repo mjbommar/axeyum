@@ -19,6 +19,7 @@
     {
       "id": "kernel-mul_zero",
       "kind": "kernel-term",
+      "kernel_declaration": "Nat.mul_zero",
       "supports": "Nat.mul_zero is admitted by the trusted kernel gate with the type recorded in formal.statement.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- Nat.mul_zero 2>/dev/null | grep -Ec '^Nat\\.mul_zero[[:space:]]')\" -ge 1",

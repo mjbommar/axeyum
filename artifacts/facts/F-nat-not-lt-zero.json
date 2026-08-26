@@ -22,6 +22,7 @@
     {
       "id": "kernel-not_lt_zero",
       "kind": "kernel-term",
+      "kernel_declaration": "Nat.not_lt_zero",
       "supports": "Nat.not_lt_zero is admitted by the trusted kernel gate with the type recorded in formal.statement.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- Nat.not_lt_zero 2>/dev/null | grep -Ec '^Nat\\.not_lt_zero[[:space:]]')\" -ge 1",

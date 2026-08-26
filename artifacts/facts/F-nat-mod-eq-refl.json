@@ -20,6 +20,7 @@
     {
       "id": "kernel-mod_eq_refl",
       "kind": "kernel-term",
+      "kernel_declaration": "Nat.mod_eq_refl",
       "supports": "Nat.mod_eq_refl is admitted by the trusted kernel gate with the type recorded in formal.statement.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- Nat.mod_eq_refl 2>/dev/null | grep -Ec '^Nat\\.mod_eq_refl[[:space:]]')\" -ge 1",
