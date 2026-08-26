@@ -41,6 +41,23 @@ alongside the existing checked-`i128` route. Large coefficients succeed, indefin
 fail, and intermediate growth declines explicitly. Producing and graph-binding an exact dual
 matrix remain open.
 
+**Certification novelty correction, 2026-08-26.** The brief's ZykovColor claim is no longer
+current: Dold et al., CP 2026, already add VeriPB logging to ZykovColor and formally check
+the result with CakePBcolour. The official 13,145,463-byte Zenodo archive (SHA-256
+`5aa7f082...232e75`) contains the producer, VeriPB, CakePB, command wrapper, and experimental
+logs; its tables cover 137 DIMACS and 1,000 random-graph attempts. Target 5c is therefore a
+reproduction/import or coverage-extension candidate, not a first. This does not touch 5a:
+the overlapping `C2000.9` stem in a colouring corpus is not a certificate for the
+Krpan--Povh maximum-clique theta bound.
+
+**Instance-bound theta duals, 2026-08-26.** ADR-0560 closes the graph/objective/PSD binding
+gap: `sos::theta::check_theta_clique_dual` validates an undirected graph and sparse exact
+non-edge multipliers, reconstructs `t I + Y - J`, and accepts only if ADR-0557's bounded
+BigRational checker proves the slack PSD. `K_3 <= 3` and empty-three <= 1 verify; false
+`K_3 <= 2`, edge-supported or duplicate multipliers, malformed graphs, and resource-policy
+controls fail or decline in their distinct channels. The published target solver discarded
+its dual variables, so none of 73/115/168 is certified yet.
+
 **S-box positive-certificate slice, 2026-08-26.** ADR-0558 adds a portable named-wire
 Boolean-circuit artifact and bounded complete truth-table checker. The published
 `PRIMATEs^-1` witness matches all 32 independently sourced rows with 8 AND, 35 XOR, and 2 NOT

@@ -630,3 +630,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0557](adr-0557-exact-psd-checking-widens-with-explicit-big-rational-limits.md) | Add bounded arbitrary-precision LDL-style PSD decisions that decline on dimension or coefficient growth rather than overflowing | accepted |
 | [0558](adr-0558-portable-boolean-circuits-bind-complete-truth-tables.md) | Check named-wire Boolean circuit witnesses exhaustively under explicit bit ordering, gate semantics, and resource admission | accepted |
 | [0559](adr-0559-simd-minimality-binds-tag-semantics-and-an-explicit-instruction-subset.md) | Prove bounded SIMD shuffle minimality over distinct provenance tags and a named instruction subset | accepted |
+| [0560](adr-0560-theta-duals-are-reconstructed-from-the-graph.md) | Check exact Lovasz theta clique bounds by reconstructing the dual slack from the graph and sparse nonedge multipliers | accepted |

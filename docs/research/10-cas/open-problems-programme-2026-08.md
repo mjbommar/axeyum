@@ -57,7 +57,9 @@ These are hypotheses until the first vertical slices measure the actual gaps.
   now removes the arithmetic-width blocker: bounded `BigRational` symmetric elimination
   reports exact pivots or declines on dimension/input/intermediate growth. The graph-bound
   dual envelope and rationalisation producer remain open.
-- A typed external-certificate adapter for VeriPB, if lane 5c survives its feasibility gate.
+- A typed external-certificate adapter for VeriPB as an import/replay calibration or coverage
+  extension. Lane 5c does not survive as a novelty claim: Dold et al. (CP 2026) already
+  proof-log ZykovColor and formally check the result with CakePBcolour.
   ADR-0555 now supplies the lower-assurance shared import boundary: hash-pinned checker and
   artifact bytes, bounded process isolation, finding-dependent exit status, and a
   content-addressed receipt.  It intentionally grants no fact-ledger or kernel authority;
@@ -121,6 +123,24 @@ objective scalars, applies `1e-9` offsets before rounding, and discards the task
 published package contains no independently replayable certificate for 73/115/168. ADR-0557
 adds the missing bounded arbitrary-precision PSD checker; obtaining/rationalising a dual
 matrix and checking graph-specific affine constraints remain required.
+
+ADR-0560 now supplies that graph-specific envelope for the standard clique-theta primal.
+The checker validates the exact graph, rational objective, and sparse multipliers supported
+only on non-edges; it independently reconstructs `t I + Y - J` before invoking ADR-0557's
+PSD decision. Tiny complete- and empty-graph controls verify, a false complete-graph bound
+and detached/malformed multiplier controls fail, and resource policy remains three-valued.
+The target bounds remain uncertified because their published producer retained none of the
+dual variables required to populate this now-complete checking envelope.
+
+The colouring premise was corrected on 2026-08-26 after a through-date search found Dold et
+al., *End-to-End Certified Graph Colouring* (LIPIcs CP 2026, article 21). Their official
+Zenodo archive contains a VeriPB-logging CertifyingZykovColor, the VeriPB and formally
+verified CakePBcolour checkers, exact run commands, and result logs. Its tables contain all
+137 DIMACS and 1,000 Erdős--Rényi attempts and 759 filtered checker rows. Thus “no proof
+logging of any kind” is only historical for the 2025 ZykovColor release and cannot support a
+2026 novelty claim. The maximum-clique theta, job-shop, and nurse-rostering targets remain
+separate; filename overlap between DIMACS colouring and clique suites proves no certificate
+transfer.
 
 The first S-box positive control is now independently replayed. Zhang--Huang's Appendix C.1
 `PRIMATEs^-1` circuit matches the inverse of the original specification's 32-row table under
