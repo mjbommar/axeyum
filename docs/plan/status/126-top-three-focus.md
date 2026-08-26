@@ -305,6 +305,7 @@ agent read surface and dispatch reconstruction for its row.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-26 | `1c7cb953e` | Add a machine-readable imported-candidate descriptor and separate footprint-aware search index; assumption-bearing candidates route to reconstruction before execution. |
 | 2026-08-26 | `6e0f87c2d` | Export and independently audit upstream `Nat.testBit_bitwise`; preserve its exact 29-dependency, five-assumption footprint as reconstruct-required guidance rather than contract evidence. |
 | 2026-08-26 | `48ae785e2` | Derive the exact four-target bit-observation contract slice: 103 shared transparent nodes, explicit target deltas, and a non-circular lower-level theorem boundary. |
 | 2026-08-26 | `95587054fd` | Preserve stream-context declaration identities, compact the imported graph through dense node IDs, and derive a checked 113-node reverse-reachability frontier for multi-sibling contract design. |
