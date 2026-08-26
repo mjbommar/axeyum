@@ -2155,3 +2155,138 @@ pub(super) fn declare_sum_range_double(
         value: value_full,
     })
 }
+
+// --- `CReal.ofNat_add` / `CReal.ofNat_mul` -- toward `riemannSum_cauchy` ---
+//
+// `CReal.sumRange_reblock`'s conclusion indexes the fine sum at the RAW
+// global index `(succ n)*i + j`; comparing a coarse `riemannSum` block's
+// single term against that block's `succ n` fine terms needs the LOCAL
+// sample-point arithmetic `a + i*delta_m + j*delta_fine` instead (`delta_fine
+// := delta_m * natDivSucc 1 n`, chosen so `(succ n)*delta_fine ~ delta_m` is
+// exactly `CReal.mesh_count_width` at `(delta_m, n)` -- no new identity
+// needed there). Bridging the two needs `CReal.ofNat` to commute with
+// `Nat.add`/`Nat.mul`, which no existing lemma states. Both are direct, with
+// no induction on either argument: `CReal.ofNat n := CReal.ofRat
+// (Rat.natDivSucc n 0)`, so lifting `Rat.natDivSucc`'s own homomorphism facts
+// at denominator index `0` (`RatPrelude::nat_div_succ_add`/`nat_div_succ_mul`,
+// the latter already general in its SECOND denominator index, so `0` is just
+// one instance) across `CReal.ofRat` via `CReal.ofRat_add`/`CReal.ofRat_mul`
+// closes each in one step -- the same one-step-lift idiom
+// [`nat_div_succ_inverse_pair_eq_one`] already uses `nat_div_succ_mul` for,
+// above.
+
+/// `CReal.ofNat_add : ∀ a b : Nat, Equiv (ofNat (Nat.add a b)) (add (ofNat a)
+/// (ofNat b))`. See this section's own module documentation.
+fn declare_of_nat_add(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let rat = p.rat;
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let zero_nat = d.num(0);
+    let rat_a = d.const_app(rat.nat_div_succ, &[a, zero_nat]);
+    let rat_b = d.const_app(rat.nat_div_succ, &[b, zero_nat]);
+    let of_nat_a = embed(d, p, rat_a); // defeq (ofNat a)
+    let of_nat_b = embed(d, p, rat_b); // defeq (ofNat b)
+    let sum_real = cadd(d, p, of_nat_a, of_nat_b);
+
+    // step1 : Equiv sum_real (ofRat (Rat.add rat_a rat_b))
+    let step1 = d.lemma(p.of_rat_add, &[rat_a, rat_b]);
+
+    let sum_rat = radd(d, rat_a, rat_b);
+    let nat_sum = NatOps::add(d, a, b);
+    let rat_target = d.const_app(rat.nat_div_succ, &[nat_sum, zero_nat]);
+    // add_eq : Eq Rat sum_rat rat_target
+    let add_eq = d.lemma(rat.nat_div_succ_add, &[a, b, zero_nat]);
+
+    let rewritten = rat_eq_rewrite(d, sum_rat, rat_target, add_eq, step1, &|d, t| {
+        let embedded = embed(d, p, t);
+        equiv(d, p, sum_real, embedded)
+    });
+    // rewritten : Equiv sum_real (embed rat_target) -- defeq Equiv sum_real (ofNat nat_sum)
+    let of_nat_sum = d.const_app(p.of_nat, &[nat_sum]);
+    let flipped = d.lemma(p.equiv_symm, &[sum_real, of_nat_sum, rewritten]);
+    // flipped : Equiv of_nat_sum sum_real
+
+    let ty = {
+        let concl = equiv(d, p, of_nat_sum, sum_real);
+        let over_b = d.pi_fv(b_fv, nat, concl);
+        d.pi_fv(a_fv, nat, over_b)
+    };
+    let value = {
+        let over_b = d.lam_fv(b_fv, nat, flipped);
+        d.lam_fv(a_fv, nat, over_b)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.of_nat_add,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.ofNat_mul : ∀ a b : Nat, Equiv (ofNat (Nat.mul a b)) (mul (ofNat a)
+/// (ofNat b))`. See this section's own module documentation.
+fn declare_of_nat_mul(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let rat = p.rat;
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let zero_nat = d.num(0);
+    let rat_a = d.const_app(rat.nat_div_succ, &[a, zero_nat]);
+    let rat_b = d.const_app(rat.nat_div_succ, &[b, zero_nat]);
+    let of_nat_a = embed(d, p, rat_a);
+    let of_nat_b = embed(d, p, rat_b);
+    let prod_real = cmul(d, p, of_nat_a, of_nat_b);
+
+    // step1 : Equiv prod_real (ofRat (Rat.mul rat_a rat_b))
+    let step1 = d.lemma(p.of_rat_mul, &[rat_a, rat_b]);
+
+    let prod_rat = rmul(d, rat_a, rat_b);
+    let nat_prod = NatOps::mul(d, a, b);
+    let rat_target = d.const_app(rat.nat_div_succ, &[nat_prod, zero_nat]);
+    // mul_eq : Eq Rat prod_rat rat_target
+    let mul_eq = d.lemma(rat.nat_div_succ_mul, &[a, b, zero_nat]);
+
+    let rewritten = rat_eq_rewrite(d, prod_rat, rat_target, mul_eq, step1, &|d, t| {
+        let embedded = embed(d, p, t);
+        equiv(d, p, prod_real, embedded)
+    });
+    let of_nat_prod = d.const_app(p.of_nat, &[nat_prod]);
+    let flipped = d.lemma(p.equiv_symm, &[prod_real, of_nat_prod, rewritten]);
+
+    let ty = {
+        let concl = equiv(d, p, of_nat_prod, prod_real);
+        let over_b = d.pi_fv(b_fv, nat, concl);
+        d.pi_fv(a_fv, nat, over_b)
+    };
+    let value = {
+        let over_b = d.lam_fv(b_fv, nat, flipped);
+        d.lam_fv(a_fv, nat, over_b)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.of_nat_mul,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Admit `CReal.ofNat_add` and `CReal.ofNat_mul`. See this section's own
+/// module documentation for what they bridge toward `riemannSum_cauchy`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_of_nat_hom(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    declare_of_nat_add(d, p)?;
+    declare_of_nat_mul(d, p)
+}

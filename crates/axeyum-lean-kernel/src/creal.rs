@@ -2193,6 +2193,28 @@ pub struct CRealPrelude {
     /// `m` and `2m+1` needs; see `integral.rs`'s module documentation for
     /// what still separates this from `riemannSum_cauchy`.
     pub sum_range_double: NameId,
+    /// `CReal.ofNat_add : ∀ a b : Nat, Equiv (ofNat (Nat.add a b)) (add (ofNat
+    /// a) (ofNat b))` (`creal/integral.rs`) — `CReal.ofNat` is a `Nat →
+    /// (CReal, +)` homomorphism. Direct, non-inductive: `ofNat a := ofRat
+    /// (natDivSucc a 0)`, so [`Self::of_rat_add`] gives `Equiv (add (ofNat a)
+    /// (ofNat b)) (ofRat (Rat.add (natDivSucc a 0) (natDivSucc b 0)))`, and
+    /// `RatPrelude::nat_div_succ_add` at denominator index `0` collapses the
+    /// right side's `Rat.add` to the single `natDivSucc (Nat.add a b) 0` —
+    /// defeq `ofNat (Nat.add a b)` — with no induction on either argument.
+    /// Needed to reconcile [`Self::sum_range_reblock`]'s raw global fine
+    /// index `(succ n)·i + j` with the per-block local sample-point
+    /// arithmetic `riemannSum_cauchy` still needs; see `integral.rs`'s
+    /// module documentation.
+    pub of_nat_add: NameId,
+    /// `CReal.ofNat_mul : ∀ a b : Nat, Equiv (ofNat (Nat.mul a b)) (mul (ofNat
+    /// a) (ofNat b))` (`creal/integral.rs`) — `CReal.ofNat` is also a `Nat →
+    /// (CReal, ·)` homomorphism, by the same direct route as
+    /// [`Self::of_nat_add`]: [`Self::of_rat_mul`] plus
+    /// `RatPrelude::nat_div_succ_mul` (`Rat.mul (natDivSucc a 0) (natDivSucc
+    /// b j) = natDivSucc (a·b) j`, already stated for an arbitrary second
+    /// denominator index `j`, so `j := 0` is exactly this case) — no
+    /// induction.
+    pub of_nat_mul: NameId,
     /// `CReal.monotone_of_nonneg_deriv : ∀ F F' a b, HasDerivativeOn F F' a
     /// b → (∀ z, le a z → le z b → le zero (F' z)) → ∀ x y, le a x → le x y →
     /// le y b → le (F x) (F y)` (`creal/monotone.rs`) — a nonnegative
@@ -2542,6 +2564,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         mesh_count_width: kernel.name_str(creal, "mesh_count_width"),
         subdivision_point_in_bounds: kernel.name_str(creal, "subdivisionPoint_in_bounds"),
         sum_range_double: kernel.name_str(creal, "sumRange_double"),
+        of_nat_add: kernel.name_str(creal, "ofNat_add"),
+        of_nat_mul: kernel.name_str(creal, "ofNat_mul"),
         monotone_of_nonneg_deriv: kernel.name_str(creal, "monotone_of_nonneg_deriv"),
         ivt_step: kernel.name_str(creal, "ivt_step"),
         constant_of_zero_deriv: kernel.name_str(creal, "constant_of_zero_deriv"),
@@ -2658,6 +2682,15 @@ pub(crate) fn build_creal_prelude_uncached(
         // in between; declared here as the same kind of standalone,
         // reusable building block as `sumRange_reblock` just above.
         integral::declare_within_of_two_sided_le(&mut d, prelude)?;
+        // `ofNat_add`/`ofNat_mul` only need `CReal.ofNat`
+        // (`archimedean::declare_archimedean`, well above) and the `Rat`-level
+        // `ofRat_add`/`ofRat_mul`/`natDivSucc_add`/`natDivSucc_mul` facts that
+        // predate `creal` entirely; no dependency on anything in between, so
+        // declared here as the same kind of standalone building block as
+        // `sumRange_reblock`/`within_of_two_sided_le` just above. See
+        // `integral.rs`'s module documentation for what they bridge toward
+        // `riemannSum_cauchy`.
+        integral::declare_of_nat_hom(&mut d, prelude)?;
         // `monotone_of_nonneg_deriv` and its two supporting lemmas
         // (`sumRange_const`, `mesh_count_width`, `subdivisionPoint_in_bounds`)
         // reuse `CReal.ofNat_le` (`integral::declare_integral`, just above)
