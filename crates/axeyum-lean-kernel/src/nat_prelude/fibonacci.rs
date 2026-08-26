@@ -326,6 +326,69 @@ fn declare_fib_le_succ(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelE
     d.declare_theorem(p.fib_le_succ, ty, value)
 }
 
+/// `Nat.fib_mono : ∀ a b, Le a b → Le (fib a) (fib b)`.
+///
+/// This is deliberately a composition theorem rather than another recurrence
+/// proof. Elimination on the order derivation starts at reflexivity; each
+/// `Le.step` chains the accumulated result with the already checked
+/// `fib_le_succ` theorem. Its dependency closure therefore records the
+/// reusable lemma that made the stronger theorem possible.
+fn declare_fib_mono(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let anon = d.anon_name();
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let h_ty = d.le(a, b);
+    let fib_a = d.const_app(p.fib, &[a]);
+    let fib_b = d.const_app(p.fib, &[b]);
+    let conclusion = d.le(fib_a, fib_b);
+
+    let motive = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let hx_ty = d.le(a, x);
+        let fib_x = d.const_app(p.fib, &[x]);
+        let body = d.le(fib_a, fib_x);
+        let inner = d.kernel().lam(anon, hx_ty, body, BinderInfo::Default);
+        d.lam_fv(x_fv, nat, inner)
+    };
+    let minor_refl = d.lemma(p.le_refl, &[fib_a]);
+    let minor_step = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let hx_fv = d.fresh_fvar();
+        let hx_ty = d.le(a, x);
+        let ih_fv = d.fresh_fvar();
+        let ih = d.kernel().fvar(ih_fv);
+        let fib_x = d.const_app(p.fib, &[x]);
+        let sx = d.succ(x);
+        let fib_sx = d.const_app(p.fib, &[sx]);
+        let ih_ty = d.le(fib_a, fib_x);
+        let adjacent = d.lemma(p.fib_le_succ, &[x]);
+        let body = d.lemma(p.le_trans, &[fib_a, fib_x, fib_sx, ih, adjacent]);
+        let with_ih = d.lam_fv(ih_fv, ih_ty, body);
+        let with_hx = d.lam_fv(hx_fv, hx_ty, with_ih);
+        d.lam_fv(x_fv, nat, with_hx)
+    };
+    let proof = d.const_app(p.le_rec, &[a, motive, minor_refl, minor_step, b, h]);
+    let ty = {
+        let arrow = d.kernel().pi(anon, h_ty, conclusion, BinderInfo::Default);
+        let over_b = d.pi_fv(b_fv, nat, arrow);
+        d.pi_fv(a_fv, nat, over_b)
+    };
+    let value = {
+        let over_h = d.lam_fv(h_fv, h_ty, proof);
+        let over_b = d.lam_fv(b_fv, nat, over_h);
+        d.lam_fv(a_fv, nat, over_b)
+    };
+    d.declare_theorem(p.fib_mono, ty, value)
+}
+
 /// `∀ i, Lt zero (fib (succ i))` — every `fib` value past the zeroth is
 /// positive, unconditionally (no hypothesis to discharge here; that is
 /// [`declare_fib_pos_of_pos`]'s job). Induction on `i`; base is `le_refl 1`
@@ -892,6 +955,7 @@ pub(super) fn declare_fib_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
     declare_fib_defs(d, p)?;
     declare_fib_add_two(d, p)?;
     declare_fib_le_succ(d, p)?;
+    declare_fib_mono(d, p)?;
     declare_fib_pos_of_pos(d, p)?;
     declare_sum_fib(d, p)?;
     declare_fib_add(d, p)?;
