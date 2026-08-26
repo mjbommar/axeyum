@@ -103,11 +103,15 @@ use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
+use crate::rat_prelude::group::rsub;
 use crate::rat_prelude::ops::{
-    den, den_pos, den_z, normalize, num, one_le_succ, rat_ty, rle, rlt, rzero,
+    den, den_pos, den_z, normalize, num, one_le_succ, radd, rat_eq_rewrite, rat_ty, rchain, rcongr,
+    rle, rlt, rmul, rneg, rsymm, rzero,
 };
 
-use super::{CRealPrelude, DERIVED_HEIGHT, and_intro, creal_ty, sample};
+use super::{
+    CRealPrelude, DERIVED_HEIGHT, and_intro, creal_ty, div_succ, halves, modulus, sample, within,
+};
 
 /// `And left right`, as a `Prop`. Generic over what `left`/`right` are —
 /// unlike [`super::equiv`]/[`super::within`], this file's statements are
@@ -951,6 +955,1087 @@ pub(super) fn declare_sqrt(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ke
     declare_nat_sqrt_lt(d, p)?;
     declare_sqrt_approx(d, p)?;
     declare_sqrt_approx_sq_bracket(d, p)
+}
+
+// =============================================================================
+// `KRegular sqrtApprox 1`, and `CReal.sqrt` from it.
+//
+// This section closes the obligation this module's own doc names as the
+// remaining `~2000-line rational-inequality half`: `sqrtApprox` is `KRegular`
+// with constant `c = 1`, so `speedup.rs`'s `regular_of_kregular` gives
+// `CReal.sqrt` directly via `CReal.mk`, with no exact-Bishop-bound argument
+// ever attempted. See each function's own doc for its piece of the argument
+// sketched in this module's top-level doc comment.
+// =============================================================================
+
+/// `Eq Rat ((a+b)*c) (a*c+b*c)` — right-distributivity at `Rat`, derived from
+/// `Rat.left_distrib` (only the left form is declared) plus `mul_comm`: one
+/// commute to put the sum on the right, `left_distrib` to open it, two more
+/// commutes to restore each factor's original order.
+fn rat_right_distrib(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let a_plus_b = radd(d, a, b);
+    let start = rmul(d, a_plus_b, c);
+    let step1 = d.lemma(rat.mul_comm, &[a_plus_b, c]);
+    let c_ab = rmul(d, c, a_plus_b);
+    let step2 = d.lemma(rat.left_distrib, &[c, a, b]);
+    let ca = rmul(d, c, a);
+    let cb = rmul(d, c, b);
+    let ca_cb = radd(d, ca, cb);
+    let ac = rmul(d, a, c);
+    let comm_ca = d.lemma(rat.mul_comm, &[c, a]);
+    let step3 = rcongr(d, ca, ac, comm_ca, &|d, t| {
+        let cb2 = rmul(d, c, b);
+        radd(d, t, cb2)
+    });
+    let ac_cb = radd(d, ac, cb);
+    let bc = rmul(d, b, c);
+    let comm_cb = d.lemma(rat.mul_comm, &[c, b]);
+    let step4 = rcongr(d, cb, bc, comm_cb, &|d, t| radd(d, ac, t));
+    let ac_bc = radd(d, ac, bc);
+    let (_, whole) = rchain(
+        d,
+        start,
+        &[
+            (c_ab, step1),
+            (ca_cb, step2),
+            (ac_cb, step3),
+            (ac_bc, step4),
+        ],
+    );
+    whole
+}
+
+/// `Eq Int ((a+b)*c) (a*c+b*c)` — the `Int`-level twin of
+/// [`rat_right_distrib`], needed inside [`succ_over_index_eq`]'s
+/// cross-multiplication identity.
+fn int_right_distrib(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+) -> ExprId {
+    let int = p.rat.int;
+    let a_plus_b = d.iadd(a, b);
+    let start = d.imul(a_plus_b, c);
+    let step1 = d.lemma(int.mul_comm, &[a_plus_b, c]);
+    let c_ab = d.imul(c, a_plus_b);
+    let step2 = d.lemma(int.left_distrib, &[c, a, b]);
+    let ca = d.imul(c, a);
+    let cb = d.imul(c, b);
+    let ca_cb = d.iadd(ca, cb);
+    let ac = d.imul(a, c);
+    let comm_ca = d.lemma(int.mul_comm, &[c, a]);
+    let step3 = d.icongr(ca, ac, comm_ca, &|d, t| {
+        let cb2 = d.imul(c, b);
+        d.iadd(t, cb2)
+    });
+    let ac_cb = d.iadd(ac, cb);
+    let bc = d.imul(b, c);
+    let comm_cb = d.lemma(int.mul_comm, &[c, b]);
+    let step4 = d.icongr(cb, bc, comm_cb, &|d, t| d.iadd(ac, t));
+    let ac_bc = d.iadd(ac, bc);
+    let (_, whole) = d.ichain(
+        start,
+        &[
+            (c_ab, step1),
+            (ca_cb, step2),
+            (ac_cb, step3),
+            (ac_bc, step4),
+        ],
+    );
+    whole
+}
+
+/// `Rat.le x (Rat.add x y)`, from `Rat.le Rat.zero y` — `x <= x+y` via
+/// `add_le_add x x 0 y (le_refl x) y_nonneg : x+0 <= x+y`, rewritten along
+/// `add_zero`. (`x <= x+x` is the `y := x` instance.)
+fn rat_le_add_nonneg(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    y_nonneg: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let zero = rzero(d, rat);
+    let refl_x = d.lemma(rat.le_refl, &[x]);
+    let step = d.lemma(rat.add_le_add, &[x, x, zero, y, refl_x, y_nonneg]);
+    let x_zero = radd(d, x, zero);
+    let xy = radd(d, x, y);
+    let az = d.lemma(rat.add_zero, &[x]);
+    rat_eq_rewrite(d, x_zero, x, az, step, &|d, t| rle(d, rat, t, xy))
+}
+
+/// `Rat.le (Rat.add (a*a) (b*b)) ((a+b)*(a+b))`, given `0 <= a` and `0 <= b`.
+///
+/// `(a+b)^2 = a*a + a*b + b*a + b*b` (via [`rat_right_distrib`]/`left_distrib`),
+/// and `a*a+b*b <= (a*a+b*b)+(a*b+b*a)` (the cross terms are non-negative) is
+/// the same sum after a four-term reassociation.
+fn sum_sq_le_sq_sum(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    a_nonneg: ExprId,
+    b_nonneg: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let a_plus_b = radd(d, a, b);
+    let start = rmul(d, a_plus_b, a_plus_b);
+
+    // (a+b)*(a+b) = (a+b)*a + (a+b)*b
+    let step1 = d.lemma(rat.left_distrib, &[a_plus_b, a, b]);
+    let ab_a = rmul(d, a_plus_b, a);
+    let ab_b = rmul(d, a_plus_b, b);
+    let mid1 = radd(d, ab_a, ab_b);
+
+    // (a+b)*a = a*a+b*a ; (a+b)*b = a*b+b*b
+    let aa = rmul(d, a, a);
+    let ba = rmul(d, b, a);
+    let ab = rmul(d, a, b);
+    let bb = rmul(d, b, b);
+    let expand_a = rat_right_distrib(d, p, a, b, a);
+    let expand_b = rat_right_distrib(d, p, a, b, b);
+    let aa_ba = radd(d, aa, ba);
+    let ab_bb = radd(d, ab, bb);
+    let step2 = rcongr(d, ab_a, aa_ba, expand_a, &|d, t| radd(d, t, ab_b));
+    let step3 = rcongr(d, ab_b, ab_bb, expand_b, &|d, t| radd(d, aa_ba, t));
+    let mid2 = radd(d, aa_ba, ab_bb);
+    let mid1b = radd(d, aa_ba, ab_b);
+
+    let (_, whole_eq) = rchain(d, start, &[(mid1, step1), (mid1b, step2), (mid2, step3)]);
+    // whole_eq : Eq Rat start mid2   -- mid2 = (a*a+b*a)+(a*b+b*b)
+
+    // a*a+b*b <= mid2, via the 4-term regroup (a*a+b*b)+(b*a+a*b) = (a*a+b*a)+(a*b+b*b)
+    // and `x <= x+y` for `y := b*a+a*b >= 0`.
+    let base = radd(d, aa, bb);
+    let cross = radd(d, ba, ab);
+    let base_plus_cross = radd(d, base, cross);
+    let cross_nonneg = {
+        let m1 = d.lemma(rat.mul_nonneg, &[b, a, b_nonneg, a_nonneg]);
+        let m2 = d.lemma(rat.mul_nonneg, &[a, b, a_nonneg, b_nonneg]);
+        d.lemma(rat.add_nonneg, &[ba, ab, m1, m2])
+    };
+    let base_le = rat_le_add_nonneg(d, p, base, cross, cross_nonneg);
+    // base_le : base <= base+cross
+
+    // (a*a+b*b)+(b*a+a*b) = (a*a+b*a)+(a*b+b*b) : a 4-term regroup,
+    // T1:=a*a, T2:=b*b, T3:=b*a, T4:=a*b throughout. Every intermediate sum
+    // is bound to its own name first -- `radd`/`rsymm`/`rcongr` all take
+    // `&mut IntDev` explicitly, and this kernel's helpers (unlike ordinary
+    // method chains) get no two-phase-borrow leniency for a *reference*
+    // parameter, so nesting a second such call inside the first's argument
+    // list does not borrow-check.
+    let regroup = {
+        let t1 = aa;
+        let t2 = bb;
+        let t3 = ba;
+        let t4 = ab;
+
+        let t12 = radd(d, t1, t2);
+        let t34 = radd(d, t3, t4);
+        let lhs = radd(d, t12, t34);
+        let t2_t34 = radd(d, t2, t34);
+        let s1 = radd(d, t1, t2_t34);
+        // hop1 : (t1+t2)+t34 = t1+(t2+t34)
+        let hop1 = d.lemma(rat.add_assoc, &[t1, t2, t34]);
+
+        let t23 = radd(d, t2, t3);
+        let t23_t4 = radd(d, t23, t4);
+        let inner_assoc = d.lemma(rat.add_assoc, &[t2, t3, t4]);
+        // inner_assoc : (t2+t3)+t4 = t2+(t3+t4) = t23_t4 = t2_t34
+        let inner_rev = rsymm(d, t23_t4, t2_t34, inner_assoc);
+        // inner_rev : t2_t34 = t23_t4
+        let s2 = radd(d, t1, t23_t4);
+        let hop2 = rcongr(d, t2_t34, t23_t4, inner_rev, &|d, t| radd(d, t1, t));
+        // hop2 : s1 = s2
+
+        let t32 = radd(d, t3, t2);
+        let comm23 = d.lemma(rat.add_comm, &[t2, t3]);
+        // comm23 : t2+t3 = t3+t2, i.e. t23 = t32
+        let t32_t4 = radd(d, t32, t4);
+        let lift3 = rcongr(d, t23, t32, comm23, &|d, t| radd(d, t, t4));
+        // lift3 : t23_t4 = t32_t4
+        let s3 = radd(d, t1, t32_t4);
+        let hop3 = rcongr(d, t23_t4, t32_t4, lift3, &|d, t| radd(d, t1, t));
+        // hop3 : s2 = s3
+
+        let t24 = radd(d, t2, t4);
+        let t3_t24 = radd(d, t3, t24);
+        let inner_assoc2 = d.lemma(rat.add_assoc, &[t3, t2, t4]);
+        // inner_assoc2 : (t3+t2)+t4 = t3+(t2+t4), i.e. t32_t4 = t3_t24
+        let s4 = radd(d, t1, t3_t24);
+        let hop4 = rcongr(d, t32_t4, t3_t24, inner_assoc2, &|d, t| radd(d, t1, t));
+        // hop4 : s3 = s4
+
+        let t13 = radd(d, t1, t3);
+        let a135 = d.lemma(rat.add_assoc, &[t1, t3, t24]);
+        // a135 : (t1+t3)+t24 = t1+(t3+t24), i.e. Eq s5 s4
+        let s5 = radd(d, t13, t24);
+        let hop5 = rsymm(d, s5, s4, a135);
+        // hop5 : s4 = s5
+
+        let t42 = radd(d, t4, t2);
+        let comm24 = d.lemma(rat.add_comm, &[t2, t4]);
+        // comm24 : t2+t4 = t4+t2, i.e. t24 = t42
+        let s6 = radd(d, t13, t42);
+        let hop6 = rcongr(d, t24, t42, comm24, &|d, t| radd(d, t13, t));
+        // hop6 : s5 = s6
+
+        let (_, regroup_eq) = rchain(
+            d,
+            lhs,
+            &[
+                (s1, hop1),
+                (s2, hop2),
+                (s3, hop3),
+                (s4, hop4),
+                (s5, hop5),
+                (s6, hop6),
+            ],
+        );
+        regroup_eq
+    };
+    // regroup : Eq Rat (base+cross) mid2
+
+    let base_le_mid2 = rat_eq_rewrite(d, base_plus_cross, mid2, regroup, base_le, &|d, t| {
+        rle(d, rat, base, t)
+    });
+    // base_le_mid2 : base <= mid2
+
+    let whole_eq_rev = rsymm(d, start, mid2, whole_eq);
+    rat_eq_rewrite(d, mid2, start, whole_eq_rev, base_le_mid2, &|d, t| {
+        rle(d, rat, base, t)
+    })
+}
+
+/// `Rat.le Rat.zero (Rat.normalize (Int.ofNat k) den_nat h)` — normalizing a
+/// non-negative-numerator fraction over a positive denominator stays
+/// non-negative.
+///
+/// Via `Rat.normalize_cross` (`num(normalize k den h)*ofNat(den_nat) =
+/// ofNat(k)*ofNat(den(normalize k den h))`, whose right side is a product of
+/// two `ofNat`s, hence non-negative), then
+/// `Rat.int_le_of_mul_le_mul_right` cancelling the positive `ofNat(den_nat)`
+/// factor to recover `0 <= num(normalize k den_nat h)`, then
+/// `Rat.nonneg_of_int_nonneg`.
+fn normalize_of_nat_nonneg(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    k: ExprId,
+    den_nat: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let nat = p.rat.int.nat;
+    let k_int = d.of_nat(k);
+    let q = normalize(d, k_int, den_nat, h);
+    let cross = d.lemma(rat.normalize_cross, &[k_int, den_nat, h]);
+    // cross : Eq Int (num(q)*ofNat(den_nat)) (k_int*ofNat(den q))
+    let dq = den(d, q);
+    let dq_z = den_z(d, q);
+    let den_nat_z = d.of_nat(den_nat);
+    let nq = num(d, q);
+    let nq_dnz = d.imul(nq, den_nat_z);
+    let k_dqz = d.imul(k_int, dq_z);
+
+    let zero_le_k = d.lemma(nat.zero_le, &[k]); // used as Int.le 0 k_int via defeq
+    let zero_le_dqz = d.lemma(nat.zero_le, &[dq]); // used as Int.le 0 dq_z via defeq
+    let rhs_nonneg = d.lemma(rat.int.mul_nonneg, &[k_int, dq_z, zero_le_k, zero_le_dqz]);
+    // rhs_nonneg : Int.le 0 (k_int*dq_z)
+
+    let cross_rev = d.isymm(nq_dnz, k_dqz, cross);
+    let zero_nat = d.zero();
+    let zero_int = d.of_nat(zero_nat);
+    let lhs_nonneg = {
+        let motive = d.ieq_motive(k_dqz, &|d, t| d.ile(zero_int, t));
+        d.itransport(k_dqz, motive, rhs_nonneg, nq_dnz, cross_rev)
+    };
+    // lhs_nonneg : Int.le 0 (nq*den_nat_z)
+
+    let zero_mul_dnz = d.imul(zero_int, den_nat_z);
+    let zero_mul_eq = {
+        let comm = d.lemma(rat.int.mul_comm, &[zero_int, den_nat_z]);
+        let dz_zero = d.imul(den_nat_z, zero_int);
+        let mz = d.lemma(rat.int.mul_zero, &[den_nat_z]);
+        let (_, e) = d.ichain(zero_mul_dnz, &[(dz_zero, comm), (zero_int, mz)]);
+        e
+    };
+    // zero_mul_eq : Eq Int zero_mul_dnz zero_int
+    let scaled_zero_le = {
+        let rev = d.isymm(zero_mul_dnz, zero_int, zero_mul_eq);
+        let motive = d.ieq_motive(zero_int, &|d, t| d.ile(t, nq_dnz));
+        d.itransport(zero_int, motive, lhs_nonneg, zero_mul_dnz, rev)
+    };
+    // scaled_zero_le : Int.le (0*den_nat_z) (nq*den_nat_z)
+    let cancel = d.lemma(
+        rat.int_le_of_mul_le_mul_right,
+        &[zero_int, nq, den_nat, h, scaled_zero_le],
+    );
+    // cancel : Int.le 0 nq
+    d.lemma(rat.nonneg_of_int_nonneg, &[q, cancel])
+}
+
+/// `Eq Rat (normalize (Int.ofNat (Nat.succ s)) (Nat.succ idx) pos)
+///         (Rat.add (normalize (Int.ofNat s) (Nat.succ idx) pos) (natDivSucc 1 idx))`
+///
+/// The next `sqrtApprox`-shaped candidate up is exactly the current one plus
+/// one unit at the same denominator. Both `normalize`s share denominator
+/// `dd := succ idx`, so `Rat.normalize_add_normalize` lands the sum at
+/// `normalize(s*dd+1*dd, dd*dd, _)`, and `Rat.normalize_congr` reads that
+/// back to `normalize(succ s, dd, _)` via the ring identity `(s*dd+1*dd)*dd =
+/// (succ s)*(dd*dd)` — built entirely from `int_right_distrib`/`mul_assoc`,
+/// exploiting that `Int.mul`'s `ofNat`/`ofNat` case makes `dd_int*dd_int` and
+/// `Int.ofNat(dd*dd)` interchangeable by computation (two ι-steps on the
+/// *integer* constructor, regardless of whether the underlying `Nat` product
+/// itself reduces further), and that `succ_s_int` and `s_int+one_int` are
+/// likewise interchangeable (`Nat.add`'s recursion on the literal `1` on the
+/// right is not stuck even for symbolic `s`).
+fn succ_over_index_eq(d: &mut IntDev<'_>, p: CRealPrelude, s: ExprId, idx: ExprId) -> ExprId {
+    let rat = p.rat;
+    let nat = p.rat.int.nat;
+    let dd = d.succ(idx);
+    let pos = one_le_succ(d, idx);
+    let j = NatOps::mul(d, dd, dd);
+    let pos_j = d.lemma(nat.one_le_mul, &[dd, dd, pos, pos]);
+
+    let s_int = d.of_nat(s);
+    let one_nat = d.num(1);
+    let one_int = d.of_nat(one_nat);
+    let succ_s = d.succ(s);
+    let succ_s_int = d.of_nat(succ_s);
+    let dd_int = d.of_nat(dd);
+    let j_int = d.of_nat(j);
+
+    let num_val = {
+        let a = d.imul(s_int, dd_int);
+        let b = d.imul(one_int, dd_int);
+        d.iadd(a, b)
+    };
+
+    // cross : Eq Int (succ_s_int * j_int) (num_val * dd_int)
+    let cross = {
+        let s_j = d.imul(s_int, j_int);
+        let one_j = d.imul(one_int, j_int);
+        let s_j_plus_one_j = d.iadd(s_j, one_j);
+
+        // Left chain: succ_s_int*j_int -[defeq]-> (s_int+one_int)*j_int
+        //                                -[int_right_distrib]-> s_int*j_int+one_int*j_int
+        let start_left = d.imul(succ_s_int, j_int);
+        let s_plus_one = d.iadd(s_int, one_int);
+        let free1 = d.irefl(start_left);
+        let mid_left = d.imul(s_plus_one, j_int);
+        let distrib_left = int_right_distrib(d, p, s_int, one_int, j_int);
+        let (_, left_eq) = d.ichain(
+            start_left,
+            &[(mid_left, free1), (s_j_plus_one_j, distrib_left)],
+        );
+
+        // Right chain: num_val*dd_int -[int_right_distrib]-> (s*dd)*dd + (1*dd)*dd
+        //                             -[mul_assoc, defeq to j_int]-> s*j_int + (1*dd)*dd
+        //                             -[mul_assoc, defeq to j_int]-> s*j_int + 1*j_int
+        let start_right = d.imul(num_val, dd_int);
+        let s_dd = d.imul(s_int, dd_int);
+        let one_dd = d.imul(one_int, dd_int);
+        let a_dd = d.imul(s_dd, dd_int);
+        let b_dd = d.imul(one_dd, dd_int);
+        let sum_dd = d.iadd(a_dd, b_dd);
+        let distrib_right = int_right_distrib(d, p, s_dd, one_dd, dd_int);
+        let assoc_a = d.lemma(rat.int.mul_assoc, &[s_int, dd_int, dd_int]);
+        let mid_r2 = d.iadd(s_j, b_dd);
+        let step_a = d.icongr(a_dd, s_j, assoc_a, &|d, t| {
+            let bd = d.imul(one_dd, dd_int);
+            d.iadd(t, bd)
+        });
+        let assoc_b = d.lemma(rat.int.mul_assoc, &[one_int, dd_int, dd_int]);
+        let step_b = d.icongr(b_dd, one_j, assoc_b, &|d, t| d.iadd(s_j, t));
+        let (_, right_eq) = d.ichain(
+            start_right,
+            &[
+                (sum_dd, distrib_right),
+                (mid_r2, step_a),
+                (s_j_plus_one_j, step_b),
+            ],
+        );
+
+        let right_eq_rev = d.isymm(start_right, s_j_plus_one_j, right_eq);
+        let (_, whole) = d.ichain(
+            start_left,
+            &[(s_j_plus_one_j, left_eq), (start_right, right_eq_rev)],
+        );
+        whole
+    };
+
+    let congr_step = d.lemma(
+        rat.normalize_congr,
+        &[succ_s_int, dd, pos, num_val, j, pos_j, cross],
+    );
+    // congr_step : Eq Rat (normalize succ_s_int dd pos) (normalize num_val j pos_j)
+
+    let add_normalize = d.lemma(
+        rat.normalize_add_normalize,
+        &[s_int, dd, pos, one_int, dd, pos],
+    );
+    // add_normalize : Eq Rat (normalize s_int dd pos + normalize one_int dd pos) (normalize num_val j _)
+
+    let lhs = normalize(d, succ_s_int, dd, pos);
+    let rhs_normalize = normalize(d, num_val, j, pos_j);
+    let left_summand = normalize(d, s_int, dd, pos);
+    let right_summand_n = normalize(d, one_int, dd, pos);
+    let sum_n = radd(d, left_summand, right_summand_n);
+    let add_normalize_rev = rsymm(d, sum_n, rhs_normalize, add_normalize);
+
+    let (_, whole) = rchain(
+        d,
+        lhs,
+        &[(rhs_normalize, congr_step), (sum_n, add_normalize_rev)],
+    );
+    // whole : Eq Rat lhs sum_n, and `sum_n` is defeq
+    // `radd(left_summand, div_succ(d,p,1,idx))` (`natDivSucc`'s own
+    // unfolding), which is what the caller's declared type actually names.
+    whole
+}
+
+/// `Rat.le (natDivSucc 1 ((succ idx)*(succ idx))) (Rat.mul (natDivSucc 1 idx) (natDivSucc 1 idx))`
+///
+/// Deepening the sample index from `dd := succ idx` to `dd*dd` shrinks the
+/// bound past its own square: `1/(dd^2+1) <= 1/dd^2`. Via
+/// `Rat.natDivSucc_antitone` at `(pred(dd^2), dd^2)` — `dd^2 >= 1`, via
+/// `Nat.one_le_mul` — plus the same `j = succ(pred j)` bridge
+/// [`one_le_implies_succ_pred`] supplies, read into `Rat` by
+/// cross-multiplication (`Rat.normalize_congr`) rather than a dependent
+/// rewrite, since `normalize`'s own third argument is itself a proof
+/// obligation and no motive can abstract over its index the naive way.
+fn div_succ_sq_bound(d: &mut IntDev<'_>, p: CRealPrelude, idx: ExprId) -> ExprId {
+    let rat = p.rat;
+    let nat = p.rat.int.nat;
+    let dd = d.succ(idx);
+    let pos = one_le_succ(d, idx);
+    let j = NatOps::mul(d, dd, dd);
+    let pos_j = d.lemma(nat.one_le_mul, &[dd, dd, pos, pos]);
+
+    let one_nat = d.num(1);
+    let one_int = d.of_nat(one_nat);
+
+    let pred_j = d.pred(j);
+    let pred_le = d.lemma(nat.pred_le, &[j]);
+    let antitone = d.lemma(rat.nat_div_succ_antitone, &[pred_j, j, pred_le]);
+    // antitone : Rat.le (natDivSucc 1 j) (natDivSucc 1 pred_j)
+
+    let succ_pred_fn = one_le_implies_succ_pred(d, p, j);
+    let j_eq_succ_pred = d.apply(succ_pred_fn, &[pos_j]);
+    // j_eq_succ_pred : Eq Nat j (succ pred_j)
+    let succ_pred = d.succ(pred_j);
+    let pos_succ_pred = one_le_succ(d, pred_j);
+
+    let int_eq = d.nat_eq_to_int(j, succ_pred, j_eq_succ_pred, &|d, t| {
+        let ot = d.of_nat(t);
+        d.imul(one_int, ot)
+    });
+    // int_eq : Eq Int (one_int * ofNat j) (one_int * ofNat succ_pred)
+
+    let congr = d.lemma(
+        rat.normalize_congr,
+        &[one_int, j, pos_j, one_int, succ_pred, pos_succ_pred, int_eq],
+    );
+    // congr : Eq Rat (normalize one_int j pos_j) (normalize one_int succ_pred pos_succ_pred)
+    //       = Eq Rat normalize_j target_pred
+    let normalize_j = normalize(d, one_int, j, pos_j);
+    let target_pred = div_succ(d, p, 1, pred_j);
+    let congr_rev = rsymm(d, normalize_j, target_pred, congr);
+    // congr_rev : Eq Rat target_pred normalize_j
+
+    let bound_at_j = div_succ(d, p, 1, j);
+    let step1 = rat_eq_rewrite(d, target_pred, normalize_j, congr_rev, antitone, &|d, t| {
+        rle(d, rat, bound_at_j, t)
+    });
+    // step1 : Rat.le bound_at_j normalize_j
+
+    let mul_normalize = d.lemma(
+        rat.normalize_mul_normalize,
+        &[one_int, dd, pos, one_int, dd, pos],
+    );
+    // mul_normalize : Eq Rat (normalize(one_int,dd,pos)*normalize(one_int,dd,pos))
+    //                        (normalize(one_int*one_int, j, _))
+    let sq = {
+        let d1 = div_succ(d, p, 1, idx);
+        rmul(d, d1, d1)
+    };
+    // mul_normalize's actual type is `Eq (d1*d1) (normalize(one*one,j,_))` up
+    // to defeq (`normalize(one_int,dd,pos)` unfolds `nat_div_succ 1 idx`, and
+    // `one_int*one_int` unfolds `one_int`, same denominator `j`,
+    // proof-irrelevant) -- i.e. `Eq sq normalize_j`, not the other way round.
+    let mul_normalize_rev = rsymm(d, sq, normalize_j, mul_normalize);
+    // mul_normalize_rev : Eq Rat normalize_j sq
+
+    rat_eq_rewrite(d, normalize_j, sq, mul_normalize_rev, step1, &|d, t| {
+        rle(d, rat, bound_at_j, t)
+    })
+}
+
+/// `Eq Rat (Rat.add (natDivSucc 1 idx) (natDivSucc 1 idx)) (natDivSucc 2 idx)`
+/// — `Rat.natDivSucc_add` at `(1,1,idx)`, `1+1` reducing to the literal `2`
+/// by pure computation.
+fn double_div_succ_eq(d: &mut IntDev<'_>, p: CRealPrelude, idx: ExprId) -> ExprId {
+    let rat = p.rat;
+    let one_nat = d.num(1);
+    d.lemma(rat.nat_div_succ_add, &[one_nat, one_nat, idx])
+}
+
+/// `Rat.le (Rat.sub (sqrtApprox x a_idx) (sqrtApprox x b_idx))
+///         (Rat.add (natDivSucc 1 b_idx) (Rat.add (natDivSucc 1 a_idx) (natDivSucc 1 b_idx)))`
+///
+/// The cross-index squeeze, one direction: `u_a := sqrtApprox x a_idx`,
+/// `u_b := sqrtApprox x b_idx`, `q_a`/`q_b` their clamped samples at
+/// `j_a := (a_idx+1)^2`/`j_b := (b_idx+1)^2`.
+///
+/// - `u_a^2 <= q_a` ([`CRealPrelude::sqrt_approx_sq_bracket`]'s lower half at
+///   `a_idx`).
+/// - `q_a <= q_b + modulus(j_a,j_b)` (`Rat.sub_max_le`, `max` is 1-Lipschitz,
+///   applied to `x`'s own regularity at `(j_a,j_b)` and the trivial
+///   `0-0<=modulus`).
+/// - `q_b < u_b1^2` ([`CRealPrelude::sqrt_approx_sq_bracket`]'s upper half at
+///   `b_idx`, `u_b1` the next candidate up).
+/// - `modulus(j_a,j_b) <= E*E` (`E := natDivSucc 1 a_idx + natDivSucc 1
+///   b_idx`), via [`div_succ_sq_bound`] at each index plus
+///   [`sum_sq_le_sq_sum`].
+/// - hence `u_a^2 <= u_b1^2 + E*E <= (u_b1+E)^2` (the second step is
+///   [`sum_sq_le_sq_sum`] again, at `(u_b1, E)`), and
+///   [`CRealPrelude::rat_sq_le`] (division-free) gives `u_a <= u_b1+E`.
+/// - `u_b1 = u_b + natDivSucc 1 b_idx` ([`succ_over_index_eq`]), so
+///   `u_a - u_b <= natDivSucc 1 b_idx + E`.
+#[allow(clippy::too_many_lines)]
+fn one_sided_bound(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    a_idx: ExprId,
+    b_idx: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let one_nat_lit = d.num(1);
+
+    // --- rebuild both brackets' shared setup, matching `sqrt_approx_sq_bracket`. ---
+    // `sqrt_approx_sq_bracket`'s own conclusion is stated with the SQUARE
+    // COLLAPSED into a single `Rat.normalize` over the sample index `j`
+    // (`rep_s`/`rep_s1` in that declaration's own naming) -- `Rat.mul
+    // (normalize s dd _) (normalize s dd _)` is only PROPOSITIONALLY equal to
+    // that, via `Rat.normalize_mul_normalize`, not definitionally, so the
+    // bracket must be projected at the collapsed shape and then bridged.
+    let bracket_setup = |d: &mut IntDev<'_>,
+                         n: ExprId|
+     -> (ExprId, ExprId, ExprId, ExprId, ExprId, ExprId, ExprId) {
+        // returns (j, q, s, s1, dd, pos, j_pos).
+        let dd = d.succ(n);
+        let pos = one_le_succ(d, n);
+        let j = NatOps::mul(d, dd, dd);
+        let sample_n = sample(d, p, x, j);
+        let zero_rat = rzero(d, rat);
+        let q = d.const_app(rat.max, &[sample_n, zero_rat]);
+        let q_nonneg = d.lemma(rat.le_max_right, &[sample_n, zero_rat]);
+        let num_q_nonneg = d.lemma(rat.int_nonneg_of_nonneg, &[q, q_nonneg]);
+        let num_q = num(d, q);
+        let a = d.const_app(rat.int.nat_abs, &[num_q]);
+        let b = den(d, q);
+        let scaled = NatOps::mul(d, a, j);
+        let k = NatOps::div(d, scaled, b);
+        let s = d.const_app(p.nat_sqrt, &[k]);
+        let s1 = d.succ(s);
+        let nat = p.rat.int.nat;
+        let j_pos = d.lemma(nat.one_le_mul, &[dd, dd, pos, pos]);
+        let _ = num_q_nonneg;
+        (j, q, s, s1, dd, pos, j_pos)
+    };
+
+    let bracket_a = d.lemma(p.sqrt_approx_sq_bracket, &[x, a_idx]);
+    let bracket_b = d.lemma(p.sqrt_approx_sq_bracket, &[x, b_idx]);
+
+    let (j_a, q_a, s_a, s1_a, dd_a, pos_a, j_pos_a) = bracket_setup(d, a_idx);
+    let (j_b, q_b, s_b, s1_b, dd_b, pos_b, j_pos_b) = bracket_setup(d, b_idx);
+
+    let s_a_int = d.of_nat(s_a);
+    let u_a = normalize(d, s_a_int, dd_a, pos_a);
+    let u_a_sq = rmul(d, u_a, u_a);
+    let s1_a_int = d.of_nat(s1_a);
+
+    let s_b_int = d.of_nat(s_b);
+    let u_b = normalize(d, s_b_int, dd_b, pos_b);
+    let s1_b_int = d.of_nat(s1_b);
+    let u_b1 = normalize(d, s1_b_int, dd_b, pos_b);
+    let u_b1_sq = rmul(d, u_b1, u_b1);
+
+    // The bracket's own collapsed forms: rep_s/rep_s1 at index a, rep_s/rep_s1
+    // at index b (this file's own naming from `declare_sqrt_approx_sq_bracket`).
+    let ssz_a = d.imul(s_a_int, s_a_int);
+    let rep_s_a = normalize(d, ssz_a, j_a, j_pos_a);
+    let s1sq_a = d.imul(s1_a_int, s1_a_int);
+    let rep_s1_a = normalize(d, s1sq_a, j_a, j_pos_a);
+
+    let ssz_b = d.imul(s_b_int, s_b_int);
+    let rep_s_b = normalize(d, ssz_b, j_b, j_pos_b);
+    let s1sq_b = d.imul(s1_b_int, s1_b_int);
+    let rep_s1_b = normalize(d, s1sq_b, j_b, j_pos_b);
+
+    let lower_a_ty = rle(d, rat, rep_s_a, q_a);
+    let upper_a_ty = rlt(d, rat, q_a, rep_s1_a);
+    let lower_a_raw = d.and_left(lower_a_ty, upper_a_ty, bracket_a);
+    // lower_a_raw : Rat.le rep_s_a q_a
+    let mul_normalize_a = d.lemma(
+        rat.normalize_mul_normalize,
+        &[s_a_int, dd_a, pos_a, s_a_int, dd_a, pos_a],
+    );
+    // mul_normalize_a : Eq (u_a*u_a) rep_s_a   (denominator dd_a*dd_a defeq j_a)
+    let mul_normalize_a_rev = rsymm(d, u_a_sq, rep_s_a, mul_normalize_a);
+    let lower_a = rat_eq_rewrite(
+        d,
+        rep_s_a,
+        u_a_sq,
+        mul_normalize_a_rev,
+        lower_a_raw,
+        &|d, t| rle(d, rat, t, q_a),
+    );
+    // lower_a : Rat.le u_a_sq q_a
+
+    let lower_b_ty = rle(d, rat, rep_s_b, q_b);
+    let upper_b_ty = rlt(d, rat, q_b, rep_s1_b);
+    let upper_b_raw = d.and_right(lower_b_ty, upper_b_ty, bracket_b);
+    // upper_b_raw : Rat.lt q_b rep_s1_b
+    let mul_normalize_b1 = d.lemma(
+        rat.normalize_mul_normalize,
+        &[s1_b_int, dd_b, pos_b, s1_b_int, dd_b, pos_b],
+    );
+    // mul_normalize_b1 : Eq (u_b1*u_b1) rep_s1_b
+    let mul_normalize_b1_rev = rsymm(d, u_b1_sq, rep_s1_b, mul_normalize_b1);
+    let upper_b = rat_eq_rewrite(
+        d,
+        rep_s1_b,
+        u_b1_sq,
+        mul_normalize_b1_rev,
+        upper_b_raw,
+        &|d, t| rlt(d, rat, q_b, t),
+    );
+    // upper_b : Rat.lt q_b u_b1_sq
+    let upper_b_le = d.lemma(rat.le_of_lt, &[q_b, u_b1_sq, upper_b]);
+    // upper_b_le : q_b <= u_b1_sq
+
+    // --- delta := q_a - q_b <= modulus(j_a, j_b), via sub_max_le. ---
+    let modulus_ab = modulus(d, p, j_a, j_b);
+    let x_reg = d.lemma(p.regular, &[x, j_a, j_b]);
+    // x_reg : Within (seq x j_a - seq x j_b) modulus_ab
+    let sample_ja = sample(d, p, x, j_a);
+    let sample_jb = sample(d, p, x, j_b);
+    let sample_diff = rsub(d, rat, sample_ja, sample_jb);
+    let (_reg_lower, reg_upper) = halves(d, p, sample_diff, modulus_ab, x_reg);
+    // reg_upper : Rat.le (seq x j_a - seq x j_b) modulus_ab
+
+    let zero_rat = rzero(d, rat);
+    let div_succ_ja = div_succ(d, p, 1, j_a);
+    let div_succ_jb = div_succ(d, p, 1, j_b);
+    let zero_sub_zero_le = {
+        let zero_sub_zero = rsub(d, rat, zero_rat, zero_rat);
+        let sub_self = d.lemma(rat.sub_self, &[zero_rat]);
+        // sub_self : Rat.sub zero zero = zero
+        let modulus_nonneg = {
+            let m1 = d.lemma(rat.zero_le_nat_div_succ, &[one_nat_lit, j_a]);
+            let m2 = d.lemma(rat.zero_le_nat_div_succ, &[one_nat_lit, j_b]);
+            d.lemma(rat.add_nonneg, &[div_succ_ja, div_succ_jb, m1, m2])
+        };
+        rat_eq_rewrite(
+            d,
+            zero_sub_zero,
+            zero_rat,
+            sub_self,
+            modulus_nonneg,
+            &|d, t| rle(d, rat, t, modulus_ab),
+        )
+    };
+    // zero_sub_zero_le : Rat.le (Rat.sub zero zero) modulus_ab
+    let sub_max = d.lemma(
+        rat.sub_max_le,
+        &[
+            sample_ja,
+            zero_rat,
+            sample_jb,
+            zero_rat,
+            modulus_ab,
+            reg_upper,
+            zero_sub_zero_le,
+        ],
+    );
+    // sub_max : Rat.le (Rat.sub q_a q_b) modulus_ab
+
+    let q_a_le = d.lemma(rat.le_of_sub_le, &[q_a, q_b, modulus_ab, sub_max]);
+    // q_a_le : q_a <= q_b + modulus_ab
+
+    let qb_plus_mod = radd(d, q_b, modulus_ab);
+    let step5 = d.lemma(rat.le_trans, &[u_a_sq, q_a, qb_plus_mod, lower_a, q_a_le]);
+    // step5 : u_a_sq <= q_b + modulus_ab
+
+    let refl_mod = d.lemma(rat.le_refl, &[modulus_ab]);
+    let step7 = d.lemma(
+        rat.add_le_add,
+        &[q_b, u_b1_sq, modulus_ab, modulus_ab, upper_b_le, refl_mod],
+    );
+    // step7 : q_b+modulus_ab <= u_b1_sq+modulus_ab
+
+    let ub1sq_plus_mod = radd(d, u_b1_sq, modulus_ab);
+    let step8 = d.lemma(
+        rat.le_trans,
+        &[u_a_sq, qb_plus_mod, ub1sq_plus_mod, step5, step7],
+    );
+    // step8 : u_a_sq <= u_b1_sq + modulus_ab
+
+    // --- modulus_ab <= E*E. ---
+    let one_a = div_succ(d, p, 1, a_idx);
+    let one_b = div_succ(d, p, 1, b_idx);
+    let e = radd(d, one_a, one_b);
+    let ee = rmul(d, e, e);
+    let a_nonneg = d.lemma(rat.zero_le_nat_div_succ, &[one_nat_lit, a_idx]);
+    let b_nonneg = d.lemma(rat.zero_le_nat_div_succ, &[one_nat_lit, b_idx]);
+
+    let bound_a = div_succ_sq_bound(d, p, a_idx);
+    let bound_b = div_succ_sq_bound(d, p, b_idx);
+    let aa_sq = rmul(d, one_a, one_a);
+    let bb_sq = rmul(d, one_b, one_b);
+    let aa_plus_bb = radd(d, aa_sq, bb_sq);
+    let sum_bounds = d.lemma(
+        rat.add_le_add,
+        &[div_succ_ja, aa_sq, div_succ_jb, bb_sq, bound_a, bound_b],
+    );
+    // sum_bounds : modulus_ab <= (A*A)+(B*B)
+    let sq_sum_le = sum_sq_le_sq_sum(d, p, one_a, one_b, a_nonneg, b_nonneg);
+    // sq_sum_le : (A*A)+(B*B) <= (A+B)*(A+B) = e*e
+    let mod_le_esq = d.lemma(
+        rat.le_trans,
+        &[modulus_ab, aa_plus_bb, ee, sum_bounds, sq_sum_le],
+    );
+    // mod_le_esq : modulus_ab <= e*e
+
+    let refl_ubsq = d.lemma(rat.le_refl, &[u_b1_sq]);
+    let step10 = d.lemma(
+        rat.add_le_add,
+        &[u_b1_sq, u_b1_sq, modulus_ab, ee, refl_ubsq, mod_le_esq],
+    );
+    // step10 : u_b1_sq + modulus_ab <= u_b1_sq + e*e
+
+    let ub1sq_plus_ee = radd(d, u_b1_sq, ee);
+    let step11 = d.lemma(
+        rat.le_trans,
+        &[u_a_sq, ub1sq_plus_mod, ub1sq_plus_ee, step8, step10],
+    );
+    // step11 : u_a_sq <= u_b1_sq + e*e
+
+    // --- u_b1_sq + e*e <= (u_b1+e)*(u_b1+e). ---
+    let u_b1_nonneg = normalize_of_nat_nonneg(d, p, s1_b, dd_b, pos_b);
+    let e_nonneg = d.lemma(rat.add_nonneg, &[one_a, one_b, a_nonneg, b_nonneg]);
+    let step12 = sum_sq_le_sq_sum(d, p, u_b1, e, u_b1_nonneg, e_nonneg);
+    // step12 : u_b1_sq + e*e <= (u_b1+e)*(u_b1+e)
+
+    let ub1_plus_e = radd(d, u_b1, e);
+    let ub1_plus_e_sq = rmul(d, ub1_plus_e, ub1_plus_e);
+    let step13 = d.lemma(
+        rat.le_trans,
+        &[u_a_sq, ub1sq_plus_ee, ub1_plus_e_sq, step11, step12],
+    );
+    // step13 : u_a_sq <= (u_b1+e)*(u_b1+e)
+
+    let target_nonneg = d.lemma(rat.add_nonneg, &[u_b1, e, u_b1_nonneg, e_nonneg]);
+    let squeeze = d.lemma(p.rat_sq_le, &[u_a, ub1_plus_e, step13, target_nonneg]);
+    // squeeze : u_a <= u_b1+e
+
+    // --- u_b1 = u_b + natDivSucc 1 b_idx, so u_a - u_b <= natDivSucc 1 b_idx + e. ---
+    let succ_eq = succ_over_index_eq(d, p, s_b, b_idx);
+    // succ_eq : Eq Rat u_b1 (Rat.add u_b (natDivSucc 1 b_idx))
+    let u_b_plus_oneb = radd(d, u_b, one_b);
+    let target_rewritten = rat_eq_rewrite(d, u_b1, u_b_plus_oneb, succ_eq, squeeze, &|d, t| {
+        let bound = radd(d, t, e);
+        rle(d, rat, u_a, bound)
+    });
+    // target_rewritten : u_a <= (u_b + natDivSucc 1 b_idx) + e
+
+    // Reassociate the RHS to `u_b + (natDivSucc 1 b_idx + e)` so `sub_le_of_le` applies.
+    let assoc = d.lemma(rat.add_assoc, &[u_b, one_b, e]);
+    let u_b_plus_oneb_plus_e = radd(d, u_b_plus_oneb, e);
+    let oneb_plus_e = radd(d, one_b, e);
+    let u_b_plus_onebpluse = radd(d, u_b, oneb_plus_e);
+    let rebound = rat_eq_rewrite(
+        d,
+        u_b_plus_oneb_plus_e,
+        u_b_plus_onebpluse,
+        assoc,
+        target_rewritten,
+        &|d, t| rle(d, rat, u_a, t),
+    );
+    // rebound : u_a <= u_b + (natDivSucc 1 b_idx + e)
+
+    d.lemma(rat.sub_le_of_le, &[u_a, u_b, oneb_plus_e, rebound])
+    // : u_a - u_b <= natDivSucc 1 b_idx + e
+}
+
+/// `Rat.le (Rat.add (natDivSucc 1 b_idx) (Rat.add (natDivSucc 1 a_idx) (natDivSucc 1 b_idx)))
+///         (Rat.add (Rat.add (natDivSucc 1 a_idx) (natDivSucc 1 a_idx)) (Rat.add (natDivSucc 1 b_idx) (natDivSucc 1 b_idx)))`
+///
+/// [`one_sided_bound`]'s raw bound is at most `2*natDivSucc(1,a_idx) +
+/// 2*natDivSucc(1,b_idx)` — [`double_div_succ_eq`] reads the right side back
+/// to `natDivSucc 2 a_idx + natDivSucc 2 b_idx`, the exact `KRegular`
+/// modulus at `c=1`.
+fn raw_bound_le_double(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a_idx: ExprId,
+    b_idx: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let one_nat_lit = d.num(1);
+    let x = div_succ(d, p, 1, a_idx);
+    let y = div_succ(d, p, 1, b_idx);
+    let x_nonneg = d.lemma(rat.zero_le_nat_div_succ, &[one_nat_lit, a_idx]);
+
+    let x_plus_y = radd(d, x, y);
+    let raw = radd(d, y, x_plus_y);
+    let y_plus_x = radd(d, y, x);
+    let y_plus_x_plus_y = radd(d, y_plus_x, y);
+    let x_plus_y_plus_y = radd(d, x_plus_y, y);
+
+    // raw = (y+x)+y
+    let assoc1 = d.lemma(rat.add_assoc, &[y, x, y]); // (y+x)+y = y+(x+y) = raw
+    let assoc1_rev = rsymm(d, y_plus_x_plus_y, raw, assoc1);
+    // (y+x)+y = (x+y)+y
+    let comm1 = d.lemma(rat.add_comm, &[y, x]);
+    let step2 = rcongr(d, y_plus_x, x_plus_y, comm1, &|d, t| radd(d, t, y));
+    // (x+y)+y = x+(y+y)
+    let y_plus_y = radd(d, y, y);
+    let step3 = d.lemma(rat.add_assoc, &[x, y, y]);
+    let x_plus_yy = radd(d, x, y_plus_y);
+
+    let (_, whole_eq) = rchain(
+        d,
+        raw,
+        &[
+            (y_plus_x_plus_y, assoc1_rev),
+            (x_plus_y_plus_y, step2),
+            (x_plus_yy, step3),
+        ],
+    );
+    // whole_eq : raw = x+(y+y)
+
+    let x_le_xx = rat_le_add_nonneg(d, p, x, x, x_nonneg);
+    let xx = radd(d, x, x);
+    let refl_yy = d.lemma(rat.le_refl, &[y_plus_y]);
+    let le_step = d.lemma(
+        rat.add_le_add,
+        &[x, xx, y_plus_y, y_plus_y, x_le_xx, refl_yy],
+    );
+    // le_step : x+(y+y) <= (x+x)+(y+y)
+
+    let target = radd(d, xx, y_plus_y);
+    let whole_eq_rev = rsymm(d, raw, x_plus_yy, whole_eq);
+    rat_eq_rewrite(d, x_plus_yy, raw, whole_eq_rev, le_step, &|d, t| {
+        rle(d, rat, t, target)
+    })
+    // : raw <= (x+x)+(y+y)
+}
+
+/// `CReal.sqrtApproxKRegular : ∀ x, KRegular (sqrtApprox x) 1`.
+///
+/// Both directions of `Within` follow the same [`one_sided_bound`] argument
+/// with the two indices swapped, widened to the exact modulus by
+/// [`raw_bound_le_double`] and [`double_div_succ_eq`].
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+#[allow(clippy::too_many_lines)]
+pub(super) fn declare_sqrt_approx_kregular(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let carrier = creal_ty(d, p);
+    let nat_ty = d.nat_ty();
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let sqrt_approx_x_m = {
+        let f = d.const_app(p.sqrt_approx, &[x]);
+        d.apply(f, &[m])
+    };
+    let sqrt_approx_x_n = {
+        let f = d.const_app(p.sqrt_approx, &[x]);
+        d.apply(f, &[n])
+    };
+
+    let diff = rsub(d, rat, sqrt_approx_x_m, sqrt_approx_x_n);
+    let div2_m = div_succ(d, p, 2, m);
+    let div2_n = div_succ(d, p, 2, n);
+    let target = radd(d, div2_m, div2_n);
+    let claim = within(d, p, diff, target);
+
+    // `widen_direction(a_idx, b_idx)` proves `Rat.le (sqrtApprox x a_idx -
+    // sqrtApprox x b_idx) (natDivSucc 2 a_idx + natDivSucc 2 b_idx)`, i.e.
+    // the KRegular target read in the `(a_idx, b_idx)` order (not yet
+    // `add_comm`-matched to the DECLARED `target`, which is fixed at `(m,
+    // n)`).
+    let widen_direction = |d: &mut IntDev<'_>, a_idx: ExprId, b_idx: ExprId| -> (ExprId, ExprId) {
+        let diff_ab = {
+            let fa = d.const_app(p.sqrt_approx, &[x]);
+            let ua = d.apply(fa, &[a_idx]);
+            let fb = d.const_app(p.sqrt_approx, &[x]);
+            let ub = d.apply(fb, &[b_idx]);
+            rsub(d, rat, ua, ub)
+        };
+        let one_a = div_succ(d, p, 1, a_idx);
+        let one_b = div_succ(d, p, 1, b_idx);
+        let two_a = div_succ(d, p, 2, a_idx);
+        let two_b = div_succ(d, p, 2, b_idx);
+        let target_ab = radd(d, two_a, two_b);
+
+        let raw = one_sided_bound(d, p, x, a_idx, b_idx);
+        // raw : diff_ab <= raw_bound(a_idx,b_idx) = Y+(X+Y), X:=1/(a_idx+1), Y:=1/(b_idx+1)
+        let one_a_plus_one_b = radd(d, one_a, one_b);
+        let raw_bound = radd(d, one_b, one_a_plus_one_b);
+        let raw_le_double = raw_bound_le_double(d, p, a_idx, b_idx);
+        // raw_le_double : raw_bound <= (X+X)+(Y+Y)
+        let aa = radd(d, one_a, one_a);
+        let bb = radd(d, one_b, one_b);
+        let raw_target = radd(d, aa, bb);
+
+        // (X+X)+(Y+Y) = natDivSucc(2,a_idx)+natDivSucc(2,b_idx), via
+        // `double_div_succ_eq` on each summand.
+        let double_a = double_div_succ_eq(d, p, a_idx);
+        let double_b = double_div_succ_eq(d, p, b_idx);
+        let step_a = rcongr(d, aa, two_a, double_a, &|d, t| radd(d, t, bb));
+        let mid = radd(d, two_a, bb);
+        let step_b = rcongr(d, bb, two_b, double_b, &|d, t| radd(d, two_a, t));
+        let (_, raw_target_eq_target) =
+            rchain(d, raw_target, &[(mid, step_a), (target_ab, step_b)]);
+        // raw_target_eq_target : Eq Rat raw_target target_ab
+
+        // raw_target <= target_ab, via `le_refl` rewritten along the equality.
+        let refl_target_ab = d.lemma(rat.le_refl, &[target_ab]);
+        let eq_rev = rsymm(d, raw_target, target_ab, raw_target_eq_target);
+        let raw_target_le =
+            rat_eq_rewrite(d, target_ab, raw_target, eq_rev, refl_target_ab, &|d, t| {
+                rle(d, rat, t, target_ab)
+            });
+        // raw_target_le : raw_target <= target_ab
+
+        let raw_bound_le_target_ab = d.lemma(
+            rat.le_trans,
+            &[
+                raw_bound,
+                raw_target,
+                target_ab,
+                raw_le_double,
+                raw_target_le,
+            ],
+        );
+        let final_bound = d.lemma(
+            rat.le_trans,
+            &[diff_ab, raw_bound, target_ab, raw, raw_bound_le_target_ab],
+        );
+        (final_bound, target_ab)
+    };
+
+    let proof_mn = {
+        let (upper, upper_target) = widen_direction(d, m, n);
+        // upper : diff <= upper_target ; upper_target IS target (a_idx=m,b_idx=n).
+        let _ = upper_target;
+
+        let (bound_nm, target_nm) = widen_direction(d, n, m);
+        // bound_nm : diff_nm <= target_nm = natDivSucc(2,n)+natDivSucc(2,m)
+        let diff_nm = rsub(d, rat, sqrt_approx_x_n, sqrt_approx_x_m);
+
+        let comm_target = d.lemma(rat.add_comm, &[div2_n, div2_m]);
+        // comm_target : Eq Rat target_nm target
+        let bound_nm2 = rat_eq_rewrite(d, target_nm, target, comm_target, bound_nm, &|d, t| {
+            rle(d, rat, diff_nm, t)
+        });
+        // bound_nm2 : diff_nm <= target
+
+        let flipped = d.lemma(rat.neg_le_neg, &[diff_nm, target, bound_nm2]);
+        // flipped : -target <= -diff_nm
+        let neg_sub_eq = d.lemma(rat.neg_sub, &[sqrt_approx_x_n, sqrt_approx_x_m]);
+        // neg_sub_eq : Eq Rat (neg diff_nm) diff
+        let neg_diff_nm = rneg(d, diff_nm);
+        let neg_target = rneg(d, target);
+        let lower = rat_eq_rewrite(d, neg_diff_nm, diff, neg_sub_eq, flipped, &|d, t| {
+            rle(d, rat, neg_target, t)
+        });
+
+        let lower_ty = rle(d, rat, neg_target, diff);
+        let upper_ty = rle(d, rat, diff, target);
+        and_intro(d, p, lower_ty, upper_ty, lower, upper)
+    };
+
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat_ty, proof_mn);
+        d.lam_fv(m_fv, nat_ty, with_n)
+    };
+    let full_ty = {
+        let over_n = d.pi_fv(n_fv, nat_ty, claim);
+        let over_mn = d.pi_fv(m_fv, nat_ty, over_n);
+        d.pi_fv(x_fv, carrier, over_mn)
+    };
+    let full_value = d.lam_fv(x_fv, carrier, value);
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sqrt_approx_kregular,
+        uparams: vec![],
+        ty: full_ty,
+        value: full_value,
+    })
+}
+
+/// `CReal.sqrt : CReal → CReal`, via `CReal.mk` directly — the same recipe
+/// `convergence.rs`'s `converges_of_cauchy` already uses (`CReal.mk (speedup
+/// ...) (regular_of_kregular ...)`), so no `Exists.rec` elimination is
+/// needed: `sqrt x := CReal.mk (speedup (sqrtApprox x) 1) (regular_of_kregular
+/// (sqrtApprox x) 1 (sqrtApproxKRegular x))`.
+///
+/// **Total, no `0 ≤ x` hypothesis.** `sqrtApprox` clamps every sample to
+/// `Rat.max _ 0` before taking a `Nat` square root, so the construction never
+/// inspects `x`'s sign; `0 ≤ x` is what `sqrt`'s own LAWS need (relating
+/// `sqrt x` back to `x`), not the definition.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+pub(super) fn declare_sqrt_ctor(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let one_nat = d.num(1);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+
+    let f = d.const_app(p.sqrt_approx, &[x]);
+    let kreg = d.lemma(p.sqrt_approx_kregular, &[x]);
+    let reg_proof = d.lemma(p.regular_of_kregular, &[f, one_nat, kreg]);
+    let speedup_term = d.const_app(p.speedup, &[f, one_nat]);
+    let value_body = d.const_app(p.mk, &[speedup_term, reg_proof]);
+
+    let value = d.lam_fv(x_fv, carrier, value_body);
+    let ty = d.arrow(carrier, carrier);
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.sqrt,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(DERIVED_HEIGHT + 45),
+    })
 }
 
 #[cfg(test)]
