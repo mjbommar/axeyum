@@ -532,6 +532,21 @@ The refreshed result is 1,287 empty-footprint theorems, zero active reviewed
 semantic anchors, and 1,287 unreviewed entries. That zero is a real knowledge
 gap, not a reason to infer semantics from theorem names.
 
+The zero also exposed a structural gap left by a correct decoupling decision.
+ADR-0553 removed every semantic edge that resolved against the read-only
+`math-education` sibling, but the queue still described a `formalizes` workflow
+that the local schema no longer represented. Axeyum now owns the smallest
+viable replacement: three self-contained concepts and three restored reviewed
+kernel anchors for scoped excluded middle, a complex squared-norm power law,
+and circumcentre uniqueness. The relation is accepted only for locally resolved
+concepts, empty-footprint kernel theorems, human-reviewed assurance, and an
+explicitly partial coverage qualifier. Fourteen validator controls and five
+coverage controls protect those boundaries; the external-coupling scan still
+reports zero findings. The queue is now actionable at 3 reviewed / 1,284
+unreviewed rather than structurally pinned at zero. Next: add small reviewed
+local concept batches whose definitions Axeyum can adjudicate, never bulk-copy
+or name-match the reference corpus.
+
 ### Exit evidence
 
 - Kernel theorem count agrees exactly with the theorem-production authority.

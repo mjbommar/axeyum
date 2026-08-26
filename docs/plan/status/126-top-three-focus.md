@@ -494,9 +494,16 @@ JSON and marked Markdown census now agree at 1,287 empty-footprint theorems,
 zero active reviewed anchors, and 1,287 unreviewed entries. The control no
 longer depends on a deleted historical overlay link; it synthesizes active and
 candidate variants and proves only the active one leaves the queue.
+That honest zero then drove the missing local-vocabulary implementation. Three
+self-contained Axeyum concepts and three reviewed theorem anchors restore the
+`formalizes` path without reintroducing any sibling checkout, path, revision,
+or resolver. The validator requires local resolution, theorem kind, empty
+footprint, human review, and partial coverage. The queue now reports 3 reviewed
+and 1,284 unreviewed; the external-coupling scan remains at zero findings.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-26 | `8b3ef15bd` | Restore an actionable semantic-review path with three self-contained local concepts and three strictly qualified empty-footprint kernel anchors, without reviving any sibling-repository dependency. |
 | 2026-08-26 | `f5695d52b` | Synchronize the semantic-review JSON and human census at 1,287 unreviewed theorems, and replace a deleted-link-dependent control with synthetic active/candidate mutations. |
 | 2026-08-26 | `2b943b2e7` | Generate a hash-bound product-health snapshot from kernel, fact, connectivity, operation, producer-outcome, episode, and aggregate-gate authorities without converting static wiring into a runtime-green claim. |
 | 2026-08-26 | `6fad715d8` | Make the Fibonacci child qualification progress-aware: pin candidate-specific dependency receipts and permit either child to advance only through checked, axiom-free kernel evidence. |
