@@ -133,6 +133,7 @@ now. Nothing was deleted.
 | 2026-08-26 | `680952a5d` | Rank 1,704 proof-isolated kernel-lemma candidates for 142 train/development open goals while excluding all 37 held-out IDs before statement tokenization. |
 | 2026-08-26 | `2b6020af2` | Compare closed propositions across independently owned kernels without confusing their shared outer `Prop` type or granting proof/admission authority. |
 | 2026-08-26 | `dc71a97a1` | Add a proof-free multi-candidate audit and demonstrate exact native equivalence can be distinguished from nearby topical mismatches. |
+| 2026-08-26 | `16de20475` | Publish the hash-bound 57-goal ranked proposition census: six exact native equivalents, 678 declines, and zero held-out access. |
 | 2026-08-25 | `beb27f1ba` | **The trusted-core ceiling, raised the way the gate demanded.** Guard C failed at 5,508 past 5,500 with "say why before raising it." The baseline was RE-DERIVED by `git archive` rather than trusted, giving a per-file table summing to exactly +379 (`tc.rs` +347, `inductive.rs` +30, `env.rs` +2). Verdict: real and necessary — a universe-parameter closure fixing declarations **official Lean 4.30.0 refuses but this kernel wrongly admitted**, and `whnf_core` memoisation (138× cost, 1,857 s → 13.4 s) inside `def_eq`. Ceiling 5,900 with headroom matching the original's character; guard C re-verified to fire by injecting 500 lines in a scratch copy. The file's own comment said "5,110" where the real baseline was 5,129 — wrong from day one. |
 | 2026-08-25 | `0f2fb5fcd` | A doc line beginning with `+` is a Markdown list bullet, so ten `doc_list_item` errors pointed at ordinary prose one line below the cause. |
 | 2026-08-25 | `6de1d88f8` | Salvage: **the irrationality of √2** (`Nat.no_rational_sqrt_two`) and **`CReal.geom_tail_within`**, committed on behalf of two lanes killed mid-run by a spend limit. Both verified here: 695 tests, clippy `--all-targets`, axiom-free. |
@@ -1200,6 +1201,14 @@ ranked pairs and found six exact equivalents (five `Nat.choose` statements and
 terminal result is not yet durable evidence: next generate and gate a
 hash-bound census artifact, then reconcile those six graph identities without
 claiming autonomous theorem production.
+That census is now durable and freshness-checkable as
+`open-ranked-proposition-census-v1.json`: 57 goals, 684 pairs, six compatible,
+678 declined, zero audit errors, zero held-out access. Each row binds its
+external capsule size/hash, while the artifact binds both source censuses. Its
+recipe is intentionally not in the fleet-wide knowledge freshness aggregate
+because reproduction requires the external reference-pack mount. Next:
+reconcile the six exact identities as aliases/correspondences, preserving their
+non-autonomous provenance and leaving the remaining 51 goals open.
 The accepted ADR-0541 general SMT-LIB session driver is now also a named
 `axeyum` binary target, not only a discoverability-poor Cargo example. The same
 source remains the historical example control, and the binary's focused check,
