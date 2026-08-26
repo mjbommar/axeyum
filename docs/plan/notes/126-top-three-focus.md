@@ -673,6 +673,23 @@ producer-evaluation frontier, product-health projection, lifecycle contract,
 and all-three-target fresh operation replay pass. Product health now reports
 511 proved facts; its runtime receipt remains explicitly `failed-ancestor`.
 
+### Second durable Nat.mod family admission (2026-08-26)
+
+At clean source commit `4cf9b69c23a1c6a0471c504981f59a264e52fe83`,
+frontier `a3c78d0a…9a46` selected
+`F:ml430-nat-add-modeq-right-e2f11f21`. Execution `55a780a2…f7b0`
+reconstructed the exact target axiom-free with proof `35a1eba6…4478` and sole
+retained dependency
+`Axeyum.Autogenesis.Candidate.NatModRemainder.addModRight`. Transaction
+`27568b5b…87a7` survived the intentional post-intent crash and recovered to one
+write. Readiness `a7931bd5…1f62` records `addRight` leaving and `modulusZero`
+becoming selected. The full audit bundle is retained at
+`/data0/axeyum/autogenesis/nat-modeq-remainder-add-right-2026-08-26-v1/`.
+
+The live ledger now reports 512 proved facts and 611 evidence rows re-derived
+by two or more independent checkers. The generated capability gap has one
+remaining admissible target.
+
 | 2026-08-26 | `6fad715d8` | Make the Fibonacci child qualification progress-aware: pin candidate-specific dependency receipts and permit either child to advance only through checked, axiom-free kernel evidence. |
 | 2026-08-26 | `2aedb4d68` | Refresh the generated public example inventory from 163 to the 193 examples canonical discovery actually finds; both guarded planning references now report zero stale markers. |
 | 2026-08-26 | `42e7bdfd1` | Make the complete Python build/test/stub/type/lint recipe part of canonical `just check`; register two orphan controls in both gates and return the reachability ratchet from 16 to its 14-module baseline. |

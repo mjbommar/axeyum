@@ -54,7 +54,7 @@
     "proof_route_counts": {
       "cas-certificate": 23,
       "imported-kernel-lean": 5,
-      "kernel-lean": 451,
+      "kernel-lean": 452,
       "search-certificate": 12,
       "smt-clausal": 9,
       "smt-term-level": 17
@@ -62,8 +62,8 @@
     "status_counts": {
       "computed": 2,
       "conjectured": 3,
-      "open": 178,
-      "proved": 511,
+      "open": 177,
+      "proved": 512,
       "refuted": 4
     }
   },
@@ -185,7 +185,7 @@
     {
       "path": "artifacts/facts/F-*.json",
       "population": 698,
-      "sha256": "40b3110490cd6002bdc2fc4a207774cea379882d33c0574ac9e9614d75f7e423"
+      "sha256": "5d972db4051a4d0da83cb3b31e9408befa7310e0ad8b2ad0aea3beb32ff04f7f"
     },
     {
       "path": "artifacts/episodes/**/episode*.json excluding fixtures*",
