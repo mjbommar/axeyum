@@ -262,9 +262,22 @@ implementation-bound `div_mod_exec` dependency over Mathlib's different
 `Nat.mod`. Production remains zero. Next: reconstruct the equality inside the
 imported kernel from portable order/decision facts, then test unchanged reuse
 across the additive siblings.
+The imported representation boundary is now a generated knowledge artifact,
+not a prose inference. All 14 exact definitions abstracted by the 25 checked
+type slices expand to 1,363 transparent-definition occurrences and 7,303
+direct dependency edges (366 structural identities / 2,219 identity-bound
+edges), with same-named variants and nontransparent trust boundaries retained.
+The checked `Nat.mod` spine explicitly reaches `Nat.decLe`/`Nat.ble`,
+`Nat.modCore`, recursive `Nat.modCore.go`, and subtraction-instance machinery.
+No theorem proof or held-out target is read and the graph grants no contract or
+transport authority. Next: derive a deduplicated reverse-reachability view,
+then use the shared `Nat.testBit` subgraph and the modulus spine to choose the
+smallest multi-sibling contracts rather than writing another target-local
+proof.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-26 | `ebcfd3fb88` | Derive the proof-isolated imported implementation-demand graph for all 14 sliced source identities, retaining structural variants and the checked `Nat.mod` decision/subtraction spine without proof or ledger authority. |
 | 2026-08-26 | `d2d6fc0d0` | Add axiom-free native `Nat.mod_self`, alpha-stable structural retrieval, and a checked native-composition control; fresh imported replay preserves zero credit and exposes the implementation-bound `Nat.mod` transport boundary. |
 | 2026-08-26 | `73800a902` | Project all 51 retrieved-induction outcomes into a digest-bound typed capability backlog; false controls remain observation-only and one-target operation registration is refused. |
 | 2026-08-26 | `e82a1b002` | Replay all 25 import-blocked positive targets through checked type slices, exposing 14 exact semantic-contract demands without proof or ledger credit. |

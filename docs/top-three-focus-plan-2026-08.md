@@ -400,6 +400,19 @@ manual review.
 4. Expose deterministic neighborhood queries through Rust/Python.
 5. Feed successful proof dependencies and typed declines back into the index.
 
+The first implementation-facing connective layer is now derived rather than
+hand-annotated. Fourteen exact definitions abstracted by 25 checked Mathlib
+type slices expand into a proof-isolated transparent implementation-demand
+graph: 1,363 transparent node occurrences and 7,303 direct edge occurrences,
+deduplicated into 366 structural identities and 2,219 identity-bound edges,
+with same-named structural variants and theorem/axiom/recursor boundaries
+retained. This
+explains why statement-level retrieval alone cannot bridge imported
+representation seams. In particular, imported `Nat.mod` reaches `Nat.decLe`,
+`Nat.ble`, `Nat.modCore`, recursive `Nat.modCore.go`, and subtraction-instance
+machinery. The graph grants no transport or proof authority; it supplies the
+bottom-up dependency spine needed to design top-down semantic contracts.
+
 ### Exit evidence
 
 - Kernel theorem count agrees exactly with the theorem-production authority.
@@ -408,6 +421,9 @@ manual review.
   are counted and retained.
 - A producer selects a lemma from this index and the final checked proof records
   that dependency.
+- Contract work can query the exact transparent implementation and trust
+  boundary beneath every currently sliced source identity without inspecting a
+  target theorem proof.
 
 ## Priority 3: stable and honest product integration
 
