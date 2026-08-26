@@ -2541,6 +2541,36 @@ pub struct CRealPrelude {
     /// endpoint after `k` bisection steps at slack index `n`. See
     /// [`Self::ivt_bisect`].
     pub ivt_bisect_hi: NameId,
+    /// `CReal.ivt_bisect_invariant : ∀ F P0 Q0 n, le P0 Q0 → le (F P0) (ofRat
+    /// (natDivSucc 1 n)) → le (neg (ofRat (natDivSucc 1 n))) (F Q0) → ∀ k, le
+    /// P0 (ivt_bisect_lo F P0 Q0 n k) ∧ le (ivt_bisect_lo F P0 Q0 n k)
+    /// (ivt_bisect_hi F P0 Q0 n k) ∧ le (ivt_bisect_hi F P0 Q0 n k) Q0 ∧ le (F
+    /// (ivt_bisect_lo F P0 Q0 n k)) (ofRat (natDivSucc 1 n)) ∧ le (neg (ofRat
+    /// (natDivSucc 1 n))) (F (ivt_bisect_hi F P0 Q0 n k)) ∧ Equiv (add
+    /// (ivt_bisect_hi F P0 Q0 n k) (neg (ivt_bisect_lo F P0 Q0 n k))) (mul
+    /// (add Q0 (neg P0)) (pow (ofRat (natDivSucc 1 1)) k))` (`creal/ivt.rs`)
+    /// — the **invariant spec theorem** [`Self::ivt_bisect`]'s own doc
+    /// comment names as not-yet-landed: the concrete, data-valued bracket
+    /// [`Self::ivt_bisect_lo`]/[`Self::ivt_bisect_hi`] computes satisfies the
+    /// SAME six-part invariant [`Self::ivt_step`]/[`Self::ivt_iter`] prove
+    /// for the existentially-quantified bracket, for the FIXED slack `eps_n
+    /// := ofRat (natDivSucc 1 n)`.
+    ///
+    /// Proved by ordinary `Prop`-level induction on `k` (no `Exists.rec`
+    /// needed anywhere, unlike [`Self::ivt_iter`]'s own proof, since `lo`/`hi`
+    /// are already concrete data rather than an existential witness to
+    /// unpack). The induction step reads the per-step branch back out of
+    /// `Rat.ble (seq (F m) j) (natDivSucc 1 j) `'s `Bool` via a "remembering"
+    /// `Bool.rec` (`nat_prelude/finite.rs::compact_eq_of_gt`'s own
+    /// "generalize then instantiate at `bool_refl`" idiom): the branch's
+    /// `Bool` alone forgets *why* it took that value, so the proof
+    /// generalizes over `Eq Bool br b` before casing, giving each branch a
+    /// genuine hypothesis `br = true`/`br = false` to feed
+    /// [`crate::RatPrelude::le_of_ble_eq_true`]/[`crate::RatPrelude::ble_eq_true_of_le`],
+    /// then [`Self::rat_approx_upper`]/[`Self::rat_approx_lower`] convert the
+    /// resulting rational bound back to the `CReal` sign fact `ivt_step`'s
+    /// own invariant needs.
+    pub ivt_bisect_invariant: NameId,
     /// `CReal.hasDerivative_unique : ∀ F F1 F2 a b, HasDerivativeOn F F1 a b
     /// → HasDerivativeOn F F2 a b → lt a b → ∀ z, le a z → le z b → Equiv
     /// (F1 z) (F2 z)` (`creal/deriv_unique.rs`) — the derivative of a
@@ -2915,6 +2945,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         ivt_bisect: kernel.name_str(creal, "ivt_bisect"),
         ivt_bisect_lo: kernel.name_str(creal, "ivt_bisect_lo"),
         ivt_bisect_hi: kernel.name_str(creal, "ivt_bisect_hi"),
+        ivt_bisect_invariant: kernel.name_str(creal, "ivt_bisect_invariant"),
         has_derivative_unique: kernel.name_str(creal, "hasDerivative_unique"),
         mesh_le_of_ge: kernel.name_str(creal, "mesh_le_of_ge"),
         fine_sample_in_bounds: kernel.name_str(creal, "fineSample_in_bounds"),
