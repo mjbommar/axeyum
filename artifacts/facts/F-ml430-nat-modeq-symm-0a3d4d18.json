@@ -1,30 +1,68 @@
 {
-  "schema_version": 1,
-  "id": "F:ml430-nat-modeq-symm-0a3d4d18",
-  "title": "Mathlib v4.30 source proposition Nat.ModEq.symm",
-  "statement": "The proposition declared as `Nat.ModEq.symm` in the pinned Mathlib v4.30 source.",
-  "formal": {
-    "language": "lean4-surface",
-    "statement": "∀ {n a b : ℕ}, a ≡ b [MOD n] → b ≡ a [MOD n]",
-    "fragment": "Nat"
-  },
-  "epistemic_status": "open",
-  "external_status": "proved",
+  "axiom_footprint": [],
   "depends_on": [],
-  "evidence": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "artifact": "sha256:c6bbf1c3f11d61a19f48db974d0ee1583488105af4c4f4866efd5fa9aa2065da",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-autogenesis-fact-operation.py --fact artifacts/facts/F-ml430-nat-modeq-symm-0a3d4d18.json",
+      "checker_operation": {
+        "admitted_declarations": 193,
+        "binders_used": 4,
+        "execution_sha256": "c6bbf1c3f11d61a19f48db974d0ee1583488105af4c4f4866efd5fa9aa2065da",
+        "external_artifact_sha256": "d5f417676b1fa3f95998c734f87aba8dcee18ade1a08b4b9c24b231243cbe94c",
+        "formal_statement_sha256": "0872bc3e5cbc38beea162ad0dc75a09f91d5c02662c3f04f8b79a1b52853bb6c",
+        "frontier_sha256": "e2f52f9a80d2c763601a4b30c8e9d909ab6f6b2470a1020abdfc72ff38c10b7a",
+        "goal_sha256": "19b81746627496fcbc9b95c1f2c6a0a032a19ce0af406c56b30685c248abb409",
+        "id": "authoritative-mathlib-modeq-family-v1",
+        "max_binders": 8,
+        "modeq_manifest": "artifacts/autogenesis/mathlib-nat-modeq-family-symm-v1.json",
+        "modeq_manifest_sha256": "1b7063e729ea7d0ae8508903ada61209a632e6e5d83da35f7669b5ca9482b175",
+        "operation_sha256": "58e2b5479ab3b7a8947b03aa8e37e07f169488801023cc88edf3cace81ee17e5",
+        "proof_sha256": "c3c8334eb388852b3761dab96d302624455695b135c286798561486680244ebd",
+        "registry_sha256_at_execution": "a3340fcb15a9a6ff305f60c8ad9e8e70920c2bb7e43408d9bc0d640c611da6cb",
+        "statement_adapter_manifest": "artifacts/autogenesis/mathlib-nat-modeq-family-symm-statement-adapter-v1.json",
+        "statement_adapter_manifest_sha256": "7f12ecf55a10dd1829e5970f65cd1ac6173f91dd80bfaf5ee82215c25ad4ade5",
+        "target_content_sha256": "686adf5994409844e729716ee1311dab77b207dbd2aafb84d0338f7c5714ec6c",
+        "target_definition": "Axeyum.Autogenesis.Statement.NatModEqFamily.natModEqSymm",
+        "target_fact_id": "F:ml430-nat-modeq-symm-0a3d4d18"
+      },
+      "checkers": [
+        "modeq-family-eq-iff-combinators-v1",
+        "axeyum-lean-import/modeq-family-operation-v1",
+        "axeyum-lean-import/modeq-family-multi-target-v1"
+      ],
+      "id": "autogenesis-operation-c6bbf1c3f11d61a1",
+      "kind": "kernel-term",
+      "notes": "Derived from a clean-commit typed execution receipt. The registered fact-operation checker replays the resolved multi-target statement adapter and candidate manifests through the operation's own reviewed checker module and requires the exact kernel-checked proof, dependency-free result, and matching target definition; no caller-authored route, footprint, checker, or shell command is accepted.",
+      "supports": "The proposition declared as `Nat.ModEq.symm` in the pinned Mathlib v4.30 source."
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "language": "lean4-surface",
+    "statement": "\u2200 {n a b : \u2115}, a \u2261 b [MOD n] \u2192 b \u2261 a [MOD n]"
+  },
+  "id": "F:ml430-nat-modeq-symm-0a3d4d18",
+  "notes": "CLOSED BY AXEYUM AUTOGENESIS. The machine frontier selected this exact fact for registered operation `authoritative-mathlib-modeq-family-v1`; execution receipt `c6bbf1c3f11d61a19f48db974d0ee1583488105af4c4f4866efd5fa9aa2065da` produced a fresh-import axiom-free modeq-family target proof, and the typed transaction derived this status, route, footprint, evidence row, checker, and provenance without caller-authored admission metadata.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+  "proof_route": "kernel-lean",
   "provenance": {
     "date": "2026-08-18",
-    "established_by": "not established in this ledger",
-    "source": "statement-only extraction of `Nat.ModEq.symm` from Mathlib v4.30.0; no proof value was exposed",
+    "established_by": "axeyum-autogenesis execution abcb8a732255ff57ea3997e5f473a431eddb2a3e1bb9c551d8f87e985bdafd38",
     "prior_art": [
       {
-        "who": "the Mathlib contributors",
+        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted",
         "what": "the theorem declaration `Nat.ModEq.symm`",
         "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
-        "year": 2026,
-        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted"
+        "who": "the Mathlib contributors",
+        "year": 2026
       }
-    ]
+    ],
+    "source": "statement-only extraction of `Nat.ModEq.symm` from Mathlib v4.30.0; no proof value was exposed"
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "schema_version": 1,
+  "statement": "The proposition declared as `Nat.ModEq.symm` in the pinned Mathlib v4.30 source.",
+  "title": "Mathlib v4.30 source proposition Nat.ModEq.symm"
 }
