@@ -326,6 +326,7 @@ clean reconstruction of the law leaves, beginning with `testBit_succ`.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-26 | `99f7b4e32` | Bind five bitwise semantic-law obligations to exact candidate and operation identities, with a checked witness that the interface excludes the prior countermodel. |
 | 2026-08-26 | `70ca259b5` | Refute and execution-block the unconstrained proof-free bitwise target with a checked finite countermodel; require a law-bearing semantic interface before reconstruction. |
 | 2026-08-26 | `0554b6b86` | Materialize the assumption-bearing imported bitwise candidate as a proof-free, axiom-free generalized reconstruction target with exact external receipt validation. |
 | 2026-08-26 | `2397eb08f` | Expose exact imported candidates through a separate ninth tier-R agent tool that preserves footprint-aware reconstruction routing and refuses invalid query shapes. |
