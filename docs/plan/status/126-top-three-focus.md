@@ -376,9 +376,16 @@ quotient `n` and remainder `boolToBit b` under division by two, using a
 constructed `divMod` witness and uniqueness against executable division. Next:
 put the bounded reifier into this low-digit-first form and induct the decoder
 to componentwise uniqueness.
+That induction now checks axiom-free: the low-digit-first reifier round-trips at
+every `i < k`. Specializing it to `bitwiseObservation` yields the first bounded
+bitwise theorem with an empty footprint. Next: derive a sufficient input width
+and prove all out-of-range observations are false under `f false false = false`;
+weighted-reifier equivalence and exact imported-operation equivalence remain
+separate, uncredited obligations.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-26 | `448fc8431` | Prove universal low-digit reification round-trip and specialize it into the first axiom-free bounded bitwise semantic theorem. |
 | 2026-08-26 | `05b92a924` | Prove axiom-free quotient and remainder equations for a Boolean low digit plus twice an arbitrary tail, supplying the recursive decoder for component uniqueness. |
 | 2026-08-26 | `d89a192b7` | Compose the universal reification bound with native bit-sum reconstruction to prove an axiom-free numeric round trip, isolating component uniqueness. |
 | 2026-08-26 | `04ca04a3d` | Prove universally and axiom-free that every bounded Boolean-bit reification is strictly below `2^k`, leaving only observation uniqueness. |
