@@ -15,7 +15,7 @@
   "inputs": {
     "candidate_fact_count": 97,
     "evaluation_frontier_path": "artifacts/autogenesis/producer-evaluation-frontier-v1.json",
-    "evaluation_frontier_sha256": "854d7f81da09953222f83dddb4add589d97a71a38dc432d79fe0f0df467e5e3b",
+    "evaluation_frontier_sha256": "bb884c9d87ef63beee1cf0df92f8916c9571f7c41b81e43d1d2c5ce9772892a5",
     "evaluation_partitions": [
       "development",
       "train"
