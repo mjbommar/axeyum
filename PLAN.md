@@ -1697,6 +1697,19 @@ settled `Nat.fib_le_succ` fact omits two proof-derived dependencies; correcting 
 then exposes a stale historical Autogenesis child-qualification contract. Neither belongs to
 this lane, so no full-gate success is claimed.
 
+**Bilinear polynomial-family artifact boundary, 2026-08-26.** ADR-0581 adds the missing
+family-native `P_n` synthesis driver over the existing complete tensor-rank encoder. It exports
+deterministic DIMACS, pins known decompositions, imports only complete strict SAT Competition
+models, lifts them to portable JSON and independently replays every coefficient, or checks a
+completed textual DRAT from disk. The two-sided `P_2` control replays rank 3 from an external
+model and checks a 130-byte rank-2 refutation; empty output exits nonzero without writing a
+witness. Wang's rank-17 `P_6` construction pins, lifts and replays all 396 coefficients. The
+complete ordered `P_6@16` formula has 13,289 variables / 52,110 clauses, raw SHA-256
+`d5692510...6d940`, and is under sustained no-short-cutoff CaDiCaL search. Its live proof prefix
+carries no rank credit. The primary source remains arXiv v10 (2026-07-30), and refreshed exact
+searches found no closure through 2026-08-26; this is negative retrieval evidence, not priority
+proof.
+
 **Job-shop exact windows and semantic order cover, 2026-08-26.** ADR-0572 adds an opt-in
 complete operation-domain restriction from exact job-chain earliest/latest starts and exposes
 all machine-order selector variables as typed, deterministic semantic records. `ft06` retains
