@@ -1,18 +1,18 @@
 {
   "census": {
     "distinct_exactly_linked_facts": 312,
-    "kernel_dependency_edges": 5804,
-    "kernel_theorems": 1100,
-    "maximum_dependency_depth": 24,
+    "kernel_dependency_edges": 6568,
+    "kernel_theorems": 1184,
+    "maximum_dependency_depth": 26,
     "theorems_with_exact_fact_links": 308,
-    "theorems_without_exact_fact_links": 792,
+    "theorems_without_exact_fact_links": 876,
     "unresolved_prefixed_kernel_evidence": 90
   },
   "derivation": {
     "fact_identity_rule": "kernel-term evidence id with exact kernel- or kernel: prefix and an exact current theorem suffix",
     "fact_population": "sorted artifacts/facts/F-*.json",
     "graph_semantics": "accepted theorem-term direct references; dependency depth is the longest direct-theorem path from a theorem with no theorem dependency",
-    "kernel_projection_sha256": "4a8d021f13eb52e7485a72ec57791ea66d6d28740eff0cceee764c707a861c33",
+    "kernel_projection_sha256": "f1c25af45a75f04d9d780933bc644561bd9984a902d871f3b13949a9c91c7cb5",
     "trust_boundary": "search and retrieval only; no concept, applicability, proof, admission, or trusted-kernel authority"
   },
   "kind": "axeyum-kernel-lemma-search-index",
@@ -42,6 +42,7 @@
       "dependency_depth": 0,
       "direct_theorem_dependencies": [],
       "direct_theorem_dependents": [
+        "CReal.riemannSum_le_on",
         "axeyum.string.2.all_append",
         "axeyum.string.2.all_iff_All",
         "axeyum.string.2.all_of_isPrefix",
@@ -69,6 +70,7 @@
       "dependency_depth": 0,
       "direct_theorem_dependencies": [],
       "direct_theorem_dependents": [
+        "CReal.riemannSum_le_on",
         "axeyum.string.2.all_append",
         "axeyum.string.2.all_iff_All",
         "demorgan_not_or_converse",
@@ -96,7 +98,8 @@
       "direct_theorem_dependencies": [],
       "direct_theorem_dependents": [
         "Bool.true_ne_false",
-        "Decidable.of_decide_eq_true"
+        "Decidable.of_decide_eq_true",
+        "Nat.cantor_diagonal"
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Bool.false_ne_true",
@@ -121,7 +124,9 @@
         "Eq.symm"
       ],
       "direct_theorem_dependents": [
-        "Decidable.of_decide_eq_false"
+        "Decidable.of_decide_eq_false",
+        "Nat.cantor_diagonal",
+        "Nat.injective_on_p_imp_surjective_on_p"
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Bool.true_ne_false",
@@ -497,7 +502,9 @@
         "CReal.neg_mul_neg",
         "CReal.sq_nonneg"
       ],
-      "direct_theorem_dependents": [],
+      "direct_theorem_dependents": [
+        "CPoint.distSq_triangle_sq_bound"
+      ],
       "exact_fact_ids": [
         "F:cauchy-schwarz-over-constructed-plane",
         "F:cpoint-cauchy-schwarz"
@@ -1140,6 +1147,36 @@
     },
     {
       "axiom_footprint_size": 0,
+      "dependency_depth": 20,
+      "direct_theorem_dependencies": [
+        "CPoint.cauchy_schwarz",
+        "CPoint.dot_congr",
+        "CPoint.dot_self_add",
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_le_add",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.le_of_equiv",
+        "CReal.le_trans",
+        "CReal.left_distrib",
+        "CReal.mul_comm",
+        "CReal.mul_congr"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CPoint.distSq_triangle_sq_bound",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "cpoint"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "dependency_depth": 18,
       "direct_theorem_dependencies": [
         "CReal.Equiv.refl",
@@ -1241,6 +1278,7 @@
         "CPoint.distSq_comm",
         "CPoint.distSq_congr",
         "CPoint.distSq_double_sum_bound",
+        "CPoint.distSq_triangle_sq_bound",
         "CPoint.euler_quadrilateral",
         "CPoint.lerp_dist_sq",
         "CPoint.orthocentre_identity",
@@ -1318,6 +1356,7 @@
       "direct_theorem_dependents": [
         "CPoint.apollonius_median",
         "CPoint.distSq_double_sum_bound",
+        "CPoint.distSq_triangle_sq_bound",
         "CPoint.dot_self_add3",
         "CPoint.euler_quadrilateral",
         "CPoint.parallelogram_law",
@@ -2659,6 +2698,7 @@
         "CPoint.distSq_double_sum_bound",
         "CPoint.distSq_eq_zero_of_equiv",
         "CPoint.distSq_self_zero",
+        "CPoint.distSq_triangle_sq_bound",
         "CPoint.dot_add_left",
         "CPoint.dot_add_right",
         "CPoint.dot_neg_left",
@@ -2704,12 +2744,18 @@
         "CReal.abs_sumRange_le",
         "CReal.add_right_cancel",
         "CReal.bounded_on_add",
+        "CReal.bounded_on_id_unit",
         "CReal.bounded_on_mul",
         "CReal.eq_zero_of_add_eq_zero_of_nonneg",
+        "CReal.equiv_zero_of_small",
         "CReal.geom_sum_bounded",
         "CReal.geom_tail_bounded",
+        "CReal.geom_tail_bounded_div",
+        "CReal.geom_tail_within",
         "CReal.hasDerivative_add",
         "CReal.hasDerivative_chain",
+        "CReal.hasDerivative_chain_id_sq",
+        "CReal.hasDerivative_closeOfEquiv",
         "CReal.hasDerivative_congr",
         "CReal.hasDerivative_const",
         "CReal.hasDerivative_id",
@@ -2721,7 +2767,10 @@
         "CReal.hasDerivative_sq",
         "CReal.inv_congr",
         "CReal.inv_index_irrelevant",
+        "CReal.le_of_mul_le_mul_left",
         "CReal.lt_congr",
+        "CReal.mesh_count_width",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_le_mul_of_nonneg_left",
         "CReal.mul_pos",
         "CReal.mul_sub_one_geom",
@@ -2738,14 +2787,25 @@
         "CReal.pow_succ_gt_one",
         "CReal.pow_succ_lt_one",
         "CReal.riemannSum_add",
+        "CReal.riemannSum_const",
         "CReal.riemannSum_le",
+        "CReal.riemannSum_le_on",
+        "CReal.riemannSum_sample_in_bounds",
+        "CReal.subdivisionPoint_in_bounds",
         "CReal.sumRange_add",
+        "CReal.sumRange_comparisonTest",
         "CReal.sumRange_congr",
+        "CReal.sumRange_const",
+        "CReal.sumRange_double",
         "CReal.sumRange_split",
         "CReal.sumRange_tail_le",
         "CReal.sumRange_telescope",
+        "CReal.sumRange_telescope_ge",
+        "CReal.sumRange_telescope_le",
         "CReal.uniformly_continuous_add",
         "CReal.uniformly_continuous_const",
+        "CReal.uniformly_continuous_mul",
+        "CReal.uniformly_continuous_neg",
         "Complex.Equiv.refl",
         "Complex.I_is_fourth_root",
         "Complex.I_sq",
@@ -2788,6 +2848,8 @@
         "Complex.ofReal_add",
         "Complex.ofReal_mul",
         "Complex.pos_bound_conj",
+        "Complex.ptolemy_identity",
+        "Complex.ptolemy_inequality_sq",
         "Complex.re_add_im",
         "Complex.root_of_unity_mul",
         "Complex.sumRange_add",
@@ -2840,6 +2902,7 @@
         "CPoint.cross_translate",
         "CPoint.distSq_comm",
         "CPoint.distSq_double_sum_bound",
+        "CPoint.distSq_triangle_sq_bound",
         "CPoint.dot_add_left",
         "CPoint.dot_add_right",
         "CPoint.dot_neg_left",
@@ -2882,10 +2945,15 @@
         "CReal.abs_sumRange_le",
         "CReal.add_right_cancel",
         "CReal.bounded_on_add",
+        "CReal.equiv_zero_of_small",
         "CReal.geom_sum_bounded",
         "CReal.geom_tail_bounded",
+        "CReal.geom_tail_bounded_div",
+        "CReal.geom_tail_within",
         "CReal.hasDerivative_add",
         "CReal.hasDerivative_chain",
+        "CReal.hasDerivative_chain_id_sq",
+        "CReal.hasDerivative_closeOfEquiv",
         "CReal.hasDerivative_congr",
         "CReal.hasDerivative_const",
         "CReal.hasDerivative_id",
@@ -2896,7 +2964,10 @@
         "CReal.hasDerivative_sq",
         "CReal.inv_congr",
         "CReal.le_congr",
+        "CReal.le_of_mul_le_mul_left",
         "CReal.lt_congr",
+        "CReal.mesh_count_width",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_le_mul_of_nonneg_left",
         "CReal.mul_riemannSum",
         "CReal.mul_sub_one_geom",
@@ -2912,12 +2983,19 @@
         "CReal.pow_le_one",
         "CReal.pow_succ_gt_one",
         "CReal.pow_succ_lt_one",
+        "CReal.riemannSum_const",
+        "CReal.riemannSum_sample_in_bounds",
+        "CReal.subdivisionPoint_in_bounds",
         "CReal.sumRange_add",
+        "CReal.sumRange_comparisonTest",
+        "CReal.sumRange_const",
         "CReal.sumRange_split",
         "CReal.sumRange_tail_le",
         "CReal.sumRange_telescope",
         "CReal.uniformly_continuous_add",
         "CReal.uniformly_continuous_const",
+        "CReal.uniformly_continuous_mul",
+        "CReal.uniformly_continuous_neg",
         "Complex.Equiv.symm",
         "Complex.I_is_fourth_root",
         "Complex.I_sq",
@@ -2956,6 +3034,8 @@
         "Complex.ofReal_add",
         "Complex.ofReal_mul",
         "Complex.pos_bound_conj",
+        "Complex.ptolemy_identity",
+        "Complex.ptolemy_inequality_sq",
         "Complex.re_add_im",
         "Complex.root_of_unity_mul",
         "Complex.sumRange_add",
@@ -3020,6 +3100,7 @@
         "CPoint.distSq_double_sum_bound",
         "CPoint.distSq_eq_zero_of_equiv",
         "CPoint.distSq_self_zero",
+        "CPoint.distSq_triangle_sq_bound",
         "CPoint.dot_add_left",
         "CPoint.dot_add_right",
         "CPoint.dot_neg_left",
@@ -3067,10 +3148,14 @@
         "CReal.abs_sumRange_le",
         "CReal.add_right_cancel",
         "CReal.bounded_on_add",
+        "CReal.equiv_zero_of_small",
         "CReal.geom_sum_bounded",
         "CReal.geom_tail_bounded",
+        "CReal.geom_tail_bounded_div",
+        "CReal.geom_tail_within",
         "CReal.hasDerivative_add",
         "CReal.hasDerivative_chain",
+        "CReal.hasDerivative_closeOfEquiv",
         "CReal.hasDerivative_const",
         "CReal.hasDerivative_id",
         "CReal.hasDerivative_mul",
@@ -3080,6 +3165,9 @@
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
         "CReal.inv_congr",
+        "CReal.le_of_mul_le_mul_left",
+        "CReal.mesh_count_width",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_le_mul_of_nonneg_left",
         "CReal.mul_pos",
         "CReal.mul_riemannSum",
@@ -3096,12 +3184,20 @@
         "CReal.pow_succ_gt_one",
         "CReal.pow_succ_lt_one",
         "CReal.riemannSum_add",
+        "CReal.riemannSum_const",
+        "CReal.riemannSum_sample_in_bounds",
+        "CReal.subdivisionPoint_in_bounds",
         "CReal.sumRange_add",
+        "CReal.sumRange_comparisonTest",
         "CReal.sumRange_congr",
+        "CReal.sumRange_const",
+        "CReal.sumRange_double",
         "CReal.sumRange_split",
         "CReal.sumRange_tail_le",
         "CReal.sumRange_telescope",
         "CReal.uniformly_continuous_add",
+        "CReal.uniformly_continuous_mul",
+        "CReal.uniformly_continuous_neg",
         "Complex.Equiv.trans",
         "Complex.I_is_fourth_root",
         "Complex.I_sq",
@@ -3141,6 +3237,7 @@
         "Complex.ofNat_eq_cast",
         "Complex.ofReal_add",
         "Complex.ofReal_mul",
+        "Complex.ptolemy_identity",
         "Complex.re_add_im",
         "Complex.root_of_unity_mul",
         "Complex.sumRange_add",
@@ -3164,10 +3261,12 @@
       "direct_theorem_dependents": [
         "CReal.hasDerivative_add",
         "CReal.hasDerivative_chain",
+        "CReal.hasDerivative_closeOfEquiv",
         "CReal.hasDerivative_congr",
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_neg",
-        "CReal.hasDerivative_smul"
+        "CReal.hasDerivative_smul",
+        "CReal.monotone_of_nonneg_deriv"
       ],
       "exact_fact_ids": [
         "F:creal-hasderivativeon-spec"
@@ -3187,7 +3286,9 @@
       "direct_theorem_dependents": [
         "CReal.hasDerivative_chain",
         "CReal.hasDerivative_mul",
-        "CReal.uniformly_continuous_add"
+        "CReal.uniformly_continuous_add",
+        "CReal.uniformly_continuous_mul",
+        "CReal.uniformly_continuous_neg"
       ],
       "exact_fact_ids": [
         "F:creal-uniformlycontinuouson-spec"
@@ -3214,8 +3315,11 @@
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_neg",
         "CReal.hasDerivative_smul",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.sumRange_tail_le",
-        "CReal.uniformly_continuous_add"
+        "CReal.uniformly_continuous_add",
+        "CReal.uniformly_continuous_mul",
+        "CReal.uniformly_continuous_neg"
       ],
       "exact_fact_ids": [
         "F:creal-abs-congr"
@@ -3238,15 +3342,21 @@
         "CReal.abs_mul_le_of_bounds",
         "CReal.abs_sumRange_le",
         "CReal.bounded_on_add",
+        "CReal.bounded_on_id_unit",
         "CReal.hasDerivative_add",
         "CReal.hasDerivative_chain",
+        "CReal.hasDerivative_closeOfEquiv",
         "CReal.hasDerivative_const",
         "CReal.hasDerivative_id",
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_neg",
         "CReal.hasDerivative_sq",
+        "CReal.monotone_of_nonneg_deriv",
+        "CReal.sumRange_comparisonTest",
         "CReal.uniformly_continuous_add",
-        "CReal.uniformly_continuous_const"
+        "CReal.uniformly_continuous_const",
+        "CReal.uniformly_continuous_mul",
+        "CReal.uniformly_continuous_neg"
       ],
       "exact_fact_ids": [
         "F:creal-abs-le"
@@ -3296,7 +3406,8 @@
         "CReal.bounded_on_mul",
         "CReal.hasDerivative_chain",
         "CReal.hasDerivative_mul",
-        "CReal.hasDerivative_smul"
+        "CReal.hasDerivative_smul",
+        "CReal.uniformly_continuous_mul"
       ],
       "exact_fact_ids": [
         "F:creal-abs-mul-le-of-bounds"
@@ -3320,6 +3431,7 @@
         "Rat.zero_le_natDivSucc"
       ],
       "direct_theorem_dependents": [
+        "CReal.hasDerivative_closeOfEquiv",
         "CReal.hasDerivative_const",
         "CReal.hasDerivative_id",
         "CReal.hasDerivative_sq",
@@ -3409,6 +3521,7 @@
         "CPoint.cross_translate",
         "CPoint.distSq_comm",
         "CPoint.distSq_double_sum_bound",
+        "CPoint.distSq_triangle_sq_bound",
         "CPoint.dot_add_left",
         "CPoint.dot_add_right",
         "CPoint.dot_neg_left",
@@ -3448,20 +3561,28 @@
         "CReal.add_lt_add_of_le_of_lt",
         "CReal.add_right_cancel",
         "CReal.bounded_on_add",
+        "CReal.geom_tail_within",
         "CReal.hasDerivative_add",
         "CReal.hasDerivative_chain",
+        "CReal.hasDerivative_closeOfEquiv",
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_neg",
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_le_mul_of_nonneg_left",
         "CReal.mul_sub_one_geom",
         "CReal.mul_sub_one_geom_tail",
+        "CReal.riemannSum_sample_in_bounds",
+        "CReal.subdivisionPoint_in_bounds",
         "CReal.sumRange_add",
+        "CReal.sumRange_double",
         "CReal.sumRange_split",
         "CReal.sumRange_tail_le",
         "CReal.sumRange_telescope",
         "CReal.uniformly_continuous_add",
+        "CReal.uniformly_continuous_mul",
+        "CReal.uniformly_continuous_neg",
         "Complex.I_is_fourth_root",
         "Complex.add_assoc",
         "Complex.add_comm",
@@ -3482,6 +3603,7 @@
         "Complex.normSq_add",
         "Complex.normSq_conj",
         "Complex.normSq_mul",
+        "Complex.ptolemy_identity",
         "Complex.root_of_unity_mul",
         "Complex.sumRange_add"
       ],
@@ -3528,6 +3650,7 @@
         "CPoint.cross_translate",
         "CPoint.distSq_comm",
         "CPoint.distSq_double_sum_bound",
+        "CPoint.distSq_triangle_sq_bound",
         "CPoint.dot_add_left",
         "CPoint.dot_add_right",
         "CPoint.dot_neg_left",
@@ -3567,10 +3690,13 @@
         "CReal.abs_mul_le_of_bounds",
         "CReal.abs_sumRange_le",
         "CReal.bounded_on_add",
+        "CReal.equiv_zero_of_small",
         "CReal.geom_sum_bounded",
         "CReal.geom_tail_bounded",
+        "CReal.geom_tail_within",
         "CReal.hasDerivative_add",
         "CReal.hasDerivative_chain",
+        "CReal.hasDerivative_closeOfEquiv",
         "CReal.hasDerivative_const",
         "CReal.hasDerivative_id",
         "CReal.hasDerivative_mul",
@@ -3578,6 +3704,7 @@
         "CReal.hasDerivative_pow",
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_le_mul_of_nonneg_left",
         "CReal.mul_pos",
         "CReal.mul_sub_one_geom",
@@ -3586,10 +3713,17 @@
         "CReal.ofRat_pos",
         "CReal.pos_bound_of_lt",
         "CReal.pos_of_pos_bound",
+        "CReal.riemannSum_const",
+        "CReal.riemannSum_sample_in_bounds",
+        "CReal.subdivisionPoint_in_bounds",
         "CReal.sumRange_add",
+        "CReal.sumRange_comparisonTest",
+        "CReal.sumRange_const",
         "CReal.sumRange_tail_le",
         "CReal.sumRange_telescope",
         "CReal.uniformly_continuous_add",
+        "CReal.uniformly_continuous_mul",
+        "CReal.uniformly_continuous_neg",
         "Complex.I_is_fourth_root",
         "Complex.I_sq",
         "Complex.add_comm",
@@ -3623,6 +3757,7 @@
         "Complex.normSq_mul",
         "Complex.ofReal_add",
         "Complex.ofReal_mul",
+        "Complex.ptolemy_identity",
         "Complex.re_add_im",
         "Complex.root_of_unity_mul",
         "Complex.sumRange_add",
@@ -3680,6 +3815,7 @@
         "CPoint.distSq_double_sum_bound",
         "CPoint.distSq_eq_zero_of_equiv",
         "CPoint.distSq_self_zero",
+        "CPoint.distSq_triangle_sq_bound",
         "CPoint.dot_add_left",
         "CPoint.dot_add_right",
         "CPoint.dot_comm",
@@ -3726,8 +3862,10 @@
         "CReal.abs_sumRange_le",
         "CReal.add_right_cancel",
         "CReal.bounded_on_add",
+        "CReal.geom_tail_within",
         "CReal.hasDerivative_add",
         "CReal.hasDerivative_chain",
+        "CReal.hasDerivative_closeOfEquiv",
         "CReal.hasDerivative_congr",
         "CReal.hasDerivative_const",
         "CReal.hasDerivative_id",
@@ -3737,17 +3875,25 @@
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
         "CReal.lt_congr",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_le_mul_of_nonneg_left",
         "CReal.mul_sub_one_geom",
         "CReal.mul_sub_one_geom_tail",
         "CReal.mul_sumRange",
         "CReal.riemannSum_add",
+        "CReal.riemannSum_const",
+        "CReal.riemannSum_sample_in_bounds",
+        "CReal.subdivisionPoint_in_bounds",
         "CReal.sumRange_add",
         "CReal.sumRange_congr",
+        "CReal.sumRange_const",
+        "CReal.sumRange_double",
         "CReal.sumRange_split",
         "CReal.sumRange_tail_le",
         "CReal.sumRange_telescope",
         "CReal.uniformly_continuous_add",
+        "CReal.uniformly_continuous_mul",
+        "CReal.uniformly_continuous_neg",
         "Complex.I_is_fourth_root",
         "Complex.I_sq",
         "Complex.add_assoc",
@@ -3779,12 +3925,14 @@
         "Complex.mul_sub_one_geom",
         "Complex.mul_zero",
         "Complex.normSq_add",
+        "Complex.normSq_congr",
         "Complex.normSq_conj",
         "Complex.normSq_eq_zero_of_eq_zero",
         "Complex.normSq_mul",
         "Complex.normSq_pow",
         "Complex.ofReal_add",
         "Complex.ofReal_mul",
+        "Complex.ptolemy_identity",
         "Complex.re_add_im",
         "Complex.root_of_unity_mul",
         "Complex.sumRange_add",
@@ -3813,24 +3961,32 @@
       "direct_theorem_dependents": [
         "CPoint.cauchy_schwarz",
         "CPoint.distSq_double_sum_bound",
+        "CPoint.distSq_triangle_sq_bound",
         "CPoint.dot_self_nonneg",
         "CReal.abs_mul_le_of_bounds",
         "CReal.abs_sumRange_le",
         "CReal.add_lt_add_of_le_of_lt",
         "CReal.bounded_on_add",
         "CReal.eq_zero_of_add_eq_zero_of_nonneg",
+        "CReal.equiv_zero_of_small",
         "CReal.geom_sum_bounded",
         "CReal.geom_tail_bounded",
+        "CReal.geom_tail_within",
         "CReal.hasDerivative_add",
         "CReal.hasDerivative_chain",
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_sq",
         "CReal.lt_of_le_of_lt",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_le_mul_of_nonneg_left",
         "CReal.not_le_zero_neg_one",
         "CReal.riemannSum_le",
+        "CReal.riemannSum_le_on",
+        "CReal.riemannSum_sample_in_bounds",
+        "CReal.subdivisionPoint_in_bounds",
         "CReal.sumRange_le",
         "CReal.uniformly_continuous_add",
+        "CReal.uniformly_continuous_mul",
         "Complex.eq_zero_of_normSq_eq_zero",
         "Complex.normSq_add_le",
         "Complex.normSq_nonneg"
@@ -3900,6 +4056,7 @@
         "CPoint.distSq_double_sum_bound",
         "CPoint.distSq_eq_zero_of_equiv",
         "CPoint.distSq_self_zero",
+        "CPoint.distSq_triangle_sq_bound",
         "CPoint.dot_neg_left",
         "CPoint.dot_self_sub",
         "CPoint.dot_sub_left",
@@ -3934,25 +4091,35 @@
         "CReal.abs_sumRange_le",
         "CReal.add_right_cancel",
         "CReal.bounded_on_add",
+        "CReal.equiv_zero_of_small",
         "CReal.geom_sum_bounded",
         "CReal.geom_tail_bounded",
+        "CReal.geom_tail_within",
         "CReal.hasDerivative_add",
         "CReal.hasDerivative_chain",
+        "CReal.hasDerivative_closeOfEquiv",
         "CReal.hasDerivative_const",
         "CReal.hasDerivative_id",
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_neg",
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_le_mul_of_nonneg_left",
         "CReal.mul_sub_one_geom",
         "CReal.mul_sub_one_geom_tail",
         "CReal.not_le_zero_neg_one",
         "CReal.riemannSum_le",
+        "CReal.riemannSum_le_on",
+        "CReal.riemannSum_sample_in_bounds",
+        "CReal.subdivisionPoint_in_bounds",
+        "CReal.sumRange_comparisonTest",
         "CReal.sumRange_tail_le",
         "CReal.sumRange_telescope",
         "CReal.uniformly_continuous_add",
         "CReal.uniformly_continuous_const",
+        "CReal.uniformly_continuous_mul",
+        "CReal.uniformly_continuous_neg",
         "Complex.I_is_fourth_root",
         "Complex.I_sq",
         "Complex.add_neg",
@@ -3982,6 +4149,7 @@
         "Complex.normSq_conj",
         "Complex.normSq_mul",
         "Complex.ofReal_mul",
+        "Complex.ptolemy_identity",
         "Complex.re_add_im",
         "Complex.root_of_unity_mul"
       ],
@@ -4089,6 +4257,7 @@
         "CPoint.distSq_comm",
         "CPoint.distSq_double_sum_bound",
         "CPoint.distSq_self_zero",
+        "CPoint.distSq_triangle_sq_bound",
         "CPoint.dot_neg_left",
         "CPoint.dot_self_nonneg",
         "CPoint.dot_self_sub",
@@ -4129,16 +4298,20 @@
         "CReal.add_right_cancel",
         "CReal.bounded_on_add",
         "CReal.eq_zero_of_add_eq_zero_of_nonneg",
+        "CReal.equiv_zero_of_small",
         "CReal.geom_sum_bounded",
         "CReal.geom_tail_bounded",
+        "CReal.geom_tail_within",
         "CReal.hasDerivative_add",
         "CReal.hasDerivative_chain",
+        "CReal.hasDerivative_closeOfEquiv",
         "CReal.hasDerivative_const",
         "CReal.hasDerivative_id",
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_neg",
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_le_mul_of_nonneg_left",
         "CReal.mul_pos",
         "CReal.mul_sub_one_geom",
@@ -4147,11 +4320,18 @@
         "CReal.ofRat_pos",
         "CReal.pos_bound_of_lt",
         "CReal.pos_of_pos_bound",
+        "CReal.riemannSum_const",
+        "CReal.riemannSum_sample_in_bounds",
+        "CReal.subdivisionPoint_in_bounds",
         "CReal.sumRange_add",
+        "CReal.sumRange_comparisonTest",
+        "CReal.sumRange_const",
         "CReal.sumRange_split",
         "CReal.sumRange_tail_le",
         "CReal.sumRange_telescope",
         "CReal.uniformly_continuous_add",
+        "CReal.uniformly_continuous_mul",
+        "CReal.uniformly_continuous_neg",
         "Complex.I_is_fourth_root",
         "Complex.I_sq",
         "Complex.add_comm",
@@ -4189,6 +4369,7 @@
         "Complex.normSq_pow",
         "Complex.ofReal_add",
         "Complex.ofReal_mul",
+        "Complex.ptolemy_identity",
         "Complex.re_add_im",
         "Complex.root_of_unity_mul",
         "Complex.sumRange_diagonal"
@@ -4294,7 +4475,9 @@
         "Rat.sub_le_of_le",
         "Rat.zero_le_natDivSucc"
       ],
-      "direct_theorem_dependents": [],
+      "direct_theorem_dependents": [
+        "CReal.monotone_of_nonneg_deriv"
+      ],
       "exact_fact_ids": [
         "F:creal-archimedean"
       ],
@@ -4370,6 +4553,32 @@
       "direct_theorem_dependents": [],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.bounded_on_add",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 18,
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.abs_le",
+        "CReal.le_congr",
+        "CReal.le_trans",
+        "CReal.neg_le_neg",
+        "CReal.ofRat_le",
+        "CReal.ofRat_neg",
+        "Rat.neg_zero",
+        "Rat.zero_le_natDivSucc"
+      ],
+      "direct_theorem_dependents": [
+        "CReal.uniformly_continuous_poly_example"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.bounded_on_id_unit",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex",
@@ -4564,7 +4773,9 @@
         "Rat.neg_sub",
         "Rat.sub_add_sub"
       ],
-      "direct_theorem_dependents": [],
+      "direct_theorem_dependents": [
+        "CReal.sumRange_comparisonTest"
+      ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.converges_cauchy",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
@@ -4625,6 +4836,30 @@
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.converges_neg",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 14,
+      "direct_theorem_dependencies": [
+        "CReal.regular_of_kregular",
+        "CReal.speedup_close",
+        "Rat.add_le_add",
+        "Rat.le_trans",
+        "Rat.natDivSucc_add",
+        "Rat.natDivSucc_le_add_left",
+        "Rat.neg_le_neg"
+      ],
+      "direct_theorem_dependents": [
+        "CReal.sumRange_converges_of_dominated"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.converges_of_cauchy",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex",
@@ -4822,10 +5057,64 @@
       ],
       "direct_theorem_dependents": [
         "CReal.eq_zero_of_add_eq_zero_of_nonneg",
+        "CReal.equiv_zero_of_small",
+        "CReal.hasDerivative_closeOfEquiv",
+        "CReal.monotone_of_nonneg_deriv",
         "Complex.eq_zero_of_normSq_eq_zero"
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.equiv_of_le_le",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 18,
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.add_comm",
+        "CReal.add_le_add",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.equiv_of_le_le",
+        "CReal.le_abs_self",
+        "CReal.le_congr",
+        "CReal.le_of_equiv",
+        "CReal.le_of_forall_le_add_small",
+        "CReal.le_refl",
+        "CReal.le_trans",
+        "CReal.neg_le_abs"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.equiv_zero_of_small",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 23,
+      "direct_theorem_dependencies": [
+        "CReal.geom_tail_within_le",
+        "CReal.regular",
+        "Rat.bounds_add",
+        "Rat.bounds_neg",
+        "Rat.neg_sub",
+        "Rat.sub_add_sub"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.geom_pair_within",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex",
@@ -4877,9 +5166,97 @@
         "CReal.neg_le_neg",
         "CReal.pow_nonneg"
       ],
-      "direct_theorem_dependents": [],
+      "direct_theorem_dependents": [
+        "CReal.geom_tail_bounded_div"
+      ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.geom_tail_bounded",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 20,
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.geom_tail_bounded",
+        "CReal.inv_nonneg",
+        "CReal.le_congr",
+        "CReal.mul_assoc",
+        "CReal.mul_comm",
+        "CReal.mul_congr",
+        "CReal.mul_inv_cancel",
+        "CReal.mul_le_mul_of_nonneg_left",
+        "CReal.mul_one"
+      ],
+      "direct_theorem_dependents": [
+        "CReal.geom_tail_within"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.geom_tail_bounded_div",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 21,
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_le_add",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.geom_tail_bounded_div",
+        "CReal.inv_nonneg",
+        "CReal.le_congr",
+        "CReal.le_refl",
+        "CReal.le_trans",
+        "CReal.mul_nonneg",
+        "CReal.neg_le_neg",
+        "CReal.pow_nonneg",
+        "CReal.sumRange_split",
+        "Rat.le_of_sub_le",
+        "Rat.neg_le_neg",
+        "Rat.neg_neg"
+      ],
+      "direct_theorem_dependents": [
+        "CReal.geom_tail_within_le"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.geom_tail_within",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 22,
+      "direct_theorem_dependencies": [
+        "CReal.geom_tail_within",
+        "Nat.le_dest"
+      ],
+      "direct_theorem_dependents": [
+        "CReal.geom_pair_within"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.geom_tail_within_le",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex",
@@ -4978,9 +5355,76 @@
         "Rat.natDivSucc_scale",
         "Rat.zero_le_natDivSucc"
       ],
-      "direct_theorem_dependents": [],
+      "direct_theorem_dependents": [
+        "CReal.hasDerivative_chain_id_sq"
+      ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.hasDerivative_chain",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 21,
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.hasDerivative_chain",
+        "CReal.hasDerivative_congr",
+        "CReal.hasDerivative_id",
+        "CReal.hasDerivative_sq",
+        "CReal.mul_one",
+        "CReal.uniformly_continuous_id"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.hasDerivative_chain_id_sq",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 19,
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.HasDerivativeOn.spec",
+        "CReal.abs_le",
+        "CReal.abs_nonneg",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.equiv_of_le_le",
+        "CReal.le_abs_self",
+        "CReal.le_congr",
+        "CReal.le_of_equiv",
+        "CReal.le_refl",
+        "CReal.le_trans",
+        "CReal.mul_congr",
+        "CReal.mul_le_mul_of_nonneg_left",
+        "CReal.mul_zero",
+        "CReal.neg_congr",
+        "CReal.neg_le_abs",
+        "CReal.neg_le_neg",
+        "CReal.ofRat_le",
+        "Rat.zero_le_natDivSucc"
+      ],
+      "direct_theorem_dependents": [
+        "CReal.monotone_of_nonneg_deriv"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.hasDerivative_closeOfEquiv",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex",
@@ -5002,6 +5446,7 @@
         "CReal.neg_congr"
       ],
       "direct_theorem_dependents": [
+        "CReal.hasDerivative_chain_id_sq",
         "CReal.hasDerivative_pow",
         "CReal.hasDerivative_pow_two"
       ],
@@ -5088,6 +5533,7 @@
         "Rat.zero_le_natDivSucc"
       ],
       "direct_theorem_dependents": [
+        "CReal.hasDerivative_chain_id_sq",
         "CReal.hasDerivative_cube",
         "CReal.hasDerivative_pow"
       ],
@@ -5318,6 +5764,7 @@
         "Rat.zero_le_natDivSucc"
       ],
       "direct_theorem_dependents": [
+        "CReal.hasDerivative_chain_id_sq",
         "CReal.hasDerivative_cube",
         "CReal.hasDerivative_pow_two"
       ],
@@ -5393,6 +5840,43 @@
     },
     {
       "axiom_footprint_size": 0,
+      "dependency_depth": 16,
+      "direct_theorem_dependencies": [
+        "Rat.add_assoc",
+        "Rat.add_le_add",
+        "Rat.add_zero",
+        "Rat.inv_pos",
+        "Rat.le_of_lt",
+        "Rat.le_refl",
+        "Rat.le_trans",
+        "Rat.lt_of_lt_of_le",
+        "Rat.natDivSucc_add",
+        "Rat.natDivSucc_halve",
+        "Rat.natDivSucc_le_scaled",
+        "Rat.natDivSucc_pos",
+        "Rat.nat_index_compose",
+        "Rat.nat_index_symm",
+        "Rat.neg_add_cancel",
+        "Rat.neg_nonpos_of_nonneg",
+        "Rat.zero_add",
+        "Rat.zero_le_natDivSucc"
+      ],
+      "direct_theorem_dependents": [
+        "CReal.geom_tail_bounded_div",
+        "CReal.geom_tail_within",
+        "CReal.le_of_mul_le_mul_left"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.inv_nonneg",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "dependency_depth": 15,
       "direct_theorem_dependencies": [
         "CReal.le_max_left"
@@ -5401,13 +5885,18 @@
         "CReal.abs_mul_le_of_bounds",
         "CReal.abs_sumRange_le",
         "CReal.bounded_on_add",
+        "CReal.equiv_zero_of_small",
         "CReal.hasDerivative_add",
         "CReal.hasDerivative_chain",
+        "CReal.hasDerivative_closeOfEquiv",
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_neg",
         "CReal.hasDerivative_sq",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.sumRange_tail_within",
-        "CReal.uniformly_continuous_add"
+        "CReal.uniformly_continuous_add",
+        "CReal.uniformly_continuous_mul",
+        "CReal.uniformly_continuous_neg"
       ],
       "exact_fact_ids": [
         "F:creal-le-abs-self"
@@ -5464,17 +5953,24 @@
       "direct_theorem_dependents": [
         "CReal.abs_mul_le_of_bounds",
         "CReal.bounded_on_add",
+        "CReal.bounded_on_id_unit",
         "CReal.bounded_on_mul",
         "CReal.eq_zero_of_add_eq_zero_of_nonneg",
+        "CReal.equiv_zero_of_small",
         "CReal.geom_sum_bounded",
         "CReal.geom_tail_bounded",
+        "CReal.geom_tail_bounded_div",
+        "CReal.geom_tail_within",
         "CReal.hasDerivative_add",
         "CReal.hasDerivative_chain",
+        "CReal.hasDerivative_closeOfEquiv",
         "CReal.hasDerivative_congr",
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_neg",
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
+        "CReal.le_of_mul_le_mul_left",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_le_mul_of_nonneg_left",
         "CReal.mul_pos",
         "CReal.not_equiv_abs_neg_one",
@@ -5487,12 +5983,21 @@
         "CReal.pow_succ_gt_one",
         "CReal.pow_succ_lt_one",
         "CReal.riemannSum_le",
+        "CReal.riemannSum_le_on",
+        "CReal.riemannSum_sample_in_bounds",
+        "CReal.subdivisionPoint_in_bounds",
+        "CReal.sumRange_comparisonTest",
+        "CReal.sumRange_telescope_ge",
+        "CReal.sumRange_telescope_le",
         "CReal.uniformly_continuous_add",
         "CReal.uniformly_continuous_const",
+        "CReal.uniformly_continuous_mul",
+        "CReal.uniformly_continuous_neg",
         "Complex.eq_zero_of_normSq_eq_zero",
         "Complex.normSq_add_le",
         "Complex.normSq_nonneg",
-        "Complex.pos_bound_conj"
+        "Complex.pos_bound_conj",
+        "Complex.ptolemy_inequality_sq"
       ],
       "exact_fact_ids": [
         "F:creal-le-congr"
@@ -5576,14 +6081,17 @@
       "direct_theorem_dependents": [
         "CPoint.cauchy_schwarz",
         "CPoint.distSq_double_sum_bound",
+        "CPoint.distSq_triangle_sq_bound",
         "CPoint.dot_self_nonneg",
         "CReal.abs_sumRange_le",
         "CReal.add_lt_add_of_le_of_lt",
         "CReal.bounded_on_add",
         "CReal.eq_zero_of_add_eq_zero_of_nonneg",
         "CReal.eq_zero_of_mul_self_zero",
+        "CReal.equiv_zero_of_small",
         "CReal.hasDerivative_add",
         "CReal.hasDerivative_chain",
+        "CReal.hasDerivative_closeOfEquiv",
         "CReal.hasDerivative_const",
         "CReal.hasDerivative_id",
         "CReal.hasDerivative_mul",
@@ -5596,12 +6104,45 @@
         "CReal.sumRange_tail_le",
         "CReal.uniformly_continuous_add",
         "CReal.uniformly_continuous_const",
+        "CReal.uniformly_continuous_mul",
         "Complex.eq_zero_of_normSq_eq_zero"
       ],
       "exact_fact_ids": [
         "F:creal-le-of-equiv"
       ],
       "kernel_declaration_id": "CReal.le_of_equiv",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 14,
+      "direct_theorem_dependencies": [
+        "CReal.regular",
+        "Rat.add_assoc",
+        "Rat.add_comm",
+        "Rat.add_le_add",
+        "Rat.add_zero",
+        "Rat.le_of_le_add_natDivSucc",
+        "Rat.le_of_sub_le",
+        "Rat.le_refl",
+        "Rat.le_trans",
+        "Rat.natDivSucc_add",
+        "Rat.natDivSucc_halve",
+        "Rat.sub_add_sub",
+        "Rat.sub_le_of_le",
+        "Rat.zero_le_natDivSucc"
+      ],
+      "direct_theorem_dependents": [
+        "CReal.equiv_zero_of_small",
+        "CReal.monotone_of_nonneg_deriv"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.le_of_forall_le_add_small",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex",
@@ -5637,6 +6178,32 @@
     },
     {
       "axiom_footprint_size": 0,
+      "dependency_depth": 19,
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.inv_nonneg",
+        "CReal.le_congr",
+        "CReal.mul_assoc",
+        "CReal.mul_comm",
+        "CReal.mul_congr",
+        "CReal.mul_inv_cancel",
+        "CReal.mul_le_mul_of_nonneg_left",
+        "CReal.mul_one"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.le_of_mul_le_mul_left",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "dependency_depth": 13,
       "direct_theorem_dependencies": [
         "Rat.sub_self",
@@ -5648,18 +6215,26 @@
         "CReal.abs_mul_le_of_bounds",
         "CReal.abs_sumRange_le",
         "CReal.eq_zero_of_add_eq_zero_of_nonneg",
+        "CReal.equiv_zero_of_small",
         "CReal.geom_sum_bounded",
         "CReal.geom_tail_bounded",
+        "CReal.geom_tail_within",
         "CReal.hasDerivative_chain",
+        "CReal.hasDerivative_closeOfEquiv",
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_sq",
         "CReal.lt_of_le_of_lt",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_le_mul_of_nonneg_left",
         "CReal.not_le_zero_neg_one",
         "CReal.one_le_pow_of_one_le",
         "CReal.pow_le_one",
         "CReal.riemannSum_le",
+        "CReal.riemannSum_le_on",
+        "CReal.riemannSum_sample_in_bounds",
+        "CReal.subdivisionPoint_in_bounds",
         "CReal.sumRange_le",
+        "CReal.uniformly_continuous_mul",
         "Complex.eq_zero_of_normSq_eq_zero",
         "Complex.normSq_add_le"
       ],
@@ -5690,14 +6265,19 @@
         "CPoint.Scalar.threePosBound",
         "CPoint.cauchy_schwarz",
         "CPoint.distSq_double_sum_bound",
+        "CPoint.distSq_triangle_sq_bound",
         "CPoint.dot_self_nonneg",
         "CReal.abs_mul_le_of_bounds",
         "CReal.abs_sumRange_le",
         "CReal.add_lt_add_of_le_of_lt",
         "CReal.bounded_on_add",
+        "CReal.bounded_on_id_unit",
         "CReal.eq_zero_of_add_eq_zero_of_nonneg",
+        "CReal.equiv_zero_of_small",
+        "CReal.geom_tail_within",
         "CReal.hasDerivative_add",
         "CReal.hasDerivative_chain",
+        "CReal.hasDerivative_closeOfEquiv",
         "CReal.hasDerivative_const",
         "CReal.hasDerivative_id",
         "CReal.hasDerivative_mul",
@@ -5709,16 +6289,20 @@
         "CReal.lt_of_le_of_lt",
         "CReal.lt_of_lt_of_le",
         "CReal.lt_trans",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_pos",
         "CReal.one_le_pow_of_one_le",
         "CReal.pos_bound_of_lt",
         "CReal.pow_le_one",
         "CReal.pow_le_pow_of_one_le",
         "CReal.pow_succ_gt_one",
+        "CReal.sumRange_comparisonTest",
         "CReal.sumRange_tail_le",
         "CReal.sumRange_tail_within",
         "CReal.uniformly_continuous_add",
         "CReal.uniformly_continuous_const",
+        "CReal.uniformly_continuous_mul",
+        "CReal.uniformly_continuous_neg",
         "Complex.eq_zero_of_normSq_eq_zero"
       ],
       "exact_fact_ids": [
@@ -5774,6 +6358,7 @@
         "CPoint.cross_annihilates_difference",
         "CPoint.cross_swap_bc",
         "CPoint.cross_translate",
+        "CPoint.distSq_triangle_sq_bound",
         "CPoint.dot_add_left",
         "CPoint.dot_add_right",
         "CPoint.dot_neg_left",
@@ -5805,11 +6390,15 @@
         "CReal.hasDerivative_pow",
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_le_mul_of_nonneg_left",
         "CReal.mul_sub_one_geom",
         "CReal.mul_sub_one_geom_tail",
         "CReal.mul_sumRange",
         "CReal.riemannSum_add",
+        "CReal.riemannSum_const",
+        "CReal.sumRange_const",
+        "CReal.uniformly_continuous_mul",
         "Complex.I_is_fourth_root",
         "Complex.add_pow",
         "Complex.apart_irrefl",
@@ -5825,6 +6414,7 @@
         "Complex.normSq_add",
         "Complex.normSq_conj",
         "Complex.normSq_mul",
+        "Complex.ptolemy_identity",
         "Complex.root_of_unity_mul"
       ],
       "exact_fact_ids": [
@@ -6099,6 +6689,36 @@
     },
     {
       "axiom_footprint_size": 0,
+      "dependency_depth": 18,
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.mul_assoc",
+        "CReal.mul_comm",
+        "CReal.mul_congr",
+        "CReal.mul_one",
+        "CReal.ofRat_mul",
+        "CReal.ratUnitEqOne",
+        "Nat.mul_one",
+        "Nat.zero_add",
+        "Rat.natDivSucc_mul",
+        "Rat.natDivSucc_scale"
+      ],
+      "direct_theorem_dependents": [
+        "CReal.monotone_of_nonneg_deriv"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.mesh_count_width",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "dependency_depth": 16,
       "direct_theorem_dependencies": [
         "Rat.neg_le_neg",
@@ -6149,6 +6769,70 @@
       "direct_theorem_dependents": [],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.min_le_right",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 20,
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.HasDerivativeOn.spec",
+        "CReal.abs_congr",
+        "CReal.abs_le",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_le_add",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.archimedean",
+        "CReal.equiv_of_le_le",
+        "CReal.hasDerivative_closeOfEquiv",
+        "CReal.le_abs_self",
+        "CReal.le_congr",
+        "CReal.le_of_forall_le_add_small",
+        "CReal.le_refl",
+        "CReal.le_trans",
+        "CReal.left_distrib",
+        "CReal.mesh_count_width",
+        "CReal.mul_assoc",
+        "CReal.mul_comm",
+        "CReal.mul_congr",
+        "CReal.mul_le_mul_of_nonneg_left",
+        "CReal.mul_nonneg",
+        "CReal.mul_one",
+        "CReal.mul_zero",
+        "CReal.neg_congr",
+        "CReal.neg_le_abs",
+        "CReal.neg_le_neg",
+        "CReal.ofNat_le",
+        "CReal.ofRat_add",
+        "CReal.ofRat_le",
+        "CReal.ofRat_mul",
+        "CReal.ratUnitEqOne",
+        "CReal.subdivisionPoint_in_bounds",
+        "CReal.sumRange_const",
+        "CReal.sumRange_telescope_ge",
+        "Nat.le_succ",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.zero_le",
+        "Rat.natDivSucc_add",
+        "Rat.natDivSucc_mul",
+        "Rat.natDivSucc_scale",
+        "Rat.self_normalize",
+        "Rat.zero_le_natDivSucc"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.monotone_of_nonneg_deriv",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex",
@@ -6209,13 +6893,20 @@
         "CPoint.radical_axis_iff_dot",
         "CPoint.thales",
         "CPoint.thales_converse",
+        "CReal.geom_tail_bounded_div",
         "CReal.hasDerivative_chain",
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_pow",
         "CReal.hasDerivative_smul",
         "CReal.inv_congr",
+        "CReal.le_of_mul_le_mul_left",
+        "CReal.mesh_count_width",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_riemannSum",
         "CReal.pow_add",
+        "CReal.riemannSum_const",
+        "CReal.riemannSum_sample_in_bounds",
+        "CReal.subdivisionPoint_in_bounds",
         "Complex.add_pow",
         "Complex.apart_symm",
         "Complex.eq_conj_iff_real",
@@ -6226,6 +6917,7 @@
         "Complex.mul_sub_one_geom",
         "Complex.normSq_add",
         "Complex.normSq_mul",
+        "Complex.ptolemy_identity",
         "Complex.root_of_unity_mul"
       ],
       "exact_fact_ids": [
@@ -6267,6 +6959,7 @@
         "CPoint.cross_self_left",
         "CPoint.cross_swap_bc",
         "CPoint.cross_translate",
+        "CPoint.distSq_triangle_sq_bound",
         "CPoint.dot_add_left",
         "CPoint.dot_comm",
         "CPoint.dot_neg_left",
@@ -6292,6 +6985,7 @@
         "CPoint.thales",
         "CPoint.thales_converse",
         "CReal.abs_mul_le_of_bounds",
+        "CReal.geom_tail_bounded_div",
         "CReal.hasDerivative_add",
         "CReal.hasDerivative_chain",
         "CReal.hasDerivative_const",
@@ -6302,6 +6996,9 @@
         "CReal.hasDerivative_pow_two",
         "CReal.hasDerivative_sq",
         "CReal.inv_congr",
+        "CReal.le_of_mul_le_mul_left",
+        "CReal.mesh_count_width",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_pos",
         "CReal.mul_sub_one_geom",
         "CReal.mul_sub_one_geom_tail",
@@ -6310,7 +7007,13 @@
         "CReal.pow_succ_gt_one",
         "CReal.pow_succ_lt_one",
         "CReal.riemannSum_add",
+        "CReal.riemannSum_const",
         "CReal.riemannSum_le",
+        "CReal.riemannSum_le_on",
+        "CReal.riemannSum_sample_in_bounds",
+        "CReal.subdivisionPoint_in_bounds",
+        "CReal.sumRange_const",
+        "CReal.uniformly_continuous_mul",
         "Complex.I_is_fourth_root",
         "Complex.I_sq",
         "Complex.add_pow",
@@ -6330,6 +7033,7 @@
         "Complex.normSq_mul",
         "Complex.normSq_pow",
         "Complex.ofReal_mul",
+        "Complex.ptolemy_identity",
         "Complex.re_add_im",
         "Complex.root_of_unity_mul"
       ],
@@ -6388,6 +7092,7 @@
         "CPoint.cross_swap_bc",
         "CPoint.cross_translate",
         "CPoint.distSq_self_zero",
+        "CPoint.distSq_triangle_sq_bound",
         "CPoint.dot_congr",
         "CPoint.dot_neg_left",
         "CPoint.dot_self_zero_of_eq_zero",
@@ -6415,8 +7120,10 @@
         "CPoint.thales",
         "CPoint.thales_converse",
         "CReal.abs_mul_le_of_bounds",
+        "CReal.geom_tail_bounded_div",
         "CReal.hasDerivative_add",
         "CReal.hasDerivative_chain",
+        "CReal.hasDerivative_closeOfEquiv",
         "CReal.hasDerivative_congr",
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_neg",
@@ -6425,11 +7132,19 @@
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
         "CReal.inv_congr",
+        "CReal.le_of_mul_le_mul_left",
+        "CReal.mesh_count_width",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_le_mul_of_nonneg_left",
         "CReal.mul_sub_one_geom",
         "CReal.mul_sub_one_geom_tail",
         "CReal.pow_add",
         "CReal.pow_congr",
+        "CReal.riemannSum_const",
+        "CReal.riemannSum_sample_in_bounds",
+        "CReal.subdivisionPoint_in_bounds",
+        "CReal.sumRange_const",
+        "CReal.uniformly_continuous_mul",
         "Complex.I_is_fourth_root",
         "Complex.I_sq",
         "Complex.add_pow",
@@ -6453,11 +7168,13 @@
         "Complex.mul_sub_one_geom",
         "Complex.mul_zero",
         "Complex.normSq_add",
+        "Complex.normSq_congr",
         "Complex.normSq_conj",
         "Complex.normSq_eq_zero_of_eq_zero",
         "Complex.normSq_mul",
         "Complex.normSq_pow",
         "Complex.ofReal_mul",
+        "Complex.ptolemy_identity",
         "Complex.re_add_im",
         "Complex.root_of_unity_mul"
       ],
@@ -6531,7 +7248,9 @@
         "CPoint.radical_axis_iff_dot",
         "CPoint.thales",
         "CPoint.thales_converse",
+        "CReal.geom_tail_bounded_div",
         "CReal.inv_congr",
+        "CReal.le_of_mul_le_mul_left",
         "Complex.eq_conj_iff_real",
         "Complex.mul_inv_cancel"
       ],
@@ -6567,8 +7286,12 @@
       ],
       "direct_theorem_dependents": [
         "CReal.abs_mul_le_of_bounds",
+        "CReal.geom_tail_bounded_div",
         "CReal.hasDerivative_chain",
+        "CReal.hasDerivative_closeOfEquiv",
         "CReal.hasDerivative_sq",
+        "CReal.le_of_mul_le_mul_left",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_pos",
         "CReal.one_le_pow_of_one_le",
         "CReal.pow_le_one",
@@ -6576,7 +7299,11 @@
         "CReal.pow_le_pow_of_one_le",
         "CReal.pow_succ_gt_one",
         "CReal.pow_succ_lt_one",
-        "CReal.riemannSum_le"
+        "CReal.riemannSum_le",
+        "CReal.riemannSum_le_on",
+        "CReal.riemannSum_sample_in_bounds",
+        "CReal.subdivisionPoint_in_bounds",
+        "CReal.uniformly_continuous_mul"
       ],
       "exact_fact_ids": [
         "F:creal-mul-le-mul-of-nonneg-left"
@@ -6612,12 +7339,17 @@
       ],
       "direct_theorem_dependents": [
         "CReal.abs_mul_le_of_bounds",
+        "CReal.geom_tail_within",
         "CReal.hasDerivative_const",
         "CReal.hasDerivative_id",
         "CReal.hasDerivative_sq",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_le_mul_of_nonneg_left",
         "CReal.pow_nonneg",
-        "CReal.riemannSum_le"
+        "CReal.riemannSum_le",
+        "CReal.riemannSum_le_on",
+        "CReal.riemannSum_sample_in_bounds",
+        "CReal.subdivisionPoint_in_bounds"
       ],
       "exact_fact_ids": [
         "F:creal-mul-nonneg"
@@ -6675,10 +7407,15 @@
         "CPoint.thales",
         "CPoint.thales_converse",
         "CReal.abs_mul_le_of_bounds",
+        "CReal.geom_tail_bounded_div",
+        "CReal.hasDerivative_chain_id_sq",
         "CReal.hasDerivative_id",
         "CReal.hasDerivative_pow",
         "CReal.hasDerivative_pow_two",
         "CReal.inv_congr",
+        "CReal.le_of_mul_le_mul_left",
+        "CReal.mesh_count_width",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_sub_one_geom",
         "CReal.mul_sub_one_geom_tail",
         "CReal.one_le_pow_of_one_le",
@@ -6688,6 +7425,10 @@
         "CReal.pow_le_pow_of_one_le",
         "CReal.pow_succ_gt_one",
         "CReal.pow_succ_lt_one",
+        "CReal.riemannSum_const",
+        "CReal.riemannSum_sample_in_bounds",
+        "CReal.subdivisionPoint_in_bounds",
+        "CReal.sumRange_const",
         "Complex.I_is_fourth_root",
         "Complex.I_sq",
         "Complex.add_pow",
@@ -6700,6 +7441,7 @@
         "Complex.normSq_add",
         "Complex.normSq_mul",
         "Complex.normSq_pow",
+        "Complex.ptolemy_identity",
         "Complex.re_add_im"
       ],
       "exact_fact_ids": [
@@ -6892,15 +7634,18 @@
         "CPoint.stewart",
         "CReal.abs_mul_le_of_bounds",
         "CReal.hasDerivative_chain",
+        "CReal.hasDerivative_closeOfEquiv",
         "CReal.hasDerivative_const",
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_neg",
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_sub_one_geom",
         "CReal.mul_sub_one_geom_tail",
         "CReal.mul_sumRange",
         "CReal.no_total_inverse",
+        "CReal.uniformly_continuous_mul",
         "Complex.I_is_fourth_root",
         "Complex.I_sq",
         "Complex.add_pow",
@@ -6921,6 +7666,7 @@
         "Complex.normSq_mul",
         "Complex.normSq_pow",
         "Complex.ofReal_mul",
+        "Complex.ptolemy_identity",
         "Complex.re_add_im",
         "Complex.root_of_unity_mul"
       ],
@@ -7051,6 +7797,7 @@
         "CReal.abs_mul_le_of_bounds",
         "CReal.hasDerivative_add",
         "CReal.hasDerivative_chain",
+        "CReal.hasDerivative_closeOfEquiv",
         "CReal.hasDerivative_congr",
         "CReal.hasDerivative_const",
         "CReal.hasDerivative_id",
@@ -7058,9 +7805,11 @@
         "CReal.hasDerivative_neg",
         "CReal.hasDerivative_smul",
         "CReal.hasDerivative_sq",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_sub_one_geom",
         "CReal.mul_sub_one_geom_tail",
         "CReal.uniformly_continuous_const",
+        "CReal.uniformly_continuous_mul",
         "Complex.I_is_fourth_root",
         "Complex.I_sq",
         "Complex.add_neg",
@@ -7095,6 +7844,7 @@
         "Complex.normSq_conj",
         "Complex.normSq_mul",
         "Complex.ofReal_mul",
+        "Complex.ptolemy_identity",
         "Complex.re_add_im",
         "Complex.root_of_unity_mul"
       ],
@@ -7119,13 +7869,18 @@
         "CReal.abs_mul_le_of_bounds",
         "CReal.abs_sumRange_le",
         "CReal.bounded_on_add",
+        "CReal.equiv_zero_of_small",
         "CReal.hasDerivative_add",
         "CReal.hasDerivative_chain",
+        "CReal.hasDerivative_closeOfEquiv",
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_neg",
         "CReal.hasDerivative_sq",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.sumRange_tail_within",
-        "CReal.uniformly_continuous_add"
+        "CReal.uniformly_continuous_add",
+        "CReal.uniformly_continuous_mul",
+        "CReal.uniformly_continuous_neg"
       ],
       "exact_fact_ids": [
         "F:creal-neg-le-abs"
@@ -7145,9 +7900,14 @@
         "Rat.sub_neg_sub"
       ],
       "direct_theorem_dependents": [
+        "CReal.bounded_on_id_unit",
         "CReal.geom_sum_bounded",
         "CReal.geom_tail_bounded",
-        "CReal.hasDerivative_sq"
+        "CReal.geom_tail_within",
+        "CReal.hasDerivative_closeOfEquiv",
+        "CReal.hasDerivative_sq",
+        "CReal.monotone_of_nonneg_deriv",
+        "CReal.sumRange_comparisonTest"
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.neg_le_neg",
@@ -7329,6 +8089,28 @@
     },
     {
       "axiom_footprint_size": 0,
+      "dependency_depth": 14,
+      "direct_theorem_dependencies": [
+        "CReal.ofRat_le",
+        "Nat.le_dest",
+        "Rat.natDivSucc_le_add_left"
+      ],
+      "direct_theorem_dependents": [
+        "CReal.monotone_of_nonneg_deriv",
+        "CReal.riemannSum_sample_in_bounds",
+        "CReal.subdivisionPoint_in_bounds"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.ofNat_le",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "dependency_depth": 17,
       "direct_theorem_dependencies": [
         "CReal.Equiv.of_pointwise"
@@ -7340,7 +8122,11 @@
         "CReal.hasDerivative_chain",
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_pow",
+        "CReal.monotone_of_nonneg_deriv",
+        "CReal.riemannSum_const",
+        "CReal.sumRange_const",
         "CReal.uniformly_continuous_add",
+        "CReal.uniformly_continuous_mul",
         "Complex.ofNat_eq_cast"
       ],
       "exact_fact_ids": [
@@ -7366,17 +8152,25 @@
       ],
       "direct_theorem_dependents": [
         "CReal.abs_mul_le_of_bounds",
+        "CReal.bounded_on_id_unit",
         "CReal.hasDerivative_add",
         "CReal.hasDerivative_chain",
+        "CReal.hasDerivative_closeOfEquiv",
         "CReal.hasDerivative_const",
         "CReal.hasDerivative_id",
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_sq",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_pos",
+        "CReal.ofNat_le",
         "CReal.pos_bound_of_lt",
         "CReal.riemannSum_le",
+        "CReal.riemannSum_le_on",
+        "CReal.riemannSum_sample_in_bounds",
+        "CReal.subdivisionPoint_in_bounds",
         "CReal.uniformly_continuous_add",
-        "CReal.uniformly_continuous_const"
+        "CReal.uniformly_continuous_const",
+        "CReal.uniformly_continuous_mul"
       ],
       "exact_fact_ids": [
         "F:creal-ofrat-le"
@@ -7400,8 +8194,14 @@
         "CReal.hasDerivative_chain",
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_smul",
+        "CReal.mesh_count_width",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_pos",
-        "CReal.not_equiv_mul_one_one_zero"
+        "CReal.not_equiv_mul_one_one_zero",
+        "CReal.riemannSum_const",
+        "CReal.riemannSum_sample_in_bounds",
+        "CReal.subdivisionPoint_in_bounds",
+        "CReal.uniformly_continuous_mul"
       ],
       "exact_fact_ids": [
         "F:creal-ofrat-mul"
@@ -7421,6 +8221,7 @@
         "CReal.Equiv.of_pointwise"
       ],
       "direct_theorem_dependents": [
+        "CReal.bounded_on_id_unit",
         "CReal.uniformly_continuous_const"
       ],
       "exact_fact_ids": [],
@@ -7658,6 +8459,7 @@
       "direct_theorem_dependents": [
         "CReal.geom_sum_bounded",
         "CReal.geom_tail_bounded",
+        "CReal.geom_tail_within",
         "CReal.one_le_pow_of_one_le",
         "CReal.pow_le_pow_of_le_one",
         "CReal.pow_le_pow_of_one_le",
@@ -7855,7 +8657,13 @@
       ],
       "direct_theorem_dependents": [
         "CReal.eq_zero_of_mul_self_zero",
-        "CReal.hasDerivative_pow"
+        "CReal.hasDerivative_pow",
+        "CReal.mesh_count_width",
+        "CReal.monotone_of_nonneg_deriv",
+        "CReal.riemannSum_const",
+        "CReal.riemannSum_sample_in_bounds",
+        "CReal.subdivisionPoint_in_bounds",
+        "CReal.sumRange_const"
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.ratUnitEqOne",
@@ -7936,7 +8744,9 @@
         "CReal.converges_cauchy",
         "CReal.converges_mul",
         "CReal.eq_zero_of_mul_self_zero",
+        "CReal.geom_pair_within",
         "CReal.le_add_of_nonneg",
+        "CReal.le_of_forall_le_add_small",
         "CReal.le_trans",
         "CReal.left_distrib",
         "CReal.limit_dist",
@@ -7948,6 +8758,7 @@
         "CReal.mul_one",
         "CReal.rat_approx_lower",
         "CReal.rat_approx_upper",
+        "CReal.sumRange_cauchy_dominated_ordered",
         "CReal.sumRange_tail_cauchy_within"
       ],
       "exact_fact_ids": [
@@ -7967,9 +8778,32 @@
       "direct_theorem_dependencies": [
         "Rat.natDivSucc_scale"
       ],
-      "direct_theorem_dependents": [],
+      "direct_theorem_dependents": [
+        "CReal.converges_of_cauchy",
+        "CReal.regular_of_scaled_cauchy"
+      ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.regular_of_kregular",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 14,
+      "direct_theorem_dependencies": [
+        "CReal.regular_of_kregular",
+        "Rat.add_le_add",
+        "Rat.le_trans",
+        "Rat.natDivSucc_le_add_left",
+        "Rat.neg_le_neg"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.regular_of_scaled_cauchy",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex",
@@ -7992,6 +8826,40 @@
       "direct_theorem_dependents": [],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.riemannSum_add",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 18,
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_zero",
+        "CReal.left_distrib",
+        "CReal.mul_assoc",
+        "CReal.mul_comm",
+        "CReal.mul_congr",
+        "CReal.mul_one",
+        "CReal.ofRat_add",
+        "CReal.ofRat_mul",
+        "CReal.ratUnitEqOne",
+        "Nat.mul_one",
+        "Nat.zero_add",
+        "Rat.natDivSucc_add",
+        "Rat.natDivSucc_mul",
+        "Rat.natDivSucc_scale"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.riemannSum_const",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex",
@@ -8027,11 +8895,87 @@
     },
     {
       "axiom_footprint_size": 0,
+      "dependency_depth": 20,
+      "direct_theorem_dependencies": [
+        "And.left",
+        "And.right",
+        "CReal.Equiv.refl",
+        "CReal.add_le_add",
+        "CReal.add_neg",
+        "CReal.le_congr",
+        "CReal.le_refl",
+        "CReal.mul_comm",
+        "CReal.mul_le_mul_of_nonneg_left",
+        "CReal.mul_nonneg",
+        "CReal.ofRat_le",
+        "CReal.riemannSum_sample_in_bounds",
+        "CReal.sumRange_le",
+        "Rat.zero_le_natDivSucc"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.riemannSum_le_on",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 19,
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_le_add",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.le_congr",
+        "CReal.le_refl",
+        "CReal.mul_assoc",
+        "CReal.mul_comm",
+        "CReal.mul_congr",
+        "CReal.mul_le_mul_of_nonneg_left",
+        "CReal.mul_nonneg",
+        "CReal.mul_one",
+        "CReal.ofNat_le",
+        "CReal.ofRat_le",
+        "CReal.ofRat_mul",
+        "CReal.ratUnitEqOne",
+        "Nat.le_succ",
+        "Nat.le_trans",
+        "Nat.mul_one",
+        "Nat.zero_add",
+        "Rat.natDivSucc_mul",
+        "Rat.natDivSucc_scale",
+        "Rat.zero_le_natDivSucc"
+      ],
+      "direct_theorem_dependents": [
+        "CReal.riemannSum_le_on"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.riemannSum_sample_in_bounds",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "dependency_depth": 12,
       "direct_theorem_dependencies": [
         "Rat.natDivSucc_scale"
       ],
-      "direct_theorem_dependents": [],
+      "direct_theorem_dependents": [
+        "CReal.converges_of_cauchy"
+      ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.speedup_close",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
@@ -8072,6 +9016,49 @@
     },
     {
       "axiom_footprint_size": 0,
+      "dependency_depth": 19,
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_le_add",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.le_congr",
+        "CReal.le_refl",
+        "CReal.mul_assoc",
+        "CReal.mul_comm",
+        "CReal.mul_congr",
+        "CReal.mul_le_mul_of_nonneg_left",
+        "CReal.mul_nonneg",
+        "CReal.mul_one",
+        "CReal.ofNat_le",
+        "CReal.ofRat_le",
+        "CReal.ofRat_mul",
+        "CReal.ratUnitEqOne",
+        "Nat.mul_one",
+        "Nat.zero_add",
+        "Rat.natDivSucc_mul",
+        "Rat.natDivSucc_scale",
+        "Rat.zero_le_natDivSucc"
+      ],
+      "direct_theorem_dependents": [
+        "CReal.monotone_of_nonneg_deriv"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.subdivisionPoint_in_bounds",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "dependency_depth": 18,
       "direct_theorem_dependencies": [
         "CReal.Equiv.refl",
@@ -8087,6 +9074,108 @@
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.sumRange_add",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 22,
+      "direct_theorem_dependencies": [
+        "CReal.regular",
+        "CReal.sumRange_tail_within_cauchy",
+        "Nat.le_dest",
+        "Rat.bounds_add",
+        "Rat.bounds_neg",
+        "Rat.neg_sub",
+        "Rat.sub_add_sub"
+      ],
+      "direct_theorem_dependents": [
+        "CReal.sumRange_cauchy_dominated_ordered_normalized"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.sumRange_cauchy_dominated_ordered",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 23,
+      "direct_theorem_dependencies": [
+        "CReal.sumRange_cauchy_dominated_ordered",
+        "Rat.add_assoc",
+        "Rat.add_comm",
+        "Rat.add_le_add",
+        "Rat.add_zero",
+        "Rat.le_refl",
+        "Rat.le_trans",
+        "Rat.natDivSucc_add",
+        "Rat.natDivSucc_halve",
+        "Rat.natDivSucc_le_add_left",
+        "Rat.neg_le_neg",
+        "Rat.zero_le_natDivSucc"
+      ],
+      "direct_theorem_dependents": [
+        "CReal.sumRange_cauchy_of_dominated"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.sumRange_cauchy_dominated_ordered_normalized",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 24,
+      "direct_theorem_dependencies": [
+        "CReal.sumRange_cauchy_dominated_ordered_normalized",
+        "Nat.le_total",
+        "Rat.add_comm",
+        "Rat.bounds_neg",
+        "Rat.neg_sub"
+      ],
+      "direct_theorem_dependents": [
+        "CReal.sumRange_converges_of_dominated"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.sumRange_cauchy_of_dominated",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 26,
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.abs_le",
+        "CReal.add_comm",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.converges_cauchy",
+        "CReal.le_congr",
+        "CReal.le_trans",
+        "CReal.neg_le_neg",
+        "CReal.sumRange_converges_of_dominated"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.sumRange_comparisonTest",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex",
@@ -8117,6 +9206,74 @@
     },
     {
       "axiom_footprint_size": 0,
+      "dependency_depth": 18,
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_zero",
+        "CReal.left_distrib",
+        "CReal.mul_comm",
+        "CReal.mul_congr",
+        "CReal.mul_one",
+        "CReal.ofRat_add",
+        "CReal.ratUnitEqOne",
+        "Rat.natDivSucc_add"
+      ],
+      "direct_theorem_dependents": [
+        "CReal.monotone_of_nonneg_deriv"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.sumRange_const",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 25,
+      "direct_theorem_dependencies": [
+        "CReal.converges_of_cauchy",
+        "CReal.sumRange_cauchy_of_dominated"
+      ],
+      "direct_theorem_dependents": [
+        "CReal.sumRange_comparisonTest"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.sumRange_converges_of_dominated",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 17,
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.trans",
+        "CReal.add_assoc",
+        "CReal.add_congr"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.sumRange_double",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "dependency_depth": 17,
       "direct_theorem_dependencies": [
         "CReal.add_le_add",
@@ -8127,7 +9284,10 @@
       ],
       "direct_theorem_dependents": [
         "CReal.riemannSum_le",
-        "CReal.sumRange_tail_le"
+        "CReal.riemannSum_le_on",
+        "CReal.sumRange_tail_le",
+        "CReal.sumRange_telescope_ge",
+        "CReal.sumRange_telescope_le"
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.sumRange_le",
@@ -8178,6 +9338,7 @@
         "CReal.add_zero"
       ],
       "direct_theorem_dependents": [
+        "CReal.geom_tail_within",
         "CReal.mul_sub_one_geom_tail",
         "CReal.sumRange_tail_le"
       ],
@@ -8212,7 +9373,9 @@
         "Rat.bounds_add",
         "Rat.sub_add_sub"
       ],
-      "direct_theorem_dependents": [],
+      "direct_theorem_dependents": [
+        "CReal.sumRange_tail_within_cauchy"
+      ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.sumRange_tail_cauchy_within",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
@@ -8266,10 +9429,34 @@
         "Rat.neg_neg"
       ],
       "direct_theorem_dependents": [
+        "CReal.sumRange_tail_within_cauchy",
         "CReal.sumRange_tail_within_le"
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.sumRange_tail_within",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 21,
+      "direct_theorem_dependencies": [
+        "CReal.sumRange_tail_cauchy_within",
+        "CReal.sumRange_tail_within",
+        "Rat.add_le_add",
+        "Rat.le_refl",
+        "Rat.le_trans",
+        "Rat.neg_le_neg"
+      ],
+      "direct_theorem_dependents": [
+        "CReal.sumRange_cauchy_dominated_ordered"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.sumRange_tail_within_cauchy",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex",
@@ -8307,11 +9494,54 @@
         "CReal.add_neg",
         "CReal.add_zero"
       ],
-      "direct_theorem_dependents": [],
+      "direct_theorem_dependents": [
+        "CReal.sumRange_telescope_ge",
+        "CReal.sumRange_telescope_le"
+      ],
       "exact_fact_ids": [
         "F:creal-sumrange-telescope"
       ],
       "kernel_declaration_id": "CReal.sumRange_telescope",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 19,
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.le_congr",
+        "CReal.sumRange_le",
+        "CReal.sumRange_telescope"
+      ],
+      "direct_theorem_dependents": [
+        "CReal.monotone_of_nonneg_deriv"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.sumRange_telescope_ge",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 19,
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.le_congr",
+        "CReal.sumRange_le",
+        "CReal.sumRange_telescope"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.sumRange_telescope_le",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex",
@@ -8362,7 +9592,10 @@
         "Rat.natDivSucc_antitone",
         "Rat.natDivSucc_halve"
       ],
-      "direct_theorem_dependents": [],
+      "direct_theorem_dependents": [
+        "CReal.uniformly_continuous_poly_example",
+        "CReal.uniformly_continuous_sub"
+      ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.uniformly_continuous_add",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
@@ -8389,7 +9622,9 @@
         "Rat.neg_zero",
         "Rat.zero_le_natDivSucc"
       ],
-      "direct_theorem_dependents": [],
+      "direct_theorem_dependents": [
+        "CReal.uniformly_continuous_poly_example"
+      ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.uniformly_continuous_const",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
@@ -8404,11 +9639,156 @@
       "dependency_depth": 0,
       "direct_theorem_dependencies": [],
       "direct_theorem_dependents": [
+        "CReal.hasDerivative_chain_id_sq",
         "CReal.hasDerivative_cube",
-        "CReal.hasDerivative_pow"
+        "CReal.hasDerivative_pow",
+        "CReal.uniformly_continuous_poly_example",
+        "CReal.uniformly_continuous_sq"
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.uniformly_continuous_id",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 20,
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.UniformlyContinuousOn.spec",
+        "CReal.abs_congr",
+        "CReal.abs_le",
+        "CReal.abs_mul_le_of_bounds",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_le_add",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.le_abs_self",
+        "CReal.le_congr",
+        "CReal.le_of_equiv",
+        "CReal.le_refl",
+        "CReal.le_trans",
+        "CReal.left_distrib",
+        "CReal.mul_comm",
+        "CReal.mul_congr",
+        "CReal.mul_le_mul_of_nonneg_left",
+        "CReal.mul_zero",
+        "CReal.neg_congr",
+        "CReal.neg_le_abs",
+        "CReal.ofRat_add",
+        "CReal.ofRat_le",
+        "CReal.ofRat_mul",
+        "Nat.add_comm",
+        "Nat.le_add_right",
+        "Nat.mul_one",
+        "Rat.natDivSucc_add",
+        "Rat.natDivSucc_antitone",
+        "Rat.natDivSucc_halve",
+        "Rat.natDivSucc_mul",
+        "Rat.natDivSucc_scale",
+        "Rat.zero_le_natDivSucc"
+      ],
+      "direct_theorem_dependents": [
+        "CReal.uniformly_continuous_sq"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.uniformly_continuous_mul",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 18,
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.UniformlyContinuousOn.spec",
+        "CReal.abs_congr",
+        "CReal.abs_le",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.le_abs_self",
+        "CReal.le_congr",
+        "CReal.le_trans",
+        "CReal.neg_le_abs"
+      ],
+      "direct_theorem_dependents": [
+        "CReal.uniformly_continuous_sub"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.uniformly_continuous_neg",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 22,
+      "direct_theorem_dependencies": [
+        "CReal.bounded_on_id_unit",
+        "CReal.uniformly_continuous_add",
+        "CReal.uniformly_continuous_const",
+        "CReal.uniformly_continuous_id",
+        "CReal.uniformly_continuous_sq"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.uniformly_continuous_poly_example",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 21,
+      "direct_theorem_dependencies": [
+        "CReal.uniformly_continuous_id",
+        "CReal.uniformly_continuous_mul"
+      ],
+      "direct_theorem_dependents": [
+        "CReal.uniformly_continuous_poly_example"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.uniformly_continuous_sq",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 19,
+      "direct_theorem_dependencies": [
+        "CReal.uniformly_continuous_add",
+        "CReal.uniformly_continuous_neg"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.uniformly_continuous_sub",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex",
@@ -9708,9 +11088,28 @@
         "Complex.normSq_add",
         "Complex.normSq_nonneg"
       ],
-      "direct_theorem_dependents": [],
+      "direct_theorem_dependents": [
+        "Complex.ptolemy_inequality_sq"
+      ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Complex.normSq_add_le",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 18,
+      "direct_theorem_dependencies": [
+        "CReal.add_congr",
+        "CReal.mul_congr"
+      ],
+      "direct_theorem_dependents": [
+        "Complex.ptolemy_inequality_sq"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Complex.normSq_congr",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex"
@@ -10091,6 +11490,55 @@
       "direct_theorem_dependents": [],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Complex.pow_zero",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 18,
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.left_distrib",
+        "CReal.mul_assoc",
+        "CReal.mul_comm",
+        "CReal.mul_congr",
+        "CReal.mul_one",
+        "CReal.mul_zero",
+        "CReal.neg_congr"
+      ],
+      "direct_theorem_dependents": [
+        "Complex.ptolemy_inequality_sq"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Complex.ptolemy_identity",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 20,
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.le_congr",
+        "Complex.normSq_add_le",
+        "Complex.normSq_congr",
+        "Complex.ptolemy_identity"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Complex.ptolemy_inequality_sq",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex"
@@ -10574,6 +12022,7 @@
         "CPoint.two_circles_meet_on_radical_axis",
         "Int.crt_unique",
         "Int.euler_criterion_pm_one",
+        "Int.euler_unit_coprime",
         "Int.modEq_add_right",
         "Int.modEq_cancel",
         "Int.modEq_inverse_unique",
@@ -10650,6 +12099,7 @@
         "Int.add_neg_cancel_right",
         "Int.crt_exists",
         "Int.euler_criterion_pm_one",
+        "Int.euler_unit_coprime",
         "Int.fib_cassini",
         "Int.gcd_eq_gcd_ab",
         "Int.int_isCommRing",
@@ -10692,6 +12142,8 @@
         "Int.crt_unique",
         "Int.ediv_emod_unique",
         "Int.euler_criterion_pm_one",
+        "Int.euler_unit_coprime",
+        "Int.euler_unit_injective",
         "Int.factorial_interior_modeq_one",
         "Int.factorial_pos",
         "Int.factorial_sq_modeq_one",
@@ -10801,6 +12253,7 @@
         "Int.add_neg_cancel_right",
         "Int.crt_exists",
         "Int.euler_criterion_pm_one",
+        "Int.euler_unit_coprime",
         "Int.fib_cassini",
         "Int.int_isCommRing",
         "Int.modEq_add_right",
@@ -10870,6 +12323,8 @@
         "Int.ediv_emod_unique",
         "Int.emod_eq_zero_iff_dvd",
         "Int.euler_criterion_pm_one",
+        "Int.euler_unit_coprime",
+        "Int.euler_unit_injective",
         "Int.factorial_interior_modeq_one",
         "Int.factorial_pos",
         "Int.factorial_sq_modeq_one",
@@ -10919,6 +12374,7 @@
       ],
       "direct_theorem_dependents": [
         "Int.crt_unique",
+        "Int.euler_unit_coprime",
         "Int.modEq_inverse_unique"
       ],
       "exact_fact_ids": [],
@@ -11186,6 +12642,8 @@
       "direct_theorem_dependents": [
         "Int.emod_eq_zero_iff_dvd",
         "Int.euler_criterion_pm_one",
+        "Int.euler_unit_coprime",
+        "Int.euler_unit_injective",
         "Int.factorial_interior_modeq_one",
         "Int.factorial_sq_modeq_one",
         "Int.modEq_iff_dvd",
@@ -11231,6 +12689,8 @@
       "direct_theorem_dependents": [
         "Int.emod_eq_zero_iff_dvd",
         "Int.euler_criterion_pm_one",
+        "Int.euler_unit_coprime",
+        "Int.euler_unit_injective",
         "Int.factorial_interior_modeq_one",
         "Int.factorial_sq_modeq_one",
         "Int.modEq_iff_dvd",
@@ -11292,6 +12752,8 @@
       "direct_theorem_dependents": [
         "Int.emod_eq_zero_iff_dvd",
         "Int.euler_criterion_pm_one",
+        "Int.euler_unit_coprime",
+        "Int.euler_unit_injective",
         "Int.factorial_interior_modeq_one",
         "Int.factorial_sq_modeq_one",
         "Int.modEq_iff_dvd",
@@ -11346,6 +12808,8 @@
       "direct_theorem_dependents": [
         "Int.emod_eq_zero_iff_dvd",
         "Int.euler_criterion_pm_one",
+        "Int.euler_unit_coprime",
+        "Int.euler_unit_injective",
         "Int.factorial_interior_modeq_one",
         "Int.factorial_sq_modeq_one",
         "Int.modEq_iff_dvd",
@@ -11554,6 +13018,70 @@
       "direct_theorem_dependents": [],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Int.euler_criterion_pm_one",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 15,
+      "direct_theorem_dependencies": [
+        "Iff.mp",
+        "Int.add_assoc",
+        "Int.add_comm",
+        "Int.add_neg",
+        "Int.add_zero",
+        "Int.coprime_of_bezout_one",
+        "Int.ediv_add_emod",
+        "Int.ediv_emod_unique",
+        "Int.emod_lt_of_pos",
+        "Int.emod_nonneg",
+        "Int.lt_irrefl",
+        "Int.modEq_iff_dvd",
+        "Int.modEq_inverse_exists",
+        "Int.modEq_mul",
+        "Int.modEq_mul_right",
+        "Int.modEq_symm",
+        "Int.modEq_trans",
+        "Int.mul_assoc",
+        "Int.mul_comm",
+        "Int.mul_one",
+        "Int.mul_zero"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Int.euler_unit_coprime",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 13,
+      "direct_theorem_dependencies": [
+        "Int.add_comm",
+        "Int.add_zero",
+        "Int.ediv_add_emod",
+        "Int.ediv_emod_unique",
+        "Int.emod_lt_of_pos",
+        "Int.emod_nonneg",
+        "Int.lt_irrefl",
+        "Int.modEq_cancel",
+        "Int.mul_zero"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Int.euler_unit_injective",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex",
@@ -12260,6 +13788,8 @@
         "Int.ediv_emod_unique",
         "Int.emod_eq_zero_iff_dvd",
         "Int.euler_criterion_pm_one",
+        "Int.euler_unit_coprime",
+        "Int.euler_unit_injective",
         "Int.factorial_interior_modeq_one",
         "Int.factorial_sq_modeq_one",
         "Int.le_antisymm",
@@ -12466,6 +13996,7 @@
         "Int.mul_sub"
       ],
       "direct_theorem_dependents": [
+        "Int.euler_unit_injective",
         "Int.modEq_inverse_unique",
         "Int.pow_prime_sub_one_modeq_one"
       ],
@@ -12500,6 +14031,7 @@
         "Int.crt_exists",
         "Int.crt_unique",
         "Int.euler_criterion_pm_one",
+        "Int.euler_unit_coprime",
         "Int.modEq_add_right",
         "Int.modEq_cancel",
         "Int.modEq_inverse_exists",
@@ -12533,7 +14065,9 @@
         "Int.gcd_eq_gcd_ab",
         "Int.modEq_iff_dvd"
       ],
-      "direct_theorem_dependents": [],
+      "direct_theorem_dependents": [
+        "Int.euler_unit_coprime"
+      ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Int.modEq_inverse_exists",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
@@ -12587,6 +14121,7 @@
       ],
       "direct_theorem_dependents": [
         "Int.euler_criterion_pm_one",
+        "Int.euler_unit_coprime",
         "Int.is_quadratic_residue_mul",
         "Int.modEq_pow",
         "Int.modEq_prodRange",
@@ -12646,6 +14181,7 @@
         "Int.mul_comm"
       ],
       "direct_theorem_dependents": [
+        "Int.euler_unit_coprime",
         "Int.modEq_mul",
         "Nat.inverseIndex_injective"
       ],
@@ -12836,6 +14372,7 @@
       "direct_theorem_dependencies": [],
       "direct_theorem_dependents": [
         "Int.euler_criterion_pm_one",
+        "Int.euler_unit_coprime",
         "Int.factorial_interior_modeq_one",
         "Int.factorial_sq_modeq_one",
         "Int.modEq_inverse_unique",
@@ -12865,6 +14402,7 @@
       "direct_theorem_dependencies": [],
       "direct_theorem_dependents": [
         "Int.euler_criterion_pm_one",
+        "Int.euler_unit_coprime",
         "Int.factorial_interior_modeq_one",
         "Int.factorial_sq_modeq_one",
         "Int.modEq_inverse_unique",
@@ -12901,6 +14439,7 @@
         "Int.crt_exists",
         "Int.crt_unique",
         "Int.dvd_trans",
+        "Int.euler_unit_coprime",
         "Int.fib_cassini",
         "Int.gauss_lemma",
         "Int.gcd_eq_gcd_ab",
@@ -12953,6 +14492,7 @@
       "direct_theorem_dependents": [
         "Int.crt_exists",
         "Int.dvd_mul_left",
+        "Int.euler_unit_coprime",
         "Int.fib_cassini",
         "Int.gauss_lemma",
         "Int.gcd_eq_gcd_ab",
@@ -13230,6 +14770,7 @@
       "direct_theorem_dependents": [
         "Int.crt_exists",
         "Int.dvd_refl",
+        "Int.euler_unit_coprime",
         "Int.factorial_sq_modeq_one",
         "Int.fib_cassini",
         "Int.gauss_lemma",
@@ -13324,6 +14865,8 @@
       "direct_theorem_dependencies": [],
       "direct_theorem_dependents": [
         "Int.euler_criterion_pm_one",
+        "Int.euler_unit_coprime",
+        "Int.euler_unit_injective",
         "Int.factorial_interior_modeq_one",
         "Int.factorial_sq_modeq_one",
         "Int.fib_cassini",
@@ -14639,6 +16182,7 @@
         "Nat.countRange_compl",
         "Nat.countRange_split",
         "Nat.countRange_union_add_inter",
+        "Nat.crt_unique",
         "Nat.euclid_lemma",
         "Nat.fib_add",
         "Nat.gauss_lemma",
@@ -14647,8 +16191,10 @@
         "Nat.left_distrib",
         "Nat.modAdd_isGroup",
         "Nat.mod_eq_add_left",
+        "Nat.mod_eq_cancel",
         "Nat.mod_eq_trans",
         "Nat.mod_two_mul_split",
+        "Nat.pow2_geom_sum",
         "Nat.succ_mul_choose_eq",
         "Nat.sumRange_add",
         "Nat.sumRange_diagonal",
@@ -14687,6 +16233,7 @@
         "CReal.mul_comm",
         "CReal.mul_nonneg",
         "CReal.uniformly_continuous_add",
+        "CReal.uniformly_continuous_mul",
         "Int.add_assoc",
         "Int.add_comm",
         "Int.ediv_add_emod",
@@ -14712,6 +16259,7 @@
         "Nat.choose_add_convolution",
         "Nat.choose_symm",
         "Nat.coprime_of_bezout_one",
+        "Nat.crt_unique",
         "Nat.div_mod_same_remainder_mod_eq",
         "Nat.dvd_add_right_cancel_of_pos",
         "Nat.dvd_of_mod_eq_zero_of_pos",
@@ -14725,12 +16273,16 @@
         "Nat.le_sumRange_of_lt",
         "Nat.modAdd_isGroup",
         "Nat.mod_eq_add_right",
+        "Nat.mod_eq_cancel",
         "Nat.mod_eq_trans",
         "Nat.mul_sub_left_distrib",
         "Nat.not_dvd_one_add_mul_of_two_le",
         "Nat.one_le_mul",
+        "Nat.pow2_geom_sum",
+        "Nat.pow_pos",
         "Nat.sub_le_iff_le_add",
         "Nat.succ_mul_choose_eq",
+        "Nat.sumDivisors_prime",
         "Nat.sumRange_add",
         "Nat.sum_fib",
         "Nat.sum_testBit_lt",
@@ -14760,6 +16312,7 @@
         "Nat.add_lt_add_left",
         "Nat.countRange_le",
         "Nat.countRange_le_of_subset",
+        "Nat.exists_prime_factorization",
         "Nat.mod_two_mul_split",
         "Nat.size_aux_lt_pow"
       ],
@@ -14809,6 +16362,7 @@
         "Nat.add_right_cancel"
       ],
       "direct_theorem_dependents": [
+        "Nat.crt_unique",
         "Nat.div_mod_unique",
         "Nat.le_of_add_le_add_left"
       ],
@@ -14834,7 +16388,10 @@
         "Int.euclid_neg_succ",
         "Nat.div_mod_bounds",
         "Nat.div_mod_unique",
-        "Nat.size_aux_lt_pow"
+        "Nat.pow_lt_pow_succ",
+        "Nat.pow_sq_aux_eq_pow",
+        "Nat.size_aux_lt_pow",
+        "Nat.sumDivisors_two_pow_eq_geom_sum"
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Nat.add_lt_add_left",
@@ -14909,10 +16466,10 @@
         "Nat.mod_eq_trans",
         "Nat.mod_eq_zero_of_dvd",
         "Nat.mul_one",
-        "Nat.not_lt_zero",
         "Nat.one_mul",
         "Nat.prime_dvd_choose",
         "Nat.sub_self",
+        "Nat.succ_pred_of_pos",
         "Nat.sumRange_shiftFront",
         "Nat.zero_add",
         "Nat.zero_le"
@@ -14980,6 +16537,7 @@
         "Nat.add_left_cancel",
         "Nat.add_sub_cancel_left",
         "Nat.dvd_add_right_cancel_of_pos",
+        "Nat.mod_eq_cancel",
         "Nat.mul_sub_left_distrib"
       ],
       "exact_fact_ids": [],
@@ -15090,7 +16648,8 @@
         "Int.euclid_neg_succ",
         "Nat.coprime_of_bezout_one",
         "Nat.mod_two_mul_split",
-        "Nat.mul_eq_zero"
+        "Nat.mul_eq_zero",
+        "Nat.pow_half_split"
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Nat.add_succ",
@@ -15114,12 +16673,16 @@
         "Nat.choose_add_convolution",
         "Nat.coprime_of_bezout_one",
         "Nat.countRange_split",
+        "Nat.crt_unique",
         "Nat.div_mod_exact_exists",
         "Nat.div_mod_remainder_eq_zero_iff_dvd",
         "Nat.div_mul_cancel_of_dvd",
         "Nat.modAdd_isGroup",
         "Nat.mod_eq_zero_iff_dvd",
         "Nat.mod_eq_zero_of_dvd",
+        "Nat.no_rational_sqrt_two",
+        "Nat.pow_half_split",
+        "Nat.pow_sq_aux_eq_pow",
         "Nat.size_aux_lt_pow",
         "Nat.sumRange_split"
       ],
@@ -15144,6 +16707,8 @@
         "Nat.eq_of_beq_eq_true"
       ],
       "direct_theorem_dependents": [
+        "Nat.sumDivisors_prime",
+        "Nat.sumDivisors_two_pow_eq_geom_sum",
         "Nat.totient_prime"
       ],
       "exact_fact_ids": [],
@@ -15192,6 +16757,7 @@
         "Nat.ne_of_beq_eq_false",
         "Nat.permInverse_left",
         "Nat.permInverse_right",
+        "Nat.sumDivisors_two_pow_eq_geom_sum",
         "Nat.totient_prime"
       ],
       "exact_fact_ids": [],
@@ -15378,6 +16944,64 @@
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Nat.ble_succ_eq_true",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 2,
+      "direct_theorem_dependencies": [
+        "Bool.false_ne_true",
+        "Bool.true_ne_false"
+      ],
+      "direct_theorem_dependents": [
+        "Nat.cantor_diagonal_neg"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.cantor_diagonal",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 3,
+      "direct_theorem_dependencies": [
+        "Nat.cantor_diagonal"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.cantor_diagonal_neg",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 0,
+      "direct_theorem_dependencies": [],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.cantor_no_fixed_point",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex",
@@ -15702,9 +17326,33 @@
         "Nat.gcd_mul_lcm",
         "Nat.one_mul"
       ],
-      "direct_theorem_dependents": [],
+      "direct_theorem_dependents": [
+        "Nat.coprime_mul_dvd"
+      ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Nat.coprime_lcm_eq_mul",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 12,
+      "direct_theorem_dependencies": [
+        "Nat.coprime_lcm_eq_mul",
+        "Nat.lcm_dvd"
+      ],
+      "direct_theorem_dependents": [
+        "Nat.crt_unique"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.coprime_mul_dvd",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex",
@@ -15958,6 +17606,35 @@
     },
     {
       "axiom_footprint_size": 0,
+      "dependency_depth": 13,
+      "direct_theorem_dependencies": [
+        "Nat.add_assoc",
+        "Nat.add_comm",
+        "Nat.add_left_cancel",
+        "Nat.add_zero",
+        "Nat.coprime_mul_dvd",
+        "Nat.le_total",
+        "Nat.mod_eq_symm",
+        "Nat.mod_eq_zero_iff_dvd",
+        "Nat.mul_zero",
+        "Nat.sub_add_cancel",
+        "Nat.zero_add"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.crt_unique",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "dependency_depth": 3,
       "direct_theorem_dependencies": [
         "Nat.add_right_comm",
@@ -16043,7 +17720,11 @@
         "Nat.mod_eq_self_of_lt",
         "Nat.mod_lt",
         "Nat.mod_two_mul_split",
+        "Nat.pow_half_split",
+        "Nat.pow_sq_aux_eq_pow",
         "Nat.size_aux_lt_pow",
+        "Nat.sumDivisors_prime",
+        "Nat.sumDivisors_two_pow_eq_geom_sum",
         "Nat.sum_testBit_lt"
       ],
       "exact_fact_ids": [],
@@ -16095,6 +17776,7 @@
         "Nat.mul_le_mul_left"
       ],
       "direct_theorem_dependents": [
+        "Nat.pow_sq_aux_eq_pow",
         "Nat.size_aux_lt_pow"
       ],
       "exact_fact_ids": [],
@@ -16167,7 +17849,9 @@
         "Nat.zero_le"
       ],
       "direct_theorem_dependents": [
-        "Nat.least_divisor_search"
+        "Nat.least_divisor_search",
+        "Nat.sumDivisors_prime",
+        "Nat.sumDivisors_two_pow_eq_geom_sum"
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Nat.div_mod_remainder_eq_zero_iff_dvd",
@@ -16593,6 +18277,7 @@
         "Nat.euclid_lemma",
         "Nat.gauss_lemma",
         "Nat.not_dvd_one_add_mul_of_two_le",
+        "Nat.pow_two_ne_pow_two_mul_prime",
         "Nat.prime_dvd_choose",
         "Nat.valuation_at_two_mul_sq",
         "Rat.eq_of_cross",
@@ -16622,6 +18307,7 @@
         "Nat.coprime_of_bezout_one",
         "Nat.dvd_factorial_of_le",
         "Nat.dvd_mod_iff",
+        "Nat.dvd_two_pow_succ_iff_of_le",
         "Nat.euclid_lemma",
         "Nat.gauss_lemma",
         "Nat.gcd_mul_lcm",
@@ -16672,7 +18358,10 @@
       "direct_theorem_dependents": [
         "Int.gcd_zero_right",
         "Nat.exists_prime_dvd",
-        "Nat.gcd_dvd"
+        "Nat.gcd_dvd",
+        "Nat.pow_two_ne_pow_two_mul_prime",
+        "Nat.sumDivisors_prime",
+        "Nat.sumDivisors_two_pow_eq_geom_sum"
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Nat.dvd_refl",
@@ -16722,6 +18411,105 @@
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Nat.dvd_trans",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 9,
+      "direct_theorem_dependencies": [
+        "Nat.eq_one_of_dvd_one",
+        "Nat.gauss_lemma",
+        "Nat.gcd_dvd_left",
+        "Nat.gcd_dvd_right",
+        "Nat.le_antisymm",
+        "Nat.le_of_dvd",
+        "Nat.le_succ",
+        "Nat.le_succ_succ",
+        "Nat.le_trans",
+        "Nat.mul_assoc",
+        "Nat.mul_comm",
+        "Nat.mul_left_cancel_of_pos",
+        "Nat.one_le_of_dvd_pos",
+        "Nat.succ_pred_of_pos",
+        "Nat.two_le_succ_or_eq_one"
+      ],
+      "direct_theorem_dependents": [
+        "Nat.dvd_two_pow_succ_iff_of_le",
+        "Nat.pow_two_ne_pow_two_mul_prime",
+        "Nat.sumDivisors_two_pow_eq_geom_sum"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.dvd_two_pow_classify",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 9,
+      "direct_theorem_dependencies": [
+        "Nat.gauss_lemma",
+        "Nat.gcd_dvd_left",
+        "Nat.gcd_dvd_right",
+        "Nat.le_antisymm",
+        "Nat.le_of_dvd",
+        "Nat.le_succ",
+        "Nat.le_succ_succ",
+        "Nat.le_trans",
+        "Nat.mul_assoc",
+        "Nat.mul_comm",
+        "Nat.mul_left_cancel_of_pos",
+        "Nat.one_le_of_dvd_pos",
+        "Nat.one_mul",
+        "Nat.succ_pred_of_pos",
+        "Nat.two_le_succ_or_eq_one"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.dvd_two_pow_mul_classify",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 10,
+      "direct_theorem_dependencies": [
+        "Nat.dvd_mul_right_of_dvd",
+        "Nat.dvd_two_pow_classify",
+        "Nat.le_dest",
+        "Nat.le_of_succ_le_succ",
+        "Nat.lt_irrefl",
+        "Nat.lt_of_lt_of_le",
+        "Nat.lt_or_eq_of_le",
+        "Nat.pow_add",
+        "Nat.pow_lt_pow_succ"
+      ],
+      "direct_theorem_dependents": [
+        "Nat.sumDivisors_two_pow_eq_geom_sum"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.dvd_two_pow_succ_iff_of_le",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex",
@@ -16837,7 +18625,12 @@
         "Nat.least_divisor_search",
         "Nat.permInverse_left",
         "Nat.permInverse_right",
-        "Nat.size_aux_lt_pow"
+        "Nat.pow_half_split",
+        "Nat.pow_sq_aux_eq_pow",
+        "Nat.pow_two_ne_pow_two_mul_prime",
+        "Nat.size_aux_lt_pow",
+        "Nat.sumDivisors_prime",
+        "Nat.sumDivisors_two_pow_eq_geom_sum"
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Nat.eq_of_beq_eq_true",
@@ -16868,6 +18661,7 @@
         "Int.wilson_converse",
         "Nat.coprime_fib_succ",
         "Nat.coprime_of_bezout_one",
+        "Nat.dvd_two_pow_classify",
         "Rat.gcd_one_right"
       ],
       "exact_fact_ids": [],
@@ -16921,6 +18715,35 @@
     },
     {
       "axiom_footprint_size": 0,
+      "dependency_depth": 9,
+      "direct_theorem_dependencies": [
+        "Nat.gauss_lemma",
+        "Nat.gcd_dvd_left",
+        "Nat.gcd_dvd_right",
+        "Nat.le_antisymm",
+        "Nat.le_of_dvd",
+        "Nat.le_succ",
+        "Nat.one_le_of_dvd_pos",
+        "Nat.succ_pred_of_pos",
+        "Nat.two_le_succ_or_eq_one"
+      ],
+      "direct_theorem_dependents": [
+        "Nat.no_rational_sqrt_two"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.even_of_even_sq",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "dependency_depth": 6,
       "direct_theorem_dependencies": [
         "Nat.dvd_refl",
@@ -16934,12 +18757,49 @@
         "Nat.zero_le"
       ],
       "direct_theorem_dependents": [
+        "Nat.exists_prime_factorization",
         "Nat.exists_prime_gt"
       ],
       "exact_fact_ids": [
         "F:nat-exists-prime-dvd"
       ],
       "kernel_declaration_id": "Nat.exists_prime_dvd",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 7,
+      "direct_theorem_dependencies": [
+        "Nat.add_le_add_left",
+        "Nat.exists_prime_dvd",
+        "Nat.le_dest",
+        "Nat.le_of_dvd",
+        "Nat.le_of_succ_le_succ",
+        "Nat.le_trans",
+        "Nat.lt_irrefl",
+        "Nat.lt_or_eq_of_le",
+        "Nat.mul_assoc",
+        "Nat.mul_comm",
+        "Nat.mul_le_mul_left",
+        "Nat.mul_one",
+        "Nat.one_le_right_of_mul",
+        "Nat.one_mul",
+        "Nat.succ_add",
+        "Nat.succ_mul",
+        "Nat.two_le_succ_or_eq_one",
+        "Nat.zero_add"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.exists_prime_factorization",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex",
@@ -17098,7 +18958,7 @@
       "direct_theorem_dependencies": [
         "Nat.fib_le_succ",
         "Nat.lt_of_lt_of_le",
-        "Nat.not_lt_zero"
+        "Nat.succ_pred_of_pos"
       ],
       "direct_theorem_dependents": [],
       "exact_fact_ids": [],
@@ -17133,6 +18993,9 @@
         "Nat.zero_le"
       ],
       "direct_theorem_dependents": [
+        "Nat.dvd_two_pow_classify",
+        "Nat.dvd_two_pow_mul_classify",
+        "Nat.even_of_even_sq",
         "Nat.lcm_dvd"
       ],
       "exact_fact_ids": [],
@@ -17171,6 +19034,7 @@
         "Nat.euclid_lemma",
         "Nat.gauss_lemma",
         "Nat.gcd_cofactors_coprime",
+        "Nat.mod_eq_cancel",
         "Rat.nat_gauss"
       ],
       "exact_fact_ids": [
@@ -17256,7 +19120,10 @@
         "Nat.dvd_gcd_iff",
         "Nat.dvd_lcm_left",
         "Nat.dvd_lcm_right",
+        "Nat.dvd_two_pow_classify",
+        "Nat.dvd_two_pow_mul_classify",
         "Nat.euclid_lemma",
+        "Nat.even_of_even_sq",
         "Nat.gcd_mul_lcm",
         "Nat.lcm_dvd",
         "Rat.normalize_cross"
@@ -17291,7 +19158,10 @@
         "Nat.coprime_of_lt_prime",
         "Nat.dvd_gcd_iff",
         "Nat.dvd_lcm_left",
+        "Nat.dvd_two_pow_classify",
+        "Nat.dvd_two_pow_mul_classify",
         "Nat.euclid_lemma",
+        "Nat.even_of_even_sq",
         "Nat.lcm_dvd",
         "Rat.gcd_one_right",
         "Rat.normalize_cross"
@@ -17487,16 +19357,38 @@
         "Nat.not_lt_zero",
         "Nat.not_succ_le_self",
         "Nat.pred_le_pred",
+        "Nat.succ_pred_of_pos",
         "Nat.zero_le",
         "Or.elim"
       ],
       "direct_theorem_dependents": [
         "Int.prodRange_permute",
         "Nat.bijective_of_injective_on",
+        "Nat.injective_on_p_imp_surjective_on_p",
         "Nat.pigeonhole"
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Nat.injective_on_imp_surjective_on",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 5,
+      "direct_theorem_dependencies": [
+        "Bool.true_ne_false",
+        "Nat.injective_on_imp_surjective_on"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.injective_on_p_imp_surjective_on_p",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex",
@@ -17830,6 +19722,7 @@
         "Nat.zero_le"
       ],
       "direct_theorem_dependents": [
+        "Nat.coprime_mul_dvd",
         "Nat.lcm_comm"
       ],
       "exact_fact_ids": [],
@@ -17878,6 +19771,7 @@
         "CReal.hasDerivative_mul",
         "CReal.natSqrtSpec",
         "CReal.uniformly_continuous_add",
+        "CReal.uniformly_continuous_mul",
         "Int.ediv_emod_unique",
         "Int.emod_lt_of_pos",
         "Int.le_ofNat_add",
@@ -17899,7 +19793,9 @@
         "Nat.not_dvd_one_add_mul_of_two_le",
         "Nat.one_le_factorial",
         "Nat.one_le_mul",
+        "Nat.pow_pos",
         "Nat.sub_le_iff_le_add",
+        "Nat.sumDivisors_two_pow_eq_geom_sum",
         "Nat.valuation_at_two_mul_sq"
       ],
       "exact_fact_ids": [],
@@ -17927,7 +19823,13 @@
         "Int.prod_range_pairing_collapse",
         "Nat.choose_symm",
         "Nat.dvd_antisymm",
+        "Nat.dvd_two_pow_classify",
+        "Nat.dvd_two_pow_mul_classify",
+        "Nat.even_of_even_sq",
         "Nat.mul_left_cancel_of_pos",
+        "Nat.no_rational_sqrt_two",
+        "Nat.pow_half_split",
+        "Nat.pow_sq_aux_eq_pow",
         "Rat.nat_dvd_antisymm_pos"
       ],
       "exact_fact_ids": [],
@@ -17947,6 +19849,9 @@
       "dependency_depth": 0,
       "direct_theorem_dependencies": [],
       "direct_theorem_dependents": [
+        "CReal.geom_tail_within_le",
+        "CReal.ofNat_le",
+        "CReal.sumRange_cauchy_dominated_ordered",
         "CReal.sumRange_tail_within_le",
         "Complex.add_pow",
         "Int.le_dest",
@@ -17956,11 +19861,14 @@
         "Int.subNatNat_elim",
         "Nat.add_pow",
         "Nat.choose_symm",
+        "Nat.dvd_two_pow_succ_iff_of_le",
+        "Nat.exists_prime_factorization",
         "Nat.le_of_add_le_add_left",
         "Nat.le_of_mul_le_mul_left",
         "Nat.not_lt_zero",
         "Nat.prime_dvd_choose",
-        "Nat.succ_sub_of_le"
+        "Nat.succ_sub_of_le",
+        "Nat.sumDivisors_two_pow_eq_geom_sum"
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Nat.le_dest",
@@ -18007,7 +19915,8 @@
       "direct_theorem_dependents": [
         "Int.emod_nonneg",
         "Nat.le_of_add_le_add_right",
-        "Nat.le_of_mul_le_mul_left_succ"
+        "Nat.le_of_mul_le_mul_left_succ",
+        "Nat.no_rational_sqrt_two"
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Nat.le_of_add_le_add_left",
@@ -18088,8 +19997,13 @@
         "Int.wilson_converse",
         "Nat.coprime_of_lt_prime",
         "Nat.dvd_antisymm",
+        "Nat.dvd_two_pow_classify",
+        "Nat.dvd_two_pow_mul_classify",
+        "Nat.even_of_even_sq",
         "Nat.exists_prime_dvd",
+        "Nat.exists_prime_factorization",
         "Nat.prime_dvd_choose",
+        "Nat.sumDivisors_two_pow_eq_geom_sum",
         "Rat.nat_dvd_antisymm_pos"
       ],
       "exact_fact_ids": [],
@@ -18140,6 +20054,7 @@
         "Nat.le_of_lt_add_one",
         "Nat.permInverse_left",
         "Nat.permInverse_right",
+        "Nat.pow_half_split",
         "Nat.restrict_pair_maps_into",
         "Nat.sum_choose_sq",
         "Rat.prob_le_one"
@@ -18224,6 +20139,8 @@
         "Nat.choose_symm",
         "Nat.div_mod_exec",
         "Nat.dvd_factorial_of_le",
+        "Nat.dvd_two_pow_succ_iff_of_le",
+        "Nat.exists_prime_factorization",
         "Nat.injective_on_imp_surjective_on",
         "Nat.inverseIndex_maps_into",
         "Nat.le_antisymm",
@@ -18232,10 +20149,15 @@
         "Nat.least_divisor_search",
         "Nat.lt_irrefl",
         "Nat.not_dvd_one_of_two_le",
+        "Nat.pow_half_split",
+        "Nat.pow_lt_pow_of_lt",
+        "Nat.pow_sq_aux_eq_pow",
         "Nat.restrict_maps_into",
         "Nat.restrict_pair_injective",
         "Nat.restrict_pair_maps_into",
         "Nat.size_aux_lt_pow",
+        "Nat.sumDivisors_prime",
+        "Nat.sumDivisors_two_pow_eq_geom_sum",
         "Nat.testBit_le_one"
       ],
       "exact_fact_ids": [],
@@ -18272,6 +20194,8 @@
       "dependency_depth": 0,
       "direct_theorem_dependencies": [],
       "direct_theorem_dependents": [
+        "CReal.monotone_of_nonneg_deriv",
+        "CReal.riemannSum_sample_in_bounds",
         "CReal.sumRange_le",
         "Complex.sumRange_congr_lt",
         "Complex.sumRange_diagonal",
@@ -18291,6 +20215,9 @@
         "Int.wilson_converse",
         "Nat.add_pow_modeq_prime",
         "Nat.bijective_on_perm_inverse",
+        "Nat.dvd_two_pow_classify",
+        "Nat.dvd_two_pow_mul_classify",
+        "Nat.even_of_even_sq",
         "Nat.injective_on_imp_surjective_on",
         "Nat.inverseIndex_fixed_point",
         "Nat.inverseIndex_fixes_last",
@@ -18300,13 +20227,19 @@
         "Nat.inverseIndex_involutive",
         "Nat.inverseIndex_maps_into",
         "Nat.modAdd_isGroup",
+        "Nat.no_rational_sqrt_two",
         "Nat.permInverse_left",
         "Nat.pigeonhole",
+        "Nat.pow_lt_pow_of_lt",
+        "Nat.pow_lt_pow_succ",
         "Nat.pow_prime_modeq_self",
+        "Nat.prodRangeIf_congr_lt",
         "Nat.restrict_injective",
         "Nat.restrict_maps_into",
         "Nat.restrict_pair_injective",
         "Nat.restrict_pair_maps_into",
+        "Nat.sumDivisors_prime",
+        "Nat.sumDivisors_two_pow_eq_geom_sum",
         "Nat.sumRange_congr_lt",
         "Nat.sumRange_diagonal",
         "Nat.sumRange_rect_eq_diag_add_corner",
@@ -18376,6 +20309,8 @@
         "Nat.dvd_gcd",
         "Nat.dvd_lcm_left",
         "Nat.dvd_lcm_right",
+        "Nat.dvd_two_pow_classify",
+        "Nat.dvd_two_pow_mul_classify",
         "Nat.eq_one_of_dvd_one",
         "Nat.exists_prime_dvd",
         "Nat.gauss_lemma",
@@ -18400,6 +20335,7 @@
         "Nat.one_le_factorial",
         "Nat.one_le_left_of_mul",
         "Nat.one_le_right_of_mul",
+        "Nat.pow_pos",
         "Nat.restrict_pair_injective",
         "Nat.restrict_pair_maps_into",
         "Nat.size_aux_lt_pow",
@@ -18471,17 +20407,20 @@
         "Nat.zero_le"
       ],
       "direct_theorem_dependents": [
+        "CReal.sumRange_cauchy_of_dominated",
         "Int.le_total",
         "Int.prodRange_permute",
         "Int.prodRange_swap",
         "Int.prod_range_pairing_collapse",
         "Int.subNatNat_elim",
+        "Nat.crt_unique",
         "Nat.div_mod_lt_mul_iff",
         "Nat.div_mod_mul_le_iff",
         "Nat.div_mod_unique",
         "Nat.exists_prime_gt",
         "Nat.injective_on_imp_surjective_on",
         "Nat.mul_sub_left_distrib_total",
+        "Nat.pow_injective",
         "Nat.restrict_injective",
         "Nat.restrict_maps_into",
         "Nat.restrict_pair_injective",
@@ -18508,7 +20447,9 @@
       "direct_theorem_dependents": [
         "CReal.hasDerivative_chain",
         "CReal.hasDerivative_mul",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.natSqrtSpec",
+        "CReal.riemannSum_sample_in_bounds",
         "Complex.sumRange_diagonal",
         "Complex.sumRange_rect_eq_diag_add_corner",
         "Int.dvd_factorial_of_le",
@@ -18534,8 +20475,11 @@
         "Nat.div_mod_lt_mul_iff",
         "Nat.div_mod_mul_le_iff",
         "Nat.dvd_factorial_of_le",
+        "Nat.dvd_two_pow_classify",
+        "Nat.dvd_two_pow_mul_classify",
         "Nat.euclid_lemma",
         "Nat.exists_prime_dvd",
+        "Nat.exists_prime_factorization",
         "Nat.exists_prime_gt",
         "Nat.injective_on_imp_surjective_on",
         "Nat.inverseIndex_fixed_point",
@@ -18553,10 +20497,13 @@
         "Nat.modAdd_isGroup",
         "Nat.mod_two_mul_split",
         "Nat.mul_le_mul_left",
+        "Nat.no_rational_sqrt_two",
         "Nat.not_dvd_one_add_mul_of_two_le",
         "Nat.not_dvd_one_of_two_le",
         "Nat.one_le_mul",
         "Nat.pigeonhole",
+        "Nat.pow_lt_pow_of_lt",
+        "Nat.pow_lt_pow_succ",
         "Nat.pow_prime_modeq_self",
         "Nat.pred_le_pred",
         "Nat.restrict_injective",
@@ -18566,6 +20513,7 @@
         "Nat.sub_add_cancel",
         "Nat.sub_le",
         "Nat.sub_le_iff_le_add",
+        "Nat.sumDivisors_prime",
         "Nat.sumRange_diagonal",
         "Nat.sumRange_rect_eq_diag_add_corner",
         "Nat.totient_prime",
@@ -18691,15 +20639,22 @@
         "Nat.div_mod_lt_mul_iff",
         "Nat.div_mod_mul_le_iff",
         "Nat.div_mod_unique",
+        "Nat.dvd_two_pow_succ_iff_of_le",
+        "Nat.exists_prime_factorization",
         "Nat.injective_on_imp_surjective_on",
         "Nat.not_succ_le_self",
         "Nat.permInverse_left",
         "Nat.pigeonhole",
+        "Nat.pow_injective",
+        "Nat.pow_pos",
+        "Nat.pow_two_ne_pow_two_mul_prime",
         "Nat.prime_dvd_choose",
         "Nat.restrict_injective",
         "Nat.restrict_maps_into",
         "Nat.restrict_pair_injective",
         "Nat.restrict_pair_maps_into",
+        "Nat.sumDivisors_prime",
+        "Nat.sumDivisors_two_pow_eq_geom_sum",
         "Nat.totient_prime",
         "Rat.variance_sumVars"
       ],
@@ -18774,13 +20729,20 @@
         "Nat.div_mod_lt_mul_iff",
         "Nat.div_mod_mul_le_iff",
         "Nat.div_mod_unique",
+        "Nat.dvd_two_pow_succ_iff_of_le",
         "Nat.fib_pos_of_pos",
         "Nat.injective_on_imp_surjective_on",
         "Nat.inverseIndex_maps_into",
         "Nat.permInverse_left",
+        "Nat.pow_lt_pow_of_lt",
+        "Nat.pow_lt_pow_succ",
+        "Nat.pow_pos",
+        "Nat.pow_sq_aux_eq_pow",
+        "Nat.prodRangeIf_congr_lt",
         "Nat.restrict_pair_injective",
         "Nat.restrict_pair_maps_into",
         "Nat.size_aux_lt_pow",
+        "Nat.sumDivisors_two_pow_eq_geom_sum",
         "Nat.sumRange_congr_lt",
         "Nat.transposition_involutive",
         "Rat.prob_le_one",
@@ -18849,7 +20811,9 @@
         "Nat.div_mod_mul_le_iff",
         "Nat.div_mod_unique",
         "Nat.dvd_factorial_of_le",
+        "Nat.dvd_two_pow_succ_iff_of_le",
         "Nat.exists_prime_dvd",
+        "Nat.exists_prime_factorization",
         "Nat.exists_prime_gt",
         "Nat.injective_on_imp_surjective_on",
         "Nat.inverseIndex_fixed_point",
@@ -18860,10 +20824,14 @@
         "Nat.least_divisor_search",
         "Nat.permInverse_left",
         "Nat.permInverse_right",
+        "Nat.pow_half_split",
+        "Nat.pow_injective",
+        "Nat.pow_lt_pow_of_lt",
         "Nat.restrict_injective",
         "Nat.restrict_maps_into",
         "Nat.restrict_pair_injective",
         "Nat.restrict_pair_maps_into",
+        "Nat.sumDivisors_two_pow_eq_geom_sum",
         "Nat.transposition_involutive",
         "Rat.prob_le_one"
       ],
@@ -18888,6 +20856,7 @@
         "Or.elim"
       ],
       "direct_theorem_dependents": [
+        "Nat.no_rational_sqrt_two",
         "Nat.restrict_pair_injective",
         "Nat.restrict_pair_maps_into"
       ],
@@ -18965,8 +20934,10 @@
         "Nat.injective_on_imp_surjective_on",
         "Nat.inverseIndex_interior_fixed_point_free",
         "Nat.permInverse_left",
+        "Nat.prodRangeIf_congr_lt",
         "Nat.restrict_injective",
         "Nat.restrict_maps_into",
+        "Nat.sumDivisors_prime",
         "Nat.sumRange_congr_lt",
         "Nat.transposition_involutive",
         "Rat.prob_le_one",
@@ -19008,8 +20979,8 @@
         "Nat.mod_lt",
         "Nat.mul_one",
         "Nat.mul_zero",
-        "Nat.not_lt_zero",
         "Nat.sub_add_cancel",
+        "Nat.succ_pred_of_pos",
         "Nat.zero_add"
       ],
       "direct_theorem_dependents": [],
@@ -19099,7 +21070,8 @@
         "Nat.add_pow_modeq_prime",
         "Nat.modAdd_isGroup",
         "Nat.mod_eq_add",
-        "Nat.mod_eq_add_right"
+        "Nat.mod_eq_add_right",
+        "Nat.mod_eq_cancel"
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Nat.mod_eq_add_left",
@@ -19128,6 +21100,37 @@
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Nat.mod_eq_add_right",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 7,
+      "direct_theorem_dependencies": [
+        "Nat.add_assoc",
+        "Nat.add_comm",
+        "Nat.add_right_cancel",
+        "Nat.gcd_bezout",
+        "Nat.mod_eq_add_left",
+        "Nat.mod_eq_mul_left",
+        "Nat.mod_eq_mul_right",
+        "Nat.mod_eq_symm",
+        "Nat.mod_eq_trans",
+        "Nat.mul_assoc",
+        "Nat.mul_comm",
+        "Nat.one_mul",
+        "Nat.right_distrib"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.mod_eq_cancel",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex",
@@ -19192,6 +21195,7 @@
         "Nat.mul_comm"
       ],
       "direct_theorem_dependents": [
+        "Nat.mod_eq_cancel",
         "Nat.mod_eq_mul",
         "Nat.mod_eq_mul_right"
       ],
@@ -19215,6 +21219,7 @@
         "Nat.mul_comm"
       ],
       "direct_theorem_dependents": [
+        "Nat.mod_eq_cancel",
         "Nat.mod_eq_mul"
       ],
       "exact_fact_ids": [],
@@ -19259,7 +21264,7 @@
         "Nat.div_mod_unique",
         "Nat.lt_of_le_of_lt",
         "Nat.mul_zero",
-        "Nat.not_lt_zero",
+        "Nat.succ_pred_of_pos",
         "Nat.zero_add",
         "Nat.zero_le"
       ],
@@ -19284,8 +21289,10 @@
       "dependency_depth": 0,
       "direct_theorem_dependencies": [],
       "direct_theorem_dependents": [
+        "Nat.crt_unique",
         "Nat.modAdd_isGroup",
-        "Nat.modEq_equivalence_on"
+        "Nat.modEq_equivalence_on",
+        "Nat.mod_eq_cancel"
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Nat.mod_eq_symm",
@@ -19311,6 +21318,7 @@
         "Nat.add_pow_modeq_prime",
         "Nat.modEq_equivalence_on",
         "Nat.mod_eq_add",
+        "Nat.mod_eq_cancel",
         "Nat.mod_eq_mul",
         "Nat.pow_prime_modeq_self"
       ],
@@ -19338,7 +21346,9 @@
         "Nat.zero_le",
         "Nat.zero_mul"
       ],
-      "direct_theorem_dependents": [],
+      "direct_theorem_dependents": [
+        "Nat.crt_unique"
+      ],
       "exact_fact_ids": [
         "F:nat-mod-eq-zero-iff-dvd"
       ],
@@ -19442,8 +21452,8 @@
         "Nat.mul_comm",
         "Nat.mul_le_mul_left",
         "Nat.mul_succ",
-        "Nat.not_lt_zero",
         "Nat.one_le_mul",
+        "Nat.succ_pred_of_pos",
         "Nat.zero_le"
       ],
       "direct_theorem_dependents": [
@@ -19493,12 +21503,17 @@
         "Nat.dvd_lcm_left",
         "Nat.dvd_lcm_right",
         "Nat.dvd_trans",
+        "Nat.dvd_two_pow_classify",
+        "Nat.dvd_two_pow_mul_classify",
         "Nat.euclid_lemma",
+        "Nat.exists_prime_factorization",
         "Nat.gauss_lemma",
         "Nat.gcd_bezout",
         "Nat.lcm_dvd",
+        "Nat.mod_eq_cancel",
         "Nat.mod_eq_mul_left",
         "Nat.mod_two_mul_split",
+        "Nat.no_rational_sqrt_two",
         "Nat.pow_add",
         "Nat.sum_testBit_lt",
         "Nat.valuation_at_two_mul_sq",
@@ -19539,13 +21554,20 @@
         "Nat.dvd_factorial_of_le",
         "Nat.dvd_lcm_left",
         "Nat.dvd_lcm_right",
+        "Nat.dvd_two_pow_classify",
+        "Nat.dvd_two_pow_mul_classify",
         "Nat.euclid_lemma",
+        "Nat.exists_prime_factorization",
         "Nat.gauss_lemma",
         "Nat.lcm_dvd",
+        "Nat.mod_eq_cancel",
         "Nat.mod_eq_mul_left",
         "Nat.mod_eq_mul_right",
         "Nat.mod_two_mul_split",
         "Nat.mul_sumRange_pow",
+        "Nat.no_rational_sqrt_two",
+        "Nat.pow_mul_prime_injective",
+        "Nat.pow_two_ne_pow_two_mul_prime",
         "Nat.right_distrib",
         "Nat.size_aux_lt_pow",
         "Nat.sum_testBit_lt",
@@ -19582,6 +21604,7 @@
       ],
       "direct_theorem_dependents": [
         "Int.mul_eq_zero",
+        "Nat.no_rational_sqrt_two",
         "Rat.mul_eq_zero"
       ],
       "exact_fact_ids": [],
@@ -19609,10 +21632,13 @@
         "Nat.div_mod_lt_mul_iff",
         "Nat.div_mod_mul_le_iff",
         "Nat.div_mod_unique",
+        "Nat.exists_prime_factorization",
         "Nat.le_of_dvd",
         "Nat.mod_two_mul_split",
         "Nat.mul_sub_left_distrib_total",
+        "Nat.no_rational_sqrt_two",
         "Nat.not_dvd_one_of_two_le",
+        "Nat.pow_lt_pow_succ",
         "Nat.size_aux_lt_pow",
         "Nat.valuation_at_two_mul_sq"
       ],
@@ -19639,7 +21665,11 @@
         "Nat.bezout_of_scaled",
         "Nat.dvd_lcm_left",
         "Nat.dvd_lcm_right",
+        "Nat.dvd_two_pow_classify",
+        "Nat.dvd_two_pow_mul_classify",
         "Nat.lcm_dvd",
+        "Nat.no_rational_sqrt_two",
+        "Nat.pow_mul_prime_injective",
         "Nat.valuation_at_two_mul_sq",
         "Rat.nat_mul_right_cancel"
       ],
@@ -19665,13 +21695,20 @@
         "CReal.hasDerivative_chain",
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_smul",
+        "CReal.mesh_count_width",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_inv_cancel",
         "CReal.mul_nonneg",
+        "CReal.riemannSum_const",
+        "CReal.riemannSum_sample_in_bounds",
+        "CReal.subdivisionPoint_in_bounds",
+        "CReal.uniformly_continuous_mul",
         "Int.mul_one",
         "Int.mul_pos",
         "Nat.add_pow_modeq_prime",
         "Nat.bezout_of_scaled",
         "Nat.dvd_refl",
+        "Nat.exists_prime_factorization",
         "Nat.fib_add",
         "Nat.gcd_bezout",
         "Nat.le_of_dvd",
@@ -19832,6 +21869,7 @@
       "direct_theorem_dependencies": [],
       "direct_theorem_dependents": [
         "CReal.converges_bounded",
+        "Nat.crt_unique",
         "Nat.dvd_zero",
         "Nat.fib_add",
         "Nat.gcd_mul_lcm",
@@ -19839,6 +21877,7 @@
         "Nat.mod_eq_self_of_lt",
         "Nat.mod_eq_zero_of_dvd",
         "Nat.mul_sub_left_distrib_total",
+        "Nat.no_rational_sqrt_two",
         "Nat.one_le_right_of_mul",
         "Nat.succ_mul_choose_eq"
       ],
@@ -19861,10 +21900,51 @@
         "Nat.beq_eq_true_of_eq"
       ],
       "direct_theorem_dependents": [
-        "Nat.size_aux_lt_pow"
+        "Nat.pow_half_split",
+        "Nat.pow_sq_aux_eq_pow",
+        "Nat.pow_two_ne_pow_two_mul_prime",
+        "Nat.size_aux_lt_pow",
+        "Nat.sumDivisors_prime",
+        "Nat.sumDivisors_two_pow_eq_geom_sum"
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Nat.ne_of_beq_eq_false",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 10,
+      "direct_theorem_dependencies": [
+        "Nat.add_zero",
+        "Nat.even_of_even_sq",
+        "Nat.le_antisymm",
+        "Nat.le_of_add_le_add_left",
+        "Nat.le_succ",
+        "Nat.le_trans",
+        "Nat.lt_or_ge",
+        "Nat.mul_assoc",
+        "Nat.mul_comm",
+        "Nat.mul_eq_zero",
+        "Nat.mul_le_mul_left",
+        "Nat.mul_left_cancel_of_pos",
+        "Nat.mul_zero",
+        "Nat.one_mul",
+        "Nat.succ_mul",
+        "Nat.succ_ne_zero",
+        "Nat.zero_le",
+        "Nat.zero_mul"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.no_rational_sqrt_two",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex",
@@ -19956,19 +22036,12 @@
         "Nat.le_dest"
       ],
       "direct_theorem_dependents": [
-        "Nat.add_pow_modeq_prime",
-        "Nat.fib_pos_of_pos",
         "Nat.injective_on_imp_surjective_on",
         "Nat.le_sumRange_of_lt",
-        "Nat.modAdd_isGroup",
-        "Nat.mod_eq_self_of_lt",
-        "Nat.mod_two_mul_split",
         "Nat.permInverse_left",
         "Nat.permInverse_right",
-        "Nat.pow_prime_modeq_self",
-        "Nat.restrict_pair_injective",
-        "Nat.restrict_pair_maps_into",
-        "Nat.totient_prime",
+        "Nat.pow_lt_pow_of_lt",
+        "Nat.succ_pred_of_pos",
         "Rat.mul_inv_cancel_of_neg",
         "Rat.prob_le_one"
       ],
@@ -20168,6 +22241,9 @@
         "Int.wilson_converse",
         "Nat.dvd_lcm_left",
         "Nat.dvd_lcm_right",
+        "Nat.dvd_two_pow_classify",
+        "Nat.dvd_two_pow_mul_classify",
+        "Nat.even_of_even_sq",
         "Nat.exists_prime_dvd",
         "Nat.gcd_mul_lcm",
         "Nat.lcm_dvd",
@@ -20195,6 +22271,7 @@
         "Nat.zero_le"
       ],
       "direct_theorem_dependents": [
+        "Nat.exists_prime_factorization",
         "Nat.le_of_dvd"
       ],
       "exact_fact_ids": [],
@@ -20224,10 +22301,17 @@
         "Nat.add_pow_one",
         "Nat.choose_add_convolution",
         "Nat.coprime_lcm_eq_mul",
+        "Nat.dvd_two_pow_mul_classify",
         "Nat.euclid_lemma",
+        "Nat.exists_prime_factorization",
         "Nat.gauss_lemma",
+        "Nat.mod_eq_cancel",
+        "Nat.no_rational_sqrt_two",
+        "Nat.pow_half_split",
+        "Nat.pow_sq_aux_eq_pow",
         "Nat.size_aux_lt_pow",
         "Nat.succ_mul_choose_eq",
+        "Nat.sumDivisors_prime",
         "Nat.sum_testBit_lt",
         "Nat.valuation_at_two_mul_sq",
         "Rat.natDivSucc_antitone",
@@ -20356,17 +22440,207 @@
     },
     {
       "axiom_footprint_size": 0,
+      "dependency_depth": 2,
+      "direct_theorem_dependencies": [
+        "Nat.add_assoc",
+        "Nat.add_comm",
+        "Nat.zero_add"
+      ],
+      "direct_theorem_dependents": [
+        "Nat.sumDivisors_two_pow"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.pow2_geom_sum",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "dependency_depth": 3,
       "direct_theorem_dependencies": [
         "Nat.mul_assoc",
         "Nat.mul_one",
         "Nat.pow_succ"
       ],
-      "direct_theorem_dependents": [],
+      "direct_theorem_dependents": [
+        "Nat.dvd_two_pow_succ_iff_of_le",
+        "Nat.pow_half_split",
+        "Nat.sumDivisors_two_pow_eq_geom_sum"
+      ],
       "exact_fact_ids": [
         "F:nat-pow-add"
       ],
       "kernel_declaration_id": "Nat.pow_add",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 5,
+      "direct_theorem_dependencies": [
+        "Nat.add_succ",
+        "Nat.add_zero",
+        "Nat.div_mod_exec",
+        "Nat.eq_of_beq_eq_true",
+        "Nat.le_antisymm",
+        "Nat.le_of_lt_succ",
+        "Nat.le_of_succ_le_succ",
+        "Nat.lt_or_eq_of_le",
+        "Nat.ne_of_beq_eq_false",
+        "Nat.one_mul",
+        "Nat.pow_add",
+        "Nat.pow_succ",
+        "Nat.succ_mul",
+        "Nat.zero_le"
+      ],
+      "direct_theorem_dependents": [
+        "Nat.pow_sq_aux_eq_pow",
+        "Nat.pow_sq_succ"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.pow_half_split",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 6,
+      "direct_theorem_dependencies": [
+        "Nat.le_total",
+        "Nat.lt_irrefl",
+        "Nat.lt_or_eq_of_le",
+        "Nat.pow_lt_pow_of_lt"
+      ],
+      "direct_theorem_dependents": [
+        "Nat.pow_mul_prime_injective"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.pow_injective",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 5,
+      "direct_theorem_dependencies": [
+        "Nat.le_of_succ_le_succ",
+        "Nat.le_succ",
+        "Nat.le_trans",
+        "Nat.lt_of_lt_of_le",
+        "Nat.lt_or_eq_of_le",
+        "Nat.not_lt_zero",
+        "Nat.pow_lt_pow_succ"
+      ],
+      "direct_theorem_dependents": [
+        "Nat.pow_injective"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.pow_lt_pow_of_lt",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 4,
+      "direct_theorem_dependencies": [
+        "Nat.add_lt_add_left",
+        "Nat.le_succ",
+        "Nat.le_trans",
+        "Nat.lt_of_lt_of_le",
+        "Nat.mul_le_mul_left",
+        "Nat.pow_pos",
+        "Nat.zero_add"
+      ],
+      "direct_theorem_dependents": [
+        "Nat.dvd_two_pow_succ_iff_of_le",
+        "Nat.pow_lt_pow_of_lt",
+        "Nat.sumDivisors_two_pow_eq_geom_sum"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.pow_lt_pow_succ",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 7,
+      "direct_theorem_dependencies": [
+        "Nat.mul_comm",
+        "Nat.mul_left_cancel_of_pos",
+        "Nat.pow_injective"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.pow_mul_prime_injective",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 3,
+      "direct_theorem_dependencies": [
+        "Nat.add_comm",
+        "Nat.le_add_right",
+        "Nat.le_succ_succ",
+        "Nat.lt_irrefl",
+        "Nat.lt_of_lt_of_le",
+        "Nat.zero_le"
+      ],
+      "direct_theorem_dependents": [
+        "Nat.pow_lt_pow_succ",
+        "Nat.sumDivisors_two_pow_eq_geom_sum"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.pow_pos",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex",
@@ -20387,8 +22661,8 @@
         "Nat.mod_eq_add_right",
         "Nat.mod_eq_refl",
         "Nat.mod_eq_trans",
-        "Nat.not_lt_zero",
-        "Nat.one_pow"
+        "Nat.one_pow",
+        "Nat.succ_pred_of_pos"
       ],
       "direct_theorem_dependents": [
         "Int.pow_prime_sub_one_modeq_one"
@@ -20410,6 +22684,103 @@
     },
     {
       "axiom_footprint_size": 0,
+      "dependency_depth": 6,
+      "direct_theorem_dependencies": [
+        "Nat.add_lt_add_left",
+        "Nat.add_zero",
+        "Nat.div_mod_exec",
+        "Nat.div_mod_lt_mul_iff",
+        "Nat.eq_of_beq_eq_true",
+        "Nat.le_antisymm",
+        "Nat.le_of_succ_le_succ",
+        "Nat.lt_of_lt_of_le",
+        "Nat.ne_of_beq_eq_false",
+        "Nat.one_mul",
+        "Nat.pow_half_split",
+        "Nat.pow_zero",
+        "Nat.succ_mul",
+        "Nat.zero_le",
+        "Nat.zero_lt_of_ne_zero"
+      ],
+      "direct_theorem_dependents": [
+        "Nat.pow_sq_eq_pow"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.pow_sq_aux_eq_pow",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 7,
+      "direct_theorem_dependencies": [
+        "Nat.pow_sq_aux_eq_pow"
+      ],
+      "direct_theorem_dependents": [
+        "Nat.pow_sq_succ",
+        "Nat.pow_sq_zero"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.pow_sq_eq_pow",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 8,
+      "direct_theorem_dependencies": [
+        "Nat.pow_half_split",
+        "Nat.pow_sq_eq_pow"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.pow_sq_succ",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 8,
+      "direct_theorem_dependencies": [
+        "Nat.pow_sq_eq_pow",
+        "Nat.pow_zero"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.pow_sq_zero",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "dependency_depth": 0,
       "direct_theorem_dependencies": [],
       "direct_theorem_dependents": [
@@ -20418,6 +22789,7 @@
         "Nat.add_pow",
         "Nat.mul_sumRange_pow",
         "Nat.pow_add",
+        "Nat.pow_half_split",
         "Nat.size_aux_lt_pow",
         "Nat.sum_testBit_lt",
         "Nat.valuation_at_two_mul_sq"
@@ -20436,9 +22808,37 @@
     },
     {
       "axiom_footprint_size": 0,
+      "dependency_depth": 10,
+      "direct_theorem_dependencies": [
+        "Nat.dvd_mul",
+        "Nat.dvd_refl",
+        "Nat.dvd_two_pow_classify",
+        "Nat.eq_of_beq_eq_true",
+        "Nat.lt_irrefl",
+        "Nat.mul_comm",
+        "Nat.ne_of_beq_eq_false",
+        "Nat.zero_lt_of_ne_zero"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.pow_two_ne_pow_two_mul_prime",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "dependency_depth": 0,
       "direct_theorem_dependencies": [],
       "direct_theorem_dependents": [
+        "Nat.pow_sq_aux_eq_pow",
+        "Nat.pow_sq_zero",
         "Nat.valuation_at_two_mul_sq"
       ],
       "exact_fact_ids": [],
@@ -20565,6 +22965,95 @@
     },
     {
       "axiom_footprint_size": 0,
+      "dependency_depth": 2,
+      "direct_theorem_dependencies": [
+        "Nat.le_succ",
+        "Nat.lt_of_lt_of_le",
+        "Nat.lt_succ_self"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.prodRangeIf_congr_lt",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 0,
+      "direct_theorem_dependencies": [],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.prodRangeIf_succ",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 0,
+      "direct_theorem_dependencies": [],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.prodRangeIf_zero",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 0,
+      "direct_theorem_dependencies": [],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.prodRange_succ",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 0,
+      "direct_theorem_dependencies": [],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.prodRange_zero",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "dependency_depth": 4,
       "direct_theorem_dependencies": [
         "Nat.ble_eq_true_of_le",
@@ -20642,9 +23131,9 @@
         "Nat.lt_or_eq_of_le",
         "Nat.lt_or_ge",
         "Nat.lt_succ_of_le",
-        "Nat.not_lt_zero",
         "Nat.not_succ_le_self",
         "Nat.pred_le_pred",
+        "Nat.succ_pred_of_pos",
         "Nat.zero_le",
         "Or.elim"
       ],
@@ -20680,9 +23169,9 @@
         "Nat.lt_or_eq_of_le",
         "Nat.lt_or_ge",
         "Nat.lt_succ_of_le",
-        "Nat.not_lt_zero",
         "Nat.not_succ_le_self",
         "Nat.pred_le_pred",
+        "Nat.succ_pred_of_pos",
         "Nat.zero_le",
         "Or.elim"
       ],
@@ -20712,6 +23201,7 @@
         "Nat.euclid_lemma",
         "Nat.gauss_lemma",
         "Nat.gcd_bezout",
+        "Nat.mod_eq_cancel",
         "Rat.nat_gauss"
       ],
       "exact_fact_ids": [],
@@ -21041,6 +23531,7 @@
         "Int.wilson_converse",
         "Nat.add_sub_cancel_left",
         "Nat.add_sub_cancel_of_le",
+        "Nat.crt_unique",
         "Nat.dvd_add_right_cancel_of_pos",
         "Nat.inverseIndex_fixed_point",
         "Nat.inverseIndex_fixes_last",
@@ -21340,9 +23831,11 @@
         "Nat.choose_add_convolution",
         "Nat.choose_succ_self_eq_zero",
         "Nat.choose_symm",
+        "Nat.exists_prime_factorization",
         "Nat.le_of_mul_le_mul_left",
         "Nat.prime_dvd_choose",
-        "Nat.succ_mul_choose_eq"
+        "Nat.succ_mul_choose_eq",
+        "Nat.sumDivisors_two_pow_eq_geom_sum"
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Nat.succ_add",
@@ -21371,7 +23864,8 @@
         "Nat.inverseIndex_fixes_last",
         "Nat.inverseIndex_injective",
         "Nat.inverseIndex_interior_fixed_point_free",
-        "Nat.inverseIndex_involutive"
+        "Nat.inverseIndex_involutive",
+        "Nat.sumDivisors_prime"
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Nat.succ_injective",
@@ -21421,9 +23915,13 @@
         "CReal.bounded_on_mul",
         "CReal.natSqrtSpec",
         "Nat.catalan_mul_succ",
+        "Nat.exists_prime_factorization",
         "Nat.mul_comm",
         "Nat.mul_eq_zero",
+        "Nat.no_rational_sqrt_two",
         "Nat.one_mul",
+        "Nat.pow_half_split",
+        "Nat.pow_sq_aux_eq_pow",
         "Nat.size_aux_lt_pow",
         "Nat.succ_mul_choose_eq",
         "Rat.nat_index_symm"
@@ -21486,10 +23984,44 @@
         "Nat.inverseIndex_injective",
         "Nat.inverseIndex_involutive",
         "Nat.mul_eq_zero",
+        "Nat.no_rational_sqrt_two",
         "Rat.mul_eq_zero"
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Nat.succ_ne_zero",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 2,
+      "direct_theorem_dependencies": [
+        "Nat.not_lt_zero"
+      ],
+      "direct_theorem_dependents": [
+        "Nat.add_pow_modeq_prime",
+        "Nat.dvd_two_pow_classify",
+        "Nat.dvd_two_pow_mul_classify",
+        "Nat.even_of_even_sq",
+        "Nat.fib_pos_of_pos",
+        "Nat.injective_on_imp_surjective_on",
+        "Nat.modAdd_isGroup",
+        "Nat.mod_eq_self_of_lt",
+        "Nat.mod_two_mul_split",
+        "Nat.pow_prime_modeq_self",
+        "Nat.restrict_pair_injective",
+        "Nat.restrict_pair_maps_into",
+        "Nat.totient_prime"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.succ_pred_of_pos",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex",
@@ -21570,6 +24102,123 @@
     },
     {
       "axiom_footprint_size": 0,
+      "dependency_depth": 0,
+      "direct_theorem_dependencies": [],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.sumDivisors_one",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 5,
+      "direct_theorem_dependencies": [
+        "Nat.add_comm",
+        "Nat.beq_eq_false_of_ne",
+        "Nat.div_mod_exec",
+        "Nat.div_mod_remainder_eq_zero_iff_dvd",
+        "Nat.dvd_refl",
+        "Nat.eq_of_beq_eq_true",
+        "Nat.le_of_succ_le_succ",
+        "Nat.le_succ",
+        "Nat.le_trans",
+        "Nat.lt_irrefl",
+        "Nat.lt_succ_self",
+        "Nat.ne_of_beq_eq_false",
+        "Nat.one_mul",
+        "Nat.succ_injective",
+        "Nat.sumRange_shiftFront",
+        "Nat.zero_add"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.sumDivisors_prime",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 12,
+      "direct_theorem_dependencies": [
+        "Nat.pow2_geom_sum",
+        "Nat.sumDivisors_two_pow_eq_geom_sum"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.sumDivisors_two_pow",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 11,
+      "direct_theorem_dependencies": [
+        "Nat.add_lt_add_left",
+        "Nat.beq_eq_false_of_ne",
+        "Nat.beq_eq_true_of_eq",
+        "Nat.div_mod_exec",
+        "Nat.div_mod_remainder_eq_zero_iff_dvd",
+        "Nat.dvd_refl",
+        "Nat.dvd_two_pow_classify",
+        "Nat.dvd_two_pow_succ_iff_of_le",
+        "Nat.eq_of_beq_eq_true",
+        "Nat.le_add_right",
+        "Nat.le_dest",
+        "Nat.le_of_dvd",
+        "Nat.le_of_succ_le_succ",
+        "Nat.le_succ",
+        "Nat.lt_irrefl",
+        "Nat.lt_of_lt_of_le",
+        "Nat.lt_or_eq_of_le",
+        "Nat.ne_of_beq_eq_false",
+        "Nat.pow_add",
+        "Nat.pow_lt_pow_succ",
+        "Nat.pow_pos",
+        "Nat.succ_add",
+        "Nat.sumRange_congr_lt",
+        "Nat.sumRange_split",
+        "Nat.sumRange_succ",
+        "Nat.zero_lt_of_ne_zero"
+      ],
+      "direct_theorem_dependents": [
+        "Nat.sumDivisors_two_pow"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.sumDivisors_two_pow_eq_geom_sum",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "dependency_depth": 2,
       "direct_theorem_dependencies": [
         "Nat.add_assoc",
@@ -21625,6 +24274,7 @@
       ],
       "direct_theorem_dependents": [
         "Nat.add_pow",
+        "Nat.sumDivisors_two_pow_eq_geom_sum",
         "Nat.sumRange_diagonal",
         "Nat.sumRange_rect_eq_diag_add_corner",
         "Nat.sum_choose_sq"
@@ -21709,6 +24359,7 @@
         "Nat.add_pow",
         "Nat.add_pow_modeq_prime",
         "Nat.choose_add_convolution",
+        "Nat.sumDivisors_prime",
         "Nat.sum_testBit_lt"
       ],
       "exact_fact_ids": [],
@@ -21731,6 +24382,7 @@
         "Nat.add_zero"
       ],
       "direct_theorem_dependents": [
+        "Nat.sumDivisors_two_pow_eq_geom_sum",
         "Nat.sumRange_rect_eq_diag_add_corner"
       ],
       "exact_fact_ids": [
@@ -21753,6 +24405,7 @@
       "direct_theorem_dependencies": [],
       "direct_theorem_dependents": [
         "Nat.choose_add_convolution",
+        "Nat.sumDivisors_two_pow_eq_geom_sum",
         "Nat.sumRange_diagonal"
       ],
       "exact_fact_ids": [],
@@ -22002,7 +24655,7 @@
         "Nat.le_succ",
         "Nat.le_trans",
         "Nat.lt_irrefl",
-        "Nat.not_lt_zero"
+        "Nat.succ_pred_of_pos"
       ],
       "direct_theorem_dependents": [],
       "exact_fact_ids": [],
@@ -22096,6 +24749,10 @@
         "Nat.zero_le"
       ],
       "direct_theorem_dependents": [
+        "Nat.dvd_two_pow_classify",
+        "Nat.dvd_two_pow_mul_classify",
+        "Nat.even_of_even_sq",
+        "Nat.exists_prime_factorization",
         "Nat.least_divisor_search"
       ],
       "exact_fact_ids": [],
@@ -22162,7 +24819,11 @@
       "direct_theorem_dependents": [
         "CReal.converges_bounded",
         "CReal.eq_zero_of_mul_self_zero",
+        "CReal.mesh_count_width",
         "CReal.ratIndexRatioLeOne",
+        "CReal.riemannSum_const",
+        "CReal.riemannSum_sample_in_bounds",
+        "CReal.subdivisionPoint_in_bounds",
         "Int.ediv_add_emod",
         "Int.ediv_emod_unique",
         "Int.emod_lt_of_pos",
@@ -22174,7 +24835,9 @@
         "Nat.choose_add_convolution",
         "Nat.countRange_eq_pred_of_only_zero_false",
         "Nat.countRange_union_add_inter",
+        "Nat.crt_unique",
         "Nat.dvd_of_mod_eq_zero_of_pos",
+        "Nat.exists_prime_factorization",
         "Nat.fib_add",
         "Nat.gcd_bezout",
         "Nat.le_of_mul_le_mul_left",
@@ -22184,9 +24847,12 @@
         "Nat.mod_eq_zero_of_dvd",
         "Nat.mul_one",
         "Nat.one_mul",
+        "Nat.pow2_geom_sum",
+        "Nat.pow_lt_pow_succ",
         "Nat.prime_dvd_choose",
         "Nat.sub_add_cancel",
         "Nat.succ_mul_choose_eq",
+        "Nat.sumDivisors_prime",
         "Nat.sumRange_diagonal",
         "Nat.sumRange_shiftFront",
         "Rat.inv_natDivSucc",
@@ -22250,6 +24916,7 @@
       "direct_theorem_dependencies": [],
       "direct_theorem_dependents": [
         "CReal.eq_zero_of_mul_self_zero",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.natSqrtSpec",
         "Int.emod_lt_of_pos",
         "Int.emod_nonneg",
@@ -22301,11 +24968,15 @@
         "Nat.mod_eq_self_of_lt",
         "Nat.mod_eq_zero_iff_dvd",
         "Nat.mod_two_mul_split",
+        "Nat.no_rational_sqrt_two",
         "Nat.not_dvd_one_of_two_le",
         "Nat.one_le_factorial",
         "Nat.one_le_left_of_mul",
         "Nat.one_le_right_of_mul",
         "Nat.permInverse_left",
+        "Nat.pow_half_split",
+        "Nat.pow_pos",
+        "Nat.pow_sq_aux_eq_pow",
         "Nat.prime_dvd_choose",
         "Nat.restrict_pair_injective",
         "Nat.restrict_pair_maps_into",
@@ -22351,7 +25022,10 @@
         "Nat.zero_le"
       ],
       "direct_theorem_dependents": [
-        "Nat.size_aux_lt_pow"
+        "Nat.pow_sq_aux_eq_pow",
+        "Nat.pow_two_ne_pow_two_mul_prime",
+        "Nat.size_aux_lt_pow",
+        "Nat.sumDivisors_two_pow_eq_geom_sum"
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Nat.zero_lt_of_ne_zero",
@@ -22435,6 +25109,7 @@
         "Nat.lcm_zero_left",
         "Nat.mod_eq_zero_iff_dvd",
         "Nat.mul_comm",
+        "Nat.no_rational_sqrt_two",
         "Nat.one_le_left_of_mul",
         "Nat.one_mul"
       ],
@@ -22708,6 +25383,8 @@
         "CReal.converges_cauchy",
         "CReal.converges_mul",
         "CReal.eq_zero_of_mul_self_zero",
+        "CReal.inv_nonneg",
+        "CReal.le_of_forall_le_add_small",
         "CReal.le_trans",
         "CReal.limit_dist",
         "CReal.lt_cotrans",
@@ -22715,6 +25392,7 @@
         "CReal.ratSqLe",
         "CReal.rat_approx_lower",
         "CReal.rat_approx_upper",
+        "CReal.sumRange_cauchy_dominated_ordered_normalized",
         "Rat.covariance_sq_le_variance_mul_of_pos",
         "Rat.covariance_sq_le_variance_mul_of_zero_zero",
         "Rat.dotN_cauchy_schwarz",
@@ -22770,6 +25448,7 @@
         "CReal.converges_unique",
         "CReal.eq_zero_of_mul_self_zero",
         "CReal.le_add_of_nonneg",
+        "CReal.le_of_forall_le_add_small",
         "CReal.le_trans",
         "CReal.limit_dist",
         "CReal.lt_cotrans",
@@ -22777,8 +25456,11 @@
         "CReal.ratSqLe",
         "CReal.rat_approx_lower",
         "CReal.rat_approx_upper",
+        "CReal.sumRange_cauchy_dominated_ordered_normalized",
+        "CReal.sumRange_cauchy_of_dominated",
         "Rat.covariance_sq_le_variance_mul_of_pos",
         "Rat.cramer2_solves",
+        "Rat.det2_eq_zero_of_lin_dep",
         "Rat.dotN_cauchy_schwarz",
         "Rat.le_of_le_add_natDivSucc",
         "Rat.le_of_sub_le",
@@ -22857,9 +25539,12 @@
         "CReal.bound_within",
         "CReal.converges_add",
         "CReal.converges_mul",
+        "CReal.converges_of_cauchy",
         "CReal.converges_squeeze",
         "CReal.eq_zero_of_mul_self_zero",
+        "CReal.inv_nonneg",
         "CReal.le_add_of_nonneg",
+        "CReal.le_of_forall_le_add_small",
         "CReal.le_trans",
         "CReal.left_distrib",
         "CReal.limitSeq_regular",
@@ -22873,6 +25558,9 @@
         "CReal.ofRat_le",
         "CReal.rat_approx_lower",
         "CReal.rat_approx_upper",
+        "CReal.regular_of_scaled_cauchy",
+        "CReal.sumRange_cauchy_dominated_ordered_normalized",
+        "CReal.sumRange_tail_within_cauchy",
         "Rat.abs_add",
         "Rat.add_nonneg",
         "Rat.bounds_add",
@@ -22958,6 +25646,7 @@
         "Rat.covariance_sq_le_variance_mul_of_pos",
         "Rat.cramer_two_unique_x",
         "Rat.cramer_two_unique_y",
+        "Rat.det2_eq_zero_of_lin_dep",
         "Rat.det2_mul",
         "Rat.det2_row_add",
         "Rat.inv2_top_right",
@@ -23029,9 +25718,11 @@
         "CReal.converges_bounded",
         "CReal.converges_mul",
         "CReal.eq_zero_of_mul_self_zero",
+        "CReal.inv_nonneg",
         "CReal.le_add_of_nonneg",
         "CReal.le_max_left",
         "CReal.le_max_right",
+        "CReal.le_of_forall_le_add_small",
         "CReal.limitSeq_regular",
         "CReal.limit_dist",
         "CReal.lt_cotrans",
@@ -23042,6 +25733,7 @@
         "CReal.ratSqLe",
         "CReal.rat_approx_lower",
         "CReal.rat_approx_upper",
+        "CReal.sumRange_cauchy_dominated_ordered_normalized",
         "Rat.add_nonneg",
         "Rat.covariance_sq_le_variance_mul_of_pos",
         "Rat.covariance_sq_le_variance_mul_of_zero_zero",
@@ -23049,6 +25741,7 @@
         "Rat.det2_id",
         "Rat.det2_mul",
         "Rat.det2_row_add",
+        "Rat.det3_id",
         "Rat.dotN_cauchy_schwarz",
         "Rat.le_of_le_add_natDivSucc",
         "Rat.le_of_sub_le",
@@ -23211,10 +25904,12 @@
         "CReal.converges_mul",
         "CReal.converges_unique",
         "CReal.eq_zero_of_mul_self_zero",
+        "CReal.geom_pair_within",
         "CReal.left_distrib",
         "CReal.limit_dist",
         "CReal.mul_assoc",
         "CReal.mul_congr",
+        "CReal.sumRange_cauchy_dominated_ordered",
         "CReal.sumRange_tail_cauchy_within"
       ],
       "exact_fact_ids": [
@@ -23278,7 +25973,10 @@
         "CReal.converges_cauchy",
         "CReal.converges_neg",
         "CReal.converges_unique",
-        "CReal.neg_congr"
+        "CReal.geom_pair_within",
+        "CReal.neg_congr",
+        "CReal.sumRange_cauchy_dominated_ordered",
+        "CReal.sumRange_cauchy_of_dominated"
       ],
       "exact_fact_ids": [
         "F:rat-bounds-neg"
@@ -23745,6 +26443,30 @@
     },
     {
       "axiom_footprint_size": 0,
+      "dependency_depth": 16,
+      "direct_theorem_dependencies": [
+        "Rat.add_comm",
+        "Rat.add_neg",
+        "Rat.mul_assoc",
+        "Rat.mul_comm",
+        "Rat.mul_left_cancel_of_ne_zero",
+        "Rat.neg_eq_of_add_eq_zero",
+        "Rat.neg_mul",
+        "Rat.neg_neg"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Rat.det2_eq_zero_of_lin_dep",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "dependency_depth": 12,
       "direct_theorem_dependencies": [
         "Int.fib_cassini",
@@ -23872,6 +26594,138 @@
         "F:rat-det2-swap-rows"
       ],
       "kernel_declaration_id": "Rat.det2_swap_rows",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 0,
+      "direct_theorem_dependencies": [],
+      "direct_theorem_dependents": [
+        "Rat.det3_ofInt"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Rat.det3_cofactor_row1",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 13,
+      "direct_theorem_dependencies": [
+        "Rat.det3_ofInt"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Rat.det3_example_diagonal",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 13,
+      "direct_theorem_dependencies": [
+        "Rat.det3_ofInt"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Rat.det3_example_generic",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 13,
+      "direct_theorem_dependencies": [
+        "Rat.det3_ofInt"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Rat.det3_example_singular",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 15,
+      "direct_theorem_dependencies": [
+        "Rat.add_zero",
+        "Rat.mul_comm",
+        "Rat.mul_one",
+        "Rat.mul_zero",
+        "Rat.neg_zero"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Rat.det3_id",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 12,
+      "direct_theorem_dependencies": [
+        "Rat.det3_cofactor_row1",
+        "Rat.ofInt_add",
+        "Rat.ofInt_mul",
+        "Rat.ofInt_neg"
+      ],
+      "direct_theorem_dependents": [
+        "Rat.det3_example_diagonal",
+        "Rat.det3_example_generic",
+        "Rat.det3_example_singular"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Rat.det3_ofInt",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 15,
+      "direct_theorem_dependencies": [
+        "Rat.left_distrib",
+        "Rat.mul_assoc",
+        "Rat.mul_neg"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Rat.det3_scale_row",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex",
@@ -24940,6 +27794,7 @@
         "Rat.zero_lt_one"
       ],
       "direct_theorem_dependents": [
+        "CReal.inv_nonneg",
         "CReal.mul_inv_cancel",
         "Rat.inv_le_of_pos_le",
         "Rat.mul_pos",
@@ -25155,6 +28010,7 @@
       "direct_theorem_dependents": [
         "CReal.Equiv.of_bounded",
         "CReal.Equiv.trans",
+        "CReal.le_of_forall_le_add_small",
         "CReal.le_trans",
         "CReal.lt_irrefl"
       ],
@@ -25179,6 +28035,7 @@
       "direct_theorem_dependents": [
         "CPoint.Scalar.threePosBound",
         "CPoint.Scalar.twoPosBound",
+        "CReal.inv_nonneg",
         "CReal.le_of_lt",
         "CReal.lt_cotrans",
         "CReal.mul_inv_cancel",
@@ -25222,6 +28079,8 @@
         "Rat.neg_add_cancel"
       ],
       "direct_theorem_dependents": [
+        "CReal.geom_tail_within",
+        "CReal.le_of_forall_le_add_small",
         "CReal.lt_cotrans",
         "CReal.rat_approx_lower",
         "CReal.rat_approx_upper",
@@ -25283,7 +28142,9 @@
         "CReal.converges_add",
         "CReal.converges_mul",
         "CReal.eq_zero_of_mul_self_zero",
+        "CReal.inv_nonneg",
         "CReal.le_add_of_nonneg",
+        "CReal.le_of_forall_le_add_small",
         "CReal.limitSeq_regular",
         "CReal.limit_dist",
         "CReal.lt_cotrans",
@@ -25294,6 +28155,8 @@
         "CReal.ratSqLe",
         "CReal.rat_approx_lower",
         "CReal.rat_approx_upper",
+        "CReal.sumRange_cauchy_dominated_ordered_normalized",
+        "CReal.sumRange_tail_within_cauchy",
         "Rat.abs_mul",
         "Rat.abs_zero",
         "Rat.ble_refl",
@@ -25371,11 +28234,14 @@
         "CReal.converges_add",
         "CReal.converges_bounded",
         "CReal.converges_mul",
+        "CReal.converges_of_cauchy",
         "CReal.converges_squeeze",
         "CReal.eq_zero_of_mul_self_zero",
+        "CReal.inv_nonneg",
         "CReal.le_add_of_nonneg",
         "CReal.le_max_left",
         "CReal.le_max_right",
+        "CReal.le_of_forall_le_add_small",
         "CReal.left_distrib",
         "CReal.limitSeq_regular",
         "CReal.limit_dist",
@@ -25391,7 +28257,10 @@
         "CReal.ofRat_le",
         "CReal.rat_approx_lower",
         "CReal.rat_approx_upper",
+        "CReal.regular_of_scaled_cauchy",
         "CReal.sq_nonneg",
+        "CReal.sumRange_cauchy_dominated_ordered_normalized",
+        "CReal.sumRange_tail_within_cauchy",
         "Rat.abs_mul",
         "Rat.bernoulli_law_of_large_numbers",
         "Rat.ble_trans",
@@ -25444,6 +28313,7 @@
         "Rat.cramer_two_unique_y",
         "Rat.det2_mul",
         "Rat.det2_scale_row",
+        "Rat.det3_scale_row",
         "Rat.dotN_cauchy_schwarz",
         "Rat.inv2_bottom_left",
         "Rat.inv2_bottom_right",
@@ -25543,6 +28413,7 @@
         "Rat.int_mul_lt_mul_right"
       ],
       "direct_theorem_dependents": [
+        "CReal.inv_nonneg",
         "CReal.lt_irrefl",
         "CReal.mul_inv_cancel",
         "CReal.ratSqLe",
@@ -25909,9 +28780,11 @@
         "Rat.cramer2_solves",
         "Rat.cramer_two_unique_x",
         "Rat.cramer_two_unique_y",
+        "Rat.det2_eq_zero_of_lin_dep",
         "Rat.det2_mul",
         "Rat.det2_row_add",
         "Rat.det2_scale_row",
+        "Rat.det3_scale_row",
         "Rat.dotN_cauchy_schwarz",
         "Rat.dotN_smul_left",
         "Rat.expectation_smul",
@@ -25972,9 +28845,11 @@
         "Rat.cramer2_solves",
         "Rat.cramer_two_unique_x",
         "Rat.cramer_two_unique_y",
+        "Rat.det2_eq_zero_of_lin_dep",
         "Rat.det2_mul",
         "Rat.det2_row_add",
         "Rat.det2_swap_rows",
+        "Rat.det3_id",
         "Rat.dotN_cauchy_schwarz",
         "Rat.dotN_comm",
         "Rat.expectation_sumVars",
@@ -26279,7 +29154,9 @@
         "Rat.mul_inv_cancel_of_ne_zero",
         "Rat.mul_one"
       ],
-      "direct_theorem_dependents": [],
+      "direct_theorem_dependents": [
+        "Rat.det2_eq_zero_of_lin_dep"
+      ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Rat.mul_left_cancel_of_ne_zero",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
@@ -26310,6 +29187,7 @@
         "Rat.cramer2_solves",
         "Rat.det2_mul",
         "Rat.det2_scale_row",
+        "Rat.det3_scale_row",
         "Rat.dotN_cauchy_schwarz",
         "Rat.inv2_bottom_right",
         "Rat.inv2_top_left",
@@ -26386,6 +29264,7 @@
         "Rat.cramer_two_unique_x",
         "Rat.cramer_two_unique_y",
         "Rat.det2_id",
+        "Rat.det3_id",
         "Rat.dotN_cauchy_schwarz",
         "Rat.expectation_const",
         "Rat.expectation_sumVars",
@@ -26522,6 +29401,7 @@
         "Rat.covariance_sumVars_left",
         "Rat.det2_id",
         "Rat.det2_mul",
+        "Rat.det3_id",
         "Rat.dotN_cauchy_schwarz",
         "Rat.expectation_sumVars",
         "Rat.indicator_le",
@@ -26574,6 +29454,7 @@
         "CReal.converges_bounded",
         "CReal.converges_cauchy",
         "CReal.converges_mul",
+        "CReal.converges_of_cauchy",
         "CReal.converges_squeeze",
         "CReal.converges_unique",
         "CReal.eq_zero_of_mul_self_zero",
@@ -26581,20 +29462,27 @@
         "CReal.hasDerivative_chain",
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_pow",
+        "CReal.inv_nonneg",
         "CReal.le_add_of_nonneg",
+        "CReal.le_of_forall_le_add_small",
         "CReal.le_trans",
         "CReal.left_distrib",
         "CReal.limitSeq_regular",
         "CReal.limit_dist",
         "CReal.lt_cotrans",
         "CReal.lt_irrefl",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_assoc",
         "CReal.mul_congr",
         "CReal.mul_inv_cancel",
         "CReal.mul_one",
         "CReal.rat_approx_lower",
         "CReal.rat_approx_upper",
+        "CReal.riemannSum_const",
+        "CReal.sumRange_cauchy_dominated_ordered_normalized",
+        "CReal.sumRange_const",
         "CReal.uniformly_continuous_add",
+        "CReal.uniformly_continuous_mul",
         "Complex.ofNat_eq_cast",
         "Rat.bernoulli_law_of_large_numbers",
         "Rat.covariance_sumVars_left",
@@ -26634,7 +29522,8 @@
         "CReal.hasDerivative_add",
         "CReal.hasDerivative_chain",
         "CReal.hasDerivative_mul",
-        "CReal.uniformly_continuous_add"
+        "CReal.uniformly_continuous_add",
+        "CReal.uniformly_continuous_mul"
       ],
       "exact_fact_ids": [
         "F:natdivsucc-antitone-over-constructed-rationals"
@@ -26667,13 +29556,17 @@
         "CReal.converges_add",
         "CReal.hasDerivative_add",
         "CReal.hasDerivative_chain",
+        "CReal.inv_nonneg",
         "CReal.le_add_of_nonneg",
+        "CReal.le_of_forall_le_add_small",
         "CReal.limitSeq_regular",
         "CReal.limit_dist",
         "CReal.lt_cotrans",
         "CReal.lt_irrefl",
         "CReal.mul_inv_cancel",
-        "CReal.uniformly_continuous_add"
+        "CReal.sumRange_cauchy_dominated_ordered_normalized",
+        "CReal.uniformly_continuous_add",
+        "CReal.uniformly_continuous_mul"
       ],
       "exact_fact_ids": [
         "F:rat-natdivsucc-halve"
@@ -26698,11 +29591,15 @@
         "Rat.zero_le_natDivSucc"
       ],
       "direct_theorem_dependents": [
+        "CReal.converges_of_cauchy",
         "CReal.converges_squeeze",
         "CReal.eq_zero_of_mul_self_zero",
         "CReal.lt_cotrans",
         "CReal.mul_nonneg",
+        "CReal.ofNat_le",
         "CReal.ratIndexRatioLeOne",
+        "CReal.regular_of_scaled_cauchy",
+        "CReal.sumRange_cauchy_dominated_ordered_normalized",
         "Rat.natDivSucc_le_one",
         "Rat.natDivSucc_le_scaled"
       ],
@@ -26758,6 +29655,7 @@
         "CReal.converges_bounded",
         "CReal.converges_mul",
         "CReal.eq_zero_of_mul_self_zero",
+        "CReal.inv_nonneg",
         "CReal.left_distrib",
         "CReal.mul_assoc",
         "CReal.mul_congr",
@@ -26830,10 +29728,16 @@
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_smul",
         "CReal.left_distrib",
+        "CReal.mesh_count_width",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_assoc",
         "CReal.mul_congr",
         "CReal.mul_inv_cancel",
         "CReal.mul_nonneg",
+        "CReal.riemannSum_const",
+        "CReal.riemannSum_sample_in_bounds",
+        "CReal.subdivisionPoint_in_bounds",
+        "CReal.uniformly_continuous_mul",
         "Rat.inv_natDivSucc",
         "Rat.natDivSucc_le_scaled"
       ],
@@ -26865,6 +29769,7 @@
       ],
       "direct_theorem_dependents": [
         "CReal.eq_zero_of_mul_self_zero",
+        "CReal.inv_nonneg",
         "CReal.lt_cotrans",
         "CReal.mul_inv_cancel",
         "CReal.pos_of_pos_bound",
@@ -26898,10 +29803,16 @@
         "CReal.hasDerivative_chain",
         "CReal.hasDerivative_mul",
         "CReal.hasDerivative_smul",
+        "CReal.mesh_count_width",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_nonneg",
         "CReal.ratIndexRatioLeOne",
         "CReal.regular_of_kregular",
+        "CReal.riemannSum_const",
+        "CReal.riemannSum_sample_in_bounds",
         "CReal.speedup_close",
+        "CReal.subdivisionPoint_in_bounds",
+        "CReal.uniformly_continuous_mul",
         "Rat.inv_natDivSucc",
         "Rat.natDivSucc_le_one",
         "Rat.natDivSucc_le_scaled"
@@ -27018,6 +29929,7 @@
       ],
       "direct_theorem_dependents": [
         "CReal.eq_zero_of_mul_self_zero",
+        "CReal.inv_nonneg",
         "CReal.left_distrib",
         "CReal.mul_assoc",
         "CReal.mul_inv_cancel"
@@ -27043,6 +29955,7 @@
         "Nat.succ_mul"
       ],
       "direct_theorem_dependents": [
+        "CReal.inv_nonneg",
         "CReal.mul_inv_cancel"
       ],
       "exact_fact_ids": [
@@ -27119,6 +30032,7 @@
         "Rat.add_neg"
       ],
       "direct_theorem_dependents": [
+        "CReal.inv_nonneg",
         "CReal.lt_cotrans",
         "CReal.mul_inv_cancel",
         "Rat.covariance_sq_le_variance_mul_of_pos",
@@ -27155,6 +30069,7 @@
         "Rat.zero_add"
       ],
       "direct_theorem_dependents": [
+        "Rat.det2_eq_zero_of_lin_dep",
         "Rat.mul_neg",
         "Rat.neg_add",
         "Rat.neg_neg",
@@ -27212,9 +30127,11 @@
         "CReal.converges_add",
         "CReal.converges_bounded",
         "CReal.converges_mul",
+        "CReal.converges_of_cauchy",
         "CReal.converges_squeeze",
         "CReal.eq_zero_of_mul_self_zero",
         "CReal.equiv_of_le_le",
+        "CReal.geom_tail_within",
         "CReal.left_distrib",
         "CReal.limitSeq_regular",
         "CReal.limit_dist",
@@ -27226,7 +30143,10 @@
         "CReal.mul_nonneg",
         "CReal.mul_one",
         "CReal.ratSqSandwich",
+        "CReal.regular_of_scaled_cauchy",
+        "CReal.sumRange_cauchy_dominated_ordered_normalized",
         "CReal.sumRange_tail_within",
+        "CReal.sumRange_tail_within_cauchy",
         "Rat.abs_le_of_le_of_neg_le",
         "Rat.abs_mul",
         "Rat.bounds_mul",
@@ -27284,6 +30204,7 @@
         "Rat.bounds_mul",
         "Rat.covariance_sq_le_variance_mul_of_pos",
         "Rat.covariance_sq_le_variance_mul_of_zero_zero",
+        "Rat.det2_eq_zero_of_lin_dep",
         "Rat.dotN_cauchy_schwarz",
         "Rat.inv2_bottom_left",
         "Rat.inv2_bottom_right",
@@ -27344,6 +30265,7 @@
       "direct_theorem_dependents": [
         "CReal.Equiv.of_bounded",
         "CReal.Equiv.trans",
+        "CReal.geom_tail_within",
         "CReal.max_congr",
         "CReal.min_congr",
         "CReal.mul_nonneg",
@@ -27358,6 +30280,7 @@
         "Rat.bounds_num",
         "Rat.covariance_sq_le_variance_mul_of_pos",
         "Rat.covariance_sq_le_variance_mul_of_zero_zero",
+        "Rat.det2_eq_zero_of_lin_dep",
         "Rat.dotN_cauchy_schwarz",
         "Rat.neg_le_of_abs_le",
         "Rat.neg_mul_le_of_bounds",
@@ -27389,6 +30312,7 @@
         "CReal.Equiv.of_pointwise",
         "CReal.Equiv.refl",
         "CReal.converges_of_const",
+        "CReal.inv_nonneg",
         "CReal.le_add_of_nonneg",
         "CReal.mul_inv_cancel",
         "CReal.sq_nonneg",
@@ -27422,9 +30346,12 @@
         "CReal.converges_squeeze",
         "CReal.converges_unique",
         "CReal.equiv_of_le_le",
+        "CReal.geom_pair_within",
         "CReal.max_congr",
         "CReal.min_congr",
         "CReal.neg_congr",
+        "CReal.sumRange_cauchy_dominated_ordered",
+        "CReal.sumRange_cauchy_of_dominated",
         "Rat.abs_sub_comm",
         "Rat.det2_swap_rows"
       ],
@@ -27448,6 +30375,7 @@
         "Rat.neg_eq_of_add_eq_zero"
       ],
       "direct_theorem_dependents": [
+        "CReal.bounded_on_id_unit",
         "CReal.eq_zero_of_mul_self_zero",
         "CReal.lt_irrefl",
         "CReal.uniformly_continuous_const",
@@ -27456,6 +30384,7 @@
         "Rat.bounds_mul",
         "Rat.covariance_sq_le_variance_mul_of_zero_zero",
         "Rat.det2_id",
+        "Rat.det3_id",
         "Rat.neg_mul_le_of_bounds",
         "Rat.neg_nonpos_of_nonneg",
         "Rat.zero_le_max_neg"
@@ -27654,7 +30583,8 @@
         "Rat.eq_of_cross"
       ],
       "direct_theorem_dependents": [
-        "Rat.det2_fib"
+        "Rat.det2_fib",
+        "Rat.det3_ofInt"
       ],
       "exact_fact_ids": [
         "F:rat-ofint-add"
@@ -27676,7 +30606,8 @@
         "Rat.mul_cross"
       ],
       "direct_theorem_dependents": [
-        "Rat.det2_fib"
+        "Rat.det2_fib",
+        "Rat.det3_ofInt"
       ],
       "exact_fact_ids": [
         "F:rat-ofint-mul"
@@ -27695,7 +30626,8 @@
       "dependency_depth": 0,
       "direct_theorem_dependencies": [],
       "direct_theorem_dependents": [
-        "Rat.det2_fib"
+        "Rat.det2_fib",
+        "Rat.det3_ofInt"
       ],
       "exact_fact_ids": [
         "F:rat-ofint-neg"
@@ -28009,6 +30941,7 @@
         "Rat.normalize_cross"
       ],
       "direct_theorem_dependents": [
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.ratUnitEqOne",
         "Rat.add_assoc",
         "Rat.bernoulli_law_of_large_numbers",
@@ -28119,11 +31052,14 @@
         "CReal.converges_mul",
         "CReal.converges_squeeze",
         "CReal.converges_unique",
+        "CReal.geom_pair_within",
+        "CReal.le_of_forall_le_add_small",
         "CReal.le_trans",
         "CReal.limit_dist",
         "CReal.lt_cotrans",
         "CReal.lt_irrefl",
         "CReal.mul_congr",
+        "CReal.sumRange_cauchy_dominated_ordered",
         "CReal.sumRange_tail_cauchy_within",
         "Rat.cramer2_solves"
       ],
@@ -28155,6 +31091,7 @@
         "CReal.archimedean",
         "CReal.le_max_left",
         "CReal.le_max_right",
+        "CReal.le_of_forall_le_add_small",
         "CReal.lt_cotrans",
         "CReal.min_le_left",
         "CReal.min_le_right",
@@ -28929,6 +31866,7 @@
         "Rat.add_zero"
       ],
       "direct_theorem_dependents": [
+        "CReal.inv_nonneg",
         "CReal.le_add_of_nonneg",
         "CReal.lt_irrefl",
         "CReal.mul_inv_cancel",
@@ -29009,17 +31947,21 @@
         "CReal.add_assoc",
         "CReal.add_zero",
         "CReal.archimedean",
+        "CReal.bounded_on_id_unit",
         "CReal.converges_add",
         "CReal.converges_mul",
         "CReal.converges_of_const",
         "CReal.eq_zero_of_mul_self_zero",
         "CReal.hasDerivative_chain",
+        "CReal.hasDerivative_closeOfEquiv",
         "CReal.hasDerivative_const",
         "CReal.hasDerivative_id",
         "CReal.hasDerivative_sq",
+        "CReal.inv_nonneg",
         "CReal.le_add_of_nonneg",
         "CReal.le_max_left",
         "CReal.le_max_right",
+        "CReal.le_of_forall_le_add_small",
         "CReal.le_refl",
         "CReal.left_distrib",
         "CReal.limitSeq_regular",
@@ -29027,6 +31969,7 @@
         "CReal.lt_irrefl",
         "CReal.min_le_left",
         "CReal.min_le_right",
+        "CReal.monotone_of_nonneg_deriv",
         "CReal.mul_assoc",
         "CReal.mul_congr",
         "CReal.mul_inv_cancel",
@@ -29035,8 +31978,13 @@
         "CReal.rat_approx_lower",
         "CReal.rat_approx_upper",
         "CReal.riemannSum_le",
+        "CReal.riemannSum_le_on",
+        "CReal.riemannSum_sample_in_bounds",
         "CReal.sq_nonneg",
+        "CReal.subdivisionPoint_in_bounds",
+        "CReal.sumRange_cauchy_dominated_ordered_normalized",
         "CReal.uniformly_continuous_const",
+        "CReal.uniformly_continuous_mul",
         "CReal.zero_lt_one",
         "Rat.bernoulli_law_of_large_numbers",
         "Rat.natDivSucc_le_add_left"

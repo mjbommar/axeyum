@@ -22,12 +22,11 @@ semantics, evidence, provenance, checking, and compounding knowledge loop.
 - The pure-Rust reasoning stack has real end-to-end SMT, CAS, kernel, program
   verification, and proof-artifact routes, but its coverage and assurance are
   uneven by fragment.
-- The production inventory reports 1,175 distinct theorems with empty measured
-  axiom footprints. The independently generated declaration projection currently
-  exposes 1,100 theorem declarations; that 75-item scope disagreement must be
-  reconciled before claiming complete producer visibility. The production-
-  provenance ledger credits only 8 established facts to reusable multi-target
-  operations; most theorems remain human-built.
+- A live high-stack production inventory reports 1,184 distinct theorems with
+  empty measured axiom footprints. The committed declaration projection was
+  stale at 1,100; regenerating it from current code now agrees exactly at 1,184.
+  The production-provenance ledger credits only 8 established facts to reusable
+  multi-target operations; most theorems remain human-built.
 - Sixteen live agent episodes exist. Two produced axiom-free proofs re-derived
   in a second kernel, but the current producer vocabulary closes only a tiny
   frontier.

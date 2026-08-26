@@ -23,10 +23,11 @@ say that a theorem applies to a goal, that a fact is semantically equivalent to
 the theorem, or that a proposed proof is valid. Producers may retrieve and rank
 candidates from it; kernel type checking remains the admission decision.
 
-The census is also deliberately scoped to the declaration projection. At the
-2026-08-25 baseline it contains 1,100 theorem declarations while the production
-inventory reports 1,175 distinct theorems. Until that difference is explained
-or eliminated, the index is not evidence of complete producer visibility.
+The census is deliberately scoped to the declaration projection. During this
+work a live production inventory found 1,184 theorems while the committed
+projection still held 1,100. Regenerating both artifacts brought them into exact
+agreement at 1,184. Their separate derivations remain valuable: freshness must
+continue to fail if theorem construction advances only one population.
 
 ## Reproduce and gate
 
@@ -46,7 +47,7 @@ order:
 
 1. resolve exact-but-dangling kernel evidence identities or document why they
    target a different admitted population;
-2. reconcile the projection and production-inventory theorem populations;
+2. preserve exact agreement between the projection and production inventory;
 3. use `axeyum.knowledge.lemmas` for deterministic lookup by declaration, fact,
    direct prerequisite, and reverse consumer;
 4. attach typed theorem signatures and normalized head symbols derived from the

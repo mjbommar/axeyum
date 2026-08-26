@@ -8,6 +8,10 @@ top-three-focus, 2026-08-25). The durable plan is
 The first increment separates production episodes from fixtures and derives a
 kernel-authoritative lemma/dependency/fact search index. Next: expose typed,
 deterministic retrieval to the general producer and measure whether it closes
-new sibling facts without per-target proof code.
+new sibling facts without per-target proof code. A live high-stack inventory
+also found 1,184 axiom-free theorems and exposed the committed dependency
+projection as stale at 1,100; both derived populations now agree at 1,184.
 
 <!-- plan-section: landed-changes -->
+
+| 2026-08-25 | `efbe6cc82` | Top-three focus plan, production-only episode gate, kernel lemma search index, and typed deterministic query API. |

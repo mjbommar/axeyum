@@ -126,6 +126,7 @@ now. Nothing was deleted.
 | 2026-08-25 | `4a21cbde7` | Correction to a correction: `Int.prodRange_permute` is full-range (`MapsInto σ n`), so the predicate-scoped primitive genuinely does not exist over any carrier. Production regen 1125 → 1141. |
 | 2026-08-25 | `af8340e16` | Held-out contamination and the seven-lane fold finding, recorded. |
 | 2026-08-25 | `8aa57e4e8` | The `CReal.sqrt` route: `KRegular` at `c = 3` **uniformly in `x`**, so `sqrt` is total and needs no `PosBound` — which a constructive setting could not have supplied, since `0 ≤ x` is undecidable. |
+| 2026-08-25 | `efbe6cc82` | Top-three focus plan, production-only episode gate, kernel lemma search index, and typed deterministic query API. |
 | 2026-08-25 | `be0c67f67` | mobility summary names the dominant unevaluable reason (`unevaluable_no_export`, `unevaluable_top`), so `unevaluable=186` reads as a reachability block not a tactic gap; regenerates the committed census (191->189) that had drifted stale |
 | 2026-08-25 | `e27140275` | `--reachable-first`: stably reorder `--next` selection so facts with a frozen export come first (the first 5 eligible had 0); deterministic, population unchanged |
 | 2026-08-25 | `b2813872f` | `--skip-unreachable`: preflight the frozen export before spending a model; skips retrieval-miss-only facts at zero cost (~26k tokens/fact saved), opt-in so replays are unchanged; 3 controls |
@@ -1097,7 +1098,9 @@ top-three-focus, 2026-08-25). The durable plan is
 The first increment separates production episodes from fixtures and derives a
 kernel-authoritative lemma/dependency/fact search index. Next: expose typed,
 deterministic retrieval to the general producer and measure whether it closes
-new sibling facts without per-target proof code.
+new sibling facts without per-target proof code. A live high-stack inventory
+also found 1,184 axiom-free theorems and exposed the committed dependency
+projection as stale at 1,100; both derived populations now agree at 1,184.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
