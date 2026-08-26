@@ -72,7 +72,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 277] = [
+    let expected: [(&str, crate::NameId, &str); 278] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -191,6 +191,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ("CReal.le_abs_self", p.le_abs_self, "theorem"),
         ("CReal.neg_le_abs", p.neg_le_abs, "theorem"),
         ("CReal.abs_le", p.abs_le, "theorem"),
+        ("CReal.abs_add_le", p.abs_add_le, "theorem"),
         ("CReal.abs_nonneg", p.abs_nonneg, "theorem"),
         (
             "CReal.not_le_zero_neg_one",
@@ -6709,6 +6710,88 @@ fn pow_half_le_nat_div_succ_at_three_bounds_one_eighth_by_one_quarter() {
                 "CReal.pow_half_le_natDivSucc 3 did NOT check against \
                  le (pow (ofRat (natDivSucc 1 1)) 3) (ofRat (natDivSucc 1 3)) \
                  (not merely SOME le statement): {error:?}"
+            )
+        });
+}
+
+/// The mandatory non-tight concrete instantiation for the newly-public
+/// `CReal.abs_add_le`: `a := one`, `b := neg one`. `abs (1 + (-1)) = abs 0 =
+/// 0`, `abs 1 + abs(-1) = 1 + 1 = 2`, so the bound has slack (`0 ≤ 2`), not
+/// zero on both sides -- this is deliberately NOT `a = b = 0`, which would
+/// hide a factor error (the module doc for `abs_add_le_at_one_and_one_is_tight`
+/// below is the tight companion). The expected conclusion is reconstructed
+/// independently of `CReal.abs_add_le`'s own proof term, so a swapped
+/// `add`/`abs` argument or a wrong-orientation `le` would fail this even if
+/// the general theorem's own type happened to still check.
+#[test]
+fn abs_add_le_at_one_and_neg_one_has_slack() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let one = d.kernel().const_(p.one, vec![]);
+    let neg_one = d.const_app(p.neg, &[one]);
+
+    let value = d.lemma(p.abs_add_le, &[one, neg_one]);
+
+    // Independently reconstruct: le (abs (add one neg_one)) (add (abs one) (abs neg_one)).
+    let sum = d.const_app(p.add, &[one, neg_one]);
+    let abs_sum = d.const_app(p.abs, &[sum]);
+    let abs_one = d.const_app(p.abs, &[one]);
+    let abs_neg_one = d.const_app(p.abs, &[neg_one]);
+    let bound = d.const_app(p.add, &[abs_one, abs_neg_one]);
+    let ty = d.const_app(p.le, &[abs_sum, bound]);
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(anon, "__abs_add_le_at_one_neg_one");
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.abs_add_le at (1, -1) did NOT check against \
+                 le (abs (add 1 (neg 1))) (add (abs 1) (abs (neg 1))) \
+                 -- i.e. le (abs 0) 2: {error:?}"
+            )
+        });
+}
+
+/// The mandatory TIGHT concrete instantiation for `CReal.abs_add_le`: `a :=
+/// one`, `b := one`. `abs (1 + 1) = 2`, `abs 1 + abs 1 = 2`, so the bound is
+/// met with equality (`2 ≤ 2`) -- a bound that is never exercised at
+/// equality can hide a factor error the slack case above would not catch.
+#[test]
+fn abs_add_le_at_one_and_one_is_tight() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let one = d.kernel().const_(p.one, vec![]);
+
+    let value = d.lemma(p.abs_add_le, &[one, one]);
+
+    // Independently reconstruct: le (abs (add one one)) (add (abs one) (abs one)).
+    let sum = d.const_app(p.add, &[one, one]);
+    let abs_sum = d.const_app(p.abs, &[sum]);
+    let abs_one = d.const_app(p.abs, &[one]);
+    let bound = d.const_app(p.add, &[abs_one, abs_one]);
+    let ty = d.const_app(p.le, &[abs_sum, bound]);
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(anon, "__abs_add_le_at_one_one_tight");
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.abs_add_le at (1, 1) did NOT check against \
+                 le (abs (add 1 1)) (add (abs 1) (abs 1)) -- i.e. le (abs 2) 2: {error:?}"
             )
         });
 }
