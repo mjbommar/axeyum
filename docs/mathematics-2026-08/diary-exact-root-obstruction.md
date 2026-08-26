@@ -156,3 +156,89 @@ six-part invariant. It needs a "remembering" `Bool.rec` at every step, convertin
 the computed `Bool` back into a `Prop` fact via `ble_eq_true_of_le` /
 `le_of_ble_eq_true` — comparable in size to `ivt_step` itself. And after that,
 the diagonal version with shrinking slack.
+
+**Landed** (a later lane): `CReal.ivt_bisect_invariant` proves exactly this,
+by ordinary `Prop`-induction on `k` (no `Exists.rec`), for the FIXED slack
+`eps_n := ofRat (natDivSucc 1 n)` `ivt_bisect` already carries as its explicit
+parameter `n`. See `CRealPrelude::ivt_bisect_invariant`'s doc comment.
+
+---
+
+## The diagonal construction — landed as data, and it does not give an exact root
+
+Two independent, kernel-verified counterexamples, both on `F := id` on
+`[−1, 2]` (the same instance every reduction test in this file uses).
+
+**Design, worked on paper first, per this task's own requirement.**
+`ivt_bisect`'s `step` closure already receives the recursion depth `j` as an
+argument and discards it, closing over a fixed external `n` instead. The
+"diagonal" move is to use `j` itself in place of that captured `n`:
+`(sample_idx, thresh) := bisect_sample_index(j)`, recomputed at every step
+from the step's own depth — `succ (2·j)` and `natDivSucc 1 (succ (2·j))`. No
+second `Nat` parameter, one `Nat.rec`: `CReal.ivt_bisect_diag`. Concrete
+numbers for `F := id` on `[−1, 2]`: step `j=0` uses `thresh_0 = 1/2` (`eps_0 =
+1`); step `j=1` uses `thresh_1 = 1/4` (`eps_1 = 1/2`). Bracket: `k=0: (−1, 2)`
+width `3`; `k=1: (1/2, 2)` width `3/2` (`F(1/2) = 1/2 ≤ 1/2`, lo moves); `k=2:
+(1/2, 5/4)` width `3/4` (`F(5/4) = 5/4 > 1/4`, hi moves) — both the width and
+the per-step slack shrink, verified in the kernel by
+`ivt_bisect_diag_reduces_on_the_identity_bracket_neg_one_two`.
+
+**Does the invariant close? No — verified by extending the same trace, exact
+rational arithmetic, no informal step:**
+
+```
+j   thresh_j   F(m)      branch    lo        hi
+0   1/2        1/2       lo moves  1/2       2
+1   1/4        5/4       hi moves  1/2       5/4
+2   1/6        7/8       hi moves  1/2       7/8
+3   1/8        11/16     hi moves  1/2       11/16
+4   1/10       19/32     hi moves  1/2       19/32
+...                                1/2   -> 1/2  (from above)
+```
+
+`lo` is accepted **once**, at step `j=0`, against the COARSEST slack in the
+entire run (`eps_0 = 1`, the largest value `eps_j` ever takes), and is never
+tested again: only the endpoint that MOVES at a step gets re-examined against
+that step's tighter threshold, so a stationary endpoint's bound is frozen at
+whatever justified its last move, however early. Here `hi` moves at every
+subsequent step (the sample is always `> thresh_j`) and its width shrinks
+geometrically, forcing `hi_k → 1/2`. Since `lo_k = 1/2` for all `k ≥ 1`, the
+bracket converges to `L = 1/2` — but the true root is `0`, and `F(1/2) = 1/2`
+is not `0` and does not shrink toward it: this is a **fixed real number**,
+constant for all `k` past the first step, not an artifact of finite
+precision. No joint width/slack invariant closes here because the claim
+itself is false for this instance.
+
+**The other natural reading of "diagonal" fails independently, for the
+opposite reason — non-nesting, not a frozen bound.** Interpret "diagonal" as
+re-running `ivt_bisect`'s own two-parameter interface fresh from `(P0, Q0)`
+for `k` steps at slack `n := k` (i.e. `ivt_bisect F P Q k k`, both arguments
+set equal), rather than folding the schedule into one recursion. Since all
+`k` steps of a given run share `n`'s single threshold, changing `k` changes
+EVERY step's threshold at once, which can flip an early decision:
+
+```
+k   bracket           k   bracket
+1   (−1, 1/2)         3   (1/8, 1/2)
+2   (−1/4, 1/2)       4   (−1/16, 1/8)
+```
+
+`k=3`'s bracket `(1/8, 1/2)` and `k=4`'s `(−1/16, 1/8)` are not nested (their
+interiors are disjoint) — exactly the diary's original obstruction-2 symptom
+("different `e` take different bisection trajectories"), reproduced here for
+`k` instead of the caller's accuracy target. No shared refinement exists for
+a limit argument to close over, independent of the frozen-bound problem
+above.
+
+**Conclusion.** Both natural diagonal constructions from this bisection are
+closed off for a general `F` satisfying only the one-sided approximate-IVT
+sign hypothesis. Landed: `CReal.ivt_bisect_diag`/`_lo`/`_hi` (the first
+reading, `CRealPrelude::ivt_bisect_diag`'s doc comment) as data plus the
+concrete reduction test above — deliberately **not** an invariant or
+exactness theorem, because none holds. An exact root from this style of
+bisection needs an additional hypothesis on `F` (e.g. strict
+monotonicity/injectivity, so a converged bracket cannot land away from the
+zero set) that the general approximate IVT does not assume; this is the
+seventh instance of `docs/mathematics-2026-08/diary-exact-root-obstruction.md`'s
+own closing pattern, in the opposite direction — here a computed projection
+exists and is exactly what proves the desired theorem FALSE.
