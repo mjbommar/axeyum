@@ -616,6 +616,26 @@ It remains separate from autonomous-production credit and runtime-green status.
 
 ## Archived landed-changes rows
 
+### Imported Nat.mod authoritative execution boundary (2026-08-26)
+
+The registered three-target operation is no longer registration-only. The
+transport probe emits the exact retained theorem dependency name in addition
+to the goal, proof, target-content, and declaration identities. The executor
+binds those values plus the immutable target/candidate stream hashes and
+receipt-manifest hash. Transaction construction preserves the one named
+dependency rather than incorrectly requiring an isolated proof, and the
+settled-fact checker replays the same target through the independent kernel
+checker before accepting its evidence row.
+
+Focused evidence: Python compilation passed; two new end-to-end mutation tests
+passed; the v2 contract checker passed; the registered operation freshly
+replayed all three targets; `cargo fmt --all --check` and `git diff --check`
+passed. The broad 42-test execution/transaction/checker run reached 39 passes
+but retained three older live-frontier fixture failures whose assumed facts are
+no longer admissible. A broad Ruff run also exposed pre-existing import-order,
+executable-bit, subprocess, and nested-context findings in the touched legacy
+modules; it is not reported as green.
+
 | 2026-08-26 | `6fad715d8` | Make the Fibonacci child qualification progress-aware: pin candidate-specific dependency receipts and permit either child to advance only through checked, axiom-free kernel evidence. |
 | 2026-08-26 | `2aedb4d68` | Refresh the generated public example inventory from 163 to the 193 examples canonical discovery actually finds; both guarded planning references now report zero stale markers. |
 | 2026-08-26 | `42e7bdfd1` | Make the complete Python build/test/stub/type/lint recipe part of canonical `just check`; register two orphan controls in both gates and return the reachability ratchet from 16 to its 14-module baseline. |
