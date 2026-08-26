@@ -927,6 +927,51 @@ fn abs_add_le(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> Expr
     d.lemma(p.abs_le, &[s, bound, premise1, premise2])
 }
 
+/// `CReal.abs_add_le : ∀ a b, le (abs (add a b)) (add (abs a) (abs b))` — the
+/// two-term triangle inequality, promoted to a public kernel declaration.
+///
+/// This is the first of `CReal.abs_add_le`'s **four** file-private proofs to
+/// gain a public name (`series.rs`, `derivative.rs`, `uniform_continuity.rs`
+/// itself and `deriv_unique.rs` each still carry their own copy — see the
+/// section doc above and `ring_helpers.rs`'s doc comment for why those are
+/// not touched here). This file's dispatch (`declare_uniform_continuity`) is
+/// the earliest of the three named in the section doc to run in
+/// `creal.rs::build_creal_prelude_uncached`, so this declaration lives here
+/// and is called immediately before it, ahead of every current and future
+/// consumer. The proof term below is this file's own [`abs_add_le`] helper,
+/// applied to two bound free variables instead of two already-elaborated
+/// terms; the statement it proves is byte-for-byte the one every other copy
+/// proves.
+pub(super) fn declare_abs_add_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let body = abs_add_le(d, p, a, b);
+    let value = {
+        let with_b = d.lam_fv(b_fv, carrier, body);
+        d.lam_fv(a_fv, carrier, with_b)
+    };
+    let ty = {
+        let s = d.const_app(p.add, &[a, b]);
+        let abs_s = d.const_app(p.abs, &[s]);
+        let abs_a = d.const_app(p.abs, &[a]);
+        let abs_b = d.const_app(p.abs, &[b]);
+        let bound = d.const_app(p.add, &[abs_a, abs_b]);
+        let conclusion = d.const_app(p.le, &[abs_s, bound]);
+        let with_b = d.pi_fv(b_fv, carrier, conclusion);
+        d.pi_fv(a_fv, carrier, with_b)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.abs_add_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 /// `CReal.uniformly_continuous_add : ∀ F G a b, UniformlyContinuousOn F a b
 /// → UniformlyContinuousOn G a b → UniformlyContinuousOn (fun r => add (F
 /// r) (G r)) a b`.
