@@ -100,7 +100,7 @@ fn on_a_deep_stack_creal<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'stat
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 325] = [
+    let expected: [(&str, crate::NameId, &str); 326] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -408,6 +408,7 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         ("CReal.sqrt_le_sqrt", p.sqrt_le_sqrt, "theorem"),
         ("CReal.sqrt_one", p.sqrt_one, "theorem"),
         ("CReal.sqrt_zero", p.sqrt_zero, "theorem"),
+        ("CReal.sqrt_sq", p.sqrt_sq, "theorem"),
         // Bishop's speed-up combinator (creal/speedup.rs).
         ("CReal.KRegular", p.k_regular_pred, "def"),
         ("CReal.speedup", p.speedup, "def"),

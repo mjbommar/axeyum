@@ -1421,6 +1421,16 @@ pub struct CRealPrelude {
     /// "forward" cross-real squeeze is run once (no `Equiv.symm`/backward
     /// direction, no negation to combine two halves). See `creal/sqrt.rs`.
     pub sqrt_le_sqrt: NameId,
+    /// `CReal.sqrt_sq : ∀ x, le zero x → Equiv (sqrt (mul x x)) x`.
+    ///
+    /// The direction `complex.rs` actually needs (not `sq_sqrt`): cancelling
+    /// the square in `sqrt(2‖z‖²+2‖w‖²) ≤ ‖z‖+‖w‖` is `sqrt_sq` at
+    /// `t := abs z + abs w`. See `creal/sqrt.rs`'s own doc for the proof
+    /// sketch — the genuinely new ingredient is recovering `t` (not `|t|`)
+    /// from a two-sided bound on `t·t`, via
+    /// [`crate::RatPrelude::lt_of_sq_lt`], the strict companion to
+    /// `ratSqLe` this required.
+    pub sqrt_sq: NameId,
 
     // --- Bishop's speed-up combinator (creal/speedup.rs) ----------------------
     /// `CReal.KRegular : (Nat → Rat) → Nat → Prop` — Bishop regularity up to a
@@ -3447,6 +3457,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sqrt_one: kernel.name_str(creal, "sqrt_one"),
         sqrt_zero: kernel.name_str(creal, "sqrt_zero"),
         sqrt_le_sqrt: kernel.name_str(creal, "sqrt_le_sqrt"),
+        sqrt_sq: kernel.name_str(creal, "sqrt_sq"),
         k_regular_pred: kernel.name_str(creal, "KRegular"),
         speedup: kernel.name_str(creal, "speedup"),
         regular_of_kregular: kernel.name_str(creal, "regular_of_kregular"),
@@ -3741,6 +3752,12 @@ pub(crate) fn build_creal_prelude_uncached(
         // `sqrt_zero` needs only `sqrt`/`sqrt_approx_sq_bracket` and
         // `rat_sq_le`, same as `sqrt_one` just above.
         sqrt::declare_sqrt_zero(&mut d, prelude)?;
+        // `sqrt_sq` needs `sqrt`/`sqrt_approx_sq_bracket`/`rat_sq_le` (all
+        // above), `mul`/`mulShift`/`equiv_of_bounded`/`regular_between`/
+        // `fuse_at` (`product.rs`, far earlier), `CReal.le` (`declare_order`,
+        // far earlier) and `RatPrelude::lt_of_sq_lt` (built as part of
+        // `rat_prelude`, upstream of this whole prelude).
+        sqrt::declare_sqrt_sq(&mut d, prelude)?;
         convergence::declare_cauchy_convergence(&mut d, prelude)?;
         series::declare_series(&mut d, prelude)?;
         // `CReal.mag_bound_le_sum_range_of_lt` needs `CReal.sumRange`

@@ -224,11 +224,11 @@ use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
 use crate::rat_prelude::group::rsub;
 use crate::rat_prelude::ops::{
-    den, den_pos, den_z, normalize, num, one_le_succ, radd, rat_eq_rewrite, rat_ty, rchain, rcongr,
-    rle, rlt, rmul, rneg, rone, rsymm, rzero,
+    den, den_pos, den_z, nat_rewrite_prop, normalize, num, one_le_succ, radd, rat_eq_rewrite,
+    rat_ty, rchain, rcongr, rle, rlt, rmul, rneg, rone, rrefl, rsymm, rzero,
 };
 
-use super::product::{index_le, mul_index};
+use super::product::{cmul, fuse_at, index_le, mul_index, mul_shift, regular_between};
 use super::{
     CRealPrelude, DERIVED_HEIGHT, and_intro, creal_ty, div_succ, equiv, halves, modulus, sample,
     weaken, within,
@@ -3136,6 +3136,469 @@ pub(super) fn declare_sqrt_zero(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.sqrt_zero,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// =============================================================================
+// `CReal.sqrt_sq : 0 ≤ x → Equiv (sqrt (mul x x)) x`.
+//
+// See this module's own top-level doc for the proof sketch this section
+// implements. The genuinely new ingredient is recovering `t := seq x J`
+// (not `|t|`) from the two-sided bracket `sqrt_approx_sq_bracket` gives on
+// `t*t`, which needs a case split on `RatPrelude::le_or_lt 0 t` and, in the
+// `0 ≤ t` branch, the strict companion [`RatPrelude::lt_of_sq_lt`] to
+// `CReal.ratSqLe` (`a,b ≥ 0 ∧ a·a < b·b → a < b`).
+// =============================================================================
+
+/// `Rat.le (a*a) (b*b)` from `0 ≤ a` and `a ≤ b` — monotonicity of squaring
+/// on the nonnegatives, via `a*a ≤ a*b ≤ b*b`
+/// (`mul_le_mul_of_nonneg_left`/`_right`, no `rat_sq_le`/case split needed
+/// since both factors' signs are already known).
+fn sq_le_sq_of_nonneg_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    ha: ExprId,
+    hab: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let zero_rat = rzero(d, rat);
+    let hb = d.lemma(rat.le_trans, &[zero_rat, a, b, ha, hab]);
+    let aa = rmul(d, a, a);
+    let ab = rmul(d, a, b);
+    let bb = rmul(d, b, b);
+    let step1 = d.lemma(rat.mul_le_mul_of_nonneg_left, &[a, a, b, ha, hab]);
+    let step2 = d.lemma(rat.mul_le_mul_of_nonneg_right, &[a, b, b, hb, hab]);
+    d.lemma(rat.le_trans, &[aa, ab, bb, step1, step2])
+}
+
+/// `Eq Rat ((-a)*(-a)) (a*a)` — the same chain
+/// [`declare_rat_sq_sandwich`](super::mul_self_zero) builds inline for its
+/// own `t`, generalized to any `a`.
+fn neg_mul_neg_eq(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId) -> ExprId {
+    let rat = p.rat;
+    let neg_a = rneg(d, a);
+    let neg_a_sq = rmul(d, neg_a, neg_a);
+    let step1 = d.lemma(rat.neg_mul, &[a, neg_a]);
+    // step1 : (-a)*(-a) = -(a*(-a))
+    let inner = rmul(d, a, neg_a);
+    let neg_inner = rneg(d, inner);
+    let step2 = d.lemma(rat.mul_neg, &[a, a]);
+    // step2 : a*(-a) = -(a*a)
+    let aa = rmul(d, a, a);
+    let neg_aa = rneg(d, aa);
+    let congr2 = rcongr(d, inner, neg_aa, step2, &|d, x| rneg(d, x));
+    let doubled = rneg(d, neg_aa);
+    let step3 = d.lemma(rat.neg_neg, &[aa]);
+    let (_, e) = rchain(
+        d,
+        neg_a_sq,
+        &[(neg_inner, step1), (doubled, congr2), (aa, step3)],
+    );
+    e
+}
+
+/// `Eq Rat (Rat.max a Rat.zero) a`, from `h : Rat.le Rat.zero a` —
+/// `le_max_left`/`max_le`/`le_antisymm`, no case split.
+fn max_eq_of_nonneg(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, h: ExprId) -> ExprId {
+    let rat = p.rat;
+    let zero_rat = rzero(d, rat);
+    let max_a = d.const_app(rat.max, &[a, zero_rat]);
+    let le_max = d.lemma(rat.le_max_left, &[a, zero_rat]);
+    let refl_a = d.lemma(rat.le_refl, &[a]);
+    let max_le_a = d.lemma(rat.max_le, &[a, zero_rat, a, refl_a, h]);
+    d.lemma(rat.le_antisymm, &[max_a, a, max_le_a, le_max])
+}
+
+/// `Nat.le n (Nat.mul (Nat.succ c) n)` — i.e. `n ≤ (c+1)·n`, via
+/// `Nat.succ_mul`/`Nat.le_add_right`/`Nat.add_comm`.
+fn n_le_succ_mul(d: &mut IntDev<'_>, p: CRealPrelude, c: ExprId, n: ExprId) -> ExprId {
+    let nat = p.rat.int.nat;
+    let cn = NatOps::mul(d, c, n);
+    let step = d.lemma(nat.succ_mul, &[c, n]);
+    // step : succ(c)*n = c*n + n
+    let succ_c = d.succ(c);
+    let succ_c_n = NatOps::mul(d, succ_c, n);
+    let cn_plus_n = NatOps::add(d, cn, n);
+    let base = d.lemma(nat.le_add_right, &[n, cn]);
+    // base : n <= n+cn
+    let n_plus_cn = NatOps::add(d, n, cn);
+    let comm = d.lemma(nat.add_comm, &[n, cn]);
+    // comm : n+cn = cn+n
+    let base2 = nat_rewrite_prop(d, n_plus_cn, cn_plus_n, comm, base, &|d, t| d.le(n, t));
+    // base2 : n <= cn+n
+    let step_rev = NatOps::symm(d, succ_c_n, cn_plus_n, step);
+    // step_rev : cn+n = succ(c)*n
+    nat_rewrite_prop(d, cn_plus_n, succ_c_n, step_rev, base2, &|d, t| d.le(n, t))
+    // : n <= succ(c)*n
+}
+
+/// `Rat.natDivSucc k j`, with a symbolic numerator — a local copy of
+/// `speedup::div_succ_at`/`product::div_succ_at` (both private there).
+fn div_succ_expr(d: &mut IntDev<'_>, p: CRealPrelude, k: ExprId, j: ExprId) -> ExprId {
+    d.const_app(p.rat.nat_div_succ, &[k, j])
+}
+
+/// `Rat.le (natDivSucc k' hi) (natDivSucc k' lo)` from `h : Nat.le lo hi`,
+/// for a literal `k >= 1`, where `k'` is `k` copies of `1` summed (not
+/// necessarily the literal `Nat` numeral `k`, though defeq to it) —
+/// `k` applications of [`RatPrelude::nat_div_succ_antitone`] (fixed at
+/// numerator 1) composed via [`RatPrelude::nat_div_succ_add`].
+fn div_succ_antitone_k(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    k: u32,
+    lo: ExprId,
+    hi: ExprId,
+    h: ExprId,
+) -> (ExprId, ExprId) {
+    let rat = p.rat;
+    let mut acc_num = d.num(1);
+    let mut acc_proof = d.lemma(rat.nat_div_succ_antitone, &[lo, hi, h]);
+    for _ in 1..k {
+        let acc_hi = div_succ_expr(d, p, acc_num, hi);
+        let acc_lo = div_succ_expr(d, p, acc_num, lo);
+        let one_hi = div_succ(d, p, 1, hi);
+        let one_lo = div_succ(d, p, 1, lo);
+        let base_proof = d.lemma(rat.nat_div_succ_antitone, &[lo, hi, h]);
+        let summed = d.lemma(
+            rat.add_le_add,
+            &[acc_hi, acc_lo, one_hi, one_lo, acc_proof, base_proof],
+        );
+        let sum_hi = radd(d, acc_hi, one_hi);
+        let sum_lo = radd(d, acc_lo, one_lo);
+        let one_lit = d.num(1);
+        let new_num = NatOps::add(d, acc_num, one_lit);
+        let fold_hi = d.lemma(rat.nat_div_succ_add, &[acc_num, one_lit, hi]);
+        let fold_lo = d.lemma(rat.nat_div_succ_add, &[acc_num, one_lit, lo]);
+        let target_hi = div_succ_expr(d, p, new_num, hi);
+        let target_lo = div_succ_expr(d, p, new_num, lo);
+        let rewritten = rat_eq_rewrite(d, sum_hi, target_hi, fold_hi, summed, &|d, t| {
+            rle(d, rat, t, sum_lo)
+        });
+        let rewritten2 = rat_eq_rewrite(d, sum_lo, target_lo, fold_lo, rewritten, &|d, t| {
+            rle(d, rat, target_hi, t)
+        });
+        acc_proof = rewritten2;
+        acc_num = new_num;
+    }
+    (acc_num, acc_proof)
+}
+
+/// `CReal.sqrt_sq : ∀ x, CReal.le CReal.zero x → Equiv (sqrt (mul x x)) x`.
+///
+/// See this module's top-level doc for the full proof sketch. Assembled via
+/// `equiv_of_bounded` at `K = 6`: for each `n`, `sqrt_bracket_pieces` at
+/// `(mul x x, N)` (`N := mul_index 1 n`) gives `u*u ≤ t*t < (u+d1)*(u+d1)`
+/// (`u := sqrtApprox (mul x x) N`, `t := seq x J`, `J` the deep index `mul
+/// x x`'s own definition samples at, `d1 := natDivSucc 1 N`); a case split
+/// on `RatPrelude::le_or_lt 0 t` gives `Within (u - t) (natDivSucc 4 n)` in
+/// EITHER branch (the `0 ≤ t` branch via `rat_sq_le`/`lt_of_sq_lt`, the
+/// `t < 0` branch via `0 ≤ x`'s slack bounding `|t|` and `u` separately);
+/// `regular_between` relates `t` back to `seq x n` at `natDivSucc 2 n`; and
+/// `Rat.sub_add_sub`'s telescoping identity `(u-t)+(t-seq x n) = u-seq x n`
+/// closes it via `fuse_at`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+#[allow(clippy::too_many_lines)]
+pub(super) fn declare_sqrt_sq(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let nat = p.rat.int.nat;
+    let carrier = creal_ty(d, p);
+    let nat_ty = d.nat_ty();
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let h_fv = d.fresh_fvar();
+    let hx = d.kernel().fvar(h_fv);
+
+    let zero_real = d.kernel().const_(p.zero, vec![]);
+    let hx_ty = d.const_app(p.le, &[zero_real, x]);
+
+    let xx = cmul(d, p, x, x);
+    let shift = mul_shift(d, p, x, x);
+    let zero_rat = rzero(d, rat);
+    let one_nat_lit = d.num(1);
+
+    let bound_hyp = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+
+        // --- the Nat-level index chain: n <= nn <= dd_n <= j_n <= jj. ---
+        let nn = mul_index(d, one_nat_lit, n);
+        let n_le_succ1n = n_le_succ_mul(d, p, one_nat_lit, n);
+        let succ1n = {
+            let succ_one = d.succ(one_nat_lit);
+            NatOps::mul(d, succ_one, n)
+        };
+        let succ1n_le_nn = d.lemma(nat.le_add_right, &[succ1n, one_nat_lit]);
+        let n_le_nn = d.lemma(nat.le_trans, &[n, succ1n, nn, n_le_succ1n, succ1n_le_nn]);
+
+        let dd_n = d.succ(nn);
+        let pos_n = one_le_succ(d, nn);
+        let nn_le_dd_n = d.lemma(nat.le_succ, &[nn]);
+        let n_le_dd_n = d.lemma(nat.le_trans, &[n, nn, dd_n, n_le_nn, nn_le_dd_n]);
+
+        let j_n = NatOps::mul(d, dd_n, dd_n);
+        let j_pos_n = d.lemma(nat.one_le_mul, &[dd_n, dd_n, pos_n, pos_n]);
+        let dd_n_le_j_n = n_le_succ_mul(d, p, nn, dd_n);
+        let n_le_j_n = d.lemma(nat.le_trans, &[n, dd_n, j_n, n_le_dd_n, dd_n_le_j_n]);
+
+        let jj = mul_index(d, shift, j_n);
+        let j_n_le_succ_shift_jn = n_le_succ_mul(d, p, shift, j_n);
+        let succ_shift_jn = {
+            let sf = d.succ(shift);
+            NatOps::mul(d, sf, j_n)
+        };
+        let succ_shift_jn_le_jj = d.lemma(nat.le_add_right, &[succ_shift_jn, shift]);
+        let j_n_le_jj = d.lemma(
+            nat.le_trans,
+            &[
+                j_n,
+                succ_shift_jn,
+                jj,
+                j_n_le_succ_shift_jn,
+                succ_shift_jn_le_jj,
+            ],
+        );
+        let n_le_jj = d.lemma(nat.le_trans, &[n, j_n, jj, n_le_j_n, j_n_le_jj]);
+
+        // --- the bracket at (xx, nn), and recovering t := seq x jj. ---
+        let (q, u, u_sq, u1, u1_sq, s, lower, upper) =
+            sqrt_bracket_pieces(d, p, xx, nn, dd_n, pos_n, j_n, j_pos_n);
+
+        let t = sample(d, p, x, jj);
+        let tt = rmul(d, t, t);
+        let tt_nonneg = d.lemma(rat.sq_nonneg, &[t]);
+        let q_eq_tt = max_eq_of_nonneg(d, p, tt, tt_nonneg);
+        let lower_tt = rat_eq_rewrite(d, q, tt, q_eq_tt, lower, &|d, t2| rle(d, rat, u_sq, t2));
+        let upper_tt = rat_eq_rewrite(d, q, tt, q_eq_tt, upper, &|d, t2| rlt(d, rat, t2, u1_sq));
+
+        let d1 = div_succ(d, p, 1, nn);
+        let u_nonneg = normalize_of_nat_nonneg(d, p, s, dd_n, pos_n);
+        let s1 = d.succ(s);
+        let u1_nonneg = normalize_of_nat_nonneg(d, p, s1, dd_n, pos_n);
+        let succ_eq = succ_over_index_eq(d, p, s, nn);
+        // succ_eq : Eq u1 (u + d1)
+        let u_plus_d1 = radd(d, u, d1);
+        let upper_tt_shifted = rat_eq_rewrite(d, u1, u_plus_d1, succ_eq, upper_tt, &|d, t2| {
+            let sq = rmul(d, t2, t2);
+            rlt(d, rat, tt, sq)
+        });
+        // upper_tt_shifted : tt < (u+d1)*(u+d1)
+        let _ = u1_nonneg;
+
+        let d1_nonneg = d.lemma(rat.zero_le_nat_div_succ, &[one_nat_lit, nn]);
+        let u_plus_d1_nonneg = d.lemma(rat.add_nonneg, &[u, d1, u_nonneg, d1_nonneg]);
+
+        let case_split = d.lemma(rat.le_or_lt, &[zero_rat, t]);
+        let case_left_ty = rle(d, rat, zero_rat, t);
+        let case_right_ty = rlt(d, rat, t, zero_rat);
+
+        let four_n = div_succ(d, p, 4, n);
+        let gap_a = rsub(d, rat, u, t);
+        let gap_a_goal = within(d, p, gap_a, four_n);
+
+        let gap_a_within = d.or_elim(
+            case_left_ty,
+            case_right_ty,
+            gap_a_goal,
+            case_split,
+            &|d, t_nonneg| {
+                // --- branch 0 <= t. ---
+                let u_le_t = d.lemma(p.rat_sq_le, &[u, t, lower_tt, t_nonneg]);
+                let t_lt_u_plus_d1 = d.lemma(
+                    rat.lt_of_sq_lt,
+                    &[t, u_plus_d1, t_nonneg, u_plus_d1_nonneg, upper_tt_shifted],
+                );
+                let t_le_u_plus_d1 = d.lemma(rat.le_of_lt, &[t, u_plus_d1, t_lt_u_plus_d1]);
+                let t_minus_u_le_d1 = d.lemma(rat.sub_le_of_le, &[t, u, d1, t_le_u_plus_d1]);
+                let t_minus_u = rsub(d, rat, t, u);
+                let neg_le_neg_1 = d.lemma(rat.neg_le_neg, &[t_minus_u, d1, t_minus_u_le_d1]);
+                // neg_le_neg_1 : le (neg d1) (neg t_minus_u)
+                let neg_sub_eq_1 = d.lemma(rat.neg_sub, &[t, u]);
+                // neg_sub_eq_1 : neg (sub t u) = sub u t
+                let neg_t_minus_u = rneg(d, t_minus_u);
+                let u_minus_t = rsub(d, rat, u, t);
+                let neg_d1 = rneg(d, d1);
+                let lower_proof = rat_eq_rewrite(
+                    d,
+                    neg_t_minus_u,
+                    u_minus_t,
+                    neg_sub_eq_1,
+                    neg_le_neg_1,
+                    &|d, t2| rle(d, rat, neg_d1, t2),
+                );
+
+                let refl_t = d.lemma(rat.le_refl, &[t]);
+                let t_plus_zero_le =
+                    d.lemma(rat.add_le_add, &[t, t, zero_rat, d1, refl_t, d1_nonneg]);
+                let t_plus_zero = radd(d, t, zero_rat);
+                let az = d.lemma(rat.add_zero, &[t]);
+                let t_plus_d1 = radd(d, t, d1);
+                let t_le_t_plus_d1 =
+                    rat_eq_rewrite(d, t_plus_zero, t, az, t_plus_zero_le, &|d, t2| {
+                        rle(d, rat, t2, t_plus_d1)
+                    });
+                let u_le_t_plus_d1 =
+                    d.lemma(rat.le_trans, &[u, t, t_plus_d1, u_le_t, t_le_t_plus_d1]);
+                let u_minus_t_le_d1 = d.lemma(rat.sub_le_of_le, &[u, t, d1, u_le_t_plus_d1]);
+
+                let lower_ty = rle(d, rat, neg_d1, u_minus_t);
+                let upper_ty = rle(d, rat, u_minus_t, d1);
+                let within_branch1 =
+                    and_intro(d, p, lower_ty, upper_ty, lower_proof, u_minus_t_le_d1);
+
+                let order1 = d.lemma(rat.nat_div_succ_antitone, &[n, nn, n_le_nn]);
+                let three_nat_lit = d.num(3);
+                let order2 = d.lemma(
+                    rat.nat_div_succ_le_add_left,
+                    &[one_nat_lit, three_nat_lit, n],
+                );
+                let one_n = div_succ(d, p, 1, n);
+                let order_total = d.lemma(rat.le_trans, &[d1, one_n, four_n, order1, order2]);
+                weaken(d, p, u_minus_t, d1, four_n, within_branch1, order_total)
+            },
+            &|d, t_neg| {
+                // --- branch t < 0. ---
+                let t_le_0 = d.lemma(rat.le_of_lt, &[t, zero_rat, t_neg]);
+                let flip0 = d.lemma(rat.neg_le_neg, &[t, zero_rat, t_le_0]);
+                let negz = d.lemma(rat.neg_zero, &[]);
+                let neg_t = rneg(d, t);
+                let neg_zero = rneg(d, zero_rat);
+                let neg_t_nonneg = rat_eq_rewrite(d, neg_zero, zero_rat, negz, flip0, &|d, t2| {
+                    rle(d, rat, t2, neg_t)
+                });
+
+                let hx_at_jj = d.apply(hx, &[jj]);
+                let e_jj = div_succ(d, p, 2, jj);
+                let sub_zero_t = rsub(d, rat, zero_rat, t);
+                let add_zero_form = radd(d, zero_rat, neg_t);
+                let unfold_refl = rrefl(d, sub_zero_t);
+                let za = d.lemma(rat.zero_add, &[neg_t]);
+                let (_, eq_full) =
+                    rchain(d, sub_zero_t, &[(add_zero_form, unfold_refl), (neg_t, za)]);
+                let neg_t_le_ej =
+                    rat_eq_rewrite(d, sub_zero_t, neg_t, eq_full, hx_at_jj, &|d, t2| {
+                        rle(d, rat, t2, e_jj)
+                    });
+
+                let two_nat_lit = d.num(2);
+                let ej_nonneg = d.lemma(rat.zero_le_nat_div_succ, &[two_nat_lit, jj]);
+                let negt_sq_le_ejsq =
+                    sq_le_sq_of_nonneg_le(d, p, neg_t, e_jj, neg_t_nonneg, neg_t_le_ej);
+                let negt_sq_eq_tt = neg_mul_neg_eq(d, p, t);
+                let negt_sq = rmul(d, neg_t, neg_t);
+                let ejsq = rmul(d, e_jj, e_jj);
+                let tt_le_ejsq =
+                    rat_eq_rewrite(d, negt_sq, tt, negt_sq_eq_tt, negt_sq_le_ejsq, &|d, t2| {
+                        rle(d, rat, t2, ejsq)
+                    });
+                let u_sq_le_ejsq = d.lemma(rat.le_trans, &[u_sq, tt, ejsq, lower_tt, tt_le_ejsq]);
+                let u_le_ej = d.lemma(p.rat_sq_le, &[u, e_jj, u_sq_le_ejsq, ej_nonneg]);
+
+                let two_n = div_succ(d, p, 2, n);
+                let (_two_expr, e_le) = div_succ_antitone_k(d, p, 2, n, jj, n_le_jj);
+                let sum_le = d.lemma(rat.add_le_add, &[e_jj, two_n, e_jj, two_n, e_le, e_le]);
+                let two_n_plus_two_n = radd(d, two_n, two_n);
+                let fold = d.lemma(rat.nat_div_succ_add, &[two_nat_lit, two_nat_lit, n]);
+                let sum_le_folded =
+                    rat_eq_rewrite(d, two_n_plus_two_n, four_n, fold, sum_le, &|d, t2| {
+                        let ejsum = radd(d, e_jj, e_jj);
+                        rle(d, rat, ejsum, t2)
+                    });
+                let upper_raw = d.lemma(
+                    rat.add_le_add,
+                    &[u, e_jj, neg_t, e_jj, u_le_ej, neg_t_le_ej],
+                );
+                let u_plus_negt = radd(d, u, neg_t);
+                let ej_plus_ej = radd(d, e_jj, e_jj);
+                let upper_proof = d.lemma(
+                    rat.le_trans,
+                    &[u_plus_negt, ej_plus_ej, four_n, upper_raw, sum_le_folded],
+                );
+
+                let u_minus_t_nonneg = d.lemma(rat.add_nonneg, &[u, neg_t, u_nonneg, neg_t_nonneg]);
+                let four_lit = d.num(4);
+                let four_n_nonneg = d.lemma(rat.zero_le_nat_div_succ, &[four_lit, n]);
+                let neg_four_n_nonpos = d.lemma(rat.neg_nonpos_of_nonneg, &[four_n, four_n_nonneg]);
+                let neg_four_n = rneg(d, four_n);
+                let lower_proof2 = d.lemma(
+                    rat.le_trans,
+                    &[
+                        neg_four_n,
+                        zero_rat,
+                        u_plus_negt,
+                        neg_four_n_nonpos,
+                        u_minus_t_nonneg,
+                    ],
+                );
+
+                let u_minus_t = rsub(d, rat, u, t);
+                let lower_ty = rle(d, rat, neg_four_n, u_minus_t);
+                let upper_ty = rle(d, rat, u_minus_t, four_n);
+                and_intro(d, p, lower_ty, upper_ty, lower_proof2, upper_proof)
+            },
+        );
+
+        let seq_x_n = sample(d, p, x, n);
+        let gap_b_high_le = d.lemma(rat.nat_div_succ_antitone, &[n, jj, n_le_jj]);
+        let gap_b_low_le = {
+            let one_n = div_succ(d, p, 1, n);
+            d.lemma(rat.le_refl, &[one_n])
+        };
+        let gap_b_within = regular_between(d, p, x, jj, n, gap_b_high_le, gap_b_low_le, n);
+        // gap_b_within : Within (t - seq_x_n) (natDivSucc 2 n)
+
+        let telescoped = d.lemma(rat.sub_add_sub, &[u, t, seq_x_n]);
+        // telescoped : Eq ((u-t)+(t-seq_x_n)) (u-seq_x_n)
+        let gap_b = rsub(d, rat, t, seq_x_n);
+        let sum_form = radd(d, gap_a, gap_b);
+        let four_num = d.num(4);
+        let two_num = d.num(2);
+        let fused = fuse_at(
+            d,
+            p,
+            gap_a,
+            four_num,
+            gap_b,
+            two_num,
+            n,
+            gap_a_within,
+            gap_b_within,
+        );
+        let final_bound = div_succ(d, p, 6, n);
+        let u_minus_seq_x_n = rsub(d, rat, u, seq_x_n);
+        let final_within =
+            rat_eq_rewrite(d, sum_form, u_minus_seq_x_n, telescoped, fused, &|d, t2| {
+                within(d, p, t2, final_bound)
+            });
+
+        d.lam_fv(n_fv, nat_ty, final_within)
+    };
+
+    let six_nat = d.num(6);
+    let sqrt_xx = d.const_app(p.sqrt, &[xx]);
+    let body = d.lemma(p.equiv_of_bounded, &[sqrt_xx, x, six_nat, bound_hyp]);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hx_ty, body);
+        d.lam_fv(x_fv, carrier, with_h)
+    };
+    let ty = {
+        let concl = equiv(d, p, sqrt_xx, x);
+        let after_h = d.arrow(hx_ty, concl);
+        d.pi_fv(x_fv, carrier, after_h)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sqrt_sq,
         uparams: vec![],
         ty,
         value,
