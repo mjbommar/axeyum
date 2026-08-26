@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 244] = [
+    let expected: [(&str, crate::NameId, &str); 246] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -525,6 +525,24 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             "theorem",
         ),
         ("CReal.riemannSum_le_on", p.riemann_sum_le_on, "theorem"),
+        // `CReal.sumRange_reblock` (creal/integral.rs), registered right
+        // after `integral::declare_integral`: regrouping `k*(n+1)`
+        // consecutive terms of an arbitrary `g` into `k` consecutive blocks
+        // of `n+1`, exactly, for an arbitrary block size. Generalizes the
+        // block-size-2 special case; a building block toward
+        // `riemannSum_cauchy`'s doubling-refinement estimate, not that
+        // estimate itself -- see that file's own module documentation.
+        ("CReal.sumRange_reblock", p.sum_range_reblock, "theorem"),
+        // `CReal.within_of_two_sided_le` (creal/integral.rs), registered
+        // right after `sumRange_reblock`: the general form of the "real
+        // inequality -> Within at a chosen index" bridge
+        // `geometric.rs::geom_tail_within` builds bespoke -- see that
+        // file's own module documentation for the derivation.
+        (
+            "CReal.within_of_two_sided_le",
+            p.within_of_two_sided_le,
+            "theorem",
+        ),
         // The continuity-from-differentiability bridge (creal/monotone.rs),
         // the missing piece the monotone_of_nonneg_deriv handoff plan did not
         // name: a `HasDerivativeOn` interpolation endpoint is only ever
@@ -4795,4 +4813,146 @@ fn ivt_step_applies_to_the_identity_on_zero_one() {
         "the conclusion must carry both the four `CReal.le` bracket/sign facts and the \
          `Equiv`-typed width identity, got: {rendered}"
     );
+}
+
+/// **Mandatory concrete instantiation** for `CReal.sumRange_reblock`
+/// (`creal/integral.rs`): `g i := CReal.ofNat i`, checked at TWO different
+/// block sizes over the SAME six terms `g 0, …, g 5` (`0+1+2+3+4+5 = 15`).
+///
+/// - `k = 3`, block size `n+1 = 2` (three pairs): `(0+1)+(2+3)+(4+5)`.
+/// - `k = 2`, block size `n+1 = 3` (two triples, the NON-SQUARE case):
+///   `(0+1+2)+(3+4+5)`. `k = n+1` in the first case cannot distinguish a
+///   transposed pair of indices (`i·(n+1)+j` vs. `j·k+i`); this second case
+///   can, because `3 ≠ 2` makes the two block shapes genuinely different
+///   partitions of the same six terms.
+///
+/// Each instance is checked two ways: (1) the theorem's OWN instantiated
+/// type, via `Kernel::infer`, must render identically to an INDEPENDENTLY
+/// reconstructed expected type (catching an argument-position defect that a
+/// mere "does it type-check" pass would not: a transposed `mul` argument
+/// order is often still well-typed, just wrong); (2) both the original sum
+/// and the reblocked sum must reduce, by `Eq.refl` alone (genuine
+/// computation, not merely type-checking), to the SAME numeral, `15`.
+#[test]
+fn sum_range_reblock_regroups_zero_through_five_two_ways() {
+    use crate::expr::ExprId;
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{req, rrefl};
+
+    /// Reconstruction of `creal/integral.rs`'s private `reblock_block`,
+    /// verbatim (that function is not visible from this sibling module):
+    /// `fun i => sumRange (fun j => g (Nat.add (Nat.mul bs i) j)) bs`.
+    fn expected_block(d: &mut IntDev<'_>, p: CRealPrelude, g: ExprId, bs: ExprId) -> ExprId {
+        let nat = d.nat_ty();
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let offset = NatOps::mul(d, bs, i);
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let nat_add = d.prelude().add;
+        let offset_j = d.const_app(nat_add, &[offset, j]);
+        let gj = d.apply(g, &[offset_j]);
+        let inner = d.lam_fv(j_fv, nat, gj);
+        let body = d.const_app(p.sum_range, &[inner, bs]);
+        d.lam_fv(i_fv, nat, body)
+    }
+
+    /// Apply `sumRange_reblock` at `n_lit`/`k_lit`, check its instantiated
+    /// type renders identically to the independently-reconstructed expected
+    /// type, then check both the original and reblocked sums compute (by
+    /// `Eq.refl`) to `fifteen_seq` at `index`.
+    #[allow(clippy::too_many_arguments)]
+    fn check_instance(
+        d: &mut IntDev<'_>,
+        p: CRealPrelude,
+        g: ExprId,
+        index: ExprId,
+        fifteen_seq: ExprId,
+        n_lit: u32,
+        k_lit: u32,
+        label: &str,
+    ) {
+        let n_val = d.num(n_lit);
+        let k_val = d.num(k_lit);
+        let bs = d.succ(n_val);
+
+        let reblock = d.kernel().const_(p.sum_range_reblock, vec![]);
+        let inst = d.apply(reblock, &[g, n_val, k_val]);
+        let ty = d.kernel().infer(inst).unwrap_or_else(|error| {
+            panic!("sumRange_reblock at n={n_lit} k={k_lit} ({label}) refused: {error:?}")
+        });
+
+        let total = NatOps::mul(d, bs, k_val);
+        let lhs_ty = d.const_app(p.sum_range, &[g, total]);
+        let block = expected_block(d, p, g, bs);
+        let rhs_ty = d.const_app(p.sum_range, &[block, k_val]);
+        let expected_ty = super::equiv(d, p, lhs_ty, rhs_ty);
+
+        let rendered = d.kernel().render_lean(ty);
+        let expected_rendered = d.kernel().render_lean(expected_ty);
+        assert_eq!(
+            rendered, expected_rendered,
+            "sumRange_reblock at n={n_lit} k={k_lit} ({label}): instantiated type must \
+             match the independently-reconstructed `i*(n+1)+j` block formula exactly \
+             -- a transposed index argument is often still well-typed, just wrong"
+        );
+
+        let lhs_seq = d.const_app(p.seq, &[lhs_ty, index]);
+        let rhs_seq = d.const_app(p.seq, &[rhs_ty, index]);
+
+        let anon = d.kernel().anon();
+
+        let stmt_lhs = req(d, lhs_seq, fifteen_seq);
+        let proof_lhs = rrefl(d, lhs_seq);
+        let name_lhs = d.kernel().name_str(anon, &format!("__reblock_lhs_{label}"));
+        d.kernel()
+            .add_declaration(Declaration::Theorem {
+                name: name_lhs,
+                uparams: vec![],
+                ty: stmt_lhs,
+                value: proof_lhs,
+            })
+            .unwrap_or_else(|error| {
+                panic!("sumRange g (mul bs k) ({label}) did NOT compute to 15: {error:?}")
+            });
+
+        let stmt_rhs = req(d, rhs_seq, fifteen_seq);
+        let proof_rhs = rrefl(d, rhs_seq);
+        let name_rhs = d.kernel().name_str(anon, &format!("__reblock_rhs_{label}"));
+        d.kernel()
+            .add_declaration(Declaration::Theorem {
+                name: name_rhs,
+                uparams: vec![],
+                ty: stmt_rhs,
+                value: proof_rhs,
+            })
+            .unwrap_or_else(|error| {
+                panic!("sumRange (reblocked) k ({label}) did NOT compute to 15: {error:?}")
+            });
+    }
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let nat = d.nat_ty();
+
+    // g := fun i : Nat => CReal.ofNat i.
+    let g = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let body = d.const_app(p.of_nat, &[i]);
+        d.lam_fv(i_fv, nat, body)
+    };
+
+    let index = d.num(0); // arbitrary: `ofNat`-built sums carry no error term.
+    let fifteen = {
+        let fifteen_nat = d.num(15);
+        d.const_app(p.of_nat, &[fifteen_nat])
+    };
+    let fifteen_seq = d.const_app(p.seq, &[fifteen, index]);
+
+    // k = 3, block size n+1 = 2: three pairs, (0+1)+(2+3)+(4+5).
+    check_instance(&mut d, p, g, index, fifteen_seq, 1, 3, "k3_blocksize2");
+    // k = 2, block size n+1 = 3 (non-square): two triples, (0+1+2)+(3+4+5).
+    check_instance(&mut d, p, g, index, fifteen_seq, 2, 2, "k2_blocksize3");
 }

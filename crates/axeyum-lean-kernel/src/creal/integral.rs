@@ -1759,6 +1759,268 @@ fn declare_riemann_sum_const(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), 
 
 /// `fun i => add (g (Nat.mul 2 i)) (g (Nat.succ (Nat.mul 2 i)))` — the
 /// `i`-th block of two consecutive `g`-terms, `g(2i) + g(2i+1)`.
+/// `fun k => f (Nat.add m k)` — `f` shifted by `m`. Reproduced verbatim from
+/// `series.rs::shifted_fn` / `geometric.rs::shifted_fn` (both private to
+/// their own modules), matching `CReal.sumRange_split`'s own instantiated
+/// conclusion shape exactly so this file's block sums are structurally
+/// (not merely propositionally) the same closures `sum_range_split`
+/// produces.
+fn reblock_shifted_fn(d: &mut IntDev<'_>, m: ExprId, f: ExprId) -> ExprId {
+    let nat_add = d.prelude().add;
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let mk = d.const_app(nat_add, &[m, k]);
+    let body = d.apply(f, &[mk]);
+    let nat = d.nat_ty();
+    d.lam_fv(k_fv, nat, body)
+}
+/// `fun i => sumRange (fun j => g (Nat.add (Nat.mul bs i) j)) bs` — the
+/// `i`-th block of `bs` consecutive `g`-terms, starting at `bs * i`. `bs` is
+/// always the FIRST argument of `Nat.mul` here, matching the shape
+/// `Nat.mul`'s own iota-reduction forces at the induction step below (never
+/// `Nat.mul i bs`, which is only propositionally, not definitionally, the
+/// same term).
+fn reblock_block(d: &mut IntDev<'_>, p: CRealPrelude, g: ExprId, bs: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let offset = NatOps::mul(d, bs, i);
+    let shifted = reblock_shifted_fn(d, offset, g);
+    let body = d.const_app(p.sum_range, &[shifted, bs]);
+    d.lam_fv(i_fv, nat, body)
+}
+/// The proof term for `CReal.sumRange_reblock` at a fixed block size `bs`,
+/// by induction on the block count `k`. See this section's own module
+/// documentation for the derivation.
+fn sum_range_reblock_proof(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    g: ExprId,
+    bs: ExprId,
+    k: ExprId,
+) -> ExprId {
+    let block = reblock_block(d, p, g, bs);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let total = NatOps::mul(d, bs, x);
+        let lhs = d.const_app(p.sum_range, &[g, total]);
+        let rhs = d.const_app(p.sum_range, &[block, x]);
+        equiv(d, p, lhs, rhs)
+    };
+
+    d.induct(
+        &motive,
+        &|d| {
+            // motive(zero): `Nat.mul bs Nat.zero ≡ Nat.zero`, so both sides
+            // reduce (defeq) to `CReal.zero`.
+            let zero_c = czero(d, p);
+            d.lemma(p.equiv_refl, &[zero_c])
+        },
+        &|d, j, ih| {
+            // ih : Equiv (sumRange g (mul bs j)) (sumRange block j)
+            let bs_j = NatOps::mul(d, bs, j);
+            let succ_j = d.succ(j);
+
+            let sum_g_bsj = d.const_app(p.sum_range, &[g, bs_j]);
+            let sum_block_j = d.const_app(p.sum_range, &[block, j]);
+            let block_j = d.apply(block, &[j]);
+
+            // split_step : Equiv (sumRange g (add bs_j bs))
+            //                    (add sum_g_bsj (sumRange (shifted bs_j g) bs))
+            // -- the second summand is defeq `block_j` (`reblock_block`'s own
+            // definition at `i := j`, same `bs_j` offset, same block size
+            // `bs`) by one beta step, no new lemma needed.
+            let split_step = d.lemma(p.sum_range_split, &[g, bs_j, bs]);
+
+            // h1 : Equiv (add sum_g_bsj block_j) (add sum_block_j block_j)
+            let refl_block_j = d.lemma(p.equiv_refl, &[block_j]);
+            let h1 = d.lemma(
+                p.add_congr,
+                &[sum_g_bsj, sum_block_j, block_j, block_j, ih, refl_block_j],
+            );
+
+            // Goal (defeq unfolded, `succ_j`): `Equiv (sumRange g (mul bs
+            // succ_j)) (sumRange block succ_j)` -- `mul bs succ_j` is defeq
+            // `add bs_j bs` (`Nat.mul`'s iota step), and `sumRange block
+            // succ_j` is defeq `add sum_block_j block_j` (`sumRange`'s own
+            // iota step), so `equiv_trans(split_step, h1)` closes it exactly.
+            let lhs_goal = {
+                let total_succ = NatOps::mul(d, bs, succ_j);
+                d.const_app(p.sum_range, &[g, total_succ])
+            };
+            let mid = cadd(d, p, sum_g_bsj, block_j);
+            let rhs_goal = d.const_app(p.sum_range, &[block, succ_j]);
+
+            d.lemma(p.equiv_trans, &[lhs_goal, mid, rhs_goal, split_step, h1])
+        },
+        k,
+    )
+}
+/// `CReal.sumRange_reblock : ∀ (g : Nat → CReal) (n k : Nat), Equiv (sumRange
+/// g (Nat.mul (Nat.succ n) k)) (sumRange (fun i => sumRange (fun j => g
+/// (Nat.add (Nat.mul (Nat.succ n) i) j)) (Nat.succ n)) k)` — regrouping
+/// `k · (n+1)` consecutive terms of an arbitrary `g` into `k` consecutive
+/// blocks of `n+1`, exactly (no error term), for an arbitrary block size
+/// `n+1` (never zero). Generalizes `CReal.sumRange_double` (block size fixed
+/// at the literal `2`) from a private, not-yet-merged worktree branch; see
+/// this section's own module documentation for the derivation and precisely
+/// what remains toward `riemannSum_cauchy`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_sum_range_reblock(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let bs = d.succ(n);
+    let proof = sum_range_reblock_proof(d, p, g, bs, k);
+
+    let ty = {
+        let total = NatOps::mul(d, bs, k);
+        let lhs = d.const_app(p.sum_range, &[g, total]);
+        let block = reblock_block(d, p, g, bs);
+        let rhs = d.const_app(p.sum_range, &[block, k]);
+        equiv(d, p, lhs, rhs)
+    };
+    let ty_full = {
+        let over_k = d.pi_fv(k_fv, nat, ty);
+        let over_n = d.pi_fv(n_fv, nat, over_k);
+        d.pi_fv(g_fv, fn_ty, over_n)
+    };
+    let value_full = {
+        let over_k = d.lam_fv(k_fv, nat, proof);
+        let over_n = d.lam_fv(n_fv, nat, over_k);
+        d.lam_fv(g_fv, fn_ty, over_n)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sum_range_reblock,
+        uparams: vec![],
+        ty: ty_full,
+        value: value_full,
+    })
+}
+/// From `Rat.le (Rat.sub u v) w` and `Rat.le (Rat.sub (Rat.neg u) v) w`,
+/// derive `CReal.Within u (Rat.add v w)`. Reproduced verbatim from
+/// `series.rs::within_of_tail_le` / `geometric.rs::within_of_tail_le` (both
+/// private to their own modules) — the RAT-LEVEL half of the bridge, already
+/// fully general over any `u, v, w`.
+fn within_of_sub_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    u: ExprId,
+    v: ExprId,
+    w: ExprId,
+    h1: ExprId,
+    h2: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let vw = radd(d, v, w);
+
+    let upper = d.lemma(rat.le_of_sub_le, &[u, v, w, h1]);
+
+    let neg_u = rneg(d, u);
+    let lower_neg = d.lemma(rat.le_of_sub_le, &[neg_u, v, w, h2]);
+
+    let neg_vw = rneg(d, vw);
+    let neg_neg_u = rneg(d, neg_u);
+    let flipped = d.lemma(rat.neg_le_neg, &[neg_u, vw, lower_neg]);
+
+    let nn = d.lemma(rat.neg_neg, &[u]);
+    let lower = rat_eq_rewrite(d, neg_neg_u, u, nn, flipped, &|d, t| rle(d, rat, neg_vw, t));
+
+    let lower_ty = rle(d, rat, neg_vw, u);
+    let upper_ty = rle(d, rat, u, vw);
+    and_intro(d, p, lower_ty, upper_ty, lower, upper)
+}
+/// `CReal.within_of_two_sided_le : ∀ t y : CReal, le t y → le (neg t) y →
+/// ∀ i : Nat, Within (seq t i) (add (seq y i) (natDivSucc 2 i))`. See this
+/// section's own module documentation for the derivation, and for whether
+/// `geometric.rs::geom_tail_within` could be re-derived from this (it could,
+/// without editing that file).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_within_of_two_sided_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+
+    let neg_t = cneg(d, p, t);
+    let hyp1 = cle(d, p, t, y);
+    let hyp2 = cle(d, p, neg_t, y);
+
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+
+    // `CReal.le` is a `Definition` (`le x y := ∀ n, seq x n − seq y n ≤
+    // 2/(n+1)`), so `.apply(_, &[i])` unfolds it directly to the per-index
+    // `Rat.le` fact -- the same idiom `geom_tail_within`'s own proof uses,
+    // just at an arbitrary `i` rather than the tail's own canonical index.
+    let h1_at_i = d.apply(h1, &[i]);
+    let h2_at_i = d.apply(h2, &[i]);
+
+    let u = sample(d, p, t, i);
+    let v = sample(d, p, y, i);
+    let w = div_succ(d, p, 2, i);
+
+    let value_body = within_of_sub_le(d, p, u, v, w, h1_at_i, h2_at_i);
+
+    let ty = {
+        let vw = radd(d, v, w);
+        let claim = within(d, p, u, vw);
+        let inner = d.pi_fv(i_fv, nat, claim);
+        // `h1_fv`/`h2_fv` escape into `inner` through `v`/`w` (via `y`/`i`),
+        // and `t_fv`/`y_fv` escape through `hyp1`/`hyp2` -- all genuinely
+        // dependent Pis (`pi_fv`), never `d.arrow`, the same trap
+        // `geom_tail_within`'s own `ty` names.
+        let with_h2 = d.pi_fv(h2_fv, hyp2, inner);
+        let with_h1 = d.pi_fv(h1_fv, hyp1, with_h2);
+        let with_y = d.pi_fv(y_fv, carrier, with_h1);
+        d.pi_fv(t_fv, carrier, with_y)
+    };
+    let value = {
+        let inner = d.lam_fv(i_fv, nat, value_body);
+        let with_h2 = d.lam_fv(h2_fv, hyp2, inner);
+        let with_h1 = d.lam_fv(h1_fv, hyp1, with_h2);
+        let with_y = d.lam_fv(y_fv, carrier, with_h1);
+        d.lam_fv(t_fv, carrier, with_y)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.within_of_two_sided_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 fn double_block(d: &mut IntDev<'_>, p: CRealPrelude, g: ExprId) -> ExprId {
     let nat = d.nat_ty();
     let two = d.num(2);
