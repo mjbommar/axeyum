@@ -13,9 +13,9 @@
     "admitted"
   ],
   "inputs": {
-    "candidate_fact_count": 89,
+    "candidate_fact_count": 97,
     "evaluation_frontier_path": "artifacts/autogenesis/producer-evaluation-frontier-v1.json",
-    "evaluation_frontier_sha256": "cf27452b7ade7b38540205bd56fd08b39a4aaa4569ce41d730ca1f22e12af47e",
+    "evaluation_frontier_sha256": "bd3271ac00b23da15715f508d67d08f186c4848f5af15b591453fe23bdaf099a",
     "evaluation_partitions": [
       "development",
       "train"

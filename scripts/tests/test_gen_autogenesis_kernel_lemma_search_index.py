@@ -84,6 +84,18 @@ class KernelLemmaSearchIndexTests(unittest.TestCase):
             "Nat.le_trans",
         )
 
+    def test_plural_declaration_identity_precedes_singular_and_legacy(self):
+        self.assertEqual(
+            INDEX.exact_kernel_declarations(
+                {
+                    "id": "kernel-invented",
+                    "kernel_declaration": "Also.invented",
+                    "kernel_declarations": ["And.left", "And.right"],
+                }
+            ),
+            ("And.left", "And.right"),
+        )
+
     def test_legacy_fully_qualified_evidence_id_remains_supported(self):
         self.assertEqual(
             INDEX.exact_kernel_declaration({"id": "kernel-Nat.le_trans"}),

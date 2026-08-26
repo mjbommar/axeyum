@@ -408,7 +408,6 @@
     },
     {
       "dependency_component_ids": [
-        "mathlib-v4.30.0-b064fa21f15a772b",
         "mathlib-v4.30.0-e7e80bd79f8762e6"
       ],
       "direct_unlock_fact_count": 1,
@@ -416,10 +415,9 @@
         "F:ml430-nat-fib-strictmonoon-905810a9"
       ],
       "family": "natural-fibonacci",
-      "ready_fact_count": 2,
+      "ready_fact_count": 1,
       "ready_fact_ids": [
-        "F:ml430-nat-fib-add-two-strictmono-c1e86d4d",
-        "F:ml430-nat-fib-mono-cc6afe09"
+        "F:ml430-nat-fib-add-two-strictmono-c1e86d4d"
       ],
       "statement_shape": "higher-order-property",
       "topic_concept_id": "C:fibonacci-sequence"
@@ -644,11 +642,11 @@
   ],
   "census": {
     "admissible_facts": 0,
-    "cataloged_ready_facts": 107,
-    "dependency_ready_facts": 107,
+    "cataloged_ready_facts": 106,
+    "dependency_ready_facts": 106,
     "excluded_held_out_ready_facts": 22,
     "excluded_outside_evaluation_ready_facts": 9,
-    "global_dependency_ready_facts": 138,
+    "global_dependency_ready_facts": 137,
     "groups": 2,
     "rejection_reasons": [
       {
@@ -656,7 +654,7 @@
         "reason": "gate-coupling-review-required"
       },
       {
-        "fact_count": 107,
+        "fact_count": 106,
         "reason": "no-registered-operation"
       }
     ],
@@ -668,8 +666,8 @@
       "train"
     ],
     "family_concept_crosswalk_path": "artifacts/autogenesis/family-concept-crosswalk-v1.json",
-    "frontier_sha256": "f3a6f3a2f579f96aa3b4b320dcd769cf8b16b1408a185f88d8a9777016c7128a",
-    "ledger_sha256": "c725596fe3c0a92b4ae068eec7a2ff445c01e1d7ca0430d28aff68db28ed271f",
+    "frontier_sha256": "4d517ece6709d09d9650d7e3e11f53b056405764a2654b7ef88e1d2464626a35",
+    "ledger_sha256": "7146f4274ed5ab94d7a609b53ab79ff6047e2ce5e1a84222f13d7f310ba7be8c",
     "nursery_sha256": "6d1f2551a612fdcadaf1c6b0096c4eebee304d9687157cb25505f785ee86daa8",
     "operation_registry_sha256": "2946dd39994e39b28df3187d55927e633ac9c3d79c2ee5281829aad3a884c974",
     "reviewed_fact_catalog_sha256": "d2ebcbd56c70445e3a1be864426ee783021387c5d6c885f182dc2a374855f988",
@@ -727,7 +725,7 @@
       "admissible_fact_ids": [],
       "formal_language": "lean4-surface",
       "fragment": "Nat",
-      "ready_fact_count": 81,
+      "ready_fact_count": 80,
       "ready_fact_ids": [
         "F:ml430-mutation-1432b2277cf2cc26c1d11cd6",
         "F:ml430-mutation-5179f333b8333ecff8adc223",
@@ -777,7 +775,6 @@
         "F:ml430-nat-factorial-pos-f1dd2405",
         "F:ml430-nat-fastfib-eq-cde11774",
         "F:ml430-nat-fib-add-two-strictmono-c1e86d4d",
-        "F:ml430-nat-fib-mono-cc6afe09",
         "F:ml430-nat-land-bit-b9ab7475",
         "F:ml430-nat-ldiff-bit-6be49bb8",
         "F:ml430-nat-le-fib-self-0cbccb4d",
@@ -818,7 +815,7 @@
           "reason": "gate-coupling-review-required"
         },
         {
-          "fact_count": 81,
+          "fact_count": 80,
           "reason": "no-registered-operation"
         }
       ],
