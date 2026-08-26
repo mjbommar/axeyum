@@ -117,6 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-26 | `fe531ca30` | Prove with two theorem-free `Eq.refl` controls that exact imported `Nat.testBit` and `Nat.bitwise` statements inherit `propext` from their definition closures, making the empty-footprint boundary structural and explicit. |
 | 2026-08-26 | `32802405d` | Construct a total target-owned bitwise operation and prove its all-index Boolean semantics axiom-free under exactly `f false false = false`. |
 | 2026-08-26 | `08d4da396` | Prove axiom-free that every observation beyond a low-digit reification's width is false, closing the output-side tail of the unbounded bitwise theorem. |
 | 2026-08-26 | `448fc8431` | Prove universal low-digit reification round-trip and specialize it into the first axiom-free bounded bitwise semantic theorem. |
@@ -1553,6 +1554,13 @@ every index under exactly `f false false = false`, axiom-free. The native
 mathematics is complete. Exact equivalence to imported Lean `Nat.testBit` and
 `Nat.bitwise` is now the sole reconstruction blocker and still receives zero
 credit.
+Two `Eq.refl` controls now establish the precise trust boundary: merely naming
+either imported operation in a theorem statement makes the declaration-reached
+footprint `[propext]`, even with zero theorem dependencies. Exact imported
+empty-footprint reconstruction is therefore structurally unavailable under the
+current definitions, not awaiting a cleverer proof. Next: choose the clean
+product boundary deliberately—target-owned operations, clean compatible
+definition reconstruction, or an explicitly weaker upstream-definition route.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization
