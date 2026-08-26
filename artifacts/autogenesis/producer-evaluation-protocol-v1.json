@@ -13,14 +13,14 @@
     "admitted"
   ],
   "inputs": {
-    "candidate_fact_count": 95,
+    "candidate_fact_count": 94,
     "evaluation_frontier_path": "artifacts/autogenesis/producer-evaluation-frontier-v1.json",
-    "evaluation_frontier_sha256": "c2c8c3493f8415a0061e59031cba1944db224e5726c35fe9a23ada46834ed61f",
+    "evaluation_frontier_sha256": "131eb4c49f77588f80553cbb667c986bcd5fa5f32dc807ed0c47943443c0e9b5",
     "evaluation_partitions": [
       "development",
       "train"
     ],
-    "must_decline_control_count": 9
+    "must_decline_control_count": 10
   },
   "kind": "axeyum-autogenesis-producer-evaluation-protocol",
   "outcome_contract": {

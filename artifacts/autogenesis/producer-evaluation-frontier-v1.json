@@ -4,13 +4,13 @@
       "development": 66,
       "train": 38
     },
-    "candidate_facts": 95,
+    "candidate_facts": 94,
     "evaluation_dependency_ready_facts": 104,
     "excluded_held_out_ready_facts": 22,
     "excluded_outside_evaluation_ready_facts": 9,
     "global_dependency_ready_facts": 135,
     "groups": 93,
-    "must_decline_controls": 9
+    "must_decline_controls": 10
   },
   "derivation": {
     "evaluation_partitions": [
@@ -19,7 +19,7 @@
     ],
     "frontier_sha256": "eaefa772f1d953af6c8c34fc3cf9e8c2617cc6f336f6a6e302724d66114cef51",
     "ledger_sha256": "16b154e1d54562baea35e49f344e3e47819e8b1e14cd1107725ebb14099b7181",
-    "must_decline_controls_sha256": "30a59e1da446a7b74de172641cf94549150d577f3a837004d896b0de1baad233",
+    "must_decline_controls_sha256": "70d52bb9517419f0caf24958fa7f596bf8486cb3e6f293b673dbe16c486871af",
     "nursery_sha256": "6d1f2551a612fdcadaf1c6b0096c4eebee304d9687157cb25505f785ee86daa8",
     "reviewed_fact_catalog_sha256": "4a6ac0c9ee34e7c6a09b596e501ba94be4b1d962cf9ed02c7f1ed4dece771117",
     "source": "scripts/fact-frontier.py build_machine_frontier intersected with nursery train/development",
@@ -978,7 +978,8 @@
     "F:ml430-mutation-aabb80b1f89f0c5847364692",
     "F:ml430-mutation-aca37b68d3cdf06f0127def9",
     "F:ml430-mutation-c20db9b4c60b816ce738bdf2",
-    "F:ml430-mutation-c86940b52af8159ca9b381d6"
+    "F:ml430-mutation-c86940b52af8159ca9b381d6",
+    "F:ml430-mutation-edb05acf07d9ef3f9f8232fc"
   ],
   "schema_version": 1
 }
