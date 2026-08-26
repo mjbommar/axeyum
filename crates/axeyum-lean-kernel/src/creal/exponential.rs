@@ -113,20 +113,8 @@ pub(super) fn declare_exponential(d: &mut IntDev<'_>, p: CRealPrelude) -> Result
     declare_exp_term_le_dominant(d, p)?;
     declare_exp_term_nonneg(d, p)?;
     declare_exp_dominant_nonneg(d, p)?;
-    declare_exp_term_abs_le_dominant(d, p)
-    // `declare_sum_pow_half_closed_form` is NOT wired in yet: it broke the
-    // whole prelude build (`TypeMismatch` at the top-level `add_declaration`,
-    // every `creal::` test failing identically at `built()`) and the exact
-    // failing step was not isolated before this lane's time ran out. The
-    // Rat-level facts it depends on (`rat_two_mul_half_eq_one`,
-    // `rat_half_add_half_eq_one`, both via `rat_normalize_self_eq_one`) and
-    // the CReal-level group chain (`one_sub_half_equiv_half`,
-    // `two_mul_one_sub_half_equiv_one`) are ALL still defined below, unused,
-    // for the next lane to bisect via `Kernel::infer` per step against a
-    // free fvar (per this repo's own advice for exactly this situation) --
-    // start with `two_mul_one_sub_half_equiv_one` in isolation (build it as
-    // its own throwaway `Theorem` with an explicit `ty` ascription) before
-    // re-wiring `declare_sum_pow_half_closed_form`.
+    declare_exp_term_abs_le_dominant(d, p)?;
+    declare_sum_pow_half_closed_form(d, p)
 }
 
 /// `Rat.normalize (Int.ofNat (Nat.succ Nat.zero)) (Nat.factorial n)
@@ -1031,7 +1019,6 @@ fn declare_exp_term_abs_le_dominant(
 /// to `num (normalize k k h_k) = den_z (normalize k k h_k)`, itself gotten
 /// from [`RatPrelude::normalize_cross`] (`num · k = k · den_z`) by
 /// [`RatPrelude::int_mul_right_cancel`] (cancelling the shared `k`).
-#[allow(dead_code)]
 fn rat_normalize_self_eq_one(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -1101,7 +1088,6 @@ fn rat_normalize_self_eq_one(
 /// `Rat.normalize 2 2 h_c`; [`rat_normalize_self_eq_one`] closes the rest.
 ///
 /// Returns `(two_r, half_r, proof : Eq Rat (Rat.mul two_r half_r) Rat.one)`.
-#[allow(dead_code)]
 fn rat_two_mul_half_eq_one(d: &mut IntDev<'_>, p: CRealPrelude) -> (ExprId, ExprId, ExprId) {
     let rp = p.rat;
     let np = d.prelude();
@@ -1144,7 +1130,6 @@ fn rat_two_mul_half_eq_one(d: &mut IntDev<'_>, p: CRealPrelude) -> (ExprId, Expr
 /// landing on `Rat.normalize 4 4 _` instead of `2 2`.
 ///
 /// Returns `(half_r, proof : Eq Rat (Rat.add half_r half_r) Rat.one)`.
-#[allow(dead_code)]
 fn rat_half_add_half_eq_one(d: &mut IntDev<'_>, p: CRealPrelude) -> (ExprId, ExprId) {
     let rp = p.rat;
     let np = d.prelude();
@@ -1183,14 +1168,12 @@ fn rat_half_add_half_eq_one(d: &mut IntDev<'_>, p: CRealPrelude) -> (ExprId, Exp
 }
 
 /// `CReal.add x y`.
-#[allow(dead_code)]
 fn cadd(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
     d.const_app(p.add, &[x, y])
 }
 
 /// `Equiv` chain composition, verbatim in shape to every other `creal/*`
 /// module's own private `echain` (see e.g. `geometric.rs::echain`).
-#[allow(dead_code)]
 fn echain(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -1209,7 +1192,6 @@ fn echain(
 /// `Equiv (add x (neg x)) zero` reproduced at `x := half`, chained through
 /// `add_comm` so it applies to `add (neg half) half` (the order `add_neg`
 /// itself does not cover).
-#[allow(dead_code)]
 fn neg_half_add_half_equiv_zero(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
     let h = half(d, p);
     let neg_h = cneg(d, p, h);
@@ -1227,7 +1209,6 @@ fn neg_half_add_half_equiv_zero(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
 /// `Equiv (add half half) one` ([`rat_half_add_half_eq_one`] lifted through
 /// `CReal.ofRat_add`), then cancelling the shared `half` on the right by
 /// adding `neg half` to both sides.
-#[allow(dead_code)]
 fn one_sub_half_equiv_half(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
     let one_c = d.kernel().const_(p.one, vec![]);
     let h = half(d, p);
@@ -1317,7 +1298,6 @@ fn one_sub_half_equiv_half(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
 /// [`one_sub_half_equiv_half`] (`1 − half ≈ half`) and
 /// [`rat_two_mul_half_eq_one`] (`2 · half = 1`, lifted through
 /// `CReal.ofRat_mul`).
-#[allow(dead_code)]
 fn two_mul_one_sub_half_equiv_one(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
     let t = two(d, p);
     let h = half(d, p);
@@ -1350,7 +1330,6 @@ fn two_mul_one_sub_half_equiv_one(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId
 }
 
 /// `λ i, CReal.pow half i` — verbatim in shape to `geometric.rs::pow_fn`.
-#[allow(dead_code)]
 fn pow_half_fn(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
     let i_fv = d.fresh_fvar();
     let i = d.kernel().fvar(i_fv);
@@ -1368,7 +1347,6 @@ fn pow_half_fn(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
 /// [`CRealPrelude::mul_sub_one_geom`]'s conclusion through by `two` and
 /// cancel `mul two (add one (neg half))` down to `one` via
 /// [`two_mul_one_sub_half_equiv_one`].
-#[allow(dead_code)]
 fn declare_sum_pow_half_closed_form(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -1430,13 +1408,19 @@ fn declare_sum_pow_half_closed_form(
     let step6_7 = echain(d, p, mul_two_a_sum, &[(mul_one_sum, step6), (sum_n, step7)]);
     // step6_7 : Equiv (mul (mul two a) sum_n) sum_n
     let step6_7_rev = d.lemma(p.equiv_symm, &[mul_two_a_sum, sum_n, step6_7]);
-    let step4_rev = d.lemma(p.equiv_symm, &[mul_two_a_sum, mul_two_y, step4]);
-    // sum_n ~ mul_two_a_sum ~ mul_two_y
+    // sum_n ~ mul_two_a_sum ~ mul_two_y. `step4` already runs
+    // `mul_two_a_sum -> mul_two_y` (the direction `echain` needs for a
+    // `current -> next` link) -- an earlier version of this chain fed
+    // `equiv_symm` a THIRD time here, building `Equiv mul_two_y
+    // mul_two_a_sum` (the wrong direction) and feeding that into the
+    // `(mul_two_y, _)` slot, which needs `mul_two_a_sum -> mul_two_y`. That
+    // was the whole `TypeMismatch`: the swapped proof against the
+    // straight-through step `equiv_trans` expects.
     let concl = echain(
         d,
         p,
         sum_n,
-        &[(mul_two_a_sum, step6_7_rev), (mul_two_y, step4_rev)],
+        &[(mul_two_a_sum, step6_7_rev), (mul_two_y, step4)],
     );
 
     let value = d.lam_fv(n_fv, nat, concl);
