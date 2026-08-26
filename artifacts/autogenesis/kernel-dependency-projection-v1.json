@@ -1,17 +1,17 @@
 {
   "census": {
-    "axiom_free_declarations": 1507,
+    "axiom_free_declarations": 1510,
     "declaration_kinds": {
       "axiom": 30,
       "constructor": 29,
       "definition": 242,
       "inductive": 22,
       "recursor": 22,
-      "theorem": 1192
+      "theorem": 1195
     },
-    "declarations": 1537,
-    "direct_theorem_dependency_edges": 6660,
-    "theorems": 1192
+    "declarations": 1540,
+    "direct_theorem_dependency_edges": 6672,
+    "theorems": 1195
   },
   "declarations": [
     {
@@ -5974,11 +5974,41 @@
       "axiom_footprint_size": 0,
       "declaration_kind": "theorem",
       "direct_theorem_dependencies": [
+        "CReal.Equiv.symm",
+        "CReal.ofRat_add",
+        "Rat.natDivSucc_add"
+      ],
+      "id": "CReal.ofNat_add",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
         "CReal.ofRat_le",
         "Nat.le_dest",
         "Rat.natDivSucc_le_add_left"
       ],
       "id": "CReal.ofNat_le",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.symm",
+        "CReal.ofRat_mul",
+        "Rat.natDivSucc_mul"
+      ],
+      "id": "CReal.ofNat_mul",
       "visible_in": [
         "complex",
         "cpoint",
@@ -6211,6 +6241,24 @@
         "CReal.mul_one"
       ],
       "id": "CReal.pow_le_one",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
+        "CReal.le_congr",
+        "CReal.le_refl",
+        "CReal.le_trans",
+        "CReal.mul_comm",
+        "CReal.mul_le_mul_of_nonneg_left",
+        "CReal.pow_nonneg"
+      ],
+      "id": "CReal.pow_le_pow_of_base_le",
       "visible_in": [
         "complex",
         "cpoint",
@@ -37389,6 +37437,21 @@
     },
     {
       "relation": "direct-theorem-depends-on",
+      "source": "CReal.ofNat_add",
+      "target": "CReal.Equiv.symm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.ofNat_add",
+      "target": "CReal.ofRat_add"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.ofNat_add",
+      "target": "Rat.natDivSucc_add"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
       "source": "CReal.ofNat_le",
       "target": "CReal.ofRat_le"
     },
@@ -37401,6 +37464,21 @@
       "relation": "direct-theorem-depends-on",
       "source": "CReal.ofNat_le",
       "target": "Rat.natDivSucc_le_add_left"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.ofNat_mul",
+      "target": "CReal.Equiv.symm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.ofNat_mul",
+      "target": "CReal.ofRat_mul"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.ofNat_mul",
+      "target": "Rat.natDivSucc_mul"
     },
     {
       "relation": "direct-theorem-depends-on",
@@ -37676,6 +37754,36 @@
       "relation": "direct-theorem-depends-on",
       "source": "CReal.pow_le_one",
       "target": "CReal.mul_one"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_le_pow_of_base_le",
+      "target": "CReal.le_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_le_pow_of_base_le",
+      "target": "CReal.le_refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_le_pow_of_base_le",
+      "target": "CReal.le_trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_le_pow_of_base_le",
+      "target": "CReal.mul_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_le_pow_of_base_le",
+      "target": "CReal.mul_le_mul_of_nonneg_left"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_le_pow_of_base_le",
+      "target": "CReal.pow_nonneg"
     },
     {
       "relation": "direct-theorem-depends-on",

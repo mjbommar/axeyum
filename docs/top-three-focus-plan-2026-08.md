@@ -26,7 +26,7 @@ semantics, evidence, provenance, checking, and compounding knowledge loop.
   empty measured axiom footprints. The committed declaration projection was
   stale at 1,100; regenerating it from current code now agrees exactly at 1,184.
   After merging the next constructive-real and rational increments, the
-  projection and search index advanced together to 1,192. The production-
+  projection and search index advanced together through at least 1,195. The production-
   provenance ledger credits
   only 8 established facts to reusable
   multi-target operations; most theorems remain human-built.

@@ -6,8 +6,19 @@ all-features = true
 
 [advisories]
 # Current defaults already deny vulnerabilities and unmaintained crates.
-# Waive specific advisories by ID here, with a comment explaining why.
-ignore = []
+# `pyo3-stub-gen` 0.23.0 is the current release and its optional, build-time
+# signature parser still depends on the unmaintained rust-unic 0.9 family.
+# None of these crates enters the shipped runtime or trusted checker, and the
+# advisories name no vulnerability or safe upgrade. Keep the exceptions exact;
+# remove them when the stub generator moves off rustpython-parser 0.4.0.
+ignore = [
+    "RUSTSEC-2025-0081", # unic-char-property
+    "RUSTSEC-2025-0075", # unic-char-range
+    "RUSTSEC-2025-0080", # unic-common
+    "RUSTSEC-2025-0090", # unic-emoji-char
+    "RUSTSEC-2025-0098", # unic-ucd-version
+    "RUSTSEC-2025-0100", # unic-ucd-ident
+]
 
 [licenses]
 allow = [
@@ -18,6 +29,9 @@ allow = [
     "BSD-3-Clause",
     "ISC",
     "Unicode-3.0",
+    # OSI-approved data/software license used by unicode_names2, a transitive
+    # build-time dependency of the optional Python stub generator.
+    "Unicode-DFS-2016",
     "Zlib",
     # Permissive licenses pulled in by the z3-static (prebuilt libz3) path.
     "bzip2-1.0.6",
