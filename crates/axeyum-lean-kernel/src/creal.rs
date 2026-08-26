@@ -2481,6 +2481,18 @@ pub struct CRealPrelude {
     /// there); see that module's own documentation for the refutation and
     /// the `lt_cotrans`-based nearby-point construction that replaces it.
     pub has_derivative_unique: NameId,
+    /// `CReal.mesh_le_of_ge : ∀ a b outer m, le a b → Nat.le ((Nat.succ
+    /// (bound (add b (neg a))))*outer + bound (add b (neg a))) m → le (mul
+    /// (add b (neg a)) (ofRat (natDivSucc 1 m))) (ofRat (natDivSucc 1
+    /// outer))` (`creal/integral.rs`) — the ARCHIMEDEAN RESCALING
+    /// `UniformlyContinuousOn.spec` needs: turning the Riemann-sum mesh width
+    /// `Δ_m := (b−a)·natDivSucc(1,m)` into a bound of the exact rational
+    /// shape `natDivSucc 1 outer` that spec expects, for every block count
+    /// `m` at or past a computed threshold. No existential elimination: the
+    /// threshold is read directly off `CReal.bound`. See that file's own
+    /// module documentation for the derivation and for what still separates
+    /// this from `riemannSum_cauchy`.
+    pub mesh_le_of_ge: NameId,
 }
 
 impl CRealPrelude {
@@ -2811,6 +2823,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         strict_mono_comp: kernel.name_str(creal, "strict_mono_comp"),
         ivt_iter: kernel.name_str(creal, "ivt_iter"),
         has_derivative_unique: kernel.name_str(creal, "hasDerivative_unique"),
+        mesh_le_of_ge: kernel.name_str(creal, "mesh_le_of_ge"),
     }
 }
 

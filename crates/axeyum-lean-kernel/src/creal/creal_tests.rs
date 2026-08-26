@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 262] = [
+    let expected: [(&str, crate::NameId, &str); 263] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -682,6 +682,13 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             p.has_derivative_unique,
             "theorem",
         ),
+        // The archimedean rescaling `UniformlyContinuousOn.spec` needs
+        // (`creal/integral.rs`): turning the Riemann-sum mesh width `Δ_m`
+        // into a bound of the exact `natDivSucc 1 outer` shape that spec
+        // expects, for every block count at or past a computed threshold.
+        // No existential elimination -- the threshold is read directly off
+        // `CReal.bound`.
+        ("CReal.mesh_le_of_ge", p.mesh_le_of_ge, "theorem"),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel
