@@ -285,6 +285,7 @@ at least three siblings.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-26 | `95587054fd` | Preserve stream-context declaration identities, compact the imported graph through dense node IDs, and derive a checked 113-node reverse-reachability frontier for multi-sibling contract design. |
 | 2026-08-26 | `ebcfd3fb88` | Derive the proof-isolated imported implementation-demand graph for all 14 sliced source identities, retaining structural variants and the checked `Nat.mod` decision/subtraction spine without proof or ledger authority. |
 | 2026-08-26 | `d2d6fc0d0` | Add axiom-free native `Nat.mod_self`, alpha-stable structural retrieval, and a checked native-composition control; fresh imported replay preserves zero credit and exposes the implementation-bound `Nat.mod` transport boundary. |
 | 2026-08-26 | `73800a902` | Project all 51 retrieved-induction outcomes into a digest-bound typed capability backlog; false controls remain observation-only and one-target operation registration is refused. |
