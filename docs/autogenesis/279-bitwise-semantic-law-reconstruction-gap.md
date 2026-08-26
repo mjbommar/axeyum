@@ -121,9 +121,24 @@ and tail `n`, `boolToBit b + 2*n` has a checked `divMod 2` witness whose
 quotient is `n` and remainder is `boolToBit b`; comparison with executable
 division proves both equations separately. This is stronger than another
 finite observation: it supplies the exact quotient/remainder equations needed
-to induct over a low-digit-first reifier. The remaining construction is to
-connect the weighted-sum reifier to that recursive shape and carry the decoder
-through every in-range index.
+to induct over a low-digit-first reifier.
+
+That induction now closes universally in the kernel. `reifyBitsLow` consumes
+the low Boolean digit, doubles the recursively encoded tail, and
+`reifyBitsLow_roundtrip` proves every observation at `i < k` equals the source
+bit. Its base, step, and universal theorem all have empty axiom footprints.
+Specializing the source bits to `bitwiseObservation f x y` produces
+`testBitBool_bitwiseReifyLow`: for every bounded index, the constructed
+number's bit equals `f` applied to the corresponding bits of `x` and `y`.
+This is the first checked bounded form of the desired bitwise semantic law.
+
+Two boundaries remain explicit. The earlier weighted-sum `reifyBits` has not
+yet been proved equal to `reifyBitsLow`; it remains useful independent numeric
+evidence, not the implementation behind the new theorem. More importantly,
+the source theorem is unbounded. Closing it requires a width derived from the
+inputs plus the `f false false = false` side condition, followed separately by
+the still-missing equivalence between target-owned `testBitBool` semantics and
+the exact imported Lean operations.
 
 A bounded oracle exhausts every Boolean vector through width 12: 8,191 vectors,
 90,114 in-range observations, and 8,191 first-out-of-range zero observations.

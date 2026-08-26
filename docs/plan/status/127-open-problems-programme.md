@@ -117,15 +117,15 @@ all-target/all-feature Clippy, and warning-denied Rustdoc pass. Both completed `
 carry no UNSAT or upper-bound credit; the exact proof-producing run remains live.
 
 **Rado exact lower bound advanced, 2026-08-26.** The seed-619 CaDiCaL producer completed the
-canonical 351-point formula SAT after 58:35 and the canonical 352-point formula SAT after
-4.35 seconds. Both complete assignments passed the strict SAT Competition importer, the
-regenerated CNF evaluator, unique one-hot decoding, independent enumeration of the defining
-relation, and lifted-witness re-encoding. The retained strongest witness has 352 entries,
-uses all five colours, covers 27,378 defining triples / 142,167 clauses, and has SHA-256
-`a117a27b0eb55fde8b022e8a6332a6cb7c9d3f2951f252643137bf347565a5cc`. Therefore the checked
-conclusion is now `R_5(3(x-y)=2z) > 352`; no upper bound or exact value is claimed. A persistent
-exact driver is live at 353 and advances only after both replay routes. A post-result literature
-refresh through 2026-08-26 found no five-colour bound at least 352 for this equation, but that
+canonical 351-, 352-, and 353-point formulas SAT; the 353 run took 19:14.90. Every complete
+assignment passed the strict SAT Competition importer, regenerated CNF evaluation, unique
+one-hot decoding, independent enumeration of the defining relation, and lifted-witness
+re-encoding. The retained strongest witness has 353 entries, uses all five colours, covers
+27,495 defining triples / 142,767 clauses, and has SHA-256
+`ff825f641352d5e6a59e098f9da648d1d8fa4d8481cb6ab41c694b5f33faedd2`. Therefore the checked
+conclusion is now `R_5(3(x-y)=2z) > 353`; no upper bound or exact value is claimed. A persistent
+exact driver is live at 354 and advances only after both replay routes. A post-result literature
+refresh through 2026-08-26 found no five-colour bound at least 353 for this equation, but that
 negative retrieval is not proof of priority.
 
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
