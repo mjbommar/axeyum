@@ -1327,6 +1327,15 @@ pub struct CRealPrelude {
     /// `sqrt`'s own LAWS need (relating `sqrt x` back to `x`), not the
     /// definition. See `creal/sqrt.rs`.
     pub sqrt: NameId,
+    /// `CReal.sqrt_congr : ∀ x y, Equiv x y → Equiv (sqrt x) (sqrt y)`.
+    ///
+    /// The cross-real analogue of `sqrtApproxKRegular`'s same-real,
+    /// two-index estimate: same bracket, same `sum_sq_le_sq_sum`/`rat_sq_le`
+    /// squeeze, but comparing two reals at one shared index via `Equiv`
+    /// instead of one real at two indices via its own `regular`. Total, no
+    /// `0 ≤ x`/`0 ≤ y` hypothesis — same reason `sqrt` itself needs none.
+    /// See `creal/sqrt.rs`.
+    pub sqrt_congr: NameId,
 
     // --- Bishop's speed-up combinator (creal/speedup.rs) ----------------------
     /// `CReal.KRegular : (Nat → Rat) → Nat → Prop` — Bishop regularity up to a
@@ -3260,6 +3269,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sqrt_approx_sq_bracket: kernel.name_str(creal, "sqrtApproxSqBracket"),
         sqrt_approx_kregular: kernel.name_str(creal, "sqrtApproxKRegular"),
         sqrt: kernel.name_str(creal, "sqrt"),
+        sqrt_congr: kernel.name_str(creal, "sqrt_congr"),
         k_regular_pred: kernel.name_str(creal, "KRegular"),
         speedup: kernel.name_str(creal, "speedup"),
         regular_of_kregular: kernel.name_str(creal, "regular_of_kregular"),
@@ -3523,6 +3533,9 @@ pub(crate) fn build_creal_prelude_uncached(
         // then needs both `sqrtApproxKRegular` and `regular_of_kregular`.
         sqrt::declare_sqrt_approx_kregular(&mut d, prelude)?;
         sqrt::declare_sqrt_ctor(&mut d, prelude)?;
+        // `sqrt_congr` needs `sqrt` itself (`declare_sqrt_ctor`, just above)
+        // plus `sqrt_approx_sq_bracket`/`equiv_symm`, both already declared.
+        sqrt::declare_sqrt_congr(&mut d, prelude)?;
         convergence::declare_cauchy_convergence(&mut d, prelude)?;
         series::declare_series(&mut d, prelude)?;
         // `CReal.mag_bound_le_sum_range_of_lt` needs `CReal.sumRange`
