@@ -255,6 +255,8 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
         ("Complex.ptolemy_inequality_sq", p.ptolemy_inequality_sq),
         ("Complex.abs", p.abs),
         ("Complex.abs_nonneg", p.abs_nonneg),
+        ("Complex.abs_congr", p.abs_congr),
+        ("Complex.abs_one", p.abs_one),
     ];
     // COVERAGE, checked against the ENVIRONMENT rather than against `named`
     // itself.
@@ -1388,5 +1390,142 @@ fn abs_nonneg_direction_is_load_bearing() {
         admitted.is_err(),
         "a proof of `0 le abs I` must NOT type-check against the REVERSED \
          claim `abs I le 0`: {admitted:?}"
+    );
+}
+
+/// A concrete, NON-trivial instantiation of [`ComplexPrelude::abs_congr`]:
+/// `conj (conj I) ~ I` ([`ComplexPrelude::conj_conj`]) transported across
+/// `abs` gives `abs (conj (conj I)) ~ abs I`. Reflexivity at one fixed point
+/// would exercise the mechanism vacuously (`Equiv.refl` proves `f x ~ f x`
+/// for ANY `f`, congruent or not); `conj_conj` supplies two SYNTACTICALLY
+/// different complex numbers connected by a genuine equivalence proof.
+#[test]
+fn abs_congr_concrete_instantiation() {
+    use super::ring::ceq;
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let i_c = d.kernel().const_(p.i, vec![]);
+    let conj_i = d.const_app(p.conj, &[i_c]);
+    let conj_conj_i = d.const_app(p.conj, &[conj_i]);
+    let h = d.lemma(p.conj_conj, &[i_c]);
+    // h : Equiv (conj (conj I)) I
+
+    let proof = d.lemma(p.abs_congr, &[conj_conj_i, i_c, h]);
+    let abs_conj_conj_i = d.const_app(p.abs, &[conj_conj_i]);
+    let abs_i = d.const_app(p.abs, &[i_c]);
+    let ty = ceq(&mut d, p.creal, abs_conj_conj_i, abs_i);
+
+    let name = d.kernel().name_str(anon, "Check.abs_congr_at_conj_conj_I");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value: proof,
+    });
+    assert!(
+        admitted.is_ok(),
+        "abs_congr at conj_conj(I) must give EXACTLY CReal.Equiv \
+         (abs (conj (conj I))) (abs I): {admitted:?}"
+    );
+}
+
+/// Negative control for [`abs_congr_concrete_instantiation`]: the SAME proof
+/// term must be REFUSED against `abs (conj (conj I)) ~ CReal.zero`.
+///
+/// **Not** used as the negative control here: pairing `abs I` with
+/// `abs (conj I)`. That statement is ALSO kernel-checkable from this same
+/// proof term (`conj` fixes `abs` too — `neg(one)*neg(one)` and `one*one`
+/// land on the same normal form, a fact caught only by trying it), so it is
+/// not a valid discriminator; see the module-level lesson about vacuous
+/// negative controls this cost real time to find.
+#[test]
+fn abs_congr_argument_is_load_bearing() {
+    use super::ring::ceq;
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let i_c = d.kernel().const_(p.i, vec![]);
+    let conj_i = d.const_app(p.conj, &[i_c]);
+    let conj_conj_i = d.const_app(p.conj, &[conj_i]);
+    let h = d.lemma(p.conj_conj, &[i_c]);
+    let proof = d.lemma(p.abs_congr, &[conj_conj_i, i_c, h]);
+
+    let abs_conj_conj_i = d.const_app(p.abs, &[conj_conj_i]);
+    let zero_real = d.kernel().const_(p.creal.zero, vec![]);
+    let wrong_ty = ceq(&mut d, p.creal, abs_conj_conj_i, zero_real);
+
+    let name = d.kernel().name_str(anon, "Check.abs_congr_wrong_target");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty: wrong_ty,
+        value: proof,
+    });
+    assert!(
+        admitted.is_err(),
+        "abs_congr's proof at conj_conj(I) must NOT type-check against \
+         `abs (conj (conj I)) ~ CReal.zero`: {admitted:?}"
+    );
+}
+
+/// `Complex.abs_one` states `abs one ~ CReal.one`, checked directly against
+/// the declared theorem's type rather than by re-deriving it, since
+/// `declare_abs_one`'s own proof already exercises the derivation.
+#[test]
+fn abs_one_is_stated_as_creal_one() {
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.abs_one)
+        .expect("Complex.abs_one must be declared")
+    {
+        Declaration::Theorem { ty, .. } => kernel.render_lean(*ty),
+        other => panic!("{other:?} is not a theorem"),
+    };
+    assert!(
+        ty.contains("Complex.abs"),
+        "abs_one's statement must mention Complex.abs: {ty}"
+    );
+}
+
+/// Negative control for `Complex.abs_one`: its proof term must NOT
+/// type-check against `abs one ~ CReal.zero` -- otherwise the checker could
+/// not distinguish a computed value from an arbitrary one.
+#[test]
+fn abs_one_value_is_load_bearing() {
+    use super::ring::ceq;
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let proof = d.lemma(p.abs_one, &[]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let abs_one_c = d.const_app(p.abs, &[one_c]);
+    let zero_real = d.kernel().const_(p.creal.zero, vec![]);
+    let wrong_ty = ceq(&mut d, p.creal, abs_one_c, zero_real);
+
+    let name = d.kernel().name_str(anon, "Check.abs_one_wrong_value");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty: wrong_ty,
+        value: proof,
+    });
+    assert!(
+        admitted.is_err(),
+        "abs_one's proof must NOT type-check against `abs one ~ \
+         CReal.zero`: {admitted:?}"
     );
 }

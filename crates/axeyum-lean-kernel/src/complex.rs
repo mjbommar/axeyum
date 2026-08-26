@@ -347,10 +347,13 @@ pub struct ComplexPrelude {
     /// this development reaches.
     ///
     /// **Not** the triangle inequality `‖z+w‖ ≤ ‖z‖+‖w‖` — that is stated on
-    /// the UN-squared norm. `CReal.sqrt` and [`Self::abs`] now exist, so the
-    /// statement itself is now writable, but proving it needs `abs` facts
-    /// ([`Self::abs`]'s own doc) that do not exist yet, so it is still not
-    /// proved here. `normSq_add` (this
+    /// the UN-squared norm. `CReal.sqrt`, [`Self::abs`], [`Self::abs_congr`]
+    /// and `CReal.sqrt_one` (hence [`Self::abs_one`]) all exist now, so the
+    /// statement is writable and `abs` is pinned at known values, but
+    /// proving the inequality still needs `CReal.sqrt` MONOTONE
+    /// (`x ≤ y → sqrt x ≤ sqrt y`) — not built in `creal/sqrt.rs` yet — to
+    /// carry this squared bound back across the square root; congruence and
+    /// a known value are not enough on their own. `normSq_add` (this
     /// module) is the parallelogram law, not subadditivity — it is an
     /// EQUALITY mentioning `normSq (add z (neg w))` as well as `normSq (add z
     /// w)`, and it is [`Self::norm_sq_nonneg`] applied to that SECOND term
@@ -1103,20 +1106,24 @@ pub struct ComplexPrelude {
     /// `‖L‖² ≤ 2‖X‖² + 2‖Y‖²`.
     ///
     /// **This is NOT Ptolemy's inequality**, and not even the sharp squared
-    /// form `‖L‖² ≤ ‖X‖² + 2‖X‖‖Y‖ + ‖Y‖²` (which is not even statable here:
-    /// no `Complex.abs`/modulus is declared in this module, only `normSq`).
-    /// It is the honest bound the available lemmas reach:
-    /// [`Self::ptolemy_identity`] gives `L ~ X + Y`, [`Self::norm_sq_congr`]
-    /// transports that to `‖L‖² ~ ‖X+Y‖²`, and [`Self::norm_sq_add_le`]
-    /// bounds `‖X+Y‖² ≤ 2‖X‖² + 2‖Y‖²` — the same factor-of-2-loose
-    /// subadditivity every other metric consequence in this module already
-    /// uses, not a sharper bound derived specially for this identity. The
-    /// unsquared metric Ptolemy inequality (`|AC|·|BD| ≤ |AB|·|CD| +
-    /// |BC|·|AD|`, on moduli) needed `CReal.sqrt`, which now exists
-    /// ([`Self::abs`]) but not yet the *further* facts (`sqrt` respecting
-    /// `Equiv`, or monotone in `≤`) that stating or proving the unsquared
-    /// form needs — see [`Self::abs`]'s own doc for exactly what is still
-    /// missing and why.
+    /// form `‖L‖² ≤ ‖X‖² + 2‖X‖‖Y‖ + ‖Y‖²` (statable now that `Complex.abs`
+    /// is declared, but its cross term `‖X‖‖Y‖` is not a `normSq`-only
+    /// quantity and is not attempted here). It is the honest bound the
+    /// available lemmas reach: [`Self::ptolemy_identity`] gives `L ~ X + Y`,
+    /// [`Self::norm_sq_congr`] transports that to `‖L‖² ~ ‖X+Y‖²`, and
+    /// [`Self::norm_sq_add_le`] bounds `‖X+Y‖² ≤ 2‖X‖² + 2‖Y‖²` — the same
+    /// factor-of-2-loose subadditivity every other metric consequence in
+    /// this module already uses, not a sharper bound derived specially for
+    /// this identity. The unsquared metric Ptolemy inequality
+    /// (`|AC|·|BD| ≤ |AB|·|CD| + |BC|·|AD|`, on moduli) needed `CReal.sqrt`,
+    /// [`Self::abs`], [`Self::abs_congr`] (`sqrt` respecting `Equiv`) — all
+    /// of which now exist — but not yet `CReal.sqrt` MONOTONE in `≤`, which
+    /// `creal/sqrt.rs` still does not build. That single remaining fact is
+    /// what stands between this squared bound and the unsquared inequality:
+    /// monotonicity turns `‖L‖² ≤ 2‖X‖² + 2‖Y‖²` into `‖L‖ ≤ sqrt(2‖X‖² +
+    /// 2‖Y‖²)`, and combining THAT with the sharp squared form above (which
+    /// itself needs `abs`'s multiplicativity, also not built) is the
+    /// remaining climb to the classical statement.
     pub ptolemy_inequality_sq: NameId,
 
     /// `Complex.abs : Complex → CReal := fun z => CReal.sqrt (normSq z)` —
@@ -1125,22 +1132,25 @@ pub struct ComplexPrelude {
     /// inspects `normSq z`'s sign, even though [`Self::norm_sq_nonneg`]
     /// already gives it for free.
     ///
-    /// **No congruence, monotonicity, or known-value law is proved for
-    /// `abs` here**, and none is a quick follow-on. All three would need a
-    /// fact `CReal.sqrt` itself does not have yet — `sqrt` respecting
-    /// `CReal.Equiv` (`x ~ y → sqrt x ~ sqrt y`), or `sqrt` monotone
-    /// (`x ≤ y → sqrt x ≤ sqrt y`), or `sqrt` at a known rational value
-    /// (`sqrt 1 ~ 1`, needed to compute `abs I`) — and `creal/sqrt.rs`'s own
-    /// module doc names exactly this class as the remaining obligation
-    /// ("`0 ≤ x` is the hypothesis `sqrt`'s own LAWS need... not the
-    /// definition"), the same real-analysis-sized gap `sq_sqrt`/`sqrt_sq`
-    /// are missing for. Building any of them means editing `creal/sqrt.rs`,
-    /// which this module does not own.
+    /// **Congruence and the known value at `one` are now proved**
+    /// ([`Self::abs_congr`], [`Self::abs_one`]) — `CReal.sqrt_congr` and
+    /// `CReal.sqrt_one` landed in `creal/sqrt.rs`, closing exactly the two
+    /// facts this doc used to name as missing. **Monotonicity is still
+    /// open**: `CReal.sqrt` respecting `≤` (`x ≤ y → sqrt x ≤ sqrt y`) is
+    /// not built in `creal/sqrt.rs`, and neither is `sq_sqrt`/`sqrt_sq`
+    /// (relating `sqrt x` back to `x` by squaring) — both real-analysis-sized
+    /// gaps, and both needed for the triangle inequality
+    /// ([`Self::norm_sq_add_le`]'s own doc) and the unsquared Ptolemy
+    /// inequality ([`Self::ptolemy_inequality_sq`]'s own doc). Building
+    /// either means editing `creal/sqrt.rs`, which this module does not own.
     ///
-    /// [`Self::abs_nonneg`] is provable WITHOUT any of those: it is a
-    /// single-index sign fact about `sqrtApprox`'s own construction (a
-    /// `Nat` square root, cast to `Rat`, always nonnegative), not an
-    /// estimate relating `sqrt x` back to `x`'s own value.
+    /// [`Self::abs_nonneg`] needed none of this: it is a single-index sign
+    /// fact about `sqrtApprox`'s own construction (a `Nat` square root, cast
+    /// to `Rat`, always nonnegative), not an estimate relating `sqrt x` back
+    /// to `x`'s own value. [`Self::abs_congr`]/[`Self::abs_one`] likewise
+    /// needed no NEW fact about `sqrt x`'s relationship to `x` — congruence
+    /// and a known value are properties of `sqrt` alone, composed with
+    /// `Complex.normSq_congr` and the ordinary `CReal` ring laws.
     pub abs: NameId,
     /// `Complex.abs_nonneg : ∀ z, CReal.le CReal.zero (abs z)`.
     ///
@@ -1159,6 +1169,27 @@ pub struct ComplexPrelude {
     /// rebuilds `sqrtApprox`'s body from public/`pub(crate)` pieces instead
     /// of importing them.
     pub abs_nonneg: NameId,
+    /// `Complex.abs_congr : ∀ z w, Equiv z w → CReal.Equiv (abs z) (abs w)`.
+    ///
+    /// Unconditional now that `CReal.sqrt_congr` is landed
+    /// (`creal/sqrt.rs`): [`Self::norm_sq_congr`] gives `normSq z ~ normSq
+    /// w`, and `CReal.sqrt_congr` (no `0 ≤ x`/`0 ≤ y` hypothesis, same reason
+    /// `sqrt` itself needs none) carries that straight across `sqrt` to
+    /// `abs z ~ abs w`. This is the fact [`Self::abs`]'s own doc used to name
+    /// as missing.
+    pub abs_congr: NameId,
+    /// `Complex.abs_one : CReal.Equiv (abs one) CReal.one`.
+    ///
+    /// `abs one = sqrt (normSq one)`, and `normSq one` unfolds (`re
+    /// one = CReal.one`, `im one = CReal.zero`, both plain structure
+    /// projections) to `mul CReal.one CReal.one + mul CReal.zero
+    /// CReal.zero`, which the ordinary ring laws (`CReal.mul_one`,
+    /// `CReal.mul_zero`, `CReal.add_congr`, `CReal.add_zero`) collapse to
+    /// `CReal.one` — no sign or magnitude fact about `sqrt` needed for that
+    /// half. `CReal.sqrt_congr` then carries `normSq one ~ CReal.one` across
+    /// `sqrt`, and `CReal.sqrt_one` (`creal/sqrt.rs`) closes `sqrt
+    /// CReal.one ~ CReal.one`; `CReal.equiv_trans` composes the two.
+    pub abs_one: NameId,
 }
 
 impl ComplexPrelude {
@@ -1322,6 +1353,8 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         ptolemy_inequality_sq: kernel.name_str(complex, "ptolemy_inequality_sq"),
         abs: kernel.name_str(complex, "abs"),
         abs_nonneg: kernel.name_str(complex, "abs_nonneg"),
+        abs_congr: kernel.name_str(complex, "abs_congr"),
+        abs_one: kernel.name_str(complex, "abs_one"),
     }
 }
 
@@ -1427,7 +1460,13 @@ pub fn build_complex_prelude(kernel: &mut Kernel) -> Result<ComplexPrelude, Kern
         declare_norm_sq_congr(&mut d, prelude)?;
         declare_ptolemy_inequality_sq(&mut d, prelude)?;
         declare_abs(&mut d, prelude)?;
-        declare_abs_nonneg(&mut d, prelude)
+        declare_abs_nonneg(&mut d, prelude)?;
+        // `abs_congr` needs `norm_sq_congr` (declared above) and
+        // `CReal.sqrt_congr` (`creal/sqrt.rs`, already in the `CRealPrelude`
+        // this module builds on). `abs_one` additionally needs
+        // `CReal.sqrt_one`.
+        declare_abs_congr(&mut d, prelude)?;
+        declare_abs_one(&mut d, prelude)
     })();
     match built {
         Ok(()) => Ok(prelude),
@@ -10116,6 +10155,132 @@ fn declare_abs_nonneg(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), Kerne
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.abs_nonneg,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.abs_congr : ∀ z w, Equiv z w → CReal.Equiv (abs z) (abs w)`.
+/// See [`ComplexPrelude::abs_congr`] for why this is now unconditional.
+fn declare_abs_congr(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let w_fv = d.fresh_fvar();
+    let w = d.kernel().fvar(w_fv);
+    let hypothesis = zeq(d, p, z, w);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let norm_z = d.const_app(p.norm_sq, &[z]);
+    let norm_w = d.const_app(p.norm_sq, &[w]);
+    let norm_eq = d.lemma(p.norm_sq_congr, &[z, w, h]);
+    // norm_eq : CReal.Equiv (normSq z) (normSq w)
+    let body = d.lemma(creal.sqrt_congr, &[norm_z, norm_w, norm_eq]);
+    // body : CReal.Equiv (sqrt (normSq z)) (sqrt (normSq w))
+    //      = CReal.Equiv (abs z) (abs w)   (`abs` unfolds to `sqrt (normSq ·)`)
+
+    let abs_z = d.const_app(p.abs, &[z]);
+    let abs_w = d.const_app(p.abs, &[w]);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, body);
+        let with_w = d.lam_fv(w_fv, carrier, with_h);
+        d.lam_fv(z_fv, carrier, with_w)
+    };
+    let ty = {
+        let claim = ceq(d, creal, abs_z, abs_w);
+        let inner = d.arrow(hypothesis, claim);
+        let with_w = d.pi_fv(w_fv, carrier, inner);
+        d.pi_fv(z_fv, carrier, with_w)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.abs_congr,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.abs_one : CReal.Equiv (abs one) CReal.one`. See
+/// [`ComplexPrelude::abs_one`] for the route.
+fn declare_abs_one(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+
+    let one_real = d.kernel().const_(creal.one, vec![]);
+    let zero_real = d.kernel().const_(creal.zero, vec![]);
+
+    // normSq one unfolds to `mul one_real one_real + mul zero_real
+    // zero_real` (`re one = one_real`, `im one = zero_real`, plain structure
+    // projections over `Complex.one := mk one_real zero_real`).
+    let one_sq = cmul(d, creal, one_real, one_real);
+    let zero_sq = cmul(d, creal, zero_real, zero_real);
+    let norm_sq_one_lit = cadd(d, creal, one_sq, zero_sq);
+
+    let mul_one_step = d.lemma(creal.mul_one, &[one_real]);
+    // mul_one_step : Equiv (mul one_real one_real) one_real
+    let mul_zero_step = d.lemma(creal.mul_zero, &[zero_real]);
+    // mul_zero_step : Equiv (mul zero_real zero_real) zero_real
+    let add_congr_step = d.lemma(
+        creal.add_congr,
+        &[
+            one_sq,
+            one_real,
+            zero_sq,
+            zero_real,
+            mul_one_step,
+            mul_zero_step,
+        ],
+    );
+    // add_congr_step : Equiv (add one_sq zero_sq) (add one_real zero_real)
+    let add_zero_step = d.lemma(creal.add_zero, &[one_real]);
+    // add_zero_step : Equiv (add one_real zero_real) one_real
+    let one_plus_zero = cadd(d, creal, one_real, zero_real);
+    let norm_sq_one_eq_one = d.lemma(
+        creal.equiv_trans,
+        &[
+            norm_sq_one_lit,
+            one_plus_zero,
+            one_real,
+            add_congr_step,
+            add_zero_step,
+        ],
+    );
+    // norm_sq_one_eq_one : Equiv normSqOneLit one_real
+
+    let sqrt_congr_step = d.lemma(
+        creal.sqrt_congr,
+        &[norm_sq_one_lit, one_real, norm_sq_one_eq_one],
+    );
+    // sqrt_congr_step : Equiv (sqrt normSqOneLit) (sqrt one_real)
+    //                 = Equiv (abs Complex.one) (sqrt CReal.one)
+    let sqrt_one_step = d.lemma(creal.sqrt_one, &[]);
+    // sqrt_one_step : Equiv (sqrt one_real) one_real
+
+    let sqrt_norm_sq_one = d.const_app(creal.sqrt, &[norm_sq_one_lit]);
+    let sqrt_one_real = d.const_app(creal.sqrt, &[one_real]);
+    let value = d.lemma(
+        creal.equiv_trans,
+        &[
+            sqrt_norm_sq_one,
+            sqrt_one_real,
+            one_real,
+            sqrt_congr_step,
+            sqrt_one_step,
+        ],
+    );
+    // value : Equiv (sqrt normSqOneLit) one_real, defeq Equiv (abs one) one_real
+
+    let ty = {
+        let one_complex = d.kernel().const_(p.one, vec![]);
+        let abs_one_c = d.const_app(p.abs, &[one_complex]);
+        ceq(d, creal, abs_one_c, one_real)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.abs_one,
         uparams: vec![],
         ty,
         value,
