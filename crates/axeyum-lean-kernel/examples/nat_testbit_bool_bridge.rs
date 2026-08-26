@@ -33,6 +33,7 @@ fn run() -> Result<(), String> {
     let reify_bits_name = kernel.name_str(autogenesis, "reifyBits");
     let reify_bits_zero_name = kernel.name_str(autogenesis, "reifyBits_zero");
     let reify_bits_succ_name = kernel.name_str(autogenesis, "reifyBits_succ");
+    let bool_to_bit_roundtrip_name = kernel.name_str(autogenesis, "boolToBit_roundtrip_zero");
     let bitwise_reify_name = kernel.name_str(autogenesis, "bitwiseReifyBounded");
 
     {
@@ -257,6 +258,36 @@ fn run() -> Result<(), String> {
         d.declare_theorem(reify_bits_succ_name, theorem_type, theorem_value)
             .map_err(|error| format!("reifyBits_succ rejected: {error:?}"))?;
 
+        // Mapping one Boolean to a numeric digit and observing bit zero returns
+        // that Boolean. Connecting this to `reifyBits bits 1` additionally
+        // needs weighted-sum normalization and is intentionally separate.
+        let zero = d.zero();
+        let selector_fv = d.fresh_fvar();
+        let selector = d.kernel().fvar(selector_fv);
+        let motive_body = {
+            let digit = d.const_app(bool_to_bit_name, &[selector]);
+            let observed = d.const_app(test_bit_bool_name, &[digit, zero]);
+            d.bool_eq(observed, selector)
+        };
+        let motive = d.lam_fv(selector_fv, bool_ty, motive_body);
+        let false_value = d.bool_false();
+        let true_value = d.bool_true();
+        let false_case = d.bool_refl(false_value);
+        let true_case = d.bool_refl(true_value);
+        let level_zero = d.kernel().level_zero();
+        let rec = d.kernel().const_(prelude.logic.bool_rec, vec![level_zero]);
+        let proof = d.apply(rec, &[motive, false_case, true_case, selector]);
+        let theorem_type = d.pi_fv(selector_fv, bool_ty, motive_body);
+        let theorem_value = d.lam_fv(selector_fv, bool_ty, proof);
+        if let Err(error) =
+            d.declare_theorem(bool_to_bit_roundtrip_name, theorem_type, theorem_value)
+        {
+            return Err(format!(
+                "boolToBit_roundtrip_zero rejected: {}",
+                d.explain(&error)
+            ));
+        }
+
         // The bounded Nat candidate associated with the pointwise algebra.
         let reified_bitwise_value = {
             let f_fv = d.fresh_fvar();
@@ -332,12 +363,23 @@ fn run() -> Result<(), String> {
     if !kernel.axiom_footprint(reify_bits_succ_name).is_empty() {
         return Err("bounded reification step gained assumptions".to_owned());
     }
+    let bool_to_bit_roundtrip_type = match kernel.environment().get(bool_to_bit_roundtrip_name) {
+        Some(Declaration::Theorem { ty, .. }) => *ty,
+        _ => return Err("boolToBit_roundtrip_zero disappeared".to_owned()),
+    };
+    if !kernel
+        .axiom_footprint(bool_to_bit_roundtrip_name)
+        .is_empty()
+    {
+        return Err("Boolean digit roundtrip gained assumptions".to_owned());
+    }
     println!(
-        "NAT_TESTBIT_BOOL_BRIDGE_OK|theorem=Axeyum.Autogenesis.testBitBool_succ|axioms=0|type={}|observation_theorem=Axeyum.Autogenesis.bitwiseObservation_apply|observation_axioms=0|observation_type={}|reification_definition=Axeyum.Autogenesis.bitwiseReifyBounded|reification_base_theorem=Axeyum.Autogenesis.reifyBits_zero|reification_base_axioms=0|reification_base_type={}|reification_step_theorem=Axeyum.Autogenesis.reifyBits_succ|reification_step_axioms=0|reification_step_type={}",
+        "NAT_TESTBIT_BOOL_BRIDGE_OK|theorem=Axeyum.Autogenesis.testBitBool_succ|axioms=0|type={}|observation_theorem=Axeyum.Autogenesis.bitwiseObservation_apply|observation_axioms=0|observation_type={}|reification_definition=Axeyum.Autogenesis.bitwiseReifyBounded|reification_base_theorem=Axeyum.Autogenesis.reifyBits_zero|reification_base_axioms=0|reification_base_type={}|reification_step_theorem=Axeyum.Autogenesis.reifyBits_succ|reification_step_axioms=0|reification_step_type={}|boolean_digit_roundtrip_theorem=Axeyum.Autogenesis.boolToBit_roundtrip_zero|boolean_digit_roundtrip_axioms=0|boolean_digit_roundtrip_type={}",
         kernel.render_lean(ty),
         kernel.render_lean(observation_type),
         kernel.render_lean(reify_zero_type),
-        kernel.render_lean(reify_succ_type)
+        kernel.render_lean(reify_succ_type),
+        kernel.render_lean(bool_to_bit_roundtrip_type)
     );
     Ok(())
 }

@@ -350,9 +350,14 @@ unbounded bitwise theorem has received credit.
 The reifier's successor equation now also checks axiom-free, exposing the prefix
 plus one weighted digit as a stable induction interface. The round-trip theorem
 remains the next proof; implementation unfolding is no longer required.
+The Boolean digit map now round-trips through bit zero axiom-free. The kernel
+correctly rejected treating the one-bit weighted sum as definitionally equal to
+that digit, exposing weighted-sum normalization as the next arithmetic lemma
+instead of silently conflating the two.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-26 | `fcdcab1b3` | Prove the Boolean-digit map round-trips through bit zero axiom-free and expose weighted-sum normalization as the next non-definitional arithmetic seam. |
 | 2026-08-26 | `75baf4b2c` | Expose the bounded reifier's axiom-free successor equation as a stable induction interface for the missing observation round trip. |
 | 2026-08-26 | `3bb1207e8` | Construct bounded Boolean-bit reification as a binary weighted sum and check its zero-length base axiom-free; retain the round-trip theorem as missing. |
 | 2026-08-26 | `f0782cc25` | Construct the axiom-free pointwise bitwise observation algebra and isolate Nat reification as the remaining mathematical obligation. |
