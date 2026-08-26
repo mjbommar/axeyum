@@ -481,6 +481,18 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.pow_sq,
         p.sum_divisors,
         p.perfect,
+        // Found by `every_nat_declaration_is_checked_and_axiom_free`'s coverage
+        // assertion, not by anyone noticing: these four were live in the
+        // prelude and unlisted here, so this suite had never checked their
+        // kind, determinism, or axiom-footprint. `Nat.noConfusionType` /
+        // `Nat.noConfusion` are the generated injectivity/disjointness
+        // machinery for the `zero`/`succ` constructors; `Nat.factorial` and
+        // `Nat.ble` (boolean `<=`) are ordinary recursive definitions that
+        // simply never made it into this list.
+        p.factorial,
+        p.no_confusion_type,
+        p.no_confusion,
+        p.ble,
     ]
 }
 
@@ -766,7 +778,132 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.sum_divisors_two_pow,
         p.even_of_even_sq,
         p.no_rational_sqrt_two,
+        // Found by `every_nat_declaration_is_checked_and_axiom_free`'s coverage
+        // assertion, not by anyone noticing: these forty-four theorems were
+        // live in the prelude and unlisted here, so this suite had never
+        // checked their kind, determinism, or axiom-footprint. Mostly the
+        // elementary `Nat.le`/`Nat.lt`/`Nat.sub`/`Nat.ble` order lemmas and a
+        // handful of number-theory results (`exists_prime_gt`,
+        // `eq_one_of_dvd_one`, the Bezout/gcd-cofactor family, `fib_mono`) that
+        // this file's own tests already exercise by name elsewhere.
+        p.succ_ne_zero,
+        p.not_lt_zero,
+        p.pow_add,
+        p.factorial_zero,
+        p.factorial_succ,
+        p.monotone_of_le_succ,
+        p.le_refl_thm,
+        p.le_succ,
+        p.succ_le_succ,
+        p.le_of_lt_succ,
+        p.lt_succ_self,
+        p.lt_succ_of_le,
+        p.lt_add_one,
+        p.not_succ_le_self,
+        p.le_succ_of_le,
+        p.zero_lt_succ,
+        p.pred_le,
+        p.pred_le_pred,
+        p.sub_le,
+        p.sub_lt,
+        p.succ_sub_succ_eq_sub,
+        p.lt_of_not_le,
+        p.lt_or_ge,
+        p.le_of_lt_add_one,
+        p.zero_lt_of_ne_zero,
+        p.ne_of_beq_eq_false,
+        p.ble_self_eq_true,
+        p.ble_succ_eq_true,
+        p.ble_eq_true_of_le,
+        p.le_of_ble_eq_true,
+        p.not_le_of_not_ble_eq_true,
+        p.one_le_factorial,
+        p.exists_prime_gt,
+        p.eq_one_of_dvd_one,
+        p.coprime_of_bezout_one,
+        p.bezout_of_scaled,
+        p.gcd_cofactors_coprime,
+        p.div_mul_cancel_of_dvd,
+        p.one_le_right_of_mul,
+        p.one_le_left_of_mul,
+        p.one_le_of_dvd_pos,
+        p.one_le_mul,
+        p.dvd_factorial_of_le,
+        p.fib_mono,
     ]
+}
+
+/// COVERAGE, checked against the ENVIRONMENT rather than against
+/// `definition_names`/`theorem_names` themselves.
+///
+/// Every other test in this file (`every_promised_name_is_admitted_with_the_
+/// expected_kind`, `the_build_is_deterministic`) only ever inspects the
+/// declarations someone remembered to list in those two functions. A
+/// `Definition` or `Theorem` declared under `Nat.` and omitted from both lists
+/// receives no kind check, no determinism check, and no axiom-footprint check
+/// -- and every run stays green, because a list cannot notice what is missing
+/// from it. This mirrors `every_creal_declaration_is_checked_and_axiom_free`
+/// (`creal_tests.rs`), landed after exactly this gap was found there.
+///
+/// Scoped to `Definition`/`Theorem` kinds deliberately: the inductive
+/// machinery (`Nat`, `Nat.zero`, `Nat.succ`, `Nat.rec`, `Nat.le` and its
+/// constructors/recursor, `Nat.Fin` and its constructor/recursor) is checked
+/// by name in `every_promised_name_is_admitted_with_the_expected_kind`
+/// instead, and an `Inductive`/`Constructor`/`Recursor` declaration has no
+/// proof term for `axiom_footprint` to inspect the way a `Definition`'s value
+/// or a `Theorem`'s proof does.
+#[test]
+fn every_nat_declaration_is_checked_and_axiom_free() {
+    let mut k = Kernel::new();
+    let p = build_nat_prelude(&mut k).expect("Nat prelude must build");
+
+    let listed: std::collections::BTreeSet<NameId> = definition_names(&p)
+        .into_iter()
+        .chain(theorem_names(&p))
+        .collect();
+    let declared: Vec<(NameId, Declaration)> = k
+        .environment()
+        .iter()
+        .map(|(name, decl)| (*name, decl.clone()))
+        .collect();
+    let unlisted: Vec<String> = declared
+        .iter()
+        .filter(|(name, decl)| {
+            matches!(
+                decl,
+                Declaration::Definition { .. } | Declaration::Theorem { .. }
+            ) && k.display_name(*name).to_string().starts_with("Nat.")
+                && !listed.contains(name)
+        })
+        .map(|(name, _)| k.display_name(*name).to_string())
+        .collect();
+    assert!(
+        unlisted.is_empty(),
+        "these `Nat` definitions/theorems are live in the prelude but absent \
+         from `definition_names`/`theorem_names`, so nothing checks their kind, \
+         determinism, or axiom-footprint: {unlisted:?}. Add them there -- do \
+         not delete this assertion."
+    );
+
+    for (name, decl) in &declared {
+        let shown = k.display_name(*name).to_string();
+        if !shown.starts_with("Nat.") || !listed.contains(name) {
+            continue;
+        }
+        assert!(
+            !matches!(decl, Declaration::Axiom { .. } | Declaration::Opaque { .. }),
+            "{shown} is asserted, not derived"
+        );
+        let footprint = k.axiom_footprint(*name);
+        assert!(
+            footprint.is_empty(),
+            "{shown} must have an empty axiom footprint, found {:?}",
+            footprint
+                .iter()
+                .map(|n| k.display_name(*n).to_string())
+                .collect::<Vec<_>>()
+        );
+    }
 }
 
 /// The honesty control: the prelude rests on **zero axioms**. Its trusted base
@@ -5990,7 +6127,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        61 + 276,
+        65 + 320,
         "every promised definition and theorem must be rendered"
     );
 }
