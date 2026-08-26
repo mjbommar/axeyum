@@ -1680,6 +1680,21 @@ pub struct CRealPrelude {
     /// symmetric in `a`/`b` needs either that or a fresh `Within r q → 0 ≤ q`
     /// generic fact neither of which exists yet).
     pub geom_pair_within: NameId,
+    /// `CReal.pow_le_pow_of_base_le : ∀ x y, le zero x → le x y → ∀ n,
+    /// le (pow x n) (pow y n)` — monotonicity of `pow` in its **base**, for a
+    /// fixed exponent, the comparison [`geometric`](super::geometric)'s own
+    /// module documentation names as missing ("no lemma comparing `pow` at
+    /// two different bases for the same exponent"). Induction on `n`: the
+    /// base case is `le_refl one` up to `pow`'s own `ι`-reduction at `0`; the
+    /// step derives `0 ≤ y` from `0 ≤ x ≤ y` via `le_trans`, multiplies the
+    /// inductive hypothesis `pow x j ≤ pow y j` by the nonnegative `x` on the
+    /// left (commuted into `pow`'s right-recursive shape via `mul_comm` +
+    /// `le_congr`, exactly [`Self::pow_le_one`]'s own technique) to get
+    /// `(pow x j)·x ≤ (pow y j)·x`, multiplies `x ≤ y` by the nonnegative
+    /// `pow y j` on the left to get `(pow y j)·x ≤ (pow y j)·y`, and chains
+    /// the two with `le_trans` to land on `pow x (succ j) ≤ pow y (succ j)`
+    /// up to the same `ι`-reduction.
+    pub pow_le_pow_of_base_le: NameId,
     /// `CReal.one_le_pow_of_one_le : ∀ x, le one x → ∀ n, le one (pow x n)` —
     /// the mirror of [`Self::pow_le_one`]: powers of a base at least `1` stay
     /// at least `1`. Induction on `n`, and simpler than `pow_le_one`'s own
@@ -2519,6 +2534,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         geom_tail_within: kernel.name_str(creal, "geom_tail_within"),
         geom_tail_within_le: kernel.name_str(creal, "geom_tail_within_le"),
         geom_pair_within: kernel.name_str(creal, "geom_pair_within"),
+        pow_le_pow_of_base_le: kernel.name_str(creal, "pow_le_pow_of_base_le"),
         one_le_pow_of_one_le: kernel.name_str(creal, "one_le_pow_of_one_le"),
         pow_le_pow_of_one_le: kernel.name_str(creal, "pow_le_pow_of_one_le"),
         pow_pos: kernel.name_str(creal, "pow_pos"),

@@ -443,6 +443,11 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ),
         ("CReal.geom_pair_within", p.geom_pair_within, "theorem"),
         (
+            "CReal.pow_le_pow_of_base_le",
+            p.pow_le_pow_of_base_le,
+            "theorem",
+        ),
+        (
             "CReal.one_le_pow_of_one_le",
             p.one_le_pow_of_one_le,
             "theorem",
