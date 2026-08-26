@@ -232,10 +232,18 @@ the binder budget, and one is integration-ready. Do not register a one-target
 operation: route the largest blocked population through the existing general
 type-slice boundary and require one unchanged contract to convert at least
 three siblings before it receives operation authority.
+That statement-boundary route now accepts all 25 positive targets with checked
+fresh-kernel receipts and exact specialization; no proof producer ran. The
+slices expose 14 distinct abstracted source definitions, so the honest next
+blocker is semantic contracts for recurrence, bit operations, order, and
+concrete functions—not statement import and not a larger blind search budget.
+Next: derive an exact contract-demand graph, join existing checked behavior
+lemmas/receipts, and choose the largest reusable sibling family.
 
 <!-- plan-section: landed-changes -->
 
 | 2026-08-26 | `73800a902` | Project all 51 retrieved-induction outcomes into a digest-bound typed capability backlog; false controls remain observation-only and one-target operation registration is refused. |
+| 2026-08-26 | `e82a1b002` | Replay all 25 import-blocked positive targets through checked type slices, exposing 14 exact semantic-contract demands without proof or ledger credit. |
 | 2026-08-25 | `efbe6cc82` | Top-three focus plan, production-only episode gate, kernel lemma search index, and typed deterministic query API. |
 | 2026-08-25 | `86431e6cd` | Autonomous-loop read tool exposes held-out-safe kernel lemma neighborhoods as candidate-only context. |
 | 2026-08-25 | `92271d133` | Kernel projection and lemma index advanced together to the then-current 1,185-theorem population. |
