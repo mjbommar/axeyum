@@ -1,17 +1,17 @@
 {
   "census": {
-    "axiom_free_declarations": 1567,
+    "axiom_free_declarations": 1570,
     "declaration_kinds": {
       "axiom": 30,
       "constructor": 29,
       "definition": 251,
       "inductive": 22,
       "recursor": 22,
-      "theorem": 1243
+      "theorem": 1246
     },
-    "declarations": 1597,
-    "direct_theorem_dependency_edges": 7057,
-    "theorems": 1243
+    "declarations": 1600,
+    "direct_theorem_dependency_edges": 7108,
+    "theorems": 1246
   },
   "declarations": [
     {
@@ -9861,6 +9861,113 @@
     },
     {
       "axiom_footprint_size": 0,
+      "canonical_type": "((x0 : ((x0 : CReal) -> CReal)) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat) -> ((x6 : AxNat) -> ((x7 : CReal.le x1 x2) -> ((x8 : CReal.UniformlyContinuousOn x0 x1 x2) -> ((x9 : AxNat.le x6 x4) -> ((x10 : AxNat.le (AxNat.add (AxNat.mul (AxNat.succ (CReal.bound (CReal.add x2 (CReal.neg x1)))) (CReal.UniformlyContinuousOn.modulus x0 x1 x2 x8 x3)) (CReal.bound (CReal.add x2 (CReal.neg x1)))) x4) -> And (CReal.le (CReal.sumRange (fun (x11 : AxNat) => CReal.mul (x0 (CReal.add (CReal.add x1 (CReal.mul (CReal.ofNat x6) (CReal.mul (CReal.add x2 (CReal.neg x1)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x4))))) (CReal.mul (CReal.ofNat x11) (CReal.mul (CReal.mul (CReal.add x2 (CReal.neg x1)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x4))) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x5)))))) (CReal.mul (CReal.mul (CReal.add x2 (CReal.neg x1)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x4))) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x5)))) (AxNat.succ x5)) (CReal.add (CReal.mul (x0 (CReal.add x1 (CReal.mul (CReal.ofNat x6) (CReal.mul (CReal.add x2 (CReal.neg x1)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x4)))))) (CReal.mul (CReal.add x2 (CReal.neg x1)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x4)))) (CReal.mul (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x3)) (CReal.mul (CReal.add x2 (CReal.neg x1)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x4)))))) (CReal.le (CReal.mul (x0 (CReal.add x1 (CReal.mul (CReal.ofNat x6) (CReal.mul (CReal.add x2 (CReal.neg x1)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x4)))))) (CReal.mul (CReal.add x2 (CReal.neg x1)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x4)))) (CReal.add (CReal.sumRange (fun (x11 : AxNat) => CReal.mul (x0 (CReal.add (CReal.add x1 (CReal.mul (CReal.ofNat x6) (CReal.mul (CReal.add x2 (CReal.neg x1)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x4))))) (CReal.mul (CReal.ofNat x11) (CReal.mul (CReal.mul (CReal.add x2 (CReal.neg x1)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x4))) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x5)))))) (CReal.mul (CReal.mul (CReal.add x2 (CReal.neg x1)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x4))) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x5)))) (AxNat.succ x5)) (CReal.mul (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x3)) (CReal.mul (CReal.add x2 (CReal.neg x1)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x4)))))))))))))))))",
+      "declaration_kind": "theorem",
+      "direct_declaration_dependencies": [
+        "And",
+        "And.intro",
+        "And.left",
+        "And.right",
+        "CReal",
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.UniformlyContinuousOn",
+        "CReal.UniformlyContinuousOn.modulus",
+        "CReal.add",
+        "CReal.add_congr",
+        "CReal.add_le_add",
+        "CReal.add_neg",
+        "CReal.bound",
+        "CReal.fineSample_close",
+        "CReal.le",
+        "CReal.le_congr",
+        "CReal.le_refl",
+        "CReal.left_distrib",
+        "CReal.mesh_count_width",
+        "CReal.mul",
+        "CReal.mul_assoc",
+        "CReal.mul_comm",
+        "CReal.mul_congr",
+        "CReal.mul_le_mul_of_nonneg_left",
+        "CReal.mul_nonneg",
+        "CReal.neg",
+        "CReal.ofNat",
+        "CReal.ofRat",
+        "CReal.ofRat_le",
+        "CReal.sumRange",
+        "CReal.sumRange_add",
+        "CReal.sumRange_const",
+        "CReal.sumRange_le",
+        "CReal.two_sided_of_abs_sub_le",
+        "CReal.zero",
+        "Nat",
+        "Nat.add",
+        "Nat.le",
+        "Nat.lt",
+        "Nat.mul",
+        "Nat.succ",
+        "Nat.zero",
+        "Rat.natDivSucc",
+        "Rat.zero",
+        "Rat.zero_le_natDivSucc"
+      ],
+      "direct_theorem_dependencies": [
+        "And.left",
+        "And.right",
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.add_congr",
+        "CReal.add_le_add",
+        "CReal.add_neg",
+        "CReal.fineSample_close",
+        "CReal.le_congr",
+        "CReal.le_refl",
+        "CReal.left_distrib",
+        "CReal.mesh_count_width",
+        "CReal.mul_assoc",
+        "CReal.mul_comm",
+        "CReal.mul_congr",
+        "CReal.mul_le_mul_of_nonneg_left",
+        "CReal.mul_nonneg",
+        "CReal.ofRat_le",
+        "CReal.sumRange_add",
+        "CReal.sumRange_const",
+        "CReal.sumRange_le",
+        "CReal.two_sided_of_abs_sub_le",
+        "Rat.zero_le_natDivSucc"
+      ],
+      "direct_type_dependencies": [
+        "And",
+        "CReal",
+        "CReal.UniformlyContinuousOn",
+        "CReal.UniformlyContinuousOn.modulus",
+        "CReal.add",
+        "CReal.bound",
+        "CReal.le",
+        "CReal.mul",
+        "CReal.neg",
+        "CReal.ofNat",
+        "CReal.ofRat",
+        "CReal.sumRange",
+        "Nat",
+        "Nat.add",
+        "Nat.le",
+        "Nat.mul",
+        "Nat.succ",
+        "Nat.zero",
+        "Rat.natDivSucc"
+      ],
+      "id": "CReal.fineBlockSum_close",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
       "canonical_type": "((x0 : ((x0 : CReal) -> CReal)) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat) -> ((x6 : AxNat) -> ((x7 : AxNat) -> ((x8 : CReal.le x1 x2) -> ((x9 : CReal.UniformlyContinuousOn x0 x1 x2) -> ((x10 : AxNat.le x6 x4) -> ((x11 : AxNat.lt x7 (AxNat.succ x5)) -> ((x12 : AxNat.le (AxNat.add (AxNat.mul (AxNat.succ (CReal.bound (CReal.add x2 (CReal.neg x1)))) (CReal.UniformlyContinuousOn.modulus x0 x1 x2 x9 x3)) (CReal.bound (CReal.add x2 (CReal.neg x1)))) x4) -> CReal.le (CReal.abs (CReal.add (x0 (CReal.add (CReal.add x1 (CReal.mul (CReal.ofNat x6) (CReal.mul (CReal.add x2 (CReal.neg x1)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x4))))) (CReal.mul (CReal.ofNat x7) (CReal.mul (CReal.mul (CReal.add x2 (CReal.neg x1)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x4))) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x5)))))) (CReal.neg (x0 (CReal.add x1 (CReal.mul (CReal.ofNat x6) (CReal.mul (CReal.add x2 (CReal.neg x1)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x4))))))))) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x3)))))))))))))))",
       "declaration_kind": "theorem",
       "direct_declaration_dependencies": [
@@ -12828,6 +12935,64 @@
         "CReal.le"
       ],
       "id": "CReal.le_abs_self",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "canonical_type": "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : Rat) -> ((x3 : CReal.le (CReal.abs (CReal.add x0 (CReal.neg x1))) (CReal.ofRat x2)) -> CReal.le x0 (CReal.add x1 (CReal.ofRat x2))))))",
+      "declaration_kind": "theorem",
+      "direct_declaration_dependencies": [
+        "CReal",
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.abs",
+        "CReal.add",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_le_add",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.le",
+        "CReal.le_abs_self",
+        "CReal.le_congr",
+        "CReal.le_refl",
+        "CReal.le_trans",
+        "CReal.neg",
+        "CReal.ofRat",
+        "CReal.zero",
+        "Rat"
+      ],
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_le_add",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.le_abs_self",
+        "CReal.le_congr",
+        "CReal.le_refl",
+        "CReal.le_trans"
+      ],
+      "direct_type_dependencies": [
+        "CReal",
+        "CReal.abs",
+        "CReal.add",
+        "CReal.le",
+        "CReal.neg",
+        "CReal.ofRat",
+        "Rat"
+      ],
+      "id": "CReal.le_add_of_abs_sub_le",
       "visible_in": [
         "complex",
         "cpoint",
@@ -20161,6 +20326,69 @@
         "Nat.zero"
       ],
       "id": "CReal.sumRange_zero",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "canonical_type": "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : Rat) -> ((x3 : CReal.le (CReal.abs (CReal.add x0 (CReal.neg x1))) (CReal.ofRat x2)) -> And (CReal.le x0 (CReal.add x1 (CReal.ofRat x2))) (CReal.le x1 (CReal.add x0 (CReal.ofRat x2)))))))",
+      "declaration_kind": "theorem",
+      "direct_declaration_dependencies": [
+        "And",
+        "And.intro",
+        "CReal",
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.abs",
+        "CReal.add",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_le_add",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.le",
+        "CReal.le_add_of_abs_sub_le",
+        "CReal.le_congr",
+        "CReal.le_refl",
+        "CReal.le_trans",
+        "CReal.neg",
+        "CReal.neg_le_abs",
+        "CReal.ofRat",
+        "CReal.zero",
+        "Rat"
+      ],
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_le_add",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.le_add_of_abs_sub_le",
+        "CReal.le_congr",
+        "CReal.le_refl",
+        "CReal.le_trans",
+        "CReal.neg_le_abs"
+      ],
+      "direct_type_dependencies": [
+        "And",
+        "CReal",
+        "CReal.abs",
+        "CReal.add",
+        "CReal.le",
+        "CReal.neg",
+        "CReal.ofRat",
+        "Rat"
+      ],
+      "id": "CReal.two_sided_of_abs_sub_le",
       "visible_in": [
         "complex",
         "cpoint",
@@ -73757,6 +73985,126 @@
     },
     {
       "relation": "direct-theorem-depends-on",
+      "source": "CReal.fineBlockSum_close",
+      "target": "And.left"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.fineBlockSum_close",
+      "target": "And.right"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.fineBlockSum_close",
+      "target": "CReal.Equiv.refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.fineBlockSum_close",
+      "target": "CReal.Equiv.symm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.fineBlockSum_close",
+      "target": "CReal.Equiv.trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.fineBlockSum_close",
+      "target": "CReal.add_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.fineBlockSum_close",
+      "target": "CReal.add_le_add"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.fineBlockSum_close",
+      "target": "CReal.add_neg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.fineBlockSum_close",
+      "target": "CReal.fineSample_close"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.fineBlockSum_close",
+      "target": "CReal.le_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.fineBlockSum_close",
+      "target": "CReal.le_refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.fineBlockSum_close",
+      "target": "CReal.left_distrib"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.fineBlockSum_close",
+      "target": "CReal.mesh_count_width"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.fineBlockSum_close",
+      "target": "CReal.mul_assoc"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.fineBlockSum_close",
+      "target": "CReal.mul_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.fineBlockSum_close",
+      "target": "CReal.mul_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.fineBlockSum_close",
+      "target": "CReal.mul_le_mul_of_nonneg_left"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.fineBlockSum_close",
+      "target": "CReal.mul_nonneg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.fineBlockSum_close",
+      "target": "CReal.ofRat_le"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.fineBlockSum_close",
+      "target": "CReal.sumRange_add"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.fineBlockSum_close",
+      "target": "CReal.sumRange_const"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.fineBlockSum_close",
+      "target": "CReal.sumRange_le"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.fineBlockSum_close",
+      "target": "CReal.two_sided_of_abs_sub_le"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.fineBlockSum_close",
+      "target": "Rat.zero_le_natDivSucc"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
       "source": "CReal.fineSample_close",
       "target": "And.left"
     },
@@ -76774,6 +77122,71 @@
       "relation": "direct-theorem-depends-on",
       "source": "CReal.le_abs_self",
       "target": "CReal.le_max_left"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.le_add_of_abs_sub_le",
+      "target": "CReal.Equiv.refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.le_add_of_abs_sub_le",
+      "target": "CReal.Equiv.symm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.le_add_of_abs_sub_le",
+      "target": "CReal.Equiv.trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.le_add_of_abs_sub_le",
+      "target": "CReal.add_assoc"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.le_add_of_abs_sub_le",
+      "target": "CReal.add_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.le_add_of_abs_sub_le",
+      "target": "CReal.add_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.le_add_of_abs_sub_le",
+      "target": "CReal.add_le_add"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.le_add_of_abs_sub_le",
+      "target": "CReal.add_neg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.le_add_of_abs_sub_le",
+      "target": "CReal.add_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.le_add_of_abs_sub_le",
+      "target": "CReal.le_abs_self"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.le_add_of_abs_sub_le",
+      "target": "CReal.le_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.le_add_of_abs_sub_le",
+      "target": "CReal.le_refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.le_add_of_abs_sub_le",
+      "target": "CReal.le_trans"
     },
     {
       "relation": "direct-theorem-depends-on",
@@ -81724,6 +82137,76 @@
       "relation": "direct-theorem-depends-on",
       "source": "CReal.sumRange_telescope_le",
       "target": "CReal.sumRange_telescope"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.two_sided_of_abs_sub_le",
+      "target": "CReal.Equiv.refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.two_sided_of_abs_sub_le",
+      "target": "CReal.Equiv.symm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.two_sided_of_abs_sub_le",
+      "target": "CReal.Equiv.trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.two_sided_of_abs_sub_le",
+      "target": "CReal.add_assoc"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.two_sided_of_abs_sub_le",
+      "target": "CReal.add_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.two_sided_of_abs_sub_le",
+      "target": "CReal.add_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.two_sided_of_abs_sub_le",
+      "target": "CReal.add_le_add"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.two_sided_of_abs_sub_le",
+      "target": "CReal.add_neg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.two_sided_of_abs_sub_le",
+      "target": "CReal.add_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.two_sided_of_abs_sub_le",
+      "target": "CReal.le_add_of_abs_sub_le"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.two_sided_of_abs_sub_le",
+      "target": "CReal.le_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.two_sided_of_abs_sub_le",
+      "target": "CReal.le_refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.two_sided_of_abs_sub_le",
+      "target": "CReal.le_trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.two_sided_of_abs_sub_le",
+      "target": "CReal.neg_le_abs"
     },
     {
       "relation": "direct-theorem-depends-on",
