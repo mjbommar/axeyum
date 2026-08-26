@@ -414,6 +414,18 @@ For prerequisites, expected output, and examples that intentionally write
 artifacts, use the complete [runnable-example catalog](docs/reference/examples.md).
 To avoid a local build, use the [browser playground](docs/playground/README.md).
 
+To solve your own SMT-LIB file through the command-faithful, multi-query front
+door (rather than the fixed teaching example):
+
+```sh
+cargo run -q -p axeyum-bench --example axeyum_cli -- your-query.smt2
+```
+
+It prints one response per output command, reports unsupported commands
+explicitly, and exits nonzero on parse, execution, or in-script errors. Axeyum
+is not yet published as a standalone `axeyum` binary; this checked-in example
+is the current general CLI surface.
+
 - [Project State](docs/PROJECT-STATE.md) — what is built, what has actually been
   measured, what remains partial, and what "Z3/Lean parity" does and does not
   mean.
