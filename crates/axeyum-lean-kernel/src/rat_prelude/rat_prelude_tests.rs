@@ -81,6 +81,7 @@ fn named(p: &RatPrelude) -> Vec<(&'static str, crate::NameId)> {
         ("inv_sub_inv", p.inv_sub_inv),
         ("inv_le_of_pos_le", p.inv_le_of_pos_le),
         ("mul_pos", p.mul_pos),
+        ("lt_of_sq_lt", p.lt_of_sq_lt),
         ("natDivSucc_pos", p.nat_div_succ_pos),
         ("inv_natDivSucc", p.inv_nat_div_succ),
         ("natDivSucc_antitone", p.nat_div_succ_antitone),

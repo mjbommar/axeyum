@@ -694,6 +694,12 @@ step tactic-catalog-census python3 scripts/gen-tactic-catalog-census.py --check
 step episodes       python3 scripts/check-agent-episode.py artifacts/episodes --production-only
 step episode-tests  python3 -m unittest scripts.tests.test_check_agent_episode
 
+# Generated product populations and static aggregate-gate reachability. The
+# artifact itself records runtime status as not-recorded; this check only proves
+# that its committed source receipts and rendered dashboard are current.
+step product-health-tests python3 -m unittest scripts.tests.test_gen_product_health
+step product-health       python3 scripts/gen-product-health.py --check
+
 # The mobility census gate (docs/python-2026-08/07-mobility-census.md, slice A7).
 # `just mobility-census` runs the same two steps.
 #

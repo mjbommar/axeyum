@@ -117,6 +117,9 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-26 | `2b943b2e7` | Generate a hash-bound product-health snapshot from kernel, fact, connectivity, operation, producer-outcome, episode, and aggregate-gate authorities without converting static wiring into a runtime-green claim. |
+| 2026-08-26 | `6fad715d8` | Make the Fibonacci child qualification progress-aware: pin candidate-specific dependency receipts and permit either child to advance only through checked, axiom-free kernel evidence. |
+| 2026-08-26 | `2aedb4d68` | Refresh the generated public example inventory from 163 to the 193 examples canonical discovery actually finds; both guarded planning references now report zero stale markers. |
 | 2026-08-26 | `42e7bdfd1` | Make the complete Python build/test/stub/type/lint recipe part of canonical `just check`; register two orphan controls in both gates and return the reachability ratchet from 16 to its 14-module baseline. |
 | 2026-08-26 | `30353a600` | Synchronize three missing fact dependencies from admitted kernel proofs; the 1,302-edge derived authority returns to zero missing edges and one more fact gains downstream connectivity. |
 | 2026-08-26 | `a88fa732f` | Redact all 37 held-out identities from agent-readable rankings and censuses; replace them with count/hash receipts, derive exclusions independently, and restore the 1,881-test Python authority to green. |
@@ -1634,7 +1637,8 @@ The canonical fact gate then exposed three missing authored dependencies in two
 settled facts. Those edges are now synchronized from the admitted proof terms:
 `Nat.fib_le_succ` points to `Nat.le_add_right` and `Nat.zero_le`, while
 `Nat.choose_self` points to `Nat.choose_succ_self_eq_zero`. The derived graph
-authority reports 1,302 edges and zero missing; the DAG now has 388 facts with
+authority reports 1,305 edges and zero missing after concurrent theorem growth;
+the DAG now has 388 facts with
 dependents, up from 387, with theorem status and evidence unchanged.
 The canonical gate now includes `py-check` itself instead of leaving the Python
 surface as an optional side recipe. A fresh PyO3 build followed by 1,881 tests,
@@ -1643,6 +1647,22 @@ and formatting passes. The statement-adapter and external-certificate controls
 are registered in both aggregate gates, reducing reachable-control drift from
 16 back to the characterized baseline of 14; aggregate scope agrees after its
 obsolete Python-only exceptions were removed.
+The generated example inventory is also current again: canonical discovery now
+finds 193 checked-in Cargo examples rather than the stale 163 recorded in two
+planning front doors. Both derived documents and `PLAN.md` are regenerated;
+the inventory checker reports two markers and zero stale counts.
+The adopted controls then exposed a qualification artifact that interpreted
+legitimate Fibonacci-child progress as a failure. Its second child now carries
+the three dependencies derived from `Nat.fib_le_succ`, and the checker preserves
+the historical selection while allowing either child to advance only through
+checked, axiom-free kernel evidence. All 51 adopted controls pass again without
+granting the qualification process proof, evaluation, or ledger-write credit.
+The first generated product-health snapshot now joins live kernel, fact,
+connectivity, operation, producer-outcome, and non-fixture episode populations.
+It reports 1,287 theorems, 698 facts, 397 exact links, 16 production episodes,
+and 2/138 admissible general-producer observations. Both aggregate gates check
+its freshness and controls. Runtime status remains explicitly `not-recorded`;
+the snapshot proves static reachability, not a green build or CI run.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization
@@ -3607,7 +3627,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | CAS parity | `BLOCKED` by deliberate pause | Wave-24 code `01d47334` and pause commit `245d8f25` are ancestors of current main. Do not start wave 25 until the user resumes it and retained specialized gate evidence is re-audited. |
 | Consumer apps / verified systems | `WIP`, non-critical path | Existing EVM, verifier, property, reflection, and symbolic-execution slices remain useful; do not preempt A2–A7 without measured demand. |
 | Foundational resources | `WIP`, separate content lane | Keep generated-resource gates green; record only project-level priority changes here. |
-| Public documentation and examples | `DONE`, current comprehensive pass | Public/crate/consumer/prover/curriculum/contributor front doors are indexed; all 163 Cargo examples and the consumer 48-case aggregate are guarded. Corrected built/planned, Lean 4.30/offline quotient, strings/P2.7, proof assurance, `i128` LRA/Farkas, native-CDCL/BatSat, RUP-only LRAT, online combination/fallback, CAS-local-vs-solver evidence, route-specific FP/datatype/nonlinear/quantifier boundaries, optional EVM/verifier certificate fields, and source-comment UNSAT-proof overclaims. Source-backed guards require nonzero full-feature tests across cookbook, learner, contributor, foundational-resource, and rules docs. Generated authorities remain canonical; reopen only for concrete drift. |
+| Public documentation and examples | `DONE`, current comprehensive pass | Public/crate/consumer/prover/curriculum/contributor front doors are indexed; all 193 Cargo examples and the consumer 48-case aggregate are guarded. Corrected built/planned, Lean 4.30/offline quotient, strings/P2.7, proof assurance, `i128` LRA/Farkas, native-CDCL/BatSat, RUP-only LRAT, online combination/fallback, CAS-local-vs-solver evidence, route-specific FP/datatype/nonlinear/quantifier boundaries, optional EVM/verifier certificate fields, and source-comment UNSAT-proof overclaims. Source-backed guards require nonzero full-feature tests across cookbook, learner, contributor, foundational-resource, and rules docs. Generated authorities remain canonical; reopen only for concrete drift. |
 | Worktree and build-cache hygiene | `WIP`, recovered | A11; only clean `main` is registered and published. A verified 2026-08-12 external Git bundle preserves the retired refs/stashes; all old branches, salvage stashes, inactive checkouts, and their large Cargo targets are removed. Next automate deterministic read-only inventory and exact-target cleanup classification. |
 
 ## Resume protocol
