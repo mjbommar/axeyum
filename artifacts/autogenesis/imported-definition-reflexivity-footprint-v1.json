@@ -1,0 +1,42 @@
+{
+  "authority": "diagnostic only; no proof transport authority, no theorem admission authority, and no fact-transition authority",
+  "consequence": "an exact theorem over either imported operation cannot have an empty declaration-reached footprint while those definitions retain their current implementation closures",
+  "controls": [
+    {
+      "axiom_footprint": [
+        "propext"
+      ],
+      "direct_declaration_dependencies": [
+        "Bool",
+        "Eq",
+        "Eq.refl",
+        "Nat",
+        "Nat.testBit"
+      ],
+      "direct_theorem_dependencies": [],
+      "name": "Axeyum.Autogenesis.ImportedTestBitReflexivityProbe",
+      "type": "Eq.{1} (((a._@._internal._hyg._0 : AxNat) -> ((x._@.Init.Prelude._2408276647._hygCtx._hyg._14 : AxNat) -> Bool))) AxNat.testBit AxNat.testBit"
+    },
+    {
+      "axiom_footprint": [
+        "propext"
+      ],
+      "direct_declaration_dependencies": [
+        "Bool",
+        "Eq",
+        "Eq.refl",
+        "Nat",
+        "Nat.bitwise"
+      ],
+      "direct_theorem_dependencies": [],
+      "name": "Axeyum.Autogenesis.ImportedBitwiseReflexivityProbe",
+      "type": "Eq.{1} (((f : ((a._@._internal._hyg._0 : Bool) -> ((a._@._internal._hyg._0 : Bool) -> Bool))) -> ((a._@._internal._hyg._0 : AxNat) -> ((n : AxNat) -> AxNat)))) AxNat.bitwise AxNat.bitwise"
+    }
+  ],
+  "finding": "a reflexive theorem with no theorem dependencies inherits propext solely by mentioning either imported definition in its statement",
+  "kind": "axeyum-imported-definition-reflexivity-footprint",
+  "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+  "lean_version": "4.30.0",
+  "schema_version": 1,
+  "source_stream_sha256": "58c09fb4f8b3af7adacd8d0c22e945507e6ffb3920b0581c22d17afa1867d3b9"
+}

@@ -12,6 +12,13 @@
     "n": 2,
     "testBit": "is_one"
   },
+  "imported_definition_footprint_probe": {
+    "artifact": "artifacts/autogenesis/imported-definition-reflexivity-footprint-v1.json",
+    "controls": 2,
+    "empty_theorem_dependency_controls": 2,
+    "finding": "both reflexive controls inherit propext solely through their imported operation dependency",
+    "status": "exact-imported-empty-footprint-structurally-unavailable"
+  },
   "kind": "axeyum-autogenesis-semantic-law-demand",
   "finite_reification_oracle": {
     "authority": "bounded computational observation only; no proof authority and no theorem authority",
@@ -205,5 +212,5 @@
     "proof_file_sha256": "fcf68b0ffe341344632929da5b4322e7303ce581125e3935ed92fe0f276a261c",
     "proof_lines": [401, 424]
   },
-  "state": "law-interface-required-before-reconstruction"
+  "state": "target-owned-law-checked-exact-imported-empty-footprint-unavailable"
 }

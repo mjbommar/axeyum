@@ -168,6 +168,27 @@ ineligible only because exact imported-operation equivalence is still missing;
 neither same-name resemblance nor the upstream assumption-bearing definitions
 may substitute for that transport.
 
+That last boundary is now measured rather than inferred. Two fresh control
+theorems state only reflexive equality of imported `Nat.testBit` and
+`Nat.bitwise` with themselves and prove it with `Eq.refl`. Neither control has
+any theorem dependency, yet both receive the footprint `[propext]`: the
+footprint walker reaches each transparent definition from the theorem's type
+and then reaches `propext` through its implementation closure. Consequently,
+no different proof of the exact imported theorem can make its current
+declaration-reached footprint empty. The honest choices are now architectural:
+retain the target-owned clean operations as Axeyum's foundation, reconstruct
+clean compatible definitions under new identities, or explicitly accept the
+upstream definition closure as a weaker trust route. An operation-equivalence
+proof alone cannot erase an assumption already present in the exact operation's
+statement dependency.
+
+The hash-bound receipt is
+[`imported-definition-reflexivity-footprint-v1.json`](../../artifacts/autogenesis/imported-definition-reflexivity-footprint-v1.json).
+`just autogenesis-imported-definition-reflexivity-footprint-replay` regenerates
+the observation from the external candidate pack; the ordinary semantic-law
+gate validates the committed receipt without requiring that 2.2 MiB NDJSON to
+be vendored.
+
 A bounded oracle exhausts every Boolean vector through width 12: 8,191 vectors,
 90,114 in-range observations, and 8,191 first-out-of-range zero observations.
 It confirms the weighted-sum construction has the intended finite semantics.

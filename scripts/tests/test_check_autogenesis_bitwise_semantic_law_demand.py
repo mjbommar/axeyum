@@ -49,6 +49,12 @@ class BitwiseSemanticLawDemandTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "operation footprint"):
             MODULE.validate(data)
 
+    def test_imported_footprint_boundary_cannot_gain_unproved_credit(self):
+        data = copy.deepcopy(self.data)
+        data["imported_definition_footprint_probe"]["status"] = "transport-ready"
+        with self.assertRaisesRegex(ValueError, "footprint boundary"):
+            MODULE.validate(data)
+
     def test_countermodel_exclusion_mutation_fails_closed(self):
         data = copy.deepcopy(self.data)
         data["countermodel_exclusion"]["law_rhs"] = False

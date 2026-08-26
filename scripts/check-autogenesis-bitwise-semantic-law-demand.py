@@ -17,7 +17,10 @@ GRAPH = ROOT / "artifacts/autogenesis/imported-implementation-demand-v1.json"
 def validate(data: dict[str, Any]) -> dict[str, int]:
     if data.get("kind") != "axeyum-autogenesis-semantic-law-demand":
         raise ValueError("wrong artifact kind")
-    if data.get("state") != "law-interface-required-before-reconstruction":
+    if (
+        data.get("state")
+        != "target-owned-law-checked-exact-imported-empty-footprint-unavailable"
+    ):
         raise ValueError("semantic-law demand state changed")
     authority = data.get("authority", "")
     for denied in ("no proof authority", "no transport", "no fact-transition"):
@@ -53,6 +56,21 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
         dependencies = operation.get("direct_declaration_dependencies")
         if not isinstance(dependencies, list) or dependencies != sorted(dependencies):
             raise ValueError("imported operation dependency identity changed")
+
+    probe = data.get("imported_definition_footprint_probe", {})
+    if probe.get("status") != "exact-imported-empty-footprint-structurally-unavailable":
+        raise ValueError("imported definition footprint boundary changed")
+    if (probe.get("controls"), probe.get("empty_theorem_dependency_controls")) != (2, 2):
+        raise ValueError("imported definition footprint control count changed")
+    probe_artifact = ROOT / probe.get("artifact", "")
+    receipt = json.loads(probe_artifact.read_text())
+    receipt_controls = receipt.get("controls", [])
+    if len(receipt_controls) != 2 or any(
+        row.get("axiom_footprint") != ["propext"]
+        or row.get("direct_theorem_dependencies") != []
+        for row in receipt_controls
+    ):
+        raise ValueError("imported definition footprint receipt disagrees with demand")
 
     laws = data.get("laws")
     if not isinstance(laws, list) or len(laws) != 6:

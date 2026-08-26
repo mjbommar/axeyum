@@ -494,6 +494,16 @@ remaining core is bit-observation uniqueness below the established bound.
 Native `sum_testBit_lt` now composes with that bound to give an axiom-free
 numeric reconstruction round trip. Only componentwise digit uniqueness and its
 Boolean transport remain.
+The subsequent low-digit construction has now closed that entire target-owned
+law, including the unbounded tail, axiom-free. A declaration-level reflexivity
+probe also resolves the exact-import question: a theorem proved only by
+`Eq.refl`, with no theorem dependencies, still inherits `[propext]` when its
+statement names imported `Nat.testBit` or `Nat.bitwise`. Exact imported
+empty-footprint reconstruction is impossible while those definitions keep
+their current closures. The next product decision is therefore whether the
+clean target-owned operations are canonical, whether compatible clean
+definitions are reconstructed under new identities, or whether a separately
+labeled weaker imported-definition route is supported.
 
 ### Exit evidence
 
