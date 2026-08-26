@@ -20,8 +20,11 @@ The family-level queue ranks natural binomial first. Its three formerly
 unreachable implication-bearing statements now export under pinned
 lean4export 3.1.0 when stdout is streamed off s5, and all three pass Axeyum's
 proof-isolated import with zero axioms and theorem proofs. The unchanged
-retrieved-induction producer declines two at the binder/generalization boundary
-and one at a non-equality (`≠`) terminal. All eight ready binomial siblings are
+retrieved-induction producer declines two at missing rewrite/induction
+composition and one at a non-equality (`≠`) terminal. A backtracking repair
+proved the former were falsely reported as binder exhaustion: failed induction
+now restores its speculative budget before plain generalization without raising
+the settled eight-binder contract. All eight ready binomial siblings are
 therefore measured: one accepted, six declined, one import-rejected. Next:
 improve the two shared producer mechanisms, rerun the family, and reach two more
 accepted siblings before operation integration.

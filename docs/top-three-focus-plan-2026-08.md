@@ -71,8 +71,8 @@ The next family is therefore **natural binomial**, not bitwise or another
 one-off theorem. `Nat.choose_one_right` already passes the retrieved-induction
 producer axiom-free. All eight ready siblings are now measured: one accepts,
 six decline, and one is rejected at the statement boundary. The three rows
-formerly classified as unreachable arrows import cleanly; two expose the
-shared binder/generalization budget and one exposes the non-equality terminal
+formerly classified as unreachable arrows import cleanly; two expose missing
+rewrite/induction composition and one exposes the non-equality terminal
 grammar. The falsifiable next step is to improve those reusable producer
 mechanisms, rerun all eight unchanged, and convert two more siblings. Natural
 bitwise remains third:
@@ -95,11 +95,12 @@ stores exact hashes, source identity, rendered goals, and a regenerable checked
 The unchanged held-out-safe retrieved-induction producer then measured those
 three goals. All imports passed and 59 of 60 ranked-premise transport attempts
 were executable; no theorem was produced. `choose_eq_zero_of_lt` and
-`choose_symm_of_eq_add` hit `BinderBudgetExceeded`; `choose_ne_zero` reached a
-non-equality terminal (`≠`) outside the producer grammar. This localizes the
-next reusable implementation work to binder/generalization accounting plus
-negative-proposition terminal support—not a new exporter and not per-target
-binomial proof code. The exact
+`choose_symm_of_eq_add` now reach `TerminalNotDefEqNoRewrite` after failed
+speculative induction correctly restores the eight-binder budget before plain
+generalization; `choose_ne_zero` reaches a non-equality terminal (`≠`) outside
+the producer grammar. This localizes the next reusable implementation work to
+rewrite/induction composition plus negative-proposition terminal support—not a
+new exporter and not per-target binomial proof code. The exact
 [`measurement`](../artifacts/autogenesis/binomial-arrow-retrieved-induction-census-v1.json)
 feeds the generated family queue.
 

@@ -11,7 +11,7 @@
   "derivation": {
     "binomial_arrow_retrieved_induction": {
       "path": "artifacts/autogenesis/binomial-arrow-retrieved-induction-census-v1.json",
-      "sha256": "4c425d5ceb50a40688ec94dd05b91298796abafc4bf4df6e1b0d41398ac66d64"
+      "sha256": "0ecc4694ed0b835410c9ae1610095abf934409bc6e100ee3b1940147a911b926"
     },
     "bitwise_clean_family": {
       "path": "artifacts/autogenesis/bitwise-clean-family-projection-v1.json",
@@ -41,8 +41,7 @@
       "already_registered_fact_ids": [],
       "capability_demands": {
         "authoritative-operation-integration": 1,
-        "binder-or-generalization": 2,
-        "missing-rewrite-or-induction-plan": 1,
+        "missing-rewrite-or-induction-plan": 3,
         "non-equality-terminal-family": 3,
         "type-slice-generalization": 1
       },
