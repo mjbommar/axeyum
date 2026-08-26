@@ -2520,6 +2520,25 @@ pub struct CRealPrelude {
     /// module documentation for the derivation and for what still separates
     /// this from `riemannSum_cauchy`.
     pub mesh_le_of_ge: NameId,
+    /// `CReal.fineSample_in_bounds : ∀ a b m n i j, le a b → Nat.le i m →
+    /// Nat.lt j (Nat.succ n) → And (le a x) (le x b)`, `x := add
+    /// (sample_point a delta_m i) (mul (ofNat j) delta_fine)`, `delta_m :=
+    /// (b−a)·natDivSucc(1,m)`, `delta_fine := delta_m·natDivSucc(1,n)`
+    /// (`creal/integral.rs`) — the fine-sample placement lemma
+    /// `riemannSum_cauchy`'s per-block fold needs: every FINE sample point
+    /// `x` inside coarse block `i` (`i ≤ m`, so `i` indexes one of
+    /// `riemannSum`'s `Nat.succ m` coarse blocks) lies in `[a, b]`, for every
+    /// fine sub-index `j < Nat.succ n`. `riemannSum_sample_in_bounds` /
+    /// `subdivisionPoint_in_bounds` only place the COARSE sample points
+    /// themselves; this is the one-index-shift generalization those two
+    /// theorems do not cover. Built from TWO calls to
+    /// `subdivisionPoint_in_bounds` (at coarse indices `i` and `Nat.succ i`,
+    /// bracketing the block `[base, base+delta_m]`) plus the same
+    /// nonneg/bounded-offset argument `sample_offset_bound` uses for its own
+    /// fine term. Called from `creal.rs`'s pipeline AFTER
+    /// `monotone::declare_monotone_of_nonneg_deriv_all` (for
+    /// `CReal.subdivisionPoint_in_bounds`).
+    pub fine_sample_in_bounds: NameId,
 }
 
 impl CRealPrelude {
@@ -2852,6 +2871,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         ivt_approx: kernel.name_str(creal, "ivt_approx"),
         has_derivative_unique: kernel.name_str(creal, "hasDerivative_unique"),
         mesh_le_of_ge: kernel.name_str(creal, "mesh_le_of_ge"),
+        fine_sample_in_bounds: kernel.name_str(creal, "fineSample_in_bounds"),
     }
 }
 
@@ -2994,6 +3014,13 @@ pub(crate) fn build_creal_prelude_uncached(
         // particular it cannot join `monotone::declare_monotone`'s own call
         // site, which runs before `integral` for exactly that reason.
         monotone::declare_monotone_of_nonneg_deriv_all(&mut d, prelude)?;
+        // `fineSample_in_bounds` needs `CReal.subdivisionPoint_in_bounds`
+        // (`monotone::declare_monotone_of_nonneg_deriv_all`, just above) —
+        // it cannot join `integral::declare_integral`'s own call site above
+        // for exactly that reason (`subdivisionPoint_in_bounds` is not
+        // declared yet there). See `integral.rs`'s module documentation for
+        // what this bridges toward `riemannSum_cauchy`.
+        integral::declare_fine_sample_in_bounds(&mut d, prelude)?;
         // `order_reflect_of_pos_deriv` needs only `strict_mono_of_pos_deriv`
         // (just declared above) plus `lt_trans`/`lt_irrefl`/`apart` (all far
         // above); nothing later depends on it, so it lands right after its
