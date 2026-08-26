@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 258] = [
+    let expected: [(&str, crate::NameId, &str); 259] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -647,9 +647,14 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ),
         // `ivt_step` iterated `n` times by structural induction
         // (creal/ivt.rs) -- the bracket-shrinking construction `ivt_approx`
-        // needs; the closing Archimedean/continuity combination is not
-        // built yet (see `CRealPrelude::ivt_iter`'s own doc comment).
+        // (below) closes against `UniformlyContinuousOn` and
+        // `pow_half_le_natDivSucc`.
         ("CReal.ivt_iter", p.ivt_iter, "theorem"),
+        // The constructive approximate Intermediate Value Theorem (Spivak
+        // ch. 7), closing `ivt_iter` against `UniformlyContinuousOn` and
+        // `CReal.bound` (no `Exists.rec`) -- see `CRealPrelude::ivt_approx`'s
+        // own doc comment.
+        ("CReal.ivt_approx", p.ivt_approx, "theorem"),
         // Uniqueness of the derivative on a NONDEGENERATE interval
         // (`creal/deriv_unique.rs`): the naive statement without `lt a b` is
         // refuted at a degenerate `a = b`, so this carries that hypothesis.
