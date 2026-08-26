@@ -218,7 +218,9 @@ dependencies = [
 name = "axeyum-search"
 version = "0.1.0"
 dependencies = [
+ "axeyum-cas",
  "axeyum-cnf",
+ "serde_json",
 ]
 
 [[package]]

@@ -1172,8 +1172,16 @@ its dual variables, so none of 73/115/168 is certified yet.
 Boolean-circuit artifact and bounded complete truth-table checker. The published
 `PRIMATEs^-1` witness matches all 32 independently sourced rows with 8 AND, 35 XOR, and 2 NOT
 gates; changing its first XOR to XNOR exits 1 on row 0. This reproduces the known upper bound
-8, not optimality or a new result. A deterministic synthesis CNF and checked boundary UNSAT
-remain open.
+8, not optimality or a new result. General bit-gate synthesis and a checked target-boundary
+UNSAT remain open.
+
+**Multiplicative synthesis envelope, 2026-08-26.** ADR-0561 adds the complete deterministic
+affine-between-AND SAT encoding, model-to-ADR-0558 lifting with exhaustive replay, and
+backward-checked DRAT for UNSAT. All 16 two-input functions reproduce their exact affine/
+one-AND boundary. The published PRIMATEs-inverse MC=8 circuit normalizes into the same
+9,326-variable / 31,712-clause formula; 222 selector units solve, lift, and replay. Unpinned
+MC=8 at 30 seconds and the known MC=6 lower-bound control at 120 seconds both interrupted,
+so no MC=7 frontier result is credited. Symmetry/performance work is next.
 
 **SIMD semantic/minimality calibration, 2026-08-26.** ADR-0559 adds exact provenance-tag
 semantics for unary AVX2 `vpshufb` and same-source `vperm2i128`. Global 32-byte reversal

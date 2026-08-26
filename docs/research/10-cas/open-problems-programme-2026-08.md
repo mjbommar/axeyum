@@ -50,8 +50,9 @@ These are hypotheses until the first vertical slices measure the actual gaps.
 - A proof-carrying Boolean-circuit synthesis envelope: circuit witness on SAT, DRAT plus
   instance pin on UNSAT, and no success state for mere solver completion. ADR-0558 supplies
   the positive half: named shared wires, explicit MSB order/gate semantics, complete truth
-  tables, bounded exhaustive replay, and stable gate counts. Deterministic synthesis CNF and
-  its negative certificate envelope remain open.
+  tables, bounded exhaustive replay, and stable gate counts. ADR-0561 completes this for
+  multiplicative complexity: deterministic affine-between-AND CNF, replayed model lifting,
+  and backward-checked DRAT. General bit-gate complexity remains open.
 - Exact-rational matrix certificates with dimension/resource admission, fraction-free or
   BigInt arithmetic, independently checked `LDL^T`, and explicit PSD semantics. ADR-0557
   now removes the arithmetic-width blocker: bounded `BigRational` symmetric elimination
@@ -147,6 +148,15 @@ The first S-box positive control is now independently replayed. Zhang--Huang's A
 both sources' MSB-first convention. ADR-0558 counts 8 AND, 35 XOR, and 2 NOT gates; changing
 the first XOR to XNOR fails row 0 (`expected=1`, `observed=23`). This reproduces the known
 upper endpoint 8 and does not close `[7,8]`.
+
+ADR-0561 now binds that positive witness to the exact lower-bound search formula. The
+complete affine-between-AND encoding has 9,326 variables and 31,712 clauses at MC=8; the
+published circuit normalizes to 222 selector coefficients, whose pinned formula solves,
+lifts, and independently replays all rows. Exhaustive tests over all sixteen two-input
+functions reproduce the exact affine-versus-one-AND boundary, with checked DRAT for the
+zero-AND negative control. Search readiness is not yet established: unpinned MC=8 interrupted
+at 30 seconds and the published-control MC=6 query interrupted at 120 seconds. Those are
+undecided calibration outcomes; MC=7 was not run and remains open.
 
 The first SIMD calibration is complete. Lane-local `vpshufb` reversal followed by a
 same-source `vperm2i128` half swap realizes global reversal of all 32 distinct provenance

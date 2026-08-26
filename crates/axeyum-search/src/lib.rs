@@ -89,6 +89,7 @@ pub mod cover;
 pub mod family;
 pub mod harness;
 pub mod ledger;
+pub mod multiplicative_circuit;
 pub mod offdiag;
 pub mod search;
 pub mod simd;
