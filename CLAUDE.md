@@ -949,6 +949,47 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   located hotspot is the deliverable. Give the lane a way to finish, not just a
   way to fail.
 
+  **TENTH STALL, 2026-08-26, AND IT HAD A MECHANICAL CAUSE — EVERY LANE WORKTREE
+  BUILDS ITS OWN `target/` FROM SCRATCH.** Measured that day: **83 GB of lane
+  `target/` directories across 125 worktrees**, 400-800 MB each. Nothing is
+  shared, so a lane's first check pays a full cold build of the workspace
+  *behind the `cargo-serialized.sh` flock*, which is many minutes before a
+  single test runs. That wait is what a lane backgrounds. No amount of
+  instruction survives it, and the nine retrospectives above all read the
+  behaviour as discipline when half of it is arithmetic.
+
+  It also reframes the disk: the worktree tree is roughly half build artifacts,
+  so reaping worktrees reclaims far more than the source suggests.
+
+  **AND THE PROHIBITION MUST NAME THE OUTCOME, NOT A MECHANISM.** That lane's
+  brief said, in bold, *"Do NOT background a cargo run and wait for it."* It
+  started a **monitor** instead and stalled inside the letter of the rule —
+  a monitor is not literally a backgrounded cargo run. Write the constraint as
+  *"do not defer the answer by ANY mechanism — background task, monitor,
+  scheduled wakeup, or a second agent — and if a check has not finished when you
+  are ready to report, report it as 'did not run'."*
+
+- **DISPATCHING WITHOUT `isolation: "worktree"` PUTS THE LANE IN THE SHARED
+  CHECKOUT WHILE ITS BRIEF SAYS OTHERWISE.** Measured 2026-08-26: three lanes
+  dispatched for one prelude, all briefed in bold that they were working in
+  their own worktree, and the `Agent` calls carried no isolation. Two of the
+  three needed the same `creal.rs` and `creal_tests.rs`.
+
+  Nothing surfaces it. `git status` looks ordinary, the lane's own report reads
+  like normal work, and the first real symptom would be two lanes overwriting
+  each other's whole-file edits. It was caught only by noticing that a lane 32
+  minutes and 104 tool calls into its task had no worktree directory.
+
+  Two rules, and the second is the one that cost time:
+  - Pass `isolation: "worktree"` for any lane that will WRITE, and never assert
+    isolation in a brief you did not provide.
+  - **`git worktree list` is the check — not the presence of a directory under
+    `.claude/worktrees/agent-<id>`.** A capable lane may create its own worktree
+    somewhere else entirely (one did, on `/data0`, as its first action after
+    noticing the shared tree was mid-merge). Inferring "no `.claude` directory"
+    ⇒ "working in the shared checkout" is wrong, and it produced a false alarm
+    aimed at the one lane that had handled the situation correctly.
+
 - **A BACKGROUND TASK REPORTED AS EXITED MAY STILL BE RUNNING, AND IT WILL TAX
   EVERY MEASUREMENT YOU TAKE AFTERWARDS.** Found 2026-08-21: a `python3 -` from
   a session task started **2026-08-18 03:43**, whose output file recorded
