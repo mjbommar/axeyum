@@ -481,7 +481,19 @@ The reifier now has clean base and successor equations, so that round-trip proof
 can proceed against a named induction interface rather than raw `sumRange`.
 The Boolean-to-digit map also round-trips at bit zero. The kernel rejected a
 direct definitional leap from `reifyBits bits 1`, so weighted-sum normalization
-is now an explicit arithmetic obligation rather than hidden conversion.
+became an explicit arithmetic obligation rather than hidden conversion. That
+chain and the resulting one-bit weighted-sum round trip now check axiom-free;
+the unresolved theorem is the general bounded case.
+An exhaustive width-12 oracle validates every finite vector and boundary bit
+while remaining explicitly non-authoritative; it is a regression oracle for,
+not a substitute for, the universal kernel proof.
+The constructive coefficient bound `boolToBit b ≤ 1` now supplies the local
+inequality needed by the universal reifier-bound induction.
+That induction now lands axiom-free: `reifyBits bits k < 2^k` universally. The
+remaining core is bit-observation uniqueness below the established bound.
+Native `sum_testBit_lt` now composes with that bound to give an axiom-free
+numeric reconstruction round trip. Only componentwise digit uniqueness and its
+Boolean transport remain.
 
 ### Exit evidence
 

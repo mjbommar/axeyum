@@ -123,7 +123,7 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
         raise ValueError("bounded reification step gained assumptions")
     if (
         reification.get("roundtrip_status")
-        != "boolean-digit-checked-weighted-sum-normalization-missing"
+        != "one-bit-checked-general-bounded-roundtrip-missing"
     ):
         raise ValueError("unproved bounded reification roundtrip gained credit")
     if "reifyBits" not in reification.get("base_canonical_type", ""):
@@ -136,6 +136,37 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
     digit_type = reification.get("boolean_digit_roundtrip_canonical_type", "")
     if "Eq.{1} Bool" not in digit_type or "boolToBit" not in digit_type:
         raise ValueError("Boolean digit roundtrip type changed")
+    if reification.get("boolean_digit_bound_axiom_footprint_size") != 0:
+        raise ValueError("Boolean digit bound gained assumptions")
+    bound_type = reification.get("boolean_digit_bound_canonical_type", "")
+    if "AxNat.le" not in bound_type or "boolToBit" not in bound_type:
+        raise ValueError("Boolean digit bound type changed")
+    for prefix, required in (
+        ("boolean_digit_divmod", "AxNat.divMod"),
+        ("boolean_digit_div", "AxNat.div"),
+        ("boolean_digit_mod", "AxNat.mod"),
+    ):
+        if reification.get(f"{prefix}_axiom_footprint_size") != 0:
+            raise ValueError(f"{prefix} gained assumptions")
+        canonical_type = reification.get(f"{prefix}_canonical_type", "")
+        if required not in canonical_type or "boolToBit" not in canonical_type:
+            raise ValueError(f"{prefix} type changed")
+    for prefix in ("one_bit_normalization", "one_bit_roundtrip"):
+        if reification.get(f"{prefix}_axiom_footprint_size") != 0:
+            raise ValueError(f"{prefix} gained assumptions")
+        canonical_type = reification.get(f"{prefix}_canonical_type", "")
+        if "reifyBits" not in canonical_type:
+            raise ValueError(f"{prefix} type changed")
+    if reification.get("reification_bound_axiom_footprint_size") != 0:
+        raise ValueError("universal reification bound gained assumptions")
+    bound_type = reification.get("reification_bound_canonical_type", "")
+    if "AxNat.lt" not in bound_type or "AxNat.pow" not in bound_type:
+        raise ValueError("universal reification bound type changed")
+    if reification.get("numeric_roundtrip_axiom_footprint_size") != 0:
+        raise ValueError("numeric reification roundtrip gained assumptions")
+    numeric_type = reification.get("numeric_roundtrip_canonical_type", "")
+    if "AxNat.sumRange" not in numeric_type or "AxNat.testBit" not in numeric_type:
+        raise ValueError("numeric reification roundtrip type changed")
 
     exclusion = data.get("countermodel_exclusion", {})
     if exclusion.get("excluded_by_law") != "testBit_succ":
@@ -150,7 +181,9 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
         raise ValueError("semantic law no longer excludes the countermodel")
     if (exclusion.get("law_lhs"), exclusion.get("law_rhs")) != (lhs, rhs):
         raise ValueError("countermodel exclusion receipt changed")
+    oracle = validate_finite_reification_oracle(data.get("finite_reification_oracle"))
     return {
+        "finite_vectors": oracle["vectors"],
         "laws": len(laws),
         "native_analogues": len(analogues),
         "native_boolean_bridges": 1,
@@ -158,6 +191,39 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
         "native_reifications": 1,
         "operations": len(operations),
     }
+
+
+def validate_finite_reification_oracle(receipt: Any) -> dict[str, int]:
+    if not isinstance(receipt, dict):
+        raise TypeError("finite reification oracle receipt is absent")
+    authority = receipt.get("authority", "")
+    if "no proof" not in authority or "no theorem authority" not in authority:
+        raise ValueError("finite reification oracle authority widened")
+    max_bits = receipt.get("max_bits")
+    if max_bits != 12:
+        raise ValueError("finite reification oracle bound changed")
+    vectors = 0
+    inside = 0
+    outside = 0
+    for width in range(max_bits + 1):
+        for mask in range(1 << width):
+            vectors += 1
+            reified = sum(((mask >> index) & 1) << index for index in range(width))
+            for index in range(width):
+                inside += 1
+                if ((reified >> index) & 1) != ((mask >> index) & 1):
+                    raise ValueError("finite reification oracle found an inside mismatch")
+            outside += 1
+            if ((reified >> width) & 1) != 0:
+                raise ValueError("finite reification oracle found an outside mismatch")
+    observed = {
+        "vectors": vectors,
+        "inside_observations": inside,
+        "outside_zero_observations": outside,
+    }
+    if any(receipt.get(key) != value for key, value in observed.items()):
+        raise ValueError("finite reification oracle receipt changed")
+    return observed
 
 
 def main() -> int:
@@ -176,6 +242,7 @@ def main() -> int:
         f"native_boolean_bridges={result['native_boolean_bridges']}|"
         f"native_observation_algebras={result['native_observation_algebras']}|"
         f"native_reifications={result['native_reifications']}|"
+        f"finite_vectors={result['finite_vectors']}|"
         "countermodel_excluded=true|reconstruction_eligible=false"
     )
     return 0

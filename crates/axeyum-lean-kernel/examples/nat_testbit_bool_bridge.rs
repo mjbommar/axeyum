@@ -5,8 +5,38 @@
 //! constructively bridgeable and preserves the native successor equation.
 
 use axeyum_lean_kernel::{
-    BinderInfo, Declaration, Kernel, NatDev, NatOps, ReducibilityHint, build_nat_prelude,
+    BinderInfo, Declaration, ExprId, Kernel, NatDev, NatOps, ReducibilityHint, build_nat_prelude,
 };
+
+fn and_left(d: &mut NatDev<'_>, left: ExprId, right: ExprId, proof: ExprId) -> ExprId {
+    let logic = d.prelude().logic;
+    let and_ty = d.const_app(logic.and, &[left, right]);
+    let pair_fv = d.fresh_fvar();
+    let motive = d.lam_fv(pair_fv, and_ty, left);
+    let left_fv = d.fresh_fvar();
+    let left_proof = d.kernel().fvar(left_fv);
+    let right_fv = d.fresh_fvar();
+    let with_right = d.lam_fv(right_fv, right, left_proof);
+    let minor = d.lam_fv(left_fv, left, with_right);
+    let zero = d.kernel().level_zero();
+    let rec = d.kernel().const_(logic.and_rec, vec![zero]);
+    d.apply(rec, &[left, right, motive, minor, proof])
+}
+
+fn and_right(d: &mut NatDev<'_>, left: ExprId, right: ExprId, proof: ExprId) -> ExprId {
+    let logic = d.prelude().logic;
+    let and_ty = d.const_app(logic.and, &[left, right]);
+    let pair_fv = d.fresh_fvar();
+    let motive = d.lam_fv(pair_fv, and_ty, right);
+    let left_fv = d.fresh_fvar();
+    let right_fv = d.fresh_fvar();
+    let right_proof = d.kernel().fvar(right_fv);
+    let with_right = d.lam_fv(right_fv, right, right_proof);
+    let minor = d.lam_fv(left_fv, left, with_right);
+    let zero = d.kernel().level_zero();
+    let rec = d.kernel().const_(logic.and_rec, vec![zero]);
+    d.apply(rec, &[left, right, motive, minor, proof])
+}
 
 fn main() {
     if let Err(error) = run() {
@@ -34,6 +64,14 @@ fn run() -> Result<(), String> {
     let reify_bits_zero_name = kernel.name_str(autogenesis, "reifyBits_zero");
     let reify_bits_succ_name = kernel.name_str(autogenesis, "reifyBits_succ");
     let bool_to_bit_roundtrip_name = kernel.name_str(autogenesis, "boolToBit_roundtrip_zero");
+    let bool_to_bit_le_one_name = kernel.name_str(autogenesis, "boolToBit_le_one");
+    let bool_digit_div_mod_name = kernel.name_str(autogenesis, "boolDigit_divMod");
+    let bool_digit_div_name = kernel.name_str(autogenesis, "boolDigit_div");
+    let bool_digit_mod_name = kernel.name_str(autogenesis, "boolDigit_mod");
+    let reify_one_normalize_name = kernel.name_str(autogenesis, "reifyBits_one_normalize");
+    let reify_one_roundtrip_name = kernel.name_str(autogenesis, "reifyBits_one_roundtrip_zero");
+    let reify_bound_name = kernel.name_str(autogenesis, "reifyBits_lt_pow");
+    let numeric_roundtrip_name = kernel.name_str(autogenesis, "reifyBits_numeric_roundtrip");
     let bitwise_reify_name = kernel.name_str(autogenesis, "bitwiseReifyBounded");
 
     {
@@ -288,6 +326,346 @@ fn run() -> Result<(), String> {
             ));
         }
 
+        // Every Boolean digit maps into the numeric interval [0, 1].
+        let selector_fv = d.fresh_fvar();
+        let selector = d.kernel().fvar(selector_fv);
+        let one_value = d.num(1);
+        let motive_body = {
+            let digit = d.const_app(bool_to_bit_name, &[selector]);
+            d.le(digit, one_value)
+        };
+        let motive = d.lam_fv(selector_fv, bool_ty, motive_body);
+        let false_case = d.lemma(prelude.zero_le, &[one_value]);
+        let true_case = d.lemma(prelude.le_refl, &[one_value]);
+        let level_zero = d.kernel().level_zero();
+        let rec = d.kernel().const_(prelude.logic.bool_rec, vec![level_zero]);
+        let proof = d.apply(rec, &[motive, false_case, true_case, selector]);
+        let theorem_type = d.pi_fv(selector_fv, bool_ty, motive_body);
+        let theorem_value = d.lam_fv(selector_fv, bool_ty, proof);
+        d.declare_theorem(bool_to_bit_le_one_name, theorem_type, theorem_value)
+            .map_err(|error| format!("boolToBit_le_one rejected: {error:?}"))?;
+
+        // A Boolean low digit followed by an arbitrary binary tail is a
+        // genuine Euclidean decomposition by two. This is the reusable
+        // arithmetic decoder required by the recursive round-trip proof: the
+        // quotient is the tail and the remainder is exactly the low digit.
+        let selector_fv = d.fresh_fvar();
+        let selector = d.kernel().fvar(selector_fv);
+        let tail_fv = d.fresh_fvar();
+        let tail = d.kernel().fvar(tail_fv);
+        let digit = d.const_app(bool_to_bit_name, &[selector]);
+        let two = d.num(2);
+        let product = d.mul(two, tail);
+        let encoded = d.add(digit, product);
+        let reconstructed = d.add(product, digit);
+        let equation_ty = d.eq(encoded, reconstructed);
+        let equation = d.lemma(prelude.add_comm, &[digit, product]);
+        let digit_le_one = d.lemma(bool_to_bit_le_one_name, &[selector]);
+        let bound_ty = d.lt(digit, two);
+        let one_value = d.num(1);
+        let bound = d.lemma(prelude.lt_succ_of_le, &[digit, one_value, digit_le_one]);
+        let relation_ty = d.div_mod(two, encoded, tail, digit);
+        let relation = d.const_app(
+            prelude.logic.and_intro,
+            &[equation_ty, bound_ty, equation, bound],
+        );
+        let over_tail_type = d.pi_fv(tail_fv, nat, relation_ty);
+        let over_tail_value = d.lam_fv(tail_fv, nat, relation);
+        let theorem_type = d.pi_fv(selector_fv, bool_ty, over_tail_type);
+        let theorem_value = d.lam_fv(selector_fv, bool_ty, over_tail_value);
+        d.declare_theorem(bool_digit_div_mod_name, theorem_type, theorem_value)
+            .map_err(|error| format!("boolDigit_divMod rejected: {}", d.explain(&error)))?;
+
+        let executable = d.lemma(prelude.div_mod_exec, &[one_value, encoded]);
+        let quotient = d.div(encoded, two);
+        let remainder = d.modulo(encoded, two);
+        let unique = d.lemma(
+            prelude.div_mod_unique,
+            &[
+                two, encoded, tail, digit, quotient, remainder, relation, executable,
+            ],
+        );
+        let quotient_forward_ty = d.eq(tail, quotient);
+        let remainder_forward_ty = d.eq(digit, remainder);
+        let quotient_forward = and_left(&mut d, quotient_forward_ty, remainder_forward_ty, unique);
+        let remainder_forward =
+            and_right(&mut d, quotient_forward_ty, remainder_forward_ty, unique);
+        let quotient_statement = d.eq(quotient, tail);
+        let quotient_proof = d.symm(tail, quotient, quotient_forward);
+        let over_tail_type = d.pi_fv(tail_fv, nat, quotient_statement);
+        let over_tail_value = d.lam_fv(tail_fv, nat, quotient_proof);
+        let theorem_type = d.pi_fv(selector_fv, bool_ty, over_tail_type);
+        let theorem_value = d.lam_fv(selector_fv, bool_ty, over_tail_value);
+        d.declare_theorem(bool_digit_div_name, theorem_type, theorem_value)
+            .map_err(|error| format!("boolDigit_div rejected: {}", d.explain(&error)))?;
+
+        let remainder_statement = d.eq(remainder, digit);
+        let remainder_proof = d.symm(digit, remainder, remainder_forward);
+        let over_tail_type = d.pi_fv(tail_fv, nat, remainder_statement);
+        let over_tail_value = d.lam_fv(tail_fv, nat, remainder_proof);
+        let theorem_type = d.pi_fv(selector_fv, bool_ty, over_tail_type);
+        let theorem_value = d.lam_fv(selector_fv, bool_ty, over_tail_value);
+        d.declare_theorem(bool_digit_mod_name, theorem_type, theorem_value)
+            .map_err(|error| format!("boolDigit_mod rejected: {}", d.explain(&error)))?;
+
+        // The non-definitional arithmetic bridge from the one-element weighted
+        // sum to its sole digit.
+        let bits_fv = d.fresh_fvar();
+        let bits = d.kernel().fvar(bits_fv);
+        let zero = d.zero();
+        let one_value = d.num(1);
+        let selected = d.apply(bits, &[zero]);
+        let digit = d.const_app(bool_to_bit_name, &[selected]);
+        let reified = d.const_app(reify_bits_name, &[bits, one_value]);
+        let prefix = d.const_app(reify_bits_name, &[bits, zero]);
+        let two = d.num(2);
+        let power = d.pow(two, zero);
+        let weighted = d.mul(digit, power);
+        let expanded = d.add(prefix, weighted);
+        let step_eq = d.lemma(reify_bits_succ_name, &[bits, zero]);
+        let prefix_zero = d.lemma(reify_bits_zero_name, &[bits]);
+        let zero_weighted = d.add(zero, weighted);
+        let replace_prefix = d.congr(prefix, zero, prefix_zero, &|d, value| {
+            d.add(value, weighted)
+        });
+        let power_one = d.lemma(prelude.pow_zero, &[two]);
+        let weighted_one = d.mul(digit, one_value);
+        let zero_weighted_one = d.add(zero, weighted_one);
+        let replace_power = d.congr(power, one_value, power_one, &|d, value| {
+            let product = d.mul(digit, value);
+            d.add(zero, product)
+        });
+        let remove_zero = d.lemma(prelude.zero_add, &[weighted_one]);
+        let remove_one = d.lemma(prelude.mul_one, &[digit]);
+        let (_, normalization) = d.chain(
+            reified,
+            &[
+                (expanded, step_eq),
+                (zero_weighted, replace_prefix),
+                (zero_weighted_one, replace_power),
+                (weighted_one, remove_zero),
+                (digit, remove_one),
+            ],
+        );
+        let normalization_type = d.eq(reified, digit);
+        let theorem_type = d.pi_fv(bits_fv, bits_type, normalization_type);
+        let theorem_value = d.lam_fv(bits_fv, bits_type, normalization);
+        d.declare_theorem(reify_one_normalize_name, theorem_type, theorem_value)
+            .map_err(|error| format!("reifyBits_one_normalize rejected: {error:?}"))?;
+
+        // Transport the Boolean digit round trip across the checked arithmetic
+        // normalization; this is the genuine one-bit weighted-sum round trip.
+        let observed_reified = d.const_app(test_bit_bool_name, &[reified, zero]);
+        let observed_digit = d.const_app(test_bit_bool_name, &[digit, zero]);
+        let motive = d.eq_motive(reified, &|d, value| {
+            let observed = d.const_app(test_bit_bool_name, &[value, zero]);
+            d.bool_eq(observed_reified, observed)
+        });
+        let refl_case = d.bool_refl(observed_reified);
+        let observed_transport = d.transport(reified, motive, refl_case, digit, normalization);
+        let digit_roundtrip = d.lemma(bool_to_bit_roundtrip_name, &[selected]);
+        let roundtrip = d.bool_trans(
+            observed_reified,
+            observed_digit,
+            selected,
+            observed_transport,
+            digit_roundtrip,
+        );
+        let roundtrip_type = d.bool_eq(observed_reified, selected);
+        let theorem_type = d.pi_fv(bits_fv, bits_type, roundtrip_type);
+        let theorem_value = d.lam_fv(bits_fv, bits_type, roundtrip);
+        d.declare_theorem(reify_one_roundtrip_name, theorem_type, theorem_value)
+            .map_err(|error| format!("reifyBits_one_roundtrip_zero rejected: {error:?}"))?;
+
+        // Every k-bit weighted sum is strictly below 2^k.
+        let motive = |d: &mut NatDev<'_>, count| {
+            let bits_fv = d.fresh_fvar();
+            let bits = d.kernel().fvar(bits_fv);
+            let reified = d.const_app(reify_bits_name, &[bits, count]);
+            let two = d.num(2);
+            let bound = d.pow(two, count);
+            let body = d.lt(reified, bound);
+            d.pi_fv(bits_fv, bits_type, body)
+        };
+        let base = |d: &mut NatDev<'_>| {
+            let bits_fv = d.fresh_fvar();
+            let zero = d.zero();
+            let proof = d.lemma(prelude.zero_lt_succ, &[zero]);
+            d.lam_fv(bits_fv, bits_type, proof)
+        };
+        let step = |d: &mut NatDev<'_>, count, ih| {
+            let bits_fv = d.fresh_fvar();
+            let bits = d.kernel().fvar(bits_fv);
+            let one_value = d.num(1);
+            let two = d.num(2);
+            let power = d.pow(two, count);
+            let prefix = d.const_app(reify_bits_name, &[bits, count]);
+            let selected = d.apply(bits, &[count]);
+            let digit = d.const_app(bool_to_bit_name, &[selected]);
+            let weighted = d.mul(digit, power);
+            let prefix_lt = d.apply(ih, &[bits]);
+            let digit_le = d.lemma(bool_to_bit_le_one_name, &[selected]);
+
+            let power_digit = d.mul(power, digit);
+            let power_one = d.mul(power, one_value);
+            let scaled = d.lemma(
+                prelude.mul_le_mul_left,
+                &[power, digit, one_value, digit_le],
+            );
+            let weighted_eq = d.lemma(prelude.mul_comm, &[digit, power]);
+            let power_digit_eq_weighted = d.symm(weighted, power_digit, weighted_eq);
+            let left_motive = d.eq_motive(power_digit, &|d, value| d.le(value, power_one));
+            let weighted_le_power_one = d.transport(
+                power_digit,
+                left_motive,
+                scaled,
+                weighted,
+                power_digit_eq_weighted,
+            );
+            let power_one_eq = d.lemma(prelude.mul_one, &[power]);
+            let right_motive = d.eq_motive(power_one, &|d, value| d.le(weighted, value));
+            let weighted_le_power = d.transport(
+                power_one,
+                right_motive,
+                weighted_le_power_one,
+                power,
+                power_one_eq,
+            );
+
+            let weighted_prefix = d.add(weighted, prefix);
+            let weighted_power = d.add(weighted, power);
+            let lifted_lt = d.lemma(
+                prelude.add_lt_add_left,
+                &[weighted, prefix, power, prefix_lt],
+            );
+            let prefix_weighted = d.add(prefix, weighted);
+            let power_weighted = d.add(power, weighted);
+            let left_comm = d.lemma(prelude.add_comm, &[weighted, prefix]);
+            let left_lt_motive =
+                d.eq_motive(weighted_prefix, &|d, value| d.lt(value, weighted_power));
+            let prefix_weighted_lt = d.transport(
+                weighted_prefix,
+                left_lt_motive,
+                lifted_lt,
+                prefix_weighted,
+                left_comm,
+            );
+            let right_comm = d.lemma(prelude.add_comm, &[weighted, power]);
+            let right_lt_motive =
+                d.eq_motive(weighted_power, &|d, value| d.lt(prefix_weighted, value));
+            let prefix_weighted_lt_power_weighted = d.transport(
+                weighted_power,
+                right_lt_motive,
+                prefix_weighted_lt,
+                power_weighted,
+                right_comm,
+            );
+            let power_plus_power = d.add(power, power);
+            let power_weighted_le_double = d.lemma(
+                prelude.add_le_add_left,
+                &[power, weighted, power, weighted_le_power],
+            );
+            let expanded_bound = d.lemma(
+                prelude.lt_of_lt_of_le,
+                &[
+                    prefix_weighted,
+                    power_weighted,
+                    power_plus_power,
+                    prefix_weighted_lt_power_weighted,
+                    power_weighted_le_double,
+                ],
+            );
+
+            let successor = d.succ(count);
+            let reified_successor = d.const_app(reify_bits_name, &[bits, successor]);
+            let step_eq = d.lemma(reify_bits_succ_name, &[bits, count]);
+            let step_eq_rev = d.symm(reified_successor, prefix_weighted, step_eq);
+            let source_motive =
+                d.eq_motive(prefix_weighted, &|d, value| d.lt(value, power_plus_power));
+            let reified_lt_double = d.transport(
+                prefix_weighted,
+                source_motive,
+                expanded_bound,
+                reified_successor,
+                step_eq_rev,
+            );
+
+            let mul_power_two = d.mul(power, two);
+            let mul_succ = d.lemma(prelude.mul_succ, &[power, one_value]);
+            let mul_power_one = d.mul(power, one_value);
+            let expanded_mul = d.add(mul_power_one, power);
+            let mul_one = d.lemma(prelude.mul_one, &[power]);
+            let simplify_mul = d.congr(mul_power_one, power, mul_one, &|d, value| {
+                d.add(value, power)
+            });
+            let (_, mul_two_eq_double) = d.chain(
+                mul_power_two,
+                &[(expanded_mul, mul_succ), (power_plus_power, simplify_mul)],
+            );
+            let pow_successor = d.pow(two, successor);
+            let pow_succ = d.lemma(prelude.pow_succ, &[two, count]);
+            let (_, pow_eq_double) = d.chain(
+                pow_successor,
+                &[
+                    (mul_power_two, pow_succ),
+                    (power_plus_power, mul_two_eq_double),
+                ],
+            );
+            let double_eq_pow = d.symm(pow_successor, power_plus_power, pow_eq_double);
+            let target_motive =
+                d.eq_motive(power_plus_power, &|d, value| d.lt(reified_successor, value));
+            let result = d.transport(
+                power_plus_power,
+                target_motive,
+                reified_lt_double,
+                pow_successor,
+                double_eq_pow,
+            );
+            d.lam_fv(bits_fv, bits_type, result)
+        };
+        let count_fv = d.fresh_fvar();
+        let count = d.kernel().fvar(count_fv);
+        let proof = d.induct(&motive, &base, &step, count);
+        let motive_type = motive(&mut d, count);
+        let theorem_type = d.pi_fv(count_fv, nat, motive_type);
+        let theorem_value = d.lam_fv(count_fv, nat, proof);
+        d.declare_theorem(reify_bound_name, theorem_type, theorem_value)
+            .map_err(|error| format!("reifyBits_lt_pow rejected: {}", d.explain(&error)))?;
+
+        // Reading the native numeric bits of a bounded reification and summing
+        // them back reconstructs the exact same Nat.
+        let count_fv = d.fresh_fvar();
+        let count = d.kernel().fvar(count_fv);
+        let bits_fv = d.fresh_fvar();
+        let bits = d.kernel().fvar(bits_fv);
+        let reified = d.const_app(reify_bits_name, &[bits, count]);
+        let two = d.num(2);
+        let power = d.pow(two, count);
+        let index_fv = d.fresh_fvar();
+        let index = d.kernel().fvar(index_fv);
+        let native_bit = d.const_app(prelude.test_bit, &[reified, index]);
+        let place = d.pow(two, index);
+        let term = d.mul(native_bit, place);
+        let summand = d.lam_fv(index_fv, nat, term);
+        let reconstructed = d.const_app(prelude.sum_range, &[summand, count]);
+        let remainder = d.modulo(reified, power);
+        let partial = d.lemma(prelude.sum_test_bit_lt, &[count, reified]);
+        let bound = d.lemma(reify_bound_name, &[count, bits]);
+        let remove_mod = d.lemma(prelude.mod_eq_self_of_lt, &[reified, power, bound]);
+        let proof = d.trans(reconstructed, remainder, reified, partial, remove_mod);
+        let statement = d.eq(reconstructed, reified);
+        let over_bits_type = d.pi_fv(bits_fv, bits_type, statement);
+        let over_bits_value = d.lam_fv(bits_fv, bits_type, proof);
+        let theorem_type = d.pi_fv(count_fv, nat, over_bits_type);
+        let theorem_value = d.lam_fv(count_fv, nat, over_bits_value);
+        d.declare_theorem(numeric_roundtrip_name, theorem_type, theorem_value)
+            .map_err(|error| {
+                format!(
+                    "reifyBits_numeric_roundtrip rejected: {}",
+                    d.explain(&error)
+                )
+            })?;
+
         // The bounded Nat candidate associated with the pointwise algebra.
         let reified_bitwise_value = {
             let f_fv = d.fresh_fvar();
@@ -373,13 +751,76 @@ fn run() -> Result<(), String> {
     {
         return Err("Boolean digit roundtrip gained assumptions".to_owned());
     }
+    let bool_to_bit_le_one_type = match kernel.environment().get(bool_to_bit_le_one_name) {
+        Some(Declaration::Theorem { ty, .. }) => *ty,
+        _ => return Err("boolToBit_le_one disappeared".to_owned()),
+    };
+    if !kernel.axiom_footprint(bool_to_bit_le_one_name).is_empty() {
+        return Err("Boolean digit bound gained assumptions".to_owned());
+    }
+    let bool_digit_div_mod_type = match kernel.environment().get(bool_digit_div_mod_name) {
+        Some(Declaration::Theorem { ty, .. }) => *ty,
+        _ => return Err("boolDigit_divMod disappeared".to_owned()),
+    };
+    let bool_digit_div_type = match kernel.environment().get(bool_digit_div_name) {
+        Some(Declaration::Theorem { ty, .. }) => *ty,
+        _ => return Err("boolDigit_div disappeared".to_owned()),
+    };
+    let bool_digit_mod_type = match kernel.environment().get(bool_digit_mod_name) {
+        Some(Declaration::Theorem { ty, .. }) => *ty,
+        _ => return Err("boolDigit_mod disappeared".to_owned()),
+    };
+    for name in [
+        bool_digit_div_mod_name,
+        bool_digit_div_name,
+        bool_digit_mod_name,
+    ] {
+        if !kernel.axiom_footprint(name).is_empty() {
+            return Err("Boolean low-digit decoder gained assumptions".to_owned());
+        }
+    }
+    let reify_one_normalize_type = match kernel.environment().get(reify_one_normalize_name) {
+        Some(Declaration::Theorem { ty, .. }) => *ty,
+        _ => return Err("reifyBits_one_normalize disappeared".to_owned()),
+    };
+    let reify_one_roundtrip_type = match kernel.environment().get(reify_one_roundtrip_name) {
+        Some(Declaration::Theorem { ty, .. }) => *ty,
+        _ => return Err("reifyBits_one_roundtrip_zero disappeared".to_owned()),
+    };
+    for name in [reify_one_normalize_name, reify_one_roundtrip_name] {
+        if !kernel.axiom_footprint(name).is_empty() {
+            return Err("one-bit weighted-sum evidence gained assumptions".to_owned());
+        }
+    }
+    let reify_bound_type = match kernel.environment().get(reify_bound_name) {
+        Some(Declaration::Theorem { ty, .. }) => *ty,
+        _ => return Err("reifyBits_lt_pow disappeared".to_owned()),
+    };
+    if !kernel.axiom_footprint(reify_bound_name).is_empty() {
+        return Err("universal reification bound gained assumptions".to_owned());
+    }
+    let numeric_roundtrip_type = match kernel.environment().get(numeric_roundtrip_name) {
+        Some(Declaration::Theorem { ty, .. }) => *ty,
+        _ => return Err("reifyBits_numeric_roundtrip disappeared".to_owned()),
+    };
+    if !kernel.axiom_footprint(numeric_roundtrip_name).is_empty() {
+        return Err("numeric reification roundtrip gained assumptions".to_owned());
+    }
     println!(
-        "NAT_TESTBIT_BOOL_BRIDGE_OK|theorem=Axeyum.Autogenesis.testBitBool_succ|axioms=0|type={}|observation_theorem=Axeyum.Autogenesis.bitwiseObservation_apply|observation_axioms=0|observation_type={}|reification_definition=Axeyum.Autogenesis.bitwiseReifyBounded|reification_base_theorem=Axeyum.Autogenesis.reifyBits_zero|reification_base_axioms=0|reification_base_type={}|reification_step_theorem=Axeyum.Autogenesis.reifyBits_succ|reification_step_axioms=0|reification_step_type={}|boolean_digit_roundtrip_theorem=Axeyum.Autogenesis.boolToBit_roundtrip_zero|boolean_digit_roundtrip_axioms=0|boolean_digit_roundtrip_type={}",
+        "NAT_TESTBIT_BOOL_BRIDGE_OK|theorem=Axeyum.Autogenesis.testBitBool_succ|axioms=0|type={}|observation_theorem=Axeyum.Autogenesis.bitwiseObservation_apply|observation_axioms=0|observation_type={}|reification_definition=Axeyum.Autogenesis.bitwiseReifyBounded|reification_base_theorem=Axeyum.Autogenesis.reifyBits_zero|reification_base_axioms=0|reification_base_type={}|reification_step_theorem=Axeyum.Autogenesis.reifyBits_succ|reification_step_axioms=0|reification_step_type={}|boolean_digit_roundtrip_theorem=Axeyum.Autogenesis.boolToBit_roundtrip_zero|boolean_digit_roundtrip_axioms=0|boolean_digit_roundtrip_type={}|boolean_digit_bound_theorem=Axeyum.Autogenesis.boolToBit_le_one|boolean_digit_bound_axioms=0|boolean_digit_bound_type={}|boolean_digit_divmod_theorem=Axeyum.Autogenesis.boolDigit_divMod|boolean_digit_divmod_axioms=0|boolean_digit_divmod_type={}|boolean_digit_div_theorem=Axeyum.Autogenesis.boolDigit_div|boolean_digit_div_axioms=0|boolean_digit_div_type={}|boolean_digit_mod_theorem=Axeyum.Autogenesis.boolDigit_mod|boolean_digit_mod_axioms=0|boolean_digit_mod_type={}|one_bit_normalization_theorem=Axeyum.Autogenesis.reifyBits_one_normalize|one_bit_normalization_axioms=0|one_bit_normalization_type={}|one_bit_roundtrip_theorem=Axeyum.Autogenesis.reifyBits_one_roundtrip_zero|one_bit_roundtrip_axioms=0|one_bit_roundtrip_type={}|reification_bound_theorem=Axeyum.Autogenesis.reifyBits_lt_pow|reification_bound_axioms=0|reification_bound_type={}|numeric_roundtrip_theorem=Axeyum.Autogenesis.reifyBits_numeric_roundtrip|numeric_roundtrip_axioms=0|numeric_roundtrip_type={}",
         kernel.render_lean(ty),
         kernel.render_lean(observation_type),
         kernel.render_lean(reify_zero_type),
         kernel.render_lean(reify_succ_type),
-        kernel.render_lean(bool_to_bit_roundtrip_type)
+        kernel.render_lean(bool_to_bit_roundtrip_type),
+        kernel.render_lean(bool_to_bit_le_one_type),
+        kernel.render_lean(bool_digit_div_mod_type),
+        kernel.render_lean(bool_digit_div_type),
+        kernel.render_lean(bool_digit_mod_type),
+        kernel.render_lean(reify_one_normalize_type),
+        kernel.render_lean(reify_one_roundtrip_type),
+        kernel.render_lean(reify_bound_type),
+        kernel.render_lean(numeric_roundtrip_type)
     );
     Ok(())
 }

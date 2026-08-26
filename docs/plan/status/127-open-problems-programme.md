@@ -105,6 +105,29 @@ controls fail closed; focused tests, all-target/all-feature Clippy, and warning-
 pass. The live `n=351` producer has not returned SAT, so this closes an evidence-route gap rather
 than establishing a new bound.
 
+**Rado 351 local-search experiment closed honestly, 2026-08-26.** The ordinary portfolio
+completed 192 equal-budget jobs / 3.84 billion moves in 5,142.3 wall seconds without a
+colouring. The experimental constraint-weighted portfolio completed 96 jobs / 1.92 billion
+moves, also without a colouring; normalized user CPU was 225.66 versus 207.89 seconds per job
+(+8.55%), and peak RSS was 401,924 versus 178,932 KiB (2.25 times). Different thread counts and
+changing contention make wall time non-comparable. Weighting demonstrated no frontier benefit
+and was removed rather than promoted. The independently justified CLI `noise`/`tie` controls,
+percentage validation, and one-colour/100%-noise panic repair remain; focused tests,
+all-target/all-feature Clippy, and warning-denied Rustdoc pass. Both completed `not-found` runs
+carry no UNSAT or upper-bound credit; the exact proof-producing run remains live.
+
+**Rado exact lower bound advanced, 2026-08-26.** The seed-619 CaDiCaL producer completed the
+canonical 351-point formula SAT after 58:35 and the canonical 352-point formula SAT after
+4.35 seconds. Both complete assignments passed the strict SAT Competition importer, the
+regenerated CNF evaluator, unique one-hot decoding, independent enumeration of the defining
+relation, and lifted-witness re-encoding. The retained strongest witness has 352 entries,
+uses all five colours, covers 27,378 defining triples / 142,167 clauses, and has SHA-256
+`a117a27b0eb55fde8b022e8a6332a6cb7c9d3f2951f252643137bf347565a5cc`. Therefore the checked
+conclusion is now `R_5(3(x-y)=2z) > 352`; no upper bound or exact value is claimed. A persistent
+exact driver is live at 353 and advances only after both replay routes. A post-result literature
+refresh through 2026-08-26 found no five-colour bound at least 352 for this equation, but that
+negative retrieval is not proof of priority.
+
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
 external-certificate replay runner for all five packages.  It validates checker and artifact
 bytes before execution, hard-kills a timed-out process session, requires an observable finding
@@ -290,6 +313,19 @@ are green. The full `just check` is independently red before reaching Rust tests
 settled `Nat.fib_le_succ` fact omits two proof-derived dependencies; correcting those edges
 then exposes a stale historical Autogenesis child-qualification contract. Neither belongs to
 this lane, so no full-gate success is claimed.
+
+**Bilinear polynomial-family artifact boundary, 2026-08-26.** ADR-0581 adds the missing
+family-native `P_n` synthesis driver over the existing complete tensor-rank encoder. It exports
+deterministic DIMACS, pins known decompositions, imports only complete strict SAT Competition
+models, lifts them to portable JSON and independently replays every coefficient, or checks a
+completed textual DRAT from disk. The two-sided `P_2` control replays rank 3 from an external
+model and checks a 130-byte rank-2 refutation; empty output exits nonzero without writing a
+witness. Wang's rank-17 `P_6` construction pins, lifts and replays all 396 coefficients. The
+complete ordered `P_6@16` formula has 13,289 variables / 52,110 clauses, raw SHA-256
+`d5692510...6d940`, and is under sustained no-short-cutoff CaDiCaL search. Its live proof prefix
+carries no rank credit. The primary source remains arXiv v10 (2026-07-30), and refreshed exact
+searches found no closure through 2026-08-26; this is negative retrieval evidence, not priority
+proof.
 
 **Job-shop exact windows and semantic order cover, 2026-08-26.** ADR-0572 adds an opt-in
 complete operation-domain restriction from exact job-chain earliest/latest starts and exposes

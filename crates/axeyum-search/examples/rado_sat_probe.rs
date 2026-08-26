@@ -19,7 +19,8 @@
 //! reported or written. The search's own bookkeeping is never the last word.
 //!
 //! usage: `rado_sat_probe a=5 b=4 k=4 n=741 seeds=16 moves=50000000 \
-//!         [warm=<witness.txt>] [out=<found.txt>] [threads=8]`
+//!         [warm=<witness.txt>] [out=<found.txt>] [threads=8] \
+//!         [noise=15] [tie=30]`
 //!
 //! exit: 0 nothing found (bound holds so far), 10 a colouring was FOUND and
 //! verified, 3 a search lied (found a colouring the enumerator rejects).
@@ -58,6 +59,10 @@ fn main() -> ExitCode {
     let seeds = count("seeds", 16);
     let moves = count("moves", 50_000_000);
     let threads = size("threads", 8).max(1);
+    let noise_percent = u8::try_from(size("noise", 15)).expect("noise fits u8");
+    let tie_percent = u8::try_from(size("tie", 30)).expect("tie fits u8");
+    assert!(noise_percent <= 100, "noise must be in 0..=100");
+    assert!(tie_percent <= 100, "tie must be in 0..=100");
 
     let family = Rado::new(a, b, k).expect("family");
     let problem = family.problem(n).expect("problem");
@@ -86,8 +91,8 @@ fn main() -> ExitCode {
     starts.push(("cold".to_string(), None));
 
     println!(
-        "probe R_{k}({a}(x-y)={b}z) n={n}: {} starts x {seeds} seeds x {moves} moves, {threads} threads",
-        starts.len()
+        "probe R_{k}({a}(x-y)={b}z) n={n}: {} starts x {seeds} seeds x {moves} moves, {threads} threads, noise={noise_percent}, tie={tie_percent}",
+        starts.len(),
     );
     let jobs: Vec<(usize, u64)> = (0..starts.len())
         .flat_map(|start| (0..seeds).map(move |seed| (start, seed)))
@@ -115,7 +120,8 @@ fn main() -> ExitCode {
                     let options = MinConflictsOptions {
                         seed,
                         max_moves: moves,
-                        ..MinConflictsOptions::default()
+                        noise_percent,
+                        tie_percent,
                     };
                     let outcome = min_conflicts(&problem, starts[start].1.as_ref(), &options)
                         .expect("min conflicts");
@@ -139,7 +145,8 @@ fn main() -> ExitCode {
         None => {
             println!(
                 "{{\"status\":\"not-found\",\"n\":{n},\"starts\":{},\"seeds\":{seeds},\
-                 \"moves\":{moves},\"wall_s\":{wall:.1}}}",
+                 \"moves\":{moves},\"noise\":{noise_percent},\"tie\":{tie_percent},\
+                 \"wall_s\":{wall:.1}}}",
                 starts.len()
             );
             ExitCode::SUCCESS

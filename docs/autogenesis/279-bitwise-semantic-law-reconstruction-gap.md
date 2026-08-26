@@ -69,7 +69,7 @@ The target-owned observation algebra is now also explicit and axiom-free:
 `f (testBitBool x i) (testBitBool y i)`, and its application theorem closes by
 reflexivity. This cleanly isolates what remains: construct a natural number
 whose Boolean observations equal that function. The artifact records
-`nat_reification_status = missing`; the observation-level theorem alone cannot
+the reification state separately; the observation-level theorem alone cannot
 receive credit for `Nat.testBit_bitwise`.
 
 Bounded Nat reification is now constructive too. `reifyBits bits k` sums
@@ -90,8 +90,46 @@ The Boolean digit seam itself now round-trips too:
 `testBitBool (boolToBit b) 0 = b`, proved constructively by the two `Bool`
 cases with an empty footprint. An attempted jump directly to
 `reifyBits bits 1` was correctly rejected because weighted-sum normalization is
-not definitional for a symbolic bit. That arithmetic bridge remains explicit;
-the smaller Boolean theorem is retained rather than overstated.
+not definitional for a symbolic bit. That arithmetic bridge is now proved from
+the named reifier equations plus `pow_zero`, `zero_add`, and `mul_one`.
+Transporting the Boolean digit theorem across it yields the genuine one-bit
+weighted-sum round trip, also axiom-free. The remaining status is precisely the
+general bounded round trip.
+
+The next induction leaf is also closed: `boolToBit b ≤ 1`, by constructive
+case analysis on `b`, with an empty footprint. This is exactly the coefficient
+bound needed to show each newly appended weighted digit contributes at most
+`2^k` in the reifier-bound induction.
+
+That universal bound now checks in the kernel:
+`reifyBits bits k < 2^k` for every `bits` and `k`, with an empty footprint. The
+proof inducts on `k`, uses the coefficient bound for the new term, and closes
+the power step through explicit addition/multiplication normalization. This
+removes the sufficient-size uncertainty from bounded reification; the remaining
+universal theorem is observation round-trip/uniqueness below the bound.
+
+The established bound composes with the existing native
+`Nat.sum_testBit_lt`: summing the first `k` native numeric observations of
+`reifyBits bits k` reconstructs that exact number, because the modulus by
+`2^k` is removable. This universal numeric round trip is kernel-checked and
+axiom-free. What remains is componentwise uniqueness—showing the reconstructed
+numeric digit at each `i < k` equals `boolToBit (bits i)`—then transporting
+through the Boolean digit bridge.
+
+The first reusable decoder step now checks axiom-free. For every Boolean `b`
+and tail `n`, `boolToBit b + 2*n` has a checked `divMod 2` witness whose
+quotient is `n` and remainder is `boolToBit b`; comparison with executable
+division proves both equations separately. This is stronger than another
+finite observation: it supplies the exact quotient/remainder equations needed
+to induct over a low-digit-first reifier. The remaining construction is to
+connect the weighted-sum reifier to that recursive shape and carry the decoder
+through every in-range index.
+
+A bounded oracle exhausts every Boolean vector through width 12: 8,191 vectors,
+90,114 in-range observations, and 8,191 first-out-of-range zero observations.
+It confirms the weighted-sum construction has the intended finite semantics.
+The artifact labels this computational observation only; it does not replace or
+receive credit for the universal kernel proof.
 
 Run `just autogenesis-bitwise-semantic-law-demand` to validate the join and its
 negative controls.

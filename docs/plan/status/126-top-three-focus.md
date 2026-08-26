@@ -354,9 +354,37 @@ The Boolean digit map now round-trips through bit zero axiom-free. The kernel
 correctly rejected treating the one-bit weighted sum as definitionally equal to
 that digit, exposing weighted-sum normalization as the next arithmetic lemma
 instead of silently conflating the two.
+That explicit chain now checks: one-bit weighted-sum normalization and the
+transported one-bit observation round trip are both axiom-free. The open proof
+has narrowed to the general `i < k` bounded round trip.
+An exhaustive oracle now checks all 8,191 Boolean vectors through 12 bits,
+covering 90,114 in-range and 8,191 boundary observations. It validates the
+construction but is explicitly non-proof evidence; the universal kernel theorem
+remains open.
+The Boolean coefficient bound `boolToBit b ≤ 1` now checks constructively and
+axiom-free. It supplies the missing local inequality for the universal
+`reifyBits bits k < 2^k` induction.
+The universal size theorem now checks axiom-free: every `k`-bit reification is
+strictly below `2^k`. The remaining universal obligation is observation
+round-trip/uniqueness, not existence or boundedness of the constructed number.
+The bound now composes with native `sum_testBit_lt` and `mod_eq_self_of_lt` to
+prove a universal numeric reconstruction round trip, also axiom-free. The
+remaining seam is componentwise digit uniqueness below `k`, followed by the
+already-checked Boolean transport.
+The low-digit decoder now proves axiom-free that `boolToBit b + 2*n` has
+quotient `n` and remainder `boolToBit b` under division by two, using a
+constructed `divMod` witness and uniqueness against executable division. Next:
+put the bounded reifier into this low-digit-first form and induct the decoder
+to componentwise uniqueness.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-26 | `05b92a924` | Prove axiom-free quotient and remainder equations for a Boolean low digit plus twice an arbitrary tail, supplying the recursive decoder for component uniqueness. |
+| 2026-08-26 | `d89a192b7` | Compose the universal reification bound with native bit-sum reconstruction to prove an axiom-free numeric round trip, isolating component uniqueness. |
+| 2026-08-26 | `04ca04a3d` | Prove universally and axiom-free that every bounded Boolean-bit reification is strictly below `2^k`, leaving only observation uniqueness. |
+| 2026-08-26 | `a00743663` | Prove every Boolean reification digit is at most one constructively and axiom-free, supplying the local bound for the universal reifier induction. |
+| 2026-08-26 | `e6d798c06` | Exhaustively validate bounded reification over all 8,191 Boolean vectors through width 12 while preserving the oracle's non-proof authority boundary. |
+| 2026-08-26 | `b1405eff6` | Prove one-bit weighted-sum normalization and its Boolean observation round trip axiom-free; narrow the open theorem to the general bounded case. |
 | 2026-08-26 | `fcdcab1b3` | Prove the Boolean-digit map round-trips through bit zero axiom-free and expose weighted-sum normalization as the next non-definitional arithmetic seam. |
 | 2026-08-26 | `75baf4b2c` | Expose the bounded reifier's axiom-free successor equation as a stable induction interface for the missing observation round trip. |
 | 2026-08-26 | `3bb1207e8` | Construct bounded Boolean-bit reification as a binary weighted sum and check its zero-length base axiom-free; retain the round-trip theorem as missing. |
