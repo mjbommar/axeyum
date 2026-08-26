@@ -275,6 +275,7 @@ class LemmaNeighbourhoodPage(_Frozen):
 
     name_glob: str
     fact_id: str
+    canonical_type_contains: str
     matched: int
     total_lemmas: int
     dropped_held_out_fact_links: int

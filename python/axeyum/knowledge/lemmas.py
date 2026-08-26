@@ -85,6 +85,12 @@ class LemmaIndex:
         lemma = self.get(declaration_id)
         return tuple(self._by_id[item] for item in lemma.dependents)
 
+    def with_type_fragment(self, fragment: str) -> tuple[Lemma, ...]:
+        """Return stable candidate rows whose canonical type contains ``fragment``."""
+        if not fragment:
+            raise ValueError("canonical type fragment must not be empty")
+        return tuple(lemma for lemma in self.lemmas if fragment in lemma.canonical_type)
+
 
 @lru_cache(maxsize=4)
 def _load_cached(root_key: str) -> LemmaIndex:

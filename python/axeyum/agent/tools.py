@@ -481,30 +481,36 @@ def lemma_neighbourhood(
     ctx: RunContext[AgentDeps],
     name_glob: str = "",
     fact_id: str = "",
+    canonical_type_contains: str = "",
 ) -> LemmaNeighbourhoodPage:
     """Retrieve kernel-observed lemma dependencies and exact fact links.
 
     Rows are candidates only: a dependency edge records what an accepted proof
     term used, not that the theorem applies to the current goal. Supply exactly
-    one of ``name_glob`` or ``fact_id``. Held-out fact identities are removed
-    before any row reaches the transcript.
+    one of ``name_glob``, ``fact_id``, or ``canonical_type_contains``. Held-out
+    fact identities are removed before any row reaches the transcript.
 
     Args:
         name_glob: Shell-style glob over exact kernel declaration names.
         fact_id: Fact id whose evidence names a kernel theorem exactly.
+        canonical_type_contains: Exact substring of the kernel-rendered type.
     """
 
     def body() -> LemmaNeighbourhoodPage:
-        if bool(name_glob) == bool(fact_id):
-            raise ToolRefusal("supply exactly one of name_glob or fact_id")
+        if sum(map(bool, (name_glob, fact_id, canonical_type_contains))) != 1:
+            raise ToolRefusal(
+                "supply exactly one of name_glob, fact_id, or canonical_type_contains"
+            )
         root = ctx.deps.root
         index = lemmas_api.load(root)
         if fact_id:
             if fact_id in _held_out(str(root)):
                 raise ToolRefusal("requested fact is not referenceable in this episode")
             selected = list(index.for_fact(fact_id))
-        else:
+        elif name_glob:
             selected = [lemma for lemma in index if glob_match(lemma.id, name_glob)]
+        else:
+            selected = list(index.with_type_fragment(canonical_type_contains))
         selected.sort(key=lambda lemma: lemma.id)
         rows: list[LemmaNeighbourhoodRow] = []
         dropped = 0
@@ -526,6 +532,7 @@ def lemma_neighbourhood(
         return LemmaNeighbourhoodPage(
             name_glob=name_glob,
             fact_id=fact_id,
+            canonical_type_contains=canonical_type_contains,
             matched=len(rows),
             total_lemmas=len(index),
             dropped_held_out_fact_links=dropped,

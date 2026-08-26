@@ -26,7 +26,8 @@ Every declaration row also carries `canonical_type`, rendered directly by the
 kernel from the accepted declaration. The lemma index preserves that type for
 all theorem rows, and the typed Python `Lemma`, `lemma_neighbourhood`, and
 `lemma_candidates` surfaces expose it to autonomous episodes. This enables
-structural candidate filtering without treating the filter as proof authority.
+bounded exact-substring type filtering without treating the filter as proof
+authority.
 
 The artifact is nevertheless search data, not proof authority. A row does not
 say that a theorem applies to a goal, that a fact is semantically equivalent to
