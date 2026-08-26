@@ -1341,6 +1341,19 @@ The accepted ADR-0541 general SMT-LIB session driver is now also a named
 source remains the historical example control, and the binary's focused check,
 Clippy, file execution, format, link, and exact-SHA pre-push gates pass. It is a
 repository-built front door, not yet a published crate or prebuilt release.
+Retrieved equality rewriting now extends bounded induction through an additive
+Rust/Python API with explicit caller-owned declarations, fair per-declaration
+typed specialization, closed-numeral normalization, deterministic forward
+chains, fixed budgets, and no retrieved-premise residual recursion. A
+second-hop knowledge projection derives connective lemmas from operator
+vocabulary introduced by the first-stage topical ranking. The immutable
+51-goal census converts `Nat.choose n 1 = n`: one induction, empty axiom
+footprint, and checked dependencies on four retrieved theorems. All six false
+controls remain unaccepted. The honest denominator is 1/20 importable positive
+targets (1/51 overall); 27 rows remain import-blocked and 15 imported rows end
+outside the equality grammar. Next: carry the ranking digest and exact premise
+identities through an authoritative operation/episode/transaction, reproduce
+that one transition cleanly, and only then claim autonomous production.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization

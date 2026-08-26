@@ -141,9 +141,12 @@ def measure(
     must_decline_path: Path | None = None,
     ranking_path: Path | None = None,
     transport_native_candidates: bool = False,
+    retrieved_induction: bool = False,
 ) -> dict[str, Any]:
     if transport_native_candidates and ranking_path is None:
         raise ValueError("native candidate transport requires --ranking")
+    if retrieved_induction and not transport_native_candidates:
+        raise ValueError("retrieved induction requires --transport-native-candidates")
     population_bytes = population_path.read_bytes() if population_path else None
     if mapping_path is None:
         if population_bytes is None:
@@ -294,11 +297,18 @@ def measure(
                 executable_candidates = [
                     kernel.name(name, must_exist=True) for name in candidate_names
                 ]
-            candidate = producers.propose_bounded_application(
-                kernel,
-                imported.goal(),
-                executable_candidates,
-            )
+            if retrieved_induction:
+                candidate = producers.propose_bounded_induction_with_rewrites(
+                    kernel,
+                    imported.goal(),
+                    executable_candidates,
+                )
+            else:
+                candidate = producers.propose_bounded_application(
+                    kernel,
+                    imported.goal(),
+                    executable_candidates,
+                )
             admitted = kernel.name("Axeyum.OpenCensus.Verified", must_exist=False)
             kernel.add_declaration(
                 Declaration.theorem(admitted, [], imported.goal(), candidate.proof)
@@ -308,8 +318,14 @@ def measure(
                 axiom_footprint=kernel.axiom_footprint(admitted),
                 theorem_dependencies=kernel.theorem_dependencies(admitted),
                 binders_used=candidate.binders_used,
-                application_depth=candidate.application_depth,
-                terms_considered=candidate.terms_considered,
+                **(
+                    {"inductions_used": candidate.inductions_used}
+                    if retrieved_induction
+                    else {
+                        "application_depth": candidate.application_depth,
+                        "terms_considered": candidate.terms_considered,
+                    }
+                ),
             )
         except producers.Declined as decline:
             row.update(result="declined", reason_kind=decline.reason.kind)
@@ -345,11 +361,15 @@ def measure(
         if transport["result"] == "transport-declined"
     )
     result = {
-        "schema_version": 3 if transport_native_candidates else 2,
+        "schema_version": 4 if retrieved_induction else (3 if transport_native_candidates else 2),
         "kind": (
-            "axeyum-open-ranked-transport-application-census"
-            if transport_native_candidates
-            else "axeyum-open-fixed-palette-census"
+            "axeyum-open-ranked-transport-induction-census"
+            if retrieved_induction
+            else (
+                "axeyum-open-ranked-transport-application-census"
+                if transport_native_candidates
+                else "axeyum-open-fixed-palette-census"
+            )
         ),
         "state": "train-development-measurement-held-out-excluded",
         "authority": "measurement only; no operation registration or fact admission",
@@ -363,7 +383,11 @@ def measure(
             "external_capsule_directory": str(capsule_directory),
         },
         "strategy": {
-            "producer": "bounded-application",
+            "producer": (
+                "bounded-induction-with-retrieved-rewrites"
+                if retrieved_induction
+                else "bounded-application"
+            ),
             "candidate_rule": (
                 "held-out-safe deterministic per-goal ranking"
                 if ranking_path is not None
@@ -373,6 +397,7 @@ def measure(
                 None if ranking_path is not None else list(CANDIDATES)
             ),
             "native_candidate_transport": transport_native_candidates,
+            "retrieved_induction": retrieved_induction,
             "forbidden_inputs": [
                 "target theorem proof",
                 "held-out goal identities or statements",
@@ -408,9 +433,13 @@ def measure(
         "excluded_held_out_fact_ids": excluded_held_out,
         "outcomes": outcomes,
         "limitations": (
-            "Ranked native theorem transport makes retrieved premises executable but does not enlarge the bounded application grammar. Held-out rows are excluded before capsule access. Import and transport rejections measure compatibility boundaries, not proposition falsehood."
-            if transport_native_candidates
-            else "One fixed elementary palette is a negative baseline, not a general producer evaluation. Held-out rows are excluded before capsule access. Import rejections measure statement-boundary incompatibility, not solver inability or proposition falsehood."
+            "Ranked native theorem transport supplies explicit premises to bounded induction and retrieved equality rewriting. Held-out rows are excluded before capsule access. Import and transport rejections measure compatibility boundaries, not proposition falsehood."
+            if retrieved_induction
+            else (
+                "Ranked native theorem transport makes retrieved premises executable but does not enlarge the bounded application grammar. Held-out rows are excluded before capsule access. Import and transport rejections measure compatibility boundaries, not proposition falsehood."
+                if transport_native_candidates
+                else "One fixed elementary palette is a negative baseline, not a general producer evaluation. Held-out rows are excluded before capsule access. Import rejections measure statement-boundary incompatibility, not solver inability or proposition falsehood."
+            )
         ),
     }
     if population_source is not None:
@@ -442,6 +471,11 @@ def main() -> int:
         help="compose each ranked native theorem independently into the imported goal kernel",
     )
     parser.add_argument(
+        "--retrieved-induction",
+        action="store_true",
+        help="run bounded induction with the transported ranked declarations as rewrite premises",
+    )
+    parser.add_argument(
         "--must-decline-population",
         type=Path,
         help="optional independently checked false-control population",
@@ -459,6 +493,7 @@ def main() -> int:
             args.must_decline_population,
             args.ranking,
             args.transport_native_candidates,
+            args.retrieved_induction,
         ),
         indent=2,
         sort_keys=True,

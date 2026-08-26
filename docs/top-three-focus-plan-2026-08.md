@@ -227,6 +227,22 @@ exact type-compatibility filter and type-directed application attempt over
 these candidates, not a larger lexical score or an LLM assertion that one is
 the same theorem.
 
+That connective layer now has its first measured success. A second-hop graph
+projection retains topical anchors, then selects simple axiom-free equations
+about operators introduced by those anchors. A target-agnostic bounded
+induction producer specializes those exact retrieved declarations in its live
+scope and constructs forward equality chains without invoking broad residual
+search. On the immutable 51-row population it admits `Nat.choose n 1 = n`
+axiom-free with checked dependencies on Pascal's rule, the zero-column rule,
+and generic additive equations. The result is 1/51 overall, 1/20 among
+importable positive targets, and 0/6 false controls. This is the first positive
+construction on that open population, but remains measurement-only until the
+same ranking digest and candidate identities pass through an authoritative
+episode and crash-safe fact transition. The next sequence is therefore:
+register that exact multi-target contract, reproduce the one transition
+cleanly, cache checked candidate transport, then attack the 27 import
+rejections and 15 non-equality terminal shapes as separate bottlenecks.
+
 ## Comparative position
 
 Axeyum should not be described as a replacement for any one neighboring

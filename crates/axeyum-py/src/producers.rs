@@ -1383,6 +1383,47 @@ fn propose_bounded_induction(
     }
 }
 
+/// Proposes bounded induction with exact retrieved declarations available for
+/// typed equality rewriting in the current induction scope.
+///
+/// `declarations` is an explicit retrieval boundary, not proof authority. The
+/// producer preserves caller order, ignores unusable candidates, applies fixed
+/// Rust-side budgets, and returns an untrusted term for same-kernel admission.
+///
+/// # Errors
+///
+/// Raises `EpochError` for a foreign goal/name handle and `Declined` with the
+/// bounded-induction reason when the combined grammar cannot close the goal.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.producers")
+)]
+#[pyfunction]
+fn propose_bounded_induction_with_rewrites(
+    py: Python<'_>,
+    mut kernel: PyRefMut<'_, PyKernel>,
+    goal: PyExprId,
+    declarations: Vec<PyNameId>,
+) -> PyResult<PyCandidate> {
+    let goal = kernel.expr_of(goal)?;
+    let declarations = declarations
+        .into_iter()
+        .map(|name| kernel.name_of(name))
+        .collect::<PyResult<Vec<_>>>()?;
+    let inner = kernel.inner_mut();
+    let proposed = py.detach(move || {
+        bounded_induction::propose_bounded_induction_with_rewrites(inner, goal, &declarations)
+    });
+    match proposed {
+        Ok(candidate) => Ok(PyCandidate {
+            proof: kernel.wrap_expr(candidate.proof),
+            binders_used: candidate.binders_used,
+            inductions_used: candidate.inductions_used,
+        }),
+        Err(reason) => Err(PyDeclineReason::from_bounded(&reason).into_declined(py)),
+    }
+}
+
 /// Proposes a bounded type-directed application proof from exact declarations.
 ///
 /// `declarations` is the retrieval boundary: the producer does not scan the
@@ -1531,6 +1572,10 @@ pub(crate) fn register<'py>(parent: &Bound<'py, PyModule>) -> PyResult<Bound<'py
     // `MAX_BINDERS` is part of five settled facts' reproduction contract.
     module.add("MAX_BINDERS", bounded_induction::MAX_BINDERS)?;
     module.add("MAX_INDUCTIONS", bounded_induction::MAX_INDUCTIONS)?;
+    module.add(
+        "MAX_RETRIEVED_DECLARATIONS",
+        bounded_induction::MAX_RETRIEVED_DECLARATIONS,
+    )?;
     module.add("APPLICATION_MAX_BINDERS", bounded_application::MAX_BINDERS)?;
     module.add(
         "APPLICATION_MAX_DEPTH",
@@ -1547,6 +1592,10 @@ pub(crate) fn register<'py>(parent: &Bound<'py, PyModule>) -> PyResult<Bound<'py
     )?)?;
     module.add_function(wrap_pyfunction!(transport_native_candidate, &module)?)?;
     module.add_function(wrap_pyfunction!(propose_bounded_induction, &module)?)?;
+    module.add_function(wrap_pyfunction!(
+        propose_bounded_induction_with_rewrites,
+        &module
+    )?)?;
     module.add_function(wrap_pyfunction!(propose_bounded_application, &module)?)?;
     module.add_function(wrap_pyfunction!(propose_modeq_family, &module)?)?;
     module.add_function(wrap_pyfunction!(audit_circularity, &module)?)?;

@@ -125,6 +125,7 @@ def test_max_binders_is_the_pinned_eight() -> None:
 
 def test_the_other_budgets_are_exported_as_constants() -> None:
     assert P.MAX_INDUCTIONS == 2
+    assert P.MAX_RETRIEVED_DECLARATIONS == 32
     assert P.MODEQ_MAX_BINDERS == 8
     assert P.APPLICATION_MAX_BINDERS == 8
     assert P.APPLICATION_MAX_DEPTH == 8
@@ -151,6 +152,22 @@ def test_bounded_application_composes_retrieved_fibonacci_lemmas(
     assert candidate.binders_used == 3
     assert 0 < candidate.application_depth <= P.APPLICATION_MAX_DEPTH
     assert candidate.terms_considered <= P.APPLICATION_MAX_TERMS
+
+
+def test_retrieved_induction_uses_only_explicit_declarations(
+    nat_kernel: Kernel,
+) -> None:
+    goal = goal_of(nat_kernel, "Nat.add_comm")
+    with pytest.raises(P.Declined):
+        P.propose_bounded_induction(nat_kernel, goal)
+    add_comm = nat_kernel.name("Nat.add_comm", must_exist=True)
+    candidate = P.propose_bounded_induction_with_rewrites(
+        nat_kernel, goal, [add_comm, add_comm]
+    )
+    admitted = nat_kernel.name("Axeyum.Test.RetrievedAddComm", must_exist=False)
+    nat_kernel.add_declaration(Declaration.theorem(admitted, [], goal, candidate.proof))
+    assert nat_kernel.axiom_footprint(admitted) == []
+    assert nat_kernel.theorem_dependencies(admitted) == ["Nat.add_comm"]
 
 
 def test_candidate_capsule_imports_exact_lemmas_without_target_proof() -> None:

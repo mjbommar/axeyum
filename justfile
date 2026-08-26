@@ -513,6 +513,10 @@ autogenesis-open-lemma-candidate-ranking:
     python3 -m unittest scripts.tests.test_gen_autogenesis_open_lemma_candidate_ranking
     python3 scripts/gen-autogenesis-open-lemma-candidate-ranking.py --check
 
+autogenesis-rewrite-support-ranking:
+    python3 -m unittest scripts.tests.test_gen_autogenesis_rewrite_support_ranking
+    python3 scripts/gen-autogenesis-rewrite-support-ranking.py --check
+
 autogenesis-ranked-proposition-census:
     cargo build -q -p axeyum-lean-import --example proposition_compatibility_audit
     python3 scripts/gen-autogenesis-ranked-proposition-census.py --ranking artifacts/autogenesis/open-lemma-candidate-ranking-pre-reconciliation-v1.json --check
@@ -529,6 +533,10 @@ autogenesis-open-ranked-application-census:
 autogenesis-open-ranked-transport-census:
     uv run --no-sync python -m unittest scripts.tests.test_measure_autogenesis_open_fixed_palette scripts.tests.test_gen_autogenesis_open_lemma_candidate_ranking
     uv run --no-sync python scripts/measure-autogenesis-open-fixed-palette.py --population artifacts/autogenesis/open-ranked-proposition-census-v2.json --must-decline-population artifacts/autogenesis/must-decline-mutations-v1.json --ranking artifacts/autogenesis/open-lemma-candidate-ranking-v1.json --transport-native-candidates --capsule-directory /nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1 --output artifacts/autogenesis/open-ranked-transport-application-census-v1.json --check
+
+autogenesis-open-ranked-transport-induction-census:
+    uv run --no-sync python -m unittest scripts.tests.test_measure_autogenesis_open_fixed_palette scripts.tests.test_gen_autogenesis_rewrite_support_ranking
+    uv run --no-sync python scripts/measure-autogenesis-open-fixed-palette.py --population artifacts/autogenesis/open-ranked-proposition-census-v2.json --must-decline-population artifacts/autogenesis/must-decline-mutations-v1.json --ranking artifacts/autogenesis/open-lemma-rewrite-support-ranking-v1.json --transport-native-candidates --retrieved-induction --capsule-directory /nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1 --output artifacts/autogenesis/open-ranked-transport-induction-census-v1.json --check
 
 autogenesis-proposition-reconciliation-proposals:
     python3 -m unittest scripts.tests.test_prepare_autogenesis_fact_transaction

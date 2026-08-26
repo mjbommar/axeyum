@@ -157,7 +157,8 @@
 use std::collections::BTreeSet;
 
 use axeyum_lean_kernel::{
-    BinderInfo, Declaration, ExprId, ExprNode, Kernel, LevelId, LocalContext, LocalDecl, NameId,
+    BinderInfo, Declaration, ExprId, ExprNode, Kernel, LevelId, Lit, LocalContext, LocalDecl,
+    NameId,
 };
 
 /// Maximum number of leading `Pi` binders this producer will peel (shared
@@ -261,6 +262,38 @@ const MAX_LE_ASCENT_STEPS: usize = 16;
 /// import stream or the kernel's own `LocalContext` would use, so this
 /// producer's free variables cannot collide with either.
 const FVAR_BASE: u64 = 9_000_000;
+
+/// Maximum number of retrieved declarations the induction producer will
+/// inspect. Retrieval remains an explicit caller-owned boundary; this merely
+/// prevents an accidentally huge candidate list from changing the producer's
+/// bounded character.
+pub const MAX_RETRIEVED_DECLARATIONS: usize = 32;
+
+/// Maximum number of typed terms retained while specializing retrieved
+/// declarations against the current induction scope.
+const MAX_RETRIEVED_TERMS: usize = 192;
+
+/// Maximum completed equality instances retained across all declarations.
+const MAX_RETRIEVED_EQUALITIES: usize = 512;
+
+/// Maximum typed application nodes one retrieved declaration may consume.
+/// A highly branching first candidate must not starve every later premise.
+const MAX_RETRIEVED_TERMS_PER_DECLARATION: usize = 48;
+
+/// Maximum completed equality instances retained from one declaration.
+const MAX_RETRIEVED_EQUALITIES_PER_DECLARATION: usize = 48;
+
+/// Maximum application layers used to specialize a retrieved declaration.
+const MAX_RETRIEVED_APPLICATION_DEPTH: usize = 4;
+
+/// Maximum number of exact forward rewrites in one terminal normalization.
+/// This is deliberately separate from specialization depth: a useful proof
+/// may revisit an earlier equation after another rewrite exposes its lhs.
+const MAX_RETRIEVED_NORMALIZATION_STEPS: usize = 16;
+
+/// Maximum retrieved equalities tried across one complete derivation,
+/// including nested residual obligations.
+const MAX_RETRIEVED_REWRITES: usize = 64;
 
 /// One fully constructed candidate, plus the search shape that produced it —
 /// reported so a caller can distinguish "closed by plain reflexivity" from
@@ -1089,6 +1122,13 @@ struct Binder {
     body: ExprId,
 }
 
+#[derive(Debug, Clone, Copy)]
+struct RetrievedTerm {
+    term: ExprId,
+    ty: ExprId,
+}
+
+#[derive(Clone)]
 struct Search {
     eqp_eq: NameId,
     eqp_refl: NameId,
@@ -1173,6 +1213,14 @@ struct Search {
     /// discipline as [`Search::local_hyps`], so a stuck hypothesis from one
     /// branch never leaks into a sibling.
     stuck_hyps: Vec<Hypothesis>,
+    /// Exact declarations supplied by the caller's retrieval stage. The
+    /// producer never scans the environment for topical lemmas and never
+    /// treats rank as authority; these names only seed bounded typed
+    /// specialization in the current local scope.
+    retrieved_declarations: Vec<NameId>,
+    /// Shared bound across the whole derivation so nested residual search
+    /// cannot turn retrieved rewriting into an unbounded loop.
+    retrieved_rewrites_left: usize,
 }
 
 impl Search {
@@ -1187,6 +1235,555 @@ impl Search {
         let fv = self.fresh_fvar();
         self.fvar_types.insert(fv, ty);
         fv
+    }
+
+    fn collect_term_subexpressions(
+        kernel: &Kernel,
+        expression: ExprId,
+        seen: &mut BTreeSet<ExprId>,
+        output: &mut Vec<ExprId>,
+    ) {
+        if output.len() >= MAX_RETRIEVED_TERMS || !seen.insert(expression) {
+            return;
+        }
+        output.push(expression);
+        match kernel.expr_node(expression).clone() {
+            ExprNode::Proj(_, _, value) => {
+                Self::collect_term_subexpressions(kernel, value, seen, output);
+            }
+            ExprNode::App(function, argument) => {
+                Self::collect_term_subexpressions(kernel, function, seen, output);
+                Self::collect_term_subexpressions(kernel, argument, seen, output);
+            }
+            ExprNode::Lam(_, ty, body, _) | ExprNode::Pi(_, ty, body, _) => {
+                Self::collect_term_subexpressions(kernel, ty, seen, output);
+                Self::collect_term_subexpressions(kernel, body, seen, output);
+            }
+            ExprNode::Let(_, ty, value, body) => {
+                Self::collect_term_subexpressions(kernel, ty, seen, output);
+                Self::collect_term_subexpressions(kernel, value, seen, output);
+                Self::collect_term_subexpressions(kernel, body, seen, output);
+            }
+            ExprNode::BVar(_)
+            | ExprNode::FVar(_)
+            | ExprNode::Sort(_)
+            | ExprNode::Const(_, _)
+            | ExprNode::Lit(_) => {}
+        }
+    }
+
+    fn term_size(kernel: &Kernel, expression: ExprId, mut budget: usize) -> usize {
+        let mut pending = vec![expression];
+        let mut size = 0usize;
+        while let Some(current) = pending.pop() {
+            if budget == 0 {
+                return MAX_KABSTRACT_NODES;
+            }
+            budget -= 1;
+            size += 1;
+            match kernel.expr_node(current) {
+                ExprNode::Proj(_, _, value) => pending.push(*value),
+                ExprNode::App(function, argument) => {
+                    pending.push(*argument);
+                    pending.push(*function);
+                }
+                ExprNode::Lam(_, ty, body, _) | ExprNode::Pi(_, ty, body, _) => {
+                    pending.push(*body);
+                    pending.push(*ty);
+                }
+                ExprNode::Let(_, ty, value, body) => {
+                    pending.push(*body);
+                    pending.push(*value);
+                    pending.push(*ty);
+                }
+                ExprNode::BVar(_)
+                | ExprNode::FVar(_)
+                | ExprNode::Sort(_)
+                | ExprNode::Const(_, _)
+                | ExprNode::Lit(_) => {}
+            }
+        }
+        size
+    }
+
+    fn contains_fvar(kernel: &Kernel, expression: ExprId, mut budget: usize) -> bool {
+        let mut pending = vec![expression];
+        while let Some(current) = pending.pop() {
+            if budget == 0 {
+                return true;
+            }
+            budget -= 1;
+            match kernel.expr_node(current) {
+                ExprNode::FVar(_) => return true,
+                ExprNode::Proj(_, _, value) => pending.push(*value),
+                ExprNode::App(function, argument) => {
+                    pending.push(*argument);
+                    pending.push(*function);
+                }
+                ExprNode::Lam(_, ty, body, _) | ExprNode::Pi(_, ty, body, _) => {
+                    pending.push(*body);
+                    pending.push(*ty);
+                }
+                ExprNode::Let(_, ty, value, body) => {
+                    pending.push(*body);
+                    pending.push(*value);
+                    pending.push(*ty);
+                }
+                ExprNode::BVar(_)
+                | ExprNode::Sort(_)
+                | ExprNode::Const(_, _)
+                | ExprNode::Lit(_) => {}
+            }
+        }
+        false
+    }
+
+    /// Canonicalize only CLOSED application subterms whose WHNF is headed by
+    /// a constructor. This turns elaborated numerals such as `OfNat ... 1`
+    /// into the constructor form used by native lemmas without unfolding a
+    /// recursive application containing the induction variable.
+    fn normalize_closed_constructors(
+        kernel: &mut Kernel,
+        expression: ExprId,
+        nat_shape: Option<NatShape>,
+    ) -> ExprId {
+        if let (ExprNode::Lit(Lit::Nat(value)), Some(shape)) =
+            (kernel.expr_node(expression).clone(), nat_shape)
+            && let Ok(count) = value.to_string().parse::<usize>()
+            && count <= MAX_LE_ASCENT_STEPS
+        {
+            let mut result = kernel.const_(shape.zero_ctor, vec![]);
+            for _ in 0..count {
+                let succ = kernel.const_(shape.succ_ctor, vec![]);
+                result = kernel.app(succ, result);
+            }
+            return result;
+        }
+        let rebuilt = match kernel.expr_node(expression).clone() {
+            ExprNode::App(function, argument) => {
+                let function = Self::normalize_closed_constructors(kernel, function, nat_shape);
+                let argument = Self::normalize_closed_constructors(kernel, argument, nat_shape);
+                kernel.app(function, argument)
+            }
+            _ => expression,
+        };
+        if !matches!(kernel.expr_node(rebuilt), ExprNode::App(_, _))
+            || Self::contains_fvar(kernel, rebuilt, MAX_KABSTRACT_NODES)
+        {
+            return rebuilt;
+        }
+        let reduced = kernel.whnf(rebuilt);
+        let (head, _) = app_spine(kernel, reduced);
+        let ExprNode::Const(name, _) = kernel.expr_node(head) else {
+            return rebuilt;
+        };
+        if matches!(
+            kernel.environment().get(*name),
+            Some(Declaration::Constructor { .. })
+        ) {
+            reduced
+        } else {
+            rebuilt
+        }
+    }
+
+    /// Build a small typed application closure from the exact retrieved
+    /// declarations, current local variables, and value subexpressions already
+    /// present in the terminal equality. Subexpressions provide structural
+    /// values such as zero without granting access to an unrelated theorem;
+    /// every retained term must infer in the current local context.
+    #[allow(clippy::too_many_lines)]
+    fn specialized_retrieved_equalities(
+        &mut self,
+        kernel: &mut Kernel,
+        goal: EqGoal,
+        hypothesis: Option<Hypothesis>,
+    ) -> Vec<(ExprId, EqGoal)> {
+        if self.retrieved_declarations.is_empty() || self.retrieved_rewrites_left == 0 {
+            return Vec::new();
+        }
+        let mut context = LocalContext::new();
+        for (&fvar, &ty) in &self.fvar_types {
+            context.push(LocalDecl {
+                fvar,
+                name: kernel.anon(),
+                ty,
+                info: BinderInfo::Default,
+            });
+        }
+
+        let mut arguments = Vec::new();
+        for (&fvar, &ty) in self.fvar_types.iter().rev() {
+            let term = kernel.fvar(fvar);
+            arguments.push(RetrievedTerm { term, ty });
+        }
+        let mut subexpressions = Vec::new();
+        let mut seen = BTreeSet::new();
+        // Use the surface terminal terms, not `whnf`: unfolding a stuck
+        // recursive definition exposes its entire recursor implementation and
+        // floods specialization with irrelevant motives/minors. The caller's
+        // syntax already contains the values a retrieved equation can match
+        // (variables, constructors, and literal indices).
+        Self::collect_term_subexpressions(kernel, goal.lhs, &mut seen, &mut subexpressions);
+        Self::collect_term_subexpressions(kernel, goal.rhs, &mut seen, &mut subexpressions);
+        let carrier_whnf = kernel.whnf(goal.carrier);
+        let nat_shape = match kernel.expr_node(carrier_whnf).clone() {
+            ExprNode::Const(name, _) => detect_nat_shape(kernel, name),
+            _ => None,
+        };
+        let normalized_lhs = Self::normalize_closed_constructors(kernel, goal.lhs, nat_shape);
+        let normalized_rhs = Self::normalize_closed_constructors(kernel, goal.rhs, nat_shape);
+        Self::collect_term_subexpressions(kernel, normalized_lhs, &mut seen, &mut subexpressions);
+        Self::collect_term_subexpressions(kernel, normalized_rhs, &mut seen, &mut subexpressions);
+        if let Some(hypothesis) = hypothesis {
+            Self::collect_term_subexpressions(
+                kernel,
+                hypothesis.stmt,
+                &mut seen,
+                &mut subexpressions,
+            );
+            let normalized_hypothesis =
+                Self::normalize_closed_constructors(kernel, hypothesis.stmt, nat_shape);
+            Self::collect_term_subexpressions(
+                kernel,
+                normalized_hypothesis,
+                &mut seen,
+                &mut subexpressions,
+            );
+        }
+        subexpressions.sort_by_key(|term| Self::term_size(kernel, *term, MAX_KABSTRACT_NODES));
+        for term in subexpressions {
+            if arguments.len() >= MAX_RETRIEVED_TERMS
+                || arguments.iter().any(|known| known.term == term)
+            {
+                continue;
+            }
+            if let Ok(ty) = kernel.infer_in(term, &mut context) {
+                arguments.push(RetrievedTerm { term, ty });
+            }
+        }
+
+        let mut equalities = Vec::new();
+        for &name in &self.retrieved_declarations {
+            if equalities.len() >= MAX_RETRIEVED_EQUALITIES {
+                break;
+            }
+            let Some(declaration) = kernel.environment().get(name) else {
+                continue;
+            };
+            if !declaration.uparams().is_empty()
+                || !matches!(
+                    declaration,
+                    Declaration::Definition { .. } | Declaration::Theorem { .. }
+                )
+            {
+                continue;
+            }
+            let term = kernel.const_(name, vec![]);
+            let Ok(ty) = kernel.infer_in(term, &mut context) else {
+                continue;
+            };
+            let mut frontier = vec![RetrievedTerm { term, ty }];
+            let mut declaration_equalities = 0usize;
+            for depth in 0..=MAX_RETRIEVED_APPLICATION_DEPTH {
+                let mut applicable = Vec::new();
+                for function in frontier {
+                    if let Ok(equality) = parse_eq_goal(kernel, self.eqp_eq, function.ty) {
+                        equalities.push((function.term, equality));
+                        declaration_equalities += 1;
+                        if equalities.len() >= MAX_RETRIEVED_EQUALITIES {
+                            return equalities;
+                        }
+                        if declaration_equalities >= MAX_RETRIEVED_EQUALITIES_PER_DECLARATION {
+                            break;
+                        }
+                    }
+                    if depth == MAX_RETRIEVED_APPLICATION_DEPTH {
+                        continue;
+                    }
+                    let function_type = kernel.whnf(function.ty);
+                    let ExprNode::Pi(_, domain, _, _) = kernel.expr_node(function_type).clone()
+                    else {
+                        continue;
+                    };
+                    applicable.push((function, domain));
+                }
+                if applicable.is_empty()
+                    || declaration_equalities >= MAX_RETRIEVED_EQUALITIES_PER_DECLARATION
+                {
+                    break;
+                }
+                // Fair diagonal beam: function-major Cartesian expansion lets
+                // the first argument consume the entire beam, starving a later
+                // local value that is the only applicable specialization.
+                let mut pairs = Vec::new();
+                for (function_index, (_, domain)) in applicable.iter().enumerate() {
+                    for (argument_index, argument) in arguments.iter().enumerate() {
+                        if kernel.def_eq(argument.ty, *domain) {
+                            pairs.push((
+                                function_index + argument_index,
+                                function_index,
+                                argument_index,
+                            ));
+                        }
+                    }
+                }
+                pairs.sort_unstable();
+                let mut next = Vec::new();
+                for (_, function_index, argument_index) in
+                    pairs.into_iter().take(MAX_RETRIEVED_TERMS_PER_DECLARATION)
+                {
+                    let function = applicable[function_index].0;
+                    let argument = arguments[argument_index];
+                    let applied = kernel.app(function.term, argument.term);
+                    if next
+                        .iter()
+                        .any(|known: &RetrievedTerm| known.term == applied)
+                    {
+                        continue;
+                    }
+                    let Ok(applied_ty) = kernel.infer_in(applied, &mut context) else {
+                        continue;
+                    };
+                    next.push(RetrievedTerm {
+                        term: applied,
+                        ty: applied_ty,
+                    });
+                }
+                if next.is_empty() {
+                    break;
+                }
+                frontier = next;
+            }
+        }
+        equalities
+    }
+
+    fn try_retrieved_terminal(
+        &mut self,
+        kernel: &mut Kernel,
+        goal: EqGoal,
+        hypothesis: Option<Hypothesis>,
+        debug: bool,
+    ) -> Option<ExprId> {
+        let mut equalities = self.specialized_retrieved_equalities(kernel, goal, hypothesis);
+        if let Some((proof, mut equality)) = hypothesis.and_then(|hyp| {
+            parse_eq_goal(kernel, self.eqp_eq, hyp.stmt)
+                .ok()
+                .map(|equality| (hyp.proof, equality))
+        }) {
+            let carrier_whnf = kernel.whnf(equality.carrier);
+            let nat_shape = match kernel.expr_node(carrier_whnf).clone() {
+                ExprNode::Const(name, _) => detect_nat_shape(kernel, name),
+                _ => None,
+            };
+            equality.lhs = Self::normalize_closed_constructors(kernel, equality.lhs, nat_shape);
+            equality.rhs = Self::normalize_closed_constructors(kernel, equality.rhs, nat_shape);
+            equalities.push((proof, equality));
+        }
+        if debug {
+            eprintln!(
+                "  [retrieved] declarations={} specialized_equalities={}",
+                self.retrieved_declarations.len(),
+                equalities.len()
+            );
+        }
+        // Exact surface occurrence is a cheap, deterministic applicability
+        // signal and avoids spending the shared residual budget on dozens of
+        // well-typed but irrelevant specializations before Pascal-style or
+        // induction-hypothesis equations that literally match the goal.
+        equalities.sort_by_key(|(_, equality)| {
+            u8::from(
+                equality.lhs != goal.lhs
+                    && equality.rhs != goal.lhs
+                    && equality.lhs != goal.rhs
+                    && equality.rhs != goal.rhs,
+            )
+        });
+        if let Some(proof) = self.try_retrieved_normalize(kernel, goal, &equalities, debug) {
+            return Some(proof);
+        }
+        None
+    }
+
+    /// Deterministically normalize the goal's left side with forward-oriented
+    /// retrieved equations, revisiting the stable list for a bounded number of
+    /// rounds. This is the cheap multi-lemma path (`Pascal`; zero-column;
+    /// induction hypothesis; additive normalization) before any residual
+    /// induction is attempted.
+    fn try_retrieved_normalize(
+        &mut self,
+        kernel: &mut Kernel,
+        goal: EqGoal,
+        equalities: &[(ExprId, EqGoal)],
+        debug: bool,
+    ) -> Option<ExprId> {
+        let carrier_whnf = kernel.whnf(goal.carrier);
+        let nat_shape = match kernel.expr_node(carrier_whnf).clone() {
+            ExprNode::Const(name, _) => detect_nat_shape(kernel, name),
+            _ => None,
+        };
+        let mut current = Self::normalize_closed_constructors(kernel, goal.lhs, nat_shape);
+        let mut aggregate = (current != goal.lhs)
+            .then(|| build_eq_refl(kernel, self.eqp_refl, goal.level, goal.carrier, goal.lhs));
+        let mut visited = BTreeSet::from([current]);
+        for _ in 0..MAX_RETRIEVED_NORMALIZATION_STEPS {
+            let mut next_step = None;
+            for &(proof, equality) in equalities {
+                if self.retrieved_rewrites_left == 0 {
+                    return None;
+                }
+                if !Self::contains_exact(kernel, current, equality.lhs, MAX_KABSTRACT_NODES) {
+                    continue;
+                }
+                let Some((rewritten, step)) = self.rewrite_term_once(
+                    kernel,
+                    current,
+                    equality.lhs,
+                    equality.rhs,
+                    proof,
+                    equality,
+                    goal,
+                ) else {
+                    continue;
+                };
+                let next = beta_whnf(kernel, rewritten);
+                if next == current || visited.contains(&next) {
+                    continue;
+                }
+                next_step = Some((next, step));
+                break;
+            }
+            // Imported theorem statements may retain a transparent notation
+            // wrapper (`HAdd.hAdd`, for example) while an earlier native
+            // rewrite exposes the underlying operation. After at least one
+            // exact rewrite, allow one whole-term definitional match. This is
+            // not recursive occurrence search: the kernel compares only the
+            // two roots, and the fixed equality/rewrite budgets still apply.
+            if next_step.is_none() && aggregate.is_some() {
+                for &(proof, equality) in equalities {
+                    if kernel.def_eq(current, equality.lhs)
+                        && !kernel.def_eq(current, equality.rhs)
+                        && !visited.contains(&equality.rhs)
+                    {
+                        next_step = Some((equality.rhs, proof));
+                        break;
+                    }
+                }
+            }
+            let Some((next, step)) = next_step else {
+                break;
+            };
+            self.retrieved_rewrites_left -= 1;
+            aggregate = Some(if let Some(previous) = aggregate {
+                self.build_eq_trans(
+                    kernel,
+                    goal.level,
+                    goal.carrier,
+                    goal.lhs,
+                    current,
+                    next,
+                    previous,
+                    step,
+                )
+            } else {
+                step
+            });
+            current = next;
+            visited.insert(current);
+            if debug {
+                eprintln!("  [retrieved-normalize] {}", kernel.render_lean(current));
+            }
+            if kernel.def_eq(current, goal.rhs) {
+                return aggregate;
+            }
+        }
+        None
+    }
+
+    /// Exact structural occurrence, with no reduction and no definitional
+    /// equality. Retrieval is a search hint, so applicability must stay cheap:
+    /// the kernel validates the assembled proof term afterward.
+    fn contains_exact(
+        kernel: &Kernel,
+        haystack: ExprId,
+        needle: ExprId,
+        mut budget: usize,
+    ) -> bool {
+        let mut pending = vec![haystack];
+        while let Some(expression) = pending.pop() {
+            if budget == 0 {
+                return false;
+            }
+            budget -= 1;
+            if expression == needle {
+                return true;
+            }
+            match kernel.expr_node(expression) {
+                ExprNode::Proj(_, _, value) => pending.push(*value),
+                ExprNode::App(function, argument) => {
+                    pending.push(*argument);
+                    pending.push(*function);
+                }
+                ExprNode::Lam(_, ty, body, _) | ExprNode::Pi(_, ty, body, _) => {
+                    pending.push(*body);
+                    pending.push(*ty);
+                }
+                ExprNode::Let(_, ty, value, body) => {
+                    pending.push(*body);
+                    pending.push(*value);
+                    pending.push(*ty);
+                }
+                ExprNode::BVar(_)
+                | ExprNode::FVar(_)
+                | ExprNode::Sort(_)
+                | ExprNode::Const(_, _)
+                | ExprNode::Lit(_) => {}
+            }
+        }
+        false
+    }
+
+    /// Rewrite every occurrence of `needle` in `term` to `replacement`, and
+    /// return both the new term and a congruence proof from the old term to the
+    /// new one. This is one explicit equality step; it never launches residual
+    /// induction or scans for another theorem.
+    #[allow(clippy::too_many_arguments)]
+    fn rewrite_term_once(
+        &mut self,
+        kernel: &mut Kernel,
+        term: ExprId,
+        needle: ExprId,
+        replacement: ExprId,
+        equality_proof: ExprId,
+        equality: EqGoal,
+        output: EqGoal,
+    ) -> Option<(ExprId, ExprId)> {
+        let reduced = term;
+        let placeholder_fv = self.fresh_fvar();
+        let placeholder = kernel.fvar(placeholder_fv);
+        let mut budget = MAX_KABSTRACT_NODES;
+        let (replaced, found) =
+            kabstract_occurrences(kernel, reduced, needle, placeholder, &mut budget);
+        if !found {
+            return None;
+        }
+        let anon = kernel.anon();
+        let abstracted = kernel.abstract_fvars(replaced, &[placeholder_fv]);
+        let wrap = kernel.lam(anon, equality.carrier, abstracted, BinderInfo::Default);
+        let rewritten = kernel.app(wrap, replacement);
+        let proof = self.build_congr_arg(
+            kernel,
+            wrap,
+            equality.level,
+            equality.carrier,
+            output.level,
+            output.carrier,
+            needle,
+            replacement,
+            equality_proof,
+        );
+        Some((rewritten, proof))
     }
 
     /// Try to close `goal` (already peeled of every leading binder) via
@@ -1213,6 +1810,10 @@ impl Search {
                 goal.carrier,
                 goal.lhs,
             ));
+        }
+        let debug = std::env::var("BIS_DEBUG").is_ok();
+        if let Some(proof) = self.try_retrieved_terminal(kernel, goal, hypothesis, debug) {
+            return Ok(proof);
         }
         // The hypothesis is only usable once its (possibly still-Pi-headed)
         // statement has been peeled down to the same `Eq` shape as `goal` —
@@ -1253,7 +1854,6 @@ impl Search {
         // finds the occurrence regardless of how deep the projection nesting
         // goes, while still building exactly one `congrArg`-shaped rewrite —
         // never more than the single hypothesis already in hand.
-        let debug = std::env::var("BIS_DEBUG").is_ok();
         let rhs_whnf = kernel.whnf(goal.rhs);
         if debug {
             eprintln!("  rhs_whnf={}", kernel.render_lean(rhs_whnf));
@@ -3520,6 +4120,28 @@ pub fn propose_bounded_induction(
     kernel: &mut Kernel,
     goal: ExprId,
 ) -> Result<Candidate, DeclineReason> {
+    propose_bounded_induction_with_rewrites(kernel, goal, &[])
+}
+
+/// As [`propose_bounded_induction`], with an explicit caller-supplied set of
+/// retrieved declarations available for bounded typed specialization and
+/// equality rewriting inside induction and residual subgoals.
+///
+/// Retrieval is not authority: unknown, polymorphic, non-definition/theorem,
+/// ill-typed, and inapplicable declarations are ignored, and the returned
+/// candidate remains untrusted until admitted by the same kernel. Caller order
+/// is preserved and duplicates are removed stably before the fixed
+/// [`MAX_RETRIEVED_DECLARATIONS`] cap is applied.
+///
+/// # Errors
+///
+/// Returns the same typed declines as [`propose_bounded_induction`] when the
+/// combined bounded grammar cannot close the goal.
+pub fn propose_bounded_induction_with_rewrites(
+    kernel: &mut Kernel,
+    goal: ExprId,
+    declarations: &[NameId],
+) -> Result<Candidate, DeclineReason> {
     // A purely order-headed statement's minimal import closure (e.g. `n ≤
     // n.factorial`, which never mentions propositional equality anywhere in
     // its own vocabulary) legitimately never imports `Eq` at all — that is
@@ -3543,6 +4165,15 @@ pub fn propose_bounded_induction(
     } else {
         (discover_eq_primitives(kernel)?, true)
     };
+    let mut retrieved_declarations = Vec::new();
+    for &name in declarations {
+        if retrieved_declarations.len() == MAX_RETRIEVED_DECLARATIONS {
+            break;
+        }
+        if !retrieved_declarations.contains(&name) {
+            retrieved_declarations.push(name);
+        }
+    }
     let mut search = Search {
         eqp_eq: eqp.eq,
         eqp_refl: eqp.eq_refl,
@@ -3558,6 +4189,8 @@ pub fn propose_bounded_induction(
         residual_depth: 0,
         local_hyps: Vec::new(),
         stuck_hyps: Vec::new(),
+        retrieved_declarations,
+        retrieved_rewrites_left: MAX_RETRIEVED_REWRITES,
     };
     let proof = search.attempt(kernel, goal, &eqp, None)?;
     Ok(Candidate {
@@ -3599,6 +4232,16 @@ mod order_terminal_tests {
         let c = kernel.const_(p.le, vec![]);
         let with_a = kernel.app(c, a);
         kernel.app(with_a, b)
+    }
+
+    fn nat_eq(kernel: &mut Kernel, p: &NatPrelude, a: ExprId, b: ExprId) -> ExprId {
+        let level = kernel.level_zero();
+        let type_level = kernel.level_succ(level);
+        let eq = kernel.const_(p.logic.eq, vec![type_level]);
+        let nat = kernel.const_(p.nat, vec![]);
+        let at_nat = kernel.app(eq, nat);
+        let at_a = kernel.app(at_nat, a);
+        kernel.app(at_a, b)
     }
 
     /// Independently confirm an ADMITTED candidate the same way the real
@@ -3750,6 +4393,106 @@ mod order_terminal_tests {
 
         propose_bounded_induction(&mut kernel, goal)
             .expect_err("n.succ.succ <= 0 is FALSE for every n and must decline");
+    }
+
+    /// `∀ n m, succ (n + m) = succ (m + n)` is a congruence instance of the
+    /// explicitly retrieved `Nat.add_comm`. The legacy producer has no access
+    /// to that theorem and must decline; the additive API specializes it in
+    /// the current two-variable scope and produces a kernel-checkable term.
+    #[test]
+    fn retrieved_add_comm_closes_a_scoped_congruence() {
+        let (mut kernel, p) = prelude_kernel();
+        let nat = kernel.const_(p.nat, vec![]);
+        let n_fv = 71u64;
+        let m_fv = 72u64;
+        let n = kernel.fvar(n_fv);
+        let m = kernel.fvar(m_fv);
+        let add = kernel.const_(p.add, vec![]);
+        let left_partial = kernel.app(add, n);
+        let left_sum = kernel.app(left_partial, m);
+        let add2 = kernel.const_(p.add, vec![]);
+        let right_partial = kernel.app(add2, m);
+        let right_sum = kernel.app(right_partial, n);
+        let succ = kernel.const_(p.succ, vec![]);
+        let lhs = kernel.app(succ, left_sum);
+        let succ2 = kernel.const_(p.succ, vec![]);
+        let rhs = kernel.app(succ2, right_sum);
+        let body = nat_eq(&mut kernel, &p, lhs, rhs);
+        let anon = kernel.anon();
+        let body_m = kernel.abstract_fvars(body, &[m_fv]);
+        let with_m = kernel.pi(anon, nat, body_m, BinderInfo::Default);
+        let goal_body = kernel.abstract_fvars(with_m, &[n_fv]);
+        let goal = kernel.pi(anon, nat, goal_body, BinderInfo::Default);
+
+        propose_bounded_induction(&mut kernel, goal)
+            .expect_err("the no-retrieval producer must not silently gain add_comm");
+        let candidate = propose_bounded_induction_with_rewrites(&mut kernel, goal, &[p.add_comm])
+            .expect("retrieved add_comm must close its congruence instance");
+        let inferred = kernel
+            .infer(candidate.proof)
+            .expect("retrieved candidate must infer");
+        assert!(kernel.def_eq(inferred, goal));
+        let root = kernel.anon();
+        let name = kernel.name_str(root, "TestRetrievedAddCommCongruence");
+        kernel
+            .add_declaration(Declaration::Theorem {
+                name,
+                uparams: vec![],
+                ty: goal,
+                value: candidate.proof,
+            })
+            .expect("retrieved candidate must admit");
+        assert!(kernel.axiom_footprint(name).is_empty());
+        assert!(kernel.theorem_dependencies(name).contains(&p.add_comm));
+    }
+
+    /// The first real grammar target from the open Mathlib-derived corpus:
+    /// `∀ n, choose n 1 = n`. It requires structural induction plus Pascal's
+    /// rule, the zero-column equation, and ordinary additive normalization;
+    /// none of those theorem names is hard-coded into the producer.
+    #[test]
+    fn retrieved_binomial_equations_close_choose_one() {
+        let (mut kernel, p) = prelude_kernel();
+        let nat = kernel.const_(p.nat, vec![]);
+        let n_fv = 81u64;
+        let n = kernel.fvar(n_fv);
+        let zero = kernel.const_(p.zero, vec![]);
+        let succ = kernel.const_(p.succ, vec![]);
+        let one = kernel.app(succ, zero);
+        let choose = kernel.const_(p.choose, vec![]);
+        let choose_n = kernel.app(choose, n);
+        let choose_n_one = kernel.app(choose_n, one);
+        let body = nat_eq(&mut kernel, &p, choose_n_one, n);
+        let anon = kernel.anon();
+        let abstracted = kernel.abstract_fvars(body, &[n_fv]);
+        let goal = kernel.pi(anon, nat, abstracted, BinderInfo::Default);
+
+        let candidate = propose_bounded_induction_with_rewrites(
+            &mut kernel,
+            goal,
+            &[
+                p.choose_succ_succ,
+                p.choose_zero_right,
+                p.zero_add,
+                p.succ_add,
+            ],
+        )
+        .expect("retrieved binomial equations must close choose-one");
+        let inferred = kernel
+            .infer(candidate.proof)
+            .expect("choose-one candidate must infer");
+        assert!(kernel.def_eq(inferred, goal));
+        let root = kernel.anon();
+        let name = kernel.name_str(root, "TestRetrievedChooseOne");
+        kernel
+            .add_declaration(Declaration::Theorem {
+                name,
+                uparams: vec![],
+                ty: goal,
+                value: candidate.proof,
+            })
+            .expect("choose-one candidate must admit");
+        assert!(kernel.axiom_footprint(name).is_empty());
     }
 
     /// `declaration_absent` itself, confirmed both ways against a kernel
