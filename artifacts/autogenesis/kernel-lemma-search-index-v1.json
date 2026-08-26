@@ -1,12 +1,12 @@
 {
   "census": {
-    "distinct_exactly_linked_facts": 319,
+    "distinct_exactly_linked_facts": 329,
     "kernel_dependency_edges": 6838,
     "kernel_theorems": 1206,
     "maximum_dependency_depth": 26,
-    "theorems_with_exact_fact_links": 315,
-    "theorems_without_exact_fact_links": 891,
-    "unresolved_prefixed_kernel_evidence": 84
+    "theorems_with_exact_fact_links": 325,
+    "theorems_without_exact_fact_links": 881,
+    "unresolved_prefixed_kernel_evidence": 74
   },
   "derivation": {
     "fact_identity_rule": "kernel-term evidence with an explicit kernel_declaration, falling back for compatibility to an evidence id with exact kernel- or kernel: prefix and an exact current theorem suffix",
@@ -18776,7 +18776,9 @@
         "Nat.not_dvd_one_add_mul_of_two_le",
         "Rat.nat_gauss"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:nat-dvd-add-right-cancel-of-pos"
+      ],
       "kernel_declaration_id": "Nat.dvd_add_right_cancel_of_pos",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -18828,7 +18830,9 @@
       "direct_theorem_dependents": [
         "Nat.exists_prime_gt"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:nat-dvd-factorial-of-le"
+      ],
       "kernel_declaration_id": "Nat.dvd_factorial_of_le",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -18971,7 +18975,9 @@
         "Nat.dvd_gcd",
         "Nat.gcd_dvd"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:nat-dvd-mod-iff"
+      ],
       "kernel_declaration_id": "Nat.dvd_mod_iff",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -19002,7 +19008,9 @@
         "Rat.eq_of_cross",
         "Rat.nat_gauss"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:nat-dvd-mul"
+      ],
       "kernel_declaration_id": "Nat.dvd_mul",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -19032,7 +19040,9 @@
         "Nat.gcd_mul_lcm",
         "Rat.nat_gauss"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:nat-dvd-mul-right-of-dvd"
+      ],
       "kernel_declaration_id": "Nat.dvd_mul_right_of_dvd",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -19130,7 +19140,9 @@
         "Nat.dvd_mul_right_of_dvd",
         "Nat.exists_prime_dvd"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:nat-dvd-trans"
+      ],
       "kernel_declaration_id": "Nat.dvd_trans",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -19385,7 +19397,9 @@
         "Nat.dvd_two_pow_classify",
         "Rat.gcd_one_right"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:nat-eq-one-of-dvd-one"
+      ],
       "kernel_declaration_id": "Nat.eq_one_of_dvd_one",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -19835,7 +19849,9 @@
         "Nat.gcd_dvd_left",
         "Nat.gcd_dvd_right"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:nat-gcd-dvd"
+      ],
       "kernel_declaration_id": "Nat.gcd_dvd",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -20001,7 +20017,9 @@
         "Nat.gcd_dvd",
         "Nat.totient_prime"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:nat-gcd-zero-left"
+      ],
       "kernel_declaration_id": "Nat.gcd_zero_left",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -20577,7 +20595,9 @@
         "Nat.pow_sq_aux_eq_pow",
         "Rat.nat_dvd_antisymm_pos"
       ],
-      "exact_fact_ids": [],
+      "exact_fact_ids": [
+        "F:nat-le-antisymm"
+      ],
       "kernel_declaration_id": "Nat.le_antisymm",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
@@ -34290,69 +34310,9 @@
       "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
     },
     {
-      "candidate_declaration_id": "dvd_add_right_cancel_of_pos",
-      "evidence_id": "kernel-dvd_add_right_cancel_of_pos",
-      "fact_id": "F:nat-dvd-add-right-cancel-of-pos",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "dvd_factorial_of_le",
-      "evidence_id": "kernel-dvd_factorial_of_le",
-      "fact_id": "F:nat-dvd-factorial-of-le",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "dvd_mod_iff",
-      "evidence_id": "kernel-dvd_mod_iff",
-      "fact_id": "F:nat-dvd-mod-iff",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "dvd_mul",
-      "evidence_id": "kernel-dvd_mul",
-      "fact_id": "F:nat-dvd-mul",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "dvd_mul_right_of_dvd",
-      "evidence_id": "kernel-dvd_mul_right_of_dvd",
-      "fact_id": "F:nat-dvd-mul-right-of-dvd",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "dvd_trans",
-      "evidence_id": "kernel-dvd_trans",
-      "fact_id": "F:nat-dvd-trans",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "eq_one_of_dvd_one",
-      "evidence_id": "kernel-eq_one_of_dvd_one",
-      "fact_id": "F:nat-eq-one-of-dvd-one",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "gcd_dvd",
-      "evidence_id": "kernel-gcd_dvd",
-      "fact_id": "F:nat-gcd-dvd",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "gcd_zero_left",
-      "evidence_id": "kernel-gcd_zero_left",
-      "fact_id": "F:nat-gcd-zero-left",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
       "candidate_declaration_id": "le_add_right",
       "evidence_id": "kernel-le_add_right",
       "fact_id": "F:nat-le-add-right",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
-    },
-    {
-      "candidate_declaration_id": "le_antisymm",
-      "evidence_id": "kernel-le_antisymm",
-      "fact_id": "F:nat-le-antisymm",
       "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
     },
     {

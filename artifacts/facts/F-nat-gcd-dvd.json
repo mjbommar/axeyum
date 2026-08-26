@@ -28,6 +28,7 @@
     {
       "id": "kernel-gcd_dvd",
       "kind": "kernel-term",
+      "kernel_declaration": "Nat.gcd_dvd",
       "supports": "Nat.gcd_dvd is admitted by the trusted kernel gate with the type recorded in formal.statement.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- Nat.gcd_dvd 2>/dev/null | grep -Ec '^Nat\\.gcd_dvd[[:space:]]')\" -ge 1",
