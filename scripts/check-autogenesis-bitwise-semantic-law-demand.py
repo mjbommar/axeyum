@@ -110,12 +110,17 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
     zero_type = bridge.get("zero_canonical_type", "")
     if "testBitBool AxNat.zero" not in zero_type or "Bool.false" not in zero_type:
         raise ValueError("zero observation theorem type changed")
+    if bridge.get("input_bound_axiom_footprint_size") != 0:
+        raise ValueError("input sufficient-width theorem gained assumptions")
+    input_bound_type = bridge.get("input_bound_canonical_type", "")
+    if "AxNat.le" not in input_bound_type or "Bool.false" not in input_bound_type:
+        raise ValueError("input sufficient-width theorem type changed")
     algebra = data.get("native_observation_algebra", {})
     if algebra.get("axiom_footprint_size") != 0:
         raise ValueError("native observation algebra gained assumptions")
     if (
         algebra.get("nat_reification_status")
-        != "bounded-recursive-theorem-checked-unbounded-missing"
+        != "target-owned-total-theorem-checked-imported-equivalence-missing"
     ):
         raise ValueError("unproved Nat reification gained credit")
     algebra_type = algebra.get("canonical_type", "")
@@ -128,7 +133,7 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
         raise ValueError("bounded reification step gained assumptions")
     if (
         reification.get("roundtrip_status")
-        != "recursive-general-bounded-roundtrip-checked-weighted-equivalence-missing"
+        != "target-owned-unbounded-checked-imported-equivalence-missing"
     ):
         raise ValueError("bounded reification status changed")
     if "reifyBits" not in reification.get("base_canonical_type", ""):
@@ -196,6 +201,15 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
         or "AxNat.lt" not in bounded_bitwise_type
     ):
         raise ValueError("bounded bitwise theorem type changed")
+    if reification.get("total_bitwise_axiom_footprint_size") != 0:
+        raise ValueError("total bitwise theorem gained assumptions")
+    total_bitwise_type = reification.get("total_bitwise_canonical_type", "")
+    if (
+        "bitwiseTotal" not in total_bitwise_type
+        or "testBitBool" not in total_bitwise_type
+        or "Bool.false" not in total_bitwise_type
+    ):
+        raise ValueError("total bitwise theorem type changed")
 
     exclusion = data.get("countermodel_exclusion", {})
     if exclusion.get("excluded_by_law") != "testBit_succ":

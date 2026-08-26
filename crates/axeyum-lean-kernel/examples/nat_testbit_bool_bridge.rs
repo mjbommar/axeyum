@@ -5,8 +5,54 @@
 //! constructively bridgeable and preserves the native successor equation.
 
 use axeyum_lean_kernel::{
-    BinderInfo, Declaration, ExprId, Kernel, NatDev, NatOps, ReducibilityHint, build_nat_prelude,
+    BinderInfo, Declaration, ExprId, Kernel, NatDev, NatOps, NatPrelude, ReducibilityHint,
+    build_nat_prelude,
 };
+
+fn iff_forward(d: &mut NatDev<'_>, left: ExprId, right: ExprId, proof: ExprId) -> ExprId {
+    let logic = d.prelude().logic;
+    let iff_ty = d.const_app(logic.iff, &[left, right]);
+    let target = d.arrow(left, right);
+    let proof_fv = d.fresh_fvar();
+    let motive = d.lam_fv(proof_fv, iff_ty, target);
+    let forward_fv = d.fresh_fvar();
+    let forward = d.kernel().fvar(forward_fv);
+    let reverse_ty = d.arrow(right, left);
+    let reverse_fv = d.fresh_fvar();
+    let with_reverse = d.lam_fv(reverse_fv, reverse_ty, forward);
+    let minor = d.lam_fv(forward_fv, target, with_reverse);
+    let zero = d.kernel().level_zero();
+    let rec = d.kernel().const_(logic.iff_rec, vec![zero]);
+    d.apply(rec, &[left, right, motive, minor, proof])
+}
+
+fn n_lt_mul_two(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId, pos: ExprId) -> ExprId {
+    let zero = d.zero();
+    let add_n_zero = d.add(n, zero);
+    let add_n_n = d.add(n, n);
+    let step = d.lemma(p.add_lt_add_left, &[n, zero, n, pos]);
+    let remove_zero = d.lemma(p.add_zero, &[n]);
+    let motive = d.eq_motive(add_n_zero, &|d, value| d.lt(value, add_n_n));
+    let n_lt_double = d.transport(add_n_zero, motive, step, n, remove_zero);
+    let one = d.num(1);
+    let two = d.succ(one);
+    let product = d.mul(two, n);
+    let one_product = d.mul(one, n);
+    let expanded = d.add(one_product, n);
+    let expand = d.lemma(p.succ_mul, &[one, n]);
+    let one_mul = d.lemma(p.one_mul, &[n]);
+    let simplify = d.congr(one_product, n, one_mul, &|d, value| d.add(value, n));
+    let (_, product_eq_double) = d.chain(product, &[(expanded, expand), (add_n_n, simplify)]);
+    let double_eq_product = d.symm(product, add_n_n, product_eq_double);
+    let target_motive = d.eq_motive(add_n_n, &|d, value| d.lt(n, value));
+    d.transport(
+        add_n_n,
+        target_motive,
+        n_lt_double,
+        product,
+        double_eq_product,
+    )
+}
 
 fn and_left(d: &mut NatDev<'_>, left: ExprId, right: ExprId, proof: ExprId) -> ExprId {
     let logic = d.prelude().logic;
@@ -38,6 +84,24 @@ fn and_right(d: &mut NatDev<'_>, left: ExprId, right: ExprId, proof: ExprId) -> 
     d.apply(rec, &[left, right, motive, minor, proof])
 }
 
+#[allow(clippy::too_many_arguments)]
+fn or_elim(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    left: ExprId,
+    right: ExprId,
+    goal: ExprId,
+    left_case: ExprId,
+    right_case: ExprId,
+    proof: ExprId,
+) -> ExprId {
+    let anon = d.anon_name();
+    let or_ty = d.const_app(p.logic.or, &[left, right]);
+    let motive = d.kernel().lam(anon, or_ty, goal, BinderInfo::Default);
+    let rec = d.kernel().const_(p.logic.or_rec, vec![]);
+    d.apply(rec, &[left, right, motive, left_case, right_case, proof])
+}
+
 fn main() {
     if let Err(error) = run() {
         eprintln!("nat-testbit-bool-bridge: {error}");
@@ -62,6 +126,7 @@ fn run() -> Result<(), String> {
     let test_bit_bool_name = kernel.name_str(autogenesis, "testBitBool");
     let successor_name = kernel.name_str(autogenesis, "testBitBool_succ");
     let zero_observation_name = kernel.name_str(autogenesis, "testBitBool_zero");
+    let beyond_bound_name = kernel.name_str(autogenesis, "testBitBool_beyond_bound");
     let observation_name = kernel.name_str(autogenesis, "bitwiseObservation");
     let observation_apply_name = kernel.name_str(autogenesis, "bitwiseObservation_apply");
     let bool_to_bit_name = kernel.name_str(autogenesis, "boolToBit");
@@ -82,6 +147,8 @@ fn run() -> Result<(), String> {
     let bitwise_reify_low_name = kernel.name_str(autogenesis, "bitwiseReifyLow");
     let bitwise_reify_low_roundtrip_name =
         kernel.name_str(autogenesis, "testBitBool_bitwiseReifyLow");
+    let bitwise_total_name = kernel.name_str(autogenesis, "bitwiseTotal");
+    let bitwise_total_theorem_name = kernel.name_str(autogenesis, "testBitBool_bitwiseTotal");
     let reify_one_normalize_name = kernel.name_str(autogenesis, "reifyBits_one_normalize");
     let reify_one_roundtrip_name = kernel.name_str(autogenesis, "reifyBits_one_roundtrip_zero");
     let reify_bound_name = kernel.name_str(autogenesis, "reifyBits_lt_pow");
@@ -189,6 +256,128 @@ fn run() -> Result<(), String> {
         let theorem_value = d.lam_fv(index_fv, nat, proof);
         d.declare_theorem(zero_observation_name, theorem_type, theorem_value)
             .map_err(|error| format!("testBitBool_zero rejected: {}", d.explain(&error)))?;
+
+        // A deliberately simple sufficient-width theorem: if n <= bound,
+        // then every bit at offset+bound is false. This is looser than
+        // `Nat.size`, but its proof follows the executable divide-by-two
+        // recursion directly and is enough to make bitwise total.
+        let bound_motive = |d: &mut NatDev<'_>, bound| {
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let within = d.le(n, bound);
+            let offset_fv = d.fresh_fvar();
+            let offset = d.kernel().fvar(offset_fv);
+            let index = d.add(offset, bound);
+            let observed = d.const_app(test_bit_bool_name, &[n, index]);
+            let false_value = d.bool_false();
+            let at_offset = d.bool_eq(observed, false_value);
+            let all_offsets = d.pi_fv(offset_fv, nat, at_offset);
+            let body = d.arrow(within, all_offsets);
+            d.pi_fv(n_fv, nat, body)
+        };
+        let bound_base = |d: &mut NatDev<'_>| {
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let zero = d.zero();
+            let within = d.le(n, zero);
+            let within_fv = d.fresh_fvar();
+            let within_proof = d.kernel().fvar(within_fv);
+            let offset_fv = d.fresh_fvar();
+            let offset = d.kernel().fvar(offset_fv);
+            let zero_le_n = d.lemma(prelude.zero_le, &[n]);
+            let n_eq_zero = d.lemma(prelude.le_antisymm, &[n, zero, within_proof, zero_le_n]);
+            let zero_eq_n = d.symm(n, zero, n_eq_zero);
+            let zero_observation = d.lemma(zero_observation_name, &[offset]);
+            let zero_source_motive = d.eq_motive(zero, &|d, value| {
+                let observed = d.const_app(test_bit_bool_name, &[value, offset]);
+                let false_value = d.bool_false();
+                d.bool_eq(observed, false_value)
+            });
+            let result = d.transport(zero, zero_source_motive, zero_observation, n, zero_eq_n);
+            let with_offset = d.lam_fv(offset_fv, nat, result);
+            let with_bound = d.lam_fv(within_fv, within, with_offset);
+            d.lam_fv(n_fv, nat, with_bound)
+        };
+        let bound_step = |d: &mut NatDev<'_>, bound, ih| {
+            let successor_bound = d.succ(bound);
+            let n_motive = |d: &mut NatDev<'_>, n| {
+                let within = d.le(n, successor_bound);
+                let offset_fv = d.fresh_fvar();
+                let offset = d.kernel().fvar(offset_fv);
+                let index = d.add(offset, successor_bound);
+                let observed = d.const_app(test_bit_bool_name, &[n, index]);
+                let false_value = d.bool_false();
+                let at_offset = d.bool_eq(observed, false_value);
+                let all_offsets = d.pi_fv(offset_fv, nat, at_offset);
+                d.arrow(within, all_offsets)
+            };
+            let n_base = |d: &mut NatDev<'_>| {
+                let zero = d.zero();
+                let within = d.le(zero, successor_bound);
+                let within_fv = d.fresh_fvar();
+                let offset_fv = d.fresh_fvar();
+                let offset = d.kernel().fvar(offset_fv);
+                let index = d.add(offset, successor_bound);
+                let proof = d.lemma(zero_observation_name, &[index]);
+                let with_offset = d.lam_fv(offset_fv, nat, proof);
+                d.lam_fv(within_fv, within, with_offset)
+            };
+            let n_step = |d: &mut NatDev<'_>, predecessor, _n_ih| {
+                let n = d.succ(predecessor);
+                let within = d.le(n, successor_bound);
+                let within_fv = d.fresh_fvar();
+                let within_proof = d.kernel().fvar(within_fv);
+                let offset_fv = d.fresh_fvar();
+                let offset = d.kernel().fvar(offset_fv);
+                let prior_index = d.add(offset, bound);
+                let index = d.add(offset, successor_bound);
+                let two = d.num(2);
+                let half = d.div(n, two);
+                let one = d.num(1);
+                let relation = d.lemma(prelude.div_mod_exec, &[one, n]);
+                let remainder = d.modulo(n, two);
+                let floor_iff_fn =
+                    d.lemma(prelude.div_mod_lt_mul_iff, &[two, n, half, remainder, n]);
+                let floor_iff = d.apply(floor_iff_fn, &[relation]);
+                let twice_n = d.mul(two, n);
+                let n_lt_twice_n_ty = d.lt(n, twice_n);
+                let half_lt_n_ty = d.lt(half, n);
+                let floor_forward = iff_forward(d, n_lt_twice_n_ty, half_lt_n_ty, floor_iff);
+                let positive = d.zero_lt_succ(predecessor);
+                let n_lt_twice_n = n_lt_mul_two(d, &prelude, n, positive);
+                let half_lt_n = d.apply(floor_forward, &[n_lt_twice_n]);
+                let half_lt_successor_bound = d.lemma(
+                    prelude.lt_of_lt_of_le,
+                    &[half, n, successor_bound, half_lt_n, within_proof],
+                );
+                let half_le_bound = d.lemma(
+                    prelude.le_of_succ_le_succ,
+                    &[half, bound, half_lt_successor_bound],
+                );
+                let tail_fn = d.apply(ih, &[half]);
+                let tail_offsets = d.apply(tail_fn, &[half_le_bound]);
+                let tail = d.apply(tail_offsets, &[offset]);
+                let observed = d.const_app(test_bit_bool_name, &[n, index]);
+                let observed_half = d.const_app(test_bit_bool_name, &[half, prior_index]);
+                let step = d.lemma(successor_name, &[n, prior_index]);
+                let false_value = d.bool_false();
+                let result = d.bool_trans(observed, observed_half, false_value, step, tail);
+                let with_offset = d.lam_fv(offset_fv, nat, result);
+                d.lam_fv(within_fv, within, with_offset)
+            };
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let proof = d.induct(&n_motive, &n_base, &n_step, n);
+            d.lam_fv(n_fv, nat, proof)
+        };
+        let bound_fv = d.fresh_fvar();
+        let bound = d.kernel().fvar(bound_fv);
+        let proof = d.induct(&bound_motive, &bound_base, &bound_step, bound);
+        let statement = bound_motive(&mut d, bound);
+        let theorem_type = d.pi_fv(bound_fv, nat, statement);
+        let theorem_value = d.lam_fv(bound_fv, nat, proof);
+        d.declare_theorem(beyond_bound_name, theorem_type, theorem_value)
+            .map_err(|error| format!("testBitBool_beyond_bound rejected: {}", d.explain(&error)))?;
 
         // The pointwise Boolean algebra required by the target, separated from
         // the harder task of reifying all observations back into one Nat.
@@ -996,6 +1185,220 @@ fn run() -> Result<(), String> {
             )
         })?;
 
+        // A total target-owned bitwise operation. The deliberately loose
+        // width `x+y` avoids depending on a separate bit-size API; the
+        // sufficient-width theorem above proves both inputs are false beyond
+        // it. The usual `f false false = false` side condition then makes the
+        // bounded construction extensionally correct at every index.
+        let bitwise_total_value = {
+            let f_fv = d.fresh_fvar();
+            let f = d.kernel().fvar(f_fv);
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let y_fv = d.fresh_fvar();
+            let y = d.kernel().fvar(y_fv);
+            let width = d.add(x, y);
+            let body = d.const_app(bitwise_reify_low_name, &[f, x, y, width]);
+            let with_y = d.lam_fv(y_fv, nat, body);
+            let with_x = d.lam_fv(x_fv, nat, with_y);
+            d.lam_fv(f_fv, bool_binary, with_x)
+        };
+        let over_y = d.arrow(nat, nat);
+        let over_x = d.arrow(nat, over_y);
+        let bitwise_total_type = d.arrow(bool_binary, over_x);
+        d.kernel()
+            .add_declaration(Declaration::Definition {
+                name: bitwise_total_name,
+                uparams: vec![],
+                ty: bitwise_total_type,
+                value: bitwise_total_value,
+                hint: ReducibilityHint::Regular(8),
+            })
+            .map_err(|error| format!("bitwiseTotal rejected: {}", d.explain(&error)))?;
+
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let false_value = d.bool_false();
+        let false_false = d.apply(f, &[false_value, false_value]);
+        let side_condition = d.bool_eq(false_false, false_value);
+        let side_fv = d.fresh_fvar();
+        let side = d.kernel().fvar(side_fv);
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let index_fv = d.fresh_fvar();
+        let index = d.kernel().fvar(index_fv);
+        let width = d.add(x, y);
+        let total = d.const_app(bitwise_total_name, &[f, x, y]);
+        let output = d.const_app(test_bit_bool_name, &[total, index]);
+        let input_x = d.const_app(test_bit_bool_name, &[x, index]);
+        let input_y = d.const_app(test_bit_bool_name, &[y, index]);
+        let rhs = d.apply(f, &[input_x, input_y]);
+        let goal = d.bool_eq(output, rhs);
+
+        let x_le_width = d.lemma(prelude.le_add_right, &[x, y]);
+        let y_plus_x = d.add(y, x);
+        let y_le_yx = d.lemma(prelude.le_add_right, &[y, x]);
+        let yx_eq_width = d.lemma(prelude.add_comm, &[y, x]);
+        let y_bound_motive = d.eq_motive(y_plus_x, &|d, value| d.le(y, value));
+        let y_le_width = d.transport(y_plus_x, y_bound_motive, y_le_yx, width, yx_eq_width);
+
+        let bits_index_fv = d.fresh_fvar();
+        let bits_index = d.kernel().fvar(bits_index_fv);
+        let bit_value = d.const_app(observation_name, &[f, x, y, bits_index]);
+        let output_bits = d.lam_fv(bits_index_fv, nat, bit_value);
+
+        let outside_at = |d: &mut NatDev<'_>, offset, source_index, source_eq_index| {
+            let output_source = d.const_app(test_bit_bool_name, &[total, source_index]);
+            let output_false_source =
+                d.lemma(reify_low_outside_name, &[width, output_bits, offset]);
+            let output_index_motive = d.eq_motive(source_index, &|d, value| {
+                let observed = d.const_app(test_bit_bool_name, &[total, value]);
+                d.bool_eq(output_source, observed)
+            });
+            let output_source_refl = d.bool_refl(output_source);
+            let output_index_transport = d.transport(
+                source_index,
+                output_index_motive,
+                output_source_refl,
+                index,
+                source_eq_index,
+            );
+            let output_to_source = d.bool_symm(output_source, output, output_index_transport);
+            let output_false = d.bool_trans(
+                output,
+                output_source,
+                false_value,
+                output_to_source,
+                output_false_source,
+            );
+
+            let x_source = d.const_app(test_bit_bool_name, &[x, source_index]);
+            let x_false_source = d.lemma(beyond_bound_name, &[width, x, x_le_width, offset]);
+            let x_index_motive = d.eq_motive(source_index, &|d, value| {
+                let observed = d.const_app(test_bit_bool_name, &[x, value]);
+                d.bool_eq(x_source, observed)
+            });
+            let x_source_refl = d.bool_refl(x_source);
+            let x_transport = d.transport(
+                source_index,
+                x_index_motive,
+                x_source_refl,
+                index,
+                source_eq_index,
+            );
+            let x_to_source = d.bool_symm(x_source, input_x, x_transport);
+            let x_false = d.bool_trans(input_x, x_source, false_value, x_to_source, x_false_source);
+
+            let y_source = d.const_app(test_bit_bool_name, &[y, source_index]);
+            let y_false_source = d.lemma(beyond_bound_name, &[width, y, y_le_width, offset]);
+            let y_index_motive = d.eq_motive(source_index, &|d, value| {
+                let observed = d.const_app(test_bit_bool_name, &[y, value]);
+                d.bool_eq(y_source, observed)
+            });
+            let y_source_refl = d.bool_refl(y_source);
+            let y_transport = d.transport(
+                source_index,
+                y_index_motive,
+                y_source_refl,
+                index,
+                source_eq_index,
+            );
+            let y_to_source = d.bool_symm(y_source, input_y, y_transport);
+            let y_false = d.bool_trans(input_y, y_source, false_value, y_to_source, y_false_source);
+
+            let f_false_y = d.apply(f, &[false_value, input_y]);
+            let x_motive = d.bool_eq_motive(input_x, &|d, value| {
+                let replaced = d.apply(f, &[value, input_y]);
+                d.bool_eq(rhs, replaced)
+            });
+            let rhs_refl = d.bool_refl(rhs);
+            let replace_x = d.bool_transport(input_x, x_motive, rhs_refl, false_value, x_false);
+            let y_motive = d.bool_eq_motive(input_y, &|d, value| {
+                let replaced = d.apply(f, &[false_value, value]);
+                d.bool_eq(f_false_y, replaced)
+            });
+            let f_false_y_refl = d.bool_refl(f_false_y);
+            let replace_y =
+                d.bool_transport(input_y, y_motive, f_false_y_refl, false_value, y_false);
+            let rhs_to_false_false =
+                d.bool_trans(rhs, f_false_y, false_false, replace_x, replace_y);
+            let rhs_false = d.bool_trans(rhs, false_false, false_value, rhs_to_false_false, side);
+            let false_rhs = d.bool_symm(rhs, false_value, rhs_false);
+            d.bool_trans(output, false_value, rhs, output_false, false_rhs)
+        };
+
+        let i_le_width_ty = d.le(index, width);
+        let width_le_i_ty = d.le(width, index);
+        let i_le_width_fv = d.fresh_fvar();
+        let i_le_width = d.kernel().fvar(i_le_width_fv);
+        let strict_ty = d.lt(index, width);
+        let equal_ty = d.eq(index, width);
+        let strict_fv = d.fresh_fvar();
+        let strict = d.kernel().fvar(strict_fv);
+        let bounded_fn = d.lemma(bitwise_reify_low_roundtrip_name, &[f, x, y, width, index]);
+        let bounded = d.apply(bounded_fn, &[strict]);
+        let strict_case = d.lam_fv(strict_fv, strict_ty, bounded);
+        let equal_fv = d.fresh_fvar();
+        let equal = d.kernel().fvar(equal_fv);
+        let width_eq_index = d.symm(index, width, equal);
+        let zero = d.zero();
+        let zero_plus_width = d.add(zero, width);
+        let zero_plus_width_eq_width = d.lemma(prelude.zero_add, &[width]);
+        let zero_plus_width_eq_index = d.trans(
+            zero_plus_width,
+            width,
+            index,
+            zero_plus_width_eq_width,
+            width_eq_index,
+        );
+        let equal_case_proof = outside_at(&mut d, zero, zero_plus_width, zero_plus_width_eq_index);
+        let equal_case = d.lam_fv(equal_fv, equal_ty, equal_case_proof);
+        let strict_or_equal = d.lemma(prelude.lt_or_eq_of_le, &[index, width, i_le_width]);
+        let inside_or_boundary = or_elim(
+            &mut d,
+            &prelude,
+            strict_ty,
+            equal_ty,
+            goal,
+            strict_case,
+            equal_case,
+            strict_or_equal,
+        );
+        let inside_case = d.lam_fv(i_le_width_fv, i_le_width_ty, inside_or_boundary);
+
+        let width_le_i_fv = d.fresh_fvar();
+        let width_le_i = d.kernel().fvar(width_le_i_fv);
+        let offset = d.sub(index, width);
+        let source_index = d.add(offset, width);
+        let source_eq_index = d.lemma(prelude.sub_add_cancel, &[width, index, width_le_i]);
+        let outside_proof = outside_at(&mut d, offset, source_index, source_eq_index);
+        let outside_case = d.lam_fv(width_le_i_fv, width_le_i_ty, outside_proof);
+        let totality = d.lemma(prelude.le_total, &[index, width]);
+        let proof = or_elim(
+            &mut d,
+            &prelude,
+            i_le_width_ty,
+            width_le_i_ty,
+            goal,
+            inside_case,
+            outside_case,
+            totality,
+        );
+        let with_index = d.lam_fv(index_fv, nat, proof);
+        let with_y = d.lam_fv(y_fv, nat, with_index);
+        let with_x = d.lam_fv(x_fv, nat, with_y);
+        let with_side = d.lam_fv(side_fv, side_condition, with_x);
+        let theorem_value = d.lam_fv(f_fv, bool_binary, with_side);
+        let with_index_type = d.pi_fv(index_fv, nat, goal);
+        let with_y_type = d.pi_fv(y_fv, nat, with_index_type);
+        let with_x_type = d.pi_fv(x_fv, nat, with_y_type);
+        let with_side_type = d.pi_fv(side_fv, side_condition, with_x_type);
+        let theorem_type = d.pi_fv(f_fv, bool_binary, with_side_type);
+        d.declare_theorem(bitwise_total_theorem_name, theorem_type, theorem_value)
+            .map_err(|error| format!("testBitBool_bitwiseTotal rejected: {}", d.explain(&error)))?;
+
         // The non-definitional arithmetic bridge from the one-element weighted
         // sum to its sole digit.
         let bits_fv = d.fresh_fvar();
@@ -1314,6 +1717,13 @@ fn run() -> Result<(), String> {
     if !kernel.axiom_footprint(zero_observation_name).is_empty() {
         return Err("zero observation theorem gained assumptions".to_owned());
     }
+    let beyond_bound_type = match kernel.environment().get(beyond_bound_name) {
+        Some(Declaration::Theorem { ty, .. }) => *ty,
+        _ => return Err("testBitBool_beyond_bound disappeared".to_owned()),
+    };
+    if !kernel.axiom_footprint(beyond_bound_name).is_empty() {
+        return Err("input sufficient-width theorem gained assumptions".to_owned());
+    }
     let observation_type = match kernel.environment().get(observation_apply_name) {
         Some(Declaration::Theorem { ty, .. }) => *ty,
         _ => return Err("bitwiseObservation_apply disappeared".to_owned()),
@@ -1421,6 +1831,16 @@ fn run() -> Result<(), String> {
     {
         return Err("bounded bitwise theorem gained assumptions".to_owned());
     }
+    let bitwise_total_theorem_type = match kernel.environment().get(bitwise_total_theorem_name) {
+        Some(Declaration::Theorem { ty, .. }) => *ty,
+        _ => return Err("testBitBool_bitwiseTotal disappeared".to_owned()),
+    };
+    if !kernel
+        .axiom_footprint(bitwise_total_theorem_name)
+        .is_empty()
+    {
+        return Err("total bitwise theorem gained assumptions".to_owned());
+    }
     let reify_one_normalize_type = match kernel.environment().get(reify_one_normalize_name) {
         Some(Declaration::Theorem { ty, .. }) => *ty,
         _ => return Err("reifyBits_one_normalize disappeared".to_owned()),
@@ -1449,9 +1869,10 @@ fn run() -> Result<(), String> {
         return Err("numeric reification roundtrip gained assumptions".to_owned());
     }
     println!(
-        "NAT_TESTBIT_BOOL_BRIDGE_OK|theorem=Axeyum.Autogenesis.testBitBool_succ|axioms=0|type={}|zero_observation_theorem=Axeyum.Autogenesis.testBitBool_zero|zero_observation_axioms=0|zero_observation_type={}|observation_theorem=Axeyum.Autogenesis.bitwiseObservation_apply|observation_axioms=0|observation_type={}|reification_definition=Axeyum.Autogenesis.bitwiseReifyBounded|reification_base_theorem=Axeyum.Autogenesis.reifyBits_zero|reification_base_axioms=0|reification_base_type={}|reification_step_theorem=Axeyum.Autogenesis.reifyBits_succ|reification_step_axioms=0|reification_step_type={}|boolean_digit_roundtrip_theorem=Axeyum.Autogenesis.boolToBit_roundtrip_zero|boolean_digit_roundtrip_axioms=0|boolean_digit_roundtrip_type={}|boolean_digit_bound_theorem=Axeyum.Autogenesis.boolToBit_le_one|boolean_digit_bound_axioms=0|boolean_digit_bound_type={}|direct_boolean_roundtrip_theorem=Axeyum.Autogenesis.bitToBool_boolToBit|direct_boolean_roundtrip_axioms=0|direct_boolean_roundtrip_type={}|boolean_digit_divmod_theorem=Axeyum.Autogenesis.boolDigit_divMod|boolean_digit_divmod_axioms=0|boolean_digit_divmod_type={}|boolean_digit_div_theorem=Axeyum.Autogenesis.boolDigit_div|boolean_digit_div_axioms=0|boolean_digit_div_type={}|boolean_digit_mod_theorem=Axeyum.Autogenesis.boolDigit_mod|boolean_digit_mod_axioms=0|boolean_digit_mod_type={}|low_reification_base_theorem=Axeyum.Autogenesis.reifyBitsLow_zero|low_reification_base_axioms=0|low_reification_base_type={}|low_reification_step_theorem=Axeyum.Autogenesis.reifyBitsLow_succ|low_reification_step_axioms=0|low_reification_step_type={}|low_reification_roundtrip_theorem=Axeyum.Autogenesis.reifyBitsLow_roundtrip|low_reification_roundtrip_axioms=0|low_reification_roundtrip_type={}|low_reification_outside_theorem=Axeyum.Autogenesis.reifyBitsLow_outside|low_reification_outside_axioms=0|low_reification_outside_type={}|bounded_bitwise_theorem=Axeyum.Autogenesis.testBitBool_bitwiseReifyLow|bounded_bitwise_axioms=0|bounded_bitwise_type={}|one_bit_normalization_theorem=Axeyum.Autogenesis.reifyBits_one_normalize|one_bit_normalization_axioms=0|one_bit_normalization_type={}|one_bit_roundtrip_theorem=Axeyum.Autogenesis.reifyBits_one_roundtrip_zero|one_bit_roundtrip_axioms=0|one_bit_roundtrip_type={}|reification_bound_theorem=Axeyum.Autogenesis.reifyBits_lt_pow|reification_bound_axioms=0|reification_bound_type={}|numeric_roundtrip_theorem=Axeyum.Autogenesis.reifyBits_numeric_roundtrip|numeric_roundtrip_axioms=0|numeric_roundtrip_type={}",
+        "NAT_TESTBIT_BOOL_BRIDGE_OK|theorem=Axeyum.Autogenesis.testBitBool_succ|axioms=0|type={}|zero_observation_theorem=Axeyum.Autogenesis.testBitBool_zero|zero_observation_axioms=0|zero_observation_type={}|input_bound_theorem=Axeyum.Autogenesis.testBitBool_beyond_bound|input_bound_axioms=0|input_bound_type={}|observation_theorem=Axeyum.Autogenesis.bitwiseObservation_apply|observation_axioms=0|observation_type={}|reification_definition=Axeyum.Autogenesis.bitwiseReifyBounded|reification_base_theorem=Axeyum.Autogenesis.reifyBits_zero|reification_base_axioms=0|reification_base_type={}|reification_step_theorem=Axeyum.Autogenesis.reifyBits_succ|reification_step_axioms=0|reification_step_type={}|boolean_digit_roundtrip_theorem=Axeyum.Autogenesis.boolToBit_roundtrip_zero|boolean_digit_roundtrip_axioms=0|boolean_digit_roundtrip_type={}|boolean_digit_bound_theorem=Axeyum.Autogenesis.boolToBit_le_one|boolean_digit_bound_axioms=0|boolean_digit_bound_type={}|direct_boolean_roundtrip_theorem=Axeyum.Autogenesis.bitToBool_boolToBit|direct_boolean_roundtrip_axioms=0|direct_boolean_roundtrip_type={}|boolean_digit_divmod_theorem=Axeyum.Autogenesis.boolDigit_divMod|boolean_digit_divmod_axioms=0|boolean_digit_divmod_type={}|boolean_digit_div_theorem=Axeyum.Autogenesis.boolDigit_div|boolean_digit_div_axioms=0|boolean_digit_div_type={}|boolean_digit_mod_theorem=Axeyum.Autogenesis.boolDigit_mod|boolean_digit_mod_axioms=0|boolean_digit_mod_type={}|low_reification_base_theorem=Axeyum.Autogenesis.reifyBitsLow_zero|low_reification_base_axioms=0|low_reification_base_type={}|low_reification_step_theorem=Axeyum.Autogenesis.reifyBitsLow_succ|low_reification_step_axioms=0|low_reification_step_type={}|low_reification_roundtrip_theorem=Axeyum.Autogenesis.reifyBitsLow_roundtrip|low_reification_roundtrip_axioms=0|low_reification_roundtrip_type={}|low_reification_outside_theorem=Axeyum.Autogenesis.reifyBitsLow_outside|low_reification_outside_axioms=0|low_reification_outside_type={}|bounded_bitwise_theorem=Axeyum.Autogenesis.testBitBool_bitwiseReifyLow|bounded_bitwise_axioms=0|bounded_bitwise_type={}|total_bitwise_theorem=Axeyum.Autogenesis.testBitBool_bitwiseTotal|total_bitwise_axioms=0|total_bitwise_type={}|one_bit_normalization_theorem=Axeyum.Autogenesis.reifyBits_one_normalize|one_bit_normalization_axioms=0|one_bit_normalization_type={}|one_bit_roundtrip_theorem=Axeyum.Autogenesis.reifyBits_one_roundtrip_zero|one_bit_roundtrip_axioms=0|one_bit_roundtrip_type={}|reification_bound_theorem=Axeyum.Autogenesis.reifyBits_lt_pow|reification_bound_axioms=0|reification_bound_type={}|numeric_roundtrip_theorem=Axeyum.Autogenesis.reifyBits_numeric_roundtrip|numeric_roundtrip_axioms=0|numeric_roundtrip_type={}",
         kernel.render_lean(ty),
         kernel.render_lean(zero_observation_type),
+        kernel.render_lean(beyond_bound_type),
         kernel.render_lean(observation_type),
         kernel.render_lean(reify_zero_type),
         kernel.render_lean(reify_succ_type),
@@ -1466,6 +1887,7 @@ fn run() -> Result<(), String> {
         kernel.render_lean(reify_low_roundtrip_type),
         kernel.render_lean(reify_low_outside_type),
         kernel.render_lean(bitwise_reify_low_roundtrip_type),
+        kernel.render_lean(bitwise_total_theorem_type),
         kernel.render_lean(reify_one_normalize_type),
         kernel.render_lean(reify_one_roundtrip_type),
         kernel.render_lean(reify_bound_type),

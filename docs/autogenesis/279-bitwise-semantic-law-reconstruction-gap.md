@@ -148,6 +148,26 @@ argument is therefore about the inputs: derive a checked bound past which
 native `testBitBool x` and `testBitBool y` are false, then use
 `f false false = false` to join the bounded and outside cases.
 
+That last target-owned argument now closes. The sufficient-width theorem uses
+the deliberately loose but constructive bound `n`: when `n ≤ k`, every bit at
+`offset+k` is false. It follows the executable divide-by-two recursion and
+contains no assumptions. `bitwiseTotal f x y` chooses width `x+y`; totality of
+Nat order splits each queried index into the bounded proof above or the false
+tail, and the side condition closes the latter. The resulting universal
+theorem is exactly:
+
+```text
+f false false = false ->
+testBitBool (bitwiseTotal f x y) i =
+  f (testBitBool x i) (testBitBool y i)
+```
+
+It is kernel-checked with an empty footprint. The mathematical semantic law is
+therefore reconstructed for target-owned operations. Reconstruction remains
+ineligible only because exact imported-operation equivalence is still missing;
+neither same-name resemblance nor the upstream assumption-bearing definitions
+may substitute for that transport.
+
 A bounded oracle exhausts every Boolean vector through width 12: 8,191 vectors,
 90,114 in-range observations, and 8,191 first-out-of-range zero observations.
 It confirms the weighted-sum construction has the intended finite semantics.
