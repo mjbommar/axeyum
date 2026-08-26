@@ -7,9 +7,9 @@
 //! it by the knowledge overlay.
 
 use axeyum_lean_kernel::{
-    Declaration, Kernel, build_arith_prelude, build_complex_prelude, build_cpoint_prelude,
-    build_creal_prelude, build_int_prelude, build_logic_prelude, build_nat_prelude,
-    build_rat_prelude, build_string_prelude,
+    Declaration, Kernel, build_arith_prelude, build_characterization, build_complex_prelude,
+    build_cpoint_prelude, build_creal_prelude, build_int_prelude, build_logic_prelude,
+    build_nat_prelude, build_rat_prelude, build_string_prelude,
 };
 
 fn kind(declaration: &Declaration) -> &'static str {
@@ -91,6 +91,11 @@ fn run() {
     let mut integer = Kernel::new();
     let _ = build_int_prelude(&mut integer).expect("Int prelude must build");
     emit("integer", &integer);
+
+    let mut characterization = Kernel::new();
+    let _ =
+        build_characterization(&mut characterization).expect("Nat/Int characterization must build");
+    emit("characterization", &characterization);
 
     let mut rational = Kernel::new();
     let _ = build_rat_prelude(&mut rational).expect("Rat prelude must build");

@@ -666,8 +666,8 @@
       "train"
     ],
     "family_concept_crosswalk_path": "artifacts/autogenesis/family-concept-crosswalk-v1.json",
-    "frontier_sha256": "4d517ece6709d09d9650d7e3e11f53b056405764a2654b7ef88e1d2464626a35",
-    "ledger_sha256": "7146f4274ed5ab94d7a609b53ab79ff6047e2ce5e1a84222f13d7f310ba7be8c",
+    "frontier_sha256": "e7e16ce7379a6119a12b18decb4760b54e20dac826d6c29314d8c7ab1b2a65a8",
+    "ledger_sha256": "e8fc18309a2124e4b862145e81626a7a82091acb3c356c6b5046020874bb4ebd",
     "nursery_sha256": "6d1f2551a612fdcadaf1c6b0096c4eebee304d9687157cb25505f785ee86daa8",
     "operation_registry_sha256": "2946dd39994e39b28df3187d55927e633ac9c3d79c2ee5281829aad3a884c974",
     "reviewed_fact_catalog_sha256": "d2ebcbd56c70445e3a1be864426ee783021387c5d6c885f182dc2a374855f988",

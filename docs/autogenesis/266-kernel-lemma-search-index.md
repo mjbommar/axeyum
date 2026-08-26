@@ -76,6 +76,11 @@ it does not belong in the theorem-only lemma search graph. An absent identity
 may instead expose a prelude/build-coverage boundary or a descriptive evidence
 ID; repair that source boundary before adding a link.
 
+The projection's claimed all-prelude scope includes the public
+`build_characterization` surface as well as the ordinary Nat and Int preludes.
+This matters: omitting that builder previously hid 32 checked characterization
+theorems and left 11 exact fact-evidence identities falsely dangling.
+
 The first producer evaluation should then ask whether bounded retrieval from
 this artifact improves held-out conversion without per-target code. That result,
 not graph density by itself, decides whether additional semantic enrichment is

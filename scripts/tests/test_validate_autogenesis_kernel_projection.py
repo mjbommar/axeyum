@@ -23,6 +23,17 @@ class KernelProjectionControls(unittest.TestCase):
     def test_current_projection_is_valid(self):
         self.assertEqual(KP.validate(self.data), [])
 
+    def test_characterization_surface_is_in_scope(self):
+        rows = {row["id"]: row for row in self.data["declarations"]}
+        for theorem in (
+            "Nat.Peano.categorical",
+            "Nat.Peano.iter_unique",
+            "Int.Characterization.categorical",
+            "Int.Characterization.iso",
+        ):
+            self.assertEqual(rows[theorem]["declaration_kind"], "theorem")
+            self.assertIn("characterization", rows[theorem]["visible_in"])
+
     def test_missing_edge_is_rejected(self):
         data = copy.deepcopy(self.data)
         data["direct_theorem_dependency_edges"].pop()
