@@ -1,7 +1,7 @@
 //! Check a recursively subdivided Boolean-product cube refutation.
 
 use std::fs::File;
-use std::io::BufReader;
+use std::io::{self, BufRead, BufReader, Read};
 use std::path::{Path, PathBuf};
 
 use axeyum_cnf::cube::{
@@ -11,16 +11,49 @@ use axeyum_cnf::cube::{
 use axeyum_cnf::{CnfFormula, CnfVar, parse_dimacs};
 
 const MAX_TREE_DEPTH: usize = 16;
-// The current reader tree owns one open file per proof. Keep the cap below the
-// common 1,024-descriptor soft limit, including manifests and process overhead.
-const MAX_TREE_NODES: usize = 512;
+const MAX_TREE_NODES: usize = 65_536;
 const MAX_PROOF_BYTES: u64 = 64 * 1024 * 1024 * 1024;
+const MAX_TREE_PROOF_BYTES: u64 = 1024 * 1024 * 1024 * 1024;
 
 #[derive(Default)]
 struct Stats {
     splits: usize,
     leaves: usize,
     nodes: usize,
+    proof_bytes: u64,
+}
+
+struct LazyProofReader {
+    path: PathBuf,
+    reader: Option<BufReader<File>>,
+}
+
+impl LazyProofReader {
+    fn reader(&mut self) -> io::Result<&mut BufReader<File>> {
+        if self.reader.is_none() {
+            self.reader = Some(BufReader::new(File::open(&self.path)?));
+        }
+        Ok(self.reader.as_mut().expect("reader was initialized"))
+    }
+}
+
+impl Read for LazyProofReader {
+    fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
+        self.reader()?.read(buffer)
+    }
+}
+
+impl BufRead for LazyProofReader {
+    fn fill_buf(&mut self) -> io::Result<&[u8]> {
+        self.reader()?.fill_buf()
+    }
+
+    fn consume(&mut self, amount: usize) {
+        self.reader
+            .as_mut()
+            .expect("consume follows a successful fill_buf")
+            .consume(amount);
+    }
 }
 
 fn fail(message: impl std::fmt::Display) -> ! {
@@ -33,7 +66,7 @@ fn parse_usize(text: &str, what: &str) -> usize {
         .unwrap_or_else(|error| fail(format!("invalid {what}: {error}")))
 }
 
-fn proof_reader(path: &Path) -> BufReader<File> {
+fn proof_reader(path: &Path, stats: &mut Stats) -> LazyProofReader {
     let metadata = std::fs::metadata(path)
         .unwrap_or_else(|error| fail(format!("{} metadata: {error}", path.display())));
     if metadata.len() > MAX_PROOF_BYTES {
@@ -43,9 +76,20 @@ fn proof_reader(path: &Path) -> BufReader<File> {
             metadata.len()
         ));
     }
-    BufReader::new(
-        File::open(path).unwrap_or_else(|error| fail(format!("{}: {error}", path.display()))),
-    )
+    stats.proof_bytes = stats
+        .proof_bytes
+        .checked_add(metadata.len())
+        .unwrap_or_else(|| fail("tree proof-byte total overflows u64"));
+    if stats.proof_bytes > MAX_TREE_PROOF_BYTES {
+        fail(format!(
+            "tree proof bytes {} exceed limit {MAX_TREE_PROOF_BYTES}",
+            stats.proof_bytes
+        ));
+    }
+    LazyProofReader {
+        path: path.to_owned(),
+        reader: None,
+    }
 }
 
 fn manifest_cubes(dir: &Path, formula: &CnfFormula) -> Vec<Vec<axeyum_cnf::CnfLit>> {
@@ -136,7 +180,7 @@ fn build_tree(
     dir: &Path,
     depth: usize,
     stats: &mut Stats,
-) -> CubeRefutationReaderTree<BufReader<File>> {
+) -> CubeRefutationReaderTree<LazyProofReader> {
     if depth >= MAX_TREE_DEPTH {
         fail(format!("tree depth reaches limit {MAX_TREE_DEPTH}"));
     }
@@ -160,13 +204,14 @@ fn build_tree(
             }
             children.push(CubeRefutationReaderTree::Leaf(proof_reader(
                 &dir.join(format!("cube-{index:06}.drat")),
+                stats,
             )));
         }
     }
     CubeRefutationReaderTree::Split {
         cubes,
         children,
-        covering_proof: proof_reader(&dir.join("covering.drat")),
+        covering_proof: proof_reader(&dir.join("covering.drat"), stats),
     }
 }
 
@@ -218,6 +263,7 @@ fn main() {
     println!("splits={}", stats.splits);
     println!("leaves={}", stats.leaves);
     println!("nodes={}", stats.nodes);
+    println!("proof-bytes={}", stats.proof_bytes);
     println!("checker=file-backed-recursive-backward-plus-covering-drat");
     println!("verdict=unsat-checked");
 }
