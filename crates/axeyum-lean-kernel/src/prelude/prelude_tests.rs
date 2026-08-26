@@ -632,15 +632,31 @@ fn accessibility_inverse_selects_the_related_predecessor() {
 fn logic_prelude_with_accessibility_declares_no_axioms() {
     let mut k = Kernel::new();
     build_logic_prelude(&mut k).expect("logic prelude must build");
-    let axioms: Vec<_> = k
+    // Checked against the WHOLE environment, not a hand-maintained list: this
+    // is the base prelude (nothing built here depends on anything else), so a
+    // scan finding no `Axiom`/`Opaque`/`Quotient` declaration ANYWHERE proves
+    // every declaration's `axiom_footprint` is empty automatically -- there is
+    // no assumed name left for any proof term to reach. Widened from
+    // `Axiom`-only (matching `int_prelude_tests.rs`'s
+    // `the_only_trusted_declarations_are_the_asserted_laws`, which also
+    // treats `Opaque`/`Quotient` as "admitted without a checked proof body"):
+    // measured 2026-08-26, this build has zero of all three (78 declarations:
+    // 14 constructor, 10 definition, 11 inductive, 11 recursor, 32 theorem),
+    // so this is a real, not vacuous, check.
+    let assumed: Vec<_> = k
         .environment()
         .iter()
         .filter_map(|(_, declaration)| match declaration {
-            Declaration::Axiom { name, .. } => Some(k.display_name(*name).to_string()),
+            Declaration::Axiom { name, .. }
+            | Declaration::Opaque { name, .. }
+            | Declaration::Quotient { name, .. } => Some(k.display_name(*name).to_string()),
             _ => None,
         })
         .collect();
-    assert!(axioms.is_empty(), "logic prelude axioms: {axioms:?}");
+    assert!(
+        assumed.is_empty(),
+        "logic prelude assumed declarations: {assumed:?}"
+    );
 }
 
 /// The negation toolkit, the three valid De Morgan directions, and the

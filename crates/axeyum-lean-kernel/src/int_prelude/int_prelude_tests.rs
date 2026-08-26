@@ -318,7 +318,7 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 126] {
 /// working parts of five of the laws above, and a footprint that leaked into one
 /// of them would leak into the law. They are checked to exactly the same
 /// standard.
-fn derived_lemmas(p: &IntPrelude) -> [crate::NameId; 26] {
+fn derived_lemmas(p: &IntPrelude) -> [crate::NameId; 28] {
     [
         p.sub_nat_nat_succ_succ,
         p.sub_nat_nat_add_add,
@@ -346,6 +346,46 @@ fn derived_lemmas(p: &IntPrelude) -> [crate::NameId; 26] {
         p.le_dest,
         p.lt_of_nat_add,
         p.lt_dest,
+        // Found by `every_int_declaration_is_checked_and_axiom_free`'s
+        // coverage assertion, not by anyone noticing: these two `natAbs`
+        // theorems were live and unlisted here, so no test ever checked their
+        // axiom footprint.
+        p.nat_abs_neg_of_nat,
+        p.nat_abs_neg,
+    ]
+}
+
+/// The primitive `Int` operations and predicates themselves -- `Definition`s,
+/// not derived theorems, but exactly as capable of leaking an axiom footprint
+/// (a `Definition`'s value is a checked term too). Found missing entirely by
+/// `every_int_declaration_is_checked_and_axiom_free`'s coverage assertion:
+/// unlike `nat_prelude_tests.rs`, this file had no `definition_names`
+/// counterpart to `derived_laws`/`derived_lemmas` at all, so none of these
+/// twenty-two had ever had their footprint checked.
+fn definition_names(p: &IntPrelude) -> [crate::NameId; 22] {
+    [
+        p.neg_of_nat,
+        p.sub_nat_nat,
+        p.add,
+        p.mul,
+        p.neg,
+        p.sub,
+        p.zero,
+        p.one,
+        p.le,
+        p.lt,
+        p.pow,
+        p.prod_range,
+        p.ediv,
+        p.emod,
+        p.dvd,
+        p.mod_eq,
+        p.nat_abs,
+        p.gcd,
+        p.coprime,
+        p.is_comm_ring,
+        p.factorial,
+        p.is_quadratic_residue,
     ]
 }
 
@@ -375,6 +415,80 @@ fn derived_laws_have_no_axiom_footprint() {
             footprint
                 .iter()
                 .map(|a| k.display_name(*a).to_string())
+                .collect::<Vec<_>>()
+        );
+    }
+}
+
+/// COVERAGE, checked against the ENVIRONMENT rather than against
+/// `derived_laws`/`derived_lemmas` themselves.
+///
+/// Without this, `derived_laws_have_no_axiom_footprint` only ever inspects the
+/// declarations someone remembered to list in those two functions. A
+/// `Definition` or `Theorem` declared under `Int.` and omitted from both lists
+/// receives no axiom-footprint check at all -- and every run stays green,
+/// because a list cannot notice what is missing from it. Mirrors
+/// `every_creal_declaration_is_checked_and_axiom_free` (`creal_tests.rs`) and
+/// `every_nat_declaration_is_checked_and_axiom_free` (`nat_prelude_tests.rs`),
+/// both landed after exactly this gap was found in `creal`.
+///
+/// Scoped to `Definition`/`Theorem` kinds deliberately: the inductive
+/// machinery (`Int`, `Int.ofNat`, `Int.negSucc`, `Int.rec`) is checked by name
+/// at line 109 instead, and it has no proof term for `axiom_footprint` to
+/// inspect the way a `Definition`'s value or a `Theorem`'s proof does.
+#[test]
+fn every_int_declaration_is_checked_and_axiom_free() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+
+    let listed: std::collections::BTreeSet<crate::NameId> = derived_laws(&p)
+        .into_iter()
+        .chain(derived_lemmas(&p))
+        .chain(asserted_laws(&p))
+        .chain(definition_names(&p))
+        .collect();
+    let declared: Vec<(crate::NameId, Declaration)> = k
+        .environment()
+        .iter()
+        .map(|(name, decl)| (*name, decl.clone()))
+        .collect();
+    let unlisted: Vec<String> = declared
+        .iter()
+        .filter(|(name, decl)| {
+            matches!(
+                decl,
+                Declaration::Definition { .. } | Declaration::Theorem { .. }
+            ) && k.display_name(*name).to_string().starts_with("Int.")
+                && !listed.contains(name)
+        })
+        .map(|(name, _)| k.display_name(*name).to_string())
+        .collect();
+    assert!(
+        unlisted.is_empty(),
+        "these `Int` definitions/theorems are live in the prelude but absent \
+         from `derived_laws`/`derived_lemmas`/`asserted_laws`/`definition_names`, \
+         so nothing \
+         checks their axiom-footprint: {unlisted:?}. Add them there -- do not \
+         delete this assertion."
+    );
+
+    for (name, decl) in &declared {
+        let shown = k.display_name(*name).to_string();
+        if !shown.starts_with("Int.") || !listed.contains(name) {
+            continue;
+        }
+        if matches!(decl, Declaration::Axiom { .. }) {
+            // `asserted_laws` legitimately holds axioms; the axiom-freedom
+            // check below applies only to the derived laws/lemmas.
+            continue;
+        }
+        let footprint = k.axiom_footprint(*name);
+        assert!(
+            footprint.is_empty(),
+            "{shown} must have an empty axiom footprint, found {:?}",
+            footprint
+                .iter()
+                .map(|n| k.display_name(*n).to_string())
                 .collect::<Vec<_>>()
         );
     }

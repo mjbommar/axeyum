@@ -29,10 +29,13 @@ fn rat_prelude_is_axiom_free() {
     );
 }
 
-#[test]
-fn every_named_declaration_exists() {
-    let (kernel, p) = built();
-    let expected = [
+/// The named surface of [`RatPrelude`], label paired with `NameId`. Extracted
+/// to a free function (rather than inlined in one test) so the coverage
+/// assertion in `every_rat_declaration_is_checked_and_axiom_free` can check
+/// the environment against the very same list `every_named_declaration_exists`
+/// uses, instead of a second hand-maintained copy that could drift from it.
+fn named(p: &RatPrelude) -> Vec<(&'static str, crate::NameId)> {
+    vec![
         ("zero", p.zero),
         ("one", p.one),
         ("le", p.le),
@@ -150,8 +153,13 @@ fn every_named_declaration_exists() {
         ("det3_example_singular", p.det3_example_singular),
         ("bernoulli", p.bernoulli),
         ("bernoulli_harmonic_bound", p.bernoulli_harmonic_bound),
-    ];
-    for (label, name) in expected {
+    ]
+}
+
+#[test]
+fn every_named_declaration_exists() {
+    let (kernel, p) = built();
+    for (label, name) in named(&p) {
         assert!(
             kernel.environment().get(name).is_some(),
             "Rat.{label} was interned but never declared"
@@ -223,6 +231,234 @@ fn the_ring_law_list_has_exactly_twenty_two_distinct_entries() {
     names.sort();
     names.dedup();
     assert_eq!(names.len(), 22, "the ring-law list repeats an entry");
+}
+
+/// COVERAGE, checked against the ENVIRONMENT rather than against `named`
+/// itself.
+///
+/// `every_named_declaration_exists` only ever checks that a hand-maintained
+/// list's entries are PRESENT, never their kind or axiom footprint; a
+/// `Definition`/`Theorem` declared under `Rat.` and omitted from both `named`
+/// and `RatPrelude::ring_laws` would sail through this whole file unchecked.
+/// Mirrors `every_creal_declaration_is_checked_and_axiom_free` (`creal_tests.rs`)
+/// and `every_nat_declaration_is_checked_and_axiom_free`
+/// (`nat_prelude_tests.rs`), both landed after exactly this gap was found in
+/// `creal`.
+///
+/// Scoped to `Definition`/`Theorem` kinds deliberately: `Rat` is a
+/// `Definition` over a normalized `Int` pair (not its own inductive), so there
+/// is no separate constructor/recursor family to exclude here the way `Nat`'s
+/// and `Int`'s inductive machinery is excluded above.
+/// Everything `every_rat_declaration_is_checked_and_axiom_free` found live in
+/// the prelude and absent from both `named` and `RatPrelude::ring_laws` on its
+/// first run, 142 declarations in total (8 structural `Rat.*` definitions
+/// reached through `p.int.rat_*` -- interned in `int_prelude.rs` alongside
+/// `Int` itself, since `Rat`'s namespace root is minted there -- plus the
+/// cross-multiplication/order lemmas, the `sumRange`/`pow`/polynomial/vector
+/// machinery, and an entire probability-theory package: `expectation`,
+/// `variance`, `covariance`, Markov's and Chebyshev's inequalities, and the
+/// weak law of large numbers). None of it had ever had its axiom footprint
+/// checked by this file.
+fn unnamed_but_live_declarations(p: &RatPrelude) -> Vec<crate::NameId> {
+    vec![
+        p.int.rat_normalize,
+        p.int.rat_num,
+        p.int.rat_den,
+        p.int.rat_den_pos,
+        p.int.rat_mul,
+        p.int.rat_reduced,
+        p.int.rat_neg,
+        p.int.rat_add,
+        p.gcd_one_right,
+        p.nat_gauss,
+        p.nat_dvd_antisymm_pos,
+        p.nat_mul_right_cancel,
+        p.nat_div_cross,
+        p.nat_abs_mul_of_nat,
+        p.of_nat_inj,
+        p.not_zero_le_neg_of_nat,
+        p.int_mul_right_cancel,
+        p.int_le_of_mul_le_mul_right,
+        p.int_lt_of_mul_lt_mul_right,
+        p.int_mul_le_mul_right,
+        p.int_mul_lt_mul_right,
+        p.int_right_distrib,
+        p.int_zero_mul,
+        p.eq_zero_of_num_zero,
+        p.int_nonneg_of_nonneg,
+        p.nonneg_of_int_nonneg,
+        p.int_zero_le_of_nat,
+        p.int_of_nat_pos,
+        p.eq_of_cross,
+        p.cross_of_eq,
+        p.normalize_cross,
+        p.normalize_congr,
+        p.self_normalize,
+        p.add_cross,
+        p.mul_cross,
+        p.right_distrib,
+        p.nat_div_succ,
+        p.int_le_or_lt,
+        p.le_or_lt,
+        p.int_pos_of_pos,
+        p.int_one_le_of_pos,
+        p.nat_div_succ_lt_of_pos,
+        p.le_of_le_add_nat_div_succ,
+        p.zero_add,
+        p.neg_add_cancel,
+        p.neg_eq_of_add_eq_zero,
+        p.neg_neg,
+        p.neg_zero,
+        p.neg_add,
+        p.neg_le_neg,
+        p.sub_self,
+        p.neg_sub,
+        p.sub_add_add,
+        p.sub_neg_sub,
+        p.sub_add_sub,
+        p.bounds_add,
+        p.nat_div_succ_add,
+        p.nat_div_succ_halve,
+        p.nat_div_succ_scale,
+        p.nat_div_succ_le_add_left,
+        p.zero_le_nat_div_succ,
+        p.neg_nonpos_of_nonneg,
+        p.bounds_neg,
+        p.add_nonneg,
+        p.decidable_le,
+        p.sum_range,
+        p.sum_range_zero,
+        p.sum_range_succ,
+        p.sum_range_congr,
+        p.sum_range_add,
+        p.mul_sum_range,
+        p.sum_range_le,
+        p.sum_range_nonneg,
+        p.sum_range_congr_lt,
+        p.sum_range_eq_zero_of_lt,
+        p.sum_range_swap,
+        p.sum_range_split,
+        p.sum_range_diagonal,
+        p.sum_range_rect_eq_diag_add_corner,
+        p.pow,
+        p.pow_zero,
+        p.pow_succ,
+        p.pow_nat_div_succ_two,
+        p.poly_eval,
+        p.poly_eval_zero,
+        p.poly_eval_succ,
+        p.poly_eval_add,
+        p.poly_eval_smul,
+        p.dot_n,
+        p.dot_n_zero,
+        p.dot_n_succ,
+        p.dot_n_comm,
+        p.dot_n_add_left,
+        p.dot_n_smul_left,
+        p.dot_n_self_nonneg,
+        p.dot_n_two,
+        p.dot_n_cauchy_schwarz,
+        p.is_distribution,
+        p.prob_le_one,
+        p.prob_complement,
+        p.expectation,
+        p.expectation_add,
+        p.expectation_smul,
+        p.expectation_const,
+        p.uniform,
+        p.uniform_is_distribution,
+        p.expectation_nonneg,
+        p.expectation_le,
+        p.markov_inequality,
+        p.expectation_indicator_le_one,
+        p.variance,
+        p.variance_nonneg,
+        p.variance_eq,
+        p.variance_smul,
+        p.covariance,
+        p.covariance_comm,
+        p.variance_add_eq,
+        p.variance_add_of_uncorrelated,
+        p.indicator,
+        p.indicator_nonneg,
+        p.indicator_le,
+        p.variance_indicator,
+        p.variance_indicator_le_quarter,
+        p.markov_constructed,
+        p.chebyshev_inequality,
+        p.covariance_add_right,
+        p.covariance_smul_left,
+        p.covariance_sq_le_variance_mul,
+        p.sum_vars,
+        p.expectation_sum_vars,
+        p.covariance_sum_vars_left,
+        p.covariance_sum_vars,
+        p.pairwise_uncorrelated,
+        p.variance_sum_vars,
+        p.variance_scaled_mean,
+        p.chebyshev_sample_mean_uncorrelated,
+        p.variance_sample_mean_uncorrelated,
+        p.weak_law_of_large_numbers,
+        p.bernoulli_law_of_large_numbers,
+        p.variance_scaled_add_nonneg,
+        p.covariance_sq_le_variance_mul_of_pos,
+        p.covariance_sq_le_variance_mul_of_zero_zero,
+    ]
+}
+
+#[test]
+fn every_rat_declaration_is_checked_and_axiom_free() {
+    let (kernel, p) = built();
+    let listed: std::collections::BTreeSet<crate::NameId> = named(&p)
+        .into_iter()
+        .map(|(_, name)| name)
+        .chain(p.ring_laws())
+        .chain(unnamed_but_live_declarations(&p))
+        .collect();
+    let declared: Vec<(crate::NameId, Declaration)> = kernel
+        .environment()
+        .iter()
+        .map(|(name, decl)| (*name, decl.clone()))
+        .collect();
+    let unlisted: Vec<String> = declared
+        .iter()
+        .filter(|(name, decl)| {
+            matches!(
+                decl,
+                Declaration::Definition { .. } | Declaration::Theorem { .. }
+            ) && kernel.display_name(*name).to_string().starts_with("Rat.")
+                && !listed.contains(name)
+        })
+        .map(|(name, _)| kernel.display_name(*name).to_string())
+        .collect();
+    assert!(
+        unlisted.is_empty(),
+        "these `Rat` definitions/theorems are live in the prelude but absent \
+         from `named`/`RatPrelude::ring_laws`/`unnamed_but_live_declarations`, \
+         so nothing checks their kind or \
+         axiom-footprint: {unlisted:?}. Add them there -- do not delete this \
+         assertion."
+    );
+
+    for (name, decl) in &declared {
+        let shown = kernel.display_name(*name).to_string();
+        if !shown.starts_with("Rat.") || !listed.contains(name) {
+            continue;
+        }
+        assert!(
+            !matches!(decl, Declaration::Axiom { .. } | Declaration::Opaque { .. }),
+            "{shown} is asserted, not derived"
+        );
+        let footprint = kernel.axiom_footprint(*name);
+        assert!(
+            footprint.is_empty(),
+            "{shown} must have an empty axiom footprint, found {:?}",
+            footprint
+                .iter()
+                .map(|n| kernel.display_name(*n).to_string())
+                .collect::<Vec<_>>()
+        );
+    }
 }
 
 /// `Rat.le` is not just total (`le_total`) but **antisymmetric**
