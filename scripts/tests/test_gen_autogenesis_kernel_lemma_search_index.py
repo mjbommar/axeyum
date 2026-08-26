@@ -55,6 +55,18 @@ class KernelLemmaSearchIndexTests(unittest.TestCase):
             self.data["census"]["unresolved_prefixed_kernel_evidence"],
         )
         self.assertGreater(len(unresolved), 0)
+        self.assertEqual(
+            sum(self.data["census"]["unresolved_reason_counts"].values()),
+            len(unresolved),
+        )
+
+    def test_non_theorem_identity_is_distinguished_from_absence(self):
+        row = next(
+            row
+            for row in self.data["unresolved_prefixed_kernel_evidence"]
+            if row["fact_id"] == "F:rat-normalize-reduces"
+        )
+        self.assertIn("definition declaration, not a theorem", row["reason"])
 
     def test_search_rows_confer_no_proof_authority(self):
         self.assertTrue(

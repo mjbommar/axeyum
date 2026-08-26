@@ -53,6 +53,7 @@ def exact_kernel_declaration(evidence: object) -> str | None:
 
 def build() -> dict[str, Any]:
     projection = json.loads(KERNEL.read_text())
+    declaration_rows = {row["id"]: row for row in projection["declarations"]}
     theorem_rows = {
         row["id"]: row
         for row in projection["declarations"]
@@ -104,12 +105,21 @@ def build() -> dict[str, Any]:
             if declaration in theorem_rows:
                 fact_links[declaration].add(fact_id)
             else:
+                declaration_row = declaration_rows.get(declaration)
+                if declaration_row is None:
+                    reason = "exact kernel evidence identity is absent from the current projection"
+                else:
+                    declaration_kind = declaration_row["declaration_kind"]
+                    reason = (
+                        "exact kernel evidence identity resolves to a current "
+                        f"{declaration_kind} declaration, not a theorem"
+                    )
                 unresolved.append(
                     {
                         "fact_id": fact_id,
                         "evidence_id": str(evidence_id),
                         "candidate_declaration_id": declaration,
-                        "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration",
+                        "reason": reason,
                     }
                 )
 
@@ -135,6 +145,9 @@ def build() -> dict[str, Any]:
 
     linked_theorems = sum(bool(row["exact_fact_ids"]) for row in lemmas)
     linked_facts = {fact for row in lemmas for fact in row["exact_fact_ids"]}
+    unresolved_reasons = defaultdict(int)
+    for row in unresolved:
+        unresolved_reasons[row["reason"]] += 1
     return {
         "schema_version": 1,
         "kind": "axeyum-kernel-lemma-search-index",
@@ -154,6 +167,7 @@ def build() -> dict[str, Any]:
             "theorems_without_exact_fact_links": len(lemmas) - linked_theorems,
             "distinct_exactly_linked_facts": len(linked_facts),
             "unresolved_prefixed_kernel_evidence": len(unresolved),
+            "unresolved_reason_counts": dict(sorted(unresolved_reasons.items())),
             "maximum_dependency_depth": max(depths.values(), default=0),
         },
         "lemmas": lemmas,

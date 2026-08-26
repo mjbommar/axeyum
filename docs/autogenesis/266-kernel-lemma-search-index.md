@@ -66,6 +66,13 @@ order:
 6. record which retrieved candidates were attempted, declined, or occurred in
    an independently checked proof.
 
+The unresolved census separates identities absent from the projection from
+identities that resolve to a non-theorem declaration. The latter is not an
+error to paper over: `Rat.normalize`, for example, is a checked definition, so
+it does not belong in the theorem-only lemma search graph. An absent identity
+may instead expose a prelude/build-coverage boundary or a descriptive evidence
+ID; repair that source boundary before adding a link.
+
 The first producer evaluation should then ask whether bounded retrieval from
 this artifact improves held-out conversion without per-target code. That result,
 not graph density by itself, decides whether additional semantic enrichment is

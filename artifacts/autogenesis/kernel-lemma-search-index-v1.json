@@ -6,7 +6,11 @@
     "maximum_dependency_depth": 26,
     "theorems_with_exact_fact_links": 382,
     "theorems_without_exact_fact_links": 824,
-    "unresolved_prefixed_kernel_evidence": 17
+    "unresolved_prefixed_kernel_evidence": 17,
+    "unresolved_reason_counts": {
+      "exact kernel evidence identity is absent from the current projection": 16,
+      "exact kernel evidence identity resolves to a current definition declaration, not a theorem": 1
+    }
   },
   "derivation": {
     "fact_identity_rule": "kernel-term evidence with an explicit kernel_declaration, falling back for compatibility to an evidence id with exact kernel- or kernel: prefix and an exact current theorem suffix",
@@ -34337,103 +34341,103 @@
       "candidate_declaration_id": "CPoint.centroid_dist_sq",
       "evidence_id": "kernel-CPoint.centroid_dist_sq",
       "fact_id": "F:geometry-leibniz-centroid-over-constructed-reals",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
+      "reason": "exact kernel evidence identity is absent from the current projection"
     },
     {
       "candidate_declaration_id": "CPoint.ceva-both-directions",
       "evidence_id": "kernel-CPoint.ceva-both-directions",
       "fact_id": "F:menelaus-and-ceva-over-constructed-plane",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
+      "reason": "exact kernel evidence identity is absent from the current projection"
     },
     {
       "candidate_declaration_id": "Int.Characterization.categorical",
       "evidence_id": "kernel-Int.Characterization.categorical",
       "fact_id": "F:int-categoricity",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
+      "reason": "exact kernel evidence identity is absent from the current projection"
     },
     {
       "candidate_declaration_id": "Int.Characterization.categorical-at-int",
       "evidence_id": "kernel-Int.Characterization.categorical-at-int",
       "fact_id": "F:int-categoricity",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
+      "reason": "exact kernel evidence identity is absent from the current projection"
     },
     {
       "candidate_declaration_id": "Int.Characterization.discrete-everywhere",
       "evidence_id": "kernel-Int.Characterization.discrete-everywhere",
       "fact_id": "F:int-characterization",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
+      "reason": "exact kernel evidence identity is absent from the current projection"
     },
     {
       "candidate_declaration_id": "Int.Characterization.induction",
       "evidence_id": "kernel-Int.Characterization.induction",
       "fact_id": "F:int-characterization",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
+      "reason": "exact kernel evidence identity is absent from the current projection"
     },
     {
       "candidate_declaration_id": "Int.Characterization.iso",
       "evidence_id": "kernel-Int.Characterization.iso",
       "fact_id": "F:int-categoricity",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
+      "reason": "exact kernel evidence identity is absent from the current projection"
     },
     {
       "candidate_declaration_id": "Int.Characterization.iter-succ",
       "evidence_id": "kernel-Int.Characterization.iter-succ",
       "fact_id": "F:int-categoricity",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
+      "reason": "exact kernel evidence identity is absent from the current projection"
     },
     {
       "candidate_declaration_id": "Int.Characterization.of_nat_or_neg",
       "evidence_id": "kernel-Int.Characterization.of_nat_or_neg",
       "fact_id": "F:int-characterization",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
+      "reason": "exact kernel evidence identity is absent from the current projection"
     },
     {
       "candidate_declaration_id": "Int.Characterization.rec-unique",
       "evidence_id": "kernel-Int.Characterization.rec-unique",
       "fact_id": "F:int-characterization",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
+      "reason": "exact kernel evidence identity is absent from the current projection"
     },
     {
       "candidate_declaration_id": "Nat.Peano.categorical",
       "evidence_id": "kernel-Nat.Peano.categorical",
       "fact_id": "F:nat-peano-categoricity",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
+      "reason": "exact kernel evidence identity is absent from the current projection"
     },
     {
       "candidate_declaration_id": "Nat.Peano.iter_unique",
       "evidence_id": "kernel-Nat.Peano.iter_unique",
       "fact_id": "F:nat-peano-categoricity",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
+      "reason": "exact kernel evidence identity is absent from the current projection"
     },
     {
       "candidate_declaration_id": "Nat.Peano.zero_ne_succ",
       "evidence_id": "kernel-Nat.Peano.zero_ne_succ",
       "fact_id": "F:nat-peano-categoricity",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
+      "reason": "exact kernel evidence identity is absent from the current projection"
     },
     {
       "candidate_declaration_id": "Rat.normalize",
       "evidence_id": "kernel-Rat.normalize",
       "fact_id": "F:rat-normalize-reduces",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
+      "reason": "exact kernel evidence identity resolves to a current definition declaration, not a theorem"
     },
     {
       "candidate_declaration_id": "ordered-ring-refutation",
       "evidence_id": "kernel-ordered-ring-refutation",
       "fact_id": "F:ordered-ring-farkas-refutation",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
+      "reason": "exact kernel evidence identity is absent from the current projection"
     },
     {
       "candidate_declaration_id": "rat-add-neg-inverse",
       "evidence_id": "kernel-rat-add-neg-inverse",
       "fact_id": "F:rat-add-neg-inverse",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
+      "reason": "exact kernel evidence identity is absent from the current projection"
     },
     {
       "candidate_declaration_id": "rat-mul-renormalises",
       "evidence_id": "kernel-rat-mul-renormalises",
       "fact_id": "F:rat-mul-renormalises",
-      "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration"
+      "reason": "exact kernel evidence identity is absent from the current projection"
     }
   ]
 }
