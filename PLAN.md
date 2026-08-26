@@ -1103,14 +1103,14 @@ top-three-focus, 2026-08-25). The durable plan is
 the full lane history is in
 [`../notes/126-top-three-focus.md`](docs/plan/notes/126-top-three-focus.md).
 
-Current boundary: the first exact imported `Nat.mod` behavior contract advances
-the frozen arithmetic `Nat.ModEq` family from 0/3 to 1/3. It reconstructs
-`n % n = 0` directly over `Nat.modCore.go`, transports with an empty footprint,
-and independently admits the proof-free modulus-zero target without depending
-on its declaration. Public `Nat.mod_self` and both public addition laws carry
-`propext`, so they remain rejected. Next: construct one implementation-local
-periodicity law reusable by both addition siblings; operation authority still
-waits for 3/3 and the transaction path.
+Current boundary: one unchanged imported `Nat.mod` contract family advances the
+frozen arithmetic `Nat.ModEq` siblings from 0/3 to 3/3. It rebuilds fuel
+congruence, modulo recurrence, addition periodicity, and self-modulus over the
+exact imported implementation. Every transport and independent admission has
+an empty footprint and no hidden-target dependency. Public shortcuts carrying
+`propext` remain rejected. The family is now operation-eligible, but zero facts
+are settled. Next: register this exact multi-target family and dispatch all
+three through clean episodes and crash-safe transactions.
 
 Priority 3 also repaired the CI-observed sub-millisecond budget escape: policy
 now compares an unrounded monotonic duration while receipts retain integer
