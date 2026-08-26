@@ -1732,3 +1732,208 @@ fn declare_riemann_sum_const(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), 
         value: value_full,
     })
 }
+
+// --- `CReal.sumRange_reblock` -- the general block-size generalization of
+// `sumRange_double` --------------------------------------------------------
+//
+// A sibling lane building this same file's Chapter 13 Cauchy-in-`m` estimate
+// landed `CReal.sumRange_double` (block size fixed at the literal `2`,
+// grouping `2k` terms into `k` pairs) by direct induction on `k`, unfolding
+// `Nat.mul`/`Nat.add`'s own iota-reduction one term at a time and closing the
+// resulting mismatched bracketing with one `add_assoc`. That commit is not
+// yet merged into this tree (a private worktree branch,
+// `42c7bf73a039a64755d75c280e63371a36ebcc07`), so it is not consumed here;
+// this section instead builds the GENERAL block-size version directly.
+//
+// The key move that lets the general case skip `sumRange_double`'s
+// `add_assoc` step entirely: rather than manually unfolding `sumRange` one
+// term at a time inside a block, treat an entire block as one call to the
+// already-general two-way splitter [`CRealPrelude::sum_range_split`]
+// (`Equiv (sumRange f (add m n)) (add (sumRange f m) (sumRange (shifted m f)
+// n))`, `series.rs`). Fixing the block size at `bs := Nat.succ n` and
+// inducting on the block COUNT `k`:
+//
+// - base case (`k = 0`): `Nat.mul bs Nat.zero ≡ Nat.zero` (`define_binary`'s
+//   own zero-case callback ignores its first argument), so both sides
+//   reduce, by pure defeq, to `CReal.zero` — exactly `sumRange_double`'s own
+//   base case, and for the same reason.
+// - step case (`k = succ j`): `Nat.mul bs (succ j) ≡ Nat.add (Nat.mul bs j)
+//   bs` is `Nat.mul`'s own iota-reduction (`define_binary`'s step equation,
+//   `mul x (succ j) ≡ add (mul x j) x` with `x := bs`) — this holds
+//   regardless of whether `bs` itself is a literal or, as here, the
+//   symbolic `Nat.succ n`, because the reduction is driven by matching the
+//   SECOND argument's `succ`/`zero` shape, not the first argument's. Applying
+//   `sum_range_split` at `(Nat.mul bs j, bs)` gives EXACTLY the bracketing
+//   `sumRange`'s own iota-reduction on the right-hand side already produces
+//   (`add (sumRange block j) (block j)`), because the block's own offset
+//   (`Nat.mul bs i`, `bs` always kept as mul's FIRST argument — never `Nat.mul
+//   i bs`, which would need `Nat.mul_comm` to match) is built to be the exact
+//   same term as `sum_range_split`'s own left summand at `i := j`. So the
+//   step needs only ONE `add_congr` (lifting the induction hypothesis in) —
+//   no `add_assoc` anywhere in this proof, because nothing here ever needs
+//   re-bracketing.
+//
+// This is not yet consumed toward `riemannSum_cauchy`: the remaining gaps
+// (the per-block estimate via `UniformlyContinuousOn.spec`, and converting a
+// real-valued bound into the `Within`-shaped witness `Cauchy` demands at
+// `riemannSum`'s own canonical indices) are exactly the ones
+// `sumRange_double`'s own doc comment already names, and this section does
+// not attempt either.
+
+/// `fun k => f (Nat.add m k)` — `f` shifted by `m`. Reproduced verbatim from
+/// `series.rs::shifted_fn` / `geometric.rs::shifted_fn` (both private to
+/// their own modules), matching `CReal.sumRange_split`'s own instantiated
+/// conclusion shape exactly so this file's block sums are structurally
+/// (not merely propositionally) the same closures `sum_range_split`
+/// produces.
+fn reblock_shifted_fn(d: &mut IntDev<'_>, m: ExprId, f: ExprId) -> ExprId {
+    let nat_add = d.prelude().add;
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let mk = d.const_app(nat_add, &[m, k]);
+    let body = d.apply(f, &[mk]);
+    let nat = d.nat_ty();
+    d.lam_fv(k_fv, nat, body)
+}
+
+/// `fun i => sumRange (fun j => g (Nat.add (Nat.mul bs i) j)) bs` — the
+/// `i`-th block of `bs` consecutive `g`-terms, starting at `bs * i`. `bs` is
+/// always the FIRST argument of `Nat.mul` here, matching the shape
+/// `Nat.mul`'s own iota-reduction forces at the induction step below (never
+/// `Nat.mul i bs`, which is only propositionally, not definitionally, the
+/// same term).
+fn reblock_block(d: &mut IntDev<'_>, p: CRealPrelude, g: ExprId, bs: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let offset = NatOps::mul(d, bs, i);
+    let shifted = reblock_shifted_fn(d, offset, g);
+    let body = d.const_app(p.sum_range, &[shifted, bs]);
+    d.lam_fv(i_fv, nat, body)
+}
+
+/// The proof term for `CReal.sumRange_reblock` at a fixed block size `bs`,
+/// by induction on the block count `k`. See this section's own module
+/// documentation for the derivation.
+fn sum_range_reblock_proof(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    g: ExprId,
+    bs: ExprId,
+    k: ExprId,
+) -> ExprId {
+    let block = reblock_block(d, p, g, bs);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let total = NatOps::mul(d, bs, x);
+        let lhs = d.const_app(p.sum_range, &[g, total]);
+        let rhs = d.const_app(p.sum_range, &[block, x]);
+        equiv(d, p, lhs, rhs)
+    };
+
+    d.induct(
+        &motive,
+        &|d| {
+            // motive(zero): `Nat.mul bs Nat.zero ≡ Nat.zero`, so both sides
+            // reduce (defeq) to `CReal.zero`.
+            let zero_c = czero(d, p);
+            d.lemma(p.equiv_refl, &[zero_c])
+        },
+        &|d, j, ih| {
+            // ih : Equiv (sumRange g (mul bs j)) (sumRange block j)
+            let bs_j = NatOps::mul(d, bs, j);
+            let succ_j = d.succ(j);
+
+            let sum_g_bsj = d.const_app(p.sum_range, &[g, bs_j]);
+            let sum_block_j = d.const_app(p.sum_range, &[block, j]);
+            let block_j = d.apply(block, &[j]);
+
+            // split_step : Equiv (sumRange g (add bs_j bs))
+            //                    (add sum_g_bsj (sumRange (shifted bs_j g) bs))
+            // -- the second summand is defeq `block_j` (`reblock_block`'s own
+            // definition at `i := j`, same `bs_j` offset, same block size
+            // `bs`) by one beta step, no new lemma needed.
+            let split_step = d.lemma(p.sum_range_split, &[g, bs_j, bs]);
+
+            // h1 : Equiv (add sum_g_bsj block_j) (add sum_block_j block_j)
+            let refl_block_j = d.lemma(p.equiv_refl, &[block_j]);
+            let h1 = d.lemma(
+                p.add_congr,
+                &[sum_g_bsj, sum_block_j, block_j, block_j, ih, refl_block_j],
+            );
+
+            // Goal (defeq unfolded, `succ_j`): `Equiv (sumRange g (mul bs
+            // succ_j)) (sumRange block succ_j)` -- `mul bs succ_j` is defeq
+            // `add bs_j bs` (`Nat.mul`'s iota step), and `sumRange block
+            // succ_j` is defeq `add sum_block_j block_j` (`sumRange`'s own
+            // iota step), so `equiv_trans(split_step, h1)` closes it exactly.
+            let lhs_goal = {
+                let total_succ = NatOps::mul(d, bs, succ_j);
+                d.const_app(p.sum_range, &[g, total_succ])
+            };
+            let mid = cadd(d, p, sum_g_bsj, block_j);
+            let rhs_goal = d.const_app(p.sum_range, &[block, succ_j]);
+
+            d.lemma(p.equiv_trans, &[lhs_goal, mid, rhs_goal, split_step, h1])
+        },
+        k,
+    )
+}
+
+/// `CReal.sumRange_reblock : ∀ (g : Nat → CReal) (n k : Nat), Equiv (sumRange
+/// g (Nat.mul (Nat.succ n) k)) (sumRange (fun i => sumRange (fun j => g
+/// (Nat.add (Nat.mul (Nat.succ n) i) j)) (Nat.succ n)) k)` — regrouping
+/// `k · (n+1)` consecutive terms of an arbitrary `g` into `k` consecutive
+/// blocks of `n+1`, exactly (no error term), for an arbitrary block size
+/// `n+1` (never zero). Generalizes `CReal.sumRange_double` (block size fixed
+/// at the literal `2`) from a private, not-yet-merged worktree branch; see
+/// this section's own module documentation for the derivation and precisely
+/// what remains toward `riemannSum_cauchy`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_sum_range_reblock(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let bs = d.succ(n);
+    let proof = sum_range_reblock_proof(d, p, g, bs, k);
+
+    let ty = {
+        let total = NatOps::mul(d, bs, k);
+        let lhs = d.const_app(p.sum_range, &[g, total]);
+        let block = reblock_block(d, p, g, bs);
+        let rhs = d.const_app(p.sum_range, &[block, k]);
+        equiv(d, p, lhs, rhs)
+    };
+    let ty_full = {
+        let over_k = d.pi_fv(k_fv, nat, ty);
+        let over_n = d.pi_fv(n_fv, nat, over_k);
+        d.pi_fv(g_fv, fn_ty, over_n)
+    };
+    let value_full = {
+        let over_k = d.lam_fv(k_fv, nat, proof);
+        let over_n = d.lam_fv(n_fv, nat, over_k);
+        d.lam_fv(g_fv, fn_ty, over_n)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sum_range_reblock,
+        uparams: vec![],
+        ty: ty_full,
+        value: value_full,
+    })
+}

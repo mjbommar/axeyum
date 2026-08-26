@@ -2079,6 +2079,18 @@ pub struct CRealPrelude {
     /// via [`Self::riemann_sample_in_bounds`]. See `integral.rs`'s module
     /// documentation; `riemann_sum_le` itself is UNCHANGED (both exist).
     pub riemann_sum_le_on: NameId,
+    /// `CReal.sumRange_reblock : ∀ (g : Nat → CReal) (n k : Nat), Equiv
+    /// (sumRange g (Nat.mul (Nat.succ n) k)) (sumRange (fun i => sumRange
+    /// (fun j => g (Nat.add (Nat.mul (Nat.succ n) i) j)) (Nat.succ n)) k)`
+    /// (`creal/integral.rs`) — regrouping `k · (n+1)` consecutive terms of an
+    /// arbitrary `g` into `k` consecutive blocks of `n+1`, exactly, for an
+    /// arbitrary (never-zero) block size. Generalizes the block-size-2
+    /// special case (a dyadic-refinement reblocking, needed for the Chapter
+    /// 13 integral's Cauchy-in-`m` estimate) from a fixed literal to an
+    /// arbitrary `Nat.succ n`; see that file's own module documentation for
+    /// the derivation and for what still separates this from
+    /// `riemannSum_cauchy`.
+    pub sum_range_reblock: NameId,
     /// `CReal.hasDerivative_closeOfEquiv : ∀ F F' a b, HasDerivativeOn F F' a b →
     /// ∀ u v, le a u → le u b → le a v → le v b → Equiv u v → Equiv (F u) (F v)`
     /// — differentiability implies (local) continuity: two `Equiv`-related
@@ -2430,6 +2442,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         of_nat_le: kernel.name_str(creal, "ofNat_le"),
         riemann_sample_in_bounds: kernel.name_str(creal, "riemannSum_sample_in_bounds"),
         riemann_sum_le_on: kernel.name_str(creal, "riemannSum_le_on"),
+        sum_range_reblock: kernel.name_str(creal, "sumRange_reblock"),
         has_derivative_close_of_equiv: kernel.name_str(creal, "hasDerivative_closeOfEquiv"),
         exp_term: kernel.name_str(creal, "expTerm"),
         exp_series_partial: kernel.name_str(creal, "expSeriesPartial"),
@@ -2528,6 +2541,12 @@ pub(crate) fn build_creal_prelude_uncached(
         // nothing from `power`, so it can land right after `series` rather
         // than waiting for the `power`/`hasDerivative_pow*` tail below.
         integral::declare_integral(&mut d, prelude)?;
+        // `sumRange_reblock` only needs `sumRange`/`sumRange_split`
+        // (`series::declare_series`, already run above) and the ring
+        // congruence/transitivity laws (far above); it does not depend on
+        // anything `declare_integral` itself adds, but lives right after it
+        // as the same kind of `sumRange`-only building block.
+        integral::declare_sum_range_reblock(&mut d, prelude)?;
         // `monotone_of_nonneg_deriv` and its two supporting lemmas
         // (`sumRange_const`, `mesh_count_width`, `subdivisionPoint_in_bounds`)
         // reuse `CReal.ofNat_le` (`integral::declare_integral`, just above)
