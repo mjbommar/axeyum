@@ -63,17 +63,45 @@ The generated
 now joins the dependency-ready evaluation frontier, measured producer
 obstructions, clean semantic analogues, and operation registry at the family
 level. It excludes held-out and answer-bearing mutation controls before
-ranking. Of 91 ready train/development facts across ten families, only 29 have
+ranking. Of 91 ready train/development facts across ten families, only 32 have
 a current measured producer outcome and only one is accepted by an unchanged
 producer. No family yet has three accepted siblings.
 
 The next family is therefore **natural binomial**, not bitwise or another
 one-off theorem. `Nat.choose_one_right` already passes the retrieved-induction
-producer axiom-free; the falsifiable next step is to convert two more of its
-seven ready siblings with the same contract. Natural bitwise remains third:
+producer axiom-free. All eight ready siblings are now measured: one accepts,
+six decline, and one is rejected at the statement boundary. The three rows
+formerly classified as unreachable arrows import cleanly; two expose the
+shared binder/generalization budget and one exposes the non-equality terminal
+grammar. The falsifiable next step is to improve those reusable producer
+mechanisms, rerun all eight unchanged, and convert two more siblings. Natural
+bitwise remains third:
 it has twelve ready facts and three clean target-owned analogues, but exact
 imported identity is still blocked, so promoting those analogues would be a
 category error rather than autonomous progress.
+
+### Arrow-export correction and binomial measurement
+
+The 2026-08-25 reachability diagnosis was wrong. It attributed a silent empty
+output to lean4export's handling of `→`/`↔`; the actual failure was output and
+storage handling on s5. Streaming stdout away from the constrained host with
+the exact same Mathlib commit, Lean 4.30.0, and lean4export 3.1.0 exported three
+implication-bearing `Nat.choose` statement definitions. Axeyum's independent
+statement importer accepted all three with zero axioms and zero exposed theorem
+proofs. The large NDJSON remains in a read-only external reference pack; Git
+stores exact hashes, source identity, rendered goals, and a regenerable checked
+[`capability receipt`](../artifacts/autogenesis/binomial-arrow-export-capability-v1.json).
+
+The unchanged held-out-safe retrieved-induction producer then measured those
+three goals. All imports passed and 59 of 60 ranked-premise transport attempts
+were executable; no theorem was produced. `choose_eq_zero_of_lt` and
+`choose_symm_of_eq_add` hit `BinderBudgetExceeded`; `choose_ne_zero` reached a
+non-equality terminal (`≠`) outside the producer grammar. This localizes the
+next reusable implementation work to binder/generalization accounting plus
+negative-proposition terminal support—not a new exporter and not per-target
+binomial proof code. The exact
+[`measurement`](../artifacts/autogenesis/binomial-arrow-retrieved-induction-census-v1.json)
+feeds the generated family queue.
 
 ### Landed autonomous-loop increment
 

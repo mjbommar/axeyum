@@ -831,3 +831,27 @@ siblings under the unchanged producer” the next falsifiable construction task.
 | 2026-08-26 | `ba3f4acdd` | Expose native transport through Python and measure 210 executable ranked premises reaching 0/24 bounded-application conversion. |
 | 2026-08-26 | `2c86c0604` | Preserve ranked premise order through bounded search; the full census reproduces unchanged, ruling out alphabetical budget starvation as the active limiter. |
 | 2026-08-26 | `b852c4e89` | Compose graph-retrieved equalities through bounded induction and convert the first immutable open-population target axiom-free with zero false-control accepts. |
+
+### Arrow reachability correction and complete binomial measurement (2026-08-26)
+
+The earlier `--exportable-only` rationale was falsified against its own pinned
+toolchain. Three proof-free implication-bearing `Nat.choose` definitions were
+compiled under Mathlib `c5ea0035…` / Lean 4.30.0 and exported by lean4export
+3.1.0 by streaming stdout from s5. Each target-only stream passes
+`import_statement_ndjson`: three definitions, zero axioms, zero substituted
+theorems. The reference pack is
+`/nas3/data/axeyum/autogenesis/reference-packs/86688948e-binomial-arrow-statements-v1`;
+the repository receipt binds every source, map, stream, toolchain, target, and
+rendered-goal identity. The compatibility flag remains as a legacy replay
+filter, not a live capability filter.
+
+The producer-ready variants additionally root-export the fixed baseline palette
+without exposing a target proof. The existing held-out-safe ranked transport +
+retrieved-induction pipeline imports all three and executes 59/60 premise
+transports. It accepts none: two terminate at `BinderBudgetExceeded`, and the
+`choose_ne_zero` goal terminates at `NotEqualityGoal`. The family queue now
+contains 32 measured ready facts overall and all eight natural-binomial rows;
+that family decomposes to one accepted, six declined, and one import-rejected.
+This moves the work from speculative exporter replacement to two concrete,
+reusable producer gaps: binder/generalization accounting and negative terminal
+grammar.

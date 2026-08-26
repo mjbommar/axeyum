@@ -117,6 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-26 | `963977dde` | Falsify the supposed lean4export arrow ceiling with three proof-isolated binomial exports; measure all three under unchanged retrieval and feed the two binder plus one negative-terminal declines into the reusable-family queue. |
 | 2026-08-26 | `9e3f1185a` | Join ready facts, measured obstructions, semantic analogues, and operation coverage into a held-out-safe reusable-family queue; natural binomial ranks first with one accepted sibling and two needed. |
 | 2026-08-26 | `98628e363` | Replace manual per-fact episode orchestration with a generic frontier-selected authoritative runner that retains crash-safe receipts and permits exactly one machine-selected ledger path to change. |
 | 2026-08-26 | `aff331097` | Settle `Nat.mod_modEq` through the third fresh crash-safe episode; the imported Nat.mod family reaches 3/3 durable admissions and the frontier returns zero admissible registered targets. |
@@ -1110,32 +1111,23 @@ top-three-focus, 2026-08-25). The durable plan is
 the full lane history is in
 [`../notes/126-top-three-focus.md`](docs/plan/notes/126-top-three-focus.md).
 
-Current boundary: one unchanged imported `Nat.mod` contract family advances the
-frozen arithmetic `Nat.ModEq` siblings from 0/3 to 3/3. It rebuilds fuel
-congruence, modulo recurrence, addition periodicity, and self-modulus over the
-exact imported implementation. Every transport and independent admission has
-an empty footprint and no hidden-target dependency. Public shortcuts carrying
-`propext` remain rejected. It is the 27th authoritative registered operation,
-and the full executor path now preserves each target's immutable stream hashes,
-proof identity, and one named retained theorem dependency through execution,
-transaction construction, and settled-fact replay. Zero facts are settled.
-Its three historical assay/contract gates are correctly lifecycle-stable, and
-the operation explicitly reviews their coupling. The first production episode
-settled `Nat.add_modEq_left`: the intent-boundary fault changed no fact,
-recovery performed exactly one write, settled replay passed, and the frontier
-advanced to `addRight`. A second independently commit-bound episode has now
-settled `Nat.add_modEq_right` through the same crash/recovery discipline and
-advanced the frontier to `modulusZero`. The third fresh episode settled
-`Nat.mod_modEq`/`modulusZero`; the family is now 3/3 durable, and the machine
-frontier honestly returns no admissible registered target. Next: use the
-measured zero-admissible boundary to select and register the next reusable
-family, rather than adding one-off proof code. The three manually orchestrated
-episodes have also been converted into a generic one-command runner: callers
+Current boundary: the imported `Nat.mod` contract family is 3/3 durable after
+three clean crash-and-recovery episodes. Every admission has an empty footprint,
+no hidden-target dependency, immutable stream/proof identity, and one exact
+retained theorem dependency. The machine frontier honestly returns no
+admissible registered target. The three manually orchestrated episodes have
+also been converted into a generic one-command runner: callers
 choose only an external receipt directory; the frontier, registry, transaction,
 intent fault, recovery, and settled checker choose and police everything else.
-The new family-level queue ranks natural binomial first: one ready sibling is
-already accepted by the unchanged retrieved-induction producer, so the next
-falsifiable bar is two more accepted siblings and then operation integration.
+The family-level queue ranks natural binomial first. Its three formerly
+unreachable implication-bearing statements now export under pinned
+lean4export 3.1.0 when stdout is streamed off s5, and all three pass Axeyum's
+proof-isolated import with zero axioms and theorem proofs. The unchanged
+retrieved-induction producer declines two at the binder/generalization boundary
+and one at a non-equality (`≠`) terminal. All eight ready binomial siblings are
+therefore measured: one accepted, six declined, one import-rejected. Next:
+improve the two shared producer mechanisms, rerun the family, and reach two more
+accepted siblings before operation integration.
 
 Priority 3 also repaired the CI-observed sub-millisecond budget escape: policy
 now compares an unrounded monotonic duration while receipts retain integer

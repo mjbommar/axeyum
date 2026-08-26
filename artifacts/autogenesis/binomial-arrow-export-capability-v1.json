@@ -1,0 +1,90 @@
+{
+  "census": {
+    "arrow_statements": 3,
+    "axioms": 0,
+    "exported": 3,
+    "proof_isolated_imports": 3,
+    "substituted_theorems": 0
+  },
+  "claim": "lean4export 3.1.0 can export implication-bearing Prop definitions; Axeyum independently imported all three without axioms or theorem proofs",
+  "correction": "The 2026-08-25 arrow-ceiling diagnosis conflated an output/storage failure with exporter semantics. --exportable-only remains only as a legacy replay filter.",
+  "kind": "axeyum-binomial-arrow-export-capability",
+  "non_claims": [
+    "the propositions are proved",
+    "the current producer can prove the propositions",
+    "every Lean surface statement is exportable"
+  ],
+  "rows": [
+    {
+      "admitted_declarations": 50,
+      "axioms": [],
+      "fact_id": "F:ml430-nat-choose-eq-zero-of-lt-92ebab29",
+      "formal_statement_sha256": "3208dfa1bd5ef275aa4753067a117595cb69be553f082cddd1cc7be93efd7205",
+      "goal_rendered": "((n : AxNat) -> ((k : AxNat) -> ((a._@._internal._hyg._0 : LT.lt.{0} AxNat instLTNat n k) -> Eq.{1} AxNat (AxNat.choose n k) (OfNat.ofNat.{0} AxNat 0 (instOfNatNat 0)))))",
+      "measurement_stream": "/nas3/data/axeyum/autogenesis/reference-packs/86688948e-binomial-arrow-statements-v1/streams/F-ml430-nat-choose-eq-zero-of-lt-92ebab29.ndjson",
+      "measurement_stream_bytes": 226891,
+      "measurement_stream_records": 4357,
+      "measurement_stream_sha256": "37b51b79a569d67f083514b86b0ed731aa877144cdbf5ef6c3c6b6806ac1b82d",
+      "proof_isolated_import": "accepted",
+      "stream": "/nas3/data/axeyum/autogenesis/reference-packs/86688948e-binomial-arrow-statements-v1/target-only/F-ml430-nat-choose-eq-zero-of-lt-92ebab29.ndjson",
+      "stream_bytes": 50455,
+      "stream_records": 885,
+      "stream_sha256": "126f7cca3feab5f58919f49f83699ded935264e59953803ec247b278f0802221",
+      "substituted_theorems": [],
+      "target_content_sha256": "96aebc33bbf6b9e168043726cc9ef67be8d2da8eba0b7cbe40735f5f8f49fe91",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natChooseEqZeroOfLt"
+    },
+    {
+      "admitted_declarations": 53,
+      "axioms": [],
+      "fact_id": "F:ml430-nat-choose-ne-zero-49c3d3cb",
+      "formal_statement_sha256": "892430e47a8100139a0a6d178abfa8650fefd2f2fb812c2de4c6970c3ffbc50e",
+      "goal_rendered": "((n : AxNat) -> ((k : AxNat) -> ((a._@._internal._hyg._0 : LE.le.{0} AxNat instLENat k n) -> Ne.{1} AxNat (AxNat.choose n k) (OfNat.ofNat.{0} AxNat 0 (instOfNatNat 0)))))",
+      "measurement_stream": "/nas3/data/axeyum/autogenesis/reference-packs/86688948e-binomial-arrow-statements-v1/streams/F-ml430-nat-choose-ne-zero-49c3d3cb.ndjson",
+      "measurement_stream_bytes": 224505,
+      "measurement_stream_records": 4322,
+      "measurement_stream_sha256": "e5882423a2bca8f8c2811796db3c5adb75419c06942d86f50e903badc6a3200b",
+      "proof_isolated_import": "accepted",
+      "stream": "/nas3/data/axeyum/autogenesis/reference-packs/86688948e-binomial-arrow-statements-v1/target-only/F-ml430-nat-choose-ne-zero-49c3d3cb.ndjson",
+      "stream_bytes": 51789,
+      "stream_records": 902,
+      "stream_sha256": "cc4cce2cc4a91144543ef81e44e1a52ac416839ef772d81ce2b27a729060d8ca",
+      "substituted_theorems": [],
+      "target_content_sha256": "949f1353941e883479c46d1fd2ee72dcf83c6d84b53010b8c4a148448549f756",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natChooseNeZero"
+    },
+    {
+      "admitted_declarations": 40,
+      "axioms": [],
+      "fact_id": "F:ml430-nat-choose-symm-of-eq-add-9b5f9a20",
+      "formal_statement_sha256": "7b338a6088d72707024be8d6442e9badb776c243f08226c14f4d55e970b2abea",
+      "goal_rendered": "((n : AxNat) -> ((a : AxNat) -> ((b : AxNat) -> ((a._@._internal._hyg._0 : Eq.{1} AxNat n (HAdd.hAdd.{0, 0, 0} AxNat AxNat AxNat (instHAdd.{0} AxNat instAddNat) a b)) -> Eq.{1} AxNat (AxNat.choose n a) (AxNat.choose n b)))))",
+      "measurement_stream": "/nas3/data/axeyum/autogenesis/reference-packs/86688948e-binomial-arrow-statements-v1/streams/F-ml430-nat-choose-symm-of-eq-add-9b5f9a20.ndjson",
+      "measurement_stream_bytes": 223879,
+      "measurement_stream_records": 4310,
+      "measurement_stream_sha256": "5ce7f332fea4fcf9b26e98345248a0e5ebd8b77d3d8139af551d0c2907bb96b4",
+      "proof_isolated_import": "accepted",
+      "stream": "/nas3/data/axeyum/autogenesis/reference-packs/86688948e-binomial-arrow-statements-v1/target-only/F-ml430-nat-choose-symm-of-eq-add-9b5f9a20.ndjson",
+      "stream_bytes": 42766,
+      "stream_records": 765,
+      "stream_sha256": "412388246c1027be27f677b56693d52ff62646e924cdbbe0352895918cb6ea20",
+      "substituted_theorems": [],
+      "target_content_sha256": "0fa065a74f49df6d42a3fe4004051eef1c86ed12dcbebfce4c297c9c45cf6eee",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natChooseSymmOfEqAdd"
+    }
+  ],
+  "schema_version": 1,
+  "source": {
+    "adapter_source_sha256": "d97a9f22bf9965a140e2dc5273fa8ed32a3a511db073995e939d58fc91e702e2",
+    "external_pack": "/nas3/data/axeyum/autogenesis/reference-packs/86688948e-binomial-arrow-statements-v1",
+    "lean4export_binary_sha256_observed_on_s5": "8e763913b03762488571a93ced6ec1a4e04f7d8eebbe40bd1215ba41a6bd4449",
+    "lean4export_commit": "a3e35a584f59b390667db7269cd37fca8575e4bf",
+    "lean4export_version": "3.1.0",
+    "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "lean_version": "4.30.0",
+    "mapping_sha256": "16fab9a5d10f076b9b92d011d14a159062a67ac9d253718a825b7886d1f9bd02",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "transport": "exporter stdout streamed over SSH to avoid the s5 disk quota"
+  },
+  "state": "three-arrow-statements-exported-and-proof-isolated"
+}
