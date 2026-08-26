@@ -117,6 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-26 | `681a9b4be` | Add three reviewed local concept families and twelve proposition-level mappings; restore held-out-safe topic, fact-formalization, and kernel-anchor coverage in one checked projection. |
 | 2026-08-26 | `8b3ef15bd` | Restore an actionable semantic-review path with three self-contained local concepts and three strictly qualified empty-footprint kernel anchors, without reviving any sibling-repository dependency. |
 | 2026-08-26 | `f5695d52b` | Synchronize the semantic-review JSON and human census at 1,287 unreviewed theorems, and replace a deleted-link-dependent control with synthetic active/candidate mutations. |
 | 2026-08-26 | `2b943b2e7` | Generate a hash-bound product-health snapshot from kernel, fact, connectivity, operation, producer-outcome, episode, and aggregate-gate authorities without converting static wiring into a runtime-green claim. |
@@ -1676,6 +1677,12 @@ self-contained Axeyum concepts and three reviewed theorem anchors restore the
 or resolver. The validator requires local resolution, theorem kind, empty
 footprint, human review, and partial coverage. The queue now reports 3 reviewed
 and 1,284 unreviewed; the external-coupling scan remains at zero findings.
+The next reviewed batch adds factorial products, modular arithmetic, and
+equivalence relations, with twelve partial links from nine settled facts. The
+restored three-dimensional projection now reports 13 concepts, 177
+train/development topic facts, nine qualified formalization facts, three kernel
+anchors, and zero held-out formalization links. Its six controls reject drift,
+invented anchors, dropped mappings, and held-out leakage.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization

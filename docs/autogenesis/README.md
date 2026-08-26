@@ -101,6 +101,7 @@ compounding, not automation theatre.
 | [Kernel semantic review queue](256-kernel-semantic-review-queue.md) | How can review scale from a hand-picked batch without confusing graph centrality with mathematical meaning? |
 | [First queue-driven review batch](257-kernel-equivalence-relation-batch.md) | What does a high-centrality, three-law kernel batch add when every mapping is still qualified and partial? |
 | [Three-dimensional concept coverage](258-concept-coverage-kernel-anchors.md) | How are topic membership, fact formalization, and kernel semantic anchors reported without collapsing their assurance? |
+| [Local concept vocabulary and restored coverage](281-local-concept-vocabulary-and-coverage.md) | How do reviewed concepts and three-dimensional coverage return without a dependency on the reference repository? |
 | [Constructive-real well-definedness batch](259-kernel-well-definedness-batch.md) | Which representative-independence laws make constructed-real operations meaningful? |
 | [Obstruction capability candidates](260-obstruction-capability-candidates.md) | Which measured producer blockers require a proposed capability rather than another isolated theorem? |
 | [Candidate capability demand](261-capability-candidate-demand.md) | Which proposed capability removes the largest observed obstruction cluster without converting that count into authority? |
