@@ -667,6 +667,14 @@ records runtime gate status as `not-recorded`: static reachability is useful,
 but it is not a successful `just check` or CI receipt. Next: define an
 authenticated, commit-bound execution receipt before displaying runtime health.
 
+The same front door now consumes the held-out-safe concept projection rather
+than leaving semantic enrichment in a specialist artifact. It reports nine
+qualified formalization facts and three reviewed kernel anchors across thirteen
+projected concepts, and verifies that semantic coverage is reachable from both
+aggregate gates. These figures remain explicitly partial human-reviewed
+mappings; they are not inferred classifications and do not change the 2/138
+general-producer result.
+
 ## Sequencing
 
 The critical path is not three independent projects:

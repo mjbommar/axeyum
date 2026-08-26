@@ -117,6 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-26 | `490c45ac3` | Add held-out-safe reviewed semantic coverage to the generated product-health authority while preserving separate autonomous-yield and runtime-status boundaries. |
 | 2026-08-26 | `681a9b4be` | Add three reviewed local concept families and twelve proposition-level mappings; restore held-out-safe topic, fact-formalization, and kernel-anchor coverage in one checked projection. |
 | 2026-08-26 | `8b3ef15bd` | Restore an actionable semantic-review path with three self-contained local concepts and three strictly qualified empty-footprint kernel anchors, without reviving any sibling-repository dependency. |
 | 2026-08-26 | `f5695d52b` | Synchronize the semantic-review JSON and human census at 1,287 unreviewed theorems, and replace a deleted-link-dependent control with synthetic active/candidate mutations. |
@@ -1683,6 +1684,10 @@ restored three-dimensional projection now reports 13 concepts, 177
 train/development topic facts, nine qualified formalization facts, three kernel
 anchors, and zero held-out formalization links. Its six controls reject drift,
 invented anchors, dropped mappings, and held-out leakage.
+The generated product-health front door now includes that semantic dimension:
+nine formalized facts and three kernel anchors across thirteen projected
+concepts, with semantic-coverage authority reachable from both aggregate gates.
+It remains separate from autonomous-production credit and runtime-green status.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization
