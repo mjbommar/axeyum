@@ -66,6 +66,15 @@ directly and records zero theorem dependencies, so the admitted symmetry fact
 does not occur in its checked proof closure. The next producer increment must
 consume a selected library lemma rather than merely being scheduled by it.
 
+The first deterministic bridge for that next increment is now implemented.
+The agent's `lemma_candidates` read tool joins an open goal's authored
+`depends_on` edges to exact fact-to-kernel links in the generated lemma index.
+For `Nat.fib` monotonicity it returns the proved dependency
+`Nat.fib_le_succ` as an axiom-free kernel candidate. Unlinked dependencies are
+reported rather than repaired by name similarity. This makes a real
+lemma-consuming attempt possible, but remains retrieval only: applicability,
+term construction, and kernel acceptance are still unproved work.
+
 ## Comparative position
 
 Axeyum should not be described as a replacement for any one neighboring
@@ -108,8 +117,9 @@ bounded lemma selection, transport, and composition.
 1. Convert producer declines into a ranked, typed strategy backlog.
 2. Build a kernel-derived lemma-search index with exact dependency and
    visibility information; do not ask an LLM to invent the available library.
-3. Implement the first measured family extension: unfold a relation such as
-   `ModEq`, select bounded arithmetic lemmas, and compose the proof term.
+3. Implement the first measured composition attempt on the live `Nat.fib`
+   monotonicity target using the exact `Nat.fib_le_succ` candidate, then either
+   admit it or record the typed obstruction.
 4. Generalize that implementation into bounded best-first lemma composition.
 5. Let an LLM propose lemma applications only across the untrusted boundary;
    the same kernel and footprint checks retain authority.

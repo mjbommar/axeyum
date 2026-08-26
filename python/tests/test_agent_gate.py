@@ -20,6 +20,8 @@ import pytest
 
 pytest.importorskip("pydantic_ai", reason="the [agent] extra is not installed")
 
+from _agent_offline import temporarily_open_fact
+
 from axeyum.agent import graph as graph_api
 from axeyum.agent import models as models_api
 from axeyum.agent import tools
@@ -38,7 +40,8 @@ SETTLED = "F:ml430-int-modeq-trans-6d7863e0"
 
 @pytest.fixture(scope="module")
 def root() -> Path:
-    return resolve_root(None)
+    with temporarily_open_fact(TARGET):
+        yield resolve_root(None)
 
 
 def state(root: Path, proposal=None, *, wall: float = 600.0, fact_id: str = TARGET):

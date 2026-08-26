@@ -37,6 +37,12 @@ and admitted it through the same typed transaction. Multi-target production
 credit moved 8 → 9 → 10 → 11. This proves durable-state-driven scheduling but
 not yet proof-term compounding: the commutativity candidate uses no theorem
 dependency, so lemma-consuming composition remains next.
+The graph-to-kernel bridge is now concrete: the eighth held-out-safe read tool,
+`lemma_candidates`, resolves authored fact dependencies to exact indexed kernel
+lemmas and keeps absent links explicit. The first live composition target is
+`Nat.fib` monotonicity through the axiom-free `Nat.fib_le_succ` dependency;
+retrieval is landed, while proof construction and admission remain the next
+falsifiable step.
 
 <!-- plan-section: landed-changes -->
 
@@ -49,3 +55,4 @@ dependency, so lemma-consuming composition remains next.
 | 2026-08-25 | `9cd07c5f1` | Authoritative frontier/execution/transaction admission settles `Nat.ModEq.symm`; multi-target credit reaches 9. |
 | 2026-08-25 | `b34067dc0` | The recomputed frontier settles `Nat.ModEq.trans` through the same producer; multi-target credit reaches 10. |
 | 2026-08-25 | `43f87f269` | Durable symmetry unlock promotes `Nat.ModEq.comm` into the unchanged family operation with source-bound evidence. |
+| 2026-08-25 | `3375112a9` | Recomputed scheduling admits `Nat.ModEq.comm`; durable-state-driven multi-target credit reaches 11. |

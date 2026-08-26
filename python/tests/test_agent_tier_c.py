@@ -32,7 +32,7 @@ from axeyum.knowledge._paths import resolve_root
 #: entry only in the resolution index (route 2). Keeping both is the point: the
 #: index must never shadow a manifest.
 MANIFEST_FACT = "F:ml430-nat-descfactorial-one-d4856d4a"
-INDEX_FACT = "F:ml430-nat-modeq-comm-24b71e7a"  # in the export index, NOT in any manifest (refl gained a manifest on main)
+INDEX_FACT = "F:ml430-nat-modeq-comm-24b71e7a"
 
 #: Reproduced from `python/tests/test_producers.py`, which reproduces them from
 #: the committed manifests. A digest asserted in two places that both derive it
@@ -108,8 +108,30 @@ def test_a_committed_manifest_resolves_before_the_index(root: Path) -> None:
     assert resolution.target_definition.endswith("natDescFactorialOne")
 
 
-def test_the_index_resolves_an_export_no_manifest_names(root: Path) -> None:
-    resolution = tools.resolve_export(root, INDEX_FACT)
+def test_the_index_resolves_an_export_when_no_manifest_names(tmp_path: Path, monkeypatch) -> None:
+    source = tmp_path / "source.ndjson"
+    source.write_text('{"kind":"fixture"}\n')
+    index = tmp_path / "index.json"
+    index.write_text(
+        json.dumps(
+            {
+                "entries": [
+                    {
+                        "fact_id": "F:ml430-index-only-0000cafe",
+                        "target_definition": (
+                            "Axeyum.Autogenesis.Statement.NatModEqFamily.natModEqComm"
+                        ),
+                        "external_artifact": {
+                            "path": str(source),
+                            "sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+                        },
+                    }
+                ]
+            }
+        )
+    )
+    monkeypatch.setattr(tools, "EXPORT_INDEX", index.relative_to(tmp_path))
+    resolution = tools.resolve_export(tmp_path, "F:ml430-index-only-0000cafe")
     assert resolution.source == "agent-frozen-export-index-v1"
     assert resolution.target_definition.endswith("natModEqComm")
 
