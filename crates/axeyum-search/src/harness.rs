@@ -318,6 +318,98 @@ pub fn parse_model(text: &str) -> Result<Vec<bool>, SearchError> {
         .collect()
 }
 
+/// Parses a SAT Competition model (`s SATISFIABLE`, followed by `v` lines).
+///
+/// The returned vector has exactly `variables` entries in DIMACS variable
+/// order. Comments and other solver telemetry are ignored, but the semantic
+/// payload is strict: exactly one SAT status, a terminating zero, no literals
+/// after that terminator, no out-of-range variables, no contradictory
+/// assignments, and no omitted variables.
+///
+/// # Errors
+///
+/// Returns [`SearchError::InvalidParameter`] when the status or model payload
+/// is absent, malformed, contradictory, incomplete, or does not match
+/// `variables`.
+pub fn parse_sat_competition_model(text: &str, variables: usize) -> Result<Vec<bool>, SearchError> {
+    let statuses: Vec<&str> = text
+        .lines()
+        .map(str::trim)
+        .filter_map(|line| line.strip_prefix("s "))
+        .collect();
+    if statuses.as_slice() != ["SATISFIABLE"] {
+        return Err(SearchError::InvalidParameter {
+            what: format!("expected exactly one SATISFIABLE status, got {statuses:?}"),
+        });
+    }
+
+    let mut values = vec![None; variables];
+    let mut terminated = false;
+    for line in text.lines().map(str::trim) {
+        let Some(payload) = line.strip_prefix("v ") else {
+            continue;
+        };
+        if terminated && !payload.is_empty() {
+            return Err(SearchError::InvalidParameter {
+                what: "model has a value line after its terminating zero".to_string(),
+            });
+        }
+        for token in payload.split_whitespace() {
+            let literal: i64 = token.parse().map_err(|_| SearchError::InvalidParameter {
+                what: format!("model token {token:?} is not a literal"),
+            })?;
+            if literal == 0 {
+                terminated = true;
+                continue;
+            }
+            if terminated {
+                return Err(SearchError::InvalidParameter {
+                    what: format!("model literal {token:?} follows the terminating zero"),
+                });
+            }
+            let magnitude = usize::try_from(literal.unsigned_abs()).map_err(|_| {
+                SearchError::InvalidParameter {
+                    what: format!("model token {token:?} is out of range"),
+                }
+            })?;
+            let Some(index) = magnitude.checked_sub(1) else {
+                return Err(SearchError::InvalidParameter {
+                    what: "zero is only valid as the final model terminator".to_string(),
+                });
+            };
+            if index >= variables {
+                return Err(SearchError::InvalidParameter {
+                    what: format!(
+                        "model variable {} exceeds declared count {variables}",
+                        index + 1
+                    ),
+                });
+            }
+            let value = literal > 0;
+            if values[index].is_some_and(|existing| existing != value) {
+                return Err(SearchError::InvalidParameter {
+                    what: format!("model assigns variable {} both ways", index + 1),
+                });
+            }
+            values[index] = Some(value);
+        }
+    }
+    if !terminated {
+        return Err(SearchError::InvalidParameter {
+            what: "model lacks a terminating zero".to_string(),
+        });
+    }
+    values
+        .into_iter()
+        .enumerate()
+        .map(|(index, value)| {
+            value.ok_or_else(|| SearchError::InvalidParameter {
+                what: format!("model does not assign variable {}", index + 1),
+            })
+        })
+        .collect()
+}
+
 /// Writes `bytes` to `path` and flushes them to the filesystem before
 /// returning.
 fn write_durable(path: &Path, bytes: &[u8]) -> Result<(), SearchError> {
@@ -1469,6 +1561,31 @@ mod tests {
         assert!(parse_model("1 3").is_err());
         assert!(parse_model("1 -1").is_err());
         assert!(parse_model("x").is_err());
+    }
+
+    #[test]
+    fn sat_competition_model_is_strict_and_complete() {
+        let output = "c solver telemetry\ns SATISFIABLE\nv 1 -2\nv 3 0\n";
+        assert_eq!(
+            parse_sat_competition_model(output, 3).expect("competition model"),
+            vec![true, false, true]
+        );
+
+        for malformed in [
+            "s UNSATISFIABLE\nv 1 -2 3 0\n",
+            "s SATISFIABLE\ns SATISFIABLE\nv 1 -2 3 0\n",
+            "s SATISFIABLE\nv 1 -2 0 3\n",
+            "s SATISFIABLE\nv 1 -2\n",
+            "s SATISFIABLE\nv 1 3 0\n",
+            "s SATISFIABLE\nv 1 -2 4 0\n",
+            "s SATISFIABLE\nv 1 -1 2 3 0\n",
+            "s SATISFIABLE\nv 1 -2 3 0\nv 3\n",
+        ] {
+            assert!(
+                parse_sat_competition_model(malformed, 3).is_err(),
+                "accepted malformed model: {malformed:?}"
+            );
+        }
     }
 
     #[test]

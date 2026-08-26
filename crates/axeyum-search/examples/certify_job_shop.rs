@@ -6,9 +6,8 @@ use std::io::BufReader;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use axeyum_cnf::{
-    CnfAssignment, CnfFormula, ProofSolveOutcome, check_drat_backward, check_drat_backward_reader,
-};
+use axeyum_cnf::{CnfFormula, ProofSolveOutcome, check_drat_backward, check_drat_backward_reader};
+use axeyum_search::harness::parse_sat_competition_model;
 use axeyum_search::job_shop::{
     JobShopEncoding, JobShopEncodingLimits, JobShopEnergeticConflict, JobShopEnergeticLimits,
     JobShopMachineOrderStatus, JobShopProblem, JobShopSchedule, check_job_shop_energetic_conflict,
@@ -177,40 +176,6 @@ fn arguments() -> Arguments {
         precedence_closure,
         energetic,
     }
-}
-
-fn parse_competition_model(text: &str, variables: usize) -> CnfAssignment {
-    assert!(
-        text.lines().any(|line| line.trim() == "s SATISFIABLE"),
-        "model file lacks SATISFIABLE status"
-    );
-    let mut values = vec![None; variables];
-    for line in text.lines().map(str::trim) {
-        let Some(rest) = line.strip_prefix("v ") else {
-            continue;
-        };
-        for word in rest.split_whitespace() {
-            let literal = word.parse::<i64>().expect("model literal is an integer");
-            if literal == 0 {
-                continue;
-            }
-            let index =
-                usize::try_from(literal.unsigned_abs() - 1).expect("model variable fits usize");
-            assert!(index < variables, "model variable is out of range");
-            let value = literal > 0;
-            assert!(
-                values[index].is_none_or(|previous| previous == value),
-                "model assigns a variable inconsistently"
-            );
-            values[index] = Some(value);
-        }
-    }
-    CnfAssignment::new(
-        values
-            .into_iter()
-            .map(|value| value.expect("model must assign every formula variable"))
-            .collect(),
-    )
 }
 
 fn write_machine_order_manifest(
@@ -461,7 +426,9 @@ fn main() {
     }
     if let Some(path) = args.model {
         let text = std::fs::read_to_string(&path).expect("read SAT competition model");
-        let model = parse_competition_model(&text, formula.variable_count());
+        let values = parse_sat_competition_model(&text, formula.variable_count())
+            .expect("strict SAT competition model");
+        let model = axeyum_cnf::CnfAssignment::new(values);
         let schedule = encoding
             .lift_model(&model)
             .expect("external SAT model must satisfy, lift, and replay");
