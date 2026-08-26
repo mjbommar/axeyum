@@ -265,8 +265,9 @@ across the additive siblings.
 The imported representation boundary is now a generated knowledge artifact,
 not a prose inference. All 14 exact definitions abstracted by the 25 checked
 type slices expand to 1,363 transparent-definition occurrences and 7,303
-direct dependency edges (366 structural identities / 2,219 identity-bound
-edges), with same-named variants and nontransparent trust boundaries retained.
+direct dependency edges (1,000 context-bound transparent nodes / 1,734 total
+declaration nodes / 5,421 identity-bound edges), with same-named variants and
+nontransparent trust boundaries retained.
 The checked `Nat.mod` spine explicitly reaches `Nat.decLe`/`Nat.ble`,
 `Nat.modCore`, recursive `Nat.modCore.go`, and subtraction-instance machinery.
 No theorem proof or held-out target is read and the graph grants no contract or
@@ -274,6 +275,13 @@ transport authority. Next: derive a deduplicated reverse-reachability view,
 then use the shared `Nat.testBit` subgraph and the modulus spine to choose the
 smallest multi-sibling contracts rather than writing another target-local
 proof.
+The derived reverse-reachability frontier now replays every root closure and
+ranks 113 near-root `Nat`/`Int`/`List` identities without granting proof
+authority. The four bit-observation siblings share a concrete implementation
+spine including `Nat.land`, `Nat.ble`, `Nat.bitwise`, `Nat.testBit`, and
+`Nat.instAndOp`. Next: separate observation laws from generic infrastructure
+in that intersection and construct one explicit contract interface consumed by
+at least three siblings.
 
 <!-- plan-section: landed-changes -->
 

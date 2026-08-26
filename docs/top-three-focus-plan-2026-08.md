@@ -404,14 +404,20 @@ The first implementation-facing connective layer is now derived rather than
 hand-annotated. Fourteen exact definitions abstracted by 25 checked Mathlib
 type slices expand into a proof-isolated transparent implementation-demand
 graph: 1,363 transparent node occurrences and 7,303 direct edge occurrences,
-deduplicated into 366 structural identities and 2,219 identity-bound edges,
-with same-named structural variants and theorem/axiom/recursor boundaries
-retained. This
+represented by 1,000 context-bound transparent nodes, 1,734 declaration nodes,
+and 5,421 identity-bound edges, with same-named structural variants and
+theorem/axiom/recursor boundaries retained. This
 explains why statement-level retrieval alone cannot bridge imported
 representation seams. In particular, imported `Nat.mod` reaches `Nat.decLe`,
 `Nat.ble`, `Nat.modCore`, recursive `Nat.modCore.go`, and subtraction-instance
 machinery. The graph grants no transport or proof authority; it supplies the
 bottom-up dependency spine needed to design top-down semantic contracts.
+The first reverse-reachability view now replays all 14 roots over that spine
+and ranks 113 near-root `Nat`/`Int`/`List` identities as scheduling context.
+For the four bit-observation siblings, `Nat.land`, `Nat.ble`, `Nat.bitwise`,
+`Nat.testBit`, and the `Nat.instAndOp` projection are shared high-reach nodes.
+This changes the next contract from a one-function `Nat.testBit` wrapper into a
+small explicit bit-observation interface spanning the co-abstractions.
 
 ### Exit evidence
 

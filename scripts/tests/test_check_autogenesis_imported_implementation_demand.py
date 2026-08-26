@@ -25,10 +25,14 @@ class ImportedImplementationDemandTests(unittest.TestCase):
 
     def test_missing_modulus_edge_fails_closed(self):
         data = copy.deepcopy(self.data)
+        names = {node["node_id"]: node["name"] for node in data["nodes"]}
         data["edges"] = [
             edge
             for edge in data["edges"]
-            if not (edge["from"] == "Nat.mod" and edge["to"] == "Nat.modCore")
+            if not (
+                names[edge["from_node_id"]] == "Nat.mod"
+                and names[edge["to_node_id"]] == "Nat.modCore"
+            )
         ]
         data["census"]["distinct_direct_edges"] = len(data["edges"])
         with self.assertRaisesRegex(ValueError, "Nat.mod"):
