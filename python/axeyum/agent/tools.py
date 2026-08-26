@@ -514,6 +514,7 @@ def lemma_neighbourhood(
             rows.append(
                 LemmaNeighbourhoodRow(
                     declaration_id=lemma.id,
+                    canonical_type=lemma.canonical_type,
                     axiom_footprint_size=lemma.axiom_footprint_size,
                     visible_in=lemma.visible_in,
                     dependencies=lemma.dependencies,
@@ -569,6 +570,7 @@ def lemma_candidates(
                 rows.append(
                     LemmaCandidateRow(
                         declaration_id=lemma.id,
+                        canonical_type=lemma.canonical_type,
                         source_dependency_fact_id=dependency_fact_id,
                         axiom_footprint_size=lemma.axiom_footprint_size,
                         visible_in=lemma.visible_in,

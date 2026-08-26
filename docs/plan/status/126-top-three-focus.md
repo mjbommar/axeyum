@@ -18,7 +18,8 @@ the reference constructor was hand-authored. Exact evidence identity now links
 395 kernel theorems to 390 facts, with only four evidence identities left
 explicitly unresolved: three are descriptive IDs and `Rat.normalize` is
 correctly classified as a definition, not a theorem. Every search row now also
-carries its kernel-rendered canonical type. Next: expose that
+carries its kernel-rendered canonical type through both the artifact and agent
+read tools. Next: expose that
 target-agnostic combinator through an
 authoritative producer, then measure sibling conversion.
 
