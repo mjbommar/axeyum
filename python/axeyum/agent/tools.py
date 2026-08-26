@@ -1,4 +1,4 @@
-"""The six tier-R tools: everything the loop is allowed to look at, and nothing else.
+"""The seven tier-R tools: everything the loop is allowed to look at, and nothing else.
 
 Tier R is *read*. No tool here writes a ledger, registers an operation, admits a
 declaration, or invokes a checker; the only bytes an R tool causes to be written
@@ -36,6 +36,7 @@ from pydantic_ai import FunctionToolset, ModelRetry, RunContext
 
 from ..knowledge import facts as facts_api
 from ..knowledge import frontier as frontier_api
+from ..knowledge import lemmas as lemmas_api
 from ..knowledge import nursery as nursery_api
 from ..knowledge import operations as operations_api
 from ..knowledge import overlay as overlay_api
@@ -50,6 +51,8 @@ from .models import (
     FactView,
     FrontierPage,
     FrontierRow,
+    LemmaNeighbourhoodPage,
+    LemmaNeighbourhoodRow,
     Neighbourhood,
     NeighbourRow,
     OperationRegistryView,
@@ -73,6 +76,7 @@ TOOL_TIERS: dict[str, Literal["read", "proposed", "checked"]] = {
     "fact_get": "read",
     "fact_neighbourhood": "read",
     "kernel_theorems": "read",
+    "lemma_neighbourhood": "read",
     "operation_registry": "read",
     "overlay_query": "read",
     # Tier R, GUARDED (slice A6). Still `read` -- they read the world and write
@@ -468,6 +472,63 @@ def kernel_theorems(
         )
 
     return _timed("kernel_theorems", ctx, body)
+
+
+def lemma_neighbourhood(
+    ctx: RunContext[AgentDeps],
+    name_glob: str = "",
+    fact_id: str = "",
+) -> LemmaNeighbourhoodPage:
+    """Retrieve kernel-observed lemma dependencies and exact fact links.
+
+    Rows are candidates only: a dependency edge records what an accepted proof
+    term used, not that the theorem applies to the current goal. Supply exactly
+    one of ``name_glob`` or ``fact_id``. Held-out fact identities are removed
+    before any row reaches the transcript.
+
+    Args:
+        name_glob: Shell-style glob over exact kernel declaration names.
+        fact_id: Fact id whose evidence names a kernel theorem exactly.
+    """
+
+    def body() -> LemmaNeighbourhoodPage:
+        if bool(name_glob) == bool(fact_id):
+            raise ToolRefusal("supply exactly one of name_glob or fact_id")
+        root = ctx.deps.root
+        index = lemmas_api.load(root)
+        if fact_id:
+            if fact_id in _held_out(str(root)):
+                raise ToolRefusal("requested fact is not referenceable in this episode")
+            selected = list(index.for_fact(fact_id))
+        else:
+            selected = [lemma for lemma in index if glob_match(lemma.id, name_glob)]
+        selected.sort(key=lambda lemma: lemma.id)
+        rows: list[LemmaNeighbourhoodRow] = []
+        dropped = 0
+        for lemma in selected:
+            safe_fact_ids, n_dropped = _safe(root, lemma.fact_ids)
+            dropped += n_dropped
+            rows.append(
+                LemmaNeighbourhoodRow(
+                    declaration_id=lemma.id,
+                    axiom_footprint_size=lemma.axiom_footprint_size,
+                    visible_in=lemma.visible_in,
+                    dependencies=lemma.dependencies,
+                    dependents=lemma.dependents,
+                    dependency_depth=lemma.dependency_depth,
+                    fact_ids=safe_fact_ids,
+                )
+            )
+        return LemmaNeighbourhoodPage(
+            name_glob=name_glob,
+            fact_id=fact_id,
+            matched=len(rows),
+            total_lemmas=len(index),
+            dropped_held_out_fact_links=dropped,
+            rows=tuple(rows[:MAX_ROWS]),
+        )
+
+    return _timed("lemma_neighbourhood", ctx, body)
 
 
 def operation_registry(ctx: RunContext[AgentDeps], fact_id: str = "") -> OperationRegistryView:
@@ -1095,6 +1156,7 @@ TIER_R_TOOLS: tuple[Callable[..., Any], ...] = (
     fact_get,
     fact_neighbourhood,
     kernel_theorems,
+    lemma_neighbourhood,
     operation_registry,
     overlay_query,
 )
@@ -1245,6 +1307,7 @@ __all__ = [
     "independent_check",
     "is_output_tool",
     "kernel_theorems",
+    "lemma_neighbourhood",
     "modeq_family",
     "operation_registry",
     "overlay_query",

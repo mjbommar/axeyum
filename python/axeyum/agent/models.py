@@ -259,6 +259,27 @@ class TheoremPage(_Frozen):
     rows: tuple[TheoremRow, ...]
 
 
+class LemmaNeighbourhoodRow(_Frozen):
+    declaration_id: str
+    axiom_footprint_size: int
+    visible_in: tuple[str, ...]
+    dependencies: tuple[str, ...]
+    dependents: tuple[str, ...]
+    dependency_depth: int
+    fact_ids: tuple[str, ...]
+
+
+class LemmaNeighbourhoodPage(_Frozen):
+    """Search-only kernel dependency rows; applicability remains unchecked."""
+
+    name_glob: str
+    fact_id: str
+    matched: int
+    total_lemmas: int
+    dropped_held_out_fact_links: int
+    rows: tuple[LemmaNeighbourhoodRow, ...]
+
+
 class OperationRow(_Frozen):
     operation_id: str
     scope: str
@@ -578,6 +599,8 @@ __all__ = [
     "FactView",
     "FrontierPage",
     "FrontierRow",
+    "LemmaNeighbourhoodPage",
+    "LemmaNeighbourhoodRow",
     "NeighbourRow",
     "Neighbourhood",
     "NoGeneralRoute",

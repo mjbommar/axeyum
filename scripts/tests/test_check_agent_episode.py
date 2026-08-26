@@ -131,6 +131,26 @@ class AgentEpisodeTests(unittest.TestCase):
         self.assertIn("EPISODES|checked=2|ok=2|failed=0", out)
         self.assertEqual(code, 0, out)
 
+    def test_production_only_excludes_fixtures_and_fails_on_zero(self) -> None:
+        code, out = run(str(FIXTURES), "--production-only")
+        self.assertIn(
+            "EPISODE_DISCOVERY|production_only=true|candidates=0|excluded_fixtures=2",
+            out,
+        )
+        self.assertIn("EPISODES|checked=0|ok=0|failed=0", out)
+        self.assertNotEqual(code, 0, out)
+
+    def test_production_only_keeps_real_episode_paths(self) -> None:
+        production = self.dir / "2026-08-25"
+        production.mkdir()
+        episode = production / "episode.json"
+        episode.write_text(DECLINED.read_text())
+        paths, excluded = gate.episode_paths(
+            [str(self.dir)], production_only=True
+        )
+        self.assertEqual(paths, [episode])
+        self.assertEqual(excluded, 0)
+
     def test_the_held_out_set_agrees_with_the_isolation_gate(self) -> None:
         isolation = _module(
             ROOT / "scripts/check-autogenesis-holdout-isolation.py",

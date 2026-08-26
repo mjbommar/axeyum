@@ -344,6 +344,8 @@ step autogenesis-knowledge-controls ./scripts/check-autogenesis-knowledge-contro
 step autogenesis-kernel-projection python3 -m unittest scripts.tests.test_validate_autogenesis_kernel_projection
 step autogenesis-kernel-projection-content python3 scripts/validate-autogenesis-kernel-dependency-projection.py
 step autogenesis-kernel-projection-fresh python3 scripts/gen-autogenesis-kernel-dependency-projection.py --check
+step autogenesis-kernel-lemma-index-tests python3 -m unittest scripts.tests.test_gen_autogenesis_kernel_lemma_search_index
+step autogenesis-kernel-lemma-index-fresh python3 scripts/gen-autogenesis-kernel-lemma-search-index.py --check
 step autogenesis-obstruction-projection python3 -m unittest scripts.tests.test_validate_autogenesis_obstruction_projection
 step autogenesis-obstruction-projection-content python3 scripts/validate-autogenesis-obstruction-projection.py
 step autogenesis-obstruction-projection-fresh python3 scripts/gen-autogenesis-obstruction-projection.py --check
@@ -673,7 +675,7 @@ step tactic-catalog-census python3 scripts/gen-tactic-catalog-census.py --check
 # default `fetch-depth: 1`, where the episode's commit object is absent and
 # every ancestor query answers "cannot resolve". The rule is tested in the
 # unittest suite instead. See artifacts/episodes/README.md.
-step episodes       python3 scripts/check-agent-episode.py artifacts/episodes
+step episodes       python3 scripts/check-agent-episode.py artifacts/episodes --production-only
 step episode-tests  python3 -m unittest scripts.tests.test_check_agent_episode
 
 # The mobility census gate (docs/python-2026-08/07-mobility-census.md, slice A7).
