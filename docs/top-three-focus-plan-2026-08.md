@@ -22,9 +22,9 @@ semantics, evidence, provenance, checking, and compounding knowledge loop.
 - The pure-Rust reasoning stack has real end-to-end SMT, CAS, kernel, program
   verification, and proof-artifact routes, but its coverage and assurance are
   uneven by fragment.
-- The generated kernel projection currently contains 1,594 declarations: 1,243
-  theorems, 248 definitions, 29 constructors, 22 inductives, 22 recursors, and
-  30 axioms. It reports 1,564 axiom-free declarations and 7,057 direct
+- The generated kernel projection currently contains 1,597 declarations: 1,243
+  theorems, 251 definitions, 29 constructors, 22 inductives, 22 recursors, and
+  30 axioms. It reports 1,567 axiom-free declarations and 7,057 direct
   theorem-dependency edges. This is a substantial checked library, but it is
   not an autonomous-production count.
 - The fact ledger contains 696 propositions: 502 proved, 4 refuted, 2 computed,

@@ -1,15 +1,15 @@
 {
   "census": {
-    "axiom_free_declarations": 1564,
+    "axiom_free_declarations": 1567,
     "declaration_kinds": {
       "axiom": 30,
       "constructor": 29,
-      "definition": 248,
+      "definition": 251,
       "inductive": 22,
       "recursor": 22,
       "theorem": 1243
     },
-    "declarations": 1594,
+    "declarations": 1597,
     "direct_theorem_dependency_edges": 7057,
     "theorems": 1243
   },
@@ -10514,6 +10514,73 @@
       ],
       "direct_theorem_dependencies": [],
       "id": "CReal.ivt_bisect",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "canonical_type": "((x0 : ((x0 : CReal) -> CReal)) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : AxNat) -> ((x4 : Bool) -> CReal)))))",
+      "declaration_kind": "definition",
+      "direct_declaration_dependencies": [
+        "Bool",
+        "Bool.false",
+        "Bool.rec",
+        "Bool.true",
+        "CReal",
+        "CReal.add",
+        "CReal.mul",
+        "CReal.neg",
+        "CReal.ofRat",
+        "CReal.seq",
+        "Nat",
+        "Nat.mul",
+        "Nat.rec",
+        "Nat.succ",
+        "Nat.zero",
+        "Rat.ble",
+        "Rat.natDivSucc"
+      ],
+      "direct_theorem_dependencies": [],
+      "id": "CReal.ivt_bisect_diag",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "canonical_type": "((x0 : ((x0 : CReal) -> CReal)) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : AxNat) -> CReal))))",
+      "declaration_kind": "definition",
+      "direct_declaration_dependencies": [
+        "Bool.true",
+        "CReal",
+        "CReal.ivt_bisect_diag",
+        "Nat"
+      ],
+      "direct_theorem_dependencies": [],
+      "id": "CReal.ivt_bisect_diag_hi",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "canonical_type": "((x0 : ((x0 : CReal) -> CReal)) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : AxNat) -> CReal))))",
+      "declaration_kind": "definition",
+      "direct_declaration_dependencies": [
+        "Bool.false",
+        "CReal",
+        "CReal.ivt_bisect_diag",
+        "Nat"
+      ],
+      "direct_theorem_dependencies": [],
+      "id": "CReal.ivt_bisect_diag_lo",
       "visible_in": [
         "complex",
         "cpoint",
