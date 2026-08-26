@@ -2333,6 +2333,19 @@ pub struct CRealPrelude {
     /// `[a, b]` makes `F` antitone there, via the same `neg ∘ F` trick
     /// [`Self::constant_of_zero_deriv`] uses for its second direction.
     pub antitone_of_nonpos_deriv: NameId,
+    /// `CReal.strict_antitone_of_neg_deriv : ∀ F F' a b, HasDerivativeOn F F'
+    /// a b → ∀ k, (∀ z, le a z → le z b → le (F' z) (neg (ofRat (natDivSucc 1
+    /// k)))) → ∀ x y, le a x → lt x y → le y b → lt (F y) (F x)`
+    /// (`creal/monotone.rs`) — the STRICT mirror of
+    /// [`Self::antitone_of_nonpos_deriv`], built the same way that theorem
+    /// was built from [`Self::monotone_of_nonneg_deriv`]: apply
+    /// [`Self::strict_mono_of_pos_deriv`] to `neg ∘ F` via
+    /// [`Self::has_derivative_neg`], against a uniformly-negative derivative
+    /// bounded away from zero by `1/(k+1)`, then flip the resulting
+    /// `lt (neg (F x)) (neg (F y))` back to `lt (F y) (F x)` via a
+    /// generic `lt (neg u) (neg v) → lt v u` derived from the field axioms
+    /// (this development has `neg_le_neg` for `le` but no strict analogue).
+    pub strict_antitone_of_neg_deriv: NameId,
 
     /// `CReal.ivt_iter : ∀ F P0 Q0 eps, lt zero eps → le P0 Q0 → le (F P0)
     /// eps → le (neg eps) (F Q0) → ∀ n : Nat, ∃ P Q, le P0 P ∧ le P Q ∧ le Q
@@ -2690,6 +2703,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         ivt_step: kernel.name_str(creal, "ivt_step"),
         constant_of_zero_deriv: kernel.name_str(creal, "constant_of_zero_deriv"),
         antitone_of_nonpos_deriv: kernel.name_str(creal, "antitone_of_nonpos_deriv"),
+        strict_antitone_of_neg_deriv: kernel.name_str(creal, "strict_antitone_of_neg_deriv"),
         ivt_iter: kernel.name_str(creal, "ivt_iter"),
         has_derivative_unique: kernel.name_str(creal, "hasDerivative_unique"),
     }

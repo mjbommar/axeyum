@@ -3882,7 +3882,8 @@ pub(super) fn declare_monotone_of_nonneg_deriv_all(
     declare_strict_mono_of_pos_deriv(d, p)?;
     declare_strict_injective_of_pos_deriv(d, p)?;
     declare_constant_of_zero_deriv(d, p)?;
-    declare_antitone_of_nonpos_deriv(d, p)
+    declare_antitone_of_nonpos_deriv(d, p)?;
+    declare_strict_antitone_of_neg_deriv(d, p)
 }
 
 // =============================================================================
@@ -4265,6 +4266,244 @@ pub(super) fn declare_antitone_of_nonpos_deriv(
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.antitone_of_nonpos_deriv,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// =============================================================================
+// `CReal.strict_antitone_of_neg_deriv`
+// =============================================================================
+//
+// The strict mirror of `antitone_of_nonpos_deriv` above, built from
+// `strict_mono_of_pos_deriv` exactly the way that theorem was built from
+// `monotone_of_nonneg_deriv`: apply it to `neg ∘ F` (via `hasDerivative_neg`)
+// against the negated, uniformly-POSITIVE derivative bound, then flip the
+// resulting `lt (neg (F x)) (neg (F y))` back to `lt (F y) (F x)`.
+//
+// The flip needs a strict analogue of `neg_le_neg` that this development does
+// not otherwise carry (`CRealPrelude` has `neg_le_neg` for `le`, never for
+// `lt`), so [`cancel_add_neg_right`]/[`cancel_add_neg_left`]/[`neg_flip_lt`]
+// below derive `lt (neg u) (neg v) -> lt v u` generically from the field
+// axioms (`add_lt_add_of_le_of_lt` at `x := y := add u v`, then two
+// ring-cancellation `Equiv`s discharge each side via `lt_congr`) rather than
+// from `lt`'s own (opaque, existential) definition -- the same generic-axiom
+// route `equiv_of_sub_equiv_zero`/`double_neg` above already use for `Equiv`.
+
+/// `Equiv (add (add x y) (neg y)) x` -- `(x+y)-y ~ x`. `add_assoc` regroups
+/// to `add x (add y (neg y))`, `add_neg` collapses the inner pair to `zero`,
+/// `add_zero` trims it. No commutativity needed.
+fn cancel_add_neg_right(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
+    let neg_y = cneg(d, p, y);
+    let xy = cadd(d, p, x, y);
+    let lhs = cadd(d, p, xy, neg_y);
+    let step1 = d.lemma(p.add_assoc, &[x, y, neg_y]);
+    // step1 : Equiv lhs (add x (add y neg_y))
+    let y_negy = cadd(d, p, y, neg_y);
+    let mid = cadd(d, p, x, y_negy);
+    let zero_c = czero(d, p);
+    let cancel = d.lemma(p.add_neg, &[y]); // Equiv y_negy zero
+    let refl_x = erefl(d, p, x);
+    let step2 = d.lemma(p.add_congr, &[x, x, y_negy, zero_c, refl_x, cancel]);
+    // step2 : Equiv mid (add x zero)
+    let x_zero = cadd(d, p, x, zero_c);
+    let step3 = d.lemma(p.add_zero, &[x]); // Equiv x_zero x
+    echain(d, p, lhs, &[(mid, step1), (x_zero, step2), (x, step3)])
+}
+
+/// `Equiv (add (add x y) (neg x)) y` -- commute `add x y` to `add y x` first,
+/// then [`cancel_add_neg_right`] at `(y, x)`.
+fn cancel_add_neg_left(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
+    let neg_x = cneg(d, p, x);
+    let xy = cadd(d, p, x, y);
+    let lhs = cadd(d, p, xy, neg_x);
+    let yx = cadd(d, p, y, x);
+    let comm = d.lemma(p.add_comm, &[x, y]); // Equiv xy yx
+    let refl_negx = erefl(d, p, neg_x);
+    let step1 = d.lemma(p.add_congr, &[xy, yx, neg_x, neg_x, comm, refl_negx]);
+    // step1 : Equiv lhs (add yx neg_x)
+    let rhs2 = cadd(d, p, yx, neg_x);
+    let step2 = cancel_add_neg_right(d, p, y, x); // Equiv rhs2 y
+    echain(d, p, lhs, &[(rhs2, step1), (y, step2)])
+}
+
+/// From `hlt : lt (neg u) (neg v)`, derive `lt v u` -- the strict order
+/// reversal under negation this development has no primitive for. Add
+/// `add u v` to both sides of `hlt` via `add_lt_add_of_le_of_lt` (`le_refl`
+/// for the unchanged side), then `lt_congr` folds each resulting sum back to
+/// `v`/`u` via [`cancel_add_neg_left`]/[`cancel_add_neg_right`].
+fn neg_flip_lt(d: &mut IntDev<'_>, p: CRealPrelude, u: ExprId, v: ExprId, hlt: ExprId) -> ExprId {
+    let neg_u = cneg(d, p, u);
+    let neg_v = cneg(d, p, v);
+    let uv = cadd(d, p, u, v);
+    let le_uv = d.lemma(p.le_refl, &[uv]);
+    let step = d.lemma(
+        p.add_lt_add_of_le_of_lt,
+        &[uv, uv, neg_u, neg_v, le_uv, hlt],
+    );
+    // step : lt (add uv neg_u) (add uv neg_v)
+    let lhs1 = cadd(d, p, uv, neg_u);
+    let lhs2 = cadd(d, p, uv, neg_v);
+    let eq1 = cancel_add_neg_left(d, p, u, v); // Equiv lhs1 v
+    let eq2 = cancel_add_neg_right(d, p, u, v); // Equiv lhs2 u
+    d.lemma(p.lt_congr, &[lhs1, v, lhs2, u, eq1, eq2, step])
+}
+
+/// `CReal.strict_antitone_of_neg_deriv : ∀ F F' a b, HasDerivativeOn F F' a b
+/// → ∀ k, (∀ z, le a z → le z b → le (F' z) (neg (ofRat (natDivSucc 1 k)))) →
+/// ∀ x y, le a x → lt x y → le y b → lt (F y) (F x)`. See the block comment
+/// above for the route.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_strict_antitone_of_neg_deriv(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let func_ty = d.arrow(carrier, carrier);
+    let nat = d.nat_ty();
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let fp_fv = d.fresh_fvar();
+    let fp = d.kernel().fvar(fp_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let hf_ty = d.const_app(p.has_derivative_on, &[f, fp, a, b]);
+    let hf_fv = d.fresh_fvar();
+    let hf = d.kernel().fvar(hf_fv);
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let a_k_rat = div_succ(d, p, 1, k);
+    let a_k = embed(d, p, a_k_rat);
+    let neg_a_k = cneg(d, p, a_k);
+
+    // hderiv_ty : ∀ z, le a z → le z b → le (F' z) (neg a_k).
+    let hderiv_ty = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let fpz = d.apply(fp, &[z]);
+        let concl = cle(d, p, fpz, neg_a_k);
+        let z_le_b = cle(d, p, z, b);
+        let after_upper = d.arrow(z_le_b, concl);
+        let a_le_z = cle(d, p, a, z);
+        let after_lower = d.arrow(a_le_z, after_upper);
+        d.pi_fv(z_fv, carrier, after_lower)
+    };
+    let hderiv_fv = d.fresh_fvar();
+    let hderiv = d.kernel().fvar(hderiv_fv);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+
+    let hax_ty = cle(d, p, a, x);
+    let hax_fv = d.fresh_fvar();
+    let hax = d.kernel().fvar(hax_fv);
+    let hxy_ty = clt(d, p, x, y);
+    let hxy_fv = d.fresh_fvar();
+    let hxy = d.kernel().fvar(hxy_fv);
+    let hyb_ty = cle(d, p, y, b);
+    let hyb_fv = d.fresh_fvar();
+    let hyb = d.kernel().fvar(hyb_fv);
+
+    let fx = d.apply(f, &[x]);
+    let fy = d.apply(f, &[y]);
+
+    let neg_f = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let fr = d.apply(f, &[r]);
+        let nfr = cneg(d, p, fr);
+        d.lam_fv(r_fv, carrier, nfr)
+    };
+    let neg_fp = {
+        let x2_fv = d.fresh_fvar();
+        let x2 = d.kernel().fvar(x2_fv);
+        let fpx2 = d.apply(fp, &[x2]);
+        let nfpx2 = cneg(d, p, fpx2);
+        d.lam_fv(x2_fv, carrier, nfpx2)
+    };
+    let hf_neg = d.lemma(p.has_derivative_neg, &[f, fp, a, b, hf]);
+
+    // hderiv_pos : ∀ z, le a z → le z b → le a_k (neg (F' z)), from the
+    // uniform upper-bound hypothesis via `neg_le_neg` against `double_neg`.
+    let hderiv_pos = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let haz_fv = d.fresh_fvar();
+        let haz = d.kernel().fvar(haz_fv);
+        let hzb_fv = d.fresh_fvar();
+        let hzb = d.kernel().fvar(hzb_fv);
+        let h_bound = d.apply(hderiv, &[z, haz, hzb]); // le (F' z) (neg a_k)
+        let fpz = d.apply(fp, &[z]);
+        let neg_fpz = cneg(d, p, fpz);
+        let step = d.lemma(p.neg_le_neg, &[fpz, neg_a_k, h_bound]);
+        // step : le (neg neg_a_k) (neg fpz)
+        let nn_ak = cneg(d, p, neg_a_k);
+        let dn = double_neg(d, p, a_k); // Equiv nn_ak a_k
+        let refl_neg_fpz = erefl(d, p, neg_fpz);
+        let body = d.lemma(
+            p.le_congr,
+            &[nn_ak, a_k, neg_fpz, neg_fpz, dn, refl_neg_fpz, step],
+        );
+        // body : le a_k (neg (F' z))
+        let a_le_z = cle(d, p, a, z);
+        let z_le_b = cle(d, p, z, b);
+        let with_hzb = d.lam_fv(hzb_fv, z_le_b, body);
+        let with_haz = d.lam_fv(haz_fv, a_le_z, with_hzb);
+        d.lam_fv(z_fv, carrier, with_haz)
+    };
+
+    let lt_neg_fx_neg_fy = d.lemma(
+        p.strict_mono_of_pos_deriv,
+        &[
+            neg_f, neg_fp, a, b, hf_neg, k, hderiv_pos, x, y, hax, hxy, hyb,
+        ],
+    );
+    // lt_neg_fx_neg_fy : lt (neg_f x) (neg_f y), beta-equal to
+    // lt (neg fx) (neg fy).
+    let value_body = neg_flip_lt(d, p, fx, fy, lt_neg_fx_neg_fy);
+
+    let value = {
+        let with_hyb = d.lam_fv(hyb_fv, hyb_ty, value_body);
+        let with_hxy = d.lam_fv(hxy_fv, hxy_ty, with_hyb);
+        let with_hax = d.lam_fv(hax_fv, hax_ty, with_hxy);
+        let with_y = d.lam_fv(y_fv, carrier, with_hax);
+        let with_x = d.lam_fv(x_fv, carrier, with_y);
+        let with_hderiv = d.lam_fv(hderiv_fv, hderiv_ty, with_x);
+        let with_k = d.lam_fv(k_fv, nat, with_hderiv);
+        let with_hf = d.lam_fv(hf_fv, hf_ty, with_k);
+        let with_b = d.lam_fv(b_fv, carrier, with_hf);
+        let with_a = d.lam_fv(a_fv, carrier, with_b);
+        let with_fp = d.lam_fv(fp_fv, func_ty, with_a);
+        d.lam_fv(f_fv, func_ty, with_fp)
+    };
+    let ty = {
+        let concl = clt(d, p, fy, fx);
+        let after_hyb = d.arrow(hyb_ty, concl);
+        let after_hxy = d.arrow(hxy_ty, after_hyb);
+        let after_hax = d.arrow(hax_ty, after_hxy);
+        let over_y = d.pi_fv(y_fv, carrier, after_hax);
+        let over_x = d.pi_fv(x_fv, carrier, over_y);
+        let after_hderiv = d.arrow(hderiv_ty, over_x);
+        let over_k = d.pi_fv(k_fv, nat, after_hderiv);
+        let after_hf = d.arrow(hf_ty, over_k);
+        let over_b = d.pi_fv(b_fv, carrier, after_hf);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        let over_fp = d.pi_fv(fp_fv, func_ty, over_a);
+        d.pi_fv(f_fv, func_ty, over_fp)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.strict_antitone_of_neg_deriv,
         uparams: vec![],
         ty,
         value,
