@@ -121,7 +121,8 @@
 
 use super::ring_helpers::right_distrib;
 use super::{
-    CRealPrelude, DERIVED_HEIGHT, and_intro, cadd, creal_ty, div_succ, embed, equiv, sample, within,
+    CRealPrelude, DERIVED_HEIGHT, and_intro, cadd, creal_ty, div_succ, embed, equiv, halves,
+    sample, within,
 };
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
@@ -130,6 +131,7 @@ use crate::int_prelude::ops::{IntDev, exists_elim};
 use crate::nat_prelude::NatOps;
 use crate::rat_prelude::ops::{
     nat_eq_to_rat, nat_rewrite_prop, radd, rat_eq_rewrite, rchain, req, rle, rmul, rneg, rone,
+    rzero,
 };
 
 /// Delta height for `CReal.riemannSum`: above `CReal.sumRange`
@@ -153,7 +155,8 @@ pub(super) fn declare_integral(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<()
     declare_riemann_sum_le(d, p)?;
     declare_riemann_sample_in_bounds(d, p)?;
     declare_riemann_sum_le_on(d, p)?;
-    declare_riemann_sum_const(d, p)
+    declare_riemann_sum_const(d, p)?;
+    declare_mesh_le_of_ge(d, p)
 }
 
 // --- shared term builders ----------------------------------------------------
@@ -2359,6 +2362,332 @@ fn succ_mul_succ(d: &mut IntDev<'_>, n: ExprId, m: ExprId) -> (ExprId, ExprId) {
     let m_prime = d.const_app(np.add, &[nm_n, m]);
     let proof = d.lemma(np.succ_mul, &[n, sm]);
     (m_prime, proof)
+}
+
+// --- the archimedean rescaling: Δ_m into a UniformlyContinuousOn-shaped bound
+
+/// From `hab : le a b`, derive `le zero (width_of a b)` — `b − a ≥ 0`.
+/// Reproduces `monotone.rs`'s private `step_nonneg_of`'s `width_nonneg`
+/// fragment (that function bundles it with a `frac_real` factor this call
+/// site does not need).
+fn width_nonneg_of(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    hab: ExprId,
+) -> ExprId {
+    let zero_c = czero(d, p);
+    let na = cneg(d, p, a);
+    let refl_na = d.lemma(p.le_refl, &[na]);
+    let a_na = cadd(d, p, a, na);
+    let b_na = cadd(d, p, b, na);
+    let shifted = d.lemma(p.add_le_add, &[a, b, na, na, hab, refl_na]);
+    let hn = d.lemma(p.add_neg, &[a]);
+    let refl_bna = d.lemma(p.equiv_refl, &[b_na]);
+    d.lemma(
+        p.le_congr,
+        &[a_na, zero_c, b_na, b_na, hn, refl_bna, shifted],
+    )
+}
+
+/// `CReal.bound x`, `CReal.bound x + 1`, and a DIRECT proof of `le x (ofNat
+/// (bound x + 1))` — reproduces `archimedean.rs`'s private `le_proof` (inside
+/// `declare_archimedean_property`), generalized to an arbitrary `x`.
+/// `CReal.bound` is a total COMPUTABLE projection (`archimedean.rs`'s own
+/// module documentation), so this needs no existential elimination at all:
+/// the witness `bound x + 1` is read directly off `x`, unlike
+/// `monotone_of_nonneg_deriv`'s Archimedean closing step, which eliminates
+/// `p.archimedean`'s `∃ n, …` to obtain its bound.
+///
+/// Returns `(c, magnitude, proof)` with `magnitude = Nat.succ c`,
+/// `c = CReal.bound x`, `proof : CReal.le x (CReal.ofNat magnitude)`.
+fn direct_bound_le(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> (ExprId, ExprId, ExprId) {
+    let rat = p.rat;
+    let nat = d.nat_ty();
+
+    let c = d.const_app(p.bound, &[x]);
+    let magnitude = d.succ(c);
+    let zero_nat = d.num(0);
+    let target = d.const_app(rat.nat_div_succ, &[magnitude, zero_nat]);
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let point = sample(d, p, x, k);
+    let bw = d.lemma(p.bound_within, &[x, k]);
+    let (_, upper) = halves(d, p, point, target, bw);
+
+    let two_nat = d.num(2);
+    let bound2 = d.const_app(rat.nat_div_succ, &[two_nat, k]);
+    let nonneg2 = d.lemma(rat.zero_le_nat_div_succ, &[two_nat, k]);
+
+    let zero = rzero(d, rat);
+    let target_refl = d.lemma(rat.le_refl, &[target]);
+    let widened = d.lemma(
+        rat.add_le_add,
+        &[target, target, zero, bound2, target_refl, nonneg2],
+    );
+    let padded_target = radd(d, target, zero);
+    let sum = radd(d, target, bound2);
+    let trim = d.lemma(rat.add_zero, &[target]);
+    let target_le_sum = rat_eq_rewrite(d, padded_target, target, trim, widened, &|d, t| {
+        rle(d, rat, t, sum)
+    });
+
+    let chained = d.lemma(rat.le_trans, &[point, target, sum, upper, target_le_sum]);
+    let at_index = d.lemma(rat.sub_le_of_le, &[point, target, bound2, chained]);
+    let proof_body = d.lam_fv(k_fv, nat, at_index);
+    (c, magnitude, proof_body)
+}
+
+/// `Equiv (mul (ofNat magnitude) (ofRat (natDivSucc 1 deep))) (ofRat
+/// (natDivSucc 1 outer))`, given `magnitude = Nat.succ c` and `deep =
+/// magnitude*outer + c` (a SYNTACTIC requirement: `Rat.natDivSucc_scale` is
+/// applied at `(c, outer)` and its conclusion must match `deep` on the
+/// nose). Duplicated verbatim from `monotone.rs`'s private
+/// `magnitude_times_frac_eq_outer` (that file is out of scope for this
+/// slice).
+fn magnitude_times_frac_eq_outer(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    c: ExprId,
+    magnitude: ExprId,
+    outer: ExprId,
+    deep: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let nat = rat.int.nat;
+    let one_nat = d.num(1);
+    let zero_nat = d.num(0);
+
+    let mag_rat = d.const_app(rat.nat_div_succ, &[magnitude, zero_nat]);
+    let frac_rat = d.const_app(rat.nat_div_succ, &[one_nat, deep]);
+    let mag_real = embed(d, p, mag_rat);
+    let frac_real = embed(d, p, frac_rat);
+    let product_real = cmul(d, p, mag_real, frac_real);
+
+    let product_rat = rmul(d, mag_rat, frac_rat);
+    let fused = {
+        let scaled = NatOps::mul(d, magnitude, one_nat);
+        d.const_app(rat.nat_div_succ, &[scaled, deep])
+    };
+    let fuse = d.lemma(rat.nat_div_succ_mul, &[magnitude, one_nat, deep]);
+    let collapsed = d.const_app(rat.nat_div_succ, &[magnitude, deep]);
+    let collapse = {
+        let scaled = NatOps::mul(d, magnitude, one_nat);
+        let identity = d.lemma(nat.mul_one, &[magnitude]);
+        nat_eq_to_rat(d, scaled, magnitude, identity, &|d, t| {
+            d.const_app(rat.nat_div_succ, &[t, deep])
+        })
+    };
+    let outer_rat = d.const_app(rat.nat_div_succ, &[one_nat, outer]);
+    let scale = d.lemma(rat.nat_div_succ_scale, &[c, outer]);
+    // scale : Eq Rat (natDivSucc magnitude deep) (natDivSucc 1 outer),
+    // PROVIDED `deep` is exactly `mul(magnitude, outer) + c`.
+
+    let (_, chain) = rchain(
+        d,
+        product_rat,
+        &[(fused, fuse), (collapsed, collapse), (outer_rat, scale)],
+    );
+
+    let of_rat_mul_step = d.lemma(p.of_rat_mul, &[mag_rat, frac_rat]);
+    rat_eq_rewrite(
+        d,
+        product_rat,
+        outer_rat,
+        chain,
+        of_rat_mul_step,
+        &|d, t| {
+            let embedded = embed(d, p, t);
+            equiv(d, p, product_real, embedded)
+        },
+    )
+}
+
+/// `le (mul diff (ofRat (natDivSucc 1 deep))) (ofRat (natDivSucc 1 outer))`,
+/// given `diff_le_mag : le diff (ofNat magnitude)`, `magnitude = Nat.succ
+/// c`, `deep = magnitude*outer + c`. Duplicated verbatim from `monotone.rs`'s
+/// private `step_le_outer_bound` (that file is out of scope for this
+/// slice) — the numeric heart of the Archimedean scaling this file's
+/// `mesh_le_of_ge` needs.
+#[allow(clippy::too_many_arguments)]
+fn step_le_outer_bound(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    diff: ExprId,
+    diff_le_mag: ExprId,
+    c: ExprId,
+    magnitude: ExprId,
+    outer: ExprId,
+    deep: ExprId,
+) -> ExprId {
+    let one_nat = d.num(1);
+    let frac_deep_rat = div_succ(d, p, 1, deep);
+    let frac_deep = embed(d, p, frac_deep_rat);
+    let frac_nonneg = {
+        let rzero_expr = d.kernel().const_(p.rat.zero, vec![]);
+        let rle_p = d.lemma(p.rat.zero_le_nat_div_succ, &[one_nat, deep]);
+        d.lemma(p.of_rat_le, &[rzero_expr, frac_deep_rat, rle_p])
+    };
+
+    let step = cmul(d, p, diff, frac_deep);
+    let diff_frac = cmul(d, p, frac_deep, diff);
+    let comm1 = d.lemma(p.mul_comm, &[diff, frac_deep]);
+
+    let om = d.const_app(p.of_nat, &[magnitude]);
+    let mag_frac = cmul(d, p, frac_deep, om);
+    let scaled = d.lemma(
+        p.mul_le_mul_of_nonneg_left,
+        &[frac_deep, diff, om, frac_nonneg, diff_le_mag],
+    );
+
+    let refl_mag_frac = d.lemma(p.equiv_refl, &[mag_frac]);
+    let comm1_symm = d.lemma(p.equiv_symm, &[step, diff_frac, comm1]);
+    let step_le_mag_frac = d.lemma(
+        p.le_congr,
+        &[
+            diff_frac,
+            step,
+            mag_frac,
+            mag_frac,
+            comm1_symm,
+            refl_mag_frac,
+            scaled,
+        ],
+    );
+
+    let frac_mag = cmul(d, p, om, frac_deep);
+    let comm2 = d.lemma(p.mul_comm, &[frac_deep, om]);
+    let collapse = magnitude_times_frac_eq_outer(d, p, c, magnitude, outer, deep);
+    let out_bound_rat = div_succ(d, p, 1, outer);
+    let out_bound = embed(d, p, out_bound_rat);
+    let mag_frac_eq_out = d.lemma(
+        p.equiv_trans,
+        &[mag_frac, frac_mag, out_bound, comm2, collapse],
+    );
+
+    let refl_step = d.lemma(p.equiv_refl, &[step]);
+    d.lemma(
+        p.le_congr,
+        &[
+            step,
+            step,
+            mag_frac,
+            out_bound,
+            refl_step,
+            mag_frac_eq_out,
+            step_le_mag_frac,
+        ],
+    )
+}
+
+/// `CReal.mesh_le_of_ge : ∀ a b outer m, le a b → Nat.le ((Nat.succ (bound
+/// (add b (neg a))))*outer + bound (add b (neg a))) m → le (mul (add b (neg
+/// a)) (ofRat (natDivSucc 1 m))) (ofRat (natDivSucc 1 outer))` — the
+/// ARCHIMEDEAN RESCALING `UniformlyContinuousOn.spec` needs: turning the
+/// mesh width `Δ_m := (b−a)·natDivSucc(1,m)` into a bound of the exact
+/// rational shape `natDivSucc 1 outer` that spec expects, for EVERY block
+/// count `m` at or past a computed threshold.
+///
+/// The threshold and the estimate reuse the SAME construction
+/// `monotone.rs`'s `HasDerivativeOn`-based Archimedean closing step uses
+/// ([`step_le_outer_bound`]/[`magnitude_times_frac_eq_outer`], duplicated
+/// here since that file is out of scope for this slice) — but where that
+/// proof is free to pick its OWN subdivision count, this one is handed an
+/// arbitrary `m` already at least as large as the threshold (`riemannSum`'s
+/// block count is fixed by its caller, not chosen here), so an extra
+/// `Rat.natDivSucc_antitone` step widens the exact-threshold bound across
+/// the gap. No existential elimination anywhere: [`direct_bound_le`] reads
+/// the Archimedean witness directly off `CReal.bound`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+fn declare_mesh_le_of_ge(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let outer_fv = d.fresh_fvar();
+    let outer = d.kernel().fvar(outer_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let width = width_of(d, p, a, b);
+    let (c, magnitude, width_le_mag) = direct_bound_le(d, p, width);
+    let me = NatOps::mul(d, magnitude, outer);
+    let deep = NatOps::add(d, me, c);
+
+    let hge_ty = d.le(deep, m);
+    let hge_fv = d.fresh_fvar();
+    let hge = d.kernel().fvar(hge_fv);
+
+    let width_nonneg = width_nonneg_of(d, p, a, b, hab);
+    let bound_at_deep = step_le_outer_bound(d, p, width, width_le_mag, c, magnitude, outer, deep);
+
+    let one_nat = d.num(1);
+    let frac_m_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, m]);
+    let frac_deep_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, deep]);
+    let out_bound_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, outer]);
+
+    let antitone = d.lemma(p.rat.nat_div_succ_antitone, &[deep, m, hge]);
+    let frac_le_real = d.lemma(p.of_rat_le, &[frac_m_rat, frac_deep_rat, antitone]);
+
+    let frac_m_real = embed(d, p, frac_m_rat);
+    let frac_deep_real = embed(d, p, frac_deep_rat);
+    let out_bound = embed(d, p, out_bound_rat);
+
+    let scaled = d.lemma(
+        p.mul_le_mul_of_nonneg_left,
+        &[
+            width,
+            frac_m_real,
+            frac_deep_real,
+            width_nonneg,
+            frac_le_real,
+        ],
+    );
+
+    let step_m = cmul(d, p, width, frac_m_real);
+    let step_deep = cmul(d, p, width, frac_deep_real);
+    let final_le = d.lemma(
+        p.le_trans,
+        &[step_m, step_deep, out_bound, scaled, bound_at_deep],
+    );
+
+    let concl = cle(d, p, step_m, out_bound);
+    let ty = {
+        let after_hge = d.arrow(hge_ty, concl);
+        let after_hab = d.arrow(hab_ty, after_hge);
+        let over_m = d.pi_fv(m_fv, nat, after_hab);
+        let over_outer = d.pi_fv(outer_fv, nat, over_m);
+        let over_b = d.pi_fv(b_fv, carrier, over_outer);
+        d.pi_fv(a_fv, carrier, over_b)
+    };
+    let value = {
+        let with_hge = d.lam_fv(hge_fv, hge_ty, final_le);
+        let with_hab = d.lam_fv(hab_fv, hab_ty, with_hge);
+        let over_m = d.lam_fv(m_fv, nat, with_hab);
+        let over_outer = d.lam_fv(outer_fv, nat, over_m);
+        let over_b = d.lam_fv(b_fv, carrier, over_outer);
+        d.lam_fv(a_fv, carrier, over_b)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mesh_le_of_ge,
+        uparams: vec![],
+        ty,
+        value,
+    })
 }
 
 #[cfg(test)]
