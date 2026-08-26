@@ -220,6 +220,7 @@ version = "0.1.0"
 dependencies = [
  "axeyum-cas",
  "axeyum-cnf",
+ "serde",
  "serde_json",
 ]
 

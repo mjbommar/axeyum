@@ -635,3 +635,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0562](adr-0562-boolean-anf-interchange-keeps-external-algebra-untrusted.md) | Export bounded canonical Boolean ANF systems while replaying SAT witnesses and withholding credit from uncertified rewrites | accepted |
 | [0563](adr-0563-external-colouring-witnesses-replay-both-semantics-and-cnf.md) | Admit external finite-colouring witnesses only after independent relation replay and regenerated-CNF evaluation | accepted |
 | [0564](adr-0564-bounded-gf2-tensor-rank-search-lifts-and-replays-models.md) | Encode complete bounded GF(2) tensor rank in SAT and admit models only after independent coefficient replay | accepted |
+| [0565](adr-0565-job-shop-optimality-uses-replayed-schedules-and-checked-refutations.md) | Certify classical job-shop optima with independently replayed schedules and DRAT-checked bounded-makespan refutations | accepted |

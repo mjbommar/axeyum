@@ -88,6 +88,7 @@ pub mod compose;
 pub mod cover;
 pub mod family;
 pub mod harness;
+pub mod job_shop;
 pub mod ledger;
 pub mod multiplicative_circuit;
 pub mod offdiag;

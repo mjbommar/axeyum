@@ -112,3 +112,14 @@ seconds and Axeyum's file-backed backward checker accepted its 234,288,465-byte 
 196.98 seconds. The open `<3,2,4>` rank-19 baseline (21,806 variables / 85,824 clauses)
 reached 300 seconds without a model or proof, so its verdict is interrupted and the bracket
 remains `[19,20]`.
+
+**Job-shop certificate route, 2026-08-26.** ADR-0565 adds strict OR-Library parsing,
+independent schedule replay, complete bounded-makespan SAT with machine-order/prefix clauses,
+untrusted model lifting, and file-backed DRAT checking. The public `ft06` control is now
+certified end to end: a 3,692-variable / 15,958-clause SAT model lifts to a replayed makespan-
+55 schedule, while the 3,620-variable / 15,640-clause makespan-54 formula has a 375,015-byte
+DRAT proof accepted by Axeyum; a precedence mutation fails. This reproduces optimum 55 and is
+not advertised as a first result despite finding no earlier artifact in current searches.
+The target `abz7@655` formula fits at 381,418 variables / 4,343,486 clauses, but its lower
+run and the `@656` witness run both reached 300 seconds without proof/model. Both verdicts are
+interrupted, so `abz7 = 656` is not yet certified here.
