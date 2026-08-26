@@ -61,6 +61,27 @@ def validate(data: dict[str, Any], verify_external: bool) -> dict[str, int]:
     if target.get("execution_eligible") is not False:
         raise ValueError("refuted generalized target became execution eligible")
     validate_countermodel(target.get("countermodel"))
+    floor = data.get("statement_trust_floor", {})
+    if floor.get("axiom_footprint") != ["propext"]:
+        raise ValueError("statement trust floor changed")
+    if floor.get("proof_reconstruction_eligible") is not False:
+        raise ValueError("structural statement floor gained proof-reconstruction credit")
+    if floor.get("required_route") != (
+        "reconstruct-clean-definitions-or-accept-weaker-imported-definition-trust"
+    ):
+        raise ValueError("structural statement route changed")
+    receipt_path = ROOT / floor.get("receipt_path", "")
+    receipt_raw = receipt_path.read_bytes()
+    if hashlib.sha256(receipt_raw).hexdigest() != floor.get("receipt_sha256"):
+        raise ValueError("statement trust floor receipt identity changed")
+    receipt = json.loads(receipt_raw)
+    controls = receipt.get("controls", [])
+    if len(controls) != 2 or any(
+        row.get("axiom_footprint") != ["propext"]
+        or row.get("direct_theorem_dependencies") != []
+        for row in controls
+    ):
+        raise ValueError("statement trust floor receipt does not support the route")
     if verify_external:
         for label, receipt in (("candidate", stream), ("target", target)):
             path = Path(receipt.get("path", ""))
@@ -72,6 +93,7 @@ def validate(data: dict[str, Any], verify_external: bool) -> dict[str, int]:
     return {
         "direct_theorem_dependencies": len(dependencies),
         "axiom_footprint": len(expected_footprint),
+        "statement_axiom_floor": len(floor["axiom_footprint"]),
     }
 
 
@@ -114,7 +136,8 @@ def main() -> int:
     print(
         "IMPORTED_TESTBIT_BITWISE_CANDIDATE_OK|"
         f"direct_theorems={census['direct_theorem_dependencies']}|"
-        f"footprint={census['axiom_footprint']}|axiom_free=false"
+        f"footprint={census['axiom_footprint']}|"
+        f"statement_floor={census['statement_axiom_floor']}|axiom_free=false"
     )
     return 0
 

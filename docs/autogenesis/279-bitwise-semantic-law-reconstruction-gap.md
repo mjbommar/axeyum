@@ -189,6 +189,13 @@ the observation from the external candidate pack; the ordinary semantic-law
 gate validates the committed receipt without requiring that 2.2 MiB NDJSON to
 be vendored.
 
+The candidate search index now consumes this distinction. An assumption-bearing
+theorem with no measured statement floor remains eligible for proof
+reconstruction. This candidate instead routes to
+`clean-definition-reconstruction-required`, publishes `[propext]` as its
+statement floor, and sets `proof_reconstruction_eligible = false`. Thus a
+producer cannot keep retrying proofs for a trust cost that no proof can remove.
+
 A bounded oracle exhausts every Boolean vector through width 12: 8,191 vectors,
 90,114 in-range observations, and 8,191 first-out-of-range zero observations.
 It confirms the weighted-sum construction has the intended finite semantics.
