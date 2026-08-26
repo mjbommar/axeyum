@@ -72,7 +72,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 320] = [
+    let expected: [(&str, crate::NameId, &str); 321] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -327,6 +327,11 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ("CReal.bucketIndexBound", p.bucket_index_bound, "theorem"),
         ("CReal.sampleUpperBound", p.sample_upper_bound, "theorem"),
         ("CReal.sampleLowerBound", p.sample_lower_bound, "theorem"),
+        (
+            "CReal.bounded_of_uniformly_continuous",
+            p.bounded_of_uniformly_continuous,
+            "theorem",
+        ),
         ("CReal.ratSqLe", p.rat_sq_le, "theorem"),
         ("CReal.ratSqSandwich", p.rat_sq_sandwich, "theorem"),
         (
@@ -8176,5 +8181,118 @@ fn sqrt_of_zero_at_index_zero_computes_to_zero() {
         "CReal.seq (CReal.sqrt CReal.zero) 0 must NOT check as equal to 1 \
          -- a checker that accepts both 0 and 1 cannot be trusted to have \
          computed anything"
+    );
+}
+
+/// `CReal.bounded_of_uniformly_continuous` instantiated at `F := identity`,
+/// `[a,b] := [0, mag_bound 0]` (`= [0,1]`), using
+/// `CReal.uniformly_continuous_id`. `K` is recomputed from scratch here by
+/// literally re-running `declare_bounded_of_uniformly_continuous`'s own
+/// documented formula (`succ(add(succ(bound(F a)), mul(add(succ(bound
+/// bnd)),2)(succ k)))`, `k := add(mul(succ(succ(succ(succ(zero)))), modulus
+/// 0), succ(succ(succ(zero))))`) over PUBLIC `CRealPrelude` fields only --
+/// never by reusing `uniform_continuity.rs`'s own private helpers -- so this
+/// is a genuine independent check that the theorem's declared type still
+/// matches its documentation, not a tautology.
+///
+/// Negative control: the SAME proof term does NOT check against `K` with the
+/// final `succ` dropped (`t_m_bound` instead of `succ(t_m_bound)`) -- a
+/// genuinely different (and non-degenerate: dropping the last
+/// `mag_bound_fuse_succ` step is exactly the off-by-one a hand-written proof
+/// of this shape is most likely to make) Nat value, not a vacuous or
+/// accidentally-true rewording.
+#[test]
+fn bounded_of_uniformly_continuous_instantiates_on_identity() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = super::creal_ty(&mut d, p);
+
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+    let three_nat = d.num(3);
+
+    let czero = d.kernel().const_(p.zero, vec![]);
+    let nds10 = d.const_app(p.rat.nat_div_succ, &[one_nat, zero_nat]);
+    let unit = d.const_app(p.of_rat, &[nds10]);
+
+    let identity = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+    let huc_id = d.const_app(p.uniformly_continuous_id, &[czero, unit]);
+
+    let rzero_expr = crate::rat_prelude::ops::rzero(&mut d, p.rat);
+    let zero_le_nds10 = d.lemma(p.rat.zero_le_nat_div_succ, &[one_nat, zero_nat]);
+    let hab = d.lemma(p.of_rat_le, &[rzero_expr, nds10, zero_le_nds10]);
+
+    // --- recompute `K` from the documented formula, independently. ---------
+    let modulus = d.const_app(p.uc_modulus, &[identity, czero, unit, huc_id]);
+    let m0 = d.apply(modulus, &[zero_nat]);
+    let succ_three = d.succ(three_nat);
+    let mul_km = NatOps::mul(&mut d, succ_three, m0);
+    let k = NatOps::add(&mut d, mul_km, three_nat);
+    let k1 = d.succ(k);
+
+    let f_a = d.apply(identity, &[czero]);
+    let k_bound = d.const_app(p.bound, &[f_a]);
+    let succ_k_bound = d.succ(k_bound);
+
+    let neg_czero = d.const_app(p.neg, &[czero]);
+    let bnd = d.const_app(p.add, &[unit, neg_czero]);
+    let bound_bnd = d.const_app(p.bound, &[bnd]);
+    let succ_bound_bnd = d.succ(bound_bnd);
+    let m_bound_base = NatOps::add(&mut d, succ_bound_bnd, two_nat);
+    let m_bound = NatOps::mul(&mut d, m_bound_base, k1);
+    let t_m_bound = NatOps::add(&mut d, succ_k_bound, m_bound);
+    let k_final = d.succ(t_m_bound);
+
+    let value = d.const_app(
+        p.bounded_of_uniformly_continuous,
+        &[identity, czero, unit, huc_id, hab],
+    );
+    let ty = d.const_app(p.bounded_on, &[identity, czero, unit, k_final]);
+
+    let anon = d.kernel().anon();
+    let name = d
+        .kernel()
+        .name_str(anon, "__bounded_of_uniformly_continuous_id_positive");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "bounded_of_uniformly_continuous applied to identity on \
+                 [0, mag_bound 0] must check against the documented K \
+                 formula, recomputed independently here: {error:?}"
+            )
+        });
+
+    // Negative control: the same proof does NOT check against `t_m_bound`
+    // (K minus the theorem's own final `succ`).
+    let value_again = d.const_app(
+        p.bounded_of_uniformly_continuous,
+        &[identity, czero, unit, huc_id, hab],
+    );
+    let ty_wrong = d.const_app(p.bounded_on, &[identity, czero, unit, t_m_bound]);
+    let name_wrong = d
+        .kernel()
+        .name_str(anon, "__bounded_of_uniformly_continuous_id_off_by_one");
+    let result = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_wrong,
+        uparams: vec![],
+        ty: ty_wrong,
+        value: value_again,
+    });
+    assert!(
+        result.is_err(),
+        "bounded_of_uniformly_continuous applied to identity must NOT check \
+         against K's own predecessor (t_m_bound, without the final succ) \
+         -- a checker that accepts both K and K-1 has not verified the bound"
     );
 }
