@@ -128,14 +128,88 @@
 //! `Rat.mul` directly, which is the SAME error this module's own opening
 //! section warns against making with `sqrtApprox` vs. its bracket.
 //!
-//! `sq_sqrt`/`sqrt_sq` (relating `sqrt x` back to `x` by squaring) are
-//! **not attempted**. Squaring `sqrt x` goes through `CReal.mul`'s own
-//! sampling (`mulShift`/`mul_index`), which needs a canonical bound on `sqrt
-//! x` itself — exactly the magnitude-bound machinery this `KRegular` proof
-//! deliberately avoided — plus composing two layers of sampling index
-//! (`mul`'s own, `speedup`'s) before the `sqrtApproxSqBracket`-based
-//! convergence squeeze (via `CRealPrelude::equiv_of_bounded`) can even be
-//! stated. That is real, comparably-sized additional work.
+//! ## Update: `sqrt_sq` is the reachable direction, and this doc's own earlier
+//! estimate of the obstruction was too pessimistic — but a real, localized gap
+//! remains
+//!
+//! `sq_sqrt` (`Equiv (mul (sqrt x) (sqrt x)) x`) and `sqrt_sq` (`Equiv (sqrt
+//! (mul x x)) x`) are **not the same difficulty**, and `sqrt_sq` is the one
+//! `complex.rs` actually needs: turning `‖z+w‖ ≤ sqrt(2‖z‖²+2‖w‖²)`
+//! (monotonicity) into `‖z+w‖ ≤ ‖z‖+‖w‖` goes through `2‖z‖²+2‖w‖² ≤
+//! (‖z‖+‖w‖)²` (ordinary ring algebra) and `sqrt_le_sqrt`, landing at
+//! `sqrt((‖z‖+‖w‖)²) ≤ …`-shaped terms — i.e. it needs `sqrt (mul t t) ~ t`
+//! for `t := add (abs z) (abs w)`, **`sqrt_sq`'s exact shape**, not `sq_sqrt`'s.
+//! Both directions need `0 ≤ x`: `sqrtApprox` clamps every sample toward
+//! zero, so for `x < 0` both `sqrt (mul x x)` and `mul (sqrt x) (sqrt x)`
+//! converge to `0 ≠ x`, unlike the four unconditional results above (none of
+//! which relates `sqrt x` back to `x`'s own sign).
+//!
+//! **Three pieces of this file's own earlier estimate do not survive
+//! rereading `product.rs`/`mul_self_zero.rs`/`rat_prelude`, and should not be
+//! repeated:**
+//!
+//! 1. *"needs a canonical bound on `sqrt x` itself."* That claim describes
+//!    `sq_sqrt` (`mulShift (sqrt x) (sqrt x)` would need one), not `sqrt_sq`
+//!    — `sqrt_sq` only ever calls `sqrt` on `mul x x`, so the only bound it
+//!    touches is `mulShift x x`. And even that bound is not new machinery:
+//!    [`CRealPrelude::bound`]/[`CRealPrelude::bound_within`]
+//!    ([`super::product`]) are already **generic and unconditional** over any
+//!    `CReal` — `bound y := natAbs (num (seq y 0)) + 1`, a raw projection, no
+//!    sign inspection, no search. `CReal.mul`'s own declaration already
+//!    depends on exactly this for `mul x x`, so nothing here is missing.
+//! 2. *"composing two layers of sampling index... before the estimate can
+//!    even be stated."* `mul x x`'s sample at any index `i` is `seq x J · seq
+//!    x J` for `J := mul_index (mul_shift x x) i` — one substitution, already
+//!    how `CReal.mul` is *defined* (`product.rs`, `declare_mul`). Nothing
+//!    about `sqrt_sq` needs a NEW composition primitive: relating the
+//!    resulting arbitrarily-deep index back to the target index `n` is
+//!    exactly what [`RatPrelude::nat_div_succ_antitone`] is for (`m ≤ n →
+//!    natDivSucc k n ≤ natDivSucc k m`) — the codebase's standing tool for
+//!    "some deep, ugly, monotone-in-its-inputs index dominates `n`", already
+//!    used pervasively (`derivative.rs`, `uniform_continuity.rs`,
+//!    `exponential.rs`, `deriv_unique.rs`, `integral.rs`, and already in THIS
+//!    file at [`div_succ_sq_bound`]) and requiring only a plain `Nat.le` fact
+//!    about the index shape, not a new estimate. `composed_index_le`
+//!    ([`super::product`]) is a sharper, *exact* version of the same idea for
+//!    the one shape `CReal.mul`'s own regularity proof needs to stay
+//!    slack-free; `sqrt_sq` does not need exactness here, so the cruder
+//!    antitone lemma is the right tool, not a gap.
+//! 3. *The clamp (`Rat.max _ 0`) inside `sqrtApprox`* never actually clamps
+//!    on this route: `sqrtApprox` is applied to `mul x x`, whose sample at
+//!    any index is `t · t` for some rational `t`, and `0 ≤ t·t` always
+//!    (`Rat.sq_nonneg`, already used in `mul_self_zero.rs`). So — unlike a
+//!    naive reading of "needs `0 ≤ x`" might suggest — no separate
+//!    "clamp-removal" lemma is needed to get from `max(t·t, 0)` down to `t·t`.
+//!
+//! **What genuinely remains, and does not reduce to an existing lemma:**
+//! recovering `t` itself (not `|t|`) from a two-sided bound on `t·t`. Write
+//! `n` for the target index, `N := mul_index 1 n` (the `sqrt`-of-`mul x x`
+//! sampling index), `d := N+1`, `j := d·d`,
+//! `J := mul_index (mul_shift x x) j`, `t := seq x J`. Reading
+//! [`declare_sqrt_approx_sq_bracket`] at `(mul x x, N)` gives (writing
+//! `u := sqrtApprox (mul x x) N`, always `≥ 0`): `u·u ≤ t·t < (u+1/d)·(u+1/d)`
+//! — a bound on `u`'s SQUARE relative to `t`'s square, not on `u` relative to
+//! `t`. [`CRealPrelude::rat_sq_le`]/[`CRealPrelude::rat_sq_sandwich`]
+//! (`mul_self_zero.rs`, already generic `CRealPrelude` fields, no
+//! modification needed) turn a bound on `t·t` into a bound on `t` GIVEN a
+//! nonnegative witness — but here the witness whose square is being compared
+//! (`u`) is known nonneg while the target (`t`) is only known `0`-ish up to
+//! `x`'s own order slack (`0 ≤ x` unfolds to `∀m, −seq x m ≤ 2/(m+1)`, an
+//! epsilon bound, not `0 ≤ seq x m` outright). Recovering `u ≈ t` (not
+//! `u ≈ |t|`) therefore needs a genuine case split on `t` itself
+//! (`RatPrelude::le_or_lt 0 t`, decidable at the `Rat` level, unlike `CReal`'s
+//! own order): the `0 ≤ t` branch is the direct two-sided squeeze (needs a
+//! *strict* companion to `rat_sq_le` for the bracket's `<` half — `a,b ≥ 0 ∧
+//! a·a < b·b → a < b`, not currently declared, though it is `rat_sq_le`'s own
+//! contrapositive and a small proof); the `t < 0` branch uses `0 ≤ x`'s slack
+//! to show `|t|` itself is small (`≤` the same `2/(j+1)`-shaped term) and
+//! bounds `u` and `t` separately against that, combining by the triangle
+//! inequality. This case split is the one piece of the original "~2000 line"
+//! estimate that survives scrutiny as genuinely new content — everything
+//! else above is composition of already-proved, already-generic lemmas.
+//! Not attempted here; the next lane can start directly from the case split,
+//! skipping the (now-refuted) magnitude-bound and index-composition
+//! obstacles this doc used to name.
 //!
 //! A concrete regression test lives in `creal_tests.rs`:
 //! `CReal.seq (CReal.sqrt (CReal.ofNat 4)) 0` computes, by kernel reduction
