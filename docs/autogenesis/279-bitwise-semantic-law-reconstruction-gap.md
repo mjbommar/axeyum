@@ -96,5 +96,11 @@ Transporting the Boolean digit theorem across it yields the genuine one-bit
 weighted-sum round trip, also axiom-free. The remaining status is precisely the
 general bounded round trip.
 
+A bounded oracle exhausts every Boolean vector through width 12: 8,191 vectors,
+90,114 in-range observations, and 8,191 first-out-of-range zero observations.
+It confirms the weighted-sum construction has the intended finite semantics.
+The artifact labels this computational observation only; it does not replace or
+receive credit for the universal kernel proof.
+
 Run `just autogenesis-bitwise-semantic-law-demand` to validate the join and its
 negative controls.

@@ -484,6 +484,9 @@ direct definitional leap from `reifyBits bits 1`, so weighted-sum normalization
 became an explicit arithmetic obligation rather than hidden conversion. That
 chain and the resulting one-bit weighted-sum round trip now check axiom-free;
 the unresolved theorem is the general bounded case.
+An exhaustive width-12 oracle validates every finite vector and boundary bit
+while remaining explicitly non-authoritative; it is a regression oracle for,
+not a substitute for, the universal kernel proof.
 
 ### Exit evidence
 

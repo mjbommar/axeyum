@@ -13,6 +13,13 @@
     "testBit": "is_one"
   },
   "kind": "axeyum-autogenesis-semantic-law-demand",
+  "finite_reification_oracle": {
+    "authority": "bounded computational observation only; no proof authority and no theorem authority",
+    "inside_observations": 90114,
+    "max_bits": 12,
+    "outside_zero_observations": 8191,
+    "vectors": 8191
+  },
   "laws": [
     {
       "availability": "imported-candidate-dependency-assumption-bearing",

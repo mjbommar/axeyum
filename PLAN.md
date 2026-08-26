@@ -1508,6 +1508,10 @@ instead of silently conflating the two.
 That explicit chain now checks: one-bit weighted-sum normalization and the
 transported one-bit observation round trip are both axiom-free. The open proof
 has narrowed to the general `i < k` bounded round trip.
+An exhaustive oracle now checks all 8,191 Boolean vectors through 12 bits,
+covering 90,114 in-range and 8,191 boundary observations. It validates the
+construction but is explicitly non-proof evidence; the universal kernel theorem
+remains open.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization
