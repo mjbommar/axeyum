@@ -142,3 +142,12 @@ rank-19 formula is 22,688 variables / 89,388 clauses; CaDiCaL reached 300.19 sec
 7,140,981 conflicts without model/proof. This is interrupted telemetry, not rank evidence,
 and it shows that the `19!` term labels are not the whole obstruction. Search found explicit
 prior term ordering, so no technique-novelty claim is made; stabilizer/basis symmetry is next.
+
+**Bilinear first-summand normalization, 2026-08-26.** ADR-0568 applies a complete
+matrix-tensor stabilizer reduction: a chosen nonzero summand occupies slot zero, its first
+factor is one of the `min(m,n)` matrix rank-normal forms, and only the remaining slots are
+lex-ordered. Strassen with padding and Wang's rank-20 witness both pin/lift/replay; a valid
+decomposition with a non-normal first term is rejected. The open rank-19 formula is 22,641
+variables / 89,206 clauses and again reached 300 seconds without model/proof. This remains
+`interrupted`, not rank evidence. The de Groote normalization is classical prior mathematics;
+the next safe step is a complete stabilizer-orbit cover, not a single assumed orbit.

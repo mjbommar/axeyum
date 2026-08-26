@@ -77,7 +77,8 @@ pub struct TensorRankEncoding {
     target: Gf2Tensor,
     layout: FactorLayout,
     budget: usize,
-    ordered_terms: bool,
+    ordered_from: Option<usize>,
+    first_factor_forms: Vec<Vec<usize>>,
 }
 
 impl TensorRankEncoding {
@@ -166,8 +167,8 @@ impl TensorRankEncoding {
         let mut formula = self.formula.clone();
         let mut supplied_terms = witness.terms.iter().map(Some).collect::<Vec<_>>();
         supplied_terms.resize(self.budget, None);
-        if self.ordered_terms {
-            supplied_terms.sort_by_key(|term| {
+        if let Some(ordered_from) = self.ordered_from {
+            supplied_terms[ordered_from..].sort_by_key(|term| {
                 let mut bits = Vec::with_capacity(self.target.dimensions.iter().sum());
                 for (dimension, support) in [
                     (
@@ -190,6 +191,23 @@ impl TensorRankEncoding {
                 }
                 bits
             });
+        }
+        if !self.first_factor_forms.is_empty() {
+            let Some(Some(first)) = supplied_terms.first() else {
+                return Err(TensorRankEncodingError::InvalidWitness(
+                    "normalized formula needs a nonzero first summand".to_owned(),
+                ));
+            };
+            if first.b.is_empty()
+                || first.c.is_empty()
+                || !self.first_factor_forms.iter().any(|form| {
+                    form.len() == first.a.len() && form.iter().all(|index| first.a.contains(index))
+                })
+            {
+                return Err(TensorRankEncodingError::InvalidWitness(
+                    "first summand is not in an admitted matrix rank-normal form".to_owned(),
+                ));
+            }
         }
         for (term, &supplied) in supplied_terms.iter().enumerate() {
             for (variables, support) in [
@@ -360,7 +378,7 @@ pub fn encode_tensor_rank(
     budget: usize,
     limits: TensorRankEncodingLimits,
 ) -> Result<TensorRankEncoding, TensorRankEncodingError> {
-    encode_tensor_rank_internal(target, budget, limits, false)
+    encode_tensor_rank_internal(target, budget, limits, None, Vec::new())
 }
 
 /// Encode bounded rank with a complete lexicographic breaker for the
@@ -378,14 +396,48 @@ pub fn encode_tensor_rank_with_ordered_terms(
     budget: usize,
     limits: TensorRankEncodingLimits,
 ) -> Result<TensorRankEncoding, TensorRankEncodingError> {
-    encode_tensor_rank_internal(target, budget, limits, true)
+    encode_tensor_rank_internal(target, budget, limits, Some(0), Vec::new())
+}
+
+/// Encode matrix-multiplication tensor rank after normalizing one nonzero
+/// summand under the natural change-of-basis stabilizer.
+///
+/// A nonzero `m x n` first-factor matrix has rank `q >= 1` and invertible row
+/// and column transformations send it to `diag(I_q, 0)`. The corresponding
+/// coupled transformations of the other two factors preserve the matrix
+/// multiplication tensor. Thus some summand may be placed in slot zero with
+/// one of these `min(m,n)` forms. Remaining slots are lexicographically
+/// ordered; slot zero deliberately is not compared with them.
+///
+/// # Errors
+///
+/// Refuses zero dimensions, a zero budget, arithmetic overflow, or a
+/// construction exceeding explicit limits.
+pub fn encode_matrix_tensor_rank_with_normalized_first_factor(
+    m: usize,
+    n: usize,
+    p: usize,
+    budget: usize,
+    limits: TensorRankEncodingLimits,
+) -> Result<TensorRankEncoding, TensorRankEncodingError> {
+    let target = Gf2Tensor::matrix_multiplication(m, n, p)?;
+    if budget == 0 {
+        return Err(TensorRankEncodingError::InvalidWitness(
+            "a nonzero matrix tensor cannot normalize a term at rank zero".to_owned(),
+        ));
+    }
+    let forms = (1..=m.min(n))
+        .map(|rank| (0..rank).map(|index| index * n + index).collect())
+        .collect();
+    encode_tensor_rank_internal(&target, budget, limits, Some(1), forms)
 }
 
 fn encode_tensor_rank_internal(
     target: &Gf2Tensor,
     budget: usize,
     limits: TensorRankEncodingLimits,
-    ordered_terms: bool,
+    ordered_from: Option<usize>,
+    first_factor_forms: Vec<Vec<usize>>,
 ) -> Result<TensorRankEncoding, TensorRankEncodingError> {
     if budget > limits.max_rank {
         return Err(TensorRankEncodingError::LimitExceeded {
@@ -410,8 +462,42 @@ fn encode_tensor_rank_internal(
         layout.b.push(builder.variables(target.dimensions[1])?);
         layout.c.push(builder.variables(target.dimensions[2])?);
     }
-    if ordered_terms {
-        for term in 0..budget.saturating_sub(1) {
+    if !first_factor_forms.is_empty() {
+        let selectors = builder.variables(first_factor_forms.len())?;
+        builder.clause(
+            &selectors
+                .iter()
+                .copied()
+                .map(|selector| (selector, false))
+                .collect::<Vec<_>>(),
+        )?;
+        for left in 0..selectors.len() {
+            for right in left + 1..selectors.len() {
+                builder.clause(&[(selectors[left], true), (selectors[right], true)])?;
+            }
+        }
+        for (form, &selector) in first_factor_forms.iter().zip(&selectors) {
+            for (index, &variable) in layout.a[0].iter().enumerate() {
+                builder.clause(&[(selector, true), (variable, !form.contains(&index))])?;
+            }
+        }
+        builder.clause(
+            &layout.b[0]
+                .iter()
+                .copied()
+                .map(|variable| (variable, false))
+                .collect::<Vec<_>>(),
+        )?;
+        builder.clause(
+            &layout.c[0]
+                .iter()
+                .copied()
+                .map(|variable| (variable, false))
+                .collect::<Vec<_>>(),
+        )?;
+    }
+    if let Some(ordered_from) = ordered_from {
+        for term in ordered_from..budget.saturating_sub(1) {
             let left = [
                 &layout.a[term][..],
                 &layout.b[term][..],
@@ -450,7 +536,8 @@ fn encode_tensor_rank_internal(
         target: target.clone(),
         layout,
         budget,
-        ordered_terms,
+        ordered_from,
+        first_factor_forms,
     })
 }
 
@@ -580,6 +667,31 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn matrix_first_factor_normalization_preserves_strassen_and_padding() {
+        let encoding = encode_matrix_tensor_rank_with_normalized_first_factor(
+            2,
+            2,
+            2,
+            8,
+            TensorRankEncodingLimits::default(),
+        )
+        .unwrap();
+        let pinned = encoding.formula_with_witness(&strassen()).unwrap();
+        let SatResult::Sat(model) = solve_with_rustsat_batsat(&pinned).unwrap() else {
+            panic!("normalized Strassen witness must remain satisfiable");
+        };
+        assert_eq!(encoding.lift_model(&model).unwrap().terms.len(), 7);
+
+        let mut malformed = strassen();
+        malformed.terms.swap(0, 1);
+        assert!(matches!(
+            encoding.formula_with_witness(&malformed),
+            Err(TensorRankEncodingError::InvalidWitness(message))
+                if message.contains("rank-normal form")
+        ));
     }
 
     #[test]

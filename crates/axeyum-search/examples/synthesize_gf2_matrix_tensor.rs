@@ -7,7 +7,8 @@ use std::{fs::File, io::BufReader};
 use axeyum_cas::gf2_tensor::{Gf2Tensor, Gf2TensorDecomposition};
 use axeyum_cnf::{ProofSolveOutcome, check_drat_backward, check_drat_backward_reader};
 use axeyum_search::tensor_decomposition::{
-    TensorRankEncodingLimits, encode_tensor_rank, encode_tensor_rank_with_ordered_terms,
+    TensorRankEncodingLimits, encode_matrix_tensor_rank_with_normalized_first_factor,
+    encode_tensor_rank, encode_tensor_rank_with_ordered_terms,
 };
 
 struct Arguments {
@@ -20,13 +21,14 @@ struct Arguments {
     witness: Option<PathBuf>,
     drat: Option<PathBuf>,
     ordered_terms: bool,
+    normalized_first_factor: bool,
 }
 
 fn arguments() -> Arguments {
     let args: Vec<String> = std::env::args().skip(1).collect();
     assert!(
         args.len() >= 4,
-        "usage: synthesize_gf2_matrix_tensor M N P RANK [SECONDS] [--ordered-terms] [--dimacs PATH] [--witness PATH] [--check-drat PATH]"
+        "usage: synthesize_gf2_matrix_tensor M N P RANK [SECONDS] [--ordered-terms | --normalize-first-factor] [--dimacs PATH] [--witness PATH] [--check-drat PATH]"
     );
     let parse = |index: usize, name: &str| {
         args[index]
@@ -47,9 +49,15 @@ fn arguments() -> Arguments {
     let mut witness = None;
     let mut drat = None;
     let mut ordered_terms = false;
+    let mut normalized_first_factor = false;
     while index < args.len() {
         if args[index] == "--ordered-terms" {
             ordered_terms = true;
+            index += 1;
+            continue;
+        }
+        if args[index] == "--normalize-first-factor" {
+            normalized_first_factor = true;
             index += 1;
             continue;
         }
@@ -74,6 +82,7 @@ fn arguments() -> Arguments {
         witness,
         drat,
         ordered_terms,
+        normalized_first_factor,
     }
 }
 
@@ -81,7 +90,19 @@ fn main() {
     let args = arguments();
     let target =
         Gf2Tensor::matrix_multiplication(args.m, args.n, args.p).expect("valid matrix dimensions");
-    let encoding = if args.ordered_terms {
+    assert!(
+        !(args.ordered_terms && args.normalized_first_factor),
+        "choose at most one symmetry mode"
+    );
+    let encoding = if args.normalized_first_factor {
+        encode_matrix_tensor_rank_with_normalized_first_factor(
+            args.m,
+            args.n,
+            args.p,
+            args.rank,
+            TensorRankEncodingLimits::default(),
+        )
+    } else if args.ordered_terms {
         encode_tensor_rank_with_ordered_terms(
             &target,
             args.rank,
@@ -96,6 +117,7 @@ fn main() {
     println!("tensor-dimensions={:?}", target.dimensions);
     println!("rank-budget={}", args.rank);
     println!("ordered-terms={}", args.ordered_terms);
+    println!("normalized-first-factor={}", args.normalized_first_factor);
     println!("variables={}", encoding.formula().variable_count());
     println!("clauses={}", encoding.formula().clauses().len());
 
