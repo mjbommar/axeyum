@@ -523,6 +523,8 @@ def lemma_neighbourhood(
                     canonical_type=lemma.canonical_type,
                     axiom_footprint_size=lemma.axiom_footprint_size,
                     visible_in=lemma.visible_in,
+                    direct_type_declarations=lemma.direct_type_declarations,
+                    direct_declarations=lemma.direct_declarations,
                     dependencies=lemma.dependencies,
                     dependents=lemma.dependents,
                     dependency_depth=lemma.dependency_depth,
@@ -581,6 +583,8 @@ def lemma_candidates(
                         source_dependency_fact_id=dependency_fact_id,
                         axiom_footprint_size=lemma.axiom_footprint_size,
                         visible_in=lemma.visible_in,
+                        direct_type_declarations=lemma.direct_type_declarations,
+                        direct_declarations=lemma.direct_declarations,
                         dependency_depth=lemma.dependency_depth,
                     )
                 )

@@ -356,6 +356,13 @@ def test_direct_declaration_dependencies_of_an_absent_name_raises_keyerror(
         nat_kernel.declaration_dependencies("Nonexistent")
 
 
+def test_direct_type_dependencies_of_an_absent_name_raises_keyerror(
+    nat_kernel: Kernel,
+) -> None:
+    with pytest.raises(KeyError):
+        nat_kernel.declaration_type_dependencies("Nonexistent")
+
+
 def test_theorem_dependencies_of_an_absent_name_raises_keyerror(nat_kernel: Kernel) -> None:
     with pytest.raises(KeyError):
         nat_kernel.theorem_dependencies("Nonexistent")
@@ -385,6 +392,17 @@ def test_direct_dependencies_do_not_expand_transitive_definition_closure(
     assert "Nat.fib" in direct
     assert "Nat.fibAux" not in direct
     assert "Nat.fibAux" in closure
+
+
+def test_direct_type_dependencies_do_not_leak_the_finished_proof(
+    nat_kernel: Kernel,
+) -> None:
+    statement = nat_kernel.declaration_type_dependencies("Nat.fib_mono")
+    complete = nat_kernel.declaration_dependencies("Nat.fib_mono")
+    assert "Nat.fib" in statement
+    assert "Nat.monotone_of_le_succ" not in statement
+    assert "Nat.fib_le_succ" not in statement
+    assert "Nat.monotone_of_le_succ" in complete
 
 
 def test_declarations_reached_finds_the_constants_of_a_term(nat_kernel: Kernel) -> None:

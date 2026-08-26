@@ -1455,6 +1455,24 @@ impl Kernel {
         dependencies
     }
 
+    /// Every constant directly referenced by a declaration's type only.
+    ///
+    /// This is the proof-isolated vocabulary for premise selection. For a
+    /// theorem, [`Self::declaration_dependencies`] also observes its checked
+    /// proof value and is therefore evidence about the finished theorem, not
+    /// admissible context for reconstructing that theorem from its statement.
+    #[must_use]
+    pub fn declaration_type_dependencies(&self, name: NameId) -> Vec<NameId> {
+        let mut dependencies = Vec::new();
+        if let Some(declaration) = self.environment().get(name) {
+            self.collect_const_deps(declaration.ty(), &mut dependencies);
+        }
+        dependencies.retain(|&dependency| dependency != name);
+        dependencies.sort_by_key(|&dependency| self.display_name(dependency).to_string());
+        dependencies.dedup();
+        dependencies
+    }
+
     /// Every declaration transitively referenced by `name`, excluding `name`
     /// itself.
     ///

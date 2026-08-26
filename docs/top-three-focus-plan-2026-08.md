@@ -125,12 +125,17 @@ even the already-demonstrated `Nat.fib_mono` composition declined: irrelevant
 implementation constants consumed the fixed term budget. The kernel and Python
 APIs, and the generated projection, now expose stable all-kind **direct**
 declaration dependencies separately from both theorem-only proof dependencies
-and the transitive audit closure. This is additive and backward-compatible.
-The distinguishing control is concrete: `Nat.fib_mono` directly names
-`Nat.fib`, while `Nat.fibAux` appears only transitively and is excluded from the
-search vocabulary. The next census must use exact direct vocabulary before an
-operation family is registered; the initial 10 successes are discovery data,
-not autonomous-production credit.
+and the transitive audit closure. A review then caught a critical distinction:
+for a theorem that all-kind field includes constants from its finished proof
+value, so using it for premise selection would leak the answer. A second
+additive field therefore exposes direct **type-only** dependencies. The
+distinguishing control is concrete: `Nat.fib_mono`'s type names `Nat.fib`, but
+neither `Nat.fibAux` nor the two lemmas its checked proof eventually uses.
+Candidate selection may combine this proof-isolated statement vocabulary with
+independently retrieved fact dependencies; it may not read the all-kind proof
+evidence. The next census must use that exact boundary before an operation
+family is registered; the initial 10 successes are discovery data, not
+autonomous-production credit.
 
 ## Comparative position
 

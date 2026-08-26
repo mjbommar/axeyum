@@ -150,6 +150,8 @@ def build() -> dict[str, Any]:
                 "canonical_type": row["canonical_type"],
                 "axiom_footprint_size": row["axiom_footprint_size"],
                 "visible_in": row["visible_in"],
+                "direct_type_dependencies": row["direct_type_dependencies"],
+                "direct_declaration_dependencies": row["direct_declaration_dependencies"],
                 "direct_theorem_dependencies": row["direct_theorem_dependencies"],
                 "direct_theorem_dependents": dependents,
                 "dependency_depth": dependency_depth(theorem),

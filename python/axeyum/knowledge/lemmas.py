@@ -25,6 +25,8 @@ class Lemma:
     canonical_type: str
     axiom_footprint_size: int
     visible_in: tuple[str, ...]
+    direct_type_declarations: tuple[str, ...]
+    direct_declarations: tuple[str, ...]
     dependencies: tuple[str, ...]
     dependents: tuple[str, ...]
     dependency_depth: int
@@ -39,6 +41,8 @@ class Lemma:
             canonical_type=raw["canonical_type"],
             axiom_footprint_size=raw["axiom_footprint_size"],
             visible_in=tuple(raw["visible_in"]),
+            direct_type_declarations=tuple(raw["direct_type_dependencies"]),
+            direct_declarations=tuple(raw["direct_declaration_dependencies"]),
             dependencies=tuple(raw["direct_theorem_dependencies"]),
             dependents=tuple(raw["direct_theorem_dependents"]),
             dependency_depth=raw["dependency_depth"],
