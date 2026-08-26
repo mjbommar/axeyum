@@ -361,6 +361,9 @@ An exhaustive oracle now checks all 8,191 Boolean vectors through 12 bits,
 covering 90,114 in-range and 8,191 boundary observations. It validates the
 construction but is explicitly non-proof evidence; the universal kernel theorem
 remains open.
+The Boolean coefficient bound `boolToBit b ≤ 1` now checks constructively and
+axiom-free. It supplies the missing local inequality for the universal
+`reifyBits bits k < 2^k` induction.
 
 <!-- plan-section: landed-changes -->
 

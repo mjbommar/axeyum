@@ -85,6 +85,12 @@ class BitwiseSemanticLawDemandTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "digit roundtrip gained assumptions"):
             MODULE.validate(data)
 
+    def test_boolean_digit_bound_assumption_fails_closed(self):
+        data = copy.deepcopy(self.data)
+        data["native_reification"]["boolean_digit_bound_axiom_footprint_size"] = 1
+        with self.assertRaisesRegex(ValueError, "digit bound gained assumptions"):
+            MODULE.validate(data)
+
     def test_one_bit_roundtrip_assumption_fails_closed(self):
         data = copy.deepcopy(self.data)
         data["native_reification"]["one_bit_roundtrip_axiom_footprint_size"] = 1

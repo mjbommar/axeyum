@@ -487,6 +487,8 @@ the unresolved theorem is the general bounded case.
 An exhaustive width-12 oracle validates every finite vector and boundary bit
 while remaining explicitly non-authoritative; it is a regression oracle for,
 not a substitute for, the universal kernel proof.
+The constructive coefficient bound `boolToBit b ≤ 1` now supplies the local
+inequality needed by the universal reifier-bound induction.
 
 ### Exit evidence
 

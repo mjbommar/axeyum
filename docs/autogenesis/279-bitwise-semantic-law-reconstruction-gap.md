@@ -96,6 +96,11 @@ Transporting the Boolean digit theorem across it yields the genuine one-bit
 weighted-sum round trip, also axiom-free. The remaining status is precisely the
 general bounded round trip.
 
+The next induction leaf is also closed: `boolToBit b ≤ 1`, by constructive
+case analysis on `b`, with an empty footprint. This is exactly the coefficient
+bound needed to show each newly appended weighted digit contributes at most
+`2^k` in the reifier-bound induction.
+
 A bounded oracle exhausts every Boolean vector through width 12: 8,191 vectors,
 90,114 in-range observations, and 8,191 first-out-of-range zero observations.
 It confirms the weighted-sum construction has the intended finite semantics.
