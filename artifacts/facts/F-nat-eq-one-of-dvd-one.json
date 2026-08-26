@@ -26,6 +26,7 @@
     {
       "id": "kernel-eq_one_of_dvd_one",
       "kind": "kernel-term",
+      "kernel_declaration": "Nat.eq_one_of_dvd_one",
       "supports": "Nat.eq_one_of_dvd_one is admitted by the trusted kernel gate with the type recorded in formal.statement.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- Nat.eq_one_of_dvd_one 2>/dev/null | grep -Ec '^Nat\\.eq_one_of_dvd_one[[:space:]]')\" -ge 1",

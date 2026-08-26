@@ -64,6 +64,10 @@ fn adapter_reason(error: &StatementImportError) -> &'static str {
         StatementImportError::TargetCardinality { .. } => "target-cardinality",
         StatementImportError::TargetNotDefinition { .. } => "target-not-definition",
         StatementImportError::TargetUniverseParameters { .. } => "target-universe-parameters",
+        StatementImportError::DuplicateCandidate => "duplicate-candidate",
+        StatementImportError::CandidateIsTarget { .. } => "candidate-is-target",
+        StatementImportError::CandidateCardinality { .. } => "candidate-cardinality",
+        StatementImportError::CandidateHasAxioms { .. } => "candidate-has-axioms",
         StatementImportError::TrustedDeclaration { .. } => "trusted-declaration",
         StatementImportError::GoalNotProp { .. } => "goal-not-prop",
     }

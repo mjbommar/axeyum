@@ -1,6 +1,9 @@
 //! Tests for the real (setoid) prelude.
 
 use super::{CRealPrelude, build_creal_prelude};
+use crate::expr::ExprId;
+use crate::int_prelude::ops::IntDev;
+use crate::nat_prelude::NatOps;
 use crate::{Declaration, Kernel};
 
 /// A built `CReal` kernel, as a **clone of one template**.
@@ -69,7 +72,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 250] = [
+    let expected: [(&str, crate::NameId, &str); 291] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -188,6 +191,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ("CReal.le_abs_self", p.le_abs_self, "theorem"),
         ("CReal.neg_le_abs", p.neg_le_abs, "theorem"),
         ("CReal.abs_le", p.abs_le, "theorem"),
+        ("CReal.abs_add_le", p.abs_add_le, "theorem"),
         ("CReal.abs_nonneg", p.abs_nonneg, "theorem"),
         (
             "CReal.not_le_zero_neg_one",
@@ -222,6 +226,21 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         // The squeeze theorem: no shift bridge needed, since `CReal.le` is
         // already stated at the same canonical-sample index `Converges` uses.
         ("CReal.converges_squeeze", p.converges_squeeze, "theorem"),
+        // The domain-hypothesis half of `converges_comp` (that composition
+        // itself is NOT provable in `Converges`'s fixed-rate form -- see
+        // `convergence.rs`'s own module documentation): a non-strict bound on
+        // a convergent sequence passes to its limit, each direction via the
+        // same "arbitrary third index" idiom `le_trans` itself uses.
+        (
+            "CReal.converges_lower_bound",
+            p.converges_lower_bound,
+            "theorem",
+        ),
+        (
+            "CReal.converges_upper_bound",
+            p.converges_upper_bound,
+            "theorem",
+        ),
         // Boundedness and sequential continuity (phase R10).
         ("CReal.Bounded", p.bounded, "def"),
         ("CReal.converges_bounded", p.converges_bounded, "theorem"),
@@ -267,6 +286,11 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             "theorem",
         ),
         (
+            "CReal.converges_comp_eventually",
+            p.converges_comp_eventually,
+            "theorem",
+        ),
+        (
             "CReal.uniformly_continuous_mul",
             p.uniformly_continuous_mul,
             "theorem",
@@ -282,6 +306,24 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             p.uniformly_continuous_poly_example,
             "theorem",
         ),
+        (
+            "CReal.mag_bound_le_sumRange_of_lt",
+            p.mag_bound_le_sum_range_of_lt,
+            "theorem",
+        ),
+        ("CReal.bucketIndex", p.bucket_index, "def"),
+        (
+            "CReal.bucketIndexFloorLower",
+            p.bucket_index_floor_lower,
+            "theorem",
+        ),
+        (
+            "CReal.bucketIndexFloorUpper",
+            p.bucket_index_floor_upper,
+            "theorem",
+        ),
+        ("CReal.bucketClampUpper", p.bucket_clamp_upper, "theorem"),
+        ("CReal.bucketClampLower", p.bucket_clamp_lower, "theorem"),
         ("CReal.ratSqLe", p.rat_sq_le, "theorem"),
         ("CReal.ratSqSandwich", p.rat_sq_sandwich, "theorem"),
         (
@@ -447,6 +489,12 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             p.pow_le_pow_of_base_le,
             "theorem",
         ),
+        ("CReal.ofRat_pow", p.of_rat_pow, "theorem"),
+        (
+            "CReal.pow_half_le_natDivSucc",
+            p.pow_half_le_nat_div_succ,
+            "theorem",
+        ),
         (
             "CReal.one_le_pow_of_one_le",
             p.one_le_pow_of_one_le,
@@ -548,6 +596,26 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             p.within_of_two_sided_le,
             "theorem",
         ),
+        // Roadmap step 2 toward `riemannSum_cauchy` (`creal/integral.rs`):
+        // the abs-bound `close_within`'s own shape produces splits into the
+        // CReal-level one-sided form `le x (add y (ofRat q))` that
+        // `sumRange_le` consumes, via `le_abs_self`/`le_trans`/`add_le_add`
+        // plus the add-rearrangement ring identity.
+        (
+            "CReal.le_add_of_abs_sub_le",
+            p.le_add_of_abs_sub_le,
+            "theorem",
+        ),
+        // The full abs-splitting lemma (`creal/integral.rs`) the per-block
+        // fold's two applications of `sumRange_le` (upper and lower) both
+        // need from a single `close_within` fact: the first conjunct reuses
+        // `le_add_of_abs_sub_le` verbatim, the second mirrors its route with
+        // `neg_le_abs` in place of `le_abs_self`.
+        (
+            "CReal.two_sided_of_abs_sub_le",
+            p.two_sided_of_abs_sub_le,
+            "theorem",
+        ),
         // The continuity-from-differentiability bridge (creal/monotone.rs),
         // the missing piece the monotone_of_nonneg_deriv handoff plan did not
         // name: a `HasDerivativeOn` interpolation endpoint is only ever
@@ -559,10 +627,13 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             "theorem",
         ),
         // Euler's number's raw material (creal/exponential.rs): the `n`-th
-        // series term `1/n!` and its `sumRange` partial sums. `CReal.e`
-        // itself is not built yet -- see that file's module documentation.
+        // series term `1/n!` and its `sumRange` partial sums, plus the
+        // domination bound `1/n! ≤ 2·(1/2)ⁿ` the convergence proof needs.
+        // `CReal.e` itself is not built yet -- see that file's module
+        // documentation for exactly what remains.
         ("CReal.expTerm", p.exp_term, "def"),
         ("CReal.expSeriesPartial", p.exp_series_partial, "def"),
+        ("CReal.expTerm_le_geom", p.exp_term_le_geom, "theorem"),
         // `CReal.sumRange_double` (creal/integral.rs), registered right
         // after `integral::declare_integral`: grouping `2k` terms of an
         // arbitrary `g` into `k` consecutive pairs, exactly. A building
@@ -570,6 +641,16 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         // not that estimate itself -- see that file's own module
         // documentation for what still separates the two.
         ("CReal.sumRange_double", p.sum_range_double, "theorem"),
+        // `CReal.ofNat_add`/`CReal.ofNat_mul` (creal/integral.rs), registered
+        // right after `sumRange_double`: `CReal.ofNat` is a `Nat -> (CReal,
+        // +, .)` homomorphism, direct (no induction) from `CReal.ofRat_add`/
+        // `CReal.ofRat_mul` plus `RatPrelude::natDivSucc_add`/
+        // `natDivSucc_mul` at denominator index `0`. Needed to reconcile
+        // `sumRange_reblock`'s raw global fine index with the per-block local
+        // sample-point arithmetic `riemannSum_cauchy` still needs -- see
+        // `integral.rs`'s own module documentation.
+        ("CReal.ofNat_add", p.of_nat_add, "theorem"),
+        ("CReal.ofNat_mul", p.of_nat_mul, "theorem"),
         // `CReal.monotone_of_nonneg_deriv` and its three supporting lemmas
         // (`creal/monotone.rs`), registered from the pipeline AFTER
         // `integral::declare_integral` (they reuse `CReal.ofNat_le`).
@@ -583,6 +664,59 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         (
             "CReal.monotone_of_nonneg_deriv",
             p.monotone_of_nonneg_deriv,
+            "theorem",
+        ),
+        // The STRICT companion of `monotone_of_nonneg_deriv` (creal/monotone.rs):
+        // a derivative uniformly bounded away from zero by `1/(k+1)` makes `F`
+        // strictly increasing, given a strict input gap `lt x y`.
+        (
+            "CReal.strict_mono_of_pos_deriv",
+            p.strict_mono_of_pos_deriv,
+            "theorem",
+        ),
+        // The RATE `strict_mono_of_pos_deriv` proves internally (as its own
+        // `chained2`) but never declared, hoisted out as its own theorem
+        // (creal/monotone.rs): `F y − F x` is bounded BELOW by the derivative
+        // floor `1/(2(k+1))` times the input gap `y − x`, given only `le x y`
+        // (not `lt x y` -- nothing up to this exact bound needs strictness).
+        (
+            "CReal.strict_mono_magnitude",
+            p.strict_mono_magnitude,
+            "theorem",
+        ),
+        // The rational-cancellation lemma `strict_mono_magnitude`-shaped
+        // bounds need and did not have (creal/monotone.rs): from
+        // `(1/(m+1))·u ≤ v` conclude `u ≤ (m+1)·v`, via `Rat.mul_inv_cancel`
+        // + `Rat.inv_natDivSucc` at the rational level and `mul_assoc` +
+        // `mul_le_mul_of_nonneg_left` at the `CReal` level -- no `PosBound`
+        // existential.
+        ("CReal.scale_cancel_le", p.scale_cancel_le, "theorem"),
+        // `strict_mono_magnitude` cancelled by `scale_cancel_le` against the
+        // triangle inequality (creal/monotone.rs): a LOWER bound on `F`'s
+        // growth becomes an UPPER bound on `|x−y|` given a spread of `F`'s
+        // values -- what an exact IVT root and Chapter 12's inverse-function
+        // continuity both need.
+        (
+            "CReal.diff_le_of_strict_mono_magnitude",
+            p.diff_le_of_strict_mono_magnitude,
+            "theorem",
+        ),
+        // Spivak ch. 12's entry point (creal/monotone.rs): a uniformly
+        // positive derivative makes `F` injective on `[a,b]`, in the
+        // constructive (apartness) sense.
+        (
+            "CReal.strict_injective_of_pos_deriv",
+            p.strict_injective_of_pos_deriv,
+            "theorem",
+        ),
+        // The CONVERSE of `strict_mono_of_pos_deriv` (creal/inverse_fn.rs),
+        // conditional on `Apart x y` already being data: order-reflection,
+        // `lt (F x) (F y) -> lt x y`. Unconditional order-reflection is not
+        // provable here (see the module doc); this is the fact Chapter 12
+        // actually needs.
+        (
+            "CReal.order_reflect_of_pos_deriv",
+            p.order_reflect_of_pos_deriv,
             "theorem",
         ),
         // The one bisection step of the constructive approximate IVT
@@ -603,11 +737,132 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             p.antitone_of_nonpos_deriv,
             "theorem",
         ),
+        // The STRICT mirror of `antitone_of_nonpos_deriv` (creal/monotone.rs),
+        // built the same way from `strict_mono_of_pos_deriv`: a derivative
+        // uniformly bounded above by `-1/(k+1)` makes `F` strictly
+        // decreasing, given a strict input gap `lt x y`.
+        (
+            "CReal.strict_antitone_of_neg_deriv",
+            p.strict_antitone_of_neg_deriv,
+            "theorem",
+        ),
+        // Spivak ch. 12's composition corollary (creal/monotone.rs): a
+        // strictly increasing `F` composed with a strictly increasing `G` is
+        // strictly increasing, stated over the strict-monotonicity
+        // conclusions plus an explicit range hypothesis -- no
+        // `HasDerivativeOn`/chain rule needed.
+        ("CReal.strict_mono_comp", p.strict_mono_comp, "theorem"),
         // `ivt_step` iterated `n` times by structural induction
         // (creal/ivt.rs) -- the bracket-shrinking construction `ivt_approx`
-        // needs; the closing Archimedean/continuity combination is not
-        // built yet (see `CRealPrelude::ivt_iter`'s own doc comment).
+        // (below) closes against `UniformlyContinuousOn` and
+        // `pow_half_le_natDivSucc`.
         ("CReal.ivt_iter", p.ivt_iter, "theorem"),
+        // The constructive approximate Intermediate Value Theorem (Spivak
+        // ch. 7), closing `ivt_iter` against `UniformlyContinuousOn` and
+        // `CReal.bound` (no `Exists.rec`) -- see `CRealPrelude::ivt_approx`'s
+        // own doc comment.
+        ("CReal.ivt_approx", p.ivt_approx, "theorem"),
+        // A DATA-VALUED bisection (creal/ivt.rs), replacing `ivt_iter`'s
+        // `Exists`-wrapped bracket with one computed by `Nat.rec` into
+        // `Sort 1`. The branch is read off a rational sample via `Rat.ble`;
+        // the bracket carrier is `Bool -> CReal`, not a new Prod/Sigma.
+        ("CReal.ivt_bisect", p.ivt_bisect, "def"),
+        // `ivt_bisect F P Q n k Bool.false` -- the lower endpoint.
+        ("CReal.ivt_bisect_lo", p.ivt_bisect_lo, "def"),
+        // `ivt_bisect F P Q n k Bool.true` -- the upper endpoint.
+        ("CReal.ivt_bisect_hi", p.ivt_bisect_hi, "def"),
+        // The invariant spec theorem for `ivt_bisect`: the concrete bracket
+        // `ivt_bisect_lo`/`_hi` computes satisfies the SAME six-part
+        // invariant `ivt_step`/`ivt_iter` prove, for the fixed slack
+        // `eps_n := ofRat (natDivSucc 1 n)`. Proved by ordinary Prop-level
+        // induction on `k` (no `Exists.rec`), reading the per-step branch
+        // back off `Rat.ble`'s `Bool` via a "remembering" `Bool.rec`.
+        (
+            "CReal.ivt_bisect_invariant",
+            p.ivt_bisect_invariant,
+            "theorem",
+        ),
+        // The DIAGONAL bisection: same `Nat.rec` shape as `ivt_bisect`, but
+        // no external slack parameter -- each step samples at its OWN
+        // recursion depth `j`. Landed as data + a reduction test only: two
+        // kernel-verified counterexamples (see `CRealPrelude::
+        // ivt_bisect_diag`'s doc comment) close off an exact root via either
+        // natural reading of "diagonal" here.
+        ("CReal.ivt_bisect_diag", p.ivt_bisect_diag, "def"),
+        // `ivt_bisect_diag F P Q k Bool.false` -- the lower endpoint.
+        ("CReal.ivt_bisect_diag_lo", p.ivt_bisect_diag_lo, "def"),
+        // `ivt_bisect_diag F P Q k Bool.true` -- the upper endpoint.
+        ("CReal.ivt_bisect_diag_hi", p.ivt_bisect_diag_hi, "def"),
+        // Uniqueness of the derivative on a NONDEGENERATE interval
+        // (`creal/deriv_unique.rs`): the naive statement without `lt a b` is
+        // refuted at a degenerate `a = b`, so this carries that hypothesis.
+        // Built on `CReal.lt_cotrans`, `HasDerivativeOn.spec`, and
+        // `CReal.equiv_zero_of_small` -- no Mean Value Theorem, no
+        // case-split on `CReal.le`.
+        (
+            "CReal.hasDerivative_unique",
+            p.has_derivative_unique,
+            "theorem",
+        ),
+        // The archimedean rescaling `UniformlyContinuousOn.spec` needs
+        // (`creal/integral.rs`): turning the Riemann-sum mesh width `Δ_m`
+        // into a bound of the exact `natDivSucc 1 outer` shape that spec
+        // expects, for every block count at or past a computed threshold.
+        // No existential elimination -- the threshold is read directly off
+        // `CReal.bound`.
+        ("CReal.mesh_le_of_ge", p.mesh_le_of_ge, "theorem"),
+        // The fine-sample placement lemma `riemannSum_cauchy`'s per-block
+        // fold needs (`creal/integral.rs`): every FINE sample point inside a
+        // COARSE block lies in `[a, b]`, the one-index-shift generalization
+        // `riemannSum_sample_in_bounds`/`subdivisionPoint_in_bounds` do not
+        // cover on their own.
+        (
+            "CReal.fineSample_in_bounds",
+            p.fine_sample_in_bounds,
+            "theorem",
+        ),
+        // Roadmap step 2 toward `riemannSum_cauchy` (`creal/integral.rs`):
+        // every fine sample point inside a coarse block is within
+        // `1/(e+1)` of that block's own coarse value, via
+        // `UniformlyContinuousOn.spec` plus `mesh_le_of_ge` and
+        // `fineSample_in_bounds`.
+        ("CReal.fineSample_close", p.fine_sample_close, "theorem"),
+        // Roadmap step 3 toward `riemannSum_cauchy` (`creal/integral.rs`):
+        // each coarse block's fine Riemann sub-sum bounded two-sidedly
+        // against the single coarse term `riemannSum` itself would use at
+        // that block, within `Δ_m · natDivSucc(1, e)`, via `fineSample_close`
+        // per fine index, `two_sided_of_abs_sub_le` to split it, and two
+        // applications of `sumRange_le`.
+        (
+            "CReal.fineBlockSum_close",
+            p.fine_block_sum_close,
+            "theorem",
+        ),
+        // Toward `riemannSum_cauchy`'s common refinement (`creal/integral.rs`):
+        // refining a partition of `succ m` coarse pieces into `succ n`
+        // further pieces gives a fine mesh factor `1/(n+1) · 1/(m+1)`
+        // EXACTLY equal to the single-partition factor at `m_prime :=
+        // ((n·m)+n)+m`, via `RatPrelude::normalize_mul_normalize` plus pure
+        // defeq -- no rewrite step.
+        ("CReal.meshReciprocalMul", p.mesh_reciprocal_mul, "theorem"),
+        // Toward `riemannSum_cauchy`'s common refinement (`creal/integral.rs`):
+        // two REAL-EQUAL numbers are within ANY chosen rational bound of
+        // each other, with no Archimedean threshold -- promotes "the global
+        // fine sample point IS the local block sample point" (an exact
+        // `Equiv`) into the explicit bound `UniformlyContinuousOn.spec`
+        // needs as a hypothesis.
+        ("CReal.equivAbsDiffLe", p.equiv_abs_diff_le, "theorem"),
+        // Roadmap step 1 toward `riemannSum_cauchy`'s common refinement
+        // (`creal/integral.rs`): `sumRange_reblock`'s raw global fine index
+        // sample point IS (an exact, UNCONDITIONAL `Equiv`) the local
+        // per-block sample point `fineBlockSum_close`'s own sum uses. Via
+        // `meshReciprocalMul`, `ofNat_add`/`ofNat_mul` and
+        // `mesh_count_width`.
+        (
+            "CReal.samplePoint_reblock",
+            p.sample_point_reblock,
+            "theorem",
+        ),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel
@@ -4181,6 +4436,102 @@ fn of_nat_le_at_one_and_three_proves_le_one_three() {
         });
 }
 
+/// **Mandatory computation test for `CReal.ofNat_add`.** Instantiates it at
+/// explicit small naturals `a := 2`, `b := 3` and checks the kernel accepts
+/// `CReal.ofNat_add 2 3 : Equiv (ofNat 5) (add (ofNat 2) (ofNat 3))` at that
+/// EXACT type, with `5` a literal (not the unevaluated `Nat.add 2 3`) — the
+/// asserted `ty` below is built from `d.num(5)` directly, so this also pins
+/// that `Nat.add 2 3` reduces to the literal `5` by defeq. A transposition
+/// (e.g. proving `Equiv (ofNat 5) (add (ofNat 3) (ofNat 2))`, or `ofNat 6`
+/// instead of `5`) would still type-check as SOME `Equiv` statement but not
+/// this one.
+#[test]
+fn of_nat_add_at_two_and_three_proves_equiv_ofnat_five_add() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let two_nat = d.num(2);
+    let three_nat = d.num(3);
+    let five_nat = d.num(5);
+
+    let value = d.const_app(p.of_nat_add, &[two_nat, three_nat]);
+
+    let of_nat_5 = d.const_app(p.of_nat, &[five_nat]);
+    let of_nat_2 = d.const_app(p.of_nat, &[two_nat]);
+    let of_nat_3 = d.const_app(p.of_nat, &[three_nat]);
+    let sum_real = super::cadd(&mut d, p, of_nat_2, of_nat_3);
+    let ty = super::equiv(&mut d, p, of_nat_5, sum_real);
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(
+        anon,
+        "__of_nat_add_at_two_and_three_proves_equiv_ofnat_five_add",
+    );
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.ofNat_add 2 3 did NOT check against \
+                 Equiv (ofNat 5) (add (ofNat 2) (ofNat 3)) (not merely SOME \
+                 Equiv statement): {error:?}"
+            )
+        });
+}
+
+/// **Mandatory computation test for `CReal.ofNat_mul`.** Instantiates it at
+/// explicit small naturals `a := 2`, `b := 3` and checks the kernel accepts
+/// `CReal.ofNat_mul 2 3 : Equiv (ofNat 6) (mul (ofNat 2) (ofNat 3))` at that
+/// EXACT type, `6` a literal — same rationale as the `ofNat_add` test above,
+/// with `Nat.mul 2 3` reducing to `6` by defeq.
+#[test]
+fn of_nat_mul_at_two_and_three_proves_equiv_ofnat_six_mul() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let two_nat = d.num(2);
+    let three_nat = d.num(3);
+    let six_nat = d.num(6);
+
+    let value = d.const_app(p.of_nat_mul, &[two_nat, three_nat]);
+
+    let of_nat_6 = d.const_app(p.of_nat, &[six_nat]);
+    let of_nat_2 = d.const_app(p.of_nat, &[two_nat]);
+    let of_nat_3 = d.const_app(p.of_nat, &[three_nat]);
+    let prod_real = d.const_app(p.mul, &[of_nat_2, of_nat_3]);
+    let ty = super::equiv(&mut d, p, of_nat_6, prod_real);
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(
+        anon,
+        "__of_nat_mul_at_two_and_three_proves_equiv_ofnat_six_mul",
+    );
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.ofNat_mul 2 3 did NOT check against \
+                 Equiv (ofNat 6) (mul (ofNat 2) (ofNat 3)) (not merely SOME \
+                 Equiv statement): {error:?}"
+            )
+        });
+}
+
 /// **Mandatory computation test for `CReal.riemannSum_sample_in_bounds`.**
 /// Instantiates it at `a := CReal.zero`, `b := CReal.ofNat 3`, `m := 2`
 /// (so `n = succ m = 3`), `i := 1` — the sample point at index `1` of a
@@ -4267,6 +4618,192 @@ fn riemann_sample_in_bounds_at_zero_three_two_one_lands_strictly_inside() {
                 "CReal.riemannSum_sample_in_bounds 0 3 2 1 hab hlt did NOT check \
                  against And (le 0 sp) (le sp 3) at the expected sample point \
                  (not merely SOME And of le statements): {error:?}"
+            )
+        });
+}
+
+/// **Mandatory computation test for `CReal.fineSample_in_bounds`.**
+/// Instantiates it at `a := CReal.zero`, `b := CReal.ofNat 1`, `m := n :=
+/// 1` (so BOTH the coarse partition and each block's fine partition split
+/// into `succ 1 = 2` pieces), `i := m := 1`, `j := n := 1` — the LAST fine
+/// sample point of the LAST coarse block, the hardest boundary case: `Δ_m =
+/// 1 · 1/2 = 1/2`, `base = 0 + 1·Δ_m = 1/2`, `Δ_fine = Δ_m · 1/2 = 1/4`,
+/// `x = base + 1·Δ_fine = 3/4` — strictly inside `[0, 1]`, one `Δ_fine`
+/// short of `b`, which an off-by-one in either the coarse or fine index
+/// arithmetic would push past. `hi : Nat.le 1 1` and `hj : Nat.lt 1 2` are
+/// both `Nat.le.refl` (the latter via `Lt n (succ n)`'s own `Nat.le (succ
+/// n) (succ n)` unfolding). Checks the kernel accepts the application at
+/// the EXACT expected `And (le a x) (le x b)` type, built independently
+/// here from `CReal.add`/`CReal.neg`/`CReal.mul`/`CReal.ofNat`/`CReal.ofRat`
+/// rather than by calling back into `integral.rs`'s private term builders.
+#[test]
+fn fine_sample_in_bounds_at_zero_one_m1_n1_last_block_last_sample() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+
+    let a = d.kernel().const_(p.zero, vec![]);
+    let b = d.const_app(p.of_nat, &[one_nat]);
+    let m = one_nat;
+    let n = one_nat;
+    let i = one_nat;
+    let j = one_nat;
+
+    // hab : CReal.le zero (ofNat 1), the same route the
+    // `riemannSum_sample_in_bounds` computation test above uses.
+    let hab = {
+        let rat_1 = d.const_app(p.rat.nat_div_succ, &[one_nat, zero_nat]);
+        let rzero = d.kernel().const_(p.rat.zero, vec![]);
+        let rle = d.lemma(p.rat.zero_le_nat_div_succ, &[one_nat, zero_nat]);
+        d.lemma(p.of_rat_le, &[rzero, rat_1, rle])
+    };
+
+    let np = d.prelude();
+    // hi : Nat.le 1 1, i.e. `Nat.le.refl 1`.
+    let hi = d.const_app(np.le_refl, &[one_nat]);
+    // hj : Nat.lt 1 2, defeq `Nat.le 2 2`, i.e. `Nat.le.refl 2`.
+    let hj = d.const_app(np.le_refl, &[two_nat]);
+
+    let value = d.const_app(p.fine_sample_in_bounds, &[a, b, m, n, i, j, hab, hi, hj]);
+
+    // The expected fine sample point, built independently: `x := add base
+    // (mul (ofNat j) delta_fine)`, `base := add a (mul (ofNat i) delta_m)`,
+    // `delta_m := mul (add b (neg a)) (ofRat (natDivSucc 1 m))`,
+    // `delta_fine := mul delta_m (ofRat (natDivSucc 1 n))` -- exactly
+    // `integral.rs`'s own `sample_point`/`delta_nonneg_of`/
+    // `fine_term_and_bounds` shapes.
+    let ty = {
+        let neg_a = d.const_app(p.neg, &[a]);
+        let width = d.const_app(p.add, &[b, neg_a]);
+        let rat_frac_m = d.const_app(p.rat.nat_div_succ, &[one_nat, m]);
+        let frac_m = d.const_app(p.of_rat, &[rat_frac_m]);
+        let delta_m = d.const_app(p.mul, &[width, frac_m]);
+        let of_nat_i = d.const_app(p.of_nat, &[i]);
+        let i_delta_m = d.const_app(p.mul, &[of_nat_i, delta_m]);
+        let base = d.const_app(p.add, &[a, i_delta_m]);
+
+        let rat_frac_n = d.const_app(p.rat.nat_div_succ, &[one_nat, n]);
+        let frac_n = d.const_app(p.of_rat, &[rat_frac_n]);
+        let delta_fine = d.const_app(p.mul, &[delta_m, frac_n]);
+        let of_nat_j = d.const_app(p.of_nat, &[j]);
+        let term = d.const_app(p.mul, &[of_nat_j, delta_fine]);
+        let x = d.const_app(p.add, &[base, term]);
+
+        let a_le_x = super::cle(&mut d, p, a, x);
+        let x_le_b = super::cle(&mut d, p, x, b);
+        d.const_app(p.rat.int.logic.and, &[a_le_x, x_le_b])
+    };
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(
+        anon,
+        "__fine_sample_in_bounds_at_zero_one_m1_n1_last_block_last_sample",
+    );
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.fineSample_in_bounds 0 1 1 1 1 1 hab hi hj did NOT \
+                 check against And (le 0 x) (le x 1) at the expected fine \
+                 sample point (not merely SOME And of le statements): \
+                 {error:?}"
+            )
+        });
+}
+
+/// **Transposition guard for `CReal.fineSample_in_bounds`.** Identical to
+/// [`fine_sample_in_bounds_at_zero_one_m1_n1_last_block_last_sample`] but at
+/// `m := 1`, `n := 2` (`m != n`, per this session's own briefing: `m = n`
+/// cannot detect a coarse/fine mesh or index transposition), `i := m := 1`,
+/// `j := n := 2` — again the last fine sample of the last coarse block:
+/// `Δ_m = 1/2`, `base = 1/2`, `Δ_fine = Δ_m · 1/3 = 1/6`, `x = 1/2 + 2·1/6 =
+/// 5/6`, strictly inside `[0, 1]`.
+#[test]
+fn fine_sample_in_bounds_at_zero_one_m1_n2_last_block_last_sample() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+    let three_nat = d.num(3);
+
+    let a = d.kernel().const_(p.zero, vec![]);
+    let b = d.const_app(p.of_nat, &[one_nat]);
+    let m = one_nat;
+    let n = two_nat;
+    let i = one_nat;
+    let j = two_nat;
+
+    let hab = {
+        let rat_1 = d.const_app(p.rat.nat_div_succ, &[one_nat, zero_nat]);
+        let rzero = d.kernel().const_(p.rat.zero, vec![]);
+        let rle = d.lemma(p.rat.zero_le_nat_div_succ, &[one_nat, zero_nat]);
+        d.lemma(p.of_rat_le, &[rzero, rat_1, rle])
+    };
+
+    let np = d.prelude();
+    // hi : Nat.le 1 1.
+    let hi = d.const_app(np.le_refl, &[one_nat]);
+    // hj : Nat.lt 2 3, defeq `Nat.le 3 3`.
+    let hj = d.const_app(np.le_refl, &[three_nat]);
+
+    let value = d.const_app(p.fine_sample_in_bounds, &[a, b, m, n, i, j, hab, hi, hj]);
+
+    let ty = {
+        let neg_a = d.const_app(p.neg, &[a]);
+        let width = d.const_app(p.add, &[b, neg_a]);
+        let rat_frac_m = d.const_app(p.rat.nat_div_succ, &[one_nat, m]);
+        let frac_m = d.const_app(p.of_rat, &[rat_frac_m]);
+        let delta_m = d.const_app(p.mul, &[width, frac_m]);
+        let of_nat_i = d.const_app(p.of_nat, &[i]);
+        let i_delta_m = d.const_app(p.mul, &[of_nat_i, delta_m]);
+        let base = d.const_app(p.add, &[a, i_delta_m]);
+
+        let rat_frac_n = d.const_app(p.rat.nat_div_succ, &[one_nat, n]);
+        let frac_n = d.const_app(p.of_rat, &[rat_frac_n]);
+        let delta_fine = d.const_app(p.mul, &[delta_m, frac_n]);
+        let of_nat_j = d.const_app(p.of_nat, &[j]);
+        let term = d.const_app(p.mul, &[of_nat_j, delta_fine]);
+        let x = d.const_app(p.add, &[base, term]);
+
+        let a_le_x = super::cle(&mut d, p, a, x);
+        let x_le_b = super::cle(&mut d, p, x, b);
+        d.const_app(p.rat.int.logic.and, &[a_le_x, x_le_b])
+    };
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(
+        anon,
+        "__fine_sample_in_bounds_at_zero_one_m1_n2_last_block_last_sample",
+    );
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.fineSample_in_bounds 0 1 1 2 1 2 hab hi hj did NOT \
+                 check against And (le 0 x) (le x 1) at the expected fine \
+                 sample point (not merely SOME And of le statements): \
+                 {error:?}"
             )
         });
 }
@@ -4587,6 +5124,59 @@ fn exp_series_partial_computes_its_first_few_values() {
     );
 }
 
+/// **Mandatory computation test for `CReal.expTerm_le_geom`.** Instantiates
+/// the universal bound at the closed term `n := 3` and checks, by
+/// `Kernel::infer` + `Kernel::def_eq` (not merely that the application
+/// type-checks), that the inferred statement is EXACTLY `le (ofRat 1/6)
+/// (ofRat 1/4)` -- `expTerm 3 = 1/3! = 1/6` and the geometric bound
+/// `2/2^3 = 2/8` reduces (via `Rat.normalize`'s own `gcd` bookkeeping) to
+/// the same `Rat.mk` normal form as `1/4`, built independently here. A
+/// vacuous or off-by-one statement (e.g. comparing against `1/8`) would
+/// type-check just as well; only forcing both sides through reduction and
+/// checking the LITERAL expected value catches that.
+///
+/// Includes a negative control: `1/4` must not reduce to `1/8` -- a
+/// consistency check that this harness can fail at all.
+#[test]
+fn exp_term_le_geom_concrete_instance_at_three() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let three = d.num(3);
+    let head = d.kernel().const_(p.exp_term_le_geom, vec![]);
+    let instance = d.apply(head, &[three]);
+    let inferred = d
+        .kernel()
+        .infer(instance)
+        .unwrap_or_else(|error| panic!("expTerm_le_geom refused at n=3: {error:?}"));
+
+    let exp_term_3 = d.const_app(p.exp_term, &[three]);
+    let expected_lhs = exp_test_rat_literal(&mut d, 1, 6); // 1/3! = 1/6
+    let expected_rhs = exp_test_rat_literal(&mut d, 1, 4); // 2/2^3 = 2/8 = 1/4
+    let embedded_lhs = d.const_app(p.of_rat, &[expected_lhs]);
+    let embedded_rhs = d.const_app(p.of_rat, &[expected_rhs]);
+    let expected_stmt = d.const_app(p.le, &[embedded_lhs, embedded_rhs]);
+
+    assert!(
+        d.kernel().def_eq(inferred, expected_stmt),
+        "expTerm_le_geom at n=3 must state exactly le (ofRat 1/6) (ofRat 1/4)"
+    );
+    assert!(
+        d.kernel().def_eq(exp_term_3, embedded_lhs),
+        "expTerm 3 should independently reduce to ofRat 1/6"
+    );
+
+    let wrong_rhs = exp_test_rat_literal(&mut d, 1, 8);
+    let embedded_wrong = d.const_app(p.of_rat, &[wrong_rhs]);
+    assert!(
+        !d.kernel().def_eq(embedded_rhs, embedded_wrong),
+        "1/4 must not reduce to 1/8 -- sanity check that this harness can fail"
+    );
+}
+
 /// **Mandatory computation test for `CReal.geom_tail_bounded_div`'s subject
 /// matter.** `r := 1/2` is the concrete instantiation the geometric-series
 /// slice's task named as mandatory: the answer is known independently (the
@@ -4735,6 +5325,438 @@ fn monotone_of_nonneg_deriv_applies_to_the_identity_on_0_1() {
     );
 }
 
+/// **Mandatory concrete instantiation** for `CReal.order_reflect_of_pos_deriv`:
+/// the identity function on `[0, 1]` again, at `x := zero`, `y := one`, with
+/// `CReal.apart_zero_one` supplying `Apart x y` and `CReal.zero_lt_one`
+/// supplying the codomain hypothesis `lt (F zero) (F one)` (`F` is the
+/// identity, so this is literally `lt zero one`). The conclusion is
+/// therefore the same fact fed in as the codomain hypothesis — a tautology
+/// for `F := id`, since order-reflection through the identity changes
+/// nothing — but that is exactly the sanity check this instantiation is
+/// for: every piece (the `HasDerivativeOn` witness, the uniform positive
+/// bound at `k := 0`, the `Apart`/`lt` wiring) must still compose and the
+/// kernel must still accept the result.
+#[test]
+fn order_reflect_of_pos_deriv_applies_to_the_identity_on_0_1() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::rat_eq_rewrite;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+
+    let identity = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+    let const_one = {
+        let r_fv = d.fresh_fvar();
+        d.lam_fv(r_fv, carrier, one_c)
+    };
+
+    let hf = d.lemma(p.has_derivative_id, &[zero_c, one_c]);
+
+    let embed_le_one = {
+        let unit_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, zero_nat]);
+        let one_rat = d.kernel().const_(p.rat.one, vec![]);
+        let unit_eq_one = d.lemma(p.rat_unit_eq_one, &[]);
+        let unit_embed = d.const_app(p.of_rat, &[unit_rat]);
+        let refl_start = d.lemma(p.equiv_refl, &[unit_embed]);
+        let bridge = rat_eq_rewrite(
+            &mut d,
+            unit_rat,
+            one_rat,
+            unit_eq_one,
+            refl_start,
+            &|d, t| {
+                let embedded = d.const_app(p.of_rat, &[t]);
+                d.const_app(p.equiv, &[unit_embed, embedded])
+            },
+        );
+        d.lemma(p.le_of_equiv, &[unit_embed, one_c, bridge])
+    };
+
+    let hderiv = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let haz_ty = d.const_app(p.le, &[zero_c, z]);
+        let hzb_ty = d.const_app(p.le, &[z, one_c]);
+        let haz_fv = d.fresh_fvar();
+        let hzb_fv = d.fresh_fvar();
+        let with_hzb = d.lam_fv(hzb_fv, hzb_ty, embed_le_one);
+        let with_haz = d.lam_fv(haz_fv, haz_ty, with_hzb);
+        d.lam_fv(z_fv, carrier, with_haz)
+    };
+
+    let hax = d.lemma(p.le_refl, &[zero_c]);
+    let hxb = {
+        let lt = d.lemma(p.zero_lt_one, &[]);
+        d.lemma(p.le_of_lt, &[zero_c, one_c, lt])
+    };
+    let hay = hxb;
+    let hyb = d.lemma(p.le_refl, &[one_c]);
+    let hap = d.lemma(p.apart_zero_one, &[]);
+    let hcodom = d.lemma(p.zero_lt_one, &[]);
+
+    let instance = d.lemma(
+        p.order_reflect_of_pos_deriv,
+        &[
+            identity, const_one, zero_c, one_c, hf, zero_nat, hderiv, zero_c, one_c, hax, hxb, hay,
+            hyb, hap, hcodom,
+        ],
+    );
+
+    let ty = d.kernel().infer(instance).unwrap_or_else(|error| {
+        panic!("order_reflect_of_pos_deriv refused at the identity on [0,1]: {error:?}")
+    });
+
+    let expected_ty = d.const_app(p.lt, &[zero_c, one_c]);
+    let rendered = d.kernel().render_lean(ty);
+    let expected_rendered = d.kernel().render_lean(expected_ty);
+    assert_eq!(
+        rendered, expected_rendered,
+        "must conclude exactly `lt zero one`, not some other CReal.lt statement"
+    );
+}
+
+/// **Mandatory concrete instantiation** for `CReal.strict_mono_of_pos_deriv`:
+/// the identity function on `[0, 1]`, whose derivative is the constant `one`
+/// — uniformly bounded below by `1/(0+1) = 1` (`k := 0`) — applied at
+/// `x := zero`, `y := one` with the STRICT input gap `CReal.zero_lt_one`.
+/// Mirrors [`monotone_of_nonneg_deriv_applies_to_the_identity_on_0_1`], but
+/// checks the conclusion is exactly `lt zero one`, not `le zero one`: a
+/// theorem that quietly proved only the non-strict conclusion would still
+/// pass a `le`-shaped check.
+#[test]
+fn strict_mono_of_pos_deriv_applies_to_the_identity_on_0_1() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::rat_eq_rewrite;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+
+    // identity := fun r => r; const_one := fun _ => one.
+    let identity = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+    let const_one = {
+        let r_fv = d.fresh_fvar();
+        d.lam_fv(r_fv, carrier, one_c)
+    };
+
+    let hf = d.lemma(p.has_derivative_id, &[zero_c, one_c]);
+
+    // le (embed (natDivSucc 1 0)) one_c, via `CReal.ratUnitEqOne` bridging
+    // `natDivSucc 1 0` to `Rat.one` (the same technique
+    // `creal/monotone.rs`'s private `of_nat_one_equiv_local` uses, duplicated
+    // here since tests are a sibling module and cannot call it).
+    let embed_le_one = {
+        let unit_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, zero_nat]);
+        let one_rat = d.kernel().const_(p.rat.one, vec![]);
+        let unit_eq_one = d.lemma(p.rat_unit_eq_one, &[]);
+        let unit_embed = d.const_app(p.of_rat, &[unit_rat]);
+        let refl_start = d.lemma(p.equiv_refl, &[unit_embed]);
+        let bridge = rat_eq_rewrite(
+            &mut d,
+            unit_rat,
+            one_rat,
+            unit_eq_one,
+            refl_start,
+            &|d, t| {
+                let embedded = d.const_app(p.of_rat, &[t]);
+                d.const_app(p.equiv, &[unit_embed, embedded])
+            },
+        );
+        // bridge : Equiv unit_embed (ofRat one_rat), defeq Equiv unit_embed one_c.
+        d.lemma(p.le_of_equiv, &[unit_embed, one_c, bridge])
+    };
+
+    // hderiv : ∀ z, le zero z -> le z one -> le (embed (natDivSucc 1 0)) (const_one z).
+    let hderiv = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let haz_ty = d.const_app(p.le, &[zero_c, z]);
+        let hzb_ty = d.const_app(p.le, &[z, one_c]);
+        let haz_fv = d.fresh_fvar();
+        let hzb_fv = d.fresh_fvar();
+        let with_hzb = d.lam_fv(hzb_fv, hzb_ty, embed_le_one);
+        let with_haz = d.lam_fv(haz_fv, haz_ty, with_hzb);
+        d.lam_fv(z_fv, carrier, with_haz)
+    };
+
+    let hax = d.lemma(p.le_refl, &[zero_c]);
+    let hxy = d.lemma(p.zero_lt_one, &[]);
+    let hyb = d.lemma(p.le_refl, &[one_c]);
+
+    let instance = d.lemma(
+        p.strict_mono_of_pos_deriv,
+        &[
+            identity, const_one, zero_c, one_c, hf, zero_nat, hderiv, zero_c, one_c, hax, hxy, hyb,
+        ],
+    );
+
+    let ty = d.kernel().infer(instance).unwrap_or_else(|error| {
+        panic!("strict_mono_of_pos_deriv refused at the identity on [0,1]: {error:?}")
+    });
+
+    let expected_fx = d.apply(identity, &[zero_c]);
+    let expected_fy = d.apply(identity, &[one_c]);
+    let expected_ty = d.const_app(p.lt, &[expected_fx, expected_fy]);
+    let rendered = d.kernel().render_lean(ty);
+    let expected_rendered = d.kernel().render_lean(expected_ty);
+    assert_eq!(
+        rendered, expected_rendered,
+        "must conclude exactly `lt (F zero) (F one)` (F is the identity), not `le`, and not some other CReal.lt statement"
+    );
+    assert!(
+        rendered.contains("CReal.zero") && rendered.contains("CReal.one"),
+        "the endpoints must be zero and one, not some other pair: {rendered}"
+    );
+}
+
+/// **Mandatory concrete instantiation** for `CReal.strict_mono_magnitude`:
+/// the identity function on `[0, 1]` again, `k := 0`, applied at `x := zero`,
+/// `y := one` with the NON-strict gap `le zero one` (derived from
+/// `CReal.zero_lt_one` via `le_of_lt`, since this lemma takes `le x y`, not
+/// `lt x y`). At `k := 0` the bound is `1/2`: for the identity the true rate
+/// is `1`, so `1 - 0 >= (1/2)*(1-0)` holds with room to spare -- this checks
+/// the theorem PRODUCES exactly that inequality, not merely that some
+/// application type-checks.
+///
+/// `x := 0, y := 1` rather than `x = y`: at `x = y` both sides of the
+/// conclusion are `Equiv`-zero and the instance could not discriminate a
+/// theorem that silently proved something else with the same shape.
+#[test]
+fn strict_mono_magnitude_applies_to_the_identity_on_0_1() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::rat_eq_rewrite;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+
+    // identity := fun r => r; const_one := fun _ => one.
+    let identity = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+    let const_one = {
+        let r_fv = d.fresh_fvar();
+        d.lam_fv(r_fv, carrier, one_c)
+    };
+
+    let hf = d.lemma(p.has_derivative_id, &[zero_c, one_c]);
+
+    // le (embed (natDivSucc 1 0)) one_c -- identical construction to
+    // `strict_mono_of_pos_deriv_applies_to_the_identity_on_0_1`, above,
+    // duplicated for the same reason it is there: tests are a sibling module
+    // and cannot call `creal/monotone.rs`'s private `of_nat_one_equiv_local`.
+    let embed_le_one = {
+        let unit_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, zero_nat]);
+        let one_rat = d.kernel().const_(p.rat.one, vec![]);
+        let unit_eq_one = d.lemma(p.rat_unit_eq_one, &[]);
+        let unit_embed = d.const_app(p.of_rat, &[unit_rat]);
+        let refl_start = d.lemma(p.equiv_refl, &[unit_embed]);
+        let bridge = rat_eq_rewrite(
+            &mut d,
+            unit_rat,
+            one_rat,
+            unit_eq_one,
+            refl_start,
+            &|d, t| {
+                let embedded = d.const_app(p.of_rat, &[t]);
+                d.const_app(p.equiv, &[unit_embed, embedded])
+            },
+        );
+        d.lemma(p.le_of_equiv, &[unit_embed, one_c, bridge])
+    };
+
+    // hderiv : ∀ z, le zero z -> le z one -> le (embed (natDivSucc 1 0)) (const_one z).
+    let hderiv = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let haz_ty = d.const_app(p.le, &[zero_c, z]);
+        let hzb_ty = d.const_app(p.le, &[z, one_c]);
+        let haz_fv = d.fresh_fvar();
+        let hzb_fv = d.fresh_fvar();
+        let with_hzb = d.lam_fv(hzb_fv, hzb_ty, embed_le_one);
+        let with_haz = d.lam_fv(haz_fv, haz_ty, with_hzb);
+        d.lam_fv(z_fv, carrier, with_haz)
+    };
+
+    let hax = d.lemma(p.le_refl, &[zero_c]);
+    let hxy_lt = d.lemma(p.zero_lt_one, &[]);
+    let hxy_le = d.lemma(p.le_of_lt, &[zero_c, one_c, hxy_lt]);
+    let hyb = d.lemma(p.le_refl, &[one_c]);
+
+    let instance = d.lemma(
+        p.strict_mono_magnitude,
+        &[
+            identity, const_one, zero_c, one_c, hf, zero_nat, hderiv, zero_c, one_c, hax, hxy_le,
+            hyb,
+        ],
+    );
+
+    let ty = d.kernel().infer(instance).unwrap_or_else(|error| {
+        panic!("strict_mono_magnitude refused at the identity on [0,1]: {error:?}")
+    });
+
+    // Reconstruct the expected type by the SAME route `half_frac_eq`
+    // (`creal/monotone.rs`, private) builds `e_acc`/`a_half` internally at
+    // `k := 0`: `e_acc = succ(2*0) = 1`, so `a_half = embed (natDivSucc 1 1)`,
+    // i.e. `1/2`.
+    let two_nat = d.num(2);
+    let doubled = NatOps::mul(&mut d, two_nat, zero_nat);
+    let e_acc = d.succ(doubled);
+    let frac_e_acc_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, e_acc]);
+    let a_half = d.const_app(p.of_rat, &[frac_e_acc_rat]);
+
+    let neg_zero = d.const_app(p.neg, &[zero_c]);
+    let diff = d.const_app(p.add, &[one_c, neg_zero]);
+    let s4 = d.const_app(p.mul, &[a_half, diff]);
+
+    let expected_fx = d.apply(identity, &[zero_c]);
+    let expected_fy = d.apply(identity, &[one_c]);
+    let neg_fx = d.const_app(p.neg, &[expected_fx]);
+    let rhs = d.const_app(p.add, &[expected_fy, neg_fx]);
+
+    let expected_ty = d.const_app(p.le, &[s4, rhs]);
+    let rendered = d.kernel().render_lean(ty);
+    let expected_rendered = d.kernel().render_lean(expected_ty);
+    assert_eq!(
+        rendered, expected_rendered,
+        "must conclude exactly `le ((1/2)*(one - zero)) (F one - F zero)` (F is the identity), \
+         not some other CReal.le statement"
+    );
+    assert!(
+        rendered.contains("CReal.zero") && rendered.contains("CReal.one"),
+        "the endpoints must be zero and one, not some other pair: {rendered}"
+    );
+}
+
+/// **Mandatory concrete instantiation** for
+/// `CReal.strict_injective_of_pos_deriv`: the identity function on `[0, 1]`
+/// again, applied at `x := zero`, `y := one` with `CReal.apart_zero_one` as
+/// the apartness witness. Checks the conclusion is exactly
+/// `Apart (F zero) (F one)`, i.e. `Apart zero one`.
+#[test]
+fn strict_injective_of_pos_deriv_applies_to_the_identity_on_0_1() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::rat_eq_rewrite;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+
+    let identity = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+    let const_one = {
+        let r_fv = d.fresh_fvar();
+        d.lam_fv(r_fv, carrier, one_c)
+    };
+
+    let hf = d.lemma(p.has_derivative_id, &[zero_c, one_c]);
+
+    let embed_le_one = {
+        let unit_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, zero_nat]);
+        let one_rat = d.kernel().const_(p.rat.one, vec![]);
+        let unit_eq_one = d.lemma(p.rat_unit_eq_one, &[]);
+        let unit_embed = d.const_app(p.of_rat, &[unit_rat]);
+        let refl_start = d.lemma(p.equiv_refl, &[unit_embed]);
+        let bridge = rat_eq_rewrite(
+            &mut d,
+            unit_rat,
+            one_rat,
+            unit_eq_one,
+            refl_start,
+            &|d, t| {
+                let embedded = d.const_app(p.of_rat, &[t]);
+                d.const_app(p.equiv, &[unit_embed, embedded])
+            },
+        );
+        d.lemma(p.le_of_equiv, &[unit_embed, one_c, bridge])
+    };
+
+    let hderiv = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let haz_ty = d.const_app(p.le, &[zero_c, z]);
+        let hzb_ty = d.const_app(p.le, &[z, one_c]);
+        let haz_fv = d.fresh_fvar();
+        let hzb_fv = d.fresh_fvar();
+        let with_hzb = d.lam_fv(hzb_fv, hzb_ty, embed_le_one);
+        let with_haz = d.lam_fv(haz_fv, haz_ty, with_hzb);
+        d.lam_fv(z_fv, carrier, with_haz)
+    };
+
+    let hax = d.lemma(p.le_refl, &[zero_c]);
+    let hxb = {
+        let lt = d.lemma(p.zero_lt_one, &[]);
+        d.lemma(p.le_of_lt, &[zero_c, one_c, lt])
+    };
+    let hay = hxb;
+    let hyb = d.lemma(p.le_refl, &[one_c]);
+    let hap = d.lemma(p.apart_zero_one, &[]);
+
+    let instance = d.lemma(
+        p.strict_injective_of_pos_deriv,
+        &[
+            identity, const_one, zero_c, one_c, hf, zero_nat, hderiv, zero_c, one_c, hax, hxb, hay,
+            hyb, hap,
+        ],
+    );
+
+    let ty = d.kernel().infer(instance).unwrap_or_else(|error| {
+        panic!("strict_injective_of_pos_deriv refused at the identity on [0,1]: {error:?}")
+    });
+
+    let expected_fx = d.apply(identity, &[zero_c]);
+    let expected_fy = d.apply(identity, &[one_c]);
+    let expected_ty = d.const_app(p.apart, &[expected_fx, expected_fy]);
+    let rendered = d.kernel().render_lean(ty);
+    let expected_rendered = d.kernel().render_lean(expected_ty);
+    assert_eq!(
+        rendered, expected_rendered,
+        "must conclude exactly `Apart (F zero) (F one)`, not some other CReal.Apart statement"
+    );
+    assert!(
+        rendered.contains("CReal.zero") && rendered.contains("CReal.one"),
+        "the endpoints must be zero and one, not some other pair: {rendered}"
+    );
+}
+
 /// **Mandatory concrete instantiation** for `CReal.ivt_step`: the identity
 /// function on the ASYMMETRIC bracket `[zero, one]` (asymmetric about `zero`,
 /// unlike `[-1, 1]`, so a transposed-endpoint defect cannot pass), at
@@ -4839,6 +5861,261 @@ fn ivt_step_applies_to_the_identity_on_zero_one() {
     );
 }
 
+/// A closed `Rat.natDivSucc k j` (negated if `negate`), i.e. `k/(j+1)` or
+/// `-k/(j+1)`.
+fn ivt_bisect_rat_lit(d: &mut IntDev<'_>, p: CRealPrelude, k: u32, j: u32, negate: bool) -> ExprId {
+    let kk = d.num(k);
+    let jj = d.num(j);
+    let q = d.const_app(p.rat.nat_div_succ, &[kk, jj]);
+    if negate {
+        crate::rat_prelude::ops::rneg(d, q)
+    } else {
+        q
+    }
+}
+
+/// Whether two closed `Rat` terms reduce to the same value, checked via
+/// `Rat.ble` BOTH ways rather than raw `def_eq` on the terms themselves --
+/// robust to `a`/`b` being unequal-looking-but-equal-valued representations
+/// (e.g. an unreduced sum vs. a hand-picked `natDivSucc` literal), since
+/// `Rat.ble` decides order by cross-multiplication regardless of shape.
+fn ivt_bisect_rat_eq(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> bool {
+    let bool_true = d.bool_true();
+    let ab = d.const_app(p.rat.ble, &[a, b]);
+    let ba = d.const_app(p.rat.ble, &[b, a]);
+    d.kernel().def_eq(ab, bool_true) && d.kernel().def_eq(ba, bool_true)
+}
+
+/// Whether `a < b` on closed `Rat` terms, checked as `Rat.ble a b = true` AND
+/// `Rat.ble b a = false` (both decided by `Rat.ble`'s own reduction, robust
+/// to shape the same way [`ivt_bisect_rat_eq`] is).
+fn ivt_bisect_rat_lt(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> bool {
+    let bool_true = d.bool_true();
+    let bool_false = d.bool_false();
+    let ab = d.const_app(p.rat.ble, &[a, b]);
+    let ba = d.const_app(p.rat.ble, &[b, a]);
+    d.kernel().def_eq(ab, bool_true) && d.kernel().def_eq(ba, bool_false)
+}
+
+/// **Mandatory concrete instantiation** for `CReal.ivt_bisect_lo`/`_hi`: `F
+/// := id` on the ASYMMETRIC bracket `[-1, 2]` (asymmetric about `zero`, so a
+/// transposed-endpoint defect cannot pass), at `n := 0` (`eps_0 = 1`, sample
+/// index `j = succ(2*0) = 1`, threshold `1/(j+1) = 1/2`).
+///
+/// By hand: `k=0` is the unmoved bracket `(-1, 2)`. `k=1`: `m = -1 + 3*1/2 =
+/// 1/2`; `F m = 1/2 <= 1/2` (the threshold) so the branch takes `(m, hi) =
+/// (1/2, 2)`. `k=2`: `m = 1/2 + 3/2*1/2 = 5/4`; `F m = 5/4 > 1/2` so the
+/// branch takes `(lo, m) = (1/2, 5/4)`. The width halves at each step: `3,
+/// 3/2, 3/4`. Every sample is checked via [`ivt_bisect_rat_eq`], not raw
+/// `def_eq`, since neither side is guaranteed to reduce to the same
+/// unnormalized shape.
+#[test]
+fn ivt_bisect_reduces_on_the_identity_bracket_neg_one_two() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    // F := identity.
+    let identity = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+
+    // P0 := -1, Q0 := 2.
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let p0 = d.const_app(p.neg, &[one_c]);
+    let two_nat = d.num(2);
+    let q0 = d.const_app(p.of_nat, &[two_nat]);
+
+    let n0 = d.zero(); // eps index n := 0
+    let idx0 = d.zero(); // sample index -- every bracket endpoint here is a
+    // constant-valued `CReal`, so the sampling index is irrelevant to the
+    // VALUE (only to the regularity proof, which this test never inspects).
+
+    // (label, k, expected_lo, expected_hi)
+    let cases: [(&str, u32, ExprId, ExprId); 3] = [
+        (
+            "k=0 (unmoved base bracket)",
+            0,
+            ivt_bisect_rat_lit(&mut d, p, 1, 0, true), // -1
+            ivt_bisect_rat_lit(&mut d, p, 2, 0, false), // 2
+        ),
+        (
+            "k=1 (F m = 1/2 <= thresh -> (m, hi))",
+            1,
+            ivt_bisect_rat_lit(&mut d, p, 1, 1, false), // 1/2
+            ivt_bisect_rat_lit(&mut d, p, 2, 0, false), // 2
+        ),
+        (
+            "k=2 (F m = 5/4 > thresh -> (lo, m))",
+            2,
+            ivt_bisect_rat_lit(&mut d, p, 1, 1, false), // 1/2
+            ivt_bisect_rat_lit(&mut d, p, 5, 3, false), // 5/4
+        ),
+    ];
+
+    let mut widths = Vec::new();
+    for (label, k, expected_lo, expected_hi) in cases {
+        let kk = d.num(k);
+        let bracket_lo = d.const_app(p.ivt_bisect_lo, &[identity, p0, q0, n0, kk]);
+        let bracket_hi = d.const_app(p.ivt_bisect_hi, &[identity, p0, q0, n0, kk]);
+        let lo_sample = d.const_app(p.seq, &[bracket_lo, idx0]);
+        let hi_sample = d.const_app(p.seq, &[bracket_hi, idx0]);
+
+        assert!(
+            ivt_bisect_rat_eq(&mut d, p, lo_sample, expected_lo),
+            "{label}: lower endpoint did not reduce to the expected rational"
+        );
+        assert!(
+            ivt_bisect_rat_eq(&mut d, p, hi_sample, expected_hi),
+            "{label}: upper endpoint did not reduce to the expected rational"
+        );
+
+        // width = hi - lo, as a Rat, for the halving check below.
+        let width = crate::rat_prelude::group::rsub(&mut d, p.rat, hi_sample, lo_sample);
+        widths.push(width);
+    }
+
+    // Widths must halve exactly: 3, 3/2, 3/4.
+    let expected_widths = [
+        ivt_bisect_rat_lit(&mut d, p, 3, 0, false), // 3
+        ivt_bisect_rat_lit(&mut d, p, 3, 1, false), // 3/2
+        ivt_bisect_rat_lit(&mut d, p, 3, 3, false), // 3/4
+    ];
+    for (i, (actual, expected)) in widths.iter().zip(expected_widths.iter()).enumerate() {
+        assert!(
+            ivt_bisect_rat_eq(&mut d, p, *actual, *expected),
+            "bracket width at k={i} did not reduce to the expected rational"
+        );
+    }
+}
+
+/// **Mandatory concrete instantiation** for `CReal.ivt_bisect_diag_lo`/`_hi`
+/// (the DIAGONAL bisection, [`CRealPrelude::ivt_bisect_diag`]): `F := id` on
+/// the SAME asymmetric bracket `[-1, 2]` [`ivt_bisect_reduces_on_the_identity_bracket_neg_one_two`]
+/// uses, so this exercises a computation the kernel already performs a
+/// fixed-`n` version of, on identical inputs -- a transposed-endpoint defect
+/// still cannot pass either test, and any drift between the two
+/// constructions on their shared first steps would show up as a diff here.
+///
+/// By hand, using THIS construction's own per-step slack (step `j` samples
+/// at `thresh_j := natDivSucc 1 (succ (2*j))`, half of `eps_j := natDivSucc 1
+/// j`): `k=0` is the unmoved bracket `(-1, 2)`. Step `j=0` (`thresh_0 =
+/// 1/2`): `m = -1 + 3*1/2 = 1/2`; `F m = 1/2 <= 1/2`, branch `(m, hi) =
+/// (1/2, 2)`. Step `j=1` (`thresh_1 = 1/4`): `m = 1/2 + 3/2*1/2 = 5/4`; `F m
+/// = 5/4 > 1/4`, branch `(lo, m) = (1/2, 5/4)`. The width halves each step
+/// (`3, 3/2, 3/4`) exactly as `ivt_bisect`'s own test (width halving does not
+/// depend on which threshold was used), AND the slack used at each step
+/// strictly shrinks (`eps_0 = 1 > eps_1 = 1/2`) -- both are checked below,
+/// neither assumed.
+///
+/// This same trace is where the diary's counterexample (1) starts:
+/// continuing past `k=2`, `lo` never moves again (every later step keeps
+/// picking `(lo, m)`), so the bracket converges to `1/2`, not the true root
+/// `0` -- see [`super::CRealPrelude::ivt_bisect_diag`]'s doc comment for the
+/// full argument. Only the three steps this section's task asks for are
+/// checked by kernel reduction here; the eventual limit is a `CReal`, not a
+/// decidable reduction.
+#[test]
+fn ivt_bisect_diag_reduces_on_the_identity_bracket_neg_one_two() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    // F := identity.
+    let identity = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+
+    // P0 := -1, Q0 := 2.
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let p0 = d.const_app(p.neg, &[one_c]);
+    let two_nat = d.num(2);
+    let q0 = d.const_app(p.of_nat, &[two_nat]);
+
+    let idx0 = d.zero(); // every bracket endpoint here is a constant-valued
+    // `CReal`, so the sampling index is irrelevant to the VALUE (only to the
+    // regularity proof, which this test never inspects).
+
+    // (label, k, expected_lo, expected_hi)
+    let cases: [(&str, u32, ExprId, ExprId); 3] = [
+        (
+            "k=0 (unmoved base bracket)",
+            0,
+            ivt_bisect_rat_lit(&mut d, p, 1, 0, true), // -1
+            ivt_bisect_rat_lit(&mut d, p, 2, 0, false), // 2
+        ),
+        (
+            "k=1 (step j=0, thresh_0=1/2: F m = 1/2 <= thresh -> (m, hi))",
+            1,
+            ivt_bisect_rat_lit(&mut d, p, 1, 1, false), // 1/2
+            ivt_bisect_rat_lit(&mut d, p, 2, 0, false), // 2
+        ),
+        (
+            "k=2 (step j=1, thresh_1=1/4: F m = 5/4 > thresh -> (lo, m))",
+            2,
+            ivt_bisect_rat_lit(&mut d, p, 1, 1, false), // 1/2
+            ivt_bisect_rat_lit(&mut d, p, 5, 3, false), // 5/4
+        ),
+    ];
+
+    let mut widths = Vec::new();
+    for (label, k, expected_lo, expected_hi) in cases {
+        let kk = d.num(k);
+        let bracket_lo = d.const_app(p.ivt_bisect_diag_lo, &[identity, p0, q0, kk]);
+        let bracket_hi = d.const_app(p.ivt_bisect_diag_hi, &[identity, p0, q0, kk]);
+        let lo_sample = d.const_app(p.seq, &[bracket_lo, idx0]);
+        let hi_sample = d.const_app(p.seq, &[bracket_hi, idx0]);
+
+        assert!(
+            ivt_bisect_rat_eq(&mut d, p, lo_sample, expected_lo),
+            "{label}: lower endpoint did not reduce to the expected rational"
+        );
+        assert!(
+            ivt_bisect_rat_eq(&mut d, p, hi_sample, expected_hi),
+            "{label}: upper endpoint did not reduce to the expected rational"
+        );
+
+        // width = hi - lo, as a Rat, for the halving check below.
+        let width = crate::rat_prelude::group::rsub(&mut d, p.rat, hi_sample, lo_sample);
+        widths.push(width);
+    }
+
+    // Widths must halve exactly: 3, 3/2, 3/4.
+    let expected_widths = [
+        ivt_bisect_rat_lit(&mut d, p, 3, 0, false), // 3
+        ivt_bisect_rat_lit(&mut d, p, 3, 1, false), // 3/2
+        ivt_bisect_rat_lit(&mut d, p, 3, 3, false), // 3/4
+    ];
+    for (i, (actual, expected)) in widths.iter().zip(expected_widths.iter()).enumerate() {
+        assert!(
+            ivt_bisect_rat_eq(&mut d, p, *actual, *expected),
+            "bracket width at k={i} did not reduce to the expected rational"
+        );
+    }
+
+    // The slack itself -- `eps_j := natDivSucc 1 j` at the two steps this
+    // test exercises -- strictly shrinks (`eps_0 = 1 > eps_1 = 1/2`). This is
+    // the property `ivt_bisect` (a fixed external `n`) never has to
+    // establish, since its `n` never changes within one bisection run; it is
+    // the only genuinely new arithmetic fact this construction introduces.
+    let eps0 = ivt_bisect_rat_lit(&mut d, p, 1, 0, false); // 1
+    let eps1 = ivt_bisect_rat_lit(&mut d, p, 1, 1, false); // 1/2
+    assert!(
+        ivt_bisect_rat_lt(&mut d, p, eps1, eps0),
+        "the per-step slack must strictly shrink: eps_1 = 1/2 must be < eps_0 = 1"
+    );
+}
+
 /// **Mandatory concrete instantiation** for `CReal.sumRange_reblock`
 /// (`creal/integral.rs`): `g i := CReal.ofNat i`, checked at TWO different
 /// block sizes over the SAME six terms `g 0, …, g 5` (`0+1+2+3+4+5 = 15`).
@@ -4929,9 +6206,7 @@ fn sum_range_reblock_regroups_zero_through_five_two_ways() {
 
         let stmt_lhs = req(d, lhs_seq, fifteen_seq);
         let proof_lhs = rrefl(d, lhs_seq);
-        let name_lhs = d
-            .kernel()
-            .name_str(anon, format!("__reblock_lhs_{label}").as_str());
+        let name_lhs = d.kernel().name_str(anon, format!("__reblock_lhs_{label}"));
         d.kernel()
             .add_declaration(Declaration::Theorem {
                 name: name_lhs,
@@ -4945,9 +6220,7 @@ fn sum_range_reblock_regroups_zero_through_five_two_ways() {
 
         let stmt_rhs = req(d, rhs_seq, fifteen_seq);
         let proof_rhs = rrefl(d, rhs_seq);
-        let name_rhs = d
-            .kernel()
-            .name_str(anon, format!("__reblock_rhs_{label}").as_str());
+        let name_rhs = d.kernel().name_str(anon, format!("__reblock_rhs_{label}"));
         d.kernel()
             .add_declaration(Declaration::Theorem {
                 name: name_rhs,
@@ -5207,4 +6480,1089 @@ fn antitone_of_nonpos_deriv_applies_to_negated_identity_on_0_1() {
         rendered.contains("CReal.zero") && rendered.contains("CReal.one"),
         "the endpoints must be zero and one, not some other pair: {rendered}"
     );
+}
+
+/// **Mandatory concrete instantiation** for `CReal.strict_antitone_of_neg_deriv`:
+/// `F := fun r => neg r` on `[0, 1]`, whose derivative is the constant `neg
+/// one` everywhere (`hasDerivative_neg` applied to `hasDerivative_id`),
+/// uniformly bounded above by `neg (embed (natDivSucc 1 0))` -- i.e. `neg
+/// one` itself, via `ratUnitEqOne` bridging `natDivSucc 1 0` to `Rat.one`
+/// exactly as `strict_mono_of_pos_deriv_applies_to_the_identity_on_0_1`
+/// does -- applied at `x := zero`, `y := one` with the STRICT input gap
+/// `CReal.zero_lt_one`. Distinct `x`/`y` rules out the trivial-by-reflexivity
+/// degenerate case; the expected conclusion is pinned to exactly
+/// `lt (F one) (F zero)`, i.e. `lt (neg one) (neg zero)` -- genuinely
+/// reversed, and strict, not merely `le`.
+#[test]
+fn strict_antitone_of_neg_deriv_applies_to_negated_identity_on_0_1() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::rat_eq_rewrite;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+
+    // identity := fun r => r; const_one := fun _ => one (F' before negation).
+    let identity = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+    let const_one = {
+        let r_fv = d.fresh_fvar();
+        d.lam_fv(r_fv, carrier, one_c)
+    };
+
+    let hf_id = d.lemma(p.has_derivative_id, &[zero_c, one_c]);
+    // hf : HasDerivativeOn (fun r => neg r) (fun r => neg one) zero one.
+    let hf = d.lemma(
+        p.has_derivative_neg,
+        &[identity, const_one, zero_c, one_c, hf_id],
+    );
+
+    let neg_r = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let nr = d.const_app(p.neg, &[r]);
+        d.lam_fv(r_fv, carrier, nr)
+    };
+    let neg_one = {
+        let r_fv = d.fresh_fvar();
+        let no = d.const_app(p.neg, &[one_c]);
+        d.lam_fv(r_fv, carrier, no)
+    };
+
+    // le (embed (natDivSucc 1 0)) one_c, via `CReal.ratUnitEqOne` bridging
+    // `natDivSucc 1 0` to `Rat.one` (same technique
+    // `strict_mono_of_pos_deriv_applies_to_the_identity_on_0_1` uses).
+    let unit_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, zero_nat]);
+    let unit_embed = d.const_app(p.of_rat, &[unit_rat]);
+    let embed_le_one = {
+        let one_rat = d.kernel().const_(p.rat.one, vec![]);
+        let unit_eq_one = d.lemma(p.rat_unit_eq_one, &[]);
+        let refl_start = d.lemma(p.equiv_refl, &[unit_embed]);
+        let bridge = rat_eq_rewrite(
+            &mut d,
+            unit_rat,
+            one_rat,
+            unit_eq_one,
+            refl_start,
+            &|d, t| {
+                let embedded = d.const_app(p.of_rat, &[t]);
+                d.const_app(p.equiv, &[unit_embed, embedded])
+            },
+        );
+        // bridge : Equiv unit_embed (ofRat one_rat), defeq Equiv unit_embed one_c.
+        d.lemma(p.le_of_equiv, &[unit_embed, one_c, bridge])
+    };
+
+    // le (neg one) (neg (embed (natDivSucc 1 0))), from `embed_le_one` via
+    // `neg_le_neg` directly -- no `double_neg` needed since `neg_le_neg`
+    // already lands on `neg (neg a_0)`'s mirror, `neg one`, on the nose.
+    let neg_one_le_neg_a0 = d.lemma(p.neg_le_neg, &[unit_embed, one_c, embed_le_one]);
+
+    // hderiv : ∀ z, le zero z -> le z one -> le (neg_one z) (neg (embed (natDivSucc 1 0))).
+    let hderiv = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let haz_ty = d.const_app(p.le, &[zero_c, z]);
+        let hzb_ty = d.const_app(p.le, &[z, one_c]);
+        let haz_fv = d.fresh_fvar();
+        let hzb_fv = d.fresh_fvar();
+        let with_hzb = d.lam_fv(hzb_fv, hzb_ty, neg_one_le_neg_a0);
+        let with_haz = d.lam_fv(haz_fv, haz_ty, with_hzb);
+        d.lam_fv(z_fv, carrier, with_haz)
+    };
+
+    let hax = d.lemma(p.le_refl, &[zero_c]);
+    let hxy = d.lemma(p.zero_lt_one, &[]);
+    let hyb = d.lemma(p.le_refl, &[one_c]);
+
+    let instance = d.lemma(
+        p.strict_antitone_of_neg_deriv,
+        &[
+            neg_r, neg_one, zero_c, one_c, hf, zero_nat, hderiv, zero_c, one_c, hax, hxy, hyb,
+        ],
+    );
+
+    let ty = d.kernel().infer(instance).unwrap_or_else(|error| {
+        panic!("strict_antitone_of_neg_deriv refused at negated identity on [0,1]: {error:?}")
+    });
+
+    let expected_fy = d.apply(neg_r, &[one_c]);
+    let expected_fx = d.apply(neg_r, &[zero_c]);
+    let expected_ty = d.const_app(p.lt, &[expected_fy, expected_fx]);
+    let rendered = d.kernel().render_lean(ty);
+    let expected_rendered = d.kernel().render_lean(expected_ty);
+    assert_eq!(
+        rendered, expected_rendered,
+        "must conclude exactly `lt (F one) (F zero)` (F is negated identity), not `le`, and not some other CReal.lt statement"
+    );
+    assert!(
+        rendered.contains("CReal.zero") && rendered.contains("CReal.one"),
+        "the endpoints must be zero and one, not some other pair: {rendered}"
+    );
+}
+
+/// **Mandatory concrete instantiation** for `CReal.strict_mono_comp`:
+/// `F := G := fun r => r` (the identity), both strictly increasing on
+/// `[0, 1]` by the trivial witness `fun x y _ hxy _ => hxy` (since
+/// `identity x = x` beta-reduces, the conclusion `lt (F x) (F y)` literally
+/// IS the hypothesis `lt x y`), and the identity trivially maps `[0, 1]`
+/// into itself (`hrange_lo := fun z haz _ => haz`, `hrange_hi := fun z _ hzb
+/// => hzb`). Applied at `x := zero`, `y := one` with the STRICT input gap
+/// `CReal.zero_lt_one`; distinct `x`/`y` rules out the degenerate case. The
+/// expected conclusion, after both identities beta-reduce away, is exactly
+/// `lt zero one`.
+#[test]
+fn strict_mono_comp_applies_to_the_identity_composed_with_itself_on_0_1() {
+    use crate::expr::ExprId;
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    let identity = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+
+    // A strict-monotonicity witness for the identity on [lo, hi]: the
+    // conclusion `lt (identity x) (identity y)` is beta-defeq to `lt x y`,
+    // so the body is just the middle hypothesis itself.
+    let id_strict_mono = |d: &mut IntDev<'_>, lo: ExprId, hi: ExprId| {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let hax_ty = d.const_app(p.le, &[lo, x]);
+        let hax_fv = d.fresh_fvar();
+        let hxy_ty = d.const_app(p.lt, &[x, y]);
+        let hxy_fv = d.fresh_fvar();
+        let hxy = d.kernel().fvar(hxy_fv);
+        let hyb_ty = d.const_app(p.le, &[y, hi]);
+        let hyb_fv = d.fresh_fvar();
+        let with_hyb = d.lam_fv(hyb_fv, hyb_ty, hxy);
+        let with_hxy = d.lam_fv(hxy_fv, hxy_ty, with_hyb);
+        let with_hax = d.lam_fv(hax_fv, hax_ty, with_hxy);
+        let with_y = d.lam_fv(y_fv, carrier, with_hax);
+        d.lam_fv(x_fv, carrier, with_y)
+    };
+    let hf = id_strict_mono(&mut d, zero_c, one_c);
+    let hg = id_strict_mono(&mut d, zero_c, one_c);
+
+    // The identity trivially maps [0, 1] into [0, 1].
+    let hrange_lo = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let haz_ty = d.const_app(p.le, &[zero_c, z]);
+        let haz_fv = d.fresh_fvar();
+        let haz = d.kernel().fvar(haz_fv);
+        let hzb_ty = d.const_app(p.le, &[z, one_c]);
+        let hzb_fv = d.fresh_fvar();
+        let with_hzb = d.lam_fv(hzb_fv, hzb_ty, haz);
+        let with_haz = d.lam_fv(haz_fv, haz_ty, with_hzb);
+        d.lam_fv(z_fv, carrier, with_haz)
+    };
+    let hrange_hi = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let haz_ty = d.const_app(p.le, &[zero_c, z]);
+        let haz_fv = d.fresh_fvar();
+        let hzb_ty = d.const_app(p.le, &[z, one_c]);
+        let hzb_fv = d.fresh_fvar();
+        let hzb = d.kernel().fvar(hzb_fv);
+        let with_hzb = d.lam_fv(hzb_fv, hzb_ty, hzb);
+        let with_haz = d.lam_fv(haz_fv, haz_ty, with_hzb);
+        d.lam_fv(z_fv, carrier, with_haz)
+    };
+
+    let hax = d.lemma(p.le_refl, &[zero_c]);
+    let hxy = d.lemma(p.zero_lt_one, &[]);
+    let hyb = d.lemma(p.le_refl, &[one_c]);
+
+    let instance = d.lemma(
+        p.strict_mono_comp,
+        &[
+            identity, identity, zero_c, one_c, zero_c, one_c, hf, hg, hrange_lo, hrange_hi, zero_c,
+            one_c, hax, hxy, hyb,
+        ],
+    );
+
+    let ty = d.kernel().infer(instance).unwrap_or_else(|error| {
+        panic!("strict_mono_comp refused at identity-composed-with-itself on [0,1]: {error:?}")
+    });
+
+    // The conclusion is `lt (G (F zero)) (G (F one))`, un-reduced (`render_lean`
+    // does not beta-reduce): with `F := G := identity` that is
+    // `lt (identity (identity zero)) (identity (identity one))`, defeq to
+    // (but not syntactically) `lt zero one`.
+    let inner_zero = d.apply(identity, &[zero_c]);
+    let expected_gfzero = d.apply(identity, &[inner_zero]);
+    let inner_one = d.apply(identity, &[one_c]);
+    let expected_gfone = d.apply(identity, &[inner_one]);
+    let expected_ty = d.const_app(p.lt, &[expected_gfzero, expected_gfone]);
+    let rendered = d.kernel().render_lean(ty);
+    let expected_rendered = d.kernel().render_lean(expected_ty);
+    assert_eq!(
+        rendered, expected_rendered,
+        "must conclude exactly `lt (identity (identity zero)) (identity (identity one))`"
+    );
+
+    // And separately confirm it really is defeq to the reduced statement
+    // `lt zero one`, so the theorem did not smuggle in some other pair.
+    let reduced_ty = d.const_app(p.lt, &[zero_c, one_c]);
+    assert!(
+        d.kernel().def_eq(ty, reduced_ty),
+        "the conclusion must be defeq to `lt zero one`, got {rendered}"
+    );
+}
+
+/// **Mandatory concrete instantiation** for `CReal.hasDerivative_unique`:
+/// `F := fun r => r` (the identity, `hasDerivative_id`) on `[0, 1]`, with
+/// BOTH candidate derivatives the constant `one` -- the same witness
+/// `hasDerivative_id` supplies twice, matching the task's own instruction
+/// ("both derivatives const one"). `a := zero`, `b := one` so `lt a b` is
+/// genuinely DISCHARGED via `CReal.zero_lt_one`, not assumed at a
+/// degenerate interval (`a = b`) the way the refuted naive statement would
+/// need -- that refutation is exactly why this theorem carries `lt a b` at
+/// all. `z := zero` (the left endpoint; `hasDerivative_unique` holds at any
+/// `z` with `le a z` and `le z b`, endpoints included).
+#[test]
+fn has_derivative_unique_applies_to_the_identity_on_0_1() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    let one_fn = {
+        let ignore_fv = d.fresh_fvar();
+        d.lam_fv(ignore_fv, carrier, one_c)
+    };
+
+    let hf1 = d.lemma(p.has_derivative_id, &[zero_c, one_c]);
+    let hf2 = d.lemma(p.has_derivative_id, &[zero_c, one_c]);
+    let hab = d.lemma(p.zero_lt_one, &[]);
+
+    let haz = d.lemma(p.le_refl, &[zero_c]);
+    let hzb = {
+        let lt = d.lemma(p.zero_lt_one, &[]);
+        d.lemma(p.le_of_lt, &[zero_c, one_c, lt])
+    };
+
+    let identity = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+    let instance = d.lemma(
+        p.has_derivative_unique,
+        &[
+            identity, one_fn, one_fn, zero_c, one_c, hf1, hf2, hab, zero_c, haz, hzb,
+        ],
+    );
+
+    let ty = d.kernel().infer(instance).unwrap_or_else(|error| {
+        panic!("hasDerivative_unique refused at the identity on [0,1]: {error:?}")
+    });
+
+    let expected_f1z = d.apply(one_fn, &[zero_c]);
+    let expected_f2z = d.apply(one_fn, &[zero_c]);
+    let expected_ty = d.const_app(p.equiv, &[expected_f1z, expected_f2z]);
+    let rendered = d.kernel().render_lean(ty);
+    let expected_rendered = d.kernel().render_lean(expected_ty);
+    assert_eq!(
+        rendered, expected_rendered,
+        "must conclude exactly `Equiv (F1 zero) (F2 zero)` (both const one), not some other CReal.Equiv statement"
+    );
+    assert!(
+        rendered.contains("CReal.one"),
+        "both candidate derivatives are the constant one: {rendered}"
+    );
+}
+
+/// **Mandatory concrete instantiation for `CReal.pow_half_le_natDivSucc`.**
+/// At `n = 3`: `(1/2)³ = 1/8 ≤ 1/4 = natDivSucc 1 3`, checked against the
+/// literal statement (not merely SOME `le` proposition). `n = 0` and `n = 1`
+/// hold with equality (`1 ≤ 1`, `1/2 ≤ 1/2`) and cannot detect a
+/// wrong-direction bound, which is why this checks `n = 3` specifically.
+#[test]
+fn pow_half_le_nat_div_succ_at_three_bounds_one_eighth_by_one_quarter() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let three_nat = d.num(3);
+    let one_nat = d.num(1);
+
+    let value = d.const_app(p.pow_half_le_nat_div_succ, &[three_nat]);
+
+    let half = super::div_succ(&mut d, p, 1, one_nat);
+    let half_creal = super::embed(&mut d, p, half);
+    let pow_half_3 = d.const_app(p.pow, &[half_creal, three_nat]);
+    let nat_div_1_3 = super::div_succ(&mut d, p, 1, three_nat);
+    let bound = super::embed(&mut d, p, nat_div_1_3);
+    let ty = d.const_app(p.le, &[pow_half_3, bound]);
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(
+        anon,
+        "__pow_half_le_nat_div_succ_at_three_bounds_one_eighth_by_one_quarter",
+    );
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.pow_half_le_natDivSucc 3 did NOT check against \
+                 le (pow (ofRat (natDivSucc 1 1)) 3) (ofRat (natDivSucc 1 3)) \
+                 (not merely SOME le statement): {error:?}"
+            )
+        });
+}
+
+/// The mandatory non-tight concrete instantiation for the newly-public
+/// `CReal.abs_add_le`: `a := one`, `b := neg one`. `abs (1 + (-1)) = abs 0 =
+/// 0`, `abs 1 + abs(-1) = 1 + 1 = 2`, so the bound has slack (`0 ≤ 2`), not
+/// zero on both sides -- this is deliberately NOT `a = b = 0`, which would
+/// hide a factor error (the module doc for `abs_add_le_at_one_and_one_is_tight`
+/// below is the tight companion). The expected conclusion is reconstructed
+/// independently of `CReal.abs_add_le`'s own proof term, so a swapped
+/// `add`/`abs` argument or a wrong-orientation `le` would fail this even if
+/// the general theorem's own type happened to still check.
+#[test]
+fn abs_add_le_at_one_and_neg_one_has_slack() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let one = d.kernel().const_(p.one, vec![]);
+    let neg_one = d.const_app(p.neg, &[one]);
+
+    let value = d.lemma(p.abs_add_le, &[one, neg_one]);
+
+    // Independently reconstruct: le (abs (add one neg_one)) (add (abs one) (abs neg_one)).
+    let sum = d.const_app(p.add, &[one, neg_one]);
+    let abs_sum = d.const_app(p.abs, &[sum]);
+    let abs_one = d.const_app(p.abs, &[one]);
+    let abs_neg_one = d.const_app(p.abs, &[neg_one]);
+    let bound = d.const_app(p.add, &[abs_one, abs_neg_one]);
+    let ty = d.const_app(p.le, &[abs_sum, bound]);
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(anon, "__abs_add_le_at_one_neg_one");
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.abs_add_le at (1, -1) did NOT check against \
+                 le (abs (add 1 (neg 1))) (add (abs 1) (abs (neg 1))) \
+                 -- i.e. le (abs 0) 2: {error:?}"
+            )
+        });
+}
+
+/// The mandatory TIGHT concrete instantiation for `CReal.abs_add_le`: `a :=
+/// one`, `b := one`. `abs (1 + 1) = 2`, `abs 1 + abs 1 = 2`, so the bound is
+/// met with equality (`2 ≤ 2`) -- a bound that is never exercised at
+/// equality can hide a factor error the slack case above would not catch.
+#[test]
+fn abs_add_le_at_one_and_one_is_tight() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let one = d.kernel().const_(p.one, vec![]);
+
+    let value = d.lemma(p.abs_add_le, &[one, one]);
+
+    // Independently reconstruct: le (abs (add one one)) (add (abs one) (abs one)).
+    let sum = d.const_app(p.add, &[one, one]);
+    let abs_sum = d.const_app(p.abs, &[sum]);
+    let abs_one = d.const_app(p.abs, &[one]);
+    let bound = d.const_app(p.add, &[abs_one, abs_one]);
+    let ty = d.const_app(p.le, &[abs_sum, bound]);
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(anon, "__abs_add_le_at_one_one_tight");
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.abs_add_le at (1, 1) did NOT check against \
+                 le (abs (add 1 1)) (add (abs 1) (abs 1)) -- i.e. le (abs 2) 2: {error:?}"
+            )
+        });
+}
+
+/// The mandatory wiring-check instantiation for
+/// `CReal.converges_comp_eventually`: `F := fun r => r` on `[0, 1]`, `f :=
+/// fun _ => zero`, `L := zero` (`CReal.converges_of_const`) -- `F` is the
+/// identity, so the conclusion collapses to (a weakened form of) the
+/// hypothesis, and this only checks the theorem's own plumbing (the
+/// `UniformlyContinuousOn.spec` application, the `exists_intro`/`exists_elim`
+/// shapes) rather than any genuine rational estimate.
+#[test]
+fn converges_comp_eventually_applies_at_the_identity_and_a_constant_sequence() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let nat = d.nat_ty();
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    let identity_fn = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    let u = d.lemma(p.uniformly_continuous_id, &[zero_c, one_c]);
+
+    // f := fun _ => zero (the constant sequence).
+    let f = {
+        let n_fv = d.fresh_fvar();
+        let _n = d.kernel().fvar(n_fv);
+        d.lam_fv(n_fv, nat, zero_c)
+    };
+    let l = zero_c;
+
+    // h_lo : forall n, le zero (f n) -- reduces to le zero zero, le_refl.
+    let h_lo = {
+        let n_fv = d.fresh_fvar();
+        let _n = d.kernel().fvar(n_fv);
+        let body = d.lemma(p.le_refl, &[zero_c]);
+        d.lam_fv(n_fv, nat, body)
+    };
+    // h_hi : forall n, le (f n) one -- reduces to le zero one, le_of_lt zero_lt_one.
+    let h_hi = {
+        let n_fv = d.fresh_fvar();
+        let _n = d.kernel().fvar(n_fv);
+        let lt01 = d.const_app(p.zero_lt_one, &[]);
+        let body = d.lemma(p.le_of_lt, &[zero_c, one_c, lt01]);
+        d.lam_fv(n_fv, nat, body)
+    };
+    let hconv = d.lemma(p.converges_of_const, &[zero_c]);
+    let e = d.num(3);
+
+    let instance = d.lemma(
+        p.converges_comp_eventually,
+        &[identity_fn, zero_c, one_c, u, f, l, h_lo, h_hi, hconv, e],
+    );
+
+    let inferred = d.kernel().infer(instance);
+    let ty = inferred.unwrap_or_else(|error| {
+        panic!("converges_comp_eventually refused at F := id, f := L := zero, e := 3: {error:?}")
+    });
+    let rendered = kernel.render_lean(ty);
+    assert!(
+        rendered.contains("Exists"),
+        "the instantiated conclusion is not an existential: {rendered}"
+    );
+}
+
+/// The mandatory MOVING-limit instantiation: `F := fun r => add r one`
+/// (`x + 1`, via `uniformly_continuous_add` composing `uniformly_continuous_id`
+/// and `uniformly_continuous_const`), same `f := L := zero`. `F L = one ≠
+/// zero = L`, so this exercises the theorem where the conclusion's target
+/// (`F L`) genuinely differs from the hypothesis' own limit `L` -- unlike the
+/// identity instantiation above, `F L` and `L` transposed would be a
+/// DIFFERENT (and wrong) claim.
+#[test]
+fn converges_comp_eventually_applies_at_x_plus_one_where_the_limit_moves() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let nat = d.nat_ty();
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    let identity_fn = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let const_one_fn = {
+        let ignore_fv = d.fresh_fvar();
+        d.lam_fv(ignore_fv, carrier, one_c)
+    };
+    let f_big = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let added = d.const_app(p.add, &[r, one_c]);
+        d.lam_fv(r_fv, carrier, added)
+    };
+
+    let u_id = d.lemma(p.uniformly_continuous_id, &[zero_c, one_c]);
+    let u_const = d.lemma(p.uniformly_continuous_const, &[one_c, zero_c, one_c]);
+    let u = d.lemma(
+        p.uniformly_continuous_add,
+        &[identity_fn, const_one_fn, zero_c, one_c, u_id, u_const],
+    );
+
+    let f = {
+        let n_fv = d.fresh_fvar();
+        let _n = d.kernel().fvar(n_fv);
+        d.lam_fv(n_fv, nat, zero_c)
+    };
+    let l = zero_c;
+
+    let h_lo = {
+        let n_fv = d.fresh_fvar();
+        let _n = d.kernel().fvar(n_fv);
+        let body = d.lemma(p.le_refl, &[zero_c]);
+        d.lam_fv(n_fv, nat, body)
+    };
+    let h_hi = {
+        let n_fv = d.fresh_fvar();
+        let _n = d.kernel().fvar(n_fv);
+        let lt01 = d.const_app(p.zero_lt_one, &[]);
+        let body = d.lemma(p.le_of_lt, &[zero_c, one_c, lt01]);
+        d.lam_fv(n_fv, nat, body)
+    };
+    let hconv = d.lemma(p.converges_of_const, &[zero_c]);
+    let e = d.num(3);
+
+    let instance = d.lemma(
+        p.converges_comp_eventually,
+        &[f_big, zero_c, one_c, u, f, l, h_lo, h_hi, hconv, e],
+    );
+
+    let inferred = d.kernel().infer(instance);
+    let ty = inferred.unwrap_or_else(|error| {
+        panic!(
+            "converges_comp_eventually refused at F := (fun r => r + 1), \
+             f := L := zero, e := 3: {error:?}"
+        )
+    });
+    let rendered = kernel.render_lean(ty);
+    assert!(
+        rendered.contains("Exists"),
+        "the instantiated conclusion is not an existential: {rendered}"
+    );
+}
+
+/// **Mandatory concrete instantiation** for `CReal.scale_cancel_le`, kernel-
+/// checked rather than verified on paper: `m := 1`, `u := 2`, `v := 1`.
+///
+/// Both directions are TIGHT, which is exactly what would catch an off-by-one
+/// factor: the hypothesis is `(1/2)*2 = 1 <= 1` (an equality dressed as a
+/// bound) and the conclusion is `2 <= 2*1 = 2` (likewise). `u` is built as
+/// `CReal.ofRat (Rat.natDivSucc 2 0)` -- the theorem's own `Nat.succ m`
+/// reciprocal shape at `m := 1` -- rather than some other representation of
+/// "2", so the hypothesis proof is exactly the field identity
+/// `declare_scale_cancel_le` itself needs internally
+/// (`Rat.mul_inv_cancel` + `Rat.inv_natDivSucc`), reconstructed here at a
+/// concrete literal instead of the free `m` the production declaration
+/// carries.
+#[test]
+fn scale_cancel_le_applies_at_one_two_one_and_is_tight() {
+    use crate::rat_prelude::ops::{rat_eq_rewrite, req, rmul, rone};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let rat = p.rat;
+
+    let one_nat = d.num(1);
+    let zero_nat = d.num(0);
+    let m = d.num(1); // m := 1
+    let sm = d.succ(m); // Nat.succ 1 = 2
+
+    // c := CReal.ofRat (Rat.natDivSucc 1 1) = 1/2
+    let c_rat = d.const_app(rat.nat_div_succ, &[one_nat, m]);
+    let c = d.const_app(p.of_rat, &[c_rat]);
+    // u := CReal.ofRat (Rat.natDivSucc 2 0) -- defeq `CReal.ofNat 2`.
+    let succ_rat = d.const_app(rat.nat_div_succ, &[sm, zero_nat]);
+    let u = d.const_app(p.of_rat, &[succ_rat]);
+    // v := CReal.ofRat Rat.one -- defeq `CReal.one`.
+    let one_rat = rone(&mut d, rat);
+    let v = d.const_app(p.of_rat, &[one_rat]);
+
+    // --- Rat level: c_rat * succ_rat = Rat.one, exactly (m := 1) -----------
+    let unit_le = d.lemma(rat.int.nat.le_refl, &[one_nat]); // Nat.le 1 1
+    let c_pos = d.lemma(rat.nat_div_succ_pos, &[one_nat, m, unit_le]);
+    // c_pos : Rat.lt Rat.zero c_rat
+    let inv_term = d.const_app(rat.inv, &[c_rat]);
+    let cancel = d.lemma(rat.mul_inv_cancel, &[c_rat, c_pos]);
+    // cancel : Eq Rat (Rat.mul c_rat inv_term) Rat.one
+    let inv_eq = d.lemma(rat.inv_nat_div_succ, &[m]);
+    // inv_eq : Eq Rat inv_term succ_rat
+    let key_rat_eq = rat_eq_rewrite(&mut d, inv_term, succ_rat, inv_eq, cancel, &|d, t| {
+        let prod = rmul(d, c_rat, t);
+        req(d, prod, one_rat)
+    });
+    // key_rat_eq : Eq Rat (Rat.mul c_rat succ_rat) Rat.one
+
+    // --- lift to CReal: Equiv (mul c u) v -----------------------------------
+    let prod_real = d.const_app(p.mul, &[c, u]);
+    let rat_prod = rmul(&mut d, c_rat, succ_rat);
+    let of_rat_mul_proof = d.lemma(p.of_rat_mul, &[c_rat, succ_rat]);
+    // of_rat_mul_proof : Equiv prod_real (ofRat rat_prod)
+    let prod_equiv_v = rat_eq_rewrite(
+        &mut d,
+        rat_prod,
+        one_rat,
+        key_rat_eq,
+        of_rat_mul_proof,
+        &|d, t| {
+            let embedded = d.const_app(p.of_rat, &[t]);
+            d.const_app(p.equiv, &[prod_real, embedded])
+        },
+    );
+    // prod_equiv_v : Equiv prod_real v  (v is syntactically `ofRat one_rat`)
+
+    let hyp_proof = d.lemma(p.le_of_equiv, &[prod_real, v, prod_equiv_v]);
+    // hyp_proof : le (mul c u) v  -- i.e. (1/2)*2 <= 1, tight.
+
+    let instance = d.lemma(p.scale_cancel_le, &[m, u, v, hyp_proof]);
+
+    // Independently reconstruct the expected conclusion:
+    // le u (mul (ofNat (Nat.succ m)) v) = le 2 (mul (ofNat 2) v), tight.
+    let nice_succ_factor = d.const_app(p.of_nat, &[sm]);
+    let nice_bound = d.const_app(p.mul, &[nice_succ_factor, v]);
+    let ty = d.const_app(p.le, &[u, nice_bound]);
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(anon, "__scale_cancel_le_at_1_2_1");
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value: instance,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.scale_cancel_le at (m=1, u=2, v=1) did NOT check against \
+                 le u (mul (ofNat 2) v) -- i.e. le 2 (mul 2 1): {error:?}"
+            )
+        });
+}
+
+/// **Mandatory concrete instantiation** for
+/// `CReal.diff_le_of_strict_mono_magnitude`, kernel-checked rather than
+/// verified on paper: `F := id` (`CReal.hasDerivative_id`, itself already
+/// `∀ a b`, so no bespoke `HasDerivativeOn` witness is needed -- applying it
+/// at `a := zero, b := one` IS the whole instantiation cost), `k := 0`,
+/// `x := 0`, `y := 1`.
+///
+/// The `hderiv` hypothesis this needs is `1/(0+1) = 1 <= F'(z) = 1` -- an
+/// equality dressed as a bound, built the same way
+/// `CReal.of_nat_one_equiv_local`'s (private, out-of-module) route does:
+/// `ofRat (natDivSucc 1 0)` and `CReal.one` each unfold one delta step to an
+/// `embed`, bridged by [`CRealPrelude::rat_unit_eq_one`] at the `Rat` level.
+#[test]
+fn diff_le_of_strict_mono_magnitude_applies_to_the_identity_at_zero_zero_one() {
+    use crate::rat_prelude::ops::{rat_eq_rewrite, rone};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let rat = p.rat;
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let k = d.num(0); // k := 0
+    let one_nat = d.num(1);
+
+    let identity = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+    let one_fn = {
+        let ignore_fv = d.fresh_fvar();
+        d.lam_fv(ignore_fv, carrier, one_c)
+    };
+
+    let hf = d.lemma(p.has_derivative_id, &[zero_c, one_c]);
+
+    // --- hderiv : forall z, le zero z -> le z one -> le (ofRat (natDivSucc 1
+    // k)) (F' z) -- constant in z, since `k := 0` makes the bound exactly
+    // `CReal.one`, matching `F' z`'s own constant value.
+    let c_rat = d.const_app(rat.nat_div_succ, &[one_nat, k]); // natDivSucc 1 0
+    let c = d.const_app(p.of_rat, &[c_rat]);
+    let one_rat = rone(&mut d, rat);
+    let unit_eq_one = d.lemma(p.rat_unit_eq_one, &[]); // Eq Rat c_rat one_rat
+    let refl_start = d.lemma(p.equiv_refl, &[c]);
+    let c_equiv_one = rat_eq_rewrite(&mut d, c_rat, one_rat, unit_eq_one, refl_start, &|d, t| {
+        let embedded = d.const_app(p.of_rat, &[t]);
+        d.const_app(p.equiv, &[c, embedded])
+    });
+    // c_equiv_one : Equiv c (ofRat one_rat) -- defeq Equiv c one_c
+    let embed_one_rat = d.const_app(p.of_rat, &[one_rat]);
+    let hderiv_body = d.lemma(p.le_of_equiv, &[c, embed_one_rat, c_equiv_one]);
+    // hderiv_body : le c embed_one_rat -- defeq le c one_c, matching `le c (F' z)`.
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let haz_ty = d.const_app(p.le, &[zero_c, z]);
+    let haz_fv = d.fresh_fvar();
+    let hzb_ty = d.const_app(p.le, &[z, one_c]);
+    let hzb_fv = d.fresh_fvar();
+    let with_hzb = d.lam_fv(hzb_fv, hzb_ty, hderiv_body);
+    let with_haz = d.lam_fv(haz_fv, haz_ty, with_hzb);
+    let hderiv = d.lam_fv(z_fv, carrier, with_haz);
+
+    // --- x := zero, y := one, a := zero, b := one -------------------------
+    let hax = d.lemma(p.le_refl, &[zero_c]); // le zero zero
+    let lt01 = d.lemma(p.zero_lt_one, &[]);
+    let hxy = d.lemma(p.le_of_lt, &[zero_c, one_c, lt01]); // le zero one
+    let hyb = d.lemma(p.le_refl, &[one_c]); // le one one
+
+    let instance = d.lemma(
+        p.diff_le_of_strict_mono_magnitude,
+        &[
+            identity, one_fn, zero_c, one_c, hf, k, hderiv, zero_c, one_c, hax, hxy, hyb,
+        ],
+    );
+
+    // Independently reconstruct the expected conclusion:
+    // le (add one (neg zero)) (mul (ofNat (Nat.succ (Nat.succ (Nat.mul 2
+    // 0)))) (add (abs (F zero)) (abs (F one)))).
+    let two_nat = d.num(2);
+    let doubled = d.mul(two_nat, k); // Nat.mul 2 0
+    let e_acc = d.succ(doubled); // Nat.succ (Nat.mul 2 0)
+    let sm = d.succ(e_acc); // Nat.succ (Nat.succ (Nat.mul 2 0))
+    let nice_factor = d.const_app(p.of_nat, &[sm]);
+    let fx = d.apply(identity, &[zero_c]);
+    let fy = d.apply(identity, &[one_c]);
+    let abs_fx = d.const_app(p.abs, &[fx]);
+    let abs_fy = d.const_app(p.abs, &[fy]);
+    let sum_fx_fy = d.const_app(p.add, &[abs_fx, abs_fy]);
+    let nice_bound = d.const_app(p.mul, &[nice_factor, sum_fx_fy]);
+    let neg_x = d.const_app(p.neg, &[zero_c]);
+    let diff = d.const_app(p.add, &[one_c, neg_x]);
+    let ty = d.const_app(p.le, &[diff, nice_bound]);
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(anon, "__diff_le_of_strict_mono_magnitude_at_id_0_0_1");
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value: instance,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.diff_le_of_strict_mono_magnitude at (F=id, k=0, x=0, y=1) \
+                 did NOT check against \
+                 le (add one (neg zero)) (mul (ofNat 2) (add (abs zero) (abs one))): \
+                 {error:?}"
+            )
+        });
+}
+
+/// `CReal.bucketIndex (CReal.ofNat 2) 0` computes to the literal `2`, and the
+/// two floor bounds instantiate to the (trivially true, since `q` lands
+/// exactly ON the grid) statement `Rat.le (natDivSucc 2 0) (natDivSucc 2 0)`
+/// twice over. The on-grid case is the one where a transposed `<`/`<=` or an
+/// off-by-one in `bucket_index`'s own recipe is easiest to miss, because both
+/// directions happen to coincide.
+#[test]
+fn bucket_index_floor_bounds_apply_on_grid_at_ofnat_two_and_zero() {
+    use crate::rat_prelude::ops::{req, rle, rrefl, rzero};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let two_nat = d.num(2);
+    let w = d.const_app(p.of_nat, &[two_nat]);
+    let zero_nat = d.num(0);
+
+    // `bucketIndex (ofNat 2) 0` reduces to the literal `2`: j = 1*1 = 1,
+    // seq w 1 = natDivSucc 2 0 (the constant sequence), q = max(2/1, 0) =
+    // 2/1, a = natAbs 2 = 2, b = 1, scaled = 2*1 = 2, m = Nat.div 2 1 = 2.
+    let m = d.const_app(p.bucket_index, &[w, zero_nat]);
+    let two_nat_again = d.num(2);
+    let m_eq_two = NatOps::eq(&mut d, m, two_nat_again);
+    let m_proof = NatOps::refl(&mut d, m);
+    let anon = d.kernel().anon();
+    let name = d
+        .kernel()
+        .name_str(anon, "__bucket_index_on_grid_reduces_to_two");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: m_eq_two,
+            value: m_proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!("bucketIndex (ofNat 2) 0 must reduce to 2 by refl: {error:?}")
+        });
+
+    // `Rat.max (seq (ofNat 2) 1) Rat.zero` reduces to the literal `natDivSucc
+    // 2 0` -- confirming `q` itself is exactly `2`, not merely that the Nat
+    // arithmetic downstream of it works out.
+    let one_nat = d.num(1);
+    let sample_w1 = d.const_app(p.seq, &[w, one_nat]);
+    let zero_rat = rzero(&mut d, p.rat);
+    let q = d.const_app(p.rat.max, &[sample_w1, zero_rat]);
+    let two_over_one = d.const_app(p.rat.nat_div_succ, &[two_nat, zero_nat]);
+    let q_eq = req(&mut d, q, two_over_one);
+    let q_proof = rrefl(&mut d, q);
+    let name2 = d
+        .kernel()
+        .name_str(anon, "__bucket_index_on_grid_q_reduces_to_two_over_one");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name: name2,
+            uparams: vec![],
+            ty: q_eq,
+            value: q_proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!("Rat.max (seq (ofNat 2) 1) 0 must reduce to natDivSucc 2 0: {error:?}")
+        });
+
+    // The two floor bounds, applied at these concrete `w, k`, both instantiate
+    // to `Rat.le (natDivSucc 2 0) (natDivSucc 2 0)` -- the same statement
+    // twice, because `q` sits exactly on `bucketIndex`'s own grid point here.
+    let lower = d.const_app(p.bucket_index_floor_lower, &[w, zero_nat]);
+    let upper = d.const_app(p.bucket_index_floor_upper, &[w, zero_nat]);
+    // Lower: `natDivSucc m k <= q` at `m = 2` is the tight `2/1 <= 2/1`.
+    let lower_tight_ty = rle(&mut d, p.rat, two_over_one, two_over_one);
+    let name3 = d
+        .kernel()
+        .name_str(anon, "__bucket_index_on_grid_lower_is_tight");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name: name3,
+            uparams: vec![],
+            ty: lower_tight_ty,
+            value: lower,
+        })
+        .unwrap_or_else(|error| {
+            panic!("bucket_index_floor_lower at (ofNat 2, 0) must read as 2/1 <= 2/1: {error:?}")
+        });
+    // Upper: `q <= natDivSucc (succ m) k` compares against `m + 1 = 3`, NOT
+    // `m` -- `q = 2 <= 3`, one full step above the lower bound's own target,
+    // not a second copy of the same tight inequality.
+    let three_nat = d.num(3);
+    let three_over_one = d.const_app(p.rat.nat_div_succ, &[three_nat, zero_nat]);
+    let upper_ty = rle(&mut d, p.rat, two_over_one, three_over_one);
+    let name4 = d
+        .kernel()
+        .name_str(anon, "__bucket_index_on_grid_upper_is_one_step_above");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name: name4,
+            uparams: vec![],
+            ty: upper_ty,
+            value: upper,
+        })
+        .unwrap_or_else(|error| {
+            panic!("bucket_index_floor_upper at (ofNat 2, 0) must read as 2/1 <= 3/1: {error:?}")
+        });
+}
+
+/// `CReal.bucketIndex (CReal.ofRat (1/3)) 1` computes to `0` -- `q = 1/3`
+/// lands STRICTLY between the grid points `0/2` and `1/2`, so this exercises
+/// the genuine floor (not merely the on-grid coincidence the sibling test
+/// above cannot rule out a transposition with).
+#[test]
+fn bucket_index_floor_bounds_apply_strictly_between_grid_points_at_one_third_and_one() {
+    use crate::rat_prelude::ops::rle;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+    let one_third = d.const_app(p.rat.nat_div_succ, &[one_nat, two_nat]); // 1/3
+    let w = d.const_app(p.of_rat, &[one_third]);
+
+    // k := 1, so k1 = 2, step = natDivSucc 1 1 = 1/2, j = 2*2 = 4.
+    let m = d.const_app(p.bucket_index, &[w, one_nat]);
+    let zero_nat = d.num(0);
+    let m_eq_zero = NatOps::eq(&mut d, m, zero_nat);
+    let m_proof = NatOps::refl(&mut d, m);
+    let anon = d.kernel().anon();
+    let name = d
+        .kernel()
+        .name_str(anon, "__bucket_index_between_grid_points_reduces_to_zero");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: m_eq_zero,
+            value: m_proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!("bucketIndex (ofRat 1/3) 1 must reduce to 0 by refl: {error:?}")
+        });
+
+    // The lower bound instantiates to `natDivSucc 0 1 <= q` (i.e. `0 <= 1/3`)
+    // and the upper bound to `q <= natDivSucc 1 1` (i.e. `1/3 <= 1/2`) --
+    // genuinely different rationals on each side, unlike the on-grid case.
+    let lower = d.const_app(p.bucket_index_floor_lower, &[w, one_nat]);
+    let upper = d.const_app(p.bucket_index_floor_upper, &[w, one_nat]);
+
+    let four_nat = d.num(4);
+    let sample_w4 = d.const_app(p.seq, &[w, four_nat]);
+    let zero_rat = crate::rat_prelude::ops::rzero(&mut d, p.rat);
+    let q = d.const_app(p.rat.max, &[sample_w4, zero_rat]);
+    let zero_over_one = d.const_app(p.rat.nat_div_succ, &[zero_nat, one_nat]); // 0/2
+    let one_over_one = d.const_app(p.rat.nat_div_succ, &[one_nat, one_nat]); // 1/2
+
+    let lower_ty = rle(&mut d, p.rat, zero_over_one, q);
+    let name2 = d
+        .kernel()
+        .name_str(anon, "__bucket_index_between_grid_points_lower");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name: name2,
+            uparams: vec![],
+            ty: lower_ty,
+            value: lower,
+        })
+        .unwrap_or_else(|error| {
+            panic!("bucket_index_floor_lower at (1/3, 1) must read as 0/2 <= q: {error:?}")
+        });
+    let upper_ty = rle(&mut d, p.rat, q, one_over_one);
+    let name3 = d
+        .kernel()
+        .name_str(anon, "__bucket_index_between_grid_points_upper");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name: name3,
+            uparams: vec![],
+            ty: upper_ty,
+            value: upper,
+        })
+        .unwrap_or_else(|error| {
+            panic!("bucket_index_floor_upper at (1/3, 1) must read as q <= 1/2: {error:?}")
+        });
+}
+
+/// `CReal.bucketClampUpper CReal.zero 0` instantiates the additive constant
+/// step 1's upper half adds to `2/(j+1)` with `j = 1`: `w`'s own sample
+/// collapses `q` to `Rat.zero` (`CReal.zero` samples constantly at `0`), so
+/// the resulting statement is `CReal.le CReal.zero (CReal.ofRat (Rat.zero +
+/// natDivSucc 2 1))`. This is exactly the check that catches a transposed
+/// `sub` for `add` or a `3` in place of the `2` step 1's own doc comment
+/// claims: either would make this `add_declaration` fail with a type
+/// mismatch, since the constant here is independently recomputed, not
+/// copied from the proof term.
+#[test]
+fn bucket_clamp_upper_at_zero_and_zero_reduces_to_zero_plus_two_over_two() {
+    use crate::rat_prelude::ops::{radd, rzero};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+    let czero = d.kernel().const_(p.zero, vec![]);
+
+    let proof = d.const_app(p.bucket_clamp_upper, &[czero, zero_nat]);
+
+    // j = (succ 0)*(succ 0) = 1, bound2j = natDivSucc 2 1 (== 1).
+    let bound2j = d.const_app(p.rat.nat_div_succ, &[two_nat, one_nat]);
+    let zero_rat = rzero(&mut d, p.rat);
+    let target = radd(&mut d, zero_rat, bound2j);
+    let embedded_target = d.const_app(p.of_rat, &[target]);
+    let expected_ty = d.const_app(p.le, &[czero, embedded_target]);
+
+    let anon = d.kernel().anon();
+    let name = d
+        .kernel()
+        .name_str(anon, "__bucket_clamp_upper_at_zero_zero");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: expected_ty,
+            value: proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "bucket_clamp_upper at (CReal.zero, 0) must read as \
+                 CReal.le CReal.zero (CReal.ofRat (Rat.zero + natDivSucc 2 1)): {error:?}"
+            )
+        });
+}
+
+/// `CReal.bucketClampLower CReal.zero 0 (le_refl CReal.zero)` instantiates
+/// the additive constant step 1's lower half SUBTRACTS: `3/(j+1)` with
+/// `j = 1`, giving `CReal.le (CReal.ofRat (Rat.zero - natDivSucc 3 1))
+/// CReal.zero`. Distinct from the sibling test above in the constant (`3`,
+/// not `2`) AND the operation (`sub`, not `add`) AND the direction of the
+/// `CReal.le` (the bound is now the LEFT argument) -- a proof that silently
+/// reused the upper half's shape, or swapped which side is smaller, fails
+/// this `add_declaration` with a type mismatch.
+#[test]
+fn bucket_clamp_lower_at_zero_and_zero_reduces_to_zero_minus_three_over_two() {
+    use crate::rat_prelude::group::rsub;
+    use crate::rat_prelude::ops::rzero;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+    let three_nat = d.num(3);
+    let czero = d.kernel().const_(p.zero, vec![]);
+
+    let hzw = d.lemma(p.le_refl, &[czero]); // CReal.le CReal.zero CReal.zero
+    let proof = d.const_app(p.bucket_clamp_lower, &[czero, zero_nat, hzw]);
+
+    // j = (succ 0)*(succ 0) = 1, bound3j = natDivSucc 3 1 (== 3/2).
+    let bound3j = d.const_app(p.rat.nat_div_succ, &[three_nat, one_nat]);
+    let zero_rat = rzero(&mut d, p.rat);
+    let target2 = rsub(&mut d, p.rat, zero_rat, bound3j);
+    let embedded_target2 = d.const_app(p.of_rat, &[target2]);
+    let expected_ty = d.const_app(p.le, &[embedded_target2, czero]);
+
+    let anon = d.kernel().anon();
+    let name = d
+        .kernel()
+        .name_str(anon, "__bucket_clamp_lower_at_zero_zero");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: expected_ty,
+            value: proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "bucket_clamp_lower at (CReal.zero, 0, le_refl) must read as \
+                 CReal.le (CReal.ofRat (Rat.zero - natDivSucc 3 1)) CReal.zero: {error:?}"
+            )
+        });
 }

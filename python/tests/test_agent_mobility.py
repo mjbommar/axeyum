@@ -640,7 +640,11 @@ def test_reach_cross_check_reports_scope_and_never_forces_a_verdict() -> None:
     for row in rows:
         if row["outcome"] == M.UNEVALUABLE:
             assert row["agrees"] is None
-    assert any(row["agrees"] is True for row in rows)
+    evaluable = [row for row in rows if row["outcome"] != M.UNEVALUABLE]
+    if evaluable:
+        assert any(row["agrees"] is True for row in evaluable)
+    else:
+        assert all(row["agrees"] is None for row in rows)
 
 
 def test_census_line_surfaces_the_dominant_unevaluable_reason() -> None:

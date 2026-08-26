@@ -23,6 +23,46 @@ class KernelProjectionControls(unittest.TestCase):
     def test_current_projection_is_valid(self):
         self.assertEqual(KP.validate(self.data), [])
 
+    def test_characterization_surface_is_in_scope(self):
+        rows = {row["id"]: row for row in self.data["declarations"]}
+        for theorem in (
+            "Nat.Peano.categorical",
+            "Nat.Peano.iter_unique",
+            "Int.Characterization.categorical",
+            "Int.Characterization.iso",
+        ):
+            self.assertEqual(rows[theorem]["declaration_kind"], "theorem")
+            self.assertIn("characterization", rows[theorem]["visible_in"])
+
+    def test_every_declaration_has_a_kernel_rendered_type(self):
+        self.assertTrue(
+            all(row.get("canonical_type") for row in self.data["declarations"])
+        )
+
+    def test_direct_declaration_edges_are_present_and_strictly_direct(self):
+        rows = {row["id"]: row for row in self.data["declarations"]}
+        direct = rows["Nat.fib_mono"]["direct_declaration_dependencies"]
+        self.assertIn("Nat.fib", direct)
+        self.assertNotIn("Nat.fibAux", direct)
+
+    def test_type_edges_do_not_leak_the_finished_proof(self):
+        rows = {row["id"]: row for row in self.data["declarations"]}
+        statement = rows["Nat.fib_mono"]["direct_type_dependencies"]
+        self.assertIn("Nat.fib", statement)
+        self.assertNotIn("Nat.monotone_of_le_succ", statement)
+        self.assertNotIn("Nat.fib_le_succ", statement)
+
+    def test_missing_direct_declaration_endpoint_is_rejected(self):
+        data = copy.deepcopy(self.data)
+        data["declarations"][0]["direct_declaration_dependencies"] = ["Absent.constant"]
+        self.assertTrue(any("endpoint missing" in error for error in KP.validate(data)))
+
+    def test_direct_declaration_self_reference_is_rejected(self):
+        data = copy.deepcopy(self.data)
+        row = data["declarations"][0]
+        row["direct_declaration_dependencies"] = [row["id"]]
+        self.assertTrue(any("self-reference" in error for error in KP.validate(data)))
+
     def test_missing_edge_is_rejected(self):
         data = copy.deepcopy(self.data)
         data["direct_theorem_dependency_edges"].pop()

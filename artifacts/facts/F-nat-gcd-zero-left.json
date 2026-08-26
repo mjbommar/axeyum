@@ -23,6 +23,7 @@
     {
       "id": "kernel-gcd_zero_left",
       "kind": "kernel-term",
+      "kernel_declaration": "Nat.gcd_zero_left",
       "supports": "Nat.gcd_zero_left is admitted by the trusted kernel gate with the type recorded in formal.statement.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- Nat.gcd_zero_left 2>/dev/null | grep -Ec '^Nat\\.gcd_zero_left[[:space:]]')\" -ge 1",

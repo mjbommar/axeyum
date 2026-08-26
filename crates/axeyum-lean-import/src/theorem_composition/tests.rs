@@ -26,6 +26,41 @@ fn add_true_theorem(kernel: &mut Kernel, name: &str) -> NameId {
     theorem
 }
 
+#[test]
+fn proposition_compatibility_compares_statement_not_outer_prop_type() {
+    let mut source = Kernel::new();
+    let source_nat = build_nat_prelude(&mut source).expect("source Nat prelude");
+    let source_goal = source
+        .environment()
+        .get(source_nat.choose_self)
+        .expect("source theorem")
+        .ty();
+
+    let mut target = Kernel::new();
+    let target_nat = build_nat_prelude(&mut target).expect("target Nat prelude");
+    let target_goal = target
+        .environment()
+        .get(target_nat.choose_self)
+        .expect("target theorem")
+        .ty();
+    let receipt = checked_proposition_compatibility(&source, source_goal, &target, target_goal)
+        .expect("independent copies of the same proposition are compatible");
+    assert_eq!(
+        receipt.compatibility,
+        ReusedTypeCompatibility::TranslatedDefinitionalEquality
+    );
+
+    let wrong = target
+        .environment()
+        .get(target_nat.choose_zero_right)
+        .expect("different theorem")
+        .ty();
+    assert!(matches!(
+        checked_proposition_compatibility(&source, source_goal, &target, wrong),
+        Err(CheckedTheoremCompositionError::TypeShapeMismatch { .. })
+    ));
+}
+
 fn target_leaf_control_source() -> Kernel {
     let mut source = Kernel::new();
     let source_logic = build_logic_prelude(&mut source).expect("source logic");

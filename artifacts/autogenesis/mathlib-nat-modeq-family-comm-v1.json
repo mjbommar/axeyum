@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-modeq-family-candidate",
+  "state": "candidate-checked-not-admitted",
+  "source_fact_id": "F:ml430-nat-modeq-comm-24b71e7a",
+  "statement_adapter": "artifacts/autogenesis/mathlib-nat-modeq-family-comm-statement-adapter-v1.json",
+  "operation": {
+    "implementation": "crates/axeyum-lean-import/examples/modeq_family_operation.rs",
+    "target_definition": "Axeyum.Autogenesis.Statement.NatModEqFamily.natModEqComm",
+    "goal_sha256": "6984bdb728178fff2e42bbf66c1227c65097c9cc4bde2829d569b628c68e2ab0",
+    "proof_sha256": "29acf599b337bb609a7800e00f30dbb4645d64d9a317412d05eb3ac09aa19ee0",
+    "target_content_sha256": "3516f9fb4798ac87c568e21ba2af04ce297c0963840c50f261f4431adf0e078b",
+    "binders_used": 5,
+    "max_binders": 8,
+    "admitted_declarations": 196,
+    "axioms": 0,
+    "theorem_dependencies": 0,
+    "target_dependency": false,
+    "ledger_writes": 0
+  },
+  "reproduction": "python3 scripts/check-autogenesis-nat-modeq-family.py",
+  "limitations": "The candidate is independently kernel checked but remains uncredited until the exact registered operation completes the authoritative transaction."
+}

@@ -250,6 +250,79 @@ pub(super) fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Ke
         d.declare_theorem(p.le_trans, ty, value)?;
     }
 
+    // monotone_of_le_succ : adjacent monotonicity implies full monotonicity.
+    // Eliminate the order derivation; each step chains the accumulated result
+    // with the supplied adjacent-step proof.
+    {
+        let fn_ty = d.arrow(nat, nat);
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let adjacent_fv = d.fresh_fvar();
+        let adjacent = d.kernel().fvar(adjacent_fv);
+        let adjacent_ty = {
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let fn_n = d.kernel().app(f, n);
+            let sn = d.succ(n);
+            let fn_sn = d.kernel().app(f, sn);
+            let body = d.le(fn_n, fn_sn);
+            d.pi_fv(n_fv, nat, body)
+        };
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let h_ty = d.le(a, b);
+        let fa = d.kernel().app(f, a);
+        let fb = d.kernel().app(f, b);
+        let conclusion = d.le(fa, fb);
+        let motive = {
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let hx_ty = d.le(a, x);
+            let fx = d.kernel().app(f, x);
+            let body = d.le(fa, fx);
+            let inner = d.kernel().lam(anon, hx_ty, body, BinderInfo::Default);
+            d.lam_fv(x_fv, nat, inner)
+        };
+        let minor_refl = d.const_app(p.le_refl, &[fa]);
+        let minor_step = {
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let hx_fv = d.fresh_fvar();
+            let hx_ty = d.le(a, x);
+            let ih_fv = d.fresh_fvar();
+            let ih = d.kernel().fvar(ih_fv);
+            let fx = d.kernel().app(f, x);
+            let sx = d.succ(x);
+            let fsx = d.kernel().app(f, sx);
+            let ih_ty = d.le(fa, fx);
+            let adjacent_x = d.kernel().app(adjacent, x);
+            let body = d.const_app(p.le_trans, &[fa, fx, fsx, ih, adjacent_x]);
+            let with_ih = d.lam_fv(ih_fv, ih_ty, body);
+            let with_hx = d.lam_fv(hx_fv, hx_ty, with_ih);
+            d.lam_fv(x_fv, nat, with_hx)
+        };
+        let proof = d.const_app(p.le_rec, &[a, motive, minor_refl, minor_step, b, h]);
+        let ty = {
+            let out = d.kernel().pi(anon, h_ty, conclusion, BinderInfo::Default);
+            let out = d.pi_fv(b_fv, nat, out);
+            let out = d.pi_fv(a_fv, nat, out);
+            let out = d.pi_fv(adjacent_fv, adjacent_ty, out);
+            d.pi_fv(f_fv, fn_ty, out)
+        };
+        let value = {
+            let out = d.lam_fv(h_fv, h_ty, proof);
+            let out = d.lam_fv(b_fv, nat, out);
+            let out = d.lam_fv(a_fv, nat, out);
+            let out = d.lam_fv(adjacent_fv, adjacent_ty, out);
+            d.lam_fv(f_fv, fn_ty, out)
+        };
+        d.declare_theorem(p.monotone_of_le_succ, ty, value)?;
+    }
+
     // le_of_succ_le_succ : ∀ n m, Le (succ n) (succ m) → Le n m
     //
     // Eliminate the derivation with the predecessor-style family
@@ -1120,6 +1193,88 @@ pub(super) fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Ke
         let body = d.const_app(p.le_rec, &[a, motive, minor_refl, minor_step, b, h]);
         let stmt = d.arrow(hyp_ty, conclusion);
         let proof = d.lam_fv(h_fv, hyp_ty, body);
+        (stmt, proof)
+    })?;
+
+    // mul_succ_add_lt_of_le_of_lt : ∀ n m i j,
+    //   Le i m → Lt j (succ n) → Lt (add (mul (succ n) i) j) (mul (succ n) (succ m))
+    //
+    // The "flatten a row-major (block, offset) index" bound. Route: `succ
+    // (mul sn i + j) = mul sn i + succ j` (`add_succ`) `<= mul sn i + sn`
+    // (`add_le_add_left` against `j < succ n`) `= mul sn (succ i)`
+    // (`mul_succ`, reversed) `<= mul sn (succ m)` (`mul_le_mul_left` against
+    // `succ i <= succ m`, from `le_succ_succ` on `i <= m`), then `le_trans`
+    // closes the chain -- the conclusion `Lt (mul sn i + j) (mul sn sm)` is
+    // exactly `Le (succ (mul sn i + j)) (mul sn sm)` by `Nat.lt`'s own
+    // definition, so no further unfolding step is needed at the end.
+    d.theorem(p.mul_succ_add_lt_of_le_of_lt, 4, &|d, v| {
+        let (n, m, i, j) = (v[0], v[1], v[2], v[3]);
+        let sn = d.succ(n);
+        let sm = d.succ(m);
+        let si = d.succ(i);
+        let sj = d.succ(j);
+
+        let hle_ty = d.le(i, m);
+        let hle_fv = d.fresh_fvar();
+        let hle = d.kernel().fvar(hle_fv);
+
+        let hlt_ty = d.lt(j, sn);
+        let hlt_fv = d.fresh_fvar();
+        let hlt = d.kernel().fvar(hlt_fv);
+
+        let mul_sn_i = d.mul(sn, i);
+        let global_idx = d.add(mul_sn_i, j);
+        let succ_global_idx = d.succ(global_idx);
+        let total = d.mul(sn, sm);
+        let conclusion = d.lt(global_idx, total);
+
+        let global_idx_sj = d.add(mul_sn_i, sj);
+        // eq1 : Eq global_idx_sj succ_global_idx.
+        let eq1 = d.lemma(p.add_succ, &[mul_sn_i, j]);
+
+        let mul_sn_i_sn = d.add(mul_sn_i, sn);
+        // step1 : Le global_idx_sj mul_sn_i_sn.
+        let step1 = d.lemma(p.add_le_add_left, &[mul_sn_i, sj, sn, hlt]);
+
+        // step1_at_succ : Le succ_global_idx mul_sn_i_sn -- rewriting
+        // `step1` along `eq1` from `global_idx_sj` to `succ_global_idx`.
+        let step1_at_succ = {
+            let motive = d.eq_motive(global_idx_sj, &|d, x| d.le(x, mul_sn_i_sn));
+            d.transport(global_idx_sj, motive, step1, succ_global_idx, eq1)
+        };
+
+        let mul_sn_si = d.mul(sn, si);
+        // eq2 : Eq mul_sn_i_sn mul_sn_si.
+        let eq2 = {
+            let mul_succ_eq = d.lemma(p.mul_succ, &[sn, i]);
+            d.symm(mul_sn_si, mul_sn_i_sn, mul_succ_eq)
+        };
+
+        // step1_final : Le succ_global_idx mul_sn_si.
+        let step1_final = {
+            let motive = d.eq_motive(mul_sn_i_sn, &|d, x| d.le(succ_global_idx, x));
+            d.transport(mul_sn_i_sn, motive, step1_at_succ, mul_sn_si, eq2)
+        };
+
+        // step2 : Le mul_sn_si total.
+        let step2 = {
+            let h_succ = d.lemma(p.le_succ_succ, &[i, m, hle]);
+            d.lemma(p.mul_le_mul_left, &[sn, si, sm, h_succ])
+        };
+
+        let proof_body = d.lemma(
+            p.le_trans,
+            &[succ_global_idx, mul_sn_si, total, step1_final, step2],
+        );
+
+        let stmt = {
+            let inner = d.arrow(hlt_ty, conclusion);
+            d.arrow(hle_ty, inner)
+        };
+        let proof = {
+            let inner = d.lam_fv(hlt_fv, hlt_ty, proof_body);
+            d.lam_fv(hle_fv, hle_ty, inner)
+        };
         (stmt, proof)
     })?;
 

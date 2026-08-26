@@ -126,6 +126,79 @@ def test_max_binders_is_the_pinned_eight() -> None:
 def test_the_other_budgets_are_exported_as_constants() -> None:
     assert P.MAX_INDUCTIONS == 2
     assert P.MODEQ_MAX_BINDERS == 8
+    assert P.APPLICATION_MAX_BINDERS == 8
+    assert P.APPLICATION_MAX_DEPTH == 8
+    assert P.APPLICATION_MAX_TERMS == 128
+
+
+def test_bounded_application_composes_retrieved_fibonacci_lemmas(
+    nat_kernel: Kernel,
+) -> None:
+    goal = goal_of(nat_kernel, "Nat.fib_mono")
+    declarations = [
+        nat_kernel.name("Nat.monotone_of_le_succ", must_exist=True),
+        nat_kernel.name("Nat.fib", must_exist=True),
+        nat_kernel.name("Nat.fib_le_succ", must_exist=True),
+    ]
+    candidate = P.propose_bounded_application(nat_kernel, goal, declarations)
+    name = nat_kernel.name("Axeyum.Test.BoundedApplicationFibMono", must_exist=False)
+    nat_kernel.add_declaration(Declaration.theorem(name, [], goal, candidate.proof))
+    assert nat_kernel.axiom_footprint(name) == []
+    assert nat_kernel.theorem_dependencies(name) == [
+        "Nat.fib_le_succ",
+        "Nat.monotone_of_le_succ",
+    ]
+    assert candidate.binders_used == 3
+    assert 0 < candidate.application_depth <= P.APPLICATION_MAX_DEPTH
+    assert candidate.terms_considered <= P.APPLICATION_MAX_TERMS
+
+
+def test_candidate_capsule_imports_exact_lemmas_without_target_proof() -> None:
+    source = Kernel()
+    source.build_nat_prelude()
+    goal = goal_of(source, "Nat.fib_mono")
+    target_text = "Axeyum.Autogenesis.Statement.Native.fibMono"
+    target = source.name(target_text, must_exist=False)
+    source.add_declaration(Declaration.definition(target, [], source.sort_zero(), goal))
+    candidate_names = [
+        "Nat.monotone_of_le_succ",
+        "Nat.fib",
+        "Nat.fib_le_succ",
+    ]
+    roots = [target, *(source.name(name, must_exist=True) for name in candidate_names)]
+    capsule = source.render_lean4export_ndjson_roots("4.30.0", roots).encode()
+    assert b'"Nat.fib_mono"' not in capsule
+
+    imported = P.import_candidate_statement_ndjson(capsule, None, target_text, candidate_names)
+    kernel = imported.kernel()
+    declarations = [kernel.name(name, must_exist=True) for name in candidate_names]
+    candidate = P.propose_bounded_application(kernel, imported.goal(), declarations)
+    admitted = kernel.name("Axeyum.Test.ImportedBoundedApplicationFibMono", must_exist=False)
+    kernel.add_declaration(Declaration.theorem(admitted, [], imported.goal(), candidate.proof))
+    assert kernel.axiom_footprint(admitted) == []
+    assert kernel.theorem_dependencies(admitted) == [
+        "Nat.fib_le_succ",
+        "Nat.monotone_of_le_succ",
+    ]
+
+    with pytest.raises(P.StatementImportError, match="trusted declaration"):
+        P.import_candidate_statement_ndjson(capsule, None, target_text, [])
+    with pytest.raises(P.StatementImportError, match="contains target"):
+        P.import_candidate_statement_ndjson(capsule, None, target_text, [target_text])
+
+
+def test_bounded_application_declines_without_adjacent_step(
+    nat_kernel: Kernel,
+) -> None:
+    goal = goal_of(nat_kernel, "Nat.fib_mono")
+    declarations = [
+        nat_kernel.name("Nat.monotone_of_le_succ", must_exist=True),
+        nat_kernel.name("Nat.fib", must_exist=True),
+    ]
+    with pytest.raises(P.Declined) as raised:
+        P.propose_bounded_application(nat_kernel, goal, declarations)
+    assert raised.value.reason.producer == "bounded-application"
+    assert raised.value.reason.kind == "NoTypedApplication"
 
 
 def test_budgets_are_not_reachable_as_keyword_arguments(nat_kernel: Kernel) -> None:

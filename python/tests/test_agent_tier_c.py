@@ -32,7 +32,7 @@ from axeyum.knowledge._paths import resolve_root
 #: entry only in the resolution index (route 2). Keeping both is the point: the
 #: index must never shadow a manifest.
 MANIFEST_FACT = "F:ml430-nat-descfactorial-one-d4856d4a"
-INDEX_FACT = "F:ml430-nat-modeq-comm-24b71e7a"  # in the export index, NOT in any manifest (refl gained a manifest on main)
+INDEX_FACT = "F:ml430-nat-modeq-comm-24b71e7a"
 
 #: Reproduced from `python/tests/test_producers.py`, which reproduces them from
 #: the committed manifests. A digest asserted in two places that both derive it
@@ -53,6 +53,38 @@ STUB = {
 @pytest.fixture(scope="module")
 def root() -> Path:
     return resolve_root(None)
+
+
+@pytest.fixture(autouse=True)
+def portable_registered_exports(tmp_path: Path, monkeypatch) -> None:
+    """Keep policy tests independent of fleet-only frozen-export storage."""
+    if _FROZEN.is_file():
+        return
+    source = tmp_path / "portable.ndjson"
+    source.write_text('{"kind":"portable-test-export"}\n')
+    digest = hashlib.sha256(source.read_bytes()).hexdigest()
+    original = tools.resolve_export
+
+    def resolve(root: Path, fact_id: str):
+        if fact_id not in {MANIFEST_FACT, INDEX_FACT}:
+            return original(root, fact_id)
+        return tools.ExportResolution(
+            fact_id=fact_id,
+            path=source,
+            sha256=digest,
+            target_definition=(
+                "Axeyum.Autogenesis.Statement.natDescFactorialOne"
+                if fact_id == MANIFEST_FACT
+                else "Axeyum.Autogenesis.Statement.NatModEqFamily.natModEqComm"
+            ),
+            source=(
+                "statement-adapter-manifest"
+                if fact_id == MANIFEST_FACT
+                else "agent-frozen-export-index-v1"
+            ),
+        )
+
+    monkeypatch.setattr(tools, "resolve_export", resolve)
 
 
 def context(root: Path, deadline: float = 0.0) -> SimpleNamespace:
@@ -108,10 +140,90 @@ def test_a_committed_manifest_resolves_before_the_index(root: Path) -> None:
     assert resolution.target_definition.endswith("natDescFactorialOne")
 
 
-def test_the_index_resolves_an_export_no_manifest_names(root: Path) -> None:
-    resolution = tools.resolve_export(root, INDEX_FACT)
+def test_the_index_resolves_an_export_when_no_manifest_names(tmp_path: Path, monkeypatch) -> None:
+    source = tmp_path / "source.ndjson"
+    source.write_text('{"kind":"fixture"}\n')
+    index = tmp_path / "index.json"
+    index.write_text(
+        json.dumps(
+            {
+                "entries": [
+                    {
+                        "fact_id": "F:ml430-index-only-0000cafe",
+                        "target_definition": (
+                            "Axeyum.Autogenesis.Statement.NatModEqFamily.natModEqComm"
+                        ),
+                        "external_artifact": {
+                            "path": str(source),
+                            "sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+                        },
+                    }
+                ]
+            }
+        )
+    )
+    monkeypatch.setattr(tools, "EXPORT_INDEX", index.relative_to(tmp_path))
+    resolution = tools.resolve_export(tmp_path, "F:ml430-index-only-0000cafe")
     assert resolution.source == "agent-frozen-export-index-v1"
     assert resolution.target_definition.endswith("natModEqComm")
+
+
+def test_candidate_capsule_receipt_resolves_exact_candidates(tmp_path: Path, monkeypatch) -> None:
+    source = tmp_path / "candidate.ndjson"
+    source.write_text('{"kind":"fixture"}\n')
+    fact_id = "F:ml430-native-candidate-0000cafe"
+    receipt = {
+        "kind": "axeyum-proof-isolated-candidate-capsule-receipt",
+        "target": "Nat.example",
+        "target_definition": "Axeyum.Statement.example",
+        "candidate_declarations": ["Nat.zero_add"],
+        "capsule_bytes": source.stat().st_size,
+        "capsule_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+        "external_artifact": {"path": str(source)},
+    }
+    lemma = SimpleNamespace(fact_ids=(fact_id,))
+    index = SimpleNamespace(get=lambda theorem: lemma)
+    monkeypatch.setattr(tools, "_adapter_records", lambda root: [receipt])
+    monkeypatch.setattr(tools.lemmas_api, "load", lambda root: index)
+    resolution = tools.resolve_export(tmp_path, fact_id)
+    assert resolution.source == "candidate-capsule-receipt"
+    assert resolution.candidate_declarations == ("Nat.zero_add",)
+
+
+def test_bounded_application_runs_only_the_receipt_candidates(tmp_path: Path) -> None:
+    from axeyum import producers
+    from axeyum.kernel import Declaration, Kernel
+
+    source = Kernel()
+    source.build_nat_prelude()
+    target = source.get_declaration("Nat.fib_mono")
+    assert target is not None
+    target_text = "Axeyum.Autogenesis.Statement.Native.fibMonoTierC"
+    target_name = source.name(target_text, must_exist=False)
+    source.add_declaration(Declaration.definition(target_name, [], source.sort_zero(), target.ty))
+    names = ("Nat.fib", "Nat.fib_le_succ", "Nat.monotone_of_le_succ")
+    capsule = source.render_lean4export_ndjson_roots(
+        "4.30.0", [target_name, *(source.name(name, must_exist=True) for name in names)]
+    ).encode()
+    path = tmp_path / "fib.ndjson"
+    path.write_bytes(capsule)
+    export = tools.ExportResolution(
+        fact_id="F:ml430-native-fib-mono-0000cafe",
+        path=path,
+        sha256=hashlib.sha256(capsule).hexdigest(),
+        target_definition=target_text,
+        source="candidate-capsule-receipt",
+        candidate_declarations=names,
+    )
+    measured = tools.run_producer("bounded_application", export)
+    assert measured["axiom_footprint"] == ()
+    assert measured["theorem_dependencies"] == (
+        "Nat.fib_le_succ",
+        "Nat.monotone_of_le_succ",
+    )
+
+    isolated = producers.import_candidate_statement_ndjson(capsule, None, target_text, names)
+    assert isolated.kernel().contains("Nat.fib_mono") is False
 
 
 def test_a_fact_with_no_frozen_export_is_refused(root: Path) -> None:

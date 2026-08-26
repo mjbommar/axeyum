@@ -136,14 +136,18 @@
 )]
 
 use super::ring_helpers::add4_comm;
-use super::{CRealPrelude, creal_ty};
+use super::{CRealPrelude, cle, creal_ty, embed, halves, sample};
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
-use crate::rat_prelude::ops::{nat_eq_to_rat, nat_rewrite_prop, radd, rat_eq_rewrite};
+use crate::rat_prelude::group::rsub;
+use crate::rat_prelude::ops::{
+    den, den_pos, den_z, nat_eq_to_rat, nat_rewrite_prop, normalize, num, one_le_succ, radd,
+    rat_eq_rewrite, rchain, rcongr, rle, rsymm, rzero,
+};
 
 /// Admit `CReal.UniformlyContinuousOn` (the carrier and its two
 /// projections), two witnesses (`id` and `const`), and the closure lemma
@@ -165,7 +169,803 @@ pub(super) fn declare_uniform_continuity(
     declare_uniformly_continuous_const(d, p)?;
     declare_uniformly_continuous_add(d, p)?;
     declare_uniformly_continuous_neg(d, p)?;
-    declare_uniformly_continuous_sub(d, p)
+    declare_uniformly_continuous_sub(d, p)?;
+    declare_bucket_index(d, p)?;
+    declare_bucket_index_floor(d, p)?;
+    declare_bucket_clamp_upper(d, p)?;
+    declare_bucket_clamp_lower(d, p)
+}
+
+// --- the bucket-index primitive ---------------------------------------------
+//
+// `CReal.bounded_of_uniformly_continuous`'s covering argument (see the
+// module documentation) needs, for a point `z` in `[a, b]` and a target
+// resolution `k` (step `1/(Nat.succ k)`), a COMPUTABLE `Nat` index of the
+// sample point nearest `z − a` from below. `CReal.archimedean`'s own `∃`
+// witness cannot be pulled into `Type` (the identical `Exists`-into-`Type`
+// wall the module documentation's own house rule states), and picking the
+// nearest of infinitely many candidates by comparison is not even
+// well-posed (`CReal.le` is undecidable) -- so this has to be a genuine
+// projection off ONE rational sample, the same move `CReal.bound` makes,
+// not a search.
+
+/// `CReal.bucketIndex w k : Nat` -- the computable "which sample bucket does
+/// `w` fall into" primitive.
+///
+/// Recipe verbatim from `creal/sqrt.rs::declare_sqrt_approx`'s own
+/// `sqrtApprox` (see that declaration's own doc comment for the identical
+/// five-line shape): sample `w` at accuracy index `j := k1*k1` (`k1 :=
+/// Nat.succ k`, so `j` is finer than the target resolution `1/k1` by a full
+/// factor of `k1`), clamp to `≥ 0` via `Rat.max _ Rat.zero` (`Rat.max`
+/// dispatches on the representation, no case split on `w`'s sign), read the
+/// clamped sample's numerator/denominator as `Nat`s (`Int.natAbs` is
+/// *exact* here, not merely an upper bound, because clamping already made
+/// the numerator nonnegative), and floor-divide `numerator * k1` by the
+/// denominator via the total `Nat.div`.
+fn bucket_index(d: &mut IntDev<'_>, p: CRealPrelude, w: ExprId, k: ExprId) -> ExprId {
+    let k1 = d.succ(k);
+    let j = NatOps::mul(d, k1, k1);
+    let sample_w = sample(d, p, w, j);
+    let zero_rat = rzero(d, p.rat);
+    let q_pos = d.const_app(p.rat.max, &[sample_w, zero_rat]);
+    let numerator = num(d, q_pos);
+    let a = d.const_app(p.rat.int.nat_abs, &[numerator]);
+    let b = den(d, q_pos);
+    let scaled = NatOps::mul(d, a, k1);
+    NatOps::div(d, scaled, b)
+}
+
+/// Admit `CReal.bucketIndex : CReal → Nat → Nat`. See the module
+/// documentation and [`bucket_index`]'s own doc comment for the recipe;
+/// **no closeness property is proved for it in this slice** -- see
+/// [`CRealPrelude::bucket_index`]'s own doc comment for exactly what
+/// remains.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_bucket_index(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let w_fv = d.fresh_fvar();
+    let w = d.kernel().fvar(w_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let body = bucket_index(d, p, w, k);
+
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, body);
+        d.lam_fv(w_fv, carrier, with_k)
+    };
+    let ty = {
+        let inner = d.arrow(nat, nat);
+        d.arrow(carrier, inner)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.bucket_index,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(super::DERIVED_HEIGHT + 44),
+    })
+}
+
+// --- the bucket-index closeness property ------------------------------------
+//
+// `bucket_index`'s own doc comment names exactly what is missing: a proof
+// that the sample point `bucketIndex w k` lands within one step of `w`. What
+// follows is the sharpest, hypothesis-free form of that fact: `w`'s own
+// clamped sample `q := Rat.max (seq w j) 0` (`j` the accuracy index
+// `bucketIndex` itself samples at) is sandwiched between the two adjacent
+// multiples of `step := 1/(k+1)` that bracket `bucketIndex w k` --
+//
+//   natDivSucc (bucketIndex w k) k  <=  q  <=  natDivSucc (succ (bucketIndex w k)) k
+//
+// exactly the floor-division guarantee `Nat.div_mod_bounds` gives for
+// `Nat.div (a*k1) b` (`a`, `b` being `q`'s own clamped numerator/denominator),
+// read back into `Rat.le` by cross-multiplying against `Rat.natDivSucc`'s own
+// `normalize`d representative (`Rat.normalize_cross`). No hypothesis on `w`'s
+// SIGN is needed anywhere here: `q` is clamped to `>= 0` unconditionally
+// (`Rat.le_max_right`), which is exactly what makes `a := natAbs (num q)` an
+// EXACT — not merely bounding — read of `num q`. (A sign hypothesis on `w`
+// only starts to matter for the FURTHER step of relating `q` back to `w`
+// itself through `w`'s own regularity — see [`declare_bucket_clamp_upper`]/
+// [`declare_bucket_clamp_lower`] below, where it is exactly the `le zero w`
+// hypothesis the lower half needs and the upper half does not.)
+
+/// `Nat.le i n`, from `hlt : Nat.lt i n` (defeq `Nat.le (succ i) n`). Local
+/// copy of `monotone.rs`'s private `nat_le_of_lt` (see that file's own copy
+/// for why this small helper is duplicated rather than shared).
+fn bucket_nat_le_of_lt(d: &mut IntDev<'_>, i: ExprId, n: ExprId, hlt: ExprId) -> ExprId {
+    let np = d.prelude();
+    let succ_i = d.succ(i);
+    let step = d.const_app(np.le_succ, &[i]);
+    d.const_app(np.le_trans, &[i, succ_i, n, step, hlt])
+}
+
+/// Admit [`CRealPrelude::bucket_index_floor_lower`] and
+/// [`CRealPrelude::bucket_index_floor_upper`]. See the section documentation
+/// above for the statement and the route.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+#[allow(clippy::too_many_lines)]
+pub(super) fn declare_bucket_index_floor(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let nat = p.rat.int.nat;
+    let carrier = creal_ty(d, p);
+    let nat_ty = d.nat_ty();
+
+    let w_fv = d.fresh_fvar();
+    let w = d.kernel().fvar(w_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    // --- shared setup, rebuilt identically to `bucket_index`'s own recipe --
+    let k1 = d.succ(k);
+    let j = NatOps::mul(d, k1, k1);
+    let w_j = sample(d, p, w, j);
+    let zero_rat = rzero(d, rat);
+    let q = d.const_app(rat.max, &[w_j, zero_rat]);
+
+    let q_nonneg = d.lemma(rat.le_max_right, &[w_j, zero_rat]); // Rat.le 0 q
+    let num_q = num(d, q);
+    let num_q_nonneg = d.lemma(rat.int_nonneg_of_nonneg, &[q, q_nonneg]); // Int.le 0 (num q)
+    let a = d.const_app(rat.int.nat_abs, &[num_q]);
+    let num_q_eq = d.lemma(rat.int.of_nat_nat_abs_of_nonneg, &[num_q, num_q_nonneg]); // Eq Int (ofNat a) (num q)
+    let b = den(d, q);
+    let bz = den_z(d, q);
+
+    let scaled = NatOps::mul(d, a, k1);
+    let m = NatOps::div(d, scaled, b); // == bucket_index w k, by construction
+
+    // --- b = succ (pred b), so `div_mod_exec` (which needs a literal succ
+    // divisor) applies ------------------------------------------------------
+    let b_pos = den_pos(d, q); // Nat.le 1 b == Nat.lt 0 b
+    let b_pred = d.pred(b);
+    let succ_b_pred = d.succ(b_pred);
+    let heq_b = d.lemma(nat.succ_pred_of_pos, &[b, b_pos]); // Eq Nat b succ_b_pred
+    let heq_b_symm = d.symm(b, succ_b_pred, heq_b); // Eq Nat succ_b_pred b
+
+    // --- `Nat.div_mod_bounds` at `succ_b_pred`, rewritten back to `b` -------
+    let dme = d.lemma(nat.div_mod_exec, &[b_pred, scaled]);
+    let div_sbp = d.div(scaled, succ_b_pred);
+    let mod_sbp = d.modulo(scaled, succ_b_pred);
+    let bounds_sbp = d.lemma(
+        nat.div_mod_bounds,
+        &[succ_b_pred, scaled, div_sbp, mod_sbp, dme],
+    );
+
+    let and_name = p.rat.int.logic.and;
+    let motive_body = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let div_x = d.div(scaled, x);
+        let lhs = NatOps::mul(d, x, div_x);
+        let le1 = NatOps::le(d, lhs, scaled);
+        let succ_div = d.succ(div_x);
+        let rhs2 = NatOps::mul(d, x, succ_div);
+        let lt1 = NatOps::lt(d, scaled, rhs2);
+        d.const_app(and_name, &[le1, lt1])
+    };
+    let bounds_b = d.nat_rewrite(succ_b_pred, b, heq_b_symm, bounds_sbp, &motive_body);
+
+    let le1_b = {
+        let lhs = NatOps::mul(d, b, m);
+        NatOps::le(d, lhs, scaled)
+    };
+    let m1 = d.succ(m);
+    let rhs2_b = NatOps::mul(d, b, m1);
+    let lt1_b = NatOps::lt(d, scaled, rhs2_b);
+    let lower_b = d.and_left(le1_b, lt1_b, bounds_b); // Nat.le (b*m) scaled
+    let upper_b_strict = d.and_right(le1_b, lt1_b, bounds_b); // Nat.lt scaled (b*m1)
+    let upper_b = bucket_nat_le_of_lt(d, scaled, rhs2_b, upper_b_strict); // Nat.le scaled (b*m1)
+
+    let az = d.of_nat(a);
+    let k1z = d.of_nat(k1);
+    let mz = d.of_nat(m);
+    let m1z = d.of_nat(m1);
+
+    let pos_k1 = one_le_succ(d, k);
+
+    // --- rep_m := natDivSucc m k, rep_m1 := natDivSucc m1 k -----------------
+    let rep_m = normalize(d, mz, k1, pos_k1);
+    let nm = num(d, rep_m);
+    let dm = den(d, rep_m);
+    let dm_z = den_z(d, rep_m);
+    let cross_m = d.lemma(rat.normalize_cross, &[mz, k1, pos_k1]); // Eq (nm*k1z) (mz*dm_z)
+
+    let rep_m1 = normalize(d, m1z, k1, pos_k1);
+    let nm1 = num(d, rep_m1);
+    let dm1 = den(d, rep_m1);
+    let dm1_z = den_z(d, rep_m1);
+    let cross_m1 = d.lemma(rat.normalize_cross, &[m1z, k1, pos_k1]); // Eq (nm1*k1z) (m1z*dm1_z)
+
+    // ============ LOWER: Rat.le rep_m q  (i.e. natDivSucc m k <= q) ========
+    let lower_final = {
+        let bz_mz = d.imul(bz, mz);
+        let az_k1z = d.imul(az, k1z);
+        let scaled_lower = d.lemma(rat.int_mul_le_mul_right, &[bz_mz, az_k1z, dm, lower_b]);
+        // : Int.le ((bz*mz)*dm_z) ((az*k1z)*dm_z)
+        let lhs0 = d.imul(bz_mz, dm_z);
+        let rhs0 = d.imul(az_k1z, dm_z);
+
+        let mz_dmz = d.imul(mz, dm_z);
+        let nm_k1z = d.imul(nm, k1z);
+        let cross_m_rev = d.isymm(nm_k1z, mz_dmz, cross_m); // Eq (mz*dm_z)(nm*k1z)
+
+        let bz_mzdmz = d.imul(bz, mz_dmz);
+        let assoc_l1 = d.lemma(rat.int.mul_assoc, &[bz, mz, dm_z]); // Eq (lhs0)(bz*(mz*dm_z))
+        let bz_nmk1z = d.imul(bz, nm_k1z);
+        let step_l2 = d.icongr(mz_dmz, nm_k1z, cross_m_rev, &|d, t| d.imul(bz, t));
+        let bz_nm = d.imul(bz, nm);
+        let bz_nm_k1z = d.imul(bz_nm, k1z);
+        let assoc_l3 = d.lemma(rat.int.mul_assoc, &[bz, nm, k1z]); // Eq ((bz*nm)*k1z)(bz*(nm*k1z))
+        let assoc_l3_rev = d.isymm(bz_nm_k1z, bz_nmk1z, assoc_l3);
+        let comm_l4 = d.lemma(rat.int.mul_comm, &[bz, nm]); // Eq (bz*nm)(nm*bz)
+        let nm_bz = d.imul(nm, bz);
+        let nm_bz_k1z = d.imul(nm_bz, k1z);
+        let step_l4 = d.icongr(bz_nm, nm_bz, comm_l4, &|d, t| d.imul(t, k1z));
+
+        let (target_lhs, eq_lhs) = d.ichain(
+            lhs0,
+            &[
+                (bz_mzdmz, assoc_l1),
+                (bz_nmk1z, step_l2),
+                (bz_nm_k1z, assoc_l3_rev),
+                (nm_bz_k1z, step_l4),
+            ],
+        );
+
+        let k1z_dmz = d.imul(k1z, dm_z);
+        let az_k1zdmz = d.imul(az, k1z_dmz);
+        let assoc_r1 = d.lemma(rat.int.mul_assoc, &[az, k1z, dm_z]); // Eq (rhs0)(az*(k1z*dm_z))
+        let dmz_k1z = d.imul(dm_z, k1z);
+        let az_dmzk1z = d.imul(az, dmz_k1z);
+        let comm_r2 = d.lemma(rat.int.mul_comm, &[k1z, dm_z]); // Eq (k1z*dm_z)(dm_z*k1z)
+        let step_r2 = d.icongr(k1z_dmz, dmz_k1z, comm_r2, &|d, t| d.imul(az, t));
+        let az_dmz = d.imul(az, dm_z);
+        let az_dmz_k1z = d.imul(az_dmz, k1z);
+        let assoc_r3 = d.lemma(rat.int.mul_assoc, &[az, dm_z, k1z]); // Eq ((az*dm_z)*k1z)(az*(dm_z*k1z))
+        let assoc_r3_rev = d.isymm(az_dmz_k1z, az_dmzk1z, assoc_r3);
+
+        let (target_rhs, eq_rhs) = d.ichain(
+            rhs0,
+            &[
+                (az_k1zdmz, assoc_r1),
+                (az_dmzk1z, step_r2),
+                (az_dmz_k1z, assoc_r3_rev),
+            ],
+        );
+
+        let motive1 = d.ieq_motive(lhs0, &|d, x| d.ile(x, rhs0));
+        let step1 = d.itransport(lhs0, motive1, scaled_lower, target_lhs, eq_lhs);
+        let motive2 = d.ieq_motive(rhs0, &|d, x| d.ile(target_lhs, x));
+        let step2 = d.itransport(rhs0, motive2, step1, target_rhs, eq_rhs);
+        // step2 : Int.le ((nm*bz)*k1z) ((az*dm_z)*k1z)
+
+        let lower_cross = d.lemma(
+            rat.int_le_of_mul_le_mul_right,
+            &[nm_bz, az_dmz, k1, pos_k1, step2],
+        );
+        // : Int.le (nm*bz) (az*dm_z)
+
+        let eq_az_dmz = d.icongr(az, num_q, num_q_eq, &|d, t| d.imul(t, dm_z));
+        let num_q_dmz = d.imul(num_q, dm_z);
+        let motive3 = d.ieq_motive(az_dmz, &|d, x| d.ile(nm_bz, x));
+        d.itransport(az_dmz, motive3, lower_cross, num_q_dmz, eq_az_dmz)
+        // : Int.le (nm*bz) (num_q*dm_z)  ==defeq==  Rat.le rep_m q
+    };
+
+    // ============ UPPER: Rat.le q rep_m1  (i.e. q <= natDivSucc m1 k) ======
+    let upper_final = {
+        let az_k1z = d.imul(az, k1z);
+        let bz_m1z = d.imul(bz, m1z);
+        let scaled_upper = d.lemma(rat.int_mul_le_mul_right, &[az_k1z, bz_m1z, dm1, upper_b]);
+        // : Int.le ((az*k1z)*dm1_z) ((bz*m1z)*dm1_z)
+        let lhs0 = d.imul(az_k1z, dm1_z);
+        let rhs0 = d.imul(bz_m1z, dm1_z);
+
+        let k1z_dm1z = d.imul(k1z, dm1_z);
+        let az_k1zdm1z = d.imul(az, k1z_dm1z);
+        let assoc_l1 = d.lemma(rat.int.mul_assoc, &[az, k1z, dm1_z]); // Eq (lhs0)(az*(k1z*dm1_z))
+        let dm1z_k1z = d.imul(dm1_z, k1z);
+        let az_dm1zk1z = d.imul(az, dm1z_k1z);
+        let comm_l2 = d.lemma(rat.int.mul_comm, &[k1z, dm1_z]); // Eq (k1z*dm1_z)(dm1_z*k1z)
+        let step_l2 = d.icongr(k1z_dm1z, dm1z_k1z, comm_l2, &|d, t| d.imul(az, t));
+        let az_dm1z = d.imul(az, dm1_z);
+        let az_dm1z_k1z = d.imul(az_dm1z, k1z);
+        let assoc_l3 = d.lemma(rat.int.mul_assoc, &[az, dm1_z, k1z]); // Eq ((az*dm1_z)*k1z)(az*(dm1_z*k1z))
+        let assoc_l3_rev = d.isymm(az_dm1z_k1z, az_dm1zk1z, assoc_l3);
+
+        let (target_lhs, eq_lhs) = d.ichain(
+            lhs0,
+            &[
+                (az_k1zdm1z, assoc_l1),
+                (az_dm1zk1z, step_l2),
+                (az_dm1z_k1z, assoc_l3_rev),
+            ],
+        );
+
+        let m1z_dm1z = d.imul(m1z, dm1_z);
+        let bz_m1zdm1z = d.imul(bz, m1z_dm1z);
+        let assoc_r1 = d.lemma(rat.int.mul_assoc, &[bz, m1z, dm1_z]); // Eq (rhs0)(bz*(m1z*dm1_z))
+        let nm1_k1z = d.imul(nm1, k1z);
+        let cross_m1_rev = d.isymm(nm1_k1z, m1z_dm1z, cross_m1); // Eq (m1z*dm1_z)(nm1*k1z)
+        let bz_nm1k1z = d.imul(bz, nm1_k1z);
+        let step_r2 = d.icongr(m1z_dm1z, nm1_k1z, cross_m1_rev, &|d, t| d.imul(bz, t));
+        let bz_nm1 = d.imul(bz, nm1);
+        let bz_nm1_k1z = d.imul(bz_nm1, k1z);
+        let assoc_r3 = d.lemma(rat.int.mul_assoc, &[bz, nm1, k1z]); // Eq ((bz*nm1)*k1z)(bz*(nm1*k1z))
+        let assoc_r3_rev = d.isymm(bz_nm1_k1z, bz_nm1k1z, assoc_r3);
+        let comm_r4 = d.lemma(rat.int.mul_comm, &[bz, nm1]); // Eq (bz*nm1)(nm1*bz)
+        let nm1_bz = d.imul(nm1, bz);
+        let nm1_bz_k1z = d.imul(nm1_bz, k1z);
+        let step_r4 = d.icongr(bz_nm1, nm1_bz, comm_r4, &|d, t| d.imul(t, k1z));
+
+        let (target_rhs, eq_rhs) = d.ichain(
+            rhs0,
+            &[
+                (bz_m1zdm1z, assoc_r1),
+                (bz_nm1k1z, step_r2),
+                (bz_nm1_k1z, assoc_r3_rev),
+                (nm1_bz_k1z, step_r4),
+            ],
+        );
+
+        let motive1 = d.ieq_motive(lhs0, &|d, x| d.ile(x, rhs0));
+        let step1 = d.itransport(lhs0, motive1, scaled_upper, target_lhs, eq_lhs);
+        let motive2 = d.ieq_motive(rhs0, &|d, x| d.ile(target_lhs, x));
+        let step2 = d.itransport(rhs0, motive2, step1, target_rhs, eq_rhs);
+        // step2 : Int.le ((az*dm1_z)*k1z) ((nm1*bz)*k1z)
+
+        let upper_cross = d.lemma(
+            rat.int_le_of_mul_le_mul_right,
+            &[az_dm1z, nm1_bz, k1, pos_k1, step2],
+        );
+        // : Int.le (az*dm1_z) (nm1*bz)
+
+        let eq_az_dm1z = d.icongr(az, num_q, num_q_eq, &|d, t| d.imul(t, dm1_z));
+        let num_q_dm1z = d.imul(num_q, dm1_z);
+        let motive3 = d.ieq_motive(az_dm1z, &|d, x| d.ile(x, nm1_bz));
+        d.itransport(az_dm1z, motive3, upper_cross, num_q_dm1z, eq_az_dm1z)
+        // : Int.le (num_q*dm1_z) (nm1*bz)  ==defeq==  Rat.le q rep_m1
+    };
+
+    // --- close both theorems -------------------------------------------------
+    let m_named = d.const_app(p.bucket_index, &[w, k]);
+    let rep_m_named = d.const_app(rat.nat_div_succ, &[m_named, k]);
+    let lower_ty_body = rle(d, rat, rep_m_named, q);
+    let lower_ty = {
+        let with_k = d.pi_fv(k_fv, nat_ty, lower_ty_body);
+        d.pi_fv(w_fv, carrier, with_k)
+    };
+    let lower_value = {
+        let with_k = d.lam_fv(k_fv, nat_ty, lower_final);
+        d.lam_fv(w_fv, carrier, with_k)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.bucket_index_floor_lower,
+        uparams: vec![],
+        ty: lower_ty,
+        value: lower_value,
+    })?;
+
+    let m1_named = d.succ(m_named);
+    let rep_m1_named = d.const_app(rat.nat_div_succ, &[m1_named, k]);
+    let upper_ty_body = rle(d, rat, q, rep_m1_named);
+    let upper_ty = {
+        let with_k = d.pi_fv(k_fv, nat_ty, upper_ty_body);
+        d.pi_fv(w_fv, carrier, with_k)
+    };
+    let upper_value = {
+        let with_k = d.lam_fv(k_fv, nat_ty, upper_final);
+        d.lam_fv(w_fv, carrier, with_k)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.bucket_index_floor_upper,
+        uparams: vec![],
+        ty: upper_ty,
+        value: upper_value,
+    })
+}
+
+// --- relating the bucket sample back to `w` itself --------------------------
+//
+// `bucketIndexFloorLower`/`Upper` sandwich the CLAMPED sample `q := Rat.max
+// (seq w j) 0` between two adjacent multiples of `1/(k+1)`. That pins the
+// grid point relative to `q`, not relative to `w` itself -- and `w` is what
+// `bounded_of_uniformly_continuous`'s covering argument actually needs close
+// to a sample point. This section supplies exactly that: `w` is within a
+// small, FIXED (not shrinking-in-`k`) multiple of `1/(j+1)` of `q`, in both
+// directions. `j := (k+1)*(k+1)` throughout, matching [`bucket_index`].
+
+/// `Eq ((a+b)+c) ((a+c)+b)` -- swap the last two summands of a
+/// left-associated `Rat` sum. Private to this section; the two three-term
+/// reorderings [`declare_bucket_clamp_upper`] and
+/// [`declare_bucket_clamp_lower`] need are both instances of this or
+/// [`radd3_swap_first`], never a fresh assoc/comm derivation each.
+fn radd3_swap_last(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+) -> (ExprId, ExprId) {
+    let rat = p.rat;
+    let ab = radd(d, a, b);
+    let bc = radd(d, b, c);
+    let cb = radd(d, c, b);
+    let ac = radd(d, a, c);
+    let start = radd(d, ab, c);
+    let s1 = radd(d, a, bc);
+    let h1 = d.lemma(rat.add_assoc, &[a, b, c]); // (a+b)+c = a+(b+c)
+    let s2 = radd(d, a, cb);
+    let comm_bc = d.lemma(rat.add_comm, &[b, c]); // b+c = c+b
+    let h2 = rcongr(d, bc, cb, comm_bc, &|d, t| radd(d, a, t));
+    let s3 = radd(d, ac, b);
+    let assoc_ac_b = d.lemma(rat.add_assoc, &[a, c, b]); // (a+c)+b = a+(c+b)
+    let h3 = rsymm(d, s3, s2, assoc_ac_b);
+    rchain(d, start, &[(s1, h1), (s2, h2), (s3, h3)])
+}
+
+/// `Eq (a+(b+c)) (b+(a+c))` -- swap the first two summands of a
+/// right-associated `Rat` sum.
+fn radd3_swap_first(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+) -> (ExprId, ExprId) {
+    let rat = p.rat;
+    let bc = radd(d, b, c);
+    let ab = radd(d, a, b);
+    let ba = radd(d, b, a);
+    let ac = radd(d, a, c);
+    let start = radd(d, a, bc);
+    let s1 = radd(d, ab, c);
+    let assoc_ab_c = d.lemma(rat.add_assoc, &[a, b, c]); // (a+b)+c = a+(b+c)
+    let h1 = rsymm(d, s1, start, assoc_ab_c);
+    let s2 = radd(d, ba, c);
+    let comm_ab = d.lemma(rat.add_comm, &[a, b]); // a+b = b+a
+    let h2 = rcongr(d, ab, ba, comm_ab, &|d, t| radd(d, t, c));
+    let s3 = radd(d, b, ac);
+    let h3 = d.lemma(rat.add_assoc, &[b, a, c]); // (b+a)+c = b+(a+c)
+    rchain(d, start, &[(s1, h1), (s2, h2), (s3, h3)])
+}
+
+/// `w`, `k`, `j := (succ k)*(succ k)`, `wj := seq w j`, `q := max wj 0`.
+/// Shared setup, rebuilt identically to [`bucket_index`]'s own recipe (and
+/// to [`declare_bucket_index_floor`]'s), so `q`/`j` here are the SAME terms
+/// those declarations' own statements mention.
+fn clamp_setup(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    w: ExprId,
+    k: ExprId,
+) -> (ExprId, ExprId, ExprId) {
+    let k1 = d.succ(k);
+    let j = NatOps::mul(d, k1, k1);
+    let wj = sample(d, p, w, j);
+    let zero_rat = rzero(d, p.rat);
+    let q = d.const_app(p.rat.max, &[wj, zero_rat]);
+    (j, wj, q)
+}
+
+/// Admit [`CRealPrelude::bucket_clamp_upper`]. See that field's own doc
+/// comment for the statement and [`CRealPrelude::bucket_clamp_lower`]'s for
+/// why this half needs no sign hypothesis on `w`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_bucket_clamp_upper(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let carrier = creal_ty(d, p);
+    let nat_ty = d.nat_ty();
+
+    let w_fv = d.fresh_fvar();
+    let w = d.kernel().fvar(w_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let (j, wj, q) = clamp_setup(d, p, w, k);
+    let zero_rat = rzero(d, rat);
+    let one_nat = d.num(1);
+    let bound2j = div_succ(d, p, 2, j);
+    let target = radd(d, q, bound2j);
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let wn = sample(d, p, w, n);
+
+    let div1n = div_succ(d, p, 1, n);
+    let div1j = div_succ(d, p, 1, j);
+    let modulus_nj = radd(d, div1n, div1j);
+
+    // `w`'s own regularity: `seq w n - seq w j <= 1/(n+1)+1/(j+1)`.
+    let reg = d.lemma(p.regular, &[w, n, j]);
+    let diff_nj = rsub(d, rat, wn, wj);
+    let (_, reg_upper) = halves(d, p, diff_nj, modulus_nj, reg);
+    let wn_le_wj_plus_mod = d.lemma(rat.le_of_sub_le, &[wn, wj, modulus_nj, reg_upper]);
+    // : Rat.le wn (radd wj modulus_nj)
+
+    // `seq w j <= q` unconditionally (`Rat.le_max_left`), so
+    // `wn <= wj+modulus_nj <= q+modulus_nj`.
+    let le_max_left_wj = d.lemma(rat.le_max_left, &[wj, zero_rat]);
+    let refl_mod = d.lemma(rat.le_refl, &[modulus_nj]);
+    let step_a = d.lemma(
+        rat.add_le_add,
+        &[wj, q, modulus_nj, modulus_nj, le_max_left_wj, refl_mod],
+    );
+    let wj_plus_mod = radd(d, wj, modulus_nj);
+    let q_plus_mod = radd(d, q, modulus_nj);
+    let wn_le_q_plus_mod = d.lemma(
+        rat.le_trans,
+        &[wn, wj_plus_mod, q_plus_mod, wn_le_wj_plus_mod, step_a],
+    );
+
+    // Widen `1/(n+1)+1/(j+1)` up to `2/(n+1)+2/(j+1)`.
+    let bound2n = div_succ(d, p, 2, n);
+    let mono_n = d.lemma(rat.nat_div_succ_le_add_left, &[one_nat, one_nat, n]);
+    let mono_j = d.lemma(rat.nat_div_succ_le_add_left, &[one_nat, one_nat, j]);
+    let widen_mod = d.lemma(
+        rat.add_le_add,
+        &[div1n, bound2n, div1j, bound2j, mono_n, mono_j],
+    );
+
+    let refl_q = d.lemma(rat.le_refl, &[q]);
+    let bn_bj = radd(d, bound2n, bound2j);
+    let step_b = d.lemma(
+        rat.add_le_add,
+        &[q, q, modulus_nj, bn_bj, refl_q, widen_mod],
+    );
+    let q_bn_bj = radd(d, q, bn_bj);
+    let wn_le_q_bn_bj = d.lemma(
+        rat.le_trans,
+        &[wn, q_plus_mod, q_bn_bj, wn_le_q_plus_mod, step_b],
+    );
+    // : Rat.le wn (radd q (radd bound2n bound2j))
+
+    // Reorder `q + (bound2n + bound2j)` to `(q + bound2j) + bound2n`:
+    // comm on the inner pair, then assoc (reversed) to move `bound2n` out.
+    let bj_bn = radd(d, bound2j, bound2n);
+    let comm1 = d.lemma(rat.add_comm, &[bound2n, bound2j]); // Eq bn_bj bj_bn
+    let cong1 = rcongr(d, bn_bj, bj_bn, comm1, &|d, t| radd(d, q, t));
+    let q_bj_bn = radd(d, q, bj_bn);
+    let target_bn = radd(d, target, bound2n);
+    let assoc1 = d.lemma(rat.add_assoc, &[q, bound2j, bound2n]); // Eq target_bn q_bj_bn
+    let assoc1_rev = rsymm(d, target_bn, q_bj_bn, assoc1); // Eq q_bj_bn target_bn
+    let (final_form, eq_final) = rchain(d, q_bn_bj, &[(q_bj_bn, cong1), (target_bn, assoc1_rev)]);
+
+    let wn_le_final = rat_eq_rewrite(d, q_bn_bj, final_form, eq_final, wn_le_q_bn_bj, &|d, t| {
+        rle(d, rat, wn, t)
+    });
+    // : Rat.le wn (radd target bound2n)
+    let at_n = d.lemma(rat.sub_le_of_le, &[wn, target, bound2n, wn_le_final]);
+    // : Rat.le (rsub wn target) bound2n
+
+    let embedded_target = embed(d, p, target);
+    let cle_stmt = cle(d, p, w, embedded_target);
+    let ty = {
+        let with_k = d.pi_fv(k_fv, nat_ty, cle_stmt);
+        d.pi_fv(w_fv, carrier, with_k)
+    };
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat_ty, at_n);
+        let with_k = d.lam_fv(k_fv, nat_ty, with_n);
+        d.lam_fv(w_fv, carrier, with_k)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.bucket_clamp_upper,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Admit [`CRealPrelude::bucket_clamp_lower`]. See that field's own doc
+/// comment for the statement and for why `le zero w` is genuinely needed
+/// here (unlike [`declare_bucket_clamp_upper`]'s half).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+#[allow(clippy::too_many_lines)]
+fn declare_bucket_clamp_lower(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let carrier = creal_ty(d, p);
+    let nat_ty = d.nat_ty();
+
+    let w_fv = d.fresh_fvar();
+    let w = d.kernel().fvar(w_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let (j, wj, q) = clamp_setup(d, p, w, k);
+    let zero_rat = rzero(d, rat);
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+    let bound2j = div_succ(d, p, 2, j);
+    let bound3j = div_succ(d, p, 3, j);
+    let target2 = rsub(d, rat, q, bound3j);
+
+    // `hzw : CReal.le CReal.zero w`.
+    let czero = d.kernel().const_(p.zero, vec![]);
+    let hzw_ty = cle(d, p, czero, w);
+    let hzw_fv = d.fresh_fvar();
+    let hzw = d.kernel().fvar(hzw_fv);
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let wn = sample(d, p, w, n);
+
+    // `hzw` at index `j`: `Rat.le (rsub (seq czero j) wj) bound2j`, which is
+    // DEFEQ to `Rat.le zero_rat (radd wj bound2j)`'s premise shape --
+    // `le_of_sub_le` is applied with `u := seq czero j` directly, and the
+    // kernel's own defeq check (CReal.zero/ofRat/seq all unfold under
+    // `ReducibilityHint::Regular`) is what identifies `seq czero j` with
+    // `Rat.zero` at `add_declaration` time.
+    let sample_czero_j = sample(d, p, czero, j);
+    let hzw_at_j = d.apply(hzw, &[j]);
+    let zero_le_wj_plus_b2j = d.lemma(rat.le_of_sub_le, &[sample_czero_j, wj, bound2j, hzw_at_j]);
+    // : Rat.le sample_czero_j (radd wj bound2j)  ~defeq~  Rat.le zero_rat (radd wj bound2j)
+
+    // branch1 : Rat.le wj (radd wj bound2j), via `add_le_add` + `add_zero`.
+    let wj_plus_b2j = radd(d, wj, bound2j);
+    let refl_wj = d.lemma(rat.le_refl, &[wj]);
+    let nonneg_b2j = d.lemma(rat.zero_le_nat_div_succ, &[two_nat, j]);
+    let padded_wj = radd(d, wj, zero_rat);
+    let widened1 = d.lemma(
+        rat.add_le_add,
+        &[wj, wj, zero_rat, bound2j, refl_wj, nonneg_b2j],
+    );
+    let trim1 = d.lemma(rat.add_zero, &[wj]);
+    let branch1 = rat_eq_rewrite(d, padded_wj, wj, trim1, widened1, &|d, t| {
+        rle(d, rat, t, wj_plus_b2j)
+    });
+
+    // `q <= wj + bound2j`, via `Rat.max_le` on branch1 and
+    // `zero_le_wj_plus_b2j`.
+    let q_le = d.lemma(
+        rat.max_le,
+        &[wj, zero_rat, wj_plus_b2j, branch1, zero_le_wj_plus_b2j],
+    );
+
+    // `w`'s regularity at `(j,n)`: `seq w j - seq w n <= 1/(j+1)+1/(n+1)`.
+    let div1j = div_succ(d, p, 1, j);
+    let div1n = div_succ(d, p, 1, n);
+    let modulus_jn = radd(d, div1j, div1n);
+    let reg2 = d.lemma(p.regular, &[w, j, n]);
+    let diff_jn = rsub(d, rat, wj, wn);
+    let (_, reg2_upper) = halves(d, p, diff_jn, modulus_jn, reg2);
+    let wj_le_wn_plus_mod = d.lemma(rat.le_of_sub_le, &[wj, wn, modulus_jn, reg2_upper]);
+    // : Rat.le wj (radd wn modulus_jn)
+
+    // Combine: `q <= wj+bound2j <= (wn+modulus_jn)+bound2j`.
+    let wn_plus_mod = radd(d, wn, modulus_jn);
+    let refl_b2j = d.lemma(rat.le_refl, &[bound2j]);
+    let step_b = d.lemma(
+        rat.add_le_add,
+        &[
+            wj,
+            wn_plus_mod,
+            bound2j,
+            bound2j,
+            wj_le_wn_plus_mod,
+            refl_b2j,
+        ],
+    );
+    let big_rhs = radd(d, wn_plus_mod, bound2j);
+    let q_le_big = d.lemma(rat.le_trans, &[q, wj_plus_b2j, big_rhs, q_le, step_b]);
+    // : Rat.le q (radd (radd wn modulus_jn) bound2j)
+    //         =  Rat.le q ((wn + (div1j+div1n)) + bound2j)
+
+    // Regroup `(wn + (div1j+div1n)) + bound2j` -> `wn + ((div1j+div1n)+bound2j)`.
+    let inner = radd(d, div1j, div1n);
+    let assoc_wn = d.lemma(rat.add_assoc, &[wn, inner, bound2j]); // Eq big_rhs (wn+(inner+bound2j))
+    let inner_plus_b2j = radd(d, inner, bound2j);
+    let wn_inner_b2j = radd(d, wn, inner_plus_b2j);
+
+    // Regroup `(div1j+div1n)+bound2j` -> `(div1j+bound2j)+div1n`.
+    let (swapped_inner, eq_swap_inner) = radd3_swap_last(d, p, div1j, div1n, bound2j);
+    let cong_inner = rcongr(d, inner_plus_b2j, swapped_inner, eq_swap_inner, &|d, t| {
+        radd(d, wn, t)
+    });
+    let wn_swapped = radd(d, wn, swapped_inner);
+
+    // `div1j + bound2j = natDivSucc (1+2) j`, DEFEQ to `bound3j`. Lift that
+    // equation through BOTH the `_ + div1n` and the outer `wn + _` wrapping
+    // in one congruence, since `swapped_inner = (div1j+bound2j)+div1n`.
+    let div1j_plus_b2j = radd(d, div1j, bound2j);
+    let nda = d.lemma(rat.nat_div_succ_add, &[one_nat, two_nat, j]);
+    // : Eq div1j_plus_b2j (natDivSucc (Nat.add 1 2) j)  ~defeq~  bound3j
+    let bound3j_div1n = radd(d, bound3j, div1n);
+    let x2 = radd(d, wn, bound3j_div1n);
+    let cong_bound3j = rcongr(d, div1j_plus_b2j, bound3j, nda, &|d, t| {
+        let inner_t = radd(d, t, div1n);
+        radd(d, wn, inner_t)
+    });
+    // : Eq wn_swapped x2
+
+    let (_, eq_regroup) = rchain(
+        d,
+        big_rhs,
+        &[
+            (wn_inner_b2j, assoc_wn),
+            (wn_swapped, cong_inner),
+            (x2, cong_bound3j),
+        ],
+    );
+    let q_le_x2 = rat_eq_rewrite(d, big_rhs, x2, eq_regroup, q_le_big, &|d, t| {
+        rle(d, rat, q, t)
+    });
+    // : Rat.le q (radd wn (radd bound3j div1n))
+
+    // Widen `div1n -> bound2n`.
+    let bound2n = div_succ(d, p, 2, n);
+    let mono_n = d.lemma(rat.nat_div_succ_le_add_left, &[one_nat, one_nat, n]);
+    let refl_bound3j = d.lemma(rat.le_refl, &[bound3j]);
+    let widen_n = d.lemma(
+        rat.add_le_add,
+        &[bound3j, bound3j, div1n, bound2n, refl_bound3j, mono_n],
+    );
+    let refl_wn = d.lemma(rat.le_refl, &[wn]);
+    let inner_bound3j_div1n = radd(d, bound3j, div1n);
+    let inner_bound3j_bound2n = radd(d, bound3j, bound2n);
+    let step_widen = d.lemma(
+        rat.add_le_add,
+        &[
+            wn,
+            wn,
+            inner_bound3j_div1n,
+            inner_bound3j_bound2n,
+            refl_wn,
+            widen_n,
+        ],
+    );
+    let x3 = radd(d, wn, inner_bound3j_bound2n);
+    let q_le_x3 = d.lemma(rat.le_trans, &[q, x2, x3, q_le_x2, step_widen]);
+    // : Rat.le q (radd wn (radd bound3j bound2n))
+
+    // Reorder `wn+(bound3j+bound2n)` -> `bound3j+(wn+bound2n)`.
+    let (z, eq_z) = radd3_swap_first(d, p, wn, bound3j, bound2n);
+    let q_le_z = rat_eq_rewrite(d, x3, z, eq_z, q_le_x3, &|d, t| rle(d, rat, q, t));
+    // : Rat.le q (radd bound3j (radd wn bound2n))
+
+    let wn_bound2n = radd(d, wn, bound2n);
+    let target2_le = d.lemma(rat.sub_le_of_le, &[q, bound3j, wn_bound2n, q_le_z]);
+    // : Rat.le (rsub q bound3j) wn_bound2n  =  Rat.le target2 (radd wn bound2n)
+    let at_n = d.lemma(rat.sub_le_of_le, &[target2, wn, bound2n, target2_le]);
+    // : Rat.le (rsub target2 wn) bound2n
+
+    let embedded_target2 = embed(d, p, target2);
+    let cle_stmt = cle(d, p, embedded_target2, w);
+    let ty = {
+        let with_hyp = d.arrow(hzw_ty, cle_stmt);
+        let with_k = d.pi_fv(k_fv, nat_ty, with_hyp);
+        d.pi_fv(w_fv, carrier, with_k)
+    };
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat_ty, at_n);
+        let with_hzw = d.lam_fv(hzw_fv, hzw_ty, with_n);
+        let with_k = d.lam_fv(k_fv, nat_ty, with_hzw);
+        d.lam_fv(w_fv, carrier, with_k)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.bucket_clamp_lower,
+        uparams: vec![],
+        ty,
+        value,
+    })
 }
 
 /// The `BoundedOn`-hypothesis closure lemmas (`mul`, `sq`) and a concrete
@@ -848,6 +1648,51 @@ fn abs_add_le(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> Expr
     d.lemma(p.abs_le, &[s, bound, premise1, premise2])
 }
 
+/// `CReal.abs_add_le : ∀ a b, le (abs (add a b)) (add (abs a) (abs b))` — the
+/// two-term triangle inequality, promoted to a public kernel declaration.
+///
+/// This is the first of `CReal.abs_add_le`'s **four** file-private proofs to
+/// gain a public name (`series.rs`, `derivative.rs`, `uniform_continuity.rs`
+/// itself and `deriv_unique.rs` each still carry their own copy — see the
+/// section doc above and `ring_helpers.rs`'s doc comment for why those are
+/// not touched here). This file's dispatch (`declare_uniform_continuity`) is
+/// the earliest of the three named in the section doc to run in
+/// `creal.rs::build_creal_prelude_uncached`, so this declaration lives here
+/// and is called immediately before it, ahead of every current and future
+/// consumer. The proof term below is this file's own [`abs_add_le`] helper,
+/// applied to two bound free variables instead of two already-elaborated
+/// terms; the statement it proves is byte-for-byte the one every other copy
+/// proves.
+pub(super) fn declare_abs_add_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let body = abs_add_le(d, p, a, b);
+    let value = {
+        let with_b = d.lam_fv(b_fv, carrier, body);
+        d.lam_fv(a_fv, carrier, with_b)
+    };
+    let ty = {
+        let s = d.const_app(p.add, &[a, b]);
+        let abs_s = d.const_app(p.abs, &[s]);
+        let abs_a = d.const_app(p.abs, &[a]);
+        let abs_b = d.const_app(p.abs, &[b]);
+        let bound = d.const_app(p.add, &[abs_a, abs_b]);
+        let conclusion = d.const_app(p.le, &[abs_s, bound]);
+        let with_b = d.pi_fv(b_fv, carrier, conclusion);
+        d.pi_fv(a_fv, carrier, with_b)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.abs_add_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 /// `CReal.uniformly_continuous_add : ∀ F G a b, UniformlyContinuousOn F a b
 /// → UniformlyContinuousOn G a b → UniformlyContinuousOn (fun r => add (F
 /// r) (G r)) a b`.
@@ -1007,7 +1852,11 @@ fn declare_uniformly_continuous_add(
         // target = add error_f error_g;
         // add4_proof : Equiv (add(add fx gx)(add neg_fy neg_gy)) target
         let abs_target = d.const_app(p.abs, &[target]);
-        let triangle = abs_add_le(d, p, error_f, error_g);
+        // Consumes the public `CReal.abs_add_le` directly rather than this
+        // file's own private `abs_add_le` helper (still used at the `mul`
+        // call site below) — the first call site converted to the public
+        // theorem.
+        let triangle = d.lemma(p.abs_add_le, &[error_f, error_g]);
         // triangle : le abs_target (add abs_error_f abs_error_g)
         let sum_bounds = d.lemma(
             p.add_le_add,
@@ -2488,4 +3337,312 @@ fn declare_uniformly_continuous_poly_example(
         ty,
         value: huc_poly,
     })
+}
+
+// --- the running bound over finitely many sample points ---------------------
+//
+// `CReal.bounded_of_uniformly_continuous` (the boundedness-of-uniformly-
+// continuous-functions theorem, not landed here -- see the module
+// documentation) needs, at its last step, a SINGLE `Nat` `k` bounding
+// `|F(x_i)|` at every one of finitely many sample points `x_0, …, x_N`. Each
+// `|F(x_i)|` is bounded by SOME `mag_bound (g i)` (`g` built from
+// `CReal.bound`, a total computable projection -- no search), but picking
+// the LARGEST of finitely many `Nat`s by comparison is exactly the kind of
+// decision `CReal.le` cannot make (`CReal.le` is undecidable; see the module
+// documentation's own house rule, echoing `CReal.pos_bound_of_lt`'s). A
+// running SUM sidesteps the comparison entirely: a sum of nonnegative reals
+// dominates each addend, and nonnegativity of `mag_bound _` is unconditional
+// (`mag_bound_nonneg`, below) -- no case split on any two samples' relative
+// size is ever needed. This is the finite-sample form of that idea, proved
+// once, independent of where the samples come from.
+
+/// `False.rec (fun _ => target) false_proof : target`. Local copy of the
+/// identical private helper in `creal/sqrt.rs` (itself a copy of several
+/// `nat_prelude` modules' own private `ex_falso`) -- see that copy's own doc
+/// comment for the lineage. Reused here rather than threaded across the
+/// module boundary, matching this file's existing practice for
+/// [`mag_bound`]/[`bounded_on_applied`]/[`rescale_index`] above.
+fn ex_falso(d: &mut IntDev<'_>, p: CRealPrelude, target: ExprId, false_proof: ExprId) -> ExprId {
+    let anon = d.anon_name();
+    let nat_p = p.rat.int.nat;
+    let false_ty = d.kernel().const_(nat_p.logic.false_, vec![]);
+    let motive = d.kernel().lam(anon, false_ty, target, BinderInfo::Default);
+    let level_zero = d.kernel().level_zero();
+    let rec = d.kernel().const_(nat_p.logic.false_rec, vec![level_zero]);
+    d.apply(rec, &[motive, false_proof])
+}
+
+/// `le x (add x w)`, from `hw : le zero w`. Local copy of the identical
+/// private helper in `creal/monotone.rs` (`shift_le_of_nonneg`), duplicated
+/// for the same file-boundary reason as [`ex_falso`] above.
+fn shift_le_of_nonneg(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    w: ExprId,
+    hw: ExprId,
+) -> ExprId {
+    let zero_c = czero(d, p);
+    let refl_x = d.lemma(p.le_refl, &[x]);
+    let grown = d.lemma(p.add_le_add, &[x, x, zero_c, w, refl_x, hw]);
+    let padded = cadd(d, p, x, zero_c);
+    let target = cadd(d, p, x, w);
+    let trim = d.lemma(p.add_zero, &[x]);
+    let refl_target = erefl(d, p, target);
+    d.lemma(
+        p.le_congr,
+        &[padded, x, target, target, trim, refl_target, grown],
+    )
+}
+
+/// `CReal.le CReal.zero (CReal.sumRange f n)`, where `f := fun j => mag_bound
+/// (g j)` for the SAME `g` used by [`declare_mag_bound_le_sum_range_of_lt`].
+///
+/// By induction on `n`: base case `sumRange f 0 ≡ zero` (`Nat.rec`'s own
+/// ι-reduction, matching this file's existing convention — see
+/// [`declare_mag_bound_le_sum_range_of_lt`]'s own module documentation), so
+/// `le_refl zero` closes it directly against the defeq-unfolded goal.
+/// Successor case: `sumRange f (Nat.succ m) ≡ add (sumRange f m) (f m)`
+/// (again by raw ι-reduction, no named `sumRange_succ` lemma needed); both
+/// summands are nonnegative — the accumulated sum by the induction
+/// hypothesis, `f m = mag_bound (g m)` by [`mag_bound_nonneg`] — so
+/// [`shift_le_of_nonneg`] extends `le zero (sumRange f m)` across the new
+/// term and [`CRealPrelude::le_trans`] chains it from `zero`.
+///
+/// This is the nonnegativity fact `mag_bound_le_sum_range_of_lt`'s own
+/// `minor_equal` branch actually needs as its `shift_le_of_nonneg` witness —
+/// nonnegativity of the RUNNING SUM `sum_f_m`, not of the single term
+/// `mag_gm` being added to it (those are different propositions, and using
+/// the latter where the former is required is exactly the `TypeMismatch`
+/// this development hit on its first attempt: `shift_le_of_nonneg(d, p, x,
+/// w, hw)` needs `hw : le zero w`, and at that call site `x = mag_gm`, `w =
+/// sum_f_m`, so `hw` must be nonnegativity of `sum_f_m`).
+fn mag_bound_sum_range_nonneg(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    g: ExprId,
+    f: ExprId,
+    n: ExprId,
+) -> ExprId {
+    let stmt_at = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let zero_c = czero(d, p);
+        let sx = d.const_app(p.sum_range, &[f, x]);
+        d.const_app(p.le, &[zero_c, sx])
+    };
+    d.induct(
+        &stmt_at,
+        &|d: &mut IntDev<'_>| -> ExprId {
+            let zero_c = czero(d, p);
+            d.lemma(p.le_refl, &[zero_c])
+        },
+        &|d: &mut IntDev<'_>, m: ExprId, ih: ExprId| -> ExprId {
+            let gm = d.apply(g, &[m]);
+            let mag_gm = mag_bound(d, p, gm);
+            let sum_f_m = d.const_app(p.sum_range, &[f, m]);
+            let nonneg_fm = mag_bound_nonneg(d, p, gm);
+            // le sum_f_m (add sum_f_m mag_gm) -- defeq `sumRange f (succ m)`.
+            let step = shift_le_of_nonneg(d, p, sum_f_m, mag_gm, nonneg_fm);
+            let zero_c = czero(d, p);
+            let target = cadd(d, p, sum_f_m, mag_gm);
+            d.lemma(p.le_trans, &[zero_c, sum_f_m, target, ih, step])
+        },
+        n,
+    )
+}
+
+/// `CReal.mag_bound_le_sum_range_of_lt : ∀ (g : Nat → Nat) (n i : Nat),
+/// Nat.lt i n → CReal.le (mag_bound (g i)) (CReal.sumRange (fun j =>
+/// mag_bound (g j)) n)`.
+///
+/// The `CReal`-valued analogue of `Nat.le_sumRange_of_lt`
+/// (`nat_prelude/binomial.rs::declare_le_sum_range_of_lt`), whose proof
+/// shape this mirrors almost verbatim: induction on `n` with `i`
+/// generalized inside the motive, successor case split by
+/// `Nat.lt_or_eq_of_le` into a strict branch (extend the outer induction
+/// hypothesis past the new boundary term via [`shift_le_of_nonneg`] +
+/// `CReal.le_trans`) and an equal branch (rewrite the goal's sample index
+/// from `m` to `i` via `Eq Nat i m`, using [`nat_rewrite_prop`] since the
+/// rewritten proposition is `Prop`-valued regardless of the `CReal`-typed
+/// terms it mentions -- `NatOps::congr`'s own `Eq` is hardcoded to `Nat`
+/// and cannot be used to equate two `CReal`s directly).
+///
+/// The base case (`n = 0`) is vacuous (`Nat.lt i 0` is impossible,
+/// `Nat.not_lt_zero`), regardless of what `CReal.sumRange f 0` reduces to.
+///
+/// Every step relies on `CReal.sumRange f (Nat.succ n) ≡ add (sumRange f n)
+/// (f n)` holding by raw `Nat.rec` ι-reduction (`series.rs::sum_range_succ`'s
+/// own proof is `Eq.refl` alone, for the same reason) -- the proof below
+/// never invokes `sumRange_succ` as a named lemma, exactly as
+/// `Nat.le_sumRange_of_lt`'s own proof never invokes `Nat.sumRange_succ`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here
+/// means the kernel **refused** a proof, not that a script gave up.
+fn declare_mag_bound_le_sum_range_of_lt(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let nat_p = p.rat.int.nat;
+    let g_ty = nat_fn_ty(d);
+
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+
+    // f := fun j => mag_bound (g j) : Nat -> CReal.
+    let f = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let gj = d.apply(g, &[j]);
+        let mbj = mag_bound(d, p, gj);
+        d.lam_fv(j_fv, nat, mbj)
+    };
+
+    let stmt_at = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let hyp = d.lt(i, x);
+        let gi = d.apply(g, &[i]);
+        let mbi = mag_bound(d, p, gi);
+        let sx = d.const_app(p.sum_range, &[f, x]);
+        let concl = d.const_app(p.le, &[mbi, sx]);
+        let body = d.arrow(hyp, concl);
+        d.pi_fv(i_fv, nat, body)
+    };
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let stmt = stmt_at(d, n);
+
+    let proof = d.induct(
+        &stmt_at,
+        &|d: &mut IntDev<'_>| -> ExprId {
+            let zero_nat = d.num(0);
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let hyp_ty = d.lt(i, zero_nat);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            let not_lt = d.lemma(nat_p.not_lt_zero, &[i]);
+            let false_proof = d.apply(not_lt, &[h]);
+
+            let gi = d.apply(g, &[i]);
+            let mbi = mag_bound(d, p, gi);
+            let sum0 = d.const_app(p.sum_range, &[f, zero_nat]);
+            let target = d.const_app(p.le, &[mbi, sum0]);
+
+            let body = ex_falso(d, p, target, false_proof);
+            let with_h = d.lam_fv(h_fv, hyp_ty, body);
+            d.lam_fv(i_fv, nat, with_h)
+        },
+        &|d: &mut IntDev<'_>, m: ExprId, ih: ExprId| -> ExprId {
+            let sm = d.succ(m);
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let hyp_ty = d.lt(i, sm);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            // Nat.lt i (succ m) is defeq Nat.le (succ i) (succ m); peel to
+            // Nat.le i m, then split it.
+            let h_le_im = d.lemma(nat_p.le_of_succ_le_succ, &[i, m, h]);
+            let split = d.lemma(nat_p.lt_or_eq_of_le, &[i, m, h_le_im]);
+
+            let strict_ty = d.lt(i, m);
+            let equal_ty = d.eq(i, m);
+
+            let gm = d.apply(g, &[m]);
+            let mag_gm = mag_bound(d, p, gm);
+            let sum_f_m = d.const_app(p.sum_range, &[f, m]);
+            // add sum_f_m mag_gm -- defeq `sumRange f (succ m)`.
+            let lhs2 = cadd(d, p, sum_f_m, mag_gm);
+
+            let gi = d.apply(g, &[i]);
+            let mag_gi = mag_bound(d, p, gi);
+            let target = d.const_app(p.le, &[mag_gi, lhs2]);
+
+            let minor_strict = {
+                let hlt_fv = d.fresh_fvar();
+                let hlt = d.kernel().fvar(hlt_fv);
+                let ih_i = d.apply(ih, &[i, hlt]); // le mag_gi sum_f_m
+                let nonneg_gm = mag_bound_nonneg(d, p, gm);
+                let ext = shift_le_of_nonneg(d, p, sum_f_m, mag_gm, nonneg_gm); // le sum_f_m lhs2
+                let body = d.lemma(p.le_trans, &[mag_gi, sum_f_m, lhs2, ih_i, ext]);
+                d.lam_fv(hlt_fv, strict_ty, body)
+            };
+            let minor_equal = {
+                let heq_fv = d.fresh_fvar();
+                let heq = d.kernel().fvar(heq_fv);
+                let sym_heq = d.symm(i, m, heq); // Eq Nat m i
+
+                let nonneg_sum_f_m = mag_bound_sum_range_nonneg(d, p, g, f, m);
+                // le mag_gm (add mag_gm sum_f_m)
+                let h1 = shift_le_of_nonneg(d, p, mag_gm, sum_f_m, nonneg_sum_f_m);
+                let lhs1 = cadd(d, p, mag_gm, sum_f_m);
+                let hcomm = d.lemma(p.add_comm, &[mag_gm, sum_f_m]); // Equiv lhs1 lhs2
+                let refl_magm = erefl(d, p, mag_gm);
+                // le mag_gm lhs2
+                let h2 = d.lemma(
+                    p.le_congr,
+                    &[mag_gm, mag_gm, lhs1, lhs2, refl_magm, hcomm, h1],
+                );
+
+                let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+                    let gx = d.apply(g, &[x]);
+                    let mbx = mag_bound(d, p, gx);
+                    d.const_app(p.le, &[mbx, lhs2])
+                };
+                let body = nat_rewrite_prop(d, m, i, sym_heq, h2, &motive);
+                d.lam_fv(heq_fv, equal_ty, body)
+            };
+
+            let selected = d.const_app(
+                nat_p.logic.or_elim,
+                &[
+                    strict_ty,
+                    equal_ty,
+                    target,
+                    split,
+                    minor_strict,
+                    minor_equal,
+                ],
+            );
+            let with_h = d.lam_fv(h_fv, hyp_ty, selected);
+            d.lam_fv(i_fv, nat, with_h)
+        },
+        n,
+    );
+
+    let ty = {
+        let over_n = d.pi_fv(n_fv, nat, stmt);
+        d.pi_fv(g_fv, g_ty, over_n)
+    };
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, proof);
+        d.lam_fv(g_fv, g_ty, over_n)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mag_bound_le_sum_range_of_lt,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Admit `CReal.mag_bound_le_sum_range_of_lt`. A THIRD entry point (after
+/// [`declare_uniform_continuity`] and [`declare_uniform_continuity_products`])
+/// because it consumes `CReal.sumRange`, which `series::declare_series`
+/// declares after both of those -- see `creal.rs`'s own wiring comment at
+/// the call site.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+pub(super) fn declare_uniform_continuity_sums(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_mag_bound_le_sum_range_of_lt(d, p)
 }

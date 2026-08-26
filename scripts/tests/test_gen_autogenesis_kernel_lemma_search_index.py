@@ -55,10 +55,69 @@ class KernelLemmaSearchIndexTests(unittest.TestCase):
             self.data["census"]["unresolved_prefixed_kernel_evidence"],
         )
         self.assertGreater(len(unresolved), 0)
+        self.assertEqual(
+            sum(self.data["census"]["unresolved_reason_counts"].values()),
+            len(unresolved),
+        )
+
+    def test_non_theorem_identity_is_distinguished_from_absence(self):
+        row = next(
+            row
+            for row in self.data["unresolved_prefixed_kernel_evidence"]
+            if row["fact_id"] == "F:rat-normalize-reduces"
+        )
+        self.assertIn("definition declaration, not a theorem", row["reason"])
 
     def test_search_rows_confer_no_proof_authority(self):
         self.assertTrue(
             all(row["search_authority"].startswith("candidate-only") for row in self.rows.values())
+        )
+
+    def test_every_search_row_has_a_kernel_rendered_type(self):
+        self.assertTrue(all(row["canonical_type"] for row in self.rows.values()))
+
+    def test_search_rows_preserve_direct_all_kind_vocabulary(self):
+        direct = self.rows["Nat.fib_mono"]["direct_declaration_dependencies"]
+        self.assertIn("Nat.fib", direct)
+        self.assertNotIn("Nat.fibAux", direct)
+        self.assertTrue(
+            set(self.rows["Nat.fib_mono"]["direct_theorem_dependencies"]).issubset(direct)
+        )
+
+    def test_search_rows_separate_statement_vocabulary_from_proof_evidence(self):
+        row = self.rows["Nat.fib_mono"]
+        statement = row["direct_type_dependencies"]
+        self.assertIn("Nat.fib", statement)
+        self.assertNotIn("Nat.monotone_of_le_succ", statement)
+        self.assertNotIn("Nat.fib_le_succ", statement)
+
+    def test_explicit_declaration_identity_precedes_legacy_evidence_id(self):
+        self.assertEqual(
+            INDEX.exact_kernel_declaration(
+                {
+                    "id": "kernel-le_trans",
+                    "kernel_declaration": "Nat.le_trans",
+                }
+            ),
+            "Nat.le_trans",
+        )
+
+    def test_plural_declaration_identity_precedes_singular_and_legacy(self):
+        self.assertEqual(
+            INDEX.exact_kernel_declarations(
+                {
+                    "id": "kernel-invented",
+                    "kernel_declaration": "Also.invented",
+                    "kernel_declarations": ["And.left", "And.right"],
+                }
+            ),
+            ("And.left", "And.right"),
+        )
+
+    def test_legacy_fully_qualified_evidence_id_remains_supported(self):
+        self.assertEqual(
+            INDEX.exact_kernel_declaration({"id": "kernel-Nat.le_trans"}),
+            "Nat.le_trans",
         )
 
 

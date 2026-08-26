@@ -109,6 +109,23 @@ class GenerateTests(unittest.TestCase):
         self.assertEqual(mapping, {})
         self.assertIn("no lean4 statement", err)
 
+    def test_more_than_two_colliding_slugs_remain_unique(self) -> None:
+        facts = [
+            _fact(f"F:ml430-mutation-{suffix}", "True")
+            for suffix in ("aaaaaa", "bbbbbb", "cccccc", "dddddd")
+        ]
+        mapping, lean, _ = self._run(facts, [])
+        self.assertEqual(
+            list(mapping.values()),
+            [
+                "Axeyum.Autogenesis.Statement.Generated.mutation",
+                "Axeyum.Autogenesis.Statement.Generated.mutationX",
+                "Axeyum.Autogenesis.Statement.Generated.mutationXX",
+                "Axeyum.Autogenesis.Statement.Generated.mutationXXX",
+            ],
+        )
+        self.assertEqual(lean.count("def mutation"), 4)
+
 
 if __name__ == "__main__":
     unittest.main()

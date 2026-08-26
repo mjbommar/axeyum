@@ -21,6 +21,7 @@
     {
       "id": "kernel-logic-not-not-intro",
       "kind": "kernel-term",
+      "kernel_declaration": "not_not_intro",
       "supports": "If p holds, then not-not-p holds.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- not_not_intro 2>/dev/null | grep -Ec '^not_not_intro[[:space:]]')\" -ge 1",

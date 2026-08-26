@@ -168,14 +168,22 @@
 //!    `natDivSucc` shape without the harmonic bound), so it was not worth the
 //!    machinery for this slice.
 
-use super::{CRealPrelude, and_intro, creal_ty, div_succ, halves, modulus, sample, shift, within};
+use super::{
+    CRealPrelude, and_intro, creal_ty, div_succ, embed, equiv, halves, modulus, sample, shift,
+    within,
+};
+use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::Declaration;
 use crate::expr::ExprId;
 use crate::int_prelude::ops::{IntDev, exists_elim};
 use crate::nat_prelude::NatOps;
+use crate::rat_prelude::RatPrelude;
 use crate::rat_prelude::group::rsub;
-use crate::rat_prelude::ops::{nat_rewrite_prop, radd, rat_eq_rewrite, rle, rneg};
+use crate::rat_prelude::ops::{
+    nat_eq_to_rat, nat_rewrite_prop, radd, rat_eq_rewrite, rat_ty, rchain, rcongr, req, rle, rlt,
+    rmul, rneg, rone, rpow, rsymm, rtrans, rzero,
+};
 
 // --- small local term builders, verbatim in shape to every other `creal/*`
 // module's own copies (see e.g. `power.rs`, `cancellation.rs`) -------------
@@ -1061,7 +1069,9 @@ pub(super) fn declare_geometric(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(
     declare_geom_tail_within(d, p)?;
     declare_geom_tail_within_le(d, p)?;
     declare_geom_pair_within(d, p)?;
-    declare_pow_le_pow_of_base_le(d, p)
+    declare_pow_le_pow_of_base_le(d, p)?;
+    declare_of_rat_pow(d, p)?;
+    declare_pow_half_le_nat_div_succ(d, p)
 }
 
 // --- `pow_le_pow_of_base_le` -------------------------------------------------
@@ -1154,6 +1164,472 @@ fn declare_pow_le_pow_of_base_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.pow_le_pow_of_base_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// ---------------------------------------------------------------------------
+// `CReal.ofRat_pow`, and the concrete geometric-decay-dominates-harmonic-rate
+// bound at base `1/2` it unlocks (`CReal.pow_half_le_natDivSucc`).
+//
+// The three private helpers immediately below are verbatim reproductions of
+// sibling modules' own private helpers, per this file's established
+// precedent (`cancel_left` above is `cancellation.rs::cancel_left`;
+// `chain_within3`/`within_of_tail_le` earlier in this file are
+// `series.rs`'s own): `l_term`/`one_le_l` are
+// `rat_prelude/bernoulli.rs::l_term`/`one_le_l`, and `ne_zero_of_pos` is
+// `rat_prelude/probability.rs::ne_zero_of_pos`. None of the three is `pub`
+// in its home module, and none of those files is in this slice's edit
+// boundary.
+// ---------------------------------------------------------------------------
+
+/// `L t n`, built as `Nat.rec (fun _ => Rat) Rat.one (fun _ ih => Rat.add ih
+/// t) n` — `L t 0 ≡ 1`, `L t (succ j) ≡ L t j + t`. Verbatim reproduction of
+/// `rat_prelude/bernoulli.rs::l_term` (private there).
+fn l_term(d: &mut IntDev<'_>, p: RatPrelude, t: ExprId, n: ExprId) -> ExprId {
+    let carrier = rat_ty(d);
+    let nat = d.nat_ty();
+    let anon = d.anon_name();
+    let one_level = d.level_one();
+
+    let motive = d.kernel().lam(anon, nat, carrier, BinderInfo::Default);
+    let minor_zero = rone(d, p);
+    let minor_succ = {
+        let ih_fv = d.fresh_fvar();
+        let ih = d.kernel().fvar(ih_fv);
+        let body = radd(d, ih, t);
+        let inner = d.lam_fv(ih_fv, carrier, body);
+        let j_fv = d.fresh_fvar();
+        d.lam_fv(j_fv, nat, inner)
+    };
+    let rec_name = d.prelude().rec;
+    let rec = d.kernel().const_(rec_name, vec![one_level]);
+    d.apply(rec, &[motive, minor_zero, minor_succ, n])
+}
+
+/// `one_le_l t h n : Rat.le Rat.one (L t n)`, given `h : Rat.le Rat.zero t`.
+/// Verbatim reproduction of `rat_prelude/bernoulli.rs::one_le_l` (private
+/// there).
+fn one_le_l(d: &mut IntDev<'_>, p: RatPrelude, t: ExprId, h: ExprId, n: ExprId) -> ExprId {
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let one = rone(d, p);
+        let lx = l_term(d, p, t, x);
+        rle(d, p, one, lx)
+    };
+    let base = |d: &mut IntDev<'_>| -> ExprId {
+        let one = rone(d, p);
+        d.lemma(p.le_refl, &[one])
+    };
+    let step = |d: &mut IntDev<'_>, j: ExprId, ih: ExprId| -> ExprId {
+        let one = rone(d, p);
+        let zero = rzero(d, p);
+        let lj = l_term(d, p, t, j);
+        let sum_le = d.lemma(p.add_le_add, &[one, lj, zero, t, ih, h]);
+        let one_plus_zero = radd(d, one, zero);
+        let add_zero_eq = d.lemma(p.add_zero, &[one]);
+        let target_rhs = radd(d, lj, t);
+        rat_eq_rewrite(d, one_plus_zero, one, add_zero_eq, sum_le, &|d, x| {
+            rle(d, p, x, target_rhs)
+        })
+    };
+    d.induct(&motive, &base, &step, n)
+}
+
+/// `Not (Eq Rat val zero)`, from `lt zero val`. Verbatim reproduction of
+/// `rat_prelude/probability.rs::ne_zero_of_pos` (private there).
+fn ne_zero_of_pos(d: &mut IntDev<'_>, p: RatPrelude, val: ExprId, h_pos: ExprId) -> ExprId {
+    let zero_r = rzero(d, p);
+    let eq_ty = req(d, val, zero_r);
+    let heq_fv = d.fresh_fvar();
+    let heq = d.kernel().fvar(heq_fv);
+    let rewritten = rat_eq_rewrite(d, val, zero_r, heq, h_pos, &|d, t| rlt(d, p, zero_r, t));
+    let irrefl = d.lemma(p.lt_irrefl, &[zero_r]);
+    let false_proof = d.apply(irrefl, &[rewritten]);
+    d.lam_fv(heq_fv, eq_ty, false_proof)
+}
+
+/// `Eq Rat (L Rat.one n) (natDivSucc (Nat.succ n) 0)` — the harmonic
+/// companion sequence at `t := 1` is exactly the whole-number embedding
+/// `n+1`. Induction on `n`. The step needs only
+/// [`crate::rat_prelude::RatPrelude::nat_div_succ_add`] (at `(succ j, 1, 0)`
+/// — `Nat.add(succ j, 1)` reduces directly since `Nat.add` recurses on its
+/// RIGHT argument and the right argument here is the literal `1`, never the
+/// stuck `1 + symbolic` shape) and
+/// [`super::CRealPrelude::rat_unit_eq_one`] (`natDivSucc 1 0 = Rat.one`) to
+/// rewrite `Rat.one` into `natDivSucc 1 0` before fusing.
+fn l_one_eq_embed(d: &mut IntDev<'_>, p: CRealPrelude, n: ExprId) -> ExprId {
+    let rat = p.rat;
+    let one_nat = d.num(1);
+    let zero_nat = d.num(0);
+    let one_r = rone(d, rat);
+
+    let motive = |d: &mut IntDev<'_>, k: ExprId| -> ExprId {
+        let lk = l_term(d, rat, one_r, k);
+        let succ_k = d.succ(k);
+        let embedded = d.const_app(rat.nat_div_succ, &[succ_k, zero_nat]);
+        req(d, lk, embedded)
+    };
+    let base = |d: &mut IntDev<'_>| -> ExprId {
+        let unit = d.const_app(rat.nat_div_succ, &[one_nat, zero_nat]);
+        let unit_eq_one = d.lemma(p.rat_unit_eq_one, &[]);
+        rsymm(d, unit, one_r, unit_eq_one)
+    };
+    let step = |d: &mut IntDev<'_>, j: ExprId, ih: ExprId| -> ExprId {
+        let lj = l_term(d, rat, one_r, j);
+        let succ_j = d.succ(j);
+        let embedded_j = d.const_app(rat.nat_div_succ, &[succ_j, zero_nat]);
+        let unit = d.const_app(rat.nat_div_succ, &[one_nat, zero_nat]);
+        let unit_eq_one = d.lemma(p.rat_unit_eq_one, &[]);
+        let one_eq_unit = rsymm(d, unit, one_r, unit_eq_one);
+
+        let step1 = rcongr(d, lj, embedded_j, ih, &|d, y| radd(d, y, one_r));
+        let step2 = rcongr(d, one_r, unit, one_eq_unit, &|d, y| radd(d, embedded_j, y));
+        let step3 = d.lemma(rat.nat_div_succ_add, &[succ_j, one_nat, zero_nat]);
+
+        let succ_succ_j = d.succ(succ_j);
+        let target = d.const_app(rat.nat_div_succ, &[succ_succ_j, zero_nat]);
+        let lj_plus_one = radd(d, lj, one_r);
+        let embedded_j_plus_one = radd(d, embedded_j, one_r);
+        let embedded_j_plus_unit = radd(d, embedded_j, unit);
+        let (_, proof) = rchain(
+            d,
+            lj_plus_one,
+            &[
+                (embedded_j_plus_one, step1),
+                (embedded_j_plus_unit, step2),
+                (target, step3),
+            ],
+        );
+        proof
+    };
+    d.induct(&motive, &base, &step, n)
+}
+
+/// From `A ≥ 0`, `A·d = 1`, and `A·y ≤ 1`, derive `y ≤ d` — cancelling the
+/// positive factor `A` without ever forming `A⁻¹`, matching
+/// `bernoulli_harmonic_bound`'s own design (`rat_prelude/bernoulli.rs`'s
+/// module doc: "avoiding `Rat.inv` on either side"). `Rat.le_total` supplies
+/// the case split (order is decidable over `ℚ`, no classical logic needed);
+/// the `d ≤ y` branch turns `A·d ≤ A·y` (from
+/// [`crate::rat_prelude::RatPrelude::mul_le_mul_of_nonneg_left`]) plus `A·y ≤
+/// 1 = A·d` into `A·d = A·y` via
+/// [`crate::rat_prelude::RatPrelude::le_antisymm`], then cancels `A` via
+/// [`crate::rat_prelude::RatPrelude::mul_left_cancel_of_ne_zero`] (needing `A
+/// ≠ 0`, supplied by the caller via [`ne_zero_of_pos`]).
+#[allow(clippy::too_many_arguments)]
+fn cancel_pos_mul_left(
+    d: &mut IntDev<'_>,
+    rat: RatPrelude,
+    a_val: ExprId,
+    y: ExprId,
+    dd: ExprId,
+    h_nonneg_a: ExprId,
+    h_eq_ad: ExprId,
+    h_le_ay: ExprId,
+    h_a_ne_zero: ExprId,
+) -> ExprId {
+    let one = rone(d, rat);
+    let tot = d.lemma(rat.le_total, &[y, dd]);
+    let left_ty = rle(d, rat, y, dd);
+    let right_ty = rle(d, rat, dd, y);
+    d.or_elim(left_ty, right_ty, left_ty, tot, &|_d, h| h, &|d, h| {
+        let mul_ad = rmul(d, a_val, dd);
+        let mul_ay = rmul(d, a_val, y);
+        let step1 = d.lemma(
+            rat.mul_le_mul_of_nonneg_left,
+            &[a_val, dd, y, h_nonneg_a, h],
+        );
+        let step1b = rat_eq_rewrite(d, mul_ad, one, h_eq_ad, step1, &|d, t| {
+            rle(d, rat, t, mul_ay)
+        });
+        let eq_one_ay = d.lemma(rat.le_antisymm, &[one, mul_ay, step1b, h_le_ay]);
+        let eq_ad_ay = rtrans(d, mul_ad, one, mul_ay, h_eq_ad, eq_one_ay);
+        let eq_d_y = d.lemma(
+            rat.mul_left_cancel_of_ne_zero,
+            &[a_val, dd, y, h_a_ne_zero, eq_ad_ay],
+        );
+        let eq_y_d = rsymm(d, dd, y, eq_d_y);
+        let refl_y = d.lemma(rat.le_refl, &[y]);
+        rat_eq_rewrite(d, y, dd, eq_y_d, refl_y, &|d, t| rle(d, rat, y, t))
+    })
+}
+
+/// `Rat.le (Rat.pow (natDivSucc 1 1) n) (Rat.natDivSucc 1 n)` — the concrete
+/// harmonic bound at base `1/2`. Chains
+/// [`crate::rat_prelude::RatPrelude::bernoulli_harmonic_bound`] (at `x :=
+/// 1/2`, `t := 1`) with [`cancel_pos_mul_left`] to strip the `L 1 n` factor,
+/// using [`l_one_eq_embed`] to identify it with the whole-number embedding
+/// `natDivSucc (n+1) 0` and
+/// [`crate::rat_prelude::RatPrelude::nat_div_succ_mul`] +
+/// [`crate::nat_prelude::NatPrelude::mul_one`] to show that embedding times
+/// `natDivSucc 1 n` is exactly `natDivSucc (n+1) n`, closed by
+/// [`crate::rat_prelude::RatPrelude::nat_div_succ_scale`] (at `c := n`, its
+/// own `m := 0`) plus [`crate::nat_prelude::NatPrelude::zero_add`] (the one
+/// place this proof needs `0 + n = n` for a symbolic `n`, since
+/// `nat_div_succ_scale`'s index is `(c+1)·0 + c` and `Nat.add` recurses on
+/// its right argument).
+fn rat_pow_half_le_nat_div_succ(d: &mut IntDev<'_>, p: CRealPrelude, mm: ExprId) -> ExprId {
+    let rat = p.rat;
+    let one_nat = d.num(1);
+    let zero_nat = d.num(0);
+    let one_r = rone(d, rat);
+    let zero_r = rzero(d, rat);
+    let half = div_succ(d, p, 1, one_nat);
+
+    // hx : 0 ≤ half.
+    let hx = d.lemma(rat.zero_le_nat_div_succ, &[one_nat, one_nat]);
+    // ht : 0 ≤ one.
+    let zlo = d.lemma(rat.zero_lt_one, &[]);
+    let ht = d.lemma(rat.le_of_lt, &[zero_r, one_r, zlo]);
+
+    // hxt : half * (one + one) ≤ one, from the equality half*2 = 1.
+    let hxt = {
+        let two_sum = radd(d, one_r, one_r);
+        let mul_expr = rmul(d, half, two_sum);
+        let mul_half_one = rmul(d, half, one_r);
+
+        let ld = d.lemma(rat.left_distrib, &[half, one_r, one_r]);
+        let mo = d.lemma(rat.mul_one, &[half]);
+        let step1 = rcongr(d, mul_half_one, half, mo, &|d, y| radd(d, y, mul_half_one));
+        let step2 = rcongr(d, mul_half_one, half, mo, &|d, y| radd(d, half, y));
+
+        let unit = d.const_app(rat.nat_div_succ, &[one_nat, zero_nat]);
+        let two_nat = d.num(2);
+        let two_one = d.const_app(rat.nat_div_succ, &[two_nat, one_nat]);
+        let e1 = d.lemma(rat.nat_div_succ_add, &[one_nat, one_nat, one_nat]);
+        let e2 = d.lemma(rat.nat_div_succ_halve, &[zero_nat]);
+        let e3 = d.lemma(p.rat_unit_eq_one, &[]);
+
+        let sum_half_half = radd(d, half, half);
+        let sum_mul_half_one = radd(d, mul_half_one, mul_half_one);
+        let sum_half_mul_half_one = radd(d, half, mul_half_one);
+
+        let (_, chain_proof) = rchain(
+            d,
+            mul_expr,
+            &[
+                (sum_mul_half_one, ld),
+                (sum_half_mul_half_one, step1),
+                (sum_half_half, step2),
+                (two_one, e1),
+                (unit, e2),
+                (one_r, e3),
+            ],
+        );
+        let sym = rsymm(d, mul_expr, one_r, chain_proof);
+        let refl_one = d.lemma(rat.le_refl, &[one_r]);
+        rat_eq_rewrite(d, one_r, mul_expr, sym, refl_one, &|d, t| {
+            rle(d, rat, t, one_r)
+        })
+    };
+
+    // bound : le (mul (L one mm) (pow half mm)) one.
+    let bound = d.lemma(
+        rat.bernoulli_harmonic_bound,
+        &[half, one_r, hx, ht, hxt, mm],
+    );
+
+    let l_mm = l_term(d, rat, one_r, mm);
+    let pow_mm = rpow(d, rat, half, mm);
+    let nat_div_1_mm = div_succ(d, p, 1, mm);
+
+    // h_eq : mul (L one mm) (natDivSucc 1 mm) = one.
+    let h_eq = {
+        let succ_mm = d.succ(mm);
+        let l_eq = l_one_eq_embed(d, p, mm);
+        let embedded_mm = d.const_app(rat.nat_div_succ, &[succ_mm, zero_nat]);
+
+        let step_a = rcongr(d, l_mm, embedded_mm, l_eq, &|d, y| rmul(d, y, nat_div_1_mm));
+        let step_b = d.lemma(rat.nat_div_succ_mul, &[succ_mm, one_nat, mm]);
+
+        let mul_one_name = d.prelude().mul_one;
+        let mul_one_h = d.lemma(mul_one_name, &[succ_mm]);
+        let mul_succ_mm_one = NatOps::mul(d, succ_mm, one_nat);
+        let step_c = nat_eq_to_rat(d, mul_succ_mm_one, succ_mm, mul_one_h, &|d, k| {
+            d.const_app(rat.nat_div_succ, &[k, mm])
+        });
+
+        // x0 : natDivSucc (succ mm) mm = one, via nat_div_succ_scale(mm, 0)
+        // plus Nat.zero_add(mm).
+        let x0 = {
+            let zero_add_name = d.prelude().zero_add;
+            let zero_add_h = d.lemma(zero_add_name, &[mm]);
+            let a_idx = NatOps::add(d, zero_nat, mm);
+            let raw = d.lemma(rat.nat_div_succ_scale, &[mm, zero_nat]);
+            let natdiv_1_0 = d.const_app(rat.nat_div_succ, &[one_nat, zero_nat]);
+            let natdiv_succmm_aidx = d.const_app(rat.nat_div_succ, &[succ_mm, a_idx]);
+            let natdiv_succmm_mm = d.const_app(rat.nat_div_succ, &[succ_mm, mm]);
+            let step_idx = nat_eq_to_rat(d, a_idx, mm, zero_add_h, &|d, k| {
+                d.const_app(rat.nat_div_succ, &[succ_mm, k])
+            });
+            let step_idx_symm = rsymm(d, natdiv_succmm_aidx, natdiv_succmm_mm, step_idx);
+            let x0_mid = rtrans(
+                d,
+                natdiv_succmm_mm,
+                natdiv_succmm_aidx,
+                natdiv_1_0,
+                step_idx_symm,
+                raw,
+            );
+            let e3 = d.lemma(p.rat_unit_eq_one, &[]);
+            rtrans(d, natdiv_succmm_mm, natdiv_1_0, one_r, x0_mid, e3)
+        };
+
+        let mul_lmm_nd = rmul(d, l_mm, nat_div_1_mm);
+        let mul_embedded_nd = rmul(d, embedded_mm, nat_div_1_mm);
+        let natdiv_mul_one = d.const_app(rat.nat_div_succ, &[mul_succ_mm_one, mm]);
+        let natdiv_succmm_mm2 = d.const_app(rat.nat_div_succ, &[succ_mm, mm]);
+        let (_, proof) = rchain(
+            d,
+            mul_lmm_nd,
+            &[
+                (mul_embedded_nd, step_a),
+                (natdiv_mul_one, step_b),
+                (natdiv_succmm_mm2, step_c),
+                (one_r, x0),
+            ],
+        );
+        proof
+    };
+
+    // h_nonneg : 0 ≤ L one mm.
+    let h_one_le_l = one_le_l(d, rat, one_r, ht, mm);
+    let h_nonneg = d.lemma(rat.le_trans, &[zero_r, one_r, l_mm, ht, h_one_le_l]);
+
+    // h_ne_zero : L one mm ≠ 0, from 0 < L one mm.
+    let lt_zero_l = d.lemma(rat.lt_of_lt_of_le, &[zero_r, one_r, l_mm, zlo, h_one_le_l]);
+    let h_ne_zero = ne_zero_of_pos(d, rat, l_mm, lt_zero_l);
+
+    cancel_pos_mul_left(
+        d,
+        rat,
+        l_mm,
+        pow_mm,
+        nat_div_1_mm,
+        h_nonneg,
+        h_eq,
+        bound,
+        h_ne_zero,
+    )
+}
+
+/// `CReal.ofRat_pow : ∀ q n, Equiv (pow (ofRat q) n) (ofRat (Rat.pow q n))`.
+///
+/// Induction on `n`. See the module documentation for the field this
+/// declares ([`CRealPrelude::of_rat_pow`]) for why neither `pow_zero` nor
+/// `pow_succ` unfolding is needed.
+fn declare_of_rat_pow(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let rat_carrier = rat_ty(d);
+    let nat = d.nat_ty();
+
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+    let x = embed(d, p, q);
+
+    let motive = |d: &mut IntDev<'_>, k: ExprId| -> ExprId {
+        let lhs = d.const_app(p.pow, &[x, k]);
+        let rpow_qk = rpow(d, rat, q, k);
+        let rhs = embed(d, p, rpow_qk);
+        equiv(d, p, lhs, rhs)
+    };
+
+    let base = |d: &mut IntDev<'_>| -> ExprId {
+        let one = d.kernel().const_(p.one, vec![]);
+        d.lemma(p.equiv_refl, &[one])
+    };
+
+    let step = |d: &mut IntDev<'_>, j: ExprId, ih: ExprId| -> ExprId {
+        let pow_xj = d.const_app(p.pow, &[x, j]);
+        let rpow_qj = rpow(d, rat, q, j);
+        let embed_rpow_qj = embed(d, p, rpow_qj);
+        let refl_x = d.lemma(p.equiv_refl, &[x]);
+        let step1 = d.lemma(p.mul_congr, &[pow_xj, embed_rpow_qj, x, x, ih, refl_x]);
+        let step2 = d.lemma(p.of_rat_mul, &[rpow_qj, q]);
+
+        let mul_pow_xj_x = d.const_app(p.mul, &[pow_xj, x]);
+        let mul_embed_x = d.const_app(p.mul, &[embed_rpow_qj, x]);
+        let scaled = rmul(d, rpow_qj, q);
+        let embed_scaled = embed(d, p, scaled);
+        d.lemma(
+            p.equiv_trans,
+            &[mul_pow_xj_x, mul_embed_x, embed_scaled, step1, step2],
+        )
+    };
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let proof_n = d.induct(&motive, &base, &step, n);
+    let stmt_n = motive(d, n);
+
+    let ty = {
+        let with_n = d.pi_fv(n_fv, nat, stmt_n);
+        d.pi_fv(q_fv, rat_carrier, with_n)
+    };
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, proof_n);
+        d.lam_fv(q_fv, rat_carrier, with_n)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.of_rat_pow,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.pow_half_le_natDivSucc : ∀ n, le (pow (ofRat (natDivSucc 1 1)) n)
+/// (ofRat (natDivSucc 1 n))`. See [`CRealPrelude::pow_half_le_nat_div_succ`]
+/// for the derivation.
+fn declare_pow_half_le_nat_div_succ(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let nat = d.nat_ty();
+    let one_nat = d.num(1);
+    let half_rat = div_succ(d, p, 1, one_nat);
+    let half_creal = embed(d, p, half_rat);
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let rat_le_proof = rat_pow_half_le_nat_div_succ(d, p, n);
+
+    let rpow_n = rpow(d, rat, half_rat, n);
+    let nat_div_1_n = div_succ(d, p, 1, n);
+    let ofrat_rpow_n = embed(d, p, rpow_n);
+    let ofrat_natdiv_n = embed(d, p, nat_div_1_n);
+
+    let of_rat_le_proof = d.lemma(p.of_rat_le, &[rpow_n, nat_div_1_n, rat_le_proof]);
+    let of_rat_pow_proof = d.lemma(p.of_rat_pow, &[half_rat, n]);
+
+    let pow_half_n = d.const_app(p.pow, &[half_creal, n]);
+    let hab = d.lemma(p.equiv_symm, &[pow_half_n, ofrat_rpow_n, of_rat_pow_proof]);
+    let hce = d.lemma(p.equiv_refl, &[ofrat_natdiv_n]);
+
+    let final_proof = d.lemma(
+        p.le_congr,
+        &[
+            ofrat_rpow_n,
+            pow_half_n,
+            ofrat_natdiv_n,
+            ofrat_natdiv_n,
+            hab,
+            hce,
+            of_rat_le_proof,
+        ],
+    );
+
+    let value = d.lam_fv(n_fv, nat, final_proof);
+    let ty = {
+        let stmt = cle(d, p, pow_half_n, ofrat_natdiv_n);
+        d.pi_fv(n_fv, nat, stmt)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.pow_half_le_nat_div_succ,
         uparams: vec![],
         ty,
         value,

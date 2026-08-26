@@ -36,17 +36,37 @@ def digest(path: pathlib.Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def exact_kernel_declaration(evidence_id: object) -> str | None:
+def exact_kernel_declarations(evidence: object) -> tuple[str, ...]:
+    if not isinstance(evidence, dict):
+        return ()
+    explicit_many = evidence.get("kernel_declarations")
+    if (
+        isinstance(explicit_many, list)
+        and explicit_many
+        and all(isinstance(value, str) and value for value in explicit_many)
+    ):
+        return tuple(explicit_many)
+    explicit = evidence.get("kernel_declaration")
+    if isinstance(explicit, str) and explicit:
+        return (explicit,)
+    evidence_id = evidence.get("id")
     if not isinstance(evidence_id, str):
-        return None
+        return ()
     for prefix in ("kernel-", "kernel:"):
         if evidence_id.startswith(prefix):
-            return evidence_id[len(prefix) :]
-    return None
+            return (evidence_id[len(prefix) :],)
+    return ()
+
+
+def exact_kernel_declaration(evidence: object) -> str | None:
+    """Compatibility helper for callers expecting at most one declaration."""
+    declarations = exact_kernel_declarations(evidence)
+    return declarations[0] if declarations else None
 
 
 def build() -> dict[str, Any]:
     projection = json.loads(KERNEL.read_text())
+    declaration_rows = {row["id"]: row for row in projection["declarations"]}
     theorem_rows = {
         row["id"]: row
         for row in projection["declarations"]
@@ -92,20 +112,30 @@ def build() -> dict[str, Any]:
             if evidence.get("kind") != "kernel-term":
                 continue
             evidence_id = evidence.get("id")
-            declaration = exact_kernel_declaration(evidence_id)
-            if declaration is None:
+            declarations = exact_kernel_declarations(evidence)
+            if not declarations:
                 continue
-            if declaration in theorem_rows:
-                fact_links[declaration].add(fact_id)
-            else:
-                unresolved.append(
-                    {
-                        "fact_id": fact_id,
-                        "evidence_id": str(evidence_id),
-                        "candidate_declaration_id": declaration,
-                        "reason": "exact kernel evidence prefix does not resolve to a current theorem declaration",
-                    }
-                )
+            for declaration in declarations:
+                if declaration in theorem_rows:
+                    fact_links[declaration].add(fact_id)
+                else:
+                    declaration_row = declaration_rows.get(declaration)
+                    if declaration_row is None:
+                        reason = "exact kernel evidence identity is absent from the current projection"
+                    else:
+                        declaration_kind = declaration_row["declaration_kind"]
+                        reason = (
+                            "exact kernel evidence identity resolves to a current "
+                            f"{declaration_kind} declaration, not a theorem"
+                        )
+                    unresolved.append(
+                        {
+                            "fact_id": fact_id,
+                            "evidence_id": str(evidence_id),
+                            "candidate_declaration_id": declaration,
+                            "reason": reason,
+                        }
+                    )
 
     unresolved.sort(
         key=lambda row: (row["candidate_declaration_id"], row["fact_id"], row["evidence_id"])
@@ -117,8 +147,11 @@ def build() -> dict[str, Any]:
         lemmas.append(
             {
                 "kernel_declaration_id": theorem,
+                "canonical_type": row["canonical_type"],
                 "axiom_footprint_size": row["axiom_footprint_size"],
                 "visible_in": row["visible_in"],
+                "direct_type_dependencies": row["direct_type_dependencies"],
+                "direct_declaration_dependencies": row["direct_declaration_dependencies"],
                 "direct_theorem_dependencies": row["direct_theorem_dependencies"],
                 "direct_theorem_dependents": dependents,
                 "dependency_depth": dependency_depth(theorem),
@@ -129,13 +162,16 @@ def build() -> dict[str, Any]:
 
     linked_theorems = sum(bool(row["exact_fact_ids"]) for row in lemmas)
     linked_facts = {fact for row in lemmas for fact in row["exact_fact_ids"]}
+    unresolved_reasons = defaultdict(int)
+    for row in unresolved:
+        unresolved_reasons[row["reason"]] += 1
     return {
         "schema_version": 1,
         "kind": "axeyum-kernel-lemma-search-index",
         "derivation": {
             "kernel_projection_sha256": digest(KERNEL),
             "fact_population": "sorted artifacts/facts/F-*.json",
-            "fact_identity_rule": "kernel-term evidence id with exact kernel- or kernel: prefix and an exact current theorem suffix",
+            "fact_identity_rule": "kernel-term evidence with explicit kernel_declarations or kernel_declaration, falling back for compatibility to an evidence id with exact kernel- or kernel: prefix and an exact current theorem suffix",
             "graph_semantics": "accepted theorem-term direct references; dependency depth is the longest direct-theorem path from a theorem with no theorem dependency",
             "trust_boundary": "search and retrieval only; no concept, applicability, proof, admission, or trusted-kernel authority",
         },
@@ -148,6 +184,7 @@ def build() -> dict[str, Any]:
             "theorems_without_exact_fact_links": len(lemmas) - linked_theorems,
             "distinct_exactly_linked_facts": len(linked_facts),
             "unresolved_prefixed_kernel_evidence": len(unresolved),
+            "unresolved_reason_counts": dict(sorted(unresolved_reasons.items())),
             "maximum_dependency_depth": max(depths.values(), default=0),
         },
         "lemmas": lemmas,

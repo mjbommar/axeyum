@@ -177,6 +177,67 @@
     },
     {
       "dependency_component_ids": [
+        "mathlib-v4.30.0-21034a8981d599dd",
+        "mathlib-v4.30.0-52448fed5f91002d",
+        "mathlib-v4.30.0-784b337733caaefb"
+      ],
+      "direct_unlock_fact_count": 1,
+      "direct_unlock_fact_ids": [
+        "F:ml430-nat-choose-symm-add-e4b68161"
+      ],
+      "family": "natural-binomial",
+      "ready_fact_count": 3,
+      "ready_fact_ids": [
+        "F:ml430-nat-choose-eq-zero-of-lt-92ebab29",
+        "F:ml430-nat-choose-ne-zero-49c3d3cb",
+        "F:ml430-nat-choose-symm-of-eq-add-9b5f9a20"
+      ],
+      "statement_shape": "conditional-proposition",
+      "topic_concept_id": "C:binomial-coefficient"
+    },
+    {
+      "dependency_component_ids": [
+        "mathlib-v4.30.0-3149d7f9cd050cac",
+        "mathlib-v4.30.0-6f230047ce83981a",
+        "mathlib-v4.30.0-772791fcb89127a3"
+      ],
+      "direct_unlock_fact_count": 2,
+      "direct_unlock_fact_ids": [
+        "F:ml430-nat-multichoose-one-b210386a",
+        "F:ml430-nat-multichoose-one-right-7755072d"
+      ],
+      "family": "natural-binomial",
+      "ready_fact_count": 3,
+      "ready_fact_ids": [
+        "F:ml430-mutation-edb05acf07d9ef3f9f8232fc",
+        "F:ml430-nat-choose-one-right-7eda8e39",
+        "F:ml430-nat-multichoose-zero-right-6ef827c8"
+      ],
+      "statement_shape": "unconditional-equality",
+      "topic_concept_id": "C:binomial-coefficient"
+    },
+    {
+      "dependency_component_ids": [
+        "mathlib-v4.30.0-03318a97f5d9c067",
+        "mathlib-v4.30.0-841c7d52cf03e6e4",
+        "mathlib-v4.30.0-b92098ec339263f0"
+      ],
+      "direct_unlock_fact_count": 1,
+      "direct_unlock_fact_ids": [
+        "F:ml430-nat-choose-le-add-9c463139"
+      ],
+      "family": "natural-binomial",
+      "ready_fact_count": 3,
+      "ready_fact_ids": [
+        "F:ml430-nat-choose-le-succ-62ae968b",
+        "F:ml430-nat-factorial-dvd-ascfactorial-44a4e641",
+        "F:ml430-nat-factorial-dvd-descfactorial-bbf6124f"
+      ],
+      "statement_shape": "unconditional-relation",
+      "topic_concept_id": "C:binomial-coefficient"
+    },
+    {
+      "dependency_component_ids": [
         "mathlib-v4.30.0-b413bfcde9767d29"
       ],
       "direct_unlock_fact_count": 0,
@@ -294,16 +355,13 @@
       "dependency_component_ids": [
         "mathlib-v4.30.0-4aaec3b2ba4c2183"
       ],
-      "direct_unlock_fact_count": 3,
-      "direct_unlock_fact_ids": [
-        "F:ml430-nat-factorial-le-d0f4a912",
+      "direct_unlock_fact_count": 0,
+      "direct_unlock_fact_ids": [],
+      "family": "natural-factorial",
+      "ready_fact_count": 2,
+      "ready_fact_ids": [
         "F:ml430-nat-factorial-ne-zero-5fc0b0a1",
         "F:ml430-nat-self-le-factorial-cfdffc69"
-      ],
-      "family": "natural-factorial",
-      "ready_fact_count": 1,
-      "ready_fact_ids": [
-        "F:ml430-nat-factorial-pos-f1dd2405"
       ],
       "statement_shape": "unconditional-relation",
       "topic_concept_id": "C:factorial"
@@ -366,22 +424,6 @@
         "F:ml430-nat-fastfib-eq-cde11774"
       ],
       "statement_shape": "unconditional-equality",
-      "topic_concept_id": "C:fibonacci-sequence"
-    },
-    {
-      "dependency_component_ids": [
-        "mathlib-v4.30.0-b064fa21f15a772b"
-      ],
-      "direct_unlock_fact_count": 1,
-      "direct_unlock_fact_ids": [
-        "F:ml430-nat-fib-mono-cc6afe09"
-      ],
-      "family": "natural-fibonacci",
-      "ready_fact_count": 1,
-      "ready_fact_ids": [
-        "F:ml430-nat-fib-le-fib-succ-d1ef4a3d"
-      ],
-      "statement_shape": "unconditional-relation",
       "topic_concept_id": "C:fibonacci-sequence"
     },
     {
@@ -486,14 +528,13 @@
         "mathlib-v4.30.0-d4e21b6b7acdcecb",
         "mathlib-v4.30.0-f1259356540dba68"
       ],
-      "direct_unlock_fact_count": 3,
+      "direct_unlock_fact_count": 2,
       "direct_unlock_fact_ids": [
-        "F:ml430-nat-modeq-comm-24b71e7a",
         "F:ml430-nat-modeq-dvd-iff-8f130450",
         "F:ml430-nat-modeq-of-mul-right-43078e1c"
       ],
       "family": "natural-modular-equivalence",
-      "ready_fact_count": 9,
+      "ready_fact_count": 7,
       "ready_fact_ids": [
         "F:ml430-nat-mod-lcm-ee6bdd41",
         "F:ml430-nat-modeq-add-left-cancel-e5287cf6",
@@ -501,9 +542,7 @@
         "F:ml430-nat-modeq-add-right-8e2ca0cc",
         "F:ml430-nat-modeq-add-right-cancel-e871facf",
         "F:ml430-nat-modeq-of-dvd-d75cc374",
-        "F:ml430-nat-modeq-of-mul-left-88d20bca",
-        "F:ml430-nat-modeq-symm-0a3d4d18",
-        "F:ml430-nat-modeq-trans-ef9d1c46"
+        "F:ml430-nat-modeq-of-mul-left-88d20bca"
       ],
       "statement_shape": "conditional-proposition",
       "topic_concept_id": "C:modular-arithmetic"
@@ -592,12 +631,12 @@
     }
   ],
   "census": {
-    "admissible_facts": 2,
-    "cataloged_ready_facts": 97,
-    "dependency_ready_facts": 97,
-    "excluded_held_out_ready_facts": 34,
+    "admissible_facts": 0,
+    "cataloged_ready_facts": 104,
+    "dependency_ready_facts": 104,
+    "excluded_held_out_ready_facts": 22,
     "excluded_outside_evaluation_ready_facts": 9,
-    "global_dependency_ready_facts": 140,
+    "global_dependency_ready_facts": 135,
     "groups": 2,
     "rejection_reasons": [
       {
@@ -605,7 +644,7 @@
         "reason": "gate-coupling-review-required"
       },
       {
-        "fact_count": 95,
+        "fact_count": 104,
         "reason": "no-registered-operation"
       }
     ],
@@ -617,10 +656,10 @@
       "train"
     ],
     "family_concept_crosswalk_path": "artifacts/autogenesis/family-concept-crosswalk-v1.json",
-    "frontier_sha256": "b767c26e6e2677d9b5cb0df972aa7f94eb1d04dd2afa901c9ed97382ee7fd3ca",
-    "ledger_sha256": "8a9866189dd0f80b0d4c270495b7a676bd7bf7ae2e6d0265c689a1c4e2dbfbdd",
-    "nursery_sha256": "aa7a2769fcc51bdcf90c360b435e5efed6797751e81ae9931fd52bb89c25e7f1",
-    "operation_registry_sha256": "a3340fcb15a9a6ff305f60c8ad9e8e70920c2bb7e43408d9bc0d640c611da6cb",
+    "frontier_sha256": "eaefa772f1d953af6c8c34fc3cf9e8c2617cc6f336f6a6e302724d66114cef51",
+    "ledger_sha256": "16b154e1d54562baea35e49f344e3e47819e8b1e14cd1107725ebb14099b7181",
+    "nursery_sha256": "6d1f2551a612fdcadaf1c6b0096c4eebee304d9687157cb25505f785ee86daa8",
+    "operation_registry_sha256": "2946dd39994e39b28df3187d55927e633ac9c3d79c2ee5281829aad3a884c974",
     "reviewed_fact_catalog_sha256": "d2ebcbd56c70445e3a1be864426ee783021387c5d6c885f182dc2a374855f988",
     "source": "scripts/fact-frontier.py build_machine_frontier",
     "trust_boundary": "train/development ranking and producer-investigation input only; never held-out inspection, proof, or admission authority"
@@ -673,13 +712,10 @@
       "route_class": "proof-route-only"
     },
     {
-      "admissible_fact_ids": [
-        "F:ml430-nat-modeq-symm-0a3d4d18",
-        "F:ml430-nat-modeq-trans-ef9d1c46"
-      ],
+      "admissible_fact_ids": [],
       "formal_language": "lean4-surface",
       "fragment": "Nat",
-      "ready_fact_count": 71,
+      "ready_fact_count": 78,
       "ready_fact_ids": [
         "F:ml430-mutation-1432b2277cf2cc26c1d11cd6",
         "F:ml430-mutation-5179f333b8333ecff8adc223",
@@ -687,9 +723,15 @@
         "F:ml430-mutation-a6dd1759bce60d820292e107",
         "F:ml430-mutation-c20db9b4c60b816ce738bdf2",
         "F:ml430-mutation-c86940b52af8159ca9b381d6",
+        "F:ml430-mutation-edb05acf07d9ef3f9f8232fc",
         "F:ml430-nat-add-modeq-left-e3b1fba9",
         "F:ml430-nat-add-modeq-right-e2f11f21",
         "F:ml430-nat-bitwise-bit-4c4b28a8",
+        "F:ml430-nat-choose-eq-zero-of-lt-92ebab29",
+        "F:ml430-nat-choose-le-succ-62ae968b",
+        "F:ml430-nat-choose-ne-zero-49c3d3cb",
+        "F:ml430-nat-choose-one-right-7eda8e39",
+        "F:ml430-nat-choose-symm-of-eq-add-9b5f9a20",
         "F:ml430-nat-coprime-add-self-left-5e93448c",
         "F:ml430-nat-coprime-add-self-right-c3ed0f45",
         "F:ml430-nat-coprime-iff-isrelprime-0c08eb25",
@@ -713,12 +755,13 @@
         "F:ml430-nat-dvd-of-lcm-left-dvd-d6b2407c",
         "F:ml430-nat-dvd-of-lcm-right-dvd-61bd1a60",
         "F:ml430-nat-even-xor-78a39432",
+        "F:ml430-nat-factorial-dvd-ascfactorial-44a4e641",
+        "F:ml430-nat-factorial-dvd-descfactorial-bbf6124f",
         "F:ml430-nat-factorial-dvd-factorial-e9d14845",
         "F:ml430-nat-factorial-lt-of-lt-d6c2125d",
-        "F:ml430-nat-factorial-pos-f1dd2405",
+        "F:ml430-nat-factorial-ne-zero-5fc0b0a1",
         "F:ml430-nat-fastfib-eq-cde11774",
         "F:ml430-nat-fib-add-two-strictmono-c1e86d4d",
-        "F:ml430-nat-fib-le-fib-succ-d1ef4a3d",
         "F:ml430-nat-land-bit-b9ab7475",
         "F:ml430-nat-ldiff-bit-6be49bb8",
         "F:ml430-nat-le-fib-self-0cbccb4d",
@@ -734,9 +777,8 @@
         "F:ml430-nat-modeq-of-dvd-d75cc374",
         "F:ml430-nat-modeq-of-mul-left-88d20bca",
         "F:ml430-nat-modeq-one-516d46e8",
-        "F:ml430-nat-modeq-symm-0a3d4d18",
-        "F:ml430-nat-modeq-trans-ef9d1c46",
         "F:ml430-nat-modulus-modeq-zero-fd9af096",
+        "F:ml430-nat-multichoose-zero-right-6ef827c8",
         "F:ml430-nat-not-coprime-zero-zero-6c4e8dd8",
         "F:ml430-nat-not-prime-of-dvd-of-ne-4ff592c0",
         "F:ml430-nat-prime-dvd-iff-not-coprime-77854741",
@@ -746,6 +788,7 @@
         "F:ml430-nat-prime-not-dvd-mul-cb3a915e",
         "F:ml430-nat-prime-odd-of-ne-two-91e1195f",
         "F:ml430-nat-prime-pred-pos-4e67ac4c",
+        "F:ml430-nat-self-le-factorial-cfdffc69",
         "F:ml430-nat-succ-pred-prime-4feb123f",
         "F:ml430-nat-testbit-eq-inth-ffa07392",
         "F:ml430-nat-testbit-land-dfef7ca4",
@@ -753,16 +796,14 @@
         "F:ml430-nat-testbit-lor-7644e067",
         "F:ml430-nat-zero-of-testbit-eq-false-e244c9a1"
       ],
-      "registered_operation_ids": [
-        "authoritative-mathlib-modeq-family-v1"
-      ],
+      "registered_operation_ids": [],
       "rejection_reasons": [
         {
           "fact_count": 1,
           "reason": "gate-coupling-review-required"
         },
         {
-          "fact_count": 69,
+          "fact_count": 78,
           "reason": "no-registered-operation"
         }
       ],

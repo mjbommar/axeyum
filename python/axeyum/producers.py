@@ -29,8 +29,7 @@ Python can change it.
 call. A goal from another kernel raises ``EpochError`` rather than silently
 denoting a different term.
 
-The two producers' :class:`Candidate` classes are deliberately distinct types
-(:class:`Candidate` and :class:`ModEqCandidate`): they measure different
+The producers' candidate classes are deliberately distinct types: they measure different
 quantities against different budgets, and one class with ``inductions_used =
 None`` would make "this producer performs no inductions" indistinguishable from
 "nobody measured".
@@ -39,11 +38,15 @@ None`` would make "this producer performs no inductions" indistinguishable from
 from __future__ import annotations
 
 from ._native.producers import (
+    APPLICATION_MAX_BINDERS,
+    APPLICATION_MAX_DEPTH,
+    APPLICATION_MAX_TERMS,
     FORMAT_VERSION,
     IDENTITY_VERSION,
     MAX_BINDERS,
     MAX_INDUCTIONS,
     MODEQ_MAX_BINDERS,
+    ApplicationCandidate,
     AxiomIdentity,
     Candidate,
     CircularityAudit,
@@ -57,17 +60,23 @@ from ._native.producers import (
     StatementImport,
     StatementImportError,
     audit_circularity,
+    import_candidate_statement_ndjson,
     import_statement_ndjson,
+    propose_bounded_application,
     propose_bounded_induction,
     propose_modeq_family,
 )
 
 __all__ = [
+    "APPLICATION_MAX_BINDERS",
+    "APPLICATION_MAX_DEPTH",
+    "APPLICATION_MAX_TERMS",
     "FORMAT_VERSION",
     "IDENTITY_VERSION",
     "MAX_BINDERS",
     "MAX_INDUCTIONS",
     "MODEQ_MAX_BINDERS",
+    "ApplicationCandidate",
     "AxiomIdentity",
     "Candidate",
     "CircularityAudit",
@@ -81,7 +90,9 @@ __all__ = [
     "StatementImport",
     "StatementImportError",
     "audit_circularity",
+    "import_candidate_statement_ndjson",
     "import_statement_ndjson",
+    "propose_bounded_application",
     "propose_bounded_induction",
     "propose_modeq_family",
 ]

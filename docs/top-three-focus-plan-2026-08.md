@@ -7,6 +7,11 @@ not another inventory of possible work. Each priority has a product outcome, a
 measured starting point, an ordered implementation path, and an exit that must
 be demonstrated by executable evidence.
 
+The companion
+[`overall vision and status review`](overall-vision-status-review-2026-08.md)
+records the code-level product spine, measured current boundary, and comparative
+position that motivate these priorities.
+
 Axeyum's product identity is:
 
 > An evidence-native reasoning system in which heterogeneous, untrusted search
@@ -22,21 +27,226 @@ semantics, evidence, provenance, checking, and compounding knowledge loop.
 - The pure-Rust reasoning stack has real end-to-end SMT, CAS, kernel, program
   verification, and proof-artifact routes, but its coverage and assurance are
   uneven by fragment.
-- A live high-stack production inventory reported 1,184 distinct theorems with
-  empty measured axiom footprints. The committed declaration projection was
-  stale at 1,100; regenerating it from current code now agrees exactly at 1,184.
-  After merging the next constructive-real and rational increments, the
-  projection and search index advanced together to 1,192. The production-
-  provenance ledger credits
-  only 8 established facts to reusable
-  multi-target operations; most theorems remain human-built.
+- The generated kernel projection currently contains 1,628 declarations: 1,274
+  theorems, 251 definitions, 29 constructors, 22 inductives, 22 recursors, and
+  30 axioms. It reports 1,598 axiom-free declarations and 7,436 direct
+  theorem-dependency edges. This is a substantial checked library, but it is
+  not an autonomous-production count.
+- The fact ledger contains 698 propositions: 510 proved, 4 refuted, 2 computed,
+  179 open, and 3 conjectured. Its 26 authoritative/counterfactual operation
+  rows contain only 2 reusable multi-target producers and name only 33 fact
+  IDs. Most checked theorems therefore remain human-constructed, and most
+  ledger facts have no reusable producer assigned.
 - Sixteen live agent episodes exist. Two produced axiom-free proofs re-derived
   in a second kernel, but the current producer vocabulary closes only a tiny
   frontier.
 - The kernel, fact ledger, tactic catalog, obstruction graph, and concept graph
   are separately useful, but do not yet form one lemma-search substrate.
+- The generated lemma index now covers all 1,274 kernel theorems and their 7,436
+  direct edges, with a kernel-rendered canonical type on every row and a
+  bounded type-fragment query in the agent read surface. Exactly 397
+  theorems link to 398 fact records; 877 theorems have
+  no exact fact link. Only four evidence identities remain unresolved: three
+  descriptive ordered-ring/Rat IDs and `Rat.normalize`, which resolves exactly
+  but is a definition rather than a theorem. The projection now actually
+  includes the public Nat/Int characterization builder, and a plural binding
+  represents the two Ceva directions without a fictitious combined theorem
+  name. Remaining repair belongs in authored evidence identity, not fuzzy
+  matching.
 - The Rust and Python surfaces are broad, but integration churn can leave
   `main` red and evidence fixtures can be mistaken for production populations.
+
+### Landed autonomous-loop increment
+
+The first action against this plan moved three facts through the authoritative
+path rather than adding proof code for new targets:
+
+1. the frontier selected open `Nat.ModEq.symm`; the existing multi-target
+   producer reconstructed it, independent checking accepted it, and the
+   crash-safe transaction admitted it;
+2. a fresh frontier selected and admitted `Nat.ModEq.trans` through the same
+   operation;
+3. the durable symmetry admission made `Nat.ModEq.comm` dependency-ready, so
+   the previously deferred target was added to the unchanged producer's
+   source-bound family, selected by a fresh frontier, and admitted.
+
+Reusable multi-target production credit consequently rose from 8 to 11 facts,
+and the family now covers eight Int/Nat targets. This demonstrates durable
+state changing later scheduling. It does **not** yet satisfy the stronger
+proof-compounding exit: the commutativity producer reconstructs Eq/Iff symmetry
+directly and records zero theorem dependencies, so the admitted symmetry fact
+does not occur in its checked proof closure. The next producer increment must
+consume a selected library lemma rather than merely being scheduled by it.
+
+The first deterministic bridge for that next increment is now implemented.
+The agent's `lemma_candidates` read tool joins an open goal's authored
+`depends_on` edges to exact fact-to-kernel links in the generated lemma index.
+For `Nat.fib` monotonicity it returned the proved dependency
+`Nat.fib_le_succ` as an axiom-free kernel candidate. A reference composition
+now closes that stronger theorem by eliminating its order derivation and
+chaining the adjacent-step lemma; the kernel records direct dependencies on
+`Nat.fib_le_succ` and the new target-agnostic
+`Nat.monotone_of_le_succ` combinator, and the ledger is settled from that
+axiom-free term. The combinator itself derives full monotonicity for any
+`Nat → Nat` function from its adjacent-step proof by eliminating the order
+derivation. Unlinked dependencies remain explicit rather than repaired by
+name similarity. This proves mathematical compounding through the connected
+graph, but not autonomous construction: the reference constructor was written
+by hand and production provenance correctly counts the result among the 472
+settled facts with no authoritative operation.
+
+A bounded, target-agnostic application producer now closes that gap at the
+candidate-construction layer. Given only the retrieved declarations
+`Nat.monotone_of_le_succ`, `Nat.fib`, and `Nat.fib_le_succ`, it constructs a
+term of `Nat.fib_mono` by deterministic type-directed application; the kernel
+admits it axiom-free with the two theorem dependencies observed in the proof.
+Removing the adjacent-step candidate makes the same bounded search decline.
+It neither scans the environment nor receives the target theorem. The remaining
+boundary is no longer language exposure: the typed Python surface accepts the
+goal plus exact retrieved `NameId` values, returns the untrusted proof and its
+fixed-budget telemetry, and preserves typed declines; the full Python suite,
+generated-stub check, stubtest, Ruff, and type-budget gates accept the surface.
+What remains is authoritative agent dispatch, operation registration, and
+episode admission. Until those land, production provenance must continue to
+say `no_operation`.
+
+The import seam required by that dispatch is now explicit rather than silently
+incompatible. Ordinary statement import remains proof-isolated and continues
+to reject every theorem. A separate candidate-capsule import accepts only the
+exact candidate declaration names supplied by retrieval, independently checks
+their proof-bearing transitive closures, requires an empty measured axiom
+footprint for every candidate, and still requires the target to be a
+transparent `definition : Prop`. Duplicate candidates, target-as-candidate,
+unlisted theorems, and assumption-bearing candidates fail closed. A
+root-selected native capsule omitting `Nat.fib_mono`'s proof reproduces the
+bounded composition after a fresh import. This closes the checker/import
+precondition for dispatch; it does not itself register an operation or admit a
+new fact.
+
+A first cross-target census exposed a second, narrower prerequisite. Offering
+each Nat goal its direct theorem dependencies plus the target's whole transitive
+declaration closure produced 10 successes across 251 bounded candidates, but
+even the already-demonstrated `Nat.fib_mono` composition declined: irrelevant
+implementation constants consumed the fixed term budget. The kernel and Python
+APIs, and the generated projection, now expose stable all-kind **direct**
+declaration dependencies separately from both theorem-only proof dependencies
+and the transitive audit closure. A review then caught a critical distinction:
+for a theorem that all-kind field includes constants from its finished proof
+value, so using it for premise selection would leak the answer. A second
+additive field therefore exposes direct **type-only** dependencies. The
+distinguishing control is concrete: `Nat.fib_mono`'s type names `Nat.fib`, but
+neither `Nat.fibAux` nor the two lemmas its checked proof eventually uses.
+Candidate selection may combine this proof-isolated statement vocabulary with
+independently retrieved fact dependencies; it may not read the all-kind proof
+evidence. The next census must use that exact boundary before an operation
+family is registered; the initial 10 successes are discovery data, not
+autonomous-production credit.
+
+The corrected, reproducible census now applies one fixed seed combinator plus
+type-only target vocabulary plus exact authored fact dependencies to every
+fact-linked theorem visible in the Nat prelude. It accepts 6 of 109 (5.5%) and
+returns `NoTypedApplication` for the other 103. Every accepted term is admitted
+again and has an empty axiom footprint. The accepts are `Nat.fib_mono`,
+`Nat.mul_one`, `Nat.one_mul`, `mt`, `not_not_intro`, and `not_not_not`.
+`Nat.fib_mono` uses exactly the independently retrieved `Nat.fib_le_succ` and
+the fixed `Nat.monotone_of_le_succ` combinator. This is an honest capability
+baseline over already settled controls, not production credit or evidence that
+the current open queue will convert at 5.5%. The next step is to materialize
+proof-isolated candidate capsules for eligible open siblings and run the same
+unchanged operation through the authoritative episode/transaction path.
+
+The external-input seam is now reproduced for the three arithmetic accepts.
+A generic materializer copies only the target theorem's type into a transparent
+goal definition, root-selects the explicit candidates, rejects any capsule
+whose bytes name the target theorem, fresh-imports the result through the
+candidate-capsule boundary, reruns bounded application, and independently
+admits the proposed term. The resulting 17–35 KiB NDJSON files are read-only
+under `/data0/axeyum/autogenesis/reference-packs/`; Git carries compact receipts
+with their paths, sizes, hashes, proof hashes, dependencies, and empty measured
+footprints. They are deliberately not vendored and do not change fact status.
+This closes materialization for controlled native targets; portable artifact
+distribution and authoritative multi-target receipt/transaction dispatch are
+still the next boundary.
+
+The common agent producer boundary can now consume those receipts. Resolution
+uses the lemma index's exact fact identity rather than theorem-name similarity,
+requires exactly one matching receipt, re-derives both byte length and SHA-256,
+and carries the receipt's candidate list into the candidate importer and
+bounded producer. A portable in-test capsule proves the route never imports the
+target theorem and reproduces the Fibonacci dependencies. This is executable
+plumbing, not operation authority: the tool is not added to the agent's tier-C
+surface until the registry, receipt schema, and crash-safe transaction agree on
+the multi-target contract.
+
+The first open-population test prevents the settled controls from being read as
+an estimate of autonomous yield. Fifty-seven train/development open or
+conjectured, arrow-free Mathlib statements were elaborated as proof-free
+definitions against pinned Lean 4.30.0 and Mathlib commit
+`c5ea00351c28e24afc9f0f84379aa41082b1188f`. Every target received the same 13
+elementary declarations; there was no per-target premise selection. Bounded
+application accepted **0 of 57**. Thirty capsules passed proof-isolated import
+and returned the typed `NoTypedApplication` decline. Twenty-seven were rejected
+before search because their statement closures reached a theorem, axiom, or
+quotient primitive outside the explicit candidate set. This is a useful
+fail-closed result, not 27 solver failures: it
+separates two bottlenecks that need different work—safe statement-environment
+construction and actual premise/term search. The external NDJSON remains
+unvendored; the committed census records every capsule hash, rejection, and
+decline. The adapter run also exposed and fixed repeated generated-name
+collisions, so arbitrarily many normalized mutation slugs now remain unique.
+
+The first exploratory run incorrectly included 23 held-out rows. It produced
+no proof and read no source proof body, but running the search grammar on those
+targets still spent evaluation information. The v2 artifact records those IDs
+as excluded and does not open their capsules; the script now fails closed when
+a mapping identity is absent from the nursery. No claim below relies on the
+contaminated 80-row run.
+
+This changes the immediate sequence. Registering the three-target settled
+control family would duplicate existing provenance and manufacture no new
+knowledge. The 27 rejections do **not** call for a second importer allowlist:
+Axeyum already implements the safer ADR-0484 type-slice route, which generalizes
+definitions with proof-bearing implementation closures, checks the fresh goal,
+and requires exact specialization back to the source proposition. Route this
+population through that existing boundary, attach independently checked local
+semantic contracts where abstraction erased required behavior, rank proof
+candidates from exact fact and kernel dependencies, and rerun the unchanged
+open population. Only a producer that converts previously open siblings earns
+operation authority.
+
+The first held-out-safe premise-ranking projection now makes the connected
+graph operational without pretending lexical overlap is semantics. It ranks at
+most 12 kernel lemmas for each of 142 open/conjectured Lean goals in train or
+development, using only the visible statement, canonical kernel types, direct
+type dependencies, and graph centrality. All 37 held-out fact IDs are excluded
+before statement tokenization. The artifact contains 1,704 candidate rows and
+grants no applicability or production authority. Its weakness is visible in
+the output: the independently proved `Nat.choose_self` is only third among a
+large tie for the corresponding source fact. The next connective layer is an
+exact type-compatibility filter and type-directed application attempt over
+these candidates, not a larger lexical score or an LLM assertion that one is
+the same theorem.
+
+## Comparative position
+
+Axeyum should not be described as a replacement for any one neighboring
+project. It combines narrower versions of several systems around a different
+unit of value: a checked, provenance-bearing result that becomes searchable
+input to the next bounded production attempt.
+
+| Neighbor | What it is far ahead on | Axeyum's distinct strength | Axeyum's present weakness |
+|---|---|---|---|
+| Lean and Mathlib | Mature elaboration, tactics, IDE experience, ecosystem, and a research-scale mathematical library | Independent Rust checking, explicit axiom footprints, and treating imported Lean as one evidence route inside a heterogeneous system | Much smaller library, partial Lean-core coverage, little interactive elaboration, and minimal user community |
+| Z3 and cvc5 | Solver performance, theory breadth/depth, quantifier heuristics, proof production, and industrial use | Route-specific evidence reports, original-query model replay, and a path from solver evidence into durable kernel theorems and a fact ledger | Uneven proof assurance across logics, incomplete theory combination, and many routes that still have no transferable proof |
+| Isabelle/Sledgehammer-style systems | Mature interactive proving plus external-prover orchestration and large proof corpora | A more explicit machine-readable ledger/operation/episode model aimed at measuring autonomous compounding | No comparably mature proof language, IDE, simplifier ecosystem, or broad automated premise-selection results |
+| AlphaProof/LLM proof agents | Learned proof search at enormous training and compute scale | Deterministic non-LLM producers, typed declines, strict held-out controls, and a checker/transaction boundary designed to remain authoritative when models change | Two successful production episodes out of sixteen is evidence of a functioning seed, not yet a productive autonomous system |
+| Standalone CAS and program analyzers | Deep domain algorithms and mature domain workflows | One evidence/provenance vocabulary spanning CAS, SMT, kernel proofs, BMC, symbolic execution, and property checking | Breadth creates maintenance cost; many integrations are shallow relative to the specialist tools and lack one polished product front door |
+
+The strategic wager is therefore credible but unproved: Axeyum is strongest in
+trust-boundary design and connective tissue, competitive only on selected
+narrow reasoning fragments, and weak in autonomous conversion rate, specialist
+algorithm depth, library scale, and product ergonomics. The next milestone must
+raise the first of those weaknesses without weakening the first strength.
 
 ## Priority 1: autonomous reusable proof production
 
@@ -59,8 +269,9 @@ bounded lemma selection, transport, and composition.
 1. Convert producer declines into a ranked, typed strategy backlog.
 2. Build a kernel-derived lemma-search index with exact dependency and
    visibility information; do not ask an LLM to invent the available library.
-3. Implement the first measured family extension: unfold a relation such as
-   `ModEq`, select bounded arithmetic lemmas, and compose the proof term.
+3. Expose the checked `Nat.monotone_of_le_succ` combinator through an operation
+   that recognizes the adjacent-step monotonicity schema without naming
+   Fibonacci or the target theorem.
 4. Generalize that implementation into bounded best-first lemma composition.
 5. Let an LLM propose lemma applications only across the untrusted boundary;
    the same kernel and footprint checks retain authority.

@@ -28,6 +28,7 @@
     {
       "id": "kernel-mod_eq_trans",
       "kind": "kernel-term",
+      "kernel_declaration": "Nat.mod_eq_trans",
       "supports": "Nat.mod_eq_trans is admitted by the trusted kernel gate with the type recorded in formal.statement.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- Nat.mod_eq_trans 2>/dev/null | grep -Ec '^Nat\\.mod_eq_trans[[:space:]]')\" -ge 1",

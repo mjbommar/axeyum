@@ -25,6 +25,7 @@
     {
       "id": "kernel-CPoint.centroid_dist_sq",
       "kind": "kernel-term",
+      "kernel_declaration": "CPoint.centroid_distSq",
       "supports": "`CPoint.centroid_dist_sq` is admitted by the kernel with exactly the type in formal.statement. The proof expands each vertex distance around the pivot G via `dot_self_sub`, uses a new `triple_sub_sum_zero` (the three vertex-to-centroid vectors sum to zero, from 3G ~ A+B+C) and `dot_zero_right`, and reassociates twelve terms through the file's existing SumTree / flatten_sum_tree / reorder_right_chain / concat_right_chains machinery.",
       "check_status": "checked",
       "checkers": [

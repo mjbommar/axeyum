@@ -874,9 +874,25 @@ class Kernel:
         
         Raises `KeyError` if nothing is declared under `name`.
         """
+    def declaration_dependencies(self, name: builtins.str  |  NameId) -> builtins.list[builtins.str]:
+        r"""
+        The declarations `name` refers to directly, including non-theorems.
+
+        # Errors
+
+        Raises `KeyError` if nothing is declared under `name`.
+        """
+    def declaration_type_dependencies(self, name: builtins.str  |  NameId) -> builtins.list[builtins.str]:
+        r"""
+        The declarations referenced directly by `name`'s type, never its value.
+
+        # Errors
+
+        Raises `KeyError` if nothing is declared under `name`.
+        """
     def theorem_dependencies(self, name: builtins.str  |  NameId) -> builtins.list[builtins.str]:
         r"""
-        The declarations `name` refers to directly (self-reference dropped).
+        The theorem declarations `name` refers to directly (self-reference dropped).
         
         # Errors
         
@@ -1191,4 +1207,3 @@ def prelude_cache_stats() -> PreludeCacheStats:
     `hits` rising between two `Kernel()` builds of the same prelude is the only
     evidence the cache actually ran; equal timings prove nothing.
     """
-

@@ -19,6 +19,7 @@
     {
       "id": "kernel-Nat.choose_zero_right",
       "kind": "kernel-term",
+      "kernel_declaration": "Nat.choose_zero_right",
       "supports": "For every natural number n, C(n, 0) = 1.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- choose_zero_right 2>/dev/null | grep -Ec '^Nat\\.choose_zero_right[[:space:]]')\" -ge 1",

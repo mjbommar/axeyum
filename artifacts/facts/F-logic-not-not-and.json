@@ -23,6 +23,7 @@
     {
       "id": "kernel-logic-not-not-and",
       "kind": "kernel-term",
+      "kernel_declaration": "not_not_and",
       "supports": "If not-not-p holds and not-not-q holds, then not-not-(p and q) holds.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- not_not_and 2>/dev/null | grep -Ec '^not_not_and[[:space:]]')\" -ge 1",

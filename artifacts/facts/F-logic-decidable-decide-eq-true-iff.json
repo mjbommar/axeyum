@@ -22,6 +22,7 @@
     {
       "id": "kernel-logic-decidable-decide-eq-true-iff",
       "kind": "kernel-term",
+      "kernel_declaration": "Decidable.decide_eq_true_iff",
       "supports": "For a decidable proposition p, the decision procedure for p returns the Boolean true if and only if p holds.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- Decidable.decide_eq_true_iff 2>/dev/null | grep -Ec '^Decidable\\.decide_eq_true_iff[[:space:]]')\" -ge 1",

@@ -261,8 +261,11 @@ class TheoremPage(_Frozen):
 
 class LemmaNeighbourhoodRow(_Frozen):
     declaration_id: str
+    canonical_type: str
     axiom_footprint_size: int
     visible_in: tuple[str, ...]
+    direct_type_declarations: tuple[str, ...]
+    direct_declarations: tuple[str, ...]
     dependencies: tuple[str, ...]
     dependents: tuple[str, ...]
     dependency_depth: int
@@ -274,10 +277,35 @@ class LemmaNeighbourhoodPage(_Frozen):
 
     name_glob: str
     fact_id: str
+    canonical_type_contains: str
     matched: int
     total_lemmas: int
     dropped_held_out_fact_links: int
     rows: tuple[LemmaNeighbourhoodRow, ...]
+
+
+class LemmaCandidateRow(_Frozen):
+    """One exact kernel lemma linked to a declared fact dependency."""
+
+    declaration_id: str
+    canonical_type: str
+    source_dependency_fact_id: str
+    axiom_footprint_size: int
+    visible_in: tuple[str, ...]
+    direct_type_declarations: tuple[str, ...]
+    direct_declarations: tuple[str, ...]
+    dependency_depth: int
+
+
+class LemmaCandidatesPage(_Frozen):
+    """Deterministic proof-context join; every row remains candidate-only."""
+
+    fact_id: str
+    declared_dependency_count: int
+    linked_dependency_count: int
+    matched: int
+    unresolved_dependency_fact_ids: tuple[str, ...]
+    rows: tuple[LemmaCandidateRow, ...]
 
 
 class OperationRow(_Frozen):
@@ -599,6 +627,8 @@ __all__ = [
     "FactView",
     "FrontierPage",
     "FrontierRow",
+    "LemmaCandidateRow",
+    "LemmaCandidatesPage",
     "LemmaNeighbourhoodPage",
     "LemmaNeighbourhoodRow",
     "NeighbourRow",

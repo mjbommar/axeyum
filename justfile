@@ -507,6 +507,28 @@ autogenesis-knowledge-derived-freshness:
     python3 scripts/gen-autogenesis-producer-outcome-observations.py --check
     python3 scripts/gen-autogenesis-producer-evaluation-frontier.py --check
     python3 scripts/gen-autogenesis-producer-evaluation-protocol.py --check
+    python3 scripts/gen-autogenesis-open-lemma-candidate-ranking.py --check
+
+autogenesis-open-lemma-candidate-ranking:
+    python3 -m unittest scripts.tests.test_gen_autogenesis_open_lemma_candidate_ranking
+    python3 scripts/gen-autogenesis-open-lemma-candidate-ranking.py --check
+
+autogenesis-ranked-proposition-census:
+    cargo build -q -p axeyum-lean-import --example proposition_compatibility_audit
+    python3 scripts/gen-autogenesis-ranked-proposition-census.py --ranking artifacts/autogenesis/open-lemma-candidate-ranking-pre-reconciliation-v1.json --check
+    python3 scripts/gen-autogenesis-ranked-proposition-census.py --ranking artifacts/autogenesis/open-lemma-candidate-ranking-post-reconciliation-v1.json --output artifacts/autogenesis/open-ranked-proposition-census-v2.json --allow-population-subset --check
+
+autogenesis-open-fixed-palette-census:
+    uv run --no-sync python -m unittest scripts.tests.test_measure_autogenesis_open_fixed_palette
+    uv run --no-sync python scripts/measure-autogenesis-open-fixed-palette.py --population artifacts/autogenesis/open-ranked-proposition-census-v2.json --capsule-directory /nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1 --output artifacts/autogenesis/open-fixed-palette-census-v2.json --check
+
+autogenesis-proposition-reconciliation-proposals:
+    python3 -m unittest scripts.tests.test_prepare_autogenesis_fact_transaction
+    python3 scripts/check-autogenesis-proposition-reconciliation-result.py
+
+autogenesis-proposition-reconciliation-result:
+    python3 -m unittest scripts.tests.test_prepare_autogenesis_fact_transaction scripts.tests.test_apply_autogenesis_fact_transaction
+    python3 scripts/check-autogenesis-proposition-reconciliation-result.py
 
 autogenesis-kernel-projection:
     python3 -m unittest scripts.tests.test_validate_autogenesis_kernel_projection
@@ -516,6 +538,15 @@ autogenesis-kernel-projection:
 autogenesis-kernel-lemma-index:
     python3 -m unittest scripts.tests.test_gen_autogenesis_kernel_lemma_search_index
     python3 scripts/gen-autogenesis-kernel-lemma-search-index.py --check
+
+# Requires the installed Python extension because the census runs the real
+# Rust producer and independently admits every accepted term in the kernel.
+autogenesis-bounded-application-census:
+    uv run --no-sync python -m unittest scripts.tests.test_gen_autogenesis_bounded_application_census
+    uv run --no-sync python scripts/gen-autogenesis-bounded-application-census.py --check
+
+autogenesis-candidate-capsule-controls:
+    uv run --no-sync python -m unittest scripts.tests.test_materialize_autogenesis_candidate_capsule
 
 autogenesis-obstruction-projection:
     python3 -m unittest scripts.tests.test_validate_autogenesis_obstruction_projection

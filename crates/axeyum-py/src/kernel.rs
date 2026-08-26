@@ -2533,7 +2533,37 @@ impl PyKernel {
             .collect())
     }
 
-    /// The declarations `name` refers to directly (self-reference dropped).
+    /// The declarations `name` refers to directly, including non-theorems.
+    ///
+    /// # Errors
+    ///
+    /// Raises `KeyError` if nothing is declared under `name`.
+    fn declaration_dependencies(&mut self, name: NameLike<'_>) -> PyResult<Vec<String>> {
+        let id = self.require_declaration(name.as_any())?;
+        Ok(self
+            .inner
+            .declaration_dependencies(id)
+            .into_iter()
+            .map(|dep| self.inner.display_name(dep).to_string())
+            .collect())
+    }
+
+    /// The declarations referenced directly by `name`'s type, never its value.
+    ///
+    /// # Errors
+    ///
+    /// Raises `KeyError` if nothing is declared under `name`.
+    fn declaration_type_dependencies(&mut self, name: NameLike<'_>) -> PyResult<Vec<String>> {
+        let id = self.require_declaration(name.as_any())?;
+        Ok(self
+            .inner
+            .declaration_type_dependencies(id)
+            .into_iter()
+            .map(|dep| self.inner.display_name(dep).to_string())
+            .collect())
+    }
+
+    /// The theorem declarations `name` refers to directly (self-reference dropped).
     ///
     /// # Errors
     ///

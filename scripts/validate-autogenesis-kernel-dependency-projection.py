@@ -34,15 +34,38 @@ def validate(data: Any) -> list[str]:
         kind = declaration.get("declaration_kind")
         if kind not in KINDS:
             errors.append(f"{ident}: unknown declaration kind {kind!r}")
+        direct_declarations = declaration.get("direct_declaration_dependencies")
+        if not isinstance(direct_declarations, list) or direct_declarations != sorted(set(direct_declarations)):
+            errors.append(f"{ident}: direct declaration dependencies must be sorted and unique")
+        direct_types = declaration.get("direct_type_dependencies")
+        if not isinstance(direct_types, list) or direct_types != sorted(set(direct_types)):
+            errors.append(f"{ident}: direct type dependencies must be sorted and unique")
         direct = declaration.get("direct_theorem_dependencies")
         if not isinstance(direct, list) or direct != sorted(set(direct)):
             errors.append(f"{ident}: direct theorem dependencies must be sorted and unique")
         if kind != "theorem" and direct:
             errors.append(f"{ident}: non-theorem declaration carries invented theorem dependencies")
+        if isinstance(direct_declarations, list) and isinstance(direct, list):
+            if not set(direct).issubset(direct_declarations):
+                errors.append(f"{ident}: theorem dependencies are not a subset of direct declarations")
+            if ident in direct_declarations:
+                errors.append(f"{ident}: direct declaration dependencies contain self-reference")
+            if isinstance(direct_types, list) and not set(direct_types).issubset(direct_declarations):
+                errors.append(f"{ident}: direct type dependencies are not a subset of direct declarations")
         if not declaration.get("visible_in"):
             errors.append(f"{ident}: declaration has no prelude visibility")
+        canonical_type = declaration.get("canonical_type")
+        if not isinstance(canonical_type, str) or not canonical_type:
+            errors.append(f"{ident}: declaration has no canonical kernel type")
     if len(by_id) < 700:
         errors.append(f"projection covers only {len(by_id)} declarations; wrong or incomplete kernel environment")
+    for source, declaration in by_id.items():
+        for target in declaration.get("direct_type_dependencies", []):
+            if target not in by_id:
+                errors.append(f"direct type endpoint missing: {source!r} -> {target!r}")
+        for target in declaration.get("direct_declaration_dependencies", []):
+            if target not in by_id:
+                errors.append(f"direct declaration endpoint missing: {source!r} -> {target!r}")
     expected = {
         (source, target)
         for source, declaration in by_id.items()

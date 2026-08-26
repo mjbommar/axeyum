@@ -240,6 +240,16 @@ pub struct ComplexPrelude {
     pub conj_of_real: NameId,
     /// `Complex.conj_I : Equiv (conj I) (neg I)`.
     pub conj_i: NameId,
+    /// `Complex.conj_zero : Equiv (conj zero) zero` — the additive identity is
+    /// conjugation-fixed, closed by the same ring calculus as
+    /// [`Self::conj_of_real`]/[`Self::conj_i`] (`neg zero ~ zero` on the
+    /// imaginary part).
+    pub conj_zero: NameId,
+    /// `Complex.conj_one : Equiv (conj one) one` — the multiplicative
+    /// identity is conjugation-fixed, same shape as [`Self::conj_zero`].
+    /// This is the base case [`Self::conj_pow`]'s induction reduces to at
+    /// `n = 0`.
+    pub conj_one: NameId,
     /// `Complex.eq_conj_iff_real : ∀ z, Iff (Equiv z (conj z))
     /// (CReal.Equiv (im z) CReal.zero)` — `z` is real exactly when it equals
     /// its own conjugate.
@@ -385,6 +395,30 @@ pub struct ComplexPrelude {
     /// congruence in the components) and then leans on `CReal.inv_congr`
     /// itself — it is not a fresh estimate.
     pub inv_congr: NameId,
+    /// `Complex.inv_mul : ∀ z w k1 (h1 : PosBound (normSq z) k1) k2
+    /// (h2 : PosBound (normSq w) k2) k3 (h3 : PosBound (normSq (mul z w)) k3),
+    /// Equiv (inv (mul z w) k3 h3) (mul (inv z k1 h1) (inv w k2 h2))` —
+    /// multiplicativity of `inv`.
+    ///
+    /// **Three independent moduli**, mirroring [`Self::inv_congr`]'s own
+    /// shape: `k3`/`h3` for the product is not derived from `k1`/`k2` (no
+    /// lemma here relates a bound on `normSq z`, `normSq w` to one on
+    /// `normSq (mul z w)` — the statement instead quantifies over *any*
+    /// witness for each of the three, since `PosBound` witnesses are caller
+    /// data, not something the type forces to agree).
+    ///
+    /// The proof needs no fresh `CReal` estimate. It is uniqueness of the
+    /// right inverse in a commutative ring: [`Self::mul_inv_cancel`] gives
+    /// both `mul (mul z w) (inv (mul z w) k3 h3) ~ one` and, after
+    /// regrouping `(z·w)·(inv z k1 h1 · inv w k2 h2)` into `(z · inv z k1
+    /// h1) · (w · inv w k2 h2)` via [`Self::mul_assoc`]/[`Self::mul_comm`]
+    /// alone, `mul (mul z w) (mul (inv z k1 h1) (inv w k2 h2)) ~ one` too —
+    /// so both `inv (mul z w) k3 h3` and `mul (inv z k1 h1) (inv w k2 h2)`
+    /// are right inverses of the same `mul z w`, and the standard
+    /// `x ~ x·1 ~ x·(p·y) ~ (x·p)·y ~ (p·x)·y ~ 1·y ~ y` chain (all
+    /// [`Self::mul_one`]/[`Self::mul_assoc`]/[`Self::mul_comm`]/
+    /// [`Self::mul_congr`]) identifies them.
+    pub inv_mul: NameId,
 
     /// `Complex.div z w k h := mul z (inv w k h)`, guarded by the DIVISOR's
     /// norm: `h : CReal.PosBound (normSq w) k`.
@@ -394,6 +428,18 @@ pub struct ComplexPrelude {
     /// [`Self::mul_inv_cancel`] since `div z z k h` unfolds by one delta step
     /// to exactly `mul z (inv z k h)`.
     pub div_self: NameId,
+    /// `Complex.div_congr : ∀ z z' w w' k k' (h : PosBound (normSq w) k)
+    /// (h' : PosBound (normSq w') k'), Equiv z z' → Equiv w w' →
+    /// Equiv (div z w k h) (div z' w' k' h')`.
+    ///
+    /// **No transport needed, unlike [`Self::conj_div`]** — `div`'s two
+    /// moduli are already independently quantified (mirroring
+    /// [`Self::inv_congr`]'s own shape), so the proof is one
+    /// [`Self::inv_congr`] call composed with one [`Self::mul_congr`] call,
+    /// with the stated conclusion reached by the kernel unfolding `div` on
+    /// both sides during defeq, exactly as [`Self::div_self`] and
+    /// [`Self::conj_div`] already rely on.
+    pub div_congr: NameId,
 
     // --- apartness, and the constructive shape of "no zero divisors" --------
     //
@@ -495,6 +541,91 @@ pub struct ComplexPrelude {
     /// [`Self::norm_sq_conj`]; the rest is the ring calculus plus
     /// `CReal.mul_congr`/`neg_congr` on that one fact, componentwise.
     pub conj_inv: NameId,
+    /// `Complex.conj_div : ∀ z w k (h : CReal.PosBound (normSq w) k),
+    /// Equiv (conj (div z w k h)) (div (conj z) (conj w) k (pos_bound_conj w k h))`.
+    ///
+    /// Conjugation commutes with division, **at the same `k`** — division is
+    /// guarded by the divisor's norm alone ([`Self::div`]), so only `w`'s
+    /// bound needs transporting, via the same [`Self::pos_bound_conj`]
+    /// [`Self::conj_inv`] already uses; no fresh estimate for the conjugate
+    /// side. `div z w k h` unfolds by one delta step to `mul z (inv w k h)`
+    /// ([`Self::div`]'s own definition), so the proof is
+    /// [`Self::conj_mul`] at `(z, inv w k h)` chained through
+    /// [`Self::mul_congr`] against [`Self::conj_inv`] itself — the same shape
+    /// [`Self::conj_pow`]'s successor step uses, one level up — and the
+    /// stated conclusion is reached by the kernel unfolding `div` on both
+    /// sides during defeq, exactly as [`Self::div_self`] already relies on.
+    pub conj_div: NameId,
+
+    // --- the division algebra: simplifying a compound expression -----------
+    //
+    // `div`, `div_congr`, `div_self` and `conj_div` establish `div` as a
+    // well-defined operation and relate it to conjugation; none of them let a
+    // caller rewrite a compound expression MIXING `div` with `mul`/`add`/`neg`.
+    // These four are exactly that layer, ordered as a caller reaches for them:
+    // absorb a multiplication into (or out of) a division first, cancel a
+    // matching factor next, then the two linearity laws (`add_div`,
+    // `neg_div`) that let a sum or a negation pass through `div` at all.
+    /// `Complex.mul_div_assoc : ∀ z w w' k (h : CReal.PosBound (normSq w') k),
+    /// Equiv (div (mul z w) w' k h) (mul z (div w w' k h))`.
+    ///
+    /// **Free from [`Self::mul_assoc`] alone, no congruence needed.** `div
+    /// (mul z w) w' k h` unfolds (delta on [`Self::div`]) to `mul (mul z w)
+    /// (inv w' k h)`, and `mul z (div w w' k h)` unfolds to `mul z (mul w (inv
+    /// w' k h))` — exactly the two sides of [`Self::mul_assoc`] instantiated
+    /// at `(z, w, inv w' k h)`. The stated conclusion is reached purely by the
+    /// kernel unfolding `div` on both sides during defeq, the reliance
+    /// [`Self::div_self`] and [`Self::conj_div`] already have.
+    pub mul_div_assoc: NameId,
+    /// `Complex.div_mul_cancel : ∀ z w k (h : CReal.PosBound (normSq w) k),
+    /// Equiv (div (mul z w) w k h) z` — dividing a product by one of its own
+    /// factors cancels it.
+    ///
+    /// Three known facts, chained: [`Self::mul_div_assoc`] rewrites the LHS to
+    /// `mul z (div w w k h)`; [`Self::div_self`] collapses `div w w k h` to
+    /// `one` (lifted across the outer `mul` by [`Self::mul_congr`]); and
+    /// [`Self::mul_one`] closes it. No fresh estimate — this is [`Self::div_self`]
+    /// composed with the ring, not a new field computation.
+    pub div_mul_cancel: NameId,
+    /// `Complex.add_div : ∀ z z' w k (h : CReal.PosBound (normSq w) k),
+    /// Equiv (div (add z z') w k h) (add (div z w k h) (div z' w k h))` —
+    /// division distributes over addition of the numerator.
+    ///
+    /// Proved directly by the [`CExpr`] ring calculus **treating `inv w k h`
+    /// as an opaque atom**: `CExpr::var` only needs an `ExprId` to compute a
+    /// real and imaginary projection from, and nothing about those
+    /// projections requires the term to be a bare free variable. So `(z + z')
+    /// · u ~ z·u + z'·u` (`u := inv w k h`) is exactly the same kind of ring
+    /// obligation [`Self::left_distrib`] already discharges, and needs no
+    /// named "`right_distrib`" lemma at all — the stated conclusion is
+    /// reached by the kernel unfolding `div` on both sides during defeq, same
+    /// as every other law in this section.
+    pub add_div: NameId,
+    /// `Complex.neg_div : ∀ z w k (h : CReal.PosBound (normSq w) k),
+    /// Equiv (div (neg z) w k h) (neg (div z w k h))` — negation passes
+    /// through division.
+    ///
+    /// The companion linearity law to [`Self::add_div`], by the same [`CExpr`]
+    /// ring-calculus technique: `(−z)·u ~ −(z·u)` is a pure ring identity with
+    /// `u := inv w k h` opaque.
+    pub neg_div: NameId,
+    /// `Complex.sub_div : ∀ z z2 w k (h : CReal.PosBound (normSq w) k),
+    /// Equiv (div (add z (neg z2)) w k h) (add (div z w k h) (neg (div z2 w k
+    /// h)))` — division distributes over subtraction of the numerator
+    /// (`z − z2 := add z (neg z2)`; **no separate `Complex.sub` is
+    /// declared**, the same choice [`Self::conj_sub`] and `CReal`'s own
+    /// "no `CReal.sub`" already make in this development, so the statement
+    /// is over `add`/`neg` directly rather than introducing a new
+    /// primitive).
+    ///
+    /// Not a fresh ring computation: [`Self::add_div`] at `(z, neg z2, w, k,
+    /// h)` gives `div (add z (neg z2)) w k h ~ add (div z w k h) (div (neg
+    /// z2) w k h)`, [`Self::neg_div`] at `(z2, w, k, h)` collapses `div (neg
+    /// z2) w k h` to `neg (div z2 w k h)`, and [`Self::add_congr`] lifts that
+    /// across the outer `add` — exactly the composition the two lemmas'
+    /// own doc comments anticipate.
+    pub sub_div: NameId,
+
     /// `Complex.pow : Complex → Nat → Complex`, by structural `Nat.rec` on the
     /// exponent — `pow z Nat.zero ≡ one`, `pow z (Nat.succ j) ≡ mul (pow z j)
     /// z` — matching `Int.pow`'s own convention exactly (`int_prelude/defs.rs`):
@@ -524,6 +655,16 @@ pub struct ComplexPrelude {
     /// case is [`Self::mul_one`] reversed, the step is the inductive
     /// hypothesis lifted by [`Self::mul_congr`] then [`Self::mul_assoc`].
     pub pow_add: NameId,
+    /// `Complex.conj_pow : ∀ z (n : Nat), Equiv (conj (pow z n))
+    /// (pow (conj z) n)` — conjugation commutes with integer powers,
+    /// completing the homomorphism family [`Self::conj_add`]/
+    /// [`Self::conj_mul`] already carry, mirroring [`Self::norm_sq_pow`]'s
+    /// own induction on `n`: the base case is [`Self::conj_one`] (both sides
+    /// ι-reduce to `conj one`/`one` respectively), the step chains
+    /// [`Self::conj_mul`] against the inductive hypothesis via
+    /// [`Self::mul_congr`], landing exactly on `pow (conj z) (Nat.succ j)`'s
+    /// own ι-reduced shape with no closing rearrangement needed.
+    pub conj_pow: NameId,
 
     // --- finite sums over ℂ, and the geometric series identity -------------
     /// `Complex.sumRange : (Nat → Complex) → Nat → Complex`, by structural
@@ -1050,6 +1191,8 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         conj_sub: kernel.name_str(complex, "conj_sub"),
         conj_of_real: kernel.name_str(complex, "conj_ofReal"),
         conj_i: kernel.name_str(complex, "conj_I"),
+        conj_zero: kernel.name_str(complex, "conj_zero"),
+        conj_one: kernel.name_str(complex, "conj_one"),
         eq_conj_iff_real: kernel.name_str(complex, "eq_conj_iff_real"),
         norm_sq: kernel.name_str(complex, "normSq"),
         mul_conj: kernel.name_str(complex, "mul_conj"),
@@ -1066,8 +1209,10 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         inv: kernel.name_str(complex, "inv"),
         mul_inv_cancel: kernel.name_str(complex, "mul_inv_cancel"),
         inv_congr: kernel.name_str(complex, "inv_congr"),
+        inv_mul: kernel.name_str(complex, "inv_mul"),
         div: kernel.name_str(complex, "div"),
         div_self: kernel.name_str(complex, "div_self"),
+        div_congr: kernel.name_str(complex, "div_congr"),
         apart: kernel.name_str(complex, "Apart"),
         apart_irrefl: kernel.name_str(complex, "apart_irrefl"),
         apart_symm: kernel.name_str(complex, "apart_symm"),
@@ -1078,10 +1223,17 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         inv_mul_cancel: kernel.name_str(complex, "inv_mul_cancel"),
         pos_bound_conj: kernel.name_str(complex, "pos_bound_conj"),
         conj_inv: kernel.name_str(complex, "conj_inv"),
+        conj_div: kernel.name_str(complex, "conj_div"),
+        mul_div_assoc: kernel.name_str(complex, "mul_div_assoc"),
+        div_mul_cancel: kernel.name_str(complex, "div_mul_cancel"),
+        add_div: kernel.name_str(complex, "add_div"),
+        neg_div: kernel.name_str(complex, "neg_div"),
+        sub_div: kernel.name_str(complex, "sub_div"),
         pow: kernel.name_str(complex, "pow"),
         pow_zero: kernel.name_str(complex, "pow_zero"),
         pow_succ: kernel.name_str(complex, "pow_succ"),
         pow_add: kernel.name_str(complex, "pow_add"),
+        conj_pow: kernel.name_str(complex, "conj_pow"),
         sum_range: kernel.name_str(complex, "sumRange"),
         sum_range_zero: kernel.name_str(complex, "sumRange_zero"),
         sum_range_succ: kernel.name_str(complex, "sumRange_succ"),
@@ -1154,6 +1306,7 @@ pub fn build_complex_prelude(kernel: &mut Kernel) -> Result<ComplexPrelude, Kern
         declare_re_add_im(&mut d, prelude)?;
         declare_conj_laws(&mut d, prelude)?;
         declare_conj_sub_ofreal_i(&mut d, prelude)?;
+        declare_conj_zero_one(&mut d, prelude)?;
         declare_eq_conj_iff_real(&mut d, prelude)?;
         declare_norm(&mut d, prelude)?;
         declare_norm_conjugation(&mut d, prelude)?;
@@ -1166,7 +1319,9 @@ pub fn build_complex_prelude(kernel: &mut Kernel) -> Result<ComplexPrelude, Kern
         declare_inv(&mut d, prelude)?;
         declare_complex_mul_inv_cancel(&mut d, prelude)?;
         declare_complex_inv_congr(&mut d, prelude)?;
+        declare_inv_mul(&mut d, prelude)?;
         declare_div(&mut d, prelude)?;
+        declare_div_congr(&mut d, prelude)?;
         declare_div_self(&mut d, prelude)?;
         declare_apart(&mut d, prelude)?;
         declare_apart_irrefl(&mut d, prelude)?;
@@ -1177,10 +1332,17 @@ pub fn build_complex_prelude(kernel: &mut Kernel) -> Result<ComplexPrelude, Kern
         declare_complex_inv_mul_cancel(&mut d, prelude)?;
         declare_pos_bound_conj(&mut d, prelude)?;
         declare_conj_inv(&mut d, prelude)?;
+        declare_conj_div(&mut d, prelude)?;
+        declare_mul_div_assoc(&mut d, prelude)?;
+        declare_div_mul_cancel(&mut d, prelude)?;
+        declare_add_div(&mut d, prelude)?;
+        declare_neg_div(&mut d, prelude)?;
+        declare_sub_div(&mut d, prelude)?;
         declare_pow(&mut d, prelude)?;
         declare_pow_equations(&mut d, prelude)?;
         declare_pow_add(&mut d, prelude)?;
         declare_norm_sq_pow(&mut d, prelude)?;
+        declare_conj_pow(&mut d, prelude)?;
         declare_sum_range(&mut d, prelude)?;
         declare_sum_range_equations(&mut d, prelude)?;
         declare_sum_range_congr(&mut d, prelude)?;
@@ -2170,6 +2332,45 @@ fn declare_conj_sub_ofreal_i(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<()
         let ty = zeq(d, p, left, right);
         d.kernel().add_declaration(Declaration::Theorem {
             name: p.conj_i,
+            uparams: vec![],
+            ty,
+            value,
+        })
+    }
+}
+
+/// `conj_zero`, `conj_one`: the two nullary corollaries of the same ring
+/// calculus [`declare_conj_sub_ofreal_i`] already uses for `conj_ofReal`/
+/// `conj_I` — the additive and multiplicative identities are each
+/// conjugation-fixed. `conj_one` is exactly the base case
+/// [`declare_conj_pow`]'s induction reduces to at `n = 0`.
+fn declare_conj_zero_one(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    // conj_zero : Equiv (conj zero) zero
+    {
+        let lhs = CExpr::conj(CExpr::Zero);
+        let rhs = CExpr::Zero;
+        let value = ring_law_proof(d, p, &lhs, &rhs);
+        let left = render_c(d, p, &lhs);
+        let right = render_c(d, p, &rhs);
+        let ty = zeq(d, p, left, right);
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.conj_zero,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+
+    // conj_one : Equiv (conj one) one
+    {
+        let lhs = CExpr::conj(CExpr::One);
+        let rhs = CExpr::One;
+        let value = ring_law_proof(d, p, &lhs, &rhs);
+        let left = render_c(d, p, &lhs);
+        let right = render_c(d, p, &rhs);
+        let ty = zeq(d, p, left, right);
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.conj_one,
             uparams: vec![],
             ty,
             value,
@@ -3527,6 +3728,293 @@ fn declare_complex_inv_congr(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<()
     })
 }
 
+/// `Complex.inv_mul : ∀ z w k1 (h1 : PosBound (normSq z) k1) k2
+/// (h2 : PosBound (normSq w) k2) k3 (h3 : PosBound (normSq (mul z w)) k3),
+/// Equiv (inv (mul z w) k3 h3) (mul (inv z k1 h1) (inv w k2 h2))` —
+/// multiplicativity of `inv`, at three INDEPENDENT moduli (see the field
+/// doc comment for why `k3`/`h3` cannot be derived from `k1`/`k2` here).
+///
+/// The proof is uniqueness of the right inverse in a commutative ring, not
+/// a fresh `CReal` estimate. Write `p := mul z w`, `a := inv z k1 h1`,
+/// `b := inv w k2 h2`, `m := mul a b`, `x := inv (mul z w) k3 h3`.
+///
+/// 1. [`mul_inv_cancel`](ComplexPrelude::mul_inv_cancel) gives `mul p x ~
+///    one` directly.
+/// 2. Regroup `mul p m` (i.e. `(z·w)·(a·b)`) into `mul (mul z a) (mul w b)`
+///    by [`mul_assoc`](ComplexPrelude::mul_assoc)/
+///    [`mul_comm`](ComplexPrelude::mul_comm) alone — five `Equiv.trans`
+///    steps, no ring calculus.
+/// 3. [`mul_inv_cancel`](ComplexPrelude::mul_inv_cancel) at `z` and at `w`
+///    give `mul z a ~ one` and `mul w b ~ one`; [`mul_congr`] lifts both
+///    across the outer `mul`, closing `mul p m ~ one`.
+/// 4. Both `x` and `m` are now right inverses of `p`. The standard chain
+///    `x ~ x·1 ~ x·(p·m) ~ (x·p)·m ~ (p·x)·m ~ 1·m ~ m` (`mul_one`,
+///    `mul_assoc`, `mul_comm`, `mul_congr`, chained by `Equiv.trans`)
+///    identifies them.
+fn declare_inv_mul(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let w_fv = d.fresh_fvar();
+    let w = d.kernel().fvar(w_fv);
+    let k1_fv = d.fresh_fvar();
+    let k1 = d.kernel().fvar(k1_fv);
+    let k2_fv = d.fresh_fvar();
+    let k2 = d.kernel().fvar(k2_fv);
+    let k3_fv = d.fresh_fvar();
+    let k3 = d.kernel().fvar(k3_fv);
+
+    let norm_z = d.const_app(p.norm_sq, &[z]);
+    let hyp1 = d.const_app(creal.pos_bound, &[norm_z, k1]);
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+
+    let norm_w = d.const_app(p.norm_sq, &[w]);
+    let hyp2 = d.const_app(creal.pos_bound, &[norm_w, k2]);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+
+    let prod = d.const_app(p.mul, &[z, w]);
+    let norm_prod = d.const_app(p.norm_sq, &[prod]);
+    let hyp3 = d.const_app(creal.pos_bound, &[norm_prod, k3]);
+    let h3_fv = d.fresh_fvar();
+    let h3 = d.kernel().fvar(h3_fv);
+
+    let inv_z = d.const_app(p.inv, &[z, k1, h1]);
+    let inv_w = d.const_app(p.inv, &[w, k2, h2]);
+    let inv_prod = d.const_app(p.inv, &[prod, k3, h3]);
+    let m = d.const_app(p.mul, &[inv_z, inv_w]);
+    let one = d.kernel().const_(p.one, vec![]);
+
+    // --- Step 2: regroup (z*w)*(a*b) into (z*a)*(w*b), assoc/comm only ----
+    let mul_prod_m = d.const_app(p.mul, &[prod, m]);
+    let mul_w_m = d.const_app(p.mul, &[w, m]);
+    // pf1 : Equiv (mul (mul z w) m) (mul z (mul w m))
+    let pf1 = d.lemma(p.mul_assoc, &[z, w, m]);
+    let mul_z_mulwm = d.const_app(p.mul, &[z, mul_w_m]);
+
+    let mul_w_invz = d.const_app(p.mul, &[w, inv_z]);
+    let mul_winvz_invw = d.const_app(p.mul, &[mul_w_invz, inv_w]);
+    // pf2 : Equiv (mul (mul w a) b) (mul w (mul a b)) = Equiv mul_winvz_invw mul_w_m
+    let pf2 = d.lemma(p.mul_assoc, &[w, inv_z, inv_w]);
+    let pf2_symm = d.lemma(p.equiv_symm, &[mul_winvz_invw, mul_w_m, pf2]);
+    let refl_z = d.lemma(p.equiv_refl, &[z]);
+    // pf3 : Equiv (mul z (mul w m)) (mul z mul_winvz_invw)
+    let mul_z_mulwinvzinvw = d.const_app(p.mul, &[z, mul_winvz_invw]);
+    let pf3 = d.lemma(
+        p.mul_congr,
+        &[z, z, mul_w_m, mul_winvz_invw, refl_z, pf2_symm],
+    );
+    let chain1 = d.lemma(
+        p.equiv_trans,
+        &[mul_prod_m, mul_z_mulwm, mul_z_mulwinvzinvw, pf1, pf3],
+    );
+
+    let mul_invz_w = d.const_app(p.mul, &[inv_z, w]);
+    let mul_invzw_invw = d.const_app(p.mul, &[mul_invz_w, inv_w]);
+    // pf4 : Equiv (mul w a) (mul a w)
+    let pf4 = d.lemma(p.mul_comm, &[w, inv_z]);
+    let refl_invw = d.lemma(p.equiv_refl, &[inv_w]);
+    // pf5 : Equiv (mul mul_w_invz invw) (mul mul_invz_w invw)
+    let pf5 = d.lemma(
+        p.mul_congr,
+        &[mul_w_invz, mul_invz_w, inv_w, inv_w, pf4, refl_invw],
+    );
+    let mul_z_mulinvzwinvw = d.const_app(p.mul, &[z, mul_invzw_invw]);
+    let pf6 = d.lemma(
+        p.mul_congr,
+        &[z, z, mul_winvz_invw, mul_invzw_invw, refl_z, pf5],
+    );
+    let chain2 = d.lemma(
+        p.equiv_trans,
+        &[
+            mul_prod_m,
+            mul_z_mulwinvzinvw,
+            mul_z_mulinvzwinvw,
+            chain1,
+            pf6,
+        ],
+    );
+
+    let mul_w_invw = d.const_app(p.mul, &[w, inv_w]);
+    let mul_invz_mulwinvw = d.const_app(p.mul, &[inv_z, mul_w_invw]);
+    // pf7 : Equiv (mul (mul a w) b) (mul a (mul w b)) = Equiv mul_invzw_invw mul_invz_mulwinvw
+    let pf7 = d.lemma(p.mul_assoc, &[inv_z, w, inv_w]);
+    let mul_z_mulinvzmulwinvw = d.const_app(p.mul, &[z, mul_invz_mulwinvw]);
+    let pf8 = d.lemma(
+        p.mul_congr,
+        &[z, z, mul_invzw_invw, mul_invz_mulwinvw, refl_z, pf7],
+    );
+    let chain3 = d.lemma(
+        p.equiv_trans,
+        &[
+            mul_prod_m,
+            mul_z_mulinvzwinvw,
+            mul_z_mulinvzmulwinvw,
+            chain2,
+            pf8,
+        ],
+    );
+
+    let mul_z_invz = d.const_app(p.mul, &[z, inv_z]);
+    let mul_zinvz_wb = d.const_app(p.mul, &[mul_z_invz, mul_w_invw]);
+    // pf9 : Equiv (mul (mul z a) wb) (mul z (mul a wb)) = Equiv mul_zinvz_wb mul_z_mulinvzmulwinvw
+    let pf9 = d.lemma(p.mul_assoc, &[z, inv_z, mul_w_invw]);
+    let pf9_symm = d.lemma(p.equiv_symm, &[mul_zinvz_wb, mul_z_mulinvzmulwinvw, pf9]);
+    // cf : Equiv (mul prod m) (mul (mul z inv_z) (mul w inv_w))
+    let cf = d.lemma(
+        p.equiv_trans,
+        &[
+            mul_prod_m,
+            mul_z_mulinvzmulwinvw,
+            mul_zinvz_wb,
+            chain3,
+            pf9_symm,
+        ],
+    );
+
+    // --- Step 3: mul p m ~ one -------------------------------------------
+    // cz : Equiv (mul z inv_z) one
+    let cz = d.lemma(p.mul_inv_cancel, &[z, k1, h1]);
+    // cw : Equiv (mul w inv_w) one
+    let cw = d.lemma(p.mul_inv_cancel, &[w, k2, h2]);
+    let mul_one_one = d.const_app(p.mul, &[one, one]);
+    // cd : Equiv (mul mul_z_invz mul_w_invw) (mul one one)
+    let cd = d.lemma(p.mul_congr, &[mul_z_invz, one, mul_w_invw, one, cz, cw]);
+    // ce : Equiv (mul one one) one
+    let ce = d.lemma(p.mul_one, &[one]);
+    let t1 = d.lemma(
+        p.equiv_trans,
+        &[mul_prod_m, mul_zinvz_wb, mul_one_one, cf, cd],
+    );
+    // cg : Equiv (mul prod m) one
+    let cg = d.lemma(p.equiv_trans, &[mul_prod_m, mul_one_one, one, t1, ce]);
+
+    // --- Step 1 & 4: uniqueness of the right inverse ----------------------
+    // cp : Equiv (mul prod inv_prod) one
+    let cp = d.lemma(p.mul_inv_cancel, &[prod, k3, h3]);
+    let mul_prod_invprod = d.const_app(p.mul, &[prod, inv_prod]);
+
+    let refl_invprod = d.lemma(p.equiv_refl, &[inv_prod]);
+    let refl_m = d.lemma(p.equiv_refl, &[m]);
+
+    let mul_invprod_one = d.const_app(p.mul, &[inv_prod, one]);
+    // mul_one_invprod : Equiv (mul inv_prod one) inv_prod
+    let mul_one_invprod = d.lemma(p.mul_one, &[inv_prod]);
+    let s_mul_one_invprod = d.lemma(p.equiv_symm, &[mul_invprod_one, inv_prod, mul_one_invprod]);
+
+    // s_cg : Equiv one (mul prod m)
+    let s_cg = d.lemma(p.equiv_symm, &[mul_prod_m, one, cg]);
+    let mul_invprod_mulprodm = d.const_app(p.mul, &[inv_prod, mul_prod_m]);
+    // step1 : Equiv (mul inv_prod one) (mul inv_prod (mul prod m))
+    let step1 = d.lemma(
+        p.mul_congr,
+        &[inv_prod, inv_prod, one, mul_prod_m, refl_invprod, s_cg],
+    );
+    // chain_a : Equiv inv_prod (mul inv_prod (mul prod m))
+    let chain_a = d.lemma(
+        p.equiv_trans,
+        &[
+            inv_prod,
+            mul_invprod_one,
+            mul_invprod_mulprodm,
+            s_mul_one_invprod,
+            step1,
+        ],
+    );
+
+    let mul_invprod_prod = d.const_app(p.mul, &[inv_prod, prod]);
+    let mul_mulinvprodprod_m = d.const_app(p.mul, &[mul_invprod_prod, m]);
+    // assoc : Equiv (mul (mul inv_prod prod) m) (mul inv_prod (mul prod m))
+    let assoc = d.lemma(p.mul_assoc, &[inv_prod, prod, m]);
+    let s_assoc = d.lemma(
+        p.equiv_symm,
+        &[mul_mulinvprodprod_m, mul_invprod_mulprodm, assoc],
+    );
+    // chain_b : Equiv inv_prod (mul (mul inv_prod prod) m)
+    let chain_b = d.lemma(
+        p.equiv_trans,
+        &[
+            inv_prod,
+            mul_invprod_mulprodm,
+            mul_mulinvprodprod_m,
+            chain_a,
+            s_assoc,
+        ],
+    );
+
+    // comm : Equiv (mul inv_prod prod) (mul prod inv_prod)
+    let comm = d.lemma(p.mul_comm, &[inv_prod, prod]);
+    let mul_mulprodinvprod_m = d.const_app(p.mul, &[mul_prod_invprod, m]);
+    // step2 : Equiv (mul (mul inv_prod prod) m) (mul (mul prod inv_prod) m)
+    let step2 = d.lemma(
+        p.mul_congr,
+        &[mul_invprod_prod, mul_prod_invprod, m, m, comm, refl_m],
+    );
+    // chain_c : Equiv inv_prod (mul (mul prod inv_prod) m)
+    let chain_c = d.lemma(
+        p.equiv_trans,
+        &[
+            inv_prod,
+            mul_mulinvprodprod_m,
+            mul_mulprodinvprod_m,
+            chain_b,
+            step2,
+        ],
+    );
+
+    let mul_one_m = d.const_app(p.mul, &[one, m]);
+    // step3 : Equiv (mul (mul prod inv_prod) m) (mul one m)
+    let step3 = d.lemma(p.mul_congr, &[mul_prod_invprod, one, m, m, cp, refl_m]);
+    // chain_d : Equiv inv_prod (mul one m)
+    let chain_d = d.lemma(
+        p.equiv_trans,
+        &[inv_prod, mul_mulprodinvprod_m, mul_one_m, chain_c, step3],
+    );
+
+    let mul_m_one = d.const_app(p.mul, &[m, one]);
+    // comm2 : Equiv (mul one m) (mul m one)
+    let comm2 = d.lemma(p.mul_comm, &[one, m]);
+    // mul_one_m2 : Equiv (mul m one) m
+    let mul_one_m2 = d.lemma(p.mul_one, &[m]);
+    // step4 : Equiv (mul one m) m
+    let step4 = d.lemma(p.equiv_trans, &[mul_one_m, mul_m_one, m, comm2, mul_one_m2]);
+
+    // proof : Equiv inv_prod m
+    let proof = d.lemma(p.equiv_trans, &[inv_prod, mul_one_m, m, chain_d, step4]);
+
+    let value = {
+        let with_h3 = d.lam_fv(h3_fv, hyp3, proof);
+        let with_k3 = d.lam_fv(k3_fv, nat, with_h3);
+        let with_h2 = d.lam_fv(h2_fv, hyp2, with_k3);
+        let with_k2 = d.lam_fv(k2_fv, nat, with_h2);
+        let with_h1 = d.lam_fv(h1_fv, hyp1, with_k2);
+        let with_k1 = d.lam_fv(k1_fv, nat, with_h1);
+        let with_w = d.lam_fv(w_fv, carrier, with_k1);
+        d.lam_fv(z_fv, carrier, with_w)
+    };
+    let ty = {
+        let conclusion = zeq(d, p, inv_prod, m);
+        let inner = d.pi_fv(h3_fv, hyp3, conclusion);
+        let with_k3 = d.pi_fv(k3_fv, nat, inner);
+        let with_h2 = d.pi_fv(h2_fv, hyp2, with_k3);
+        let with_k2 = d.pi_fv(k2_fv, nat, with_h2);
+        let with_h1 = d.pi_fv(h1_fv, hyp1, with_k2);
+        let with_k1 = d.pi_fv(k1_fv, nat, with_h1);
+        let with_w = d.pi_fv(w_fv, carrier, with_k1);
+        d.pi_fv(z_fv, carrier, with_w)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.inv_mul,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 /// `Complex.div z w k h := mul z (inv w k h)`.
 ///
 /// Guarded by the **divisor's** norm: `h : CReal.PosBound (normSq w) k`, not
@@ -3568,6 +4056,97 @@ fn declare_div(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError>
         ty,
         value,
         hint: ReducibilityHint::Regular(DERIVED_HEIGHT + 7),
+    })
+}
+
+/// `Complex.div_congr : ∀ z z' w w' k k' (h : PosBound (normSq w) k)
+/// (h' : PosBound (normSq w') k'), Equiv z z' → Equiv w w' →
+/// Equiv (div z w k h) (div z' w' k' h')`.
+///
+/// Both moduli are quantified independently, mirroring
+/// [`ComplexPrelude::inv_congr`]'s own shape exactly — `div`'s hypothesis
+/// only ever guards the divisor, so this needs no transport step at all
+/// (unlike [`declare_conj_div`], which fixes `w`, `w'` to `w`, `conj w`
+/// specifically and so DOES need one). One [`ComplexPrelude::inv_congr`]
+/// call to relate the two inverses, then one [`ComplexPrelude::mul_congr`]
+/// call to lift that across the numerator; the stated conclusion is reached
+/// by the kernel unfolding `div` on both sides during defeq, exactly as
+/// [`declare_div_self`] and [`declare_conj_div`] already rely on.
+fn declare_div_congr(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let z2_fv = d.fresh_fvar();
+    let z2 = d.kernel().fvar(z2_fv);
+    let w_fv = d.fresh_fvar();
+    let w = d.kernel().fvar(w_fv);
+    let w2_fv = d.fresh_fvar();
+    let w2 = d.kernel().fvar(w2_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let k2_fv = d.fresh_fvar();
+    let k2 = d.kernel().fvar(k2_fv);
+
+    let norm_w = d.const_app(p.norm_sq, &[w]);
+    let hypothesis = d.const_app(creal.pos_bound, &[norm_w, k]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let norm_w2 = d.const_app(p.norm_sq, &[w2]);
+    let hypothesis2 = d.const_app(creal.pos_bound, &[norm_w2, k2]);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+
+    let hz_ty = zeq(d, p, z, z2);
+    let hz_fv = d.fresh_fvar();
+    let hz = d.kernel().fvar(hz_fv);
+    let hw_ty = zeq(d, p, w, w2);
+    let hw_fv = d.fresh_fvar();
+    let hw = d.kernel().fvar(hw_fv);
+
+    let inv_w = d.const_app(p.inv, &[w, k, h]);
+    let inv_w2 = d.const_app(p.inv, &[w2, k2, h2]);
+
+    // Equiv (inv w k h) (inv w2 k2 h2), independent moduli.
+    let u = d.lemma(p.inv_congr, &[w, w2, k, k2, h, h2, hw]);
+    // Equiv (mul z inv_w) (mul z2 inv_w2).
+    let proof = d.lemma(p.mul_congr, &[z, z2, inv_w, inv_w2, hz, u]);
+
+    let div_zw = d.const_app(p.div, &[z, w, k, h]);
+    let div_z2w2 = d.const_app(p.div, &[z2, w2, k2, h2]);
+
+    let value = {
+        let with_hw = d.lam_fv(hw_fv, hw_ty, proof);
+        let with_hz = d.lam_fv(hz_fv, hz_ty, with_hw);
+        let with_h2 = d.lam_fv(h2_fv, hypothesis2, with_hz);
+        let with_h = d.lam_fv(h_fv, hypothesis, with_h2);
+        let with_k2 = d.lam_fv(k2_fv, nat, with_h);
+        let with_k = d.lam_fv(k_fv, nat, with_k2);
+        let with_w2 = d.lam_fv(w2_fv, carrier, with_k);
+        let with_w = d.lam_fv(w_fv, carrier, with_w2);
+        let with_z2 = d.lam_fv(z2_fv, carrier, with_w);
+        d.lam_fv(z_fv, carrier, with_z2)
+    };
+    let ty = {
+        let conclusion = zeq(d, p, div_zw, div_z2w2);
+        let after_hw = d.arrow(hw_ty, conclusion);
+        let after_hz = d.arrow(hz_ty, after_hw);
+        let with_h2 = d.pi_fv(h2_fv, hypothesis2, after_hz);
+        let with_h = d.pi_fv(h_fv, hypothesis, with_h2);
+        let with_k2 = d.pi_fv(k2_fv, nat, with_h);
+        let with_k = d.pi_fv(k_fv, nat, with_k2);
+        let with_w2 = d.pi_fv(w2_fv, carrier, with_k);
+        let with_w = d.pi_fv(w_fv, carrier, with_w2);
+        let with_z2 = d.pi_fv(z2_fv, carrier, with_w);
+        d.pi_fv(z_fv, carrier, with_z2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.div_congr,
+        uparams: vec![],
+        ty,
+        value,
     })
 }
 
@@ -4325,6 +4904,414 @@ fn declare_conj_inv(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelE
     })
 }
 
+/// `Complex.conj_div : ∀ z w k (h : CReal.PosBound (normSq w) k),
+/// Equiv (conj (div z w k h)) (div (conj z) (conj w) k (pos_bound_conj w k h))`.
+///
+/// `div z w k h` unfolds by one delta step to `mul z (inv w k h)`
+/// ([`declare_div`]), so the proof chains three known facts and lets the
+/// kernel unfold `div` on both sides of the stated conclusion during defeq —
+/// the same reliance [`declare_div_self`] already has on `div`'s
+/// transparency:
+///
+/// 1. [`ComplexPrelude::conj_mul`] at `(z, inv w k h)`:
+///    `Equiv (conj (mul z (inv w k h))) (mul (conj z) (conj (inv w k h)))`.
+/// 2. [`ComplexPrelude::conj_inv`] at `(w, k, h)`:
+///    `Equiv (conj (inv w k h)) (inv (conj w) k (pos_bound_conj w k h))` —
+///    already stated at the caller's own `k`, so no modulus mismatch to
+///    close.
+/// 3. [`ComplexPrelude::mul_congr`] holding `conj z` fixed by
+///    [`ComplexPrelude::equiv_refl`] and rewriting the second factor by (2),
+///    then [`ComplexPrelude::equiv_trans`] against (1).
+fn declare_conj_div(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let w_fv = d.fresh_fvar();
+    let w = d.kernel().fvar(w_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let norm_w = d.const_app(p.norm_sq, &[w]);
+    let hypothesis = d.const_app(creal.pos_bound, &[norm_w, k]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let inv_w = d.const_app(p.inv, &[w, k, h]);
+    let conj_z = d.const_app(p.conj, &[z]);
+    let conj_w = d.const_app(p.conj, &[w]);
+    let h2 = d.lemma(p.pos_bound_conj, &[w, k, h]); // PosBound (normSq (conj w)) k
+    let inv_conj_w = d.const_app(p.inv, &[conj_w, k, h2]);
+
+    // Step 1: Equiv (conj (mul z inv_w)) (mul (conj z) (conj inv_w)).
+    let t1 = d.lemma(p.conj_mul, &[z, inv_w]);
+    let conj_inv_w = d.const_app(p.conj, &[inv_w]);
+    let mul_z_invw = d.const_app(p.mul, &[z, inv_w]);
+    let start = d.const_app(p.conj, &[mul_z_invw]);
+    let mid = d.const_app(p.mul, &[conj_z, conj_inv_w]);
+
+    // Step 2: Equiv (conj inv_w) (inv_conj_w), at the same k via pos_bound_conj.
+    let t2 = d.lemma(p.conj_inv, &[w, k, h]);
+
+    // Step 3: Equiv (mul (conj z) (conj inv_w)) (mul (conj z) inv_conj_w).
+    let refl_conj_z = d.lemma(p.equiv_refl, &[conj_z]);
+    let t3 = d.lemma(
+        p.mul_congr,
+        &[conj_z, conj_z, conj_inv_w, inv_conj_w, refl_conj_z, t2],
+    );
+    let end = d.const_app(p.mul, &[conj_z, inv_conj_w]);
+
+    let proof = d.lemma(p.equiv_trans, &[start, mid, end, t1, t3]);
+
+    let div_zw = d.const_app(p.div, &[z, w, k, h]);
+    let conj_div_zw = d.const_app(p.conj, &[div_zw]);
+    let div_conjz_conjw = d.const_app(p.div, &[conj_z, conj_w, k, h2]);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, proof);
+        let with_k = d.lam_fv(k_fv, nat, with_h);
+        let with_w = d.lam_fv(w_fv, carrier, with_k);
+        d.lam_fv(z_fv, carrier, with_w)
+    };
+    let ty = {
+        let conclusion = zeq(d, p, conj_div_zw, div_conjz_conjw);
+        let inner = d.pi_fv(h_fv, hypothesis, conclusion);
+        let with_k = d.pi_fv(k_fv, nat, inner);
+        let with_w = d.pi_fv(w_fv, carrier, with_k);
+        d.pi_fv(z_fv, carrier, with_w)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.conj_div,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.mul_div_assoc : ∀ z w w2 k (h : CReal.PosBound (normSq w2) k),
+/// Equiv (div (mul z w) w2 k h) (mul z (div w w2 k h))`.
+///
+/// `div (mul z w) w2 k h` unfolds (delta on [`ComplexPrelude::div`]) to `mul
+/// (mul z w) (inv w2 k h)`, and `mul z (div w w2 k h)` unfolds to `mul z (mul
+/// w (inv w2 k h))` — exactly the two sides of [`ComplexPrelude::mul_assoc`]
+/// instantiated at `(z, w, inv w2 k h)`. So the proof term is that one
+/// application, and the stated conclusion is reached purely by the kernel
+/// unfolding `div` on both sides during defeq.
+fn declare_mul_div_assoc(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let w_fv = d.fresh_fvar();
+    let w = d.kernel().fvar(w_fv);
+    let w2_fv = d.fresh_fvar();
+    let w2 = d.kernel().fvar(w2_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let norm_w2 = d.const_app(p.norm_sq, &[w2]);
+    let hypothesis = d.const_app(creal.pos_bound, &[norm_w2, k]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let inv_w2 = d.const_app(p.inv, &[w2, k, h]);
+    let proof = d.lemma(p.mul_assoc, &[z, w, inv_w2]);
+
+    let mul_zw = d.const_app(p.mul, &[z, w]);
+    let div_mulzw_w2 = d.const_app(p.div, &[mul_zw, w2, k, h]);
+    let div_w_w2 = d.const_app(p.div, &[w, w2, k, h]);
+    let mul_z_div = d.const_app(p.mul, &[z, div_w_w2]);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, proof);
+        let with_k = d.lam_fv(k_fv, nat, with_h);
+        let with_w2 = d.lam_fv(w2_fv, carrier, with_k);
+        let with_w = d.lam_fv(w_fv, carrier, with_w2);
+        d.lam_fv(z_fv, carrier, with_w)
+    };
+    let ty = {
+        let conclusion = zeq(d, p, div_mulzw_w2, mul_z_div);
+        let inner = d.pi_fv(h_fv, hypothesis, conclusion);
+        let with_k = d.pi_fv(k_fv, nat, inner);
+        let with_w2 = d.pi_fv(w2_fv, carrier, with_k);
+        let with_w = d.pi_fv(w_fv, carrier, with_w2);
+        d.pi_fv(z_fv, carrier, with_w)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mul_div_assoc,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.div_mul_cancel : ∀ z w k (h : CReal.PosBound (normSq w) k),
+/// Equiv (div (mul z w) w k h) z` — dividing a product by one of its own
+/// factors cancels it.
+///
+/// [`ComplexPrelude::mul_div_assoc`] rewrites the LHS to `mul z (div w w k
+/// h)`; [`ComplexPrelude::div_self`] collapses `div w w k h` to `one`, lifted
+/// across the outer `mul` by [`ComplexPrelude::mul_congr`]; and
+/// [`ComplexPrelude::mul_one`] closes it. Two `Equiv.trans` steps chain the
+/// three facts.
+fn declare_div_mul_cancel(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let w_fv = d.fresh_fvar();
+    let w = d.kernel().fvar(w_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let norm_w = d.const_app(p.norm_sq, &[w]);
+    let hypothesis = d.const_app(p.creal.pos_bound, &[norm_w, k]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let mul_zw = d.const_app(p.mul, &[z, w]);
+    let div_w_w = d.const_app(p.div, &[w, w, k, h]);
+    let one = d.kernel().const_(p.one, vec![]);
+    let mul_z_divww = d.const_app(p.mul, &[z, div_w_w]);
+    let mul_z_one = d.const_app(p.mul, &[z, one]);
+    let div_mulzw_w = d.const_app(p.div, &[mul_zw, w, k, h]);
+
+    // Equiv (div (mul z w) w k h) (mul z (div w w k h)).
+    let s1 = d.lemma(p.mul_div_assoc, &[z, w, w, k, h]);
+    // Equiv (div w w k h) one.
+    let s2 = d.lemma(p.div_self, &[w, k, h]);
+    // Equiv (mul z (div w w k h)) (mul z one).
+    let refl_z = d.lemma(p.equiv_refl, &[z]);
+    let s3 = d.lemma(p.mul_congr, &[z, z, div_w_w, one, refl_z, s2]);
+    // Equiv (mul z one) z.
+    let s4 = d.lemma(p.mul_one, &[z]);
+
+    let t1 = d.lemma(
+        p.equiv_trans,
+        &[div_mulzw_w, mul_z_divww, mul_z_one, s1, s3],
+    );
+    let proof = d.lemma(p.equiv_trans, &[div_mulzw_w, mul_z_one, z, t1, s4]);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, proof);
+        let with_k = d.lam_fv(k_fv, nat, with_h);
+        let with_w = d.lam_fv(w_fv, carrier, with_k);
+        d.lam_fv(z_fv, carrier, with_w)
+    };
+    let ty = {
+        let conclusion = zeq(d, p, div_mulzw_w, z);
+        let inner = d.pi_fv(h_fv, hypothesis, conclusion);
+        let with_k = d.pi_fv(k_fv, nat, inner);
+        let with_w = d.pi_fv(w_fv, carrier, with_k);
+        d.pi_fv(z_fv, carrier, with_w)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.div_mul_cancel,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.add_div : ∀ z z2 w k (h : CReal.PosBound (normSq w) k),
+/// Equiv (div (add z z2) w k h) (add (div z w k h) (div z2 w k h))` —
+/// division distributes over addition of the numerator.
+///
+/// Decided directly by the [`CExpr`] ring calculus, treating `inv w k h` as
+/// an opaque atom: `(z + z2) · u ~ z·u + z2·u` needs no named
+/// "`right_distrib`" at all. The stated conclusion is reached by the kernel
+/// unfolding `div` on both sides during defeq.
+fn declare_add_div(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let z2_fv = d.fresh_fvar();
+    let z2 = d.kernel().fvar(z2_fv);
+    let w_fv = d.fresh_fvar();
+    let w = d.kernel().fvar(w_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let norm_w = d.const_app(p.norm_sq, &[w]);
+    let hypothesis = d.const_app(creal.pos_bound, &[norm_w, k]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let inv_w = d.const_app(p.inv, &[w, k, h]);
+    let z_c = CExpr::var(d, p, z);
+    let z2_c = CExpr::var(d, p, z2);
+    let u_c = CExpr::var(d, p, inv_w);
+    let lhs_c = CExpr::mul(CExpr::add(z_c.clone(), z2_c.clone()), u_c.clone());
+    let rhs_c = CExpr::add(CExpr::mul(z_c, u_c.clone()), CExpr::mul(z2_c, u_c));
+    let proof = ring_law_proof(d, p, &lhs_c, &rhs_c);
+
+    let add_zz2 = d.const_app(p.add, &[z, z2]);
+    let div_add = d.const_app(p.div, &[add_zz2, w, k, h]);
+    let div_z_w = d.const_app(p.div, &[z, w, k, h]);
+    let div_z2_w = d.const_app(p.div, &[z2, w, k, h]);
+    let add_divs = d.const_app(p.add, &[div_z_w, div_z2_w]);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, proof);
+        let with_k = d.lam_fv(k_fv, nat, with_h);
+        let with_w = d.lam_fv(w_fv, carrier, with_k);
+        let with_z2 = d.lam_fv(z2_fv, carrier, with_w);
+        d.lam_fv(z_fv, carrier, with_z2)
+    };
+    let ty = {
+        let conclusion = zeq(d, p, div_add, add_divs);
+        let inner = d.pi_fv(h_fv, hypothesis, conclusion);
+        let with_k = d.pi_fv(k_fv, nat, inner);
+        let with_w = d.pi_fv(w_fv, carrier, with_k);
+        let with_z2 = d.pi_fv(z2_fv, carrier, with_w);
+        d.pi_fv(z_fv, carrier, with_z2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.add_div,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.neg_div : ∀ z w k (h : CReal.PosBound (normSq w) k),
+/// Equiv (div (neg z) w k h) (neg (div z w k h))` — negation passes through
+/// division.
+///
+/// The companion linearity law to [`ComplexPrelude::add_div`], by the same
+/// [`CExpr`] ring-calculus technique: `(−z)·u ~ −(z·u)` is a pure ring
+/// identity with `u := inv w k h` opaque.
+fn declare_neg_div(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let w_fv = d.fresh_fvar();
+    let w = d.kernel().fvar(w_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let norm_w = d.const_app(p.norm_sq, &[w]);
+    let hypothesis = d.const_app(creal.pos_bound, &[norm_w, k]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let inv_w = d.const_app(p.inv, &[w, k, h]);
+    let z_c = CExpr::var(d, p, z);
+    let u_c = CExpr::var(d, p, inv_w);
+    let lhs_c = CExpr::mul(CExpr::neg(z_c.clone()), u_c.clone());
+    let rhs_c = CExpr::neg(CExpr::mul(z_c, u_c));
+    let proof = ring_law_proof(d, p, &lhs_c, &rhs_c);
+
+    let neg_z = d.const_app(p.neg, &[z]);
+    let div_negz = d.const_app(p.div, &[neg_z, w, k, h]);
+    let div_z_w = d.const_app(p.div, &[z, w, k, h]);
+    let neg_div_zw = d.const_app(p.neg, &[div_z_w]);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, proof);
+        let with_k = d.lam_fv(k_fv, nat, with_h);
+        let with_w = d.lam_fv(w_fv, carrier, with_k);
+        d.lam_fv(z_fv, carrier, with_w)
+    };
+    let ty = {
+        let conclusion = zeq(d, p, div_negz, neg_div_zw);
+        let inner = d.pi_fv(h_fv, hypothesis, conclusion);
+        let with_k = d.pi_fv(k_fv, nat, inner);
+        let with_w = d.pi_fv(w_fv, carrier, with_k);
+        d.pi_fv(z_fv, carrier, with_w)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.neg_div,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.sub_div : ∀ z z2 w k (h : CReal.PosBound (normSq w) k),
+/// Equiv (div (add z (neg z2)) w k h) (add (div z w k h) (neg (div z2 w k
+/// h)))` — division distributes over subtraction of the numerator, spelled
+/// as `add`/`neg` (see the field doc comment for why no `Complex.sub` is
+/// introduced).
+///
+/// [`ComplexPrelude::add_div`] at `(z, neg z2, w, k, h)` gives `div (add z
+/// (neg z2)) w k h ~ add (div z w k h) (div (neg z2) w k h)`;
+/// [`ComplexPrelude::neg_div`] at `(z2, w, k, h)` collapses `div (neg z2) w
+/// k h` to `neg (div z2 w k h)`, lifted across the outer `add` by
+/// [`ComplexPrelude::add_congr`]. Two `Equiv.trans` steps chain the three
+/// facts — no fresh ring calculus needed.
+fn declare_sub_div(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let z2_fv = d.fresh_fvar();
+    let z2 = d.kernel().fvar(z2_fv);
+    let w_fv = d.fresh_fvar();
+    let w = d.kernel().fvar(w_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let norm_w = d.const_app(p.norm_sq, &[w]);
+    let hypothesis = d.const_app(creal.pos_bound, &[norm_w, k]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let neg_z2 = d.const_app(p.neg, &[z2]);
+    let add_z_negz2 = d.const_app(p.add, &[z, neg_z2]);
+    let div_lhs = d.const_app(p.div, &[add_z_negz2, w, k, h]);
+
+    let div_z_w = d.const_app(p.div, &[z, w, k, h]);
+    let div_negz2_w = d.const_app(p.div, &[neg_z2, w, k, h]);
+    let add_mid = d.const_app(p.add, &[div_z_w, div_negz2_w]);
+
+    let div_z2_w = d.const_app(p.div, &[z2, w, k, h]);
+    let neg_div_z2_w = d.const_app(p.neg, &[div_z2_w]);
+    let add_rhs = d.const_app(p.add, &[div_z_w, neg_div_z2_w]);
+
+    // s1 : Equiv (div (add z (neg z2)) w k h) (add (div z w k h) (div (neg z2) w k h)).
+    let s1 = d.lemma(p.add_div, &[z, neg_z2, w, k, h]);
+    // s2 : Equiv (div (neg z2) w k h) (neg (div z2 w k h)).
+    let s2 = d.lemma(p.neg_div, &[z2, w, k, h]);
+    let refl_divzw = d.lemma(p.equiv_refl, &[div_z_w]);
+    // s3 : Equiv (add (div z w k h) (div (neg z2) w k h)) (add (div z w k h) (neg (div z2 w k h))).
+    let s3 = d.lemma(
+        p.add_congr,
+        &[div_z_w, div_z_w, div_negz2_w, neg_div_z2_w, refl_divzw, s2],
+    );
+
+    let proof = d.lemma(p.equiv_trans, &[div_lhs, add_mid, add_rhs, s1, s3]);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, proof);
+        let with_k = d.lam_fv(k_fv, nat, with_h);
+        let with_w = d.lam_fv(w_fv, carrier, with_k);
+        let with_z2 = d.lam_fv(z2_fv, carrier, with_w);
+        d.lam_fv(z_fv, carrier, with_z2)
+    };
+    let ty = {
+        let conclusion = zeq(d, p, div_lhs, add_rhs);
+        let inner = d.pi_fv(h_fv, hypothesis, conclusion);
+        let with_k = d.pi_fv(k_fv, nat, inner);
+        let with_w = d.pi_fv(w_fv, carrier, with_k);
+        let with_z2 = d.pi_fv(z2_fv, carrier, with_w);
+        d.pi_fv(z_fv, carrier, with_z2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sub_div,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 /// `Complex.pow : Complex → Nat → Complex`, by structural `Nat.rec` on the
 /// exponent — `pow z Nat.zero ≡ one`, `pow z (Nat.succ j) ≡ mul (pow z j) z`.
 ///
@@ -4611,6 +5598,90 @@ fn declare_norm_sq_pow(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), Kern
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.norm_sq_pow,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.conj_pow : ∀ z (n : Nat), Equiv (conj (pow z n)) (pow (conj z) n)`.
+///
+/// Induction on `n` via [`NatOps::induct`], mirroring [`declare_norm_sq_pow`]'s
+/// own shape one level down — `conj`/`mul` over `Complex.Equiv` in place of
+/// `normSq`/`CReal.mul` over `CReal.Equiv`. The base case's goal, up to iota
+/// (`pow z Nat.zero ≡ Complex.one` on both sides), is exactly
+/// [`ComplexPrelude::conj_one`]'s own statement, so no ring calculus call is
+/// needed at all — a plain reference to that declaration closes it,
+/// analogous to how [`declare_pow_equations`] closes `pow_zero`/`pow_succ` by
+/// `Eq.refl` alone. The step chains [`ComplexPrelude::conj_mul`] against the
+/// inductive hypothesis via [`ComplexPrelude::mul_congr`], landing exactly on
+/// `pow (conj z) (Nat.succ j)`'s own iota-reduced shape (`mul (pow (conj z)
+/// j) (conj z)`) with no closing rearrangement needed — the same "no fresh
+/// estimate" shape [`declare_norm_sq_pow`]'s own step has.
+fn declare_conj_pow(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let conj_z = d.const_app(p.conj, &[z]);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let pow_z_x = d.const_app(p.pow, &[z, x]);
+        let conj_pow_zx = d.const_app(p.conj, &[pow_z_x]);
+        let pow_conj_x = d.const_app(p.pow, &[conj_z, x]);
+        zeq(d, p, conj_pow_zx, pow_conj_x)
+    };
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let stmt = motive(d, n);
+
+    let proof = d.induct(
+        &motive,
+        &|d| d.kernel().const_(p.conj_one, vec![]),
+        &|d, j, ih| {
+            // ih : Equiv (conj (pow z j)) (pow (conj z) j)
+            let pow_z_j = d.const_app(p.pow, &[z, j]);
+            let conj_pow_j = d.const_app(p.conj, &[pow_z_j]);
+            let pow_conj_j = d.const_app(p.pow, &[conj_z, j]);
+
+            // start = conj (mul (pow z j) z), which is `conj (pow z (succ
+            // j))` up to iota.
+            let mul_pow_z = d.const_app(p.mul, &[pow_z_j, z]);
+            let start = d.const_app(p.conj, &[mul_pow_z]);
+
+            // Step 1: conj (mul (pow z j) z) ~ mul (conj (pow z j)) (conj z),
+            // via `conj_mul`.
+            let h1 = d.lemma(p.conj_mul, &[pow_z_j, z]);
+            let mid = d.const_app(p.mul, &[conj_pow_j, conj_z]);
+
+            // Step 2: mul (conj (pow z j)) (conj z) ~
+            // mul (pow (conj z) j) (conj z), via `ih`.
+            let refl_conj_z = d.lemma(p.equiv_refl, &[conj_z]);
+            let h2 = d.lemma(
+                p.mul_congr,
+                &[conj_pow_j, pow_conj_j, conj_z, conj_z, ih, refl_conj_z],
+            );
+            // end = mul (pow (conj z) j) (conj z), which is `pow (conj z)
+            // (succ j)` up to iota.
+            let end = d.const_app(p.mul, &[pow_conj_j, conj_z]);
+
+            d.lemma(p.equiv_trans, &[start, mid, end, h1, h2])
+        },
+        n,
+    );
+
+    let ty = {
+        let inner = d.pi_fv(n_fv, nat, stmt);
+        d.pi_fv(z_fv, carrier, inner)
+    };
+    let value = {
+        let inner = d.lam_fv(n_fv, nat, proof);
+        d.lam_fv(z_fv, carrier, inner)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.conj_pow,
         uparams: vec![],
         ty,
         value,

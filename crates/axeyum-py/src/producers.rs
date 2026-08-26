@@ -40,9 +40,10 @@ use std::fs::File;
 use std::io::{BufReader, Cursor};
 use std::path::PathBuf;
 
-use axeyum_lean_import::producers::{bounded_induction, modeq_family};
+use axeyum_lean_import::producers::{bounded_application, bounded_induction, modeq_family};
 use axeyum_lean_import::{
     AxiomIdentity, DeclarationDependencyIdentity, DeclarationIdentity, ImportLimits, ImportReport,
+    import_candidate_statement_ndjson as rust_import_candidate_statement_ndjson,
     import_statement_ndjson as rust_import_statement_ndjson,
 };
 use pyo3::create_exception;
@@ -97,6 +98,22 @@ pub struct PyDeclineReason {
 }
 
 impl PyDeclineReason {
+    /// Projects `bounded_application::DeclineReason`.
+    fn from_application(reason: &bounded_application::DeclineReason) -> Self {
+        use bounded_application::DeclineReason as R;
+        let kind = match reason {
+            R::BinderBudgetExceeded => "BinderBudgetExceeded",
+            R::NoUsableCandidates => "NoUsableCandidates",
+            R::NoTypedApplication => "NoTypedApplication",
+        };
+        Self {
+            producer: "bounded-application",
+            kind: kind.to_owned(),
+            detail: None,
+            message: reason.to_string(),
+        }
+    }
+
     /// Projects `bounded_induction::DeclineReason`.
     fn from_bounded(reason: &bounded_induction::DeclineReason) -> Self {
         use bounded_induction::DeclineReason as R;
@@ -269,6 +286,60 @@ impl PyCandidate {
         format!(
             "Candidate(binders_used={}, inductions_used={})",
             self.binders_used, self.inductions_used
+        )
+    }
+}
+
+/// A bounded-application candidate over an explicit retrieved declaration set.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.producers")
+)]
+#[pyclass(
+    frozen,
+    skip_from_py_object,
+    module = "axeyum",
+    name = "ApplicationCandidate"
+)]
+#[derive(Debug, Clone, Copy)]
+pub struct PyApplicationCandidate {
+    proof: PyExprId,
+    binders_used: usize,
+    application_depth: usize,
+    terms_considered: usize,
+}
+
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
+#[pymethods]
+impl PyApplicationCandidate {
+    /// Proposed proof term, untrusted until kernel admission.
+    #[getter]
+    fn proof(&self) -> PyExprId {
+        self.proof
+    }
+
+    /// Leading goal binders introduced by the search.
+    #[getter]
+    fn binders_used(&self) -> usize {
+        self.binders_used
+    }
+
+    /// Application-closure rounds consumed.
+    #[getter]
+    fn application_depth(&self) -> usize {
+        self.application_depth
+    }
+
+    /// Distinct terms present when the proof was found.
+    #[getter]
+    fn terms_considered(&self) -> usize {
+        self.terms_considered
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "ApplicationCandidate(binders_used={}, application_depth={}, terms_considered={})",
+            self.binders_used, self.application_depth, self.terms_considered
         )
     }
 }
@@ -999,6 +1070,70 @@ fn import_statement_ndjson(
         }),
     }
     .map_err(|error| statement_import_error(py, &error))?;
+    wrap_statement_import(py, completed)
+}
+
+/// Imports a proof-free target plus an exact axiom-free theorem candidate set.
+///
+/// Unlike [`import_statement_ndjson`], this capsule may carry proof-bearing
+/// declarations, but only those whose exact names occur in `candidates`; every
+/// one is independently kernel-checked and must have an empty measured axiom
+/// footprint. The target remains a transparent `definition : Prop`, never a
+/// theorem. The bounded-application producer must still receive the same names
+/// explicitly and cannot scan the returned environment.
+///
+/// `source` is a path (`str` / `os.PathLike`) or the NDJSON `bytes`. `limits`
+/// of `None` uses the Rust `ImportLimits::default()`.
+///
+/// # Errors
+///
+/// Raises `TypeError` for an invalid source, `OSError` for an unreadable path,
+/// and `StatementImportError` for any wire, target-isolation, candidate-identity
+/// or axiom-footprint failure.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.producers")
+)]
+#[pyfunction]
+#[pyo3(signature = (source, limits, target, candidates))]
+fn import_candidate_statement_ndjson(
+    py: Python<'_>,
+    source: &Bound<'_, PyAny>,
+    limits: Option<PyImportLimits>,
+    target: &str,
+    candidates: Vec<String>,
+) -> PyResult<PyStatementImport> {
+    let source = resolve_source(source)?;
+    let limits = limits.map_or_else(ImportLimits::default, |limits| limits.inner);
+    let completed = match source {
+        Source::Path(path) => {
+            let file = File::open(&path)?;
+            py.detach(move || {
+                rust_import_candidate_statement_ndjson(
+                    BufReader::new(file),
+                    limits,
+                    target,
+                    &candidates,
+                )
+            })
+        }
+        Source::Bytes(bytes) => py.detach(move || {
+            rust_import_candidate_statement_ndjson(
+                BufReader::new(Cursor::new(bytes)),
+                limits,
+                target,
+                &candidates,
+            )
+        }),
+    }
+    .map_err(|error| statement_import_error(py, &error))?;
+    wrap_statement_import(py, completed)
+}
+
+fn wrap_statement_import(
+    py: Python<'_>,
+    completed: axeyum_lean_import::CompletedStatementImport,
+) -> PyResult<PyStatementImport> {
     let (kernel, report, target_name, goal) = completed.into_parts();
     let report = build_report(py, &report)?;
     let wrapper = PyKernel::from_kernel(kernel);
@@ -1056,6 +1191,47 @@ fn propose_bounded_induction(
             })
         }
         Err(reason) => Err(PyDeclineReason::from_bounded(&reason).into_declined(py)),
+    }
+}
+
+/// Proposes a bounded type-directed application proof from exact declarations.
+///
+/// `declarations` is the retrieval boundary: the producer does not scan the
+/// environment. Do not include the target theorem. The returned proof remains
+/// untrusted until the same kernel admits it as a theorem of `goal`.
+///
+/// # Errors
+///
+/// Raises `EpochError` for a foreign goal/name handle and `Declined` with a
+/// typed bounded-application reason when the fixed search budget finds no term.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.producers")
+)]
+#[pyfunction]
+fn propose_bounded_application(
+    py: Python<'_>,
+    mut kernel: PyRefMut<'_, PyKernel>,
+    goal: PyExprId,
+    declarations: Vec<PyNameId>,
+) -> PyResult<PyApplicationCandidate> {
+    let goal = kernel.expr_of(goal)?;
+    let declarations = declarations
+        .into_iter()
+        .map(|name| kernel.name_of(name))
+        .collect::<PyResult<Vec<_>>>()?;
+    let inner = kernel.inner_mut();
+    let proposed = py.detach(move || {
+        bounded_application::propose_bounded_application(inner, goal, &declarations)
+    });
+    match proposed {
+        Ok(candidate) => Ok(PyApplicationCandidate {
+            proof: kernel.wrap_expr(candidate.proof),
+            binders_used: candidate.binders_used,
+            application_depth: candidate.application_depth,
+            terms_considered: candidate.terms_considered,
+        }),
+        Err(reason) => Err(PyDeclineReason::from_application(&reason).into_declined(py)),
     }
 }
 
@@ -1143,6 +1319,7 @@ pub(crate) fn register<'py>(parent: &Bound<'py, PyModule>) -> PyResult<Bound<'py
     let module = PyModule::new(py, "axeyum._native.producers")?;
     module.add_class::<PyDeclineReason>()?;
     module.add_class::<PyCandidate>()?;
+    module.add_class::<PyApplicationCandidate>()?;
     module.add_class::<PyModEqCandidate>()?;
     module.add_class::<PyCircularityAudit>()?;
     module.add_class::<PyImportLimits>()?;
@@ -1160,11 +1337,22 @@ pub(crate) fn register<'py>(parent: &Bound<'py, PyModule>) -> PyResult<Bound<'py
     // `MAX_BINDERS` is part of five settled facts' reproduction contract.
     module.add("MAX_BINDERS", bounded_induction::MAX_BINDERS)?;
     module.add("MAX_INDUCTIONS", bounded_induction::MAX_INDUCTIONS)?;
+    module.add("APPLICATION_MAX_BINDERS", bounded_application::MAX_BINDERS)?;
+    module.add(
+        "APPLICATION_MAX_DEPTH",
+        bounded_application::MAX_APPLICATION_DEPTH,
+    )?;
+    module.add("APPLICATION_MAX_TERMS", bounded_application::MAX_TERMS)?;
     module.add("MODEQ_MAX_BINDERS", modeq_family::MAX_BINDERS)?;
     module.add("FORMAT_VERSION", axeyum_lean_import::FORMAT_VERSION)?;
     module.add("IDENTITY_VERSION", axeyum_lean_import::IDENTITY_VERSION)?;
     module.add_function(wrap_pyfunction!(import_statement_ndjson, &module)?)?;
+    module.add_function(wrap_pyfunction!(
+        import_candidate_statement_ndjson,
+        &module
+    )?)?;
     module.add_function(wrap_pyfunction!(propose_bounded_induction, &module)?)?;
+    module.add_function(wrap_pyfunction!(propose_bounded_application, &module)?)?;
     module.add_function(wrap_pyfunction!(propose_modeq_family, &module)?)?;
     module.add_function(wrap_pyfunction!(audit_circularity, &module)?)?;
     parent.add("producers", &module)?;
@@ -1225,6 +1413,9 @@ mod stub {
 // VALUE deliberately is not, so a constant cannot drift from its stub.
 #[cfg(feature = "stub-gen")]
 mod stub_variables {
+    pyo3_stub_gen::module_variable!("axeyum._native.producers", "APPLICATION_MAX_BINDERS", usize);
+    pyo3_stub_gen::module_variable!("axeyum._native.producers", "APPLICATION_MAX_DEPTH", usize);
+    pyo3_stub_gen::module_variable!("axeyum._native.producers", "APPLICATION_MAX_TERMS", usize);
     pyo3_stub_gen::module_variable!("axeyum._native.producers", "MAX_BINDERS", usize);
     pyo3_stub_gen::module_variable!("axeyum._native.producers", "MAX_INDUCTIONS", usize);
     pyo3_stub_gen::module_variable!("axeyum._native.producers", "MODEQ_MAX_BINDERS", usize);

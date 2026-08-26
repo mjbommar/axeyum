@@ -31,6 +31,7 @@
     {
       "id": "kernel-Int.Characterization.categorical",
       "kind": "kernel-term",
+      "kernel_declaration": "Int.Characterization.categorical",
       "supports": "Every generated aperiodic Z-structure is in structure-preserving bijection with the constructed Int, and the axiom footprint of the witness is empty.",
       "check_status": "checked",
       "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && test \"$(printf '%s\\n' \"$out\" | grep -Ec '^int-categoricity[[:space:]]+Int[.]Characterization[.]categorical[[:space:]]+\\[\\][[:space:]]')\" -ge 1",
@@ -39,6 +40,7 @@
     {
       "id": "kernel-Int.Characterization.categorical-at-int",
       "kind": "kernel-term",
+      "kernel_declaration": "Int.Characterization.categorical_at_int",
       "supports": "NON-VACUITY: the hypothesis list is inhabited -- `categorical` instantiated at (Int, 0, (.+1), (.-1)) with every premise discharged by a real theorem, admitted by the kernel with an empty footprint.",
       "check_status": "checked",
       "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && test \"$(printf '%s\\n' \"$out\" | grep -Ec '^int-categoricity[[:space:]]+Int[.]Characterization[.]categorical_at_int[[:space:]]+\\[\\][[:space:]]')\" -ge 1",
@@ -47,6 +49,7 @@
     {
       "id": "kernel-Int.Characterization.iter-succ",
       "kind": "kernel-term",
+      "kernel_declaration": "Int.Characterization.iter_succ",
       "supports": "The EXISTENCE half of the universal property, which is what F:int-characterization was missing: the comparison map exists and preserves the +1 recurrence.",
       "check_status": "checked",
       "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && test \"$(printf '%s\\n' \"$out\" | grep -Ec '^int-universal-property[[:space:]]+Int[.]Characterization[.]iter_succ[[:space:]]+\\[\\][[:space:]]')\" -ge 1",
@@ -55,6 +58,7 @@
     {
       "id": "kernel-Int.Characterization.iso",
       "kind": "kernel-term",
+      "kernel_declaration": "Int.Characterization.iso",
       "supports": "The CONSTRUCTED isomorphism, as opposed to the Prop-level bijection: given any structure-preserving psi : R -> Int, iter . psi = id_R and psi . iter = id_Int.",
       "check_status": "checked",
       "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && test \"$(printf '%s\\n' \"$out\" | grep -Ec '^int-categoricity[[:space:]]+Int[.]Characterization[.]iso[[:space:]]+\\[\\][[:space:]]')\" -ge 1",

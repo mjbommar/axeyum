@@ -660,6 +660,16 @@ pub struct CRealPrelude {
     /// `CReal.abs_le : ∀ x z, le x z → le (neg x) z → le (abs x) z` —
     /// [`Self::max_le`] verbatim, and the form every estimate consumes.
     pub abs_le: NameId,
+    /// `CReal.abs_add_le : ∀ a b, le (abs (add a b)) (add (abs a) (abs b))` —
+    /// the two-term triangle inequality, from [`Self::abs_le`] with
+    /// [`Self::add_le_add`]/[`Self::le_abs_self`] for the lower branch and
+    /// `neg (add a b) ~ add (neg a) (neg b)` plus [`Self::neg_le_abs`] for the
+    /// upper (negated) branch. This statement was proved as a private helper
+    /// independently in `creal/series.rs`, `creal/derivative.rs`,
+    /// `creal/uniform_continuity.rs` and `creal/deriv_unique.rs` before this
+    /// declaration gave it one public name; each private copy is unchanged
+    /// and still calls its own file-local proof route.
+    pub abs_add_le: NameId,
     /// `CReal.abs_nonneg : ∀ x, le zero (abs x)` — the one lattice fact that is
     /// not a rearrangement of the others; it rests on
     /// [`Rat.zero_le_max_neg`](crate::RatPrelude::zero_le_max_neg), the only
@@ -893,6 +903,22 @@ pub struct CRealPrelude {
     /// and one `Rat.natDivSucc_le_add_left` widening per side to a common
     /// witness `K := (2+K_a)+(2+K_c)`.
     pub converges_squeeze: NameId,
+    /// `CReal.converges_lower_bound : ∀ a f L, (∀ n, le a (f n)) →
+    /// Converges f L → le a L`.
+    ///
+    /// A non-strict lower bound on a convergent sequence bounds its limit
+    /// below — the "compare at an arbitrary third index" idiom
+    /// [`Self::le_trans`] itself uses, routed through `f j` instead of a
+    /// second `CReal`. See `creal/convergence.rs`'s own module documentation
+    /// for why this (and its mirror [`Self::converges_upper_bound`]) answers
+    /// the domain-hypothesis question the (unbuilt, and not provable in the
+    /// fixed-rate form the `Converges` predicate states) `converges_comp`
+    /// needed.
+    pub converges_lower_bound: NameId,
+    /// `CReal.converges_upper_bound : ∀ f L b, (∀ n, le (f n) b) →
+    /// Converges f L → le L b`. The mirror of
+    /// [`Self::converges_lower_bound`].
+    pub converges_upper_bound: NameId,
 
     // --- boundedness of sequences, and sequential continuity (phase R10) ----
     /// `CReal.Bounded (g : Nat → CReal) : Prop :=
@@ -955,6 +981,32 @@ pub struct CRealPrelude {
     /// beta. No rational estimate at all, and no shift bridge: this is a
     /// chain of two existing modulus witnesses, not a new one.
     pub continuous_comp: NameId,
+
+    /// `CReal.converges_comp_eventually : ∀ F a b (u : UniformlyContinuousOn
+    /// F a b) f L, (∀ n, le a (f n)) → (∀ n, le (f n) b) → Converges f L →
+    /// ∀ e, ∃ N, ∀ n, Nat.le N n → close_within (F (f n)) (F L) (natDivSucc
+    /// 1 e)`.
+    ///
+    /// **The repair for `docs/mathematics-2026-08/diary-exact-root-obstruction.md`'s
+    /// refuted `converges_comp`.** The fixed-rate composition (`Converges f
+    /// L → UniformlyContinuousOn F a b → Converges (F ∘ f) (F L)`) is FALSE
+    /// here: `UniformlyContinuousOn`'s `modulus : Nat → Nat` carries no
+    /// growth bound, so composing an `O(1/n)`-convergent sequence through a
+    /// √-shaped modulus genuinely converges at `O(1/√n)`, and no fixed `K'`
+    /// witnesses a faster rate. This *eventual* form is the true statement:
+    /// for each target accuracy `e`, `N := K·(modulus(e)+1)` works, and the
+    /// witness is computed by forward evaluation of `modulus` alone — no
+    /// `Nat` division or search. Conclusion in `close_within` form (the
+    /// shape [`Self::uc_spec`] itself produces), not `Within` (the shape
+    /// [`Self::converges`] uses) — the two differ (one is index-tied to a
+    /// representative, the other a genuine real-valued bound) and the spec
+    /// application is a one-step consumer of exactly `close_within`.
+    ///
+    /// The domain hypotheses `le a L`/`le L b` are not required separately:
+    /// [`Self::converges_lower_bound`]/[`Self::converges_upper_bound`]
+    /// derive them from `(∀n, le a (f n))`/`(∀n, le (f n) b)` plus
+    /// `Converges f L`.
+    pub converges_comp_eventually: NameId,
 
     // --- uniform continuity on an interval (phase R11) -----------------------
     /// `CReal.UniformlyContinuousOn (F : CReal -> CReal) (a b : CReal) : Type :=
@@ -1056,6 +1108,123 @@ pub struct CRealPrelude {
     /// discharged concretely via [`Self::bounded_on_id_unit`]. See
     /// `creal/uniform_continuity.rs`.
     pub uniformly_continuous_poly_example: NameId,
+    /// `CReal.mag_bound_le_sum_range_of_lt : ∀ (g : Nat → Nat) (n i : Nat),
+    /// Nat.lt i n → CReal.le (mag_bound (g i)) (CReal.sumRange (fun j =>
+    /// mag_bound (g j)) n)` — a `Nat`-indexed family of magnitude bounds is
+    /// dominated by their running sum, by induction on `n` with no
+    /// comparison of `CReal`s (only `Nat.lt`/`Eq Nat` case splits): the
+    /// `CReal`-valued analogue of `Nat.le_sumRange_of_lt`
+    /// (`nat_prelude/binomial.rs`), needed because `CReal.le` cannot decide
+    /// a maximum by comparison but a sum of nonnegatives still dominates
+    /// each addend. Declared in a THIRD `uniform_continuity.rs` entry point
+    /// (`declare_uniform_continuity_sums`) because it consumes
+    /// `CReal.sumRange`, which `series::declare_series` declares after both
+    /// of this module's earlier entry points. See
+    /// `creal/uniform_continuity.rs`.
+    pub mag_bound_le_sum_range_of_lt: NameId,
+    /// `CReal.bucketIndex : CReal → Nat → Nat` — the computable "which
+    /// sample bucket does `w` fall into" primitive toward
+    /// `bounded_of_uniformly_continuous`'s covering argument, given a step
+    /// size `1/(Nat.succ k)`.
+    ///
+    /// ```text
+    /// bucketIndex w k :=
+    ///   let k1 := Nat.succ k                          -- Nat
+    ///   let j  := k1 * k1                              -- Nat, the sample index
+    ///   let q  := Rat.max (CReal.seq w j) Rat.zero       -- Rat, clamped >= 0
+    ///   let a  := Int.natAbs (Rat.num q)                  -- Nat
+    ///   let b  := Rat.den q                                -- Nat, >= 1
+    ///   Nat.div (a * k1) b                                  -- Nat
+    /// ```
+    ///
+    /// Verbatim in *recipe* to `creal/sqrt.rs`'s own `sqrtApprox`
+    /// (`declare_sqrt_approx`): sample `w` at accuracy index `j = k1²`
+    /// (finer than the target resolution `1/k1` by a full factor of `k1`),
+    /// clamp to nonnegative via `Rat.max _ Rat.zero` (no case split on `w`'s
+    /// sign — `Rat.max` dispatches structurally, and `Rat.le_max_left`/
+    /// `Rat.le_max_right` bound both directions with no hypothesis), read
+    /// the clamped sample's numerator/denominator as `Nat`s (`Int.natAbs` is
+    /// *exact*, not merely an upper bound, precisely because clamping made
+    /// the numerator already nonnegative), and floor-divide `numerator *
+    /// k1` by the denominator via `Nat.div` — decidable Nat arithmetic
+    /// throughout, no comparison of `CReal`s anywhere.
+    ///
+    /// **Now proved to be within a fixed multiple of one step of `w`**,
+    /// in both directions: [`Self::bucket_clamp_upper`] and
+    /// [`Self::bucket_clamp_lower`] compose exactly the route this comment
+    /// used to defer — `Rat`'s own regularity-sample bound (`w` vs
+    /// `CReal.seq w j`) — with [`Self::bucket_index_floor_lower`]/
+    /// [`Self::bucket_index_floor_upper`]'s own floor error, still leaving
+    /// slack (`2/(j+1)` and `3/(j+1)` respectively, not an exact
+    /// nearest-index guarantee) rather than trying to remove it — see this
+    /// section's own module documentation in
+    /// `creal/uniform_continuity.rs` for why the `2`/`3` slack is fine for
+    /// the covering argument this primitive exists for
+    /// (`CReal.bounded_of_uniformly_continuous`, not yet landed: it still
+    /// needs a computable `Nat` bound on `bucketIndex (sub z a) k` uniform
+    /// over `z ∈ [a,b]`, derived from `CReal.bound (sub b a)` via
+    /// `Rat.sub_max_le` + `CReal.bound_within` + `Rat.max_le` to bound the
+    /// clamped sample `q` first, then a cross-multiplication argument
+    /// inverting `Rat.natDivSucc` back into a `Nat.le` on `bucketIndex`
+    /// itself — the same shape [`Self::bucket_index_floor_lower`]/
+    /// [`Self::bucket_index_floor_upper`]'s own proofs use, just in the
+    /// other direction).
+    pub bucket_index: NameId,
+    /// `CReal.bucketIndexFloorLower : ∀ w k, Rat.le (Rat.natDivSucc
+    /// (CReal.bucketIndex w k) k) (Rat.max (CReal.seq w ((Nat.succ
+    /// k)*(Nat.succ k))) Rat.zero)` — the closeness property
+    /// [`Self::bucket_index`]'s own doc comment says is missing, in its
+    /// sharpest, **hypothesis-free** form: the clamped sample `q := Rat.max
+    /// (seq w j) 0` (`j` the exact accuracy index `bucketIndex` itself
+    /// samples at) is `>=` the multiple of `1/(k+1)` `bucketIndex w k`
+    /// names. No sign hypothesis on `w` is needed — `q >= 0` unconditionally
+    /// (`Rat.le_max_right`), which is exactly what makes `a := natAbs (num
+    /// q)` an EXACT read of `num q`, not merely a bound. Proved by reading
+    /// `Nat.div_mod_bounds`'s lower half (via `Nat.div_mod_exec`, which needs
+    /// the divisor written `Nat.succ _`, so `den q` is first rewritten along
+    /// `Nat.succ_pred_of_pos`) back into `Rat.le` by cross-multiplying
+    /// against `Rat.natDivSucc`'s own `normalize`d representative
+    /// (`Rat.normalize_cross`). See `creal/uniform_continuity.rs`.
+    pub bucket_index_floor_lower: NameId,
+    /// `CReal.bucketIndexFloorUpper : ∀ w k, Rat.le (Rat.max (CReal.seq w
+    /// ((Nat.succ k)*(Nat.succ k))) Rat.zero) (Rat.natDivSucc (Nat.succ
+    /// (CReal.bucketIndex w k)) k)` — the other half of
+    /// [`Self::bucket_index_floor_lower`]: `q` is also `<=` the NEXT
+    /// multiple of `1/(k+1)`, from `Nat.div_mod_bounds`'s strict upper half.
+    /// Together the two pin `q` inside a single step of `bucketIndex w k`'s
+    /// own multiple, which is what the module documentation asks for.
+    pub bucket_index_floor_upper: NameId,
+    /// `CReal.bucketClampUpper : ∀ w k, CReal.le w (CReal.ofRat (Rat.add
+    /// (Rat.max (CReal.seq w ((Nat.succ k)*(Nat.succ k))) Rat.zero)
+    /// (Rat.natDivSucc 2 ((Nat.succ k)*(Nat.succ k)))))` — the boundedness
+    /// theorem's step 1, upper half: relates the clamped bucket sample `q :=
+    /// Rat.max (seq w j) 0` (`j` the accuracy index [`Self::bucket_index`]
+    /// itself samples at) back to `w` ITSELF, not merely to `q`. `w` is at
+    /// most `q + 2/(j+1)`, via `w`'s own regularity (`seq w n` is within
+    /// `1/(n+1)+1/(j+1)` of `seq w j`) plus `seq w j <= q`
+    /// (`Rat.le_max_left`, unconditional). **No sign hypothesis on `w` is
+    /// needed** — see [`Self::bucket_clamp_lower`] for the half that does.
+    /// See `creal/uniform_continuity.rs`.
+    pub bucket_clamp_upper: NameId,
+    /// `CReal.bucketClampLower : ∀ w k, CReal.le CReal.zero w →
+    /// CReal.le (CReal.ofRat (Rat.sub (Rat.max (CReal.seq w ((Nat.succ
+    /// k)*(Nat.succ k))) Rat.zero) (Rat.natDivSucc 3 ((Nat.succ
+    /// k)*(Nat.succ k))))) w` — the other half of
+    /// [`Self::bucket_clamp_upper`]: `w` is at least `q - 3/(j+1)`. **This
+    /// is the one place a sign hypothesis on `w` genuinely enters**: without
+    /// `le zero w`, `seq w j` could be arbitrarily negative, the clamp to
+    /// `0` would then discard an unbounded amount, and no fixed multiple of
+    /// `1/(j+1)` would relate `q` back to `w`. With `le zero w`, `seq w j >=
+    /// -2/(j+1)`, so the clamp changes it by at most that much, and
+    /// `q <= seq w j + 2/(j+1)` unconditionally (`Rat.max_le` on the two
+    /// branches `Rat.le_or_lt`-free — actually via `Rat.max_le` applied to
+    /// the two bounds `seq w j <= seq w j + 2/(j+1)` and
+    /// `0 <= seq w j + 2/(j+1)`, the second using `le zero w` at index
+    /// `j`). Combined with `w`'s regularity at `(j,n)` and
+    /// `Rat.natDivSucc_add`/`Rat.natDivSucc_le_add_left`, the constant `3`
+    /// falls out as `1 (regularity slack) + 2 (the clamp's own slack)`. See
+    /// `creal/uniform_continuity.rs`.
+    pub bucket_clamp_lower: NameId,
     /// `CReal.ratSqLe : ∀ (u s : Rat), Rat.le (u*u) (s*s) → Rat.le Rat.zero s
     /// → Rat.le u s` — a purely rational fact (no `CReal` structure), proved
     /// via `Rat.mul_pos` and a difference-of-squares identity rather than a
@@ -1682,7 +1851,7 @@ pub struct CRealPrelude {
     pub geom_pair_within: NameId,
     /// `CReal.pow_le_pow_of_base_le : ∀ x y, le zero x → le x y → ∀ n,
     /// le (pow x n) (pow y n)` — monotonicity of `pow` in its **base**, for a
-    /// fixed exponent, the comparison [`geometric`](super::geometric)'s own
+    /// fixed exponent, the comparison `geometric`'s own
     /// module documentation names as missing ("no lemma comparing `pow` at
     /// two different bases for the same exponent"). Induction on `n`: the
     /// base case is `le_refl one` up to `pow`'s own `ι`-reduction at `0`; the
@@ -1695,6 +1864,43 @@ pub struct CRealPrelude {
     /// the two with `le_trans` to land on `pow x (succ j) ≤ pow y (succ j)`
     /// up to the same `ι`-reduction.
     pub pow_le_pow_of_base_le: NameId,
+    /// `CReal.ofRat_pow : ∀ q n, Equiv (pow (ofRat q) n) (ofRat (Rat.pow q
+    /// n))` — the embedding `ℚ ↪ ℝ` is a `Nat`-power homomorphism. Induction
+    /// on `n`: both `CReal.pow` and `Rat.pow` share the identical
+    /// `Nat.rec`-on-the-exponent shape (`pow _ 0 ≡ one`/`Rat.one`, `pow _
+    /// (succ j) ≡ mul (pow _ j) _` with the fresh factor on the right), so
+    /// neither `pow_zero`/`pow_succ` unfolding lemma is needed — the base and
+    /// step terms below are accepted directly against the ι-reduced motive.
+    /// The step chains [`Self::mul_congr`] (against the inductive hypothesis,
+    /// on the left factor, [`Self::equiv_refl`] on the right) with
+    /// [`Self::of_rat_mul`] (collapsing the product of two embeddings into
+    /// the embedding of the product) via [`Self::equiv_trans`]. This is the
+    /// missing piece `creal/geometric.rs`'s own module documentation names:
+    /// there was no bridge from a `CReal.pow` at an embedded base to `Rat.pow`
+    /// of the same rational, because `CReal.mul`'s sampling schedule is
+    /// data-dependent and recursively self-referential across nested `pow`
+    /// applications — this sidesteps that entirely by working at the
+    /// `Equiv`/setoid level, never touching a sample.
+    pub of_rat_pow: NameId,
+    /// `CReal.pow_half_le_natDivSucc : ∀ n, le (pow (ofRat (natDivSucc 1 1))
+    /// n) (ofRat (natDivSucc 1 n))` — geometric decay at base `1/2` dominates
+    /// the harmonic rate, the estimate `creal/power.rs`'s own module
+    /// documentation names as missing for `CReal.geom_cauchy`'s undischarged
+    /// `seq Yₐ b` leaf (`creal/geometric.rs`'s `geom_pair_within`).
+    ///
+    /// Via [`Self::of_rat_pow`] (at `q := 1/2`) plus
+    /// [`crate::rat_prelude::RatPrelude::bernoulli_harmonic_bound`] (at `x :=
+    /// 1/2, t := 1`) transported back across it with [`Self::of_rat_le`] and
+    /// [`Self::le_congr`]. `bernoulli_harmonic_bound`'s conclusion is stated
+    /// against the inline `Nat.rec` companion `L t m := 1 + m·t`, not
+    /// `natDivSucc` directly, so this also proves (privately, in
+    /// `geometric.rs`) that `L Rat.one m` is exactly the whole-number
+    /// embedding `natDivSucc (Nat.succ m) 0`, and cancels that positive
+    /// factor from the resulting `L one m · pow (1/2) m ≤ 1` via
+    /// `Rat.le_total`/`Rat.le_antisymm`/`Rat.mul_left_cancel_of_ne_zero` —
+    /// never forming `Rat.inv`, matching `bernoulli_harmonic_bound`'s own
+    /// design.
+    pub pow_half_le_nat_div_succ: NameId,
     /// `CReal.one_le_pow_of_one_le : ∀ x, le one x → ∀ n, le one (pow x n)` —
     /// the mirror of [`Self::pow_le_one`]: powers of a base at least `1` stay
     /// at least `1`. Induction on `n`, and simpler than `pow_le_one`'s own
@@ -2153,6 +2359,33 @@ pub struct CRealPrelude {
     /// documentation for the derivation and for why `geom_tail_within`
     /// could be re-derived from this without editing that file.
     pub within_of_two_sided_le: NameId,
+    /// `CReal.le_add_of_abs_sub_le : ∀ x y : CReal, ∀ q : Rat, le (abs (add x
+    /// (neg y))) (ofRat q) → le x (add y (ofRat q))` (`creal/integral.rs`) —
+    /// roadmap step 2 toward `riemannSum_cauchy`: the abs-bound shape
+    /// `UniformlyContinuousOn.spec`'s conclusion (and `fineSample_close`)
+    /// produces splits into the CReal-level one-sided form `sumRange_le`
+    /// consumes. Via `le_abs_self`, `le_trans`, `add_le_add`, and the
+    /// add-rearrangement identity that folds `y + (x + (-y))` back to `x`.
+    pub le_add_of_abs_sub_le: NameId,
+    /// `CReal.two_sided_of_abs_sub_le : ∀ x y : CReal, ∀ q : Rat, le (abs
+    /// (add x (neg y))) (ofRat q) → And (le x (add y (ofRat q))) (le y (add
+    /// x (ofRat q)))` (`creal/integral.rs`) — the full abs-splitting lemma
+    /// the per-block Riemann sum fold's two applications of `sumRange_le`
+    /// (upper and lower) both need from a single `close_within` fact. The
+    /// first conjunct reuses [`Self::le_add_of_abs_sub_le`] verbatim; the
+    /// second mirrors its route with `neg_le_abs` in place of `le_abs_self`.
+    pub two_sided_of_abs_sub_le: NameId,
+    /// `CReal.fineBlockSum_close : ∀ F a b e m n i, le a b →
+    /// UniformlyContinuousOn F a b → Nat.le i m → Nat.le deep m → And (le
+    /// blockSum (add coarseTerm epsTerm)) (le coarseTerm (add blockSum
+    /// epsTerm))` (`creal/integral.rs`) — roadmap step 3 toward
+    /// `riemannSum_cauchy`: each coarse block's fine Riemann sub-sum bounded
+    /// two-sidedly against the single coarse term `riemannSum` itself would
+    /// use at that block, within `Δ_m · natDivSucc(1, e)`. Via
+    /// `fineSample_close` per fine index, [`Self::two_sided_of_abs_sub_le`]
+    /// to split it, and two applications of `sumRange_le` to lift the
+    /// per-term bounds to the block sum.
+    pub fine_block_sum_close: NameId,
     /// `CReal.hasDerivative_closeOfEquiv : ∀ F F' a b, HasDerivativeOn F F' a b →
     /// ∀ u v, le a u → le u b → le a v → le v b → Equiv u v → Equiv (F u) (F v)`
     /// — differentiability implies (local) continuity: two `Equiv`-related
@@ -2170,6 +2403,13 @@ pub struct CRealPrelude {
     /// `CReal.expSeriesPartial : Nat → CReal := CReal.sumRange CReal.expTerm`
     /// — the `k`-th partial sum `Σ_{n<k} 1/n!`. See `creal/exponential.rs`.
     pub exp_series_partial: NameId,
+    /// `CReal.expTerm_le_geom : ∀ n, le (expTerm n) (ofRat (Rat.normalize 2
+    /// (Nat.pow 2 n) _))` — `1/n! ≤ 2·(1/2)ⁿ` for every `n`, unconditional
+    /// (no case split): both sides are `2` at `n=0` and `1` at `n=1`, and
+    /// the ratio only widens from there. A pure `Rat`/`Nat` cross-
+    /// multiplication proof (`creal/exponential.rs`), reducing to the `Nat`
+    /// fact `2ⁿ ≤ 2·n!` — never touches `CReal.pow` or `CReal.inv`.
+    pub exp_term_le_geom: NameId,
     /// `CReal.sumRange_const : ∀ w m,
     /// Equiv (sumRange (fun _ => w) (Nat.succ m)) (mul (ofNat (Nat.succ m))
     /// w)` (`creal/monotone.rs`) — a constant summed `succ m` times is
@@ -2208,6 +2448,28 @@ pub struct CRealPrelude {
     /// `m` and `2m+1` needs; see `integral.rs`'s module documentation for
     /// what still separates this from `riemannSum_cauchy`.
     pub sum_range_double: NameId,
+    /// `CReal.ofNat_add : ∀ a b : Nat, Equiv (ofNat (Nat.add a b)) (add (ofNat
+    /// a) (ofNat b))` (`creal/integral.rs`) — `CReal.ofNat` is a `Nat →
+    /// (CReal, +)` homomorphism. Direct, non-inductive: `ofNat a := ofRat
+    /// (natDivSucc a 0)`, so [`Self::of_rat_add`] gives `Equiv (add (ofNat a)
+    /// (ofNat b)) (ofRat (Rat.add (natDivSucc a 0) (natDivSucc b 0)))`, and
+    /// `RatPrelude::nat_div_succ_add` at denominator index `0` collapses the
+    /// right side's `Rat.add` to the single `natDivSucc (Nat.add a b) 0` —
+    /// defeq `ofNat (Nat.add a b)` — with no induction on either argument.
+    /// Needed to reconcile [`Self::sum_range_reblock`]'s raw global fine
+    /// index `(succ n)·i + j` with the per-block local sample-point
+    /// arithmetic `riemannSum_cauchy` still needs; see `integral.rs`'s
+    /// module documentation.
+    pub of_nat_add: NameId,
+    /// `CReal.ofNat_mul : ∀ a b : Nat, Equiv (ofNat (Nat.mul a b)) (mul (ofNat
+    /// a) (ofNat b))` (`creal/integral.rs`) — `CReal.ofNat` is also a `Nat →
+    /// (CReal, ·)` homomorphism, by the same direct route as
+    /// [`Self::of_nat_add`]: [`Self::of_rat_mul`] plus
+    /// `RatPrelude::nat_div_succ_mul` (`Rat.mul (natDivSucc a 0) (natDivSucc
+    /// b j) = natDivSucc (a·b) j`, already stated for an arbitrary second
+    /// denominator index `j`, so `j := 0` is exactly this case) — no
+    /// induction.
+    pub of_nat_mul: NameId,
     /// `CReal.monotone_of_nonneg_deriv : ∀ F F' a b, HasDerivativeOn F F' a
     /// b → (∀ z, le a z → le z b → le zero (F' z)) → ∀ x y, le a x → le x y →
     /// le y b → le (F x) (F y)` (`creal/monotone.rs`) — a nonnegative
@@ -2217,6 +2479,127 @@ pub struct CRealPrelude {
     /// interpolation endpoints, not only the last one the original two-lane
     /// handoff plan named.
     pub monotone_of_nonneg_deriv: NameId,
+
+    /// `CReal.strict_mono_of_pos_deriv : ∀ F F' a b, HasDerivativeOn F F' a b
+    /// → ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k)) (F' z)) →
+    /// ∀ x y, le a x → lt x y → le y b → lt (F x) (F y)` (`creal/monotone.rs`)
+    /// — the STRICT companion of [`Self::monotone_of_nonneg_deriv`]: a
+    /// derivative *uniformly bounded away from zero* by `1/(k+1)` on `[a,b]`
+    /// makes `F` strictly increasing there, given a strict input gap
+    /// (`lt x y`, not merely `le x y` — the conclusion is false at a
+    /// degenerate `x ~ y`, so this is genuinely required, not a convenience).
+    ///
+    /// The hypothesis is a `Nat`-indexed UNIFORM bound (`PosBound (F' z) k`'s
+    /// own shape, spelled out rather than named) rather than the pointwise
+    /// `∀ z, lt zero (F' z)`: the pointwise form hands a *different* rational
+    /// witness at every `z`, and nothing in this development extracts one
+    /// witness usable across an entire subdivision from that (no compactness
+    /// argument exists here, deliberately — see the module documentation for
+    /// why this is the honest choice, not a weakening).
+    ///
+    /// Built by halving the given bound (`CReal.strict_mono_of_pos_deriv`'s
+    /// own module doc: `Rat.natDivSucc_halve` + `Rat.natDivSucc_add` fuse
+    /// `1/(2k+2) + 1/(2k+2) = 1/(k+1)`) to get an error tolerance strictly
+    /// below the derivative's own lower bound, subdividing finely enough
+    /// (exactly [`Self::monotone_of_nonneg_deriv`]'s own construction) that
+    /// `hd_spec`'s error term stays under that tolerance on every piece, and
+    /// telescoping the resulting **positive** per-piece lower bound
+    /// `(1/(2k+2))·step` up to `(1/(2k+2))·(y−x)` — a REAL, not yet rational,
+    /// lower bound on `F y − F x`. The strict input gap `lt x y` supplies a
+    /// rational `r > 0` with `embed r ≤ y−x`; multiplying it by the rational
+    /// `1/(2k+2)` (via `CReal.ofRat_mul`, a genuine `Rat` product, not a
+    /// `CReal` one) produces the RATIONAL gap `CReal.lt` demands.
+    pub strict_mono_of_pos_deriv: NameId,
+
+    /// `CReal.strict_mono_magnitude : ∀ F F' a b, HasDerivativeOn F F' a b →
+    /// ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k)) (F' z)) →
+    /// ∀ x y, le a x → le x y → le y b →
+    /// le (mul (ofRat (natDivSucc 1 (2·k+2))) (add y (neg x)))
+    ///    (add (F y) (neg (F x)))` (`creal/monotone.rs`) — the RATE
+    /// [`Self::strict_mono_of_pos_deriv`] proves internally (as `chained2` in
+    /// that function's own derivation) but never used to declare: `F y − F x`
+    /// is bounded BELOW by the derivative floor `1/(2(k+1))` times the input
+    /// gap, not merely shown positive. Takes `le x y`, not `lt x y` — nothing
+    /// in the subdivision argument up to this exact inequality needs a
+    /// strict gap (it degenerates correctly to `0 ≤ 0` at `x = y`); strictness
+    /// is only needed downstream to turn a REAL lower bound into a RATIONAL
+    /// `CReal.lt` witness, which is exactly what
+    /// [`Self::strict_mono_of_pos_deriv`] does on top of this lemma.
+    ///
+    /// [`Self::strict_mono_of_pos_deriv`] now calls this lemma directly for
+    /// that inequality rather than re-deriving it: the whole subdivision /
+    /// telescope construction (the piece count, the per-piece bound, the
+    /// telescope, the algebraic regrouping to `(1/(2(k+1)))·(y−x)`) lives here
+    /// exactly once. Two consumers outside `monotone.rs` are blocked on
+    /// reaching it: an exact IVT root (`|x−y| ≤ 2(k+1)·(|F x|+|F y|)` follows
+    /// directly) and Chapter 12's inverse-function continuity (a lower bound
+    /// on `F`'s growth is an upper bound on `F⁻¹`'s modulus).
+    pub strict_mono_magnitude: NameId,
+
+    /// `CReal.scale_cancel_le : ∀ (m : Nat) (u v : CReal),
+    /// le (mul (ofRat (natDivSucc 1 m)) u) v → le u (mul (ofNat (Nat.succ m)) v)`
+    /// (`creal/monotone.rs`) — the rational-cancellation step two lanes
+    /// independently stopped on: [`Self::strict_mono_magnitude`] (and every
+    /// other place this development samples at the recurring `1/(m+1)`
+    /// shape) produces a bound `(1/(m+1))·u ≤ v`, and turning that into a
+    /// bound on `u` alone means multiplying through by `(m+1)` and
+    /// cancelling `(m+1)·(1/(m+1)) = 1`. Stated at a bare `m`, not at
+    /// [`Self::strict_mono_magnitude`]'s own instantiation `m := 2k+1`,
+    /// because `Rat.natDivSucc 1 m` is the single recurring "epsilon" this
+    /// whole file samples at — narrowing the shape to one call site would
+    /// just mean rebuilding it at the next.
+    pub scale_cancel_le: NameId,
+
+    /// `CReal.diff_le_of_strict_mono_magnitude : ∀ F F' a b,
+    /// HasDerivativeOn F F' a b → ∀ k, (∀ z, le a z → le z b →
+    /// le (ofRat (natDivSucc 1 k)) (F' z)) → ∀ x y, le a x → le x y → le y b
+    /// → le (add y (neg x)) (mul (ofNat (Nat.succ (Nat.succ (Nat.mul 2 k))))
+    /// (add (abs (F x)) (abs (F y))))` (`creal/monotone.rs`) —
+    /// [`Self::strict_mono_magnitude`] cancelled by [`Self::scale_cancel_le`]
+    /// against the triangle inequality: a LOWER bound on `F`'s growth
+    /// becomes an UPPER bound on how far apart `x` and `y` can be for a
+    /// given spread of `F` values, `|x−y| ≤ 2(k+1)·(|Fx|+|Fy|)` — the exact
+    /// IVT root and Chapter 12's inverse-function continuity both need this
+    /// direction. Left as `add y (neg x)` rather than wrapped in `CReal.abs`:
+    /// the hypotheses already give `x ≤ y`, so this term IS the (nonnegative)
+    /// difference, and no public `CReal.abs_of_nonneg`-shaped fact exists yet
+    /// to fold that in for free.
+    pub diff_le_of_strict_mono_magnitude: NameId,
+
+    /// `CReal.strict_injective_of_pos_deriv : ∀ F F' a b, HasDerivativeOn F
+    /// F' a b → ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k))
+    /// (F' z)) → ∀ x y, le a x → le x b → le a y → le y b → Apart x y →
+    /// Apart (F x) (F y)` (`creal/monotone.rs`) — Spivak ch. 12's entry point
+    /// for inverse functions: a uniformly positive derivative on `[a,b]`
+    /// makes `F` injective there, in the constructive (apartness) sense.
+    /// `Or.elim` on `Apart x y := lt x y ∨ lt y x` applies
+    /// [`Self::strict_mono_of_pos_deriv`] to whichever ordered pair the
+    /// witness supplies — never deciding which, since the witness already
+    /// says so.
+    pub strict_injective_of_pos_deriv: NameId,
+
+    /// `CReal.order_reflect_of_pos_deriv : ∀ F F' a b, HasDerivativeOn F F' a
+    /// b → ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k)) (F' z)) →
+    /// ∀ x y, le a x → le x b → le a y → le y b → Apart x y → lt (F x) (F y)
+    /// → lt x y` (`creal/inverse_fn.rs`) — the CONVERSE half of
+    /// [`Self::strict_mono_of_pos_deriv`], and the reason it is stated with
+    /// `Apart x y` as a HYPOTHESIS rather than derived: producing `lt x y`
+    /// from nothing but a codomain inequality would require deciding which
+    /// of `lt x y`/`lt y x` holds, and `CReal.lt` is not decidable. Given
+    /// `Apart x y` as DATA (not derived via excluded middle), the proof
+    /// cases on it: the `lt x y` branch is the goal already; the `lt y x`
+    /// branch applies [`Self::strict_mono_of_pos_deriv`] to get
+    /// `lt (F y) (F x)`, which together with the hypothesis `lt (F x) (F y)`
+    /// gives `lt (F x) (F x)` via `lt_trans`, refuted by `lt_irrefl`.
+    ///
+    /// Unconditional order-reflection (no `Apart x y` hypothesis) is NOT
+    /// proved here and is not reachable with this development's current
+    /// machinery: it is exactly as hard as finding an exact preimage
+    /// (`creal/ivt.rs`'s `ivt_approx`, still open), since both require
+    /// turning a codomain inequality into domain POSITION information, which
+    /// needs some form of bisection/localisation this file does not have in
+    /// exact form.
+    pub order_reflect_of_pos_deriv: NameId,
 
     /// `CReal.ivt_step : ∀ F P Q eps, lt zero eps → le P Q → le (F P) eps →
     /// le (neg eps) (F Q) → ∃ P' Q', le P P' ∧ le P' Q' ∧ le Q' Q ∧
@@ -2245,6 +2628,32 @@ pub struct CRealPrelude {
     /// `[a, b]` makes `F` antitone there, via the same `neg ∘ F` trick
     /// [`Self::constant_of_zero_deriv`] uses for its second direction.
     pub antitone_of_nonpos_deriv: NameId,
+    /// `CReal.strict_antitone_of_neg_deriv : ∀ F F' a b, HasDerivativeOn F F'
+    /// a b → ∀ k, (∀ z, le a z → le z b → le (F' z) (neg (ofRat (natDivSucc 1
+    /// k)))) → ∀ x y, le a x → lt x y → le y b → lt (F y) (F x)`
+    /// (`creal/monotone.rs`) — the STRICT mirror of
+    /// [`Self::antitone_of_nonpos_deriv`], built the same way that theorem
+    /// was built from [`Self::monotone_of_nonneg_deriv`]: apply
+    /// [`Self::strict_mono_of_pos_deriv`] to `neg ∘ F` via
+    /// [`Self::has_derivative_neg`], against a uniformly-negative derivative
+    /// bounded away from zero by `1/(k+1)`, then flip the resulting
+    /// `lt (neg (F x)) (neg (F y))` back to `lt (F y) (F x)` via a
+    /// generic `lt (neg u) (neg v) → lt v u` derived from the field axioms
+    /// (this development has `neg_le_neg` for `le` but no strict analogue).
+    pub strict_antitone_of_neg_deriv: NameId,
+    /// `CReal.strict_mono_comp : ∀ F G a b c d, (∀ x y, le a x → lt x y → le
+    /// y b → lt (F x) (F y)) → (∀ x y, le c x → lt x y → le y d → lt (G x)
+    /// (G y)) → (∀ z, le a z → le z b → le c (F z)) → (∀ z, le a z → le z b →
+    /// le (F z) d) → ∀ x y, le a x → lt x y → le y b → lt (G (F x)) (G (F y))`
+    /// (`creal/monotone.rs`) — Spivak ch. 12's composition corollary: a
+    /// strictly increasing `F` composed with a strictly increasing `G` is
+    /// strictly increasing. Stated over the strict-monotonicity
+    /// CONCLUSIONS directly (not `HasDerivativeOn`/`hasDerivative_neg`'s
+    /// chain rule, whose shared-interval self-map hypothesis would force `G`
+    /// onto `F`'s own domain rather than `F`'s range) plus an explicit range
+    /// hypothesis (`F` maps `[a, b]` into `[c, d]`); composing the two `lt`
+    /// facts is then direct function application.
+    pub strict_mono_comp: NameId,
 
     /// `CReal.ivt_iter : ∀ F P0 Q0 eps, lt zero eps → le P0 Q0 → le (F P0)
     /// eps → le (neg eps) (F Q0) → ∀ n : Nat, ∃ P Q, le P0 P ∧ le P Q ∧ le Q
@@ -2270,6 +2679,244 @@ pub struct CRealPrelude {
     /// neighbourhood already flags as missing, not a gap this file's own
     /// construction leaves behind.
     pub ivt_iter: NameId,
+    /// `CReal.ivt_approx : ∀ F a b, UniformlyContinuousOn F a b → le a b →
+    /// le (F a) zero → le zero (F b) → ∀ e : Nat, ∃ x, le a x ∧ le x b ∧
+    /// le (abs (F x)) (ofRat (natDivSucc 1 e))` (`creal/ivt.rs`) — the
+    /// **constructive approximate Intermediate Value Theorem** (Spivak ch.
+    /// 7), closing [`Self::ivt_iter`] against [`Self::uniformly_continuous_on`]
+    /// and [`Self::pow_half_le_nat_div_succ`].
+    ///
+    /// Chooses the bisection depth `N` and the continuity/sign slack `eps`
+    /// entirely by computation, with no search and no `Exists.rec`: `eps :=
+    /// ofRat (natDivSucc 1 n)` for `n := 2·e + 1` (so `eps + eps ~
+    /// ofRat (natDivSucc 1 e)` via [`RatPrelude::nat_div_succ_add`] then
+    /// [`RatPrelude::nat_div_succ_halve`]); `delta := ` the continuity
+    /// modulus at `n`; and `N := M·delta + c` for `c := CReal.bound (b −
+    /// a)`, `M := c + 1` — [`RatPrelude::nat_div_succ_scale`]'s own index
+    /// shape, chosen so `M · natDivSucc 1 N = natDivSucc 1 delta` is an
+    /// **equality**, not merely a bound. `CReal.bound` is a total computable
+    /// projection (`Self::bound`), so this needs no Archimedean-property
+    /// `Exists` unwrap either: the same non-existential bound
+    /// [`Self::archimedean`] is built from is reproduced directly against
+    /// `b − a`.
+    ///
+    /// The witness returned is always the final bracket's RIGHT endpoint:
+    /// with the sign invariant `F P ≤ eps`, `−eps ≤ F Q` and continuity
+    /// giving `|F Q − F P| ≤ eps`, `F Q ≤ F P + eps ≤ eps + eps` and `−eps ≤
+    /// F Q` already, so `|F Q| ≤ eps + eps = ofRat (natDivSucc 1 e)`
+    /// directly, no case split on any sign.
+    pub ivt_approx: NameId,
+    /// `CReal.ivt_bisect : (CReal → CReal) → CReal → CReal → Nat → Nat →
+    /// Bool → CReal` (`creal/ivt.rs`) — a **data-valued** bisection,
+    /// replacing `ivt_iter`'s `Exists`-wrapped bracket with one actually
+    /// computed by `Nat.rec` into `Sort 1` (legal because `Nat`'s own sort is
+    /// nonzero — `docs/mathematics-2026-08/diary-exact-root-obstruction.md`).
+    ///
+    /// Three design choices, all forced by what is and is not computable
+    /// here:
+    /// - **`eps` is the explicit `Nat` `n`** (`eps_n := ofRat (natDivSucc 1
+    ///   n)`), not an arbitrary `CReal` — an arbitrary real carries no
+    ///   `Nat` a construction could sample at, the same obstruction
+    ///   `CReal.inv`'s explicit modulus already works around.
+    /// - **The per-step branch is read off a RATIONAL sample**, not `F`'s
+    ///   sign: at the FIXED index `j := succ (2*n)` (same `j` every step —
+    ///   the invariant's slack never shrinks, matching `ivt_iter`, not
+    ///   `ivt_approx`), `Rat.ble (seq (F m) j) (natDivSucc 1 j)` is a
+    ///   genuine `Bool` (`Rat.ble`, not `Rat.le_or_lt`), so `Bool.rec` may
+    ///   select a `CReal` freely (`sqrt.rs`'s `natSqrt` is the precedent for
+    ///   this move one type down).
+    /// - **The bracket carrier is `Bool → CReal`**, not a new `Prod`/`Sigma`
+    ///   (this kernel has neither) and not two independently-recursing
+    ///   `Nat → CReal` functions (which would need the SAME pairing anyway
+    ///   to compute next-step's midpoint from both current endpoints). One
+    ///   `Nat.rec` produces the pair at each step; applying it to
+    ///   `Bool.false`/`Bool.true` reads off the two endpoints —
+    ///   [`Self::ivt_bisect_lo`]/[`Self::ivt_bisect_hi`] are exactly those
+    ///   two applications, packaged as their own one-line definitions.
+    ///
+    /// **Landed as the data-valued construction only** (`declare_ivt_bisect`
+    /// in `creal/ivt.rs`); the invariant spec theorem showing this bracket
+    /// satisfies the same six-part invariant `ivt_iter` proves is a
+    /// separate, not-yet-landed slice.
+    pub ivt_bisect: NameId,
+    /// `CReal.ivt_bisect_lo : (CReal → CReal) → CReal → CReal → Nat → Nat →
+    /// CReal := fun F P Q n k => ivt_bisect F P Q n k Bool.false` — the
+    /// lower endpoint after `k` bisection steps at slack index `n`. See
+    /// [`Self::ivt_bisect`].
+    pub ivt_bisect_lo: NameId,
+    /// `CReal.ivt_bisect_hi : (CReal → CReal) → CReal → CReal → Nat → Nat →
+    /// CReal := fun F P Q n k => ivt_bisect F P Q n k Bool.true` — the upper
+    /// endpoint after `k` bisection steps at slack index `n`. See
+    /// [`Self::ivt_bisect`].
+    pub ivt_bisect_hi: NameId,
+    /// `CReal.ivt_bisect_invariant : ∀ F P0 Q0 n, le P0 Q0 → le (F P0) (ofRat
+    /// (natDivSucc 1 n)) → le (neg (ofRat (natDivSucc 1 n))) (F Q0) → ∀ k, le
+    /// P0 (ivt_bisect_lo F P0 Q0 n k) ∧ le (ivt_bisect_lo F P0 Q0 n k)
+    /// (ivt_bisect_hi F P0 Q0 n k) ∧ le (ivt_bisect_hi F P0 Q0 n k) Q0 ∧ le (F
+    /// (ivt_bisect_lo F P0 Q0 n k)) (ofRat (natDivSucc 1 n)) ∧ le (neg (ofRat
+    /// (natDivSucc 1 n))) (F (ivt_bisect_hi F P0 Q0 n k)) ∧ Equiv (add
+    /// (ivt_bisect_hi F P0 Q0 n k) (neg (ivt_bisect_lo F P0 Q0 n k))) (mul
+    /// (add Q0 (neg P0)) (pow (ofRat (natDivSucc 1 1)) k))` (`creal/ivt.rs`)
+    /// — the **invariant spec theorem** [`Self::ivt_bisect`]'s own doc
+    /// comment names as not-yet-landed: the concrete, data-valued bracket
+    /// [`Self::ivt_bisect_lo`]/[`Self::ivt_bisect_hi`] computes satisfies the
+    /// SAME six-part invariant [`Self::ivt_step`]/[`Self::ivt_iter`] prove
+    /// for the existentially-quantified bracket, for the FIXED slack `eps_n
+    /// := ofRat (natDivSucc 1 n)`.
+    ///
+    /// Proved by ordinary `Prop`-level induction on `k` (no `Exists.rec`
+    /// needed anywhere, unlike [`Self::ivt_iter`]'s own proof, since `lo`/`hi`
+    /// are already concrete data rather than an existential witness to
+    /// unpack). The induction step reads the per-step branch back out of
+    /// `Rat.ble (seq (F m) j) (natDivSucc 1 j) `'s `Bool` via a "remembering"
+    /// `Bool.rec` (`nat_prelude/finite.rs::compact_eq_of_gt`'s own
+    /// "generalize then instantiate at `bool_refl`" idiom): the branch's
+    /// `Bool` alone forgets *why* it took that value, so the proof
+    /// generalizes over `Eq Bool br b` before casing, giving each branch a
+    /// genuine hypothesis `br = true`/`br = false` to feed
+    /// [`crate::RatPrelude::le_of_ble_eq_true`]/[`crate::RatPrelude::ble_eq_true_of_le`],
+    /// then [`Self::rat_approx_upper`]/[`Self::rat_approx_lower`] convert the
+    /// resulting rational bound back to the `CReal` sign fact `ivt_step`'s
+    /// own invariant needs.
+    pub ivt_bisect_invariant: NameId,
+    /// `CReal.ivt_bisect_diag : (CReal → CReal) → CReal → CReal → Nat → Bool
+    /// → CReal` (`creal/ivt.rs`) — the **diagonal** bisection: the SAME
+    /// `Nat.rec` shape as [`Self::ivt_bisect`], but with the external slack
+    /// parameter `n` **removed**. Each step samples `F` at its OWN recursion
+    /// depth `j` (`Nat.rec`'s step closure already receives `j`; `ivt_bisect`
+    /// discarded it and used a fixed outer `n` instead) — sample index `succ
+    /// (2*j)`, threshold `natDivSucc 1 (succ (2*j))`, exactly
+    /// `ivt.rs`'s own `bisect_sample_index` helper applied to `j` in place of
+    /// a captured `n`. "Diagonal" names this precisely: depth and slack index
+    /// literally coincide at every step, one bisection run with no second
+    /// `Nat` parameter, per
+    /// `docs/mathematics-2026-08/diary-exact-root-obstruction.md`'s "diagonal
+    /// bisection with shrinking slack" addendum.
+    ///
+    /// **Landed as the data-valued construction and a concrete reduction
+    /// test only.** The diary addendum this declaration accompanies records
+    /// a verified NEGATIVE result: for `F := id` on `[−1, 2]`, this
+    /// construction's lower endpoint freezes at `1/2` after its very first
+    /// step (`F(1/2) = 1/2 ≤ thresh₀ = 1/2` is accepted once, at the
+    /// COARSEST slack, and never re-examined against a tighter one), so the
+    /// bracket converges to `L = 1/2` with `F(L) = 1/2 ≠ 0` even though the
+    /// true root is `0` — a fixed-point, kernel-verified rational
+    /// computation, not an informal argument. No joint width/slack invariant
+    /// closes over this bracket to an exact root in general, and
+    /// [`Self::ivt_bisect_invariant`]'s route (an EXTERNAL fixed `n`,
+    /// re-instantiated at `n := k` for each `k` from scratch) fails for the
+    /// opposite reason: different `k` take different, non-nested
+    /// trajectories (verified: `k=3` and `k=4` brackets on the same `F`/
+    /// bracket above are not nested). Both routes to an exact IVT root from
+    /// this bisection are closed for general `F`; see the diary for the full
+    /// derivation and both counterexamples.
+    pub ivt_bisect_diag: NameId,
+    /// `CReal.ivt_bisect_diag_lo : (CReal → CReal) → CReal → CReal → Nat →
+    /// CReal := fun F P Q k => ivt_bisect_diag F P Q k Bool.false` — the
+    /// lower endpoint after `k` diagonal bisection steps. See
+    /// [`Self::ivt_bisect_diag`].
+    pub ivt_bisect_diag_lo: NameId,
+    /// `CReal.ivt_bisect_diag_hi : (CReal → CReal) → CReal → CReal → Nat →
+    /// CReal := fun F P Q k => ivt_bisect_diag F P Q k Bool.true` — the
+    /// upper endpoint after `k` diagonal bisection steps. See
+    /// [`Self::ivt_bisect_diag`].
+    pub ivt_bisect_diag_hi: NameId,
+    /// `CReal.hasDerivative_unique : ∀ F F1 F2 a b, HasDerivativeOn F F1 a b
+    /// → HasDerivativeOn F F2 a b → lt a b → ∀ z, le a z → le z b → Equiv
+    /// (F1 z) (F2 z)` (`creal/deriv_unique.rs`) — the derivative of a
+    /// function on `[a,b]` is unique, GIVEN the interval is genuinely
+    /// nondegenerate (`lt a b`, not merely `le a b`). The naive statement
+    /// without that hypothesis is refuted at a degenerate interval `a = b`
+    /// (`id`'s derivative is simultaneously `const zero` and `const one`
+    /// there); see that module's own documentation for the refutation and
+    /// the `lt_cotrans`-based nearby-point construction that replaces it.
+    pub has_derivative_unique: NameId,
+    /// `CReal.mesh_le_of_ge : ∀ a b outer m, le a b → Nat.le ((Nat.succ
+    /// (bound (add b (neg a))))*outer + bound (add b (neg a))) m → le (mul
+    /// (add b (neg a)) (ofRat (natDivSucc 1 m))) (ofRat (natDivSucc 1
+    /// outer))` (`creal/integral.rs`) — the ARCHIMEDEAN RESCALING
+    /// `UniformlyContinuousOn.spec` needs: turning the Riemann-sum mesh width
+    /// `Δ_m := (b−a)·natDivSucc(1,m)` into a bound of the exact rational
+    /// shape `natDivSucc 1 outer` that spec expects, for every block count
+    /// `m` at or past a computed threshold. No existential elimination: the
+    /// threshold is read directly off `CReal.bound`. See that file's own
+    /// module documentation for the derivation and for what still separates
+    /// this from `riemannSum_cauchy`.
+    pub mesh_le_of_ge: NameId,
+    /// `CReal.fineSample_in_bounds : ∀ a b m n i j, le a b → Nat.le i m →
+    /// Nat.lt j (Nat.succ n) → And (le a x) (le x b)`, `x := add
+    /// (sample_point a delta_m i) (mul (ofNat j) delta_fine)`, `delta_m :=
+    /// (b−a)·natDivSucc(1,m)`, `delta_fine := delta_m·natDivSucc(1,n)`
+    /// (`creal/integral.rs`) — the fine-sample placement lemma
+    /// `riemannSum_cauchy`'s per-block fold needs: every FINE sample point
+    /// `x` inside coarse block `i` (`i ≤ m`, so `i` indexes one of
+    /// `riemannSum`'s `Nat.succ m` coarse blocks) lies in `[a, b]`, for every
+    /// fine sub-index `j < Nat.succ n`. `riemannSum_sample_in_bounds` /
+    /// `subdivisionPoint_in_bounds` only place the COARSE sample points
+    /// themselves; this is the one-index-shift generalization those two
+    /// theorems do not cover. Built from TWO calls to
+    /// `subdivisionPoint_in_bounds` (at coarse indices `i` and `Nat.succ i`,
+    /// bracketing the block `[base, base+delta_m]`) plus the same
+    /// nonneg/bounded-offset argument `sample_offset_bound` uses for its own
+    /// fine term. Called from `creal.rs`'s pipeline AFTER
+    /// `monotone::declare_monotone_of_nonneg_deriv_all` (for
+    /// `CReal.subdivisionPoint_in_bounds`).
+    pub fine_sample_in_bounds: NameId,
+    /// `CReal.fineSample_close : ∀ F a b e m n i j, le a b →
+    /// UniformlyContinuousOn F a b → Nat.le i m → Nat.lt j (Nat.succ n) →
+    /// Nat.le deep m → close_within (F fine_j) (F base_i) (Rat.natDivSucc 1
+    /// e)`, `deep := (Nat.succ (bound (add b (neg a))))·(modulus F a b u e)
+    /// plus bound (add b (neg a))` (`creal/integral.rs`) — roadmap step 2
+    /// toward `riemannSum_cauchy`: EVERY fine sample point inside coarse
+    /// block `i` is within `1/(e+1)` of that block's own coarse value
+    /// `F(base_i)`, once the coarse block count `m` clears the Archimedean
+    /// threshold `deep` relative to `F`'s modulus of uniform continuity at
+    /// target precision `e`. Built from [`Self::mesh_le_of_ge`],
+    /// [`Self::fine_sample_in_bounds`], `UniformlyContinuousOn.spec`, and
+    /// the private `sample_offset_bound` (`creal/integral.rs`). See that
+    /// file's own module documentation for the derivation.
+    pub fine_sample_close: NameId,
+    /// `CReal.meshReciprocalMul : ∀ n m : Nat,
+    /// Eq Rat (Rat.mul (Rat.natDivSucc 1 n) (Rat.natDivSucc 1 m))
+    ///        (Rat.natDivSucc 1 (Nat.add (Nat.add (Nat.mul n m) n) m))`
+    /// (`creal/integral.rs`) — refining a partition of `succ m` coarse
+    /// pieces into `succ n` further pieces each gives a fine mesh factor
+    /// EXACTLY equal (not merely close) to the single-partition factor at
+    /// `m_prime := ((n·m)+n)+m`, the same witness [`Self::of_nat_add`]'s
+    /// sibling `succ_mul_succ` computes (`Nat.succ m_prime` is
+    /// definitionally `(Nat.succ n)·(Nat.succ m)`). Via
+    /// `RatPrelude::normalize_mul_normalize` plus pure defeq — no rewrite
+    /// step. Toward `riemannSum_cauchy`'s common refinement; see
+    /// `integral.rs`'s module documentation.
+    pub mesh_reciprocal_mul: NameId,
+    /// `CReal.equivAbsDiffLe : ∀ x y : CReal, Equiv x y → ∀ e : Nat,
+    /// le (abs (add x (neg y))) (embed (Rat.natDivSucc 1 e))`
+    /// (`creal/integral.rs`) — two REAL-EQUAL numbers are within ANY chosen
+    /// rational bound of each other, with no Archimedean threshold on `e`:
+    /// `Equiv` already gives arbitrary precision for free. Via `le_of_equiv`
+    /// (both directions), `add_le_add`/`add_neg`/`le_congr`, and a
+    /// cancellation identity showing `neg (add x (neg y))` and `add y (neg
+    /// x)` are both additive inverses of `add x (neg y)`. Toward
+    /// `riemannSum_cauchy`'s common refinement: promotes "the global fine
+    /// sample point IS the local block sample point" (an exact `Equiv`) into
+    /// the explicit bound `UniformlyContinuousOn.spec` needs as a
+    /// hypothesis.
+    pub equiv_abs_diff_le: NameId,
+    /// `CReal.samplePoint_reblock : ∀ a b : CReal, ∀ n m i j : Nat, Equiv
+    /// (sample_point a delta_m_prime globalIdx) (sample_point base_i
+    /// delta_fine j)` (`creal/integral.rs`) — roadmap step 1 toward
+    /// `riemannSum_cauchy`'s common refinement: `CReal.sumRange_reblock`'s
+    /// RAW global fine index sample point IS (an exact, UNCONDITIONAL
+    /// `Equiv`, no bound on `i`/`j` needed) the LOCAL per-block sample point
+    /// `CReal.fineBlockSum_close`'s own sum uses, `m_prime :=
+    /// ((n·m)+n)+m` ([`Self::mesh_reciprocal_mul`]'s own witness),
+    /// `globalIdx := Nat.add (Nat.mul (Nat.succ n) i) j`. Built from
+    /// [`Self::mesh_reciprocal_mul`] (the exact mesh identity),
+    /// [`Self::of_nat_add`]/[`Self::of_nat_mul`] (splitting the global
+    /// index) and [`Self::mesh_count_width`] (cancelling the `Nat.succ n`
+    /// factor). See `integral.rs`'s module documentation and this
+    /// declaration's own section header comment.
+    pub sample_point_reblock: NameId,
 }
 
 impl CRealPrelude {
@@ -2424,6 +3071,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         le_abs_self: kernel.name_str(creal, "le_abs_self"),
         neg_le_abs: kernel.name_str(creal, "neg_le_abs"),
         abs_le: kernel.name_str(creal, "abs_le"),
+        abs_add_le: kernel.name_str(creal, "abs_add_le"),
         abs_nonneg: kernel.name_str(creal, "abs_nonneg"),
         not_le_zero_neg_one: kernel.name_str(creal, "not_le_zero_neg_one"),
         not_equiv_abs_neg_one: kernel.name_str(creal, "not_equiv_abs_neg_one"),
@@ -2448,6 +3096,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         converges_neg: kernel.name_str(creal, "converges_neg"),
         converges_sub: kernel.name_str(creal, "converges_sub"),
         converges_squeeze: kernel.name_str(creal, "converges_squeeze"),
+        converges_lower_bound: kernel.name_str(creal, "converges_lower_bound"),
+        converges_upper_bound: kernel.name_str(creal, "converges_upper_bound"),
         bounded: kernel.name_str(creal, "Bounded"),
         converges_bounded: kernel.name_str(creal, "converges_bounded"),
         converges_mul: kernel.name_str(creal, "converges_mul"),
@@ -2457,6 +3107,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         continuous_add: kernel.name_str(creal, "continuous_add"),
         continuous_mul: kernel.name_str(creal, "continuous_mul"),
         continuous_comp: kernel.name_str(creal, "continuous_comp"),
+        converges_comp_eventually: kernel.name_str(creal, "converges_comp_eventually"),
         uniformly_continuous_on,
         uc_mk: kernel.name_str(uniformly_continuous_on, "mk"),
         uc_rec: kernel.name_str(uniformly_continuous_on, "rec"),
@@ -2472,6 +3123,12 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         bounded_on_id_unit: kernel.name_str(creal, "bounded_on_id_unit"),
         uniformly_continuous_poly_example: kernel
             .name_str(creal, "uniformly_continuous_poly_example"),
+        mag_bound_le_sum_range_of_lt: kernel.name_str(creal, "mag_bound_le_sumRange_of_lt"),
+        bucket_index: kernel.name_str(creal, "bucketIndex"),
+        bucket_index_floor_lower: kernel.name_str(creal, "bucketIndexFloorLower"),
+        bucket_index_floor_upper: kernel.name_str(creal, "bucketIndexFloorUpper"),
+        bucket_clamp_upper: kernel.name_str(creal, "bucketClampUpper"),
+        bucket_clamp_lower: kernel.name_str(creal, "bucketClampLower"),
         rat_sq_le: kernel.name_str(creal, "ratSqLe"),
         rat_sq_sandwich: kernel.name_str(creal, "ratSqSandwich"),
         rat_index_ratio_le_one: kernel.name_str(creal, "ratIndexRatioLeOne"),
@@ -2535,6 +3192,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         geom_tail_within_le: kernel.name_str(creal, "geom_tail_within_le"),
         geom_pair_within: kernel.name_str(creal, "geom_pair_within"),
         pow_le_pow_of_base_le: kernel.name_str(creal, "pow_le_pow_of_base_le"),
+        of_rat_pow: kernel.name_str(creal, "ofRat_pow"),
+        pow_half_le_nat_div_succ: kernel.name_str(creal, "pow_half_le_natDivSucc"),
         one_le_pow_of_one_le: kernel.name_str(creal, "one_le_pow_of_one_le"),
         pow_le_pow_of_one_le: kernel.name_str(creal, "pow_le_pow_of_one_le"),
         pow_pos: kernel.name_str(creal, "pow_pos"),
@@ -2576,18 +3235,48 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         riemann_sum_le_on: kernel.name_str(creal, "riemannSum_le_on"),
         sum_range_reblock: kernel.name_str(creal, "sumRange_reblock"),
         within_of_two_sided_le: kernel.name_str(creal, "within_of_two_sided_le"),
+        le_add_of_abs_sub_le: kernel.name_str(creal, "le_add_of_abs_sub_le"),
+        two_sided_of_abs_sub_le: kernel.name_str(creal, "two_sided_of_abs_sub_le"),
+        fine_block_sum_close: kernel.name_str(creal, "fineBlockSum_close"),
         has_derivative_close_of_equiv: kernel.name_str(creal, "hasDerivative_closeOfEquiv"),
         exp_term: kernel.name_str(creal, "expTerm"),
         exp_series_partial: kernel.name_str(creal, "expSeriesPartial"),
+        exp_term_le_geom: kernel.name_str(creal, "expTerm_le_geom"),
         sum_range_const: kernel.name_str(creal, "sumRange_const"),
         mesh_count_width: kernel.name_str(creal, "mesh_count_width"),
         subdivision_point_in_bounds: kernel.name_str(creal, "subdivisionPoint_in_bounds"),
         sum_range_double: kernel.name_str(creal, "sumRange_double"),
+        of_nat_add: kernel.name_str(creal, "ofNat_add"),
+        of_nat_mul: kernel.name_str(creal, "ofNat_mul"),
         monotone_of_nonneg_deriv: kernel.name_str(creal, "monotone_of_nonneg_deriv"),
+        strict_mono_of_pos_deriv: kernel.name_str(creal, "strict_mono_of_pos_deriv"),
+        strict_mono_magnitude: kernel.name_str(creal, "strict_mono_magnitude"),
+        scale_cancel_le: kernel.name_str(creal, "scale_cancel_le"),
+        diff_le_of_strict_mono_magnitude: kernel
+            .name_str(creal, "diff_le_of_strict_mono_magnitude"),
+        strict_injective_of_pos_deriv: kernel.name_str(creal, "strict_injective_of_pos_deriv"),
+        order_reflect_of_pos_deriv: kernel.name_str(creal, "order_reflect_of_pos_deriv"),
         ivt_step: kernel.name_str(creal, "ivt_step"),
         constant_of_zero_deriv: kernel.name_str(creal, "constant_of_zero_deriv"),
         antitone_of_nonpos_deriv: kernel.name_str(creal, "antitone_of_nonpos_deriv"),
+        strict_antitone_of_neg_deriv: kernel.name_str(creal, "strict_antitone_of_neg_deriv"),
+        strict_mono_comp: kernel.name_str(creal, "strict_mono_comp"),
         ivt_iter: kernel.name_str(creal, "ivt_iter"),
+        ivt_approx: kernel.name_str(creal, "ivt_approx"),
+        ivt_bisect: kernel.name_str(creal, "ivt_bisect"),
+        ivt_bisect_lo: kernel.name_str(creal, "ivt_bisect_lo"),
+        ivt_bisect_hi: kernel.name_str(creal, "ivt_bisect_hi"),
+        ivt_bisect_invariant: kernel.name_str(creal, "ivt_bisect_invariant"),
+        ivt_bisect_diag: kernel.name_str(creal, "ivt_bisect_diag"),
+        ivt_bisect_diag_lo: kernel.name_str(creal, "ivt_bisect_diag_lo"),
+        ivt_bisect_diag_hi: kernel.name_str(creal, "ivt_bisect_diag_hi"),
+        has_derivative_unique: kernel.name_str(creal, "hasDerivative_unique"),
+        mesh_le_of_ge: kernel.name_str(creal, "mesh_le_of_ge"),
+        fine_sample_in_bounds: kernel.name_str(creal, "fineSample_in_bounds"),
+        fine_sample_close: kernel.name_str(creal, "fineSample_close"),
+        mesh_reciprocal_mul: kernel.name_str(creal, "meshReciprocalMul"),
+        equiv_abs_diff_le: kernel.name_str(creal, "equivAbsDiffLe"),
+        sample_point_reblock: kernel.name_str(creal, "samplePoint_reblock"),
     }
 }
 
@@ -2667,8 +3356,30 @@ pub(crate) fn build_creal_prelude_uncached(
         cotransitivity::declare_cotransitivity(&mut d, prelude)?;
         completeness::declare_completeness(&mut d, prelude)?;
         convergence::declare_convergence(&mut d, prelude)?;
+        // `abs_add_le` needs only `abs_le`/`add_le_add`/`le_abs_self`/
+        // `neg_le_abs`/`le_trans`/`le_of_equiv` (`order_extra`/additive
+        // sections, well above), and must run before the first of its four
+        // current private-copy modules dispatches — `uniform_continuity`'s
+        // own `declare_uniform_continuity`, immediately below, is the
+        // earliest of the three named in that declaration's own doc comment
+        // (`derivative` at the next line, `series` much further down) — and
+        // before `monotone::declare_monotone`, its first NEW consumer.
+        uniform_continuity::declare_abs_add_le(&mut d, prelude)?;
         uniform_continuity::declare_uniform_continuity(&mut d, prelude)?;
+        // `converges_comp_eventually` needs `UniformlyContinuousOn`/`.spec`/
+        // `.modulus` (`declare_uniform_continuity`, just above) plus
+        // `Converges`/`converges_lower_bound`/`converges_upper_bound`
+        // (`convergence::declare_convergence`, well above) — this is the
+        // earliest point both are available.
+        convergence::declare_converges_comp_eventually(&mut d, prelude)?;
         derivative::declare_derivative(&mut d, prelude)?;
+        // `hasDerivative_unique` needs only `HasDerivativeOn`/`hd_spec`
+        // (`derivative::declare_derivative`, just above) and `lt_cotrans`
+        // (`cotransitivity::declare_cotransitivity`, well above); it does
+        // not need `BoundedOn`/`abs_mul_le_of_bounds` or anything from
+        // `uniform_continuity`, so it lands right here rather than waiting
+        // for either.
+        deriv_unique::declare_deriv_unique(&mut d, prelude)?;
         // `uniformly_continuous_mul`/`_sq` and the concrete polynomial
         // instantiation consume `CReal.BoundedOn` and
         // `CReal.abs_mul_le_of_bounds`, declared just above by
@@ -2682,6 +3393,12 @@ pub(crate) fn build_creal_prelude_uncached(
         speedup::declare_speedup(&mut d, prelude)?;
         convergence::declare_cauchy_convergence(&mut d, prelude)?;
         series::declare_series(&mut d, prelude)?;
+        // `CReal.mag_bound_le_sum_range_of_lt` needs `CReal.sumRange`
+        // (`series::declare_series`, just above), which is declared after
+        // BOTH of `uniform_continuity`'s earlier entry points -- so it gets
+        // its own, third, entry point here rather than joining
+        // `declare_uniform_continuity`/`declare_uniform_continuity_products`.
+        uniform_continuity::declare_uniform_continuity_sums(&mut d, prelude)?;
         monotone::declare_monotone(&mut d, prelude)?;
         // `riemannSum` is built directly on `sumRange`/`ofNat` and needs
         // nothing from `power`, so it can land right after `series` rather
@@ -2700,6 +3417,29 @@ pub(crate) fn build_creal_prelude_uncached(
         // in between; declared here as the same kind of standalone,
         // reusable building block as `sumRange_reblock` just above.
         integral::declare_within_of_two_sided_le(&mut d, prelude)?;
+        // `le_add_of_abs_sub_le` (roadmap step 2 toward `riemannSum_cauchy`)
+        // only needs `le_abs_self`/`le_trans`/`add_le_add`/`le_congr` (all
+        // far above, basic order/setoid facts) and this file's own private
+        // `add_sub_cancel` ring identity; no dependency on anything in
+        // between, so it lands here as the same kind of standalone,
+        // reusable building block as `sumRange_reblock`/
+        // `within_of_two_sided_le` just above.
+        integral::declare_le_add_of_abs_sub_le(&mut d, prelude)?;
+        // `two_sided_of_abs_sub_le` needs `le_add_of_abs_sub_le` (just above)
+        // for its first conjunct plus `neg_le_abs`/`le_trans`/`add_le_add`
+        // (all far above) and this file's own private `diff_cancel_left` for
+        // the mirror; same standalone-building-block placement as its own
+        // dependency.
+        integral::declare_two_sided_of_abs_sub_le(&mut d, prelude)?;
+        // `ofNat_add`/`ofNat_mul` only need `CReal.ofNat`
+        // (`archimedean::declare_archimedean`, well above) and the `Rat`-level
+        // `ofRat_add`/`ofRat_mul`/`natDivSucc_add`/`natDivSucc_mul` facts that
+        // predate `creal` entirely; no dependency on anything in between, so
+        // declared here as the same kind of standalone building block as
+        // `sumRange_reblock`/`within_of_two_sided_le` just above. See
+        // `integral.rs`'s module documentation for what they bridge toward
+        // `riemannSum_cauchy`.
+        integral::declare_of_nat_hom(&mut d, prelude)?;
         // `monotone_of_nonneg_deriv` and its two supporting lemmas
         // (`sumRange_const`, `mesh_count_width`, `subdivisionPoint_in_bounds`)
         // reuse `CReal.ofNat_le` (`integral::declare_integral`, just above)
@@ -2708,6 +3448,46 @@ pub(crate) fn build_creal_prelude_uncached(
         // particular it cannot join `monotone::declare_monotone`'s own call
         // site, which runs before `integral` for exactly that reason.
         monotone::declare_monotone_of_nonneg_deriv_all(&mut d, prelude)?;
+        // `fineSample_in_bounds` needs `CReal.subdivisionPoint_in_bounds`
+        // (`monotone::declare_monotone_of_nonneg_deriv_all`, just above) —
+        // it cannot join `integral::declare_integral`'s own call site above
+        // for exactly that reason (`subdivisionPoint_in_bounds` is not
+        // declared yet there). See `integral.rs`'s module documentation for
+        // what this bridges toward `riemannSum_cauchy`.
+        integral::declare_fine_sample_in_bounds(&mut d, prelude)?;
+        // `fineSample_close` (roadmap step 2 toward `riemannSum_cauchy`)
+        // needs `fineSample_in_bounds` (just above), `mesh_le_of_ge`
+        // (`integral::declare_integral`, well above) and
+        // `UniformlyContinuousOn.spec`/`.modulus`
+        // (`uniform_continuity::declare_uniform_continuity`, further above
+        // still), so it cannot land any earlier than this call site.
+        integral::declare_fine_sample_close(&mut d, prelude)?;
+        // `fineBlockSum_close` (roadmap step 3 toward `riemannSum_cauchy`)
+        // needs `fineSample_close` (just above) and `two_sided_of_abs_sub_le`
+        // (`integral::declare_two_sided_of_abs_sub_le`, well above), so it
+        // cannot land any earlier than this call site.
+        integral::declare_fine_block_sum_close(&mut d, prelude)?;
+        // `meshReciprocalMul` and `equivAbsDiffLe` are both standalone
+        // building blocks toward `riemannSum_cauchy`'s common-refinement
+        // step (relating `sumRange_reblock`'s raw global fine index to
+        // `riemannSum`'s own per-block sample-point arithmetic); neither
+        // depends on anything declared in this section, so their landing
+        // here is only about staying next to the roadmap step they serve,
+        // not about a dependency.
+        integral::declare_mesh_reciprocal_mul(&mut d, prelude)?;
+        integral::declare_equiv_abs_diff_le(&mut d, prelude)?;
+        // `samplePoint_reblock` (roadmap step 1 toward `riemannSum_cauchy`'s
+        // common refinement) needs `meshReciprocalMul` (just above),
+        // `ofNat_add`/`ofNat_mul` (`integral::declare_of_nat_hom`, well
+        // above) and `mesh_count_width`
+        // (`monotone::declare_monotone_of_nonneg_deriv_all`, further above
+        // still), so it cannot land any earlier than this call site.
+        integral::declare_sample_point_reblock(&mut d, prelude)?;
+        // `order_reflect_of_pos_deriv` needs only `strict_mono_of_pos_deriv`
+        // (just declared above) plus `lt_trans`/`lt_irrefl`/`apart` (all far
+        // above); nothing later depends on it, so it lands right after its
+        // one real dependency.
+        inverse_fn::declare_order_reflect_of_pos_deriv(&mut d, prelude)?;
         power::declare_power(&mut d, prelude)?;
         // `hasDerivative_pow_two` mentions `CReal.pow`, which `power.rs`
         // declares. It cannot live inside `derivative::declare_derivative`,
@@ -2732,6 +3512,9 @@ pub(crate) fn build_creal_prelude_uncached(
         // above), `CReal.mesh_count_width` (`monotone::declare_monotone_of_nonneg_deriv_all`,
         // also above) and ordinary ring/order laws; nothing later depends on
         // it, so it lands last.
+        // `declare_ivt` also lands `ivt_bisect`/`ivt_bisect_lo`/
+        // `ivt_bisect_hi` (the data-valued bisection), which needs nothing
+        // beyond what `ivt_step`/`ivt_iter` already required.
         ivt::declare_ivt(&mut d, prelude)
     })();
     match built {
@@ -3652,12 +4435,14 @@ mod completeness;
 mod convergence;
 mod cotransitivity;
 mod density;
+mod deriv_unique;
 mod derivative;
 mod exponential;
 mod field;
 mod geometric;
 mod integral;
 mod inverse;
+mod inverse_fn;
 mod ivt;
 mod lattice;
 mod monotone;

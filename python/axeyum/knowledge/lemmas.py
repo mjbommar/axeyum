@@ -22,8 +22,11 @@ class Lemma:
     """One accepted theorem and its mechanically observed neighborhood."""
 
     id: str
+    canonical_type: str
     axiom_footprint_size: int
     visible_in: tuple[str, ...]
+    direct_type_declarations: tuple[str, ...]
+    direct_declarations: tuple[str, ...]
     dependencies: tuple[str, ...]
     dependents: tuple[str, ...]
     dependency_depth: int
@@ -35,8 +38,11 @@ class Lemma:
     def from_raw(cls, raw: dict[str, Any]) -> Lemma:
         return cls(
             id=raw["kernel_declaration_id"],
+            canonical_type=raw["canonical_type"],
             axiom_footprint_size=raw["axiom_footprint_size"],
             visible_in=tuple(raw["visible_in"]),
+            direct_type_declarations=tuple(raw["direct_type_dependencies"]),
+            direct_declarations=tuple(raw["direct_declaration_dependencies"]),
             dependencies=tuple(raw["direct_theorem_dependencies"]),
             dependents=tuple(raw["direct_theorem_dependents"]),
             dependency_depth=raw["dependency_depth"],
@@ -82,6 +88,12 @@ class LemmaIndex:
     def consumers(self, declaration_id: str) -> tuple[Lemma, ...]:
         lemma = self.get(declaration_id)
         return tuple(self._by_id[item] for item in lemma.dependents)
+
+    def with_type_fragment(self, fragment: str) -> tuple[Lemma, ...]:
+        """Return stable candidate rows whose canonical type contains ``fragment``."""
+        if not fragment:
+            raise ValueError("canonical type fragment must not be empty")
+        return tuple(lemma for lemma in self.lemmas if fragment in lemma.canonical_type)
 
 
 @lru_cache(maxsize=4)

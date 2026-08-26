@@ -1,0 +1,2735 @@
+{
+  "accepted": [
+    {
+      "application_depth": 5,
+      "axiom_footprint": [],
+      "binders_used": 3,
+      "candidate_declarations": [
+        "Nat",
+        "Nat.fib",
+        "Nat.fib_le_succ",
+        "Nat.le",
+        "Nat.monotone_of_le_succ"
+      ],
+      "fact_id": "F:ml430-nat-fib-mono-cc6afe09",
+      "premise_declarations": [
+        "Nat.fib_le_succ"
+      ],
+      "premise_fact_ids": [
+        "F:ml430-nat-fib-le-fib-succ-d1ef4a3d"
+      ],
+      "proof_sha256": "496e9a709ba3de7dd459c01a1ad297769ee3c4461dbd7a4c8d924864424cba04",
+      "result": "accepted",
+      "terms_considered": 119,
+      "theorem": "Nat.fib_mono",
+      "theorem_dependencies": [
+        "Nat.fib_le_succ",
+        "Nat.monotone_of_le_succ"
+      ]
+    },
+    {
+      "application_depth": 1,
+      "axiom_footprint": [],
+      "binders_used": 1,
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.monotone_of_le_succ",
+        "Nat.mul",
+        "Nat.succ",
+        "Nat.zero",
+        "Nat.zero_add"
+      ],
+      "fact_id": "F:nat-mul-one",
+      "premise_declarations": [
+        "Nat.zero_add"
+      ],
+      "premise_fact_ids": [
+        "F:nat-zero-add"
+      ],
+      "proof_sha256": "e62ca6f5e210e063e1e1fa1373372e37d96c6e8002681193fde1bef53cde5d26",
+      "result": "accepted",
+      "terms_considered": 6,
+      "theorem": "Nat.mul_one",
+      "theorem_dependencies": [
+        "Nat.zero_add"
+      ]
+    },
+    {
+      "application_depth": 1,
+      "axiom_footprint": [],
+      "binders_used": 1,
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.monotone_of_le_succ",
+        "Nat.mul",
+        "Nat.succ",
+        "Nat.succ_mul",
+        "Nat.zero",
+        "Nat.zero_add",
+        "Nat.zero_mul"
+      ],
+      "fact_id": "F:nat-one-mul",
+      "premise_declarations": [
+        "Nat.succ_mul",
+        "Nat.zero_add",
+        "Nat.zero_mul"
+      ],
+      "premise_fact_ids": [
+        "F:nat-succ-mul",
+        "F:nat-zero-add",
+        "F:nat-zero-mul"
+      ],
+      "proof_sha256": "e62ca6f5e210e063e1e1fa1373372e37d96c6e8002681193fde1bef53cde5d26",
+      "result": "accepted",
+      "terms_considered": 10,
+      "theorem": "Nat.one_mul",
+      "theorem_dependencies": [
+        "Nat.zero_add"
+      ]
+    },
+    {
+      "application_depth": 2,
+      "axiom_footprint": [],
+      "binders_used": 5,
+      "candidate_declarations": [
+        "False",
+        "Nat.monotone_of_le_succ"
+      ],
+      "fact_id": "F:logic-modus-tollens",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "proof_sha256": "aca5d0daebf51f59975fa310f9692ff400dcc0ef8405713bf3b52f353f5b2a2b",
+      "result": "accepted",
+      "terms_considered": 8,
+      "theorem": "mt",
+      "theorem_dependencies": []
+    },
+    {
+      "application_depth": 1,
+      "axiom_footprint": [],
+      "binders_used": 3,
+      "candidate_declarations": [
+        "False",
+        "Nat.monotone_of_le_succ"
+      ],
+      "fact_id": "F:logic-not-not-intro",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "proof_sha256": "8d24a6a4581c521f6fd00ad1eae1e25e040f78fa02b6ee9691933efaeffdf11f",
+      "result": "accepted",
+      "terms_considered": 5,
+      "theorem": "not_not_intro",
+      "theorem_dependencies": []
+    },
+    {
+      "application_depth": 3,
+      "axiom_footprint": [],
+      "binders_used": 3,
+      "candidate_declarations": [
+        "False",
+        "Nat.monotone_of_le_succ",
+        "not_not_intro"
+      ],
+      "fact_id": "F:logic-not-not-not",
+      "premise_declarations": [
+        "not_not_intro"
+      ],
+      "premise_fact_ids": [
+        "F:logic-not-not-intro"
+      ],
+      "proof_sha256": "67313ebfac345029af5709ca39ab818d166b1503d24826d0bf97341f0c9219d2",
+      "result": "accepted",
+      "terms_considered": 8,
+      "theorem": "not_not_not",
+      "theorem_dependencies": [
+        "not_not_intro"
+      ]
+    }
+  ],
+  "census": {
+    "accepted": 6,
+    "conversion_percent": 5.5,
+    "decline_reasons": {
+      "NoTypedApplication": 103
+    },
+    "declined": 103,
+    "population": 109
+  },
+  "kind": "axeyum-bounded-application-proof-isolated-census",
+  "outcomes": [
+    {
+      "candidate_declarations": [
+        "And",
+        "Nat.monotone_of_le_succ"
+      ],
+      "fact_id": "F:logic-and-left",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "And.left"
+    },
+    {
+      "candidate_declarations": [
+        "And",
+        "Nat.monotone_of_le_succ"
+      ],
+      "fact_id": "F:logic-and-right",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "And.right"
+    },
+    {
+      "candidate_declarations": [
+        "Bool",
+        "Bool.false",
+        "Bool.true",
+        "Eq",
+        "False",
+        "Nat.monotone_of_le_succ"
+      ],
+      "fact_id": "F:logic-bool-false-ne-true",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Bool.false_ne_true"
+    },
+    {
+      "candidate_declarations": [
+        "Bool",
+        "Bool.false",
+        "Bool.false_ne_true",
+        "Bool.true",
+        "Eq",
+        "False",
+        "Nat.monotone_of_le_succ"
+      ],
+      "fact_id": "F:logic-bool-true-ne-false",
+      "premise_declarations": [
+        "Bool.false_ne_true"
+      ],
+      "premise_fact_ids": [
+        "F:logic-bool-false-ne-true"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Bool.true_ne_false"
+    },
+    {
+      "candidate_declarations": [
+        "Bool",
+        "Bool.true",
+        "Decidable",
+        "Decidable.decide",
+        "Decidable.of_decide_eq_true",
+        "Eq",
+        "Iff",
+        "Nat.monotone_of_le_succ"
+      ],
+      "fact_id": "F:logic-decidable-decide-eq-true-iff",
+      "premise_declarations": [
+        "Decidable.of_decide_eq_true"
+      ],
+      "premise_fact_ids": [
+        "F:logic-decidable-of-decide-eq-true"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Decidable.decide_eq_true_iff"
+    },
+    {
+      "candidate_declarations": [
+        "Decidable",
+        "False",
+        "Nat.monotone_of_le_succ",
+        "Or"
+      ],
+      "fact_id": "F:logic-decidable-em",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Decidable.em"
+    },
+    {
+      "candidate_declarations": [
+        "Bool",
+        "Bool.false",
+        "Bool.true_ne_false",
+        "Decidable",
+        "Decidable.decide",
+        "Eq",
+        "False",
+        "Nat.monotone_of_le_succ"
+      ],
+      "fact_id": "F:logic-decidable-of-decide-eq-false",
+      "premise_declarations": [
+        "Bool.true_ne_false"
+      ],
+      "premise_fact_ids": [
+        "F:logic-bool-true-ne-false"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Decidable.of_decide_eq_false"
+    },
+    {
+      "candidate_declarations": [
+        "Bool",
+        "Bool.false_ne_true",
+        "Bool.true",
+        "Decidable",
+        "Decidable.decide",
+        "Eq",
+        "Nat.monotone_of_le_succ"
+      ],
+      "fact_id": "F:logic-decidable-of-decide-eq-true",
+      "premise_declarations": [
+        "Bool.false_ne_true"
+      ],
+      "premise_fact_ids": [
+        "F:logic-bool-false-ne-true"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Decidable.of_decide_eq_true"
+    },
+    {
+      "candidate_declarations": [
+        "Iff",
+        "Nat.monotone_of_le_succ"
+      ],
+      "fact_id": "F:logic-iff-mp",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Iff.mp"
+    },
+    {
+      "candidate_declarations": [
+        "Iff",
+        "Nat.monotone_of_le_succ"
+      ],
+      "fact_id": "F:logic-iff-mpr",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Iff.mpr"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.add",
+        "Nat.monotone_of_le_succ"
+      ],
+      "fact_id": "F:nat-add-assoc",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.add_assoc"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.add",
+        "Nat.monotone_of_le_succ",
+        "Nat.succ_add",
+        "Nat.zero_add"
+      ],
+      "fact_id": "F:nat-add-comm",
+      "premise_declarations": [
+        "Nat.succ_add",
+        "Nat.zero_add"
+      ],
+      "premise_fact_ids": [
+        "F:nat-succ-add",
+        "F:nat-zero-add"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.add_comm"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.add",
+        "Nat.monotone_of_le_succ"
+      ],
+      "fact_id": "F:nat-add-right-cancel",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.add_right_cancel"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.add",
+        "Nat.add_comm",
+        "Nat.add_right_cancel",
+        "Nat.le_add_right",
+        "Nat.monotone_of_le_succ",
+        "Nat.sub",
+        "Nat.sub_add_cancel"
+      ],
+      "fact_id": "F:nat-add-sub-cancel-left",
+      "premise_declarations": [
+        "Nat.add_comm",
+        "Nat.add_right_cancel",
+        "Nat.le_add_right",
+        "Nat.sub_add_cancel"
+      ],
+      "premise_fact_ids": [
+        "F:nat-add-comm",
+        "F:nat-add-right-cancel",
+        "F:nat-le-add-right",
+        "F:nat-sub-add-cancel"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.add_sub_cancel_left"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.add",
+        "Nat.monotone_of_le_succ",
+        "Nat.zero"
+      ],
+      "fact_id": "F:nat-add-zero",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.add_zero"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.choose",
+        "Nat.le",
+        "Nat.monotone_of_le_succ",
+        "Nat.pow",
+        "Nat.succ",
+        "Nat.zero"
+      ],
+      "fact_id": "F:nat-choose-le-two-pow",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.choose_le_two_pow"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.choose",
+        "Nat.choose_succ_succ",
+        "Nat.monotone_of_le_succ",
+        "Nat.succ",
+        "Nat.zero"
+      ],
+      "fact_id": "F:nat-choose-self",
+      "premise_declarations": [
+        "Nat.choose_succ_succ"
+      ],
+      "premise_fact_ids": [
+        "F:nat-choose-succ-succ"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.choose_self"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.add",
+        "Nat.choose",
+        "Nat.monotone_of_le_succ",
+        "Nat.succ"
+      ],
+      "fact_id": "F:nat-choose-succ-succ",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.choose_succ_succ"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.add_comm",
+        "Nat.add_sub_cancel_left",
+        "Nat.choose",
+        "Nat.choose_self",
+        "Nat.choose_succ_succ",
+        "Nat.choose_zero_right",
+        "Nat.le",
+        "Nat.le_antisymm",
+        "Nat.le_dest",
+        "Nat.le_of_succ_le_succ",
+        "Nat.lt_or_eq_of_le",
+        "Nat.monotone_of_le_succ",
+        "Nat.sub",
+        "Nat.sub_self",
+        "Nat.succ_add",
+        "Nat.succ_sub_succ",
+        "Nat.zero_le"
+      ],
+      "fact_id": "F:nat-choose-symm",
+      "premise_declarations": [
+        "Nat.add_comm",
+        "Nat.add_sub_cancel_left",
+        "Nat.choose_self",
+        "Nat.choose_succ_succ",
+        "Nat.choose_zero_right",
+        "Nat.le_antisymm",
+        "Nat.le_dest",
+        "Nat.le_of_succ_le_succ",
+        "Nat.lt_or_eq_of_le",
+        "Nat.sub_self",
+        "Nat.succ_add",
+        "Nat.succ_sub_succ",
+        "Nat.zero_le"
+      ],
+      "premise_fact_ids": [
+        "F:nat-add-comm",
+        "F:nat-add-sub-cancel-left",
+        "F:nat-choose-self",
+        "F:nat-choose-succ-succ",
+        "F:nat-choose-zero-right",
+        "F:nat-le-antisymm",
+        "F:nat-le-dest",
+        "F:nat-le-of-succ-le-succ",
+        "F:nat-lt-or-eq-of-le",
+        "F:nat-sub-self",
+        "F:nat-succ-add",
+        "F:nat-succ-sub-succ",
+        "F:nat-zero-le"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.choose_symm"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.choose",
+        "Nat.monotone_of_le_succ",
+        "Nat.succ",
+        "Nat.zero"
+      ],
+      "fact_id": "F:nat-choose-zero-right",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.choose_zero_right"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.add_assoc",
+        "Nat.add_comm",
+        "Nat.add_zero",
+        "Nat.bezout",
+        "Nat.dvd_add",
+        "Nat.dvd_add_right_cancel_of_pos",
+        "Nat.dvd_mul_right_of_dvd",
+        "Nat.eq_one_of_dvd_one",
+        "Nat.gcd",
+        "Nat.gcd_dvd_left",
+        "Nat.gcd_dvd_right",
+        "Nat.le_succ_succ",
+        "Nat.monotone_of_le_succ",
+        "Nat.not_succ_le_zero",
+        "Nat.succ",
+        "Nat.zero",
+        "Nat.zero_le",
+        "Nat.zero_mul"
+      ],
+      "fact_id": "F:nat-coprime-of-bezout-one",
+      "premise_declarations": [
+        "Nat.add_assoc",
+        "Nat.add_comm",
+        "Nat.add_zero",
+        "Nat.dvd_add",
+        "Nat.dvd_add_right_cancel_of_pos",
+        "Nat.dvd_mul_right_of_dvd",
+        "Nat.eq_one_of_dvd_one",
+        "Nat.gcd_dvd_left",
+        "Nat.gcd_dvd_right",
+        "Nat.le_succ_succ",
+        "Nat.not_succ_le_zero",
+        "Nat.zero_le",
+        "Nat.zero_mul"
+      ],
+      "premise_fact_ids": [
+        "F:nat-add-assoc",
+        "F:nat-add-comm",
+        "F:nat-add-zero",
+        "F:nat-dvd-add",
+        "F:nat-dvd-add-right-cancel-of-pos",
+        "F:nat-dvd-mul-right-of-dvd",
+        "F:nat-eq-one-of-dvd-one",
+        "F:nat-gcd-dvd-left",
+        "F:nat-gcd-dvd-right",
+        "F:nat-le-succ-succ",
+        "F:nat-not-succ-le-zero",
+        "F:nat-zero-le",
+        "F:nat-zero-mul"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.coprime_of_bezout_one"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.div",
+        "Nat.divMod",
+        "Nat.le_of_succ_le_succ",
+        "Nat.le_succ_succ",
+        "Nat.lt_or_eq_of_le",
+        "Nat.mod",
+        "Nat.monotone_of_le_succ",
+        "Nat.succ",
+        "Nat.zero_le"
+      ],
+      "fact_id": "F:nat-div-mod-exec",
+      "premise_declarations": [
+        "Nat.le_of_succ_le_succ",
+        "Nat.le_succ_succ",
+        "Nat.lt_or_eq_of_le",
+        "Nat.zero_le"
+      ],
+      "premise_fact_ids": [
+        "F:nat-le-of-succ-le-succ",
+        "F:nat-le-succ-succ",
+        "F:nat-lt-or-eq-of-le",
+        "F:nat-zero-le"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.div_mod_exec"
+    },
+    {
+      "candidate_declarations": [
+        "Exists",
+        "Nat",
+        "Nat.divMod",
+        "Nat.le",
+        "Nat.lt_or_eq_of_le",
+        "Nat.monotone_of_le_succ",
+        "Nat.succ",
+        "Nat.zero"
+      ],
+      "fact_id": "F:nat-div-mod-exists",
+      "premise_declarations": [
+        "Nat.lt_or_eq_of_le"
+      ],
+      "premise_fact_ids": [
+        "F:nat-lt-or-eq-of-le"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.div_mod_exists"
+    },
+    {
+      "candidate_declarations": [
+        "And",
+        "Eq",
+        "Nat",
+        "Nat.divMod",
+        "Nat.div_mod_exists",
+        "Nat.le_add_right",
+        "Nat.le_total",
+        "Nat.lt_irrefl",
+        "Nat.lt_or_eq_of_le",
+        "Nat.monotone_of_le_succ",
+        "Nat.mul_le_mul_left"
+      ],
+      "fact_id": "F:nat-div-mod-unique",
+      "premise_declarations": [
+        "Nat.div_mod_exists",
+        "Nat.le_add_right",
+        "Nat.le_total",
+        "Nat.lt_irrefl",
+        "Nat.lt_or_eq_of_le",
+        "Nat.mul_le_mul_left"
+      ],
+      "premise_fact_ids": [
+        "F:nat-div-mod-exists",
+        "F:nat-le-add-right",
+        "F:nat-le-total",
+        "F:nat-lt-irrefl",
+        "F:nat-lt-or-eq-of-le",
+        "F:nat-mul-le-mul-left"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.div_mod_unique"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.add",
+        "Nat.dvd",
+        "Nat.left_distrib",
+        "Nat.monotone_of_le_succ"
+      ],
+      "fact_id": "F:nat-dvd-add",
+      "premise_declarations": [
+        "Nat.left_distrib"
+      ],
+      "premise_fact_ids": [
+        "F:nat-left-distrib"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.dvd_add"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.add",
+        "Nat.add_comm",
+        "Nat.add_right_cancel",
+        "Nat.dvd",
+        "Nat.le",
+        "Nat.le_add_right",
+        "Nat.monotone_of_le_succ",
+        "Nat.sub_add_cancel",
+        "Nat.succ",
+        "Nat.zero"
+      ],
+      "fact_id": "F:nat-dvd-add-right-cancel-of-pos",
+      "premise_declarations": [
+        "Nat.add_comm",
+        "Nat.add_right_cancel",
+        "Nat.le_add_right",
+        "Nat.sub_add_cancel"
+      ],
+      "premise_fact_ids": [
+        "F:nat-add-comm",
+        "F:nat-add-right-cancel",
+        "F:nat-le-add-right",
+        "F:nat-sub-add-cancel"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.dvd_add_right_cancel_of_pos"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.dvd",
+        "Nat.dvd_mul",
+        "Nat.dvd_mul_right_of_dvd",
+        "Nat.factorial",
+        "Nat.le",
+        "Nat.le_of_succ_le_succ",
+        "Nat.le_trans",
+        "Nat.lt_or_eq_of_le",
+        "Nat.monotone_of_le_succ",
+        "Nat.mul_comm",
+        "Nat.not_succ_le_zero",
+        "Nat.succ",
+        "Nat.zero"
+      ],
+      "fact_id": "F:nat-dvd-factorial-of-le",
+      "premise_declarations": [
+        "Nat.dvd_mul",
+        "Nat.dvd_mul_right_of_dvd",
+        "Nat.le_of_succ_le_succ",
+        "Nat.le_trans",
+        "Nat.lt_or_eq_of_le",
+        "Nat.mul_comm",
+        "Nat.not_succ_le_zero"
+      ],
+      "premise_fact_ids": [
+        "F:nat-dvd-mul",
+        "F:nat-dvd-mul-right-of-dvd",
+        "F:nat-le-of-succ-le-succ",
+        "F:nat-le-trans",
+        "F:nat-lt-or-eq-of-le",
+        "F:nat-mul-comm",
+        "F:nat-not-succ-le-zero"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.dvd_factorial_of_le"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.dvd",
+        "Nat.dvd_mod_iff",
+        "Nat.gcd",
+        "Nat.gcd_succ",
+        "Nat.gcd_zero_left",
+        "Nat.le_succ_succ",
+        "Nat.mod_lt",
+        "Nat.monotone_of_le_succ",
+        "Nat.zero_le"
+      ],
+      "fact_id": "F:nat-dvd-gcd",
+      "premise_declarations": [
+        "Nat.dvd_mod_iff",
+        "Nat.gcd_succ",
+        "Nat.gcd_zero_left",
+        "Nat.le_succ_succ",
+        "Nat.mod_lt",
+        "Nat.zero_le"
+      ],
+      "premise_fact_ids": [
+        "F:nat-dvd-mod-iff",
+        "F:nat-gcd-succ",
+        "F:nat-gcd-zero-left",
+        "F:nat-le-succ-succ",
+        "F:nat-mod-lt",
+        "F:nat-zero-le"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.dvd_gcd"
+    },
+    {
+      "candidate_declarations": [
+        "And",
+        "Iff",
+        "Nat",
+        "Nat.dvd",
+        "Nat.dvd_gcd",
+        "Nat.dvd_trans",
+        "Nat.gcd",
+        "Nat.gcd_dvd_left",
+        "Nat.gcd_dvd_right",
+        "Nat.monotone_of_le_succ"
+      ],
+      "fact_id": "F:nat-dvd-gcd-iff",
+      "premise_declarations": [
+        "Nat.dvd_gcd",
+        "Nat.dvd_trans",
+        "Nat.gcd_dvd_left",
+        "Nat.gcd_dvd_right"
+      ],
+      "premise_fact_ids": [
+        "F:nat-dvd-gcd",
+        "F:nat-dvd-trans",
+        "F:nat-gcd-dvd-left",
+        "F:nat-gcd-dvd-right"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.dvd_gcd_iff"
+    },
+    {
+      "candidate_declarations": [
+        "Iff",
+        "Nat",
+        "Nat.div_mod_exec",
+        "Nat.dvd",
+        "Nat.dvd_mul_right_of_dvd",
+        "Nat.mod",
+        "Nat.monotone_of_le_succ",
+        "Nat.succ"
+      ],
+      "fact_id": "F:nat-dvd-mod-iff",
+      "premise_declarations": [
+        "Nat.div_mod_exec",
+        "Nat.dvd_mul_right_of_dvd"
+      ],
+      "premise_fact_ids": [
+        "F:nat-div-mod-exec",
+        "F:nat-dvd-mul-right-of-dvd"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.dvd_mod_iff"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.dvd",
+        "Nat.monotone_of_le_succ",
+        "Nat.mul"
+      ],
+      "fact_id": "F:nat-dvd-mul",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.dvd_mul"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.dvd",
+        "Nat.dvd_mul",
+        "Nat.dvd_trans",
+        "Nat.monotone_of_le_succ",
+        "Nat.mul"
+      ],
+      "fact_id": "F:nat-dvd-mul-right-of-dvd",
+      "premise_declarations": [
+        "Nat.dvd_mul",
+        "Nat.dvd_trans"
+      ],
+      "premise_fact_ids": [
+        "F:nat-dvd-mul",
+        "F:nat-dvd-trans"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.dvd_mul_right_of_dvd"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.dvd",
+        "Nat.monotone_of_le_succ",
+        "Nat.mul_one"
+      ],
+      "fact_id": "F:nat-dvd-refl",
+      "premise_declarations": [
+        "Nat.mul_one"
+      ],
+      "premise_fact_ids": [
+        "F:nat-mul-one"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.dvd_refl"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.dvd",
+        "Nat.monotone_of_le_succ",
+        "Nat.mul_assoc"
+      ],
+      "fact_id": "F:nat-dvd-trans",
+      "premise_declarations": [
+        "Nat.mul_assoc"
+      ],
+      "premise_fact_ids": [
+        "F:nat-mul-assoc"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.dvd_trans"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.dvd",
+        "Nat.le_succ_succ",
+        "Nat.monotone_of_le_succ",
+        "Nat.not_dvd_one_of_two_le",
+        "Nat.not_succ_le_zero",
+        "Nat.succ",
+        "Nat.zero",
+        "Nat.zero_le",
+        "Nat.zero_mul"
+      ],
+      "fact_id": "F:nat-eq-one-of-dvd-one",
+      "premise_declarations": [
+        "Nat.le_succ_succ",
+        "Nat.not_dvd_one_of_two_le",
+        "Nat.not_succ_le_zero",
+        "Nat.zero_le",
+        "Nat.zero_mul"
+      ],
+      "premise_fact_ids": [
+        "F:nat-le-succ-succ",
+        "F:nat-not-dvd-one-of-two-le",
+        "F:nat-not-succ-le-zero",
+        "F:nat-zero-le",
+        "F:nat-zero-mul"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.eq_one_of_dvd_one"
+    },
+    {
+      "candidate_declarations": [
+        "And",
+        "Eq",
+        "Nat",
+        "Nat.add_assoc",
+        "Nat.add_comm",
+        "Nat.dvd",
+        "Nat.dvd_add",
+        "Nat.dvd_add_right_cancel_of_pos",
+        "Nat.dvd_gcd_iff",
+        "Nat.dvd_mul",
+        "Nat.dvd_mul_right_of_dvd",
+        "Nat.gcd_bezout",
+        "Nat.gcd_dvd_left",
+        "Nat.gcd_dvd_right",
+        "Nat.le",
+        "Nat.le_add_right",
+        "Nat.le_trans",
+        "Nat.monotone_of_le_succ",
+        "Nat.mul",
+        "Nat.mul_assoc",
+        "Nat.mul_comm",
+        "Nat.one_mul",
+        "Nat.right_distrib",
+        "Nat.succ",
+        "Nat.zero",
+        "Or"
+      ],
+      "fact_id": "F:nat-euclid-lemma",
+      "premise_declarations": [
+        "Nat.add_assoc",
+        "Nat.add_comm",
+        "Nat.dvd_add",
+        "Nat.dvd_add_right_cancel_of_pos",
+        "Nat.dvd_gcd_iff",
+        "Nat.dvd_mul",
+        "Nat.dvd_mul_right_of_dvd",
+        "Nat.gcd_bezout",
+        "Nat.gcd_dvd_left",
+        "Nat.gcd_dvd_right",
+        "Nat.le_add_right",
+        "Nat.le_trans",
+        "Nat.mul_assoc",
+        "Nat.mul_comm",
+        "Nat.one_mul",
+        "Nat.right_distrib"
+      ],
+      "premise_fact_ids": [
+        "F:nat-add-assoc",
+        "F:nat-add-comm",
+        "F:nat-dvd-add",
+        "F:nat-dvd-add-right-cancel-of-pos",
+        "F:nat-dvd-gcd-iff",
+        "F:nat-dvd-mul",
+        "F:nat-dvd-mul-right-of-dvd",
+        "F:nat-gcd-bezout",
+        "F:nat-gcd-dvd-left",
+        "F:nat-gcd-dvd-right",
+        "F:nat-le-add-right",
+        "F:nat-le-trans",
+        "F:nat-mul-assoc",
+        "F:nat-mul-comm",
+        "F:nat-one-mul",
+        "F:nat-right-distrib"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.euclid_lemma"
+    },
+    {
+      "candidate_declarations": [
+        "And",
+        "Eq",
+        "Exists",
+        "Nat",
+        "Nat.div_mod_exists",
+        "Nat.dvd",
+        "Nat.dvd_add",
+        "Nat.dvd_refl",
+        "Nat.dvd_trans",
+        "Nat.le",
+        "Nat.le_of_dvd",
+        "Nat.le_succ_succ",
+        "Nat.le_trans",
+        "Nat.least_divisor_search",
+        "Nat.lt_or_eq_of_le",
+        "Nat.monotone_of_le_succ",
+        "Nat.one_le_of_dvd_pos",
+        "Nat.succ",
+        "Nat.zero",
+        "Nat.zero_le",
+        "Or"
+      ],
+      "fact_id": "F:nat-exists-prime-dvd",
+      "premise_declarations": [
+        "Nat.div_mod_exists",
+        "Nat.dvd_add",
+        "Nat.dvd_refl",
+        "Nat.dvd_trans",
+        "Nat.le_of_dvd",
+        "Nat.le_succ_succ",
+        "Nat.le_trans",
+        "Nat.least_divisor_search",
+        "Nat.lt_or_eq_of_le",
+        "Nat.one_le_of_dvd_pos",
+        "Nat.zero_le"
+      ],
+      "premise_fact_ids": [
+        "F:nat-div-mod-exists",
+        "F:nat-dvd-add",
+        "F:nat-dvd-refl",
+        "F:nat-dvd-trans",
+        "F:nat-le-of-dvd",
+        "F:nat-le-succ-succ",
+        "F:nat-le-trans",
+        "F:nat-least-divisor-search",
+        "F:nat-lt-or-eq-of-le",
+        "F:nat-one-le-of-dvd-pos",
+        "F:nat-zero-le"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.exists_prime_dvd"
+    },
+    {
+      "candidate_declarations": [
+        "And",
+        "Eq",
+        "Exists",
+        "Nat",
+        "Nat.dvd",
+        "Nat.dvd_add",
+        "Nat.dvd_add_right_cancel_of_pos",
+        "Nat.dvd_factorial_of_le",
+        "Nat.exists_prime_dvd",
+        "Nat.le",
+        "Nat.le_add_right",
+        "Nat.le_total",
+        "Nat.le_trans",
+        "Nat.lt",
+        "Nat.lt_or_eq_of_le",
+        "Nat.monotone_of_le_succ",
+        "Nat.not_dvd_one_of_two_le",
+        "Nat.one_le_factorial",
+        "Nat.succ",
+        "Nat.zero",
+        "Or"
+      ],
+      "fact_id": "F:nat-exists-prime-gt",
+      "premise_declarations": [
+        "Nat.dvd_add",
+        "Nat.dvd_add_right_cancel_of_pos",
+        "Nat.dvd_factorial_of_le",
+        "Nat.exists_prime_dvd",
+        "Nat.le_add_right",
+        "Nat.le_total",
+        "Nat.le_trans",
+        "Nat.lt_or_eq_of_le",
+        "Nat.not_dvd_one_of_two_le",
+        "Nat.one_le_factorial"
+      ],
+      "premise_fact_ids": [
+        "F:nat-dvd-add",
+        "F:nat-dvd-add-right-cancel-of-pos",
+        "F:nat-dvd-factorial-of-le",
+        "F:nat-exists-prime-dvd",
+        "F:nat-le-add-right",
+        "F:nat-le-total",
+        "F:nat-le-trans",
+        "F:nat-lt-or-eq-of-le",
+        "F:nat-not-dvd-one-of-two-le",
+        "F:nat-one-le-factorial"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.exists_prime_gt"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.fib",
+        "Nat.le",
+        "Nat.monotone_of_le_succ",
+        "Nat.succ"
+      ],
+      "fact_id": "F:ml430-nat-fib-le-fib-succ-d1ef4a3d",
+      "premise_declarations": [],
+      "premise_fact_ids": [
+        "F:ml430-nat-fib-add-two-b86e0c82"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.fib_le_succ"
+    },
+    {
+      "application_depth": 5,
+      "axiom_footprint": [],
+      "binders_used": 3,
+      "candidate_declarations": [
+        "Nat",
+        "Nat.fib",
+        "Nat.fib_le_succ",
+        "Nat.le",
+        "Nat.monotone_of_le_succ"
+      ],
+      "fact_id": "F:ml430-nat-fib-mono-cc6afe09",
+      "premise_declarations": [
+        "Nat.fib_le_succ"
+      ],
+      "premise_fact_ids": [
+        "F:ml430-nat-fib-le-fib-succ-d1ef4a3d"
+      ],
+      "proof_sha256": "496e9a709ba3de7dd459c01a1ad297769ee3c4461dbd7a4c8d924864424cba04",
+      "result": "accepted",
+      "terms_considered": 119,
+      "theorem": "Nat.fib_mono",
+      "theorem_dependencies": [
+        "Nat.fib_le_succ",
+        "Nat.monotone_of_le_succ"
+      ]
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.add_assoc",
+        "Nat.add_comm",
+        "Nat.bezout",
+        "Nat.div_mod_exec",
+        "Nat.gcd",
+        "Nat.gcd_succ",
+        "Nat.gcd_zero_left",
+        "Nat.le_succ_succ",
+        "Nat.left_distrib",
+        "Nat.mod_lt",
+        "Nat.monotone_of_le_succ",
+        "Nat.mul_assoc",
+        "Nat.mul_one",
+        "Nat.right_distrib",
+        "Nat.zero_add",
+        "Nat.zero_le"
+      ],
+      "fact_id": "F:nat-gcd-bezout",
+      "premise_declarations": [
+        "Nat.add_assoc",
+        "Nat.add_comm",
+        "Nat.div_mod_exec",
+        "Nat.gcd_succ",
+        "Nat.gcd_zero_left",
+        "Nat.le_succ_succ",
+        "Nat.left_distrib",
+        "Nat.mod_lt",
+        "Nat.mul_assoc",
+        "Nat.mul_one",
+        "Nat.right_distrib",
+        "Nat.zero_add",
+        "Nat.zero_le"
+      ],
+      "premise_fact_ids": [
+        "F:nat-add-assoc",
+        "F:nat-add-comm",
+        "F:nat-div-mod-exec",
+        "F:nat-gcd-succ",
+        "F:nat-gcd-zero-left",
+        "F:nat-le-succ-succ",
+        "F:nat-left-distrib",
+        "F:nat-mod-lt",
+        "F:nat-mul-assoc",
+        "F:nat-mul-one",
+        "F:nat-right-distrib",
+        "F:nat-zero-add",
+        "F:nat-zero-le"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.gcd_bezout"
+    },
+    {
+      "candidate_declarations": [
+        "And",
+        "Nat",
+        "Nat.dvd",
+        "Nat.dvd_mod_iff",
+        "Nat.dvd_refl",
+        "Nat.gcd",
+        "Nat.gcd_succ",
+        "Nat.gcd_zero_left",
+        "Nat.le_succ_succ",
+        "Nat.mod_lt",
+        "Nat.monotone_of_le_succ",
+        "Nat.zero_le"
+      ],
+      "fact_id": "F:nat-gcd-dvd",
+      "premise_declarations": [
+        "Nat.dvd_mod_iff",
+        "Nat.dvd_refl",
+        "Nat.gcd_succ",
+        "Nat.gcd_zero_left",
+        "Nat.le_succ_succ",
+        "Nat.mod_lt",
+        "Nat.zero_le"
+      ],
+      "premise_fact_ids": [
+        "F:nat-dvd-mod-iff",
+        "F:nat-dvd-refl",
+        "F:nat-gcd-succ",
+        "F:nat-gcd-zero-left",
+        "F:nat-le-succ-succ",
+        "F:nat-mod-lt",
+        "F:nat-zero-le"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.gcd_dvd"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.dvd",
+        "Nat.gcd",
+        "Nat.gcd_dvd",
+        "Nat.monotone_of_le_succ"
+      ],
+      "fact_id": "F:nat-gcd-dvd-left",
+      "premise_declarations": [
+        "Nat.gcd_dvd"
+      ],
+      "premise_fact_ids": [
+        "F:nat-gcd-dvd"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.gcd_dvd_left"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.dvd",
+        "Nat.gcd",
+        "Nat.gcd_dvd",
+        "Nat.monotone_of_le_succ"
+      ],
+      "fact_id": "F:nat-gcd-dvd-right",
+      "premise_declarations": [
+        "Nat.gcd_dvd"
+      ],
+      "premise_fact_ids": [
+        "F:nat-gcd-dvd"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.gcd_dvd_right"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.dvd_mul_right_of_dvd",
+        "Nat.gcd",
+        "Nat.gcd_dvd_left",
+        "Nat.lcm",
+        "Nat.le_succ_succ",
+        "Nat.monotone_of_le_succ",
+        "Nat.mul",
+        "Nat.mul_zero",
+        "Nat.one_le_of_dvd_pos",
+        "Nat.zero_le",
+        "Nat.zero_mul"
+      ],
+      "fact_id": "F:nat-gcd-mul-lcm",
+      "premise_declarations": [
+        "Nat.dvd_mul_right_of_dvd",
+        "Nat.gcd_dvd_left",
+        "Nat.le_succ_succ",
+        "Nat.mul_zero",
+        "Nat.one_le_of_dvd_pos",
+        "Nat.zero_le",
+        "Nat.zero_mul"
+      ],
+      "premise_fact_ids": [
+        "F:nat-dvd-mul-right-of-dvd",
+        "F:nat-gcd-dvd-left",
+        "F:nat-le-succ-succ",
+        "F:nat-mul-zero",
+        "F:nat-one-le-of-dvd-pos",
+        "F:nat-zero-le",
+        "F:nat-zero-mul"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.gcd_mul_lcm"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.gcd",
+        "Nat.le_succ_succ",
+        "Nat.mod",
+        "Nat.mod_lt",
+        "Nat.monotone_of_le_succ",
+        "Nat.succ",
+        "Nat.zero_le"
+      ],
+      "fact_id": "F:nat-gcd-succ",
+      "premise_declarations": [
+        "Nat.le_succ_succ",
+        "Nat.mod_lt",
+        "Nat.zero_le"
+      ],
+      "premise_fact_ids": [
+        "F:nat-le-succ-succ",
+        "F:nat-mod-lt",
+        "F:nat-zero-le"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.gcd_succ"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.gcd",
+        "Nat.le_succ_succ",
+        "Nat.mod_lt",
+        "Nat.monotone_of_le_succ",
+        "Nat.zero",
+        "Nat.zero_le"
+      ],
+      "fact_id": "F:nat-gcd-zero-left",
+      "premise_declarations": [
+        "Nat.le_succ_succ",
+        "Nat.mod_lt",
+        "Nat.zero_le"
+      ],
+      "premise_fact_ids": [
+        "F:nat-le-succ-succ",
+        "F:nat-mod-lt",
+        "F:nat-zero-le"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.gcd_zero_left"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.add",
+        "Nat.le",
+        "Nat.monotone_of_le_succ"
+      ],
+      "fact_id": "F:nat-le-add-right",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.le_add_right"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.le",
+        "Nat.le_of_succ_le_succ",
+        "Nat.monotone_of_le_succ",
+        "Nat.not_succ_le_zero"
+      ],
+      "fact_id": "F:nat-le-antisymm",
+      "premise_declarations": [
+        "Nat.le_of_succ_le_succ",
+        "Nat.not_succ_le_zero"
+      ],
+      "premise_fact_ids": [
+        "F:nat-le-of-succ-le-succ",
+        "F:nat-not-succ-le-zero"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.le_antisymm"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Exists",
+        "Nat",
+        "Nat.add",
+        "Nat.le",
+        "Nat.monotone_of_le_succ"
+      ],
+      "fact_id": "F:nat-le-dest",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.le_dest"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.dvd",
+        "Nat.le",
+        "Nat.monotone_of_le_succ",
+        "Nat.mul_le_mul_left",
+        "Nat.mul_one",
+        "Nat.succ",
+        "Nat.zero"
+      ],
+      "fact_id": "F:nat-le-of-dvd",
+      "premise_declarations": [
+        "Nat.mul_le_mul_left",
+        "Nat.mul_one"
+      ],
+      "premise_fact_ids": [
+        "F:nat-mul-le-mul-left",
+        "F:nat-mul-one"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.le_of_dvd"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.le",
+        "Nat.le_trans",
+        "Nat.monotone_of_le_succ",
+        "Nat.succ"
+      ],
+      "fact_id": "F:nat-le-of-succ-le-succ",
+      "premise_declarations": [
+        "Nat.le_trans"
+      ],
+      "premise_fact_ids": [
+        "F:nat-le-trans"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.le_of_succ_le_succ"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.le",
+        "Nat.monotone_of_le_succ",
+        "Nat.succ"
+      ],
+      "fact_id": "F:nat-le-succ-succ",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.le_succ_succ"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.le",
+        "Nat.le_succ_succ",
+        "Nat.monotone_of_le_succ",
+        "Nat.zero_le",
+        "Or"
+      ],
+      "fact_id": "F:nat-le-total",
+      "premise_declarations": [
+        "Nat.le_succ_succ",
+        "Nat.zero_le"
+      ],
+      "premise_fact_ids": [
+        "F:nat-le-succ-succ",
+        "F:nat-zero-le"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.le_total"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.le",
+        "Nat.monotone_of_le_succ"
+      ],
+      "fact_id": "F:nat-le-trans",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.le_trans"
+    },
+    {
+      "candidate_declarations": [
+        "And",
+        "Exists",
+        "Nat",
+        "Nat.div_mod_exec",
+        "Nat.dvd",
+        "Nat.le",
+        "Nat.le_of_succ_le_succ",
+        "Nat.le_trans",
+        "Nat.lt",
+        "Nat.lt_or_eq_of_le",
+        "Nat.monotone_of_le_succ",
+        "Nat.not_succ_le_zero",
+        "Nat.succ",
+        "Nat.zero",
+        "Not",
+        "Or"
+      ],
+      "fact_id": "F:nat-least-divisor-search",
+      "premise_declarations": [
+        "Nat.div_mod_exec",
+        "Nat.le_of_succ_le_succ",
+        "Nat.le_trans",
+        "Nat.lt_or_eq_of_le",
+        "Nat.not_succ_le_zero"
+      ],
+      "premise_fact_ids": [
+        "F:nat-div-mod-exec",
+        "F:nat-le-of-succ-le-succ",
+        "F:nat-le-trans",
+        "F:nat-lt-or-eq-of-le",
+        "F:nat-not-succ-le-zero"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.least_divisor_search"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.add",
+        "Nat.add_assoc",
+        "Nat.monotone_of_le_succ",
+        "Nat.mul"
+      ],
+      "fact_id": "F:nat-left-distrib",
+      "premise_declarations": [
+        "Nat.add_assoc"
+      ],
+      "premise_fact_ids": [
+        "F:nat-add-assoc"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.left_distrib"
+    },
+    {
+      "candidate_declarations": [
+        "False",
+        "Nat",
+        "Nat.le_of_succ_le_succ",
+        "Nat.lt",
+        "Nat.monotone_of_le_succ",
+        "Nat.not_succ_le_zero"
+      ],
+      "fact_id": "F:nat-lt-irrefl",
+      "premise_declarations": [
+        "Nat.le_of_succ_le_succ",
+        "Nat.not_succ_le_zero"
+      ],
+      "premise_fact_ids": [
+        "F:nat-le-of-succ-le-succ",
+        "F:nat-not-succ-le-zero"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.lt_irrefl"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.le",
+        "Nat.le_succ_succ",
+        "Nat.lt",
+        "Nat.monotone_of_le_succ",
+        "Or"
+      ],
+      "fact_id": "F:nat-lt-or-eq-of-le",
+      "premise_declarations": [
+        "Nat.le_succ_succ"
+      ],
+      "premise_fact_ids": [
+        "F:nat-le-succ-succ"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.lt_or_eq_of_le"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.equivalenceOn",
+        "Nat.modEq",
+        "Nat.mod_eq_refl",
+        "Nat.mod_eq_trans",
+        "Nat.monotone_of_le_succ"
+      ],
+      "fact_id": "F:nat-modeq-equivalence-on",
+      "premise_declarations": [
+        "Nat.mod_eq_refl",
+        "Nat.mod_eq_trans"
+      ],
+      "premise_fact_ids": [
+        "F:nat-mod-eq-refl",
+        "F:nat-mod-eq-trans"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.modEq_equivalence_on"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.add",
+        "Nat.add_comm",
+        "Nat.modEq",
+        "Nat.monotone_of_le_succ"
+      ],
+      "fact_id": "F:nat-mod-eq-add-right",
+      "premise_declarations": [
+        "Nat.add_comm"
+      ],
+      "premise_fact_ids": [
+        "F:nat-add-comm"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.mod_eq_add_right"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.modEq",
+        "Nat.mod_eq_mul_left",
+        "Nat.mod_eq_mul_right",
+        "Nat.mod_eq_trans",
+        "Nat.monotone_of_le_succ",
+        "Nat.mul"
+      ],
+      "fact_id": "F:nat-mod-eq-mul",
+      "premise_declarations": [
+        "Nat.mod_eq_mul_left",
+        "Nat.mod_eq_mul_right",
+        "Nat.mod_eq_trans"
+      ],
+      "premise_fact_ids": [
+        "F:nat-mod-eq-mul-left",
+        "F:nat-mod-eq-mul-right",
+        "F:nat-mod-eq-trans"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.mod_eq_mul"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.left_distrib",
+        "Nat.modEq",
+        "Nat.monotone_of_le_succ",
+        "Nat.mul",
+        "Nat.mul_assoc",
+        "Nat.mul_comm"
+      ],
+      "fact_id": "F:nat-mod-eq-mul-left",
+      "premise_declarations": [
+        "Nat.left_distrib",
+        "Nat.mul_assoc",
+        "Nat.mul_comm"
+      ],
+      "premise_fact_ids": [
+        "F:nat-left-distrib",
+        "F:nat-mul-assoc",
+        "F:nat-mul-comm"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.mod_eq_mul_left"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.modEq",
+        "Nat.mod_eq_mul_left",
+        "Nat.monotone_of_le_succ",
+        "Nat.mul",
+        "Nat.mul_comm"
+      ],
+      "fact_id": "F:nat-mod-eq-mul-right",
+      "premise_declarations": [
+        "Nat.mod_eq_mul_left",
+        "Nat.mul_comm"
+      ],
+      "premise_fact_ids": [
+        "F:nat-mod-eq-mul-left",
+        "F:nat-mul-comm"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.mod_eq_mul_right"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.modEq",
+        "Nat.monotone_of_le_succ"
+      ],
+      "fact_id": "F:nat-mod-eq-refl",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.mod_eq_refl"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.add_assoc",
+        "Nat.add_comm",
+        "Nat.left_distrib",
+        "Nat.modEq",
+        "Nat.monotone_of_le_succ"
+      ],
+      "fact_id": "F:nat-mod-eq-trans",
+      "premise_declarations": [
+        "Nat.add_assoc",
+        "Nat.add_comm",
+        "Nat.left_distrib"
+      ],
+      "premise_fact_ids": [
+        "F:nat-add-assoc",
+        "F:nat-add-comm",
+        "F:nat-left-distrib"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.mod_eq_trans"
+    },
+    {
+      "candidate_declarations": [
+        "Iff",
+        "Nat",
+        "Nat.add_zero",
+        "Nat.dvd",
+        "Nat.le_succ_succ",
+        "Nat.modEq",
+        "Nat.mod_eq_zero_of_dvd",
+        "Nat.monotone_of_le_succ",
+        "Nat.zero",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "Nat.zero_mul"
+      ],
+      "fact_id": "F:nat-mod-eq-zero-iff-dvd",
+      "premise_declarations": [
+        "Nat.add_zero",
+        "Nat.le_succ_succ",
+        "Nat.mod_eq_zero_of_dvd",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "Nat.zero_mul"
+      ],
+      "premise_fact_ids": [
+        "F:nat-add-zero",
+        "F:nat-le-succ-succ",
+        "F:nat-mod-eq-zero-of-dvd",
+        "F:nat-zero-add",
+        "F:nat-zero-le",
+        "F:nat-zero-mul"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.mod_eq_zero_iff_dvd"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.add_zero",
+        "Nat.dvd",
+        "Nat.modEq",
+        "Nat.monotone_of_le_succ",
+        "Nat.mul_zero",
+        "Nat.zero",
+        "Nat.zero_add"
+      ],
+      "fact_id": "F:nat-mod-eq-zero-of-dvd",
+      "premise_declarations": [
+        "Nat.add_zero",
+        "Nat.mul_zero",
+        "Nat.zero_add"
+      ],
+      "premise_fact_ids": [
+        "F:nat-add-zero",
+        "F:nat-mul-zero",
+        "F:nat-zero-add"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.mod_eq_zero_of_dvd"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.div_mod_exec",
+        "Nat.lt",
+        "Nat.mod",
+        "Nat.monotone_of_le_succ",
+        "Nat.not_succ_le_zero",
+        "Nat.zero"
+      ],
+      "fact_id": "F:nat-mod-lt",
+      "premise_declarations": [
+        "Nat.div_mod_exec",
+        "Nat.not_succ_le_zero"
+      ],
+      "premise_fact_ids": [
+        "F:nat-div-mod-exec",
+        "F:nat-not-succ-le-zero"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.mod_lt"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.left_distrib",
+        "Nat.monotone_of_le_succ",
+        "Nat.mul"
+      ],
+      "fact_id": "F:nat-mul-assoc",
+      "premise_declarations": [
+        "Nat.left_distrib"
+      ],
+      "premise_fact_ids": [
+        "F:nat-left-distrib"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.mul_assoc"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.monotone_of_le_succ",
+        "Nat.mul",
+        "Nat.succ_mul",
+        "Nat.zero_mul"
+      ],
+      "fact_id": "F:nat-mul-comm",
+      "premise_declarations": [
+        "Nat.succ_mul",
+        "Nat.zero_mul"
+      ],
+      "premise_fact_ids": [
+        "F:nat-succ-mul",
+        "F:nat-zero-mul"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.mul_comm"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.le",
+        "Nat.le_add_right",
+        "Nat.le_trans",
+        "Nat.monotone_of_le_succ",
+        "Nat.mul"
+      ],
+      "fact_id": "F:nat-mul-le-mul-left",
+      "premise_declarations": [
+        "Nat.le_add_right",
+        "Nat.le_trans"
+      ],
+      "premise_fact_ids": [
+        "F:nat-le-add-right",
+        "F:nat-le-trans"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.mul_le_mul_left"
+    },
+    {
+      "application_depth": 1,
+      "axiom_footprint": [],
+      "binders_used": 1,
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.monotone_of_le_succ",
+        "Nat.mul",
+        "Nat.succ",
+        "Nat.zero",
+        "Nat.zero_add"
+      ],
+      "fact_id": "F:nat-mul-one",
+      "premise_declarations": [
+        "Nat.zero_add"
+      ],
+      "premise_fact_ids": [
+        "F:nat-zero-add"
+      ],
+      "proof_sha256": "e62ca6f5e210e063e1e1fa1373372e37d96c6e8002681193fde1bef53cde5d26",
+      "result": "accepted",
+      "terms_considered": 6,
+      "theorem": "Nat.mul_one",
+      "theorem_dependencies": [
+        "Nat.zero_add"
+      ]
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.monotone_of_le_succ",
+        "Nat.mul",
+        "Nat.zero"
+      ],
+      "fact_id": "F:nat-mul-zero",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.mul_zero"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.dvd",
+        "Nat.le",
+        "Nat.le_of_succ_le_succ",
+        "Nat.le_succ_succ",
+        "Nat.le_trans",
+        "Nat.monotone_of_le_succ",
+        "Nat.mul_le_mul_left",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.succ",
+        "Nat.zero",
+        "Nat.zero_le",
+        "Not"
+      ],
+      "fact_id": "F:nat-not-dvd-one-of-two-le",
+      "premise_declarations": [
+        "Nat.le_of_succ_le_succ",
+        "Nat.le_succ_succ",
+        "Nat.le_trans",
+        "Nat.mul_le_mul_left",
+        "Nat.mul_one",
+        "Nat.not_succ_le_zero",
+        "Nat.zero_le"
+      ],
+      "premise_fact_ids": [
+        "F:nat-le-of-succ-le-succ",
+        "F:nat-le-succ-succ",
+        "F:nat-le-trans",
+        "F:nat-mul-le-mul-left",
+        "F:nat-mul-one",
+        "F:nat-not-succ-le-zero",
+        "F:nat-zero-le"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.not_dvd_one_of_two_le"
+    },
+    {
+      "candidate_declarations": [
+        "False",
+        "Nat",
+        "Nat.le_dest",
+        "Nat.lt",
+        "Nat.monotone_of_le_succ",
+        "Nat.zero"
+      ],
+      "fact_id": "F:nat-not-lt-zero",
+      "premise_declarations": [
+        "Nat.le_dest"
+      ],
+      "premise_fact_ids": [
+        "F:nat-le-dest"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.not_lt_zero"
+    },
+    {
+      "candidate_declarations": [
+        "False",
+        "Nat",
+        "Nat.le",
+        "Nat.monotone_of_le_succ",
+        "Nat.succ",
+        "Nat.zero"
+      ],
+      "fact_id": "F:nat-not-succ-le-zero",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.not_succ_le_zero"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.factorial",
+        "Nat.le",
+        "Nat.le_add_right",
+        "Nat.le_succ_succ",
+        "Nat.monotone_of_le_succ",
+        "Nat.one_le_mul",
+        "Nat.succ",
+        "Nat.zero",
+        "Nat.zero_le"
+      ],
+      "fact_id": "F:nat-one-le-factorial",
+      "premise_declarations": [
+        "Nat.le_add_right",
+        "Nat.le_succ_succ",
+        "Nat.one_le_mul",
+        "Nat.zero_le"
+      ],
+      "premise_fact_ids": [
+        "F:nat-le-add-right",
+        "F:nat-le-succ-succ",
+        "F:nat-one-le-mul",
+        "F:nat-zero-le"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.one_le_factorial"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.add_comm",
+        "Nat.le",
+        "Nat.le_add_right",
+        "Nat.le_trans",
+        "Nat.monotone_of_le_succ",
+        "Nat.mul",
+        "Nat.not_succ_le_zero",
+        "Nat.succ",
+        "Nat.zero"
+      ],
+      "fact_id": "F:nat-one-le-mul",
+      "premise_declarations": [
+        "Nat.add_comm",
+        "Nat.le_add_right",
+        "Nat.le_trans",
+        "Nat.not_succ_le_zero"
+      ],
+      "premise_fact_ids": [
+        "F:nat-add-comm",
+        "F:nat-le-add-right",
+        "F:nat-le-trans",
+        "F:nat-not-succ-le-zero"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.one_le_mul"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.dvd",
+        "Nat.le",
+        "Nat.monotone_of_le_succ",
+        "Nat.succ",
+        "Nat.zero"
+      ],
+      "fact_id": "F:nat-one-le-of-dvd-pos",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.one_le_of_dvd_pos"
+    },
+    {
+      "application_depth": 1,
+      "axiom_footprint": [],
+      "binders_used": 1,
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.monotone_of_le_succ",
+        "Nat.mul",
+        "Nat.succ",
+        "Nat.succ_mul",
+        "Nat.zero",
+        "Nat.zero_add",
+        "Nat.zero_mul"
+      ],
+      "fact_id": "F:nat-one-mul",
+      "premise_declarations": [
+        "Nat.succ_mul",
+        "Nat.zero_add",
+        "Nat.zero_mul"
+      ],
+      "premise_fact_ids": [
+        "F:nat-succ-mul",
+        "F:nat-zero-add",
+        "F:nat-zero-mul"
+      ],
+      "proof_sha256": "e62ca6f5e210e063e1e1fa1373372e37d96c6e8002681193fde1bef53cde5d26",
+      "result": "accepted",
+      "terms_considered": 10,
+      "theorem": "Nat.one_mul",
+      "theorem_dependencies": [
+        "Nat.zero_add"
+      ]
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.add",
+        "Nat.monotone_of_le_succ",
+        "Nat.mul",
+        "Nat.mul_assoc",
+        "Nat.mul_comm",
+        "Nat.mul_one",
+        "Nat.pow"
+      ],
+      "fact_id": "F:nat-pow-add",
+      "premise_declarations": [
+        "Nat.mul_assoc",
+        "Nat.mul_comm",
+        "Nat.mul_one"
+      ],
+      "premise_fact_ids": [
+        "F:nat-mul-assoc",
+        "F:nat-mul-comm",
+        "F:nat-mul-one"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.pow_add"
+    },
+    {
+      "candidate_declarations": [
+        "And",
+        "Eq",
+        "Nat",
+        "Nat.dvd",
+        "Nat.le",
+        "Nat.modEq",
+        "Nat.monotone_of_le_succ",
+        "Nat.pow",
+        "Nat.succ",
+        "Nat.zero",
+        "Or"
+      ],
+      "fact_id": "F:fermat-little-theorem-over-constructed-naturals",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.pow_prime_modeq_self"
+    },
+    {
+      "candidate_declarations": [
+        "And",
+        "Eq",
+        "Nat",
+        "Nat.choose",
+        "Nat.dvd",
+        "Nat.dvd_mul",
+        "Nat.euclid_lemma",
+        "Nat.le",
+        "Nat.le_dest",
+        "Nat.le_of_dvd",
+        "Nat.lt",
+        "Nat.lt_irrefl",
+        "Nat.monotone_of_le_succ",
+        "Nat.succ",
+        "Nat.succ_add",
+        "Nat.zero",
+        "Nat.zero_add",
+        "Nat.zero_le",
+        "Or"
+      ],
+      "fact_id": "F:nat-prime-dvd-choose",
+      "premise_declarations": [
+        "Nat.dvd_mul",
+        "Nat.euclid_lemma",
+        "Nat.le_dest",
+        "Nat.le_of_dvd",
+        "Nat.lt_irrefl",
+        "Nat.succ_add",
+        "Nat.zero_add",
+        "Nat.zero_le"
+      ],
+      "premise_fact_ids": [
+        "F:nat-dvd-mul",
+        "F:nat-euclid-lemma",
+        "F:nat-le-dest",
+        "F:nat-le-of-dvd",
+        "F:nat-lt-irrefl",
+        "F:nat-succ-add",
+        "F:nat-zero-add",
+        "F:nat-zero-le"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.prime_dvd_choose"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.add",
+        "Nat.left_distrib",
+        "Nat.monotone_of_le_succ",
+        "Nat.mul",
+        "Nat.mul_comm"
+      ],
+      "fact_id": "F:nat-right-distrib",
+      "premise_declarations": [
+        "Nat.left_distrib",
+        "Nat.mul_comm"
+      ],
+      "premise_fact_ids": [
+        "F:nat-left-distrib",
+        "F:nat-mul-comm"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.right_distrib"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.add",
+        "Nat.le",
+        "Nat.le_trans",
+        "Nat.monotone_of_le_succ",
+        "Nat.sub",
+        "Nat.sub_self",
+        "Nat.succ_sub_succ",
+        "Nat.zero_add"
+      ],
+      "fact_id": "F:nat-sub-add-cancel",
+      "premise_declarations": [
+        "Nat.le_trans",
+        "Nat.sub_self",
+        "Nat.succ_sub_succ",
+        "Nat.zero_add"
+      ],
+      "premise_fact_ids": [
+        "F:nat-le-trans",
+        "F:nat-sub-self",
+        "F:nat-succ-sub-succ",
+        "F:nat-zero-add"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.sub_add_cancel"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.monotone_of_le_succ",
+        "Nat.sub",
+        "Nat.succ_sub_succ",
+        "Nat.zero"
+      ],
+      "fact_id": "F:nat-sub-self",
+      "premise_declarations": [
+        "Nat.succ_sub_succ"
+      ],
+      "premise_fact_ids": [
+        "F:nat-succ-sub-succ"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.sub_self"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.add",
+        "Nat.monotone_of_le_succ",
+        "Nat.succ"
+      ],
+      "fact_id": "F:nat-succ-add",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.succ_add"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.add",
+        "Nat.monotone_of_le_succ",
+        "Nat.mul",
+        "Nat.succ"
+      ],
+      "fact_id": "F:nat-succ-mul",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.succ_mul"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.monotone_of_le_succ",
+        "Nat.sub",
+        "Nat.succ"
+      ],
+      "fact_id": "F:nat-succ-sub-succ",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.succ_sub_succ"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.add",
+        "Nat.monotone_of_le_succ",
+        "Nat.sub",
+        "Nat.succ",
+        "Nat.sumRange"
+      ],
+      "fact_id": "F:finite-double-sum-rectangle-eq-triangle-plus-corner",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.sumRange_rect_eq_diag_add_corner"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.add",
+        "Nat.monotone_of_le_succ",
+        "Nat.sumRange"
+      ],
+      "fact_id": "F:finite-double-sum-rectangle-eq-triangle-plus-corner",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.sumRange_split"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.add",
+        "Nat.monotone_of_le_succ",
+        "Nat.zero"
+      ],
+      "fact_id": "F:nat-zero-add",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.zero_add"
+    },
+    {
+      "candidate_declarations": [
+        "Nat",
+        "Nat.le",
+        "Nat.monotone_of_le_succ",
+        "Nat.zero"
+      ],
+      "fact_id": "F:nat-zero-le",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.zero_le"
+    },
+    {
+      "candidate_declarations": [
+        "Eq",
+        "Nat",
+        "Nat.monotone_of_le_succ",
+        "Nat.mul",
+        "Nat.zero"
+      ],
+      "fact_id": "F:nat-zero-mul",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Nat.zero_mul"
+    },
+    {
+      "candidate_declarations": [
+        "Nat.monotone_of_le_succ",
+        "Or"
+      ],
+      "fact_id": "F:logic-or-elim",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Or.elim"
+    },
+    {
+      "candidate_declarations": [
+        "False",
+        "Nat.monotone_of_le_succ",
+        "Or"
+      ],
+      "fact_id": "F:logic-or-resolve-left",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "Or.resolve_left"
+    },
+    {
+      "candidate_declarations": [
+        "And",
+        "False",
+        "Nat.monotone_of_le_succ",
+        "Or"
+      ],
+      "fact_id": "F:logic-demorgan-not-or",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "demorgan_not_or"
+    },
+    {
+      "candidate_declarations": [
+        "And",
+        "And.left",
+        "And.right",
+        "False",
+        "Nat.monotone_of_le_succ",
+        "Or",
+        "Or.elim"
+      ],
+      "fact_id": "F:logic-demorgan-not-or-converse",
+      "premise_declarations": [
+        "And.left",
+        "And.right",
+        "Or.elim"
+      ],
+      "premise_fact_ids": [
+        "F:logic-and-left",
+        "F:logic-and-right",
+        "F:logic-or-elim"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "demorgan_not_or_converse"
+    },
+    {
+      "candidate_declarations": [
+        "False",
+        "Nat.monotone_of_le_succ",
+        "Or",
+        "Or.elim"
+      ],
+      "fact_id": "F:logic-dne-of-em",
+      "premise_declarations": [
+        "Or.elim"
+      ],
+      "premise_fact_ids": [
+        "F:logic-or-elim"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "dne_of_em"
+    },
+    {
+      "candidate_declarations": [
+        "False",
+        "Nat.monotone_of_le_succ",
+        "Or",
+        "not_not_em"
+      ],
+      "fact_id": "F:logic-em-of-dne",
+      "premise_declarations": [
+        "not_not_em"
+      ],
+      "premise_fact_ids": [
+        "F:logic-not-not-em"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "em_of_dne"
+    },
+    {
+      "candidate_declarations": [
+        "False",
+        "Nat.monotone_of_le_succ",
+        "Or"
+      ],
+      "fact_id": "F:logic-em-of-peirce",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "em_of_peirce"
+    },
+    {
+      "application_depth": 2,
+      "axiom_footprint": [],
+      "binders_used": 5,
+      "candidate_declarations": [
+        "False",
+        "Nat.monotone_of_le_succ"
+      ],
+      "fact_id": "F:logic-modus-tollens",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "proof_sha256": "aca5d0daebf51f59975fa310f9692ff400dcc0ef8405713bf3b52f353f5b2a2b",
+      "result": "accepted",
+      "terms_considered": 8,
+      "theorem": "mt",
+      "theorem_dependencies": []
+    },
+    {
+      "candidate_declarations": [
+        "And",
+        "And.left",
+        "And.right",
+        "False",
+        "Nat.monotone_of_le_succ"
+      ],
+      "fact_id": "F:logic-noncontradiction",
+      "premise_declarations": [
+        "And.left",
+        "And.right"
+      ],
+      "premise_fact_ids": [
+        "F:logic-and-left",
+        "F:logic-and-right"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "noncontradiction"
+    },
+    {
+      "candidate_declarations": [
+        "And",
+        "False",
+        "Nat.monotone_of_le_succ"
+      ],
+      "fact_id": "F:logic-not-not-and",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "not_not_and"
+    },
+    {
+      "candidate_declarations": [
+        "False",
+        "Nat.monotone_of_le_succ",
+        "Or"
+      ],
+      "fact_id": "F:logic-not-not-em",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "not_not_em"
+    },
+    {
+      "application_depth": 1,
+      "axiom_footprint": [],
+      "binders_used": 3,
+      "candidate_declarations": [
+        "False",
+        "Nat.monotone_of_le_succ"
+      ],
+      "fact_id": "F:logic-not-not-intro",
+      "premise_declarations": [],
+      "premise_fact_ids": [],
+      "proof_sha256": "8d24a6a4581c521f6fd00ad1eae1e25e040f78fa02b6ee9691933efaeffdf11f",
+      "result": "accepted",
+      "terms_considered": 5,
+      "theorem": "not_not_intro",
+      "theorem_dependencies": []
+    },
+    {
+      "application_depth": 3,
+      "axiom_footprint": [],
+      "binders_used": 3,
+      "candidate_declarations": [
+        "False",
+        "Nat.monotone_of_le_succ",
+        "not_not_intro"
+      ],
+      "fact_id": "F:logic-not-not-not",
+      "premise_declarations": [
+        "not_not_intro"
+      ],
+      "premise_fact_ids": [
+        "F:logic-not-not-intro"
+      ],
+      "proof_sha256": "67313ebfac345029af5709ca39ab818d166b1503d24826d0bf97341f0c9219d2",
+      "result": "accepted",
+      "terms_considered": 8,
+      "theorem": "not_not_not",
+      "theorem_dependencies": [
+        "not_not_intro"
+      ]
+    },
+    {
+      "candidate_declarations": [
+        "False",
+        "Nat.monotone_of_le_succ",
+        "Or",
+        "Or.elim"
+      ],
+      "fact_id": "F:logic-peirce-of-em",
+      "premise_declarations": [
+        "Or.elim"
+      ],
+      "premise_fact_ids": [
+        "F:logic-or-elim"
+      ],
+      "reason_kind": "NoTypedApplication",
+      "result": "declined",
+      "theorem": "peirce_of_em"
+    }
+  ],
+  "schema_version": 1,
+  "strategy": {
+    "authority": "candidate-only; every accepted term is separately admitted and measured",
+    "candidate_rule": "direct type dependencies plus exact authored fact dependencies plus fixed seed declarations",
+    "forbidden_inputs": [
+      "target theorem proof value",
+      "direct_declaration_dependencies",
+      "direct_theorem_dependencies",
+      "transitive declaration closure",
+      "name or statement similarity"
+    ],
+    "population": "every fact-linked theorem visible in the constructed Nat prelude",
+    "seed_declarations": [
+      "Nat.monotone_of_le_succ"
+    ]
+  }
+}

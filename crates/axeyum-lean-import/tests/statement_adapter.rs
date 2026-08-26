@@ -2,7 +2,9 @@
 
 use std::io::Cursor;
 
-use axeyum_lean_import::{ImportLimits, StatementImportError, import_statement_ndjson};
+use axeyum_lean_import::{
+    ImportLimits, StatementImportError, import_candidate_statement_ndjson, import_statement_ndjson,
+};
 use axeyum_lean_kernel::{BinderInfo, Declaration, Kernel, Lean4ExportMetadata, ReducibilityHint};
 
 const TARGET: &str = "Axeyum.Autogenesis.Statement.target";
@@ -47,6 +49,43 @@ fn definition_stream() -> String {
     render(&kernel)
 }
 
+fn candidate_stream() -> (String, String) {
+    let mut kernel = Kernel::new();
+    let target = target_name(&mut kernel);
+    let zero = kernel.level_zero();
+    let prop = kernel.sort(zero);
+    let root = kernel.anon();
+    let p_name = kernel.name_str(root, "p");
+    let h_name = kernel.name_str(root, "h");
+    let p = kernel.bvar(0);
+    let result = kernel.bvar(1);
+    let implication = kernel.pi(h_name, p, result, BinderInfo::Default);
+    let goal = kernel.pi(p_name, prop, implication, BinderInfo::Default);
+    kernel
+        .add_declaration(Declaration::Definition {
+            name: target,
+            uparams: vec![],
+            ty: prop,
+            value: goal,
+            hint: ReducibilityHint::Regular(0),
+        })
+        .expect("goal definition must check");
+    let candidate = kernel.name_str(root, "CandidateIdentity");
+    let h = kernel.bvar(0);
+    let p = kernel.bvar(0);
+    let identity = kernel.lam(h_name, p, h, BinderInfo::Default);
+    let proof = kernel.lam(p_name, prop, identity, BinderInfo::Default);
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name: candidate,
+            uparams: vec![],
+            ty: goal,
+            value: proof,
+        })
+        .expect("candidate theorem must check");
+    (render(&kernel), "CandidateIdentity".to_owned())
+}
+
 #[test]
 fn transparent_prop_definition_publishes_a_goal_without_an_assumption() {
     let completed = import_statement_ndjson(
@@ -68,6 +107,79 @@ fn transparent_prop_definition_publishes_a_goal_without_an_assumption() {
             .to_string(),
         TARGET
     );
+}
+
+#[test]
+fn explicit_axiom_free_theorem_candidate_is_checked_and_published() {
+    let (stream, candidate) = candidate_stream();
+    let completed = import_candidate_statement_ndjson(
+        Cursor::new(stream),
+        ImportLimits::default(),
+        TARGET,
+        std::slice::from_ref(&candidate),
+    )
+    .expect("the exact checked candidate must import");
+    assert!(
+        completed
+            .kernel()
+            .axiom_footprint(
+                completed
+                    .kernel()
+                    .environment()
+                    .iter()
+                    .find(
+                        |(name, _)| completed.kernel().display_name(**name).to_string()
+                            == candidate
+                    )
+                    .map(|(name, _)| *name)
+                    .expect("candidate must be published")
+            )
+            .is_empty()
+    );
+}
+
+#[test]
+fn unlisted_theorem_remains_forbidden_in_candidate_capsule() {
+    let (stream, _candidate) = candidate_stream();
+    let error = import_candidate_statement_ndjson(
+        Cursor::new(stream),
+        ImportLimits::default(),
+        TARGET,
+        &[],
+    )
+    .expect_err("an unlisted theorem must poison the capsule");
+    assert!(matches!(
+        error,
+        StatementImportError::TrustedDeclaration { .. }
+    ));
+}
+
+#[test]
+fn candidate_identity_list_is_exact_and_cannot_name_the_target() {
+    let (stream, candidate) = candidate_stream();
+    let duplicate = import_candidate_statement_ndjson(
+        Cursor::new(stream.clone()),
+        ImportLimits::default(),
+        TARGET,
+        &[candidate.clone(), candidate],
+    )
+    .expect_err("duplicate candidate names must be rejected");
+    assert!(matches!(
+        duplicate,
+        StatementImportError::DuplicateCandidate
+    ));
+
+    let target = import_candidate_statement_ndjson(
+        Cursor::new(stream),
+        ImportLimits::default(),
+        TARGET,
+        &[TARGET.to_owned()],
+    )
+    .expect_err("the target cannot be its own candidate");
+    assert!(matches!(
+        target,
+        StatementImportError::CandidateIsTarget { .. }
+    ));
 }
 
 #[test]

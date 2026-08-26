@@ -121,3 +121,66 @@ an inequality with slack. Slack is fine — every consumer is a bound.
 This is the fourth time in this session that separate developments turned out to
 need one missing lemma, and the third time nobody could see it from inside a
 single lane.
+
+---
+
+# `CReal.ivt_approx` is closed
+
+**2026-08-25.** Spivak Chapter 7's Intermediate Value Theorem, in the form this
+logic admits:
+
+```text
+CReal.ivt_approx :
+  ∀ F a b, UniformlyContinuousOn F a b → le a b →
+           le (F a) zero → le zero (F b) →
+  ∀ e, ∃ x, le a x ∧ le x b ∧ le (abs (F x)) (ofRat (natDivSucc 1 e))
+```
+
+Kernel-checked, axiom-free, `creal_prelude_builds` observed passing. Four lanes:
+`ivt_step` (the bisection insight), `ivt_iter` (the iteration), the decay bound
+`pow_half_le_natDivSucc`, and the assembly.
+
+## A correction to this note's own arithmetic
+
+An earlier version of the estimate here — and the brief built from it — said
+`e := 9` gives `eps = 1/20`, continuity index `19`, and "`2^N ≥ 20`, so
+`N = 5`."
+
+**That was wrong, and it was wrong in a way worth recording.** It assumed an
+*exponential* bound `pow(1/2, N) ≤ 1/2^N`. The lemma that actually landed,
+`pow_half_le_natDivSucc`, is **linear**: `pow(1/2, N) ≤ 1/(N+1)`. The two agree
+only at small `N` and diverge fast, so a depth computed from the exponential
+form is far too small.
+
+The corrected depth is `bisect_n := M·delta + c`, with `c := CReal.bound (b−a)`
+and `M := c+1` — chosen so `M · natDivSucc(1, bisect_n) = natDivSucc(1, delta)`
+is an **equality**, via `Rat.natDivSucc_scale`'s own `(c+1)·m + c` index shape,
+rather than merely a bound. No search and no `Exists.rec`, because `CReal.bound`
+is a total computable projection.
+
+The lesson is narrow but sharp: **an estimate carried forward from a lane's
+report is only valid against the lemma that lane was imagining.** I propagated
+`N = 5` into a brief without re-checking it against the bound that had since
+landed under a different shape. The lane caught it and declined to assert a
+concrete numeral it could not evaluate, documenting the formula instead — which
+is the right call.
+
+## Also worth keeping, from the assembly
+
+- `n := succ (2·e)` makes `sgn_eps + sgn_eps ~ ofRat (natDivSucc 1 e)` an
+  **exact equality** via `natDivSucc_add` then `natDivSucc_halve` — the same
+  no-weakening trick the derivative-uniqueness proof found independently.
+- Two rejections, both ~10–20 s (ordinary type errors, per the diagnostic):
+  `erefl` (Equiv reflexivity) used where `le_refl` was needed, at three sites;
+  and an `abs_le` slot wanting `le (neg (F q)) target` where the
+  mathematically-equivalent-but-syntactically-different `le (neg target) (F q)`
+  had been built. **Neither was an argument-order defect** — that makes four
+  rejections today whose cause was *not* the thing the prior predicted.
+
+## What this unblocks
+
+`docs/mathematics-2026-08/diary-apart-as-data.md` records that exact
+`lt`-reflection, Chapter 12's inverse function theorem, and **tightness of
+apartness** are one problem in three guises, all waiting on an exact IVT
+preimage. `ivt_approx` is the *approximate* preimage; whether it suffices for
+those three, or whether they need the exact form, is now the live question.

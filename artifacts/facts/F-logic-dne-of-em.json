@@ -23,6 +23,7 @@
     {
       "id": "kernel-logic-dne-of-em",
       "kind": "kernel-term",
+      "kernel_declaration": "dne_of_em",
       "supports": "If excluded middle holds for every proposition, then double-negation elimination holds for every proposition.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- dne_of_em 2>/dev/null | grep -Ec '^dne_of_em[[:space:]]')\" -ge 1",

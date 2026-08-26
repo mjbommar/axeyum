@@ -1,4 +1,4 @@
-"""The seven tier-R tools: everything the loop is allowed to look at, and nothing else.
+"""The eight tier-R tools: everything the loop is allowed to look at, and nothing else.
 
 Tier R is *read*. No tool here writes a ledger, registers an operation, admits a
 declaration, or invokes a checker; the only bytes an R tool causes to be written
@@ -51,6 +51,8 @@ from .models import (
     FactView,
     FrontierPage,
     FrontierRow,
+    LemmaCandidateRow,
+    LemmaCandidatesPage,
     LemmaNeighbourhoodPage,
     LemmaNeighbourhoodRow,
     Neighbourhood,
@@ -77,6 +79,7 @@ TOOL_TIERS: dict[str, Literal["read", "proposed", "checked"]] = {
     "fact_neighbourhood": "read",
     "kernel_theorems": "read",
     "lemma_neighbourhood": "read",
+    "lemma_candidates": "read",
     "operation_registry": "read",
     "overlay_query": "read",
     # Tier R, GUARDED (slice A6). Still `read` -- they read the world and write
@@ -478,30 +481,36 @@ def lemma_neighbourhood(
     ctx: RunContext[AgentDeps],
     name_glob: str = "",
     fact_id: str = "",
+    canonical_type_contains: str = "",
 ) -> LemmaNeighbourhoodPage:
     """Retrieve kernel-observed lemma dependencies and exact fact links.
 
     Rows are candidates only: a dependency edge records what an accepted proof
     term used, not that the theorem applies to the current goal. Supply exactly
-    one of ``name_glob`` or ``fact_id``. Held-out fact identities are removed
-    before any row reaches the transcript.
+    one of ``name_glob``, ``fact_id``, or ``canonical_type_contains``. Held-out
+    fact identities are removed before any row reaches the transcript.
 
     Args:
         name_glob: Shell-style glob over exact kernel declaration names.
         fact_id: Fact id whose evidence names a kernel theorem exactly.
+        canonical_type_contains: Exact substring of the kernel-rendered type.
     """
 
     def body() -> LemmaNeighbourhoodPage:
-        if bool(name_glob) == bool(fact_id):
-            raise ToolRefusal("supply exactly one of name_glob or fact_id")
+        if sum(map(bool, (name_glob, fact_id, canonical_type_contains))) != 1:
+            raise ToolRefusal(
+                "supply exactly one of name_glob, fact_id, or canonical_type_contains"
+            )
         root = ctx.deps.root
         index = lemmas_api.load(root)
         if fact_id:
             if fact_id in _held_out(str(root)):
                 raise ToolRefusal("requested fact is not referenceable in this episode")
             selected = list(index.for_fact(fact_id))
-        else:
+        elif name_glob:
             selected = [lemma for lemma in index if glob_match(lemma.id, name_glob)]
+        else:
+            selected = list(index.with_type_fragment(canonical_type_contains))
         selected.sort(key=lambda lemma: lemma.id)
         rows: list[LemmaNeighbourhoodRow] = []
         dropped = 0
@@ -511,8 +520,11 @@ def lemma_neighbourhood(
             rows.append(
                 LemmaNeighbourhoodRow(
                     declaration_id=lemma.id,
+                    canonical_type=lemma.canonical_type,
                     axiom_footprint_size=lemma.axiom_footprint_size,
                     visible_in=lemma.visible_in,
+                    direct_type_declarations=lemma.direct_type_declarations,
+                    direct_declarations=lemma.direct_declarations,
                     dependencies=lemma.dependencies,
                     dependents=lemma.dependents,
                     dependency_depth=lemma.dependency_depth,
@@ -522,6 +534,7 @@ def lemma_neighbourhood(
         return LemmaNeighbourhoodPage(
             name_glob=name_glob,
             fact_id=fact_id,
+            canonical_type_contains=canonical_type_contains,
             matched=len(rows),
             total_lemmas=len(index),
             dropped_held_out_fact_links=dropped,
@@ -529,6 +542,63 @@ def lemma_neighbourhood(
         )
 
     return _timed("lemma_neighbourhood", ctx, body)
+
+
+def lemma_candidates(
+    ctx: RunContext[AgentDeps],
+    fact_id: str,
+) -> LemmaCandidatesPage:
+    """Resolve a goal fact's declared dependencies to exact kernel lemmas.
+
+    This is the deterministic bridge between the fact DAG and the kernel
+    search index. It does not use names, statement similarity, or an LLM: only
+    authored ``depends_on`` edges and exact evidence-to-declaration links can
+    produce rows. A row is a premise candidate, never an applicability claim.
+
+    Args:
+        fact_id: Open goal whose declared dependencies should be resolved.
+    """
+
+    def body() -> LemmaCandidatesPage:
+        root = ctx.deps.root
+        if fact_id in _held_out(str(root)):
+            raise ToolRefusal("requested fact is not referenceable in this episode")
+        fact = facts_api.load(root).get(fact_id)
+        safe_dependencies, _ = _safe(root, fact.depends_on)
+        index = lemmas_api.load(root)
+        rows: list[LemmaCandidateRow] = []
+        unresolved: list[str] = []
+        linked_dependencies = 0
+        for dependency_fact_id in safe_dependencies:
+            linked = index.for_fact(dependency_fact_id)
+            if not linked:
+                unresolved.append(dependency_fact_id)
+                continue
+            linked_dependencies += 1
+            for lemma in linked:
+                rows.append(
+                    LemmaCandidateRow(
+                        declaration_id=lemma.id,
+                        canonical_type=lemma.canonical_type,
+                        source_dependency_fact_id=dependency_fact_id,
+                        axiom_footprint_size=lemma.axiom_footprint_size,
+                        visible_in=lemma.visible_in,
+                        direct_type_declarations=lemma.direct_type_declarations,
+                        direct_declarations=lemma.direct_declarations,
+                        dependency_depth=lemma.dependency_depth,
+                    )
+                )
+        rows.sort(key=lambda row: (row.source_dependency_fact_id, row.declaration_id))
+        return LemmaCandidatesPage(
+            fact_id=fact_id,
+            declared_dependency_count=len(safe_dependencies),
+            linked_dependency_count=linked_dependencies,
+            matched=len(rows),
+            unresolved_dependency_fact_ids=tuple(unresolved),
+            rows=tuple(rows[:MAX_ROWS]),
+        )
+
+    return _timed("lemma_candidates", ctx, body)
 
 
 def operation_registry(ctx: RunContext[AgentDeps], fact_id: str = "") -> OperationRegistryView:
@@ -801,6 +871,7 @@ class ExportResolution(NamedTuple):
     sha256: str
     target_definition: str
     source: str
+    candidate_declarations: tuple[str, ...] = ()
 
 
 class ExportUnavailable(RuntimeError):
@@ -835,7 +906,7 @@ def resolve_export(root: Path, fact_id: str) -> ExportResolution:
             are refusals rather than a best effort: importing bytes nobody
             pinned would make every digest downstream meaningless.
     """
-    candidates: list[tuple[str, str, str, int | None]] = []
+    candidates: list[tuple[str, str, str, int | None, tuple[str, ...]]] = []
     for document in _adapter_records(root):
         if document.get("source_fact_id") != fact_id:
             continue
@@ -848,9 +919,49 @@ def resolve_export(root: Path, fact_id: str) -> ExportResolution:
                     str(artifact.get("sha256", "")),
                     target,
                     artifact.get("bytes"),
+                    (),
                 )
             )
     source = "statement-adapter-manifest"
+    if not candidates:
+        receipt_documents = [
+            document
+            for document in _adapter_records(root)
+            if document.get("kind")
+            == "axeyum-proof-isolated-candidate-capsule-receipt"
+        ]
+        lemma_index = lemmas_api.load(root) if receipt_documents else None
+        for document in receipt_documents:
+            target_theorem = document.get("target")
+            candidate_names = document.get("candidate_declarations")
+            artifact = document.get("external_artifact") or {}
+            if not isinstance(target_theorem, str):
+                continue
+            try:
+                assert lemma_index is not None
+                linked_facts = lemma_index.get(target_theorem).fact_ids
+            except KeyError:
+                continue
+            if fact_id not in linked_facts:
+                continue
+            if not (
+                isinstance(candidate_names, list)
+                and candidate_names
+                and all(isinstance(name, str) and name for name in candidate_names)
+            ):
+                raise ExportUnavailable(
+                    f"candidate capsule receipt for {fact_id} has no exact candidate list"
+                )
+            candidates.append(
+                (
+                    str(artifact.get("path", "")),
+                    str(document.get("capsule_sha256", "")),
+                    str(document.get("target_definition", "")),
+                    document.get("capsule_bytes"),
+                    tuple(candidate_names),
+                )
+            )
+        source = "candidate-capsule-receipt"
     if not candidates:
         try:
             index = json.loads((root / EXPORT_INDEX).read_text(encoding="utf-8"))
@@ -869,6 +980,7 @@ def resolve_export(root: Path, fact_id: str) -> ExportResolution:
                     str(artifact.get("sha256", "")),
                     str(entry.get("target_definition", "")),
                     artifact.get("bytes"),
+                    (),
                 )
             )
         source = "agent-frozen-export-index-v1"
@@ -877,7 +989,11 @@ def resolve_export(root: Path, fact_id: str) -> ExportResolution:
             "no frozen statement export is registered for this fact; a producer has "
             "nothing to import and there is no goal to attack"
         )
-    path_text, pinned, target, _bytes = candidates[0]
+    if len(candidates) != 1:
+        raise ExportUnavailable(
+            f"{len(candidates)} frozen exports resolve this fact; expected exactly one"
+        )
+    path_text, pinned, target, expected_bytes, candidate_declarations = candidates[0]
     path = Path(path_text)
     if not path.is_file():
         raise ExportUnavailable(
@@ -890,9 +1006,15 @@ def resolve_export(root: Path, fact_id: str) -> ExportResolution:
             f"{path} does not hash to what was pinned (pinned {pinned}, on disk {measured}); "
             f"refusing to import bytes nobody pinned"
         )
+    if isinstance(expected_bytes, int) and path.stat().st_size != expected_bytes:
+        raise ExportUnavailable(
+            f"{path} has {path.stat().st_size} bytes, expected {expected_bytes}"
+        )
     if not target:
         raise ExportUnavailable(f"the record for this fact names no target definition ({source})")
-    return ExportResolution(fact_id, path, measured, target, source)
+    return ExportResolution(
+        fact_id, path, measured, target, source, candidate_declarations
+    )
 
 
 def _sha256_of_render(kernel: Any, expression: Any) -> str:
@@ -921,18 +1043,41 @@ def run_producer(tool: str, export: ExportResolution) -> dict[str, Any]:
     from .. import producers as producers_api
     from ..kernel import Declaration
 
-    imported = producers_api.import_statement_ndjson(
-        str(export.path), None, export.target_definition
-    )
+    candidate: Any
+    if tool == "bounded_application":
+        if not export.candidate_declarations:
+            raise ExportUnavailable(
+                "bounded application requires a candidate-capsule receipt with exact declarations"
+            )
+        imported = producers_api.import_candidate_statement_ndjson(
+            str(export.path),
+            None,
+            export.target_definition,
+            export.candidate_declarations,
+        )
+    else:
+        imported = producers_api.import_statement_ndjson(
+            str(export.path), None, export.target_definition
+        )
     kernel = imported.kernel()
     goal = imported.goal()
     report = imported.report()
-    propose = (
-        producers_api.propose_bounded_induction
-        if tool == "bounded_induction"
-        else producers_api.propose_modeq_family
-    )
-    candidate = propose(kernel, goal)
+    if tool == "bounded_application":
+        candidate = producers_api.propose_bounded_application(
+            kernel,
+            goal,
+            [
+                kernel.name(name, must_exist=True)
+                for name in export.candidate_declarations
+            ],
+        )
+    else:
+        propose = (
+            producers_api.propose_bounded_induction
+            if tool == "bounded_induction"
+            else producers_api.propose_modeq_family
+        )
+        candidate = propose(kernel, goal)
     name = kernel.name(f"Axeyum.Agent.{export.fact_id.split(':', 1)[1]}", must_exist=False)
     kernel.add_declaration(Declaration.theorem(name, [], goal, candidate.proof))
     return {
@@ -1157,6 +1302,7 @@ TIER_R_TOOLS: tuple[Callable[..., Any], ...] = (
     fact_neighbourhood,
     kernel_theorems,
     lemma_neighbourhood,
+    lemma_candidates,
     operation_registry,
     overlay_query,
 )
@@ -1307,6 +1453,7 @@ __all__ = [
     "independent_check",
     "is_output_tool",
     "kernel_theorems",
+    "lemma_candidates",
     "lemma_neighbourhood",
     "modeq_family",
     "operation_registry",

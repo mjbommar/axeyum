@@ -1,0 +1,497 @@
+{
+  "kind": "axeyum-proposition-reconciliation-proposals",
+  "next": "Version the pre-reconciliation evaluation artifacts, then apply these exact proposals through a crash-safe checked writer and regenerate all affected views.",
+  "proposals": [
+    {
+      "admission_event": null,
+      "authoritative_write": {
+        "after_fact": {
+          "axiom_footprint": [],
+          "depends_on": [],
+          "epistemic_status": "proved",
+          "evidence": [
+            {
+              "artifact": "sha256:d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8",
+              "check_status": "checked",
+              "checkers": [
+                "axeyum-lean-kernel",
+                "axeyum-lean-import/checked-proposition-compatibility"
+              ],
+              "id": "reconciliation-Nat.choose_self",
+              "kernel_declaration": "Nat.choose_self",
+              "kind": "kernel-term",
+              "notes": "Registers an independently constructed native theorem whose proposition definitionally matches this proof-free imported goal. No Autogenesis operation produced the theorem.",
+              "supports": "\u2200 (n : \u2115), n.choose n = 1"
+            }
+          ],
+          "external_status": "proved",
+          "formal": {
+            "fragment": "Nat",
+            "language": "lean4-surface",
+            "statement": "\u2200 (n : \u2115), n.choose n = 1"
+          },
+          "id": "F:ml430-nat-choose-self-25bb9fb8",
+          "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+          "proof_route": "kernel-lean",
+          "provenance": {
+            "date": "2026-08-18",
+            "established_by": "non-autonomous reconciliation with native fact F:nat-choose-self",
+            "prior_art": [
+              {
+                "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted",
+                "what": "the theorem declaration `Nat.choose_self`",
+                "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
+                "who": "the Mathlib contributors",
+                "year": 2026
+              }
+            ],
+            "source": "statement-only extraction of `Nat.choose_self` from Mathlib v4.30.0; no proof value was exposed"
+          },
+          "schema_version": 1,
+          "statement": "The proposition declared as `Nat.choose_self` in the pinned Mathlib v4.30 source.",
+          "title": "Mathlib v4.30 source proposition Nat.choose_self"
+        },
+        "after_sha256": "92d8ebb4f203ca0666d463a105c90d6a219ebb3bee60bf4e874c3f80ee1c3645",
+        "before_sha256": "4ca873910df6ce4103ffdc202e5d9cd5d6f6826daa79a0660117c52ccfbf4ef8",
+        "path": "artifacts/facts/F-ml430-nat-choose-self-25bb9fb8.json"
+      },
+      "identity": {
+        "after_fact_sha256": "92d8ebb4f203ca0666d463a105c90d6a219ebb3bee60bf4e874c3f80ee1c3645",
+        "before_fact_sha256": "4ca873910df6ce4103ffdc202e5d9cd5d6f6826daa79a0660117c52ccfbf4ef8",
+        "fact_id": "F:ml430-nat-choose-self-25bb9fb8",
+        "knowledge_link_id": "L:ml430-nat-choose-self-definitionally-matches-native",
+        "native_fact_id": "F:nat-choose-self",
+        "native_theorem": "Nat.choose_self",
+        "proposition_census_sha256": "d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8"
+      },
+      "kind": "axeyum-proposition-reconciliation-transaction-proposal",
+      "precondition": {
+        "definitionally_matches": true,
+        "epistemic_status": "open",
+        "evidence": [],
+        "native_axiom_footprint": [],
+        "source_is_authoritative": true
+      },
+      "production_credit": {
+        "autonomous": false,
+        "classification": "no_operation",
+        "operation_id": null
+      },
+      "schema_version": 1,
+      "state": "prepared",
+      "transaction_sha256": "ffbf5d7aa4c73faae3dbadae54375c160b3db0889d8cb625c0048109e5dd9d23"
+    },
+    {
+      "admission_event": null,
+      "authoritative_write": {
+        "after_fact": {
+          "axiom_footprint": [],
+          "depends_on": [
+            "F:ml430-nat-choose-eq-zero-of-lt-92ebab29"
+          ],
+          "epistemic_status": "proved",
+          "evidence": [
+            {
+              "artifact": "sha256:d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8",
+              "check_status": "checked",
+              "checkers": [
+                "axeyum-lean-kernel",
+                "axeyum-lean-import/checked-proposition-compatibility"
+              ],
+              "id": "reconciliation-Nat.choose_succ_self_eq_zero",
+              "kernel_declaration": "Nat.choose_succ_self_eq_zero",
+              "kind": "kernel-term",
+              "notes": "Registers an independently constructed native theorem whose proposition definitionally matches this proof-free imported goal. No Autogenesis operation produced the theorem.",
+              "supports": "\u2200 (n : \u2115), n.choose n.succ = 0"
+            }
+          ],
+          "external_status": "proved",
+          "formal": {
+            "fragment": "Nat",
+            "language": "lean4-surface",
+            "statement": "\u2200 (n : \u2115), n.choose n.succ = 0"
+          },
+          "id": "F:ml430-nat-choose-succ-self-e396f6c2",
+          "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+          "proof_route": "kernel-lean",
+          "provenance": {
+            "date": "2026-08-18",
+            "established_by": "non-autonomous reconciliation with native fact F:nat-choose-succ-self-eq-zero",
+            "prior_art": [
+              {
+                "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted",
+                "what": "the theorem declaration `Nat.choose_succ_self`",
+                "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
+                "who": "the Mathlib contributors",
+                "year": 2026
+              }
+            ],
+            "source": "statement-only extraction of `Nat.choose_succ_self` from Mathlib v4.30.0; no proof value was exposed"
+          },
+          "schema_version": 1,
+          "statement": "The proposition declared as `Nat.choose_succ_self` in the pinned Mathlib v4.30 source.",
+          "title": "Mathlib v4.30 source proposition Nat.choose_succ_self"
+        },
+        "after_sha256": "afb4a8f5211629027fef069510fb741315df6453c2c0cfeffc8f846bb29c67af",
+        "before_sha256": "6ba14bc9f97bbf8a0d4a43e7861a7cf2fe32e25366d8d1ad406b9221f6ec8a5d",
+        "path": "artifacts/facts/F-ml430-nat-choose-succ-self-e396f6c2.json"
+      },
+      "identity": {
+        "after_fact_sha256": "afb4a8f5211629027fef069510fb741315df6453c2c0cfeffc8f846bb29c67af",
+        "before_fact_sha256": "6ba14bc9f97bbf8a0d4a43e7861a7cf2fe32e25366d8d1ad406b9221f6ec8a5d",
+        "fact_id": "F:ml430-nat-choose-succ-self-e396f6c2",
+        "knowledge_link_id": "L:ml430-nat-choose-succ-self-definitionally-matches-native",
+        "native_fact_id": "F:nat-choose-succ-self-eq-zero",
+        "native_theorem": "Nat.choose_succ_self_eq_zero",
+        "proposition_census_sha256": "d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8"
+      },
+      "kind": "axeyum-proposition-reconciliation-transaction-proposal",
+      "precondition": {
+        "definitionally_matches": true,
+        "epistemic_status": "open",
+        "evidence": [],
+        "native_axiom_footprint": [],
+        "source_is_authoritative": true
+      },
+      "production_credit": {
+        "autonomous": false,
+        "classification": "no_operation",
+        "operation_id": null
+      },
+      "schema_version": 1,
+      "state": "prepared",
+      "transaction_sha256": "7f0bb3b721ea847e3d8766c064f775c1c86ac119a456b69d3604b80b56ef6d65"
+    },
+    {
+      "admission_event": null,
+      "authoritative_write": {
+        "after_fact": {
+          "axiom_footprint": [],
+          "depends_on": [],
+          "epistemic_status": "proved",
+          "evidence": [
+            {
+              "artifact": "sha256:d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8",
+              "check_status": "checked",
+              "checkers": [
+                "axeyum-lean-kernel",
+                "axeyum-lean-import/checked-proposition-compatibility"
+              ],
+              "id": "reconciliation-Nat.choose_succ_succ",
+              "kernel_declaration": "Nat.choose_succ_succ",
+              "kind": "kernel-term",
+              "notes": "Registers an independently constructed native theorem whose proposition definitionally matches this proof-free imported goal. No Autogenesis operation produced the theorem.",
+              "supports": "\u2200 (n k : \u2115), n.succ.choose k.succ = n.choose k + n.choose k.succ"
+            }
+          ],
+          "external_status": "proved",
+          "formal": {
+            "fragment": "Nat",
+            "language": "lean4-surface",
+            "statement": "\u2200 (n k : \u2115), n.succ.choose k.succ = n.choose k + n.choose k.succ"
+          },
+          "id": "F:ml430-nat-choose-succ-succ-671856b6",
+          "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+          "proof_route": "kernel-lean",
+          "provenance": {
+            "date": "2026-08-18",
+            "established_by": "non-autonomous reconciliation with native fact F:nat-choose-succ-succ",
+            "prior_art": [
+              {
+                "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted",
+                "what": "the theorem declaration `Nat.choose_succ_succ`",
+                "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
+                "who": "the Mathlib contributors",
+                "year": 2026
+              }
+            ],
+            "source": "statement-only extraction of `Nat.choose_succ_succ` from Mathlib v4.30.0; no proof value was exposed"
+          },
+          "schema_version": 1,
+          "statement": "The proposition declared as `Nat.choose_succ_succ` in the pinned Mathlib v4.30 source.",
+          "title": "Mathlib v4.30 source proposition Nat.choose_succ_succ"
+        },
+        "after_sha256": "a744d2f193ec9ac8c486efe8dc7232559f04a4065ca88e864cef3d5da2901835",
+        "before_sha256": "18a7c7220acdb38f72bcc573cbd525e5d8aeac7cf6f637e18a49444ef68c69d8",
+        "path": "artifacts/facts/F-ml430-nat-choose-succ-succ-671856b6.json"
+      },
+      "identity": {
+        "after_fact_sha256": "a744d2f193ec9ac8c486efe8dc7232559f04a4065ca88e864cef3d5da2901835",
+        "before_fact_sha256": "18a7c7220acdb38f72bcc573cbd525e5d8aeac7cf6f637e18a49444ef68c69d8",
+        "fact_id": "F:ml430-nat-choose-succ-succ-671856b6",
+        "knowledge_link_id": "L:ml430-nat-choose-succ-succ-definitionally-matches-native",
+        "native_fact_id": "F:nat-choose-succ-succ",
+        "native_theorem": "Nat.choose_succ_succ",
+        "proposition_census_sha256": "d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8"
+      },
+      "kind": "axeyum-proposition-reconciliation-transaction-proposal",
+      "precondition": {
+        "definitionally_matches": true,
+        "epistemic_status": "open",
+        "evidence": [],
+        "native_axiom_footprint": [],
+        "source_is_authoritative": true
+      },
+      "production_credit": {
+        "autonomous": false,
+        "classification": "no_operation",
+        "operation_id": null
+      },
+      "schema_version": 1,
+      "state": "prepared",
+      "transaction_sha256": "e0c4f50466d32a825ac729fbb122ea6a21a4f57ceb449356f5fb5a26ca9bb9ed"
+    },
+    {
+      "admission_event": null,
+      "authoritative_write": {
+        "after_fact": {
+          "axiom_footprint": [],
+          "depends_on": [],
+          "epistemic_status": "proved",
+          "evidence": [
+            {
+              "artifact": "sha256:d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8",
+              "check_status": "checked",
+              "checkers": [
+                "axeyum-lean-kernel",
+                "axeyum-lean-import/checked-proposition-compatibility"
+              ],
+              "id": "reconciliation-Nat.choose_zero_right",
+              "kernel_declaration": "Nat.choose_zero_right",
+              "kind": "kernel-term",
+              "notes": "Registers an independently constructed native theorem whose proposition definitionally matches this proof-free imported goal. No Autogenesis operation produced the theorem.",
+              "supports": "\u2200 (n : \u2115), n.choose 0 = 1"
+            }
+          ],
+          "external_status": "proved",
+          "formal": {
+            "fragment": "Nat",
+            "language": "lean4-surface",
+            "statement": "\u2200 (n : \u2115), n.choose 0 = 1"
+          },
+          "id": "F:ml430-nat-choose-zero-right-1ed2802a",
+          "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+          "proof_route": "kernel-lean",
+          "provenance": {
+            "date": "2026-08-18",
+            "established_by": "non-autonomous reconciliation with native fact F:nat-choose-zero-right",
+            "prior_art": [
+              {
+                "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted",
+                "what": "the theorem declaration `Nat.choose_zero_right`",
+                "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
+                "who": "the Mathlib contributors",
+                "year": 2026
+              }
+            ],
+            "source": "statement-only extraction of `Nat.choose_zero_right` from Mathlib v4.30.0; no proof value was exposed"
+          },
+          "schema_version": 1,
+          "statement": "The proposition declared as `Nat.choose_zero_right` in the pinned Mathlib v4.30 source.",
+          "title": "Mathlib v4.30 source proposition Nat.choose_zero_right"
+        },
+        "after_sha256": "153fe7fd17cc1c14e66ba3a8e70d715b993706f6c5377b9e2dfc471176e208f2",
+        "before_sha256": "88d444adf9131a2fe21c61bcc5d8199b0935eda2df51bd5c76a2304c7bcdb9ea",
+        "path": "artifacts/facts/F-ml430-nat-choose-zero-right-1ed2802a.json"
+      },
+      "identity": {
+        "after_fact_sha256": "153fe7fd17cc1c14e66ba3a8e70d715b993706f6c5377b9e2dfc471176e208f2",
+        "before_fact_sha256": "88d444adf9131a2fe21c61bcc5d8199b0935eda2df51bd5c76a2304c7bcdb9ea",
+        "fact_id": "F:ml430-nat-choose-zero-right-1ed2802a",
+        "knowledge_link_id": "L:ml430-nat-choose-zero-right-definitionally-matches-native",
+        "native_fact_id": "F:nat-choose-zero-right",
+        "native_theorem": "Nat.choose_zero_right",
+        "proposition_census_sha256": "d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8"
+      },
+      "kind": "axeyum-proposition-reconciliation-transaction-proposal",
+      "precondition": {
+        "definitionally_matches": true,
+        "epistemic_status": "open",
+        "evidence": [],
+        "native_axiom_footprint": [],
+        "source_is_authoritative": true
+      },
+      "production_credit": {
+        "autonomous": false,
+        "classification": "no_operation",
+        "operation_id": null
+      },
+      "schema_version": 1,
+      "state": "prepared",
+      "transaction_sha256": "2905cec8219235fb16b5f6482cd6f55af67e14c1adb7cea01a46e70c3dd305dc"
+    },
+    {
+      "admission_event": null,
+      "authoritative_write": {
+        "after_fact": {
+          "axiom_footprint": [],
+          "depends_on": [],
+          "epistemic_status": "proved",
+          "evidence": [
+            {
+              "artifact": "sha256:d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8",
+              "check_status": "checked",
+              "checkers": [
+                "axeyum-lean-kernel",
+                "axeyum-lean-import/checked-proposition-compatibility"
+              ],
+              "id": "reconciliation-Nat.zero_choose_succ",
+              "kernel_declaration": "Nat.zero_choose_succ",
+              "kind": "kernel-term",
+              "notes": "Registers an independently constructed native theorem whose proposition definitionally matches this proof-free imported goal. No Autogenesis operation produced the theorem.",
+              "supports": "\u2200 (k : \u2115), Nat.choose 0 k.succ = 0"
+            }
+          ],
+          "external_status": "proved",
+          "formal": {
+            "fragment": "Nat",
+            "language": "lean4-surface",
+            "statement": "\u2200 (k : \u2115), Nat.choose 0 k.succ = 0"
+          },
+          "id": "F:ml430-nat-choose-zero-succ-62c6520b",
+          "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+          "proof_route": "kernel-lean",
+          "provenance": {
+            "date": "2026-08-18",
+            "established_by": "non-autonomous reconciliation with native fact F:nat-zero-choose-succ",
+            "prior_art": [
+              {
+                "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted",
+                "what": "the theorem declaration `Nat.choose_zero_succ`",
+                "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
+                "who": "the Mathlib contributors",
+                "year": 2026
+              }
+            ],
+            "source": "statement-only extraction of `Nat.choose_zero_succ` from Mathlib v4.30.0; no proof value was exposed"
+          },
+          "schema_version": 1,
+          "statement": "The proposition declared as `Nat.choose_zero_succ` in the pinned Mathlib v4.30 source.",
+          "title": "Mathlib v4.30 source proposition Nat.choose_zero_succ"
+        },
+        "after_sha256": "3bf3cb5688bbb6cd651715b9006d153cdb793663c0c5ed42b3d7195539514b13",
+        "before_sha256": "b1936c360fa077b87f3cde0e4c5bec9cfdd3d6f9d8637dcf8f02cc6dbf3e397d",
+        "path": "artifacts/facts/F-ml430-nat-choose-zero-succ-62c6520b.json"
+      },
+      "identity": {
+        "after_fact_sha256": "3bf3cb5688bbb6cd651715b9006d153cdb793663c0c5ed42b3d7195539514b13",
+        "before_fact_sha256": "b1936c360fa077b87f3cde0e4c5bec9cfdd3d6f9d8637dcf8f02cc6dbf3e397d",
+        "fact_id": "F:ml430-nat-choose-zero-succ-62c6520b",
+        "knowledge_link_id": "L:ml430-nat-choose-zero-succ-definitionally-matches-native",
+        "native_fact_id": "F:nat-zero-choose-succ",
+        "native_theorem": "Nat.zero_choose_succ",
+        "proposition_census_sha256": "d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8"
+      },
+      "kind": "axeyum-proposition-reconciliation-transaction-proposal",
+      "precondition": {
+        "definitionally_matches": true,
+        "epistemic_status": "open",
+        "evidence": [],
+        "native_axiom_footprint": [],
+        "source_is_authoritative": true
+      },
+      "production_credit": {
+        "autonomous": false,
+        "classification": "no_operation",
+        "operation_id": null
+      },
+      "schema_version": 1,
+      "state": "prepared",
+      "transaction_sha256": "57d5c27515a08ce23517694fa790cb0c6f9da930d453efc01187273c402fcd2a"
+    },
+    {
+      "admission_event": null,
+      "authoritative_write": {
+        "after_fact": {
+          "axiom_footprint": [],
+          "depends_on": [],
+          "epistemic_status": "proved",
+          "evidence": [
+            {
+              "artifact": "sha256:d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8",
+              "check_status": "checked",
+              "checkers": [
+                "axeyum-lean-kernel",
+                "axeyum-lean-import/checked-proposition-compatibility"
+              ],
+              "id": "reconciliation-Nat.one_le_factorial",
+              "kernel_declaration": "Nat.one_le_factorial",
+              "kind": "kernel-term",
+              "notes": "Registers an independently constructed native theorem whose proposition definitionally matches this proof-free imported goal. No Autogenesis operation produced the theorem.",
+              "supports": "\u2200 (n : \u2115), 0 < n.factorial"
+            }
+          ],
+          "external_status": "proved",
+          "formal": {
+            "fragment": "Nat",
+            "language": "lean4-surface",
+            "statement": "\u2200 (n : \u2115), 0 < n.factorial"
+          },
+          "id": "F:ml430-nat-factorial-pos-f1dd2405",
+          "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+          "proof_route": "kernel-lean",
+          "provenance": {
+            "date": "2026-08-18",
+            "established_by": "non-autonomous reconciliation with native fact F:nat-one-le-factorial",
+            "prior_art": [
+              {
+                "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted",
+                "what": "the theorem declaration `Nat.factorial_pos`",
+                "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
+                "who": "the Mathlib contributors",
+                "year": 2026
+              }
+            ],
+            "source": "statement-only extraction of `Nat.factorial_pos` from Mathlib v4.30.0; no proof value was exposed"
+          },
+          "schema_version": 1,
+          "statement": "The proposition declared as `Nat.factorial_pos` in the pinned Mathlib v4.30 source.",
+          "title": "Mathlib v4.30 source proposition Nat.factorial_pos"
+        },
+        "after_sha256": "a19384dc8a6ea18026f31ddebd5fbc4f8f3e8757749936c6925f9f2125825d80",
+        "before_sha256": "81877372cc34eaa5a0d2b6c12461ca24f7731c528998a2ede446e99adc8b41e9",
+        "path": "artifacts/facts/F-ml430-nat-factorial-pos-f1dd2405.json"
+      },
+      "identity": {
+        "after_fact_sha256": "a19384dc8a6ea18026f31ddebd5fbc4f8f3e8757749936c6925f9f2125825d80",
+        "before_fact_sha256": "81877372cc34eaa5a0d2b6c12461ca24f7731c528998a2ede446e99adc8b41e9",
+        "fact_id": "F:ml430-nat-factorial-pos-f1dd2405",
+        "knowledge_link_id": "L:ml430-nat-factorial-pos-definitionally-matches-native",
+        "native_fact_id": "F:nat-one-le-factorial",
+        "native_theorem": "Nat.one_le_factorial",
+        "proposition_census_sha256": "d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8"
+      },
+      "kind": "axeyum-proposition-reconciliation-transaction-proposal",
+      "precondition": {
+        "definitionally_matches": true,
+        "epistemic_status": "open",
+        "evidence": [],
+        "native_axiom_footprint": [],
+        "source_is_authoritative": true
+      },
+      "production_credit": {
+        "autonomous": false,
+        "classification": "no_operation",
+        "operation_id": null
+      },
+      "schema_version": 1,
+      "state": "prepared",
+      "transaction_sha256": "b4aaad37aedef97bfdae2cc511616656d8cdbc6d7ad86da6f549447babe95c5b"
+    }
+  ],
+  "schema_version": 1,
+  "source": {
+    "census_sha256": "d99ed47b705619f4fe74ff4196c5aa4197cde4d930b36ad08f298ba3de770cd8",
+    "kernel_lemma_index_path": "artifacts/autogenesis/kernel-lemma-search-index-pre-reconciliation-v1.json",
+    "kernel_lemma_index_sha256": "446e0a717279f7e7a65b874fba9a3a1a7c3fcb5396dd81919a3b53518245c8d0",
+    "knowledge_overlay_sha256": "c165e9fd36d6126c4f0f8c7b3b8b69f0f32c37b7ae1abf26197dfdfa704567fd",
+    "transaction_builder_sha256": "cf84ac4154215dcc40aa15388ca3af0f38dc699c986d7487e8c4e569b54ab698"
+  },
+  "state": "prepared-read-only-no-ledger-writes",
+  "summary": {
+    "authoritative_ledger_writes": 0,
+    "autonomous_credit_count": 0,
+    "operation_count": 0,
+    "proposal_count": 6
+  }
+}

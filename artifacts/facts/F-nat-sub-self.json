@@ -21,6 +21,7 @@
     {
       "id": "kernel-sub_self",
       "kind": "kernel-term",
+      "kernel_declaration": "Nat.sub_self",
       "supports": "Nat.sub_self is admitted by the trusted kernel gate with the type recorded in formal.statement.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- Nat.sub_self 2>/dev/null | grep -Ec '^Nat\\.sub_self[[:space:]]')\" -ge 1",

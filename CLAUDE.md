@@ -634,6 +634,19 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   `hooks/pre-push` refuses the push, so it does not reach `main`; the cost is a
   wasted push attempt, which on this repository is several minutes of battery.
 
+  **AND "COUNT THE LIST" IS ITSELF EASY TO GET WRONG, BECAUSE ENTRIES ARE NOT
+  ONE PER LINE.** rustfmt wraps any entry whose name is long across five lines,
+  beginning with a bare `(` on its own line, so the obvious count -- lines
+  matching `("` -- silently undercounts. Measured 2026-08-26 while resolving a
+  pin conflict in `creal_tests.rs`: **210 such lines against a true 283**, and
+  the wrong number was written into the file before the gap was noticed. An
+  entry starts at either `^        \("` or `^        \($`, and only those two.
+
+  Do not hand-roll it. `scripts/recount-pinned-inventory.py <file>` rewrites the
+  pin to the counted value and exits nonzero when it moved; `--check` reports
+  without rewriting. Controls: `scripts/tests/test-recount-pinned-inventory.sh`,
+  each guard mutation-verified to be killed by the case that names it.
+
 - **AN ABSOLUTE PATH UNDER THE MAIN CHECKOUT SILENTLY EDITS THE MAIN CHECKOUT,
   EVEN FROM INSIDE A WORKTREE.** A lane working in
   `.claude/worktrees/agent-<id>/` opened `CLAUDE.md` by its familiar path,
@@ -771,6 +784,29 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   §7.1.2 makes the CLI print `unknown` for an error, so 59 both-sides-decline
   files read as disagreements and the count comes out 193 instead of 134.
   `--confirm` compares in-process, which is the difference.
+- **A CONCRETE INSTANTIATION CAN HIDE THE BUG A SYMBOLIC ONE EXPOSES, so the
+  mandatory-instantiation rule is NECESSARY AND NOT SUFFICIENT.** Measured
+  2026-08-26 in `creal/exponential.rs`. A proof of `2^n <= 2*n!` type-checked at
+  every concrete `n` tried (2, then 3) and failed with `TypeMismatch` for
+  symbolic `n`. The cause was real: `Int.int_le_of_mul_le_mul_right`'s
+  conclusion is `a * (ofNat c)`, ONE multiplication, while the chain produced
+  `(a * d1z) * d2z`, two left-associated ones -- propositionally equal, not
+  definitionally. At a concrete `n` every term reduces to a numeral and full
+  evaluation papers the associativity hole over.
+
+  This cuts against the instinct the rest of this file builds. Concrete
+  instantiation is what catches a transposed branch, a sign error, and a wrong
+  hand-computed expectation -- three separate defects this session, none of
+  which a symbolic check would have found. But numerals reduce, and reduction
+  hides every defeq-shaped gap. The two checks fail on disjoint defect classes,
+  so a declaration needs BOTH: instantiate at concrete arguments AND confirm the
+  proof term builds against a genuinely free variable.
+
+  The bisect that finds it: run `Kernel::infer` on each intermediate step with a
+  FREE fvar in the position, not a literal, and compare the inferred shape
+  against what the next lemma's conclusion expects. The first step whose shape
+  differs is the one needing an explicit `mul_assoc` (or `add_assoc`) rewrite.
+
 - **A CERTIFICATE MUST CARRY EVERY DISTINCTION ITS PRODUCER MAKES, or the checker
   cannot re-derive the refutation — and mutation testing will not find the gap.**
   Measured 2026-08-20 in `nra_monomial_bound_cert.rs`. The producer distinguished
@@ -935,6 +971,47 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   a reduced run."* A profile of a smaller input still locates the hotspot, and a
   located hotspot is the deliverable. Give the lane a way to finish, not just a
   way to fail.
+
+  **TENTH STALL, 2026-08-26, AND IT HAD A MECHANICAL CAUSE — EVERY LANE WORKTREE
+  BUILDS ITS OWN `target/` FROM SCRATCH.** Measured that day: **83 GB of lane
+  `target/` directories across 125 worktrees**, 400-800 MB each. Nothing is
+  shared, so a lane's first check pays a full cold build of the workspace
+  *behind the `cargo-serialized.sh` flock*, which is many minutes before a
+  single test runs. That wait is what a lane backgrounds. No amount of
+  instruction survives it, and the nine retrospectives above all read the
+  behaviour as discipline when half of it is arithmetic.
+
+  It also reframes the disk: the worktree tree is roughly half build artifacts,
+  so reaping worktrees reclaims far more than the source suggests.
+
+  **AND THE PROHIBITION MUST NAME THE OUTCOME, NOT A MECHANISM.** That lane's
+  brief said, in bold, *"Do NOT background a cargo run and wait for it."* It
+  started a **monitor** instead and stalled inside the letter of the rule —
+  a monitor is not literally a backgrounded cargo run. Write the constraint as
+  *"do not defer the answer by ANY mechanism — background task, monitor,
+  scheduled wakeup, or a second agent — and if a check has not finished when you
+  are ready to report, report it as 'did not run'."*
+
+- **DISPATCHING WITHOUT `isolation: "worktree"` PUTS THE LANE IN THE SHARED
+  CHECKOUT WHILE ITS BRIEF SAYS OTHERWISE.** Measured 2026-08-26: three lanes
+  dispatched for one prelude, all briefed in bold that they were working in
+  their own worktree, and the `Agent` calls carried no isolation. Two of the
+  three needed the same `creal.rs` and `creal_tests.rs`.
+
+  Nothing surfaces it. `git status` looks ordinary, the lane's own report reads
+  like normal work, and the first real symptom would be two lanes overwriting
+  each other's whole-file edits. It was caught only by noticing that a lane 32
+  minutes and 104 tool calls into its task had no worktree directory.
+
+  Two rules, and the second is the one that cost time:
+  - Pass `isolation: "worktree"` for any lane that will WRITE, and never assert
+    isolation in a brief you did not provide.
+  - **`git worktree list` is the check — not the presence of a directory under
+    `.claude/worktrees/agent-<id>`.** A capable lane may create its own worktree
+    somewhere else entirely (one did, on `/data0`, as its first action after
+    noticing the shared tree was mid-merge). Inferring "no `.claude` directory"
+    ⇒ "working in the shared checkout" is wrong, and it produced a false alarm
+    aimed at the one lane that had handled the situation correctly.
 
 - **A BACKGROUND TASK REPORTED AS EXITED MAY STILL BE RUNNING, AND IT WILL TAX
   EVERY MEASUREMENT YOU TAKE AFTERWARDS.** Found 2026-08-21: a `python3 -` from

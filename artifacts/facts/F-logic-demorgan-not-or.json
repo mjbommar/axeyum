@@ -22,6 +22,7 @@
     {
       "id": "kernel-logic-demorgan-not-or",
       "kind": "kernel-term",
+      "kernel_declaration": "demorgan_not_or",
       "supports": "If not-(p or q) holds, then not-p and not-q both hold.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- demorgan_not_or 2>/dev/null | grep -Ec '^demorgan_not_or[[:space:]]')\" -ge 1",

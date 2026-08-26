@@ -1,4 +1,4 @@
-"""The seven tier-R tools, and the held-out filter that lives inside them.
+"""The eight tier-R tools, and the held-out filter that lives inside them.
 
 The central assertion is not "no held-out id appeared". That is what a broken
 filter and a working one both report when the population is empty or the query
@@ -179,6 +179,7 @@ def test_lemma_neighbourhood_exposes_candidate_dependencies(ctx) -> None:
     assert page.total_lemmas > 0
     assert page.matched > 0
     assert all(row.declaration_id.startswith("Nat.add_") for row in page.rows)
+    assert all(row.canonical_type for row in page.rows)
     assert all(row.axiom_footprint_size == 0 for row in page.rows)
 
 
@@ -187,6 +188,32 @@ def test_lemma_neighbourhood_requires_one_query_axis(ctx) -> None:
         tools.lemma_neighbourhood(ctx)
     with pytest.raises(tools.ToolRefusal):
         tools.lemma_neighbourhood(ctx, name_glob="Nat.*", fact_id="F:any")
+
+
+def test_lemma_neighbourhood_filters_by_canonical_type(ctx) -> None:
+    page = tools.lemma_neighbourhood(ctx, canonical_type_contains="AxNat.fib")
+    assert page.matched > 0
+    assert page.canonical_type_contains == "AxNat.fib"
+    assert all("AxNat.fib" in row.canonical_type for row in page.rows)
+
+
+def test_lemma_candidates_joins_fact_dependencies_to_exact_kernel_links(ctx) -> None:
+    page = tools.lemma_candidates(ctx, "F:ml430-nat-fib-mono-cc6afe09")
+    assert page.declared_dependency_count == 1
+    assert page.linked_dependency_count == 1
+    assert page.matched == 1
+    assert page.unresolved_dependency_fact_ids == ()
+    assert page.rows[0].source_dependency_fact_id == ("F:ml430-nat-fib-le-fib-succ-d1ef4a3d")
+    assert page.rows[0].declaration_id == "Nat.fib_le_succ"
+    assert "AxNat.fib" in page.rows[0].canonical_type
+    assert page.rows[0].axiom_footprint_size == 0
+
+
+def test_lemma_candidates_reports_unlinked_dependencies_without_guessing(ctx) -> None:
+    page = tools.lemma_candidates(ctx, "F:ml430-nat-modeq-dvd-iff-8f130450")
+    assert page.declared_dependency_count > 0
+    assert page.linked_dependency_count < page.declared_dependency_count
+    assert page.unresolved_dependency_fact_ids
 
 
 def test_operation_registry_exposes_generality(ctx) -> None:
@@ -222,8 +249,8 @@ def test_every_tool_declares_a_tier() -> None:
     assert {tools.TOOL_TIERS[f.__name__] for f in tools.TIER_C_TOOLS} == {"checked"}
 
 
-def test_the_toolset_exposes_exactly_the_seven_read_tools() -> None:
-    assert len(tools.TIER_R_TOOLS) == 7
+def test_the_toolset_exposes_exactly_the_eight_read_tools() -> None:
+    assert len(tools.TIER_R_TOOLS) == 8
     tools.build_toolset()  # constructs, so every parameter carries a description
 
 

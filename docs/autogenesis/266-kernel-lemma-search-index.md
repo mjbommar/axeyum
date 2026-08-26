@@ -14,9 +14,20 @@ fact records name them exactly?**
 ## Authority boundary
 
 Every theorem row and dependency edge originates in declarations accepted by
-the Axeyum kernel. Fact links use only exact `kernel-<declaration>` or
-`kernel:<declaration>` evidence identities. Unresolved prefixed evidence is
-retained and counted. The generator does not fuzzy-match names.
+the Axeyum kernel. Fact links use explicit evidence-level
+`kernel_declarations` or `kernel_declaration` when present, then fall back for
+compatibility to exact
+`kernel-<declaration>` or `kernel:<declaration>` evidence identities. Historical
+evidence IDs therefore remain stable while an exact fully-qualified declaration
+can be added without guessing. Unresolved identities are retained and counted;
+the generator does not fuzzy-match names.
+
+Every declaration row also carries `canonical_type`, rendered directly by the
+kernel from the accepted declaration. The lemma index preserves that type for
+all theorem rows, and the typed Python `Lemma`, `lemma_neighbourhood`, and
+`lemma_candidates` surfaces expose it to autonomous episodes. This enables
+bounded exact-substring type filtering without treating the filter as proof
+authority.
 
 The artifact is nevertheless search data, not proof authority. A row does not
 say that a theorem applies to a goal, that a fact is semantically equivalent to
@@ -29,7 +40,7 @@ projection still held 1,100. Regenerating both artifacts brought them into exact
 agreement at 1,184. Their separate derivations remain valuable: freshness must
 continue to fail if theorem construction advances only one population.
 After merging the immediately subsequent constructive-real and rational
-theorems, both derived artifacts advanced together to 1,192.
+theorems, both derived artifacts advanced together through at least 1,195.
 
 ## Reproduce and gate
 
@@ -47,19 +58,58 @@ landing a refresh after theorem construction changes the source projection.
 The generated census makes incompleteness visible. Work should proceed in this
 order:
 
-1. resolve exact-but-dangling kernel evidence identities or document why they
-   target a different admitted population;
+1. For each exact-but-dangling kernel evidence identity, inspect the evidence's
+   actual checker and the live declaration projection. If they identify the
+   same theorem, add its fully-qualified ID as `kernel_declaration` on that
+   evidence row. If one checker row jointly establishes multiple declarations,
+   record all of them in `kernel_declarations`. If they do not agree, leave it
+   unresolved and document which admitted
+   population the evidence targets. Never infer a namespace from the fact's
+   fragment or from suffix uniqueness alone;
 2. preserve exact agreement between the projection and production inventory;
 3. use `axeyum.knowledge.lemmas` for deterministic programmatic lookup, or the
    autonomous loop's read-only `lemma_neighbourhood` tool for held-out-safe
    retrieval by theorem-name glob or exact fact identity;
-4. attach typed theorem signatures and normalized head symbols derived from the
-   kernel, without granting applicability authority;
+4. derive normalized head symbols and argument-shape fingerprints from the
+   now-recorded kernel theorem signatures, without granting applicability
+   authority;
 5. join operation/tactic preconditions through exact identifiers;
 6. record which retrieved candidates were attempted, declined, or occurred in
    an independently checked proof.
+
+The unresolved census separates identities absent from the projection from
+identities that resolve to a non-theorem declaration. The latter is not an
+error to paper over: `Rat.normalize`, for example, is a checked definition, so
+it does not belong in the theorem-only lemma search graph. An absent identity
+may instead expose a prelude/build-coverage boundary or a descriptive evidence
+ID; repair that source boundary before adding a link.
+
+The projection's claimed all-prelude scope includes the public
+`build_characterization` surface as well as the ordinary Nat and Int preludes.
+This matters: omitting that builder previously hid 32 checked characterization
+theorems and left 11 exact fact-evidence identities falsely dangling.
 
 The first producer evaluation should then ask whether bounded retrieval from
 this artifact improves held-out conversion without per-target code. That result,
 not graph density by itself, decides whether additional semantic enrichment is
 worth its maintenance cost.
+
+The first candidate-construction bridge is now concrete. Exact theorem names
+returned by `lemma_candidates` can be resolved to kernel `NameId` handles and
+passed, with the goal type, to `propose_bounded_application`. The producer does
+not scan the environment or receive a target theorem name; it builds a bounded
+type-directed application closure and returns an untrusted term. Kernel
+admission remains mandatory, and a failed bounded search remains a typed
+decline. This is the intended graph-to-producer boundary; operation dispatch
+and durable episode admission must preserve it rather than widening retrieval
+inside the producer.
+
+There are consequently two import contracts, and they must not be conflated.
+`import_statement_ndjson` is for producers that construct proofs from kernel
+primitives and rejects all proof-bearing declarations. The bounded application
+route instead uses `import_candidate_statement_ndjson`: the target remains a
+proof-free `definition : Prop`, while the exact retrieved candidates and only
+their independently checked transitive proof closures may enter. Every named
+candidate must have an empty kernel-measured axiom footprint. This distinction
+prevents both failure modes: an application producer starved of every reusable
+lemma, and a supposedly proof-free target capsule that smuggles its answer.

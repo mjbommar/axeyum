@@ -1,15 +1,13 @@
 //! Emit the complete constructed-prelude declaration surface for Autogenesis.
 //!
-//! Rows are `prelude<TAB>kind<TAB>name<TAB>axiom-footprint-size<TAB>` followed
-//! by a comma-separated list of *direct theorem dependencies*.  The last field
-//! is deliberately empty for non-theorems: a definition/recursor dependency
-//! closure is not proof-term theorem dependency and must not be conflated with
-//! it by the knowledge overlay.
+//! Rows carry both all-kind direct declaration references and the theorem-only
+//! subset. The latter remains the proof dependency relation; the former is
+//! search vocabulary and must not be confused with a transitive closure.
 
 use axeyum_lean_kernel::{
-    Declaration, Kernel, build_arith_prelude, build_complex_prelude, build_cpoint_prelude,
-    build_creal_prelude, build_int_prelude, build_logic_prelude, build_nat_prelude,
-    build_rat_prelude, build_string_prelude,
+    Declaration, Kernel, build_arith_prelude, build_characterization, build_complex_prelude,
+    build_cpoint_prelude, build_creal_prelude, build_int_prelude, build_logic_prelude,
+    build_nat_prelude, build_rat_prelude, build_string_prelude,
 };
 
 fn kind(declaration: &Declaration) -> &'static str {
@@ -41,13 +39,49 @@ fn emit(label: &str, kernel: &Kernel) {
             } else {
                 String::new()
             };
+            let direct_declarations = kernel
+                .declaration_dependencies(*name)
+                .into_iter()
+                .map(|dependency| kernel.display_name(dependency).to_string())
+                .collect::<Vec<_>>()
+                .join(",");
+            let direct_type_declarations = kernel
+                .declaration_type_dependencies(*name)
+                .into_iter()
+                .map(|dependency| kernel.display_name(dependency).to_string())
+                .collect::<Vec<_>>()
+                .join(",");
+            let canonical_type = kernel.render_lean(declaration.ty());
+            assert!(
+                !canonical_type.contains(['\t', '\n', '\r']),
+                "canonical declaration type must remain one TSV field"
+            );
             let footprint_size = kernel.axiom_footprint(*name).len();
-            (rendered, kind(declaration), footprint_size, direct_theorems)
+            (
+                rendered,
+                kind(declaration),
+                footprint_size,
+                direct_type_declarations,
+                direct_declarations,
+                direct_theorems,
+                canonical_type,
+            )
         })
         .collect::<Vec<_>>();
     rows.sort_by(|left, right| left.0.cmp(&right.0));
-    for (name, declaration_kind, footprint_size, dependencies) in rows {
-        println!("{label}\t{declaration_kind}\t{name}\t{footprint_size}\t{dependencies}");
+    for (
+        name,
+        declaration_kind,
+        footprint_size,
+        direct_type_declarations,
+        direct_declarations,
+        direct_theorems,
+        canonical_type,
+    ) in rows
+    {
+        println!(
+            "{label}\t{declaration_kind}\t{name}\t{footprint_size}\t{direct_type_declarations}\t{direct_declarations}\t{direct_theorems}\t{canonical_type}"
+        );
     }
 }
 
@@ -91,6 +125,11 @@ fn run() {
     let mut integer = Kernel::new();
     let _ = build_int_prelude(&mut integer).expect("Int prelude must build");
     emit("integer", &integer);
+
+    let mut characterization = Kernel::new();
+    let _ =
+        build_characterization(&mut characterization).expect("Nat/Int characterization must build");
+    emit("characterization", &characterization);
 
     let mut rational = Kernel::new();
     let _ = build_rat_prelude(&mut rational).expect("Rat prelude must build");
