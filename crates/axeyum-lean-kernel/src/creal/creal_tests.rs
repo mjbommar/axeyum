@@ -100,7 +100,7 @@ fn on_a_deep_stack_creal<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'stat
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 325] = [
+    let expected: [(&str, crate::NameId, &str); 328] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -439,6 +439,12 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         ("CReal.sumRange_add", p.sum_range_add, "theorem"),
         ("CReal.mul_sumRange", p.mul_sum_range, "theorem"),
         ("CReal.sumRange_le", p.sum_range_le, "theorem"),
+        ("CReal.monotone_of_le_succ", p.mono_of_le_succ, "theorem"),
+        (
+            "CReal.sumRange_mono_outer",
+            p.sum_range_mono_outer,
+            "theorem",
+        ),
         ("CReal.abs_sumRange_le", p.abs_sum_range_le, "theorem"),
         ("CReal.sumRange_telescope", p.sum_range_telescope, "theorem"),
         ("CReal.sumRange_split", p.sum_range_split, "theorem"),
@@ -953,6 +959,16 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         // directly. NOT `CReal.Cauchy` in that definition's own
         // canonical-index shape.
         ("CReal.riemannSum_cauchy", p.riemann_sum_cauchy, "theorem"),
+        // The representative-index bridge (`creal/integral.rs`): arbitrary
+        // shared-index closeness (as `riemannSum_cauchy` proves) implies
+        // own-canonical-index closeness (as `RegularSeq`/`Cauchy` demand).
+        // General in `X`, `Y` and the bound function -- not
+        // `riemannSum`-specific.
+        (
+            "CReal.sharedIndexToCanonical",
+            p.shared_index_to_canonical,
+            "theorem",
+        ),
         // Chapter 18/22: the geometric domination of `expTerm`, ending at the
         // `abs`-shaped form `sumRange_cauchy_of_dominated` consumes.
         ("CReal.expDominant", p.exp_dominant, "def"),

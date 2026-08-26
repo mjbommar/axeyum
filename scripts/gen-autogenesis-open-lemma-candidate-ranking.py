@@ -230,7 +230,7 @@ def build() -> dict[str, Any]:
         )
     goals.sort(key=lambda row: row["fact_id"])
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "kind": "axeyum-open-lemma-candidate-ranking",
         "state": "candidate-only-train-development-held-out-unread",
         "derivation": {
@@ -254,7 +254,11 @@ def build() -> dict[str, Any]:
             "candidate_rows": sum(len(row["candidates"]) for row in goals),
             "held_out_fact_ids_excluded_before_tokenization": len(excluded_held_out),
         },
-        "excluded_held_out_fact_ids": excluded_held_out,
+        "held_out_exclusion": {
+            "count": len(excluded_held_out),
+            "nursery_sha256": digest(NURSERY),
+            "identities_redacted": True,
+        },
         "goals": goals,
     }
 

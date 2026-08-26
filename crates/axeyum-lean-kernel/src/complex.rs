@@ -356,12 +356,20 @@ pub struct ComplexPrelude {
     /// `CReal.sqrt_sq`/`sq_sqrt` (`sqrt (x*x) ~ x` for `0 ≤ x`, or an
     /// equivalent), to cancel the square on the target side — monotonicity
     /// alone only ever produces a bound of the shape `sqrt(something)`, never
-    /// removes a `sqrt` that is already there. `creal/sqrt.rs`'s own module
-    /// doc names `sq_sqrt`/`sqrt_sq` as comparably sized to the whole
-    /// `sqrtApproxKRegular` climb (it goes through `CReal.mul`'s own
-    /// sampling, needing a canonical bound on `sqrt x` itself) and NOT
-    /// attempted there; that is what still stands between this lemma and the
-    /// unsquared triangle inequality, not monotonicity. `normSq_add` (this
+    /// removes a `sqrt` that is already there. The needed shape is
+    /// specifically `CReal.sqrt_sq` (`sqrt (mul t t) ~ t` for `0 ≤ t`,
+    /// `t := add (abs z) (abs w)`) — NOT `sq_sqrt` — and `creal/sqrt.rs`'s
+    /// own module doc (re-read 2026-08-26) narrows the obstruction: the
+    /// magnitude-bound and index-composition concerns that doc used to name
+    /// both turn out to already be free (`CReal.bound`/`bound_within` are
+    /// generic and unconditional; `RatPrelude::nat_div_succ_antitone` handles
+    /// the composed sampling index the same way `derivative.rs`/
+    /// `uniform_continuity.rs` already do elsewhere). What is left, and is
+    /// genuinely new, is a sign-recovery case split (`Rat.le_or_lt 0 t`)
+    /// turning a bound on `t·t` back into a bound on `t` itself rather than
+    /// `|t|` — see that file's own doc for the exact two branches. That
+    /// case split, not monotonicity, is what still stands between this
+    /// lemma and the unsquared triangle inequality. `normSq_add` (this
     /// module) is the parallelogram law, not subadditivity — it is an
     /// EQUALITY mentioning `normSq (add z (neg w))` as well as `normSq (add z
     /// w)`, and it is [`Self::norm_sq_nonneg`] applied to that SECOND term
@@ -1128,14 +1136,16 @@ pub struct ComplexPrelude {
     /// `CReal.sqrt_le_sqrt` (`x ≤ y → sqrt x ≤ sqrt y`) — all of which now
     /// exist, so `‖L‖ ≤ sqrt(2‖X‖² + 2‖Y‖²)` is provable outright from this
     /// lemma by monotonicity. What still stands between THAT and the
-    /// unsquared inequality is `CReal.sqrt_sq`/`sq_sqrt` (`sqrt (x*x) ~ x`
-    /// for `0 ≤ x`), needed to cancel a square that monotonicity alone never
+    /// unsquared inequality is `CReal.sqrt_sq` (`sqrt (mul t t) ~ t` for
+    /// `0 ≤ t`), needed to cancel a square that monotonicity alone never
     /// removes — see [`Self::norm_sq_add_le`]'s own doc for the identical gap
-    /// on the simpler triangle-inequality case. `creal/sqrt.rs`'s own module
-    /// doc names that fact as NOT built and comparably sized to the whole
-    /// `sqrtApproxKRegular` climb. Combining it with the sharp squared form
-    /// above (which itself needs `abs`'s multiplicativity, also not built)
-    /// is the remaining climb to the classical statement.
+    /// on the simpler triangle-inequality case, and `creal/sqrt.rs`'s own
+    /// module doc (2026-08-26 revision) for exactly what is and is not still
+    /// missing: not a magnitude bound, not new index-composition machinery
+    /// (both already exist generically), only a sign-recovery case split.
+    /// Combining it with the sharp squared form above (which itself needs
+    /// `abs`'s multiplicativity, also not built) is the remaining climb to
+    /// the classical statement.
     pub ptolemy_inequality_sq: NameId,
 
     /// `Complex.abs : Complex → CReal := fun z => CReal.sqrt (normSq z)` —
@@ -1148,18 +1158,24 @@ pub struct ComplexPrelude {
     /// proved** ([`Self::abs_congr`], [`Self::abs_one`]) — `CReal.sqrt_congr`,
     /// `CReal.sqrt_one`, and `CReal.sqrt_le_sqrt` (`x ≤ y → sqrt x ≤ sqrt y`,
     /// total, no `0 ≤ x` hypothesis) all landed in `creal/sqrt.rs`, closing
-    /// every fact this doc used to name as missing except one. **`sq_sqrt`/
-    /// `sqrt_sq` (relating `sqrt x` back to `x` by squaring, e.g. `sqrt
-    /// (x*x) ~ x` for `0 ≤ x`) is still open** — a real-analysis-sized gap on
-    /// its own (`creal/sqrt.rs`'s own module doc: it goes through
-    /// `CReal.mul`'s own sampling, needing a canonical bound on `sqrt x`
-    /// itself, and is comparably sized to the whole `sqrtApproxKRegular`
-    /// climb) — and it, not monotonicity, is what still blocks the triangle
-    /// inequality ([`Self::norm_sq_add_le`]'s own doc) and the unsquared
-    /// Ptolemy inequality ([`Self::ptolemy_inequality_sq`]'s own doc):
-    /// monotonicity alone only ever produces a bound of the shape
+    /// every fact this doc used to name as missing except one. **`sqrt_sq`
+    /// (`sqrt (mul t t) ~ t` for `0 ≤ t`; the OTHER direction, `sq_sqrt :=
+    /// mul (sqrt x) (sqrt x) ~ x`, is not what this module's two consumers
+    /// need) is still open**, and it, not monotonicity, is what still blocks
+    /// the triangle inequality ([`Self::norm_sq_add_le`]'s own doc) and the
+    /// unsquared Ptolemy inequality ([`Self::ptolemy_inequality_sq`]'s own
+    /// doc): monotonicity alone only ever produces a bound of the shape
     /// `sqrt(something)`, and cancelling a square it did NOT introduce needs
-    /// `sq_sqrt`/`sqrt_sq` instead. Building it means editing
+    /// `sqrt_sq` instead. **This is a smaller gap than earlier revisions of
+    /// this doc claimed.** `creal/sqrt.rs`'s 2026-08-26 revision found that
+    /// two of the three obstacles it used to name — a magnitude bound on
+    /// `sqrt x`, and new sampling-index-composition machinery — do not apply
+    /// to `sqrt_sq` at all (they describe `sq_sqrt`'s harder route) and are
+    /// otherwise already available generically (`CReal.bound`/
+    /// `bound_within`, `RatPrelude::nat_div_succ_antitone`). What is left is
+    /// a localized sign-recovery case split (`Rat.le_or_lt 0 t`, recovering
+    /// `t` rather than `|t|` from a bound on `t·t`) — real, not yet built,
+    /// but not a fresh real-analysis climb. Building it means editing
     /// `creal/sqrt.rs`, which this module does not own.
     ///
     /// [`Self::abs_nonneg`] needed none of this: it is a single-index sign

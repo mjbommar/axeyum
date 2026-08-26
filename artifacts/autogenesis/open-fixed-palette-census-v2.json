@@ -2,6 +2,10 @@
   "authority": "measurement only; no operation registration or fact admission",
   "census": {
     "accepted": 0,
+    "candidate_transport": {
+      "decline_reasons": {},
+      "outcomes": {}
+    },
     "conversion_percent": 0.0,
     "decline_reasons": {
       "NoTypedApplication": 24
@@ -36,7 +40,11 @@
       }
     }
   },
-  "excluded_held_out_fact_ids": [],
+  "held_out_exclusion": {
+    "count": 0,
+    "identities_redacted": true,
+    "nursery_sha256": "6d1f2551a612fdcadaf1c6b0096c4eebee304d9687157cb25505f785ee86daa8"
+  },
   "kind": "axeyum-open-fixed-palette-census",
   "limitations": "One fixed elementary palette is a negative baseline, not a general producer evaluation. Held-out rows are excluded before capsule access. Import rejections measure statement-boundary incompatibility, not solver inability or proposition falsehood.",
   "outcomes": [
@@ -1319,12 +1327,12 @@
       "trusted_declaration_kind": "Theorem"
     }
   ],
-  "schema_version": 2,
+  "schema_version": 3,
   "source": {
     "external_capsule_directory": "/nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1",
     "lean4export_format": "3.1.0",
     "lean_version": "4.30.0",
-    "mapping_sha256": "78ceebf4849689c0aa3b6b37b54aaf64df467c7e9e60f83a275462371c5d70e1",
+    "mapping_sha256": "3271e9aa4343376499d288c38edded424dc91bff61062f5de40b5027fb9d2fb3",
     "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
     "must_decline_population": {
       "path": "artifacts/autogenesis/must-decline-mutations-v1.json",
@@ -1333,7 +1341,7 @@
     "nursery_sha256": "6d1f2551a612fdcadaf1c6b0096c4eebee304d9687157cb25505f785ee86daa8",
     "population_filter": {
       "path": "artifacts/autogenesis/open-ranked-proposition-census-v2.json",
-      "sha256": "78ceebf4849689c0aa3b6b37b54aaf64df467c7e9e60f83a275462371c5d70e1"
+      "sha256": "3271e9aa4343376499d288c38edded424dc91bff61062f5de40b5027fb9d2fb3"
     }
   },
   "state": "train-development-measurement-held-out-excluded",
@@ -1356,11 +1364,16 @@
     "candidate_rule": "one fixed target-independent palette for every goal",
     "forbidden_inputs": [
       "target theorem proof",
-      "per-target candidate selection",
-      "name or statement similarity",
+      "held-out goal identities or statements",
+      "per-target hand-authored candidate selection",
+      "candidate theorem proof bodies during retrieval",
       "transitive declaration closure as search candidates"
     ],
-    "producer": "bounded-application"
+    "import_support_declarations": null,
+    "modeq_family": false,
+    "native_candidate_transport": false,
+    "producer": "bounded-application",
+    "retrieved_induction": false
   },
   "supersedes": "the initial 80-row exploratory run, which improperly executed the grammar on 23 held-out targets; it found no proof and read no source proof body, but its held-out outcomes are contaminated and carry no evaluation credit"
 }

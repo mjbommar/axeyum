@@ -12,6 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 RANKING = ROOT / "artifacts/autogenesis/open-lemma-candidate-ranking-v1.json"
 POPULATION = ROOT / "artifacts/autogenesis/open-fixed-palette-census-v1.json"
+NURSERY = ROOT / "artifacts/autogenesis/nursery-v1.json"
 OUTPUT = ROOT / "artifacts/autogenesis/open-ranked-proposition-census-v1.json"
 BINARY = ROOT / "target/debug/examples/proposition_compatibility_audit"
 
@@ -36,7 +37,20 @@ def main() -> int:
 
     ranking = json.loads(args.ranking.read_text())
     population = json.loads(args.population.read_text())
-    held_out = set(ranking["excluded_held_out_fact_ids"])
+    nursery_bytes = NURSERY.read_bytes()
+    nursery = json.loads(nursery_bytes)
+    held_out = {
+        row["fact_id"]
+        for row in nursery.get("entries", [])
+        if isinstance(row, dict) and row.get("partition") == "held-out"
+    }
+    exclusion = ranking.get("held_out_exclusion")
+    if not held_out or exclusion != {
+        "count": len(held_out),
+        "nursery_sha256": hashlib.sha256(nursery_bytes).hexdigest(),
+        "identities_redacted": True,
+    }:
+        raise SystemExit("ranking held-out exclusion receipt disagrees with the nursery")
     goals = {row["fact_id"]: row for row in ranking["goals"]}
     archive = Path(population["source"]["external_capsule_directory"])
     if not args.binary.is_file():

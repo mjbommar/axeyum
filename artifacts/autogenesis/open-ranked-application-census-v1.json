@@ -45,7 +45,11 @@
       }
     }
   },
-  "excluded_held_out_fact_ids": [],
+  "held_out_exclusion": {
+    "count": 0,
+    "identities_redacted": true,
+    "nursery_sha256": "6d1f2551a612fdcadaf1c6b0096c4eebee304d9687157cb25505f785ee86daa8"
+  },
   "kind": "axeyum-open-fixed-palette-census",
   "limitations": "One fixed elementary palette is a negative baseline, not a general producer evaluation. Held-out rows are excluded before capsule access. Import rejections measure statement-boundary incompatibility, not solver inability or proposition falsehood.",
   "outcomes": [
@@ -1325,16 +1329,16 @@
       "target_definition": "Axeyum.Autogenesis.Statement.Generated.natTestbitLor"
     }
   ],
-  "schema_version": 2,
+  "schema_version": 3,
   "source": {
     "candidate_ranking": {
       "path": "artifacts/autogenesis/open-lemma-candidate-ranking-v1.json",
-      "sha256": "7a996b2f5fed6f1cb36535686e452c946f95992c5636285799b447c60be3b1ef"
+      "sha256": "43d468d42d3cb1ec3ad3af190805cf0f82fdd16ea6e991a39cda36b6e89f6c3d"
     },
     "external_capsule_directory": "/nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1",
     "lean4export_format": "3.1.0",
     "lean_version": "4.30.0",
-    "mapping_sha256": "78ceebf4849689c0aa3b6b37b54aaf64df467c7e9e60f83a275462371c5d70e1",
+    "mapping_sha256": "3271e9aa4343376499d288c38edded424dc91bff61062f5de40b5027fb9d2fb3",
     "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
     "must_decline_population": {
       "path": "artifacts/autogenesis/must-decline-mutations-v1.json",
@@ -1343,7 +1347,7 @@
     "nursery_sha256": "6d1f2551a612fdcadaf1c6b0096c4eebee304d9687157cb25505f785ee86daa8",
     "population_filter": {
       "path": "artifacts/autogenesis/open-ranked-proposition-census-v2.json",
-      "sha256": "78ceebf4849689c0aa3b6b37b54aaf64df467c7e9e60f83a275462371c5d70e1"
+      "sha256": "3271e9aa4343376499d288c38edded424dc91bff61062f5de40b5027fb9d2fb3"
     }
   },
   "state": "train-development-measurement-held-out-excluded",

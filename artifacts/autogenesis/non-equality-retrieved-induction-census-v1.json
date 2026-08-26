@@ -45,7 +45,11 @@
       }
     }
   },
-  "excluded_held_out_fact_ids": [],
+  "held_out_exclusion": {
+    "count": 0,
+    "identities_redacted": true,
+    "nursery_sha256": "6d1f2551a612fdcadaf1c6b0096c4eebee304d9687157cb25505f785ee86daa8"
+  },
   "kind": "axeyum-open-ranked-transport-induction-census",
   "limitations": "Ranked native theorem transport supplies explicit premises to bounded induction and retrieved equality rewriting. Held-out rows are excluded before capsule access. Import and transport rejections measure compatibility boundaries, not proposition falsehood.",
   "outcomes": [
@@ -2951,11 +2955,11 @@
       "target_definition": "Axeyum.Autogenesis.Statement.Generated.natModulusModeqZero"
     }
   ],
-  "schema_version": 4,
+  "schema_version": 5,
   "source": {
     "candidate_ranking": {
       "path": "artifacts/autogenesis/open-lemma-rewrite-support-ranking-v1.json",
-      "sha256": "39ce801b37b88f8fc17a7d5ad9e6e9bb957d63eb4cbd1d5a340ace066987ab67"
+      "sha256": "612c053fd91f4fa674b46492e27d1a89628166bc6c06f3912964cf4216127199"
     },
     "external_capsule_directory": "/nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1",
     "lean4export_format": "3.1.0",

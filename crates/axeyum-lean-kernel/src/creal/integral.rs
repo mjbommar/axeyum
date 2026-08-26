@@ -120,15 +120,17 @@
 //! `declare_integral`'s caller for that check.
 
 use super::ring_helpers::right_distrib;
+use super::series::chain_within3;
 use super::{
     CRealPrelude, DERIVED_HEIGHT, and_intro, cadd, creal_ty, div_succ, embed, equiv, halves,
-    sample, shift, within,
+    modulus, sample, shift, within,
 };
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::{IntDev, exists_elim};
 use crate::nat_prelude::NatOps;
+use crate::rat_prelude::group::rsub;
 use crate::rat_prelude::ops::{
     nat_eq_to_rat, nat_rewrite_prop, normalize, one_le_succ, radd, rat_eq_rewrite, rat_ty, rchain,
     req, rle, rmul, rneg, rone, rtrans, rzero,
@@ -7451,6 +7453,299 @@ mod riemann_sum_cauchy_tests {
             result_bad.is_err(),
             "the SAME proof must be REFUSED against a conclusion using the \
              UNDOUBLED eps_term instead of total_eps"
+        );
+    }
+}
+
+// --- the representative-index bridge -- shared-index closeness implies
+// own-canonical-index closeness, the one gap `riemannSum_cauchy`'s own doc
+// comment names between it and `CReal.integral`. -----------------------------
+
+/// `CReal.sharedIndexToCanonical : ∀ (X Y : CReal) (bound : Nat → Rat),
+/// (∀ i, Within (seq (add X (neg Y)) i) (bound i)) → ∀ p q j : Nat,
+/// Within (Rat.sub (seq X p) (seq Y q))
+///        ((modulus p (shift j) + bound j) + modulus (shift j) q)`.
+///
+/// **The representative-index bridge.** `riemannSum_cauchy` (and, per this
+/// module's own top-of-file documentation, `series.rs`'s structurally
+/// analogous `sumRange` case) proves closeness of a `CReal` difference `t :=
+/// add X (neg Y)` at an arbitrary SHARED index `i` — `seq t i`, which by
+/// `add`/`neg`'s own definitions (`add x y := mk (fun n => x_(2n+1) +
+/// y_(2n+1))`, `neg x := mk (fun n => Rat.neg (x_n))`, `declare_addition`/
+/// `declare_negation` in `creal.rs`) is `seq X (shift i) − seq Y (shift i)`,
+/// the SAME shifted index on both sides. `CReal.RegularSeq`/`CReal.Cauchy`
+/// instead compare `X` and `Y` at their OWN, generally DIFFERENT, canonical
+/// indices `p`/`q` — `seq X p − seq Y q`. Those are not the same quantity,
+/// and nothing in `riemannSum_cauchy`'s own statement bridges them.
+///
+/// This theorem is that bridge. Given any auxiliary index `j`, `seq X p −
+/// seq Y q` telescopes through `seq X (shift j)` and `seq Y (shift j)` via
+/// [`chain_within3`] — three legs:
+///
+/// 1. `seq X p − seq X (shift j)`, bounded by `X`'s own
+///    [`CRealPrelude::regular`] at `(p, shift j)` — every `CReal` is regular
+///    against ITSELF at any two indices, the same accessor
+///    [`super::completeness`]'s own module documentation already reads this
+///    way ("the sample each real already offers at its own index ... is
+///    equivalent up to a constant factor to bounding `X` ... as a real");
+/// 2. `seq X (shift j) − seq Y (shift j)`, exactly `H` read at `j` — DEFEQ to
+///    the stated middle-leg shape via unfolding `add`/`neg`/`Rat.sub` plus
+///    beta reduction, the same "ordinary ... defeq" pattern
+///    [`declare_riemann_sum_const`] already uses, with no bridging lemma
+///    needed;
+/// 3. `seq Y (shift j) − seq Y q`, bounded by `Y`'s own `regular` at
+///    `(shift j, q)`.
+///
+/// **Genuinely reusable, not `riemannSum`-specific**: `X`, `Y` and `bound`
+/// are all free parameters, and nothing in the statement or proof mentions
+/// `riemannSum`/`sumRange`. The same theorem closes the analogous
+/// representative-index gap `series.rs`'s own module documentation measures
+/// for `CReal.sumRange_cauchy_of_dominated`'s shared-index estimates.
+///
+/// **Does not by itself produce `RegularSeq`/`Cauchy`** for `fun n =>
+/// riemannSum F a b n`, and so does not by itself reach `CReal.integral`:
+/// that needs, in addition, a construction relating an ARBITRARY pair
+/// `(p, q)` of subinterval counts through a common refinement (so
+/// `riemannSum_cauchy` — which only compares a count `m` past an
+/// Archimedean threshold against a `succ_mul_succ`-refinement of it — can be
+/// applied at all between two otherwise-unrelated counts). That
+/// construction is comparable in size to this bridge and is separate,
+/// unattempted work.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_shared_index_to_canonical(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let rat = rat_ty(d);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let bound_fv = d.fresh_fvar();
+    let bound = d.kernel().fvar(bound_fv);
+    let bound_ty = d.arrow(nat, rat);
+
+    // t := add X (neg Y).
+    let neg_y = cneg(d, p, y);
+    let t = cadd(d, p, x, neg_y);
+
+    let h_ty = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let seq_t_i = sample(d, p, t, i);
+        let bound_i = d.apply(bound, &[i]);
+        let claim = within(d, p, seq_t_i, bound_i);
+        d.pi_fv(i_fv, nat, claim)
+    };
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let pp_fv = d.fresh_fvar();
+    let pp = d.kernel().fvar(pp_fv);
+    let qq_fv = d.fresh_fvar();
+    let qq = d.kernel().fvar(qq_fv);
+    let jj_fv = d.fresh_fvar();
+    let jj = d.kernel().fvar(jj_fv);
+
+    let conclusion_ty = {
+        let sj = shift(d, jj);
+        let seq_x_pp = sample(d, p, x, pp);
+        let seq_y_qq = sample(d, p, y, qq);
+        let diff = rsub(d, p.rat, seq_x_pp, seq_y_qq);
+        let leg1 = modulus(d, p, pp, sj);
+        let bound_j = d.apply(bound, &[jj]);
+        let leg12 = radd(d, leg1, bound_j);
+        let leg3 = modulus(d, p, sj, qq);
+        let total = radd(d, leg12, leg3);
+        within(d, p, diff, total)
+    };
+
+    let ty = {
+        let after_jj = d.pi_fv(jj_fv, nat, conclusion_ty);
+        let after_qq = d.pi_fv(qq_fv, nat, after_jj);
+        let after_pp = d.pi_fv(pp_fv, nat, after_qq);
+        let after_h = d.arrow(h_ty, after_pp);
+        let after_bound = d.pi_fv(bound_fv, bound_ty, after_h);
+        let after_y = d.pi_fv(y_fv, carrier, after_bound);
+        d.pi_fv(x_fv, carrier, after_y)
+    };
+
+    let value_body = {
+        let sj = shift(d, jj);
+        let seq_x_pp = sample(d, p, x, pp);
+        let seq_x_sj = sample(d, p, x, sj);
+        let seq_y_sj = sample(d, p, y, sj);
+        let seq_y_qq = sample(d, p, y, qq);
+
+        let bxy = modulus(d, p, pp, sj);
+        let byz = d.apply(bound, &[jj]);
+        let bzw = modulus(d, p, sj, qq);
+
+        let pxy = d.lemma(p.regular, &[x, pp, sj]);
+        let pyz = d.apply(h, &[jj]);
+        let pzw = d.lemma(p.regular, &[y, sj, qq]);
+
+        chain_within3(
+            d, p, seq_x_pp, seq_x_sj, seq_y_sj, seq_y_qq, bxy, byz, bzw, pxy, pyz, pzw,
+        )
+    };
+
+    let value = {
+        let with_jj = d.lam_fv(jj_fv, nat, value_body);
+        let with_qq = d.lam_fv(qq_fv, nat, with_jj);
+        let with_pp = d.lam_fv(pp_fv, nat, with_qq);
+        let with_h = d.lam_fv(h_fv, h_ty, with_pp);
+        let with_bound = d.lam_fv(bound_fv, bound_ty, with_h);
+        let with_y = d.lam_fv(y_fv, carrier, with_bound);
+        d.lam_fv(x_fv, carrier, with_y)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.shared_index_to_canonical,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+#[cfg(test)]
+mod shared_index_to_canonical_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// **Mandatory concrete instantiation, with a negative control.**
+    /// `X := zero`, `Y := one` (genuinely different reals — the negative
+    /// control below needs `X`/`Y` unrelated by `regular` alone, and `zero`/
+    /// `one` are PRIMITIVE `CReal` constants, not built via `ofNat`'s
+    /// `Nat`-recursive definition — measured: instantiating this same test
+    /// at `ofNat 5`/`ofNat 2` did not finish `add_declaration`'s defeq check
+    /// within 300s, where `zero`/`one` finish in seconds. This matches
+    /// `riemann_sum_cauchy`'s own concrete test picking the SMALLEST
+    /// instantiation available for exactly this reason), `bound := fun _ =>
+    /// natDivSucc 2 0` (the constant `2`), `p := q := j := 6` — concrete
+    /// `Nat`s large enough that `X`/`Y`'s own [`CRealPrelude::regular`] legs
+    /// (`modulus 6 13 ≈ 0.214` each, `shift 6 = 13`) are individually too
+    /// small to bound `|seq X 6 − seq Y 6| = 1` without the middle leg's `2`
+    /// — see the negative control below for why that inequality is exactly
+    /// the point. `H` is left ASSUMED (a free hypothesis), the same choice
+    /// `riemann_sum_cauchy`'s own concrete test makes for `hab`: proving `H`
+    /// itself needs no arithmetic this theorem's own statement does not
+    /// need, and this test is about the BRIDGE'S telescope shape, not about
+    /// producing a witness for an arbitrary hypothesis.
+    ///
+    /// The negative control drops the MIDDLE leg (`H`'s own contribution)
+    /// from the reconstructed bound — the same "forgot a term" bug shape
+    /// [`declare_riemann_sum_cauchy`]'s own test catches for `total_eps`.
+    /// **Not vacuous, and genuinely false, not just differently-shaped**:
+    /// `modulus 6 13 + modulus 13 6 = 3/7 < 1 = |seq zero 6 − seq one 6|`, so
+    /// the dropped-middle-leg statement is an actually-false `CReal.le`
+    /// inequality over concrete rationals, refused on that basis, not merely
+    /// on a syntactic mismatch a differently-associated but equally-true sum
+    /// could paper over.
+    #[test]
+    fn shared_index_to_canonical_applies_at_concrete_literals() {
+        crate::on_a_deep_stack(shared_index_to_canonical_concrete_body);
+    }
+
+    fn shared_index_to_canonical_concrete_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let nat = d.nat_ty();
+
+        let x = d.kernel().const_(p.zero, vec![]);
+        let y = d.kernel().const_(p.one, vec![]);
+
+        let two_nat = d.num(2);
+        let zero_nat = d.num(0);
+        let bound = {
+            let ignored_fv = d.fresh_fvar();
+            let real_body = d.const_app(p.rat.nat_div_succ, &[two_nat, zero_nat]);
+            d.lam_fv(ignored_fv, nat, real_body)
+        };
+
+        let h_ty = {
+            let neg_y = cneg(&mut d, p, y);
+            let t = cadd(&mut d, p, x, neg_y);
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let seq_t_i = sample(&mut d, p, t, i);
+            let bound_i = d.apply(bound, &[i]);
+            let claim = within(&mut d, p, seq_t_i, bound_i);
+            d.pi_fv(i_fv, nat, claim)
+        };
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        let pp = d.num(6);
+        let qq = d.num(6);
+        let jj = d.num(6);
+
+        let applied = d.const_app(p.shared_index_to_canonical, &[x, y, bound, h, pp, qq, jj]);
+
+        let sj = shift(&mut d, jj);
+        let seq_x_pp = sample(&mut d, p, x, pp);
+        let seq_y_qq = sample(&mut d, p, y, qq);
+        let diff = rsub(&mut d, p.rat, seq_x_pp, seq_y_qq);
+        let leg1 = modulus(&mut d, p, pp, sj);
+        let bound_j = d.apply(bound, &[jj]);
+        let leg3 = modulus(&mut d, p, sj, qq);
+
+        let ok_total = {
+            let leg12 = radd(&mut d, leg1, bound_j);
+            radd(&mut d, leg12, leg3)
+        };
+        let ok_ty = {
+            let claim = within(&mut d, p, diff, ok_total);
+            d.arrow(h_ty, claim)
+        };
+        let ok_value = d.lam_fv(h_fv, h_ty, applied);
+
+        let anon = d.kernel().anon();
+        let name_ok = d
+            .kernel()
+            .name_str(anon, "__sharedIndexToCanonicalConcreteOk");
+        let result_ok = d.kernel().add_declaration(Declaration::Theorem {
+            name: name_ok,
+            uparams: vec![],
+            ty: ok_ty,
+            value: ok_value,
+        });
+        assert!(
+            result_ok.is_ok(),
+            "sharedIndexToCanonical at (zero, one, p=6, q=6, j=6) must have \
+             the expected three-leg `Within`-shaped conclusion type: {:?}",
+            result_ok.err()
+        );
+
+        // Negative control: drop the middle leg (`bound j`) entirely.
+        let bad_total = radd(&mut d, leg1, leg3);
+        let bad_ty = {
+            let claim = within(&mut d, p, diff, bad_total);
+            d.arrow(h_ty, claim)
+        };
+        let bad_value = d.lam_fv(h_fv, h_ty, applied);
+
+        let name_bad = d
+            .kernel()
+            .name_str(anon, "__sharedIndexToCanonicalConcreteBad");
+        let result_bad = d.kernel().add_declaration(Declaration::Theorem {
+            name: name_bad,
+            uparams: vec![],
+            ty: bad_ty,
+            value: bad_value,
+        });
+        assert!(
+            result_bad.is_err(),
+            "the SAME proof must be REFUSED against a conclusion that DROPS \
+             the middle (`H`) leg from the reconstructed bound"
         );
     }
 }

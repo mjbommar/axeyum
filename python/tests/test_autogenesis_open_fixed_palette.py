@@ -7,6 +7,9 @@ from axeyum import autogenesis_open_fixed_palette as MODULE
 
 
 class OpenFixedPaletteTests(unittest.TestCase):
+    def test_packaged_module_resolves_the_repository_root(self) -> None:
+        self.assertTrue((MODULE.ROOT / "artifacts" / "ontology" / "fact.schema.json").is_file())
+
     def test_palette_is_sorted_unique_and_target_independent(self) -> None:
         self.assertEqual(tuple(sorted(set(MODULE.CANDIDATES))), MODULE.CANDIDATES)
         self.assertNotIn("Nat.fib_mono", MODULE.CANDIDATES)

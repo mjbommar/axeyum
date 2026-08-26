@@ -514,6 +514,14 @@ external capsule with a committed hash-bound receipt. This converts the
 example-built family into reusable checked library material while keeping
 operation registration and autonomous-production credit at zero.
 
+The repository-wide fact gate subsequently found three authored graph edges
+missing from two settled facts even though their kernel terms already exposed
+them. `Nat.fib_le_succ` directly uses `Nat.le_add_right` and `Nat.zero_le`, and
+`Nat.choose_self` directly uses `Nat.choose_succ_self_eq_zero`. The ledger now
+records all three. The derived authority reports 450 kernel facts, 356 named
+facts, 1,302 graph edges, and zero missing edges; the fact DAG gains one fact
+with dependents without changing theorem status or proof credit.
+
 ### Exit evidence
 
 - Kernel theorem count agrees exactly with the theorem-production authority.
@@ -574,10 +582,17 @@ with a positive control. The same refresh measures 6 accepted proofs among 111
 eligible theorem goals (5.4%), down from 6/109 (5.5%): mathematical inventory
 growth did not masquerade as producer progress.
 
-The project-wide Python claim is still withheld. The prior 1,861-test run also
-reported two held-out-isolation setup errors from exclusion-list references
-introduced by concurrent nursery expansion; that separate shared defect has
-not yet been re-audited here.
+The second integration defect is now closed without weakening the isolation
+gate. Candidate rankings and producer censuses had excluded held-out goals
+before search but then serialized the protected fact identities themselves.
+Those arrays are replaced by a count, the nursery SHA-256, and an explicit
+`identities_redacted` receipt. Consumers independently derive the protected set
+from the nursery and fail closed when the receipt disagrees. The isolation gate
+now scans 1,066 files with 37 held-out facts, zero settled facts, and zero
+references. The complete Python authority collected 1,881 tests: 1,847 passed,
+34 skipped, and none failed or errored. That proves the Python surface green at
+this commit; it does not imply the independent Rust, docs, or remote-CI gates
+are green.
 
 ## Sequencing
 
