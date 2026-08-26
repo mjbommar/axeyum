@@ -117,6 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-26 | `b1405eff6` | Prove one-bit weighted-sum normalization and its Boolean observation round trip axiom-free; narrow the open theorem to the general bounded case. |
 | 2026-08-26 | `fcdcab1b3` | Prove the Boolean-digit map round-trips through bit zero axiom-free and expose weighted-sum normalization as the next non-definitional arithmetic seam. |
 | 2026-08-26 | `75baf4b2c` | Expose the bounded reifier's axiom-free successor equation as a stable induction interface for the missing observation round trip. |
 | 2026-08-26 | `3bb1207e8` | Construct bounded Boolean-bit reification as a binary weighted sum and check its zero-length base axiom-free; retain the round-trip theorem as missing. |
