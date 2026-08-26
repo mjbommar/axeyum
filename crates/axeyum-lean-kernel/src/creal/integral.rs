@@ -2370,7 +2370,13 @@ fn succ_mul_succ(d: &mut IntDev<'_>, n: ExprId, m: ExprId) -> (ExprId, ExprId) {
 /// Reproduces `monotone.rs`'s private `step_nonneg_of`'s `width_nonneg`
 /// fragment (that function bundles it with a `frac_real` factor this call
 /// site does not need).
-fn width_nonneg_of(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId, hab: ExprId) -> ExprId {
+fn width_nonneg_of(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    hab: ExprId,
+) -> ExprId {
     let zero_c = czero(d, p);
     let na = cneg(d, p, a);
     let refl_na = d.lemma(p.le_refl, &[na]);
@@ -2642,7 +2648,13 @@ fn declare_mesh_le_of_ge(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kern
 
     let scaled = d.lemma(
         p.mul_le_mul_of_nonneg_left,
-        &[width, frac_m_real, frac_deep_real, width_nonneg, frac_le_real],
+        &[
+            width,
+            frac_m_real,
+            frac_deep_real,
+            width_nonneg,
+            frac_le_real,
+        ],
     );
 
     let step_m = cmul(d, p, width, frac_m_real);
