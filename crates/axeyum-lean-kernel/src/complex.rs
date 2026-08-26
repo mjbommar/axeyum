@@ -404,6 +404,18 @@ pub struct ComplexPrelude {
     /// [`Self::mul_inv_cancel`] since `div z z k h` unfolds by one delta step
     /// to exactly `mul z (inv z k h)`.
     pub div_self: NameId,
+    /// `Complex.div_congr : ∀ z z' w w' k k' (h : PosBound (normSq w) k)
+    /// (h' : PosBound (normSq w') k'), Equiv z z' → Equiv w w' →
+    /// Equiv (div z w k h) (div z' w' k' h')`.
+    ///
+    /// **No transport needed, unlike [`Self::conj_div`]** — `div`'s two
+    /// moduli are already independently quantified (mirroring
+    /// [`Self::inv_congr`]'s own shape), so the proof is one
+    /// [`Self::inv_congr`] call composed with one [`Self::mul_congr`] call,
+    /// with the stated conclusion reached by the kernel unfolding `div` on
+    /// both sides during defeq, exactly as [`Self::div_self`] and
+    /// [`Self::conj_div`] already rely on.
+    pub div_congr: NameId,
 
     // --- apartness, and the constructive shape of "no zero divisors" --------
     //
@@ -505,6 +517,21 @@ pub struct ComplexPrelude {
     /// [`Self::norm_sq_conj`]; the rest is the ring calculus plus
     /// `CReal.mul_congr`/`neg_congr` on that one fact, componentwise.
     pub conj_inv: NameId,
+    /// `Complex.conj_div : ∀ z w k (h : CReal.PosBound (normSq w) k),
+    /// Equiv (conj (div z w k h)) (div (conj z) (conj w) k (pos_bound_conj w k h))`.
+    ///
+    /// Conjugation commutes with division, **at the same `k`** — division is
+    /// guarded by the divisor's norm alone ([`Self::div`]), so only `w`'s
+    /// bound needs transporting, via the same [`Self::pos_bound_conj`]
+    /// [`Self::conj_inv`] already uses; no fresh estimate for the conjugate
+    /// side. `div z w k h` unfolds by one delta step to `mul z (inv w k h)`
+    /// ([`Self::div`]'s own definition), so the proof is
+    /// [`Self::conj_mul`] at `(z, inv w k h)` chained through
+    /// [`Self::mul_congr`] against [`Self::conj_inv`] itself — the same shape
+    /// [`Self::conj_pow`]'s successor step uses, one level up — and the
+    /// stated conclusion is reached by the kernel unfolding `div` on both
+    /// sides during defeq, exactly as [`Self::div_self`] already relies on.
+    pub conj_div: NameId,
     /// `Complex.pow : Complex → Nat → Complex`, by structural `Nat.rec` on the
     /// exponent — `pow z Nat.zero ≡ one`, `pow z (Nat.succ j) ≡ mul (pow z j)
     /// z` — matching `Int.pow`'s own convention exactly (`int_prelude/defs.rs`):
@@ -1090,6 +1117,7 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         inv_congr: kernel.name_str(complex, "inv_congr"),
         div: kernel.name_str(complex, "div"),
         div_self: kernel.name_str(complex, "div_self"),
+        div_congr: kernel.name_str(complex, "div_congr"),
         apart: kernel.name_str(complex, "Apart"),
         apart_irrefl: kernel.name_str(complex, "apart_irrefl"),
         apart_symm: kernel.name_str(complex, "apart_symm"),
@@ -1100,6 +1128,7 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         inv_mul_cancel: kernel.name_str(complex, "inv_mul_cancel"),
         pos_bound_conj: kernel.name_str(complex, "pos_bound_conj"),
         conj_inv: kernel.name_str(complex, "conj_inv"),
+        conj_div: kernel.name_str(complex, "conj_div"),
         pow: kernel.name_str(complex, "pow"),
         pow_zero: kernel.name_str(complex, "pow_zero"),
         pow_succ: kernel.name_str(complex, "pow_succ"),
@@ -1191,6 +1220,7 @@ pub fn build_complex_prelude(kernel: &mut Kernel) -> Result<ComplexPrelude, Kern
         declare_complex_mul_inv_cancel(&mut d, prelude)?;
         declare_complex_inv_congr(&mut d, prelude)?;
         declare_div(&mut d, prelude)?;
+        declare_div_congr(&mut d, prelude)?;
         declare_div_self(&mut d, prelude)?;
         declare_apart(&mut d, prelude)?;
         declare_apart_irrefl(&mut d, prelude)?;
@@ -1201,6 +1231,7 @@ pub fn build_complex_prelude(kernel: &mut Kernel) -> Result<ComplexPrelude, Kern
         declare_complex_inv_mul_cancel(&mut d, prelude)?;
         declare_pos_bound_conj(&mut d, prelude)?;
         declare_conj_inv(&mut d, prelude)?;
+        declare_conj_div(&mut d, prelude)?;
         declare_pow(&mut d, prelude)?;
         declare_pow_equations(&mut d, prelude)?;
         declare_pow_add(&mut d, prelude)?;
@@ -3635,6 +3666,97 @@ fn declare_div(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError>
     })
 }
 
+/// `Complex.div_congr : ∀ z z' w w' k k' (h : PosBound (normSq w) k)
+/// (h' : PosBound (normSq w') k'), Equiv z z' → Equiv w w' →
+/// Equiv (div z w k h) (div z' w' k' h')`.
+///
+/// Both moduli are quantified independently, mirroring
+/// [`ComplexPrelude::inv_congr`]'s own shape exactly — `div`'s hypothesis
+/// only ever guards the divisor, so this needs no transport step at all
+/// (unlike [`declare_conj_div`], which fixes `w`, `w'` to `w`, `conj w`
+/// specifically and so DOES need one). One [`ComplexPrelude::inv_congr`]
+/// call to relate the two inverses, then one [`ComplexPrelude::mul_congr`]
+/// call to lift that across the numerator; the stated conclusion is reached
+/// by the kernel unfolding `div` on both sides during defeq, exactly as
+/// [`declare_div_self`] and [`declare_conj_div`] already rely on.
+fn declare_div_congr(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let z2_fv = d.fresh_fvar();
+    let z2 = d.kernel().fvar(z2_fv);
+    let w_fv = d.fresh_fvar();
+    let w = d.kernel().fvar(w_fv);
+    let w2_fv = d.fresh_fvar();
+    let w2 = d.kernel().fvar(w2_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let k2_fv = d.fresh_fvar();
+    let k2 = d.kernel().fvar(k2_fv);
+
+    let norm_w = d.const_app(p.norm_sq, &[w]);
+    let hypothesis = d.const_app(creal.pos_bound, &[norm_w, k]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let norm_w2 = d.const_app(p.norm_sq, &[w2]);
+    let hypothesis2 = d.const_app(creal.pos_bound, &[norm_w2, k2]);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+
+    let hz_ty = zeq(d, p, z, z2);
+    let hz_fv = d.fresh_fvar();
+    let hz = d.kernel().fvar(hz_fv);
+    let hw_ty = zeq(d, p, w, w2);
+    let hw_fv = d.fresh_fvar();
+    let hw = d.kernel().fvar(hw_fv);
+
+    let inv_w = d.const_app(p.inv, &[w, k, h]);
+    let inv_w2 = d.const_app(p.inv, &[w2, k2, h2]);
+
+    // Equiv (inv w k h) (inv w2 k2 h2), independent moduli.
+    let u = d.lemma(p.inv_congr, &[w, w2, k, k2, h, h2, hw]);
+    // Equiv (mul z inv_w) (mul z2 inv_w2).
+    let proof = d.lemma(p.mul_congr, &[z, z2, inv_w, inv_w2, hz, u]);
+
+    let div_zw = d.const_app(p.div, &[z, w, k, h]);
+    let div_z2w2 = d.const_app(p.div, &[z2, w2, k2, h2]);
+
+    let value = {
+        let with_hw = d.lam_fv(hw_fv, hw_ty, proof);
+        let with_hz = d.lam_fv(hz_fv, hz_ty, with_hw);
+        let with_h2 = d.lam_fv(h2_fv, hypothesis2, with_hz);
+        let with_h = d.lam_fv(h_fv, hypothesis, with_h2);
+        let with_k2 = d.lam_fv(k2_fv, nat, with_h);
+        let with_k = d.lam_fv(k_fv, nat, with_k2);
+        let with_w2 = d.lam_fv(w2_fv, carrier, with_k);
+        let with_w = d.lam_fv(w_fv, carrier, with_w2);
+        let with_z2 = d.lam_fv(z2_fv, carrier, with_w);
+        d.lam_fv(z_fv, carrier, with_z2)
+    };
+    let ty = {
+        let conclusion = zeq(d, p, div_zw, div_z2w2);
+        let after_hw = d.arrow(hw_ty, conclusion);
+        let after_hz = d.arrow(hz_ty, after_hw);
+        let with_h2 = d.pi_fv(h2_fv, hypothesis2, after_hz);
+        let with_h = d.pi_fv(h_fv, hypothesis, with_h2);
+        let with_k2 = d.pi_fv(k2_fv, nat, with_h);
+        let with_k = d.pi_fv(k_fv, nat, with_k2);
+        let with_w2 = d.pi_fv(w2_fv, carrier, with_k);
+        let with_w = d.pi_fv(w_fv, carrier, with_w2);
+        let with_z2 = d.pi_fv(z2_fv, carrier, with_w);
+        d.pi_fv(z_fv, carrier, with_z2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.div_congr,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 /// `Complex.div_self : ∀ z k (h : PosBound (normSq z) k),
 /// Equiv (div z z k h) one` — `z / z ~ 1`.
 ///
@@ -4383,6 +4505,91 @@ fn declare_conj_inv(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelE
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.conj_inv,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.conj_div : ∀ z w k (h : CReal.PosBound (normSq w) k),
+/// Equiv (conj (div z w k h)) (div (conj z) (conj w) k (pos_bound_conj w k h))`.
+///
+/// `div z w k h` unfolds by one delta step to `mul z (inv w k h)`
+/// ([`declare_div`]), so the proof chains three known facts and lets the
+/// kernel unfold `div` on both sides of the stated conclusion during defeq —
+/// the same reliance [`declare_div_self`] already has on `div`'s
+/// transparency:
+///
+/// 1. [`ComplexPrelude::conj_mul`] at `(z, inv w k h)`:
+///    `Equiv (conj (mul z (inv w k h))) (mul (conj z) (conj (inv w k h)))`.
+/// 2. [`ComplexPrelude::conj_inv`] at `(w, k, h)`:
+///    `Equiv (conj (inv w k h)) (inv (conj w) k (pos_bound_conj w k h))` —
+///    already stated at the caller's own `k`, so no modulus mismatch to
+///    close.
+/// 3. [`ComplexPrelude::mul_congr`] holding `conj z` fixed by
+///    [`ComplexPrelude::equiv_refl`] and rewriting the second factor by (2),
+///    then [`ComplexPrelude::equiv_trans`] against (1).
+fn declare_conj_div(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let w_fv = d.fresh_fvar();
+    let w = d.kernel().fvar(w_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let norm_w = d.const_app(p.norm_sq, &[w]);
+    let hypothesis = d.const_app(creal.pos_bound, &[norm_w, k]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let inv_w = d.const_app(p.inv, &[w, k, h]);
+    let conj_z = d.const_app(p.conj, &[z]);
+    let conj_w = d.const_app(p.conj, &[w]);
+    let h2 = d.lemma(p.pos_bound_conj, &[w, k, h]); // PosBound (normSq (conj w)) k
+    let inv_conj_w = d.const_app(p.inv, &[conj_w, k, h2]);
+
+    // Step 1: Equiv (conj (mul z inv_w)) (mul (conj z) (conj inv_w)).
+    let t1 = d.lemma(p.conj_mul, &[z, inv_w]);
+    let conj_inv_w = d.const_app(p.conj, &[inv_w]);
+    let mul_z_invw = d.const_app(p.mul, &[z, inv_w]);
+    let start = d.const_app(p.conj, &[mul_z_invw]);
+    let mid = d.const_app(p.mul, &[conj_z, conj_inv_w]);
+
+    // Step 2: Equiv (conj inv_w) (inv_conj_w), at the same k via pos_bound_conj.
+    let t2 = d.lemma(p.conj_inv, &[w, k, h]);
+
+    // Step 3: Equiv (mul (conj z) (conj inv_w)) (mul (conj z) inv_conj_w).
+    let refl_conj_z = d.lemma(p.equiv_refl, &[conj_z]);
+    let t3 = d.lemma(
+        p.mul_congr,
+        &[conj_z, conj_z, conj_inv_w, inv_conj_w, refl_conj_z, t2],
+    );
+    let end = d.const_app(p.mul, &[conj_z, inv_conj_w]);
+
+    let proof = d.lemma(p.equiv_trans, &[start, mid, end, t1, t3]);
+
+    let div_zw = d.const_app(p.div, &[z, w, k, h]);
+    let conj_div_zw = d.const_app(p.conj, &[div_zw]);
+    let div_conjz_conjw = d.const_app(p.div, &[conj_z, conj_w, k, h2]);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, proof);
+        let with_k = d.lam_fv(k_fv, nat, with_h);
+        let with_w = d.lam_fv(w_fv, carrier, with_k);
+        d.lam_fv(z_fv, carrier, with_w)
+    };
+    let ty = {
+        let conclusion = zeq(d, p, conj_div_zw, div_conjz_conjw);
+        let inner = d.pi_fv(h_fv, hypothesis, conclusion);
+        let with_k = d.pi_fv(k_fv, nat, inner);
+        let with_w = d.pi_fv(w_fv, carrier, with_k);
+        d.pi_fv(z_fv, carrier, with_w)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.conj_div,
         uparams: vec![],
         ty,
         value,
