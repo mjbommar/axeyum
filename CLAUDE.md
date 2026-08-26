@@ -784,6 +784,43 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   §7.1.2 makes the CLI print `unknown` for an error, so 59 both-sides-decline
   files read as disagreements and the count comes out 193 instead of 134.
   `--confirm` compares in-process, which is the difference.
+- **AN INVENTORY TEST THAT ITERATES ITS OWN LIST CANNOT SEE WHAT IS MISSING
+  FROM IT, AND ITS NAME WILL SAY OTHERWISE.** Measured 2026-08-26.
+  `every_creal_declaration_is_checked_and_axiom_free` looped over a
+  hand-maintained `expected` array, checking each entry's declaration kind and
+  `axiom_footprint`. Its name promises *every* `CReal` declaration; its
+  behaviour was *every declaration someone remembered to add*. Green on every
+  run, for as long as it has existed.
+
+  **The pinned length does not catch this.** It constrains the list against
+  itself -- 294 entries declared, 294 entries present -- and says nothing about
+  what the prelude actually declared. Both numbers can be right while the test
+  covers a fraction of the environment.
+
+  The fix is one assertion, checked against the ENVIRONMENT rather than the
+  list: enumerate `kernel.environment().iter()`, filter to the namespace the
+  file owns, and fail naming anything absent from `expected`.
+
+  It found **twelve** unchecked declarations on its first run. Five were that
+  session's. The other seven had been unchecked far longer -- `lt_cotrans` and
+  `apart_cotrans` (Ch12 cotransitivity) and the entire `limit` family
+  (`RegularSeq`, `limitSeq`, `limitSeq_regular`, `limit`, `limit_dist`), which
+  is **Bishop completeness**, this project's constructive substitute for the
+  least-upper-bound property. None had a `Theorem`-kind or axiom-footprint
+  check from this test.
+
+  All twelve passed once listed, so nothing rested on an axiom; the gap was in
+  the checking. And the headline axiom-freedom figure was never affected,
+  because `prelude_theorem_inventory` reads the environment directly -- which
+  is precisely why this file insists on reading metrics from the kernel and
+  never from a list or from source text.
+
+  Generalize it: **any test named "every X" must derive its X from the
+  authority, not from a literal.** If the list is maintained by hand, the test
+  measures the maintainer's memory. `nat_prelude_tests.rs`'s `theorem_names`
+  and the `complex` `named` array have the same shape and deserve the same
+  assertion.
+
 - **A TEST THAT PASSES ONLY UNDER AN AMBIENT ENVIRONMENT VARIABLE IS A GATE ON
   ONE SHELL, AND THE LANE THAT ADDS IT CANNOT SEE THE PROBLEM.** Measured
   2026-08-26. A lane added a concrete-instantiation test for
