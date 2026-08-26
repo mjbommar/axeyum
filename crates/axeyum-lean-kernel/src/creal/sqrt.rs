@@ -4434,6 +4434,80 @@ pub(super) fn declare_sqrt_mul(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<()
     })
 }
 
+/// `CReal.le_of_sq_le : ∀ t s, CReal.le CReal.zero t → CReal.le CReal.zero s
+/// → CReal.le (mul t t) (mul s s) → CReal.le t s`.
+///
+/// The "cancel the square at the `CReal` level" step
+/// [`crate::ComplexPrelude::abs_add_le`] needs, and a reusable order lemma in
+/// its own right — the `CReal` analogue of [`crate::RatPrelude::lt_of_sq_lt`]
+/// (`Rat`, strict). No new epsilon estimate: `sqrt_le_sqrt` at `(t·t, s·s,
+/// h)` gives `sqrt(t·t) ≤ sqrt(s·s)`; `sqrt_sq` at `t` (using `ht`) and at
+/// `s` (using `hs`) give `sqrt(t·t) ~ t` and `sqrt(s·s) ~ s`; `le_congr`
+/// transports the `le` fact across both equivalences at once, landing
+/// exactly on `t ≤ s`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_le_of_sq_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+    let s_fv = d.fresh_fvar();
+    let s = d.kernel().fvar(s_fv);
+    let ht_fv = d.fresh_fvar();
+    let ht = d.kernel().fvar(ht_fv);
+    let hs_fv = d.fresh_fvar();
+    let hs = d.kernel().fvar(hs_fv);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let zero_real = d.kernel().const_(p.zero, vec![]);
+    let ht_ty = d.const_app(p.le, &[zero_real, t]);
+    let hs_ty = d.const_app(p.le, &[zero_real, s]);
+
+    let tt = cmul(d, p, t, t);
+    let ss = cmul(d, p, s, s);
+    let h_ty = d.const_app(p.le, &[tt, ss]);
+
+    let sqrt_tt = d.const_app(p.sqrt, &[tt]);
+    let sqrt_ss = d.const_app(p.sqrt, &[ss]);
+
+    // step1 : le (sqrt (mul t t)) (sqrt (mul s s))
+    let step1 = d.lemma(p.sqrt_le_sqrt, &[tt, ss, h]);
+    // eq_t : Equiv (sqrt (mul t t)) t
+    let eq_t = d.lemma(p.sqrt_sq, &[t, ht]);
+    // eq_s : Equiv (sqrt (mul s s)) s
+    let eq_s = d.lemma(p.sqrt_sq, &[s, hs]);
+
+    // body : le t s
+    let body = d.lemma(p.le_congr, &[sqrt_tt, t, sqrt_ss, s, eq_t, eq_s, step1]);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, h_ty, body);
+        let with_hs = d.lam_fv(hs_fv, hs_ty, with_h);
+        let with_ht = d.lam_fv(ht_fv, ht_ty, with_hs);
+        let with_s = d.lam_fv(s_fv, carrier, with_ht);
+        d.lam_fv(t_fv, carrier, with_s)
+    };
+    let ty = {
+        let concl = d.const_app(p.le, &[t, s]);
+        let after_h = d.arrow(h_ty, concl);
+        let after_hs = d.arrow(hs_ty, after_h);
+        let after_ht = d.arrow(ht_ty, after_hs);
+        let with_s = d.pi_fv(s_fv, carrier, after_ht);
+        d.pi_fv(t_fv, carrier, with_s)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.le_of_sq_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 #[cfg(test)]
 mod bridging_smoke_tests {
     use super::*;

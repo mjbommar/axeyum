@@ -1434,11 +1434,13 @@ pub struct CRealPrelude {
     /// `CReal.sqrt_sq : ∀ x, le zero x → Equiv (sqrt (mul x x)) x`.
     ///
     /// The direction `complex.rs` actually needs (not `sq_sqrt`): cancelling
-    /// the square in `sqrt(2‖z‖²+2‖w‖²) ≤ ‖z‖+‖w‖` is `sqrt_sq` at
-    /// `t := abs z + abs w`. See `creal/sqrt.rs`'s own doc for the proof
-    /// sketch — the genuinely new ingredient is recovering `t` (not `|t|`)
-    /// from a two-sided bound on `t·t`, via
-    /// [`crate::RatPrelude::lt_of_sq_lt`], the strict companion to
+    /// the square in `‖z+w‖² ≤ (‖z‖+‖w‖)²` (the CAUCHY–SCHWARZ route,
+    /// `Self::le_of_sq_le`'s consumer — a loose `2‖z‖²+2‖w‖²` bound was tried
+    /// first and refuted, see `ComplexPrelude::norm_sq_add_le`'s own doc for
+    /// the counterexample) is `sqrt_sq` at `t := abs z + abs w`. See
+    /// `creal/sqrt.rs`'s own doc for the proof sketch — the genuinely new
+    /// ingredient is recovering `t` (not `|t|`) from a two-sided bound on
+    /// `t·t`, via [`crate::RatPrelude::lt_of_sq_lt`], the strict companion to
     /// `ratSqLe` this required.
     pub sqrt_sq: NameId,
     /// `CReal.sqrt_nonneg : ∀ x, CReal.le CReal.zero (sqrt x)`.
@@ -1471,6 +1473,18 @@ pub struct CRealPrelude {
     /// `sqrt_congr` carries the first equivalence through `sqrt`, chaining
     /// to `sqrt (mul x y) ~ mul (sqrt x) (sqrt y)`. See `creal/sqrt.rs`.
     pub sqrt_mul: NameId,
+    /// `CReal.le_of_sq_le : ∀ t s, le zero t → le zero s → le (mul t t) (mul
+    /// s s) → le t s`.
+    ///
+    /// "Cancel the square" at the `CReal` level — the `CReal` analogue of
+    /// [`crate::RatPrelude::lt_of_sq_lt`] (`Rat`, strict), and the step
+    /// [`crate::ComplexPrelude::abs_add_le`] needs to close its own squared
+    /// bound. Composable from already-landed facts, no new epsilon estimate:
+    /// `sqrt_le_sqrt` on the hypothesis gives `sqrt(t·t) ≤ sqrt(s·s)`;
+    /// `sqrt_sq` at `t` and at `s` (using the two nonnegativity hypotheses)
+    /// give `sqrt(t·t) ~ t` and `sqrt(s·s) ~ s`; `le_congr` transports the
+    /// `le` fact across both at once. See `creal/sqrt.rs`.
+    pub le_of_sq_le: NameId,
 
     // --- Bishop's speed-up combinator (creal/speedup.rs) ----------------------
     /// `CReal.KRegular : (Nat → Rat) → Nat → Prop` — Bishop regularity up to a
@@ -3634,6 +3648,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sqrt_nonneg: kernel.name_str(creal, "sqrt_nonneg"),
         mul_self_sqrt: kernel.name_str(creal, "mul_self_sqrt"),
         sqrt_mul: kernel.name_str(creal, "sqrt_mul"),
+        le_of_sq_le: kernel.name_str(creal, "le_of_sq_le"),
         k_regular_pred: kernel.name_str(creal, "KRegular"),
         speedup: kernel.name_str(creal, "speedup"),
         regular_of_kregular: kernel.name_str(creal, "regular_of_kregular"),
@@ -3962,6 +3977,11 @@ pub(crate) fn build_creal_prelude_uncached(
         // earlier) -- no new epsilon estimate, so it is placed right after
         // `mul_self_sqrt` rather than waiting for anything below.
         sqrt::declare_sqrt_mul(&mut d, prelude)?;
+        // `le_of_sq_le` needs `sqrt_le_sqrt`/`sqrt_sq` (both above) and
+        // `CReal.le_congr` (far earlier); no new epsilon estimate, so it is
+        // placed right after `sqrt_mul` rather than waiting for anything
+        // below.
+        sqrt::declare_le_of_sq_le(&mut d, prelude)?;
         convergence::declare_cauchy_convergence(&mut d, prelude)?;
         series::declare_series(&mut d, prelude)?;
         // `CReal.mag_bound_le_sum_range_of_lt` needs `CReal.sumRange`

@@ -115,7 +115,7 @@ fn on_a_deep_stack_creal<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'stat
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 338] = [
+    let expected: [(&str, crate::NameId, &str); 339] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -436,6 +436,7 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         ("CReal.sqrt_nonneg", p.sqrt_nonneg, "theorem"),
         ("CReal.mul_self_sqrt", p.mul_self_sqrt, "theorem"),
         ("CReal.sqrt_mul", p.sqrt_mul, "theorem"),
+        ("CReal.le_of_sq_le", p.le_of_sq_le, "theorem"),
         // Bishop's speed-up combinator (creal/speedup.rs).
         ("CReal.KRegular", p.k_regular_pred, "def"),
         ("CReal.speedup", p.speedup, "def"),
@@ -8360,6 +8361,107 @@ fn sqrt_mul_at_ofnat_four_and_one_type_checks_against_the_independent_statement(
          (ofNat 4)) (sqrt (ofNat 4))) -- a checker that accepts both the \
          real second factor and a copy of the first cannot be trusted to \
          have proved anything about `ofNat 1` specifically"
+    );
+}
+
+/// **Mandatory concrete instantiation of `CReal.le_of_sq_le`.** `t :=
+/// CReal.ofNat 0`, `s := CReal.ofNat 1`: `t*t ~ ofNat 0`, `s*s ~ ofNat 1`
+/// (`CReal.ofNat_mul` at `(0,0)`/`(1,1)`, `Nat.mul` computing away by
+/// defeq), and `CReal.ofNat_le` at the `Nat.le 0 1` witness
+/// (`Nat.zero_le`) gives `le (ofNat 0) (ofNat 1)`, transported across both
+/// products by `le_congr` to the required `le (mul t t) (mul s s)`
+/// hypothesis. `ht`/`hs` are built the same `of_rat_le`-across-`ofRat`
+/// route the `mul_self_sqrt`/`sqrt_mul` instances above use. The negative
+/// control checks the SAME proof against the swapped conclusion `le s t`
+/// (`le (ofNat 1) (ofNat 0)`, genuinely false, not a vacuous swap) --
+/// `CReal.ofNat 0` and `CReal.ofNat 1` are built from different `Nat`
+/// literals with no reduction path relating them, so a checker that
+/// accepted both directions could not be trusted to have proved `t ≤ s`
+/// specifically.
+#[test]
+fn le_of_sq_le_at_ofnat_zero_and_one_type_checks_against_the_independent_statement() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+
+    let t = d.const_app(p.of_nat, &[zero_nat]);
+    let s = d.const_app(p.of_nat, &[one_nat]);
+
+    // ht : le zero (ofNat 0), hs : le zero (ofNat 1) -- the same
+    // `of_rat_le`-across-`ofRat` route `mul_self_sqrt_at_ofnat_four...`
+    // above uses.
+    let ht = {
+        let rat_0 = d.const_app(p.rat.nat_div_succ, &[zero_nat, zero_nat]);
+        let rzero = d.kernel().const_(p.rat.zero, vec![]);
+        let rle = d.lemma(p.rat.zero_le_nat_div_succ, &[zero_nat, zero_nat]);
+        d.lemma(p.of_rat_le, &[rzero, rat_0, rle])
+    };
+    let hs = {
+        let rat_1 = d.const_app(p.rat.nat_div_succ, &[one_nat, zero_nat]);
+        let rzero = d.kernel().const_(p.rat.zero, vec![]);
+        let rle = d.lemma(p.rat.zero_le_nat_div_succ, &[one_nat, zero_nat]);
+        d.lemma(p.of_rat_le, &[rzero, rat_1, rle])
+    };
+
+    let tt = d.const_app(p.mul, &[t, t]);
+    let ss = d.const_app(p.mul, &[s, s]);
+
+    // eq_t : Equiv (ofNat (Nat.mul 0 0)) tt, defeq Equiv (ofNat 0) tt
+    // (`Nat.mul 0 0` computes to `0`).
+    let eq_t = d.lemma(p.of_nat_mul, &[zero_nat, zero_nat]);
+    // eq_s : Equiv (ofNat (Nat.mul 1 1)) ss, defeq Equiv (ofNat 1) ss.
+    let eq_s = d.lemma(p.of_nat_mul, &[one_nat, one_nat]);
+
+    let nat_zero_le_one = d.lemma(p.rat.int.nat.zero_le, &[one_nat]);
+    let le_0_1 = d.const_app(p.of_nat_le, &[zero_nat, one_nat, nat_zero_le_one]);
+    // h : le tt ss, via le_congr transporting `le (ofNat 0) (ofNat 1)`
+    // across both `ofNat_mul` equivalences at once.
+    let h = d.lemma(p.le_congr, &[t, tt, s, ss, eq_t, eq_s, le_0_1]);
+
+    let concrete_proof = d.const_app(p.le_of_sq_le, &[t, s, ht, hs, h]);
+
+    let expected_ty = d.const_app(p.le, &[t, s]);
+
+    let anon = d.kernel().anon();
+    let name = d
+        .kernel()
+        .name_str(anon, "__le_of_sq_le_at_ofnat_zero_and_one_instance");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: expected_ty,
+            value: concrete_proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.le_of_sq_le (CReal.ofNat 0) (CReal.ofNat 1) ht hs h \
+                 must check against CReal.le (ofNat 0) (ofNat 1): {error:?}"
+            )
+        });
+
+    // Negative control: the SAME proof does NOT check against the SWAPPED
+    // conclusion `le s t` -- `le (ofNat 1) (ofNat 0)` is genuinely false,
+    // not a vacuous relabeling.
+    let wrong_ty = d.const_app(p.le, &[s, t]);
+    let name_wrong = d.kernel().name_str(
+        anon,
+        "__le_of_sq_le_at_ofnat_zero_and_one_wrong_direction_must_be_rejected",
+    );
+    let result = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_wrong,
+        uparams: vec![],
+        ty: wrong_ty,
+        value: concrete_proof,
+    });
+    assert!(
+        result.is_err(),
+        "CReal.le_of_sq_le (CReal.ofNat 0) (CReal.ofNat 1) ht hs h must NOT \
+         check against CReal.le (ofNat 1) (ofNat 0) -- a checker that \
+         accepts both directions cannot be trusted to have proved `t ≤ s` \
+         specifically"
     );
 }
 
