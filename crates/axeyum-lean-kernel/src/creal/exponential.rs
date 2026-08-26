@@ -35,29 +35,67 @@
 //! it was this comparison itself, which nothing in the prelude had built for
 //! two *differently*-shaped `Rat.normalize`s before.
 //!
-//! **This file still does not establish `Cauchy (sumRange expTerm)`, and so
-//! still does not build `CReal.e`.** That is genuinely the next step, and
-//! separately: `CReal.sumRange_cauchy_dominated_ordered_normalized`
-//! (`series.rs`) already gives a raw, UNWRAPPED pointwise Cauchy-shaped
-//! bound for one ordered pair `a ≤ b` from exactly this kind of domination
-//! (`∀x, le (abs (f x)) (g x)`, plus a Cauchy witness for `sumRange g` in the
-//! same raw form) — the `abs` needs `expTerm`/the geometric bound each shown
-//! nonnegative first (an easy `Rat`-level fact via [`normalize`]'s own
-//! `num`/`den`, not yet built here), and the `Cauchy (sumRange g)` witness
-//! for THIS `g` (route (b)'s raw-normalize sequence) still needs its own
-//! tail-sum argument — `geom_pair_within`/`geom_tail_bounded_div`
-//! (`geometric.rs`, route (a)'s machinery) do not apply to it directly since
-//! they are built for `CReal.pow`-based sequences, and bridging `g` to a
-//! `CReal.pow`-based sequence hits the same `Rat.pow`-vs-`Rat.normalize`
-//! representation gap route (a) was blocked on (see below) unless a fresh
-//! `Rat`-level equality `Rat.pow (natDivSucc 1 1) n = Rat.normalize 1 (2ⁿ) _`
-//! is built first (a clean, bounded induction via `normalize_mul_normalize`,
-//! not attempted here). Once *some* Cauchy witness for `sumRange g` exists in
-//! the raw pointwise form, doing the `Nat.le_total` split on top of
-//! `sum_range_cauchy_dominated_ordered_normalized` (mirroring what
-//! `sum_range_cauchy_of_dominated` does internally, but stopping short of its
-//! final `Exists.intro`) gives a concrete-`K` pointwise Cauchy bound for
-//! `sumRange expTerm`, which is exactly the shape
+//! **UPDATE, the next lane: `CReal.sumRange_pow_half_closed_form` is now
+//! built** — `∀n, Equiv (sumRange (fun i => pow half i) n) (mul two (add one
+//! (neg (pow half n))))`, i.e. `Σ_{k<n} (1/2)ᵏ = 2·(1 − (1/2)ⁿ)`, entirely
+//! `inv`-free (no `pos_bound`, no `geom_pair_within`). The only defect
+//! blocking it for two prior lanes was ONE swapped `equiv_symm` direction
+//! feeding the final `echain`'s last link with `Equiv mul_two_y
+//! mul_two_a_sum` where the straight-through `equiv_trans` step needed
+//! `Equiv mul_two_a_sum mul_two_y` (already available, unreversed, as
+//! `step4`) — none of the `Rat.normalize`/rescaling terrain this module's
+//! other notes warn about was the cause.
+//!
+//! **This closed form does NOT by itself give `Cauchy (sumRange expDominant)`
+//! (nor `sumRange (pow half ·)`), and closing that gap is more than index
+//! bookkeeping.** `CReal.Equiv` is a same-index rational bound
+//! (`Within (seq x n - seq y n) (modulus n n)`), while `CReal.mul`'s own
+//! representative resamples its FACTORS at a shifted index depending on both
+//! factors' magnitude (`product.rs`: `(x·y)_n := x_{(c+1)n+c} · y_{(c+1)n+c}`)
+//! — so `seq (sumRange expDominant m) m` is not literally `2·(1 −
+//! (1/2)ᵐ)` as a rational, only `Equiv`-related to it. Turning the closed
+//! form into an actual `Cauchy` witness needs the same index/modulus
+//! bookkeeping `series.rs`'s six-stage dominated-Cauchy pipeline already does
+//! for a sequence dominated by an ALREADY-Cauchy `g` — which is exactly the
+//! circularity `geometric.rs`'s own module documentation names for the raw
+//! `pow half` sequence itself.
+//!
+//! **A genuinely new fact changes that module's own diagnosis, though.**
+//! `geometric.rs` names "no lemma bounding `CReal.pow` above by a
+//! `natDivSucc` rational" as one of three pieces missing to close
+//! `CReal.geom_cauchy` via `geom_pair_within` (`geom_tail_within_le` +
+//! `geom_pair_within` are landed there; the harmonic bound on the deferred
+//! `seq Yₘ b` leaf was the blocker). That bound **already exists** —
+//! `CRealPrelude::pow_half_le_nat_div_succ : ∀n, le (pow half n) (ofRat
+//! (natDivSucc 1 n))`, built in `geometric.rs` itself for the IVT bisection
+//! modulus (`ivt.rs`) — for the concrete base `1/2` this file needs. So
+//! `geom_pair_within`'s `Nat.le_total` split plus fusing its five leaves
+//! (including `seq Yₘ b`, `Yₘ := pow half m * inv (add one (neg half))`) is
+//! newly unblocked. It still goes through `CReal.inv`/`PosBound` to build
+//! `Yₘ` (`PosBound half 1` is easy — `half`'s own sample is the constant
+//! `1/2` — but it is `inv`, which the domination bound above deliberately
+//! never touches). Two live options for the next lane, neither attempted
+//! here: finish `geom_cauchy` through `inv` at this one concrete base (a
+//! bounded, contained use, not a new general reliance on `inv`), or build a
+//! from-scratch inv-free Cauchy witness directly off
+//! `sumRange_pow_half_closed_form` mirroring `series.rs`'s own
+//! index-bookkeeping. Either way, scaling the resulting `Cauchy (sumRange
+//! (pow half ·))` up to `Cauchy (sumRange expDominant)` (the `mul two`
+//! wrapper) is a further step, not free, because of the same `CReal.mul`
+//! index-shift.
+//!
+//! Separately, once *some* `Cauchy (sumRange expDominant)` witness exists (by
+//! either route above): `CReal.sumRange_cauchy_dominated_ordered_normalized`
+//! (`series.rs`) already gives a raw, UNWRAPPED pointwise Cauchy-shaped bound
+//! for one ordered pair `a ≤ b` from exactly this kind of domination (`∀x, le
+//! (abs (f x)) (g x)`, plus a Cauchy witness for `sumRange g` in the same raw
+//! form) — `exp_term_abs_le_dominant` already supplies the domination
+//! hypothesis, so only the nonnegativity-derived `abs` shape and the
+//! `Cauchy (sumRange expDominant)` witness are missing. Then the
+//! `Nat.le_total` split on top of `sum_range_cauchy_dominated_ordered_normalized`
+//! (mirroring what `sum_range_cauchy_of_dominated` does internally, but
+//! stopping short of its final `Exists.intro`) gives a concrete-`K` pointwise
+//! Cauchy bound for `sumRange expTerm`, which is exactly the shape
 //! [`CRealPrelude::regular_of_scaled_cauchy`] consumes to build `CReal.e :=
 //! CReal.mk (speedup (diagonal expSeriesPartial) K) (...)` directly — see
 //! `creal/convergence.rs` for `regular_of_scaled_cauchy`/`speedup`, and
@@ -66,19 +104,18 @@
 //! this kernel; `converges_of_cauchy`'s own `∃ L, …` cannot be unwrapped for
 //! this purpose).
 //!
-//! What follows below is this file's original diagnosis, from before the
-//! domination bound existed, of what a route (a)/(b) choice would need for
-//! domination specifically — kept because the same representation gap it
-//! names (`Rat.pow` vs `Rat.normalize`) is exactly what still blocks the
-//! Cauchy witness above, on the route (a) side: (a) relate `CReal.pow
-//! (ofRat (1/2)) n` to `ofRat ((1/2)^n)` via `of_rat_mul`/`pow_congr`
-//! induction (this bridge, `CReal.ofRat_pow`, now EXISTS —
-//! `creal/geometric.rs` — so route (a)'s domination half was in fact
-//! buildable; what remained missing for it was `Rat.pow (1/2) n`'s
-//! relationship to a `Rat.normalize`d denominator, not an order lemma); or
-//! (b) skip `CReal.pow` and `Rat.normalize` a genuinely rational geometric
-//! bound `g n := ofRat (2 / 2ⁿ)` directly (the route this file's domination
-//! bound now takes).
+//! **Historical note, since the naming below is easy to misread against the
+//! code that actually shipped.** This file's original diagnosis (before the
+//! domination bound existed) framed the choice as route (a) — bridge
+//! `CReal.pow` to a `Rat.pow` via `CReal.ofRat_pow` — versus route (b) — skip
+//! `CReal.pow` and `Rat.normalize` a genuinely rational bound directly.
+//! `declare_exp_term_le_geom` (route (b)) proves the domination against a
+//! **raw `Rat.normalize`d** rational; the separate `CReal.expDominant`
+//! (`declare_exp_dominant`, below) then bridges that to a `CReal.pow`-based
+//! form (`mul two (pow half n)`) so that `sumRange_pow_half_closed_form` and
+//! `pow_half_le_nat_div_succ` — both stated over `CReal.pow` — apply to it.
+//! So the shipped construction uses **both**: route (b) for the one-shot
+//! comparison, route (a)'s `CReal.pow` shape for everything built since.
 
 use super::{CRealPrelude, DERIVED_HEIGHT, creal_ty, div_succ, embed, equiv};
 use crate::KernelError;
