@@ -1,11 +1,12 @@
 {
   "catalog_path": "artifacts/autogenesis/tactic-catalog-v1.json",
-  "catalog_sha256": "1d753a18084785dc038fd79bd10990498fa0b12bbce0fd5b1bbdfade9a48f935",
+  "catalog_sha256": "a07350f10869e1a38ba588491ed7f2770d9f87c025e654238e8e572290ca343f",
   "export_coverage": {
     "by_source": {
-      "agent-frozen-export-index-v1": 4
+      "agent-frozen-export-index-v1": 1,
+      "statement-adapter-manifest": 2
     },
-    "open_facts_with_export": 4
+    "open_facts_with_export": 3
   },
   "export_index_path": "artifacts/autogenesis/agent-frozen-export-index-v1.json",
   "export_index_sha256": "c12ec48126644b8e35f771cfc8cc4045366d657a46a2d78351aa5c1c41409752",
@@ -894,6 +895,27 @@
     },
     {
       "evaluable": false,
+      "fact_id": "F:ml430-mutation-edb05acf07d9ef3f9f8232fc",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
       "fact_id": "F:ml430-nat-add-modeq-left-e3b1fba9",
       "goal_source": "none",
       "matched": [],
@@ -979,6 +1001,300 @@
     {
       "evaluable": false,
       "fact_id": "F:ml430-nat-bitwise-swap-7175e90e",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-choose-eq-zero-of-lt-92ebab29",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-choose-le-add-9c463139",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-choose-le-choose-907b5042",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-choose-le-succ-62ae968b",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-choose-mono-a1af9c18",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-choose-ne-zero-49c3d3cb",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-choose-one-right-7eda8e39",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-choose-self-25bb9fb8",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-choose-succ-self-e396f6c2",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-choose-succ-succ-671856b6",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-choose-symm-add-e4b68161",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-choose-symm-of-eq-add-9b5f9a20",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-choose-zero-right-1ed2802a",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-choose-zero-succ-62c6520b",
       "goal_source": "none",
       "matched": [],
       "mobility": 0,
@@ -1650,6 +1966,48 @@
     },
     {
       "evaluable": false,
+      "fact_id": "F:ml430-nat-factorial-dvd-ascfactorial-44a4e641",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-factorial-dvd-descfactorial-bbf6124f",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
       "fact_id": "F:ml430-nat-factorial-dvd-factorial-e9d14845",
       "goal_source": "none",
       "matched": [],
@@ -1777,27 +2135,6 @@
     {
       "evaluable": false,
       "fact_id": "F:ml430-nat-fib-add-two-strictmono-c1e86d4d",
-      "goal_source": "none",
-      "matched": [],
-      "mobility": 0,
-      "partition": "train",
-      "unevaluable": {
-        "T:absorbing-argument-chaining": "no-frozen-export",
-        "T:absurd-elimination": "no-frozen-export",
-        "T:bounded-structural-induction": "no-frozen-export",
-        "T:case-split-elimination": "no-frozen-export",
-        "T:ih-congruence-rewrite": "no-frozen-export",
-        "T:modeq-equivalence-combinators": "no-frozen-export",
-        "T:refl-closure": "no-frozen-export",
-        "T:residual-lemma-splice": "no-frozen-export",
-        "T:split-congruence-generalization": "no-frozen-export"
-      },
-      "unevaluable_reason": "no-frozen-export",
-      "unmatched": {}
-    },
-    {
-      "evaluable": false,
-      "fact_id": "F:ml430-nat-fib-le-fib-succ-d1ef4a3d",
       "goal_source": "none",
       "matched": [],
       "mobility": 0,
@@ -2385,30 +2722,9 @@
     },
     {
       "evaluable": true,
-      "fact_id": "F:ml430-nat-modeq-refl-d870c8f5",
-      "goal_shape_sha256": "6b30f449f696934839c4ad8dfc3a7370ff0dd76d84c1b3c9db2714b4cd372ab5",
-      "goal_source": "agent-frozen-export-index-v1",
-      "matched": [],
-      "mobility": 0,
-      "partition": "development",
-      "unevaluable": {},
-      "unmatched": {
-        "T:absorbing-argument-chaining": "goal-head-is-not-eq-shaped",
-        "T:absurd-elimination": "no-hypothesis-binder-to-classify",
-        "T:bounded-structural-induction": "goal-head-is-not-eq-shaped",
-        "T:case-split-elimination": "goal-head-is-not-eq-shaped",
-        "T:ih-congruence-rewrite": "goal-head-is-not-eq-shaped",
-        "T:modeq-equivalence-combinators": "no-equation-shaped-hypothesis",
-        "T:refl-closure": "goal-head-is-not-eq-shaped",
-        "T:residual-lemma-splice": "goal-head-is-not-eq-shaped",
-        "T:split-congruence-generalization": "goal-head-is-not-eq-shaped"
-      }
-    },
-    {
-      "evaluable": true,
       "fact_id": "F:ml430-nat-modeq-symm-0a3d4d18",
       "goal_shape_sha256": "723fdb5a963bb58e56f05122e22dff409cd6053a8ce6bfb3821e18698ec5cdcc",
-      "goal_source": "agent-frozen-export-index-v1",
+      "goal_source": "statement-adapter-manifest",
       "matched": [
         "T:modeq-equivalence-combinators"
       ],
@@ -2430,7 +2746,7 @@
       "evaluable": true,
       "fact_id": "F:ml430-nat-modeq-trans-ef9d1c46",
       "goal_shape_sha256": "d6770067252ce637e24930fcb5050442b754bc3ce6e4c42df64b516766965665",
-      "goal_source": "agent-frozen-export-index-v1",
+      "goal_source": "statement-adapter-manifest",
       "matched": [
         "T:modeq-equivalence-combinators"
       ],
@@ -2451,6 +2767,69 @@
     {
       "evaluable": false,
       "fact_id": "F:ml430-nat-modulus-modeq-zero-fd9af096",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-multichoose-one-b210386a",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-multichoose-one-right-7755072d",
+      "goal_source": "none",
+      "matched": [],
+      "mobility": 0,
+      "partition": "development",
+      "unevaluable": {
+        "T:absorbing-argument-chaining": "no-frozen-export",
+        "T:absurd-elimination": "no-frozen-export",
+        "T:bounded-structural-induction": "no-frozen-export",
+        "T:case-split-elimination": "no-frozen-export",
+        "T:ih-congruence-rewrite": "no-frozen-export",
+        "T:modeq-equivalence-combinators": "no-frozen-export",
+        "T:refl-closure": "no-frozen-export",
+        "T:residual-lemma-splice": "no-frozen-export",
+        "T:split-congruence-generalization": "no-frozen-export"
+      },
+      "unevaluable_reason": "no-frozen-export",
+      "unmatched": {}
+    },
+    {
+      "evaluable": false,
+      "fact_id": "F:ml430-nat-multichoose-zero-right-6ef827c8",
       "goal_source": "none",
       "matched": [],
       "mobility": 0,
@@ -2828,32 +3207,32 @@
     }
   ],
   "generated_by": "python -m axeyum.agent mobility",
-  "git_commit": "2f300656f1fdf91e1f94b31e430aa6760656ef02",
+  "git_commit": "e271402750f3410f11e37829575069d0efdc9eff",
   "holdout_policy": "Held-out fact ids are never written to this file. Held-out rows are counted in `totals.held_out_excluded` and in `partitions['held-out']` and appear nowhere else; the writer re-scans the serialized document for every held-out id before it lands.",
   "kind": "axeyum-mobility-census",
-  "ledger_sha256": "ced589de8879449ac796896dcef5c1d37fb5df2e681a6d1d65ed2b623fdebcf1",
+  "ledger_sha256": "d99df2918b28cff4eb7889b4cabbd1bce0d3aa87990d4491a2ce937a8fe40c5e",
   "must_decline_sampling": {
     "evaluated": 0,
-    "rows": 9,
+    "rows": 10,
     "suspect_facts": [],
     "suspects": [],
-    "unevaluable": 9,
+    "unevaluable": 10,
     "unevaluable_reasons": {
-      "no-frozen-export": 9
+      "no-frozen-export": 10
     }
   },
-  "nursery_sha256": "aa7a2769fcc51bdcf90c360b435e5efed6797751e81ae9931fd52bb89c25e7f1",
+  "nursery_sha256": "6d1f2551a612fdcadaf1c6b0096c4eebee304d9687157cb25505f785ee86daa8",
   "partitions": {
     "development": {
-      "evaluable": 4,
-      "open": 78,
-      "unevaluable": 74,
-      "zero_match": 2
+      "evaluable": 3,
+      "open": 97,
+      "unevaluable": 94,
+      "zero_match": 1
     },
     "held-out": {
       "evaluable": 0,
-      "open": 57,
-      "unevaluable": 57,
+      "open": 37,
+      "unevaluable": 37,
       "zero_match": 0
     },
     "not-in-nursery": {
@@ -2864,8 +3243,8 @@
     },
     "train": {
       "evaluable": 0,
-      "open": 50,
-      "unevaluable": 50,
+      "open": 49,
+      "unevaluable": 49,
       "zero_match": 0
     }
   },
@@ -2982,22 +3361,22 @@
     }
   ],
   "totals": {
-    "clusters": 2,
-    "evaluable": 4,
+    "clusters": 1,
+    "evaluable": 3,
     "held_out_evaluable": 0,
-    "held_out_excluded": 57,
+    "held_out_excluded": 37,
     "matched_pairs": 2,
-    "open_facts": 191,
-    "pairs": 1719,
+    "open_facts": 189,
+    "pairs": 1701,
     "tactics": 9,
-    "unevaluable": 187,
-    "unevaluable_pairs": 1683,
-    "unmatched_pairs": 34,
-    "written_fact_rows": 134,
-    "zero_match_facts": 2
+    "unevaluable": 186,
+    "unevaluable_pairs": 1674,
+    "unmatched_pairs": 25,
+    "written_fact_rows": 152,
+    "zero_match_facts": 1
   },
   "unevaluable_reasons": {
-    "no-frozen-export": 187
+    "no-frozen-export": 186
   },
   "zero_match_clusters": [
     {
@@ -3007,17 +3386,6 @@
       "reasons": [
         "goal-does-not-unfold-to-an-eq-shaped-head",
         "goal-head-is-not-eq-shaped",
-        "no-hypothesis-binder-to-classify"
-      ],
-      "size": 1
-    },
-    {
-      "fact_ids": [
-        "F:ml430-nat-modeq-refl-d870c8f5"
-      ],
-      "reasons": [
-        "goal-head-is-not-eq-shaped",
-        "no-equation-shaped-hypothesis",
         "no-hypothesis-binder-to-classify"
       ],
       "size": 1

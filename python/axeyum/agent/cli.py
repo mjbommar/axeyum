@@ -48,7 +48,14 @@ from .episode import Budgets
 from .graph import EpisodeState, run_episode
 from .models import set_vocabulary_root
 from .replay import ReplayError, replay
-from .tools import PRODUCER_TOOLS, AgentDeps, eligible_fact_ids, independent_check
+from .tools import (
+    PRODUCER_TOOLS,
+    AgentDeps,
+    ExportUnavailable,
+    eligible_fact_ids,
+    independent_check,
+    resolve_export,
+)
 
 #: The offline stand-in's model id. It is a real id shape (provider-prefixed, as
 #: v2 requires) that resolves to no provider, so it cannot be mistaken for a run
@@ -133,8 +140,21 @@ def offline_models(root: Path, fact_id: str) -> tuple[Any, Any]:
     return gather, plan
 
 
-def pick_facts(root: Path, requested: list[str], take_next: int) -> list[str]:
-    """The facts to run, refusing anything outside the eligible population."""
+def pick_facts(
+    root: Path,
+    requested: list[str],
+    take_next: int,
+    reachable_first: bool = False,
+) -> list[str]:
+    """The facts to run, refusing anything outside the eligible population.
+
+    With `reachable_first`, the eligible order is stably partitioned so facts
+    with a resolvable frozen export come first -- `--next --n K` then surfaces
+    the productive frontier instead of grinding unreachable facts, which the
+    plain ordinal order does (measured: the first 5 eligible had 0 exports). The
+    partition is stable, so the choice stays deterministic and no fact is added
+    or dropped -- only reordered.
+    """
     eligible = eligible_fact_ids(root)
     if requested:
         unknown = [f for f in requested if f not in eligible]
@@ -146,7 +166,19 @@ def pick_facts(root: Path, requested: list[str], take_next: int) -> list[str]:
         return requested
     if take_next <= 0:
         raise SystemExit("pass --fact or --next --n N")
+    if reachable_first:
+        reachable = [f for f in eligible if _has_export(root, f)]
+        unreachable = [f for f in eligible if not _has_export(root, f)]
+        eligible = reachable + unreachable
     return list(eligible[:take_next])
+
+
+def _has_export(root: Path, fact_id: str) -> bool:
+    try:
+        resolve_export(root, fact_id)
+        return True
+    except ExportUnavailable:
+        return False
 
 
 def run_command(args: argparse.Namespace) -> int:
@@ -156,7 +188,12 @@ def run_command(args: argparse.Namespace) -> int:
     if not out_dir.is_absolute():
         out_dir = root / out_dir
     commit = episode_api.git_commit(root, args.git_commit or os.environ.get("AXEYUM_GIT_COMMIT"))
-    facts = pick_facts(root, args.fact, args.n if args.next else 0)
+    facts = pick_facts(
+        root,
+        args.fact,
+        args.n if args.next else 0,
+        reachable_first=getattr(args, "reachable_first", False),
+    )
 
     budgets = Budgets(
         wall_seconds=args.wall_seconds,
@@ -174,7 +211,18 @@ def run_command(args: argparse.Namespace) -> int:
     settings = ModelSettings(temperature=0.0, max_tokens=args.max_tokens)
 
     failures = 0
+    skipped = 0
     for fact_id in facts:
+        if getattr(args, "skip_unreachable", False):
+            try:
+                resolve_export(root, fact_id)
+            except ExportUnavailable as error:
+                skipped += 1
+                print(
+                    f"AGENT_SKIP|fact={fact_id}|reason=no-frozen-export|detail={error}",
+                    file=sys.stderr,
+                )
+                continue
         model, plan_model = offline_models(root, fact_id) if args.offline else (args.model, None)
         dispatch_model = (
             offline_dispatch_model(fact_id, PRODUCER_TOOLS["close_terminal"])
@@ -233,7 +281,8 @@ def run_command(args: argparse.Namespace) -> int:
             f"|cost_limit_enforced={'false' if cost is None else 'true'}"
         )
     print(
-        f"AGENT_EPISODES|requested={len(facts)}|written={len(facts) - failures}|failed={failures}"
+        f"AGENT_EPISODES|requested={len(facts)}|written={len(facts) - failures - skipped}"
+        f"|failed={failures}|skipped_unreachable={skipped}"
     )
     if not facts:
         print(
@@ -323,6 +372,23 @@ def build_parser() -> argparse.ArgumentParser:
         "--out",
         default="artifacts/episodes",
         help="directory the episodes and their snapshots are written to",
+    )
+    run.add_argument(
+        "--skip-unreachable",
+        action="store_true",
+        help=(
+            "preflight each fact's frozen export and skip (no model spend, no episode) "
+            "any fact with none -- a producer could only ever report retrieval-miss, "
+            "reached today after two model rounds"
+        ),
+    )
+    run.add_argument(
+        "--reachable-first",
+        action="store_true",
+        help=(
+            "with --next, stably reorder the eligible facts so those with a frozen "
+            "export come first, so --n K surfaces the productive frontier"
+        ),
     )
     run.add_argument(
         "--git-commit",

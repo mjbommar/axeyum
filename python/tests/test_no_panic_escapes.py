@@ -355,25 +355,19 @@ def test_probe_targeted_battery_is_panic_free():
     assignments -- in-process, so re-introducing a panic anywhere they reach
     fails the suite.
 
-    Two scenarios are excluded by name, and only two: `cas.Expr.__add__` and
-    `cas.normalize` at depth 50,000 still ABORT the process (a recursive
-    `Clone`/`Drop` over a boxed chain inside `axeyum-cas`, not a panic -- see
-    `docs/python-2026-08/13-panic-surface.md`). Running them here would kill the
-    pytest process rather than fail a test.
+    Nothing is excluded any more: the two deep-`CasExpr` cases that used to
+    ABORT the process (`cas.Expr.__add__` / `cas.normalize` at depth 50,000) now
+    raise `BudgetExceeded` from the operator depth guard (`MAX_EXPR_DEPTH`), so
+    they run in-process like every other case -- see
+    `docs/python-2026-08/13-panic-surface.md`.
     """
     specimens = panic_probe.build_specimens(axeyum._native)
     cases = panic_probe.targeted_cases(axeyum._native, specimens)
 
-    excluded = {
-        ("cas.Expr.__add__", "targeted:depth=50000"),
-        ("cas.normalize", "targeted:depth=50000"),
-    }
     escapes: list[str] = []
     ran = 0
     raised = 0
     for target, label, thunk in cases:
-        if (target, label) in excluded:
-            continue
         ran += 1
         try:
             thunk()
@@ -402,3 +396,25 @@ def test_committed_probe_report_records_zero_panics():
     # The count is only meaningful if the probe actually made calls.
     assert int(fields["probed"]) > 10_000, headline
     assert int(fields["callables"]) > 1_000, headline
+
+
+def test_a_deep_expression_chain_is_a_budget_exceeded_not_a_crash():
+    """`x + x + ...` past the depth bound raises rather than overflowing the stack.
+
+    A `CasExpr` is a recursively-boxed tree; `Clone`/`Drop`/`normalize` recurse
+    over it, and past a few thousand levels that aborted the process (SIGSEGV).
+    The operator depth guard caps what can be built through the binding, so the
+    recursive Rust routines never see a chain deep enough to overflow.
+    """
+    from axeyum import cas
+
+    x = cas.Expr.var("x")
+    with pytest.raises(axeyum.BudgetExceeded, match="nested"):
+        e = x
+        for _ in range(50_000):
+            e = e + x
+    # ... while a modest chain is built, normalized and dropped without issue.
+    ok = x
+    for _ in range(64):
+        ok = ok + x
+    assert cas.normalize(ok) is not None

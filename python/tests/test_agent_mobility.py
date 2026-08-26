@@ -577,7 +577,8 @@ def test_the_committed_census_names_no_held_out_fact() -> None:
 
 
 CENSUS_LINE = re.compile(
-    r"^MOBILITY\|open=(\d+)\|evaluable=(\d+)\|unevaluable=(\d+)\|tactics=(\d+)"
+    r"^MOBILITY\|open=(\d+)\|evaluable=(\d+)\|unevaluable=(\d+)"
+    r"\|unevaluable_no_export=(\d+)\|unevaluable_top=[^|]+\|tactics=(\d+)"
     r"\|matched_pairs=(\d+)\|zero_match_facts=(\d+)\|clusters=(\d+)\|held_out_excluded=(\d+)$"
 )
 
@@ -614,7 +615,15 @@ def test_must_decline_population_is_derived_and_non_held_out() -> None:
     ids = M.must_decline_ids(ROOT)
     document = json.loads(NURSERY.read_text(encoding="utf-8"))
     partitions = {entry["fact_id"]: entry.get("partition") for entry in document["entries"]}
-    assert len(ids) == 9
+    # Derived from the nursery, not a literal: the must-decline population
+    # grows as mutation fixtures are registered, so pin it to its source.
+    nursery = json.loads((ROOT / "artifacts/autogenesis/nursery-v1.json").read_text())
+    expected = {
+        e["fact_id"]
+        for e in nursery["entries"]
+        if e.get("provenance_class") == "generated-mutation" and e["partition"] != "held-out"
+    }
+    assert set(ids) == expected
     assert all(partitions[fact_id] != "held-out" for fact_id in ids)
 
 
@@ -632,3 +641,47 @@ def test_reach_cross_check_reports_scope_and_never_forces_a_verdict() -> None:
         if row["outcome"] == M.UNEVALUABLE:
             assert row["agrees"] is None
     assert any(row["agrees"] is True for row in rows)
+
+
+def test_census_line_surfaces_the_dominant_unevaluable_reason() -> None:
+    """The summary line must make an unevaluable count legible as reachability
+    vs a tactic gap -- the whole point of the three-valued result."""
+    census = {
+        "totals": {
+            "open_facts": 189,
+            "evaluable": 3,
+            "unevaluable": 186,
+            "tactics": 9,
+            "matched_pairs": 2,
+            "zero_match_facts": 1,
+            "clusters": 1,
+            "held_out_excluded": 37,
+        },
+        "unevaluable_reasons": {
+            "no-frozen-export": 184,
+            "statement-import-failed:StatementImportError": 2,
+        },
+    }
+    line = M.census_line(census)
+    assert "unevaluable=186" in line
+    assert "unevaluable_no_export=184" in line
+    assert "unevaluable_top=no-frozen-export:184" in line
+
+
+def test_census_line_tolerates_no_unevaluable_reasons() -> None:
+    census = {
+        "totals": {
+            "open_facts": 3,
+            "evaluable": 3,
+            "unevaluable": 0,
+            "tactics": 9,
+            "matched_pairs": 2,
+            "zero_match_facts": 0,
+            "clusters": 1,
+            "held_out_excluded": 0,
+        },
+        "unevaluable_reasons": {},
+    }
+    line = M.census_line(census)
+    assert "unevaluable_no_export=0" in line
+    assert "unevaluable_top=none:0" in line

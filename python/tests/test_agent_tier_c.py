@@ -32,7 +32,7 @@ from axeyum.knowledge._paths import resolve_root
 #: entry only in the resolution index (route 2). Keeping both is the point: the
 #: index must never shadow a manifest.
 MANIFEST_FACT = "F:ml430-nat-descfactorial-one-d4856d4a"
-INDEX_FACT = "F:ml430-nat-modeq-refl-d870c8f5"
+INDEX_FACT = "F:ml430-nat-modeq-comm-24b71e7a"  # in the export index, NOT in any manifest (refl gained a manifest on main)
 
 #: Reproduced from `python/tests/test_producers.py`, which reproduces them from
 #: the committed manifests. A digest asserted in two places that both derive it
@@ -111,7 +111,7 @@ def test_a_committed_manifest_resolves_before_the_index(root: Path) -> None:
 def test_the_index_resolves_an_export_no_manifest_names(root: Path) -> None:
     resolution = tools.resolve_export(root, INDEX_FACT)
     assert resolution.source == "agent-frozen-export-index-v1"
-    assert resolution.target_definition.endswith("natModEqRefl")
+    assert resolution.target_definition.endswith("natModEqComm")
 
 
 def test_a_fact_with_no_frozen_export_is_refused(root: Path) -> None:

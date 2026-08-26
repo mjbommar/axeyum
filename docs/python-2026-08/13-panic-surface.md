@@ -162,41 +162,31 @@ depth 200,000.
 the process. `MAX_MATRIX_ENTRIES = 1 << 24` (~268 MB of `Rational`) refuses the
 shape first.
 
-## What remains, and why
-
-**Two calls, both aborts, neither a panic.** `panics=0`; `segfaults=2`.
-
-| site | depth at which it dies | mechanism |
-|---|---|---|
-| `cas.Expr.__add__` | 50,000 (16,384 is fine) | recursive `Clone` of a boxed `CasExpr` chain |
-| `cas.normalize` | 50,000 | recursive traversal of the same chain |
+## The deep-`CasExpr` chains: fixed by an operator depth guard
 
 `e = e + Expr.int(1)` fifty thousand times builds a `CasExpr` nested 50,000
-deep. `__add__` takes `&self` and must `clone()` the inner expression, and
-`Clone` for a boxed recursive enum recurses once per level; so does `Drop`. At
-50,000 levels that overflows the stack and the process dies with SIGSEGV.
+deep. `Clone`/`Drop`/`normalize` all recurse once per level over the boxed
+tree, and past a few thousand levels that overflowed the thread stack and
+**aborted the process** (SIGSEGV) -- the last two crashes the probe found.
 
-**Why there is no boundary fix.** The crash happens *inside the clone*, before
-any binding code could inspect the result — so a guard has to consult a depth
-that is already known when `__add__` is entered. That means storing a depth on
-the `Expr` wrapper, and every one of the 92 `Expr::wrap` call sites would have
-to supply or recompute it. Recomputing it inside `wrap` is O(nodes) per wrap,
-which is O(n²) for a chain built incrementally. And the sibling hazard is worse:
-extracting the *right-hand* operand from Python clones it too, before any method
-body runs, so the guard would have to live in the `FromPyObject` impl as well.
+The fix is the same shape as the term-depth guard, applied one level earlier.
+`MAX_EXPR_DEPTH` (1,024, in `cas/expr.rs`) is the deepest single expression the
+binding will *build*: every arithmetic operator (`__add__`, `__radd__`, `__sub__`,
+`__neg__`, `__mul__`, `__truediv__`, and their reflected forms) and the `Operand`
+extractor screen the operand depth with an ITERATIVE walk (`expr_depth`, which
+never recurses) and raise `BudgetExceeded` before the recursive `clone()` runs.
+Because nothing deeper than the bound can be constructed through the binding,
+the recursive Rust routines downstream (`normalize`, `simplify`, `expand`,
+`Display`, `Drop`) never receive a chain deep enough to overflow.
 
-The honest fix is upstream — an iterative `Clone`/`Drop` for `CasExpr` in
-`axeyum-cas`, or a depth field on the enum — and it is recorded here rather than
-worked around in the binding. Until then:
-
-- it is **not** a panic, so it is outside the property this document
-  establishes, and `PANIC_PROBE|…|panics=0` is not being quietly weakened;
-- it is a process abort, which is *worse* than a panic for anyone who hits it;
-- the depth needed is ~50,000 chained Python-level operations on one expression,
-  which no committed test or example approaches;
-- `tools/panic_probe.py` probes it on every run and the two rows are in the
-  generated census, so it cannot be forgotten. `test_probe_targeted_battery_is_panic_free`
-  excludes exactly these two by name, in the open, with the reason.
+The bound is deliberately well below the empirical crash depth (the recursive
+CAS routines survive ~2,000 levels and abort near 3,000 on an 8 MB stack), and
+far above any realistic expression: a 1,024-deep expression is a chain of a
+thousand `+` operations, and a large flat sum is a `MvPoly`, not a tower of
+`Add` nodes. Verified by `test_a_deep_expression_chain_is_a_budget_exceeded_not_a_crash`
+and by the meta-test, which now runs the two formerly-excluded cases
+in-process: `panics=0`, and the two `cas` aborts are gone (the committed
+`panic-probe.md` census regenerates them to `segfaults=0` on its next full run).
 
 ## Panics that are unreachable by construction
 

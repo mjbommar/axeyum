@@ -65,3 +65,84 @@ axeyum._native.producers.ImportLimits.__eq__(other)  A rich-comparison operand i
 axeyum._native.producers.import_statement_ndjson(source)  A filesystem path (str, bytes or os.PathLike) or an in-memory bytes buffer; `resolve_source` decides which and raises TypeError otherwise.
 axeyum._native.smt.ScriptTerm.__eq__(other)  A rich-comparison operand is any Python object; the body answers False or defers with NotImplemented rather than narrowing the type.
 axeyum._native.smt.get_value -> return  One model value per `(get-value ...)` term, each typed by its own sort -- the same union as the IR evaluator returns.
+
+
+# --- Q8 CAS long-tail (2026-08-24): gf2/stats report getters, algebraic/beta rationals, and __eq__ ---
+axeyum._native.cas.AlgebraicReal.__eq__(other)  structural equality takes any Python object
+axeyum._native.cas.AlgebraicReal.refine(width)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.BinaryExtensionConnectedAdamsTraceReport.candidate_absolute_bound -> return  exact BigInt/BigRational report field crossing as a Python int/Fraction from a decimal string; typed newtype is a follow-up
+axeyum._native.cas.BinaryExtensionConnectedAdamsTraceReport.centered_fourth_moment -> return  exact BigInt/BigRational report field crossing as a Python int/Fraction from a decimal string; typed newtype is a follow-up
+axeyum._native.cas.BinaryExtensionConnectedAdamsTraceReport.centered_second_moment -> return  exact BigInt/BigRational report field crossing as a Python int/Fraction from a decimal string; typed newtype is a follow-up
+axeyum._native.cas.BinaryExtensionConnectedAdamsTraceReport.connected_adams_trace -> return  exact BigInt/BigRational report field crossing as a Python int/Fraction from a decimal string; typed newtype is a follow-up
+axeyum._native.cas.BinaryExtensionConnectedAdamsTraceReport.fourth_cumulant_numerator -> return  exact BigInt/BigRational report field crossing as a Python int/Fraction from a decimal string; typed newtype is a follow-up
+axeyum._native.cas.BinaryExtensionConnectedAdamsTraceReport.minimum_normalized_betti_ceiling -> return  exact BigInt/BigRational report field crossing as a Python int/Fraction from a decimal string; typed newtype is a follow-up
+axeyum._native.cas.BinaryExtensionEllThreeDegreeSevenClosedForm.centered_fourth_moment -> return  exact BigInt/BigRational report field crossing as a Python int/Fraction from a decimal string; typed newtype is a follow-up
+axeyum._native.cas.BinaryExtensionEllThreeDegreeSevenClosedForm.centered_second_moment -> return  exact BigInt/BigRational report field crossing as a Python int/Fraction from a decimal string; typed newtype is a follow-up
+axeyum._native.cas.BinaryExtensionEllThreeDegreeSevenClosedForm.connected_adams_trace -> return  exact BigInt/BigRational report field crossing as a Python int/Fraction from a decimal string; typed newtype is a follow-up
+axeyum._native.cas.BinaryExtensionEllThreeDegreeSevenClosedForm.field_order -> return  exact BigInt/BigRational report field crossing as a Python int/Fraction from a decimal string; typed newtype is a follow-up
+axeyum._native.cas.BinaryExtensionEllThreeDegreeSevenClosedForm.fourth_cumulant_numerator -> return  exact BigInt/BigRational report field crossing as a Python int/Fraction from a decimal string; typed newtype is a follow-up
+axeyum._native.cas.BinaryExtensionEllThreeDegreeSevenClosedForm.ordinary_class_count -> return  exact BigInt/BigRational report field crossing as a Python int/Fraction from a decimal string; typed newtype is a follow-up
+axeyum._native.cas.BinaryExtensionEllThreeDegreeSevenClosedForm.ordinary_class_population -> return  exact BigInt/BigRational report field crossing as a Python int/Fraction from a decimal string; typed newtype is a follow-up
+axeyum._native.cas.BinaryExtensionEllThreeDegreeSevenClosedForm.special_class_count -> return  exact BigInt/BigRational report field crossing as a Python int/Fraction from a decimal string; typed newtype is a follow-up
+axeyum._native.cas.BinaryExtensionEllThreeDegreeSevenClosedForm.special_class_population -> return  exact BigInt/BigRational report field crossing as a Python int/Fraction from a decimal string; typed newtype is a follow-up
+axeyum._native.cas.BinaryExtensionEllThreeDegreeSevenWittShiftedClosedForm.conductor_one_high_character_trace -> return  exact BigInt/BigRational report field crossing as a Python int/Fraction from a decimal string; typed newtype is a follow-up
+axeyum._native.cas.BinaryExtensionEllThreeDegreeSevenWittShiftedClosedForm.conductor_two_high_character_trace -> return  exact BigInt/BigRational report field crossing as a Python int/Fraction from a decimal string; typed newtype is a follow-up
+axeyum._native.cas.BinaryExtensionEllThreeDegreeSevenWittShiftedClosedForm.field_order -> return  exact BigInt/BigRational report field crossing as a Python int/Fraction from a decimal string; typed newtype is a follow-up
+axeyum._native.cas.BinaryExtensionEllThreeDegreeSevenWittShiftedClosedForm.supported_coarse_mass -> return  exact BigInt/BigRational report field crossing as a Python int/Fraction from a decimal string; typed newtype is a follow-up
+axeyum._native.cas.BinaryExtensionEllTwoDegreeFiveClosedForm.centered_fourth_moment -> return  exact BigInt/BigRational report field crossing as a Python int/Fraction from a decimal string; typed newtype is a follow-up
+axeyum._native.cas.BinaryExtensionEllTwoDegreeFiveClosedForm.centered_second_moment -> return  exact BigInt/BigRational report field crossing as a Python int/Fraction from a decimal string; typed newtype is a follow-up
+axeyum._native.cas.BinaryExtensionEllTwoDegreeFiveClosedForm.connected_adams_trace -> return  exact BigInt/BigRational report field crossing as a Python int/Fraction from a decimal string; typed newtype is a follow-up
+axeyum._native.cas.BinaryExtensionEllTwoDegreeFiveClosedForm.field_order -> return  exact BigInt/BigRational report field crossing as a Python int/Fraction from a decimal string; typed newtype is a follow-up
+axeyum._native.cas.BinaryExtensionEllTwoDegreeFiveClosedForm.fourth_cumulant_numerator -> return  exact BigInt/BigRational report field crossing as a Python int/Fraction from a decimal string; typed newtype is a follow-up
+axeyum._native.cas.BinaryExtensionEllTwoDegreeFiveClosedForm.nonzero_subtrace_population -> return  exact BigInt/BigRational report field crossing as a Python int/Fraction from a decimal string; typed newtype is a follow-up
+axeyum._native.cas.BinaryExtensionEllTwoDegreeFiveClosedForm.zero_subtrace_population -> return  exact BigInt/BigRational report field crossing as a Python int/Fraction from a decimal string; typed newtype is a follow-up
+axeyum._native.cas.BinaryExtensionWittShiftedLayerTrace.identity_aggregate_mass -> return  exact BigInt/BigRational report field crossing as a Python int/Fraction from a decimal string; typed newtype is a follow-up
+axeyum._native.cas.BinaryExtensionWittShiftedLayerTrace.parent_aggregate_mass -> return  exact BigInt/BigRational report field crossing as a Python int/Fraction from a decimal string; typed newtype is a follow-up
+axeyum._native.cas.BinaryExtensionWittShiftedLayerTrace.signed_high_character_trace -> return  exact BigInt/BigRational report field crossing as a Python int/Fraction from a decimal string; typed newtype is a follow-up
+axeyum._native.cas.BinaryExtensionWittShiftedLayerTrace.signed_spatial_layer -> return  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.BinaryExtensionWittShiftedTraceReport.aggregate_global_mass -> return  exact BigInt/BigRational report field crossing as a Python int/Fraction from a decimal string; typed newtype is a follow-up
+axeyum._native.cas.BoolExpr.__eq__(other)  structural equality takes any Python object
+axeyum._native.cas.ExtensionTraceHankelMinor.determinant -> return  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.Permutation.__eq__(other)  structural equality takes any Python object
+axeyum._native.cas.RealSet.__eq__(other)  structural equality takes any Python object
+axeyum._native.cas.RealSet.contains(x)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.RealSet.finite(points)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.RealSet.point(a)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.algebraic_real_roots(coeffs)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.beta(x)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.beta(y)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.certify.ansatz.AnsatzLimits.__eq__(other)  structural equality takes any Python object
+axeyum._native.cas.certify.ansatz.LinearBlock.__eq__(other)  structural equality takes any Python object
+axeyum._native.cas.certify.ansatz.cofactors_by_ansatz(generators)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.certify.ansatz.combination(cofactors)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.certify.ansatz.combination(generators)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.certify.ansatz.detect_linear_blocks(generators)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.certify.ansatz.eliminate(generators)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.certify.ansatz.eliminate_blocks(generators)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.certify.moments.CertifiedSquaredBinomialFallingMoment.__eq__(other)  structural equality takes any Python object
+axeyum._native.cas.certify.moments.CertifiedSquaredBinomialMoment.__eq__(other)  structural equality takes any Python object
+axeyum._native.cas.certify.moments.WzCertificate.__eq__(other)  structural equality takes any Python object
+axeyum._native.cas.certify.sturm.SetInterval.__eq__(other)  structural equality takes any Python object
+axeyum._native.cas.certify.sturm.SetInterval.closed_open(a)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.certify.sturm.SetInterval.closed_open(b)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.certify.sturm.SetInterval.open_closed(a)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.certify.sturm.SetInterval.open_closed(b)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.certify.sturm.SetInterval.point(a)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.covariance(xs)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.covariance(ys)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.exact_rational(value)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.gamma(x)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.gegenbauer(weight)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.generalized_laguerre(alpha)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.gram_schmidt(vectors)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.jacobi(alpha)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.jacobi(beta)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.lagrange_interpolation(points)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.mean(data)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.median(data)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.mode(data)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.newton_divided_differences(points)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.pade(series_coeffs)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.pade_fraction(series_coeffs)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.sample_variance(data)  exact rational value, sort-decided at runtime; typed newtype is a follow-up
+axeyum._native.cas.variance(data)  exact rational value, sort-decided at runtime; typed newtype is a follow-up

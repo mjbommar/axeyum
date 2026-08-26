@@ -1267,9 +1267,17 @@ def assert_no_held_out(census: dict[str, Any], held_out: set[str]) -> None:
 
 def census_line(census: dict[str, Any]) -> str:
     totals = census["totals"]
+    reasons = census.get("unevaluable_reasons") or {}
+    # Make the dominant unevaluable reason legible on the summary line itself.
+    # Without it `unevaluable=186` reads as a tactic gap when it is almost
+    # entirely a reachability one (no frozen export), and the breakdown otherwise
+    # lives only in the census JSON, which a run without --write never saves.
+    no_export = reasons.get("no-frozen-export", 0)
+    top = max(reasons.items(), key=lambda kv: kv[1], default=("none", 0))
     return (
         f"MOBILITY|open={totals['open_facts']}|evaluable={totals['evaluable']}"
-        f"|unevaluable={totals['unevaluable']}|tactics={totals['tactics']}"
+        f"|unevaluable={totals['unevaluable']}|unevaluable_no_export={no_export}"
+        f"|unevaluable_top={top[0]}:{top[1]}|tactics={totals['tactics']}"
         f"|matched_pairs={totals['matched_pairs']}|zero_match_facts={totals['zero_match_facts']}"
         f"|clusters={totals['clusters']}|held_out_excluded={totals['held_out_excluded']}"
     )

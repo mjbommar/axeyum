@@ -36,7 +36,9 @@ from axeyum.agent.graph import EpisodeState, run_episode
 from axeyum.agent.tools import AgentDeps
 from axeyum.knowledge._paths import resolve_root
 
-TARGET = "F:ml430-nat-modeq-refl-d870c8f5"
+TARGET = (
+    "F:ml430-nat-modeq-symm-0a3d4d18"  # open + train/dev + exportable (refl was proved on main)
+)
 
 STUB = {
     "goal_sha256": "a" * 64,

@@ -1598,6 +1598,49 @@ pub struct CRealPrelude {
     /// to an index) and combining via the "within-swap via `neg_sub`" pattern
     /// closes the `Within`.
     pub geom_tail_within: NameId,
+    /// `CReal.geom_tail_within_le : ∀ x, le zero x → ∀ k (h : PosBound (add
+    /// one (neg x)) k) a b, Nat.le a b → Within (seq (add (sumRange (fun j =>
+    /// pow x j) b) (neg (sumRange (fun j => pow x j) a))) b) (add (seq (mul
+    /// (inv (add one (neg x)) k h) (pow x a)) b) (natDivSucc 2 b))` —
+    /// [`Self::geom_tail_within`]'s ordered-pair form `(m, add m n)` lifted to
+    /// an arbitrary pair `(a, b)` constrained only by `a ≤ b`, via
+    /// `Nat.le_dest` + `nat_rewrite_prop`: exactly the technique
+    /// `series.rs::declare_sum_range_tail_within_le` uses to lift
+    /// `sum_range_tail_within` the same way (reproduced in `geometric.rs`
+    /// rather than reused, since that helper is private to `series.rs`).
+    pub geom_tail_within_le: NameId,
+    /// `CReal.geom_pair_within : ∀ x, le zero x → ∀ k (h : PosBound (add one
+    /// (neg x)) k) a b, Nat.le a b → Within (sub (seq (sumRange (fun j => pow
+    /// x j) b) b) (seq (sumRange (fun j => pow x j) a) a)) (add (add
+    /// (modulus (shift b) b) (add (seq (mul (inv (add one (neg x)) k h) (pow
+    /// x a)) b) (natDivSucc 2 b))) (modulus a (shift b)))` — the
+    /// canonical-two-index normalization [`Self::geom_tail_within_le`] itself
+    /// stops short of: a genuine bound on `seq (sumRange f b) b − seq
+    /// (sumRange f a) a` (the shape [`Self::cauchy`] actually needs), not the
+    /// shifted-sample shape `geom_tail_within_le` supplies.
+    ///
+    /// Built exactly like `series.rs`'s own `dominated_canonical_at` chains
+    /// its four points `Y → X → W → Z` via `chain_within3` — **except** the
+    /// middle leg here is [`Self::geom_tail_within_le`]'s own conclusion
+    /// (needs no separately-witnessed `Cauchy` hypothesis, unlike the
+    /// dominated-comparison-test's `g`), and the two outer legs are
+    /// [`Self::regular`] applied to `sumRange f b` and `sumRange f a`
+    /// themselves (a fact true of any `CReal`, so this needs no domination
+    /// either). The bound still carries the undischarged sample `seq (mul
+    /// (inv …) (pow x a)) b` from `geom_tail_within_le` rather than a fixed
+    /// `natDivSucc`-shaped constant — see `geometric.rs`'s module
+    /// documentation for exactly what remains (bounding that sample by a
+    /// harmonic-shaped rational uniform in `a`, which needs a still-missing
+    /// `pow`-vs-`natDivSucc` comparison lemma) and what does not (this
+    /// theorem's own index bookkeeping, which is complete for the ordered
+    /// pair `a ≤ b`; the `Nat.le_total` case split to remove that hypothesis
+    /// is left unbuilt for the same reason `series.rs`'s own
+    /// `sum_range_cauchy_dominated_ordered_normalized` leaves it to
+    /// "whichever piece assembles `sum_range_cauchy_of_dominated` next" —
+    /// `nat_prelude` has no `Nat.max`, so a single closed-form bound
+    /// symmetric in `a`/`b` needs either that or a fresh `Within r q → 0 ≤ q`
+    /// generic fact neither of which exists yet).
+    pub geom_pair_within: NameId,
     /// `CReal.one_le_pow_of_one_le : ∀ x, le one x → ∀ n, le one (pow x n)` —
     /// the mirror of [`Self::pow_le_one`]: powers of a base at least `1` stay
     /// at least `1`. Induction on `n`, and simpler than `pow_le_one`'s own
@@ -2346,6 +2389,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         geom_tail_bounded: kernel.name_str(creal, "geom_tail_bounded"),
         geom_tail_bounded_div: kernel.name_str(creal, "geom_tail_bounded_div"),
         geom_tail_within: kernel.name_str(creal, "geom_tail_within"),
+        geom_tail_within_le: kernel.name_str(creal, "geom_tail_within_le"),
+        geom_pair_within: kernel.name_str(creal, "geom_pair_within"),
         one_le_pow_of_one_le: kernel.name_str(creal, "one_le_pow_of_one_le"),
         pow_le_pow_of_one_le: kernel.name_str(creal, "pow_le_pow_of_one_le"),
         pow_pos: kernel.name_str(creal, "pow_pos"),
