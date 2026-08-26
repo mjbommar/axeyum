@@ -117,6 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-26 | `f0782cc25` | Construct the axiom-free pointwise bitwise observation algebra and isolate Nat reification as the remaining mathematical obligation. |
 | 2026-08-26 | `8935a4045` | Describe imported transparent definitions by exact body/type identities, closure, and footprint; both bitwise operations reach `propext`, ruling out clean grafting. |
 | 2026-08-26 | `b4d64c3ea` | Make the refuted generalized capsule fail closed at emission time unless the caller explicitly opts into diagnostic-only output. |
 | 2026-08-26 | `6eb41d48b` | Construct an axiom-free Boolean view of native numeric bits and prove its successor equation by reflexivity, while withholding imported-definition equivalence credit. |
