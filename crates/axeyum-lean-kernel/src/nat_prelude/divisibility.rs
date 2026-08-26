@@ -336,6 +336,47 @@ pub(super) fn declare_divisibility(d: &mut NatDev<'_>, p: &NatPrelude) -> Result
         (d.dvd(a, a), proof)
     })?;
 
+    // mod_self : ∀ n, mod n n = zero
+    //
+    // At zero this is the total division convention `mod 0 0 = 0`.  At a
+    // successor, executable division supplies the checked quotient/remainder
+    // relation; its zero-remainder characterization and reflexive divisibility
+    // close the result.  Keeping this as an equality (rather than routing
+    // through native `Nat.modEq`) matches the imported Mathlib `Nat.ModEq`
+    // representation, which unfolds to equality of remainders.
+    d.theorem(p.mod_self, 1, &|d, v| {
+        let n = v[0];
+        let zero = d.zero();
+        let self_remainder = d.modulo(n, n);
+        let stmt = d.eq(self_remainder, zero);
+        let claim = |d: &mut NatDev<'_>, x: ExprId| {
+            let zero = d.zero();
+            let remainder = d.modulo(x, x);
+            d.eq(remainder, zero)
+        };
+        // Use the numerator-zero law, whose proof transports across the
+        // imported implementation.  The denominator-zero defining equation
+        // is true natively but its reflexivity proof is representation-bound.
+        let at_zero = |d: &mut NatDev<'_>| d.lemma(p.zero_mod, &[zero]);
+        let at_succ = |d: &mut NatDev<'_>, k: ExprId, _ih: ExprId| {
+            let divisor = d.succ(k);
+            let quotient = d.div(divisor, divisor);
+            let remainder = d.modulo(divisor, divisor);
+            let relation = d.lemma(p.div_mod_exec, &[k, divisor]);
+            let characterization = d.lemma(
+                p.div_mod_remainder_eq_zero_iff_dvd,
+                &[divisor, divisor, quotient, remainder, relation],
+            );
+            let remainder_zero = d.eq(remainder, zero);
+            let divides_self = d.dvd(divisor, divisor);
+            let reverse = iff_reverse(d, remainder_zero, divides_self, characterization);
+            let divides = d.lemma(p.dvd_refl, &[divisor]);
+            d.apply(reverse, &[divides])
+        };
+        let proof = d.induct(&claim, &at_zero, &at_succ, n);
+        (stmt, proof)
+    })?;
+
     d.theorem(p.dvd_zero, 1, &|d, v| {
         let a = v[0];
         let zero = d.zero();

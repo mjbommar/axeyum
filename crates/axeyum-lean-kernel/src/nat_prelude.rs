@@ -626,6 +626,8 @@ pub struct NatPrelude {
     pub div_mod_remainder_eq_zero_iff_dvd: NameId,
     /// `Nat.div_mod_exact_exists : Le one d → dvd d n → ∃ q, divMod d n q zero`.
     pub div_mod_exact_exists: NameId,
+    /// `Nat.mod_self : ∀ n, mod n n = zero`.
+    pub mod_self: NameId,
     /// Executable quotient and remainder satisfy `divMod` at every successor divisor.
     pub div_mod_exec: NameId,
     /// `Nat.mod_lt : ∀ x y, 0 < y → mod x y < y`.
@@ -1993,6 +1995,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             div_mod_remainder_eq_zero_iff_dvd: kernel
                 .name_str(nat, "div_mod_remainder_eq_zero_iff_dvd"),
             div_mod_exact_exists: kernel.name_str(nat, "div_mod_exact_exists"),
+            mod_self: kernel.name_str(nat, "mod_self"),
             div_mod_exec: kernel.name_str(nat, "div_mod_exec"),
             mod_lt: kernel.name_str(nat, "mod_lt"),
             gcd_zero_left: kernel.name_str(nat, "gcd_zero_left"),

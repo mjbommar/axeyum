@@ -46,9 +46,9 @@ not theorem production.
 
 ## What remains missing
 
-The current ranking supplies relation-level congruence lemmas such as
-`Nat.mod_eq_add_left`, but retrieved equality rewriting consumes equality
-theorems. The simplest modulus-zero sibling illustrates the missing plan:
+The current ranking supplies relation-level congruence lemmas such as the
+native `Nat.mod_eq_add_left`, but retrieved equality rewriting consumes
+equality theorems. A first reading suggested this native chain:
 
 ```text
 Nat.dvd_refl n
@@ -57,11 +57,28 @@ Nat.dvd_refl n
 ```
 
 Both supporting theorems are already axiom-free in the kernel, but neither the
-current ranking nor the equality-only rewrite stage assembles this
-relation-level application chain. Add-left/right siblings can then build from
-that base through the existing ModEq congruence lemmas. The next capability is
-therefore bounded backward chaining over typed proposition premises, not more
-transparent unfolding and not a larger term budget.
+current ranking nor the equality-only rewrite stage assembles this application
+chain. More importantly, that chain is **not** a proof of the imported target:
+Axeyum's native lowercase `Nat.modEq` is an existential congruence relation,
+while imported Mathlib `Nat.ModEq` unfolds to equality of remainders. The two
+must not be conflated.
+
+The bounded application producer should retain the native chain as a typed
+composition control. The actual imported path starts with checked remainder
+equalities, first `Nat.mod_self : ∀ n, mod n n = 0`, and then reusable
+modulo-add equations. Retrieved equality rewriting can consume those contracts
+without an unsound relation transport. At least three siblings must convert
+under the unchanged operation before it earns production authority.
+
+The first foundation increment now constructs that native `Nat.mod_self`
+axiom-free and retrieves it first from the visible statement's alpha-stable
+shape. Fresh transport still declines: its successor proof uses Axeyum's
+executable-division specification, whose proof is tied to Axeyum's native
+`Nat.mod` implementation and does not type-check over imported Mathlib
+`Nat.mod`. This is useful negative evidence. The next step is not to label the
+types compatible; it is to reconstruct a target-local remainder proof from the
+imported definition and portable order facts, or build an independently
+checked semantic bridge. Until that succeeds, production credit stays zero.
 
 The two runs also measured 184 transported candidates added, 67 already in the
 capsules, and 89 typed transport declines. The expensive transport denominator

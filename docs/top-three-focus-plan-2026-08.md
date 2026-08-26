@@ -266,9 +266,23 @@ zero of the 25 targets has complete candidate contract support. Every
 shared contract prototype rather than the shortest conversion path. In
 parallel, transparent terminal reduction moved ten already-importable ModEq
 goals from `NotEqualityGoal` into checked equality composition, with zero false
-controls accepted, but conversion remained 0/13. Their concrete missing layer
-is typed relation-premise chaining (`dvd_refl` → `mod_eq_zero_of_dvd` → ModEq,
-then congruence), which is now the shorter autonomous-yield path.
+controls accepted, but conversion remained 0/13. A follow-up representation
+audit rejected the tempting native `dvd_refl` → `mod_eq_zero_of_dvd` chain:
+native lowercase `Nat.modEq` is existential, while imported Mathlib
+`Nat.ModEq` reduces to remainder equality. The shorter sound path is therefore
+to construct checked remainder-equality contracts (`Nat.mod_self` first, then
+modulo-add laws) and let the existing equality producer reuse them across at
+least three siblings. Native relation chaining remains a composition control,
+not evidence for an imported target.
+
+`Nat.mod_self` is now present as an axiom-free native theorem and a generic
+alpha-stable shape heuristic retrieves it first for the modulus-self target.
+The clean transport probe correctly refuses it because the proof's
+`div_mod_exec` dependency is implementation-bound: equal theorem statements
+do not make Axeyum's and Mathlib's `Nat.mod` definitions interchangeable. The
+remaining foundation is a target-local reconstruction over the imported
+definition (or an independently checked semantic bridge), followed by the same
+three-sibling unchanged-operation bar.
 
 ## Comparative position
 

@@ -317,4 +317,37 @@ mod tests {
         assert_eq!(baseline.application_depth, repeated.application_depth);
         assert_eq!(baseline.terms_considered, repeated.terms_considered);
     }
+
+    #[test]
+    fn composes_modulus_zero_from_divisibility_reflexivity() {
+        let mut kernel = Kernel::new();
+        let p = build_nat_prelude(&mut kernel).expect("Nat prelude must build");
+        let nat = kernel.const_(p.nat, vec![]);
+        let zero = kernel.const_(p.zero, vec![]);
+        let n_fv = 9_200_000_u64;
+        let n = kernel.fvar(n_fv);
+        let relation = kernel.const_(p.mod_eq, vec![]);
+        let at_modulus = kernel.app(relation, n);
+        let at_value = kernel.app(at_modulus, n);
+        let body = kernel.app(at_value, zero);
+        let anon = kernel.anon();
+        let abstracted = kernel.abstract_fvars(body, &[n_fv]);
+        let goal = kernel.pi(anon, nat, abstracted, BinderInfo::Default);
+        let candidate =
+            propose_bounded_application(&mut kernel, goal, &[p.mod_eq_zero_of_dvd, p.dvd_refl])
+                .expect("typed application closure must compose the divisibility witness");
+        let name = kernel.name_str(anon, "BoundedApplicationModulusZero");
+        kernel
+            .add_declaration(Declaration::Theorem {
+                name,
+                uparams: vec![],
+                ty: goal,
+                value: candidate.proof,
+            })
+            .expect("kernel must independently accept the relation candidate");
+        assert!(kernel.axiom_footprint(name).is_empty());
+        let dependencies = kernel.theorem_dependencies(name);
+        assert!(dependencies.contains(&p.mod_eq_zero_of_dvd));
+        assert!(dependencies.contains(&p.dvd_refl));
+    }
 }

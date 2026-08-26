@@ -250,8 +250,18 @@ every `Nat.testBit` sibling has an unsupported co-abstraction. The shorter
 reachable path is now measured separately. Transparent terminal reduction
 moves all ten imported ModEq positives into equality composition while all six
 controls remain unaccepted; conversion is still 0/13 because the producer does
-not chain typed relation premises. Next: compose the general
-`dvd_refl → mod_eq_zero_of_dvd → ModEq` base and its congruence consumers.
+not yet have the needed remainder-equality contracts. A representation audit
+shows the native existential `Nat.modEq` chain is not the imported Mathlib
+`Nat.ModEq`, which unfolds to equality of remainders. Next: construct
+`Nat.mod_self` and reusable modulo-add equalities, retaining native relation
+composition only as a boundary control, and require unchanged conversion of at
+least three imported siblings.
+Native `Nat.mod_self` is now axiom-free and ranks first by a generic
+alpha-stable statement-shape feature, but a fresh transport probe refuses its
+implementation-bound `div_mod_exec` dependency over Mathlib's different
+`Nat.mod`. Production remains zero. Next: reconstruct the equality inside the
+imported kernel from portable order/decision facts, then test unchanged reuse
+across the additive siblings.
 
 <!-- plan-section: landed-changes -->
 
