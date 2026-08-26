@@ -22,9 +22,9 @@ semantics, evidence, provenance, checking, and compounding knowledge loop.
 - The pure-Rust reasoning stack has real end-to-end SMT, CAS, kernel, program
   verification, and proof-artifact routes, but its coverage and assurance are
   uneven by fragment.
-- The generated kernel projection currently contains 1,594 declarations: 1,243
-  theorems, 248 definitions, 29 constructors, 22 inductives, 22 recursors, and
-  30 axioms. It reports 1,564 axiom-free declarations and 7,057 direct
+- The generated kernel projection currently contains 1,597 declarations: 1,243
+  theorems, 251 definitions, 29 constructors, 22 inductives, 22 recursors, and
+  30 axioms. It reports 1,567 axiom-free declarations and 7,057 direct
   theorem-dependency edges. This is a substantial checked library, but it is
   not an autonomous-production count.
 - The fact ledger contains 696 propositions: 502 proved, 4 refuted, 2 computed,
@@ -117,6 +117,20 @@ root-selected native capsule omitting `Nat.fib_mono`'s proof reproduces the
 bounded composition after a fresh import. This closes the checker/import
 precondition for dispatch; it does not itself register an operation or admit a
 new fact.
+
+A first cross-target census exposed a second, narrower prerequisite. Offering
+each Nat goal its direct theorem dependencies plus the target's whole transitive
+declaration closure produced 10 successes across 251 bounded candidates, but
+even the already-demonstrated `Nat.fib_mono` composition declined: irrelevant
+implementation constants consumed the fixed term budget. The kernel and Python
+APIs, and the generated projection, now expose stable all-kind **direct**
+declaration dependencies separately from both theorem-only proof dependencies
+and the transitive audit closure. This is additive and backward-compatible.
+The distinguishing control is concrete: `Nat.fib_mono` directly names
+`Nat.fib`, while `Nat.fibAux` appears only transitively and is excluded from the
+search vocabulary. The next census must use exact direct vocabulary before an
+operation family is registered; the initial 10 successes are discovery data,
+not autonomous-production credit.
 
 ## Comparative position
 

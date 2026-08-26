@@ -21,6 +21,13 @@ an authoritative operation and clean episode, then measure sibling conversion.
 The prerequisite candidate-capsule importer now keeps the target proof absent
 while independently admitting only the exact axiom-free candidate closures;
 the ordinary proof-isolated importer remains unchanged.
+The kernel projection now also publishes each declaration's all-kind **direct**
+dependencies, additively beside the theorem-only proof edges. This gives
+bounded search the target's exact vocabulary without flooding it with the
+transitive implementation closure; the Fibonacci control includes `Nat.fib`
+but excludes `Nat.fibAux`. Next: use that field to select a minimal candidate
+capsule, measure the bounded producer across the discovered sibling family,
+then register only the supported operation.
 
 <!-- plan-section: landed-changes -->
 
@@ -39,3 +46,4 @@ the ordinary proof-isolated importer remains unchanged.
 | 2026-08-26 | `0c261718f` | Add the fail-closed candidate-capsule import boundary required for theorem-composition dispatch. |
 | 2026-08-26 | `ebe2b7b2e` | Re-derive the kernel projection and lemma-search artifacts at 1,242 theorems after rebasing concurrent mathematics work. |
 | 2026-08-26 | `fa821fc54` | Merge the next constructive-real theorem and advance the same generated search population to 1,243 without clobbering either lane. |
+| 2026-08-26 | `5916d47cc` | Publish stable all-kind direct declaration dependencies through Rust, Python, and the generated kernel projection, with direct-versus-transitive controls. |

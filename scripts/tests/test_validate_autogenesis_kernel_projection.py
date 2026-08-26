@@ -39,6 +39,23 @@ class KernelProjectionControls(unittest.TestCase):
             all(row.get("canonical_type") for row in self.data["declarations"])
         )
 
+    def test_direct_declaration_edges_are_present_and_strictly_direct(self):
+        rows = {row["id"]: row for row in self.data["declarations"]}
+        direct = rows["Nat.fib_mono"]["direct_declaration_dependencies"]
+        self.assertIn("Nat.fib", direct)
+        self.assertNotIn("Nat.fibAux", direct)
+
+    def test_missing_direct_declaration_endpoint_is_rejected(self):
+        data = copy.deepcopy(self.data)
+        data["declarations"][0]["direct_declaration_dependencies"] = ["Absent.constant"]
+        self.assertTrue(any("endpoint missing" in error for error in KP.validate(data)))
+
+    def test_direct_declaration_self_reference_is_rejected(self):
+        data = copy.deepcopy(self.data)
+        row = data["declarations"][0]
+        row["direct_declaration_dependencies"] = [row["id"]]
+        self.assertTrue(any("self-reference" in error for error in KP.validate(data)))
+
     def test_missing_edge_is_rejected(self):
         data = copy.deepcopy(self.data)
         data["direct_theorem_dependency_edges"].pop()

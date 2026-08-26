@@ -349,6 +349,13 @@ def test_dependency_closure_of_an_absent_name_raises_keyerror(nat_kernel: Kernel
         nat_kernel.declaration_dependency_closure("Nonexistent")
 
 
+def test_direct_declaration_dependencies_of_an_absent_name_raises_keyerror(
+    nat_kernel: Kernel,
+) -> None:
+    with pytest.raises(KeyError):
+        nat_kernel.declaration_dependencies("Nonexistent")
+
+
 def test_theorem_dependencies_of_an_absent_name_raises_keyerror(nat_kernel: Kernel) -> None:
     with pytest.raises(KeyError):
         nat_kernel.theorem_dependencies("Nonexistent")
@@ -362,10 +369,22 @@ def test_name_must_exist_raises_for_an_undeclared_name(nat_kernel: Kernel) -> No
 
 def test_dependency_closure_and_direct_dependencies_agree(nat_kernel: Kernel) -> None:
     closure = nat_kernel.declaration_dependency_closure("Nat.add_comm")
-    direct = nat_kernel.theorem_dependencies("Nat.add_comm")
+    direct = nat_kernel.declaration_dependencies("Nat.add_comm")
+    direct_theorems = nat_kernel.theorem_dependencies("Nat.add_comm")
     assert len(closure) > 0
     assert len(direct) > 0
     assert set(direct).issubset(set(closure))
+    assert set(direct_theorems).issubset(set(direct))
+
+
+def test_direct_dependencies_do_not_expand_transitive_definition_closure(
+    nat_kernel: Kernel,
+) -> None:
+    direct = nat_kernel.declaration_dependencies("Nat.fib_mono")
+    closure = nat_kernel.declaration_dependency_closure("Nat.fib_mono")
+    assert "Nat.fib" in direct
+    assert "Nat.fibAux" not in direct
+    assert "Nat.fibAux" in closure
 
 
 def test_declarations_reached_finds_the_constants_of_a_term(nat_kernel: Kernel) -> None:

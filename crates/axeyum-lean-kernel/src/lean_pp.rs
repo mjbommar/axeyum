@@ -1394,8 +1394,6 @@ impl Kernel {
         order
     }
 
-    /// The constants a declaration references (in its type, plus its value for
-    /// `Definition`/`Theorem`/`Opaque`).
     /// The **theorems** `name`'s statement and proof directly reference.
     ///
     /// The dependency walk this shares with [`Self::axiom_footprint`] already
@@ -1426,15 +1424,35 @@ impl Kernel {
     /// result is stable across runs and interning orders and can be committed.
     #[must_use]
     pub fn theorem_dependencies(&self, name: NameId) -> Vec<NameId> {
-        let mut deps: Vec<NameId> = self
+        self.declaration_dependencies(name)
+            .into_iter()
+            .filter(|&d| matches!(self.environment().get(d), Some(Declaration::Theorem { .. })))
+            .collect()
+    }
+
+    /// Every constant directly referenced by a declaration's type and value.
+    ///
+    /// This is the non-transitive counterpart to
+    /// [`Self::declaration_dependency_closure`]. Unlike
+    /// [`Self::theorem_dependencies`], it retains definitions, inductives,
+    /// constructors, recursors, axioms, opaque declarations, and quotient
+    /// declarations. This distinction matters to bounded proof search: the
+    /// target's direct definitions are useful vocabulary, while its entire
+    /// transitive closure can exhaust a search budget with irrelevant terms.
+    ///
+    /// Self-reference is removed and names are sorted by their rendered form,
+    /// making the result stable across construction and interning order. An
+    /// absent root yields an empty result.
+    #[must_use]
+    pub fn declaration_dependencies(&self, name: NameId) -> Vec<NameId> {
+        let mut dependencies: Vec<NameId> = self
             .decl_deps(name)
             .into_iter()
-            .filter(|&d| d != name)
-            .filter(|&d| matches!(self.environment().get(d), Some(Declaration::Theorem { .. })))
+            .filter(|&dependency| dependency != name)
             .collect();
-        deps.sort_by_key(|&n| self.display_name(n).to_string());
-        deps.dedup();
-        deps
+        dependencies.sort_by_key(|&dependency| self.display_name(dependency).to_string());
+        dependencies.dedup();
+        dependencies
     }
 
     /// Every declaration transitively referenced by `name`, excluding `name`
