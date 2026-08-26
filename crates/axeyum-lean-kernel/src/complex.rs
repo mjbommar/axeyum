@@ -240,6 +240,16 @@ pub struct ComplexPrelude {
     pub conj_of_real: NameId,
     /// `Complex.conj_I : Equiv (conj I) (neg I)`.
     pub conj_i: NameId,
+    /// `Complex.conj_zero : Equiv (conj zero) zero` — the additive identity is
+    /// conjugation-fixed, closed by the same ring calculus as
+    /// [`Self::conj_of_real`]/[`Self::conj_i`] (`neg zero ~ zero` on the
+    /// imaginary part).
+    pub conj_zero: NameId,
+    /// `Complex.conj_one : Equiv (conj one) one` — the multiplicative
+    /// identity is conjugation-fixed, same shape as [`Self::conj_zero`].
+    /// This is the base case [`Self::conj_pow`]'s induction reduces to at
+    /// `n = 0`.
+    pub conj_one: NameId,
     /// `Complex.eq_conj_iff_real : ∀ z, Iff (Equiv z (conj z))
     /// (CReal.Equiv (im z) CReal.zero)` — `z` is real exactly when it equals
     /// its own conjugate.
@@ -524,6 +534,16 @@ pub struct ComplexPrelude {
     /// case is [`Self::mul_one`] reversed, the step is the inductive
     /// hypothesis lifted by [`Self::mul_congr`] then [`Self::mul_assoc`].
     pub pow_add: NameId,
+    /// `Complex.conj_pow : ∀ z (n : Nat), Equiv (conj (pow z n))
+    /// (pow (conj z) n)` — conjugation commutes with integer powers,
+    /// completing the homomorphism family [`Self::conj_add`]/
+    /// [`Self::conj_mul`] already carry, mirroring [`Self::norm_sq_pow`]'s
+    /// own induction on `n`: the base case is [`Self::conj_one`] (both sides
+    /// ι-reduce to `conj one`/`one` respectively), the step chains
+    /// [`Self::conj_mul`] against the inductive hypothesis via
+    /// [`Self::mul_congr`], landing exactly on `pow (conj z) (Nat.succ j)`'s
+    /// own ι-reduced shape with no closing rearrangement needed.
+    pub conj_pow: NameId,
 
     // --- finite sums over ℂ, and the geometric series identity -------------
     /// `Complex.sumRange : (Nat → Complex) → Nat → Complex`, by structural
@@ -1050,6 +1070,8 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         conj_sub: kernel.name_str(complex, "conj_sub"),
         conj_of_real: kernel.name_str(complex, "conj_ofReal"),
         conj_i: kernel.name_str(complex, "conj_I"),
+        conj_zero: kernel.name_str(complex, "conj_zero"),
+        conj_one: kernel.name_str(complex, "conj_one"),
         eq_conj_iff_real: kernel.name_str(complex, "eq_conj_iff_real"),
         norm_sq: kernel.name_str(complex, "normSq"),
         mul_conj: kernel.name_str(complex, "mul_conj"),
@@ -1082,6 +1104,7 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         pow_zero: kernel.name_str(complex, "pow_zero"),
         pow_succ: kernel.name_str(complex, "pow_succ"),
         pow_add: kernel.name_str(complex, "pow_add"),
+        conj_pow: kernel.name_str(complex, "conj_pow"),
         sum_range: kernel.name_str(complex, "sumRange"),
         sum_range_zero: kernel.name_str(complex, "sumRange_zero"),
         sum_range_succ: kernel.name_str(complex, "sumRange_succ"),
@@ -1154,6 +1177,7 @@ pub fn build_complex_prelude(kernel: &mut Kernel) -> Result<ComplexPrelude, Kern
         declare_re_add_im(&mut d, prelude)?;
         declare_conj_laws(&mut d, prelude)?;
         declare_conj_sub_ofreal_i(&mut d, prelude)?;
+        declare_conj_zero_one(&mut d, prelude)?;
         declare_eq_conj_iff_real(&mut d, prelude)?;
         declare_norm(&mut d, prelude)?;
         declare_norm_conjugation(&mut d, prelude)?;
@@ -1181,6 +1205,7 @@ pub fn build_complex_prelude(kernel: &mut Kernel) -> Result<ComplexPrelude, Kern
         declare_pow_equations(&mut d, prelude)?;
         declare_pow_add(&mut d, prelude)?;
         declare_norm_sq_pow(&mut d, prelude)?;
+        declare_conj_pow(&mut d, prelude)?;
         declare_sum_range(&mut d, prelude)?;
         declare_sum_range_equations(&mut d, prelude)?;
         declare_sum_range_congr(&mut d, prelude)?;
@@ -2170,6 +2195,45 @@ fn declare_conj_sub_ofreal_i(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<()
         let ty = zeq(d, p, left, right);
         d.kernel().add_declaration(Declaration::Theorem {
             name: p.conj_i,
+            uparams: vec![],
+            ty,
+            value,
+        })
+    }
+}
+
+/// `conj_zero`, `conj_one`: the two nullary corollaries of the same ring
+/// calculus [`declare_conj_sub_ofreal_i`] already uses for `conj_ofReal`/
+/// `conj_I` — the additive and multiplicative identities are each
+/// conjugation-fixed. `conj_one` is exactly the base case
+/// [`declare_conj_pow`]'s induction reduces to at `n = 0`.
+fn declare_conj_zero_one(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    // conj_zero : Equiv (conj zero) zero
+    {
+        let lhs = CExpr::conj(CExpr::Zero);
+        let rhs = CExpr::Zero;
+        let value = ring_law_proof(d, p, &lhs, &rhs);
+        let left = render_c(d, p, &lhs);
+        let right = render_c(d, p, &rhs);
+        let ty = zeq(d, p, left, right);
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.conj_zero,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+
+    // conj_one : Equiv (conj one) one
+    {
+        let lhs = CExpr::conj(CExpr::One);
+        let rhs = CExpr::One;
+        let value = ring_law_proof(d, p, &lhs, &rhs);
+        let left = render_c(d, p, &lhs);
+        let right = render_c(d, p, &rhs);
+        let ty = zeq(d, p, left, right);
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.conj_one,
             uparams: vec![],
             ty,
             value,
@@ -4611,6 +4675,90 @@ fn declare_norm_sq_pow(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), Kern
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.norm_sq_pow,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.conj_pow : ∀ z (n : Nat), Equiv (conj (pow z n)) (pow (conj z) n)`.
+///
+/// Induction on `n` via [`NatOps::induct`], mirroring [`declare_norm_sq_pow`]'s
+/// own shape one level down — `conj`/`mul` over `Complex.Equiv` in place of
+/// `normSq`/`CReal.mul` over `CReal.Equiv`. The base case's goal, up to iota
+/// (`pow z Nat.zero ≡ Complex.one` on both sides), is exactly
+/// [`ComplexPrelude::conj_one`]'s own statement, so no ring calculus call is
+/// needed at all — a plain reference to that declaration closes it,
+/// analogous to how [`declare_pow_equations`] closes `pow_zero`/`pow_succ` by
+/// `Eq.refl` alone. The step chains [`ComplexPrelude::conj_mul`] against the
+/// inductive hypothesis via [`ComplexPrelude::mul_congr`], landing exactly on
+/// `pow (conj z) (Nat.succ j)`'s own iota-reduced shape (`mul (pow (conj z)
+/// j) (conj z)`) with no closing rearrangement needed — the same "no fresh
+/// estimate" shape [`declare_norm_sq_pow`]'s own step has.
+fn declare_conj_pow(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let conj_z = d.const_app(p.conj, &[z]);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let pow_z_x = d.const_app(p.pow, &[z, x]);
+        let conj_pow_zx = d.const_app(p.conj, &[pow_z_x]);
+        let pow_conj_x = d.const_app(p.pow, &[conj_z, x]);
+        zeq(d, p, conj_pow_zx, pow_conj_x)
+    };
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let stmt = motive(d, n);
+
+    let proof = d.induct(
+        &motive,
+        &|d| d.kernel().const_(p.conj_one, vec![]),
+        &|d, j, ih| {
+            // ih : Equiv (conj (pow z j)) (pow (conj z) j)
+            let pow_z_j = d.const_app(p.pow, &[z, j]);
+            let conj_pow_j = d.const_app(p.conj, &[pow_z_j]);
+            let pow_conj_j = d.const_app(p.pow, &[conj_z, j]);
+
+            // start = conj (mul (pow z j) z), which is `conj (pow z (succ
+            // j))` up to iota.
+            let mul_pow_z = d.const_app(p.mul, &[pow_z_j, z]);
+            let start = d.const_app(p.conj, &[mul_pow_z]);
+
+            // Step 1: conj (mul (pow z j) z) ~ mul (conj (pow z j)) (conj z),
+            // via `conj_mul`.
+            let h1 = d.lemma(p.conj_mul, &[pow_z_j, z]);
+            let mid = d.const_app(p.mul, &[conj_pow_j, conj_z]);
+
+            // Step 2: mul (conj (pow z j)) (conj z) ~
+            // mul (pow (conj z) j) (conj z), via `ih`.
+            let refl_conj_z = d.lemma(p.equiv_refl, &[conj_z]);
+            let h2 = d.lemma(
+                p.mul_congr,
+                &[conj_pow_j, pow_conj_j, conj_z, conj_z, ih, refl_conj_z],
+            );
+            // end = mul (pow (conj z) j) (conj z), which is `pow (conj z)
+            // (succ j)` up to iota.
+            let end = d.const_app(p.mul, &[pow_conj_j, conj_z]);
+
+            d.lemma(p.equiv_trans, &[start, mid, end, h1, h2])
+        },
+        n,
+    );
+
+    let ty = {
+        let inner = d.pi_fv(n_fv, nat, stmt);
+        d.pi_fv(z_fv, carrier, inner)
+    };
+    let value = {
+        let inner = d.lam_fv(n_fv, nat, proof);
+        d.lam_fv(z_fv, carrier, inner)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.conj_pow,
         uparams: vec![],
         ty,
         value,
