@@ -72,7 +72,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 269] = [
+    let expected: [(&str, crate::NameId, &str); 270] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -688,6 +688,17 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         ("CReal.ivt_bisect_lo", p.ivt_bisect_lo, "def"),
         // `ivt_bisect F P Q n k Bool.true` -- the upper endpoint.
         ("CReal.ivt_bisect_hi", p.ivt_bisect_hi, "def"),
+        // The invariant spec theorem for `ivt_bisect`: the concrete bracket
+        // `ivt_bisect_lo`/`_hi` computes satisfies the SAME six-part
+        // invariant `ivt_step`/`ivt_iter` prove, for the fixed slack
+        // `eps_n := ofRat (natDivSucc 1 n)`. Proved by ordinary Prop-level
+        // induction on `k` (no `Exists.rec`), reading the per-step branch
+        // back off `Rat.ble`'s `Bool` via a "remembering" `Bool.rec`.
+        (
+            "CReal.ivt_bisect_invariant",
+            p.ivt_bisect_invariant,
+            "theorem",
+        ),
         // Uniqueness of the derivative on a NONDEGENERATE interval
         // (`creal/deriv_unique.rs`): the naive statement without `lt a b` is
         // refuted at a degenerate `a = b`, so this carries that hypothesis.

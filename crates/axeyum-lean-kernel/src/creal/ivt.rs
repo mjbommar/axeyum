@@ -149,7 +149,10 @@ use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
 use crate::name::NameId;
 use crate::nat_prelude::NatOps;
-use crate::rat_prelude::ops::{nat_eq_to_rat, radd, rat_eq_rewrite, rle, rmul, rone, rzero};
+use crate::rat_prelude::group::rsub;
+use crate::rat_prelude::ops::{
+    nat_eq_to_rat, radd, rat_eq_rewrite, rle, rlt, rmul, rneg, rone, rzero,
+};
 
 /// Admit `CReal.ivt_step`.
 ///
@@ -168,7 +171,8 @@ pub(super) fn declare_ivt(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
     // `Rat.ble`, not `lt_cotrans`).
     declare_ivt_bisect(d, p)?;
     declare_ivt_bisect_lo(d, p)?;
-    declare_ivt_bisect_hi(d, p)
+    declare_ivt_bisect_hi(d, p)?;
+    declare_ivt_bisect_invariant(d, p)
 }
 
 // --- small shared idiom (private to this module, per the codebase's own
@@ -2391,4 +2395,562 @@ fn declare_ivt_bisect_lo(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kern
 /// `CReal.ivt_bisect_hi := fun F P Q n k => ivt_bisect F P Q n k Bool.true`.
 fn declare_ivt_bisect_hi(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
     declare_ivt_bisect_projection(d, p, p.ivt_bisect_hi, super::DERIVED_HEIGHT + 61, true)
+}
+
+// =============================================================================
+// `CReal.ivt_bisect_invariant` -- the invariant spec theorem for
+// `CReal.ivt_bisect`: the concrete bracket it computes satisfies the SAME
+// six-part invariant `ivt_step`/`ivt_iter` prove, for the fixed slack
+// `eps_n := ofRat (natDivSucc 1 n)`. See `CRealPrelude::ivt_bisect_invariant`
+// for the exact statement and the "remembering `Bool.rec`" proof sketch.
+// =============================================================================
+
+/// From `h : Rat.le y z`, `Rat.le rzero (Rat.add z (Rat.neg y))` -- the
+/// RAT-level analogue of this file's own [`sub_nonneg_of_le`] (which works
+/// over `CReal.Equiv`). `Rat`'s own equality is ordinary `Eq`, so
+/// [`rat_eq_rewrite`] substitutes directly and no `le_congr`-shaped lemma is
+/// needed.
+fn rat_sub_nonneg_of_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    y: ExprId,
+    z: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let ny = rneg(d, y);
+    let gap = radd(d, z, ny);
+    let cancelled = radd(d, y, ny);
+    let reflexive = d.lemma(rat.le_refl, &[ny]);
+    let shifted = d.lemma(rat.add_le_add, &[y, z, ny, ny, h, reflexive]); // Rat.le cancelled gap
+    let vanish = d.lemma(rat.add_neg, &[y]); // Eq cancelled rzero
+    let rzero_val = rzero(d, rat);
+    rat_eq_rewrite(d, cancelled, rzero_val, vanish, shifted, &|d, t| {
+        rle(d, rat, t, gap)
+    })
+}
+
+/// Bracket midpoint facts shared by [`declare_ivt_step`]'s own bisection
+/// argument and the invariant proof below: given `hpq : le lo hi`, the exact
+/// midpoint `m`, `width_half := (hi - lo) * (1/2)`, `le lo m`, `le m hi`, and
+/// the two width identities `Equiv (add m (neg lo)) width_half` / `Equiv (add
+/// hi (neg m)) width_half`. Verbatim reproduction of `declare_ivt_step`'s own
+/// internal derivation (`cp,cq` renamed `lo,hi`) -- duplicated per this
+/// codebase's own convention (see this file's `cneg`/`cmul`/`czero`/...
+/// note) rather than factored into `declare_ivt_step`, which stays untouched.
+#[allow(clippy::similar_names)]
+fn bisect_midpoint_facts(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    lo: ExprId,
+    hi: ExprId,
+    hpq: ExprId,
+) -> (ExprId, ExprId, ExprId, ExprId, ExprId, ExprId) {
+    let neg_lo = cneg(d, p, lo);
+    let width = cadd(d, p, hi, neg_lo);
+    let one_nat = d.num(1);
+    let (half, half_nonneg) = nonneg_rat_bound(d, p, 1, one_nat);
+    let width_half = cmul(d, p, width, half);
+
+    let m = cadd(d, p, lo, width_half);
+
+    let width_nonneg = sub_nonneg_of_le(d, p, lo, hi, hpq);
+    let step_nonneg = d.lemma(p.mul_nonneg, &[width, half, width_nonneg, half_nonneg]);
+    let zero_c = czero(d, p);
+
+    // le lo m
+    let m_minus_lo_eq_step = cancel_right(d, p, lo, width_half);
+    let m_minus_lo_nonneg = {
+        let m_minus_lo = cadd(d, p, m, neg_lo);
+        let flipped = esymm(d, p, m_minus_lo, width_half, m_minus_lo_eq_step);
+        let refl_zero = erefl(d, p, zero_c);
+        d.lemma(
+            p.le_congr,
+            &[
+                zero_c,
+                zero_c,
+                width_half,
+                m_minus_lo,
+                refl_zero,
+                flipped,
+                step_nonneg,
+            ],
+        )
+    };
+    let le_lo_m = le_of_nonneg_sub(d, p, lo, m, m_minus_lo_nonneg);
+
+    let width_eq_2step = width_eq_two_step(d, p, width, width_half, one_nat);
+    let restore = restore_from_width(d, p, lo, hi);
+
+    let hi_eq_m_plus_step = {
+        let step_step = cadd(d, p, width_half, width_half);
+        let assoc1 = d.lemma(p.add_assoc, &[lo, width_half, width_half]);
+        let lo_step_step = cadd(d, p, lo, step_step);
+        let lo_width = cadd(d, p, lo, width);
+        let refl_lo = erefl(d, p, lo);
+        let step_b = d.lemma(
+            p.add_congr,
+            &[lo, lo, step_step, width, refl_lo, width_eq_2step],
+        );
+        let m_width_half = cadd(d, p, m, width_half);
+        let mid = d.lemma(
+            p.equiv_trans,
+            &[m_width_half, lo_step_step, lo_width, assoc1, step_b],
+        );
+        d.lemma(p.equiv_trans, &[m_width_half, lo_width, hi, mid, restore])
+    };
+
+    let hi_minus_m_eq_step = {
+        let m_width_half = cadd(d, p, m, width_half);
+        let cancel2 = cancel_right(d, p, m, width_half);
+        let hi_eq_reversed = esymm(d, p, m_width_half, hi, hi_eq_m_plus_step);
+        let neg_m = cneg(d, p, m);
+        let refl_neg_m = erefl(d, p, neg_m);
+        let congr_step = d.lemma(
+            p.add_congr,
+            &[hi, m_width_half, neg_m, neg_m, hi_eq_reversed, refl_neg_m],
+        );
+        let hi_minus_m = cadd(d, p, hi, neg_m);
+        let m_width_half_minus_m = cadd(d, p, m_width_half, neg_m);
+        d.lemma(
+            p.equiv_trans,
+            &[
+                hi_minus_m,
+                m_width_half_minus_m,
+                width_half,
+                congr_step,
+                cancel2,
+            ],
+        )
+    };
+    let hi_minus_m_nonneg = {
+        let neg_m2 = cneg(d, p, m);
+        let hi_minus_m = cadd(d, p, hi, neg_m2);
+        let flipped = esymm(d, p, hi_minus_m, width_half, hi_minus_m_eq_step);
+        let refl_zero2 = erefl(d, p, zero_c);
+        d.lemma(
+            p.le_congr,
+            &[
+                zero_c,
+                zero_c,
+                width_half,
+                hi_minus_m,
+                refl_zero2,
+                flipped,
+                step_nonneg,
+            ],
+        )
+    };
+    let le_m_hi = le_of_nonneg_sub(d, p, m, hi, hi_minus_m_nonneg);
+
+    (
+        m,
+        width_half,
+        le_lo_m,
+        le_m_hi,
+        m_minus_lo_eq_step,
+        hi_minus_m_eq_step,
+    )
+}
+
+/// Extract the six conjuncts from a proof of `conj_ty(f,cp,cq,eps,width_half,
+/// pp,qq)`, in [`conj_ty`]'s own order. The mirror image of `conj_proof`;
+/// verbatim reproduction of `with_ivt_witness`'s own inner extraction (which
+/// is buried inside that function's `Exists`-elimination and not reusable
+/// standalone).
+#[allow(clippy::too_many_arguments)]
+fn conj_split(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    cp: ExprId,
+    cq: ExprId,
+    eps: ExprId,
+    width_half: ExprId,
+    pp: ExprId,
+    qq: ExprId,
+    h: ExprId,
+) -> (ExprId, ExprId, ExprId, ExprId, ExprId, ExprId) {
+    let le1 = cle(d, p, cp, pp);
+    let le2 = cle(d, p, pp, qq);
+    let le3 = cle(d, p, qq, cq);
+    let fpp = d.apply(f, &[pp]);
+    let le4 = cle(d, p, fpp, eps);
+    let neg_eps = cneg(d, p, eps);
+    let fqq = d.apply(f, &[qq]);
+    let le5 = cle(d, p, neg_eps, fqq);
+    let neg_pp = cneg(d, p, pp);
+    let diff = cadd(d, p, qq, neg_pp);
+    let le6 = equiv(d, p, diff, width_half);
+    let and5 = d.and(le5, le6);
+    let and4 = d.and(le4, and5);
+    let and3 = d.and(le3, and4);
+    let and2 = d.and(le2, and3);
+
+    let h1 = d.and_left(le1, and2, h);
+    let rest2 = d.and_right(le1, and2, h);
+    let h2 = d.and_left(le2, and3, rest2);
+    let rest3 = d.and_right(le2, and3, rest2);
+    let h3 = d.and_left(le3, and4, rest3);
+    let rest4 = d.and_right(le3, and4, rest3);
+    let h4 = d.and_left(le4, and5, rest4);
+    let rest5 = d.and_right(le4, and5, rest4);
+    let h5 = d.and_left(le5, le6, rest5);
+    let h6 = d.and_right(le5, le6, rest5);
+    (h1, h2, h3, h4, h5, h6)
+}
+
+/// `CReal.ivt_bisect_invariant` -- see `CRealPrelude::ivt_bisect_invariant`'s
+/// own doc comment for the statement and this section's module documentation
+/// for the proof sketch.
+#[allow(clippy::too_many_lines)]
+fn declare_ivt_bisect_invariant(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let fn_ty = d.arrow(carrier, carrier);
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let cp0_fv = d.fresh_fvar();
+    let cp0 = d.kernel().fvar(cp0_fv);
+    let cq0_fv = d.fresh_fvar();
+    let cq0 = d.kernel().fvar(cq0_fv);
+    let slack_fv = d.fresh_fvar();
+    let slack_n = d.kernel().fvar(slack_fv);
+
+    // `eps_n := ofRat (natDivSucc 1 slack_n)`, and the sampling index/
+    // threshold `ivt_bisect`'s own `step` closure computes internally
+    // (`bisect_sample_index`) -- reused here via `sgn_eps_of`, the SAME
+    // construction (`j := succ (2*slack_n)`, `thresh := natDivSucc 1 j`), so
+    // the two calls build the same `ExprId`s (checked below).
+    let (sample_idx, thresh_creal, thresh_rat, _thresh_pos) = sgn_eps_of(d, p, slack_n);
+    {
+        let (check_j, check_thresh) = bisect_sample_index(d, p, slack_n);
+        debug_assert_eq!(sample_idx, check_j);
+        debug_assert_eq!(thresh_rat, check_thresh);
+    }
+    let (eps_n_rat, thresh_double_eq_eps_n) =
+        sgn_eps_double_eq_target(d, p, slack_n, sample_idx, thresh_creal, thresh_rat);
+    let eps_n = embed(d, p, eps_n_rat);
+    let neg_eps_n = cneg(d, p, eps_n);
+
+    let hpq_ty = cle(d, p, cp0, cq0);
+    let hpq_fv = d.fresh_fvar();
+    let hpq = d.kernel().fvar(hpq_fv);
+
+    let fp0 = d.apply(f, &[cp0]);
+    let hfp_ty = cle(d, p, fp0, eps_n);
+    let hfp_fv = d.fresh_fvar();
+    let hfp = d.kernel().fvar(hfp_fv);
+
+    let fq0 = d.apply(f, &[cq0]);
+    let hfq_ty = cle(d, p, neg_eps_n, fq0);
+    let hfq_fv = d.fresh_fvar();
+    let hfq = d.kernel().fvar(hfq_fv);
+
+    let one_nat = d.num(1);
+    let (half, _half_nonneg) = nonneg_rat_bound(d, p, 1, one_nat);
+    let neg_cp0 = cneg(d, p, cp0);
+    let w0 = cadd(d, p, cq0, neg_cp0);
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let lo_at = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        d.const_app(p.ivt_bisect_lo, &[f, cp0, cq0, slack_n, x])
+    };
+    let hi_at = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        d.const_app(p.ivt_bisect_hi, &[f, cp0, cq0, slack_n, x])
+    };
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let width_x = ivt_iter_width(d, p, w0, half, x);
+        let lo = lo_at(d, x);
+        let hi = hi_at(d, x);
+        conj_ty(d, p, f, cp0, cq0, eps_n, width_x, lo, hi)
+    };
+
+    let base = |d: &mut IntDev<'_>| -> ExprId {
+        let zero_nat = d.num(0);
+        let width0 = ivt_iter_width(d, p, w0, half, zero_nat);
+        let h1 = d.lemma(p.le_refl, &[cp0]);
+        let h3 = d.lemma(p.le_refl, &[cq0]);
+        let one_c = d.kernel().const_(p.one, vec![]);
+        let mul_w0_one = cmul(d, p, w0, one_c);
+        let mo = d.lemma(p.mul_one, &[w0]);
+        let h6 = esymm(d, p, mul_w0_one, w0, mo);
+        // `lo_at(0)`/`hi_at(0)` are defeq to `cp0`/`cq0` (`Nat.rec` at zero,
+        // then `Bool.rec` at `false`/`true`); the kernel accepts this
+        // `conj_proof` (stated directly at `cp0`/`cq0`) at `motive(0)` by
+        // unfolding `ivt_bisect_lo`/`ivt_bisect_hi`/`ivt_bisect` through that
+        // iota-reduction.
+        conj_proof(
+            d, p, f, cp0, cq0, eps_n, width0, cp0, cq0, h1, hpq, h3, hfp, hfq, h6,
+        )
+    };
+
+    let step = |d: &mut IntDev<'_>, j: ExprId, ih: ExprId| -> ExprId {
+        let width_j = ivt_iter_width(d, p, w0, half, j);
+        let lo = lo_at(d, j);
+        let hi = hi_at(d, j);
+        let (h1, h2, h3, h4, h5, h6) = conj_split(d, p, f, cp0, cq0, eps_n, width_j, lo, hi, ih);
+
+        let (m, width_half_j, le_lo_m, le_m_hi, m_minus_lo_eq_step, hi_minus_m_eq_step) =
+            bisect_midpoint_facts(d, p, lo, hi, h2);
+
+        let fm = d.apply(f, &[m]);
+        let s = sample(d, p, fm, sample_idx);
+        let br = d.const_app(p.rat.ble, &[s, thresh_rat]);
+
+        // width chaining: width_half_j ~ mul width_j half [via h6, mul_congr]
+        // ~ mul w0 (mul (pow half j) half) [mul_assoc] =(defeq, `pow`
+        // ι-reduces) width at step `succ j`.
+        let pow_half_j = d.const_app(p.pow, &[half, j]);
+        let refl_half = erefl(d, p, half);
+        let neg_lo_here = cneg(d, p, lo);
+        let gap = cadd(d, p, hi, neg_lo_here);
+        let congr_step = d.lemma(p.mul_congr, &[gap, width_j, half, half, h6, refl_half]);
+        let mul_width_j_half = cmul(d, p, width_j, half);
+        let assoc_step = d.lemma(p.mul_assoc, &[w0, pow_half_j, half]);
+        let inner_half = cmul(d, p, pow_half_j, half);
+        let final_width = cmul(d, p, w0, inner_half);
+        let width_chain = d.lemma(
+            p.equiv_trans,
+            &[
+                width_half_j,
+                mul_width_j_half,
+                final_width,
+                congr_step,
+                assoc_step,
+            ],
+        );
+
+        let neg_m_here = cneg(d, p, m);
+        let hi_minus_m = cadd(d, p, hi, neg_m_here);
+        let true_width = d.lemma(
+            p.equiv_trans,
+            &[
+                hi_minus_m,
+                width_half_j,
+                final_width,
+                hi_minus_m_eq_step,
+                width_chain,
+            ],
+        );
+        let neg_lo_here2 = cneg(d, p, lo);
+        let m_minus_lo = cadd(d, p, m, neg_lo_here2);
+        let false_width = d.lemma(
+            p.equiv_trans,
+            &[
+                m_minus_lo,
+                width_half_j,
+                final_width,
+                m_minus_lo_eq_step,
+                width_chain,
+            ],
+        );
+
+        let true_val = d.bool_true();
+        let false_val = d.bool_false();
+
+        let motive_b = |d: &mut IntDev<'_>, b: ExprId| -> ExprId {
+            let heq_ty = d.bool_eq(br, b);
+            let new_lo = bool_select_creal(d, p, carrier, b, m, lo);
+            let new_hi = bool_select_creal(d, p, carrier, b, hi, m);
+            let body = conj_ty(d, p, f, cp0, cq0, eps_n, final_width, new_lo, new_hi);
+            d.arrow(heq_ty, body)
+        };
+
+        // `br = true`: `Rat.ble s thresh = true`, i.e. `s <= thresh`, so
+        // `F m <= thresh + thresh ~ eps_n` via `rat_approx_upper`. New
+        // bracket `(m, hi)`.
+        let true_minor = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let heq_ty = d.bool_eq(br, true_val);
+
+            let hle = d.lemma(p.rat.le_of_ble_eq_true, &[s, thresh_rat, h]);
+            let hup = d.lemma(p.rat_approx_upper, &[fm, sample_idx]);
+            let refl_thresh = d.lemma(p.rat.le_refl, &[thresh_rat]);
+            let radd_le = d.lemma(
+                p.rat.add_le_add,
+                &[s, thresh_rat, thresh_rat, thresh_rat, hle, refl_thresh],
+            );
+            let sum_st = radd(d, s, thresh_rat);
+            let sum_tt = radd(d, thresh_rat, thresh_rat);
+            let hrle = d.lemma(p.of_rat_le, &[sum_st, sum_tt, radd_le]);
+
+            let of_rat_add_tt = d.lemma(p.of_rat_add, &[thresh_rat, thresh_rat]);
+            let thresh_thresh = cadd(d, p, thresh_creal, thresh_creal);
+            let ofrat_sum_tt = embed(d, p, sum_tt);
+            let flipped = esymm(d, p, thresh_thresh, ofrat_sum_tt, of_rat_add_tt);
+            let hde = d.lemma(
+                p.equiv_trans,
+                &[
+                    ofrat_sum_tt,
+                    thresh_thresh,
+                    eps_n,
+                    flipped,
+                    thresh_double_eq_eps_n,
+                ],
+            );
+            let ofrat_sum_st = embed(d, p, sum_st);
+            let refl_left = erefl(d, p, ofrat_sum_st);
+            let hcre = d.lemma(
+                p.le_congr,
+                &[
+                    ofrat_sum_st,
+                    ofrat_sum_st,
+                    ofrat_sum_tt,
+                    eps_n,
+                    refl_left,
+                    hde,
+                    hrle,
+                ],
+            );
+            let sign_true = d.lemma(p.le_trans, &[fm, ofrat_sum_st, eps_n, hup, hcre]);
+
+            let h1p = d.lemma(p.le_trans, &[cp0, lo, m, h1, le_lo_m]);
+            let body = conj_proof(
+                d,
+                p,
+                f,
+                cp0,
+                cq0,
+                eps_n,
+                final_width,
+                m,
+                hi,
+                h1p,
+                le_m_hi,
+                h3,
+                sign_true,
+                h5,
+                true_width,
+            );
+            d.lam_fv(h_fv, heq_ty, body)
+        };
+
+        // `br = false`: `Rat.ble s thresh = false`, so (by totality)
+        // `Rat.lt thresh s`, hence `-eps_n <= F m` via `rat_approx_lower`.
+        // New bracket `(lo, m)`.
+        let false_minor = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let heq_ty = d.bool_eq(br, false_val);
+
+            let target_sign_ty = cle(d, p, neg_eps_n, fm);
+            let dis = d.lemma(p.rat.le_or_lt, &[s, thresh_rat]);
+            let rle_ty = rle(d, p.rat, s, thresh_rat);
+            let rlt_ty = rlt(d, p.rat, thresh_rat, s);
+
+            let sign_false = d.or_elim(
+                rle_ty,
+                rlt_ty,
+                target_sign_ty,
+                dis,
+                &|d, hp| {
+                    let hc = d.lemma(p.rat.ble_eq_true_of_le, &[s, thresh_rat, hp]);
+                    let symm_h = d.bool_symm(br, false_val, h);
+                    let combined = d.bool_trans(false_val, br, true_val, symm_h, hc);
+                    d.false_true_elim(target_sign_ty, combined)
+                },
+                &|d, hlt| {
+                    let hle2 = d.lemma(p.rat.le_of_lt, &[thresh_rat, s, hlt]);
+                    let gap_rat = rsub(d, p.rat, s, thresh_rat);
+                    let nonneg = rat_sub_nonneg_of_le(d, p, thresh_rat, s, hle2);
+                    let one_c = d.num(1);
+                    let eps_n_rat_nonneg = d.lemma(p.rat.zero_le_nat_div_succ, &[one_c, slack_n]);
+                    let neg_eps_n_rat = rneg(d, eps_n_rat);
+                    let neg_nonpos =
+                        d.lemma(p.rat.neg_nonpos_of_nonneg, &[eps_n_rat, eps_n_rat_nonneg]);
+                    let rzero_val = rzero(d, p.rat);
+                    let chained = d.lemma(
+                        p.rat.le_trans,
+                        &[neg_eps_n_rat, rzero_val, gap_rat, neg_nonpos, nonneg],
+                    );
+                    let hrle2 = d.lemma(p.of_rat_le, &[neg_eps_n_rat, gap_rat, chained]);
+                    let lower = d.lemma(p.rat_approx_lower, &[fm, sample_idx]);
+                    let of_rat_neg_pf = d.lemma(p.of_rat_neg, &[eps_n_rat]);
+                    let ofrat_neg = embed(d, p, neg_eps_n_rat);
+                    let hab = esymm(d, p, neg_eps_n, ofrat_neg, of_rat_neg_pf);
+                    let ofrat_gap = embed(d, p, gap_rat);
+                    let refl_right = erefl(d, p, ofrat_gap);
+                    let hcre2 = d.lemma(
+                        p.le_congr,
+                        &[
+                            ofrat_neg, neg_eps_n, ofrat_gap, ofrat_gap, hab, refl_right, hrle2,
+                        ],
+                    );
+                    d.lemma(p.le_trans, &[neg_eps_n, ofrat_gap, fm, hcre2, lower])
+                },
+            );
+
+            let h3pp = d.lemma(p.le_trans, &[m, hi, cq0, le_m_hi, h3]);
+            let body = conj_proof(
+                d,
+                p,
+                f,
+                cp0,
+                cq0,
+                eps_n,
+                final_width,
+                lo,
+                m,
+                h1,
+                le_lo_m,
+                h3pp,
+                h4,
+                sign_false,
+                false_width,
+            );
+            d.lam_fv(h_fv, heq_ty, body)
+        };
+
+        let motive_lam = {
+            let b_fv = d.fresh_fvar();
+            let b = d.kernel().fvar(b_fv);
+            let body = motive_b(d, b);
+            d.lam_fv(b_fv, bool_ty, body)
+        };
+        let level_zero = d.kernel().level_zero();
+        let bool_rec = d
+            .kernel()
+            .const_(p.rat.int.logic.bool_rec, vec![level_zero]);
+        let selected = d.apply(bool_rec, &[motive_lam, false_minor, true_minor, br]);
+        let br_refl = d.bool_refl(br);
+        d.apply(selected, &[br_refl])
+    };
+
+    let final_proof = d.induct(&motive, &base, &step, k);
+
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, final_proof);
+        let with_hfq = d.lam_fv(hfq_fv, hfq_ty, with_k);
+        let with_hfp = d.lam_fv(hfp_fv, hfp_ty, with_hfq);
+        let with_hpq = d.lam_fv(hpq_fv, hpq_ty, with_hfp);
+        let with_slack = d.lam_fv(slack_fv, nat, with_hpq);
+        let with_cq0 = d.lam_fv(cq0_fv, carrier, with_slack);
+        let with_cp0 = d.lam_fv(cp0_fv, carrier, with_cq0);
+        d.lam_fv(f_fv, fn_ty, with_cp0)
+    };
+    let ty = {
+        let motive_k = motive(d, k);
+        let stmt_k = d.pi_fv(k_fv, nat, motive_k);
+        let with_hfq = d.arrow(hfq_ty, stmt_k);
+        let with_hfp = d.arrow(hfp_ty, with_hfq);
+        let with_hpq = d.arrow(hpq_ty, with_hfp);
+        let with_slack = d.pi_fv(slack_fv, nat, with_hpq);
+        let with_cq0 = d.pi_fv(cq0_fv, carrier, with_slack);
+        let with_cp0 = d.pi_fv(cp0_fv, carrier, with_cq0);
+        d.pi_fv(f_fv, fn_ty, with_cp0)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.ivt_bisect_invariant,
+        uparams: vec![],
+        ty,
+        value,
+    })
 }
