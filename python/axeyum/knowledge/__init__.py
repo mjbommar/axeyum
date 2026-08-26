@@ -21,6 +21,7 @@ submodule            canonical authority
 :mod:`autogenesis`   shape classification (``kind`` has 707 values)
 :mod:`generated`     the dashboards' own headers
 :mod:`lemmas`        kernel-derived theorem dependency and exact fact links
+:mod:`imported_candidates` exact imported theorem candidates and footprint routing
 ===================  ===============================================
 
 Three rules hold everywhere in this package:
@@ -45,6 +46,7 @@ from . import (
     facts,
     frontier,
     generated,
+    imported_candidates,
     lemmas,
     nursery,
     operations,
@@ -61,6 +63,7 @@ __all__ = [
     "facts",
     "frontier",
     "generated",
+    "imported_candidates",
     "lemmas",
     "nursery",
     "operations",

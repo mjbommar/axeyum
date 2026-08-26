@@ -278,6 +278,11 @@ compounding, not automation theatre.
 | [Imported implementation-demand graph](272-imported-implementation-demand.md) | Which transparent Mathlib definitions and decision/recursion boundaries lie beneath the 14 sliced semantic-contract roots? |
 | [Imported implementation frontier](273-imported-implementation-frontier.md) | Which context-bound implementation nodes are shared by the most demanded roots and targets, without turning reachability into proof authority? |
 | [Bit-observation contract slice](274-bit-observation-contract-slice.md) | What exact transparent core do all four `Nat.testBit` siblings share, what remains target-specific, and why are the five current behavior lemmas insufficient? |
+| [Imported generic bitwise candidate audit](275-imported-testbit-bitwise-candidate.md) | Does pinned Lean already provide the three-sibling generic theorem, and does its independently imported proof satisfy Axeyum's empty-footprint boundary? |
+| [Footprint-aware imported candidate index](276-imported-candidate-index.md) | How can exact imported theorem candidates participate in retrieval while assumption-bearing proofs are routed to reconstruction before execution? |
+| [Imported candidate agent read surface](277-imported-candidate-agent-read-surface.md) | How does the agent query imported candidates while preserving source, footprint, and `reconstruct-required` execution refusal? |
+| [Proof-free imported reconstruction target](278-proof-free-imported-reconstruction-target.md) | Can an assumption-bearing imported theorem be converted into an axiom-free statement-only target without leaking its proof? |
+| [Bitwise semantic-law reconstruction gap](279-bitwise-semantic-law-reconstruction-gap.md) | Why is the proof-free generalized target false, and which law-bearing interface must replace it? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

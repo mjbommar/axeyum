@@ -308,6 +308,30 @@ class LemmaCandidatesPage(_Frozen):
     rows: tuple[LemmaCandidateRow, ...]
 
 
+class ImportedCandidateRow(_Frozen):
+    """One exact imported candidate with its non-negotiable routing policy."""
+
+    name: str
+    canonical_type: str
+    alpha_type_expression_sha256: str
+    declaration_content_sha256: str
+    axiom_footprint: tuple[str, ...]
+    direct_theorem_dependency_count: int
+    retrieval_disposition: str
+    strategy_eligible: bool
+    execution_eligible: bool
+
+
+class ImportedCandidatesPage(_Frozen):
+    """Candidate-only imported theorem search, separate from native lemmas."""
+
+    name_glob: str
+    canonical_type_contains: str
+    matched: int
+    total_candidates: int
+    rows: tuple[ImportedCandidateRow, ...]
+
+
 class OperationRow(_Frozen):
     operation_id: str
     scope: str

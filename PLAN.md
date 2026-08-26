@@ -117,6 +117,16 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-26 | `8935a4045` | Describe imported transparent definitions by exact body/type identities, closure, and footprint; both bitwise operations reach `propext`, ruling out clean grafting. |
+| 2026-08-26 | `b4d64c3ea` | Make the refuted generalized capsule fail closed at emission time unless the caller explicitly opts into diagnostic-only output. |
+| 2026-08-26 | `6eb41d48b` | Construct an axiom-free Boolean view of native numeric bits and prove its successor equation by reflexivity, while withholding imported-definition equivalence credit. |
+| 2026-08-26 | `af86b673a` | Bind existing axiom-free numeric `testBit` analogues while refusing their Bool-valued imported use until a checked observation-transport seam exists. |
+| 2026-08-26 | `99f7b4e32` | Bind five bitwise semantic-law obligations to exact candidate and operation identities, with a checked witness that the interface excludes the prior countermodel. |
+| 2026-08-26 | `70ca259b5` | Refute and execution-block the unconstrained proof-free bitwise target with a checked finite countermodel; require a law-bearing semantic interface before reconstruction. |
+| 2026-08-26 | `0554b6b86` | Materialize the assumption-bearing imported bitwise candidate as a proof-free, axiom-free generalized reconstruction target with exact external receipt validation. |
+| 2026-08-26 | `2397eb08f` | Expose exact imported candidates through a separate ninth tier-R agent tool that preserves footprint-aware reconstruction routing and refuses invalid query shapes. |
+| 2026-08-26 | `1c7cb953e` | Add a machine-readable imported-candidate descriptor and separate footprint-aware search index; assumption-bearing candidates route to reconstruction before execution. |
+| 2026-08-26 | `6e0f87c2d` | Export and independently audit upstream `Nat.testBit_bitwise`; preserve its exact 29-dependency, five-assumption footprint as reconstruct-required guidance rather than contract evidence. |
 | 2026-08-26 | `48ae785e2` | Derive the exact four-target bit-observation contract slice: 103 shared transparent nodes, explicit target deltas, and a non-circular lower-level theorem boundary. |
 | 2026-08-26 | `95587054fd` | Preserve stream-context declaration identities, compact the imported graph through dense node IDs, and derive a checked 113-node reverse-reachability frontier for multi-sibling contract design. |
 | 2026-08-26 | `ebcfd3fb88` | Derive the proof-isolated imported implementation-demand graph for all 14 sliced source identities, retaining structural variants and the checked `Nat.mod` decision/subtraction spine without proof or ledger authority. |
@@ -1424,6 +1434,57 @@ axiom-free `Nat.testBit` candidates cover zero/successor, bounds, and sums, but
 not the required `Nat.bitwise` or list-lookup commutation. Next: inventory exact
 lower-level recurrence theorems and construct one operator-parametric generic
 law without using a desired target conclusion as its own contract witness.
+Pinned Lean already supplies that generic law as `Nat.testBit_bitwise`, and
+Mathlib's and/or/difference targets are direct specializations. A root-selected
+external export independently imports, but its measured footprint contains
+`propext` and the quotient package, with 29 direct theorem dependencies. It is
+candidate guidance only. Next: add an exact imported-candidate search
+population with footprint-aware `reconstruct-required` routing, then rebuild
+the generic theorem constructively inside the imported kernel before any
+three-sibling production claim.
+The footprint-aware imported-candidate index now provides that separate search
+population. Its first exact row is strategy-eligible but execution-ineligible,
+and a Rust descriptor reproduces canonical/alpha type hashes, declaration and
+dependency identities, 29 theorem dependencies, and the five-member footprint
+from the external stream. Next: expose this index through the candidate-only
+agent read surface and dispatch reconstruction for its row.
+The agent now exposes that index through a separate ninth tier-R tool. Exact
+name/type queries preserve the bitwise candidate's source, five-member
+footprint, 29-dependency count, and `execution_eligible=false`; invalid query
+shapes fail closed and the toolset policy fingerprint moves. Next: implement a
+reconstruction proposal that consumes strategy metadata without importing the
+assumption-bearing proof term.
+The assumption-bearing theorem now materializes as a proof-free 10 KiB
+reconstruction target: 12 declarations, two explicit definition abstractions,
+zero normalization rewrites, and an empty footprint. The source theorem name is
+absent. Next: reconstruct this generalized goal and issue exact specialization
+evidence before attempting the three bitwise siblings.
+Immediate semantic review refuted that generalized proposition: unconstrained
+operation parameters admit a concrete `false = true` countermodel. The capsule
+is now explicitly execution-ineligible, and the checker fails closed unless the
+countermodel remains valid. Next: construct and check a law-bearing semantic
+interface before reconstruction dispatch.
+The replacement demand is now machine-readable: five law obligations join the
+exact candidate type to the two exact implementation-graph definition hashes,
+and a checked successor-bit witness proves the interface excludes the earlier
+countermodel. All imported supports remain labeled assumption-bearing; next is
+clean reconstruction of the law leaves, beginning with `testBit_succ`.
+Exact retrieval found the native successor and zero-bit laws already axiom-free,
+but also caught their result-sort mismatch: native observation is `AxNat`, while
+the imported contract is `Bool`. The demand now binds both native types and
+adds an explicit missing Boolean/numeric observation-transport obligation.
+The native half of that transport now exists: a constructive Boolean view of
+numeric bits preserves the successor equation by reflexivity and has an empty
+kernel footprint. Exact equivalence to the imported Bool-valued definition is
+still missing and explicitly receives zero credit.
+The old capsule command now also fails closed by default: writing the refuted
+statement requires an explicit `--emit-refuted-diagnostic` opt-in, so omitting
+the separate metadata checker cannot accidentally make it a producer target.
+Exact definition descriptors now bind both imported operation bodies, types,
+direct closures, and footprints. Each concrete implementation reaches
+`propext`; `testBit` does so through its typeclass-expanded shift/and/equality
+route, while `bitwise` reaches a private unary worker and `PSigma`. Clean work
+must therefore reconstruct target-owned semantics rather than graft definitions.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization

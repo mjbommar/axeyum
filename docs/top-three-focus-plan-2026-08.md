@@ -424,6 +424,53 @@ shows that the five existing `Nat.testBit` behavior candidates do not describe
 bitwise operators or list lookup. The next bottom-up theorem must be a smaller
 operator-parametric recurrence/observation law; using any of the desired four
 conclusions as its own contract witness would be circular.
+The pinned source audit then found the exact generic upstream theorem:
+`Nat.testBit_bitwise` specializes to the and/or/difference siblings. A
+root-selected 2.2 MiB export independently imports, but its proof footprint is
+`propext` plus the quotient package and it has 29 direct theorem dependencies.
+It is therefore strategy evidence, not an admissible contract witness. The
+next producer capability is exact imported-candidate retrieval with footprint-
+aware `reconstruct-required` routing, followed by constructive reconstruction
+of that generic theorem in the imported kernel. The list/bits sibling remains
+a separate projection-law family.
+That routing substrate now exists as a separate generated index. Its first row
+retains exact/alpha type identity, declaration/dependency hashes, the external
+receipt, 29 theorem dependencies, and the five-member footprint. It is search-
+eligible and explicitly execution-ineligible. A Rust descriptor reproduces
+those fields from the stream. Next: expose these rows through the agent's
+candidate-only read surface and dispatch reconstruction rather than proof reuse.
+The read surface now exists as a ninth tier-R tool. Exact-name and canonical-
+type queries return imported rows separately from native lemmas, and the live
+bitwise row remains strategy-eligible but execution-ineligible. Empty/two-axis
+queries decline, and the toolset policy hash changes with the new surface.
+Next: define a reconstruction proposal that consumes the descriptor but never
+the imported proof term, then independently check the newly constructed term.
+That proof-isolation boundary now exists: the generic candidate type becomes a
+10 KiB, 12-declaration, zero-axiom statement capsule with `Nat.testBit` and
+`Nat.bitwise` generalized as two explicit parameters. It leaks no source
+theorem name. Next: run reconstruction against this exact goal and require a
+checked specialization receipt before sibling production.
+Semantic review then caught a stronger boundary: the two generalized functions
+were unconstrained, so the proposition is false despite its empty footprint. A
+committed finite countermodel now makes that diagnostic capsule
+execution-ineligible. The next target must carry checked bitwise/test-bit laws;
+importability and footprint alone are insufficient dispatch criteria.
+The follow-on demand artifact now binds five semantic laws to the exact
+candidate and operation identities and verifies that `testBit_succ` excludes
+the committed countermodel. This converts the vague reconstruction request into
+a typed, ordered leaf backlog without granting proof or execution authority.
+The first leaf lookup found existing axiom-free native zero/successor analogues
+but rejected direct reuse because their observation result is `AxNat`, not the
+imported `Bool`. A sixth typed transport obligation now owns that exact seam.
+Its native half is implemented: `testBitBool` maps numeric bits into `Bool`, and
+its successor law checks axiom-free by reflexivity. The remaining seam is the
+exact imported-definition equivalence, not Boolean adaptation in general.
+The refuted capsule generator itself now refuses default execution; only an
+explicit diagnostic flag permits emission, closing reliance on a downstream
+metadata checker for this semantic safety decision.
+Definition-level descriptors now show that both imported operation closures
+carry `propext`, with exact body/type hashes and direct dependency sets. The
+remaining route is target-owned semantic reconstruction, not definition grafting.
 
 ### Exit evidence
 
