@@ -42,7 +42,7 @@ boundary remains ADR-0568; this decision makes its finite cases explicit and com
 - A generic tensor encoding reports no matrix-specific orbit descriptors.
 - The `<3,2,4>` rank-19 encoding reports the same two support types and emits a four-leaf
   cover over selectors 495 and 496. The cover CNF and covering DRAT proof are retained with
-  hashes in the fifth open-problem package.
+  hashes in the bilinear open-problem package.
 - Focused tensor-decomposition tests and all-feature Clippy pass. Mutation coverage rejects a
   missing cube through the generic covering checker and checks the exact support-to-selector
   mapping at the tensor boundary.
