@@ -92,6 +92,16 @@ recipe is intentionally not in the fleet-wide knowledge freshness aggregate
 because reproduction requires the external reference-pack mount. Next:
 reconcile the six exact identities as aliases/correspondences, preserving their
 non-autonomous provenance and leaving the remaining 51 goals open.
+The knowledge overlay now represents those six observations with an additive
+`definitionally-matches` relation from fact to kernel declaration. The relation
+is independently checked but explicitly non-authoritative: all six fact
+statuses remain unchanged. A durable review explains why these cannot yet be
+theorem correspondences (that schema correctly requires two settled fact
+endpoints) and sequences two missing native fact records, a reviewed
+reconciliation transaction, coordinated regeneration, and a remaining-target
+rerun. Next: add the two missing native fact records from kernel evidence, then
+specify and test the non-autonomous reconciliation transaction before changing
+any imported fact status.
 The accepted ADR-0541 general SMT-LIB session driver is now also a named
 `axeyum` binary target, not only a discoverability-poor Cargo example. The same
 source remains the historical example control, and the binary's focused check,
@@ -128,3 +138,4 @@ repository-built front door, not yet a published crate or prebuilt release.
 | 2026-08-26 | `2b6020af2` | Compare closed propositions across independently owned kernels without confusing their shared outer `Prop` type or granting proof/admission authority. |
 | 2026-08-26 | `dc71a97a1` | Add a proof-free multi-candidate audit and demonstrate exact native equivalence can be distinguished from nearby topical mismatches. |
 | 2026-08-26 | `16de20475` | Publish the hash-bound 57-goal ranked proposition census: six exact native equivalents, 678 declines, and zero held-out access. |
+| 2026-08-26 | `18ccc487e` | Add six independently checked, non-authoritative fact-to-kernel proposition-match links and document the reconciliation boundary. |
