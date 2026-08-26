@@ -61,6 +61,7 @@ fn run() -> Result<(), String> {
     let bit_to_bool_name = kernel.name_str(autogenesis, "bitToBool");
     let test_bit_bool_name = kernel.name_str(autogenesis, "testBitBool");
     let successor_name = kernel.name_str(autogenesis, "testBitBool_succ");
+    let zero_observation_name = kernel.name_str(autogenesis, "testBitBool_zero");
     let observation_name = kernel.name_str(autogenesis, "bitwiseObservation");
     let observation_apply_name = kernel.name_str(autogenesis, "bitwiseObservation_apply");
     let bool_to_bit_name = kernel.name_str(autogenesis, "boolToBit");
@@ -77,6 +78,7 @@ fn run() -> Result<(), String> {
     let reify_low_zero_name = kernel.name_str(autogenesis, "reifyBitsLow_zero");
     let reify_low_succ_name = kernel.name_str(autogenesis, "reifyBitsLow_succ");
     let reify_low_roundtrip_name = kernel.name_str(autogenesis, "reifyBitsLow_roundtrip");
+    let reify_low_outside_name = kernel.name_str(autogenesis, "reifyBitsLow_outside");
     let bitwise_reify_low_name = kernel.name_str(autogenesis, "bitwiseReifyLow");
     let bitwise_reify_low_roundtrip_name =
         kernel.name_str(autogenesis, "testBitBool_bitwiseReifyLow");
@@ -156,6 +158,37 @@ fn run() -> Result<(), String> {
             (d.bool_eq(lhs, rhs), d.bool_refl(rhs))
         })
         .map_err(|error| format!("testBitBool_succ rejected: {error:?}"))?;
+
+        // Every observation of zero is false. This is the terminal needed to
+        // prove that a finite low-digit reification has no bits beyond its
+        // declared width.
+        let zero_motive = |d: &mut NatDev<'_>, index| {
+            let zero = d.zero();
+            let observed = d.const_app(test_bit_bool_name, &[zero, index]);
+            let false_value = d.bool_false();
+            d.bool_eq(observed, false_value)
+        };
+        let zero_base = |d: &mut NatDev<'_>| {
+            let false_value = d.bool_false();
+            d.bool_refl(false_value)
+        };
+        let zero_step = |d: &mut NatDev<'_>, index, ih| {
+            let zero = d.zero();
+            let successor = d.succ(index);
+            let observed = d.const_app(test_bit_bool_name, &[zero, successor]);
+            let observed_prior = d.const_app(test_bit_bool_name, &[zero, index]);
+            let step = d.lemma(successor_name, &[zero, index]);
+            let false_value = d.bool_false();
+            d.bool_trans(observed, observed_prior, false_value, step, ih)
+        };
+        let index_fv = d.fresh_fvar();
+        let index = d.kernel().fvar(index_fv);
+        let proof = d.induct(&zero_motive, &zero_base, &zero_step, index);
+        let statement = zero_motive(&mut d, index);
+        let theorem_type = d.pi_fv(index_fv, nat, statement);
+        let theorem_value = d.lam_fv(index_fv, nat, proof);
+        d.declare_theorem(zero_observation_name, theorem_type, theorem_value)
+            .map_err(|error| format!("testBitBool_zero rejected: {}", d.explain(&error)))?;
 
         // The pointwise Boolean algebra required by the target, separated from
         // the harder task of reifying all observations back into one Nat.
@@ -770,6 +803,104 @@ fn run() -> Result<(), String> {
         d.declare_theorem(reify_low_roundtrip_name, theorem_type, theorem_value)
             .map_err(|error| format!("reifyBitsLow_roundtrip rejected: {}", d.explain(&error)))?;
 
+        // A width-k reification has no set bits at offset+k or beyond. The
+        // index is stated as `offset + k` so the successor equation computes
+        // in lockstep with the induction on k.
+        let outside_motive = |d: &mut NatDev<'_>, width| {
+            let bits_fv = d.fresh_fvar();
+            let bits = d.kernel().fvar(bits_fv);
+            let offset_fv = d.fresh_fvar();
+            let offset = d.kernel().fvar(offset_fv);
+            let index = d.add(offset, width);
+            let encoded = d.const_app(reify_low_name, &[bits, width]);
+            let observed = d.const_app(test_bit_bool_name, &[encoded, index]);
+            let false_value = d.bool_false();
+            let body = d.bool_eq(observed, false_value);
+            let over_offset = d.pi_fv(offset_fv, nat, body);
+            d.pi_fv(bits_fv, bits_type, over_offset)
+        };
+        let outside_base = |d: &mut NatDev<'_>| {
+            let bits_fv = d.fresh_fvar();
+            let offset_fv = d.fresh_fvar();
+            let offset = d.kernel().fvar(offset_fv);
+            let zero_case = d.lemma(zero_observation_name, &[offset]);
+            let with_offset = d.lam_fv(offset_fv, nat, zero_case);
+            d.lam_fv(bits_fv, bits_type, with_offset)
+        };
+        let outside_step = |d: &mut NatDev<'_>, width, ih| {
+            let bits_fv = d.fresh_fvar();
+            let bits = d.kernel().fvar(bits_fv);
+            let offset_fv = d.fresh_fvar();
+            let offset = d.kernel().fvar(offset_fv);
+            let successor_width = d.succ(width);
+            let index = d.add(offset, successor_width);
+            let prior_index = d.add(offset, width);
+            let encoded = d.const_app(reify_low_name, &[bits, successor_width]);
+            let zero = d.zero();
+            let low = d.apply(bits, &[zero]);
+            let tail_index_fv = d.fresh_fvar();
+            let tail_index = d.kernel().fvar(tail_index_fv);
+            let next_tail_index = d.succ(tail_index);
+            let shifted_bit = d.apply(bits, &[next_tail_index]);
+            let shifted = d.lam_fv(tail_index_fv, nat, shifted_bit);
+            let tail = d.const_app(reify_low_name, &[shifted, width]);
+            let digit = d.const_app(bool_to_bit_name, &[low]);
+            let two = d.num(2);
+            let doubled = d.mul(two, tail);
+            let expanded = d.add(digit, doubled);
+            let encoded_expanded = d.lemma(reify_low_succ_name, &[bits, width]);
+            let quotient_encoded = d.div(encoded, two);
+            let quotient_expanded = d.div(expanded, two);
+            let quotient_congr = d.congr(encoded, expanded, encoded_expanded, &|d, value| {
+                d.div(value, two)
+            });
+            let quotient_tail = d.lemma(bool_digit_div_name, &[low, tail]);
+            let quotient_eq = d.trans(
+                quotient_encoded,
+                quotient_expanded,
+                tail,
+                quotient_congr,
+                quotient_tail,
+            );
+            let observed = d.const_app(test_bit_bool_name, &[encoded, index]);
+            let observed_quotient =
+                d.const_app(test_bit_bool_name, &[quotient_encoded, prior_index]);
+            let observed_tail = d.const_app(test_bit_bool_name, &[tail, prior_index]);
+            let successor_observation = d.lemma(successor_name, &[encoded, prior_index]);
+            let quotient_motive = d.eq_motive(quotient_encoded, &|d, value| {
+                let observation = d.const_app(test_bit_bool_name, &[value, prior_index]);
+                d.bool_eq(observed_quotient, observation)
+            });
+            let quotient_refl = d.bool_refl(observed_quotient);
+            let through_tail = d.transport(
+                quotient_encoded,
+                quotient_motive,
+                quotient_refl,
+                tail,
+                quotient_eq,
+            );
+            let tail_outside = d.apply(ih, &[shifted, offset]);
+            let false_value = d.bool_false();
+            let first = d.bool_trans(
+                observed,
+                observed_quotient,
+                observed_tail,
+                successor_observation,
+                through_tail,
+            );
+            let result = d.bool_trans(observed, observed_tail, false_value, first, tail_outside);
+            let with_offset = d.lam_fv(offset_fv, nat, result);
+            d.lam_fv(bits_fv, bits_type, with_offset)
+        };
+        let width_fv = d.fresh_fvar();
+        let width = d.kernel().fvar(width_fv);
+        let proof = d.induct(&outside_motive, &outside_base, &outside_step, width);
+        let statement = outside_motive(&mut d, width);
+        let theorem_type = d.pi_fv(width_fv, nat, statement);
+        let theorem_value = d.lam_fv(width_fv, nat, proof);
+        d.declare_theorem(reify_low_outside_name, theorem_type, theorem_value)
+            .map_err(|error| format!("reifyBitsLow_outside rejected: {}", d.explain(&error)))?;
+
         // Specialize the general low-digit reifier to the target-owned
         // pointwise bitwise observation algebra.
         let bool_to_bool = d.arrow(bool_ty, bool_ty);
@@ -1176,6 +1307,13 @@ fn run() -> Result<(), String> {
     if !footprint.is_empty() {
         return Err(format!("bridge theorem has assumptions: {footprint:?}"));
     }
+    let zero_observation_type = match kernel.environment().get(zero_observation_name) {
+        Some(Declaration::Theorem { ty, .. }) => *ty,
+        _ => return Err("testBitBool_zero disappeared".to_owned()),
+    };
+    if !kernel.axiom_footprint(zero_observation_name).is_empty() {
+        return Err("zero observation theorem gained assumptions".to_owned());
+    }
     let observation_type = match kernel.environment().get(observation_apply_name) {
         Some(Declaration::Theorem { ty, .. }) => *ty,
         _ => return Err("bitwiseObservation_apply disappeared".to_owned()),
@@ -1258,10 +1396,15 @@ fn run() -> Result<(), String> {
         Some(Declaration::Theorem { ty, .. }) => *ty,
         _ => return Err("reifyBitsLow_roundtrip disappeared".to_owned()),
     };
+    let reify_low_outside_type = match kernel.environment().get(reify_low_outside_name) {
+        Some(Declaration::Theorem { ty, .. }) => *ty,
+        _ => return Err("reifyBitsLow_outside disappeared".to_owned()),
+    };
     for name in [
         reify_low_zero_name,
         reify_low_succ_name,
         reify_low_roundtrip_name,
+        reify_low_outside_name,
     ] {
         if !kernel.axiom_footprint(name).is_empty() {
             return Err("low-digit-first reification gained assumptions".to_owned());
@@ -1306,8 +1449,9 @@ fn run() -> Result<(), String> {
         return Err("numeric reification roundtrip gained assumptions".to_owned());
     }
     println!(
-        "NAT_TESTBIT_BOOL_BRIDGE_OK|theorem=Axeyum.Autogenesis.testBitBool_succ|axioms=0|type={}|observation_theorem=Axeyum.Autogenesis.bitwiseObservation_apply|observation_axioms=0|observation_type={}|reification_definition=Axeyum.Autogenesis.bitwiseReifyBounded|reification_base_theorem=Axeyum.Autogenesis.reifyBits_zero|reification_base_axioms=0|reification_base_type={}|reification_step_theorem=Axeyum.Autogenesis.reifyBits_succ|reification_step_axioms=0|reification_step_type={}|boolean_digit_roundtrip_theorem=Axeyum.Autogenesis.boolToBit_roundtrip_zero|boolean_digit_roundtrip_axioms=0|boolean_digit_roundtrip_type={}|boolean_digit_bound_theorem=Axeyum.Autogenesis.boolToBit_le_one|boolean_digit_bound_axioms=0|boolean_digit_bound_type={}|direct_boolean_roundtrip_theorem=Axeyum.Autogenesis.bitToBool_boolToBit|direct_boolean_roundtrip_axioms=0|direct_boolean_roundtrip_type={}|boolean_digit_divmod_theorem=Axeyum.Autogenesis.boolDigit_divMod|boolean_digit_divmod_axioms=0|boolean_digit_divmod_type={}|boolean_digit_div_theorem=Axeyum.Autogenesis.boolDigit_div|boolean_digit_div_axioms=0|boolean_digit_div_type={}|boolean_digit_mod_theorem=Axeyum.Autogenesis.boolDigit_mod|boolean_digit_mod_axioms=0|boolean_digit_mod_type={}|low_reification_base_theorem=Axeyum.Autogenesis.reifyBitsLow_zero|low_reification_base_axioms=0|low_reification_base_type={}|low_reification_step_theorem=Axeyum.Autogenesis.reifyBitsLow_succ|low_reification_step_axioms=0|low_reification_step_type={}|low_reification_roundtrip_theorem=Axeyum.Autogenesis.reifyBitsLow_roundtrip|low_reification_roundtrip_axioms=0|low_reification_roundtrip_type={}|bounded_bitwise_theorem=Axeyum.Autogenesis.testBitBool_bitwiseReifyLow|bounded_bitwise_axioms=0|bounded_bitwise_type={}|one_bit_normalization_theorem=Axeyum.Autogenesis.reifyBits_one_normalize|one_bit_normalization_axioms=0|one_bit_normalization_type={}|one_bit_roundtrip_theorem=Axeyum.Autogenesis.reifyBits_one_roundtrip_zero|one_bit_roundtrip_axioms=0|one_bit_roundtrip_type={}|reification_bound_theorem=Axeyum.Autogenesis.reifyBits_lt_pow|reification_bound_axioms=0|reification_bound_type={}|numeric_roundtrip_theorem=Axeyum.Autogenesis.reifyBits_numeric_roundtrip|numeric_roundtrip_axioms=0|numeric_roundtrip_type={}",
+        "NAT_TESTBIT_BOOL_BRIDGE_OK|theorem=Axeyum.Autogenesis.testBitBool_succ|axioms=0|type={}|zero_observation_theorem=Axeyum.Autogenesis.testBitBool_zero|zero_observation_axioms=0|zero_observation_type={}|observation_theorem=Axeyum.Autogenesis.bitwiseObservation_apply|observation_axioms=0|observation_type={}|reification_definition=Axeyum.Autogenesis.bitwiseReifyBounded|reification_base_theorem=Axeyum.Autogenesis.reifyBits_zero|reification_base_axioms=0|reification_base_type={}|reification_step_theorem=Axeyum.Autogenesis.reifyBits_succ|reification_step_axioms=0|reification_step_type={}|boolean_digit_roundtrip_theorem=Axeyum.Autogenesis.boolToBit_roundtrip_zero|boolean_digit_roundtrip_axioms=0|boolean_digit_roundtrip_type={}|boolean_digit_bound_theorem=Axeyum.Autogenesis.boolToBit_le_one|boolean_digit_bound_axioms=0|boolean_digit_bound_type={}|direct_boolean_roundtrip_theorem=Axeyum.Autogenesis.bitToBool_boolToBit|direct_boolean_roundtrip_axioms=0|direct_boolean_roundtrip_type={}|boolean_digit_divmod_theorem=Axeyum.Autogenesis.boolDigit_divMod|boolean_digit_divmod_axioms=0|boolean_digit_divmod_type={}|boolean_digit_div_theorem=Axeyum.Autogenesis.boolDigit_div|boolean_digit_div_axioms=0|boolean_digit_div_type={}|boolean_digit_mod_theorem=Axeyum.Autogenesis.boolDigit_mod|boolean_digit_mod_axioms=0|boolean_digit_mod_type={}|low_reification_base_theorem=Axeyum.Autogenesis.reifyBitsLow_zero|low_reification_base_axioms=0|low_reification_base_type={}|low_reification_step_theorem=Axeyum.Autogenesis.reifyBitsLow_succ|low_reification_step_axioms=0|low_reification_step_type={}|low_reification_roundtrip_theorem=Axeyum.Autogenesis.reifyBitsLow_roundtrip|low_reification_roundtrip_axioms=0|low_reification_roundtrip_type={}|low_reification_outside_theorem=Axeyum.Autogenesis.reifyBitsLow_outside|low_reification_outside_axioms=0|low_reification_outside_type={}|bounded_bitwise_theorem=Axeyum.Autogenesis.testBitBool_bitwiseReifyLow|bounded_bitwise_axioms=0|bounded_bitwise_type={}|one_bit_normalization_theorem=Axeyum.Autogenesis.reifyBits_one_normalize|one_bit_normalization_axioms=0|one_bit_normalization_type={}|one_bit_roundtrip_theorem=Axeyum.Autogenesis.reifyBits_one_roundtrip_zero|one_bit_roundtrip_axioms=0|one_bit_roundtrip_type={}|reification_bound_theorem=Axeyum.Autogenesis.reifyBits_lt_pow|reification_bound_axioms=0|reification_bound_type={}|numeric_roundtrip_theorem=Axeyum.Autogenesis.reifyBits_numeric_roundtrip|numeric_roundtrip_axioms=0|numeric_roundtrip_type={}",
         kernel.render_lean(ty),
+        kernel.render_lean(zero_observation_type),
         kernel.render_lean(observation_type),
         kernel.render_lean(reify_zero_type),
         kernel.render_lean(reify_succ_type),
@@ -1320,6 +1464,7 @@ fn run() -> Result<(), String> {
         kernel.render_lean(reify_low_zero_type),
         kernel.render_lean(reify_low_succ_type),
         kernel.render_lean(reify_low_roundtrip_type),
+        kernel.render_lean(reify_low_outside_type),
         kernel.render_lean(bitwise_reify_low_roundtrip_type),
         kernel.render_lean(reify_one_normalize_type),
         kernel.render_lean(reify_one_roundtrip_type),

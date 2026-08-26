@@ -105,6 +105,11 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
     bridge_type = bridge.get("canonical_type", "")
     if "Eq.{1} Bool" not in bridge_type or "testBitBool" not in bridge_type:
         raise ValueError("native Boolean observation bridge type changed")
+    if bridge.get("zero_axiom_footprint_size") != 0:
+        raise ValueError("zero observation theorem gained assumptions")
+    zero_type = bridge.get("zero_canonical_type", "")
+    if "testBitBool AxNat.zero" not in zero_type or "Bool.false" not in zero_type:
+        raise ValueError("zero observation theorem type changed")
     algebra = data.get("native_observation_algebra", {})
     if algebra.get("axiom_footprint_size") != 0:
         raise ValueError("native observation algebra gained assumptions")
@@ -176,6 +181,7 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
         "low_reification_base",
         "low_reification_step",
         "low_reification_roundtrip",
+        "low_reification_outside",
     ):
         if reification.get(f"{prefix}_axiom_footprint_size") != 0:
             raise ValueError(f"{prefix} gained assumptions")

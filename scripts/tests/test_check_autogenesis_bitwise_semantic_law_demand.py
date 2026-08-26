@@ -121,6 +121,12 @@ class BitwiseSemanticLawDemandTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "bounded bitwise"):
             MODULE.validate(data)
 
+    def test_outside_reification_assumption_fails_closed(self):
+        data = copy.deepcopy(self.data)
+        data["native_reification"]["low_reification_outside_axiom_footprint_size"] = 1
+        with self.assertRaisesRegex(ValueError, "low_reification_outside"):
+            MODULE.validate(data)
+
     def test_finite_oracle_receipt_mutation_fails_closed(self):
         data = copy.deepcopy(self.data)
         data["finite_reification_oracle"]["inside_observations"] -= 1

@@ -122,7 +122,10 @@
     "canonical_type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} Bool (Axeyum.Autogenesis.testBitBool x0 (AxNat.succ x1)) (Axeyum.Autogenesis.testBitBool (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) x1)))",
     "definition": "Axeyum.Autogenesis.testBitBool",
     "imported_equivalence_status": "missing",
-    "theorem": "Axeyum.Autogenesis.testBitBool_succ"
+    "theorem": "Axeyum.Autogenesis.testBitBool_succ",
+    "zero_axiom_footprint_size": 0,
+    "zero_canonical_type": "((x0 : AxNat) -> Eq.{1} Bool (Axeyum.Autogenesis.testBitBool AxNat.zero x0) Bool.false)",
+    "zero_theorem": "Axeyum.Autogenesis.testBitBool_zero"
   },
   "native_observation_algebra": {
     "axiom_footprint_size": 0,
@@ -180,6 +183,9 @@
     "low_reification_roundtrip_axiom_footprint_size": 0,
     "low_reification_roundtrip_canonical_type": "((x0 : AxNat) -> ((x1 : ((x1 : AxNat) -> Bool)) -> ((x2 : AxNat) -> ((x3 : AxNat.lt x2 x0) -> Eq.{1} Bool (Axeyum.Autogenesis.testBitBool (Axeyum.Autogenesis.reifyBitsLow x1 x0) x2) (x1 x2)))))",
     "low_reification_roundtrip_theorem": "Axeyum.Autogenesis.reifyBitsLow_roundtrip",
+    "low_reification_outside_axiom_footprint_size": 0,
+    "low_reification_outside_canonical_type": "((x0 : AxNat) -> ((x1 : ((x1 : AxNat) -> Bool)) -> ((x2 : AxNat) -> Eq.{1} Bool (Axeyum.Autogenesis.testBitBool (Axeyum.Autogenesis.reifyBitsLow x1 x0) (AxNat.add x2 x0)) Bool.false)))",
+    "low_reification_outside_theorem": "Axeyum.Autogenesis.reifyBitsLow_outside",
     "roundtrip_status": "recursive-general-bounded-roundtrip-checked-weighted-equivalence-missing",
     "step_axiom_footprint_size": 0,
     "step_canonical_type": "((x0 : ((x0 : AxNat) -> Bool)) -> ((x1 : AxNat) -> Eq.{1} AxNat (Axeyum.Autogenesis.reifyBits x0 (AxNat.succ x1)) (AxNat.add (Axeyum.Autogenesis.reifyBits x0 x1) (AxNat.mul (Axeyum.Autogenesis.boolToBit (x0 x1)) (AxNat.pow (AxNat.succ (AxNat.succ AxNat.zero)) x1)))))",
