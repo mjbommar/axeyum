@@ -144,7 +144,8 @@ use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
 use crate::rat_prelude::ops::{
-    den, nat_eq_to_rat, nat_rewrite_prop, num, radd, rat_eq_rewrite, rzero,
+    den, den_pos, den_z, nat_eq_to_rat, nat_rewrite_prop, normalize, num, one_le_succ, radd,
+    rat_eq_rewrite, rle, rzero,
 };
 
 /// Admit `CReal.UniformlyContinuousOn` (the carrier and its two
@@ -168,7 +169,8 @@ pub(super) fn declare_uniform_continuity(
     declare_uniformly_continuous_add(d, p)?;
     declare_uniformly_continuous_neg(d, p)?;
     declare_uniformly_continuous_sub(d, p)?;
-    declare_bucket_index(d, p)
+    declare_bucket_index(d, p)?;
+    declare_bucket_index_floor(d, p)
 }
 
 // --- the bucket-index primitive ---------------------------------------------
@@ -244,6 +246,327 @@ fn declare_bucket_index(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kerne
         ty,
         value,
         hint: ReducibilityHint::Regular(super::DERIVED_HEIGHT + 44),
+    })
+}
+
+// --- the bucket-index closeness property ------------------------------------
+//
+// `bucket_index`'s own doc comment names exactly what is missing: a proof
+// that the sample point `bucketIndex w k` lands within one step of `w`. What
+// follows is the sharpest, hypothesis-free form of that fact: `w`'s own
+// clamped sample `q := Rat.max (seq w j) 0` (`j` the accuracy index
+// `bucketIndex` itself samples at) is sandwiched between the two adjacent
+// multiples of `step := 1/(k+1)` that bracket `bucketIndex w k` --
+//
+//   natDivSucc (bucketIndex w k) k  <=  q  <=  natDivSucc (succ (bucketIndex w k)) k
+//
+// exactly the floor-division guarantee `Nat.div_mod_bounds` gives for
+// `Nat.div (a*k1) b` (`a`, `b` being `q`'s own clamped numerator/denominator),
+// read back into `Rat.le` by cross-multiplying against `Rat.natDivSucc`'s own
+// `normalize`d representative (`Rat.normalize_cross`). No hypothesis on `w`'s
+// SIGN is needed anywhere here: `q` is clamped to `>= 0` unconditionally
+// (`Rat.le_max_right`), which is exactly what makes `a := natAbs (num q)` an
+// EXACT — not merely bounding — read of `num q`. (A sign hypothesis on `w`
+// only starts to matter for the FURTHER step of relating `q` back to `w`
+// itself through `w`'s own regularity, which is not attempted in this slice.)
+
+/// `Nat.le i n`, from `hlt : Nat.lt i n` (defeq `Nat.le (succ i) n`). Local
+/// copy of `monotone.rs`'s private `nat_le_of_lt` (see that file's own copy
+/// for why this small helper is duplicated rather than shared).
+fn bucket_nat_le_of_lt(d: &mut IntDev<'_>, i: ExprId, n: ExprId, hlt: ExprId) -> ExprId {
+    let np = d.prelude();
+    let succ_i = d.succ(i);
+    let step = d.const_app(np.le_succ, &[i]);
+    d.const_app(np.le_trans, &[i, succ_i, n, step, hlt])
+}
+
+/// Admit [`CRealPrelude::bucket_index_floor_lower`] and
+/// [`CRealPrelude::bucket_index_floor_upper`]. See the section documentation
+/// above for the statement and the route.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+#[allow(clippy::too_many_lines)]
+pub(super) fn declare_bucket_index_floor(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let nat = p.rat.int.nat;
+    let carrier = creal_ty(d, p);
+    let nat_ty = d.nat_ty();
+
+    let w_fv = d.fresh_fvar();
+    let w = d.kernel().fvar(w_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    // --- shared setup, rebuilt identically to `bucket_index`'s own recipe --
+    let k1 = d.succ(k);
+    let j = NatOps::mul(d, k1, k1);
+    let w_j = sample(d, p, w, j);
+    let zero_rat = rzero(d, rat);
+    let q = d.const_app(rat.max, &[w_j, zero_rat]);
+
+    let q_nonneg = d.lemma(rat.le_max_right, &[w_j, zero_rat]); // Rat.le 0 q
+    let num_q = num(d, q);
+    let num_q_nonneg = d.lemma(rat.int_nonneg_of_nonneg, &[q, q_nonneg]); // Int.le 0 (num q)
+    let a = d.const_app(rat.int.nat_abs, &[num_q]);
+    let num_q_eq = d.lemma(rat.int.of_nat_nat_abs_of_nonneg, &[num_q, num_q_nonneg]); // Eq Int (ofNat a) (num q)
+    let b = den(d, q);
+    let bz = den_z(d, q);
+
+    let scaled = NatOps::mul(d, a, k1);
+    let m = NatOps::div(d, scaled, b); // == bucket_index w k, by construction
+
+    // --- b = succ (pred b), so `div_mod_exec` (which needs a literal succ
+    // divisor) applies ------------------------------------------------------
+    let b_pos = den_pos(d, q); // Nat.le 1 b == Nat.lt 0 b
+    let b_pred = d.pred(b);
+    let succ_b_pred = d.succ(b_pred);
+    let heq_b = d.lemma(nat.succ_pred_of_pos, &[b, b_pos]); // Eq Nat b succ_b_pred
+    let heq_b_symm = d.symm(b, succ_b_pred, heq_b); // Eq Nat succ_b_pred b
+
+    // --- `Nat.div_mod_bounds` at `succ_b_pred`, rewritten back to `b` -------
+    let dme = d.lemma(nat.div_mod_exec, &[b_pred, scaled]);
+    let div_sbp = d.div(scaled, succ_b_pred);
+    let mod_sbp = d.modulo(scaled, succ_b_pred);
+    let bounds_sbp = d.lemma(
+        nat.div_mod_bounds,
+        &[succ_b_pred, scaled, div_sbp, mod_sbp, dme],
+    );
+
+    let and_name = p.rat.int.logic.and;
+    let motive_body = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let div_x = d.div(scaled, x);
+        let lhs = NatOps::mul(d, x, div_x);
+        let le1 = NatOps::le(d, lhs, scaled);
+        let succ_div = d.succ(div_x);
+        let rhs2 = NatOps::mul(d, x, succ_div);
+        let lt1 = NatOps::lt(d, scaled, rhs2);
+        d.const_app(and_name, &[le1, lt1])
+    };
+    let bounds_b = d.nat_rewrite(succ_b_pred, b, heq_b_symm, bounds_sbp, &motive_body);
+
+    let le1_b = {
+        let lhs = NatOps::mul(d, b, m);
+        NatOps::le(d, lhs, scaled)
+    };
+    let m1 = d.succ(m);
+    let rhs2_b = NatOps::mul(d, b, m1);
+    let lt1_b = NatOps::lt(d, scaled, rhs2_b);
+    let lower_b = d.and_left(le1_b, lt1_b, bounds_b); // Nat.le (b*m) scaled
+    let upper_b_strict = d.and_right(le1_b, lt1_b, bounds_b); // Nat.lt scaled (b*m1)
+    let upper_b = bucket_nat_le_of_lt(d, scaled, rhs2_b, upper_b_strict); // Nat.le scaled (b*m1)
+
+    let az = d.of_nat(a);
+    let k1z = d.of_nat(k1);
+    let mz = d.of_nat(m);
+    let m1z = d.of_nat(m1);
+
+    let pos_k1 = one_le_succ(d, k);
+
+    // --- rep_m := natDivSucc m k, rep_m1 := natDivSucc m1 k -----------------
+    let rep_m = normalize(d, mz, k1, pos_k1);
+    let nm = num(d, rep_m);
+    let dm = den(d, rep_m);
+    let dm_z = den_z(d, rep_m);
+    let cross_m = d.lemma(rat.normalize_cross, &[mz, k1, pos_k1]); // Eq (nm*k1z) (mz*dm_z)
+
+    let rep_m1 = normalize(d, m1z, k1, pos_k1);
+    let nm1 = num(d, rep_m1);
+    let dm1 = den(d, rep_m1);
+    let dm1_z = den_z(d, rep_m1);
+    let cross_m1 = d.lemma(rat.normalize_cross, &[m1z, k1, pos_k1]); // Eq (nm1*k1z) (m1z*dm1_z)
+
+    // ============ LOWER: Rat.le rep_m q  (i.e. natDivSucc m k <= q) ========
+    let lower_final = {
+        let bz_mz = d.imul(bz, mz);
+        let az_k1z = d.imul(az, k1z);
+        let scaled_lower = d.lemma(rat.int_mul_le_mul_right, &[bz_mz, az_k1z, dm, lower_b]);
+        // : Int.le ((bz*mz)*dm_z) ((az*k1z)*dm_z)
+        let lhs0 = d.imul(bz_mz, dm_z);
+        let rhs0 = d.imul(az_k1z, dm_z);
+
+        let mz_dmz = d.imul(mz, dm_z);
+        let nm_k1z = d.imul(nm, k1z);
+        let cross_m_rev = d.isymm(nm_k1z, mz_dmz, cross_m); // Eq (mz*dm_z)(nm*k1z)
+
+        let bz_mzdmz = d.imul(bz, mz_dmz);
+        let assoc_l1 = d.lemma(rat.int.mul_assoc, &[bz, mz, dm_z]); // Eq (lhs0)(bz*(mz*dm_z))
+        let bz_nmk1z = d.imul(bz, nm_k1z);
+        let step_l2 = d.icongr(mz_dmz, nm_k1z, cross_m_rev, &|d, t| d.imul(bz, t));
+        let bz_nm = d.imul(bz, nm);
+        let bz_nm_k1z = d.imul(bz_nm, k1z);
+        let assoc_l3 = d.lemma(rat.int.mul_assoc, &[bz, nm, k1z]); // Eq ((bz*nm)*k1z)(bz*(nm*k1z))
+        let assoc_l3_rev = d.isymm(bz_nm_k1z, bz_nmk1z, assoc_l3);
+        let comm_l4 = d.lemma(rat.int.mul_comm, &[bz, nm]); // Eq (bz*nm)(nm*bz)
+        let nm_bz = d.imul(nm, bz);
+        let nm_bz_k1z = d.imul(nm_bz, k1z);
+        let step_l4 = d.icongr(bz_nm, nm_bz, comm_l4, &|d, t| d.imul(t, k1z));
+
+        let (target_lhs, eq_lhs) = d.ichain(
+            lhs0,
+            &[
+                (bz_mzdmz, assoc_l1),
+                (bz_nmk1z, step_l2),
+                (bz_nm_k1z, assoc_l3_rev),
+                (nm_bz_k1z, step_l4),
+            ],
+        );
+
+        let k1z_dmz = d.imul(k1z, dm_z);
+        let az_k1zdmz = d.imul(az, k1z_dmz);
+        let assoc_r1 = d.lemma(rat.int.mul_assoc, &[az, k1z, dm_z]); // Eq (rhs0)(az*(k1z*dm_z))
+        let dmz_k1z = d.imul(dm_z, k1z);
+        let az_dmzk1z = d.imul(az, dmz_k1z);
+        let comm_r2 = d.lemma(rat.int.mul_comm, &[k1z, dm_z]); // Eq (k1z*dm_z)(dm_z*k1z)
+        let step_r2 = d.icongr(k1z_dmz, dmz_k1z, comm_r2, &|d, t| d.imul(az, t));
+        let az_dmz = d.imul(az, dm_z);
+        let az_dmz_k1z = d.imul(az_dmz, k1z);
+        let assoc_r3 = d.lemma(rat.int.mul_assoc, &[az, dm_z, k1z]); // Eq ((az*dm_z)*k1z)(az*(dm_z*k1z))
+        let assoc_r3_rev = d.isymm(az_dmz_k1z, az_dmzk1z, assoc_r3);
+
+        let (target_rhs, eq_rhs) = d.ichain(
+            rhs0,
+            &[
+                (az_k1zdmz, assoc_r1),
+                (az_dmzk1z, step_r2),
+                (az_dmz_k1z, assoc_r3_rev),
+            ],
+        );
+
+        let motive1 = d.ieq_motive(lhs0, &|d, x| d.ile(x, rhs0));
+        let step1 = d.itransport(lhs0, motive1, scaled_lower, target_lhs, eq_lhs);
+        let motive2 = d.ieq_motive(rhs0, &|d, x| d.ile(target_lhs, x));
+        let step2 = d.itransport(rhs0, motive2, step1, target_rhs, eq_rhs);
+        // step2 : Int.le ((nm*bz)*k1z) ((az*dm_z)*k1z)
+
+        let lower_cross = d.lemma(
+            rat.int_le_of_mul_le_mul_right,
+            &[nm_bz, az_dmz, k1, pos_k1, step2],
+        );
+        // : Int.le (nm*bz) (az*dm_z)
+
+        let eq_az_dmz = d.icongr(az, num_q, num_q_eq, &|d, t| d.imul(t, dm_z));
+        let num_q_dmz = d.imul(num_q, dm_z);
+        let motive3 = d.ieq_motive(az_dmz, &|d, x| d.ile(nm_bz, x));
+        d.itransport(az_dmz, motive3, lower_cross, num_q_dmz, eq_az_dmz)
+        // : Int.le (nm*bz) (num_q*dm_z)  ==defeq==  Rat.le rep_m q
+    };
+
+    // ============ UPPER: Rat.le q rep_m1  (i.e. q <= natDivSucc m1 k) ======
+    let upper_final = {
+        let az_k1z = d.imul(az, k1z);
+        let bz_m1z = d.imul(bz, m1z);
+        let scaled_upper = d.lemma(rat.int_mul_le_mul_right, &[az_k1z, bz_m1z, dm1, upper_b]);
+        // : Int.le ((az*k1z)*dm1_z) ((bz*m1z)*dm1_z)
+        let lhs0 = d.imul(az_k1z, dm1_z);
+        let rhs0 = d.imul(bz_m1z, dm1_z);
+
+        let k1z_dm1z = d.imul(k1z, dm1_z);
+        let az_k1zdm1z = d.imul(az, k1z_dm1z);
+        let assoc_l1 = d.lemma(rat.int.mul_assoc, &[az, k1z, dm1_z]); // Eq (lhs0)(az*(k1z*dm1_z))
+        let dm1z_k1z = d.imul(dm1_z, k1z);
+        let az_dm1zk1z = d.imul(az, dm1z_k1z);
+        let comm_l2 = d.lemma(rat.int.mul_comm, &[k1z, dm1_z]); // Eq (k1z*dm1_z)(dm1_z*k1z)
+        let step_l2 = d.icongr(k1z_dm1z, dm1z_k1z, comm_l2, &|d, t| d.imul(az, t));
+        let az_dm1z = d.imul(az, dm1_z);
+        let az_dm1z_k1z = d.imul(az_dm1z, k1z);
+        let assoc_l3 = d.lemma(rat.int.mul_assoc, &[az, dm1_z, k1z]); // Eq ((az*dm1_z)*k1z)(az*(dm1_z*k1z))
+        let assoc_l3_rev = d.isymm(az_dm1z_k1z, az_dm1zk1z, assoc_l3);
+
+        let (target_lhs, eq_lhs) = d.ichain(
+            lhs0,
+            &[
+                (az_k1zdm1z, assoc_l1),
+                (az_dm1zk1z, step_l2),
+                (az_dm1z_k1z, assoc_l3_rev),
+            ],
+        );
+
+        let m1z_dm1z = d.imul(m1z, dm1_z);
+        let bz_m1zdm1z = d.imul(bz, m1z_dm1z);
+        let assoc_r1 = d.lemma(rat.int.mul_assoc, &[bz, m1z, dm1_z]); // Eq (rhs0)(bz*(m1z*dm1_z))
+        let nm1_k1z = d.imul(nm1, k1z);
+        let cross_m1_rev = d.isymm(nm1_k1z, m1z_dm1z, cross_m1); // Eq (m1z*dm1_z)(nm1*k1z)
+        let bz_nm1k1z = d.imul(bz, nm1_k1z);
+        let step_r2 = d.icongr(m1z_dm1z, nm1_k1z, cross_m1_rev, &|d, t| d.imul(bz, t));
+        let bz_nm1 = d.imul(bz, nm1);
+        let bz_nm1_k1z = d.imul(bz_nm1, k1z);
+        let assoc_r3 = d.lemma(rat.int.mul_assoc, &[bz, nm1, k1z]); // Eq ((bz*nm1)*k1z)(bz*(nm1*k1z))
+        let assoc_r3_rev = d.isymm(bz_nm1_k1z, bz_nm1k1z, assoc_r3);
+        let comm_r4 = d.lemma(rat.int.mul_comm, &[bz, nm1]); // Eq (bz*nm1)(nm1*bz)
+        let nm1_bz = d.imul(nm1, bz);
+        let nm1_bz_k1z = d.imul(nm1_bz, k1z);
+        let step_r4 = d.icongr(bz_nm1, nm1_bz, comm_r4, &|d, t| d.imul(t, k1z));
+
+        let (target_rhs, eq_rhs) = d.ichain(
+            rhs0,
+            &[
+                (bz_m1zdm1z, assoc_r1),
+                (bz_nm1k1z, step_r2),
+                (bz_nm1_k1z, assoc_r3_rev),
+                (nm1_bz_k1z, step_r4),
+            ],
+        );
+
+        let motive1 = d.ieq_motive(lhs0, &|d, x| d.ile(x, rhs0));
+        let step1 = d.itransport(lhs0, motive1, scaled_upper, target_lhs, eq_lhs);
+        let motive2 = d.ieq_motive(rhs0, &|d, x| d.ile(target_lhs, x));
+        let step2 = d.itransport(rhs0, motive2, step1, target_rhs, eq_rhs);
+        // step2 : Int.le ((az*dm1_z)*k1z) ((nm1*bz)*k1z)
+
+        let upper_cross = d.lemma(
+            rat.int_le_of_mul_le_mul_right,
+            &[az_dm1z, nm1_bz, k1, pos_k1, step2],
+        );
+        // : Int.le (az*dm1_z) (nm1*bz)
+
+        let eq_az_dm1z = d.icongr(az, num_q, num_q_eq, &|d, t| d.imul(t, dm1_z));
+        let num_q_dm1z = d.imul(num_q, dm1_z);
+        let motive3 = d.ieq_motive(az_dm1z, &|d, x| d.ile(x, nm1_bz));
+        d.itransport(az_dm1z, motive3, upper_cross, num_q_dm1z, eq_az_dm1z)
+        // : Int.le (num_q*dm1_z) (nm1*bz)  ==defeq==  Rat.le q rep_m1
+    };
+
+    // --- close both theorems -------------------------------------------------
+    let m_named = d.const_app(p.bucket_index, &[w, k]);
+    let rep_m_named = d.const_app(rat.nat_div_succ, &[m_named, k]);
+    let lower_ty_body = rle(d, rat, rep_m_named, q);
+    let lower_ty = {
+        let with_k = d.pi_fv(k_fv, nat_ty, lower_ty_body);
+        d.pi_fv(w_fv, carrier, with_k)
+    };
+    let lower_value = {
+        let with_k = d.lam_fv(k_fv, nat_ty, lower_final);
+        d.lam_fv(w_fv, carrier, with_k)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.bucket_index_floor_lower,
+        uparams: vec![],
+        ty: lower_ty,
+        value: lower_value,
+    })?;
+
+    let m1_named = d.succ(m_named);
+    let rep_m1_named = d.const_app(rat.nat_div_succ, &[m1_named, k]);
+    let upper_ty_body = rle(d, rat, q, rep_m1_named);
+    let upper_ty = {
+        let with_k = d.pi_fv(k_fv, nat_ty, upper_ty_body);
+        d.pi_fv(w_fv, carrier, with_k)
+    };
+    let upper_value = {
+        let with_k = d.lam_fv(k_fv, nat_ty, upper_final);
+        d.lam_fv(w_fv, carrier, with_k)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.bucket_index_floor_upper,
+        uparams: vec![],
+        ty: upper_ty,
+        value: upper_value,
     })
 }
 

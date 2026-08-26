@@ -1158,6 +1158,30 @@ pub struct CRealPrelude {
     /// step'` for *some* fixed `step'` a small constant multiple of `step`,
     /// not an exact nearest-index guarantee.)
     pub bucket_index: NameId,
+    /// `CReal.bucketIndexFloorLower : ∀ w k, Rat.le (Rat.natDivSucc
+    /// (CReal.bucketIndex w k) k) (Rat.max (CReal.seq w ((Nat.succ
+    /// k)*(Nat.succ k))) Rat.zero)` — the closeness property
+    /// [`Self::bucket_index`]'s own doc comment says is missing, in its
+    /// sharpest, **hypothesis-free** form: the clamped sample `q := Rat.max
+    /// (seq w j) 0` (`j` the exact accuracy index `bucketIndex` itself
+    /// samples at) is `>=` the multiple of `1/(k+1)` `bucketIndex w k`
+    /// names. No sign hypothesis on `w` is needed — `q >= 0` unconditionally
+    /// (`Rat.le_max_right`), which is exactly what makes `a := natAbs (num
+    /// q)` an EXACT read of `num q`, not merely a bound. Proved by reading
+    /// `Nat.div_mod_bounds`'s lower half (via `Nat.div_mod_exec`, which needs
+    /// the divisor written `Nat.succ _`, so `den q` is first rewritten along
+    /// `Nat.succ_pred_of_pos`) back into `Rat.le` by cross-multiplying
+    /// against `Rat.natDivSucc`'s own `normalize`d representative
+    /// (`Rat.normalize_cross`). See `creal/uniform_continuity.rs`.
+    pub bucket_index_floor_lower: NameId,
+    /// `CReal.bucketIndexFloorUpper : ∀ w k, Rat.le (Rat.max (CReal.seq w
+    /// ((Nat.succ k)*(Nat.succ k))) Rat.zero) (Rat.natDivSucc (Nat.succ
+    /// (CReal.bucketIndex w k)) k)` — the other half of
+    /// [`Self::bucket_index_floor_lower`]: `q` is also `<=` the NEXT
+    /// multiple of `1/(k+1)`, from `Nat.div_mod_bounds`'s strict upper half.
+    /// Together the two pin `q` inside a single step of `bucketIndex w k`'s
+    /// own multiple, which is what the module documentation asks for.
+    pub bucket_index_floor_upper: NameId,
     /// `CReal.ratSqLe : ∀ (u s : Rat), Rat.le (u*u) (s*s) → Rat.le Rat.zero s
     /// → Rat.le u s` — a purely rational fact (no `CReal` structure), proved
     /// via `Rat.mul_pos` and a difference-of-squares identity rather than a
@@ -3036,6 +3060,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
             .name_str(creal, "uniformly_continuous_poly_example"),
         mag_bound_le_sum_range_of_lt: kernel.name_str(creal, "mag_bound_le_sumRange_of_lt"),
         bucket_index: kernel.name_str(creal, "bucketIndex"),
+        bucket_index_floor_lower: kernel.name_str(creal, "bucketIndexFloorLower"),
+        bucket_index_floor_upper: kernel.name_str(creal, "bucketIndexFloorUpper"),
         rat_sq_le: kernel.name_str(creal, "ratSqLe"),
         rat_sq_sandwich: kernel.name_str(creal, "ratSqSandwich"),
         rat_index_ratio_le_one: kernel.name_str(creal, "ratIndexRatioLeOne"),
