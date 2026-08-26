@@ -1,18 +1,18 @@
 {
   "census": {
     "distinct_exactly_linked_facts": 312,
-    "kernel_dependency_edges": 6660,
-    "kernel_theorems": 1192,
+    "kernel_dependency_edges": 6666,
+    "kernel_theorems": 1193,
     "maximum_dependency_depth": 26,
     "theorems_with_exact_fact_links": 308,
-    "theorems_without_exact_fact_links": 884,
+    "theorems_without_exact_fact_links": 885,
     "unresolved_prefixed_kernel_evidence": 90
   },
   "derivation": {
     "fact_identity_rule": "kernel-term evidence id with exact kernel- or kernel: prefix and an exact current theorem suffix",
     "fact_population": "sorted artifacts/facts/F-*.json",
     "graph_semantics": "accepted theorem-term direct references; dependency depth is the longest direct-theorem path from a theorem with no theorem dependency",
-    "kernel_projection_sha256": "a287dc76f2787074be5dcce1e539894b8c9e539cc504068c7453c7de5eb5755a",
+    "kernel_projection_sha256": "41a47213cfbafdd67b26a3794d8d7cdd0985beef4f4d8d45524e5442ddbf401f",
     "trust_boundary": "search and retrieval only; no concept, applicability, proof, admission, or trusted-kernel authority"
   },
   "kind": "axeyum-kernel-lemma-search-index",
@@ -6141,6 +6141,7 @@
         "CReal.one_le_pow_of_one_le",
         "CReal.pos_of_pos_bound",
         "CReal.pow_le_one",
+        "CReal.pow_le_pow_of_base_le",
         "CReal.pow_le_pow_of_le_one",
         "CReal.pow_le_pow_of_one_le",
         "CReal.pow_succ_gt_one",
@@ -6396,6 +6397,7 @@
         "CReal.not_le_zero_neg_one",
         "CReal.one_le_pow_of_one_le",
         "CReal.pow_le_one",
+        "CReal.pow_le_pow_of_base_le",
         "CReal.riemannSum_le",
         "CReal.riemannSum_le_on",
         "CReal.riemannSum_sample_in_bounds",
@@ -6462,6 +6464,7 @@
         "CReal.one_le_pow_of_one_le",
         "CReal.pos_bound_of_lt",
         "CReal.pow_le_one",
+        "CReal.pow_le_pow_of_base_le",
         "CReal.pow_le_pow_of_one_le",
         "CReal.pow_succ_gt_one",
         "CReal.sumRange_comparisonTest",
@@ -7183,6 +7186,7 @@
         "CReal.mul_sub_one_geom_tail",
         "CReal.no_total_inverse",
         "CReal.pow_le_one",
+        "CReal.pow_le_pow_of_base_le",
         "CReal.pow_succ_gt_one",
         "CReal.pow_succ_lt_one",
         "CReal.riemannSum_add",
@@ -7476,6 +7480,7 @@
         "CReal.mul_pos",
         "CReal.one_le_pow_of_one_le",
         "CReal.pow_le_one",
+        "CReal.pow_le_pow_of_base_le",
         "CReal.pow_le_pow_of_le_one",
         "CReal.pow_le_pow_of_one_le",
         "CReal.pow_succ_gt_one",
@@ -8598,6 +8603,27 @@
       "axiom_footprint_size": 0,
       "dependency_depth": 19,
       "direct_theorem_dependencies": [
+        "CReal.le_congr",
+        "CReal.le_refl",
+        "CReal.le_trans",
+        "CReal.mul_comm",
+        "CReal.mul_le_mul_of_nonneg_left",
+        "CReal.pow_nonneg"
+      ],
+      "direct_theorem_dependents": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "CReal.pow_le_pow_of_base_le",
+      "search_authority": "candidate-only; kernel type checking remains authoritative",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "dependency_depth": 19,
+      "direct_theorem_dependencies": [
         "CReal.Equiv.refl",
         "CReal.le_congr",
         "CReal.mul_le_mul_of_nonneg_left",
@@ -8650,6 +8676,7 @@
         "CReal.geom_tail_bounded",
         "CReal.geom_tail_within",
         "CReal.one_le_pow_of_one_le",
+        "CReal.pow_le_pow_of_base_le",
         "CReal.pow_le_pow_of_le_one",
         "CReal.pow_le_pow_of_one_le",
         "CReal.pow_succ_gt_one",

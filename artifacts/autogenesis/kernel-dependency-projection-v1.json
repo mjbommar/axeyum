@@ -1,17 +1,17 @@
 {
   "census": {
-    "axiom_free_declarations": 1507,
+    "axiom_free_declarations": 1508,
     "declaration_kinds": {
       "axiom": 30,
       "constructor": 29,
       "definition": 242,
       "inductive": 22,
       "recursor": 22,
-      "theorem": 1192
+      "theorem": 1193
     },
-    "declarations": 1537,
-    "direct_theorem_dependency_edges": 6660,
-    "theorems": 1192
+    "declarations": 1538,
+    "direct_theorem_dependency_edges": 6666,
+    "theorems": 1193
   },
   "declarations": [
     {
@@ -6211,6 +6211,24 @@
         "CReal.mul_one"
       ],
       "id": "CReal.pow_le_one",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
+        "CReal.le_congr",
+        "CReal.le_refl",
+        "CReal.le_trans",
+        "CReal.mul_comm",
+        "CReal.mul_le_mul_of_nonneg_left",
+        "CReal.pow_nonneg"
+      ],
+      "id": "CReal.pow_le_pow_of_base_le",
       "visible_in": [
         "complex",
         "cpoint",
@@ -37676,6 +37694,36 @@
       "relation": "direct-theorem-depends-on",
       "source": "CReal.pow_le_one",
       "target": "CReal.mul_one"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_le_pow_of_base_le",
+      "target": "CReal.le_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_le_pow_of_base_le",
+      "target": "CReal.le_refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_le_pow_of_base_le",
+      "target": "CReal.le_trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_le_pow_of_base_le",
+      "target": "CReal.mul_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_le_pow_of_base_le",
+      "target": "CReal.mul_le_mul_of_nonneg_left"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.pow_le_pow_of_base_le",
+      "target": "CReal.pow_nonneg"
     },
     {
       "relation": "direct-theorem-depends-on",
