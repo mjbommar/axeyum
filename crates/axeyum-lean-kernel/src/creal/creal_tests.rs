@@ -72,7 +72,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 276] = [
+    let expected: [(&str, crate::NameId, &str); 277] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -636,6 +636,16 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         (
             "CReal.strict_mono_of_pos_deriv",
             p.strict_mono_of_pos_deriv,
+            "theorem",
+        ),
+        // The RATE `strict_mono_of_pos_deriv` proves internally (as its own
+        // `chained2`) but never declared, hoisted out as its own theorem
+        // (creal/monotone.rs): `F y − F x` is bounded BELOW by the derivative
+        // floor `1/(2(k+1))` times the input gap `y − x`, given only `le x y`
+        // (not `lt x y` -- nothing up to this exact bound needs strictness).
+        (
+            "CReal.strict_mono_magnitude",
+            p.strict_mono_magnitude,
             "theorem",
         ),
         // Spivak ch. 12's entry point (creal/monotone.rs): a uniformly

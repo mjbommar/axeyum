@@ -2385,6 +2385,31 @@ pub struct CRealPrelude {
     /// `CReal` one) produces the RATIONAL gap `CReal.lt` demands.
     pub strict_mono_of_pos_deriv: NameId,
 
+    /// `CReal.strict_mono_magnitude : ∀ F F' a b, HasDerivativeOn F F' a b →
+    /// ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k)) (F' z)) →
+    /// ∀ x y, le a x → le x y → le y b →
+    /// le (mul (ofRat (natDivSucc 1 (2·k+2))) (add y (neg x)))
+    ///    (add (F y) (neg (F x)))` (`creal/monotone.rs`) — the RATE
+    /// [`Self::strict_mono_of_pos_deriv`] proves internally (as `chained2` in
+    /// that function's own derivation) but never used to declare: `F y − F x`
+    /// is bounded BELOW by the derivative floor `1/(2(k+1))` times the input
+    /// gap, not merely shown positive. Takes `le x y`, not `lt x y` — nothing
+    /// in the subdivision argument up to this exact inequality needs a
+    /// strict gap (it degenerates correctly to `0 ≤ 0` at `x = y`); strictness
+    /// is only needed downstream to turn a REAL lower bound into a RATIONAL
+    /// `CReal.lt` witness, which is exactly what
+    /// [`Self::strict_mono_of_pos_deriv`] does on top of this lemma.
+    ///
+    /// [`Self::strict_mono_of_pos_deriv`] now calls this lemma directly for
+    /// that inequality rather than re-deriving it: the whole subdivision /
+    /// telescope construction (the piece count, the per-piece bound, the
+    /// telescope, the algebraic regrouping to `(1/(2(k+1)))·(y−x)`) lives here
+    /// exactly once. Two consumers outside `monotone.rs` are blocked on
+    /// reaching it: an exact IVT root (`|x−y| ≤ 2(k+1)·(|F x|+|F y|)` follows
+    /// directly) and Chapter 12's inverse-function continuity (a lower bound
+    /// on `F`'s growth is an upper bound on `F⁻¹`'s modulus).
+    pub strict_mono_magnitude: NameId,
+
     /// `CReal.strict_injective_of_pos_deriv : ∀ F F' a b, HasDerivativeOn F
     /// F' a b → ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k))
     /// (F' z)) → ∀ x y, le a x → le x b → le a y → le y b → Apart x y →
@@ -3019,6 +3044,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         of_nat_mul: kernel.name_str(creal, "ofNat_mul"),
         monotone_of_nonneg_deriv: kernel.name_str(creal, "monotone_of_nonneg_deriv"),
         strict_mono_of_pos_deriv: kernel.name_str(creal, "strict_mono_of_pos_deriv"),
+        strict_mono_magnitude: kernel.name_str(creal, "strict_mono_magnitude"),
         strict_injective_of_pos_deriv: kernel.name_str(creal, "strict_injective_of_pos_deriv"),
         order_reflect_of_pos_deriv: kernel.name_str(creal, "order_reflect_of_pos_deriv"),
         ivt_step: kernel.name_str(creal, "ivt_step"),
