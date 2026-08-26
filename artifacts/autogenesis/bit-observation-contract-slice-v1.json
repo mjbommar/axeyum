@@ -1,0 +1,1344 @@
+{
+  "authority": "strategy context only; set intersection and lexical focus grant no semantic contract, proof, operation, applicability, transport, or fact-transition authority",
+  "behavior_candidates": [
+    {
+      "canonical_type": "((x0 : AxNat) -> Eq.{1} AxNat (AxNat.sumRange (fun (x1 : AxNat) => AxNat.mul (AxNat.testBit x0 x1) (AxNat.pow (AxNat.succ (AxNat.succ AxNat.zero)) x1)) (AxNat.size x0)) x0)",
+      "direct_theorem_dependencies": [
+        "Nat.lt_pow_size",
+        "Nat.mod_eq_self_of_lt",
+        "Nat.sum_testBit_lt"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.sum_testBit_eq"
+    },
+    {
+      "canonical_type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.sumRange (fun (x2 : AxNat) => AxNat.mul (AxNat.testBit x1 x2) (AxNat.pow (AxNat.succ (AxNat.succ AxNat.zero)) x2)) x0) (AxNat.mod x1 (AxNat.pow (AxNat.succ (AxNat.succ AxNat.zero)) x0))))",
+      "direct_theorem_dependencies": [
+        "Nat.add_comm",
+        "Nat.div_mod_exec",
+        "Nat.div_mod_unique",
+        "Nat.le_succ_succ",
+        "Nat.mod_two_mul_split",
+        "Nat.mul_assoc",
+        "Nat.mul_comm",
+        "Nat.mul_one",
+        "Nat.mul_sumRange",
+        "Nat.one_le_mul",
+        "Nat.one_mul",
+        "Nat.pow_succ",
+        "Nat.sumRange_congr",
+        "Nat.sumRange_shiftFront",
+        "Nat.zero_le"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.sum_testBit_lt"
+    },
+    {
+      "canonical_type": "((x0 : AxNat) -> ((x1 : AxNat) -> AxNat.le (AxNat.testBit x0 x1) (AxNat.succ AxNat.zero)))",
+      "direct_theorem_dependencies": [
+        "Nat.le_of_succ_le_succ",
+        "Nat.le_succ_succ",
+        "Nat.mod_lt",
+        "Nat.zero_le"
+      ],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.testBit_le_one"
+    },
+    {
+      "canonical_type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.testBit x0 (AxNat.succ x1)) (AxNat.testBit (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) x1)))",
+      "direct_theorem_dependencies": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.testBit_succ"
+    },
+    {
+      "canonical_type": "((x0 : AxNat) -> Eq.{1} AxNat (AxNat.testBit x0 AxNat.zero) (AxNat.mod x0 (AxNat.succ (AxNat.succ AxNat.zero))))",
+      "direct_theorem_dependencies": [],
+      "exact_fact_ids": [],
+      "kernel_declaration_id": "Nat.testBit_zero"
+    }
+  ],
+  "census": {
+    "exact_axiom_free_behavior_candidates": 5,
+    "observation_focus_nodes": 18,
+    "shared_transparent_nodes": 103,
+    "targets": 4,
+    "union_transparent_nodes": 471
+  },
+  "kind": "axeyum-autogenesis-bit-observation-contract-slice",
+  "limitations": "The shared set is structural implementation overlap. The lexical observation focus is a review queue, not a contract vocabulary or semantic witness.",
+  "observation_focus": [
+    {
+      "content_sha256": "f1ff827b59c6a6afbd90487eb8e27aa815bff840aa045de020e69cff9f34d794",
+      "dependency_sha256": "89d8d6f9706f0c1a0c6ef5f7375b971876f6db6f4cd36cfc4551919e8f850e29",
+      "distance_from_testbit": 0,
+      "name": "Nat.testBit",
+      "node_id": 1171
+    },
+    {
+      "content_sha256": "d98079f2a46bd72789e35a1424303923935c237089546775f8d31db78281d7ed",
+      "dependency_sha256": "b43eea820e8e89882d807c98330b1efe76e5055b515a3cf600c66efcf662be93",
+      "distance_from_testbit": 1,
+      "name": "instBEqOfDecidableEq",
+      "node_id": 1244
+    },
+    {
+      "content_sha256": "d38c907831a05c56b4646ad4f001ffdcc32b71e83a2bd557ababbbb862690230",
+      "dependency_sha256": "ac03c046720ea8a7ef5e17a3acfb89572bb377a40a8b79a1a4038ddadf554652",
+      "distance_from_testbit": 1,
+      "name": "instDecidableEqNat",
+      "node_id": 1251
+    },
+    {
+      "content_sha256": "ab78cf4b090ac3c5910ad65c5c2dc5e92009c14762429689ae20e15d309ae2cd",
+      "dependency_sha256": "58f7c8112444cdb7780bf887a49e2778eef6e336e236dc693e3e34d074eb1881",
+      "distance_from_testbit": 2,
+      "name": "Decidable.decide",
+      "node_id": 989
+    },
+    {
+      "content_sha256": "d48471f501ca2bc1a1616c8fd9a87a8c972523e9c4603d88dd6ff1b12d1192e1",
+      "dependency_sha256": "000848aa0ef8229fdd9dfc73ed79d286c5be2a8ceead12e9261cd39710cc3e24",
+      "distance_from_testbit": 2,
+      "name": "DecidableEq",
+      "node_id": 993
+    },
+    {
+      "content_sha256": "fed33ef53deb172ea461ef86741e770c8d1d8ec4e01dc7272b52473a3300c0c2",
+      "dependency_sha256": "b5b876cc7716a4ebf91b4197e7e3afd913ac353f4c169b5d495d14926f5a2f32",
+      "distance_from_testbit": 2,
+      "name": "Nat.land",
+      "node_id": 1137
+    },
+    {
+      "content_sha256": "01c61358da19be2afb2b57b0a7937d99fb56c0f72b164a9941c096ff001ea6b3",
+      "dependency_sha256": "ad97db3b55cbcbea658a0a086b715c0fca52453aef3e527fbee368e6f6ec01c7",
+      "distance_from_testbit": 2,
+      "name": "Nat.shiftRight",
+      "node_id": 1166
+    },
+    {
+      "content_sha256": "898914a299382e24f0184684c4bdd9da5e2fdcd658f98f8166a3bfadaf7f5a54",
+      "dependency_sha256": "eeafcf84e0072e782f5e7009504ecb80a631a677c106af2ede4f7d549c4b6237",
+      "distance_from_testbit": 2,
+      "name": "ShiftRight.shiftRight",
+      "node_id": 1207
+    },
+    {
+      "content_sha256": "b065508fd5a3b15b2e786608ee9c99dc53d8caccba325deda657142f4aaa685e",
+      "dependency_sha256": "d957f8e65ec1b7512166fa191145806b87d1fb897e130bf5f9a2f2e1cff9f059",
+      "distance_from_testbit": 3,
+      "name": "Decidable.casesOn",
+      "node_id": 988
+    },
+    {
+      "content_sha256": "38cd05001a9d7f264cd50692ba43718c4913c3ec80243776fe919cb5c79d91ac",
+      "dependency_sha256": "867153096720ac77560bbf17eb0158a5bb3d6ded66ff178377b55be42ef5e32d",
+      "distance_from_testbit": 3,
+      "name": "Nat.bitwise",
+      "node_id": 1111
+    },
+    {
+      "content_sha256": "bf726135997a2c64f9e6c5214505ae4635f73f70b8ea08332e5aa749275695ed",
+      "dependency_sha256": "90ad68f614e468f87217dbb30666e0a0d7fb66285ebe64545c83d9573c6fca14",
+      "distance_from_testbit": 3,
+      "name": "Nat.shiftRight._f",
+      "node_id": 1167
+    },
+    {
+      "content_sha256": "324e8f3500222a2ad16da4a56a56442718e16dfda76bd0784eddcc42416cee5c",
+      "dependency_sha256": "6f3bac621b7b334c5c528259bc7579b1c04d7d944d007a29e68ba7341f81dfb0",
+      "distance_from_testbit": 4,
+      "name": "Nat.bitwise._unary",
+      "node_id": 1112
+    },
+    {
+      "content_sha256": "e94f97610f0c43bfdd8596f0eee0ec9f0785a8adbba2b0fccdce6ca00e9c793d",
+      "dependency_sha256": "dedd8f3634dd2eab0eb88ea5047998488ceb595a054420a5497385534df9a832",
+      "distance_from_testbit": 4,
+      "name": "Nat.shiftLeft.match_1",
+      "node_id": 1165
+    },
+    {
+      "content_sha256": "a813c3f99409a7e43c3ec069617ac87a6a23f15a197a823d8442c33e59af611b",
+      "dependency_sha256": "3838201b912e486321cf8be92aa0690ee876522a4a26040f13d906b7341ea483",
+      "distance_from_testbit": 5,
+      "name": "instDecidableEqBool",
+      "node_id": 1249
+    },
+    {
+      "content_sha256": "aacffa7a0228a75b5e3bed9abc9e49dd9e74359eea14a4c754e058d95a8f8992",
+      "dependency_sha256": "7bef3f57ffe2192664a08e5d7e93f62b4dfacdcbd108f76cc29cc40d7af1b823",
+      "distance_from_testbit": 7,
+      "name": "Nat.decLe",
+      "node_id": 1122
+    },
+    {
+      "content_sha256": "94feab3682bfd8477fb46185c1b6724a92968e69c407e59e6cd873fea6777905",
+      "dependency_sha256": "5bb2486cc3634afe3e0041c8f73b5ae668d6edab1fc5fb765b5da152f39f1451",
+      "distance_from_testbit": 8,
+      "name": "Nat.ble",
+      "node_id": 1113
+    },
+    {
+      "content_sha256": "0ab0281c8923aa12caf3c8c1269b421c9a57e892a3d277362463c44e8f0276c9",
+      "dependency_sha256": "4d5d33b30e4d2eafddfd3265635dfb4ae78e0518d0c5459f88516906cd4abbde",
+      "distance_from_testbit": 9,
+      "name": "Nat.ble._f",
+      "node_id": 1114
+    },
+    {
+      "content_sha256": "fc045b3b6a0e52687e2c0205d6a909daf5157be683da11e495e3288894e08760",
+      "dependency_sha256": "31913e37a34a0e0616a803ba2d7c482242b8562228049657a0efa34522b70450",
+      "distance_from_testbit": 10,
+      "name": "Nat.ble.match_1",
+      "node_id": 1115
+    }
+  ],
+  "schema_version": 1,
+  "shared_nodes": [
+    {
+      "content_sha256": "f1ff827b59c6a6afbd90487eb8e27aa815bff840aa045de020e69cff9f34d794",
+      "dependency_sha256": "89d8d6f9706f0c1a0c6ef5f7375b971876f6db6f4cd36cfc4551919e8f850e29",
+      "distance_from_testbit": 0,
+      "name": "Nat.testBit",
+      "node_id": 1171
+    },
+    {
+      "content_sha256": "4dea0bb2b23028d007779e9909571f5fc427495a5cf8af3b740c5ded86615879",
+      "dependency_sha256": "4aa6b2ec1a7f77f268ec77ece46c98b05433e6a820a12861c761bb9d18535bdd",
+      "distance_from_testbit": 1,
+      "name": "HAnd.hAnd",
+      "node_id": 1019
+    },
+    {
+      "content_sha256": "a77bfbf494a692eec8f6951fa09eb9d08cdd161c9b579dbd47dd9466b2d45305",
+      "dependency_sha256": "bbc89df5c629c31c893b605c65dbd7aa64406bfbb68622ebbb1456a7f4740c40",
+      "distance_from_testbit": 1,
+      "name": "HShiftRight.hShiftRight",
+      "node_id": 1036
+    },
+    {
+      "content_sha256": "a31360a8dc0f02486a63d564240d3ff35c166990f91a4c90ec53c1b4bc99d184",
+      "dependency_sha256": "1b21678e8b129c7975e7eb4da8ef89b5ae8c94a2ca4780b6ab2b67e10406b088",
+      "distance_from_testbit": 1,
+      "name": "Nat.instAndOp",
+      "node_id": 1132
+    },
+    {
+      "content_sha256": "3fee6094cb7654dc9e00cc3214d1f52048dffe8f72cc01b9b10a47c9f5ab683d",
+      "dependency_sha256": "eb9b8c9465bd17b3ea96eda5651394a03133d852fb3c20dd8f630416b5c6a023",
+      "distance_from_testbit": 1,
+      "name": "Nat.instShiftRight",
+      "node_id": 1135
+    },
+    {
+      "content_sha256": "b23be02d24e92a32c0fd08cced7ad09f5e79080fd60fa9d755296ad150e25921",
+      "dependency_sha256": "aae16910e1badb2d82d4433500546699fea8ea7c59b9c16d2740c8f6360dbad8",
+      "distance_from_testbit": 1,
+      "name": "OfNat.ofNat",
+      "node_id": 1183
+    },
+    {
+      "content_sha256": "a7adfa4f3dc33da670a3e373782721c413a9363326b388e4aeeb53d511012019",
+      "dependency_sha256": "dd771317e8c9d6fa95cad110ff12b95cc455a64df83ae3bb2135766c6053e637",
+      "distance_from_testbit": 1,
+      "name": "bne",
+      "node_id": 1239
+    },
+    {
+      "content_sha256": "d98079f2a46bd72789e35a1424303923935c237089546775f8d31db78281d7ed",
+      "dependency_sha256": "b43eea820e8e89882d807c98330b1efe76e5055b515a3cf600c66efcf662be93",
+      "distance_from_testbit": 1,
+      "name": "instBEqOfDecidableEq",
+      "node_id": 1244
+    },
+    {
+      "content_sha256": "d38c907831a05c56b4646ad4f001ffdcc32b71e83a2bd557ababbbb862690230",
+      "dependency_sha256": "ac03c046720ea8a7ef5e17a3acfb89572bb377a40a8b79a1a4038ddadf554652",
+      "distance_from_testbit": 1,
+      "name": "instDecidableEqNat",
+      "node_id": 1251
+    },
+    {
+      "content_sha256": "68cf30c7b02b7045c9ad9aea2d432b741c12ecbb158db7c6ed166e1de6170cd4",
+      "dependency_sha256": "db6b0bee548cc0cf9b6683e81f3836e6de263bf52b4d4d15cdbf6a9c1c717d8b",
+      "distance_from_testbit": 1,
+      "name": "instHAndOfAndOp",
+      "node_id": 1255
+    },
+    {
+      "content_sha256": "ab69cd3927ed3b52e84ad17093d925e0759a7f72a96d90dd7cd21ba66c3a9fd6",
+      "dependency_sha256": "913280c6ec639286a578161ea77160d44672d63678b42f4df85b08c3d90e96c3",
+      "distance_from_testbit": 1,
+      "name": "instHShiftRightOfShiftRight",
+      "node_id": 1260
+    },
+    {
+      "content_sha256": "fe4e08388f4f746a9b1c7969d717734da6dab3b28f8e932ae5271dcad33fef2f",
+      "dependency_sha256": "ff150819e860fc4147f0ff6bb4b372f177fb9492ee028a2a9b6c9eebc4c81280",
+      "distance_from_testbit": 1,
+      "name": "instOfNatNat",
+      "node_id": 1266
+    },
+    {
+      "content_sha256": "3e2909c60de5182b4b7e09bda7a8f81fc671acdd57106e8923834761653d0225",
+      "dependency_sha256": "0cccb163b98bb35b2f1ba66aabc1d27b7f0b92722c04f7aad10eae8a92a2c85e",
+      "distance_from_testbit": 2,
+      "name": "AndOp.and",
+      "node_id": 941
+    },
+    {
+      "content_sha256": "063505f4dfbee85ebf929dc73d1999252ddb7c44521822fc8e7ebb840370829b",
+      "dependency_sha256": "c76a02dd3c960f915e03cf8d4a1b1b43f872c0c2f5ea0e0a931032abd41b18f5",
+      "distance_from_testbit": 2,
+      "name": "BEq.beq",
+      "node_id": 950
+    },
+    {
+      "content_sha256": "f8d6b11d8d35468fd5f25c33f53e3a7aababf6e40f349b85aaecddd0ad6387a4",
+      "dependency_sha256": "67c56792e4b329600478a1683814995bbd95feeda631f1f784c2bed0debe5bd2",
+      "distance_from_testbit": 2,
+      "name": "Bool.not",
+      "node_id": 968
+    },
+    {
+      "content_sha256": "ab78cf4b090ac3c5910ad65c5c2dc5e92009c14762429689ae20e15d309ae2cd",
+      "dependency_sha256": "58f7c8112444cdb7780bf887a49e2778eef6e336e236dc693e3e34d074eb1881",
+      "distance_from_testbit": 2,
+      "name": "Decidable.decide",
+      "node_id": 989
+    },
+    {
+      "content_sha256": "d48471f501ca2bc1a1616c8fd9a87a8c972523e9c4603d88dd6ff1b12d1192e1",
+      "dependency_sha256": "000848aa0ef8229fdd9dfc73ed79d286c5be2a8ceead12e9261cd39710cc3e24",
+      "distance_from_testbit": 2,
+      "name": "DecidableEq",
+      "node_id": 993
+    },
+    {
+      "content_sha256": "4197fd133eabede17fb3e68da86cea4d755266df4164205cb02391b157b4c34a",
+      "dependency_sha256": "4da84c1fbd608e9b32cacce32089bf18963d1f7cff780f9e91d031b7883a5d1b",
+      "distance_from_testbit": 2,
+      "name": "Nat.decEq",
+      "node_id": 1120
+    },
+    {
+      "content_sha256": "fed33ef53deb172ea461ef86741e770c8d1d8ec4e01dc7272b52473a3300c0c2",
+      "dependency_sha256": "b5b876cc7716a4ebf91b4197e7e3afd913ac353f4c169b5d495d14926f5a2f32",
+      "distance_from_testbit": 2,
+      "name": "Nat.land",
+      "node_id": 1137
+    },
+    {
+      "content_sha256": "01c61358da19be2afb2b57b0a7937d99fb56c0f72b164a9941c096ff001ea6b3",
+      "dependency_sha256": "ad97db3b55cbcbea658a0a086b715c0fca52453aef3e527fbee368e6f6ec01c7",
+      "distance_from_testbit": 2,
+      "name": "Nat.shiftRight",
+      "node_id": 1166
+    },
+    {
+      "content_sha256": "898914a299382e24f0184684c4bdd9da5e2fdcd658f98f8166a3bfadaf7f5a54",
+      "dependency_sha256": "eeafcf84e0072e782f5e7009504ecb80a631a677c106af2ede4f7d549c4b6237",
+      "distance_from_testbit": 2,
+      "name": "ShiftRight.shiftRight",
+      "node_id": 1207
+    },
+    {
+      "content_sha256": "d8919a5543ea3805d881f7dc18978dc84b790da869fdf4c097533559b578b40e",
+      "dependency_sha256": "041ae2cf343563b09c9d79d6ac74935ffb4233bcffc92a9bf3d697cc48eb8759",
+      "distance_from_testbit": 2,
+      "name": "outParam",
+      "node_id": 1274
+    },
+    {
+      "content_sha256": "c9368077c7e2acaf5cfbaa0760873e5a89097dc4225432157180be2c0d2b634f",
+      "dependency_sha256": "bf6f9b672d4e9ce3c87a2d30eabf928097b99cf27b54ab924c97ef2939690c7d",
+      "distance_from_testbit": 3,
+      "name": "Bool.and",
+      "node_id": 960
+    },
+    {
+      "content_sha256": "b065508fd5a3b15b2e786608ee9c99dc53d8caccba325deda657142f4aaa685e",
+      "dependency_sha256": "d957f8e65ec1b7512166fa191145806b87d1fb897e130bf5f9a2f2e1cff9f059",
+      "distance_from_testbit": 3,
+      "name": "Decidable.casesOn",
+      "node_id": 988
+    },
+    {
+      "content_sha256": "bae8ace412d731a11ceab248dc7316c36f4c32543c176fec89e23abfde7252ee",
+      "dependency_sha256": "e769a198e8dc13ebfaeacf8a295dcb2470c87d9c3adefe33804bf8ca20a66895",
+      "distance_from_testbit": 3,
+      "name": "Nat.beq",
+      "node_id": 1102
+    },
+    {
+      "content_sha256": "38cd05001a9d7f264cd50692ba43718c4913c3ec80243776fe919cb5c79d91ac",
+      "dependency_sha256": "867153096720ac77560bbf17eb0158a5bb3d6ded66ff178377b55be42ef5e32d",
+      "distance_from_testbit": 3,
+      "name": "Nat.bitwise",
+      "node_id": 1111
+    },
+    {
+      "content_sha256": "ea7042d61e3f0fa69457d1897e7764e5aa08006d082751bcc4821df1a13fd5d1",
+      "dependency_sha256": "b3623f3846df3f741c6ab0ea4475194cdf41cc27d9358d7b1da154e6ff1ff69d",
+      "distance_from_testbit": 3,
+      "name": "Nat.brecOn",
+      "node_id": 1116
+    },
+    {
+      "content_sha256": "3ea66dc82a1c1930543250e1313e49dd0db8f0962f05db8480bdbca826a39f36",
+      "dependency_sha256": "89a7d8d83ea4e952a86929aad640aee6a6b52602df0cf2bf5745fd376896109a",
+      "distance_from_testbit": 3,
+      "name": "Nat.decEq.match_1",
+      "node_id": 1121
+    },
+    {
+      "content_sha256": "bf726135997a2c64f9e6c5214505ae4635f73f70b8ea08332e5aa749275695ed",
+      "dependency_sha256": "90ad68f614e468f87217dbb30666e0a0d7fb66285ebe64545c83d9573c6fca14",
+      "distance_from_testbit": 3,
+      "name": "Nat.shiftRight._f",
+      "node_id": 1167
+    },
+    {
+      "content_sha256": "4e92e14b010e82110711afc720bb39a8f0bcb8b28688e22d1a00bc779ccb9d25",
+      "dependency_sha256": "6e0f0723bc11ee031c0129d4935e941ff2a03bf86650a3d8ddaf1ca3cbdd20ee",
+      "distance_from_testbit": 3,
+      "name": "Not",
+      "node_id": 1180
+    },
+    {
+      "content_sha256": "47936ee54285f2c0498815150182b32305946ac3611fff3a29fe9260da33d5c4",
+      "dependency_sha256": "6d938081a7f7443bdc2f6227da34a82a4830acd3c027e7f1a46b94e8296bafbb",
+      "distance_from_testbit": 3,
+      "name": "Unit",
+      "node_id": 1228
+    },
+    {
+      "content_sha256": "49c959c978e28de1d6b3b8c232913a84175675f2bc4164ba31b2da923e9817d3",
+      "dependency_sha256": "5aee0215f6f7f479552b1141d93d47b3edc2911f1dcd799170e6963fb80fa614",
+      "distance_from_testbit": 3,
+      "name": "cond.match_1",
+      "node_id": 1241
+    },
+    {
+      "content_sha256": "5c8c46f2cc8d5d2d1e2a23cc5e7d1f631f7e828e6e7acbe36abd303b51cf3b52",
+      "dependency_sha256": "5aee0215f6f7f479552b1141d93d47b3edc2911f1dcd799170e6963fb80fa614",
+      "distance_from_testbit": 4,
+      "name": "Bool.and.match_1",
+      "node_id": 961
+    },
+    {
+      "content_sha256": "e82bdeef8a09d8a829ada4024b5181bba6593f11b22b1f46c80bfc27d7373cb4",
+      "dependency_sha256": "54c4f692882e269bbe8294fb3d60c71dd764d371bfc0359b2a75a4c325fae47f",
+      "distance_from_testbit": 4,
+      "name": "Bool.casesOn",
+      "node_id": 962
+    },
+    {
+      "content_sha256": "678ecda3ca5926d6a610d0dd9763c2c8d0f71db1b19daea5d142fc08c5e4a73c",
+      "dependency_sha256": "a5baac0142d52d12b1ecaf60bbc6e70ee2699a686bbea4c84194e77c1d91b5fc",
+      "distance_from_testbit": 4,
+      "name": "HDiv.hDiv",
+      "node_id": 1022
+    },
+    {
+      "content_sha256": "53dd045950d04ee67d54e95960eb10164a723d6e4f4293eee1dbfe96b8433d82",
+      "dependency_sha256": "f3273886d0346e67e9e98100b2e8bac9c092fd98e51705f5b4c6be89f660b27b",
+      "distance_from_testbit": 4,
+      "name": "Nat.below",
+      "node_id": 1101
+    },
+    {
+      "content_sha256": "5c1de24bfdfe0355a9bbfd5c889748a7762b2e1a58c129a7348cd0813d4c3160",
+      "dependency_sha256": "ad9087bd031091fc5e536df2975a0d12ba311c5b0610c13c3da09a31c892969f",
+      "distance_from_testbit": 4,
+      "name": "Nat.beq._f",
+      "node_id": 1103
+    },
+    {
+      "content_sha256": "324e8f3500222a2ad16da4a56a56442718e16dfda76bd0784eddcc42416cee5c",
+      "dependency_sha256": "6f3bac621b7b334c5c528259bc7579b1c04d7d944d007a29e68ba7341f81dfb0",
+      "distance_from_testbit": 4,
+      "name": "Nat.bitwise._unary",
+      "node_id": 1112
+    },
+    {
+      "content_sha256": "18c0860e219be8343c4a6a7450d5c215da96defea87e52f46f1a430de376c077",
+      "dependency_sha256": "3b48bdf095e94cb93c2324e146f82043bd92538bd431f15e4204040f521ee279",
+      "distance_from_testbit": 4,
+      "name": "Nat.brecOn.go",
+      "node_id": 1117
+    },
+    {
+      "content_sha256": "23375e54833fcdcaba5345925475d15ddc5d772277812a7f82589439b10c96a0",
+      "dependency_sha256": "312a41a2aeced96e958b134c4a0c1d4287122f6b3ed321cbbbe92ed232457df5",
+      "distance_from_testbit": 4,
+      "name": "Nat.instDiv",
+      "node_id": 1133
+    },
+    {
+      "content_sha256": "e94f97610f0c43bfdd8596f0eee0ec9f0785a8adbba2b0fccdce6ca00e9c793d",
+      "dependency_sha256": "dedd8f3634dd2eab0eb88ea5047998488ceb595a054420a5497385534df9a832",
+      "distance_from_testbit": 4,
+      "name": "Nat.shiftLeft.match_1",
+      "node_id": 1165
+    },
+    {
+      "content_sha256": "3614864d3a35409459f4fed27a310c86ec3faf76747a2da6f6852adb4782d503",
+      "dependency_sha256": "91a49174f3e4a4dc0af38b5c9bd8bb87c2bb3b688fcad531365e1f5ca4a4fbab",
+      "distance_from_testbit": 4,
+      "name": "Unit.unit",
+      "node_id": 1229
+    },
+    {
+      "content_sha256": "41ff2f07097ae26706224af2fecc898da8f1defea2784182d3d612f6ac9a9f4a",
+      "dependency_sha256": "bbf4f255270d0eb7b3c1078d62725b20ba747e0424333b0e7368d6fcb29fb8f2",
+      "distance_from_testbit": 4,
+      "name": "instHDiv",
+      "node_id": 1256
+    },
+    {
+      "content_sha256": "da36947ea0329e3778d583275d809e42898a593d83017bce840f259dfb7ad0d6",
+      "dependency_sha256": "c49dad92f22f25ee749c11720723ac109033d8d05bfaac4ae1687cb4681ba38f",
+      "distance_from_testbit": 5,
+      "name": "Div.div",
+      "node_id": 995
+    },
+    {
+      "content_sha256": "1c21e8c0687033c9fa103d8ed3f3cd7511e0dab48bcd155c435dd0e54781b54c",
+      "dependency_sha256": "6e330c925a5d947590c1435151c6c6b8e3644d3e6a0317a079aa2872271e09a1",
+      "distance_from_testbit": 5,
+      "name": "HAdd.hAdd",
+      "node_id": 1016
+    },
+    {
+      "content_sha256": "e2f3a06163256db2b30d50aed43d71e3723b0817c248d012944b8dbe452ca168",
+      "dependency_sha256": "15011cc864728bd5b40fc7b53813b3462e952a94fa00d24d626c11bdb0900197",
+      "distance_from_testbit": 5,
+      "name": "HMod.hMod",
+      "node_id": 1027
+    },
+    {
+      "content_sha256": "e5a389cd935aa592d070638699826ad858e0420b9c853c3ecc2c8128eff4e60e",
+      "dependency_sha256": "041ae2cf343563b09c9d79d6ac74935ffb4233bcffc92a9bf3d697cc48eb8759",
+      "distance_from_testbit": 5,
+      "name": "InvImage",
+      "node_id": 1043
+    },
+    {
+      "content_sha256": "38abab48ae97b1beaf17796eb05eb3f8d1b177a3f4be05c59d3a75d279b8dfbd",
+      "dependency_sha256": "4e7aefbe516d2220cfa58fb82f68b839e20c23866e7e09c67dc7c968117ea012",
+      "distance_from_testbit": 5,
+      "name": "LT.lt",
+      "node_id": 1048
+    },
+    {
+      "content_sha256": "1adaef8cfc58dfa8f3859d1c919f1147630609dacb6b8494a73fa174c19f62f7",
+      "dependency_sha256": "a6a1c3fdc3339b41e5b21b8534ee84f85a7198ec7c952e3ed8a475bf509effc2",
+      "distance_from_testbit": 5,
+      "name": "Nat.beq.match_1",
+      "node_id": 1104
+    },
+    {
+      "content_sha256": "710dc67a1ac6e5df5940b1124e7a94e4e8aed181f8e187b5f47a15cd5504a5d7",
+      "dependency_sha256": "1df50b05f2ced197a74eecd956899526da50954105c86647e71b8f6eae4be0a3",
+      "distance_from_testbit": 5,
+      "name": "Nat.casesOn",
+      "node_id": 1118
+    },
+    {
+      "content_sha256": "1fca1842a0cf21b22938013129d28fcbcd73e3d06435f752f921d45165b508d0",
+      "dependency_sha256": "e0804c16cf7ffb01387a8be346273f9cc3d9f0c1bc569ec1dda3cf741f04aaf7",
+      "distance_from_testbit": 5,
+      "name": "Nat.div",
+      "node_id": 1125
+    },
+    {
+      "content_sha256": "b0f9af704d9f09801d7776b9f3b31250f0104bc7f74ab2ff7cd127f7c6ff0955",
+      "dependency_sha256": "cbb5d7bbd74f197411f51e156f3b2a6e2fdce84fff15b269788f76e29355aa2a",
+      "distance_from_testbit": 5,
+      "name": "Nat.instMod",
+      "node_id": 1134
+    },
+    {
+      "content_sha256": "4e5f329401dd4637a3dc47f4ca16b86c3aba64cd081b90201b3485261eea0476",
+      "dependency_sha256": "c1e5fba9d3c14684ea319b3f5d47c5bd37e5c4ff6dd3dea4f6b580da81c27a93",
+      "distance_from_testbit": 5,
+      "name": "PSigma.casesOn",
+      "node_id": 1197
+    },
+    {
+      "content_sha256": "cdd5db8ed3b7d5eb949f2eabbf307c627815b1285e46efdefa3bc3db880ef07b",
+      "dependency_sha256": "287b4fb38084bd245488439fdd8cb412a73cec3d09db28ff6653c9f0d4cea590",
+      "distance_from_testbit": 5,
+      "name": "WellFounded.Nat.fix",
+      "node_id": 1231
+    },
+    {
+      "content_sha256": "56516c08330c012b356caa6c59b1551718934590bbcff9d8aef4dc36081a75d0",
+      "dependency_sha256": "00d48953111f5b570292c7f943e60dc9b0f350c3d85ad7ffad1602a7a20d8830",
+      "distance_from_testbit": 5,
+      "name": "dite",
+      "node_id": 1242
+    },
+    {
+      "content_sha256": "76458a0b44bc5c09aabbaeaafb0f337e10a5effbc0f2158bfe29c4548e6cb7a7",
+      "dependency_sha256": "22c695b675f57ec5c7a75f7af4dba954dfdf5f9e688f9b169f727f4af6008083",
+      "distance_from_testbit": 5,
+      "name": "instAddNat",
+      "node_id": 1243
+    },
+    {
+      "content_sha256": "a813c3f99409a7e43c3ec069617ac87a6a23f15a197a823d8442c33e59af611b",
+      "dependency_sha256": "3838201b912e486321cf8be92aa0690ee876522a4a26040f13d906b7341ea483",
+      "distance_from_testbit": 5,
+      "name": "instDecidableEqBool",
+      "node_id": 1249
+    },
+    {
+      "content_sha256": "007d03131614b253302cba50bb15c1a1ee87abfb9c826be00b377c1a52a343b4",
+      "dependency_sha256": "6ba0c145460dcb1639b1edd3f3fa9f485ff8f7993297b05c60a246c26afd2dc7",
+      "distance_from_testbit": 5,
+      "name": "instHAdd",
+      "node_id": 1254
+    },
+    {
+      "content_sha256": "8acd12e7b62df09e02d23ede2d4eb8f7c5a87fe80b79dccf8ded11f091ba8c8a",
+      "dependency_sha256": "49d1ade2ad9d009fb9e9b122c26d82d8b3065b44edad0e8ed2c46364059d88df",
+      "distance_from_testbit": 5,
+      "name": "instHMod",
+      "node_id": 1257
+    },
+    {
+      "content_sha256": "05efbfe0a8e252794d18f9c9420276c8973db2671113dd2c53358fd41d71df76",
+      "dependency_sha256": "b6add54bd02c0ac194600dbc6e0c6929c6a8c68361aee9dc584b613fd7a534a7",
+      "distance_from_testbit": 5,
+      "name": "instLTNat",
+      "node_id": 1263
+    },
+    {
+      "content_sha256": "2554e2bdedf18f8dcb60faf3c65bfb10e9234679f39011650dd6a9aa2a8d11cc",
+      "dependency_sha256": "5bff392cd00be74453820771404313a920ea45b101529ed91c98b0417335eb39",
+      "distance_from_testbit": 6,
+      "name": "Add.add",
+      "node_id": 936
+    },
+    {
+      "content_sha256": "3a114316260f93d207cdd16c70c5dd61df9042ac70a299af062ab988feed79d3",
+      "dependency_sha256": "ab3ee5c99d343d9fad6fcb6c6f7dcd2de8f2840da73afe5578b8475aae18d048",
+      "distance_from_testbit": 6,
+      "name": "Bool.decEq",
+      "node_id": 963
+    },
+    {
+      "content_sha256": "fbae2134effcc0dd954b5eded17818491045824e422e6d56d44ea6dc02e5010d",
+      "dependency_sha256": "8cb820c5eafaef9cd8ddd107250093e614843bcb01d7e68f3cc00e8ffcea7cc7",
+      "distance_from_testbit": 6,
+      "name": "Mod.mod",
+      "node_id": 1093
+    },
+    {
+      "content_sha256": "f174b00a83679ff2c9534feb9f8f99014edbe48b38a7b6467a91b93f7a822714",
+      "dependency_sha256": "ff3654535c3512c27832fb7f97ea0eb604d812abf510acee61c7b7e0ddc9416f",
+      "distance_from_testbit": 6,
+      "name": "Nat.add",
+      "node_id": 1098
+    },
+    {
+      "content_sha256": "cef1ad358525e604db9c5f752b0956a37afc22348b74ad77ecb7527cce08c91a",
+      "dependency_sha256": "fcdad3b1d7fd88d0f8283caab298fb5065faaf69b2f1264b9deed16aaefd19cc",
+      "distance_from_testbit": 6,
+      "name": "Nat.decLt",
+      "node_id": 1123
+    },
+    {
+      "content_sha256": "d6a83cc8f4221b012e8803a19be6ad1735cd58f98d7063bfff70c1113935a6c3",
+      "dependency_sha256": "cf9a3692a07ac58d0f7cedf0aa94f58798357744951a7b62df06ce0ecf136160",
+      "distance_from_testbit": 6,
+      "name": "Nat.div.go",
+      "node_id": 1126
+    },
+    {
+      "content_sha256": "aa96ab6523fa1e2b8a1bfb7bf587616917694f6c498cd9fc4190d12992114eb8",
+      "dependency_sha256": "bdf92a69bc928e2afb6ad7e565e95cbda20044d2c276c7c68c4c45d5e3f48554",
+      "distance_from_testbit": 6,
+      "name": "Nat.lt",
+      "node_id": 1146
+    },
+    {
+      "content_sha256": "4b387a088420ca50960177665021a542a0319655075dc6c62d0cfeea338b823c",
+      "dependency_sha256": "342ab4f9c1f29616ed8da321020d479296e627f54c0c6bdb7a69682f26bbff84",
+      "distance_from_testbit": 6,
+      "name": "Nat.mod",
+      "node_id": 1148
+    },
+    {
+      "content_sha256": "301a2bc96ccf755122d5ddc6aee5c82c1704b4fb9962a89611b0142e43f63077",
+      "dependency_sha256": "91e39a8785b48bb7c9994282836944b66de660cb044957c14ce0f401dc960318",
+      "distance_from_testbit": 6,
+      "name": "WellFounded.Nat.eager",
+      "node_id": 1230
+    },
+    {
+      "content_sha256": "15b5a10386baf66f57de06dd2a31eb7068e868c685e5e44da51557a2129b2c4c",
+      "dependency_sha256": "d9e23c3f1a15176c3e63077805c9ff97165e941ab0cd25d17607505f3d9946f2",
+      "distance_from_testbit": 6,
+      "name": "WellFounded.Nat.fix.go",
+      "node_id": 1234
+    },
+    {
+      "content_sha256": "9e07252262e1db75310ec19b0a54c3b3723093ab629c7cc4a24e59a800125259",
+      "dependency_sha256": "5aee0215f6f7f479552b1141d93d47b3edc2911f1dcd799170e6963fb80fa614",
+      "distance_from_testbit": 7,
+      "name": "Bool.decEq.match_1",
+      "node_id": 964
+    },
+    {
+      "content_sha256": "8c1cfb7e0af3fe689e1739bfab736161eb279dbd61f644aed63e3fceeea43da1",
+      "dependency_sha256": "f86442467d64e57f1599548c90296862668238ff3981da216e58d65c49c06ed0",
+      "distance_from_testbit": 7,
+      "name": "Bool.noConfusion",
+      "node_id": 966
+    },
+    {
+      "content_sha256": "a52ffbf497699330500ffc61b7c3726a3d15f03b32590859810c74ca4ca501d9",
+      "dependency_sha256": "72fd179b553a6ee55d1b95ae59b833975807e15b896633a40ca817051a4e745a",
+      "distance_from_testbit": 7,
+      "name": "False.elim",
+      "node_id": 1002
+    },
+    {
+      "content_sha256": "ca328422c699d14f4cfa43332081f49adcf526e658f2225f340f49e27b344f64",
+      "dependency_sha256": "5c4c4ac9c7c87c3d5bb53aa04e93d6fa82d7c8217f8be9a19fe63750710f1e8b",
+      "distance_from_testbit": 7,
+      "name": "LE.le",
+      "node_id": 1045
+    },
+    {
+      "content_sha256": "581fb8807d8eead3f5fdc7c5a6662df42ca36fe3714eb50f5340f4afc00d0495",
+      "dependency_sha256": "9d61bfc66e27b8b7228d88965fa86cf91918acd9f021a7004808bfb3419f22ab",
+      "distance_from_testbit": 7,
+      "name": "Nat.add._f",
+      "node_id": 1099
+    },
+    {
+      "content_sha256": "aacffa7a0228a75b5e3bed9abc9e49dd9e74359eea14a4c754e058d95a8f8992",
+      "dependency_sha256": "7bef3f57ffe2192664a08e5d7e93f62b4dfacdcbd108f76cc29cc40d7af1b823",
+      "distance_from_testbit": 7,
+      "name": "Nat.decLe",
+      "node_id": 1122
+    },
+    {
+      "content_sha256": "a87be0a0616593e1a75bb293a78361bdbc8b69e4d1a30b27c20ea502940e54e6",
+      "dependency_sha256": "4f04fa23836e484feceaccf5250b274930b761837dc7e3aa7ff2f97bcbd58edd",
+      "distance_from_testbit": 7,
+      "name": "Nat.div.go._f",
+      "node_id": 1127
+    },
+    {
+      "content_sha256": "6a54c7bafdf79952a8a783e6349d67683d743789082e4f750147b074c1556652",
+      "dependency_sha256": "e6cf2c7bdee02f374b6deb2d5c5ba8631e27a428f67d1a7ac80d5273c7c99118",
+      "distance_from_testbit": 7,
+      "name": "Nat.mod.match_1",
+      "node_id": 1149
+    },
+    {
+      "content_sha256": "ad866ff9c464f061078fac9891c97b340e727b94ac69d7ea8dd1d8a5f0d0e02b",
+      "dependency_sha256": "b6f7850caed81a0f8d8f958c308e466df02e01f81c602909c5ae0b0896afb45a",
+      "distance_from_testbit": 7,
+      "name": "Nat.modCore",
+      "node_id": 1150
+    },
+    {
+      "content_sha256": "d5f4397aa94b0bdabbad33f7119ed99f861cb115a00567643f9391b56264dcb4",
+      "dependency_sha256": "8cd28fd1dd2e85daef44788a6019f15c51cabd0820a44a99590661094f2f64f9",
+      "distance_from_testbit": 7,
+      "name": "instLENat",
+      "node_id": 1262
+    },
+    {
+      "content_sha256": "e7e5777387c703bf2ba51b4b90d1c0a8b4cd853a009fe8bcdc65933ceadb3a13",
+      "dependency_sha256": "00d48953111f5b570292c7f943e60dc9b0f350c3d85ad7ffad1602a7a20d8830",
+      "distance_from_testbit": 7,
+      "name": "ite",
+      "node_id": 1270
+    },
+    {
+      "content_sha256": "477444cd00658fbf95e2c66c80ebf12da222eeff14164b3d2e3b2e4c61edbbf8",
+      "dependency_sha256": "189bf4a218ab8f284d4fff5d72abbba0dbae1df4f4afbbfe7abc8807070d5f24",
+      "distance_from_testbit": 7,
+      "name": "rfl",
+      "node_id": 1278
+    },
+    {
+      "content_sha256": "c1a8644124b678bd550e465b9a79d6618549faf2b77dc818d02cb2fee02d00ac",
+      "dependency_sha256": "1a4393988736cad3c9046310b84393b74d4410f5e71210cb453153f5e0f1d3b8",
+      "distance_from_testbit": 8,
+      "name": "Bool.noConfusionType",
+      "node_id": 967
+    },
+    {
+      "content_sha256": "f551433b07401c1a5e9edbf5932f6c9f136e223976c6eb5c5ce678083446c8f6",
+      "dependency_sha256": "6e06a91d9a1d4cc87b48b3f36803d3a4cf77659ed2e41a97c99b0dab1872640a",
+      "distance_from_testbit": 8,
+      "name": "Eq.ndrec",
+      "node_id": 998
+    },
+    {
+      "content_sha256": "a41a29dc1f8d23b10bbbbd8bee5f2851ef7cfcdcac420246f6907b9fee76a2e7",
+      "dependency_sha256": "ef94f3cc9f367ca5a4933937a914ce73820a4e5b7a69f5d913aad78b715dc3a7",
+      "distance_from_testbit": 8,
+      "name": "HSub.hSub",
+      "node_id": 1039
+    },
+    {
+      "content_sha256": "758f1931b5456f37320f45a993c9cf697f9dbc6d1949a4a37d5b628abb6e5a61",
+      "dependency_sha256": "31913e37a34a0e0616a803ba2d7c482242b8562228049657a0efa34522b70450",
+      "distance_from_testbit": 8,
+      "name": "Nat.add.match_1",
+      "node_id": 1100
+    },
+    {
+      "content_sha256": "94feab3682bfd8477fb46185c1b6724a92968e69c407e59e6cd873fea6777905",
+      "dependency_sha256": "5bb2486cc3634afe3e0041c8f73b5ae668d6edab1fc5fb765b5da152f39f1451",
+      "distance_from_testbit": 8,
+      "name": "Nat.ble",
+      "node_id": 1113
+    },
+    {
+      "content_sha256": "844856ee15da7615c67da2a2c188b10966b643e411fb8f54b392c81e85ddba17",
+      "dependency_sha256": "6d1f542ce74afc2300ede680a102ffc899c610c32085eeff7aee4d5204ecf65b",
+      "distance_from_testbit": 8,
+      "name": "Nat.div.go.match_1",
+      "node_id": 1128
+    },
+    {
+      "content_sha256": "d34caed8ecd1b30395f4a8cddeec7df2e06b3444d3760d90120122aae38ce60d",
+      "dependency_sha256": "34cc9967aafc7d5b0ff24c75522b85d4368a456d780c9376168152246001d7d8",
+      "distance_from_testbit": 8,
+      "name": "Nat.modCore.go",
+      "node_id": 1151
+    },
+    {
+      "content_sha256": "e755acfcab058c4f8060ebdaf222f34fbdd4726a05775198feb28e086ea2632b",
+      "dependency_sha256": "046835e9f0788f3a0dadd39da73b23ed6b203599dd2d72ceb87ca9337fc58b2d",
+      "distance_from_testbit": 8,
+      "name": "instHSub",
+      "node_id": 1261
+    },
+    {
+      "content_sha256": "bfe375de62ee5e3c705cddb5194597136017ba7200e0db5aaa11ec9e5b96704f",
+      "dependency_sha256": "971b598ccf5949f6c92eaebbac5cbc9311862bbc386fc8e4bed98a297c342a74",
+      "distance_from_testbit": 8,
+      "name": "instSubNat",
+      "node_id": 1268
+    },
+    {
+      "content_sha256": "73ade5838c47d94b1e8ca87de31277e637edca30d17098fc7687d9f42f7e93dd",
+      "dependency_sha256": "d5fe82ef7dfe801cef7ceb9375589cd576384512c387119ddea36c9dbca958fb",
+      "distance_from_testbit": 8,
+      "name": "namedPattern",
+      "node_id": 1272
+    },
+    {
+      "content_sha256": "0ab0281c8923aa12caf3c8c1269b421c9a57e892a3d277362463c44e8f0276c9",
+      "dependency_sha256": "4d5d33b30e4d2eafddfd3265635dfb4ae78e0518d0c5459f88516906cd4abbde",
+      "distance_from_testbit": 9,
+      "name": "Nat.ble._f",
+      "node_id": 1114
+    },
+    {
+      "content_sha256": "054024f9c30483496589349dc2b2cbc1feae09c3bd9ad4e02fbd4da127085ce1",
+      "dependency_sha256": "c4f79895814cd0d64f59b6f12157fa1e660e1f042bccdaf190cd5f27b9ddedb1",
+      "distance_from_testbit": 9,
+      "name": "Nat.ctorIdx",
+      "node_id": 1119
+    },
+    {
+      "content_sha256": "b516426fa24107dac43e4b1f417c42da2128462d2b26ac08afc897ae5e8cc963",
+      "dependency_sha256": "6fd31b9fa8dc9a07591e40bb4b9116ca457293faeafbf6a28a24e9e167bb727d",
+      "distance_from_testbit": 9,
+      "name": "Nat.le.casesOn",
+      "node_id": 1139
+    },
+    {
+      "content_sha256": "4ef06761b3fe7737337df729918453137f57280580138818a3ea22b5942dbc34",
+      "dependency_sha256": "ad3c09fb72f8eab0aa5e7518d33b98bfdf9b4df5aeaa05d598c7ce3dca0728ab",
+      "distance_from_testbit": 9,
+      "name": "Nat.modCore.go._f",
+      "node_id": 1152
+    },
+    {
+      "content_sha256": "f7197cf0342092b7adfce990b83af21408e46271a675ba08bda2bbec0077c99d",
+      "dependency_sha256": "eb030037c1924a895140c9f35575caa10c04284ae6c7746445055dec98b93a5a",
+      "distance_from_testbit": 9,
+      "name": "Nat.sub",
+      "node_id": 1168
+    },
+    {
+      "content_sha256": "4885e8ed5d270699355310733294416b677491f2475b1a8c2a919f87e0622c81",
+      "dependency_sha256": "80b6947bbcf9e2f42fcc5dc87a39c06542fb8b3289cc9e94561e169cbd8a900a",
+      "distance_from_testbit": 9,
+      "name": "Sub.sub",
+      "node_id": 1216
+    },
+    {
+      "content_sha256": "fc045b3b6a0e52687e2c0205d6a909daf5157be683da11e495e3288894e08760",
+      "dependency_sha256": "31913e37a34a0e0616a803ba2d7c482242b8562228049657a0efa34522b70450",
+      "distance_from_testbit": 10,
+      "name": "Nat.ble.match_1",
+      "node_id": 1115
+    },
+    {
+      "content_sha256": "0457de8b6a2905778b9a283ad0e4f2eb6ff5b5562cd25d892e972f4a14e98a7d",
+      "dependency_sha256": "e2450e03d652b8be51d52c4f0a88618cb69a5ff354489e20d7ef215a17be19f4",
+      "distance_from_testbit": 10,
+      "name": "Nat.sub._f",
+      "node_id": 1169
+    },
+    {
+      "content_sha256": "129fd82c0fdb9eab077b5f42b551cbdba5816351fe61a1653fe7f7f0aeee01ef",
+      "dependency_sha256": "dedd8f3634dd2eab0eb88ea5047998488ceb595a054420a5497385534df9a832",
+      "distance_from_testbit": 11,
+      "name": "Nat.mul.match_1",
+      "node_id": 1156
+    },
+    {
+      "content_sha256": "22831c9263cf53f7f11a884d8934d87c7d08f49db8e61fcd80e4612504c28d89",
+      "dependency_sha256": "02b3d9583e6e92e4ee8eb7d75777d80ff9508e12e130c7fc2873106f8d74747f",
+      "distance_from_testbit": 11,
+      "name": "Nat.pred",
+      "node_id": 1162
+    },
+    {
+      "content_sha256": "2091c6177672b2cf54f9c351c2650c0a926dd69b498a906aad2d84675d388f45",
+      "dependency_sha256": "d0ec7e51fe9ebbc5acd07103355f1559b1fd5787fe12c51c5870e3e6d591c682",
+      "distance_from_testbit": 12,
+      "name": "Nat.pow.match_1",
+      "node_id": 1161
+    }
+  ],
+  "source": {
+    "implementation_graph_sha256": "562586beb96b69e3805844c7fd32336b2209599c5bd54f73920c52c04bbfd8b4",
+    "selected_exact_source_name": "Nat.testBit",
+    "selection_rule": "the unique semantic-contract demand for Nat.testBit with four affected targets",
+    "semantic_contract_demand_sha256": "44ce2477a7635a47adb84797bc5f02c00d1dbd2657390f3483ce3d4572468667",
+    "type_slice_replay_sha256": "f5bca62ca641a1b8c64f14c52f72c146b01c9da4cec3ecb9c4d3375c7330d0ad"
+  },
+  "state": "family-contract-design-context",
+  "targets": [
+    {
+      "fact_id": "F:ml430-nat-testbit-eq-inth-ffa07392",
+      "reachable_transparent_nodes": 209,
+      "source_names": [
+        "Nat.testBit",
+        "List.getI",
+        "Nat.bits"
+      ],
+      "target_specific_node_ids": [
+        944,
+        945,
+        947,
+        948,
+        954,
+        956,
+        957,
+        958,
+        972,
+        973,
+        974,
+        976,
+        977,
+        981,
+        984,
+        985,
+        986,
+        1005,
+        1006,
+        1009,
+        1013,
+        1030,
+        1033,
+        1042,
+        1051,
+        1052,
+        1053,
+        1054,
+        1055,
+        1056,
+        1057,
+        1058,
+        1059,
+        1060,
+        1062,
+        1063,
+        1064,
+        1065,
+        1066,
+        1067,
+        1068,
+        1069,
+        1070,
+        1071,
+        1072,
+        1073,
+        1074,
+        1075,
+        1076,
+        1077,
+        1078,
+        1079,
+        1080,
+        1081,
+        1082,
+        1083,
+        1086,
+        1087,
+        1088,
+        1089,
+        1090,
+        1096,
+        1105,
+        1109,
+        1110,
+        1124,
+        1131,
+        1136,
+        1145,
+        1154,
+        1155,
+        1159,
+        1160,
+        1164,
+        1172,
+        1173,
+        1174,
+        1178,
+        1179,
+        1185,
+        1186,
+        1187,
+        1204,
+        1211,
+        1213,
+        1219,
+        1222,
+        1223,
+        1224,
+        1227,
+        1237,
+        1240,
+        1245,
+        1248,
+        1250,
+        1252,
+        1258,
+        1259,
+        1264,
+        1265,
+        1267,
+        1269,
+        1271,
+        1275,
+        1276,
+        1277
+      ],
+      "target_specific_nodes": 106
+    },
+    {
+      "fact_id": "F:ml430-nat-testbit-land-dfef7ca4",
+      "reachable_transparent_nodes": 190,
+      "source_names": [
+        "Nat.testBit",
+        "Nat.instAndOp"
+      ],
+      "target_specific_node_ids": [
+        1583,
+        1588,
+        1589,
+        1590,
+        1591,
+        1592,
+        1594,
+        1595,
+        1599,
+        1600,
+        1604,
+        1606,
+        1609,
+        1613,
+        1616,
+        1619,
+        1624,
+        1627,
+        1629,
+        1631,
+        1634,
+        1638,
+        1640,
+        1641,
+        1642,
+        1643,
+        1644,
+        1645,
+        1646,
+        1647,
+        1648,
+        1649,
+        1650,
+        1651,
+        1652,
+        1653,
+        1654,
+        1655,
+        1656,
+        1657,
+        1658,
+        1659,
+        1660,
+        1661,
+        1662,
+        1663,
+        1666,
+        1667,
+        1668,
+        1669,
+        1671,
+        1676,
+        1678,
+        1679,
+        1680,
+        1681,
+        1682,
+        1683,
+        1686,
+        1687,
+        1689,
+        1690,
+        1693,
+        1696,
+        1700,
+        1707,
+        1708,
+        1709,
+        1710,
+        1711,
+        1714,
+        1717,
+        1718,
+        1719,
+        1720,
+        1721,
+        1722,
+        1723,
+        1724,
+        1725,
+        1726,
+        1727,
+        1728,
+        1729,
+        1730,
+        1732,
+        1733
+      ],
+      "target_specific_nodes": 87
+    },
+    {
+      "fact_id": "F:ml430-nat-testbit-ldiff-16f94162",
+      "reachable_transparent_nodes": 191,
+      "source_names": [
+        "Nat.testBit",
+        "Nat.ldiff"
+      ],
+      "target_specific_node_ids": [
+        1432,
+        1435,
+        1436,
+        1437,
+        1438,
+        1439,
+        1441,
+        1442,
+        1443,
+        1447,
+        1448,
+        1452,
+        1454,
+        1457,
+        1461,
+        1464,
+        1467,
+        1472,
+        1475,
+        1477,
+        1479,
+        1482,
+        1486,
+        1488,
+        1489,
+        1490,
+        1491,
+        1492,
+        1493,
+        1494,
+        1495,
+        1496,
+        1497,
+        1498,
+        1499,
+        1500,
+        1501,
+        1502,
+        1503,
+        1504,
+        1505,
+        1506,
+        1507,
+        1508,
+        1509,
+        1510,
+        1511,
+        1514,
+        1515,
+        1516,
+        1518,
+        1523,
+        1525,
+        1526,
+        1527,
+        1528,
+        1529,
+        1530,
+        1533,
+        1534,
+        1536,
+        1537,
+        1540,
+        1543,
+        1547,
+        1554,
+        1555,
+        1556,
+        1557,
+        1558,
+        1561,
+        1564,
+        1565,
+        1566,
+        1567,
+        1568,
+        1569,
+        1570,
+        1571,
+        1572,
+        1573,
+        1574,
+        1575,
+        1576,
+        1577,
+        1578,
+        1580,
+        1581
+      ],
+      "target_specific_nodes": 88
+    },
+    {
+      "fact_id": "F:ml430-nat-testbit-lor-7644e067",
+      "reachable_transparent_nodes": 190,
+      "source_names": [
+        "Nat.testBit",
+        "Nat.instOrOp"
+      ],
+      "target_specific_node_ids": [
+        1280,
+        1283,
+        1284,
+        1285,
+        1287,
+        1288,
+        1289,
+        1293,
+        1294,
+        1298,
+        1300,
+        1303,
+        1307,
+        1310,
+        1313,
+        1318,
+        1321,
+        1323,
+        1325,
+        1328,
+        1332,
+        1334,
+        1335,
+        1336,
+        1337,
+        1338,
+        1339,
+        1340,
+        1341,
+        1342,
+        1343,
+        1344,
+        1345,
+        1346,
+        1347,
+        1348,
+        1349,
+        1350,
+        1351,
+        1352,
+        1353,
+        1354,
+        1355,
+        1356,
+        1357,
+        1360,
+        1361,
+        1362,
+        1364,
+        1369,
+        1370,
+        1372,
+        1373,
+        1374,
+        1375,
+        1376,
+        1377,
+        1380,
+        1381,
+        1383,
+        1384,
+        1387,
+        1390,
+        1396,
+        1403,
+        1404,
+        1405,
+        1406,
+        1407,
+        1410,
+        1413,
+        1414,
+        1415,
+        1416,
+        1417,
+        1418,
+        1419,
+        1420,
+        1421,
+        1422,
+        1423,
+        1424,
+        1425,
+        1426,
+        1427,
+        1429,
+        1430
+      ],
+      "target_specific_nodes": 87
+    }
+  ]
+}

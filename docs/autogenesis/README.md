@@ -277,6 +277,7 @@ compounding, not automation theatre.
 | [Transparent relation terminal result](271-transparent-relation-terminal-result.md) | Ten ModEq goals now reach equality composition but still convert 0/13; which typed relation-premise chain is actually missing? |
 | [Imported implementation-demand graph](272-imported-implementation-demand.md) | Which transparent Mathlib definitions and decision/recursion boundaries lie beneath the 14 sliced semantic-contract roots? |
 | [Imported implementation frontier](273-imported-implementation-frontier.md) | Which context-bound implementation nodes are shared by the most demanded roots and targets, without turning reachability into proof authority? |
+| [Bit-observation contract slice](274-bit-observation-contract-slice.md) | What exact transparent core do all four `Nat.testBit` siblings share, what remains target-specific, and why are the five current behavior lemmas insufficient? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

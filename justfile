@@ -560,11 +560,14 @@ autogenesis-imported-implementation-demand:
     python3 scripts/check-autogenesis-imported-implementation-demand.py
     uv run --no-sync python -m unittest scripts.tests.test_gen_autogenesis_imported_implementation_frontier
     python3 scripts/gen-autogenesis-imported-implementation-frontier.py --check
+    uv run --no-sync python -m unittest scripts.tests.test_gen_autogenesis_bit_observation_contract_slice
+    python3 scripts/gen-autogenesis-bit-observation-contract-slice.py --check
 
 autogenesis-imported-implementation-demand-reproduce streams="/nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1":
     cargo run -q -p axeyum-lean-import --example imported_implementation_demand -- --streams "{{ streams }}" --replay artifacts/autogenesis/retrieved-induction-type-slice-replay-v1.json --output artifacts/autogenesis/imported-implementation-demand-v1.json
     python3 scripts/check-autogenesis-imported-implementation-demand.py
     python3 scripts/gen-autogenesis-imported-implementation-frontier.py
+    python3 scripts/gen-autogenesis-bit-observation-contract-slice.py
 
 autogenesis-non-equality-terminal-census:
     uv run --no-sync python -m unittest scripts.tests.test_measure_autogenesis_open_fixed_palette scripts.tests.test_gen_autogenesis_non_equality_population

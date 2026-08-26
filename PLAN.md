@@ -1417,6 +1417,12 @@ spine including `Nat.land`, `Nat.ble`, `Nat.bitwise`, `Nat.testBit`, and
 `Nat.instAndOp`. Next: separate observation laws from generic infrastructure
 in that intersection and construct one explicit contract interface consumed by
 at least three siblings.
+The exact four-target bit-observation slice now contains 471 union nodes and a
+103-node shared core; target-specific deltas are 106/87/88/87. Its five current
+axiom-free `Nat.testBit` candidates cover zero/successor, bounds, and sums, but
+not the required `Nat.bitwise` or list-lookup commutation. Next: inventory exact
+lower-level recurrence theorems and construct one operator-parametric generic
+law without using a desired target conclusion as its own contract witness.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization

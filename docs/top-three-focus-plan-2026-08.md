@@ -418,6 +418,12 @@ For the four bit-observation siblings, `Nat.land`, `Nat.ble`, `Nat.bitwise`,
 `Nat.testBit`, and the `Nat.instAndOp` projection are shared high-reach nodes.
 This changes the next contract from a one-function `Nat.testBit` wrapper into a
 small explicit bit-observation interface spanning the co-abstractions.
+The exact four-target slice now measures 471 union nodes and a 103-node shared
+core, with target-specific deltas of 106/87/88/87 nodes. More importantly, it
+shows that the five existing `Nat.testBit` behavior candidates do not describe
+bitwise operators or list lookup. The next bottom-up theorem must be a smaller
+operator-parametric recurrence/observation law; using any of the desired four
+conclusions as its own contract witness would be circular.
 
 ### Exit evidence
 
