@@ -1443,12 +1443,24 @@ pub struct CRealPrelude {
     pub sqrt_sq: NameId,
     /// `CReal.sqrt_nonneg : ∀ x, CReal.le CReal.zero (sqrt x)`.
     ///
-    /// Unconditional, unlike `sqrt_sq`/the still-open `mul_self_sqrt` gap
-    /// (`Equiv (mul (sqrt x) (sqrt x)) x`, needed for `CReal.sqrt_mul` and
-    /// hence `Complex.abs_mul`): this never relates `sqrt x` back to `x`
-    /// itself, only to `sqrtApprox`'s own clamp-then-`natSqrt` shape, which
-    /// is nonneg regardless of `x`'s sign. See `creal/sqrt.rs`.
+    /// Unconditional, unlike `sqrt_sq`/`mul_self_sqrt`: this never relates
+    /// `sqrt x` back to `x` itself, only to `sqrtApprox`'s own
+    /// clamp-then-`natSqrt` shape, which is nonneg regardless of `x`'s sign.
+    /// See `creal/sqrt.rs`.
     pub sqrt_nonneg: NameId,
+    /// `CReal.mul_self_sqrt : ∀ x, CReal.le CReal.zero x → Equiv (mul (sqrt
+    /// x) (sqrt x)) x`.
+    ///
+    /// The direction `sqrt_sq` (`sqrt (mul x x) ~ x`) does NOT give: those
+    /// are different statements, composed only via a third fact that this
+    /// one is. Needed for `CReal.sqrt_mul` and hence `Complex.abs_mul`. The
+    /// upper bound is a direct chain (`sqrt_bracket_pieces`'s lower half plus
+    /// `Rat.max_le` against `x`'s own regularity and the `0 ≤ x` slack); the
+    /// lower bound needs a uniform magnitude bound on `sqrtApprox(x, k)`
+    /// (`CReal.bound_within` + `CReal.rat_sq_le`) and
+    /// `mul_self_zero::diff_of_squares` at `(u1, u)` to expand the bracket's
+    /// width term. See `creal/sqrt.rs`.
+    pub mul_self_sqrt: NameId,
 
     // --- Bishop's speed-up combinator (creal/speedup.rs) ----------------------
     /// `CReal.KRegular : (Nat → Rat) → Nat → Prop` — Bishop regularity up to a
@@ -3580,6 +3592,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sqrt_le_sqrt: kernel.name_str(creal, "sqrt_le_sqrt"),
         sqrt_sq: kernel.name_str(creal, "sqrt_sq"),
         sqrt_nonneg: kernel.name_str(creal, "sqrt_nonneg"),
+        mul_self_sqrt: kernel.name_str(creal, "mul_self_sqrt"),
         k_regular_pred: kernel.name_str(creal, "KRegular"),
         speedup: kernel.name_str(creal, "speedup"),
         regular_of_kregular: kernel.name_str(creal, "regular_of_kregular"),
@@ -3892,6 +3905,15 @@ pub(crate) fn build_creal_prelude_uncached(
         // right after it since both round out "the laws sqrt.rs's own doc
         // names as reachable now" from the same landing.
         sqrt::declare_sqrt_nonneg(&mut d, prelude)?;
+        // `mul_self_sqrt` needs `sqrt`/`sqrt_approx_sq_bracket`/`rat_sq_le`
+        // (all above, same as `sqrt_sq`), `bound`/`bound_within`/`mul`/
+        // `mulShift`/`equiv_of_bounded`/`regular_between` (`product.rs`, far
+        // earlier), `CReal.le` (`declare_order`, far earlier), and
+        // `mul_self_zero::diff_of_squares` (widened to `pub(super)`,
+        // upstream of this whole prelude). It does not depend on `sqrt_sq`
+        // itself, but is placed right after it since both round out the
+        // laws relating `sqrt` back to its argument.
+        sqrt::declare_mul_self_sqrt(&mut d, prelude)?;
         convergence::declare_cauchy_convergence(&mut d, prelude)?;
         series::declare_series(&mut d, prelude)?;
         // `CReal.mag_bound_le_sum_range_of_lt` needs `CReal.sumRange`

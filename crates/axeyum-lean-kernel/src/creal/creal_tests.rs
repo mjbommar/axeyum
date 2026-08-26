@@ -100,7 +100,7 @@ fn on_a_deep_stack_creal<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'stat
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 335] = [
+    let expected: [(&str, crate::NameId, &str); 336] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -419,6 +419,7 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         ("CReal.sqrt_zero", p.sqrt_zero, "theorem"),
         ("CReal.sqrt_sq", p.sqrt_sq, "theorem"),
         ("CReal.sqrt_nonneg", p.sqrt_nonneg, "theorem"),
+        ("CReal.mul_self_sqrt", p.mul_self_sqrt, "theorem"),
         // Bishop's speed-up combinator (creal/speedup.rs).
         ("CReal.KRegular", p.k_regular_pred, "def"),
         ("CReal.speedup", p.speedup, "def"),
@@ -8156,6 +8157,92 @@ fn sqrt_of_ofnat_four_at_index_zero_computes_to_two() {
         "CReal.seq (CReal.sqrt (CReal.ofNat 4)) 0 must NOT check as equal \
          to 3 -- a checker that accepts both 2 and 3 cannot be trusted to \
          have computed anything"
+    );
+}
+
+/// **Mandatory concrete instantiation of `CReal.mul_self_sqrt`.** `Equiv` is
+/// not decidable by computation (unlike `CReal.seq`'s own reduction, which
+/// the sibling `sqrt_of_ofnat_four...` test above exercises), so the check
+/// here is: instantiate the theorem at a genuinely CONCRETE `x := CReal.ofNat
+/// 4` and `hx : le zero (ofNat 4)` (built the same `of_rat_le`-across-`ofRat`
+/// route `riemann_sample_in_bounds_at_...`'s own `hab` uses), then declare
+/// the application against an INDEPENDENTLY constructed expected type
+/// (`Equiv (mul (sqrt (ofNat 4)) (sqrt (ofNat 4))) (ofNat 4)`) rather than
+/// trusting `Kernel::infer` on the theorem's own instantiation. The negative
+/// control swaps the right-hand side to `ofNat 5`: `CReal.ofNat 4` and
+/// `CReal.ofNat 5` are built from different Nat literals with no reduction
+/// path relating them, so the kernel must refuse the mismatched Prop -- the
+/// same mandatory-instantiation-plus-negative-control shape
+/// `sqrt_of_ofnat_four_at_index_zero_computes_to_two` uses for `CReal.sqrt`
+/// itself, applied here to a law about it instead of to `CReal.seq`'s
+/// reduction.
+#[test]
+fn mul_self_sqrt_at_ofnat_four_type_checks_against_the_independent_statement() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let four_nat = d.num(4);
+    let five_nat = d.num(5);
+    let zero_nat = d.num(0);
+
+    let x4 = d.const_app(p.of_nat, &[four_nat]);
+    let x5 = d.const_app(p.of_nat, &[five_nat]);
+
+    // hx4 : CReal.le CReal.zero (CReal.ofNat 4), via `Rat.zero_le_natDivSucc`
+    // lifted across `CReal.of_rat_le` -- `CReal.zero` and `CReal.ofNat 4` are
+    // each one delta-step from an `ofRat` of a `Rat.natDivSucc`.
+    let hx4 = {
+        let rat_4 = d.const_app(p.rat.nat_div_succ, &[four_nat, zero_nat]);
+        let rzero = d.kernel().const_(p.rat.zero, vec![]);
+        let rle = d.lemma(p.rat.zero_le_nat_div_succ, &[four_nat, zero_nat]);
+        d.lemma(p.of_rat_le, &[rzero, rat_4, rle])
+    };
+
+    let concrete_proof = d.const_app(p.mul_self_sqrt, &[x4, hx4]);
+
+    let sqrt_x4 = d.const_app(p.sqrt, &[x4]);
+    let lhs4 = d.const_app(p.mul, &[sqrt_x4, sqrt_x4]);
+    let expected_ty = d.const_app(p.equiv, &[lhs4, x4]);
+
+    let anon = d.kernel().anon();
+    let name = d
+        .kernel()
+        .name_str(anon, "__mul_self_sqrt_at_ofnat_four_instance");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: expected_ty,
+            value: concrete_proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.mul_self_sqrt (CReal.ofNat 4) hx4 must check against \
+                 Equiv (mul (sqrt (ofNat 4)) (sqrt (ofNat 4))) (ofNat 4): \
+                 {error:?}"
+            )
+        });
+
+    // Negative control: the SAME proof does NOT check against the WRONG
+    // right-hand side `ofNat 5` -- if it did, this checker could not
+    // distinguish `mul_self_sqrt`'s real conclusion from an arbitrary one.
+    let wrong_ty = d.const_app(p.equiv, &[lhs4, x5]);
+    let name_wrong = d.kernel().name_str(
+        anon,
+        "__mul_self_sqrt_at_ofnat_four_wrong_rhs_must_be_rejected",
+    );
+    let result = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_wrong,
+        uparams: vec![],
+        ty: wrong_ty,
+        value: concrete_proof,
+    });
+    assert!(
+        result.is_err(),
+        "CReal.mul_self_sqrt (CReal.ofNat 4) hx4 must NOT check against \
+         Equiv (mul (sqrt (ofNat 4)) (sqrt (ofNat 4))) (ofNat 5) -- a \
+         checker that accepts both 4 and 5 on the right cannot be trusted \
+         to have proved anything about `ofNat 4` specifically"
     );
 }
 
