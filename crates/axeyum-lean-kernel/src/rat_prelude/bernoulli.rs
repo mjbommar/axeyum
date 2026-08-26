@@ -79,9 +79,9 @@
 //!
 //! `Rat.bernoulli_harmonic_bound : ∀ x t, 0 ≤ x → 0 ≤ t →`
 //! `Rat.mul x (Rat.add Rat.one t) ≤ Rat.one → ∀ m,`
-//! `Rat.mul (Rat.pow x m) (L t m) ≤ Rat.one`
+//! `Rat.mul (L t m) (Rat.pow x m) ≤ Rat.one`
 //!
-//! i.e. `xᵐ · (1 + m·t) ≤ 1` — the cross-multiplied form of `xᵐ ≤
+//! i.e. `(1 + m·t) · xᵐ ≤ 1` — the cross-multiplied form of `xᵐ ≤
 //! 1/(1+m·t)`, avoiding `Rat.inv` on either side. The hypothesis
 //! `x·(1+t) ≤ 1` is exactly `x ≤ 1/(1+t)` cross-multiplied, i.e. exactly
 //! what a caller holding `1/x = 1+t` (this file's own module doc quotes the
