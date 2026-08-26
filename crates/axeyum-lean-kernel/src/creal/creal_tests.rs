@@ -72,7 +72,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 280] = [
+    let expected: [(&str, crate::NameId, &str); 282] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -662,6 +662,23 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         (
             "CReal.strict_mono_magnitude",
             p.strict_mono_magnitude,
+            "theorem",
+        ),
+        // The rational-cancellation lemma `strict_mono_magnitude`-shaped
+        // bounds need and did not have (creal/monotone.rs): from
+        // `(1/(m+1))·u ≤ v` conclude `u ≤ (m+1)·v`, via `Rat.mul_inv_cancel`
+        // + `Rat.inv_natDivSucc` at the rational level and `mul_assoc` +
+        // `mul_le_mul_of_nonneg_left` at the `CReal` level -- no `PosBound`
+        // existential.
+        ("CReal.scale_cancel_le", p.scale_cancel_le, "theorem"),
+        // `strict_mono_magnitude` cancelled by `scale_cancel_le` against the
+        // triangle inequality (creal/monotone.rs): a LOWER bound on `F`'s
+        // growth becomes an UPPER bound on `|x−y|` given a spread of `F`'s
+        // values -- what an exact IVT root and Chapter 12's inverse-function
+        // continuity both need.
+        (
+            "CReal.diff_le_of_strict_mono_magnitude",
+            p.diff_le_of_strict_mono_magnitude,
             "theorem",
         ),
         // Spivak ch. 12's entry point (creal/monotone.rs): a uniformly

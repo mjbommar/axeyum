@@ -3572,6 +3572,421 @@ pub(super) fn declare_strict_mono_magnitude(
     })
 }
 
+/// `le (abs (neg t)) (abs t)`. Built from public pieces
+/// ([`CRealPrelude::neg_le_abs`], [`CRealPrelude::le_abs_self`],
+/// [`CRealPrelude::abs_le`], [`CRealPrelude::le_congr`], plus this file's own
+/// [`double_neg`]) rather than duplicating `deriv_unique.rs`'s private,
+/// stronger `abs_neg_equiv` (an `Equiv`, needing an antisymmetry step this
+/// slice does not otherwise use) — an inequality is all
+/// [`declare_diff_le_of_strict_mono_magnitude`] needs.
+fn abs_neg_le(d: &mut IntDev<'_>, p: CRealPrelude, t: ExprId) -> ExprId {
+    let neg_t = cneg(d, p, t);
+    let abs_t = cabs(d, p, t);
+    let nn_t = cneg(d, p, neg_t);
+    let dn = double_neg(d, p, t); // Equiv nn_t t
+    let t_to_nn_t = esymm(d, p, nn_t, t, dn); // Equiv t nn_t
+    let le_t_abs_t = d.lemma(p.le_abs_self, &[t]); // le t abs_t
+    let refl_abs_t = erefl(d, p, abs_t);
+    let le_nnt_abs_t = d.lemma(
+        p.le_congr,
+        &[t, nn_t, abs_t, abs_t, t_to_nn_t, refl_abs_t, le_t_abs_t],
+    );
+    // le_nnt_abs_t : le nn_t abs_t
+    let le_negt_abs_t = d.lemma(p.neg_le_abs, &[t]); // le neg_t abs_t
+    d.lemma(p.abs_le, &[neg_t, abs_t, le_negt_abs_t, le_nnt_abs_t])
+    // : le (abs neg_t) abs_t
+}
+
+/// `CReal.scale_cancel_le : ∀ (m : Nat) (u v : CReal),
+/// le (mul (ofRat (natDivSucc 1 m)) u) v → le u (mul (ofNat (Nat.succ m)) v)`.
+///
+/// The rational-cancellation lemma two lanes independently stopped short of:
+/// [`declare_strict_mono_magnitude`] (and every other place in this
+/// development that samples at the recurring `1/(m+1)` shape) produces a
+/// bound `(1/(m+1))·u ≤ v`, and turning that into a bound on `u` alone means
+/// multiplying through by `(m+1)` and cancelling `(m+1)·(1/(m+1)) = 1`.
+///
+/// **Shape choice.** Stated at a bare `m : Nat`, not at
+/// [`declare_strict_mono_magnitude`]'s own instantiation `m := 2k+1`:
+/// `Rat.natDivSucc 1 m` is the single recurring "epsilon" this whole
+/// development samples at (moduli, regularity bounds, `hd_modulus`), so a
+/// cancellation lemma for exactly that shape earns its keep well beyond this
+/// one corollary — narrowing it to one call site's instantiation would just
+/// mean rebuilding this a second time at the next.
+///
+/// **Route, and why it avoids [`CRealPrelude::le_of_mul_le_mul_left`].**
+/// `CReal.ofNat n` is *defeq* to `ofRat (natDivSucc n 0)` (that is its own
+/// definition — `archimedean.rs`'s `declare_of_nat`), so `Nat.succ m`'s
+/// reciprocal is available for free as `natDivSucc (Nat.succ m) 0`: no
+/// bridging lemma between the two forms is needed, only the field identity
+/// `Rat.mul_inv_cancel` plus `Rat.inv_natDivSucc` to name that reciprocal as
+/// a SECOND `natDivSucc` term rather than an opaque `Rat.inv` application.
+/// That turns `(1/(m+1))·((m+1)·v) ≈ v` into a `CReal.mul_assoc` +
+/// `CReal.mul_le_mul_of_nonneg_left` composition with no `PosBound`
+/// existential anywhere — deliberately NOT reusing
+/// [`CRealPrelude::le_of_mul_le_mul_left`], whose generality (an arbitrary
+/// `PosBound` witness, needing `CReal.inv`'s Cauchy-sequence machinery) is
+/// more than this concrete rational scale factor ever needs.
+fn declare_scale_cancel_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let rat = p.rat;
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let v_fv = d.fresh_fvar();
+    let v = d.kernel().fvar(v_fv);
+
+    let one_nat = d.num(1);
+    let zero_nat = d.num(0);
+    let sm = d.succ(m);
+
+    let c_rat = d.const_app(rat.nat_div_succ, &[one_nat, m]);
+    let c = embed(d, p, c_rat);
+    let succ_rat = d.const_app(rat.nat_div_succ, &[sm, zero_nat]);
+    let succ_factor = embed(d, p, succ_rat);
+
+    let cu = cmul(d, p, c, u);
+    let hyp_ty = cle(d, p, cu, v);
+    let hyp_fv = d.fresh_fvar();
+    let hyp = d.kernel().fvar(hyp_fv);
+
+    // --- Rat level: c_rat * succ_rat = Rat.one -----------------------------
+    let unit_le = d.lemma(rat.int.nat.le_refl, &[one_nat]); // Nat.le 1 1
+    let c_pos = d.lemma(rat.nat_div_succ_pos, &[one_nat, m, unit_le]);
+    // c_pos : Rat.lt Rat.zero c_rat
+    let inv_term = d.const_app(rat.inv, &[c_rat]);
+    let cancel = d.lemma(rat.mul_inv_cancel, &[c_rat, c_pos]);
+    // cancel : Eq Rat (Rat.mul c_rat inv_term) Rat.one
+    let inv_eq = d.lemma(rat.inv_nat_div_succ, &[m]);
+    // inv_eq : Eq Rat inv_term succ_rat
+    let one_rat = rone(d, rat);
+    let key_rat_eq = rat_eq_rewrite(d, inv_term, succ_rat, inv_eq, cancel, &|d, t| {
+        let prod = rmul(d, c_rat, t);
+        req(d, prod, one_rat)
+    });
+    // key_rat_eq : Eq Rat (Rat.mul c_rat succ_rat) Rat.one
+
+    // --- lift to CReal: Equiv (mul c succ_factor) one -----------------------
+    let prod_real = cmul(d, p, c, succ_factor);
+    let rat_prod = rmul(d, c_rat, succ_rat);
+    let of_rat_mul_proof = d.lemma(p.of_rat_mul, &[c_rat, succ_rat]);
+    // of_rat_mul_proof : Equiv prod_real (embed rat_prod)
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let prod_one_equiv = rat_eq_rewrite(
+        d,
+        rat_prod,
+        one_rat,
+        key_rat_eq,
+        of_rat_mul_proof,
+        &|d, t| {
+            let embedded = embed(d, p, t);
+            equiv(d, p, prod_real, embedded)
+        },
+    );
+    // prod_one_equiv : Equiv prod_real (embed one_rat) -- defeq CReal.one.
+
+    // --- flip to `succ_factor * c ≈ one` ------------------------------------
+    let succ_c = cmul(d, p, succ_factor, c);
+    let comm_c_succ = d.lemma(p.mul_comm, &[c, succ_factor]);
+    // comm_c_succ : Equiv prod_real succ_c
+    let comm_succ_c = esymm(d, p, prod_real, succ_c, comm_c_succ);
+    // comm_succ_c : Equiv succ_c prod_real
+    let succ_c_equiv_one = d.lemma(
+        p.equiv_trans,
+        &[succ_c, prod_real, one_c, comm_succ_c, prod_one_equiv],
+    );
+    // succ_c_equiv_one : Equiv succ_c one_c
+
+    // --- succ_factor is nonnegative ------------------------------------------
+    let succ_nonneg = zero_le_of_nat(d, p, sm); // le zero succ_factor (defeq)
+
+    // --- mul_le_mul_of_nonneg_left succ_factor (mul c u) v ------------------
+    let step1 = d.lemma(
+        p.mul_le_mul_of_nonneg_left,
+        &[succ_factor, cu, v, succ_nonneg, hyp],
+    );
+    // step1 : le (mul succ_factor cu) (mul succ_factor v)
+
+    // --- simplify LHS: mul succ_factor (mul c u) ≈ u ------------------------
+    let succ_cu = cmul(d, p, succ_factor, cu);
+    let mul_succ_c_u = cmul(d, p, succ_c, u);
+    let assoc = d.lemma(p.mul_assoc, &[succ_factor, c, u]);
+    // assoc : Equiv mul_succ_c_u succ_cu
+    let assoc_rev = esymm(d, p, mul_succ_c_u, succ_cu, assoc);
+    // assoc_rev : Equiv succ_cu mul_succ_c_u
+
+    let refl_u = erefl(d, p, u);
+    let cong1 = d.lemma(
+        p.mul_congr,
+        &[succ_c, one_c, u, u, succ_c_equiv_one, refl_u],
+    );
+    let mul_one_u = cmul(d, p, one_c, u);
+    // cong1 : Equiv mul_succ_c_u mul_one_u
+
+    let comm_one_u = d.lemma(p.mul_comm, &[one_c, u]);
+    let mul_u_one = cmul(d, p, u, one_c);
+    // comm_one_u : Equiv mul_one_u mul_u_one
+
+    let mul_one_thm = d.lemma(p.mul_one, &[u]); // Equiv mul_u_one u
+
+    let full_chain = echain(
+        d,
+        p,
+        succ_cu,
+        &[
+            (mul_succ_c_u, assoc_rev),
+            (mul_one_u, cong1),
+            (mul_u_one, comm_one_u),
+            (u, mul_one_thm),
+        ],
+    );
+    // full_chain : Equiv succ_cu u
+
+    let scaled_v = cmul(d, p, succ_factor, v);
+    let refl_scaled_v = erefl(d, p, scaled_v);
+    let result_raw = d.lemma(
+        p.le_congr,
+        &[
+            succ_cu,
+            u,
+            scaled_v,
+            scaled_v,
+            full_chain,
+            refl_scaled_v,
+            step1,
+        ],
+    );
+    // result_raw : le u scaled_v (raw `ofRat` form of the `(m+1)` factor)
+
+    let value = {
+        let over_hyp = d.lam_fv(hyp_fv, hyp_ty, result_raw);
+        let over_v = d.lam_fv(v_fv, carrier, over_hyp);
+        let over_u = d.lam_fv(u_fv, carrier, over_v);
+        d.lam_fv(m_fv, nat, over_u)
+    };
+    let ty = {
+        let nice_succ_factor = d.const_app(p.of_nat, &[sm]);
+        let nice_scaled_v = cmul(d, p, nice_succ_factor, v);
+        let concl = cle(d, p, u, nice_scaled_v);
+        let after_hyp = d.arrow(hyp_ty, concl);
+        let over_v = d.pi_fv(v_fv, carrier, after_hyp);
+        let over_u = d.pi_fv(u_fv, carrier, over_v);
+        d.pi_fv(m_fv, nat, over_u)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.scale_cancel_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.diff_le_of_strict_mono_magnitude : ∀ F F' a b, HasDerivativeOn F F'
+/// a b → ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k)) (F' z)) →
+/// ∀ x y, le a x → le x y → le y b →
+/// le (add y (neg x)) (mul (ofNat (Nat.succ (Nat.succ (Nat.mul 2 k))))
+///    (add (abs (F x)) (abs (F y))))`.
+///
+/// [`declare_strict_mono_magnitude`]'s own conclusion
+/// (`(1/(2k+2))·(y−x) ≤ Fy − Fx`), cancelled by [`declare_scale_cancel_le`]
+/// against the two-term triangle inequality
+/// ([`CRealPrelude::abs_add_le`] plus [`abs_neg_le`] to fold `|−Fx|` down to
+/// `|Fx|`): a LOWER bound on `F`'s growth rate becomes an UPPER bound on how
+/// far apart `x` and `y` can be for a given spread of `F`'s values. This is
+/// what an exact IVT root needs (a bisection's two endpoints, both mapped
+/// close to the target, must themselves be close) and what Chapter 12's
+/// inverse-function continuity needs (a lower bound on `F`'s growth is an
+/// upper bound on `F⁻¹`'s modulus).
+///
+/// Left as `add y (neg x)` rather than wrapped in `CReal.abs`: the
+/// hypotheses already give `x ≤ y`, so this term IS the (nonnegative)
+/// difference, and no public `CReal.abs_of_nonneg`-shaped fact exists yet to
+/// fold that in for free — a caller holding `x ≤ y` already has exactly this
+/// term.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+#[allow(clippy::too_many_arguments)]
+fn declare_diff_le_of_strict_mono_magnitude(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let func_ty = d.arrow(carrier, carrier);
+    let nat = d.nat_ty();
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let fp_fv = d.fresh_fvar();
+    let fp = d.kernel().fvar(fp_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let hf_ty = d.const_app(p.has_derivative_on, &[f, fp, a, b]);
+    let hf_fv = d.fresh_fvar();
+    let hf = d.kernel().fvar(hf_fv);
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let a_k_rat = div_succ(d, p, 1, k);
+    let a_k = embed(d, p, a_k_rat);
+
+    let hderiv_ty = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let fpz = d.apply(fp, &[z]);
+        let concl = cle(d, p, a_k, fpz);
+        let z_le_b = cle(d, p, z, b);
+        let after_upper = d.arrow(z_le_b, concl);
+        let a_le_z = cle(d, p, a, z);
+        let after_lower = d.arrow(a_le_z, after_upper);
+        d.pi_fv(z_fv, carrier, after_lower)
+    };
+    let hderiv_fv = d.fresh_fvar();
+    let hderiv = d.kernel().fvar(hderiv_fv);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+
+    let hax_ty = cle(d, p, a, x);
+    let hax_fv = d.fresh_fvar();
+    let hax = d.kernel().fvar(hax_fv);
+    let hxy_ty = cle(d, p, x, y);
+    let hxy_fv = d.fresh_fvar();
+    let hxy = d.kernel().fvar(hxy_fv);
+    let hyb_ty = cle(d, p, y, b);
+    let hyb_fv = d.fresh_fvar();
+    let hyb = d.kernel().fvar(hyb_fv);
+
+    let fx = d.apply(f, &[x]);
+    let fy = d.apply(f, &[y]);
+    let diff = cdiff(d, p, y, x); // add y (neg x)
+    let neg_fx = cneg(d, p, fx);
+    let sum_diff = cdiff(d, p, fy, fx); // add fy (neg fx)
+
+    let raw = d.lemma(
+        p.strict_mono_magnitude,
+        &[f, fp, a, b, hf, k, hderiv, x, y, hax, hxy, hyb],
+    );
+    // raw : le (mul (ofRat (natDivSucc 1 e_acc)) diff) sum_diff, e_acc from
+    // `half_frac_eq(d, p, k)` -- reused below so the two constructions of
+    // `e_acc` are structurally the SAME term.
+    let (e_acc, _sum_eq_full) = half_frac_eq(d, p, k);
+    let factor_rat = div_succ(d, p, 1, e_acc);
+    let factor = embed(d, p, factor_rat);
+    let mul_factor_diff = cmul(d, p, factor, diff);
+
+    // --- mul_factor_diff ≤ abs sum_diff --------------------------------------
+    let le_abs_sum = d.lemma(p.le_abs_self, &[sum_diff]); // le sum_diff (abs sum_diff)
+    let abs_sum_diff = cabs(d, p, sum_diff);
+    let le_trans_1 = d.lemma(
+        p.le_trans,
+        &[mul_factor_diff, sum_diff, abs_sum_diff, raw, le_abs_sum],
+    );
+    // le_trans_1 : le mul_factor_diff abs_sum_diff
+
+    // --- abs sum_diff ≤ abs fx + abs fy --------------------------------------
+    let abs_fx = cabs(d, p, fx);
+    let abs_fy = cabs(d, p, fy);
+    let abs_neg_fx = cabs(d, p, neg_fx);
+    let triangle = d.lemma(p.abs_add_le, &[fy, neg_fx]);
+    // triangle : le abs_sum_diff (add abs_fy abs_neg_fx)
+    let neg_fx_le = abs_neg_le(d, p, fx); // le abs_neg_fx abs_fx
+    let refl_abs_fy = d.lemma(p.le_refl, &[abs_fy]);
+    let widen = d.lemma(
+        p.add_le_add,
+        &[abs_fy, abs_fy, abs_neg_fx, abs_fx, refl_abs_fy, neg_fx_le],
+    );
+    // widen : le (add abs_fy abs_neg_fx) (add abs_fy abs_fx)
+    let sum_fy_negfx = cadd(d, p, abs_fy, abs_neg_fx);
+    let sum_fy_fx = cadd(d, p, abs_fy, abs_fx);
+    let le_trans_2 = d.lemma(
+        p.le_trans,
+        &[abs_sum_diff, sum_fy_negfx, sum_fy_fx, triangle, widen],
+    );
+    // le_trans_2 : le abs_sum_diff sum_fy_fx
+
+    let comm_final = d.lemma(p.add_comm, &[abs_fy, abs_fx]); // Equiv sum_fy_fx sum_fx_fy
+    let sum_fx_fy = cadd(d, p, abs_fx, abs_fy);
+    let refl_abs_sum_diff = erefl(d, p, abs_sum_diff);
+    let le_trans_2b = d.lemma(
+        p.le_congr,
+        &[
+            abs_sum_diff,
+            abs_sum_diff,
+            sum_fy_fx,
+            sum_fx_fy,
+            refl_abs_sum_diff,
+            comm_final,
+            le_trans_2,
+        ],
+    );
+    // le_trans_2b : le abs_sum_diff sum_fx_fy
+
+    let final_bound = d.lemma(
+        p.le_trans,
+        &[
+            mul_factor_diff,
+            abs_sum_diff,
+            sum_fx_fy,
+            le_trans_1,
+            le_trans_2b,
+        ],
+    );
+    // final_bound : le mul_factor_diff sum_fx_fy
+
+    let scale_result = d.lemma(p.scale_cancel_le, &[e_acc, diff, sum_fx_fy, final_bound]);
+    // scale_result : le diff (mul (ofNat (Nat.succ e_acc)) sum_fx_fy)
+
+    let value = {
+        let over_hyb = d.lam_fv(hyb_fv, hyb_ty, scale_result);
+        let over_hxy = d.lam_fv(hxy_fv, hxy_ty, over_hyb);
+        let over_hax = d.lam_fv(hax_fv, hax_ty, over_hxy);
+        let over_y = d.lam_fv(y_fv, carrier, over_hax);
+        let over_x = d.lam_fv(x_fv, carrier, over_y);
+        let over_hderiv = d.lam_fv(hderiv_fv, hderiv_ty, over_x);
+        let over_k = d.lam_fv(k_fv, nat, over_hderiv);
+        let over_hf = d.lam_fv(hf_fv, hf_ty, over_k);
+        let over_b = d.lam_fv(b_fv, carrier, over_hf);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        let over_fp = d.lam_fv(fp_fv, func_ty, over_a);
+        d.lam_fv(f_fv, func_ty, over_fp)
+    };
+    let ty = {
+        let sm = d.succ(e_acc);
+        let nice_succ_factor = d.const_app(p.of_nat, &[sm]);
+        let nice_bound = cmul(d, p, nice_succ_factor, sum_fx_fy);
+        let concl = cle(d, p, diff, nice_bound);
+        let after_hyb = d.arrow(hyb_ty, concl);
+        let after_hxy = d.arrow(hxy_ty, after_hyb);
+        let after_hax = d.arrow(hax_ty, after_hxy);
+        let over_y = d.pi_fv(y_fv, carrier, after_hax);
+        let over_x = d.pi_fv(x_fv, carrier, over_y);
+        let after_hderiv = d.arrow(hderiv_ty, over_x);
+        let over_k = d.pi_fv(k_fv, nat, after_hderiv);
+        let after_hf = d.arrow(hf_ty, over_k);
+        let over_b = d.pi_fv(b_fv, carrier, after_hf);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        let over_fp = d.pi_fv(fp_fv, func_ty, over_a);
+        d.pi_fv(f_fv, func_ty, over_fp)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.diff_le_of_strict_mono_magnitude,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 /// `CReal.strict_mono_of_pos_deriv : ∀ F F' a b, HasDerivativeOn F F' a b →
 /// ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k)) (F' z)) → ∀ x y,
 /// le a x → lt x y → le y b → lt (F x) (F y)`.
@@ -4598,6 +5013,8 @@ pub(super) fn declare_monotone_of_nonneg_deriv_all(
     declare_subdivision_point_in_bounds(d, p)?;
     declare_monotone_of_nonneg_deriv(d, p)?;
     declare_strict_mono_magnitude(d, p)?;
+    declare_scale_cancel_le(d, p)?;
+    declare_diff_le_of_strict_mono_magnitude(d, p)?;
     declare_strict_mono_of_pos_deriv(d, p)?;
     declare_strict_injective_of_pos_deriv(d, p)?;
     declare_constant_of_zero_deriv(d, p)?;
