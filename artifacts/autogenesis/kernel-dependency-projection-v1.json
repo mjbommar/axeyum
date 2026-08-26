@@ -1,17 +1,17 @@
 {
   "census": {
-    "axiom_free_declarations": 1506,
+    "axiom_free_declarations": 1507,
     "declaration_kinds": {
       "axiom": 30,
       "constructor": 29,
       "definition": 242,
       "inductive": 22,
       "recursor": 22,
-      "theorem": 1191
+      "theorem": 1192
     },
-    "declarations": 1536,
-    "direct_theorem_dependency_edges": 6651,
-    "theorems": 1191
+    "declarations": 1537,
+    "direct_theorem_dependency_edges": 6660,
+    "theorems": 1192
   },
   "declarations": [
     {
@@ -4665,6 +4665,27 @@
         "Rat.zero_le_natDivSucc"
       ],
       "id": "CReal.inv_nonneg",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.ivt_step",
+        "CReal.le_refl",
+        "CReal.le_trans",
+        "CReal.mul_assoc",
+        "CReal.mul_congr",
+        "CReal.mul_one"
+      ],
+      "id": "CReal.ivt_iter",
       "visible_in": [
         "complex",
         "cpoint",
@@ -34945,6 +34966,51 @@
       "relation": "direct-theorem-depends-on",
       "source": "CReal.inv_nonneg",
       "target": "Rat.zero_le_natDivSucc"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.ivt_iter",
+      "target": "CReal.Equiv.refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.ivt_iter",
+      "target": "CReal.Equiv.symm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.ivt_iter",
+      "target": "CReal.Equiv.trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.ivt_iter",
+      "target": "CReal.ivt_step"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.ivt_iter",
+      "target": "CReal.le_refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.ivt_iter",
+      "target": "CReal.le_trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.ivt_iter",
+      "target": "CReal.mul_assoc"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.ivt_iter",
+      "target": "CReal.mul_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.ivt_iter",
+      "target": "CReal.mul_one"
     },
     {
       "relation": "direct-theorem-depends-on",
