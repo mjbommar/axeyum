@@ -243,9 +243,13 @@ family, five demand a missing rewrite/induction plan, one exceeds the binder
 budget, and one is ready for eventual operation integration. Because a
 one-target registry row would violate the reusable-producer goal, operation
 registration waits until the unchanged contract converts at least three
-siblings. The immediate work is therefore the highest-yield general boundary:
-route the 25 import-blocked positives through type-slice generalization, then
-rerun the same producer and look for a real multi-target family.
+siblings. The highest-yield statement boundary is now closed: all 25
+import-blocked positive targets have fresh, exactly specialized proof-free
+type-slice receipts. They collectively abstract 14 source definitions, so the
+next general boundary is semantic rather than syntactic. Generate an exact
+contract-demand graph, connect existing axiom-free behavior theorems and
+receipts, then rerun one unchanged producer across the largest supported
+sibling family.
 
 ## Comparative position
 

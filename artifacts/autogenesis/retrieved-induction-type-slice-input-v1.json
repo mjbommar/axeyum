@@ -1,0 +1,224 @@
+{
+  "authority": {
+    "facts_opened": 25,
+    "held_out_inspected": false,
+    "ledger_writes": 0,
+    "partitions_inspected": [
+      "development",
+      "train"
+    ],
+    "proof_bodies_accessed": false,
+    "target_outcomes_accessed": true
+  },
+  "kind": "axeyum-autogenesis-retrieved-induction-type-slice-input",
+  "rows": [
+    {
+      "artifact_file": "F-ml430-int-fib-add-181b6a2c.ndjson",
+      "fact_id": "F:ml430-int-fib-add-181b6a2c",
+      "family": "integer-fibonacci",
+      "partition": "train",
+      "source_obstruction": "TrustedDeclarationInStatementClosure",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.intFibAdd"
+    },
+    {
+      "artifact_file": "F-ml430-int-fib-two-mul-0e70f3dd.ndjson",
+      "fact_id": "F:ml430-int-fib-two-mul-0e70f3dd",
+      "family": "integer-fibonacci",
+      "partition": "train",
+      "source_obstruction": "TrustedDeclarationInStatementClosure",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.intFibTwoMul"
+    },
+    {
+      "artifact_file": "F-ml430-int-fib-two-mul-add-one-pos-8977f65f.ndjson",
+      "fact_id": "F:ml430-int-fib-two-mul-add-one-pos-8977f65f",
+      "family": "integer-fibonacci",
+      "partition": "train",
+      "source_obstruction": "TrustedDeclarationInStatementClosure",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.intFibTwoMulAddOnePos"
+    },
+    {
+      "artifact_file": "F-ml430-int-fib-two-mul-add-two-0ba4a948.ndjson",
+      "fact_id": "F:ml430-int-fib-two-mul-add-two-0ba4a948",
+      "family": "integer-fibonacci",
+      "partition": "train",
+      "source_obstruction": "TrustedDeclarationInStatementClosure",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.intFibTwoMulAddTwo"
+    },
+    {
+      "artifact_file": "F-ml430-int-gcd-eq-gcd-ab-63005aef.ndjson",
+      "fact_id": "F:ml430-int-gcd-eq-gcd-ab-63005aef",
+      "family": "integer-gcd",
+      "partition": "train",
+      "source_obstruction": "TrustedDeclarationInStatementClosure",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.intGcdEqGcdAb"
+    },
+    {
+      "artifact_file": "F-ml430-nat-choose-mono-a1af9c18.ndjson",
+      "fact_id": "F:ml430-nat-choose-mono-a1af9c18",
+      "family": "natural-binomial",
+      "partition": "development",
+      "source_obstruction": "TrustedDeclarationInStatementClosure",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natChooseMono"
+    },
+    {
+      "artifact_file": "F-ml430-nat-coprime-symmetric-9b5cfa12.ndjson",
+      "fact_id": "F:ml430-nat-coprime-symmetric-9b5cfa12",
+      "family": "natural-gcd",
+      "partition": "development",
+      "source_obstruction": "TrustedDeclarationInStatementClosure",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natCoprimeSymmetric"
+    },
+    {
+      "artifact_file": "F-ml430-nat-fastfib-eq-cde11774.ndjson",
+      "fact_id": "F:ml430-nat-fastfib-eq-cde11774",
+      "family": "natural-fibonacci",
+      "partition": "train",
+      "source_obstruction": "TrustedDeclarationInStatementClosure",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natFastfibEq"
+    },
+    {
+      "artifact_file": "F-ml430-nat-fib-add-two-strictmono-c1e86d4d.ndjson",
+      "fact_id": "F:ml430-nat-fib-add-two-strictmono-c1e86d4d",
+      "family": "natural-fibonacci",
+      "partition": "train",
+      "source_obstruction": "TrustedDeclarationInStatementClosure",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natFibAddTwoStrictmono"
+    },
+    {
+      "artifact_file": "F-ml430-nat-fib-strictmonoon-905810a9.ndjson",
+      "fact_id": "F:ml430-nat-fib-strictmonoon-905810a9",
+      "family": "natural-fibonacci",
+      "partition": "train",
+      "source_obstruction": "TrustedDeclarationInStatementClosure",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natFibStrictmonoon"
+    },
+    {
+      "artifact_file": "F-ml430-nat-land-assoc-ad4775b8.ndjson",
+      "fact_id": "F:ml430-nat-land-assoc-ad4775b8",
+      "family": "natural-bitwise",
+      "partition": "development",
+      "source_obstruction": "TrustedDeclarationInStatementClosure",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natLandAssoc"
+    },
+    {
+      "artifact_file": "F-ml430-nat-land-bit-b9ab7475.ndjson",
+      "fact_id": "F:ml430-nat-land-bit-b9ab7475",
+      "family": "natural-bitwise",
+      "partition": "development",
+      "source_obstruction": "TrustedDeclarationInStatementClosure",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natLandBit"
+    },
+    {
+      "artifact_file": "F-ml430-nat-land-comm-7e6ad72e.ndjson",
+      "fact_id": "F:ml430-nat-land-comm-7e6ad72e",
+      "family": "natural-bitwise",
+      "partition": "development",
+      "source_obstruction": "TrustedDeclarationInStatementClosure",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natLandComm"
+    },
+    {
+      "artifact_file": "F-ml430-nat-ldiff-bit-6be49bb8.ndjson",
+      "fact_id": "F:ml430-nat-ldiff-bit-6be49bb8",
+      "family": "natural-bitwise",
+      "partition": "development",
+      "source_obstruction": "TrustedDeclarationInStatementClosure",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natLdiffBit"
+    },
+    {
+      "artifact_file": "F-ml430-nat-lor-assoc-82c4d0fd.ndjson",
+      "fact_id": "F:ml430-nat-lor-assoc-82c4d0fd",
+      "family": "natural-bitwise",
+      "partition": "development",
+      "source_obstruction": "TrustedDeclarationInStatementClosure",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natLorAssoc"
+    },
+    {
+      "artifact_file": "F-ml430-nat-lor-bit-a2f98c7c.ndjson",
+      "fact_id": "F:ml430-nat-lor-bit-a2f98c7c",
+      "family": "natural-bitwise",
+      "partition": "development",
+      "source_obstruction": "TrustedDeclarationInStatementClosure",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natLorBit"
+    },
+    {
+      "artifact_file": "F-ml430-nat-lor-comm-2666d7ef.ndjson",
+      "fact_id": "F:ml430-nat-lor-comm-2666d7ef",
+      "family": "natural-bitwise",
+      "partition": "development",
+      "source_obstruction": "TrustedDeclarationInStatementClosure",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natLorComm"
+    },
+    {
+      "artifact_file": "F-ml430-nat-multichoose-one-b210386a.ndjson",
+      "fact_id": "F:ml430-nat-multichoose-one-b210386a",
+      "family": "natural-binomial",
+      "partition": "development",
+      "source_obstruction": "TrustedDeclarationInStatementClosure",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natMultichooseOne"
+    },
+    {
+      "artifact_file": "F-ml430-nat-multichoose-one-right-7755072d.ndjson",
+      "fact_id": "F:ml430-nat-multichoose-one-right-7755072d",
+      "family": "natural-binomial",
+      "partition": "development",
+      "source_obstruction": "TrustedDeclarationInStatementClosure",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natMultichooseOneRight"
+    },
+    {
+      "artifact_file": "F-ml430-nat-multichoose-zero-right-6ef827c8.ndjson",
+      "fact_id": "F:ml430-nat-multichoose-zero-right-6ef827c8",
+      "family": "natural-binomial",
+      "partition": "development",
+      "source_obstruction": "TrustedDeclarationInStatementClosure",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natMultichooseZeroRight"
+    },
+    {
+      "artifact_file": "F-ml430-nat-not-coprime-zero-zero-6c4e8dd8.ndjson",
+      "fact_id": "F:ml430-nat-not-coprime-zero-zero-6c4e8dd8",
+      "family": "natural-gcd",
+      "partition": "development",
+      "source_obstruction": "TrustedDeclarationInStatementClosure",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natNotCoprimeZeroZero"
+    },
+    {
+      "artifact_file": "F-ml430-nat-testbit-eq-inth-ffa07392.ndjson",
+      "fact_id": "F:ml430-nat-testbit-eq-inth-ffa07392",
+      "family": "natural-bitwise",
+      "partition": "development",
+      "source_obstruction": "TrustedDeclarationInStatementClosure",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natTestbitEqInth"
+    },
+    {
+      "artifact_file": "F-ml430-nat-testbit-land-dfef7ca4.ndjson",
+      "fact_id": "F:ml430-nat-testbit-land-dfef7ca4",
+      "family": "natural-bitwise",
+      "partition": "development",
+      "source_obstruction": "TrustedDeclarationInStatementClosure",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natTestbitLand"
+    },
+    {
+      "artifact_file": "F-ml430-nat-testbit-ldiff-16f94162.ndjson",
+      "fact_id": "F:ml430-nat-testbit-ldiff-16f94162",
+      "family": "natural-bitwise",
+      "partition": "development",
+      "source_obstruction": "TrustedDeclarationInStatementClosure",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natTestbitLdiff"
+    },
+    {
+      "artifact_file": "F-ml430-nat-testbit-lor-7644e067.ndjson",
+      "fact_id": "F:ml430-nat-testbit-lor-7644e067",
+      "family": "natural-bitwise",
+      "partition": "development",
+      "source_obstruction": "TrustedDeclarationInStatementClosure",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natTestbitLor"
+    }
+  ],
+  "schema_version": 1,
+  "source": {
+    "nursery_path": "artifacts/autogenesis/nursery-v1.json",
+    "nursery_sha256": "6d1f2551a612fdcadaf1c6b0096c4eebee304d9687157cb25505f785ee86daa8",
+    "projection_path": "artifacts/autogenesis/retrieved-induction-obstruction-projection-v1.json",
+    "projection_sha256": "4267f7bacef1a8667075c03a2f38a4ebcdb90d79d87777c93cc002886296f684"
+  },
+  "state": "proof-free-source-input"
+}

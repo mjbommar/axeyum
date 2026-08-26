@@ -110,8 +110,11 @@ transition.
    specialization, and kernel-check time separately before raising any search
    budget.
 3. Route the 27 import rejections through the existing type-slice
-   generalization boundary. Keep that denominator separate: no producer grammar
-   change can improve rows that never reach it.
+   generalization boundary. This is now complete for all 25 positive targets;
+   the two controls remain excluded. Every positive slice abstracts at least
+   one source definition, exposing 14 exact semantic-contract demands. Keep
+   that denominator separate from proof grammar and do not mistake a checked
+   statement receipt for a proof.
 4. Add producer families for the fifteen non-equality terminal shapes based on
    their parsed heads and obstruction clusters. Do not widen this equality
    grammar until a repeated equality decline demands it.

@@ -56,7 +56,11 @@ fn main() {
 #[allow(clippy::too_many_lines)]
 fn run() -> Result<(Option<PathBuf>, String), String> {
     let arguments = parse_arguments()?;
-    let archive = required_path(&arguments, "--archive")?;
+    let streams = if let Some(path) = arguments.get("--streams") {
+        PathBuf::from(path)
+    } else {
+        required_path(&arguments, "--archive")?.join("streams")
+    };
     let mapping_path = required_path(&arguments, "--mapping")?;
     let output = arguments.get("--output").map(PathBuf::from);
     let auto_param_v2 = arguments.contains_key("--auto-param-v2");
@@ -80,6 +84,15 @@ fn run() -> Result<(Option<PathBuf>, String), String> {
     let mapping: Value = serde_json::from_slice(&mapping_bytes)
         .map_err(|error| format!("mapping is not JSON: {error}"))?;
     let rows = validate_mapping(&mapping)?;
+    let population_selection = (mapping.get("kind").and_then(Value::as_str)
+        == Some("axeyum-autogenesis-retrieved-induction-type-slice-input"))
+    .then(|| {
+        json!({
+            "source_kind": "axeyum-autogenesis-retrieved-induction-type-slice-input",
+            "target_outcomes_accessed": true,
+            "selection": "measured type-slice-generalization obstruction rows",
+        })
+    });
 
     let mut outcomes = BTreeMap::<String, u64>::new();
     let mut output_rows = Vec::with_capacity(rows.len());
@@ -94,7 +107,7 @@ fn run() -> Result<(Option<PathBuf>, String), String> {
             return Err(format!("unsafe artifact path {artifact:?}"));
         }
         let target = required_string(row, "target_definition")?;
-        let stream_path = archive.join("streams").join(artifact);
+        let stream_path = streams.join(artifact);
         let stream = fs::read(&stream_path).map_err(|error| {
             format!(
                 "cannot read mapped stream {}: {error}",
@@ -168,6 +181,7 @@ fn run() -> Result<(Option<PathBuf>, String), String> {
         policy_version,
         reflexivity_v1,
         producer_invocations,
+        population_selection,
     )?;
     if let Some(path) = &output {
         let mut rendered = serde_json::to_string_pretty(&observation)
@@ -186,6 +200,7 @@ fn build_observation(
     policy_version: &str,
     reflexivity_v1: bool,
     producer_invocations: u64,
+    population_selection: Option<Value>,
 ) -> Result<(Value, String), String> {
     let coverage: Map<String, Value> = outcomes
         .into_iter()
@@ -250,6 +265,12 @@ fn build_observation(
             "limitations".to_owned(),
             json!("Every row is diagnostic under one fixed reflexivity grammar. No candidate is registered or admitted, held-out remains sealed, and no fact-ledger row changes."),
         );
+    }
+    if let Some(selection) = population_selection {
+        observation
+            .as_object_mut()
+            .ok_or_else(|| "observation is not an object".to_owned())?
+            .insert("population_selection".to_owned(), selection);
     }
     let canonical = serde_json::to_vec(&observation)
         .map_err(|error| format!("cannot serialize observation: {error}"))?;
@@ -523,8 +544,11 @@ fn find_exact_name(kernel: &Kernel, target: &str) -> Result<NameId, Decline> {
 }
 
 fn validate_mapping(mapping: &Value) -> Result<&[Value], String> {
-    if mapping.get("kind").and_then(Value::as_str)
-        != Some("axeyum-autogenesis-reflexivity-coverage-input")
+    let kind = mapping.get("kind").and_then(Value::as_str);
+    let legacy = kind == Some("axeyum-autogenesis-reflexivity-coverage-input");
+    let measured_obstructions =
+        kind == Some("axeyum-autogenesis-retrieved-induction-type-slice-input");
+    if (!legacy && !measured_obstructions)
         || mapping.get("state").and_then(Value::as_str) != Some("proof-free-source-input")
         || mapping
             .pointer("/authority/held_out_inspected")
@@ -534,25 +558,28 @@ fn validate_mapping(mapping: &Value) -> Result<&[Value], String> {
             .pointer("/authority/proof_bodies_accessed")
             .and_then(Value::as_bool)
             != Some(false)
-        || mapping
-            .pointer("/authority/target_outcomes_accessed")
-            .and_then(Value::as_bool)
-            != Some(false)
-        || mapping
-            .pointer("/authority/facts_opened")
-            .and_then(Value::as_u64)
-            != Some(138)
         || mapping.pointer("/authority/partitions_inspected")
             != Some(&json!(["development", "train"]))
     {
-        return Err("mapping does not preserve the frozen unsealed authority".to_owned());
+        return Err("mapping does not preserve the unsealed proof-free authority".to_owned());
     }
     let rows = mapping
         .get("rows")
         .and_then(Value::as_array)
         .ok_or_else(|| "mapping rows are absent".to_owned())?;
-    if rows.len() != 138 {
-        return Err(format!("mapping has {} rows rather than 138", rows.len()));
+    let facts_opened = mapping
+        .pointer("/authority/facts_opened")
+        .and_then(Value::as_u64)
+        .and_then(|value| usize::try_from(value).ok());
+    let outcomes_accessed = mapping
+        .pointer("/authority/target_outcomes_accessed")
+        .and_then(Value::as_bool);
+    if rows.is_empty()
+        || facts_opened != Some(rows.len())
+        || (legacy && (rows.len() != 138 || outcomes_accessed != Some(false)))
+        || (measured_obstructions && outcomes_accessed != Some(true))
+    {
+        return Err("mapping population or outcome-access authority is inconsistent".to_owned());
     }
     let mut artifacts = BTreeSet::new();
     let mut facts = BTreeSet::new();
@@ -587,7 +614,10 @@ fn parse_arguments() -> Result<BTreeMap<String, String>, String> {
             }
             continue;
         }
-        if !matches!(flag.as_str(), "--archive" | "--mapping" | "--output") {
+        if !matches!(
+            flag.as_str(),
+            "--archive" | "--streams" | "--mapping" | "--output"
+        ) {
             return Err(format!("unknown argument {flag}"));
         }
         let value = arguments
@@ -694,6 +724,26 @@ mod tests {
     }
 
     #[test]
+    fn measured_obstruction_population_requires_explicit_outcome_access() {
+        let mut value = mapping();
+        value["kind"] = json!("axeyum-autogenesis-retrieved-induction-type-slice-input");
+        value["rows"] = Value::Array(
+            value["rows"]
+                .as_array()
+                .expect("rows")
+                .iter()
+                .take(25)
+                .cloned()
+                .collect(),
+        );
+        value["authority"]["facts_opened"] = json!(25);
+        value["authority"]["target_outcomes_accessed"] = json!(true);
+        assert_eq!(validate_mapping(&value).expect("measured input").len(), 25);
+        value["authority"]["target_outcomes_accessed"] = json!(false);
+        assert!(validate_mapping(&value).is_err());
+    }
+
+    #[test]
     fn default_observation_retains_the_historical_no_producer_contract() {
         let (value, _) = build_observation(
             &[],
@@ -702,6 +752,7 @@ mod tests {
             POLICY_AUTO_PARAM_BINDERS_V3,
             false,
             0,
+            None,
         )
         .expect("observation must render");
         assert_eq!(
@@ -722,6 +773,7 @@ mod tests {
             POLICY_AUTO_PARAM_BINDERS_V3,
             true,
             138,
+            None,
         )
         .expect("observation must render");
         assert_eq!(
