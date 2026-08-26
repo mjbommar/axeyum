@@ -120,14 +120,16 @@
 //! `declare_integral`'s caller for that check.
 
 use super::ring_helpers::right_distrib;
-use super::{CRealPrelude, DERIVED_HEIGHT, and_intro, cadd, creal_ty, embed, equiv};
+use super::{
+    CRealPrelude, DERIVED_HEIGHT, and_intro, cadd, creal_ty, div_succ, embed, equiv, sample, within,
+};
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::{IntDev, exists_elim};
 use crate::nat_prelude::NatOps;
 use crate::rat_prelude::ops::{
-    nat_eq_to_rat, nat_rewrite_prop, radd, rat_eq_rewrite, rchain, req, rmul, rone,
+    nat_eq_to_rat, nat_rewrite_prop, radd, rat_eq_rewrite, rchain, req, rle, rmul, rneg, rone,
 };
 
 /// Delta height for `CReal.riemannSum`: above `CReal.sumRange`
