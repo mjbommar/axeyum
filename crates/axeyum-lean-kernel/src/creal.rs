@@ -1149,14 +1149,26 @@ pub struct CRealPrelude {
     /// k1` by the denominator via `Nat.div` — decidable Nat arithmetic
     /// throughout, no comparison of `CReal`s anywhere.
     ///
-    /// **Not yet proved to be within one step of `w`** — that needs `Rat`'s
-    /// own regularity-sample bound (`w` vs `CReal.seq w j`) composed with
-    /// `Nat.div_mod_bounds`'s floor error on the last step, and is the next
-    /// piece toward the covering argument, not attempted in this slice.
-    /// (**"off by one bucket" is fine** for that composition — the caller
-    /// only needs `le (abs (sub w (mul (ofNat (bucketIndex w k)) step)))
-    /// step'` for *some* fixed `step'` a small constant multiple of `step`,
-    /// not an exact nearest-index guarantee.)
+    /// **Now proved to be within a fixed multiple of one step of `w`**,
+    /// in both directions: [`Self::bucket_clamp_upper`] and
+    /// [`Self::bucket_clamp_lower`] compose exactly the route this comment
+    /// used to defer — `Rat`'s own regularity-sample bound (`w` vs
+    /// `CReal.seq w j`) — with [`Self::bucket_index_floor_lower`]/
+    /// [`Self::bucket_index_floor_upper`]'s own floor error, still leaving
+    /// slack (`2/(j+1)` and `3/(j+1)` respectively, not an exact
+    /// nearest-index guarantee) rather than trying to remove it — see this
+    /// section's own module documentation in
+    /// `creal/uniform_continuity.rs` for why the `2`/`3` slack is fine for
+    /// the covering argument this primitive exists for
+    /// (`CReal.bounded_of_uniformly_continuous`, not yet landed: it still
+    /// needs a computable `Nat` bound on `bucketIndex (sub z a) k` uniform
+    /// over `z ∈ [a,b]`, derived from `CReal.bound (sub b a)` via
+    /// `Rat.sub_max_le` + `CReal.bound_within` + `Rat.max_le` to bound the
+    /// clamped sample `q` first, then a cross-multiplication argument
+    /// inverting `Rat.natDivSucc` back into a `Nat.le` on `bucketIndex`
+    /// itself — the same shape [`Self::bucket_index_floor_lower`]/
+    /// [`Self::bucket_index_floor_upper`]'s own proofs use, just in the
+    /// other direction).
     pub bucket_index: NameId,
     /// `CReal.bucketIndexFloorLower : ∀ w k, Rat.le (Rat.natDivSucc
     /// (CReal.bucketIndex w k) k) (Rat.max (CReal.seq w ((Nat.succ
@@ -1182,6 +1194,37 @@ pub struct CRealPrelude {
     /// Together the two pin `q` inside a single step of `bucketIndex w k`'s
     /// own multiple, which is what the module documentation asks for.
     pub bucket_index_floor_upper: NameId,
+    /// `CReal.bucketClampUpper : ∀ w k, CReal.le w (CReal.ofRat (Rat.add
+    /// (Rat.max (CReal.seq w ((Nat.succ k)*(Nat.succ k))) Rat.zero)
+    /// (Rat.natDivSucc 2 ((Nat.succ k)*(Nat.succ k)))))` — the boundedness
+    /// theorem's step 1, upper half: relates the clamped bucket sample `q :=
+    /// Rat.max (seq w j) 0` (`j` the accuracy index [`Self::bucket_index`]
+    /// itself samples at) back to `w` ITSELF, not merely to `q`. `w` is at
+    /// most `q + 2/(j+1)`, via `w`'s own regularity (`seq w n` is within
+    /// `1/(n+1)+1/(j+1)` of `seq w j`) plus `seq w j <= q`
+    /// (`Rat.le_max_left`, unconditional). **No sign hypothesis on `w` is
+    /// needed** — see [`Self::bucket_clamp_lower`] for the half that does.
+    /// See `creal/uniform_continuity.rs`.
+    pub bucket_clamp_upper: NameId,
+    /// `CReal.bucketClampLower : ∀ w k, CReal.le CReal.zero w →
+    /// CReal.le (CReal.ofRat (Rat.sub (Rat.max (CReal.seq w ((Nat.succ
+    /// k)*(Nat.succ k))) Rat.zero) (Rat.natDivSucc 3 ((Nat.succ
+    /// k)*(Nat.succ k))))) w` — the other half of
+    /// [`Self::bucket_clamp_upper`]: `w` is at least `q - 3/(j+1)`. **This
+    /// is the one place a sign hypothesis on `w` genuinely enters**: without
+    /// `le zero w`, `seq w j` could be arbitrarily negative, the clamp to
+    /// `0` would then discard an unbounded amount, and no fixed multiple of
+    /// `1/(j+1)` would relate `q` back to `w`. With `le zero w`, `seq w j >=
+    /// -2/(j+1)`, so the clamp changes it by at most that much, and
+    /// `q <= seq w j + 2/(j+1)` unconditionally (`Rat.max_le` on the two
+    /// branches `Rat.le_or_lt`-free — actually via `Rat.max_le` applied to
+    /// the two bounds `seq w j <= seq w j + 2/(j+1)` and
+    /// `0 <= seq w j + 2/(j+1)`, the second using `le zero w` at index
+    /// `j`). Combined with `w`'s regularity at `(j,n)` and
+    /// `Rat.natDivSucc_add`/`Rat.natDivSucc_le_add_left`, the constant `3`
+    /// falls out as `1 (regularity slack) + 2 (the clamp's own slack)`. See
+    /// `creal/uniform_continuity.rs`.
+    pub bucket_clamp_lower: NameId,
     /// `CReal.ratSqLe : ∀ (u s : Rat), Rat.le (u*u) (s*s) → Rat.le Rat.zero s
     /// → Rat.le u s` — a purely rational fact (no `CReal` structure), proved
     /// via `Rat.mul_pos` and a difference-of-squares identity rather than a
@@ -3069,6 +3112,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         bucket_index: kernel.name_str(creal, "bucketIndex"),
         bucket_index_floor_lower: kernel.name_str(creal, "bucketIndexFloorLower"),
         bucket_index_floor_upper: kernel.name_str(creal, "bucketIndexFloorUpper"),
+        bucket_clamp_upper: kernel.name_str(creal, "bucketClampUpper"),
+        bucket_clamp_lower: kernel.name_str(creal, "bucketClampLower"),
         rat_sq_le: kernel.name_str(creal, "ratSqLe"),
         rat_sq_sandwich: kernel.name_str(creal, "ratSqSandwich"),
         rat_index_ratio_le_one: kernel.name_str(creal, "ratIndexRatioLeOne"),
