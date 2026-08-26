@@ -6,11 +6,55 @@
 //! targets: a deterministic single-register unary sequence cannot recreate a
 //! distinct input tag after duplication or zeroing has discarded it.
 
-use axeyum_cnf::{CnfAssignment, CnfClause, CnfFormula, CnfLit, CnfVar};
+use axeyum_cnf::{
+    CnfAssignment, CnfClause, CnfFormula, CnfLit, CnfVar, WeightedAtMostLimits,
+    encode_weighted_at_most,
+};
 
 use crate::simd::{AVX2_BYTES, Avx2Shuffle, ByteTags, HalfSelect, replay_sequence};
 
 const FAMILIES: usize = 5;
+const WEIGHTED_FAMILIES: usize = 6;
+
+/// Positive integer costs for the five real instruction families.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct UnaryAvx2InstructionCosts {
+    /// Cost of `vpshufb`.
+    pub pshufb: u64,
+    /// Cost of `vpermd`.
+    pub permute_dwords: u64,
+    /// Cost of `vpermq`.
+    pub permute_qwords: u64,
+    /// Cost of same-source `vpalignr`.
+    pub align_right: u64,
+    /// Cost of same-source `vperm2i128`.
+    pub permute_2x128: u64,
+}
+
+impl UnaryAvx2InstructionCosts {
+    fn as_array(self) -> [u64; FAMILIES] {
+        [
+            self.pshufb,
+            self.permute_dwords,
+            self.permute_qwords,
+            self.align_right,
+            self.permute_2x128,
+        ]
+    }
+
+    /// Sum the configured costs of a lifted concrete sequence.
+    pub fn sequence_cost(self, sequence: &[Avx2Shuffle]) -> u64 {
+        sequence.iter().fold(0_u64, |total, instruction| {
+            total.saturating_add(match instruction {
+                Avx2Shuffle::Pshufb(_) => self.pshufb,
+                Avx2Shuffle::PermuteDwords(_) => self.permute_dwords,
+                Avx2Shuffle::PermuteQwords(_) => self.permute_qwords,
+                Avx2Shuffle::AlignRight(_) => self.align_right,
+                Avx2Shuffle::Permute2x128 { .. } => self.permute_2x128,
+            })
+        })
+    }
+}
 
 /// Stable ceilings for unary AVX2 synthesis.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -51,6 +95,10 @@ pub enum UnaryAvx2SynthesisError {
     Cnf(String),
     /// A satisfying assignment did not lift and replay.
     InvalidModel(String),
+    /// Weighted search requires every real instruction to have positive cost.
+    ZeroInstructionCost,
+    /// Weighted-CNF composition failed.
+    Weighted(String),
 }
 
 #[derive(Debug)]
@@ -162,6 +210,7 @@ pub struct UnaryAvx2Encoding {
     formula: CnfFormula,
     target: ByteTags,
     steps: Vec<StepLayout>,
+    allow_noop: bool,
 }
 
 impl UnaryAvx2Encoding {
@@ -226,7 +275,8 @@ impl UnaryAvx2Encoding {
                     },
                     _ => unreachable!("two selectors"),
                 },
-                _ => unreachable!("five families"),
+                5 if self.allow_noop => continue,
+                _ => unreachable!("validated family selector"),
             };
             sequence.push(instruction);
         }
@@ -340,8 +390,13 @@ fn encode_step(
     builder: &mut Builder,
     input: &[Vec<usize>],
     output: &[Vec<usize>],
+    include_noop: bool,
 ) -> Result<StepLayout, UnaryAvx2SynthesisError> {
-    let families = builder.variables(FAMILIES)?;
+    let families = builder.variables(if include_noop {
+        WEIGHTED_FAMILIES
+    } else {
+        FAMILIES
+    })?;
     builder.exactly_one(&families)?;
     let pshufb = lane_permutation_controls(builder, families[0])?;
     let dwords = permutation_controls(builder, families[1], 8, 8)?;
@@ -401,6 +456,15 @@ fn encode_step(
             .collect::<Vec<_>>();
         transition(builder, selector, input, output, &mappings)?;
     }
+    if include_noop {
+        transition(
+            builder,
+            families[FAMILIES],
+            input,
+            output,
+            &(0..AVX2_BYTES).map(|byte| (byte, byte)).collect::<Vec<_>>(),
+        )?;
+    }
     Ok(StepLayout {
         families,
         pshufb,
@@ -422,6 +486,15 @@ pub fn encode_unary_avx2_sequence(
     target: &ByteTags,
     steps: usize,
     limits: UnaryAvx2SynthesisLimits,
+) -> Result<UnaryAvx2Encoding, UnaryAvx2SynthesisError> {
+    encode_unary_avx2_sequence_internal(target, steps, limits, false)
+}
+
+fn encode_unary_avx2_sequence_internal(
+    target: &ByteTags,
+    steps: usize,
+    limits: UnaryAvx2SynthesisLimits,
+    include_noop: bool,
 ) -> Result<UnaryAvx2Encoding, UnaryAvx2SynthesisError> {
     if !valid_permutation_target(target) {
         return Err(UnaryAvx2SynthesisError::NonPermutationTarget);
@@ -456,13 +529,90 @@ pub fn encode_unary_avx2_sequence(
 
     let mut step_layouts = Vec::with_capacity(steps);
     for adjacent in states.windows(2) {
-        step_layouts.push(encode_step(&mut builder, &adjacent[0], &adjacent[1])?);
+        step_layouts.push(encode_step(
+            &mut builder,
+            &adjacent[0],
+            &adjacent[1],
+            include_noop,
+        )?);
     }
     Ok(UnaryAvx2Encoding {
         formula: builder.finish()?,
         target: *target,
         steps: step_layouts,
+        allow_noop: include_noop,
     })
+}
+
+/// Encode the complete weighted-cost query for this unary AVX2 language.
+///
+/// The number of slots is derived as `bound / minimum_positive_cost`. A
+/// zero-cost pseudo-instruction pads every shorter real sequence to that width,
+/// so the formula covers every sequence whose total cost is at most `bound`
+/// without charging padding. Real instruction costs must be positive.
+///
+/// # Errors
+///
+/// Refuses zero real costs, non-permutation targets, or either base/weighted
+/// construction exceeding its explicit resource policy.
+pub fn encode_weighted_unary_avx2_sequence(
+    target: &ByteTags,
+    costs: UnaryAvx2InstructionCosts,
+    bound: u64,
+    limits: UnaryAvx2SynthesisLimits,
+) -> Result<UnaryAvx2Encoding, UnaryAvx2SynthesisError> {
+    let weights = costs.as_array();
+    let minimum = weights
+        .iter()
+        .copied()
+        .min()
+        .filter(|minimum| *minimum != 0)
+        .ok_or(UnaryAvx2SynthesisError::ZeroInstructionCost)?;
+    if weights.contains(&0) {
+        return Err(UnaryAvx2SynthesisError::ZeroInstructionCost);
+    }
+    let slots_u64 = bound / minimum;
+    let slots = usize::try_from(slots_u64).map_err(|_| UnaryAvx2SynthesisError::LimitExceeded {
+        resource: "weighted_steps",
+        observed: usize::MAX,
+        limit: limits.max_steps,
+    })?;
+    let mut encoding = encode_unary_avx2_sequence_internal(target, slots, limits, true)?;
+    let mut terms = Vec::with_capacity(encoding.steps.len().saturating_mul(FAMILIES));
+    for step in &encoding.steps {
+        for (variable, weight) in step.families[..FAMILIES].iter().copied().zip(weights) {
+            let variable = CnfVar::new(variable)
+                .map_err(|error| UnaryAvx2SynthesisError::Cnf(format!("{error:?}")))?;
+            terms.push((CnfLit::positive(variable), weight));
+        }
+    }
+    let weighted = encode_weighted_at_most(
+        &encoding.formula,
+        &terms,
+        bound,
+        WeightedAtMostLimits {
+            max_auxiliary_variables: limits.max_variables,
+            max_added_clauses: limits.max_clauses,
+            max_bound: u64::try_from(limits.max_clauses).unwrap_or(u64::MAX),
+        },
+    )
+    .map_err(|error| UnaryAvx2SynthesisError::Weighted(format!("{error:?}")))?;
+    if weighted.formula().variable_count() > limits.max_variables {
+        return Err(UnaryAvx2SynthesisError::LimitExceeded {
+            resource: "variables",
+            observed: weighted.formula().variable_count(),
+            limit: limits.max_variables,
+        });
+    }
+    if weighted.formula().clauses().len() > limits.max_clauses {
+        return Err(UnaryAvx2SynthesisError::LimitExceeded {
+            resource: "clauses",
+            observed: weighted.formula().clauses().len(),
+            limit: limits.max_clauses,
+        });
+    }
+    encoding.formula = weighted.formula().clone();
+    Ok(encoding)
 }
 
 #[cfg(test)]
@@ -519,5 +669,95 @@ mod tests {
             encode_unary_avx2_sequence(&zero, 1, UnaryAvx2SynthesisLimits::default()),
             Err(UnaryAvx2SynthesisError::NonPermutationTarget)
         );
+    }
+
+    #[test]
+    fn weighted_reverse_has_checked_cost_three_refutation_and_cost_four_witness() {
+        let costs = UnaryAvx2InstructionCosts {
+            pshufb: 1,
+            permute_dwords: 3,
+            permute_qwords: 3,
+            align_right: 1,
+            permute_2x128: 3,
+        };
+        let target = ByteTags::reversed();
+        let lower = encode_weighted_unary_avx2_sequence(
+            &target,
+            costs,
+            3,
+            UnaryAvx2SynthesisLimits::default(),
+        )
+        .unwrap();
+        let ProofSolveOutcome::Unsat(proof) = solve_with_drat_proof(lower.formula()) else {
+            panic!("lane-local unit-cost shuffles cannot reverse globally at cost three");
+        };
+        assert_eq!(
+            axeyum_cnf::check_drat_backward(lower.formula(), &proof),
+            Ok(true)
+        );
+
+        let upper = encode_weighted_unary_avx2_sequence(
+            &target,
+            costs,
+            4,
+            UnaryAvx2SynthesisLimits::default(),
+        )
+        .unwrap();
+        let SatResult::Sat(model) = solve_with_rustsat_batsat(upper.formula()).unwrap() else {
+            panic!("global reversal has weighted cost four");
+        };
+        let sequence = upper.lift_model(&model).unwrap();
+        assert_eq!(replay_sequence(&sequence), target);
+        assert!(costs.sequence_cost(&sequence) <= 4);
+    }
+
+    #[test]
+    fn zero_cost_padding_preserves_a_short_expensive_sequence() {
+        let costs = UnaryAvx2InstructionCosts {
+            pshufb: 1,
+            permute_dwords: 3,
+            permute_qwords: 3,
+            align_right: 1,
+            permute_2x128: 3,
+        };
+        let target =
+            Avx2Shuffle::PermuteDwords([7, 6, 5, 4, 3, 2, 1, 0]).replay(&ByteTags::identity());
+        let encoding = encode_weighted_unary_avx2_sequence(
+            &target,
+            costs,
+            3,
+            UnaryAvx2SynthesisLimits::default(),
+        )
+        .unwrap();
+        let mut pinned = encoding.formula().clone();
+        let unit = |variable: usize, value: bool| {
+            let literal = CnfLit::positive(CnfVar::new(variable).unwrap());
+            CnfClause::new(vec![if value { literal } else { literal.negated() }])
+        };
+        // Slot 0 is the cost-three dword reversal; slots 1 and 2 are the
+        // zero-cost padding pseudo-instruction. Pinning avoids turning this
+        // structural completeness control into an unrelated synthesis run.
+        for (family, &variable) in encoding.steps[0].families.iter().enumerate() {
+            pinned.add_clause(unit(variable, family == 1)).unwrap();
+        }
+        for (output, choices) in encoding.steps[0].dwords.iter().enumerate() {
+            for (source, &variable) in choices.iter().enumerate() {
+                pinned
+                    .add_clause(unit(variable, source == 7 - output))
+                    .unwrap();
+            }
+        }
+        for step in &encoding.steps[1..] {
+            for (family, &variable) in step.families.iter().enumerate() {
+                pinned.add_clause(unit(variable, family == 5)).unwrap();
+            }
+        }
+        let SatResult::Sat(model) = solve_with_rustsat_batsat(&pinned).unwrap() else {
+            panic!("one cost-three instruction must survive in three padded slots");
+        };
+        let sequence = encoding.lift_model(&model).unwrap();
+        assert_eq!(sequence.len(), 1);
+        assert_eq!(costs.sequence_cost(&sequence), 3);
+        assert_eq!(replay_sequence(&sequence), target);
     }
 }
