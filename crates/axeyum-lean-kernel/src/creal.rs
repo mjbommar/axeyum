@@ -2410,6 +2410,44 @@ pub struct CRealPrelude {
     /// multiplication proof (`creal/exponential.rs`), reducing to the `Nat`
     /// fact `2ⁿ ≤ 2·n!` — never touches `CReal.pow` or `CReal.inv`.
     pub exp_term_le_geom: NameId,
+    /// `CReal.expDominant : Nat → CReal := fun n => mul two (pow half n)` —
+    /// the `CReal.pow`-based reading of [`Self::exp_term_le_geom`]'s own
+    /// bound `2·(1/2)ⁿ`, `half := ofRat (natDivSucc 1 1)`,
+    /// `two := ofRat (normalize 2 1 _)`. See `creal/exponential.rs`.
+    pub exp_dominant: NameId,
+    /// `CReal.exp_term_le_dominant : ∀ n, le (expTerm n) (expDominant n)` —
+    /// [`Self::exp_term_le_geom`], transported along `Rat.pow_natDivSucc_two`
+    /// lifted through [`Self::of_rat_pow`] and rescaled by an explicit `2`,
+    /// into the `CReal.pow`-based reading `expDominant` needs for
+    /// [`Self::mul_sub_one_geom`]/[`Self::pow_half_le_nat_div_succ`]-style
+    /// consumers. See `creal/exponential.rs::exp_dominant_equiv_r`.
+    pub exp_term_le_dominant: NameId,
+    /// `CReal.exp_term_nonneg : ∀ n, le zero (expTerm n)` — `1/n! ≥ 0`, by
+    /// `rat_prelude/group.rs::zero_le_natDivSucc`'s own cross-multiplication
+    /// technique, generalized off `natDivSucc`'s fixed denominator shape to
+    /// the arbitrary positive denominator `Nat.factorial n`.
+    pub exp_term_nonneg: NameId,
+    /// `CReal.exp_dominant_nonneg : ∀ n, le zero (expDominant n)` — from
+    /// [`Self::mul_nonneg`], `0 ≤ two`, and [`Self::pow_nonneg`] at
+    /// `0 ≤ half`.
+    pub exp_dominant_nonneg: NameId,
+    /// `CReal.exp_term_abs_le_dominant : ∀ n, le (abs (expTerm n)) (expDominant n)`
+    /// — [`Self::exp_term_le_dominant`] plus nonnegativity of both sides via
+    /// [`Self::abs_le`], the exact domination shape
+    /// [`Self::sum_range_cauchy_of_dominated`] and
+    /// [`Self::sum_range_converges_of_dominated`] need.
+    pub exp_term_abs_le_dominant: NameId,
+    /// `CReal.sumRange_pow_half_closed_form : ∀ n, Equiv (sumRange (fun i =>
+    /// pow half i) n) (mul two (add one (neg (pow half n))))` — the closed
+    /// form of the base-`1/2` geometric partial sum, derived **without**
+    /// `CReal.inv`/`PosBound`/`geometric.rs::geom_pair_within`: multiply
+    /// [`Self::mul_sub_one_geom`]'s conclusion through by `two` and cancel
+    /// `mul two (1 − half)` down to `one`. See `creal/exponential.rs`'s
+    /// module documentation for the two new concrete `Rat` facts this needed
+    /// (`2·(1/2)=1`, `1/2+1/2=1` — neither holds by `Eq.refl`; `Rat.normalize`
+    /// does not unfold `Nat.gcd` by ι even for literal arguments) and why
+    /// they were not needed for [`Self::exp_term_le_dominant`].
+    pub sum_pow_half_closed_form: NameId,
     /// `CReal.sumRange_const : ∀ w m,
     /// Equiv (sumRange (fun _ => w) (Nat.succ m)) (mul (ofNat (Nat.succ m))
     /// w)` (`creal/monotone.rs`) — a constant summed `succ m` times is
@@ -3242,6 +3280,12 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         exp_term: kernel.name_str(creal, "expTerm"),
         exp_series_partial: kernel.name_str(creal, "expSeriesPartial"),
         exp_term_le_geom: kernel.name_str(creal, "expTerm_le_geom"),
+        exp_dominant: kernel.name_str(creal, "expDominant"),
+        exp_term_le_dominant: kernel.name_str(creal, "exp_term_le_dominant"),
+        exp_term_nonneg: kernel.name_str(creal, "exp_term_nonneg"),
+        exp_dominant_nonneg: kernel.name_str(creal, "exp_dominant_nonneg"),
+        exp_term_abs_le_dominant: kernel.name_str(creal, "exp_term_abs_le_dominant"),
+        sum_pow_half_closed_form: kernel.name_str(creal, "sumRange_pow_half_closed_form"),
         sum_range_const: kernel.name_str(creal, "sumRange_const"),
         mesh_count_width: kernel.name_str(creal, "mesh_count_width"),
         subdivision_point_in_bounds: kernel.name_str(creal, "subdivisionPoint_in_bounds"),
