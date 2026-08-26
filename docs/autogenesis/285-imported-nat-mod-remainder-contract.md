@@ -39,3 +39,7 @@ native definition.
 Construct one implementation-local periodicity contract for `Nat.mod` that
 specializes to both addition siblings. Then rerun the unchanged transport probe
 and require 3/3 independent admissions before operation registration.
+
+That bar is now met by the expanded
+[`imported Nat.mod remainder family`](286-imported-nat-mod-remainder-family.md).
+This 1/3 receipt remains the immutable first checkpoint.

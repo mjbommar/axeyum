@@ -110,6 +110,8 @@ step autogenesis-modeq-family python3 scripts/check-autogenesis-modeq-family.py
 step autogenesis-nat-modeq-family python3 scripts/check-autogenesis-nat-modeq-family.py
 step autogenesis-nat-modeq-imported-bridge-assay python3 scripts/check-autogenesis-nat-modeq-imported-bridge-assay.py
 step autogenesis-nat-modeq-remainder-contract python3 scripts/check-autogenesis-nat-modeq-remainder-contract.py
+step autogenesis-nat-modeq-remainder-contract-v2 python3 scripts/check-autogenesis-nat-modeq-remainder-contract-v2.py
+step autogenesis-nat-modeq-remainder-operation python3 scripts/check-autogenesis-nat-modeq-remainder-operation.py
 step established-fact-bounded-truth python3 scripts/check-established-facts-bounded-truth.py
 step lane-turn-controls ./scripts/tests/test-check-lane-turn.sh
 step autogenesis-nursery python3 scripts/check-autogenesis-nursery.py

@@ -1103,14 +1103,16 @@ top-three-focus, 2026-08-25). The durable plan is
 the full lane history is in
 [`../notes/126-top-three-focus.md`](docs/plan/notes/126-top-three-focus.md).
 
-Current boundary: the first exact imported `Nat.mod` behavior contract advances
-the frozen arithmetic `Nat.ModEq` family from 0/3 to 1/3. It reconstructs
-`n % n = 0` directly over `Nat.modCore.go`, transports with an empty footprint,
-and independently admits the proof-free modulus-zero target without depending
-on its declaration. Public `Nat.mod_self` and both public addition laws carry
-`propext`, so they remain rejected. Next: construct one implementation-local
-periodicity law reusable by both addition siblings; operation authority still
-waits for 3/3 and the transaction path.
+Current boundary: one unchanged imported `Nat.mod` contract family advances the
+frozen arithmetic `Nat.ModEq` siblings from 0/3 to 3/3. It rebuilds fuel
+congruence, modulo recurrence, addition periodicity, and self-modulus over the
+exact imported implementation. Every transport and independent admission has
+an empty footprint and no hidden-target dependency. Public shortcuts carrying
+`propext` remain rejected. The family is now operation-eligible, but zero facts
+are settled. It is now the 27th authoritative registered operation, and its
+gate freshly replays all three exact capsules and proof identities. Next:
+extend per-fact execution/transaction receipts to preserve the one checked
+theorem dependency, then dispatch all three through clean crash-safe episodes.
 
 Priority 3 also repaired the CI-observed sub-millisecond budget escape: policy
 now compares an unrounded monotonic duration while receipts retain integer
@@ -1336,6 +1338,16 @@ leaf. Removing the final 64 bytes is rejected. Thus one of 32 leaves is now chec
 the other eight active portfolio cells continue without a wall-clock cutoff. This is exact
 partial progress, not a lower bound: `[7,8]` remains unchanged until either a replayed SAT
 model appears or all leaves and the covering proof check.
+
+**Recursive S-box leaf refinement, 2026-08-26.** ADR-0589 adds a reusable file-backed recursive
+cube checker: every child formula and every covering formula is reconstructed from one trusted
+root, proof files open lazily under per-file and aggregate byte caps, and a missing or invalid
+leaf names its exact tree path. The first hard top-level leaf
+exposed why this is needed: its raw UNSAT search took 79 minutes and the proof-producing replay
+exceeded 1 GiB, while a five-selector refinement closed 30/32 children immediately. Refining
+only the two hard children again, then their measured hard children, has already produced two
+complete 32-leaf subtrees accepted by the existing flat checker. The full cube-8 tree remains
+live and is not counted until every recursive leaf and cover checks.
 
 **Regression replay gate made load-stable, 2026-08-26.** The pre-push sweep failed twice on
 different corpus rows because it ran `solve_smtlib` and its direct

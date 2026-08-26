@@ -23,6 +23,7 @@ EXECUTION_DRIVERS = {
     "axeyum-lean-import/statement-reflexivity-v1",
     "axeyum-lean-import/bounded-induction-multi-target-v1",
     "axeyum-lean-import/modeq-family-multi-target-v1",
+    "axeyum-lean-import/imported-candidate-family-multi-target-v1",
     "axeyum-lean-import/checked-theorem-receipt-v1",
     "axeyum-lean-import/dependency-theorem-receipt-v1",
     "axeyum-lean-import/sealed-kernel-capsule-v1",
@@ -266,6 +267,13 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
         expected = common | {
             "additional_fact_ids",
             "targets",
+            "max_binders",
+        }
+    elif driver == "axeyum-lean-import/imported-candidate-family-multi-target-v1":
+        expected = common | {
+            "additional_fact_ids",
+            "targets",
+            "receipt_manifest",
             "max_binders",
         }
     elif driver == "axeyum-lean-import/checked-theorem-receipt-v1":
@@ -554,6 +562,62 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
                 raise RegistryError(
                     f"{t_label} statement identity disagrees with its fact"
                 )
+        if target_fact_ids != all_fact_ids:
+            raise RegistryError(
+                f"{label}.targets fact_id order must match input_fact_id "
+                "followed by additional_fact_ids"
+            )
+    elif driver == "axeyum-lean-import/imported-candidate-family-multi-target-v1":
+        additional = nonempty_strings(
+            value["additional_fact_ids"], f"{label}.additional_fact_ids"
+        )
+        all_fact_ids = [value["input_fact_id"], *additional]
+        if len(all_fact_ids) != len(set(all_fact_ids)) or any(
+            not FACT_ID_RE.fullmatch(fid) for fid in all_fact_ids
+        ):
+            raise RegistryError(f"{label} has duplicate or invalid fact ids")
+        manifest_path = repository_file(
+            value["receipt_manifest"], f"{label}.receipt_manifest", root
+        )
+        if manifest_path.parent != (root / "artifacts/autogenesis").resolve():
+            raise RegistryError(f"{label}.receipt_manifest must be canonical")
+        manifest = json.loads(manifest_path.read_text())
+        if (
+            manifest.get("schema_version") != 2
+            or manifest.get("kind") != "axeyum-autogenesis-nat-modeq-remainder-contract"
+            or manifest.get("state") != "three-of-three-operation-registered-not-admitted"
+            or (manifest.get("contract_source") or {}).get("lean_axiom_footprint") != []
+        ):
+            raise RegistryError(f"{label}.receipt_manifest is not operation-eligible")
+        outcomes = {row.get("fact_id"): row for row in manifest.get("outcomes", [])}
+        targets = value["targets"]
+        if not isinstance(targets, list) or len(targets) != len(all_fact_ids):
+            raise RegistryError(f"{label}.targets must bind every named fact exactly once")
+        target_fact_ids = []
+        for index, target in enumerate(targets):
+            t_label = f"{label}.targets[{index}]"
+            if not isinstance(target, dict):
+                raise RegistryError(f"{t_label} must be an object")
+            exact_keys(target, {"fact_id", "target_definition"}, t_label)
+            fid = target["fact_id"]
+            target_fact_ids.append(fid)
+            outcome = outcomes.get(fid)
+            fact_path = root / "artifacts/facts" / (fid.replace("F:", "F-") + ".json")
+            if not fact_path.is_file() or not isinstance(outcome, dict):
+                raise RegistryError(f"{t_label} has no fact or receipt outcome")
+            fact = json.loads(fact_path.read_text())
+            statement = (fact.get("formal") or {}).get("statement")
+            if (
+                outcome.get("target_definition") != target["target_definition"]
+                or outcome.get("axiom_footprint") != []
+                or outcome.get("theorem_dependencies") != 1
+                or outcome.get("target_dependency") is not False
+                or outcome.get("independently_admitted") is not True
+                or not isinstance(statement, str)
+                or hashlib.sha256(statement.encode()).hexdigest()
+                != outcome.get("formal_statement_sha256")
+            ):
+                raise RegistryError(f"{t_label} receipt contract disagrees")
         if target_fact_ids != all_fact_ids:
             raise RegistryError(
                 f"{label}.targets fact_id order must match input_fact_id "
@@ -1029,6 +1093,7 @@ def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
             if executor["driver"] in {
                 "axeyum-lean-import/bounded-induction-multi-target-v1",
                 "axeyum-lean-import/modeq-family-multi-target-v1",
+                "axeyum-lean-import/imported-candidate-family-multi-target-v1",
             }:
                 all_ids = [
                     executor["input_fact_id"],
@@ -1088,6 +1153,17 @@ def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
                     applicability["formal_languages"] != ["lean4-surface"]
                     or applicability["fragments"]
                     not in (["Int"], ["Nat"], ["Int", "Nat"])
+                    or admission["proof_route"] != "kernel-lean"
+                    or admission["evidence_kind"] != "kernel-term"
+                    or admission["axiom_footprint"] != []
+                ):
+                    raise RegistryError(
+                        f"{label}.executor driver is inconsistent with applicability/admission"
+                    )
+            elif executor["driver"] == "axeyum-lean-import/imported-candidate-family-multi-target-v1":
+                if (
+                    applicability["formal_languages"] != ["lean4-surface"]
+                    or applicability["fragments"] != ["Nat"]
                     or admission["proof_route"] != "kernel-lean"
                     or admission["evidence_kind"] != "kernel-term"
                     or admission["axiom_footprint"] != []
