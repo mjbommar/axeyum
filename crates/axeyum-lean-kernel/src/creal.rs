@@ -2498,6 +2498,49 @@ pub struct CRealPrelude {
     /// F Q` already, so `|F Q| ≤ eps + eps = ofRat (natDivSucc 1 e)`
     /// directly, no case split on any sign.
     pub ivt_approx: NameId,
+    /// `CReal.ivt_bisect : (CReal → CReal) → CReal → CReal → Nat → Nat →
+    /// Bool → CReal` (`creal/ivt.rs`) — a **data-valued** bisection,
+    /// replacing `ivt_iter`'s `Exists`-wrapped bracket with one actually
+    /// computed by `Nat.rec` into `Sort 1` (legal because `Nat`'s own sort is
+    /// nonzero — `docs/mathematics-2026-08/diary-exact-root-obstruction.md`).
+    ///
+    /// Three design choices, all forced by what is and is not computable
+    /// here:
+    /// - **`eps` is the explicit `Nat` `n`** (`eps_n := ofRat (natDivSucc 1
+    ///   n)`), not an arbitrary `CReal` — an arbitrary real carries no
+    ///   `Nat` a construction could sample at, the same obstruction
+    ///   `CReal.inv`'s explicit modulus already works around.
+    /// - **The per-step branch is read off a RATIONAL sample**, not `F`'s
+    ///   sign: at the FIXED index `j := succ (2*n)` (same `j` every step —
+    ///   the invariant's slack never shrinks, matching `ivt_iter`, not
+    ///   `ivt_approx`), `Rat.ble (seq (F m) j) (natDivSucc 1 j)` is a
+    ///   genuine `Bool` (`Rat.ble`, not `Rat.le_or_lt`), so `Bool.rec` may
+    ///   select a `CReal` freely (`sqrt.rs`'s `natSqrt` is the precedent for
+    ///   this move one type down).
+    /// - **The bracket carrier is `Bool → CReal`**, not a new `Prod`/`Sigma`
+    ///   (this kernel has neither) and not two independently-recursing
+    ///   `Nat → CReal` functions (which would need the SAME pairing anyway
+    ///   to compute next-step's midpoint from both current endpoints). One
+    ///   `Nat.rec` produces the pair at each step; applying it to
+    ///   `Bool.false`/`Bool.true` reads off the two endpoints —
+    ///   [`Self::ivt_bisect_lo`]/[`Self::ivt_bisect_hi`] are exactly those
+    ///   two applications, packaged as their own one-line definitions.
+    ///
+    /// **Landed as the data-valued construction only** (`declare_ivt_bisect`
+    /// in `creal/ivt.rs`); the invariant spec theorem showing this bracket
+    /// satisfies the same six-part invariant `ivt_iter` proves is a
+    /// separate, not-yet-landed slice.
+    pub ivt_bisect: NameId,
+    /// `CReal.ivt_bisect_lo : (CReal → CReal) → CReal → CReal → Nat → Nat →
+    /// CReal := fun F P Q n k => ivt_bisect F P Q n k Bool.false` — the
+    /// lower endpoint after `k` bisection steps at slack index `n`. See
+    /// [`Self::ivt_bisect`].
+    pub ivt_bisect_lo: NameId,
+    /// `CReal.ivt_bisect_hi : (CReal → CReal) → CReal → CReal → Nat → Nat →
+    /// CReal := fun F P Q n k => ivt_bisect F P Q n k Bool.true` — the upper
+    /// endpoint after `k` bisection steps at slack index `n`. See
+    /// [`Self::ivt_bisect`].
+    pub ivt_bisect_hi: NameId,
     /// `CReal.hasDerivative_unique : ∀ F F1 F2 a b, HasDerivativeOn F F1 a b
     /// → HasDerivativeOn F F2 a b → lt a b → ∀ z, le a z → le z b → Equiv
     /// (F1 z) (F2 z)` (`creal/deriv_unique.rs`) — the derivative of a
@@ -2869,6 +2912,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         strict_mono_comp: kernel.name_str(creal, "strict_mono_comp"),
         ivt_iter: kernel.name_str(creal, "ivt_iter"),
         ivt_approx: kernel.name_str(creal, "ivt_approx"),
+        ivt_bisect: kernel.name_str(creal, "ivt_bisect"),
+        ivt_bisect_lo: kernel.name_str(creal, "ivt_bisect_lo"),
+        ivt_bisect_hi: kernel.name_str(creal, "ivt_bisect_hi"),
         has_derivative_unique: kernel.name_str(creal, "hasDerivative_unique"),
         mesh_le_of_ge: kernel.name_str(creal, "mesh_le_of_ge"),
         fine_sample_in_bounds: kernel.name_str(creal, "fineSample_in_bounds"),
@@ -3050,6 +3096,9 @@ pub(crate) fn build_creal_prelude_uncached(
         // above), `CReal.mesh_count_width` (`monotone::declare_monotone_of_nonneg_deriv_all`,
         // also above) and ordinary ring/order laws; nothing later depends on
         // it, so it lands last.
+        // `declare_ivt` also lands `ivt_bisect`/`ivt_bisect_lo`/
+        // `ivt_bisect_hi` (the data-valued bisection), which needs nothing
+        // beyond what `ivt_step`/`ivt_iter` already required.
         ivt::declare_ivt(&mut d, prelude)
     })();
     match built {
