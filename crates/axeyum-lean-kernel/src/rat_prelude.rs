@@ -609,6 +609,22 @@ pub struct RatPrelude {
     /// Rat.le a b → Rat.le (Rat.mul a c) (Rat.mul b c)` — the side
     /// [`Self::mul_le_mul_of_nonneg_left`] does not give, one `mul_comm` away.
     pub mul_le_mul_of_nonneg_right: NameId,
+    /// `Rat.lt_of_sq_lt : ∀ a b, Rat.le Rat.zero a → Rat.le Rat.zero b →
+    /// Rat.lt (Rat.mul a a) (Rat.mul b b) → Rat.lt a b`.
+    ///
+    /// The **strict companion** to `CReal.ratSqLe` (`creal::mul_self_zero`,
+    /// `u·u ≤ s·s → 0 ≤ s → u ≤ s`) — its own contrapositive, proved
+    /// independently rather than derived from it since the `<`/`≤` swap does
+    /// not go through `Classical`. Case split on
+    /// [`Self::le_or_lt`]`(b, a) : Or (le b a) (lt a b)`: the right branch is
+    /// the goal directly; the left branch (`b ≤ a`) gives `b·b ≤ b·a` (by
+    /// [`Self::mul_le_mul_of_nonneg_left`] at `0 ≤ b`) and `b·a ≤ a·a` (by
+    /// [`Self::mul_le_mul_of_nonneg_right`] at `0 ≤ a`), chaining to
+    /// `b·b ≤ a·a` — which contradicts the hypothesis `a·a < b·b` via
+    /// `lt_of_le_of_lt`/`lt_irrefl`. No difference-of-squares identity is
+    /// needed (unlike `ratSqLe`'s own proof), since both monotonicity
+    /// directions are already Rat-level facts.
+    pub lt_of_sq_lt: NameId,
     /// `Rat.mul_sub_mul : ∀ a b c e,
     /// Rat.sub (a·b) (c·e) = Rat.add (a · Rat.sub b e) (Rat.sub a c · e)`.
     ///
@@ -1756,6 +1772,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         mul_neg: child(kernel, "mul_neg"),
         neg_mul: child(kernel, "neg_mul"),
         mul_le_mul_of_nonneg_right: child(kernel, "mul_le_mul_of_nonneg_right"),
+        lt_of_sq_lt: child(kernel, "lt_of_sq_lt"),
         mul_sub_mul: child(kernel, "mul_sub_mul"),
         bounds_mul: child(kernel, "bounds_mul"),
         neg_mul_le_of_bounds: child(kernel, "neg_mul_le_of_bounds"),

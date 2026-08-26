@@ -110,6 +110,7 @@ pub(super) fn declare_field_laws(d: &mut IntDev<'_>, p: RatPrelude) -> Result<()
     declare_inverse_identities(d, p)?;
     declare_inv_antitone(d, p)?;
     declare_mul_pos(d, p)?;
+    declare_lt_of_sq_lt(d, p)?;
     declare_nat_div_succ_pos(d, p)?;
     declare_inv_nat_div_succ(d, p)?;
     declare_one_ne_zero(d, p)?;
@@ -216,6 +217,74 @@ fn declare_mul_pos(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError>
         let proof = {
             let with_b = d.lam_fv(lb_fv, right_hypothesis, body);
             d.lam_fv(la_fv, left_hypothesis, with_b)
+        };
+        (stmt, proof)
+    })
+}
+
+/// `Rat.lt_of_sq_lt : ∀ a b, 0 ≤ a → 0 ≤ b → a·a < b·b → a < b`.
+///
+/// The strict companion to `CReal.ratSqLe` (`creal::mul_self_zero`,
+/// `u·u ≤ s·s → 0 ≤ s → u ≤ s`). Case split on
+/// [`RatPrelude::le_or_lt`]`(b, a) : Or (le b a) (lt a b)` — the right branch
+/// **is** the goal; the left branch (`b ≤ a`) derives a contradiction by
+/// monotonicity: `b·b ≤ b·a` ([`RatPrelude::mul_le_mul_of_nonneg_left`] at
+/// `0 ≤ b`) and `b·a ≤ a·a` ([`RatPrelude::mul_le_mul_of_nonneg_right`] at
+/// `0 ≤ a`) chain (`le_trans`) to `b·b ≤ a·a`, which contradicts the
+/// hypothesis `a·a < b·b` via `lt_of_le_of_lt`/`lt_irrefl`.
+fn declare_lt_of_sq_lt(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    rat_theorem(d, p.lt_of_sq_lt, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let zero = rzero(d, p);
+        let ha_ty = rle(d, p, zero, a);
+        let hb_ty = rle(d, p, zero, b);
+        let aa = rmul(d, a, a);
+        let bb = rmul(d, b, b);
+        let hsq_ty = rlt(d, p, aa, bb);
+        let goal = rlt(d, p, a, b);
+        let stmt = {
+            let inner = d.arrow(hsq_ty, goal);
+            let with_hb = d.arrow(hb_ty, inner);
+            d.arrow(ha_ty, with_hb)
+        };
+
+        let ha_fv = d.fresh_fvar();
+        let ha = d.kernel().fvar(ha_fv);
+        let hb_fv = d.fresh_fvar();
+        let hb = d.kernel().fvar(hb_fv);
+        let hsq_fv = d.fresh_fvar();
+        let hsq = d.kernel().fvar(hsq_fv);
+
+        let case_left_ty = rle(d, p, b, a);
+        let case_right_ty = rlt(d, p, a, b);
+        let case = d.lemma(p.le_or_lt, &[b, a]);
+        let body = d.or_elim(
+            case_left_ty,
+            case_right_ty,
+            goal,
+            case,
+            &|d, hyp| {
+                // hyp : le b a. b*b <= b*a <= a*a, contradicting a*a < b*b.
+                let ba = rmul(d, b, a);
+                let step1 = d.lemma(p.mul_le_mul_of_nonneg_left, &[b, b, a, hb, hyp]);
+                // step1 : le (b*b) (b*a)
+                let step2 = d.lemma(p.mul_le_mul_of_nonneg_right, &[b, a, a, ha, hyp]);
+                // step2 : le (b*a) (a*a)
+                let bb_le_aa = d.lemma(p.le_trans, &[bb, ba, aa, step1, step2]);
+                // bb_le_aa : le (b*b) (a*a)
+                let bb_lt_bb = d.lemma(p.lt_of_le_of_lt, &[bb, aa, bb, bb_le_aa, hsq]);
+                // bb_lt_bb : lt (b*b) (b*b)
+                let irrefl = d.lemma(p.lt_irrefl, &[bb]);
+                let false_proof = d.apply(irrefl, &[bb_lt_bb]);
+                d.absurd(goal, false_proof)
+            },
+            &|_d, strict| strict,
+        );
+
+        let proof = {
+            let with_hsq = d.lam_fv(hsq_fv, hsq_ty, body);
+            let with_hb = d.lam_fv(hb_fv, hb_ty, with_hsq);
+            d.lam_fv(ha_fv, ha_ty, with_hb)
         };
         (stmt, proof)
     })
