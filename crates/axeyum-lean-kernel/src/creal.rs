@@ -1441,6 +1441,14 @@ pub struct CRealPrelude {
     /// [`crate::RatPrelude::lt_of_sq_lt`], the strict companion to
     /// `ratSqLe` this required.
     pub sqrt_sq: NameId,
+    /// `CReal.sqrt_nonneg : ∀ x, CReal.le CReal.zero (sqrt x)`.
+    ///
+    /// Unconditional, unlike `sqrt_sq`/the still-open `mul_self_sqrt` gap
+    /// (`Equiv (mul (sqrt x) (sqrt x)) x`, needed for `CReal.sqrt_mul` and
+    /// hence `Complex.abs_mul`): this never relates `sqrt x` back to `x`
+    /// itself, only to `sqrtApprox`'s own clamp-then-`natSqrt` shape, which
+    /// is nonneg regardless of `x`'s sign. See `creal/sqrt.rs`.
+    pub sqrt_nonneg: NameId,
 
     // --- Bishop's speed-up combinator (creal/speedup.rs) ----------------------
     /// `CReal.KRegular : (Nat → Rat) → Nat → Prop` — Bishop regularity up to a
@@ -3571,6 +3579,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sqrt_zero: kernel.name_str(creal, "sqrt_zero"),
         sqrt_le_sqrt: kernel.name_str(creal, "sqrt_le_sqrt"),
         sqrt_sq: kernel.name_str(creal, "sqrt_sq"),
+        sqrt_nonneg: kernel.name_str(creal, "sqrt_nonneg"),
         k_regular_pred: kernel.name_str(creal, "KRegular"),
         speedup: kernel.name_str(creal, "speedup"),
         regular_of_kregular: kernel.name_str(creal, "regular_of_kregular"),
@@ -3878,6 +3887,11 @@ pub(crate) fn build_creal_prelude_uncached(
         // far earlier) and `RatPrelude::lt_of_sq_lt` (built as part of
         // `rat_prelude`, upstream of this whole prelude).
         sqrt::declare_sqrt_sq(&mut d, prelude)?;
+        // `sqrt_nonneg` needs only `sqrt`/`sqrt_approx` (above); it is
+        // unconditional and does not depend on `sqrt_sq`, but is placed
+        // right after it since both round out "the laws sqrt.rs's own doc
+        // names as reachable now" from the same landing.
+        sqrt::declare_sqrt_nonneg(&mut d, prelude)?;
         convergence::declare_cauchy_convergence(&mut d, prelude)?;
         series::declare_series(&mut d, prelude)?;
         // `CReal.mag_bound_le_sum_range_of_lt` needs `CReal.sumRange`
