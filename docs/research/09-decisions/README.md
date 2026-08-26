@@ -649,3 +649,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0576](adr-0576-job-shop-machine-orders-are-replayable-witnesses.md) | Import compact machine-job permutations by deterministic earliest-schedule reconstruction and independent replay | accepted |
 | [0577](adr-0577-energetic-overloads-are-recomputed-not-trusted.md) | Recompute cumulative compulsory energy and admit only strict overload certificates | accepted |
 | [0578](adr-0578-conditional-energetic-explanations-become-checked-prefix-clauses.md) | Replay conditional energetic overloads and translate their assumptions into exact CNF prefix clauses | accepted |
+| [0579](adr-0579-standalone-energetic-unit-scans-are-exhaustive-and-bounded.md) | Exhaust all machine intervals for strongest independently replayed start-bound units | accepted |

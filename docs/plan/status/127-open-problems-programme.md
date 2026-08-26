@@ -62,6 +62,16 @@ job-shop tests and all-feature Clippy are green; the next layer is a bounded all
 fixpoint before multi-assumption clauses or checked cover composition. All seven full-proof
 producers remain live.
 
+**Exhaustive standalone energetic units, 2026-08-26.** ADR-0579 scans every machine interval
+and both one-sided bounds for every flexible task under explicit resource ceilings, uses monotone
+binary search for the strongest implied unit, and independently replays every retained artifact
+before bulk CNF insertion. The `ft06 = 55` control finds two units and preserves a lifted/replayed
+optimal schedule. On `abz7@655`, 3,222,600 intervals / 128,904,000 candidates / 322,261,348
+task checks complete in 7.49 seconds and retain exactly two deductions: `start(2,10) > 532` and
+`start(7,0) < 24`. The exact formula gains two clauses; a matched 30-second SAT run remains
+unknown. This exhausts standalone units, not contextual propagation under learned bounds, and
+does not change the open lower-bound verdict.
+
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
 external-certificate replay runner for all five packages.  It validates checker and artifact
 bytes before execution, hard-kills a timed-out process session, requires an observable finding

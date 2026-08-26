@@ -4,7 +4,7 @@
 //! share only the typed problem. Search models are lifted to start times and
 //! replayed against precedence, machine capacity, and the claimed makespan.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 
 use axeyum_cnf::{CnfAssignment, CnfClause, CnfFormula, CnfLit, CnfVar};
@@ -262,6 +262,59 @@ impl Default for JobShopEnergeticLimits {
     }
 }
 
+/// Explicit limits for exhaustive conditional energetic unit scans.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct JobShopConditionalEnergeticUnitLimits {
+    /// Shared horizon, interval, and task-check ceilings.
+    pub energetic: JobShopEnergeticLimits,
+    /// Maximum distinct operation/direction deductions retained.
+    pub max_conflicts: usize,
+}
+
+impl Default for JobShopConditionalEnergeticUnitLimits {
+    fn default() -> Self {
+        Self {
+            energetic: JobShopEnergeticLimits::default(),
+            max_conflicts: 100_000,
+        }
+    }
+}
+
+/// Result of an exhaustive strongest-unit energetic scan.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct JobShopConditionalEnergeticUnitScan {
+    /// Strongest checked deduction retained for each operation and polarity.
+    pub conflicts: Vec<JobShopConditionalEnergeticConflict>,
+    /// Machine/interval pairs examined.
+    pub intervals_checked: usize,
+    /// One-sided operation tightenings considered.
+    pub candidates_checked: usize,
+    /// Exact task-energy contributions evaluated, including bound searches.
+    pub task_checks: usize,
+}
+
+fn cumulative_task_energy(
+    task: CumulativeTaskWindow,
+    interval_start: usize,
+    interval_end: usize,
+) -> Result<usize, JobShopError> {
+    let width = interval_end
+        .checked_sub(interval_start)
+        .ok_or_else(|| JobShopError::Malformed("energetic interval must be nonempty".to_owned()))?;
+    let earliest_completion = task
+        .earliest_start
+        .checked_add(task.duration)
+        .ok_or_else(|| JobShopError::Malformed("task completion overflow".to_owned()))?;
+    let compulsory_time = task
+        .duration
+        .min(width)
+        .min(earliest_completion.saturating_sub(interval_start))
+        .min(interval_end.saturating_sub(task.latest_start));
+    compulsory_time
+        .checked_mul(task.demand)
+        .ok_or_else(|| JobShopError::Malformed("task energy overflow".to_owned()))
+}
+
 /// Check the classical energetic inequality on one cumulative resource.
 ///
 /// For each task this recomputes the minimum amount of its processing that
@@ -311,26 +364,14 @@ pub fn check_cumulative_energetic_interval(
                 task.task
             )));
         }
-        let earliest_completion = task
-            .earliest_start
-            .checked_add(task.duration)
-            .ok_or_else(|| JobShopError::Malformed("task completion overflow".to_owned()))?;
-
         // Standard energetic contribution:
         // max(0, min(p, b-a, est+p-a, b-lst)).  Saturating subtraction
         // expresses the outer max(0, ...) without signed arithmetic.
-        let compulsory_time = task
-            .duration
-            .min(width)
-            .min(earliest_completion.saturating_sub(interval_start))
-            .min(interval_end.saturating_sub(task.latest_start));
-        if compulsory_time == 0 {
+        let energy = cumulative_task_energy(*task, interval_start, interval_end)?;
+        if energy == 0 {
             continue;
         }
         contributing_tasks += 1;
-        let energy = compulsory_time
-            .checked_mul(task.demand)
-            .ok_or_else(|| JobShopError::Malformed("task energy overflow".to_owned()))?;
         required_energy = required_energy
             .checked_add(energy)
             .ok_or_else(|| JobShopError::Malformed("required energy overflow".to_owned()))?;
@@ -1017,6 +1058,334 @@ pub fn find_job_shop_conditional_energetic_conflict(
         base,
         candidates_checked,
         conflict: Some(conflict),
+    })
+}
+
+#[derive(Clone, Copy)]
+enum UnitBoundDirection {
+    Lower,
+    Upper,
+}
+
+struct UnitEnergeticProbe {
+    assumption: JobShopStartBound,
+    required_energy: usize,
+}
+
+struct UnitIntervalContext {
+    interval_start: usize,
+    interval_end: usize,
+    base_required_energy: usize,
+    capacity_energy: usize,
+}
+
+fn unit_probe(
+    assumption: JobShopStartBound,
+    required_energy: usize,
+    task_checks: usize,
+) -> (Option<UnitEnergeticProbe>, usize) {
+    (
+        Some(UnitEnergeticProbe {
+            assumption,
+            required_energy,
+        }),
+        task_checks,
+    )
+}
+
+fn find_conditional_energetic_unit_bound(
+    task: CumulativeTaskWindow,
+    operation: &JobShopOperationWindow,
+    direction: UnitBoundDirection,
+    interval: &UnitIntervalContext,
+) -> Result<(Option<UnitEnergeticProbe>, usize), JobShopError> {
+    if task.earliest_start == task.latest_start {
+        return Ok((None, 0));
+    }
+    let mut task_checks = 1usize;
+    let base_task = cumulative_task_energy(task, interval.interval_start, interval.interval_end)?;
+    let fixed_energy = interval
+        .base_required_energy
+        .checked_sub(base_task)
+        .ok_or_else(|| JobShopError::Malformed("conditional fixed energy underflow".to_owned()))?;
+    let mut evaluate = |narrowed: CumulativeTaskWindow| -> Result<usize, JobShopError> {
+        task_checks = task_checks
+            .checked_add(1)
+            .ok_or_else(|| JobShopError::Malformed("conditional task-check overflow".to_owned()))?;
+        fixed_energy
+            .checked_add(cumulative_task_energy(
+                narrowed,
+                interval.interval_start,
+                interval.interval_end,
+            )?)
+            .ok_or_else(|| {
+                JobShopError::Malformed("conditional required energy overflow".to_owned())
+            })
+    };
+    let (assumption, required_energy) = match direction {
+        UnitBoundDirection::Upper => {
+            let extreme = CumulativeTaskWindow {
+                latest_start: task.earliest_start,
+                ..task
+            };
+            if evaluate(extreme)? <= interval.capacity_energy {
+                return Ok((None, task_checks));
+            }
+            let mut low = task.earliest_start;
+            let mut high = task.latest_start - 1;
+            while low < high {
+                let middle = low + (high - low).div_ceil(2);
+                let required = evaluate(CumulativeTaskWindow {
+                    latest_start: middle,
+                    ..task
+                })?;
+                if required > interval.capacity_energy {
+                    low = middle;
+                } else {
+                    high = middle - 1;
+                }
+            }
+            let required = evaluate(CumulativeTaskWindow {
+                latest_start: low,
+                ..task
+            })?;
+            (
+                JobShopStartBound::StartAtMost {
+                    job: operation.job,
+                    operation: operation.operation,
+                    time: low,
+                },
+                required,
+            )
+        }
+        UnitBoundDirection::Lower => {
+            let extreme = CumulativeTaskWindow {
+                earliest_start: task.latest_start,
+                ..task
+            };
+            if evaluate(extreme)? <= interval.capacity_energy {
+                return Ok((None, task_checks));
+            }
+            let mut low = task.earliest_start + 1;
+            let mut high = task.latest_start;
+            while low < high {
+                let middle = low + (high - low) / 2;
+                let required = evaluate(CumulativeTaskWindow {
+                    earliest_start: middle,
+                    ..task
+                })?;
+                if required > interval.capacity_energy {
+                    high = middle;
+                } else {
+                    low = middle + 1;
+                }
+            }
+            let required = evaluate(CumulativeTaskWindow {
+                earliest_start: low,
+                ..task
+            })?;
+            (
+                JobShopStartBound::StartAtLeast {
+                    job: operation.job,
+                    operation: operation.operation,
+                    time: low,
+                },
+                required,
+            )
+        }
+    };
+    Ok(unit_probe(assumption, required_energy, task_checks))
+}
+
+fn stronger_unit_conflict(
+    candidate: &JobShopConditionalEnergeticConflict,
+    current: &JobShopConditionalEnergeticConflict,
+) -> bool {
+    match (candidate.assumptions[0], current.assumptions[0]) {
+        (
+            JobShopStartBound::StartAtMost {
+                time: candidate, ..
+            },
+            JobShopStartBound::StartAtMost { time: current, .. },
+        ) => candidate > current,
+        (
+            JobShopStartBound::StartAtLeast {
+                time: candidate, ..
+            },
+            JobShopStartBound::StartAtLeast { time: current, .. },
+        ) => candidate < current,
+        _ => false,
+    }
+}
+
+struct UnitScanContext<'a> {
+    bound: usize,
+    domain: JobShopEnergeticDomain,
+    windows: &'a [JobShopOperationWindow],
+    limits: JobShopConditionalEnergeticUnitLimits,
+}
+
+#[derive(Default)]
+struct UnitScanState {
+    retained: BTreeMap<(usize, usize, u8), JobShopConditionalEnergeticConflict>,
+    candidates_checked: usize,
+    task_checks: usize,
+}
+
+impl UnitScanState {
+    fn check_interval(
+        &mut self,
+        context: &UnitScanContext<'_>,
+        tasks: &[CumulativeTaskWindow],
+        machine: usize,
+        interval_start: usize,
+        interval_end: usize,
+    ) -> Result<(), JobShopError> {
+        let base = check_cumulative_energetic_interval(tasks, 1, interval_start, interval_end)?;
+        if base.overloaded {
+            return Err(JobShopError::InvalidSchedule(
+                "conditional unit scan encountered a root energetic conflict".to_owned(),
+            ));
+        }
+        self.task_checks = self
+            .task_checks
+            .checked_add(tasks.len())
+            .ok_or_else(|| JobShopError::Malformed("conditional task-check overflow".to_owned()))?;
+        let interval = UnitIntervalContext {
+            interval_start,
+            interval_end,
+            base_required_energy: base.required_energy,
+            capacity_energy: base.capacity_energy,
+        };
+        for task in tasks {
+            if task.earliest_start == task.latest_start {
+                continue;
+            }
+            let operation = context.windows.get(task.task).ok_or_else(|| {
+                JobShopError::Malformed("conditional scan operation mismatch".to_owned())
+            })?;
+            for direction in [UnitBoundDirection::Lower, UnitBoundDirection::Upper] {
+                self.candidates_checked =
+                    self.candidates_checked.checked_add(1).ok_or_else(|| {
+                        JobShopError::Malformed("conditional candidate count overflow".to_owned())
+                    })?;
+                let (probe, probe_task_checks) =
+                    find_conditional_energetic_unit_bound(*task, operation, direction, &interval)?;
+                self.task_checks =
+                    self.task_checks
+                        .checked_add(probe_task_checks)
+                        .ok_or_else(|| {
+                            JobShopError::Malformed("conditional task-check overflow".to_owned())
+                        })?;
+                let Some(probe) = probe else {
+                    continue;
+                };
+                let conflict = JobShopConditionalEnergeticConflict {
+                    schema: JOB_SHOP_CONDITIONAL_ENERGETIC_CONFLICT_SCHEMA.to_owned(),
+                    bound: context.bound,
+                    domain: context.domain,
+                    assumptions: vec![probe.assumption],
+                    machine,
+                    interval_start,
+                    interval_end,
+                    required_energy: probe.required_energy,
+                    capacity_energy: base.capacity_energy,
+                };
+                let key = probe.assumption.key();
+                if self
+                    .retained
+                    .get(&key)
+                    .is_none_or(|current| stronger_unit_conflict(&conflict, current))
+                {
+                    self.retained.insert(key, conflict);
+                    if self.retained.len() > context.limits.max_conflicts {
+                        return Err(JobShopError::LimitExceeded {
+                            resource: "conditional energetic conflicts",
+                            observed: self.retained.len(),
+                            limit: context.limits.max_conflicts,
+                        });
+                    }
+                }
+            }
+        }
+        if self.task_checks > context.limits.energetic.max_task_checks {
+            return Err(JobShopError::LimitExceeded {
+                resource: "conditional energetic task checks",
+                observed: self.task_checks,
+                limit: context.limits.energetic.max_task_checks,
+            });
+        }
+        Ok(())
+    }
+}
+
+/// Exhaustively find strongest standalone unit-bound energetic deductions.
+///
+/// Every integer interval on every machine is checked from the selected base
+/// domains. For each flexible task and each polarity, a monotone binary search
+/// finds the weakest single assumption that still overloads the interval; its
+/// negation is therefore the strongest unit deduction supported by that
+/// interval. Only the strongest checked artifact per operation/polarity is
+/// retained. This scan derives standalone units: it does not assume deductions
+/// found earlier in the same scan.
+///
+/// # Errors
+///
+/// Refuses malformed instances, root-overloaded domains, arithmetic overflow,
+/// or work exceeding explicit horizon, interval, task-check, or artifact
+/// ceilings.
+pub fn scan_job_shop_conditional_energetic_unit_conflicts(
+    problem: &JobShopProblem,
+    bound: usize,
+    domain: JobShopEnergeticDomain,
+    limits: JobShopConditionalEnergeticUnitLimits,
+) -> Result<JobShopConditionalEnergeticUnitScan, JobShopError> {
+    if bound > limits.energetic.max_horizon {
+        return Err(JobShopError::LimitExceeded {
+            resource: "conditional energetic horizon",
+            observed: bound,
+            limit: limits.energetic.max_horizon,
+        });
+    }
+    let intervals_checked = bound
+        .checked_mul(bound.checked_add(1).ok_or_else(|| {
+            JobShopError::Malformed("conditional interval count overflow".to_owned())
+        })?)
+        .and_then(|value| value.checked_div(2))
+        .and_then(|value| value.checked_mul(problem.machines))
+        .ok_or_else(|| JobShopError::Malformed("conditional interval count overflow".to_owned()))?;
+    if intervals_checked > limits.energetic.max_intervals {
+        return Err(JobShopError::LimitExceeded {
+            resource: "conditional energetic intervals",
+            observed: intervals_checked,
+            limit: limits.energetic.max_intervals,
+        });
+    }
+    let windows = job_shop_domain_windows(problem, bound, domain)?;
+    let context = UnitScanContext {
+        bound,
+        domain,
+        windows: &windows,
+        limits,
+    };
+    let mut state = UnitScanState::default();
+    for machine in 0..problem.machines {
+        let tasks = job_shop_machine_task_windows(problem, bound, machine, Some(&windows))?;
+        for interval_start in 0..bound {
+            for interval_end in interval_start + 1..=bound {
+                state.check_interval(&context, &tasks, machine, interval_start, interval_end)?;
+            }
+        }
+    }
+    let conflicts = state.retained.into_values().collect::<Vec<_>>();
+    for conflict in &conflicts {
+        check_job_shop_conditional_energetic_conflict(problem, bound, conflict)?;
+    }
+    Ok(JobShopConditionalEnergeticUnitScan {
+        conflicts,
+        intervals_checked,
+        candidates_checked: state.candidates_checked,
+        task_checks: state.task_checks,
     })
 }
 
@@ -2093,6 +2462,29 @@ impl JobShopEncoding {
         }
         Ok(formula)
     }
+
+    /// Add several independently checked conditional energetic clauses.
+    ///
+    /// Conflicts are replayed and inserted in caller order. Tautological
+    /// explanations are skipped, and the base formula is cloned only once.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::conditional_energetic_clause`], plus CNF insertion errors.
+    pub fn formula_with_conditional_energetic_conflicts(
+        &self,
+        conflicts: &[JobShopConditionalEnergeticConflict],
+    ) -> Result<CnfFormula, JobShopError> {
+        let mut formula = self.formula.clone();
+        for conflict in conflicts {
+            if let Some(clause) = self.conditional_energetic_clause(conflict)? {
+                formula.add_clause(clause).map_err(|error| {
+                    JobShopError::Cnf(format!("conditional energetic clause: {error:?}"))
+                })?;
+            }
+        }
+        Ok(formula)
+    }
 }
 
 fn encode_machine_orders(
@@ -2455,6 +2847,13 @@ mod tests {
     };
 
     const TINY: &str = "2 2\n0 2 1 1\n1 2 0 1\n";
+    const FT06: &str = "6 6\n\
+2 1 0 3 1 6 3 7 5 3 4 6\n\
+1 8 2 5 4 10 5 10 0 10 3 4\n\
+2 5 3 4 5 8 0 9 1 1 4 7\n\
+1 5 0 5 2 5 3 3 4 8 5 9\n\
+2 9 1 3 4 5 5 4 0 3 3 1\n\
+1 3 3 3 5 9 0 10 4 4 2 1\n";
 
     #[test]
     fn flatzinc_export_uses_checker_supported_exact_constraints() {
@@ -2713,6 +3112,72 @@ mod tests {
             check_job_shop_conditional_energetic_conflict(&problem, 4, &mutated),
             Err(JobShopError::Malformed(_))
         ));
+    }
+
+    #[test]
+    fn conditional_energetic_unit_scan_finds_and_encodes_strongest_bounds() {
+        let problem = JobShopProblem::parse_orlib(FT06).unwrap();
+        let scan = scan_job_shop_conditional_energetic_unit_conflicts(
+            &problem,
+            55,
+            JobShopEnergeticDomain::PrecedenceClosure,
+            JobShopConditionalEnergeticUnitLimits::default(),
+        )
+        .unwrap();
+        assert_eq!(scan.intervals_checked, 9_240);
+        assert_eq!(scan.candidates_checked, 110_880);
+        assert_eq!(scan.task_checks, 277_248);
+        assert_eq!(scan.conflicts.len(), 2);
+        assert_eq!(
+            scan.conflicts
+                .iter()
+                .map(|conflict| conflict.assumptions[0])
+                .collect::<Vec<_>>(),
+            vec![
+                JobShopStartBound::StartAtLeast {
+                    job: 1,
+                    operation: 2,
+                    time: 21,
+                },
+                JobShopStartBound::StartAtMost {
+                    job: 1,
+                    operation: 4,
+                    time: 33,
+                },
+            ]
+        );
+        let encoding =
+            encode_job_shop_with_precedence_closure(&problem, 55, JobShopEncodingLimits::default())
+                .unwrap();
+        let strengthened = encoding
+            .formula_with_conditional_energetic_conflicts(&scan.conflicts)
+            .unwrap();
+        assert_eq!(
+            strengthened.clauses().len(),
+            encoding.formula().clauses().len() + 2
+        );
+        let SatResult::Sat(model) = solve_with_rustsat_batsat(&strengthened).unwrap() else {
+            panic!("ft06 at its optimum remains feasible");
+        };
+        assert_eq!(encoding.lift_model(&model).unwrap().makespan, 55);
+
+        let limited = scan_job_shop_conditional_energetic_unit_conflicts(
+            &problem,
+            55,
+            JobShopEnergeticDomain::PrecedenceClosure,
+            JobShopConditionalEnergeticUnitLimits {
+                max_conflicts: 1,
+                ..JobShopConditionalEnergeticUnitLimits::default()
+            },
+        );
+        assert_eq!(
+            limited,
+            Err(JobShopError::LimitExceeded {
+                resource: "conditional energetic conflicts",
+                observed: 2,
+                limit: 1,
+            })
+        );
     }
 
     #[test]
