@@ -1060,5 +1060,102 @@ pub(super) fn declare_geometric(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(
     declare_geom_tail_bounded_div(d, p)?;
     declare_geom_tail_within(d, p)?;
     declare_geom_tail_within_le(d, p)?;
-    declare_geom_pair_within(d, p)
+    declare_geom_pair_within(d, p)?;
+    declare_pow_le_pow_of_base_le(d, p)
+}
+
+// --- `pow_le_pow_of_base_le` -------------------------------------------------
+
+/// `CReal.pow_le_pow_of_base_le`. See the field documentation
+/// ([`super::CRealPrelude::pow_le_pow_of_base_le`]) for the statement and the
+/// derivation.
+fn declare_pow_le_pow_of_base_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let h0_fv = d.fresh_fvar();
+    let h0 = d.kernel().fvar(h0_fv);
+    let hxy_fv = d.fresh_fvar();
+    let hxy = d.kernel().fvar(hxy_fv);
+
+    let motive = |d: &mut IntDev<'_>, v: ExprId| -> ExprId {
+        let px = d.const_app(p.pow, &[x, v]);
+        let py = d.const_app(p.pow, &[y, v]);
+        cle(d, p, px, py)
+    };
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let stmt_inner = motive(d, n);
+
+    // h0y : le zero y, from le zero x and le x y.
+    let h0y = {
+        let zero_c = czero(d, p);
+        d.lemma(p.le_trans, &[zero_c, x, y, h0, hxy])
+    };
+
+    let proof_inner = d.induct(
+        &motive,
+        &|d| {
+            let one = d.kernel().const_(p.one, vec![]);
+            d.lemma(p.le_refl, &[one])
+        },
+        &|d, j, ih| {
+            let px_j = d.const_app(p.pow, &[x, j]);
+            let py_j = d.const_app(p.pow, &[y, j]);
+
+            // raw1 : le (mul x px_j) (mul x py_j), from 0 ≤ x and ih.
+            let raw1 = d.lemma(p.mul_le_mul_of_nonneg_left, &[x, px_j, py_j, h0, ih]);
+            let x_pxj = cmul(d, p, x, px_j);
+            let x_pyj = cmul(d, p, x, py_j);
+            let pxj_x = cmul(d, p, px_j, x);
+            let pyj_x = cmul(d, p, py_j, x);
+            let comm_left = d.lemma(p.mul_comm, &[x, px_j]); // Equiv x_pxj pxj_x
+            let comm_right = d.lemma(p.mul_comm, &[x, py_j]); // Equiv x_pyj pyj_x
+            // term1 : le pxj_x pyj_x
+            let term1 = d.lemma(
+                p.le_congr,
+                &[x_pxj, pxj_x, x_pyj, pyj_x, comm_left, comm_right, raw1],
+            );
+
+            // step2 : le (mul py_j x) (mul py_j y), from 0 ≤ py_j and x ≤ y.
+            let py_j_nonneg = d.lemma(p.pow_nonneg, &[y, h0y, j]);
+            let step2 = d.lemma(p.mul_le_mul_of_nonneg_left, &[py_j, x, y, py_j_nonneg, hxy]);
+            let pyj_y = cmul(d, p, py_j, y);
+
+            // final : le pxj_x pyj_y -- defeq to le (pow x (succ j)) (pow y (succ j)).
+            d.lemma(p.le_trans, &[pxj_x, pyj_x, pyj_y, term1, step2])
+        },
+        n,
+    );
+
+    let hyp0 = {
+        let zero_c = czero(d, p);
+        cle(d, p, zero_c, x)
+    };
+    let hyp_xy = cle(d, p, x, y);
+    let ty = {
+        let inner = d.pi_fv(n_fv, nat, stmt_inner);
+        let with_hxy = d.arrow(hyp_xy, inner);
+        let with_h0 = d.arrow(hyp0, with_hxy);
+        let with_y = d.pi_fv(y_fv, carrier, with_h0);
+        d.pi_fv(x_fv, carrier, with_y)
+    };
+    let value = {
+        let inner = d.lam_fv(n_fv, nat, proof_inner);
+        let with_hxy = d.lam_fv(hxy_fv, hyp_xy, inner);
+        let with_h0 = d.lam_fv(h0_fv, hyp0, with_hxy);
+        let with_y = d.lam_fv(y_fv, carrier, with_h0);
+        d.lam_fv(x_fv, carrier, with_y)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.pow_le_pow_of_base_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
 }
