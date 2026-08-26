@@ -184,6 +184,7 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
         ("Complex.mul_inv_cancel", p.mul_inv_cancel),
         ("Complex.inv_congr", p.inv_congr),
         ("Complex.div", p.div),
+        ("Complex.div_congr", p.div_congr),
         ("Complex.div_self", p.div_self),
         ("Complex.Apart", p.apart),
         ("Complex.apart_irrefl", p.apart_irrefl),
@@ -197,6 +198,7 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
         ("Complex.inv_mul_cancel", p.inv_mul_cancel),
         ("Complex.pos_bound_conj", p.pos_bound_conj),
         ("Complex.conj_inv", p.conj_inv),
+        ("Complex.conj_div", p.conj_div),
         ("Complex.pow", p.pow),
         ("Complex.pow_zero", p.pow_zero),
         ("Complex.pow_succ", p.pow_succ),
@@ -676,5 +678,180 @@ fn conj_pow_gives_conj_i_a_fourth_root_of_unity() {
     assert!(
         d.kernel().def_eq(inferred, expected),
         "the derived fact must be EXACTLY Equiv (pow (conj I) 4) one"
+    );
+}
+
+/// `Complex.conj_div` instantiated at `z = w = I`, chained against
+/// [`ComplexPrelude::div_self`], [`ComplexPrelude::conj_congr`] and
+/// [`ComplexPrelude::conj_one`] to derive a fact `conj_div`'s own type does
+/// not state on its own: **dividing `conj I` by itself is also `Equiv` to
+/// `one`** — `Equiv (div (conj I) (conj I) k (pos_bound_conj I k h)) one`,
+/// for *any* modulus `k` and witness `h` the caller holds for `I` itself.
+/// `k` and `h` stay universally quantified (the same genericity every
+/// division law in this module already carries over its side condition);
+/// `z` and `w` are pinned to the concrete numeral `I` this test exercises.
+///
+/// Built as a fully closed, abstracted proof term admitted through
+/// `Kernel::add_declaration` — mirroring
+/// `creal::creal_tests::the_inverses_domain_is_inhabited_and_the_inverse_is_not_the_zero_function`
+/// — rather than `infer`/`def_eq` on an open term, because `k` and `h` are
+/// free variables here rather than ground numerals. `add_declaration`
+/// re-checks the closed value against the EXACT stated `ty`, which is
+/// itself the direction check: had the derivation actually produced the
+/// mathematically equivalent but syntactically reversed
+/// `Equiv one (div (conj I) (conj I) k h2)`, the kernel would refuse it.
+#[test]
+fn conj_div_gives_the_conjugate_self_quotient_too() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let i_c = d.kernel().const_(p.i, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let conj_i = d.const_app(p.conj, &[i_c]);
+
+    let nat = d.nat_ty();
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let norm_i = d.const_app(p.norm_sq, &[i_c]);
+    let hypothesis = d.const_app(p.creal.pos_bound, &[norm_i, k]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    // h2 : PosBound (normSq (conj I)) k, via `pos_bound_conj`.
+    let h2 = d.lemma(p.pos_bound_conj, &[i_c, k, h]);
+
+    let div_ii = d.const_app(p.div, &[i_c, i_c, k, h]);
+    let conj_div_ii = d.const_app(p.conj, &[div_ii]);
+    let div_conji_conji = d.const_app(p.div, &[conj_i, conj_i, k, h2]);
+
+    // t_conj_div : Equiv (conj (div I I k h)) (div (conj I) (conj I) k h2).
+    let t_conj_div = d.lemma(p.conj_div, &[i_c, i_c, k, h]);
+
+    // t_div_self : Equiv (div I I k h) one.
+    let t_div_self = d.lemma(p.div_self, &[i_c, k, h]);
+    // t_congr : Equiv (conj (div I I k h)) (conj one).
+    let t_congr = d.lemma(p.conj_congr, &[div_ii, one_c, t_div_self]);
+    let conj_one_term = d.const_app(p.conj, &[one_c]);
+    // t_conj_one : Equiv (conj one) one.
+    let t_conj_one = d.kernel().const_(p.conj_one, vec![]);
+    // t_left : Equiv (conj (div I I k h)) one.
+    let t_left = d.lemma(
+        p.equiv_trans,
+        &[conj_div_ii, conj_one_term, one_c, t_congr, t_conj_one],
+    );
+
+    // t_symm : Equiv (div (conj I) (conj I) k h2) (conj (div I I k h)).
+    let t_symm = d.lemma(p.equiv_symm, &[conj_div_ii, div_conji_conji, t_conj_div]);
+    // t_final : Equiv (div (conj I) (conj I) k h2) one.
+    let t_final = d.lemma(
+        p.equiv_trans,
+        &[div_conji_conji, conj_div_ii, one_c, t_symm, t_left],
+    );
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, t_final);
+        d.lam_fv(k_fv, nat, with_h)
+    };
+    let ty = {
+        let conclusion = super::zeq(&mut d, p, div_conji_conji, one_c);
+        let inner = d.pi_fv(h_fv, hypothesis, conclusion);
+        d.pi_fv(k_fv, nat, inner)
+    };
+    let name = d.kernel().name_str(anon, "Check.conj_div_self_quotient");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    });
+    assert!(
+        admitted.is_ok(),
+        "conj_div + div_self + conj_one must derive \
+         `Equiv (div (conj I) (conj I) k h2) one`: {admitted:?}"
+    );
+}
+
+/// `Complex.div_congr` instantiated at `w = w' = I` and `z = I`,
+/// `z' = conj (conj I)` (related by [`ComplexPrelude::conj_conj`]), chained
+/// against [`ComplexPrelude::div_self`] to derive a fact neither lemma
+/// states alone: **dividing `conj (conj I)` by `I` is also `Equiv` to
+/// `one`** — `Equiv (div (conj (conj I)) I k h) one`, for any modulus `k`
+/// and witness `h`. Reusing `I` for both `w` and `w'` (so the two `PosBound`
+/// hypotheses coincide as one `h`) keeps the instantiation to a single
+/// nontrivial numerator substitution rather than doubling the abstract
+/// plumbing on the denominator side too.
+#[test]
+fn div_congr_transports_div_self_across_a_conjugate_involution() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let i_c = d.kernel().const_(p.i, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let conj_i = d.const_app(p.conj, &[i_c]);
+    let conj_conj_i = d.const_app(p.conj, &[conj_i]);
+
+    // t_involution : Equiv (conj (conj I)) I.
+    let t_involution = d.lemma(p.conj_conj, &[i_c]);
+    // hz : Equiv I (conj (conj I)).
+    let hz = d.lemma(p.equiv_symm, &[conj_conj_i, i_c, t_involution]);
+    // hw : Equiv I I.
+    let hw = d.lemma(p.equiv_refl, &[i_c]);
+
+    let nat = d.nat_ty();
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let norm_i = d.const_app(p.norm_sq, &[i_c]);
+    let hypothesis = d.const_app(p.creal.pos_bound, &[norm_i, k]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let div_ii = d.const_app(p.div, &[i_c, i_c, k, h]);
+    let div_ccii = d.const_app(p.div, &[conj_conj_i, i_c, k, h]);
+
+    // t_div_congr : Equiv (div I I k h) (div (conj (conj I)) I k h).
+    let t_div_congr = d.lemma(
+        p.div_congr,
+        &[i_c, conj_conj_i, i_c, i_c, k, k, h, h, hz, hw],
+    );
+    // t_div_self : Equiv (div I I k h) one.
+    let t_div_self = d.lemma(p.div_self, &[i_c, k, h]);
+    // t_symm : Equiv (div (conj (conj I)) I k h) (div I I k h).
+    let t_symm = d.lemma(p.equiv_symm, &[div_ii, div_ccii, t_div_congr]);
+    // t_final : Equiv (div (conj (conj I)) I k h) one.
+    let t_final = d.lemma(
+        p.equiv_trans,
+        &[div_ccii, div_ii, one_c, t_symm, t_div_self],
+    );
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, t_final);
+        d.lam_fv(k_fv, nat, with_h)
+    };
+    let ty = {
+        let conclusion = super::zeq(&mut d, p, div_ccii, one_c);
+        let inner = d.pi_fv(h_fv, hypothesis, conclusion);
+        d.pi_fv(k_fv, nat, inner)
+    };
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.div_congr_conjugate_involution");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    });
+    assert!(
+        admitted.is_ok(),
+        "div_congr + conj_conj + div_self must derive \
+         `Equiv (div (conj (conj I)) I k h) one`: {admitted:?}"
     );
 }
