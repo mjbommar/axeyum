@@ -347,29 +347,35 @@ pub struct ComplexPrelude {
     /// this development reaches.
     ///
     /// **Not** the triangle inequality `‖z+w‖ ≤ ‖z‖+‖w‖` — that is stated on
-    /// the UN-squared norm. `CReal.sqrt`, [`Self::abs`], [`Self::abs_congr`],
-    /// `CReal.sqrt_one` (hence [`Self::abs_one`]) and now `CReal.sqrt_le_sqrt`
-    /// (`x ≤ y → sqrt x ≤ sqrt y`, landed in `creal/sqrt.rs`) all exist, so
-    /// `‖z+w‖ ≤ sqrt(2‖z‖²+2‖w‖²)` is provable from this lemma by
-    /// monotonicity alone. Turning THAT into the classical `‖z+w‖ ≤
-    /// ‖z‖+‖w‖` needs one more fact monotonicity does not supply:
-    /// `CReal.sqrt_sq`/`sq_sqrt` (`sqrt (x*x) ~ x` for `0 ≤ x`, or an
-    /// equivalent), to cancel the square on the target side — monotonicity
-    /// alone only ever produces a bound of the shape `sqrt(something)`, never
-    /// removes a `sqrt` that is already there. The needed shape is
-    /// specifically `CReal.sqrt_sq` (`sqrt (mul t t) ~ t` for `0 ≤ t`,
-    /// `t := add (abs z) (abs w)`) — NOT `sq_sqrt` — and `creal/sqrt.rs`'s
-    /// own module doc (re-read 2026-08-26) narrows the obstruction: the
-    /// magnitude-bound and index-composition concerns that doc used to name
-    /// both turn out to already be free (`CReal.bound`/`bound_within` are
-    /// generic and unconditional; `RatPrelude::nat_div_succ_antitone` handles
-    /// the composed sampling index the same way `derivative.rs`/
-    /// `uniform_continuity.rs` already do elsewhere). What is left, and is
-    /// genuinely new, is a sign-recovery case split (`Rat.le_or_lt 0 t`)
-    /// turning a bound on `t·t` back into a bound on `t` itself rather than
-    /// `|t|` — see that file's own doc for the exact two branches. That
-    /// case split, not monotonicity, is what still stands between this
-    /// lemma and the unsquared triangle inequality. `normSq_add` (this
+    /// the UN-squared norm, and `CReal.sqrt_sq` (`sqrt (mul t t) ~ t` for
+    /// `0 ≤ t`) is now LANDED (`creal/sqrt.rs`, 2026-08-26), but it does
+    /// **not** close this gap, and an earlier revision of this doc was wrong
+    /// to say a fact of this shape was all that stood in the way.
+    ///
+    /// **Why the "cancel the square with `sqrt_sq`" route does not work
+    /// here, checked with a counterexample.** The route this doc used to
+    /// describe was: from this lemma, `‖z+w‖ ≤ sqrt(2‖z‖²+2‖w‖²)`
+    /// (`CReal.sqrt_le_sqrt`); then show `2‖z‖²+2‖w‖² ≤ (‖z‖+‖w‖)²` so that
+    /// `sqrt_le_sqrt` again gives `sqrt(2‖z‖²+2‖w‖²) ≤ sqrt((‖z‖+‖w‖)²)`;
+    /// then `sqrt_sq` at `t := ‖z‖+‖w‖` collapses the right side to
+    /// `‖z‖+‖w‖`. The MIDDLE inequality is **false in general**: at
+    /// `z := one`, `w := zero`, `2‖z‖²+2‖w‖² = 2` and `(‖z‖+‖w‖)² = 1`, and
+    /// `2 ≤ 1` does not hold. So `sqrt_sq` cancels a square correctly, but
+    /// the square this route needs to cancel is never validly reached — the
+    /// factor-of-2 slack `normSq_add_le` carries (from the parallelogram
+    /// law, see below) is too loose to land inside `(‖z‖+‖w‖)²`, no matter
+    /// how the "cancel the square" step is phrased. `sqrt_sq` genuinely
+    /// closed the analogous gap in `Complex.ptolemy_inequality_sq`'s own
+    /// doc for the SAME reason it fails here, so that doc carries the same
+    /// correction.
+    ///
+    /// What THIS lemma plus `sqrt_le_sqrt` actually gives, soundly, is the
+    /// weaker `‖z+w‖ ≤ sqrt(2‖z‖²+2‖w‖²)` — not simplifiable further without
+    /// a SHARPER bound on `normSq (z+w)` than the parallelogram-derived one
+    /// below, e.g. a Cauchy–Schwarz-style bound on the cross term
+    /// `Re(z·conj w)` against `‖z‖·‖w‖`, which needs `abs`'s multiplicativity
+    /// (`‖z·w‖ = ‖z‖·‖w‖`, not built) or an equivalent — not merely
+    /// `sqrt_sq`. `normSq_add` (this
     /// module) is the parallelogram law, not subadditivity — it is an
     /// EQUALITY mentioning `normSq (add z (neg w))` as well as `normSq (add z
     /// w)`, and it is [`Self::norm_sq_nonneg`] applied to that SECOND term
@@ -1135,17 +1141,20 @@ pub struct ComplexPrelude {
     /// [`Self::abs`], [`Self::abs_congr`] (`sqrt` respecting `Equiv`), and
     /// `CReal.sqrt_le_sqrt` (`x ≤ y → sqrt x ≤ sqrt y`) — all of which now
     /// exist, so `‖L‖ ≤ sqrt(2‖X‖² + 2‖Y‖²)` is provable outright from this
-    /// lemma by monotonicity. What still stands between THAT and the
-    /// unsquared inequality is `CReal.sqrt_sq` (`sqrt (mul t t) ~ t` for
-    /// `0 ≤ t`), needed to cancel a square that monotonicity alone never
-    /// removes — see [`Self::norm_sq_add_le`]'s own doc for the identical gap
-    /// on the simpler triangle-inequality case, and `creal/sqrt.rs`'s own
-    /// module doc (2026-08-26 revision) for exactly what is and is not still
-    /// missing: not a magnitude bound, not new index-composition machinery
-    /// (both already exist generically), only a sign-recovery case split.
-    /// Combining it with the sharp squared form above (which itself needs
-    /// `abs`'s multiplicativity, also not built) is the remaining climb to
-    /// the classical statement.
+    /// lemma by monotonicity.
+    ///
+    /// **`CReal.sqrt_sq` is now landed (`creal/sqrt.rs`, 2026-08-26), and an
+    /// earlier revision of this doc was wrong that it alone closes the
+    /// remaining gap to the classical inequality — see
+    /// [`Self::norm_sq_add_le`]'s own doc for the counterexample
+    /// (`z := one, w := zero` makes `2‖z‖²+2‖w‖² ≤ (‖z‖+‖w‖)²` false, `2 ≤
+    /// 1`).** The identical factor-of-2 slack is present here: `‖L‖ ≤
+    /// sqrt(2‖X‖²+2‖Y‖²)` cannot be simplified to `‖L‖ ≤ ‖X‖+‖Y‖` by
+    /// `sqrt_sq` alone, for the same reason. Combining a SHARPER squared
+    /// bound (the `‖L‖² ≤ ‖X‖²+2‖X‖‖Y‖+‖Y‖²` form named above, which needs
+    /// `abs`'s multiplicativity, still not built) with `sqrt_sq` is the
+    /// remaining climb to the classical statement — `sqrt_sq` was necessary
+    /// but is not, by itself, sufficient.
     pub ptolemy_inequality_sq: NameId,
 
     /// `Complex.abs : Complex → CReal := fun z => CReal.sqrt (normSq z)` —
@@ -1154,29 +1163,33 @@ pub struct ComplexPrelude {
     /// inspects `normSq z`'s sign, even though [`Self::norm_sq_nonneg`]
     /// already gives it for free.
     ///
-    /// **Congruence, the known value at `one`, and monotonicity are now
-    /// proved** ([`Self::abs_congr`], [`Self::abs_one`]) — `CReal.sqrt_congr`,
-    /// `CReal.sqrt_one`, and `CReal.sqrt_le_sqrt` (`x ≤ y → sqrt x ≤ sqrt y`,
-    /// total, no `0 ≤ x` hypothesis) all landed in `creal/sqrt.rs`, closing
-    /// every fact this doc used to name as missing except one. **`sqrt_sq`
-    /// (`sqrt (mul t t) ~ t` for `0 ≤ t`; the OTHER direction, `sq_sqrt :=
-    /// mul (sqrt x) (sqrt x) ~ x`, is not what this module's two consumers
-    /// need) is still open**, and it, not monotonicity, is what still blocks
-    /// the triangle inequality ([`Self::norm_sq_add_le`]'s own doc) and the
-    /// unsquared Ptolemy inequality ([`Self::ptolemy_inequality_sq`]'s own
-    /// doc): monotonicity alone only ever produces a bound of the shape
-    /// `sqrt(something)`, and cancelling a square it did NOT introduce needs
-    /// `sqrt_sq` instead. **This is a smaller gap than earlier revisions of
-    /// this doc claimed.** `creal/sqrt.rs`'s 2026-08-26 revision found that
-    /// two of the three obstacles it used to name — a magnitude bound on
-    /// `sqrt x`, and new sampling-index-composition machinery — do not apply
-    /// to `sqrt_sq` at all (they describe `sq_sqrt`'s harder route) and are
-    /// otherwise already available generically (`CReal.bound`/
-    /// `bound_within`, `RatPrelude::nat_div_succ_antitone`). What is left is
-    /// a localized sign-recovery case split (`Rat.le_or_lt 0 t`, recovering
-    /// `t` rather than `|t|` from a bound on `t·t`) — real, not yet built,
-    /// but not a fresh real-analysis climb. Building it means editing
-    /// `creal/sqrt.rs`, which this module does not own.
+    /// **Congruence, the known value at `one`, monotonicity, AND `sqrt_sq`
+    /// are now all proved** ([`Self::abs_congr`], [`Self::abs_one`];
+    /// `CReal.sqrt_congr`, `CReal.sqrt_one`, `CReal.sqrt_le_sqrt`, and
+    /// `CReal.sqrt_sq` — `sqrt (mul t t) ~ t` for `0 ≤ t`; the OTHER
+    /// direction, `sq_sqrt := mul (sqrt x) (sqrt x) ~ x`, is not what this
+    /// module's two consumers need — all landed in `creal/sqrt.rs`,
+    /// 2026-08-26).
+    ///
+    /// **This does NOT close the triangle inequality or the unsquared
+    /// Ptolemy inequality, and an earlier revision of this doc was wrong to
+    /// say `sqrt_sq` was the one fact standing between `normSq_add_le`/
+    /// `ptolemy_inequality_sq` and their classical unsquared forms.** Both
+    /// bounds carry a factor-of-2 slack from the parallelogram law
+    /// (`normSq(z+w) ≤ 2‖z‖²+2‖w‖²`, not the sharp `≤ (‖z‖+‖w‖)²`), and
+    /// `sqrt_sq` only cancels a square that is ALREADY there — it cannot
+    /// manufacture the sharper bound the cancellation needs. Concretely, at
+    /// `z := one, w := zero`: `2‖z‖²+2‖w‖² = 2` but `(‖z‖+‖w‖)² = 1`, so
+    /// `2‖z‖²+2‖w‖² ≤ (‖z‖+‖w‖)²` is FALSE, and no amount of `sqrt_sq` makes
+    /// `sqrt(2‖z‖²+2‖w‖²) ≤ ‖z‖+‖w‖` provable through that route — see
+    /// [`Self::norm_sq_add_le`]'s own doc for the full chain this refutes.
+    /// What `sqrt_sq` DOES give outright, combined with `sqrt_le_sqrt`, is
+    /// the honest (loose) bound `‖z+w‖ ≤ sqrt(2‖z‖²+2‖w‖²)`. Reaching the
+    /// classical inequality needs a SHARPER bound on `normSq(z+w)` first —
+    /// a Cauchy–Schwarz-style estimate on the cross term, which needs
+    /// `abs`'s multiplicativity (`‖z·w‖ = ‖z‖·‖w‖`, not built) or an
+    /// equivalent. That is a genuinely new piece of work, not a rename of
+    /// this one.
     ///
     /// [`Self::abs_nonneg`] needed none of this: it is a single-index sign
     /// fact about `sqrtApprox`'s own construction (a `Nat` square root, cast
