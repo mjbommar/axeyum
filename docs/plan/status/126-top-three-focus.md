@@ -429,9 +429,17 @@ three root identities reproduce byte-for-byte from the checked builder. The
 hash, population, provenance, and generic-theorem dependencies. Next: expose
 the capsule through held-out-safe agent retrieval as target-owned library
 material while preserving zero exact-imported and autonomous credit.
+An end-to-end read-surface audit found that the typed Python
+`imported_candidates` tool still exposed the obsolete one-dimensional route
+even though the generated index had changed. The model and tool now carry the
+statement axiom floor, proof-reconstruction eligibility, and required clean
+definition route; its test requires `[propext]` and refuses the stale label.
+Next: add the clean capsule roots as a separate target-owned retrieval
+population, never as imported exact candidates.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-26 | `81b5bae31` | Repair the typed agent read surface so structural statement floors, proof-reconstruction eligibility, and clean-definition routing survive the generated index boundary. |
 | 2026-08-26 | `e56f1b339` | Root-export the three clean bitwise siblings as one reproducible external NDJSON capsule; fresh import admits 116 declarations, no axioms, and the same generic dependency for every root. |
 | 2026-08-26 | `282235e82` | Connect the three clean bitwise siblings to their open Mathlib development facts as non-authoritative semantic analogues, preserving zero exact-match and operation credit. |
 | 2026-08-26 | `76817cc3b` | Specialize the clean generic bitwise construction into AND, OR, and difference; all three sibling theorems reuse the same generic proof and retain empty footprints. |
