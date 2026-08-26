@@ -214,6 +214,20 @@ operation registration and fact transition. This makes the useful connection
 queryable while preventing the graph from silently collapsing “same bit law”
 into “same imported operation.”
 
+The family is no longer trapped inside the example process. The builder can
+root-export all three theorems as one official-format NDJSON capsule. The
+243,235-byte read-only pack lives outside Git under
+`/data0/axeyum/autogenesis/reference-packs/target-owned-bitwise-family-v1/`;
+the committed
+[`bitwise-clean-family-capsule-v1.json`](../../artifacts/autogenesis/bitwise-clean-family-capsule-v1.json)
+binds its size, hash, producer provenance, import population, and three root
+identities. A fresh importer admits 116 declarations with no axioms; every root
+has an empty footprint and directly depends on the same generic theorem. Run
+`just autogenesis-bitwise-clean-family-capsule-replay` to rebuild a temporary
+pack, independently import all three roots, and verify the durable external
+receipt. This supplies a reusable library capsule without vendoring bulk data
+or pretending it is an authoritative operation.
+
 A bounded oracle exhausts every Boolean vector through width 12: 8,191 vectors,
 90,114 in-range observations, and 8,191 first-out-of-range zero observations.
 It confirms the weighted-sum construction has the intended finite semantics.

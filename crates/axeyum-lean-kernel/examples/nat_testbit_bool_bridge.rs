@@ -4,9 +4,12 @@
 //! later transport remains explicit. It proves the result-sort seam itself is
 //! constructively bridgeable and preserves the native successor equation.
 
+use std::fs;
+use std::path::PathBuf;
+
 use axeyum_lean_kernel::{
-    BinderInfo, Declaration, ExprId, Kernel, NameId, NatDev, NatOps, NatPrelude, ReducibilityHint,
-    build_nat_prelude,
+    BinderInfo, Declaration, ExprId, Kernel, Lean4ExportMetadata, NameId, NatDev, NatOps,
+    NatPrelude, ReducibilityHint, build_nat_prelude,
 };
 
 #[derive(Clone, Copy)]
@@ -158,6 +161,7 @@ fn main() {
     clippy::too_many_lines
 )]
 fn run() -> Result<(), String> {
+    let export_path = parse_export_path()?;
     let mut kernel = Kernel::new();
     let prelude = build_nat_prelude(&mut kernel).map_err(|error| format!("{error:?}"))?;
     let root = kernel.anon();
@@ -2040,6 +2044,21 @@ fn run() -> Result<(), String> {
     if !kernel.axiom_footprint(numeric_roundtrip_name).is_empty() {
         return Err("numeric reification roundtrip gained assumptions".to_owned());
     }
+    let exported = if let Some(path) = export_path {
+        let roots = [
+            bitwise_and_theorem_name,
+            bitwise_or_theorem_name,
+            bitwise_difference_theorem_name,
+        ];
+        let stream = kernel
+            .render_lean4export_ndjson_roots(&Lean4ExportMetadata::axeyum("4.30.0"), &roots)
+            .map_err(|error| format!("bitwise family export failed: {error}"))?;
+        fs::write(&path, stream.as_bytes())
+            .map_err(|error| format!("bitwise family export write failed: {error}"))?;
+        Some((path, stream.len()))
+    } else {
+        None
+    };
     println!(
         "NAT_TESTBIT_BOOL_BRIDGE_OK|theorem=Axeyum.Autogenesis.testBitBool_succ|axioms=0|type={}|zero_observation_theorem=Axeyum.Autogenesis.testBitBool_zero|zero_observation_axioms=0|zero_observation_type={}|input_bound_theorem=Axeyum.Autogenesis.testBitBool_beyond_bound|input_bound_axioms=0|input_bound_type={}|observation_theorem=Axeyum.Autogenesis.bitwiseObservation_apply|observation_axioms=0|observation_type={}|reification_definition=Axeyum.Autogenesis.bitwiseReifyBounded|reification_base_theorem=Axeyum.Autogenesis.reifyBits_zero|reification_base_axioms=0|reification_base_type={}|reification_step_theorem=Axeyum.Autogenesis.reifyBits_succ|reification_step_axioms=0|reification_step_type={}|boolean_digit_roundtrip_theorem=Axeyum.Autogenesis.boolToBit_roundtrip_zero|boolean_digit_roundtrip_axioms=0|boolean_digit_roundtrip_type={}|boolean_digit_bound_theorem=Axeyum.Autogenesis.boolToBit_le_one|boolean_digit_bound_axioms=0|boolean_digit_bound_type={}|direct_boolean_roundtrip_theorem=Axeyum.Autogenesis.bitToBool_boolToBit|direct_boolean_roundtrip_axioms=0|direct_boolean_roundtrip_type={}|boolean_digit_divmod_theorem=Axeyum.Autogenesis.boolDigit_divMod|boolean_digit_divmod_axioms=0|boolean_digit_divmod_type={}|boolean_digit_div_theorem=Axeyum.Autogenesis.boolDigit_div|boolean_digit_div_axioms=0|boolean_digit_div_type={}|boolean_digit_mod_theorem=Axeyum.Autogenesis.boolDigit_mod|boolean_digit_mod_axioms=0|boolean_digit_mod_type={}|low_reification_base_theorem=Axeyum.Autogenesis.reifyBitsLow_zero|low_reification_base_axioms=0|low_reification_base_type={}|low_reification_step_theorem=Axeyum.Autogenesis.reifyBitsLow_succ|low_reification_step_axioms=0|low_reification_step_type={}|low_reification_roundtrip_theorem=Axeyum.Autogenesis.reifyBitsLow_roundtrip|low_reification_roundtrip_axioms=0|low_reification_roundtrip_type={}|low_reification_outside_theorem=Axeyum.Autogenesis.reifyBitsLow_outside|low_reification_outside_axioms=0|low_reification_outside_type={}|bounded_bitwise_theorem=Axeyum.Autogenesis.testBitBool_bitwiseReifyLow|bounded_bitwise_axioms=0|bounded_bitwise_type={}|total_bitwise_theorem=Axeyum.Autogenesis.testBitBool_bitwiseTotal|total_bitwise_axioms=0|total_bitwise_type={}|bitwise_specialization_count=3|bitwise_specialization_axioms=0|bitwise_specializations={}|one_bit_normalization_theorem=Axeyum.Autogenesis.reifyBits_one_normalize|one_bit_normalization_axioms=0|one_bit_normalization_type={}|one_bit_roundtrip_theorem=Axeyum.Autogenesis.reifyBits_one_roundtrip_zero|one_bit_roundtrip_axioms=0|one_bit_roundtrip_type={}|reification_bound_theorem=Axeyum.Autogenesis.reifyBits_lt_pow|reification_bound_axioms=0|reification_bound_type={}|numeric_roundtrip_theorem=Axeyum.Autogenesis.reifyBits_numeric_roundtrip|numeric_roundtrip_axioms=0|numeric_roundtrip_type={}",
         kernel.render_lean(ty),
@@ -2066,5 +2085,29 @@ fn run() -> Result<(), String> {
         kernel.render_lean(reify_bound_type),
         kernel.render_lean(numeric_roundtrip_type)
     );
+    if let Some((path, bytes)) = exported {
+        println!(
+            "NAT_TESTBIT_BOOL_FAMILY_EXPORT_OK|path={}|bytes={bytes}|roots=3|axioms=0",
+            path.display()
+        );
+    }
     Ok(())
+}
+
+fn parse_export_path() -> Result<Option<PathBuf>, String> {
+    let mut arguments = std::env::args_os().skip(1);
+    match arguments.next() {
+        None => Ok(None),
+        Some(flag) if flag == "--export" => {
+            let path = arguments
+                .next()
+                .map(PathBuf::from)
+                .ok_or("--export requires an output path")?;
+            if arguments.next().is_some() {
+                return Err("unexpected argument after --export output path".to_owned());
+            }
+            Ok(Some(path))
+        }
+        Some(_) => Err("usage: nat_testbit_bool_bridge [--export <output.ndjson>]".to_owned()),
+    }
 }

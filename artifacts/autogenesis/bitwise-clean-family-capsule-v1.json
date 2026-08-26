@@ -1,0 +1,53 @@
+{
+  "authority": "reusable checked target-owned library capsule; no exact imported-operation identity, no imported proof transport, no operation registration, no autonomous-production credit, and no fact-transition authority",
+  "external_stream": {
+    "bytes": 243235,
+    "mode": "0444",
+    "path": "/data0/axeyum/autogenesis/reference-packs/target-owned-bitwise-family-v1/bitwise-family.ndjson",
+    "sha256": "347c12cd48007434f72b86bb84d68399df05ff9a8ad0f1146cae3086a69ec250"
+  },
+  "import": {
+    "admitted_declarations": 116,
+    "axioms": [],
+    "declaration_records": 93,
+    "expression_records": 4646,
+    "export_format": "3.1.0",
+    "lean_githash": "axeyum-lean-kernel",
+    "lean_version": "4.30.0",
+    "level_records": 4,
+    "name_records": 132
+  },
+  "kind": "axeyum-autogenesis-bitwise-clean-family-capsule",
+  "roots": [
+    {
+      "axiom_footprint": [],
+      "declaration_identity": "ea6f68354931e032506b9ef41fdcc21ed660c8604d55c186ed11068927afc3da",
+      "direct_theorem_dependencies": [
+        "Axeyum.Autogenesis.testBitBool_bitwiseTotal"
+      ],
+      "name": "Axeyum.Autogenesis.testBitBool_bitwiseAnd"
+    },
+    {
+      "axiom_footprint": [],
+      "declaration_identity": "f31c1c7b9549c5093fdb7758677b7128e2836895afaafeaadcab02aef4d7145e",
+      "direct_theorem_dependencies": [
+        "Axeyum.Autogenesis.testBitBool_bitwiseTotal"
+      ],
+      "name": "Axeyum.Autogenesis.testBitBool_bitwiseOr"
+    },
+    {
+      "axiom_footprint": [],
+      "declaration_identity": "96fda339d21d7baecddd939d74cbb31c227e2e863b5b7dce3ab52061158bf796",
+      "direct_theorem_dependencies": [
+        "Axeyum.Autogenesis.testBitBool_bitwiseTotal"
+      ],
+      "name": "Axeyum.Autogenesis.testBitBool_bitwiseDifference"
+    }
+  ],
+  "schema_version": 1,
+  "source": {
+    "builder": "crates/axeyum-lean-kernel/examples/nat_testbit_bool_bridge.rs",
+    "command": "cargo run -q -p axeyum-lean-kernel --example nat_testbit_bool_bridge -- --export /data0/axeyum/autogenesis/reference-packs/target-owned-bitwise-family-v1/bitwise-family.ndjson"
+  },
+  "state": "root-selected-export-reimported-axiom-free"
+}

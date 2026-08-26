@@ -509,6 +509,10 @@ difference are definitions over the same generic constructor, and their three
 axiom-free observation theorems are specializations of the one generic theorem.
 This meets the multi-target mathematical-family bar without manufacturing
 exact imported-definition identity.
+The three roots now also ship as a root-selected, independently re-importable
+external capsule with a committed hash-bound receipt. This converts the
+example-built family into reusable checked library material while keeping
+operation registration and autonomous-production credit at zero.
 
 ### Exit evidence
 
