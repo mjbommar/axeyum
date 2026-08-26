@@ -117,6 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-26 | `30353a600` | Synchronize three missing fact dependencies from admitted kernel proofs; the 1,302-edge derived authority returns to zero missing edges and one more fact gains downstream connectivity. |
 | 2026-08-26 | `a88fa732f` | Redact all 37 held-out identities from agent-readable rankings and censuses; replace them with count/hash receipts, derive exclusions independently, and restore the 1,881-test Python authority to green. |
 | 2026-08-26 | `7e8fe9b3b` | Restore the standard-library-only script boundary with typed package implementations and stable launchers; fix seven newly exposed diagnostics and refresh honest bounded yield from 6/109 to 6/111. |
 | 2026-08-26 | `f1e1724e2` | Add held-out-safe tier-R retrieval for reusable target-owned capsule roots, preserving capsule identity, empty footprints, semantic-analogue qualification, and zero operation authority. |
@@ -1628,6 +1629,12 @@ set from the nursery. The gate scans 1,066 files against 37 held-out facts and
 reports zero references. The full Python authority is now green at 1,881
 collected, 1,847 passed, and 34 skipped, with zero failures or errors; Rust,
 docs, and remote CI remain separate claims.
+The canonical fact gate then exposed three missing authored dependencies in two
+settled facts. Those edges are now synchronized from the admitted proof terms:
+`Nat.fib_le_succ` points to `Nat.le_add_right` and `Nat.zero_le`, while
+`Nat.choose_self` points to `Nat.choose_succ_self_eq_zero`. The derived graph
+authority reports 1,302 edges and zero missing; the DAG now has 388 facts with
+dependents, up from 387, with theorem status and evidence unchanged.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization
