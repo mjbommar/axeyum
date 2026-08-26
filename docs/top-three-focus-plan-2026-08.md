@@ -617,6 +617,17 @@ axiom-free `kernel-lean` proof; an open child must remain free of admission
 fields. This keeps top-down selection evidence stable while allowing bottom-up
 theorem construction to move the ledger forward.
 
+The product-health front door is now generated from the committed authorities
+rather than maintained as another prose estimate. Its first snapshot measures
+1,287 kernel theorems, 698 ledger facts, 397 exactly linked theorems, 16
+non-fixture episodes, two reusable multi-target operations, and two admissible
+general-producer observations among 138 facts. Source-population hashes make
+the JSON and Markdown stale when their evidence changes, and both aggregate
+gates run the generator's controls and freshness check. Crucially, the artifact
+records runtime gate status as `not-recorded`: static reachability is useful,
+but it is not a successful `just check` or CI receipt. Next: define an
+authenticated, commit-bound execution receipt before displaying runtime health.
+
 ## Sequencing
 
 The critical path is not three independent projects:

@@ -483,9 +483,16 @@ the three dependencies derived from `Nat.fib_le_succ`, and the checker preserves
 the historical selection while allowing either child to advance only through
 checked, axiom-free kernel evidence. All 51 adopted controls pass again without
 granting the qualification process proof, evaluation, or ledger-write credit.
+The first generated product-health snapshot now joins live kernel, fact,
+connectivity, operation, producer-outcome, and non-fixture episode populations.
+It reports 1,287 theorems, 698 facts, 397 exact links, 16 production episodes,
+and 2/138 admissible general-producer observations. Both aggregate gates check
+its freshness and controls. Runtime status remains explicitly `not-recorded`;
+the snapshot proves static reachability, not a green build or CI run.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-26 | `2b943b2e7` | Generate a hash-bound product-health snapshot from kernel, fact, connectivity, operation, producer-outcome, episode, and aggregate-gate authorities without converting static wiring into a runtime-green claim. |
 | 2026-08-26 | `6fad715d8` | Make the Fibonacci child qualification progress-aware: pin candidate-specific dependency receipts and permit either child to advance only through checked, axiom-free kernel evidence. |
 | 2026-08-26 | `2aedb4d68` | Refresh the generated public example inventory from 163 to the 193 examples canonical discovery actually finds; both guarded planning references now report zero stale markers. |
 | 2026-08-26 | `42e7bdfd1` | Make the complete Python build/test/stub/type/lint recipe part of canonical `just check`; register two orphan controls in both gates and return the reachability ratchet from 16 to its 14-module baseline. |
