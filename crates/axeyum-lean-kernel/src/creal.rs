@@ -1312,6 +1312,21 @@ pub struct CRealPrelude {
     /// The single-index approximation-quality bracket `sqrtApprox` was built
     /// to satisfy. See `creal/sqrt.rs`.
     pub sqrt_approx_sq_bracket: NameId,
+    /// `CReal.sqrtApproxKRegular : ∀ x, KRegular (sqrtApprox x) 1` — the
+    /// cross-index estimate `sqrt.rs`'s own module doc names as the
+    /// remaining obligation: `sqrtApprox x` is regular up to the constant
+    /// factor `2` (`c = 1`), independent of any magnitude bound on `x`. See
+    /// `creal/sqrt.rs`.
+    pub sqrt_approx_kregular: NameId,
+    /// `CReal.sqrt : CReal → CReal := fun x => CReal.mk (speedup (sqrtApprox
+    /// x) 1) (regular_of_kregular (sqrtApprox x) 1 (sqrtApproxKRegular x))`.
+    ///
+    /// Total (no `0 ≤ x` hypothesis in its signature): `sqrtApprox` clamps
+    /// every sample to `Rat.max _ 0` before taking a `Nat` square root, so
+    /// the construction never inspects `x`'s sign. `0 ≤ x` is the hypothesis
+    /// `sqrt`'s own LAWS need (relating `sqrt x` back to `x`), not the
+    /// definition. See `creal/sqrt.rs`.
+    pub sqrt: NameId,
 
     // --- Bishop's speed-up combinator (creal/speedup.rs) ----------------------
     /// `CReal.KRegular : (Nat → Rat) → Nat → Prop` — Bishop regularity up to a
@@ -3228,6 +3243,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         nat_sqrt_lt: kernel.name_str(creal, "natSqrtLt"),
         sqrt_approx: kernel.name_str(creal, "sqrtApprox"),
         sqrt_approx_sq_bracket: kernel.name_str(creal, "sqrtApproxSqBracket"),
+        sqrt_approx_kregular: kernel.name_str(creal, "sqrtApproxKRegular"),
+        sqrt: kernel.name_str(creal, "sqrt"),
         k_regular_pred: kernel.name_str(creal, "KRegular"),
         speedup: kernel.name_str(creal, "speedup"),
         regular_of_kregular: kernel.name_str(creal, "regular_of_kregular"),
@@ -3484,6 +3501,12 @@ pub(crate) fn build_creal_prelude_uncached(
         mul_self_zero::declare_mul_self_zero(&mut d, prelude)?;
         sqrt::declare_sqrt(&mut d, prelude)?;
         speedup::declare_speedup(&mut d, prelude)?;
+        // `sqrtApproxKRegular` needs `speedup.rs`'s `KRegular` predicate
+        // (`declare_speedup`, just above) and `sqrt.rs`'s own
+        // `sqrtApproxSqBracket` (`declare_sqrt`, above that); `sqrt` itself
+        // then needs both `sqrtApproxKRegular` and `regular_of_kregular`.
+        sqrt::declare_sqrt_approx_kregular(&mut d, prelude)?;
+        sqrt::declare_sqrt_ctor(&mut d, prelude)?;
         convergence::declare_cauchy_convergence(&mut d, prelude)?;
         series::declare_series(&mut d, prelude)?;
         // `CReal.mag_bound_le_sum_range_of_lt` needs `CReal.sumRange`
