@@ -6827,3 +6827,100 @@ fn abs_add_le_at_one_and_one_is_tight() {
             )
         });
 }
+
+/// **Mandatory concrete instantiation** for `CReal.scale_cancel_le`, kernel-
+/// checked rather than verified on paper: `m := 1`, `u := 2`, `v := 1`.
+///
+/// Both directions are TIGHT, which is exactly what would catch an off-by-one
+/// factor: the hypothesis is `(1/2)*2 = 1 <= 1` (an equality dressed as a
+/// bound) and the conclusion is `2 <= 2*1 = 2` (likewise). `u` is built as
+/// `CReal.ofRat (Rat.natDivSucc 2 0)` -- the theorem's own `Nat.succ m`
+/// reciprocal shape at `m := 1` -- rather than some other representation of
+/// "2", so the hypothesis proof is exactly the field identity
+/// `declare_scale_cancel_le` itself needs internally
+/// (`Rat.mul_inv_cancel` + `Rat.inv_natDivSucc`), reconstructed here at a
+/// concrete literal instead of the free `m` the production declaration
+/// carries.
+#[test]
+fn scale_cancel_le_applies_at_one_two_one_and_is_tight() {
+    use crate::rat_prelude::ops::{rat_eq_rewrite, req, rmul, rone};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let rat = p.rat;
+
+    let one_nat = d.num(1);
+    let zero_nat = d.num(0);
+    let m = d.num(1); // m := 1
+    let sm = d.succ(m); // Nat.succ 1 = 2
+
+    // c := CReal.ofRat (Rat.natDivSucc 1 1) = 1/2
+    let c_rat = d.const_app(rat.nat_div_succ, &[one_nat, m]);
+    let c = d.const_app(p.of_rat, &[c_rat]);
+    // u := CReal.ofRat (Rat.natDivSucc 2 0) -- defeq `CReal.ofNat 2`.
+    let succ_rat = d.const_app(rat.nat_div_succ, &[sm, zero_nat]);
+    let u = d.const_app(p.of_rat, &[succ_rat]);
+    // v := CReal.ofRat Rat.one -- defeq `CReal.one`.
+    let one_rat = rone(&mut d, rat);
+    let v = d.const_app(p.of_rat, &[one_rat]);
+
+    // --- Rat level: c_rat * succ_rat = Rat.one, exactly (m := 1) -----------
+    let unit_le = d.lemma(rat.int.nat.le_refl, &[one_nat]); // Nat.le 1 1
+    let c_pos = d.lemma(rat.nat_div_succ_pos, &[one_nat, m, unit_le]);
+    // c_pos : Rat.lt Rat.zero c_rat
+    let inv_term = d.const_app(rat.inv, &[c_rat]);
+    let cancel = d.lemma(rat.mul_inv_cancel, &[c_rat, c_pos]);
+    // cancel : Eq Rat (Rat.mul c_rat inv_term) Rat.one
+    let inv_eq = d.lemma(rat.inv_nat_div_succ, &[m]);
+    // inv_eq : Eq Rat inv_term succ_rat
+    let key_rat_eq = rat_eq_rewrite(&mut d, inv_term, succ_rat, inv_eq, cancel, &|d, t| {
+        let prod = rmul(d, c_rat, t);
+        req(d, prod, one_rat)
+    });
+    // key_rat_eq : Eq Rat (Rat.mul c_rat succ_rat) Rat.one
+
+    // --- lift to CReal: Equiv (mul c u) v -----------------------------------
+    let prod_real = d.const_app(p.mul, &[c, u]);
+    let rat_prod = rmul(&mut d, c_rat, succ_rat);
+    let of_rat_mul_proof = d.lemma(p.of_rat_mul, &[c_rat, succ_rat]);
+    // of_rat_mul_proof : Equiv prod_real (ofRat rat_prod)
+    let prod_equiv_v = rat_eq_rewrite(
+        &mut d,
+        rat_prod,
+        one_rat,
+        key_rat_eq,
+        of_rat_mul_proof,
+        &|d, t| {
+            let embedded = d.const_app(p.of_rat, &[t]);
+            d.const_app(p.equiv, &[prod_real, embedded])
+        },
+    );
+    // prod_equiv_v : Equiv prod_real v  (v is syntactically `ofRat one_rat`)
+
+    let hyp_proof = d.lemma(p.le_of_equiv, &[prod_real, v, prod_equiv_v]);
+    // hyp_proof : le (mul c u) v  -- i.e. (1/2)*2 <= 1, tight.
+
+    let instance = d.lemma(p.scale_cancel_le, &[m, u, v, hyp_proof]);
+
+    // Independently reconstruct the expected conclusion:
+    // le u (mul (ofNat (Nat.succ m)) v) = le 2 (mul (ofNat 2) v), tight.
+    let nice_succ_factor = d.const_app(p.of_nat, &[sm]);
+    let nice_bound = d.const_app(p.mul, &[nice_succ_factor, v]);
+    let ty = d.const_app(p.le, &[u, nice_bound]);
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(anon, "__scale_cancel_le_at_1_2_1");
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value: instance,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.scale_cancel_le at (m=1, u=2, v=1) did NOT check against \
+                 le u (mul (ofNat 2) v) -- i.e. le 2 (mul 2 1): {error:?}"
+            )
+        });
+}
