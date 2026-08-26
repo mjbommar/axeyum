@@ -138,6 +138,14 @@ replacement, and event publication is deterministic; all six live proposals
 reconstruct byte-for-byte. No fact status changed in this increment. Next:
 preserve v1 as the explicit pre-reconciliation baseline, then execute the six
 checked transitions and publish a v2 remaining-target census.
+The original 1,704-row candidate ranking is now preserved under an explicit
+pre-reconciliation path, and the 57-goal census pins that path and SHA rather
+than the mutable current ranking. Its six proposals were regenerated against
+the versioned census. This removes the artifact-lifecycle blocker: later
+status-driven ranking refreshes cannot rewrite or invalidate the experiment
+that justified reconciliation. Next: execute the six exact crash-safe
+transitions, regenerate current views, and publish the 51-goal remaining-target
+result separately.
 The accepted ADR-0541 general SMT-LIB session driver is now also a named
 `axeyum` binary target, not only a discoverability-poor Cargo example. The same
 source remains the historical example control, and the binary's focused check,
@@ -179,3 +187,4 @@ repository-built front door, not yet a published crate or prebuilt release.
 | 2026-08-26 | `cd02dbb57` | Add a fail-closed, operation-free proposition-reconciliation transaction with mutation controls and explicit zero autonomous credit. |
 | 2026-08-26 | `3d4bb31eb` | Materialize six live hash-bound reconciliation proposals with zero writes, operations, and autonomous credit. |
 | 2026-08-26 | `6a348363b` | Extend the crash-safe applier with live-rebuilt, operation-free reconciliation events and recovery controls at every durable boundary. |
+| 2026-08-26 | `4e025a444` | Preserve the pre-reconciliation ranking and bind the 57-goal census to its immutable path and hash. |
