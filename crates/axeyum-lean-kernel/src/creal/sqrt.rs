@@ -96,6 +96,51 @@
 //! `2`) — **independent of any magnitude bound on `x`**, unlike `CReal.mul`'s
 //! canonical-bound machinery: `sqrt` is norm-*reducing*, and this route never
 //! needs to know how big `x` is, only how close two of its samples are.
+//!
+//! ## Update: the sketch above is now landed, as [`declare_sqrt_approx_kregular`]
+//!
+//! `CReal.sqrtApproxKRegular : ∀ x, KRegular (sqrtApprox x) 1` is a kernel
+//! declaration now (checked, axiom-free, confirmed by
+//! `creal_tests::every_creal_declaration_is_checked_and_axiom_free`), built
+//! via [`one_sided_bound`] (the cross-index squeeze sketched above, applied
+//! once per direction rather than by a WLOG case split — both directions are
+//! symmetric applications of the same `rat_sq_le` squeeze, so no
+//! `Rat.le_or_lt` case analysis was needed after all) and
+//! [`raw_bound_le_double`]/[`double_div_succ_eq`] (widening the raw bound to
+//! the exact `c = 1` modulus). [`declare_sqrt_ctor`] then gives `CReal.sqrt`
+//! directly: `sqrt x := CReal.mk (speedup (sqrtApprox x) 1)
+//! (regular_of_kregular (sqrtApprox x) 1 (sqrtApproxKRegular x))` — the same
+//! `CReal.mk`-via-`speedup` recipe `convergence.rs`'s `converges_of_cauchy`
+//! already uses, so no `Exists.rec` elimination is needed. `CReal.sqrt` is
+//! **total**: `sqrtApprox` clamps every sample to `Rat.max _ 0`, so the
+//! construction never inspects `x`'s sign, and `0 ≤ x` is not part of its
+//! signature.
+//!
+//! One shape mismatch cost real debugging time and is worth naming:
+//! [`CRealPrelude::sqrt_approx_sq_bracket`]'s own conclusion states the
+//! square as a single COLLAPSED `Rat.normalize` over the sample index
+//! (`Rat.normalize (s*s) j _`), not as `Rat.mul (sqrtApprox x n) (sqrtApprox
+//! x n)` — those two are only PROPOSITIONALLY equal, via
+//! `Rat.normalize_mul_normalize`, not definitionally, so [`one_sided_bound`]
+//! projects the bracket at its actual collapsed shape and bridges to the
+//! squared-`sqrtApprox` form explicitly (see its own doc comment). A
+//! previous version of this file's own doc restated the bracket using
+//! `Rat.mul` directly, which is the SAME error this module's own opening
+//! section warns against making with `sqrtApprox` vs. its bracket.
+//!
+//! `sq_sqrt`/`sqrt_sq` (relating `sqrt x` back to `x` by squaring) are
+//! **not attempted**. Squaring `sqrt x` goes through `CReal.mul`'s own
+//! sampling (`mulShift`/`mul_index`), which needs a canonical bound on `sqrt
+//! x` itself — exactly the magnitude-bound machinery this `KRegular` proof
+//! deliberately avoided — plus composing two layers of sampling index
+//! (`mul`'s own, `speedup`'s) before the `sqrtApproxSqBracket`-based
+//! convergence squeeze (via `CRealPrelude::equiv_of_bounded`) can even be
+//! stated. That is real, comparably-sized additional work.
+//!
+//! A concrete regression test lives in `creal_tests.rs`:
+//! `CReal.seq (CReal.sqrt (CReal.ofNat 4)) 0` computes, by kernel reduction
+//! alone, to `Rat.natDivSucc 2 0` (`= 2`), with a negative control (`3`) the
+//! kernel rejects.
 
 use crate::BinderInfo;
 use crate::KernelError;
