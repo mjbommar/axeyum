@@ -1,17 +1,17 @@
 {
   "census": {
-    "axiom_free_declarations": 1500,
+    "axiom_free_declarations": 1506,
     "declaration_kinds": {
       "axiom": 30,
       "constructor": 29,
       "definition": 242,
       "inductive": 22,
       "recursor": 22,
-      "theorem": 1185
+      "theorem": 1191
     },
-    "declarations": 1530,
-    "direct_theorem_dependency_edges": 6595,
-    "theorems": 1185
+    "declarations": 1536,
+    "direct_theorem_dependency_edges": 6651,
+    "theorems": 1191
   },
   "declarations": [
     {
@@ -3330,6 +3330,30 @@
       "axiom_footprint_size": 0,
       "declaration_kind": "theorem",
       "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.hasDerivative_neg",
+        "CReal.le_congr",
+        "CReal.monotone_of_nonneg_deriv",
+        "CReal.neg_le_neg"
+      ],
+      "id": "CReal.antitone_of_nonpos_deriv",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
         "CReal.lt_congr"
       ],
       "id": "CReal.apart_congr",
@@ -3520,6 +3544,33 @@
       "declaration_kind": "theorem",
       "direct_theorem_dependencies": [],
       "id": "CReal.bounded_on_unfold",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.symm",
+        "CReal.Equiv.trans",
+        "CReal.add_assoc",
+        "CReal.add_comm",
+        "CReal.add_congr",
+        "CReal.add_neg",
+        "CReal.add_zero",
+        "CReal.equiv_of_le_le",
+        "CReal.hasDerivative_neg",
+        "CReal.le_congr",
+        "CReal.le_of_equiv",
+        "CReal.monotone_of_nonneg_deriv",
+        "CReal.neg_congr",
+        "CReal.neg_le_neg"
+      ],
+      "id": "CReal.constant_of_zero_deriv",
       "visible_in": [
         "complex",
         "cpoint",
@@ -6905,6 +6956,22 @@
     {
       "axiom_footprint_size": 0,
       "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
+        "CReal.Equiv.refl",
+        "CReal.Equiv.trans",
+        "CReal.add_congr",
+        "CReal.sumRange_split"
+      ],
+      "id": "CReal.sumRange_reblock",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
       "direct_theorem_dependencies": [],
       "id": "CReal.sumRange_seq_succ",
       "visible_in": [
@@ -7294,6 +7361,21 @@
         "CReal.uniformly_continuous_neg"
       ],
       "id": "CReal.uniformly_continuous_sub",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
+        "Rat.le_of_sub_le",
+        "Rat.neg_le_neg",
+        "Rat.neg_neg"
+      ],
+      "id": "CReal.within_of_two_sided_le",
       "visible_in": [
         "complex",
         "cpoint",
@@ -20297,6 +20379,54 @@
       "axiom_footprint_size": 0,
       "declaration_kind": "theorem",
       "direct_theorem_dependencies": [
+        "Rat.add_le_add",
+        "Rat.add_nonneg",
+        "Rat.add_zero",
+        "Rat.le_of_lt",
+        "Rat.le_refl",
+        "Rat.le_trans",
+        "Rat.left_distrib",
+        "Rat.mul_comm",
+        "Rat.mul_le_mul_of_nonneg_right",
+        "Rat.mul_one",
+        "Rat.zero_lt_one"
+      ],
+      "id": "Rat.bernoulli",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
+        "Rat.add_le_add",
+        "Rat.add_zero",
+        "Rat.le_refl",
+        "Rat.le_trans",
+        "Rat.left_distrib",
+        "Rat.mul_assoc",
+        "Rat.mul_comm",
+        "Rat.mul_le_mul_of_nonneg_left",
+        "Rat.mul_le_mul_of_nonneg_right",
+        "Rat.mul_one",
+        "Rat.right_distrib"
+      ],
+      "id": "Rat.bernoulli_harmonic_bound",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "rat"
+      ]
+    },
+    {
+      "axiom_footprint_size": 0,
+      "declaration_kind": "theorem",
+      "direct_theorem_dependencies": [
         "Rat.add_nonneg",
         "Rat.le_of_lt",
         "Rat.le_trans",
@@ -31768,6 +31898,66 @@
     },
     {
       "relation": "direct-theorem-depends-on",
+      "source": "CReal.antitone_of_nonpos_deriv",
+      "target": "CReal.Equiv.refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.antitone_of_nonpos_deriv",
+      "target": "CReal.Equiv.symm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.antitone_of_nonpos_deriv",
+      "target": "CReal.Equiv.trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.antitone_of_nonpos_deriv",
+      "target": "CReal.add_assoc"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.antitone_of_nonpos_deriv",
+      "target": "CReal.add_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.antitone_of_nonpos_deriv",
+      "target": "CReal.add_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.antitone_of_nonpos_deriv",
+      "target": "CReal.add_neg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.antitone_of_nonpos_deriv",
+      "target": "CReal.add_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.antitone_of_nonpos_deriv",
+      "target": "CReal.hasDerivative_neg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.antitone_of_nonpos_deriv",
+      "target": "CReal.le_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.antitone_of_nonpos_deriv",
+      "target": "CReal.monotone_of_nonneg_deriv"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.antitone_of_nonpos_deriv",
+      "target": "CReal.neg_le_neg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
       "source": "CReal.apart_congr",
       "target": "CReal.lt_congr"
     },
@@ -32060,6 +32250,81 @@
       "relation": "direct-theorem-depends-on",
       "source": "CReal.bounded_on_mul",
       "target": "Rat.natDivSucc_mul"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.constant_of_zero_deriv",
+      "target": "CReal.Equiv.refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.constant_of_zero_deriv",
+      "target": "CReal.Equiv.symm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.constant_of_zero_deriv",
+      "target": "CReal.Equiv.trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.constant_of_zero_deriv",
+      "target": "CReal.add_assoc"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.constant_of_zero_deriv",
+      "target": "CReal.add_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.constant_of_zero_deriv",
+      "target": "CReal.add_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.constant_of_zero_deriv",
+      "target": "CReal.add_neg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.constant_of_zero_deriv",
+      "target": "CReal.add_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.constant_of_zero_deriv",
+      "target": "CReal.equiv_of_le_le"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.constant_of_zero_deriv",
+      "target": "CReal.hasDerivative_neg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.constant_of_zero_deriv",
+      "target": "CReal.le_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.constant_of_zero_deriv",
+      "target": "CReal.le_of_equiv"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.constant_of_zero_deriv",
+      "target": "CReal.monotone_of_nonneg_deriv"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.constant_of_zero_deriv",
+      "target": "CReal.neg_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.constant_of_zero_deriv",
+      "target": "CReal.neg_le_neg"
     },
     {
       "relation": "direct-theorem-depends-on",
@@ -38718,6 +38983,26 @@
     },
     {
       "relation": "direct-theorem-depends-on",
+      "source": "CReal.sumRange_reblock",
+      "target": "CReal.Equiv.refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.sumRange_reblock",
+      "target": "CReal.Equiv.trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.sumRange_reblock",
+      "target": "CReal.add_congr"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.sumRange_reblock",
+      "target": "CReal.sumRange_split"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
       "source": "CReal.sumRange_split",
       "target": "CReal.Equiv.refl"
     },
@@ -39470,6 +39755,21 @@
       "relation": "direct-theorem-depends-on",
       "source": "CReal.uniformly_continuous_sub",
       "target": "CReal.uniformly_continuous_neg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.within_of_two_sided_le",
+      "target": "Rat.le_of_sub_le"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.within_of_two_sided_le",
+      "target": "Rat.neg_le_neg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "CReal.within_of_two_sided_le",
+      "target": "Rat.neg_neg"
     },
     {
       "relation": "direct-theorem-depends-on",
@@ -53450,6 +53750,116 @@
       "relation": "direct-theorem-depends-on",
       "source": "Rat.add_zero",
       "target": "Rat.int_zero_mul"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.bernoulli",
+      "target": "Rat.add_le_add"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.bernoulli",
+      "target": "Rat.add_nonneg"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.bernoulli",
+      "target": "Rat.add_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.bernoulli",
+      "target": "Rat.le_of_lt"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.bernoulli",
+      "target": "Rat.le_refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.bernoulli",
+      "target": "Rat.le_trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.bernoulli",
+      "target": "Rat.left_distrib"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.bernoulli",
+      "target": "Rat.mul_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.bernoulli",
+      "target": "Rat.mul_le_mul_of_nonneg_right"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.bernoulli",
+      "target": "Rat.mul_one"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.bernoulli",
+      "target": "Rat.zero_lt_one"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.bernoulli_harmonic_bound",
+      "target": "Rat.add_le_add"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.bernoulli_harmonic_bound",
+      "target": "Rat.add_zero"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.bernoulli_harmonic_bound",
+      "target": "Rat.le_refl"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.bernoulli_harmonic_bound",
+      "target": "Rat.le_trans"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.bernoulli_harmonic_bound",
+      "target": "Rat.left_distrib"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.bernoulli_harmonic_bound",
+      "target": "Rat.mul_assoc"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.bernoulli_harmonic_bound",
+      "target": "Rat.mul_comm"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.bernoulli_harmonic_bound",
+      "target": "Rat.mul_le_mul_of_nonneg_left"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.bernoulli_harmonic_bound",
+      "target": "Rat.mul_le_mul_of_nonneg_right"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.bernoulli_harmonic_bound",
+      "target": "Rat.mul_one"
+    },
+    {
+      "relation": "direct-theorem-depends-on",
+      "source": "Rat.bernoulli_harmonic_bound",
+      "target": "Rat.right_distrib"
     },
     {
       "relation": "direct-theorem-depends-on",

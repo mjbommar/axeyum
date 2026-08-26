@@ -28,8 +28,8 @@ work a live production inventory found 1,184 theorems while the committed
 projection still held 1,100. Regenerating both artifacts brought them into exact
 agreement at 1,184. Their separate derivations remain valuable: freshness must
 continue to fail if theorem construction advances only one population.
-After merging the immediately subsequent `CReal.ivt_step` theorem, both derived
-artifacts advanced together to 1,185.
+After merging the immediately subsequent constructive-real and rational
+theorems, both derived artifacts advanced together to 1,191.
 
 ## Reproduce and gate
 

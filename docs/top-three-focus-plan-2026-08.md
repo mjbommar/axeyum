@@ -25,8 +25,9 @@ semantics, evidence, provenance, checking, and compounding knowledge loop.
 - A live high-stack production inventory reported 1,184 distinct theorems with
   empty measured axiom footprints. The committed declaration projection was
   stale at 1,100; regenerating it from current code now agrees exactly at 1,184.
-  After merging the next `CReal.ivt_step` increment, the projection and search
-  index advanced together to 1,185. The production-provenance ledger credits
+  After merging the next constructive-real and rational increments, the
+  projection and search index advanced together to 1,191. The production-
+  provenance ledger credits
   only 8 established facts to reusable
   multi-target operations; most theorems remain human-built.
 - Sixteen live agent episodes exist. Two produced axiom-free proofs re-derived
