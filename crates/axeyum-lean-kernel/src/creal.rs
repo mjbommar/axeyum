@@ -2615,6 +2615,36 @@ pub struct CRealPrelude {
     /// does not unfold `Nat.gcd` by ι even for literal arguments) and why
     /// they were not needed for [`Self::exp_term_le_dominant`].
     pub sum_pow_half_closed_form: NameId,
+    /// `CReal.cauchyOfPointwiseEquiv : ∀ G F, (∀ n, Equiv (G n) (F n)) →
+    /// Cauchy G → Cauchy F` — the general lemma this lane built to scale a
+    /// `Cauchy` witness across a pointwise `Equiv`, e.g. `CReal.mul_sumRange`'s
+    /// index-shifted `mul c (sumRange f n) ~ sumRange (scaled f) n` bridge.
+    /// See `creal/exponential.rs::declare_cauchy_of_pointwise_equiv`.
+    pub cauchy_of_pointwise_equiv: NameId,
+    /// `CReal.expDominantCauchy : Cauchy (sumRange expDominant)` — built via
+    /// `CReal.converges_mul` (a constant sequence times the geometric partial
+    /// sums, both convergent) plus [`Self::cauchy_of_pointwise_equiv`]
+    /// transported across `CReal.mul_sumRange`'s `Equiv`, rather than
+    /// re-deriving `CReal.mul`'s own index-shift bookkeeping by hand. See
+    /// `creal/exponential.rs::declare_exp_dominant_cauchy`.
+    pub exp_dominant_cauchy: NameId,
+    /// `CReal.expSeriesPartialConverges : Exists CReal (fun L => Converges
+    /// expSeriesPartial L)` — [`Self::sum_range_converges_of_dominated`]
+    /// applied to [`Self::exp_term_abs_le_dominant`] and
+    /// [`Self::exp_dominant_cauchy`]. See
+    /// `creal/exponential.rs::declare_exp_series_partial_converges`.
+    pub exp_series_partial_converges: NameId,
+    /// `CReal.e := CReal.mk (speedup (diagonal expSeriesPartial) K) (…)` —
+    /// Euler's number, built via `CReal.mk` on an EXPLICIT regular sequence
+    /// (never an `Exists`-elimination into data): a concrete, non-existential
+    /// `Cauchy` witness for `sumRange expDominant`
+    /// (`exponential.rs::exp_dominant_cauchy_body_concrete`, redone by hand
+    /// through `CReal.mul`'s own index shift, since
+    /// [`Self::exp_dominant_cauchy`]'s existential form cannot supply `K` as
+    /// data) feeds `CReal.sumRange_cauchy_dominated_ordered_normalized` and
+    /// `CReal.regular_of_scaled_cauchy`. See
+    /// `creal/exponential.rs::declare_e`.
+    pub e: NameId,
     /// `CReal.sumRange_const : ∀ w m,
     /// Equiv (sumRange (fun _ => w) (Nat.succ m)) (mul (ofNat (Nat.succ m))
     /// w)` (`creal/monotone.rs`) — a constant summed `succ m` times is
@@ -3516,6 +3546,10 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         exp_dominant_nonneg: kernel.name_str(creal, "exp_dominant_nonneg"),
         exp_term_abs_le_dominant: kernel.name_str(creal, "exp_term_abs_le_dominant"),
         sum_pow_half_closed_form: kernel.name_str(creal, "sumRange_pow_half_closed_form"),
+        cauchy_of_pointwise_equiv: kernel.name_str(creal, "cauchyOfPointwiseEquiv"),
+        exp_dominant_cauchy: kernel.name_str(creal, "expDominantCauchy"),
+        exp_series_partial_converges: kernel.name_str(creal, "expSeriesPartialConverges"),
+        e: kernel.name_str(creal, "e"),
         sum_range_const: kernel.name_str(creal, "sumRange_const"),
         mesh_count_width: kernel.name_str(creal, "mesh_count_width"),
         subdivision_point_in_bounds: kernel.name_str(creal, "subdivisionPoint_in_bounds"),
@@ -3838,6 +3872,22 @@ pub(crate) fn build_creal_prelude_uncached(
         // `half`/`one_sub_half_equiv_half` builders are reused verbatim, not
         // because anything `exponential` DECLARES is a dependency.
         exponential::declare_geom_cauchy_family(&mut d, prelude)?;
+        // `cauchyOfPointwiseEquiv`/`expDominantCauchy`/
+        // `expSeriesPartialConverges` need `geomCauchy` (just above),
+        // `CReal.mul_sumRange` (`series::declare_series`, well above) and
+        // `CReal.converges_mul`/`converges_cauchy`/`converges_of_const`/
+        // `converges_of_cauchy` (`convergence::declare_convergence` /
+        // `declare_cauchy_convergence`, both well above).
+        exponential::declare_exp_convergence(&mut d, prelude)?;
+        // `CReal.e` needs `geomCauchy_ordered_half` (just above),
+        // `exp_term_abs_le_dominant`/`sum_range_cauchy_dominated_ordered_normalized`
+        // (`series::declare_series`, well above) and
+        // `regular_of_scaled_cauchy`/`speedup`
+        // (`convergence::declare_cauchy_convergence`/`speedup::declare_speedup`,
+        // both well above) — it does NOT depend on `declare_exp_convergence`
+        // just above, but shares enough of its own dependency reasoning that
+        // it is placed next to it.
+        exponential::declare_e_family(&mut d, prelude)?;
         // `ivt::declare_ivt` needs `CReal.lt_cotrans` (`cotransitivity`, well
         // above), `CReal.mesh_count_width` (`monotone::declare_monotone_of_nonneg_deriv_all`,
         // also above) and ordinary ring/order laws; nothing later depends on
