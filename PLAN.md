@@ -1501,6 +1501,17 @@ checker, which retains only the reverse clause plan required by the algorithm. T
 it from disk with `route=file-backed-backward`; all-target/all-feature Clippy and
 warning-denied Rustdoc pass. This is checker-readiness, not a result at 351.
 
+**Strict external SAT-model replay boundary, 2026-08-26.** A reusable harness parser now
+imports SAT Competition output only when it contains exactly one `SATISFIABLE` status, a
+terminated complete assignment of the declared width, and no duplicate contradiction,
+out-of-range literal, post-terminator payload, or missing variable. The job-shop importer no
+longer owns a permissive duplicate, and `akb2_frontier check-model` evaluates the imported
+assignment against the regenerated CNF, lifts its one-hot colouring, independently replays the
+defining relation, re-evaluates the lifted witness, and only then writes it. Eight malformed
+controls fail closed; focused tests, all-target/all-feature Clippy, and warning-denied Rustdoc
+pass. The live `n=351` producer has not returned SAT, so this closes an evidence-route gap rather
+than establishing a new bound.
+
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
 external-certificate replay runner for all five packages.  It validates checker and artifact
 bytes before execution, hard-kills a timed-out process session, requires an observable finding
