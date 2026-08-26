@@ -117,6 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-26 | `15a4e7871` | Add axiom-free native `Nat.mod_self`, alpha-stable structural retrieval, and a checked native-composition control; fresh imported replay preserves zero credit and exposes the implementation-bound `Nat.mod` transport boundary. |
 | 2026-08-26 | `73800a902` | Project all 51 retrieved-induction outcomes into a digest-bound typed capability backlog; false controls remain observation-only and one-target operation registration is refused. |
 | 2026-08-26 | `e82a1b002` | Replay all 25 import-blocked positive targets through checked type slices, exposing 14 exact semantic-contract demands without proof or ledger credit. |
 | 2026-08-26 | `1e7b3acdf` | Join 14 sliced source identities to exact kernel and durable contract evidence; `Nat.testBit` becomes the first measured multi-sibling contract target. |
@@ -1382,8 +1383,18 @@ every `Nat.testBit` sibling has an unsupported co-abstraction. The shorter
 reachable path is now measured separately. Transparent terminal reduction
 moves all ten imported ModEq positives into equality composition while all six
 controls remain unaccepted; conversion is still 0/13 because the producer does
-not chain typed relation premises. Next: compose the general
-`dvd_refl → mod_eq_zero_of_dvd → ModEq` base and its congruence consumers.
+not yet have the needed remainder-equality contracts. A representation audit
+shows the native existential `Nat.modEq` chain is not the imported Mathlib
+`Nat.ModEq`, which unfolds to equality of remainders. Next: construct
+`Nat.mod_self` and reusable modulo-add equalities, retaining native relation
+composition only as a boundary control, and require unchanged conversion of at
+least three imported siblings.
+Native `Nat.mod_self` is now axiom-free and ranks first by a generic
+alpha-stable statement-shape feature, but a fresh transport probe refuses its
+implementation-bound `div_mod_exec` dependency over Mathlib's different
+`Nat.mod`. Production remains zero. Next: reconstruct the equality inside the
+imported kernel from portable order/decision facts, then test unchanged reuse
+across the additive siblings.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization
