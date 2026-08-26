@@ -136,14 +136,16 @@
 )]
 
 use super::ring_helpers::add4_comm;
-use super::{CRealPrelude, creal_ty};
+use super::{CRealPrelude, creal_ty, sample};
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
-use crate::rat_prelude::ops::{nat_eq_to_rat, nat_rewrite_prop, radd, rat_eq_rewrite};
+use crate::rat_prelude::ops::{
+    den, nat_eq_to_rat, nat_rewrite_prop, num, radd, rat_eq_rewrite, rzero,
+};
 
 /// Admit `CReal.UniformlyContinuousOn` (the carrier and its two
 /// projections), two witnesses (`id` and `const`), and the closure lemma
@@ -165,7 +167,84 @@ pub(super) fn declare_uniform_continuity(
     declare_uniformly_continuous_const(d, p)?;
     declare_uniformly_continuous_add(d, p)?;
     declare_uniformly_continuous_neg(d, p)?;
-    declare_uniformly_continuous_sub(d, p)
+    declare_uniformly_continuous_sub(d, p)?;
+    declare_bucket_index(d, p)
+}
+
+// --- the bucket-index primitive ---------------------------------------------
+//
+// `CReal.bounded_of_uniformly_continuous`'s covering argument (see the
+// module documentation) needs, for a point `z` in `[a, b]` and a target
+// resolution `k` (step `1/(Nat.succ k)`), a COMPUTABLE `Nat` index of the
+// sample point nearest `z − a` from below. `CReal.archimedean`'s own `∃`
+// witness cannot be pulled into `Type` (the identical `Exists`-into-`Type`
+// wall the module documentation's own house rule states), and picking the
+// nearest of infinitely many candidates by comparison is not even
+// well-posed (`CReal.le` is undecidable) -- so this has to be a genuine
+// projection off ONE rational sample, the same move `CReal.bound` makes,
+// not a search.
+
+/// `CReal.bucketIndex w k : Nat` -- the computable "which sample bucket does
+/// `w` fall into" primitive.
+///
+/// Recipe verbatim from `creal/sqrt.rs::declare_sqrt_approx`'s own
+/// `sqrtApprox` (see that declaration's own doc comment for the identical
+/// five-line shape): sample `w` at accuracy index `j := k1*k1` (`k1 :=
+/// Nat.succ k`, so `j` is finer than the target resolution `1/k1` by a full
+/// factor of `k1`), clamp to `≥ 0` via `Rat.max _ Rat.zero` (`Rat.max`
+/// dispatches on the representation, no case split on `w`'s sign), read the
+/// clamped sample's numerator/denominator as `Nat`s (`Int.natAbs` is
+/// *exact* here, not merely an upper bound, because clamping already made
+/// the numerator nonnegative), and floor-divide `numerator * k1` by the
+/// denominator via the total `Nat.div`.
+fn bucket_index(d: &mut IntDev<'_>, p: CRealPrelude, w: ExprId, k: ExprId) -> ExprId {
+    let k1 = d.succ(k);
+    let j = NatOps::mul(d, k1, k1);
+    let sample_w = sample(d, p, w, j);
+    let zero_rat = rzero(d, p.rat);
+    let q_pos = d.const_app(p.rat.max, &[sample_w, zero_rat]);
+    let numerator = num(d, q_pos);
+    let a = d.const_app(p.rat.int.nat_abs, &[numerator]);
+    let b = den(d, q_pos);
+    let scaled = NatOps::mul(d, a, k1);
+    NatOps::div(d, scaled, b)
+}
+
+/// Admit `CReal.bucketIndex : CReal → Nat → Nat`. See the module
+/// documentation and [`bucket_index`]'s own doc comment for the recipe;
+/// **no closeness property is proved for it in this slice** -- see
+/// [`CRealPrelude::bucket_index`]'s own doc comment for exactly what
+/// remains.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_bucket_index(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let w_fv = d.fresh_fvar();
+    let w = d.kernel().fvar(w_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let body = bucket_index(d, p, w, k);
+
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, body);
+        d.lam_fv(w_fv, carrier, with_k)
+    };
+    let ty = {
+        let inner = d.arrow(nat, nat);
+        d.arrow(carrier, inner)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.bucket_index,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(super::DERIVED_HEIGHT + 44),
+    })
 }
 
 /// The `BoundedOn`-hypothesis closure lemmas (`mul`, `sq`) and a concrete

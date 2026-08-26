@@ -1070,6 +1070,42 @@ pub struct CRealPrelude {
     /// of this module's earlier entry points. See
     /// `creal/uniform_continuity.rs`.
     pub mag_bound_le_sum_range_of_lt: NameId,
+    /// `CReal.bucketIndex : CReal → Nat → Nat` — the computable "which
+    /// sample bucket does `w` fall into" primitive toward
+    /// `bounded_of_uniformly_continuous`'s covering argument, given a step
+    /// size `1/(Nat.succ k)`.
+    ///
+    /// ```text
+    /// bucketIndex w k :=
+    ///   let k1 := Nat.succ k                          -- Nat
+    ///   let j  := k1 * k1                              -- Nat, the sample index
+    ///   let q  := Rat.max (CReal.seq w j) Rat.zero       -- Rat, clamped >= 0
+    ///   let a  := Int.natAbs (Rat.num q)                  -- Nat
+    ///   let b  := Rat.den q                                -- Nat, >= 1
+    ///   Nat.div (a * k1) b                                  -- Nat
+    /// ```
+    ///
+    /// Verbatim in *recipe* to `creal/sqrt.rs`'s own `sqrtApprox`
+    /// (`declare_sqrt_approx`): sample `w` at accuracy index `j = k1²`
+    /// (finer than the target resolution `1/k1` by a full factor of `k1`),
+    /// clamp to nonnegative via `Rat.max _ Rat.zero` (no case split on `w`'s
+    /// sign — `Rat.max` dispatches structurally, and `Rat.le_max_left`/
+    /// `Rat.le_max_right` bound both directions with no hypothesis), read
+    /// the clamped sample's numerator/denominator as `Nat`s (`Int.natAbs` is
+    /// *exact*, not merely an upper bound, precisely because clamping made
+    /// the numerator already nonnegative), and floor-divide `numerator *
+    /// k1` by the denominator via `Nat.div` — decidable Nat arithmetic
+    /// throughout, no comparison of `CReal`s anywhere.
+    ///
+    /// **Not yet proved to be within one step of `w`** — that needs `Rat`'s
+    /// own regularity-sample bound (`w` vs `CReal.seq w j`) composed with
+    /// `Nat.div_mod_bounds`'s floor error on the last step, and is the next
+    /// piece toward the covering argument, not attempted in this slice.
+    /// (**"off by one bucket" is fine** for that composition — the caller
+    /// only needs `le (abs (sub w (mul (ofNat (bucketIndex w k)) step)))
+    /// step'` for *some* fixed `step'` a small constant multiple of `step`,
+    /// not an exact nearest-index guarantee.)
+    pub bucket_index: NameId,
     /// `CReal.ratSqLe : ∀ (u s : Rat), Rat.le (u*u) (s*s) → Rat.le Rat.zero s
     /// → Rat.le u s` — a purely rational fact (no `CReal` structure), proved
     /// via `Rat.mul_pos` and a difference-of-squares identity rather than a
@@ -2585,6 +2621,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         uniformly_continuous_poly_example: kernel
             .name_str(creal, "uniformly_continuous_poly_example"),
         mag_bound_le_sum_range_of_lt: kernel.name_str(creal, "mag_bound_le_sumRange_of_lt"),
+        bucket_index: kernel.name_str(creal, "bucketIndex"),
         rat_sq_le: kernel.name_str(creal, "ratSqLe"),
         rat_sq_sandwich: kernel.name_str(creal, "ratSqSandwich"),
         rat_index_ratio_le_one: kernel.name_str(creal, "ratIndexRatioLeOne"),
