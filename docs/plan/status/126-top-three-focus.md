@@ -452,11 +452,17 @@ stable standard-library-only launchers preserve the existing commands. This
 made seven hidden type diagnostics visible and fixed them without widening the
 four-diagnostic baseline. The refreshed bounded census is 6/111 (5.4%), so two
 new eligible theorem goals correctly register as producer declines rather than
-volume credit. The held-out-isolation setup errors remain a separate
-project-wide gate failure to audit next.
+volume credit. The held-out-isolation setup errors are now closed without an
+exception: all agent-readable exclusion arrays were replaced by
+count/hash/redaction receipts, and consumers independently derive the protected
+set from the nursery. The gate scans 1,066 files against 37 held-out facts and
+reports zero references. The full Python authority is now green at 1,881
+collected, 1,847 passed, and 34 skipped, with zero failures or errors; Rust,
+docs, and remote CI remain separate claims.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-26 | `a88fa732f` | Redact all 37 held-out identities from agent-readable rankings and censuses; replace them with count/hash receipts, derive exclusions independently, and restore the 1,881-test Python authority to green. |
 | 2026-08-26 | `7e8fe9b3b` | Restore the standard-library-only script boundary with typed package implementations and stable launchers; fix seven newly exposed diagnostics and refresh honest bounded yield from 6/109 to 6/111. |
 | 2026-08-26 | `f1e1724e2` | Add held-out-safe tier-R retrieval for reusable target-owned capsule roots, preserving capsule identity, empty footprints, semantic-analogue qualification, and zero operation authority. |
 | 2026-08-26 | `81b5bae31` | Repair the typed agent read surface so structural statement floors, proof-reconstruction eligibility, and clean-definition routing survive the generated index boundary. |
