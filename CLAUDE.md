@@ -634,6 +634,19 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   `hooks/pre-push` refuses the push, so it does not reach `main`; the cost is a
   wasted push attempt, which on this repository is several minutes of battery.
 
+  **AND "COUNT THE LIST" IS ITSELF EASY TO GET WRONG, BECAUSE ENTRIES ARE NOT
+  ONE PER LINE.** rustfmt wraps any entry whose name is long across five lines,
+  beginning with a bare `(` on its own line, so the obvious count -- lines
+  matching `("` -- silently undercounts. Measured 2026-08-26 while resolving a
+  pin conflict in `creal_tests.rs`: **210 such lines against a true 283**, and
+  the wrong number was written into the file before the gap was noticed. An
+  entry starts at either `^        \("` or `^        \($`, and only those two.
+
+  Do not hand-roll it. `scripts/recount-pinned-inventory.py <file>` rewrites the
+  pin to the counted value and exits nonzero when it moved; `--check` reports
+  without rewriting. Controls: `scripts/tests/test-recount-pinned-inventory.sh`,
+  each guard mutation-verified to be killed by the case that names it.
+
 - **AN ABSOLUTE PATH UNDER THE MAIN CHECKOUT SILENTLY EDITS THE MAIN CHECKOUT,
   EVEN FROM INSIDE A WORKTREE.** A lane working in
   `.claude/worktrees/agent-<id>/` opened `CLAUDE.md` by its familiar path,
