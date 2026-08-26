@@ -22,6 +22,12 @@ evidence IDs therefore remain stable while an exact fully-qualified declaration
 can be added without guessing. Unresolved identities are retained and counted;
 the generator does not fuzzy-match names.
 
+Every declaration row also carries `canonical_type`, rendered directly by the
+kernel from the accepted declaration. The lemma index preserves that type for
+all theorem rows, and the typed Python `Lemma`, `lemma_neighbourhood`, and
+`lemma_candidates` surfaces expose it to autonomous episodes. This enables
+structural candidate filtering without treating the filter as proof authority.
+
 The artifact is nevertheless search data, not proof authority. A row does not
 say that a theorem applies to a goal, that a fact is semantically equivalent to
 the theorem, or that a proposed proof is valid. Producers may retrieve and rank
@@ -63,8 +69,9 @@ order:
 3. use `axeyum.knowledge.lemmas` for deterministic programmatic lookup, or the
    autonomous loop's read-only `lemma_neighbourhood` tool for held-out-safe
    retrieval by theorem-name glob or exact fact identity;
-4. attach typed theorem signatures and normalized head symbols derived from the
-   kernel, without granting applicability authority;
+4. derive normalized head symbols and argument-shape fingerprints from the
+   now-recorded kernel theorem signatures, without granting applicability
+   authority;
 5. join operation/tactic preconditions through exact identifiers;
 6. record which retrieved candidates were attempted, declined, or occurred in
    an independently checked proof.

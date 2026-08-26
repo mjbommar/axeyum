@@ -73,6 +73,9 @@ class KernelLemmaSearchIndexTests(unittest.TestCase):
             all(row["search_authority"].startswith("candidate-only") for row in self.rows.values())
         )
 
+    def test_every_search_row_has_a_kernel_rendered_type(self):
+        self.assertTrue(all(row["canonical_type"] for row in self.rows.values()))
+
     def test_explicit_declaration_identity_precedes_legacy_evidence_id(self):
         self.assertEqual(
             INDEX.exact_kernel_declaration(

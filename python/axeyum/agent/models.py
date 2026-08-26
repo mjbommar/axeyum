@@ -261,6 +261,7 @@ class TheoremPage(_Frozen):
 
 class LemmaNeighbourhoodRow(_Frozen):
     declaration_id: str
+    canonical_type: str
     axiom_footprint_size: int
     visible_in: tuple[str, ...]
     dependencies: tuple[str, ...]
@@ -284,6 +285,7 @@ class LemmaCandidateRow(_Frozen):
     """One exact kernel lemma linked to a declared fact dependency."""
 
     declaration_id: str
+    canonical_type: str
     source_dependency_fact_id: str
     axiom_footprint_size: int
     visible_in: tuple[str, ...]

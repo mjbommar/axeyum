@@ -7,7 +7,7 @@
   },
   "derivation": {
     "candidate_rule": "theorem with empty recorded axiom footprint and no active kernel-source formalizes link",
-    "kernel_projection_sha256": "d73b00689f853f807644fe1477031117e0bf4b7b35e29988fe5fad88b0766a2e",
+    "kernel_projection_sha256": "bfd3e38847f9b8227dffaf16ae22cbf530d09a36bf381370d6b9de93ad4be27e",
     "knowledge_overlay_sha256": "559cd93509b83e8fa9a60591bb21e40d073f4f5a739faec5941857e01e707d8b",
     "ordering": "descending direct reverse theorem-reference count, descending direct theorem-dependency count, ascending declaration id",
     "trust_boundary": "review planning only; never concept classification, producer dispatch, proof, admission, or trusted-kernel authority"

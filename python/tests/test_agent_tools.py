@@ -179,6 +179,7 @@ def test_lemma_neighbourhood_exposes_candidate_dependencies(ctx) -> None:
     assert page.total_lemmas > 0
     assert page.matched > 0
     assert all(row.declaration_id.startswith("Nat.add_") for row in page.rows)
+    assert all(row.canonical_type for row in page.rows)
     assert all(row.axiom_footprint_size == 0 for row in page.rows)
 
 
@@ -197,6 +198,7 @@ def test_lemma_candidates_joins_fact_dependencies_to_exact_kernel_links(ctx) -> 
     assert page.unresolved_dependency_fact_ids == ()
     assert page.rows[0].source_dependency_fact_id == ("F:ml430-nat-fib-le-fib-succ-d1ef4a3d")
     assert page.rows[0].declaration_id == "Nat.fib_le_succ"
+    assert "AxNat.fib" in page.rows[0].canonical_type
     assert page.rows[0].axiom_footprint_size == 0
 
 

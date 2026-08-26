@@ -22,6 +22,7 @@ class Lemma:
     """One accepted theorem and its mechanically observed neighborhood."""
 
     id: str
+    canonical_type: str
     axiom_footprint_size: int
     visible_in: tuple[str, ...]
     dependencies: tuple[str, ...]
@@ -35,6 +36,7 @@ class Lemma:
     def from_raw(cls, raw: dict[str, Any]) -> Lemma:
         return cls(
             id=raw["kernel_declaration_id"],
+            canonical_type=raw["canonical_type"],
             axiom_footprint_size=raw["axiom_footprint_size"],
             visible_in=tuple(raw["visible_in"]),
             dependencies=tuple(raw["direct_theorem_dependencies"]),
