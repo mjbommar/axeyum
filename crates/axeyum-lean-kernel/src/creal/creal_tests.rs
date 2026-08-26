@@ -5399,6 +5399,133 @@ fn strict_mono_of_pos_deriv_applies_to_the_identity_on_0_1() {
     );
 }
 
+/// **Mandatory concrete instantiation** for `CReal.strict_mono_magnitude`:
+/// the identity function on `[0, 1]` again, `k := 0`, applied at `x := zero`,
+/// `y := one` with the NON-strict gap `le zero one` (derived from
+/// `CReal.zero_lt_one` via `le_of_lt`, since this lemma takes `le x y`, not
+/// `lt x y`). At `k := 0` the bound is `1/2`: for the identity the true rate
+/// is `1`, so `1 - 0 >= (1/2)*(1-0)` holds with room to spare -- this checks
+/// the theorem PRODUCES exactly that inequality, not merely that some
+/// application type-checks.
+///
+/// `x := 0, y := 1` rather than `x = y`: at `x = y` both sides of the
+/// conclusion are `Equiv`-zero and the instance could not discriminate a
+/// theorem that silently proved something else with the same shape.
+#[test]
+fn strict_mono_magnitude_applies_to_the_identity_on_0_1() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::rat_eq_rewrite;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+
+    // identity := fun r => r; const_one := fun _ => one.
+    let identity = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+    let const_one = {
+        let r_fv = d.fresh_fvar();
+        d.lam_fv(r_fv, carrier, one_c)
+    };
+
+    let hf = d.lemma(p.has_derivative_id, &[zero_c, one_c]);
+
+    // le (embed (natDivSucc 1 0)) one_c -- identical construction to
+    // `strict_mono_of_pos_deriv_applies_to_the_identity_on_0_1`, above,
+    // duplicated for the same reason it is there: tests are a sibling module
+    // and cannot call `creal/monotone.rs`'s private `of_nat_one_equiv_local`.
+    let embed_le_one = {
+        let unit_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, zero_nat]);
+        let one_rat = d.kernel().const_(p.rat.one, vec![]);
+        let unit_eq_one = d.lemma(p.rat_unit_eq_one, &[]);
+        let unit_embed = d.const_app(p.of_rat, &[unit_rat]);
+        let refl_start = d.lemma(p.equiv_refl, &[unit_embed]);
+        let bridge = rat_eq_rewrite(
+            &mut d,
+            unit_rat,
+            one_rat,
+            unit_eq_one,
+            refl_start,
+            &|d, t| {
+                let embedded = d.const_app(p.of_rat, &[t]);
+                d.const_app(p.equiv, &[unit_embed, embedded])
+            },
+        );
+        d.lemma(p.le_of_equiv, &[unit_embed, one_c, bridge])
+    };
+
+    // hderiv : ∀ z, le zero z -> le z one -> le (embed (natDivSucc 1 0)) (const_one z).
+    let hderiv = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let haz_ty = d.const_app(p.le, &[zero_c, z]);
+        let hzb_ty = d.const_app(p.le, &[z, one_c]);
+        let haz_fv = d.fresh_fvar();
+        let hzb_fv = d.fresh_fvar();
+        let with_hzb = d.lam_fv(hzb_fv, hzb_ty, embed_le_one);
+        let with_haz = d.lam_fv(haz_fv, haz_ty, with_hzb);
+        d.lam_fv(z_fv, carrier, with_haz)
+    };
+
+    let hax = d.lemma(p.le_refl, &[zero_c]);
+    let hxy_lt = d.lemma(p.zero_lt_one, &[]);
+    let hxy_le = d.lemma(p.le_of_lt, &[zero_c, one_c, hxy_lt]);
+    let hyb = d.lemma(p.le_refl, &[one_c]);
+
+    let instance = d.lemma(
+        p.strict_mono_magnitude,
+        &[
+            identity, const_one, zero_c, one_c, hf, zero_nat, hderiv, zero_c, one_c, hax, hxy_le,
+            hyb,
+        ],
+    );
+
+    let ty = d.kernel().infer(instance).unwrap_or_else(|error| {
+        panic!("strict_mono_magnitude refused at the identity on [0,1]: {error:?}")
+    });
+
+    // Reconstruct the expected type by the SAME route `half_frac_eq`
+    // (`creal/monotone.rs`, private) builds `e_acc`/`a_half` internally at
+    // `k := 0`: `e_acc = succ(2*0) = 1`, so `a_half = embed (natDivSucc 1 1)`,
+    // i.e. `1/2`.
+    let two_nat = d.num(2);
+    let doubled = NatOps::mul(&mut d, two_nat, zero_nat);
+    let e_acc = d.succ(doubled);
+    let frac_e_acc_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, e_acc]);
+    let a_half = d.const_app(p.of_rat, &[frac_e_acc_rat]);
+
+    let neg_zero = d.const_app(p.neg, &[zero_c]);
+    let diff = d.const_app(p.add, &[one_c, neg_zero]);
+    let s4 = d.const_app(p.mul, &[a_half, diff]);
+
+    let expected_fx = d.apply(identity, &[zero_c]);
+    let expected_fy = d.apply(identity, &[one_c]);
+    let neg_fx = d.const_app(p.neg, &[expected_fx]);
+    let rhs = d.const_app(p.add, &[expected_fy, neg_fx]);
+
+    let expected_ty = d.const_app(p.le, &[s4, rhs]);
+    let rendered = d.kernel().render_lean(ty);
+    let expected_rendered = d.kernel().render_lean(expected_ty);
+    assert_eq!(
+        rendered, expected_rendered,
+        "must conclude exactly `le ((1/2)*(one - zero)) (F one - F zero)` (F is the identity), \
+         not some other CReal.le statement"
+    );
+    assert!(
+        rendered.contains("CReal.zero") && rendered.contains("CReal.one"),
+        "the endpoints must be zero and one, not some other pair: {rendered}"
+    );
+}
+
 /// **Mandatory concrete instantiation** for
 /// `CReal.strict_injective_of_pos_deriv`: the identity function on `[0, 1]`
 /// again, applied at `x := zero`, `y := one` with `CReal.apart_zero_one` as
