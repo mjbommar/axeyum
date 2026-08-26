@@ -46,4 +46,4 @@ then register only the supported operation.
 | 2026-08-26 | `0c261718f` | Add the fail-closed candidate-capsule import boundary required for theorem-composition dispatch. |
 | 2026-08-26 | `ebe2b7b2e` | Re-derive the kernel projection and lemma-search artifacts at 1,242 theorems after rebasing concurrent mathematics work. |
 | 2026-08-26 | `fa821fc54` | Merge the next constructive-real theorem and advance the same generated search population to 1,243 without clobbering either lane. |
-| 2026-08-26 | pending | Publish stable all-kind direct declaration dependencies through Rust, Python, and the generated kernel projection, with direct-versus-transitive controls. |
+| 2026-08-26 | `5916d47cc` | Publish stable all-kind direct declaration dependencies through Rust, Python, and the generated kernel projection, with direct-versus-transitive controls. |
