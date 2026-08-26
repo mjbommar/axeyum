@@ -1,6 +1,7 @@
 //! The **constructive approximate Intermediate Value Theorem** (Spivak,
-//! *Calculus*, Ch. 7 "Three Hard Theorems") — the one-step bisection lemma,
-//! `CReal.ivt_step`, and its `n`-fold iteration, `CReal.ivt_iter`.
+//! *Calculus*, Ch. 7 "Three Hard Theorems") — the one-step bisection lemma
+//! `CReal.ivt_step`, its `n`-fold iteration `CReal.ivt_iter`, and the closing
+//! statement `CReal.ivt_approx`.
 //!
 //! ## Why the classical statement is unavailable
 //!
@@ -16,8 +17,8 @@
 //! ## The one-step lemma, worked on paper
 //!
 //! Fix a target slack `eps > 0` (this will end up being half the caller's
-//! accuracy target — see the module documentation this file's sibling
-//! `ivt_approx` slice would add, not landed here) and a bracket `[P, Q]`
+//! accuracy target — see [`CReal.ivt_approx`](super::CRealPrelude::ivt_approx)
+//! below) and a bracket `[P, Q]`
 //! satisfying the **weak sign invariant** `F P ≤ eps` and `−eps ≤ F Q` — note
 //! this is *not* `F P ≤ 0 ≤ F Q`; the slack is what makes the step avoid ever
 //! deciding an exact sign.
@@ -56,11 +57,12 @@
 //! supplies for the target accuracy, continuity turns "the endpoints are
 //! close" into "their `F`-values are close", which combined with the sign
 //! invariant on the two endpoints pins down `|F x| ≤` the target for `x` one
-//! of the two final endpoints. That combination step (`CReal.ivt_approx`,
-//! `∀ e : Nat, ∃ x, …`) needs a quantitative bound relating `pow x n` to a
-//! `natDivSucc`-shaped rational threshold, which is **not** built here or
-//! anywhere else in this development yet — see [`CRealPrelude::ivt_iter`]'s
-//! own doc comment.
+//! of the two final endpoints. That combination step
+//! ([`CReal.ivt_approx`](super::CRealPrelude::ivt_approx), `∀ e : Nat, ∃ x,
+//! …`) needs a quantitative bound relating `pow x n` to a `natDivSucc`-shaped
+//! rational threshold — [`CReal.pow_half_le_natDivSucc`](super::CRealPrelude::pow_half_le_nat_div_succ)
+//! (`geometric.rs`) — and an Archimedean bound on the initial width, both
+//! consumed by `ivt_approx`'s own construction below.
 //!
 //! ## Why not trisection
 //!
@@ -88,25 +90,39 @@
 //! `F Q` is pinned to `[−1/20, 1/10]`, giving `|F Q| ≤ 1/10`) — `x := Q`
 //! is the desired witness, with no case split on any exact sign anywhere.
 //!
-//! ## What this file lands, and what it does not
+//! ## What this file lands
 //!
-//! Landed: [`CReal.ivt_step`](super::CRealPrelude::ivt_step) — the bisection
-//! step above, fully general in `F`, `P`, `Q`, `eps` — and
-//! [`CReal.ivt_iter`](super::CRealPrelude::ivt_iter), `ivt_step` iterated `n`
-//! times by structural `Nat` induction, carrying the same six-part invariant
-//! with the width tracked as `(Q0 − P0)·(1/2)ⁿ` via `CReal.pow`. **Not
-//! landed**: the outer `∀ e : Nat, ∃ x, …` statement (`CReal.ivt_approx`).
-//! Closing it needs, on top of `ivt_iter`: choosing `n` from the
-//! Archimedean property against the width
-//! [`CReal.UniformlyContinuousOn.spec`](super::CRealPrelude::uniformly_continuous_on)'s
-//! modulus supplies, and — the actual obstruction — a quantitative bound
-//! relating `pow x n` (`0 ≤ x < 1`) to a `natDivSucc`-shaped rational
-//! threshold. `CRealPrelude::geom_sum_bounded`'s own neighbourhood already
-//! names this as missing ("the geometric-decay-dominates-harmonic-rate
-//! estimate this development does not yet build"); it is not a gap this
-//! file's own construction leaves behind, and building it is comparable in
-//! size to `power.rs`/`geometric.rs` themselves, not a same-slice extension
-//! of `ivt_iter`.
+//! [`CReal.ivt_step`](super::CRealPrelude::ivt_step) — the bisection step
+//! above, fully general in `F`, `P`, `Q`, `eps`; [`CReal.ivt_iter`](super::CRealPrelude::ivt_iter)
+//! — `ivt_step` iterated `n` times by structural `Nat` induction, carrying
+//! the same six-part invariant with the width tracked as `(Q0 − P0)·(1/2)ⁿ`
+//! via `CReal.pow`; and [`CReal.ivt_approx`](super::CRealPrelude::ivt_approx)
+//! — the outer `∀ e : Nat, ∃ x, …` statement, closing `ivt_iter` against
+//! [`CReal.UniformlyContinuousOn`](super::CRealPrelude::uniformly_continuous_on)
+//! and [`CReal.pow_half_le_natDivSucc`](super::CRealPrelude::pow_half_le_nat_div_succ).
+//!
+//! **The bound `pow_half_le_natDivSucc` supplies is linear (`1/(N+1)`), not
+//! the tight geometric `1/2^N`** — it is a valid but looser upper bound, so
+//! `ivt_approx` needs a bisection depth *proportional to* the target
+//! accuracy rather than to its logarithm: `bisect_n := M·delta + c` for `c :=
+//! CReal.bound (b − a)`, `M := c + 1`, `delta :=` the continuity modulus at
+//! the chosen index (see [`CRealPrelude::ivt_approx`]'s own doc comment for
+//! the full derivation). For `f := id` on `[0, 1]` at `e := 9`: `sgn_eps =
+//! 1/20`, the identity's modulus is itself, so the continuity index is `n =
+//! 19` and `delta = 19` — **not `N = 5`**, which was the right count only
+//! under the never-built `2^N ≥ 20` route this file's earlier documentation
+//! (wrongly) anticipated. `ivt_approx`'s own construction
+//! (`declare_ivt_approx`, [`width_le_via_bound`]) computes `bisect_n`
+//! directly from `CReal.bound`, with no search and no `Exists.rec`.
+//!
+//! **Chapter 12's exact inverse function theorem is now unblocked.** A
+//! previous lane established that exact order-reflection is precisely as
+//! hard as an exact IVT preimage — both need a computable root, which is
+//! exactly what the *approximate* statement here declines to produce. With
+//! `ivt_approx` landed, the *approximate* preimage direction that chapter
+//! needs is available; the exact direction remains genuinely unavailable for
+//! the same reason classical IVT is (see "Why the classical statement is
+//! unavailable", above).
 
 #![allow(
     clippy::too_many_arguments,
@@ -115,13 +131,15 @@
 )]
 
 use super::ring_helpers::right_distrib;
-use super::{CRealPrelude, and_intro, cadd, cle, clt, creal_ty, div_succ, embed, equiv};
+use super::{
+    CRealPrelude, and_intro, cadd, cle, clt, creal_ty, div_succ, embed, equiv, halves, sample,
+};
 use crate::KernelError;
 use crate::env::Declaration;
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
-use crate::rat_prelude::ops::{radd, rat_eq_rewrite, rone, rzero};
+use crate::rat_prelude::ops::{nat_eq_to_rat, radd, rat_eq_rewrite, rle, rmul, rone, rzero};
 
 /// Admit `CReal.ivt_step`.
 ///
@@ -131,7 +149,8 @@ use crate::rat_prelude::ops::{radd, rat_eq_rewrite, rone, rzero};
 /// **refused** a proof, not that a script gave up.
 pub(super) fn declare_ivt(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
     declare_ivt_step(d, p)?;
-    declare_ivt_iter(d, p)
+    declare_ivt_iter(d, p)?;
+    declare_ivt_approx(d, p)
 }
 
 // --- small shared idiom (private to this module, per the codebase's own
@@ -334,6 +353,86 @@ fn neg_add_self(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
     let comm_symm = esymm(d, p, x_nx, nx_x, comm);
     let cancel = d.lemma(p.add_neg, &[x]);
     echain(d, p, nx_x, &[(x_nx, comm_symm), (zero_c, cancel)])
+}
+
+/// From `h_ab_zero : Equiv (add a b) zero`, derive `Equiv b (neg a)` -- `b`
+/// is the unique additive inverse of `a`. Verbatim reproduction of
+/// `deriv_unique.rs`'s private helper of the same name (itself copied from
+/// `derivative.rs`; both files are out of this slice's edit boundary).
+fn neg_unique(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    h_ab_zero: ExprId,
+) -> ExprId {
+    let zero_c = czero(d, p);
+    let neg_a = cneg(d, p, a);
+
+    let add_a_nega = cadd(d, p, a, neg_a);
+    let add_nega_a = cadd(d, p, neg_a, a);
+    let h_add_neg = d.lemma(p.add_neg, &[a]);
+    let comm0 = d.lemma(p.add_comm, &[a, neg_a]);
+    let symm_h = esymm(d, p, add_a_nega, zero_c, h_add_neg);
+    let zero_equiv_nega_a = d.lemma(
+        p.equiv_trans,
+        &[zero_c, add_a_nega, add_nega_a, symm_h, comm0],
+    );
+
+    let add_b_zero = cadd(d, p, b, zero_c);
+    let add_zero_b = cadd(d, p, zero_c, b);
+    let h_addzero_b = d.lemma(p.add_zero, &[b]);
+    let b_equiv_addbzero = esymm(d, p, add_b_zero, b, h_addzero_b);
+    let comm_b0 = d.lemma(p.add_comm, &[b, zero_c]);
+    let b_equiv_addzerob = d.lemma(
+        p.equiv_trans,
+        &[b, add_b_zero, add_zero_b, b_equiv_addbzero, comm_b0],
+    );
+
+    let addnega_a = cadd(d, p, neg_a, a);
+    let addnega_a_plus_b = cadd(d, p, addnega_a, b);
+    let refl_b = erefl(d, p, b);
+    let subst1 = d.lemma(
+        p.add_congr,
+        &[zero_c, addnega_a, b, b, zero_equiv_nega_a, refl_b],
+    );
+
+    let a_plus_b = cadd(d, p, a, b);
+    let nega_plus_aplusb = cadd(d, p, neg_a, a_plus_b);
+    let assoc = d.lemma(p.add_assoc, &[neg_a, a, b]);
+
+    let nega_plus_zero = cadd(d, p, neg_a, zero_c);
+    let refl_nega = erefl(d, p, neg_a);
+    let subst2 = d.lemma(
+        p.add_congr,
+        &[neg_a, neg_a, a_plus_b, zero_c, refl_nega, h_ab_zero],
+    );
+
+    let final_step = d.lemma(p.add_zero, &[neg_a]);
+
+    echain(
+        d,
+        p,
+        b,
+        &[
+            (add_zero_b, b_equiv_addzerob),
+            (addnega_a_plus_b, subst1),
+            (nega_plus_aplusb, assoc),
+            (nega_plus_zero, subst2),
+            (neg_a, final_step),
+        ],
+    )
+}
+
+/// `Equiv (neg (neg x)) x` -- double negation, from [`neg_unique`] applied
+/// to [`neg_add_self`]. Verbatim reproduction of `deriv_unique.rs`'s private
+/// helper of the same name.
+fn double_neg(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+    let nx = cneg(d, p, x);
+    let nnx = cneg(d, p, nx);
+    let h = neg_add_self(d, p, x);
+    let nu = neg_unique(d, p, nx, x, h);
+    esymm(d, p, x, nnx, nu)
 }
 
 /// From `h : le y z`, `le zero (add z (neg y))` — copied from
@@ -1322,6 +1421,680 @@ fn declare_ivt_iter(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelErr
 
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.ivt_iter,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// =============================================================================
+// `CReal.ivt_approx` -- the closing combination: `ivt_iter` against
+// `UniformlyContinuousOn` and the Archimedean property (via `CReal.bound`,
+// not `CReal.archimedean`'s `Exists` wrapper), plus
+// `CReal.pow_half_le_natDivSucc`. See the module documentation's "Addendum"
+// and `CRealPrelude::ivt_approx`'s own doc comment for the choice of `n`,
+// `delta` and `bisect_n`.
+// =============================================================================
+
+/// `Equiv (neg zero) zero`. Verbatim reproduction of `series.rs::neg_zero_equiv`
+/// (private there, and reused by `power.rs` the same way).
+fn neg_zero_equiv(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let zero_c = czero(d, p);
+    let nz = cneg(d, p, zero_c);
+    let padded = cadd(d, p, nz, zero_c);
+    let flipped = cadd(d, p, zero_c, nz);
+    let h1 = d.lemma(p.add_zero, &[nz]); // add nz zero ~ nz
+    let step1 = esymm(d, p, padded, nz, h1); // nz ~ padded
+    let h2 = d.lemma(p.add_comm, &[nz, zero_c]); // padded ~ flipped
+    let h3 = d.lemma(p.add_neg, &[zero_c]); // flipped ~ zero
+    echain(d, p, nz, &[(padded, step1), (flipped, h2), (zero_c, h3)])
+}
+
+/// From `h : le zero x`, `le (neg x) zero` -- negation of a nonneg quantity
+/// is nonpositive, via [`neg_zero_equiv`].
+fn neg_nonpos_of_nonneg(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, h: ExprId) -> ExprId {
+    let zero_c = czero(d, p);
+    let nx = cneg(d, p, x);
+    let step = d.lemma(p.neg_le_neg, &[zero_c, x, h]); // le nx (neg zero)
+    let nz_eq_zero = neg_zero_equiv(d, p);
+    let refl_nx = erefl(d, p, nx);
+    let neg_zero_c = cneg(d, p, zero_c);
+    d.lemma(
+        p.le_congr,
+        &[nx, nx, neg_zero_c, zero_c, refl_nx, nz_eq_zero, step],
+    )
+}
+
+/// `Equiv (add (add x (neg y)) y) x` -- adding back what was subtracted.
+fn add_sub_cancel(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
+    let ny = cneg(d, p, y);
+    let xy = cadd(d, p, x, ny); // x - y
+    let start = cadd(d, p, xy, y); // (x-y)+y
+    let yxy = cadd(d, p, y, xy); // y+(x-y)
+    let comm = d.lemma(p.add_comm, &[xy, y]); // Equiv start yxy
+    let restored = restore_from_width(d, p, y, x); // Equiv yxy x
+    echain(d, p, start, &[(yxy, comm), (x, restored)])
+}
+
+/// `n := succ(2*e)`, `sgn_eps := ofRat (natDivSucc 1 n)`, and a proof `lt
+/// zero sgn_eps`. This is both the bisection sign-slack and the continuity
+/// output accuracy at index `n` -- chosen so `sgn_eps + sgn_eps ~ ofRat
+/// (natDivSucc 1 e)` (see [`sgn_eps_double_eq_target`]).
+fn sgn_eps_of(d: &mut IntDev<'_>, p: CRealPrelude, e: ExprId) -> (ExprId, ExprId, ExprId, ExprId) {
+    let rat = p.rat;
+    let two_nat = d.num(2);
+    let two_e = d.mul(two_nat, e);
+    let n = d.succ(two_e);
+    let sgn_eps_rat = div_succ(d, p, 1, n);
+    let sgn_eps = embed(d, p, sgn_eps_rat);
+
+    let one_nat = d.num(1);
+    let le11 = {
+        let np = d.prelude();
+        d.const_app(np.le_refl, &[one_nat])
+    };
+    let rat_pos = d.lemma(rat.nat_div_succ_pos, &[one_nat, n, le11]);
+    let sgn_eps_pos = d.lemma(p.of_rat_pos, &[sgn_eps_rat, rat_pos]);
+    (n, sgn_eps, sgn_eps_rat, sgn_eps_pos)
+}
+
+/// `Equiv (add sgn_eps sgn_eps) (ofRat (natDivSucc 1 e))`, given `n :=
+/// succ(2*e)` and `sgn_eps_rat := natDivSucc 1 n` (see [`sgn_eps_of`]).
+/// `Rat.natDivSucc_add` fuses the two summands to `natDivSucc (1+1) n`; `1+1`
+/// and `2` are both closed numerals, so `Eq.refl` bridges them by
+/// ι-reduction alone; `n`'s own shape `succ(2*e)` then matches
+/// `Rat.natDivSucc_halve`'s index exactly, folding straight to `natDivSucc 1
+/// e`. Returns `(natDivSucc 1 e, proof)`.
+fn sgn_eps_double_eq_target(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    e: ExprId,
+    n: ExprId,
+    sgn_eps: ExprId,
+    sgn_eps_rat: ExprId,
+) -> (ExprId, ExprId) {
+    let rat = p.rat;
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+
+    let sum_rat = radd(d, sgn_eps_rat, sgn_eps_rat);
+    let eq_add = d.lemma(rat.nat_div_succ_add, &[one_nat, one_nat, n]);
+    let sum11 = d.add(one_nat, one_nat);
+    let natdiv_11_n = d.const_app(rat.nat_div_succ, &[sum11, n]);
+    let natdiv_2_n = d.const_app(rat.nat_div_succ, &[two_nat, n]);
+    // `sum11` (`Nat.add one_nat one_nat`) ι-reduces to `two_nat`: both are
+    // closed numerals, so `Eq.refl two_nat` also proves `Eq sum11 two_nat`
+    // by defeq at the final kernel check.
+    let h_11_eq_2 = d.refl(two_nat);
+    let eq_11_to_2 = nat_eq_to_rat(d, sum11, two_nat, h_11_eq_2, &|d, x| {
+        d.const_app(rat.nat_div_succ, &[x, n])
+    });
+
+    let target_e_rat = div_succ(d, p, 1, e);
+    let eq_halve = d.lemma(rat.nat_div_succ_halve, &[e]);
+
+    let sum_creal = cadd(d, p, sgn_eps, sgn_eps);
+    let motive = |d: &mut IntDev<'_>, t: ExprId| {
+        let oft = d.const_app(p.of_rat, &[t]);
+        d.const_app(p.equiv, &[sum_creal, oft])
+    };
+    let of_rat_add_proof = d.lemma(p.of_rat_add, &[sgn_eps_rat, sgn_eps_rat]);
+    let step_a = rat_eq_rewrite(d, sum_rat, natdiv_11_n, eq_add, of_rat_add_proof, &motive);
+    let step_b = rat_eq_rewrite(d, natdiv_11_n, natdiv_2_n, eq_11_to_2, step_a, &motive);
+    let step_c = rat_eq_rewrite(d, natdiv_2_n, target_e_rat, eq_halve, step_b, &motive);
+    (target_e_rat, step_c)
+}
+
+/// Given `w0` (nonneg) and `delta : Nat`, compute a bisection depth
+/// `bisect_n`, the width term `mul w0 (pow half bisect_n)`, the target bound
+/// `ofRat (natDivSucc 1 delta)` (with its own nonnegativity), and a proof
+/// that the width term is `le` the target.
+///
+/// `bisect_n := big_m * delta + magnitude`, `magnitude := CReal.bound w0`,
+/// `big_m := succ magnitude` -- `Rat.natDivSucc_scale`'s own `(c+1)*m+c`
+/// index shape, chosen so `big_m * natDivSucc 1 bisect_n = natDivSucc 1
+/// delta` is an EQUALITY, not merely a bound. `CReal.bound` is a total
+/// computable projection, so `le w0 (ofRat (natDivSucc big_m 0))` is
+/// reproduced directly from [`super::CRealPrelude::bound_within`] -- the
+/// non-`Exists` core of [`super::CRealPrelude::archimedean`]'s own
+/// construction (`archimedean.rs`, out of this file's edit boundary) -- with
+/// no `Exists.rec` needed to choose `bisect_n`.
+fn width_le_via_bound(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    w0: ExprId,
+    w0_nonneg: ExprId,
+    delta: ExprId,
+) -> (ExprId, ExprId, ExprId, ExprId, ExprId) {
+    let rat = p.rat;
+    let one_nat = d.num(1);
+    let zero_nat = d.num(0);
+
+    let (half, _half_nonneg) = nonneg_rat_bound(d, p, 1, one_nat);
+
+    let magnitude = d.const_app(p.bound, &[w0]);
+    let big_m = d.succ(magnitude);
+    let target_rat = d.const_app(rat.nat_div_succ, &[big_m, zero_nat]);
+    let m_creal = embed(d, p, target_rat);
+
+    // `le w0 m_creal`, reproduced directly from `bound_within` -- the
+    // non-`Exists` core of `archimedean::declare_archimedean_property`'s own
+    // `le_proof`.
+    let w0_le_m = {
+        let nat = d.nat_ty();
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+
+        let point = sample(d, p, w0, k);
+        let bw = d.lemma(p.bound_within, &[w0, k]);
+        let (_, upper) = halves(d, p, point, target_rat, bw);
+
+        let two_nat = d.num(2);
+        let bound2 = d.const_app(rat.nat_div_succ, &[two_nat, k]);
+        let nonneg2 = d.lemma(rat.zero_le_nat_div_succ, &[two_nat, k]);
+
+        let zero = rzero(d, rat);
+        let target_refl = d.lemma(rat.le_refl, &[target_rat]);
+        let widened = d.lemma(
+            rat.add_le_add,
+            &[target_rat, target_rat, zero, bound2, target_refl, nonneg2],
+        );
+        let padded_target = radd(d, target_rat, zero);
+        let sum = radd(d, target_rat, bound2);
+        let trim = d.lemma(rat.add_zero, &[target_rat]);
+        let target_le_sum = rat_eq_rewrite(d, padded_target, target_rat, trim, widened, &|d, t| {
+            rle(d, rat, t, sum)
+        });
+        let chained = d.lemma(
+            rat.le_trans,
+            &[point, target_rat, sum, upper, target_le_sum],
+        );
+        let at_index = d.lemma(rat.sub_le_of_le, &[point, target_rat, bound2, chained]);
+        d.lam_fv(k_fv, nat, at_index)
+    };
+
+    let scaled = d.mul(big_m, delta);
+    let bisect_n = d.add(scaled, magnitude);
+
+    let (bound_creal_n, bound_creal_n_nonneg) = nonneg_rat_bound(d, p, 1, bisect_n);
+    let bound_rat_n = div_succ(d, p, 1, bisect_n);
+
+    let pow_half_n = d.const_app(p.pow, &[half, bisect_n]);
+    let pow_le = d.lemma(p.pow_half_le_nat_div_succ, &[bisect_n]);
+
+    let mul_w0_pow = cmul(d, p, w0, pow_half_n);
+    let mul_w0_bcn = cmul(d, p, w0, bound_creal_n);
+    let step1 = d.lemma(
+        p.mul_le_mul_of_nonneg_left,
+        &[w0, pow_half_n, bound_creal_n, w0_nonneg, pow_le],
+    );
+
+    let step2_pre = d.lemma(
+        p.mul_le_mul_of_nonneg_left,
+        &[bound_creal_n, w0, m_creal, bound_creal_n_nonneg, w0_le_m],
+    );
+    let mul_bcn_w0 = cmul(d, p, bound_creal_n, w0);
+    let mul_bcn_m = cmul(d, p, bound_creal_n, m_creal);
+    let mul_m_bcn = cmul(d, p, m_creal, bound_creal_n);
+    let comm_left = d.lemma(p.mul_comm, &[bound_creal_n, w0]);
+    let comm_right = d.lemma(p.mul_comm, &[bound_creal_n, m_creal]);
+    let step2 = d.lemma(
+        p.le_congr,
+        &[
+            mul_bcn_w0, mul_w0_bcn, mul_bcn_m, mul_m_bcn, comm_left, comm_right, step2_pre,
+        ],
+    );
+
+    let (target_creal, target_nonneg) = nonneg_rat_bound(d, p, 1, delta);
+    let target_delta_rat = div_succ(d, p, 1, delta);
+
+    let rat_prod = rmul(d, target_rat, bound_rat_n);
+    let mul_bigm_1 = d.mul(big_m, one_nat);
+    let natdiv_mul_bigm1_n = d.const_app(rat.nat_div_succ, &[mul_bigm_1, bisect_n]);
+    let natdiv_bigm_n = d.const_app(rat.nat_div_succ, &[big_m, bisect_n]);
+
+    let eq_mul = d.lemma(rat.nat_div_succ_mul, &[big_m, one_nat, bisect_n]);
+    let mul_one_eq = d.lemma(rat.int.nat.mul_one, &[big_m]);
+    let eq_fold = nat_eq_to_rat(d, mul_bigm_1, big_m, mul_one_eq, &|d, x| {
+        d.const_app(rat.nat_div_succ, &[x, bisect_n])
+    });
+    let eq_scale = d.lemma(rat.nat_div_succ_scale, &[magnitude, delta]);
+
+    let of_rat_mul_proof = d.lemma(p.of_rat_mul, &[target_rat, bound_rat_n]);
+    let motive = |d: &mut IntDev<'_>, t: ExprId| {
+        let oft = d.const_app(p.of_rat, &[t]);
+        d.const_app(p.equiv, &[mul_m_bcn, oft])
+    };
+    let step_a = rat_eq_rewrite(
+        d,
+        rat_prod,
+        natdiv_mul_bigm1_n,
+        eq_mul,
+        of_rat_mul_proof,
+        &motive,
+    );
+    let step_b = rat_eq_rewrite(
+        d,
+        natdiv_mul_bigm1_n,
+        natdiv_bigm_n,
+        eq_fold,
+        step_a,
+        &motive,
+    );
+    let step_c = rat_eq_rewrite(
+        d,
+        natdiv_bigm_n,
+        target_delta_rat,
+        eq_scale,
+        step_b,
+        &motive,
+    );
+    // step_c : Equiv mul_m_bcn target_creal
+
+    let le_trans_12 = d.lemma(
+        p.le_trans,
+        &[mul_w0_pow, mul_w0_bcn, mul_m_bcn, step1, step2],
+    );
+    let refl_lhs = erefl(d, p, mul_w0_pow);
+    let final_le = d.lemma(
+        p.le_congr,
+        &[
+            mul_w0_pow,
+            mul_w0_pow,
+            mul_m_bcn,
+            target_creal,
+            refl_lhs,
+            step_c,
+            le_trans_12,
+        ],
+    );
+
+    (bisect_n, mul_w0_pow, target_creal, target_nonneg, final_le)
+}
+
+/// `And (le a x) (And (le x b) (le (abs (f x)) (ofRat (natDivSucc 1 e))))`.
+fn approx_pred_body(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    a: ExprId,
+    b: ExprId,
+    target_e_rat: ExprId,
+    x: ExprId,
+) -> ExprId {
+    let le1 = cle(d, p, a, x);
+    let le2 = cle(d, p, x, b);
+    let fx = d.apply(f, &[x]);
+    let absfx = d.const_app(p.abs, &[fx]);
+    let target_e = embed(d, p, target_e_rat);
+    let le3 = cle(d, p, absfx, target_e);
+    let and2 = d.and(le2, le3);
+    d.and(le1, and2)
+}
+
+fn approx_pred_lambda(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    a: ExprId,
+    b: ExprId,
+    target_e_rat: ExprId,
+    carrier: ExprId,
+) -> ExprId {
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let body = approx_pred_body(d, p, f, a, b, target_e_rat, x);
+    d.lam_fv(x_fv, carrier, body)
+}
+
+/// `Exists CReal (fun x => approx_pred_body(f,a,b,e,x))`.
+fn approx_exists_ty(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    a: ExprId,
+    b: ExprId,
+    target_e_rat: ExprId,
+    carrier: ExprId,
+) -> ExprId {
+    let pred = approx_pred_lambda(d, p, f, a, b, target_e_rat, carrier);
+    cexists_ty(d, p, carrier, pred)
+}
+
+/// A witness proof of [`approx_exists_ty`] at concrete `x`.
+#[allow(clippy::too_many_arguments)]
+fn approx_exists_proof(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    a: ExprId,
+    b: ExprId,
+    target_e_rat: ExprId,
+    carrier: ExprId,
+    x: ExprId,
+    h1: ExprId,
+    h2: ExprId,
+    h3: ExprId,
+) -> ExprId {
+    let le2 = cle(d, p, x, b);
+    let fx = d.apply(f, &[x]);
+    let absfx = d.const_app(p.abs, &[fx]);
+    let target_e = embed(d, p, target_e_rat);
+    let le3 = cle(d, p, absfx, target_e);
+    let and2ty = d.and(le2, le3);
+    let p2 = and_intro(d, p, le2, le3, h2, h3);
+    let le1 = cle(d, p, a, x);
+    let p1 = and_intro(d, p, le1, and2ty, h1, p2);
+    let pred = approx_pred_lambda(d, p, f, a, b, target_e_rat, carrier);
+    cexists_intro(d, p, carrier, pred, x, p1)
+}
+
+/// `CReal.ivt_approx` -- see [`super::CRealPrelude::ivt_approx`]'s doc
+/// comment for the statement and this module's documentation "Addendum" for
+/// how `n`, `delta`, `bisect_n` are chosen.
+fn declare_ivt_approx(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let fn_ty = d.arrow(carrier, carrier);
+    let nat = d.nat_ty();
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let uc_ty_ab = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let huc_fv = d.fresh_fvar();
+    let huc = d.kernel().fvar(huc_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let zero_c = czero(d, p);
+    let fa = d.apply(f, &[a]);
+    let hfa_ty = cle(d, p, fa, zero_c);
+    let hfa_fv = d.fresh_fvar();
+    let hfa = d.kernel().fvar(hfa_fv);
+
+    let fb = d.apply(f, &[b]);
+    let hfb_ty = cle(d, p, zero_c, fb);
+    let hfb_fv = d.fresh_fvar();
+    let hfb = d.kernel().fvar(hfb_fv);
+
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+
+    // --- `n`, `sgn_eps`, `delta`, `bisect_n` ---------------------------------
+    let (n, sgn_eps, sgn_eps_rat, sgn_eps_pos) = sgn_eps_of(d, p, e);
+    let (target_e_rat, double_eq_target) =
+        sgn_eps_double_eq_target(d, p, e, n, sgn_eps, sgn_eps_rat);
+
+    let sgn_eps_nonneg = d.lemma(p.le_of_lt, &[zero_c, sgn_eps, sgn_eps_pos]);
+    let hfp = d.lemma(p.le_trans, &[fa, zero_c, sgn_eps, hfa, sgn_eps_nonneg]);
+    let neg_sgn_eps = cneg(d, p, sgn_eps);
+    let neg_sgn_eps_le_zero = neg_nonpos_of_nonneg(d, p, sgn_eps, sgn_eps_nonneg);
+    let hfq = d.lemma(
+        p.le_trans,
+        &[neg_sgn_eps, zero_c, fb, neg_sgn_eps_le_zero, hfb],
+    );
+
+    let mod_fn = d.const_app(p.uc_modulus, &[f, a, b, huc]);
+    let delta = d.apply(mod_fn, &[n]);
+
+    let neg_a = cneg(d, p, a);
+    let w0 = cadd(d, p, b, neg_a);
+    let w0_nonneg = sub_nonneg_of_le(d, p, a, b, hab);
+    let (bisect_n, width_term, target_creal, target_nonneg, width_le) =
+        width_le_via_bound(d, p, w0, w0_nonneg, delta);
+
+    let iter_at_n = d.lemma(
+        p.ivt_iter,
+        &[f, a, b, sgn_eps, sgn_eps_pos, hab, hfp, hfq, bisect_n],
+    );
+
+    let target_ty = approx_exists_ty(d, p, f, a, b, target_e_rat, carrier);
+
+    let body = with_ivt_witness(
+        d,
+        p,
+        f,
+        a,
+        b,
+        sgn_eps,
+        width_term,
+        carrier,
+        target_ty,
+        iter_at_n,
+        &|d, pp2, qq2, h1, h2, h3, h4, h5, h6| {
+            let neg_pp2 = cneg(d, p, pp2);
+            let diff = cadd(d, p, qq2, neg_pp2);
+
+            // `le diff target_creal`, from `h6 : Equiv diff width_term` and
+            // `width_le : le width_term target_creal`.
+            let diff_le_t = {
+                let h6_symm = esymm(d, p, diff, width_term, h6);
+                let refl_target = erefl(d, p, target_creal);
+                d.lemma(
+                    p.le_congr,
+                    &[
+                        width_term,
+                        diff,
+                        target_creal,
+                        target_creal,
+                        h6_symm,
+                        refl_target,
+                        width_le,
+                    ],
+                )
+            };
+            let neg_diff_le_t = {
+                let diff_nonneg = sub_nonneg_of_le(d, p, pp2, qq2, h2);
+                let neg_diff_le_zero = neg_nonpos_of_nonneg(d, p, diff, diff_nonneg);
+                let neg_diff = cneg(d, p, diff);
+                d.lemma(
+                    p.le_trans,
+                    &[
+                        neg_diff,
+                        zero_c,
+                        target_creal,
+                        neg_diff_le_zero,
+                        target_nonneg,
+                    ],
+                )
+            };
+            let abs_diff_le_t = d.lemma(p.abs_le, &[diff, target_creal, diff_le_t, neg_diff_le_t]);
+
+            let range_a_qq2 = d.lemma(p.le_trans, &[a, pp2, qq2, h1, h2]);
+            let range_pp2_b = d.lemma(p.le_trans, &[pp2, qq2, b, h2, h3]);
+
+            let uc_spec_term = d.const_app(p.uc_spec, &[f, a, b, huc]);
+            let uc_concl = d.apply(
+                uc_spec_term,
+                &[n, qq2, pp2, range_a_qq2, h3, h1, range_pp2_b, abs_diff_le_t],
+            );
+            // uc_concl : le (abs (add (f qq2) (neg (f pp2)))) sgn_eps
+
+            let f_qq2 = d.apply(f, &[qq2]);
+            let f_pp2 = d.apply(f, &[pp2]);
+            let neg_f_pp2 = cneg(d, p, f_pp2);
+            let diff_f = cadd(d, p, f_qq2, neg_f_pp2);
+            let abs_diff_f = d.const_app(p.abs, &[diff_f]);
+
+            let le_abs_self_proof = d.lemma(p.le_abs_self, &[diff_f]);
+            let diff_f_le_eps = d.lemma(
+                p.le_trans,
+                &[diff_f, abs_diff_f, sgn_eps, le_abs_self_proof, uc_concl],
+            );
+
+            // `f_qq2 ~ diff_f + f_pp2 ≤ sgn_eps + f_pp2 ≤ sgn_eps + sgn_eps
+            // ~ target_e`.
+            let diff_f_fpp2 = cadd(d, p, diff_f, f_pp2);
+            let eps_fpp2 = cadd(d, p, sgn_eps, f_pp2);
+            let eps_eps = cadd(d, p, sgn_eps, sgn_eps);
+            let target_e_creal = embed(d, p, target_e_rat);
+
+            let refl_f_pp2 = d.lemma(p.le_refl, &[f_pp2]);
+            let add_le_1 = d.lemma(
+                p.add_le_add,
+                &[diff_f, sgn_eps, f_pp2, f_pp2, diff_f_le_eps, refl_f_pp2],
+            );
+            let cancel_eq = add_sub_cancel(d, p, f_qq2, f_pp2); // Equiv diff_f_fpp2 f_qq2
+            let refl_eps_fpp2 = erefl(d, p, eps_fpp2);
+            let add_le_1_congr = d.lemma(
+                p.le_congr,
+                &[
+                    diff_f_fpp2,
+                    f_qq2,
+                    eps_fpp2,
+                    eps_fpp2,
+                    cancel_eq,
+                    refl_eps_fpp2,
+                    add_le_1,
+                ],
+            );
+            let refl_sgn_eps_1 = d.lemma(p.le_refl, &[sgn_eps]);
+            let add_le_2 = d.lemma(
+                p.add_le_add,
+                &[sgn_eps, sgn_eps, f_pp2, sgn_eps, refl_sgn_eps_1, h4],
+            );
+            let upper_pre = d.lemma(
+                p.le_trans,
+                &[f_qq2, eps_fpp2, eps_eps, add_le_1_congr, add_le_2],
+            );
+            let refl_f_qq2 = erefl(d, p, f_qq2);
+            let f_qq2_le_target = d.lemma(
+                p.le_congr,
+                &[
+                    f_qq2,
+                    f_qq2,
+                    eps_eps,
+                    target_e_creal,
+                    refl_f_qq2,
+                    double_eq_target,
+                    upper_pre,
+                ],
+            );
+
+            let sgn_eps_le_target = {
+                let refl_sgn_eps_2 = d.lemma(p.le_refl, &[sgn_eps]);
+                let add_le = d.lemma(
+                    p.add_le_add,
+                    &[
+                        sgn_eps,
+                        sgn_eps,
+                        zero_c,
+                        sgn_eps,
+                        refl_sgn_eps_2,
+                        sgn_eps_nonneg,
+                    ],
+                );
+                let sgn_eps_zero = cadd(d, p, sgn_eps, zero_c);
+                let add_zero_eq = d.lemma(p.add_zero, &[sgn_eps]);
+                let refl_eps_eps_1 = erefl(d, p, eps_eps);
+                let lhs_congr = d.lemma(
+                    p.le_congr,
+                    &[
+                        sgn_eps_zero,
+                        sgn_eps,
+                        eps_eps,
+                        eps_eps,
+                        add_zero_eq,
+                        refl_eps_eps_1,
+                        add_le,
+                    ],
+                );
+                let refl_sgn_eps_3 = erefl(d, p, sgn_eps);
+                d.lemma(
+                    p.le_congr,
+                    &[
+                        sgn_eps,
+                        sgn_eps,
+                        eps_eps,
+                        target_e_creal,
+                        refl_sgn_eps_3,
+                        double_eq_target,
+                        lhs_congr,
+                    ],
+                )
+            };
+            // `le (neg f_qq2) target_e_creal`, from `h5 : le (neg sgn_eps)
+            // f_qq2` via `neg_le_neg` (giving `le (neg f_qq2) (neg (neg
+            // sgn_eps))`), `double_neg` to fold `neg (neg sgn_eps) ~
+            // sgn_eps`, then `sgn_eps_le_target`.
+            let neg_f_qq2 = cneg(d, p, f_qq2);
+            let step_nn = d.lemma(p.neg_le_neg, &[neg_sgn_eps, f_qq2, h5]);
+            // step_nn : le neg_f_qq2 (neg neg_sgn_eps)
+            let neg_neg_sgn_eps = cneg(d, p, neg_sgn_eps);
+            let dn = double_neg(d, p, sgn_eps); // Equiv neg_neg_sgn_eps sgn_eps
+            let neg_f_qq2_eq_refl = erefl(d, p, neg_f_qq2);
+            let neg_f_qq2_le_sgn = d.lemma(
+                p.le_congr,
+                &[
+                    neg_f_qq2,
+                    neg_f_qq2,
+                    neg_neg_sgn_eps,
+                    sgn_eps,
+                    neg_f_qq2_eq_refl,
+                    dn,
+                    step_nn,
+                ],
+            );
+            let neg_fqq2_le_target = d.lemma(
+                p.le_trans,
+                &[
+                    neg_f_qq2,
+                    sgn_eps,
+                    target_e_creal,
+                    neg_f_qq2_le_sgn,
+                    sgn_eps_le_target,
+                ],
+            );
+
+            let abs_fqq2_le_target = d.lemma(
+                p.abs_le,
+                &[f_qq2, target_e_creal, f_qq2_le_target, neg_fqq2_le_target],
+            );
+
+            approx_exists_proof(
+                d,
+                p,
+                f,
+                a,
+                b,
+                target_e_rat,
+                carrier,
+                qq2,
+                range_a_qq2,
+                h3,
+                abs_fqq2_le_target,
+            )
+        },
+    );
+
+    let value = {
+        let with_e = d.lam_fv(e_fv, nat, body);
+        let with_hfb = d.lam_fv(hfb_fv, hfb_ty, with_e);
+        let with_hfa = d.lam_fv(hfa_fv, hfa_ty, with_hfb);
+        let with_hab = d.lam_fv(hab_fv, hab_ty, with_hfa);
+        let with_huc = d.lam_fv(huc_fv, uc_ty_ab, with_hab);
+        let with_b = d.lam_fv(b_fv, carrier, with_huc);
+        let with_a = d.lam_fv(a_fv, carrier, with_b);
+        d.lam_fv(f_fv, fn_ty, with_a)
+    };
+    let ty = {
+        let with_e = d.pi_fv(e_fv, nat, target_ty);
+        let with_hfb = d.arrow(hfb_ty, with_e);
+        let with_hfa = d.arrow(hfa_ty, with_hfb);
+        let with_hab = d.arrow(hab_ty, with_hfa);
+        let with_huc = d.arrow(uc_ty_ab, with_hab);
+        let with_b = d.pi_fv(b_fv, carrier, with_huc);
+        let with_a = d.pi_fv(a_fv, carrier, with_b);
+        d.pi_fv(f_fv, fn_ty, with_a)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.ivt_approx,
         uparams: vec![],
         ty,
         value,

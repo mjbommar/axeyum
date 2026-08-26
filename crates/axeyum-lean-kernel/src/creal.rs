@@ -2471,6 +2471,33 @@ pub struct CRealPrelude {
     /// neighbourhood already flags as missing, not a gap this file's own
     /// construction leaves behind.
     pub ivt_iter: NameId,
+    /// `CReal.ivt_approx : ∀ F a b, UniformlyContinuousOn F a b → le a b →
+    /// le (F a) zero → le zero (F b) → ∀ e : Nat, ∃ x, le a x ∧ le x b ∧
+    /// le (abs (F x)) (ofRat (natDivSucc 1 e))` (`creal/ivt.rs`) — the
+    /// **constructive approximate Intermediate Value Theorem** (Spivak ch.
+    /// 7), closing [`Self::ivt_iter`] against [`Self::uniformly_continuous_on`]
+    /// and [`Self::pow_half_le_nat_div_succ`].
+    ///
+    /// Chooses the bisection depth `N` and the continuity/sign slack `eps`
+    /// entirely by computation, with no search and no `Exists.rec`: `eps :=
+    /// ofRat (natDivSucc 1 n)` for `n := 2·e + 1` (so `eps + eps ~
+    /// ofRat (natDivSucc 1 e)` via [`RatPrelude::nat_div_succ_add`] then
+    /// [`RatPrelude::nat_div_succ_halve`]); `delta := ` the continuity
+    /// modulus at `n`; and `N := M·delta + c` for `c := CReal.bound (b −
+    /// a)`, `M := c + 1` — [`RatPrelude::nat_div_succ_scale`]'s own index
+    /// shape, chosen so `M · natDivSucc 1 N = natDivSucc 1 delta` is an
+    /// **equality**, not merely a bound. `CReal.bound` is a total computable
+    /// projection (`Self::bound`), so this needs no Archimedean-property
+    /// `Exists` unwrap either: the same non-existential bound
+    /// [`Self::archimedean`] is built from is reproduced directly against
+    /// `b − a`.
+    ///
+    /// The witness returned is always the final bracket's RIGHT endpoint:
+    /// with the sign invariant `F P ≤ eps`, `−eps ≤ F Q` and continuity
+    /// giving `|F Q − F P| ≤ eps`, `F Q ≤ F P + eps ≤ eps + eps` and `−eps ≤
+    /// F Q` already, so `|F Q| ≤ eps + eps = ofRat (natDivSucc 1 e)`
+    /// directly, no case split on any sign.
+    pub ivt_approx: NameId,
     /// `CReal.hasDerivative_unique : ∀ F F1 F2 a b, HasDerivativeOn F F1 a b
     /// → HasDerivativeOn F F2 a b → lt a b → ∀ z, le a z → le z b → Equiv
     /// (F1 z) (F2 z)` (`creal/deriv_unique.rs`) — the derivative of a
@@ -2810,6 +2837,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         strict_antitone_of_neg_deriv: kernel.name_str(creal, "strict_antitone_of_neg_deriv"),
         strict_mono_comp: kernel.name_str(creal, "strict_mono_comp"),
         ivt_iter: kernel.name_str(creal, "ivt_iter"),
+        ivt_approx: kernel.name_str(creal, "ivt_approx"),
         has_derivative_unique: kernel.name_str(creal, "hasDerivative_unique"),
     }
 }
