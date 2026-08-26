@@ -117,16 +117,24 @@
 //! So the shipped construction uses **both**: route (b) for the one-shot
 //! comparison, route (a)'s `CReal.pow` shape for everything built since.
 
-use super::{CRealPrelude, DERIVED_HEIGHT, creal_ty, div_succ, embed, equiv};
+use super::series::{
+    assoc_rev_eq, chain_within3, exists_nat_intro, fuse_same_index, sum_range_cauchy_body,
+    within_symm,
+};
+use super::{
+    CRealPrelude, DERIVED_HEIGHT, creal_ty, div_succ, embed, equiv, halves, modulus, sample, shift,
+    weaken, within,
+};
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
 use crate::rat_prelude::RatPrelude;
+use crate::rat_prelude::group::rsub;
 use crate::rat_prelude::ops::{
-    den, den_z, iregroup4, nat_rewrite_prop, normalize, num, radd, rat_eq_rewrite, rchain, rmul,
-    rone, rpow,
+    den, den_z, iregroup4, nat_rewrite_prop, normalize, num, radd, rat_eq_rewrite, rchain, rcongr,
+    rle, rmul, rone, rpow, rsymm, rzero,
 };
 
 /// Height for `expTerm`/`expSeriesPartial`: both are thin definitional
@@ -1471,4 +1479,327 @@ fn declare_sum_pow_half_closed_form(
         ty,
         value,
     })
+}
+
+// --- `CReal.geom_cauchy` family -------------------------------------------
+//
+// See this file's own module documentation ("A genuinely new fact changes
+// that module's own diagnosis") for the overall plan. This section builds
+// it: [`declare_geom_half_inv_leaf_bound`] first (the one `CReal.inv`-using
+// piece, self-contained), then [`declare_geom_cauchy_ordered_half`] (the
+// index-bookkeeping normalization on top of it), then
+// [`declare_geom_cauchy`] (the `Nat.le_total` assembly into `CReal.Cauchy`
+// itself).
+
+/// `CReal.inv x k h`.
+fn cinv(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, k: ExprId, h: ExprId) -> ExprId {
+    d.const_app(p.inv, &[x, k, h])
+}
+
+/// `Rat.natDivSucc 2 0` — the rational `2`, kept in the `natDivSucc` shape
+/// [`RatPrelude::nat_div_succ_mul`]'s first-factor slot expects, rather than
+/// the `Rat.normalize`-based shape [`two`]/[`two_normalize`] above build (a
+/// shape used nowhere in this derivation).
+fn two_ds(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let zero_nat = d.num(0);
+    div_succ(d, p, 2, zero_nat)
+}
+
+/// `CReal.ofRat (Rat.natDivSucc 2 0)` — the constant `2`, in the shape
+/// [`two_ds`] builds.
+fn two_c(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let t = two_ds(d, p);
+    embed(d, p, t)
+}
+
+/// `Eq Rat (mul (natDivSucc 2 0) (natDivSucc 1 1)) Rat.one`, i.e. `2 · 1/2 =
+/// 1` — via `natDivSucc`'s own algebraic interface
+/// (`Rat.natDivSucc_mul`/`Rat.natDivSucc_scale`/`CReal.ratUnitEqOne`), never
+/// by unfolding `Rat.normalize`'s `Nat.gcd` (which does not reduce by ι even
+/// on literals — see [`rat_two_mul_half_eq_one`]'s own doc for the
+/// `Rat.normalize`-based route this avoids).
+///
+/// `Rat.natDivSucc_mul(2,1,1) : mul (natDivSucc 2 0) (natDivSucc 1 1) =
+/// natDivSucc (2*1) 1`, `2*1` a literal-literal `Nat.mul` that ι-reduces to
+/// `2`; `Rat.natDivSucc_scale(1,0) : natDivSucc 2 ((1+1)*0+1) = natDivSucc 1
+/// 0`, `(1+1)*0+1` likewise literal-literal, reducing to `1`; and
+/// `CReal.ratUnitEqOne : natDivSucc 1 0 = Rat.one` closes it.
+fn two_ds_mul_half_rat_eq_one(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let rat = p.rat;
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+    let zero_nat = d.num(0);
+    let mul_eq = d.lemma(rat.nat_div_succ_mul, &[two_nat, one_nat, one_nat]);
+    let scale_eq = d.lemma(rat.nat_div_succ_scale, &[one_nat, zero_nat]);
+    let unit_eq = d.lemma(p.rat_unit_eq_one, &[]);
+    let td = two_ds(d, p);
+    let hr = half_rat(d, p);
+    let mul_expr = rmul(d, td, hr);
+    let two_one = div_succ(d, p, 2, one_nat);
+    let one_zero = d.const_app(rat.nat_div_succ, &[one_nat, zero_nat]);
+    let one_r = rone(d, rat);
+    let (_, proof) = rchain(
+        d,
+        mul_expr,
+        &[(two_one, mul_eq), (one_zero, scale_eq), (one_r, unit_eq)],
+    );
+    proof
+}
+
+/// `λ i, CReal.pow half i` — the summand [`CRealPrelude::geom_cauchy`] is
+/// stated over. Same shape as `geometric.rs::pow_fn(half)` (private there,
+/// reproduced here).
+fn geom_half_fn(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let h = half(d, p);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let body = d.const_app(p.pow, &[h, i]);
+    let nat = d.nat_ty();
+    d.lam_fv(i_fv, nat, body)
+}
+
+/// `CReal.geomHalfInvLeafBound`. See the field documentation
+/// ([`CRealPrelude::geom_half_inv_leaf_bound`]) for the statement and the
+/// derivation.
+fn declare_geom_half_inv_leaf_bound(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let nat = d.nat_ty();
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let h = half(d, p);
+    let neg_h = cneg(d, p, h);
+    let a_real = cadd(d, p, one_c, neg_h); // a_real = 1 - half
+
+    // `PosBound half 1`: `half` IS `ofRat (natDivSucc 1 1)` by construction
+    // (`half`/`half_rat` above), so this is `le_refl` at that shared term.
+    let hp_half = d.lemma(p.le_refl, &[h]);
+
+    // `PosBound a_real 1`, transported from `hp_half` across `Equiv half
+    // a_real` (`one_sub_half_equiv_half`, reversed).
+    let eq_a_half = one_sub_half_equiv_half(d, p); // Equiv a_real half
+    let eq_half_a = d.lemma(p.equiv_symm, &[a_real, h, eq_a_half]); // Equiv half a_real
+    let refl_half = d.lemma(p.equiv_refl, &[h]);
+    let h_pos_a_real = d.lemma(
+        p.le_congr,
+        &[h, h, h, a_real, refl_half, eq_half_a, hp_half],
+    ); // le half a_real == PosBound a_real 1 (unfolded)
+
+    let inv_expr = cinv(d, p, a_real, one_nat, h_pos_a_real);
+
+    // `Equiv (mul half inv_expr) one`, transported from `mul_inv_cancel` at
+    // `a_real` across `Equiv a_real half`.
+    let cancel_a_real = d.lemma(p.mul_inv_cancel, &[a_real, one_nat, h_pos_a_real]);
+    // cancel_a_real : Equiv (mul a_real inv_expr) one
+    let refl_inv = d.lemma(p.equiv_refl, &[inv_expr]);
+    let mul_a_real_inv = cmul(d, p, a_real, inv_expr);
+    let mul_half_inv = cmul(d, p, h, inv_expr);
+    let mul_congr_half = d.lemma(
+        p.mul_congr,
+        &[a_real, h, inv_expr, inv_expr, eq_a_half, refl_inv],
+    );
+    // mul_congr_half : Equiv mul_a_real_inv mul_half_inv
+    let mul_congr_half_rev = d.lemma(
+        p.equiv_symm,
+        &[mul_a_real_inv, mul_half_inv, mul_congr_half],
+    );
+    // mul_congr_half_rev : Equiv mul_half_inv mul_a_real_inv
+    let half_inv_one = d.lemma(
+        p.equiv_trans,
+        &[
+            mul_half_inv,
+            mul_a_real_inv,
+            one_c,
+            mul_congr_half_rev,
+            cancel_a_real,
+        ],
+    );
+    // half_inv_one : Equiv mul_half_inv one_c
+
+    // `Equiv (mul half two_c) one`, a pure `Rat`-level computation lifted
+    // through `of_rat_mul`.
+    let tc = two_c(d, p);
+    let td = two_ds(d, p);
+    let hr = half_rat(d, p);
+    let two_half_eq = two_ds_mul_half_rat_eq_one(d, p); // Eq (mul td hr) one_r
+    let mul_tc_half = cmul(d, p, tc, h);
+    let mul_half_tc = cmul(d, p, h, tc);
+    let rmul_td_hr = rmul(d, td, hr);
+    let embed_mul_td_hr = embed(d, p, rmul_td_hr);
+    let of_rat_mul_two_half = d.lemma(p.of_rat_mul, &[td, hr]);
+    // of_rat_mul_two_half : Equiv mul_tc_half embed_mul_td_hr
+    let one_r_here = rone(d, rat);
+    let ofrat_two_half_eq = ofrat_congr(d, p, rmul_td_hr, one_r_here, two_half_eq);
+    // ofrat_two_half_eq : Equiv embed_mul_td_hr one_c (defeq to `ofRat one_r`)
+    let two_half_one = d.lemma(
+        p.equiv_trans,
+        &[
+            mul_tc_half,
+            embed_mul_td_hr,
+            one_c,
+            of_rat_mul_two_half,
+            ofrat_two_half_eq,
+        ],
+    );
+    // two_half_one : Equiv mul_tc_half one_c
+    let comm_two_half = d.lemma(p.mul_comm, &[tc, h]);
+    // comm_two_half : Equiv mul_tc_half mul_half_tc
+    let comm_two_half_rev = d.lemma(p.equiv_symm, &[mul_tc_half, mul_half_tc, comm_two_half]);
+    // comm_two_half_rev : Equiv mul_half_tc mul_tc_half
+    let half_two_one = d.lemma(
+        p.equiv_trans,
+        &[
+            mul_half_tc,
+            mul_tc_half,
+            one_c,
+            comm_two_half_rev,
+            two_half_one,
+        ],
+    );
+    // half_two_one : Equiv mul_half_tc one_c
+
+    // Cancel `half` from `Equiv mul_half_inv mul_half_tc` (both ~ `one_c`)
+    // via `le_of_mul_le_mul_left` in both directions.
+    let half_two_one_rev = d.lemma(p.equiv_symm, &[mul_half_tc, one_c, half_two_one]);
+    // half_two_one_rev : Equiv one_c mul_half_tc
+    let both_one = d.lemma(
+        p.equiv_trans,
+        &[
+            mul_half_inv,
+            one_c,
+            mul_half_tc,
+            half_inv_one,
+            half_two_one_rev,
+        ],
+    );
+    // both_one : Equiv mul_half_inv mul_half_tc
+    let both_one_rev = d.lemma(p.equiv_symm, &[mul_half_inv, mul_half_tc, both_one]);
+    let le1 = d.lemma(p.le_of_equiv, &[mul_half_inv, mul_half_tc, both_one]);
+    let le2 = d.lemma(p.le_of_equiv, &[mul_half_tc, mul_half_inv, both_one_rev]);
+    let cancel1 = d.lemma(
+        p.le_of_mul_le_mul_left,
+        &[h, inv_expr, tc, one_nat, hp_half, le1],
+    ); // le inv_expr tc
+    let cancel2 = d.lemma(
+        p.le_of_mul_le_mul_left,
+        &[h, tc, inv_expr, one_nat, hp_half, le2],
+    ); // le tc inv_expr
+    let inv_equiv_two = d.lemma(p.equiv_of_le_le, &[inv_expr, tc, cancel1, cancel2]);
+    // inv_equiv_two : Equiv inv_expr tc
+
+    // `y_a := mul inv_expr (pow half a) ~ mul tc (pow half a)`, then bound
+    // the right side via `pow_half_le_nat_div_succ` scaled by `tc`.
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let pow_half_a = cpow(d, p, h, a);
+    let refl_pow = d.lemma(p.equiv_refl, &[pow_half_a]);
+    let y_a = cmul(d, p, inv_expr, pow_half_a);
+    let two_pow = cmul(d, p, tc, pow_half_a);
+    let y_a_equiv = d.lemma(
+        p.mul_congr,
+        &[
+            inv_expr,
+            tc,
+            pow_half_a,
+            pow_half_a,
+            inv_equiv_two,
+            refl_pow,
+        ],
+    );
+    // y_a_equiv : Equiv y_a two_pow
+
+    let bound_rat_1a = div_succ(d, p, 1, a);
+    let pow_le = d.lemma(p.pow_half_le_nat_div_succ, &[a]);
+    // pow_le : le pow_half_a (ofRat bound_rat_1a)
+    let zero_nat = d.num(0);
+    let zero_le_td = d.lemma(rat.zero_le_nat_div_succ, &[two_nat, zero_nat]);
+    let rzero_here = rzero(d, rat);
+    let zero_le_tc = d.lemma(p.of_rat_le, &[rzero_here, td, zero_le_td]);
+    let embed_bound_1a = embed(d, p, bound_rat_1a);
+    let mul_le = d.lemma(
+        p.mul_le_mul_of_nonneg_left,
+        &[tc, pow_half_a, embed_bound_1a, zero_le_tc, pow_le],
+    );
+    // mul_le : le two_pow (mul tc embed_bound_1a)
+
+    let bound_a_rat = div_succ(d, p, 2, a);
+    let bound_a = embed(d, p, bound_a_rat);
+    let mul_eq2 = d.lemma(rat.nat_div_succ_mul, &[two_nat, one_nat, a]);
+    // mul_eq2 : Eq (mul td bound_rat_1a) (natDivSucc (2*1) a) ~ bound_a_rat
+    let mul_tc_bound1a = cmul(d, p, tc, embed_bound_1a);
+    let rmul_td_1a = rmul(d, td, bound_rat_1a);
+    let embed_mul_td_1a = embed(d, p, rmul_td_1a);
+    let of_rat_mul_two_bound = d.lemma(p.of_rat_mul, &[td, bound_rat_1a]);
+    // of_rat_mul_two_bound : Equiv mul_tc_bound1a embed_mul_td_1a
+    let ofrat_bound_eq = ofrat_congr(d, p, rmul_td_1a, bound_a_rat, mul_eq2);
+    // ofrat_bound_eq : Equiv embed_mul_td_1a bound_a
+    let rhs_equiv = d.lemma(
+        p.equiv_trans,
+        &[
+            mul_tc_bound1a,
+            embed_mul_td_1a,
+            bound_a,
+            of_rat_mul_two_bound,
+            ofrat_bound_eq,
+        ],
+    );
+    // rhs_equiv : Equiv mul_tc_bound1a bound_a
+    let refl_two_pow = d.lemma(p.equiv_refl, &[two_pow]);
+    let two_pow_le_bound = d.lemma(
+        p.le_congr,
+        &[
+            two_pow,
+            two_pow,
+            mul_tc_bound1a,
+            bound_a,
+            refl_two_pow,
+            rhs_equiv,
+            mul_le,
+        ],
+    );
+    // two_pow_le_bound : le two_pow bound_a
+
+    let y_a_equiv_rev = d.lemma(p.equiv_symm, &[y_a, two_pow, y_a_equiv]);
+    let refl_bound_a = d.lemma(p.equiv_refl, &[bound_a]);
+    let hv = d.lemma(
+        p.le_congr,
+        &[
+            two_pow,
+            y_a,
+            bound_a,
+            bound_a,
+            y_a_equiv_rev,
+            refl_bound_a,
+            two_pow_le_bound,
+        ],
+    );
+    // hv : le y_a bound_a
+
+    let value = d.lam_fv(a_fv, nat, hv);
+    let ty = {
+        let stmt = cle(d, p, y_a, bound_a);
+        d.pi_fv(a_fv, nat, stmt)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.geom_half_inv_leaf_bound,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Admit `CReal.geom_half_inv_leaf_bound`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_geom_cauchy_family(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_geom_half_inv_leaf_bound(d, p)
 }
