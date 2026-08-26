@@ -6,6 +6,10 @@ from axeyum._native import kernel
 import builtins
 import typing
 __all__ = [
+    "APPLICATION_MAX_BINDERS",
+    "APPLICATION_MAX_DEPTH",
+    "APPLICATION_MAX_TERMS",
+    "ApplicationCandidate",
     "AxiomIdentity",
     "Candidate",
     "CircularityAudit",
@@ -25,15 +29,46 @@ __all__ = [
     "StatementImportError",
     "audit_circularity",
     "import_statement_ndjson",
+    "propose_bounded_application",
     "propose_bounded_induction",
     "propose_modeq_family",
 ]
 
+APPLICATION_MAX_BINDERS: builtins.int
+APPLICATION_MAX_DEPTH: builtins.int
+APPLICATION_MAX_TERMS: builtins.int
 FORMAT_VERSION: builtins.str
 IDENTITY_VERSION: builtins.str
 MAX_BINDERS: builtins.int
 MAX_INDUCTIONS: builtins.int
 MODEQ_MAX_BINDERS: builtins.int
+@typing.final
+class ApplicationCandidate:
+    r"""
+    A bounded-application candidate over an explicit retrieved declaration set.
+    """
+    @property
+    def proof(self) -> kernel.ExprId:
+        r"""
+        Proposed proof term, untrusted until kernel admission.
+        """
+    @property
+    def binders_used(self) -> builtins.int:
+        r"""
+        Leading goal binders introduced by the search.
+        """
+    @property
+    def application_depth(self) -> builtins.int:
+        r"""
+        Application-closure rounds consumed.
+        """
+    @property
+    def terms_considered(self) -> builtins.int:
+        r"""
+        Distinct terms present when the proof was found.
+        """
+    def __repr__(self) -> builtins.str: ...
+
 @typing.final
 class AxiomIdentity:
     r"""
@@ -61,7 +96,7 @@ class Candidate:
     r"""
     A bounded-induction candidate: a proposed proof term plus the search shape
     that produced it.
-    
+
     `inductions_used == 0` means the goal closed by plain reflexivity. Nothing
     here is checked: `proof` is untrusted until `Kernel.add_declaration` accepts
     it as the value of a theorem whose type is the goal.
@@ -87,7 +122,7 @@ class Candidate:
 class CircularityAudit:
     r"""
     The mechanical circularity/trust audit an admitted candidate must pass.
-    
+
     Computed **only** from `declaration_dependency_closure`, `axiom_footprint`
     and `theorem_dependencies` — never from a doc comment, never from a
     head-symbol text match on a rendered name. The three counts are exposed
@@ -140,7 +175,7 @@ class DeclarationDependency:
 class DeclarationIdentity:
     r"""
     Canonical identity for one independently admitted declaration.
-    
+
     `content_sha256` is what a family manifest's `target_content_sha256` pins:
     it is arena-independent, so two imports of the same bytes agree.
     """
@@ -440,6 +475,20 @@ def import_statement_ndjson(source: typing.Any, limits: typing.Optional[ImportLi
     proof-isolation contract.
     """
 
+def propose_bounded_application(kernel: kernel.Kernel, goal: kernel.ExprId, declarations: typing.Sequence[kernel.NameId]) -> ApplicationCandidate:
+    r"""
+    Proposes a bounded type-directed application proof from exact declarations.
+
+    `declarations` is the retrieval boundary: the producer does not scan the
+    environment. Do not include the target theorem. The returned proof remains
+    untrusted until the same kernel admits it as a theorem of `goal`.
+
+    # Errors
+
+    Raises `EpochError` for a foreign goal/name handle and `Declined` with a
+    typed bounded-application reason when the fixed search budget finds no term.
+    """
+
 def propose_bounded_induction(kernel: kernel.Kernel, goal: kernel.ExprId) -> Candidate:
     r"""
     Proposes a bounded structural-induction proof of `goal`.
@@ -478,4 +527,3 @@ def propose_modeq_family(kernel: kernel.Kernel, goal: kernel.ExprId) -> ModEqCan
     Raises `EpochError` if `goal` was interned by another kernel, and `Declined`
     carrying a typed `.reason` when the bounded search does not close the goal.
     """
-
