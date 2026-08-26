@@ -69,8 +69,9 @@ fn cpoint_prelude_builds() {
 /// the whole point of building this over `CReal` rather than asserting it.
 #[test]
 fn every_theorem_here_is_axiom_free() {
+    use crate::env::Declaration;
     let (kernel, p) = built();
-    for (label, name) in [
+    let named = [
         ("midpoint_comm", p.midpoint_comm),
         ("midpoint_self", p.midpoint_self),
         ("sum_perm", p.sum_perm),
@@ -200,7 +201,75 @@ fn every_theorem_here_is_axiom_free() {
             p.medial_triangle_cross_quarter,
         ),
         ("collinear_of_area_zero", p.collinear_of_area_zero),
-    ] {
+        // Found by the coverage assertion below, not by anyone noticing:
+        // these 27 were live in the prelude and unlisted here -- the
+        // inductive/ctor/recursor machinery (`CPoint`, `CPoint.mk`,
+        // `CPoint.rec`), the field projections and structural operations
+        // (`x`, `y`, `Equiv`, `midpoint`, `sub`, `add`, `neg`, `dot`,
+        // `distSq`, `centroid`, `lerp`, `cross`, `power`), the geometric
+        // predicates (`OnPerpBisector`, `OnCircle`, `NonCollinear`,
+        // `Collinear`), and the `Scalar` constant family (`two`, `inv2`,
+        // `three`, `inv3`, `centroid`, `lerp`) -- so none of them had ever
+        // had a checked-not-assumed or axiom-footprint check from this test.
+        ("CPoint", p.point),
+        ("CPoint.mk", p.mk),
+        ("CPoint.rec", p.rec),
+        ("CPoint.x", p.x),
+        ("CPoint.y", p.y),
+        ("CPoint.Equiv", p.point_equiv),
+        ("CPoint.Scalar.two", p.two),
+        ("CPoint.Scalar.inv2", p.inv2),
+        ("CPoint.Scalar.midpoint", p.midpoint),
+        ("CPoint.midpoint", p.point_midpoint),
+        ("CPoint.sub", p.point_sub),
+        ("CPoint.add", p.point_add),
+        ("CPoint.neg", p.point_neg),
+        ("CPoint.dot", p.dot),
+        ("CPoint.distSq", p.dist_sq),
+        ("CPoint.Scalar.three", p.three),
+        ("CPoint.Scalar.inv3", p.inv3),
+        ("CPoint.Scalar.centroid", p.centroid_scalar),
+        ("CPoint.centroid", p.centroid),
+        ("CPoint.Scalar.lerp", p.lerp_scalar),
+        ("CPoint.lerp", p.point_lerp),
+        ("CPoint.OnPerpBisector", p.on_perp_bisector),
+        ("CPoint.OnCircle", p.on_circle),
+        ("CPoint.cross", p.cross),
+        ("CPoint.NonCollinear", p.non_collinear),
+        ("CPoint.power", p.power),
+        ("CPoint.Collinear", p.collinear),
+    ];
+
+    // COVERAGE, checked against the ENVIRONMENT rather than against `named`
+    // itself. Without this, the loop below only ever inspects declarations
+    // someone remembered to add to `named`, while the test's name promises
+    // *every* theorem here is checked. Mirrors
+    // `every_creal_declaration_is_checked_and_axiom_free` (`creal_tests.rs`),
+    // landed after exactly this gap was found there.
+    let listed: std::collections::BTreeSet<crate::NameId> =
+        named.iter().map(|(_, name)| *name).collect();
+    let declared: Vec<crate::NameId> = kernel.environment().iter().map(|(name, _)| *name).collect();
+    let unlisted: Vec<String> = declared
+        .into_iter()
+        .map(|name| (name, kernel.display_name(name).to_string()))
+        .filter(|(name, shown)| shown.starts_with("CPoint") && !listed.contains(name))
+        .map(|(_, shown)| shown)
+        .collect();
+    assert!(
+        unlisted.is_empty(),
+        "these `CPoint` declarations are live in the prelude but absent from \
+         `named`, so nothing checks that they are axiom-free: {unlisted:?}. \
+         Add them here -- do not delete this assertion."
+    );
+
+    for (label, name) in named {
+        assert!(
+            !matches!(
+                kernel.environment().get(name).expect("declared"),
+                Declaration::Axiom { .. } | Declaration::Opaque { .. }
+            ),
+            "{label} is asserted, not derived"
+        );
         let footprint = kernel.axiom_footprint(name);
         assert!(
             footprint.is_empty(),

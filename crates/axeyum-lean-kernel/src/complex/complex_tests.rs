@@ -254,6 +254,35 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
         ("Complex.normSq_congr", p.norm_sq_congr),
         ("Complex.ptolemy_inequality_sq", p.ptolemy_inequality_sq),
     ];
+    // COVERAGE, checked against the ENVIRONMENT rather than against `named`
+    // itself.
+    //
+    // Without this, the loop below only ever inspects declarations someone
+    // remembered to add to `named`, while the test's name promises *every*
+    // named `Complex` declaration is checked. Mirrors
+    // `every_creal_declaration_is_checked_and_axiom_free` (`creal_tests.rs`),
+    // landed after exactly this gap was found there.
+    //
+    // Unlike the `Nat`/`CReal` sibling guards, `named` deliberately holds
+    // every declaration kind (`Complex`/`Complex.mk`/`Complex.rec` are the
+    // inductive/ctor/recursor, everything else a `Definition` or `Theorem`),
+    // so the filter here is by namespace alone, not by declaration kind.
+    let listed: std::collections::BTreeSet<crate::NameId> =
+        named.iter().map(|(_, name)| *name).collect();
+    let declared: Vec<crate::NameId> = kernel.environment().iter().map(|(name, _)| *name).collect();
+    let unlisted: Vec<String> = declared
+        .into_iter()
+        .map(|name| (name, kernel.display_name(name).to_string()))
+        .filter(|(name, shown)| shown.starts_with("Complex") && !listed.contains(name))
+        .map(|(_, shown)| shown)
+        .collect();
+    assert!(
+        unlisted.is_empty(),
+        "these `Complex` declarations are live in the prelude but absent from \
+         `named`, so nothing checks that they are derived and axiom-free: \
+         {unlisted:?}. Add them here -- do not delete this assertion."
+    );
+
     for (label, name) in named {
         let declaration = kernel
             .environment()

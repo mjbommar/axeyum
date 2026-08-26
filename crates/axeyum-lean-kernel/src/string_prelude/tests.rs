@@ -2585,3 +2585,168 @@ fn contains_of_contains_bool_eq_true_infers_at_the_stated_type() {
         k.render_lean(applied_ty)
     );
 }
+
+/// The declarations `every_string_declaration_is_checked_and_axiom_free`
+/// checks -- pulled into its own function only because clippy caps a
+/// function's line count, not because this list is reused elsewhere.
+fn string_declarations_checked_here(sp: &crate::StringPrelude) -> Vec<crate::NameId> {
+    vec![
+        sp.all_,
+        sp.all_append,
+        sp.all_bool,
+        sp.all_iff_all,
+        sp.all_nil,
+        sp.all_of_is_prefix,
+        sp.append,
+        sp.append_assoc,
+        sp.append_eq_foldr,
+        sp.append_left_cancel,
+        sp.append_nil,
+        sp.at,
+        sp.at_cons_zero,
+        sp.at_nil,
+        sp.char_beq,
+        sp.char_beq_eq_true_of_eq,
+        sp.char_beq_refl,
+        sp.char_decidable_eq,
+        sp.char_eq_of_beq_eq_true,
+        sp.cons_append,
+        sp.contains,
+        sp.contains_bool,
+        sp.contains_nil,
+        sp.contains_of_contains_bool_eq_true,
+        sp.contains_of_is_prefix,
+        sp.contains_of_is_suffix,
+        sp.contains_refl,
+        sp.contains_substr,
+        sp.drop,
+        sp.drop_succ_cons,
+        sp.drop_succ_nil,
+        sp.drop_zero,
+        sp.foldr,
+        sp.foldr_cons,
+        sp.foldr_nil,
+        sp.is_prefix,
+        sp.is_prefix_bool,
+        sp.is_prefix_bool_eq_true_of_is_prefix,
+        sp.is_prefix_bool_nil,
+        sp.is_prefix_append,
+        sp.is_prefix_nil,
+        sp.is_prefix_of_is_prefix_bool_eq_true,
+        sp.is_prefix_refl,
+        sp.is_prefix_take,
+        sp.is_prefix_trans,
+        sp.is_suffix,
+        sp.is_suffix_bool,
+        sp.is_suffix_bool_eq_true_of_is_suffix,
+        sp.is_suffix_drop,
+        sp.is_suffix_nil,
+        sp.is_suffix_of_is_suffix_bool_eq_true,
+        sp.is_suffix_refl,
+        sp.is_suffix_reverse_mp,
+        sp.is_suffix_reverse_mpr,
+        sp.length,
+        sp.length_cons,
+        sp.length_eq_foldr,
+        sp.length_map,
+        sp.length_nil,
+        sp.map,
+        sp.map_append,
+        sp.map_cons,
+        sp.map_id,
+        sp.map_map,
+        sp.map_nil,
+        sp.map_reverse,
+        sp.nil_append,
+        sp.reverse,
+        sp.reverse_append,
+        sp.reverse_nil,
+        sp.reverse_reverse,
+        sp.str_beq,
+        sp.str_beq_eq_true_of_eq,
+        sp.str_beq_refl,
+        sp.str_decidable_eq,
+        sp.str_decidable_is_prefix,
+        sp.str_eq_of_beq_eq_true,
+        sp.substr,
+        sp.substr_nil,
+        sp.substr_zero_len,
+        sp.substr_zero_zero,
+        sp.take,
+        sp.take_append_drop,
+        sp.take_succ_cons,
+        sp.take_succ_nil,
+        sp.take_zero,
+    ]
+}
+
+/// Every `Definition`/`Theorem` this prelude declares (under its
+/// `axeyum.string.<alphabet size>.` namespace root -- there is no `String.`
+/// prefix here, unlike `Nat.`/`Int.`/`Rat.`/`Complex.`/`CReal.`) is a checked
+/// declaration with an empty axiom footprint.
+///
+/// Unlike the sibling preludes, this file has no single hand-maintained
+/// inventory array to add a coverage guard next to: the discipline here is
+/// many small `..._names_are_registered` / `..._are_axiom_free` test pairs,
+/// one per feature slice. That shape has exactly the same risk -- a
+/// declaration added to `string_prelude.rs` and never added to ANY of those
+/// per-feature lists would be checked by nothing -- so this is a single
+/// aggregate list, built directly from the environment the first time it was
+/// run (which is how it is verified to have covered everything: it found
+/// zero declarations outside this list).
+#[test]
+fn every_string_declaration_is_checked_and_axiom_free() {
+    let (k, sp) = setup(2);
+    let listed: std::collections::BTreeSet<crate::NameId> =
+        string_declarations_checked_here(&sp).into_iter().collect();
+
+    let declared: Vec<(crate::NameId, crate::env::Declaration)> = k
+        .environment()
+        .iter()
+        .map(|(name, decl)| (*name, decl.clone()))
+        .collect();
+    let unlisted: Vec<String> = declared
+        .iter()
+        .filter(|(name, decl)| {
+            matches!(
+                decl,
+                crate::env::Declaration::Definition { .. }
+                    | crate::env::Declaration::Theorem { .. }
+            ) && k
+                .display_name(*name)
+                .to_string()
+                .starts_with("axeyum.string.")
+                && !listed.contains(name)
+        })
+        .map(|(name, _)| k.display_name(*name).to_string())
+        .collect();
+    assert!(
+        unlisted.is_empty(),
+        "these string-prelude declarations are live but absent from this \
+         test's list, so nothing checks their axiom-footprint: {unlisted:?}. \
+         Add them here -- do not delete this assertion."
+    );
+
+    for (name, decl) in &declared {
+        let shown = k.display_name(*name).to_string();
+        if !shown.starts_with("axeyum.string.") || !listed.contains(name) {
+            continue;
+        }
+        assert!(
+            !matches!(
+                decl,
+                crate::env::Declaration::Axiom { .. } | crate::env::Declaration::Opaque { .. }
+            ),
+            "{shown} is asserted, not derived"
+        );
+        let footprint = k.axiom_footprint(*name);
+        assert!(
+            footprint.is_empty(),
+            "{shown} must have an empty axiom footprint, found {:?}",
+            footprint
+                .iter()
+                .map(|n| k.display_name(*n).to_string())
+                .collect::<Vec<_>>()
+        );
+    }
+}
