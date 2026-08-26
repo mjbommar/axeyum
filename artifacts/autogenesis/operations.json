@@ -1454,6 +1454,72 @@
         "axiom_footprint_policy": "must-be-empty",
         "axiom_footprint": []
       }
+    },
+    {
+      "id": "authoritative-mathlib-nat-modeq-remainder-family-v1",
+      "scope": "authoritative",
+      "reviewed_gate_mentions": [
+        "check-autogenesis-nat-modeq-remainder-operation.py"
+      ],
+      "applicability": {
+        "fact_ids": [
+          "F:ml430-nat-add-modeq-left-e3b1fba9",
+          "F:ml430-nat-add-modeq-right-e2f11f21",
+          "F:ml430-nat-modulus-modeq-zero-fd9af096"
+        ],
+        "formal_languages": [
+          "lean4-surface"
+        ],
+        "fragments": [
+          "Nat"
+        ]
+      },
+      "producer": {
+        "operation": "bounded-type-directed-application-v1",
+        "implementation": "crates/axeyum-lean-import/src/producers/bounded_application.rs",
+        "input_kind": "axeyum-imported-candidate-family-goal",
+        "output_kind": "axeyum-bounded-application-candidate"
+      },
+      "checker": {
+        "operation": "axeyum-lean-import/imported-candidate-transport-v1",
+        "implementation": "crates/axeyum-lean-import/examples/imported_candidate_transport_probe.rs",
+        "input_kind": "axeyum-bounded-application-candidate",
+        "output_kind": "axeyum-source-bound-kernel-evidence-v1"
+      },
+      "executor": {
+        "driver": "axeyum-lean-import/imported-candidate-family-multi-target-v1",
+        "implementation": "scripts/execute-autogenesis-operation.py",
+        "input_fact_id": "F:ml430-nat-add-modeq-left-e3b1fba9",
+        "additional_fact_ids": [
+          "F:ml430-nat-add-modeq-right-e2f11f21",
+          "F:ml430-nat-modulus-modeq-zero-fd9af096"
+        ],
+        "targets": [
+          {
+            "fact_id": "F:ml430-nat-add-modeq-left-e3b1fba9",
+            "target_definition": "Axeyum.Autogenesis.Statement.NatModEqArithmetic.addLeft"
+          },
+          {
+            "fact_id": "F:ml430-nat-add-modeq-right-e2f11f21",
+            "target_definition": "Axeyum.Autogenesis.Statement.NatModEqArithmetic.addRight"
+          },
+          {
+            "fact_id": "F:ml430-nat-modulus-modeq-zero-fd9af096",
+            "target_definition": "Axeyum.Autogenesis.Statement.NatModEqArithmetic.modulusZero"
+          }
+        ],
+        "receipt_manifest": "artifacts/autogenesis/nat-modeq-remainder-contract-v2.json",
+        "max_binders": 2,
+        "timeout_seconds": 180,
+        "expected_evidence_label": "imported-nat-mod-remainder-family-v1"
+      },
+      "admission": {
+        "epistemic_status": "proved",
+        "proof_route": "kernel-lean",
+        "evidence_kind": "kernel-term",
+        "axiom_footprint_policy": "must-be-empty",
+        "axiom_footprint": []
+      }
     }
   ]
 }

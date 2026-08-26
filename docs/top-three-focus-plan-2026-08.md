@@ -284,16 +284,20 @@ remaining foundation is a target-local reconstruction over the imported
 definition (or an independently checked semantic bridge), followed by the same
 three-sibling unchanged-operation bar.
 
-That reconstruction has now crossed the boundary for the first sibling.
+That reconstruction first crossed the boundary for the modulus-zero sibling.
 Lean 4.30 reports that its own `Nat.mod_self`, `Nat.add_mod_left`, and
 `Nat.add_mod_right` proofs all carry `propext`; importing those names therefore
 repeats the failed shortcut. A new target-local `modSelf` contract instead
 reduces the exact `Nat.mod` / `Nat.modCore.go` implementation directly. Lean
 reports an empty footprint, source-to-source transport succeeds, bounded
 application closes the proof-free modulus-zero goal, and Axeyum independently
-admits it with no target dependency. Conversion is now 1/3. The remaining
-construction is one implementation-local periodicity law reusable by both
-addition siblings; operation authority still waits for 3/3.
+admits it with no target dependency. A shared implementation-local recurrence
+and periodicity spine now closes both addition orientations through the same
+unchanged candidate family. Conversion is 3/3 with every final footprint empty
+and every target dependency false. This makes the family operation-eligible;
+it is now registered as one authoritative three-target operation whose gate
+freshly replays every capsule and proof identity. Zero facts are settled until
+per-fact execution receipts and crash-safe transactions run.
 
 ## Comparative position
 
@@ -693,13 +697,17 @@ targets and passed through a new source-to-source checked transport probe. Six
 obvious arithmetic shortcuts carry `propext`; `dvd_refl` is axiom-free but its
 closure cannot yet compose into the minimal target capsule; only
 `Nat.ModEq.refl` transports, and bounded application converts 0/3 targets.
-This was a useful hard boundary rather than producer progress. The first exact
-behavior contract now reconstructs `n % n = 0` directly over imported
-`Nat.mod`, transports with an empty footprint, and independently admits the
-modulus-zero sibling. The assay therefore advances from 0/3 to 1/3 without
-settling the fact or registering an operation. Next: construct one shared
-implementation-local periodicity law for the two addition siblings and require
-the unchanged probe to reach 3/3 before operation registration.
+This was a useful hard boundary rather than producer progress. Exact behavior
+contracts now reconstruct self-modulus and addition periodicity directly over
+imported `Nat.mod`. The unchanged probe advances from 0/3 to 3/3: every target
+is independently admitted with an empty footprint and no hidden-target
+dependency. Zero facts are settled. Next: register exactly this family as one
+authoritative multi-target operation. Registration is now complete: the 27th
+authoritative operation binds the shared receipt and freshly replays all three
+targets. The remaining boundary is per-fact execution/transaction support for
+a retained checked theorem dependency, followed by three fresh frontier
+selections and crash-safe settlements without changing the candidate set or
+trusted base.
 
 Runtime health now has a provider-captured, commit-bound evidence path. The
 first receipt binds canonical GitHub Actions run `33013805820` to tested commit

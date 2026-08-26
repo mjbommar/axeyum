@@ -75,6 +75,28 @@ Policy now compares the unrounded monotonic duration, so a sub-millisecond call
 cannot escape a zero-second budget merely because the receipt rounds down to
 zero milliseconds. All 29 focused tier-C tests and Ruff pass.
 
+## 2026-08-26 imported Nat.mod remainder family
+
+The implementation-local proof spine now includes axiom-free fuel congruence,
+`modCore` recurrence, exact `Nat.mod` correspondence, and addition periodicity.
+The same three exported candidates convert all three frozen arithmetic
+`Nat.ModEq` targets through checked transport, bounded application, and fresh
+independent admission. Every footprint is empty and every hidden-target
+dependency is false. This reaches the reusable 3/3 bar and makes the family
+operation-eligible, while deliberately leaving all three facts open until
+authoritative registry dispatch and crash-safe transactions occur.
+
+## 2026-08-26 imported Nat.mod operation registration
+
+The 3/3 family is now registered as
+`authoritative-mathlib-nat-modeq-remainder-family-v1`, the 27th authoritative
+operation and third reusable multi-target producer. Its gate rehashes the four
+read-only external capsules and performs three fresh release-mode transports,
+bounded searches, and independent admissions. Every replay matches the sealed
+goal, proof, declaration, term-count, binder, footprint, and one-theorem-
+dependency identities. All facts remain open; the next boundary is per-fact
+execution and transaction support that preserves that checked dependency.
+
 Current boundary: reusable ModEq production reached 11 facts. Exact retrieval
 then composed `Nat.fib_le_succ` through `Nat.monotone_of_le_succ` into checked
 `Nat.fib_mono`, but remains honestly `no_operation` because its constructor was

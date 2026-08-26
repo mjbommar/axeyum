@@ -11,7 +11,8 @@ use std::io::{BufReader, Read};
 use std::path::PathBuf;
 
 use axeyum_lean_import::{
-    CandidateTransportReceipt, ImportLimits, import_candidate_statement_ndjson, import_ndjson,
+    CandidateTransportReceipt, ImportLimits, canonical_declaration_sha256,
+    canonical_expression_sha256, import_candidate_statement_ndjson, import_ndjson,
     producers::propose_bounded_application, transport_checked_theorem_candidate,
 };
 use axeyum_lean_kernel::Declaration;
@@ -67,7 +68,7 @@ fn run() -> Result<(), String> {
         &TARGET_CAPSULE_CANDIDATES.map(str::to_owned),
     )
     .map_err(|error| format!("target-import:{error}"))?;
-    let (mut kernel, _report, target_name, goal) = imported.into_parts();
+    let (mut kernel, report, target_name, goal) = imported.into_parts();
 
     let mut source_bytes = Vec::new();
     File::open(&source_path)
@@ -113,6 +114,10 @@ fn run() -> Result<(), String> {
     let axeyum = kernel.name_str(root, "Axeyum");
     let transport = kernel.name_str(axeyum, "ImportedCandidateTransport");
     let name = kernel.name_str(transport, "Verified");
+    let goal_sha256 = canonical_expression_sha256(&kernel, goal)
+        .map_err(|error| format!("candidate-audit:goal-identity:{error}"))?;
+    let proof_sha256 = canonical_expression_sha256(&kernel, candidate.proof)
+        .map_err(|error| format!("candidate-audit:proof-identity:{error}"))?;
     kernel
         .add_declaration(Declaration::Theorem {
             name,
@@ -124,6 +129,9 @@ fn run() -> Result<(), String> {
     let closure = kernel.declaration_dependency_closure(name);
     let target_dependency = closure.contains(&target_name);
     let footprint = kernel.axiom_footprint(name);
+    let theorem_dependencies = kernel.theorem_dependencies(name);
+    let target_content_sha256 = canonical_declaration_sha256(&kernel, name)
+        .map_err(|error| format!("candidate-audit:declaration-identity:{error}"))?;
     if target_dependency || !footprint.is_empty() {
         return Err(format!(
             "candidate-audit:target_dependency={target_dependency};axioms={}",
@@ -131,14 +139,16 @@ fn run() -> Result<(), String> {
         ));
     }
     println!(
-        "IMPORTED_CANDIDATE_TRANSPORT|result=accepted|target={target}|roots={}|transported={}|added={added}|reused={reused}|transport_declines={}|binders_used={}|application_depth={}|terms_considered={}|axioms={}|target_dependency={target_dependency}",
+        "IMPORTED_CANDIDATE_TRANSPORT|result=accepted|target={target}|roots={}|transported={}|added={added}|reused={reused}|transport_declines={}|binders_used={}|application_depth={}|terms_considered={}|declarations={}|axioms={}|theorem_dependencies={}|target_dependency={target_dependency}|goal_sha256={goal_sha256}|proof_sha256={proof_sha256}|target_content_sha256={target_content_sha256}",
         roots.len(),
         candidates.len(),
         declined.len(),
         candidate.binders_used,
         candidate.application_depth,
         candidate.terms_considered,
+        report.admitted_declarations + added,
         footprint.len(),
+        theorem_dependencies.len(),
     );
     Ok(())
 }
