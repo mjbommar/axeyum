@@ -117,6 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-26 | `76817cc3b` | Specialize the clean generic bitwise construction into AND, OR, and difference; all three sibling theorems reuse the same generic proof and retain empty footprints. |
 | 2026-08-26 | `cca5f9678` | Split proof-reconstructible candidate debt from structural statement trust floors; route the exact imported bitwise theorem to clean-definition reconstruction instead of futile proof retries. |
 | 2026-08-26 | `fe531ca30` | Prove with two theorem-free `Eq.refl` controls that exact imported `Nat.testBit` and `Nat.bitwise` statements inherit `propext` from their definition closures, making the empty-footprint boundary structural and explicit. |
 | 2026-08-26 | `32802405d` | Construct a total target-owned bitwise operation and prove its all-index Boolean semantics axiom-free under exactly `f false false = false`. |
@@ -1569,6 +1570,13 @@ reconstruction, while `Nat.testBit_bitwise` is classified as
 and cannot consume proof-reconstruction budget. Next: specialize the completed
 target-owned law into one reusable bitwise family without claiming exact
 imported-definition identity.
+That specialization now covers AND, OR, and difference. Each target-owned
+operation uses the same `bitwiseTotal` constructor; each observation theorem is
+an instantiation of `testBitBool_bitwiseTotal`, has an empty footprint, and
+records the generic theorem dependency. The three-sibling reuse bar is met
+without one proof per target or a false exact-import claim. Next: expose this
+family as a reusable producer/knowledge operation rather than example-only
+kernel declarations.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization
