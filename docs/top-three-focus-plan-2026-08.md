@@ -563,6 +563,15 @@ now makes release discipline a prerequisite for further scale.
 - No product claim depends on a skipped, warning-only, zero-population, or stale
   gate.
 
+Current integration evidence is not green. The 2026-08-26 full Python run
+collected 1,861 tests and produced 1,824 passes, 34 skips, one failure, and two
+setup errors. The failures are outside the target-owned capsule change but are
+still product truth: three existing scripts violate the standard-library-only
+knowledge-layer invariant, and held-out isolation rejects exclusion-list
+references introduced by the concurrent nursery expansion. Focused agent and
+typing checks pass; the project-wide Python claim remains withheld until those
+shared defects are repaired.
+
 ## Sequencing
 
 The critical path is not three independent projects:

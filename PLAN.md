@@ -117,6 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-26 | `f1e1724e2` | Add held-out-safe tier-R retrieval for reusable target-owned capsule roots, preserving capsule identity, empty footprints, semantic-analogue qualification, and zero operation authority. |
 | 2026-08-26 | `81b5bae31` | Repair the typed agent read surface so structural statement floors, proof-reconstruction eligibility, and clean-definition routing survive the generated index boundary. |
 | 2026-08-26 | `e56f1b339` | Root-export the three clean bitwise siblings as one reproducible external NDJSON capsule; fresh import admits 116 declarations, no axioms, and the same generic dependency for every root. |
 | 2026-08-26 | `282235e82` | Connect the three clean bitwise siblings to their open Mathlib development facts as non-authoritative semantic analogues, preserving zero exact-match and operation credit. |
@@ -1601,6 +1602,17 @@ statement axiom floor, proof-reconstruction eligibility, and required clean
 definition route; its test requires `[propext]` and refuses the stale label.
 Next: add the clean capsule roots as a separate target-owned retrieval
 population, never as imported exact candidates.
+The tier-R `target_owned_candidates` surface now does that. It searches exact
+name or canonical type, returns capsule and declaration identities, preserves
+empty footprints and generic dependencies, labels semantic analogue links as
+non-exact/non-authoritative, and removes protected fact IDs through the central
+held-out filter. The focused 35-test tool suite and the broader 105-test agent
+suite pass. A full 1,861-test Python run reached 1,824 passes and exposed one
+failure plus two setup errors already present outside this lane: the repository
+currently violates its standard-library-only `scripts/` test in three existing
+scripts, and the held-out gate rejects newly referenced exclusion lists. Do not
+report the full Python gate green until those concurrent integration defects
+land.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization
