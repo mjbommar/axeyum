@@ -122,7 +122,7 @@
 use super::ring_helpers::right_distrib;
 use super::{
     CRealPrelude, DERIVED_HEIGHT, and_intro, cadd, creal_ty, div_succ, embed, equiv, halves,
-    sample, within,
+    sample, shift, within,
 };
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
@@ -7030,6 +7030,475 @@ mod riemann_sum_reblock_close_tests {
             result_bad.is_err(),
             "the SAME proof must be REFUSED against a conclusion using the \
              UNDOUBLED epsTerm instead of totalEps"
+        );
+    }
+}
+
+// --- roadmap step 5: `riemannSum_cauchy`, closing the roadmap --------------
+
+/// `Equiv (add (add a b) (neg a)) b` — the group cancellation `(a+b)+(−a) ~
+/// b`. A verbatim, private restatement of `series.rs`'s own private
+/// `cancel_right` — `creal::integral` and `creal::series` are siblings, not
+/// descendants of each other, so the Rust-private original is not visible
+/// here (see `ring_helpers.rs`'s own module documentation for why this
+/// repository duplicates small ring-algebra helpers per-file rather than
+/// promoting every one of them to a shared module).
+fn cancel_right(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let na = cneg(d, p, a);
+    let ab = cadd(d, p, a, b);
+    let start = cadd(d, p, ab, na);
+
+    // (a+b)+(-a) ~ (b+a)+(-a)
+    let ba = cadd(d, p, b, a);
+    let comm1 = d.lemma(p.add_comm, &[a, b]);
+    let refl_na = d.lemma(p.equiv_refl, &[na]);
+    let s1 = cadd(d, p, ba, na);
+    let h1 = d.lemma(p.add_congr, &[ab, ba, na, na, comm1, refl_na]);
+
+    // (b+a)+(-a) ~ b+(a+(-a))
+    let a_na = cadd(d, p, a, na);
+    let s2 = cadd(d, p, b, a_na);
+    let h2 = d.lemma(p.add_assoc, &[b, a, na]);
+
+    // b+(a+(-a)) ~ b+zero
+    let zero_c = czero(d, p);
+    let h_an = d.lemma(p.add_neg, &[a]);
+    let refl_b = d.lemma(p.equiv_refl, &[b]);
+    let s3 = cadd(d, p, b, zero_c);
+    let h3 = d.lemma(p.add_congr, &[b, b, a_na, zero_c, refl_b, h_an]);
+
+    // b+zero ~ b
+    let h4 = d.lemma(p.add_zero, &[b]);
+
+    echain(d, p, start, &[(s1, h1), (s2, h2), (s3, h3), (b, h4)])
+}
+
+/// `Equiv (neg (add a (neg b))) (add b (neg a))` — the CReal-level sign-flip
+/// identity [`declare_riemann_sum_cauchy`] needs to read the SAME `t := add
+/// a (neg b)` on both sides of [`CRealPrelude::within_of_two_sided_le`]'s
+/// two hypotheses: that lemma needs `le t y` and `le (neg t) y`, but the two
+/// `le` facts `riemannSum_reblock_close`'s `And` conclusion actually
+/// supplies rearrange most directly into `le (add a (neg b)) y` and `le (add
+/// b (neg a)) y` — the same pair up to THIS identity, not up to `neg`
+/// applied to the first.
+///
+/// `CReal.neg` takes **no** index shift (`declare_negation`'s own
+/// definition, `neg x := mk (fun n => Rat.neg (seq x n)) _`), so both sides
+/// sample `a`/`b` at the identical shifted index on every `n`, and the whole
+/// identity is one `Rat.neg_sub` application per index via
+/// `Equiv.of_pointwise` — no CReal-level ring lemma needed, exactly the
+/// pattern `declare_additive_laws`'s own `add_comm`/`add_neg` pointwise
+/// proofs already use one section up in this same file.
+fn neg_sub_symm(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let rat = p.rat;
+    let nat = d.nat_ty();
+
+    let neg_b = cneg(d, p, b);
+    let a_neg_b = cadd(d, p, a, neg_b);
+    let left = cneg(d, p, a_neg_b);
+
+    let neg_a = cneg(d, p, a);
+    let right = cadd(d, p, b, neg_a);
+
+    let pointwise = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let index = shift(d, n);
+        let sa = sample(d, p, a, index);
+        let sb = sample(d, p, b, index);
+        let body = d.lemma(rat.neg_sub, &[sa, sb]);
+        d.lam_fv(n_fv, nat, body)
+    };
+    d.lemma(p.equiv_of_pointwise, &[left, right, pointwise])
+}
+
+/// `CReal.riemannSum_cauchy : ∀ F a b e n k, le a b →
+/// UniformlyContinuousOn F a b → ∀ i : Nat, Within (seq (add (riemannSum F a
+/// b m_prime) (neg (riemannSum F a b m))) i) (add (seq totalEps i)
+/// (natDivSucc 2 i))`, `m := Nat.add deep k` (`deep`
+/// [`declare_riemann_sum_reblock_close`]'s own Archimedean threshold at `(F,
+/// a, b, e, u)`; `k` an arbitrary extra depth, discharging `Nat.le deep m`
+/// unconditionally via `Nat.le_add_right` rather than leaving it an assumed
+/// hypothesis, the way `riemann_sum_reblock_close`'s own tests do), `m_prime`/
+/// `totalEps` [`declare_riemann_sum_reblock_close`]'s own witness and error
+/// term at that `m`.
+///
+/// Roadmap step 5, closing the roadmap `riemannSum_reblock_close`'s own doc
+/// comment opens: rearrange its two-sided `≤` sandwich (`le rsum_m_prime (add
+/// rsum_m totalEps)`, `le rsum_m (add rsum_m_prime totalEps)`) into the
+/// two-sided form [`CRealPrelude::within_of_two_sided_le`] itself demands
+/// (`le t totalEps`, `le (neg t) totalEps` at the SAME `t := add rsum_m_prime
+/// (neg rsum_m)`) via [`cancel_right`] on each half and [`neg_sub_symm`] to
+/// bridge the second half's `add rsum_m (neg rsum_m_prime)` shape over to
+/// `neg t`, then apply `within_of_two_sided_le` directly — its own
+/// conclusion is already the `∀ i, Within …` Pi this declaration's own type
+/// states, so no further index-introduction is needed.
+///
+/// **This is not `CReal.Cauchy (fun m => riemannSum F a b m)` in that
+/// definition's own literal shape** (`∃ K, ∀ m n, Within (seq (f m) m − seq
+/// (f n) n) (natDivSucc K m + natDivSucc K n)`, comparing samples at each
+/// term's OWN canonical index). Reaching that shape needs the
+/// representative-index bridging telescope `series.rs`'s own module
+/// documentation measures, for the structurally analogous `sumRange` case,
+/// at 35–45 further proof-term steps (`declare_sum_range_cauchy_of_dominated`'s
+/// whole derivation) — genuinely separate work, not attempted here. What
+/// this theorem proves is the raw, unscaled closeness bound that content
+/// would rest on: past the Archimedean threshold, any mesh count `m` and any
+/// further `(Nat.succ n)`-fold common refinement `m_prime` of it produce
+/// Riemann sums within `totalEps` of one another at EVERY rational sample
+/// index `i`, up to the universal `2/(i+1)` bridging slack
+/// `within_of_two_sided_le` itself always carries.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_riemann_sum_cauchy(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let f_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+
+    let np = d.prelude();
+
+    // `deep`, EXACTLY as `declare_riemann_sum_reblock_close` computes it.
+    let width = width_of(d, p, a, b);
+    let modulus_fn = d.const_app(p.uc_modulus, &[f, a, b, u]);
+    let outer = d.apply(modulus_fn, &[e]);
+    let (c, magnitude, _width_le_mag) = direct_bound_le(d, p, width);
+    let me = NatOps::mul(d, magnitude, outer);
+    let deep = NatOps::add(d, me, c);
+
+    // `m := deep + k`; `Nat.le deep m` unconditionally via `Nat.le_add_right`
+    // — no assumed hypothesis, unlike `riemann_sum_reblock_close`'s own `hge`.
+    let m = NatOps::add(d, deep, k);
+    let hge = d.lemma(np.le_add_right, &[deep, k]);
+
+    let and_result = d.lemma(
+        p.riemann_sum_reblock_close,
+        &[f, a, b, e, m, n, hab, u, hge],
+    );
+
+    let (m_prime, _succ_proof) = succ_mul_succ(d, n, m);
+    let rsum_m_prime = rsum(d, p, f, a, b, m_prime);
+    let rsum_m = rsum(d, p, f, a, b, m);
+
+    let delta_m = delta_of(d, p, a, b, m);
+    let one_nat = d.num(1);
+    let eps_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, e]);
+    let eps_embed = embed(d, p, eps_rat);
+    let eps_term = cmul(d, p, eps_embed, delta_m);
+    let sm = d.succ(m);
+    let sm_real = d.const_app(p.of_nat, &[sm]);
+    let total_eps = cmul(d, p, sm_real, eps_term);
+
+    let rsum_m_plus_total_eps = cadd(d, p, rsum_m, total_eps);
+    let rsum_m_prime_plus_total_eps = cadd(d, p, rsum_m_prime, total_eps);
+    let upper_ty = cle(d, p, rsum_m_prime, rsum_m_plus_total_eps);
+    let lower_ty = cle(d, p, rsum_m, rsum_m_prime_plus_total_eps);
+    let logic = p.rat.int.logic;
+    let upper = d.const_app(logic.and_left, &[upper_ty, lower_ty, and_result]);
+    let lower = d.const_app(logic.and_right, &[upper_ty, lower_ty, and_result]);
+
+    // t := add rsum_m_prime (neg rsum_m).
+    let neg_rsum_m = cneg(d, p, rsum_m);
+    let t = cadd(d, p, rsum_m_prime, neg_rsum_m);
+
+    // h1 : le t total_eps, from `upper : le rsum_m_prime rsum_m_plus_total_eps`
+    // via `add_le_add` (add `neg rsum_m` to both sides) then `cancel_right`
+    // (`(rsum_m + total_eps) + (neg rsum_m) ~ total_eps`).
+    let h1 = {
+        let refl_neg = d.lemma(p.le_refl, &[neg_rsum_m]);
+        let rhs_added = cadd(d, p, rsum_m_plus_total_eps, neg_rsum_m);
+        let step_added = d.lemma(
+            p.add_le_add,
+            &[
+                rsum_m_prime,
+                rsum_m_plus_total_eps,
+                neg_rsum_m,
+                neg_rsum_m,
+                upper,
+                refl_neg,
+            ],
+        );
+        // step_added : le t rhs_added
+        let cancel_eq = cancel_right(d, p, rsum_m, total_eps);
+        // cancel_eq : Equiv rhs_added total_eps
+        let refl_t = d.lemma(p.equiv_refl, &[t]);
+        d.lemma(
+            p.le_congr,
+            &[t, t, rhs_added, total_eps, refl_t, cancel_eq, step_added],
+        )
+    };
+
+    // h2 : le (neg t) total_eps, from `lower : le rsum_m
+    // rsum_m_prime_plus_total_eps` the same way, then bridged across
+    // `neg_sub_symm` from `add rsum_m (neg rsum_m_prime)` to `neg t`.
+    let neg_rsum_m_prime = cneg(d, p, rsum_m_prime);
+    let lhs2 = cadd(d, p, rsum_m, neg_rsum_m_prime);
+    let h2_prime = {
+        let refl_neg_prime = d.lemma(p.le_refl, &[neg_rsum_m_prime]);
+        let rhs_added = cadd(d, p, rsum_m_prime_plus_total_eps, neg_rsum_m_prime);
+        let step_added = d.lemma(
+            p.add_le_add,
+            &[
+                rsum_m,
+                rsum_m_prime_plus_total_eps,
+                neg_rsum_m_prime,
+                neg_rsum_m_prime,
+                lower,
+                refl_neg_prime,
+            ],
+        );
+        // step_added : le lhs2 rhs_added
+        let cancel_eq = cancel_right(d, p, rsum_m_prime, total_eps);
+        // cancel_eq : Equiv rhs_added total_eps
+        let refl_lhs2 = d.lemma(p.equiv_refl, &[lhs2]);
+        d.lemma(
+            p.le_congr,
+            &[
+                lhs2, lhs2, rhs_added, total_eps, refl_lhs2, cancel_eq, step_added,
+            ],
+        )
+    };
+    let neg_t = cneg(d, p, t);
+    let bridge = neg_sub_symm(d, p, rsum_m_prime, rsum_m);
+    // bridge : Equiv neg_t lhs2
+    let bridge_symm = d.lemma(p.equiv_symm, &[neg_t, lhs2, bridge]);
+    // bridge_symm : Equiv lhs2 neg_t
+    let refl_total_eps = d.lemma(p.equiv_refl, &[total_eps]);
+    let h2 = d.lemma(
+        p.le_congr,
+        &[
+            lhs2,
+            neg_t,
+            total_eps,
+            total_eps,
+            bridge_symm,
+            refl_total_eps,
+            h2_prime,
+        ],
+    );
+
+    // proof_body : ∀ i, Within (seq t i) (add (seq total_eps i) (natDivSucc 2 i))
+    let proof_body = d.lemma(p.within_of_two_sided_le, &[t, total_eps, h1, h2]);
+
+    let conclusion_ty = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let seq_t_i = sample(d, p, t, i);
+        let seq_y_i = sample(d, p, total_eps, i);
+        let slack = div_succ(d, p, 2, i);
+        let bound = radd(d, seq_y_i, slack);
+        let claim = within(d, p, seq_t_i, bound);
+        d.pi_fv(i_fv, nat, claim)
+    };
+
+    let ty = {
+        let after_u = d.pi_fv(u_fv, u_ty, conclusion_ty);
+        let after_hab = d.arrow(hab_ty, after_u);
+        let over_k = d.pi_fv(k_fv, nat, after_hab);
+        let over_n = d.pi_fv(n_fv, nat, over_k);
+        let over_e = d.pi_fv(e_fv, nat, over_n);
+        let over_b = d.pi_fv(b_fv, carrier, over_e);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        d.pi_fv(f_fv, f_ty, over_a)
+    };
+    let value = {
+        let with_u = d.lam_fv(u_fv, u_ty, proof_body);
+        let with_hab = d.lam_fv(hab_fv, hab_ty, with_u);
+        let over_k = d.lam_fv(k_fv, nat, with_hab);
+        let over_n = d.lam_fv(n_fv, nat, over_k);
+        let over_e = d.lam_fv(e_fv, nat, over_n);
+        let over_b = d.lam_fv(b_fv, carrier, over_e);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        d.lam_fv(f_fv, f_ty, over_a)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.riemann_sum_cauchy,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+#[cfg(test)]
+mod riemann_sum_cauchy_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// Runs `f` on a 256 MiB stack — see
+    /// `riemann_sum_reblock_close_tests::on_a_deep_stack` for the same
+    /// pattern one step earlier in this pipeline.
+    fn on_a_deep_stack<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> T {
+        std::thread::Builder::new()
+            .stack_size(256 * 1024 * 1024)
+            .spawn(f)
+            .expect("spawning a deep-stack thread must succeed")
+            .join()
+            .expect("the deep-stack thread must not panic")
+    }
+
+    /// **Mandatory concrete instantiation, with a negative control.**
+    /// `F := identity`, `a := ofNat 0`, `b := ofNat 1`, `e := 0`, `n := 1`,
+    /// `k := 0` (i.e. `m := deep` exactly — `k` is kept as a genuine free
+    /// parameter of the DECLARATION, not fixed to `0` there, but `0` is
+    /// deliberately the smallest instantiation here: `m` and `m_prime` drive
+    /// nested `sumRange`/`Nat.mul` unfoldings over UNARY `Nat`s, and `k := 3`
+    /// was measured to still be running after 669s of pure CPU before being
+    /// killed, against `riemann_sum_reblock_close`'s own concrete test's
+    /// comparable `m := 2` — a real cost difference, not a hang). `hab` is
+    /// left ASSUMED (a free hypothesis) — the same choice
+    /// `riemann_sum_reblock_close`'s own concrete test makes, since proving
+    /// it numerically needs `CReal.bound` computation this declaration's own
+    /// TYPE does not need. `u := CReal.uniformly_continuous_id a b` is a REAL
+    /// witness, not a placeholder.
+    ///
+    /// The negative control swaps `total_eps` for the UNDOUBLED `eps_term`
+    /// in the reconstructed bound — the same "forgot to multiply by the
+    /// block count" bug `riemann_sum_reblock_close`'s own control catches.
+    /// `sm = Nat.succ (deep + k)` is at least `2` regardless of `deep`'s own
+    /// value (`CReal.bound` is `Int.natAbs (…) + 1`, so `deep >= 1` and
+    /// `sm >= 2` even at `k := 0`), so `total_eps` (`sm` copies of
+    /// `eps_term`) and the bare `eps_term` are genuinely different `CReal`
+    /// literals here, not a vacuous relabeling.
+    #[test]
+    fn riemann_sum_cauchy_applies_at_concrete_literals() {
+        on_a_deep_stack(riemann_sum_cauchy_concrete_body);
+    }
+
+    fn riemann_sum_cauchy_concrete_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+        let nat = d.nat_ty();
+
+        let identity = {
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            d.lam_fv(x_fv, carrier, x)
+        };
+
+        let zero_nat = d.num(0);
+        let one_nat_lit = d.num(1);
+        let a = d.const_app(p.of_nat, &[zero_nat]);
+        let b = d.const_app(p.of_nat, &[one_nat_lit]);
+        let e = d.num(0);
+        let n = d.num(1);
+        let k = d.num(0);
+
+        let u = d.const_app(p.uniformly_continuous_id, &[a, b]);
+
+        let hab_ty = cle(&mut d, p, a, b);
+        let hab_fv = d.fresh_fvar();
+        let hab = d.kernel().fvar(hab_fv);
+
+        let applied = d.const_app(p.riemann_sum_cauchy, &[identity, a, b, e, n, k, hab, u]);
+
+        // Independently reconstruct `m`, `t`, `total_eps`, exactly the way
+        // the real declaration computes them.
+        let modulus_fn = d.const_app(p.uc_modulus, &[identity, a, b, u]);
+        let outer = d.apply(modulus_fn, &[e]);
+        let width = width_of(&mut d, p, a, b);
+        let (c, magnitude, _width_le_mag) = direct_bound_le(&mut d, p, width);
+        let me = NatOps::mul(&mut d, magnitude, outer);
+        let deep = NatOps::add(&mut d, me, c);
+        let m = NatOps::add(&mut d, deep, k);
+
+        let (m_prime, _succ_proof) = succ_mul_succ(&mut d, n, m);
+        let rsum_m_prime = rsum(&mut d, p, identity, a, b, m_prime);
+        let rsum_m = rsum(&mut d, p, identity, a, b, m);
+
+        let delta_m = delta_of(&mut d, p, a, b, m);
+        let one_nat = d.num(1);
+        let eps_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, e]);
+        let eps_embed = embed(&mut d, p, eps_rat);
+        let eps_term = cmul(&mut d, p, eps_embed, delta_m);
+        let sm = d.succ(m);
+        let sm_real = d.const_app(p.of_nat, &[sm]);
+        let total_eps = cmul(&mut d, p, sm_real, eps_term);
+
+        let neg_rsum_m = cneg(&mut d, p, rsum_m);
+        let t = cadd(&mut d, p, rsum_m_prime, neg_rsum_m);
+
+        let conclusion_ty_ok = {
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let seq_t_i = sample(&mut d, p, t, i);
+            let seq_y_i = sample(&mut d, p, total_eps, i);
+            let slack = div_succ(&mut d, p, 2, i);
+            let bound = radd(&mut d, seq_y_i, slack);
+            let claim = within(&mut d, p, seq_t_i, bound);
+            d.pi_fv(i_fv, nat, claim)
+        };
+        let ty_ok = d.arrow(hab_ty, conclusion_ty_ok);
+        let value_ok = d.lam_fv(hab_fv, hab_ty, applied);
+
+        let anon = d.kernel().anon();
+        let name_ok = d.kernel().name_str(anon, "__riemannSumCauchyConcreteOk");
+        let result_ok = d.kernel().add_declaration(Declaration::Theorem {
+            name: name_ok,
+            uparams: vec![],
+            ty: ty_ok,
+            value: value_ok,
+        });
+        assert!(
+            result_ok.is_ok(),
+            "riemann_sum_cauchy at (identity, 0, 1, e=0, n=1, k=3) must have \
+             the expected `Within`-shaped conclusion type: {:?}",
+            result_ok.err()
+        );
+
+        // Negative control: swap `total_eps` for the UNDOUBLED `eps_term`.
+        let conclusion_ty_bad = {
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let seq_t_i = sample(&mut d, p, t, i);
+            let seq_y_i = sample(&mut d, p, eps_term, i);
+            let slack = div_succ(&mut d, p, 2, i);
+            let bound = radd(&mut d, seq_y_i, slack);
+            let claim = within(&mut d, p, seq_t_i, bound);
+            d.pi_fv(i_fv, nat, claim)
+        };
+        let ty_bad = d.arrow(hab_ty, conclusion_ty_bad);
+        let value_bad = d.lam_fv(hab_fv, hab_ty, applied);
+
+        let name_bad = d.kernel().name_str(anon, "__riemannSumCauchyConcreteBad");
+        let result_bad = d.kernel().add_declaration(Declaration::Theorem {
+            name: name_bad,
+            uparams: vec![],
+            ty: ty_bad,
+            value: value_bad,
+        });
+        assert!(
+            result_bad.is_err(),
+            "the SAME proof must be REFUSED against a conclusion using the \
+             UNDOUBLED eps_term instead of total_eps"
         );
     }
 }

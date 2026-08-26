@@ -72,7 +72,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 308] = [
+    let expected: [(&str, crate::NameId, &str); 309] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -896,6 +896,12 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             p.riemann_sum_reblock_close,
             "theorem",
         ),
+        // Roadmap step 5, closing the roadmap (`creal/integral.rs`):
+        // rearranges `riemannSum_reblock_close`'s two-sided `≤` sandwich into
+        // the two-sided form `within_of_two_sided_le` demands and applies it
+        // directly. NOT `CReal.Cauchy` in that definition's own
+        // canonical-index shape.
+        ("CReal.riemannSum_cauchy", p.riemann_sum_cauchy, "theorem"),
         // Chapter 18/22: the geometric domination of `expTerm`, ending at the
         // `abs`-shaped form `sumRange_cauchy_of_dominated` consumes.
         ("CReal.expDominant", p.exp_dominant, "def"),

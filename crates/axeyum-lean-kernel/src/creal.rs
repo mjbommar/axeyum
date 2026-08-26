@@ -3016,6 +3016,21 @@ pub struct CRealPrelude {
     /// (assembling this into `riemannSum_cauchy` via
     /// [`Self::within_of_two_sided_le`]) is NOT attempted here.
     pub riemann_sum_reblock_close: NameId,
+    /// `CReal.riemannSum_cauchy : ∀ F a b e n k, le a b →
+    /// UniformlyContinuousOn F a b → ∀ i : Nat, Within (seq (add (riemannSum
+    /// F a b m_prime) (neg (riemannSum F a b m))) i) (add (seq totalEps i)
+    /// (natDivSucc 2 i))` (`creal/integral.rs`), `m := Nat.add deep k`
+    /// (`deep` [`Self::riemann_sum_reblock_close`]'s own Archimedean
+    /// threshold at `(F, a, b, e, u)`, `Nat.le deep m` discharged
+    /// unconditionally via `Nat.le_add_right` rather than left an assumed
+    /// hypothesis), `m_prime`/`totalEps` [`Self::riemann_sum_reblock_close`]'s
+    /// own witness/error term at that `m` — roadmap step 5, closing the
+    /// roadmap. Rearranges `riemann_sum_reblock_close`'s two-sided `≤`
+    /// sandwich into the two-sided form [`Self::within_of_two_sided_le`]
+    /// itself demands and applies it directly. NOT `CReal.Cauchy` in that
+    /// definition's own canonical-index shape — see `integral.rs`'s own
+    /// documentation for why that bridge is separate, unattempted work.
+    pub riemann_sum_cauchy: NameId,
 }
 
 impl CRealPrelude {
@@ -3387,6 +3402,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sample_point_reblock: kernel.name_str(creal, "samplePoint_reblock"),
         reblock_block_eq_fine_block_sum: kernel.name_str(creal, "reblockBlock_eq_fineBlockSum"),
         riemann_sum_reblock_close: kernel.name_str(creal, "riemannSum_reblock_close"),
+        riemann_sum_cauchy: kernel.name_str(creal, "riemannSum_cauchy"),
     }
 }
 
@@ -3615,6 +3631,11 @@ pub(crate) fn build_creal_prelude_uncached(
         // (`integral::declare_fine_block_sum_close`, well above), so it
         // cannot land any earlier than this call site.
         integral::declare_riemann_sum_reblock_close(&mut d, prelude)?;
+        // `riemannSum_cauchy` (roadmap step 5, closing the roadmap) needs
+        // `riemannSum_reblock_close` (just above) and `within_of_two_sided_le`
+        // (`integral::declare_within_of_two_sided_le`, well above), so it
+        // cannot land any earlier than this call site.
+        integral::declare_riemann_sum_cauchy(&mut d, prelude)?;
         // `order_reflect_of_pos_deriv` needs only `strict_mono_of_pos_deriv`
         // (just declared above) plus `lt_trans`/`lt_irrefl`/`apart` (all far
         // above); nothing later depends on it, so it lands right after its
