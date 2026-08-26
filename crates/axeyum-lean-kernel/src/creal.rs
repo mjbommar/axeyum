@@ -2571,6 +2571,48 @@ pub struct CRealPrelude {
     /// resulting rational bound back to the `CReal` sign fact `ivt_step`'s
     /// own invariant needs.
     pub ivt_bisect_invariant: NameId,
+    /// `CReal.ivt_bisect_diag : (CReal → CReal) → CReal → CReal → Nat → Bool
+    /// → CReal` (`creal/ivt.rs`) — the **diagonal** bisection: the SAME
+    /// `Nat.rec` shape as [`Self::ivt_bisect`], but with the external slack
+    /// parameter `n` **removed**. Each step samples `F` at its OWN recursion
+    /// depth `j` (`Nat.rec`'s step closure already receives `j`; `ivt_bisect`
+    /// discarded it and used a fixed outer `n` instead) — sample index `succ
+    /// (2*j)`, threshold `natDivSucc 1 (succ (2*j))`, exactly
+    /// `ivt.rs`'s own `bisect_sample_index` helper applied to `j` in place of
+    /// a captured `n`. "Diagonal" names this precisely: depth and slack index
+    /// literally coincide at every step, one bisection run with no second
+    /// `Nat` parameter, per
+    /// `docs/mathematics-2026-08/diary-exact-root-obstruction.md`'s "diagonal
+    /// bisection with shrinking slack" addendum.
+    ///
+    /// **Landed as the data-valued construction and a concrete reduction
+    /// test only.** The diary addendum this declaration accompanies records
+    /// a verified NEGATIVE result: for `F := id` on `[−1, 2]`, this
+    /// construction's lower endpoint freezes at `1/2` after its very first
+    /// step (`F(1/2) = 1/2 ≤ thresh₀ = 1/2` is accepted once, at the
+    /// COARSEST slack, and never re-examined against a tighter one), so the
+    /// bracket converges to `L = 1/2` with `F(L) = 1/2 ≠ 0` even though the
+    /// true root is `0` — a fixed-point, kernel-verified rational
+    /// computation, not an informal argument. No joint width/slack invariant
+    /// closes over this bracket to an exact root in general, and
+    /// [`Self::ivt_bisect_invariant`]'s route (an EXTERNAL fixed `n`,
+    /// re-instantiated at `n := k` for each `k` from scratch) fails for the
+    /// opposite reason: different `k` take different, non-nested
+    /// trajectories (verified: `k=3` and `k=4` brackets on the same `F`/
+    /// bracket above are not nested). Both routes to an exact IVT root from
+    /// this bisection are closed for general `F`; see the diary for the full
+    /// derivation and both counterexamples.
+    pub ivt_bisect_diag: NameId,
+    /// `CReal.ivt_bisect_diag_lo : (CReal → CReal) → CReal → CReal → Nat →
+    /// CReal := fun F P Q k => ivt_bisect_diag F P Q k Bool.false` — the
+    /// lower endpoint after `k` diagonal bisection steps. See
+    /// [`Self::ivt_bisect_diag`].
+    pub ivt_bisect_diag_lo: NameId,
+    /// `CReal.ivt_bisect_diag_hi : (CReal → CReal) → CReal → CReal → Nat →
+    /// CReal := fun F P Q k => ivt_bisect_diag F P Q k Bool.true` — the
+    /// upper endpoint after `k` diagonal bisection steps. See
+    /// [`Self::ivt_bisect_diag`].
+    pub ivt_bisect_diag_hi: NameId,
     /// `CReal.hasDerivative_unique : ∀ F F1 F2 a b, HasDerivativeOn F F1 a b
     /// → HasDerivativeOn F F2 a b → lt a b → ∀ z, le a z → le z b → Equiv
     /// (F1 z) (F2 z)` (`creal/deriv_unique.rs`) — the derivative of a
@@ -2960,6 +3002,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         ivt_bisect_lo: kernel.name_str(creal, "ivt_bisect_lo"),
         ivt_bisect_hi: kernel.name_str(creal, "ivt_bisect_hi"),
         ivt_bisect_invariant: kernel.name_str(creal, "ivt_bisect_invariant"),
+        ivt_bisect_diag: kernel.name_str(creal, "ivt_bisect_diag"),
+        ivt_bisect_diag_lo: kernel.name_str(creal, "ivt_bisect_diag_lo"),
+        ivt_bisect_diag_hi: kernel.name_str(creal, "ivt_bisect_diag_hi"),
         has_derivative_unique: kernel.name_str(creal, "hasDerivative_unique"),
         mesh_le_of_ge: kernel.name_str(creal, "mesh_le_of_ge"),
         fine_sample_in_bounds: kernel.name_str(creal, "fineSample_in_bounds"),
