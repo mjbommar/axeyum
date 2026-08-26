@@ -243,7 +243,7 @@ fn committed_capture_is_authenticated_and_root_independent() {
         ),
         (
             "Cargo.lock",
-            "b10b0e169afd2b1f797de553cd23475101fdc607907eadf5282e4d45ffe5b8f6",
+            "b2ee38c3d6ebcf74fea25cc089a1f8fd629318ccec66c34da8dfded55af40c19",
         ),
         (
             "src/lib.rs",
@@ -251,11 +251,11 @@ fn committed_capture_is_authenticated_and_root_independent() {
         ),
         (
             "artifacts/wrapping_inc.mir",
-            "b1e7b19e5e36f28f4bb631d95fd7f18c42786447a87e9b1cce8dccf180bd1a64",
+            "1f22a92d96c21c0946a31ea2b279f7d5e71cdff490f00aeacbc36a13d73f12f0",
         ),
         (
             "artifacts/capture-summary.json",
-            "67603fb13b954551924745d51f80f91374ac17e6a51afeb0684a330d152a5b2e",
+            "97ec4c1d5966efc295e72bf8f34c10f571d4bd533825b5be9d16f10df62470df",
         ),
         (
             "artifacts/provenance.json",
@@ -269,7 +269,7 @@ fn committed_capture_is_authenticated_and_root_independent() {
     assert!(summary.contains("\"target_dir\":\"$TARGET_DIR\""));
     assert!(summary.contains("\"output\":\"$OUTPUT\""));
     assert!(!summary.contains(env!("CARGO_MANIFEST_DIR")));
-    assert_eq!(CAPTURED_MIR.len(), 10_120);
+    assert_eq!(CAPTURED_MIR.len(), 10_276);
 }
 
 #[test]

@@ -1106,7 +1106,10 @@ projection as stale at 1,100; both derived populations now agree at 1,184.
 After the next mainline construction commits, both advanced together to 1,191.
 The autonomous loop now has a seventh held-out-safe read tool,
 `lemma_neighbourhood`, which exposes exact dependencies and reverse consumers
-without treating retrieval as applicability or proof authority.
+without treating retrieval as applicability or proof authority. Product
+stability follow-through: Python CI now installs the `[agent]` extra its suite
+imports, and the pinned-nightly MIR contract fixture was regenerated as one
+authenticated unit after its lockfile drift made `--locked` fail in CI.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 

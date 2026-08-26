@@ -86,7 +86,10 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - uses: astral-sh/setup-uv@v6
       - run: uv python install ${{ matrix.python }}
-      - run: uv sync --locked --dev --python ${{ matrix.python }}
+      # The suite imports `axeyum.agent` and its sandbox dependency `sympy`.
+      # Both live in the declared [agent] extra; installing only `--dev` made
+      # collection fail after discovering hundreds of tests.
+      - run: uv sync --locked --dev --extra agent --python ${{ matrix.python }}
       - run: uv run --no-sync maturin develop
       - run: uv run --no-sync pytest python/tests -q -p no:cacheprovider
       - run: uv run --no-sync python tools/gen_native_stub.py --check
