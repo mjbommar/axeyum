@@ -174,7 +174,9 @@ pub(super) fn declare_uniform_continuity(
     declare_bucket_index_floor(d, p)?;
     declare_bucket_clamp_upper(d, p)?;
     declare_bucket_clamp_lower(d, p)?;
-    declare_bucket_index_bound(d, p)
+    declare_bucket_index_bound(d, p)?;
+    declare_sample_upper_bound(d, p)?;
+    declare_sample_lower_bound(d, p)
 }
 
 // --- the bucket-index primitive ---------------------------------------------
@@ -1279,6 +1281,224 @@ fn declare_bucket_index_bound(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(),
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.bucket_index_bound,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- the general self-approximation lemmas ----------------------------------
+//
+// `bounded_of_uniformly_continuous`'s covering argument (module documentation)
+// needs to bound its RATIONAL clamp `cap := max (seq bnd j - 1/(j+1)) 0` by
+// `bnd` itself -- and that needs, for `bnd` specifically, the fact that `bnd`
+// never falls below its own `j`-th sample by more than `1/(j+1)`. That is a
+// property of every `CReal`, not of `bnd` in particular, and searching the
+// prelude for it (`prelude_theorem_inventory --include-constructed`) turned up
+// nothing: `CReal.bound_within` bounds a real by a FIXED integer constant, and
+// `CReal.regular` bounds two SAMPLES of the same real against each other, but
+// nothing bounds a real against one of ITS OWN samples directly. These two
+// lemmas are exactly that, in both directions.
+
+/// `Eq (a+(b+c)) ((a+c)+b)` -- move the middle summand of a right-associated
+/// three-term `Rat` sum out to the end, keeping the first summand fixed.
+/// Composition of `Rat.add_assoc` (reversed) with [`radd3_swap_last`]; not a
+/// fresh derivation.
+fn radd3_move_middle_out(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+) -> (ExprId, ExprId) {
+    let rat = p.rat;
+    let bc = radd(d, b, c);
+    let a_bc = radd(d, a, bc);
+    let ab = radd(d, a, b);
+    let ab_c = radd(d, ab, c);
+    let assoc = d.lemma(rat.add_assoc, &[a, b, c]); // Eq ab_c a_bc
+    let assoc_rev = rsymm(d, ab_c, a_bc, assoc); // Eq a_bc ab_c
+    let (s3, swap_eq) = radd3_swap_last(d, p, a, b, c); // Eq ab_c s3, s3 = (a+c)+b
+    rchain(d, a_bc, &[(ab_c, assoc_rev), (s3, swap_eq)])
+}
+
+/// Admit [`CRealPrelude::sample_upper_bound`]. See that field's own doc
+/// comment for the statement. Via `x`'s own regularity read at `(n, m)` --
+/// the same shape [`declare_bucket_clamp_upper`] reads at `(n, j)` for the
+/// CLAMPED sample rather than `x` itself -- widened from `1/(n+1)` up to the
+/// `2/(n+1)` `CReal.le`'s own definition asks for.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_sample_upper_bound(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let carrier = creal_ty(d, p);
+    let nat_ty = d.nat_ty();
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let wm = sample(d, p, x, m);
+    let div1m = div_succ(d, p, 1, m);
+    let target_q = radd(d, wm, div1m);
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let wn = sample(d, p, x, n);
+    let div1n = div_succ(d, p, 1, n);
+    let modulus_nm = radd(d, div1n, div1m);
+
+    // `x`'s own regularity: `seq x n - seq x m <= 1/(n+1)+1/(m+1)`.
+    let reg = d.lemma(p.regular, &[x, n, m]);
+    let diff_nm = rsub(d, rat, wn, wm);
+    let (_, reg_upper) = halves(d, p, diff_nm, modulus_nm, reg);
+    let wn_le_wm_plus_mod = d.lemma(rat.le_of_sub_le, &[wn, wm, modulus_nm, reg_upper]);
+    // : Rat.le wn (radd wm modulus_nm)
+
+    // Reassociate: wm + (div1n + div1m) = (wm + div1m) + div1n = target_q + div1n.
+    let (moved, eq_moved) = radd3_move_middle_out(d, p, wm, div1n, div1m);
+    let wm_plus_mod = radd(d, wm, modulus_nm);
+    let wn_le_moved = rat_eq_rewrite(
+        d,
+        wm_plus_mod,
+        moved,
+        eq_moved,
+        wn_le_wm_plus_mod,
+        &|d, t| rle(d, rat, wn, t),
+    );
+    // : Rat.le wn (radd target_q div1n)
+
+    // Widen `1/(n+1)` up to `2/(n+1)`.
+    let one_nat = d.num(1);
+    let bound2n = div_succ(d, p, 2, n);
+    let mono_n = d.lemma(rat.nat_div_succ_le_add_left, &[one_nat, one_nat, n]);
+    let refl_target = d.lemma(rat.le_refl, &[target_q]);
+    let widen = d.lemma(
+        rat.add_le_add,
+        &[target_q, target_q, div1n, bound2n, refl_target, mono_n],
+    );
+    let target_plus_bound2n = radd(d, target_q, bound2n);
+    let wn_le_target_bound = d.lemma(
+        rat.le_trans,
+        &[wn, moved, target_plus_bound2n, wn_le_moved, widen],
+    );
+    // : Rat.le wn (radd target_q bound2n)
+
+    let at_n = d.lemma(
+        rat.sub_le_of_le,
+        &[wn, target_q, bound2n, wn_le_target_bound],
+    );
+    // : Rat.le (rsub wn target_q) bound2n
+
+    let embedded_target = embed(d, p, target_q);
+    let cle_stmt = cle(d, p, x, embedded_target);
+    let ty = {
+        let with_m = d.pi_fv(m_fv, nat_ty, cle_stmt);
+        d.pi_fv(x_fv, carrier, with_m)
+    };
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat_ty, at_n);
+        let with_m = d.lam_fv(m_fv, nat_ty, with_n);
+        d.lam_fv(x_fv, carrier, with_m)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sample_upper_bound,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Admit [`CRealPrelude::sample_lower_bound`]. See that field's own doc
+/// comment for the statement, and [`declare_sample_upper_bound`]'s for the
+/// route -- identical with the regularity indices swapped, mirroring how
+/// [`declare_bucket_clamp_lower`] swaps [`declare_bucket_clamp_upper`]'s own
+/// `(n, j)` to `(j, n)`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_sample_lower_bound(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let carrier = creal_ty(d, p);
+    let nat_ty = d.nat_ty();
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let wm = sample(d, p, x, m);
+    let div1m = div_succ(d, p, 1, m);
+    let target_q = rsub(d, rat, wm, div1m);
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let wn = sample(d, p, x, n);
+    let div1n = div_succ(d, p, 1, n);
+    let modulus_mn = radd(d, div1m, div1n);
+
+    // `x`'s own regularity read at `(m, n)`: `seq x m - seq x n <= 1/(m+1)+1/(n+1)`.
+    let reg = d.lemma(p.regular, &[x, m, n]);
+    let diff_mn = rsub(d, rat, wm, wn);
+    let (_, reg_upper) = halves(d, p, diff_mn, modulus_mn, reg);
+    let wm_le_wn_plus_mod = d.lemma(rat.le_of_sub_le, &[wm, wn, modulus_mn, reg_upper]);
+    // : Rat.le wm (radd wn modulus_mn)  =  Rat.le wm (radd wn (radd div1m div1n))
+
+    // Move `div1m` to the front: `wn+(div1m+div1n) = div1m+(wn+div1n)`.
+    let (moved, eq_moved) = radd3_swap_first(d, p, wn, div1m, div1n);
+    let wn_plus_mod = radd(d, wn, modulus_mn);
+    let wm_le_moved = rat_eq_rewrite(
+        d,
+        wn_plus_mod,
+        moved,
+        eq_moved,
+        wm_le_wn_plus_mod,
+        &|d, t| rle(d, rat, wm, t),
+    );
+    // : Rat.le wm (radd div1m (radd wn div1n))
+
+    let wn_div1n = radd(d, wn, div1n);
+    let wm_le_div1m_plus = d.lemma(rat.sub_le_of_le, &[wm, div1m, wn_div1n, wm_le_moved]);
+    // : Rat.le (rsub wm div1m) (radd wn div1n)  =  Rat.le target_q (radd wn div1n)
+
+    // Widen `1/(n+1)` up to `2/(n+1)`.
+    let one_nat = d.num(1);
+    let bound2n = div_succ(d, p, 2, n);
+    let mono_n = d.lemma(rat.nat_div_succ_le_add_left, &[one_nat, one_nat, n]);
+    let refl_wn = d.lemma(rat.le_refl, &[wn]);
+    let wn_bound2n = radd(d, wn, bound2n);
+    let widen = d.lemma(rat.add_le_add, &[wn, wn, div1n, bound2n, refl_wn, mono_n]);
+    let target_le_wn_bound2n = d.lemma(
+        rat.le_trans,
+        &[target_q, wn_div1n, wn_bound2n, wm_le_div1m_plus, widen],
+    );
+    // : Rat.le target_q (radd wn bound2n)
+
+    let at_n = d.lemma(
+        rat.sub_le_of_le,
+        &[target_q, wn, bound2n, target_le_wn_bound2n],
+    );
+    // : Rat.le (rsub target_q wn) bound2n
+
+    let embedded_target = embed(d, p, target_q);
+    let cle_stmt = cle(d, p, embedded_target, x);
+    let ty = {
+        let with_m = d.pi_fv(m_fv, nat_ty, cle_stmt);
+        d.pi_fv(x_fv, carrier, with_m)
+    };
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat_ty, at_n);
+        let with_m = d.lam_fv(m_fv, nat_ty, with_n);
+        d.lam_fv(x_fv, carrier, with_m)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sample_lower_bound,
         uparams: vec![],
         ty,
         value,
