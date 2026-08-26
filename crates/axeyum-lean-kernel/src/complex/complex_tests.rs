@@ -235,6 +235,7 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
         ("Complex.abs_nonneg", p.abs_nonneg),
         ("Complex.abs_congr", p.abs_congr),
         ("Complex.abs_one", p.abs_one),
+        ("Complex.abs_mul", p.abs_mul),
     ];
     // COVERAGE, checked against the ENVIRONMENT rather than against `named`
     // itself.
@@ -1452,6 +1453,87 @@ fn abs_congr_argument_is_load_bearing() {
         admitted.is_err(),
         "abs_congr's proof at conj_conj(I) must NOT type-check against \
          `abs (conj (conj I)) ~ CReal.zero`: {admitted:?}"
+    );
+}
+
+/// A concrete instantiation of [`ComplexPrelude::abs_mul`] at `z := I`,
+/// `w := one` -- two SYNTACTICALLY distinct complex numbers, not a
+/// self-instantiation (`z = w` risks hiding a factor error the same way
+/// `a = b` does elsewhere in this codebase's own retrospectives). Checked
+/// against the INDEPENDENTLY reconstructed statement `abs (mul I one) ~
+/// mul (abs I) (abs one)`, with a negative control against `CReal.zero`
+/// rather than a swapped-factor target -- swapping factors would ALSO be
+/// provable from this same proof term via `CReal.mul_comm`, which is
+/// exactly the vacuous-negative-control trap `abs_congr_argument_is_load_bearing`'s
+/// own doc names.
+#[test]
+fn abs_mul_concrete_instantiation() {
+    use super::ring::ceq;
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let i_c = d.kernel().const_(p.i, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    let proof = d.lemma(p.abs_mul, &[i_c, one_c]);
+
+    let i_one = d.const_app(p.mul, &[i_c, one_c]);
+    let abs_i_one = d.const_app(p.abs, &[i_one]);
+    let abs_i = d.const_app(p.abs, &[i_c]);
+    let abs_one = d.const_app(p.abs, &[one_c]);
+    let rhs = d.const_app(p.creal.mul, &[abs_i, abs_one]);
+    let ty = ceq(&mut d, p.creal, abs_i_one, rhs);
+
+    let name = d.kernel().name_str(anon, "Check.abs_mul_at_I_one");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value: proof,
+    });
+    assert!(
+        admitted.is_ok(),
+        "abs_mul at (I, one) must give EXACTLY CReal.Equiv (abs (mul I \
+         one)) (mul (abs I) (abs one)): {admitted:?}"
+    );
+}
+
+/// Negative control for [`abs_mul_concrete_instantiation`]: the SAME proof
+/// term must be REFUSED against `abs (mul I one) ~ CReal.zero`.
+#[test]
+fn abs_mul_argument_is_load_bearing() {
+    use super::ring::ceq;
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let i_c = d.kernel().const_(p.i, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let proof = d.lemma(p.abs_mul, &[i_c, one_c]);
+
+    let i_one = d.const_app(p.mul, &[i_c, one_c]);
+    let abs_i_one = d.const_app(p.abs, &[i_one]);
+    let zero_real = d.kernel().const_(p.creal.zero, vec![]);
+    let wrong_ty = ceq(&mut d, p.creal, abs_i_one, zero_real);
+
+    let name = d.kernel().name_str(anon, "Check.abs_mul_wrong_target");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty: wrong_ty,
+        value: proof,
+    });
+    assert!(
+        admitted.is_err(),
+        "abs_mul's proof at (I, one) must NOT type-check against `abs (mul \
+         I one) ~ CReal.zero`: {admitted:?}"
     );
 }
 

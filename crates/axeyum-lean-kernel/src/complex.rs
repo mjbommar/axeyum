@@ -1237,6 +1237,20 @@ pub struct ComplexPrelude {
     /// `sqrt`, and `CReal.sqrt_one` (`creal/sqrt.rs`) closes `sqrt
     /// CReal.one ~ CReal.one`; `CReal.equiv_trans` composes the two.
     pub abs_one: NameId,
+    /// `Complex.abs_mul : ∀ z w, CReal.Equiv (abs (mul z w)) (mul (abs z)
+    /// (abs w))`.
+    ///
+    /// Trivial once `CReal.sqrt_mul` (`creal/sqrt.rs`) exists — this is
+    /// exactly the "genuinely new piece of work" [`Self::abs`]'s own doc
+    /// names as the missing ingredient for the sharp triangle inequality,
+    /// and it needed no new analysis here: [`Self::norm_sq_mul`] gives
+    /// `normSq (mul z w) ~ (normSq z)·(normSq w)`; `CReal.sqrt_congr`
+    /// carries that across `sqrt` to `abs (mul z w) ~ sqrt ((normSq
+    /// z)·(normSq w))`; and `CReal.sqrt_mul` (nonneg via
+    /// [`Self::norm_sq_nonneg`] on each factor) closes `sqrt ((normSq
+    /// z)·(normSq w)) ~ (abs z)·(abs w)`. `CReal.equiv_trans` composes the
+    /// two.
+    pub abs_mul: NameId,
 }
 
 impl ComplexPrelude {
@@ -1402,6 +1416,7 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         abs_nonneg: kernel.name_str(complex, "abs_nonneg"),
         abs_congr: kernel.name_str(complex, "abs_congr"),
         abs_one: kernel.name_str(complex, "abs_one"),
+        abs_mul: kernel.name_str(complex, "abs_mul"),
     }
 }
 
@@ -1513,7 +1528,14 @@ pub fn build_complex_prelude(kernel: &mut Kernel) -> Result<ComplexPrelude, Kern
         // this module builds on). `abs_one` additionally needs
         // `CReal.sqrt_one`.
         declare_abs_congr(&mut d, prelude)?;
-        declare_abs_one(&mut d, prelude)
+        declare_abs_one(&mut d, prelude)?;
+        // `abs_mul` needs `norm_sq_mul`/`norm_sq_nonneg` (declared far
+        // above) and `CReal.sqrt_congr`/`CReal.sqrt_mul` (`creal/sqrt.rs`,
+        // already in the `CRealPrelude` this module builds on) -- no new
+        // analysis, so it does not depend on `abs_congr`/`abs_one` and is
+        // placed right after them only because both round out "the laws
+        // relating `abs` to the operations it is built from".
+        declare_abs_mul(&mut d, prelude)
     })();
     match built {
         Ok(()) => Ok(prelude),
@@ -10328,6 +10350,65 @@ fn declare_abs_one(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelEr
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.abs_one,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.abs_mul : ∀ z w, CReal.Equiv (abs (mul z w)) (mul (abs z) (abs
+/// w))`. See [`ComplexPrelude::abs_mul`] for the route.
+fn declare_abs_mul(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let w_fv = d.fresh_fvar();
+    let w = d.kernel().fvar(w_fv);
+
+    let zw = d.const_app(p.mul, &[z, w]);
+    let norm_zw = d.const_app(p.norm_sq, &[zw]);
+    let norm_z = d.const_app(p.norm_sq, &[z]);
+    let norm_w = d.const_app(p.norm_sq, &[w]);
+
+    let norm_mul_eq = d.lemma(p.norm_sq_mul, &[z, w]);
+    // norm_mul_eq : Equiv (normSq (mul z w)) (mul (normSq z) (normSq w))
+    let abs_zw = d.const_app(p.abs, &[zw]);
+    let norm_prod = cmul(d, creal, norm_z, norm_w);
+    let sqrt_norm_prod = d.const_app(creal.sqrt, &[norm_prod]);
+    let step1 = d.lemma(creal.sqrt_congr, &[norm_zw, norm_prod, norm_mul_eq]);
+    // step1 : Equiv (sqrt (normSq (mul z w))) (sqrt (mul (normSq z) (normSq w)))
+    //       = Equiv abs_zw sqrt_norm_prod   (`abs` unfolds to `sqrt (normSq ·)`)
+
+    let hnz = d.lemma(p.norm_sq_nonneg, &[z]);
+    let hnw = d.lemma(p.norm_sq_nonneg, &[w]);
+    let step2 = d.lemma(creal.sqrt_mul, &[norm_z, norm_w, hnz, hnw]);
+    // step2 : Equiv (sqrt (mul (normSq z) (normSq w)))
+    //               (mul (sqrt (normSq z)) (sqrt (normSq w)))
+    //       = Equiv sqrt_norm_prod (mul (abs z) (abs w))
+
+    let abs_z = d.const_app(p.abs, &[z]);
+    let abs_w = d.const_app(p.abs, &[w]);
+    let rhs = cmul(d, creal, abs_z, abs_w);
+
+    let body = d.lemma(
+        creal.equiv_trans,
+        &[abs_zw, sqrt_norm_prod, rhs, step1, step2],
+    );
+    // body : Equiv abs_zw rhs
+
+    let value = {
+        let with_w = d.lam_fv(w_fv, carrier, body);
+        d.lam_fv(z_fv, carrier, with_w)
+    };
+    let ty = {
+        let claim = ceq(d, creal, abs_zw, rhs);
+        let with_w = d.pi_fv(w_fv, carrier, claim);
+        d.pi_fv(z_fv, carrier, with_w)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.abs_mul,
         uparams: vec![],
         ty,
         value,
