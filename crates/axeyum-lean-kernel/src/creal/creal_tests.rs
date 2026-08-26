@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 255] = [
+    let expected: [(&str, crate::NameId, &str); 256] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -609,6 +609,16 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         (
             "CReal.strict_injective_of_pos_deriv",
             p.strict_injective_of_pos_deriv,
+            "theorem",
+        ),
+        // The CONVERSE of `strict_mono_of_pos_deriv` (creal/inverse_fn.rs),
+        // conditional on `Apart x y` already being data: order-reflection,
+        // `lt (F x) (F y) -> lt x y`. Unconditional order-reflection is not
+        // provable here (see the module doc); this is the fact Chapter 12
+        // actually needs.
+        (
+            "CReal.order_reflect_of_pos_deriv",
+            p.order_reflect_of_pos_deriv,
             "theorem",
         ),
         // The one bisection step of the constructive approximate IVT
@@ -4865,6 +4875,107 @@ fn monotone_of_nonneg_deriv_applies_to_the_identity_on_0_1() {
     assert!(
         rendered.contains("CReal.zero") && rendered.contains("CReal.one"),
         "the endpoints must be zero and one, not some other pair: {rendered}"
+    );
+}
+
+/// **Mandatory concrete instantiation** for `CReal.order_reflect_of_pos_deriv`:
+/// the identity function on `[0, 1]` again, at `x := zero`, `y := one`, with
+/// `CReal.apart_zero_one` supplying `Apart x y` and `CReal.zero_lt_one`
+/// supplying the codomain hypothesis `lt (F zero) (F one)` (`F` is the
+/// identity, so this is literally `lt zero one`). The conclusion is
+/// therefore the same fact fed in as the codomain hypothesis — a tautology
+/// for `F := id`, since order-reflection through the identity changes
+/// nothing — but that is exactly the sanity check this instantiation is
+/// for: every piece (the `HasDerivativeOn` witness, the uniform positive
+/// bound at `k := 0`, the `Apart`/`lt` wiring) must still compose and the
+/// kernel must still accept the result.
+#[test]
+fn order_reflect_of_pos_deriv_applies_to_the_identity_on_0_1() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::rat_eq_rewrite;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+
+    let identity = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+    let const_one = {
+        let r_fv = d.fresh_fvar();
+        d.lam_fv(r_fv, carrier, one_c)
+    };
+
+    let hf = d.lemma(p.has_derivative_id, &[zero_c, one_c]);
+
+    let embed_le_one = {
+        let unit_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, zero_nat]);
+        let one_rat = d.kernel().const_(p.rat.one, vec![]);
+        let unit_eq_one = d.lemma(p.rat_unit_eq_one, &[]);
+        let unit_embed = d.const_app(p.of_rat, &[unit_rat]);
+        let refl_start = d.lemma(p.equiv_refl, &[unit_embed]);
+        let bridge = rat_eq_rewrite(
+            &mut d,
+            unit_rat,
+            one_rat,
+            unit_eq_one,
+            refl_start,
+            &|d, t| {
+                let embedded = d.const_app(p.of_rat, &[t]);
+                d.const_app(p.equiv, &[unit_embed, embedded])
+            },
+        );
+        d.lemma(p.le_of_equiv, &[unit_embed, one_c, bridge])
+    };
+
+    let hderiv = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let haz_ty = d.const_app(p.le, &[zero_c, z]);
+        let hzb_ty = d.const_app(p.le, &[z, one_c]);
+        let haz_fv = d.fresh_fvar();
+        let hzb_fv = d.fresh_fvar();
+        let with_hzb = d.lam_fv(hzb_fv, hzb_ty, embed_le_one);
+        let with_haz = d.lam_fv(haz_fv, haz_ty, with_hzb);
+        d.lam_fv(z_fv, carrier, with_haz)
+    };
+
+    let hax = d.lemma(p.le_refl, &[zero_c]);
+    let hxb = {
+        let lt = d.lemma(p.zero_lt_one, &[]);
+        d.lemma(p.le_of_lt, &[zero_c, one_c, lt])
+    };
+    let hay = hxb;
+    let hyb = d.lemma(p.le_refl, &[one_c]);
+    let hap = d.lemma(p.apart_zero_one, &[]);
+    let hcodom = d.lemma(p.zero_lt_one, &[]);
+
+    let instance = d.lemma(
+        p.order_reflect_of_pos_deriv,
+        &[
+            identity, const_one, zero_c, one_c, hf, zero_nat, hderiv, zero_c, one_c, hax, hxb, hay,
+            hyb, hap, hcodom,
+        ],
+    );
+
+    let ty = d.kernel().infer(instance).unwrap_or_else(|error| {
+        panic!("order_reflect_of_pos_deriv refused at the identity on [0,1]: {error:?}")
+    });
+
+    let expected_ty = d.const_app(p.lt, &[zero_c, one_c]);
+    let rendered = d.kernel().render_lean(ty);
+    let expected_rendered = d.kernel().render_lean(expected_ty);
+    assert_eq!(
+        rendered, expected_rendered,
+        "must conclude exactly `lt zero one`, not some other CReal.lt statement"
     );
 }
 
