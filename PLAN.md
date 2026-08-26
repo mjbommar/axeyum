@@ -117,6 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-26 | `73800a902` | Project all 51 retrieved-induction outcomes into a digest-bound typed capability backlog; false controls remain observation-only and one-target operation registration is refused. |
 | 2026-08-26 | `228494275` | Expose bounded retrieved-lemma application through the typed Python producer surface with full Python, stub, and type-gate coverage. |
 | 2026-08-26 | `0c261718f` | Add the fail-closed candidate-capsule import boundary required for theorem-composition dispatch. |
 | 2026-08-26 | `ebe2b7b2e` | Re-derive the kernel projection and lemma-search artifacts at 1,242 theorems after rebasing concurrent mathematics work. |
@@ -1352,9 +1353,14 @@ vocabulary introduced by the first-stage topical ranking. The immutable
 footprint, and checked dependencies on four retrieved theorems. All six false
 controls remain unaccepted. The honest denominator is 1/20 importable positive
 targets (1/51 overall); 27 rows remain import-blocked and 15 imported rows end
-outside the equality grammar. Next: carry the ranking digest and exact premise
-identities through an authoritative operation/episode/transaction, reproduce
-that one transition cleanly, and only then claim autonomous production.
+outside the equality grammar. A digest-bound obstruction projection now turns
+all 51 outcomes into typed capability demand while excluding the six controls
+from scheduling. Among 45 positives: 25 need type-slice generalization, 13 need
+non-equality grammar, five need a missing rewrite/induction plan, one exceeds
+the binder budget, and one is integration-ready. Do not register a one-target
+operation: route the largest blocked population through the existing general
+type-slice boundary and require one unchanged contract to convert at least
+three siblings before it receives operation authority.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization
