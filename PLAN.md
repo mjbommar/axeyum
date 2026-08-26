@@ -117,6 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-26 | `70ca259b5` | Refute and execution-block the unconstrained proof-free bitwise target with a checked finite countermodel; require a law-bearing semantic interface before reconstruction. |
 | 2026-08-26 | `0554b6b86` | Materialize the assumption-bearing imported bitwise candidate as a proof-free, axiom-free generalized reconstruction target with exact external receipt validation. |
 | 2026-08-26 | `2397eb08f` | Expose exact imported candidates through a separate ninth tier-R agent tool that preserves footprint-aware reconstruction routing and refuses invalid query shapes. |
 | 2026-08-26 | `1c7cb953e` | Add a machine-readable imported-candidate descriptor and separate footprint-aware search index; assumption-bearing candidates route to reconstruction before execution. |
