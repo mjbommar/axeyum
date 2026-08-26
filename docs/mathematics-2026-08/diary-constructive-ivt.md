@@ -79,3 +79,45 @@ Chapter 7's other two theorems remain genuinely unavailable: **EVT** asserts an
 *attained* maximum, and boundedness holds for **uniformly** continuous functions
 — which is why `UniformlyContinuousOn`, not pointwise continuity, is the
 hypothesis Chapters 13 and 14 run on here.
+
+---
+
+## Addendum: `ivt_approx` and the geometric series are blocked on ONE lemma
+
+`CReal.ivt_iter` landed — `ivt_step` iterated `N` times by structural `Nat`
+induction, carrying the six-part invariant against the *original* endpoints
+while `ivt_step`'s own slots track the current bracket. Two details worth
+keeping:
+
+- The width recursion needed **no `pow_succ`/`pow_zero`**: `pow`'s own `Nat.rec`
+  ι-reduces `pow half (succ j)` to `mul (pow half j) half` definitionally, so
+  the step only needs `mul_assoc`.
+- `N` comes from `Nat.size(M)` via the existing **`Nat.lt_pow_size`**, which
+  supplies the existence witness directly — cheaper than the
+  `Nat.pow_lt_pow_of_lt` route I suggested.
+
+**What blocks `ivt_approx` is not IVT-specific.** The lane named it:
+
+> a quantitative bound relating `pow x n` (`0 ≤ x < 1`) to a `natDivSucc`-shaped
+> rational threshold — e.g. `pow half n ≤ ofRat (natDivSucc 1 n)` — to turn "`N`
+> large enough that `2^N ≥ M`" (Nat-level, solved) into "`width_N` small enough"
+> (`CReal`-level).
+
+**That is the same lemma the geometric series needs**, and the same one
+`power.rs`'s own doc calls "the geometric-decay-dominates-harmonic-rate estimate
+this development does not yet build."
+
+And it **already exists over ℚ**. `Rat.bernoulli_harmonic_bound` says
+`(1 + m·t)·xᵐ ≤ 1`; at `x = 1/2, t = 1` that is exactly
+`(1/2)ᵐ ≤ 1/(1+m) = natDivSucc 1 m`.
+
+So three separate Spivak chapters — **7** (IVT), **13→18** (exp), **22–23**
+(series) — are blocked on transporting one rational inequality across the
+`CReal.pow` sampling schedule. The hazard there, flagged before anyone builds
+it: **`CReal.mul` does not sample its arguments at the index it is sampled at**,
+so `seq (pow x a) b` is *not* `Rat.pow (seq x b) a`, and the bridge may only be
+an inequality with slack. Slack is fine — every consumer is a bound.
+
+This is the fourth time in this session that separate developments turned out to
+need one missing lemma, and the third time nobody could see it from inside a
+single lane.
