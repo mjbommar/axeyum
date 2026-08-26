@@ -40,6 +40,18 @@ class ImportedTestBitBitwiseCandidateTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "reconstruction target"):
             MODULE.validate(data, verify_external=False)
 
+    def test_refuted_target_cannot_become_executable(self):
+        data = copy.deepcopy(self.data)
+        data["reconstruction_target"]["execution_eligible"] = True
+        with self.assertRaisesRegex(ValueError, "execution eligible"):
+            MODULE.validate(data, verify_external=False)
+
+    def test_countermodel_mutation_fails_closed(self):
+        data = copy.deepcopy(self.data)
+        data["reconstruction_target"]["countermodel"]["rhs"] = False
+        with self.assertRaisesRegex(ValueError, "countermodel receipt"):
+            MODULE.validate(data, verify_external=False)
+
 
 if __name__ == "__main__":
     unittest.main()

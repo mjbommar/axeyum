@@ -1453,6 +1453,11 @@ reconstruction target: 12 declarations, two explicit definition abstractions,
 zero normalization rewrites, and an empty footprint. The source theorem name is
 absent. Next: reconstruct this generalized goal and issue exact specialization
 evidence before attempting the three bitwise siblings.
+Immediate semantic review refuted that generalized proposition: unconstrained
+operation parameters admit a concrete `false = true` countermodel. The capsule
+is now explicitly execution-ineligible, and the checker fails closed unless the
+countermodel remains valid. Next: construct and check a law-bearing semantic
+interface before reconstruction dispatch.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization

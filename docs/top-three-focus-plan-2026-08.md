@@ -450,6 +450,11 @@ That proof-isolation boundary now exists: the generic candidate type becomes a
 `Nat.bitwise` generalized as two explicit parameters. It leaks no source
 theorem name. Next: run reconstruction against this exact goal and require a
 checked specialization receipt before sibling production.
+Semantic review then caught a stronger boundary: the two generalized functions
+were unconstrained, so the proposition is false despite its empty footprint. A
+committed finite countermodel now makes that diagnostic capsule
+execution-ineligible. The next target must carry checked bitwise/test-bit laws;
+importability and footprint alone are insufficient dispatch criteria.
 
 ### Exit evidence
 

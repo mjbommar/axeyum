@@ -282,6 +282,7 @@ compounding, not automation theatre.
 | [Footprint-aware imported candidate index](276-imported-candidate-index.md) | How can exact imported theorem candidates participate in retrieval while assumption-bearing proofs are routed to reconstruction before execution? |
 | [Imported candidate agent read surface](277-imported-candidate-agent-read-surface.md) | How does the agent query imported candidates while preserving source, footprint, and `reconstruct-required` execution refusal? |
 | [Proof-free imported reconstruction target](278-proof-free-imported-reconstruction-target.md) | Can an assumption-bearing imported theorem be converted into an axiom-free statement-only target without leaking its proof? |
+| [Bitwise semantic-law reconstruction gap](279-bitwise-semantic-law-reconstruction-gap.md) | Why is the proof-free generalized target false, and which law-bearing interface must replace it? |
 
 The first executable counterfactual primitive is
 [`create-autogenesis-snapshot.py`](../../scripts/create-autogenesis-snapshot.py).

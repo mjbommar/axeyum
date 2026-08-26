@@ -56,6 +56,11 @@ def validate(data: dict[str, Any], verify_external: bool) -> dict[str, int]:
         raise ValueError("proof-free reconstruction target boundary changed")
     if target.get("declarations") != 12 or target.get("normalization_rewrites") != 0:
         raise ValueError("proof-free reconstruction target population changed")
+    if target.get("logical_status") != "refuted-unconstrained-abstraction":
+        raise ValueError("generalized target logical status changed")
+    if target.get("execution_eligible") is not False:
+        raise ValueError("refuted generalized target became execution eligible")
+    validate_countermodel(target.get("countermodel"))
     if verify_external:
         for label, receipt in (("candidate", stream), ("target", target)):
             path = Path(receipt.get("path", ""))
@@ -68,6 +73,32 @@ def validate(data: dict[str, Any], verify_external: bool) -> dict[str, int]:
         "direct_theorem_dependencies": len(dependencies),
         "axiom_footprint": len(expected_footprint),
     }
+
+
+def validate_countermodel(model: Any) -> None:
+    if not isinstance(model, dict):
+        raise TypeError("generalized target countermodel is absent")
+    if model.get("f") != "and" or model.get("testBit") != "is_one":
+        raise ValueError("generalized target countermodel functions changed")
+    if model.get("bitwise") != "constant_zero":
+        raise ValueError("generalized target countermodel bitwise changed")
+    x, y, i = (model.get(name) for name in ("x", "y", "i"))
+    if (x, y, i) != (1, 1, 0):
+        raise ValueError("generalized target countermodel inputs changed")
+    test_bit = lambda n, _i: n == 1
+    bitwise = lambda _f, _x, _y: 0
+    operation = lambda left, right: left and right
+    premise = operation(False, False)
+    lhs = test_bit(bitwise(operation, x, y), i)
+    rhs = operation(test_bit(x, i), test_bit(y, i))
+    if premise is not False or lhs is not False or rhs is not True or lhs == rhs:
+        raise ValueError("generalized target countermodel no longer refutes the goal")
+    if (model.get("premise_f_false_false"), model.get("lhs"), model.get("rhs")) != (
+        premise,
+        lhs,
+        rhs,
+    ):
+        raise ValueError("generalized target countermodel receipt changed")
 
 
 def main() -> int:

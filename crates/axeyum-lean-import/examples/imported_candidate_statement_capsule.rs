@@ -1,4 +1,8 @@
-//! Materialize one imported theorem type as a proof-free statement capsule.
+//! Materialize one imported theorem type as a proof-free diagnostic capsule.
+//!
+//! Definition abstraction proves proof isolation, not semantic sufficiency.
+//! The committed audit separately rejects this unconstrained generalized goal
+//! for execution using a concrete countermodel.
 
 use std::env;
 use std::fmt::Write;
@@ -94,7 +98,7 @@ fn run() -> Result<(), String> {
     fs::write(&output_path, &stream)
         .map_err(|error| format!("cannot write {output_path}: {error}"))?;
     println!(
-        "IMPORTED_CANDIDATE_STATEMENT_CAPSULE_OK|candidate={candidate}|target={FRESH_TARGET}|bytes={}|sha256={}|goal_sha256={}|declarations={}|abstractions={}|normalization_rewrites={}|axiom_footprint={}",
+        "IMPORTED_CANDIDATE_STATEMENT_DIAGNOSTIC_OK|candidate={candidate}|target={FRESH_TARGET}|execution_eligible=false|bytes={}|sha256={}|goal_sha256={}|declarations={}|abstractions={}|normalization_rewrites={}|axiom_footprint={}",
         stream.len(),
         sha256(stream.as_bytes()),
         sha256(goal.as_bytes()),
