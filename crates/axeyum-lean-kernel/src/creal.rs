@@ -3302,6 +3302,36 @@ pub struct CRealPrelude {
     /// three-leg telescope and exactly what remains (an arbitrary-pair
     /// common-refinement construction) to reach `CReal.integral` itself.
     pub shared_index_to_canonical: NameId,
+    /// `CReal.riemannSum_sharedAccuracyClose : ∀ F a b e k1 k2, le a b →
+    /// UniformlyContinuousOn F a b → ∀ p q j1 j2 : Nat, Within
+    /// (Rat.sub (seq (riemannSum F a b m1) p) (seq (riemannSum F a b m2) q))
+    /// (BND1 j1 + BND2 j2)`, `m1 := Nat.add deep k1`, `m2 := Nat.add deep
+    /// k2` (SAME `deep`, i.e. `m1`/`m2` are two counts both "deep enough"
+    /// for the SAME chosen accuracy `e`) (`creal/integral.rs`).
+    ///
+    /// The common-refinement construction `riemannSum_cauchy`'s and
+    /// `sharedIndexToCanonical`'s own doc comments name as the remaining gap
+    /// toward `CReal.integral`: two [`Self`]-independent `Nat.succ_mul`
+    /// refinements of `m1`/`m2` (`integral.rs`'s private `common_refinement`,
+    /// identifying the two via `Nat.mul_comm`) land at the SAME shared
+    /// refinement target, so `riemannSum_cauchy` applied twice plus
+    /// `sharedIndexToCanonical` applied twice telescope `riemannSum F a b
+    /// m1` and `riemannSum F a b m2` together directly, with no rewrite
+    /// beyond the one `Nat.mul_comm`-derived equality that `common_refinement`
+    /// itself already supplies.
+    ///
+    /// **Not yet `CReal.Cauchy`/`RegularSeq` for the RAW-indexed sequence
+    /// `fun n => riemannSum F a b n`, and precisely why not**: this
+    /// theorem's `m1`/`m2` share ONE accuracy `e`, so its bound does not
+    /// shrink as `m1`/`m2` grow past the point needed for that fixed `e` —
+    /// exactly the rate `CReal.Cauchy`'s existential `K` needs. Reaching
+    /// that needs `e` to grow with the sequence's OWN index (reindexing via
+    /// `deep` rather than comparing at raw counts) PLUS a genuinely new
+    /// CReal-magnitude bound turning `riemannSum_cauchy`'s `totalEps` sample
+    /// into a closed-form rational — see `creal/integral.rs`'s
+    /// `declare_shared_index_to_canonical` doc comment for both pieces,
+    /// sized precisely rather than gestured at.
+    pub riemann_sum_shared_accuracy_close: NameId,
 }
 
 impl CRealPrelude {
@@ -3697,6 +3727,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         riemann_sum_reblock_close: kernel.name_str(creal, "riemannSum_reblock_close"),
         riemann_sum_cauchy: kernel.name_str(creal, "riemannSum_cauchy"),
         shared_index_to_canonical: kernel.name_str(creal, "sharedIndexToCanonical"),
+        riemann_sum_shared_accuracy_close: kernel.name_str(creal, "riemannSum_sharedAccuracyClose"),
     }
 }
 
@@ -3967,6 +3998,12 @@ pub(crate) fn build_creal_prelude_uncached(
         // `chain_within3` helper -- nothing from `riemannSum_cauchy` itself
         // -- but lands here as the building block motivated by it.
         integral::declare_shared_index_to_canonical(&mut d, prelude)?;
+        // `riemannSum_sharedAccuracyClose` (the common-refinement
+        // construction both declarations just above name as the remaining
+        // gap toward `CReal.integral`) needs `riemannSum_cauchy` and
+        // `sharedIndexToCanonical` (both just above) plus `series.rs`'s
+        // `within_symm`, so it cannot land any earlier than this call site.
+        integral::declare_riemann_sum_shared_accuracy_close(&mut d, prelude)?;
         // `order_reflect_of_pos_deriv` needs only `strict_mono_of_pos_deriv`
         // (just declared above) plus `lt_trans`/`lt_irrefl`/`apart` (all far
         // above); nothing later depends on it, so it lands right after its

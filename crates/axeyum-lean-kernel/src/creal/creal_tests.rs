@@ -100,7 +100,7 @@ fn on_a_deep_stack_creal<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'stat
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 333] = [
+    let expected: [(&str, crate::NameId, &str); 334] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -977,6 +977,21 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         (
             "CReal.sharedIndexToCanonical",
             p.shared_index_to_canonical,
+            "theorem",
+        ),
+        // The common-refinement construction wired together
+        // (`creal/integral.rs`): two counts `m1, m2` sharing ONE accuracy
+        // `e` (`m1 := deep(e)+k1`, `m2 := deep(e)+k2`) are close, via
+        // `riemannSum_cauchy` applied twice through the SAME shared
+        // refinement `l` (the private `common_refinement` Nat lemma
+        // identifies the two `succ_mul_succ` targets via `Nat.mul_comm`)
+        // plus `sharedIndexToCanonical` applied twice. NOT yet
+        // `CReal.Cauchy`/`RegularSeq` for the raw-indexed sequence -- see
+        // `declare_shared_index_to_canonical`'s own doc comment for
+        // precisely what additionally remains.
+        (
+            "CReal.riemannSum_sharedAccuracyClose",
+            p.riemann_sum_shared_accuracy_close,
             "theorem",
         ),
         // Chapter 18/22: the geometric domination of `expTerm`, ending at the
