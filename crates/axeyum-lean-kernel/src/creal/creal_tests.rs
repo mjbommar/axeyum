@@ -72,7 +72,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 287] = [
+    let expected: [(&str, crate::NameId, &str); 289] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -322,6 +322,8 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             p.bucket_index_floor_upper,
             "theorem",
         ),
+        ("CReal.bucketClampUpper", p.bucket_clamp_upper, "theorem"),
+        ("CReal.bucketClampLower", p.bucket_clamp_lower, "theorem"),
         ("CReal.ratSqLe", p.rat_sq_le, "theorem"),
         ("CReal.ratSqSandwich", p.rat_sq_sandwich, "theorem"),
         (
@@ -7396,5 +7398,104 @@ fn bucket_index_floor_bounds_apply_strictly_between_grid_points_at_one_third_and
         })
         .unwrap_or_else(|error| {
             panic!("bucket_index_floor_upper at (1/3, 1) must read as q <= 1/2: {error:?}")
+        });
+}
+
+/// `CReal.bucketClampUpper CReal.zero 0` instantiates the additive constant
+/// step 1's upper half adds to `2/(j+1)` with `j = 1`: `w`'s own sample
+/// collapses `q` to `Rat.zero` (`CReal.zero` samples constantly at `0`), so
+/// the resulting statement is `CReal.le CReal.zero (CReal.ofRat (Rat.zero +
+/// natDivSucc 2 1))`. This is exactly the check that catches a transposed
+/// `sub` for `add` or a `3` in place of the `2` step 1's own doc comment
+/// claims: either would make this `add_declaration` fail with a type
+/// mismatch, since the constant here is independently recomputed, not
+/// copied from the proof term.
+#[test]
+fn bucket_clamp_upper_at_zero_and_zero_reduces_to_zero_plus_two_over_two() {
+    use crate::rat_prelude::ops::{radd, rzero};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+    let czero = d.kernel().const_(p.zero, vec![]);
+
+    let proof = d.const_app(p.bucket_clamp_upper, &[czero, zero_nat]);
+
+    // j = (succ 0)*(succ 0) = 1, bound2j = natDivSucc 2 1 (== 1).
+    let bound2j = d.const_app(p.rat.nat_div_succ, &[two_nat, one_nat]);
+    let zero_rat = rzero(&mut d, p.rat);
+    let target = radd(&mut d, zero_rat, bound2j);
+    let embedded_target = d.const_app(p.of_rat, &[target]);
+    let expected_ty = d.const_app(p.le, &[czero, embedded_target]);
+
+    let anon = d.kernel().anon();
+    let name = d
+        .kernel()
+        .name_str(anon, "__bucket_clamp_upper_at_zero_zero");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: expected_ty,
+            value: proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "bucket_clamp_upper at (CReal.zero, 0) must read as \
+                 CReal.le CReal.zero (CReal.ofRat (Rat.zero + natDivSucc 2 1)): {error:?}"
+            )
+        });
+}
+
+/// `CReal.bucketClampLower CReal.zero 0 (le_refl CReal.zero)` instantiates
+/// the additive constant step 1's lower half SUBTRACTS: `3/(j+1)` with
+/// `j = 1`, giving `CReal.le (CReal.ofRat (Rat.zero - natDivSucc 3 1))
+/// CReal.zero`. Distinct from the sibling test above in the constant (`3`,
+/// not `2`) AND the operation (`sub`, not `add`) AND the direction of the
+/// `CReal.le` (the bound is now the LEFT argument) -- a proof that silently
+/// reused the upper half's shape, or swapped which side is smaller, fails
+/// this `add_declaration` with a type mismatch.
+#[test]
+fn bucket_clamp_lower_at_zero_and_zero_reduces_to_zero_minus_three_over_two() {
+    use crate::rat_prelude::group::rsub;
+    use crate::rat_prelude::ops::rzero;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+    let three_nat = d.num(3);
+    let czero = d.kernel().const_(p.zero, vec![]);
+
+    let hzw = d.lemma(p.le_refl, &[czero]); // CReal.le CReal.zero CReal.zero
+    let proof = d.const_app(p.bucket_clamp_lower, &[czero, zero_nat, hzw]);
+
+    // j = (succ 0)*(succ 0) = 1, bound3j = natDivSucc 3 1 (== 3/2).
+    let bound3j = d.const_app(p.rat.nat_div_succ, &[three_nat, one_nat]);
+    let zero_rat = rzero(&mut d, p.rat);
+    let target2 = rsub(&mut d, p.rat, zero_rat, bound3j);
+    let embedded_target2 = d.const_app(p.of_rat, &[target2]);
+    let expected_ty = d.const_app(p.le, &[embedded_target2, czero]);
+
+    let anon = d.kernel().anon();
+    let name = d
+        .kernel()
+        .name_str(anon, "__bucket_clamp_lower_at_zero_zero");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: expected_ty,
+            value: proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "bucket_clamp_lower at (CReal.zero, 0, le_refl) must read as \
+                 CReal.le (CReal.ofRat (Rat.zero - natDivSucc 3 1)) CReal.zero: {error:?}"
+            )
         });
 }
