@@ -1475,6 +1475,9 @@ The native half of that transport now exists: a constructive Boolean view of
 numeric bits preserves the successor equation by reflexivity and has an empty
 kernel footprint. Exact equivalence to the imported Bool-valued definition is
 still missing and explicitly receives zero credit.
+The old capsule command now also fails closed by default: writing the refuted
+statement requires an explicit `--emit-refuted-diagnostic` opt-in, so omitting
+the separate metadata checker cannot accidentally make it a producer target.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization

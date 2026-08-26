@@ -30,7 +30,8 @@ fn run() -> Result<(), String> {
     let source_path = arguments.next().ok_or_else(usage)?;
     let candidate = arguments.next().ok_or_else(usage)?;
     let output_path = arguments.next().ok_or_else(usage)?;
-    if arguments.next().is_some() {
+    let mode = arguments.next();
+    if arguments.next().is_some() || mode.as_deref() != Some("--emit-refuted-diagnostic") {
         return Err(usage());
     }
     let source_bytes =
@@ -111,7 +112,7 @@ fn run() -> Result<(), String> {
 }
 
 fn usage() -> String {
-    "usage: imported_candidate_statement_capsule <source-stream> <candidate> <output>".to_owned()
+    "refusing unconstrained generalized target; diagnostic-only usage: imported_candidate_statement_capsule <source-stream> <candidate> <output> --emit-refuted-diagnostic".to_owned()
 }
 
 fn find_name(kernel: &Kernel, requested: &str) -> Result<NameId, String> {

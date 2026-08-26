@@ -579,7 +579,7 @@ autogenesis-imported-testbit-bitwise-candidate-replay stream="/nas3/data/axeyum/
     cargo run -q -p axeyum-lean-import --example imported_candidate_descriptor -- "{{ stream }}" Nat.testBit_bitwise
 
 autogenesis-imported-testbit-bitwise-statement source="/nas3/data/axeyum/autogenesis/reference-packs/imported-candidates-v1/Nat.testBit_bitwise.ndjson" output="/nas3/data/axeyum/autogenesis/reference-packs/imported-candidate-goals-v1/Nat.testBit_bitwise.statement.ndjson":
-    cargo run -q -p axeyum-lean-import --example imported_candidate_statement_capsule -- "{{ source }}" Nat.testBit_bitwise "{{ output }}"
+    cargo run -q -p axeyum-lean-import --example imported_candidate_statement_capsule -- "{{ source }}" Nat.testBit_bitwise "{{ output }}" --emit-refuted-diagnostic
     cargo run -q -p axeyum-lean-import --example statement_adapter_import -- "{{ output }}" Axeyum.Autogenesis.ImportedCandidateGoal
     python3 scripts/check-autogenesis-imported-testbit-bitwise-candidate.py --verify-external
 

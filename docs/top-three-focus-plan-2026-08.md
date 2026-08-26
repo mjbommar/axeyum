@@ -465,6 +465,9 @@ imported `Bool`. A sixth typed transport obligation now owns that exact seam.
 Its native half is implemented: `testBitBool` maps numeric bits into `Bool`, and
 its successor law checks axiom-free by reflexivity. The remaining seam is the
 exact imported-definition equivalence, not Boolean adaptation in general.
+The refuted capsule generator itself now refuses default execution; only an
+explicit diagnostic flag permits emission, closing reliance on a downstream
+metadata checker for this semantic safety decision.
 
 ### Exit evidence
 

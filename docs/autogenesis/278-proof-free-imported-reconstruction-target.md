@@ -32,3 +32,6 @@ The committed candidate audit binds the external path, size, digest, goal
 digest, target identity, abstraction count, and empty footprint. Run
 `just autogenesis-imported-testbit-bitwise-statement` to reproduce the
 diagnostic capsule and verify its fail-closed countermodel receipt.
+Direct invocation without `--emit-refuted-diagnostic` exits nonzero before
+writing: producing a known-false generalized statement is an explicit audit
+operation, never the default reconstruction path.
