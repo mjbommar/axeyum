@@ -1,0 +1,99 @@
+{
+  "authority": "knowledge projection only; no exact operation identity, no proof transport, no operation registration, no theorem admission, and no fact-transition authority",
+  "census": {
+    "authoritative_operation_eligible": 0,
+    "clean_axiom_free_analogues": 3,
+    "development_targets": 3,
+    "exact_imported_matches": 0
+  },
+  "kind": "axeyum-autogenesis-bitwise-clean-family-projection",
+  "next": "promote the target-owned family as its own reusable library surface and fact identities, or explicitly authorize a separately labeled weaker imported-definition route; do not close these exact Mathlib facts from semantic analogy",
+  "rows": [
+    {
+      "authoritative_operation_eligible": false,
+      "blocking_obligations": [
+        "exact-imported-testBit-equivalence",
+        "exact-imported-operation-equivalence",
+        "imported-definition-propext-floor"
+      ],
+      "clean_axiom_footprint_size": 0,
+      "clean_boolean_operation": "Axeyum.Autogenesis.boolAnd",
+      "clean_canonical_type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} Bool (Axeyum.Autogenesis.testBitBool (Axeyum.Autogenesis.bitwiseAnd x0 x1) x2) (Axeyum.Autogenesis.boolAnd (Axeyum.Autogenesis.testBitBool x0 x2) (Axeyum.Autogenesis.testBitBool x1 x2)))))",
+      "clean_operation": "Axeyum.Autogenesis.bitwiseAnd",
+      "clean_theorem": "Axeyum.Autogenesis.testBitBool_bitwiseAnd",
+      "exact_imported_identity": false,
+      "fact_id": "F:ml430-nat-testbit-land-dfef7ca4",
+      "fact_statement": "\u2200 (m n k : \u2115), (m &&& n).testBit k = (m.testBit k && n.testBit k)",
+      "family": "natural-bitwise",
+      "generic_theorem_dependency": "Axeyum.Autogenesis.testBitBool_bitwiseTotal",
+      "partition": "development",
+      "relationship": "target-owned-semantic-analogue"
+    },
+    {
+      "authoritative_operation_eligible": false,
+      "blocking_obligations": [
+        "exact-imported-testBit-equivalence",
+        "exact-imported-operation-equivalence",
+        "imported-definition-propext-floor"
+      ],
+      "clean_axiom_footprint_size": 0,
+      "clean_boolean_operation": "Axeyum.Autogenesis.boolOr",
+      "clean_canonical_type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} Bool (Axeyum.Autogenesis.testBitBool (Axeyum.Autogenesis.bitwiseOr x0 x1) x2) (Axeyum.Autogenesis.boolOr (Axeyum.Autogenesis.testBitBool x0 x2) (Axeyum.Autogenesis.testBitBool x1 x2)))))",
+      "clean_operation": "Axeyum.Autogenesis.bitwiseOr",
+      "clean_theorem": "Axeyum.Autogenesis.testBitBool_bitwiseOr",
+      "exact_imported_identity": false,
+      "fact_id": "F:ml430-nat-testbit-lor-7644e067",
+      "fact_statement": "\u2200 (m n k : \u2115), (m ||| n).testBit k = (m.testBit k || n.testBit k)",
+      "family": "natural-bitwise",
+      "generic_theorem_dependency": "Axeyum.Autogenesis.testBitBool_bitwiseTotal",
+      "partition": "development",
+      "relationship": "target-owned-semantic-analogue"
+    },
+    {
+      "authoritative_operation_eligible": false,
+      "blocking_obligations": [
+        "exact-imported-testBit-equivalence",
+        "exact-imported-operation-equivalence",
+        "imported-definition-propext-floor"
+      ],
+      "clean_axiom_footprint_size": 0,
+      "clean_boolean_operation": "Axeyum.Autogenesis.boolDifference",
+      "clean_canonical_type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} Bool (Axeyum.Autogenesis.testBitBool (Axeyum.Autogenesis.bitwiseDifference x0 x1) x2) (Axeyum.Autogenesis.boolDifference (Axeyum.Autogenesis.testBitBool x0 x2) (Axeyum.Autogenesis.testBitBool x1 x2)))))",
+      "clean_operation": "Axeyum.Autogenesis.bitwiseDifference",
+      "clean_theorem": "Axeyum.Autogenesis.testBitBool_bitwiseDifference",
+      "exact_imported_identity": false,
+      "fact_id": "F:ml430-nat-testbit-ldiff-16f94162",
+      "fact_statement": "\u2200 (m n k : \u2115), (m.ldiff n).testBit k = (m.testBit k && !n.testBit k)",
+      "family": "natural-bitwise",
+      "generic_theorem_dependency": "Axeyum.Autogenesis.testBitBool_bitwiseTotal",
+      "partition": "development",
+      "relationship": "target-owned-semantic-analogue"
+    }
+  ],
+  "schema_version": 1,
+  "source": {
+    "facts": [
+      {
+        "path": "artifacts/facts/F-ml430-nat-testbit-land-dfef7ca4.json",
+        "sha256": "29c5c4735f29c970358cd5639bd9a3d7c9b7eba1625b706e45eb237bd3e556d2"
+      },
+      {
+        "path": "artifacts/facts/F-ml430-nat-testbit-lor-7644e067.json",
+        "sha256": "ade92dfff282a7d68e381d43af29429e79c25f4c9735028e3cd18410c7736e5c"
+      },
+      {
+        "path": "artifacts/facts/F-ml430-nat-testbit-ldiff-16f94162.json",
+        "sha256": "8bd0b5afa231c5191da42df4a263e79809302fd0dd8f27b8401365906581ee0d"
+      }
+    ],
+    "nursery": {
+      "path": "artifacts/autogenesis/nursery-v1.json",
+      "sha256": "6d1f2551a612fdcadaf1c6b0096c4eebee304d9687157cb25505f785ee86daa8"
+    },
+    "semantic_demand": {
+      "path": "artifacts/autogenesis/bitwise-semantic-law-demand-v1.json",
+      "sha256": "5fd9cdba0c6671b897f23a0da0b1faaf638f6444596b41f7221b14db5e382b0f"
+    }
+  },
+  "state": "clean-three-sibling-family-exact-imported-admission-blocked"
+}

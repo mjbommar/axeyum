@@ -117,6 +117,14 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-26 | `f1e1724e2` | Add held-out-safe tier-R retrieval for reusable target-owned capsule roots, preserving capsule identity, empty footprints, semantic-analogue qualification, and zero operation authority. |
+| 2026-08-26 | `81b5bae31` | Repair the typed agent read surface so structural statement floors, proof-reconstruction eligibility, and clean-definition routing survive the generated index boundary. |
+| 2026-08-26 | `e56f1b339` | Root-export the three clean bitwise siblings as one reproducible external NDJSON capsule; fresh import admits 116 declarations, no axioms, and the same generic dependency for every root. |
+| 2026-08-26 | `282235e82` | Connect the three clean bitwise siblings to their open Mathlib development facts as non-authoritative semantic analogues, preserving zero exact-match and operation credit. |
+| 2026-08-26 | `76817cc3b` | Specialize the clean generic bitwise construction into AND, OR, and difference; all three sibling theorems reuse the same generic proof and retain empty footprints. |
+| 2026-08-26 | `cca5f9678` | Split proof-reconstructible candidate debt from structural statement trust floors; route the exact imported bitwise theorem to clean-definition reconstruction instead of futile proof retries. |
+| 2026-08-26 | `fe531ca30` | Prove with two theorem-free `Eq.refl` controls that exact imported `Nat.testBit` and `Nat.bitwise` statements inherit `propext` from their definition closures, making the empty-footprint boundary structural and explicit. |
+| 2026-08-26 | `32802405d` | Construct a total target-owned bitwise operation and prove its all-index Boolean semantics axiom-free under exactly `f false false = false`. |
 | 2026-08-26 | `08d4da396` | Prove axiom-free that every observation beyond a low-digit reification's width is false, closing the output-side tail of the unbounded bitwise theorem. |
 | 2026-08-26 | `448fc8431` | Prove universal low-digit reification round-trip and specialize it into the first axiom-free bounded bitwise semantic theorem. |
 | 2026-08-26 | `05b92a924` | Prove axiom-free quotient and remainder equations for a Boolean low digit plus twice an arbitrary tail, supplying the recursive decoder for component uniqueness. |
@@ -1546,6 +1554,66 @@ and every bit at `offset+k` of a width-`k` low reification is false, universally
 and axiom-free. The unbounded theorem now needs only an input-side sufficient
 width theorem plus the `f false false = false` join; imported equivalence stays
 separate.
+The input theorem and join now close too. `testBitBool_beyond_bound` proves a
+simple sufficient width directly from divide-by-two recursion; `bitwiseTotal`
+uses width `x+y`; and `testBitBool_bitwiseTotal` proves the desired equation at
+every index under exactly `f false false = false`, axiom-free. The native
+mathematics is complete. Exact equivalence to imported Lean `Nat.testBit` and
+`Nat.bitwise` is now the sole reconstruction blocker and still receives zero
+credit.
+Two `Eq.refl` controls now establish the precise trust boundary: merely naming
+either imported operation in a theorem statement makes the declaration-reached
+footprint `[propext]`, even with zero theorem dependencies. Exact imported
+empty-footprint reconstruction is therefore structurally unavailable under the
+current definitions, not awaiting a cleverer proof. Next: choose the clean
+product boundary deliberately—target-owned operations, clean compatible
+definition reconstruction, or an explicitly weaker upstream-definition route.
+Candidate routing now acts on that distinction: ordinary assumption-bearing
+candidates without a measured statement floor remain eligible for proof
+reconstruction, while `Nat.testBit_bitwise` is classified as
+`clean-definition-reconstruction-required`, exposes `[propext]` as the floor,
+and cannot consume proof-reconstruction budget. Next: specialize the completed
+target-owned law into one reusable bitwise family without claiming exact
+imported-definition identity.
+That specialization now covers AND, OR, and difference. Each target-owned
+operation uses the same `bitwiseTotal` constructor; each observation theorem is
+an instantiation of `testBitBool_bitwiseTotal`, has an empty footprint, and
+records the generic theorem dependency. The three-sibling reuse bar is met
+without one proof per target or a false exact-import claim. Next: expose this
+family as a reusable producer/knowledge operation rather than example-only
+kernel declarations.
+A generated projection now connects the three clean theorems to the three open
+development facts for imported `land`, `lor`, and `ldiff`, while marking every
+edge as semantic analogy rather than exact identity. It reports three clean
+analogues, zero exact matches, and zero operation-eligible targets. The graph
+can now use the connection without closing the wrong proposition. Next: promote
+the target-owned family into a reusable library surface with its own durable
+fact identities before considering producer registration.
+The family is now reusable outside its builder process: a root-selected
+official-format capsule re-imports 116 declarations with no axioms, and all
+three root identities reproduce byte-for-byte from the checked builder. The
+243,235-byte read-only pack stays outside Git; a committed receipt binds its
+hash, population, provenance, and generic-theorem dependencies. Next: expose
+the capsule through held-out-safe agent retrieval as target-owned library
+material while preserving zero exact-imported and autonomous credit.
+An end-to-end read-surface audit found that the typed Python
+`imported_candidates` tool still exposed the obsolete one-dimensional route
+even though the generated index had changed. The model and tool now carry the
+statement axiom floor, proof-reconstruction eligibility, and required clean
+definition route; its test requires `[propext]` and refuses the stale label.
+Next: add the clean capsule roots as a separate target-owned retrieval
+population, never as imported exact candidates.
+The tier-R `target_owned_candidates` surface now does that. It searches exact
+name or canonical type, returns capsule and declaration identities, preserves
+empty footprints and generic dependencies, labels semantic analogue links as
+non-exact/non-authoritative, and removes protected fact IDs through the central
+held-out filter. The focused 35-test tool suite and the broader 105-test agent
+suite pass. A full 1,861-test Python run reached 1,824 passes and exposed one
+failure plus two setup errors already present outside this lane: the repository
+currently violates its standard-library-only `scripts/` test in three existing
+scripts, and the held-out gate rejects newly referenced exclusion lists. Do not
+report the full Python gate green until those concurrent integration defects
+land.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization
@@ -1662,15 +1730,15 @@ all-target/all-feature Clippy, and warning-denied Rustdoc pass. Both completed `
 carry no UNSAT or upper-bound credit; the exact proof-producing run remains live.
 
 **Rado exact lower bound advanced, 2026-08-26.** The seed-619 CaDiCaL producer completed the
-canonical 351-, 352-, and 353-point formulas SAT; the 353 run took 19:14.90. Every complete
+canonical 351-, 352-, 353-, and 354-point formulas SAT; the 354 run took 35:44.27. Every complete
 assignment passed the strict SAT Competition importer, regenerated CNF evaluation, unique
 one-hot decoding, independent enumeration of the defining relation, and lifted-witness
-re-encoding. The retained strongest witness has 353 entries, uses all five colours, covers
-27,495 defining triples / 142,767 clauses, and has SHA-256
-`ff825f641352d5e6a59e098f9da648d1d8fa4d8481cb6ab41c694b5f33faedd2`. Therefore the checked
-conclusion is now `R_5(3(x-y)=2z) > 353`; no upper bound or exact value is claimed. A persistent
-exact driver is live at 354 and advances only after both replay routes. A post-result literature
-refresh through 2026-08-26 found no five-colour bound at least 353 for this equation, but that
+re-encoding. The retained strongest witness has 354 entries, uses all five colours, covers
+27,730 defining triples / 143,957 clauses, and has SHA-256
+`bdbefdab98481c995876fcf1a31b5b82b352ba50b5ac472595912b9a33c4fcba`. Therefore the checked
+conclusion is now `R_5(3(x-y)=2z) > 354`; no upper bound or exact value is claimed. A persistent
+exact driver is live at 355 and advances only after both replay routes. A post-result literature
+refresh through 2026-08-26 found no five-colour bound at least 354 for this equation, but that
 negative retrieval is not proof of priority.
 
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
@@ -1749,6 +1817,19 @@ replays a `vpermd; vpshufb` program. A hardware oracle agrees with every modeled
 rejects a direction mutation. This proves minimum length two only in the exact unary language;
 LLVM already records a two-operation AVX2 byte reverse, and current Scholar/arXiv/web searches
 do not justify a novelty-priority claim. Multi-source and weighted-cost synthesis remain open.
+
+**SIMD weighted dependent-latency synthesis, 2026-08-26.** ADR-0583 adds generic,
+resource-bounded weighted-at-most CNF composition and uses it without changing the ordinary
+unweighted formula bytes. Under the explicitly named Haswell register-form serial dependency
+profile `vpshufb=1, vpermd=3, vpermq=3, vpalignr=1, vperm2i128=3`, global byte reversal has
+minimum cost four in the same exact unary language. Cost at most three is 6,024 variables /
+235,303 clauses; CaDiCaL's 12,554,825-byte DRAT is accepted by Axeyum's file-backed backward
+checker, while a 64-byte truncation is rejected. Cost four is SAT and lifts/replays as
+`vpermd; vpshufb`. Intel explicitly scopes added latency to dependency chains, so this is not
+a throughput, port-scheduling, whole-machine, ISA-wide, or priority claim. The durable sibling
+package retains deterministic compressed CNF/DRAT, hashes, diary, provenance, and a cleanly
+built LaTeX note. Multi-source live-register semantics and a real scheduler objective remain
+the open SIMD boundary.
 
 **Boolean-ANF control route, 2026-08-26.** ADR-0562 adds canonical resource-bounded Boolean
 polynomials, deterministic Bosphorus interchange, and a sparse coefficient-DAG formulation of
@@ -1845,6 +1926,21 @@ two live leaves interrupted. An adaptive exhaustive cover on variables 2 and 3 h
 two-step covering proof, but all four leaves interrupted at 600 seconds. No model or complete
 leaf-proof set exists, so `[7,8]` is unchanged.
 
+**Premise-explicit exact-budget circuit reduction, 2026-08-26.** ADR-0582 adds a reusable
+normal form for a query known to be at its minimum possible budget: every AND operand has a
+nonconstant term, every AND result is used later, every essential primary input occurs, and
+every varying output coordinate is nonconstant. The ordinary at-most-budget encodings remain
+unchanged; the PRIMATEs driver requires the independently checked MC=6 premise by name before
+adding these clauses to its MC=7 formula. The generic Boolean-ANF/CNF bridge now composes
+validated clauses over source selectors without exposing its private extension variables,
+and pure ANF export refuses the disjunctive mode. All eight exact-MC-one two-input functions
+remain SAT and replay through both direct and portable routes; malformed source indices fail
+closed. The complete MC=7 formula is 20,585 variables / 69,809 clauses with SHA-256
+`176513848d1fa511bca2a7b5c50255f6dabe6ebff696eb9f62abcfad0f43ae76`. Two persistent
+proof-producing CaDiCaL runs have no short cutoff and remain uncredited. Soeken 2020 already
+publishes the corresponding nonconstant/all-used constraints, so no technique novelty is
+claimed and `[7,8]` is unchanged.
+
 **Bilinear complete first-factor orbit cover, 2026-08-26.** ADR-0571 exposes typed canonical
 support/selector descriptors from normalized matrix-tensor encodings, avoiding dependence on
 private CNF allocation. The `<3,2,4>` rank-19 formula reports `[0] -> 495` and `[0,3] -> 496`.
@@ -1933,7 +2029,7 @@ sites using a 64 MiB `on_a_deep_stack` copy had **2×** headroom, not the
 comfortable margin the number looks like.
 
 **The recursion-depth limit that was proposed is the wrong instrument, and the
-measurements are why** (ADR-0582). Debug frames cost up to 32× release frames
+measurements are why** (ADR-0584). Debug frames cost up to 32× release frames
 at *identical* depth, so one constant cannot serve both profiles; the two deep
 recursions cost ~2,250 B and ~576 B per frame, so depth does not predict stack;
 and only `infer_core`/`check_core` return `Result` — `whnf_core`,

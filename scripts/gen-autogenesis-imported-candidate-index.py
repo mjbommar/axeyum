@@ -36,7 +36,19 @@ def build(entries: list[tuple[Path, dict[str, Any]]]) -> dict[str, Any]:
         axiom_free = kernel["axiom_free"]
         if axiom_free != (len(footprint) == 0):
             raise ValueError(f"{key[0]} axiom-free flag disagrees with footprint")
-        disposition = "candidate-executable" if axiom_free else "reconstruct-required"
+        floor = data.get("statement_trust_floor")
+        if floor is not None:
+            if axiom_free:
+                raise ValueError(f"{key[0]} is axiom-free but retains a statement trust floor")
+            floor_footprint = floor.get("axiom_footprint")
+            if not isinstance(floor_footprint, list) or not floor_footprint:
+                raise ValueError(f"{key[0]} statement trust floor is malformed")
+            if floor.get("proof_reconstruction_eligible") is not False:
+                raise ValueError(f"{key[0]} structural floor gained reconstruction credit")
+            disposition = "clean-definition-reconstruction-required"
+        else:
+            floor_footprint = []
+            disposition = "candidate-executable" if axiom_free else "proof-reconstruct-required"
         rows.append(
             {
                 "name": candidate["name"],
@@ -50,6 +62,9 @@ def build(entries: list[tuple[Path, dict[str, Any]]]) -> dict[str, Any]:
                 "axiom_footprint": footprint,
                 "axiom_footprint_size": len(footprint),
                 "retrieval_disposition": disposition,
+                "statement_axiom_floor": floor_footprint,
+                "proof_reconstruction_eligible": not floor_footprint and not axiom_free,
+                "required_route": floor.get("required_route") if floor else None,
                 "external_stream": data["external_stream"],
                 "audit_artifact_path": str(path.relative_to(ROOT)),
                 "audit_artifact_sha256": digest(path),
@@ -68,8 +83,12 @@ def build(entries: list[tuple[Path, dict[str, Any]]]) -> dict[str, Any]:
         "census": {
             "candidates": len(rows),
             "candidate_executable": sum(row["execution_eligible"] for row in rows),
-            "reconstruct_required": sum(
-                row["retrieval_disposition"] == "reconstruct-required" for row in rows
+            "proof_reconstruct_required": sum(
+                row["retrieval_disposition"] == "proof-reconstruct-required" for row in rows
+            ),
+            "clean_definition_reconstruct_required": sum(
+                row["retrieval_disposition"] == "clean-definition-reconstruction-required"
+                for row in rows
             ),
         },
         "candidates": rows,
@@ -107,7 +126,8 @@ def main() -> int:
     print(
         "IMPORTED_CANDIDATE_INDEX|"
         f"candidates={census['candidates']}|executable={census['candidate_executable']}|"
-        f"reconstruct_required={census['reconstruct_required']}"
+        f"proof_reconstruct_required={census['proof_reconstruct_required']}|"
+        f"clean_definition_reconstruct_required={census['clean_definition_reconstruct_required']}"
     )
     return 0
 

@@ -41,6 +41,7 @@ from ..knowledge import lemmas as lemmas_api
 from ..knowledge import nursery as nursery_api
 from ..knowledge import operations as operations_api
 from ..knowledge import overlay as overlay_api
+from ..knowledge import target_owned_candidates as target_owned_candidates_api
 from ..knowledge._paths import resolve_root
 from . import sandbox as sandbox_api
 from . import web as web_api
@@ -67,6 +68,8 @@ from .models import (
     ProducerAccepted,
     ProducerDeclined,
     ProducerError,
+    TargetOwnedCandidateRow,
+    TargetOwnedCandidatesPage,
     TheoremPage,
     TheoremRow,
     glob_match,
@@ -84,6 +87,7 @@ TOOL_TIERS: dict[str, Literal["read", "proposed", "checked"]] = {
     "lemma_neighbourhood": "read",
     "lemma_candidates": "read",
     "imported_candidates": "read",
+    "target_owned_candidates": "read",
     "operation_registry": "read",
     "overlay_query": "read",
     # Tier R, GUARDED (slice A6). Still `read` -- they read the world and write
@@ -614,8 +618,10 @@ def imported_candidates(
 
     Imported candidates remain separate from native kernel lemmas. Every row
     carries its measured footprint and execution eligibility; a
-    ``reconstruct-required`` row is strategy context and must not be sent to a
-    proof-reuse or transport path.
+    non-executable row is strategy context and must not be sent to a proof-reuse
+    or transport path. ``proof-reconstruct-required`` means a different proof
+    may remove the footprint; ``clean-definition-reconstruction-required``
+    carries a statement floor that no replacement proof can remove.
 
     Args:
         name_glob: Shell-style glob over imported candidate names.
@@ -642,6 +648,9 @@ def imported_candidates(
                 axiom_footprint=row.axiom_footprint,
                 direct_theorem_dependency_count=len(row.direct_theorem_dependencies),
                 retrieval_disposition=row.retrieval_disposition,
+                statement_axiom_floor=row.statement_axiom_floor,
+                proof_reconstruction_eligible=row.proof_reconstruction_eligible,
+                required_route=row.required_route,
                 strategy_eligible=row.strategy_eligible,
                 execution_eligible=row.execution_eligible,
             )
@@ -656,6 +665,67 @@ def imported_candidates(
         )
 
     return _timed("imported_candidates", ctx, body)
+
+
+def target_owned_candidates(
+    ctx: RunContext[AgentDeps],
+    name_glob: str = "",
+    canonical_type_contains: str = "",
+) -> TargetOwnedCandidatesPage:
+    """Search reusable checked Axeyum theorem capsules.
+
+    This population is separate from both the native prelude index and imported
+    theorem candidates. Rows are axiom-footprint-aware reusable material, but a
+    semantic-analogue fact link is not exact imported identity or operation
+    authority. Held-out analogue links are removed before the row is returned.
+
+    Args:
+        name_glob: Shell-style glob over target-owned theorem names.
+        canonical_type_contains: Exact substring of the target-owned canonical type.
+    """
+
+    def body() -> TargetOwnedCandidatesPage:
+        if sum(map(bool, (name_glob, canonical_type_contains))) != 1:
+            raise ToolRefusal(
+                "supply exactly one of name_glob or canonical_type_contains"
+            )
+        root = ctx.deps.root
+        index = target_owned_candidates_api.load(root)
+        if name_glob:
+            selected = [row for row in index if glob_match(row.name, name_glob)]
+        else:
+            selected = list(index.with_type_fragment(canonical_type_contains))
+        selected.sort(key=lambda row: (row.name, row.declaration_identity))
+        rows = []
+        dropped = 0
+        for row in selected[:MAX_ROWS]:
+            safe_fact_ids, n_dropped = _safe(root, row.semantic_analogue_fact_ids)
+            dropped += n_dropped
+            rows.append(
+                TargetOwnedCandidateRow(
+                    name=row.name,
+                    canonical_type=row.canonical_type,
+                    declaration_identity=row.declaration_identity,
+                    axiom_footprint=row.axiom_footprint,
+                    direct_theorem_dependencies=row.direct_theorem_dependencies,
+                    semantic_analogue_fact_ids=safe_fact_ids,
+                    capsule_path=row.capsule_path,
+                    capsule_sha256=row.capsule_sha256,
+                    exact_imported_identity=row.exact_imported_identity,
+                    reuse_eligible=row.reuse_eligible,
+                    authoritative_operation_eligible=row.authoritative_operation_eligible,
+                )
+            )
+        return TargetOwnedCandidatesPage(
+            name_glob=name_glob,
+            canonical_type_contains=canonical_type_contains,
+            matched=len(selected),
+            total_candidates=len(index),
+            dropped_held_out_fact_links=dropped,
+            rows=tuple(rows),
+        )
+
+    return _timed("target_owned_candidates", ctx, body)
 
 
 def operation_registry(ctx: RunContext[AgentDeps], fact_id: str = "") -> OperationRegistryView:
@@ -1361,6 +1431,7 @@ TIER_R_TOOLS: tuple[Callable[..., Any], ...] = (
     lemma_neighbourhood,
     lemma_candidates,
     imported_candidates,
+    target_owned_candidates,
     operation_registry,
     overlay_query,
 )
@@ -1520,6 +1591,7 @@ __all__ = [
     "python_exec",
     "resolve_export",
     "run_producer",
+    "target_owned_candidates",
     "toolset_fingerprint",
     "toolset_sha256",
     "web_fetch",

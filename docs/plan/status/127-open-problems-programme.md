@@ -117,15 +117,15 @@ all-target/all-feature Clippy, and warning-denied Rustdoc pass. Both completed `
 carry no UNSAT or upper-bound credit; the exact proof-producing run remains live.
 
 **Rado exact lower bound advanced, 2026-08-26.** The seed-619 CaDiCaL producer completed the
-canonical 351-, 352-, and 353-point formulas SAT; the 353 run took 19:14.90. Every complete
+canonical 351-, 352-, 353-, and 354-point formulas SAT; the 354 run took 35:44.27. Every complete
 assignment passed the strict SAT Competition importer, regenerated CNF evaluation, unique
 one-hot decoding, independent enumeration of the defining relation, and lifted-witness
-re-encoding. The retained strongest witness has 353 entries, uses all five colours, covers
-27,495 defining triples / 142,767 clauses, and has SHA-256
-`ff825f641352d5e6a59e098f9da648d1d8fa4d8481cb6ab41c694b5f33faedd2`. Therefore the checked
-conclusion is now `R_5(3(x-y)=2z) > 353`; no upper bound or exact value is claimed. A persistent
-exact driver is live at 354 and advances only after both replay routes. A post-result literature
-refresh through 2026-08-26 found no five-colour bound at least 353 for this equation, but that
+re-encoding. The retained strongest witness has 354 entries, uses all five colours, covers
+27,730 defining triples / 143,957 clauses, and has SHA-256
+`bdbefdab98481c995876fcf1a31b5b82b352ba50b5ac472595912b9a33c4fcba`. Therefore the checked
+conclusion is now `R_5(3(x-y)=2z) > 354`; no upper bound or exact value is claimed. A persistent
+exact driver is live at 355 and advances only after both replay routes. A post-result literature
+refresh through 2026-08-26 found no five-colour bound at least 354 for this equation, but that
 negative retrieval is not proof of priority.
 
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
@@ -204,6 +204,19 @@ replays a `vpermd; vpshufb` program. A hardware oracle agrees with every modeled
 rejects a direction mutation. This proves minimum length two only in the exact unary language;
 LLVM already records a two-operation AVX2 byte reverse, and current Scholar/arXiv/web searches
 do not justify a novelty-priority claim. Multi-source and weighted-cost synthesis remain open.
+
+**SIMD weighted dependent-latency synthesis, 2026-08-26.** ADR-0583 adds generic,
+resource-bounded weighted-at-most CNF composition and uses it without changing the ordinary
+unweighted formula bytes. Under the explicitly named Haswell register-form serial dependency
+profile `vpshufb=1, vpermd=3, vpermq=3, vpalignr=1, vperm2i128=3`, global byte reversal has
+minimum cost four in the same exact unary language. Cost at most three is 6,024 variables /
+235,303 clauses; CaDiCaL's 12,554,825-byte DRAT is accepted by Axeyum's file-backed backward
+checker, while a 64-byte truncation is rejected. Cost four is SAT and lifts/replays as
+`vpermd; vpshufb`. Intel explicitly scopes added latency to dependency chains, so this is not
+a throughput, port-scheduling, whole-machine, ISA-wide, or priority claim. The durable sibling
+package retains deterministic compressed CNF/DRAT, hashes, diary, provenance, and a cleanly
+built LaTeX note. Multi-source live-register semantics and a real scheduler objective remain
+the open SIMD boundary.
 
 **Boolean-ANF control route, 2026-08-26.** ADR-0562 adds canonical resource-bounded Boolean
 polynomials, deterministic Bosphorus interchange, and a sparse coefficient-DAG formulation of
@@ -299,6 +312,21 @@ A monolithic 600-second run interrupted. A first cover exposed source variable 1
 two live leaves interrupted. An adaptive exhaustive cover on variables 2 and 3 has a checked
 two-step covering proof, but all four leaves interrupted at 600 seconds. No model or complete
 leaf-proof set exists, so `[7,8]` is unchanged.
+
+**Premise-explicit exact-budget circuit reduction, 2026-08-26.** ADR-0582 adds a reusable
+normal form for a query known to be at its minimum possible budget: every AND operand has a
+nonconstant term, every AND result is used later, every essential primary input occurs, and
+every varying output coordinate is nonconstant. The ordinary at-most-budget encodings remain
+unchanged; the PRIMATEs driver requires the independently checked MC=6 premise by name before
+adding these clauses to its MC=7 formula. The generic Boolean-ANF/CNF bridge now composes
+validated clauses over source selectors without exposing its private extension variables,
+and pure ANF export refuses the disjunctive mode. All eight exact-MC-one two-input functions
+remain SAT and replay through both direct and portable routes; malformed source indices fail
+closed. The complete MC=7 formula is 20,585 variables / 69,809 clauses with SHA-256
+`176513848d1fa511bca2a7b5c50255f6dabe6ebff696eb9f62abcfad0f43ae76`. Two persistent
+proof-producing CaDiCaL runs have no short cutoff and remain uncredited. Soeken 2020 already
+publishes the corresponding nonconstant/all-used constraints, so no technique novelty is
+claimed and `[7,8]` is unchanged.
 
 **Bilinear complete first-factor orbit cover, 2026-08-26.** ADR-0571 exposes typed canonical
 support/selector descriptors from normalized matrix-tensor encodings, avoiding dependence on

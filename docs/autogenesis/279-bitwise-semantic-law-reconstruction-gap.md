@@ -148,6 +148,86 @@ argument is therefore about the inputs: derive a checked bound past which
 native `testBitBool x` and `testBitBool y` are false, then use
 `f false false = false` to join the bounded and outside cases.
 
+That last target-owned argument now closes. The sufficient-width theorem uses
+the deliberately loose but constructive bound `n`: when `n ≤ k`, every bit at
+`offset+k` is false. It follows the executable divide-by-two recursion and
+contains no assumptions. `bitwiseTotal f x y` chooses width `x+y`; totality of
+Nat order splits each queried index into the bounded proof above or the false
+tail, and the side condition closes the latter. The resulting universal
+theorem is exactly:
+
+```text
+f false false = false ->
+testBitBool (bitwiseTotal f x y) i =
+  f (testBitBool x i) (testBitBool y i)
+```
+
+It is kernel-checked with an empty footprint. The mathematical semantic law is
+therefore reconstructed for target-owned operations. Reconstruction remains
+ineligible only because exact imported-operation equivalence is still missing;
+neither same-name resemblance nor the upstream assumption-bearing definitions
+may substitute for that transport.
+
+That last boundary is now measured rather than inferred. Two fresh control
+theorems state only reflexive equality of imported `Nat.testBit` and
+`Nat.bitwise` with themselves and prove it with `Eq.refl`. Neither control has
+any theorem dependency, yet both receive the footprint `[propext]`: the
+footprint walker reaches each transparent definition from the theorem's type
+and then reaches `propext` through its implementation closure. Consequently,
+no different proof of the exact imported theorem can make its current
+declaration-reached footprint empty. The honest choices are now architectural:
+retain the target-owned clean operations as Axeyum's foundation, reconstruct
+clean compatible definitions under new identities, or explicitly accept the
+upstream definition closure as a weaker trust route. An operation-equivalence
+proof alone cannot erase an assumption already present in the exact operation's
+statement dependency.
+
+The hash-bound receipt is
+[`imported-definition-reflexivity-footprint-v1.json`](../../artifacts/autogenesis/imported-definition-reflexivity-footprint-v1.json).
+`just autogenesis-imported-definition-reflexivity-footprint-replay` regenerates
+the observation from the external candidate pack; the ordinary semantic-law
+gate validates the committed receipt without requiring that 2.2 MiB NDJSON to
+be vendored.
+
+The candidate search index now consumes this distinction. An assumption-bearing
+theorem with no measured statement floor remains eligible for proof
+reconstruction. This candidate instead routes to
+`clean-definition-reconstruction-required`, publishes `[propext]` as its
+statement floor, and sets `proof_reconstruction_eligible = false`. Thus a
+producer cannot keep retrying proofs for a trust cost that no proof can remove.
+
+The clean route now has sibling evidence rather than only a generic endpoint.
+Three target-owned definitions—`bitwiseAnd`, `bitwiseOr`, and
+`bitwiseDifference`—instantiate the same `bitwiseTotal` construction with
+computational Boolean truth tables. Their three observation theorems all depend
+on `testBitBool_bitwiseTotal`, all have empty footprints, and no sibling has a
+separately authored bit proof. This is reusable family construction, not three
+one-off reconstructions. It intentionally does not claim identity with Lean's
+assumption-bearing `lor`, `land`, or `ldiff` definitions.
+
+The generated
+[`bitwise-clean-family-projection-v1.json`](../../artifacts/autogenesis/bitwise-clean-family-projection-v1.json)
+connects those three clean results to the three corresponding open development
+facts. Every row is deliberately a `target-owned-semantic-analogue`, not an
+exact proposition match; all three remain ineligible for authoritative
+operation registration and fact transition. This makes the useful connection
+queryable while preventing the graph from silently collapsing “same bit law”
+into “same imported operation.”
+
+The family is no longer trapped inside the example process. The builder can
+root-export all three theorems as one official-format NDJSON capsule. The
+243,235-byte read-only pack lives outside Git under
+`/data0/axeyum/autogenesis/reference-packs/target-owned-bitwise-family-v1/`;
+the committed
+[`bitwise-clean-family-capsule-v1.json`](../../artifacts/autogenesis/bitwise-clean-family-capsule-v1.json)
+binds its size, hash, producer provenance, import population, and three root
+identities. A fresh importer admits 116 declarations with no axioms; every root
+has an empty footprint and directly depends on the same generic theorem. Run
+`just autogenesis-bitwise-clean-family-capsule-replay` to rebuild a temporary
+pack, independently import all three roots, and verify the durable external
+receipt. This supplies a reusable library capsule without vendoring bulk data
+or pretending it is an authoritative operation.
+
 A bounded oracle exhausts every Boolean vector through width 12: 8,191 vectors,
 90,114 in-range observations, and 8,191 first-out-of-range zero observations.
 It confirms the weighted-sum construction has the intended finite semantics.

@@ -494,6 +494,25 @@ remaining core is bit-observation uniqueness below the established bound.
 Native `sum_testBit_lt` now composes with that bound to give an axiom-free
 numeric reconstruction round trip. Only componentwise digit uniqueness and its
 Boolean transport remain.
+The subsequent low-digit construction has now closed that entire target-owned
+law, including the unbounded tail, axiom-free. A declaration-level reflexivity
+probe also resolves the exact-import question: a theorem proved only by
+`Eq.refl`, with no theorem dependencies, still inherits `[propext]` when its
+statement names imported `Nat.testBit` or `Nat.bitwise`. Exact imported
+empty-footprint reconstruction is impossible while those definitions keep
+their current closures. The next product decision is therefore whether the
+clean target-owned operations are canonical, whether compatible clean
+definitions are reconstructed under new identities, or whether a separately
+labeled weaker imported-definition route is supported.
+The clean route now demonstrates reuse across three siblings: AND, OR, and
+difference are definitions over the same generic constructor, and their three
+axiom-free observation theorems are specializations of the one generic theorem.
+This meets the multi-target mathematical-family bar without manufacturing
+exact imported-definition identity.
+The three roots now also ship as a root-selected, independently re-importable
+external capsule with a committed hash-bound receipt. This converts the
+example-built family into reusable checked library material while keeping
+operation registration and autonomous-production credit at zero.
 
 ### Exit evidence
 
@@ -543,6 +562,15 @@ now makes release discipline a prerequisite for further scale.
   UNSAT or kernel-proof case.
 - No product claim depends on a skipped, warning-only, zero-population, or stale
   gate.
+
+Current integration evidence is not green. The 2026-08-26 full Python run
+collected 1,861 tests and produced 1,824 passes, 34 skips, one failure, and two
+setup errors. The failures are outside the target-owned capsule change but are
+still product truth: three existing scripts violate the standard-library-only
+knowledge-layer invariant, and held-out isolation rejects exclusion-list
+references introduced by the concurrent nursery expansion. Focused agent and
+typing checks pass; the project-wide Python claim remains withheld until those
+shared defects are repaired.
 
 ## Sequencing
 

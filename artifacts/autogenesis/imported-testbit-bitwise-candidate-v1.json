@@ -96,5 +96,15 @@
     "lean4export_commit": "a3e35a584f59b390667db7269cd37fca8575e4bf",
     "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f"
   },
+  "statement_trust_floor": {
+    "axiom_footprint": [
+      "propext"
+    ],
+    "proof_reconstruction_eligible": false,
+    "receipt_path": "artifacts/autogenesis/imported-definition-reflexivity-footprint-v1.json",
+    "receipt_sha256": "b95f6d471577d6dd196797c38b5572414a1384fa8232abeff43b47565f696dbe",
+    "reason": "the candidate statement names Nat.testBit and Nat.bitwise; theorem-free Eq.refl controls show each definition alone reaches propext",
+    "required_route": "reconstruct-clean-definitions-or-accept-weaker-imported-definition-trust"
+  },
   "state": "independently-imported-assumption-bearing-candidate"
 }

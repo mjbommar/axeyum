@@ -29,7 +29,7 @@ sites using a 64 MiB `on_a_deep_stack` copy had **2×** headroom, not the
 comfortable margin the number looks like.
 
 **The recursion-depth limit that was proposed is the wrong instrument, and the
-measurements are why** (ADR-0582). Debug frames cost up to 32× release frames
+measurements are why** (ADR-0584). Debug frames cost up to 32× release frames
 at *identical* depth, so one constant cannot serve both profiles; the two deep
 recursions cost ~2,250 B and ~576 B per frame, so depth does not predict stack;
 and only `infer_core`/`check_core` return `Result` — `whnf_core`,

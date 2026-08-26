@@ -4,7 +4,7 @@
     {
       "alpha_type_expression_sha256": "9b0cf9b6b6b581e5520a76f39d748eab8478da3565863efeee41bff41146b77e",
       "audit_artifact_path": "artifacts/autogenesis/imported-testbit-bitwise-candidate-v1.json",
-      "audit_artifact_sha256": "445b8864817e5b9ec1ddc6509d38c01f3726980eb1ae744239fb0752dc457bf8",
+      "audit_artifact_sha256": "4d2dddb55808fa5514705162ffb465fca9cba4d955b82dda52362ba2f7bf506a",
       "axiom_footprint": [
         "Quot",
         "Quot.lift",
@@ -55,7 +55,12 @@
         "sha256": "58c09fb4f8b3af7adacd8d0c22e945507e6ffb3920b0581c22d17afa1867d3b9"
       },
       "name": "Nat.testBit_bitwise",
-      "retrieval_disposition": "reconstruct-required",
+      "proof_reconstruction_eligible": false,
+      "required_route": "reconstruct-clean-definitions-or-accept-weaker-imported-definition-trust",
+      "retrieval_disposition": "clean-definition-reconstruction-required",
+      "statement_axiom_floor": [
+        "propext"
+      ],
       "strategy_eligible": true,
       "type_expression_sha256": "a8978a1b2c417db5f04e6f8e36c2e099f65ac9e33d333fd06f9c52e97843ac96"
     }
@@ -63,7 +68,8 @@
   "census": {
     "candidate_executable": 0,
     "candidates": 1,
-    "reconstruct_required": 1
+    "clean_definition_reconstruct_required": 1,
+    "proof_reconstruct_required": 0
   },
   "kind": "axeyum-autogenesis-imported-candidate-search-index",
   "limitations": "The current index contains only explicitly audited root-selected candidates. It is not a census of Lean or Mathlib theorem declarations.",
@@ -72,7 +78,7 @@
     "audit_artifacts": [
       {
         "path": "artifacts/autogenesis/imported-testbit-bitwise-candidate-v1.json",
-        "sha256": "445b8864817e5b9ec1ddc6509d38c01f3726980eb1ae744239fb0752dc457bf8"
+        "sha256": "4d2dddb55808fa5514705162ffb465fca9cba4d955b82dda52362ba2f7bf506a"
       }
     ]
   },

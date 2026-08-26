@@ -12,6 +12,13 @@
     "n": 2,
     "testBit": "is_one"
   },
+  "imported_definition_footprint_probe": {
+    "artifact": "artifacts/autogenesis/imported-definition-reflexivity-footprint-v1.json",
+    "controls": 2,
+    "empty_theorem_dependency_controls": 2,
+    "finding": "both reflexive controls inherit propext solely through their imported operation dependency",
+    "status": "exact-imported-empty-footprint-structurally-unavailable"
+  },
   "kind": "axeyum-autogenesis-semantic-law-demand",
   "finite_reification_oracle": {
     "authority": "bounded computational observation only; no proof authority and no theorem authority",
@@ -122,6 +129,9 @@
     "canonical_type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} Bool (Axeyum.Autogenesis.testBitBool x0 (AxNat.succ x1)) (Axeyum.Autogenesis.testBitBool (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) x1)))",
     "definition": "Axeyum.Autogenesis.testBitBool",
     "imported_equivalence_status": "missing",
+    "input_bound_axiom_footprint_size": 0,
+    "input_bound_canonical_type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x1 x0) -> ((x3 : AxNat) -> Eq.{1} Bool (Axeyum.Autogenesis.testBitBool x1 (AxNat.add x3 x0)) Bool.false))))",
+    "input_bound_theorem": "Axeyum.Autogenesis.testBitBool_beyond_bound",
     "theorem": "Axeyum.Autogenesis.testBitBool_succ",
     "zero_axiom_footprint_size": 0,
     "zero_canonical_type": "((x0 : AxNat) -> Eq.{1} Bool (Axeyum.Autogenesis.testBitBool AxNat.zero x0) Bool.false)",
@@ -131,7 +141,7 @@
     "axiom_footprint_size": 0,
     "canonical_type": "((x0 : ((x0 : Bool) -> ((x1 : Bool) -> Bool))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> Eq.{1} Bool (Axeyum.Autogenesis.bitwiseObservation x0 x1 x2 x3) (x0 (Axeyum.Autogenesis.testBitBool x1 x3) (Axeyum.Autogenesis.testBitBool x2 x3))))))",
     "definition": "Axeyum.Autogenesis.bitwiseObservation",
-    "nat_reification_status": "bounded-recursive-theorem-checked-unbounded-missing",
+    "nat_reification_status": "target-owned-total-theorem-checked-imported-equivalence-missing",
     "theorem": "Axeyum.Autogenesis.bitwiseObservation_apply"
   },
   "native_reification": {
@@ -161,6 +171,33 @@
     "bounded_bitwise_canonical_type": "((x0 : ((x0 : Bool) -> ((x1 : Bool) -> Bool))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat.lt x4 x3) -> Eq.{1} Bool (Axeyum.Autogenesis.testBitBool (Axeyum.Autogenesis.bitwiseReifyLow x0 x1 x2 x3) x4) (x0 (Axeyum.Autogenesis.testBitBool x1 x4) (Axeyum.Autogenesis.testBitBool x2 x4))))))))",
     "bounded_bitwise_definition": "Axeyum.Autogenesis.bitwiseReifyLow",
     "bounded_bitwise_theorem": "Axeyum.Autogenesis.testBitBool_bitwiseReifyLow",
+    "total_bitwise_axiom_footprint_size": 0,
+    "total_bitwise_canonical_type": "((x0 : ((x0 : Bool) -> ((x1 : Bool) -> Bool))) -> ((x1 : Eq.{1} Bool (x0 Bool.false Bool.false) Bool.false) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> Eq.{1} Bool (Axeyum.Autogenesis.testBitBool (Axeyum.Autogenesis.bitwiseTotal x0 x2 x3) x4) (x0 (Axeyum.Autogenesis.testBitBool x2 x4) (Axeyum.Autogenesis.testBitBool x3 x4)))))))",
+    "total_bitwise_definition": "Axeyum.Autogenesis.bitwiseTotal",
+    "total_bitwise_theorem": "Axeyum.Autogenesis.testBitBool_bitwiseTotal",
+    "total_bitwise_specializations": [
+      {
+        "axiom_footprint_size": 0,
+        "canonical_type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} Bool (Axeyum.Autogenesis.testBitBool (Axeyum.Autogenesis.bitwiseAnd x0 x1) x2) (Axeyum.Autogenesis.boolAnd (Axeyum.Autogenesis.testBitBool x0 x2) (Axeyum.Autogenesis.testBitBool x1 x2)))))",
+        "definition": "Axeyum.Autogenesis.bitwiseAnd",
+        "generic_theorem_dependency": "Axeyum.Autogenesis.testBitBool_bitwiseTotal",
+        "theorem": "Axeyum.Autogenesis.testBitBool_bitwiseAnd"
+      },
+      {
+        "axiom_footprint_size": 0,
+        "canonical_type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} Bool (Axeyum.Autogenesis.testBitBool (Axeyum.Autogenesis.bitwiseOr x0 x1) x2) (Axeyum.Autogenesis.boolOr (Axeyum.Autogenesis.testBitBool x0 x2) (Axeyum.Autogenesis.testBitBool x1 x2)))))",
+        "definition": "Axeyum.Autogenesis.bitwiseOr",
+        "generic_theorem_dependency": "Axeyum.Autogenesis.testBitBool_bitwiseTotal",
+        "theorem": "Axeyum.Autogenesis.testBitBool_bitwiseOr"
+      },
+      {
+        "axiom_footprint_size": 0,
+        "canonical_type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} Bool (Axeyum.Autogenesis.testBitBool (Axeyum.Autogenesis.bitwiseDifference x0 x1) x2) (Axeyum.Autogenesis.boolDifference (Axeyum.Autogenesis.testBitBool x0 x2) (Axeyum.Autogenesis.testBitBool x1 x2)))))",
+        "definition": "Axeyum.Autogenesis.bitwiseDifference",
+        "generic_theorem_dependency": "Axeyum.Autogenesis.testBitBool_bitwiseTotal",
+        "theorem": "Axeyum.Autogenesis.testBitBool_bitwiseDifference"
+      }
+    ],
     "definition": "Axeyum.Autogenesis.reifyBits",
     "one_bit_normalization_axiom_footprint_size": 0,
     "one_bit_normalization_canonical_type": "((x0 : ((x0 : AxNat) -> Bool)) -> Eq.{1} AxNat (Axeyum.Autogenesis.reifyBits x0 (AxNat.succ AxNat.zero)) (Axeyum.Autogenesis.boolToBit (x0 AxNat.zero)))",
@@ -186,7 +223,7 @@
     "low_reification_outside_axiom_footprint_size": 0,
     "low_reification_outside_canonical_type": "((x0 : AxNat) -> ((x1 : ((x1 : AxNat) -> Bool)) -> ((x2 : AxNat) -> Eq.{1} Bool (Axeyum.Autogenesis.testBitBool (Axeyum.Autogenesis.reifyBitsLow x1 x0) (AxNat.add x2 x0)) Bool.false)))",
     "low_reification_outside_theorem": "Axeyum.Autogenesis.reifyBitsLow_outside",
-    "roundtrip_status": "recursive-general-bounded-roundtrip-checked-weighted-equivalence-missing",
+    "roundtrip_status": "target-owned-unbounded-checked-imported-equivalence-missing",
     "step_axiom_footprint_size": 0,
     "step_canonical_type": "((x0 : ((x0 : AxNat) -> Bool)) -> ((x1 : AxNat) -> Eq.{1} AxNat (Axeyum.Autogenesis.reifyBits x0 (AxNat.succ x1)) (AxNat.add (Axeyum.Autogenesis.reifyBits x0 x1) (AxNat.mul (Axeyum.Autogenesis.boolToBit (x0 x1)) (AxNat.pow (AxNat.succ (AxNat.succ AxNat.zero)) x1)))))",
     "step_theorem": "Axeyum.Autogenesis.reifyBits_succ"
@@ -198,5 +235,5 @@
     "proof_file_sha256": "fcf68b0ffe341344632929da5b4322e7303ce581125e3935ed92fe0f276a261c",
     "proof_lines": [401, 424]
   },
-  "state": "law-interface-required-before-reconstruction"
+  "state": "target-owned-law-checked-exact-imported-empty-footprint-unavailable"
 }

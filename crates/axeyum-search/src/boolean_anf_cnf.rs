@@ -61,6 +61,12 @@ pub enum BooleanAnfCnfError {
     ReplayFailed,
 }
 
+/// A clause over source variables in a Boolean-ANF/CNF definitional extension.
+///
+/// Each pair is a zero-based source-variable index and its required polarity:
+/// `true` denotes the positive literal and `false` its negation.
+pub type BooleanAnfSourceClause = Vec<(usize, bool)>;
+
 impl From<BooleanAnfError> for BooleanAnfCnfError {
     fn from(value: BooleanAnfError) -> Self {
         Self::Anf(value)
@@ -109,6 +115,41 @@ impl BooleanAnfCnfEncoding {
             } else {
                 literal.negated()
             }]))?;
+        }
+        Ok(formula)
+    }
+
+    /// Add arbitrary clauses over the projected source-variable prefix.
+    ///
+    /// This is the checked front door for composing a Boolean-ANF system with
+    /// independently justified CNF-side restrictions without depending on the
+    /// private variables introduced by the definitional extension.
+    ///
+    /// # Errors
+    ///
+    /// Refuses every literal whose index is outside the source-variable
+    /// prefix. Empty clauses are retained and therefore make the formula
+    /// unsatisfiable.
+    pub fn formula_with_source_clauses(
+        &self,
+        clauses: &[BooleanAnfSourceClause],
+    ) -> Result<CnfFormula, BooleanAnfCnfError> {
+        let mut formula = self.formula.clone();
+        for clause in clauses {
+            let literals = clause
+                .iter()
+                .map(|&(index, positive)| {
+                    if index >= self.source_variables {
+                        return Err(BooleanAnfCnfError::SourceVariableOutOfRange {
+                            variable: index,
+                            source_variables: self.source_variables,
+                        });
+                    }
+                    let literal = CnfLit::positive(CnfVar::new(index)?);
+                    Ok(if positive { literal } else { literal.negated() })
+                })
+                .collect::<Result<Vec<_>, BooleanAnfCnfError>>()?;
+            formula.add_clause(CnfClause::new(literals))?;
         }
         Ok(formula)
     }
@@ -388,6 +429,25 @@ mod tests {
             Err(BooleanAnfCnfError::SourceVariableOutOfRange {
                 variable: 1,
                 source_variables: 1
+            })
+        ));
+    }
+
+    #[test]
+    fn source_clauses_compose_without_exposing_extension_variables() {
+        let system = BooleanAnfSystem::new(2, BooleanAnfLimits::default()).unwrap();
+        let encoding = encode_boolean_anf_cnf(&system, BooleanAnfCnfLimits::default()).unwrap();
+        let restricted = encoding
+            .formula_with_source_clauses(&[vec![(0, true), (1, true)]])
+            .unwrap();
+        assert_eq!(restricted.clauses().len(), 1);
+        assert_eq!(restricted.evaluate(&[false, false]), Ok(false));
+        assert_eq!(restricted.evaluate(&[true, false]), Ok(true));
+        assert!(matches!(
+            encoding.formula_with_source_clauses(&[vec![(2, true)]]),
+            Err(BooleanAnfCnfError::SourceVariableOutOfRange {
+                variable: 2,
+                source_variables: 2
             })
         ));
     }

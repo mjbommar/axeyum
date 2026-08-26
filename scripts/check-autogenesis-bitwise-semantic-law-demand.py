@@ -17,7 +17,10 @@ GRAPH = ROOT / "artifacts/autogenesis/imported-implementation-demand-v1.json"
 def validate(data: dict[str, Any]) -> dict[str, int]:
     if data.get("kind") != "axeyum-autogenesis-semantic-law-demand":
         raise ValueError("wrong artifact kind")
-    if data.get("state") != "law-interface-required-before-reconstruction":
+    if (
+        data.get("state")
+        != "target-owned-law-checked-exact-imported-empty-footprint-unavailable"
+    ):
         raise ValueError("semantic-law demand state changed")
     authority = data.get("authority", "")
     for denied in ("no proof authority", "no transport", "no fact-transition"):
@@ -53,6 +56,21 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
         dependencies = operation.get("direct_declaration_dependencies")
         if not isinstance(dependencies, list) or dependencies != sorted(dependencies):
             raise ValueError("imported operation dependency identity changed")
+
+    probe = data.get("imported_definition_footprint_probe", {})
+    if probe.get("status") != "exact-imported-empty-footprint-structurally-unavailable":
+        raise ValueError("imported definition footprint boundary changed")
+    if (probe.get("controls"), probe.get("empty_theorem_dependency_controls")) != (2, 2):
+        raise ValueError("imported definition footprint control count changed")
+    probe_artifact = ROOT / probe.get("artifact", "")
+    receipt = json.loads(probe_artifact.read_text())
+    receipt_controls = receipt.get("controls", [])
+    if len(receipt_controls) != 2 or any(
+        row.get("axiom_footprint") != ["propext"]
+        or row.get("direct_theorem_dependencies") != []
+        for row in receipt_controls
+    ):
+        raise ValueError("imported definition footprint receipt disagrees with demand")
 
     laws = data.get("laws")
     if not isinstance(laws, list) or len(laws) != 6:
@@ -110,12 +128,17 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
     zero_type = bridge.get("zero_canonical_type", "")
     if "testBitBool AxNat.zero" not in zero_type or "Bool.false" not in zero_type:
         raise ValueError("zero observation theorem type changed")
+    if bridge.get("input_bound_axiom_footprint_size") != 0:
+        raise ValueError("input sufficient-width theorem gained assumptions")
+    input_bound_type = bridge.get("input_bound_canonical_type", "")
+    if "AxNat.le" not in input_bound_type or "Bool.false" not in input_bound_type:
+        raise ValueError("input sufficient-width theorem type changed")
     algebra = data.get("native_observation_algebra", {})
     if algebra.get("axiom_footprint_size") != 0:
         raise ValueError("native observation algebra gained assumptions")
     if (
         algebra.get("nat_reification_status")
-        != "bounded-recursive-theorem-checked-unbounded-missing"
+        != "target-owned-total-theorem-checked-imported-equivalence-missing"
     ):
         raise ValueError("unproved Nat reification gained credit")
     algebra_type = algebra.get("canonical_type", "")
@@ -128,7 +151,7 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
         raise ValueError("bounded reification step gained assumptions")
     if (
         reification.get("roundtrip_status")
-        != "recursive-general-bounded-roundtrip-checked-weighted-equivalence-missing"
+        != "target-owned-unbounded-checked-imported-equivalence-missing"
     ):
         raise ValueError("bounded reification status changed")
     if "reifyBits" not in reification.get("base_canonical_type", ""):
@@ -196,6 +219,35 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
         or "AxNat.lt" not in bounded_bitwise_type
     ):
         raise ValueError("bounded bitwise theorem type changed")
+    if reification.get("total_bitwise_axiom_footprint_size") != 0:
+        raise ValueError("total bitwise theorem gained assumptions")
+    total_bitwise_type = reification.get("total_bitwise_canonical_type", "")
+    if (
+        "bitwiseTotal" not in total_bitwise_type
+        or "testBitBool" not in total_bitwise_type
+        or "Bool.false" not in total_bitwise_type
+    ):
+        raise ValueError("total bitwise theorem type changed")
+    specializations = reification.get("total_bitwise_specializations")
+    if not isinstance(specializations, list) or len(specializations) != 3:
+        raise ValueError("total bitwise specialization population changed")
+    expected_specializations = [
+        ("bitwiseAnd", "boolAnd"),
+        ("bitwiseOr", "boolOr"),
+        ("bitwiseDifference", "boolDifference"),
+    ]
+    for specialization, (operation, boolean_operation) in zip(
+        specializations, expected_specializations, strict=True
+    ):
+        if specialization.get("axiom_footprint_size") != 0:
+            raise ValueError("total bitwise specialization gained assumptions")
+        if specialization.get("generic_theorem_dependency") != (
+            "Axeyum.Autogenesis.testBitBool_bitwiseTotal"
+        ):
+            raise ValueError("total bitwise specialization bypassed the generic theorem")
+        canonical_type = specialization.get("canonical_type", "")
+        if operation not in canonical_type or boolean_operation not in canonical_type:
+            raise ValueError("total bitwise specialization type changed")
 
     exclusion = data.get("countermodel_exclusion", {})
     if exclusion.get("excluded_by_law") != "testBit_succ":
@@ -218,6 +270,7 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
         "native_boolean_bridges": 1,
         "native_observation_algebras": 1,
         "native_reifications": 1,
+        "total_bitwise_specializations": len(specializations),
         "operations": len(operations),
     }
 
@@ -271,6 +324,7 @@ def main() -> int:
         f"native_boolean_bridges={result['native_boolean_bridges']}|"
         f"native_observation_algebras={result['native_observation_algebras']}|"
         f"native_reifications={result['native_reifications']}|"
+        f"total_bitwise_specializations={result['total_bitwise_specializations']}|"
         f"finite_vectors={result['finite_vectors']}|"
         "countermodel_excluded=true|reconstruction_eligible=false"
     )

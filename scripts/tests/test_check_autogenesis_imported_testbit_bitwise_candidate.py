@@ -21,6 +21,7 @@ class ImportedTestBitBitwiseCandidateTests(unittest.TestCase):
         result = MODULE.validate(self.data, verify_external=False)
         self.assertEqual(result["axiom_footprint"], 5)
         self.assertEqual(result["direct_theorem_dependencies"], 29)
+        self.assertEqual(result["statement_axiom_floor"], 1)
 
     def test_axiom_free_flip_fails_closed(self):
         data = copy.deepcopy(self.data)
@@ -50,6 +51,18 @@ class ImportedTestBitBitwiseCandidateTests(unittest.TestCase):
         data = copy.deepcopy(self.data)
         data["reconstruction_target"]["countermodel"]["rhs"] = False
         with self.assertRaisesRegex(ValueError, "countermodel receipt"):
+            MODULE.validate(data, verify_external=False)
+
+    def test_statement_floor_cannot_gain_proof_reconstruction_credit(self):
+        data = copy.deepcopy(self.data)
+        data["statement_trust_floor"]["proof_reconstruction_eligible"] = True
+        with self.assertRaisesRegex(ValueError, "reconstruction credit"):
+            MODULE.validate(data, verify_external=False)
+
+    def test_statement_floor_receipt_identity_fails_closed(self):
+        data = copy.deepcopy(self.data)
+        data["statement_trust_floor"]["receipt_sha256"] = "0" * 64
+        with self.assertRaisesRegex(ValueError, "receipt identity"):
             MODULE.validate(data, verify_external=False)
 
 

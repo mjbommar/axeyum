@@ -48,23 +48,30 @@ the current empty-footprint authority. Specializing it would merely propagate
 the assumption-bearing proof into the three targets.
 
 This is not evidence that the mathematical proposition requires those axioms.
-The upstream proof uses tactic-generated simplification and strong induction;
-the footprint describes that exported proof term. A separate constructive
-reconstruction may establish the same type without those assumptions.
+The upstream proof uses tactic-generated simplification and strong induction.
+However, the later declaration-level controls separate proof debt from
+statement debt: `Eq.refl` theorems with no theorem dependencies still inherit
+`[propext]` merely by naming either exact imported operation. A different proof
+can remove the quotient and proof-level assumptions, but it cannot make this
+exact statement's declaration-reached footprint empty while the operations
+retain their current implementation closures.
 
 ## Correct next sequence
 
 1. Add imported theorem candidates as a separate, exact-identity search
    population. Never silently mix them with native axiom-free lemmas.
-2. Carry the measured footprint into ranking and require an explicit
-   `reconstruct-required` disposition for this candidate.
-3. Reconstruct `Nat.testBit_bitwise` inside the imported target kernel from its
-   transparent `Nat.bitwise`/`Nat.testBit` definitions and axiom-free arithmetic
-   and decision lemmas. The imported proof may guide strategy but may not be
-   admitted as evidence.
-4. If the reconstructed generic theorem has an empty footprint, specialize the
-   same checked term to and/or/difference and run all three targets through one
-   unchanged producer operation.
+2. Carry both the proof footprint and the independently measured statement
+   floor into ranking. This candidate is now
+   `clean-definition-reconstruction-required`, not the weaker and misleading
+   `proof-reconstruct-required` route.
+3. Use the now-complete target-owned axiom-free generic theorem as the clean
+   mathematical foundation. Separately decide whether to reconstruct compatible
+   clean operations under new identities or support an explicitly weaker
+   imported-definition trust route.
+4. Specialize the target-owned theorem to and/or/difference through one
+   unchanged producer operation. Do not claim exact imported theorem identity
+   unless a separate checked operation bridge and its nonempty trust floor are
+   stated explicitly.
 5. Keep `testBit_eq_inth` separate: it needs the list/bits projection law and is
    not a specialization of the binary bitwise theorem.
 

@@ -62,7 +62,7 @@ step settled-fact-statement-tests python3 -m unittest scripts.tests.test_settled
 step settled-fact-statements python3 scripts/check-settled-fact-statements.py
 step fact-dag-tests python3 -m unittest scripts.tests.test_check_fact_dag
 step fact-dag python3 scripts/check-fact-dag.py --quiet
-# ADR-0582. The kernel type checker recurses over the term with no bound, so a
+# ADR-0584. The kernel type checker recurses over the term with no bound, so a
 # deep enough declaration exhausts the stack and the process ABORTS -- exit 134,
 # which looks exactly like a broken tool or an absent declaration and has been
 # read as both. This re-derives the required stack per prelude and reds when it

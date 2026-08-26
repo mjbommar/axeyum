@@ -652,4 +652,6 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0579](adr-0579-standalone-energetic-unit-scans-are-exhaustive-and-bounded.md) | Exhaust all machine intervals for strongest independently replayed start-bound units | accepted |
 | [0580](adr-0580-contextual-energetic-units-close-as-a-checked-clause-chain.md) | Iterate replayed scheduling bounds through precedence closure and energetic unit explanations | accepted |
 | [0581](adr-0581-polynomial-tensor-search-has-a-strict-artifact-front-door.md) | Full-polynomial GF(2) rank search exports DIMACS and admits SAT or UNSAT artifacts only through replay | accepted |
-| [0582](adr-0582-the-kernel-stack-envelope-is-measured-not-limited.md) | Kernel recursion gets a measured stack budget and a ratchet, not a recursion-depth limit | accepted |
+| [0582](adr-0582-exact-budget-circuit-search-must-name-its-lower-bound-premise.md) | Exact-budget circuit search must name its lower-bound premise | accepted |
+| [0583](adr-0583-weighted-cnf-composition-precedes-machine-cost-claims.md) | Compose bounded integer costs as checked CNF, lift weighted SIMD models, and keep dependent-latency claims distinct from scheduling | accepted |
+| [0584](adr-0584-the-kernel-stack-envelope-is-measured-not-limited.md) | Kernel recursion gets a measured stack budget and a ratchet, not a recursion-depth limit | accepted |

@@ -1,4 +1,4 @@
-# ADR-0582: The kernel's stack envelope is measured, not limited
+# ADR-0584: The kernel's stack envelope is measured, not limited
 
 Status: accepted
 Date: 2026-08-26
