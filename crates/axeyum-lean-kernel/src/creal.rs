@@ -1017,6 +1017,45 @@ pub struct CRealPrelude {
     /// [`Rat.natDivSucc_antitone`](crate::RatPrelude::nat_div_succ_antitone).
     /// See `creal/uniform_continuity.rs`.
     pub uniformly_continuous_add: NameId,
+    /// `CReal.uniformly_continuous_neg : ∀ F a b, UniformlyContinuousOn F a b
+    /// -> UniformlyContinuousOn (fun r => neg (F r)) a b` -- modulus
+    /// UNCHANGED (`mF` itself); `abs (neg _)` costs one `double_neg`/`abs_le`
+    /// argument, no new estimate. See `creal/uniform_continuity.rs`.
+    pub uniformly_continuous_neg: NameId,
+    /// `CReal.uniformly_continuous_sub : ∀ F G a b, UniformlyContinuousOn F a
+    /// b -> UniformlyContinuousOn G a b -> UniformlyContinuousOn (fun r =>
+    /// add (F r) (neg (G r))) a b` -- pure composition of
+    /// [`Self::uniformly_continuous_add`] and [`Self::uniformly_continuous_neg`].
+    /// See `creal/uniform_continuity.rs`.
+    pub uniformly_continuous_sub: NameId,
+    /// `CReal.uniformly_continuous_mul : ∀ F G a b, UniformlyContinuousOn F a
+    /// b -> UniformlyContinuousOn G a b -> ∀ k1 k2, BoundedOn F a b k1 ->
+    /// BoundedOn G a b k2 -> UniformlyContinuousOn (fun r => mul (F r)
+    /// (G r)) a b` -- `|F(x)G(x)-F(y)G(y)| <= |F(x)||G(x)-G(y)| +
+    /// |G(y)||F(x)-F(y)|`, each term rescaled by its own `BoundedOn` weight
+    /// via `Rat.natDivSucc_scale` and folded back to a single
+    /// `1/(2(n+1))` share. See `creal/uniform_continuity.rs`.
+    pub uniformly_continuous_mul: NameId,
+    /// `CReal.uniformly_continuous_sq : ∀ a b k, BoundedOn (fun r => r) a b k
+    /// -> UniformlyContinuousOn (fun r => mul r r) a b` --
+    /// [`Self::uniformly_continuous_mul`] at `F := G := id`, both `BoundedOn`
+    /// witnesses the SAME hypothesis. See `creal/uniform_continuity.rs`.
+    pub uniformly_continuous_sq: NameId,
+    /// `CReal.bounded_on_id_unit : BoundedOn (fun r => r) zero (mag_bound 0)
+    /// 0` -- `id` bounded by `1` on `[0, mag_bound 0]`, where `mag_bound 0`
+    /// IS the kernel's own representation of the real number `1` (chosen so
+    /// the proof needs no separate `CReal.one`-vs-`mag_bound` bridge lemma).
+    /// See `creal/uniform_continuity.rs`.
+    pub bounded_on_id_unit: NameId,
+    /// `CReal.uniformly_continuous_poly_example : UniformlyContinuousOn (fun
+    /// r => add (add (mul r r) r) one) zero (mag_bound 0)` -- `x -> x^2 + x +
+    /// 1` uniformly continuous on `[0,1]`, assembled from
+    /// [`Self::uniformly_continuous_sq`], [`Self::uniformly_continuous_id`],
+    /// [`Self::uniformly_continuous_const`] and
+    /// [`Self::uniformly_continuous_add`] with every `BoundedOn` hypothesis
+    /// discharged concretely via [`Self::bounded_on_id_unit`]. See
+    /// `creal/uniform_continuity.rs`.
+    pub uniformly_continuous_poly_example: NameId,
     /// `CReal.ratSqLe : ∀ (u s : Rat), Rat.le (u*u) (s*s) → Rat.le Rat.zero s
     /// → Rat.le u s` — a purely rational fact (no `CReal` structure), proved
     /// via `Rat.mul_pos` and a difference-of-squares identity rather than a
@@ -2286,6 +2325,13 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         uniformly_continuous_id: kernel.name_str(creal, "uniformly_continuous_id"),
         uniformly_continuous_const: kernel.name_str(creal, "uniformly_continuous_const"),
         uniformly_continuous_add: kernel.name_str(creal, "uniformly_continuous_add"),
+        uniformly_continuous_neg: kernel.name_str(creal, "uniformly_continuous_neg"),
+        uniformly_continuous_sub: kernel.name_str(creal, "uniformly_continuous_sub"),
+        uniformly_continuous_mul: kernel.name_str(creal, "uniformly_continuous_mul"),
+        uniformly_continuous_sq: kernel.name_str(creal, "uniformly_continuous_sq"),
+        bounded_on_id_unit: kernel.name_str(creal, "bounded_on_id_unit"),
+        uniformly_continuous_poly_example: kernel
+            .name_str(creal, "uniformly_continuous_poly_example"),
         rat_sq_le: kernel.name_str(creal, "ratSqLe"),
         rat_sq_sandwich: kernel.name_str(creal, "ratSqSandwich"),
         rat_index_ratio_le_one: kernel.name_str(creal, "ratIndexRatioLeOne"),
@@ -2473,6 +2519,14 @@ pub(crate) fn build_creal_prelude_uncached(
         convergence::declare_convergence(&mut d, prelude)?;
         uniform_continuity::declare_uniform_continuity(&mut d, prelude)?;
         derivative::declare_derivative(&mut d, prelude)?;
+        // `uniformly_continuous_mul`/`_sq` and the concrete polynomial
+        // instantiation consume `CReal.BoundedOn` and
+        // `CReal.abs_mul_le_of_bounds`, declared just above by
+        // `derivative::declare_derivative` -- see
+        // `uniform_continuity::declare_uniform_continuity_products`'s own
+        // doc comment for why this cannot instead move earlier, next to
+        // `declare_uniform_continuity`.
+        uniform_continuity::declare_uniform_continuity_products(&mut d, prelude)?;
         mul_self_zero::declare_mul_self_zero(&mut d, prelude)?;
         sqrt::declare_sqrt(&mut d, prelude)?;
         speedup::declare_speedup(&mut d, prelude)?;
