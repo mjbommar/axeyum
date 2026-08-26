@@ -136,6 +136,7 @@ now. Nothing was deleted.
 | 2026-08-25 | `b34067dc0` | The recomputed frontier settles `Nat.ModEq.trans` through the same producer; multi-target credit reaches 10. |
 | 2026-08-25 | `43f87f269` | Durable symmetry unlock promotes `Nat.ModEq.comm` into the unchanged family operation with source-bound evidence. |
 | 2026-08-25 | `3375112a9` | Recomputed scheduling admits `Nat.ModEq.comm`; durable-state-driven multi-target credit reaches 11. |
+| 2026-08-25 | `3cfb80172` | Resolve five manually verified Nat evidence identities; exact links reach 315 theorems and 319 facts without guessing. |
 | 2026-08-25 | `be0c67f67` | mobility summary names the dominant unevaluable reason (`unevaluable_no_export`, `unevaluable_top`), so `unevaluable=186` reads as a reachability block not a tactic gap; regenerates the committed census (191->189) that had drifted stale |
 | 2026-08-25 | `e27140275` | `--reachable-first`: stably reorder `--next` selection so facts with a frozen export come first (the first 5 eligible had 0); deterministic, population unchanged |
 | 2026-08-25 | `b2813872f` | `--skip-unreachable`: preflight the frozen export before spending a model; skips retrieval-miss-only facts at zero cost (~26k tokens/fact saved), opt-in so replays are unchanged; 3 controls |
@@ -1113,8 +1114,10 @@ then retrieved `Nat.fib_le_succ`; a checked, axiom-free
 `Nat.monotone_of_le_succ` combinator composes it into `Nat.fib_mono`, settling
 the corresponding fact with real kernel-observed dependencies. This is genuine
 library compounding but remains correctly classified as `no_operation` because
-the reference constructor was hand-authored. Next: expose that target-agnostic
-combinator through an authoritative producer, then measure sibling conversion.
+the reference constructor was hand-authored. Exact evidence identity now links
+315 kernel theorems to 319 facts, with 84 historical shorthand IDs left
+explicitly unresolved. Next: expose that target-agnostic combinator through an
+authoritative producer, then measure sibling conversion.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
