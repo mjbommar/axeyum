@@ -7,13 +7,13 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use axeyum_cnf::{
-    CnfAssignment, ProofSolveOutcome, check_drat_backward, check_drat_backward_reader,
+    CnfAssignment, CnfFormula, ProofSolveOutcome, check_drat_backward, check_drat_backward_reader,
 };
 use axeyum_search::job_shop::{
     JobShopEncoding, JobShopEncodingLimits, JobShopMachineOrderStatus, JobShopProblem,
     JobShopSchedule, encode_job_shop, encode_job_shop_with_detectable_precedence,
     encode_job_shop_with_job_windows, encode_job_shop_with_precedence_closure,
-    job_shop_to_pumpkin_flatzinc,
+    job_shop_to_pumpkin_flatzinc, parse_job_shop_machine_orders, schedule_job_shop_machine_orders,
 };
 
 struct Arguments {
@@ -22,6 +22,7 @@ struct Arguments {
     seconds: u64,
     dimacs: Option<PathBuf>,
     witness: Option<PathBuf>,
+    machine_order_witness: Option<PathBuf>,
     model: Option<PathBuf>,
     schedule_out: Option<PathBuf>,
     drat: Option<PathBuf>,
@@ -36,7 +37,7 @@ fn arguments() -> Arguments {
     let args: Vec<String> = std::env::args().skip(1).collect();
     assert!(
         args.len() >= 2,
-        "usage: certify_job_shop INSTANCE BOUND [SECONDS] [--job-windows | --detectable-precedence | --precedence-closure] [--dimacs PATH] [--flatzinc PATH] [--witness JSON] [--model SAT-SOLUTION] [--schedule-out JSON] [--check-drat PATH] [--machine-orders PATH]"
+        "usage: certify_job_shop INSTANCE BOUND [SECONDS] [--job-windows | --detectable-precedence | --precedence-closure] [--dimacs PATH] [--flatzinc PATH] [--witness JSON | --machine-order-witness TEXT] [--model SAT-SOLUTION] [--schedule-out JSON] [--check-drat PATH] [--machine-orders PATH]"
     );
     let instance = PathBuf::from(&args[0]);
     let bound = args[1]
@@ -50,6 +51,7 @@ fn arguments() -> Arguments {
     }
     let mut dimacs = None;
     let mut witness = None;
+    let mut machine_order_witness = None;
     let mut model = None;
     let mut schedule_out = None;
     let mut drat = None;
@@ -80,6 +82,7 @@ fn arguments() -> Arguments {
         let destination = match args[index].as_str() {
             "--dimacs" => &mut dimacs,
             "--witness" => &mut witness,
+            "--machine-order-witness" => &mut machine_order_witness,
             "--model" => &mut model,
             "--schedule-out" => &mut schedule_out,
             "--check-drat" => &mut drat,
@@ -98,6 +101,7 @@ fn arguments() -> Arguments {
         seconds,
         dimacs,
         witness,
+        machine_order_witness,
         model,
         schedule_out,
         drat,
@@ -245,8 +249,47 @@ fn encode(args: &Arguments, problem: &JobShopProblem) -> JobShopEncoding {
     result.expect("encoding must fit explicit defaults")
 }
 
+fn witness_formula(
+    args: &Arguments,
+    problem: &JobShopProblem,
+    encoding: &JobShopEncoding,
+) -> Option<CnfFormula> {
+    if let Some(path) = &args.witness {
+        let bytes = std::fs::read(path).expect("read schedule JSON");
+        let schedule: JobShopSchedule =
+            serde_json::from_slice(&bytes).expect("parse schedule JSON");
+        let pinned = encoding
+            .formula_with_schedule(&schedule)
+            .expect("schedule must replay and fit bound");
+        println!("witness={}", path.display());
+        println!("witness-makespan={}", schedule.makespan);
+        return Some(pinned);
+    }
+    let path = args.machine_order_witness.as_ref()?;
+    let text = std::fs::read_to_string(path).expect("read machine-order witness");
+    let orders =
+        parse_job_shop_machine_orders(problem, &text).expect("parse machine-order witness");
+    let schedule = schedule_job_shop_machine_orders(problem, &orders)
+        .expect("machine orders must induce a feasible schedule");
+    let pinned = encoding
+        .formula_with_schedule(&schedule)
+        .expect("machine-order schedule must replay and fit bound");
+    if let Some(path) = &args.schedule_out {
+        let bytes = serde_json::to_vec_pretty(&schedule).expect("serialize schedule");
+        std::fs::write(path, bytes).expect("write schedule JSON");
+        println!("schedule={}", path.display());
+    }
+    println!("machine-order-witness={}", path.display());
+    println!("witness-makespan={}", schedule.makespan);
+    Some(pinned)
+}
+
 fn main() {
     let args = arguments();
+    assert!(
+        args.witness.is_none() || args.machine_order_witness.is_none(),
+        "--witness and --machine-order-witness are mutually exclusive"
+    );
     let text = std::fs::read_to_string(&args.instance).expect("read instance");
     let problem = JobShopProblem::parse_orlib(&text).expect("parse OR-Library instance");
     if emit_flatzinc(&args, &problem) {
@@ -259,19 +302,8 @@ fn main() {
         println!("machine-order-manifest={}", path.display());
     }
 
-    let formula = if let Some(path) = &args.witness {
-        let bytes = std::fs::read(path).expect("read schedule JSON");
-        let schedule: JobShopSchedule =
-            serde_json::from_slice(&bytes).expect("parse schedule JSON");
-        let pinned = encoding
-            .formula_with_schedule(&schedule)
-            .expect("schedule must replay and fit bound");
-        println!("witness={}", path.display());
-        println!("witness-makespan={}", schedule.makespan);
-        pinned
-    } else {
-        encoding.formula().clone()
-    };
+    let formula =
+        witness_formula(&args, &problem, &encoding).unwrap_or_else(|| encoding.formula().clone());
     if let Some(path) = args.dimacs {
         std::fs::write(&path, formula.to_dimacs()).expect("write DIMACS");
         println!("dimacs={}", path.display());

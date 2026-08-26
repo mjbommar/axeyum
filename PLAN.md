@@ -1350,12 +1350,23 @@ generate deterministically, run untrusted search, independently replay/check, bi
 and reconstruct formal identities into the kernel where applicable. Current focus stays on
 `abz7`: deterministic detectable-precedence closure is complete and exhausted after one round,
 and an exact checker-compatible FlatZinc/DRCP route is calibrated against both an independent
-Rust checker and the Rocq-verified FznDrcpCheck. Sustained `abz7@655` proof production and
-`@656` witness searches are live without short wall-clock cutoffs. The
+Rust checker and the Rocq-verified FznDrcpCheck. Sustained `abz7@655` proof production remains
+live without a short wall-clock cutoff; the upper-bound search is closed by the replayed public
+656 witness described below. The
 settled-cell calibration is green for `R_3(x-y=z)=14` (42 variables,
 356 clauses, 25 checked DRAT steps); a mutated DIMACS header fails closed, and the aggregate
 claim sweep reports 104 claims re-checked / 0 errors / 25 rows explicitly not re-checked.
 Frontier claims remain open.
+
+**Job-shop published-witness import, 2026-08-26.** ADR-0576 adds strict parsing of the common
+one-job-per-machine-order-row solution format and deterministic earliest-schedule reconstruction
+over the combined job/machine precedence DAG. Malformed permutations and cyclic rows fail closed;
+the resulting start matrix is independently replayed and pinned into the bounded CNF. A live
+current-source search found Optimizizer's retained 15-row `abz7` solution. Axeyum reconstructed
+all 300 starts at makespan 656 and returned `sat-replayed` against the 175,770-variable /
+1,696,774-clause exact-window formula. This closes the upper-bound half and supersedes the local
+657 search as evidence. It does not prove optimality: sustained `abz7@655` DRCP producers remain
+live, and only a completed proof accepted by both calibrated checkers can close the lower half.
 
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
 external-certificate replay runner for all five packages.  It validates checker and artifact
