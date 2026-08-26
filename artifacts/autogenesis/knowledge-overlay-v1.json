@@ -71,6 +71,12 @@
       "source_kinds": ["fact", "capability"],
       "target_kinds": ["fact", "capability"],
       "semantics": "Establishing the source makes the target newly reachable or measurably cheaper; readiness and solution are distinct."
+    },
+    {
+      "id": "definitionally-matches",
+      "source_kinds": ["fact"],
+      "target_kinds": ["kernel-declaration"],
+      "semantics": "An independently checked cross-kernel translation found the fact's proof-free proposition definitionally equal to the kernel declaration's theorem type. This diagnostic link neither settles the fact nor grants proof, operation, or admission authority."
     }
   ],
   "entities": [
@@ -237,6 +243,72 @@
       "status": "active",
       "reason": "The fact evidence credits the checked general ModEq family operation.",
       "provenance": { "method": "checker-derived", "sources": ["artifacts/facts/F-ml430-int-modeq-comm-1e4bcc07.json", "scripts/check-autogenesis-modeq-family.py"] }
+    },
+    {
+      "id": "L:ml430-nat-choose-self-definitionally-matches-native",
+      "relation": "definitionally-matches",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-choose-self-25bb9fb8" },
+      "target": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "Nat.choose_self" },
+      "assurance": "independently-checked",
+      "status": "active",
+      "reason": "The proof-free imported Mathlib proposition and independently constructed native theorem type are definitionally equal after exact-name translation into a private target kernel.",
+      "provenance": { "method": "checker-derived", "sources": ["artifacts/autogenesis/open-ranked-proposition-census-v1.json", "crates/axeyum-lean-import/examples/proposition_compatibility_audit.rs"] },
+      "qualifiers": { "fact_status_unchanged": true, "admission_authority": false }
+    },
+    {
+      "id": "L:ml430-nat-choose-succ-self-definitionally-matches-native",
+      "relation": "definitionally-matches",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-choose-succ-self-e396f6c2" },
+      "target": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "Nat.choose_succ_self_eq_zero" },
+      "assurance": "independently-checked",
+      "status": "active",
+      "reason": "The proof-free imported Mathlib proposition and independently constructed native theorem type are definitionally equal after exact-name translation into a private target kernel.",
+      "provenance": { "method": "checker-derived", "sources": ["artifacts/autogenesis/open-ranked-proposition-census-v1.json", "crates/axeyum-lean-import/examples/proposition_compatibility_audit.rs"] },
+      "qualifiers": { "fact_status_unchanged": true, "admission_authority": false }
+    },
+    {
+      "id": "L:ml430-nat-choose-succ-succ-definitionally-matches-native",
+      "relation": "definitionally-matches",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-choose-succ-succ-671856b6" },
+      "target": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "Nat.choose_succ_succ" },
+      "assurance": "independently-checked",
+      "status": "active",
+      "reason": "The proof-free imported Mathlib proposition and independently constructed native theorem type are definitionally equal after exact-name translation into a private target kernel.",
+      "provenance": { "method": "checker-derived", "sources": ["artifacts/autogenesis/open-ranked-proposition-census-v1.json", "crates/axeyum-lean-import/examples/proposition_compatibility_audit.rs"] },
+      "qualifiers": { "fact_status_unchanged": true, "admission_authority": false }
+    },
+    {
+      "id": "L:ml430-nat-choose-zero-right-definitionally-matches-native",
+      "relation": "definitionally-matches",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-choose-zero-right-1ed2802a" },
+      "target": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "Nat.choose_zero_right" },
+      "assurance": "independently-checked",
+      "status": "active",
+      "reason": "The proof-free imported Mathlib proposition and independently constructed native theorem type are definitionally equal after exact-name translation into a private target kernel.",
+      "provenance": { "method": "checker-derived", "sources": ["artifacts/autogenesis/open-ranked-proposition-census-v1.json", "crates/axeyum-lean-import/examples/proposition_compatibility_audit.rs"] },
+      "qualifiers": { "fact_status_unchanged": true, "admission_authority": false }
+    },
+    {
+      "id": "L:ml430-nat-choose-zero-succ-definitionally-matches-native",
+      "relation": "definitionally-matches",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-choose-zero-succ-62c6520b" },
+      "target": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "Nat.zero_choose_succ" },
+      "assurance": "independently-checked",
+      "status": "active",
+      "reason": "The proof-free imported Mathlib proposition and independently constructed native theorem type are definitionally equal after exact-name translation into a private target kernel.",
+      "provenance": { "method": "checker-derived", "sources": ["artifacts/autogenesis/open-ranked-proposition-census-v1.json", "crates/axeyum-lean-import/examples/proposition_compatibility_audit.rs"] },
+      "qualifiers": { "fact_status_unchanged": true, "admission_authority": false }
+    },
+    {
+      "id": "L:ml430-nat-factorial-pos-definitionally-matches-native",
+      "relation": "definitionally-matches",
+      "source": { "namespace": "axeyum-fact", "kind": "fact", "id": "F:ml430-nat-factorial-pos-f1dd2405" },
+      "target": { "namespace": "axeyum-kernel", "kind": "kernel-declaration", "id": "Nat.one_le_factorial" },
+      "assurance": "independently-checked",
+      "status": "active",
+      "reason": "The proof-free imported Mathlib proposition and independently constructed native theorem type are definitionally equal after exact-name translation into a private target kernel.",
+      "provenance": { "method": "checker-derived", "sources": ["artifacts/autogenesis/open-ranked-proposition-census-v1.json", "crates/axeyum-lean-import/examples/proposition_compatibility_audit.rs"] },
+      "qualifiers": { "fact_status_unchanged": true, "admission_authority": false }
     }
   ]
 }
