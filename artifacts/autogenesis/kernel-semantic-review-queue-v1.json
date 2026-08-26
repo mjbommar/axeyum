@@ -1,13 +1,13 @@
 {
   "census": {
-    "empty_footprint_theorems": 1260,
-    "kernel_theorems": 1260,
+    "empty_footprint_theorems": 1261,
+    "kernel_theorems": 1261,
     "reviewed_kernel_semantic_anchors": 0,
-    "unreviewed_queue_entries": 1260
+    "unreviewed_queue_entries": 1261
   },
   "derivation": {
     "candidate_rule": "theorem with empty recorded axiom footprint and no active kernel-source formalizes link",
-    "kernel_projection_sha256": "4a99495046e23107387cc1e309af56723b2a9fb62610ffb9e417c51e530fa8bf",
+    "kernel_projection_sha256": "1b8813ef2648d837dd71a7624a5d5f811a76a59bf1e53f3c256dbaea990e620f",
     "knowledge_overlay_sha256": "c165e9fd36d6126c4f0f8c7b3b8b69f0f32c37b7ae1abf26197dfdfa704567fd",
     "ordering": "descending direct reverse theorem-reference count, descending direct theorem-dependency count, ascending declaration id",
     "trust_boundary": "review planning only; never concept classification, producer dispatch, proof, admission, or trusted-kernel authority"
@@ -149,9 +149,25 @@
       ]
     },
     {
-      "direct_reverse_theorem_reference_count": 91,
+      "direct_reverse_theorem_reference_count": 92,
       "direct_theorem_dependency_count": 0,
       "kernel_declaration_id": "Nat.zero_le",
+      "review_status": "unreviewed",
+      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
+      "visible_in": [
+        "characterization",
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "direct_reverse_theorem_reference_count": 85,
+      "direct_theorem_dependency_count": 0,
+      "kernel_declaration_id": "Nat.le_trans",
       "review_status": "unreviewed",
       "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
       "visible_in": [
@@ -177,22 +193,6 @@
       ]
     },
     {
-      "direct_reverse_theorem_reference_count": 84,
-      "direct_theorem_dependency_count": 0,
-      "kernel_declaration_id": "Nat.le_trans",
-      "review_status": "unreviewed",
-      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
-      "visible_in": [
-        "characterization",
-        "complex",
-        "cpoint",
-        "creal",
-        "integer",
-        "nat",
-        "rat"
-      ]
-    },
-    {
       "direct_reverse_theorem_reference_count": 75,
       "direct_theorem_dependency_count": 8,
       "kernel_declaration_id": "CReal.mul_one",
@@ -205,19 +205,7 @@
       ]
     },
     {
-      "direct_reverse_theorem_reference_count": 70,
-      "direct_theorem_dependency_count": 2,
-      "kernel_declaration_id": "CReal.mul_zero",
-      "review_status": "unreviewed",
-      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
-      "visible_in": [
-        "complex",
-        "cpoint",
-        "creal"
-      ]
-    },
-    {
-      "direct_reverse_theorem_reference_count": 70,
+      "direct_reverse_theorem_reference_count": 71,
       "direct_theorem_dependency_count": 0,
       "kernel_declaration_id": "Nat.le_succ_succ",
       "review_status": "unreviewed",
@@ -230,6 +218,18 @@
         "integer",
         "nat",
         "rat"
+      ]
+    },
+    {
+      "direct_reverse_theorem_reference_count": 70,
+      "direct_theorem_dependency_count": 2,
+      "kernel_declaration_id": "CReal.mul_zero",
+      "review_status": "unreviewed",
+      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
       ]
     },
     {
@@ -445,20 +445,7 @@
       ]
     },
     {
-      "direct_reverse_theorem_reference_count": 41,
-      "direct_theorem_dependency_count": 10,
-      "kernel_declaration_id": "Rat.add_assoc",
-      "review_status": "unreviewed",
-      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
-      "visible_in": [
-        "complex",
-        "cpoint",
-        "creal",
-        "rat"
-      ]
-    },
-    {
-      "direct_reverse_theorem_reference_count": 41,
+      "direct_reverse_theorem_reference_count": 42,
       "direct_theorem_dependency_count": 1,
       "kernel_declaration_id": "Int.mul_comm",
       "review_status": "unreviewed",
@@ -469,6 +456,19 @@
         "cpoint",
         "creal",
         "integer",
+        "rat"
+      ]
+    },
+    {
+      "direct_reverse_theorem_reference_count": 41,
+      "direct_theorem_dependency_count": 10,
+      "kernel_declaration_id": "Rat.add_assoc",
+      "review_status": "unreviewed",
+      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
         "rat"
       ]
     },
@@ -549,7 +549,7 @@
       ]
     },
     {
-      "direct_reverse_theorem_reference_count": 35,
+      "direct_reverse_theorem_reference_count": 36,
       "direct_theorem_dependency_count": 5,
       "kernel_declaration_id": "CReal.ofRat_le",
       "review_status": "unreviewed",
@@ -561,7 +561,7 @@
       ]
     },
     {
-      "direct_reverse_theorem_reference_count": 35,
+      "direct_reverse_theorem_reference_count": 36,
       "direct_theorem_dependency_count": 5,
       "kernel_declaration_id": "Int.mul_assoc",
       "review_status": "unreviewed",
@@ -587,8 +587,8 @@
     },
     {
       "direct_reverse_theorem_reference_count": 33,
-      "direct_theorem_dependency_count": 0,
-      "kernel_declaration_id": "Nat.add_assoc",
+      "direct_theorem_dependency_count": 2,
+      "kernel_declaration_id": "Nat.mul_comm",
       "review_status": "unreviewed",
       "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
       "visible_in": [
@@ -602,9 +602,9 @@
       ]
     },
     {
-      "direct_reverse_theorem_reference_count": 32,
-      "direct_theorem_dependency_count": 2,
-      "kernel_declaration_id": "Nat.mul_comm",
+      "direct_reverse_theorem_reference_count": 33,
+      "direct_theorem_dependency_count": 0,
+      "kernel_declaration_id": "Nat.add_assoc",
       "review_status": "unreviewed",
       "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
       "visible_in": [
@@ -706,6 +706,22 @@
     },
     {
       "direct_reverse_theorem_reference_count": 29,
+      "direct_theorem_dependency_count": 5,
+      "kernel_declaration_id": "Nat.one_le_mul",
+      "review_status": "unreviewed",
+      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
+      "visible_in": [
+        "characterization",
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "direct_reverse_theorem_reference_count": 29,
       "direct_theorem_dependency_count": 4,
       "kernel_declaration_id": "Rat.mul_one",
       "review_status": "unreviewed",
@@ -784,8 +800,8 @@
     },
     {
       "direct_reverse_theorem_reference_count": 28,
-      "direct_theorem_dependency_count": 5,
-      "kernel_declaration_id": "Nat.one_le_mul",
+      "direct_theorem_dependency_count": 1,
+      "kernel_declaration_id": "Nat.mul_assoc",
       "review_status": "unreviewed",
       "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
       "visible_in": [
@@ -850,22 +866,6 @@
       ]
     },
     {
-      "direct_reverse_theorem_reference_count": 27,
-      "direct_theorem_dependency_count": 1,
-      "kernel_declaration_id": "Nat.mul_assoc",
-      "review_status": "unreviewed",
-      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
-      "visible_in": [
-        "characterization",
-        "complex",
-        "cpoint",
-        "creal",
-        "integer",
-        "nat",
-        "rat"
-      ]
-    },
-    {
       "direct_reverse_theorem_reference_count": 26,
       "direct_theorem_dependency_count": 5,
       "kernel_declaration_id": "Rat.natDivSucc_halve",
@@ -875,6 +875,22 @@
         "complex",
         "cpoint",
         "creal",
+        "rat"
+      ]
+    },
+    {
+      "direct_reverse_theorem_reference_count": 26,
+      "direct_theorem_dependency_count": 3,
+      "kernel_declaration_id": "Nat.one_mul",
+      "review_status": "unreviewed",
+      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
+      "visible_in": [
+        "characterization",
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
         "rat"
       ]
     },
@@ -913,22 +929,6 @@
         "complex",
         "cpoint",
         "creal",
-        "rat"
-      ]
-    },
-    {
-      "direct_reverse_theorem_reference_count": 25,
-      "direct_theorem_dependency_count": 3,
-      "kernel_declaration_id": "Nat.one_mul",
-      "review_status": "unreviewed",
-      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
-      "visible_in": [
-        "characterization",
-        "complex",
-        "cpoint",
-        "creal",
-        "integer",
-        "nat",
         "rat"
       ]
     },
@@ -1371,6 +1371,19 @@
     },
     {
       "direct_reverse_theorem_reference_count": 16,
+      "direct_theorem_dependency_count": 5,
+      "kernel_declaration_id": "Rat.normalize_cross",
+      "review_status": "unreviewed",
+      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "rat"
+      ]
+    },
+    {
+      "direct_reverse_theorem_reference_count": 16,
       "direct_theorem_dependency_count": 3,
       "kernel_declaration_id": "CPoint.Scalar.twoPosBound",
       "review_status": "unreviewed",
@@ -1455,19 +1468,6 @@
     },
     {
       "direct_reverse_theorem_reference_count": 15,
-      "direct_theorem_dependency_count": 5,
-      "kernel_declaration_id": "Rat.normalize_cross",
-      "review_status": "unreviewed",
-      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
-      "visible_in": [
-        "complex",
-        "cpoint",
-        "creal",
-        "rat"
-      ]
-    },
-    {
-      "direct_reverse_theorem_reference_count": 15,
       "direct_theorem_dependency_count": 2,
       "kernel_declaration_id": "CReal.abs_congr",
       "review_status": "unreviewed",
@@ -1476,6 +1476,22 @@
         "complex",
         "cpoint",
         "creal"
+      ]
+    },
+    {
+      "direct_reverse_theorem_reference_count": 15,
+      "direct_theorem_dependency_count": 2,
+      "kernel_declaration_id": "Nat.mul_le_mul_left",
+      "review_status": "unreviewed",
+      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
+      "visible_in": [
+        "characterization",
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
       ]
     },
     {
@@ -1557,17 +1573,14 @@
     },
     {
       "direct_reverse_theorem_reference_count": 14,
-      "direct_theorem_dependency_count": 2,
-      "kernel_declaration_id": "Nat.mul_le_mul_left",
+      "direct_theorem_dependency_count": 3,
+      "kernel_declaration_id": "Rat.int_mul_le_mul_right",
       "review_status": "unreviewed",
       "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
       "visible_in": [
-        "characterization",
         "complex",
         "cpoint",
         "creal",
-        "integer",
-        "nat",
         "rat"
       ]
     },
@@ -1703,19 +1716,6 @@
         "creal",
         "integer",
         "nat",
-        "rat"
-      ]
-    },
-    {
-      "direct_reverse_theorem_reference_count": 13,
-      "direct_theorem_dependency_count": 3,
-      "kernel_declaration_id": "Rat.int_mul_le_mul_right",
-      "review_status": "unreviewed",
-      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
-      "visible_in": [
-        "complex",
-        "cpoint",
-        "creal",
         "rat"
       ]
     },
@@ -2146,6 +2146,19 @@
     },
     {
       "direct_reverse_theorem_reference_count": 10,
+      "direct_theorem_dependency_count": 7,
+      "kernel_declaration_id": "Rat.int_le_of_mul_le_mul_right",
+      "review_status": "unreviewed",
+      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal",
+        "rat"
+      ]
+    },
+    {
+      "direct_reverse_theorem_reference_count": 10,
       "direct_theorem_dependency_count": 5,
       "kernel_declaration_id": "Rat.neg_add",
       "review_status": "unreviewed",
@@ -2374,19 +2387,6 @@
       "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
       "visible_in": [
         "cpoint"
-      ]
-    },
-    {
-      "direct_reverse_theorem_reference_count": 9,
-      "direct_theorem_dependency_count": 7,
-      "kernel_declaration_id": "Rat.int_le_of_mul_le_mul_right",
-      "review_status": "unreviewed",
-      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
-      "visible_in": [
-        "complex",
-        "cpoint",
-        "creal",
-        "rat"
       ]
     },
     {
@@ -4827,6 +4827,22 @@
     },
     {
       "direct_reverse_theorem_reference_count": 3,
+      "direct_theorem_dependency_count": 6,
+      "kernel_declaration_id": "Nat.pow_pos",
+      "review_status": "unreviewed",
+      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
+      "visible_in": [
+        "characterization",
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "direct_reverse_theorem_reference_count": 3,
       "direct_theorem_dependency_count": 5,
       "kernel_declaration_id": "Complex.mul_sumRange",
       "review_status": "unreviewed",
@@ -6144,22 +6160,6 @@
     {
       "direct_reverse_theorem_reference_count": 2,
       "direct_theorem_dependency_count": 6,
-      "kernel_declaration_id": "Nat.pow_pos",
-      "review_status": "unreviewed",
-      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
-      "visible_in": [
-        "characterization",
-        "complex",
-        "cpoint",
-        "creal",
-        "integer",
-        "nat",
-        "rat"
-      ]
-    },
-    {
-      "direct_reverse_theorem_reference_count": 2,
-      "direct_theorem_dependency_count": 6,
       "kernel_declaration_id": "Rat.variance_smul",
       "review_status": "unreviewed",
       "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
@@ -6325,6 +6325,22 @@
       "direct_reverse_theorem_reference_count": 2,
       "direct_theorem_dependency_count": 4,
       "kernel_declaration_id": "Nat.le_of_mul_le_mul_left",
+      "review_status": "unreviewed",
+      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
+      "visible_in": [
+        "characterization",
+        "complex",
+        "cpoint",
+        "creal",
+        "integer",
+        "nat",
+        "rat"
+      ]
+    },
+    {
+      "direct_reverse_theorem_reference_count": 2,
+      "direct_theorem_dependency_count": 4,
+      "kernel_declaration_id": "Nat.one_le_factorial",
       "review_status": "unreviewed",
       "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
       "visible_in": [
@@ -9353,22 +9369,6 @@
     {
       "direct_reverse_theorem_reference_count": 1,
       "direct_theorem_dependency_count": 4,
-      "kernel_declaration_id": "Nat.one_le_factorial",
-      "review_status": "unreviewed",
-      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
-      "visible_in": [
-        "characterization",
-        "complex",
-        "cpoint",
-        "creal",
-        "integer",
-        "nat",
-        "rat"
-      ]
-    },
-    {
-      "direct_reverse_theorem_reference_count": 1,
-      "direct_theorem_dependency_count": 4,
       "kernel_declaration_id": "Nat.one_le_left_of_mul",
       "review_status": "unreviewed",
       "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
@@ -11467,6 +11467,18 @@
       "direct_reverse_theorem_reference_count": 0,
       "direct_theorem_dependency_count": 16,
       "kernel_declaration_id": "CReal.equivAbsDiffLe",
+      "review_status": "unreviewed",
+      "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
+      "visible_in": [
+        "complex",
+        "cpoint",
+        "creal"
+      ]
+    },
+    {
+      "direct_reverse_theorem_reference_count": 0,
+      "direct_theorem_dependency_count": 16,
+      "kernel_declaration_id": "CReal.expTerm_le_geom",
       "review_status": "unreviewed",
       "selection_basis": "mechanical graph ordering only; no topic, proof technique, capability, or concept claim",
       "visible_in": [

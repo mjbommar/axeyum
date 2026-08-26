@@ -1,7 +1,7 @@
 # Axeyum overall vision and status review
 
 Date: 2026-08-26  
-Repository checkpoint: `12fd6fd13` (review lane; concurrent mathematics merged through `f00bf790c`)
+Repository checkpoint: `85efc8e72` (review lane; later mutable views include concurrent mathematics through `9b4952e60`)
 
 This review starts from executable code, generated artifacts, and recent Git
 history. Documentation is used to explain contracts, not as evidence that a
@@ -62,13 +62,13 @@ kernel and rejects unsupported or contaminated streams explicitly.
 
 The generated current projection measures:
 
-- 1,614 declarations;
-- 1,260 theorems;
+- 1,615 declarations;
+- 1,261 theorems;
 - 251 definitions;
 - 29 constructors, 22 inductives, and 22 recursors;
 - 30 declared axioms, all in the retained `AxReal` negative-control package;
-- 1,584 declarations with an empty measured footprint; and
-- 7,317 direct theorem-dependency edges.
+- 1,585 declarations with an empty measured footprint; and
+- 7,333 direct theorem-dependency edges.
 
 The constructive Nat, Int, Rat, CReal, Complex, logic, and string packages have
 zero measured trusted declarations. This is a narrower, differently engineered
@@ -94,8 +94,8 @@ Lean theorem does not upgrade a proofless SMT route.
 
 The ledger contains 698 propositions: 510 proved, 4 refuted, 2 computed, 179
 open, and 3 conjectured. Validation re-derives evidence and reports 609 rows
-with two or more independent checks. The lemma index covers all 1,260 kernel
-theorems and 7,317 direct edges; 397 theorems now link exactly to 398 ledger
+with two or more independent checks. The lemma index covers all 1,261 kernel
+theorems and 7,333 direct edges; 397 theorems now link exactly to 398 ledger
 facts. Six previously open Mathlib-derived records were reconciled to exact
 native theorem propositions through independently checked, operation-free
 transactions. This raised proved counts but received zero autonomous-production
