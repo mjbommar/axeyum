@@ -1279,6 +1279,14 @@ pub struct CRealPrelude {
     /// how [`Self::bucket_clamp_lower`] swaps [`Self::bucket_clamp_upper`]'s
     /// own `(n, j)` to `(j, n)`. See `creal/uniform_continuity.rs`.
     pub sample_lower_bound: NameId,
+    /// `CReal.bounded_of_uniformly_continuous : ∀ F a b, UniformlyContinuousOn
+    /// F a b → CReal.le a b → CReal.BoundedOn F a b K` for a COMPUTED `K`
+    /// (never `Exists`-elimination — `K` is one Nat expression built from
+    /// `F`, `a`, `b`, `huc` alone, so it is the SAME constant for every `z`).
+    /// Spivak ch.7: a function uniformly continuous on `[a,b]` is bounded
+    /// there. See `creal/uniform_continuity.rs`'s own
+    /// `declare_bounded_of_uniformly_continuous` for the covering argument.
+    pub bounded_of_uniformly_continuous: NameId,
     /// `CReal.ratSqLe : ∀ (u s : Rat), Rat.le (u*u) (s*s) → Rat.le Rat.zero s
     /// → Rat.le u s` — a purely rational fact (no `CReal` structure), proved
     /// via `Rat.mul_pos` and a difference-of-squares identity rather than a
@@ -3417,6 +3425,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         bucket_index_bound: kernel.name_str(creal, "bucketIndexBound"),
         sample_upper_bound: kernel.name_str(creal, "sampleUpperBound"),
         sample_lower_bound: kernel.name_str(creal, "sampleLowerBound"),
+        bounded_of_uniformly_continuous: kernel.name_str(creal, "bounded_of_uniformly_continuous"),
         rat_sq_le: kernel.name_str(creal, "ratSqLe"),
         rat_sq_sandwich: kernel.name_str(creal, "ratSqSandwich"),
         rat_index_ratio_le_one: kernel.name_str(creal, "ratIndexRatioLeOne"),
@@ -3699,6 +3708,13 @@ pub(crate) fn build_creal_prelude_uncached(
         // doc comment for why this cannot instead move earlier, next to
         // `declare_uniform_continuity`.
         uniform_continuity::declare_uniform_continuity_products(&mut d, prelude)?;
+        // `bounded_of_uniformly_continuous` needs `CReal.BoundedOn`
+        // (`derivative::declare_derivative`, above) and everything
+        // `declare_uniform_continuity_products` just declared
+        // (`uniformly_continuous_mul`/`_sq`, `bounded_on_id_unit`), but
+        // nothing from `series.rs`/`monotone.rs` -- so it lands here rather
+        // than waiting for the third `uniform_continuity` entry point below.
+        uniform_continuity::declare_bounded_of_uniformly_continuous(&mut d, prelude)?;
         mul_self_zero::declare_mul_self_zero(&mut d, prelude)?;
         sqrt::declare_sqrt(&mut d, prelude)?;
         speedup::declare_speedup(&mut d, prelude)?;
