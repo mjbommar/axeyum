@@ -72,7 +72,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 293] = [
+    let expected: [(&str, crate::NameId, &str); 294] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -876,6 +876,18 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         (
             "CReal.reblockBlock_eq_fineBlockSum",
             p.reblock_block_eq_fine_block_sum,
+            "theorem",
+        ),
+        // Roadmap step 4 toward `riemannSum_cauchy` (`creal/integral.rs`):
+        // the outer fold over all `Nat.succ m` coarse blocks, gluing the
+        // REFINED `riemannSum F a b m_prime` to the coarse `riemannSum F a b
+        // m` via `sumRange_reblock` (transported along `succ_mul_succ`),
+        // `reblockBlock_eq_fineBlockSum` folded with `sum_range_congr_lt_proof`,
+        // and `fineBlockSum_close`'s own `±eps` sandwich folded with
+        // `sum_range_le`/`sum_range_add`/`sum_range_const`.
+        (
+            "CReal.riemannSum_reblock_close",
+            p.riemann_sum_reblock_close,
             "theorem",
         ),
     ];

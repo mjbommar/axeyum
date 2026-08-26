@@ -6382,3 +6382,626 @@ mod pointwise_block_equiv_tests {
         );
     }
 }
+
+// --- roadmap step 4: the outer fold over all `Nat.succ m` coarse blocks ---
+//
+// `CReal.reblockBlock_eq_fineBlockSum` (roadmap step 3) glues, EXACTLY, a
+// single coarse block `i`'s reblocked fine sum to `CReal.fineBlockSum_close`'s
+// own per-block sum. This section folds that identity, together with
+// `fineBlockSum_close`'s own `±eps` sandwich, over ALL `Nat.succ m` coarse
+// blocks at once:
+//
+// - `CReal.sumRange_reblock`, transported along `succ_mul_succ`'s witness
+//   (`Nat.succ m_prime` definitionally `(Nat.succ n)·(Nat.succ m)`),
+//   identifies the FULL reblocked sum with the REFINED `riemannSum F a b
+//   m_prime`'s own sum (`riemannSum`'s definition is exactly `sumRange
+//   (summand_fn F a delta) (Nat.succ _)`, see [`declare_riemann_sum`], so
+//   this and the coarse identification below are both by DEFEQ, no lemma
+//   needed at the top level).
+// - `reblockBlock_eq_fineBlockSum`'s exact per-block `Equiv`, folded over all
+//   `Nat.succ m` blocks by [`sum_range_congr_lt_proof`] (step 3's own bounded
+//   congruence induction, reused here rather than duplicated), identifies
+//   the reblocked sum with `fineBlockSum_close`'s own sum of per-block sums.
+// - `fineBlockSum_close`'s own `±eps` sandwich, folded over all `Nat.succ m`
+//   blocks with [`CRealPrelude::sum_range_le`] + [`CRealPrelude::sum_range_add`]
+//   + [`CRealPrelude::sum_range_const`], accumulates to `mul (ofNat (Nat.succ
+//   m)) epsTerm` -- the SAME `epsTerm` `fineBlockSum_close` already uses (it
+//   does not depend on the block index `i`, so no re-derivation is needed to
+//   sum it, only `CReal.sumRange_const` at the constant function).
+//
+// No error term accumulates from the first identification (it is an exact
+// `Equiv`, not an estimate); the only error entering here is
+// `fineBlockSum_close`'s own per-block `±eps`.
+//
+// Roadmap step 5 (assembling this into `riemannSum_cauchy` via
+// `CReal.within_of_two_sided_le`, choosing `e` large enough as a function of
+// the target accuracy) is explicitly NOT attempted here.
+
+/// `fun i => sumRange (summand_fn F (sample_point a delta_m i) delta_fine)
+/// sn` -- the per-block fine sub-sum `CReal.fineBlockSum_close`'s own
+/// `blockSum` produces, as a function of the coarse block index `i`.
+fn block_sum_fn(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    a: ExprId,
+    delta_m: ExprId,
+    delta_fine: ExprId,
+    sn: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let base_i = sample_point(d, p, a, delta_m, i);
+    let block_summand = summand_fn(d, p, f, base_i, delta_fine);
+    let block_sum = d.const_app(p.sum_range, &[block_summand, sn]);
+    d.lam_fv(i_fv, nat, block_sum)
+}
+
+/// `(blockSum, coarseTerm, epsTerm)` at a fixed block index `i` -- rebuilt
+/// the same way [`declare_fine_block_sum_close`] builds them internally, so
+/// extracting either half of its `And` conclusion at `i` type-checks against
+/// exactly these terms.
+fn block_triple_at(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    a: ExprId,
+    delta_m: ExprId,
+    delta_fine: ExprId,
+    eps_embed: ExprId,
+    sn: ExprId,
+    i: ExprId,
+) -> (ExprId, ExprId, ExprId) {
+    let base_i = sample_point(d, p, a, delta_m, i);
+    let fbase = d.apply(f, &[base_i]);
+    let block_summand = summand_fn(d, p, f, base_i, delta_fine);
+    let block_sum = d.const_app(p.sum_range, &[block_summand, sn]);
+    let coarse_term = cmul(d, p, fbase, delta_m);
+    let eps_term = cmul(d, p, eps_embed, delta_m);
+    (block_sum, coarse_term, eps_term)
+}
+
+/// `fun i => add (f i) (g i)` -- pointwise sum of two `Nat -> CReal`
+/// functions. Reproduces the shape `series.rs`'s private `declare_sum_range_add`
+/// builds its own `combined_fn` in (that file is out of scope for edits in
+/// this slice), so `CReal.sumRange_add` applies against it directly once
+/// substituted at concrete `f`/`g`.
+fn pointwise_add_fn(d: &mut IntDev<'_>, p: CRealPrelude, f: ExprId, g: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let fi = d.apply(f, &[i]);
+    let gi = d.apply(g, &[i]);
+    let body = cadd(d, p, fi, gi);
+    d.lam_fv(i_fv, nat, body)
+}
+
+/// `CReal.riemannSum_reblock_close : ∀ F a b e m n, le a b →
+/// UniformlyContinuousOn F a b → Nat.le deep m → And (le (riemannSum F a b
+/// m_prime) (add (riemannSum F a b m) totalEps)) (le (riemannSum F a b m)
+/// (add (riemannSum F a b m_prime) totalEps))`, `deep`
+/// [`declare_fine_block_sum_close`]'s own Archimedean threshold, `m_prime`
+/// [`succ_mul_succ`]'s witness, `epsTerm := mul (embed (Rat.natDivSucc 1 e))
+/// delta_m` (`fineBlockSum_close`'s own per-block error term, independent of
+/// the block index) and `totalEps := mul (ofNat (Nat.succ m)) epsTerm`.
+///
+/// Roadmap step 4: the outer fold over all `Nat.succ m` coarse blocks. See
+/// this section's own header comment for the derivation and this module's
+/// top-level documentation for the overall roadmap. Roadmap step 5
+/// (assembling this into `riemannSum_cauchy` via
+/// [`CRealPrelude::within_of_two_sided_le`]) is explicitly NOT attempted
+/// here.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_riemann_sum_reblock_close(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let f_ty = fn_ty(d, p);
+    let logic = p.rat.int.logic;
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+
+    // `deep`, EXACTLY as `declare_fine_block_sum_close` computes it (same
+    // free variables `f, a, b, e, u` in scope, same helper calls).
+    let width = width_of(d, p, a, b);
+    let modulus_fn = d.const_app(p.uc_modulus, &[f, a, b, u]);
+    let outer = d.apply(modulus_fn, &[e]);
+    let (c, magnitude, _width_le_mag) = direct_bound_le(d, p, width);
+    let me = NatOps::mul(d, magnitude, outer);
+    let deep = NatOps::add(d, me, c);
+    let hge_ty = d.le(deep, m);
+    let hge_fv = d.fresh_fvar();
+    let hge = d.kernel().fvar(hge_fv);
+
+    // `m_prime`, the refined/fine mesh identity, the coarse mesh, block
+    // counts.
+    let (m_prime, succ_proof) = succ_mul_succ(d, n, m);
+    let (delta_m_prime, delta_fine, _delta_eq) = mesh_reblock_delta_eq(d, p, width, n, m, m_prime);
+    let delta_m = delta_of(d, p, a, b, m);
+    let sn = d.succ(n);
+    let sm = d.succ(m);
+
+    let g = summand_fn(d, p, f, a, delta_m_prime);
+    let reblock_g = reblock_block(d, p, g, sn);
+    let coarse_term_fn = summand_fn(d, p, f, a, delta_m);
+    let block_sum_fn_expr = block_sum_fn(d, p, f, a, delta_m, delta_fine, sn);
+
+    let one_nat = d.num(1);
+    let eps_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, e]);
+    let eps_embed = embed(d, p, eps_rat);
+    let eps_term = cmul(d, p, eps_embed, delta_m);
+
+    // --- glue the FULL reblocked sum to the REFINED `riemannSum`'s own sum:
+    // `Equiv (sumRange g (succ m_prime)) (sumRange reblock_g sm)`.
+    let reblock_proof = sum_range_reblock_proof(d, p, g, sn, sm);
+    let mul_sn_sm = NatOps::mul(d, sn, sm);
+    let succ_m_prime = d.succ(m_prime);
+    let reblock_g_sum = d.const_app(p.sum_range, &[reblock_g, sm]);
+    let motive1 = d.eq_motive(mul_sn_sm, &|d, x| {
+        let lhs = d.const_app(p.sum_range, &[g, x]);
+        equiv(d, p, lhs, reblock_g_sum)
+    });
+    let step1 = d.transport(mul_sn_sm, motive1, reblock_proof, succ_m_prime, succ_proof);
+    // step1 : Equiv (sumRange g (succ m_prime)) reblock_g_sum
+
+    // --- glue the reblocked sum to `fineBlockSum_close`'s own sum of
+    // per-block sums, EXACTLY, via `reblockBlock_eq_fineBlockSum` folded
+    // over all `sm` blocks with `sum_range_congr_lt_proof`.
+    let np = d.prelude();
+    let step2_hyp = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let hi_lt_ty = d.lt(i, sm);
+        let hi_lt_fv = d.fresh_fvar();
+        let hi_lt = d.kernel().fvar(hi_lt_fv);
+        let hi_le = d.lemma(np.le_of_succ_le_succ, &[i, m, hi_lt]);
+        let step3_applied = d.const_app(
+            p.reblock_block_eq_fine_block_sum,
+            &[f, a, b, m, n, i, hab, hi_le, u],
+        );
+        let inner = d.lam_fv(hi_lt_fv, hi_lt_ty, step3_applied);
+        d.lam_fv(i_fv, nat, inner)
+    };
+    let step2 = {
+        let proof_fn = sum_range_congr_lt_proof(d, p, reblock_g, block_sum_fn_expr, sm);
+        d.apply(proof_fn, &[step2_hyp])
+    };
+    // step2 : Equiv reblock_g_sum (sumRange block_sum_fn_expr sm)
+
+    let full_sum_g = d.const_app(p.sum_range, &[g, succ_m_prime]);
+    let block_sum_total = d.const_app(p.sum_range, &[block_sum_fn_expr, sm]);
+    let full_equiv = d.lemma(
+        p.equiv_trans,
+        &[full_sum_g, reblock_g_sum, block_sum_total, step1, step2],
+    );
+    // full_equiv : Equiv full_sum_g block_sum_total
+
+    // --- fold `fineBlockSum_close`'s per-block `±eps` sandwich over all `sm`
+    // blocks.
+    let const_eps_fn = const_nat_fn(d, eps_term);
+    let coarse_term_and_eps_fn = pointwise_add_fn(d, p, coarse_term_fn, const_eps_fn);
+    let block_sum_and_eps_fn = pointwise_add_fn(d, p, block_sum_fn_expr, const_eps_fn);
+
+    let upper_pointwise = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let hi_lt_ty = d.lt(i, sm);
+        let hi_lt_fv = d.fresh_fvar();
+        let hi_lt = d.kernel().fvar(hi_lt_fv);
+        let hi_le = d.lemma(np.le_of_succ_le_succ, &[i, m, hi_lt]);
+        let and_i = d.const_app(
+            p.fine_block_sum_close,
+            &[f, a, b, e, m, n, i, hab, u, hi_le, hge],
+        );
+        let (block_sum_i, coarse_term_i, eps_term_i) =
+            block_triple_at(d, p, f, a, delta_m, delta_fine, eps_embed, sn, i);
+        let coarse_plus_eps_i = cadd(d, p, coarse_term_i, eps_term_i);
+        let block_sum_plus_eps_i = cadd(d, p, block_sum_i, eps_term_i);
+        let upper_ty_i = cle(d, p, block_sum_i, coarse_plus_eps_i);
+        let lower_ty_i = cle(d, p, coarse_term_i, block_sum_plus_eps_i);
+        let upper_i = d.const_app(logic.and_left, &[upper_ty_i, lower_ty_i, and_i]);
+        let inner = d.lam_fv(hi_lt_fv, hi_lt_ty, upper_i);
+        d.lam_fv(i_fv, nat, inner)
+    };
+    let lower_pointwise = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let hi_lt_ty = d.lt(i, sm);
+        let hi_lt_fv = d.fresh_fvar();
+        let hi_lt = d.kernel().fvar(hi_lt_fv);
+        let hi_le = d.lemma(np.le_of_succ_le_succ, &[i, m, hi_lt]);
+        let and_i = d.const_app(
+            p.fine_block_sum_close,
+            &[f, a, b, e, m, n, i, hab, u, hi_le, hge],
+        );
+        let (block_sum_i, coarse_term_i, eps_term_i) =
+            block_triple_at(d, p, f, a, delta_m, delta_fine, eps_embed, sn, i);
+        let coarse_plus_eps_i = cadd(d, p, coarse_term_i, eps_term_i);
+        let block_sum_plus_eps_i = cadd(d, p, block_sum_i, eps_term_i);
+        let upper_ty_i = cle(d, p, block_sum_i, coarse_plus_eps_i);
+        let lower_ty_i = cle(d, p, coarse_term_i, block_sum_plus_eps_i);
+        let lower_i = d.const_app(logic.and_right, &[upper_ty_i, lower_ty_i, and_i]);
+        let inner = d.lam_fv(hi_lt_fv, hi_lt_ty, lower_i);
+        d.lam_fv(i_fv, nat, inner)
+    };
+
+    let upper_sum_le = d.lemma(
+        p.sum_range_le,
+        &[
+            block_sum_fn_expr,
+            coarse_term_and_eps_fn,
+            sm,
+            upper_pointwise,
+        ],
+    );
+    // upper_sum_le : le block_sum_total (sumRange coarse_term_and_eps_fn sm)
+    let lower_sum_le = d.lemma(
+        p.sum_range_le,
+        &[coarse_term_fn, block_sum_and_eps_fn, sm, lower_pointwise],
+    );
+    // lower_sum_le : le (sumRange coarse_term_fn sm) (sumRange block_sum_and_eps_fn sm)
+
+    let coarse_sum_total = d.const_app(p.sum_range, &[coarse_term_fn, sm]);
+    let const_eps_sum = d.const_app(p.sum_range, &[const_eps_fn, sm]);
+    let const_sum_eps = d.lemma(p.sum_range_const, &[eps_term, m]);
+    // const_sum_eps : Equiv const_eps_sum (mul (ofNat sm) eps_term)
+    let sm_real = d.const_app(p.of_nat, &[sm]);
+    let total_eps = cmul(d, p, sm_real, eps_term);
+
+    // --- upper: le block_sum_total (add coarse_sum_total total_eps) -------
+    let upper_final = {
+        let sum_add = d.lemma(p.sum_range_add, &[coarse_term_fn, const_eps_fn, sm]);
+        // sum_add : Equiv (sumRange coarse_term_and_eps_fn sm) (add
+        //   coarse_sum_total const_eps_sum)
+        let coarse_plus_eps_sum = cadd(d, p, coarse_sum_total, const_eps_sum);
+        let coarse_plus_total_eps = cadd(d, p, coarse_sum_total, total_eps);
+        let refl_coarse = d.lemma(p.equiv_refl, &[coarse_sum_total]);
+        let rhs_step = d.lemma(
+            p.add_congr,
+            &[
+                coarse_sum_total,
+                coarse_sum_total,
+                const_eps_sum,
+                total_eps,
+                refl_coarse,
+                const_sum_eps,
+            ],
+        );
+        let rhs_sum = d.const_app(p.sum_range, &[coarse_term_and_eps_fn, sm]);
+        let rhs_chain = echain(
+            d,
+            p,
+            rhs_sum,
+            &[
+                (coarse_plus_eps_sum, sum_add),
+                (coarse_plus_total_eps, rhs_step),
+            ],
+        );
+        let refl_block_sum_total = d.lemma(p.equiv_refl, &[block_sum_total]);
+        d.lemma(
+            p.le_congr,
+            &[
+                block_sum_total,
+                block_sum_total,
+                rhs_sum,
+                coarse_plus_total_eps,
+                refl_block_sum_total,
+                rhs_chain,
+                upper_sum_le,
+            ],
+        )
+    };
+    // upper_final : le block_sum_total (add coarse_sum_total total_eps)
+
+    // --- lower: le coarse_sum_total (add block_sum_total total_eps) -------
+    let lower_final = {
+        let sum_add = d.lemma(p.sum_range_add, &[block_sum_fn_expr, const_eps_fn, sm]);
+        // sum_add : Equiv (sumRange block_sum_and_eps_fn sm) (add
+        //   block_sum_total const_eps_sum)
+        let block_sum_plus_eps_sum = cadd(d, p, block_sum_total, const_eps_sum);
+        let block_sum_plus_total_eps = cadd(d, p, block_sum_total, total_eps);
+        let refl_block_sum = d.lemma(p.equiv_refl, &[block_sum_total]);
+        let rhs_step = d.lemma(
+            p.add_congr,
+            &[
+                block_sum_total,
+                block_sum_total,
+                const_eps_sum,
+                total_eps,
+                refl_block_sum,
+                const_sum_eps,
+            ],
+        );
+        let rhs_sum = d.const_app(p.sum_range, &[block_sum_and_eps_fn, sm]);
+        let rhs_chain = echain(
+            d,
+            p,
+            rhs_sum,
+            &[
+                (block_sum_plus_eps_sum, sum_add),
+                (block_sum_plus_total_eps, rhs_step),
+            ],
+        );
+        let refl_coarse_sum_total = d.lemma(p.equiv_refl, &[coarse_sum_total]);
+        d.lemma(
+            p.le_congr,
+            &[
+                coarse_sum_total,
+                coarse_sum_total,
+                rhs_sum,
+                block_sum_plus_total_eps,
+                refl_coarse_sum_total,
+                rhs_chain,
+                lower_sum_le,
+            ],
+        )
+    };
+    // lower_final : le coarse_sum_total (add block_sum_total total_eps)
+
+    // --- swap `block_sum_total` for `full_sum_g` (Equiv, from `full_equiv`)
+    // -- both are DEFEQ to `riemannSum F a b m_prime`/`riemannSum F a b m`
+    // respectively, so the final `ty` below can state the conclusion
+    // directly in terms of `riemannSum`.
+    let full_equiv_symm = d.lemma(p.equiv_symm, &[full_sum_g, block_sum_total, full_equiv]);
+    // full_equiv_symm : Equiv block_sum_total full_sum_g
+
+    let coarse_plus_total_eps = cadd(d, p, coarse_sum_total, total_eps);
+    let upper_result = {
+        let refl_rhs = d.lemma(p.equiv_refl, &[coarse_plus_total_eps]);
+        d.lemma(
+            p.le_congr,
+            &[
+                block_sum_total,
+                full_sum_g,
+                coarse_plus_total_eps,
+                coarse_plus_total_eps,
+                full_equiv_symm,
+                refl_rhs,
+                upper_final,
+            ],
+        )
+    };
+    // upper_result : le full_sum_g coarse_plus_total_eps
+
+    let full_sum_g_plus_total_eps = cadd(d, p, full_sum_g, total_eps);
+    let lower_result = {
+        let block_sum_plus_total_eps = cadd(d, p, block_sum_total, total_eps);
+        let refl_total_eps = d.lemma(p.equiv_refl, &[total_eps]);
+        let rhs_step = d.lemma(
+            p.add_congr,
+            &[
+                block_sum_total,
+                full_sum_g,
+                total_eps,
+                total_eps,
+                full_equiv_symm,
+                refl_total_eps,
+            ],
+        );
+        let refl_coarse_lhs = d.lemma(p.equiv_refl, &[coarse_sum_total]);
+        d.lemma(
+            p.le_congr,
+            &[
+                coarse_sum_total,
+                coarse_sum_total,
+                block_sum_plus_total_eps,
+                full_sum_g_plus_total_eps,
+                refl_coarse_lhs,
+                rhs_step,
+                lower_final,
+            ],
+        )
+    };
+    // lower_result : le coarse_sum_total full_sum_g_plus_total_eps
+
+    let rsum_m_prime = rsum(d, p, f, a, b, m_prime);
+    let rsum_m = rsum(d, p, f, a, b, m);
+    let rsum_m_plus_total_eps = cadd(d, p, rsum_m, total_eps);
+    let rsum_m_prime_plus_total_eps = cadd(d, p, rsum_m_prime, total_eps);
+    let upper_ty = cle(d, p, rsum_m_prime, rsum_m_plus_total_eps);
+    let lower_ty = cle(d, p, rsum_m, rsum_m_prime_plus_total_eps);
+    let conclusion_proof = and_intro(d, p, upper_ty, lower_ty, upper_result, lower_result);
+
+    let ty = {
+        let and_ty = d.const_app(logic.and, &[upper_ty, lower_ty]);
+        let after_hge = d.arrow(hge_ty, and_ty);
+        let after_u = d.pi_fv(u_fv, u_ty, after_hge);
+        let after_hab = d.arrow(hab_ty, after_u);
+        let over_n = d.pi_fv(n_fv, nat, after_hab);
+        let over_m = d.pi_fv(m_fv, nat, over_n);
+        let over_e = d.pi_fv(e_fv, nat, over_m);
+        let over_b = d.pi_fv(b_fv, carrier, over_e);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        d.pi_fv(f_fv, f_ty, over_a)
+    };
+    let value = {
+        let with_hge = d.lam_fv(hge_fv, hge_ty, conclusion_proof);
+        let with_u = d.lam_fv(u_fv, u_ty, with_hge);
+        let with_hab = d.lam_fv(hab_fv, hab_ty, with_u);
+        let over_n = d.lam_fv(n_fv, nat, with_hab);
+        let over_m = d.lam_fv(m_fv, nat, over_n);
+        let over_e = d.lam_fv(e_fv, nat, over_m);
+        let over_b = d.lam_fv(b_fv, carrier, over_e);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        d.lam_fv(f_fv, f_ty, over_a)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.riemann_sum_reblock_close,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+#[cfg(test)]
+mod riemann_sum_reblock_close_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// **Mandatory concrete instantiation, with a negative control.**
+    /// `F := identity`, `a := ofNat 0`, `b := ofNat 1`, `e := 0`, `m := 2`,
+    /// `n := 1` (`m != n`, per this slice's own caution about
+    /// transposed-argument defects). `hab` and `hge` are left ASSUMED (free
+    /// hypotheses) -- proving them numerically needs `CReal.bound`
+    /// computation this declaration's own TYPE does not need, the same
+    /// choice `fine_block_sum_close_tests` makes -- so what this test checks
+    /// is exactly the declaration's own promise: applying it at these
+    /// literals yields a term whose type is the expected concrete `And`
+    /// conclusion, independently reconstructed from the same
+    /// `rsum`/`succ_mul_succ`/`delta_of` building blocks the real
+    /// declaration uses. `u := CReal.uniformly_continuous_id a b` is a REAL
+    /// witness, not a placeholder.
+    ///
+    /// The negative control swaps `totalEps := mul (ofNat (succ m)) epsTerm`
+    /// for the UNDOUBLED `epsTerm` -- the natural "forgot to multiply by the
+    /// block count" bug -- and confirms the SAME proof is REFUSED against
+    /// that conclusion. At `m := 2` (`succ m = 3`) `totalEps` and `epsTerm`
+    /// are genuinely different `CReal` literals (a `3x` vs `1x` scaling), so
+    /// this is not a vacuous check.
+    #[test]
+    fn riemann_sum_reblock_close_applies_at_concrete_literals() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+
+        let identity = {
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            d.lam_fv(x_fv, carrier, x)
+        };
+
+        let zero_nat = d.num(0);
+        let one_nat_lit = d.num(1);
+        let a = d.const_app(p.of_nat, &[zero_nat]);
+        let b = d.const_app(p.of_nat, &[one_nat_lit]);
+        let e = d.num(0);
+        let m = d.num(2);
+        let n = d.num(1);
+
+        let u = d.const_app(p.uniformly_continuous_id, &[a, b]);
+
+        let hab_ty = cle(&mut d, p, a, b);
+        let hab_fv = d.fresh_fvar();
+        let hab = d.kernel().fvar(hab_fv);
+
+        // `deep`, the same way the real declaration computes it.
+        let modulus_fn = d.const_app(p.uc_modulus, &[identity, a, b, u]);
+        let outer = d.apply(modulus_fn, &[e]);
+        let width = width_of(&mut d, p, a, b);
+        let (c, magnitude, _width_le_mag) = direct_bound_le(&mut d, p, width);
+        let me = NatOps::mul(&mut d, magnitude, outer);
+        let deep = NatOps::add(&mut d, me, c);
+        let hge_ty = d.le(deep, m);
+        let hge_fv = d.fresh_fvar();
+        let hge = d.kernel().fvar(hge_fv);
+
+        let applied = d.const_app(
+            p.riemann_sum_reblock_close,
+            &[identity, a, b, e, m, n, hab, u, hge],
+        );
+
+        // Independently reconstruct the expected conclusion.
+        let (m_prime, _succ_proof) = succ_mul_succ(&mut d, n, m);
+        let rsum_m_prime = rsum(&mut d, p, identity, a, b, m_prime);
+        let rsum_m = rsum(&mut d, p, identity, a, b, m);
+
+        let delta_m = delta_of(&mut d, p, a, b, m);
+        let one_nat = d.num(1);
+        let eps_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, e]);
+        let eps_embed = embed(&mut d, p, eps_rat);
+        let eps_term = cmul(&mut d, p, eps_embed, delta_m);
+        let sm = d.succ(m);
+        let sm_real = d.const_app(p.of_nat, &[sm]);
+        let total_eps = cmul(&mut d, p, sm_real, eps_term);
+
+        let rsum_m_plus_total_eps = cadd(&mut d, p, rsum_m, total_eps);
+        let rsum_m_prime_plus_total_eps = cadd(&mut d, p, rsum_m_prime, total_eps);
+        let upper_ty = cle(&mut d, p, rsum_m_prime, rsum_m_plus_total_eps);
+        let lower_ty = cle(&mut d, p, rsum_m, rsum_m_prime_plus_total_eps);
+        let logic = p.rat.int.logic;
+        let expected = d.const_app(logic.and, &[upper_ty, lower_ty]);
+
+        let ty = {
+            let after_hge = d.arrow(hge_ty, expected);
+            d.arrow(hab_ty, after_hge)
+        };
+        let value = {
+            let with_hge = d.lam_fv(hge_fv, hge_ty, applied);
+            d.lam_fv(hab_fv, hab_ty, with_hge)
+        };
+
+        let anon = d.kernel().anon();
+        let name_ok = d
+            .kernel()
+            .name_str(anon, "__riemannSumReblockCloseConcreteOk");
+        let result_ok = d.kernel().add_declaration(Declaration::Theorem {
+            name: name_ok,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(
+            result_ok.is_ok(),
+            "riemann_sum_reblock_close at (identity, 0, 1, e=0, m=2, n=1) \
+             must have the expected conclusion type: {:?}",
+            result_ok.err()
+        );
+
+        // Negative control: swap `total_eps` for the UNDOUBLED `eps_term`.
+        let rsum_m_plus_eps_term = cadd(&mut d, p, rsum_m, eps_term);
+        let rsum_m_prime_plus_eps_term = cadd(&mut d, p, rsum_m_prime, eps_term);
+        let wrong_upper_ty = cle(&mut d, p, rsum_m_prime, rsum_m_plus_eps_term);
+        let wrong_lower_ty = cle(&mut d, p, rsum_m, rsum_m_prime_plus_eps_term);
+        let wrong_expected = d.const_app(logic.and, &[wrong_upper_ty, wrong_lower_ty]);
+        let wrong_ty = {
+            let after_hge = d.arrow(hge_ty, wrong_expected);
+            d.arrow(hab_ty, after_hge)
+        };
+        let wrong_value = {
+            let with_hge = d.lam_fv(hge_fv, hge_ty, applied);
+            d.lam_fv(hab_fv, hab_ty, with_hge)
+        };
+        let name_bad = d
+            .kernel()
+            .name_str(anon, "__riemannSumReblockCloseConcreteBad");
+        let result_bad = d.kernel().add_declaration(Declaration::Theorem {
+            name: name_bad,
+            uparams: vec![],
+            ty: wrong_ty,
+            value: wrong_value,
+        });
+        assert!(
+            result_bad.is_err(),
+            "the SAME proof must be REFUSED against a conclusion using the \
+             UNDOUBLED epsTerm instead of totalEps"
+        );
+    }
+}
