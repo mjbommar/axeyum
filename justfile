@@ -516,10 +516,19 @@ autogenesis-open-lemma-candidate-ranking:
 autogenesis-ranked-proposition-census:
     cargo build -q -p axeyum-lean-import --example proposition_compatibility_audit
     python3 scripts/gen-autogenesis-ranked-proposition-census.py --ranking artifacts/autogenesis/open-lemma-candidate-ranking-pre-reconciliation-v1.json --check
+    python3 scripts/gen-autogenesis-ranked-proposition-census.py --ranking artifacts/autogenesis/open-lemma-candidate-ranking-post-reconciliation-v1.json --output artifacts/autogenesis/open-ranked-proposition-census-v2.json --allow-population-subset --check
+
+autogenesis-open-fixed-palette-census:
+    uv run --no-sync python -m unittest scripts.tests.test_measure_autogenesis_open_fixed_palette
+    uv run --no-sync python scripts/measure-autogenesis-open-fixed-palette.py --population artifacts/autogenesis/open-ranked-proposition-census-v2.json --must-decline-population artifacts/autogenesis/must-decline-mutations-v1.json --capsule-directory /nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1 --output artifacts/autogenesis/open-fixed-palette-census-v2.json --check
 
 autogenesis-proposition-reconciliation-proposals:
     python3 -m unittest scripts.tests.test_prepare_autogenesis_fact_transaction
-    python3 scripts/gen-autogenesis-proposition-reconciliation-proposals.py --check
+    python3 scripts/check-autogenesis-proposition-reconciliation-result.py
+
+autogenesis-proposition-reconciliation-result:
+    python3 -m unittest scripts.tests.test_prepare_autogenesis_fact_transaction scripts.tests.test_apply_autogenesis_fact_transaction
+    python3 scripts/check-autogenesis-proposition-reconciliation-result.py
 
 autogenesis-kernel-projection:
     python3 -m unittest scripts.tests.test_validate_autogenesis_kernel_projection

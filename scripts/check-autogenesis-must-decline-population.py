@@ -9,12 +9,12 @@ been evaluated only on statements that are TRUE, so a producer that admitted
 *anything at all* would have looked successful. There was no statement in the
 evaluation population marked "this MUST be declined".
 
-`artifacts/autogenesis/nursery-v1.json` already contains 12 rows with
+`artifacts/autogenesis/nursery-v1.json` contains 12 rows with
 `provenance_class: generated-mutation` -- deliberately corrupted variants of
-real, proved Mathlib propositions. Nine of them sit in the train/development
-partitions (the other three are held-out and are never referenced here or
+real, proved Mathlib propositions. Ten of them sit in the train/development
+partitions (the other two are held-out and are never referenced here or
 anywhere else outside the two files that define that population -- see
-`scripts/check-autogenesis-holdout-isolation.py`). Every one of those nine is
+`scripts/check-autogenesis-holdout-isolation.py`). Every one of those ten is
 FALSE, each by a concrete, hand-checkable counterexample:
 `artifacts/autogenesis/must-decline-mutations-v1.json` records the witness and
 this script independently RECOMPUTES it -- the JSON is not trusted on its own.
@@ -84,6 +84,18 @@ def nat_factorial(n: int) -> int:
     return result
 
 
+def nat_choose(n: int, k: int) -> int:
+    if n < 0 or k < 0:
+        raise MustDeclineError("nat_choose: negative argument")
+    if k > n:
+        return 0
+    k = min(k, n - k)
+    result = 1
+    for i in range(1, k + 1):
+        result = result * (n - k + i) // i
+    return result
+
+
 def nat_gcd(a: int, b: int) -> int:
     a, b = abs(a), abs(b)
     while b:
@@ -115,6 +127,7 @@ CHECKS = {
         is_prime(w["p"]) and not (nat_pred(w["p"]) > 1)
     ),
     "factorial_polarity_reversed": lambda w: nat_factorial(w["n"]) != 0,
+    "choose_self_polarity_reversed": lambda w: nat_choose(w["n"], w["n"]) != 0,
     "bitwise_operator_substituted": lambda w: (w["n"] | w["m"]) != (w["n"] & w["m"]),
     "modeq_premise_removed": lambda w: (w["a"] % w["n"]) != (w["b"] % w["n"]),
     "coprime_polarity_reversed": lambda w: nat_gcd(w["a"], w["b"]) != 1,

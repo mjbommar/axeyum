@@ -146,6 +146,38 @@ status-driven ranking refreshes cannot rewrite or invalidate the experiment
 that justified reconciliation. Next: execute the six exact crash-safe
 transitions, regenerate current views, and publish the 51-goal remaining-target
 result separately.
+All six crash-safe reconciliations are now committed and checked as one
+coordinated transition. The ledger moves from 185 open / 504 proved to 179 open
+/ 510 proved; exact linkage reaches 397 theorems / 398 facts. The current
+ranking shrinks from 142 goals / 1,704 pairs to 136 / 1,632, while the mapped
+open-population comparison moves exactly from 57 goals / six matches to 51 /
+zero matches. Durable events, live after-facts, v1 matches, and v2 exclusions
+agree exactly; operation and autonomous credit remain zero. Next: point
+bounded application at the now-clean 51-goal population and measure whether
+semantic/type-directed retrieval improves the honest 0/51 construction rate.
+After rebasing over concurrent CReal, Nat, Complex, and Rat construction,
+mutable views were regenerated again at 1,628 declarations / 1,274 theorems /
+7,436 edges. The full 753-test kernel suite passes. These additions are
+credible manual library construction, not autonomous-production credit; the
+semantic-review queue still has all 1,274 indexed theorems unreviewed. The
+historical authorization artifacts remain pinned to their archived
+pre-transition index, while the post-transition 51-goal census absorbs the new
+kernel state and remains zero exact matches.
+The 51-goal v2 result now also pins an immutable post-reconciliation ranking.
+This separates completed evaluation artifacts from the live theorem dashboard:
+concurrent theorem construction can advance current projections without making
+either the 57-goal v1 or 51-goal v2 experiment stale.
+The fixed-palette producer now runs directly against that committed 51-goal
+population through a backward-compatible population input. The direct result
+is 0 accepted, 24 `NoTypedApplication` declines, 27 statement-import
+rejections, and zero held-out access. Future changes must report the import and
+search denominators separately; retrieval work cannot affect the 27 rejected
+closures, and import work alone cannot affect the 24 grammar declines.
+The must-decline gate exposed and now independently refutes a tenth visible
+mutation (`Nat.choose_self = 0` at `n = 0`). The clean census therefore contains
+45 positive targets and six false controls: 20/4 in the importable population
+and 25/2 in the import-rejected population. Control acceptance is a soundness
+failure, never production credit.
 The accepted ADR-0541 general SMT-LIB session driver is now also a named
 `axeyum` binary target, not only a discoverability-poor Cargo example. The same
 source remains the historical example control, and the binary's focused check,
@@ -188,3 +220,4 @@ repository-built front door, not yet a published crate or prebuilt release.
 | 2026-08-26 | `3d4bb31eb` | Materialize six live hash-bound reconciliation proposals with zero writes, operations, and autonomous credit. |
 | 2026-08-26 | `6a348363b` | Extend the crash-safe applier with live-rebuilt, operation-free reconciliation events and recovery controls at every durable boundary. |
 | 2026-08-26 | `4e025a444` | Preserve the pre-reconciliation ranking and bind the 57-goal census to its immutable path and hash. |
+| 2026-08-26 | `9230d9666` | Reconcile six exact native propositions crash-safely, preserve zero production credit, and publish the clean 51-goal / zero-match remainder. |

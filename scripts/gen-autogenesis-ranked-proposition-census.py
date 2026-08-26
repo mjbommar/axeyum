@@ -27,6 +27,7 @@ def main() -> int:
     parser.add_argument("--ranking", type=Path, default=RANKING)
     parser.add_argument("--population", type=Path, default=POPULATION)
     parser.add_argument("--output", type=Path, default=OUTPUT)
+    parser.add_argument("--allow-population-subset", action="store_true")
     args = parser.parse_args()
     args.ranking = args.ranking.resolve()
     args.population = args.population.resolve()
@@ -43,12 +44,16 @@ def main() -> int:
 
     rows = []
     matches = []
+    excluded_absent_goals = []
     for source_row in population["outcomes"]:
         fact_id = source_row["fact_id"]
         if fact_id in held_out:
             raise SystemExit(f"held-out fact reached census: {fact_id}")
         goal = goals.get(fact_id)
         if goal is None:
+            if args.allow_population_subset:
+                excluded_absent_goals.append(fact_id)
+                continue
             raise SystemExit(f"population fact absent from ranking: {fact_id}")
         capsule = archive / f"{fact_id.replace(':', '-')}.ndjson"
         candidates = [row["kernel_declaration_id"] for row in goal["candidates"]]
@@ -95,7 +100,9 @@ def main() -> int:
             "declined_pair_count": candidate_count - len(matches),
             "audit_error_count": 0,
             "held_out_access_count": 0,
+            "population_goals_excluded_as_no_longer_open": len(excluded_absent_goals),
         },
+        "excluded_population_fact_ids": excluded_absent_goals,
         "matches": matches,
         "outcomes": rows,
         "authority": "Exact compatibility is graph-reconciliation evidence only; it is not autonomous proof production, fact settlement, or theorem admission.",

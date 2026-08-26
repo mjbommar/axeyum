@@ -1,15 +1,15 @@
 {
   "census": {
     "by_partition": {
-      "development": 69,
-      "train": 37
+      "development": 66,
+      "train": 38
     },
-    "candidate_facts": 97,
-    "evaluation_dependency_ready_facts": 106,
+    "candidate_facts": 95,
+    "evaluation_dependency_ready_facts": 104,
     "excluded_held_out_ready_facts": 22,
     "excluded_outside_evaluation_ready_facts": 9,
-    "global_dependency_ready_facts": 137,
-    "groups": 95,
+    "global_dependency_ready_facts": 135,
+    "groups": 93,
     "must_decline_controls": 9
   },
   "derivation": {
@@ -17,8 +17,8 @@
       "development",
       "train"
     ],
-    "frontier_sha256": "c14753470e71380e4e66378b580b779b26e93a4b9cd750e4fd0dc4eb8f0b9c22",
-    "ledger_sha256": "315a014fb5530076400839a035798022392efaef9a375f38903dea4329d80866",
+    "frontier_sha256": "eaefa772f1d953af6c8c34fc3cf9e8c2617cc6f336f6a6e302724d66114cef51",
+    "ledger_sha256": "16b154e1d54562baea35e49f344e3e47819e8b1e14cd1107725ebb14099b7181",
     "must_decline_controls_sha256": "30a59e1da446a7b74de172641cf94549150d577f3a837004d896b0de1baad233",
     "nursery_sha256": "6d1f2551a612fdcadaf1c6b0096c4eebee304d9687157cb25505f785ee86daa8",
     "reviewed_fact_catalog_sha256": "4a6ac0c9ee34e7c6a09b596e501ba94be4b1d962cf9ed02c7f1ed4dece771117",
@@ -68,10 +68,9 @@
     },
     {
       "dependency_component_id": "mathlib-v4.30.0-6f230047ce83981a",
-      "fact_count": 2,
+      "fact_count": 1,
       "fact_ids": [
-        "F:ml430-mutation-edb05acf07d9ef3f9f8232fc",
-        "F:ml430-nat-choose-self-25bb9fb8"
+        "F:ml430-mutation-edb05acf07d9ef3f9f8232fc"
       ],
       "family": "natural-binomial",
       "partition": "development",
@@ -81,27 +80,7 @@
       "dependency_component_id": "mathlib-v4.30.0-772791fcb89127a3",
       "fact_count": 1,
       "fact_ids": [
-        "F:ml430-nat-choose-zero-right-1ed2802a"
-      ],
-      "family": "natural-binomial",
-      "partition": "development",
-      "statement_shape": "unconditional-equality"
-    },
-    {
-      "dependency_component_id": "mathlib-v4.30.0-9556aecf1bb98439",
-      "fact_count": 1,
-      "fact_ids": [
-        "F:ml430-nat-choose-zero-succ-62c6520b"
-      ],
-      "family": "natural-binomial",
-      "partition": "development",
-      "statement_shape": "unconditional-equality"
-    },
-    {
-      "dependency_component_id": "mathlib-v4.30.0-be1c3ada4fef6ea6",
-      "fact_count": 1,
-      "fact_ids": [
-        "F:ml430-nat-choose-succ-succ-671856b6"
+        "F:ml430-nat-choose-one-right-7eda8e39"
       ],
       "family": "natural-binomial",
       "partition": "development",
@@ -939,9 +918,10 @@
     },
     {
       "dependency_component_id": "mathlib-v4.30.0-4aaec3b2ba4c2183",
-      "fact_count": 1,
+      "fact_count": 2,
       "fact_ids": [
-        "F:ml430-nat-factorial-pos-f1dd2405"
+        "F:ml430-nat-factorial-ne-zero-5fc0b0a1",
+        "F:ml430-nat-self-le-factorial-cfdffc69"
       ],
       "family": "natural-factorial",
       "partition": "train",

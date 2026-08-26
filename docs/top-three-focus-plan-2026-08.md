@@ -27,13 +27,13 @@ semantics, evidence, provenance, checking, and compounding knowledge loop.
 - The pure-Rust reasoning stack has real end-to-end SMT, CAS, kernel, program
   verification, and proof-artifact routes, but its coverage and assurance are
   uneven by fragment.
-- The generated kernel projection currently contains 1,604 declarations: 1,250
+- The generated kernel projection currently contains 1,628 declarations: 1,274
   theorems, 251 definitions, 29 constructors, 22 inductives, 22 recursors, and
-  30 axioms. It reports 1,574 axiom-free declarations and 7,184 direct
+  30 axioms. It reports 1,598 axiom-free declarations and 7,436 direct
   theorem-dependency edges. This is a substantial checked library, but it is
   not an autonomous-production count.
-- The fact ledger contains 696 propositions: 502 proved, 4 refuted, 2 computed,
-  185 open, and 3 conjectured. Its 26 authoritative/counterfactual operation
+- The fact ledger contains 698 propositions: 510 proved, 4 refuted, 2 computed,
+  179 open, and 3 conjectured. Its 26 authoritative/counterfactual operation
   rows contain only 2 reusable multi-target producers and name only 33 fact
   IDs. Most checked theorems therefore remain human-constructed, and most
   ledger facts have no reusable producer assigned.
@@ -42,10 +42,10 @@ semantics, evidence, provenance, checking, and compounding knowledge loop.
   frontier.
 - The kernel, fact ledger, tactic catalog, obstruction graph, and concept graph
   are separately useful, but do not yet form one lemma-search substrate.
-- The generated lemma index now covers all 1,250 kernel theorems and their 7,184
+- The generated lemma index now covers all 1,274 kernel theorems and their 7,436
   direct edges, with a kernel-rendered canonical type on every row and a
-  bounded type-fragment query in the agent read surface. Exactly 395
-  theorems link to 390 fact records; 846 theorems have
+  bounded type-fragment query in the agent read surface. Exactly 397
+  theorems link to 398 fact records; 877 theorems have
   no exact fact link. Only four evidence identities remain unresolved: three
   descriptive ordered-ring/Rat IDs and `Rat.normalize`, which resolves exactly
   but is a definition rather than a theorem. The projection now actually

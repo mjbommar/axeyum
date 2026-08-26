@@ -1,11 +1,11 @@
 {
   "census": {
-    "distinct_exactly_linked_facts": 398,
-    "kernel_dependency_edges": 7436,
-    "kernel_theorems": 1274,
+    "distinct_exactly_linked_facts": 392,
+    "kernel_dependency_edges": 7317,
+    "kernel_theorems": 1260,
     "maximum_dependency_depth": 26,
     "theorems_with_exact_fact_links": 397,
-    "theorems_without_exact_fact_links": 877,
+    "theorems_without_exact_fact_links": 863,
     "unresolved_prefixed_kernel_evidence": 4,
     "unresolved_reason_counts": {
       "exact kernel evidence identity is absent from the current projection": 3,
@@ -16,7 +16,7 @@
     "fact_identity_rule": "kernel-term evidence with explicit kernel_declarations or kernel_declaration, falling back for compatibility to an evidence id with exact kernel- or kernel: prefix and an exact current theorem suffix",
     "fact_population": "sorted artifacts/facts/F-*.json",
     "graph_semantics": "accepted theorem-term direct references; dependency depth is the longest direct-theorem path from a theorem with no theorem dependency",
-    "kernel_projection_sha256": "221fdb3ccda07ac8da7b77ac157b599d3d1389d92f0812aed57d2e7f5183cd7e",
+    "kernel_projection_sha256": "4a99495046e23107387cc1e309af56723b2a9fb62610ffb9e417c51e530fa8bf",
     "trust_boundary": "search and retrieval only; no concept, applicability, proof, admission, or trusted-kernel authority"
   },
   "kind": "axeyum-kernel-lemma-search-index",
@@ -6064,7 +6064,6 @@
         "CReal.riemannSum_le",
         "CReal.riemannSum_le_on",
         "CReal.riemannSum_sample_in_bounds",
-        "CReal.samplePoint_reblock",
         "CReal.scale_cancel_le",
         "CReal.strict_antitone_of_neg_deriv",
         "CReal.strict_mono_magnitude",
@@ -6091,7 +6090,6 @@
         "Complex.I_sq",
         "Complex.add_assoc",
         "Complex.add_comm",
-        "Complex.add_div",
         "Complex.add_neg",
         "Complex.add_pow",
         "Complex.add_zero",
@@ -6120,7 +6118,6 @@
         "Complex.mul_one",
         "Complex.mul_sub_one_geom",
         "Complex.mul_zero",
-        "Complex.neg_div",
         "Complex.normSq_add",
         "Complex.normSq_add_le",
         "Complex.normSq_conj",
@@ -6312,7 +6309,6 @@
         "CReal.pow_succ_lt_one",
         "CReal.riemannSum_const",
         "CReal.riemannSum_sample_in_bounds",
-        "CReal.samplePoint_reblock",
         "CReal.scale_cancel_le",
         "CReal.strict_antitone_of_neg_deriv",
         "CReal.strict_mono_magnitude",
@@ -6334,7 +6330,6 @@
         "Complex.I_sq",
         "Complex.add_assoc",
         "Complex.add_comm",
-        "Complex.add_div",
         "Complex.add_neg",
         "Complex.add_pow",
         "Complex.add_zero",
@@ -6362,7 +6357,6 @@
         "Complex.mul_one",
         "Complex.mul_sub_one_geom",
         "Complex.mul_zero",
-        "Complex.neg_div",
         "Complex.normSq_add",
         "Complex.normSq_conj",
         "Complex.normSq_eq_zero_of_eq_zero",
@@ -6575,7 +6569,6 @@
         "CReal.riemannSum_add",
         "CReal.riemannSum_const",
         "CReal.riemannSum_sample_in_bounds",
-        "CReal.samplePoint_reblock",
         "CReal.scale_cancel_le",
         "CReal.strict_antitone_of_neg_deriv",
         "CReal.strict_mono_magnitude",
@@ -6599,7 +6592,6 @@
         "Complex.I_sq",
         "Complex.add_assoc",
         "Complex.add_comm",
-        "Complex.add_div",
         "Complex.add_neg",
         "Complex.add_pow",
         "Complex.add_zero",
@@ -6628,7 +6620,6 @@
         "Complex.mul_one",
         "Complex.mul_sub_one_geom",
         "Complex.mul_zero",
-        "Complex.neg_div",
         "Complex.normSq_add",
         "Complex.normSq_conj",
         "Complex.normSq_eq_zero_of_eq_zero",
@@ -7319,7 +7310,6 @@
         "CReal.mul_sub_one_geom",
         "CReal.mul_sub_one_geom_tail",
         "CReal.riemannSum_sample_in_bounds",
-        "CReal.samplePoint_reblock",
         "CReal.strict_antitone_of_neg_deriv",
         "CReal.strict_mono_magnitude",
         "CReal.strict_mono_of_pos_deriv",
@@ -7336,7 +7326,6 @@
         "Complex.I_is_fourth_root",
         "Complex.add_assoc",
         "Complex.add_comm",
-        "Complex.add_div",
         "Complex.add_pow",
         "Complex.apart_irrefl",
         "Complex.apart_symm",
@@ -7351,7 +7340,6 @@
         "Complex.mul_conj",
         "Complex.mul_inv_cancel",
         "Complex.mul_sub_one_geom",
-        "Complex.neg_div",
         "Complex.normSq_add",
         "Complex.normSq_conj",
         "Complex.normSq_mul",
@@ -7513,7 +7501,6 @@
         "Complex.I_is_fourth_root",
         "Complex.I_sq",
         "Complex.add_comm",
-        "Complex.add_div",
         "Complex.add_pow",
         "Complex.apart_irrefl",
         "Complex.apart_of_normSq_pos",
@@ -7540,7 +7527,6 @@
         "Complex.mul_one",
         "Complex.mul_sub_one_geom",
         "Complex.mul_zero",
-        "Complex.neg_div",
         "Complex.normSq_add",
         "Complex.normSq_conj",
         "Complex.normSq_eq_zero_of_eq_zero",
@@ -7718,7 +7704,6 @@
         "CReal.riemannSum_add",
         "CReal.riemannSum_const",
         "CReal.riemannSum_sample_in_bounds",
-        "CReal.samplePoint_reblock",
         "CReal.strict_antitone_of_neg_deriv",
         "CReal.strict_mono_magnitude",
         "CReal.strict_mono_of_pos_deriv",
@@ -7740,7 +7725,6 @@
         "Complex.add_assoc",
         "Complex.add_comm",
         "Complex.add_congr",
-        "Complex.add_div",
         "Complex.add_neg",
         "Complex.add_pow",
         "Complex.add_zero",
@@ -7766,7 +7750,6 @@
         "Complex.mul_one",
         "Complex.mul_sub_one_geom",
         "Complex.mul_zero",
-        "Complex.neg_div",
         "Complex.normSq_add",
         "Complex.normSq_congr",
         "Complex.normSq_conj",
@@ -8076,7 +8059,6 @@
         "CReal.uniformly_continuous_neg",
         "Complex.I_is_fourth_root",
         "Complex.I_sq",
-        "Complex.add_div",
         "Complex.add_neg",
         "Complex.add_pow",
         "Complex.apart_irrefl",
@@ -8102,7 +8084,6 @@
         "Complex.mul_one",
         "Complex.mul_sub_one_geom",
         "Complex.mul_zero",
-        "Complex.neg_div",
         "Complex.normSq_add",
         "Complex.normSq_conj",
         "Complex.normSq_mul",
@@ -8372,7 +8353,6 @@
         "Complex.I_is_fourth_root",
         "Complex.I_sq",
         "Complex.add_comm",
-        "Complex.add_div",
         "Complex.add_pow",
         "Complex.add_zero",
         "Complex.apart_irrefl",
@@ -8400,7 +8380,6 @@
         "Complex.mul_one",
         "Complex.mul_sub_one_geom",
         "Complex.mul_zero",
-        "Complex.neg_div",
         "Complex.normSq_add",
         "Complex.normSq_add_le",
         "Complex.normSq_conj",
@@ -9028,160 +9007,6 @@
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.bounded_on_unfold",
-      "search_authority": "candidate-only; kernel type checking remains authoritative",
-      "visible_in": [
-        "complex",
-        "cpoint",
-        "creal"
-      ]
-    },
-    {
-      "axiom_footprint_size": 0,
-      "canonical_type": "((x0 : CReal) -> ((x1 : AxNat) -> ((x2 : CReal.le CReal.zero x0) -> CReal.le (CReal.ofRat (Rat.sub (Rat.max (CReal.seq x0 (AxNat.mul (AxNat.succ x1) (AxNat.succ x1))) Rat.zero) (Rat.natDivSucc (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.mul (AxNat.succ x1) (AxNat.succ x1))))) x0)))",
-      "dependency_depth": 14,
-      "direct_declaration_dependencies": [
-        "And",
-        "And.rec",
-        "CReal",
-        "CReal.le",
-        "CReal.ofRat",
-        "CReal.regular",
-        "CReal.seq",
-        "CReal.zero",
-        "Eq",
-        "Eq.rec",
-        "Eq.refl",
-        "Nat",
-        "Nat.mul",
-        "Nat.succ",
-        "Nat.zero",
-        "Rat",
-        "Rat.add",
-        "Rat.add_assoc",
-        "Rat.add_comm",
-        "Rat.add_le_add",
-        "Rat.add_zero",
-        "Rat.le",
-        "Rat.le_of_sub_le",
-        "Rat.le_refl",
-        "Rat.le_trans",
-        "Rat.max",
-        "Rat.max_le",
-        "Rat.natDivSucc",
-        "Rat.natDivSucc_add",
-        "Rat.natDivSucc_le_add_left",
-        "Rat.neg",
-        "Rat.sub",
-        "Rat.sub_le_of_le",
-        "Rat.zero",
-        "Rat.zero_le_natDivSucc"
-      ],
-      "direct_theorem_dependencies": [
-        "CReal.regular",
-        "Rat.add_assoc",
-        "Rat.add_comm",
-        "Rat.add_le_add",
-        "Rat.add_zero",
-        "Rat.le_of_sub_le",
-        "Rat.le_refl",
-        "Rat.le_trans",
-        "Rat.max_le",
-        "Rat.natDivSucc_add",
-        "Rat.natDivSucc_le_add_left",
-        "Rat.sub_le_of_le",
-        "Rat.zero_le_natDivSucc"
-      ],
-      "direct_theorem_dependents": [],
-      "direct_type_dependencies": [
-        "CReal",
-        "CReal.le",
-        "CReal.ofRat",
-        "CReal.seq",
-        "CReal.zero",
-        "Nat",
-        "Nat.mul",
-        "Nat.succ",
-        "Nat.zero",
-        "Rat.max",
-        "Rat.natDivSucc",
-        "Rat.sub",
-        "Rat.zero"
-      ],
-      "exact_fact_ids": [],
-      "kernel_declaration_id": "CReal.bucketClampLower",
-      "search_authority": "candidate-only; kernel type checking remains authoritative",
-      "visible_in": [
-        "complex",
-        "cpoint",
-        "creal"
-      ]
-    },
-    {
-      "axiom_footprint_size": 0,
-      "canonical_type": "((x0 : CReal) -> ((x1 : AxNat) -> CReal.le x0 (CReal.ofRat (Rat.add (Rat.max (CReal.seq x0 (AxNat.mul (AxNat.succ x1) (AxNat.succ x1))) Rat.zero) (Rat.natDivSucc (AxNat.succ (AxNat.succ AxNat.zero)) (AxNat.mul (AxNat.succ x1) (AxNat.succ x1)))))))",
-      "dependency_depth": 14,
-      "direct_declaration_dependencies": [
-        "And",
-        "And.rec",
-        "CReal",
-        "CReal.le",
-        "CReal.ofRat",
-        "CReal.regular",
-        "CReal.seq",
-        "Eq",
-        "Eq.rec",
-        "Eq.refl",
-        "Nat",
-        "Nat.mul",
-        "Nat.succ",
-        "Nat.zero",
-        "Rat",
-        "Rat.add",
-        "Rat.add_assoc",
-        "Rat.add_comm",
-        "Rat.add_le_add",
-        "Rat.le",
-        "Rat.le_max_left",
-        "Rat.le_of_sub_le",
-        "Rat.le_refl",
-        "Rat.le_trans",
-        "Rat.max",
-        "Rat.natDivSucc",
-        "Rat.natDivSucc_le_add_left",
-        "Rat.neg",
-        "Rat.sub",
-        "Rat.sub_le_of_le",
-        "Rat.zero"
-      ],
-      "direct_theorem_dependencies": [
-        "CReal.regular",
-        "Rat.add_assoc",
-        "Rat.add_comm",
-        "Rat.add_le_add",
-        "Rat.le_max_left",
-        "Rat.le_of_sub_le",
-        "Rat.le_refl",
-        "Rat.le_trans",
-        "Rat.natDivSucc_le_add_left",
-        "Rat.sub_le_of_le"
-      ],
-      "direct_theorem_dependents": [],
-      "direct_type_dependencies": [
-        "CReal",
-        "CReal.le",
-        "CReal.ofRat",
-        "CReal.seq",
-        "Nat",
-        "Nat.mul",
-        "Nat.succ",
-        "Nat.zero",
-        "Rat.add",
-        "Rat.max",
-        "Rat.natDivSucc",
-        "Rat.zero"
-      ],
-      "exact_fact_ids": [],
-      "kernel_declaration_id": "CReal.bucketClampUpper",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex",
@@ -10970,92 +10795,6 @@
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.equiv_zero_of_small",
-      "search_authority": "candidate-only; kernel type checking remains authoritative",
-      "visible_in": [
-        "complex",
-        "cpoint",
-        "creal"
-      ]
-    },
-    {
-      "axiom_footprint_size": 0,
-      "canonical_type": "((x0 : AxNat) -> CReal.le (CReal.expTerm x0) (CReal.ofRat (Rat.normalize (Int.ofNat (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.pow (AxNat.succ (AxNat.succ AxNat.zero)) x0) (AxNat.pow_pos (AxNat.succ (AxNat.succ AxNat.zero)) x0 (AxNat.le_succ_succ AxNat.zero (AxNat.succ AxNat.zero) (AxNat.zero_le (AxNat.succ AxNat.zero)))))))",
-      "dependency_depth": 13,
-      "direct_declaration_dependencies": [
-        "CReal.expTerm",
-        "CReal.le",
-        "CReal.ofRat",
-        "CReal.ofRat_le",
-        "Eq",
-        "Eq.rec",
-        "Eq.refl",
-        "Int",
-        "Int.le",
-        "Int.mul",
-        "Int.mul_assoc",
-        "Int.mul_comm",
-        "Int.ofNat",
-        "Nat",
-        "Nat.factorial",
-        "Nat.le",
-        "Nat.le.refl",
-        "Nat.le_succ_succ",
-        "Nat.le_trans",
-        "Nat.mul",
-        "Nat.mul_assoc",
-        "Nat.mul_comm",
-        "Nat.mul_le_mul_left",
-        "Nat.one_le_factorial",
-        "Nat.one_le_mul",
-        "Nat.one_mul",
-        "Nat.pow",
-        "Nat.pow_pos",
-        "Nat.rec",
-        "Nat.succ",
-        "Nat.zero",
-        "Nat.zero_le",
-        "Rat.den",
-        "Rat.int_le_of_mul_le_mul_right",
-        "Rat.int_mul_le_mul_right",
-        "Rat.normalize",
-        "Rat.normalize_cross",
-        "Rat.num"
-      ],
-      "direct_theorem_dependencies": [
-        "CReal.ofRat_le",
-        "Int.mul_assoc",
-        "Int.mul_comm",
-        "Nat.le_succ_succ",
-        "Nat.le_trans",
-        "Nat.mul_assoc",
-        "Nat.mul_comm",
-        "Nat.mul_le_mul_left",
-        "Nat.one_le_factorial",
-        "Nat.one_le_mul",
-        "Nat.one_mul",
-        "Nat.pow_pos",
-        "Nat.zero_le",
-        "Rat.int_le_of_mul_le_mul_right",
-        "Rat.int_mul_le_mul_right",
-        "Rat.normalize_cross"
-      ],
-      "direct_theorem_dependents": [],
-      "direct_type_dependencies": [
-        "CReal.expTerm",
-        "CReal.le",
-        "CReal.ofRat",
-        "Int.ofNat",
-        "Nat",
-        "Nat.le_succ_succ",
-        "Nat.pow",
-        "Nat.pow_pos",
-        "Nat.succ",
-        "Nat.zero",
-        "Nat.zero_le",
-        "Rat.normalize"
-      ],
-      "exact_fact_ids": [],
-      "kernel_declaration_id": "CReal.expTerm_le_geom",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex",
@@ -15016,13 +14755,11 @@
         "CReal.mul_sumRange",
         "CReal.riemannSum_add",
         "CReal.riemannSum_const",
-        "CReal.samplePoint_reblock",
         "CReal.strict_mono_magnitude",
         "CReal.strict_mono_of_pos_deriv",
         "CReal.sumRange_const",
         "CReal.uniformly_continuous_mul",
         "Complex.I_is_fourth_root",
-        "Complex.add_div",
         "Complex.add_pow",
         "Complex.apart_irrefl",
         "Complex.apart_symm",
@@ -15034,7 +14771,6 @@
         "Complex.mul_conj",
         "Complex.mul_inv_cancel",
         "Complex.mul_sub_one_geom",
-        "Complex.neg_div",
         "Complex.normSq_add",
         "Complex.normSq_conj",
         "Complex.normSq_mul",
@@ -15784,9 +15520,7 @@
         "Rat.normalize_congr",
         "Rat.normalize_mul_normalize"
       ],
-      "direct_theorem_dependents": [
-        "CReal.samplePoint_reblock"
-      ],
+      "direct_theorem_dependents": [],
       "direct_type_dependencies": [
         "Eq",
         "Nat",
@@ -15864,7 +15598,6 @@
         "CReal.ivt_bisect_invariant",
         "CReal.ivt_step",
         "CReal.monotone_of_nonneg_deriv",
-        "CReal.samplePoint_reblock",
         "CReal.strict_mono_magnitude",
         "CReal.strict_mono_of_pos_deriv"
       ],
@@ -16422,7 +16155,6 @@
         "CReal.pow_add",
         "CReal.riemannSum_const",
         "CReal.riemannSum_sample_in_bounds",
-        "CReal.samplePoint_reblock",
         "CReal.scale_cancel_le",
         "CReal.strict_mono_magnitude",
         "CReal.strict_mono_of_pos_deriv",
@@ -16566,7 +16298,6 @@
         "CReal.riemannSum_le",
         "CReal.riemannSum_le_on",
         "CReal.riemannSum_sample_in_bounds",
-        "CReal.samplePoint_reblock",
         "CReal.scale_cancel_le",
         "CReal.strict_mono_magnitude",
         "CReal.strict_mono_of_pos_deriv",
@@ -16575,7 +16306,6 @@
         "CReal.uniformly_continuous_mul",
         "Complex.I_is_fourth_root",
         "Complex.I_sq",
-        "Complex.add_div",
         "Complex.add_pow",
         "Complex.apart_irrefl",
         "Complex.apart_symm",
@@ -16587,7 +16317,6 @@
         "Complex.mul_conj",
         "Complex.mul_inv_cancel",
         "Complex.mul_sub_one_geom",
-        "Complex.neg_div",
         "Complex.normSq_add",
         "Complex.normSq_conj",
         "Complex.normSq_eq_zero_of_eq_zero",
@@ -16759,7 +16488,6 @@
         "CReal.pow_congr",
         "CReal.riemannSum_const",
         "CReal.riemannSum_sample_in_bounds",
-        "CReal.samplePoint_reblock",
         "CReal.scale_cancel_le",
         "CReal.strict_mono_magnitude",
         "CReal.strict_mono_of_pos_deriv",
@@ -16768,7 +16496,6 @@
         "CReal.uniformly_continuous_mul",
         "Complex.I_is_fourth_root",
         "Complex.I_sq",
-        "Complex.add_div",
         "Complex.add_pow",
         "Complex.apart_irrefl",
         "Complex.apart_of_normSq_pos",
@@ -16789,7 +16516,6 @@
         "Complex.mul_one",
         "Complex.mul_sub_one_geom",
         "Complex.mul_zero",
-        "Complex.neg_div",
         "Complex.normSq_add",
         "Complex.normSq_congr",
         "Complex.normSq_conj",
@@ -17694,7 +17420,6 @@
         "Complex.mul_one",
         "Complex.mul_sub_one_geom",
         "Complex.mul_zero",
-        "Complex.neg_div",
         "Complex.normSq_add",
         "Complex.normSq_conj",
         "Complex.normSq_eq_zero_of_eq_zero",
@@ -17969,7 +17694,6 @@
         "CReal.uniformly_continuous_mul",
         "Complex.I_is_fourth_root",
         "Complex.I_sq",
-        "Complex.add_div",
         "Complex.add_neg",
         "Complex.add_pow",
         "Complex.apart_irrefl",
@@ -18000,7 +17724,6 @@
         "Complex.mul_sub_one_geom",
         "Complex.mul_zero",
         "Complex.neg_congr",
-        "Complex.neg_div",
         "Complex.normSq_add",
         "Complex.normSq_conj",
         "Complex.normSq_mul",
@@ -18530,9 +18253,7 @@
         "CReal.ofRat_add",
         "Rat.natDivSucc_add"
       ],
-      "direct_theorem_dependents": [
-        "CReal.samplePoint_reblock"
-      ],
+      "direct_theorem_dependents": [],
       "direct_type_dependencies": [
         "CReal.Equiv",
         "CReal.add",
@@ -18624,9 +18345,7 @@
         "CReal.ofRat_mul",
         "Rat.natDivSucc_mul"
       ],
-      "direct_theorem_dependents": [
-        "CReal.samplePoint_reblock"
-      ],
+      "direct_theorem_dependents": [],
       "direct_type_dependencies": [
         "CReal.Equiv",
         "CReal.mul",
@@ -18737,7 +18456,6 @@
         "CReal.bounded_on_id_unit",
         "CReal.converges_comp_eventually",
         "CReal.equivAbsDiffLe",
-        "CReal.expTerm_le_geom",
         "CReal.fineBlockSum_close",
         "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
@@ -18821,7 +18539,6 @@
         "CReal.ofRat_pow",
         "CReal.riemannSum_const",
         "CReal.riemannSum_sample_in_bounds",
-        "CReal.samplePoint_reblock",
         "CReal.scale_cancel_le",
         "CReal.strict_mono_magnitude",
         "CReal.strict_mono_of_pos_deriv",
@@ -20265,8 +19982,6 @@
         "CReal.add_assoc",
         "CReal.add_zero",
         "CReal.bound_within",
-        "CReal.bucketClampLower",
-        "CReal.bucketClampUpper",
         "CReal.converges_add",
         "CReal.converges_cauchy",
         "CReal.converges_comp_eventually",
@@ -20788,86 +20503,6 @@
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "CReal.riemannSum_sample_in_bounds",
-      "search_authority": "candidate-only; kernel type checking remains authoritative",
-      "visible_in": [
-        "complex",
-        "cpoint",
-        "creal"
-      ]
-    },
-    {
-      "axiom_footprint_size": 0,
-      "canonical_type": "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat) -> CReal.Equiv (CReal.add x0 (CReal.mul (CReal.ofNat (AxNat.add (AxNat.mul (AxNat.succ x2) x4) x5)) (CReal.mul (CReal.add x1 (CReal.neg x0)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) (AxNat.add (AxNat.add (AxNat.mul x2 x3) x2) x3)))))) (CReal.add (CReal.add x0 (CReal.mul (CReal.ofNat x4) (CReal.mul (CReal.add x1 (CReal.neg x0)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x3))))) (CReal.mul (CReal.ofNat x5) (CReal.mul (CReal.mul (CReal.add x1 (CReal.neg x0)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x3))) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x2)))))))))))",
-      "dependency_depth": 19,
-      "direct_declaration_dependencies": [
-        "CReal",
-        "CReal.Equiv",
-        "CReal.Equiv.refl",
-        "CReal.Equiv.symm",
-        "CReal.Equiv.trans",
-        "CReal.add",
-        "CReal.add_assoc",
-        "CReal.add_congr",
-        "CReal.left_distrib",
-        "CReal.meshReciprocalMul",
-        "CReal.mesh_count_width",
-        "CReal.mul",
-        "CReal.mul_assoc",
-        "CReal.mul_comm",
-        "CReal.mul_congr",
-        "CReal.neg",
-        "CReal.ofNat",
-        "CReal.ofNat_add",
-        "CReal.ofNat_mul",
-        "CReal.ofRat",
-        "CReal.ofRat_mul",
-        "Eq",
-        "Eq.rec",
-        "Nat",
-        "Nat.add",
-        "Nat.mul",
-        "Nat.succ",
-        "Nat.zero",
-        "Rat",
-        "Rat.mul",
-        "Rat.mul_comm",
-        "Rat.natDivSucc"
-      ],
-      "direct_theorem_dependencies": [
-        "CReal.Equiv.refl",
-        "CReal.Equiv.symm",
-        "CReal.Equiv.trans",
-        "CReal.add_assoc",
-        "CReal.add_congr",
-        "CReal.left_distrib",
-        "CReal.meshReciprocalMul",
-        "CReal.mesh_count_width",
-        "CReal.mul_assoc",
-        "CReal.mul_comm",
-        "CReal.mul_congr",
-        "CReal.ofNat_add",
-        "CReal.ofNat_mul",
-        "CReal.ofRat_mul",
-        "Rat.mul_comm"
-      ],
-      "direct_theorem_dependents": [],
-      "direct_type_dependencies": [
-        "CReal",
-        "CReal.Equiv",
-        "CReal.add",
-        "CReal.mul",
-        "CReal.neg",
-        "CReal.ofNat",
-        "CReal.ofRat",
-        "Nat",
-        "Nat.add",
-        "Nat.mul",
-        "Nat.succ",
-        "Nat.zero",
-        "Rat.natDivSucc"
-      ],
-      "exact_fact_ids": [],
-      "kernel_declaration_id": "CReal.samplePoint_reblock",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex",
@@ -23757,12 +23392,9 @@
       "direct_theorem_dependents": [
         "Complex.I_is_fourth_root",
         "Complex.add_pow",
-        "Complex.conj_div",
         "Complex.conj_pow",
-        "Complex.div_mul_cancel",
         "Complex.geom_series_div",
         "Complex.geom_sum_eq_zero_of_root_of_unity",
-        "Complex.inv_mul",
         "Complex.mul_sub_one_geom",
         "Complex.mul_sumRange",
         "Complex.no_compatible_order",
@@ -23774,7 +23406,6 @@
         "Complex.pow_mul",
         "Complex.root_of_unity_mul",
         "Complex.root_of_unity_pow",
-        "Complex.sub_div",
         "Complex.sumRange_add",
         "Complex.sumRange_congr",
         "Complex.sumRange_congr_lt",
@@ -23819,7 +23450,6 @@
         "Complex.add_pow",
         "Complex.geom_series_div",
         "Complex.geom_sum_eq_zero_of_root_of_unity",
-        "Complex.inv_mul",
         "Complex.mul_sub_one_geom",
         "Complex.ofNat_add",
         "Complex.ofNat_mul",
@@ -23866,12 +23496,9 @@
       "direct_theorem_dependents": [
         "Complex.I_is_fourth_root",
         "Complex.add_pow",
-        "Complex.conj_div",
         "Complex.conj_pow",
-        "Complex.div_mul_cancel",
         "Complex.geom_series_div",
         "Complex.geom_sum_eq_zero_of_root_of_unity",
-        "Complex.inv_mul",
         "Complex.inv_mul_cancel",
         "Complex.mul_sub_one_geom",
         "Complex.mul_sumRange",
@@ -23883,7 +23510,6 @@
         "Complex.pow_mul",
         "Complex.root_of_unity_mul",
         "Complex.root_of_unity_pow",
-        "Complex.sub_div",
         "Complex.sumRange_add",
         "Complex.sumRange_congr",
         "Complex.sumRange_congr_lt",
@@ -24165,7 +23791,6 @@
         "Complex.ofNat_add",
         "Complex.ofNat_eq_cast",
         "Complex.ofNat_mul",
-        "Complex.sub_div",
         "Complex.sumRange_add",
         "Complex.sumRange_congr",
         "Complex.sumRange_congr_lt",
@@ -24184,73 +23809,6 @@
         "F:complex-add-congr"
       ],
       "kernel_declaration_id": "Complex.add_congr",
-      "search_authority": "candidate-only; kernel type checking remains authoritative",
-      "visible_in": [
-        "complex"
-      ]
-    },
-    {
-      "axiom_footprint_size": 0,
-      "canonical_type": "((x0 : Complex) -> ((x1 : Complex) -> ((x2 : Complex) -> ((x3 : AxNat) -> ((x4 : CReal.PosBound (Complex.normSq x2) x3) -> Complex.Equiv (Complex.div (Complex.add x0 x1) x2 x3 x4) (Complex.add (Complex.div x0 x2 x3 x4) (Complex.div x1 x2 x3 x4)))))))",
-      "dependency_depth": 18,
-      "direct_declaration_dependencies": [
-        "And.intro",
-        "CReal.Equiv",
-        "CReal.Equiv.refl",
-        "CReal.Equiv.symm",
-        "CReal.Equiv.trans",
-        "CReal.PosBound",
-        "CReal.add",
-        "CReal.add_assoc",
-        "CReal.add_comm",
-        "CReal.add_congr",
-        "CReal.add_neg",
-        "CReal.add_zero",
-        "CReal.left_distrib",
-        "CReal.mul",
-        "CReal.mul_comm",
-        "CReal.mul_congr",
-        "CReal.neg",
-        "CReal.neg_congr",
-        "CReal.zero",
-        "Complex",
-        "Complex.Equiv",
-        "Complex.add",
-        "Complex.div",
-        "Complex.im",
-        "Complex.inv",
-        "Complex.normSq",
-        "Complex.re",
-        "Nat"
-      ],
-      "direct_theorem_dependencies": [
-        "CReal.Equiv.refl",
-        "CReal.Equiv.symm",
-        "CReal.Equiv.trans",
-        "CReal.add_assoc",
-        "CReal.add_comm",
-        "CReal.add_congr",
-        "CReal.add_neg",
-        "CReal.add_zero",
-        "CReal.left_distrib",
-        "CReal.mul_comm",
-        "CReal.mul_congr",
-        "CReal.neg_congr"
-      ],
-      "direct_theorem_dependents": [
-        "Complex.sub_div"
-      ],
-      "direct_type_dependencies": [
-        "CReal.PosBound",
-        "Complex",
-        "Complex.Equiv",
-        "Complex.add",
-        "Complex.div",
-        "Complex.normSq",
-        "Nat"
-      ],
-      "exact_fact_ids": [],
-      "kernel_declaration_id": "Complex.add_div",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex"
@@ -24861,53 +24419,6 @@
     },
     {
       "axiom_footprint_size": 0,
-      "canonical_type": "((x0 : Complex) -> ((x1 : Complex) -> ((x2 : AxNat) -> ((x3 : CReal.PosBound (Complex.normSq x1) x2) -> Complex.Equiv (Complex.conj (Complex.div x0 x1 x2 x3)) (Complex.div (Complex.conj x0) (Complex.conj x1) x2 (Complex.pos_bound_conj x1 x2 x3))))))",
-      "dependency_depth": 21,
-      "direct_declaration_dependencies": [
-        "CReal.PosBound",
-        "Complex",
-        "Complex.Equiv",
-        "Complex.Equiv.refl",
-        "Complex.Equiv.trans",
-        "Complex.conj",
-        "Complex.conj_inv",
-        "Complex.conj_mul",
-        "Complex.div",
-        "Complex.inv",
-        "Complex.mul",
-        "Complex.mul_congr",
-        "Complex.normSq",
-        "Complex.pos_bound_conj",
-        "Nat"
-      ],
-      "direct_theorem_dependencies": [
-        "Complex.Equiv.refl",
-        "Complex.Equiv.trans",
-        "Complex.conj_inv",
-        "Complex.conj_mul",
-        "Complex.mul_congr",
-        "Complex.pos_bound_conj"
-      ],
-      "direct_theorem_dependents": [],
-      "direct_type_dependencies": [
-        "CReal.PosBound",
-        "Complex",
-        "Complex.Equiv",
-        "Complex.conj",
-        "Complex.div",
-        "Complex.normSq",
-        "Complex.pos_bound_conj",
-        "Nat"
-      ],
-      "exact_fact_ids": [],
-      "kernel_declaration_id": "Complex.conj_div",
-      "search_authority": "candidate-only; kernel type checking remains authoritative",
-      "visible_in": [
-        "complex"
-      ]
-    },
-    {
-      "axiom_footprint_size": 0,
       "canonical_type": "((x0 : Complex) -> ((x1 : AxNat) -> ((x2 : CReal.PosBound (Complex.normSq x0) x1) -> Complex.Equiv (Complex.conj (Complex.inv x0 x1 x2)) (Complex.inv (Complex.conj x0) x1 (Complex.pos_bound_conj x0 x1 x2)))))",
       "dependency_depth": 20,
       "direct_declaration_dependencies": [
@@ -24962,9 +24473,7 @@
         "Complex.normSq_conj",
         "Complex.pos_bound_conj"
       ],
-      "direct_theorem_dependents": [
-        "Complex.conj_div"
-      ],
+      "direct_theorem_dependents": [],
       "direct_type_dependencies": [
         "CReal.PosBound",
         "Complex",
@@ -25029,7 +24538,6 @@
         "CReal.neg_congr"
       ],
       "direct_theorem_dependents": [
-        "Complex.conj_div",
         "Complex.conj_pow"
       ],
       "direct_type_dependencies": [
@@ -25276,86 +24784,6 @@
     },
     {
       "axiom_footprint_size": 0,
-      "canonical_type": "((x0 : Complex) -> ((x1 : Complex) -> ((x2 : Complex) -> ((x3 : Complex) -> ((x4 : AxNat) -> ((x5 : AxNat) -> ((x6 : CReal.PosBound (Complex.normSq x2) x4) -> ((x7 : CReal.PosBound (Complex.normSq x3) x5) -> ((x8 : Complex.Equiv x0 x1) -> ((x9 : Complex.Equiv x2 x3) -> Complex.Equiv (Complex.div x0 x2 x4 x6) (Complex.div x1 x3 x5 x7)))))))))))",
-      "dependency_depth": 21,
-      "direct_declaration_dependencies": [
-        "CReal.PosBound",
-        "Complex",
-        "Complex.Equiv",
-        "Complex.div",
-        "Complex.inv",
-        "Complex.inv_congr",
-        "Complex.mul_congr",
-        "Complex.normSq",
-        "Nat"
-      ],
-      "direct_theorem_dependencies": [
-        "Complex.inv_congr",
-        "Complex.mul_congr"
-      ],
-      "direct_theorem_dependents": [],
-      "direct_type_dependencies": [
-        "CReal.PosBound",
-        "Complex",
-        "Complex.Equiv",
-        "Complex.div",
-        "Complex.normSq",
-        "Nat"
-      ],
-      "exact_fact_ids": [],
-      "kernel_declaration_id": "Complex.div_congr",
-      "search_authority": "candidate-only; kernel type checking remains authoritative",
-      "visible_in": [
-        "complex"
-      ]
-    },
-    {
-      "axiom_footprint_size": 0,
-      "canonical_type": "((x0 : Complex) -> ((x1 : Complex) -> ((x2 : AxNat) -> ((x3 : CReal.PosBound (Complex.normSq x1) x2) -> Complex.Equiv (Complex.div (Complex.mul x0 x1) x1 x2 x3) x0))))",
-      "dependency_depth": 21,
-      "direct_declaration_dependencies": [
-        "CReal.PosBound",
-        "Complex",
-        "Complex.Equiv",
-        "Complex.Equiv.refl",
-        "Complex.Equiv.trans",
-        "Complex.div",
-        "Complex.div_self",
-        "Complex.mul",
-        "Complex.mul_congr",
-        "Complex.mul_div_assoc",
-        "Complex.mul_one",
-        "Complex.normSq",
-        "Complex.one",
-        "Nat"
-      ],
-      "direct_theorem_dependencies": [
-        "Complex.Equiv.refl",
-        "Complex.Equiv.trans",
-        "Complex.div_self",
-        "Complex.mul_congr",
-        "Complex.mul_div_assoc",
-        "Complex.mul_one"
-      ],
-      "direct_theorem_dependents": [],
-      "direct_type_dependencies": [
-        "CReal.PosBound",
-        "Complex",
-        "Complex.Equiv",
-        "Complex.div",
-        "Complex.mul",
-        "Complex.normSq",
-        "Nat"
-      ],
-      "exact_fact_ids": [],
-      "kernel_declaration_id": "Complex.div_mul_cancel",
-      "search_authority": "candidate-only; kernel type checking remains authoritative",
-      "visible_in": [
-        "complex"
-      ]
-    },
-    {
-      "axiom_footprint_size": 0,
       "canonical_type": "((x0 : Complex) -> ((x1 : AxNat) -> ((x2 : CReal.PosBound (Complex.normSq x0) x1) -> Complex.Equiv (Complex.div x0 x0 x1 x2) Complex.one)))",
       "dependency_depth": 20,
       "direct_declaration_dependencies": [
@@ -25371,9 +24799,7 @@
       "direct_theorem_dependencies": [
         "Complex.mul_inv_cancel"
       ],
-      "direct_theorem_dependents": [
-        "Complex.div_mul_cancel"
-      ],
+      "direct_theorem_dependents": [],
       "direct_type_dependencies": [
         "CReal.PosBound",
         "Complex",
@@ -25758,9 +25184,7 @@
         "CReal.mul_congr",
         "CReal.neg_congr"
       ],
-      "direct_theorem_dependents": [
-        "Complex.div_congr"
-      ],
+      "direct_theorem_dependents": [],
       "direct_type_dependencies": [
         "CReal.PosBound",
         "Complex",
@@ -25771,55 +25195,6 @@
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Complex.inv_congr",
-      "search_authority": "candidate-only; kernel type checking remains authoritative",
-      "visible_in": [
-        "complex"
-      ]
-    },
-    {
-      "axiom_footprint_size": 0,
-      "canonical_type": "((x0 : Complex) -> ((x1 : Complex) -> ((x2 : AxNat) -> ((x3 : CReal.PosBound (Complex.normSq x0) x2) -> ((x4 : AxNat) -> ((x5 : CReal.PosBound (Complex.normSq x1) x4) -> ((x6 : AxNat) -> ((x7 : CReal.PosBound (Complex.normSq (Complex.mul x0 x1)) x6) -> Complex.Equiv (Complex.inv (Complex.mul x0 x1) x6 x7) (Complex.mul (Complex.inv x0 x2 x3) (Complex.inv x1 x4 x5))))))))))",
-      "dependency_depth": 20,
-      "direct_declaration_dependencies": [
-        "CReal.PosBound",
-        "Complex",
-        "Complex.Equiv",
-        "Complex.Equiv.refl",
-        "Complex.Equiv.symm",
-        "Complex.Equiv.trans",
-        "Complex.inv",
-        "Complex.mul",
-        "Complex.mul_assoc",
-        "Complex.mul_comm",
-        "Complex.mul_congr",
-        "Complex.mul_inv_cancel",
-        "Complex.mul_one",
-        "Complex.normSq",
-        "Complex.one",
-        "Nat"
-      ],
-      "direct_theorem_dependencies": [
-        "Complex.Equiv.refl",
-        "Complex.Equiv.symm",
-        "Complex.Equiv.trans",
-        "Complex.mul_assoc",
-        "Complex.mul_comm",
-        "Complex.mul_congr",
-        "Complex.mul_inv_cancel",
-        "Complex.mul_one"
-      ],
-      "direct_theorem_dependents": [],
-      "direct_type_dependencies": [
-        "CReal.PosBound",
-        "Complex",
-        "Complex.Equiv",
-        "Complex.inv",
-        "Complex.mul",
-        "Complex.normSq",
-        "Nat"
-      ],
-      "exact_fact_ids": [],
-      "kernel_declaration_id": "Complex.inv_mul",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex"
@@ -26044,8 +25419,6 @@
       "direct_theorem_dependents": [
         "Complex.geom_series_div",
         "Complex.geom_sum_eq_zero_of_root_of_unity",
-        "Complex.inv_mul",
-        "Complex.mul_div_assoc",
         "Complex.pow_add"
       ],
       "direct_type_dependencies": [
@@ -26110,7 +25483,6 @@
         "Complex.add_pow",
         "Complex.geom_series_div",
         "Complex.geom_sum_eq_zero_of_root_of_unity",
-        "Complex.inv_mul",
         "Complex.inv_mul_cancel",
         "Complex.sumRange_mul"
       ],
@@ -26156,13 +25528,9 @@
       ],
       "direct_theorem_dependents": [
         "Complex.add_pow",
-        "Complex.conj_div",
         "Complex.conj_pow",
-        "Complex.div_congr",
-        "Complex.div_mul_cancel",
         "Complex.geom_series_div",
         "Complex.geom_sum_eq_zero_of_root_of_unity",
-        "Complex.inv_mul",
         "Complex.one_is_root_of_unity",
         "Complex.pow_add",
         "Complex.pow_mul",
@@ -26249,43 +25617,6 @@
         "F:complex-mul-conj"
       ],
       "kernel_declaration_id": "Complex.mul_conj",
-      "search_authority": "candidate-only; kernel type checking remains authoritative",
-      "visible_in": [
-        "complex"
-      ]
-    },
-    {
-      "axiom_footprint_size": 0,
-      "canonical_type": "((x0 : Complex) -> ((x1 : Complex) -> ((x2 : Complex) -> ((x3 : AxNat) -> ((x4 : CReal.PosBound (Complex.normSq x2) x3) -> Complex.Equiv (Complex.div (Complex.mul x0 x1) x2 x3 x4) (Complex.mul x0 (Complex.div x1 x2 x3 x4)))))))",
-      "dependency_depth": 19,
-      "direct_declaration_dependencies": [
-        "CReal.PosBound",
-        "Complex",
-        "Complex.Equiv",
-        "Complex.div",
-        "Complex.inv",
-        "Complex.mul",
-        "Complex.mul_assoc",
-        "Complex.normSq",
-        "Nat"
-      ],
-      "direct_theorem_dependencies": [
-        "Complex.mul_assoc"
-      ],
-      "direct_theorem_dependents": [
-        "Complex.div_mul_cancel"
-      ],
-      "direct_type_dependencies": [
-        "CReal.PosBound",
-        "Complex",
-        "Complex.Equiv",
-        "Complex.div",
-        "Complex.mul",
-        "Complex.normSq",
-        "Nat"
-      ],
-      "exact_fact_ids": [],
-      "kernel_declaration_id": "Complex.mul_div_assoc",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex"
@@ -26417,7 +25748,6 @@
       ],
       "direct_theorem_dependents": [
         "Complex.div_self",
-        "Complex.inv_mul",
         "Complex.inv_mul_cancel"
       ],
       "direct_type_dependencies": [
@@ -26483,10 +25813,8 @@
         "CReal.neg_congr"
       ],
       "direct_theorem_dependents": [
-        "Complex.div_mul_cancel",
         "Complex.geom_series_div",
         "Complex.geom_sum_eq_zero_of_root_of_unity",
-        "Complex.inv_mul",
         "Complex.ofNat_mul",
         "Complex.one_is_root_of_unity",
         "Complex.pow_add",
@@ -26738,75 +26066,6 @@
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Complex.neg_congr",
-      "search_authority": "candidate-only; kernel type checking remains authoritative",
-      "visible_in": [
-        "complex"
-      ]
-    },
-    {
-      "axiom_footprint_size": 0,
-      "canonical_type": "((x0 : Complex) -> ((x1 : Complex) -> ((x2 : AxNat) -> ((x3 : CReal.PosBound (Complex.normSq x1) x2) -> Complex.Equiv (Complex.div (Complex.neg x0) x1 x2 x3) (Complex.neg (Complex.div x0 x1 x2 x3))))))",
-      "dependency_depth": 18,
-      "direct_declaration_dependencies": [
-        "And.intro",
-        "CReal.Equiv",
-        "CReal.Equiv.refl",
-        "CReal.Equiv.symm",
-        "CReal.Equiv.trans",
-        "CReal.PosBound",
-        "CReal.add",
-        "CReal.add_assoc",
-        "CReal.add_comm",
-        "CReal.add_congr",
-        "CReal.add_neg",
-        "CReal.add_zero",
-        "CReal.left_distrib",
-        "CReal.mul",
-        "CReal.mul_comm",
-        "CReal.mul_congr",
-        "CReal.mul_zero",
-        "CReal.neg",
-        "CReal.neg_congr",
-        "CReal.zero",
-        "Complex",
-        "Complex.Equiv",
-        "Complex.div",
-        "Complex.im",
-        "Complex.inv",
-        "Complex.neg",
-        "Complex.normSq",
-        "Complex.re",
-        "Nat"
-      ],
-      "direct_theorem_dependencies": [
-        "CReal.Equiv.refl",
-        "CReal.Equiv.symm",
-        "CReal.Equiv.trans",
-        "CReal.add_assoc",
-        "CReal.add_comm",
-        "CReal.add_congr",
-        "CReal.add_neg",
-        "CReal.add_zero",
-        "CReal.left_distrib",
-        "CReal.mul_comm",
-        "CReal.mul_congr",
-        "CReal.mul_zero",
-        "CReal.neg_congr"
-      ],
-      "direct_theorem_dependents": [
-        "Complex.sub_div"
-      ],
-      "direct_type_dependencies": [
-        "CReal.PosBound",
-        "Complex",
-        "Complex.Equiv",
-        "Complex.div",
-        "Complex.neg",
-        "Complex.normSq",
-        "Nat"
-      ],
-      "exact_fact_ids": [],
-      "kernel_declaration_id": "Complex.neg_div",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex"
@@ -27707,7 +26966,6 @@
         "Complex.normSq_conj"
       ],
       "direct_theorem_dependents": [
-        "Complex.conj_div",
         "Complex.conj_inv"
       ],
       "direct_type_dependencies": [
@@ -28195,50 +27453,6 @@
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Complex.root_of_unity_pow",
-      "search_authority": "candidate-only; kernel type checking remains authoritative",
-      "visible_in": [
-        "complex"
-      ]
-    },
-    {
-      "axiom_footprint_size": 0,
-      "canonical_type": "((x0 : Complex) -> ((x1 : Complex) -> ((x2 : Complex) -> ((x3 : AxNat) -> ((x4 : CReal.PosBound (Complex.normSq x2) x3) -> Complex.Equiv (Complex.div (Complex.add x0 (Complex.neg x1)) x2 x3 x4) (Complex.add (Complex.div x0 x2 x3 x4) (Complex.neg (Complex.div x1 x2 x3 x4))))))))",
-      "dependency_depth": 19,
-      "direct_declaration_dependencies": [
-        "CReal.PosBound",
-        "Complex",
-        "Complex.Equiv",
-        "Complex.Equiv.refl",
-        "Complex.Equiv.trans",
-        "Complex.add",
-        "Complex.add_congr",
-        "Complex.add_div",
-        "Complex.div",
-        "Complex.neg",
-        "Complex.neg_div",
-        "Complex.normSq",
-        "Nat"
-      ],
-      "direct_theorem_dependencies": [
-        "Complex.Equiv.refl",
-        "Complex.Equiv.trans",
-        "Complex.add_congr",
-        "Complex.add_div",
-        "Complex.neg_div"
-      ],
-      "direct_theorem_dependents": [],
-      "direct_type_dependencies": [
-        "CReal.PosBound",
-        "Complex",
-        "Complex.Equiv",
-        "Complex.add",
-        "Complex.div",
-        "Complex.neg",
-        "Complex.normSq",
-        "Nat"
-      ],
-      "exact_fact_ids": [],
-      "kernel_declaration_id": "Complex.sub_div",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "complex"
@@ -34996,7 +34210,6 @@
       "direct_theorem_dependents": [
         "CReal.bucketIndexFloorLower",
         "CReal.bucketIndexFloorUpper",
-        "CReal.expTerm_le_geom",
         "Int.crt_exists",
         "Int.crt_unique",
         "Int.dvd_trans",
@@ -35075,7 +34288,6 @@
       "direct_theorem_dependents": [
         "CReal.bucketIndexFloorLower",
         "CReal.bucketIndexFloorUpper",
-        "CReal.expTerm_le_geom",
         "Int.crt_exists",
         "Int.dvd_mul_left",
         "Int.euler_unit_coprime",
@@ -39097,7 +38309,6 @@
         "Nat.countRange_le_of_subset",
         "Nat.exists_prime_factorization",
         "Nat.mod_two_mul_split",
-        "Nat.mul_succ_add_lt_of_le_of_lt",
         "Nat.size_aux_lt_pow"
       ],
       "direct_type_dependencies": [
@@ -39734,7 +38945,6 @@
         "Nat.coprime_of_bezout_one",
         "Nat.mod_two_mul_split",
         "Nat.mul_eq_zero",
-        "Nat.mul_succ_add_lt_of_le_of_lt",
         "Nat.pow_half_split"
       ],
       "direct_type_dependencies": [
@@ -40674,7 +39884,6 @@
         "Nat.zero"
       ],
       "exact_fact_ids": [
-        "F:ml430-nat-choose-self-25bb9fb8",
         "F:nat-choose-self"
       ],
       "kernel_declaration_id": "Nat.choose_self",
@@ -40723,7 +39932,6 @@
         "Nat.zero"
       ],
       "exact_fact_ids": [
-        "F:ml430-nat-choose-succ-self-e396f6c2",
         "F:nat-choose-succ-self-eq-zero"
       ],
       "kernel_declaration_id": "Nat.choose_succ_self_eq_zero",
@@ -40768,7 +39976,6 @@
         "Nat.succ"
       ],
       "exact_fact_ids": [
-        "F:ml430-nat-choose-succ-succ-671856b6",
         "F:nat-choose-succ-succ"
       ],
       "kernel_declaration_id": "Nat.choose_succ_succ",
@@ -40891,7 +40098,6 @@
         "Nat.zero"
       ],
       "exact_fact_ids": [
-        "F:ml430-nat-choose-zero-right-1ed2802a",
         "F:nat-choose-zero-right"
       ],
       "kernel_declaration_id": "Nat.choose_zero_right",
@@ -47195,7 +46401,6 @@
         "Nat.totient_prime",
         "Nat.transposition_involutive",
         "Nat.transposition_maps_into",
-        "Rat.pow_natDivSucc_two",
         "Rat.prob_le_one",
         "Rat.sumRange_congr_lt",
         "Rat.sumRange_diagonal",
@@ -47273,7 +46478,6 @@
         "CReal.bucketIndexFloorLower",
         "CReal.bucketIndexFloorUpper",
         "CReal.eq_zero_of_mul_self_zero",
-        "CReal.expTerm_le_geom",
         "CReal.meshReciprocalMul",
         "CReal.natSqrtSpec",
         "Int.emod_lt_of_pos",
@@ -47313,7 +46517,6 @@
         "Nat.lt_succ_of_le",
         "Nat.mod_eq_zero_iff_dvd",
         "Nat.mod_two_mul_split",
-        "Nat.mul_succ_add_lt_of_le_of_lt",
         "Nat.not_dvd_one_of_two_le",
         "Nat.one_le_factorial",
         "Nat.one_le_left_of_mul",
@@ -47497,7 +46700,6 @@
       "direct_theorem_dependents": [
         "CReal.bucketIndexFloorUpper",
         "CReal.converges_comp_eventually",
-        "CReal.expTerm_le_geom",
         "CReal.fineSample_close",
         "CReal.fineSample_in_bounds",
         "CReal.hasDerivative_chain",
@@ -47555,7 +46757,6 @@
         "Nat.mod_two_mul_split",
         "Nat.monotone_of_le_succ",
         "Nat.mul_le_mul_left",
-        "Nat.mul_succ_add_lt_of_le_of_lt",
         "Nat.no_rational_sqrt_two",
         "Nat.not_dvd_one_add_mul_of_two_le",
         "Nat.not_dvd_one_of_two_le",
@@ -49399,7 +48600,6 @@
         "Nat.left_distrib"
       ],
       "direct_theorem_dependents": [
-        "CReal.expTerm_le_geom",
         "Int.mul_assoc",
         "Nat.add_pow",
         "Nat.bezout_of_scaled",
@@ -49470,7 +48670,6 @@
         "Nat.zero_mul"
       ],
       "direct_theorem_dependents": [
-        "CReal.expTerm_le_geom",
         "CReal.mul_nonneg",
         "Complex.root_of_unity_pow",
         "Int.mul_comm",
@@ -49596,7 +48795,6 @@
         "Nat.le_trans"
       ],
       "direct_theorem_dependents": [
-        "CReal.expTerm_le_geom",
         "Int.mul_le_mul_of_nonneg_left",
         "Int.mul_pos",
         "Nat.div_mod_lt_mul_iff",
@@ -49606,7 +48804,6 @@
         "Nat.le_of_dvd",
         "Nat.mod_two_mul_split",
         "Nat.mul_sub_left_distrib_total",
-        "Nat.mul_succ_add_lt_of_le_of_lt",
         "Nat.no_rational_sqrt_two",
         "Nat.not_dvd_one_of_two_le",
         "Nat.pow_lt_pow_succ",
@@ -49886,7 +49083,6 @@
         "Int.ediv_emod_unique",
         "Int.euclid_neg_succ",
         "Nat.mod_two_mul_split",
-        "Nat.mul_succ_add_lt_of_le_of_lt",
         "Nat.one_le_mul",
         "Nat.size_aux_lt_pow",
         "Rat.natDivSucc_halve",
@@ -49903,57 +49099,6 @@
       ],
       "exact_fact_ids": [],
       "kernel_declaration_id": "Nat.mul_succ",
-      "search_authority": "candidate-only; kernel type checking remains authoritative",
-      "visible_in": [
-        "characterization",
-        "complex",
-        "cpoint",
-        "creal",
-        "integer",
-        "nat",
-        "rat"
-      ]
-    },
-    {
-      "axiom_footprint_size": 0,
-      "canonical_type": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat.le x2 x1) -> ((x5 : AxNat.lt x3 (AxNat.succ x0)) -> AxNat.lt (AxNat.add (AxNat.mul (AxNat.succ x0) x2) x3) (AxNat.mul (AxNat.succ x0) (AxNat.succ x1))))))))",
-      "dependency_depth": 2,
-      "direct_declaration_dependencies": [
-        "Eq",
-        "Eq.rec",
-        "Eq.refl",
-        "Nat",
-        "Nat.add",
-        "Nat.add_le_add_left",
-        "Nat.add_succ",
-        "Nat.le",
-        "Nat.le_succ_succ",
-        "Nat.le_trans",
-        "Nat.lt",
-        "Nat.mul",
-        "Nat.mul_le_mul_left",
-        "Nat.mul_succ",
-        "Nat.succ"
-      ],
-      "direct_theorem_dependencies": [
-        "Nat.add_le_add_left",
-        "Nat.add_succ",
-        "Nat.le_succ_succ",
-        "Nat.le_trans",
-        "Nat.mul_le_mul_left",
-        "Nat.mul_succ"
-      ],
-      "direct_theorem_dependents": [],
-      "direct_type_dependencies": [
-        "Nat",
-        "Nat.add",
-        "Nat.le",
-        "Nat.lt",
-        "Nat.mul",
-        "Nat.succ"
-      ],
-      "exact_fact_ids": [],
-      "kernel_declaration_id": "Nat.mul_succ_add_lt_of_le_of_lt",
       "search_authority": "candidate-only; kernel type checking remains authoritative",
       "visible_in": [
         "characterization",
@@ -50583,7 +49728,6 @@
         "Nat.zero_le"
       ],
       "direct_theorem_dependents": [
-        "CReal.expTerm_le_geom",
         "Nat.exists_prime_gt"
       ],
       "direct_type_dependencies": [
@@ -50594,7 +49738,6 @@
         "Nat.zero"
       ],
       "exact_fact_ids": [
-        "F:ml430-nat-factorial-pos-f1dd2405",
         "F:nat-one-le-factorial"
       ],
       "kernel_declaration_id": "Nat.one_le_factorial",
@@ -50689,7 +49832,6 @@
         "Nat.not_succ_le_zero"
       ],
       "direct_theorem_dependents": [
-        "CReal.expTerm_le_geom",
         "CReal.meshReciprocalMul",
         "Nat.mod_two_mul_split",
         "Nat.one_le_factorial",
@@ -50869,7 +50011,6 @@
         "Nat.zero_mul"
       ],
       "direct_theorem_dependents": [
-        "CReal.expTerm_le_geom",
         "Int.neg_one_mul",
         "Nat.add_pow",
         "Nat.add_pow_modeq_prime",
@@ -51600,10 +50741,8 @@
         "Nat.zero_le"
       ],
       "direct_theorem_dependents": [
-        "CReal.expTerm_le_geom",
         "Nat.pow_lt_pow_succ",
-        "Nat.sumDivisors_two_pow_eq_geom_sum",
-        "Rat.pow_natDivSucc_two"
+        "Nat.sumDivisors_two_pow_eq_geom_sum"
       ],
       "direct_type_dependencies": [
         "Nat",
@@ -56251,7 +55390,6 @@
         "Nat.zero"
       ],
       "exact_fact_ids": [
-        "F:ml430-nat-choose-zero-succ-62c6520b",
         "F:nat-zero-choose-succ"
       ],
       "kernel_declaration_id": "Nat.zero_choose_succ",
@@ -56320,7 +55458,6 @@
         "CReal.bucketIndexFloorLower",
         "CReal.bucketIndexFloorUpper",
         "CReal.eq_zero_of_mul_self_zero",
-        "CReal.expTerm_le_geom",
         "CReal.meshReciprocalMul",
         "CReal.monotone_of_nonneg_deriv",
         "CReal.natSqrtSpec",
@@ -57089,8 +56226,6 @@
         "CReal.Equiv.trans",
         "CReal.add_assoc",
         "CReal.bound_within",
-        "CReal.bucketClampLower",
-        "CReal.bucketClampUpper",
         "CReal.converges_bounded",
         "CReal.converges_cauchy",
         "CReal.converges_comp_eventually",
@@ -57183,8 +56318,6 @@
         "CReal.add_assoc",
         "CReal.add_comm",
         "CReal.bound_within",
-        "CReal.bucketClampLower",
-        "CReal.bucketClampUpper",
         "CReal.converges_bounded",
         "CReal.converges_cauchy",
         "CReal.converges_comp_eventually",
@@ -57342,8 +56475,6 @@
         "CReal.add_zero",
         "CReal.archimedean",
         "CReal.bound_within",
-        "CReal.bucketClampLower",
-        "CReal.bucketClampUpper",
         "CReal.converges_add",
         "CReal.converges_comp_eventually",
         "CReal.converges_lower_bound",
@@ -57651,7 +56782,6 @@
         "CReal.add_zero",
         "CReal.archimedean",
         "CReal.bound_within",
-        "CReal.bucketClampLower",
         "CReal.converges_add",
         "CReal.converges_bounded",
         "CReal.converges_comp_eventually",
@@ -61114,7 +60244,6 @@
       "direct_theorem_dependents": [
         "CReal.bucketIndexFloorLower",
         "CReal.bucketIndexFloorUpper",
-        "CReal.expTerm_le_geom",
         "Rat.add_le_add",
         "Rat.le_trans",
         "Rat.mul_le_mul_of_nonneg_left",
@@ -61279,7 +60408,6 @@
       "direct_theorem_dependents": [
         "CReal.bucketIndexFloorLower",
         "CReal.bucketIndexFloorUpper",
-        "CReal.expTerm_le_geom",
         "Rat.add_le_add",
         "Rat.add_lt_add_of_le_of_lt",
         "Rat.bounds_num",
@@ -62355,7 +61483,6 @@
         "Rat.max_cases"
       ],
       "direct_theorem_dependents": [
-        "CReal.bucketClampUpper",
         "CReal.le_max_left",
         "Rat.abs_mul",
         "Rat.abs_neg",
@@ -62714,8 +61841,6 @@
         "Rat.neg_add_cancel"
       ],
       "direct_theorem_dependents": [
-        "CReal.bucketClampLower",
-        "CReal.bucketClampUpper",
         "CReal.geom_tail_within",
         "CReal.le_of_forall_le_add_small",
         "CReal.lt_cotrans",
@@ -62813,8 +61938,6 @@
         "CReal.add_zero",
         "CReal.archimedean",
         "CReal.bound_within",
-        "CReal.bucketClampLower",
-        "CReal.bucketClampUpper",
         "CReal.converges_add",
         "CReal.converges_comp_eventually",
         "CReal.converges_mul",
@@ -62956,8 +62079,6 @@
         "CReal.add_zero",
         "CReal.archimedean",
         "CReal.bound_within",
-        "CReal.bucketClampLower",
-        "CReal.bucketClampUpper",
         "CReal.converges_add",
         "CReal.converges_bounded",
         "CReal.converges_comp_eventually",
@@ -63599,7 +62720,6 @@
         "Rat.max_cases"
       ],
       "direct_theorem_dependents": [
-        "CReal.bucketClampLower",
         "Rat.abs_add",
         "Rat.abs_le_of_le_of_neg_le",
         "Rat.abs_mul",
@@ -64085,7 +63205,6 @@
         "CReal.mul_inv_cancel",
         "CReal.mul_nonneg",
         "CReal.ratSqLe",
-        "CReal.samplePoint_reblock",
         "Rat.abs_mul",
         "Rat.bernoulli",
         "Rat.bernoulli_harmonic_bound",
@@ -65247,7 +64366,6 @@
         "CReal.add_zero",
         "CReal.bound_within",
         "CReal.bounded_on_add",
-        "CReal.bucketClampLower",
         "CReal.converges_add",
         "CReal.converges_bounded",
         "CReal.converges_cauchy",
@@ -65503,8 +64621,6 @@
         "Rat.zero_le_natDivSucc"
       ],
       "direct_theorem_dependents": [
-        "CReal.bucketClampLower",
-        "CReal.bucketClampUpper",
         "CReal.converges_comp_eventually",
         "CReal.converges_of_cauchy",
         "CReal.converges_squeeze",
@@ -67182,7 +66298,6 @@
       "direct_theorem_dependents": [
         "CReal.bucketIndexFloorLower",
         "CReal.bucketIndexFloorUpper",
-        "CReal.expTerm_le_geom",
         "Rat.add_cross",
         "Rat.bounds_num",
         "Rat.mul_cross",
@@ -67262,8 +66377,7 @@
         "CReal.meshReciprocalMul",
         "Rat.left_distrib",
         "Rat.mul_assoc",
-        "Rat.natDivSucc_mul",
-        "Rat.pow_natDivSucc_two"
+        "Rat.natDivSucc_mul"
       ],
       "direct_type_dependencies": [
         "Eq",
@@ -67702,66 +66816,6 @@
     },
     {
       "axiom_footprint_size": 0,
-      "canonical_type": "((x0 : AxNat) -> Eq.{1} Rat (Rat.pow (Rat.natDivSucc (AxNat.succ AxNat.zero) (AxNat.succ AxNat.zero)) x0) (Rat.normalize (Int.ofNat (AxNat.succ AxNat.zero)) (AxNat.pow (AxNat.succ (AxNat.succ AxNat.zero)) x0) (AxNat.pow_pos (AxNat.succ (AxNat.succ AxNat.zero)) x0 (AxNat.le_succ (AxNat.succ AxNat.zero)))))",
-      "dependency_depth": 12,
-      "direct_declaration_dependencies": [
-        "Eq",
-        "Eq.rec",
-        "Eq.refl",
-        "Int.ofNat",
-        "Nat",
-        "Nat.le_succ",
-        "Nat.pow",
-        "Nat.pow_pos",
-        "Nat.rec",
-        "Nat.succ",
-        "Nat.zero",
-        "Rat",
-        "Rat.mul",
-        "Rat.natDivSucc",
-        "Rat.normalize",
-        "Rat.normalize_mul_normalize",
-        "Rat.one",
-        "Rat.pow",
-        "Rat.pow_succ",
-        "Rat.pow_zero",
-        "Rat.self_normalize"
-      ],
-      "direct_theorem_dependencies": [
-        "Nat.le_succ",
-        "Nat.pow_pos",
-        "Rat.normalize_mul_normalize",
-        "Rat.pow_succ",
-        "Rat.pow_zero",
-        "Rat.self_normalize"
-      ],
-      "direct_theorem_dependents": [],
-      "direct_type_dependencies": [
-        "Eq",
-        "Int.ofNat",
-        "Nat",
-        "Nat.le_succ",
-        "Nat.pow",
-        "Nat.pow_pos",
-        "Nat.succ",
-        "Nat.zero",
-        "Rat",
-        "Rat.natDivSucc",
-        "Rat.normalize",
-        "Rat.pow"
-      ],
-      "exact_fact_ids": [],
-      "kernel_declaration_id": "Rat.pow_natDivSucc_two",
-      "search_authority": "candidate-only; kernel type checking remains authoritative",
-      "visible_in": [
-        "complex",
-        "cpoint",
-        "creal",
-        "rat"
-      ]
-    },
-    {
-      "axiom_footprint_size": 0,
       "canonical_type": "((x0 : Rat) -> ((x1 : AxNat) -> Eq.{1} Rat (Rat.pow x0 (AxNat.succ x1)) (Rat.mul (Rat.pow x0 x1) x0)))",
       "dependency_depth": 0,
       "direct_declaration_dependencies": [
@@ -67774,9 +66828,7 @@
         "Rat.pow"
       ],
       "direct_theorem_dependencies": [],
-      "direct_theorem_dependents": [
-        "Rat.pow_natDivSucc_two"
-      ],
+      "direct_theorem_dependents": [],
       "direct_type_dependencies": [
         "Eq",
         "Nat",
@@ -67808,9 +66860,7 @@
         "Rat.pow"
       ],
       "direct_theorem_dependencies": [],
-      "direct_theorem_dependents": [
-        "Rat.pow_natDivSucc_two"
-      ],
+      "direct_theorem_dependents": [],
       "direct_type_dependencies": [
         "Eq",
         "Nat.zero",
@@ -68193,7 +67243,6 @@
         "Rat.inv_natDivSucc",
         "Rat.left_distrib",
         "Rat.mul_assoc",
-        "Rat.pow_natDivSucc_two",
         "Rat.uniform_is_distribution",
         "Rat.variance_sumVars"
       ],
@@ -68434,8 +67483,6 @@
       "direct_theorem_dependents": [
         "CReal.abs_nonneg",
         "CReal.archimedean",
-        "CReal.bucketClampLower",
-        "CReal.bucketClampUpper",
         "CReal.ivt_approx",
         "CReal.le_max_left",
         "CReal.le_max_right",
@@ -70197,7 +69244,6 @@
         "CReal.add_zero",
         "CReal.archimedean",
         "CReal.bounded_on_id_unit",
-        "CReal.bucketClampLower",
         "CReal.converges_add",
         "CReal.converges_comp_eventually",
         "CReal.converges_mul",
