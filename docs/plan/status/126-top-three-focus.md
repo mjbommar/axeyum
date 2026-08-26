@@ -84,6 +84,60 @@ ranked pairs and found six exact equivalents (five `Nat.choose` statements and
 terminal result is not yet durable evidence: next generate and gate a
 hash-bound census artifact, then reconcile those six graph identities without
 claiming autonomous theorem production.
+That census is now durable and freshness-checkable as
+`open-ranked-proposition-census-v1.json`: 57 goals, 684 pairs, six compatible,
+678 declined, zero audit errors, zero held-out access. Each row binds its
+external capsule size/hash, while the artifact binds both source censuses. Its
+recipe is intentionally not in the fleet-wide knowledge freshness aggregate
+because reproduction requires the external reference-pack mount. Next:
+reconcile the six exact identities as aliases/correspondences, preserving their
+non-autonomous provenance and leaving the remaining 51 goals open.
+The knowledge overlay now represents those six observations with an additive
+`definitionally-matches` relation from fact to kernel declaration. The relation
+is independently checked but explicitly non-authoritative: all six fact
+statuses remain unchanged. A durable review explains why these cannot yet be
+theorem correspondences (that schema correctly requires two settled fact
+endpoints) and sequences two missing native fact records, a reviewed
+reconciliation transaction, coordinated regeneration, and a remaining-target
+rerun. Next: add the two missing native fact records from kernel evidence, then
+specify and test the non-autonomous reconciliation transaction before changing
+any imported fact status.
+Two previously unlinked native theorem declarations now have first-class fact
+records derived from exact kernel types, direct dependencies, and theorem-level
+empty footprints: `Nat.choose_succ_self_eq_zero` and
+`Nat.zero_choose_succ`. The ledger reaches 698 facts / 504 proved while open
+remains 185; exact graph linkage reaches 397 theorems / 392 facts. All derived
+views were regenerated against the merged 1,253-theorem kernel, and the ranked
+57-goal census still finds exactly the same six matches. This is metadata and
+connective-tissue repair, not autonomous yield. Next: specify the reviewed
+reconciliation transaction and its negative controls before settling any of
+the six imported statement records.
+A prepared proposition-reconciliation transaction now requires an open,
+evidence-free source fact; a proved axiom-free native kernel fact; evidence
+binding that native fact to the exact matched declaration; and the exact
+independently checked overlay link with its false admission-authority
+qualifier. Mutations of every boundary fail closed. Each proposal carries
+`no_operation`, `autonomous: false`, and no admission event. All six source
+facts remain open. Next: materialize the six proposals against live hashes,
+version the pre-reconciliation evaluation artifacts, then apply and regenerate
+as one coordinated non-autonomous metadata transition.
+Six live, hash-bound reconciliation proposals now materialize from the exact
+census, lemma index, overlay links, and fact files. They name unique native
+fact endpoints and proposed after-facts while reporting zero ledger writes,
+zero operations, and zero autonomous credit. Two historical native evidence
+rows gained the additive `kernel_declaration` identity required to remove the
+last legacy-ID inference. No source fact changed status. Next: add a crash-safe
+checked apply path for this proposal kind, preserve the current 57-goal census
+as the pre-reconciliation version, then apply all six and regenerate the
+remaining-target v2 population.
+The crash-safe fact applier now rebuilds this proposal kind from the live
+census, overlay, native fact, and open fact before compare-and-swap. Durable
+events are `fact-reconciled`, not `fact-admitted`, and embed the same
+operation-free, non-autonomous classification. Recovery after intent, fact
+replacement, and event publication is deterministic; all six live proposals
+reconstruct byte-for-byte. No fact status changed in this increment. Next:
+preserve v1 as the explicit pre-reconciliation baseline, then execute the six
+checked transitions and publish a v2 remaining-target census.
 The accepted ADR-0541 general SMT-LIB session driver is now also a named
 `axeyum` binary target, not only a discoverability-poor Cargo example. The same
 source remains the historical example control, and the binary's focused check,
@@ -119,3 +173,9 @@ repository-built front door, not yet a published crate or prebuilt release.
 | 2026-08-26 | `680952a5d` | Rank 1,704 proof-isolated kernel-lemma candidates for 142 train/development open goals while excluding all 37 held-out IDs before statement tokenization. |
 | 2026-08-26 | `2b6020af2` | Compare closed propositions across independently owned kernels without confusing their shared outer `Prop` type or granting proof/admission authority. |
 | 2026-08-26 | `dc71a97a1` | Add a proof-free multi-candidate audit and demonstrate exact native equivalence can be distinguished from nearby topical mismatches. |
+| 2026-08-26 | `16de20475` | Publish the hash-bound 57-goal ranked proposition census: six exact native equivalents, 678 declines, and zero held-out access. |
+| 2026-08-26 | `18ccc487e` | Add six independently checked, non-authoritative fact-to-kernel proposition-match links and document the reconciliation boundary. |
+| 2026-08-26 | `83b3694e8` | Register two missing native binomial facts from kernel inventories and regenerate all dependent knowledge views at 1,253 theorems. |
+| 2026-08-26 | `cd02dbb57` | Add a fail-closed, operation-free proposition-reconciliation transaction with mutation controls and explicit zero autonomous credit. |
+| 2026-08-26 | `3d4bb31eb` | Materialize six live hash-bound reconciliation proposals with zero writes, operations, and autonomous credit. |
+| 2026-08-26 | `6a348363b` | Extend the crash-safe applier with live-rebuilt, operation-free reconciliation events and recovery controls at every durable boundary. |

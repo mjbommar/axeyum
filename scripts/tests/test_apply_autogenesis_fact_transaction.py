@@ -159,5 +159,74 @@ class FactTransactionApplyTests(unittest.TestCase):
             self.assertTrue(intent.is_file())
 
 
+class PropositionReconciliationApplyTests(unittest.TestCase):
+    def transaction(self):
+        before = {"id": "F:source", "epistemic_status": "open", "evidence": []}
+        after = {
+            "id": "F:source",
+            "epistemic_status": "proved",
+            "proof_route": "kernel-lean",
+            "axiom_footprint": [],
+            "evidence": [{"kernel_declaration": "Nat.source"}],
+        }
+        transaction = {
+            "schema_version": 1,
+            "kind": "axeyum-proposition-reconciliation-transaction-proposal",
+            "state": "prepared",
+            "identity": {
+                "fact_id": "F:source",
+                "native_fact_id": "F:native-source",
+                "native_theorem": "Nat.source",
+                "before_fact_sha256": MODULE.digest(before),
+                "after_fact_sha256": MODULE.digest(after),
+                "proposition_census_sha256": "a" * 64,
+            },
+            "precondition": {"source_is_authoritative": True},
+            "production_credit": {
+                "operation_id": None,
+                "autonomous": False,
+                "classification": "no_operation",
+            },
+            "authoritative_write": {
+                "path": "artifacts/facts/F-source.json",
+                "after_fact": after,
+            },
+            "admission_event": None,
+        }
+        transaction["transaction_sha256"] = MODULE.digest(transaction)
+        return before, after, transaction
+
+    def test_reconciliation_event_is_not_an_admission_or_production_event(self):
+        _before, _after, transaction = self.transaction()
+        event = MODULE.build_admission_event(transaction)
+        self.assertEqual(event["event_type"], "fact-reconciled")
+        self.assertEqual(event["kind"], "axeyum-autogenesis-durable-reconciliation-event")
+        self.assertEqual(event["production_credit"], transaction["production_credit"])
+        self.assertNotIn("episode_id", event["identity"])
+
+    def test_reconciliation_recovers_at_every_durable_boundary(self):
+        for fault in ("intent", "fact", "event"):
+            with self.subTest(fault=fault), tempfile.TemporaryDirectory() as raw:
+                before, after, transaction = self.transaction()
+                root = pathlib.Path(raw)
+                target = root / "F-source.json"
+                target.write_text(json.dumps(before))
+                journal = root / "journal"
+                with self.assertRaises(MODULE.InjectedFault):
+                    MODULE.apply_or_recover(
+                        transaction=transaction,
+                        target=target,
+                        journal_root=journal,
+                        fault_after=fault,
+                    )
+                event = MODULE.apply_or_recover(
+                    transaction=transaction,
+                    target=target,
+                    journal_root=journal,
+                )
+                self.assertEqual(json.loads(target.read_text()), after)
+                self.assertEqual(event["event_type"], "fact-reconciled")
+
+
 if __name__ == "__main__":
     unittest.main()

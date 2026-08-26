@@ -513,6 +513,14 @@ autogenesis-open-lemma-candidate-ranking:
     python3 -m unittest scripts.tests.test_gen_autogenesis_open_lemma_candidate_ranking
     python3 scripts/gen-autogenesis-open-lemma-candidate-ranking.py --check
 
+autogenesis-ranked-proposition-census:
+    cargo build -q -p axeyum-lean-import --example proposition_compatibility_audit
+    python3 scripts/gen-autogenesis-ranked-proposition-census.py --check
+
+autogenesis-proposition-reconciliation-proposals:
+    python3 -m unittest scripts.tests.test_prepare_autogenesis_fact_transaction
+    python3 scripts/gen-autogenesis-proposition-reconciliation-proposals.py --check
+
 autogenesis-kernel-projection:
     python3 -m unittest scripts.tests.test_validate_autogenesis_kernel_projection
     python3 scripts/validate-autogenesis-kernel-dependency-projection.py

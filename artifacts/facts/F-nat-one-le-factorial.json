@@ -24,6 +24,7 @@
     {
       "id": "kernel-Nat.one_le_factorial",
       "kind": "kernel-term",
+      "kernel_declaration": "Nat.one_le_factorial",
       "supports": "For every natural number n, n! ≥ 1 (the factorial is never zero).",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- one_le_factorial 2>/dev/null | grep -Ec '^Nat\\.one_le_factorial[[:space:]]')\" -ge 1",
