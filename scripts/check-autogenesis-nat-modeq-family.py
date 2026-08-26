@@ -24,17 +24,12 @@ script confirms the same bounded search actually closes three of the four --
 `Nat.ModEq.refl`, `Nat.ModEq.symm`, `Nat.ModEq.trans` -- from their
 tracked, hash-pinned external Mathlib exports.
 
-The fourth member, `Nat.ModEq.comm` (`F:ml430-nat-modeq-comm-24b71e7a`), is
-deliberately NOT named by this operation: it `depends_on`
-`F:ml430-nat-modeq-symm-0a3d4d18` in the fact ledger, which is not yet
-`proved`, so it is `blocked` rather than dependency-ready
-(`artifacts/autogenesis/nat-modeq-capability-selection-v1.json` records this
-scoping decision explicitly). Naming a currently-blocked fact in
-`applicability.fact_ids` would not change today's frontier selection and
-would contradict that recorded plan, so the operation's Nat.ModEq coverage is
-exactly the three ready facts (its Int.ModEq coverage is the separate,
-already-settled four-fact family checked by
-`check-autogenesis-modeq-family.py`).
+The fourth member, `Nat.ModEq.comm` (`F:ml430-nat-modeq-comm-24b71e7a`), was
+initially deferred because its ledger dependency on `Nat.ModEq.symm` was open.
+The authoritative loop admitted symmetry and transitivity on 2026-08-25, then
+recomputed the frontier and found commutativity dependency-ready. It is now the
+fourth Nat target of the same unchanged producer; this extension records a real
+durable-state-to-next-dispatch transition rather than bypassing the dependency.
 
 Registering this operation does not by itself prove anything: it makes three
 `open` facts dispatchable to `fact-frontier.py`'s selection. `execute-
@@ -58,7 +53,8 @@ at the time as `authoritative-mathlib-nat-modeq-family-v1`, before the merge
 above; only the id string changed), `checker_operation.goal_sha256` and
 `proof_sha256` matching exactly what `check_target` below re-derives.
 `F:ml430-nat-modeq-symm-0a3d4d18` and `F:ml430-nat-modeq-trans-ef9d1c46`
-remain `open` and dispatchable, for a following lane to close the same way.
+were subsequently closed through the typed execution and transaction path.
+`F:ml430-nat-modeq-comm-24b71e7a` is the remaining dispatchable target.
 A registration gate that let an `open` fact drift to `proved` without a
 matching evidence row, or let a `proved` fact's evidence disagree with a
 fresh replay, would be exactly the "checker that cannot fail" defect this
@@ -99,13 +95,14 @@ DISPATCHABLE_FACT_IDS = (
     "F:ml430-nat-modeq-refl-d870c8f5",
     "F:ml430-nat-modeq-symm-0a3d4d18",
     "F:ml430-nat-modeq-trans-ef9d1c46",
+    "F:ml430-nat-modeq-comm-24b71e7a",
 )
-SETTLED_FACT_IDS = ("F:ml430-nat-modeq-refl-d870c8f5",)
-REMAINING_DISPATCHABLE_FACT_IDS = (
+SETTLED_FACT_IDS = (
+    "F:ml430-nat-modeq-refl-d870c8f5",
     "F:ml430-nat-modeq-symm-0a3d4d18",
     "F:ml430-nat-modeq-trans-ef9d1c46",
 )
-DEFERRED_FACT_ID = "F:ml430-nat-modeq-comm-24b71e7a"
+REMAINING_DISPATCHABLE_FACT_IDS = ("F:ml430-nat-modeq-comm-24b71e7a",)
 
 
 class FamilyError(RuntimeError):
@@ -292,11 +289,6 @@ def check_registration_grants_dispatch_not_proof(
             "SETTLED_FACT_IDS and REMAINING_DISPATCHABLE_FACT_IDS no longer "
             "partition DISPATCHABLE_FACT_IDS"
         )
-    if DEFERRED_FACT_ID in all_named:
-        raise FamilyError(
-            f"{DEFERRED_FACT_ID} is blocked on an unsettled dependency and must "
-            "not be named by this operation yet"
-        )
     for fact_id in REMAINING_DISPATCHABLE_FACT_IDS:
         fact = load(ROOT / "artifacts/facts" / (fact_id.replace("F:", "F-") + ".json"))
         if fact.get("epistemic_status") != "open":
@@ -353,11 +345,15 @@ def check_registration_grants_dispatch_not_proof(
                     f"{fact_id}: evidence row {key}={bound.get(key)!r} disagrees "
                     f"with the freshly replayed {key}={op.get(key)!r}"
                 )
-    deferred = load(ROOT / "artifacts/facts" / (DEFERRED_FACT_ID.replace("F:", "F-") + ".json"))
-    if deferred.get("depends_on") != ["F:ml430-nat-modeq-symm-0a3d4d18"]:
+    comm = load(
+        ROOT
+        / "artifacts/facts"
+        / "F-ml430-nat-modeq-comm-24b71e7a.json"
+    )
+    if comm.get("depends_on") != ["F:ml430-nat-modeq-symm-0a3d4d18"]:
         raise FamilyError(
-            f"{DEFERRED_FACT_ID}: expected dependency changed; re-check whether "
-            "it is still blocked before leaving it deferred"
+            "Nat.ModEq.comm: expected dependency changed; re-check the durable "
+            "unlock before retaining it in this operation"
         )
 
 
@@ -412,13 +408,13 @@ def main() -> int:
             raise FamilyError("operation driver changed")
         max_binders = executor["max_binders"]
         # The operation also carries the four Int.ModEq train targets (see
-        # module docstring); this checker's job is the three Nat.ModEq
+        # module docstring); this checker's job is the four Nat.ModEq
         # targets specifically, so it selects its own subset rather than
         # assuming the operation names only them.
         all_targets = executor["targets"]
         targets = [t for t in all_targets if t["fact_id"] in DISPATCHABLE_FACT_IDS]
-        if len(targets) != 3:
-            raise FamilyError("expected exactly three Nat targets in this family")
+        if len(targets) != 4:
+            raise FamilyError("expected exactly four Nat targets in this family")
         targets_by_fact: dict[str, dict[str, Any]] = {}
         for target in targets:
             modeq = check_target(target, max_binders)
@@ -431,7 +427,7 @@ def main() -> int:
             f"operation={OPERATION_ID}|targets={len(targets)}|"
             f"settled_facts={','.join(SETTLED_FACT_IDS)}|"
             f"remaining_dispatchable_facts={','.join(REMAINING_DISPATCHABLE_FACT_IDS)}|"
-            f"deferred_fact={DEFERRED_FACT_ID}|"
+            "deferred_fact=none|"
             "circularity_adversarial_control=rejected|"
             "bogus_path_control=declined"
         )

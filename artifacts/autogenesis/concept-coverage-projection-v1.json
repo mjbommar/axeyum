@@ -1,16 +1,37 @@
 {
   "census": {
     "concepts": 9,
-    "excluded_held_out_family_topic_facts": 57,
-    "family_topic_facts": 157,
-    "with_family_topic": 6
+    "excluded_held_out_family_topic_facts": 37,
+    "family_topic_facts": 177,
+    "with_family_topic": 7
   },
   "concepts": [
     {
       "concept_id": "C:binomial-coefficient",
       "coverage_state": "family-topic-only",
-      "family_topic_fact_count": 0,
-      "family_topic_fact_ids": [],
+      "family_topic_fact_count": 20,
+      "family_topic_fact_ids": [
+        "F:ml430-mutation-edb05acf07d9ef3f9f8232fc",
+        "F:ml430-nat-choose-eq-zero-of-lt-92ebab29",
+        "F:ml430-nat-choose-le-add-9c463139",
+        "F:ml430-nat-choose-le-choose-907b5042",
+        "F:ml430-nat-choose-le-succ-62ae968b",
+        "F:ml430-nat-choose-mono-a1af9c18",
+        "F:ml430-nat-choose-ne-zero-49c3d3cb",
+        "F:ml430-nat-choose-one-right-7eda8e39",
+        "F:ml430-nat-choose-self-25bb9fb8",
+        "F:ml430-nat-choose-succ-self-e396f6c2",
+        "F:ml430-nat-choose-succ-succ-671856b6",
+        "F:ml430-nat-choose-symm-add-e4b68161",
+        "F:ml430-nat-choose-symm-of-eq-add-9b5f9a20",
+        "F:ml430-nat-choose-zero-right-1ed2802a",
+        "F:ml430-nat-choose-zero-succ-62c6520b",
+        "F:ml430-nat-factorial-dvd-ascfactorial-44a4e641",
+        "F:ml430-nat-factorial-dvd-descfactorial-bbf6124f",
+        "F:ml430-nat-multichoose-one-b210386a",
+        "F:ml430-nat-multichoose-one-right-7755072d",
+        "F:ml430-nat-multichoose-zero-right-6ef827c8"
+      ],
       "trust": "family-topic guidance only; the C: id is an unresolved citation label, not a formalization target"
     },
     {
@@ -240,7 +261,7 @@
       "development",
       "train"
     ],
-    "nursery_sha256": "aa7a2769fcc51bdcf90c360b435e5efed6797751e81ae9931fd52bb89c25e7f1",
+    "nursery_sha256": "6d1f2551a612fdcadaf1c6b0096c4eebee304d9687157cb25505f785ee86daa8",
     "removed_dimensions": "ADR-0553 removed qualified_formalization_* and kernel_semantic_anchor_*; both were read from overlay formalizes links resolved against an external repository, and both became structurally empty when it was removed",
     "trust_boundary": "train/development family-topic coverage only; never held-out inspection, proof, operation, or admission authority"
   },
