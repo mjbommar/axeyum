@@ -183,6 +183,7 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
         ("Complex.inv", p.inv),
         ("Complex.mul_inv_cancel", p.mul_inv_cancel),
         ("Complex.inv_congr", p.inv_congr),
+        ("Complex.inv_mul", p.inv_mul),
         ("Complex.div", p.div),
         ("Complex.div_congr", p.div_congr),
         ("Complex.div_self", p.div_self),
@@ -203,6 +204,7 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
         ("Complex.div_mul_cancel", p.div_mul_cancel),
         ("Complex.add_div", p.add_div),
         ("Complex.neg_div", p.neg_div),
+        ("Complex.sub_div", p.sub_div),
         ("Complex.pow", p.pow),
         ("Complex.pow_zero", p.pow_zero),
         ("Complex.pow_succ", p.pow_succ),
@@ -1082,5 +1084,152 @@ fn neg_div_concrete_instantiation() {
         admitted.is_ok(),
         "neg_div at (I, one, k, h) must give EXACTLY \
          Equiv (div (neg I) one k h) (neg (div I one k h)): {admitted:?}"
+    );
+}
+
+/// `Complex.sub_div` instantiated at `z = I`, `z2 = one`, `w = neg I` —
+/// three PAIRWISE DISTINCT concrete values (unlike this module's earlier
+/// concrete-instantiation tests, which only ever combined `I` and `one`),
+/// so a transposed numerator, a swapped `div_z_w`/`div_z2_w`, or a missing
+/// `neg` on the wrong side would all be caught by `add_declaration`'s own
+/// re-check against the independently-built expected `ty`.
+#[test]
+fn sub_div_concrete_instantiation() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let i_c = d.kernel().const_(p.i, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let neg_i_c = d.const_app(p.neg, &[i_c]);
+
+    let nat = d.nat_ty();
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let norm_negi = d.const_app(p.norm_sq, &[neg_i_c]);
+    let hypothesis = d.const_app(p.creal.pos_bound, &[norm_negi, k]);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    // Equiv (div (add I (neg one)) (neg I) k h)
+    //       (add (div I (neg I) k h) (neg (div one (neg I) k h))).
+    let proof = d.lemma(p.sub_div, &[i_c, one_c, neg_i_c, k, h]);
+
+    let neg_one = d.const_app(p.neg, &[one_c]);
+    let add_i_negone = d.const_app(p.add, &[i_c, neg_one]);
+    let div_lhs = d.const_app(p.div, &[add_i_negone, neg_i_c, k, h]);
+    let div_i_negi = d.const_app(p.div, &[i_c, neg_i_c, k, h]);
+    let div_one_negi = d.const_app(p.div, &[one_c, neg_i_c, k, h]);
+    let neg_div_one_negi = d.const_app(p.neg, &[div_one_negi]);
+    let add_rhs = d.const_app(p.add, &[div_i_negi, neg_div_one_negi]);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hypothesis, proof);
+        d.lam_fv(k_fv, nat, with_h)
+    };
+    let ty = {
+        let conclusion = super::zeq(&mut d, p, div_lhs, add_rhs);
+        let inner = d.pi_fv(h_fv, hypothesis, conclusion);
+        d.pi_fv(k_fv, nat, inner)
+    };
+    let name = d.kernel().name_str(anon, "Check.sub_div_concrete");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    });
+    assert!(
+        admitted.is_ok(),
+        "sub_div at (I, one, neg I, k, h) must give EXACTLY \
+         Equiv (div (add I (neg one)) (neg I) k h) \
+         (add (div I (neg I) k h) (neg (div one (neg I) k h))): {admitted:?}"
+    );
+}
+
+/// `Complex.inv_mul` instantiated at `z = neg I`, `w = one` — two DISTINCT
+/// concrete values, deliberately not the `z = I, w = one` combination this
+/// module's earlier division-algebra tests already used, so a swapped
+/// `inv_z`/`inv_w` on the right-hand side would be caught. The three moduli
+/// `k1`/`k2`/`k3` and their witnesses stay free, mirroring every other
+/// concrete-instantiation test in this module: this is a check on the
+/// COMPLEX arguments, not on a constructed `PosBound` witness.
+#[test]
+fn inv_mul_concrete_instantiation() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let i_c = d.kernel().const_(p.i, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let neg_i_c = d.const_app(p.neg, &[i_c]);
+
+    let nat = d.nat_ty();
+
+    let k1_fv = d.fresh_fvar();
+    let k1 = d.kernel().fvar(k1_fv);
+    let norm_negi = d.const_app(p.norm_sq, &[neg_i_c]);
+    let hyp1 = d.const_app(p.creal.pos_bound, &[norm_negi, k1]);
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+
+    let k2_fv = d.fresh_fvar();
+    let k2 = d.kernel().fvar(k2_fv);
+    let norm_one = d.const_app(p.norm_sq, &[one_c]);
+    let hyp2 = d.const_app(p.creal.pos_bound, &[norm_one, k2]);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+
+    let prod = d.const_app(p.mul, &[neg_i_c, one_c]);
+    let k3_fv = d.fresh_fvar();
+    let k3 = d.kernel().fvar(k3_fv);
+    let norm_prod = d.const_app(p.norm_sq, &[prod]);
+    let hyp3 = d.const_app(p.creal.pos_bound, &[norm_prod, k3]);
+    let h3_fv = d.fresh_fvar();
+    let h3 = d.kernel().fvar(h3_fv);
+
+    // Equiv (inv (mul (neg I) one) k3 h3) (mul (inv (neg I) k1 h1) (inv one k2 h2)).
+    let proof = d.lemma(p.inv_mul, &[neg_i_c, one_c, k1, h1, k2, h2, k3, h3]);
+
+    let inv_prod = d.const_app(p.inv, &[prod, k3, h3]);
+    let inv_negi = d.const_app(p.inv, &[neg_i_c, k1, h1]);
+    let inv_one = d.const_app(p.inv, &[one_c, k2, h2]);
+    let mul_invs = d.const_app(p.mul, &[inv_negi, inv_one]);
+
+    let value = {
+        let with_h3 = d.lam_fv(h3_fv, hyp3, proof);
+        let with_k3 = d.lam_fv(k3_fv, nat, with_h3);
+        let with_h2 = d.lam_fv(h2_fv, hyp2, with_k3);
+        let with_k2 = d.lam_fv(k2_fv, nat, with_h2);
+        let with_h1 = d.lam_fv(h1_fv, hyp1, with_k2);
+        d.lam_fv(k1_fv, nat, with_h1)
+    };
+    let ty = {
+        let conclusion = super::zeq(&mut d, p, inv_prod, mul_invs);
+        let inner = d.pi_fv(h3_fv, hyp3, conclusion);
+        let with_k3 = d.pi_fv(k3_fv, nat, inner);
+        let with_h2 = d.pi_fv(h2_fv, hyp2, with_k3);
+        let with_k2 = d.pi_fv(k2_fv, nat, with_h2);
+        let with_h1 = d.pi_fv(h1_fv, hyp1, with_k2);
+        d.pi_fv(k1_fv, nat, with_h1)
+    };
+    let name = d.kernel().name_str(anon, "Check.inv_mul_concrete");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    });
+    assert!(
+        admitted.is_ok(),
+        "inv_mul at (neg I, one, k1, h1, k2, h2, k3, h3) must give EXACTLY \
+         Equiv (inv (mul (neg I) one) k3 h3) \
+         (mul (inv (neg I) k1 h1) (inv one k2 h2)): {admitted:?}"
     );
 }
