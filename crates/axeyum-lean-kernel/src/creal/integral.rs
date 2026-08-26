@@ -2796,47 +2796,30 @@ fn frac_nonneg(d: &mut IntDev<'_>, p: CRealPrelude, denom: ExprId) -> ExprId {
     d.lemma(p.of_rat_le, &[rzero_expr, frac, rle_p])
 }
 
-/// `CReal.le (CReal.abs (CReal.add (CReal.add base (CReal.mul (CReal.ofNat
-/// j) (CReal.mul delta (CReal.ofRat (Rat.natDivSucc 1 n))))) (CReal.neg
-/// base))) delta` — roadmap step 1: every fine sample point `base +
-/// j·Δ_fine` (`Δ_fine := delta · natDivSucc 1 n`, `j < succ n`) lies within
-/// `delta` of the block's own coarse sample point `base`, for an arbitrary
-/// nonneg `delta` — independent of which coarse block `base` names.
-///
-/// Route: [`cancel_add_neg_right`] collapses the difference to the pure
-/// offset term `mul (ofNat j) Δ_fine`; that term is nonneg (`ofNat j` and
-/// `Δ_fine` both nonneg, `mul_nonneg`) and bounded above by `delta` exactly
-/// via `j ≤ succ n` ([`nat_le_of_lt`] on the hypothesis `hlt`), `ofNat_le`,
-/// `mul_le_mul_of_nonneg_left` and the exact identity `(succ n)·Δ_fine ~
-/// delta` ([`mesh_times_count_eq_width`] at `(delta, frac_n, n)` — the same
-/// helper [`declare_riemann_sample_in_bounds`]'s `upper` branch already
-/// uses, here reused at the FINE denominator rather than the coarse one);
-/// [`neg_le_of_nonneg`] gives the other `abs_le` branch directly from that
-/// same nonnegativity, with no separate lower-bound argument needed.
-#[allow(dead_code)] // staged for the per-term UC bound (riemannSum_cauchy), not yet landed
-fn sample_offset_bound(
+/// `(term, term_nonneg, term_le_delta)`, `term := mul (ofNat j) delta_fine`,
+/// `delta_fine := mul delta (embed (Rat.natDivSucc 1 n))`, `term_nonneg :
+/// le zero term`, `term_le_delta : le term delta` — the pure NUMERIC core
+/// [`sample_offset_bound`]'s own proof needs (there, to close an `abs_le`)
+/// and the fine-sample placement lemma [`declare_fine_sample_in_bounds`]
+/// needs directly (there, to place the fine sample point between `base` and
+/// `base + delta` via [`shift_le_of_nonneg`]/`add_le_add`). Factored out so
+/// both share exactly this proof term rather than two independently-typed
+/// copies of it.
+fn fine_term_and_bounds(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
-    base: ExprId,
     delta: ExprId,
     n: ExprId,
     j: ExprId,
     hlt: ExprId,
     delta_nonneg: ExprId,
-) -> ExprId {
+) -> (ExprId, ExprId, ExprId) {
     let one_nat = d.num(1);
     let frac_n_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, n]);
     let frac_n = embed(d, p, frac_n_rat);
     let delta_fine = cmul(d, p, delta, frac_n); // Δ_fine := delta * natDivSucc 1 n
     let of_nat_j = d.const_app(p.of_nat, &[j]);
     let term = cmul(d, p, of_nat_j, delta_fine); // mul (ofNat j) delta_fine
-
-    let x_j = cadd(d, p, base, term); // base + term -- the fine sample point
-    let diff = {
-        let nb = cneg(d, p, base);
-        cadd(d, p, x_j, nb) // (base + term) + (-base)
-    };
-    let diff_eq = cancel_add_neg_right(d, p, base, term); // Equiv diff term
 
     let frac_n_nonneg = frac_nonneg(d, p, n);
     let delta_fine_nonneg = d.lemma(p.mul_nonneg, &[delta, frac_n, delta_nonneg, frac_n_nonneg]);
@@ -2889,6 +2872,47 @@ fn sample_offset_bound(
         // : le term delta
     };
 
+    (term, term_nonneg, term_le_delta)
+}
+
+/// `CReal.le (CReal.abs (CReal.add (CReal.add base (CReal.mul (CReal.ofNat
+/// j) (CReal.mul delta (CReal.ofRat (Rat.natDivSucc 1 n))))) (CReal.neg
+/// base))) delta` — roadmap step 1: every fine sample point `base +
+/// j·Δ_fine` (`Δ_fine := delta · natDivSucc 1 n`, `j < succ n`) lies within
+/// `delta` of the block's own coarse sample point `base`, for an arbitrary
+/// nonneg `delta` — independent of which coarse block `base` names.
+///
+/// Route: [`cancel_add_neg_right`] collapses the difference to the pure
+/// offset term `mul (ofNat j) Δ_fine`; that term is nonneg (`ofNat j` and
+/// `Δ_fine` both nonneg, `mul_nonneg`) and bounded above by `delta` exactly
+/// via `j ≤ succ n` ([`nat_le_of_lt`] on the hypothesis `hlt`), `ofNat_le`,
+/// `mul_le_mul_of_nonneg_left` and the exact identity `(succ n)·Δ_fine ~
+/// delta` ([`mesh_times_count_eq_width`] at `(delta, frac_n, n)` — the same
+/// helper [`declare_riemann_sample_in_bounds`]'s `upper` branch already
+/// uses, here reused at the FINE denominator rather than the coarse one);
+/// [`neg_le_of_nonneg`] gives the other `abs_le` branch directly from that
+/// same nonnegativity, with no separate lower-bound argument needed.
+#[allow(dead_code)] // staged for the per-term UC bound (riemannSum_cauchy), not yet landed
+fn sample_offset_bound(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    base: ExprId,
+    delta: ExprId,
+    n: ExprId,
+    j: ExprId,
+    hlt: ExprId,
+    delta_nonneg: ExprId,
+) -> ExprId {
+    let (term, term_nonneg, term_le_delta) =
+        fine_term_and_bounds(d, p, delta, n, j, hlt, delta_nonneg);
+
+    let x_j = cadd(d, p, base, term); // base + term -- the fine sample point
+    let diff = {
+        let nb = cneg(d, p, base);
+        cadd(d, p, x_j, nb) // (base + term) + (-base)
+    };
+    let diff_eq = cancel_add_neg_right(d, p, base, term); // Equiv diff term
+
     let neg_term_le_delta = neg_le_of_nonneg(d, p, term, delta, term_nonneg, delta_nonneg);
     let abs_term_le_delta = d.lemma(p.abs_le, &[term, delta, term_le_delta, neg_term_le_delta]);
 
@@ -2910,6 +2934,271 @@ fn sample_offset_bound(
         ],
     )
     // : le abs_diff delta
+}
+
+/// `Equiv (sample_point x0 step (Nat.succ i)) (add (sample_point x0 step i)
+/// step)` — the coarse/fine successor step `x_{i+1} ~ x_i + step`, in
+/// ADDITIVE form. A restatement of `monotone.rs`'s private
+/// `consecutive_diff_eq_step` (which proves the DIFFERENCE form `x_{i+1} −
+/// x_i ~ step`, built for a different call site) built directly to the
+/// additive shape [`declare_fine_sample_in_bounds`] needs: duplicated rather
+/// than imported, since that file is out of scope for edits in this slice
+/// and `consecutive_diff_eq_step` is private there.
+///
+/// Route: `ofNat (succ i) ~ ofNat i + one` ([`of_nat_succ_equiv_local`]),
+/// `mul_congr` to lift that into `(ofNat (succ i))·step ~ (ofNat i +
+/// one)·step`, [`right_distrib`] to expand the right side to `(ofNat
+/// i)·step + one·step`, `mul_one`/`mul_comm` to fold `one·step ~ step`, then
+/// `add_congr` with `x0` and `add_assoc` to re-bracket `x0 + ((ofNat
+/// i)·step + step)` as `(x0 + (ofNat i)·step) + step`.
+fn sample_point_succ_step(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x0: ExprId,
+    step: ExprId,
+    i: ExprId,
+) -> ExprId {
+    let of_nat_i = d.const_app(p.of_nat, &[i]);
+    let u = cmul(d, p, of_nat_i, step);
+    let x_i = cadd(d, p, x0, u); // sample_point x0 step i
+
+    let si = d.succ(i);
+    let of_nat_si = d.const_app(p.of_nat, &[si]);
+    let v = cmul(d, p, of_nat_si, step); // ofNat(succ i) * step
+    let x_si = cadd(d, p, x0, v); // sample_point x0 step (succ i)
+
+    // v_eq_u_plus_step : Equiv v (add u step).
+    let v_eq_u_plus_step = {
+        let one_c = d.kernel().const_(p.one, vec![]);
+        let succ_eq = of_nat_succ_equiv_local(d, p, i); // Equiv of_nat_si (add of_nat_i one_c)
+        let sum_of_nat = cadd(d, p, of_nat_i, one_c);
+        let expanded = cmul(d, p, sum_of_nat, step);
+        let h_a = {
+            let refl_step = d.lemma(p.equiv_refl, &[step]);
+            d.lemma(
+                p.mul_congr,
+                &[of_nat_si, sum_of_nat, step, step, succ_eq, refl_step],
+            )
+        };
+        let h_b = right_distrib(d, p, of_nat_i, one_c, step);
+        let one_step = cmul(d, p, one_c, step);
+        let distributed = cadd(d, p, u, one_step);
+        let h_c = {
+            let refl_u = d.lemma(p.equiv_refl, &[u]);
+            let one_mul_step = {
+                let step_one = cmul(d, p, step, one_c);
+                let mul_one_step = d.lemma(p.mul_one, &[step]);
+                let comm = d.lemma(p.mul_comm, &[one_c, step]);
+                d.lemma(
+                    p.equiv_trans,
+                    &[one_step, step_one, step, comm, mul_one_step],
+                )
+            };
+            d.lemma(p.add_congr, &[u, u, one_step, step, refl_u, one_mul_step])
+        };
+        let u_plus_step = cadd(d, p, u, step);
+        let s1 = d.lemma(p.equiv_trans, &[v, expanded, distributed, h_a, h_b]);
+        d.lemma(p.equiv_trans, &[v, distributed, u_plus_step, s1, h_c])
+    };
+
+    // x_si = x0 + v ~ x0 + (u + step) ~ (x0 + u) + step = x_i + step.
+    let u_plus_step = cadd(d, p, u, step);
+    let x0_u_step = cadd(d, p, x0, u_plus_step);
+    let h_v = {
+        let refl_x0 = d.lemma(p.equiv_refl, &[x0]);
+        d.lemma(
+            p.add_congr,
+            &[x0, x0, v, u_plus_step, refl_x0, v_eq_u_plus_step],
+        )
+    };
+    let x_i_step = cadd(d, p, x_i, step);
+    let h_assoc = {
+        // add_assoc(x0, u, step) : Equiv (add (add x0 u) step) (add x0 (add u step))
+        //                        = Equiv x_i_step x0_u_step
+        let assoc = d.lemma(p.add_assoc, &[x0, u, step]);
+        d.lemma(p.equiv_symm, &[x_i_step, x0_u_step, assoc])
+    };
+    d.lemma(p.equiv_trans, &[x_si, x0_u_step, x_i_step, h_v, h_assoc])
+    // : Equiv x_si x_i_step
+}
+
+/// `CReal.fineSample_in_bounds : ∀ a b m n i j, le a b → Nat.le i m →
+/// Nat.lt j (Nat.succ n) → And (le a x) (le x b)`, `x := add (sample_point a
+/// delta_m i) (mul (ofNat j) delta_fine)`, `delta_m := mul (add b (neg a))
+/// (embed (Rat.natDivSucc 1 m))`, `delta_fine := mul delta_m (embed
+/// (Rat.natDivSucc 1 n))` — the fine-sample placement lemma
+/// `riemannSum_cauchy`'s per-block fold needs: every FINE sample point `x`
+/// inside COARSE block `i` (`i ≤ m`) lies in `[a, b]`, for every fine
+/// sub-index `j < Nat.succ n`. See the module documentation's "the succ-shape
+/// bridge" section header and [`CRealPrelude::fine_sample_in_bounds`]'s own
+/// doc comment for why this is the one-index-shift generalization
+/// `riemannSum_sample_in_bounds`/`subdivisionPoint_in_bounds` do not cover.
+///
+/// Route: two calls to `subdivisionPoint_in_bounds`, at coarse indices `i`
+/// (giving `a ≤ base`, `base := sample_point a delta_m i`) and `Nat.succ i`
+/// (giving `base' ≤ b`, `base' := sample_point a delta_m (Nat.succ i)`),
+/// bracketing the block `[base, base + delta_m]` via
+/// [`sample_point_succ_step`] (`base' ~ base + delta_m`). `i ≤ m` weakens to
+/// both `i ≤ succ m` (`Nat.le_trans` against `Nat.le_succ`, the exact idiom
+/// [`nat_le_of_lt`] already uses) and `succ i ≤ succ m` (`Nat.succ_le_succ`
+/// directly) — the two hypotheses `subdivisionPoint_in_bounds` needs at
+/// those two indices. [`fine_term_and_bounds`] gives the fine term's own
+/// `0 ≤ term` (lower: [`shift_le_of_nonneg`] places `x` past `base`) and
+/// `term ≤ delta_m` (upper: `add_le_add` places `x` before `base'`, then
+/// `le_congr` rewrites `base'` down to `base + delta_m`); `le_trans` on each
+/// side closes `a ≤ x` and `x ≤ b`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_fine_sample_in_bounds(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let logic = p.rat.int.logic;
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let hi_ty = d.le(i, m); // Nat.le i m
+    let hi_fv = d.fresh_fvar();
+    let hi = d.kernel().fvar(hi_fv);
+
+    let sn = d.succ(n);
+    let hj_ty = d.lt(j, sn); // Nat.lt j (Nat.succ n)
+    let hj_fv = d.fresh_fvar();
+    let hj = d.kernel().fvar(hj_fv);
+
+    let (delta_m, delta_m_nonneg) = delta_nonneg_of(d, p, a, b, m, hab);
+    let base = sample_point(d, p, a, delta_m, i);
+    let (term, term_nonneg, term_le_delta_m) =
+        fine_term_and_bounds(d, p, delta_m, n, j, hj, delta_m_nonneg);
+    let x = cadd(d, p, base, term); // the fine sample point
+
+    let np = d.prelude();
+    let succ_m = d.succ(m);
+
+    // lower : le a x.
+    let a_le_x = {
+        // hle_i_succm : Nat.le i (Nat.succ m), from `i ≤ m` and `m ≤ succ m`.
+        let hle_i_succm = {
+            let le_succ_m = d.const_app(np.le_succ, &[m]);
+            d.const_app(np.le_trans, &[i, m, succ_m, hi, le_succ_m])
+        };
+        let and_base = d.const_app(
+            p.subdivision_point_in_bounds,
+            &[a, b, m, i, hab, hle_i_succm],
+        );
+        let a_le_base_ty = cle(d, p, a, base);
+        let base_le_b_ty = cle(d, p, base, b);
+        let a_le_base = d.const_app(logic.and_left, &[a_le_base_ty, base_le_b_ty, and_base]);
+
+        let base_le_x = shift_le_of_nonneg(d, p, base, term, term_nonneg);
+        d.lemma(p.le_trans, &[a, base, x, a_le_base, base_le_x])
+    };
+
+    // upper : le x b.
+    let x_le_b = {
+        let succ_i = d.succ(i);
+        // hle_si_succm : Nat.le (Nat.succ i) (Nat.succ m), from `i ≤ m`.
+        let hle_si_succm = d.const_app(np.succ_le_succ, &[i, m, hi]);
+        let and_base_succ = d.const_app(
+            p.subdivision_point_in_bounds,
+            &[a, b, m, succ_i, hab, hle_si_succm],
+        );
+        let base_succ = sample_point(d, p, a, delta_m, succ_i);
+        let a_le_base_succ_ty = cle(d, p, a, base_succ);
+        let base_succ_le_b_ty = cle(d, p, base_succ, b);
+        let base_succ_le_b = d.const_app(
+            logic.and_right,
+            &[a_le_base_succ_ty, base_succ_le_b_ty, and_base_succ],
+        );
+
+        // base_succ ~ add base delta_m.
+        let succ_step_eq = sample_point_succ_step(d, p, a, delta_m, i);
+        let base_plus_delta = cadd(d, p, base, delta_m);
+        let refl_b = d.lemma(p.equiv_refl, &[b]);
+        let base_plus_delta_le_b = d.lemma(
+            p.le_congr,
+            &[
+                base_succ,
+                base_plus_delta,
+                b,
+                b,
+                succ_step_eq,
+                refl_b,
+                base_succ_le_b,
+            ],
+        );
+
+        // x = add base term ≤ add base delta_m, from term ≤ delta_m.
+        let refl_base = d.lemma(p.le_refl, &[base]);
+        let x_le_base_plus_delta = d.lemma(
+            p.add_le_add,
+            &[base, base, term, delta_m, refl_base, term_le_delta_m],
+        );
+        d.lemma(
+            p.le_trans,
+            &[
+                x,
+                base_plus_delta,
+                b,
+                x_le_base_plus_delta,
+                base_plus_delta_le_b,
+            ],
+        )
+    };
+
+    let a_le_x_ty = cle(d, p, a, x);
+    let x_le_b_ty = cle(d, p, x, b);
+    let and_ty = d.const_app(logic.and, &[a_le_x_ty, x_le_b_ty]);
+    let proof_body = and_intro(d, p, a_le_x_ty, x_le_b_ty, a_le_x, x_le_b);
+
+    let ty = {
+        let after_hj = d.arrow(hj_ty, and_ty);
+        let after_hi = d.arrow(hi_ty, after_hj);
+        let after_hab = d.arrow(hab_ty, after_hi);
+        let over_j = d.pi_fv(j_fv, nat, after_hab);
+        let over_i = d.pi_fv(i_fv, nat, over_j);
+        let over_n = d.pi_fv(n_fv, nat, over_i);
+        let over_m = d.pi_fv(m_fv, nat, over_n);
+        let over_b = d.pi_fv(b_fv, carrier, over_m);
+        d.pi_fv(a_fv, carrier, over_b)
+    };
+    let value = {
+        let with_hj = d.lam_fv(hj_fv, hj_ty, proof_body);
+        let with_hi = d.lam_fv(hi_fv, hi_ty, with_hj);
+        let with_hab = d.lam_fv(hab_fv, hab_ty, with_hi);
+        let over_j = d.lam_fv(j_fv, nat, with_hab);
+        let over_i = d.lam_fv(i_fv, nat, over_j);
+        let over_n = d.lam_fv(n_fv, nat, over_i);
+        let over_m = d.lam_fv(m_fv, nat, over_n);
+        let over_b = d.lam_fv(b_fv, carrier, over_m);
+        d.lam_fv(a_fv, carrier, over_b)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.fine_sample_in_bounds,
+        uparams: vec![],
+        ty,
+        value,
+    })
 }
 
 #[cfg(test)]
