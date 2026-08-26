@@ -15,6 +15,9 @@ fn main() {
     }
 }
 
+// The term construction mirrors the mathematical telescope; conventional
+// one-letter variables keep the rendered theorem and its builder aligned.
+#[allow(clippy::many_single_char_names, clippy::too_many_lines)]
 fn run() -> Result<(), String> {
     let mut kernel = Kernel::new();
     let prelude = build_nat_prelude(&mut kernel).map_err(|error| format!("{error:?}"))?;
@@ -24,6 +27,8 @@ fn run() -> Result<(), String> {
     let bit_to_bool_name = kernel.name_str(autogenesis, "bitToBool");
     let test_bit_bool_name = kernel.name_str(autogenesis, "testBitBool");
     let successor_name = kernel.name_str(autogenesis, "testBitBool_succ");
+    let observation_name = kernel.name_str(autogenesis, "bitwiseObservation");
+    let observation_apply_name = kernel.name_str(autogenesis, "bitwiseObservation_apply");
 
     {
         let mut d = NatDev::new(&mut kernel, prelude);
@@ -95,6 +100,68 @@ fn run() -> Result<(), String> {
             (d.bool_eq(lhs, rhs), d.bool_refl(rhs))
         })
         .map_err(|error| format!("testBitBool_succ rejected: {error:?}"))?;
+
+        // The pointwise Boolean algebra required by the target, separated from
+        // the harder task of reifying all observations back into one Nat.
+        let bool_binary = {
+            let bool_to_bool = d.arrow(bool_ty, bool_ty);
+            d.arrow(bool_ty, bool_to_bool)
+        };
+        let observation_value = {
+            let f_fv = d.fresh_fvar();
+            let f = d.kernel().fvar(f_fv);
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let y_fv = d.fresh_fvar();
+            let y = d.kernel().fvar(y_fv);
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let left = d.const_app(test_bit_bool_name, &[x, i]);
+            let right = d.const_app(test_bit_bool_name, &[y, i]);
+            let body = d.apply(f, &[left, right]);
+            let with_i = d.lam_fv(i_fv, nat, body);
+            let with_y = d.lam_fv(y_fv, nat, with_i);
+            let with_x = d.lam_fv(x_fv, nat, with_y);
+            d.lam_fv(f_fv, bool_binary, with_x)
+        };
+        let observation_type = {
+            let over_i = d.arrow(nat, bool_ty);
+            let over_y = d.arrow(nat, over_i);
+            let over_x = d.arrow(nat, over_y);
+            d.arrow(bool_binary, over_x)
+        };
+        d.kernel()
+            .add_declaration(Declaration::Definition {
+                name: observation_name,
+                uparams: vec![],
+                ty: observation_type,
+                value: observation_value,
+                hint: ReducibilityHint::Regular(4),
+            })
+            .map_err(|error| format!("bitwiseObservation rejected: {error:?}"))?;
+
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let lhs = d.const_app(observation_name, &[f, x, y, i]);
+        let left = d.const_app(test_bit_bool_name, &[x, i]);
+        let right = d.const_app(test_bit_bool_name, &[y, i]);
+        let rhs = d.apply(f, &[left, right]);
+        let statement = d.bool_eq(lhs, rhs);
+        let proof = d.bool_refl(rhs);
+        let mut theorem_type = statement;
+        let mut theorem_value = proof;
+        for (free, ty) in [(i_fv, nat), (y_fv, nat), (x_fv, nat), (f_fv, bool_binary)] {
+            theorem_type = d.pi_fv(free, ty, theorem_type);
+            theorem_value = d.lam_fv(free, ty, theorem_value);
+        }
+        d.declare_theorem(observation_apply_name, theorem_type, theorem_value)
+            .map_err(|error| format!("bitwiseObservation_apply rejected: {error:?}"))?;
     }
 
     let declaration = kernel
@@ -113,9 +180,18 @@ fn run() -> Result<(), String> {
     if !footprint.is_empty() {
         return Err(format!("bridge theorem has assumptions: {footprint:?}"));
     }
+    let observation_type = match kernel.environment().get(observation_apply_name) {
+        Some(Declaration::Theorem { ty, .. }) => *ty,
+        _ => return Err("bitwiseObservation_apply disappeared".to_owned()),
+    };
+    let observation_footprint = kernel.axiom_footprint(observation_apply_name);
+    if !observation_footprint.is_empty() {
+        return Err("bitwise observation algebra gained assumptions".to_owned());
+    }
     println!(
-        "NAT_TESTBIT_BOOL_BRIDGE_OK|theorem=Axeyum.Autogenesis.testBitBool_succ|axioms=0|type={}",
-        kernel.render_lean(ty)
+        "NAT_TESTBIT_BOOL_BRIDGE_OK|theorem=Axeyum.Autogenesis.testBitBool_succ|axioms=0|type={}|observation_theorem=Axeyum.Autogenesis.bitwiseObservation_apply|observation_axioms=0|observation_type={}",
+        kernel.render_lean(ty),
+        kernel.render_lean(observation_type)
     );
     Ok(())
 }

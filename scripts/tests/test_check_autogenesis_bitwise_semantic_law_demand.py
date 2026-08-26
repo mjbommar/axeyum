@@ -24,6 +24,7 @@ class BitwiseSemanticLawDemandTests(unittest.TestCase):
                 "laws": 6,
                 "native_analogues": 2,
                 "native_boolean_bridges": 1,
+                "native_observation_algebras": 1,
                 "operations": 2,
             },
         )
@@ -62,6 +63,12 @@ class BitwiseSemanticLawDemandTests(unittest.TestCase):
         data = copy.deepcopy(self.data)
         data["native_boolean_bridge"]["imported_equivalence_status"] = "proved"
         with self.assertRaisesRegex(ValueError, "gained credit"):
+            MODULE.validate(data)
+
+    def test_nat_reification_cannot_gain_unproved_credit(self):
+        data = copy.deepcopy(self.data)
+        data["native_observation_algebra"]["nat_reification_status"] = "proved"
+        with self.assertRaisesRegex(ValueError, "reification gained credit"):
             MODULE.validate(data)
 
 

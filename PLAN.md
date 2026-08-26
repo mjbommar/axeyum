@@ -1485,6 +1485,10 @@ direct closures, and footprints. Each concrete implementation reaches
 `propext`; `testBit` does so through its typeclass-expanded shift/and/equality
 route, while `bitwise` reaches a private unary worker and `PSigma`. Clean work
 must therefore reconstruct target-owned semantics rather than graft definitions.
+The target-owned pointwise bitwise algebra now checks axiom-free for arbitrary
+Boolean operators. The remaining mathematical obligation is sharply isolated:
+reify that observation function as a natural number, then prove its observations
+round-trip. Observation-level success is explicitly denied theorem credit.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization

@@ -64,5 +64,13 @@ carry `propext` through their concrete implementation closures. For
 unary worker plus `PSigma`. This rules out a cheap exact-definition graft as
 the clean bridge and makes target-owned semantic reconstruction the next step.
 
+The target-owned observation algebra is now also explicit and axiom-free:
+`bitwiseObservation f x y i` computes
+`f (testBitBool x i) (testBitBool y i)`, and its application theorem closes by
+reflexivity. This cleanly isolates what remains: construct a natural number
+whose Boolean observations equal that function. The artifact records
+`nat_reification_status = missing`; the observation-level theorem alone cannot
+receive credit for `Nat.testBit_bitwise`.
+
 Run `just autogenesis-bitwise-semantic-law-demand` to validate the join and its
 negative controls.

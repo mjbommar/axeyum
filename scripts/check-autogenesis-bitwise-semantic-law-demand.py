@@ -105,6 +105,14 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
     bridge_type = bridge.get("canonical_type", "")
     if "Eq.{1} Bool" not in bridge_type or "testBitBool" not in bridge_type:
         raise ValueError("native Boolean observation bridge type changed")
+    algebra = data.get("native_observation_algebra", {})
+    if algebra.get("axiom_footprint_size") != 0:
+        raise ValueError("native observation algebra gained assumptions")
+    if algebra.get("nat_reification_status") != "missing":
+        raise ValueError("unproved Nat reification gained credit")
+    algebra_type = algebra.get("canonical_type", "")
+    if "bitwiseObservation" not in algebra_type or "testBitBool" not in algebra_type:
+        raise ValueError("native observation algebra type changed")
 
     exclusion = data.get("countermodel_exclusion", {})
     if exclusion.get("excluded_by_law") != "testBit_succ":
@@ -123,6 +131,7 @@ def validate(data: dict[str, Any]) -> dict[str, int]:
         "laws": len(laws),
         "native_analogues": len(analogues),
         "native_boolean_bridges": 1,
+        "native_observation_algebras": 1,
         "operations": len(operations),
     }
 
@@ -141,6 +150,7 @@ def main() -> int:
         f"laws={result['laws']}|operations={result['operations']}|"
         f"native_analogues={result['native_analogues']}|"
         f"native_boolean_bridges={result['native_boolean_bridges']}|"
+        f"native_observation_algebras={result['native_observation_algebras']}|"
         "countermodel_excluded=true|reconstruction_eligible=false"
     )
     return 0
