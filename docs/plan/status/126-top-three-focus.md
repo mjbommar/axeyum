@@ -46,16 +46,21 @@ fact-to-kernel identity, re-hashes and size-checks the external capsule, imports
 only its explicit candidates, and runs bounded application. It does not yet
 expose this route as a tier-C tool: operation registration and transaction
 authority remain deliberately separate.
-An 80-target open/conjectured arrow-free sweep now measures the honest next
-boundary: the unchanged 13-declaration palette accepts 0, 37 targets reach
-search and type-decline, and 43 fail closed during import because their target
+The corrected 57-target train/development open/conjectured arrow-free sweep
+measures the honest next boundary: the unchanged 13-declaration palette accepts
+0, 30 targets reach search and type-decline, and 27 fail closed during import because their target
 type closure reaches an unallowlisted trusted declaration. The hashed census is
 measurement only. Do not register the settled three-control family as new
 production. Next: separate an allowlisted checked type environment from proof
 candidates, then add dependency-ranked premise retrieval and rerun this exact
-population. The 43 import rejections must use the already implemented ADR-0484
+population. The 27 import rejections must use the already implemented ADR-0484
 type-slice/generalization and exact-specialization route; do not create a second
 trusted-support allowlist in the candidate importer.
+The first exploratory run improperly included 23 held-out rows. It found no
+proof and read no source proof body, but the attempt itself spent evaluation
+information. The v2 census excludes them before capsule access, records their
+identities, and fails closed on facts absent from the nursery. Do not use the
+superseded 80-row counts.
 The accepted ADR-0541 general SMT-LIB session driver is now also a named
 `axeyum` binary target, not only a discoverability-poor Cargo example. The same
 source remains the historical example control, and the binary's focused check,

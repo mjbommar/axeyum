@@ -107,15 +107,18 @@ compounding claim remains small:
 - an earlier fixed reflexivity grammar accepted 2 of 138 checked type slices;
 - proof-isolated bounded application accepted 6 of 109 already settled Nat
   controls; and
-- the same search over 80 genuinely open/conjectured arrow-free statements
+- the same search over 57 train/development open/conjectured arrow-free statements
   with one target-independent elementary palette accepted 0.
 
-Of those 80, 37 reached search and returned `NoTypedApplication`; 43 failed
+Of those 57, 30 reached search and returned `NoTypedApplication`; 27 failed
 closed because the direct statement capsule reached an unlisted theorem,
 axiom, or quotient declaration. The existing ADR-0484 type-slice route—not a
 weaker importer—handles that second class by generalization and exact checked
 specialization. The remaining problem is productive proof search and semantic
-contracts, not merely transport.
+contracts, not merely transport. An initial exploratory run also touched 23
+held-out targets; although it produced no proof and read no source proof body,
+that was an evaluation-policy breach. The committed v2 census excludes those
+rows before reading their capsules and records their identities explicitly.
 
 ## Comparative position
 
@@ -158,7 +161,7 @@ Primary external references: [Lean documentation](https://lean-lang.org/lean4/do
 ## Weakest parts
 
 1. **Autonomous conversion, by a wide margin.** Architecture and checking are
-   ahead of premise selection and proof construction. Zero of the latest 80
+   ahead of premise selection and proof construction. Zero of the latest 57
    open targets converted under the fixed baseline.
 2. **Graph connectivity and semantic availability.** Two thirds of kernel
    theorems lack exact fact links. Type slices often erase the behavior a proof

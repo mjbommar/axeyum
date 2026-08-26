@@ -26,6 +26,22 @@ class OpenFixedPaletteTests(unittest.TestCase):
             Path("/packs/F-ml430-nat-foo-deadbeef.ndjson"),
         )
 
+    def test_held_out_rows_are_excluded_before_capsule_access(self) -> None:
+        mapping = {"F:train": "T.train", "F:held": "T.held"}
+        nursery = {
+            "entries": [
+                {"fact_id": "F:train", "partition": "train"},
+                {"fact_id": "F:held", "partition": "held-out"},
+            ]
+        }
+        eligible, excluded = MODULE.eligible_mapping(mapping, nursery)
+        self.assertEqual(eligible, {"F:train": "T.train"})
+        self.assertEqual(excluded, ["F:held"])
+
+    def test_unknown_nursery_identity_fails_closed(self) -> None:
+        with self.assertRaisesRegex(ValueError, "absent from the nursery"):
+            MODULE.eligible_mapping({"F:unknown": "T"}, {"entries": []})
+
 
 if __name__ == "__main__":
     unittest.main()
