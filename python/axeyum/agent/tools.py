@@ -871,6 +871,7 @@ class ExportResolution(NamedTuple):
     sha256: str
     target_definition: str
     source: str
+    candidate_declarations: tuple[str, ...] = ()
 
 
 class ExportUnavailable(RuntimeError):
@@ -905,7 +906,7 @@ def resolve_export(root: Path, fact_id: str) -> ExportResolution:
             are refusals rather than a best effort: importing bytes nobody
             pinned would make every digest downstream meaningless.
     """
-    candidates: list[tuple[str, str, str, int | None]] = []
+    candidates: list[tuple[str, str, str, int | None, tuple[str, ...]]] = []
     for document in _adapter_records(root):
         if document.get("source_fact_id") != fact_id:
             continue
@@ -918,9 +919,49 @@ def resolve_export(root: Path, fact_id: str) -> ExportResolution:
                     str(artifact.get("sha256", "")),
                     target,
                     artifact.get("bytes"),
+                    (),
                 )
             )
     source = "statement-adapter-manifest"
+    if not candidates:
+        receipt_documents = [
+            document
+            for document in _adapter_records(root)
+            if document.get("kind")
+            == "axeyum-proof-isolated-candidate-capsule-receipt"
+        ]
+        lemma_index = lemmas_api.load(root) if receipt_documents else None
+        for document in receipt_documents:
+            target_theorem = document.get("target")
+            candidate_names = document.get("candidate_declarations")
+            artifact = document.get("external_artifact") or {}
+            if not isinstance(target_theorem, str):
+                continue
+            try:
+                assert lemma_index is not None
+                linked_facts = lemma_index.get(target_theorem).fact_ids
+            except KeyError:
+                continue
+            if fact_id not in linked_facts:
+                continue
+            if not (
+                isinstance(candidate_names, list)
+                and candidate_names
+                and all(isinstance(name, str) and name for name in candidate_names)
+            ):
+                raise ExportUnavailable(
+                    f"candidate capsule receipt for {fact_id} has no exact candidate list"
+                )
+            candidates.append(
+                (
+                    str(artifact.get("path", "")),
+                    str(document.get("capsule_sha256", "")),
+                    str(document.get("target_definition", "")),
+                    document.get("capsule_bytes"),
+                    tuple(candidate_names),
+                )
+            )
+        source = "candidate-capsule-receipt"
     if not candidates:
         try:
             index = json.loads((root / EXPORT_INDEX).read_text(encoding="utf-8"))
@@ -939,6 +980,7 @@ def resolve_export(root: Path, fact_id: str) -> ExportResolution:
                     str(artifact.get("sha256", "")),
                     str(entry.get("target_definition", "")),
                     artifact.get("bytes"),
+                    (),
                 )
             )
         source = "agent-frozen-export-index-v1"
@@ -947,7 +989,11 @@ def resolve_export(root: Path, fact_id: str) -> ExportResolution:
             "no frozen statement export is registered for this fact; a producer has "
             "nothing to import and there is no goal to attack"
         )
-    path_text, pinned, target, _bytes = candidates[0]
+    if len(candidates) != 1:
+        raise ExportUnavailable(
+            f"{len(candidates)} frozen exports resolve this fact; expected exactly one"
+        )
+    path_text, pinned, target, expected_bytes, candidate_declarations = candidates[0]
     path = Path(path_text)
     if not path.is_file():
         raise ExportUnavailable(
@@ -960,9 +1006,15 @@ def resolve_export(root: Path, fact_id: str) -> ExportResolution:
             f"{path} does not hash to what was pinned (pinned {pinned}, on disk {measured}); "
             f"refusing to import bytes nobody pinned"
         )
+    if isinstance(expected_bytes, int) and path.stat().st_size != expected_bytes:
+        raise ExportUnavailable(
+            f"{path} has {path.stat().st_size} bytes, expected {expected_bytes}"
+        )
     if not target:
         raise ExportUnavailable(f"the record for this fact names no target definition ({source})")
-    return ExportResolution(fact_id, path, measured, target, source)
+    return ExportResolution(
+        fact_id, path, measured, target, source, candidate_declarations
+    )
 
 
 def _sha256_of_render(kernel: Any, expression: Any) -> str:
@@ -991,18 +1043,41 @@ def run_producer(tool: str, export: ExportResolution) -> dict[str, Any]:
     from .. import producers as producers_api
     from ..kernel import Declaration
 
-    imported = producers_api.import_statement_ndjson(
-        str(export.path), None, export.target_definition
-    )
+    candidate: Any
+    if tool == "bounded_application":
+        if not export.candidate_declarations:
+            raise ExportUnavailable(
+                "bounded application requires a candidate-capsule receipt with exact declarations"
+            )
+        imported = producers_api.import_candidate_statement_ndjson(
+            str(export.path),
+            None,
+            export.target_definition,
+            export.candidate_declarations,
+        )
+    else:
+        imported = producers_api.import_statement_ndjson(
+            str(export.path), None, export.target_definition
+        )
     kernel = imported.kernel()
     goal = imported.goal()
     report = imported.report()
-    propose = (
-        producers_api.propose_bounded_induction
-        if tool == "bounded_induction"
-        else producers_api.propose_modeq_family
-    )
-    candidate = propose(kernel, goal)
+    if tool == "bounded_application":
+        candidate = producers_api.propose_bounded_application(
+            kernel,
+            goal,
+            [
+                kernel.name(name, must_exist=True)
+                for name in export.candidate_declarations
+            ],
+        )
+    else:
+        propose = (
+            producers_api.propose_bounded_induction
+            if tool == "bounded_induction"
+            else producers_api.propose_modeq_family
+        )
+        candidate = propose(kernel, goal)
     name = kernel.name(f"Axeyum.Agent.{export.fact_id.split(':', 1)[1]}", must_exist=False)
     kernel.add_declaration(Declaration.theorem(name, [], goal, candidate.proof))
     return {
