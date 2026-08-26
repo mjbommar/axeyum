@@ -7,6 +7,11 @@ not another inventory of possible work. Each priority has a product outcome, a
 measured starting point, an ordered implementation path, and an exit that must
 be demonstrated by executable evidence.
 
+The companion
+[`overall vision and status review`](overall-vision-status-review-2026-08.md)
+records the code-level product spine, measured current boundary, and comparative
+position that motivate these priorities.
+
 Axeyum's product identity is:
 
 > An evidence-native reasoning system in which heterogeneous, untrusted search
