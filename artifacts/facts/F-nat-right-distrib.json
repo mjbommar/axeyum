@@ -24,6 +24,7 @@
     {
       "id": "kernel-right_distrib",
       "kind": "kernel-term",
+      "kernel_declaration": "Nat.right_distrib",
       "supports": "Nat.right_distrib is admitted by the trusted kernel gate with the type recorded in formal.statement.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- Nat.right_distrib 2>/dev/null | grep -Ec '^Nat\\.right_distrib[[:space:]]')\" -ge 1",

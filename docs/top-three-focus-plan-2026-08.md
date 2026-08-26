@@ -38,8 +38,8 @@ semantics, evidence, provenance, checking, and compounding knowledge loop.
 - The kernel, fact ledger, tactic catalog, obstruction graph, and concept graph
   are separately useful, but do not yet form one lemma-search substrate.
 - The generated lemma index now covers all 1,206 kernel theorems and their 6,838
-  direct edges, but only 325 theorems link exactly to 329 fact records. It keeps
-  74 unresolved evidence IDs explicit rather than guessing, leaving 881
+  direct edges, but only 346 theorems link exactly to 350 fact records. It keeps
+  53 unresolved evidence IDs explicit rather than guessing, leaving 860
   theorems without exact fact links.
 - The Rust and Python surfaces are broad, but integration churn can leave
   `main` red and evidence fixtures can be mistaken for production populations.

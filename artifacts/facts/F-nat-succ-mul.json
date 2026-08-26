@@ -20,6 +20,7 @@
     {
       "id": "kernel-succ_mul",
       "kind": "kernel-term",
+      "kernel_declaration": "Nat.succ_mul",
       "supports": "Nat.succ_mul is admitted by the trusted kernel gate with the type recorded in formal.statement.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- Nat.succ_mul 2>/dev/null | grep -Ec '^Nat\\.succ_mul[[:space:]]')\" -ge 1",

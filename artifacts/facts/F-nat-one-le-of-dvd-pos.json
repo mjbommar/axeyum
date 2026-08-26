@@ -22,6 +22,7 @@
     {
       "id": "kernel-one_le_of_dvd_pos",
       "kind": "kernel-term",
+      "kernel_declaration": "Nat.one_le_of_dvd_pos",
       "supports": "Nat.one_le_of_dvd_pos is admitted by the trusted kernel gate with the type recorded in formal.statement.",
       "check_status": "checked",
       "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- Nat.one_le_of_dvd_pos 2>/dev/null | grep -Ec '^Nat\\.one_le_of_dvd_pos[[:space:]]')\" -ge 1",
