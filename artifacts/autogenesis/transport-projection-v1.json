@@ -1,7 +1,7 @@
 {
   "census": {
     "chains": 13,
-    "complete": 12
+    "complete": 13
   },
   "chains": [
     {
@@ -167,13 +167,20 @@
     {
       "adapter_manifest": "artifacts/autogenesis/mathlib-nat-modeq-family-comm-statement-adapter-v1.json",
       "adapter_ndjson_sha256": "9ed43e533ed850970cdf1a373cb90c33c65c3cc1f805ecd3a47f56aac047e1fc",
-      "checked_evidence_bindings": [],
-      "checked_evidence_ids": [],
+      "checked_evidence_bindings": [
+        {
+          "binding": "statement-and-goal",
+          "evidence_id": "autogenesis-operation-80dc2c09437382bf"
+        }
+      ],
+      "checked_evidence_ids": [
+        "autogenesis-operation-80dc2c09437382bf"
+      ],
       "id": "T:mathlib-nat-modeq-family-comm-statement-adapter-v1",
       "imported_goal_sha256": "6984bdb728178fff2e42bbf66c1227c65097c9cc4bde2829d569b628c68e2ab0",
       "source_fact_id": "F:ml430-nat-modeq-comm-24b71e7a",
       "source_statement_sha256": "dc2839b0a5fb08366172b72d77517bce107da7d433e7758c43f7e7689d636267",
-      "status": "incomplete-no-matching-fact-evidence",
+      "status": "complete",
       "target_content_sha256": "3516f9fb4798ac87c568e21ba2af04ce297c0963840c50f261f4431adf0e078b",
       "trust": "identity-bound-sidecar-not-admission-authority"
     },

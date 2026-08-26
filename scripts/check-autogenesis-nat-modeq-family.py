@@ -54,7 +54,8 @@ above; only the id string changed), `checker_operation.goal_sha256` and
 `proof_sha256` matching exactly what `check_target` below re-derives.
 `F:ml430-nat-modeq-symm-0a3d4d18` and `F:ml430-nat-modeq-trans-ef9d1c46`
 were subsequently closed through the typed execution and transaction path.
-`F:ml430-nat-modeq-comm-24b71e7a` is the remaining dispatchable target.
+`F:ml430-nat-modeq-comm-24b71e7a` was then admitted by the same path after the
+recomputed frontier selected it as the sole admissible target.
 A registration gate that let an `open` fact drift to `proved` without a
 matching evidence row, or let a `proved` fact's evidence disagree with a
 fresh replay, would be exactly the "checker that cannot fail" defect this
@@ -101,8 +102,9 @@ SETTLED_FACT_IDS = (
     "F:ml430-nat-modeq-refl-d870c8f5",
     "F:ml430-nat-modeq-symm-0a3d4d18",
     "F:ml430-nat-modeq-trans-ef9d1c46",
+    "F:ml430-nat-modeq-comm-24b71e7a",
 )
-REMAINING_DISPATCHABLE_FACT_IDS = ("F:ml430-nat-modeq-comm-24b71e7a",)
+REMAINING_DISPATCHABLE_FACT_IDS: tuple[str, ...] = ()
 
 
 class FamilyError(RuntimeError):
