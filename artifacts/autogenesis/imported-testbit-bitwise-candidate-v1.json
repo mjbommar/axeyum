@@ -1,7 +1,10 @@
 {
   "authority": "candidate audit only; no semantic contract authority, no proof authority, no operation authority, no transport authority, no applicability authority, no axiom-free claim, and no fact-transition authority",
   "candidate": {
+    "alpha_type_expression_sha256": "9b0cf9b6b6b581e5520a76f39d748eab8478da3565863efeee41bff41146b77e",
+    "canonical_type": "((f : ((a._@._internal._hyg._0 : Bool) -> ((a._@._internal._hyg._0 : Bool) -> Bool))) -> ((of_false_false : Eq.{1} Bool (f Bool.false Bool.false) Bool.false) -> ((x : AxNat) -> ((y : AxNat) -> ((i : AxNat) -> Eq.{1} Bool (AxNat.testBit (AxNat.bitwise f x y) i) (f (AxNat.testBit x i) (AxNat.testBit y i)))))))",
     "declaration_content_sha256": "726b08bc9e4acac588eec49023c0631190dc21ac2d5e45b836d60519a551a1ad",
+    "direct_dependency_sha256": "d9a7425049aa2c297994e4b1d42737b10f3565c4ca24a871cf7417c2b9f9bab4",
     "direct_theorem_dependencies": [
       "Bool.false_eq_true",
       "Decidable.decide.congr_simp",
@@ -35,7 +38,8 @@
     ],
     "name": "Nat.testBit_bitwise",
     "source_file": "Init/Data/Nat/Bitwise/Lemmas.lean",
-    "source_line": 401
+    "source_line": 401,
+    "type_expression_sha256": "a8978a1b2c417db5f04e6f8e36c2e099f65ac9e33d333fd06f9c52e97843ac96"
   },
   "external_stream": {
     "bytes": 2222315,

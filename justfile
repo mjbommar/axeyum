@@ -564,6 +564,8 @@ autogenesis-imported-implementation-demand:
     python3 scripts/gen-autogenesis-bit-observation-contract-slice.py --check
     uv run --no-sync python -m unittest scripts.tests.test_check_autogenesis_imported_testbit_bitwise_candidate
     python3 scripts/check-autogenesis-imported-testbit-bitwise-candidate.py
+    uv run --no-sync python -m unittest scripts.tests.test_gen_autogenesis_imported_candidate_index
+    python3 scripts/gen-autogenesis-imported-candidate-index.py --check
 
 autogenesis-imported-implementation-demand-reproduce streams="/nas3/data/axeyum/autogenesis/reference-packs/open-fixed-palette-v1":
     cargo run -q -p axeyum-lean-import --example imported_implementation_demand -- --streams "{{ streams }}" --replay artifacts/autogenesis/retrieved-induction-type-slice-replay-v1.json --output artifacts/autogenesis/imported-implementation-demand-v1.json
@@ -574,6 +576,7 @@ autogenesis-imported-implementation-demand-reproduce streams="/nas3/data/axeyum/
 autogenesis-imported-testbit-bitwise-candidate-replay stream="/nas3/data/axeyum/autogenesis/reference-packs/imported-candidates-v1/Nat.testBit_bitwise.ndjson":
     python3 scripts/check-autogenesis-imported-testbit-bitwise-candidate.py --verify-external
     cargo run -q -p axeyum-lean-import --example lean4export_import -- "{{ stream }}" Nat.testBit_bitwise
+    cargo run -q -p axeyum-lean-import --example imported_candidate_descriptor -- "{{ stream }}" Nat.testBit_bitwise
 
 autogenesis-non-equality-terminal-census:
     uv run --no-sync python -m unittest scripts.tests.test_measure_autogenesis_open_fixed_palette scripts.tests.test_gen_autogenesis_non_equality_population

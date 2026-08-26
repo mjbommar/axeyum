@@ -25,6 +25,18 @@ def validate(data: dict[str, Any], verify_external: bool) -> dict[str, int]:
     candidate = data.get("candidate", {})
     if candidate.get("name") != "Nat.testBit_bitwise":
         raise ValueError("wrong candidate declaration")
+    for field in (
+        "type_expression_sha256",
+        "alpha_type_expression_sha256",
+        "declaration_content_sha256",
+        "direct_dependency_sha256",
+    ):
+        value = candidate.get(field)
+        if not isinstance(value, str) or len(value) != 64:
+            raise ValueError(f"candidate {field} is malformed")
+    canonical_type = candidate.get("canonical_type", "")
+    if "AxNat.testBit (AxNat.bitwise f x y)" not in canonical_type:
+        raise ValueError("candidate canonical type lost the generic bitwise observation")
     kernel = data.get("kernel_import", {})
     if kernel.get("axiom_free") is not False:
         raise ValueError("candidate must not be represented as axiom-free")

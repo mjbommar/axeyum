@@ -433,6 +433,12 @@ next producer capability is exact imported-candidate retrieval with footprint-
 aware `reconstruct-required` routing, followed by constructive reconstruction
 of that generic theorem in the imported kernel. The list/bits sibling remains
 a separate projection-law family.
+That routing substrate now exists as a separate generated index. Its first row
+retains exact/alpha type identity, declaration/dependency hashes, the external
+receipt, 29 theorem dependencies, and the five-member footprint. It is search-
+eligible and explicitly execution-ineligible. A Rust descriptor reproduces
+those fields from the stream. Next: expose these rows through the agent's
+candidate-only read surface and dispatch reconstruction rather than proof reuse.
 
 ### Exit evidence
 

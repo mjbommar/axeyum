@@ -1433,6 +1433,12 @@ candidate guidance only. Next: add an exact imported-candidate search
 population with footprint-aware `reconstruct-required` routing, then rebuild
 the generic theorem constructively inside the imported kernel before any
 three-sibling production claim.
+The footprint-aware imported-candidate index now provides that separate search
+population. Its first exact row is strategy-eligible but execution-ineligible,
+and a Rust descriptor reproduces canonical/alpha type hashes, declaration and
+dependency identities, 29 theorem dependencies, and the five-member footprint
+from the external stream. Next: expose this index through the candidate-only
+agent read surface and dispatch reconstruction for its row.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization
