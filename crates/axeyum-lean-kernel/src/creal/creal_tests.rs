@@ -69,7 +69,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 265] = [
+    let expected: [(&str, crate::NameId, &str); 266] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -704,6 +704,12 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             p.fine_sample_in_bounds,
             "theorem",
         ),
+        // Roadmap step 2 toward `riemannSum_cauchy` (`creal/integral.rs`):
+        // every fine sample point inside a coarse block is within
+        // `1/(e+1)` of that block's own coarse value, via
+        // `UniformlyContinuousOn.spec` plus `mesh_le_of_ge` and
+        // `fineSample_in_bounds`.
+        ("CReal.fineSample_close", p.fine_sample_close, "theorem"),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel

@@ -2706,7 +2706,6 @@ fn declare_mesh_le_of_ge(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kern
 /// `Equiv (add (add x w) (neg x)) w` — `(x + w) − x ~ w`. The mirror of
 /// [`add_sub_cancel`] (`a + (b − a) ~ b`): here the FIRST operand of the
 /// addition is the one subtracted back off, rather than the second.
-#[allow(dead_code)] // staged for the per-term UC bound (riemannSum_cauchy), not yet landed
 fn cancel_add_neg_right(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, w: ExprId) -> ExprId {
     let nx = cneg(d, p, x);
     let xw = cadd(d, p, x, w); // x + w
@@ -2742,7 +2741,6 @@ fn cancel_add_neg_right(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, w: ExprI
 /// From `v_nonneg : le zero v` and `bound_nonneg : le zero bound`, `le (neg
 /// v) bound`. Reproduced verbatim from `derivative.rs`'s private
 /// `neg_le_of_nonneg` (that file is out of scope for this slice).
-#[allow(dead_code)] // staged for the per-term UC bound (riemannSum_cauchy), not yet landed
 fn neg_le_of_nonneg(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -2787,7 +2785,6 @@ fn neg_le_of_nonneg(
 /// is always nonneg. The same route [`delta_nonneg_of`]'s own `frac_nonneg`
 /// uses, factored out so [`sample_offset_bound`] can call it at the FINE
 /// denominator `n` independently of that function's coarse `m`.
-#[allow(dead_code)] // staged for the per-term UC bound (riemannSum_cauchy), not yet landed
 fn frac_nonneg(d: &mut IntDev<'_>, p: CRealPrelude, denom: ExprId) -> ExprId {
     let one_nat = d.num(1);
     let frac = d.const_app(p.rat.nat_div_succ, &[one_nat, denom]);
@@ -2892,7 +2889,6 @@ fn fine_term_and_bounds(
 /// uses, here reused at the FINE denominator rather than the coarse one);
 /// [`neg_le_of_nonneg`] gives the other `abs_le` branch directly from that
 /// same nonnegativity, with no separate lower-bound argument needed.
-#[allow(dead_code)] // staged for the per-term UC bound (riemannSum_cauchy), not yet landed
 fn sample_offset_bound(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -3195,6 +3191,206 @@ pub(super) fn declare_fine_sample_in_bounds(
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.fine_sample_in_bounds,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- roadmap step 2: the per-block bound, via `UniformlyContinuousOn.spec` -
+
+/// `CReal.close (x y : CReal) (q : Rat) : Prop := le (abs (add x (neg y)))
+/// (ofRat q)` — `|x − y| ≤ q`, real-valued and index-free in `x, y`.
+/// Reproduced from `uniform_continuity.rs`'s private `close_within` (that
+/// file is out of scope for edits in this slice): the exact shape
+/// `UniformlyContinuousOn.spec`'s hypothesis and conclusion both take.
+fn close_within(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId, q: ExprId) -> ExprId {
+    let ny = cneg(d, p, y);
+    let diff = cadd(d, p, x, ny);
+    let magnitude = d.const_app(p.abs, &[diff]);
+    let target = embed(d, p, q);
+    cle(d, p, magnitude, target)
+}
+
+/// `CReal.fineSample_close : ∀ F a b e m n i j, le a b →
+/// UniformlyContinuousOn F a b → Nat.le i m → Nat.lt j (Nat.succ n) →
+/// Nat.le deep m → close_within (F fine_j) (F base_i) (Rat.natDivSucc 1 e)`,
+/// `deep := (Nat.succ (bound (add b (neg a))))·(modulus F a b u e) + bound
+/// (add b (neg a))`, `base_i := sample_point a delta_m i`, `fine_j := add
+/// base_i (mul (ofNat j) (mul delta_m (embed (natDivSucc 1 n))))`, `delta_m
+/// := mul (add b (neg a)) (embed (natDivSucc 1 m))` — roadmap step 2, and
+/// this module's own documentation's success condition on its own: EVERY
+/// fine sample point inside coarse block `i` is within `1/(e+1)` of that
+/// block's own coarse value `F(base_i)`, once the coarse block count `m` is
+/// Archimedean-large enough relative to the modulus of uniform continuity
+/// at target precision `e`.
+///
+/// Route: [`sample_offset_bound`] bounds the fine sample's OFFSET from
+/// `base_i` by `delta_m` exactly; [`declare_mesh_le_of_ge`]'s own theorem
+/// (at `outer := modulus F a b u e`) rescales `delta_m` down to `natDivSucc
+/// 1 outer` PROVIDED `m` clears the Archimedean threshold `deep`;
+/// `le_trans` chains the two into exactly `UniformlyContinuousOn.spec`'s
+/// own hypothesis shape at `n := e`. The two domain-membership pairs `spec`
+/// needs come from [`declare_fine_sample_in_bounds`] (the fine point) and
+/// [`declare_riemann_sample_in_bounds`] (the coarse point, its `Nat.lt i
+/// (Nat.succ m)` hypothesis obtained from this theorem's own `Nat.le i m`
+/// via `Nat.lt_succ_of_le`).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_fine_sample_close(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let f_ty = fn_ty(d, p);
+    let logic = p.rat.int.logic;
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+
+    let hi_ty = d.le(i, m);
+    let hi_fv = d.fresh_fvar();
+    let hi = d.kernel().fvar(hi_fv);
+
+    let sn = d.succ(n);
+    let hj_ty = d.lt(j, sn);
+    let hj_fv = d.fresh_fvar();
+    let hj = d.kernel().fvar(hj_fv);
+
+    // outer := UniformlyContinuousOn.modulus F a b u e.
+    let modulus_fn = d.const_app(p.uc_modulus, &[f, a, b, u]);
+    let outer = d.apply(modulus_fn, &[e]);
+
+    // deep, the same Archimedean threshold `mesh_le_of_ge` computes
+    // internally at this `outer`.
+    let width = width_of(d, p, a, b);
+    let (c, magnitude, _width_le_mag) = direct_bound_le(d, p, width);
+    let me = NatOps::mul(d, magnitude, outer);
+    let deep = NatOps::add(d, me, c);
+    let hge_ty = d.le(deep, m);
+    let hge_fv = d.fresh_fvar();
+    let hge = d.kernel().fvar(hge_fv);
+
+    let (delta_m, delta_m_nonneg) = delta_nonneg_of(d, p, a, b, m, hab);
+    let base_i = sample_point(d, p, a, delta_m, i);
+    let (term, _term_nonneg, _term_le_delta_m) =
+        fine_term_and_bounds(d, p, delta_m, n, j, hj, delta_m_nonneg);
+    let fine_j = cadd(d, p, base_i, term);
+
+    // hax, hxb : le a fine_j, le fine_j b.
+    let (hax, hxb) = {
+        let and_fine = d.const_app(p.fine_sample_in_bounds, &[a, b, m, n, i, j, hab, hi, hj]);
+        let hax_ty = cle(d, p, a, fine_j);
+        let hxb_ty = cle(d, p, fine_j, b);
+        let hax = d.const_app(logic.and_left, &[hax_ty, hxb_ty, and_fine]);
+        let hxb = d.const_app(logic.and_right, &[hax_ty, hxb_ty, and_fine]);
+        (hax, hxb)
+    };
+
+    // hay, hyb : le a base_i, le base_i b.
+    let (hay, hyb) = {
+        let np = d.prelude();
+        let hi_lt = d.const_app(np.lt_succ_of_le, &[i, m, hi]); // Nat.lt i (Nat.succ m)
+        let and_coarse = d.const_app(p.riemann_sample_in_bounds, &[a, b, m, i, hab, hi_lt]);
+        let hay_ty = cle(d, p, a, base_i);
+        let hyb_ty = cle(d, p, base_i, b);
+        let hay = d.const_app(logic.and_left, &[hay_ty, hyb_ty, and_coarse]);
+        let hyb = d.const_app(logic.and_right, &[hay_ty, hyb_ty, and_coarse]);
+        (hay, hyb)
+    };
+
+    // hclose : close_within fine_j base_i (natDivSucc 1 outer).
+    let hclose = {
+        let offset_bound = sample_offset_bound(d, p, base_i, delta_m, n, j, hj, delta_m_nonneg);
+        // offset_bound : le (abs (add fine_j (neg base_i))) delta_m
+        let mesh_bound = d.const_app(p.mesh_le_of_ge, &[a, b, outer, m, hab, hge]);
+        // mesh_bound : le delta_m (embed (natDivSucc 1 outer))
+        let one_nat = d.num(1);
+        let out_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, outer]);
+        let out_bound = embed(d, p, out_rat);
+        let ny = cneg(d, p, base_i);
+        let diff = cadd(d, p, fine_j, ny);
+        let abs_diff = d.const_app(p.abs, &[diff]);
+        d.lemma(
+            p.le_trans,
+            &[abs_diff, delta_m, out_bound, offset_bound, mesh_bound],
+        )
+    };
+
+    let conclusion = {
+        let fx = d.apply(f, &[fine_j]);
+        let fy = d.apply(f, &[base_i]);
+        let one_nat = d.num(1);
+        let out_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, e]);
+        close_within(d, p, fx, fy, out_rat)
+    };
+
+    let proof_body = d.const_app(
+        p.uc_spec,
+        &[f, a, b, u, e, fine_j, base_i, hax, hxb, hay, hyb, hclose],
+    );
+
+    let ty = {
+        let after_hge = d.arrow(hge_ty, conclusion);
+        let after_hj = d.arrow(hj_ty, after_hge);
+        let after_hi = d.arrow(hi_ty, after_hj);
+        // `u` (dependent, not `arrow`): `after_hi` mentions the fvar `u`
+        // through `hge_ty`'s own `deep`/`outer := modulus F a b u e`.
+        let after_u = d.pi_fv(u_fv, u_ty, after_hi);
+        let after_hab = d.arrow(hab_ty, after_u);
+        let over_j = d.pi_fv(j_fv, nat, after_hab);
+        let over_i = d.pi_fv(i_fv, nat, over_j);
+        let over_n = d.pi_fv(n_fv, nat, over_i);
+        let over_m = d.pi_fv(m_fv, nat, over_n);
+        let over_e = d.pi_fv(e_fv, nat, over_m);
+        let over_b = d.pi_fv(b_fv, carrier, over_e);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        d.pi_fv(f_fv, f_ty, over_a)
+    };
+    let value = {
+        let with_hge = d.lam_fv(hge_fv, hge_ty, proof_body);
+        let with_hj = d.lam_fv(hj_fv, hj_ty, with_hge);
+        let with_hi = d.lam_fv(hi_fv, hi_ty, with_hj);
+        let with_u = d.lam_fv(u_fv, u_ty, with_hi);
+        let with_hab = d.lam_fv(hab_fv, hab_ty, with_u);
+        let over_j = d.lam_fv(j_fv, nat, with_hab);
+        let over_i = d.lam_fv(i_fv, nat, over_j);
+        let over_n = d.lam_fv(n_fv, nat, over_i);
+        let over_m = d.lam_fv(m_fv, nat, over_n);
+        let over_e = d.lam_fv(e_fv, nat, over_m);
+        let over_b = d.lam_fv(b_fv, carrier, over_e);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        d.lam_fv(f_fv, f_ty, over_a)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.fine_sample_close,
         uparams: vec![],
         ty,
         value,
