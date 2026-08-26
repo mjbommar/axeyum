@@ -118,6 +118,8 @@ now. Nothing was deleted.
 | Date | Commit | Result |
 |---|---|---|
 | 2026-08-26 | `73800a902` | Project all 51 retrieved-induction outcomes into a digest-bound typed capability backlog; false controls remain observation-only and one-target operation registration is refused. |
+| 2026-08-26 | `e82a1b002` | Replay all 25 import-blocked positive targets through checked type slices, exposing 14 exact semantic-contract demands without proof or ledger credit. |
+| 2026-08-26 | `1e7b3acdf` | Join 14 sliced source identities to exact kernel and durable contract evidence; `Nat.testBit` becomes the first measured multi-sibling contract target. |
 | 2026-08-26 | `228494275` | Expose bounded retrieved-lemma application through the typed Python producer surface with full Python, stub, and type-gate coverage. |
 | 2026-08-26 | `0c261718f` | Add the fail-closed candidate-capsule import boundary required for theorem-composition dispatch. |
 | 2026-08-26 | `ebe2b7b2e` | Re-derive the kernel projection and lemma-search artifacts at 1,242 theorems after rebasing concurrent mathematics work. |
@@ -1361,6 +1363,19 @@ the binder budget, and one is integration-ready. Do not register a one-target
 operation: route the largest blocked population through the existing general
 type-slice boundary and require one unchanged contract to convert at least
 three siblings before it receives operation authority.
+That statement-boundary route now accepts all 25 positive targets with checked
+fresh-kernel receipts and exact specialization; no proof producer ran. The
+slices expose 14 distinct abstracted source definitions, so the honest next
+blocker is semantic contracts for recurrence, bit operations, order, and
+concrete functions—not statement import and not a larger blind search budget.
+Next: derive an exact contract-demand graph, join existing checked behavior
+lemmas/receipts, and choose the largest reusable sibling family.
+That graph now joins all 14 exact source identities to the live kernel index and
+durable contract-receipt population. No checked contract receipt exists. Only
+`Nat.testBit` (four targets, five candidates) and `Int.gcd` (one target, six
+candidates) have exact axiom-free theorem edges. `Nat.testBit` is therefore the
+first general contract prototype; twelve unmatched identities stay visible
+rather than receiving fuzzy or manually asserted support.
 
 **WIP, open-problems-programme, 2026-08-26.** Five durable research packages now own the
 Rado/Schur, GF(2) bilinear-rank, S-box optimality, SIMD-shuffle minimality, and optimization

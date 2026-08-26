@@ -72,7 +72,7 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 #[test]
 fn every_creal_declaration_is_checked_and_axiom_free() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 309] = [
+    let expected: [(&str, crate::NameId, &str); 311] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -368,6 +368,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
             "theorem",
         ),
         ("CReal.sqrt", p.sqrt, "def"),
+        ("CReal.sqrt_congr", p.sqrt_congr, "theorem"),
         // Bishop's speed-up combinator (creal/speedup.rs).
         ("CReal.KRegular", p.k_regular_pred, "def"),
         ("CReal.speedup", p.speedup, "def"),
@@ -919,6 +920,18 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
         (
             "CReal.exp_term_abs_le_dominant",
             p.exp_term_abs_le_dominant,
+            "theorem",
+        ),
+        // The base-1/2 geometric closed form, `Σ_{k<n} (1/2)^k = 2*(1 -
+        // (1/2)^n)` -- built entirely `inv`-free (no `pos_bound`, no
+        // `geom_pair_within`) by multiplying `mul_sub_one_geom`'s conclusion
+        // through by `two` and cancelling. The wiring bug that blocked this
+        // for two prior lanes was one swapped `equiv_symm` direction feeding
+        // the final `echain` (see `exponential.rs`'s
+        // `declare_sum_pow_half_closed_form`).
+        (
+            "CReal.sumRange_pow_half_closed_form",
+            p.sum_pow_half_closed_form,
             "theorem",
         ),
         // Found by the coverage assertion above, not by anyone noticing: these

@@ -1,0 +1,449 @@
+{
+  "authority": "strategy context only; no contract, proof, operation, applicability, or fact-transition authority",
+  "census": {
+    "accepted_type_slices": 25,
+    "distinct_source_identities": 14,
+    "exact_axiom_free_kernel_candidates": 11,
+    "identities_with_checked_contract_receipts": 0,
+    "identities_with_exact_kernel_candidates": 2
+  },
+  "demands": [
+    {
+      "affected_fact_ids": [
+        "F:ml430-nat-testbit-eq-inth-ffa07392",
+        "F:ml430-nat-testbit-land-dfef7ca4",
+        "F:ml430-nat-testbit-ldiff-16f94162",
+        "F:ml430-nat-testbit-lor-7644e067"
+      ],
+      "affected_targets": 4,
+      "checked_contract_receipt_count": 0,
+      "checked_contract_receipts": [],
+      "exact_axiom_free_kernel_candidate_count": 5,
+      "exact_axiom_free_kernel_candidates": [
+        {
+          "canonical_type": "((x0 : AxNat) -> Eq.{1} AxNat (AxNat.sumRange (fun (x1 : AxNat) => AxNat.mul (AxNat.testBit x0 x1) (AxNat.pow (AxNat.succ (AxNat.succ AxNat.zero)) x1)) (AxNat.size x0)) x0)",
+          "direct_theorem_dependencies": [
+            "Nat.lt_pow_size",
+            "Nat.mod_eq_self_of_lt",
+            "Nat.sum_testBit_lt"
+          ],
+          "exact_fact_ids": [],
+          "kernel_declaration_id": "Nat.sum_testBit_eq"
+        },
+        {
+          "canonical_type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.sumRange (fun (x2 : AxNat) => AxNat.mul (AxNat.testBit x1 x2) (AxNat.pow (AxNat.succ (AxNat.succ AxNat.zero)) x2)) x0) (AxNat.mod x1 (AxNat.pow (AxNat.succ (AxNat.succ AxNat.zero)) x0))))",
+          "direct_theorem_dependencies": [
+            "Nat.add_comm",
+            "Nat.div_mod_exec",
+            "Nat.div_mod_unique",
+            "Nat.le_succ_succ",
+            "Nat.mod_two_mul_split",
+            "Nat.mul_assoc",
+            "Nat.mul_comm",
+            "Nat.mul_one",
+            "Nat.mul_sumRange",
+            "Nat.one_le_mul",
+            "Nat.one_mul",
+            "Nat.pow_succ",
+            "Nat.sumRange_congr",
+            "Nat.sumRange_shiftFront",
+            "Nat.zero_le"
+          ],
+          "exact_fact_ids": [],
+          "kernel_declaration_id": "Nat.sum_testBit_lt"
+        },
+        {
+          "canonical_type": "((x0 : AxNat) -> ((x1 : AxNat) -> AxNat.le (AxNat.testBit x0 x1) (AxNat.succ AxNat.zero)))",
+          "direct_theorem_dependencies": [
+            "Nat.le_of_succ_le_succ",
+            "Nat.le_succ_succ",
+            "Nat.mod_lt",
+            "Nat.zero_le"
+          ],
+          "exact_fact_ids": [],
+          "kernel_declaration_id": "Nat.testBit_le_one"
+        },
+        {
+          "canonical_type": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.testBit x0 (AxNat.succ x1)) (AxNat.testBit (AxNat.div x0 (AxNat.succ (AxNat.succ AxNat.zero))) x1)))",
+          "direct_theorem_dependencies": [],
+          "exact_fact_ids": [],
+          "kernel_declaration_id": "Nat.testBit_succ"
+        },
+        {
+          "canonical_type": "((x0 : AxNat) -> Eq.{1} AxNat (AxNat.testBit x0 AxNat.zero) (AxNat.mod x0 (AxNat.succ (AxNat.succ AxNat.zero))))",
+          "direct_theorem_dependencies": [],
+          "exact_fact_ids": [],
+          "kernel_declaration_id": "Nat.testBit_zero"
+        }
+      ],
+      "next_action": "construct-and-check-generic-contract",
+      "partitions": [
+        "development"
+      ],
+      "source_content_sha256": "f1ff827b59c6a6afbd90487eb8e27aa815bff840aa045de020e69cff9f34d794",
+      "source_name": "Nat.testBit",
+      "source_occurrences": 10,
+      "source_type_sha256": "8344358937e2dd74f2cf2714f06889df2e6fe8b21ada029f3425ee166bff0f5d",
+      "strategy_eligible": true,
+      "strategy_rank": 1
+    },
+    {
+      "affected_fact_ids": [
+        "F:ml430-int-gcd-eq-gcd-ab-63005aef"
+      ],
+      "affected_targets": 1,
+      "checked_contract_receipt_count": 0,
+      "checked_contract_receipts": [],
+      "exact_axiom_free_kernel_candidate_count": 6,
+      "exact_axiom_free_kernel_candidates": [
+        {
+          "canonical_type": "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int.dvd x0 x1) -> ((x4 : Int.dvd x0 x2) -> Int.dvd x0 (Int.ofNat (Int.gcd x1 x2)))))))",
+          "direct_theorem_dependencies": [
+            "Int.dvd_of_nat_abs_dvd",
+            "Int.nat_abs_dvd_nat_abs_of_dvd",
+            "Nat.dvd_gcd"
+          ],
+          "exact_fact_ids": [],
+          "kernel_declaration_id": "Int.dvd_gcd"
+        },
+        {
+          "canonical_type": "((x0 : Int) -> ((x1 : Int) -> Eq.{1} AxNat (Int.gcd x0 x1) (Int.gcd x1 x0)))",
+          "direct_theorem_dependencies": [
+            "Nat.dvd_gcd",
+            "Nat.gcd_dvd_left",
+            "Nat.gcd_dvd_right",
+            "Nat.le_antisymm",
+            "Nat.le_of_dvd",
+            "Nat.one_le_of_dvd_pos",
+            "Nat.zero_lt_succ",
+            "Nat.zero_mul"
+          ],
+          "exact_fact_ids": [
+            "F:int-gcd-comm"
+          ],
+          "kernel_declaration_id": "Int.gcd_comm"
+        },
+        {
+          "canonical_type": "((x0 : Int) -> ((x1 : Int) -> Int.dvd (Int.ofNat (Int.gcd x0 x1)) x0))",
+          "direct_theorem_dependencies": [
+            "Int.dvd_of_nat_abs_dvd",
+            "Nat.gcd_dvd_left"
+          ],
+          "exact_fact_ids": [],
+          "kernel_declaration_id": "Int.gcd_dvd_left"
+        },
+        {
+          "canonical_type": "((x0 : Int) -> ((x1 : Int) -> Int.dvd (Int.ofNat (Int.gcd x0 x1)) x1))",
+          "direct_theorem_dependencies": [
+            "Int.dvd_of_nat_abs_dvd",
+            "Nat.gcd_dvd_right"
+          ],
+          "exact_fact_ids": [],
+          "kernel_declaration_id": "Int.gcd_dvd_right"
+        },
+        {
+          "canonical_type": "((x0 : Int) -> Eq.{1} AxNat (Int.gcd x0 Int.one) (AxNat.succ AxNat.zero))",
+          "direct_theorem_dependencies": [
+            "Nat.eq_one_of_dvd_one",
+            "Nat.gcd_dvd_right"
+          ],
+          "exact_fact_ids": [],
+          "kernel_declaration_id": "Int.gcd_one_right"
+        },
+        {
+          "canonical_type": "((x0 : Int) -> Eq.{1} AxNat (Int.gcd x0 Int.zero) (Int.natAbs x0))",
+          "direct_theorem_dependencies": [
+            "Nat.dvd_gcd",
+            "Nat.dvd_refl",
+            "Nat.dvd_zero",
+            "Nat.gcd_dvd_left",
+            "Nat.le_antisymm",
+            "Nat.le_of_dvd",
+            "Nat.one_le_of_dvd_pos",
+            "Nat.zero_lt_succ",
+            "Nat.zero_mul"
+          ],
+          "exact_fact_ids": [],
+          "kernel_declaration_id": "Int.gcd_zero_right"
+        }
+      ],
+      "next_action": "construct-and-check-generic-contract",
+      "partitions": [
+        "train"
+      ],
+      "source_content_sha256": "1b4460e69780e5080a107bc178b77ffe064585b9712c5f7468a80c02cdee0655",
+      "source_name": "Int.gcd",
+      "source_occurrences": 1,
+      "source_type_sha256": "b5797e63588cdb7fc01cbaa965f03c291f682da45dea2817f14853de2d88c8fe",
+      "strategy_eligible": true,
+      "strategy_rank": 2
+    },
+    {
+      "affected_fact_ids": [
+        "F:ml430-int-fib-add-181b6a2c",
+        "F:ml430-int-fib-two-mul-0e70f3dd",
+        "F:ml430-int-fib-two-mul-add-one-pos-8977f65f",
+        "F:ml430-int-fib-two-mul-add-two-0ba4a948"
+      ],
+      "affected_targets": 4,
+      "checked_contract_receipt_count": 0,
+      "checked_contract_receipts": [],
+      "exact_axiom_free_kernel_candidate_count": 0,
+      "exact_axiom_free_kernel_candidates": [],
+      "next_action": "find-or-construct-behavior-theorems",
+      "partitions": [
+        "train"
+      ],
+      "source_content_sha256": "8f0b6b257623d1257c8137da80d11104781e854045b1ac2f4e92b41e89bf5a46",
+      "source_name": "Int.fib",
+      "source_occurrences": 14,
+      "source_type_sha256": "8b7b9e259bec2413b659914e18a7d57c8cc2eea8dfaec75ed3893d7b1c8e376c",
+      "strategy_eligible": true,
+      "strategy_rank": 3
+    },
+    {
+      "affected_fact_ids": [
+        "F:ml430-nat-land-assoc-ad4775b8",
+        "F:ml430-nat-land-bit-b9ab7475",
+        "F:ml430-nat-land-comm-7e6ad72e",
+        "F:ml430-nat-testbit-land-dfef7ca4"
+      ],
+      "affected_targets": 4,
+      "checked_contract_receipt_count": 0,
+      "checked_contract_receipts": [],
+      "exact_axiom_free_kernel_candidate_count": 0,
+      "exact_axiom_free_kernel_candidates": [],
+      "next_action": "find-or-construct-behavior-theorems",
+      "partitions": [
+        "development"
+      ],
+      "source_content_sha256": "a31360a8dc0f02486a63d564240d3ff35c166990f91a4c90ec53c1b4bc99d184",
+      "source_name": "Nat.instAndOp",
+      "source_occurrences": 9,
+      "source_type_sha256": "1edfdbaf7d8c2db675ae3ac17e586aa15beffec2511a3725383ce60652d53380",
+      "strategy_eligible": true,
+      "strategy_rank": 4
+    },
+    {
+      "affected_fact_ids": [
+        "F:ml430-nat-lor-assoc-82c4d0fd",
+        "F:ml430-nat-lor-bit-a2f98c7c",
+        "F:ml430-nat-lor-comm-2666d7ef",
+        "F:ml430-nat-testbit-lor-7644e067"
+      ],
+      "affected_targets": 4,
+      "checked_contract_receipt_count": 0,
+      "checked_contract_receipts": [],
+      "exact_axiom_free_kernel_candidate_count": 0,
+      "exact_axiom_free_kernel_candidates": [],
+      "next_action": "find-or-construct-behavior-theorems",
+      "partitions": [
+        "development"
+      ],
+      "source_content_sha256": "c24369c709439b09603aca41aae1b9ef3f27b6115a42bf529a0fd1e678abf6a2",
+      "source_name": "Nat.instOrOp",
+      "source_occurrences": 9,
+      "source_type_sha256": "a84f9985efe91c997d310b3312872d9a0a916ca6d2f068349630b9eb600aa131",
+      "strategy_eligible": true,
+      "strategy_rank": 5
+    },
+    {
+      "affected_fact_ids": [
+        "F:ml430-nat-choose-mono-a1af9c18",
+        "F:ml430-nat-fib-add-two-strictmono-c1e86d4d",
+        "F:ml430-nat-fib-strictmonoon-905810a9"
+      ],
+      "affected_targets": 3,
+      "checked_contract_receipt_count": 0,
+      "checked_contract_receipts": [],
+      "exact_axiom_free_kernel_candidate_count": 0,
+      "exact_axiom_free_kernel_candidates": [],
+      "next_action": "find-or-construct-behavior-theorems",
+      "partitions": [
+        "development",
+        "train"
+      ],
+      "source_content_sha256": "a141d86b8529e741876b02d77e966817b58fc9ae85649e8b6c0278fad2a90dc7",
+      "source_name": "Nat.instPreorder",
+      "source_occurrences": 7,
+      "source_type_sha256": "d4f403b10cdce141476ee57c80460b6c1c3c0deebe39e8b73330ade277432e84",
+      "strategy_eligible": true,
+      "strategy_rank": 6
+    },
+    {
+      "affected_fact_ids": [
+        "F:ml430-nat-multichoose-one-b210386a",
+        "F:ml430-nat-multichoose-one-right-7755072d",
+        "F:ml430-nat-multichoose-zero-right-6ef827c8"
+      ],
+      "affected_targets": 3,
+      "checked_contract_receipt_count": 0,
+      "checked_contract_receipts": [],
+      "exact_axiom_free_kernel_candidate_count": 0,
+      "exact_axiom_free_kernel_candidates": [],
+      "next_action": "find-or-construct-behavior-theorems",
+      "partitions": [
+        "development"
+      ],
+      "source_content_sha256": "6002a3e190a54debd13fd278e06286f19d3beb549f0223696dd34ea5a0a42b45",
+      "source_name": "Nat.multichoose",
+      "source_occurrences": 3,
+      "source_type_sha256": "db858c4c25bad9ad1db73e5c2f3bd918739ddf3916a6c6534a785e421891f065",
+      "strategy_eligible": true,
+      "strategy_rank": 7
+    },
+    {
+      "affected_fact_ids": [
+        "F:ml430-nat-coprime-symmetric-9b5cfa12",
+        "F:ml430-nat-not-coprime-zero-zero-6c4e8dd8"
+      ],
+      "affected_targets": 2,
+      "checked_contract_receipt_count": 0,
+      "checked_contract_receipts": [],
+      "exact_axiom_free_kernel_candidate_count": 0,
+      "exact_axiom_free_kernel_candidates": [],
+      "next_action": "find-or-construct-behavior-theorems",
+      "partitions": [
+        "development"
+      ],
+      "source_content_sha256": "440342fb5f887466d4c744c4ca4a38b5c75040f5eb3820d0ef0d4cac85ce3f59",
+      "source_name": "Nat.Coprime",
+      "source_occurrences": 2,
+      "source_type_sha256": "f18e29a1a67db5566e8a97649dd24256a4c64784b08995cc3e0b8335c664990d",
+      "strategy_eligible": true,
+      "strategy_rank": 8
+    },
+    {
+      "affected_fact_ids": [
+        "F:ml430-nat-ldiff-bit-6be49bb8",
+        "F:ml430-nat-testbit-ldiff-16f94162"
+      ],
+      "affected_targets": 2,
+      "checked_contract_receipt_count": 0,
+      "checked_contract_receipts": [],
+      "exact_axiom_free_kernel_candidate_count": 0,
+      "exact_axiom_free_kernel_candidates": [],
+      "next_action": "find-or-construct-behavior-theorems",
+      "partitions": [
+        "development"
+      ],
+      "source_content_sha256": "bd0de5c08727e290ffc7dd177e96cb719ad16930c1e5e008496035c3ba83e38b",
+      "source_name": "Nat.ldiff",
+      "source_occurrences": 3,
+      "source_type_sha256": "db858c4c25bad9ad1db73e5c2f3bd918739ddf3916a6c6534a785e421891f065",
+      "strategy_eligible": true,
+      "strategy_rank": 9
+    },
+    {
+      "affected_fact_ids": [
+        "F:ml430-int-gcd-eq-gcd-ab-63005aef"
+      ],
+      "affected_targets": 1,
+      "checked_contract_receipt_count": 0,
+      "checked_contract_receipts": [],
+      "exact_axiom_free_kernel_candidate_count": 0,
+      "exact_axiom_free_kernel_candidates": [],
+      "next_action": "find-or-construct-behavior-theorems",
+      "partitions": [
+        "train"
+      ],
+      "source_content_sha256": "18100d923053c96f7f6fccba1d0559724bd7d20eee3881cb07850ebca54a50b2",
+      "source_name": "Int.gcdA",
+      "source_occurrences": 1,
+      "source_type_sha256": "3b2a9d6ac9914f60a719e74208375ef3d23ccf38f8d390fb5ebfa340ba536197",
+      "strategy_eligible": true,
+      "strategy_rank": 10
+    },
+    {
+      "affected_fact_ids": [
+        "F:ml430-int-gcd-eq-gcd-ab-63005aef"
+      ],
+      "affected_targets": 1,
+      "checked_contract_receipt_count": 0,
+      "checked_contract_receipts": [],
+      "exact_axiom_free_kernel_candidate_count": 0,
+      "exact_axiom_free_kernel_candidates": [],
+      "next_action": "find-or-construct-behavior-theorems",
+      "partitions": [
+        "train"
+      ],
+      "source_content_sha256": "47c9900aeaebb8f8da23e950bcec01a1fe1a7a2512446825d4123446d40a9026",
+      "source_name": "Int.gcdB",
+      "source_occurrences": 1,
+      "source_type_sha256": "3b2a9d6ac9914f60a719e74208375ef3d23ccf38f8d390fb5ebfa340ba536197",
+      "strategy_eligible": true,
+      "strategy_rank": 11
+    },
+    {
+      "affected_fact_ids": [
+        "F:ml430-nat-testbit-eq-inth-ffa07392"
+      ],
+      "affected_targets": 1,
+      "checked_contract_receipt_count": 0,
+      "checked_contract_receipts": [],
+      "exact_axiom_free_kernel_candidate_count": 0,
+      "exact_axiom_free_kernel_candidates": [],
+      "next_action": "find-or-construct-behavior-theorems",
+      "partitions": [
+        "development"
+      ],
+      "source_content_sha256": "95f589331081442cef96302dccce7dbabf6490c368fbc3ddbaa41c672afefad3",
+      "source_name": "List.getI",
+      "source_occurrences": 1,
+      "source_type_sha256": "9042e4a2eb61107e725a17dba1487140114d5f0c7ef80445055df576ffbd2ba0",
+      "strategy_eligible": true,
+      "strategy_rank": 12
+    },
+    {
+      "affected_fact_ids": [
+        "F:ml430-nat-testbit-eq-inth-ffa07392"
+      ],
+      "affected_targets": 1,
+      "checked_contract_receipt_count": 0,
+      "checked_contract_receipts": [],
+      "exact_axiom_free_kernel_candidate_count": 0,
+      "exact_axiom_free_kernel_candidates": [],
+      "next_action": "find-or-construct-behavior-theorems",
+      "partitions": [
+        "development"
+      ],
+      "source_content_sha256": "a2cbf74c89617979f5bc55db5622a0bfe4ed393500585b71391f9b9f5743afcc",
+      "source_name": "Nat.bits",
+      "source_occurrences": 1,
+      "source_type_sha256": "48946a774c922ebd7680c53e93445e66636e2cdd7238ecce8cee4756fa665744",
+      "strategy_eligible": true,
+      "strategy_rank": 13
+    },
+    {
+      "affected_fact_ids": [
+        "F:ml430-nat-fastfib-eq-cde11774"
+      ],
+      "affected_targets": 1,
+      "checked_contract_receipt_count": 0,
+      "checked_contract_receipts": [],
+      "exact_axiom_free_kernel_candidate_count": 0,
+      "exact_axiom_free_kernel_candidates": [],
+      "next_action": "find-or-construct-behavior-theorems",
+      "partitions": [
+        "train"
+      ],
+      "source_content_sha256": "42f34fd04cdba8554b5f22b6f3acf8b75ea492968a7529e27b0487846f7e7ee1",
+      "source_name": "Nat.fastFib",
+      "source_occurrences": 1,
+      "source_type_sha256": "d07c2b2c42497339f29fb82e13ce55ecc214ee8eef4271177c51ab3dcf3f59ab",
+      "strategy_eligible": true,
+      "strategy_rank": 14
+    }
+  ],
+  "kind": "axeyum-autogenesis-semantic-contract-demand",
+  "schema_version": 1,
+  "source": {
+    "contract_artifact_scope": "artifacts/autogenesis/*.json",
+    "contract_receipt_schema_scanned": "axeyum-semantic-function-contract-receipt-v1",
+    "lemma_index_path": "artifacts/autogenesis/kernel-lemma-search-index-v1.json",
+    "lemma_index_sha256": "020ecc6203f6513e74acef630b4b46bbc5d62c6d9261a5c5ee43d81f24d40bfd",
+    "type_slice_replay_path": "artifacts/autogenesis/retrieved-induction-type-slice-replay-v1.json",
+    "type_slice_replay_sha256": "f5bca62ca641a1b8c64f14c52f72c146b01c9da4cec3ecb9c4d3375c7330d0ad"
+  },
+  "state": "candidate-only-exact-identity-join"
+}

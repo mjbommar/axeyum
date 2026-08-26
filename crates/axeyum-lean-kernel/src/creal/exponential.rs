@@ -35,29 +35,67 @@
 //! it was this comparison itself, which nothing in the prelude had built for
 //! two *differently*-shaped `Rat.normalize`s before.
 //!
-//! **This file still does not establish `Cauchy (sumRange expTerm)`, and so
-//! still does not build `CReal.e`.** That is genuinely the next step, and
-//! separately: `CReal.sumRange_cauchy_dominated_ordered_normalized`
-//! (`series.rs`) already gives a raw, UNWRAPPED pointwise Cauchy-shaped
-//! bound for one ordered pair `a ≤ b` from exactly this kind of domination
-//! (`∀x, le (abs (f x)) (g x)`, plus a Cauchy witness for `sumRange g` in the
-//! same raw form) — the `abs` needs `expTerm`/the geometric bound each shown
-//! nonnegative first (an easy `Rat`-level fact via [`normalize`]'s own
-//! `num`/`den`, not yet built here), and the `Cauchy (sumRange g)` witness
-//! for THIS `g` (route (b)'s raw-normalize sequence) still needs its own
-//! tail-sum argument — `geom_pair_within`/`geom_tail_bounded_div`
-//! (`geometric.rs`, route (a)'s machinery) do not apply to it directly since
-//! they are built for `CReal.pow`-based sequences, and bridging `g` to a
-//! `CReal.pow`-based sequence hits the same `Rat.pow`-vs-`Rat.normalize`
-//! representation gap route (a) was blocked on (see below) unless a fresh
-//! `Rat`-level equality `Rat.pow (natDivSucc 1 1) n = Rat.normalize 1 (2ⁿ) _`
-//! is built first (a clean, bounded induction via `normalize_mul_normalize`,
-//! not attempted here). Once *some* Cauchy witness for `sumRange g` exists in
-//! the raw pointwise form, doing the `Nat.le_total` split on top of
-//! `sum_range_cauchy_dominated_ordered_normalized` (mirroring what
-//! `sum_range_cauchy_of_dominated` does internally, but stopping short of its
-//! final `Exists.intro`) gives a concrete-`K` pointwise Cauchy bound for
-//! `sumRange expTerm`, which is exactly the shape
+//! **UPDATE, the next lane: `CReal.sumRange_pow_half_closed_form` is now
+//! built** — `∀n, Equiv (sumRange (fun i => pow half i) n) (mul two (add one
+//! (neg (pow half n))))`, i.e. `Σ_{k<n} (1/2)ᵏ = 2·(1 − (1/2)ⁿ)`, entirely
+//! `inv`-free (no `pos_bound`, no `geom_pair_within`). The only defect
+//! blocking it for two prior lanes was ONE swapped `equiv_symm` direction
+//! feeding the final `echain`'s last link with `Equiv mul_two_y
+//! mul_two_a_sum` where the straight-through `equiv_trans` step needed
+//! `Equiv mul_two_a_sum mul_two_y` (already available, unreversed, as
+//! `step4`) — none of the `Rat.normalize`/rescaling terrain this module's
+//! other notes warn about was the cause.
+//!
+//! **This closed form does NOT by itself give `Cauchy (sumRange expDominant)`
+//! (nor `sumRange (pow half ·)`), and closing that gap is more than index
+//! bookkeeping.** `CReal.Equiv` is a same-index rational bound
+//! (`Within (seq x n - seq y n) (modulus n n)`), while `CReal.mul`'s own
+//! representative resamples its FACTORS at a shifted index depending on both
+//! factors' magnitude (`product.rs`: `(x·y)_n := x_{(c+1)n+c} · y_{(c+1)n+c}`)
+//! — so `seq (sumRange expDominant m) m` is not literally `2·(1 −
+//! (1/2)ᵐ)` as a rational, only `Equiv`-related to it. Turning the closed
+//! form into an actual `Cauchy` witness needs the same index/modulus
+//! bookkeeping `series.rs`'s six-stage dominated-Cauchy pipeline already does
+//! for a sequence dominated by an ALREADY-Cauchy `g` — which is exactly the
+//! circularity `geometric.rs`'s own module documentation names for the raw
+//! `pow half` sequence itself.
+//!
+//! **A genuinely new fact changes that module's own diagnosis, though.**
+//! `geometric.rs` names "no lemma bounding `CReal.pow` above by a
+//! `natDivSucc` rational" as one of three pieces missing to close
+//! `CReal.geom_cauchy` via `geom_pair_within` (`geom_tail_within_le` +
+//! `geom_pair_within` are landed there; the harmonic bound on the deferred
+//! `seq Yₘ b` leaf was the blocker). That bound **already exists** —
+//! `CRealPrelude::pow_half_le_nat_div_succ : ∀n, le (pow half n) (ofRat
+//! (natDivSucc 1 n))`, built in `geometric.rs` itself for the IVT bisection
+//! modulus (`ivt.rs`) — for the concrete base `1/2` this file needs. So
+//! `geom_pair_within`'s `Nat.le_total` split plus fusing its five leaves
+//! (including `seq Yₘ b`, `Yₘ := pow half m * inv (add one (neg half))`) is
+//! newly unblocked. It still goes through `CReal.inv`/`PosBound` to build
+//! `Yₘ` (`PosBound half 1` is easy — `half`'s own sample is the constant
+//! `1/2` — but it is `inv`, which the domination bound above deliberately
+//! never touches). Two live options for the next lane, neither attempted
+//! here: finish `geom_cauchy` through `inv` at this one concrete base (a
+//! bounded, contained use, not a new general reliance on `inv`), or build a
+//! from-scratch inv-free Cauchy witness directly off
+//! `sumRange_pow_half_closed_form` mirroring `series.rs`'s own
+//! index-bookkeeping. Either way, scaling the resulting `Cauchy (sumRange
+//! (pow half ·))` up to `Cauchy (sumRange expDominant)` (the `mul two`
+//! wrapper) is a further step, not free, because of the same `CReal.mul`
+//! index-shift.
+//!
+//! Separately, once *some* `Cauchy (sumRange expDominant)` witness exists (by
+//! either route above): `CReal.sumRange_cauchy_dominated_ordered_normalized`
+//! (`series.rs`) already gives a raw, UNWRAPPED pointwise Cauchy-shaped bound
+//! for one ordered pair `a ≤ b` from exactly this kind of domination (`∀x, le
+//! (abs (f x)) (g x)`, plus a Cauchy witness for `sumRange g` in the same raw
+//! form) — `exp_term_abs_le_dominant` already supplies the domination
+//! hypothesis, so only the nonnegativity-derived `abs` shape and the
+//! `Cauchy (sumRange expDominant)` witness are missing. Then the
+//! `Nat.le_total` split on top of `sum_range_cauchy_dominated_ordered_normalized`
+//! (mirroring what `sum_range_cauchy_of_dominated` does internally, but
+//! stopping short of its final `Exists.intro`) gives a concrete-`K` pointwise
+//! Cauchy bound for `sumRange expTerm`, which is exactly the shape
 //! [`CRealPrelude::regular_of_scaled_cauchy`] consumes to build `CReal.e :=
 //! CReal.mk (speedup (diagonal expSeriesPartial) K) (...)` directly — see
 //! `creal/convergence.rs` for `regular_of_scaled_cauchy`/`speedup`, and
@@ -66,19 +104,18 @@
 //! this kernel; `converges_of_cauchy`'s own `∃ L, …` cannot be unwrapped for
 //! this purpose).
 //!
-//! What follows below is this file's original diagnosis, from before the
-//! domination bound existed, of what a route (a)/(b) choice would need for
-//! domination specifically — kept because the same representation gap it
-//! names (`Rat.pow` vs `Rat.normalize`) is exactly what still blocks the
-//! Cauchy witness above, on the route (a) side: (a) relate `CReal.pow
-//! (ofRat (1/2)) n` to `ofRat ((1/2)^n)` via `of_rat_mul`/`pow_congr`
-//! induction (this bridge, `CReal.ofRat_pow`, now EXISTS —
-//! `creal/geometric.rs` — so route (a)'s domination half was in fact
-//! buildable; what remained missing for it was `Rat.pow (1/2) n`'s
-//! relationship to a `Rat.normalize`d denominator, not an order lemma); or
-//! (b) skip `CReal.pow` and `Rat.normalize` a genuinely rational geometric
-//! bound `g n := ofRat (2 / 2ⁿ)` directly (the route this file's domination
-//! bound now takes).
+//! **Historical note, since the naming below is easy to misread against the
+//! code that actually shipped.** This file's original diagnosis (before the
+//! domination bound existed) framed the choice as route (a) — bridge
+//! `CReal.pow` to a `Rat.pow` via `CReal.ofRat_pow` — versus route (b) — skip
+//! `CReal.pow` and `Rat.normalize` a genuinely rational bound directly.
+//! `declare_exp_term_le_geom` (route (b)) proves the domination against a
+//! **raw `Rat.normalize`d** rational; the separate `CReal.expDominant`
+//! (`declare_exp_dominant`, below) then bridges that to a `CReal.pow`-based
+//! form (`mul two (pow half n)`) so that `sumRange_pow_half_closed_form` and
+//! `pow_half_le_nat_div_succ` — both stated over `CReal.pow` — apply to it.
+//! So the shipped construction uses **both**: route (b) for the one-shot
+//! comparison, route (a)'s `CReal.pow` shape for everything built since.
 
 use super::{CRealPrelude, DERIVED_HEIGHT, creal_ty, div_succ, embed, equiv};
 use crate::KernelError;
@@ -113,20 +150,8 @@ pub(super) fn declare_exponential(d: &mut IntDev<'_>, p: CRealPrelude) -> Result
     declare_exp_term_le_dominant(d, p)?;
     declare_exp_term_nonneg(d, p)?;
     declare_exp_dominant_nonneg(d, p)?;
-    declare_exp_term_abs_le_dominant(d, p)
-    // `declare_sum_pow_half_closed_form` is NOT wired in yet: it broke the
-    // whole prelude build (`TypeMismatch` at the top-level `add_declaration`,
-    // every `creal::` test failing identically at `built()`) and the exact
-    // failing step was not isolated before this lane's time ran out. The
-    // Rat-level facts it depends on (`rat_two_mul_half_eq_one`,
-    // `rat_half_add_half_eq_one`, both via `rat_normalize_self_eq_one`) and
-    // the CReal-level group chain (`one_sub_half_equiv_half`,
-    // `two_mul_one_sub_half_equiv_one`) are ALL still defined below, unused,
-    // for the next lane to bisect via `Kernel::infer` per step against a
-    // free fvar (per this repo's own advice for exactly this situation) --
-    // start with `two_mul_one_sub_half_equiv_one` in isolation (build it as
-    // its own throwaway `Theorem` with an explicit `ty` ascription) before
-    // re-wiring `declare_sum_pow_half_closed_form`.
+    declare_exp_term_abs_le_dominant(d, p)?;
+    declare_sum_pow_half_closed_form(d, p)
 }
 
 /// `Rat.normalize (Int.ofNat (Nat.succ Nat.zero)) (Nat.factorial n)
@@ -1031,7 +1056,6 @@ fn declare_exp_term_abs_le_dominant(
 /// to `num (normalize k k h_k) = den_z (normalize k k h_k)`, itself gotten
 /// from [`RatPrelude::normalize_cross`] (`num · k = k · den_z`) by
 /// [`RatPrelude::int_mul_right_cancel`] (cancelling the shared `k`).
-#[allow(dead_code)]
 fn rat_normalize_self_eq_one(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -1101,7 +1125,6 @@ fn rat_normalize_self_eq_one(
 /// `Rat.normalize 2 2 h_c`; [`rat_normalize_self_eq_one`] closes the rest.
 ///
 /// Returns `(two_r, half_r, proof : Eq Rat (Rat.mul two_r half_r) Rat.one)`.
-#[allow(dead_code)]
 fn rat_two_mul_half_eq_one(d: &mut IntDev<'_>, p: CRealPrelude) -> (ExprId, ExprId, ExprId) {
     let rp = p.rat;
     let np = d.prelude();
@@ -1144,7 +1167,6 @@ fn rat_two_mul_half_eq_one(d: &mut IntDev<'_>, p: CRealPrelude) -> (ExprId, Expr
 /// landing on `Rat.normalize 4 4 _` instead of `2 2`.
 ///
 /// Returns `(half_r, proof : Eq Rat (Rat.add half_r half_r) Rat.one)`.
-#[allow(dead_code)]
 fn rat_half_add_half_eq_one(d: &mut IntDev<'_>, p: CRealPrelude) -> (ExprId, ExprId) {
     let rp = p.rat;
     let np = d.prelude();
@@ -1183,14 +1205,12 @@ fn rat_half_add_half_eq_one(d: &mut IntDev<'_>, p: CRealPrelude) -> (ExprId, Exp
 }
 
 /// `CReal.add x y`.
-#[allow(dead_code)]
 fn cadd(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
     d.const_app(p.add, &[x, y])
 }
 
 /// `Equiv` chain composition, verbatim in shape to every other `creal/*`
 /// module's own private `echain` (see e.g. `geometric.rs::echain`).
-#[allow(dead_code)]
 fn echain(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -1209,7 +1229,6 @@ fn echain(
 /// `Equiv (add x (neg x)) zero` reproduced at `x := half`, chained through
 /// `add_comm` so it applies to `add (neg half) half` (the order `add_neg`
 /// itself does not cover).
-#[allow(dead_code)]
 fn neg_half_add_half_equiv_zero(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
     let h = half(d, p);
     let neg_h = cneg(d, p, h);
@@ -1227,7 +1246,6 @@ fn neg_half_add_half_equiv_zero(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
 /// `Equiv (add half half) one` ([`rat_half_add_half_eq_one`] lifted through
 /// `CReal.ofRat_add`), then cancelling the shared `half` on the right by
 /// adding `neg half` to both sides.
-#[allow(dead_code)]
 fn one_sub_half_equiv_half(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
     let one_c = d.kernel().const_(p.one, vec![]);
     let h = half(d, p);
@@ -1317,7 +1335,6 @@ fn one_sub_half_equiv_half(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
 /// [`one_sub_half_equiv_half`] (`1 − half ≈ half`) and
 /// [`rat_two_mul_half_eq_one`] (`2 · half = 1`, lifted through
 /// `CReal.ofRat_mul`).
-#[allow(dead_code)]
 fn two_mul_one_sub_half_equiv_one(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
     let t = two(d, p);
     let h = half(d, p);
@@ -1350,7 +1367,6 @@ fn two_mul_one_sub_half_equiv_one(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId
 }
 
 /// `λ i, CReal.pow half i` — verbatim in shape to `geometric.rs::pow_fn`.
-#[allow(dead_code)]
 fn pow_half_fn(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
     let i_fv = d.fresh_fvar();
     let i = d.kernel().fvar(i_fv);
@@ -1368,7 +1384,6 @@ fn pow_half_fn(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
 /// [`CRealPrelude::mul_sub_one_geom`]'s conclusion through by `two` and
 /// cancel `mul two (add one (neg half))` down to `one` via
 /// [`two_mul_one_sub_half_equiv_one`].
-#[allow(dead_code)]
 fn declare_sum_pow_half_closed_form(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -1430,13 +1445,19 @@ fn declare_sum_pow_half_closed_form(
     let step6_7 = echain(d, p, mul_two_a_sum, &[(mul_one_sum, step6), (sum_n, step7)]);
     // step6_7 : Equiv (mul (mul two a) sum_n) sum_n
     let step6_7_rev = d.lemma(p.equiv_symm, &[mul_two_a_sum, sum_n, step6_7]);
-    let step4_rev = d.lemma(p.equiv_symm, &[mul_two_a_sum, mul_two_y, step4]);
-    // sum_n ~ mul_two_a_sum ~ mul_two_y
+    // sum_n ~ mul_two_a_sum ~ mul_two_y. `step4` already runs
+    // `mul_two_a_sum -> mul_two_y` (the direction `echain` needs for a
+    // `current -> next` link) -- an earlier version of this chain fed
+    // `equiv_symm` a THIRD time here, building `Equiv mul_two_y
+    // mul_two_a_sum` (the wrong direction) and feeding that into the
+    // `(mul_two_y, _)` slot, which needs `mul_two_a_sum -> mul_two_y`. That
+    // was the whole `TypeMismatch`: the swapped proof against the
+    // straight-through step `equiv_trans` expects.
     let concl = echain(
         d,
         p,
         sum_n,
-        &[(mul_two_a_sum, step6_7_rev), (mul_two_y, step4_rev)],
+        &[(mul_two_a_sum, step6_7_rev), (mul_two_y, step4)],
     );
 
     let value = d.lam_fv(n_fv, nat, concl);
