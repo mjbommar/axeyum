@@ -74,6 +74,8 @@ pub mod check;
 pub mod corpus;
 pub mod json;
 pub mod psd;
+pub mod psd_big;
+pub mod theta;
 
 /// A sum of weighted squares, `sum_i weight_i * square_i^2`, with every weight
 /// required nonnegative.

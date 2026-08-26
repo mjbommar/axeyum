@@ -17,10 +17,11 @@
 //! rejected in favor of this shape.
 
 use std::fmt;
+use std::io::BufRead;
 
 use crate::{
     CnfAssignment, CnfClause, CnfError, CnfFormula, CnfLit, CnfVar, DratError, DratStep,
-    ProofSolveOutcome, check_drat, solve_with_drat_proof_with_limits,
+    ProofSolveOutcome, check_drat, check_drat_backward_reader, solve_with_drat_proof_with_limits,
 };
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -266,6 +267,70 @@ pub fn check_cube_refutation(
     }
 }
 
+/// Checks a composite refutation from textual DRAT readers without first
+/// materializing parsed proof-step vectors.
+///
+/// This is the retained-artifact route for large leaves. It rebuilds the same
+/// `base AND cube` and covering formulas as [`check_cube_refutation`], then
+/// delegates each ordinary proof to the file-backed backward checker.
+///
+/// # Errors
+///
+/// Returns a [`CubeCheckError`] for an empty cube set, a reader-count mismatch,
+/// malformed cube literals, rejected/incomplete leaf proofs, or a rejected/
+/// incomplete covering proof.
+pub fn check_cube_refutation_backward_readers<R, I>(
+    base: &CnfFormula,
+    cubes: &[Cube],
+    cube_proofs: I,
+    covering_proof: R,
+) -> Result<(), CubeCheckError>
+where
+    R: BufRead,
+    I: IntoIterator<Item = R>,
+{
+    if cubes.is_empty() {
+        return Err(CubeCheckError::EmptyCubeSet);
+    }
+    let mut proofs = cube_proofs.into_iter();
+    for (index, cube) in cubes.iter().enumerate() {
+        let Some(reader) = proofs.next() else {
+            return Err(CubeCheckError::CubeCountMismatch {
+                cubes: cubes.len(),
+                proofs: index,
+            });
+        };
+        let augmented =
+            augmented_formula(base, cube).map_err(|source| CubeCheckError::InvalidCubeLiteral {
+                cube: index,
+                source,
+            })?;
+        match check_drat_backward_reader(&augmented, reader) {
+            Ok(true) => {}
+            Ok(false) => return Err(CubeCheckError::CubeProofIncomplete { cube: index }),
+            Err(source) => {
+                return Err(CubeCheckError::CubeProofInvalid {
+                    cube: index,
+                    source,
+                });
+            }
+        }
+    }
+    if proofs.next().is_some() {
+        return Err(CubeCheckError::CubeCountMismatch {
+            cubes: cubes.len(),
+            proofs: cubes.len() + 1 + proofs.count(),
+        });
+    }
+    let covering = covering_formula(base, cubes)
+        .map_err(|source| CubeCheckError::CoveringFormulaInvalid { source })?;
+    match check_drat_backward_reader(&covering, covering_proof) {
+        Ok(true) => Ok(()),
+        Ok(false) => Err(CubeCheckError::CoveringProofIncomplete),
+        Err(source) => Err(CubeCheckError::CoveringProofInvalid { source }),
+    }
+}
+
 /// Why [`boolean_product_cubes`] declined to generate a cube set.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CubeGenError {
@@ -485,8 +550,10 @@ pub fn certify_by_cubes(
 
 #[cfg(test)]
 mod tests {
+    use std::io::Cursor;
+
     use super::*;
-    use crate::{CnfClause, CnfFormula, CnfLit, CnfVar};
+    use crate::{CnfClause, CnfFormula, CnfLit, CnfVar, write_drat};
 
     /// A base formula over `s0, s1` (free selectors) plus four payload
     /// variables `p00, p01, p10, p11`, one per `(s0, s1)` sign combination.
@@ -593,6 +660,45 @@ mod tests {
         assert_eq!(refutation.cubes.len(), 4);
         check_cube_refutation(&base, &refutation)
             .expect("an honestly produced refutation must check");
+    }
+
+    #[test]
+    fn file_backed_checker_accepts_the_same_composition() {
+        let (base, s0, s1, _x) = selector_gated_unsat();
+        let cubes = boolean_product_cubes(&[s0, s1]).unwrap();
+        let (outcome, _stats) = certify_by_cubes(&base, cubes, None, 10_000, 10_000);
+        let CubeCertifyOutcome::Unsat(refutation) = outcome else {
+            panic!("expected Unsat");
+        };
+        let readers: Vec<_> = refutation
+            .cube_proofs
+            .iter()
+            .map(|proof| Cursor::new(write_drat(proof).into_bytes()))
+            .collect();
+        let covering = Cursor::new(write_drat(&refutation.covering_proof).into_bytes());
+        check_cube_refutation_backward_readers(&base, &refutation.cubes, readers, covering)
+            .expect("textual file-backed composition must check");
+    }
+
+    #[test]
+    fn file_backed_checker_rejects_a_missing_reader() {
+        let (base, s0, s1, _x) = selector_gated_unsat();
+        let cubes = boolean_product_cubes(&[s0, s1]).unwrap();
+        let (outcome, _stats) = certify_by_cubes(&base, cubes, None, 10_000, 10_000);
+        let CubeCertifyOutcome::Unsat(refutation) = outcome else {
+            panic!("expected Unsat");
+        };
+        let readers: Vec<_> = refutation
+            .cube_proofs
+            .iter()
+            .take(refutation.cube_proofs.len() - 1)
+            .map(|proof| Cursor::new(write_drat(proof).into_bytes()))
+            .collect();
+        let covering = Cursor::new(write_drat(&refutation.covering_proof).into_bytes());
+        assert!(matches!(
+            check_cube_refutation_backward_readers(&base, &refutation.cubes, readers, covering),
+            Err(CubeCheckError::CubeCountMismatch { .. })
+        ));
     }
 
     #[test]

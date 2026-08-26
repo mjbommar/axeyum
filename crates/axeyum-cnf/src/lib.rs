@@ -43,6 +43,7 @@ mod alethe;
 mod bve;
 pub mod colouring;
 mod compact;
+pub mod cube;
 mod drat;
 mod drat_backward;
 mod drat_resource;

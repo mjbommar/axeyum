@@ -82,15 +82,21 @@
 //! # Ok::<(), axeyum_search::SearchError>(())
 //! ```
 
+pub mod boolean_anf_cnf;
 pub mod certify;
 pub mod colouring;
 pub mod compose;
 pub mod cover;
 pub mod family;
 pub mod harness;
+pub mod job_shop;
 pub mod ledger;
+pub mod multiplicative_circuit;
 pub mod offdiag;
 pub mod search;
+pub mod simd;
+pub mod simd_synthesis;
+pub mod tensor_decomposition;
 pub mod vdw;
 
 pub use certify::certify_dumped_cover;

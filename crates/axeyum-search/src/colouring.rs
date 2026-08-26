@@ -442,6 +442,39 @@ impl ColouringProblem {
         Witness::new(self.colours, colouring)
     }
 
+    /// Encode a complete witness as the one-hot assignment for this problem.
+    ///
+    /// This is the reverse of [`Self::decode_model`]. It does not silently
+    /// rename colours: callers importing a witness whose palette is freely
+    /// permutable may first use [`Witness::canonicalize_palette`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SearchError::WitnessLength`] unless the witness covers this
+    /// exact domain, and rejects a witness built for a different palette.
+    pub fn witness_assignment(&self, witness: &Witness) -> Result<Vec<bool>, SearchError> {
+        if witness.points() != self.points {
+            return Err(SearchError::WitnessLength {
+                expected: self.points,
+                found: witness.points(),
+            });
+        }
+        if witness.colours() != self.colours {
+            return Err(SearchError::InvalidParameter {
+                what: format!(
+                    "witness has {} colours, problem has {}",
+                    witness.colours(),
+                    self.colours
+                ),
+            });
+        }
+        let mut values = vec![false; self.variable_count()];
+        for (offset, &colour) in witness.colouring().iter().enumerate() {
+            values[self.variable(offset + 1, colour)?.index()] = true;
+        }
+        Ok(values)
+    }
+
     /// The first forbidden set this colouring makes monochromatic, if any.
     ///
     /// This uses the problem's own constraint list, so it re-checks the
@@ -540,6 +573,34 @@ impl Witness {
         out
     }
 
+    /// Rename colours by order of first occurrence.
+    ///
+    /// The first observed colour becomes 1, the next previously unseen colour
+    /// becomes 2, and so on. This is semantics-preserving only when the whole
+    /// palette is interchangeable, as it is for uniform Rado, Schur, and van
+    /// der Waerden instances. It must not be applied across distinct roles in
+    /// an off-diagonal colouring problem.
+    #[must_use]
+    pub fn canonicalize_palette(&self) -> Self {
+        let mut names = vec![0usize; self.colours + 1];
+        let mut next = 1usize;
+        let colouring = self
+            .colouring
+            .iter()
+            .map(|&colour| {
+                if names[colour] == 0 {
+                    names[colour] = next;
+                    next += 1;
+                }
+                names[colour]
+            })
+            .collect();
+        Self {
+            colours: self.colours,
+            colouring,
+        }
+    }
+
     /// A prefix of this witness covering `points` points.
     ///
     /// # Errors
@@ -619,6 +680,18 @@ mod tests {
                 colours: 2
             }
         );
+    }
+
+    #[test]
+    fn witness_palette_canonicalization_and_assignment_round_trip() {
+        let witness = Witness::new(3, vec![3, 3, 1, 2]).unwrap();
+        let canonical = witness.canonicalize_palette();
+        assert_eq!(canonical.colouring(), &[1, 1, 2, 3]);
+
+        let problem = ColouringProblem::new(4, 3, Vec::new()).unwrap();
+        let assignment = problem.witness_assignment(&canonical).unwrap();
+        assert_eq!(problem.decode_model(&assignment), Ok(canonical));
+        assert_eq!(problem.encode().unwrap().evaluate(&assignment), Ok(true));
     }
 
     #[test]
