@@ -19,7 +19,10 @@
 
 use crate::BinderInfo;
 use crate::env::Declaration;
-use crate::{ExprId, Kernel, KernelError, NameId, NatOps, NatPrelude, NatState, build_nat_prelude};
+use crate::{
+    ExprId, Kernel, KernelError, NameId, NatOps, NatPrelude, NatState, build_nat_prelude,
+    on_a_deep_stack,
+};
 
 /// A downstream development: a kernel carrying the prelude, plus a name root of
 /// its own. Implementing [`NatOps`] takes exactly the two required methods.
@@ -1100,26 +1103,6 @@ fn totient_computes_on_small_numerals() {
         !f.k.def_eq(totient_nine, five),
         "totient 9 must NOT be def-eq to 5"
     );
-}
-
-/// Run `f` on a thread with a **64 MiB stack**.
-///
-/// The default test-thread stack is 2 MiB. Reducing `prodRangeIf 6 (fun _ =>
-/// true) succ` to the UNARY numeral `720` (720 nested `succ`s, via `Nat.mul`'s
-/// own recursive unfolding) overflows it — confirmed by running the same test
-/// under `RUST_MIN_STACK=1073741824` directly (bypassing the test harness's
-/// own default), where it passes. This is the same shape as
-/// `complex_tests.rs`'s/`creal_point_tests.rs`'s `on_a_deep_stack`: the
-/// recursion is in the kernel's own reducer over a genuinely large unary
-/// term, not a bug, so the fix is to give it room where it is exercised
-/// rather than solve it with an environment variable CI would not set.
-fn on_a_deep_stack<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> T {
-    std::thread::Builder::new()
-        .stack_size(64 * 1024 * 1024)
-        .spawn(f)
-        .expect("spawning a deep-stack thread must succeed")
-        .join()
-        .expect("the deep-stack thread must not panic")
 }
 
 /// `Nat.prodRangeIf` computes on small numerals by REDUCTION, not merely

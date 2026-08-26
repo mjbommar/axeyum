@@ -54,7 +54,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::{
     Declaration, Kernel, build_arith_prelude, build_complex_prelude, build_cpoint_prelude,
     build_creal_prelude, build_int_prelude, build_logic_prelude, build_nat_prelude,
-    build_rat_prelude, build_string_prelude,
+    build_rat_prelude, build_string_prelude, on_a_deep_stack,
 };
 
 /// Every declaration name currently in `kernel`'s environment, in canonical
@@ -272,18 +272,6 @@ fn cross_prelude_declaration_names_are_disjoint() {
     let own = own_declarations(&groups);
     let collisions = cross_prelude_collisions(&own);
     assert!(collisions.is_empty(), "{}", collision_report(&collisions));
-}
-
-/// Run `f` on a thread with a **64 MiB stack**. Verbatim copy of
-/// `complex_tests.rs`'s helper of the same name; see its doc for why this is
-/// not solved with `RUST_MIN_STACK` instead.
-fn on_a_deep_stack<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> T {
-    std::thread::Builder::new()
-        .stack_size(64 * 1024 * 1024)
-        .spawn(f)
-        .expect("spawning a deep-stack thread must succeed")
-        .join()
-        .expect("the deep-stack thread must not panic")
 }
 
 #[cfg(test)]
