@@ -3170,7 +3170,10 @@ fn succ_mul_succ(d: &mut IntDev<'_>, n: ExprId, m: ExprId) -> (ExprId, ExprId) {
 ///
 /// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
 /// the kernel **refused** a proof, not that a script gave up.
-pub(super) fn declare_mesh_reciprocal_mul(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+pub(super) fn declare_mesh_reciprocal_mul(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
     let nat = d.nat_ty();
 
     let n_fv = d.fresh_fvar();
@@ -3363,7 +3366,10 @@ fn cancel_unique(
 ///
 /// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
 /// the kernel **refused** a proof, not that a script gave up.
-pub(super) fn declare_equiv_abs_diff_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+pub(super) fn declare_equiv_abs_diff_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
     let carrier = creal_ty(d, p);
     let nat = d.nat_ty();
 
@@ -3507,7 +3513,15 @@ pub(super) fn declare_equiv_abs_diff_le(d: &mut IntDev<'_>, p: CRealPrelude) -> 
         let refl_q = d.lemma(p.equiv_refl, &[embed_q]);
         d.lemma(
             p.le_congr,
-            &[flipped, neg_diff, embed_q, embed_q, raw, refl_q, lower_flipped],
+            &[
+                flipped,
+                neg_diff,
+                embed_q,
+                embed_q,
+                raw,
+                refl_q,
+                lower_flipped,
+            ],
         )
     };
 
