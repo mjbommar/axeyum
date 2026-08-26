@@ -101,3 +101,14 @@ mutation fails at monochromatic `[1,22,63]`. This supersedes Axeyum's 251-point 
 and removes any novelty claim for that weaker bound. A 144-million-move probe across all five
 warm extensions and a cold start found no 297-point witness; that is explicitly not an upper
 bound.
+
+**Bilinear bounded-rank search, 2026-08-26.** ADR-0564 adds row-major matrix tensor generation
+and a complete resource-bounded `GF(2)` rank SAT encoding whose models lift into ADR-0556
+artifacts and independently replay. Wang's `<3,2,4>` rank-20 witness, after an explicit
+output-dual basis permutation, matches all 576 coefficients and passes the pinned 22,984-
+variable / 90,952-clause path; a one-support mutation fails at `[0,0,0]`. The known
+`<2,2,2>` rank-6 control generated 776 variables / 2,880 clauses; CaDiCaL refuted it in 39.35
+seconds and Axeyum's file-backed backward checker accepted its 234,288,465-byte DRAT proof in
+196.98 seconds. The open `<3,2,4>` rank-19 baseline (21,806 variables / 85,824 clauses)
+reached 300 seconds without a model or proof, so its verdict is interrupted and the bracket
+remains `[19,20]`.

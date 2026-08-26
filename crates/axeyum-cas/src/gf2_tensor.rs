@@ -70,6 +70,71 @@ impl Gf2Tensor {
             ones,
         })
     }
+
+    /// Construct the structure tensor for multiplying an `m x n` matrix by an
+    /// `n x p` matrix.
+    ///
+    /// Row-major basis indices are `a(i,j) = i*n+j`, `b(j,k) = j*p+k`, and
+    /// `c(i,k) = i*p+k`. Thus the tensor dimensions are
+    /// `[m*n, n*p, m*p]` and its nonzero coefficients are exactly
+    /// `(a(i,j), b(j,k), c(i,k))`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for a zero matrix dimension or arithmetic overflow.
+    pub fn matrix_multiplication(m: usize, n: usize, p: usize) -> Result<Self, Gf2TensorError> {
+        for (mode, dimension) in [m, n, p].into_iter().enumerate() {
+            if dimension == 0 {
+                return Err(Gf2TensorError::ZeroDimension { mode });
+            }
+        }
+        let a_dimension = m.checked_mul(n).ok_or(Gf2TensorError::DimensionOverflow)?;
+        let b_dimension = n.checked_mul(p).ok_or(Gf2TensorError::DimensionOverflow)?;
+        let c_dimension = m.checked_mul(p).ok_or(Gf2TensorError::DimensionOverflow)?;
+        let entries = m
+            .checked_mul(n)
+            .and_then(|value| value.checked_mul(p))
+            .ok_or(Gf2TensorError::DimensionOverflow)?;
+        let mut ones = Vec::with_capacity(entries);
+        for i in 0..m {
+            for j in 0..n {
+                for k in 0..p {
+                    ones.push([i * n + j, j * p + k, i * p + k]);
+                }
+            }
+        }
+        Ok(Self {
+            dimensions: [a_dimension, b_dimension, c_dimension],
+            ones,
+        })
+    }
+
+    /// Validate and expand this sparse tensor in lexicographic dense order.
+    ///
+    /// # Errors
+    ///
+    /// Refuses zero dimensions, arithmetic overflow, duplicate/out-of-range
+    /// coordinates, or a coefficient volume above `max_coefficients`.
+    pub fn dense_coefficients(&self, max_coefficients: usize) -> Result<Vec<bool>, Gf2TensorError> {
+        for (mode, &dimension) in self.dimensions.iter().enumerate() {
+            if dimension == 0 {
+                return Err(Gf2TensorError::ZeroDimension { mode });
+            }
+        }
+        let volume = self
+            .dimensions
+            .into_iter()
+            .try_fold(1_usize, usize::checked_mul)
+            .ok_or(Gf2TensorError::DimensionOverflow)?;
+        if volume > max_coefficients {
+            return Err(Gf2TensorError::LimitExceeded {
+                resource: "coefficients",
+                observed: volume,
+                limit: max_coefficients,
+            });
+        }
+        expected_coefficients(self, volume)
+    }
 }
 
 /// A rank-one tensor represented by the supports of its three factor vectors.
@@ -413,5 +478,18 @@ mod tests {
                 limit: 44,
             })
         );
+    }
+
+    #[test]
+    fn matrix_multiplication_uses_row_major_basis_indices() {
+        let target = Gf2Tensor::matrix_multiplication(2, 3, 4).unwrap();
+        assert_eq!(target.dimensions, [6, 12, 8]);
+        assert_eq!(target.ones.len(), 24);
+        assert_eq!(target.ones[0], [0, 0, 0]);
+        assert_eq!(target.ones[3], [0, 3, 3]);
+        assert_eq!(target.ones[4], [1, 4, 0]);
+        assert_eq!(target.ones[23], [5, 11, 7]);
+        let dense = target.dense_coefficients(576).unwrap();
+        assert_eq!(dense.iter().filter(|&&coefficient| coefficient).count(), 24);
     }
 }

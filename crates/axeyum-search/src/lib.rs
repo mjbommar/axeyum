@@ -93,6 +93,7 @@ pub mod multiplicative_circuit;
 pub mod offdiag;
 pub mod search;
 pub mod simd;
+pub mod tensor_decomposition;
 pub mod vdw;
 
 pub use certify::certify_dumped_cover;

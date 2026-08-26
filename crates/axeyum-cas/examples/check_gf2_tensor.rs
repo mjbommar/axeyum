@@ -14,41 +14,43 @@ fn fail(message: &str, code: i32) -> ! {
 }
 
 fn main() {
-    let mut arguments = std::env::args_os();
-    let _program = arguments.next();
-    let Some(raw_n) = arguments.next() else {
-        fail(
-            "usage: check_gf2_tensor <full-polynomial-n> <decomposition.json>",
-            2,
-        );
+    let arguments: Vec<String> = std::env::args().skip(1).collect();
+    let usage = "usage: check_gf2_tensor <N> <decomposition.json> | matrix <M> <N> <P> <decomposition.json>";
+    let parse_dimension = |text: &str, name: &str| {
+        text.parse::<usize>()
+            .unwrap_or_else(|_| fail(&format!("{name} must be a positive integer"), 2))
     };
-    let Some(raw_path) = arguments.next() else {
-        fail(
-            "usage: check_gf2_tensor <full-polynomial-n> <decomposition.json>",
-            2,
-        );
+    let (family, target, path) = match arguments.as_slice() {
+        [n, path] => {
+            let n = parse_dimension(n, "full-polynomial N");
+            (
+                format!("full-polynomial|n={n}"),
+                Gf2Tensor::full_polynomial_multiplication(n),
+                PathBuf::from(path),
+            )
+        }
+        [kind, m, n, p, path] if kind == "matrix" => {
+            let m = parse_dimension(m, "matrix M");
+            let n = parse_dimension(n, "matrix N");
+            let p = parse_dimension(p, "matrix P");
+            (
+                format!("matrix|m={m}|n={n}|p={p}"),
+                Gf2Tensor::matrix_multiplication(m, n, p),
+                PathBuf::from(path),
+            )
+        }
+        _ => fail(usage, 2),
     };
-    if arguments.next().is_some() {
-        fail(
-            "usage: check_gf2_tensor <full-polynomial-n> <decomposition.json>",
-            2,
-        );
-    }
-    let Some(n) = raw_n.to_str().and_then(|value| value.parse::<usize>().ok()) else {
-        fail("full-polynomial-n must be a positive integer", 2);
-    };
-    let path = PathBuf::from(raw_path);
     let bytes = fs::read(&path).unwrap_or_else(|error| fail(&format!("read: {error}"), 2));
     let decomposition: Gf2TensorDecomposition =
         serde_json::from_slice(&bytes).unwrap_or_else(|error| fail(&format!("parse: {error}"), 2));
-    let target = Gf2Tensor::full_polynomial_multiplication(n)
-        .unwrap_or_else(|error| fail(&format!("target: {error:?}"), 2));
+    let target = target.unwrap_or_else(|error| fail(&format!("target: {error:?}"), 2));
     match check_gf2_tensor_decomposition(&target, &decomposition, Gf2TensorCheckLimits::default()) {
         Ok(Gf2TensorCheck::Verified {
             rank,
             coefficients_checked,
         }) => println!(
-            "GF2_TENSOR_CHECK|verified|family=full-polynomial|n={n}|rank={rank}|coefficients={coefficients_checked}"
+            "GF2_TENSOR_CHECK|verified|family={family}|rank={rank}|coefficients={coefficients_checked}"
         ),
         Ok(Gf2TensorCheck::Failed {
             coordinate,
