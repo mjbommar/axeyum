@@ -39,6 +39,17 @@ package receipt records that fail-closed boundary. The generic missing capabilit
 identified as certifiable scheduling propagation/search composition, while all seven independent
 DRCP/DRAT proof producers continue without short cutoffs.
 
+**Checked energetic-overload boundary, 2026-08-26.** ADR-0577 adds a reusable cumulative-task
+window type and exact energetic checker: task membership, domains, duration, demand, capacity,
+and compulsory energy are recomputed with checked arithmetic, and only a strict overload is a
+conflict. Portable job-shop conflicts replay either defining job-chain windows or ADR-0574's
+precedence closure; schema, bound, machine, interval, and energy mutations fail closed. The
+bounded exhaustive scan evaluates all integer intervals under explicit ceilings. On `abz7@655`,
+3,222,600 intervals / 64,452,000 task contributions identify machine 5 `[0,538)` at 533/538
+required/capacity energy in 0.75 seconds. Repeating after all 256 forced precedences gives exactly
+the same ratio, so no root conflict exists and none is emitted. Conditional conflict composition
+under branch domains is the next required layer; the target lower bound remains open.
+
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
 external-certificate replay runner for all five packages.  It validates checker and artifact
 bytes before execution, hard-kills a timed-out process session, requires an observable finding
