@@ -54,6 +54,7 @@ use crate::{Kernel, KernelError};
 
 mod abs;
 mod archimedean;
+mod bernoulli;
 mod core;
 mod decidable;
 mod decide;
@@ -972,6 +973,25 @@ pub struct RatPrelude {
     /// polyEval c n x` — a scalar distributes through evaluation.
     pub poly_eval_smul: NameId,
 
+    // --- Bernoulli's inequality and the harmonic power bound (rat_prelude::bernoulli) ---
+    /// `Rat.bernoulli : ∀ t, Rat.le Rat.zero t →`
+    /// `∀ n, Rat.le (L t n) (Rat.pow (Rat.add Rat.one t) n)`, where `L t n`
+    /// is the inline `Nat.rec`-built companion `1 + n·t` — see
+    /// `bernoulli.rs`'s module doc for why it is not a named cast. Spivak
+    /// Chapter 2's Bernoulli's inequality, `t ≥ 0` case (not the general
+    /// `t ≥ -1`; see the module doc for why the restriction is deliberate).
+    pub bernoulli: NameId,
+    /// `Rat.bernoulli_harmonic_bound : ∀ x t, Rat.le Rat.zero x →`
+    /// `Rat.le Rat.zero t → Rat.le (Rat.mul x (Rat.add Rat.one t)) Rat.one →`
+    /// `∀ m, Rat.le (Rat.mul (L t m) (Rat.pow x m)) Rat.one` — the
+    /// cross-multiplied form of `xᵐ ≤ 1/(1+m·t)`, avoiding `Rat.inv`. The
+    /// harmonic-shaped bound `geom_pair_within`'s own module doc
+    /// (`creal/geometric.rs`) names as the missing piece blocking
+    /// `CReal.geom_cauchy`; see `bernoulli.rs`'s module doc for exactly what
+    /// bridging this rational fact back across a `CReal.pow` sample would
+    /// still need.
+    pub bernoulli_harmonic_bound: NameId,
+
     // --- `Rat.dotN`: the n-dimensional dot product (rat_prelude::vector) ---
     /// `Rat.dotN : (Nat → Rat) → (Nat → Rat) → Nat → Rat := fun u v n =>
     /// sumRange (fun i => u i * v i) n` — the finite-dimensional inner
@@ -1793,6 +1813,8 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         poly_eval_succ: child(kernel, "polyEval_succ"),
         poly_eval_add: child(kernel, "polyEval_add"),
         poly_eval_smul: child(kernel, "polyEval_smul"),
+        bernoulli: child(kernel, "bernoulli"),
+        bernoulli_harmonic_bound: child(kernel, "bernoulli_harmonic_bound"),
         dot_n: child(kernel, "dotN"),
         dot_n_zero: child(kernel, "dotN_zero"),
         dot_n_succ: child(kernel, "dotN_succ"),
@@ -1931,6 +1953,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         sum::declare_sum(&mut d, prelude)?;
         diagonal::declare_diagonal(&mut d, prelude)?;
         polynomial::declare_polynomial(&mut d, prelude)?;
+        bernoulli::declare_bernoulli(&mut d, prelude)?;
         vector::declare_vector(&mut d, prelude)?;
         probability::declare_probability(&mut d, prelude)?;
         Ok(())

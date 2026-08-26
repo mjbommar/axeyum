@@ -148,6 +148,8 @@ fn every_named_declaration_exists() {
         ("det3_example_generic", p.det3_example_generic),
         ("det3_example_diagonal", p.det3_example_diagonal),
         ("det3_example_singular", p.det3_example_singular),
+        ("bernoulli", p.bernoulli),
+        ("bernoulli_harmonic_bound", p.bernoulli_harmonic_bound),
     ];
     for (label, name) in expected {
         assert!(
@@ -4618,4 +4620,136 @@ fn the_vector_toolkit_is_axiom_free() {
             .collect();
         assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
     }
+}
+
+// --- Bernoulli's inequality and the harmonic power bound
+// (`rat_prelude::bernoulli`) -------------------------------------------------
+
+/// `Rat.bernoulli` and `Rat.bernoulli_harmonic_bound` are each a **checked**
+/// theorem with an empty axiom footprint, read out of the kernel, not off
+/// the diff.
+#[test]
+fn the_bernoulli_toolkit_is_axiom_free() {
+    let (kernel, p) = built();
+    let expected = [
+        ("bernoulli", p.bernoulli),
+        ("bernoulli_harmonic_bound", p.bernoulli_harmonic_bound),
+    ];
+    for (label, name) in expected {
+        let declaration = kernel
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("Rat.{label} was interned but never declared"));
+        assert!(
+            matches!(declaration, Declaration::Theorem { .. }),
+            "Rat.{label} must be a checked Theorem, found a different kind"
+        );
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
+    }
+}
+
+/// **The mandatory concrete computation test.** Bernoulli at `t = 1, n = 3`:
+/// `(1+1)^3 = 8 ≥ 1 + 3·1 = 4` -- `n = 3` (not `0` or `1`, where the
+/// inequality holds with equality and cannot detect a wrong direction).
+/// Applies `Rat.bernoulli` to concrete literals and checks the resulting
+/// proof's INFERRED type against an independently built
+/// `Rat.le (natDivSucc 4 0) (natDivSucc 8 0)` -- not by trusting the
+/// induction (proved symbolically, over an opaque `t`/`n`) to be about the
+/// definition this file actually declared.
+#[test]
+fn rat_bernoulli_holds_at_t_one_n_three() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::rle;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    let one = literal(&mut d, 1);
+    let three = d.num(3);
+    let one_nat = d.num(1);
+    let zero_idx = d.num(0);
+    let h = d.lemma(p.zero_le_nat_div_succ, &[one_nat, zero_idx]); // 0 ≤ 1
+    let proof = d.lemma(p.bernoulli, &[one, h, three]);
+    let inferred = d
+        .kernel()
+        .infer(proof)
+        .unwrap_or_else(|e| panic!("Rat.bernoulli(1, _, 3) should infer: {e:?}"));
+
+    let four = literal(&mut d, 4);
+    let eight = literal(&mut d, 8);
+    let expected = rle(&mut d, p, four, eight);
+    assert!(
+        d.kernel().def_eq(inferred, expected),
+        "Rat.bernoulli at t=1, n=3 should state `Rat.le 4 8` (companion `L 1 3` \
+         reduces to 4, `pow 2 3` reduces to 8)"
+    );
+    assert!(
+        !d.kernel().def_eq(four, eight),
+        "4 and 8 must not be defeq, or this test cannot tell a wrong bound from a vacuous one"
+    );
+}
+
+/// The harmonic bound at a concrete instance: `x = 1/2`, `t = 1` (so
+/// `1/x = 1+t`, matching the task's own worked translation), `m = 3`:
+/// `(1+3·1)·(1/2)³ = 4·(1/8) = 1/2 ≤ 1`. The hypothesis `x·(1+t) ≤ 1`
+/// becomes `(1/2)·2 ≤ 1`, i.e. `Rat.le one one` up to ground reduction, so
+/// [`RatPrelude::le_refl`] at `one` already has the needed type by `def_eq`
+/// -- exactly the same reduction [`rat_bernoulli_holds_at_t_one_n_three`]
+/// relies on, applied to the hypothesis instead of the conclusion.
+#[test]
+fn rat_bernoulli_harmonic_bound_holds_at_x_half_t_one_m_three() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::rle;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let literal = |d: &mut IntDev<'_>, k: u32, j: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(j);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    let half = literal(&mut d, 1, 1); // 1/2
+    let one = literal(&mut d, 1, 0); // 1/1
+    let three_n = d.num(3);
+
+    let one_nat = d.num(1);
+    let half_idx = d.num(1);
+    let hx = d.lemma(p.zero_le_nat_div_succ, &[one_nat, half_idx]); // 0 ≤ 1/2
+    let one_nat2 = d.num(1);
+    let zero_idx = d.num(0);
+    let ht = d.lemma(p.zero_le_nat_div_succ, &[one_nat2, zero_idx]); // 0 ≤ 1
+    let hxt = d.lemma(p.le_refl, &[one]); // le one one, defeq to `le (half*(1+1)) one`
+
+    let proof = d.lemma(
+        p.bernoulli_harmonic_bound,
+        &[half, one, hx, ht, hxt, three_n],
+    );
+    let inferred = d.kernel().infer(proof).unwrap_or_else(|e| {
+        panic!("Rat.bernoulli_harmonic_bound(1/2, 1, _, _, _, 3) should infer: {e:?}")
+    });
+
+    let expected = rle(&mut d, p, half, one);
+    assert!(
+        d.kernel().def_eq(inferred, expected),
+        "Rat.bernoulli_harmonic_bound at x=1/2, t=1, m=3 should state `Rat.le 1/2 1` \
+         (companion `L 1 3` reduces to 4, `pow (1/2) 3` reduces to 1/8, and 4*(1/8) \
+         reduces to 1/2)"
+    );
+    assert!(
+        !d.kernel().def_eq(one, half),
+        "1/2 and 1 must not be defeq, or this test cannot tell a wrong bound from a vacuous one"
+    );
 }
