@@ -1,3 +1,4 @@
+render/check.sh 1
 scripts/check-kernel-suites.sh 2
 scripts/check-scope.sh 5
 scripts/install-pinned-lean.sh 1

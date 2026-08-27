@@ -108,7 +108,7 @@ git worktree add -q --detach "$WORK/wt" HEAD 2>/dev/null
 cd "$WORK/wt" || exit 2
 echo linked >> a.txt
 out=$("$HELPER" -m "$WORK/msg" -- a.txt 2>&1); rc=$?
-if [ "$rc" = 0 ] && git log --oneline -1 | grep -qv base; then
+if [ "$rc" = 0 ] && [ "$(git log --oneline -1 | grep -vc base)" != 0 ]; then
   ok "6 lane-commit works in a linked worktree"
 else
   bad "6 lane-commit failed in a linked worktree (rc=$rc): $out"
