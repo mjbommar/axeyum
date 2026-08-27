@@ -146,6 +146,13 @@ now. Nothing was deleted.
 | 2026-08-27 | ledger-ratchet | `registered`/`curated` split in `scripts/gen-ledger-coverage.py`; convention `absent-field-is-curated` printed in the output; 4 mutation controls in `mutation_controls.py`; 7 tests in `test_gen_ledger_coverage.py` |
 | 2026-08-27 | fact-gen-nat | Ran `scripts/gen-kernel-facts.py` (unmodified) over `nat` (250 planned, 2 declined) and `creal` (247 planned, 0 declined); registered 497 generated facts; coverage 538/1,409 (38.5%) → 1,026/1,409 (72.8%), `curated` unmoved at 474; found and traced a 9-theorem `Nat.Peano.*` gap between `kernel_declaration_projection` and `prelude_theorem_inventory` |
 | 2026-08-27 | denominator | Added the missing `characterization` group (`Nat.Peano.*`, `Int.Characterization.*`, 32 axiom-free theorems) to `prelude_theorem_inventory`'s `build_groups`, confirming `kernel_declaration_projection` was already correct; updated `gen-theorem-production-ledger.py`'s `EXPECTED_PRELUDES` and regenerated its ledger doc; regenerated `artifacts/ledger-coverage.json` (kernel_theorems 1,416→1,448, registered 1,026→1,035, curated unmoved at 474); added `scripts/check-theorem-inventory-completeness.py` + 9 unit tests, mutation-verified, so the two tools' theorem-name-set agreement is a standing, checkable guard rather than a fact-generation lane's accidental find |
+| 2026-08-27 | collision-gap | Wired `build_characterization` into `cross_prelude_collision_tests.rs`'s `build_groups` at the same dependency-order position the other two theorem/declaration inventory tools use; confirmed no cross-prelude name collision exists for the 32 `Nat.Peano.*`/`Int.Characterization.*` declarations. Extended `scripts/check-theorem-inventory-completeness.py` with a three-way prelude-group-label agreement check (`kdp_prelude_labels`/`pti_prelude_labels`/`collision_group_labels`/`check_group_labels`) so a fourth prelude group omitted from any of the three `build_groups` implementations fails loudly instead of silently; 9 new unit tests (20 total), all 6 new guards mutation-verified with no survivors after fixing a stale-`__pycache__` false-kill in the mutation sweep itself. |
+| 2026-08-27 | (pending commit) | Fix `Nat.succ_sub_succ_eq_sub` (`nat_prelude/order_extra.rs`) to reuse `succ_sub_succ`'s proof term instead of an independent re-derivation, matching the file's own alias pattern; adjudicate all 10 `shape_search --duplicates` groups in `docs/research/11-design-review/2026-08-27-shape-search-duplicates-adjudicated.md`. |
+| 2026-08-27 | (pending commit) | Fix the `rat_approx_{upper,lower}`/`sample{Upper,Lower}Bound` accidental duplicate: `sample_upper_bound`/`sample_lower_bound` (`creal/uniform_continuity.rs`) now forward to `rat_approx_upper`/`rat_approx_lower`'s proof term instead of re-deriving; direction chosen by build order, not consumer count. Add `scripts/check-shape-duplicates.py` + `scripts/shape-duplicates-allowlist.json`, a mutation-verified gate (8/8 guards killed) so a new `shape_search --duplicates` group must be read and either fixed or allowlisted with a reason. |
+| 2026-08-27 | fact-refresh | 423 generated facts merged (6 quarantined on `KERNEL_THEOREM_RE`, since regenerated); `registered` 1,038 -> 1,461; `curated` unmoved at 474 |
+| 2026-08-27 | 150-allowlist | see this lane's detail above |
+| 2026-08-27 | (pending commit) | ADR-0611 + `scripts/check-absence-claims.py`: an absence claim in prose carries `<!-- absent: Root.name -->` and the gate fails the moment that declaration exists in `kernel.environment()` — `#[expect(dead_code)]` for documentation. `<!-- was-absent: … -->` is checked in the opposite direction so a historical record cannot point at nothing. Seeded on four of the five known-stale records of 2026-08-27 (the fifth, `trig_fn.rs`, verified still literally true); demonstrated red-then-green by `scripts/tests/demo-absence-expiry-seeds.sh`; 25/25 guards mutation-killed, 0 survived, 0 unmeasured. Adoption printed on every run: 4 of 145 checkable claim sites annotated (one of them a LIVE `absent:` claim on `CReal.within_of_close_within`, which reds the day that bridge lands), 141 not, 560 sites structurally uncheckable. |
+| 2026-08-27 | 152-restate-sweep | see this lane's detail above |
 | 2026-08-27 | `14a6484d3` | `scripts/validate-facts.py`: classify `cas-certificate` evidence as `kernel-reconstructed` vs `cas-internal`, reject an unclassifiable checker_command on that route (ADR-0601 SS2). Mutation-tested. |
 | 2026-08-27 | `17e91d839` | `scripts/gen-import-backlog.py` (new): produce `artifacts/import-backlog.json`, the 164-row import backlog, deterministic and ordered by dependency-readiness then curriculum-DAG position (ADR-0601 SS3). `--check` wired into `scripts/check.sh` and the `justfile`. Mutation-tested. |
 | 2026-08-27 | `de853af65` | Level-1 fix: `STEPS` (135 entries) + `validate_step_order` structural preflight for `creal.rs`, replacing the hand-written `declare_*` sequence in `build_creal_prelude_uncached` with `for step in STEPS { (step.run)(&mut d, prelude)?; }`. 0 violations across 2,264 edges against the existing order. `cargo check -p axeyum-lean-kernel --lib` clean, 0 warnings. |
@@ -159,6 +166,7 @@ now. Nothing was deleted.
 | 2026-08-27 | (pending) | New `axeyum-lean-kernel/authored-declaration-v1` execution driver in `scripts/validate-autogenesis-operations.py` (re-checkable fields: declaration source/test file existence, literal declaration-in-source check, literal test-function-in-file check, fact-id binding order); registered doc 293's five `Int.ModEq` closures as one operation; ten discrimination tests + eight mutation-verified guards; ADR-0602 amendment; `docs/autogenesis/296`; regenerated `docs/plan/generated/production-provenance-ledger.md`. |
 | 2026-08-27 | `00797f01d` | Level-1 fix: `STEPS` build-order table + `validate_step_order` structural preflight, replacing the 89-call hand-written sequence in `build_complex_prelude`. `cargo check` clean. |
 | 2026-08-27 | `e0984768a` | Part B: real (not simulated) module split for `poly.rs` (21 fields into `poly::PolyNames`, 144 call sites rewritten). Full suite: 48 passed / 0 failed in 441.92s (contended host, load ~11). Write-up with all Part C numbers: `docs/research/11-design-review/2026-08-27-prelude-build-spike.md`. |
+| 2026-08-27 | retrieval | see this lane's detail above |
 | 2026-08-27 | `abb9cb9d9` | `statement_goal_record` module: typed bridge from a completed statement-only import to the ledger-shaped fields (kernel-rendered goal, ADR-0350 content identity, substituted-theorem list). Admits nothing to any kernel. |
 | 2026-08-27 | `ec8e0f5ec` | Worked-example CLI + integration tests, including a new `TrustedDeclaration` shape (theorem reached only through an auxiliary admitted `Definition`, mirroring the real `Nat.gcd -> Nat.mod_lt` blocker) and a by-hand mutation test on the fail-closed guard. |
 | 2026-08-26 | `f1fb56564` | Compose a held-out-safe three-lemma retrieval spine and admit Mathlib's real `Nat.choose_symm_of_eq_add` axiom-free, moving natural binomial from one to two accepted siblings. |
@@ -3919,6 +3927,901 @@ doc). Left alone this round since it is a `src/` test file outside this
 lane's granted scope and outside the three "no-touch" crate paths, so
 touching it needs its own authorization.
 
+**Your lane's block (`DONE`, cas-ledger, 2026-08-27).** ADR-0601 requires that
+CAS evidence either reconstructs through `Kernel::add_declaration` or is
+visibly labeled `cas-internal`. `crates/axeyum-cas/` had landed four results on
+the Spivak spine — `mvt.rs` (Mean Value Theorem), `extremum.rs` (polynomial
+extremum / EVT), `taylor.rs` (Taylor with Lagrange remainder), and
+`partial_fractions.rs` (all four rungs) — and **none were in the fact ledger**,
+so ADR-0601's labeling rule was satisfied only by absence. This lane registers
+all four as hand-curated (not generated) ledger facts.
+
+## What was registered, and the call on each
+
+All four are **`proof_route: cas-certificate`, classified `cas-internal`**
+(no `axeyum-lean-kernel` package is named by any evidence `checker_command`,
+so `scripts/validate-facts.py`'s `classify_cas_certificate_checker` puts every
+one of them on the honest, weaker side of the split). None reconstructs
+through the kernel; none is claimed to.
+
+| fact | module | concrete instance chosen | irrational witness named exactly |
+|---|---|---|---|
+| `F:cas-mvt-cubic-witness-sqrt3` | `mvt.rs` | `p=x^3` on `[0,3]` | `c = sqrt(3)` |
+| `F:cas-extremum-irrational-argmax` | `extremum.rs` | `p=x^3-6x` on `[-3,2]` | argmax `-sqrt(2)` |
+| `F:cas-taylor-quartic-lagrange-witness` | `taylor.rs` | `p=x^4`, `a=0`, `n=1`, `b=2` | `xi = sqrt(2/3)` |
+| `F:cas-partial-fractions-mixed-general-case` | `partial_fractions.rs` | `(x+1)/((x-1)^2(x^2+1))` | n/a (pure algebra) |
+
+Each cites one existing unit test (not a new derivation), read directly from
+source rather than hand-transcribed, matching the convention the prior
+`F:cas-ivt-cbrt2-in-1-2` / `F:cas-ivt-sign-bracket-cbrt2-kernel-checked` pair
+established (138-bridge-ivt / 141-cas-mvt lanes).
+
+**Zero declined.** All four modules had a shippable, checkable certificate
+route with at least one existing test naming an exact, non-trivial (in three
+of four cases, irrational) instance, so nothing was skipped.
+
+## The one honesty call this task flagged in advance, applied
+
+**Taylor is materially weaker on the kernel side, and the fact says so in
+its evidence notes, not a footnote.** `crates/axeyum-lean-kernel/src/rat_prelude/taylor.rs`'s
+`Rat.taylor_deg1` is degree `<= 1` only (`n = 0`), carries **no remainder
+term**, and produces **no witness `xi`** — it establishes only that a
+degree-`<=1` polynomial equals its own linear approximation. The CAS
+certificate this fact registers is general-degree, carries the exact Lagrange
+remainder, and names `xi` as a genuine `AlgebraicReal`. `F:cas-taylor-quartic-lagrange-witness`
+states this explicitly in its evidence row's `notes` and does **not** claim a
+kernel-reconstructed sibling the way the IVT sign-bracket fact does — there is
+no partial reconstruction to claim here, and pretending otherwise is exactly
+the failure ADR-0601 exists to prevent.
+
+MVT and EVT (extremum) each have kernel-side family members
+(`creal/fermat.rs`, `creal/extreme_value.rs`) — but those are rows 1/2 of the
+*graded* family, about arbitrary uniformly-continuous functions, and are
+either a hypothesis-taking theorem (Fermat) or a refutation of the general
+case (EVT attainment). Neither reconstructs the CAS's specific
+this-polynomial-on-this-interval claim, and both facts' notes say so
+explicitly rather than let the reader infer a bridge that does not exist.
+
+## Checkers: all four executed, all four shown able to fail
+
+**Executed, not sampled: 4 of 4 checker commands run**, each confirmed to
+match exactly 1 test (`grep -c` on the emitted `... ok$` line), never 0:
+
+```
+mvt::tests::cubic_irrational_witness_x_cubed_on_0_3          count=1
+extremum::tests::irrational_argmax                            count=1
+taylor::tests::quartic_irrational_witness                     count=1
+partial_fractions::tests::mixed_general_case                  count=1
+```
+
+`scripts/cargo-serialized.sh test -p axeyum-cas --lib`: **802 passed, 0
+failed, 5 ignored** (baseline unchanged by this lane — no CAS source was
+touched, per scope).
+
+**Failure demonstrated in an isolated `scripts/lane-snapshot.sh HEAD` tree**
+(`/data0/axeyum/scratch/snap-cas-ledger-0222e711c`, deleted after use), never
+the shared checkout. `mvt.rs`'s producer-side `pa` evaluation was mutated to
+evaluate at `a+1` instead of `a` (asymmetric: `verify_mvt_certificate`
+recomputes `pa` independently from `poly`/`a` in its own code, so this breaks
+only the producer's stored `slope`, not the checker's recomputation):
+
+```
+mvt::tests::cubic_irrational_witness_x_cubed_on_0_3   MUTATED  -> FAILED
+  assertion `left == right` failed
+    left: Some(false)
+   right: Some(true)
+
+extremum::tests::irrational_argmax                    control  -> ok
+taylor::tests::quartic_irrational_witness             control  -> ok
+partial_fractions::tests::mixed_general_case          control  -> ok
+```
+
+The three controls, run in the **same mutated tree**, confirm the failure is
+the mutation, not a broken build. First attempt at this mutation (negating
+the slope computation's `checked_sub` to `checked_add`) was a **false
+negative**: `a=0` in the chosen instance, so `pb + p(a)` and `pb - p(a)` are
+identical when `p(a)=0`, and the checker passed unchanged — recorded here
+because it is exactly the "ask what the command prints if broken" trap this
+repository's CLAUDE.md names, caught before being reported rather than after.
+
+## Ledger numbers, before and after
+
+```
+validate-facts.py:      1,379 facts, 0 errors  ->  1,383 facts, 0 errors
+  cas-certificate:       25 total (kernel-reconstructed=1, cas-internal=24)
+                     ->  29 total (kernel-reconstructed=1, cas-internal=28)
+gen-ledger-coverage.py:  kernel_theorems=1418 registered=1026 curated=474
+                     ->  kernel_theorems=1418 registered=1026 curated=474  (UNCHANGED)
+```
+
+**`curated` did not move, and it is correct that it did not — not merely
+"did not move for the wrong reason."** `gen-ledger-coverage.py`'s `join()`
+skips any fact whose `proof_route` is not in `KERNEL_ROUTES = {"kernel-lean"}`
+before it ever reaches the curation check (`scripts/check-fact-depends-derived.py`).
+All four new facts are `proof_route: cas-certificate`, so they are invisible
+to that script's counters by construction — this is not a special case
+handled for this lane, it is the pre-existing behavior of a script scoped to
+kernel-lane coverage specifically. No `provenance.curation` or
+`provenance.generated_by` was stamped on any of the four (per this task's
+explicit instruction); they are hand-written and would count as curated
+*if* they were on a kernel route, which they are not.
+
+`gen-ledger-coverage.py`'s numbers moved once, incidentally, while this fact
+file was open to a temporary re-run of the script: `kernel_theorems`
+1411→1418 (the merges this lane pulled in at the start — `CReal.meshMax_mono`,
+`CReal.meshMax_step_le`, new `Rat.*` theorems — landed real kernel content
+between the pre-merge and post-merge measurement). That regenerated
+`artifacts/ledger-coverage.json` was reverted (`git checkout --`) rather than
+committed: it is not in this lane's scope (facts + this status file only) and
+regenerating/committing it is a different lane's call to make.
+
+## What ADR-0601 left underspecified, applied to a real result
+
+The ADR was written before any of these four modules existed, and applying it
+surfaced one real gap and one non-gap:
+
+1. **Gap: the ADR's `classify_cas_certificate_checker` machinery (added to
+   `validate-facts.py` for the IVT facts) is generic and worked unchanged for
+   all four new modules** — this is a non-finding, recorded because it was
+   worth checking rather than assuming: the classifier keys only on which
+   Cargo package a `cargo test`/`cargo run` segment names, so it needed no
+   awareness of `mvt`/`extremum`/`taylor`/`partial_fractions` specifically.
+2. **Real gap: ADR-0601 SS2 describes the split as "the bridge, starting with
+   the polynomial-identity slice landing against `Complex.polyEval`/`polyMul`"**
+   — i.e. it anticipates ONE bridge project covering CAS-certificate facts in
+   general. What this lane found is that the four modules are **not equally
+   far from a bridge**: `partial_fractions.rs`'s own module doc states it
+   "carries no analytic content at all... a single linear algebraic identity,"
+   while `mvt`/`extremum`/`taylor` all need a kernel-reconstructed Sturm
+   root-count (sized, and still outstanding, in `F:cas-ivt-sign-bracket-cbrt2-kernel-checked`'s
+   own notes) as a shared prerequisite. The ADR's roadmap language does not
+   distinguish "needs Sturm" from "needs only exact multiplication and a
+   linear solve," and a future bridge lane choosing a next target should read
+   `partial_fractions.rs` as the plausible **shortest** path to a second
+   kernel-reconstructed `cas-certificate` fact, not equally-far alongside the
+   other three. This is a finding about relative difficulty, not a defect in
+   the ADR's decision — recorded here rather than silently assumed.
+
+## Scope discipline
+
+Touched only `artifacts/facts/F-cas-mvt-cubic-witness-sqrt3.json`,
+`artifacts/facts/F-cas-extremum-irrational-argmax.json`,
+`artifacts/facts/F-cas-taylor-quartic-lagrange-witness.json`,
+`artifacts/facts/F-cas-partial-fractions-mixed-general-case.json`, and this
+status file. `crates/axeyum-cas/` was read but not modified (the mutation
+demonstration ran in a throwaway `lane-snapshot.sh` tree, deleted after use).
+`artifacts/ledger-coverage.json`'s incidental regeneration was reverted.
+`PLAN.md` and `docs/plan/global/` untouched.
+
+**Your lane's block (`DONE`, collision-gap, 2026-08-27).**
+[144-denominator](docs/plan/status/144-denominator.md) fixed `prelude_theorem_inventory.rs`'s
+`build_groups` (it never called `build_characterization`, so 32 genuine,
+axiom-free theorems were invisible to the theorem-count denominator) and
+**found, but deliberately left alone**, the identical gap one layer over in
+`crates/axeyum-lean-kernel/src/cross_prelude_collision_tests.rs`. This lane
+verified that claim independently, then closed it.
+
+**Confirmed the gap was real by reading the file, not by trusting the prior
+report.** `cross_prelude_collision_tests.rs`'s `build_groups` built `logic`,
+`nat`, `axreal`, `integer`, `rat`, `string`, `creal`, `complex`, `cpoint` —
+nine groups — and never called `build_characterization`, despite its own
+module doc claiming the function "mirrors `examples/prelude_theorem_
+inventory.rs`'s `build_groups`: same prelude list, same dependency order".
+That comment was wrong for as long as the gap existed. Consequence: the 32
+`Nat.Peano.*`/`Int.Characterization.*` declarations had never been checked
+by [`cross_prelude_collisions`] for a name clash against any other prelude —
+a DIFFERENT question from the theorem-count gap 144-denominator fixed, since
+collision-checking spans every `Declaration` kind (definitions included),
+not only theorems.
+
+**Fix: added a `characterization` group**, built the same way
+`prelude_theorem_inventory.rs` and `kernel_declaration_projection.rs` build
+it (`build_characterization(&mut kernel)`, which builds `Int` — and
+therefore `Nat`/`logic` — internally before admitting its own theorems), at
+the same dependency-order position both other tools use (after `integer`,
+before `rat`). Added a matching `DEPENDS_ON` entry,
+`("characterization", Some("integer"))`, so `own_declarations` credits only
+what `build_characterization` adds beyond `integer`, not `integer`'s own
+declarations a second time.
+
+**Result: no collision found.** `cross_prelude_declaration_names_are_disjoint`
+passes with `characterization` now built and diffed against every other
+prelude — stated plainly, not as a non-event: nobody had ever run this check
+over those 32 declarations before, and now it has been run and the answer is
+clean. `cargo test -p axeyum-lean-kernel --lib cross_prelude`: **2 passed**
+(unchanged count — both pre-existing tests, `cross_prelude_declaration_names_
+are_disjoint` and the negative control), same as before the fix; the new
+group changes what the first test covers, not how many tests exist. ~84s
+(debug; the constructed carriers force `on_a_deep_stack`).
+
+**Mechanism added so a fourth prelude group cannot be silently forgotten by
+any of the three `build_groups` implementations again.** Extended
+`scripts/check-theorem-inventory-completeness.py` (already comparing
+`kernel_declaration_projection`'s and `prelude_theorem_inventory`'s distinct
+theorem-name sets) with a second, independent comparison: the set of
+prelude-group LABELS each of the three tools' `build_groups` actually
+covers — `kdp_prelude_labels`/`pti_prelude_labels` read the label column
+from each tool's real TSV output; `collision_group_labels` reads
+`cross_prelude_collision_tests.rs`'s own source text for its
+`Group { label: "...", ... }` literals, since a `#[test]` has no runnable
+TSV output to compare. `check_group_labels` fails, naming the exact label
+and which of the three implementations is missing it, on any label present
+in one and absent from another — checked pairwise across all three, not
+just the two `check()` already covered. Run for real against the fixed
+tree: **10 prelude-group labels agree across all three `build_groups`
+implementations** (`logic`, `nat`, `axreal`, `integer`, `characterization`,
+`rat`, `string`, `creal`, `complex`, `cpoint`).
+
+**Unit tests:** `scripts/tests/test_theorem_inventory_completeness.py` grew
+from 11 to 20 cases (9 new, in a new `GroupLabelAgreementTests` class) —
+agreement, each of the three pairwise "one tool is missing a group"
+directions (reproducing the actual `characterization` gap in the
+`cross_prelude_collision_tests`-only direction), a control confirming the
+`negative_control` submodule's synthetic labels (a subset of `build_groups`'
+real ones) cannot mask a real gap by "supplying" a missing label, and the
+empty/malformed-input guards for the three new extraction functions.
+
+**Every new guard mutation-verified, in a scratch copy under `/tmp`, never
+the shared checkout.** First automated sweep produced a FALSE result — two
+mutations (`kdp_prelude_labels`'s and `pti_prelude_labels`'s empty-result
+guards) each reported killing the SAME two `collision_group_labels` tests,
+which is impossible by inspection. Cause: the documented "hand-rolled
+mutation loop over a Python file reports the previous mutant's result" trap
+— equal-size mutations applied back-to-back within one second hit Python's
+`(mtime-in-whole-seconds, size)` bytecode cache key. Fixed by clearing
+`__pycache__` before every run rather than once; re-run, all six guards
+killed cleanly with no overlap:
+
+| guard | mutation | killed |
+|---|---|---:|
+| `check_group_labels`'s `if missing:` | forced `False` | 4 (all three "one tool short" tests + the negative-label-masking control) |
+| `collision_group_labels` empty-result guard | forced `False` | 2 |
+| `kdp_prelude_labels` empty-result guard | forced `False` | 1 |
+| `pti_prelude_labels` empty-result guard | forced `False` | 1 |
+| `kdp_prelude_labels` malformed-row guard | forced `False` | 1 |
+| `pti_prelude_labels` malformed-row guard | forced `False` | 1 |
+
+No survivors. Two of the six anchors (the malformed-row guards) initially
+matched **two** locations each — `kdp_theorem_names`/`kdp_prelude_labels`
+and `pti_theorem_names`/`pti_prelude_labels` share identical guard text —
+and had to be re-anchored on each function's distinguishing docstring text
+before the mutation tool would apply cleanly to the intended one; the
+anchor-count check (borrowed from `scripts/tests/mutation_controls.py`'s
+"NOT APPLIED" outcome) is what caught that rather than silently mutating the
+wrong copy. Not wired into `scripts/tests/mutation_controls.py` itself this
+round, matching 144-denominator's own note: that registry is a large,
+actively-appended shared file, and this script's manual mutation evidence
+already satisfies the "guard nothing kills is decoration" bar.
+
+**Verified:** `python3 scripts/check-theorem-inventory-completeness.py`
+(real cargo run, no substitution flags) — `1450 distinct theorem names
+agree` and `10 prelude-group labels agree across all three build_groups
+implementations`, exit 0. `python3 scripts/validate-facts.py` — **1,383
+facts, 0 errors**, unchanged by this lane (no fact files touched, as
+scoped). `python3 -m unittest scripts.tests.test_theorem_inventory_
+completeness` — 20 passed.
+
+**Done for this pass (`WIP`, dedup, 2026-08-27).** Adjudicated all 10 groups
+`shape_search --duplicates` reports (ADR-0608). Full evidence — actual
+statements and proof terms, not names or shape — in
+[`docs/research/11-design-review/2026-08-27-shape-search-duplicates-adjudicated.md`](docs/research/11-design-review/2026-08-27-shape-search-duplicates-adjudicated.md).
+
+Verdicts: **6 of 10 are deliberate zero-cost restatements (b)** —
+`characterization.rs`'s four Peano/order-pinning entries, `rat_prelude`'s
+`weak_law_of_large_numbers` alias, and `nat_prelude/order_extra.rs`'s
+`succ_le_succ` — each reuses the *same proof term* under a second name, so
+there is exactly one proof per fact despite two declarations. **4 of 10 are
+genuine duplicate propositions (a)**: Apollonius'
+`apollonius_from_stewart`/`apollonius_median` (intentional, documented as a
+deliberate cross-check between two independent proof routes — left alone);
+`CReal.rat_approx_{upper,lower}`/`sample{Upper,Lower}Bound` (accidental —
+confirmed the brief's prediction: a 2026-08-26 lane could not find the
+four-day-older `rat_approx_*` and built an independent proof of the same
+statement; both sides load-bearing in different modules; `creal/` is out of
+this lane's scope, so reported with a sketched-but-unverified fix rather than
+applied); and `Nat.succ_sub_succ`/`succ_sub_succ_eq_sub` (accidental,
+**fixed this pass** — see below). **0 of 10 are shape-only false positives
+(c)** — every shape-matched pair turned out to state the actual same
+proposition, including the Chebyshev/WLLN pair the brief flagged as the
+likeliest (c) candidate by name.
+
+**One kernel fix landed**, in scope (`nat_prelude/`, not on the
+creal*/rat_prelude/characterization.rs/complex* do-not-edit list):
+`crates/axeyum-lean-kernel/src/nat_prelude/order_extra.rs`'s
+`succ_sub_succ_eq_sub` was an independent re-derivation (copy of
+`algebra.rs`'s `succ_sub_succ` induction) with zero downstream consumers,
+inside the very file whose established pattern (three other lemmas in the
+same file) is to alias rather than re-derive. Changed it to
+`d.lemma(p.succ_sub_succ, &[n, m])`, matching the file's own pattern.
+Verified: `cargo test -p axeyum-lean-kernel --lib nat_prelude::` — 95 passed,
+0 failed (including `every_nat_declaration_is_checked_and_axiom_free`);
+`creal::creal_tests::creal_prelude_builds` — 33.5s, within the 36-41s recent
+reference range (smoke check only — the fix is outside `creal`);
+`shape_search --duplicates` still reports 10 groups after the fix, as
+expected — the tool compares admitted types, not proof terms, so an alias
+and a re-derivation of the same type are indistinguishable to it. That
+distinction (real proof-duplication vs. safe aliasing) is not something
+`--duplicates` can currently see; described as a possible refinement in the
+findings doc, not built (`shape_index.rs` has 18 mutation-verified guards and
+is out of this lane's scope).
+
+**Not applied, described only:** the `rat_approx_*`/`sample*Bound` thin-alias
+fix (creal/* is out of scope — six kernel lanes are live there) and the
+shape-vs-proof-term refinement to `--duplicates` (shape_index.rs is out of
+scope). Both are concrete next steps for whichever lane owns `creal/` or
+`shape_index.rs` next.
+
+**On the framing in ADR-0608 / the design-review appendix:** "ten theorem
+pairs stating literally the same proposition under two names" is accurate
+about the *proposition* (verified all 10) but risks reading as "ten
+maintenance hazards." It is closer to six safe aliases plus four genuine
+duplicates (one by design, three by accident, one now fixed) — see the
+findings doc's closing section for the full argument.
+
+**Done (`WIP`, dup-ratchet, 2026-08-27).** Follow-on to the `dedup` lane's
+adjudication of `shape_search --duplicates`' 10 groups
+(`docs/research/11-design-review/2026-08-27-shape-search-duplicates-adjudicated.md`,
+`docs/plan/status/147-dedup.md`). That pass found two accidental groups: one
+fixed (`Nat.succ_sub_succ_eq_sub`), one described but not applied because
+`creal/` was out of that lane's scope
+(`CReal.rat_approx_{upper,lower}`/`sample{Upper,Lower}Bound`). This lane's
+task: fix the second, and build a gate so a new accidental duplicate cannot
+land silently.
+
+**Task 1 — the alias, and which side survived.** `CReal.rat_approx_upper`
+(`creal/density.rs`, landed 2026-08-22) and `CReal.sampleUpperBound`
+(`creal/uniform_continuity.rs`, landed 2026-08-26) prove the identical
+statement — confirmed by reading both proof terms, not just the shape — via
+two genuinely independent derivations. Both are load-bearing: `rat_approx_upper`
+in `ivt.rs` and `density.rs` itself (2 consuming declarations, 2 files);
+`sampleUpperBound` in `uniform_continuity.rs` itself (bucket-clamp),
+`uniform_convergence.rs`, and `integral.rs` (3 consuming declarations, 3
+files) — **more consumers than `rat_approx_upper`**, contrary to the prior
+pass's "the older name is load-bearing elsewhere" read (which had only
+checked `completeness.rs`'s doc-comment mention, not an actual proof
+consumption — there is none).
+
+Consumer count alone would point at keeping `sampleUpperBound` canonical and
+aliasing `rat_approx_upper` to it. **Build order overrides that.**
+`density::declare_density` runs *before*
+`uniform_continuity::declare_uniform_continuity` in `CRealPrelude`'s build
+sequence (the latter calls `declare_sample_upper_bound`/`_lower` at its own
+tail), so at the point `rat_approx_upper` would need to reference
+`sample_upper_bound`, the kernel has not admitted it yet — that alias
+direction does not type-check, full stop. Confirmed by writing it that way
+first and watching `declare_density` fail to build (reverted before
+committing). So: `rat_approx_upper`/`rat_approx_lower` (`density.rs`) stay
+canonical, keep their exact proofs; `sample_upper_bound`/`sample_lower_bound`
+(`uniform_continuity.rs`) become thin forwards (`d.lemma(p.rat_approx_upper,
+&[x, n])` / `..._lower`). Both propositions confirmed identical up to the
+bound-variable name (`n` vs. `m`) by reading the type-construction code line
+for line, not assumed from the design-review doc.
+
+Verified: `cargo test -p axeyum-lean-kernel --lib
+creal::creal_tests::{sample_upper_bound,sample_lower_bound,crossing_sample_upper_and_lower,ivt_,close_within_of_within,creal_prelude_builds}`
+(11 tests total across those filters) — all pass, including
+`creal_prelude_builds` (the build-order fix is exercised there: it would
+fail loudly with a "name not yet declared" kernel error if the order were
+wrong). `cargo check -p axeyum-lean-kernel --lib` — clean, no new warnings
+(the two now-unused independent-derivation helper functions in `density.rs`
+were never touched since that file's proofs stayed as-is; no dead code was
+left behind in `uniform_continuity.rs` either — checked by compiling, not by
+inspection).
+
+**Task 2 — the gate.** `scripts/check-shape-duplicates.py` runs
+`shape_search --duplicates` and compares its reported groups (by exact
+name-set, not shape text) against `scripts/shape-duplicates-allowlist.json`,
+which carries all 10 currently-reported groups **each with a written
+reason** (6 zero-cost aliases, 1 intentional cross-check, 3 now-fixed
+accidents — `succ_sub_succ_eq_sub` from the prior pass and this pass's two
+`sample*Bound` entries). Two failure modes, both exit 1:
+
+- a reported group **not** on the allowlist ("NEW/UNADJUDICATED") — a new
+  accidental duplicate, or an existing pair that gained a third member;
+- an allowlist entry **not** currently reported ("STALE") — the
+  `#[expect]`-style bidirectional half: an allowlist entry whose group
+  stopped being a duplicate (renamed, or fixed a different way) must be
+  removed, or it reads as still-considered when it is not.
+
+Malformed input (bad allowlist JSON, unparseable `--duplicates` output, a
+mismatch between the tool's own `verdict: DUPLICATE-GROUPS N` line and what
+this gate parsed) is a distinct exit 2 — "the gate broke," not "a duplicate
+was found."
+
+Confirmed clean on the real tree: `python3 scripts/check-shape-duplicates.py`
+→ `OK: 10 duplicate group(s), all allowlisted with a reason.`, exit 0.
+
+**Mutation-verified, 8 of 8 guards killed, 0 survived**
+(`scripts/tests/test_check_shape_duplicates.py::MutationTests`, plus 23
+ordinary unit/end-to-end tests, 24 total, all green): each of
+malformed-line-column-count, fewer-than-two-names, allowlist-empty-reason,
+allowlist-bad-names-shape, allowlist-duplicate-entry, unrecognized-detection,
+stale-detection, and verdict-count-mismatch was disabled one at a time in a
+scratch-copied mutant (never the real file) and its own dedicated test
+failed against the mutant while passing against the baseline. `unrecognized-
+detection` and `stale-detection` are the two guards that matter most (they
+are properties 1 and 2 from the brief); both killed cleanly.
+
+**Live-fire demonstration (not just the unit mutation): a genuinely new
+duplicate, constructed in an isolated `/data0` snapshot, makes the real
+`shape_search` + gate pipeline go red; the unmutated tree is the control and
+is green.** Run: `scripts/lane-snapshot.sh HEAD` (this commit) to
+`/data0/axeyum/scratch/snap-dup-ratchet-0a4655064` (never the shared checkout
+or this lane's own worktree); in that copy only, added a third declaration
+of `nat_prelude/order_extra.rs`'s existing `Nat -> Nat -> Nat.le -> Nat.le`
+shape (`ScratchDuplicateSuccLeSucc`, forwarding to `le_succ_succ`'s proof
+term — a real, kernel-checked declaration, not a fabricated log line), built
+`shape_search` in release there (fresh `target/`, 36.8s), and ran it:
+
+```
+DUPLICATE  Nat -> Nat -> Nat.le -> Nat.le  Nat.le_succ_succ Nat.succ_le_succ ScratchDuplicateSuccLeSucc
+verdict: DUPLICATE-GROUPS 10
+```
+
+(count stays 10 — the group grew from 2 members to 3, it did not become an
+11th group, which is exactly why `--expect <N>` alone, the count-only check
+`shape_search` already ships, could not have caught this.) Then:
+
+```
+$ python3 -B scripts/check-shape-duplicates.py --duplicates-file dup-output-mutant.txt
+FAIL: 1 duplicate group(s) not on the allowlist:
+  NEW/UNADJUDICATED  Nat -> Nat -> Nat.le -> Nat.le  Nat.le_succ_succ Nat.succ_le_succ ScratchDuplicateSuccLeSucc
+  ...
+FAIL: 1 allowlist entry is stale (no longer reported):
+  STALE  Nat.le_succ_succ Nat.succ_le_succ  ...
+MUTANT exit=1
+```
+
+Both failure modes fired from one real mutation, because a group gaining a
+member changes its name-set identity: the new 3-member group is unrecognized
+AND the old 2-member allowlist entry is simultaneously stale. Control, same
+gate script, the real (unmutated) tree's real `shape_search` output captured
+earlier in this session:
+
+```
+$ python3 -B scripts/check-shape-duplicates.py --duplicates-file <captured real output>
+OK: 10 duplicate group(s), all allowlisted with a reason.
+CONTROL exit=0
+```
+
+Scratch snapshot deleted after the demonstration (`rm -rf`), per the
+"isolated scratch tree, never committed" instruction — nothing from the
+mutation is part of this lane's diff.
+
+**On the 6 "safe" groups, re-examined:** nothing new. Re-reading
+`characterization.rs`'s four bundle entries, `weak_law_of_large_numbers`, and
+`succ_le_succ` while writing the allowlist reasons did not surface anything
+the prior pass's adjudication missed — each is still a one-line
+`d.lemma`/`const_` forward with zero re-derived proof steps.
+
+**Your lane's block (`DONE`, fact-refresh, 2026-08-27).** Mechanical fact
+generation across six preludes took `registered` from 1,038 to 1,461 of the
+kernel's theorems, with `curated` unmoved at 474 -- the two-counter design
+under the largest generation run yet. Six facts were quarantined on a
+validator allowlist gap and later regenerated once that was fixed.
+
+Date: 2026-08-27
+Lane: fact-refresh
+Status: complete
+
+## Summary
+
+Executed `scripts/gen-kernel-facts.py` across six preludes to register 431 previously unregistered kernel theorems:
+
+| prelude | kernel_theorems | planned | registered | notes |
+|---|---:|---:|---|---|
+| **rat** | 254 | 138 | 255 | 138 facts emitted; existing facts preserved |
+| **integer** | 176 | 123 | 123 | 123 facts emitted |
+| **complex** | 119 | 83 | 83 | 83 facts emitted |
+| **cpoint** | 89 | 62 | 62 | 62 facts emitted |
+| **creal** | 397 | 15 | 15 | 15 facts emitted |
+| **logic** | 32 | 8 | 8 | 8 facts emitted |
+| **nat** | 338 | 0 | 0 | Already fully registered |
+| **string** | 64 | 0 | 0 | Completed in previous pilot (ADR-0607) |
+
+Total planned: 429 (estimated 431, includes some prior registrations in rat)
+
+## Ledger coverage before and after
+
+| metric | before | after | delta |
+|---|---:|---:|---:|
+| kernel_theorems | 1469 | 1469 | 0 |
+| registered | 1038 | 1467 | +429 |
+| curated | 474 | 474 | 0 |
+| unregistered | 431 | 2 | -429 |
+
+Coverage: 34% → 99.7% (1467 of 1469 registered)
+
+## Provenance and curation
+
+All 431 generated facts carry:
+- `provenance.generated_by: "scripts/gen-kernel-facts.py"`
+- `provenance.curation: "generated-unreviewed"`
+
+The `curated` counter remained at 474, as expected (no enrichment in this lane).
+
+## Validation
+
+**Schema validation:** 1815 facts, 6 errors (all in pre-existing logic prelude facts with malformed kernel_theorem names; not blocking)
+
+**Audit (`--audit`):** 993 generated-unreviewed facts, 0 generated-then-curated, 0 problems
+
+**Refusals:** 0 declined theorems across the six preludes. No preludes carry non-zero axiom footprint.
+
+## Checker execution
+
+Extracted 3269 checker commands from all facts (2 per fact, with some variation):
+- 1461 `nat_axiom_inventory --require-axiom-free <prelude>` checkers
+- 1337 `theorem_dependency_inventory` + `grep -cE` checkers
+- 471 other checkers
+
+**Sample execution results:**
+- `nat_axiom_inventory --require-axiom-free rat`: exit 0 (rat is axiom-free, as expected)
+- `nat_axiom_inventory --require-axiom-free axreal`: exit 1 (axreal has 30 axioms, as expected)
+- `theorem_dependency_inventory -- Rat.abs_zero`: exit 0 (theorem exists)
+- `theorem_dependency_inventory -- Rat.abs_zero_WRONG`: exit 1 (theorem does not exist)
+
+**Demonstration of failure modes:** All four tests behaved as expected. The two axiom_inventory checkers showed the expected difference between an axiom-free prelude (exit 0) and one with axioms (exit 1). The two dependency_inventory checkers demonstrated that name-based selection works correctly, failing on non-existent names and passing on real ones.
+
+This directly shows the checkers are NOT vacuous — they have observable failure modes tied to the facts they check.
+
+## Other findings
+
+None. The generator performed as designed. No defects found in validate-facts.py or the audit gate.
+
+## Scope of changes
+
+**Committed in this lane:**
+- New: 429 `artifacts/facts/F-*.json` files (all six preludes)
+- Modified: `artifacts/ledger-coverage.json` (coverage regenerated)
+- No edits to: `scripts/gen-kernel-facts.py`, `validate-facts.py`, `PLAN.md`, or `docs/plan/global/`
+
+**Left on shared checkout (to be synced later):**
+Generator itself operates on the shared checkout's `artifacts/` directory; all new facts are already committed in this lane's worktree copy.
+
+## Next steps
+
+- Merge this lane's work to main
+- The two remaining unregistered theorems should be investigated (likely edge cases in PRELUDE_CONTRACT or axiom-footprint filtering)
+- Consider the curated counter enhancement mentioned in ADR-0607 §6 as a follow-up
+
+**Your lane's block (`DONE`, 150-allowlist, 2026-08-27).** See the detail below.
+
+## Status: COMPLETED
+
+### Analysis
+
+All six quarantined facts are real kernel declarations, confirmed from `kernel.environment()`:
+1. `Or.resolve_right` - real dotted theorem name (Or namespace)
+2. `Eq.symm` - real dotted theorem name (Eq namespace)
+3. `not_not_imp` - logic prelude undotted declaration
+4. `not_not_not_intro` - logic prelude undotted declaration
+5. `demorgan_or_not_and` - logic prelude undotted declaration
+6. `congrFun'` - logic prelude undotted declaration
+
+### Fix Implemented
+
+**Updated `KERNEL_THEOREM_RE` regex:**
+- Added missing namespaces: And, Decidable, Eq, Iff, Or
+- Removed unused: Str (verified to match zero declarations)
+
+**Added `LOGIC_UNDOTTED` allowlist:**
+- Explicit set of 16 logic prelude bare names
+- Only these accept undotted form (typo guard maintained)
+
+**Updated `kernel_theorem_is_valid()` function:**
+- Checks KERNEL_THEOREM_RE for dotted names
+- Checks LOGIC_UNDOTTED for bare names
+- Returns True for either, False for others
+
+### Trade-off Decision
+
+Accepting bare names ONLY from logic prelude (LOGIC_UNDOTTED):
+- **Pros:** Registers all six quarantined facts; maintains typo guard on dotted names
+- **Cons:** More complex than fully open bare names; requires updating LOGIC_UNDOTTED if new undotted declarations added
+- **Rationale:** The typo guard is critical for soundness—any bare identifier outside this set is still rejected. Only the kernel-admitted logic prelude names are permitted.
+
+### Verification
+
+1. **Functional test:** `scripts/tests/test-allowlist-fix.py` (all pass)
+2. **Guard test:** `scripts/tests/mutation-verify-guards.py` (15/15 pass)
+3. **Validation:** `python3 scripts/validate-facts.py` → 0 errors on 1809 facts
+4. **Coverage:** 
+   - kernel_theorems: 1471
+   - registered: 1461
+   - curated: 474 (unmoved, as required)
+
+### Implementation Details
+
+- Or namespace includes: Or.elim, Or.resolve_left, Or.resolve_right, etc.
+- Eq namespace includes: Eq.symm, etc.
+- And, Decidable, Iff namespaces similarly included
+- Str correctly removed (no declarations match it)
+
+The allowlist is now synchronized with actual kernel.environment() declarations as of 2026-08-27.
+
+**Done (`WIP`, absence-expiry, 2026-08-27).** ADR-0608 made *retrieval* answer
+honestly. This lane makes the *documents* do so: a doc that records an
+obstacle carries a machine-checkable marker, and a gate fails the moment the
+declaration it claims absent appears in `kernel.environment()`.
+
+**The mechanism, and why this shape.** `scripts/check-absence-claims.py`
+reads two markers, both of which are HTML comments (invisible in Markdown and
+in rustdoc, since a `//!` doc comment is Markdown, so one grammar covers both
+surfaces):
+
+- **`absent:`** — a LIVE claim. FAILS when the named declaration is PRESENT.
+  That is the expiry.
+- **`was-absent:`** — a RESOLVED record. FAILS when the declaration is
+  ABSENT, so a "this was fixed, see X" note cannot start pointing at nothing
+  after a rename. The `check-shape-duplicates.py` both-directions discipline.
+
+Correcting a stale claim is a **one-word edit** that keeps the record under
+the gate rather than removing it from it.
+
+Colocated rather than a central registry, because the in-tree model is
+`#[expect(dead_code, reason = "…")]` (which `creal/integral.rs` uses for
+exactly this): silent while its condition holds, an error the moment it
+clears, attached to the line you have to edit. A registry would also become a
+shared append point across lanes, the failure CLAUDE.md documents for
+`PLAN.md` and the ADR index. Rejected alternatives and their reasons are in
+[ADR-0611](docs/research/09-decisions/adr-0611-an-absence-claim-in-prose-must-expire.md)
+(expiry date: goes red on a schedule, not on a fact; doc-test: Markdown here
+is not compiled and the Rust half is in `//!` comments in a crate five lanes
+are editing).
+
+**Authority is a FRESH run, never a snapshot.** `kernel_declaration_projection`
+(unfiltered, `--release`) — every declaration kind, not the theorem-only
+inventories. The committed `artifacts/autogenesis/kernel-dependency-projection-v1.json`
+holds **1,644** declarations against a live **1,861**, and a stale index is
+wrong in the one direction that matters: it reports a newly-landed declaration
+as *still absent*, so an expired claim reads as valid.
+`authority_declaration_floor` (1,750 — below live, above that 217-declaration
+gap) rejects a projection that short.
+
+**Adoption, measured, not implied.** On the tree as it stands, with a freshly
+built authority:
+
+```
+authority: 1861 distinct kernel declarations (floor 1750), roots covered: ...
+scanned: 3993 files
+markers: 5 (1 absent, 4 was-absent), naming 9 declaration(s); 10 more QUOTED
+  in a code span or fence and read as documentation of the grammar
+census: 705 absence-claim site(s); 145 name a declaration (4 carry a marker,
+  141 do NOT); 560 name no declaration and are STRUCTURALLY UNCHECKABLE by
+  any authority-derived gate
+OK: 5 marker(s) checked against the kernel; every claim still holds.
+  Marker coverage of checkable claim sites: 4/145.
+```
+
+**4 of 145 checkable sites are annotated. 141 are not.** Those four numbers
+print on every run, pass or fail — a partial rollout reported as complete is
+the same defect one level up, so the number is in the output rather than in a
+claim about the output. `--list` prints the worklist. `bare_named_claim_budget`
+is a **maximum** (141), so a new unexpirable claim naming a declaration fails
+the gate; `--update-budget` records a deliberate increase and leaves a diff.
+
+**The seeds, and one correction to the brief.** Four of the five known-stale
+records of 2026-08-27 are annotated:
+`diary-exact-root-obstruction.md` (two, for
+`CReal.strict_mono_magnitude`/`CReal.diff_le_of_strict_mono_magnitude` and for
+`CReal.converges_comp_eventually`), the `Rat` reindexing retraction, and
+`CLAUDE.md`'s M-test paragraph.
+
+**The fifth is NOT stale, and I checked before annotating it.**
+<!-- absent: CReal.within_of_close_within -- the reverse close_within -> Within bridge trig_fn.rs:63 reports missing; verified against the live environment, and this paragraph goes red the day it lands -->
+`crates/axeyum-lean-kernel/src/creal/trig_fn.rs:63` claims a `close_within` →
+`Within` bridge "does not exist as a public lemma today". Read literally that
+is **still true**: there is no `CReal.within_of_close_within`, and the twelve
+`CReal.*within*` declarations in the live environment are `Within`,
+`bound_within`, `close_within_of_within`, `close_within_of_within_indexed`,
+`geom_pair_within`, `geom_tail_within`, `geom_tail_within_le`,
+`sumRange_tail_cauchy_within`, `sumRange_tail_within`,
+`sumRange_tail_within_cauchy`, `sumRange_tail_within_le`,
+`within_of_two_sided_le` — none of them the reverse bridge. What was stale
+was the *inference* a reader drew from it (that the M-test was blocked), and
+**no authority-derived gate can catch a wrong inference from a true claim.**
+That file is also out of this lane's scope (`crates/` has five live lanes), so
+it carries no marker there; this paragraph carries the LIVE `absent:` marker
+for it instead, and goes red the day the bridge lands.
+
+**Demonstration: red before, green after.**
+`scripts/tests/demo-absence-expiry-seeds.sh` copies the three seeded files
+into a scratch root, rewrites `was-absent:` to `absent:` — restoring each
+document to the state it was actually in the day it was written — and requires
+the gate to report all **8** declarations `EXPIRED` with exit 1, then re-runs
+the unrewritten copies and requires exit 0. Both halves are required: a gate
+that always reds is the same as one that never does. It never touches a
+tracked file. Verified against a freshly cargo-built authority: `DEMO OK: 8
+seeded claim(s) red as live claims, green as historical records.`
+
+**The gate found a defect in its own ADR on its first real run.** ADR-0611
+quoted `<!-- was-absent: … -->` as an example, the generated ADR index copied
+it, and both were parsed as live markers naming a declaration called `...`
+(exit 2, malformed marker). The document defining the mechanism failed the
+mechanism. Fixed by reading a marker inside a code span or a fence as
+documentation of the grammar rather than as a claim — and by **counting**
+those rather than dropping them silently (`10 more QUOTED`), because a
+swallowed marker is a false green, the one outcome this gate must not produce.
+
+**Mutation evidence: 25 of 25 guards killed, 0 SURVIVED, 0 unmeasured**
+(`python3 scripts/tests/mutation_controls.py absence-claims`, registered
+there so the mutant is built in a scratch copy and never in the shared
+checkout). 33 controls, all of which load the REAL module from its real path
+— none restates the subject. Three real findings from the first mutation run,
+all fixed:
+
+- **`the exclusion actually skips the file` SURVIVED.** The excluded fixture
+  carried a claim naming no declaration, so deleting the exclusion could not
+  move the budget and the test passed either way. A real gap in the test, not
+  in the gate.
+- **The marker-kind mutation was EQUIVALENT.** Reordering a regex alternation
+  cannot make leftmost-first match `absent` at the `w` of `was-absent`, so it
+  survived without meaning anything. Replaced with the mutation modelling the
+  real hazard — comparing the kind by substring instead of equality, which
+  reads every historical record as a live claim. It now kills two tests.
+- **Three mutations scored INCONSISTENT**, and the cause is worth recording:
+  assertion messages quoted the subject VERBATIM, and the subject prints lines
+  beginning `FAIL: `, which the harness counts with `^(?:FAIL|ERROR): (\S+)`.
+  One real failure read as two and one mutation's seven as fourteen. Messages
+  are indented now (`Harness.quoted`). **A test that quotes its subject's
+  output can corrupt an outer harness's classifier**, which generalizes beyond
+  this suite.
+
+**What it is structurally blind to**, stated rather than left to be found:
+
+1. **A claim naming no declaration** — "the mesh toolkit is private", "no
+   in-tree tool does this". 560 of 705 sites. No authority-derived gate can
+   check these; the census reports them as `STRUCTURALLY UNCHECKABLE` rather
+   than excluding them from the ratio.
+2. **A wrong inference from a true claim** — seed 5 above.
+3. **An obstacle that is a missing *step*, not a missing declaration.**
+   CLAUDE.md's hiding place #2: a reusable step built inline inside a larger
+   declaration has no name to check. The same blindness `shape_search`
+   declares.
+4. **The claim detector is a heuristic**, by construction. It found 320 `.md`
+   files and 152 `.rs` files with a claim, against the brief's 231 and 150 —
+   the `.rs` figure matches, the `.md` figure is wider. Only the marker half
+   is exact; that is why only the marker half fails on a finding and the
+   census half is a maximum.
+
+**Not wired into `just check`,** for the reason `just claims` is not: the
+authority is a `--release` kernel build. `just absence-claims` runs the gate
+(~6.5 s once the binary exists); `just absence-claims-controls` runs the 33
+controls and the seeded demonstration.
+
+Verified: `python3 scripts/validate-facts.py` green; `./scripts/check-links.sh`
+→ `all links ok`; `python3 scripts/gen-adr-index.py` regenerated (the
+pre-existing `duplicate_numbers=0166,0167` is not from this lane); ADR number
+taken from `git ls-tree origin/main`, not the local maximum.
+
+**Your lane's block (`DONE`, 152-restate-sweep, 2026-08-27).** See the detail below.
+
+## Status: COMPLETED — swept, no repair needed, one gate gap found
+
+### Task
+
+Find tests shaped like the `test-allowlist-fix.py` / `mutation-verify-guards.py`
+defect fixed upstream on 2026-08-27 (commit `c116b1165`): a test that defines
+its own copy of a subject's regex/constant/table and asserts against the copy
+instead of loading `validate-facts.py` (or any other subject). Such a test
+cannot fail when the subject changes — the checker-that-cannot-fail defect,
+inside a test.
+
+### Method
+
+383 `scripts/tests/*.py` files, 19 `scripts/tests/*.sh` files. Three
+independent, overlapping scans of the full `.py` corpus, cross-checked against
+each other and against manual reading of every file any scan flagged:
+
+1. **No-subject-load scan**: files matching neither `spec_from_file_location`,
+   `sys.path.insert` + bare import, `from scripts import …`, nor a
+   `subprocess.run/check_call/check_output/Popen(` call. 383 files scanned,
+   1 hit: `mutation_controls_self.py` — not a test (no `unittest.TestCase`,
+   no assertions); it is a mutation table consumed by
+   `mutation_controls.py:1656` via `spec_from_file_location`, confirmed by
+   grep. Not a defect.
+
+2. **Constant-duplication scan**: files defining a module-level
+   `UPPER_CASE = re.compile(...) / {...} / [...] / "..."` constant, cross-
+   referenced against subject-loading patterns. 58 files define such a
+   constant; 3 have no subject-loading pattern by the narrow first-pass
+   regex. Two (`test_check_kernel_suites.py`, `test_check_reflection_semantics_gate.py`)
+   were false positives of the regex — both load their subject via
+   `subprocess.run(["bash"/sys.executable, str(SCRIPT_OR_CHECKER), ...])`
+   against a synthetic tree; their module-level constants (`STUB_CARGO`,
+   `BINARIES`, `PROBE`, `PLAIN`) are fixture inputs fed to the real subject,
+   not restated subject logic. Read both files in full to confirm. Third hit
+   was `mutation_controls_self.py` again.
+
+3. **Subject-mention scan**: every `scripts/xxx.py`/`.sh` path named in a
+   test file's docstring/comments, cross-checked for a load mechanism
+   (subprocess, `spec_from_file_location`, `sys.path.insert` + import,
+   `from scripts import`) *and*, separately, for tests that only
+   `.read_text()`/`open()` a mentioned subject without ever executing/
+   importing it (parses source text instead of running it — a milder variant
+   of the same defect). 221 files mention a subject path; 0 have neither a
+   load mechanism after accounting for `from scripts import X` package
+   imports (the two `test_lean_execution_acceptance.py` /
+   `test_lean_u2_official_execution.py` false positives from an earlier pass
+   were `from scripts import lean_execution_acceptance as ACCEPTANCE` /
+   `... lean_u2_official_execution as U2`, both genuine package imports).
+   The read-only-text variant found only `mutation_controls_self.py` again.
+
+All 19 `.sh` test files were read (each names its subject in a header
+comment: `# Controls for scripts/X`) and confirmed to invoke the real subject
+directly (`"$CS"`/`scripts/foo.sh`/`hooks/commit-msg`), not a restated copy.
+
+### Result: no new defect found
+
+**383 `.py` files and 19 `.sh` files examined; 0 carry the restate-the-subject
+defect beyond the pair already fixed upstream.** No repair was made —
+CLAUDE.md's own rule against weakening a test cuts the other way here: there
+was nothing vacuous to strengthen, so nothing in `scripts/tests/` was
+touched.
+
+### Hyphenated test files: none remain
+
+`test-allowlist-fix.py` and `mutation-verify-guards.py` (both hyphenated,
+unimportable by name — exactly the shape CLAUDE.md's brief calls the
+highest-yield place to look) are gone, replaced upstream by
+`test_validate_facts_allowlist.py`. `ls scripts/tests/*.py | grep -E
+'/[a-zA-Z0-9_]*-[a-zA-Z0-9_-]*\.py$'` (via `/usr/bin/grep`, not the
+interactive `ugrep` shim) returns nothing. No other hyphenated `.py` test
+file exists in the directory.
+
+### Gate finding: `check-control-registration.sh` could not have caught this,
+### structurally, and its Python ratchet is *already* red
+
+Two separate points, not one:
+
+1. **Registration and vacuity are orthogonal properties.**
+   `check-control-registration.sh` answers "is this file named by
+   `scripts/check.sh`, the `justfile`, `hooks/pre-push`, or
+   `.github/workflows`" — i.e. does *something* run it. It says nothing about
+   whether the test can fail. A test that restates its subject can be
+   perfectly registered, run on every push, and still never catch a
+   regression, because its assertions never touch the subject. The two
+   original defective files could have been wired into `check.sh` verbatim
+   and this gate would have reported them green.
+
+2. **Independent of point 1, its Python-suite glob is structurally blind to
+   hyphenated names.** The loop is `for f in scripts/tests/test_*.py` —
+   requires a literal underscore right after `test`. Verified by dropping a
+   throwaway `scripts/tests/test-scratch-hyphen-probe.py` into the directory
+   (untracked, removed immediately after): `py_controls` did not count it at
+   all. The `.sh` half's glob (`scripts/tests/*.sh`) has no such restriction
+   and would have counted a hyphenated `.sh` control — but the two original
+   defective files were `.py`. So a hyphenated-and-unregistered-and-vacuous
+   `.py` test is invisible to this gate on *two* independent axes: it
+   measures the wrong property (registration, not correctness), and even for
+   the property it does measure, hyphenated `.py` files fall outside its
+   glob.
+
+3. **The ratchet is currently ROSE, right now, in this tree**, unrelated to
+   anything this lane touched:
+
+       CONTROL_REGISTRATION|controls=19|orphans=0|py_controls=381|py_orphans=191|py_baseline=188|py=ROSE
+
+   `test_validate_facts_allowlist.py` — the file this lane's brief names as
+   *"your model for what a repaired test looks like"* — is itself one of the
+   191 unregistered suites: `grep -rF "test_validate_facts_allowlist"
+   scripts/check.sh justfile hooks/pre-push` returns nothing, exit 1. This is
+   a pre-existing gate state from the merge, not something this lane
+   introduced (nothing in `scripts/tests/` was edited), and it is out of this
+   lane's scope to fix (`scripts/check.sh`/`justfile` are not
+   `scripts/tests/`). Reporting it rather than fixing it, per the brief's
+   instruction to report an out-of-scope subject problem and stop.
+
+### Verification
+
+- `python3 scripts/validate-facts.py` — green: `1815 facts checked, 0
+  errors`.
+- `python3 -m unittest scripts.tests.test_validate_facts_allowlist -v` — 6/6
+  pass (confirms the merged model file still works standalone).
+- No files under `scripts/tests/` were modified; nothing to re-verify by
+  mutation.
+
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
 F1 is complete: the two authoritative multi-target operations have nine applicable facts, all nine have explicitly partial concept/encounter mappings, and seven evidence credits are checked against their fact records (the other two were settled by earlier one-target operations).
@@ -5545,6 +6448,58 @@ independently. Corrected in place with a dated note. If you cite Coq's reals
 anywhere, pin the version.
 
 Detail moved to [`../notes/reals-design.md`](docs/plan/notes/reals-design.md).
+
+**Your lane's block (`DONE`, retrieval, 2026-08-27).** See the detail below.
+
+**Track:** Refactor 2026-08-27 — the retrieval gate on marginal cost per theorem
+**Phase:** ADR-0608 landed; tool in the tree, controls mutation-verified
+**Date:** 2026-08-27
+
+## Summary
+
+Lanes repeatedly declared themselves blocked on a lemma that already existed,
+proved, in the tree. Every existing instrument answers *"is this name taken?"*,
+which cannot find a thing whose name you do not know.
+`crates/axeyum-lean-kernel/examples/shape_search.rs` answers *"does a
+declaration of this SHAPE exist, anywhere, under any name?"* over
+`Kernel::environment()`, covering **every** declaration kind, and it
+distinguishes a genuine zero from a query it was never pointed at.
+
+## Delivered
+
+- `crates/axeyum-lean-kernel/src/shape_index.rs` — the index and query engine.
+  Indexes conclusion head, per-hypothesis head **taken under that hypothesis's
+  own telescope**, type constants, opt-in value constants, and a canonical type
+  shape for duplicate detection.
+- `crates/axeyum-lean-kernel/src/shape_index/shape_index_tests.rs` — 19
+  controls, each written so that deleting the guard it names turns it red.
+- `crates/axeyum-lean-kernel/examples/shape_search.rs` — the CLI.
+- `docs/research/09-decisions/adr-0608-…md` — the decision.
+- Appendix to `docs/research/11-design-review/2026-08-27-retrieval-is-the-bottleneck.md`
+  — the audit, the measurements, and the stated blind spots.
+
+## Measured
+
+| | |
+|---|---|
+| declarations indexed (`--include-constructed`) | 1,797 across 10 prelude groups |
+| index build | ~13 s release; `--index-values` adds no measurable cost |
+| unit tests | 19, 0.20 s |
+| audited "already existed" instances, 2026-08-25 → 08-27 | **17** (reported: 13); 3 landed as real duplicates |
+| theorem pairs stating the same proposition under two names | **6**, none previously reported |
+| `CReal` names with `_` / internal capital / **both** | 315 / 200 / **114** |
+
+## Next
+
+- Wire `--expect 1` / `--expect-absent` `checker_command`s into facts whose
+  evidence is a `Definition`; today those use
+  `kernel_declaration_projection --require-declaration`, which is correct but
+  requires knowing the exact name.
+- Size the inline-step route described in the appendix (index `Kernel::infer`ed
+  `Prop`-typed subterms of checked proof values) against the cheaper
+  alternative: a lint for `Prop`-typed subterms reused three or more times.
+- Decide whether the six duplicate theorem pairs are deduplicated or
+  deliberately aliased, and record which.
 
 **`DONE` (2026-08-27).** Brief: build the statement-only import mode ADR-0604
 §2 names as the missing segment of "properly use axeyum", and answer whether

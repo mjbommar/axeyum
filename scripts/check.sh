@@ -94,6 +94,7 @@ step validate-facts-tests python3 -m unittest scripts.tests.test_validate_facts
 step validate-facts-allowlist-tests python3 -m unittest scripts.tests.test_validate_facts_allowlist
 step shape-duplicates-tests python3 -m unittest scripts.tests.test_check_shape_duplicates
 step theorem-inventory-completeness-tests python3 -m unittest scripts.tests.test_theorem_inventory_completeness
+step absence-claims-tests python3 -m unittest scripts.tests.test_check_absence_claims
 step settled-fact-statement-tests python3 -m unittest scripts.tests.test_settled_fact_statements
 step settled-fact-statements python3 scripts/check-settled-fact-statements.py
 step fact-dag-tests python3 -m unittest scripts.tests.test_check_fact_dag

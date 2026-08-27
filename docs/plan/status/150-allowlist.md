@@ -1,5 +1,9 @@
 # Lane 150: Fix allowlist validator for logic prelude
 
+<!-- plan-section: lane-status -->
+
+**Your lane's block (`DONE`, 150-allowlist, 2026-08-27).** See the detail below.
+
 ## Status: COMPLETED
 
 ### Analysis
@@ -52,3 +56,8 @@ Accepting bare names ONLY from logic prelude (LOGIC_UNDOTTED):
 - Str correctly removed (no declarations match it)
 
 The allowlist is now synchronized with actual kernel.environment() declarations as of 2026-08-27.
+
+
+<!-- plan-section: landed-changes -->
+
+| 2026-08-27 | 150-allowlist | see this lane's detail above |

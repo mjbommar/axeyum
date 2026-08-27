@@ -1,5 +1,9 @@
 # Lane 152: sweep `scripts/tests/` for tests that restate their subject
 
+<!-- plan-section: lane-status -->
+
+**Your lane's block (`DONE`, 152-restate-sweep, 2026-08-27).** See the detail below.
+
 ## Status: COMPLETED — swept, no repair needed, one gate gap found
 
 ### Task
@@ -124,3 +128,8 @@ Two separate points, not one:
   pass (confirms the merged model file still works standalone).
 - No files under `scripts/tests/` were modified; nothing to re-verify by
   mutation.
+
+
+<!-- plan-section: landed-changes -->
+
+| 2026-08-27 | 152-restate-sweep | see this lane's detail above |

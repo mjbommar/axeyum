@@ -1,5 +1,13 @@
 # 149 — Mechanical fact registration: refresh after kernel theorem landings
 
+<!-- plan-section: lane-status -->
+
+**Your lane's block (`DONE`, fact-refresh, 2026-08-27).** Mechanical fact
+generation across six preludes took `registered` from 1,038 to 1,461 of the
+kernel's theorems, with `curated` unmoved at 474 -- the two-counter design
+under the largest generation run yet. Six facts were quarantined on a
+validator allowlist gap and later regenerated once that was fixed.
+
 Date: 2026-08-27
 Lane: fact-refresh
 Status: complete
@@ -84,3 +92,8 @@ Generator itself operates on the shared checkout's `artifacts/` directory; all n
 - Merge this lane's work to main
 - The two remaining unregistered theorems should be investigated (likely edge cases in PRELUDE_CONTRACT or axiom-footprint filtering)
 - Consider the curated counter enhancement mentioned in ADR-0607 §6 as a follow-up
+
+
+<!-- plan-section: landed-changes -->
+
+| 2026-08-27 | fact-refresh | 423 generated facts merged (6 quarantined on `KERNEL_THEOREM_RE`, since regenerated); `registered` 1,038 -> 1,461; `curated` unmoved at 474 |

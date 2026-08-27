@@ -1,5 +1,9 @@
 # Status: Shape-indexed retrieval (`shape_search`)
 
+<!-- plan-section: lane-status -->
+
+**Your lane's block (`DONE`, retrieval, 2026-08-27).** See the detail below.
+
 **Track:** Refactor 2026-08-27 — the retrieval gate on marginal cost per theorem
 **Phase:** ADR-0608 landed; tool in the tree, controls mutation-verified
 **Date:** 2026-08-27
@@ -49,3 +53,8 @@ distinguishes a genuine zero from a query it was never pointed at.
   alternative: a lint for `Prop`-typed subterms reused three or more times.
 - Decide whether the six duplicate theorem pairs are deduplicated or
   deliberately aliased, and record which.
+
+
+<!-- plan-section: landed-changes -->
+
+| 2026-08-27 | retrieval | see this lane's detail above |
