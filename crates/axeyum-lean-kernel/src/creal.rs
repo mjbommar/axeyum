@@ -3207,6 +3207,43 @@ pub struct CRealPrelude {
     /// (cosSeriesPartial n) <= four` per-`n` fact read through
     /// `neg_le_abs`/`neg_le_neg`/double-negation instead of `le_abs_self`.
     pub neg_four_le_cos_one: NameId,
+    /// `CReal.expTerm_antitone : ∀ n, le (expTerm (succ n)) (expTerm n)` --
+    /// `1/(n+1)! <= 1/n!`, a pure `Rat`/`Nat` cross-multiplication fact about
+    /// `CReal.expTerm` (never touching `CReal.inv`, since `expTerm n :=
+    /// ofRat (1/n!)` is already a raw normalized rational). Declared from
+    /// `creal/trig.rs` (after `exponential::declare_e_family`, per
+    /// `creal.rs`'s own ordering) rather than `creal/exponential.rs` itself,
+    /// which another lane owns. This is the `hdec` premise
+    /// `CReal.alternatingLowerBound`/`upperBound` need at `cosTerm`'s
+    /// magnitude sequence -- see `creal/trig.rs`.
+    pub exp_term_antitone: NameId,
+    /// `CReal.cosOne_alternating_lower : ∀ m, le (sumRange cosTerm (add m m))
+    /// cosOne` -- [`Self::alternating_lower_bound`] instantiated at
+    /// `cosTerm`'s magnitude sequence `a j := expTerm (add j j)`, closing
+    /// `hnn` from `CReal.exp_term_nonneg` and `hdec` from
+    /// [`Self::exp_term_antitone`] (doubled via `Nat.succ_add`), against the
+    /// limit hypothesis `CReal.cosOneConverges`. See `creal/trig.rs`.
+    pub cos_one_alternating_lower: NameId,
+    /// `CReal.cosOne_alternating_upper : ∀ m, le cosOne (sumRange cosTerm
+    /// (succ (add m m)))` -- the mirror of
+    /// [`Self::cos_one_alternating_lower`], off
+    /// [`Self::alternating_upper_bound`]. See `creal/trig.rs`.
+    pub cos_one_alternating_upper: NameId,
+    /// `CReal.cosOne_nonneg : le zero cosOne` --
+    /// [`Self::cos_one_alternating_lower`] at `m := 0`: `sumRange cosTerm
+    /// (add 0 0)` is ι-defeq to `zero`, so the general bracket specializes
+    /// to the sign bound for free -- the first concrete numeric fact this
+    /// development has about `cosOne` (previously only `[-4, 4]`, which does
+    /// not even pin the sign). See `creal/trig.rs`.
+    pub cos_one_nonneg: NameId,
+    /// `CReal.cosOne_le_exp_term_zero : le cosOne (expTerm 0)` --
+    /// [`Self::cos_one_alternating_upper`] at `m := 0`, folded through
+    /// `add_comm`/`add_zero`/`one_mul` via `le_congr`. `expTerm 0` is
+    /// mathematically `1` (`1/0! = 1`) but is not reduced to the literal
+    /// `CReal.one` here -- that needs `Rat.normalize 1 (factorial 0) _ =
+    /// Rat.one`, i.e. `Nat.gcd 1 1` computing to `1`, which does not hold by
+    /// `Eq.refl` and was out of scope for this slice. See `creal/trig.rs`.
+    pub cos_one_le_exp_term_zero: NameId,
     /// `CReal.negOnePowDouble : ∀ k, Equiv (pow (neg one) (add k k)) one` --
     /// `(-1)^(2k) = 1` for every `k`, by plain induction on `k` (no parity
     /// case split). `creal/alternating.rs`'s parity fact underneath the
@@ -4741,6 +4778,11 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         cos_one_converges: kernel.name_str(creal, "cosOneConverges"),
         cos_one_le_four: kernel.name_str(creal, "cosOne_le_four"),
         neg_four_le_cos_one: kernel.name_str(creal, "neg_four_le_cosOne"),
+        exp_term_antitone: kernel.name_str(creal, "expTerm_antitone"),
+        cos_one_alternating_lower: kernel.name_str(creal, "cosOne_alternating_lower"),
+        cos_one_alternating_upper: kernel.name_str(creal, "cosOne_alternating_upper"),
+        cos_one_nonneg: kernel.name_str(creal, "cosOne_nonneg"),
+        cos_one_le_exp_term_zero: kernel.name_str(creal, "cosOne_le_exp_term_zero"),
         neg_one_pow_double: kernel.name_str(creal, "negOnePowDouble"),
         alternating_e_le_o: kernel.name_str(creal, "alternatingELeO"),
         alternating_bracket: kernel.name_str(creal, "alternatingBracket"),
@@ -5395,6 +5437,14 @@ pub(crate) fn build_creal_prelude_uncached(
         // `trig` because it is the pairing argument that file's own
         // `cosOne_le_four` doc comment names as the missing piece.
         alternating::declare_alternating(&mut d, prelude)?;
+        // `trig::declare_trig_alternating_bounds` -- `trig.rs`'s SECOND
+        // dispatch entry point, needing `alternating_lower_bound`/
+        // `alternating_upper_bound` (just above) to instantiate the
+        // Leibniz bracket at `cosTerm`'s own magnitude sequence. Cannot
+        // join `trig::declare_trig` itself: that call runs BEFORE this one,
+        // and referencing a name from a later phase gives `UnknownConst`,
+        // not a missing-lemma error.
+        trig::declare_trig_alternating_bounds(&mut d, prelude)?;
         // `ivt::declare_ivt` needs `CReal.lt_cotrans` (`cotransitivity`, well
         // above), `CReal.mesh_count_width` (`monotone::declare_monotone_of_nonneg_deriv_all`,
         // also above) and ordinary ring/order laws; nothing later depends on

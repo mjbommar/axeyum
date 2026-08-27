@@ -126,7 +126,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 410] = [
+    let expected: [(&str, crate::NameId, &str); 415] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -1377,6 +1377,33 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         ("CReal.cosOneConverges", p.cos_one_converges, "theorem"),
         ("CReal.cosOne_le_four", p.cos_one_le_four, "theorem"),
         ("CReal.neg_four_le_cosOne", p.neg_four_le_cos_one, "theorem"),
+        // The alternating-series sharpening: the reciprocal-of-factorial
+        // antitone fact `expTerm_antitone` (pure `Rat`/`Nat`
+        // cross-multiplication, mirroring
+        // `rat_prelude/archimedean.rs::declare_nat_div_succ_antitone`), the
+        // Leibniz bracket instantiated at `cosTerm`'s own magnitude
+        // sequence, and the two `m = 0` corollaries -- this development's
+        // first concrete numeric facts about `cosOne` (previously only
+        // `[-4, 4]`, which does not even pin the sign). See
+        // `creal/trig.rs`'s own module-level doc and
+        // `declare_trig_alternating_bounds`.
+        ("CReal.expTerm_antitone", p.exp_term_antitone, "theorem"),
+        (
+            "CReal.cosOne_alternating_lower",
+            p.cos_one_alternating_lower,
+            "theorem",
+        ),
+        (
+            "CReal.cosOne_alternating_upper",
+            p.cos_one_alternating_upper,
+            "theorem",
+        ),
+        ("CReal.cosOne_nonneg", p.cos_one_nonneg, "theorem"),
+        (
+            "CReal.cosOne_le_exp_term_zero",
+            p.cos_one_le_exp_term_zero,
+            "theorem",
+        ),
         // `creal/alternating.rs` -- the Leibniz (alternating series) pairing
         // argument the `cosOne_le_four`/`neg_four_le_cosOne` bound's own doc
         // comment names as the missing piece for a tighter bound. Generic
