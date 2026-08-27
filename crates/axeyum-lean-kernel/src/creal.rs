@@ -6679,6 +6679,14 @@ mod uniform_convergence;
 #[cfg(test)]
 mod creal_tests;
 
+/// Per-module declaration inventory consumed by `creal_tests`'s
+/// environment-derived coverage test. `#[cfg(test)]`: pure test scaffolding,
+/// not shipped in a release build. See `creal/inventory.rs` module docs for
+/// why this exists (sharding the single 432-entry pinned array that used to
+/// collide every pair of concurrent `creal` lanes).
+#[cfg(test)]
+mod inventory;
+
 // --- the additive structure -------------------------------------------------
 
 /// `CReal.zero` and `CReal.one`, as constant sequences.

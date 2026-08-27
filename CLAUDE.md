@@ -668,6 +668,35 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   without rewriting. Controls: `scripts/tests/test-recount-pinned-inventory.sh`,
   each guard mutation-verified to be killed by the case that names it.
 
+  **CURRENT STATE (2026-08-27): `creal_tests.rs` no longer has this pin at
+  all.** Everything above is the incident history that motivated the fix, kept
+  because the failure mode it describes is general (it will recur in
+  `nat_prelude_tests.rs` or anywhere else this array shape is used) — but the
+  432-entry single array is gone from `creal_tests.rs` specifically. It was
+  the thing making EVERY pair of concurrent `creal` lanes collide (any two
+  declarations anywhere in `creal/` touched the same one file), so it was
+  sharded into one plain `Vec` per `creal/` source module under
+  `crates/axeyum-lean-kernel/src/creal/inventory/` (plus `base.rs` for the
+  algebra declared directly in `creal.rs`), registered from
+  `crates/axeyum-lean-kernel/src/creal/inventory.rs`. A lane adding a
+  declaration to an existing `creal/` module now edits exactly one file —
+  that module's shard — never the array every other `creal` lane also edits.
+
+  No shard carries a pinned length, and none should be added: the length pin
+  answered "is this list internally consistent", never "is it complete", and
+  `creal_tests::every_creal_declaration_is_checked_and_axiom_free` already
+  answers the question that matters — coverage read from
+  `kernel.environment()` directly, both directions (an environment
+  declaration missing from every shard, and a shard entry naming a
+  declaration no longer in the environment) — plus a check new to the
+  sharded shape: no declaration may be claimed by more than one shard. A
+  single array could never have that failure mode; many files can, if two
+  lanes both add an entry for the same declaration. `scripts/
+  recount-pinned-inventory.py` is unchanged and still applies verbatim to any
+  `*_tests.rs` that keeps this pin shape (`nat_prelude_tests.rs` and
+  `complex_tests.rs` do not use it today — see their own `theorem_names`/
+  `named` helpers — so nothing else needed updating for this).
+
 - **AN ABSOLUTE PATH UNDER THE MAIN CHECKOUT SILENTLY EDITS THE MAIN CHECKOUT,
   EVEN FROM INSIDE A WORKTREE.** A lane working in
   `.claude/worktrees/agent-<id>/` opened `CLAUDE.md` by its familiar path,
