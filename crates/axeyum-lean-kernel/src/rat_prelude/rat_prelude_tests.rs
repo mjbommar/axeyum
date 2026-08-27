@@ -341,6 +341,9 @@ fn unnamed_but_live_declarations(p: &RatPrelude) -> Vec<crate::NameId> {
         p.sum_range_split,
         p.sum_range_diagonal,
         p.sum_range_rect_eq_diag_add_corner,
+        p.sum_range_mul,
+        p.sum_range_mul_double,
+        p.sum_range_mul_eq_diag_add_corner,
         p.pow,
         p.pow_zero,
         p.pow_succ,
@@ -4209,6 +4212,12 @@ fn the_diagonal_toolkit_is_axiom_free() {
         (
             "sumRange_rect_eq_diag_add_corner",
             p.sum_range_rect_eq_diag_add_corner,
+        ),
+        ("sumRange_mul", p.sum_range_mul),
+        ("sumRange_mul_double", p.sum_range_mul_double),
+        (
+            "sumRange_mul_eq_diag_add_corner",
+            p.sum_range_mul_eq_diag_add_corner,
         ),
     ];
     for (label, name) in expected {

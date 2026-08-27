@@ -964,6 +964,36 @@ pub struct RatPrelude {
     /// (`rat_prelude/diagonal.rs`'s module doc). The `Rat` port of
     /// `Nat.sumRange_rect_eq_diag_add_corner` (`nat_prelude::rectangle`).
     pub sum_range_rect_eq_diag_add_corner: NameId,
+    /// `Rat.sumRange_mul : ∀ f g m n, mul (sumRange f m) (sumRange g n) =
+    /// sumRange (fun i => mul (f i) (sumRange g n)) m` — one factor's sum
+    /// distributes over a product with a second sum. TWO independent bounds:
+    /// nothing requires `m = n`. Not an induction — `sumRange g n` plays the
+    /// "constant" role [`Self::mul_sum_range`] already handles, reached by
+    /// `mul_comm` on both sides of it.
+    pub sum_range_mul: NameId,
+    /// `Rat.sumRange_mul_double : ∀ f g m n, mul (sumRange f m) (sumRange g n)
+    /// = sumRange (fun i => sumRange (fun j => mul (f i) (g j)) n) m` — the
+    /// un-grouped, **subtraction-free** rectangle form of the Cauchy product,
+    /// `f i * g j` at every `(i, j)` with `i < m`, `j < n`. From
+    /// [`Self::sum_range_mul`] plus [`Self::sum_range_congr`] moving
+    /// [`Self::mul_sum_range`] under the outer sum. Not the diagonal-grouped
+    /// convolution — that is [`Self::sum_range_mul_eq_diag_add_corner`].
+    pub sum_range_mul_double: NameId,
+    /// `Rat.sumRange_mul_eq_diag_add_corner : ∀ f g n,`
+    /// `mul (sumRange f n) (sumRange g n) = add (sumRange (fun k => sumRange`
+    /// `(fun i => mul (f i) (g (sub k i))) (succ k)) n) (sumRange (fun i =>`
+    /// `sumRange (fun k => mul (f i) (g (add (sub n i) k))) i) n)` — **the
+    /// finite Cauchy product over `ℚ`, in its honest form**: a product of two
+    /// partial sums is the antidiagonal-grouped convolution PLUS a corner term
+    /// the naive identity drops (refuted at `n = 2` already over `ℕ`).
+    ///
+    /// Composes [`Self::sum_range_mul_double`] at `[f, g, n, n]` with
+    /// [`Self::sum_range_rect_eq_diag_add_corner`] at the separable
+    /// `F i j := f i * g j`. The `ℚ` counterpart of
+    /// [`ComplexPrelude::sum_range_mul_eq_diag_add_corner`](crate::ComplexPrelude::sum_range_mul_eq_diag_add_corner),
+    /// but stated redex-free: the triangle and corner here read as ordinary
+    /// convolution sums rather than as `F` applications awaiting beta.
+    pub sum_range_mul_eq_diag_add_corner: NameId,
 
     // --- polynomials (rat_prelude::polynomial) ------------------------------
     /// `Rat.pow : Rat → Nat → Rat`, `Nat.rec` on the exponent: `pow a zero ≡
@@ -1880,6 +1910,9 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         sum_range_split: child(kernel, "sumRange_split"),
         sum_range_diagonal: child(kernel, "sumRange_diagonal"),
         sum_range_rect_eq_diag_add_corner: child(kernel, "sumRange_rect_eq_diag_add_corner"),
+        sum_range_mul: child(kernel, "sumRange_mul"),
+        sum_range_mul_double: child(kernel, "sumRange_mul_double"),
+        sum_range_mul_eq_diag_add_corner: child(kernel, "sumRange_mul_eq_diag_add_corner"),
         pow: child(kernel, "pow"),
         pow_zero: child(kernel, "pow_zero"),
         pow_succ: child(kernel, "pow_succ"),
