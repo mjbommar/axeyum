@@ -136,3 +136,41 @@ right endpoint) and `v=c=0` (every point a maximiser) — with `Kernel::infer`
 accepting both, plus computed endpoint instances whose strict comparison flips
 with the sign of `v`. Future row 2s must carry the same control.
 
+## Amendment 3, 2026-08-27: the family is UP TO four rows, not always four
+
+This ADR's decision reads as though every classical theorem has all four rows.
+Two independent lines of evidence now say that is a template, not a law, and
+**FTA is the first candidate for a THREE-row theorem (1, 3, 4) with no row 2.**
+
+1. **Shape argument** (FTA assessment lane). FTA's classical proof is a
+   compactness argument over a **bounded closed disk**. Row 2 arises for IVT,
+   EVT, MVT and LUB because their classical statements require deciding a
+   comparison over an unbounded or open search — that is what
+   `evt_attained_max_decides_sign` extracts. A compactness argument over a
+   bounded region has no such step to extract.
+2. **Construction evidence** (approximate-FTA lane). Building the shared
+   prerequisite both FTA routes need — `Complex.abs_neg` and
+   `Complex.abs_le_add_abs_sub`, the directional reverse triangle inequality —
+   **encountered no undecidable comparison at any point**, and every
+   construction type-checked on the first `add_declaration` attempt. That is a
+   second, independent data point.
+
+**It is NOT settled**, and the hedge matters: row 1 (approximate FTA) has not
+closed. Its final assembly step still faces a real question the assessment doc
+raised — distinguishing "the infimum is exactly 0" from "arbitrarily small" —
+and that is precisely where an undecidable comparison could still appear. What
+is established is that the *prerequisites* are clean and the *shape* differs
+from the row-2 family.
+
+**Decision**: a graded family has **up to** four rows. Row 2 is required
+wherever the classical statement demands a decision the kernel lacks, and its
+absence must be **argued from the shape of the classical proof**, never assumed
+from a failure to find one. An entry claiming "no row 2 needed" must say which
+decision principle would have been extracted and why the classical argument
+never reaches it.
+
+**Why this is not a weakening.** A theorem with no row 2 is one where axeyum's
+row 1 and row 3 simply *dominate* the classical entry with nothing conceded —
+strictly better for the Pareto argument than a theorem whose boundary must be
+mapped. The four-row template was a worst case mistaken for a law.
+
