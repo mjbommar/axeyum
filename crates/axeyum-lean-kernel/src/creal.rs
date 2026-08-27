@@ -3893,6 +3893,24 @@ pub struct CRealPrelude {
     /// the full accounting, including why the UNRESTRICTED (existential)
     /// form is NOT landed here.
     pub rolle_interior_extremum: NameId,
+    /// `CReal.mvt_interiorExtremum : ∀ F F' lo hi, HasDerivativeOn F F' lo
+    /// hi → ∀ m, Equiv (F hi) (add (F lo) (mul m (add hi (neg lo)))) → ∀ c,
+    /// lt lo c → lt c hi → (Or (∀ x, le lo x → le x hi → le (g x) (g c)) (∀
+    /// x, le lo x → le x hi → le (g c) (g x))) → Equiv (F' c) m`, where `g :=
+    /// fun r => add (F r) (neg (mul m r))` (`creal/mvt.rs`) — the Mean Value
+    /// Theorem (Spivak ch. 11, Thm 3), a thin wrapper over
+    /// [`Self::rolle_interior_extremum`] applied to `g`: the secant-slope
+    /// hypothesis makes `Equiv (g lo) (g hi)` provable UNCONDITIONALLY (pure
+    /// algebra, no extra hypothesis), `g`'s derivative is `fun x => add (F'
+    /// x) (neg m)` via [`Self::has_derivative_sub`] composed with a
+    /// from-scratch (not [`Self::has_derivative_smul`], which would need an
+    /// extra magnitude bound on `m`) derivative witness for `r ↦ m·r`, and
+    /// the `Or` case-split hypothesis is Rolle's own, passed through
+    /// verbatim with no case analysis performed in this theorem at all. See
+    /// `creal/mvt.rs`'s module documentation for the full graded-family
+    /// accounting (row 2 unassessed, row 3 already the existing CAS
+    /// certificate).
+    pub mvt_interior_extremum: NameId,
     /// `CReal.mesh_le_of_ge : ∀ a b outer m, le a b → Nat.le ((Nat.succ
     /// (bound (add b (neg a))))*outer + bound (add b (neg a))) m → le (mul
     /// (add b (neg a)) (ofRat (natDivSucc 1 m))) (ofRat (natDivSucc 1
@@ -5413,6 +5431,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         has_derivative_unique: kernel.name_str(creal, "hasDerivative_unique"),
         fermat_interior_extremum: kernel.name_str(creal, "fermat_interiorExtremum"),
         rolle_interior_extremum: kernel.name_str(creal, "rolle_interiorExtremum"),
+        mvt_interior_extremum: kernel.name_str(creal, "mvt_interiorExtremum"),
         mesh_le_of_ge: kernel.name_str(creal, "mesh_le_of_ge"),
         mesh_scaled_le_of_ge: kernel.name_str(creal, "meshScaledLeOfGe"),
         fine_sample_in_bounds: kernel.name_str(creal, "fineSample_in_bounds"),
@@ -6694,6 +6713,46 @@ const STEPS: &[BuildStep] = &[
         ],
         provides: &[|p: CRealPrelude| p.rolle_interior_extremum],
         run: rolle::declare_rolle,
+    },
+    BuildStep {
+        label: "mvt::declare_mvt",
+        requires: &[
+            |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.abs_le,
+            |p: CRealPrelude| p.abs_nonneg,
+            |p: CRealPrelude| p.add,
+            |p: CRealPrelude| p.add_assoc,
+            |p: CRealPrelude| p.add_comm,
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.creal,
+            |p: CRealPrelude| p.equiv,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.has_derivative_on,
+            |p: CRealPrelude| p.has_derivative_sub,
+            |p: CRealPrelude| p.hd_mk,
+            |p: CRealPrelude| p.le,
+            |p: CRealPrelude| p.le_of_equiv,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.left_distrib,
+            |p: CRealPrelude| p.lt,
+            |p: CRealPrelude| p.mul,
+            |p: CRealPrelude| p.mul_comm,
+            |p: CRealPrelude| p.mul_congr,
+            |p: CRealPrelude| p.mul_nonneg,
+            |p: CRealPrelude| p.mul_zero,
+            |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.neg_congr,
+            |p: CRealPrelude| p.of_rat,
+            |p: CRealPrelude| p.of_rat_le,
+            |p: CRealPrelude| p.rolle_interior_extremum,
+            |p: CRealPrelude| p.zero,
+        ],
+        provides: &[|p: CRealPrelude| p.mvt_interior_extremum],
+        run: mvt::declare_mvt,
     },
     BuildStep {
         label: "uniform_continuity::declare_uniform_continuity_products",
@@ -10568,6 +10627,7 @@ mod ivt;
 mod lattice;
 mod monotone;
 mod mul_self_zero;
+mod mvt;
 mod order_extra;
 mod polynomial;
 mod power;
