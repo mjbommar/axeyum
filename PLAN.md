@@ -123,6 +123,7 @@ now. Nothing was deleted.
 | 2026-08-27 | (uncommitted at status-file write time) | Registered 28 new `artifacts/facts/F-*.json` entries: Ch.15 cosine-at-1 construction and bounds (`creal-cosone`, `creal-costerm`, `creal-cosseriespartial`, `creal-costermabsledominant`, `creal-cosoneconverges`, `creal-cosone-le-four`, `creal-neg-four-le-cosone`); Ch.22-23 general-ratio geometric series and ratio test (`creal-geomcauchyoflt`, `creal-geomcauchyofltordered`, `creal-geomscaledcauchyoflt`, `creal-sumrangeratiotest`); Ch.14 crossing-index construction (`creal-crossingindex`, `creal-crossingupper`, `creal-crossinglower`, `creal-crossingsampleupper`, `creal-crossingsamplelower`); Ch.25-27 polynomials over `Complex` (`complex-polyeval`, `complex-polyeval-zero`, `complex-polyeval-succ`, `complex-polyadd`, `complex-polyeval-polyadd`, `complex-polyscale`, `complex-polyeval-polyscale`, `complex-polydegreelt`, `complex-polydegreelt-polyadd`, `complex-polydegreelt-polyscale`, `complex-polymul`, `complex-polyeval-polymul`). `python3 scripts/validate-facts.py` green (750 facts, 0 errors). Mutation-tested 3 representative checkers (1 definition, 2 theorems) in an isolated snapshot; all failed correctly on the mutated name while unrelated controls in the same rebuild passed. |
 | 2026-08-27 | `PENDING` | Diagnosed why `fact-frontier.py --json` reports `admissible: 0` over 132 dependency-ready facts: operation registration requires a completed, independently-checked proof (`ADMISSION_CONTRACTS` allows only `proved`), and none exists for any open fact. Added a purely additive `diagnostics.unregistered_by_route_class` split to `fact-frontier.py`; declined to fabricate an operation over unproved work. `docs/autogenesis/288-admission-precedes-registration.md`. |
 | 2026-08-27 | `PENDING` | Implemented ADR-0602: `artifacts/ontology/producer-contract.schema.json` + `scripts/validate-producer-contracts.py` (a capability claim, never a completion claim — no `proved`/`epistemic_status` field exists in the schema at all), two seed contracts (Int.ModEq congruence family, Nat.Coprime family — both checked held-out-clean against `nursery-v1.json`), and redefined `fact-frontier.py` admissibility as dependency-ready × (registered operation OR matched capable-route contract). `admissible_count` moved 0 → 27 on the real ledger; all 8 existing `test_fact_frontier.py` tests pass unmodified, 7 new added. `docs/autogenesis/289-producer-contract-admissibility.md`. |
+| 2026-08-27 | `PENDING` | First real execution of a producer-contract dispatch (`F:ml430-int-add-modeq-left-ee732b5b`): clean s5 export/import, honest producer decline (`TerminalNotClosed`), recorded as a decline artifact + fact note rather than a fabricated admission. No fact status changed, no operation registered. |
 | 2026-08-27 | `14a6484d3` | `scripts/validate-facts.py`: classify `cas-certificate` evidence as `kernel-reconstructed` vs `cas-internal`, reject an unclassifiable checker_command on that route (ADR-0601 SS2). Mutation-tested. |
 | 2026-08-27 | `17e91d839` | `scripts/gen-import-backlog.py` (new): produce `artifacts/import-backlog.json`, the 164-row import backlog, deterministic and ordered by dependency-readiness then curriculum-DAG position (ADR-0601 SS3). `--check` wired into `scripts/check.sh` and the `justfile`. Mutation-tested. |
 | 2026-08-26 | `f1fb56564` | Compose a held-out-safe three-lemma retrieval spine and admit Mathlib's real `Nat.choose_symm_of_eq_add` axiom-free, moving natural binomial from one to two accepted siblings. |
@@ -2409,6 +2410,67 @@ touching the receipt system. Separately, `cas-bridge`/`import` route
 capability is 0 today purely because neither sibling artifact exists in this
 tree yet; once either lands, contracts declaring that route become live with
 no further `fact-frontier.py` change needed.
+
+**Executed the first machine-selected, contract-matched dispatch** (`DONE`,
+flywheel-1, 2026-08-27): `scripts/fact-frontier.py --json` selected
+`F:ml430-int-add-modeq-left-ee732b5b` via `producer-contract-int-modeq-family-v1`
+(route `kernel-lane`, landed same-day by the `producer-contracts` lane,
+[`135-producer-contracts.md`](docs/plan/status/135-producer-contracts.md)). Checked the
+nursery partition first (`train`, not held-out) per ADR-0542, then ran the
+contract's own recipe for real: authored an s5-side Lean statement adapter
+(`AxeyumAutogenesisIntAddModEqLeftV1.lean`, a new file, not an edit to the
+shared family adapter), verified the pinned Mathlib
+(`c5ea00351c28e24afc9f0f84379aa41082b1188f`) and lean4export
+(`a3e35a584f59b390667db7269cd37fca8575e4bf`) commits, exported via
+`lake env lean` + `lean4export` (clean, 6,138 records, zero-byte stderr),
+imported cleanly (208 declarations, 0 axioms — independently reconfirms the
+`Nat.div_rec_lemma` cascade from docs 241/242 is still bridged), and ran the
+shape-generic checker (`modeq_family_operation`).
+
+**Result: honest decline, not a proof.** `propose_modeq_family` returned
+`DeclineReason::TerminalNotClosed` — the goal is an *unconditional* additive
+identity (`n + a ≡ a [ZMOD n]`, no hypothesis to symm/trans over), unlike the
+four family members this exact producer already proves
+(refl/symm/trans/comm, all of which manipulate an already-given equality).
+Mathlib's own proof is `:= by simp`, not `rfl`, independently confirming this
+was never a definitional identity. Cross-checked against this kernel's own
+`Int.ModEq.add_left`/`add_right` (`int_prelude/modeq.rs`): both require
+`0 < n` via `modEq_iff_dvd`, while the Mathlib target is unconditional — the
+same `0 < n` gap two sibling facts (`F-ml430-int-modeq-one-01d9de39.json`,
+`F-ml430-int-modeq-neg-d6ff57b6.json`) already record in their own `notes`.
+Fixing it needs a natAbs-based generalization of `Int.emod_lt_of_pos`
+(`int_prelude/division.rs`) — real kernel-level work, out of this lane's
+scope (`crates/axeyum-lean-kernel/src/` off-limits per brief).
+
+**`epistemic_status` stays `open`.** No evidence attached, no operation
+registered — per ADR-0602 and doc 288, admission precedes registration, and
+a contract match with no completed proof is not grounds for either.
+Recorded in `artifacts/autogenesis/mathlib-int-add-modeq-left-decline-v1.json`
+(the repository's established `<name>-decline-v1.json` shape) and in the
+fact's own `notes` field, following the precedent
+`F-ml430-int-modeq-one-01d9de39.json` set, so a future lane does not read
+this as merely unattempted. Full account, including a six-item honest
+accounting of exactly which steps needed human judgment (ADR-0602's own
+question):
+[`../../autogenesis/290-int-add-modeq-left-contract-dispatch-decline.md`](docs/autogenesis/290-int-add-modeq-left-contract-dispatch-decline.md).
+
+**Verified:** `python3 scripts/validate-facts.py` (776 facts, 0 errors,
+unchanged distribution), `python3 scripts/validate-autogenesis-operations.py`
+(27 operations, unchanged), `python3
+scripts/check-autogenesis-holdout-isolation.py` (`held_out=37|settled=0|
+verdict=PASS`, unchanged) — all green, all confirming this task added no
+fabricated admission and touched no held-out fact.
+
+**Did not touch:** `scripts/fact-frontier.py`, `scripts/validate-producer-
+contracts.py`, either producer contract instance, `artifacts/import-backlog.json`,
+`artifacts/autogenesis/operations.json`, anything under
+`crates/axeyum-lean-kernel/src/` or `crates/axeyum-cas/`, or
+`python/axeyum/agent/` — all out of scope per the brief.
+
+**Next.** The natAbs-based `Int.emod` magnitude bound generalizing
+`emod_lt_of_pos` would unblock this fact and its two named siblings at once
+(three open facts, one missing kernel lemma) — but that is
+`axeyum-lean-kernel` work for a lane with that crate in scope, not this one.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
