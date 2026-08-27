@@ -10,8 +10,8 @@ One row per claim under `artifacts/claims/<family>/<id>/claim.json`: what is ass
 
 - Claims: 104 across 3 families (`offdiag-schur` 48, `rado` 43, `vdw` 13)
 - Epistemic status: `computed` 101, `open` 3
-- Evidence rows: 269 — `checked` 265, `not-checked` 1, `replay-only` 3
-- Evidence kinds: `cube-cover` 6, `cube-tree-cover` 1, `instance-pin` 52, `unsat-certificate` 100, `witness-replay` 110
+- Evidence rows: 270 — `checked` 266, `not-checked` 1, `replay-only` 3
+- Evidence kinds: `cube-cover` 6, `cube-tree-cover` 1, `instance-pin` 52, `unsat-certificate` 100, `witness-replay` 111
 - Topic citations: 438 — unresolved by design (ADR-0553); nothing in this repository resolves them
 - Frontier records (open/conjectured claims): 3
 
@@ -116,7 +116,7 @@ One row per claim under `artifacts/claims/<family>/<id>/claim.json`: what is ass
 | [`rado-r4-a5-b4-frontier`](rado/rado-r4-a5-b4-frontier/claim.json) | R_4(5(x-y)=4z) = 741 | `computed` | `instance-pin`: checked<br>`witness-replay`: checked<br>`cube-tree-cover`: checked | 5 |
 | [`rado-r4-a6-b5-frontier`](rado/rado-r4-a6-b5-frontier/claim.json) | R_4(6(x-y)=5z) > 1500: the shell construction at the next point of the k=4 row | `open` | `witness-replay`: checked | 5 |
 | [`rado-r5-a3-b1-frontier`](rado/rado-r5-a3-b1-frontier/claim.json) | R_5(3(x-y)=1z) > 296: Li's public witness independently replayed | `open` | `witness-replay`: checked<br>`instance-pin`: checked<br>`witness-replay`: checked<br>`witness-replay`: checked | 3 |
-| [`rado-r5-a3-b2-frontier`](rado/rado-r5-a3-b2-frontier/claim.json) | R_5(3(x-y)=2z) > 358: checked five-colour frontier bound | `open` | `witness-replay`: checked<br>`witness-replay`: checked<br>`witness-replay`: checked<br>`witness-replay`: checked | 5 |
+| [`rado-r5-a3-b2-frontier`](rado/rado-r5-a3-b2-frontier/claim.json) | R_5(3(x-y)=2z) > 368: checked five-colour frontier bound | `open` | `witness-replay`: checked<br>`witness-replay`: checked<br>`witness-replay`: checked<br>`witness-replay`: checked<br>`witness-replay`: checked | 5 |
 
 ### `vdw`
 
@@ -172,21 +172,21 @@ Open and conjectured claims carry a mandatory `frontier` record: what is current
 
 **Attack notes:** The satisfiable side is not free here: the a-adic construction that settles every n <= a^k - 1 in milliseconds provably cannot reach a^k, and min-conflicts warm-started from it failed three times. What worked was cube-and-conquer, which starts from no construction at all (35.8 s). Monolithic proof-producing CDCL is the wrong tool on the satisfiable side of this instance: it emitted 2.6 GB of DRAT in 8 minutes without deciding, and its resident set tracked the proof size almost exactly, so on a 26 GiB host it would have OOM-killed before answering.
 
-### `rado-r5-a3-b2-frontier` — R_5(3(x-y)=2z) > 358: checked five-colour frontier bound
+### `rado-r5-a3-b2-frontier` — R_5(3(x-y)=2z) > 368: checked five-colour frontier bound
 
 - Status: `open`
 - Claim: [`rado/rado-r5-a3-b2-frontier/claim.json`](rado/rado-r5-a3-b2-frontier/claim.json)
 
 **Known**
 
-- R_5(3(x-y)=2z) > 358, witnessed and verified (evidence row witness-358); the earlier 357, 350, and 319 witnesses are retained as reproducibility and historical frontier points
+- R_5(3(x-y)=2z) > 368, witnessed and verified (evidence row witness-368); the earlier 358, 357, 350, and 319 witnesses are retained as reproducibility and historical frontier points
 - The shell construction of this work yields a verified solution-free colouring of [N] with N+1 = a^k + a^(k-1) - 2a + 1; this is ATTAINED at (a,k)=(3,3) [31], (4,3) [73], (3,4) [103] and (4,4) [313], all independently re-verified, but NOT at (3,5), where it gives 318 while a 5-colouring of [319] exists. The general-k proof is asserted in the construction source and has NOT been independently verified here.
 - Independent corroboration of k=5 non-tightness in a different column: Li (SSRN 6814341) reports R_5(3)>296>243 for b=1
-- Canonical exact instances 351 through 357 are SAT and replayed; the 358 witness is a checked direct extension, while its paused incomplete solver proof stream has no evidentiary status; instance 359 remains open
+- Canonical exact instances 351 through 357 are SAT and replayed; deterministic checked extension reaches 368; every colour is locally blocked at 369 for this fixed prefix, but instance 369 remains open
 
 **Would settle:** A verified 5-colouring of [n-1] together with an exhaustive cube cover refuting [n], for the same n. Both artifact kinds and their checkers exist in this family; the obstruction is the cost of refutation at k=5, not the encoding.
 
-**Attack notes:** The satisfiable side reaches 358: exact solving produced the 357 witness, and an audited colour-4 extension plus two complete replay routes produced 358. The refutation side at five colours is still unclosed and is the real exact-value question.
+**Attack notes:** The satisfiable side reaches 368: exact solving produced the 357 witness, then deterministic new-relation audits and two complete replay routes extended it through 368. The fixed prefix does not extend directly to 369; the refutation side remains unclosed and is the real exact-value question.
 
 ## Provenance
 
