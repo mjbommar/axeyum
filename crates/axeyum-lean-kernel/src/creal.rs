@@ -1491,6 +1491,48 @@ pub struct CRealPrelude {
     /// existing bound on `c - samplePt` up to `c - clampedPt` by plain
     /// transitivity, no case split anywhere. See `creal/crossing.rs`.
     pub crossing_close_clamped: NameId,
+    /// `CReal.riemannSampleCrossingClose : ∀ F a b (u : UniformlyContinuousOn
+    /// F a b) stepAb i deltaAc e, Rat.lt Rat.zero deltaAc → CReal.le a ptI →
+    /// CReal.le ptI b → CReal.le slackUpper bound → CReal.le (CReal.neg
+    /// slackLower) bound → CReal.le (CReal.abs (CReal.add (F ptI) (CReal.neg
+    /// (F clampedPt)))) (CReal.ofRat (Rat.natDivSucc 1 e))`, where `ptI := a +
+    /// (ofNat i)·stepAb` is an ORDINARY Riemann-sum sample point (`stepAb` an
+    /// arbitrary `CReal`, not necessarily `riemannSum`'s own mesh step) and
+    /// `clampedPt`/`slackUpper`/`slackLower` are [`Self::crossing_close_clamped`]'s
+    /// own terms at `c := ptI`, `delta := deltaAc`.
+    ///
+    /// [`integral.rs`]'s SEVENTH 2026-08-27 module doc entry's proposed
+    /// term-pairing lemma — literally [`Self::crossing_close_clamped`]
+    /// specialized at `c := ptI` — **restricted to the one case that
+    /// type-checks against this file's existing machinery**: `crossingIndex`
+    /// (hence `crossingCloseClamped`) takes its step as a `Rat`, not a
+    /// `CReal` (`declare_crossing_index`'s `delta` parameter is `rat_ty_`
+    /// itself, not `creal_ty`). The natural cross-mesh step for an ARBITRARY
+    /// split point `c`, `deltaAc := (c−a)·ofRat(natDivSucc 1 m_ac)`, is
+    /// `CReal`-valued whenever `c−a` is not itself rational — the same "not a
+    /// computable rational multiple" fact `integral.rs`'s module doc already
+    /// names, sharpened here to the exact type-level obstruction: this
+    /// theorem is only USABLE when the caller already has a **rational**
+    /// `deltaAc` in hand (e.g. `c := a + ofRat q` for some `Rat q`, giving
+    /// `deltaAc := q·natDivSucc(1,m_ac)`, itself `Rat`), not for a fully
+    /// general `CReal c`.
+    ///
+    /// The only `CReal`-level inverse in this prelude,
+    /// [`Self::inv`] `(x : CReal) (k : Nat) (h : PosBound x k) : CReal`,
+    /// could in principle build `(c−a)⁻¹` given an explicit positivity
+    /// witness, but none of `crossing.rs`'s internal recipe (`build_scaled`,
+    /// `scale_cancels`, the four `bucketIndex` closeness lemmas'
+    /// composition) is stated against it — it is hard-wired to `Rat.inv`.
+    /// Pre-rescaling `ptI` by `(c−a)⁻¹` before calling `crossingIndex` (so
+    /// `crossingIndex` itself only ever sees a plain `Rat` delta) is possible
+    /// in principle, but translating the resulting NORMALIZED-coordinate
+    /// closeness bound back into a bound on `|ptI − ptAc(j(i))|` in ORIGINAL
+    /// units needs multiplying back through by the `CReal` factor `(c−a)`,
+    /// which is a REAL (not `Nat`, unlike [`Self::mesh_scaled_le_of_ge`])
+    /// scaling step with no existing lemma covering it — a second gap on top
+    /// of `crossingCloseClamped`'s own already-flagged ones. See
+    /// `creal/crossing.rs`.
+    pub crossing_sample_pairing_close: NameId,
     /// `CReal.sampleUpperBound : ∀ x m, CReal.le x (CReal.ofRat (Rat.add
     /// (CReal.seq x m) (Rat.natDivSucc 1 m)))` — the general
     /// self-approximation lemma every `CReal` satisfies: it never exceeds
@@ -4764,6 +4806,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         crossing_sample_lower: kernel.name_str(creal, "crossingSampleLower"),
         crossing_close: kernel.name_str(creal, "crossingClose"),
         crossing_close_clamped: kernel.name_str(creal, "crossingCloseClamped"),
+        crossing_sample_pairing_close: kernel.name_str(creal, "riemannSampleCrossingClose"),
         sample_upper_bound: kernel.name_str(creal, "sampleUpperBound"),
         sample_lower_bound: kernel.name_str(creal, "sampleLowerBound"),
         bounded_of_uniformly_continuous: kernel.name_str(creal, "bounded_of_uniformly_continuous"),
@@ -5197,6 +5240,12 @@ pub(crate) fn build_creal_prelude_uncached(
         // point since `crossing_close` itself already needs `abs_le` from
         // that same module).
         crossing::declare_crossing_close_clamped(&mut d, prelude)?;
+        // `crossing::declare_crossing_sample_pairing_close` needs only
+        // `crossingCloseClamped`, just above -- see its own doc comment for
+        // why it is the restricted (rational-step) case of the SEVENTH
+        // 2026-08-27 `integral.rs` module doc entry's pairing lemma, not the
+        // general one.
+        crossing::declare_crossing_sample_pairing_close(&mut d, prelude)?;
         sqrt::declare_sqrt(&mut d, prelude)?;
         speedup::declare_speedup(&mut d, prelude)?;
         // `sqrtApproxKRegular` needs `speedup.rs`'s `KRegular` predicate

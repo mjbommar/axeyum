@@ -621,6 +621,187 @@
 //! lane's branch, WITH `crossingSampleGeA` landed) — no regression from the
 //! ~22.17 s / ~19.99 s baseline the fourth/third entries already flagged as
 //! noise-dominated.
+//!
+//! ## `CReal.integral_split` — checked 2026-08-27 (a SEVENTH lane), dispatched
+//! to ASSEMBLE the theorem from [`super::crossing::declare_crossing_close_clamped`],
+//! [`declare_mesh_scaled_le_of_ge`] and [`declare_riemann_sum_integral_close`].
+//! **Still blocked, and the reason is a different SHAPE of gap than any of
+//! the six entries above individually name, though it is the same gap the
+//! third entry's own final paragraph and `derivative.rs`'s
+//! `hasDerivative_integral_const` doc comment both already point at.**
+//!
+//! The dispatch briefing's proposed shape was: fix `e`; pick mesh depths on
+//! all three intervals via [`declare_riemann_sum_integral_close`]; "relate the
+//! `[a,b]` sum to the two sub-sums using the crossing machinery — the
+//! crossing block's error bounded by `crossingCloseClamped` +
+//! `meshScaledLeOfGe`, the interior blocks by the existing single-interval
+//! reblock algebra"; close with
+//! [`super::archimedean_squeeze::CRealPrelude::equiv_zero_of_small`]. Worked
+//! through at the level of what each piece actually STATES, not just what it
+//! is named for, before any kernel call:
+//!
+//! **What `crossingCloseClamped` (with its two remaining hypotheses
+//! discharged via `meshScaledLeOfGe`, which is a real, buildable, ~15-call
+//! wiring — the two slack terms are `Δ·(1+bound2j)` and `Δ·(neg bound3j)` for
+//! FIXED `bound2j = 1`, `bound3j = 3/2` at this file's own `j := 1`, so
+//! `slack_upper ≡ ofNat 2 · Δ` and `neg slack_lower ≡ ofNat 2 · Δ` after the
+//! same `of_nat_one_equiv_local`/`of_nat_succ_equiv_local`/`right_distrib`
+//! moves [`riemann_sum_const_core`] already uses, letting ONE
+//! `mesh_scaled_le_of_ge` instance at `k0 := 1` cover both) actually gives is
+//! a bound on `abs (F c - F clampedPt)` for **one single sample point** —
+//! `clampedPt`, the coarse `[a,b]`-mesh's OWN crossing-index sample, clamped
+//! into range.
+//!
+//! **What `riemannSum F a b m_ab` needs, to be related to `riemannSum F a c
+//! m_ac + riemannSum F c b m_cb`, is a bound on the discrepancy between TWO
+//! WHOLE SUMS**: `sumRange (fun i => F(a+iΔ_ab)·Δ_ab) (m_ab+1)` against
+//! `sumRange (fun j => F(a+jΔ_ac)·Δ_ac) (m_ac+1) + sumRange (fun k =>
+//! F(c+kΔ_cb)·Δ_cb) (m_cb+1)`. Bounding a SUM by bounding one term of it
+//! (the crossing term) says nothing about the other `m_ab` terms UNLESS they
+//! can be shown to correspond, index-for-index, to terms of the `[a,c]`/
+//! `[c,b]` sums — which needs each `[a,b]`-mesh sample point BEFORE the
+//! crossing index to be within `F`'s modulus of SOME `[a,c]`-mesh sample
+//! point, for every one of up to `m_ab` indices simultaneously, not just at
+//! the boundary. **This is exactly the "existing single-interval reblock
+//! algebra" the briefing proposed reusing for "the interior blocks" — and it
+//! does not apply here**: every reblock/common_refinement construction in
+//! this file (`common_refinement`, `common_refinement3`,
+//! `sharedIndexToCanonical`, the whole `sumRange_reblock` chain) relates two
+//! meshes on the SAME interval `[a,b]` (a refined step is an EXACT algebraic
+//! multiple of the coarse one, `mesh_reciprocal_mul`/`succ_mul_succ`, pure
+//! `Nat` arithmetic). `Δ_ab := (b-a)/(m_ab+1)` and `Δ_ac := (c-a)/(m_ac+1)`
+//! are steps of DIFFERENT, generally incommensurate widths (`c-a` is not a
+//! computable rational multiple of `b-a` for an arbitrary `CReal c`), so no
+//! choice of `m_ac` makes an `[a,c]`-mesh sample point EXACTLY coincide with
+//! an `[a,b]`-mesh sample point — the "interior blocks" have no existing
+//! algebra to reuse at all, not even approximately, without a NEW
+//! cross-width correspondence between the two grids.
+//!
+//! So even with a fully-wired `crossingCloseClamped` in hand, the assembly
+//! stops at the exact same place `crossing.rs`'s own module documentation
+//! ("landed here as a standalone, reusable fact rather than wired into
+//! `CReal.integral_split`, which needs a SECOND, LARGER fact") and this
+//! file's third 2026-08-27 entry ("a term-by-term bound on the difference
+//! between the partial sum over the crossing block's indices... and
+//! `riemannSum F a c m_ac`... structurally close to what
+//! `pointwise_block_equiv`/`sample_point_reblock_proof` do for a SAME-interval
+//! refinement, but neither is stated for two different interval endpoints")
+//! already named. `crossingCloseClamped` closed exactly the two hypotheses
+//! those entries flagged as open on the SINGLE-POINT bound; it does not
+//! (and was never claimed to) extend that bound across a whole block of
+//! indices.
+//!
+//! **Independent corroboration, not previously cross-referenced from this
+//! file:** `derivative.rs`'s own `declare_has_derivative_integral_const`
+//! section comment states plainly that the general (non-constant) case of
+//! Spivak Ch14's Fundamental Theorem "needs additivity of `integral` over a
+//! split point plus a Riemann-sum-vs-`F(x)*(y-x)` estimate — neither built
+//! anywhere in this prelude yet" — written independently of this file's own
+//! `integral_split` entries, about the SAME missing "additivity over a
+//! split" fact, from the consumer side.
+//!
+//! **No kernel declaration was attempted.** The gap is structural (a
+//! whole-sum comparison across differently-scaled meshes, not a hypothesis
+//! this file's existing lemmas can discharge), so — per this task's own
+//! instruction to name a genuinely missing piece rather than build something
+//! that only looks like it discharges it — nothing was written at the term
+//! level. **Precisely what is still needed, unchanged in kind from the third
+//! entry's own conclusion but now confirmed against the fully-landed
+//! prerequisites**: a lemma bounding `abs (riemannSum F a b m_ab -
+//! (riemannSum F a c m_ac + riemannSum F c b m_cb))` for a SUITABLE CHOICE of
+//! `m_ac`/`m_cb` given `m_ab` (or vice versa), via `F`'s uniform continuity
+//! applied ACROSS the crossing block's full index range (not just at
+//! `crossingIndex` itself) — a new sub-development on the same order as the
+//! `riemannSum`→`riemannSum_integral_close` chain this file already carries
+//! (~2,500 lines), not a composition of `crossingCloseClamped` +
+//! `meshScaledLeOfGe` + `riemannSumIntegralClose` +
+//! `le_of_forall_le_add_small`, which between them supply: how close ANY
+//! sufficiently fine SINGLE-interval Riemann sum sits to that interval's own
+//! integral; a closeness bound at ONE boundary sample near `c` with fully
+//! discharged domain-membership hypotheses; Archimedean smallness of a
+//! scaled mesh step; and a way to conclude `Equiv` from an arbitrary-accuracy
+//! bound — none of which, singly or combined, bound the cross-interval,
+//! whole-sum discrepancy `integral_split` needs.
+//!
+//! `creal_prelude_builds`: unaffected by this entry (module documentation
+//! only, no declaration added or changed).
+//!
+//! ## `CReal.integral_split` — checked 2026-08-27 (an EIGHTH lane), landed
+//! [`CRealPrelude::crossing_sample_pairing_close`] (`crossing.rs`), the
+//! term-PAIRING slice this task was sized down to, and hit a WALL one level
+//! deeper than the seventh entry's — the wall is not (only) "no reblock
+//! algebra applies", it is a **type-level mismatch inside `crossing.rs`
+//! itself**.
+//!
+//! **What was buildable, and IS now kernel-checked**:
+//! `crossingCloseClamped` specialized at `c := a + (ofNat i)·stepAb` (an
+//! ordinary `[a,b]`-mesh sample point, `stepAb : CReal` arbitrary) gives,
+//! for a **rational** `deltaAc`, `close_within (F ptI) (F clampedPt)
+//! (1/(e+1))` where `clampedPt := min (a + (ofNat (crossingIndex a ptI
+//! deltaAc))·(ofRat deltaAc)) b` — the index map `j(i) := crossingIndex a
+//! ptI deltaAc`, COMPUTED (no `Exists.rec`), no `Nat.sub` anywhere. Verified
+//! by hand at `i := 0` (`ptI` reduces to `a`, so `j(0) = crossingIndex a a
+//! deltaAc`, and every hypothesis the theorem needs at that instance is
+//! trivial `le_refl`-shaped) and symbolically at arbitrary `i` (the theorem
+//! is universally quantified over `i`, so there is no separate "boundary"
+//! case to special-case: `crossingIndex`'s own recipe is total in its
+//! target argument, unlike a hand-rolled `floor`/`Nat.sub` map would be).
+//! `creal_prelude_builds`: **23.88s** against a same-session baseline in the
+//! 20-22.4s band (noise-dominated, one declaration) —
+//! `every_creal_declaration_is_checked_and_axiom_free` (`--release`)
+//! confirms it is a checked, axiom-free `Theorem`.
+//!
+//! **Why "rational `deltaAc`" is not a stylistic choice but the actual
+//! boundary of what type-checks**: `crossingIndex`'s (hence
+//! `crossingCloseClamped`'s) step parameter is `Rat`, not `CReal` —
+//! `declare_crossing_index`'s `delta_fv` is bound at `rat_ty_` in the
+//! kernel, and `build_scaled` computes `Rat.inv delta`, a DECIDABLE
+//! rational inverse. The natural cross-mesh step for an ARBITRARY split
+//! point `c`, `deltaAc := (c−a)·ofRat(natDivSucc 1 m_ac)`, is `CReal`-valued
+//! whenever `c−a` is not itself rational — so `crossingIndex a ptI deltaAc`
+//! **does not even parse** for a general `c`, let alone need a soundness
+//! argument. This is the SAME "not a computable rational multiple" fact the
+//! seventh entry names, sharpened from "no algebra applies" to the precise
+//! signature that blocks it.
+//!
+//! **The rescue that does NOT work for free**: this prelude's only
+//! `CReal`-level inverse, `CReal.inv (x) (k) (h : PosBound x k) : CReal`
+//! (`creal/inverse.rs`, ADR-0510 phase F3), could build `(c−a)⁻¹` given an
+//! explicit positivity witness — but `crossing.rs`'s internal recipe
+//! (`build_scaled`, `scale_cancels`, the four `bucketIndex` closeness
+//! lemmas' composition) is hard-wired to `Rat.inv` throughout; none of it is
+//! stated against `CReal.inv`. Pre-rescaling `ptI` by `(c−a)⁻¹` so
+//! `crossingIndex` only ever sees a literal `Rat` delta is possible in
+//! principle, but the resulting closeness bound would be stated in the
+//! RESCALED (unit) coordinate, and translating it back to a bound on `|ptI
+//! − ptAc(j(i))|` in ORIGINAL units needs multiplying back through by the
+//! `CReal` factor `(c−a)` — a REAL (not `Nat`, unlike
+//! [`CRealPrelude::mesh_scaled_le_of_ge`]) scaling step with no existing
+//! lemma covering it. That is a genuinely new sub-development, not a
+//! wiring exercise, and is NOT attempted here.
+//!
+//! **What this slice does NOT reach**: the block-level summation
+//! (`abs_sumRange_le` + `sumRange_le` over the paired terms) was not
+//! attempted — it needs, in addition to the general (non-rational-`deltaAc`)
+//! pairing lemma above, a Nat-arithmetic bound placing `j(i) ≤ m_ac` for
+//! every `i` up to the crossing index (so `ptAc(j(i))` is an actual term of
+//! `riemannSum F a c m_ac`, not merely a nearby real value), which is itself
+//! unbuilt. **Negative control, checked**: this pairing lemma's conclusion
+//! is an inequality (`close_within`, i.e. `abs (…) ≤ ofRat (1/(e+1))`)
+//! gated entirely behind caller-supplied `h_upper`/`h_lower` hypotheses that
+//! themselves encode mesh fineness — there is no substitution of `m_ac`
+//! (equivalently, of `deltaAc`) that turns this into an unconditional claim,
+//! so it cannot collapse into the false fixed-mesh interval-additivity
+//! equality the task's negative control names.
+//!
+//! **Recommended next slice**: EITHER (a) restrict `integral_split`'s own
+//! statement to the case `c := a + ofRat q` (`q : Rat`, giving `deltaAc :=
+//! q·natDivSucc(1,m_ac)`, directly usable by
+//! [`CRealPrelude::crossing_sample_pairing_close`] as built) and prove the
+//! rational-split-point special case of interval additivity first, or (b)
+//! build the real-scaled analogue of `mesh_scaled_le_of_ge` needed to
+//! translate a `CReal.inv`-rescaled closeness bound back to original units,
+//! which unblocks the general `c`.
 
 use super::completeness::half_shift_le;
 use super::convergence::{

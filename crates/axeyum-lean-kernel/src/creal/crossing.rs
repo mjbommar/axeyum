@@ -1969,3 +1969,146 @@ pub(super) fn declare_crossing_close_clamped(
         value,
     })
 }
+
+// --- `riemannSampleCrossingClose`: the FIRST SLICE of the cross-mesh
+// whole-sum bound (`integral.rs`'s SEVENTH 2026-08-27 module doc entry) --
+// [`declare_crossing_close_clamped`] specialized at `c := ptI`, an ordinary
+// Riemann-sum sample point, RESTRICTED to a rational `deltaAc` -- see
+// [`CRealPrelude::crossing_sample_pairing_close`]'s own doc comment for why
+// the restriction is load-bearing (`crossingIndex`'s step is `Rat`, not
+// `CReal`) and precisely what would be needed to lift it. -----------------
+
+/// Admit [`CRealPrelude::crossing_sample_pairing_close`]. See that field's
+/// own doc comment for the statement and for the general (non-rational
+/// `deltaAc`) case this does NOT attempt.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here
+/// means the kernel **refused** a proof, not that a script gave up.
+#[allow(clippy::too_many_lines)]
+pub(super) fn declare_crossing_sample_pairing_close(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let rat_ty_ = crate::rat_prelude::ops::rat_ty(d);
+    let fn_ty = d.arrow(carrier, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+
+    let step_ab_fv = d.fresh_fvar();
+    let step_ab = d.kernel().fvar(step_ab_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let delta_ac_fv = d.fresh_fvar();
+    let delta_ac = d.kernel().fvar(delta_ac_fv);
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+
+    // pt_i := a + (ofNat i) * step_ab -- the [a,b]-mesh's i-th sample point
+    // for an ARBITRARY CReal step `step_ab` (not necessarily `riemannSum`'s
+    // own `delta_of`, which this file cannot see -- reproduced verbatim from
+    // `integral.rs`'s private `sample_point`, per this file's own
+    // per-module-copy convention).
+    let of_nat_i = d.const_app(p.of_nat, &[i]);
+    let i_step = cmul(d, p, of_nat_i, step_ab);
+    let pt_i = cadd(d, p, a, i_step);
+
+    let zero_rat = rzero(d, p.rat);
+    let hpos_ty = d.const_app(p.rat.lt, &[zero_rat, delta_ac]);
+    let hpos_fv = d.fresh_fvar();
+    let hpos = d.kernel().fvar(hpos_fv);
+
+    let hai_ty = cle(d, p, a, pt_i);
+    let hai_fv = d.fresh_fvar();
+    let hai = d.kernel().fvar(hai_fv);
+    let hib_ty = cle(d, p, pt_i, b);
+    let hib_fv = d.fresh_fvar();
+    let hib = d.kernel().fvar(hib_fv);
+
+    // Same recipe `declare_crossing_close_clamped` uses internally at
+    // `(a, c, delta) := (a, pt_i, delta_ac)`, rebuilt here so this
+    // declaration's own hypothesis/conclusion types are the IDENTICAL
+    // `ExprId` shapes the `crossing_close_clamped` application below
+    // produces by substitution.
+    let slack = sample_slack(d, p, a, pt_i, delta_ac);
+    let clamped_pt = d.const_app(p.min, &[slack.sample_pt, b]);
+
+    let modulus_fn = d.const_app(p.uc_modulus, &[f, a, b, u]);
+    let outer = d.apply(modulus_fn, &[e]);
+    let one_nat = d.num(1);
+    let bound_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, outer]);
+    let bound_embed = embed(d, p, bound_rat);
+
+    let h_upper_ty = cle(d, p, slack.slack_upper, bound_embed);
+    let h_upper_fv = d.fresh_fvar();
+    let h_upper = d.kernel().fvar(h_upper_fv);
+    let neg_slack_lower = cneg(d, p, slack.slack_lower);
+    let h_lower_ty = cle(d, p, neg_slack_lower, bound_embed);
+    let h_lower_fv = d.fresh_fvar();
+    let h_lower = d.kernel().fvar(h_lower_fv);
+
+    // --- the proof body: a direct application of `crossing_close_clamped`
+    // at `c := pt_i`, `delta := delta_ac` -----------------------------------
+
+    let proof_body = d.lemma(
+        p.crossing_close_clamped,
+        &[
+            f, a, b, pt_i, delta_ac, e, u, hpos, hai, hib, h_upper, h_lower,
+        ],
+    );
+
+    let out_rat_e = d.const_app(p.rat.nat_div_succ, &[one_nat, e]);
+    let f_pt_i = d.apply(f, &[pt_i]);
+    let f_clamped = d.apply(f, &[clamped_pt]);
+    let conclusion_ty = close_within(d, p, f_pt_i, f_clamped, out_rat_e);
+
+    let ty = {
+        let after_hlower = d.arrow(h_lower_ty, conclusion_ty);
+        let after_hupper = d.arrow(h_upper_ty, after_hlower);
+        let after_hib = d.arrow(hib_ty, after_hupper);
+        let after_hai = d.arrow(hai_ty, after_hib);
+        let after_hpos = d.arrow(hpos_ty, after_hai);
+        let over_e = d.pi_fv(e_fv, nat, after_hpos);
+        let over_delta_ac = d.pi_fv(delta_ac_fv, rat_ty_, over_e);
+        let over_i = d.pi_fv(i_fv, nat, over_delta_ac);
+        let over_step_ab = d.pi_fv(step_ab_fv, carrier, over_i);
+        let after_u = d.pi_fv(u_fv, u_ty, over_step_ab);
+        let over_b = d.pi_fv(b_fv, carrier, after_u);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        d.pi_fv(f_fv, fn_ty, over_a)
+    };
+    let value = {
+        let with_hlower = d.lam_fv(h_lower_fv, h_lower_ty, proof_body);
+        let with_hupper = d.lam_fv(h_upper_fv, h_upper_ty, with_hlower);
+        let with_hib = d.lam_fv(hib_fv, hib_ty, with_hupper);
+        let with_hai = d.lam_fv(hai_fv, hai_ty, with_hib);
+        let with_hpos = d.lam_fv(hpos_fv, hpos_ty, with_hai);
+        let over_e = d.lam_fv(e_fv, nat, with_hpos);
+        let over_delta_ac = d.lam_fv(delta_ac_fv, rat_ty_, over_e);
+        let over_i = d.lam_fv(i_fv, nat, over_delta_ac);
+        let over_step_ab = d.lam_fv(step_ab_fv, carrier, over_i);
+        let with_u = d.lam_fv(u_fv, u_ty, over_step_ab);
+        let over_b = d.lam_fv(b_fv, carrier, with_u);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        d.lam_fv(f_fv, fn_ty, over_a)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.crossing_sample_pairing_close,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}

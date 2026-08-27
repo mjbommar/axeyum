@@ -126,7 +126,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 430] = [
+    let expected: [(&str, crate::NameId, &str); 431] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -422,6 +422,11 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         (
             "CReal.crossingCloseClamped",
             p.crossing_close_clamped,
+            "theorem",
+        ),
+        (
+            "CReal.riemannSampleCrossingClose",
+            p.crossing_sample_pairing_close,
             "theorem",
         ),
         ("CReal.sampleUpperBound", p.sample_upper_bound, "theorem"),
