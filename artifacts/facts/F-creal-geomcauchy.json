@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-geomcauchy",
+  "title": "The base-1/2 geometric partial sums form a Cauchy sequence",
+  "statement": "Cauchy (sumRange (fun n => pow half n)) -- the geometric series' convergence, Spivak Ch.22-23's standard geometric-decay estimate at the concrete ratio 1/2. Eliminates the Nat.le_total disjunction (never branching on the undecidable CReal.le itself) and calls the ordered-pair bound geomCauchyOrderedHalf at whichever of (m,n)/(n,m) satisfies its own a<=b side condition, with the single fixed witness K := 7. This is CLAUDE.md's named CReal.geomCauchy, and it is distinct from the not-yet-registered general-base CReal.geomCauchyOfLt (on an unmerged sibling branch, out of scope for this batch).",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CReal.geomCauchy : CReal.Cauchy (CReal.sumRange (fun (x0 : AxNat) => CReal.pow (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) (AxNat.succ AxNat.zero))) x0))",
+    "fragment": "CReal",
+    "free_symbols": [],
+    "kernel_theorem": "CReal.geomCauchy"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-le-total",
+    "F:rat-add-comm",
+    "F:rat-bounds-neg",
+    "F:rat-neg-sub"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.geomCauchy",
+      "kind": "kernel-term",
+      "supports": "CReal.geomCauchy is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- geomCauchy 2>/dev/null | grep -cE '^CReal\\.geomCauchy[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "build_creal_prelude admits CReal.geomCauchy through the trusted Kernel::add_declaration gate. theorem_dependency_inventory exits non-zero for a named filter matching nothing; grep -c (never -q) both consumes the pipe and asserts the exact tab-anchored line is present. Verified on this tree: the command currently prints exactly one matching line for CReal.geomCauchy. --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-CReal.geomCauchy",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.geomCauchy",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: creal: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: creal trusted surface = 0'. That bounds every declaration in the creal environment. --require-axiom-free <name> errors for a prelude never built by this run rather than silently passing on zero rows. --release is MANDATORY here."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/exponential.rs, declare_geom_cauchy)",
+    "source": "theorem name and canonical type read via a standalone probe binary depending on axeyum-lean-kernel by path, calling only its public Kernel API (environment(), display_name(), render_lean(), axiom_footprint(), theorem_dependencies()) -- no in-tree example prints this theorem's own type directly. Direct dependency edges cross-checked against theorem_dependency_inventory's own output on the same tree. The probe was built and run in the session scratchpad and deleted after use; crates/ source was not touched to produce this batch."
+  },
+  "notes": "theorem_dependency_inventory's direct-edge set for CReal.geomCauchy also names CReal.geomCauchyOrderedHalf, the ordered-pair leaf bound this theorem's own case split consumes, which is not a registered ledger fact yet; it is omitted from depends_on rather than registered speculatively. Do NOT confuse with CReal.geomCauchyOfLt (general base 0<=x<1), which lives on an unmerged sibling branch a lane is building on right now and is deliberately NOT registered here per this batch's scope.",
+  "external_status": "proved"
+}

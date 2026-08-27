@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-sumrange-cauchy-of-dominated",
+  "title": "Dominated convergence, Cauchy form: a series bounded by a Cauchy series is Cauchy",
+  "statement": "forall f g, (forall k, le (abs (f k)) (g k)) -> Cauchy (sumRange g) -> Cauchy (sumRange f) -- the comparison test's Cauchy half. Eliminates the Cauchy witness's existential on the hypothesis, splits forall m n via the DECIDABLE Nat.le_total (never branching on the undecidable CReal.le itself), and in each branch instantiates the ordered-pair normalized bound at whichever of (m,n)/(n,m) satisfies its own a<=b side condition.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CReal.sumRange_cauchy_of_dominated : ((x0 : ((x0 : AxNat) -> CReal)) -> ((x1 : ((x1 : AxNat) -> CReal)) -> ((x2 : ((x2 : AxNat) -> CReal.le (CReal.abs (x0 x2)) (x1 x2))) -> ((x3 : CReal.Cauchy (CReal.sumRange x1)) -> CReal.Cauchy (CReal.sumRange x0)))))",
+    "fragment": "CReal",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "kernel_theorem": "CReal.sumRange_cauchy_of_dominated"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-le-total",
+    "F:rat-add-comm",
+    "F:rat-bounds-neg",
+    "F:rat-neg-sub"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.sumRange_cauchy_of_dominated",
+      "kind": "kernel-term",
+      "supports": "CReal.sumRange_cauchy_of_dominated is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- sumRange_cauchy_of_dominated 2>/dev/null | grep -cE '^CReal\\.sumRange_cauchy_of_dominated[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "build_creal_prelude admits CReal.sumRange_cauchy_of_dominated through the trusted Kernel::add_declaration gate. theorem_dependency_inventory exits non-zero for a named filter matching nothing; grep -c (never -q) both consumes the pipe and asserts the exact tab-anchored line is present. Verified on this tree: the command currently prints exactly one matching line for CReal.sumRange_cauchy_of_dominated. --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-CReal.sumRange_cauchy_of_dominated",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.sumRange_cauchy_of_dominated",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: creal: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: creal trusted surface = 0'. That bounds every declaration in the creal environment. --require-axiom-free <name> errors for a prelude never built by this run rather than silently passing on zero rows. --release is MANDATORY here."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/series.rs, declare_sum_range_cauchy_of_dominated)",
+    "source": "theorem name and canonical type read via a standalone probe binary depending on axeyum-lean-kernel by path, calling only its public Kernel API (environment(), display_name(), render_lean(), axiom_footprint(), theorem_dependencies()) -- no in-tree example prints this theorem's own type directly. Direct dependency edges cross-checked against theorem_dependency_inventory's own output on the same tree. The probe was built and run in the session scratchpad and deleted after use; crates/ source was not touched to produce this batch."
+  },
+  "notes": "theorem_dependency_inventory's direct-edge set for CReal.sumRange_cauchy_of_dominated also names CReal.sumRange_cauchy_dominated_ordered_normalized, the ordered-pair bound this theorem's case split consumes, which is not a registered ledger fact yet; it is omitted from depends_on rather than registered speculatively. This is CLAUDE.md's named 'dominated convergence' theorem in its Cauchy form; F:creal-sumrange-converges-of-dominated is its Converges-conclusion composition.",
+  "external_status": "proved"
+}

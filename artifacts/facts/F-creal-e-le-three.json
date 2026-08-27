@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-e-le-three",
+  "title": "e <= 3, via a genuine {0, 1, k+2} case split at the mathematical kink",
+  "statement": "le e three, three := add two one -- the classical index-2 split sharpening e <= 4: e = sum 1/n! = 1 + 1 + sum_{n>=2} 1/n!, the first two terms exact, and for n >= 2, 1/n! <= (1/2)^(n-1) so the tail is at most sum_{k>=1} (1/2)^k = 1. Built WITHOUT any new Nat-level factorial fact, via the pure CReal-algebra identity 2 * pow half (succ m) ~ pow half m. UNLIKE e_le_four, this is NOT one uniform forall-n bound but a nested Nat.rec on {0, 1, k+2}: expSeriesPartial 0 = expSeriesPartial 1 = 1, not yet geometric, so the index-2 kink is mathematical, not an artifact of the formalization.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CReal.e_le_three : CReal.le CReal.e (CReal.add (CReal.ofRat (Rat.normalize (Int.ofNat (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ AxNat.zero) (AxNat.le.refl (AxNat.succ AxNat.zero)))) CReal.one)",
+    "fragment": "CReal",
+    "free_symbols": [],
+    "kernel_theorem": "CReal.e_le_three"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:creal-e-converges",
+    "F:creal-equiv-refl",
+    "F:creal-equiv-symm",
+    "F:creal-equiv-trans",
+    "F:creal-add-assoc",
+    "F:creal-add-comm",
+    "F:creal-add-le-add",
+    "F:creal-add-zero",
+    "F:creal-le-congr",
+    "F:creal-le-refl",
+    "F:creal-le-trans",
+    "F:creal-left-distrib",
+    "F:creal-mul-assoc",
+    "F:creal-mul-comm",
+    "F:creal-mul-congr",
+    "F:creal-mul-one",
+    "F:creal-ofrat-add",
+    "F:creal-ofrat-le",
+    "F:creal-ofrat-mul",
+    "F:int-mul-comm",
+    "F:nat-le-succ",
+    "F:nat-le-trans",
+    "F:nat-mul-one",
+    "F:nat-one-mul",
+    "F:rat-eq-of-cross",
+    "F:rat-int-le-of-mul-le-mul-right",
+    "F:rat-int-mul-right-cancel",
+    "F:rat-int-zero-le-of-nat",
+    "F:rat-int-zero-mul",
+    "F:rat-nonneg-of-int-nonneg",
+    "F:rat-normalize-add-normalize",
+    "F:rat-normalize-cross",
+    "F:rat-normalize-mul-normalize",
+    "F:rat-zero-le-natdivsucc"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.e_le_three",
+      "kind": "kernel-term",
+      "supports": "CReal.e_le_three is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- e_le_three 2>/dev/null | grep -cE '^CReal\\.e_le_three[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "build_creal_prelude admits CReal.e_le_three through the trusted Kernel::add_declaration gate. theorem_dependency_inventory exits non-zero for a named filter matching nothing; grep -c (never -q) both consumes the pipe and asserts the exact tab-anchored line is present. Verified on this tree: the command currently prints exactly one matching line for CReal.e_le_three. --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-CReal.e_le_three",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.e_le_three",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: creal: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: creal trusted surface = 0'. That bounds every declaration in the creal environment. --require-axiom-free <name> errors for a prelude never built by this run rather than silently passing on zero rows. --release is MANDATORY here."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/exponential.rs, declare_e_le_three)",
+    "source": "theorem name and canonical type read via a standalone probe binary depending on axeyum-lean-kernel by path, calling only its public Kernel API (environment(), display_name(), render_lean(), axiom_footprint(), theorem_dependencies()) -- no in-tree example prints this theorem's own type directly. Direct dependency edges cross-checked against theorem_dependency_inventory's own output on the same tree. The probe was built and run in the session scratchpad and deleted after use; crates/ source was not touched to produce this batch."
+  },
+  "notes": "theorem_dependency_inventory's direct-edge set for CReal.e_le_three also names CReal.converges_upper_bound, CReal.exp_term_le_dominant, CReal.le_of_lt, CReal.pow_nonneg, and CReal.zero_lt_one, none of which is a registered ledger fact yet; they are omitted from depends_on rather than registered speculatively. Registered alongside F:creal-e-le-four deliberately: the two facts record a genuine mathematical contrast the source module's own doc comment calls out -- e_le_four is one uniform bound holding at every n (including n = 0), while e_le_three needs a case split at the index-2 kink where the series stops being loose by a factor of 2. Neither fact supersedes the other; both are worth the ledger.",
+  "external_status": "proved"
+}

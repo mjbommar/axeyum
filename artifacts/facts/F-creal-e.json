@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-e",
+  "title": "Euler's number e is constructed as a total, axiom-free CReal value",
+  "statement": "Euler's number is built as CReal.mk (speedup (diagonal expSeriesPartial) K) (...) -- via CReal.mk on an EXPLICIT, concrete regular sequence, never an Exists-elimination into data. expSeriesPartial n := sumRange expTerm n is the partial sum of 1/k! for k < n. The concrete Cauchy witness K for the dominating geometric series (sumRange expDominant, expDominant n := 2*(1/2)^n) is built by hand through CReal.mul's own index-shift bookkeeping (exp_dominant_cauchy_body_concrete) rather than reused from the existential form CReal.expDominantCauchy, precisely because an Exists-eliminated witness cannot be extracted as DATA for CReal.mk to consume -- Exists.rec targets only Prop. Admitted by the trusted kernel gate with an empty axiom footprint. This is Spivak Ch.18's e.",
+  "formal": {
+    "language": "lean4",
+    "statement": "def CReal.e : CReal",
+    "fragment": "CReal",
+    "free_symbols": [],
+    "kernel_theorem": "CReal.e"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.e",
+      "kind": "kernel-term",
+      "supports": "CReal.e is admitted by the trusted kernel gate as a definition with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "kernel_declaration_projection --require-declaration (DIRECT, fail-on-absence)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration CReal.e --require-kind definition 2>/dev/null | grep -cE '^found[[:space:]]creal[[:space:]]definition[[:space:]]CReal\\.e[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "DIRECT presence check, built this session (Task 1 of this batch): no in-tree example previously inventoried Declaration::Definition by name with fail-on-absence semantics (theorem_dependency_inventory / nat_theorem_inventory / prelude_theorem_inventory all filter to Declaration::Theorem and explicitly exclude Definitions -- 'Definitions, inductives and axioms are excluded' is theorem_dependency_inventory's own stated contract). Added '--require-declaration <name> [--require-kind <kind>]' to kernel_declaration_projection: it searches every constructed prelude's environment for an EXACT display-name match and exits non-zero when none is found, or when --require-kind is given and no match has that kind. Mutation-tested on an isolated /data0 snapshot (scripts/lane-snapshot.sh, never the shared checkout): renaming CReal.integral's display string to \"integral_MUTATED\" at crates/axeyum-lean-kernel/src/creal.rs:4389 made this exact check (run against CReal.integral) return count 0 / exit 1 in the rebuilt binary, while an unrelated control name (CReal.e) in the SAME rebuild still matched and exited 0 -- confirming the check discriminates on the intended declaration's own name, not on the build succeeding globally. --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-CReal.e",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.e",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: creal: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: creal trusted surface = 0'. That bounds every declaration in the creal environment. --require-axiom-free <name> errors for a prelude never built by this run rather than silently passing on zero rows. --release is MANDATORY here."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/exponential.rs, declare_e)",
+    "source": "canonical type read via a standalone probe binary depending on axeyum-lean-kernel by path, calling only its public Kernel API (environment(), display_name(), render_lean(), axiom_footprint()) -- no in-tree theorem-inventory example prints a Definition's own type, since every such example filters to Declaration::Theorem and excludes Definitions. The probe was built and run in the session scratchpad and deleted after use; crates/ source was not touched to produce this batch."
+  },
+  "notes": "depends_on is empty for the same reason F:creal-integral's is: e's own direct building blocks (CReal.expSeriesPartial, CReal.expTerm, CReal.speedup, CReal.mk, the diagonal sequence, the concrete Cauchy witness exp_dominant_cauchy_body_concrete) are either plain Definitions (nothing to register as a proposition) or private, unregistered helpers internal to crates/axeyum-lean-kernel/src/creal/exponential.rs. The propositions ABOUT e (that it converges to its own defining series, its numeric bounds) are the separate facts F:creal-e-converges, F:creal-two-le-e, F:creal-e-le-three, F:creal-e-le-four. This fact's kernel-term evidence now uses the DIRECT --require-declaration checker built in Task 1 of this batch (see declaration_presence_evidence's own notes), not an indirect route through a citing theorem.",
+  "external_status": "proved"
+}
