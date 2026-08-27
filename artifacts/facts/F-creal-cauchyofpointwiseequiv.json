@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-cauchyofpointwiseequiv",
+  "title": "A Cauchy witness transports across a pointwise-Equiv sequence",
+  "statement": "forall G F, (forall n, Equiv (G n) (F n)) -> Cauchy G -> Cauchy F -- the general lemma this lane built to scale a Cauchy witness across a pointwise Equiv, e.g. CReal.mul_sumRange's index-shifted mul c (sumRange f n) ~ sumRange (scaled f) n bridge. Named explicitly in this batch's brief as part of the exponential domination bridge.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CReal.cauchyOfPointwiseEquiv : ((x0 : ((x0 : AxNat) -> CReal)) -> ((x1 : ((x1 : AxNat) -> CReal)) -> ((x2 : ((x2 : AxNat) -> CReal.Equiv (x0 x2) (x1 x2))) -> ((x3 : CReal.Cauchy x0) -> CReal.Cauchy x1))))",
+    "fragment": "CReal",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "kernel_theorem": "CReal.cauchyOfPointwiseEquiv"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:rat-add-assoc",
+    "F:rat-add-comm",
+    "F:rat-bounds-add",
+    "F:rat-bounds-neg",
+    "F:rat-natdivsucc-add",
+    "F:rat-neg-sub",
+    "F:rat-sub-add-sub"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.cauchyOfPointwiseEquiv",
+      "kind": "kernel-term",
+      "supports": "CReal.cauchyOfPointwiseEquiv is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- cauchyOfPointwiseEquiv 2>/dev/null | grep -cE '^CReal\\.cauchyOfPointwiseEquiv[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "build_creal_prelude admits CReal.cauchyOfPointwiseEquiv through the trusted Kernel::add_declaration gate. theorem_dependency_inventory exits non-zero for a named filter matching nothing; grep -c (never -q) both consumes the pipe and asserts the exact tab-anchored line is present. Verified on this tree: the command currently prints exactly one matching line for CReal.cauchyOfPointwiseEquiv. --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-CReal.cauchyOfPointwiseEquiv",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.cauchyOfPointwiseEquiv",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: creal: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: creal trusted surface = 0'. That bounds every declaration in the creal environment. --require-axiom-free <name> errors for a prelude never built by this run rather than silently passing on zero rows. --release is MANDATORY here."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/exponential.rs, declare_cauchy_of_pointwise_equiv)",
+    "source": "theorem name and canonical type read via a standalone probe binary depending on axeyum-lean-kernel by path, calling only its public Kernel API (environment(), display_name(), render_lean(), axiom_footprint(), theorem_dependencies()) -- no in-tree example prints this theorem's own type directly. Direct dependency edges cross-checked against theorem_dependency_inventory's own output on the same tree. The probe was built and run in the session scratchpad and deleted after use; crates/ source was not touched to produce this batch."
+  },
+  "notes": "theorem_dependency_inventory's direct-edge set for CReal.cauchyOfPointwiseEquiv names only prelude Rat lemmas, ALL of which are already registered ledger facts, so depends_on is complete with no omissions for this fact.",
+  "external_status": "proved"
+}

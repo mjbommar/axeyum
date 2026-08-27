@@ -3,6 +3,48 @@
 //! Rows carry both all-kind direct declaration references and the theorem-only
 //! subset. The latter remains the proof dependency relation; the former is
 //! search vocabulary and must not be confused with a transitive closure.
+//!
+//! # `--require-declaration <name>` — a DIRECT, discriminating presence check
+//!
+//! Every in-tree inventory example (`theorem_dependency_inventory`,
+//! `nat_theorem_inventory`, `prelude_theorem_inventory`) filters to
+//! `Declaration::Theorem` and explicitly excludes `Definition`s: "Definitions,
+//! inductives and axioms are excluded" is `theorem_dependency_inventory`'s own
+//! stated contract. So before this flag existed, no in-tree tool could assert
+//! "definition `X` exists" with a non-zero exit when it does not — a fact
+//! whose evidence is a `Definition` (e.g. `CReal.integral`, `CReal.e`) could
+//! only be checked INDIRECTLY, via some theorem that cites it.
+//!
+//! `--require-declaration <name>` searches every constructed prelude's
+//! environment (this binary already builds all of them for the unfiltered
+//! mode) for a declaration whose `Kernel::display_name` is EXACTLY `<name>`
+//! (e.g. `CReal.integral`, not a substring match), of ANY kind — axiom,
+//! definition, theorem, opaque, inductive, constructor, recursor, or
+//! quotient. On a match it prints `found\t<prelude-label>\t<kind>\t<name>\t
+//! <footprint-size>` to stdout and exits 0. On NO match across every prelude
+//! it prints an error to stderr and exits 1 — the same discriminating shape
+//! `theorem_dependency_inventory` uses for a named filter matching nothing:
+//! a deleted or renamed declaration must not read as a present one.
+//!
+//! Optional `--require-kind <kind>` (matching [`kind`]'s own strings:
+//! `axiom`, `definition`, `theorem`, `opaque`, `inductive`, `constructor`,
+//! `recursor`, `quotient`) additionally requires the match be of that exact
+//! kind — a `Theorem` named `Foo.bar` must not satisfy a check meant to
+//! confirm a `Definition` named `Foo.bar` exists (they cannot collide in this
+//! kernel's namespacing, but the flag makes the intent explicit and checked
+//! rather than assumed).
+//!
+//! ```sh
+//! cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection \
+//!   -- --require-declaration CReal.integral --require-kind definition
+//! ```
+//!
+//! `--release` is MANDATORY: this binary builds `creal`/`complex`/`cpoint`,
+//! which recurse deep enough to overflow the default debug thread stack (the
+//! deep-stack worker in `main` below covers the MAIN thread's frame, not
+//! debug-vs-release per-frame size).
+
+use std::process::ExitCode;
 
 use axeyum_lean_kernel::{
     Declaration, Kernel, build_arith_prelude, build_characterization, build_complex_prelude,
@@ -85,7 +127,24 @@ fn emit(label: &str, kernel: &Kernel) {
     }
 }
 
-fn main() {
+/// If `target` is present in `kernel`'s environment (by exact rendered
+/// display name), print `found\t<label>\t<kind>\t<name>\t<footprint-size>`
+/// and return its kind string. Returns `None` on no match in this prelude.
+fn check_declaration(label: &str, kernel: &Kernel, target: &str) -> Option<&'static str> {
+    kernel.environment().iter().find_map(|(name, declaration)| {
+        let rendered = kernel.display_name(*name).to_string();
+        if rendered == target {
+            let declaration_kind = kind(declaration);
+            let footprint_size = kernel.axiom_footprint(*name).len();
+            println!("found\t{label}\t{declaration_kind}\t{rendered}\t{footprint_size}");
+            Some(declaration_kind)
+        } else {
+            None
+        }
+    })
+}
+
+fn main() -> ExitCode {
     // RUN THE WHOLE PROJECTION ON A DEEP STACK, not the process's main thread.
     //
     // This example builds every constructed prelude, and `Kernel::add_declaration`
@@ -101,49 +160,131 @@ fn main() {
     // caller that does not read it. Carry the one documented envelope
     // (`axeyum_lean_kernel::DEEP_STACK_BYTES`, see `src/stack.rs`) here and
     // every caller works unchanged, debug or release.
-    axeyum_lean_kernel::on_a_deep_stack(run);
+    axeyum_lean_kernel::on_a_deep_stack(run)
 }
 
-fn run() {
+fn run() -> ExitCode {
+    let args: Vec<String> = std::env::args().collect();
+    let require_declaration = args
+        .iter()
+        .position(|a| a == "--require-declaration")
+        .and_then(|i| args.get(i + 1))
+        .cloned();
+    let require_kind = args
+        .iter()
+        .position(|a| a == "--require-kind")
+        .and_then(|i| args.get(i + 1))
+        .cloned();
+
+    let unfiltered = require_declaration.is_none();
+
     let mut logic = Kernel::new();
     let _ = build_logic_prelude(&mut logic).expect("logic prelude must build");
-    emit("logic", &logic);
+    if unfiltered {
+        emit("logic", &logic);
+    }
 
     let mut nat = Kernel::new();
     let _ = build_nat_prelude(&mut nat).expect("Nat prelude must build");
-    emit("nat", &nat);
+    if unfiltered {
+        emit("nat", &nat);
+    }
 
     let mut axreal = Kernel::new();
     let _ = build_arith_prelude(&mut axreal).expect("AxReal prelude must build");
-    emit("axreal", &axreal);
+    if unfiltered {
+        emit("axreal", &axreal);
+    }
 
     let mut integer = Kernel::new();
     let _ = build_int_prelude(&mut integer).expect("Int prelude must build");
-    emit("integer", &integer);
+    if unfiltered {
+        emit("integer", &integer);
+    }
 
     let mut characterization = Kernel::new();
     let _ =
         build_characterization(&mut characterization).expect("Nat/Int characterization must build");
-    emit("characterization", &characterization);
+    if unfiltered {
+        emit("characterization", &characterization);
+    }
 
     let mut rational = Kernel::new();
     let _ = build_rat_prelude(&mut rational).expect("Rat prelude must build");
-    emit("rat", &rational);
+    if unfiltered {
+        emit("rat", &rational);
+    }
 
     let mut string = Kernel::new();
     let logic_handle = build_logic_prelude(&mut string).expect("logic prelude must build");
     let _ = build_string_prelude(&mut string, logic_handle, 2).expect("String prelude must build");
-    emit("string", &string);
+    if unfiltered {
+        emit("string", &string);
+    }
 
     let mut creal = Kernel::new();
     let _ = build_creal_prelude(&mut creal).expect("CReal prelude must build");
-    emit("creal", &creal);
+    if unfiltered {
+        emit("creal", &creal);
+    }
 
     let mut complex = Kernel::new();
     let _ = build_complex_prelude(&mut complex).expect("Complex prelude must build");
-    emit("complex", &complex);
+    if unfiltered {
+        emit("complex", &complex);
+    }
 
     let mut cpoint = Kernel::new();
     let _ = build_cpoint_prelude(&mut cpoint).expect("CPoint prelude must build");
-    emit("cpoint", &cpoint);
+    if unfiltered {
+        emit("cpoint", &cpoint);
+    }
+
+    let Some(target) = require_declaration else {
+        return ExitCode::SUCCESS;
+    };
+
+    // Check every constructed prelude's environment for the exact rendered
+    // name. A declaration cannot appear in more than one of these disjoint
+    // `Kernel`s under the same fully-qualified name by construction, so the
+    // first match found is the only one possible; we still scan all of them
+    // rather than stopping early so a rename into the wrong prelude cannot
+    // silently pass by matching whichever prelude happens to be checked
+    // first.
+    let matches: Vec<&'static str> = [
+        ("logic", &logic),
+        ("nat", &nat),
+        ("axreal", &axreal),
+        ("integer", &integer),
+        ("characterization", &characterization),
+        ("rat", &rational),
+        ("string", &string),
+        ("creal", &creal),
+        ("complex", &complex),
+        ("cpoint", &cpoint),
+    ]
+    .into_iter()
+    .filter_map(|(label, kernel)| check_declaration(label, kernel, &target))
+    .collect();
+
+    if matches.is_empty() {
+        eprintln!(
+            "error: no declaration named {target:?} exists in any constructed prelude's \
+             environment. Asking for a declaration and finding none is a failure, not an \
+             empty answer -- a deleted or renamed declaration must not read as a present one."
+        );
+        return ExitCode::FAILURE;
+    }
+
+    if let Some(wanted_kind) = require_kind {
+        if !matches.iter().any(|&k| k == wanted_kind) {
+            eprintln!(
+                "error: {target:?} exists but not with kind {wanted_kind:?} (found kind(s): {})",
+                matches.join(",")
+            );
+            return ExitCode::FAILURE;
+        }
+    }
+
+    ExitCode::SUCCESS
 }

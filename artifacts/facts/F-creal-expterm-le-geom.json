@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-expterm-le-geom",
+  "title": "1/n! is dominated by the geometric term 2/2^n",
+  "statement": "forall n, le (expTerm n) (ofRat (2 / 2^n)) -- the pointwise domination that lets the exponential series' Cauchy property and e's numeric bounds all be derived from the geometric series' own Cauchy property, without ever constructing a Nat-level factorial growth rate directly. Part of the domination bridge (with expDominantCauchy and cauchyOfPointwiseEquiv) this batch's brief names explicitly.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CReal.expTerm_le_geom : ((x0 : AxNat) -> CReal.le (CReal.expTerm x0) (CReal.ofRat (Rat.normalize (Int.ofNat (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.pow (AxNat.succ (AxNat.succ AxNat.zero)) x0) (AxNat.pow_pos (AxNat.succ (AxNat.succ AxNat.zero)) x0 (AxNat.le_succ_succ AxNat.zero (AxNat.succ AxNat.zero) (AxNat.zero_le (AxNat.succ AxNat.zero)))))))",
+    "fragment": "CReal",
+    "free_symbols": [
+      "x0"
+    ],
+    "kernel_theorem": "CReal.expTerm_le_geom"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:creal-ofrat-le",
+    "F:int-mul-assoc",
+    "F:int-mul-comm",
+    "F:nat-le-succ-succ",
+    "F:nat-le-trans",
+    "F:nat-mul-assoc",
+    "F:nat-mul-comm",
+    "F:nat-mul-le-mul-left",
+    "F:nat-one-le-factorial",
+    "F:nat-one-le-mul",
+    "F:nat-one-mul",
+    "F:nat-zero-le",
+    "F:rat-int-le-of-mul-le-mul-right",
+    "F:rat-int-mul-le-mul-right",
+    "F:rat-normalize-cross"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.expTerm_le_geom",
+      "kind": "kernel-term",
+      "supports": "CReal.expTerm_le_geom is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- expTerm_le_geom 2>/dev/null | grep -cE '^CReal\\.expTerm_le_geom[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "build_creal_prelude admits CReal.expTerm_le_geom through the trusted Kernel::add_declaration gate. theorem_dependency_inventory exits non-zero for a named filter matching nothing; grep -c (never -q) both consumes the pipe and asserts the exact tab-anchored line is present. Verified on this tree: the command currently prints exactly one matching line for CReal.expTerm_le_geom. --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-CReal.expTerm_le_geom",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.expTerm_le_geom",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: creal: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: creal trusted surface = 0'. That bounds every declaration in the creal environment. --require-axiom-free <name> errors for a prelude never built by this run rather than silently passing on zero rows. --release is MANDATORY here."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/exponential.rs, declare_exp_term_le_geom)",
+    "source": "theorem name and canonical type read via a standalone probe binary depending on axeyum-lean-kernel by path, calling only its public Kernel API (environment(), display_name(), render_lean(), axiom_footprint(), theorem_dependencies()) -- no in-tree example prints this theorem's own type directly. Direct dependency edges cross-checked against theorem_dependency_inventory's own output on the same tree. The probe was built and run in the session scratchpad and deleted after use; crates/ source was not touched to produce this batch."
+  },
+  "notes": "theorem_dependency_inventory's direct-edge set for CReal.expTerm_le_geom also names Nat.pow_pos, which is not a registered ledger fact yet; it is omitted from depends_on rather than registered speculatively. This is the FIRST domination step (bounding expTerm by a Rat literal geometric term); CReal.exp_term_le_dominant bridges the same bound to the CReal.pow value CReal.expDominant and is not yet registered (see F:creal-e-le-three's notes).",
+  "external_status": "proved"
+}
