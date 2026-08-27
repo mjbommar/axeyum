@@ -80,7 +80,9 @@
 //!   `_mul`/`_const`/`_id`, not attempted here) and a sign change witness,
 //!   neither built in this slice.
 
-use super::trig::{cabs, cadd, cle, cmul, cneg, cpow, czero, exp_dominant_cauchy_body_concrete, one_c};
+use super::trig::{
+    cabs, cadd, cle, cmul, cneg, cpow, czero, exp_dominant_cauchy_body_concrete, one_c,
+};
 use super::{CRealPrelude, DERIVED_HEIGHT, creal_ty, equiv};
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
@@ -258,7 +260,15 @@ fn declare_cos_fn_term_abs_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(),
     let refl_neg_pow = d.lemma(p.equiv_refl, &[neg_pow]);
     let neg_pow_le_zero = d.lemma(
         p.le_congr,
-        &[neg_pow, neg_pow, neg_zero, zero_c, refl_neg_pow, nz_eq, step1],
+        &[
+            neg_pow,
+            neg_pow,
+            neg_zero,
+            zero_c,
+            refl_neg_pow,
+            nz_eq,
+            step1,
+        ],
     );
     let zlo = zero_le_one(d, p);
     let neg_pow_le_one = d.lemma(p.le_trans, &[neg_pow, zero_c, one_cc, neg_pow_le_zero, zlo]);
@@ -272,7 +282,14 @@ fn declare_cos_fn_term_abs_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(),
     let le_refl_abs = d.lemma(p.le_refl, &[abs_cos_term_k]);
     let mul_bound = d.lemma(
         p.abs_mul_le_of_bounds,
-        &[cos_term_k, pow_x_2k, abs_cos_term_k, one_cc, le_refl_abs, abs_pow_le_one],
+        &[
+            cos_term_k,
+            pow_x_2k,
+            abs_cos_term_k,
+            one_cc,
+            le_refl_abs,
+            abs_pow_le_one,
+        ],
     );
 
     // fold mul (abs (cosTerm k)) one ~ abs (cosTerm k) via mul_one, then
@@ -300,7 +317,10 @@ fn declare_cos_fn_term_abs_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(),
         d.apply(ed, &[k])
     };
     let cos_dom = d.lemma(p.cos_term_abs_le_dominant, &[k]);
-    let final_proof = d.lemma(p.le_trans, &[lhs_abs, abs_cos_term_k, dominant_k, mul_bound2, cos_dom]);
+    let final_proof = d.lemma(
+        p.le_trans,
+        &[lhs_abs, abs_cos_term_k, dominant_k, mul_bound2, cos_dom],
+    );
 
     let value = {
         let with_k = d.lam_fv(k_fv, nat, final_proof);
@@ -391,7 +411,9 @@ pub(super) fn declare_cos_fn(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), 
 
     let u0 = d.lemma(
         p.weierstrass_m_test,
-        &[f0, mseq0, zero_c, one_cc, hab0, hcong0, k_g, hdom0, hcauchy0],
+        &[
+            f0, mseq0, zero_c, one_cc, hab0, hcong0, k_g, hdom0, hcauchy0,
+        ],
     );
     let ty0 = d.kernel().infer(u0)?;
 
@@ -437,7 +459,10 @@ pub(super) fn declare_cos_fn(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), 
     })
 }
 
-pub(super) fn declare_cos_fn_family(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+pub(super) fn declare_cos_fn_family(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
     declare_cos_fn_term(d, p)?;
     declare_cos_fn_term_congr(d, p)?;
     declare_cos_fn_term_abs_le(d, p)?;
