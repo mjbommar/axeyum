@@ -121,6 +121,7 @@ use super::deriv_unique::equiv_of_sub_equiv_zero;
 use super::trig::{
     cabs, cadd, cle, cmul, cneg, cpow, czero, exp_dominant_cauchy_body_concrete, one_c,
 };
+use super::uniform_continuity::abs_neg_le;
 use super::uniform_convergence::close_within_of_within_at;
 use super::{CRealPrelude, DERIVED_HEIGHT, creal_ty, embed, equiv};
 use crate::KernelError;
@@ -517,40 +518,6 @@ fn neg_add_self(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
     let comm_symm = esymm(d, p, x_nx, nx_x, comm);
     let cancel = d.lemma(p.add_neg, &[x]);
     echain(d, p, nx_x, &[(x_nx, comm_symm), (zero_c, cancel)])
-}
-
-/// `Equiv (neg (neg x)) x`. Reproduced (Rust privacy) from
-/// `creal/deriv_unique.rs`'s private helper of the same shape.
-fn double_neg(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
-    let nx = cneg(d, p, x);
-    let nnx = cneg(d, p, nx);
-    let nx_nnx = cadd(d, p, nx, nnx);
-    let nnx_nx = cadd(d, p, nnx, nx);
-    let comm = d.lemma(p.add_comm, &[nx, nnx]);
-    let comm_symm = esymm(d, p, nx_nnx, nnx_nx, comm);
-    let an = d.lemma(p.add_neg, &[nx]);
-    let zero_c = czero(d, p);
-    let h = echain(d, p, nnx_nx, &[(nx_nnx, comm_symm), (zero_c, an)]);
-    equiv_of_sub_equiv_zero(d, p, nnx, x, h)
-}
-
-/// From `h : le (abs w) bound`, derive `le (abs (neg w)) bound`. Reproduced
-/// (Rust privacy) from `creal/uniform_continuity.rs`'s private `abs_neg_le`.
-fn abs_neg_le(d: &mut IntDev<'_>, p: CRealPrelude, w: ExprId, q: ExprId, h: ExprId) -> ExprId {
-    let abs_w = cabs(d, p, w);
-    let neg_w = cneg(d, p, w);
-    let w_le_absw = d.lemma(p.le_abs_self, &[w]);
-    let w_le_q = d.lemma(p.le_trans, &[w, abs_w, q, w_le_absw, h]);
-    let negw_le_absw = d.lemma(p.neg_le_abs, &[w]);
-    let negw_le_q = d.lemma(p.le_trans, &[neg_w, abs_w, q, negw_le_absw, h]);
-
-    let neg_neg_w = cneg(d, p, neg_w);
-    let nn = double_neg(d, p, w); // Equiv neg_neg_w w
-    let nn_symm = esymm(d, p, neg_neg_w, w, nn); // Equiv w neg_neg_w
-    let refl_q = erefl(d, p, q);
-    let nnw_le_q = d.lemma(p.le_congr, &[w, neg_neg_w, q, q, nn_symm, refl_q, w_le_q]);
-
-    d.lemma(p.abs_le, &[neg_w, q, negw_le_q, nnw_le_q])
 }
 
 /// From `h : close_within x y q`, derive `close_within y x q`. Reproduced

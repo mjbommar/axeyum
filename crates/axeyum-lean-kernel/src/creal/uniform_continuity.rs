@@ -2773,8 +2773,17 @@ fn mul_neg_equiv(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> E
     neg_unique(d, p, xy, x_ny, h_sum_zero)
 }
 
-/// From `h : le (abs w) q`, derive `le (abs (neg w)) q`.
-fn abs_neg_le(d: &mut IntDev<'_>, p: CRealPrelude, w: ExprId, q: ExprId, h: ExprId) -> ExprId {
+/// From `h : le (abs w) q`, derive `le (abs (neg w)) q`. `creal/exp_fn.rs`
+/// and `creal/trig_fn.rs` both had a copy of this same helper (the latter
+/// out of scope here, a live lane); `exp_fn.rs` now imports this one
+/// instead of keeping its own.
+pub(super) fn abs_neg_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    w: ExprId,
+    q: ExprId,
+    h: ExprId,
+) -> ExprId {
     let abs_w = cabs(d, p, w);
     let neg_w = cneg(d, p, w);
     let w_le_absw = d.lemma(p.le_abs_self, &[w]);
