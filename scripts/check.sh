@@ -562,6 +562,8 @@ step autogenesis-operation-registry python3 scripts/validate-autogenesis-operati
 step autogenesis-operation-registry-tests python3 -m unittest scripts.tests.test_validate_autogenesis_operations
 step autogenesis-producer-contracts python3 scripts/validate-producer-contracts.py
 step autogenesis-producer-contracts-tests python3 -m unittest scripts.tests.test_validate_producer_contracts
+step autogenesis-producer-contract-declines python3 scripts/validate-producer-contract-declines.py
+step autogenesis-producer-contract-declines-tests python3 -m unittest scripts.tests.test_validate_producer_contract_declines
 step autogenesis-authoritative-comparison-tests python3 -m unittest scripts.tests.test_compare_autogenesis_authoritative_chains
 step autogenesis-result python3 scripts/check-autogenesis-1-result.py
 step autogenesis-result-tests python3 -m unittest scripts.tests.test_check_autogenesis_1_result

@@ -116,6 +116,15 @@ autogenesis-producer-contracts:
     python3 scripts/validate-producer-contracts.py
     python3 -m unittest scripts.tests.test_validate_producer_contracts
 
+# Doc 291: contract-driven decline artifacts -- a real producer attempt
+# against a matched contract that came back honestly negative. `fact-frontier.py`
+# reads these back so the selector stops re-presenting a `(fact, contract)`
+# pair a producer already declined; this validator is what keeps a decline
+# from becoming a cheap way to make the selector shut up about a fact forever.
+autogenesis-producer-contract-declines:
+    python3 scripts/validate-producer-contract-declines.py
+    python3 -m unittest scripts.tests.test_validate_producer_contract_declines
+
 # Validate and exactly regenerate the frozen leakage-safe population contract.
 autogenesis-nursery:
     python3 -m unittest scripts.tests.test_check_autogenesis_nursery
@@ -1102,6 +1111,8 @@ generated-trackers:
     python3 -m unittest scripts.tests.test_validate_autogenesis_operations
     python3 scripts/validate-producer-contracts.py
     python3 -m unittest scripts.tests.test_validate_producer_contracts
+    python3 scripts/validate-producer-contract-declines.py
+    python3 -m unittest scripts.tests.test_validate_producer_contract_declines
     python3 -m unittest scripts.tests.test_fact_frontier
     python3 -m unittest scripts.tests.test_create_autogenesis_chain_catalog
     python3 -m unittest scripts.tests.test_execute_autogenesis_operation

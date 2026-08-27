@@ -3,6 +3,7 @@
   "kind": "axeyum-autogenesis-mathlib-int-add-modeq-left-decline-v1",
   "state": "clean-import-producer-declines-terminal-not-closed",
   "contract": "artifacts/autogenesis/producer-contracts/int-modeq-family-v1.json",
+  "contract_sha256": "c4b52ebf2222226d0a34a11aa99aa06f4bf7a671d8ff90ecf4d40c29977a1dd9",
   "fact_id": "F:ml430-int-add-modeq-left-ee732b5b",
   "fact_sha256": "94f72ddeea1776a3dff1f6f597a131d93e578a9e262720162b426a450a187562",
   "nursery_partition": "train",

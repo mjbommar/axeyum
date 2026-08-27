@@ -896,6 +896,60 @@ SUITES: dict[str, tuple[str, "str | Unittest | Cargo", list[tuple[str, ...]]]] =
             ),
         ],
     ),
+    # --------------------------------------------------------------------
+    # `producer-contract-declines` (doc 291) -- the falsifiability guards on
+    # the new contract-driven decline artifact. The failure mode this suite
+    # exists to catch, verbatim from the task that added it: a decline
+    # artifact becomes a cheap way to make the selector shut up about a fact
+    # forever. Each guard below is a real, independent way that could
+    # happen, and each is expected to die under exactly one mutation.
+    # --------------------------------------------------------------------
+    "producer-contract-declines": (
+        "scripts/validate-producer-contract-declines.py",
+        "scripts.tests.test_validate_producer_contract_declines",
+        [
+            (
+                "fact_id must resolve to a real fact",
+                "    if fact_id not in facts:",
+                "    if False:",
+            ),
+            (
+                "contract path must resolve under producer-contracts/",
+                "    if contracts_dir_resolved not in resolved.parents:",
+                "    if False:",
+            ),
+            (
+                "contract path must resolve to a real file",
+                "    if not resolved.is_file():",
+                "    if False:",
+            ),
+            (
+                "decline_reason must be a typed identifier, never free text",
+                "    if not isinstance(reason, str) or not TYPED_REASON_RE.match(reason):",
+                "    if False:",
+            ),
+            (
+                "producer.result must be exactly \"declined\"",
+                '    if producer["result"] != "declined":',
+                "    if False:",
+            ),
+            (
+                "contract_sha256 must be a well-formed sha256 hex digest",
+                "    if not isinstance(contract_sha256, str) or not SHA256_RE.match(contract_sha256):",
+                "    if False:",
+            ),
+            (
+                "producer.tool must be non-empty (producer identity)",
+                "    if not isinstance(tool, str) or not tool:",
+                "    if False:",
+            ),
+            (
+                "every required top-level key must be present",
+                "    if missing:",
+                "    if False:",
+            ),
+        ],
+    ),
 }
 
 
