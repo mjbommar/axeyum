@@ -84,6 +84,7 @@ pub mod interval_arith;
 pub mod linear_elim;
 mod matrix;
 pub mod mvpoly;
+pub mod mvt;
 mod normalforms;
 pub mod ntheory;
 pub mod ntheory_advanced;
