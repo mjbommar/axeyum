@@ -4281,6 +4281,46 @@ pub struct CRealPrelude {
     /// Ch24's headline theorem) — the uniform limit of uniformly continuous
     /// functions is uniformly continuous.
     pub uniform_limit_uniformly_continuous: NameId,
+
+    // --- polynomials over `CReal` (creal/polynomial.rs) ----------------------
+    /// `CReal.polyEval : (Nat → CReal) → Nat → CReal → CReal` — `polyEval c n
+    /// x := sumRange (fun i => mul (c i) (pow x i)) n`, sum of monomials, not
+    /// Horner. See `creal/polynomial.rs`'s module doc for why.
+    pub poly_eval: NameId,
+    /// `CReal.polyEval_zero : ∀ c x, Eq CReal (polyEval c Nat.zero x) zero`.
+    /// Closes by `Eq.refl` alone.
+    pub poly_eval_zero: NameId,
+    /// `CReal.polyEval_succ : ∀ c n x, Eq CReal (polyEval c (Nat.succ n) x)
+    /// (add (polyEval c n x) (mul (c n) (pow x n)))`. Closes by `Eq.refl`
+    /// alone.
+    pub poly_eval_succ: NameId,
+    /// `CReal.polyAdd : (Nat → CReal) → (Nat → CReal) → (Nat → CReal) := fun
+    /// c g i => add (c i) (g i)` — pointwise coefficient addition.
+    pub poly_add: NameId,
+    /// `CReal.polyEval_polyAdd : ∀ c g n x, Equiv (polyEval (polyAdd c g) n
+    /// x) (add (polyEval c n x) (polyEval g n x))` — evaluation is a
+    /// homomorphism from `(polyAdd, polyEval)` to `(add, ·)`, at one shared
+    /// bound `n` for both operands.
+    pub poly_eval_poly_add: NameId,
+    /// `CReal.polyScale : CReal → (Nat → CReal) → (Nat → CReal) := fun a c i
+    /// => mul a (c i)` — scaling every coefficient by a constant.
+    pub poly_scale: NameId,
+    /// `CReal.polyEval_polyScale : ∀ a c n x, Equiv (polyEval (polyScale a c)
+    /// n x) (mul a (polyEval c n x))` — evaluation is a homomorphism from
+    /// `(polyScale, polyEval)` to `(mul, ·)`.
+    pub poly_eval_poly_scale: NameId,
+    /// `CReal.polyDegreeLt : (Nat → CReal) → Nat → Prop := fun c n => ∀ i,
+    /// Nat.le n i → Equiv (c i) zero` — the honest stand-in for a *computed*
+    /// degree bound, ruled out by `CReal.Equiv`'s undecidability: a
+    /// **hypothesis** a caller supplies, never derived from `c`/`n` alone.
+    pub poly_degree_lt: NameId,
+    /// `CReal.polyDegreeLt_polyAdd : ∀ c g n, polyDegreeLt c n →
+    /// polyDegreeLt g n → polyDegreeLt (polyAdd c g) n` — preserved at the
+    /// same bound (no `Nat.max` is used or available in this kernel).
+    pub poly_degree_lt_poly_add: NameId,
+    /// `CReal.polyDegreeLt_polyScale : ∀ a c n, polyDegreeLt c n →
+    /// polyDegreeLt (polyScale a c) n`.
+    pub poly_degree_lt_poly_scale: NameId,
 }
 
 impl CRealPrelude {
@@ -4744,6 +4784,16 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         uniform_converges_geom_half: kernel.name_str(creal, "uniform_converges_geom_half"),
         uniform_limit_uniformly_continuous: kernel
             .name_str(creal, "uniform_limit_uniformly_continuous"),
+        poly_eval: kernel.name_str(creal, "polyEval"),
+        poly_eval_zero: kernel.name_str(creal, "polyEval_zero"),
+        poly_eval_succ: kernel.name_str(creal, "polyEval_succ"),
+        poly_add: kernel.name_str(creal, "polyAdd"),
+        poly_eval_poly_add: kernel.name_str(creal, "polyEval_polyAdd"),
+        poly_scale: kernel.name_str(creal, "polyScale"),
+        poly_eval_poly_scale: kernel.name_str(creal, "polyEval_polyScale"),
+        poly_degree_lt: kernel.name_str(creal, "polyDegreeLt"),
+        poly_degree_lt_poly_add: kernel.name_str(creal, "polyDegreeLt_polyAdd"),
+        poly_degree_lt_poly_scale: kernel.name_str(creal, "polyDegreeLt_polyScale"),
     }
 }
 
@@ -5320,7 +5370,13 @@ pub(crate) fn build_creal_prelude_uncached(
         // `declare_ivt` also lands `ivt_bisect`/`ivt_bisect_lo`/
         // `ivt_bisect_hi` (the data-valued bisection), which needs nothing
         // beyond what `ivt_step`/`ivt_iter` already required.
-        ivt::declare_ivt(&mut d, prelude)
+        ivt::declare_ivt(&mut d, prelude)?;
+        // `polynomial::declare_polynomial` (Spivak Ch 20's polynomial layer
+        // over `CReal`) needs only `CRealPrelude::sum_range`
+        // (`series::declare_series`, well above) and `CRealPrelude::pow`
+        // (`power::declare_power`, well above); placed last since nothing
+        // else in this prelude depends on it.
+        polynomial::declare_polynomial(&mut d, prelude)
     })();
     match built {
         Ok(()) => {
@@ -6255,6 +6311,7 @@ mod lattice;
 mod monotone;
 mod mul_self_zero;
 mod order_extra;
+mod polynomial;
 mod power;
 mod product;
 mod ratio_test;
