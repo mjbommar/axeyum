@@ -154,7 +154,9 @@ fn declare_max_range_def(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kern
 
     let f_fv = d.fresh_fvar();
     let f = d.kernel().fvar(f_fv);
-    let motive = d.kernel().lam(anon, nat, carrier, crate::BinderInfo::Default);
+    let motive = d
+        .kernel()
+        .lam(anon, nat, carrier, crate::BinderInfo::Default);
     let zero_n = d.zero();
     let minor_zero = d.apply(f, &[zero_n]);
     let minor_succ = {
