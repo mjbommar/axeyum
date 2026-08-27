@@ -1259,6 +1259,86 @@
 //! inventory shard row; `creal_prelude_builds` is unaffected (doc-only
 //! change, confirmed 31.5 s post-merge, same band as the FOURTEENTH lane's
 //! 33 s).
+//!
+//! ## `CReal.integral_split` — 2026-08-27 (a SIXTEENTH lane), Gap A resolved
+//! in the direction the FIFTEENTH lane conjectured: a MULTIPLICATIVE
+//! alignment preserves an arbitrary rational ratio EXACTLY, at every scale
+//!
+//! **First, a correction to the FIFTEENTH lane's own numbers, which does not
+//! change its conclusion but does change how bad the situation is.** That
+//! entry computed the split ratio as `succ(m_ac) / combined`. The correct
+//! fraction is `succ(m_ac) / (combined + 1)`: `riemann_sum_split_exact`'s
+//! `c := a + ofNat(succ m_ac) * delta_of(a, b, combined)` and `delta_of a b m
+//! := (b − a) * natDivSucc(1, m)` = `(b − a)/(m + 1)`, so
+//!
+//! ```text
+//! (c − a)/(b − a) = succ(m_ac) / (combined + 1)
+//!                 = n_ac / (n_ac + n_cb),   n_X := m_X + 1
+//! ```
+//!
+//! since `combined + 1 = succ(m_ac) + succ(m_cb)`. Read correctly, the
+//! additive scheme is worse than "drifting": with `mesh_count_align`'s own
+//! `depth_ac := depth_cb := deep_ab + big_n` and `deep_ac = deep_cb`, the
+//! ratio is **exactly 0.5 for every `big_n`, including `big_n = 0`** — not
+//! 0.5185 → 0.5024 → 0.50002 converging to it. Recomputed:
+//!
+//! ```text
+//! deep_ab=2, deep_ac=deep_cb=1:    big_n = 0, 10, 100, 1e4, 1e6 -> 0.5 exactly, every time
+//! deep_ab=2, deep_ac=1, deep_cb=7: 0.2857 -> 0.4118 -> 0.4860 -> 0.49985 -> 0.4999985
+//! ```
+//!
+//! The asymmetric row is the only one that moves, and it moves TOWARD 0.5.
+//! And note what the symmetric row means: [`mesh_count_align`] has **no ratio
+//! input at all** — its parameters are `deep_ab`, `deep_ac`, `deep_cb`,
+//! `big_n`, three of which are uniform-continuity moduli the caller does not
+//! choose. There is nowhere to put `(m_ac0, m_cb0)`. So the FIFTEENTH lane's
+//! verdict stands and is strengthened: **as landed, [`mesh_count_align`]
+//! supports the MIDPOINT only**, and the "every rational proportion" stratum
+//! that [`declare_riemann_sum_split_exact_of_uc`]'s ADR-0603 entry aims at is
+//! not reachable through it by any choice of its arguments.
+//!
+//! **Second, the multiplicative hypothesis: CONFIRMED, and exactly, not
+//! asymptotically.** Take the base ratio `(m_ac0, m_cb0)` and scale both
+//! counts through [`succ_mul_succ`] at a common factor `succ k`:
+//! `m_ac_k := succ_mul_succ(m_ac0, k).0`, `m_cb_k := succ_mul_succ(m_cb0, k).0`,
+//! so `succ(m_ac_k) = succ(m_ac0)·succ(k)` and likewise for `cb`. Then
+//!
+//! ```text
+//! ratio = succ(m_ac0)·succ(k) / ((succ(m_ac0) + succ(m_cb0))·succ(k))
+//!       = succ(m_ac0) / (succ(m_ac0) + succ(m_cb0))
+//! ```
+//!
+//! — the `succ(k)` cancels identically, so the ratio is the base ratio for
+//! EVERY `k`, with no limit taken. Checked as exact `Fraction` arithmetic at
+//! `(m_ac0, m_cb0) ∈ {(0,3), (0,0), (2,5), (4,1), (9,90)}` and
+//! `k ∈ {0, 1, 2, 3, 10, 100, 1e4, 1e6}`: 40 of 40 exactly equal to the base
+//! ratio (1/5, 1/2, 1/3, 5/7, 10/101 respectively). This is the same family
+//! [`CRealPrelude::riemann_sum_split_scale_invariant`] already proves
+//! `Equiv c_k c_0` for — that theorem is the kernel-verified statement of
+//! precisely this cancellation, and it is why the multiplicative route was
+//! worth testing before building anything.
+//!
+//! **Third, the piece that made the additive scheme necessary in the first
+//! place — clearing the three accuracy thresholds — survives the switch, and
+//! gets SHORTER.** [`mesh_count_align`] bakes `deep_ac`/`deep_cb` into the
+//! mesh counts syntactically (`m_ac := deep_ac + depth_ac`) precisely so
+//! `deep_ac ≤ m_ac` needs no proof; that is exactly what forces the additive
+//! shape. The multiplicative family cannot do that, so all three thresholds
+//! become obligations — but all three follow from ONE inequality:
+//!
+//! ```text
+//! succ_mul_succ(m0, k).0 = (m0·k + m0) + k  >=  k        [Nat.le_add_left]
+//! ```
+//!
+//! so picking `k := ((deep_ab + deep_ac) + deep_cb) + big_n` gives
+//! `deep_ac ≤ k ≤ m_ac_k`, `deep_cb ≤ k ≤ m_cb_k`, and
+//! `deep_ab ≤ k ≤ m_cb_k ≤ combined`, each by a `le_trans` over
+//! `le_add_left`/`le_add_right` only. Randomised check over 200,000 draws of
+//! `(deep_ab, deep_ac, deep_cb, m_ac0, m_cb0, big_n)`: **0 counterexamples**.
+//! Negative control (`k := big_n` alone, dropping the moduli from the scale
+//! factor): **1,435 counterexamples in 20,000 draws**, so the check is not
+//! vacuous. `big_n` remains free and drives all three counts to infinity, as
+//! `equiv_zero_of_small` requires.
 
 use super::completeness::half_shift_le;
 use super::convergence::{
