@@ -454,3 +454,128 @@ pub(super) fn declare_max_range(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(
     declare_max_range_ub(d, p)?;
     Ok(())
 }
+
+// ---------------------------------------------------------------------------
+// `CReal.meshLevelCount` -- the geometric (doubling) mesh-count schedule
+// route 2's nested refinement runs on. See this module's own documentation,
+// "Route 2 is the one to pick up", for why doubling (rather than an
+// arbitrary refinement factor) is what makes the coarse-in-fine embedding
+// need only closed-form index SCALING (`Rat.natDivSucc_scale`/
+// `nat_div_succ_mul`) and no `Nat.div`/bucket-index search.
+// ---------------------------------------------------------------------------
+
+/// `CReal.meshLevelCount : Nat → Nat`, `meshLevelCount 0 := 0`, `meshLevelCount
+/// (succ j) := succ (add (meshLevelCount j) (meshLevelCount j))` — i.e.
+/// `meshLevelCount j = 2^j − 1` (a `mesh_level_count(j)+1`-point mesh has
+/// `2^j` points), built additively (`add x x` rather than `mul 2 x`) so no
+/// `Nat.mul` dependency is needed for this one recursion. Declared under the
+/// `creal` namespace (a [`CRealPrelude`] field) even though its VALUE is pure
+/// `Nat → Nat`, because every consumer of it lives in this file's later
+/// `CReal`-level construction — mirrors [`declare_max_range_def`]'s own
+/// `Nat.rec` shape, minus the `f` parameter (this recursion carries no
+/// external function, only the level index itself).
+fn declare_mesh_level_count_def(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let anon = d.anon_name();
+    let one_level = d.level_one();
+    let nat_add = d.prelude().add;
+
+    let motive = d.kernel().lam(anon, nat, nat, crate::BinderInfo::Default);
+    let minor_zero = d.zero();
+    let minor_succ = {
+        let j_fv = d.fresh_fvar();
+        let ih_fv = d.fresh_fvar();
+        let ih = d.kernel().fvar(ih_fv);
+        let doubled = d.const_app(nat_add, &[ih, ih]);
+        let body = d.succ(doubled);
+        let inner = d.lam_fv(ih_fv, nat, body);
+        d.lam_fv(j_fv, nat, inner)
+    };
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let rec_name = d.prelude().rec;
+    let rec = d.kernel().const_(rec_name, vec![one_level]);
+    let value_body = d.apply(rec, &[motive, minor_zero, minor_succ, n]);
+    let value = d.lam_fv(n_fv, nat, value_body);
+    let ty = d.arrow(nat, nat);
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.mesh_level_count,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(MAX_RANGE_HEIGHT),
+    })
+}
+
+/// `CReal.meshLevelCount_zero : Eq Nat (meshLevelCount Nat.zero) Nat.zero` and
+/// `CReal.meshLevelCount_succ : ∀ j, Eq Nat (meshLevelCount (succ j)) (add
+/// (meshLevelCount j) (meshLevelCount j)).succ` — both close by `Eq.refl`
+/// alone, the same reason [`declare_max_range_equations`]'s two equations do
+/// (`meshLevelCount`'s `Nat.rec` application ι-reduces on both minor
+/// premises).
+fn declare_mesh_level_count_equations(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let nat_add = d.prelude().add;
+    let one = d.level_one();
+    let logic = p.rat.int.logic;
+
+    // meshLevelCount_zero : Eq Nat (meshLevelCount zero) zero.
+    {
+        let zero_n = d.zero();
+        let lhs = d.const_app(p.mesh_level_count, &[zero_n]);
+        let eq = d.kernel().const_(logic.eq, vec![one]);
+        let stmt = d.apply(eq, &[nat, lhs, zero_n]);
+        let refl = d.kernel().const_(logic.eq_refl, vec![one]);
+        let value = d.apply(refl, &[nat, zero_n]);
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.mesh_level_count_zero,
+            uparams: vec![],
+            ty: stmt,
+            value,
+        })?;
+    }
+
+    // meshLevelCount_succ : ∀ j,
+    //   Eq Nat (meshLevelCount (succ j)) (succ (add (meshLevelCount j)
+    //     (meshLevelCount j))).
+    {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let sj = d.succ(j);
+        let lhs = d.const_app(p.mesh_level_count, &[sj]);
+        let mlc_j = d.const_app(p.mesh_level_count, &[j]);
+        let doubled = d.const_app(nat_add, &[mlc_j, mlc_j]);
+        let rhs = d.succ(doubled);
+        let eq = d.kernel().const_(logic.eq, vec![one]);
+        let stmt_inner = d.apply(eq, &[nat, lhs, rhs]);
+        let refl = d.kernel().const_(logic.eq_refl, vec![one]);
+        let proof_inner = d.apply(refl, &[nat, rhs]);
+        let ty = d.pi_fv(j_fv, nat, stmt_inner);
+        let value = d.lam_fv(j_fv, nat, proof_inner);
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.mesh_level_count_succ,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+    Ok(())
+}
+
+/// Land `CReal.meshLevelCount` and its two defining equations.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_mesh_level_count(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_mesh_level_count_def(d, p)?;
+    declare_mesh_level_count_equations(d, p)?;
+    Ok(())
+}

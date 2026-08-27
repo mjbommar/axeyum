@@ -4859,6 +4859,20 @@ pub struct CRealPrelude {
     /// `CReal.maxRange_ub : ∀ f n i, Nat.le i n → le (f i) (maxRange f n)`.
     /// See `creal/supremum.rs`.
     pub max_range_ub: NameId,
+    /// `CReal.meshLevelCount : Nat → Nat` — the geometric (doubling) mesh-count
+    /// schedule route 2's nested refinement runs on: `meshLevelCount 0 :=
+    /// 0`, `meshLevelCount (succ j) := succ (add (meshLevelCount j)
+    /// (meshLevelCount j))`, i.e. `meshLevelCount j = 2^j − 1`, built
+    /// additively so no `Nat.mul` dependency is needed. See
+    /// `creal/supremum.rs`.
+    pub mesh_level_count: NameId,
+    /// `CReal.meshLevelCount_zero : Eq Nat (meshLevelCount Nat.zero) Nat.zero`.
+    /// See `creal/supremum.rs`.
+    pub mesh_level_count_zero: NameId,
+    /// `CReal.meshLevelCount_succ : ∀ j, Eq Nat (meshLevelCount (succ j)) (succ
+    /// (add (meshLevelCount j) (meshLevelCount j)))`. See
+    /// `creal/supremum.rs`.
+    pub mesh_level_count_succ: NameId,
 }
 
 impl CRealPrelude {
@@ -5384,6 +5398,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         max_range_self_le: kernel.name_str(creal, "maxRange_self_le"),
         max_range_mono: kernel.name_str(creal, "maxRange_mono"),
         max_range_ub: kernel.name_str(creal, "maxRange_ub"),
+        mesh_level_count: kernel.name_str(creal, "meshLevelCount"),
+        mesh_level_count_zero: kernel.name_str(creal, "meshLevelCount_zero"),
+        mesh_level_count_succ: kernel.name_str(creal, "meshLevelCount_succ"),
     }
 }
 
@@ -9240,6 +9257,16 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.max_range_zero,
         ],
         run: supremum::declare_max_range,
+    },
+    BuildStep {
+        label: "supremum::declare_mesh_level_count",
+        requires: &[],
+        provides: &[
+            |p: CRealPrelude| p.mesh_level_count,
+            |p: CRealPrelude| p.mesh_level_count_succ,
+            |p: CRealPrelude| p.mesh_level_count_zero,
+        ],
+        run: supremum::declare_mesh_level_count,
     },
 ];
 
