@@ -1167,6 +1167,38 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   nothing ever required length one. Full retrospective:
   `docs/autogenesis/228-capsule-lane-retrospective.md`.
 
+- **TWO STRUCTURALLY-UNRELATED REPRESENTATIONS OF THE SAME VALUE FORCE A FULL
+  `Definition` UNFOLD, AND THE COST LANDS ON EVERY PRELUDE BUILD.** Measured
+  2026-08-26. `riemannSum_integral_close`'s second leg built
+  `sample(CReal.integral F a b hab u, e)` and had to show it defeq to a
+  hand-rebuilt `speedup(raw, K)` term that never mentions `CReal.integral` at
+  all. The two share no head symbol, so the kernel fully delta-unfolded
+  `CReal.integral`'s `Definition` -- whose stored value embeds an entire
+  `regular_of_scaled_cauchy` construction -- **on every prelude build**.
+
+  `creal_prelude_builds` went **18.7 s -> 92.6 s** from that one declaration,
+  and because dozens of tests build a prelude, the full `--lib` sweep went from
+  802 tests in 316 s to **timing out at 1700 s with 95 tests done**. An
+  unrunnable gate blocks all publication, including other lanes' finished work.
+
+  **The fix is to make the two sides the SAME `ExprId`, not merely defeq.**
+  Route through the already-checked theorem (`integral_converges` via
+  `exists_elim`) instead of re-deriving its witness triple by hand: the
+  eliminated witness builds the value with the identical `const_app` recipe, so
+  the definition is never unfolded. Restored to **18.4 s**, statement unchanged.
+
+  **This is NOT the concrete-witness/lazy-delta family above**, and treating it
+  as one wastes the diagnosis -- everything here was symbolic, with no concrete
+  `Nat` partial evaluation. Nor is `--release` the discriminator. What found it
+  was **bisecting WITHIN the declaration**: build a throwaway variant keeping
+  only leg 1, then only leg 2, and time each. Leg 1 was 18.35 s, leg 2 alone was
+  95.15 s -- the whole regression, isolated in one experiment.
+
+  The general rule: **when a proof must relate a value produced by a
+  `Definition` to a value you rebuilt yourself, reach for the theorem that
+  already names it.** If a prelude build slows by a multiple, bisect the
+  declaration by legs before reaching for any of the documented families.
+
 - **`le_congr`'s PREMISE TAKES THE PRE-SUBSTITUTION TYPE, AND AN `Equiv` PROOF IN
   A `le` SLOT FAILS IDENTICALLY TO A DIRECTION BUG.** Measured across 2026-08-26.
   Eleven separate rejections in one session came from this family, in six
