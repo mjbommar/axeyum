@@ -236,32 +236,21 @@ pub(super) fn declare_order_extra(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<
     })?;
 
     // succ_sub_succ_eq_sub : ∀ n m, sub (succ n) (succ m) = sub n m
-    // (Lean-core name for `succ_sub_succ`; the identical statement,
-    // independently re-derived by induction on `m`, since `sub` recurses
-    // only on its second argument and `sub (succ n) (succ m)` is not
-    // definitionally `sub n m` in general.)
+    // (Lean-core name for `succ_sub_succ`; a thin restatement under a
+    // second name a Lean-core-style reader would search for, not a second
+    // proof: reuses `succ_sub_succ`'s own proof term directly rather than
+    // re-deriving it by induction, so there is exactly one proof of this
+    // fact for the kernel to keep sound. shape_search's `--duplicates`
+    // still reports the pair, because it compares admitted *types*, not
+    // proof terms.)
     d.theorem(p.succ_sub_succ_eq_sub, 2, &|d, v| {
         let (n, m) = (v[0], v[1]);
-        let motive = |d: &mut NatDev<'_>, x: ExprId| {
-            let sn = d.succ(n);
-            let sx = d.succ(x);
-            let lhs = d.sub(sn, sx);
-            let rhs = d.sub(n, x);
-            d.eq(lhs, rhs)
-        };
-        let stmt = motive(d, m);
-        let proof = d.induct(
-            &motive,
-            &|d| d.refl(n),
-            &|d, j, ih| {
-                let sn = d.succ(n);
-                let sj = d.succ(j);
-                let lhs = d.sub(sn, sj);
-                let rhs = d.sub(n, j);
-                d.congr(lhs, rhs, ih, &|d, x| d.pred(x))
-            },
-            m,
-        );
+        let sn = d.succ(n);
+        let sm = d.succ(m);
+        let lhs = d.sub(sn, sm);
+        let rhs = d.sub(n, m);
+        let stmt = d.eq(lhs, rhs);
+        let proof = d.lemma(p.succ_sub_succ, &[n, m]);
         (stmt, proof)
     })?;
 
