@@ -1156,6 +1156,109 @@
 //! place of `(a,c,m_ac,magnitude_ac)` — not a mirror-image derivation to
 //! write. What remains is the final three-way `abs_add_le` combine sized in
 //! the TWELFTH lane's own entry above (unchanged by this landing).
+//!
+//! ## `CReal.integral_split` — checked 2026-08-27 (a FIFTEENTH lane), the
+//! assembly was NOT attempted in code; TWO gaps found that no prior entry
+//! names, one of which makes [`mesh_count_align`] unusable for a general
+//! split ratio as landed
+//!
+//! Starting point confirmed unchanged: [`mesh_count_align`] and
+//! [`bnd_leg_plus_share_le_at`] both build and both pass their own tests
+//! post-merge; `creal_prelude_builds` is 31.5 s (band 29-39 s). Before
+//! writing the ~450-line combine, this lane worked out EXACTLY which
+//! `ExprId`s the combine's three legs must share (`riemann_sum_integral_close`
+//! on `[a,b]`, `[a,c]`, `[c,b]`; `close_within_of_within_indexed` bridging
+//! each `Within` to a `CReal.le (abs …)`; [`declare_riemann_sum_split_exact_of_uc`]'s
+//! exact identity substituted in via `le_congr`), and found two obstacles
+//! neither the TENTH, TWELFTH, THIRTEENTH nor FOURTEENTH lane's sizing
+//! mentions.
+//!
+//! **Gap A: [`mesh_count_align`]'s padding scheme forces the split ratio
+//! toward the MIDPOINT as its own `big_n` grows, for any target ratio other
+//! than 1:1 — confirmed by direct computation, not just inspection.**
+//! `mesh_count_align` fixes `depth_ac := depth_cb := add(deep_ab, big_n)`
+//! (the SAME padding term for both legs, per its own doc comment above).
+//! `riemann_sum_split_exact_of_uc`'s split point is exactly `a +
+//! ofNat(succ m_ac) * delta_of(a,b,combined)`, i.e. the ratio `succ(m_ac) :
+//! combined`. At `m_ac0 := 0, m_cb0 := 3` (an intended 1:4 split, `c` at
+//! 20% of `[a,b]`), `deep_ab := 2, deep_ac := 1, deep_cb := 1`, this ratio
+//! measures:
+//!
+//! ```text
+//! big_n =     10 -> ratio 0.5185
+//! big_n =    100 -> ratio 0.5024
+//! big_n =  10000 -> ratio 0.50002
+//! big_n = 1e6    -> ratio 0.500000
+//! ```
+//!
+//! — converging to **0.5**, not the intended **0.2**, because `big_n` is
+//! ADDED identically to both legs' mesh counts and therefore dominates and
+//! equalizes them as it grows, regardless of `m_ac0`/`m_cb0`. Since
+//! `equiv_zero_of_small` needs the mesh counts to grow WITHOUT BOUND as the
+//! outer accuracy `e` does (so `big_n` cannot be held at a small fixed
+//! value), [`mesh_count_align`] as landed can only support the bisection
+//! case (`m_ac0 = m_cb0`) — for which the drift target (midpoint) happens
+//! to coincide with the intended one — and NOT the general "every rational
+//! proportion" claim [`declare_riemann_sum_split_exact_of_uc`]'s own
+//! ADR-0603 stratum aims for. `riemann_sum_split_scale_invariant` cannot
+//! rescue this after the fact either: it only proves the split point fixed
+//! for the *multiplicative* `succ_mul_succ` family (`m_ac_k`/`m_cb_k` both
+//! scaled by the SAME factor `succ k`), which [`mesh_count_align`]'s
+//! additive `deep_ac + (deep_ab+big_n)` shape does not belong to for any
+//! `big_n`. The fix is a differently-parameterized alignment helper (or a
+//! generalized [`mesh_count_align`]) that pads `m_ac`/`m_cb` by
+//! `n_ac0 * (deep_ab+big_n)` / `n_cb0 * (deep_ab+big_n)` respectively (or
+//! goes through `succ_mul_succ` directly, proving `deep_X(e) ≤ m_X_k` for
+//! the multiplicative family by a separate Archimedean argument) — not
+//! attempted here; this is new scope, not a rewiring of what exists.
+//!
+//! **Gap B: nothing in this file (or elsewhere in `creal/`) lets a `CReal
+//! .integral` taken at one endpoint be related to the SAME integral at an
+//! `Equiv` — not equal — endpoint, and the combine needs exactly that.**
+//! Even with Gap A fixed, `riemann_sum_split_exact_of_uc(F,a,b,m_ac,m_cb,
+//! u,hab)`'s split point `c` is whatever `a + ofNat(succ m_ac) *
+//! delta_of(a,b,combined)` computes to for the mesh counts actually used at
+//! a given outer accuracy `e` — call it `c_e`. `integral_split`'s STATED
+//! conclusion needs a single FIXED `c` (with fixed `hac`/`u_ac`/`hcb`/
+//! `u_cb`, supplied once by the caller), so closing it needs `integral F a
+//! c_e hac_e u_ac_e` related to `integral F a c hac u_ac` for `c_e` merely
+//! `Equiv c` (never definitionally equal, since `c_e` is a fresh Nat
+//! arithmetic expression at every `e`). [`CRealPrelude::integral_witness_independent`]
+//! is the closest existing lemma and does NOT cover this: its own two
+//! endpoints are the SAME `b`, varying only the *witness* (`u1` vs `u2`);
+//! nothing here varies the endpoint itself. Note too that this cannot be
+//! discharged by a `riemannSum`-level congruence in `b` under `Equiv`, even
+//! in principle: `riemannSum`'s value at a sample index is a RATIONAL
+//! (`sample x n`), and two `Equiv` `CReal`s are only guaranteed to agree in
+//! the LIMIT, never sample-by-sample — so any bridge has to go through the
+//! `CReal`-level `Equiv`/`le_congr` route (the same one
+//! [`declare_integral_witness_independent`] already uses for its own,
+//! narrower, same-endpoint case), which is why this is a genuinely new
+//! lemma (`integral_congr_endpoint`, sketched but not built: same
+//! `Converges`/`riemann_sum_deep_cauchy_cross`-family route as
+//! `integral_witness_independent`, with the cross-bridge additionally
+//! needing to relate `f_lambda`'s own mesh-count family across the two
+//! `b`s) rather than a rewiring of anything landed.
+//!
+//! **Net effect on sizing**: the combine's own volume (three-way
+//! `abs_add_le`, one `bnd_leg_plus_share_le_at` call per leg,
+//! `le_of_forall_le_add_small`/`equiv_zero_of_small` to close) is unchanged
+//! from the TWELFTH lane's own estimate, but it now has two PREREQUISITES
+//! neither the TENTH, TWELFTH, THIRTEENTH nor FOURTEENTH lane's sizing
+//! counted: a re-parameterized mesh-alignment helper (Gap A, comparable in
+//! size to [`mesh_count_align`] itself, ~100 lines) and a new
+//! `integral_congr_endpoint` lemma (Gap B, comparable in size to
+//! [`declare_integral_witness_independent`], ~70-100 lines). Neither was
+//! attempted in code this slice: writing either without kernel-verifying it
+//! risks exactly the "checker that cannot fail" and "certificate must carry
+//! every distinction" failure modes this repository's own CLAUDE.md warns
+//! against, and this lane's remaining budget did not cover both plus the
+//! combine itself with the compile-and-verify cadence the file's own
+//! kernel-facts list requires. `integral_split` is not registered in
+//! `CRealPrelude`, has no `BuildStep`/`EXPECTED_STEP_ORDER` entry, and no
+//! inventory shard row; `creal_prelude_builds` is unaffected (doc-only
+//! change, confirmed 31.5 s post-merge, same band as the FOURTEENTH lane's
+//! 33 s).
 
 use super::completeness::half_shift_le;
 use super::convergence::{
