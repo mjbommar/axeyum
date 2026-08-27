@@ -1,5 +1,14 @@
 # Status: Ledger Coverage Split (Registered vs. Curated)
 
+<!-- plan-section: lane-status -->
+
+**Your lane's block (`DONE`, ledger-ratchet, 2026-08-27).** Ledger coverage
+now reports two counters instead of one: `registered` (538) and `curated`
+(474). Generation moves the first and provably cannot move the second, so
+bulk-generating fact skeletons is permitted and visible rather than able to
+masquerade as human curation. Four mutation controls pin the independence
+(4/4 guards killed, 33-test baseline).
+
 **Track:** Refactor 2026-08-27  
 **Phase:** Implement ADR-0607 measurement infrastructure  
 **Date:** 2026-08-27
@@ -133,3 +142,8 @@ fixture, and all such guards would either hit real code or fail to apply.
 - `python3 scripts/validate-facts.py` — pass (882 facts, 0 errors)
 - `python3 scripts/gen-ledger-coverage.py` — pass (`registered=538|curated=474`)
 - All four guards measured and each kills ≥2 tests
+
+
+<!-- plan-section: landed-changes -->
+
+| 2026-08-27 | ledger-ratchet | `registered`/`curated` split in `scripts/gen-ledger-coverage.py`; convention `absent-field-is-curated` printed in the output; 4 mutation controls in `mutation_controls.py`; 7 tests in `test_gen_ledger_coverage.py` |
