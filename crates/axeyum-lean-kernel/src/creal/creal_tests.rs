@@ -126,7 +126,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 359] = [
+    let expected: [(&str, crate::NameId, &str); 360] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -1184,6 +1184,18 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         // `integral_witness_independent` uses, one sequence wider
         // (creal/integral.rs's `declare_integral_add`).
         ("CReal.integral_add", p.integral_add, "theorem"),
+        // Order passes to the integral: `(∀ t, le a t → le t b → le (F t) (G
+        // t)) → le (integral F a b hab uF) (integral G a b hab uG)`. No
+        // `Equiv`/`converges_unique` bridge (unlike `integral_add`/
+        // `integral_witness_independent`): `converges_le` compares two
+        // Converges facts at INDEPENDENT limits directly, so the only work
+        // is landing both sides' native Riemann-sum sequences on a SHARED
+        // mesh depth per accuracy index (two `riemann_sum_cauchy` calls +
+        // `common_refinement` + `shared_index_to_canonical`, exactly
+        // `riemannSumDeepCauchyCross`'s own recipe with `F`/`G` in place of
+        // "one function, two witnesses"), then `riemann_sum_le_on` at that
+        // shared mesh is EXACT (creal/integral.rs's `declare_integral_le`).
+        ("CReal.integral_le", p.integral_le, "theorem"),
         // Spivak Ch14 FTC-I, first evaluation instance: the antiderivative
         // of a constant integrand, `G x := integral (fun _ => c) a (max a
         // (min x b)) …` (the `max`/`min` clamp is what makes `G` a genuinely

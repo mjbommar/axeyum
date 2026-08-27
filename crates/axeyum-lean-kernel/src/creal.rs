@@ -3739,6 +3739,24 @@ pub struct CRealPrelude {
     /// technique [`Self::integral_witness_independent`] uses, one sequence
     /// wider. See `creal/integral.rs`'s `declare_integral_add`.
     pub integral_add: NameId,
+    /// `CReal.integral_le : ∀ F G a b hab uF uG, (∀ t, le a t → le t b → le
+    /// (F t) (G t)) → le (CReal.integral F a b hab uF) (CReal.integral G a b
+    /// hab uG)`.
+    ///
+    /// **Order passes to the integral.** No `converges_unique`/`Equiv`
+    /// bridge (unlike [`Self::integral_add`]/[`Self::integral_witness_independent`]):
+    /// [`Self::converges_le`] takes two Converges facts at *independent*
+    /// limits directly, so the obstruction is purely getting BOTH sides'
+    /// native Riemann-sum sequences onto a SHARED mesh depth `l(n) :=`
+    /// [`Self::riemann_sum_cauchy`]'s common refinement of `F`'s and `G`'s
+    /// own `deep`-depths at `n`, at which [`Self::riemann_sum_le_on`]'s
+    /// comparison is exact (no epsilon slack). One
+    /// [`Self::converges_of_close`] transport per side (F's native sequence
+    /// to `l(n)`, G's native sequence to `l(n)`) lands both at `l(n)`
+    /// simultaneously converging to their own original limits, then
+    /// `riemannSum_le_on` at `l(n)` supplies `converges_le`'s pointwise
+    /// hypothesis directly. See `creal/integral.rs`'s `declare_integral_le`.
+    pub integral_le: NameId,
     /// `CReal.hasDerivative_integral_const : ∀ c a b (k : Nat), le (abs c)
     /// (ofRat (natDivSucc (Nat.succ k) 0)) → HasDerivativeOn (fun x =>
     /// integral (fun _ => c) a (max a (min x b)) (le_max_left a (min x b))
@@ -4215,6 +4233,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         integral_const: kernel.name_str(creal, "integral_const"),
         integral_witness_independent: kernel.name_str(creal, "integral_witness_independent"),
         integral_add: kernel.name_str(creal, "integral_add"),
+        integral_le: kernel.name_str(creal, "integral_le"),
         has_derivative_integral_const: kernel.name_str(creal, "hasDerivative_integral_const"),
     }
 }
@@ -4597,6 +4616,16 @@ pub(crate) fn build_creal_prelude_uncached(
         // lands here to stay next to the other `integral_*` law that shares
         // its dependency shape.
         integral::declare_integral_add(&mut d, prelude)?;
+        // `integral_le` needs `integral_converges` (well above),
+        // `riemannSum_cauchy`/`sharedIndexToCanonical` (well above, the SAME
+        // two dependencies `riemannSumDeepCauchyCross` uses, applied to TWO
+        // different functions F/G instead of one function at two
+        // witnesses), `riemannSum_le_on` (`integral::declare_integral`, well
+        // above), `converges_of_close`/`converges_le` (far above). It does
+        // not need `integral_add`/`integral_witness_independent` (just
+        // above); it lands here to stay next to the other `integral_*` law
+        // that shares its dependency shape.
+        integral::declare_integral_le(&mut d, prelude)?;
         // `hasDerivative_integral_const` (Spivak Ch14 FTC-I, first evaluation
         // instance) needs `integral`/`integral_const` (just above, this
         // dispatch is why it cannot live inside `derivative::declare_derivative`,
