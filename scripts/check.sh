@@ -560,6 +560,8 @@ step autogenesis-fact-admission-tests python3 -m unittest scripts.tests.test_app
 step autogenesis-readiness-delta-tests python3 -m unittest scripts.tests.test_create_autogenesis_readiness_delta
 step autogenesis-operation-registry python3 scripts/validate-autogenesis-operations.py
 step autogenesis-operation-registry-tests python3 -m unittest scripts.tests.test_validate_autogenesis_operations
+step autogenesis-producer-contracts python3 scripts/validate-producer-contracts.py
+step autogenesis-producer-contracts-tests python3 -m unittest scripts.tests.test_validate_producer_contracts
 step autogenesis-authoritative-comparison-tests python3 -m unittest scripts.tests.test_compare_autogenesis_authoritative_chains
 step autogenesis-result python3 scripts/check-autogenesis-1-result.py
 step autogenesis-result-tests python3 -m unittest scripts.tests.test_check_autogenesis_1_result
