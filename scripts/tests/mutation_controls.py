@@ -3150,6 +3150,153 @@ SUITES["ledger-coverage"] = (
     ],
 )
 
+# --------------------------------------------------------------------------
+# `kernel-facts` -- the BULK-GENERATION suite, where the stakes are inverted.
+#
+# Every other suite here asks "does this guard stop a wrong answer".  This one
+# asks "does this guard stop a PLAUSIBLE answer being manufactured at scale".
+# `gen-kernel-facts.py` writes ledger facts mechanically, and the repository's
+# central audit finding is that 40 of 162 checker runs exited 0 on completion
+# alone.  A generator with a weak refusal set reproduces that finding 923 times
+# in one commit, so the guards below are all either REFUSALS (things the script
+# must decline to derive) or PROVENANCE (things that keep a generated fact
+# distinguishable from a curated one).
+#
+# The `checker_command` shape guard is the one that matters most: without it a
+# generated fact could carry `cargo run ... theorem_dependency_inventory` with
+# the pipe removed, which lists theorems and says nothing about whether THIS one
+# is among them.
+# --------------------------------------------------------------------------
+
+SUITES["kernel-facts"] = (
+    "scripts/gen-kernel-facts.py",
+    "scripts.tests.test_gen_kernel_facts",
+    [
+        # The projection prints the footprint SIZE, never the axiom NAMES, so a
+        # non-zero footprint cannot be transcribed into `axiom_footprint` -- only
+        # guessed at, and the whole value of that field is that it is measured.
+        # Kills exactly `test_nonzero_axiom_footprint_is_declined`.
+        (
+            "a non-zero axiom footprint is declined, not guessed at",
+            "    if row.footprint != 0:",
+            "    if False:",
+        ),
+        # `lean_pp` renders `axeyum.string.2.X`'s namespace as
+        # `axeyum.string._2.`. That is a RULE this script applies, so it is
+        # checked against the type body rather than trusted. Kills exactly
+        # `test_unconfirmable_numeric_namespace_spelling_is_declined`.
+        (
+            "the derived _-form namespace is verified against the type body",
+            "        if namespace not in row.rendered_type:",
+            "        if False:",
+        ),
+        # A zero-row projection is what a debug build's SIGABRT looks like, and
+        # "measured, nothing to report" is the most dangerous available reading.
+        # Kills exactly `test_zero_rows_is_an_error_not_an_empty_answer`.
+        (
+            "an empty projection is an error, not an empty answer",
+            "    if total == 0:",
+            "    if False:",
+        ),
+        # A generated fact must never overwrite a hand-written one. Kills exactly
+        # `test_a_slug_taken_by_an_existing_curated_fact_is_declined`.
+        (
+            "a slug already taken by a curated fact is declined",
+            "            if fact_id in existing_ids:",
+            "            if False:",
+        ),
+        # Two theorems slugging to one id would silently give one fact two
+        # subjects, the second write overwriting the first. Kills exactly
+        # `test_two_theorems_slugging_to_one_id_is_declined_not_merged`.
+        (
+            "two theorems slugging to one id is declined, not merged",
+            "            if fact_id in claimed:",
+            "            if False:",
+        ),
+        # A direct proof dependency that no fact registers is DISCLOSED in
+        # `notes` rather than silently dropped -- otherwise a generated fact's
+        # `depends_on` reads as complete when it is a filtered subset. Kills
+        # exactly `test_omitted_dependency_edges_are_disclosed_in_notes`.
+        (
+            "unregistered dependency edges are disclosed, not silently dropped",
+            "    if omitted:",
+            "    if False:",
+        ),
+        # THE PROVENANCE MARKER'S LOAD-BEARING GUARD. Without it, hand-written
+        # prose sits under a `generated-unreviewed` marker and "generated" and
+        # "curated" become indistinguishable again -- the exact thing the marker
+        # exists to prevent. Kills exactly
+        # `test_hand_edited_prose_under_a_generated_marker_is_a_problem`.
+        (
+            "enriched prose must flip curation, not sit under the generated marker",
+            '        if fact.get("title") != expected_title:',
+            "        if False:",
+        ),
+        # `external_status` is a judgement about the LITERATURE and this project
+        # has already cited Zenodo self-deposits as refereed results. A generator
+        # must never supply one. Kills exactly
+        # `test_an_added_external_status_is_a_problem`.
+        (
+            "a generated fact may not carry external_status",
+            '        if "external_status" in fact:',
+            "        if False:",
+        ),
+        # THE CHECKER-THAT-CANNOT-FAIL GUARD. Kills exactly
+        # `test_a_checker_that_cannot_fail_is_a_problem`.
+        (
+            "every generated checker_command must be able to fail",
+            "            if not any(shape.match(cmd) for shape in ALLOWED_CHECKER_SHAPES):",
+            "            if False:",
+        ),
+        # `curation` is defined only for generated facts; on a hand-written fact
+        # it would read as "a lane reviewed this generated skeleton", a different
+        # and stronger statement. Kills exactly
+        # `test_a_curation_marker_without_a_generator_marker_is_a_problem`.
+        (
+            "a curation marker without a generator marker is rejected",
+            '            if provenance.get("curation") in CURATION_VALUES:',
+            "            if False:",
+        ),
+        # A fact flipped to `curated` is exempt from the byte-identity check --
+        # that exemption is the whole point of the two-key marker, so it has to
+        # be tested rather than assumed. Kills exactly
+        # `test_flipping_curation_to_curated_permits_enriched_prose`.
+        (
+            "flipping curation to curated exempts a fact from byte-identity",
+            "        if curation == CURATION_CURATED:",
+            "        if False:",
+        ),
+        # `\t` in a scripted (GNU) grep is a literal `t`. 54 facts / 68 checkers
+        # in this ledger were once wrong exactly this way, passing only in an
+        # interactive ugrep-backed shell.
+        #
+        # MEASURED: this one kills FOUR tests, not one, and the overlap is
+        # structural rather than sloppy -- ALLOWED_CHECKER_SHAPES is the AUDIT
+        # half of the same contract the emitter implements, so changing the
+        # emitted anchor also makes every generated fixture fail the audit. The
+        # test that NAMES this guard is
+        # `test_anchor_is_a_posix_class_that_gnu_grep_matches_against_a_real_tab`,
+        # the only one of the four that RUNS the pattern; the other three die
+        # through the audit regex. Splitting the halves apart to get a clean 1:1
+        # would mean letting the emitter and the audit disagree about what a
+        # valid checker looks like -- a worse property than an impure control.
+        (
+            "the checker anchor is [[:space:]], never a backslash-t",
+            "f\"grep -cE '^{anchored}[[:space:]]'\"",
+            "f\"grep -cE '^{anchored}\\\\t'\"",
+        ),
+        # `grep -q` exits at the first match and SIGPIPEs the producer, which
+        # under `set -o pipefail` reads as "not found". Same four-way kill and the
+        # same structural reason as the entry above; the test that NAMES this
+        # guard is `test_uses_grep_c_not_grep_q`.
+        (
+            "the checker consumes the pipe with grep -c, never grep -q",
+            "f\"grep -cE '^{anchored}",
+            "f\"grep -qE '^{anchored}",
+        ),
+    ],
+)
+
 SUITES["autogenesis-authored-declaration-driver"] = (
     "scripts/validate-autogenesis-operations.py",
     "scripts.tests.test_validate_autogenesis_operations",
