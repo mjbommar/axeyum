@@ -33,5 +33,7 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             "theorem",
         ),
         ("CReal.meshMax", p.mesh_max, "def"),
+        ("CReal.meshMax_step_le", p.mesh_max_step_le, "theorem"),
+        ("CReal.meshMax_mono", p.mesh_max_mono, "theorem"),
     ]
 }

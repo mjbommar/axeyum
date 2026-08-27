@@ -50,7 +50,9 @@
 //! are pure `Definition`s needing no hypothesis on `F`/`a`/`b` and no
 //! continuity witness — the continuity only enters at the NEXT rung.
 //!
-//! **Still not landed: `CReal.supOn` itself**, and therefore none of
+//! **Also landed this session: `CReal.meshMax_step_le` and
+//! `CReal.meshMax_mono`** (rungs 3 and 4 below), both first-attempt kernel
+//! accepts. **Still not landed: `CReal.supOn` itself**, and therefore none of
 //! deliverables (a)/(b)/(c) the assignment names in fully assembled form.
 //! This is not a hedge — it is the honest outcome of a real attempt at the
 //! full route, and the remaining obstruction is now characterized much more
@@ -98,36 +100,50 @@
 //! **The remaining assembly, characterized precisely (verified against this
 //! kernel's actual API this session, not just worked out on paper):**
 //!
-//! - **Rung 3, the order half (no continuity needed):**
-//!   `meshMax_step_le : ∀ F a b j, le (meshMax F a b j) (meshMax F a b
-//!   (Nat.succ j))`. This is NOT an instance of
+//! - **Rung 3, the order half — LANDED, and the plan below was subtly
+//!   WRONG about its statement.** The actual, kernel-accepted signature is
+//!   `meshMax_step_le : ∀ F a b j, UniformlyContinuousOn F a b → le a b → le
+//!   (meshMax F a b j) (meshMax F a b (Nat.succ j))` — **not** hypothesis-free
+//!   as first planned. `F` applied to the two `Equiv`-but-not-equal mesh
+//!   points needs `F` to respect `Equiv`, which is exactly
+//!   [`CRealPrelude::congr_of_uniformly_continuous`] and is FALSE for an
+//!   arbitrary `F` with no continuity witness. This is NOT an instance of
 //!   [`CReal.mono_of_le_succ`](super::CRealPrelude::mono_of_le_succ) the way
 //!   `maxRange_mono` is (`mono_of_le_succ` holds the SAMPLING FUNCTION fixed
 //!   and varies only `maxRange`'s own bound; here both the sampling function
-//!   AND the bound change together as `j` grows). It needs a genuinely new
-//!   combinator, proved once and reusable well beyond this file:
-//!   `maxRange_transport : ∀ f g n n' (e : Nat → Nat), (∀ i, Nat.le i n →
-//!   Nat.le (e i) n') → (∀ i, Nat.le i n → Equiv (f i) (g (e i))) → le
-//!   (maxRange f n) (maxRange g n')` — by induction on an AUXILIARY index `k`
-//!   (motive `fun k => Nat.le k n → le (maxRange f k) (maxRange g n')`, the
-//!   side condition threaded through the motive exactly the way
-//!   [`NatOps::induct`](crate::nat_prelude::NatOps::induct)'s generic `p`
-//!   closure supports — confirmed against its actual signature this session),
+//!   AND the bound change together as `j` grows). Built from
+//!   [`CRealPrelude::max_range_transport`], induction on an AUXILIARY index
+//!   `k` (motive `fun k => Nat.le k n → le (maxRange f k) (maxRange g n')`),
 //!   base case via [`CRealPrelude::maxRange_ub`] plus
 //!   [`CRealPrelude::le_congr`], step case via
-//!   [`CRealPrelude::max_le`](super::CRealPrelude::max_le) (confirmed to
-//!   exist: `∀ x y z, le x z → le y z → le (max x y) z`) combining the IH
-//!   with a fresh `maxRange_ub` instance. Instantiated at `e(i) := 2·i`,
-//!   `n := meshLevelCount j`, `n' := meshLevelCount (succ j)` (so `e(i) ≤ n'`
-//!   is `2i ≤ 2·meshLevelCount j + 1`, immediate from `i ≤ meshLevelCount j`),
-//!   the `Equiv` hypothesis is exactly the sample-point identity above,
-//!   closed via [`CRealPrelude::of_nat_mul`] (`ofNat (2i) ~ mul (ofNat 2)
-//!   (ofNat i)`, confirmed to exist) plus the `natDivSucc_scale`/`_mul`
-//!   algebra giving `mul (ofNat 2) Δⱼ' ~ Δⱼ`.
-//! - **Rung 4, general monotonicity, for free once rung 3 lands:**
-//!   `meshMax_mono : ∀ F a b j j', Nat.le j j' → le (meshMax F a b j)
-//!   (meshMax F a b j')`, by [`CRealPrelude::mono_of_le_succ`] applied to
-//!   `fun j => meshMax F a b j` with rung 3 as the adjacent step — EXACTLY
+//!   [`CRealPrelude::max_le`](super::CRealPrelude::max_le) combining the IH
+//!   with a fresh `maxRange_ub` instance — see [`declare_max_range_transport_thm`]
+//!   for that combinator's own construction. Instantiated at `e(i) := add i
+//!   i` (built ADDITIVELY, matching `meshLevelCount`'s own convention — not
+//!   `mul 2 i` as first planned, which would have needed a `Nat.mul`
+//!   dependency this file otherwise avoids entirely), `n := meshLevelCount
+//!   j`, `n' := meshLevelCount (succ j)` (`hbound` is pure `Nat` order
+//!   algebra: `add_le_add_left`/`_right` plus `le_succ`, `le_trans`). The
+//!   `Equiv` hypothesis places both sample points in `[a, b]` via
+//!   [`CRealPrelude::riemann_sample_in_bounds`] (the same mesh-point shape
+//!   `riemannSum` uses) and closes with
+//!   [`CRealPrelude::congr_of_uniformly_continuous`] against
+//!   [`mesh_sample_transport`]'s point-level `Equiv (meshSamplePoint a Δⱼ i)
+//!   (meshSamplePoint a Δⱼ' (add i i))` — built from `ofNat (add i i) ~ add
+//!   (ofNat i) (ofNat i)` ([`CRealPrelude::of_nat_add`], not `of_nat_mul` as
+//!   first planned), [`right_distrib`]/[`CRealPrelude::left_distrib`], and
+//!   [`mesh_delta_halve`]'s `Δⱼ' + Δⱼ' ~ Δⱼ` (via `Rat.natDivSucc_add` fusing
+//!   the sum, then `Rat.natDivSucc_halve` rewritten along a small
+//!   `mul 2 m = add m m` bridge lemma — not `natDivSucc_scale`/`_mul` as
+//!   first planned, which multiply rather than add and so do not match
+//!   `meshLevelCount`'s additive doubling directly).
+//! - **Rung 4, general monotonicity — LANDED**, for free once rung 3 lands:
+//!   `meshMax_mono : ∀ F a b, UniformlyContinuousOn F a b → le a b → ∀ j j',
+//!   Nat.le j j' → le (meshMax F a b j) (meshMax F a b j')` (`F`/`a`/`b`/the
+//!   continuity witness/`le a b` closed over rather than varying, since
+//!   rung 3's hypotheses are needed at every adjacent step), by
+//!   [`CRealPrelude::mono_of_le_succ`] applied to `fun j => meshMax F a b j`
+//!   with rung 3 as the adjacent step — EXACTLY
 //!   [`declare_max_range_mono`]'s own construction, one level up.
 //! - **Rung 5, the accuracy-selection scheme (where continuity enters).**
 //!   The naive choice — request the SAME accuracy `k` as the outer `CReal`
@@ -173,25 +189,31 @@
 //!   h)` shape (kernel fact 1 respected: `f_lambda`/`K` stay concrete data
 //!   throughout, never pulled from an `Exists`).
 //!
-//! This plan is now grounded against the kernel's actual API (every named
-//! lemma above was confirmed present this session, not merely recalled) —
-//! the remaining work is assembling rungs 3–7 as kernel terms, each with its
-//! own real risk of `TypeMismatch` cycles (see this file's own experience
-//! with rungs 1–2, which built cleanly on the first attempt each time by
-//! mirroring `declare_max_range`'s and `integral.rs`'s existing shapes
-//! exactly rather than composing primitives from scratch). Rung 3 is the
-//! next concrete task; do NOT skip to rung 5 without it, since rung 4's
-//! `mono_of_le_succ` application needs rung 3 as its adjacent-step
-//! hypothesis verbatim.
+//! This plan was grounded against the kernel's actual API, and rungs 1–4 have
+//! now all built cleanly on the first attempt by mirroring
+//! `declare_max_range`'s and `integral.rs`'s existing shapes exactly rather
+//! than composing primitives from scratch — the same held for rung 3's own
+//! sub-lemmas ([`mesh_delta_halve`], [`mesh_sample_transport`]), each of
+//! which needed one correction against the ORIGINAL plan above (documented
+//! inline at rung 3: additive doubling and `natDivSucc_add`/`_halve` in
+//! place of the originally planned multiplicative route, and an added
+//! `UniformlyContinuousOn`/`le a b` hypothesis the original statement
+//! omitted). **Rung 5, the accuracy-selection scheme, is the next concrete
+//! task** — the first rung where continuity's actual QUANTITATIVE content
+//! (the modulus, not just `Equiv`-respecting) is used, and the harmonic-vs.
+//! summable trap it documents above is real and unverified against the
+//! kernel until that rung is built.
 
 #![allow(clippy::doc_markdown, clippy::too_many_arguments)]
 
+use super::ring_helpers::right_distrib;
 use super::{CRealPrelude, cadd, cle, creal_ty, embed};
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
+use crate::rat_prelude::ops::{nat_rewrite_prop, radd, rat_eq_rewrite, req, rtrans};
 
 /// Reducibility height for [`declare_max_range`]'s `Definition`. Deliberately
 /// far above [`super::DERIVED_HEIGHT`] plus every other derived-operation
@@ -983,4 +1005,540 @@ fn declare_mesh_max_def(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kerne
 /// **refused** a proof, not that a script gave up.
 pub(super) fn declare_mesh_max(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
     declare_mesh_max_def(d, p)
+}
+
+// ---------------------------------------------------------------------------
+// `CReal.meshMax_step_le` -- rung 3, the order half: adjacent mesh levels are
+// ordered, for a function uniformly continuous on `[a, b]`. See this
+// module's own documentation, "Rung 3, the order half", and the correction
+// to it recorded there: this needs `UniformlyContinuousOn F a b` and `le a
+// b` after all (`F` applied to two `Equiv`-but-not-equal mesh points needs
+// `F` to respect `Equiv`, which is exactly
+// [`CRealPrelude::congr_of_uniformly_continuous`] and is FALSE for an
+// arbitrary `F` with no continuity hypothesis).
+// ---------------------------------------------------------------------------
+
+/// `Eq Nat (mul (Nat.succ (Nat.succ Nat.zero)) m) (add m m)` -- `2·m = m + m`,
+/// built from `Nat.succ_mul` (`mul (succ n) m = add (mul n m) m`, at `n :=
+/// 1`) and `Nat.one_mul`, exactly the pattern `nat_prelude/factorization.rs`
+/// uses for the same identity (re-derived here per this development's
+/// convention of not importing another file's private helper).
+fn nat_two_mul_eq_add(d: &mut IntDev<'_>, p: CRealPrelude, m: ExprId) -> ExprId {
+    let nat_p = p.rat.int.nat;
+    let one_v = d.num(1);
+    let sm = d.lemma(nat_p.succ_mul, &[one_v, m]);
+    // sm : Eq (mul (succ one_v) m) (add (mul one_v m) m) -- LHS is `mul (num
+    // 2) m` since `succ one_v` and `num 2` are the same interned term.
+    let one_mul_m = d.lemma(nat_p.one_mul, &[m]); // Eq (mul one_v m) m
+    let one_m = NatOps::mul(d, one_v, m);
+    let cong_add = NatOps::congr(d, one_m, m, one_mul_m, &|d, t| NatOps::add(d, t, m));
+    // cong_add : Eq (add one_m m) (add m m)
+    let add_one_m_m = NatOps::add(d, one_m, m);
+    let m_m = NatOps::add(d, m, m);
+    let two_v = d.num(2);
+    let two_m = NatOps::mul(d, two_v, m);
+    NatOps::trans(d, two_m, add_one_m_m, m_m, sm, cong_add)
+}
+
+/// `Equiv (add Δⱼ' Δⱼ') Δⱼ`, where `Δⱼ := meshDelta a b (meshLevelCount j)`
+/// and `Δⱼ' := meshDelta a b (meshLevelCount (Nat.succ j))` -- the mesh width
+/// exactly halves from level `j` to level `j+1`.
+///
+/// Rat-level core: `natDivSucc 1 (meshLevelCount (succ j)) + natDivSucc 1
+/// (meshLevelCount (succ j)) = natDivSucc 1 (meshLevelCount j)`, via
+/// `Rat.natDivSucc_add` (fusing the sum into `natDivSucc 2 …`) then
+/// `Rat.natDivSucc_halve` (`natDivSucc 2 (succ (mul 2 m)) = natDivSucc 1 m`)
+/// rewritten along [`nat_two_mul_eq_add`] to replace the multiplicative
+/// index `succ (mul 2 m)` with the additive one `succ (add m m)` --
+/// `meshLevelCount (succ j)`'s own ι-reduction, since `meshLevelCount` is
+/// built additively (`add x x`, not `mul 2 x`, per this file's own
+/// `meshLevelCount` documentation). Lifted to `CReal` via `CReal.ofRat_add`
+/// and `CReal.left_distrib`.
+fn mesh_delta_halve(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    j: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let mlc_j = d.const_app(p.mesh_level_count, &[j]);
+    let sj = d.succ(j);
+    let mlc_sj = d.const_app(p.mesh_level_count, &[sj]);
+
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+    let q = d.const_app(rat.nat_div_succ, &[one_nat, mlc_sj]);
+    let target_rat = d.const_app(rat.nat_div_succ, &[one_nat, mlc_j]);
+
+    // Rat level: Eq Rat (radd q q) target_rat.
+    let add_fuse = d.lemma(rat.nat_div_succ_add, &[one_nat, one_nat, mlc_sj]);
+    // add_fuse : Eq Rat (radd q q) (natDivSucc (add 1 1) mlc_sj)
+    let radd_qq = radd(d, q, q);
+    let one_plus_one = NatOps::add(d, one_nat, one_nat);
+    let fused_idx = d.const_app(rat.nat_div_succ, &[one_plus_one, mlc_sj]);
+
+    let two_mul_eq = nat_two_mul_eq_add(d, p, mlc_j); // Eq Nat (mul 2 mlc_j) (add mlc_j mlc_j)
+    let mul2mlcj = NatOps::mul(d, two_nat, mlc_j);
+    let addmlcjmlcj = NatOps::add(d, mlc_j, mlc_j);
+    let midx = d.succ(mul2mlcj);
+    let ridx = d.succ(addmlcjmlcj);
+    let bridge_nat = NatOps::congr(d, mul2mlcj, addmlcjmlcj, two_mul_eq, &|d, t| d.succ(t));
+    // bridge_nat : Eq Nat midx ridx
+
+    let halve = d.lemma(rat.nat_div_succ_halve, &[mlc_j]); // Eq Rat (natDivSucc 2 midx) target_rat
+    let halve_at_ridx = nat_rewrite_prop(d, midx, ridx, bridge_nat, halve, &|d, t| {
+        let lhs = d.const_app(rat.nat_div_succ, &[two_nat, t]);
+        req(d, lhs, target_rat)
+    });
+    // halve_at_ridx : Eq Rat (natDivSucc 2 ridx) target_rat -- ridx is defeq
+    // mlc_sj (meshLevelCount's own ι-reduction), so this and `add_fuse`
+    // chain at the shared middle term up to defeq.
+    let rat_eq = rtrans(d, radd_qq, fused_idx, target_rat, add_fuse, halve_at_ridx);
+    // rat_eq : Eq Rat (radd q q) target_rat
+
+    // Lift to CReal: Equiv (add (embed q) (embed q)) (embed target_rat).
+    let of_rat_add_step = d.lemma(p.of_rat_add, &[q, q]);
+    // of_rat_add_step : Equiv (add (embed q) (embed q)) (embed (radd q q))
+    let embed_level = rat_eq_rewrite(d, radd_qq, target_rat, rat_eq, of_rat_add_step, &|d, t| {
+        let embed_q = embed(d, p, q);
+        let sum_real = cadd(d, p, embed_q, embed_q);
+        let embedded = embed(d, p, t);
+        cequiv(d, p, sum_real, embedded)
+    });
+    // embed_level : Equiv (add (embed q) (embed q)) (embed target_rat)
+
+    // Multiply through by the shared width factor.
+    let delta_j = mesh_delta(d, p, a, b, mlc_j);
+    let delta_sj = mesh_delta(d, p, a, b, mlc_sj);
+    let width = {
+        let na = cneg(d, p, a);
+        cadd(d, p, b, na)
+    };
+    let embed_q = embed(d, p, q);
+    let embed_target = embed(d, p, target_rat);
+    let sum_embed = cadd(d, p, embed_q, embed_q);
+
+    let refl_width = d.lemma(p.equiv_refl, &[width]);
+    let mul_congr_step = d.lemma(
+        p.mul_congr,
+        &[
+            width,
+            width,
+            sum_embed,
+            embed_target,
+            refl_width,
+            embed_level,
+        ],
+    );
+    // mul_congr_step : Equiv (mul width sum_embed) (mul width embed_target)
+    //                = Equiv (mul width sum_embed) delta_j
+
+    let dist_left = d.lemma(p.left_distrib, &[width, embed_q, embed_q]);
+    // dist_left : Equiv (mul width sum_embed) (add (mul width embed_q) (mul width embed_q))
+    //           = Equiv (mul width sum_embed) (add delta_sj delta_sj)
+    let mul_width_sum = cmul(d, p, width, sum_embed);
+    let add_delta_sj_delta_sj = cadd(d, p, delta_sj, delta_sj);
+    let dist_left_symm = d.lemma(
+        p.equiv_symm,
+        &[mul_width_sum, add_delta_sj_delta_sj, dist_left],
+    );
+    // dist_left_symm : Equiv (add delta_sj delta_sj) (mul width sum_embed)
+
+    d.lemma(
+        p.equiv_trans,
+        &[
+            add_delta_sj_delta_sj,
+            mul_width_sum,
+            delta_j,
+            dist_left_symm,
+            mul_congr_step,
+        ],
+    )
+    // : Equiv (add delta_sj delta_sj) delta_j
+}
+
+/// `Equiv (meshSamplePoint a Δⱼ i) (meshSamplePoint a Δⱼ' (add i i))` -- the
+/// level-`j` coarse sample point at index `i` is `CReal.Equiv` to the
+/// level-`(j+1)` fine sample point at index `2i` (built additively as `add i
+/// i`). Route: `ofNat (add i i) ~ add (ofNat i) (ofNat i)`
+/// ([`CRealPrelude::of_nat_add`]), distribute across `Δⱼ'`
+/// ([`right_distrib`]), refactor the resulting sum back through `ofNat i`
+/// ([`CRealPrelude::left_distrib`], reversed), close the `Δⱼ' + Δⱼ' ~ Δⱼ`
+/// gap via [`mesh_delta_halve`], then lift across the shared `a +` via
+/// [`CRealPrelude::add_congr`].
+fn mesh_sample_transport(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    j: ExprId,
+    i: ExprId,
+) -> ExprId {
+    let mlc_j = d.const_app(p.mesh_level_count, &[j]);
+    let sj = d.succ(j);
+    let mlc_sj = d.const_app(p.mesh_level_count, &[sj]);
+    let delta_j = mesh_delta(d, p, a, b, mlc_j);
+    let delta_sj = mesh_delta(d, p, a, b, mlc_sj);
+    let ii = NatOps::add(d, i, i);
+
+    let of_nat_i = d.const_app(p.of_nat, &[i]);
+    let of_nat_ii = d.const_app(p.of_nat, &[ii]);
+    let sum_oi = cadd(d, p, of_nat_i, of_nat_i);
+
+    let of_nat_add_step = d.lemma(p.of_nat_add, &[i, i]);
+    // of_nat_add_step : Equiv (ofNat (add i i)) (add (ofNat i) (ofNat i))
+
+    let refl_delta_sj = d.lemma(p.equiv_refl, &[delta_sj]);
+    let term_a = cmul(d, p, of_nat_ii, delta_sj); // ofNat(i+i) * delta_sj
+    let term_b = cmul(d, p, sum_oi, delta_sj);
+    let step2 = d.lemma(
+        p.mul_congr,
+        &[
+            of_nat_ii,
+            sum_oi,
+            delta_sj,
+            delta_sj,
+            of_nat_add_step,
+            refl_delta_sj,
+        ],
+    );
+    // step2 : Equiv term_a term_b
+
+    let step3 = right_distrib(d, p, of_nat_i, of_nat_i, delta_sj);
+    // step3 : Equiv term_b (add (mul of_nat_i delta_sj) (mul of_nat_i delta_sj))
+    let oi_delta_sj = cmul(d, p, of_nat_i, delta_sj);
+    let term_c = cadd(d, p, oi_delta_sj, oi_delta_sj);
+    let step23 = d.lemma(p.equiv_trans, &[term_a, term_b, term_c, step2, step3]);
+    // step23 : Equiv term_a term_c
+
+    let sum_delta_sj = cadd(d, p, delta_sj, delta_sj);
+    let oi_sum_delta_sj = cmul(d, p, of_nat_i, sum_delta_sj);
+    let dist2 = d.lemma(p.left_distrib, &[of_nat_i, delta_sj, delta_sj]);
+    // dist2 : Equiv oi_sum_delta_sj term_c
+    let dist2_symm = d.lemma(p.equiv_symm, &[oi_sum_delta_sj, term_c, dist2]);
+    // dist2_symm : Equiv term_c oi_sum_delta_sj
+
+    let step234 = d.lemma(
+        p.equiv_trans,
+        &[term_a, term_c, oi_sum_delta_sj, step23, dist2_symm],
+    );
+    // step234 : Equiv term_a oi_sum_delta_sj
+
+    let halve = mesh_delta_halve(d, p, a, b, j); // Equiv sum_delta_sj delta_j
+    let refl_oi = d.lemma(p.equiv_refl, &[of_nat_i]);
+    let term_final = cmul(d, p, of_nat_i, delta_j); // ofNat(i) * delta_j
+    let step6 = d.lemma(
+        p.mul_congr,
+        &[of_nat_i, of_nat_i, sum_delta_sj, delta_j, refl_oi, halve],
+    );
+    // step6 : Equiv oi_sum_delta_sj term_final
+
+    let step2346 = d.lemma(
+        p.equiv_trans,
+        &[term_a, oi_sum_delta_sj, term_final, step234, step6],
+    );
+    // step2346 : Equiv term_a term_final
+
+    let refl_a = d.lemma(p.equiv_refl, &[a]);
+    let step_final = d.lemma(p.add_congr, &[a, a, term_a, term_final, refl_a, step2346]);
+    // step_final : Equiv (add a term_a) (add a term_final)
+    //            = Equiv (meshSamplePoint a delta_sj ii) (meshSamplePoint a delta_j i)
+
+    let sp_sj = mesh_sample_point(d, p, a, delta_sj, ii);
+    let sp_j = mesh_sample_point(d, p, a, delta_j, i);
+    d.lemma(p.equiv_symm, &[sp_sj, sp_j, step_final])
+    // : Equiv sp_j sp_sj
+}
+
+/// `CReal.meshMax_step_le : ∀ F a b j, UniformlyContinuousOn F a b → le a b →
+/// le (meshMax F a b j) (meshMax F a b (Nat.succ j))` -- rung 3.
+///
+/// Instantiates [`CRealPrelude::max_range_transport`] at the two mesh
+/// samplers (`f := fun i => F (meshSamplePoint a Δⱼ i)`, `g := fun i => F
+/// (meshSamplePoint a Δⱼ' i)`), bounds `n := meshLevelCount j`, `n' :=
+/// meshLevelCount (succ j)`, and index embedding `e := fun i => add i i`.
+/// `hbound` is pure `Nat` order algebra (`add_le_add_left/_right` plus
+/// `le_succ`, `le_trans`); `heq` places both sample points in `[a, b]` via
+/// [`CRealPrelude::riemann_sample_in_bounds`] (the same mesh-point shape
+/// `riemannSum` uses) and closes with
+/// [`CRealPrelude::congr_of_uniformly_continuous`] against
+/// [`mesh_sample_transport`]'s point-level `Equiv`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_mesh_max_step_le_thm(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let func_ty = d.arrow(carrier, carrier);
+    let nat_p = p.rat.int.nat;
+    let logic = p.rat.int.logic;
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let mlc_j = d.const_app(p.mesh_level_count, &[j]);
+    let sj = d.succ(j);
+    let mlc_sj = d.const_app(p.mesh_level_count, &[sj]);
+    let delta_j = mesh_delta(d, p, a, b, mlc_j);
+    let delta_sj = mesh_delta(d, p, a, b, mlc_sj);
+
+    let f_sampler = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let sp = mesh_sample_point(d, p, a, delta_j, i);
+        let fx = d.apply(f, &[sp]);
+        d.lam_fv(i_fv, nat, fx)
+    };
+    let g_sampler = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let sp = mesh_sample_point(d, p, a, delta_sj, i);
+        let fx = d.apply(f, &[sp]);
+        d.lam_fv(i_fv, nat, fx)
+    };
+    let e_fn = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let ei = NatOps::add(d, i, i);
+        d.lam_fv(i_fv, nat, ei)
+    };
+
+    // hbound : ∀ i, Nat.le i mlc_j → Nat.le (add i i) mlc_sj.
+    let hbound = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let hi_fv = d.fresh_fvar();
+        let hi = d.kernel().fvar(hi_fv);
+        let hi_ty = d.le(i, mlc_j);
+
+        let step1 = d.lemma(nat_p.add_le_add_right, &[i, i, mlc_j, hi]);
+        // step1 : Le (add i i) (add mlc_j i)
+        let step2 = d.lemma(nat_p.add_le_add_left, &[mlc_j, i, mlc_j, hi]);
+        // step2 : Le (add mlc_j i) (add mlc_j mlc_j)
+        let ii = NatOps::add(d, i, i);
+        let mm = NatOps::add(d, mlc_j, i);
+        let mm2 = NatOps::add(d, mlc_j, mlc_j);
+        let combined = d.lemma(nat_p.le_trans, &[ii, mm, mm2, step1, step2]);
+        let step3 = d.lemma(nat_p.le_succ, &[mm2]);
+        let smm2 = d.succ(mm2);
+        let final_le = d.lemma(nat_p.le_trans, &[ii, mm2, smm2, combined, step3]);
+        // final_le : Le (add i i) (succ (add mlc_j mlc_j)) -- defeq mlc_sj
+
+        let body = d.lam_fv(hi_fv, hi_ty, final_le);
+        d.lam_fv(i_fv, nat, body)
+    };
+
+    // heq : ∀ i, Nat.le i mlc_j → Equiv (f_sampler i) (g_sampler (add i i)).
+    let heq = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let hi_fv = d.fresh_fvar();
+        let hi = d.kernel().fvar(hi_fv);
+        let hi_ty = d.le(i, mlc_j);
+
+        let sp_j = mesh_sample_point(d, p, a, delta_j, i);
+        let ii = NatOps::add(d, i, i);
+        let sp_sj = mesh_sample_point(d, p, a, delta_sj, ii);
+
+        let hlt_i = d.lemma(nat_p.lt_succ_of_le, &[i, mlc_j, hi]);
+        let and_j = d.const_app(p.riemann_sample_in_bounds, &[a, b, mlc_j, i, hab, hlt_i]);
+        let a_le_spj = cle(d, p, a, sp_j);
+        let spj_le_b = cle(d, p, sp_j, b);
+        let hax_j = d.const_app(logic.and_left, &[a_le_spj, spj_le_b, and_j]);
+        let hxb_j = d.const_app(logic.and_right, &[a_le_spj, spj_le_b, and_j]);
+
+        let hbound_i = d.apply(hbound, &[i, hi]);
+        let hlt_ii = d.lemma(nat_p.lt_succ_of_le, &[ii, mlc_sj, hbound_i]);
+        let and_sj = d.const_app(p.riemann_sample_in_bounds, &[a, b, mlc_sj, ii, hab, hlt_ii]);
+        let a_le_spsj = cle(d, p, a, sp_sj);
+        let spsj_le_b = cle(d, p, sp_sj, b);
+        let hay_sj = d.const_app(logic.and_left, &[a_le_spsj, spsj_le_b, and_sj]);
+        let hyb_sj = d.const_app(logic.and_right, &[a_le_spsj, spsj_le_b, and_sj]);
+
+        let point_equiv = mesh_sample_transport(d, p, a, b, j, i);
+
+        let concl = d.lemma(
+            p.congr_of_uniformly_continuous,
+            &[
+                f,
+                a,
+                b,
+                u,
+                sp_j,
+                sp_sj,
+                hax_j,
+                hxb_j,
+                hay_sj,
+                hyb_sj,
+                point_equiv,
+            ],
+        );
+
+        let body = d.lam_fv(hi_fv, hi_ty, concl);
+        d.lam_fv(i_fv, nat, body)
+    };
+
+    let transport_applied = d.const_app(
+        p.max_range_transport,
+        &[f_sampler, g_sampler, mlc_j, mlc_sj, e_fn, hbound, heq],
+    );
+
+    let mesh_j = d.const_app(p.mesh_max, &[f, a, b, j]);
+    let mesh_sj = d.const_app(p.mesh_max, &[f, a, b, sj]);
+    let conclusion = cle(d, p, mesh_j, mesh_sj);
+
+    let ty = {
+        let after_hab = d.arrow(hab_ty, conclusion);
+        let after_u = d.arrow(u_ty, after_hab);
+        let over_j = d.pi_fv(j_fv, nat, after_u);
+        let over_b = d.pi_fv(b_fv, carrier, over_j);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        d.pi_fv(f_fv, func_ty, over_a)
+    };
+    let value = {
+        let after_hab = d.lam_fv(hab_fv, hab_ty, transport_applied);
+        let after_u = d.lam_fv(u_fv, u_ty, after_hab);
+        let over_j = d.lam_fv(j_fv, nat, after_u);
+        let over_b = d.lam_fv(b_fv, carrier, over_j);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        d.lam_fv(f_fv, func_ty, over_a)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mesh_max_step_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Land `CReal.meshMax_step_le` alone (a one-declaration `BuildStep`).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_mesh_max_step_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_mesh_max_step_le_thm(d, p)
+}
+
+/// `CReal.meshMax_mono : ∀ F a b, UniformlyContinuousOn F a b → le a b → ∀ j
+/// j', Nat.le j j' → le (meshMax F a b j) (meshMax F a b j')` -- rung 4,
+/// general monotonicity, for free from rung 3 via
+/// [`CRealPrelude::mono_of_le_succ`] applied to `fun k => meshMax F a b k`
+/// with [`declare_mesh_max_step_le`]'s theorem as the adjacent step --
+/// EXACTLY [`declare_max_range_mono`]'s own construction, one level up (`F`,
+/// `a`, `b`, `u`, `hab` closed over rather than varying).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_mesh_max_mono_thm(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let func_ty = d.arrow(carrier, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let mesh_f = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let body = d.const_app(p.mesh_max, &[f, a, b, k]);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let adjacent = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let body = d.const_app(p.mesh_max_step_le, &[f, a, b, n, u, hab]);
+        d.lam_fv(n_fv, nat, body)
+    };
+    let mono = d.const_app(p.mono_of_le_succ, &[mesh_f, adjacent]);
+
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let jp_fv = d.fresh_fvar();
+    let jp = d.kernel().fvar(jp_fv);
+    let hjj_fv = d.fresh_fvar();
+    let hjj = d.kernel().fvar(hjj_fv);
+    let hjj_ty = d.le(j, jp);
+    let applied = d.apply(mono, &[j, jp, hjj]);
+
+    let mesh_j = d.const_app(p.mesh_max, &[f, a, b, j]);
+    let mesh_jp = d.const_app(p.mesh_max, &[f, a, b, jp]);
+    let conclusion = cle(d, p, mesh_j, mesh_jp);
+
+    let ty = {
+        let anon = d.anon_name();
+        let out = d
+            .kernel()
+            .pi(anon, hjj_ty, conclusion, crate::BinderInfo::Default);
+        let out = d.pi_fv(jp_fv, nat, out);
+        let out = d.pi_fv(j_fv, nat, out);
+        let out = d.arrow(hab_ty, out);
+        let out = d.arrow(u_ty, out);
+        let out = d.pi_fv(b_fv, carrier, out);
+        let out = d.pi_fv(a_fv, carrier, out);
+        d.pi_fv(f_fv, func_ty, out)
+    };
+    let value = {
+        let out = d.lam_fv(hjj_fv, hjj_ty, applied);
+        let out = d.lam_fv(jp_fv, nat, out);
+        let out = d.lam_fv(j_fv, nat, out);
+        let out = d.lam_fv(hab_fv, hab_ty, out);
+        let out = d.lam_fv(u_fv, u_ty, out);
+        let out = d.lam_fv(b_fv, carrier, out);
+        let out = d.lam_fv(a_fv, carrier, out);
+        d.lam_fv(f_fv, func_ty, out)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mesh_max_mono,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Land `CReal.meshMax_mono` alone (a one-declaration `BuildStep`).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_mesh_max_mono(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_mesh_max_mono_thm(d, p)
 }
