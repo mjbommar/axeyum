@@ -10032,6 +10032,9 @@ fn poly_eval_poly_add_would_reject_mul_instead_of_add() {
         admitted.is_err(),
         "polyEval_polyAdd's proof must NOT type-check against a `mul`-shaped \
          conclusion: {admitted:?}"
+    );
+}
+
 /// `CReal.uniform_converges_add` at a GENUINELY non-degenerate pair: `F n x
 /// := x` (via `uniform_converges_id`, instantiated at `[0, 1]`) and `H n x
 /// := x * (1/2)^n` (via `uniform_converges_geom_half`, already at `[0, 1]`)
