@@ -1498,8 +1498,8 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         (
             "CReal.polyDegreeLt_polyScale",
             p.poly_degree_lt_poly_scale,
-    );
-
+            "theorem",
+        ),
         (
             "CReal.uniform_converges_add",
             p.uniform_converges_add,
@@ -10075,6 +10075,7 @@ fn poly_eval_poly_add_would_reject_mul_instead_of_add() {
         admitted.is_err(),
         "polyEval_polyAdd's proof must NOT type-check against a `mul`-shaped \
          conclusion: {admitted:?}"
+    );
 }
 
 /// `CReal.uniform_converges_add` at a GENUINELY non-degenerate pair: `F n x
