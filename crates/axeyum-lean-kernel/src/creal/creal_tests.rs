@@ -126,7 +126,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 377] = [
+    let expected: [(&str, crate::NameId, &str); 387] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -1359,6 +1359,41 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         ("CReal.limitSeq_regular", p.limit_seq_regular, "theorem"),
         ("CReal.limit", p.limit, "def"),
         ("CReal.limit_dist", p.limit_dist, "theorem"),
+        // Added for `creal/order_extra.rs` (Spivak Ch24's
+        // `creal/uniform_convergence.rs`): the additive-inverse-swap identity
+        // and the converse of `two_sided_of_abs_sub_le`.
+        ("CReal.neg_sub_swap", p.neg_sub_swap, "theorem"),
+        (
+            "CReal.abs_le_of_two_sided",
+            p.abs_le_of_two_sided,
+            "theorem",
+        ),
+        // Spivak Ch24: uniform convergence of a sequence of functions
+        // (`creal/uniform_convergence.rs`).
+        (
+            "CReal.UniformConvergesOn",
+            p.uniform_converges_on,
+            "inductive",
+        ),
+        ("UniformConvergesOn.mk", p.uconv_mk, "ctor"),
+        ("UniformConvergesOn.rec", p.uconv_rec, "recursor"),
+        ("UniformConvergesOn.rate", p.uconv_rate, "def"),
+        ("UniformConvergesOn.spec", p.uconv_spec, "theorem"),
+        (
+            "CReal.uniform_converges_id",
+            p.uniform_converges_id,
+            "theorem",
+        ),
+        (
+            "CReal.uniform_converges_geom_half",
+            p.uniform_converges_geom_half,
+            "theorem",
+        ),
+        (
+            "CReal.uniform_limit_uniformly_continuous",
+            p.uniform_limit_uniformly_continuous,
+            "theorem",
+        ),
     ];
     // COVERAGE, checked against the ENVIRONMENT rather than against this list.
     //

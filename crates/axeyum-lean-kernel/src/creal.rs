@@ -4108,6 +4108,53 @@ pub struct CRealPrelude {
     /// pattern of pushing a Skolem witness onto the caller rather than
     /// solving the `ofNat`-vs-`natDivSucc` conversion inline.
     pub has_derivative_integral_const: NameId,
+    /// `CReal.neg_sub_swap : ∀ a b, Equiv (neg (add a (neg b))) (add b (neg
+    /// a))` (`creal/order_extra.rs`) — negating a difference reverses it.
+    /// Added for `creal/uniform_convergence.rs` (Spivak Ch24); see that
+    /// file's module documentation and `order_extra.rs`'s own section
+    /// comment for why this specific compound identity, rather than a
+    /// `neg_add`/`neg_neg` pair, is what got proved.
+    pub neg_sub_swap: NameId,
+    /// `CReal.abs_le_of_two_sided : ∀ x y q : Rat, le x (add y (ofRat q)) →
+    /// le y (add x (ofRat q)) → le (abs (add x (neg y))) (ofRat q)`
+    /// (`creal/order_extra.rs`) — the converse of
+    /// [`Self::two_sided_of_abs_sub_le`]: rebuilds a `close_within`-shaped
+    /// bound from the two "shifted" one-sided `le` facts a triangle-of-three
+    /// argument naturally produces.
+    pub abs_le_of_two_sided: NameId,
+    /// `CReal.UniformConvergesOn (F : Nat → CReal → CReal) (G : CReal →
+    /// CReal) (a b : CReal) : Type := mk (rate : Nat) (spec : …)`
+    /// (`creal/uniform_convergence.rs`, Spivak Ch24) — uniform convergence of
+    /// a sequence of functions on `[a, b]`. See that file's module
+    /// documentation for why `rate` is a genuine `Nat` DATA field (mirroring
+    /// [`Self::uniformly_continuous_on`]'s own `Type`-valued shape) rather
+    /// than an `Exists`-wrapped `Prop`.
+    pub uniform_converges_on: NameId,
+    /// `UniformConvergesOn.mk`, the one constructor.
+    pub uconv_mk: NameId,
+    /// `UniformConvergesOn.rec`, the kernel-generated recursor (four leading
+    /// parameters `F G a b`).
+    pub uconv_rec: NameId,
+    /// `UniformConvergesOn.rate : ∀ F G a b, UniformConvergesOn F G a b →
+    /// Nat` — the data field, by large elimination.
+    pub uconv_rate: NameId,
+    /// `UniformConvergesOn.spec` — the `Prop`-valued field, projected with
+    /// the motive at a witness `u` mentioning `u`'s own `rate`.
+    pub uconv_spec: NameId,
+    /// `CReal.uniform_converges_id : ∀ a b, UniformConvergesOn (fun n x =>
+    /// x) (fun x => x) a b` — `F n x := x` (constant in `n`) converges
+    /// uniformly to `id`, at `rate := 1`.
+    pub uniform_converges_id: NameId,
+    /// `CReal.uniform_converges_geom_half : UniformConvergesOn (fun n x =>
+    /// mul x (pow half n)) (fun _ => zero) zero one` — `F n x := x·(1/2)^n`
+    /// converges uniformly to the constant `0` on `[0, 1]`, at `rate := 1`.
+    pub uniform_converges_geom_half: NameId,
+    /// `CReal.uniform_limit_uniformly_continuous : ∀ F G a b,
+    /// UniformConvergesOn F G a b → (∀ n, UniformlyContinuousOn (F n) a b) →
+    /// UniformlyContinuousOn G a b` (`creal/uniform_convergence.rs`, Spivak
+    /// Ch24's headline theorem) — the uniform limit of uniformly continuous
+    /// functions is uniformly continuous.
+    pub uniform_limit_uniformly_continuous: NameId,
 }
 
 impl CRealPrelude {
@@ -4161,6 +4208,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
     let creal = kernel.name_str(anon, "CReal");
     let equiv = kernel.name_str(creal, "Equiv");
     let uniformly_continuous_on = kernel.name_str(creal, "UniformlyContinuousOn");
+    let uniform_converges_on = kernel.name_str(creal, "UniformConvergesOn");
     let has_derivative_on = kernel.name_str(creal, "HasDerivativeOn");
     CRealPrelude {
         rat,
@@ -4549,6 +4597,17 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         integral_scale: kernel.name_str(creal, "integral_scale"),
         riemann_sum_integral_close: kernel.name_str(creal, "riemannSum_integral_close"),
         has_derivative_integral_const: kernel.name_str(creal, "hasDerivative_integral_const"),
+        neg_sub_swap: kernel.name_str(creal, "neg_sub_swap"),
+        abs_le_of_two_sided: kernel.name_str(creal, "abs_le_of_two_sided"),
+        uniform_converges_on,
+        uconv_mk: kernel.name_str(uniform_converges_on, "mk"),
+        uconv_rec: kernel.name_str(uniform_converges_on, "rec"),
+        uconv_rate: kernel.name_str(uniform_converges_on, "rate"),
+        uconv_spec: kernel.name_str(uniform_converges_on, "spec"),
+        uniform_converges_id: kernel.name_str(creal, "uniform_converges_id"),
+        uniform_converges_geom_half: kernel.name_str(creal, "uniform_converges_geom_half"),
+        uniform_limit_uniformly_continuous: kernel
+            .name_str(creal, "uniform_limit_uniformly_continuous"),
     }
 }
 
@@ -4627,6 +4686,18 @@ pub(crate) fn build_creal_prelude_uncached(
         // (`creal/product.rs`) for why it cannot be dispatched from inside
         // `product::declare_product`, even though it is a product law.
         product::declare_mul_self_abs(&mut d, prelude)?;
+        // `CReal.abs_le_of_two_sided`/`CReal.neg_sub_swap` need `CReal.abs`/
+        // `CReal.abs_le` (`lattice::declare_lattice`, just above) -- same
+        // reason `mul_self_abs` cannot dispatch from inside
+        // `order_extra::declare_order_extra`, which runs before `lattice`.
+        order_extra::declare_order_extra_abs(&mut d, prelude)?;
+        // `UniformConvergesOn`'s carrier/projections/`uniform_converges_id`
+        // need only `CReal.abs`/`CReal.max`/`CReal.abs_le`
+        // (`lattice::declare_lattice`, well above) and ordinary order/additive
+        // laws (far above); nothing from `series`/`geometric`/`exponential`,
+        // so it lands here rather than beside `uniform_continuity`'s own
+        // entry points further down.
+        uniform_convergence::declare_uniform_converges_on(&mut d, prelude)?;
         archimedean_squeeze::declare_archimedean_squeeze(&mut d, prelude)?;
         archimedean::declare_archimedean(&mut d, prelude)?;
         density::declare_density(&mut d, prelude)?;
@@ -4776,6 +4847,17 @@ pub(crate) fn build_creal_prelude_uncached(
         // the mirror; same standalone-building-block placement as its own
         // dependency.
         integral::declare_two_sided_of_abs_sub_le(&mut d, prelude)?;
+        // `uniform_limit_uniformly_continuous` needs
+        // `CReal.two_sided_of_abs_sub_le`, just declared above, plus
+        // `UniformlyContinuousOn`'s `modulus`/`spec`
+        // (`uniform_continuity::declare_uniform_continuity`, well above),
+        // `UniformConvergesOn`'s own `rate`/`spec`
+        // (`uniform_convergence::declare_uniform_converges_on`, well above)
+        // and `CReal.abs_le_of_two_sided`/`CReal.neg_sub_swap`
+        // (`order_extra::declare_order_extra_abs`, also well above). It
+        // cannot join `declare_uniform_continuity`'s own call site, well
+        // above `two_sided_of_abs_sub_le` in this build order.
+        uniform_convergence::declare_uniform_convergence_continuity(&mut d, prelude)?;
         // `ofNat_add`/`ofNat_mul` only need `CReal.ofNat`
         // (`archimedean::declare_archimedean`, well above) and the `Rat`-level
         // `ofRat_add`/`ofRat_mul`/`natDivSucc_add`/`natDivSucc_mul` facts that
@@ -5004,6 +5086,13 @@ pub(crate) fn build_creal_prelude_uncached(
         // `mul_inv_cancel` via `inverse`) — the latter already ran earlier,
         // the former just above. See `geometric.rs`'s module documentation.
         geometric::declare_geometric(&mut d, prelude)?;
+        // `uniform_converges_geom_half` needs `CReal.pow`/`CReal.pow_nonneg`
+        // (`power::declare_power`, well above) and
+        // `CReal.pow_half_le_nat_div_succ`, just declared above by
+        // `geometric::declare_geometric` itself — it cannot join this file's
+        // own earlier entry point (`uniform_convergence::declare_uniform_converges_on`,
+        // dispatched right after `lattice`, well before `power`/`geometric`).
+        uniform_convergence::declare_uniform_converges_geom(&mut d, prelude)?;
         // `geomCauchyOfLtOrdered`/`geomCauchyOfLt` need only `geometric.rs`'s
         // own `geom_pair_within`/`geom_y_bound` (just above, well before
         // `exponential`'s base-1/2 `geom_cauchy_ordered_half`/`geom_cauchy`
@@ -6015,6 +6104,7 @@ mod speedup;
 mod sqrt;
 mod trig;
 mod uniform_continuity;
+mod uniform_convergence;
 
 #[cfg(test)]
 mod creal_tests;
