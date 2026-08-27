@@ -73,28 +73,50 @@
 //! [`crate::factor_univariate_over_q`] or `crate::ratint::solve_linear` — it
 //! re-derives everything from the certificate's own data:
 //!
-//! 1. **Structural well-formedness**: grouping `terms` by their stated
-//!    `factor`, the `power`s present in each group must be **exactly**
-//!    `{1, …, m}` for that group's size `m` — no gaps, no duplicates. This is
-//!    the guard that makes a mislabeled multiplicity a structural rejection
+//! 1. Non-constant `q` (`deg q ≥ 1`), `leading` nonzero, `terms` nonempty.
+//! 2. **Structural well-formedness**: every group's `factor` is non-constant
+//!    (`deg ≥ 1`), and grouping `terms` by their stated `factor`, the
+//!    `power`s present in each group must be **exactly** `{1, …, m}` for that
+//!    group's size `m` — no gaps, no duplicates. The power-set half is the
+//!    guard that makes a mislabeled multiplicity a structural rejection
 //!    rather than a numeric coincidence (see
 //!    `wrong_multiplicity_is_vacuous_without_the_power_set_guard`, below,
-//!    which is deliberately built so the value identity alone — the next two
-//!    checks — passes anyway).
-//! 2. **Degree bound**: every numerator's degree is strictly below its
-//!    factor's.
-//! 3. **Pairwise coprimality** of distinct factor groups (`gcd` has degree
+//!    which is deliberately built so the value identity alone — checks 4 and
+//!    5 — passes anyway); the non-constant half catches a spurious constant
+//!    "factor" with a zero numerator, smuggled in to absorb into `leading`
+//!    (`spurious_constant_factor_with_zero_numerator_is_rejected`).
+//! 3. **Degree bound**: every numerator's degree is strictly below its
+//!    factor's — without this, a decomposition is not unique (`N/(x−1) ==
+//!    (N + k·(x−1))/(x−1) − k` for any `k`, absorbed into `whole`), so a
+//!    dedicated fixture bumps one numerator's degree and compensates exactly
+//!    in `whole` (`over_degree_numerator_compensated_by_whole_is_rejected`).
+//! 4. **Pairwise coprimality** of distinct factor groups (`gcd` has degree
 //!    0). This is the cheap, standard necessary condition for a genuine
 //!    irreducible-factor decomposition, and it is what catches a repeated
 //!    root disguised as two separate proportional "factors" —
 //!    `disguised_repeated_root_via_proportional_factors_is_rejected`, below.
-//! 4. **Reconstruct `q`** as `leading · ∏ factorᵢ^{mᵢ}` (`mᵢ` = that group's
-//!    size) and compare **exactly** to the stored `q`.
-//! 5. **Reconstruct `p`** as `whole·q + leading·Σ` (numerator × cofactor) and
-//!    compare **exactly** to the stored `p`.
+//! 5. **Reconstruct `q`** as `leading · ∏ factorᵢ^{mᵢ}` (`mᵢ` = that group's
+//!    size) and compare **exactly** to the stored `q`
+//!    (`mismatched_q_is_rejected`).
+//! 6. **Reconstruct `p`** as `whole·q + leading·Σ` (numerator × cofactor) and
+//!    compare **exactly** to the stored `p`
+//!    (`perturbed_coefficient_is_rejected`).
 //!
-//! `Some(true)` only if every one of the five holds; `Some(false)` the moment
+//! `Some(true)` only if every one of these holds; `Some(false)` the moment
 //! any one fails; `None` only on arithmetic overflow — never a false accept.
+//!
+//! **Mutation testing** (deleting each guard in turn and confirming exactly
+//! which test dies) found that check 1's three individual guards (`deg q ≥
+//! 1`, `leading` nonzero, `terms` nonempty) are **structurally subsumed** by
+//! check 5 given check 2's non-constant-factor half: with `terms` nonempty
+//! and every factor non-constant, the reconstructed `∏ factorᵢ^{mᵢ}` always
+//! has degree `≥ 1`, so a constant or zero `q`, or a `leading` of zero, can
+//! never reconstruct a genuinely non-constant `q` regardless of what those
+//! three guards do. No fixture kills any of the three in isolation — this
+//! was verified, not assumed, and is recorded here rather than left as
+//! silent decoration. They are kept anyway (cheap, and a clearer failure
+//! shape than a coincidental reconstruction mismatch would be), but the
+//! checker's soundness does not rest on them.
 //!
 //! ## Scope and bounds — and the one thing NOT independently re-derived
 //!
@@ -688,7 +710,11 @@ mod tests {
         // before trusting the guard rejects it for the right reason.
         let x = Rational::integer(4);
         let lhs = eval_ratio(&p, x).checked_div(eval_ratio(&q, x)).unwrap();
-        assert_eq!(lhs, decomposition_value_at(&cert, x), "fixture must be a genuine identity");
+        assert_eq!(
+            lhs,
+            decomposition_value_at(&cert, x),
+            "fixture must be a genuine identity"
+        );
 
         assert_eq!(
             verify_partial_fraction_certificate(&cert),
@@ -734,7 +760,11 @@ mod tests {
         // Confirm it is a genuine identity before trusting the guard.
         let x = Rational::integer(9);
         let lhs = eval_ratio(&p, x).checked_div(eval_ratio(&q, x)).unwrap();
-        assert_eq!(lhs, decomposition_value_at(&cert, x), "fixture must be a genuine identity");
+        assert_eq!(
+            lhs,
+            decomposition_value_at(&cert, x),
+            "fixture must be a genuine identity"
+        );
 
         assert_eq!(
             verify_partial_fraction_certificate(&cert),
@@ -781,6 +811,31 @@ mod tests {
         assert_eq!(verify_partial_fraction_certificate(&cert), Some(false));
     }
 
+    /// Isolates the q-reconstruction guard: keep a genuinely correct
+    /// certificate for `1/((x-1)(x+1))` (`whole` is empty, so `q` never
+    /// enters the p-reconstruction sum at all -- `whole*q` is zero
+    /// regardless of `q`'s value) but swap the stored `q` for an unrelated
+    /// non-constant polynomial. Every other guard is blind to this: the
+    /// terms/factors/powers/coprimality checks never look at `q` itself, and
+    /// p-reconstruction is unaffected because `whole` is empty.
+    #[test]
+    fn mismatched_q_is_rejected() {
+        let p = poly_from(&[1]);
+        let q = poly_from(&[-1, 0, 1]); // (x-1)(x+1)
+        let mut cert = partial_fractions(&p, &q).expect("must not decline");
+        assert_eq!(
+            cert.whole,
+            Vec::<Rational>::new(),
+            "fixture needs whole == 0"
+        );
+        cert.q = poly_from(&[-4, 0, 1]); // x^2 - 4, unrelated to the factors
+        assert_eq!(
+            verify_partial_fraction_certificate(&cert),
+            Some(false),
+            "a q that the stated factors do not reconstruct must be rejected"
+        );
+    }
+
     #[test]
     fn numerator_degree_too_high_is_rejected() {
         let p = poly_from(&[1]);
@@ -788,5 +843,47 @@ mod tests {
         let mut cert = partial_fractions(&p, &q).unwrap();
         cert.terms[0].numerator = poly_from(&[1, 1]); // degree 1, factor degree 1
         assert_eq!(verify_partial_fraction_certificate(&cert), Some(false));
+    }
+
+    /// `numerator_degree_too_high_is_rejected` above is ALSO caught by the
+    /// p-reconstruction guard (bumping one numerator's degree without
+    /// compensating breaks the identity). This fixture isolates the degree
+    /// bound itself: without it, a partial-fraction "decomposition" is not
+    /// unique -- `N/(x-1) == (N + k*(x-1))/(x-1) - k` for ANY polynomial `k`,
+    /// shifted into `whole`. Bump the single numerator's degree by exactly
+    /// one factor's worth and compensate in `whole`, so p- and
+    /// q-reconstruction, coprimality, and the power-set guard all still hold
+    /// exactly; only the degree bound rejects it.
+    #[test]
+    fn over_degree_numerator_compensated_by_whole_is_rejected() {
+        let factor = poly_from(&[-1, 1]); // x - 1
+        let q = factor.clone();
+        let p = poly_from(&[2]); // p/q = 2/(x-1): whole=0, N=2
+
+        let baseline = partial_fractions(&p, &q).expect("must not decline");
+        assert_eq!(verify_partial_fraction_certificate(&baseline), Some(true));
+        assert_eq!(baseline.whole, Vec::<Rational>::new());
+        assert_eq!(baseline.terms[0].numerator, poly_from(&[2]));
+
+        // N' = N + 1*(x-1) = 1 + x; whole' = whole - 1 = -1. Since q = x-1
+        // exactly, whole'*q + N' = -(x-1) + (1+x) = 2 = p, unchanged.
+        let mut mutant = baseline.clone();
+        mutant.whole = poly_from(&[-1]);
+        mutant.terms[0].numerator = poly_from(&[1, 1]);
+
+        let x = Rational::integer(5);
+        let lhs = eval_ratio(&p, x).checked_div(eval_ratio(&q, x)).unwrap();
+        assert_eq!(
+            lhs,
+            decomposition_value_at(&mutant, x),
+            "fixture must be a genuine identity"
+        );
+
+        assert_eq!(
+            verify_partial_fraction_certificate(&mutant),
+            Some(false),
+            "an over-degree numerator must be rejected even when compensated \
+             exactly by the whole part"
+        );
     }
 }
