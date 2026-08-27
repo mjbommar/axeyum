@@ -4334,6 +4334,21 @@ pub struct CRealPrelude {
     /// remaining gap, per `integral.rs`'s module documentation) is NOT
     /// attempted here.
     pub riemann_sum_integral_close: NameId,
+    /// `CReal.riemannSum_split_exact : ∀ F a b m_ac m_cb, (∀ x y, Equiv x y ->
+    /// Equiv (F x) (F y)) -> Equiv (riemannSum F a b (add (Nat.succ m_ac)
+    /// m_cb)) (add (riemannSum F a c m_ac) (riemannSum F c b m_cb))`, `c :=
+    /// add a (mul (ofNat (Nat.succ m_ac)) (delta_of a b (add (Nat.succ m_ac)
+    /// m_cb)))` -- the ninth `integral_split` slice
+    /// (`integral::declare_riemann_sum_split_exact`, `integral.rs`'s own
+    /// module documentation): an EXACT (no estimate) interval split once `c`
+    /// is chosen to BE a sample point of a suitably refined `[a,b]` mesh,
+    /// rather than an arbitrary `CReal`. Needs no rationality of any
+    /// proportion `c` sits at -- only that `c` is literally that mesh point --
+    /// so it is strictly more general than the rational-split-point slice it
+    /// was sized for; connecting an arbitrary rational `q` (`c := a +
+    /// q*(b-a)`) to such a mesh point (choosing counts commensurate with `q`'s
+    /// denominator) is the remaining assembly step, not attempted here.
+    pub riemann_sum_split_exact: NameId,
     /// `CReal.hasDerivative_integral_const : ∀ c a b (k : Nat), le (abs c)
     /// (ofRat (natDivSucc (Nat.succ k) 0)) → HasDerivativeOn (fun x =>
     /// integral (fun _ => c) a (max a (min x b)) (le_max_left a (min x b))
@@ -5041,6 +5056,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         integral_le: kernel.name_str(creal, "integral_le"),
         integral_scale: kernel.name_str(creal, "integral_scale"),
         riemann_sum_integral_close: kernel.name_str(creal, "riemannSum_integral_close"),
+        riemann_sum_split_exact: kernel.name_str(creal, "riemannSum_split_exact"),
         has_derivative_integral_const: kernel.name_str(creal, "hasDerivative_integral_const"),
         neg_sub_swap: kernel.name_str(creal, "neg_sub_swap"),
         abs_le_of_two_sided: kernel.name_str(creal, "abs_le_of_two_sided"),
@@ -5558,6 +5574,14 @@ pub(crate) fn build_creal_prelude_uncached(
         // `integral_add`/`integral_le`/`integral_scale`; it lands here to
         // stay next to the other `integral_*` laws.
         integral::declare_riemann_sum_integral_close(&mut d, prelude)?;
+        // `riemannSum_split_exact` (the ninth `integral_split` slice) needs
+        // `CReal.mesh_count_width` (`monotone::declare_mesh_count_width`, well
+        // above), `CReal.ofNat_add` (`integral::declare_of_nat_hom`, well
+        // above) and `CReal.sumRange_split`/`sumRange_congr`
+        // (`series::declare_series`, well above) -- nothing from
+        // `riemannSum_integral_close` itself, it lands here to stay next to
+        // the other `integral_split` slices' own dispatch history.
+        integral::declare_riemann_sum_split_exact(&mut d, prelude)?;
         // `hasDerivative_integral_const` (Spivak Ch14 FTC-I, first evaluation
         // instance) needs `integral`/`integral_const` (just above, this
         // dispatch is why it cannot live inside `derivative::declare_derivative`,
