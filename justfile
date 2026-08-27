@@ -1236,6 +1236,35 @@ links:
 adr-remote-collisions:
     python3 scripts/gen-adr-index.py --check-remote
 
+# Make an absence claim in prose EXPIRE (ADR-0611). A doc carries
+# `<!-- absent: CReal.foo -->` and this fails the moment that declaration
+# exists in `kernel.environment()`; `<!-- was-absent: ... -->` fails in the
+# other direction, when a resolution record starts pointing at nothing.
+#
+# Deliberately NOT part of `check`, for the same reason as `just claims`: the
+# authority is `kernel_declaration_projection --release`, which builds every
+# constructed prelude (~20 s once warm, a full release build cold) and must
+# never be a committed snapshot -- the committed one held 1,644 declarations
+# against a live 1,861 on 2026-08-27, and a stale index reports a
+# newly-landed declaration as still absent, which is the exact failure this
+# gate exists to catch.
+#
+# `--list` prints the adoption worklist: every claim site, annotated or bare.
+absence-claims:
+    python3 scripts/check-absence-claims.py
+
+# The controls for that gate, plus the seeded-claim demonstration: it rewrites
+# `was-absent:` to `absent:` in a SCRATCH copy of the four seeded records --
+# restoring each document to the state it was actually in the day it was
+# written -- and requires the gate to report all eight declarations EXPIRED,
+# with the unrewritten green control in the same run. A gate that always reds
+# is the same as one that never does, so both halves are required.
+absence-claims-controls:
+    python3 -m unittest scripts.tests.test_check_absence_claims
+    cargo run --release -q -p axeyum-lean-kernel --example kernel_declaration_projection \
+      > "${TMPDIR:-/tmp}/absence-claims-projection.$USER.tsv"
+    scripts/tests/demo-absence-expiry-seeds.sh "${TMPDIR:-/tmp}/absence-claims-projection.$USER.tsv"
+
 # The ADR-0380 claim-ledger gates: structural/referential/epistemic validation of
 # every artifacts/claims/**/claim.json, the negative fixtures that prove the
 # validator actually rejects bad claims, and the independent semantic re-check of

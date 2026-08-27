@@ -302,9 +302,20 @@ identified:
    means duplicating the whole subdivision argument. **A natural fix is to
    expose the magnitude form as its own declared theorem in `monotone.rs`**,
    which would serve Chapter 12's inverse-function continuity as well.
+   *(Resolved — see "Obstacle 1" below; the extraction happened.)*
+   <!-- was-absent: CReal.strict_mono_magnitude, CReal.diff_le_of_strict_mono_magnitude -- the magnitude form this bullet says exists only mid-proof; extracted in monotone.rs and consumed by ivt.rs -->
 2. **A "continuity transports convergence" lemma does not exist** —
    `Converges f L → UniformlyContinuousOn F … → Converges (F ∘ f) (F L)`.
    Grepped for; absent. Without it, `F(x_n) → 0` does not give `F L ~ 0`.
+   *(Resolved in the weakened eventual form — see "Obstacle 2" below.)*
+   <!-- was-absent: CReal.converges_comp_eventually -- the repair for this bullet; its own doc comment names this file -->
+
+<!-- Both bullets above are historical. The markers make that machine-checked:
+     `scripts/check-absence-claims.py` fails if either declaration is ever
+     removed or renamed, so this record cannot quietly start pointing at
+     nothing -- and had the markers read `absent:` instead, it would have gone
+     red the day the declarations landed. -->
+
 
 Also worth recording: **`converges_of_cauchy`'s conclusion is itself
 existential**, so obtaining `L` as *data* means inlining its own internal
