@@ -1453,6 +1453,21 @@ passes at 1,454,994,044 proof bytes, one split / 32 leaves / 33 nodes, 5:04.57 w
 parent remained six terminal leaves short at the same audit, so neither the parent nor any
 higher result is yet claimed.
 
+**Whole-tree bounded proof replay, 2026-08-27.** ADR-0596 removes the operational tail in
+ADR-0590 without weakening its resource bound. The earlier four-worker checker parallelized
+only the root and had fallen to two active workers after 30 root children completed. The new
+route schedules every leaf and every covering proof through one bounded pool; tasks retain
+only reader/cube paths and reconstruct formulas from the trusted root, so simultaneous formula
+and DRAT-checker memory remains bounded by the explicit worker count. Depth-first obligation
+indices preserve the sequential first-error result and deterministic contiguous progress.
+Twenty-one focused tests and all-target/all-feature Clippy pass. On the retained
+249,251,498-byte subtree, all 32 leaves plus its cover were freshly accepted as 33/33
+obligations in 12.22 observed wall seconds. This validates the checker, not MC=7: the live
+top-level tree remains uncredited until every descendant and cover accepts. The old root-only
+cell-4 process is preserved under `SIGSTOP`; PID 4188179 restarted the byte-identical root as
+385 whole-tree obligations and is using the intended four workers (about 350% CPU at the first
+audit) rather than the prior two-worker tail.
+
 **Bounded-parallel recursive proof replay, 2026-08-26.** ADR-0590 addresses the measured
 single-core checker bottleneck without multiplying solver processes. The native API schedules
 only independent root children through an explicit worker bound, reuses the unchanged recursive
