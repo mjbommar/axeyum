@@ -48,13 +48,19 @@ were simply never propagated.
 |---|---|
 | **1. Constructive general form** | Not MVT — MVT is unavailable (see row 2). What IS proved, axiom-free, over `CReal`, without invoking MVT: `CReal.monotone_of_nonneg_deriv`, `CReal.antitone_of_nonpos_deriv`, `CReal.constant_of_zero_deriv`, `CReal.strict_mono_of_pos_deriv`, `CReal.strict_injective_of_pos_deriv`, `CReal.strict_antitone_of_neg_deriv`, `CReal.strict_mono_comp` — all confirmed present (`kernel_declaration_projection --require-declaration`, `found … theorem … 0` axiom footprint). The **rate** chain — `CReal.strict_mono_magnitude` → `CReal.scale_cancel_le` → `CReal.diff_le_of_strict_mono_magnitude` (`\|x−y\| ≤ 2(k+1)(\|Fx\|+\|Fy\|)`) — is likewise present. None of these seven are registered in `artifacts/facts/` (`ls artifacts/facts | grep -i` finds no `monotone-of-nonneg-deriv`/`strict-mono`/etc. entry); they exist only as kernel declarations. |
 | **2. Boundary refutation** | **Absence, not refutation.** `crates/axeyum-lean-kernel/src/creal/monotone.rs:5029-5032`'s own module doc states MVT is "unavailable here — it rests on the extreme value theorem, not constructively provable" — an *inherited* unavailability argument (MVT needs EVT; EVT is unavailable), never a **dedicated MVT counterexample**. No declaration, test, or fact constructs a function `F` for which the MVT conclusion (`∃c ∈ (a,b), F'(c) = (F(b)−F(a))/(b−a)`) is false — contrast with IVT's row 2, which has a **kernel-computed** reduction test (`ivt_bisect_diag_reduces_on_the_identity_bracket_neg_one_two`, `creal_tests.rs:6026`) exhibiting a concrete bracket converging to the *wrong* value. And EVT's own row 2 — the theorem MVT is said to inherit its unavailability from — is itself marked **"in progress"** in `crates/axeyum-cas/src/extremum.rs:11` ("Row 2 (kernel side, in progress): attainment is refuted as constructively unavailable…"), not landed. So MVT's row 2 rests on an argument whose own foundation is not yet built. This is a genuine gap in the family, not a documentation gap: building it needs either (a) a direct MVT counterexample (a function with a bounded derivative-difference structure but no interior point matching the secant slope — the standard classical counterexamples all secretly use EVT/attainment, so a genuinely *independent* MVT counterexample is not obviously easier than finishing EVT's own row 2), or (b) finishing EVT's row 2 first and then formally deriving MVT's unavailability from it. |
-| **3. Exact form on the decidable fragment** | **Reachable, not built.** For a polynomial `p` with rational coefficients on `[a,b]`, MVT's conclusion becomes: does `q(x) := p'(x) − (p(b)−p(a))/(b−a)` have a root in the *open* interval `(a,b)`? Every ingredient already ships: `poly::rat_derivative` (exact differentiation), `real_algebraic::polynomial_ivt`/`verify_ivt_certificate` (exact sign-change root existence, the same machinery IVT's row 3 uses), and `extremum::polynomial_extremum` (differentiate + Sturm-isolate + exact compare) as the nearest existing analog — its 20 in-file unit tests (`cargo test -p axeyum-cas --lib extremum::`, confirmed 20 passed / 1 ignored / 0 failed this session) include a family of adversarial `verify_rejects_*` fixtures, which is the right shape for a re-derivation checker. Nothing in `axeyum-cas` currently assembles these into a `polynomial_mvt`/`verify_mvt_certificate` pair (`grep -rliE "mean_value\|mvt" crates/axeyum-cas/src/` is empty) — it is unbuilt, not blocked, and it is the **same shape** as `extremum.rs`, sized as a same-day task once someone picks it up. |
+| **3. Exact form on the decidable fragment** | **Landed, same day as this row was last marked "reachable, not built."** `crates/axeyum-cas/src/mvt.rs`: `polynomial_mvt`/`verify_mvt_certificate`, confirmed present this session (`cargo test -p axeyum-cas --lib mvt::` — **18 passed, 0 failed**, re-run fresh, not read from the lane's own report). For a polynomial `p` with rational coefficients on `[a,b]`, it forms the Rolle reduction `g(x) := p(x) − p(a) − m(x−a)` (`m` the exact secant slope), reuses `extremum::polynomial_extremum` on `g` (and `−g` on a tie) to locate an interior critical point when `deg(p) ≥ 2`, and handles `deg(p) ≤ 1` as its own degenerate branch (`g' ≡ 0` identically, every interior point a witness) — `c` is produced as a **named** `AlgebraicReal`, not merely asserted. `verify_mvt_certificate` independently re-derives the slope, `g`/`g'`, the bracket's Sturm recount, strict interiority, and the conclusion `p'(c) = m`, all from `poly`/`a`/`b` alone. The adversarial case worth naming: `p = x³ − 4x²` on `[0,4]` has `m = 0` and `p'(x) = x(3x−8)`, whose roots are `x = 0` (the **left endpoint itself**) and `x = 8/3` (genuinely interior) — both satisfy the slope equation, so a checker that skipped the strict-interiority re-check would wrongly accept the endpoint (`verify_rejects_an_endpoint_witness` confirms this). **Cost is not simply inherited from `extremum.rs`**: reusing EVT's cheap all-rational degree-5 case (`3x⁵−5x³` on `[−2,2]`) gives a nonzero secant slope, which destroys the factorization that made the *original* derivative cheap to isolate — `g'` becomes an irreducible quartic that declines soundly at ~2–4s instead of resolving cleanly. Measured cost curve (debug build): degree 2 ~2ms, degree 3 (√3 witness) ~5ms, degree 5 (degree-4 algebraic witness) ~27ms. Kernel reconstruction (ADR-0601 §2) is not attempted — this is a CAS-internal-only row 3 until that lands. |
 | **4. Labeled import** | Not attempted. `AxReal`'s 30-axiom package (`crates/axeyum-lean-kernel/src/arith_model.rs:1-13`) axiomatizes only "a commutative ring with 1, compatibly ordered" — no `inv`, no `div`, no completeness/supremum axiom, no Archimedean axiom, no MVT. There is no axiomatized carrier in this repository a classical MVT import would even attach to; building row 4 means adding new axioms first. |
 
-**Verdict**: MVT's family is 1 real row (constructive substitutes, unregistered
-as facts), 1 half-row (row 2 is an inherited assertion resting on an
-unfinished EVT row 2, not a dedicated refutation), 1 reachable-but-unbuilt row
-(row 3), 1 not-applicable-yet row (row 4, no axiomatized target exists).
+**Verdict (updated 2026-08-27, same day as the `cas-mvt` lane's landing)**:
+MVT's family is 1 real row (constructive substitutes, unregistered as facts),
+1 half-row (row 2 is an inherited assertion resting on an unfinished EVT
+row 2 — **re-confirmed still "in progress" this session**, `extremum.rs`'s
+module doc unchanged; a separate lane is actively building the kernel-side
+EVT refutation in `creal/extreme_value.rs`, not yet landed, outcome not
+guessed here — not a dedicated refutation), **1 landed row (row 3,
+`polynomial_mvt`/`verify_mvt_certificate`, CAS-internal only pending kernel
+reconstruction)**, 1 not-applicable-yet row (row 4, no axiomatized target
+exists).
 
 ---
 
@@ -153,8 +159,15 @@ checked against the declarations they name and matched).
   per ADR-0603's own stated purpose for row 2), these two are the ones that
   need a genuine counterexample construction, not documentation.
 - EVT's own row 2 (`extremum.rs`'s "in progress" note) should be finished
-  before leaning on it to justify MVT's inherited unavailability.
-- MVT row 3 (`polynomial_mvt`) is the single cheapest win named in this
-  note: every ingredient it needs already ships and is unit-tested.
+  before leaning on it to justify MVT's inherited unavailability. **As of
+  this update a lane is actively building that refutation in
+  `creal/extreme_value.rs`; it had not landed on `main` at merge time, and
+  this note does not guess its outcome.**
+- **MVT row 3 landed 2026-08-27, same day it was named the cheapest win**:
+  `crates/axeyum-cas/src/mvt.rs`, `polynomial_mvt`/`verify_mvt_certificate`,
+  18 tests. Kernel reconstruction (ADR-0601 §2) is the remaining step, not
+  attempted here.
 - FTA is the one family where the right question is still open ("does a
-  constructive counterexample exist at all?"), not just unbuilt.
+  constructive counterexample exist at all?"), not just unbuilt — see the
+  re-assessment below, which confirms this and sharpens it: FTA's row 2 may
+  not exist at all as a *distinct* row (see the FTA verdict).
