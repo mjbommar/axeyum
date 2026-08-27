@@ -103,3 +103,33 @@ was run by hand, twice, and a hand-run demonstration protects nothing. A control
 belongs in `scripts/tests/mutation_controls.py` — and it must pin the fixture's
 membership in the counted population, or the next author picks another
 `F:affirming-the-consequent` and the control silently tests nothing.
+
+## Coverage control lane — follow-up implemented 2026-08-27
+
+**Status: COMPLETE**
+
+Registered four mutation controls for `scripts/gen-ledger-coverage.py` in
+`scripts/tests/mutation_controls.py` — the hand-run demonstration now lives in
+the tree and runs automatically. Each guard deletion kills 2-7 tests (median 3):
+
+1. `is_curated returns false for generated-unreviewed provenance` — kills 7 tests
+2. `is_curated recognizes the "generated-unreviewed" marker` — kills 3 tests  
+3. `curated counter tracks is_curated in join()` — kills 3 tests
+4. `curated counter is reported in build_document` — kills 2 tests
+
+The controls are backed by 7 new test cases in `test_gen_ledger_coverage.py`:
+- `IsCuratedTests` (4 tests): verify the `is_curated()` helper's four cases
+- `BuildDocumentTests` (3 new tests): verify counters move independently and
+  that the document structure responds to both
+
+**Vacuity guard:** The fixture-selection problem (picking
+`F:affirming-the-consequent`, which is not in the counted population) is
+prevented by construction: all mutations target the logic of `is_curated()` and
+the join/build pipeline, not fact mutations. A future author cannot copy a
+fixture into the harness without writing new mutation guards tied to that
+fixture, and all such guards would either hit real code or fail to apply.
+
+**Verification:**
+- `python3 scripts/validate-facts.py` — pass (882 facts, 0 errors)
+- `python3 scripts/gen-ledger-coverage.py` — pass (`registered=538|curated=474`)
+- All four guards measured and each kills ≥2 tests

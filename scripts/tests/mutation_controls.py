@@ -3386,6 +3386,49 @@ SUITES["autogenesis-authored-declaration-driver"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `ledger-coverage` — independent validation that curated and registered
+# counters measure distinct properties and cannot silently swap meaning.
+#
+# The incident that prompted this was a demonstration that a VACUOUS fixture —
+# a fact not in the registered population — was used as "proof" the counter
+# moved. Deleting this control would let a future author swap in a similarly-
+# vacuous fixture and the guard would fire at exactly the wrong time: when the
+# counter did NOT move and the author could not see why.
+#
+# This suite has two fixtures: one in-population fact that is generated-unreviewed,
+# and one in-population fact that is curated. The guards assert both memberships
+# explicitly, so a future author cannot repeat the vacuity trap.
+# --------------------------------------------------------------------------
+
+SUITES["ledger-coverage"] = (
+    "scripts/gen-ledger-coverage.py",
+    Unittest("scripts.tests.test_gen_ledger_coverage"),
+    [
+        (
+            "is_curated returns false for generated-unreviewed provenance",
+            '    curation = provenance.get("curation")\n    # If curation field is missing or not "generated-unreviewed", it\'s curated\n    return curation != "generated-unreviewed"',
+            '    curation = provenance.get("curation")\n    # If curation field is missing or not "generated-unreviewed", it\'s curated\n    return curation == "generated-unreviewed"',
+        ),
+        (
+            "is_curated recognizes the \"generated-unreviewed\" marker",
+            '    return curation != "generated-unreviewed"',
+            '    return True',
+        ),
+        (
+            "curated counter tracks is_curated in join()",
+            '        if is_curated(fact):\n            result.curated.setdefault(name, []).append(fid)\n            result.curated_facts += 1',
+            '        if not is_curated(fact):\n            result.curated.setdefault(name, []).append(fid)\n            result.curated_facts += 1',
+        ),
+        (
+            "curated counter is reported in build_document",
+            '"curated": len(curated_names),',
+            '"curated": 0,',
+        ),
+    ],
+)
+
+
 def main(argv: list[str]) -> int:
     if argv[1:2] == ["--check-anchors"]:
         return check_anchors()
