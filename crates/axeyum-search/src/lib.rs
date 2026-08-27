@@ -112,7 +112,7 @@ pub use offdiag::OffDiagonalSchur;
 pub use search::{MinConflictsOptions, min_conflicts};
 pub use vdw::VanDerWaerden;
 
-use axeyum_cnf::{CnfError, DratError};
+use axeyum_cnf::{CnfError, DratError, WeightedAtMostError};
 
 /// Errors from instance construction, cover search, and cover certification.
 ///
@@ -126,6 +126,8 @@ pub enum SearchError {
     Cnf(CnfError),
     /// The DRAT layer rejected a proof or failed to parse one.
     Drat(DratError),
+    /// Weighted-cardinality composition rejected a literal or resource bound.
+    WeightedAtMost(WeightedAtMostError),
     /// A filesystem operation failed.
     Io {
         /// Path the operation was attempted on.
@@ -287,6 +289,7 @@ impl core::fmt::Display for SearchError {
         match self {
             Self::Cnf(error) => write!(f, "{error}"),
             Self::Drat(error) => write!(f, "{error}"),
+            Self::WeightedAtMost(error) => write!(f, "weighted-at-most construction: {error:?}"),
             Self::Io { path, message } => write!(f, "{path}: {message}"),
             Self::InvalidParameter { what } => write!(f, "invalid parameter: {what}"),
             Self::PointOutOfRange { point, points } => {
@@ -374,6 +377,12 @@ impl From<CnfError> for SearchError {
 impl From<DratError> for SearchError {
     fn from(error: DratError) -> Self {
         Self::Drat(error)
+    }
+}
+
+impl From<WeightedAtMostError> for SearchError {
+    fn from(error: WeightedAtMostError) -> Self {
+        Self::WeightedAtMost(error)
     }
 }
 

@@ -686,6 +686,266 @@ pub fn check_cube_refutation_reader_tree_parallel_with_progress<
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+enum CubeTreeObligation<R> {
+    Leaf {
+        path: Vec<usize>,
+        cube_path: Vec<(usize, Cube)>,
+        proof: R,
+    },
+    Covering {
+        path: Vec<usize>,
+        cube_path: Vec<(usize, Cube)>,
+        cubes: Vec<Cube>,
+        proof: R,
+    },
+    Structural {
+        cube_path: Vec<(usize, Cube)>,
+        error: CubeTreeCheckError,
+    },
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn flatten_cube_tree_obligations<R>(
+    tree: CubeRefutationReaderTree<R>,
+    path: &mut Vec<usize>,
+    cube_path: &mut Vec<(usize, Cube)>,
+    obligations: &mut Vec<CubeTreeObligation<R>>,
+) -> bool {
+    match tree {
+        CubeRefutationReaderTree::Leaf(proof) => {
+            obligations.push(CubeTreeObligation::Leaf {
+                path: path.clone(),
+                cube_path: cube_path.clone(),
+                proof,
+            });
+            true
+        }
+        CubeRefutationReaderTree::Split {
+            cubes,
+            children,
+            covering_proof,
+        } => {
+            if cubes.is_empty() {
+                obligations.push(CubeTreeObligation::Structural {
+                    cube_path: cube_path.clone(),
+                    error: CubeTreeCheckError::EmptyCubeSet { path: path.clone() },
+                });
+                return false;
+            }
+            if cubes.len() != children.len() {
+                obligations.push(CubeTreeObligation::Structural {
+                    cube_path: cube_path.clone(),
+                    error: CubeTreeCheckError::ChildCountMismatch {
+                        path: path.clone(),
+                        cubes: cubes.len(),
+                        children: children.len(),
+                    },
+                });
+                return false;
+            }
+            for (index, (cube, child)) in cubes.iter().cloned().zip(children).enumerate() {
+                path.push(index);
+                cube_path.push((index, cube));
+                if !flatten_cube_tree_obligations(child, path, cube_path, obligations) {
+                    return false;
+                }
+                cube_path.pop();
+                path.pop();
+            }
+            obligations.push(CubeTreeObligation::Covering {
+                path: path.clone(),
+                cube_path: cube_path.clone(),
+                cubes,
+                proof: covering_proof,
+            });
+            true
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn reconstruct_cube_tree_formula(
+    base: &CnfFormula,
+    cube_path: &[(usize, Cube)],
+) -> Result<CnfFormula, CubeTreeCheckError> {
+    let mut formula = base.clone();
+    let mut path = Vec::with_capacity(cube_path.len());
+    for (index, cube) in cube_path {
+        path.push(*index);
+        for &literal in cube {
+            formula
+                .add_clause(CnfClause::new(vec![literal]))
+                .map_err(|source| CubeTreeCheckError::InvalidCube {
+                    path: path.clone(),
+                    source,
+                })?;
+        }
+    }
+    Ok(formula)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn check_cube_tree_obligation<R: BufRead>(
+    base: &CnfFormula,
+    obligation: CubeTreeObligation<R>,
+) -> Result<(), CubeTreeCheckError> {
+    match obligation {
+        CubeTreeObligation::Leaf {
+            path,
+            cube_path,
+            proof,
+        } => {
+            let formula = reconstruct_cube_tree_formula(base, &cube_path)?;
+            match check_drat_backward_reader(&formula, proof) {
+                Ok(true) => Ok(()),
+                Ok(false) => Err(CubeTreeCheckError::LeafIncomplete { path }),
+                Err(source) => Err(CubeTreeCheckError::LeafInvalid { path, source }),
+            }
+        }
+        CubeTreeObligation::Covering {
+            path,
+            cube_path,
+            cubes,
+            proof,
+        } => {
+            let formula = reconstruct_cube_tree_formula(base, &cube_path)?;
+            let covering = covering_formula(&formula, &cubes).map_err(|source| {
+                CubeTreeCheckError::CoveringFormulaInvalid {
+                    path: path.clone(),
+                    source,
+                }
+            })?;
+            match check_drat_backward_reader(&covering, proof) {
+                Ok(true) => Ok(()),
+                Ok(false) => Err(CubeTreeCheckError::CoveringProofIncomplete { path }),
+                Err(source) => Err(CubeTreeCheckError::CoveringProofInvalid { path, source }),
+            }
+        }
+        CubeTreeObligation::Structural { cube_path, error } => {
+            reconstruct_cube_tree_formula(base, &cube_path)?;
+            Err(error)
+        }
+    }
+}
+
+/// Checks every proof obligation in a recursive cube tree concurrently through
+/// one bounded worker pool.
+///
+/// This is the no-progress-callback form of
+/// [`check_cube_refutation_reader_tree_fully_parallel_with_progress`].
+///
+/// # Panics
+///
+/// Panics if `workers` is zero. A proof-reader panic is resumed in the caller.
+///
+/// # Errors
+///
+/// Returns the same structural and proof errors as
+/// [`check_cube_refutation_reader_tree`].
+#[cfg(not(target_arch = "wasm32"))]
+pub fn check_cube_refutation_reader_tree_fully_parallel<R: BufRead + Send>(
+    base: &CnfFormula,
+    tree: CubeRefutationReaderTree<R>,
+    workers: usize,
+) -> Result<(), CubeTreeCheckError> {
+    check_cube_refutation_reader_tree_fully_parallel_with_progress(base, tree, workers, |_, _| {})
+}
+
+/// Checks every leaf and covering proof in a recursive cube tree through one
+/// bounded worker pool.
+///
+/// Unlike [`check_cube_refutation_reader_tree_parallel`], this route exposes
+/// parallelism below the root split. The tree is flattened into ordered proof
+/// obligations carrying only readers and cube paths. Each worker reconstructs
+/// the obligation formula from `base`, so simultaneous formula and backward-
+/// DRAT checker memory remains bounded by `workers`, not by the tree size.
+///
+/// Obligations are ordered exactly as the sequential depth-first checker:
+/// every child before its parent's covering proof. Results are sorted by that
+/// order, and `progress(completed, total)` advances only over a contiguous
+/// completed prefix. Scheduling therefore cannot change either the returned
+/// first error or the progress stream.
+///
+/// # Panics
+///
+/// Panics if `workers` is zero or the progress callback panics. A proof-reader
+/// panic is resumed in the caller.
+///
+/// # Errors
+///
+/// Returns the same structural and proof errors as
+/// [`check_cube_refutation_reader_tree`].
+#[cfg(not(target_arch = "wasm32"))]
+pub fn check_cube_refutation_reader_tree_fully_parallel_with_progress<
+    R: BufRead + Send,
+    F: Fn(usize, usize) + Sync,
+>(
+    base: &CnfFormula,
+    tree: CubeRefutationReaderTree<R>,
+    workers: usize,
+    progress: F,
+) -> Result<(), CubeTreeCheckError> {
+    assert!(workers > 0, "cube-tree worker count must be positive");
+    let mut obligations = Vec::new();
+    flatten_cube_tree_obligations(tree, &mut Vec::new(), &mut Vec::new(), &mut obligations);
+    let total = obligations.len();
+    let jobs = std::sync::Mutex::new(
+        obligations
+            .into_iter()
+            .enumerate()
+            .collect::<std::collections::VecDeque<_>>(),
+    );
+    let completed = std::sync::Mutex::new((vec![false; total], 0usize));
+    let worker_count = workers.min(total);
+    let mut results = std::thread::scope(|scope| {
+        let mut handles = Vec::with_capacity(worker_count);
+        for _ in 0..worker_count {
+            let jobs = &jobs;
+            let completed = &completed;
+            let progress = &progress;
+            handles.push(scope.spawn(move || {
+                let mut local = Vec::new();
+                loop {
+                    let job = jobs
+                        .lock()
+                        .expect("cube-tree job mutex poisoned")
+                        .pop_front();
+                    let Some((index, obligation)) = job else {
+                        break;
+                    };
+                    let result = check_cube_tree_obligation(base, obligation);
+                    {
+                        let mut state =
+                            completed.lock().expect("cube-tree progress mutex poisoned");
+                        state.0[index] = true;
+                        while state.1 < state.0.len() && state.0[state.1] {
+                            state.1 += 1;
+                            progress(state.1, state.0.len());
+                        }
+                    }
+                    local.push((index, result));
+                }
+                local
+            }));
+        }
+        let mut results = Vec::with_capacity(total);
+        for handle in handles {
+            results.extend(
+                handle
+                    .join()
+                    .unwrap_or_else(|panic| std::panic::resume_unwind(panic)),
+            );
+        }
+        results
+    });
+    results.sort_by_key(|(index, _)| *index);
+    for (_, result) in results {
+        result?;
+    }
+    Ok(())
+}
+
 /// Why [`boolean_product_cubes`] declined to generate a cube set.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CubeGenError {
@@ -1128,6 +1388,59 @@ mod tests {
 
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
+    fn fully_parallel_recursive_checker_schedules_every_obligation() {
+        let (base, s0, s1, _x) = selector_gated_unsat();
+        let root_cubes = boolean_product_cubes(&[s0]).unwrap();
+        let (root_outcome, _) = certify_by_cubes(&base, root_cubes, None, 10_000, 10_000);
+        let CubeCertifyOutcome::Unsat(root) = root_outcome else {
+            panic!("expected root refutation");
+        };
+        let first_formula = augmented_formula(&base, &root.cubes[0]).unwrap();
+        let nested_cubes = boolean_product_cubes(&[s1]).unwrap();
+        let (nested_outcome, _) =
+            certify_by_cubes(&first_formula, nested_cubes, None, 10_000, 10_000);
+        let CubeCertifyOutcome::Unsat(nested) = nested_outcome else {
+            panic!("expected nested refutation");
+        };
+        let nested_children = nested
+            .cube_proofs
+            .iter()
+            .map(|proof| {
+                CubeRefutationReaderTree::Leaf(Cursor::new(write_drat(proof).into_bytes()))
+            })
+            .collect();
+        let tree = CubeRefutationReaderTree::Split {
+            cubes: root.cubes.clone(),
+            children: vec![
+                CubeRefutationReaderTree::Split {
+                    cubes: nested.cubes,
+                    children: nested_children,
+                    covering_proof: Cursor::new(write_drat(&nested.covering_proof).into_bytes()),
+                },
+                CubeRefutationReaderTree::Leaf(Cursor::new(
+                    write_drat(&root.cube_proofs[1]).into_bytes(),
+                )),
+            ],
+            covering_proof: Cursor::new(write_drat(&root.covering_proof).into_bytes()),
+        };
+        let progress = std::sync::Mutex::new(Vec::new());
+        check_cube_refutation_reader_tree_fully_parallel_with_progress(
+            &base,
+            tree,
+            4,
+            |completed, total| {
+                progress.lock().unwrap().push((completed, total));
+            },
+        )
+        .expect("whole-tree parallel composition must check from the root formula");
+        assert_eq!(
+            *progress.lock().unwrap(),
+            vec![(1, 5), (2, 5), (3, 5), (4, 5), (5, 5)]
+        );
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
     fn parallel_recursive_checker_reports_the_lowest_failed_path() {
         let (base, s0, _s1, _x) = selector_gated_unsat();
         let cubes = boolean_product_cubes(&[s0]).unwrap();
@@ -1142,6 +1455,50 @@ mod tests {
         assert!(matches!(
             check_cube_refutation_reader_tree_parallel(&base, tree, 2),
             Err(CubeTreeCheckError::LeafIncomplete { path }) if path == vec![0]
+        ));
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn fully_parallel_recursive_checker_reports_the_lowest_failed_path() {
+        let (base, s0, _s1, _x) = selector_gated_unsat();
+        let cubes = boolean_product_cubes(&[s0]).unwrap();
+        let tree = CubeRefutationReaderTree::Split {
+            cubes,
+            children: vec![
+                CubeRefutationReaderTree::Leaf(Cursor::new(Vec::new())),
+                CubeRefutationReaderTree::Leaf(Cursor::new(Vec::new())),
+            ],
+            covering_proof: Cursor::new(Vec::new()),
+        };
+        assert!(matches!(
+            check_cube_refutation_reader_tree_fully_parallel_with_progress(
+                &base,
+                tree,
+                3,
+                |_, _| {}
+            ),
+            Err(CubeTreeCheckError::LeafIncomplete { path }) if path == vec![0]
+        ));
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn fully_parallel_recursive_checker_reports_parent_cube_before_child_structure() {
+        let base = CnfFormula::new(1);
+        let bogus = CnfVar::new(4).unwrap();
+        let tree = CubeRefutationReaderTree::Split {
+            cubes: vec![vec![CnfLit::positive(bogus)]],
+            children: vec![CubeRefutationReaderTree::Split {
+                cubes: Vec::new(),
+                children: Vec::new(),
+                covering_proof: Cursor::new(Vec::new()),
+            }],
+            covering_proof: Cursor::new(Vec::new()),
+        };
+        assert!(matches!(
+            check_cube_refutation_reader_tree_fully_parallel(&base, tree, 2),
+            Err(CubeTreeCheckError::InvalidCube { path, .. }) if path == vec![0]
         ));
     }
 

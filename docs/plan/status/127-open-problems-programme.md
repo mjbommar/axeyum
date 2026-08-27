@@ -161,6 +161,28 @@ discovery-time 404/50-prefix formula byte-for-byte at SHA-256
 critical asymmetry: restricted SAT may be promoted only after unrestricted replay, while
 restricted UNSAT is never an upper bound.
 
+**Reusable colouring Hamming-ball restriction, 2026-08-27.** ADR-0595 composes canonical
+colouring CNF with the existing generic weighted-at-most encoder instead of duplicating a
+cardinality circuit. A point's change indicator is the negation of its witnessed-colour literal;
+canonical one-hot clauses make this exact. The result retains source-model projection, and a SAT
+result earns credit only after unrestricted CNF and independent relation replay. An exhaustive
+control checks radius zero versus one with checked DRAT, projection, decoding, and replay. On the
+open 405-point Rado instance, proof-free diagnostics reported UNSAT through radius 22 and timed out
+at radius 23 after 120 seconds; those status lines alone received no mathematical credit before the
+separate certificate run below.
+
+**Checked Rado repair-neighbourhood boundary, 2026-08-27.** Radius 22 regenerated
+byte-identically at 11,745 variables / 319,249 clauses / 6,751,821 bytes, SHA-256
+`f93dc5bf...a6d`. CaDiCaL seed 722 returned UNSAT in 126.32 seconds and emitted a
+609,746,173-byte textual DRAT, SHA-256 `4aed07d6...ffa5`; Axeyum's independent file-backed
+backward checker returned `true` in 119.534 seconds. Thus no solution of the canonical 405-point
+formula lies within 22 **labelled** changes of the checked 404 witness on points 1--404. ADR-0595
+and a new checked control now make explicit that this is not distance modulo palette permutation.
+The compressed CNF/proof, receipt, diary, provenance, and rebuilt paper are retained in the Rado
+package. Exact searches through 2026-08-27 found no matching indexed result, which is negative
+retrieval rather than priority evidence. Radius 23 and unrestricted 405 remain open, so the exact
+Rado bound does not move.
+
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
 external-certificate replay runner for all five packages.  It validates checker and artifact
 bytes before execution, hard-kills a timed-out process session, requires an observable finding
@@ -298,6 +320,21 @@ passes at 1,454,994,044 proof bytes, one split / 32 leaves / 33 nodes, 5:04.57 w
 235,748 KiB peak RSS. Its four authority hashes are retained in the sibling package. Its
 parent remained six terminal leaves short at the same audit, so neither the parent nor any
 higher result is yet claimed.
+
+**Whole-tree bounded proof replay, 2026-08-27.** ADR-0596 removes the operational tail in
+ADR-0590 without weakening its resource bound. The earlier four-worker checker parallelized
+only the root and had fallen to two active workers after 30 root children completed. The new
+route schedules every leaf and every covering proof through one bounded pool; tasks retain
+only reader/cube paths and reconstruct formulas from the trusted root, so simultaneous formula
+and DRAT-checker memory remains bounded by the explicit worker count. Depth-first obligation
+indices preserve the sequential first-error result and deterministic contiguous progress.
+Twenty-one focused tests and all-target/all-feature Clippy pass. On the retained
+249,251,498-byte subtree, all 32 leaves plus its cover were freshly accepted as 33/33
+obligations in 12.22 observed wall seconds. This validates the checker, not MC=7: the live
+top-level tree remains uncredited until every descendant and cover accepts. The old root-only
+cell-4 process is preserved under `SIGSTOP`; PID 4188179 restarted the byte-identical root as
+385 whole-tree obligations and is using the intended four workers (about 350% CPU at the first
+audit) rather than the prior two-worker tail.
 
 **Bounded-parallel recursive proof replay, 2026-08-26.** ADR-0590 addresses the measured
 single-core checker bottleneck without multiplying solver processes. The native API schedules

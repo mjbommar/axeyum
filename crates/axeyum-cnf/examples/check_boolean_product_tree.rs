@@ -5,7 +5,7 @@ use std::io::{self, BufRead, BufReader, Read};
 use std::path::{Path, PathBuf};
 
 #[cfg(not(target_arch = "wasm32"))]
-use axeyum_cnf::cube::check_cube_refutation_reader_tree_parallel_with_progress;
+use axeyum_cnf::cube::check_cube_refutation_reader_tree_fully_parallel_with_progress;
 use axeyum_cnf::cube::{
     CubeRefutationReaderTree, augmented_formula, boolean_product_cubes,
     check_cube_refutation_reader_tree,
@@ -276,12 +276,12 @@ fn main() {
     let tree = build_tree(&root, &tree_dir, 0, &mut stats);
     #[cfg(not(target_arch = "wasm32"))]
     if workers > 1 {
-        check_cube_refutation_reader_tree_parallel_with_progress(
+        check_cube_refutation_reader_tree_fully_parallel_with_progress(
             &root,
             tree,
             workers,
             |completed, total| {
-                eprintln!("BOOLEAN_PRODUCT_TREE_PROGRESS|root-children={completed}/{total}");
+                eprintln!("BOOLEAN_PRODUCT_TREE_PROGRESS|obligations={completed}/{total}");
             },
         )
         .unwrap_or_else(|error| fail(error));
@@ -298,6 +298,6 @@ fn main() {
     println!("nodes={}", stats.nodes);
     println!("proof-bytes={}", stats.proof_bytes);
     println!("workers={workers}");
-    println!("checker=file-backed-recursive-backward-plus-covering-drat");
+    println!("checker=file-backed-whole-tree-parallel-backward-plus-covering-drat");
     println!("verdict=unsat-checked");
 }

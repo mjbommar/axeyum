@@ -49,7 +49,10 @@
 //! constructor [`ColouringProblem::new`] is unchanged and still emits the
 //! byte-identical generator-of-record encoding.
 
-use axeyum_cnf::{CnfClause, CnfFormula, CnfLit, CnfVar};
+use axeyum_cnf::{
+    CnfClause, CnfFormula, CnfLit, CnfVar, WeightedAtMostEncoding, WeightedAtMostLimits,
+    encode_weighted_at_most,
+};
 
 use crate::SearchError;
 
@@ -401,6 +404,75 @@ impl ColouringProblem {
             formula.add_clause(CnfClause::new(vec![self.literal(offset + 1, colour)?]))?;
         }
         Ok(formula)
+    }
+
+    /// Encodes the canonical problem within a bounded Hamming distance of a
+    /// supplied witness on its first `compared_points`.
+    ///
+    /// A point differs from the witness exactly when its witnessed-colour
+    /// literal is false, because the canonical formula enforces one-hot
+    /// colours. The generic weighted-at-most encoder therefore counts negated
+    /// witnessed-colour literals with unit weights. Points after the compared
+    /// prefix remain unrestricted.
+    ///
+    /// Distance is measured in the formula's **labelled palette coordinates**.
+    /// It is not minimized over colour permutations. With symmetry breaking
+    /// enabled, callers should normally pass a witness canonicalized under the
+    /// same convention; a restricted UNSAT result must still state this
+    /// coordinate dependence rather than claiming an orbit-distance bound.
+    ///
+    /// Like [`Self::encode_with_witness_prefix`], this is a search restriction.
+    /// Restricted UNSAT is not an upper bound. Promote a SAT model only after
+    /// projecting it with [`WeightedAtMostEncoding::project_source_model`] and
+    /// replaying that projection against [`Self::encode`].
+    ///
+    /// # Errors
+    ///
+    /// Rejects an overlong comparison, a short witness, a palette mismatch,
+    /// or weighted-cardinality resource exhaustion.
+    pub fn encode_with_witness_hamming_ball(
+        &self,
+        witness: &Witness,
+        compared_points: usize,
+        max_changes: u64,
+        limits: WeightedAtMostLimits,
+    ) -> Result<WeightedAtMostEncoding, SearchError> {
+        if compared_points > self.points {
+            return Err(SearchError::WitnessLength {
+                expected: compared_points,
+                found: self.points,
+            });
+        }
+        if compared_points > witness.points() {
+            return Err(SearchError::WitnessLength {
+                expected: compared_points,
+                found: witness.points(),
+            });
+        }
+        if witness.colours() != self.colours {
+            return Err(SearchError::InvalidParameter {
+                what: format!(
+                    "witness has {} colours, problem has {}",
+                    witness.colours(),
+                    self.colours
+                ),
+            });
+        }
+        let canonical = self.encode()?;
+        let terms = witness
+            .colouring()
+            .iter()
+            .copied()
+            .take(compared_points)
+            .enumerate()
+            .map(|(offset, colour)| Ok((self.literal(offset + 1, colour)?.negated(), 1)))
+            .collect::<Result<Vec<_>, SearchError>>()?;
+        Ok(encode_weighted_at_most(
+            &canonical,
+            &terms,
+            max_changes,
+            limits,
+        )?)
     }
 
     /// Clause group 4, restricted to blocks of interchangeable colours.
@@ -788,6 +860,77 @@ mod tests {
                 found: 4
             })
         );
+    }
+
+    #[test]
+    fn witness_hamming_ball_counts_changed_points_and_projects() {
+        use axeyum_cnf::{ProofSolveOutcome, solve_with_drat_proof};
+
+        let problem = ColouringProblem::new(4, 3, Vec::new()).unwrap();
+        let witness = Witness::new(3, vec![1, 2, 3, 1]).unwrap();
+        let exact = problem
+            .encode_with_witness_hamming_ball(&witness, 4, 0, WeightedAtMostLimits::default())
+            .unwrap();
+        let ProofSolveOutcome::Sat(model) = solve_with_drat_proof(exact.formula()) else {
+            panic!("the center of a zero-radius ball must remain satisfiable")
+        };
+        let source = exact.project_source_model(model.values()).unwrap();
+        assert_eq!(problem.decode_model(&source), Ok(witness.clone()));
+        assert_eq!(problem.encode().unwrap().evaluate(&source), Ok(true));
+
+        let changed = Witness::new(3, vec![1, 2, 3, 2]).unwrap();
+        let changed_assignment = problem.witness_assignment(&changed).unwrap();
+        let mut pinned = exact.formula().clone();
+        for (index, value) in changed_assignment.iter().copied().enumerate() {
+            let literal = CnfLit::positive(CnfVar::new(index).unwrap());
+            pinned
+                .add_clause(CnfClause::new(vec![if value {
+                    literal
+                } else {
+                    literal.negated()
+                }]))
+                .unwrap();
+        }
+        assert!(matches!(
+            solve_with_drat_proof(&pinned),
+            ProofSolveOutcome::Unsat(_)
+        ));
+        let radius_one = problem
+            .encode_with_witness_hamming_ball(&witness, 4, 1, WeightedAtMostLimits::default())
+            .unwrap();
+        let mut pinned = radius_one.formula().clone();
+        for (index, value) in changed_assignment.iter().copied().enumerate() {
+            let literal = CnfLit::positive(CnfVar::new(index).unwrap());
+            pinned
+                .add_clause(CnfClause::new(vec![if value {
+                    literal
+                } else {
+                    literal.negated()
+                }]))
+                .unwrap();
+        }
+        assert!(matches!(
+            solve_with_drat_proof(&pinned),
+            ProofSolveOutcome::Sat(_)
+        ));
+    }
+
+    #[test]
+    fn witness_hamming_ball_is_not_a_palette_orbit_distance() {
+        use axeyum_cnf::{ProofSolveOutcome, check_drat, solve_with_drat_proof};
+
+        let problem = ColouringProblem::new(4, 3, Vec::new()).unwrap();
+        let canonical = Witness::new(3, vec![1, 2, 3, 1]).unwrap();
+        let relabelled = Witness::new(3, vec![2, 1, 3, 2]).unwrap();
+        assert_eq!(relabelled.canonicalize_palette(), canonical);
+        let labelled_radius_zero = problem
+            .encode_with_witness_hamming_ball(&relabelled, 4, 0, WeightedAtMostLimits::default())
+            .unwrap();
+        let ProofSolveOutcome::Unsat(proof) = solve_with_drat_proof(labelled_radius_zero.formula())
+        else {
+            panic!("the noncanonical relabelling must conflict with canonical palette clauses")
+        };
+        assert_eq!(check_drat(labelled_radius_zero.formula(), &proof), Ok(true));
     }
 
     #[test]

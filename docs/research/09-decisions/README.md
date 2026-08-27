@@ -665,3 +665,5 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0592](adr-0592-exact-tensor-rank-search-must-name-its-lower-bound-premise.md) | Exact tensor-rank search must name its lower-bound premise | accepted |
 | [0593](adr-0593-parallel-proof-tree-progress-is-root-ordered.md) | Parallel proof-tree progress is root-ordered | accepted |
 | [0594](adr-0594-colouring-prefix-guidance-is-an-explicit-restriction.md) | Colouring prefix guidance is an explicit search restriction | accepted |
+| [0595](adr-0595-colouring-hamming-balls-compose-with-weighted-cardinality.md) | Colouring Hamming balls compose with weighted cardinality | accepted |
+| [0596](adr-0596-recursive-proof-trees-use-one-whole-tree-worker-pool.md) | Recursive proof trees use one whole-tree worker pool | accepted |
