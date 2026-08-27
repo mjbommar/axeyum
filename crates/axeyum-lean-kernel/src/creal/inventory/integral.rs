@@ -146,5 +146,10 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.riemann_sum_integral_close,
             "theorem",
         ),
+        (
+            "CReal.riemannSum_split_exact",
+            p.riemann_sum_split_exact,
+            "theorem",
+        ),
     ]
 }

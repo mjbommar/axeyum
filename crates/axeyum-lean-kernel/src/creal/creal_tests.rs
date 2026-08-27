@@ -3870,6 +3870,124 @@ fn riemann_sum_of_the_constant_two_on_0_3_computes_to_six() {
         });
 }
 
+/// **Mandatory concrete instantiation for `CReal.riemannSum_split_exact`,
+/// with `F := id` rather than a constant** -- a constant `F` cannot
+/// discriminate a wrong split point at all (`riemannSum (fun _ => k) a b m`
+/// equals `k*(b-a)` for EVERY `m`, so `2c + 2(3-c)` is `6` for every `c`
+/// whatsoever, aligned or not). `a := 0`, `b := 3`, `m_ac := 1`, `m_cb := 3`
+/// (so `n_ac = 2`, `n_cb = 4`, `n_ab = 6` -- the task's own hand-verified
+/// aligned case: `q := 1/3`, `k := 2`), `hcong := fun x y h => h` (`id`
+/// trivially respects `Equiv`). Asserts the kernel accepts the theorem
+/// applied at these exact arguments against the INDEPENDENTLY built expected
+/// type (never merely inferred), confirming the `Nat.succ`/`Nat.add`
+/// literal arithmetic (`m_ab = 5`, `n_ac = 2`) reduces as this module's
+/// own hand computation says it must, and that `hcong` threads correctly
+/// for a genuinely non-constant `F`.
+#[test]
+fn riemann_sum_split_exact_at_id_zero_three_one_three() {
+    crate::on_a_deep_stack(riemann_sum_split_exact_at_id_zero_three_one_three_body);
+}
+
+fn riemann_sum_split_exact_at_id_zero_three_one_three_body() {
+    use crate::int_prelude::ops::IntDev;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = super::creal_ty(&mut d, p);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let two_c = d.const_app(p.add, &[one_c, one_c]);
+    let three_c = d.const_app(p.add, &[two_c, one_c]);
+
+    let id_fn = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        d.lam_fv(x_fv, carrier, x)
+    };
+
+    let m_ac = d.num(1);
+    let m_cb = d.num(3);
+
+    // hcong : forall x y, Equiv x y -> Equiv (id x) (id y) := fun x y h => h
+    // (`id x`/`id y` beta-reduce to `x`/`y`, so `h` itself already has the
+    // needed type).
+    let hcong = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let hxy_ty = super::equiv(&mut d, p, x, y);
+        let body = d.lam_fv(h_fv, hxy_ty, h);
+        let over_y = d.lam_fv(y_fv, carrier, body);
+        d.lam_fv(x_fv, carrier, over_y)
+    };
+
+    let proof = d.lemma(
+        p.riemann_sum_split_exact,
+        &[id_fn, zero_c, three_c, m_ac, m_cb, hcong],
+    );
+
+    // Independently built expected type: m_ab := add (succ m_ac) m_cb,
+    // delta_ab := width_of(0,3) * embed(natDivSucc 1 m_ab), c := 0 + (ofNat
+    // (succ m_ac)) * delta_ab -- the SAME recipe `integral.rs`'s
+    // `width_of`/`delta_of`/`sample_point` use internally, rebuilt here
+    // (those helpers are private to `integral.rs`, not visible from this
+    // sibling module) so interning lines this up with what the theorem's own
+    // proof term actually produces.
+    let n_ac = d.succ(m_ac);
+    let m_ab = {
+        let nat_add = d.prelude().add;
+        d.const_app(nat_add, &[n_ac, m_cb])
+    };
+    let width_ab = {
+        let neg_a = d.const_app(p.neg, &[zero_c]);
+        d.const_app(p.add, &[three_c, neg_a])
+    };
+    let one_nat = d.num(1);
+    let frac_ab_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, m_ab]);
+    let frac_ab = super::embed(&mut d, p, frac_ab_rat);
+    let delta_ab = d.const_app(p.mul, &[width_ab, frac_ab]);
+    let on_ac = d.const_app(p.of_nat, &[n_ac]);
+    let w1 = d.const_app(p.mul, &[on_ac, delta_ab]);
+    let c = d.const_app(p.add, &[zero_c, w1]);
+
+    let riemann_ab = d.const_app(p.riemann_sum, &[id_fn, zero_c, three_c, m_ab]);
+    let riemann_ac = d.const_app(p.riemann_sum, &[id_fn, zero_c, c, m_ac]);
+    let riemann_cb = d.const_app(p.riemann_sum, &[id_fn, c, three_c, m_cb]);
+    let rhs = d.const_app(p.add, &[riemann_ac, riemann_cb]);
+    let expected_ty = super::equiv(&mut d, p, riemann_ab, rhs);
+
+    // A negative control asserting the SAME proof term against a
+    // deliberately-swapped-mesh-count statement was tried here and removed:
+    // it drove the kernel's typechecker into unbounded work (observed >2:35
+    // wall-clock at 99.9% CPU with RSS still climbing past 2.6 GB before
+    // being killed, not a stack overflow) -- the same "symbolic test can be
+    // pathological" shape this codebase's own gotchas document. The POSITIVE
+    // check below (kernel accepts the real proof against the independently
+    // rebuilt expected statement) is the real verification; deleting the
+    // negative control rather than debugging its cost, per the documented
+    // convention.
+    let anon = kernel.anon();
+    let name = kernel.name_str(anon, "__riemann_sum_split_exact_at_id_zero_three_one_three");
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: expected_ty,
+            value: proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "riemannSum_split_exact at F := id, a := 0, b := 3, \
+                 m_ac := 1, m_cb := 3 did NOT type-check against the \
+                 independently rebuilt expected statement: {error:?}"
+            )
+        });
+}
+
 /// **Mandatory computation test for `CReal.ofNat_le`.** Instantiates it at
 /// explicit small naturals `i := 1`, `j := 3` against a CONCRETE
 /// `Nat.le 1 3` witness built from `Nat.le_intro 1 3 2 (rfl : 1+2=3)` — not a
