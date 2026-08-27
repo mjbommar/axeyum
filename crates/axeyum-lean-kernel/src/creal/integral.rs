@@ -802,6 +802,95 @@
 //! build the real-scaled analogue of `mesh_scaled_le_of_ge` needed to
 //! translate a `CReal.inv`-rescaled closeness bound back to original units,
 //! which unblocks the general `c`.
+//!
+//! ## `CReal.integral_split` — checked 2026-08-27 (a NINTH lane), took fork
+//! (b) — a MUCH easier route than the general case, and it is now landed as
+//! `CReal.riemannSum_split_exact`
+//!
+//! Task: restrict the split point to `c := a + q·(b−a)`, `q : Rat`,
+//! `0 < q < 1`, and check whether the resulting mesh-splitting bridge is pure
+//! index algebra, per this file's own eighth entry's suggested next slice.
+//!
+//! **The hand computation confirms exact alignment, and it generalizes
+//! further than expected.** At `a := 0, b := 3, q := 1/3, k := 2` (so
+//! `n_ac := 2, n_cb := 4, n_ab := 6`, `c := 1`): `riemannSum(F,a,b,5) =
+//! riemannSum(F,a,1,1) + riemannSum(F,1,3,3)` EXACTLY, checked for both
+//! `F := const 2` (`6 = 2 + 4`) and `F := id` (`3.75 = 0.25 + 3.5`) by hand
+//! summation. The false fixed-mesh counterexample the task named (`m := 0`
+//! shared across all three intervals: `0 = riemannSum(id,0,3,0)` vs
+//! `2 = riemannSum(id,0,1,0) + riemannSum(id,1,3,0)`) fails for a precise,
+//! checkable reason: it uses `n_ac = n_cb = n_ab = 1`, and `1 ≠ 1+1` — it
+//! violates the ONE identity (`n_ab = n_ac + n_cb`) alignment actually
+//! needs, not some subtler estimate.
+//!
+//! **The general lemma needs no rationality of `q` at all.** Deriving the
+//! mesh-count identity `n_ab = n_ac + n_cb ⟹ Δ_ac = Δ_cb = Δ_ab EXACTLY`
+//! only uses that `c` IS a sample point of a refined `[a,b]` mesh —
+//! `c := a + (ofNat (succ m_ac))·Δ_ab` — never that `c−a` is a rational
+//! multiple of `b−a`. So the buildable core is STRICTLY more general than
+//! the rational-split-point slice this task was sized for: it is a
+//! `riemannSum` interval-split identity for ANY `c` the caller can express
+//! as such a mesh point, symbolic `m_ac`/`m_cb` included. Landed as
+//! [`CRealPrelude::riemann_sum_split_exact`]
+//! (`declare_riemann_sum_split_exact`, this file) — **kernel-checked**,
+//! `creal_prelude_builds` unaffected (22–25 s, within this session's
+//! 20–24 s noise band), and confirmed at a concrete, discriminating
+//! instantiation (`F := id`, not a constant — `riemannSum(const k,a,b,m) =
+//! k·(b−a)` for EVERY `m`, so a constant `F` cannot tell an aligned split
+//! from a misaligned one; `a:=0, b:=3, m_ac:=1, m_cb:=3`, matching the hand
+//! computation's `q := 1/3, k := 2` case) against an INDEPENDENTLY rebuilt
+//! expected statement, not merely inferred.
+//!
+//! Proof shape: `H_split` (`width_of(a,b) ~ w1+w2`, `w_i := ofNat(n_i)·Δ_ab`,
+//! via [`CRealPrelude::of_nat_add`] + [`right_distrib`] +
+//! [`CRealPrelude::mesh_count_width`] — no `CReal.inv`, no crossing index);
+//! `H_b`/`H_cb` (uncancel/cancel that width equation to place `c` between
+//! `a` and `b`, and derive `width_of(c,b) ~ w2`); two
+//! `delta_from_width_equiv` calls (`Δ_ac ~ Δ_ab`, `Δ_cb ~ Δ_ab` — EQUAL, not
+//! merely close); then [`CRealPrelude::sum_range_split`] (`succ m_ab`
+//! defeq `add (succ m_ac)(succ m_cb)` by pure `Nat.add` right-recursion, no
+//! `succ_add` rewrite needed — the SAME `succ_mul_succ` trick this file
+//! already uses for `*`, reused for `+`) plus two
+//! [`CRealPrelude::sum_range_congr`] calls to glue the split sum back into
+//! the two child `riemannSum`s.
+//!
+//! **The one genuinely new hypothesis, and it is NOT avoidable**: `F`
+//! respecting `Equiv` (`∀ x y, Equiv x y → Equiv (F x) (F y)`), threaded as
+//! an explicit parameter (`hcong`). `Δ_ac ~ Δ_ab` is `Equiv`, not `Eq`, so the
+//! two mesh points `a+i·Δ_ab` and `a+i·Δ_ac` an arbitrary `F : CReal → CReal`
+//! is applied to are only `Equiv`, never definitionally equal, once the mesh
+//! is refined — and nothing about a raw `CReal → CReal` function forces it to
+//! respect that relation. This is a MUCH weaker requirement than a full
+//! `UniformlyContinuousOn` modulus (no rate, just the bare implication), but
+//! it is not zero.
+//!
+//! **What this slice does NOT reach, precisely two gaps, both assembly, not
+//! new estimates:**
+//! 1. Connecting an arbitrary rational `q` (`c := a + ofRat(q)·(b−a)`) to a
+//!    SPECIFIC `(m_ac, m_cb)` pair this lemma accepts — writing
+//!    `q = p/(succ r)` and choosing `m_ac := p·k − 1`-shaped counts (for a
+//!    multiplier `k`) so `c` literally lands on `a + (ofNat(succ m_ac))·Δ_ab`.
+//!    Pure `Rat`/`Nat` bookkeeping (no estimate), NOT attempted here; the
+//!    landed lemma is strictly more general than needing it, so this is
+//!    optional polish for a rational-`q`-shaped public statement, not a
+//!    blocker for reuse.
+//! 2. Deriving `hcong` from an actual continuity witness (e.g.
+//!    `UniformlyContinuousOn F a b`) — `uniformly_continuous_imp_continuous_at`
+//!    (`uniform_continuity.rs`'s own module documentation) is the named,
+//!    not-yet-landed bridge this needs, and then relating `riemannSum` to
+//!    `CReal.integral` via [`CRealPrelude::riemann_sum_integral_close`] on
+//!    all three intervals plus `le_of_forall_le_add_small`/
+//!    `equiv_zero_of_small` (per the 2026-08-27-earlier entry) to close the
+//!    outer `Equiv` on `CReal.integral` values themselves. NOT attempted
+//!    here — this is where the real estimate-shaped work still lives.
+//!
+//! **Negative control, tried and removed rather than debugged**: a
+//! kernel-level test asserting the SAME concrete proof term against a
+//! statement with `m_ac`/`m_cb` swapped between the two `riemannSum` calls
+//! drove the typechecker into unbounded work (>2:35 wall-clock at 99.9% CPU,
+//! RSS still climbing past 2.6 GB when killed — not a stack overflow). Per
+//! this file's own "a symbolic test can be pathological" convention: deleted
+//! rather than chased, and recorded here rather than silently dropped.
 
 use super::completeness::half_shift_le;
 use super::convergence::{
