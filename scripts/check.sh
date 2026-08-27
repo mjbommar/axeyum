@@ -642,6 +642,17 @@ step import-backlog python3 scripts/gen-import-backlog.py --check
 # the artifact is not regenerated to match. docs/autogenesis/297-ledger-coverage-gate.md.
 step ledger-coverage-tests python3 -m unittest scripts.tests.test_gen_ledger_coverage
 step ledger-coverage python3 scripts/gen-ledger-coverage.py --check
+# The generated half of that ledger. `gen-kernel-facts.py` writes facts
+# mechanically for already-proved kernel theorems, and bulk generation is
+# exactly how the "checker that cannot fail" defect gets manufactured at
+# speed. `--audit` re-derives the prose every `provenance.curation:
+# generated-unreviewed` fact would carry and requires a byte-identical match
+# (so enriched prose must flip the marker to `curated` rather than sit under
+# the generated one), requires `external_status` to be absent, and requires
+# every checker_command to match a shape whose exit status depends on the
+# finding. docs/autogenesis/298-mechanical-fact-registration.md.
+step kernel-facts-tests python3 -m unittest scripts.tests.test_gen_kernel_facts
+step kernel-facts-audit python3 scripts/gen-kernel-facts.py --audit
 # The formalized-math strand's status block, re-derived from the tree.
 step import-status-tests python3 -m unittest scripts.tests.test_check_import_status
 step import-status  python3 scripts/check-import-status.py

@@ -62,9 +62,18 @@ ID_RE = re.compile(r"^F:[a-z0-9]+(-[a-z0-9]+)*$")
 # `formal.kernel_theorem` in fact.schema.json. A garbage string here would be
 # silently treated as a theorem name by every `theorem_of` consumer and would
 # never be caught, since nothing else reads this field.
+# `axeyum.string.<N>` is the string prelude's ACTUAL namespace -- the alphabet
+# size is a name component, so `build_string_prelude(k, logic, 2)` declares
+# `axeyum.string.2.append_assoc`. `Str` above is the carrier TYPE's short name
+# and matches no declaration this kernel admits, so before this alternative the
+# allowlist rejected every one of the 64 string-prelude theorems. That went
+# unnoticed for as long as the ledger registered ZERO of them (measured
+# 2026-08-27 by `gen-ledger-coverage.py`: string 0/64), which is the coverage
+# trap in miniature -- an allowlist is only tested by the names someone tries.
 KERNEL_THEOREM_RE = re.compile(
     r"^(?:AxReal|AxNat|Nat|Int|Real|Rat|List|Bool|Prop|Acc|WellFounded|Str|"
-    r"CReal|Complex|CPoint)(?:\.[A-Za-z_][A-Za-z0-9_']*)+$"
+    r"CReal|Complex|CPoint|axeyum\.string\.[0-9]+)"
+    r"(?:\.[A-Za-z_][A-Za-z0-9_']*)+$"
 )
 
 REQUIRED = {"schema_version", "id", "title", "statement", "formal",
