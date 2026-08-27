@@ -725,6 +725,83 @@
 //!
 //! `creal_prelude_builds`: unaffected by this entry (module documentation
 //! only, no declaration added or changed).
+//!
+//! ## `CReal.integral_split` — checked 2026-08-27 (an EIGHTH lane), landed
+//! [`CRealPrelude::crossing_sample_pairing_close`] (`crossing.rs`), the
+//! term-PAIRING slice this task was sized down to, and hit a WALL one level
+//! deeper than the seventh entry's — the wall is not (only) "no reblock
+//! algebra applies", it is a **type-level mismatch inside `crossing.rs`
+//! itself**.
+//!
+//! **What was buildable, and IS now kernel-checked**:
+//! `crossingCloseClamped` specialized at `c := a + (ofNat i)·stepAb` (an
+//! ordinary `[a,b]`-mesh sample point, `stepAb : CReal` arbitrary) gives,
+//! for a **rational** `deltaAc`, `close_within (F ptI) (F clampedPt)
+//! (1/(e+1))` where `clampedPt := min (a + (ofNat (crossingIndex a ptI
+//! deltaAc))·(ofRat deltaAc)) b` — the index map `j(i) := crossingIndex a
+//! ptI deltaAc`, COMPUTED (no `Exists.rec`), no `Nat.sub` anywhere. Verified
+//! by hand at `i := 0` (`ptI` reduces to `a`, so `j(0) = crossingIndex a a
+//! deltaAc`, and every hypothesis the theorem needs at that instance is
+//! trivial `le_refl`-shaped) and symbolically at arbitrary `i` (the theorem
+//! is universally quantified over `i`, so there is no separate "boundary"
+//! case to special-case: `crossingIndex`'s own recipe is total in its
+//! target argument, unlike a hand-rolled `floor`/`Nat.sub` map would be).
+//! `creal_prelude_builds`: **23.88s** against a same-session baseline in the
+//! 20-22.4s band (noise-dominated, one declaration) —
+//! `every_creal_declaration_is_checked_and_axiom_free` (`--release`)
+//! confirms it is a checked, axiom-free `Theorem`.
+//!
+//! **Why "rational `deltaAc`" is not a stylistic choice but the actual
+//! boundary of what type-checks**: `crossingIndex`'s (hence
+//! `crossingCloseClamped`'s) step parameter is `Rat`, not `CReal` —
+//! `declare_crossing_index`'s `delta_fv` is bound at `rat_ty_` in the
+//! kernel, and `build_scaled` computes `Rat.inv delta`, a DECIDABLE
+//! rational inverse. The natural cross-mesh step for an ARBITRARY split
+//! point `c`, `deltaAc := (c−a)·ofRat(natDivSucc 1 m_ac)`, is `CReal`-valued
+//! whenever `c−a` is not itself rational — so `crossingIndex a ptI deltaAc`
+//! **does not even parse** for a general `c`, let alone need a soundness
+//! argument. This is the SAME "not a computable rational multiple" fact the
+//! seventh entry names, sharpened from "no algebra applies" to the precise
+//! signature that blocks it.
+//!
+//! **The rescue that does NOT work for free**: this prelude's only
+//! `CReal`-level inverse, `CReal.inv (x) (k) (h : PosBound x k) : CReal`
+//! (`creal/inverse.rs`, ADR-0510 phase F3), could build `(c−a)⁻¹` given an
+//! explicit positivity witness — but `crossing.rs`'s internal recipe
+//! (`build_scaled`, `scale_cancels`, the four `bucketIndex` closeness
+//! lemmas' composition) is hard-wired to `Rat.inv` throughout; none of it is
+//! stated against `CReal.inv`. Pre-rescaling `ptI` by `(c−a)⁻¹` so
+//! `crossingIndex` only ever sees a literal `Rat` delta is possible in
+//! principle, but the resulting closeness bound would be stated in the
+//! RESCALED (unit) coordinate, and translating it back to a bound on `|ptI
+//! − ptAc(j(i))|` in ORIGINAL units needs multiplying back through by the
+//! `CReal` factor `(c−a)` — a REAL (not `Nat`, unlike
+//! [`CRealPrelude::mesh_scaled_le_of_ge`]) scaling step with no existing
+//! lemma covering it. That is a genuinely new sub-development, not a
+//! wiring exercise, and is NOT attempted here.
+//!
+//! **What this slice does NOT reach**: the block-level summation
+//! (`abs_sumRange_le` + `sumRange_le` over the paired terms) was not
+//! attempted — it needs, in addition to the general (non-rational-`deltaAc`)
+//! pairing lemma above, a Nat-arithmetic bound placing `j(i) ≤ m_ac` for
+//! every `i` up to the crossing index (so `ptAc(j(i))` is an actual term of
+//! `riemannSum F a c m_ac`, not merely a nearby real value), which is itself
+//! unbuilt. **Negative control, checked**: this pairing lemma's conclusion
+//! is an inequality (`close_within`, i.e. `abs (…) ≤ ofRat (1/(e+1))`)
+//! gated entirely behind caller-supplied `h_upper`/`h_lower` hypotheses that
+//! themselves encode mesh fineness — there is no substitution of `m_ac`
+//! (equivalently, of `deltaAc`) that turns this into an unconditional claim,
+//! so it cannot collapse into the false fixed-mesh interval-additivity
+//! equality the task's negative control names.
+//!
+//! **Recommended next slice**: EITHER (a) restrict `integral_split`'s own
+//! statement to the case `c := a + ofRat q` (`q : Rat`, giving `deltaAc :=
+//! q·natDivSucc(1,m_ac)`, directly usable by
+//! [`CRealPrelude::crossing_sample_pairing_close`] as built) and prove the
+//! rational-split-point special case of interval additivity first, or (b)
+//! build the real-scaled analogue of `mesh_scaled_le_of_ge` needed to
+//! translate a `CReal.inv`-rescaled closeness bound back to original units,
+//! which unblocks the general `c`.
 
 use super::completeness::half_shift_le;
 use super::convergence::{
