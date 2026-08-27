@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
-"""Guard: `prelude_theorem_inventory` and `kernel_declaration_projection` must
-agree on the distinct set of `Declaration::Theorem` names.
+"""Guard: `prelude_theorem_inventory`, `kernel_declaration_projection` and
+`cross_prelude_collision_tests` must agree on the distinct set of `Declaration
+::Theorem` names (the first two) AND on the set of prelude-group labels their
+three separate `build_groups` implementations build (all three).
 
 # Why this exists
 
@@ -34,12 +36,36 @@ theorem name sets are identical. Any name present in one and absent from the
 other is a failure, in EITHER direction, because either tool omitting a
 prelude group is the same defect class.
 
+# A THIRD file has the identical shape, and this script did not cover it
+
+`crates/axeyum-lean-kernel/src/cross_prelude_collision_tests.rs`'s own
+`build_groups` -- a *third*, independent re-implementation of "build every
+prelude this crate ships" -- had the SAME gap: its module doc claimed to
+mirror `prelude_theorem_inventory`'s prelude list but never called
+`build_characterization` either, so the 32 `characterization` declarations
+had never been checked for a cross-prelude NAME COLLISION (a different
+question from "is it in the theorem count", and one this script's `check()`
+above cannot answer, since collision-checking covers every `Declaration`
+kind, not just theorems). See `docs/plan/status/146-collision-gap.md`.
+
+That file is a `#[test]`, not a binary with a TSV stdout, so it cannot be
+compared by running it and parsing output the way `check()` above compares
+`kdp`/`pti`. `check_group_labels` instead compares the three tools' PRELUDE
+LABEL SETS (not theorem names): the labels `kernel_declaration_projection`
+and `prelude_theorem_inventory` actually emitted in their TSV output, against
+the labels used inside `cross_prelude_collision_tests.rs`'s own `build_groups`
+literals, read directly from that file's source text (`collision_group_
+labels`). A label present in one `build_groups` and absent from another is
+the same defect class as `check()`'s theorem-name mismatch, in whichever of
+the three tools omitted it.
+
 # Testing hook
 
-`--kdp-tsv` / `--pti-tsv` substitute a file in each tool's own TSV shape, so
-`scripts/tests/test_theorem_inventory_completeness.py` can exercise the
-comparison logic without paying a `--release` cargo build of the whole
-constructed universe.
+`--kdp-tsv` / `--pti-tsv` substitute a file in each tool's own TSV shape;
+`--collision-source` substitutes a file for `cross_prelude_collision_tests
+.rs`'s own source text. `scripts/tests/test_theorem_inventory_completeness.py`
+exercises the comparison logic against these without paying a `--release`
+cargo build of the whole constructed universe.
 
 ```sh
 python3 scripts/check-theorem-inventory-completeness.py
@@ -49,6 +75,7 @@ python3 scripts/check-theorem-inventory-completeness.py
 from __future__ import annotations
 
 import argparse
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -63,6 +90,11 @@ PTI_COMMAND = (
     "cargo run --quiet --release -p axeyum-lean-kernel "
     "--example prelude_theorem_inventory -- --include-constructed"
 )
+COLLISION_SOURCE = (
+    ROOT / "crates" / "axeyum-lean-kernel" / "src" / "cross_prelude_collision_tests.rs"
+)
+
+_LABEL_RE = re.compile(r'label:\s*"([A-Za-z0-9_]+)"')
 
 
 class CompletenessError(Exception):
@@ -124,6 +156,127 @@ def pti_theorem_names(stdout: str) -> set[str]:
     return names
 
 
+def kdp_prelude_labels(stdout: str) -> set[str]:
+    """Distinct prelude labels (`kernel_declaration_projection`'s first TSV
+    field) actually present in its output -- i.e. the label set its own
+    `build_groups` produced, read from what it emitted rather than assumed
+    from source. Reuses the same 8-field shape check as `kdp_theorem_names`;
+    a malformed row is caught there in normal use since both are run over the
+    same `stdout`, but this function re-validates independently so it also
+    works standalone (as the tests exercise it).
+    """
+    labels: set[str] = set()
+    for line in stdout.splitlines():
+        if not line.strip():
+            continue
+        fields = line.split("\t")
+        if len(fields) != 8:
+            raise CompletenessError(
+                f"kernel_declaration_projection row has {len(fields)} fields, "
+                f"expected 8: {line[:160]!r}"
+            )
+        labels.add(fields[0])
+    if not labels:
+        raise CompletenessError(
+            "kernel_declaration_projection reported ZERO prelude labels -- a "
+            "broken tool or empty input, not a real measurement"
+        )
+    return labels
+
+
+def pti_prelude_labels(stdout: str) -> set[str]:
+    """Distinct prelude labels (`prelude_theorem_inventory`'s first TSV
+    field) actually present in its output. Depends on every built prelude
+    group producing at least one theorem row -- true for every group this
+    crate ships today (even `logic` proves things) -- so a group with zero
+    theorems would be invisible here; `collision_group_labels` below is read
+    from source specifically because a `#[test]` cannot be probed this way at
+    all, so this function's "read what it emitted" approach is the one
+    that's actually available for the two runnable tools.
+    """
+    labels: set[str] = set()
+    for line in stdout.splitlines():
+        if not line.strip():
+            continue
+        fields = line.split("\t")
+        if len(fields) < 3:
+            raise CompletenessError(
+                f"prelude_theorem_inventory row malformed: {line[:160]!r}"
+            )
+        labels.add(fields[0])
+    if not labels:
+        raise CompletenessError(
+            "prelude_theorem_inventory reported ZERO prelude labels -- a "
+            "broken tool or empty input, not a real measurement"
+        )
+    return labels
+
+
+def collision_group_labels(source_text: str) -> set[str]:
+    """Distinct prelude labels used in `cross_prelude_collision_tests.rs`'s
+    `Group { label: "...", ... }` literals -- both `build_groups`'s real
+    groups and the `negative_control` submodule's synthetic ones. Scanning
+    the WHOLE file rather than isolating `build_groups`'s body is safe
+    because `negative_control` only ever reuses labels `build_groups` already
+    declares (`logic`, `nat`, `axreal`) as a subset for its injected-collision
+    fixture -- it can shrink what a naive line-count would show, never
+    introduce a label absent from the real group list, so it cannot produce a
+    false MATCH by inventing an extra label that happens to agree with the
+    other two tools.
+
+    Refuses an empty result: if this file's `Group` literal shape ever
+    changes away from `label: "..."`, or the file is empty or missing, that
+    must fail loudly rather than silently compare against an empty set (which
+    `check_group_labels` would otherwise report as "every other tool's label
+    is missing from this one" -- true, but for the wrong reason).
+    """
+    labels = set(_LABEL_RE.findall(source_text))
+    if not labels:
+        raise CompletenessError(
+            "cross_prelude_collision_tests.rs: found ZERO `label: \"...\"` "
+            "occurrences -- source shape changed, or the file is empty/"
+            "missing, not a real measurement"
+        )
+    return labels
+
+
+def check_group_labels(
+    kdp_labels: set[str], pti_labels: set[str], collision_labels: set[str]
+) -> int:
+    """Raise `CompletenessError` naming any prelude-group label present in
+    one of the three `build_groups` implementations
+    (`kernel_declaration_projection`, `prelude_theorem_inventory`,
+    `cross_prelude_collision_tests`) and absent from another, in ANY of the
+    three pairwise directions. Returns the agreed label count on agreement.
+
+    This is the general form of the exact 2026-08-27 defect: a group present
+    in two tools' `build_groups` and silently missing from the third's is the
+    same failure whichever tool is short, so all three are compared, not just
+    the pair `check()` above already covers.
+    """
+    sets = {
+        "kernel_declaration_projection": kdp_labels,
+        "prelude_theorem_inventory": pti_labels,
+        "cross_prelude_collision_tests": collision_labels,
+    }
+    all_labels = set().union(*sets.values())
+    problems = []
+    for label in sorted(all_labels):
+        present = sorted(name for name, s in sets.items() if label in s)
+        missing = sorted(name for name in sets if name not in present)
+        if missing:
+            problems.append(f"  {label!r}: present in {present}, MISSING from {missing}")
+    if problems:
+        raise CompletenessError(
+            "prelude group label sets disagree across the three build_groups "
+            "implementations (kernel_declaration_projection, "
+            "prelude_theorem_inventory, cross_prelude_collision_tests) -- one "
+            "of them never builds a prelude group the others do:\n"
+            + "\n".join(problems)
+        )
+    return len(all_labels)
+
+
 def _run(command: str) -> str:
     completed = subprocess.run(
         command, shell=True, cwd=ROOT, capture_output=True, text=True, check=False
@@ -181,6 +334,14 @@ def main() -> int:
         type=Path,
         help="substitute file for prelude_theorem_inventory's stdout (testing)",
     )
+    parser.add_argument(
+        "--collision-source",
+        type=Path,
+        help=(
+            "substitute file for cross_prelude_collision_tests.rs's own "
+            "source text (testing)"
+        ),
+    )
     args = parser.parse_args()
     try:
         kdp_stdout = (
@@ -189,11 +350,24 @@ def main() -> int:
         pti_stdout = (
             args.pti_tsv.read_text(encoding="utf-8") if args.pti_tsv else _run(PTI_COMMAND)
         )
+        collision_source = (
+            args.collision_source.read_text(encoding="utf-8")
+            if args.collision_source
+            else COLLISION_SOURCE.read_text(encoding="utf-8")
+        )
         kdp_count, _pti_count = check(kdp_stdout, pti_stdout)
+        kdp_labels = kdp_prelude_labels(kdp_stdout)
+        pti_labels = pti_prelude_labels(pti_stdout)
+        collision_labels = collision_group_labels(collision_source)
+        label_count = check_group_labels(kdp_labels, pti_labels, collision_labels)
     except CompletenessError as error:
         print(f"THEOREM_INVENTORY_COMPLETENESS_ERROR: {error}", file=sys.stderr)
         return 1
     print(f"THEOREM_INVENTORY_COMPLETENESS_OK: {kdp_count} distinct theorem names agree")
+    print(
+        f"THEOREM_INVENTORY_COMPLETENESS_OK: {label_count} prelude-group labels "
+        "agree across all three build_groups implementations"
+    )
     return 0
 
 

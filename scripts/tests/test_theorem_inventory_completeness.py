@@ -136,5 +136,162 @@ class AgreementTests(unittest.TestCase):
             MODULE.pti_theorem_names(text)
 
 
+def collision_source(*labels: str) -> str:
+    """A minimal `cross_prelude_collision_tests.rs`-shaped source fragment:
+    one `Group { label: "...", ... }` literal per label, the only shape
+    `collision_group_labels` reads."""
+    return "\n".join(f'    Group {{ label: "{label}", all: names }}' for label in labels)
+
+
+class GroupLabelAgreementTests(unittest.TestCase):
+    """Tests for `check_group_labels`, `kdp_prelude_labels`,
+    `pti_prelude_labels` and `collision_group_labels` -- the three-way guard
+    added alongside the theorem-name comparison above, for the identical gap
+    found in `cross_prelude_collision_tests.rs`'s OWN `build_groups`: it too
+    never called `build_characterization`, so `characterization` had never
+    been checked for a cross-prelude name collision (a different question
+    from the theorem-name comparison `check()` answers -- collision-checking
+    spans every `Declaration` kind, not only theorems)."""
+
+    def test_all_three_agreeing_passes(self) -> None:
+        kdp = "\n".join([kdp_row("nat", "theorem", "Nat.add_comm")])
+        pti = "\n".join([pti_row("nat", "Nat.add_comm")])
+        source = collision_source("nat")
+        count = MODULE.check_group_labels(
+            MODULE.kdp_prelude_labels(kdp),
+            MODULE.pti_prelude_labels(pti),
+            MODULE.collision_group_labels(source),
+        )
+        self.assertEqual(count, 1)
+
+    def test_collision_tests_missing_a_group_is_caught(self) -> None:
+        # Reproduces the actual defect this guard exists for: kdp/pti both
+        # build `characterization`, but `cross_prelude_collision_tests.rs`'s
+        # own `build_groups` never calls `build_characterization`.
+        kdp = "\n".join(
+            [
+                kdp_row("nat", "theorem", "Nat.add_comm"),
+                kdp_row("characterization", "theorem", "Nat.Peano.zero_ne_succ"),
+            ]
+        )
+        pti = "\n".join(
+            [
+                pti_row("nat", "Nat.add_comm"),
+                pti_row("characterization", "Nat.Peano.zero_ne_succ"),
+            ]
+        )
+        source = collision_source("nat")  # "characterization" omitted
+        with self.assertRaises(MODULE.CompletenessError) as ctx:
+            MODULE.check_group_labels(
+                MODULE.kdp_prelude_labels(kdp),
+                MODULE.pti_prelude_labels(pti),
+                MODULE.collision_group_labels(source),
+            )
+        message = str(ctx.exception)
+        self.assertIn("'characterization'", message)
+        self.assertIn("MISSING from ['cross_prelude_collision_tests']", message)
+
+    def test_kdp_missing_a_group_is_also_caught(self) -> None:
+        # The reverse direction: cross_prelude_collision_tests/pti both build
+        # a group kdp does not -- must fail too, naming kdp as the gap.
+        kdp = "\n".join([kdp_row("nat", "theorem", "Nat.add_comm")])
+        pti = "\n".join(
+            [
+                pti_row("nat", "Nat.add_comm"),
+                pti_row("characterization", "Nat.Peano.zero_ne_succ"),
+            ]
+        )
+        source = collision_source("nat", "characterization")
+        with self.assertRaises(MODULE.CompletenessError) as ctx:
+            MODULE.check_group_labels(
+                MODULE.kdp_prelude_labels(kdp),
+                MODULE.pti_prelude_labels(pti),
+                MODULE.collision_group_labels(source),
+            )
+        message = str(ctx.exception)
+        self.assertIn("'characterization'", message)
+        self.assertIn("MISSING from ['kernel_declaration_projection']", message)
+
+    def test_pti_missing_a_group_is_also_caught(self) -> None:
+        kdp = "\n".join(
+            [
+                kdp_row("nat", "theorem", "Nat.add_comm"),
+                kdp_row("characterization", "theorem", "Nat.Peano.zero_ne_succ"),
+            ]
+        )
+        pti = "\n".join([pti_row("nat", "Nat.add_comm")])
+        source = collision_source("nat", "characterization")
+        with self.assertRaises(MODULE.CompletenessError) as ctx:
+            MODULE.check_group_labels(
+                MODULE.kdp_prelude_labels(kdp),
+                MODULE.pti_prelude_labels(pti),
+                MODULE.collision_group_labels(source),
+            )
+        message = str(ctx.exception)
+        self.assertIn("'characterization'", message)
+        self.assertIn("MISSING from ['prelude_theorem_inventory']", message)
+
+    def test_negative_control_labels_do_not_mask_a_real_gap(self) -> None:
+        # negative_control's synthetic `Group` literals reuse a SUBSET of
+        # build_groups's real labels (logic/nat/axreal) -- confirms that
+        # scanning the whole file cannot manufacture a false agreement by
+        # having negative_control "supply" a label build_groups itself is
+        # missing (negative_control never mentions "characterization").
+        kdp = "\n".join(
+            [
+                kdp_row("nat", "theorem", "Nat.add_comm"),
+                kdp_row("characterization", "theorem", "Nat.Peano.zero_ne_succ"),
+            ]
+        )
+        pti = "\n".join(
+            [
+                pti_row("nat", "Nat.add_comm"),
+                pti_row("characterization", "Nat.Peano.zero_ne_succ"),
+            ]
+        )
+        # build_groups has "nat" only; negative_control separately mentions
+        # "nat" and "axreal" (its own fixture), neither of which is
+        # "characterization".
+        source = collision_source("nat") + "\n" + collision_source("nat", "axreal")
+        with self.assertRaises(MODULE.CompletenessError) as ctx:
+            MODULE.check_group_labels(
+                MODULE.kdp_prelude_labels(kdp),
+                MODULE.pti_prelude_labels(pti),
+                MODULE.collision_group_labels(source),
+            )
+        self.assertIn("'characterization'", str(ctx.exception))
+
+    def test_empty_collision_source_is_an_error_not_a_silent_pass(self) -> None:
+        with self.assertRaises(MODULE.CompletenessError):
+            MODULE.collision_group_labels("")
+
+    def test_collision_source_with_no_label_literals_is_an_error(self) -> None:
+        # The shape changed (or the file is garbage) -- must fail loudly,
+        # not silently report "collision tests cover zero preludes" as if
+        # that were a measurement.
+        with self.assertRaises(MODULE.CompletenessError):
+            MODULE.collision_group_labels("struct Group { name: &'static str }")
+
+    def test_empty_kdp_prelude_labels_is_an_error(self) -> None:
+        with self.assertRaises(MODULE.CompletenessError):
+            MODULE.kdp_prelude_labels("")
+
+    def test_empty_pti_prelude_labels_is_an_error(self) -> None:
+        with self.assertRaises(MODULE.CompletenessError):
+            MODULE.pti_prelude_labels("")
+
+    def test_malformed_kdp_row_is_an_error_for_prelude_labels_too(self) -> None:
+        text = "\n".join(
+            [kdp_row("nat", "theorem", "Nat.add_comm"), "only\tfour\tfields\there"]
+        )
+        with self.assertRaises(MODULE.CompletenessError):
+            MODULE.kdp_prelude_labels(text)
+
+    def test_malformed_pti_row_is_an_error_for_prelude_labels_too(self) -> None:
+        text = "\n".join([pti_row("nat", "Nat.add_comm"), "onlyonefield"])
+        with self.assertRaises(MODULE.CompletenessError):
+            MODULE.pti_prelude_labels(text)
+
+
 if __name__ == "__main__":
     unittest.main()
