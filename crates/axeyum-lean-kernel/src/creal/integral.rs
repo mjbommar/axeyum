@@ -329,6 +329,63 @@
 //! free `Rat` fvar throughout `crossing_close`, never a mesh-derived
 //! `Nat.mul`/`Nat.add` term, so none of the concrete-witness/lazy-delta
 //! traps this file's own history warns about apply here).
+//!
+//! ## `CReal.integral_split` — checked 2026-08-27 (later still), a THIRD
+//! lane: prerequisite (1) landed as [`CRealPrelude::mesh_scaled_le_of_ge`],
+//! prerequisite (2) NOT attempted, and here is exactly why
+//!
+//! [`declare_mesh_scaled_le_of_ge`] proves the SCALED analogue prerequisite
+//! (1) names: `le (mul (ofNat k) Δ_m) (ofRat (natDivSucc 1 outer))` for an
+//! explicit Nat multiplier `k := Nat.succ k0`, by reusing
+//! [`declare_mesh_le_of_ge`] wholesale at a substituted `outer' := k*outer +
+//! k0` and collapsing `k·(1/(outer'+1))` back to `1/(outer+1)` with the same
+//! `magnitude_times_frac_eq_outer` helper `mesh_le_of_ge` itself uses (its
+//! `(c, magnitude, deep)` slots taking `(k0, k, outer')`, which is EXACTLY
+//! `Rat.natDivSucc_scale`'s required syntactic shape). Reusable well beyond
+//! this file, and a complete result on its own, independent of everything
+//! below.
+//!
+//! Prerequisite (2) — `samplePt`'s domain membership — was investigated and
+//! NOT attempted, because the investigation surfaced a genuine type
+//! mismatch prerequisite (2)'s own one-line gloss papers over. `crossing.rs`
+//! types `Δ` as a **`Rat`** (`crossingIndex a c Δ`, `Δ : Rat`, invertible via
+//! the DECIDABLE `Rat.inv`), while `mesh_le_of_ge`/`mesh_scaled_le_of_ge`'s
+//! own mesh step `Δ_m := (b−a)·natDivSucc(1,m)` is a **`CReal`** (`b−a` is an
+//! arbitrary real, not generally rational). "`Δ_ab := (b−a)/(m+1)`" — this
+//! entry's own predecessor's gloss, repeated in [`CRealPrelude::crossing_close`]'s
+//! doc comment — is not literally well-typed as `crossingIndex`'s argument;
+//! at best it names a **rational upper bound** for the true real mesh step
+//! (e.g. `Δ := natDivSucc(magnitude, m)` for `magnitude := bound(b−a)+1`,
+//! since `b−a ≤ ofNat(magnitude)` makes `(b−a)/(m+1) ≤ magnitude/(m+1)`).
+//!
+//! Working through THAT reading to its end does not land prerequisite (2)
+//! either. With `w := (c−a)·Δ⁻¹` (`crossingIndex`'s own rescaled argument),
+//! `0 ≤ c−a ≤ b−a ≤ ofNat(magnitude)` and `Δ⁻¹ = ofNat(m+1)/magnitude`
+//! (exactly, since `Δ = magnitude/(m+1)`) give `w ≤ ofNat(m+1)` — clean, and
+//! [`CRealPrelude::bucket_index_bound`] (`creal/uniform_continuity.rs`,
+//! already proved) would then bound `crossingIndex a c Δ = bucketIndex w 0 ≤
+//! (bound(ofNat(m+1))+3)*1`, roughly `m+4`, NOT `≤ m`. That gap alone is
+//! absorbable (widen the target interval's own slack). The genuinely
+//! disqualifying direction is the OTHER one: this `Δ` is an upper bound for
+//! the true step, so it can UNDERSHOOT the number of steps actually needed
+//! to cross `[a, c]` at accuracy comparable to `Δ`'s own denominator, and
+//! nothing above bounds `crossingIndex` in terms of `m` alone without ALSO
+//! bounding `magnitude := bound(b−a)+1` — which is data about the interval,
+//! not about `m` — so "a caller supplying only a mesh count" cannot be made
+//! literally true for THIS reading of `Δ` either. Resolving prerequisite
+//! (2) needs a considered choice of what `Δ` actually denotes for
+//! `integral_split`'s crossing block (a `Rat` derived from `m` and the
+//! interval's own Archimedean bound, per above, OR a different bracketing
+//! that avoids `crossingIndex`'s `Rat`-typed step altogether) before further
+//! proof engineering is worth attempting — a design question, not a proof
+//! gap. Left exactly as prerequisite (2) was before this entry:
+//! unattempted, hypothesis, explicit.
+//!
+//! `creal_prelude_builds`: 23.07 s test-run (was ~19.99 s on the previous
+//! lane's build; `Δ`/`k`/`k0`/`outer`/`m` all stay free fvars throughout
+//! [`declare_mesh_scaled_le_of_ge`], so none of this file's documented
+//! concrete-witness/lazy-delta traps apply — the increase is consistent
+//! with ordinary machine load, not a construction cost).
 
 use super::completeness::half_shift_le;
 use super::convergence::{
@@ -373,7 +430,8 @@ pub(super) fn declare_integral(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<()
     declare_riemann_sample_in_bounds(d, p)?;
     declare_riemann_sum_le_on(d, p)?;
     declare_riemann_sum_const(d, p)?;
-    declare_mesh_le_of_ge(d, p)
+    declare_mesh_le_of_ge(d, p)?;
+    declare_mesh_scaled_le_of_ge(d, p)
 }
 
 // --- shared term builders ----------------------------------------------------
@@ -4633,6 +4691,127 @@ fn declare_mesh_le_of_ge(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kern
 
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.mesh_le_of_ge,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Admit [`CRealPrelude::mesh_scaled_le_of_ge`]. See that field's own doc
+/// comment for the statement and the route: reuse [`declare_mesh_le_of_ge`]
+/// wholesale at a substituted `outer' := k*outer + k0`, scale by the nonneg
+/// `k := Nat.succ k0`, then collapse `k·(1/(outer'+1))` back to
+/// `1/(outer+1)` with [`magnitude_times_frac_eq_outer`] at `c := k0`,
+/// `magnitude := k`, `deep := outer'`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+fn declare_mesh_scaled_le_of_ge(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let outer_fv = d.fresh_fvar();
+    let outer = d.kernel().fvar(outer_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let k0_fv = d.fresh_fvar();
+    let k0 = d.kernel().fvar(k0_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let width = width_of(d, p, a, b);
+    let (c, magnitude, _width_le_mag) = direct_bound_le(d, p, width);
+
+    // k := Nat.succ k0, outer' := k*outer + k0 -- exactly the syntactic
+    // shape `Rat.natDivSucc_scale` (via `magnitude_times_frac_eq_outer`)
+    // needs at `(c, magnitude, deep) := (k0, k, outer')`.
+    let k = d.succ(k0);
+    let k_outer = NatOps::mul(d, k, outer);
+    let outer_prime = NatOps::add(d, k_outer, k0);
+
+    // hge_ty : Nat.le (magnitude*outer' + c) m -- EXACTLY `mesh_le_of_ge`'s
+    // own hypothesis shape with `outer` substituted by `outer'`, so
+    // `mesh_le_of_ge` applies wholesale below.
+    let me = NatOps::mul(d, magnitude, outer_prime);
+    let deep = NatOps::add(d, me, c);
+    let hge_ty = d.le(deep, m);
+    let hge_fv = d.fresh_fvar();
+    let hge = d.kernel().fvar(hge_fv);
+
+    // mesh_result : le (mul width (ofRat (natDivSucc 1 m)))
+    //                  (ofRat (natDivSucc 1 outer'))
+    let mesh_result = d.lemma(p.mesh_le_of_ge, &[a, b, outer_prime, m, hab, hge]);
+
+    let one_nat = d.num(1);
+    let frac_m_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, m]);
+    let frac_m_real = embed(d, p, frac_m_rat);
+    let step_m = cmul(d, p, width, frac_m_real);
+
+    let out_bound_prime_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, outer_prime]);
+    let out_bound_prime = embed(d, p, out_bound_prime_rat);
+
+    let k_real = d.const_app(p.of_nat, &[k]);
+    let k_nonneg = zero_le_of_nat(d, p, k);
+
+    // scaled : le (mul k_real step_m) (mul k_real out_bound_prime)
+    let scaled = d.lemma(
+        p.mul_le_mul_of_nonneg_left,
+        &[k_real, step_m, out_bound_prime, k_nonneg, mesh_result],
+    );
+
+    // collapse : Equiv (mul (ofNat k) (ofRat (natDivSucc 1 outer')))
+    //                  (ofRat (natDivSucc 1 outer))
+    let collapse = magnitude_times_frac_eq_outer(d, p, k0, k, outer, outer_prime);
+
+    let out_bound_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, outer]);
+    let out_bound = embed(d, p, out_bound_rat);
+
+    let k_step_m = cmul(d, p, k_real, step_m);
+    let k_out_bound_prime = cmul(d, p, k_real, out_bound_prime);
+    let refl_k_step_m = d.lemma(p.equiv_refl, &[k_step_m]);
+    let final_le = d.lemma(
+        p.le_congr,
+        &[
+            k_step_m,
+            k_step_m,
+            k_out_bound_prime,
+            out_bound,
+            refl_k_step_m,
+            collapse,
+            scaled,
+        ],
+    );
+
+    let concl = cle(d, p, k_step_m, out_bound);
+    let ty = {
+        let after_hge = d.arrow(hge_ty, concl);
+        let after_hab = d.arrow(hab_ty, after_hge);
+        let over_k0 = d.pi_fv(k0_fv, nat, after_hab);
+        let over_m = d.pi_fv(m_fv, nat, over_k0);
+        let over_outer = d.pi_fv(outer_fv, nat, over_m);
+        let over_b = d.pi_fv(b_fv, carrier, over_outer);
+        d.pi_fv(a_fv, carrier, over_b)
+    };
+    let value = {
+        let with_hge = d.lam_fv(hge_fv, hge_ty, final_le);
+        let with_hab = d.lam_fv(hab_fv, hab_ty, with_hge);
+        let over_k0 = d.lam_fv(k0_fv, nat, with_hab);
+        let over_m = d.lam_fv(m_fv, nat, over_k0);
+        let over_outer = d.lam_fv(outer_fv, nat, over_m);
+        let over_b = d.lam_fv(b_fv, carrier, over_outer);
+        d.lam_fv(a_fv, carrier, over_b)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mesh_scaled_le_of_ge,
         uparams: vec![],
         ty,
         value,

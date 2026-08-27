@@ -1428,9 +1428,15 @@ pub struct CRealPrelude {
     /// already within `UniformlyContinuousOn`'s modulus at accuracy `e`.
     /// Does **not** derive that Archimedean smallness from a mesh count, nor
     /// `samplePt`'s own domain membership — both are explicit hypotheses
-    /// here, left as the next steps toward `CReal.integral_split`. See
-    /// `creal/crossing.rs` and `creal/integral.rs`'s 2026-08-27 module doc
-    /// entry.
+    /// here. The first is now DISCHARGEABLE in general via
+    /// [`Self::mesh_scaled_le_of_ge`] (not yet wired into this theorem's own
+    /// statement). The second remains open, and is NOT merely unattempted —
+    /// `integral.rs`'s third 2026-08-27 module doc entry works through the
+    /// natural reading of "a mesh count `m`" for this theorem's `Rat`-typed
+    /// `Δ` and finds it does not make `samplePt ≤ b` provable from `m`
+    /// alone without also bounding the interval's own Archimedean constant,
+    /// which is data about `[a,b]`, not about `m`. See `creal/crossing.rs`
+    /// and `creal/integral.rs`'s 2026-08-27 module doc entries (all three).
     pub crossing_close: NameId,
     /// `CReal.sampleUpperBound : ∀ x m, CReal.le x (CReal.ofRat (Rat.add
     /// (CReal.seq x m) (Rat.natDivSucc 1 m)))` — the general
@@ -3686,6 +3692,31 @@ pub struct CRealPrelude {
     /// module documentation for the derivation and for what still separates
     /// this from `riemannSum_cauchy`.
     pub mesh_le_of_ge: NameId,
+    /// `CReal.meshScaledLeOfGe : ∀ a b outer m k0, le a b → Nat.le
+    /// ((Nat.succ (bound (add b (neg a))))*(Nat.mul (Nat.succ k0) outer +
+    /// k0) + bound (add b (neg a))) m → le (mul (ofNat (Nat.succ k0)) (mul
+    /// (add b (neg a)) (ofRat (natDivSucc 1 m)))) (ofRat (natDivSucc 1
+    /// outer))` (`creal/integral.rs`) — the SCALED analogue of
+    /// [`Self::mesh_le_of_ge`] that `crossing.rs`'s `crossingClose` needs
+    /// (its own doc comment, and `integral.rs`'s 2026-08-27 module doc
+    /// entry, name this exactly): bounds `k·Δ_m` for an explicit Nat
+    /// multiplier `k := Nat.succ k0`, never a fixed literal, rather than
+    /// `Δ_m` itself.
+    ///
+    /// Reuses [`Self::mesh_le_of_ge`] WHOLESALE at a substituted `outer' :=
+    /// k*outer + k0` (so ITS OWN threshold, unfolded here, gives `Δ_m ≤
+    /// 1/(outer'+1)` rather than `≤ 1/(outer+1)`), then multiplies by the
+    /// nonneg `k` and collapses `k·(1/(outer'+1))` back to `1/(outer+1)`
+    /// with the SAME `magnitude_times_frac_eq_outer` private helper
+    /// `mesh_le_of_ge`'s own proof uses, at `c := k0`, `magnitude := k`,
+    /// `deep := outer'` — exactly `Rat.natDivSucc_scale`'s required shape
+    /// (`deep = mul(magnitude,outer)+c`), so the identity is free. `k :=
+    /// Nat.succ k0` throughout (never a bare Nat fvar with a `0 < k`
+    /// hypothesis) for the same reason `mesh_le_of_ge`'s own `magnitude :=
+    /// Nat.succ c` is: the reused private helper pattern-matches a
+    /// `Nat.succ` structurally applied, not merely a positivity hypothesis.
+    /// See `creal/integral.rs`.
+    pub mesh_scaled_le_of_ge: NameId,
     /// `CReal.fineSample_in_bounds : ∀ a b m n i j, le a b → Nat.le i m →
     /// Nat.lt j (Nat.succ n) → And (le a x) (le x b)`, `x := add
     /// (sample_point a delta_m i) (mul (ofNat j) delta_fine)`, `delta_m :=
@@ -4620,6 +4651,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         ivt_bisect_diag_hi: kernel.name_str(creal, "ivt_bisect_diag_hi"),
         has_derivative_unique: kernel.name_str(creal, "hasDerivative_unique"),
         mesh_le_of_ge: kernel.name_str(creal, "mesh_le_of_ge"),
+        mesh_scaled_le_of_ge: kernel.name_str(creal, "meshScaledLeOfGe"),
         fine_sample_in_bounds: kernel.name_str(creal, "fineSample_in_bounds"),
         fine_sample_close: kernel.name_str(creal, "fineSample_close"),
         mesh_reciprocal_mul: kernel.name_str(creal, "meshReciprocalMul"),
