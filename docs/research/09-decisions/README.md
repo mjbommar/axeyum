@@ -667,3 +667,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0594](adr-0594-colouring-prefix-guidance-is-an-explicit-restriction.md) | Colouring prefix guidance is an explicit search restriction | accepted |
 | [0595](adr-0595-colouring-hamming-balls-compose-with-weighted-cardinality.md) | Colouring Hamming balls compose with weighted cardinality | accepted |
 | [0596](adr-0596-recursive-proof-trees-use-one-whole-tree-worker-pool.md) | Recursive proof trees use one whole-tree worker pool | accepted |
+| [0597](adr-0597-palette-orbit-distance-is-one-existential-bijection.md) | Palette-orbit distance is one existential bijection | accepted |

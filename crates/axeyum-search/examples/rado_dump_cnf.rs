@@ -18,6 +18,8 @@
 //!         [prefix_witness=previous.txt prefix_points=100]`
 //! or: `rado_dump_cnf a=3 b=2 k=5 n=405 out=repair.cnf \
 //!      hamming_witness=witness-404.txt hamming_points=404 max_changes=10`
+//! Add `hamming_mod_palette=true` to minimize distance over all colour
+//! permutations in one checked bijection encoding.
 //!
 //! exit: 0 written, 2 usage.
 
@@ -81,18 +83,33 @@ fn main() -> ExitCode {
             let witness = Witness::parse(k, &text).expect("parse Hamming witness");
             let points = points.parse::<usize>().expect("hamming_points number");
             let changes = changes.parse::<u64>().expect("max_changes number");
-            let encoding = problem
-                .encode_with_witness_hamming_ball(
-                    &witness,
-                    points,
-                    changes,
-                    WeightedAtMostLimits::default(),
+            if args.get("hamming_mod_palette").map(String::as_str) == Some("true") {
+                let encoding = problem
+                    .encode_with_witness_hamming_ball_up_to_palette_permutation(
+                        &witness,
+                        points,
+                        changes,
+                        WeightedAtMostLimits::default(),
+                    )
+                    .expect("encode palette-orbit Hamming ball");
+                (
+                    encoding.formula().clone(),
+                    format!("hamming-mod-palette:{points}:at-most:{changes}"),
                 )
-                .expect("encode Hamming ball");
-            (
-                encoding.formula().clone(),
-                format!("hamming:{points}:at-most:{changes}"),
-            )
+            } else {
+                let encoding = problem
+                    .encode_with_witness_hamming_ball(
+                        &witness,
+                        points,
+                        changes,
+                        WeightedAtMostLimits::default(),
+                    )
+                    .expect("encode Hamming ball");
+                (
+                    encoding.formula().clone(),
+                    format!("hamming:{points}:at-most:{changes}"),
+                )
+            }
         }
         _ => {
             eprintln!(
