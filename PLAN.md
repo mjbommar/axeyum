@@ -2162,6 +2162,33 @@ lanes were live in `creal/trig.rs` + `creal/alternating.rs`,
 `creal/uniform_convergence.rs`, `complex/poly.rs`, and
 `creal/integral.rs`/`crossing.rs` per this lane's brief; all reads only.
 
+**Your lane's block (`IN PROGRESS`, ledger-uc, 2026-08-27).** Registering
+facts for Ch.24 (uniform convergence), Ch.22-23 (alternating series), Ch.20
+(`CReal` polynomials), Ch.25-27 (`Complex` polynomials, factor theorem), and
+Ch.14 (`CReal.meshScaledLeOfGe` / `CReal.crossingClose`) that were built by
+sibling lanes but had no ledger entry.
+
+Placeholder commit to satisfy "commit early" — this block is updated with
+the final fact list, checker commands, mutation-test results and validator
+total once the batch lands.
+
+**Findings so far (existence checked against local `main` @ `aee64cc17`,
+merged into this worktree):**
+
+- `CReal.uniform_converges_add`, `Nat.even_or_odd`,
+  `CReal.alternatingBracketUpper`, `CReal.alternatingLowerBound`,
+  `CReal.alternatingUpperBound` do **not exist** in the merged tree.
+  `Nat.even_or_odd` and `CReal.uniform_converges_add` exist as commits on
+  OTHER, unmerged sibling branches (`worktree-agent-a71ce0189ae2e5688` /
+  `worktree-agent-aa7767a7d63d9446e` for the former,
+  `worktree-agent-a2562e3631adc1bf2` for the latter) but are not in `main` or
+  `origin/main` as of this run, so per this lane's brief ("read freely, write
+  nothing" / "if a declaration does not exist, that is a finding to report")
+  they are not registered here.
+- Everything else in the brief's list was confirmed present in the merged
+  tree by grepping declaration names and, for theorems, by running
+  `theorem_dependency_inventory` (exit 0 = found).
+
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
 F1 is complete: the two authoritative multi-target operations have nine applicable facts, all nine have explicitly partial concept/encounter mappings, and seven evidence credits are checked against their fact records (the other two were settled by earlier one-target operations).
