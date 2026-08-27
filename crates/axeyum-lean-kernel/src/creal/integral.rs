@@ -1946,16 +1946,199 @@
 //! function and assert both outcomes together.
 //!
 //! ## Arbitrary-`c` `integral_split` under a `PosBound` — TWENTY-FIRST lane,
-//! 2026-08-27 (IN PROGRESS, this entry is a marker committed before the work)
+//! 2026-08-27. **Piece 2 LANDED and published**; the stratum is named
+//! `CReal.splitPointApprox` and carries its `PosBound` in its own signature
 //!
 //! Target stratum, stated up front so it cannot be shipped under the wrong
-//! name: **`integral_split` at an arbitrary `c` with `a <= c <= b`, GIVEN a
-//! `PosBound` on the interval width `b - a`** — not universally quantified in
-//! `c`. Locating `c` in the base proportion family needs `t := (c-a)/(b-a)`,
-//! hence [`super::inverse`]'s `CReal.inv`, which takes a positivity witness
-//! that `hab : le a b` does not supply.
+//! name: **an arbitrary `c` with `a ≤ c ≤ b`, GIVEN a `PosBound` on the
+//! interval width `b − a`** — never universally quantified in `c` alone.
+//! Locating `c` in the base proportion family needs `t := (c−a)/(b−a)`, hence
+//! [`super::inverse`]'s `CReal.inv`, which takes a positivity witness that
+//! `hab : le a b` does not supply.
 //!
-//! Findings replace this marker as they land.
+//! ### What landed
+//!
+//! [`CRealPrelude::split_point_approx`], admitted, axiom-free, in
+//! `EXPECTED_STEP_ORDER` and in the `creal/inventory/integral.rs` shard:
+//!
+//! ```text
+//! ∀ a b c (k : Nat), PosBound (b − a) k → le a c → le c b → ∀ (g : Nat),
+//!   ∃ m_ac0 m_cb0,
+//!     le (abs (c − split_point_base a b m_ac0 m_cb0))
+//!        (mul (ofRat (4/(g+2))) (abs (b − a)))
+//! ```
+//!
+//! `split_point_base a b m_ac0 m_cb0` is `declare_integral_split`'s OWN `c` —
+//! the same term, built by the same helper — so this says: every `c` in the
+//! interval is approximated, to any accuracy, by a split point
+//! `integral_split` already handles.
+//!
+//! Plus [`riemann_sum_endpoints_le_mesh_uniform`], private: piece 1 with the
+//! `succ m` factor CANCELLED (feed its two slack parameters as `<real>·Δ` and
+//! [`mesh_inverse_identity`] collapses `(succ m)·Δ` to `one`), leaving
+//! `|riemannSum F x y m − riemannSum F x2 y2 m| ≤ M·dw + (1/(e+1))·w2b` with
+//! `m` nowhere in the bound.
+//!
+//! ### The shorter route existed AGAIN — at the level of `bucketIndex`, and
+//! the whole five-lane `crossingIndex` obstruction is off this route
+//!
+//! Entries four through seven above measure, in increasing sharpness, why
+//! locating `c` on the `[a,b]` mesh cannot work: `crossingIndex`'s step is a
+//! **`Rat`** while the mesh step `(b−a)/(m+1)` is a `CReal`; reading a
+//! rational upper bound for it instead makes `bucket_index_bound`'s `+3`
+//! slack land exactly on `magnitude` from above; and a purpose-built
+//! zero-excess replacement still fails on `CReal.bound`'s own non-tightness.
+//! All of that is correct and **none of it applies here.**
+//!
+//! The `PosBound` changes the question. With `t := (c−a)·(b−a)⁻¹` the
+//! problem moves into the UNIT interval, where the grid is rational **by
+//! construction**: [`CRealPrelude::bucket_index`] can be read at grid
+//! `succ g` directly, with no rescaling and no `crossingIndex` at all. Two
+//! consequences, and both are what made this cheap:
+//!
+//! - **One denominator everywhere.** Bucketing at `succ g` puts the
+//!   approximant `(succ m_ac0)/(g+2)`, the floor slack `1/(g+2)` and the
+//!   clamp slack — read back from `j := (g+2)²` by
+//!   [`RatPrelude::nat_div_succ_antitone`] — all at the SAME denominator.
+//!   Every comparison in [`bucket_close_bounds`] and
+//!   [`unit_fraction_approx`] is then `Rat.add_le_add` plus
+//!   [`RatPrelude::nat_div_succ_add`]; **no cross-denominator `Rat`
+//!   arithmetic appears anywhere**, which is the thing this prelude has no
+//!   general lemma for (`natDivSucc_antitone` is numerator-`1` only).
+//! - **The index cap is `Nat.le_total`, not `bucket_index_bound`.** The
+//!   numerator must be at most `g` for the complementary count to exist;
+//!   `bucket_index_bound` gives `≤ 5(g+2)`, five times too loose, and that
+//!   looseness is exactly the fourth entry's obstruction. But `Nat` order IS
+//!   decidable even though `CReal` order is not, so
+//!   [`NatOps::le_total`](crate::NatPrelude::le_total) splits it: on
+//!   `idx ≤ g` take `(idx, dd)` from `Nat.le_dest`; on `g ≤ idx` take
+//!   `(g, 0)` and close the branch with `t ≤ 1`. `bucket_index_bound` is
+//!   never called.
+//!
+//! Generalizing the lesson this register already carries twice: the shorter
+//! route was found by asking the retrieval question **at the level of the
+//! unit interval** rather than at the level of the mesh. Asked about a mesh,
+//! nothing works and five lanes proved it; asked about a real in `[0,1]`,
+//! `bucketIndex` plus its four already-public sandwich lemmas do the whole
+//! job.
+//!
+//! ### `bucket_close_bounds` is a rebuild of an INLINE step, and that is a
+//! tooling deficiency, not a design choice
+//!
+//! `declare_bounded_of_uniformly_continuous` (`creal/uniform_continuity.rs`)
+//! already assembles exactly this fact — `|w − bucketIndex(w,k)/(k+1)| ≤
+//! 1/(k+1) + 3/(j+1)` — inside its own `z` close to `GP(m)` block, using the
+//! private `clamp_setup` / `k_le_j` / `creal_le_of_sub_le` /
+//! `rat_le_add_left_of_nonneg` / `creal_le_ofrat_add_of_le_ofrat_sum`
+//! helpers. None of them is `pub(super)` and the assembly has no name, so it
+//! is **hiding place 2** from `CLAUDE.md`'s retrieval section: a reusable
+//! step built inline inside a larger declaration, structurally invisible to
+//! any name- or shape-indexed search. `uniform_continuity.rs` was read-only
+//! for this lane, so the four PUBLIC ingredients
+//! ([`CRealPrelude::bucket_index_floor_lower`]/`_upper`,
+//! [`CRealPrelude::bucket_clamp_lower`]/`_upper`) were re-assembled here
+//! instead. The right fix is to extract it there — as a `pub(super)` helper
+//! or as a public `CReal.bucketClose` — and have both callers use it.
+//!
+//! The same section's first hiding place bit too, and the compiler caught it:
+//! `width_nonneg_of` was written fresh and already existed 14,000 lines up in
+//! THIS file. A Rust duplicate is a build error; a kernel duplicate is not,
+//! which is the whole reason that rule is stated.
+//!
+//! ### What the kernel rejected: NOTHING
+//!
+//! Six increments (`split_fraction` and its two unit-interval bounds,
+//! [`bucket_close_bounds`], [`unit_fraction_approx`],
+//! [`split_point_approx_proof`], [`riemann_sum_endpoints_le_mesh_uniform`]),
+//! every one accepted on the first attempt, each with its negative controls
+//! refused in the same build. The only two failures in the lane were Rust's:
+//! the duplicate helper above, and one `cannot borrow *d as mutable more than
+//! once` from a nested `cadd(d, p, c, cneg(d, p, point))` — the flattening
+//! rule this file's own kernel-facts list already names.
+//!
+//! Every negative control varies a SMALL term (the two sides of one `le`, or
+//! `g` for `succ g` in the index equation), per the pathological-`def_eq`
+//! rule the nineteenth lane established; none touches a `riemannSum`.
+//!
+//! ### Cost: none measurable
+//!
+//! Matched A/B on one tree, the declaration and its wiring checked out to the
+//! parent commit and back (restoration verified with `git hash-object`
+//! against `git rev-parse HEAD:<path>`, all four files byte-identical),
+//! `creal_prelude_builds` isolated:
+//!
+//! | tree | load before → after | reading |
+//! | --- | --- | --- |
+//! | WITH | 5.67 → 7.04 | 46.54 s |
+//! | WITH | 6.64 → 4.75 | 40.90 s |
+//! | WITHOUT | 4.69 → 4.05 | 39.24 s |
+//! | WITHOUT | 3.73 → 2.44 | 40.03 s |
+//!
+//! The closest matched pair is 40.03 s WITHOUT against 40.90 s WITH — and the
+//! `WITH` reading was taken at roughly TWICE the load, so **+0.9 s is an
+//! upper bound at matched load, not a floor**. Consistent with the
+//! construction: no `CReal.integral` appears anywhere in piece 2, so none of
+//! this file's lazy-delta traps can apply.
+//!
+//! ### What is still missing, precisely
+//!
+//! `integral_split` at an arbitrary `c` does NOT land here, and the gap is
+//! now a single named lemma rather than a family:
+//!
+//! > **`integral_endpoint_close`**: `|integral F x y − integral F x2 y2| ≤
+//! > M·dw + (1/(e+1))·w2b` under the same endpoint hypotheses
+//! > [`riemann_sum_endpoints_le_mesh_uniform`] takes.
+//!
+//! With it the assembly is four steps and no new estimate:
+//!
+//! ```text
+//! |I(a,b) − I(a,c) − I(c,b)|
+//!   ≤ |I(a,b) − I(a,c_n) − I(c_n,b)|      = 0   [integral_split at (m_ac0,m_cb0)]
+//!   + |I(a,c_n) − I(a,c)|                       [integral_endpoint_close, dw := δ]
+//!   + |I(c_n,b) − I(c,b)|                       [integral_endpoint_close, dw := δ]
+//! ```
+//!
+//! with `δ := |c − c_n| ≤ 4/(g+2)·|b−a|` from `splitPointApprox`, closed by
+//! [`CRealPrelude::equiv_zero_of_small`]. **Do not size that assembly as a
+//! Riemann-sum-level argument** — the twelfth lane's three-`riemann_sum_
+//! integral_close`-legs shape is the wrong altitude here for the same reason
+//! the seventeenth lane found it wrong for the rational case.
+//!
+//! And `integral_endpoint_close` itself should NOT be sized against
+//! `riemannSum_integral_close`'s sample-level `Within` statement. The cheap
+//! route is [`leg_converges`], this file's own private helper, which takes
+//! the mesh family as CALLBACKS: run both legs at the SHARED count
+//! `M(n) := (deep₁(n) + deep₂(n)) + n`, bound `|g₁ n − g₂ n|` uniformly with
+//! [`riemann_sum_endpoints_le_mesh_uniform`], and close with
+//! [`CRealPrelude::le_add_of_abs_sub_le`], [`CRealPrelude::converges_add`],
+//! [`CRealPrelude::converges_of_const`] and
+//! [`CRealPrelude::converges_le`] — all public, no estimate rebuilt.
+//!
+//! ### The `PosBound` removal was NOT attempted, and here is the cost
+//!
+//! The per-accuracy `lt_cotrans` split the briefing sketches does work in
+//! principle — `b−a < 1/(e+1)` closes by [`CRealPrelude::integral_abs_le`]
+//! and `b−a > 1/(2e+2)` feeds [`CRealPrelude::pos_bound_of_lt`] — and it is
+//! sound only because the target is a `Prop`, so `pos_bound_of_lt`'s
+//! `Exists` may be eliminated. But it has to be run at EVERY accuracy, so the
+//! `PosBound`-hypothesised theorem is applied inside the split with a `k`
+//! that changes per accuracy, and `integral`'s own value must then be shown
+//! independent of that choice. [`CRealPrelude::inv_index_irrelevant`] is the
+//! lemma that makes that possible and it is not yet wired anywhere near
+//! here. That is the next rung after `integral_endpoint_close`, not before
+//! it.
+//!
+//! ### Dead code
+//!
+//! [`neg_add_local`] is now CONSUMED (by [`split_residue_factors`]), so its
+//! `expect(dead_code)` is REMOVED — an `expect` errors the moment the item is
+//! used, which is exactly the signal that annotation exists to carry. Three
+//! new helpers gain one each ([`abs_frac_le_frac`], [`delta_diff_factors`],
+//! [`riemann_sum_endpoints_le_mesh_uniform`]), each naming
+//! `integral_endpoint_close` as its specific future consumer.
+//! `mesh_count_align`, `MeshAlignMul`/`mesh_count_align_mul` and
+//! `bnd_leg_plus_share_le_at` are unchanged and still unconsumed.
+//! `clippy --all-targets --all-features -D warnings` is green.
 use super::completeness::half_shift_le;
 use super::convergence::{
     converges_applied, converges_predicate, div_succ_at, exists_intro, exists_ty,
