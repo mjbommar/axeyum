@@ -1272,15 +1272,19 @@ pub struct CRealPrelude {
     /// section's own module documentation in
     /// `creal/uniform_continuity.rs` for why the `2`/`3` slack is fine for
     /// the covering argument this primitive exists for
-    /// (`CReal.bounded_of_uniformly_continuous`, not yet landed: it still
-    /// needs a computable `Nat` bound on `bucketIndex (sub z a) k` uniform
-    /// over `z ∈ [a,b]`, derived from `CReal.bound (sub b a)` via
-    /// `Rat.sub_max_le` + `CReal.bound_within` + `Rat.max_le` to bound the
-    /// clamped sample `q` first, then a cross-multiplication argument
-    /// inverting `Rat.natDivSucc` back into a `Nat.le` on `bucketIndex`
-    /// itself — the same shape [`Self::bucket_index_floor_lower`]/
-    /// [`Self::bucket_index_floor_upper`]'s own proofs use, just in the
-    /// other direction).
+    /// ([`Self::bounded_of_uniformly_continuous`] — **landed**; this comment
+    /// read "not yet landed" long after
+    /// `uniform_continuity::declare_bounded_of_uniformly_continuous` became a
+    /// `BuildStep`, and a stale absence claim is worse than none, because the
+    /// next lane sizes work that is already done. What it then needed, and
+    /// [`Self::bucket_index_bound`] now supplies, was a computable `Nat` bound
+    /// on `bucketIndex (sub z a) k` uniform over `z ∈ [a,b]`, derived from
+    /// `CReal.bound (sub b a)` via `Rat.sub_max_le` + `CReal.bound_within` +
+    /// `Rat.max_le` to bound the clamped sample `q` first, then a
+    /// cross-multiplication argument inverting `Rat.natDivSucc` back into a
+    /// `Nat.le` on `bucketIndex` itself — the same shape
+    /// [`Self::bucket_index_floor_lower`]/[`Self::bucket_index_floor_upper`]'s
+    /// own proofs use, just in the other direction).
     pub bucket_index: NameId,
     /// `CReal.bucketIndexFloorLower : ∀ w k, Rat.le (Rat.natDivSucc
     /// (CReal.bucketIndex w k) k) (Rat.max (CReal.seq w ((Nat.succ
