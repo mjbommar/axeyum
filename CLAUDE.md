@@ -1653,11 +1653,38 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   `scripts/tests/test_lean_axiom_ledger.py`. Decide which package you mean by
   its declaration, never by a substring; if you must match text, anchor it.
 
-  **Declared is not reached, and both numbers are published** (ADR-0509). The 30
-  are declared; no shipped route reaches them — `Lra`, `DisjunctiveLra`, `Sos`
-  and `IntFarkas` all reconstruct over constructed carriers. So "we have 30
-  axioms" and "our proofs rest on 30 axioms" are both wrong: the first ignores
-  that nothing reaches them, the second is simply false. Quote the pair.
+  **Declared is not reached by the DEFAULT route, and both numbers are
+  published** (ADR-0509). The 30 are declared; the default reconstruction does
+  not reach them — `Lra`, `DisjunctiveLra`, `Sos` and `IntFarkas` all
+  reconstruct over constructed carriers. So "we have 30 axioms" and "our proofs
+  rest on 30 axioms" are both wrong: the first ignores that the shipped route
+  does not reach them, the second is simply false. Quote the pair.
+
+  **"No route reaches them" is too strong, and a lane that reads it that way
+  will distrust a correct measurement.** One route deliberately does, and
+  measured 2026-08-27 it is live and green:
+
+      cargo run --release -p axeyum-solver --features full \
+        --example infeasibility_farkas_lean -- \
+        artifacts/instances/infeasibility/schedule-deadline.smt2 \
+        --require-kernel --expect-axioms 26
+      ->  kernel-lean route   REACHED (term infers to False)
+          kernel axioms       26 = 17 prelude + 4 variable + 5 hypothesis
+          axiom-free          no -- the ordered field and every core row are asserted
+
+  Nothing about that is a leak, and every part of it is opt-in and loud:
+  `examples/infeasibility_farkas_lean.rs:292` calls
+  `LraReconstructCtx::new_over_axreal()` — a constructor NAMED for the choice it
+  makes, which is ADR-0605's fix for a plain `new()` that used to make it
+  silently. `prove_unsat_to_lean_module` stopped routing pure-AxReal on
+  2026-08-15. The tool prints `axiom-free no` itself, and the fact
+  `F:schedule-critical-chain-infeasible` publishes all 26 in its
+  `axiom_footprint` with a `--expect-axioms 26` checker that fails if the count
+  moves.
+
+  The distinction to carry: **the default route reaches zero; an explicitly
+  opted-in demonstrator reaches 26 and says so.** Both are true, both are
+  measured, and only the pair is honest.
 
   The count is not a dial. `Real`'s carrier is opaque, so nothing over it is
   definable and every operation and law must be assumed — **30 is the floor for
