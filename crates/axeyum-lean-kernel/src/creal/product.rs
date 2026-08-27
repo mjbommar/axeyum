@@ -95,6 +95,7 @@ use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
+use crate::rat_prelude::abs::{abs_num_nat_abs_eq, mul_self_abs_rat, rabs};
 use crate::rat_prelude::group::{rsub, rsum, rsum_append, rsum_perm};
 use crate::rat_prelude::ops::{
     nat_eq_to_rat, nat_rewrite_prop, num, radd, rat_eq_rewrite, rchain, rcongr, rle, rmul, rneg,
@@ -2141,6 +2142,125 @@ fn declare_neg_mul_neg(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kernel
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.neg_mul_neg,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Eq Rat (mul (Rat.abs a) (Rat.abs a)) (mul a a)` — the `abs` analogue of
+/// [`sq_neg_eq`], via [`mul_self_abs_rat`]. Returns `(lhs, rhs, proof)` for
+/// the same reason `sq_neg_eq` does: a caller chains `proof` against a
+/// further `Eq lhs' lhs` / `Eq rhs rhs''` without reconstructing either side
+/// and risking a syntactically different (if defeq) term.
+fn sq_abs_eq(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId) -> (ExprId, ExprId, ExprId) {
+    let rat = p.rat;
+    let magnitude = rabs(d, rat, a);
+    let lhs = rmul(d, magnitude, magnitude);
+    let rhs = rmul(d, a, a);
+    let proof = mul_self_abs_rat(d, rat, a);
+    (lhs, rhs, proof)
+}
+
+/// `CReal.mul_self_abs : ∀ x, Equiv (mul (abs x) (abs x)) (mul x x)`.
+///
+/// The unconditional half of the constructive triangle-inequality gap (see
+/// [`super::CRealPrelude::mul_self_abs`]'s doc comment for why `le_of_sq_le`
+/// alone cannot close `Complex.abs_add_le`).
+///
+/// **Not called from [`declare_product`] above, unlike every other law in
+/// this file.** `CReal.abs` is `CReal.max x (CReal.neg x)`
+/// ([`super::lattice`]), declared in the *lattice* phase (ADR-0519 R5), which
+/// runs strictly after the *product* phase (R2) that owns this file
+/// (`build_creal_prelude_uncached` calls `product::declare_product` before
+/// `lattice::declare_lattice`). Referencing `p.abs` from inside
+/// `declare_product` itself is an `UnknownConst` — declaration order matters
+/// (this crate's own multi-agent notes call this out explicitly): the
+/// dispatcher must run after everything it references, so `creal.rs`'s
+/// top-level builder calls this function directly, after
+/// `lattice::declare_lattice`, not through [`declare_product`].
+///
+/// **Not pointwise**, exactly like [`declare_neg_mul_neg`] just above:
+/// `CReal.bound` reads `Int.natAbs (Rat.num (seq x 0))`, and `seq (abs x) 0`
+/// is `Rat.abs (seq x 0)`, so `bound (abs x)` and `bound x` are not the
+/// *same* term. They are, as there, **provably equal naturals** — but via a
+/// `Rat.le_or_lt` case split ([`abs_num_nat_abs_eq`]) rather than
+/// `Int.natAbs_neg` alone, because `Rat.abs`/`Rat.max` decide on the sign of
+/// an *integer* rather than perform a fixed sign-flip: nothing about `abs x`
+/// reduces at a symbolic `x` without first knowing which side of zero its
+/// representative is on. Once `mulShift (abs x) (abs x) = mulShift x x` is a
+/// `Nat` equation, both products sample at a value-equal index and
+/// [`nat_eq_to_rat`] lifts that into a `Rat` equation between the two
+/// samples — [`declare_neg_mul_neg`]'s structure, verbatim. The sign
+/// cancellation itself ([`sq_abs_eq`]) is the easy half.
+pub(super) fn declare_mul_self_abs(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let abs_x = d.const_app(p.abs, &[x]);
+    let product1 = cmul(d, p, abs_x, abs_x);
+    let product2 = cmul(d, p, x, x);
+
+    // bound (abs x) = bound x, via a Rat.le_or_lt case split at the index-0
+    // numerator.
+    let zero_nat = d.num(0);
+    let s0 = sample(d, p, x, zero_nat);
+    let int_p = p.rat.int;
+    let q0 = num(d, s0);
+    let abs_s0 = rabs(d, p.rat, s0);
+    let num_abs_q0 = num(d, abs_s0);
+    let natabs_abs_q0 = d.const_app(int_p.nat_abs, &[num_abs_q0]);
+    let natabs_q0 = d.const_app(int_p.nat_abs, &[q0]);
+    let magnitude_eq = abs_num_nat_abs_eq(d, p.rat, s0);
+    let bound_absx = bound_of(d, p, abs_x);
+    let bound_x = bound_of(d, p, x);
+    let bound_eq = NatOps::congr(d, natabs_abs_q0, natabs_q0, magnitude_eq, &|d, t| d.succ(t));
+
+    // mulShift (abs x) (abs x) = mulShift x x.
+    let sum1 = NatOps::add(d, bound_absx, bound_absx);
+    let sum_mid = NatOps::add(d, bound_x, bound_absx);
+    let sum2 = NatOps::add(d, bound_x, bound_x);
+    let step_a = NatOps::congr(d, bound_absx, bound_x, bound_eq, &|d, t| {
+        NatOps::add(d, t, bound_absx)
+    });
+    let step_b = NatOps::congr(d, bound_absx, bound_x, bound_eq, &|d, t| {
+        NatOps::add(d, bound_x, t)
+    });
+    let (_, sum_eq) = NatOps::chain(d, sum1, &[(sum_mid, step_a), (sum2, step_b)]);
+    let shift1 = mul_shift(d, p, abs_x, abs_x);
+    let shift2 = mul_shift(d, p, x, x);
+    let shift_eq = NatOps::congr(d, sum1, sum2, sum_eq, &|d, t| d.succ(t));
+
+    // Both products sample at the same (value-equal) index.
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let j1 = mul_index(d, shift1, n);
+    let j2 = mul_index(d, shift2, n);
+    let index_eq = NatOps::congr(d, shift1, shift2, shift_eq, &|d, t| mul_index(d, t, n));
+
+    let a1 = sample(d, p, x, j1);
+    let a2 = sample(d, p, x, j2);
+    let base_eq = nat_eq_to_rat(d, j1, j2, index_eq, &|d, t| sample(d, p, x, t));
+
+    let (lhs0, aa1, sqabs_eq) = sq_abs_eq(d, p, a1);
+    let a1a2 = rmul(d, a1, a2);
+    let aa2 = rmul(d, a2, a2);
+    let sq_step1 = rcongr(d, a1, a2, base_eq, &|d, t| rmul(d, a1, t));
+    let sq_step2 = rcongr(d, a1, a2, base_eq, &|d, t| rmul(d, t, a2));
+    let sq_eq = rtrans(d, aa1, a1a2, aa2, sq_step1, sq_step2);
+    let pointwise_n = rtrans(d, lhs0, aa1, aa2, sqabs_eq, sq_eq);
+
+    let pointwise = d.lam_fv(n_fv, nat, pointwise_n);
+    let body = d.lemma(p.equiv_of_pointwise, &[product1, product2, pointwise]);
+    let value = d.lam_fv(x_fv, carrier, body);
+    let ty = {
+        let claim = equiv(d, p, product1, product2);
+        d.pi_fv(x_fv, carrier, claim)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mul_self_abs,
         uparams: vec![],
         ty,
         value,

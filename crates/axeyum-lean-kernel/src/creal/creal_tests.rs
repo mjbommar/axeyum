@@ -115,7 +115,7 @@ fn on_a_deep_stack_creal<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'stat
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 343] = [
+    let expected: [(&str, crate::NameId, &str); 344] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -177,6 +177,7 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         ("CReal.mul_nonneg", p.mul_nonneg, "theorem"),
         ("CReal.sq_nonneg", p.sq_nonneg, "theorem"),
         ("CReal.neg_mul_neg", p.neg_mul_neg, "theorem"),
+        ("CReal.mul_self_abs", p.mul_self_abs, "theorem"),
         (
             "CReal.not_equiv_mul_one_one_zero",
             p.not_equiv_mul_one_one_zero,
@@ -4388,6 +4389,80 @@ fn the_lattice_is_not_degenerate_and_abs_is_not_the_identity() {
              everything else proved about abs: {admitted:?}"
         );
     }
+}
+
+/// A concrete instantiation of [`CRealPrelude::mul_self_abs`] at `x := neg
+/// one` -- a NEGATIVE value, the case classical trichotomy needs and this
+/// development's `Rat.le_or_lt` case split (at the RATIONAL level, one
+/// below `CReal`) supplies instead. Checked against the independently
+/// reconstructed statement `mul (abs (neg one)) (abs (neg one)) ~
+/// mul (neg one) (neg one)`.
+#[test]
+fn mul_self_abs_concrete_instantiation_at_neg_one() {
+    use crate::int_prelude::ops::IntDev;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let one = d.kernel().const_(p.one, vec![]);
+    let neg_one = d.const_app(p.neg, &[one]);
+
+    let proof = d.lemma(p.mul_self_abs, &[neg_one]);
+
+    let abs_neg_one = d.const_app(p.abs, &[neg_one]);
+    let lhs = d.const_app(p.mul, &[abs_neg_one, abs_neg_one]);
+    let rhs = d.const_app(p.mul, &[neg_one, neg_one]);
+    let ty = d.const_app(p.equiv, &[lhs, rhs]);
+
+    let name = d.kernel().name_str(anon, "Check.mul_self_abs_at_neg_one");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value: proof,
+    });
+    assert!(
+        admitted.is_ok(),
+        "mul_self_abs at (neg one) must give EXACTLY Equiv (mul (abs (neg \
+         one)) (abs (neg one))) (mul (neg one) (neg one)): {admitted:?}"
+    );
+}
+
+/// Negative control for
+/// [`mul_self_abs_concrete_instantiation_at_neg_one`]: the SAME proof term
+/// must be REFUSED against `mul (abs (neg one)) (abs (neg one)) ~ neg one`
+/// -- a statement missing the self-multiplication on the right, which a
+/// vacuous or degenerate `mul_self_abs` could not be distinguished from by
+/// shape alone.
+#[test]
+fn mul_self_abs_argument_is_load_bearing() {
+    use crate::int_prelude::ops::IntDev;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let one = d.kernel().const_(p.one, vec![]);
+    let neg_one = d.const_app(p.neg, &[one]);
+    let proof = d.lemma(p.mul_self_abs, &[neg_one]);
+
+    let abs_neg_one = d.const_app(p.abs, &[neg_one]);
+    let lhs = d.const_app(p.mul, &[abs_neg_one, abs_neg_one]);
+    let wrong_ty = d.const_app(p.equiv, &[lhs, neg_one]);
+
+    let name = d.kernel().name_str(anon, "Check.mul_self_abs_wrong_target");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty: wrong_ty,
+        value: proof,
+    });
+    assert!(
+        admitted.is_err(),
+        "mul_self_abs's proof at (neg one) must NOT type-check against `mul \
+         (abs (neg one)) (abs (neg one)) ~ neg one`: {admitted:?}"
+    );
 }
 
 /// The negative controls for the lattice: **the same proof terms, pointed at
