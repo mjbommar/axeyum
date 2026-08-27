@@ -3975,6 +3975,31 @@ pub struct CRealPrelude {
     /// upper endpoint after `k` diagonal bisection steps. See
     /// [`Self::ivt_bisect_diag`].
     pub ivt_bisect_diag_hi: NameId,
+    /// `CReal.ivt_bisect_approx : ∀ F a b, UniformlyContinuousOn F a b →
+    /// le a b → le (F a) zero → le zero (F b) → ∀ e : Nat,
+    /// And (le a (ivt_bisect_hi F a b (Nat.succ (Nat.mul 2 e)) K))
+    ///     (And (le (ivt_bisect_hi F a b (Nat.succ (Nat.mul 2 e)) K) b)
+    ///          (le (abs (F (ivt_bisect_hi F a b (Nat.succ (Nat.mul 2 e)) K)))
+    ///              (ofRat (natDivSucc 1 e))))`, where
+    /// `K := Nat.add (Nat.mul (Nat.succ (bound (add b (neg a))))
+    /// (ucModulus F a b u (Nat.succ (Nat.mul 2 e)))) (bound (add b (neg a)))`
+    /// (`creal/ivt.rs`) — **[`Self::ivt_approx`] with the `Exists` removed.**
+    ///
+    /// [`Self::ivt_approx`] quantifies its witness existentially because
+    /// [`Self::ivt_iter`]'s bracket is existential, so nothing outside that
+    /// proof can name the point — and a *sequence* of such points cannot be
+    /// formed at all, since `∀ e, ∃ x` → `Nat → CReal` is an `Exists`
+    /// elimination into a `Type`-valued target. This states the identical
+    /// bound about the NAMED point [`Self::ivt_bisect_hi`] computes, at the
+    /// depth [`Self::ivt_approx`]'s own schedule already chose, so
+    /// `fun e => ivt_bisect_hi F a b (Nat.succ (Nat.mul 2 e)) K` is an
+    /// ordinary lambda.
+    ///
+    /// One estimate, not two: `creal/ivt.rs`'s `approx_endpoint_bound` is
+    /// shared verbatim by both declarations, applied here to the concrete
+    /// pair [`Self::ivt_bisect_invariant`] supplies instead of to
+    /// [`Self::ivt_iter`]'s eliminated witness.
+    pub ivt_bisect_approx: NameId,
     /// `CReal.abs_diff_le_of_small_image : ∀ F F' a b, HasDerivativeOn F F' a
     /// b → ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k)) (F' z)) →
     /// ∀ eps x y, le a x → le x b → le a y → le y b → le (abs (F x)) eps →
@@ -5677,6 +5702,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         ivt_bisect_diag: kernel.name_str(creal, "ivt_bisect_diag"),
         ivt_bisect_diag_lo: kernel.name_str(creal, "ivt_bisect_diag_lo"),
         ivt_bisect_diag_hi: kernel.name_str(creal, "ivt_bisect_diag_hi"),
+        ivt_bisect_approx: kernel.name_str(creal, "ivt_bisect_approx"),
         abs_diff_le_of_small_image: kernel.name_str(creal, "abs_diff_le_of_small_image"),
         has_derivative_unique: kernel.name_str(creal, "hasDerivative_unique"),
         fermat_interior_extremum: kernel.name_str(creal, "fermat_interiorExtremum"),
@@ -9696,6 +9722,7 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.ivt_bisect_diag_hi,
             |p: CRealPrelude| p.ivt_bisect_diag_lo,
             |p: CRealPrelude| p.ivt_bisect_hi,
+            |p: CRealPrelude| p.ivt_bisect_approx,
             |p: CRealPrelude| p.ivt_bisect_invariant,
             |p: CRealPrelude| p.ivt_bisect_lo,
             |p: CRealPrelude| p.ivt_iter,

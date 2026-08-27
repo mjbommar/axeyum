@@ -182,6 +182,9 @@ pub(super) fn declare_ivt(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
     declare_ivt_bisect_diag(d, p)?;
     declare_ivt_bisect_diag_lo(d, p)?;
     declare_ivt_bisect_diag_hi(d, p)?;
+    // `ivt_approx` with the `Exists` removed: the same estimate, run against
+    // the concrete `ivt_bisect_hi` bracket via `ivt_bisect_invariant`.
+    declare_ivt_bisect_approx(d, p)?;
     // The order-free two-point separation bound the EXACT root needs -- see
     // the section header above `declare_abs_diff_le_of_small_image` for why
     // this is a `lt_cotrans` and not the lattice detour the diary proposed.
@@ -1824,6 +1827,340 @@ fn approx_exists_proof(
     cexists_intro(d, p, carrier, pred, x, p1)
 }
 
+/// Everything `approx_endpoint_bound` reads from its caller's scope: the
+/// function, the interval, the uniform-continuity witness, the slack index
+/// and its `CReal` slack, and the width bound `width_le_via_bound` produced.
+#[derive(Clone, Copy)]
+struct ApproxCtx {
+    f: ExprId,
+    a: ExprId,
+    b: ExprId,
+    huc: ExprId,
+    n: ExprId,
+    sgn_eps: ExprId,
+    neg_sgn_eps: ExprId,
+    sgn_eps_nonneg: ExprId,
+    target_e_rat: ExprId,
+    double_eq_target: ExprId,
+    width_term: ExprId,
+    target_creal: ExprId,
+    target_nonneg: ExprId,
+    width_le: ExprId,
+}
+
+/// [`approx_setup`]'s result: the shared context plus the three things only
+/// the `ivt_iter` route consumes (`sgn_eps_pos` and the two sign hypotheses
+/// at the FIXED slack, which `ivt_bisect_invariant` also takes).
+struct ApproxSetup {
+    ctx: ApproxCtx,
+    bisect_n: ExprId,
+    sgn_eps_pos: ExprId,
+    hfp: ExprId,
+    hfq: ExprId,
+}
+
+/// The accuracy schedule both IVT closings share, at outer accuracy `e`:
+/// the slack index `n := succ (2*e)` and its `sgn_eps := 1/(n+1)`, the two
+/// sign hypotheses weakened from `F a <= 0 <= F b` to the slack form, the
+/// continuity modulus at `n`, and the bisection depth
+/// [`width_le_via_bound`] computes from the initial width.
+///
+/// Extracted rather than copied: [`declare_ivt_approx`] and
+/// [`declare_ivt_bisect_approx`] must agree on every one of these terms
+/// (they instantiate the SAME invariant at the SAME slack), and two copies
+/// that drifted would be accepted by the kernel as two different theorems.
+#[allow(clippy::too_many_arguments)]
+fn approx_setup(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    a: ExprId,
+    b: ExprId,
+    huc: ExprId,
+    hab: ExprId,
+    hfa: ExprId,
+    hfb: ExprId,
+    e: ExprId,
+) -> ApproxSetup {
+    let zero_c = czero(d, p);
+    let fa = d.apply(f, &[a]);
+    let fb = d.apply(f, &[b]);
+
+    let (n, sgn_eps, sgn_eps_rat, sgn_eps_pos) = sgn_eps_of(d, p, e);
+    let (target_e_rat, double_eq_target) =
+        sgn_eps_double_eq_target(d, p, e, n, sgn_eps, sgn_eps_rat);
+
+    let sgn_eps_nonneg = d.lemma(p.le_of_lt, &[zero_c, sgn_eps, sgn_eps_pos]);
+    let hfp = d.lemma(p.le_trans, &[fa, zero_c, sgn_eps, hfa, sgn_eps_nonneg]);
+    let neg_sgn_eps = cneg(d, p, sgn_eps);
+    let neg_sgn_eps_le_zero = neg_nonpos_of_nonneg(d, p, sgn_eps, sgn_eps_nonneg);
+    let hfq = d.lemma(
+        p.le_trans,
+        &[neg_sgn_eps, zero_c, fb, neg_sgn_eps_le_zero, hfb],
+    );
+
+    let mod_fn = d.const_app(p.uc_modulus, &[f, a, b, huc]);
+    let delta = d.apply(mod_fn, &[n]);
+
+    let neg_a = cneg(d, p, a);
+    let w0 = cadd(d, p, b, neg_a);
+    let w0_nonneg = sub_nonneg_of_le(d, p, a, b, hab);
+    let (bisect_n, width_term, target_creal, target_nonneg, width_le) =
+        width_le_via_bound(d, p, w0, w0_nonneg, delta);
+
+    ApproxSetup {
+        ctx: ApproxCtx {
+            f,
+            a,
+            b,
+            huc,
+            n,
+            sgn_eps,
+            neg_sgn_eps,
+            sgn_eps_nonneg,
+            target_e_rat,
+            double_eq_target,
+            width_term,
+            target_creal,
+            target_nonneg,
+            width_le,
+        },
+        bisect_n,
+        sgn_eps_pos,
+        hfp,
+        hfq,
+    }
+}
+
+/// The estimate `declare_ivt_approx` runs on ONE bracket, factored out so
+/// the concrete data-valued bracket can run the identical argument.
+///
+/// Given the six-part invariant at `(pp2, qq2)` -- whichever route produced
+/// it, `ivt_iter`'s existential or `ivt_bisect_invariant`'s concrete pair --
+/// returns `(le a qq2, le (abs (F qq2)) (ofRat target_e_rat))`. The width
+/// conjunct plus `uc_spec` bound `|F qq2 - F pp2|` by `sgn_eps`; the two
+/// sign conjuncts then pin `F qq2` into `[-sgn_eps, 2*sgn_eps]`, and
+/// `double_eq_target` folds `sgn_eps + sgn_eps` to the caller's accuracy.
+fn approx_endpoint_bound(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    c: &ApproxCtx,
+    pp2: ExprId,
+    qq2: ExprId,
+    h1: ExprId,
+    h2: ExprId,
+    h3: ExprId,
+    h4: ExprId,
+    h5: ExprId,
+    h6: ExprId,
+) -> (ExprId, ExprId) {
+    let ApproxCtx {
+        f,
+        a,
+        b,
+        huc,
+        n,
+        sgn_eps,
+        neg_sgn_eps,
+        sgn_eps_nonneg,
+        target_e_rat,
+        double_eq_target,
+        width_term,
+        target_creal,
+        target_nonneg,
+        width_le,
+    } = *c;
+    let zero_c = czero(d, p);
+    let neg_pp2 = cneg(d, p, pp2);
+    let diff = cadd(d, p, qq2, neg_pp2);
+
+    // `le diff target_creal`, from `h6 : Equiv diff width_term` and
+    // `width_le : le width_term target_creal`.
+    let diff_le_t = {
+        let h6_symm = esymm(d, p, diff, width_term, h6);
+        let refl_target = erefl(d, p, target_creal);
+        d.lemma(
+            p.le_congr,
+            &[
+                width_term,
+                diff,
+                target_creal,
+                target_creal,
+                h6_symm,
+                refl_target,
+                width_le,
+            ],
+        )
+    };
+    let neg_diff_le_t = {
+        let diff_nonneg = sub_nonneg_of_le(d, p, pp2, qq2, h2);
+        let neg_diff_le_zero = neg_nonpos_of_nonneg(d, p, diff, diff_nonneg);
+        let neg_diff = cneg(d, p, diff);
+        d.lemma(
+            p.le_trans,
+            &[
+                neg_diff,
+                zero_c,
+                target_creal,
+                neg_diff_le_zero,
+                target_nonneg,
+            ],
+        )
+    };
+    let abs_diff_le_t = d.lemma(p.abs_le, &[diff, target_creal, diff_le_t, neg_diff_le_t]);
+
+    let range_a_qq2 = d.lemma(p.le_trans, &[a, pp2, qq2, h1, h2]);
+    let range_pp2_b = d.lemma(p.le_trans, &[pp2, qq2, b, h2, h3]);
+
+    let uc_spec_term = d.const_app(p.uc_spec, &[f, a, b, huc]);
+    let uc_concl = d.apply(
+        uc_spec_term,
+        &[n, qq2, pp2, range_a_qq2, h3, h1, range_pp2_b, abs_diff_le_t],
+    );
+    // uc_concl : le (abs (add (f qq2) (neg (f pp2)))) sgn_eps
+
+    let f_qq2 = d.apply(f, &[qq2]);
+    let f_pp2 = d.apply(f, &[pp2]);
+    let neg_f_pp2 = cneg(d, p, f_pp2);
+    let diff_f = cadd(d, p, f_qq2, neg_f_pp2);
+    let abs_diff_f = d.const_app(p.abs, &[diff_f]);
+
+    let le_abs_self_proof = d.lemma(p.le_abs_self, &[diff_f]);
+    let diff_f_le_eps = d.lemma(
+        p.le_trans,
+        &[diff_f, abs_diff_f, sgn_eps, le_abs_self_proof, uc_concl],
+    );
+
+    // `f_qq2 ~ diff_f + f_pp2 ≤ sgn_eps + f_pp2 ≤ sgn_eps + sgn_eps
+    // ~ target_e`.
+    let diff_f_fpp2 = cadd(d, p, diff_f, f_pp2);
+    let eps_fpp2 = cadd(d, p, sgn_eps, f_pp2);
+    let eps_eps = cadd(d, p, sgn_eps, sgn_eps);
+    let target_e_creal = embed(d, p, target_e_rat);
+
+    let refl_f_pp2 = d.lemma(p.le_refl, &[f_pp2]);
+    let add_le_1 = d.lemma(
+        p.add_le_add,
+        &[diff_f, sgn_eps, f_pp2, f_pp2, diff_f_le_eps, refl_f_pp2],
+    );
+    let cancel_eq = add_sub_cancel(d, p, f_qq2, f_pp2); // Equiv diff_f_fpp2 f_qq2
+    let refl_eps_fpp2 = erefl(d, p, eps_fpp2);
+    let add_le_1_congr = d.lemma(
+        p.le_congr,
+        &[
+            diff_f_fpp2,
+            f_qq2,
+            eps_fpp2,
+            eps_fpp2,
+            cancel_eq,
+            refl_eps_fpp2,
+            add_le_1,
+        ],
+    );
+    let refl_sgn_eps_1 = d.lemma(p.le_refl, &[sgn_eps]);
+    let add_le_2 = d.lemma(
+        p.add_le_add,
+        &[sgn_eps, sgn_eps, f_pp2, sgn_eps, refl_sgn_eps_1, h4],
+    );
+    let upper_pre = d.lemma(
+        p.le_trans,
+        &[f_qq2, eps_fpp2, eps_eps, add_le_1_congr, add_le_2],
+    );
+    let refl_f_qq2 = erefl(d, p, f_qq2);
+    let f_qq2_le_target = d.lemma(
+        p.le_congr,
+        &[
+            f_qq2,
+            f_qq2,
+            eps_eps,
+            target_e_creal,
+            refl_f_qq2,
+            double_eq_target,
+            upper_pre,
+        ],
+    );
+
+    let sgn_eps_le_target = {
+        let refl_sgn_eps_2 = d.lemma(p.le_refl, &[sgn_eps]);
+        let add_le = d.lemma(
+            p.add_le_add,
+            &[
+                sgn_eps,
+                sgn_eps,
+                zero_c,
+                sgn_eps,
+                refl_sgn_eps_2,
+                sgn_eps_nonneg,
+            ],
+        );
+        let sgn_eps_zero = cadd(d, p, sgn_eps, zero_c);
+        let add_zero_eq = d.lemma(p.add_zero, &[sgn_eps]);
+        let refl_eps_eps_1 = erefl(d, p, eps_eps);
+        let lhs_congr = d.lemma(
+            p.le_congr,
+            &[
+                sgn_eps_zero,
+                sgn_eps,
+                eps_eps,
+                eps_eps,
+                add_zero_eq,
+                refl_eps_eps_1,
+                add_le,
+            ],
+        );
+        let refl_sgn_eps_3 = erefl(d, p, sgn_eps);
+        d.lemma(
+            p.le_congr,
+            &[
+                sgn_eps,
+                sgn_eps,
+                eps_eps,
+                target_e_creal,
+                refl_sgn_eps_3,
+                double_eq_target,
+                lhs_congr,
+            ],
+        )
+    };
+    // `le (neg f_qq2) target_e_creal`, from `h5 : le (neg sgn_eps)
+    // f_qq2` via `neg_le_neg` (giving `le (neg f_qq2) (neg (neg
+    // sgn_eps))`), `double_neg` to fold `neg (neg sgn_eps) ~
+    // sgn_eps`, then `sgn_eps_le_target`.
+    let neg_f_qq2 = cneg(d, p, f_qq2);
+    let step_nn = d.lemma(p.neg_le_neg, &[neg_sgn_eps, f_qq2, h5]);
+    // step_nn : le neg_f_qq2 (neg neg_sgn_eps)
+    let neg_neg_sgn_eps = cneg(d, p, neg_sgn_eps);
+    let dn = double_neg(d, p, sgn_eps); // Equiv neg_neg_sgn_eps sgn_eps
+    let neg_f_qq2_eq_refl = erefl(d, p, neg_f_qq2);
+    let neg_f_qq2_le_sgn = d.lemma(
+        p.le_congr,
+        &[
+            neg_f_qq2,
+            neg_f_qq2,
+            neg_neg_sgn_eps,
+            sgn_eps,
+            neg_f_qq2_eq_refl,
+            dn,
+            step_nn,
+        ],
+    );
+    let neg_fqq2_le_target = d.lemma(
+        p.le_trans,
+        &[
+            neg_f_qq2,
+            sgn_eps,
+            target_e_creal,
+            neg_f_qq2_le_sgn,
+            sgn_eps_le_target,
+        ],
+    );
+
+    let abs_fqq2_le_target = d.lemma(
+        p.abs_le,
+        &[f_qq2, target_e_creal, f_qq2_le_target, neg_fqq2_le_target],
+    );
+    (range_a_qq2, abs_fqq2_le_target)
+}
 /// `CReal.ivt_approx` -- see [`super::CRealPrelude::ivt_approx`]'s doc
 /// comment for the statement and this module's documentation "Addendum" for
 /// how `n`, `delta`, `bisect_n` are chosen.
@@ -1862,31 +2199,25 @@ fn declare_ivt_approx(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelE
     let e = d.kernel().fvar(e_fv);
 
     // --- `n`, `sgn_eps`, `delta`, `bisect_n` ---------------------------------
-    let (n, sgn_eps, sgn_eps_rat, sgn_eps_pos) = sgn_eps_of(d, p, e);
-    let (target_e_rat, double_eq_target) =
-        sgn_eps_double_eq_target(d, p, e, n, sgn_eps, sgn_eps_rat);
-
-    let sgn_eps_nonneg = d.lemma(p.le_of_lt, &[zero_c, sgn_eps, sgn_eps_pos]);
-    let hfp = d.lemma(p.le_trans, &[fa, zero_c, sgn_eps, hfa, sgn_eps_nonneg]);
-    let neg_sgn_eps = cneg(d, p, sgn_eps);
-    let neg_sgn_eps_le_zero = neg_nonpos_of_nonneg(d, p, sgn_eps, sgn_eps_nonneg);
-    let hfq = d.lemma(
-        p.le_trans,
-        &[neg_sgn_eps, zero_c, fb, neg_sgn_eps_le_zero, hfb],
-    );
-
-    let mod_fn = d.const_app(p.uc_modulus, &[f, a, b, huc]);
-    let delta = d.apply(mod_fn, &[n]);
-
-    let neg_a = cneg(d, p, a);
-    let w0 = cadd(d, p, b, neg_a);
-    let w0_nonneg = sub_nonneg_of_le(d, p, a, b, hab);
-    let (bisect_n, width_term, target_creal, target_nonneg, width_le) =
-        width_le_via_bound(d, p, w0, w0_nonneg, delta);
+    let setup = approx_setup(d, p, f, a, b, huc, hab, hfa, hfb, e);
+    let ctx = setup.ctx;
+    let target_e_rat = ctx.target_e_rat;
+    let sgn_eps = ctx.sgn_eps;
+    let width_term = ctx.width_term;
 
     let iter_at_n = d.lemma(
         p.ivt_iter,
-        &[f, a, b, sgn_eps, sgn_eps_pos, hab, hfp, hfq, bisect_n],
+        &[
+            f,
+            a,
+            b,
+            sgn_eps,
+            setup.sgn_eps_pos,
+            hab,
+            setup.hfp,
+            setup.hfq,
+            setup.bisect_n,
+        ],
     );
 
     let target_ty = approx_exists_ty(d, p, f, a, b, target_e_rat, carrier);
@@ -1903,194 +2234,8 @@ fn declare_ivt_approx(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelE
         target_ty,
         iter_at_n,
         &|d, pp2, qq2, h1, h2, h3, h4, h5, h6| {
-            let neg_pp2 = cneg(d, p, pp2);
-            let diff = cadd(d, p, qq2, neg_pp2);
-
-            // `le diff target_creal`, from `h6 : Equiv diff width_term` and
-            // `width_le : le width_term target_creal`.
-            let diff_le_t = {
-                let h6_symm = esymm(d, p, diff, width_term, h6);
-                let refl_target = erefl(d, p, target_creal);
-                d.lemma(
-                    p.le_congr,
-                    &[
-                        width_term,
-                        diff,
-                        target_creal,
-                        target_creal,
-                        h6_symm,
-                        refl_target,
-                        width_le,
-                    ],
-                )
-            };
-            let neg_diff_le_t = {
-                let diff_nonneg = sub_nonneg_of_le(d, p, pp2, qq2, h2);
-                let neg_diff_le_zero = neg_nonpos_of_nonneg(d, p, diff, diff_nonneg);
-                let neg_diff = cneg(d, p, diff);
-                d.lemma(
-                    p.le_trans,
-                    &[
-                        neg_diff,
-                        zero_c,
-                        target_creal,
-                        neg_diff_le_zero,
-                        target_nonneg,
-                    ],
-                )
-            };
-            let abs_diff_le_t = d.lemma(p.abs_le, &[diff, target_creal, diff_le_t, neg_diff_le_t]);
-
-            let range_a_qq2 = d.lemma(p.le_trans, &[a, pp2, qq2, h1, h2]);
-            let range_pp2_b = d.lemma(p.le_trans, &[pp2, qq2, b, h2, h3]);
-
-            let uc_spec_term = d.const_app(p.uc_spec, &[f, a, b, huc]);
-            let uc_concl = d.apply(
-                uc_spec_term,
-                &[n, qq2, pp2, range_a_qq2, h3, h1, range_pp2_b, abs_diff_le_t],
-            );
-            // uc_concl : le (abs (add (f qq2) (neg (f pp2)))) sgn_eps
-
-            let f_qq2 = d.apply(f, &[qq2]);
-            let f_pp2 = d.apply(f, &[pp2]);
-            let neg_f_pp2 = cneg(d, p, f_pp2);
-            let diff_f = cadd(d, p, f_qq2, neg_f_pp2);
-            let abs_diff_f = d.const_app(p.abs, &[diff_f]);
-
-            let le_abs_self_proof = d.lemma(p.le_abs_self, &[diff_f]);
-            let diff_f_le_eps = d.lemma(
-                p.le_trans,
-                &[diff_f, abs_diff_f, sgn_eps, le_abs_self_proof, uc_concl],
-            );
-
-            // `f_qq2 ~ diff_f + f_pp2 ≤ sgn_eps + f_pp2 ≤ sgn_eps + sgn_eps
-            // ~ target_e`.
-            let diff_f_fpp2 = cadd(d, p, diff_f, f_pp2);
-            let eps_fpp2 = cadd(d, p, sgn_eps, f_pp2);
-            let eps_eps = cadd(d, p, sgn_eps, sgn_eps);
-            let target_e_creal = embed(d, p, target_e_rat);
-
-            let refl_f_pp2 = d.lemma(p.le_refl, &[f_pp2]);
-            let add_le_1 = d.lemma(
-                p.add_le_add,
-                &[diff_f, sgn_eps, f_pp2, f_pp2, diff_f_le_eps, refl_f_pp2],
-            );
-            let cancel_eq = add_sub_cancel(d, p, f_qq2, f_pp2); // Equiv diff_f_fpp2 f_qq2
-            let refl_eps_fpp2 = erefl(d, p, eps_fpp2);
-            let add_le_1_congr = d.lemma(
-                p.le_congr,
-                &[
-                    diff_f_fpp2,
-                    f_qq2,
-                    eps_fpp2,
-                    eps_fpp2,
-                    cancel_eq,
-                    refl_eps_fpp2,
-                    add_le_1,
-                ],
-            );
-            let refl_sgn_eps_1 = d.lemma(p.le_refl, &[sgn_eps]);
-            let add_le_2 = d.lemma(
-                p.add_le_add,
-                &[sgn_eps, sgn_eps, f_pp2, sgn_eps, refl_sgn_eps_1, h4],
-            );
-            let upper_pre = d.lemma(
-                p.le_trans,
-                &[f_qq2, eps_fpp2, eps_eps, add_le_1_congr, add_le_2],
-            );
-            let refl_f_qq2 = erefl(d, p, f_qq2);
-            let f_qq2_le_target = d.lemma(
-                p.le_congr,
-                &[
-                    f_qq2,
-                    f_qq2,
-                    eps_eps,
-                    target_e_creal,
-                    refl_f_qq2,
-                    double_eq_target,
-                    upper_pre,
-                ],
-            );
-
-            let sgn_eps_le_target = {
-                let refl_sgn_eps_2 = d.lemma(p.le_refl, &[sgn_eps]);
-                let add_le = d.lemma(
-                    p.add_le_add,
-                    &[
-                        sgn_eps,
-                        sgn_eps,
-                        zero_c,
-                        sgn_eps,
-                        refl_sgn_eps_2,
-                        sgn_eps_nonneg,
-                    ],
-                );
-                let sgn_eps_zero = cadd(d, p, sgn_eps, zero_c);
-                let add_zero_eq = d.lemma(p.add_zero, &[sgn_eps]);
-                let refl_eps_eps_1 = erefl(d, p, eps_eps);
-                let lhs_congr = d.lemma(
-                    p.le_congr,
-                    &[
-                        sgn_eps_zero,
-                        sgn_eps,
-                        eps_eps,
-                        eps_eps,
-                        add_zero_eq,
-                        refl_eps_eps_1,
-                        add_le,
-                    ],
-                );
-                let refl_sgn_eps_3 = erefl(d, p, sgn_eps);
-                d.lemma(
-                    p.le_congr,
-                    &[
-                        sgn_eps,
-                        sgn_eps,
-                        eps_eps,
-                        target_e_creal,
-                        refl_sgn_eps_3,
-                        double_eq_target,
-                        lhs_congr,
-                    ],
-                )
-            };
-            // `le (neg f_qq2) target_e_creal`, from `h5 : le (neg sgn_eps)
-            // f_qq2` via `neg_le_neg` (giving `le (neg f_qq2) (neg (neg
-            // sgn_eps))`), `double_neg` to fold `neg (neg sgn_eps) ~
-            // sgn_eps`, then `sgn_eps_le_target`.
-            let neg_f_qq2 = cneg(d, p, f_qq2);
-            let step_nn = d.lemma(p.neg_le_neg, &[neg_sgn_eps, f_qq2, h5]);
-            // step_nn : le neg_f_qq2 (neg neg_sgn_eps)
-            let neg_neg_sgn_eps = cneg(d, p, neg_sgn_eps);
-            let dn = double_neg(d, p, sgn_eps); // Equiv neg_neg_sgn_eps sgn_eps
-            let neg_f_qq2_eq_refl = erefl(d, p, neg_f_qq2);
-            let neg_f_qq2_le_sgn = d.lemma(
-                p.le_congr,
-                &[
-                    neg_f_qq2,
-                    neg_f_qq2,
-                    neg_neg_sgn_eps,
-                    sgn_eps,
-                    neg_f_qq2_eq_refl,
-                    dn,
-                    step_nn,
-                ],
-            );
-            let neg_fqq2_le_target = d.lemma(
-                p.le_trans,
-                &[
-                    neg_f_qq2,
-                    sgn_eps,
-                    target_e_creal,
-                    neg_f_qq2_le_sgn,
-                    sgn_eps_le_target,
-                ],
-            );
-
-            let abs_fqq2_le_target = d.lemma(
-                p.abs_le,
-                &[f_qq2, target_e_creal, f_qq2_le_target, neg_fqq2_le_target],
-            );
+            let (range_a_qq2, abs_fqq2_le_target) =
+                approx_endpoint_bound(d, p, &ctx, pp2, qq2, h1, h2, h3, h4, h5, h6);
 
             approx_exists_proof(
                 d,
@@ -3491,11 +3636,37 @@ fn declare_abs_diff_le_of_small_image(
 
     // `le (add x (neg y)) rhs` -- the `(lo, hi) := (y, x)` orientation.
     let part_i = small_image_one_sided(
-        d, p, dp, csucc, eps, rhs, rhs_nonneg, csucc_nonneg, y, x, hay, hxb, hfy, hfx,
+        d,
+        p,
+        dp,
+        csucc,
+        eps,
+        rhs,
+        rhs_nonneg,
+        csucc_nonneg,
+        y,
+        x,
+        hay,
+        hxb,
+        hfy,
+        hfx,
     );
     // `le (add y (neg x)) rhs` -- the mirror.
     let part_ii_raw = small_image_one_sided(
-        d, p, dp, csucc, eps, rhs, rhs_nonneg, csucc_nonneg, x, y, hax, hyb, hfx, hfy,
+        d,
+        p,
+        dp,
+        csucc,
+        eps,
+        rhs,
+        rhs_nonneg,
+        csucc_nonneg,
+        x,
+        y,
+        hax,
+        hyb,
+        hfx,
+        hfy,
     );
 
     let neg_y = cneg(d, p, y);
@@ -3562,6 +3733,134 @@ fn declare_abs_diff_le_of_small_image(
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.abs_diff_le_of_small_image,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// =============================================================================
+// `CReal.ivt_bisect_approx` -- `ivt_approx` with the `Exists` removed.
+//
+// `ivt_approx` says `∀ e, ∃ x ∈ [a,b], |F x| ≤ 1/(e+1)`. Its witness is
+// `ivt_iter`'s existentially-quantified bracket, so nothing outside the proof
+// can NAME the point, and a SEQUENCE of such points cannot be formed at all:
+// extracting one from `∀ e, ∃ x` is an `Exists` elimination into a
+// `Type`-valued target, which this kernel (correctly) refuses.
+//
+// The bracket `ivt_bisect_lo`/`ivt_bisect_hi` computes is data, and
+// `ivt_bisect_invariant` proves it satisfies the SAME six-part invariant at
+// the same fixed slack. So the estimate `ivt_approx` runs
+// ([`approx_endpoint_bound`], shared verbatim between the two -- not copied)
+// applies to it unchanged, and the conclusion becomes a bound on a NAMED
+// point:
+//
+//     ivt_bisect_hi F a b (succ (2*e)) (bisect_n e)
+//
+// with `bisect_n e` the depth [`width_le_via_bound`] already computed for
+// `ivt_approx`'s own schedule -- `succ (bound (b−a)) * modulus(succ (2*e)) +
+// bound (b−a)`. `fun e => …` is then an ordinary `Nat → CReal` lambda, which
+// is what an exact root's Cauchy argument needs and what
+// `docs/mathematics-2026-08/diary-exact-root-obstruction.md`'s first
+// obstruction was about.
+// =============================================================================
+
+/// `CReal.ivt_bisect_approx` -- see
+/// [`super::CRealPrelude::ivt_bisect_approx`] for the statement.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_ivt_bisect_approx(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let fn_ty = d.arrow(carrier, carrier);
+    let nat = d.nat_ty();
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let uc_ty_ab = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let huc_fv = d.fresh_fvar();
+    let huc = d.kernel().fvar(huc_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let zero_c = czero(d, p);
+    let fa = d.apply(f, &[a]);
+    let hfa_ty = cle(d, p, fa, zero_c);
+    let hfa_fv = d.fresh_fvar();
+    let hfa = d.kernel().fvar(hfa_fv);
+
+    let fb = d.apply(f, &[b]);
+    let hfb_ty = cle(d, p, zero_c, fb);
+    let hfb_fv = d.fresh_fvar();
+    let hfb = d.kernel().fvar(hfb_fv);
+
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+
+    let setup = approx_setup(d, p, f, a, b, huc, hab, hfa, hfb, e);
+    let ctx = setup.ctx;
+    let bisect_n = setup.bisect_n;
+
+    // The concrete bracket, and the invariant it satisfies at this slack.
+    let lo = d.const_app(p.ivt_bisect_lo, &[f, a, b, ctx.n, bisect_n]);
+    let hi = d.const_app(p.ivt_bisect_hi, &[f, a, b, ctx.n, bisect_n]);
+    let inv = d.lemma(
+        p.ivt_bisect_invariant,
+        &[f, a, b, ctx.n, hab, setup.hfp, setup.hfq, bisect_n],
+    );
+    let (h1, h2, h3, h4, h5, h6) =
+        conj_split(d, p, f, a, b, ctx.sgn_eps, ctx.width_term, lo, hi, inv);
+
+    let (range_a_hi, abs_bound) = approx_endpoint_bound(d, p, &ctx, lo, hi, h1, h2, h3, h4, h5, h6);
+
+    let concl = approx_pred_body(d, p, f, a, b, ctx.target_e_rat, hi);
+    let proof = {
+        let le2 = cle(d, p, hi, b);
+        let f_hi = d.apply(f, &[hi]);
+        let abs_f_hi = cabs(d, p, f_hi);
+        let target_e = embed(d, p, ctx.target_e_rat);
+        let le3 = cle(d, p, abs_f_hi, target_e);
+        let and2ty = d.and(le2, le3);
+        let inner = and_intro(d, p, le2, le3, h3, abs_bound);
+        let le1 = cle(d, p, a, hi);
+        and_intro(d, p, le1, and2ty, range_a_hi, inner)
+    };
+
+    let value = {
+        let with_e = d.lam_fv(e_fv, nat, proof);
+        let with_hfb = d.lam_fv(hfb_fv, hfb_ty, with_e);
+        let with_hfa = d.lam_fv(hfa_fv, hfa_ty, with_hfb);
+        let with_hab = d.lam_fv(hab_fv, hab_ty, with_hfa);
+        let with_huc = d.lam_fv(huc_fv, uc_ty_ab, with_hab);
+        let with_b = d.lam_fv(b_fv, carrier, with_huc);
+        let with_a = d.lam_fv(a_fv, carrier, with_b);
+        d.lam_fv(f_fv, fn_ty, with_a)
+    };
+    let ty = {
+        let with_e = d.pi_fv(e_fv, nat, concl);
+        let with_hfb = d.arrow(hfb_ty, with_e);
+        let with_hfa = d.arrow(hfa_ty, with_hfb);
+        let with_hab = d.arrow(hab_ty, with_hfa);
+        // `pi_fv`, not `arrow`: the conclusion MENTIONS `huc` (the bisection
+        // depth reads the continuity modulus), so a non-dependent arrow would
+        // leave that occurrence free -- `UnboundFVar`, which is exactly how
+        // this first went wrong.
+        let with_huc = d.pi_fv(huc_fv, uc_ty_ab, with_hab);
+        let with_b = d.pi_fv(b_fv, carrier, with_huc);
+        let with_a = d.pi_fv(a_fv, carrier, with_b);
+        d.pi_fv(f_fv, fn_ty, with_a)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.ivt_bisect_approx,
         uparams: vec![],
         ty,
         value,
