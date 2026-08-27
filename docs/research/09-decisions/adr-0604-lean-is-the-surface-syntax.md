@@ -34,6 +34,30 @@ and `lean_pp`/`render_lean` already render kernel declarations as Lean.
    construction. This turns the import backlog artifact (ADR-0601 §3) from a
    list into a work queue, and gives external users a way to pose goals
    without writing Rust.
+
+   **Amended 2026-08-27, correcting this ADR's own framing.** The mode was
+   NOT missing: `import_statement_ndjson` has existed since `0c261718f`
+   (2026-08-26). The coordinator asserted its absence from a grep whose
+   pattern did not match the function's name AND WHICH WAS RUN WITHOUT A
+   POSITIVE CONTROL -- the exact banned idiom this repository documents. The
+   genuine gap, now built, was the bridge from a completed statement import
+   to the `artifacts/facts/` shape: `statement_goal_record.rs`'s
+   `build_statement_goal_record` (kernel-rendered goal text, ADR-0350 content
+   identity, substituted-theorem list; admits nothing).
+
+   **And the `TrustedDeclaration` refusals are MOSTLY ESSENTIAL, not an
+   artifact of proof-stream import.** Measured against the importer's source:
+   the guard is a deliberate whole-stream anti-smuggling check (pinned by
+   `unrelated_axiom_is_rejected` and, newly, by a test reproducing the real
+   `Nat.gcd -> Nat.mod_lt` mechanism at minimal scale). Admitting a trusted
+   dependency as a bare `Axiom` -- the only kernel kind that skips
+   value-checking -- would corrupt the statement itself, since `Nat.gcd`'s
+   recursive content is precisely what a `Coprime` fact is about. The one real
+   artifact is ALLOWLIST COVERAGE: `trusted_substitution`/
+   `nat_order_substitution` do not yet cover `Nat.mod_lt`/`eq_self`. `Quot`
+   can never be exempted, by hard rule. So of doc 292's fifteen
+   `TrustedDeclaration` declines, some are closable by extending the
+   substitution allowlist and some are permanent.
 3. **Producer contracts (ADR-0602) are the tactic layer.** A contract —
    "goals of this shape are dischargeable via route R" — is what a tactic is,
    with the difference that discharge produces checkable artifacts and a
