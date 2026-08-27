@@ -183,6 +183,18 @@ package. Exact searches through 2026-08-27 found no matching indexed result, whi
 retrieval rather than priority evidence. Radius 23 and unrestricted 405 remain open, so the exact
 Rado bound does not move.
 
+**Palette-orbit repair distance, 2026-08-27.** ADR-0597 closes the labelled-coordinate gap
+with one complete existential encoding, not an external loop over `k!` cases. A checked
+bijection maps reference colours to model colours; per-point Tseitin matches feed the generic
+weighted-at-most encoder. The wrapper validates the full model before projecting the original
+colouring and separately recovers the bijection. An exhaustive two-colour control agrees with
+explicit permutation enumeration for every colouring and radius; relabelling/model-replay and
+resource-ceiling controls pass, as does all-target/all-feature Clippy. The real radius-22
+formula is 14,194 variables / 327,843 clauses / 6,960,997 bytes, SHA-256
+`33e5f3ab...b2cc`. Its no-cutoff CaDiCaL seed-723 proof producer remains live; at 27:33 it had
+written 5.55 GB after 18.55 million conflicts. This prefix has no mathematical credit. A
+palette-invariant conclusion requires its terminal proof and independent replay.
+
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
 external-certificate replay runner for all five packages.  It validates checker and artifact
 bytes before execution, hard-kills a timed-out process session, requires an observable finding

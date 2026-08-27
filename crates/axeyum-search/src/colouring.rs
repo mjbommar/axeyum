@@ -56,6 +56,60 @@ use axeyum_cnf::{
 
 use crate::SearchError;
 
+/// A colouring formula restricted by Hamming distance after an existential
+/// bijection of palette labels.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PaletteOrbitHammingEncoding {
+    encoding: WeightedAtMostEncoding,
+    colouring_variables: usize,
+    mapping_offset: usize,
+    colours: usize,
+}
+
+impl PaletteOrbitHammingEncoding {
+    /// The complete deterministic CNF.
+    pub fn formula(&self) -> &CnfFormula {
+        self.encoding.formula()
+    }
+
+    /// Project a satisfying full model to the original colouring variables.
+    ///
+    /// # Errors
+    ///
+    /// Refuses a model that does not satisfy the complete composed formula.
+    pub fn project_colouring_model(&self, values: &[bool]) -> Result<Vec<bool>, SearchError> {
+        let source = self.encoding.project_source_model(values)?;
+        Ok(source[..self.colouring_variables].to_vec())
+    }
+
+    /// Recover the witnessed-colour to model-colour bijection, one-based.
+    ///
+    /// # Errors
+    ///
+    /// Refuses a model that does not satisfy the complete composed formula or
+    /// does not select exactly one target for a mapping row.
+    pub fn palette_permutation(&self, values: &[bool]) -> Result<Vec<usize>, SearchError> {
+        let source = self.encoding.project_source_model(values)?;
+        let mut permutation = Vec::with_capacity(self.colours);
+        for witnessed in 0..self.colours {
+            let chosen: Vec<usize> = (0..self.colours)
+                .filter(|&model| source[self.mapping_offset + witnessed * self.colours + model])
+                .collect();
+            if chosen.len() != 1 {
+                return Err(SearchError::InvalidParameter {
+                    what: format!(
+                        "palette mapping row {} selects {} targets",
+                        witnessed + 1,
+                        chosen.len()
+                    ),
+                });
+            }
+            permutation.push(chosen[0] + 1);
+        }
+        Ok(permutation)
+    }
+}
+
 /// A finite colouring problem over `1..=points` with `1..=colours`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ColouringProblem {
@@ -473,6 +527,178 @@ impl ColouringProblem {
             max_changes,
             limits,
         )?)
+    }
+
+    /// Encodes the canonical problem within bounded Hamming distance of a
+    /// supplied witness **up to an arbitrary palette permutation**.
+    ///
+    /// A bijection maps every witness colour to one model colour. For each
+    /// compared point, a definitional match literal is true exactly when the
+    /// model colour equals the mapped witness colour. The generic weighted
+    /// encoder bounds the number of false match literals. This is a single
+    /// existential CNF, not an unchecked loop over `colours!` relabellings.
+    /// Points after `compared_points` remain unrestricted.
+    ///
+    /// The method is complete for palette-orbit distance even when the base
+    /// formula uses canonical symmetry breaking: any valid colouring has one
+    /// canonical representative, while the existential bijection aligns the
+    /// reference witness independently of those coordinate names.
+    ///
+    /// # Errors
+    ///
+    /// Rejects an overlong comparison, a short witness, a palette mismatch,
+    /// arithmetic overflow, or either definitional/cardinality phase exceeding
+    /// the supplied explicit resource ceilings.
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the bijection, match definitions, and bound stay together for a linearly auditable encoding"
+    )]
+    pub fn encode_with_witness_hamming_ball_up_to_palette_permutation(
+        &self,
+        witness: &Witness,
+        compared_points: usize,
+        max_changes: u64,
+        limits: WeightedAtMostLimits,
+    ) -> Result<PaletteOrbitHammingEncoding, SearchError> {
+        if compared_points > self.points {
+            return Err(SearchError::WitnessLength {
+                expected: compared_points,
+                found: self.points,
+            });
+        }
+        if compared_points > witness.points() {
+            return Err(SearchError::WitnessLength {
+                expected: compared_points,
+                found: witness.points(),
+            });
+        }
+        if witness.colours() != self.colours {
+            return Err(SearchError::InvalidParameter {
+                what: format!(
+                    "witness has {} colours, problem has {}",
+                    witness.colours(),
+                    self.colours
+                ),
+            });
+        }
+
+        let canonical = self.encode()?;
+        let colouring_variables = canonical.variable_count();
+        let mapping_variables = self.colours.checked_mul(self.colours).ok_or_else(|| {
+            SearchError::InvalidParameter {
+                what: "palette mapping variable count overflows usize".to_string(),
+            }
+        })?;
+        let conjunction_variables = compared_points.checked_mul(self.colours).ok_or_else(|| {
+            SearchError::InvalidParameter {
+                what: "palette match variable count overflows usize".to_string(),
+            }
+        })?;
+        let orbit_auxiliary = mapping_variables
+            .checked_add(conjunction_variables)
+            .and_then(|count| count.checked_add(compared_points))
+            .ok_or_else(|| SearchError::InvalidParameter {
+                what: "palette-orbit auxiliary count overflows usize".to_string(),
+            })?;
+        if orbit_auxiliary > limits.max_auxiliary_variables {
+            return Err(axeyum_cnf::WeightedAtMostError::LimitExceeded {
+                resource: "palette_orbit_auxiliary_variables",
+                observed: orbit_auxiliary,
+                limit: limits.max_auxiliary_variables,
+            }
+            .into());
+        }
+        let total_variables = colouring_variables
+            .checked_add(orbit_auxiliary)
+            .ok_or_else(|| SearchError::InvalidParameter {
+                what: "palette-orbit total variable count overflows usize".to_string(),
+            })?;
+        let mapping_offset = colouring_variables;
+        let conjunction_offset = mapping_offset + mapping_variables;
+        let match_offset = conjunction_offset + conjunction_variables;
+        let mut source = CnfFormula::new(total_variables);
+        for clause in canonical.clauses() {
+            source.add_clause(clause.clone())?;
+        }
+        let mut added = 0usize;
+        let mut add = |formula: &mut CnfFormula, literals: Vec<CnfLit>| {
+            added = added.saturating_add(1);
+            if added > limits.max_added_clauses {
+                return Err(SearchError::from(
+                    axeyum_cnf::WeightedAtMostError::LimitExceeded {
+                        resource: "palette_orbit_added_clauses",
+                        observed: added,
+                        limit: limits.max_added_clauses,
+                    },
+                ));
+            }
+            formula.add_clause(CnfClause::new(literals))?;
+            Ok(())
+        };
+        let mapping_var = |witnessed: usize, model: usize| {
+            CnfVar::new(mapping_offset + witnessed * self.colours + model)
+        };
+        for witnessed in 0..self.colours {
+            let row = (0..self.colours)
+                .map(|model| Ok(CnfLit::positive(mapping_var(witnessed, model)?)))
+                .collect::<Result<Vec<_>, SearchError>>()?;
+            add(&mut source, row.clone())?;
+            for left in 0..row.len() {
+                for right in left + 1..row.len() {
+                    add(&mut source, vec![row[left].negated(), row[right].negated()])?;
+                }
+            }
+        }
+        for model in 0..self.colours {
+            let column = (0..self.colours)
+                .map(|witnessed| Ok(CnfLit::positive(mapping_var(witnessed, model)?)))
+                .collect::<Result<Vec<_>, SearchError>>()?;
+            add(&mut source, column.clone())?;
+            for left in 0..column.len() {
+                for right in left + 1..column.len() {
+                    add(
+                        &mut source,
+                        vec![column[left].negated(), column[right].negated()],
+                    )?;
+                }
+            }
+        }
+
+        let mut terms = Vec::with_capacity(compared_points);
+        for (point_offset, &witnessed_colour) in
+            witness.colouring().iter().take(compared_points).enumerate()
+        {
+            let mut conjunctions = Vec::with_capacity(self.colours);
+            for model in 0..self.colours {
+                let conjunction =
+                    CnfVar::new(conjunction_offset + point_offset * self.colours + model)?;
+                let conjunction_lit = CnfLit::positive(conjunction);
+                let mapping_lit = CnfLit::positive(mapping_var(witnessed_colour - 1, model)?);
+                let colour_lit = self.literal(point_offset + 1, model + 1)?;
+                add(&mut source, vec![conjunction_lit.negated(), mapping_lit])?;
+                add(&mut source, vec![conjunction_lit.negated(), colour_lit])?;
+                add(
+                    &mut source,
+                    vec![conjunction_lit, mapping_lit.negated(), colour_lit.negated()],
+                )?;
+                conjunctions.push(conjunction_lit);
+            }
+            let matched = CnfLit::positive(CnfVar::new(match_offset + point_offset)?);
+            for &conjunction in &conjunctions {
+                add(&mut source, vec![conjunction.negated(), matched])?;
+            }
+            let mut match_implies_some = vec![matched.negated()];
+            match_implies_some.extend(conjunctions);
+            add(&mut source, match_implies_some)?;
+            terms.push((matched.negated(), 1));
+        }
+        let encoding = encode_weighted_at_most(&source, &terms, max_changes, limits)?;
+        Ok(PaletteOrbitHammingEncoding {
+            encoding,
+            colouring_variables,
+            mapping_offset,
+            colours: self.colours,
+        })
     }
 
     /// Clause group 4, restricted to blocks of interchangeable colours.
@@ -931,6 +1157,106 @@ mod tests {
             panic!("the noncanonical relabelling must conflict with canonical palette clauses")
         };
         assert_eq!(check_drat(labelled_radius_zero.formula(), &proof), Ok(true));
+    }
+
+    #[test]
+    fn palette_orbit_hamming_ball_accepts_and_recovers_a_relabelling() {
+        use axeyum_cnf::{ProofSolveOutcome, solve_with_drat_proof};
+
+        let problem = ColouringProblem::new(4, 3, Vec::new()).unwrap();
+        let canonical = Witness::new(3, vec![1, 2, 3, 1]).unwrap();
+        let relabelled = Witness::new(3, vec![2, 1, 3, 2]).unwrap();
+        let orbit = problem
+            .encode_with_witness_hamming_ball_up_to_palette_permutation(
+                &relabelled,
+                4,
+                0,
+                WeightedAtMostLimits::default(),
+            )
+            .unwrap();
+        let ProofSolveOutcome::Sat(model) = solve_with_drat_proof(orbit.formula()) else {
+            panic!("a palette relabelling must remain in the same radius-zero orbit")
+        };
+        let source = orbit.project_colouring_model(model.values()).unwrap();
+        assert_eq!(problem.decode_model(&source), Ok(canonical));
+        assert_eq!(orbit.palette_permutation(model.values()), Ok(vec![2, 1, 3]));
+        assert_eq!(problem.encode().unwrap().evaluate(&source), Ok(true));
+    }
+
+    #[test]
+    fn palette_orbit_hamming_ball_obeys_auxiliary_limit() {
+        let problem = ColouringProblem::new(4, 3, Vec::new()).unwrap();
+        let witness = Witness::new(3, vec![1, 2, 3, 1]).unwrap();
+        let limits = WeightedAtMostLimits {
+            max_auxiliary_variables: 1,
+            ..WeightedAtMostLimits::default()
+        };
+        assert!(matches!(
+            problem
+                .encode_with_witness_hamming_ball_up_to_palette_permutation(&witness, 4, 0, limits),
+            Err(SearchError::WeightedAtMost(
+                axeyum_cnf::WeightedAtMostError::LimitExceeded {
+                    resource: "palette_orbit_auxiliary_variables",
+                    ..
+                }
+            ))
+        ));
+    }
+
+    #[test]
+    fn palette_orbit_hamming_ball_matches_exhaustive_permutations() {
+        use axeyum_cnf::{ProofSolveOutcome, solve_with_drat_proof};
+
+        let problem = ColouringProblem::new(3, 2, Vec::new()).unwrap();
+        let witness = Witness::new(2, vec![1, 2, 1]).unwrap();
+        let canonical = problem.encode().unwrap();
+        for radius in 0..=3 {
+            let orbit = problem
+                .encode_with_witness_hamming_ball_up_to_palette_permutation(
+                    &witness,
+                    3,
+                    radius,
+                    WeightedAtMostLimits::default(),
+                )
+                .unwrap();
+            for packed in 0usize..8 {
+                let candidate =
+                    Witness::new(2, (0..3).map(|bit| 1 + ((packed >> bit) & 1)).collect()).unwrap();
+                let assignment = problem.witness_assignment(&candidate).unwrap();
+                let base_accepts = canonical.evaluate(&assignment).unwrap();
+                let identity_distance = candidate
+                    .colouring()
+                    .iter()
+                    .zip(witness.colouring())
+                    .filter(|(left, right)| left != right)
+                    .count();
+                let swap_distance = candidate
+                    .colouring()
+                    .iter()
+                    .zip(witness.colouring())
+                    .filter(|(left, right)| **left != 3 - **right)
+                    .count();
+                let expected = base_accepts
+                    && identity_distance.min(swap_distance) <= usize::try_from(radius).unwrap();
+                let mut pinned = orbit.formula().clone();
+                for (index, value) in assignment.iter().copied().enumerate() {
+                    let literal = CnfLit::positive(CnfVar::new(index).unwrap());
+                    pinned
+                        .add_clause(CnfClause::new(vec![if value {
+                            literal
+                        } else {
+                            literal.negated()
+                        }]))
+                        .unwrap();
+                }
+                assert_eq!(
+                    matches!(solve_with_drat_proof(&pinned), ProofSolveOutcome::Sat(_)),
+                    expected,
+                    "radius={radius} candidate={:?}",
+                    candidate.colouring()
+                );
+            }
+        }
     }
 
     #[test]
