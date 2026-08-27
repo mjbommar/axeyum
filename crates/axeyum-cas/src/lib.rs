@@ -99,6 +99,7 @@ pub mod sos;
 pub mod special;
 pub mod stats;
 pub mod sturm;
+pub mod taylor;
 pub mod telescoping;
 pub mod telescoping_check;
 pub mod telescoping_json;
