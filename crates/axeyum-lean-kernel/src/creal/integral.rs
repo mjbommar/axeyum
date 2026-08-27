@@ -891,6 +891,92 @@
 //! RSS still climbing past 2.6 GB when killed — not a stack overflow). Per
 //! this file's own "a symbolic test can be pathological" convention: deleted
 //! rather than chased, and recorded here rather than silently dropped.
+//!
+//! ## `CReal.integral_split` — checked 2026-08-27 (a TENTH lane), gap 2's
+//! two remaining pieces landed; the final estimate assembly NOT attempted
+//!
+//! Gap 2 above named two pieces: deriving `hcong` from a
+//! `UniformlyContinuousOn` witness, and relating `riemannSum` to
+//! `CReal.integral` on all three intervals. **Both prerequisites this lane
+//! was briefed against already existed by the time it started**:
+//! [`CRealPrelude::riemann_sum_split_exact_of_uc`] (discharges the split
+//! identity from a `UniformlyContinuousOn` witness directly, no `hcong`
+//! needed at all — a later lane's stronger route than gap 2's own plan) and
+//! [`CRealPrelude::riemann_sum_integral_close`] (riemannSum-vs-`integral`,
+//! already landed). The one piece that did NOT exist is the sub-interval
+//! restriction `UniformlyContinuousOn` needs to turn ONE witness on `[a,b]`
+//! into witnesses on `[a,c]`/`[c,b]` for the two child integrals —
+//! `CReal.uniformlyContinuousOn_restrict` (`uniform_continuity.rs`, this
+//! lane), built directly against `UniformlyContinuousOn.mk` with the SAME
+//! modulus and kernel-checked (`creal_prelude_builds` unaffected, 32.5s
+//! against a 32–38s baseline band).
+//!
+//! **The remaining estimate work, characterized precisely rather than
+//! attempted, because it is the load-bearing piece and a wrong shortcut here
+//! would be a soundness risk, not a missing convenience:**
+//! [`CRealPrelude::riemann_sum_integral_close`]'s own bound
+//! (`bound_leg1(e,depth,i,jj1,jj2) + natDivSucc(K,e)`, reconstructed from
+//! [`CRealPrelude::riemann_sum_shared_accuracy_close`]'s conclusion) is
+//! `modulus(l, shift(jj1)) + bound1(jj1) + modulus(shift(jj1), i)` plus a
+//! symmetric second leg, where **`l := common_refinement(m1, m2).0`
+//! (`m1 := deep(e)+depth`, `m2 := deep(e)+0`) is NOT the caller's choice of
+//! `jj1`/`i` — it is baked into `riemann_sum_shared_accuracy_close`'s own
+//! statement as the shared mid-anchor's sample point.** This differs from
+//! [`declare_riemann_sum_deep_cauchy`]'s own use of the more primitive
+//! [`CRealPrelude::shared_index_to_canonical`] (three FREE indices `pp, qq,
+//! jj`, so it can choose `pp := pn` directly and avoid `l` in the bound
+//! altogether) — `riemann_sum_shared_accuracy_close` is a less general,
+//! already-composed theorem that cannot be re-parameterized this way without
+//! rebuilding it.
+//!
+//! **The lever `l` responds to, and the reason this is still closable
+//! without new mathematics**: `l` is a genuine `Nat` term (not an opaque
+//! constant) that GROWS with `depth` regardless of what `u`'s own modulus
+//! does, since `m1 := deep(e) + depth → ∞` as `depth → ∞` and
+//! `l = succ_mul_succ(m2, m1).0` grows with `m1`. So `natDivSucc(1, l) → 0`
+//! as `depth → ∞`, at every fixed `e` — the missing shrink is available, it
+//! is just reached through `depth`, not through `e` or `jj1` the way the
+//! other two `modulus` legs shrink.
+//!
+//! **`riemannSumTotalEpsLe`'s own consumer, [`total_eps_sample_le`], is
+//! accuracy-locked to its sample index and must be generalized before this
+//! assembly can use it.** `bound1(jj1) := sample(totalEps(a,b,e,m1),jj1) +
+//! natDivSucc(2,jj1)` samples `totalEps` at `jj1`, a DIFFERENT index from the
+//! accuracy `e` baked into `totalEps`'s own construction; `total_eps_sample_le`
+//! as written applies `riemann_sum_total_eps_le`'s witness at the SAME index
+//! used to build it (`d.apply(t, &[idx])`, one `idx` doing both jobs). The
+//! generalization is mechanical, not new mathematics: `CReal.le`'s own
+//! witness term can be `d.apply`'d at ANY raw index, so a two-index variant
+//! (`total_eps_sample_le_at(a, b, e, m, magnitude, n)`, applying at `n`
+//! instead of `e`) gives `sample(totalEps(a,b,e,m),n) ≤
+//! natDivSucc(magnitude,e) + natDivSucc(2,n)` — a term depending on `e` and
+//! `n` SEPARATELY, exactly what combining three intervals at independently
+//! chosen accuracies needs. NOT built here: it has no consumer yet in this
+//! file, and an unused private helper is a `-D warnings` clippy failure, so
+//! landing it alone would be dead weight rather than progress.
+//!
+//! **The resulting recipe, worked out but not built**: pick ONE inner
+//! accuracy `e_inner` and ONE large index `depth := jj1 := jj2 := i := N`
+//! (all equal, all free choices `riemann_sum_integral_close` allows) on each
+//! of the three interval applications ([a,b], [a,c], [c,b], the latter two
+//! using [`CRealPrelude::uniformly_continuous_on_restrict`]'s witnesses).
+//! Every term in the resulting bound is then one of: `natDivSucc(1, l(N,
+//! e_inner))` (→0 as `N`→∞, via the lever above), `natDivSucc(c, N)` for
+//! small literal `c` (→0 as `N`→∞, ordinary), `natDivSucc(magnitude_X,
+//! e_inner)` for the three intervals' own `magnitude_X := succ(CReal.bound
+//! (width_X))` (→0 as `e_inner`→∞, via `total_eps_sample_le_at` above), and
+//! `natDivSucc(K_X, e_inner)` (the three `riemann_sum_integral_close`
+//! witnesses' own rates, already closed-form). The middle `riemannSum`
+//! equality is EXACT ([`CRealPrelude::riemann_sum_split_exact_of_uc`]), so
+//! summing all three intervals' bounds and choosing `N`, `e_inner` as
+//! explicit linear functions of the OUTER accuracy `equiv_zero_of_small`
+//! names (enough slack to beat the finitely many fixed rational
+//! coefficients) closes `integral_split`. This is genuinely assembly — every
+//! lemma named above already exists or is a small mechanical generalization
+//! of one that does — but it is roughly the same volume of exact `Rat`
+//! bookkeeping as [`bnd_leg_plus_share_le`] (~150 lines) done THREE times and
+//! then combined, plus the final `Nat`-valued choice of `N`/`e_inner`, and
+//! was not attempted in this slice.
 
 use super::completeness::half_shift_le;
 use super::convergence::{
