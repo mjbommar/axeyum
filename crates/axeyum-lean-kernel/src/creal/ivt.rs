@@ -140,7 +140,8 @@
 
 use super::ring_helpers::right_distrib;
 use super::{
-    CRealPrelude, and_intro, cadd, cle, clt, creal_ty, div_succ, embed, equiv, halves, sample,
+    CRealPrelude, and_intro, cadd, cle, clt, creal_ty, div_succ, div_succ_k, embed, equiv, halves,
+    modulus, sample, weaken, within,
 };
 use crate::BinderInfo;
 use crate::KernelError;
@@ -149,9 +150,9 @@ use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
 use crate::name::NameId;
 use crate::nat_prelude::NatOps;
-use crate::rat_prelude::group::rsub;
+use crate::rat_prelude::group::{rsub, rsum, rsum_append, rsum_perm};
 use crate::rat_prelude::ops::{
-    nat_eq_to_rat, radd, rat_eq_rewrite, rle, rlt, rmul, rneg, rone, rzero,
+    nat_eq_to_rat, radd, rat_eq_rewrite, rchain, rcongr, rle, rlt, rmul, rneg, rone, rsymm, rzero,
 };
 
 /// Admit `CReal.ivt_step`.
@@ -191,7 +192,11 @@ pub(super) fn declare_ivt(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
     declare_abs_diff_le_of_small_image(d, p)?;
     // ...and the two composed: the exact root's Cauchy estimate at the
     // `CReal` level. Runs AFTER both of its inputs.
-    declare_ivt_bisect_cauchy_bound(d, p)
+    declare_ivt_bisect_cauchy_bound(d, p)?;
+    // The general real-bound-to-`CReal.Cauchy` bridge. Nothing about it is
+    // IVT-specific; it lives here only because this is the file that first
+    // needed it.
+    declare_cauchy_of_abs_diff_le(d, p)
 }
 
 // --- small shared idiom (private to this module, per the codebase's own
@@ -4242,6 +4247,386 @@ fn declare_ivt_bisect_cauchy_bound(d: &mut IntDev<'_>, p: CRealPrelude) -> Resul
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.ivt_bisect_cauchy_bound,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// =============================================================================
+// `CReal.cauchy_of_abs_diff_le` -- the REAL-valued Cauchy criterion to
+// `CReal.Cauchy`'s canonical-sample form.
+//
+// `Cauchy f` is stated on the canonical rational SAMPLES,
+// `Within (seq (f m) m - seq (f n) n) (K/(m+1) + K/(n+1))`, while every
+// estimate that produces a Cauchy sequence in this development produces a
+// REAL inequality, `le (abs (f m - f n)) (ofRat (K/(m+1) + K/(n+1)))`. No
+// lemma crossed that gap in this direction: `close_within_of_within` and
+// `close_within_of_within_indexed` run the other way, and
+// `riemannSum_cauchy`'s own doc comment records the same gap for the
+// integral ("NOT `CReal.Cauchy` in that definition's own canonical-index
+// shape ... separate, unattempted work").
+//
+// The route, and the two index choices that make the arithmetic exact:
+//
+//   1. `within_of_two_sided_le` turns the real bound into
+//      `Within (seq (f m - f n) i) (qmn + 2/(i+1))` at an arbitrary SHARED
+//      index `i`, where `qmn := K/(m+1) + K/(n+1)`.
+//   2. `sharedIndexToCanonical` moves from that shared index to the two
+//      canonical ones, at the cost of two regularity legs:
+//
+//          ((1/(m+1) + 1/(sj+1)) + (qmn + 2/(j+1))) + (1/(sj+1) + 1/(n+1))
+//
+//      with `sj := 2j+1` and `j` free.
+//   3. Choose `j := 3*m + 2`. Then BOTH slack groups collapse EXACTLY, with
+//      no inequality: `Rat.natDivSucc_halve j` makes `1/(sj+1) + 1/(sj+1)`
+//      exactly `1/(j+1)`, `Rat.natDivSucc_add` fuses that with `2/(j+1)` to
+//      `3/(j+1)`, and `Rat.natDivSucc_scale 2 m` makes `3/(j+1)` exactly
+//      `1/(m+1)`. The seven-term bound is therefore EQUAL to
+//      `(K+2)/(m+1) + (K+1)/(n+1)`, and the only inequality in the whole
+//      proof is the final `Rat.natDivSucc_le_add_left` widening the second
+//      numerator to `K+2`.
+//
+// The permutation that groups the seven summands is `rsum_perm`, not an
+// inline chain of `add_assoc`/`add_comm`: it panics on a non-permutation, so
+// a mis-derived rearrangement fails with a Rust message naming the two lists
+// rather than as an opaque `TypeMismatch` a thousand terms deep.
+// =============================================================================
+
+/// `CReal.cauchy_of_abs_diff_le` -- see
+/// [`super::CRealPrelude::cauchy_of_abs_diff_le`] for the statement and this
+/// section's header for the route.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+#[allow(clippy::too_many_lines)]
+fn declare_cauchy_of_abs_diff_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let seq_ty = d.arrow(nat, carrier);
+    let rat = p.rat;
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let cap_k_fv = d.fresh_fvar();
+    let cap_k = d.kernel().fvar(cap_k_fv);
+
+    // The hypothesis, at a fresh pair of indices.
+    let hyp_ty = {
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let fm = d.apply(f, &[m]);
+        let fn_ = d.apply(f, &[n]);
+        let neg_fn = cneg(d, p, fn_);
+        let diff = cadd(d, p, fm, neg_fn);
+        let abs_diff = cabs(d, p, diff);
+        let qm = div_succ_k(d, p, cap_k, m);
+        let qn = div_succ_k(d, p, cap_k, n);
+        let qmn = radd(d, qm, qn);
+        let bound = embed(d, p, qmn);
+        let claim = cle(d, p, abs_diff, bound);
+        let over_n = d.pi_fv(n_fv, nat, claim);
+        d.pi_fv(m_fv, nat, over_n)
+    };
+    let hyp_fv = d.fresh_fvar();
+    let hyp = d.kernel().fvar(hyp_fv);
+
+    let two_nat = d.num(2);
+    let one_nat = d.num(1);
+    let k2 = d.add(cap_k, two_nat);
+
+    // `λ K, ∀ m n, Within (seq (f m) m − seq (f n) n)
+    //   (natDivSucc K m + natDivSucc K n)` -- `convergence.rs`'s
+    // `cauchy_predicate`, rebuilt here because that helper is private to its
+    // own module. `Cauchy f` δ-reduces to `Exists Nat` of exactly this.
+    let cauchy_pred = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let fm = d.apply(f, &[m]);
+        let fn_ = d.apply(f, &[n]);
+        let left = sample(d, p, fm, m);
+        let right = sample(d, p, fn_, n);
+        let difference = rsub(d, rat, left, right);
+        let bm = div_succ_k(d, p, k, m);
+        let bn = div_succ_k(d, p, k, n);
+        let bound = radd(d, bm, bn);
+        let claim = within(d, p, difference, bound);
+        let over_n = d.pi_fv(n_fv, nat, claim);
+        let over_m = d.pi_fv(m_fv, nat, over_n);
+        d.lam_fv(k_fv, nat, over_m)
+    };
+
+    // The body, at a concrete pair `(m, n)`.
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let fm = d.apply(f, &[m]);
+    let fn_ = d.apply(f, &[n]);
+    let neg_fn = cneg(d, p, fn_);
+    let t = cadd(d, p, fm, neg_fn);
+    let abs_t = cabs(d, p, t);
+
+    let a_atom = div_succ(d, p, 1, m);
+    let e_atom = div_succ(d, p, 1, n);
+    let qm = div_succ_k(d, p, cap_k, m);
+    let qn = div_succ_k(d, p, cap_k, n);
+    let qmn = radd(d, qm, qn);
+    let y = embed(d, p, qmn);
+
+    let h_mn = d.apply(hyp, &[m, n]);
+    let ht = {
+        let self_le = d.lemma(p.le_abs_self, &[t]);
+        d.lemma(p.le_trans, &[t, abs_t, y, self_le, h_mn])
+    };
+    let hnt = {
+        let neg_t = cneg(d, p, t);
+        let neg_le = d.lemma(p.neg_le_abs, &[t]);
+        d.lemma(p.le_trans, &[neg_t, abs_t, y, neg_le, h_mn])
+    };
+
+    // `bound i := seq y i + 2/(i+1)` -- exactly `within_of_two_sided_le`'s
+    // own conclusion, so `w` inhabits `∀ i, Within (seq t i) (bound i)`
+    // with no transport.
+    let bound_lam = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let seq_y_i = sample(d, p, y, i);
+        let slack = div_succ(d, p, 2, i);
+        let body = radd(d, seq_y_i, slack);
+        d.lam_fv(i_fv, nat, body)
+    };
+    let w = d.lemma(p.within_of_two_sided_le, &[t, y, ht, hnt]);
+
+    // `j := 3*m + 2` -- `Rat.natDivSucc_scale`'s own `(c+1)*m + c` index at
+    // `c := 2`, so `3/(j+1)` is EXACTLY `1/(m+1)`.
+    let three_nat = d.succ(two_nat);
+    let j = {
+        let scaled = NatOps::mul(d, three_nat, m);
+        d.add(scaled, two_nat)
+    };
+    let sj = {
+        let doubled = NatOps::mul(d, two_nat, j);
+        d.succ(doubled)
+    };
+
+    let sic = d.lemma(
+        p.shared_index_to_canonical,
+        &[fm, fn_, bound_lam, w, m, n, j],
+    );
+
+    // The bound `sic` carries, with `bound_lam j` β-reduced and
+    // `seq (ofRat qmn) j` ι-reduced to `qmn` (both hold definitionally, so
+    // `sic` inhabits this type unchanged).
+    let b_atom = div_succ(d, p, 1, sj);
+    let d_atom = div_succ(d, p, 2, j);
+    let leg1 = modulus(d, p, m, sj);
+    let leg3 = modulus(d, p, sj, n);
+    let bound_j = radd(d, qmn, d_atom);
+    let leg12 = radd(d, leg1, bound_j);
+    let total = radd(d, leg12, leg3);
+
+    // --- the rational identity -------------------------------------------
+    // total = rsum [A, B, QM, QN, D, B, E]
+    let flat = [a_atom, b_atom, qm, qn, d_atom, b_atom, e_atom];
+    let flatten = {
+        // (QM + QN) + D  =  rsum [QM, QN, D]
+        let qmn_d = rsum(d, rat, &[qm, qn, d_atom]);
+        let step_inner = rsum_append(d, rat, &[qm, qn], &[d_atom]);
+        // (A + B) + ((QM+QN)+D)  =  (A + B) + rsum [QM,QN,D]
+        let ab = radd(d, a_atom, b_atom);
+        let step_leg12 = rcongr(d, bound_j, qmn_d, step_inner, &|d, tm| radd(d, ab, tm));
+        let leg12_mid = radd(d, ab, qmn_d);
+        // (A + B) + rsum [QM,QN,D]  =  rsum [A,B,QM,QN,D]
+        let five = rsum(d, rat, &[a_atom, b_atom, qm, qn, d_atom]);
+        let step_five = rsum_append(d, rat, &[a_atom, b_atom], &[qm, qn, d_atom]);
+        let (_, leg12_eq) = rchain(d, leg12, &[(leg12_mid, step_leg12), (five, step_five)]);
+        // total = rsum[A,B,QM,QN,D] + (B + E)
+        let step_top = rcongr(d, leg12, five, leg12_eq, &|d, tm| radd(d, tm, leg3));
+        let top_mid = radd(d, five, leg3);
+        let all = rsum(d, rat, &flat);
+        let step_join = rsum_append(d, rat, &[a_atom, b_atom, qm, qn, d_atom], &[b_atom, e_atom]);
+        let (_, eq) = rchain(d, total, &[(top_mid, step_top), (all, step_join)]);
+        eq
+    };
+    let flat_sum = rsum(d, rat, &flat);
+
+    // Permute so the three slack atoms sit at the TAIL, where `B + (B + D)`
+    // is a genuine subterm of the right-nested sum.
+    let sorted = [qm, a_atom, qn, e_atom, b_atom, b_atom, d_atom];
+    let perm = rsum_perm(d, rat, &flat, &sorted);
+    let sorted_sum = rsum(d, rat, &sorted);
+
+    // `B + (B + D) = 1/(m+1)`, exactly.
+    let slack_sum = rsum(d, rat, &[b_atom, b_atom, d_atom]);
+    let slack_eq = {
+        // B + (B + D) = (B + B) + D
+        let bb = radd(d, b_atom, b_atom);
+        let assoc = d.lemma(rat.add_assoc, &[b_atom, b_atom, d_atom]);
+        let left_nested = radd(d, bb, d_atom);
+        let step0 = rsymm(d, left_nested, slack_sum, assoc);
+        // B + B = natDivSucc (1+1) sj = natDivSucc 2 sj
+        let one_one = d.add(one_nat, one_nat);
+        let fused_raw = d.const_app(rat.nat_div_succ, &[one_one, sj]);
+        let fuse = d.lemma(rat.nat_div_succ_add, &[one_nat, one_nat, sj]);
+        let two_sj = d.const_app(rat.nat_div_succ, &[two_nat, sj]);
+        let renumber = {
+            let refl_two = d.refl(two_nat);
+            nat_eq_to_rat(d, one_one, two_nat, refl_two, &|d, x| {
+                d.const_app(rat.nat_div_succ, &[x, sj])
+            })
+        };
+        // natDivSucc 2 sj = natDivSucc 1 j
+        let halve = d.lemma(rat.nat_div_succ_halve, &[j]);
+        let one_j = div_succ(d, p, 1, j);
+        let (_, bb_eq) = rchain(
+            d,
+            bb,
+            &[(fused_raw, fuse), (two_sj, renumber), (one_j, halve)],
+        );
+        let step1 = rcongr(d, bb, one_j, bb_eq, &|d, tm| radd(d, tm, d_atom));
+        let after_bb = radd(d, one_j, d_atom);
+        // 1/(j+1) + 2/(j+1) = natDivSucc (1+2) j = natDivSucc 3 j
+        let one_two = d.add(one_nat, two_nat);
+        let fused3_raw = d.const_app(rat.nat_div_succ, &[one_two, j]);
+        let fuse3 = d.lemma(rat.nat_div_succ_add, &[one_nat, two_nat, j]);
+        let three_j = d.const_app(rat.nat_div_succ, &[three_nat, j]);
+        let renumber3 = {
+            let refl_three = d.refl(three_nat);
+            nat_eq_to_rat(d, one_two, three_nat, refl_three, &|d, x| {
+                d.const_app(rat.nat_div_succ, &[x, j])
+            })
+        };
+        // natDivSucc 3 (3*m+2) = natDivSucc 1 m
+        let scale = d.lemma(rat.nat_div_succ_scale, &[two_nat, m]);
+        let (_, eq) = rchain(
+            d,
+            slack_sum,
+            &[
+                (left_nested, step0),
+                (after_bb, step1),
+                (fused3_raw, fuse3),
+                (three_j, renumber3),
+                (a_atom, scale),
+            ],
+        );
+        eq
+    };
+    let collapsed = [qm, a_atom, qn, e_atom, a_atom];
+    let collapse_step = rcongr(d, slack_sum, a_atom, slack_eq, &|d, tm| {
+        let i1 = radd(d, e_atom, tm);
+        let i2 = radd(d, qn, i1);
+        let i3 = radd(d, a_atom, i2);
+        radd(d, qm, i3)
+    });
+    let collapsed_sum = rsum(d, rat, &collapsed);
+
+    // Group the two indices.
+    let grouped = [qm, a_atom, a_atom, qn, e_atom];
+    let regroup = rsum_perm(d, rat, &collapsed, &grouped);
+    let grouped_sum = rsum(d, rat, &grouped);
+    let left_three = rsum(d, rat, &[qm, a_atom, a_atom]);
+    let right_two = rsum(d, rat, &[qn, e_atom]);
+    let split = {
+        let app = rsum_append(d, rat, &[qm, a_atom, a_atom], &[qn, e_atom]);
+        let joined = radd(d, left_three, right_two);
+        rsymm(d, joined, grouped_sum, app)
+    };
+    let joined = radd(d, left_three, right_two);
+
+    // `QM + (A + A) = natDivSucc (K+2) m` and `QN + E = natDivSucc (K+1) n`.
+    let km = div_succ_k(d, p, k2, m);
+    let k1 = d.add(cap_k, one_nat);
+    let kn1 = div_succ_k(d, p, k1, n);
+    let kn2 = div_succ_k(d, p, k2, n);
+    let left_eq = {
+        let aa = radd(d, a_atom, a_atom);
+        let one_one = d.add(one_nat, one_nat);
+        let fused_raw = d.const_app(rat.nat_div_succ, &[one_one, m]);
+        let fuse = d.lemma(rat.nat_div_succ_add, &[one_nat, one_nat, m]);
+        let two_m = d.const_app(rat.nat_div_succ, &[two_nat, m]);
+        let renumber = {
+            let refl_two = d.refl(two_nat);
+            nat_eq_to_rat(d, one_one, two_nat, refl_two, &|d, x| {
+                d.const_app(rat.nat_div_succ, &[x, m])
+            })
+        };
+        let (_, aa_eq) = rchain(d, aa, &[(fused_raw, fuse), (two_m, renumber)]);
+        let step = rcongr(d, aa, two_m, aa_eq, &|d, tm| radd(d, qm, tm));
+        let mid = radd(d, qm, two_m);
+        let fuse_k = d.lemma(rat.nat_div_succ_add, &[cap_k, two_nat, m]);
+        let (_, eq) = rchain(d, left_three, &[(mid, step), (km, fuse_k)]);
+        eq
+    };
+    let right_eq = d.lemma(rat.nat_div_succ_add, &[cap_k, one_nat, n]);
+    let fold_left = rcongr(d, left_three, km, left_eq, &|d, tm| radd(d, tm, right_two));
+    let after_left = radd(d, km, right_two);
+    let fold_right = rcongr(d, right_two, kn1, right_eq, &|d, tm| radd(d, km, tm));
+    let target1 = radd(d, km, kn1);
+    let target2 = radd(d, km, kn2);
+
+    let (_, total_eq) = rchain(
+        d,
+        total,
+        &[
+            (flat_sum, flatten),
+            (sorted_sum, perm),
+            (collapsed_sum, collapse_step),
+            (grouped_sum, regroup),
+            (joined, split),
+            (after_left, fold_left),
+            (target1, fold_right),
+        ],
+    );
+    // total_eq : Eq total (natDivSucc (K+2) m + natDivSucc (K+1) n)
+
+    let order = {
+        let refl_km = d.lemma(rat.le_refl, &[km]);
+        let widen_n = d.lemma(rat.nat_div_succ_le_add_left, &[k1, one_nat, n]);
+        d.lemma(rat.add_le_add, &[km, km, kn1, kn2, refl_km, widen_n])
+    };
+    // order : Rat.le target1 target2
+    let total_le = {
+        let back = rsymm(d, total, target1, total_eq);
+        rat_eq_rewrite(d, target1, total, back, order, &|d, tm| {
+            rle(d, rat, tm, target2)
+        })
+    };
+    // total_le : Rat.le total target2
+
+    let left_sample = sample(d, p, fm, m);
+    let right_sample = sample(d, p, fn_, n);
+    let difference = rsub(d, rat, left_sample, right_sample);
+    let body = weaken(d, p, difference, total, target2, sic, total_le);
+
+    let per_pair = {
+        let over_n = d.lam_fv(n_fv, nat, body);
+        d.lam_fv(m_fv, nat, over_n)
+    };
+    let witness = cexists_intro(d, p, nat, cauchy_pred, k2, per_pair);
+
+    let value = {
+        let over_hyp = d.lam_fv(hyp_fv, hyp_ty, witness);
+        let over_k = d.lam_fv(cap_k_fv, nat, over_hyp);
+        d.lam_fv(f_fv, seq_ty, over_k)
+    };
+    let ty = {
+        let concl = d.const_app(p.cauchy, &[f]);
+        let after_hyp = d.arrow(hyp_ty, concl);
+        let over_k = d.pi_fv(cap_k_fv, nat, after_hyp);
+        d.pi_fv(f_fv, seq_ty, over_k)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.cauchy_of_abs_diff_le,
         uparams: vec![],
         ty,
         value,

@@ -4064,6 +4064,33 @@ pub struct CRealPrelude {
     /// `riemannSum_cauchy`'s own doc comment records the identical gap for
     /// the integral. One lemma closes both.
     pub ivt_bisect_cauchy_bound: NameId,
+    /// `CReal.cauchy_of_abs_diff_le : ∀ (f : Nat → CReal) (K : Nat),
+    /// (∀ m n, le (abs (add (f m) (neg (f n))))
+    ///           (ofRat (Rat.add (natDivSucc K m) (natDivSucc K n)))) →
+    /// Cauchy f` (`creal/ivt.rs`) — **the REAL-valued Cauchy criterion,
+    /// bridged to [`Self::cauchy`]'s canonical-sample form.**
+    ///
+    /// Every estimate in this development that establishes a Cauchy sequence
+    /// produces a real inequality about `abs (f m − f n)`; [`Self::cauchy`]
+    /// is stated on the rational SAMPLES `seq (f m) m − seq (f n) n`. Nothing
+    /// crossed that gap in this direction — [`Self::close_within_of_within`]
+    /// and [`Self::close_within_of_within_indexed`] run the other way — and
+    /// `riemannSum_cauchy`'s own doc records the same gap for the integral.
+    ///
+    /// [`Self::within_of_two_sided_le`] reaches a `Within` at an arbitrary
+    /// SHARED index; [`Self::shared_index_to_canonical`] moves to the two
+    /// canonical ones at the cost of two regularity legs. **The index choice
+    /// `j := 3m+2` makes the whole seven-term bound an EQUALITY**, not a
+    /// chain of widenings: `Rat.natDivSucc_halve` collapses the two
+    /// `1/(2j+2)` legs to `1/(j+1)`, `Rat.natDivSucc_add` fuses that with the
+    /// `2/(j+1)` slack to `3/(j+1)`, and `Rat.natDivSucc_scale 2 m` makes
+    /// `3/(j+1)` exactly `1/(m+1)`. The only inequality in the proof is the
+    /// final `Rat.natDivSucc_le_add_left` raising one numerator from `K+1` to
+    /// the shared witness `K+2`.
+    ///
+    /// Filed in `creal/ivt.rs` because the exact IVT root is what first
+    /// needed it; nothing in the statement or the proof mentions the IVT.
+    pub cauchy_of_abs_diff_le: NameId,
     /// `CReal.hasDerivative_unique : ∀ F F1 F2 a b, HasDerivativeOn F F1 a b
     /// → HasDerivativeOn F F2 a b → lt a b → ∀ z, le a z → le z b → Equiv
     /// (F1 z) (F2 z)` (`creal/deriv_unique.rs`) — the derivative of a
@@ -5740,6 +5767,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         ivt_bisect_approx: kernel.name_str(creal, "ivt_bisect_approx"),
         abs_diff_le_of_small_image: kernel.name_str(creal, "abs_diff_le_of_small_image"),
         ivt_bisect_cauchy_bound: kernel.name_str(creal, "ivt_bisect_cauchy_bound"),
+        cauchy_of_abs_diff_le: kernel.name_str(creal, "cauchy_of_abs_diff_le"),
         has_derivative_unique: kernel.name_str(creal, "hasDerivative_unique"),
         fermat_interior_extremum: kernel.name_str(creal, "fermat_interiorExtremum"),
         rolle_interior_extremum: kernel.name_str(creal, "rolle_interiorExtremum"),
@@ -7196,6 +7224,8 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.rat_sq_le,
             |p: CRealPrelude| p.rat_sq_sandwich,
             |p: CRealPrelude| p.rat_unit_eq_one,
+            |p: CRealPrelude| p.seq,
+            |p: CRealPrelude| p.shared_index_to_canonical,
         ],
         run: mul_self_zero::declare_mul_self_zero,
     },
@@ -9706,6 +9736,7 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.add_zero,
             |p: CRealPrelude| p.bound,
             |p: CRealPrelude| p.bound_within,
+            |p: CRealPrelude| p.cauchy,
             |p: CRealPrelude| p.diff_le_of_strict_mono_magnitude,
             |p: CRealPrelude| p.equiv,
             |p: CRealPrelude| p.equiv_refl,
@@ -9730,6 +9761,7 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.mul_nonneg,
             |p: CRealPrelude| p.mul_one,
             |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.neg_le_abs,
             |p: CRealPrelude| p.neg_le_neg,
             |p: CRealPrelude| p.neg_sub_swap,
             |p: CRealPrelude| p.of_nat,
@@ -9748,10 +9780,13 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.uc_modulus,
             |p: CRealPrelude| p.uc_spec,
             |p: CRealPrelude| p.uniformly_continuous_on,
+            |p: CRealPrelude| p.within,
+            |p: CRealPrelude| p.within_of_two_sided_le,
             |p: CRealPrelude| p.zero,
         ],
         provides: &[
             |p: CRealPrelude| p.abs_diff_le_of_small_image,
+            |p: CRealPrelude| p.cauchy_of_abs_diff_le,
             |p: CRealPrelude| p.ivt_approx,
             |p: CRealPrelude| p.ivt_bisect,
             |p: CRealPrelude| p.ivt_bisect_diag,

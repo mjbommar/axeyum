@@ -53,5 +53,10 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.ivt_bisect_cauchy_bound,
             "theorem",
         ),
+        (
+            "CReal.cauchy_of_abs_diff_le",
+            p.cauchy_of_abs_diff_le,
+            "theorem",
+        ),
     ]
 }
