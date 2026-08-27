@@ -846,6 +846,15 @@ pub struct CRealPrelude {
     pub converges_unique: NameId,
     /// `CReal.converges_of_const : ∀ c, Converges (fun _ => c) c`.
     pub converges_of_const: NameId,
+    /// `CReal.converges_of_equiv : ∀ f target, (∀ n, Equiv (f n) target) →
+    /// Converges f target`.
+    ///
+    /// A sequence EXACTLY `Equiv` to a fixed target at every index (not just
+    /// in the limit) `Converges` to it at rate `K := 2` — one instantiation
+    /// of `Equiv`'s own per-index bound, no new estimate. See
+    /// `convergence.rs`'s `declare_converges_of_equiv` for why this is the
+    /// second half of the general bridge `CReal.integral_const` needs.
+    pub converges_of_equiv: NameId,
     /// `CReal.Cauchy (f : Nat → CReal) : Prop :=
     /// ∃ (K : Nat), ∀ m n, Within (seq (f m) m − seq (f n) n)
     /// (Rat.natDivSucc K m + Rat.natDivSucc K n)`.
@@ -877,6 +886,26 @@ pub struct CRealPrelude {
     /// bridge (the speed-up's own sample *is* the diagonal value, not a
     /// resampling of it), and closes exactly.
     pub regular_of_scaled_cauchy: NameId,
+    /// `CReal.converges_of_scaled_cauchy : ∀ f K,
+    /// (∀ m n, Within (seq (f m) m − seq (f n) n)
+    ///    (Rat.natDivSucc K m + Rat.natDivSucc K n)) →
+    /// Converges f (CReal.mk (speedup (diagonal f) K)
+    ///   (regular_of_scaled_cauchy f K h))`.
+    ///
+    /// The "speedup transported" bridge, and [`Self::regular_of_scaled_cauchy`]'s
+    /// companion: whenever `f` satisfies the SAME `K`-scaled Cauchy estimate
+    /// that makes `speedup (diagonal f) K` `Regular`, `f` also `Converges` to
+    /// the exact `CReal` that estimate builds via `CReal.mk`. Shares its
+    /// whole proof body with [`Self::converges_of_cauchy`]'s own inner
+    /// derivation (`speedup_close` plus one `Rat.natDivSucc_add` fusion); the
+    /// only difference is that `h`/`K` are bare hypotheses here rather than
+    /// an eliminated `Cauchy f` witness, so the conclusion NAMES the
+    /// constructed limit instead of hiding it behind an `Exists`. Built for
+    /// `creal/integral.rs`'s `CReal.integral_converges`, which ties
+    /// `CReal.integral`'s own `mk`/`speedup` construction back to
+    /// `Converges` — reusable by any future `integral_*` evaluation law that
+    /// needs the same tie.
+    pub converges_of_scaled_cauchy: NameId,
     /// `CReal.converges_of_cauchy : ∀ f, Cauchy f →
     /// Exists (fun L => Converges f L)`.
     ///
@@ -3505,6 +3534,31 @@ pub struct CRealPrelude {
     /// colliding with that file's own, unrelated, pre-existing
     /// `declare_integral`, which builds `CReal.riemannSum`).
     pub integral: NameId,
+    /// `CReal.integral_converges : ∀ F a b hab u, Converges (fun n =>
+    /// riemannSum F a b (Nat.add (deep F a b u n) 0)) (CReal.integral F a b
+    /// hab u)`.
+    ///
+    /// Ties `CReal.integral`'s own `mk`/`speedup` construction back to
+    /// `Converges`, fully generically in `F`/`a`/`b`/`hab`/`u` — the
+    /// `f_lambda`/`K`/`cauchy_proof` triple this reconstructs is EXACTLY
+    /// [`Self::integral`]'s own (`creal/integral.rs`'s `integral_witness`,
+    /// shared by both declarations so they cannot drift), so
+    /// [`Self::converges_of_scaled_cauchy`] applied to it produces a term
+    /// whose type is `CReal.integral F a b hab u` by unfolding alone — no
+    /// new estimate. See `creal/integral.rs`'s `declare_integral_converges`.
+    pub integral_converges: NameId,
+    /// `CReal.integral_const : ∀ c a b hab u, Equiv (CReal.integral (fun _ =>
+    /// c) a b hab u) (mul c (add b (neg a)))`.
+    ///
+    /// The first evaluation law for `CReal.integral`: a constant function's
+    /// integral is base times height. Combines [`Self::integral_converges`]
+    /// (specialised at `F := fun _ => c`) with [`Self::converges_of_equiv`]
+    /// (built from [`Self::riemann_sum_const`], exact for every subdivision
+    /// count) via [`Self::converges_unique`] — the SAME `Nat → CReal`
+    /// sequence provably converges to both `CReal.integral (fun _ => c) a b
+    /// hab u` and `mul c (b−a)`, so the two are `Equiv`. See
+    /// `creal/integral.rs`'s `declare_integral_const`.
+    pub integral_const: NameId,
 }
 
 impl CRealPrelude {
@@ -3679,6 +3733,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         converges: kernel.name_str(creal, "Converges"),
         converges_unique: kernel.name_str(creal, "converges_unique"),
         converges_of_const: kernel.name_str(creal, "converges_of_const"),
+        converges_of_equiv: kernel.name_str(creal, "converges_of_equiv"),
         cauchy: kernel.name_str(creal, "Cauchy"),
         converges_cauchy: kernel.name_str(creal, "converges_cauchy"),
         converges_add: kernel.name_str(creal, "converges_add"),
@@ -3754,6 +3809,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         regular_of_kregular: kernel.name_str(creal, "regular_of_kregular"),
         speedup_close: kernel.name_str(creal, "speedup_close"),
         regular_of_scaled_cauchy: kernel.name_str(creal, "regular_of_scaled_cauchy"),
+        converges_of_scaled_cauchy: kernel.name_str(creal, "converges_of_scaled_cauchy"),
         converges_of_cauchy: kernel.name_str(creal, "converges_of_cauchy"),
         sum_range: kernel.name_str(creal, "sumRange"),
         sum_range_zero: kernel.name_str(creal, "sumRange_zero"),
@@ -3911,6 +3967,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         riemann_sum_deep_cauchy: kernel.name_str(creal, "riemannSumDeepCauchy"),
         riemann_sum_deep_cauchy_folded: kernel.name_str(creal, "riemannSumDeepCauchyFolded"),
         integral: kernel.name_str(creal, "integral"),
+        integral_converges: kernel.name_str(creal, "integral_converges"),
+        integral_const: kernel.name_str(creal, "integral_const"),
     }
 }
 
@@ -4246,6 +4304,17 @@ pub(crate) fn build_creal_prelude_uncached(
         // `regular_of_scaled_cauchy` (`convergence::declare_cauchy_convergence`,
         // well above).
         integral::declare_creal_integral(&mut d, prelude)?;
+        // `integral_converges` ties `CReal.integral` (just above) back to
+        // `Converges` via `converges_of_scaled_cauchy`
+        // (`convergence::declare_cauchy_convergence`, well above); it is the
+        // reusable half of the transport every future `integral_*`
+        // evaluation law needs.
+        integral::declare_integral_converges(&mut d, prelude)?;
+        // `integral_const` needs `integral_converges` (just above),
+        // `riemannSum_const` (`integral::declare_integral`, well above),
+        // `converges_of_equiv` (`convergence::declare_convergence`, well
+        // above) and `converges_unique`/`equiv_symm` (both far above).
+        integral::declare_integral_const(&mut d, prelude)?;
         // `order_reflect_of_pos_deriv` needs only `strict_mono_of_pos_deriv`
         // (just declared above) plus `lt_trans`/`lt_irrefl`/`apart` (all far
         // above); nothing later depends on it, so it lands right after its

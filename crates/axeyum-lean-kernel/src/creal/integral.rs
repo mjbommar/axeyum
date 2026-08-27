@@ -120,6 +120,7 @@
 //! `declare_integral`'s caller for that check.
 
 use super::completeness::half_shift_le;
+use super::convergence::converges_applied;
 use super::ring_helpers::right_distrib;
 use super::series::{chain_within3, within_symm};
 use super::{
@@ -9318,54 +9319,30 @@ fn integral_diagonal(d: &mut IntDev<'_>, p: CRealPrelude, f: ExprId) -> ExprId {
     d.lam_fv(n_fv, nat, body)
 }
 
-/// `CReal.integral : ∀ F a b, CReal.le a b → CReal.UniformlyContinuousOn F a
-/// b → CReal`, defined as `CReal.mk (speedup (diagonal f) K) (regularity
-/// proof)`, `f := fun n => riemannSum F a b (deep F a b u n)`, `K` and the
-/// regularity proof both supplied by
-/// [`CRealPrelude::regular_of_scaled_cauchy`] applied at `f`, `K` (built
-/// purely from `magnitude`, [`fold_k`]) and a `Cauchy`-shaped instance of
-/// [`CRealPrelude::riemann_sum_deep_cauchy_folded`] at two FRESH indices
-/// (rebound as the outermost `∀ m n` `regular_of_scaled_cauchy` itself
-/// expects, rather than reusing that theorem's own `p`/`q` binder names --
-/// which sit INSIDE `hab`/`u` in its own Pi nesting, not outside them).
+/// Builds `(f_lambda, K, cauchy_proof)`, exactly as [`declare_creal_integral`]
+/// itself needs them: `f_lambda := fun n => riemannSum F a b (deep F a b u n
+/// + 0)`, `K := fold_k(magnitude)` from `direct_bound_le(width_of(a,b))`, and
+/// `cauchy_proof`, a `Within (seq (f_lambda m) m − seq (f_lambda n) n)` bound
+/// of `natDivSucc K m + natDivSucc K n` for every `m`/`n`, via
+/// `riemannSumDeepCauchyFolded` applied at fresh indices.
 ///
-/// **Kept generic over `(f, K, cauchy_proof)` until this exact point**:
-/// `regular_of_scaled_cauchy` is an ALREADY-PROVED theorem, so applying it
-/// here is one small `App` node referencing it by name -- it does not
-/// re-run or duplicate that theorem's own proof term. Nothing in `K`'s own
-/// construction is ever combined via `Nat.mul`/`Nat.add` with the bound
-/// index `n` anywhere in this declaration's statement (`K` and `n` are
-/// always SIBLING arguments to `Rat.natDivSucc`, never merged) -- unlike the
-/// `declare_e_converges` kernel-cost trap this module's own history
-/// documents, there is no partial evaluation for a concrete/symbolic mix to
-/// desynchronize on.
-///
-/// # Errors
-///
-/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
-/// the kernel **refused** a proof, not that a script gave up.
-pub(super) fn declare_creal_integral(
+/// **Extracted so [`declare_integral_converges`] can build the exact same
+/// triple, call for call**, rather than risk a syntactically different (even
+/// if propositionally equal) reconstruction: `CReal.integral F a b hab u`
+/// unfolds to `CReal.mk (speedup (integral_diagonal f_lambda) K) (…)` with
+/// THIS `f_lambda`/`K`, so any caller that needs a term whose type mentions
+/// `CReal.integral` on the nose must reproduce them identically, and sharing
+/// one function is the only way to guarantee that rather than hope for it.
+fn integral_witness(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
-) -> Result<(), KernelError> {
-    let carrier = creal_ty(d, p);
+    f: ExprId,
+    a: ExprId,
+    b: ExprId,
+    hab: ExprId,
+    u: ExprId,
+) -> (ExprId, ExprId, ExprId) {
     let nat = d.nat_ty();
-    let f_ty = fn_ty(d, p);
-
-    let f_fv = d.fresh_fvar();
-    let f = d.kernel().fvar(f_fv);
-    let a_fv = d.fresh_fvar();
-    let a = d.kernel().fvar(a_fv);
-    let b_fv = d.fresh_fvar();
-    let b = d.kernel().fvar(b_fv);
-
-    let hab_ty = cle(d, p, a, b);
-    let hab_fv = d.fresh_fvar();
-    let hab = d.kernel().fvar(hab_fv);
-
-    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
-    let u_fv = d.fresh_fvar();
-    let u = d.kernel().fvar(u_fv);
 
     // f_lambda := fun n => riemannSum F a b (deep F a b u n + 0) -- the
     // raw-indexed sequence `riemannSumDeepCauchyFolded` is itself a Cauchy
@@ -9397,6 +9374,59 @@ pub(super) fn declare_creal_integral(
         d.lam_fv(m_fv, nat, with_n)
     };
 
+    (f_lambda, k, cauchy_proof)
+}
+
+/// `CReal.integral : ∀ F a b, CReal.le a b → CReal.UniformlyContinuousOn F a
+/// b → CReal`, defined as `CReal.mk (speedup (diagonal f) K) (regularity
+/// proof)`, `f := fun n => riemannSum F a b (deep F a b u n)`, `K` and the
+/// regularity proof both supplied by
+/// [`CRealPrelude::regular_of_scaled_cauchy`] applied at `f`, `K` (built
+/// purely from `magnitude`, [`fold_k`]) and a `Cauchy`-shaped instance of
+/// [`CRealPrelude::riemann_sum_deep_cauchy_folded`] at two FRESH indices
+/// (rebound as the outermost `∀ m n` `regular_of_scaled_cauchy` itself
+/// expects, rather than reusing that theorem's own `p`/`q` binder names --
+/// which sit INSIDE `hab`/`u` in its own Pi nesting, not outside them).
+///
+/// **Kept generic over `(f, K, cauchy_proof)` until this exact point**:
+/// `regular_of_scaled_cauchy` is an ALREADY-PROVED theorem, so applying it
+/// here is one small `App` node referencing it by name -- it does not
+/// re-run or duplicate that theorem's own proof term. Nothing in `K`'s own
+/// construction is ever combined via `Nat.mul`/`Nat.add` with the bound
+/// index `n` anywhere in this declaration's statement (`K` and `n` are
+/// always SIBLING arguments to `Rat.natDivSucc`, never merged) -- unlike the
+/// `declare_e_converges` kernel-cost trap this module's own history
+/// documents, there is no partial evaluation for a concrete/symbolic mix to
+/// desynchronize on.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_creal_integral(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let f_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+
+    let (f_lambda, k, cauchy_proof) = integral_witness(d, p, f, a, b, hab, u);
+
     let regularity = d.lemma(p.regular_of_scaled_cauchy, &[f_lambda, k, cauchy_proof]);
     let diag = integral_diagonal(d, p, f_lambda);
     let speedup_term = d.const_app(p.speedup, &[diag, k]);
@@ -9423,5 +9453,196 @@ pub(super) fn declare_creal_integral(
         ty,
         value,
         hint: ReducibilityHint::Regular(INTEGRAL_HEIGHT),
+    })
+}
+
+/// `CReal.integral_converges : ∀ F a b hab u, Converges (fun n => riemannSum
+/// F a b (Nat.add (deep F a b u n) 0)) (CReal.integral F a b hab u)`.
+///
+/// Ties `CReal.integral`'s own `mk`/`speedup` construction back to
+/// `Converges`, fully generically in `F`/`a`/`b`/`hab`/`u`. Reconstructs the
+/// EXACT same `(f_lambda, K, cauchy_proof)` triple [`declare_creal_integral`]
+/// itself builds — both call [`integral_witness`], so they cannot drift
+/// apart — applies [`CRealPrelude::converges_of_scaled_cauchy`] to it, and
+/// states the conclusion as `Converges f_lambda (CReal.integral F a b hab
+/// u)` rather than the raw `CReal.mk (…)` term that application actually
+/// produces. The kernel accepts the substitution by unfolding
+/// `CReal.integral`'s own `Definition` at these exact arguments: since
+/// [`declare_creal_integral`] built `CReal.integral` from this very
+/// `integral_witness` triple, the two sides are the same term after
+/// delta/beta, not merely propositionally equal.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+pub(super) fn declare_integral_converges(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let f_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+
+    let (f_lambda, k, cauchy_proof) = integral_witness(d, p, f, a, b, hab, u);
+
+    let value_body = d.lemma(p.converges_of_scaled_cauchy, &[f_lambda, k, cauchy_proof]);
+
+    let integral_val = d.const_app(p.integral, &[f, a, b, hab, u]);
+    let concl = converges_applied(d, p, f_lambda, integral_val);
+
+    // `concl` mentions `hab`/`u` (via `integral_val`), so both must be bound
+    // with `pi_fv`, not `d.arrow` — an `arrow` here would leave those fvars
+    // unbound (`UnboundFVar`), unlike `declare_creal_integral`'s own `ty`,
+    // whose codomain is bare `carrier` and mentions neither.
+    let ty = {
+        let after_u = d.pi_fv(u_fv, u_ty, concl);
+        let after_hab = d.pi_fv(hab_fv, hab_ty, after_u);
+        let over_b = d.pi_fv(b_fv, carrier, after_hab);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        d.pi_fv(f_fv, f_ty, over_a)
+    };
+    let value = {
+        let with_u = d.lam_fv(u_fv, u_ty, value_body);
+        let with_hab = d.lam_fv(hab_fv, hab_ty, with_u);
+        let over_b = d.lam_fv(b_fv, carrier, with_hab);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        d.lam_fv(f_fv, f_ty, over_a)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.integral_converges,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.integral_const : ∀ c a b hab u, Equiv (CReal.integral (fun _ => c)
+/// a b hab u) (mul c (add b (neg a)))`.
+///
+/// The first evaluation law for `CReal.integral`: a constant function's
+/// integral is base times height, for the SAME reasons
+/// [`declare_riemann_sum_const`] proves it exactly at every subdivision
+/// count. Two `Converges` facts about the one `Nat → CReal` sequence
+/// `f_lambda := fun n => riemannSum (fun _ => c) a b (deep (fun _ => c) a b u
+/// n + 0)`:
+///
+/// 1. [`declare_integral_converges`] (specialised at `F := fun _ => c`):
+///    `Converges f_lambda (CReal.integral (fun _ => c) a b hab u)`.
+/// 2. [`CRealPrelude::converges_of_equiv`] applied to
+///    [`declare_riemann_sum_const`] instantiated at every deep index in one
+///    lambda: `riemannSum (fun _ => c) a b m ~ mul c (b−a)` holds for EVERY
+///    `m`, so `f_lambda n ~ mul c (b−a)` for EVERY `n`, and
+///    `converges_of_equiv` turns that pointwise fact into `Converges
+///    f_lambda (mul c (b−a))` directly (no new estimate — see that
+///    declaration's own doc comment for why `K := 2` suffices).
+///
+/// `CReal.converges_unique` then gives `Equiv (mul c (b−a)) (CReal.integral
+/// …)`, and one `Equiv.symm` flips it to the stated direction.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+pub(super) fn declare_integral_const(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let f_const = {
+        let r_fv = d.fresh_fvar();
+        d.lam_fv(r_fv, carrier, c)
+    };
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f_const, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+
+    let (f_lambda, _k, _cauchy_proof) = integral_witness(d, p, f_const, a, b, hab, u);
+
+    let integral_val = d.const_app(p.integral, &[f_const, a, b, hab, u]);
+    let conv_integral = d.lemma(p.integral_converges, &[f_const, a, b, hab, u]);
+    // conv_integral : Converges f_lambda integral_val
+
+    let width = width_of(d, p, a, b);
+    let target = cmul(d, p, c, width);
+
+    // pointwise : forall n, Equiv (f_lambda n) target -- reconstructing
+    // `f_lambda n`'s own `m_n` (deep_at + zero add) so the LHS of each
+    // instance is exactly `f_lambda`'s body, not merely defeq to it.
+    let pointwise = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let deep_n = deep_at(d, p, f_const, a, b, u, n);
+        let zero_n = d.num(0);
+        let m_n = NatOps::add(d, deep_n, zero_n);
+        let inst = d.lemma(p.riemann_sum_const, &[c, a, b, m_n]);
+        // inst : Equiv (riemannSum f_const a b m_n) target
+        d.lam_fv(n_fv, nat, inst)
+    };
+
+    let conv_target = d.lemma(p.converges_of_equiv, &[f_lambda, target, pointwise]);
+    // conv_target : Converges f_lambda target
+
+    let unique = d.lemma(
+        p.converges_unique,
+        &[f_lambda, target, integral_val, conv_target, conv_integral],
+    );
+    // unique : Equiv target integral_val
+
+    let proof = d.lemma(p.equiv_symm, &[target, integral_val, unique]);
+    // proof : Equiv integral_val target
+
+    let ty_body = equiv(d, p, integral_val, target);
+
+    let value = {
+        let with_u = d.lam_fv(u_fv, u_ty, proof);
+        let with_hab = d.lam_fv(hab_fv, hab_ty, with_u);
+        let over_b = d.lam_fv(b_fv, carrier, with_hab);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        d.lam_fv(c_fv, carrier, over_a)
+    };
+    // `ty_body` mentions `hab`/`u` (via `integral_val`), so both must be
+    // bound with `pi_fv`, not `d.arrow` -- see `declare_integral_converges`'s
+    // own `ty` for the identical trap.
+    let ty = {
+        let after_u = d.pi_fv(u_fv, u_ty, ty_body);
+        let after_hab = d.pi_fv(hab_fv, hab_ty, after_u);
+        let over_b = d.pi_fv(b_fv, carrier, after_hab);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        d.pi_fv(c_fv, carrier, over_a)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.integral_const,
+        uparams: vec![],
+        ty,
+        value,
     })
 }

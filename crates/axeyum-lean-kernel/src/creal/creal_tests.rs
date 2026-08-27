@@ -115,7 +115,7 @@ fn on_a_deep_stack_creal<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'stat
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 344] = [
+    let expected: [(&str, crate::NameId, &str); 348] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -259,6 +259,10 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         ("CReal.Converges", p.converges, "def"),
         ("CReal.converges_unique", p.converges_unique, "theorem"),
         ("CReal.converges_of_const", p.converges_of_const, "theorem"),
+        // The "speedup transported" bridge's second half: a sequence EXACTLY
+        // `Equiv` to a fixed target at every index `Converges` to it, at rate
+        // `K := 2` (creal/convergence.rs's `declare_converges_of_equiv`).
+        ("CReal.converges_of_equiv", p.converges_of_equiv, "theorem"),
         ("CReal.Cauchy", p.cauchy, "def"),
         ("CReal.converges_cauchy", p.converges_cauchy, "theorem"),
         // Algebra of limits (ADR-0512 phase R9, continued): the shift bridge
@@ -452,6 +456,15 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         (
             "CReal.regular_of_scaled_cauchy",
             p.regular_of_scaled_cauchy,
+            "theorem",
+        ),
+        // `regular_of_scaled_cauchy`'s companion: `f` `Converges` to the
+        // exact `CReal` that estimate builds via `CReal.mk`, no new
+        // estimate (creal/convergence.rs's
+        // `declare_converges_of_scaled_cauchy`).
+        (
+            "CReal.converges_of_scaled_cauchy",
+            p.converges_of_scaled_cauchy,
             "theorem",
         ),
         (
@@ -1063,6 +1076,14 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         // unrelated, earlier `declare_integral` (which builds
         // `CReal.riemannSum`).
         ("CReal.integral", p.integral, "def"),
+        // Ties `CReal.integral`'s own `mk`/`speedup` construction back to
+        // `Converges`, fully generically in `F`/`a`/`b`/`hab`/`u`
+        // (creal/integral.rs's `declare_integral_converges`).
+        ("CReal.integral_converges", p.integral_converges, "theorem"),
+        // The first evaluation law for `CReal.integral`: a constant
+        // function's integral is base times height (creal/integral.rs's
+        // `declare_integral_const`), Spivak Ch14's opening computation.
+        ("CReal.integral_const", p.integral_const, "theorem"),
         // Chapter 18/22: the geometric domination of `expTerm`, ending at the
         // `abs`-shaped form `sumRange_cauchy_of_dominated` consumes.
         ("CReal.expDominant", p.exp_dominant, "def"),

@@ -240,6 +240,7 @@ pub(super) fn declare_convergence(d: &mut IntDev<'_>, p: CRealPrelude) -> Result
     declare_converges(d, p)?;
     declare_converges_unique(d, p)?;
     declare_converges_of_const(d, p)?;
+    declare_converges_of_equiv(d, p)?;
     declare_cauchy(d, p)?;
     declare_converges_cauchy(d, p)?;
     declare_converges_add(d, p)?;
@@ -657,6 +658,80 @@ fn declare_converges_of_const(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(),
     let value = d.lam_fv(c_fv, carrier, claim);
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.converges_of_const,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.converges_of_equiv : ∀ f target, (∀ n, Equiv (f n) target) →
+/// Converges f target`.
+///
+/// A `Nat → CReal` sequence each of whose terms is EXACTLY `Equiv` to a fixed
+/// `target` — not merely close for large `n`, but for EVERY `n` — trivially
+/// `Converges` to it, at the fixed rate `K := 2`. `Equiv (f n) target`
+/// unfolds to `∀ j, Within (seq (f n) j − seq target j) (natDivSucc 2 j)`
+/// ([`super::equiv`]'s own definition); instantiating that at `j := n` is
+/// already exactly `Converges`'s own per-index bound at `K = 2`
+/// ([`converges_body`]) — no index shift, no estimate, no dependence on `f`
+/// beyond the hypothesis itself.
+///
+/// This is the second half of the general "speedup transported" bridge
+/// [`declare_converges_of_scaled_cauchy`] provides the first half of:
+/// together with `CReal.converges_unique`, a sequence that is (a) EXACTLY
+/// `Equiv` to a known constant at every index and (b) the diagonal input to
+/// some `CReal.mk (speedup … K) …` construction lets a caller conclude that
+/// constructed `CReal` is `Equiv` to the known constant, with no new
+/// epsilon estimate anywhere. `creal/integral.rs`'s `CReal.integral_const`
+/// is the first such caller — `CReal.riemannSum_const` supplies exactly this
+/// pointwise-equiv hypothesis against `mul c (b−a)`, for every subdivision
+/// count, not just in the limit.
+fn declare_converges_of_equiv(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let seq_ty = seq_fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let target_fv = d.fresh_fvar();
+    let target = d.kernel().fvar(target_fv);
+
+    let hyp_ty = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let fn_term = d.apply(f, &[n]);
+        let claim = equiv(d, p, fn_term, target);
+        d.pi_fv(n_fv, nat, claim)
+    };
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let two_nat = d.num(2);
+
+    let per_n = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let hn = d.apply(h, &[n]); // Equiv (f n) target
+        let inst = d.apply(hn, &[n]); // Within (seq (f n) n - seq target n) (natDivSucc 2 n)
+        d.lam_fv(n_fv, nat, inst)
+    };
+
+    let converges_pred = converges_predicate(d, p, f, target);
+    let claim = exists_intro(d, p, nat, converges_pred, two_nat, per_n);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hyp_ty, claim);
+        let with_target = d.lam_fv(target_fv, carrier, with_h);
+        d.lam_fv(f_fv, seq_ty, with_target)
+    };
+    let ty = {
+        let concl = converges_applied(d, p, f, target);
+        let inner = d.arrow(hyp_ty, concl);
+        let with_target = d.pi_fv(target_fv, carrier, inner);
+        d.pi_fv(f_fv, seq_ty, with_target)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.converges_of_equiv,
         uparams: vec![],
         ty,
         value,
@@ -1119,6 +1194,109 @@ fn declare_regular_of_scaled_cauchy(
     })
 }
 
+/// `CReal.converges_of_scaled_cauchy : ∀ f K, (∀ m n, Within (seq (f m) m −
+/// seq (f n) n) (natDivSucc K m + natDivSucc K n)) → Converges f (CReal.mk
+/// (speedup (diagonal f) K) (regular_of_scaled_cauchy f K h))`.
+///
+/// **The "speedup transported" bridge.** [`declare_regular_of_scaled_cauchy`]
+/// (just above) shows a `K`-scaled Cauchy witness `h` makes `speedup
+/// (diagonal f) K` `Regular`, i.e. that `CReal.mk (speedup (diagonal f) K) …`
+/// is a well-formed `CReal`. This theorem is the companion fact a caller
+/// needs to relate THAT specific `CReal` back to the sequence `f` it was
+/// built from: `f` itself `Converges` to it. Its whole proof body is
+/// [`declare_converges_of_cauchy`]'s own inner `minor` (`speedup_close` at
+/// `(raw, K, kregular_proof)`, one `Rat.natDivSucc_add` fusion `(K+1)+1`),
+/// reused verbatim — the only difference is that `h` here is a bare
+/// hypothesis rather than an eliminated `Cauchy f` witness, so the
+/// conclusion can NAME the constructed limit directly instead of hiding it
+/// behind an `Exists`. That is exactly what a caller who already built `h`
+/// and `K` outside a `Cauchy`-wrapper needs — `creal/integral.rs`'s
+/// `CReal.integral_converges` is the first such caller, ties `CReal.integral`
+/// itself (built via [`Self::regular_of_scaled_cauchy`]) back to `Converges`
+/// with no new estimate, and is the reusable half of the transport any
+/// future `integral_*` evaluation law needs (see that declaration's own doc
+/// comment).
+///
+/// [`Self::regular_of_scaled_cauchy`]: super::CRealPrelude::regular_of_scaled_cauchy
+fn declare_converges_of_scaled_cauchy(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let nat = d.nat_ty();
+    let seq_ty = seq_fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let hyp_ty = cauchy_body(d, p, f, k);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let raw = diagonal(d, p, f);
+    let kregular_proof = kregular_of_cauchy_proof(d, p, raw, k, h);
+    let reg_proof = d.const_app(p.regular_of_kregular, &[raw, k, kregular_proof]);
+    let speedup_term = d.const_app(p.speedup, &[raw, k]);
+    let l_val = d.const_app(p.mk, &[speedup_term, reg_proof]);
+
+    let sc = d.const_app(p.speedup_close, &[raw, k, kregular_proof]);
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let raw_n = d.apply(raw, &[n]);
+    let speedup_n = d.apply(speedup_term, &[n]);
+    let diff_n = rsub(d, rat, raw_n, speedup_n);
+
+    let succ_k = d.succ(k);
+    let one_nat = d.num(1);
+    let bound_left_n = div_succ_at(d, p, succ_k, n);
+    let bound_right_n = div_succ_at(d, p, one_nat, n);
+    let sc_n_bound = radd(d, bound_left_n, bound_right_n);
+
+    let sc_n = d.apply(sc, &[n]);
+    // sc_n : Within diff_n sc_n_bound
+    //      = Within (seq (f n) n - seq l_val n) sc_n_bound, by beta/iota.
+
+    let fuse = d.lemma(rat.nat_div_succ_add, &[succ_k, one_nat, n]);
+    let k2 = NatOps::add(d, succ_k, one_nat);
+    let target_bound_n = div_succ_at(d, p, k2, n);
+    let step = rat_eq_rewrite(d, sc_n_bound, target_bound_n, fuse, sc_n, &|d, t| {
+        within(d, p, diff_n, t)
+    });
+    // step : Within diff_n (natDivSucc k2 n)
+    //      = Within (seq (f n) n - seq l_val n) (natDivSucc k2 n).
+
+    let over_n = d.lam_fv(n_fv, nat, step);
+    let converges_pred = converges_predicate(d, p, f, l_val);
+    let conv_proof = exists_intro(d, p, nat, converges_pred, k2, over_n);
+    // conv_proof : Converges f l_val
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, hyp_ty, conv_proof);
+        let with_k = d.lam_fv(k_fv, nat, with_h);
+        d.lam_fv(f_fv, seq_ty, with_k)
+    };
+    // `l_val` embeds `reg_proof`, which embeds `h` (via
+    // `kregular_of_cauchy_proof`) — unlike `regular_of_scaled_cauchy`'s own
+    // conclusion `Regular (speedup raw K)`, which mentions neither `h` nor
+    // any proof term at all. So `concl` genuinely depends on `h` here, and
+    // `h` must be bound with `pi_fv`, not `d.arrow`.
+    let ty = {
+        let concl = converges_applied(d, p, f, l_val);
+        let inner = d.pi_fv(h_fv, hyp_ty, concl);
+        let with_k = d.pi_fv(k_fv, nat, inner);
+        d.pi_fv(f_fv, seq_ty, with_k)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.converges_of_scaled_cauchy,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 /// `CReal.converges_of_cauchy : ∀ f, Cauchy f → Exists (fun L => Converges f L)`.
 ///
 /// **The `Cauchy → Converges` bridge.** Eliminates `Cauchy f`'s witness `K`,
@@ -1236,6 +1414,7 @@ pub(super) fn declare_cauchy_convergence(
     p: CRealPrelude,
 ) -> Result<(), KernelError> {
     declare_regular_of_scaled_cauchy(d, p)?;
+    declare_converges_of_scaled_cauchy(d, p)?;
     declare_converges_of_cauchy(d, p)
 }
 
