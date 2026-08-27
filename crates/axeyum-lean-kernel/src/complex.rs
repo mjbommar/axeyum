@@ -86,7 +86,7 @@ use crate::creal::build_creal_prelude;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::{IntDev, exists_elim};
-use crate::name::NameId;
+use crate::name::{NameId, NameNode};
 use crate::nat_prelude::{NatOps, NatPrelude};
 use crate::rat_prelude::ops::{den, num, radd, rat_eq_rewrite, rle, rneg, rsymm, rzero};
 use crate::{Kernel, KernelError};
@@ -1791,6 +1791,697 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Build order as data (level 1 of the phase-order fix)
+// ---------------------------------------------------------------------------
+//
+// `docs/research/11-design-review/2026-08-27-architecture-review.md` §1
+// measures the failure class this section exists to eliminate: every
+// `ComplexPrelude` `NameId` is interned up front by `intern_names`, so `p.foo`
+// is always a valid *handle* -- the failure is that the *declaration* `foo` is
+// not yet in the kernel environment when a `declare_*` runs, and the kernel's
+// `UnknownConst` is indistinguishable from `foo` never having been written at
+// all. Four lanes hit exactly this on `creal.rs` in one day and each "fixed"
+// it by adding a duplicate declaration elsewhere, because the error gave no
+// way to tell "not yet declared" from "does not exist".
+//
+// [`BuildStep`] makes each step's dependencies data instead of only being
+// implicit in call order, and [`validate_step_order`] checks that data is
+// self-consistent -- purely structurally, with no kernel involved -- so a step
+// moved earlier than its dependency is caught with a diagnosis naming the
+// missing declaration, the step that would produce it, and both steps'
+// positions, before the kernel ever sees a malformed term.
+
+/// One step of [`build_complex_prelude`]'s build order: the fields (by
+/// [`ComplexPrelude`] accessor) this step's proof terms reference and
+/// therefore require already declared in the kernel environment, the fields
+/// it declares once it runs, and the `declare_*` function itself.
+///
+/// `requires`/`provides` are function pointers rather than string literals so
+/// a field rename is a compile error here, not a silently-stale table; the
+/// human-readable name used in diagnostics is rendered from the `NameId`
+/// itself (`render_name`), which is also what the kernel's own errors name.
+struct BuildStep {
+    /// The declaring function's name, for diagnostics only.
+    label: &'static str,
+    /// Fields this step's proof terms reference and so requires already
+    /// declared. Extracted from the existing `build_complex_prelude` call
+    /// sequence and each step's referenced fields, transitively through this
+    /// module's private term-builder helpers -- see
+    /// `docs/research/11-design-review/2026-08-27-prelude-build-spike.md`.
+    requires: &'static [fn(ComplexPrelude) -> NameId],
+    /// Fields this step declares (via `add_declaration`/`add_inductive`).
+    provides: &'static [fn(ComplexPrelude) -> NameId],
+    /// The `declare_*` function that performs the declaration(s).
+    run: fn(&mut IntDev<'_>, ComplexPrelude) -> Result<(), KernelError>,
+}
+
+/// Renders a [`NameId`]'s dotted display form (e.g. `"Complex.mul"`), for
+/// diagnostics only. Name *identity* is always `NameId` equality (`name.rs`);
+/// this never participates in it.
+fn render_name(kernel: &Kernel, name: NameId) -> String {
+    match kernel.name_node(name) {
+        NameNode::Anonymous => String::new(),
+        NameNode::Str(parent, s) => {
+            let parent_text = render_name(kernel, *parent);
+            if parent_text.is_empty() {
+                s.clone()
+            } else {
+                format!("{parent_text}.{s}")
+            }
+        }
+        NameNode::Num(parent, n) => {
+            let parent_text = render_name(kernel, *parent);
+            if parent_text.is_empty() {
+                n.to_string()
+            } else {
+                format!("{parent_text}.{n}")
+            }
+        }
+    }
+}
+
+/// A [`STEPS`] entry requires a declaration before the step that would
+/// produce it has run -- the phase-order failure class from §1 of the
+/// architecture review, caught structurally rather than as a raw
+/// `UnknownConst`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct OrderViolation {
+    /// Index into `steps` of the step whose `requires` fired.
+    consumer_index: usize,
+    /// That step's label.
+    consumer_label: &'static str,
+    /// The missing declaration.
+    missing: NameId,
+    /// The step that declares `missing` and its index, if any step in the
+    /// table does. `None` means the table itself is incomplete: it names a
+    /// dependency nothing in `steps` provides, which is a bug in the table,
+    /// not merely in the order.
+    provider: Option<(usize, &'static str)>,
+}
+
+/// Checks that `steps` is a valid topological order for the dependencies it
+/// declares: every `requires` entry is provided by a strictly earlier step.
+///
+/// Purely structural: evaluates each step's accessor against `p` to obtain
+/// concrete `NameId`s, but never touches a kernel's environment. That is what
+/// makes it possible to test with a deliberately-broken order (see
+/// `complex_tests::order_violation_is_detected_and_precise`) without building
+/// anything, and to run it as a preflight in [`build_complex_prelude`] before
+/// any expensive kernel work.
+///
+/// # Errors
+///
+/// The first requirement not satisfied by a strictly earlier step, as an
+/// [`OrderViolation`].
+fn validate_step_order(
+    p: ComplexPrelude,
+    steps: &'static [BuildStep],
+) -> Result<(), OrderViolation> {
+    let mut declared: std::collections::HashSet<NameId> = std::collections::HashSet::new();
+    for (index, step) in steps.iter().enumerate() {
+        for &req in step.requires {
+            let name = req(p);
+            if declared.contains(&name) {
+                continue;
+            }
+            let provider = steps
+                .iter()
+                .enumerate()
+                .find(|(_, s)| s.provides.iter().any(|&pf| pf(p) == name))
+                .map(|(i, s)| (i, s.label));
+            return Err(OrderViolation {
+                consumer_index: index,
+                consumer_label: step.label,
+                missing: name,
+                provider,
+            });
+        }
+        for &prov in step.provides {
+            declared.insert(prov(p));
+        }
+    }
+    Ok(())
+}
+
+/// The complex prelude's build order, as data: each step names the fields
+/// (by [`ComplexPrelude`] accessor) it requires already declared in the
+/// kernel environment and the fields it declares once it runs.
+///
+/// This is the level-1 fix for the phase-order failure class in
+/// `docs/research/11-design-review/2026-08-27-architecture-review.md` §1:
+/// `KernelError::UnknownConst` alone is indistinguishable from "this
+/// declaration does not exist", because every `NameId` is interned up
+/// front regardless of build order. [`validate_step_order`] checks this
+/// table's internal consistency (purely structurally, no kernel needed) so
+/// a step moved earlier than its dependency is caught with a diagnostic
+/// naming the missing declaration, the step that would produce it, and
+/// both steps' positions -- instead of a bare `UnknownConst` indistinguishable
+/// from a missing declaration.
+///
+/// Generated from the existing `build_complex_prelude` call sequence and each
+/// step's referenced `ComplexPrelude` fields (transitively, through this
+/// module's private term-builder helpers); see
+/// `docs/research/11-design-review/2026-08-27-prelude-build-spike.md` for the
+/// extraction method. Validated: the existing order already satisfies every
+/// one of the 1,279 requirement edges below.
+const STEPS: &[BuildStep] = &[
+    BuildStep {
+        label: "declare_carrier",
+        requires: &[],
+        provides: &[|p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.mk, |p: ComplexPrelude| p.rec],
+        run: declare_carrier,
+    },
+    BuildStep {
+        label: "declare_projections",
+        requires: &[|p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.rec],
+        provides: &[|p: ComplexPrelude| p.im, |p: ComplexPrelude| p.re],
+        run: declare_projections,
+    },
+    BuildStep {
+        label: "declare_equiv",
+        requires: &[|p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.re],
+        provides: &[|p: ComplexPrelude| p.equiv],
+        run: declare_equiv,
+    },
+    BuildStep {
+        label: "declare_setoid_laws",
+        requires: &[|p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.re],
+        provides: &[|p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans],
+        run: declare_setoid_laws,
+    },
+    BuildStep {
+        label: "declare_constants",
+        requires: &[|p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.mk],
+        provides: &[|p: ComplexPrelude| p.i, |p: ComplexPrelude| p.of_real, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.zero],
+        run: declare_constants,
+    },
+    BuildStep {
+        label: "declare_operations",
+        requires: &[|p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.mk, |p: ComplexPrelude| p.re],
+        provides: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.conj, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.norm_sq],
+        run: declare_operations,
+    },
+    BuildStep {
+        label: "declare_congruences",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.conj, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.re],
+        provides: &[|p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.conj_congr, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.neg_congr],
+        run: declare_congruences,
+    },
+    BuildStep {
+        label: "declare_projection_congruences",
+        requires: &[|p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.re],
+        provides: &[|p: ComplexPrelude| p.im_congr, |p: ComplexPrelude| p.re_congr],
+        run: declare_projection_congruences,
+    },
+    BuildStep {
+        label: "declare_ring_laws",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.conj, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.i, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_congr, |p: ComplexPrelude| p.of_real, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.re, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_zero],
+        run: declare_ring_laws,
+    },
+    BuildStep {
+        label: "declare_pinning",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.conj, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.i, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_congr, |p: ComplexPrelude| p.of_real, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.re, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.i_sq, |p: ComplexPrelude| p.not_zero_i, |p: ComplexPrelude| p.not_zero_one, |p: ComplexPrelude| p.of_real_add, |p: ComplexPrelude| p.of_real_mul],
+        run: declare_pinning,
+    },
+    BuildStep {
+        label: "declare_re_add_im",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.conj, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.i, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_congr, |p: ComplexPrelude| p.of_real, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.re, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.re_add_im],
+        run: declare_re_add_im,
+    },
+    BuildStep {
+        label: "declare_conj_laws",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.conj, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.i, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_congr, |p: ComplexPrelude| p.of_real, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.re, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.conj_add, |p: ComplexPrelude| p.conj_conj, |p: ComplexPrelude| p.conj_mul],
+        run: declare_conj_laws,
+    },
+    BuildStep {
+        label: "declare_conj_sub_ofreal_i",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.conj, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.i, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_congr, |p: ComplexPrelude| p.of_real, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.re, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.conj_i, |p: ComplexPrelude| p.conj_of_real, |p: ComplexPrelude| p.conj_sub],
+        run: declare_conj_sub_ofreal_i,
+    },
+    BuildStep {
+        label: "declare_conj_zero_one",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.conj, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.i, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_congr, |p: ComplexPrelude| p.of_real, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.conj_one, |p: ComplexPrelude| p.conj_zero],
+        run: declare_conj_zero_one,
+    },
+    BuildStep {
+        label: "declare_eq_conj_iff_real",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.conj, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_congr, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.re, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.eq_conj_iff_real],
+        run: declare_eq_conj_iff_real,
+    },
+    BuildStep {
+        label: "declare_norm",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.conj, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.i, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_congr, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.of_real, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.re, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.mul_conj, |p: ComplexPrelude| p.norm_sq_nonneg],
+        run: declare_norm,
+    },
+    BuildStep {
+        label: "declare_norm_conjugation",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.conj, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_congr, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.re, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.norm_sq_conj, |p: ComplexPrelude| p.norm_sq_mul],
+        run: declare_norm_conjugation,
+    },
+    BuildStep {
+        label: "declare_norm_sq_eq_zero_of_eq_zero",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_congr, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.re, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.norm_sq_eq_zero_of_eq_zero],
+        run: declare_norm_sq_eq_zero_of_eq_zero,
+    },
+    BuildStep {
+        label: "declare_eq_zero_of_norm_sq_eq_zero",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.re, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.eq_zero_of_norm_sq_eq_zero],
+        run: declare_eq_zero_of_norm_sq_eq_zero,
+    },
+    BuildStep {
+        label: "declare_norm_sq_eq_zero_iff",
+        requires: &[|p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.eq_zero_of_norm_sq_eq_zero, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.norm_sq_eq_zero_of_eq_zero, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.norm_sq_eq_zero_iff],
+        run: declare_norm_sq_eq_zero_iff,
+    },
+    BuildStep {
+        label: "declare_norm_sq_add",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_congr, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.re, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.norm_sq_add],
+        run: declare_norm_sq_add,
+    },
+    BuildStep {
+        label: "declare_norm_sq_add_le",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.norm_sq_add, |p: ComplexPrelude| p.norm_sq_nonneg, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.norm_sq_add_le],
+        run: declare_norm_sq_add_le,
+    },
+    BuildStep {
+        label: "declare_no_order",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.i, |p: ComplexPrelude| p.i_sq, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.no_compatible_order],
+        run: declare_no_order,
+    },
+    BuildStep {
+        label: "declare_inv",
+        requires: &[|p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.mk, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.re],
+        provides: &[|p: ComplexPrelude| p.inv],
+        run: declare_inv,
+    },
+    BuildStep {
+        label: "declare_complex_mul_inv_cancel",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.inv, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_congr, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.re, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.mul_inv_cancel],
+        run: declare_complex_mul_inv_cancel,
+    },
+    BuildStep {
+        label: "declare_complex_inv_congr",
+        requires: &[|p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.inv, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.re],
+        provides: &[|p: ComplexPrelude| p.inv_congr],
+        run: declare_complex_inv_congr,
+    },
+    BuildStep {
+        label: "declare_inv_mul",
+        requires: &[|p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.inv, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_inv_cancel, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.one],
+        provides: &[|p: ComplexPrelude| p.inv_mul],
+        run: declare_inv_mul,
+    },
+    BuildStep {
+        label: "declare_div",
+        requires: &[|p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.inv, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.norm_sq],
+        provides: &[|p: ComplexPrelude| p.div],
+        run: declare_div,
+    },
+    BuildStep {
+        label: "declare_div_congr",
+        requires: &[|p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.div, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.inv, |p: ComplexPrelude| p.inv_congr, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.norm_sq],
+        provides: &[|p: ComplexPrelude| p.div_congr],
+        run: declare_div_congr,
+    },
+    BuildStep {
+        label: "declare_div_self",
+        requires: &[|p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.div, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.mul_inv_cancel, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.one],
+        provides: &[|p: ComplexPrelude| p.div_self],
+        run: declare_div_self,
+    },
+    BuildStep {
+        label: "declare_apart",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.apart],
+        run: declare_apart,
+    },
+    BuildStep {
+        label: "declare_apart_irrefl",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.apart, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_congr, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.re, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.apart_irrefl],
+        run: declare_apart_irrefl,
+    },
+    BuildStep {
+        label: "declare_apart_symm",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.apart, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_congr, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.re, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.apart_symm],
+        run: declare_apart_symm,
+    },
+    BuildStep {
+        label: "declare_apart_of_normsq_pos",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.apart, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_congr, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.re, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.apart_of_normsq_pos],
+        run: declare_apart_of_normsq_pos,
+    },
+    BuildStep {
+        label: "declare_mul_apart_zero",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.apart, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_congr, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.norm_sq_mul, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.re, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.mul_apart_zero],
+        run: declare_mul_apart_zero,
+    },
+    BuildStep {
+        label: "declare_mul_eq_zero_not_both_apart_zero",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.apart, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_apart_zero, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_congr, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.norm_sq_eq_zero_of_eq_zero, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.re, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.mul_eq_zero_not_both_apart_zero],
+        run: declare_mul_eq_zero_not_both_apart_zero,
+    },
+    BuildStep {
+        label: "declare_complex_inv_mul_cancel",
+        requires: &[|p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.inv, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_inv_cancel, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.one],
+        provides: &[|p: ComplexPrelude| p.inv_mul_cancel],
+        run: declare_complex_inv_mul_cancel,
+    },
+    BuildStep {
+        label: "declare_pos_bound_conj",
+        requires: &[|p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.conj, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.norm_sq_conj],
+        provides: &[|p: ComplexPrelude| p.pos_bound_conj],
+        run: declare_pos_bound_conj,
+    },
+    BuildStep {
+        label: "declare_conj_inv",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.conj, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.inv, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_congr, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.norm_sq_conj, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.pos_bound_conj, |p: ComplexPrelude| p.re, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.conj_inv],
+        run: declare_conj_inv,
+    },
+    BuildStep {
+        label: "declare_conj_div",
+        requires: &[|p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.conj, |p: ComplexPrelude| p.conj_inv, |p: ComplexPrelude| p.conj_mul, |p: ComplexPrelude| p.div, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.inv, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.pos_bound_conj],
+        provides: &[|p: ComplexPrelude| p.conj_div],
+        run: declare_conj_div,
+    },
+    BuildStep {
+        label: "declare_mul_div_assoc",
+        requires: &[|p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.div, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.inv, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.norm_sq],
+        provides: &[|p: ComplexPrelude| p.mul_div_assoc],
+        run: declare_mul_div_assoc,
+    },
+    BuildStep {
+        label: "declare_div_mul_cancel",
+        requires: &[|p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.div, |p: ComplexPrelude| p.div_self, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_div_assoc, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.one],
+        provides: &[|p: ComplexPrelude| p.div_mul_cancel],
+        run: declare_div_mul_cancel,
+    },
+    BuildStep {
+        label: "declare_add_div",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.div, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.inv, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_congr, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.re, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.add_div],
+        run: declare_add_div,
+    },
+    BuildStep {
+        label: "declare_neg_div",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.div, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.inv, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_congr, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.re, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.neg_div],
+        run: declare_neg_div,
+    },
+    BuildStep {
+        label: "declare_sub_div",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_div, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.div, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_div, |p: ComplexPrelude| p.norm_sq],
+        provides: &[|p: ComplexPrelude| p.sub_div],
+        run: declare_sub_div,
+    },
+    BuildStep {
+        label: "declare_pow",
+        requires: &[|p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.one],
+        provides: &[|p: ComplexPrelude| p.pow],
+        run: declare_pow,
+    },
+    BuildStep {
+        label: "declare_pow_equations",
+        requires: &[|p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.pow],
+        provides: &[|p: ComplexPrelude| p.pow_succ, |p: ComplexPrelude| p.pow_zero],
+        run: declare_pow_equations,
+    },
+    BuildStep {
+        label: "declare_pow_add",
+        requires: &[|p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.pow],
+        provides: &[|p: ComplexPrelude| p.pow_add],
+        run: declare_pow_add,
+    },
+    BuildStep {
+        label: "declare_norm_sq_pow",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_congr, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.norm_sq_mul, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.pow, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.norm_sq_pow],
+        run: declare_norm_sq_pow,
+    },
+    BuildStep {
+        label: "declare_conj_pow",
+        requires: &[|p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.conj, |p: ComplexPrelude| p.conj_mul, |p: ComplexPrelude| p.conj_one, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.pow],
+        provides: &[|p: ComplexPrelude| p.conj_pow],
+        run: declare_conj_pow,
+    },
+    BuildStep {
+        label: "declare_sum_range",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.sum_range],
+        run: declare_sum_range,
+    },
+    BuildStep {
+        label: "declare_sum_range_equations",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.sum_range, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.sum_range_succ, |p: ComplexPrelude| p.sum_range_zero],
+        run: declare_sum_range_equations,
+    },
+    BuildStep {
+        label: "declare_sum_range_congr",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.sum_range, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.sum_range_congr],
+        run: declare_sum_range_congr,
+    },
+    BuildStep {
+        label: "declare_mul_sum_range",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.sum_range],
+        provides: &[|p: ComplexPrelude| p.mul_sum_range],
+        run: declare_mul_sum_range,
+    },
+    BuildStep {
+        label: "declare_sum_range_mul",
+        requires: &[|p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_sum_range, |p: ComplexPrelude| p.sum_range, |p: ComplexPrelude| p.sum_range_congr],
+        provides: &[|p: ComplexPrelude| p.sum_range_mul],
+        run: declare_sum_range_mul,
+    },
+    BuildStep {
+        label: "declare_sum_range_mul_double",
+        requires: &[|p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_sum_range, |p: ComplexPrelude| p.sum_range, |p: ComplexPrelude| p.sum_range_congr, |p: ComplexPrelude| p.sum_range_mul],
+        provides: &[|p: ComplexPrelude| p.sum_range_mul_double],
+        run: declare_sum_range_mul_double,
+    },
+    BuildStep {
+        label: "declare_mul_sub_one_geom",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.conj, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.i, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_congr, |p: ComplexPrelude| p.of_real, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.pow, |p: ComplexPrelude| p.re, |p: ComplexPrelude| p.sum_range, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.mul_sub_one_geom],
+        run: declare_mul_sub_one_geom,
+    },
+    BuildStep {
+        label: "declare_geom_series_div",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.div, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.inv, |p: ComplexPrelude| p.inv_mul_cancel, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_sub_one_geom, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.pow, |p: ComplexPrelude| p.sum_range],
+        provides: &[|p: ComplexPrelude| p.geom_series_div],
+        run: declare_geom_series_div,
+    },
+    BuildStep {
+        label: "declare_of_nat",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.of_nat],
+        run: declare_of_nat,
+    },
+    BuildStep {
+        label: "declare_of_nat_equations",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.of_nat, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.of_nat_succ, |p: ComplexPrelude| p.of_nat_zero],
+        run: declare_of_nat_equations,
+    },
+    BuildStep {
+        label: "declare_of_nat_add",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.of_nat, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.of_nat_add],
+        run: declare_of_nat_add,
+    },
+    BuildStep {
+        label: "declare_of_nat_mul",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.of_nat, |p: ComplexPrelude| p.of_nat_add, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.of_nat_mul],
+        run: declare_of_nat_mul,
+    },
+    BuildStep {
+        label: "declare_of_nat_eq_cast",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.of_nat, |p: ComplexPrelude| p.of_real, |p: ComplexPrelude| p.of_real_add, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.of_nat_eq_cast],
+        run: declare_of_nat_eq_cast,
+    },
+    BuildStep {
+        label: "declare_sum_range_add",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.conj, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.i, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_congr, |p: ComplexPrelude| p.of_real, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.re, |p: ComplexPrelude| p.sum_range, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.sum_range_add],
+        run: declare_sum_range_add,
+    },
+    BuildStep {
+        label: "declare_sum_range_shift_front",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.sum_range, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.sum_range_shift_front],
+        run: declare_sum_range_shift_front,
+    },
+    BuildStep {
+        label: "declare_sum_range_congr_lt",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.sum_range, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.sum_range_congr_lt],
+        run: declare_sum_range_congr_lt,
+    },
+    BuildStep {
+        label: "declare_sum_range_split",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.sum_range, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.sum_range_split],
+        run: declare_sum_range_split,
+    },
+    BuildStep {
+        label: "declare_sum_range_swap",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.sum_range, |p: ComplexPrelude| p.sum_range_add, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.sum_range_swap],
+        run: declare_sum_range_swap,
+    },
+    BuildStep {
+        label: "declare_sum_range_diagonal",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_congr, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.re, |p: ComplexPrelude| p.sum_range, |p: ComplexPrelude| p.sum_range_add, |p: ComplexPrelude| p.sum_range_congr_lt, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.sum_range_diagonal],
+        run: declare_sum_range_diagonal,
+    },
+    BuildStep {
+        label: "declare_sum_range_rect_eq_diag_add_corner",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.sum_range, |p: ComplexPrelude| p.sum_range_add, |p: ComplexPrelude| p.sum_range_congr_lt, |p: ComplexPrelude| p.sum_range_diagonal, |p: ComplexPrelude| p.sum_range_split],
+        provides: &[|p: ComplexPrelude| p.sum_range_rect_eq_diag_add_corner],
+        run: declare_sum_range_rect_eq_diag_add_corner,
+    },
+    BuildStep {
+        label: "declare_sum_range_mul_eq_diag_add_corner",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.sum_range, |p: ComplexPrelude| p.sum_range_mul_double, |p: ComplexPrelude| p.sum_range_rect_eq_diag_add_corner],
+        provides: &[|p: ComplexPrelude| p.sum_range_mul_eq_diag_add_corner],
+        run: declare_sum_range_mul_eq_diag_add_corner,
+    },
+    BuildStep {
+        label: "poly::declare_polynomial",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.conj, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.i, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_sum_range, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_congr, |p: ComplexPrelude| p.of_real, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.pow, |p: ComplexPrelude| p.pow_add, |p: ComplexPrelude| p.pow_zero, |p: ComplexPrelude| p.re, |p: ComplexPrelude| p.sum_range, |p: ComplexPrelude| p.sum_range_add, |p: ComplexPrelude| p.sum_range_congr, |p: ComplexPrelude| p.sum_range_congr_lt, |p: ComplexPrelude| p.sum_range_mul_eq_diag_add_corner, |p: ComplexPrelude| p.sum_range_split, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.factor_quotient, |p: ComplexPrelude| p.factor_quotient_degree_lt, |p: ComplexPrelude| p.factor_quotient_succ_eq, |p: ComplexPrelude| p.horner_from_top, |p: ComplexPrelude| p.horner_from_top_diag_eq_poly_eval, |p: ComplexPrelude| p.horner_from_top_succ_succ, |p: ComplexPrelude| p.horner_from_top_succ_zero, |p: ComplexPrelude| p.horner_from_top_zero, |p: ComplexPrelude| p.poly_add, |p: ComplexPrelude| p.poly_degree_lt, |p: ComplexPrelude| p.poly_degree_lt_poly_add, |p: ComplexPrelude| p.poly_degree_lt_poly_mul, |p: ComplexPrelude| p.poly_degree_lt_poly_scale, |p: ComplexPrelude| p.poly_eval, |p: ComplexPrelude| p.poly_eval_poly_add, |p: ComplexPrelude| p.poly_eval_poly_mul, |p: ComplexPrelude| p.poly_eval_poly_scale, |p: ComplexPrelude| p.poly_eval_succ, |p: ComplexPrelude| p.poly_eval_zero, |p: ComplexPrelude| p.poly_mul, |p: ComplexPrelude| p.poly_scale],
+        run: poly::declare_polynomial,
+    },
+    BuildStep {
+        label: "declare_add_pow",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.conj, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.i, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_sum_range, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_congr, |p: ComplexPrelude| p.of_nat, |p: ComplexPrelude| p.of_nat_add, |p: ComplexPrelude| p.of_real, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.pow, |p: ComplexPrelude| p.pow_succ, |p: ComplexPrelude| p.re, |p: ComplexPrelude| p.sum_range, |p: ComplexPrelude| p.sum_range_add, |p: ComplexPrelude| p.sum_range_congr, |p: ComplexPrelude| p.sum_range_congr_lt, |p: ComplexPrelude| p.sum_range_shift_front, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.add_pow],
+        run: declare_add_pow,
+    },
+    BuildStep {
+        label: "declare_is_root_of_unity",
+        requires: &[|p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.pow],
+        provides: &[|p: ComplexPrelude| p.is_root_of_unity],
+        run: declare_is_root_of_unity,
+    },
+    BuildStep {
+        label: "declare_one_is_root_of_unity",
+        requires: &[|p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.is_root_of_unity, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.pow],
+        provides: &[|p: ComplexPrelude| p.one_is_root_of_unity],
+        run: declare_one_is_root_of_unity,
+    },
+    BuildStep {
+        label: "declare_i_is_fourth_root",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.conj, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.i, |p: ComplexPrelude| p.is_root_of_unity, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_congr, |p: ComplexPrelude| p.of_real, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.pow, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.i_is_fourth_root],
+        run: declare_i_is_fourth_root,
+    },
+    BuildStep {
+        label: "declare_pow_mul",
+        requires: &[|p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.pow, |p: ComplexPrelude| p.pow_add],
+        provides: &[|p: ComplexPrelude| p.pow_mul],
+        run: declare_pow_mul,
+    },
+    BuildStep {
+        label: "declare_geom_sum_eq_zero_of_root_of_unity",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.apart, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.inv, |p: ComplexPrelude| p.inv_mul_cancel, |p: ComplexPrelude| p.is_root_of_unity, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_sub_one_geom, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_congr, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.pow, |p: ComplexPrelude| p.re, |p: ComplexPrelude| p.sum_range, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.geom_sum_eq_zero_of_root_of_unity],
+        run: declare_geom_sum_eq_zero_of_root_of_unity,
+    },
+    BuildStep {
+        label: "declare_root_of_unity_mul",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.conj, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.i, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.is_root_of_unity, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_congr, |p: ComplexPrelude| p.of_real, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.pow, |p: ComplexPrelude| p.re, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.root_of_unity_mul],
+        run: declare_root_of_unity_mul,
+    },
+    BuildStep {
+        label: "declare_root_of_unity_pow",
+        requires: &[|p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.is_root_of_unity, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.one_is_root_of_unity, |p: ComplexPrelude| p.pow, |p: ComplexPrelude| p.pow_mul],
+        provides: &[|p: ComplexPrelude| p.root_of_unity_pow],
+        run: declare_root_of_unity_pow,
+    },
+    BuildStep {
+        label: "declare_ptolemy_identity",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.conj, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.i, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_congr, |p: ComplexPrelude| p.of_real, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.re, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.ptolemy_identity],
+        run: declare_ptolemy_identity,
+    },
+    BuildStep {
+        label: "declare_norm_sq_congr",
+        requires: &[|p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.re],
+        provides: &[|p: ComplexPrelude| p.norm_sq_congr],
+        run: declare_norm_sq_congr,
+    },
+    BuildStep {
+        label: "declare_ptolemy_inequality_sq",
+        requires: &[|p: ComplexPrelude| p.add, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.norm_sq_add_le, |p: ComplexPrelude| p.norm_sq_congr, |p: ComplexPrelude| p.ptolemy_identity],
+        provides: &[|p: ComplexPrelude| p.ptolemy_inequality_sq],
+        run: declare_ptolemy_inequality_sq,
+    },
+    BuildStep {
+        label: "declare_abs",
+        requires: &[|p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.norm_sq],
+        provides: &[|p: ComplexPrelude| p.abs],
+        run: declare_abs,
+    },
+    BuildStep {
+        label: "declare_abs_nonneg",
+        requires: &[|p: ComplexPrelude| p.abs, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.norm_sq],
+        provides: &[|p: ComplexPrelude| p.abs_nonneg],
+        run: declare_abs_nonneg,
+    },
+    BuildStep {
+        label: "declare_abs_congr",
+        requires: &[|p: ComplexPrelude| p.abs, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.norm_sq_congr],
+        provides: &[|p: ComplexPrelude| p.abs_congr],
+        run: declare_abs_congr,
+    },
+    BuildStep {
+        label: "declare_abs_one",
+        requires: &[|p: ComplexPrelude| p.abs, |p: ComplexPrelude| p.add, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.one],
+        provides: &[|p: ComplexPrelude| p.abs_one],
+        run: declare_abs_one,
+    },
+    BuildStep {
+        label: "declare_abs_mul",
+        requires: &[|p: ComplexPrelude| p.abs, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.equiv, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.norm_sq_mul, |p: ComplexPrelude| p.norm_sq_nonneg],
+        provides: &[|p: ComplexPrelude| p.abs_mul],
+        run: declare_abs_mul,
+    },
+    BuildStep {
+        label: "declare_abs_add_le",
+        requires: &[|p: ComplexPrelude| p.abs, |p: ComplexPrelude| p.abs_nonneg, |p: ComplexPrelude| p.add, |p: ComplexPrelude| p.add_assoc, |p: ComplexPrelude| p.add_comm, |p: ComplexPrelude| p.add_congr, |p: ComplexPrelude| p.add_neg, |p: ComplexPrelude| p.add_zero, |p: ComplexPrelude| p.complex, |p: ComplexPrelude| p.conj, |p: ComplexPrelude| p.equiv_refl, |p: ComplexPrelude| p.equiv_symm, |p: ComplexPrelude| p.equiv_trans, |p: ComplexPrelude| p.im, |p: ComplexPrelude| p.left_distrib, |p: ComplexPrelude| p.mul, |p: ComplexPrelude| p.mul_assoc, |p: ComplexPrelude| p.mul_comm, |p: ComplexPrelude| p.mul_congr, |p: ComplexPrelude| p.mul_one, |p: ComplexPrelude| p.mul_zero, |p: ComplexPrelude| p.neg, |p: ComplexPrelude| p.neg_congr, |p: ComplexPrelude| p.norm_sq, |p: ComplexPrelude| p.norm_sq_conj, |p: ComplexPrelude| p.norm_sq_mul, |p: ComplexPrelude| p.norm_sq_nonneg, |p: ComplexPrelude| p.one, |p: ComplexPrelude| p.re, |p: ComplexPrelude| p.zero],
+        provides: &[|p: ComplexPrelude| p.abs_add_le],
+        run: declare_abs_add_le,
+    },
+];
+
 /// Build the complex prelude: ℂ as pairs of constructed reals, **asserting
 /// nothing**.
 ///
@@ -1807,114 +2498,42 @@ pub fn build_complex_prelude(kernel: &mut Kernel) -> Result<ComplexPrelude, Kern
     if kernel.environment().get(prelude.complex).is_some() {
         return Ok(prelude);
     }
+    // Preflight: a purely structural check (no kernel environment involved)
+    // that `STEPS` is a valid topological order for the dependencies it
+    // declares. This is what turns a phase-order bug -- a step moved earlier
+    // than its dependency -- into a precise diagnosis instead of a bare
+    // `KernelError::UnknownConst` indistinguishable from a missing
+    // declaration; see §1 of
+    // `docs/research/11-design-review/2026-08-27-architecture-review.md`.
+    if let Err(violation) = validate_step_order(prelude, STEPS) {
+        let missing_text = render_name(kernel, violation.missing);
+        let reason = match violation.provider {
+            Some((provider_index, provider_label)) => format!(
+                "which step {provider_index} ('{provider_label}') declares, \
+                 but step {provider_index} has not run yet -- move \
+                 '{provider_label}' before '{}', or move '{}' after it",
+                violation.consumer_label, violation.consumer_label,
+            ),
+            None => "which no step in the build order declares -- the \
+                      dependency table itself is incomplete, not just \
+                      misordered"
+                .to_string(),
+        };
+        panic!(
+            "complex prelude build order is broken (a phase-order bug, not a \
+             missing declaration -- see docs/research/11-design-review/\
+             2026-08-27-architecture-review.md \u{a7}1): step {} ('{}') \
+             requires `{missing_text}`, {reason}.",
+            violation.consumer_index, violation.consumer_label,
+        );
+    }
     let checkpoint = kernel.prelude_checkpoint();
     let built = (|| -> Result<(), KernelError> {
         let mut d = IntDev::new(kernel, creal.rat.int);
-        declare_carrier(&mut d, prelude)?;
-        declare_projections(&mut d, prelude)?;
-        declare_equiv(&mut d, prelude)?;
-        declare_setoid_laws(&mut d, prelude)?;
-        declare_constants(&mut d, prelude)?;
-        declare_operations(&mut d, prelude)?;
-        declare_congruences(&mut d, prelude)?;
-        declare_projection_congruences(&mut d, prelude)?;
-        declare_ring_laws(&mut d, prelude)?;
-        declare_pinning(&mut d, prelude)?;
-        declare_re_add_im(&mut d, prelude)?;
-        declare_conj_laws(&mut d, prelude)?;
-        declare_conj_sub_ofreal_i(&mut d, prelude)?;
-        declare_conj_zero_one(&mut d, prelude)?;
-        declare_eq_conj_iff_real(&mut d, prelude)?;
-        declare_norm(&mut d, prelude)?;
-        declare_norm_conjugation(&mut d, prelude)?;
-        declare_norm_sq_eq_zero_of_eq_zero(&mut d, prelude)?;
-        declare_eq_zero_of_norm_sq_eq_zero(&mut d, prelude)?;
-        declare_norm_sq_eq_zero_iff(&mut d, prelude)?;
-        declare_norm_sq_add(&mut d, prelude)?;
-        declare_norm_sq_add_le(&mut d, prelude)?;
-        declare_no_order(&mut d, prelude)?;
-        declare_inv(&mut d, prelude)?;
-        declare_complex_mul_inv_cancel(&mut d, prelude)?;
-        declare_complex_inv_congr(&mut d, prelude)?;
-        declare_inv_mul(&mut d, prelude)?;
-        declare_div(&mut d, prelude)?;
-        declare_div_congr(&mut d, prelude)?;
-        declare_div_self(&mut d, prelude)?;
-        declare_apart(&mut d, prelude)?;
-        declare_apart_irrefl(&mut d, prelude)?;
-        declare_apart_symm(&mut d, prelude)?;
-        declare_apart_of_normsq_pos(&mut d, prelude)?;
-        declare_mul_apart_zero(&mut d, prelude)?;
-        declare_mul_eq_zero_not_both_apart_zero(&mut d, prelude)?;
-        declare_complex_inv_mul_cancel(&mut d, prelude)?;
-        declare_pos_bound_conj(&mut d, prelude)?;
-        declare_conj_inv(&mut d, prelude)?;
-        declare_conj_div(&mut d, prelude)?;
-        declare_mul_div_assoc(&mut d, prelude)?;
-        declare_div_mul_cancel(&mut d, prelude)?;
-        declare_add_div(&mut d, prelude)?;
-        declare_neg_div(&mut d, prelude)?;
-        declare_sub_div(&mut d, prelude)?;
-        declare_pow(&mut d, prelude)?;
-        declare_pow_equations(&mut d, prelude)?;
-        declare_pow_add(&mut d, prelude)?;
-        declare_norm_sq_pow(&mut d, prelude)?;
-        declare_conj_pow(&mut d, prelude)?;
-        declare_sum_range(&mut d, prelude)?;
-        declare_sum_range_equations(&mut d, prelude)?;
-        declare_sum_range_congr(&mut d, prelude)?;
-        declare_mul_sum_range(&mut d, prelude)?;
-        declare_sum_range_mul(&mut d, prelude)?;
-        declare_sum_range_mul_double(&mut d, prelude)?;
-        declare_mul_sub_one_geom(&mut d, prelude)?;
-        declare_geom_series_div(&mut d, prelude)?;
-        declare_of_nat(&mut d, prelude)?;
-        declare_of_nat_equations(&mut d, prelude)?;
-        declare_of_nat_add(&mut d, prelude)?;
-        declare_of_nat_mul(&mut d, prelude)?;
-        declare_of_nat_eq_cast(&mut d, prelude)?;
-        declare_sum_range_add(&mut d, prelude)?;
-        declare_sum_range_shift_front(&mut d, prelude)?;
-        declare_sum_range_congr_lt(&mut d, prelude)?;
-        declare_sum_range_split(&mut d, prelude)?;
-        declare_sum_range_swap(&mut d, prelude)?;
-        declare_sum_range_diagonal(&mut d, prelude)?;
-        declare_sum_range_rect_eq_diag_add_corner(&mut d, prelude)?;
-        declare_sum_range_mul_eq_diag_add_corner(&mut d, prelude)?;
-        poly::declare_polynomial(&mut d, prelude)?;
-        declare_add_pow(&mut d, prelude)?;
-        declare_is_root_of_unity(&mut d, prelude)?;
-        declare_one_is_root_of_unity(&mut d, prelude)?;
-        declare_i_is_fourth_root(&mut d, prelude)?;
-        declare_pow_mul(&mut d, prelude)?;
-        declare_geom_sum_eq_zero_of_root_of_unity(&mut d, prelude)?;
-        declare_root_of_unity_mul(&mut d, prelude)?;
-        declare_root_of_unity_pow(&mut d, prelude)?;
-        declare_ptolemy_identity(&mut d, prelude)?;
-        declare_norm_sq_congr(&mut d, prelude)?;
-        declare_ptolemy_inequality_sq(&mut d, prelude)?;
-        declare_abs(&mut d, prelude)?;
-        declare_abs_nonneg(&mut d, prelude)?;
-        // `abs_congr` needs `norm_sq_congr` (declared above) and
-        // `CReal.sqrt_congr` (`creal/sqrt.rs`, already in the `CRealPrelude`
-        // this module builds on). `abs_one` additionally needs
-        // `CReal.sqrt_one`.
-        declare_abs_congr(&mut d, prelude)?;
-        declare_abs_one(&mut d, prelude)?;
-        // `abs_mul` needs `norm_sq_mul`/`norm_sq_nonneg` (declared far
-        // above) and `CReal.sqrt_congr`/`CReal.sqrt_mul` (`creal/sqrt.rs`,
-        // already in the `CRealPrelude` this module builds on) -- no new
-        // analysis, so it does not depend on `abs_congr`/`abs_one` and is
-        // placed right after them only because both round out "the laws
-        // relating `abs` to the operations it is built from".
-        declare_abs_mul(&mut d, prelude)?;
-        // `abs_add_le` needs `norm_sq_mul`/`norm_sq_conj`/`norm_sq_add_le`
-        // (all declared far above) and `CReal.mul_self_abs`
-        // (`creal/product.rs`) plus `CReal.sqrt_le_sqrt`/`CReal.sqrt_sq`/
-        // `CReal.le_of_sq_le` (`creal/sqrt.rs`) -- no new analysis of its
-        // own, so it is placed last only because it is the heaviest
-        // consumer of everything above it.
-        declare_abs_add_le(&mut d, prelude)
+        for step in STEPS {
+            (step.run)(&mut d, prelude)?;
+        }
+        Ok(())
     })();
     match built {
         Ok(()) => Ok(prelude),
