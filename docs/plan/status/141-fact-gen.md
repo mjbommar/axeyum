@@ -82,6 +82,4 @@ Decision: [ADR-0606](../../research/09-decisions/adr-0606-generated-facts-declar
 
 <!-- plan-section: landed-changes -->
 
-| date | lane | change |
-|---|---|---|
 | 2026-08-27 | fact-gen | `scripts/gen-kernel-facts.py` + 32-test suite + `mutation_controls.py kernel-facts` (13 guards); 64 generated `string` facts (0/64 → 64/64); ledger coverage 34% → 38.5%; ADR-0606; one `KERNEL_THEOREM_RE` alternative in `validate-facts.py` |
