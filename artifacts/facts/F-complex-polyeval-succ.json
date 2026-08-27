@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "id": "F:complex-polyeval-succ",
+  "title": "polyEval's recursive unfolding: one more Horner step",
+  "statement": "For any c, n, x: polyEval c (n+1) x = polyEval c n x + c(n)*x^n -- the recursive unfolding of Horner evaluation by one more term, proved by Eq.refl and registered as a first-class named equation.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Complex.polyEval_succ : ((x0 : ((x0 : AxNat) -> Complex)) -> ((x1 : AxNat) -> ((x2 : Complex) -> Eq.{1} Complex (Complex.polyEval x0 (AxNat.succ x1) x2) (Complex.add (Complex.polyEval x0 x1 x2) (Complex.mul (x0 x1) (Complex.pow x2 x1))))))",
+    "fragment": "Complex",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "kernel_theorem": "Complex.polyEval_succ"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Complex.polyEval_succ",
+      "kind": "kernel-term",
+      "supports": "Complex.polyEval_succ is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Complex.polyEval_succ 2>/dev/null | grep -cE '^Complex\\.polyEval_succ[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "build_complex_prelude admits Complex.polyEval_succ through the trusted Kernel::add_declaration gate, which re-checks the proof term against the stated type. theorem_dependency_inventory exits non-zero for a named filter matching nothing (a deleted theorem cannot read as a re-derived one), and grep -c (never -q) both consumes the pipe and asserts the exact tab-anchored line is present. Verified on this tree: the command prints exactly one matching line for Complex.polyEval_succ. --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-Complex.polyEval_succ",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the complex prelude's trusted surface is empty, which bounds Complex.polyEval_succ",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free complex",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: complex: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: complex trusted surface = 0'. That bounds every declaration in the complex environment, including Complex.polyEval_succ, since a declaration cannot depend on a trusted declaration the environment does not contain. --require-axiom-free <name> errors for a prelude never built by this run rather than silently passing on zero rows. --release is MANDATORY here."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-lean-kernel build_complex_prelude (crates/axeyum-lean-kernel/src/complex/poly.rs, declare_poly_eval_equations)",
+    "source": "canonical type read via kernel_declaration_projection's own UNFILTERED emit mode (cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection, no --require-declaration flag), which prints, per constructed prelude, one TSV row per declaration whose last field is kernel.render_lean(declaration.ty()) -- the same Kernel::render_lean canonical form nat_theorem_inventory prints, just not filtered to Declaration::Theorem. That output was piped to a scratchpad file and the exact row for this declaration's own prelude label was extracted and injected here programmatically (a Python script reading the TSV, never hand-transcribed); direct dependency edges (where applicable) were cross-read from the same run's direct_theorems column and independently confirmed against theorem_dependency_inventory's own output on this tree. No new probe binary was written for this batch, since the in-tree tool already emits the canonical type; crates/ source was not touched to produce this batch."
+  },
+  "external_status": "proved"
+}

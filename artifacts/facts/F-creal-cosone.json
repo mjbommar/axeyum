@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-cosone",
+  "title": "cos(1) is constructed as a total, axiom-free CReal value",
+  "statement": "The cosine of 1 (radian) is built as CReal.mk on an explicit, concrete regular sequence -- speedup(diagonal(cosSeriesPartial), K) -- via the same CONSTRUCTION pattern as CReal.e, never Exists-elimination into data. cosSeriesPartial n := sumRange cosTerm n sums the alternating series sum (-1)^k/(2k)! for k<n. This is the kernel's first transcendental-function-family value (Spivak Ch.15's cos(1)); its domination bound reuses CReal.e's own expDominant/expDominantCauchy machinery unchanged rather than deriving a new geometric bound. Admitted by the trusted kernel gate with an empty axiom footprint.",
+  "formal": {
+    "language": "lean4",
+    "statement": "def CReal.cosOne : CReal",
+    "fragment": "CReal",
+    "free_symbols": [],
+    "kernel_theorem": "CReal.cosOne"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.cosOne",
+      "kind": "kernel-term",
+      "supports": "CReal.cosOne is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "kernel_declaration_projection --require-declaration (DIRECT, fail-on-absence)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration CReal.cosOne --require-kind definition 2>/dev/null | grep -cE '^found[[:space:]]creal[[:space:]]definition[[:space:]]CReal\\.cosOne[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "CReal.cosOne is a Declaration::Definition. theorem_dependency_inventory / nat_theorem_inventory / prelude_theorem_inventory all filter to Declaration::Theorem and exclude Definitions, so this fact uses the DIRECT 'kernel_declaration_projection --require-declaration' checker (added earlier in this session's batch): it searches every constructed prelude's environment for an exact display-name match and exits non-zero on no match or kind mismatch. Verified on this tree: the command prints exactly one 'found\\tcreal\\tdefinition\\tCReal.cosOne\\t...' line (a definition built this early in the dependency order also shows up, separately, under the downstream complex/cpoint preludes that rebuild CReal from scratch as their own Kernel instance -- this checker deliberately anchors on the creal row only, the prelude CReal.cosOne is native to). --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-CReal.cosOne",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.cosOne",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: creal: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: creal trusted surface = 0'. That bounds every declaration in the creal environment, including CReal.cosOne, since a declaration cannot depend on a trusted declaration the environment does not contain. --require-axiom-free <name> errors for a prelude never built by this run rather than silently passing on zero rows. --release is MANDATORY here."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/trig.rs, declare_cos_one)",
+    "source": "canonical type read via kernel_declaration_projection's own UNFILTERED emit mode (cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection, no --require-declaration flag), which prints, per constructed prelude, one TSV row per declaration whose last field is kernel.render_lean(declaration.ty()) -- the same Kernel::render_lean canonical form nat_theorem_inventory prints, just not filtered to Declaration::Theorem. That output was piped to a scratchpad file and the exact row for this declaration's own prelude label was extracted and injected here programmatically (a Python script reading the TSV, never hand-transcribed); direct dependency edges (where applicable) were cross-read from the same run's direct_theorems column and independently confirmed against theorem_dependency_inventory's own output on this tree. No new probe binary was written for this batch, since the in-tree tool already emits the canonical type; crates/ source was not touched to produce this batch."
+  },
+  "notes": "depends_on is empty for the same reason F:creal-e's and F:creal-integral's are: cosOne's own direct building blocks (CReal.cosSeriesPartial, CReal.cosTerm, CReal.speedup, CReal.mk, the diagonal sequence, and the REUSED CReal.e Cauchy-witness machinery) are either plain Definitions (nothing to register as a proposition) or private/already-namespaced helpers. The propositions ABOUT cosOne (convergence, numeric bounds) are the separate facts F:creal-cosoneconverges, F:creal-cosone-le-four, F:creal-neg-four-le-cosone. This is Spivak Ch.15, the kernel's first transcendental-function-family value; it is built via CReal.mk on an explicit regular sequence, never Exists-elimination, matching this batch's mandate.",
+  "external_status": "proved"
+}
