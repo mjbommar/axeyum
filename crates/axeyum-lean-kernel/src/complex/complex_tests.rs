@@ -261,6 +261,8 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
             "Complex.polyDegreeLt_polyScale",
             p.poly_degree_lt_poly_scale,
         ),
+        ("Complex.polyMul", p.poly_mul),
+        ("Complex.polyEval_polyMul", p.poly_eval_poly_mul),
     ];
     // COVERAGE, checked against the ENVIRONMENT rather than against `named`
     // itself.
@@ -1912,6 +1914,183 @@ fn poly_eval_poly_add_would_reject_mul_instead_of_add() {
     assert!(
         admitted.is_err(),
         "polyEval_polyAdd's proof must NOT type-check against a `mul`-shaped \
+         conclusion: {admitted:?}"
+    );
+}
+
+/// Re-generalize `Complex.polyEval_polyMul` over fresh, mutually-opaque
+/// witnesses for every one of its own arguments (`c`, `g`, `m`, `n`, `x`, and
+/// PLACEHOLDER hypothesis fvars carrying exactly the `polyDegreeLt` types
+/// this theorem demands -- never discharged, since only their *type* matters
+/// for this check) and re-bind the result into a fresh closed declaration.
+///
+/// This is the concrete-instantiation discipline
+/// `poly_eval_poly_add_concrete_instantiation` uses, adapted to a theorem
+/// whose hypotheses make a genuinely NONZERO closed coefficient function
+/// expensive here (it would need a nested `Nat.rec`, not attempted in this
+/// slice). Distinct fresh free variables can never become definitionally
+/// equal to one another or collapse under reduction the way `Complex.zero`
+/// does, so `mul (eval_c) (eval_g)` and `add (eval_c) (eval_g)` stay
+/// syntactically apart no matter how far the kernel reduces -- a `c`/`g`
+/// swap anywhere in [`super::poly`]'s construction of
+/// `Complex.polyEval_polyMul` would produce a term that does not match this
+/// independently-built expected type.
+#[test]
+fn poly_eval_poly_mul_argument_order_is_load_bearing() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let nat = d.nat_ty();
+    let carrier = super::complex_ty(&mut d, p);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+
+    let degree_lt_c = d.const_app(p.poly_degree_lt, &[c, m]);
+    let degree_lt_g = d.const_app(p.poly_degree_lt, &[g, n]);
+    let hc_fv = d.fresh_fvar();
+    let hc = d.kernel().fvar(hc_fv);
+    let hg_fv = d.fresh_fvar();
+    let hg = d.kernel().fvar(hg_fv);
+
+    let proof = d.lemma(p.poly_eval_poly_mul, &[c, g, m, n, hc, hg, x]);
+
+    let poly_mul_cg = d.const_app(p.poly_mul, &[c, g]);
+    let bound = d.add(m, n);
+    let lhs_stmt = d.const_app(p.poly_eval, &[poly_mul_cg, bound, x]);
+    let eval_c = d.const_app(p.poly_eval, &[c, m, x]);
+    let eval_g = d.const_app(p.poly_eval, &[g, n, x]);
+    let rhs_stmt = d.const_app(p.mul, &[eval_c, eval_g]);
+    let inner_ty = super::zeq(&mut d, p, lhs_stmt, rhs_stmt);
+
+    let ty = {
+        let over_x = d.pi_fv(x_fv, carrier, inner_ty);
+        let after_hg = d.arrow(degree_lt_g, over_x);
+        let after_hc = d.arrow(degree_lt_c, after_hg);
+        let over_n = d.pi_fv(n_fv, nat, after_hc);
+        let over_m = d.pi_fv(m_fv, nat, over_n);
+        let over_g = d.pi_fv(g_fv, fn_ty, over_m);
+        d.pi_fv(c_fv, fn_ty, over_g)
+    };
+    let value = {
+        let over_x = d.lam_fv(x_fv, carrier, proof);
+        let after_hg = d.lam_fv(hg_fv, degree_lt_g, over_x);
+        let after_hc = d.lam_fv(hc_fv, degree_lt_c, after_hg);
+        let over_n = d.lam_fv(n_fv, nat, after_hc);
+        let over_m = d.lam_fv(m_fv, nat, over_n);
+        let over_g = d.lam_fv(g_fv, fn_ty, over_m);
+        d.lam_fv(c_fv, fn_ty, over_g)
+    };
+
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.poly_eval_poly_mul_argument_order");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    });
+    assert!(
+        admitted.is_ok(),
+        "polyEval_polyMul, re-closed over its own bound variables in the SAME \
+         order, must give EXACTLY Equiv (polyEval (polyMul c g) (add m n) x) \
+         (mul (polyEval c m x) (polyEval g n x)): {admitted:?}"
+    );
+}
+
+/// Negative control for `Complex.polyEval_polyMul`, mirroring
+/// `poly_eval_poly_add_would_reject_mul_instead_of_add`'s shape: the SAME
+/// re-closed proof from
+/// [`poly_eval_poly_mul_argument_order_is_load_bearing`] must NOT type-check
+/// against an `add`-shaped conclusion in place of `mul`-shaped -- otherwise
+/// the homomorphism statement would be too weak to distinguish `polyMul`'s
+/// evaluation behaviour from `polyAdd`'s, or from no homomorphism at all.
+#[test]
+fn poly_eval_poly_mul_would_reject_add_instead_of_mul() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let nat = d.nat_ty();
+    let carrier = super::complex_ty(&mut d, p);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+
+    let degree_lt_c = d.const_app(p.poly_degree_lt, &[c, m]);
+    let degree_lt_g = d.const_app(p.poly_degree_lt, &[g, n]);
+    let hc_fv = d.fresh_fvar();
+    let hc = d.kernel().fvar(hc_fv);
+    let hg_fv = d.fresh_fvar();
+    let hg = d.kernel().fvar(hg_fv);
+
+    let proof = d.lemma(p.poly_eval_poly_mul, &[c, g, m, n, hc, hg, x]);
+
+    let poly_mul_cg = d.const_app(p.poly_mul, &[c, g]);
+    let bound = d.add(m, n);
+    let lhs_stmt = d.const_app(p.poly_eval, &[poly_mul_cg, bound, x]);
+    let eval_c = d.const_app(p.poly_eval, &[c, m, x]);
+    let eval_g = d.const_app(p.poly_eval, &[g, n, x]);
+    let wrong_rhs = d.const_app(p.add, &[eval_c, eval_g]);
+    let inner_ty = super::zeq(&mut d, p, lhs_stmt, wrong_rhs);
+
+    let ty = {
+        let over_x = d.pi_fv(x_fv, carrier, inner_ty);
+        let after_hg = d.arrow(degree_lt_g, over_x);
+        let after_hc = d.arrow(degree_lt_c, after_hg);
+        let over_n = d.pi_fv(n_fv, nat, after_hc);
+        let over_m = d.pi_fv(m_fv, nat, over_n);
+        let over_g = d.pi_fv(g_fv, fn_ty, over_m);
+        d.pi_fv(c_fv, fn_ty, over_g)
+    };
+    let value = {
+        let over_x = d.lam_fv(x_fv, carrier, proof);
+        let after_hg = d.lam_fv(hg_fv, degree_lt_g, over_x);
+        let after_hc = d.lam_fv(hc_fv, degree_lt_c, after_hg);
+        let over_n = d.lam_fv(n_fv, nat, after_hc);
+        let over_m = d.lam_fv(m_fv, nat, over_n);
+        let over_g = d.lam_fv(g_fv, fn_ty, over_m);
+        d.lam_fv(c_fv, fn_ty, over_g)
+    };
+
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.poly_eval_poly_mul_wrong_add");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    });
+    assert!(
+        admitted.is_err(),
+        "polyEval_polyMul's proof must NOT type-check against an `add`-shaped \
          conclusion: {admitted:?}"
     );
 }

@@ -1425,6 +1425,32 @@ pub struct ComplexPrelude {
     /// `Equiv (mul a (c i)) (mul a zero)`, and [`Self::mul_zero`] at `a`
     /// closes `Equiv (mul a zero) zero`.
     pub poly_degree_lt_poly_scale: NameId,
+    /// `Complex.polyMul : (Nat → Complex) → (Nat → Complex) → (Nat → Complex)
+    /// := fun c g k => sumRange (fun i => mul (c i) (g (Nat.sub k i)))
+    /// (Nat.succ k)` — the finite Cauchy product of two coefficient
+    /// functions: the antidiagonal convolution [`poly`]'s module doc names as
+    /// the natural (but, without a vanishing hypothesis, not provably
+    /// correct) definition.
+    pub poly_mul: NameId,
+    /// `Complex.polyEval_polyMul : ∀ c g m n, polyDegreeLt c m →
+    /// polyDegreeLt g n → ∀ x, Equiv (polyEval (polyMul c g) (Nat.add m n) x)
+    /// (mul (polyEval c m x) (polyEval g n x))` — evaluation is a
+    /// homomorphism from `(polyMul, polyEval)` to `(mul, ·)`, **padded to the
+    /// shared bound `Nat.add m n`**, under the vanishing hypotheses
+    /// [`poly`]'s module doc showed were necessary.
+    ///
+    /// Route: pad each factor's sum up to `Nat.add m n`
+    /// ([`Self::sum_range_split`] plus the vanishing hypothesis collapsing
+    /// the tail, `Nat.add_comm` reindexing the `g`-side padding which splits
+    /// naturally at `Nat.add n m`); decompose the padded product via
+    /// [`Self::sum_range_mul_eq_diag_add_corner`] into antidiagonal-triangle
+    /// plus corner; show the corner vanishes (the new analysis — every
+    /// summand's indices `(i, j)` satisfy `i ≥ m ∨ j ≥ n`, since `i < m ∧ j <
+    /// n` would force `i + j < Nat.add m n`, contradicting the corner
+    /// region's own `i + j ≥ Nat.add m n`); and identify `polyMul`'s
+    /// antidiagonal convolution with the triangle sum via [`Self::pow_add`]
+    /// splitting `pow x k` across each antidiagonal pair.
+    pub poly_eval_poly_mul: NameId,
 }
 
 impl ComplexPrelude {
@@ -1602,6 +1628,8 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         poly_degree_lt: kernel.name_str(complex, "polyDegreeLt"),
         poly_degree_lt_poly_add: kernel.name_str(complex, "polyDegreeLt_polyAdd"),
         poly_degree_lt_poly_scale: kernel.name_str(complex, "polyDegreeLt_polyScale"),
+        poly_mul: kernel.name_str(complex, "polyMul"),
+        poly_eval_poly_mul: kernel.name_str(complex, "polyEval_polyMul"),
     }
 }
 
