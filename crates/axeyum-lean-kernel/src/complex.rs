@@ -1582,9 +1582,9 @@ pub struct ComplexPrelude {
     /// deliberately NOT `nat_prelude::choose::sub_succ_of_lt`, which proves
     /// the identical fact but is `pub(super)` to that module, so this
     /// re-derives it from public building blocks rather than reaching across
-    /// the boundary), [`Self::succ_sub_of_le`]-style reindexing (via the
-    /// public `Nat.succ_sub_of_le`) puts `Nat.sub (Nat.succ n) k` at `Nat.succ
-    /// (Nat.succ j)` too, and BOTH `factorQuotient c a (Nat.succ n) k` and
+    /// the boundary), the public `Nat.succ_sub_of_le`-style reindexing puts
+    /// `Nat.sub (Nat.succ n) k` at `Nat.succ (Nat.succ j)` too, and BOTH
+    /// `factorQuotient c a (Nat.succ n) k` and
     /// `factorQuotient c a n k` reduce (one `Nat.rec` ι-step each, via
     /// `nat_eq_to_complex_equiv` transport exactly as
     /// [`Self::factor_quotient_degree_lt`] already transports through this
