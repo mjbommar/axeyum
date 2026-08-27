@@ -20380,3 +20380,405 @@ mod product_pair_diff_le_tests {
         (ok, bad)
     }
 }
+
+// --- piece 1, ASSEMBLED at the riemannSum level ---------------------------
+
+/// The close-endpoint estimate: the `le` analogue of
+/// [`riemann_sum_congr_endpoints`].
+///
+/// ```text
+/// ∀ F aa bb (u : UniformlyContinuousOn F aa bb) k, BoundedOn F aa bb k →
+/// ∀ x y x2 y2 m e (dd d2b : CReal),
+///   le x y → le x2 y2 → le aa x → le y bb → le aa x2 → le y2 bb →
+///   le (abs (Δ₁ − Δ₂)) dd →
+///   le (abs Δ₂) d2b →
+///   (∀ i, Nat.lt i (succ m) →
+///      le (abs (p_i − p'_i)) (ofRat (1/(modulus F aa bb u e + 1)))) →
+///   le (abs (riemannSum F x y m − riemannSum F x2 y2 m))
+///      ((succ m) · (M·dd + (1/(e+1))·d2b))
+/// ```
+///
+/// with `Δ₁ := delta_of x y m`, `Δ₂ := delta_of x2 y2 m`,
+/// `p_i := sample_point x Δ₁ i`, `p'_i := sample_point x2 Δ₂ i`, and
+/// `M := ofRat (natDivSucc (succ k) 0)` — `bounded_on_unfold`'s own bound,
+/// built with `derivative.rs::mag_bound`'s exact recipe so the `ExprId` is
+/// shared.
+///
+/// **The `(succ m)` factor is what makes the bound uniform in the mesh
+/// count**, not what breaks it: the caller instantiates `dd` and `d2b` at
+/// quantities that already carry `Δ`'s own `1/(m+1)`, and
+/// [`CRealPrelude::mesh_count_width`] cancels the two. That cancellation is
+/// deliberately NOT done here, because it is the caller's `dd`/`d2b` that fix
+/// which form it takes.
+///
+/// **Three hypotheses, not three estimates.** `dd`, `d2b` and the per-index
+/// sample-point closeness are parameters. The last is the one this lane did
+/// not discharge: `p_i − p'_i = (x − x2) + i·(Δ₁ − Δ₂)` and bounding
+/// `i·|Δ₁ − Δ₂|` uniformly needs `i ≤ m` carried through
+/// [`CRealPrelude::of_nat_le`] and [`CRealPrelude::mesh_reciprocal_mul`].
+/// See the module documentation.
+#[allow(clippy::too_many_arguments)]
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "piece 1 assembled; its consumer is integral_split at an ARBITRARY \
+                  split point, which is additionally blocked on piece 2 (a PosBound \
+                  on the interval width)"
+    )
+)]
+fn riemann_sum_endpoints_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    aa: ExprId,
+    bb: ExprId,
+    u: ExprId,
+    k: ExprId,
+    hb: ExprId,
+    x: ExprId,
+    y: ExprId,
+    x2: ExprId,
+    y2: ExprId,
+    m: ExprId,
+    e: ExprId,
+    dd: ExprId,
+    d2b: ExprId,
+    hxy: ExprId,
+    hx2y2: ExprId,
+    hax: ExprId,
+    hyb: ExprId,
+    hax2: ExprId,
+    hy2b: ExprId,
+    hdd: ExprId,
+    hd2: ExprId,
+    hclose: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let logic = p.rat.int.logic;
+
+    let n = d.succ(m);
+    let delta1 = delta_of(d, p, x, y, m);
+    let delta2 = delta_of(d, p, x2, y2, m);
+    let f_summand = summand_fn(d, p, f, x, delta1);
+    let g_summand = summand_fn(d, p, f, x2, delta2);
+
+    let mbound = {
+        let succ_k = d.succ(k);
+        let zero_nat = d.num(0);
+        let q = d.const_app(p.rat.nat_div_succ, &[succ_k, zero_nat]);
+        embed(d, p, q)
+    };
+    let eps = {
+        let one_nat = d.num(1);
+        let q = d.const_app(p.rat.nat_div_succ, &[one_nat, e]);
+        embed(d, p, q)
+    };
+    let kb = {
+        let left = cmul(d, p, mbound, dd);
+        let right = cmul(d, p, eps, d2b);
+        cadd(d, p, left, right)
+    };
+
+    let spec = d.const_app(p.uc_spec, &[f, aa, bb, u]);
+
+    let pointwise = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let lt_ty = d.lt(i, n);
+        let lt_fv = d.fresh_fvar();
+        let lt = d.kernel().fvar(lt_fv);
+
+        let sp1 = sample_point(d, p, x, delta1, i);
+        let sp2 = sample_point(d, p, x2, delta2, i);
+
+        // Both sample points inside `[aa, bb]`, via their OWN sub-interval —
+        // the same four-step placement `riemann_sum_congr_endpoints` uses,
+        // and for the same reason: `u` and `hb` witness only `[aa, bb]`.
+        let and1 = d.const_app(p.riemann_sample_in_bounds, &[x, y, m, i, hxy, lt]);
+        let x_le_sp1 = cle(d, p, x, sp1);
+        let sp1_le_y = cle(d, p, sp1, y);
+        let lo1 = d.const_app(logic.and_left, &[x_le_sp1, sp1_le_y, and1]);
+        let hi1 = d.const_app(logic.and_right, &[x_le_sp1, sp1_le_y, and1]);
+        let h_a_sp1 = d.lemma(p.le_trans, &[aa, x, sp1, hax, lo1]);
+        let h_sp1_b = d.lemma(p.le_trans, &[sp1, y, bb, hi1, hyb]);
+
+        let and2 = d.const_app(p.riemann_sample_in_bounds, &[x2, y2, m, i, hx2y2, lt]);
+        let x2_le_sp2 = cle(d, p, x2, sp2);
+        let sp2_le_y2 = cle(d, p, sp2, y2);
+        let lo2 = d.const_app(logic.and_left, &[x2_le_sp2, sp2_le_y2, and2]);
+        let hi2 = d.const_app(logic.and_right, &[x2_le_sp2, sp2_le_y2, and2]);
+        let h_a_sp2 = d.lemma(p.le_trans, &[aa, x2, sp2, hax2, lo2]);
+        let h_sp2_b = d.lemma(p.le_trans, &[sp2, y2, bb, hi2, hy2b]);
+
+        // |F(p_i)| ≤ M, from the BoundedOn witness at this sample point.
+        let hfp = d.lemma(
+            p.bounded_on_unfold,
+            &[f, aa, bb, k, hb, sp1, h_a_sp1, h_sp1_b],
+        );
+
+        // |F(p_i) − F(p'_i)| ≤ 1/(e+1), from `UniformlyContinuousOn.spec`.
+        let hclose_i = d.apply(hclose, &[i, lt]);
+        let hf = d.apply(
+            spec,
+            &[e, sp1, sp2, h_a_sp1, h_sp1_b, h_a_sp2, h_sp2_b, hclose_i],
+        );
+
+        let fz1 = d.apply(f, &[sp1]);
+        let fz2 = d.apply(f, &[sp2]);
+        let step = product_pair_diff_le(
+            d, p, fz1, fz2, delta1, delta2, mbound, dd, eps, d2b, hfp, hdd, hf, hd2,
+        );
+
+        let with_lt = d.lam_fv(lt_fv, lt_ty, step);
+        d.lam_fv(i_fv, nat, with_lt)
+    };
+
+    sum_range_pair_diff_le(d, p, f_summand, g_summand, m, kb, pointwise)
+}
+
+#[cfg(test)]
+mod riemann_sum_endpoints_le_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// Everything both probes share: the fully symbolic context, the proof
+    /// term, and a closer that seals a supplied conclusion into a `Theorem`.
+    #[allow(clippy::type_complexity)]
+    fn probe(short_count: bool) -> Result<(), crate::KernelError> {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+        let nat = d.nat_ty();
+        let f_ty = fn_ty(&mut d, p);
+
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let aa_fv = d.fresh_fvar();
+        let aa = d.kernel().fvar(aa_fv);
+        let bb_fv = d.fresh_fvar();
+        let bb = d.kernel().fvar(bb_fv);
+        let u_ty = d.const_app(p.uniformly_continuous_on, &[f, aa, bb]);
+        let u_fv = d.fresh_fvar();
+        let u = d.kernel().fvar(u_fv);
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hb_ty = d.const_app(p.bounded_on, &[f, aa, bb, k]);
+        let hb_fv = d.fresh_fvar();
+        let hb = d.kernel().fvar(hb_fv);
+
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let x2_fv = d.fresh_fvar();
+        let x2 = d.kernel().fvar(x2_fv);
+        let y2_fv = d.fresh_fvar();
+        let y2 = d.kernel().fvar(y2_fv);
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+        let dd_fv = d.fresh_fvar();
+        let dd = d.kernel().fvar(dd_fv);
+        let d2b_fv = d.fresh_fvar();
+        let d2b = d.kernel().fvar(d2b_fv);
+
+        let hxy_ty = cle(&mut d, p, x, y);
+        let hxy_fv = d.fresh_fvar();
+        let hxy = d.kernel().fvar(hxy_fv);
+        let hx2y2_ty = cle(&mut d, p, x2, y2);
+        let hx2y2_fv = d.fresh_fvar();
+        let hx2y2 = d.kernel().fvar(hx2y2_fv);
+        let hax_ty = cle(&mut d, p, aa, x);
+        let hax_fv = d.fresh_fvar();
+        let hax = d.kernel().fvar(hax_fv);
+        let hyb_ty = cle(&mut d, p, y, bb);
+        let hyb_fv = d.fresh_fvar();
+        let hyb = d.kernel().fvar(hyb_fv);
+        let hax2_ty = cle(&mut d, p, aa, x2);
+        let hax2_fv = d.fresh_fvar();
+        let hax2 = d.kernel().fvar(hax2_fv);
+        let hy2b_ty = cle(&mut d, p, y2, bb);
+        let hy2b_fv = d.fresh_fvar();
+        let hy2b = d.kernel().fvar(hy2b_fv);
+
+        let delta1 = delta_of(&mut d, p, x, y, m);
+        let delta2 = delta_of(&mut d, p, x2, y2, m);
+        let ndelta2 = cneg(&mut d, p, delta2);
+        let ddiff = cadd(&mut d, p, delta1, ndelta2);
+        let hdd_ty = {
+            let a = d.const_app(p.abs, &[ddiff]);
+            cle(&mut d, p, a, dd)
+        };
+        let hdd_fv = d.fresh_fvar();
+        let hdd = d.kernel().fvar(hdd_fv);
+        let hd2_ty = {
+            let a = d.const_app(p.abs, &[delta2]);
+            cle(&mut d, p, a, d2b)
+        };
+        let hd2_fv = d.fresh_fvar();
+        let hd2 = d.kernel().fvar(hd2_fv);
+
+        let n = d.succ(m);
+        let modul = d.const_app(p.uc_modulus, &[f, aa, bb, u, e]);
+        let hclose_ty = {
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let lt_ty = d.lt(i, n);
+            let sp1 = sample_point(&mut d, p, x, delta1, i);
+            let sp2 = sample_point(&mut d, p, x2, delta2, i);
+            let one_nat = d.num(1);
+            let q = d.const_app(p.rat.nat_div_succ, &[one_nat, modul]);
+            let body = close_within(&mut d, p, sp1, sp2, q);
+            let inner = d.arrow(lt_ty, body);
+            d.pi_fv(i_fv, nat, inner)
+        };
+        let hclose_fv = d.fresh_fvar();
+        let hclose = d.kernel().fvar(hclose_fv);
+
+        let proof = riemann_sum_endpoints_le(
+            &mut d, p, f, aa, bb, u, k, hb, x, y, x2, y2, m, e, dd, d2b, hxy, hx2y2, hax, hyb,
+            hax2, hy2b, hdd, hd2, hclose,
+        );
+
+        let rs1 = rsum(&mut d, p, f, x, y, m);
+        let rs2 = rsum(&mut d, p, f, x2, y2, m);
+        // Non-vacuity, STRUCTURALLY: the two sides must be different terms, so
+        // the conclusion is not `|X − X| ≤ …`. Deliberately `assert_ne!` on the
+        // hash-consed ids and NOT `Kernel::def_eq` — see the module doc: a
+        // FAILING `def_eq` between two `riemannSum`s at different endpoints is
+        // pathological, and it was measured so.
+        assert_ne!(
+            rs1, rs2,
+            "the two riemannSums must be distinct terms, or the estimate is |X − X|"
+        );
+
+        let nrs2 = cneg(&mut d, p, rs2);
+        let diff = cadd(&mut d, p, rs1, nrs2);
+        let abs_diff = d.const_app(p.abs, &[diff]);
+
+        let mbound = {
+            let succ_k = d.succ(k);
+            let zero_nat = d.num(0);
+            let q = d.const_app(p.rat.nat_div_succ, &[succ_k, zero_nat]);
+            embed(&mut d, p, q)
+        };
+        let eps = {
+            let one_nat = d.num(1);
+            let q = d.const_app(p.rat.nat_div_succ, &[one_nat, e]);
+            embed(&mut d, p, q)
+        };
+        let kb = {
+            let left = cmul(&mut d, p, mbound, dd);
+            let right = cmul(&mut d, p, eps, d2b);
+            cadd(&mut d, p, left, right)
+        };
+        // The negative control varies ONLY the term count in the bound and
+        // leaves the left-hand side the identical `ExprId`. That is not a
+        // stylistic choice: a control that transposed the two `riemannSum`s
+        // was measured PATHOLOGICAL -- see the module documentation.
+        let count = if short_count { m } else { n };
+        let n_real = d.const_app(p.of_nat, &[count]);
+        let bound = cmul(&mut d, p, n_real, kb);
+        let concl = cle(&mut d, p, abs_diff, bound);
+
+        let ty = {
+            let t = d.arrow(hclose_ty, concl);
+            let t = d.arrow(hd2_ty, t);
+            let t = d.arrow(hdd_ty, t);
+            let t = d.arrow(hy2b_ty, t);
+            let t = d.arrow(hax2_ty, t);
+            let t = d.arrow(hyb_ty, t);
+            let t = d.arrow(hax_ty, t);
+            let t = d.arrow(hx2y2_ty, t);
+            let t = d.arrow(hxy_ty, t);
+            let t = d.pi_fv(d2b_fv, carrier, t);
+            let t = d.pi_fv(dd_fv, carrier, t);
+            let t = d.pi_fv(e_fv, nat, t);
+            let t = d.pi_fv(m_fv, nat, t);
+            let t = d.pi_fv(y2_fv, carrier, t);
+            let t = d.pi_fv(x2_fv, carrier, t);
+            let t = d.pi_fv(y_fv, carrier, t);
+            let t = d.pi_fv(x_fv, carrier, t);
+            let t = d.arrow(hb_ty, t);
+            let t = d.pi_fv(k_fv, nat, t);
+            let t = d.pi_fv(u_fv, u_ty, t);
+            let t = d.pi_fv(bb_fv, carrier, t);
+            let t = d.pi_fv(aa_fv, carrier, t);
+            d.pi_fv(f_fv, f_ty, t)
+        };
+        let value = {
+            let v = d.lam_fv(hclose_fv, hclose_ty, proof);
+            let v = d.lam_fv(hd2_fv, hd2_ty, v);
+            let v = d.lam_fv(hdd_fv, hdd_ty, v);
+            let v = d.lam_fv(hy2b_fv, hy2b_ty, v);
+            let v = d.lam_fv(hax2_fv, hax2_ty, v);
+            let v = d.lam_fv(hyb_fv, hyb_ty, v);
+            let v = d.lam_fv(hax_fv, hax_ty, v);
+            let v = d.lam_fv(hx2y2_fv, hx2y2_ty, v);
+            let v = d.lam_fv(hxy_fv, hxy_ty, v);
+            let v = d.lam_fv(d2b_fv, carrier, v);
+            let v = d.lam_fv(dd_fv, carrier, v);
+            let v = d.lam_fv(e_fv, nat, v);
+            let v = d.lam_fv(m_fv, nat, v);
+            let v = d.lam_fv(y2_fv, carrier, v);
+            let v = d.lam_fv(x2_fv, carrier, v);
+            let v = d.lam_fv(y_fv, carrier, v);
+            let v = d.lam_fv(x_fv, carrier, v);
+            let v = d.lam_fv(hb_fv, hb_ty, v);
+            let v = d.lam_fv(k_fv, nat, v);
+            let v = d.lam_fv(u_fv, u_ty, v);
+            let v = d.lam_fv(bb_fv, carrier, v);
+            let v = d.lam_fv(aa_fv, carrier, v);
+            d.lam_fv(f_fv, f_ty, v)
+        };
+
+        let anon = d.kernel().anon();
+        let name = d.kernel().name_str(anon, "riemannSumEndpointsLeProbe");
+        d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+    }
+
+    /// Symbolic in `F`, both interval pairs, the outer interval, both
+    /// witnesses, the mesh count, the accuracy and both slack bounds, closed
+    /// into a real `Theorem` — and stated at the [`rsum`] type, not at the
+    /// `sumRange` type the proof term builds, so this also pins that the two
+    /// are the same `Definition` body at the same hash-consed `ExprId`s.
+    #[test]
+    fn riemann_sum_endpoints_le_proves_the_stated_bound() {
+        crate::on_a_deep_stack(|| {
+            let r = probe(false);
+            assert!(
+                r.is_ok(),
+                "riemann_sum_endpoints_le must prove the stated bound at the \
+                 riemannSum type: {r:?}"
+            );
+        });
+    }
+
+    /// Negative control: the SAME proof term against a term count of `m`
+    /// rather than `Nat.succ m` in the bound, everything else identical.
+    ///
+    /// Genuinely false, not merely a different spelling: at `m := 0` the
+    /// Riemann sum has ONE term, the claimed bound is `0`, and the
+    /// hypotheses permit a nonzero difference. Not vacuous either -- the
+    /// positive test above is green on the same proof term, which is the
+    /// pairing the first increment's control failed to have.
+    #[test]
+    fn riemann_sum_endpoints_le_is_refused_at_a_short_term_count() {
+        crate::on_a_deep_stack(|| {
+            let r = probe(true);
+            assert!(
+                r.is_err(),
+                "the SAME proof term must be REFUSED against the short term \
+                 count `mul (ofNat m) kb`"
+            );
+        });
+    }
+}
