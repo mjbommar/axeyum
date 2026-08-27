@@ -406,3 +406,85 @@ That same run also produced a control lesson worth keeping: the NEGATIVE
 control PASSED while the positive was rejected. A refusal proves nothing
 until the acceptance is green beside it, so the later increments build both
 probes in ONE function and assert both outcomes together.
+
+## CLOSED — TWENTY-FIRST lane, 2026-08-27: arbitrary `c`, under a `PosBound`
+
+`CReal.integralSplitArbitrary` is admitted and axiom-free:
+
+```text
+∀ F a b c (k kb : Nat), PosBound (b − a) k →
+∀ (hab : le a b) (u : UniformlyContinuousOn F a b), BoundedOn F a b kb →
+∀ (hac : le a c) (hcb : le c b) (uac : ...F a c) (ucb : ...F c b),
+  Equiv (integral F a b hab u)
+        (add (integral F a c hac uac) (integral F c b hcb ucb))
+```
+
+**The `PosBound` on the width is in the signature and is the whole stratum.**
+Locating `c` in `integral_split`'s base proportion family means forming
+`t := (c−a)/(b−a)`, and `CReal.inv` takes the positivity witness as an
+explicit argument. `bounded_of_uniformly_continuous` supplies the `BoundedOn`
+pair for free, so that hypothesis costs a caller nothing.
+
+Two more public declarations landed with it: `CReal.splitPointApprox` (piece 2
+— every `c` is within `4/(g+2)·|b−a|` of a base split point, for every `g`)
+and `CReal.integralEndpointClose` (endpoint continuity of the integral,
+mesh-free).
+
+### Why the five-lane `crossingIndex` obstruction is not on this route
+
+Entries four through seven of `creal/integral.rs`'s module doc are correct and
+do not apply. The `PosBound` moves the problem into the UNIT interval, where
+the grid is rational **by construction**: `bucketIndex` is read at grid
+`succ g` directly, so the approximant and every slack term share ONE
+denominator (no cross-denominator `Rat` arithmetic exists in this prelude to
+need), and the index cap comes from `Nat.le_total` — `Nat` order IS decidable
+— rather than from `bucket_index_bound`, whose `+3` slack was the fourth
+entry's measured obstruction. `crossingIndex`, `CReal.bound` and
+`bucket_index_bound` are never called.
+
+The register's standing lesson pays a fourth and fifth time, both about
+LEVEL: `integral_endpoint_close` is four named lemmas at the `Converges`
+altitude (`leg_converges` at a shared mesh + `converges_le`) and a
+sub-development if sized against `riemannSum_integral_close`'s sample-level
+`Within`; and the accuracy arithmetic is exact identities
+(`natDivSucc_scale`, plus `nat_div_succ_le_scaled` + `nat_index_symm` to make
+ONE composed index serve two depth requirements) rather than any comparison
+between denominators.
+
+### The kernel rejected ONE of nine increments
+
+`neg (neg x)` is NOT defeq to `x` in this setoid — `CReal.neg` negates each
+sample and `Rat.neg_neg` is a theorem, not a reduction. The symptom was a bare
+`TypeMismatch` between two ADJACENT `ExprId`s. Never form the double
+negation: `neg_le_abs` bounds `−(x−y)` directly and `neg_sub_swap` rewrites it
+to `y−x`.
+
+### Cost, and the cite-vs-inline mistake
+
+`creal_prelude_builds`, matched A/B on one tree with restoration verified by
+`git hash-object`: `splitPointApprox` alone is free (+0.9 s at matched load);
+the two integral theorems cost **about +8 s**, the same band
+`declare_integral_split` itself does. They cost **+26 s** until
+`integral_split_arbitrary_close` was changed to CITE the published
+`integralEndpointClose` instead of calling the private function, which had put
+two full copies of that estimate into the proof term. **Once a step is
+published, cite it.**
+
+Dead code 8 → 4: publishing makes the nineteenth lane's whole piece-1 chain
+reachable, so eleven `expect(dead_code)` annotations became unfulfilled and
+were removed. The four that remain (`mesh_count_align`, `MeshAlignMul` +
+`mesh_count_align_mul`, `bnd_leg_plus_share_le_at`) are unchanged.
+
+### Two things left
+
+- **Removing the `PosBound`** is now the ONLY step to an unconditional
+  theorem. The per-accuracy `lt_cotrans` split works in principle and is sound
+  only because the target is a `Prop`; it needs
+  `CReal.inv_index_irrelevant` wired in, since `k` changes per accuracy.
+- **A tooling deficiency, logged here and not fixed:**
+  `declare_bounded_of_uniformly_continuous` already assembles the
+  bucket-closeness fact INLINE, behind five private helpers, so it is
+  invisible to any name- or shape-indexed search (`CLAUDE.md`'s hiding place
+  2). It was re-assembled from the four public prelude lemmas instead.
+  Extracting it in `uniform_continuity.rs` — as a `pub(super)` helper or a
+  public `CReal.bucketClose` — is the right fix.
