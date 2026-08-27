@@ -415,6 +415,12 @@ impl ColouringProblem {
     /// witnessed-colour literals with unit weights. Points after the compared
     /// prefix remain unrestricted.
     ///
+    /// Distance is measured in the formula's **labelled palette coordinates**.
+    /// It is not minimized over colour permutations. With symmetry breaking
+    /// enabled, callers should normally pass a witness canonicalized under the
+    /// same convention; a restricted UNSAT result must still state this
+    /// coordinate dependence rather than claiming an orbit-distance bound.
+    ///
     /// Like [`Self::encode_with_witness_prefix`], this is a search restriction.
     /// Restricted UNSAT is not an upper bound. Promote a SAT model only after
     /// projecting it with [`WeightedAtMostEncoding::project_source_model`] and
@@ -907,6 +913,24 @@ mod tests {
             solve_with_drat_proof(&pinned),
             ProofSolveOutcome::Sat(_)
         ));
+    }
+
+    #[test]
+    fn witness_hamming_ball_is_not_a_palette_orbit_distance() {
+        use axeyum_cnf::{ProofSolveOutcome, check_drat, solve_with_drat_proof};
+
+        let problem = ColouringProblem::new(4, 3, Vec::new()).unwrap();
+        let canonical = Witness::new(3, vec![1, 2, 3, 1]).unwrap();
+        let relabelled = Witness::new(3, vec![2, 1, 3, 2]).unwrap();
+        assert_eq!(relabelled.canonicalize_palette(), canonical);
+        let labelled_radius_zero = problem
+            .encode_with_witness_hamming_ball(&relabelled, 4, 0, WeightedAtMostLimits::default())
+            .unwrap();
+        let ProofSolveOutcome::Unsat(proof) = solve_with_drat_proof(labelled_radius_zero.formula())
+        else {
+            panic!("the noncanonical relabelling must conflict with canonical palette clauses")
+        };
+        assert_eq!(check_drat(labelled_radius_zero.formula(), &proof), Ok(true));
     }
 
     #[test]

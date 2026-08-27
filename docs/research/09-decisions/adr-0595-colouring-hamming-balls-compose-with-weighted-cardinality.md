@@ -18,6 +18,12 @@ with the existing bounded weighted-at-most encoder. For every compared point, th
 is the negation of its witnessed-colour literal. Canonical exactly-one clauses make that literal
 true exactly when the point changes colour. Later points are unrestricted.
 
+The distance is in the formula's labelled palette coordinates, not minimized over colour
+permutations. When canonical symmetry breaking is active, callers should canonicalize the reference
+witness under the same first-occurrence convention. Every restricted-UNSAT statement must retain
+this coordinate scope; an orbit-distance result would require a different encoding or a checked
+cover over palette permutations.
+
 The method returns `WeightedAtMostEncoding`, not a bare formula, so a satisfying model can be
 projected back to the canonical variable namespace. Mathematical credit still requires evaluating
 that projection against the unrestricted canonical formula and independently replaying the family
@@ -29,11 +35,16 @@ checked proof; a solver status line is not evidence.
 An exhaustive small control checks both sides of the boundary: a one-point mutation is rejected
 at radius zero with checked DRAT and accepted at radius one. A SAT model at the center is projected,
 decoded, and replayed against the canonical formula. Length, palette, literal-range, and resource
-limits fail closed through typed errors. All five focused colouring-guidance tests and all-target,
+limits fail closed through typed errors. A separate checked-DRAT control permutes two palette labels,
+canonicalizes back to the same witness, and nevertheless refutes labelled radius zero; this pins the
+deliberately non-orbit semantics. All six focused colouring-guidance tests and all-target,
 all-feature Clippy pass.
 
-On the open 405-point Rado instance, a bounded diagnostic reported UNSAT at radii zero through 22;
-radius 23 exceeded 120 seconds. No proof was retained, so this is explicitly uncredited telemetry.
+On the open 405-point Rado instance, radius 22 regenerates as 11,745 variables / 319,249 clauses.
+CaDiCaL seed 722 emitted a 609,746,173-byte textual DRAT in 126.32 seconds; Axeyum's file-backed
+backward checker accepted it in 119.534 seconds. The checked statement is only that the canonical
+labelled formula has no solution within 22 changes of the retained witness on points 1--404. Radius
+23 remains undecided, and the unrestricted 405-point instance remains open.
 
 ## Alternatives
 

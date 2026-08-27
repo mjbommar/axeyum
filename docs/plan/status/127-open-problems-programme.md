@@ -168,7 +168,20 @@ canonical one-hot clauses make this exact. The result retains source-model proje
 result earns credit only after unrestricted CNF and independent relation replay. An exhaustive
 control checks radius zero versus one with checked DRAT, projection, decoding, and replay. On the
 open 405-point Rado instance, proof-free diagnostics reported UNSAT through radius 22 and timed out
-at radius 23 after 120 seconds; these status lines receive no mathematical credit.
+at radius 23 after 120 seconds; those status lines alone received no mathematical credit before the
+separate certificate run below.
+
+**Checked Rado repair-neighbourhood boundary, 2026-08-27.** Radius 22 regenerated
+byte-identically at 11,745 variables / 319,249 clauses / 6,751,821 bytes, SHA-256
+`f93dc5bf...a6d`. CaDiCaL seed 722 returned UNSAT in 126.32 seconds and emitted a
+609,746,173-byte textual DRAT, SHA-256 `4aed07d6...ffa5`; Axeyum's independent file-backed
+backward checker returned `true` in 119.534 seconds. Thus no solution of the canonical 405-point
+formula lies within 22 **labelled** changes of the checked 404 witness on points 1--404. ADR-0595
+and a new checked control now make explicit that this is not distance modulo palette permutation.
+The compressed CNF/proof, receipt, diary, provenance, and rebuilt paper are retained in the Rado
+package. Exact searches through 2026-08-27 found no matching indexed result, which is negative
+retrieval rather than priority evidence. Radius 23 and unrestricted 405 remain open, so the exact
+Rado bound does not move.
 
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
 external-certificate replay runner for all five packages.  It validates checker and artifact
