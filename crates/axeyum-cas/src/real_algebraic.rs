@@ -191,9 +191,9 @@ pub fn algebraic_eq(a: &RealAlgebraic, b: &RealAlgebraic) -> Option<bool> {
     if big_degree(&g).is_none_or(|d| d == 0) {
         return Some(false); // no shared root at all
     }
-    let at_lo = big_sign(&big_horner(&g, &lo));
-    let at_hi = big_sign(&big_horner(&g, &hi));
-    match (at_lo, at_hi) {
+    let sign_lower = big_sign(&big_horner(&g, &lo));
+    let sign_upper = big_sign(&big_horner(&g, &hi));
+    match (sign_lower, sign_upper) {
         (Sign2::Neg, Sign2::Pos) | (Sign2::Pos, Sign2::Neg) => Some(true),
         (Sign2::Neg, Sign2::Neg) | (Sign2::Pos, Sign2::Pos) => Some(false),
         // Should not happen (see doc): an overlap endpoint is one of a/b's own
@@ -367,12 +367,8 @@ pub fn verify_ivt_certificate(cert: &IvtCertificate) -> Option<bool> {
     let Some(Ordering::Less) = a.checked_cmp(b) else {
         return Some(false);
     };
-    let Some(pa) = poly::eval_rat_poly(poly, *a) else {
-        return None;
-    };
-    let Some(pb) = poly::eval_rat_poly(poly, *b) else {
-        return None;
-    };
+    let pa = poly::eval_rat_poly(poly, *a)?;
+    let pb = poly::eval_rat_poly(poly, *b)?;
     if pa.is_zero() || pb.is_zero() {
         return Some(false);
     }
@@ -490,39 +486,39 @@ fn big_poly_rem(a: &[BigRational], b: &[BigRational]) -> Option<Vec<BigRational>
 /// cap or the algorithm needs more than `max_degree` remainder steps (a
 /// resource decline, never a wrong GCD).
 fn big_rat_gcd(
-    a: &[BigRational],
-    b: &[BigRational],
+    poly_a: &[BigRational],
+    poly_b: &[BigRational],
     max_degree: usize,
 ) -> Option<Vec<BigRational>> {
-    let mut x = big_trim(a.to_vec());
-    let mut y = big_trim(b.to_vec());
-    if big_degree(&x).is_some_and(|d| d > max_degree)
-        || big_degree(&y).is_some_and(|d| d > max_degree)
+    let mut prev = big_trim(poly_a.to_vec());
+    let mut curr = big_trim(poly_b.to_vec());
+    if big_degree(&prev).is_some_and(|d| d > max_degree)
+        || big_degree(&curr).is_some_and(|d| d > max_degree)
     {
         return None;
     }
     let mut steps = 0usize;
-    while big_degree(&y).is_some() {
+    while big_degree(&curr).is_some() {
         steps += 1;
         if steps > max_degree.saturating_add(1) {
             return None;
         }
-        let r = big_poly_rem(&x, &y)?;
-        x = y;
-        y = r;
+        let remainder = big_poly_rem(&prev, &curr)?;
+        prev = curr;
+        curr = remainder;
     }
-    // `x` is the GCD, up to a scalar; monic-normalize for a canonical result
-    // (not required for correctness of the caller's sign test, but keeps the
-    // intermediate readable/testable).
-    if let Some(d) = big_degree(&x) {
-        let lead = x[d].clone();
+    // `prev` is the GCD, up to a scalar; monic-normalize for a canonical
+    // result (not required for correctness of the caller's sign test, but
+    // keeps the intermediate readable/testable).
+    if let Some(d) = big_degree(&prev) {
+        let lead = prev[d].clone();
         if !lead.is_zero() {
-            for c in &mut x {
+            for c in &mut prev {
                 *c = &*c / &lead;
             }
         }
     }
-    Some(x)
+    Some(prev)
 }
 
 #[cfg(test)]
@@ -543,6 +539,7 @@ mod tests {
     // ---- from_algebraic_real / real_roots bridge ----
 
     #[test]
+    #[allow(clippy::cast_precision_loss)] // test-only f64 sanity check
     fn bridges_every_degree_from_cas_root_isolation() {
         // x^5 - x - 1: the classic non-radical quintic, degree 5, one real root.
         let p = poly_from(&[-1, -1, 0, 0, 0, 1]);
@@ -565,7 +562,7 @@ mod tests {
         let roots = real_roots(&p).unwrap();
         assert_eq!(roots.len(), 3);
         for r in &roots {
-            assert_eq!(r.compare_rational(&Rational::integer(0)).is_some(), true);
+            assert!(r.compare_rational(&Rational::integer(0)).is_some());
         }
     }
 
