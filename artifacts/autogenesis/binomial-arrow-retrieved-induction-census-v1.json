@@ -1,23 +1,20 @@
 {
   "authority": "measurement only; no operation registration or fact admission",
   "census": {
-    "accepted": 0,
+    "accepted": 1,
     "candidate_transport": {
-      "decline_reasons": {
-        "MissingRoot": 1
-      },
+      "decline_reasons": {},
       "outcomes": {
-        "added": 26,
-        "capsule-existing": 33,
-        "transport-declined": 1
+        "added": 3,
+        "capsule-existing": 2
       }
     },
-    "conversion_percent": 0.0,
+    "conversion_percent": 33.3,
     "decline_reasons": {
       "NotEqualityGoal": 1,
-      "TerminalNotDefEqNoRewrite": 2
+      "TerminalNotDefEqNoRewrite": 1
     },
-    "declined": 3,
+    "declined": 2,
     "evaluation_classes": {
       "positive-target": 3
     },
@@ -28,11 +25,11 @@
     "result_by_evaluation_class": {
       "accepted": {
         "must-decline-control": 0,
-        "positive-target": 0
+        "positive-target": 1
       },
       "declined": {
         "must-decline-control": 0,
-        "positive-target": 3
+        "positive-target": 2
       },
       "import_rejected": {
         "must-decline-control": 0,
@@ -50,149 +47,16 @@
   "outcomes": [
     {
       "candidate_declarations": [
-        "Nat.prime_dvd_choose",
-        "Nat.lt_or_eq_of_le",
-        "Nat.lt_of_lt_of_le",
-        "Nat.lt_irrefl",
-        "Nat.two_le_succ_or_eq_one",
-        "Nat.sub_eq_zero_of_le",
-        "Nat.succ_sub_of_le",
-        "Nat.succ_ne_zero",
-        "Nat.Peano.zero_ne_succ",
-        "Nat.choose_succ_self_eq_zero",
-        "Nat.zero_choose_succ",
-        "Nat.div_mod_remainder_eq_zero_iff_dvd",
-        "Nat.lt_succ_self",
-        "Nat.lt_of_le_of_lt",
-        "Nat.le_of_lt_succ",
-        "Nat.zero_lt_succ",
-        "Nat.not_lt_zero",
-        "Nat.mod_lt",
-        "Nat.add_lt_add_left",
         "Nat.choose_succ_succ"
       ],
       "candidate_transport": [
         {
-          "added_definitions": 13,
-          "added_theorems": 58,
-          "candidate_declaration": "Nat.prime_dvd_choose",
-          "receipt_sha256": "d2f03a54332f416981657bec6299bb75a12a70a7f1ab7042508ceb591270962a",
-          "result": "added",
-          "source_closure_size": 125
-        },
-        {
-          "candidate_declaration": "Nat.lt_or_eq_of_le",
-          "result": "capsule-existing"
-        },
-        {
           "added_definitions": 0,
           "added_theorems": 1,
-          "candidate_declaration": "Nat.lt_of_lt_of_le",
-          "receipt_sha256": "e378afbe441d30bb278f27521068c42e54c1900fed4cdf223187d99c5f8df100",
-          "result": "added",
-          "source_closure_size": 11
-        },
-        {
-          "candidate_declaration": "Nat.lt_irrefl",
-          "result": "capsule-existing"
-        },
-        {
-          "added_definitions": 0,
-          "added_theorems": 1,
-          "candidate_declaration": "Nat.two_le_succ_or_eq_one",
-          "receipt_sha256": "0641c2ee05623ca6542b72da9244d456bfbb41b2300680806412aa0f7b3a14eb",
-          "result": "added",
-          "source_closure_size": 18
-        },
-        {
-          "candidate_declaration": "Nat.sub_eq_zero_of_le",
-          "result": "capsule-existing"
-        },
-        {
-          "added_definitions": 0,
-          "added_theorems": 1,
-          "candidate_declaration": "Nat.succ_sub_of_le",
-          "receipt_sha256": "7a08b03b83ed01c66e00b0592aada11daeab4cbbc544fc9ededaa3611477b855",
-          "result": "added",
-          "source_closure_size": 30
-        },
-        {
-          "added_definitions": 0,
-          "added_theorems": 1,
-          "candidate_declaration": "Nat.succ_ne_zero",
-          "receipt_sha256": "a9209d13ccd5bde4983958b9c9e66596cff2ca0a6afcf4277cb24bfb5dbb0fed",
-          "result": "added",
-          "source_closure_size": 12
-        },
-        {
-          "candidate_declaration": "Nat.Peano.zero_ne_succ",
-          "debug": "MissingRoot(\"Nat.Peano.zero_ne_succ\")",
-          "reason_kind": "MissingRoot",
-          "result": "transport-declined"
-        },
-        {
-          "candidate_declaration": "Nat.choose_succ_self_eq_zero",
-          "result": "capsule-existing"
-        },
-        {
-          "candidate_declaration": "Nat.zero_choose_succ",
-          "result": "capsule-existing"
-        },
-        {
-          "added_definitions": 0,
-          "added_theorems": 4,
-          "candidate_declaration": "Nat.div_mod_remainder_eq_zero_iff_dvd",
-          "receipt_sha256": "168de3af1ad5899651be9e758e10fa61e9ecf971ff234244d2b696b410c3b67a",
-          "result": "added",
-          "source_closure_size": 58
-        },
-        {
-          "added_definitions": 0,
-          "added_theorems": 1,
-          "candidate_declaration": "Nat.lt_succ_self",
-          "receipt_sha256": "1139820b55238090fd0ab74bc7dcace62bb25ed7bdf01c5c2b5046dfda245ba3",
+          "candidate_declaration": "Nat.choose_succ_succ",
+          "receipt_sha256": "db982ce7e3a5a295ecb5dfcb7e761383ca84a22185bffe755d0c2de5ef1e5f75",
           "result": "added",
           "source_closure_size": 10
-        },
-        {
-          "candidate_declaration": "Nat.lt_of_le_of_lt",
-          "result": "capsule-existing"
-        },
-        {
-          "added_definitions": 0,
-          "added_theorems": 1,
-          "candidate_declaration": "Nat.le_of_lt_succ",
-          "receipt_sha256": "bfaed1d7242ea9573cf59c08702d3927b562a5f8186ff19e6d1017687e9f8c2c",
-          "result": "added",
-          "source_closure_size": 14
-        },
-        {
-          "added_definitions": 0,
-          "added_theorems": 1,
-          "candidate_declaration": "Nat.zero_lt_succ",
-          "receipt_sha256": "6d9b8f049e13773bb7588e5d13fcdbd31c1522a70537853f23e891e1373a20c0",
-          "result": "added",
-          "source_closure_size": 12
-        },
-        {
-          "added_definitions": 0,
-          "added_theorems": 1,
-          "candidate_declaration": "Nat.not_lt_zero",
-          "receipt_sha256": "d63b3ccc52520bca3a2381383c8e27e2483d49d2ad7486a6e50dc7b0c201b5df",
-          "result": "added",
-          "source_closure_size": 22
-        },
-        {
-          "candidate_declaration": "Nat.mod_lt",
-          "result": "capsule-existing"
-        },
-        {
-          "candidate_declaration": "Nat.add_lt_add_left",
-          "result": "capsule-existing"
-        },
-        {
-          "candidate_declaration": "Nat.choose_succ_succ",
-          "result": "capsule-existing"
         }
       ],
       "capsule_bytes": 226891,
@@ -205,139 +69,16 @@
     },
     {
       "candidate_declarations": [
-        "Nat.choose_le_two_pow",
-        "Nat.choose_symm",
-        "Nat.prime_dvd_choose",
-        "Nat.zero_le",
-        "Nat.succ_sub_succ",
-        "Nat.succ_sub_succ_eq_sub",
-        "Nat.sub_zero",
-        "Nat.pow_zero",
-        "Nat.pow_sq_zero",
-        "Nat.sub_eq_zero_of_le",
-        "Nat.succ_sub_of_le",
-        "Nat.pow_succ",
-        "Nat.le_trans",
-        "Nat.le_succ_succ",
-        "Nat.le_succ",
-        "Rat.zero_le_natDivSucc",
-        "Nat.lt_or_eq_of_le",
-        "Nat.lt_of_lt_of_le",
-        "Nat.le_add_right",
-        "Nat.le_of_succ_le_succ"
+        "Nat.choose_zero_right"
       ],
       "candidate_transport": [
         {
-          "added_definitions": 5,
-          "added_theorems": 34,
-          "candidate_declaration": "Nat.choose_le_two_pow",
-          "receipt_sha256": "3af89b683f26a41be560e63dc3c81d5d9a0108b72fb44209ed1fee3716b6eae4",
-          "result": "added",
-          "source_closure_size": 75
-        },
-        {
-          "added_definitions": 0,
-          "added_theorems": 4,
-          "candidate_declaration": "Nat.choose_symm",
-          "receipt_sha256": "f48bb94b7f1165976200a98d132d1b4856fb285e59a1f6296d383933528525b0",
-          "result": "added",
-          "source_closure_size": 53
-        },
-        {
-          "added_definitions": 11,
-          "added_theorems": 40,
-          "candidate_declaration": "Nat.prime_dvd_choose",
-          "receipt_sha256": "878ccd8bf92d49e0ff08c13c38dcd5e2926eefe81457233a513ee5b8c5832c12",
-          "result": "added",
-          "source_closure_size": 125
-        },
-        {
-          "candidate_declaration": "Nat.zero_le",
-          "result": "capsule-existing"
-        },
-        {
-          "candidate_declaration": "Nat.succ_sub_succ",
-          "result": "capsule-existing"
-        },
-        {
           "added_definitions": 0,
           "added_theorems": 1,
-          "candidate_declaration": "Nat.succ_sub_succ_eq_sub",
-          "receipt_sha256": "7aa703c2beafeaa03507929b4d17a4ec8454b305cbe6b7f6598cb830e9bf5854",
+          "candidate_declaration": "Nat.choose_zero_right",
+          "receipt_sha256": "15a1435ff2f3c62101d810ba9eb2541f70fc47aa2113656923ee89cc2f7ef8d6",
           "result": "added",
           "source_closure_size": 10
-        },
-        {
-          "candidate_declaration": "Nat.sub_zero",
-          "result": "capsule-existing"
-        },
-        {
-          "added_definitions": 0,
-          "added_theorems": 1,
-          "candidate_declaration": "Nat.pow_zero",
-          "receipt_sha256": "78457bab95e70536760359e951344a4ebbe6058ae419674c5fd25c565b970f8f",
-          "result": "added",
-          "source_closure_size": 11
-        },
-        {
-          "added_definitions": 2,
-          "added_theorems": 12,
-          "candidate_declaration": "Nat.pow_sq_zero",
-          "receipt_sha256": "ec40b44eae40c1e94c47916cff40643e7898cd17a8754971dccc1c787d38b6ca",
-          "result": "added",
-          "source_closure_size": 84
-        },
-        {
-          "candidate_declaration": "Nat.sub_eq_zero_of_le",
-          "result": "capsule-existing"
-        },
-        {
-          "added_definitions": 0,
-          "added_theorems": 1,
-          "candidate_declaration": "Nat.succ_sub_of_le",
-          "receipt_sha256": "31021556d56f70120a42a3e2c74bdcc1680c9e147bbd16e4d1b4f5d62801e51d",
-          "result": "added",
-          "source_closure_size": 30
-        },
-        {
-          "candidate_declaration": "Nat.pow_succ",
-          "result": "capsule-existing"
-        },
-        {
-          "candidate_declaration": "Nat.le_trans",
-          "result": "capsule-existing"
-        },
-        {
-          "candidate_declaration": "Nat.le_succ_succ",
-          "result": "capsule-existing"
-        },
-        {
-          "candidate_declaration": "Nat.le_succ",
-          "result": "capsule-existing"
-        },
-        {
-          "added_definitions": 13,
-          "added_theorems": 39,
-          "candidate_declaration": "Rat.zero_le_natDivSucc",
-          "receipt_sha256": "e3cb0ed56225693b07ae527e664476fc52a1b95289a948a0e4dbdceb295b1e80",
-          "result": "added",
-          "source_closure_size": 181
-        },
-        {
-          "candidate_declaration": "Nat.lt_or_eq_of_le",
-          "result": "capsule-existing"
-        },
-        {
-          "candidate_declaration": "Nat.lt_of_lt_of_le",
-          "result": "capsule-existing"
-        },
-        {
-          "candidate_declaration": "Nat.le_add_right",
-          "result": "capsule-existing"
-        },
-        {
-          "candidate_declaration": "Nat.le_of_succ_le_succ",
-          "result": "capsule-existing"
         }
       ],
       "capsule_bytes": 224505,
@@ -349,139 +90,28 @@
       "target_definition": "Axeyum.Autogenesis.Statement.Generated.natChooseNeZero"
     },
     {
+      "axiom_footprint": [],
+      "binders_used": 4,
       "candidate_declarations": [
-        "Nat.choose_add_convolution",
-        "Nat.choose_succ_succ",
-        "Nat.add_pow",
-        "Nat.add_pow_one",
-        "Nat.mul_sumRange_pow",
-        "Nat.mul_sumRange",
-        "Nat.sumRange_zero",
-        "Nat.sumRange_succ",
-        "Nat.sumRange_congr",
-        "Nat.sumRange_add",
-        "Nat.sumRange_split",
-        "Nat.sumRange_congr_lt",
-        "Nat.add_pow_zero",
-        "Nat.sum_choose_sq",
-        "Nat.add_comm",
-        "Rat.natDivSucc_add",
-        "Nat.zero_add",
-        "Nat.add_assoc",
-        "Nat.le_add_right",
-        "Nat.sub_add_cancel"
+        "Nat.choose_symm",
+        "Nat.add_sub_cancel_left",
+        "Nat.le_add_right"
       ],
       "candidate_transport": [
         {
           "added_definitions": 3,
-          "added_theorems": 13,
-          "candidate_declaration": "Nat.choose_add_convolution",
-          "receipt_sha256": "0ae3e4fe1fa25bc6c86761f90190b8c77c37968915d6c074a4298e2c7b3a58c6",
+          "added_theorems": 19,
+          "candidate_declaration": "Nat.choose_symm",
+          "receipt_sha256": "24d74926634fcc59f3784fda512d64d2344d80a1dd973334d4910250b1c0b401",
           "result": "added",
-          "source_closure_size": 36
+          "source_closure_size": 53
         },
         {
-          "candidate_declaration": "Nat.choose_succ_succ",
-          "result": "capsule-existing"
-        },
-        {
-          "added_definitions": 2,
-          "added_theorems": 16,
-          "candidate_declaration": "Nat.add_pow",
-          "receipt_sha256": "327430ea9c5d82882bdb2675c9fbd72f88ed15d7dfe19b5dbcb2f19cd88ca67c",
-          "result": "added",
-          "source_closure_size": 56
-        },
-        {
-          "added_definitions": 0,
-          "added_theorems": 1,
-          "candidate_declaration": "Nat.add_pow_one",
-          "receipt_sha256": "3f798161250ba6ae8537757f14619ae321eb33be100ed389fdac5b41479e774c",
-          "result": "added",
-          "source_closure_size": 23
-        },
-        {
-          "added_definitions": 0,
-          "added_theorems": 1,
-          "candidate_declaration": "Nat.mul_sumRange_pow",
-          "receipt_sha256": "55af1abdc494b5d60ea66397b819eb918ac8dfb7b5df6da037521ac2bc4d7e58",
-          "result": "added",
-          "source_closure_size": 22
-        },
-        {
-          "candidate_declaration": "Nat.mul_sumRange",
-          "result": "capsule-existing"
-        },
-        {
-          "candidate_declaration": "Nat.sumRange_zero",
-          "result": "capsule-existing"
-        },
-        {
-          "candidate_declaration": "Nat.sumRange_succ",
-          "result": "capsule-existing"
-        },
-        {
-          "candidate_declaration": "Nat.sumRange_congr",
-          "result": "capsule-existing"
-        },
-        {
-          "candidate_declaration": "Nat.sumRange_add",
-          "result": "capsule-existing"
-        },
-        {
-          "added_definitions": 0,
-          "added_theorems": 1,
-          "candidate_declaration": "Nat.sumRange_split",
-          "receipt_sha256": "47fabd1d02e1bc5a146c594033ffb2f6e7a5dd520c56d3bc4fc73af6473a2c3b",
-          "result": "added",
-          "source_closure_size": 12
-        },
-        {
-          "candidate_declaration": "Nat.sumRange_congr_lt",
-          "result": "capsule-existing"
-        },
-        {
-          "added_definitions": 0,
-          "added_theorems": 1,
-          "candidate_declaration": "Nat.add_pow_zero",
-          "receipt_sha256": "e270eb961d78f99b5b332077946366e32e09890246f7fd30825655fada99e146",
-          "result": "added",
-          "source_closure_size": 15
-        },
-        {
-          "added_definitions": 0,
-          "added_theorems": 9,
-          "candidate_declaration": "Nat.sum_choose_sq",
-          "receipt_sha256": "97bf29065b7e88dd4727e410f8f1a5b6528003922780c4d337a6a5e18d2b95dd",
-          "result": "added",
-          "source_closure_size": 77
-        },
-        {
-          "candidate_declaration": "Nat.add_comm",
-          "result": "capsule-existing"
-        },
-        {
-          "added_definitions": 24,
-          "added_theorems": 91,
-          "candidate_declaration": "Rat.natDivSucc_add",
-          "receipt_sha256": "899055d8f779a845e176f32e36fe321beb07a75a73617b88f680651acb0787aa",
-          "result": "added",
-          "source_closure_size": 196
-        },
-        {
-          "candidate_declaration": "Nat.zero_add",
-          "result": "capsule-existing"
-        },
-        {
-          "candidate_declaration": "Nat.add_assoc",
+          "candidate_declaration": "Nat.add_sub_cancel_left",
           "result": "capsule-existing"
         },
         {
           "candidate_declaration": "Nat.le_add_right",
-          "result": "capsule-existing"
-        },
-        {
-          "candidate_declaration": "Nat.sub_add_cancel",
           "result": "capsule-existing"
         }
       ],
@@ -489,16 +119,21 @@
       "capsule_sha256": "5ce7f332fea4fcf9b26e98345248a0e5ebd8b77d3d8139af551d0c2907bb96b4",
       "evaluation_class": "positive-target",
       "fact_id": "F:ml430-nat-choose-symm-of-eq-add-9b5f9a20",
-      "reason_kind": "TerminalNotDefEqNoRewrite",
-      "result": "declined",
-      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natChooseSymmOfEqAdd"
+      "inductions_used": 0,
+      "result": "accepted",
+      "target_definition": "Axeyum.Autogenesis.Statement.Generated.natChooseSymmOfEqAdd",
+      "theorem_dependencies": [
+        "Nat.add_sub_cancel_left",
+        "Nat.choose_symm",
+        "Nat.le_add_right"
+      ]
     }
   ],
   "schema_version": 5,
   "source": {
     "candidate_ranking": {
-      "path": "artifacts/autogenesis/open-lemma-rewrite-support-ranking-v1.json",
-      "sha256": "612c053fd91f4fa674b46492e27d1a89628166bc6c06f3912964cf4216127199"
+      "path": "artifacts/autogenesis/binomial-arrow-connective-ranking-v1.json",
+      "sha256": "323da99eb462c6013b6efcddea74ae5f299ec35f2d17204a71a2d80629a51e1e"
     },
     "external_capsule_directory": "/nas3/data/axeyum/autogenesis/reference-packs/86688948e-binomial-arrow-statements-v1/streams",
     "lean4export_format": "3.1.0",

@@ -861,3 +861,50 @@ that family decomposes to one accepted, six declined, and one import-rejected.
 This moves the work from speculative exporter replacement to two concrete,
 reusable producer gaps: rewrite/induction composition and negative terminal
 grammar.
+
+### First graph-selected arrow conversion (2026-08-26)
+
+The missing composition was not one feature but four bounded connective seams:
+
+1. proposition-valued results from one retrieved theorem were not retained as
+   typed arguments for another retrieved theorem;
+2. ordinary local equality premises were not part of terminal normalization,
+   and their reverse orientation was unavailable;
+3. imported `HAdd` notation and native `AxNat.add` were definitionally related,
+   but full WHNF ran past the useful common head into recursive implementation
+   code;
+4. induction was attempted before the cheaper terminal retrieval path.
+
+The producer now uses a two-round, proposition-only saturation pool with fixed
+term, equality, declaration, and rewrite ceilings. Equality proofs stay in the
+normalization pool rather than starving derived order evidence. Local
+equalities enter in both directions. The kernel exposes non-delta WHNF and one
+definition-head unfolding, allowing a bounded structural aligner to remove
+surface operator dispatch wrappers and stop at the native operation. That
+alignment runs only while a recognized Lean surface wrapper remains, preserving
+the native regression suite's runtime. With retrieval active, plain
+generalization gets one checkpointed attempt before structural induction.
+
+The knowledge side is additive. The population-wide rewrite ranking and every
+artifact bound to its hash remain unchanged. A new three-goal connective
+ranking reads the existing held-out-safe ranking, the kernel lemma index, and
+the binomial capability receipt. It chooses an IDF-weighted seed from checked
+dependency neighbors, one equality simplifier for vocabulary introduced by the
+seed, and one non-equality premise producer below that simplifier. It reads no
+target proof, producer outcome, decline trace, held-out identity, or per-target
+override. On the symmetry goal this yields exactly:
+
+```text
+Nat.choose_symm
+  -> Nat.add_sub_cancel_left
+       -> Nat.le_add_right
+```
+
+The actual Mathlib 4.30 statement replay now accepts 1/3 arrow goals. The
+independent kernel admits `Nat.choose_symm_of_eq_add` with an empty axiom
+footprint, dependencies exactly `Nat.add_sub_cancel_left`, `Nat.choose_symm`,
+and `Nat.le_add_right`, four generalized binders, and zero inductions. The two
+remaining declines are honest and distinct: equality/rewrite composition for
+`choose_eq_zero_of_lt`, and non-equality terminal grammar for `choose_ne_zero`.
+The natural-binomial family therefore moves from 1/8 to 2/8 accepted while the
+operation-integration bar remains three siblings.

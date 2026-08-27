@@ -286,6 +286,20 @@ const MAX_RETRIEVED_EQUALITIES_PER_DECLARATION: usize = 48;
 /// Maximum application layers used to specialize a retrieved declaration.
 const MAX_RETRIEVED_APPLICATION_DEPTH: usize = 4;
 
+/// Number of bounded saturation rounds used when specializing retrieved
+/// declarations.  Round one may derive a proposition-valued term (for
+/// example `a <= a + b`); round two may use that proof as an argument to a
+/// different retrieved theorem (for example `choose_symm`).  Two rounds are
+/// enough for this connective step without turning retrieval into an
+/// unbounded general proof search.
+const MAX_RETRIEVED_SATURATION_ROUNDS: usize = 2;
+
+/// Maximum number of fully applied retrieved terms retained as arguments for
+/// the next saturation round.  This is separate from the surface-term bound:
+/// derived evidence is the point of saturation and must not be starved when a
+/// large imported expression already fills the surface pool.
+const MAX_RETRIEVED_DERIVED_TERMS: usize = 16;
+
 /// Maximum number of exact forward rewrites in one terminal normalization.
 /// This is deliberately separate from specialization depth: a useful proof
 /// may revisit an earlier equation after another rewrite exposes its lhs.
@@ -571,24 +585,63 @@ fn collect_fvars(
 /// compiled recursive definition routes a nested recursive call through a
 /// structure *projection* before it reaches an argument slot of the outer
 /// operator — a shape `App`-only spine peeling cannot see into.
+fn align_definition_heads(
+    kernel: &mut Kernel,
+    candidate: ExprId,
+    pattern: ExprId,
+    budget: &mut usize,
+) -> ExprId {
+    if *budget == 0 || candidate == pattern {
+        return candidate;
+    }
+    *budget -= 1;
+    let candidate = kernel.whnf_without_delta(candidate);
+    let pattern = kernel.whnf_without_delta(pattern);
+    if candidate == pattern {
+        return candidate;
+    }
+    let (candidate_head, candidate_args) = app_spine(kernel, candidate);
+    let (pattern_head, pattern_args) = app_spine(kernel, pattern);
+    if candidate_head == pattern_head && candidate_args.len() == pattern_args.len() {
+        let mut rebuilt = candidate_head;
+        for (argument, pattern_argument) in candidate_args.into_iter().zip(pattern_args) {
+            let aligned = align_definition_heads(kernel, argument, pattern_argument, budget);
+            rebuilt = kernel.app(rebuilt, aligned);
+        }
+        return rebuilt;
+    }
+    if let Some(unfolded) = kernel.unfold_definition_once(candidate) {
+        return align_definition_heads(kernel, unfolded, pattern, budget);
+    }
+    candidate
+}
+
 fn kabstract_occurrences(
     kernel: &mut Kernel,
     haystack: ExprId,
     needle: ExprId,
     placeholder: ExprId,
     budget: &mut usize,
+    align_heads: bool,
 ) -> (ExprId, bool) {
     if *budget == 0 {
         return (haystack, false);
     }
     *budget -= 1;
-    if kernel.def_eq(haystack, needle) {
+    let aligned = if align_heads {
+        align_definition_heads(kernel, haystack, needle, budget)
+    } else {
+        haystack
+    };
+    if aligned == needle || kernel.def_eq(aligned, needle) {
         return (placeholder, true);
     }
     match kernel.expr_node(haystack).clone() {
         ExprNode::App(f, a) => {
-            let (f2, found_f) = kabstract_occurrences(kernel, f, needle, placeholder, budget);
-            let (a2, found_a) = kabstract_occurrences(kernel, a, needle, placeholder, budget);
+            let (f2, found_f) =
+                kabstract_occurrences(kernel, f, needle, placeholder, budget, align_heads);
+            let (a2, found_a) =
+                kabstract_occurrences(kernel, a, needle, placeholder, budget, align_heads);
             if found_f || found_a {
                 (kernel.app(f2, a2), true)
             } else {
@@ -596,7 +649,8 @@ fn kabstract_occurrences(
             }
         }
         ExprNode::Proj(type_name, field_index, inner) => {
-            let (inner2, found) = kabstract_occurrences(kernel, inner, needle, placeholder, budget);
+            let (inner2, found) =
+                kabstract_occurrences(kernel, inner, needle, placeholder, budget, align_heads);
             if found {
                 (kernel.proj(type_name, field_index, inner2), true)
             } else {
@@ -604,7 +658,8 @@ fn kabstract_occurrences(
             }
         }
         ExprNode::Lam(name, ty, body, info) => {
-            let (ty2, found) = kabstract_occurrences(kernel, ty, needle, placeholder, budget);
+            let (ty2, found) =
+                kabstract_occurrences(kernel, ty, needle, placeholder, budget, align_heads);
             if found {
                 (kernel.lam(name, ty2, body, info), true)
             } else {
@@ -612,7 +667,8 @@ fn kabstract_occurrences(
             }
         }
         ExprNode::Pi(name, ty, body, info) => {
-            let (ty2, found) = kabstract_occurrences(kernel, ty, needle, placeholder, budget);
+            let (ty2, found) =
+                kabstract_occurrences(kernel, ty, needle, placeholder, budget, align_heads);
             if found {
                 (kernel.pi(name, ty2, body, info), true)
             } else {
@@ -620,8 +676,10 @@ fn kabstract_occurrences(
             }
         }
         ExprNode::Let(name, ty, val, body) => {
-            let (ty2, found_ty) = kabstract_occurrences(kernel, ty, needle, placeholder, budget);
-            let (val2, found_val) = kabstract_occurrences(kernel, val, needle, placeholder, budget);
+            let (ty2, found_ty) =
+                kabstract_occurrences(kernel, ty, needle, placeholder, budget, align_heads);
+            let (val2, found_val) =
+                kabstract_occurrences(kernel, val, needle, placeholder, budget, align_heads);
             if found_ty || found_val {
                 (kernel.let_(name, ty2, val2, body), true)
             } else {
@@ -1454,6 +1512,16 @@ impl Search {
                 &mut subexpressions,
             );
         }
+        for &(_, local_ty) in &self.local_hyps {
+            Self::collect_term_subexpressions(kernel, local_ty, &mut seen, &mut subexpressions);
+            let normalized_local = Self::normalize_closed_constructors(kernel, local_ty, nat_shape);
+            Self::collect_term_subexpressions(
+                kernel,
+                normalized_local,
+                &mut seen,
+                &mut subexpressions,
+            );
+        }
         subexpressions.sort_by_key(|term| Self::term_size(kernel, *term, MAX_KABSTRACT_NODES));
         for term in subexpressions {
             if arguments.len() >= MAX_RETRIEVED_TERMS
@@ -1467,97 +1535,123 @@ impl Search {
         }
 
         let mut equalities = Vec::new();
-        for &name in &self.retrieved_declarations {
-            if equalities.len() >= MAX_RETRIEVED_EQUALITIES {
+        let mut derived_seen = BTreeSet::new();
+        for _ in 0..MAX_RETRIEVED_SATURATION_ROUNDS {
+            let mut derived = Vec::new();
+            for &name in &self.retrieved_declarations {
+                if equalities.len() >= MAX_RETRIEVED_EQUALITIES {
+                    break;
+                }
+                let Some(declaration) = kernel.environment().get(name) else {
+                    continue;
+                };
+                if !declaration.uparams().is_empty()
+                    || !matches!(
+                        declaration,
+                        Declaration::Definition { .. } | Declaration::Theorem { .. }
+                    )
+                {
+                    continue;
+                }
+                let term = kernel.const_(name, vec![]);
+                let Ok(ty) = kernel.infer_in(term, &mut context) else {
+                    continue;
+                };
+                let mut frontier = vec![RetrievedTerm { term, ty }];
+                let mut declaration_equalities = 0usize;
+                for depth in 0..=MAX_RETRIEVED_APPLICATION_DEPTH {
+                    let mut applicable = Vec::new();
+                    for function in frontier {
+                        let mut completed_equality = false;
+                        if let Ok(equality) = parse_eq_goal(kernel, self.eqp_eq, function.ty) {
+                            completed_equality = true;
+                            if !equalities.iter().any(|(known, _)| *known == function.term) {
+                                equalities.push((function.term, equality));
+                                declaration_equalities += 1;
+                            }
+                            if equalities.len() >= MAX_RETRIEVED_EQUALITIES {
+                                return equalities;
+                            }
+                            if declaration_equalities >= MAX_RETRIEVED_EQUALITIES_PER_DECLARATION {
+                                break;
+                            }
+                        }
+                        let function_type = kernel.whnf(function.ty);
+                        let ExprNode::Pi(_, domain, _, _) = kernel.expr_node(function_type).clone()
+                        else {
+                            // Only proposition-valued leaves are connective
+                            // evidence. Retaining arbitrary computed values
+                            // recursively feeds large arithmetic terms back
+                            // into every declaration and causes combinatorial
+                            // term growth without adding theorem premises.
+                            if !completed_equality && derived.len() < MAX_RETRIEVED_DERIVED_TERMS {
+                                let prop_sort = kernel.sort_zero();
+                                if kernel
+                                    .infer_in(function.ty, &mut context)
+                                    .is_ok_and(|sort| kernel.def_eq(sort, prop_sort))
+                                    && derived_seen.insert(function.term)
+                                {
+                                    derived.push(function);
+                                }
+                            }
+                            continue;
+                        };
+                        if depth < MAX_RETRIEVED_APPLICATION_DEPTH {
+                            applicable.push((function, domain));
+                        }
+                    }
+                    if applicable.is_empty()
+                        || declaration_equalities >= MAX_RETRIEVED_EQUALITIES_PER_DECLARATION
+                    {
+                        break;
+                    }
+                    // Fair diagonal beam: function-major Cartesian expansion lets
+                    // the first argument consume the entire beam, starving a later
+                    // local value that is the only applicable specialization.
+                    let mut pairs = Vec::new();
+                    for (function_index, (_, domain)) in applicable.iter().enumerate() {
+                        for (argument_index, argument) in arguments.iter().enumerate() {
+                            if kernel.def_eq(argument.ty, *domain) {
+                                pairs.push((
+                                    function_index + argument_index,
+                                    function_index,
+                                    argument_index,
+                                ));
+                            }
+                        }
+                    }
+                    pairs.sort_unstable();
+                    let mut next = Vec::new();
+                    for (_, function_index, argument_index) in
+                        pairs.into_iter().take(MAX_RETRIEVED_TERMS_PER_DECLARATION)
+                    {
+                        let function = applicable[function_index].0;
+                        let argument = arguments[argument_index];
+                        let applied = kernel.app(function.term, argument.term);
+                        if next
+                            .iter()
+                            .any(|known: &RetrievedTerm| known.term == applied)
+                        {
+                            continue;
+                        }
+                        let Ok(applied_ty) = kernel.infer_in(applied, &mut context) else {
+                            continue;
+                        };
+                        next.push(RetrievedTerm {
+                            term: applied,
+                            ty: applied_ty,
+                        });
+                    }
+                    if next.is_empty() {
+                        break;
+                    }
+                    frontier = next;
+                }
+            }
+            if derived.is_empty() {
                 break;
             }
-            let Some(declaration) = kernel.environment().get(name) else {
-                continue;
-            };
-            if !declaration.uparams().is_empty()
-                || !matches!(
-                    declaration,
-                    Declaration::Definition { .. } | Declaration::Theorem { .. }
-                )
-            {
-                continue;
-            }
-            let term = kernel.const_(name, vec![]);
-            let Ok(ty) = kernel.infer_in(term, &mut context) else {
-                continue;
-            };
-            let mut frontier = vec![RetrievedTerm { term, ty }];
-            let mut declaration_equalities = 0usize;
-            for depth in 0..=MAX_RETRIEVED_APPLICATION_DEPTH {
-                let mut applicable = Vec::new();
-                for function in frontier {
-                    if let Ok(equality) = parse_eq_goal(kernel, self.eqp_eq, function.ty) {
-                        equalities.push((function.term, equality));
-                        declaration_equalities += 1;
-                        if equalities.len() >= MAX_RETRIEVED_EQUALITIES {
-                            return equalities;
-                        }
-                        if declaration_equalities >= MAX_RETRIEVED_EQUALITIES_PER_DECLARATION {
-                            break;
-                        }
-                    }
-                    if depth == MAX_RETRIEVED_APPLICATION_DEPTH {
-                        continue;
-                    }
-                    let function_type = kernel.whnf(function.ty);
-                    let ExprNode::Pi(_, domain, _, _) = kernel.expr_node(function_type).clone()
-                    else {
-                        continue;
-                    };
-                    applicable.push((function, domain));
-                }
-                if applicable.is_empty()
-                    || declaration_equalities >= MAX_RETRIEVED_EQUALITIES_PER_DECLARATION
-                {
-                    break;
-                }
-                // Fair diagonal beam: function-major Cartesian expansion lets
-                // the first argument consume the entire beam, starving a later
-                // local value that is the only applicable specialization.
-                let mut pairs = Vec::new();
-                for (function_index, (_, domain)) in applicable.iter().enumerate() {
-                    for (argument_index, argument) in arguments.iter().enumerate() {
-                        if kernel.def_eq(argument.ty, *domain) {
-                            pairs.push((
-                                function_index + argument_index,
-                                function_index,
-                                argument_index,
-                            ));
-                        }
-                    }
-                }
-                pairs.sort_unstable();
-                let mut next = Vec::new();
-                for (_, function_index, argument_index) in
-                    pairs.into_iter().take(MAX_RETRIEVED_TERMS_PER_DECLARATION)
-                {
-                    let function = applicable[function_index].0;
-                    let argument = arguments[argument_index];
-                    let applied = kernel.app(function.term, argument.term);
-                    if next
-                        .iter()
-                        .any(|known: &RetrievedTerm| known.term == applied)
-                    {
-                        continue;
-                    }
-                    let Ok(applied_ty) = kernel.infer_in(applied, &mut context) else {
-                        continue;
-                    };
-                    next.push(RetrievedTerm {
-                        term: applied,
-                        ty: applied_ty,
-                    });
-                }
-                if next.is_empty() {
-                    break;
-                }
-                frontier = next;
-            }
+            arguments.extend(derived);
         }
         equalities
     }
@@ -1583,6 +1677,37 @@ impl Search {
             equality.lhs = Self::normalize_closed_constructors(kernel, equality.lhs, nat_shape);
             equality.rhs = Self::normalize_closed_constructors(kernel, equality.rhs, nat_shape);
             equalities.push((proof, equality));
+        }
+        let local_hyps = self.local_hyps.clone();
+        for (fv, ty) in local_hyps {
+            let Ok(mut equality) = parse_eq_goal(kernel, self.eqp_eq, ty) else {
+                continue;
+            };
+            let carrier_whnf = kernel.whnf(equality.carrier);
+            let nat_shape = match kernel.expr_node(carrier_whnf).clone() {
+                ExprNode::Const(name, _) => detect_nat_shape(kernel, name),
+                _ => None,
+            };
+            equality.lhs = Self::normalize_closed_constructors(kernel, equality.lhs, nat_shape);
+            equality.rhs = Self::normalize_closed_constructors(kernel, equality.rhs, nat_shape);
+            let proof = kernel.fvar(fv);
+            let reverse_proof = self.build_eq_symm(
+                kernel,
+                equality.level,
+                equality.carrier,
+                equality.lhs,
+                equality.rhs,
+                proof,
+            );
+            equalities.push((proof, equality));
+            equalities.push((
+                reverse_proof,
+                EqGoal {
+                    lhs: equality.rhs,
+                    rhs: equality.lhs,
+                    ..equality
+                },
+            ));
         }
         if debug {
             eprintln!(
@@ -1632,46 +1757,64 @@ impl Search {
         let mut visited = BTreeSet::from([current]);
         for _ in 0..MAX_RETRIEVED_NORMALIZATION_STEPS {
             let mut next_step = None;
-            for &(proof, equality) in equalities {
-                if self.retrieved_rewrites_left == 0 {
-                    return None;
-                }
-                if !Self::contains_exact(kernel, current, equality.lhs, MAX_KABSTRACT_NODES) {
-                    continue;
-                }
-                let Some((rewritten, step)) = self.rewrite_term_once(
-                    kernel,
-                    current,
-                    equality.lhs,
-                    equality.rhs,
-                    proof,
-                    equality,
-                    goal,
-                ) else {
-                    continue;
-                };
-                let next = beta_whnf(kernel, rewritten);
-                if next == current || visited.contains(&next) {
-                    continue;
-                }
-                next_step = Some((next, step));
-                break;
-            }
-            // Imported theorem statements may retain a transparent notation
-            // wrapper (`HAdd.hAdd`, for example) while an earlier native
-            // rewrite exposes the underlying operation. After at least one
-            // exact rewrite, allow one whole-term definitional match. This is
-            // not recursive occurrence search: the kernel compares only the
-            // two roots, and the fixed equality/rewrite budgets still apply.
-            if next_step.is_none() && aggregate.is_some() {
-                for &(proof, equality) in equalities {
-                    if kernel.def_eq(current, equality.lhs)
-                        && !kernel.def_eq(current, equality.rhs)
-                        && !visited.contains(&equality.rhs)
-                    {
-                        next_step = Some((equality.rhs, proof));
-                        break;
+            // Imported statements may retain transparent notation wrappers
+            // (`HAdd.hAdd`, for example) around a nested operation while a
+            // native lemma names the underlying constant. Once an exact
+            // rewrite establishes a real path, allow a bounded prefix of the
+            // ranked equations to search occurrences up to definitional
+            // equality. `rewrite_term_once` uses the same node ceiling as the
+            // exact path and the final proof is still explicit `congrArg`.
+            if next_step.is_none()
+                && aggregate.is_some()
+                && Self::contains_surface_operator_wrapper(kernel, current, MAX_KABSTRACT_NODES)
+            {
+                for &(proof, equality) in equalities.iter().take(64) {
+                    let Some((rewritten, step)) = self.rewrite_term_once(
+                        kernel,
+                        current,
+                        equality.lhs,
+                        equality.rhs,
+                        proof,
+                        equality,
+                        goal,
+                        true,
+                    ) else {
+                        continue;
+                    };
+                    let next = beta_whnf(kernel, rewritten);
+                    if next == current || visited.contains(&next) {
+                        continue;
                     }
+                    next_step = Some((next, step));
+                    break;
+                }
+            }
+            if next_step.is_none() {
+                for &(proof, equality) in equalities {
+                    if self.retrieved_rewrites_left == 0 {
+                        return None;
+                    }
+                    if !Self::contains_exact(kernel, current, equality.lhs, MAX_KABSTRACT_NODES) {
+                        continue;
+                    }
+                    let Some((rewritten, step)) = self.rewrite_term_once(
+                        kernel,
+                        current,
+                        equality.lhs,
+                        equality.rhs,
+                        proof,
+                        equality,
+                        goal,
+                        false,
+                    ) else {
+                        continue;
+                    };
+                    let next = beta_whnf(kernel, rewritten);
+                    if next == current || visited.contains(&next) {
+                        continue;
+                    }
+                    next_step = Some((next, step));
+                    break;
                 }
             }
             let Some((next, step)) = next_step else {
@@ -1747,6 +1890,61 @@ impl Search {
         false
     }
 
+    /// Whether an expression still contains one of Lean's standard
+    /// elaboration-level operator dispatch wrappers.  Definition-head
+    /// alignment is materially more expensive than exact rewriting and is
+    /// useful only while such a wrapper separates an imported statement from
+    /// a native theorem.  The list is about Lean surface representation, not
+    /// any mathematical target or declaration selected for proof.
+    fn contains_surface_operator_wrapper(
+        kernel: &Kernel,
+        expression: ExprId,
+        mut budget: usize,
+    ) -> bool {
+        let mut pending = vec![expression];
+        while let Some(current) = pending.pop() {
+            if budget == 0 {
+                return false;
+            }
+            budget -= 1;
+            match kernel.expr_node(current) {
+                ExprNode::Const(name, _) => {
+                    if matches!(
+                        kernel.display_name(*name).to_string().as_str(),
+                        "HAdd.hAdd"
+                            | "Add.add"
+                            | "HSub.hSub"
+                            | "Sub.sub"
+                            | "HMul.hMul"
+                            | "Mul.mul"
+                            | "HDiv.hDiv"
+                            | "Div.div"
+                            | "HPow.hPow"
+                            | "Pow.pow"
+                    ) {
+                        return true;
+                    }
+                }
+                ExprNode::Proj(_, _, value) => pending.push(*value),
+                ExprNode::App(function, argument) => {
+                    pending.push(*argument);
+                    pending.push(*function);
+                }
+                ExprNode::Lam(_, ty, body, _) | ExprNode::Pi(_, ty, body, _) => {
+                    pending.push(*body);
+                    pending.push(*ty);
+                }
+                ExprNode::Let(_, ty, value, body) => {
+                    pending.push(*body);
+                    pending.push(*value);
+                    pending.push(*ty);
+                }
+                ExprNode::BVar(_) | ExprNode::FVar(_) | ExprNode::Sort(_) | ExprNode::Lit(_) => {}
+            }
+        }
+        false
+    }
+
     /// Rewrite every occurrence of `needle` in `term` to `replacement`, and
     /// return both the new term and a congruence proof from the old term to the
     /// new one. This is one explicit equality step; it never launches residual
@@ -1761,13 +1959,20 @@ impl Search {
         equality_proof: ExprId,
         equality: EqGoal,
         output: EqGoal,
+        align_heads: bool,
     ) -> Option<(ExprId, ExprId)> {
         let reduced = term;
         let placeholder_fv = self.fresh_fvar();
         let placeholder = kernel.fvar(placeholder_fv);
         let mut budget = MAX_KABSTRACT_NODES;
-        let (replaced, found) =
-            kabstract_occurrences(kernel, reduced, needle, placeholder, &mut budget);
+        let (replaced, found) = kabstract_occurrences(
+            kernel,
+            reduced,
+            needle,
+            placeholder,
+            &mut budget,
+            align_heads,
+        );
         if !found {
             return None;
         }
@@ -2421,7 +2626,8 @@ impl Search {
         let placeholder_fv = self.fresh_fvar();
         let placeholder = kernel.fvar(placeholder_fv);
         let mut kb = MAX_KABSTRACT_NODES;
-        let (replaced, found) = kabstract_occurrences(kernel, target, n_pred, placeholder, &mut kb);
+        let (replaced, found) =
+            kabstract_occurrences(kernel, target, n_pred, placeholder, &mut kb, false);
         if !found {
             if debug {
                 eprintln!("  [case-split] n_pred does not occur in target");
@@ -2809,7 +3015,7 @@ impl Search {
             let placeholder = kernel.fvar(placeholder_fv);
             let mut kb = MAX_KABSTRACT_NODES;
             let (replaced, found) =
-                kabstract_occurrences(kernel, lhs_whnf, args[i], placeholder, &mut kb);
+                kabstract_occurrences(kernel, lhs_whnf, args[i], placeholder, &mut kb, false);
             if !found {
                 continue;
             }
@@ -2998,7 +3204,7 @@ impl Search {
         let placeholder = kernel.fvar(placeholder_fv);
         let mut budget = MAX_KABSTRACT_NODES;
         let (replaced, found) =
-            kabstract_occurrences(kernel, haystack, needle, placeholder, &mut budget);
+            kabstract_occurrences(kernel, haystack, needle, placeholder, &mut budget, false);
         if !found {
             if debug {
                 eprintln!(
@@ -3156,7 +3362,7 @@ impl Search {
             let placeholder = kernel.fvar(placeholder_fv);
             let mut kb = MAX_KABSTRACT_NODES;
             let (replaced, found) =
-                kabstract_occurrences(kernel, candidate_whnf, diff_a, placeholder, &mut kb);
+                kabstract_occurrences(kernel, candidate_whnf, diff_a, placeholder, &mut kb, false);
             if found {
                 let anon = kernel.anon();
                 let abstracted = kernel.abstract_fvars(replaced, &[placeholder_fv]);
@@ -3523,7 +3729,7 @@ impl Search {
             let placeholder = kernel.fvar(placeholder_fv);
             let mut kb = MAX_KABSTRACT_NODES;
             let (replaced, found) =
-                kabstract_occurrences(kernel, args_b[i], args_a[i], placeholder, &mut kb);
+                kabstract_occurrences(kernel, args_b[i], args_a[i], placeholder, &mut kb, false);
             if !found {
                 if debug {
                     eprintln!(
@@ -4002,6 +4208,37 @@ impl Search {
         Err(DeclineReason::TerminalNotDefEqNoRewrite)
     }
 
+    fn try_plain_generalization(
+        &mut self,
+        kernel: &mut Kernel,
+        binder: (NameId, ExprId, ExprId, BinderInfo),
+        eqp: &EqPrimitives,
+        hypothesis: Option<Hypothesis>,
+    ) -> Result<ExprId, DeclineReason> {
+        let (name, ty, body, info) = binder;
+        let fv = self.fresh_fvar_typed(ty);
+        let x = kernel.fvar(fv);
+        let sub_goal = kernel.instantiate(body, &[x]);
+        let sub_hypothesis = hypothesis.and_then(|hyp| instantiate_hypothesis(kernel, hyp, x, ty));
+        let local_hyps_mark = self.local_hyps.len();
+        self.local_hyps.push((fv, ty));
+        let stuck_hyps_mark = self.stuck_hyps.len();
+        if sub_hypothesis.is_none()
+            && let Some(hyp) = hypothesis
+            && let ExprNode::Pi(_, domain_ty, _, _) = kernel.expr_node(hyp.stmt)
+        {
+            let domain_ty = *domain_ty;
+            if !kernel.def_eq(domain_ty, ty) {
+                self.stuck_hyps.push(hyp);
+            }
+        }
+        let sub_proof = self.attempt(kernel, sub_goal, eqp, sub_hypothesis);
+        self.local_hyps.truncate(local_hyps_mark);
+        self.stuck_hyps.truncate(stuck_hyps_mark);
+        let sub_proof = sub_proof?;
+        Ok(lam_fv(kernel, name, fv, ty, sub_proof, info))
+    }
+
     fn attempt(
         &mut self,
         kernel: &mut Kernel,
@@ -4016,6 +4253,24 @@ impl Search {
             }
             self.binders_left -= 1;
             self.binders_used += 1;
+
+            // Retrieved theorem composition is normally a terminal operation:
+            // introduce the values and hypotheses appearing in the statement,
+            // then specialize the retrieved declarations against that local
+            // context.  Trying structural induction first can expand a simple
+            // two-lemma application into a large family of irrelevant base,
+            // step, and residual goals.  Give plain generalization the first
+            // bounded attempt when retrieval is active; on decline restore the
+            // complete checkpoint and retain the established induction path.
+            if !self.retrieved_declarations.is_empty() {
+                let checkpoint = self.clone();
+                if let Ok(proof) =
+                    self.try_plain_generalization(kernel, (name, ty, body, info), eqp, hypothesis)
+                {
+                    return Ok(proof);
+                }
+                *self = checkpoint;
+            }
 
             if self.inductions_left > 0 {
                 let ty_whnf = kernel.whnf(ty);
@@ -4064,34 +4319,7 @@ impl Search {
             // notice that than here, where it is already in scope. Popped
             // back off after the recursive call regardless of outcome, so it
             // never leaks into a sibling branch.
-            let fv = self.fresh_fvar_typed(ty);
-            let x = kernel.fvar(fv);
-            let sub_goal = kernel.instantiate(body, &[x]);
-            let sub_hypothesis =
-                hypothesis.and_then(|hyp| instantiate_hypothesis(kernel, hyp, x, ty));
-            let local_hyps_mark = self.local_hyps.len();
-            self.local_hyps.push((fv, ty));
-            // If a hypothesis was live but could not be carried forward, and
-            // that is specifically because its OWN leading `Pi` domain is
-            // not the same type as this binder's (rather than it not being
-            // `Pi`-headed at all), retain it unapplied in `stuck_hyps` — see
-            // that field's doc for why (`Search::try_case_split_elimination`
-            // is the only consumer).
-            let stuck_hyps_mark = self.stuck_hyps.len();
-            if sub_hypothesis.is_none()
-                && let Some(hyp) = hypothesis
-                && let ExprNode::Pi(_, domain_ty, _, _) = kernel.expr_node(hyp.stmt)
-            {
-                let domain_ty = *domain_ty;
-                if !kernel.def_eq(domain_ty, ty) {
-                    self.stuck_hyps.push(hyp);
-                }
-            }
-            let sub_proof = self.attempt(kernel, sub_goal, eqp, sub_hypothesis);
-            self.local_hyps.truncate(local_hyps_mark);
-            self.stuck_hyps.truncate(stuck_hyps_mark);
-            let sub_proof = sub_proof?;
-            return Ok(lam_fv(kernel, name, fv, ty, sub_proof, info));
+            return self.try_plain_generalization(kernel, (name, ty, body, info), eqp, hypothesis);
         }
         if self.eq_available
             && let Ok(parsed) = parse_eq_goal(kernel, eqp.eq, goal)
@@ -4549,6 +4777,130 @@ mod order_terminal_tests {
             .expect("retrieved candidate must admit");
         assert!(kernel.axiom_footprint(name).is_empty());
         assert!(kernel.theorem_dependencies(name).contains(&p.add_comm));
+    }
+
+    /// A proposition-valued binder is usable evidence, not merely another
+    /// term to specialize retrieved declarations with.  The generic shape is
+    /// `n = a + b -> n = b + a`: rewrite with the local equality, then with
+    /// the independently retrieved commutativity theorem.  No target name or
+    /// arithmetic operator is known to the search.
+    #[test]
+    fn local_equality_composes_with_a_retrieved_rewrite() {
+        let (mut kernel, p) = prelude_kernel();
+        let nat = kernel.const_(p.nat, vec![]);
+        let n_fv = 73u64;
+        let a_fv = 74u64;
+        let b_fv = 75u64;
+        let n = kernel.fvar(n_fv);
+        let a = kernel.fvar(a_fv);
+        let b = kernel.fvar(b_fv);
+        let add = kernel.const_(p.add, vec![]);
+        let a_add_b = {
+            let partial = kernel.app(add, a);
+            kernel.app(partial, b)
+        };
+        let add_again = kernel.const_(p.add, vec![]);
+        let b_add_a = {
+            let partial = kernel.app(add_again, b);
+            kernel.app(partial, a)
+        };
+        let premise = nat_eq(&mut kernel, &p, n, a_add_b);
+        let conclusion = nat_eq(&mut kernel, &p, n, b_add_a);
+        let anon = kernel.anon();
+        let with_premise = kernel.pi(anon, premise, conclusion, BinderInfo::Default);
+        let body_b = kernel.abstract_fvars(with_premise, &[b_fv]);
+        let with_b = kernel.pi(anon, nat, body_b, BinderInfo::Default);
+        let body_a = kernel.abstract_fvars(with_b, &[a_fv]);
+        let with_a = kernel.pi(anon, nat, body_a, BinderInfo::Default);
+        let body_n = kernel.abstract_fvars(with_a, &[n_fv]);
+        let goal = kernel.pi(anon, nat, body_n, BinderInfo::Default);
+
+        propose_bounded_induction(&mut kernel, goal)
+            .expect_err("the local premise alone does not prove commutativity");
+        let candidate = propose_bounded_induction_with_rewrites(&mut kernel, goal, &[p.add_comm])
+            .expect("local equality followed by retrieved add_comm must close");
+        let inferred = kernel
+            .infer(candidate.proof)
+            .expect("composed local/retrieved proof must infer");
+        assert!(kernel.def_eq(inferred, goal));
+        let root = kernel.anon();
+        let name = kernel.name_str(root, "TestLocalEqualityThenRetrieved");
+        kernel
+            .add_declaration(Declaration::Theorem {
+                name,
+                uparams: vec![],
+                ty: goal,
+                value: candidate.proof,
+            })
+            .expect("composed local/retrieved proof must admit");
+        assert!(kernel.axiom_footprint(name).is_empty());
+        assert_eq!(kernel.theorem_dependencies(name), vec![p.add_comm]);
+    }
+
+    /// Retrieved propositions can connect two independently selected lemmas.
+    /// `le_add_right a b` produces the proof argument required by
+    /// `choose_symm (a+b) a`; putting `choose_symm` first deliberately proves
+    /// this is saturation rather than a lucky declaration-order effect.
+    #[test]
+    fn retrieved_proposition_feeds_a_second_theorem() {
+        let (mut kernel, p) = prelude_kernel();
+        let nat = kernel.const_(p.nat, vec![]);
+        let a_fv = 76u64;
+        let b_fv = 77u64;
+        let a = kernel.fvar(a_fv);
+        let b = kernel.fvar(b_fv);
+        let add = kernel.const_(p.add, vec![]);
+        let sum = {
+            let partial = kernel.app(add, a);
+            kernel.app(partial, b)
+        };
+        let choose = kernel.const_(p.choose, vec![]);
+        let lhs = {
+            let row = kernel.app(choose, sum);
+            kernel.app(row, a)
+        };
+        let sub = kernel.const_(p.sub, vec![]);
+        let complement = {
+            let partial = kernel.app(sub, sum);
+            kernel.app(partial, a)
+        };
+        let choose_again = kernel.const_(p.choose, vec![]);
+        let rhs = {
+            let row = kernel.app(choose_again, sum);
+            kernel.app(row, complement)
+        };
+        let body = nat_eq(&mut kernel, &p, lhs, rhs);
+        let anon = kernel.anon();
+        let body_b = kernel.abstract_fvars(body, &[b_fv]);
+        let with_b = kernel.pi(anon, nat, body_b, BinderInfo::Default);
+        let body_a = kernel.abstract_fvars(with_b, &[a_fv]);
+        let goal = kernel.pi(anon, nat, body_a, BinderInfo::Default);
+
+        let candidate = propose_bounded_induction_with_rewrites(
+            &mut kernel,
+            goal,
+            &[p.choose_symm, p.le_add_right],
+        )
+        .expect("the derived order proposition must feed choose_symm");
+        let inferred = kernel
+            .infer(candidate.proof)
+            .expect("saturated retrieved proof must infer");
+        assert!(kernel.def_eq(inferred, goal));
+        let root = kernel.anon();
+        let name = kernel.name_str(root, "TestRetrievedPropositionSaturation");
+        kernel
+            .add_declaration(Declaration::Theorem {
+                name,
+                uparams: vec![],
+                ty: goal,
+                value: candidate.proof,
+            })
+            .expect("saturated retrieved proof must admit");
+        assert!(kernel.axiom_footprint(name).is_empty());
+        assert_eq!(
+            kernel.theorem_dependencies(name),
+            vec![p.choose_symm, p.le_add_right]
+        );
     }
 
     /// The first real grammar target from the open Mathlib-derived corpus:

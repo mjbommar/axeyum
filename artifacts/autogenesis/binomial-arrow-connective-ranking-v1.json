@@ -1,0 +1,158 @@
+{
+  "authority": "retrieval hints only; proof construction and kernel admission remain independent",
+  "goals": [
+    {
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "axiom_footprint_size": 0,
+          "dependency_depth": 1,
+          "dependency_parent": null,
+          "exact_fact_ids": [
+            "F:ml430-nat-choose-succ-succ-671856b6",
+            "F:nat-choose-succ-succ"
+          ],
+          "kernel_declaration_id": "Nat.choose_succ_succ",
+          "query_name_token_overlap": [
+            "choose"
+          ],
+          "retrieval_role": "dependency-spine",
+          "score": 56.958965
+        }
+      ],
+      "connective_seed": "Nat.choose_succ_succ",
+      "dependency_spine_count": 1,
+      "fact_id": "F:ml430-nat-choose-eq-zero-of-lt-92ebab29",
+      "formal_fragment": "Nat",
+      "mutation_of": null,
+      "partition": "development",
+      "primary_candidate_count": 12,
+      "rewrite_support_candidate_count": 8,
+      "statement_tokens": [
+        "choose",
+        "lt",
+        "nat"
+      ]
+    },
+    {
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "axiom_footprint_size": 0,
+          "dependency_depth": 1,
+          "dependency_parent": null,
+          "exact_fact_ids": [
+            "F:ml430-nat-choose-zero-right-1ed2802a",
+            "F:nat-choose-zero-right"
+          ],
+          "kernel_declaration_id": "Nat.choose_zero_right",
+          "query_name_token_overlap": [
+            "choose",
+            "zero"
+          ],
+          "retrieval_role": "dependency-spine",
+          "score": 91.204605
+        }
+      ],
+      "connective_seed": "Nat.choose_zero_right",
+      "dependency_spine_count": 1,
+      "fact_id": "F:ml430-nat-choose-ne-zero-49c3d3cb",
+      "formal_fragment": "Nat",
+      "mutation_of": null,
+      "partition": "development",
+      "primary_candidate_count": 12,
+      "rewrite_support_candidate_count": 8,
+      "statement_tokens": [
+        "choose",
+        "le",
+        "nat"
+      ]
+    },
+    {
+      "candidate_count": 3,
+      "candidates": [
+        {
+          "axiom_footprint_size": 0,
+          "dependency_depth": 1,
+          "dependency_parent": null,
+          "exact_fact_ids": [
+            "F:nat-choose-symm"
+          ],
+          "kernel_declaration_id": "Nat.choose_symm",
+          "query_name_token_overlap": [
+            "choose",
+            "symm"
+          ],
+          "retrieval_role": "dependency-spine",
+          "score": 114.588472
+        },
+        {
+          "axiom_footprint_size": 0,
+          "dependency_depth": 2,
+          "dependency_parent": "Nat.choose_symm",
+          "exact_fact_ids": [
+            "F:nat-add-sub-cancel-left"
+          ],
+          "kernel_declaration_id": "Nat.add_sub_cancel_left",
+          "query_name_token_overlap": [
+            "add"
+          ],
+          "retrieval_role": "dependency-spine",
+          "score": 172.980013
+        },
+        {
+          "axiom_footprint_size": 0,
+          "dependency_depth": 3,
+          "dependency_parent": "Nat.add_sub_cancel_left",
+          "exact_fact_ids": [
+            "F:nat-le-add-right"
+          ],
+          "kernel_declaration_id": "Nat.le_add_right",
+          "query_name_token_overlap": [
+            "add"
+          ],
+          "retrieval_role": "dependency-spine",
+          "score": 72.980013
+        }
+      ],
+      "connective_seed": "Nat.choose_symm",
+      "dependency_spine_count": 3,
+      "fact_id": "F:ml430-nat-choose-symm-of-eq-add-9b5f9a20",
+      "formal_fragment": "Nat",
+      "mutation_of": null,
+      "partition": "development",
+      "primary_candidate_count": 12,
+      "rewrite_support_candidate_count": 8,
+      "statement_tokens": [
+        "add",
+        "choose",
+        "nat"
+      ]
+    }
+  ],
+  "held_out_exclusion": {
+    "count": 37,
+    "identities_redacted": true,
+    "nursery_sha256": "6d1f2551a612fdcadaf1c6b0096c4eebee304d9687157cb25505f785ee86daa8"
+  },
+  "kind": "axeyum-binomial-arrow-connective-ranking",
+  "schema_version": 1,
+  "source": {
+    "base_ranking": "artifacts/autogenesis/open-lemma-rewrite-support-ranking-v1.json",
+    "base_ranking_sha256": "612c053fd91f4fa674b46492e27d1a89628166bc6c06f3912964cf4216127199",
+    "binomial_arrow_capability": "artifacts/autogenesis/binomial-arrow-export-capability-v1.json",
+    "binomial_arrow_capability_sha256": "f80294bd55cf70dfdfe306082c6e68461993148f0106f860134b876eea6f38a8",
+    "forbidden_inputs": [
+      "target theorem proof",
+      "producer outcome or decline trace",
+      "per-target candidate override",
+      "held-out identity or statement"
+    ],
+    "kernel_lemma_search_index": "artifacts/autogenesis/kernel-lemma-search-index-v1.json",
+    "kernel_lemma_search_index_sha256": "cfd3ccc95249a4085f13a4478faff30d3f270975793e9daa32c501084885fa74",
+    "max_candidates_per_goal": 3,
+    "max_dependency_depth": 3,
+    "selection_rule": "IDF-weighted visible identity seed, one equality simplifier for seed-introduced vocabulary, then one non-equality premise producer from the checked dependency graph"
+  },
+  "state": "train-development-projection-held-out-excluded"
+}
