@@ -20055,3 +20055,328 @@ mod sum_range_pair_diff_le_tests {
         );
     }
 }
+
+// --- piece 1, the PER-TERM half ------------------------------------------
+
+/// The two-product estimate every Riemann-endpoint comparison reduces to:
+///
+/// ```text
+/// le (abs (f₁·d₁ − f₂·d₂))  (mb·dd + eb·d2b)
+/// ```
+///
+/// from `|f₁| ≤ mb`, `|d₁ − d₂| ≤ dd`, `|f₁ − f₂| ≤ eb` and `|d₂| ≤ d2b`.
+///
+/// Purely algebraic — no sample point, no modulus, no mesh — which is why it
+/// is stated on four bare factors rather than on `summand_fn`. The split is
+/// `f₁·d₁ − f₂·d₂ = f₁·(d₁−d₂) + (f₁−f₂)·d₂`, taken as the two legs of
+/// [`CRealPrelude::abs_add_le`] and each closed by
+/// [`CRealPrelude::abs_mul_le_of_bounds`], the product-of-bounds lemma
+/// `derivative.rs` built for the product rule.
+///
+/// Note which distributivity each leg needs: the first is
+/// [`CRealPrelude::left_distrib`] (sum on the RIGHT of the product), the
+/// second `ring_helpers::right_distrib`. They are different lemmas here, and
+/// the prelude publishes only the first.
+#[allow(clippy::too_many_arguments)]
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "piece 1's per-term estimate; its consumer is the riemannSum-level \
+                  assembly, which needs the per-index sample-point closeness this \
+                  lane did not discharge"
+    )
+)]
+fn product_pair_diff_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    fp: ExprId,
+    fq: ExprId,
+    d1: ExprId,
+    d2: ExprId,
+    mb: ExprId,
+    dd: ExprId,
+    eb: ExprId,
+    d2b: ExprId,
+    hfp: ExprId,
+    hdd: ExprId,
+    hf: ExprId,
+    hd2: ExprId,
+) -> ExprId {
+    let zero = czero(d, p);
+
+    let u = cmul(d, p, fp, d1);
+    let v = cmul(d, p, fp, d2);
+    let w = cmul(d, p, fq, d2);
+    let nv = cneg(d, p, v);
+    let nw = cneg(d, p, w);
+    let leg_a = cadd(d, p, u, nv);
+    let leg_b = cadd(d, p, v, nw);
+    let start = cadd(d, p, leg_a, leg_b);
+    let target = cadd(d, p, u, nw);
+
+    // h_split : Equiv ((u − v) + (v − w)) (u − w). The middle term cancels;
+    // `add_zero` is the only zero law published, so the residue is carried
+    // through `add_comm` before it is dropped.
+    let h_split = {
+        let s1 = d.lemma(p.add_assoc, &[u, nv, leg_b]);
+        let inner_start = cadd(d, p, nv, leg_b);
+        let mid1 = cadd(d, p, u, inner_start);
+
+        let inner = {
+            let a2 = d.lemma(p.add_assoc, &[nv, v, nw]);
+            let nv_v = cadd(d, p, nv, v);
+            let lhs2 = cadd(d, p, nv_v, nw);
+            let a2s = d.lemma(p.equiv_symm, &[lhs2, inner_start, a2]);
+
+            let cm = d.lemma(p.add_comm, &[nv, v]);
+            let v_nv = cadd(d, p, v, nv);
+            let an = d.lemma(p.add_neg, &[v]);
+            let hz = d.lemma(p.equiv_trans, &[nv_v, v_nv, zero, cm, an]);
+
+            let refl_nw = d.lemma(p.equiv_refl, &[nw]);
+            let step = d.lemma(p.add_congr, &[nv_v, zero, nw, nw, hz, refl_nw]);
+            let zero_nw = cadd(d, p, zero, nw);
+
+            let cm2 = d.lemma(p.add_comm, &[zero, nw]);
+            let nw_zero = cadd(d, p, nw, zero);
+            let az = d.lemma(p.add_zero, &[nw]);
+
+            echain(
+                d,
+                p,
+                inner_start,
+                &[(lhs2, a2s), (zero_nw, step), (nw_zero, cm2), (nw, az)],
+            )
+        };
+
+        let refl_u = d.lemma(p.equiv_refl, &[u]);
+        let s2 = d.lemma(p.add_congr, &[u, u, inner_start, nw, refl_u, inner]);
+        echain(d, p, start, &[(mid1, s1), (target, s2)])
+    };
+
+    let abs_a = d.const_app(p.abs, &[leg_a]);
+    let abs_b = d.const_app(p.abs, &[leg_b]);
+    let sum_abs = cadd(d, p, abs_a, abs_b);
+    let tri = d.lemma(p.abs_add_le, &[leg_a, leg_b]);
+
+    let abs_start = d.const_app(p.abs, &[start]);
+    let abs_target = d.const_app(p.abs, &[target]);
+    let h_abs = d.lemma(p.abs_congr, &[start, target, h_split]);
+    let refl_sum = d.lemma(p.equiv_refl, &[sum_abs]);
+    let tri_t = d.lemma(
+        p.le_congr,
+        &[
+            abs_start, abs_target, sum_abs, sum_abs, h_abs, refl_sum, tri,
+        ],
+    );
+    // tri_t : le (abs (u − w)) (abs (u − v) + abs (v − w))
+
+    // Leg A: |u − v| = |f₁·(d₁ − d₂)| ≤ mb·dd.
+    let nd2 = cneg(d, p, d2);
+    let d_diff = cadd(d, p, d1, nd2);
+    let prod_a = cmul(d, p, fp, d_diff);
+    let bound_a = cmul(d, p, mb, dd);
+    let ha = d.lemma(p.abs_mul_le_of_bounds, &[fp, d_diff, mb, dd, hfp, hdd]);
+
+    let ld = d.lemma(p.left_distrib, &[fp, d1, nd2]);
+    let fp_nd2 = cmul(d, p, fp, nd2);
+    let mid_a = cadd(d, p, u, fp_nd2);
+    let hn = {
+        // `f₁·(−d₂) ~ −(f₁·d₂)`, via the LEFT-negation helper plus two
+        // `mul_comm`s: `neg_mul_left_local` moves a `neg` out of the LEFT
+        // factor only, and this file has no right-hand version.
+        let cm = d.lemma(p.mul_comm, &[fp, nd2]);
+        let nd2_fp = cmul(d, p, nd2, fp);
+        let nml = neg_mul_left_local(d, p, d2, fp);
+        let d2_fp = cmul(d, p, d2, fp);
+        let neg_d2fp = cneg(d, p, d2_fp);
+        let cm2 = d.lemma(p.mul_comm, &[d2, fp]);
+        let ncm = d.lemma(p.neg_congr, &[d2_fp, v, cm2]);
+        echain(d, p, fp_nd2, &[(nd2_fp, cm), (neg_d2fp, nml), (nv, ncm)])
+    };
+    let refl_u = d.lemma(p.equiv_refl, &[u]);
+    let step_a = d.lemma(p.add_congr, &[u, u, fp_nd2, nv, refl_u, hn]);
+    let h_pa = echain(d, p, prod_a, &[(mid_a, ld), (leg_a, step_a)]);
+
+    let abs_prod_a = d.const_app(p.abs, &[prod_a]);
+    let h_abs_a = d.lemma(p.abs_congr, &[prod_a, leg_a, h_pa]);
+    let refl_ba = d.lemma(p.equiv_refl, &[bound_a]);
+    let ha_t = d.lemma(
+        p.le_congr,
+        &[abs_prod_a, abs_a, bound_a, bound_a, h_abs_a, refl_ba, ha],
+    );
+
+    // Leg B: |v − w| = |(f₁ − f₂)·d₂| ≤ eb·d2b.
+    let nfq = cneg(d, p, fq);
+    let f_diff = cadd(d, p, fp, nfq);
+    let prod_b = cmul(d, p, f_diff, d2);
+    let bound_b = cmul(d, p, eb, d2b);
+    let hb = d.lemma(p.abs_mul_le_of_bounds, &[f_diff, d2, eb, d2b, hf, hd2]);
+
+    let rd = right_distrib(d, p, fp, nfq, d2);
+    let nfq_d2 = cmul(d, p, nfq, d2);
+    let mid_b = cadd(d, p, v, nfq_d2);
+    let nml_b = neg_mul_left_local(d, p, fq, d2);
+    let refl_v = d.lemma(p.equiv_refl, &[v]);
+    let step_b = d.lemma(p.add_congr, &[v, v, nfq_d2, nw, refl_v, nml_b]);
+    let h_pb = echain(d, p, prod_b, &[(mid_b, rd), (leg_b, step_b)]);
+
+    let abs_prod_b = d.const_app(p.abs, &[prod_b]);
+    let h_abs_b = d.lemma(p.abs_congr, &[prod_b, leg_b, h_pb]);
+    let refl_bb = d.lemma(p.equiv_refl, &[bound_b]);
+    let hb_t = d.lemma(
+        p.le_congr,
+        &[abs_prod_b, abs_b, bound_b, bound_b, h_abs_b, refl_bb, hb],
+    );
+
+    let sum_bounds = cadd(d, p, bound_a, bound_b);
+    let add_le = d.lemma(p.add_le_add, &[abs_a, bound_a, abs_b, bound_b, ha_t, hb_t]);
+    d.lemma(
+        p.le_trans,
+        &[abs_target, sum_abs, sum_bounds, tri_t, add_le],
+    )
+}
+
+#[cfg(test)]
+mod product_pair_diff_le_tests {
+    use super::*;
+    use crate::Declaration;
+
+    fn bounds_hyp(d: &mut IntDev<'_>, p: CRealPrelude, value: ExprId, bound: ExprId) -> ExprId {
+        let a = d.const_app(p.abs, &[value]);
+        cle(d, p, a, bound)
+    }
+
+    /// Symbolic in all four factors, all four bounds and all four
+    /// hypotheses, closed into a real `Theorem`.
+    #[test]
+    fn product_pair_diff_le_proves_the_stated_bound() {
+        crate::on_a_deep_stack(product_pair_diff_le_proves_the_stated_bound_body);
+    }
+
+    fn product_pair_diff_le_proves_the_stated_bound_body() {
+        let (ok, bad) = product_pair_diff_le_both_ways();
+        assert!(
+            ok.is_ok(),
+            "product_pair_diff_le must prove `le (abs (f1*d1 - f2*d2)) \
+             (add (mul mb dd) (mul eb d2b))`: {ok:?}"
+        );
+        assert!(
+            bad.is_err(),
+            "the SAME proof term must be REFUSED against the single-summand \
+             bound `mul mb dd`"
+        );
+    }
+
+    /// Both directions in one build, so the negative control cannot pass
+    /// merely because the positive one is broken — which is exactly how the
+    /// sibling `sum_range_pair_diff_le` control behaved on its first run,
+    /// while its own proof term was rejected outright.
+    ///
+    /// The dropped-summand variant is **genuinely false**, not merely a
+    /// different spelling: at `f1 := 0`, `mb := 0`, `f2 := −1`, `d2 := 1`
+    /// the hypotheses hold with `eb = d2b = 1`, the claimed bound is `0`,
+    /// and the left-hand side is `1`.
+    #[allow(clippy::type_complexity)]
+    fn product_pair_diff_le_both_ways() -> (
+        Result<(), crate::KernelError>,
+        Result<(), crate::KernelError>,
+    ) {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+
+        let names = ["fp", "fq", "d1", "d2", "mb", "dd", "eb", "d2b"];
+        let mut fvs = Vec::new();
+        let mut vals = Vec::new();
+        for _ in names {
+            let fv = d.fresh_fvar();
+            fvs.push(fv);
+            let e = d.kernel().fvar(fv);
+            vals.push(e);
+        }
+        let (fp, fq, d1, d2) = (vals[0], vals[1], vals[2], vals[3]);
+        let (mb, dd, eb, d2b) = (vals[4], vals[5], vals[6], vals[7]);
+
+        let nd2 = cneg(&mut d, p, d2);
+        let d_diff = cadd(&mut d, p, d1, nd2);
+        let nfq = cneg(&mut d, p, fq);
+        let f_diff = cadd(&mut d, p, fp, nfq);
+
+        let hfp_ty = bounds_hyp(&mut d, p, fp, mb);
+        let hdd_ty = bounds_hyp(&mut d, p, d_diff, dd);
+        let hf_ty = bounds_hyp(&mut d, p, f_diff, eb);
+        let hd2_ty = bounds_hyp(&mut d, p, d2, d2b);
+
+        let hfp_fv = d.fresh_fvar();
+        let hfp = d.kernel().fvar(hfp_fv);
+        let hdd_fv = d.fresh_fvar();
+        let hdd = d.kernel().fvar(hdd_fv);
+        let hf_fv = d.fresh_fvar();
+        let hf = d.kernel().fvar(hf_fv);
+        let hd2_fv = d.fresh_fvar();
+        let hd2 = d.kernel().fvar(hd2_fv);
+
+        let proof = product_pair_diff_le(
+            &mut d, p, fp, fq, d1, d2, mb, dd, eb, d2b, hfp, hdd, hf, hd2,
+        );
+
+        let u = cmul(&mut d, p, fp, d1);
+        let w = cmul(&mut d, p, fq, d2);
+        let nw = cneg(&mut d, p, w);
+        let lhs = cadd(&mut d, p, u, nw);
+        let abs_lhs = d.const_app(p.abs, &[lhs]);
+        let bound_a = cmul(&mut d, p, mb, dd);
+        let bound_b = cmul(&mut d, p, eb, d2b);
+        let good = cadd(&mut d, p, bound_a, bound_b);
+        assert!(
+            !d.kernel().def_eq(good, bound_a),
+            "the dropped-summand control must not be DEFINITIONALLY the true \
+             bound, or the refusal proves nothing"
+        );
+
+        let concl_good = cle(&mut d, p, abs_lhs, good);
+        let concl_bad = cle(&mut d, p, abs_lhs, bound_a);
+
+        let mut results = Vec::new();
+        for (label, concl) in [
+            ("productPairDiffLeGood", concl_good),
+            ("productPairDiffLeBad", concl_bad),
+        ] {
+            let ty = {
+                let t = d.arrow(hd2_ty, concl);
+                let t = d.arrow(hf_ty, t);
+                let t = d.arrow(hdd_ty, t);
+                let mut t = d.arrow(hfp_ty, t);
+                for fv in fvs.iter().rev() {
+                    t = d.pi_fv(*fv, carrier, t);
+                }
+                t
+            };
+            let value = {
+                let v = d.lam_fv(hd2_fv, hd2_ty, proof);
+                let v = d.lam_fv(hf_fv, hf_ty, v);
+                let v = d.lam_fv(hdd_fv, hdd_ty, v);
+                let mut v = d.lam_fv(hfp_fv, hfp_ty, v);
+                for fv in fvs.iter().rev() {
+                    v = d.lam_fv(*fv, carrier, v);
+                }
+                v
+            };
+            let anon = d.kernel().anon();
+            let name = d.kernel().name_str(anon, label);
+            results.push(d.kernel().add_declaration(Declaration::Theorem {
+                name,
+                uparams: vec![],
+                ty,
+                value,
+            }));
+        }
+
+        let bad = results.pop().expect("two probes");
+        let ok = results.pop().expect("two probes");
+        (ok, bad)
+    }
+}
