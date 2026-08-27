@@ -5100,6 +5100,33 @@ pub struct CRealPrelude {
     /// otherwise) against [`Self::geom_cauchy_ordered_16_over_25`] as the
     /// base series' own ordered-half witness. See `creal/trig_fn.rs`.
     pub cos_dominant_16_over_25_cauchy_body: NameId,
+    /// `CReal.powMulDistrib : ∀ a b (n : Nat), Equiv (mul (pow a n) (pow b
+    /// n)) (pow (mul a b) n)` — power distributes over a product of bases
+    /// at a fixed exponent, general in `a`, `b`, `n`. This is the identity
+    /// `creal/trig_fn.rs`'s own "2026-08-27 update" module documentation
+    /// names as missing ("no power distributes over a product"); it is
+    /// declared HERE (not `power.rs`, which this task's scope leaves
+    /// untouched) but proved exactly where a reader would look for
+    /// `pow`-family lemmas conceptually, by an induction on `n` mirroring
+    /// [`Self::pow_add`]'s own shape. See `creal/trig_fn.rs`.
+    pub pow_mul_distrib: NameId,
+    /// `CReal.cosFnWide : CReal → CReal` — `cosFn` extended to the domain
+    /// `[0, 8/5]` (`8/5` clears cosine's first zero, `≈ 1.5708`), by
+    /// [`Self::weierstrass_m_test`] applied at `f := cosFnTerm`, `mseq :=
+    /// cosDominant16Over25`, `a := zero`, `b := ofRat (natDivSucc 8 4)`,
+    /// bridging [`Self::cos_fn_term_abs_le_wide`]'s domination bound to
+    /// [`Self::cos_dominant_16_over_25`]'s dominating series via
+    /// [`Self::pow_mul_distrib`] plus a concrete `Rat` identity `(1/2 ·
+    /// 8/5)² = 16/25`. A SEPARATE declaration from [`Self::cos_fn`]
+    /// (`[0, 1]`), not a widening of it — existing `[0, 1]` callers are
+    /// untouched. See `creal/trig_fn.rs`.
+    pub cos_fn_wide: NameId,
+    /// `CReal.cosFnWideUniformConverges : UniformConvergesOn (fun n x =>
+    /// sumRange (fun k => cosFnTerm k x) n) cosFnWide zero (ofRat
+    /// (natDivSucc 8 4))` — the M-test applied at cosine's series on the
+    /// wider domain, ascribed against the named `cosFnWide`. See
+    /// `creal/trig_fn.rs`.
+    pub cos_fn_wide_uniform_converges: NameId,
 
     // --- general `exp : CReal → CReal` (creal/exp_fn.rs) -----------------------
     /// `CReal.expFnTermAbsLe : ∀ x, le zero x → le x one → ∀ k, le (abs
@@ -5741,6 +5768,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         cos_dominant_16_over_25: kernel.name_str(creal, "cosDominant16Over25"),
         cos_dominant_16_over_25_cauchy_body: kernel
             .name_str(creal, "cosDominant16Over25CauchyBody"),
+        pow_mul_distrib: kernel.name_str(creal, "powMulDistrib"),
+        cos_fn_wide: kernel.name_str(creal, "cosFnWide"),
+        cos_fn_wide_uniform_converges: kernel.name_str(creal, "cosFnWideUniformConverges"),
         exp_fn_term_abs_le: kernel.name_str(creal, "expFnTermAbsLe"),
         exp_fn: kernel.name_str(creal, "expFn"),
         exp_fn_uniform_converges: kernel.name_str(creal, "expFnUniformConverges"),
@@ -9814,13 +9844,17 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.cos_fn_term,
             |p: CRealPrelude| p.cos_term,
             |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
             |p: CRealPrelude| p.exp_dominant,
             |p: CRealPrelude| p.exp_term,
             |p: CRealPrelude| p.exp_term_abs_le_dominant,
             |p: CRealPrelude| p.geom_cauchy_ordered_16_over_25,
             |p: CRealPrelude| p.le_congr,
             |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.mul_assoc,
             |p: CRealPrelude| p.mul_comm,
+            |p: CRealPrelude| p.mul_congr,
             |p: CRealPrelude| p.mul_one,
             |p: CRealPrelude| p.mul_sum_range,
             |p: CRealPrelude| p.neg_le_neg,
@@ -9832,8 +9866,41 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.cos_dominant_16_over_25,
             |p: CRealPrelude| p.cos_dominant_16_over_25_cauchy_body,
             |p: CRealPrelude| p.cos_fn_term_abs_le_wide,
+            |p: CRealPrelude| p.pow_mul_distrib,
         ],
         run: trig_fn::declare_cos_fn_wide_progress,
+    },
+    BuildStep {
+        label: "trig_fn::declare_cos_fn_wide",
+        requires: &[
+            |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.cos_dominant_16_over_25,
+            |p: CRealPrelude| p.cos_dominant_16_over_25_cauchy_body,
+            |p: CRealPrelude| p.cos_fn_term,
+            |p: CRealPrelude| p.cos_fn_term_abs_le_wide,
+            |p: CRealPrelude| p.cos_fn_term_congr,
+            |p: CRealPrelude| p.equiv,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.exp_dominant,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.mul_assoc,
+            |p: CRealPrelude| p.mul_congr,
+            |p: CRealPrelude| p.of_rat_le,
+            |p: CRealPrelude| p.of_rat_mul,
+            |p: CRealPrelude| p.pow_add,
+            |p: CRealPrelude| p.pow_congr,
+            |p: CRealPrelude| p.pow_mul_distrib,
+            |p: CRealPrelude| p.sum_range,
+            |p: CRealPrelude| p.uniform_converges_on,
+            |p: CRealPrelude| p.weierstrass_m_test,
+        ],
+        provides: &[
+            |p: CRealPrelude| p.cos_fn_wide,
+            |p: CRealPrelude| p.cos_fn_wide_uniform_converges,
+        ],
+        run: trig_fn::declare_cos_fn_wide,
     },
     BuildStep {
         label: "exp_fn::declare_exp_fn_family",

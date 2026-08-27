@@ -10198,6 +10198,7 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "extreme_value::declare_extreme_value",
     "trig_fn::declare_cos_fn_family",
     "trig_fn::declare_cos_fn_wide_progress",
+    "trig_fn::declare_cos_fn_wide",
     "exp_fn::declare_exp_fn_family",
     "supremum::declare_max_range",
     "supremum::declare_max_range_transport",
