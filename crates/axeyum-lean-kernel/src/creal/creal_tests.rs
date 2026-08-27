@@ -126,7 +126,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 349] = [
+    let expected: [(&str, crate::NameId, &str); 351] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -309,6 +309,10 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
             p.converges_upper_bound,
             "theorem",
         ),
+        // Order passes to the limit: composition of `converges_sub` +
+        // `converges_upper_bound` + ring/order algebra, no new accuracy-index
+        // estimate (see `convergence.rs`'s own doc on the declaration).
+        ("CReal.converges_le", p.converges_le, "theorem"),
         // Boundedness and sequential continuity (phase R10).
         ("CReal.Bounded", p.bounded, "def"),
         ("CReal.converges_bounded", p.converges_bounded, "theorem"),
@@ -1107,6 +1111,21 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         // function's integral is base times height (creal/integral.rs's
         // `declare_integral_const`), Spivak Ch14's opening computation.
         ("CReal.integral_const", p.integral_const, "theorem"),
+        // Spivak Ch14 FTC-I, first evaluation instance: the antiderivative
+        // of a constant integrand, `G x := integral (fun _ => c) a (max a
+        // (min x b)) …` (the `max`/`min` clamp is what makes `G` a genuinely
+        // TOTAL `CReal -> CReal` function, since `integral`'s own proof
+        // arguments only exist on `[a, b]`), has derivative `fun _ => c` on
+        // `[a, b]` (`creal/derivative.rs`'s
+        // `declare_has_derivative_integral_const`). Deliberately NOT the
+        // general FTC-I: see that declaration's own doc comment for the two
+        // open pieces (additivity of `integral` over a split point, and a
+        // Riemann-sum-vs-`F(x)*(y-x)` estimate) neither built yet.
+        (
+            "CReal.hasDerivative_integral_const",
+            p.has_derivative_integral_const,
+            "theorem",
+        ),
         // Chapter 18/22: the geometric domination of `expTerm`, ending at the
         // `abs`-shaped form `sumRange_cauchy_of_dominated` consumes.
         ("CReal.expDominant", p.exp_dominant, "def"),
@@ -7400,6 +7419,125 @@ fn has_derivative_unique_applies_to_the_identity_on_0_1() {
     assert!(
         rendered.contains("CReal.one"),
         "both candidate derivatives are the constant one: {rendered}"
+    );
+}
+
+/// **Mandatory concrete instantiation** for
+/// `CReal.hasDerivative_integral_const`: `c := zero`, `a := zero`, `b :=
+/// one`, `k := 0` — the zero function's antiderivative on `[0, 1]` has
+/// derivative `zero`. Chosen over a nonzero `c` so the archimedean-style
+/// magnitude hypothesis `le (abs c) (ofRat (natDivSucc 1 0))` discharges
+/// from base group laws alone (`abs zero = max zero (neg zero)`, `neg zero ~
+/// zero` via `add_zero`/`add_comm`/`add_neg`), with no `archimedean`/`bound`
+/// plumbing needed. Confirms the kernel accepts the application and that the
+/// concluded type is EXACTLY `HasDerivativeOn G (fun _ => zero) zero one`
+/// for the expected clamp-based `G` (built the same way the declaration
+/// itself builds it), not merely some `HasDerivativeOn` statement — and,
+/// as a negative control, that the same instance is NOT defeq to the WRONG
+/// derivative claim `HasDerivativeOn G (fun _ => one) zero one` (guards
+/// against a vacuous `hasDerivative_congr` application that would accept any
+/// target).
+#[test]
+fn has_derivative_integral_const_applies_to_the_zero_function_on_0_1() {
+    use crate::int_prelude::ops::IntDev;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let k_c = d.num(0);
+    let zero_idx = d.num(0);
+
+    // hbound : le (abs zero) (ofRat (natDivSucc (Nat.succ 0) 0))
+    let succ_k = d.succ(k_c);
+    let bound_rat = d.const_app(p.rat.nat_div_succ, &[succ_k, zero_idx]);
+    let bound_real = d.const_app(p.of_rat, &[bound_rat]);
+
+    let rat_nonneg = d.lemma(p.rat.zero_le_nat_div_succ, &[succ_k, zero_idx]);
+    let rzero_expr = crate::rat_prelude::ops::rzero(&mut d, p.rat);
+    let bound_nonneg = d.lemma(p.of_rat_le, &[rzero_expr, bound_rat, rat_nonneg]);
+    // bound_nonneg : le (ofRat rzero_expr) bound_real -- defeq `le zero_c
+    // bound_real` since `CReal.zero` is *defined* as `ofRat Rat.zero`.
+
+    let neg_zero_c = d.const_app(p.neg, &[zero_c]);
+    let padded = d.const_app(p.add, &[neg_zero_c, zero_c]);
+    let flipped = d.const_app(p.add, &[zero_c, neg_zero_c]);
+    let add_zero_negzero = d.lemma(p.add_zero, &[neg_zero_c]); // padded ~ neg_zero_c
+    let s1 = d.lemma(p.equiv_symm, &[padded, neg_zero_c, add_zero_negzero]); // neg_zero_c ~ padded
+    let comm = d.lemma(p.add_comm, &[neg_zero_c, zero_c]); // padded ~ flipped
+    let s2 = d.lemma(p.equiv_trans, &[neg_zero_c, padded, flipped, s1, comm]); // neg_zero_c ~ flipped
+    let cancel = d.lemma(p.add_neg, &[zero_c]); // flipped ~ zero_c
+    let nz_eq = d.lemma(p.equiv_trans, &[neg_zero_c, flipped, zero_c, s2, cancel]); // neg_zero_c ~ zero_c
+    let neg_zero_le_zero = d.lemma(p.le_of_equiv, &[neg_zero_c, zero_c, nz_eq]);
+    let neg_zero_le_bound = d.lemma(
+        p.le_trans,
+        &[
+            neg_zero_c,
+            zero_c,
+            bound_real,
+            neg_zero_le_zero,
+            bound_nonneg,
+        ],
+    );
+
+    let hbound = d.lemma(
+        p.abs_le,
+        &[zero_c, bound_real, bound_nonneg, neg_zero_le_bound],
+    );
+
+    let instance = d.lemma(
+        p.has_derivative_integral_const,
+        &[zero_c, zero_c, one_c, k_c, hbound],
+    );
+
+    let ty = d.kernel().infer(instance).unwrap_or_else(|error| {
+        panic!("hasDerivative_integral_const refused at c=a=zero, b=one, k=0: {error:?}")
+    });
+
+    // Expected conclusion, built the SAME way the declaration itself builds
+    // its `G`: `HasDerivativeOn G (fun _ => zero) zero one`.
+    let const_zero_fn = {
+        let ignore_fv = d.fresh_fvar();
+        d.lam_fv(ignore_fv, carrier, zero_c)
+    };
+    let g_fn = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let mn = d.const_app(p.min, &[x, one_c]);
+        let clamp_x = d.const_app(p.max, &[zero_c, mn]);
+        let hacx = d.lemma(p.le_max_left, &[zero_c, mn]);
+        let const_zero_inner = {
+            let ignore_fv2 = d.fresh_fvar();
+            d.lam_fv(ignore_fv2, carrier, zero_c)
+        };
+        let ucx = d.const_app(p.uniformly_continuous_const, &[zero_c, zero_c, clamp_x]);
+        let integral_val = d.const_app(p.integral, &[const_zero_inner, zero_c, clamp_x, hacx, ucx]);
+        d.lam_fv(x_fv, carrier, integral_val)
+    };
+    let expected_ty = d.const_app(p.has_derivative_on, &[g_fn, const_zero_fn, zero_c, one_c]);
+
+    let rendered = d.kernel().render_lean(ty);
+    let expected_rendered = d.kernel().render_lean(expected_ty);
+    assert_eq!(
+        rendered, expected_rendered,
+        "must conclude exactly `HasDerivativeOn G (fun _=>zero) zero one` for the clamp-based G"
+    );
+    assert!(
+        rendered.contains("CReal.integral"),
+        "the antiderivative must be stated via `CReal.integral`: {rendered}"
+    );
+
+    // Negative control: NOT defeq to the WRONG derivative claim.
+    let const_one_fn = {
+        let ignore_fv = d.fresh_fvar();
+        d.lam_fv(ignore_fv, carrier, one_c)
+    };
+    let wrong_ty = d.const_app(p.has_derivative_on, &[g_fn, const_one_fn, zero_c, one_c]);
+    assert!(
+        !d.kernel().def_eq(ty, wrong_ty),
+        "must NOT be defeq to `HasDerivativeOn G (fun _=>one) zero one` (wrong derivative)"
     );
 }
 

@@ -250,6 +250,7 @@ pub(super) fn declare_convergence(d: &mut IntDev<'_>, p: CRealPrelude) -> Result
     declare_converges_lower_bound(d, p)?;
     declare_converges_lower_bound_shift(d, p)?;
     declare_converges_upper_bound(d, p)?;
+    declare_converges_le(d, p)?;
     declare_bounded(d, p)?;
     declare_converges_bounded(d, p)?;
     declare_converges_mul(d, p)?;
@@ -2984,6 +2985,335 @@ fn declare_converges_upper_bound(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<
         value,
     })
 }
+
+/// `CReal.add x y`.
+fn cadd(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
+    d.const_app(p.add, &[x, y])
+}
+
+/// `CReal.neg x`.
+fn cneg(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+    d.const_app(p.neg, &[x])
+}
+
+/// `CReal.converges_le : ∀ f g L M, Converges f L → Converges g M →
+/// (∀ n, le (f n) (g n)) → le L M`.
+///
+/// Order passes to the limit. No new Riemann-sum or accuracy-index estimate
+/// is needed here — unlike [`declare_converges_mul`]'s own obstruction (two
+/// sequences sampled at *different* deep indices), the pointwise hypothesis
+/// and both `Converges` witnesses are all read at the *same* index `n`, so
+/// this is composition of already-proved `Converges` combinators plus
+/// ordinary ring/order algebra:
+///
+/// 1. [`CRealPrelude::converges_sub`] applied to the two hypotheses gives
+///    `Converges h (add L (neg M))`, `h n := add (f n) (neg (g n))`.
+/// 2. The pointwise hypothesis `le (f n) (g n)` rearranges to `le (h n) zero`
+///    via [`CRealPrelude::add_le_add`] (add `neg (g n)` to both sides) then
+///    [`CRealPrelude::le_congr`] against [`CRealPrelude::add_neg`] (`g n +
+///    neg (g n) ~ zero`).
+/// 3. [`CRealPrelude::converges_upper_bound`] at the constant `zero` turns
+///    steps 1–2 into `le (add L (neg M)) zero`.
+/// 4. Adding `M` to both sides (`add_le_add` again) and cancelling
+///    (`add_assoc`/`add_comm`/`add_neg`/`add_zero`, the same ring-identity
+///    shape [`super::integral`]'s `add_sub_cancel`/`shift_le_of_nonneg`
+///    use) recovers `le L M`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+fn declare_converges_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let seq_ty = seq_fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let l_fv = d.fresh_fvar();
+    let l = d.kernel().fvar(l_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let converges_fl = converges_applied(d, p, f, l);
+    let converges_gm = converges_applied(d, p, g, m);
+    let hle_ty = le_pointwise_ty(d, p, f, g);
+
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+    let hle_fv = d.fresh_fvar();
+    let hle = d.kernel().fvar(hle_fv);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let neg_m = cneg(d, p, m);
+    let add_l_negm = cadd(d, p, l, neg_m);
+
+    // h_seq := fun n => add (f n) (neg (g n)).
+    let h_seq = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let fn_term = d.apply(f, &[n]);
+        let gn_term = d.apply(g, &[n]);
+        let neg_gn = cneg(d, p, gn_term);
+        let body = cadd(d, p, fn_term, neg_gn);
+        d.lam_fv(n_fv, nat, body)
+    };
+
+    // conv_h : Converges h_seq (add L (neg M)).
+    let conv_h = d.lemma(p.converges_sub, &[f, g, l, m, h1, h2]);
+
+    // pointwise_nonpos : forall n, le (h_seq n) zero.
+    let pointwise_nonpos = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let fn_term = d.apply(f, &[n]);
+        let gn_term = d.apply(g, &[n]);
+        let neg_gn = cneg(d, p, gn_term);
+        let hn = d.apply(hle, &[n]); // le (f n) (g n)
+        let refl_neg_gn = d.lemma(p.le_refl, &[neg_gn]);
+        let step = d.lemma(
+            p.add_le_add,
+            &[fn_term, gn_term, neg_gn, neg_gn, hn, refl_neg_gn],
+        );
+        // step : le (add fn neg_gn) (add gn neg_gn)
+        let lhs = cadd(d, p, fn_term, neg_gn); // = h_seq n, up to beta
+        let rhs = cadd(d, p, gn_term, neg_gn);
+        let refl_lhs = d.lemma(p.equiv_refl, &[lhs]);
+        let gn_negeq = d.lemma(p.add_neg, &[gn_term]); // Equiv (add gn neg_gn) zero
+        let claim = d.lemma(
+            p.le_congr,
+            &[lhs, lhs, rhs, zero_c, refl_lhs, gn_negeq, step],
+        );
+        // claim : le lhs zero
+        d.lam_fv(n_fv, nat, claim)
+    };
+
+    // le_sum_zero : le (add L (neg M)) zero.
+    let le_sum_zero = d.lemma(
+        p.converges_upper_bound,
+        &[h_seq, add_l_negm, zero_c, pointwise_nonpos, conv_h],
+    );
+
+    // step1 : le (add add_l_negm m) (add zero m).
+    let refl_m = d.lemma(p.le_refl, &[m]);
+    let step1 = d.lemma(
+        p.add_le_add,
+        &[add_l_negm, zero_c, m, m, le_sum_zero, refl_m],
+    );
+    let sum_l_negm_m = cadd(d, p, add_l_negm, m);
+    let zero_add_m = cadd(d, p, zero_c, m);
+
+    // eq_l : Equiv (add add_l_negm m) L.
+    let eq_l = {
+        let assoc = d.lemma(p.add_assoc, &[l, neg_m, m]);
+        // assoc : Equiv (add (add L neg_m) m) (add L (add neg_m m))
+        let negm_m = cadd(d, p, neg_m, m);
+        let m_negm = cadd(d, p, m, neg_m);
+        let comm_negm_m = d.lemma(p.add_comm, &[neg_m, m]); // Equiv negm_m m_negm
+        let mneg = d.lemma(p.add_neg, &[m]); // Equiv m_negm zero
+        let negm_m_zero = d.lemma(p.equiv_trans, &[negm_m, m_negm, zero_c, comm_negm_m, mneg]);
+        // negm_m_zero : Equiv negm_m zero
+        let refl_l = d.lemma(p.equiv_refl, &[l]);
+        let l_negmm = cadd(d, p, l, negm_m);
+        let l_zero = cadd(d, p, l, zero_c);
+        let congr1 = d.lemma(p.add_congr, &[l, l, negm_m, zero_c, refl_l, negm_m_zero]);
+        // congr1 : Equiv l_negmm l_zero
+        let addzero_l = d.lemma(p.add_zero, &[l]); // Equiv l_zero l
+        let step_a = d.lemma(p.equiv_trans, &[l_negmm, l_zero, l, congr1, addzero_l]);
+        // step_a : Equiv l_negmm l
+        d.lemma(p.equiv_trans, &[sum_l_negm_m, l_negmm, l, assoc, step_a])
+        // : Equiv sum_l_negm_m l
+    };
+
+    // eq_m : Equiv (add zero m) m.
+    let eq_m = {
+        let m_zero = cadd(d, p, m, zero_c);
+        let comm_zero_m = d.lemma(p.add_comm, &[zero_c, m]); // Equiv zero_add_m m_zero
+        let addzero_m = d.lemma(p.add_zero, &[m]); // Equiv m_zero m
+        d.lemma(
+            p.equiv_trans,
+            &[zero_add_m, m_zero, m, comm_zero_m, addzero_m],
+        )
+    };
+
+    let final_proof = d.lemma(
+        p.le_congr,
+        &[sum_l_negm_m, l, zero_add_m, m, eq_l, eq_m, step1],
+    );
+    // final_proof : le L M
+
+    let concl = d.const_app(p.le, &[l, m]);
+    let ty = {
+        let after_hle = d.arrow(hle_ty, concl);
+        let after_h2 = d.arrow(converges_gm, after_hle);
+        let after_h1 = d.arrow(converges_fl, after_h2);
+        let with_m = d.pi_fv(m_fv, carrier, after_h1);
+        let with_l = d.pi_fv(l_fv, carrier, with_m);
+        let with_g = d.pi_fv(g_fv, seq_ty, with_l);
+        d.pi_fv(f_fv, seq_ty, with_g)
+    };
+    let value = {
+        let with_hle = d.lam_fv(hle_fv, hle_ty, final_proof);
+        let with_h2 = d.lam_fv(h2_fv, converges_gm, with_hle);
+        let with_h1 = d.lam_fv(h1_fv, converges_fl, with_h2);
+        let with_m = d.lam_fv(m_fv, carrier, with_h1);
+        let with_l = d.lam_fv(l_fv, carrier, with_m);
+        let with_g = d.lam_fv(g_fv, seq_ty, with_l);
+        d.lam_fv(f_fv, seq_ty, with_g)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.converges_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+#[cfg(test)]
+mod converges_le_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// **Mandatory concrete instantiation, both directions.** `F := fun _ =>
+    /// zero`, `G := fun _ => one` -- `zero != one`, so a bug that swapped `L`
+    /// and `M` in `converges_le`'s conclusion is visible (unlike testing at
+    /// `F = G`, where `le c c` holds regardless of which side the proof
+    /// actually establishes -- see the vacuous check at the end of this test
+    /// for exactly that degenerate case, kept for comparison rather than as
+    /// the only check). The SAME proof term is checked against BOTH the true
+    /// conclusion `le zero one` (must succeed) and the FALSE, swapped
+    /// conclusion `le one zero` (must be REFUSED) -- the "inverted" control
+    /// this repository's own house rule asks for, run against the exact term
+    /// [`declare_converges_le`]'s construction produces, not a hand-rolled
+    /// substitute.
+    #[test]
+    fn converges_le_concrete_and_negative_control() {
+        crate::on_a_deep_stack(converges_le_concrete_and_negative_control_body);
+    }
+
+    fn converges_le_concrete_and_negative_control_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let nat = d.nat_ty();
+
+        let zero_c = d.kernel().const_(p.zero, vec![]);
+        let one_c = d.kernel().const_(p.one, vec![]);
+
+        let f_const_zero = {
+            let ignore_fv = d.fresh_fvar();
+            d.lam_fv(ignore_fv, nat, zero_c)
+        };
+        let g_const_one = {
+            let ignore_fv = d.fresh_fvar();
+            d.lam_fv(ignore_fv, nat, one_c)
+        };
+
+        let conv_f = d.lemma(p.converges_of_const, &[zero_c]);
+        let conv_g = d.lemma(p.converges_of_const, &[one_c]);
+
+        // hle : forall n, le (f_const_zero n) (g_const_one n) -- both sides
+        // beta-reduce to `le zero one`, a genuine (non-vacuous) fact via
+        // `zero_lt_one` + `le_of_lt`, not `le_refl` at a single point.
+        let hle = {
+            let n_fv = d.fresh_fvar();
+            let lt01 = d.lemma(p.zero_lt_one, &[]);
+            let le01 = d.lemma(p.le_of_lt, &[zero_c, one_c, lt01]);
+            d.lam_fv(n_fv, nat, le01)
+        };
+
+        let proof = d.lemma(
+            p.converges_le,
+            &[
+                f_const_zero,
+                g_const_one,
+                zero_c,
+                one_c,
+                conv_f,
+                conv_g,
+                hle,
+            ],
+        );
+
+        let anon = d.kernel().anon();
+
+        // Positive: the TRUE conclusion must be accepted.
+        let true_ty = d.const_app(p.le, &[zero_c, one_c]);
+        let name_ok = d.kernel().name_str(anon, "__convergesLeConcreteOk");
+        let result_ok = d.kernel().add_declaration(Declaration::Theorem {
+            name: name_ok,
+            uparams: vec![],
+            ty: true_ty,
+            value: proof,
+        });
+        assert!(
+            result_ok.is_ok(),
+            "converges_le at F := const zero, G := const one must prove \
+             `le zero one`: {:?}",
+            result_ok.err()
+        );
+
+        // Negative control: the SAME proof term, asserted at the SWAPPED
+        // (false) conclusion `le one zero`, must be REFUSED.
+        let false_ty = d.const_app(p.le, &[one_c, zero_c]);
+        let name_bad = d.kernel().name_str(anon, "__convergesLeConcreteBad");
+        let result_bad = d.kernel().add_declaration(Declaration::Theorem {
+            name: name_bad,
+            uparams: vec![],
+            ty: false_ty,
+            value: proof,
+        });
+        assert!(
+            result_bad.is_err(),
+            "the SAME proof term must be REFUSED against the swapped \
+             (false) conclusion `le one zero`"
+        );
+
+        // Vacuous sanity, for comparison: F = G = const zero, via `le_refl`.
+        // This ALONE would not distinguish a correct proof from one that
+        // silently swapped `L`/`M` -- `le zero zero` holds either way -- so
+        // it is checked alongside the non-vacuous pair above, never instead
+        // of it.
+        let conv_f0 = d.lemma(p.converges_of_const, &[zero_c]);
+        let conv_g0 = d.lemma(p.converges_of_const, &[zero_c]);
+        let hle0 = {
+            let n_fv = d.fresh_fvar();
+            let refl0 = d.lemma(p.le_refl, &[zero_c]);
+            d.lam_fv(n_fv, nat, refl0)
+        };
+        let proof0 = d.lemma(
+            p.converges_le,
+            &[
+                f_const_zero,
+                f_const_zero,
+                zero_c,
+                zero_c,
+                conv_f0,
+                conv_g0,
+                hle0,
+            ],
+        );
+        let vacuous_ty = d.const_app(p.le, &[zero_c, zero_c]);
+        let name_vacuous = d.kernel().name_str(anon, "__convergesLeVacuous");
+        let result_vacuous = d.kernel().add_declaration(Declaration::Theorem {
+            name: name_vacuous,
+            uparams: vec![],
+            ty: vacuous_ty,
+            value: proof0,
+        });
+        assert!(
+            result_vacuous.is_ok(),
+            "the degenerate F = G = const zero case must still typecheck: {:?}",
+            result_vacuous.err()
+        );
+    }
+}
+
 // --- `CReal.Bounded`, and what it turned out to unlock ----------------------
 //
 // `CReal.mul`'s own regularity is a FIXED rate (see `product.rs`'s module
