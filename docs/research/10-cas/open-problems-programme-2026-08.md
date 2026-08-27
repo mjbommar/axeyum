@@ -3,7 +3,9 @@
 ## Purpose
 
 This is the durable Axeyum-side control document for the five targets surveyed in
-[`docs/open-problems-2026-08/`](../../open-problems-2026-08/).  The problem-specific
+`docs/open-problems-2026-08/` (a **sibling research package, not tracked in this
+repository** -- the relative link that used to sit here pointed at a path that has
+never existed in this tree, and reddened `scripts/check-links.sh`).  The problem-specific
 narrative, literature diary, drafts, and bulky outputs live in sibling research packages;
 only generic machinery and schema-valid, independently checkable evidence belong here.
 
