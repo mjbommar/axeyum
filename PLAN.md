@@ -1377,6 +1377,14 @@ a local repair-neighbourhood theorem: unrestricted 405 remains open and the exac
 does not move. The proof manifest, receipt, diary, provenance, and rebuilt paper are retained;
 the redundant single-bijection producer stopped with an uncredited 26.32 GB prefix.
 
+**Labelled Rado radius 23 checked, 2026-08-27.** The next labelled formula has 12,150 variables,
+329,778 clauses, and SHA-256 `7ab8fb91...6b2`. CaDiCaL seed 725 returned UNSAT in 155.40 seconds
+with a 736,089,882-byte DRAT, SHA-256 `0f740d18...fc9b`; Axeyum's independent file-backed checker
+accepted the complete proof in 127.658 seconds. Thus the canonical labelled minimum distance from
+the retained witness is at least 24. This does not raise the palette-orbit distance, whose other
+119 permutations have only radius-22 proofs, and does not refute unrestricted 405. The exact
+lower bound remains `R_5(3(x-y)=2z)>404`.
+
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
 external-certificate replay runner for all five packages.  It validates checker and artifact
 bytes before execution, hard-kills a timed-out process session, requires an observable finding
