@@ -1204,3 +1204,309 @@ pub(super) fn declare_crossing_sample(
     declare_crossing_sample_upper(d, p)?;
     declare_crossing_sample_lower(d, p)
 }
+
+// --- roadmap: bridging the crossing sample point to `F` via uniform
+// continuity -- the ANALYTIC half of the cross-width Riemann comparison's
+// single block (see `integral.rs`'s 2026-08-27 module doc entry) ----------
+
+/// `Equiv (add (add s y) (neg s)) y` — cancelling a term added on the LEFT
+/// back off, via `add_comm`, `add_assoc`, `add_neg`, `add_zero`. Shared by
+/// [`le_sub_of_le_add`] and [`le_sub_of_add_le_left`], the two directions
+/// [`declare_crossing_close`] needs to move `samplePt` across a `CReal.le`.
+fn cancel_added_left(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    s: ExprId,
+    y: ExprId,
+) -> (ExprId, ExprId) {
+    let neg_s = cneg(d, p, s);
+    let sy = cadd(d, p, s, y);
+    let start = cadd(d, p, sy, neg_s);
+
+    let ys = cadd(d, p, y, s);
+    let h_comm = d.lemma(p.add_comm, &[s, y]); // Equiv sy ys
+    let refl_neg_s = d.lemma(p.equiv_refl, &[neg_s]);
+    let step_a = d.lemma(p.add_congr, &[sy, ys, neg_s, neg_s, h_comm, refl_neg_s]);
+    let next1 = cadd(d, p, ys, neg_s);
+
+    let s_negs = cadd(d, p, s, neg_s);
+    let step_b = d.lemma(p.add_assoc, &[y, s, neg_s]); // Equiv next1 (add y s_negs)
+    let next2 = cadd(d, p, y, s_negs);
+
+    let zero_c = czero(d, p);
+    let h_addneg = d.lemma(p.add_neg, &[s]); // Equiv s_negs zero_c
+    let refl_y = d.lemma(p.equiv_refl, &[y]);
+    let step_c = d.lemma(p.add_congr, &[y, y, s_negs, zero_c, refl_y, h_addneg]);
+    let next3 = cadd(d, p, y, zero_c);
+
+    let step_d = d.lemma(p.add_zero, &[y]); // Equiv next3 y
+
+    let proof = echain(
+        d,
+        p,
+        start,
+        &[
+            (next1, step_a),
+            (next2, step_b),
+            (next3, step_c),
+            (y, step_d),
+        ],
+    );
+    (start, proof)
+}
+
+/// `le x (add s y) -> le (add x (neg s)) y` — move `s` from the right of a
+/// sum across to cancel against a matching `neg s` on the left.
+fn le_sub_of_le_add(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    s: ExprId,
+    y: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let (start, cancel_proof) = cancel_added_left(d, p, s, y);
+    let neg_s = cneg(d, p, s);
+    let refl_neg_s = d.lemma(p.le_refl, &[neg_s]);
+    let sy = cadd(d, p, s, y);
+    let step1 = d.lemma(p.add_le_add, &[x, sy, neg_s, neg_s, h, refl_neg_s]);
+    // step1 : le (add x neg_s) start
+    let lhs = cadd(d, p, x, neg_s);
+    let refl_lhs = d.lemma(p.equiv_refl, &[lhs]);
+    d.lemma(
+        p.le_congr,
+        &[lhs, lhs, start, y, refl_lhs, cancel_proof, step1],
+    )
+}
+
+/// `le (add s y) x -> le y (add x (neg s))` — the mirror direction:
+/// [`declare_crossing_close`] needs this for `crossingSampleLower`'s own
+/// shape, `add samplePt slackLower ≤ c`.
+fn le_sub_of_add_le_left(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    s: ExprId,
+    y: ExprId,
+    x: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let (start, cancel_proof) = cancel_added_left(d, p, s, y);
+    let neg_s = cneg(d, p, s);
+    let refl_neg_s = d.lemma(p.le_refl, &[neg_s]);
+    let sy = cadd(d, p, s, y);
+    let step1 = d.lemma(p.add_le_add, &[sy, x, neg_s, neg_s, h, refl_neg_s]);
+    // step1 : le start (add x neg_s)
+    let rhs = cadd(d, p, x, neg_s);
+    let refl_rhs = d.lemma(p.equiv_refl, &[rhs]);
+    d.lemma(
+        p.le_congr,
+        &[start, y, rhs, rhs, cancel_proof, refl_rhs, step1],
+    )
+}
+
+/// `CReal.close (x y : CReal) (q : Rat) : Prop := le (abs (add x (neg y)))
+/// (ofRat q)` — reproduced locally (`uniform_continuity.rs`/`integral.rs`
+/// both keep their own private copy of this same shape, per this file's own
+/// convention of small per-module copies rather than reaching across a
+/// sibling module boundary for a private helper).
+fn close_within(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId, q: ExprId) -> ExprId {
+    let ny = cneg(d, p, y);
+    let diff = cadd(d, p, x, ny);
+    let magnitude = d.const_app(p.abs, &[diff]);
+    let target = embed(d, p, q);
+    cle(d, p, magnitude, target)
+}
+
+/// The coarse mesh's crossing-index sample point and the two closed slack
+/// terms `crossingSampleUpper`/`crossingSampleLower` place `c` within,
+/// rebuilt via the SAME [`build_scaled`] recipe those two theorems' own
+/// proofs use, so [`declare_crossing_close`]'s proof cites the identical
+/// `ExprId` shapes their stated types already carry.
+struct SampleSlack {
+    sample_pt: ExprId,
+    slack_upper: ExprId,
+    slack_lower: ExprId,
+}
+
+fn sample_slack(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    c: ExprId,
+    delta: ExprId,
+) -> SampleSlack {
+    let scaled = build_scaled(d, p, a, c, delta);
+    let k1 = d.succ(scaled.zero_nat);
+    let j = NatOps::mul(d, k1, k1);
+    let two_nat = d.num(2);
+    let three_nat = d.num(3);
+    let bound2j = d.const_app(p.rat.nat_div_succ, &[two_nat, j]);
+    let bound3j = d.const_app(p.rat.nat_div_succ, &[three_nat, j]);
+    let embed_bound2j = embed(d, p, bound2j);
+    let neg_bound3j = rneg(d, bound3j);
+    let embed_neg_bound3j = embed(d, p, neg_bound3j);
+    let of_nat_i0 = d.const_app(p.of_nat, &[scaled.i0]);
+    let sample_term = cmul(d, p, of_nat_i0, scaled.delta_embed);
+    let sample_pt = cadd(d, p, a, sample_term);
+    let bound2j_term = cmul(d, p, scaled.delta_embed, embed_bound2j);
+    let slack_upper = cadd(d, p, scaled.delta_embed, bound2j_term);
+    let slack_lower = cmul(d, p, scaled.delta_embed, embed_neg_bound3j);
+    SampleSlack {
+        sample_pt,
+        slack_upper,
+        slack_lower,
+    }
+}
+
+/// Admit [`CRealPrelude::crossing_close`]. See that field's own doc comment
+/// for the exact statement and for what this does NOT derive (the
+/// Archimedean smallness of the two slacks from a mesh count, and
+/// `samplePt`'s own domain membership) — both are explicit hypotheses here.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+#[allow(clippy::too_many_lines)]
+pub(super) fn declare_crossing_close(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let rat_ty_ = crate::rat_prelude::ops::rat_ty(d);
+    let fn_ty = d.arrow(carrier, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let delta_fv = d.fresh_fvar();
+    let delta = d.kernel().fvar(delta_fv);
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+
+    let zero_rat = rzero(d, p.rat);
+    let hpos_ty = d.const_app(p.rat.lt, &[zero_rat, delta]);
+    let hpos_fv = d.fresh_fvar();
+    let hpos = d.kernel().fvar(hpos_fv);
+
+    let hac_ty = cle(d, p, a, c);
+    let hac_fv = d.fresh_fvar();
+    let hac = d.kernel().fvar(hac_fv);
+    let hcb_ty = cle(d, p, c, b);
+    let hcb_fv = d.fresh_fvar();
+    let hcb = d.kernel().fvar(hcb_fv);
+
+    let slack = sample_slack(d, p, a, c, delta);
+
+    let hap_ty = cle(d, p, a, slack.sample_pt);
+    let hap_fv = d.fresh_fvar();
+    let hap = d.kernel().fvar(hap_fv);
+    let hpb_ty = cle(d, p, slack.sample_pt, b);
+    let hpb_fv = d.fresh_fvar();
+    let hpb = d.kernel().fvar(hpb_fv);
+
+    let modulus_fn = d.const_app(p.uc_modulus, &[f, a, b, u]);
+    let outer = d.apply(modulus_fn, &[e]);
+    let one_nat = d.num(1);
+    let bound_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, outer]);
+    let bound_embed = embed(d, p, bound_rat);
+
+    let h_upper_ty = cle(d, p, slack.slack_upper, bound_embed);
+    let h_upper_fv = d.fresh_fvar();
+    let h_upper = d.kernel().fvar(h_upper_fv);
+    let neg_slack_lower = cneg(d, p, slack.slack_lower);
+    let h_lower_ty = cle(d, p, neg_slack_lower, bound_embed);
+    let h_lower_fv = d.fresh_fvar();
+    let h_lower = d.kernel().fvar(h_lower_fv);
+
+    // --- the proof body -------------------------------------------------
+
+    let hu_sample = d.lemma(p.crossing_sample_upper, &[a, c, delta, hpos]);
+    // hu_sample : le c (add samplePt slackUpper)
+    let hl_sample = d.lemma(p.crossing_sample_lower, &[a, c, delta, hpos, hac]);
+    // hl_sample : le (add samplePt slackLower) c
+
+    let neg_sample_pt = cneg(d, p, slack.sample_pt);
+    let x_val = cadd(d, p, c, neg_sample_pt);
+
+    let h1 = le_sub_of_le_add(d, p, c, slack.sample_pt, slack.slack_upper, hu_sample);
+    // h1 : le x_val slackUpper
+    let h1p = d.lemma(
+        p.le_trans,
+        &[x_val, slack.slack_upper, bound_embed, h1, h_upper],
+    );
+
+    let h2 = le_sub_of_add_le_left(d, p, slack.sample_pt, slack.slack_lower, c, hl_sample);
+    // h2 : le slackLower x_val
+    let h2n = d.lemma(p.neg_le_neg, &[slack.slack_lower, x_val, h2]);
+    // h2n : le (neg x_val) (neg slackLower)
+    let neg_x_val = cneg(d, p, x_val);
+    let h2p = d.lemma(
+        p.le_trans,
+        &[neg_x_val, neg_slack_lower, bound_embed, h2n, h_lower],
+    );
+
+    let abs_bound = d.lemma(p.abs_le, &[x_val, bound_embed, h1p, h2p]);
+    // abs_bound : le (abs x_val) bound_embed == close_within c samplePt bound_rat
+
+    let uc_spec_term = d.const_app(p.uc_spec, &[f, a, b, u]);
+    let conclusion_proof = d.apply(
+        uc_spec_term,
+        &[e, c, slack.sample_pt, hac, hcb, hap, hpb, abs_bound],
+    );
+
+    let out_rat_e = d.const_app(p.rat.nat_div_succ, &[one_nat, e]);
+    let fc = d.apply(f, &[c]);
+    let f_sample = d.apply(f, &[slack.sample_pt]);
+    let conclusion_ty = close_within(d, p, fc, f_sample, out_rat_e);
+
+    let ty = {
+        let after_hlower = d.arrow(h_lower_ty, conclusion_ty);
+        let after_hupper = d.arrow(h_upper_ty, after_hlower);
+        let after_hpb = d.arrow(hpb_ty, after_hupper);
+        let after_hap = d.arrow(hap_ty, after_hpb);
+        let after_hcb = d.arrow(hcb_ty, after_hap);
+        let after_hac = d.arrow(hac_ty, after_hcb);
+        let after_hpos = d.arrow(hpos_ty, after_hac);
+        let after_u = d.pi_fv(u_fv, u_ty, after_hpos);
+        let over_e = d.pi_fv(e_fv, nat, after_u);
+        let over_delta = d.pi_fv(delta_fv, rat_ty_, over_e);
+        let over_c = d.pi_fv(c_fv, carrier, over_delta);
+        let over_b = d.pi_fv(b_fv, carrier, over_c);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        d.pi_fv(f_fv, fn_ty, over_a)
+    };
+    let value = {
+        let with_hlower = d.lam_fv(h_lower_fv, h_lower_ty, conclusion_proof);
+        let with_hupper = d.lam_fv(h_upper_fv, h_upper_ty, with_hlower);
+        let with_hpb = d.lam_fv(hpb_fv, hpb_ty, with_hupper);
+        let with_hap = d.lam_fv(hap_fv, hap_ty, with_hpb);
+        let with_hcb = d.lam_fv(hcb_fv, hcb_ty, with_hap);
+        let with_hac = d.lam_fv(hac_fv, hac_ty, with_hcb);
+        let with_hpos = d.lam_fv(hpos_fv, hpos_ty, with_hac);
+        let with_u = d.lam_fv(u_fv, u_ty, with_hpos);
+        let over_e = d.lam_fv(e_fv, nat, with_u);
+        let over_delta = d.lam_fv(delta_fv, rat_ty_, over_e);
+        let over_c = d.lam_fv(c_fv, carrier, over_delta);
+        let over_b = d.lam_fv(b_fv, carrier, over_c);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        d.lam_fv(f_fv, fn_ty, over_a)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.crossing_close,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
