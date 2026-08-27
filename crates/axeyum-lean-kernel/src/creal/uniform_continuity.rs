@@ -1792,6 +1792,148 @@ fn declare_projections(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kernel
     Ok(())
 }
 
+// --- sub-interval restriction --------------------------------------------------
+
+/// Admit `CReal.uniformlyContinuousOn_restrict : ∀ F a b a' b',
+/// UniformlyContinuousOn F a b → le a a' → le a' b' → le b' b →
+/// UniformlyContinuousOn F a' b'`.
+///
+/// The SAME modulus works on a narrower interval: `UniformlyContinuousOn`'s
+/// `spec` (`uc_spec_body`, this file's own module-top helper) only ever uses
+/// its range hypotheses (`a ≤ x`, `x ≤ b`, `a ≤ y`, `y ≤ b`) to state the
+/// closeness implication, and `a ≤ a' ≤ x` / `y ≤ b' ≤ b` compose to exactly
+/// those via [`CRealPrelude::le_trans`] -- no new estimate, no modulus
+/// change. Built directly against [`CRealPrelude::uc_mk`] rather than
+/// through the recursor: the new `spec` is a `lam` wrapping the ORIGINAL
+/// witness's own `spec` (via [`CRealPrelude::uc_spec`]) applied to the
+/// composed range proofs, so `UniformlyContinuousOn`'s definition is never
+/// unfolded.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// refused a proof, not that a script gave up.
+pub(super) fn declare_uniformly_continuous_on_restrict(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let func_ty = fn_ty(d, p);
+    let nat = d.nat_ty();
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let ap_fv = d.fresh_fvar();
+    let ap = d.kernel().fvar(ap_fv);
+    let bp_fv = d.fresh_fvar();
+    let bp = d.kernel().fvar(bp_fv);
+
+    let u_ty = uc_ty(d, p, f, a, b);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+
+    let h1_ty = cle(d, p, a, ap); // le a a'
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let h2_ty = cle(d, p, ap, bp); // le a' b' -- carried in the statement for
+    // symmetry with the task's own hypothesis list; not needed by the proof
+    // (the restriction only ever composes `a <= a' <= x` and `y <= b' <= b`).
+    let h2_fv = d.fresh_fvar();
+    let h3_ty = cle(d, p, bp, b); // le b' b
+    let h3_fv = d.fresh_fvar();
+    let h3 = d.kernel().fvar(h3_fv);
+
+    let modulus_u = d.const_app(p.uc_modulus, &[f, a, b, u]);
+    let spec_u = d.const_app(p.uc_spec, &[f, a, b, u]);
+    // spec_u : uc_spec_body f a b modulus_u, i.e. ∀ n x y, le a x -> le x b
+    // -> le a y -> le y b -> close_within x y (natDivSucc 1 (modulus_u n))
+    // -> close_within (f x) (f y) (natDivSucc 1 n).
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+
+    let hax_ty = cle(d, p, ap, x); // le a' x
+    let hax_fv = d.fresh_fvar();
+    let hax = d.kernel().fvar(hax_fv);
+    let hxb_ty = cle(d, p, x, bp); // le x b'
+    let hxb_fv = d.fresh_fvar();
+    let hxb = d.kernel().fvar(hxb_fv);
+    let hay_ty = cle(d, p, ap, y); // le a' y
+    let hay_fv = d.fresh_fvar();
+    let hay = d.kernel().fvar(hay_fv);
+    let hyb_ty = cle(d, p, y, bp); // le y b'
+    let hyb_fv = d.fresh_fvar();
+    let hyb = d.kernel().fvar(hyb_fv);
+
+    // Compose the narrower range hypotheses back to the original ones.
+    let le_a_x = d.lemma(p.le_trans, &[a, ap, x, h1, hax]); // le a x
+    let le_x_b = d.lemma(p.le_trans, &[x, bp, b, hxb, h3]); // le x b
+    let le_a_y = d.lemma(p.le_trans, &[a, ap, y, h1, hay]); // le a y
+    let le_y_b = d.lemma(p.le_trans, &[y, bp, b, hyb, h3]); // le y b
+
+    let mod_n = d.apply(modulus_u, &[n]);
+    let in_bound = div_succ(d, p, 1, mod_n);
+    let hyp_ty = close_within(d, p, x, y, in_bound);
+    let hyp_fv = d.fresh_fvar();
+    let hyp = d.kernel().fvar(hyp_fv);
+
+    let concl = d.apply(spec_u, &[n, x, y, le_a_x, le_x_b, le_a_y, le_y_b, hyp]);
+    // concl : close_within (f x) (f y) (natDivSucc 1 n) -- the ORIGINAL
+    // witness's own spec, reused verbatim.
+
+    let new_spec_value = {
+        let with_hyp = d.lam_fv(hyp_fv, hyp_ty, concl);
+        let with_hyb = d.lam_fv(hyb_fv, hyb_ty, with_hyp);
+        let with_hay = d.lam_fv(hay_fv, hay_ty, with_hyb);
+        let with_hxb = d.lam_fv(hxb_fv, hxb_ty, with_hay);
+        let with_hax = d.lam_fv(hax_fv, hax_ty, with_hxb);
+        let with_y = d.lam_fv(y_fv, carrier, with_hax);
+        let with_x = d.lam_fv(x_fv, carrier, with_y);
+        d.lam_fv(n_fv, nat, with_x)
+    };
+
+    let result = d.const_app(p.uc_mk, &[f, ap, bp, modulus_u, new_spec_value]);
+    let concl_ty = uc_ty(d, p, f, ap, bp);
+
+    let ty = {
+        let after_h3 = d.arrow(h3_ty, concl_ty);
+        let after_h2 = d.arrow(h2_ty, after_h3);
+        let after_h1 = d.arrow(h1_ty, after_h2);
+        let after_u = d.pi_fv(u_fv, u_ty, after_h1);
+        let over_bp = d.pi_fv(bp_fv, carrier, after_u);
+        let over_ap = d.pi_fv(ap_fv, carrier, over_bp);
+        let over_b = d.pi_fv(b_fv, carrier, over_ap);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        d.pi_fv(f_fv, func_ty, over_a)
+    };
+    let value = {
+        let with_h3 = d.lam_fv(h3_fv, h3_ty, result);
+        let with_h2 = d.lam_fv(h2_fv, h2_ty, with_h3);
+        let with_h1 = d.lam_fv(h1_fv, h1_ty, with_h2);
+        let with_u = d.lam_fv(u_fv, u_ty, with_h1);
+        let over_bp = d.lam_fv(bp_fv, carrier, with_u);
+        let over_ap = d.lam_fv(ap_fv, carrier, over_bp);
+        let over_b = d.lam_fv(b_fv, carrier, over_ap);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        d.lam_fv(f_fv, func_ty, over_a)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.uniformly_continuous_on_restrict,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 // --- witness: `id` -------------------------------------------------------------
 
 /// `CReal.uniformly_continuous_id : ∀ a b, UniformlyContinuousOn (fun r => r) a b`.

@@ -39,6 +39,11 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
         ("UniformlyContinuousOn.modulus", p.uc_modulus, "def"),
         ("UniformlyContinuousOn.spec", p.uc_spec, "theorem"),
         (
+            "CReal.uniformlyContinuousOn_restrict",
+            p.uniformly_continuous_on_restrict,
+            "theorem",
+        ),
+        (
             "CReal.uniformly_continuous_id",
             p.uniformly_continuous_id,
             "theorem",
