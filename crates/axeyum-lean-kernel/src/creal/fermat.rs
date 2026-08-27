@@ -62,6 +62,7 @@
     clippy::too_many_lines
 )]
 
+use super::deriv_unique::{abs_neg_equiv, abs_of_nonneg, le_sub_of_add_le};
 use super::{CRealPrelude, cadd, cle, clt, creal_ty, div_succ, embed, gap_elim, gap_halves};
 use crate::KernelError;
 use crate::env::Declaration;
@@ -326,43 +327,6 @@ fn mul_neg_equiv(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> E
     neg_unique(d, p, xy, x_ny, h_sum_zero)
 }
 
-/// From `h : le (add x q) y`, derive `le x (add y (neg q))`. Copied verbatim
-/// from `deriv_unique.rs`'s private helper of the same shape.
-fn le_sub_of_add_le(
-    d: &mut IntDev<'_>,
-    p: CRealPrelude,
-    x: ExprId,
-    q: ExprId,
-    y: ExprId,
-    h: ExprId,
-) -> ExprId {
-    let nq = cneg(d, p, q);
-    let refl_nq = d.lemma(p.le_refl, &[nq]);
-    let xq = cadd(d, p, x, q);
-    let step = d.lemma(p.add_le_add, &[xq, y, nq, nq, h, refl_nq]);
-
-    let lhs_equiv_x = {
-        let assoc = d.lemma(p.add_assoc, &[x, q, nq]);
-        let qnq = cadd(d, p, q, nq);
-        let x_qnq = cadd(d, p, x, qnq);
-        let an = d.lemma(p.add_neg, &[q]);
-        let refl_x = erefl(d, p, x);
-        let zero_c = czero(d, p);
-        let cong = d.lemma(p.add_congr, &[x, x, qnq, zero_c, refl_x, an]);
-        let x_zero = cadd(d, p, x, zero_c);
-        let trim = d.lemma(p.add_zero, &[x]);
-        let start = cadd(d, p, xq, nq);
-        echain(d, p, start, &[(x_qnq, assoc), (x_zero, cong), (x, trim)])
-    };
-    let y_nq = cadd(d, p, y, nq);
-    let refl_target = erefl(d, p, y_nq);
-    let start = cadd(d, p, xq, nq);
-    d.lemma(
-        p.le_congr,
-        &[start, x, y_nq, y_nq, lhs_equiv_x, refl_target, step],
-    )
-}
-
 /// `Equiv (add (add v u) (neg v)) u` — for ANY `u`. Copied verbatim from
 /// `deriv_unique.rs`'s private helper of the same shape.
 fn add_sub_cancel(d: &mut IntDev<'_>, p: CRealPrelude, v: ExprId, u: ExprId) -> ExprId {
@@ -408,113 +372,6 @@ fn neg_zero_equiv(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
     let h2 = d.lemma(p.add_comm, &[nz, zero_c]);
     let h3 = d.lemma(p.add_neg, &[zero_c]);
     echain(d, p, nz, &[(padded, step1), (flipped, h2), (zero_c, h3)])
-}
-
-/// `Equiv (abs (ofRat q)) (ofRat q)` for `q_nonneg : Rat.le Rat.zero q`.
-/// Copied verbatim from `deriv_unique.rs`'s private helper.
-fn abs_of_nonneg(d: &mut IntDev<'_>, p: CRealPrelude, q: ExprId, q_nonneg: ExprId) -> ExprId {
-    let rat = p.rat;
-    let q_emb = embed(d, p, q);
-    let abs_q = cabs(d, p, q_emb);
-
-    let refl_q = d.lemma(p.le_refl, &[q_emb]);
-
-    let neg_q = crate::rat_prelude::ops::rneg(d, q);
-    let neg_le_zero = d.lemma(rat.neg_nonpos_of_nonneg, &[q, q_nonneg]);
-    let rzero_expr = rzero(d, rat);
-    let neg_q_le_q = d.lemma(rat.le_trans, &[neg_q, rzero_expr, q, neg_le_zero, q_nonneg]);
-    let creal_neg_q_le_q = d.lemma(p.of_rat_le, &[neg_q, q, neg_q_le_q]);
-
-    let neg_q_emb = cneg(d, p, q_emb);
-    let of_rat_neg_q = embed(d, p, neg_q);
-    let on_eq = d.lemma(p.of_rat_neg, &[q]);
-    let on_eq_symm = esymm(d, p, of_rat_neg_q, neg_q_emb, on_eq);
-
-    let refl_qemb = erefl(d, p, q_emb);
-    let upper = d.lemma(
-        p.le_congr,
-        &[
-            of_rat_neg_q,
-            neg_q_emb,
-            q_emb,
-            q_emb,
-            on_eq_symm,
-            refl_qemb,
-            creal_neg_q_le_q,
-        ],
-    );
-
-    let abs_le_result = d.lemma(p.abs_le, &[q_emb, q_emb, refl_q, upper]);
-    let le_abs_self_q = d.lemma(p.le_abs_self, &[q_emb]);
-
-    d.lemma(
-        p.equiv_of_le_le,
-        &[abs_q, q_emb, abs_le_result, le_abs_self_q],
-    )
-}
-
-/// From `h : le (abs x) bound`, derive `le (abs (neg x)) bound`. Copied
-/// verbatim from `derivative.rs`'s private helper of the same shape.
-fn le_abs_neg_of_le_abs(
-    d: &mut IntDev<'_>,
-    p: CRealPrelude,
-    x: ExprId,
-    bound: ExprId,
-    h: ExprId,
-) -> ExprId {
-    let abs_x = cabs(d, p, x);
-    let nx = cneg(d, p, x);
-    let nnx = cneg(d, p, nx);
-
-    let nle = d.lemma(p.neg_le_abs, &[x]);
-    let upper = d.lemma(p.le_trans, &[nx, abs_x, bound, nle, h]);
-
-    let le_x_bound = {
-        let sle = d.lemma(p.le_abs_self, &[x]);
-        d.lemma(p.le_trans, &[x, abs_x, bound, sle, h])
-    };
-    let nn = double_neg(d, p, x);
-    let nn_symm = esymm(d, p, nnx, x, nn);
-    let refl_bound = erefl(d, p, bound);
-    let lower = d.lemma(
-        p.le_congr,
-        &[x, nnx, bound, bound, nn_symm, refl_bound, le_x_bound],
-    );
-
-    d.lemma(p.abs_le, &[nx, bound, upper, lower])
-}
-
-/// `Equiv (abs (neg x)) (abs x)`. Copied verbatim from `deriv_unique.rs`'s
-/// private helper.
-fn abs_neg_equiv(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
-    let abs_x = cabs(d, p, x);
-    let nx = cneg(d, p, x);
-    let abs_nx = cabs(d, p, nx);
-
-    let refl_absx = d.lemma(p.le_refl, &[abs_x]);
-    let le1 = le_abs_neg_of_le_abs(d, p, x, abs_x, refl_absx);
-
-    let refl_absnx = d.lemma(p.le_refl, &[abs_nx]);
-    let le2_pre = le_abs_neg_of_le_abs(d, p, nx, abs_nx, refl_absnx);
-    let nnx = cneg(d, p, nx);
-    let abs_nnx = cabs(d, p, nnx);
-    let dn = double_neg(d, p, x);
-    let abs_congr_dn = d.lemma(p.abs_congr, &[nnx, x, dn]);
-    let refl_absnx2 = erefl(d, p, abs_nx);
-    let le2 = d.lemma(
-        p.le_congr,
-        &[
-            abs_nnx,
-            abs_x,
-            abs_nx,
-            abs_nx,
-            abs_congr_dn,
-            refl_absnx2,
-            le2_pre,
-        ],
-    );
-
-    d.lemma(p.equiv_of_le_le, &[abs_nx, abs_x, le1, le2])
 }
 
 /// From `h : le (abs v) bound`, derive `le (neg v) bound`.

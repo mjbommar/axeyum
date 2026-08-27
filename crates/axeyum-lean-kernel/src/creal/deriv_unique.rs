@@ -404,8 +404,9 @@ fn le_abs_neg_of_le_abs(
 /// `Equiv (abs (neg x)) (abs x)` — from [`le_abs_neg_of_le_abs`] applied
 /// twice (once at `bound := abs x` via `le_refl`, once at `bound := abs (neg
 /// x)` via `le_refl` transported back through [`double_neg`]) and
-/// `equiv_of_le_le`.
-fn abs_neg_equiv(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+/// `equiv_of_le_le`. `creal/fermat.rs` had a byte-identical (modulo
+/// comments) private copy; it now imports this one instead.
+pub(super) fn abs_neg_equiv(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
     let abs_x = cabs(d, p, x);
     let nx = cneg(d, p, x);
     let abs_nx = cabs(d, p, nx);
@@ -510,8 +511,15 @@ pub(super) fn equiv_of_sub_equiv_zero(
 
 /// `Equiv (abs (ofRat q)) (ofRat q)` for `q_nonneg : Rat.le Rat.zero q` —
 /// `abs_le` (upper via `Rat.neg_nonpos_of_nonneg` + `Rat.le_trans`, lower via
-/// `le_abs_self`) sandwiches the embedding between itself.
-fn abs_of_nonneg(d: &mut IntDev<'_>, p: CRealPrelude, q: ExprId, q_nonneg: ExprId) -> ExprId {
+/// `le_abs_self`) sandwiches the embedding between itself. `creal/fermat.rs`
+/// had a byte-identical (modulo comments) private copy; it now imports this
+/// one instead.
+pub(super) fn abs_of_nonneg(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    q: ExprId,
+    q_nonneg: ExprId,
+) -> ExprId {
     let rat = p.rat;
     let q_emb = embed(d, p, q);
     let abs_q = cabs(d, p, q_emb);
@@ -594,8 +602,9 @@ fn add_sub_cancel(d: &mut IntDev<'_>, p: CRealPrelude, v: ExprId, u: ExprId) -> 
 }
 
 /// From `h : le (add x q) y`, derive `le x (add y (neg q))` — the CReal-level
-/// "subtract `q` from a `le`" step.
-fn le_sub_of_add_le(
+/// "subtract `q` from a `le`" step. `creal/fermat.rs` had a byte-identical
+/// (modulo comments) private copy; it now imports this one instead.
+pub(super) fn le_sub_of_add_le(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     x: ExprId,
