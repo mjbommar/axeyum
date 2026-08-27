@@ -79,6 +79,119 @@
 //!   finite-sum induction over already-public `uniformly_continuous_add`/
 //!   `_mul`/`_const`/`_id`, not attempted here) and a sign change witness,
 //!   neither built in this slice.
+//!
+//! ## Investigated for π (Spivak ch. 15): extending the domain past `[0, 1]`
+//! is blocked on a MISSING concrete Cauchy witness, not a missing domain
+//! bound
+//!
+//! Spivak defines `π := 2 · (first zero of cos)`, needing `cosFn` (or at
+//! least one point value) evaluated somewhere past `1` — cosine's first
+//! zero is `≈ 1.5708`, outside `[0, 1]`. This was investigated in full
+//! (domain extension, a numeric sign-change fact, and what `creal/ivt.rs`
+//! would hand back) and **nothing here changes the domain**, because the
+//! actual obstacle is one level deeper than "no dominating series exists
+//! past `x = 1`" — a dominating series is easy to write down; the CONCRETE,
+//! non-existential Cauchy witness for it is not, and every route to a real
+//! number past `x = 1` needs exactly that.
+//!
+//! **The pointwise bound itself is cheap and needs no new lemma beyond
+//! ones already public.** For `0 ≤ x ≤ R` (any `R`), `abs (cosFnTerm k x) =
+//! abs (cosTerm k) · pow x (Nat.add k k) ≤ (mul two (pow half (Nat.add k
+//! k))) · pow R (Nat.add k k)` via `exp_term_abs_le_dominant` at index
+//! `Nat.add k k` (giving `abs (cosTerm k) ≤ expDominant (Nat.add k k) = 2 ·
+//! (1/2)^{2k}` — the TIGHTER, pre-collapse bound `cosTermAbsLeDominant`
+//! itself uses internally before its own final `exp_dominant_double_le`
+//! step down to `expDominant k`) and [`CRealPrelude::pow_le_pow_of_base_le`]
+//! (base monotonicity for `pow`, ALREADY public and general in the base —
+//! `geometric.rs`'s own module documentation once named this comparison
+//! missing; it no longer is). Multiplying out: `2 · (1/2)^{2k} · R^{2k} = 2
+//! · (R/2)^{2k} = 2 · ((R/2)²)^k` — a plain geometric bound with ratio
+//! `(R/2)²`, **strictly `< 1` for any `R < 2`**, comfortably including
+//! values past `π/2` (e.g. `R := 7/4` gives ratio `49/64`). So domain `[0,
+//! R]` for any fixed rational `R < 2` is the right target, not `[0, 2]`
+//! itself (ratio exactly `1` at `R = 2`, the M-test's `geom_scaled_cauchy_of_lt`-
+//! style route needs it strict) — a smaller correction to this file's own
+//! earlier framing, not a new obstacle.
+//!
+//! **The obstacle is that `CReal.weierstrassMTest`'s `hcauchy` parameter —
+//! and, identically, `CReal.mk`'s own regularity argument for building ANY
+//! new `CReal` VALUE directly — needs a RAW, non-existential `(k : Nat,
+//! proof)` pair, never the `Prop`-wrapped `∃ K, …` `CReal.Cauchy` most
+//! convergence machinery in this codebase produces.** `UniformConvergesOn`
+//! (`creal/uniform_convergence.rs`) is `Type`-valued exactly so its `G`
+//! field can be *computed* from the witness; `Exists.rec`'s motive must not
+//! depend on the witness when the target is a `Type`, so a `Cauchy`
+//! `Prop`-existential cannot be unwrapped into either `UniformConvergesOn`'s
+//! `G` or a fresh `CReal.mk`'s own `Nat → Rat` sequence — the SAME wall
+//! `super::exponential`'s own module documentation names for why `CReal.e`
+//! needed a "concrete (non-existential) witness" section at all, and why
+//! `cosOne` reuses that exact witness rather than deriving its own: at `x =
+//! 1`, `pow x (Nat.add k k) ≡ one`, so no NEW ratio is needed, and the
+//! existing raw witness for `expDominant` (ratio `1/2`) suffices unchanged.
+//! Any `R ≠ 1` needs a genuinely different ratio (`(R/2)²` above), so this
+//! shortcut is unavailable for both a domain-extended `cosFn` AND a lone
+//! new point value `cos R` — they hit the identical wall.
+//!
+//! **Confirmed (`shape_search --include-constructed`, positive controls
+//! passing) that no shortcut around this exists today:** no `CReal.pi`, no
+//! `cos_add`/angle-addition formula (which would let `cos 2` be computed
+//! algebraically from `cosOne` without any new series at all), and no
+//! `CReal` "power distributes over a product" identity. Exactly one raw,
+//! non-existential geometric ordered-half `Within` witness exists in the
+//! whole kernel: `CReal.geomCauchyOrderedHalf`, tied to the literal ratio
+//! `1/2` via `CReal.geomHalfInvLeafBound`'s `inv`-cancellation at that one
+//! concrete value.
+//!
+//! **What DOES already generalize, confirmed by reading (not just
+//! grepping) `creal/geometric.rs` and `creal/exponential.rs`:** the
+//! *scaling* combinators that turn a raw ordered-half witness for a base
+//! series into one for a constant multiple of it — `exponential.rs`'s
+//! private `mul_deshift`, `mul_ordered_half_body`, and
+//! `promote_ordered_half_to_full` — already take the base series' own
+//! ordered-half proof as a `&dyn Fn` PARAMETER, not a hardcoded fact; they
+//! are not the blocker. The blocker is one level further in:
+//! `CReal.geomCauchyOfLtOrdered`/`CReal.geomYBound`/
+//! `CReal.pow_le_natDivSucc_of_lt` (`geometric.rs`) already generalize the
+//! *statement* "geometric decay at ratio `x` dominates some harmonic rate"
+//! to an arbitrary `0 ≤ x < 1` — but every one of them is built, and stays,
+//! `Prop`-`Exists`-wrapped all the way down (`geom_y_bound`'s own witness
+//! `K` is produced by an internal `PosBound`/Bernoulli-harmonic argument
+//! that is never factored out as a *raw* pair the way
+//! `exp_dominant_cauchy_body_concrete` factors expDominant's). So the
+//! generic-ratio machinery answers "does a rate exist" (a `Prop`), never
+//! "here is one" (data) — exactly backwards from what a `Type`-valued
+//! consumer needs.
+//!
+//! **What landing this would take, precisely sized for whoever picks it up
+//! next:** redo `geometric.rs`'s `declare_pow_le_nat_div_succ_of_lt` →
+//! `declare_geom_y_bound` → `geom_half_inv_leaf_bound`-equivalent →
+//! `geom_cauchy_ordered_half`-equivalent chain (~150–300 new lines, the
+//! same order of magnitude as that chain's own current size) EXPLICITLY —
+//! i.e. with every `Exists.intro`/`exists_elim` in that chain replaced by
+//! literal `(k, proof)` construction — for ONE chosen literal ratio (e.g.
+//! `R := 7/4`, combined ratio `49/64`), rather than symbolically for
+//! arbitrary `x` (the existing theorems already cover the symbolic
+//! *statement*; only the *witness* needs to stop being existential). The
+//! already-generic `mul_deshift`/`mul_ordered_half_body`/
+//! `promote_ordered_half_to_full` combinators finish the job unchanged once
+//! that one raw ordered-half fact exists. This is a real, separately-sized
+//! piece of new arithmetic, not attempted in this slice.
+//!
+//! **Rung 3, checked ahead of time so the shape of a landed π is not a
+//! surprise later:** `CReal.ivt_approx` (`creal/ivt.rs`) is `∀ F a b,
+//! UniformlyContinuousOn F a b → le a b → le (F a) zero → le zero (F b) →
+//! ∀ e : Nat, ∃ x, le a x ∧ le x b ∧ le (abs (F x)) (ofRat (natDivSucc 1
+//! e))` — an APPROXIMATE root family, never `F c ≡ zero`, by the file's own
+//! module documentation ("no algorithm produces \[a computable root\] in
+//! general"). It also needs `F`'s `UniformlyContinuousOn` (itself
+//! `Type`-valued, same reason as `UniformConvergesOn` above, and not built
+//! for `cosFn` — see the bullet above), which the raw-witness fix above
+//! does not supply. So even with the domain extended, `π` built this way
+//! is NOT a single theorem: it is at best a graded family per ADR-0603 —
+//! the general `∀ e, ∃ x, …` approximation fact, PLUS a separate,
+//! currently-unbuilt argument (likely leaning on `cosFn`'s monotonicity
+//! near its zero) that the family of approximate roots itself converges to
+//! an actual `CReal`, which `ivt_approx` does not provide for free.
 
 use super::trig::{
     cabs, cadd, cle, cmul, cneg, cpow, czero, exp_dominant_cauchy_body_concrete, one_c,
