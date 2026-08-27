@@ -4504,6 +4504,29 @@ pub struct CRealPrelude {
     /// transports at `Kc := 2` and [`Self::converges_unique`] closes. See
     /// `creal/integral.rs`'s `declare_integral_split`.
     pub integral_split: NameId,
+    /// `CReal.splitPointApprox : ∀ a b c (k : Nat), CReal.PosBound (add b
+    /// (neg a)) k → CReal.le a c → CReal.le c b → ∀ (g : Nat),
+    /// ∃ m_ac0 m_cb0, CReal.le (CReal.abs (add c (neg (a + (ofNat (succ
+    /// m_ac0)) * ((b−a)/(succ m_ac0 + m_cb0 + 1)))))) ((4/(g+2)) * |b−a|)`
+    /// — **piece 2**: an ARBITRARY `c` in `[a, b]` is approximated, to any
+    /// accuracy, by a member of [`Self::integral_split`]'s own base
+    /// proportion family.
+    ///
+    /// The `PosBound` on the width is load-bearing and is why this is not
+    /// universally quantified in `c` alone: locating `c` means forming
+    /// `t := (c−a)/(b−a)`, and [`Self::inv`] takes the positivity witness as
+    /// an explicit argument, which `le a b` does not supply.
+    ///
+    /// The route bypasses [`Self::crossing_index`], [`Self::bound`] and
+    /// [`Self::bucket_index_bound`] entirely — the three things five earlier
+    /// lanes measured as blocking this. `t` lives in `[0,1]`, so
+    /// [`Self::bucket_index`] can be read at grid `succ g` directly: the
+    /// approximant `(succ m_ac0)/(g+2)` and every slack term then share ONE
+    /// denominator, and the index is capped by `Nat.le_total` — `Nat` order
+    /// IS decidable — rather than by `bucket_index_bound`'s `+3` slack, which
+    /// is what made the rescaled-mesh route fail. See
+    /// `creal/integral.rs`'s `declare_split_point_approx`.
+    pub split_point_approx: NameId,
     /// `CReal.integral_abs_le : ∀ F a b (k : Nat) (hab : le a b)
     /// (u : UniformlyContinuousOn F a b), BoundedOn F a b k →
     /// le (abs (integral F a b hab u))
@@ -5680,6 +5703,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         integral_add: kernel.name_str(creal, "integral_add"),
         integral_le: kernel.name_str(creal, "integral_le"),
         integral_split: kernel.name_str(creal, "integral_split"),
+        split_point_approx: kernel.name_str(creal, "splitPointApprox"),
         integral_abs_le: kernel.name_str(creal, "integral_abs_le"),
         integral_scale: kernel.name_str(creal, "integral_scale"),
         riemann_sum_integral_close: kernel.name_str(creal, "riemannSum_integral_close"),
@@ -8672,6 +8696,54 @@ const STEPS: &[BuildStep] = &[
         ],
         provides: &[|p: CRealPrelude| p.integral_split],
         run: integral::declare_integral_split,
+    },
+    BuildStep {
+        label: "integral::declare_split_point_approx",
+        requires: &[
+            |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.abs_congr,
+            |p: CRealPrelude| p.abs_le_of_two_sided,
+            |p: CRealPrelude| p.abs_mul_le_of_bounds,
+            |p: CRealPrelude| p.add,
+            |p: CRealPrelude| p.add_assoc,
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.bucket_clamp_lower,
+            |p: CRealPrelude| p.bucket_clamp_upper,
+            |p: CRealPrelude| p.bucket_index,
+            |p: CRealPrelude| p.bucket_index_floor_lower,
+            |p: CRealPrelude| p.bucket_index_floor_upper,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.inv,
+            |p: CRealPrelude| p.inv_nonneg,
+            |p: CRealPrelude| p.le,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.mul,
+            |p: CRealPrelude| p.mul_assoc,
+            |p: CRealPrelude| p.mul_comm,
+            |p: CRealPrelude| p.mul_congr,
+            |p: CRealPrelude| p.mul_inv_cancel,
+            |p: CRealPrelude| p.mul_nonneg,
+            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
+            |p: CRealPrelude| p.mul_one,
+            |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.neg_congr,
+            |p: CRealPrelude| p.of_nat,
+            |p: CRealPrelude| p.of_rat,
+            |p: CRealPrelude| p.of_rat_add,
+            |p: CRealPrelude| p.of_rat_le,
+            |p: CRealPrelude| p.of_rat_mul,
+            |p: CRealPrelude| p.pos_bound,
+            |p: CRealPrelude| p.rat_unit_eq_one,
+            |p: CRealPrelude| p.zero,
+        ],
+        provides: &[|p: CRealPrelude| p.split_point_approx],
+        run: integral::declare_split_point_approx,
     },
     BuildStep {
         label: "integral::declare_integral_abs_le",

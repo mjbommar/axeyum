@@ -23287,3 +23287,96 @@ mod split_point_approx_tests {
         }
     }
 }
+
+/// Admit `CReal.splitPointApprox`. See this section's own module
+/// documentation for the route and for why the `PosBound` cannot be dropped
+/// at this stratum.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_split_point_approx(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+
+    let w = width_of(d, p, a, b);
+    let hpos_ty = d.const_app(p.pos_bound, &[w, k]);
+    let hpos_fv = d.fresh_fvar();
+    let hpos = d.kernel().fvar(hpos_fv);
+    let hac_ty = cle(d, p, a, c);
+    let hac_fv = d.fresh_fvar();
+    let hac = d.kernel().fvar(hac_fv);
+    let hcb_ty = cle(d, p, c, b);
+    let hcb_fv = d.fresh_fvar();
+    let hcb = d.kernel().fvar(hcb_fv);
+
+    let proof = split_point_approx_proof(d, p, a, b, c, k, hpos, hac, hcb, g);
+
+    let (_, _, four_r) = unit_slack(d, p, g);
+    let o_four = d.const_app(p.of_rat, &[four_r]);
+    let abs_w = d.const_app(p.abs, &[w]);
+    let bound = cmul(d, p, o_four, abs_w);
+
+    let concl = {
+        let outer = {
+            let ac_fv = d.fresh_fvar();
+            let m_ac0 = d.kernel().fvar(ac_fv);
+            let inner = {
+                let cb_fv = d.fresh_fvar();
+                let m_cb0 = d.kernel().fvar(cb_fv);
+                let point = split_point_base(d, p, a, b, m_ac0, m_cb0);
+                let npoint = cneg(d, p, point);
+                let diff = cadd(d, p, c, npoint);
+                let abs_diff = d.const_app(p.abs, &[diff]);
+                let body = cle(d, p, abs_diff, bound);
+                d.lam_fv(cb_fv, nat, body)
+            };
+            let body = exists_ty(d, p, nat, inner);
+            d.lam_fv(ac_fv, nat, body)
+        };
+        exists_ty(d, p, nat, outer)
+    };
+
+    let ty = {
+        let t = d.pi_fv(g_fv, nat, concl);
+        let t = d.arrow(hcb_ty, t);
+        let t = d.arrow(hac_ty, t);
+        let t = d.pi_fv(hpos_fv, hpos_ty, t);
+        let t = d.pi_fv(k_fv, nat, t);
+        let t = d.pi_fv(c_fv, carrier, t);
+        let t = d.pi_fv(b_fv, carrier, t);
+        d.pi_fv(a_fv, carrier, t)
+    };
+    let value = {
+        let v = d.lam_fv(g_fv, nat, proof);
+        let v = d.lam_fv(hcb_fv, hcb_ty, v);
+        let v = d.lam_fv(hac_fv, hac_ty, v);
+        let v = d.lam_fv(hpos_fv, hpos_ty, v);
+        let v = d.lam_fv(k_fv, nat, v);
+        let v = d.lam_fv(c_fv, carrier, v);
+        let v = d.lam_fv(b_fv, carrier, v);
+        d.lam_fv(a_fv, carrier, v)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.split_point_approx,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
