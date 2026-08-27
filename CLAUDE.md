@@ -1505,6 +1505,7 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
      step internally via `speedup_close` + one `Rat.natDivSucc_add` fusion, and
      the only PUBLIC lemma of that shape, `within_of_two_sided_le`, runs the
      **opposite direction**.
+     <!-- was-absent: CReal.weierstrassMTest, CReal.close_within_of_within -- the claim above is historical; `scripts/check-absence-claims.py` (ADR-0611) fails if either is ever removed, and had this carried an `absent:` marker it would have gone red the day they landed instead of costing two lanes -->
   **CORRECTION, 2026-08-27: the M-test example above is STALE, and it cost two
   lanes.** `CReal.weierstrassMTest` was landed in full generality
   (`creal/uniform_convergence.rs`, commit `1d08388a3`), along with

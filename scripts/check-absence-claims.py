@@ -144,7 +144,7 @@ CLAIM_PHRASES = [
     r"\bno\s+in-tree\b",
     r"\bno\s+public\s+(?:lemma|theorem|declaration|helper)",
     r"\bnot\s+a\s+public\s+(?:lemma|theorem|declaration|helper)",
-    r"\bhas\s+no\s+(?:lemma|theorem|declaration|helper|diagonal|public)",
+    r"\b(?:has|had)\s+no\s+(?:lemma|theorem|declaration|helper|diagonal|public|reindexing|bridge)",
     r"\bcould\s+not\s+be\s+found\b",
     r"\bcannot\s+be\s+found\b",
     r"\bnothing\s+(?:in-tree|named)\b",
@@ -185,8 +185,18 @@ class ClaimSite:
     path: str
     line: int
     text: str
-    names: tuple[str, ...]
+    candidates: tuple[str, ...]
     annotated: bool
+
+    def names(self, authority: "Authority") -> tuple[str, ...]:
+        """The candidates whose namespace root the authority actually carries.
+
+        Derived from the authority rather than from a literal list of roots:
+        a hand-written root list is the defect this whole gate is about, one
+        level down, and it would silently classify `CLAUDE.md` and `PLAN.md`
+        (both of which match `Root.identifier`) as declaration names.
+        """
+        return tuple(n for n in self.candidates if n.split(".", 1)[0] in authority.roots)
 
 
 @dataclass(frozen=True)
@@ -305,13 +315,49 @@ def is_prose_line(path: str, line: str) -> bool:
     return True
 
 
-def scan(root: Path, globs: tuple[str, ...] = SCAN_GLOBS) -> tuple[list[Path], list[Marker], list[ClaimSite], list[MarkerError]]:
+def blocks(path: str, lines: list[str]) -> list[tuple[int, list[str]]]:
+    """Split a file into prose BLOCKS: `(first line number, lines)`.
+
+    A block is the unit a marker attaches to, and it is the natural one rather
+    than an arbitrary line window: in Markdown, a blank-line-separated
+    paragraph or list item; in Rust, a run of consecutive comment lines. The
+    earlier line-window rule scored a marker written one blank line below its
+    own paragraph as attached to nothing, and split one wrapped sentence into
+    four overlapping "sites" whose name sets were near-duplicates -- so the
+    coverage number it printed was neither stable nor meaningful.
+    """
+    out: list[tuple[int, list[str]]] = []
+    current: list[str] = []
+    start = 0
+    for i, line in enumerate(lines, start=1):
+        prose = is_prose_line(path, line)
+        breaks = (not prose) if path.endswith(".rs") else (not line.strip())
+        if breaks:
+            if current:
+                out.append((start, current))
+                current = []
+            continue
+        if not current:
+            start = i
+        current.append(line)
+    if current:
+        out.append((start, current))
+    return out
+
+
+def scan(
+    root: Path,
+    globs: tuple[str, ...] = SCAN_GLOBS,
+    excluded: frozenset[str] = frozenset(),
+) -> tuple[list[Path], list[Marker], list[ClaimSite], list[MarkerError]]:
     """Walk the prose surface once, collecting markers AND census sites."""
     files: list[Path] = []
     seen: set[Path] = set()
     for pattern in globs:
         for path in sorted(root.glob(pattern)):
             if not path.is_file() or path in seen:
+                continue
+            if path.relative_to(root).as_posix() in excluded:
                 continue
             seen.add(path)
             files.append(path)
@@ -326,27 +372,28 @@ def scan(root: Path, globs: tuple[str, ...] = SCAN_GLOBS) -> tuple[list[Path], l
         except OSError:
             continue
         lines = text.splitlines()
-        marker_lines: set[int] = set()
-        for i, line in enumerate(lines, start=1):
-            for match in MARKER_RE.finditer(line):
-                try:
-                    markers.append(parse_marker(rel, i, match))
-                    marker_lines.add(i)
-                except MarkerError as exc:
-                    errors.append(exc)
         for i, line in enumerate(lines, start=1):
             if not is_prose_line(rel, line):
                 continue
-            if MARKER_RE.search(line):
+            for match in MARKER_RE.finditer(line):
+                try:
+                    markers.append(parse_marker(rel, i, match))
+                except MarkerError as exc:
+                    errors.append(exc)
+        for start, block in blocks(rel, lines):
+            annotated = any(MARKER_RE.search(line) for line in block)
+            # The marker's own text is stripped before the claim phrases are
+            # matched, so a marker's note can quote a claim without the block
+            # counting itself as a fresh claim.
+            body = MARKER_RE.sub(" ", "\n".join(block))
+            match = CLAIM_RE.search(body)
+            if match is None:
                 continue
-            if not CLAIM_RE.search(line):
-                continue
-            # A marker within two lines either side annotates this claim; prose
-            # wraps, and the marker is conventionally put on its own line above
-            # or below the sentence it expires.
-            annotated = any(j in marker_lines for j in range(i - 2, i + 3))
-            names = tuple(dict.fromkeys(DECL_RE.findall(line)))
-            sites.append(ClaimSite(rel, i, line.strip()[:200], names, annotated))
+            offset = body.count("\n", 0, match.start())
+            candidates = tuple(dict.fromkeys(DECL_RE.findall(body)))
+            sites.append(
+                ClaimSite(rel, start + offset, body.splitlines()[offset].strip()[:200], candidates, annotated)
+            )
     return files, markers, sites, errors
 
 
@@ -365,7 +412,42 @@ def load_census(path: Path) -> dict:
         value = data.get(key)
         if not isinstance(value, int) or isinstance(value, bool) or value < 0:
             raise CensusFormatError(f"{path}: {key!r} must be a non-negative integer, got {value!r}")
+    excluded = data.get("excluded_paths")
+    if not isinstance(excluded, list):
+        raise CensusFormatError(f"{path}: 'excluded_paths' must be a JSON list, got {type(excluded).__name__}")
+    seen: set[str] = set()
+    for i, entry in enumerate(excluded):
+        if not isinstance(entry, dict):
+            raise CensusFormatError(f"{path}: excluded_paths[{i}] is not an object")
+        rel = entry.get("path")
+        if not isinstance(rel, str) or not rel.strip():
+            raise CensusFormatError(f"{path}: excluded_paths[{i}] has no 'path'")
+        if rel in seen:
+            raise CensusFormatError(f"{path}: excluded_paths lists {rel!r} more than once")
+        seen.add(rel)
+        reason = entry.get("reason")
+        if not isinstance(reason, str) or not reason.strip():
+            raise CensusFormatError(
+                f"{path}: excluded_paths[{i}] ({rel!r}) has no non-empty 'reason' -- "
+                "an exclusion without a reason is how a gate becomes decoration"
+            )
     return data
+
+
+def check_exclusions(census: dict, root: Path) -> list[str]:
+    """An exclusion for a path that no longer exists is STALE.
+
+    Same both-directions discipline as `check-shape-duplicates.py`: a list of
+    "this one is fine, because X" is only trustworthy if the entries are
+    checked against reality, or it silently accumulates carve-outs for files
+    that were renamed or deleted -- and a stale exemption reads as
+    still-considered when it is not.
+    """
+    return [
+        entry["path"]
+        for entry in census["excluded_paths"]
+        if not (root / entry["path"]).exists()
+    ]
 
 
 def evaluate_markers(
@@ -416,6 +498,12 @@ def main(argv: list[str] | None = None) -> int:  # noqa: PLR0911, PLR0912, PLR09
     parser.add_argument("--cargo-bin", default="cargo")
     parser.add_argument("--root", type=Path, default=REPO_ROOT)
     parser.add_argument(
+        "--list",
+        action="store_true",
+        help="also print every marker and every claim site, annotated or not "
+        "(the adoption worklist)",
+    )
+    parser.add_argument(
         "--update-budget",
         action="store_true",
         help="rewrite `bare_named_claim_budget` to the counted value and exit "
@@ -429,7 +517,19 @@ def main(argv: list[str] | None = None) -> int:  # noqa: PLR0911, PLR0912, PLR09
         print(f"FAIL: {exc}", file=sys.stderr)
         return 2
 
-    files, markers, sites, marker_errors = scan(args.root)
+    stale_exclusions = check_exclusions(census, args.root)
+    if stale_exclusions:
+        print(
+            f"FAIL: {len(stale_exclusions)} excluded path(s) no longer exist -- "
+            "a stale carve-out reads as still-considered when it is not:",
+            file=sys.stderr,
+        )
+        for rel in stale_exclusions:
+            print(f"  STALE-EXCLUSION  {rel}", file=sys.stderr)
+        return 2
+
+    excluded = frozenset(entry["path"] for entry in census["excluded_paths"])
+    files, markers, sites, marker_errors = scan(args.root, excluded=excluded)
 
     # Vacuity: a gate that scans nothing exits 0 on completion alone.
     if not files:
@@ -486,8 +586,8 @@ def main(argv: list[str] | None = None) -> int:  # noqa: PLR0911, PLR0912, PLR09
 
     expired, stale, unanswerable = evaluate_markers(markers, authority)
 
-    named_sites = [s for s in sites if s.names]
-    unnamed_sites = [s for s in sites if not s.names]
+    named_sites = [s for s in sites if s.names(authority)]
+    unnamed_sites = [s for s in sites if not s.names(authority)]
     bare_named = [s for s in named_sites if not s.annotated]
     annotated_named = [s for s in named_sites if s.annotated]
 
@@ -524,6 +624,13 @@ def main(argv: list[str] | None = None) -> int:  # noqa: PLR0911, PLR0912, PLR09
         f"{len(unnamed_sites)} name no declaration and are STRUCTURALLY UNCHECKABLE "
         "by any authority-derived gate"
     )
+    if args.list:
+        for marker in markers:
+            print(f"  MARKER  {marker.kind:11s} {marker.path}:{marker.line}  {', '.join(marker.names)}")
+        for site in sites:
+            flag = "ANNOTATED" if site.annotated else ("BARE     " if site.names(authority) else "UNNAMED  ")
+            print(f"  {flag}  {site.path}:{site.line}  {site.text[:110]}")
+    sys.stdout.flush()
 
     ok = True
 
@@ -585,7 +692,7 @@ def main(argv: list[str] | None = None) -> int:  # noqa: PLR0911, PLR0912, PLR09
             file=sys.stderr,
         )
         for site in bare_named[: budget + 20][-20:]:
-            print(f"  BARE  {site.path}:{site.line}  {' '.join(site.names)}", file=sys.stderr)
+            print(f"  BARE  {site.path}:{site.line}  {' '.join(site.names(authority))}", file=sys.stderr)
         print(
             "  Annotate the new one with `<!-- absent: Root.name -->` so it can\n"
             f"  expire, or run --update-budget to record a deliberate increase.",
