@@ -52,8 +52,8 @@ use super::RatPrelude;
 use super::group::rsub;
 use super::lattice::rmax;
 use super::ops::{
-    radd, rat_eq_rewrite, rat_theorem, rat_ty, rchain, rcongr, req, rle, rlt, rmul, rneg, rsymm,
-    rtrans, rzero,
+    int_eq_to_nat, num, radd, rat_eq_rewrite, rat_theorem, rat_ty, rchain, rcongr, req,
+    req_congr_int, rle, rlt, rmul, rneg, rsymm, rtrans, rzero,
 };
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
@@ -639,4 +639,146 @@ fn declare_abs_sub_comm(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelE
         let final_proof = rsymm(d, magnitude_backward, magnitude_forward, proof);
         (stmt, final_proof)
     })
+}
+
+// --- helpers for `CReal.mul_self_abs` --------------------------------------
+//
+// Neither of the two functions below is a declared Lean theorem — both are
+// Rust-level proof-construction helpers, like [`abs_of_nonneg`] itself, kept
+// `pub(crate)` (not `rat_theorem`-declared) because nothing outside
+// `creal/product.rs`'s `CReal.mul_self_abs` consumes them and a named `Rat`
+// lemma would need its own environment-coverage bookkeeping for no reader.
+
+/// `Int.natAbs (Rat.num (Rat.abs q)) = Int.natAbs (Rat.num q)` — what
+/// `CReal.bound (CReal.abs x) = CReal.bound x` needs at the index-0 sample,
+/// since `CReal.bound y := succ (natAbs (num (seq y 0)))` and
+/// `seq (abs x) 0` is definitionally `Rat.abs (seq x 0)`.
+///
+/// `0 ≤ q` makes `abs q = q` and the claim is congruence through `num`. The
+/// `q < 0` branch cannot be: `Rat.abs`/`Rat.max` decide on the *sign of an
+/// integer* (an `Int.rec`), so nothing about `abs q` reduces at a *symbolic*
+/// `q` without first knowing which side of zero it is on — the same
+/// obstruction the module doc's "not another `Int.rec` case split" section
+/// describes, paid here at one level up. [`RatPrelude::le_or_lt`] supplies
+/// exactly that `Prop`-level disjunction; `abs_of_nonpos` turns it into
+/// `abs q = neg q`, and `Rat.num (Rat.neg q)` is `Int.neg (Rat.num q)`
+/// **definitionally** (`Rat.neg` builds a fresh `Rat.mk` with that numerator
+/// field, and `Rat.num` projects it out by iota), so
+/// [`IntPrelude::nat_abs_neg`](crate::int_prelude::IntPrelude::nat_abs_neg)
+/// closes it with no further `Rat`-level lemma.
+pub(crate) fn abs_num_nat_abs_eq(d: &mut IntDev<'_>, p: RatPrelude, q: ExprId) -> ExprId {
+    let zero = rzero(d, p);
+    let magnitude = rabs(d, p, q);
+    let num_q = num(d, q);
+    let num_abs_q = num(d, magnitude);
+    let nat_abs_q = d.const_app(p.int.nat_abs, &[num_q]);
+    let nat_abs_abs_q = d.const_app(p.int.nat_abs, &[num_abs_q]);
+    let stmt = NatOps::eq(d, nat_abs_abs_q, nat_abs_q);
+
+    let case_pos = rle(d, p, zero, q);
+    let case_neg = rlt(d, p, q, zero);
+    let decision = d.lemma(p.le_or_lt, &[zero, q]);
+
+    d.or_elim(
+        case_pos,
+        case_neg,
+        stmt,
+        decision,
+        &|d, hq| {
+            let habs = abs_of_nonneg(d, p, q, hq);
+            let hnum = req_congr_int(d, magnitude, q, habs, &|d, x| num(d, x));
+            int_eq_to_nat(d, num_abs_q, num_q, hnum, &|d, x| {
+                d.const_app(p.int.nat_abs, &[x])
+            })
+        },
+        &|d, hq| {
+            let hq_le = d.lemma(p.le_of_lt, &[q, zero, hq]);
+            let habs = abs_of_nonpos(d, p, q, hq_le);
+            let neg_q = rneg(d, q);
+            let hnum = req_congr_int(d, magnitude, neg_q, habs, &|d, x| num(d, x));
+            // `hnum`'s actual type mentions `num neg_q`; `neg_num_q` below is
+            // definitionally that same term (`Rat.neg`'s `Mk` unfolds and
+            // `Rat.num` projects it out by iota), so using `hnum` at this
+            // differently-*written* but defeq type is exactly the technique
+            // `declare_of_rat_mul`'s `rrefl(d, scalar)` already relies on.
+            let neg_num_q = d.ineg(num_q);
+            let nat_abs_neg_num_q = d.const_app(p.int.nat_abs, &[neg_num_q]);
+            let step1 = int_eq_to_nat(d, num_abs_q, neg_num_q, hnum, &|d, x| {
+                d.const_app(p.int.nat_abs, &[x])
+            });
+            let step2 = d.lemma(p.int.nat_abs_neg, &[num_q]);
+            NatOps::trans(d, nat_abs_abs_q, nat_abs_neg_num_q, nat_abs_q, step1, step2)
+        },
+    )
+}
+
+/// `Rat.mul (Rat.abs q) (Rat.abs q) = Rat.mul q q` — the per-index identity
+/// `CReal.mul_self_abs` needs once both products sample at the same index.
+///
+/// `0 ≤ q`: `abs q = q`, congruence closes it. `q < 0`: `abs q = neg q`, and
+/// `neg q * neg q = q * q` is exactly [`declare_abs_mul`]'s fourth branch
+/// (`neg_a * neg_b = a * b` via `neg_mul`/`mul_neg`/`neg_neg`) specialised to
+/// `a = b = q`.
+pub(crate) fn mul_self_abs_rat(d: &mut IntDev<'_>, p: RatPrelude, q: ExprId) -> ExprId {
+    let zero = rzero(d, p);
+    let magnitude = rabs(d, p, q);
+    let lhs = rmul(d, magnitude, magnitude);
+    let rhs = rmul(d, q, q);
+    let stmt = req(d, lhs, rhs);
+
+    let case_pos = rle(d, p, zero, q);
+    let case_neg = rlt(d, p, q, zero);
+    let decision = d.lemma(p.le_or_lt, &[zero, q]);
+
+    d.or_elim(
+        case_pos,
+        case_neg,
+        stmt,
+        decision,
+        &|d, hq| {
+            let habs = abs_of_nonneg(d, p, q, hq);
+            let mid = rmul(d, q, magnitude);
+            let step1 = rcongr(d, magnitude, q, habs, &|d, t| rmul(d, t, magnitude));
+            let step2 = rcongr(d, magnitude, q, habs, &|d, t| rmul(d, q, t));
+            let (_, chain) = rchain(d, lhs, &[(mid, step1), (rhs, step2)]);
+            chain
+        },
+        &|d, hq| {
+            let hq_le = d.lemma(p.le_of_lt, &[q, zero, hq]);
+            let habs = abs_of_nonpos(d, p, q, hq_le);
+            let neg_q = rneg(d, q);
+            let mid = rmul(d, neg_q, magnitude);
+            let negs_product = rmul(d, neg_q, neg_q);
+            let q_neg_q = rmul(d, q, neg_q);
+            let neg_q_neg_q = rneg(d, q_neg_q);
+            let neg_neg_product = {
+                let neg_rhs = rneg(d, rhs);
+                rneg(d, neg_rhs)
+            };
+            let step_a = d.lemma(p.neg_mul, &[q, neg_q]);
+            let step_b = {
+                let inner = d.lemma(p.mul_neg, &[q, q]);
+                let neg_rhs = rneg(d, rhs);
+                rcongr(d, q_neg_q, neg_rhs, inner, &|d, t| rneg(d, t))
+            };
+            let step_c = d.lemma(p.neg_neg, &[rhs]);
+            let (_, negs_eq_rhs) = rchain(
+                d,
+                negs_product,
+                &[
+                    (neg_q_neg_q, step_a),
+                    (neg_neg_product, step_b),
+                    (rhs, step_c),
+                ],
+            );
+            let step1 = rcongr(d, magnitude, neg_q, habs, &|d, t| rmul(d, t, magnitude));
+            let step2 = rcongr(d, magnitude, neg_q, habs, &|d, t| rmul(d, neg_q, t));
+            let (_, chain) = rchain(
+                d,
+                lhs,
+                &[(mid, step1), (negs_product, step2), (rhs, negs_eq_rhs)],
+            );
+            chain
+        },
+    )
 }

@@ -337,6 +337,25 @@ pub(crate) fn int_eq_to_nat(
     d.itransport(a, motive, refl_case, b, h)
 }
 
+/// From `h : Eq Rat a b`, derive `Eq Int (f a) (f b)` — the `ℚ → ℤ` companion
+/// of [`int_eq_to_nat`], needed wherever the equation lives at `Rat` (e.g. an
+/// `abs`/sign case split) but its consequence is about `Rat.num`.
+pub(crate) fn req_congr_int(
+    d: &mut IntDev<'_>,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+    f: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
+) -> ExprId {
+    let fa = f(d, a);
+    let motive = req_motive(d, a, &|d, x| {
+        let fx = f(d, x);
+        d.ieq(fa, fx)
+    });
+    let refl_case = d.irefl(fa);
+    rtransport(d, a, motive, refl_case, b, h)
+}
+
 /// Case-analyse a **positive** natural: `1 ≤ n` rules the `zero` branch out, so
 /// only the `succ` branch has to be supplied.
 ///

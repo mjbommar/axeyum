@@ -455,6 +455,30 @@ pub struct CRealPrelude {
     /// an estimate. The other of the two facts a negative-threshold
     /// cotransitivity argument needs; see [`Self::neg_le_neg`].
     pub neg_mul_neg: NameId,
+    /// `CReal.mul_self_abs : ∀ x, Equiv (mul (abs x) (abs x)) (mul x x)`.
+    ///
+    /// The **unconditional** half of the constructive triangle-inequality
+    /// gap: `sqrt (mul t t) ~ abs t` without a `0 ≤ t` hypothesis on either
+    /// side, needed because `Complex.abs_add_le`'s Cauchy–Schwarz cross term
+    /// `re z · re w + im z · im w` has no known sign, so
+    /// [`Self::le_of_sq_le`] cannot be applied to it directly — the classical
+    /// proof's silent trichotomy on a real has no constructive counterpart
+    /// (`CReal.le` is undecidable; `Rat.le_or_lt`, a *decidable* order, only
+    /// exists one level down, on the representation).
+    ///
+    /// Same shape as [`Self::neg_mul_neg`], not composable from
+    /// `sqrt_le_sqrt`/`sqrt_sq`/`abs_mul`/`le_of_sq_le` (`sqrt_sq` needs
+    /// `0 ≤ t` for the identical reason `le_of_sq_le` does): `bound (abs x)`
+    /// and `bound x` are provably equal naturals rather than the same
+    /// literal (`Rat.abs`/`Rat.max` decide on the sign of an *integer*, so
+    /// nothing about `seq (abs x) 0` reduces at a symbolic `x` without a
+    /// `Rat.le_or_lt` case split — see
+    /// `rat_prelude::abs::abs_num_nat_abs_eq`), which is what lets both
+    /// products sample at a value-equal index; the per-index step is
+    /// `rat_prelude::abs::mul_self_abs_rat` (`|q|·|q| = q·q`, itself a
+    /// `Rat.le_or_lt` case split whose negative branch is
+    /// [`Self::neg_mul_neg`]'s `sq_neg_eq` specialised to one variable).
+    pub mul_self_abs: NameId,
     /// `CReal.not_equiv_mul_one_one_zero : Not (Equiv (mul one one) zero)`.
     ///
     /// The **discrimination** witness for the product. `mul_zero`, `mul_comm`
@@ -1477,9 +1501,15 @@ pub struct CRealPrelude {
     /// s s) → le t s`.
     ///
     /// "Cancel the square" at the `CReal` level — the `CReal` analogue of
-    /// [`crate::RatPrelude::lt_of_sq_lt`] (`Rat`, strict), and the step
-    /// `Complex.abs_add_le` (not yet declared) needs to close its own squared
-    /// bound. Composable from already-landed facts, no new epsilon estimate:
+    /// [`crate::RatPrelude::lt_of_sq_lt`] (`Rat`, strict). `Complex.abs_add_le`
+    /// (landed, `complex.rs`) uses this at `t := abs (Re (z · conj w))`,
+    /// `s := abs z · abs w` — NOT at the final sqrt-cancellation step, which
+    /// needs only `sqrt_le_sqrt`/`sqrt_sq` directly, both nonneg already —
+    /// because `t` there is an `abs`, whose nonnegativity is unconditional,
+    /// where the RAW Cauchy–Schwarz cross term is not (see
+    /// `ComplexPrelude::abs_add_le`'s own doc, and
+    /// [`Self::mul_self_abs`]). Composable from already-landed facts, no new
+    /// epsilon estimate:
     /// `sqrt_le_sqrt` on the hypothesis gives `sqrt(t·t) ≤ sqrt(s·s)`;
     /// `sqrt_sq` at `t` and at `s` (using the two nonnegativity hypotheses)
     /// give `sqrt(t·t) ~ t` and `sqrt(s·s) ~ s`; `le_congr` transports the
@@ -3593,6 +3623,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         mul_nonneg: kernel.name_str(creal, "mul_nonneg"),
         sq_nonneg: kernel.name_str(creal, "sq_nonneg"),
         neg_mul_neg: kernel.name_str(creal, "neg_mul_neg"),
+        mul_self_abs: kernel.name_str(creal, "mul_self_abs"),
         not_equiv_mul_one_one_zero: kernel.name_str(creal, "not_equiv_mul_one_one_zero"),
         apart: kernel.name_str(creal, "Apart"),
         apart_symm: kernel.name_str(creal, "apart_symm"),
@@ -3953,6 +3984,11 @@ pub(crate) fn build_creal_prelude_uncached(
         inverse::declare_inverse(&mut d, prelude)?;
         cancellation::declare_cancellation(&mut d, prelude)?;
         lattice::declare_lattice(&mut d, prelude)?;
+        // `CReal.mul_self_abs` references `CReal.abs`, declared by the
+        // `lattice` phase just above -- see its own doc comment
+        // (`creal/product.rs`) for why it cannot be dispatched from inside
+        // `product::declare_product`, even though it is a product law.
+        product::declare_mul_self_abs(&mut d, prelude)?;
         archimedean_squeeze::declare_archimedean_squeeze(&mut d, prelude)?;
         archimedean::declare_archimedean(&mut d, prelude)?;
         density::declare_density(&mut d, prelude)?;

@@ -52,7 +52,7 @@ use crate::int_prelude::{IntPrelude, build_int_prelude};
 use crate::name::NameId;
 use crate::{Kernel, KernelError};
 
-mod abs;
+pub(crate) mod abs;
 mod archimedean;
 mod bernoulli;
 mod core;
