@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-coprime-symmetric-decline-v1",
+  "state": "import-blocked-trusted-declaration",
+  "contract": "artifacts/autogenesis/producer-contracts/nat-coprime-family-v1.json",
+  "contract_sha256": "36d030d1a93ede5e7a04f927cd4404757ecd162c0357a163d37b665dd6778db5",
+  "fact_id": "F:ml430-nat-coprime-symmetric-9b5cfa12",
+  "fact_sha256": "b7d2c065be54b7af6e6443f53738986e3c709290ade8d08c7e9b5578e1d20a03",
+  "nursery_partition": "development",
+  "lane": "flywheel-2",
+  "date": "2026-08-27",
+  "adapter": {
+    "host": "s5",
+    "path": "/home/mjbommar/lean-import-scale/mathlib4/AxeyumAutogenesisOpenArrowFreeV1.lean",
+    "namespace": "Axeyum.Autogenesis.Statement.Generated",
+    "definition": "natCoprimeSymmetric",
+    "statement": "Symmetric Nat.Coprime",
+    "mathlib_source": "Mathlib/Data/Nat/GCD/Basic.lean:93, theorem Coprime.symmetric : Symmetric Coprime := fun _ _ => Coprime.symm",
+    "note": "batched: one new standalone Lean file (AxeyumAutogenesisNatCoprimeFamilyV1.lean, 13 defs, one s5 compile) plus two defs (natCoprimeSymmetric, natNotCoprimeZeroZero) already present in a pre-existing compiled batch file (AxeyumAutogenesisOpenArrowFreeV1.lean) -- one lean4export invocation per fact against whichever module already holds it, no per-fact recompile."
+  },
+  "identity": {
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean4export_commit": "a3e35a584f59b390667db7269cd37fca8575e4bf",
+    "lean_version": "4.30.0",
+    "lean4export_version": "3.1.0",
+    "export_ndjson_sha256": "f7dfff380a89eb2455273eebe2d12a534c74358156cd1d9a539519e6eed9934b",
+    "export_records": 8349,
+    "export_stderr_bytes": 0
+  },
+  "import": {
+    "tool": "crates/axeyum-lean-import/examples/statement_adapter_import.rs",
+    "result": "blocked",
+    "blocked_reason": "TrustedDeclaration",
+    "blocked_declaration_name": "Nat.mod_lt",
+    "blocked_declaration_kind": "Theorem",
+    "note": "the statement's own dependency closure (elaborating Nat.Coprime/Nat.gcd/Nat.minFac/... as a bare Prop, before any proof) transitively reaches a proof-bearing Theorem or a Quotient primitive; the v1 statement-adapter import policy refuses any such declaration entering the stream by design (StatementImportError::TrustedDeclaration), so the producer never runs."
+  },
+  "producer": {
+    "tool": "crates/axeyum-lean-import/examples/modeq_family_operation.rs",
+    "module": "axeyum_lean_import::import_statement_ndjson (import stage, before axeyum_lean_import::producers::modeq_family runs at all)",
+    "result": "declined",
+    "decline_reason": "TrustedDeclaration",
+    "decline_message": "statement stream contains trusted declaration 'Nat.mod_lt' (Theorem)"
+  },
+  "effects": {
+    "fact_status_changes": 0,
+    "evidence_rows_added": 0,
+    "operations_registered": 0,
+    "kernel_declarations_added": 0
+  },
+  "disposition": "epistemic_status stays open; no operation registered per ADR-0602 (admission precedes registration). This is an IMPORT-stage decline, not a producer-search decline: propose_modeq_family never runs for any of the 15 nat-coprime-family-v1 facts in this batch, because the statement's own dependency closure is blocked first.",
+  "full_writeup": "docs/autogenesis/292-flywheel-2-batch-contract-dispatch.md"
+}
