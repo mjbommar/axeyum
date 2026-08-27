@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "id": "rado-r5-a3-b2-frontier",
-  "title": "R_5(3(x-y)=2z) > 357: checked five-colour frontier bound",
-  "statement": "The 5-colour Rado number of 3(x-y) = 2z exceeds 357. Exact web, arXiv, and Scholar-oriented searches through 2026-08-26 located no prior five-colour bound at least 357 for this equation; this is dated negative retrieval evidence, not proof of priority. The bound also establishes that this work's shell construction, which gives 319 at (a,k)=(3,5), is NOT TIGHT at k=5 -- in contrast to k=3 and k=4, where it is attained at every point tested.",
+  "title": "R_5(3(x-y)=2z) > 358: checked five-colour frontier bound",
+  "statement": "The 5-colour Rado number of 3(x-y) = 2z exceeds 358. Exact web, arXiv, and Scholar-oriented searches through 2026-08-26 located no prior five-colour bound at least 358 for this equation; this is dated negative retrieval evidence, not proof of priority. The bound also establishes that this work's shell construction, which gives 319 at (a,k)=(3,5), is NOT TIGHT at k=5 -- in contrast to k=3 and k=4, where it is attained at every point tested.",
   "epistemic_status": "open",
   "formal": {
     "language": "cnf-family",
@@ -62,7 +62,7 @@
     "date": "2026-08-26",
     "machine": "linux x86-64, 24 cores, load-managed and contended",
     "toolchain": {
-      "axeyum_commit": "c516b5fac20f38886dfad41433656bad988f9f5c",
+      "axeyum_commit": "3d5b59e8658f7b4a11920b3df7dc5d6e08634ef3",
       "rustc_version": "rustc 1.94.1 (e408947bf 2026-03-25)",
       "target": "x86_64",
       "dirty": true
@@ -82,6 +82,17 @@
   },
   "evidence": [
     {
+      "id": "witness-358",
+      "kind": "witness-replay",
+      "supports": "R_5 > 358 (strongest retained lower bound)",
+      "artifact": "artifacts/claims/rado/rado-r5-a3-b2-frontier/witness-358.txt",
+      "artifact_sha256": "bb955b9ceb5d1b1ecc83ad18a88bfb5bd3b12a966c312f85d2015af1e19f15d6",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-claim-certificates.py --only rado-r5-a3-b2-frontier",
+      "notes": "A 5-colouring of [358] obtained by appending colour 4 to the checked 357-point witness. Axeyum's direct verifier enumerated all 28,322 defining triples; a separately constructed complete assignment also satisfied all 146,977 clauses of the canonical 1,790-variable CNF and decoded to this byte-identical witness. This proves only the lower bound; instance 359 remains open.",
+      "artifact_format": "colouring-text"
+    },
+    {
       "id": "witness-357",
       "kind": "witness-replay",
       "supports": "R_5 > 357 (strongest retained lower bound)",
@@ -89,7 +100,7 @@
       "artifact_sha256": "545f4f7c8704fff31da07a2a2f946eb70ac1787bb3d4c49f4ac3e2d15d20ee1e",
       "check_status": "checked",
       "checker_command": "python3 scripts/check-claim-certificates.py --only rado-r5-a3-b2-frontier",
-      "notes": "A 5-colouring of [357] using all five colours, with no monochromatic solution among all 28,203 defining triples. CaDiCaL seed 619 found the model on the canonical 1,785-variable / 146,367-clause instance; Axeyum's strict model import and this independent direct relation enumerator both replayed it. This proves only the lower bound; instance 358 remains open.",
+      "notes": "A historical 5-colouring of [357] using all five colours, with no monochromatic solution among all 28,203 defining triples. CaDiCaL seed 619 found the model on the canonical 1,785-variable / 146,367-clause instance; Axeyum's strict model import and this independent direct relation enumerator both replayed it. Appending colour 4 yields the stronger retained 358-point witness.",
       "artifact_format": "colouring-text"
     },
     {
@@ -117,13 +128,13 @@
   ],
   "frontier": {
     "known": [
-      "R_5(3(x-y)=2z) > 357, witnessed and verified (evidence row witness-357); the earlier 350 and 319 witnesses are retained as reproducibility and historical frontier points",
+      "R_5(3(x-y)=2z) > 358, witnessed and verified (evidence row witness-358); the earlier 357, 350, and 319 witnesses are retained as reproducibility and historical frontier points",
       "The shell construction of this work yields a verified solution-free colouring of [N] with N+1 = a^k + a^(k-1) - 2a + 1; this is ATTAINED at (a,k)=(3,3) [31], (4,3) [73], (3,4) [103] and (4,4) [313], all independently re-verified, but NOT at (3,5), where it gives 318 while a 5-colouring of [319] exists. The general-k proof is asserted in the construction source and has NOT been independently verified here.",
       "Independent corroboration of k=5 non-tightness in a different column: Li (SSRN 6814341) reports R_5(3)>296>243 for b=1",
-      "Canonical exact instances 351 through 357 are SAT and replayed; instance 358 is actively solving, and its incomplete proof stream has no evidentiary status"
+      "Canonical exact instances 351 through 357 are SAT and replayed; the 358 witness is a checked direct extension, while its paused incomplete solver proof stream has no evidentiary status; instance 359 remains open"
     ],
     "would_settle": "A verified 5-colouring of [n-1] together with an exhaustive cube cover refuting [n], for the same n. Both artifact kinds and their checkers exist in this family; the obstruction is the cost of refutation at k=5, not the encoding.",
-    "attack_notes": "The satisfiable side remained tractable through 357, although solve time rose to 24:46.01 at 357. The refutation side at five colours is still unclosed and is the real exact-value question."
+    "attack_notes": "The satisfiable side reaches 358: exact solving produced the 357 witness, and an audited colour-4 extension plus two complete replay routes produced 358. The refutation side at five colours is still unclosed and is the real exact-value question."
   },
   "notes": "Recorded because a failed prediction is evidence. The construction's bound remains SOUND -- a lower bound cannot be refuted by finding a larger colouring -- but its tightness, which holds at k=3 and k=4, does not extend to k=5. This is the datum that scopes every tightness claim in this work to k <= 4."
 }
