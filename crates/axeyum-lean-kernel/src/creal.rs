@@ -4424,6 +4424,65 @@ pub struct CRealPrelude {
     /// across different function indices is needed, only a rearrangement of
     /// the sum.
     pub uniform_converges_add: NameId,
+    /// `CReal.sinTerm : Nat → CReal := fun k => mul (pow (neg one) k)
+    /// (expTerm (Nat.add (Nat.add k k) 1))` — the `k`-th term of `sin 1`'s
+    /// Taylor series, `(-1)^k/(2k+1)!`, the odd index written `Nat.add
+    /// (Nat.add k k) 1` (symbolic left, literal right) so it reduces
+    /// definitionally to `Nat.succ (Nat.add k k)` — mirrors `CReal.cosTerm`
+    /// exactly except for the odd index. See `creal/trig.rs`.
+    pub sin_term: NameId,
+    /// `CReal.sinSeriesPartial : Nat → CReal := CReal.sumRange CReal.sinTerm`
+    /// — the `k`-th partial sum `Σ_{n<k} (-1)^n/(2n+1)!`. See
+    /// `creal/trig.rs`.
+    pub sin_series_partial: NameId,
+    /// `CReal.sinTermAbsLeDominant : ∀ k, le (abs (sinTerm k)) (expDominant
+    /// k)` — the [`Self::cos_term_abs_le_dominant`] analogue for the odd
+    /// index, closing the descent from `expDominant (add (add k k) 1)` down
+    /// to `expDominant k` via one extra [`Self::pow_le_pow_of_le_one`] step
+    /// (`expDominant`'s exponent is already `succ`-headed once the odd
+    /// index's own `Nat.add` ι-reduces) composed with the SAME
+    /// `expDominant (add k k) ≤ expDominant k` descent `CReal.cosTerm`'s own
+    /// bound already needed. See `creal/trig.rs::exp_dominant_odd_le`.
+    pub sin_term_abs_le_dominant: NameId,
+    /// `CReal.sinOne := CReal.mk (speedup (diagonal sinSeriesPartial) K) (…)`
+    /// — `sin 1`, built via `CReal.mk` on an explicit regular sequence
+    /// exactly as `CReal.cosOne`/`CReal.e` are (never by
+    /// `Exists`-elimination). Reuses `CReal.e`'s own concrete Cauchy witness
+    /// for `Cauchy (sumRange expDominant)` unchanged — `sinOne`'s domination
+    /// series **is** `expDominant`, not a new one. See `creal/trig.rs`.
+    pub sin_one: NameId,
+    /// `CReal.sinOneConverges : Converges sinSeriesPartial sinOne` — the
+    /// `cosOneConverges` analogue, built generically over a BOUND `(k, h)`
+    /// rather than the concrete `k_final` for the same stack-overflow reason
+    /// `cosOneConverges`/`e_converges` are. See `creal/trig.rs`.
+    pub sin_one_converges: NameId,
+    /// `CReal.sinOne_alternating_lower : ∀ m, le (sumRange sinTerm (add m
+    /// m)) sinOne` — [`Self::alternating_lower_bound`] instantiated at
+    /// `sinTerm`'s magnitude sequence `b j := expTerm (add (add j j) 1)`,
+    /// the [`Self::cos_one_alternating_lower`] analogue. See
+    /// `creal/trig.rs`.
+    pub sin_one_alternating_lower: NameId,
+    /// `CReal.sinOne_alternating_upper : ∀ m, le sinOne (sumRange sinTerm
+    /// (succ (add m m)))` — the mirror of
+    /// [`Self::sin_one_alternating_lower`], off
+    /// [`Self::alternating_upper_bound`]. See `creal/trig.rs`.
+    pub sin_one_alternating_upper: NameId,
+    /// `CReal.sinOne_nonneg : le zero sinOne` —
+    /// [`Self::sin_one_alternating_lower`] at `m := 0`: `sumRange sinTerm
+    /// (add 0 0)` is ι-defeq to `zero`, so the general bracket specializes
+    /// to the sign bound for free, exactly as [`Self::cos_one_nonneg`] does.
+    /// See `creal/trig.rs`.
+    pub sin_one_nonneg: NameId,
+    /// `CReal.sinOne_le_exp_term_one : le sinOne (expTerm 1)` —
+    /// [`Self::sin_one_alternating_upper`] at `m := 0`, folded through
+    /// `add_comm`/`add_zero`/`mul_comm`/`mul_one` via `le_congr`, mirroring
+    /// [`Self::cos_one_le_exp_term_zero`] exactly except that `sinTerm 0`
+    /// reduces to `mul one (expTerm 1)` (odd index `1`, not `0`). `expTerm
+    /// 1` is mathematically `1` (`1/1! = 1`) but is not reduced to the
+    /// literal `CReal.one` here, for the same `Rat.normalize`/`Nat.gcd`
+    /// reason [`Self::cos_one_le_exp_term_zero`]'s doc names. See
+    /// `creal/trig.rs`.
+    pub sin_one_le_exp_term_one: NameId,
 }
 
 impl CRealPrelude {
@@ -4907,6 +4966,15 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         poly_degree_lt_poly_add: kernel.name_str(creal, "polyDegreeLt_polyAdd"),
         poly_degree_lt_poly_scale: kernel.name_str(creal, "polyDegreeLt_polyScale"),
         uniform_converges_add: kernel.name_str(creal, "uniform_converges_add"),
+        sin_term: kernel.name_str(creal, "sinTerm"),
+        sin_series_partial: kernel.name_str(creal, "sinSeriesPartial"),
+        sin_term_abs_le_dominant: kernel.name_str(creal, "sinTermAbsLeDominant"),
+        sin_one: kernel.name_str(creal, "sinOne"),
+        sin_one_converges: kernel.name_str(creal, "sinOneConverges"),
+        sin_one_alternating_lower: kernel.name_str(creal, "sinOne_alternating_lower"),
+        sin_one_alternating_upper: kernel.name_str(creal, "sinOne_alternating_upper"),
+        sin_one_nonneg: kernel.name_str(creal, "sinOne_nonneg"),
+        sin_one_le_exp_term_one: kernel.name_str(creal, "sinOne_le_exp_term_one"),
     }
 }
 
@@ -5474,6 +5542,12 @@ pub(crate) fn build_creal_prelude_uncached(
         // new one, so it does not depend on `declare_e_family`'s own
         // declarations, only on the machinery both share.
         trig::declare_trig(&mut d, prelude)?;
+        // `trig::declare_sin_trig` -- `sinOne`, mirroring `cosOne` exactly
+        // (odd index in place of doubled index). Needs nothing
+        // `declare_trig` did not already need: reuses `CReal.e`'s own
+        // concrete Cauchy witness for `Cauchy (sumRange expDominant)`
+        // unchanged, the same reuse `declare_trig` itself relies on.
+        trig::declare_sin_trig(&mut d, prelude)?;
         // `alternating::declare_alternating` (the Leibniz/alternating-series
         // pairing argument, `CReal.negOnePowDouble`/`alternatingELeO`/
         // `alternatingBracket`) reuses `trig.rs`'s own `pub(super)` local
@@ -5491,6 +5565,10 @@ pub(crate) fn build_creal_prelude_uncached(
         // and referencing a name from a later phase gives `UnknownConst`,
         // not a missing-lemma error.
         trig::declare_trig_alternating_bounds(&mut d, prelude)?;
+        // `trig::declare_sin_trig_alternating_bounds` -- the `sinOne`
+        // analogue, same phase-order reason: needs `alternating_lower_bound`/
+        // `alternating_upper_bound`, declared just above.
+        trig::declare_sin_trig_alternating_bounds(&mut d, prelude)?;
         // `ivt::declare_ivt` needs `CReal.lt_cotrans` (`cotransitivity`, well
         // above), `CReal.mesh_count_width` (`monotone::declare_monotone_of_nonneg_deriv_all`,
         // also above) and ordinary ring/order laws; nothing later depends on
