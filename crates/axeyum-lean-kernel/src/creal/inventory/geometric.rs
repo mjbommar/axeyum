@@ -59,6 +59,12 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
         ("CReal.ratioDecayBound", p.ratio_decay_bound, "theorem"),
         ("CReal.invLeOfPosBound", p.inv_le_of_pos_bound, "theorem"),
         ("CReal.geomYBound", p.geom_y_bound, "theorem"),
+        ("CReal.geomYBoundRaw", p.geom_y_bound_raw, "theorem"),
+        (
+            "CReal.pow_le_natDivSucc_of_gap",
+            p.pow_le_nat_div_succ_of_gap,
+            "theorem",
+        ),
         (
             "CReal.geomCauchyOfLtOrdered",
             p.geom_cauchy_of_lt_ordered,

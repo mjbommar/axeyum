@@ -2457,6 +2457,40 @@ pub struct CRealPrelude {
     /// `Rat`-level bound back across a `CReal.pow` sample is exactly the open
     /// gap `rat_prelude/bernoulli.rs`'s own module doc names).
     pub pow_le_nat_div_succ_of_lt: NameId,
+    /// `CReal.pow_le_natDivSucc_of_gap : ∀ x, le zero x → ∀ (q : Rat),
+    /// le (add x (ofRat q)) one → ∀ (k3 : Nat), PosBound (ofRat q) k3 →
+    /// ∀ m, le (pow x m) (ofRat (natDivSucc (Nat.succ k3) m))` — the **raw,
+    /// non-existential** form of [`Self::pow_le_nat_div_succ_of_lt`].
+    ///
+    /// Same proof, same helpers (`creal_bernoulli_harmonic`,
+    /// `k_relation_creal`, `creal_cancel_exact` in `creal/geometric.rs`),
+    /// with the two `Exists` eliminations that theorem performs replaced by
+    /// explicit parameters: the rational gap `q` it obtains from `lt x one`
+    /// and the modulus `k3` it obtains from [`Self::pos_bound_of_lt`] are
+    /// taken as data, and the `Exists.intro` on `K := Nat.succ k3` is
+    /// dropped so the witness is visible in the statement.
+    ///
+    /// This is what a `Type`-valued consumer needs. `CReal.mk`'s regularity
+    /// argument and `CReal.weierstrassMTest`'s `hcauchy` parameter both
+    /// require a raw `(k, proof)` pair, and `Exists.rec` is `Prop`-only, so
+    /// [`Self::pow_le_nat_div_succ_of_lt`]'s `∃ K, …` cannot be unwrapped to
+    /// reach either. Note the hypothesis `lt x one` is **not** needed here —
+    /// it existed only to produce `q` and `k3`.
+    pub pow_le_nat_div_succ_of_gap: NameId,
+    /// `CReal.geomYBoundRaw : ∀ x, le zero x → ∀ k (h : PosBound (add one
+    /// (neg x)) k) (k1 : Nat), (∀ m, le (pow x m) (ofRat (natDivSucc k1
+    /// m))) → ∀ a, le (mul (inv (add one (neg x)) k h) (pow x a)) (ofRat
+    /// (natDivSucc (Nat.mul (Nat.succ k) k1) a))` — the **raw,
+    /// non-existential** form of [`Self::geom_y_bound`], sharing its proof
+    /// body (`geom_y_bound_leaf`, `creal/geometric.rs`) verbatim.
+    ///
+    /// [`Self::geom_y_bound`]'s `∃ K, …` is now derived FROM this by one
+    /// `Exists.intro` after eliminating
+    /// [`Self::pow_le_nat_div_succ_of_lt`]'s own existential, so the two
+    /// cannot drift apart. As with
+    /// [`Self::pow_le_nat_div_succ_of_gap`], the hypothesis `lt x one` is
+    /// not needed: it existed only to manufacture `k1`.
+    pub geom_y_bound_raw: NameId,
     /// `CReal.ratioDecayBound : ∀ f r, le zero r → (∀ n, le (f (Nat.succ n))
     /// (mul r (f n))) → ∀ n, le (f n) (mul (f Nat.zero) (pow r n))` — the
     /// ratio test's decay induction: a sequence shrinking by a factor `r` at
@@ -2593,6 +2627,33 @@ pub struct CRealPrelude {
     /// bridge, never via a literal coincidence like `geomCauchy`'s own
     /// `3+4=7`.
     pub geom_cauchy_of_lt_ordered: NameId,
+    /// `CReal.geomCauchyOrderedOfGap : ∀ x, le zero x → ∀ (q : Rat), le
+    /// (add x (ofRat q)) one → ∀ (k3 : Nat), PosBound (ofRat q) k3 → ∀ k (h
+    /// : PosBound (add one (neg x)) k) a b, Nat.le a b → Within (seq
+    /// (sumRange (pow x) b) b − seq (sumRange (pow x) a) a) (natDivSucc N b
+    /// + natDivSucc N a)`, with `N := ((Nat.succ k * Nat.succ k3) + 1) + 7`
+    /// — **the raw, non-existential ordered geometric Cauchy witness at an
+    /// ARBITRARY ratio**, and the point of this family.
+    ///
+    /// Exactly one such witness existed before this
+    /// (`CReal.geomCauchyOrderedHalf`, `exponential.rs`), hardcoded to the
+    /// literal ratio `1/2` through
+    /// [`Self::geom_half_inv_leaf_bound`]'s `inv`-cancellation at that one
+    /// value. Every `Type`-valued consumer — `CReal.mk`, and
+    /// `CReal.weierstrassMTest`'s `hcauchy` argument — needs a raw `(k,
+    /// proof)` pair rather than a `Prop`-wrapped [`Self::cauchy`], and the
+    /// general-ratio machinery ([`Self::geom_cauchy_of_lt`],
+    /// [`Self::geom_y_bound`], [`Self::pow_le_nat_div_succ_of_lt`]) is
+    /// `Exists`-wrapped all the way down, so it answers "a rate exists"
+    /// (`Prop`) and never "here it is" (data).
+    ///
+    /// It is a pure composition, no new arithmetic: `hK1 :=
+    /// [`Self::pow_le_nat_div_succ_of_gap`]` at `(q, k3)` feeds
+    /// [`Self::geom_y_bound_raw`], whose conclusion is exactly
+    /// [`Self::geom_cauchy_of_lt_ordered`]'s already-raw `hK` parameter.
+    /// The ratio-specific work a caller must supply is only rational: the
+    /// gap `q` with `x + q ≤ 1`, and two `PosBound` moduli.
+    pub geom_cauchy_ordered_of_gap: NameId,
     /// `CReal.geomCauchyOfLt : ∀ x, le zero x → lt x one → ∀ k (h : PosBound
     /// (add one (neg x)) k), Cauchy (sumRange (fun n => pow x n))` —
     /// geometric-series Cauchyness at a GENERAL ratio `0 ≤ x < 1`, the
@@ -5387,13 +5448,16 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         of_rat_pow: kernel.name_str(creal, "ofRat_pow"),
         pow_half_le_nat_div_succ: kernel.name_str(creal, "pow_half_le_natDivSucc"),
         pow_le_nat_div_succ_of_lt: kernel.name_str(creal, "pow_le_natDivSucc_of_lt"),
+        pow_le_nat_div_succ_of_gap: kernel.name_str(creal, "pow_le_natDivSucc_of_gap"),
         ratio_decay_bound: kernel.name_str(creal, "ratioDecayBound"),
         inv_le_of_pos_bound: kernel.name_str(creal, "invLeOfPosBound"),
         geom_y_bound: kernel.name_str(creal, "geomYBound"),
+        geom_y_bound_raw: kernel.name_str(creal, "geomYBoundRaw"),
         geom_half_inv_leaf_bound: kernel.name_str(creal, "geomHalfInvLeafBound"),
         geom_cauchy_ordered_half: kernel.name_str(creal, "geomCauchyOrderedHalf"),
         geom_cauchy: kernel.name_str(creal, "geomCauchy"),
         geom_cauchy_of_lt_ordered: kernel.name_str(creal, "geomCauchyOfLtOrdered"),
+        geom_cauchy_ordered_of_gap: kernel.name_str(creal, "geomCauchyOrderedOfGap"),
         geom_cauchy_of_lt: kernel.name_str(creal, "geomCauchyOfLt"),
         geom_scaled_cauchy_of_lt: kernel.name_str(creal, "geomScaledCauchyOfLt"),
         sum_range_ratio_test: kernel.name_str(creal, "sumRangeRatioTest"),
@@ -8852,6 +8916,8 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.inv_le_of_pos_bound,
             |p: CRealPrelude| p.of_rat_pow,
             |p: CRealPrelude| p.pow_half_le_nat_div_succ,
+            |p: CRealPrelude| p.geom_y_bound_raw,
+            |p: CRealPrelude| p.pow_le_nat_div_succ_of_gap,
             |p: CRealPrelude| p.pow_le_nat_div_succ_of_lt,
             |p: CRealPrelude| p.pow_le_pow_of_base_le,
             |p: CRealPrelude| p.ratio_decay_bound,
@@ -8961,6 +9027,7 @@ const STEPS: &[BuildStep] = &[
         provides: &[
             |p: CRealPrelude| p.geom_cauchy_of_lt,
             |p: CRealPrelude| p.geom_cauchy_of_lt_ordered,
+            |p: CRealPrelude| p.geom_cauchy_ordered_of_gap,
         ],
         run: geometric::declare_geom_cauchy_of_lt_family,
     },
