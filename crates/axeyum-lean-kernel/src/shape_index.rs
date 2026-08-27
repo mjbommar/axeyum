@@ -359,7 +359,10 @@ impl ShapeIndex {
     pub fn duplicate_shapes_where(&self, keep: impl Fn(&Entry) -> bool) -> Vec<Vec<&Entry>> {
         let mut by_shape: BTreeMap<&str, Vec<&Entry>> = BTreeMap::new();
         for entry in self.entries.iter().filter(|entry| keep(entry)) {
-            by_shape.entry(entry.shape.as_str()).or_default().push(entry);
+            by_shape
+                .entry(entry.shape.as_str())
+                .or_default()
+                .push(entry);
         }
         by_shape
             .into_values()
@@ -413,7 +416,7 @@ pub struct Query {
     /// Substring of the rendered name.
     pub name_contains: Option<String>,
     /// Substring of the rendered name after [`spelling_insensitive`] on both
-    /// sides, so a snake_case guess retrieves a camelCase declaration.
+    /// sides, so a `snake_case` guess retrieves a `camelCase` declaration.
     pub name_like: Option<String>,
     /// Restrict to these kinds (empty = every kind).
     pub kinds: Vec<DeclKind>,

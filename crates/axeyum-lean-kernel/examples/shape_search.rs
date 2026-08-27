@@ -238,7 +238,11 @@ fn build_index(include_constructed: bool, index_values: bool) -> ShapeIndex {
         "string".to_owned(),
     ];
     if include_constructed {
-        groups.extend(["creal".to_owned(), "complex".to_owned(), "cpoint".to_owned()]);
+        groups.extend([
+            "creal".to_owned(),
+            "complex".to_owned(),
+            "cpoint".to_owned(),
+        ]);
     }
     let mut index = ShapeIndex::new(groups, index_values);
 
@@ -265,9 +269,14 @@ fn build_index(include_constructed: bool, index_values: bool) -> ShapeIndex {
     // The Nat/Int characterization package: `kernel_declaration_projection`
     // builds it and this index would otherwise report its declarations absent.
     let mut characterization = Kernel::new();
-    let _ = build_characterization(&mut characterization)
-        .expect("Nat/Int characterization must build");
-    index_kernel(&characterization, "characterization", &mut index, index_values);
+    let _ =
+        build_characterization(&mut characterization).expect("Nat/Int characterization must build");
+    index_kernel(
+        &characterization,
+        "characterization",
+        &mut index,
+        index_values,
+    );
 
     let mut string = Kernel::new();
     let string_handle = build_logic_prelude(&mut string).expect("logic prelude must build");
@@ -303,11 +312,11 @@ fn main() -> ExitCode {
     // whole example exists to prevent. A doc note saying "use --release"
     // cannot reach a caller that does not read it; carrying the documented
     // envelope makes every caller work unchanged.
-    on_a_deep_stack(run)
+    on_a_deep_stack(execute)
 }
 
 #[allow(clippy::too_many_lines)]
-fn run() -> ExitCode {
+fn execute() -> ExitCode {
     let args = match parse_args() {
         Ok(args) => args,
         Err(message) => {
@@ -370,7 +379,10 @@ fn run() -> ExitCode {
             println!("DUPLICATE  {}  {}", group[0].signature(), names.join(" "));
             reported += 1;
             if reported >= args.limit {
-                println!("… {} further duplicate groups not printed", groups.len() - reported);
+                println!(
+                    "… {} further duplicate groups not printed",
+                    groups.len() - reported
+                );
                 break;
             }
         }
@@ -378,7 +390,10 @@ fn run() -> ExitCode {
         if let Some(expected) = args.expect
             && groups.len() != expected
         {
-            eprintln!("FAIL: expected {expected} duplicate groups, found {}", groups.len());
+            eprintln!(
+                "FAIL: expected {expected} duplicate groups, found {}",
+                groups.len()
+            );
             return ExitCode::from(1);
         }
         return ExitCode::SUCCESS;
@@ -425,9 +440,7 @@ fn run() -> ExitCode {
             let namespaces = index.namespace_census();
             let root_line: Vec<String> = roots
                 .iter()
-                .map(|root| {
-                    format!("{root}={}", namespaces.get(root).copied().unwrap_or(0))
-                })
+                .map(|root| format!("{root}={}", namespaces.get(root).copied().unwrap_or(0)))
                 .collect();
             println!(
                 "verdict: ABSENT  (positive control: {}{}{})",
@@ -447,7 +460,10 @@ fn run() -> ExitCode {
             {
                 let nearest = index.nearest(probe, 8);
                 if !nearest.is_empty() {
-                    println!("hint: names containing that component: {}", nearest.join(", "));
+                    println!(
+                        "hint: names containing that component: {}",
+                        nearest.join(", ")
+                    );
                 }
             }
         }
@@ -461,7 +477,12 @@ fn run() -> ExitCode {
                 let consts = if args.show_consts {
                     format!(
                         "  consts=[{}]",
-                        entry.type_consts.iter().cloned().collect::<Vec<_>>().join(",")
+                        entry
+                            .type_consts
+                            .iter()
+                            .cloned()
+                            .collect::<Vec<_>>()
+                            .join(",")
                     )
                 } else {
                     String::new()
@@ -476,7 +497,10 @@ fn run() -> ExitCode {
                 );
             }
             if matched.len() > args.limit {
-                println!("… {} further matches not printed", matched.len() - args.limit);
+                println!(
+                    "… {} further matches not printed",
+                    matched.len() - args.limit
+                );
             }
             println!("verdict: FOUND {}", matched.len());
         }

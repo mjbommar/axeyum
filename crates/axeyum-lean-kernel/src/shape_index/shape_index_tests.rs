@@ -18,12 +18,8 @@ use super::{
 use crate::{Kernel, build_nat_prelude};
 
 fn entry(name: &str, kind: DeclKind, hyps: &[&str], concl: &str) -> Entry {
-    let hyp_heads: Vec<Option<String>> = hyps
-        .iter()
-        .map(|head| Some((*head).to_owned()))
-        .collect();
-    let mut type_consts: BTreeSet<String> =
-        hyps.iter().map(|head| (*head).to_owned()).collect();
+    let hyp_heads: Vec<Option<String>> = hyps.iter().map(|head| Some((*head).to_owned())).collect();
+    let mut type_consts: BTreeSet<String> = hyps.iter().map(|head| (*head).to_owned()).collect();
     type_consts.insert(concl.to_owned());
     Entry {
         name: name.to_owned(),
@@ -44,7 +40,12 @@ fn entry(name: &str, kind: DeclKind, hyps: &[&str], concl: &str) -> Entry {
 fn fixture() -> ShapeIndex {
     let mut index = ShapeIndex::new(vec!["synthetic".to_owned()], false);
     index.insert(entry("CReal.le", DeclKind::Definition, &["CReal"], "Prop"));
-    index.insert(entry("CReal.Equiv", DeclKind::Definition, &["CReal"], "Prop"));
+    index.insert(entry(
+        "CReal.Equiv",
+        DeclKind::Definition,
+        &["CReal"],
+        "Prop",
+    ));
     index.insert(entry("CReal", DeclKind::Inductive, &[], "Sort"));
     index.insert(entry("Prop", DeclKind::Inductive, &[], "Sort"));
     index.insert(entry("Sort", DeclKind::Inductive, &[], "Sort"));
@@ -60,19 +61,9 @@ fn fixture() -> ShapeIndex {
         &["CReal"],
         "CReal.le",
     ));
-    index.insert(entry(
-        "Rat.polyEval",
-        DeclKind::Definition,
-        &["Rat"],
-        "Rat",
-    ));
+    index.insert(entry("Rat.polyEval", DeclKind::Definition, &["Rat"], "Rat"));
     index.insert(entry("Rat", DeclKind::Inductive, &[], "Sort"));
-    index.insert(entry(
-        "Rat.polyEval_add",
-        DeclKind::Theorem,
-        &["Rat"],
-        "Eq",
-    ));
+    index.insert(entry("Rat.polyEval_add", DeclKind::Theorem, &["Rat"], "Eq"));
     index.insert(entry("Eq", DeclKind::Inductive, &[], "Sort"));
     index.finish();
     index
@@ -476,8 +467,8 @@ fn a_quantified_hypothesis_is_headed_by_its_own_conclusion() {
 }
 
 /// GUARD: `--name-like` ignores case, `_` and `.` on BOTH sides, so the
-/// snake_case spelling every design document and Rust field uses retrieves the
-/// camelCase declaration the kernel actually holds. Without it a lane grepping
+/// `snake_case` spelling every design document and Rust field uses retrieves the
+/// `camelCase` declaration the kernel actually holds. Without it a lane grepping
 /// for `congr_of_uniformly_continuous` gets zero rows for a lemma that exists —
 /// which is the exact failure this whole index is for, arriving through the
 /// spelling rather than through the module it is filed in.
@@ -491,7 +482,12 @@ fn a_snake_case_guess_retrieves_a_camel_case_declaration() {
         "CReal.Equiv",
     ));
     index.insert(entry("CReal", DeclKind::Inductive, &[], "Sort"));
-    index.insert(entry("CReal.Equiv", DeclKind::Definition, &["CReal"], "Prop"));
+    index.insert(entry(
+        "CReal.Equiv",
+        DeclKind::Definition,
+        &["CReal"],
+        "Prop",
+    ));
     index.finish();
 
     // The exact-substring form fails, which is the status quo.
