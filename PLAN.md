@@ -1305,6 +1305,15 @@ discovery-time 404/50-prefix formula byte-for-byte at SHA-256
 critical asymmetry: restricted SAT may be promoted only after unrestricted replay, while
 restricted UNSAT is never an upper bound.
 
+**Reusable colouring Hamming-ball restriction, 2026-08-27.** ADR-0595 composes canonical
+colouring CNF with the existing generic weighted-at-most encoder instead of duplicating a
+cardinality circuit. A point's change indicator is the negation of its witnessed-colour literal;
+canonical one-hot clauses make this exact. The result retains source-model projection, and a SAT
+result earns credit only after unrestricted CNF and independent relation replay. An exhaustive
+control checks radius zero versus one with checked DRAT, projection, decoding, and replay. On the
+open 405-point Rado instance, proof-free diagnostics reported UNSAT through radius 22 and timed out
+at radius 23 after 120 seconds; these status lines receive no mathematical credit.
+
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
 external-certificate replay runner for all five packages.  It validates checker and artifact
 bytes before execution, hard-kills a timed-out process session, requires an observable finding

@@ -16,6 +16,8 @@
 //!
 //! usage: `rado_dump_cnf a=5 b=4 k=4 n=741 out=F_741.cnf \
 //!         [prefix_witness=previous.txt prefix_points=100]`
+//! or: `rado_dump_cnf a=3 b=2 k=5 n=405 out=repair.cnf \
+//!      hamming_witness=witness-404.txt hamming_points=404 max_changes=10`
 //!
 //! exit: 0 written, 2 usage.
 
@@ -23,6 +25,7 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::process::ExitCode;
 
+use axeyum_cnf::WeightedAtMostLimits;
 use axeyum_search::{ColouringFamily, Rado, Witness};
 
 fn main() -> ExitCode {
@@ -52,18 +55,49 @@ fn main() -> ExitCode {
     );
     let family = Rado::new(a, b, k).expect("family");
     let problem = family.problem(n).expect("problem");
-    let formula = match (args.get("prefix_witness"), args.get("prefix_points")) {
-        (None, None) => problem.encode().expect("encode"),
-        (Some(path), Some(points)) => {
+    let prefix = (args.get("prefix_witness"), args.get("prefix_points"));
+    let hamming = (
+        args.get("hamming_witness"),
+        args.get("hamming_points"),
+        args.get("max_changes"),
+    );
+    let (formula, restriction) = match (prefix, hamming) {
+        ((None, None), (None, None, None)) => {
+            (problem.encode().expect("encode"), "canonical".to_owned())
+        }
+        ((Some(path), Some(points)), (None, None, None)) => {
             let text = fs::read_to_string(path).expect("read prefix witness");
             let witness = Witness::parse(k, &text).expect("parse prefix witness");
             let points = points.parse::<usize>().expect("prefix_points number");
-            problem
-                .encode_with_witness_prefix(&witness, points)
-                .expect("encode with witness prefix")
+            (
+                problem
+                    .encode_with_witness_prefix(&witness, points)
+                    .expect("encode with witness prefix"),
+                format!("fixed-prefix:{points}"),
+            )
+        }
+        ((None, None), (Some(path), Some(points), Some(changes))) => {
+            let text = fs::read_to_string(path).expect("read Hamming witness");
+            let witness = Witness::parse(k, &text).expect("parse Hamming witness");
+            let points = points.parse::<usize>().expect("hamming_points number");
+            let changes = changes.parse::<u64>().expect("max_changes number");
+            let encoding = problem
+                .encode_with_witness_hamming_ball(
+                    &witness,
+                    points,
+                    changes,
+                    WeightedAtMostLimits::default(),
+                )
+                .expect("encode Hamming ball");
+            (
+                encoding.formula().clone(),
+                format!("hamming:{points}:at-most:{changes}"),
+            )
         }
         _ => {
-            eprintln!("prefix_witness and prefix_points must be supplied together");
+            eprintln!(
+                "supply either the complete prefix pair, the complete Hamming triple, or neither"
+            );
             return ExitCode::from(2);
         }
     };
@@ -71,7 +105,8 @@ fn main() -> ExitCode {
     fs::write(out, &dimacs).expect("write cnf");
     println!(
         "{{\"status\":\"written\",\"a\":{a},\"b\":{b},\"k\":{k},\"n\":{n},\
-         \"vars\":{},\"clauses\":{},\"bytes\":{},\"out\":{out:?}}}",
+         \"restriction\":{restriction:?},\"vars\":{},\"clauses\":{},\"bytes\":{},\
+         \"out\":{out:?}}}",
         formula.variable_count(),
         formula.clauses().len(),
         dimacs.len(),
