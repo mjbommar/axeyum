@@ -4061,6 +4061,28 @@ pub struct CRealPrelude {
     /// `declare_shared_index_to_canonical` doc comment for both pieces,
     /// sized precisely rather than gestured at.
     pub riemann_sum_shared_accuracy_close: NameId,
+    /// `CReal.riemannSum_sharedAccuracyClose_at : ∀ (x y1 y2 : CReal) (bound1
+    /// bound2 : Nat → Rat) (l : Nat), (∀ i, Within (sample (add x (neg y1))
+    /// i) (bound1 i)) → (∀ i, Within (sample (add x (neg y2)) i) (bound2
+    /// i)) → ∀ oi oj jj1 jj2, Within (sub (sample y1 oi) (sample y2 oj))
+    /// (bound)` — the shared-mid-anchor "wiring" step behind
+    /// [`Self::riemann_sum_shared_accuracy_close`] with `l` (the sample
+    /// index shared by both [`Self::shared_index_to_canonical`]
+    /// applications) and the two closeness hypotheses `h1`/`h2` genuinely
+    /// `Π`-bound, rather than derived internally from
+    /// `riemann_sum_cauchy`/`common_refinement`
+    /// (`creal/integral.rs`'s private `common_refinement`) the way
+    /// [`Self::riemann_sum_shared_accuracy_close`]'s own conclusion bakes
+    /// them in. Added alongside that theorem (2026-08-27) because a
+    /// consumer wanting to reason about `l` itself — e.g. how `natDivSucc(1,
+    /// l)` shrinks as a mesh-refinement depth grows, toward `integral_split`
+    /// — needs to name `l` as a bound variable rather than reconstruct
+    /// `common_refinement(m1, m2).0` and match it syntactically against a
+    /// fixed subterm. `riemann_sum_shared_accuracy_close`'s own proof now
+    /// calls this theorem's underlying construction directly
+    /// (`creal/integral.rs`'s private `shared_accuracy_close_at_proof`), so
+    /// the specialized and general versions share one proof, not two.
+    pub riemann_sum_shared_accuracy_close_at: NameId,
     /// `CReal.riemannSumTotalEpsLe : ∀ a b e m : Nat's/CReal mix,
     /// CReal.le (totalEps a b e m) (CReal.ofRat (Rat.natDivSucc magnitude
     /// e))`, `magnitude := Nat.succ (CReal.bound (CReal.add b (CReal.neg
@@ -5180,6 +5202,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         riemann_sum_cauchy: kernel.name_str(creal, "riemannSum_cauchy"),
         shared_index_to_canonical: kernel.name_str(creal, "sharedIndexToCanonical"),
         riemann_sum_shared_accuracy_close: kernel.name_str(creal, "riemannSum_sharedAccuracyClose"),
+        riemann_sum_shared_accuracy_close_at: kernel
+            .name_str(creal, "riemannSum_sharedAccuracyClose_at"),
         riemann_sum_total_eps_le: kernel.name_str(creal, "riemannSumTotalEpsLe"),
         riemann_sum_deep_cauchy: kernel.name_str(creal, "riemannSumDeepCauchy"),
         riemann_sum_deep_cauchy_folded: kernel.name_str(creal, "riemannSumDeepCauchyFolded"),
@@ -5643,6 +5667,14 @@ pub(crate) fn build_creal_prelude_uncached(
         // `sharedIndexToCanonical` (both just above) plus `series.rs`'s
         // `within_symm`, so it cannot land any earlier than this call site.
         integral::declare_riemann_sum_shared_accuracy_close(&mut d, prelude)?;
+        // `riemannSum_sharedAccuracyClose_at` (the same wiring with the
+        // shared mid-anchor `l` and the two closeness hypotheses exposed as
+        // free `Π`-bound parameters, rather than derived from
+        // `riemannSum_cauchy`/`common_refinement`) needs only
+        // `sharedIndexToCanonical` (well above) -- it does not depend on
+        // `riemannSum_sharedAccuracyClose` itself, but lands right beside it
+        // since that is the theorem it generalizes.
+        integral::declare_riemann_sum_shared_accuracy_close_at(&mut d, prelude)?;
         // `riemannSumTotalEpsLe` (the closed-form magnitude lemma
         // `riemannSum_cauchy`'s own doc comment names as the actual
         // remaining gate on `CReal.integral`) needs only `CReal.bound`/
