@@ -24828,9 +24828,14 @@ fn integral_split_arbitrary_close(
                 let bound_r = embed(d, p, q);
                 d.lemma(p.le_trans, &[zero_delta, delta_delta, bound_r, grown, hfit])
             };
-            let leg1 = integral_endpoint_close(
-                d, p, f, a, b, u, kb, hbnd, a, cn, a, c, hacn, hac, uacn, uac, refl_a, hcnb,
-                refl_a, hcb, delta, w_ac, zero_c, delta, e, hdw1, hw2b1, hbx1, hdw1, hfit1,
+            // The PUBLISHED theorem, not the function: inlining its proof term
+            // twice cost ~14 s on `creal_prelude_builds`, measured.
+            let leg1 = d.lemma(
+                p.integral_endpoint_close,
+                &[
+                    f, a, b, u, kb, hbnd, a, cn, a, c, hacn, hac, uacn, uac, delta, w_ac, zero_c,
+                    delta, e, refl_a, hcnb, refl_a, hcb, hdw1, hw2b1, hbx1, hdw1, hfit1,
+                ],
             );
             // leg1 : le (abs (i_acn − i_ac)) b1
 
@@ -24854,9 +24859,12 @@ fn integral_split_arbitrary_close(
                 )
             };
             let hw2b2 = d.lemma(p.le_refl, &[w_cb]);
-            let leg2 = integral_endpoint_close(
-                d, p, f, a, b, u, kb, hbnd, cn, b, c, b, hcnb, hcb, ucnb, ucb, hacn, refl_b, hac,
-                refl_b, delta, w_cb, delta, delta, e, hdw2, hw2b2, hcn_c, hdw2, hfit,
+            let leg2 = d.lemma(
+                p.integral_endpoint_close,
+                &[
+                    f, a, b, u, kb, hbnd, cn, b, c, b, hcnb, hcb, ucnb, ucb, delta, w_cb, delta,
+                    delta, e, hacn, refl_b, hac, refl_b, hdw2, hw2b2, hcn_c, hdw2, hfit,
+                ],
             );
             // leg2 : le (abs (i_cnb − i_cb)) b2
 
