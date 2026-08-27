@@ -1870,7 +1870,10 @@ pub(super) fn declare_crossing_close_clamped(
 
     let h2 = le_sub_of_add_le_left(d, p, slack.sample_pt, slack.slack_lower, c, hl_sample);
     // h2 : le slackLower x_val   (x_val = add c (neg samplePt))
-    let x_val = cadd(d, p, c, cneg(d, p, slack.sample_pt));
+    let x_val = {
+        let neg_samplept_local = cneg(d, p, slack.sample_pt);
+        cadd(d, p, c, neg_samplept_local)
+    };
 
     let min_le_left_inst = d.lemma(p.min_le_left, &[slack.sample_pt, b]);
     // min_le_left_inst : le clampedPt samplePt
@@ -1897,7 +1900,13 @@ pub(super) fn declare_crossing_close_clamped(
     // h2n : le (neg x_val_clamped) (neg slackLower)
     let h2p = d.lemma(
         p.le_trans,
-        &[neg_x_val_clamped, neg_slack_lower, bound_embed, h2n, h_lower],
+        &[
+            neg_x_val_clamped,
+            neg_slack_lower,
+            bound_embed,
+            h2n,
+            h_lower,
+        ],
     );
     // h2p : le (neg x_val_clamped) bound_embed
 
@@ -1907,7 +1916,16 @@ pub(super) fn declare_crossing_close_clamped(
     let uc_spec_term = d.const_app(p.uc_spec, &[f, a, b, u]);
     let conclusion_proof = d.apply(
         uc_spec_term,
-        &[e, c, clamped_pt, hac, hcb, hap_clamped, hpb_clamped, abs_bound],
+        &[
+            e,
+            c,
+            clamped_pt,
+            hac,
+            hcb,
+            hap_clamped,
+            hpb_clamped,
+            abs_bound,
+        ],
     );
 
     let out_rat_e = d.const_app(p.rat.nat_div_succ, &[one_nat, e]);
