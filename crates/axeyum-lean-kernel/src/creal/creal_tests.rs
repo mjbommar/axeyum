@@ -6118,6 +6118,256 @@ fn ivt_bisect_diag_reduces_on_the_identity_bracket_neg_one_two() {
     );
 }
 
+// ---------------------------------------------------------------------------
+// `CReal.evtLinear` / `CReal.evt_attained_max_decides_sign`
+// (`creal/extreme_value.rs`, ADR-0603 row 2 for the Extreme Value Theorem)
+// ---------------------------------------------------------------------------
+
+/// **The non-vacuity control, and the one that matters most for this
+/// declaration.** `evt_attained_max_decides_sign` is a REFUTATION shaped as an
+/// implication, so if its maximality hypothesis had no models it would be
+/// unfalsifiable -- exactly the "checker that cannot fail" defect this
+/// repository audits against, arriving as a theorem instead of a script.
+///
+/// So: discharge the hypothesis at a genuine, non-degenerate instance and let
+/// the kernel infer the conclusion. `v := 1`, `c := 1` -- the true maximiser
+/// of `t |-> t*1` on `[0, 1]` is the right endpoint, so `c := 1` is the
+/// mathematically correct argmax and the hypothesis is
+/// `forall t in [0,1], t*1 <= 1*1`, which is the interval hypothesis `le t
+/// one` transported across `mul_one` on both sides. Nothing is assumed: the
+/// witness is built and `Kernel::infer` accepts it.
+///
+/// The conclusion is then pinned VERBATIM against an independently built
+/// `Or (le one zero) (le zero one)` -- the analytic-LLPO shape at `v := 1` --
+/// rather than loosely matched, so a theorem that concluded some other
+/// disjunction cannot pass.
+#[test]
+fn evt_attained_max_hypothesis_is_satisfiable_at_v_one_c_one() {
+    use crate::int_prelude::ops::IntDev;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = d.kernel().const_(p.creal, vec![]);
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    let hc0 = {
+        let lt = d.lemma(p.zero_lt_one, &[]);
+        d.lemma(p.le_of_lt, &[zero_c, one_c, lt])
+    };
+    let hc1 = d.lemma(p.le_refl, &[one_c]);
+
+    // hmax : forall t, le zero t -> le t one -> le (mul t one) (mul one one).
+    // `ht1 : le t one` transported by `le_congr` across `t ~ mul t one` and
+    // `one ~ mul one one` (both `mul_one`, run backwards).
+    let hmax = {
+        let t_fv = d.fresh_fvar();
+        let t = d.kernel().fvar(t_fv);
+        let ht0_ty = d.const_app(p.le, &[zero_c, t]);
+        let ht1_ty = d.const_app(p.le, &[t, one_c]);
+        let ht1_fv = d.fresh_fvar();
+        let ht1 = d.kernel().fvar(ht1_fv);
+
+        let t_one = d.const_app(p.mul, &[t, one_c]);
+        let one_one = d.const_app(p.mul, &[one_c, one_c]);
+        let fwd_t = d.lemma(p.mul_one, &[t]);
+        let back_t = d.lemma(p.equiv_symm, &[t_one, t, fwd_t]);
+        let fwd_one = d.lemma(p.mul_one, &[one_c]);
+        let back_one = d.lemma(p.equiv_symm, &[one_one, one_c, fwd_one]);
+        let body = d.lemma(
+            p.le_congr,
+            &[t, t_one, one_c, one_one, back_t, back_one, ht1],
+        );
+
+        let with_ht1 = d.lam_fv(ht1_fv, ht1_ty, body);
+        let ht0_fv = d.fresh_fvar();
+        let with_ht0 = d.lam_fv(ht0_fv, ht0_ty, with_ht1);
+        d.lam_fv(t_fv, carrier, with_ht0)
+    };
+
+    let instance = d.lemma(
+        p.evt_attained_max_decides_sign,
+        &[one_c, one_c, hc0, hc1, hmax],
+    );
+    let ty = d.kernel().infer(instance).unwrap_or_else(|error| {
+        panic!(
+            "evt_attained_max_decides_sign refused a DISCHARGED maximality \
+             hypothesis at v = c = 1, so the row-2 statement would be \
+             vacuous: {error:?}"
+        )
+    });
+
+    let expected = {
+        let left = d.const_app(p.le, &[one_c, zero_c]);
+        let right = d.const_app(p.le, &[zero_c, one_c]);
+        d.or(left, right)
+    };
+    let rendered = d.kernel().render_lean(ty);
+    let expected_rendered = d.kernel().render_lean(expected);
+    assert_eq!(
+        rendered, expected_rendered,
+        "an attained maximum must conclude exactly `Or (le one zero) \
+         (le zero one)` -- the analytic-LLPO disjunction at v = 1 -- and \
+         nothing else"
+    );
+}
+
+/// The same discharge at a SECOND, structurally different `(v, c)`: `v := 0`,
+/// `c := 0`. Here every value of `t |-> t*0` is the maximum, so the maximiser
+/// is genuinely non-unique and the hypothesis holds at an argmax the previous
+/// test's `c := 1` would not reach.
+///
+/// Two instances rather than one because a single one cannot distinguish "the
+/// hypothesis is satisfiable" from "the hypothesis is satisfiable only at the
+/// one point I happened to pick", and the whole force of the refutation is
+/// that the hypothesis is the ORDINARY EVT conclusion, available wherever
+/// classical EVT is.
+#[test]
+fn evt_attained_max_hypothesis_is_satisfiable_at_v_zero_c_zero() {
+    use crate::int_prelude::ops::IntDev;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = d.kernel().const_(p.creal, vec![]);
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    let hc0 = d.lemma(p.le_refl, &[zero_c]);
+    let hc1 = {
+        let lt = d.lemma(p.zero_lt_one, &[]);
+        d.lemma(p.le_of_lt, &[zero_c, one_c, lt])
+    };
+
+    // hmax : forall t, le zero t -> le t one -> le (mul t zero) (mul zero zero)
+    // -- both sides are `Equiv`-zero, so `le_refl zero` transported.
+    let hmax = {
+        let t_fv = d.fresh_fvar();
+        let t = d.kernel().fvar(t_fv);
+        let ht0_ty = d.const_app(p.le, &[zero_c, t]);
+        let ht1_ty = d.const_app(p.le, &[t, one_c]);
+
+        let t_zero = d.const_app(p.mul, &[t, zero_c]);
+        let zero_zero = d.const_app(p.mul, &[zero_c, zero_c]);
+        let fwd_t = d.lemma(p.mul_zero, &[t]);
+        let back_t = d.lemma(p.equiv_symm, &[t_zero, zero_c, fwd_t]);
+        let fwd_z = d.lemma(p.mul_zero, &[zero_c]);
+        let back_z = d.lemma(p.equiv_symm, &[zero_zero, zero_c, fwd_z]);
+        let refl = d.lemma(p.le_refl, &[zero_c]);
+        let body = d.lemma(
+            p.le_congr,
+            &[zero_c, t_zero, zero_c, zero_zero, back_t, back_z, refl],
+        );
+
+        let ht1_fv = d.fresh_fvar();
+        let with_ht1 = d.lam_fv(ht1_fv, ht1_ty, body);
+        let ht0_fv = d.fresh_fvar();
+        let with_ht0 = d.lam_fv(ht0_fv, ht0_ty, with_ht1);
+        d.lam_fv(t_fv, carrier, with_ht0)
+    };
+
+    let instance = d.lemma(
+        p.evt_attained_max_decides_sign,
+        &[zero_c, zero_c, hc0, hc1, hmax],
+    );
+    let ty = d.kernel().infer(instance).unwrap_or_else(|error| {
+        panic!("evt_attained_max_decides_sign refused the v = c = 0 discharge: {error:?}")
+    });
+
+    let expected = {
+        let left = d.const_app(p.le, &[zero_c, zero_c]);
+        let right = d.const_app(p.le, &[zero_c, zero_c]);
+        d.or(left, right)
+    };
+    assert_eq!(
+        d.kernel().render_lean(ty),
+        d.kernel().render_lean(expected),
+        "must conclude exactly `Or (le zero zero) (le zero zero)` at v = 0"
+    );
+}
+
+/// **Mandatory concrete instantiation** for `CReal.evtLinear`, and the
+/// COMPUTED half of this row-2 certificate: the two endpoint values of the
+/// counterexample family, read off by kernel reduction rather than asserted.
+///
+/// `evtLinear v := fun t => mul t v` at `v := 3`. Its value at the left
+/// endpoint reduces to `0` and at the right endpoint to `3`, so the classical
+/// maximum over `[0, 1]` sits at `t = 1`; at `v := -3` the same two reductions
+/// give `0` and `-3`, so it sits at `t = 0`. **The maximiser jumps from one
+/// endpoint to the other as the sign of `v` flips**, which is precisely why an
+/// operator returning it decides that sign -- the informal content of
+/// `evt_attained_max_decides_sign`, here as an exact rational computation.
+///
+/// Checked at `-3` as well as `3` deliberately: a construction that dropped
+/// `v` entirely, or that returned `abs v`, would still give `0` and `3` on the
+/// positive side alone.
+#[test]
+fn evt_linear_endpoint_values_reduce_and_flip_with_the_sign_of_v() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let idx0 = d.zero();
+
+    let three_nat = d.num(3);
+    let three = d.const_app(p.of_nat, &[three_nat]);
+    let neg_three = d.const_app(p.neg, &[three]);
+
+    // (label, v, expected at t = 0, expected at t = 1)
+    let cases: [(&str, ExprId, ExprId, ExprId); 2] = [
+        (
+            "v = 3 (maximum at the RIGHT endpoint)",
+            three,
+            ivt_bisect_rat_lit(&mut d, p, 0, 0, false), // 0
+            ivt_bisect_rat_lit(&mut d, p, 3, 0, false), // 3
+        ),
+        (
+            "v = -3 (maximum at the LEFT endpoint)",
+            neg_three,
+            ivt_bisect_rat_lit(&mut d, p, 0, 0, false), // 0
+            ivt_bisect_rat_lit(&mut d, p, 3, 0, true),  // -3
+        ),
+    ];
+
+    for (label, v, expect_lo, expect_hi) in cases {
+        let at_zero = d.const_app(p.evt_linear, &[v, zero_c]);
+        let at_one = d.const_app(p.evt_linear, &[v, one_c]);
+        let lo = d.const_app(p.seq, &[at_zero, idx0]);
+        let hi = d.const_app(p.seq, &[at_one, idx0]);
+        assert!(
+            ivt_bisect_rat_eq(&mut d, p, lo, expect_lo),
+            "{label}: evtLinear v zero did not reduce to the expected rational"
+        );
+        assert!(
+            ivt_bisect_rat_eq(&mut d, p, hi, expect_hi),
+            "{label}: evtLinear v one did not reduce to the expected rational"
+        );
+    }
+
+    // And the comparison itself flips, which is the whole point: at v = 3 the
+    // right endpoint strictly dominates the left, at v = -3 strictly the
+    // reverse. Checked by reduction, not by reading the numbers above.
+    let mk = |d: &mut IntDev<'_>, v: ExprId, t: ExprId| -> ExprId {
+        let at = d.const_app(p.evt_linear, &[v, t]);
+        d.const_app(p.seq, &[at, idx0])
+    };
+    let pos_lo = mk(&mut d, three, zero_c);
+    let pos_hi = mk(&mut d, three, one_c);
+    assert!(
+        ivt_bisect_rat_lt(&mut d, p, pos_lo, pos_hi),
+        "at v = 3 the right endpoint must strictly dominate"
+    );
+    let neg_lo = mk(&mut d, neg_three, zero_c);
+    let neg_hi = mk(&mut d, neg_three, one_c);
+    assert!(
+        ivt_bisect_rat_lt(&mut d, p, neg_hi, neg_lo),
+        "at v = -3 the LEFT endpoint must strictly dominate -- the maximiser \
+         moved, which is the sign decision an argmax operator would be making"
+    );
+}
+
 /// **Mandatory concrete instantiation** for `CReal.sumRange_reblock`
 /// (`creal/integral.rs`): `g i := CReal.ofNat i`, checked at TWO different
 /// block sizes over the SAME six terms `g 0, …, g 5` (`0+1+2+3+4+5 = 15`).
