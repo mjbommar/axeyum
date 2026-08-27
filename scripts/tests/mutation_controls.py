@@ -2951,6 +2951,35 @@ SUITES["fact-theorem-of-explicit-field"] = (
     ],
 )
 
+SUITES["import-backlog-classification"] = (
+    "scripts/gen-import-backlog.py",
+    "scripts.tests.test_gen_import_backlog",
+    [
+        # ADR-0601 SS3: a fact maps to a curriculum node only via an EXACT
+        # match on `concept_refs[].graph == "math-education"` -- a crude
+        # classifier that also accepted an unrelated graph carrying the same
+        # ref id would manufacture curriculum edges nobody asserted (CLAUDE.md:
+        # "a crude classifier that flags a whole shape is not a measurement").
+        # Deleting this guard must kill exactly
+        # `test_wrong_graph_does_not_map_even_with_matching_id`.
+        (
+            "curriculum mapping requires graph == math-education",
+            '        if ref.get("graph") != "math-education":',
+            "        if False:",
+        ),
+        # `dependency_ready` requires every dep's `epistemic_status` to be in
+        # `OURS_SETTLED`, not merely present. Weakening this to "present-only"
+        # must kill exactly `test_any_dep_open_is_not_ready` -- the sibling
+        # `test_missing_dep_is_not_ready` (a dep id absent from the ledger)
+        # exercises the OTHER half of this same condition and must survive.
+        (
+            "dependency readiness requires a SETTLED status, not just presence",
+            '        if dep is None or dep.get("epistemic_status") not in VALIDATE_FACTS.OURS_SETTLED:',
+            "        if dep is None:",
+        ),
+    ],
+)
+
 
 def main(argv: list[str]) -> int:
     if argv[1:2] == ["--check-anchors"]:

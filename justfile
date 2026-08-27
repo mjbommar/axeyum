@@ -1115,6 +1115,10 @@ generated-trackers:
     python3 scripts/gen-plan.py --check
     python3 -m unittest scripts.tests.test_gen_adr_index
     python3 scripts/gen-adr-index.py --check
+    # ADR-0601 SS3: the import backlog as a produced artifact, not a bare
+    # count. docs/autogenesis/288-import-backlog-artifact.md.
+    python3 -m unittest scripts.tests.test_gen_import_backlog
+    python3 scripts/gen-import-backlog.py --check
     python3 scripts/gen-claims-dashboard.py --check
 
 # The `axeyum-solver` decomposition ratchet (docs/refactor-2026-08/03).
