@@ -1634,6 +1634,27 @@ pub struct CRealPrelude {
     /// transported across `add_neg`. `equiv_of_le_le` closes both into one
     /// `Equiv`. See `creal/archimedean_squeeze.rs`.
     pub equiv_zero_of_small: NameId,
+    /// `CReal.le_of_forall_le_add_rate : ∀ k x y,
+    /// (∀ e : Nat, le x (add y (ofRat (natDivSucc k e)))) → le x y`.
+    ///
+    /// The rate-`K` generalization of [`Self::le_of_forall_le_add_small`]
+    /// (which is now this lemma's `k := 1` instance, a thin wrapper). Only
+    /// the hypothesis's own accuracy family scales with `k` — the two
+    /// `CReal.regular` round trips are the representation's own rate-1
+    /// Cauchy modulus and never see `k` — so term B fuses to `(k+2)/(j+1)`
+    /// (was the literal `3/(j+1)`) and the final bound is
+    /// `2/(n+1) + (k+4)/(j+1)`, closed by `Rat.le_of_le_add_natDivSucc` at
+    /// the **symbolic** `k+4` (already general in its own `k` argument, so
+    /// this needed no change). See `creal/archimedean_squeeze.rs`.
+    pub le_of_forall_le_add_rate: NameId,
+    /// `CReal.equiv_zero_of_rate : ∀ k v,
+    /// (∀ e : Nat, le (abs v) (ofRat (natDivSucc k e))) → Equiv v zero`.
+    ///
+    /// The rate-`K` generalization of [`Self::equiv_zero_of_small`] (which is
+    /// now this lemma's `k := 1` instance). Same two-sided-bound proof as the
+    /// `k = 1` case, through [`Self::le_of_forall_le_add_rate`] at the same
+    /// `k`. See `creal/archimedean_squeeze.rs`.
+    pub equiv_zero_of_rate: NameId,
 
     // --- the integer square root (creal/sqrt.rs) ------------------------------
     /// `CReal.natSqrt : Nat -> Nat`, the missing computational primitive
@@ -5289,6 +5310,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
             .name_str(creal, "eq_zero_of_add_eq_zero_of_nonneg"),
         le_of_forall_le_add_small: kernel.name_str(creal, "le_of_forall_le_add_small"),
         equiv_zero_of_small: kernel.name_str(creal, "equiv_zero_of_small"),
+        le_of_forall_le_add_rate: kernel.name_str(creal, "le_of_forall_le_add_rate"),
+        equiv_zero_of_rate: kernel.name_str(creal, "equiv_zero_of_rate"),
         nat_sqrt: kernel.name_str(creal, "natSqrt"),
         nat_sqrt_spec: kernel.name_str(creal, "natSqrtSpec"),
         nat_sqrt_le: kernel.name_str(creal, "natSqrtLe"),
@@ -6309,7 +6332,9 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.zero,
         ],
         provides: &[
+            |p: CRealPrelude| p.equiv_zero_of_rate,
             |p: CRealPrelude| p.equiv_zero_of_small,
+            |p: CRealPrelude| p.le_of_forall_le_add_rate,
             |p: CRealPrelude| p.le_of_forall_le_add_small,
         ],
         run: archimedean_squeeze::declare_archimedean_squeeze,
