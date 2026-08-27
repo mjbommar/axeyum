@@ -181,7 +181,11 @@ pub(super) fn declare_ivt(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
     // exact root via this route.
     declare_ivt_bisect_diag(d, p)?;
     declare_ivt_bisect_diag_lo(d, p)?;
-    declare_ivt_bisect_diag_hi(d, p)
+    declare_ivt_bisect_diag_hi(d, p)?;
+    // The order-free two-point separation bound the EXACT root needs -- see
+    // the section header above `declare_abs_diff_le_of_small_image` for why
+    // this is a `lt_cotrans` and not the lattice detour the diary proposed.
+    declare_abs_diff_le_of_small_image(d, p)
 }
 
 // --- small shared idiom (private to this module, per the codebase's own
@@ -3150,4 +3154,416 @@ fn declare_ivt_bisect_diag_lo(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(),
 /// Bool.true`.
 fn declare_ivt_bisect_diag_hi(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
     declare_ivt_bisect_diag_projection(d, p, p.ivt_bisect_diag_hi, super::DERIVED_HEIGHT + 63, true)
+}
+
+// =============================================================================
+// `CReal.abs_diff_le_of_small_image` -- the ORDER-FREE two-point separation
+// bound an exact IVT root needs, and the piece
+// `docs/mathematics-2026-08/diary-exact-root-obstruction.md`'s "step 3" got
+// wrong.
+//
+// That section proposed routing around the undecidability of `CReal.le` via
+// the LATTICE: apply `diff_le_of_strict_mono_magnitude` to the ordered pair
+// `(min x y, max x y)` and close with `abs_le`. The ordering half of that is
+// fine -- `min_le_left`/`le_max_left`/`le_trans` do order the pair -- but the
+// bound it produces is
+//
+//     max x y - min x y <= (2k+2) * (|F (min x y)| + |F (max x y)|)
+//
+// whose right-hand side mentions `F` at the LATTICE points, not at `x` and
+// `y`. Recovering `|F (min x y)| <= eps` from `|F x| <= eps` and
+// `|F y| <= eps` needs a LOWER bound on `F (min x y)`, and every bound
+// available points the other way: `min_le_left`/`min_le_right` plus the
+// monotonicity `strict_mono_magnitude` supplies bound `F (min x y)` ABOVE, by
+// `F x` and by `F y`. A lower bound would need an UPPER bound on `F'`, which
+// `HasDerivativeOn` does not carry -- the same asymmetry that section already
+// identifies one step earlier, for `F lo`. The meet-semilattice interface
+// (`min_le_left`, `min_le_right`, `le_min`) does not entail
+// `Equiv (min x y) x ∨ Equiv (min x y) y`, which is exactly the case split
+// the detour was supposed to avoid, so the missing bound is not derivable
+// from it either.
+//
+// COTRANSITIVITY supplies the case split instead, and does so without ever
+// deciding an order -- the same move `declare_ivt_step` already makes one
+// section up. For a target `x - y <= R` and any strictly positive `q`,
+// `lt_cotrans` at the pair `(zero, q)` evaluated at `x - y` gives
+//
+//     Or (lt zero (x - y))  (lt (x - y) q)
+//
+// and BOTH disjuncts close the goal at slack `q`:
+//
+//   * `0 < x - y` gives `le y x` (via this file's own `le_of_nonneg_sub`),
+//     which is precisely the ordering `diff_le_of_strict_mono_magnitude`
+//     wants -- at the pair `(y, x)`, so its right-hand side is
+//     `|F y| + |F x|`, the two terms the hypotheses actually bound;
+//   * `x - y < q` gives the goal outright, since `R >= 0`.
+//
+// Quantifying `q` over `1/(e+1)` and closing with
+// `le_of_forall_le_add_small` removes the slack. No positivity hypothesis on
+// `eps` is needed, and no lattice operation appears anywhere in the proof.
+// =============================================================================
+
+/// `CReal.abs x`.
+fn cabs(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+    d.const_app(p.abs, &[x])
+}
+
+/// `le zero (ofNat n)`, for a SYMBOLIC `n : Nat`.
+///
+/// This file's own [`nonneg_rat_bound`] at a symbolic numerator: `CReal.ofNat
+/// n` is *defined* as `ofRat (Rat.natDivSucc n 0)` (`archimedean.rs`) and
+/// `CReal.zero` as `ofRat Rat.zero`, so [`super::CRealPrelude::of_rat_le`]
+/// against `Rat.zero_le_natDivSucc` proves this with both sides related by
+/// δ-reduction alone -- the same defeq every `nonneg_rat_bound` caller in
+/// this file already relies on.
+fn nonneg_of_nat(d: &mut IntDev<'_>, p: CRealPrelude, n: ExprId) -> ExprId {
+    let zero_idx = d.num(0);
+    let q = d.const_app(p.rat.nat_div_succ, &[n, zero_idx]);
+    let rzero_expr = rzero(d, p.rat);
+    let rat_nonneg = d.lemma(p.rat.zero_le_nat_div_succ, &[n, zero_idx]);
+    d.lemma(p.of_rat_le, &[rzero_expr, q, rat_nonneg])
+}
+
+/// `(ofRat (natDivSucc 1 e), lt zero that)` -- the two lines [`sgn_eps_of`]
+/// runs at its own index, at a bare `e`.
+fn unit_frac_pos(d: &mut IntDev<'_>, p: CRealPrelude, e: ExprId) -> (ExprId, ExprId) {
+    let one_nat = d.num(1);
+    let q_rat = div_succ(d, p, 1, e);
+    let q = embed(d, p, q_rat);
+    let le11 = {
+        let np = d.prelude();
+        d.const_app(np.le_refl, &[one_nat])
+    };
+    let rat_pos = d.lemma(p.rat.nat_div_succ_pos, &[one_nat, e, le11]);
+    let pos = d.lemma(p.of_rat_pos, &[q_rat, rat_pos]);
+    (q, pos)
+}
+
+/// The derivative package every caller of
+/// [`super::CRealPrelude::diff_le_of_strict_mono_magnitude`] carries, bundled
+/// so [`small_image_one_sided`] can be called twice without a
+/// twelve-argument signature.
+#[derive(Clone, Copy)]
+struct DerivPack {
+    f: ExprId,
+    fp: ExprId,
+    a: ExprId,
+    b: ExprId,
+    hf: ExprId,
+    k: ExprId,
+    hderiv: ExprId,
+}
+
+/// `le (add hi (neg lo)) rhs`, where `rhs := mul csucc (add eps eps)` and
+/// `csucc := ofNat (Nat.succ (Nat.succ (Nat.mul 2 k)))`.
+///
+/// The one-sided half of [`declare_abs_diff_le_of_small_image`]; called twice,
+/// once per orientation, and the two results joined by
+/// [`super::CRealPrelude::abs_le`]. See this section's header for why the case
+/// split is a `lt_cotrans` rather than a lattice detour.
+fn small_image_one_sided(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    dp: DerivPack,
+    csucc: ExprId,
+    eps: ExprId,
+    rhs: ExprId,
+    rhs_nonneg: ExprId,
+    csucc_nonneg: ExprId,
+    lo: ExprId,
+    hi: ExprId,
+    ha_lo: ExprId,
+    hhi_b: ExprId,
+    habs_lo: ExprId,
+    habs_hi: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let zero_c = czero(d, p);
+    let neg_lo = cneg(d, p, lo);
+    let diff = cadd(d, p, hi, neg_lo);
+    let eps2 = cadd(d, p, eps, eps);
+
+    let f_lo = d.apply(dp.f, &[lo]);
+    let f_hi = d.apply(dp.f, &[hi]);
+    let abs_f_lo = cabs(d, p, f_lo);
+    let abs_f_hi = cabs(d, p, f_hi);
+    let sum_abs = cadd(d, p, abs_f_lo, abs_f_hi);
+    let scaled_sum = cmul(d, p, csucc, sum_abs);
+
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+    let (q, q_pos) = unit_frac_pos(d, p, e);
+    let rhs_q = cadd(d, p, rhs, q);
+    let target_e = cle(d, p, diff, rhs_q);
+
+    let left_ty = clt(d, p, zero_c, diff);
+    let right_ty = clt(d, p, diff, q);
+    let cotrans = d.lemma(p.lt_cotrans, &[zero_c, q, q_pos, diff]);
+
+    let body = d.or_elim(
+        left_ty,
+        right_ty,
+        target_e,
+        cotrans,
+        &|d, hpos| {
+            // `0 < hi - lo`, so `lo <= hi` and the ordered-pair lemma applies
+            // at `(lo, hi)` -- whose right-hand side is `|F lo| + |F hi|`.
+            let nonneg = d.lemma(p.le_of_lt, &[zero_c, diff, hpos]);
+            let le_lo_hi = le_of_nonneg_sub(d, p, lo, hi, nonneg);
+            let raw = d.lemma(
+                p.diff_le_of_strict_mono_magnitude,
+                &[
+                    dp.f, dp.fp, dp.a, dp.b, dp.hf, dp.k, dp.hderiv, lo, hi, ha_lo, le_lo_hi, hhi_b,
+                ],
+            );
+            // raw : le diff scaled_sum
+            let widen = d.lemma(
+                p.add_le_add,
+                &[abs_f_lo, eps, abs_f_hi, eps, habs_lo, habs_hi],
+            );
+            let scale = d.lemma(
+                p.mul_le_mul_of_nonneg_left,
+                &[csucc, sum_abs, eps2, csucc_nonneg, widen],
+            );
+            let bounded = d.lemma(p.le_trans, &[diff, scaled_sum, rhs, raw, scale]);
+            // rhs <= rhs + q
+            let widen_q = {
+                let q_nonneg = d.lemma(p.le_of_lt, &[zero_c, q, q_pos]);
+                let refl_rhs = d.lemma(p.le_refl, &[rhs]);
+                let step = d.lemma(p.add_le_add, &[rhs, rhs, zero_c, q, refl_rhs, q_nonneg]);
+                let rhs_zero = cadd(d, p, rhs, zero_c);
+                let trim = d.lemma(p.add_zero, &[rhs]);
+                let refl_target = erefl(d, p, rhs_q);
+                d.lemma(
+                    p.le_congr,
+                    &[rhs_zero, rhs, rhs_q, rhs_q, trim, refl_target, step],
+                )
+            };
+            d.lemma(p.le_trans, &[diff, rhs, rhs_q, bounded, widen_q])
+        },
+        &|d, hsmall| {
+            // `hi - lo < q`, and `0 <= rhs`, so the goal holds with room to
+            // spare -- no derivative fact is consulted in this branch.
+            let le_diff_q = d.lemma(p.le_of_lt, &[diff, q, hsmall]);
+            let widen_rhs = {
+                let refl_q = d.lemma(p.le_refl, &[q]);
+                let step = d.lemma(p.add_le_add, &[zero_c, rhs, q, q, rhs_nonneg, refl_q]);
+                let zero_q = cadd(d, p, zero_c, q);
+                let q_zero = cadd(d, p, q, zero_c);
+                let comm = d.lemma(p.add_comm, &[zero_c, q]);
+                let trim = d.lemma(p.add_zero, &[q]);
+                let lhs_eq = echain(d, p, zero_q, &[(q_zero, comm), (q, trim)]);
+                let refl_target = erefl(d, p, rhs_q);
+                d.lemma(
+                    p.le_congr,
+                    &[zero_q, q, rhs_q, rhs_q, lhs_eq, refl_target, step],
+                )
+            };
+            d.lemma(p.le_trans, &[diff, q, rhs_q, le_diff_q, widen_rhs])
+        },
+    );
+
+    let per_e = d.lam_fv(e_fv, nat, body);
+    d.lemma(p.le_of_forall_le_add_small, &[diff, rhs, per_e])
+}
+
+/// `CReal.abs_diff_le_of_small_image` -- see
+/// [`super::CRealPrelude::abs_diff_le_of_small_image`] for the statement and
+/// this section's header for the route.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_abs_diff_le_of_small_image(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let func_ty = d.arrow(carrier, carrier);
+    let nat = d.nat_ty();
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let fp_fv = d.fresh_fvar();
+    let fp = d.kernel().fvar(fp_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let hf_ty = d.const_app(p.has_derivative_on, &[f, fp, a, b]);
+    let hf_fv = d.fresh_fvar();
+    let hf = d.kernel().fvar(hf_fv);
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    // The SAME hypothesis shape `strict_mono_magnitude` /
+    // `diff_le_of_strict_mono_magnitude` state, binder for binder.
+    let hderiv_ty = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let fpz = d.apply(fp, &[z]);
+        let a_k_rat = div_succ(d, p, 1, k);
+        let a_k = embed(d, p, a_k_rat);
+        let concl = cle(d, p, a_k, fpz);
+        let z_le_b = cle(d, p, z, b);
+        let after_upper = d.arrow(z_le_b, concl);
+        let a_le_z = cle(d, p, a, z);
+        let after_lower = d.arrow(a_le_z, after_upper);
+        d.pi_fv(z_fv, carrier, after_lower)
+    };
+    let hderiv_fv = d.fresh_fvar();
+    let hderiv = d.kernel().fvar(hderiv_fv);
+
+    let eps_fv = d.fresh_fvar();
+    let eps = d.kernel().fvar(eps_fv);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+
+    let hax_ty = cle(d, p, a, x);
+    let hax_fv = d.fresh_fvar();
+    let hax = d.kernel().fvar(hax_fv);
+    let hxb_ty = cle(d, p, x, b);
+    let hxb_fv = d.fresh_fvar();
+    let hxb = d.kernel().fvar(hxb_fv);
+    let hay_ty = cle(d, p, a, y);
+    let hay_fv = d.fresh_fvar();
+    let hay = d.kernel().fvar(hay_fv);
+    let hyb_ty = cle(d, p, y, b);
+    let hyb_fv = d.fresh_fvar();
+    let hyb = d.kernel().fvar(hyb_fv);
+
+    let fx = d.apply(f, &[x]);
+    let fy = d.apply(f, &[y]);
+    let abs_fx = cabs(d, p, fx);
+    let abs_fy = cabs(d, p, fy);
+    let hfx_ty = cle(d, p, abs_fx, eps);
+    let hfx_fv = d.fresh_fvar();
+    let hfx = d.kernel().fvar(hfx_fv);
+    let hfy_ty = cle(d, p, abs_fy, eps);
+    let hfy_fv = d.fresh_fvar();
+    let hfy = d.kernel().fvar(hfy_fv);
+
+    // `csucc := ofNat (2k+2)` -- byte-for-byte the constant
+    // `diff_le_of_strict_mono_magnitude`'s own conclusion carries.
+    let two_nat = d.num(2);
+    let doubled = NatOps::mul(d, two_nat, k);
+    let e_acc = d.succ(doubled);
+    let e_acc_succ = d.succ(e_acc);
+    let csucc = d.const_app(p.of_nat, &[e_acc_succ]);
+    let eps2 = cadd(d, p, eps, eps);
+    let rhs = cmul(d, p, csucc, eps2);
+
+    let zero_c = czero(d, p);
+    let csucc_nonneg = nonneg_of_nat(d, p, e_acc_succ);
+    let eps_nonneg = {
+        let an = d.lemma(p.abs_nonneg, &[fx]);
+        d.lemma(p.le_trans, &[zero_c, abs_fx, eps, an, hfx])
+    };
+    let eps2_nonneg = {
+        let step = d.lemma(
+            p.add_le_add,
+            &[zero_c, eps, zero_c, eps, eps_nonneg, eps_nonneg],
+        );
+        let zero_zero = cadd(d, p, zero_c, zero_c);
+        let trim = d.lemma(p.add_zero, &[zero_c]);
+        let refl_eps2 = erefl(d, p, eps2);
+        d.lemma(
+            p.le_congr,
+            &[zero_zero, zero_c, eps2, eps2, trim, refl_eps2, step],
+        )
+    };
+    let rhs_nonneg = d.lemma(p.mul_nonneg, &[csucc, eps2, csucc_nonneg, eps2_nonneg]);
+
+    let dp = DerivPack {
+        f,
+        fp,
+        a,
+        b,
+        hf,
+        k,
+        hderiv,
+    };
+
+    // `le (add x (neg y)) rhs` -- the `(lo, hi) := (y, x)` orientation.
+    let part_i = small_image_one_sided(
+        d, p, dp, csucc, eps, rhs, rhs_nonneg, csucc_nonneg, y, x, hay, hxb, hfy, hfx,
+    );
+    // `le (add y (neg x)) rhs` -- the mirror.
+    let part_ii_raw = small_image_one_sided(
+        d, p, dp, csucc, eps, rhs, rhs_nonneg, csucc_nonneg, x, y, hax, hyb, hfx, hfy,
+    );
+
+    let neg_y = cneg(d, p, y);
+    let neg_x = cneg(d, p, x);
+    let diff_xy = cadd(d, p, x, neg_y);
+    let diff_yx = cadd(d, p, y, neg_x);
+    let neg_diff_xy = cneg(d, p, diff_xy);
+    let part_ii = {
+        let swap = d.lemma(p.neg_sub_swap, &[x, y]);
+        let flipped = esymm(d, p, neg_diff_xy, diff_yx, swap);
+        let refl_rhs = erefl(d, p, rhs);
+        d.lemma(
+            p.le_congr,
+            &[
+                diff_yx,
+                neg_diff_xy,
+                rhs,
+                rhs,
+                flipped,
+                refl_rhs,
+                part_ii_raw,
+            ],
+        )
+    };
+    let abs_diff_xy = cabs(d, p, diff_xy);
+    let proof = d.lemma(p.abs_le, &[diff_xy, rhs, part_i, part_ii]);
+
+    let value = {
+        let over_hfy = d.lam_fv(hfy_fv, hfy_ty, proof);
+        let over_hfx = d.lam_fv(hfx_fv, hfx_ty, over_hfy);
+        let over_hyb = d.lam_fv(hyb_fv, hyb_ty, over_hfx);
+        let over_hay = d.lam_fv(hay_fv, hay_ty, over_hyb);
+        let over_hxb = d.lam_fv(hxb_fv, hxb_ty, over_hay);
+        let over_hax = d.lam_fv(hax_fv, hax_ty, over_hxb);
+        let over_y = d.lam_fv(y_fv, carrier, over_hax);
+        let over_x = d.lam_fv(x_fv, carrier, over_y);
+        let over_eps = d.lam_fv(eps_fv, carrier, over_x);
+        let over_hderiv = d.lam_fv(hderiv_fv, hderiv_ty, over_eps);
+        let over_k = d.lam_fv(k_fv, nat, over_hderiv);
+        let over_hf = d.lam_fv(hf_fv, hf_ty, over_k);
+        let over_b = d.lam_fv(b_fv, carrier, over_hf);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        let over_fp = d.lam_fv(fp_fv, func_ty, over_a);
+        d.lam_fv(f_fv, func_ty, over_fp)
+    };
+    let ty = {
+        let concl = cle(d, p, abs_diff_xy, rhs);
+        let after_hfy = d.arrow(hfy_ty, concl);
+        let after_hfx = d.arrow(hfx_ty, after_hfy);
+        let after_hyb = d.arrow(hyb_ty, after_hfx);
+        let after_hay = d.arrow(hay_ty, after_hyb);
+        let after_hxb = d.arrow(hxb_ty, after_hay);
+        let after_hax = d.arrow(hax_ty, after_hxb);
+        let over_y = d.pi_fv(y_fv, carrier, after_hax);
+        let over_x = d.pi_fv(x_fv, carrier, over_y);
+        let over_eps = d.pi_fv(eps_fv, carrier, over_x);
+        let after_hderiv = d.arrow(hderiv_ty, over_eps);
+        let over_k = d.pi_fv(k_fv, nat, after_hderiv);
+        let after_hf = d.arrow(hf_ty, over_k);
+        let over_b = d.pi_fv(b_fv, carrier, after_hf);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        let over_fp = d.pi_fv(fp_fv, func_ty, over_a);
+        d.pi_fv(f_fv, func_ty, over_fp)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.abs_diff_le_of_small_image,
+        uparams: vec![],
+        ty,
+        value,
+    })
 }

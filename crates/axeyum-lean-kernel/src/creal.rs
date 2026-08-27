@@ -3975,6 +3975,35 @@ pub struct CRealPrelude {
     /// upper endpoint after `k` diagonal bisection steps. See
     /// [`Self::ivt_bisect_diag`].
     pub ivt_bisect_diag_hi: NameId,
+    /// `CReal.abs_diff_le_of_small_image : ∀ F F' a b, HasDerivativeOn F F' a
+    /// b → ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k)) (F' z)) →
+    /// ∀ eps x y, le a x → le x b → le a y → le y b → le (abs (F x)) eps →
+    /// le (abs (F y)) eps → le (abs (add x (neg y))) (mul (ofNat (Nat.succ
+    /// (Nat.succ (Nat.mul 2 k)))) (add eps eps))` (`creal/ivt.rs`) — **two
+    /// points of `[a,b]` whose `F`-values are both within `eps` of zero are
+    /// within `2(k+1)·2eps` of each other**, with NO hypothesis ordering them
+    /// and no [`Self::apart`] witness.
+    ///
+    /// This is the Cauchy criterion an exact IVT root needs: the bisection
+    /// brackets at two different accuracies are not nested and cannot be
+    /// ordered ([`Self::ivt_bisect_diag`]'s own doc records the verified
+    /// non-nesting), so [`Self::diff_le_of_strict_mono_magnitude`] — which
+    /// takes `le x y` — and [`Self::inverse_lipschitz_of_pos_deriv`] — which
+    /// takes `Apart x y` — are both out of reach at the point of use.
+    ///
+    /// `docs/mathematics-2026-08/diary-exact-root-obstruction.md` proposed
+    /// closing that gap through the LATTICE, at the pair `(min x y, max x y)`.
+    /// That does not close: the bound it yields mentions
+    /// `abs (F (min x y))`, and recovering `le (abs (F (min x y))) eps` needs
+    /// a LOWER bound on `F (min x y)`, which the meet-semilattice interface
+    /// ([`Self::min_le_left`], [`Self::min_le_right`], [`Self::le_min`]) plus
+    /// monotonicity cannot supply — every one of them bounds it ABOVE. The
+    /// route that does close is [`Self::lt_cotrans`] at the fixed strict pair
+    /// `(zero, 1/(e+1))`, evaluated at the difference: one disjunct hands
+    /// back the ordering `diff_le_of_strict_mono_magnitude` wants, the other
+    /// gives the goal outright, and [`Self::le_of_forall_le_add_small`]
+    /// removes the slack. See `creal/ivt.rs`'s own section header.
+    pub abs_diff_le_of_small_image: NameId,
     /// `CReal.hasDerivative_unique : ∀ F F1 F2 a b, HasDerivativeOn F F1 a b
     /// → HasDerivativeOn F F2 a b → lt a b → ∀ z, le a z → le z b → Equiv
     /// (F1 z) (F2 z)` (`creal/deriv_unique.rs`) — the derivative of a
@@ -5648,6 +5677,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         ivt_bisect_diag: kernel.name_str(creal, "ivt_bisect_diag"),
         ivt_bisect_diag_lo: kernel.name_str(creal, "ivt_bisect_diag_lo"),
         ivt_bisect_diag_hi: kernel.name_str(creal, "ivt_bisect_diag_hi"),
+        abs_diff_le_of_small_image: kernel.name_str(creal, "abs_diff_le_of_small_image"),
         has_derivative_unique: kernel.name_str(creal, "hasDerivative_unique"),
         fermat_interior_extremum: kernel.name_str(creal, "fermat_interiorExtremum"),
         rolle_interior_extremum: kernel.name_str(creal, "rolle_interiorExtremum"),
@@ -9604,6 +9634,7 @@ const STEPS: &[BuildStep] = &[
         requires: &[
             |p: CRealPrelude| p.abs,
             |p: CRealPrelude| p.abs_le,
+            |p: CRealPrelude| p.abs_nonneg,
             |p: CRealPrelude| p.add_assoc,
             |p: CRealPrelude| p.add_comm,
             |p: CRealPrelude| p.add_congr,
@@ -9613,12 +9644,15 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.add_zero,
             |p: CRealPrelude| p.bound,
             |p: CRealPrelude| p.bound_within,
+            |p: CRealPrelude| p.diff_le_of_strict_mono_magnitude,
             |p: CRealPrelude| p.equiv,
             |p: CRealPrelude| p.equiv_refl,
             |p: CRealPrelude| p.equiv_symm,
             |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.has_derivative_on,
             |p: CRealPrelude| p.le_abs_self,
             |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_of_forall_le_add_small,
             |p: CRealPrelude| p.le_of_lt,
             |p: CRealPrelude| p.le_refl,
             |p: CRealPrelude| p.le_trans,
@@ -9635,6 +9669,7 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.mul_one,
             |p: CRealPrelude| p.neg,
             |p: CRealPrelude| p.neg_le_neg,
+            |p: CRealPrelude| p.neg_sub_swap,
             |p: CRealPrelude| p.of_nat,
             |p: CRealPrelude| p.of_rat,
             |p: CRealPrelude| p.of_rat_add,
@@ -9654,6 +9689,7 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.zero,
         ],
         provides: &[
+            |p: CRealPrelude| p.abs_diff_le_of_small_image,
             |p: CRealPrelude| p.ivt_approx,
             |p: CRealPrelude| p.ivt_bisect,
             |p: CRealPrelude| p.ivt_bisect_diag,
