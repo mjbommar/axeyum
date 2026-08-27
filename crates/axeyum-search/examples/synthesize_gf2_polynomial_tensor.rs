@@ -25,13 +25,14 @@ struct Arguments {
     drat: Option<PathBuf>,
     ordered_terms: bool,
     polynomial_group_min_first: bool,
+    exact_rank_after_checked_lower: Option<usize>,
 }
 
 fn arguments() -> Arguments {
     let args: Vec<String> = std::env::args().skip(1).collect();
     assert!(
         args.len() >= 2,
-        "usage: synthesize_gf2_polynomial_tensor TERMS RANK [SECONDS] [--ordered-terms | --polynomial-group-min-first] [--dimacs PATH] [--witness PATH] [--check-model PATH --output-witness PATH] [--check-drat PATH]"
+        "usage: synthesize_gf2_polynomial_tensor TERMS RANK [SECONDS] [--ordered-terms | --polynomial-group-min-first] [--exact-rank-after-checked-lower RANK_MINUS_ONE] [--dimacs PATH] [--witness PATH] [--check-model PATH --output-witness PATH] [--check-drat PATH]"
     );
     let parse = |index: usize, name: &str| {
         args[index]
@@ -53,6 +54,7 @@ fn arguments() -> Arguments {
     let mut drat = None;
     let mut ordered_terms = false;
     let mut polynomial_group_min_first = false;
+    let mut exact_rank_after_checked_lower = None;
     while index < args.len() {
         if args[index] == "--ordered-terms" {
             ordered_terms = true;
@@ -62,6 +64,11 @@ fn arguments() -> Arguments {
         if args[index] == "--polynomial-group-min-first" {
             polynomial_group_min_first = true;
             index += 1;
+            continue;
+        }
+        if args[index] == "--exact-rank-after-checked-lower" {
+            exact_rank_after_checked_lower = Some(parse(index + 1, "checked lower rank"));
+            index += 2;
             continue;
         }
         let destination = match args[index].as_str() {
@@ -89,6 +96,17 @@ fn arguments() -> Arguments {
         !(ordered_terms && polynomial_group_min_first),
         "choose at most one symmetry mode"
     );
+    if let Some(lower) = exact_rank_after_checked_lower {
+        assert_eq!(
+            lower.checked_add(1),
+            Some(rank),
+            "checked lower rank must equal RANK - 1"
+        );
+        assert!(
+            pinned_witness.is_none(),
+            "exact-rank augmentation and pinned-witness mode cannot be combined"
+        );
+    }
     Arguments {
         terms,
         rank,
@@ -100,6 +118,7 @@ fn arguments() -> Arguments {
         drat,
         ordered_terms,
         polynomial_group_min_first,
+        exact_rank_after_checked_lower,
     }
 }
 
@@ -107,6 +126,28 @@ fn write_witness(path: &PathBuf, witness: &Gf2TensorDecomposition) {
     let mut bytes = serde_json::to_vec_pretty(witness).expect("serialize witness JSON");
     bytes.push(b'\n');
     std::fs::write(path, bytes).expect("write witness JSON");
+}
+
+fn selected_formula(
+    args: &Arguments,
+    encoding: &axeyum_search::tensor_decomposition::TensorRankEncoding,
+) -> axeyum_cnf::CnfFormula {
+    if args.exact_rank_after_checked_lower.is_some() {
+        encoding
+            .formula_with_exact_rank_nonzero_summands()
+            .expect("exact-rank augmentation must fit")
+    } else if let Some(path) = &args.pinned_witness {
+        let witness: Gf2TensorDecomposition =
+            serde_json::from_slice(&std::fs::read(path).expect("read witness JSON"))
+                .expect("parse witness JSON");
+        println!("witness={}", path.display());
+        println!("witness-rank={}", witness.terms.len());
+        encoding
+            .formula_with_witness(&witness)
+            .expect("witness must replay and fit budget")
+    } else {
+        encoding.formula().clone()
+    }
 }
 
 fn main() {
@@ -138,22 +179,12 @@ fn main() {
         "polynomial-group-min-first={}",
         args.polynomial_group_min_first
     );
-    println!("variables={}", encoding.formula().variable_count());
-    println!("clauses={}", encoding.formula().clauses().len());
-
-    let formula = if let Some(path) = &args.pinned_witness {
-        let witness: Gf2TensorDecomposition =
-            serde_json::from_slice(&std::fs::read(path).expect("read witness JSON"))
-                .expect("parse witness JSON");
-        let pinned = encoding
-            .formula_with_witness(&witness)
-            .expect("witness must replay and fit budget");
-        println!("witness={}", path.display());
-        println!("witness-rank={}", witness.terms.len());
-        pinned
-    } else {
-        encoding.formula().clone()
-    };
+    if let Some(lower) = args.exact_rank_after_checked_lower {
+        println!("checked-lower-rank-premise={lower}");
+    }
+    let formula = selected_formula(&args, &encoding);
+    println!("variables={}", formula.variable_count());
+    println!("clauses={}", formula.clauses().len());
 
     if let Some(path) = args.dimacs {
         std::fs::write(&path, formula.to_dimacs()).expect("write DIMACS");

@@ -1555,6 +1555,14 @@ rank-16 formula is 26,489 variables / 105,262 clauses / 1,809,746 bytes, SHA-256
 is live without a short cutoff. Wang's current source already implements the binary-form
 symmetry mathematics, so this is reusable Axeyum capability, not a novelty claim or rank result.
 
+**Premise-explicit exact tensor rank, 2026-08-26.** ADR-0592 leaves ordinary at-most-rank
+encoding unchanged and adds three nonzero-factor clauses per summand only when a caller names a
+checked rank-`k-1` exclusion. The checked `P_2` rank-two DRAT plus rank-three SAT/lift/replay is
+the two-sided control. Composed with the independently replayed `P_6 >= 16` certificate, the
+rank-16 polynomial-action formula has 26,489 variables / 105,310 clauses / 1,811,206 bytes,
+SHA-256 `bc932196...c7815`; CaDiCaL seed 2615 is live without a short cutoff. This removes
+zero-product padding but does not change the `[16,17]` interval.
+
 **Bilinear first-summand normalization, 2026-08-26.** ADR-0568 applies a complete
 matrix-tensor stabilizer reduction: a chosen nonzero summand occupies slot zero, its first
 factor is one of the `min(m,n)` matrix rank-normal forms, and only the remaining slots are

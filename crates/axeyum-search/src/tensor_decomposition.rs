@@ -442,6 +442,43 @@ impl TensorRankEncoding {
         }
         Ok(formula)
     }
+
+    /// Require every one of the `budget` rank-one summands to be nonzero.
+    ///
+    /// This changes an at-most-rank query into an exact-rank normal form and is
+    /// complete only when a separately checked lower bound rules out rank below
+    /// `budget`. A rank-one tensor is nonzero exactly when each of its three
+    /// factor vectors is nonzero, so the augmentation is three clauses per
+    /// summand and introduces no auxiliary variables.
+    ///
+    /// # Errors
+    ///
+    /// Refuses a clause that cannot be represented by the CNF layer.
+    pub fn formula_with_exact_rank_nonzero_summands(
+        &self,
+    ) -> Result<CnfFormula, TensorRankEncodingError> {
+        let mut formula = self.formula.clone();
+        for term in 0..self.budget {
+            for factor in [
+                &self.layout.a[term],
+                &self.layout.b[term],
+                &self.layout.c[term],
+            ] {
+                let literals = factor
+                    .iter()
+                    .map(|&variable| Ok(CnfLit::positive(cnf_var(variable)?)))
+                    .collect::<Result<Vec<_>, TensorRankEncodingError>>()?;
+                formula
+                    .add_clause(CnfClause::new(literals))
+                    .map_err(|error| {
+                        TensorRankEncodingError::Cnf(format!(
+                            "exact-rank nonzero factor: {error:?}"
+                        ))
+                    })?;
+            }
+        }
+        Ok(formula)
+    }
 }
 
 fn selected(variables: &[usize], values: &[bool]) -> Vec<usize> {
@@ -985,6 +1022,42 @@ mod tests {
             panic!("P2 rank two must remain unsatisfiable");
         };
         assert_eq!(check_drat(rank_two.formula(), &proof), Ok(true));
+    }
+
+    #[test]
+    fn checked_lower_bound_allows_exact_rank_nonzero_summands() {
+        let lower = encode_full_polynomial_rank_with_group_minimal_first(
+            2,
+            2,
+            TensorRankEncodingLimits::default(),
+        )
+        .unwrap();
+        let ProofSolveOutcome::Unsat(proof) = solve_with_drat_proof(lower.formula()) else {
+            panic!("P2 rank two must supply the checked lower-bound premise");
+        };
+        assert_eq!(check_drat(lower.formula(), &proof), Ok(true));
+
+        let exact = encode_full_polynomial_rank_with_group_minimal_first(
+            2,
+            3,
+            TensorRankEncodingLimits::default(),
+        )
+        .unwrap();
+        let formula = exact.formula_with_exact_rank_nonzero_summands().unwrap();
+        assert_eq!(
+            formula.clauses().len(),
+            exact.formula().clauses().len() + 3 * 3
+        );
+        let SatResult::Sat(model) = solve_with_rustsat_batsat(&formula).unwrap() else {
+            panic!("the exact P2 rank-three normal form must remain satisfiable");
+        };
+        let witness = exact.lift_model(&model).unwrap();
+        assert!(
+            witness
+                .terms
+                .iter()
+                .all(|term| { !term.a.is_empty() && !term.b.is_empty() && !term.c.is_empty() })
+        );
     }
 
     #[test]
