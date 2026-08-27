@@ -4943,6 +4943,39 @@ pub struct CRealPrelude {
     /// own construction) supplies the M-test's `(k, hcauchy)` pair DIRECTLY —
     /// no bridge needed. See `creal/trig_fn.rs`.
     pub cos_fn_uniform_converges: NameId,
+
+    // --- general `exp : CReal → CReal` (creal/exp_fn.rs) -----------------------
+    /// `CReal.expFnTermAbsLe : ∀ x, le zero x → le x one → ∀ k, le (abs
+    /// (powerSeriesTerm expTerm k x)) (expDominant k)` — the domination bound
+    /// [`Self::weierstrass_m_test`] needs. Unlike
+    /// [`Self::cos_fn_term_abs_le`], NO new per-file term/congruence pair is
+    /// needed here: `expTerm`'s coefficients cover EVERY `Nat` index (cosine's
+    /// support only even exponents), so [`Self::power_series_term`] /
+    /// [`Self::power_series_term_congr`] (already generic, `creal/power.rs`)
+    /// apply directly at `c := expTerm`. `0 ≤ x ≤ 1` gives `pow x k ≤ one`
+    /// ([`Self::pow_le_one`]), `abs_mul_le_of_bounds` folds that against
+    /// `le_refl (abs (expTerm k))` to `abs (powerSeriesTerm expTerm k x) ≤ abs
+    /// (expTerm k)` (up to `mul_one`), and [`Self::exp_term_abs_le_dominant`]
+    /// closes the rest by `le_trans`. See `creal/exp_fn.rs`.
+    pub exp_fn_term_abs_le: NameId,
+    /// `CReal.expFn : CReal → CReal` — general exponential on the bounded
+    /// domain `[0, 1]`, the `G` [`Self::weierstrass_m_test`]'s own proof
+    /// builds when applied at `f := powerSeriesTerm expTerm`, `mseq :=
+    /// expDominant`, `a := zero`, `b := one`, extracted from that
+    /// application's INFERRED type (never hand-reconstructed) so it is the
+    /// identical closed term [`Self::exp_fn_uniform_converges`]'s own `G`
+    /// slot names. See `creal/exp_fn.rs`.
+    pub exp_fn: NameId,
+    /// `CReal.expFnUniformConverges : UniformConvergesOn (fun n x => sumRange
+    /// (fun k => powerSeriesTerm expTerm k x) n) expFn zero one` — the M-test
+    /// applied at the exponential power series, ascribed against the NAMED
+    /// `expFn` (rather than the raw extracted `G`) so a caller sees the
+    /// constant, not its unfolding. `expDominantCauchy`'s own concrete
+    /// witness (`exp_dominant_cauchy_body_concrete`, reused unchanged from
+    /// `CReal.e`'s and `cosOne`'s own constructions) supplies the M-test's
+    /// `(k, hcauchy)` pair DIRECTLY — no bridge needed. See
+    /// `creal/exp_fn.rs`.
+    pub exp_fn_uniform_converges: NameId,
     /// `CReal.maxRange : (Nat → CReal) → Nat → CReal` — the `max`-lattice
     /// analogue of [`Self::sum_range`]: `maxRange f 0 := f 0`, `maxRange f
     /// (succ n) := max (maxRange f n) (f (succ n))`, so `maxRange f n` is
@@ -5539,6 +5572,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         cos_fn_term_congr: kernel.name_str(creal, "cosFnTerm_congr"),
         cos_fn: kernel.name_str(creal, "cosFn"),
         cos_fn_uniform_converges: kernel.name_str(creal, "cosFnUniformConverges"),
+        exp_fn_term_abs_le: kernel.name_str(creal, "expFnTermAbsLe"),
+        exp_fn: kernel.name_str(creal, "expFn"),
+        exp_fn_uniform_converges: kernel.name_str(creal, "expFnUniformConverges"),
         max_range: kernel.name_str(creal, "maxRange"),
         max_range_zero: kernel.name_str(creal, "maxRange_zero"),
         max_range_succ: kernel.name_str(creal, "maxRange_succ"),
@@ -9579,6 +9615,44 @@ const STEPS: &[BuildStep] = &[
         run: trig_fn::declare_cos_fn_family,
     },
     BuildStep {
+        label: "exp_fn::declare_exp_fn_family",
+        requires: &[
+            |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.abs_le,
+            |p: CRealPrelude| p.abs_mul_le_of_bounds,
+            |p: CRealPrelude| p.add_comm,
+            |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.equiv,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.exp_dominant,
+            |p: CRealPrelude| p.exp_term,
+            |p: CRealPrelude| p.exp_term_abs_le_dominant,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_of_lt,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.mul_one,
+            |p: CRealPrelude| p.neg_le_neg,
+            |p: CRealPrelude| p.pow_le_one,
+            |p: CRealPrelude| p.pow_nonneg,
+            |p: CRealPrelude| p.power_series_term,
+            |p: CRealPrelude| p.power_series_term_congr,
+            |p: CRealPrelude| p.sum_range,
+            |p: CRealPrelude| p.uniform_converges_on,
+            |p: CRealPrelude| p.weierstrass_m_test,
+            |p: CRealPrelude| p.zero_lt_one,
+        ],
+        provides: &[
+            |p: CRealPrelude| p.exp_fn,
+            |p: CRealPrelude| p.exp_fn_term_abs_le,
+            |p: CRealPrelude| p.exp_fn_uniform_converges,
+        ],
+        run: exp_fn::declare_exp_fn_family,
+    },
+    BuildStep {
         label: "supremum::declare_max_range",
         requires: &[
             |p: CRealPrelude| p.creal,
@@ -10678,6 +10752,7 @@ mod crossing;
 mod density;
 mod deriv_unique;
 mod derivative;
+mod exp_fn;
 mod exponential;
 mod extreme_value;
 mod fermat;
