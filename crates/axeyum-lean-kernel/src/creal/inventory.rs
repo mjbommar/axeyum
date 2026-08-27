@@ -64,6 +64,7 @@ mod polynomial;
 mod power;
 mod product;
 mod ratio_test;
+mod rolle;
 mod series;
 mod speedup;
 mod sqrt;
@@ -109,6 +110,7 @@ pub(crate) fn all_entries(
     all.extend(power::entries(p));
     all.extend(product::entries(p));
     all.extend(ratio_test::entries(p));
+    all.extend(rolle::entries(p));
     all.extend(series::entries(p));
     all.extend(speedup::entries(p));
     all.extend(sqrt::entries(p));
