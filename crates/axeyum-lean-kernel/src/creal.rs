@@ -4796,6 +4796,45 @@ pub struct CRealPrelude {
     /// kernel does not have, NOT that the principle is false (it is
     /// consistent, hence unprovable here rather than refutable).
     pub evt_attained_max_decides_sign: NameId,
+
+    // --- general `cos : CReal → CReal` (creal/trig_fn.rs) ---------------------
+    /// `CReal.cosFnTerm : Nat → CReal → CReal := fun k x => mul (cosTerm k)
+    /// (pow x (Nat.add k k))` — the `k`-th power-series term of general
+    /// cosine at the point `x`, `cosTerm k` reused unchanged (so `x := one`
+    /// makes this ι/δ-reduce to `cosTerm k` itself, up to `mul _ one ~ _`).
+    /// See `creal/trig_fn.rs`.
+    pub cos_fn_term: NameId,
+    /// `CReal.cosFnTermAbsLe : ∀ x, le zero x → le x one → ∀ k, le (abs
+    /// (cosFnTerm k x)) (expDominant k)` — the domination bound
+    /// [`Self::weierstrass_m_test`] needs, closed WITHOUT any new
+    /// domination series: `0 ≤ x ≤ 1` gives `pow x (Nat.add k k) ≤ one`
+    /// ([`Self::pow_le_one`]), `abs_mul_le_of_bounds` folds that against
+    /// `le_refl (abs (cosTerm k))` to `abs (cosFnTerm k x) ≤ abs (cosTerm k)`
+    /// (up to `mul_one`), and [`Self::cos_term_abs_le_dominant`] closes the
+    /// rest by `le_trans`. See `creal/trig_fn.rs`.
+    pub cos_fn_term_abs_le: NameId,
+    /// `CReal.cosFnTerm_congr : ∀ k x y, Equiv x y → Equiv (cosFnTerm k x)
+    /// (cosFnTerm k y)` — [`Self::mul_pow_congr`] applied at the constant
+    /// coefficient function `fun _ => cosTerm k` and exponent `Nat.add k k`.
+    /// See `creal/trig_fn.rs`.
+    pub cos_fn_term_congr: NameId,
+    /// `CReal.cosFn : CReal → CReal` — general cosine on the bounded domain
+    /// `[0, 1]`, the `G` [`Self::weierstrass_m_test`]'s own proof builds when
+    /// applied at `f := cosFnTerm`, `mseq := expDominant`, `a := zero`, `b :=
+    /// one`, extracted from that application's INFERRED type (never
+    /// hand-reconstructed) so it is the identical closed term
+    /// [`Self::cos_fn_uniform_converges`]'s own `G` slot names. See
+    /// `creal/trig_fn.rs`.
+    pub cos_fn: NameId,
+    /// `CReal.cosFnUniformConverges : UniformConvergesOn (fun n x => sumRange
+    /// (fun k => cosFnTerm k x) n) cosFn zero one` — the M-test applied at
+    /// cosine's own series, ascribed against the NAMED `cosFn` (rather than
+    /// the raw extracted `G`) so a caller sees the constant, not its
+    /// unfolding. `expDominantCauchy`'s own concrete witness
+    /// (`exp_dominant_cauchy_body_concrete`, reused unchanged from `cosOne`'s
+    /// own construction) supplies the M-test's `(k, hcauchy)` pair DIRECTLY —
+    /// no bridge needed. See `creal/trig_fn.rs`.
+    pub cos_fn_uniform_converges: NameId,
 }
 
 impl CRealPrelude {
@@ -5310,6 +5349,11 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         mul_pow_congr: kernel.name_str(creal, "mulPowCongr"),
         evt_linear: kernel.name_str(creal, "evtLinear"),
         evt_attained_max_decides_sign: kernel.name_str(creal, "evt_attained_max_decides_sign"),
+        cos_fn_term: kernel.name_str(creal, "cosFnTerm"),
+        cos_fn_term_abs_le: kernel.name_str(creal, "cosFnTermAbsLe"),
+        cos_fn_term_congr: kernel.name_str(creal, "cosFnTerm_congr"),
+        cos_fn: kernel.name_str(creal, "cosFn"),
+        cos_fn_uniform_converges: kernel.name_str(creal, "cosFnUniformConverges"),
     }
 }
 
@@ -9106,6 +9150,45 @@ const STEPS: &[BuildStep] = &[
         ],
         run: extreme_value::declare_extreme_value,
     },
+    BuildStep {
+        label: "trig_fn::declare_cos_fn_family",
+        requires: &[
+            |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.abs_le,
+            |p: CRealPrelude| p.abs_mul_le_of_bounds,
+            |p: CRealPrelude| p.add_comm,
+            |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.cos_term,
+            |p: CRealPrelude| p.cos_term_abs_le_dominant,
+            |p: CRealPrelude| p.equiv,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.exp_dominant,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_of_lt,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.mul_one,
+            |p: CRealPrelude| p.mul_pow_congr,
+            |p: CRealPrelude| p.neg_le_neg,
+            |p: CRealPrelude| p.pow_le_one,
+            |p: CRealPrelude| p.pow_nonneg,
+            |p: CRealPrelude| p.sum_range,
+            |p: CRealPrelude| p.uniform_converges_on,
+            |p: CRealPrelude| p.weierstrass_m_test,
+            |p: CRealPrelude| p.zero_lt_one,
+        ],
+        provides: &[
+            |p: CRealPrelude| p.cos_fn,
+            |p: CRealPrelude| p.cos_fn_term,
+            |p: CRealPrelude| p.cos_fn_term_abs_le,
+            |p: CRealPrelude| p.cos_fn_term_congr,
+            |p: CRealPrelude| p.cos_fn_uniform_converges,
+        ],
+        run: trig_fn::declare_cos_fn_family,
+    },
 ];
 
 /// Build the real prelude: `ℝ` as a Bishop setoid over the constructed `ℚ`,
@@ -10137,6 +10220,7 @@ mod series;
 mod speedup;
 mod sqrt;
 mod trig;
+mod trig_fn;
 mod uniform_continuity;
 mod uniform_convergence;
 

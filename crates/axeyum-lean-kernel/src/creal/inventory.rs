@@ -67,6 +67,7 @@ mod series;
 mod speedup;
 mod sqrt;
 mod trig;
+mod trig_fn;
 mod uniform_continuity;
 mod uniform_convergence;
 
@@ -109,6 +110,7 @@ pub(crate) fn all_entries(
     all.extend(speedup::entries(p));
     all.extend(sqrt::entries(p));
     all.extend(trig::entries(p));
+    all.extend(trig_fn::entries(p));
     all.extend(uniform_continuity::entries(p));
     all.extend(uniform_convergence::entries(p));
     all
