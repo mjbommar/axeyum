@@ -126,6 +126,12 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
+    // At 428 pinned entries this literal is a few hundred bytes over
+    // clippy's fixed 16 KiB `large_stack_arrays` threshold -- an intrinsic
+    // consequence of the inventory's size, not a per-entry inefficiency
+    // worth restructuring into a `Vec` (which would cost a heap allocation
+    // on every prelude-build test run instead).
+    #[allow(clippy::large_stack_arrays)]
     let expected: [(&str, crate::NameId, &str); 428] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
