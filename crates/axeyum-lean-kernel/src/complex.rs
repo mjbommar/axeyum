@@ -3734,6 +3734,15 @@ const STEPS: &[BuildStep] = &[
 ///
 /// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
 /// the kernel **refused** a proof, not that a script gave up.
+///
+/// # Panics
+///
+/// Panics if the `STEPS` build order is internally inconsistent -- a step whose
+/// `requires` are not yet `provided`. That is a **programming error in this
+/// file**, deliberately distinct from a `KernelError`: an `Err` means the
+/// kernel rejected a proof, whereas this panic means the declarations were
+/// ordered wrongly and no proof was ever attempted. Conflating the two is what
+/// the `STEPS` table exists to prevent, so it aborts rather than returning.
 pub fn build_complex_prelude(kernel: &mut Kernel) -> Result<ComplexPrelude, KernelError> {
     let creal = build_creal_prelude(kernel)?;
     let prelude = intern_names(kernel, creal);
