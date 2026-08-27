@@ -23,5 +23,20 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.cos_fn_uniform_converges,
             "theorem",
         ),
+        (
+            "CReal.cosFnTermAbsLeWide",
+            p.cos_fn_term_abs_le_wide,
+            "theorem",
+        ),
+        (
+            "CReal.cosDominant16Over25",
+            p.cos_dominant_16_over_25,
+            "def",
+        ),
+        (
+            "CReal.cosDominant16Over25CauchyBody",
+            p.cos_dominant_16_over_25_cauchy_body,
+            "theorem",
+        ),
     ]
 }

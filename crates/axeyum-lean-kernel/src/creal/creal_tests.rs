@@ -10197,6 +10197,7 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "congruence::declare_congruence_extras",
     "extreme_value::declare_extreme_value",
     "trig_fn::declare_cos_fn_family",
+    "trig_fn::declare_cos_fn_wide_progress",
     "exp_fn::declare_exp_fn_family",
     "supremum::declare_max_range",
     "supremum::declare_max_range_transport",
