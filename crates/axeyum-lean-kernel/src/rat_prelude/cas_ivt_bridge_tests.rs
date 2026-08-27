@@ -96,11 +96,10 @@ use axeyum_cas::real_algebraic::{IvtCertificate, polynomial_ivt};
 use axeyum_ir::Rational;
 
 use super::ops::{
-    radd, rat_ty, rchain, rcongr, req, rlt, rmul, rpoly_eval, rpow, rrefl, rsymm, rtrans, rzero,
+    radd, rat_ty, rchain, rcongr, rlt, rmul, rpoly_eval, rpow, rrefl, rsymm, rtrans, rzero,
 };
 use super::{RatPrelude, build_rat_prelude};
 use crate::BinderInfo;
-use crate::env::Declaration;
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
@@ -120,7 +119,11 @@ fn built() -> (Kernel, RatPrelude) {
 /// requiring an integer value. `None` on any genuinely fractional value —
 /// this slice does not attempt a general `Rat.ofRat` cast (see module doc).
 fn rational_to_int(r: Rational) -> Option<i128> {
-    if r.is_integer() { Some(r.numerator()) } else { None }
+    if r.is_integer() {
+        Some(r.numerator())
+    } else {
+        None
+    }
 }
 
 /// Translate an [`IvtCertificate`]'s SIGN BRACKET ONLY — `poly` (LSB-first)
@@ -377,7 +380,9 @@ fn poly_eval_to_of_int(
         );
 
         let ec_partial_next = radd(d, ec_partial, term_i);
-        let step_add1 = rcongr(d, ec_partial, clean_raw, h_clean, &|d, t| radd(d, t, term_i));
+        let step_add1 = rcongr(d, ec_partial, clean_raw, h_clean, &|d, t| {
+            radd(d, t, term_i)
+        });
         let mid_a1 = radd(d, clean_raw, term_i);
         let step_add2 = rcongr(d, term_i, term_target, h_term_i, &|d, t| {
             radd(d, clean_raw, t)
@@ -447,7 +452,6 @@ fn lt_zero_via_true(
 ) -> ExprId {
     let zero_c = rzero(d, p);
     let target = of_int(d, p, total_int);
-    let target_lt = rlt(d, p, target, zero_c);
     let trivial = d.true_intro();
     rat_eq_rewrite_back(d, eval_expr, target, eq_proof, trivial, &|d, t| {
         rlt(d, p, t, zero_c)
@@ -468,7 +472,6 @@ fn zero_lt_via_nat_le(
 ) -> ExprId {
     let zero_c = rzero(d, p);
     let target = of_int(d, p, total_int);
-    let target_lt = rlt(d, p, zero_c, target);
     let nat_bound = nat_le_lit(d, 1, hi);
     rat_eq_rewrite_back(d, eval_expr, target, eq_proof, nat_bound, &|d, t| {
         rlt(d, p, zero_c, t)
@@ -522,14 +525,21 @@ mod tests {
         // The translator: certificate -> integer sign-bracket data.
         let (coeffs_int_vals, a_int_val, b_int_val) = sign_bracket_to_int(&cert)
             .expect("x^3-2 and the bracket (1,2) are integer-valued: translator must accept");
-        assert_eq!(coeffs_int_vals, vec![-2, 0, 0, 1], "translator: x^3-2 -> [-2,0,0,1]");
+        assert_eq!(
+            coeffs_int_vals,
+            vec![-2, 0, 0, 1],
+            "translator: x^3-2 -> [-2,0,0,1]"
+        );
         assert_eq!((a_int_val, b_int_val), (1, 2));
 
         let mut d = IntDev::new(&mut kernel, prelude.int);
         let p = prelude;
 
         // Build the coefficient function ONCE, shared by both endpoints.
-        let coeffs_int: Vec<ExprId> = coeffs_int_vals.iter().map(|&n| int_lit(&mut d, n)).collect();
+        let coeffs_int: Vec<ExprId> = coeffs_int_vals
+            .iter()
+            .map(|&n| int_lit(&mut d, n))
+            .collect();
         let coeffs_rat: Vec<ExprId> = coeffs_int.iter().map(|&i| of_int(&mut d, p, i)).collect();
         let c = n_term_polynomial(&mut d, p, &coeffs_rat);
 
@@ -541,7 +551,8 @@ mod tests {
         let n_lit = d.num(u32::try_from(coeffs_int.len()).expect("fits"));
         let eval_a = rpoly_eval(&mut d, p, c, n_lit, a_rat);
         let proof_lower = lt_zero_via_true(&mut d, p, eval_a, total_a, eq_a);
-        let stmt_lower = rlt(&mut d, p, eval_a, rzero(&mut d, p));
+        let zero_c1 = rzero(&mut d, p);
+        let stmt_lower = rlt(&mut d, p, eval_a, zero_c1);
 
         let name_lower = d
             .kernel()
@@ -564,12 +575,14 @@ mod tests {
         let (total_b, eq_b) =
             poly_eval_to_of_int(&mut d, p, c, &coeffs_int, &coeffs_rat, b_rat, b_int);
         let eval_b = rpoly_eval(&mut d, p, c, n_lit, b_rat);
-        // p(2) = 6; nat_le_lit needs an upper bound covering the literal
-        // `Int.mul total_b (ofNat 1)` reduces to (6) plus slack for the
-        // `ofNat 1` factor's own reduction -- 8 is a safe round number for
-        // this certificate's degree.
-        let proof_upper = zero_lt_via_nat_le(&mut d, p, eval_b, total_b, eq_b, 8);
-        let stmt_upper = rlt(&mut d, p, rzero(&mut d, p), eval_b);
+        // p(2) = 6 exactly -- `nat_le_lit`'s `hi` must be the EXACT value the
+        // fully-reduced `Int.mul total_b (ofNat 1)` computes to, not a round
+        // "safe" upper bound: `Nat.le 1 6` and `Nat.le 1 8` are different
+        // (non-defeq) propositions, so a slack value here is simply wrong,
+        // not conservative.
+        let proof_upper = zero_lt_via_nat_le(&mut d, p, eval_b, total_b, eq_b, 6);
+        let zero_c2 = rzero(&mut d, p);
+        let stmt_upper = rlt(&mut d, p, zero_c2, eval_b);
 
         let name_upper = d
             .kernel()
@@ -595,7 +608,8 @@ mod tests {
         // against the FALSE statement's type, exercising
         // `Kernel::add_declaration`'s own type check. `p(1) < 0` is TRUE;
         // `0 < p(1)` is FALSE (p(1) = -1).
-        let false_stmt = rlt(&mut d, p, rzero(&mut d, p), eval_a);
+        let zero_c3 = rzero(&mut d, p);
+        let false_stmt = rlt(&mut d, p, zero_c3, eval_a);
         let name_wrong = d
             .kernel()
             .name_str(anon, "Check.ivt_sign_bracket_cbrt2_wrong");
@@ -633,14 +647,17 @@ mod tests {
         ];
         let cert = polynomial_ivt(&poly, Rational::integer(1), Rational::integer(2))
             .expect("the CAS must produce an IVT certificate for x^4-2 on (1,2)");
-        let (coeffs_int_vals, a_int_val, b_int_val) = sign_bracket_to_int(&cert)
-            .expect("x^4-2 and the bracket (1,2) are integer-valued");
+        let (coeffs_int_vals, a_int_val, b_int_val) =
+            sign_bracket_to_int(&cert).expect("x^4-2 and the bracket (1,2) are integer-valued");
         assert_eq!(coeffs_int_vals, vec![-2, 0, 0, 0, 1]);
 
         let mut d = IntDev::new(&mut kernel, prelude.int);
         let p = prelude;
 
-        let coeffs_int: Vec<ExprId> = coeffs_int_vals.iter().map(|&n| int_lit(&mut d, n)).collect();
+        let coeffs_int: Vec<ExprId> = coeffs_int_vals
+            .iter()
+            .map(|&n| int_lit(&mut d, n))
+            .collect();
         let coeffs_rat: Vec<ExprId> = coeffs_int.iter().map(|&i| of_int(&mut d, p, i)).collect();
         let c = n_term_polynomial(&mut d, p, &coeffs_rat);
         let n_lit = d.num(u32::try_from(coeffs_int.len()).expect("fits"));
@@ -651,7 +668,8 @@ mod tests {
             poly_eval_to_of_int(&mut d, p, c, &coeffs_int, &coeffs_rat, a_rat, a_int);
         let eval_a = rpoly_eval(&mut d, p, c, n_lit, a_rat);
         let proof_lower = lt_zero_via_true(&mut d, p, eval_a, total_a, eq_a);
-        let stmt_lower = rlt(&mut d, p, eval_a, rzero(&mut d, p));
+        let zero_c1 = rzero(&mut d, p);
+        let stmt_lower = rlt(&mut d, p, eval_a, zero_c1);
         let name_lower = d
             .kernel()
             .name_str(anon, "Check.ivt_sign_bracket_deg4_lower");
@@ -661,15 +679,19 @@ mod tests {
             ty: stmt_lower,
             value: proof_lower,
         });
-        assert!(admitted_lower.is_ok(), "p(1) < 0 for x^4-2: {admitted_lower:?}");
+        assert!(
+            admitted_lower.is_ok(),
+            "p(1) < 0 for x^4-2: {admitted_lower:?}"
+        );
 
         let b_int = int_lit(&mut d, b_int_val);
         let b_rat = of_int(&mut d, p, b_int);
         let (total_b, eq_b) =
             poly_eval_to_of_int(&mut d, p, c, &coeffs_int, &coeffs_rat, b_rat, b_int);
         let eval_b = rpoly_eval(&mut d, p, c, n_lit, b_rat);
-        let proof_upper = zero_lt_via_nat_le(&mut d, p, eval_b, total_b, eq_b, 16);
-        let stmt_upper = rlt(&mut d, p, rzero(&mut d, p), eval_b);
+        let proof_upper = zero_lt_via_nat_le(&mut d, p, eval_b, total_b, eq_b, 14);
+        let zero_c2 = rzero(&mut d, p);
+        let stmt_upper = rlt(&mut d, p, zero_c2, eval_b);
         let name_upper = d
             .kernel()
             .name_str(anon, "Check.ivt_sign_bracket_deg4_upper");
@@ -679,6 +701,9 @@ mod tests {
             ty: stmt_upper,
             value: proof_upper,
         });
-        assert!(admitted_upper.is_ok(), "0 < p(2) for x^4-2: {admitted_upper:?}");
+        assert!(
+            admitted_upper.is_ok(),
+            "0 < p(2) for x^4-2: {admitted_upper:?}"
+        );
     }
 }
