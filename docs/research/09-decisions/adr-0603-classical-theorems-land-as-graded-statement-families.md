@@ -59,3 +59,40 @@ states all four rows for each, as measured status rather than aspiration —
 including that EVT's own row 2 is itself only "in progress"
 (`crates/axeyum-cas/src/extremum.rs`), and that MVT's and LUB's row 2 are
 currently asserted unavailability rather than proved refutations.
+
+## Amendment, 2026-08-27: row 2 is PROVED for exactly one theorem
+
+Measured against the kernel and the CAS source, not against prose:
+
+- **IVT row 2 is genuine.** `creal/ivt.rs` carries two independent,
+  kernel-verified counterexamples on `F := id` over `[-1,2]`, plus a concrete
+  reduction test recording one at the kernel level.
+- **EVT row 2 is NOT landed.** No declaration exists, and
+  `crates/axeyum-cas/src/extremum.rs` says so itself: *"Row 2 (kernel side,
+  **in progress**)"*. The coordinator repeatedly described EVT's boundary as
+  "refuted rather than merely unbuilt" — that was an assertion inherited from
+  the curriculum map, not a proved refutation.
+- **MVT row 2** is an inherited assertion (`creal/monotone.rs:5029-5032`)
+  which leans on the EVT one above, so it inherits its unprovenness.
+- **LUB row 2** is a clean absence — no constructive-LUB counterexample exists
+  anywhere in the repository.
+- **Taylor row 2** is undecided: which statement (Lagrange vs integral-form
+  remainder) would even be the refutation target has not been settled.
+- **FTA row 2** is unassessed, and may not belong in this failure class at
+  all: Bishop-style constructive analysis proves an APPROXIMATE FTA via
+  infimum-of-modulus over a compact disk. Neither attempted nor refuted here.
+
+**Consequence for the Pareto argument.** "The entry proves WHERE the boundary
+is, with a machine-checked certificate" is the strongest thing this design
+claims over a classical library — and it currently holds for **one theorem of
+five**. An asserted unavailability is exactly the shape of claim this project
+audits against everywhere else: it cannot fail, so it is not evidence. Row 2
+must be either proved or labeled "asserted, not proved" wherever it appears;
+`docs/curriculum/graded-statement-families.md` now labels each one.
+
+**Cheapest closures, measured**: `polynomial_mvt` (row 3 for MVT) has every
+ingredient shipped today — `rat_derivative`, `polynomial_ivt`,
+`polynomial_extremum` — and is assembly, not new mathematics. The row-2
+refutations are genuine research: each needs a kernel-computed counterexample
+of the kind `creal/ivt.rs` already demonstrates is achievable.
+
