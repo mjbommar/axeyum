@@ -19611,3 +19611,447 @@ mod integral_abs_le_tests {
         );
     }
 }
+
+// --- piece 1, the SUM-level half -----------------------------------------
+//
+// The nineteenth lane's slice of the close-endpoint estimate. Nothing here
+// mentions `riemannSum`, a mesh, or a modulus: it is the general fact that a
+// UNIFORM per-term bound on the difference of two finite sums bounds the
+// difference of the sums, with the term count as the only factor.
+// `CReal.sumRange_const` is what makes it three lemma applications rather
+// than an induction, and finding it is what the register's "which
+// declaration already does this?" question bought this time.
+
+/// `fun i => add (f i) (neg (g i))` — built once so every occurrence interns
+/// to the same `ExprId`, the discipline this file's 74 s incident set.
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "piece 1's summand-difference builder; consumed once the \
+                  per-term Riemann estimate that feeds sum_range_pair_diff_le \
+                  lands"
+    )
+)]
+fn diff_fn_of(d: &mut IntDev<'_>, p: CRealPrelude, f: ExprId, g: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let fi = d.apply(f, &[i]);
+    let gi = d.apply(g, &[i]);
+    let ngi = cneg(d, p, gi);
+    let body = cadd(d, p, fi, ngi);
+    d.lam_fv(i_fv, nat, body)
+}
+
+/// `fun i => abs (add (f i) (neg (g i)))`.
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "piece 1's |summand difference| builder; same consumer as \
+                  diff_fn_of"
+    )
+)]
+fn abs_diff_fn_of(d: &mut IntDev<'_>, p: CRealPrelude, f: ExprId, g: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let fi = d.apply(f, &[i]);
+    let gi = d.apply(g, &[i]);
+    let ngi = cneg(d, p, gi);
+    let body = cadd(d, p, fi, ngi);
+    let a = d.const_app(p.abs, &[body]);
+    d.lam_fv(i_fv, nat, a)
+}
+
+/// `Equiv (add (sumRange f n) (neg (sumRange g n)))
+///        (sumRange (fun i => add (f i) (neg (g i))) n)`.
+///
+/// The setoid has no `sumRange_neg`, and routing one through
+/// [`CRealPrelude::mul_sum_range`] at `neg one` would need a `one_mul` this
+/// prelude does not publish (it has [`CRealPrelude::mul_one`] only). So the
+/// difference is reassembled from the ADDITIVE law instead:
+/// [`CRealPrelude::sum_range_add`] at `(fun i => f i − g i)` and `g` gives
+/// `sumRange (fun i => (f i − g i) + g i) n ~ sumRange D n + sumRange g n`,
+/// and the summand on the left is pointwise `f i` — so
+/// `sumRange f n ~ sumRange D n + sumRange g n`, which the four standard
+/// additive laws turn into the stated form. No new estimate anywhere.
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "the setoid's missing sumRange_neg, reassembled additively; \
+                  consumed by sum_range_pair_diff_le, itself awaiting the \
+                  per-term Riemann estimate"
+    )
+)]
+fn sum_range_diff_local(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    g: ExprId,
+    n: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let zero = czero(d, p);
+
+    let s1 = d.const_app(p.sum_range, &[f, n]);
+    let s2 = d.const_app(p.sum_range, &[g, n]);
+    let neg_s2 = cneg(d, p, s2);
+
+    let diff_fn = diff_fn_of(d, p, f, g);
+    let sd = d.const_app(p.sum_range, &[diff_fn, n]);
+
+    // `fun i => (f i − g i) + g i`, the summand `sum_range_add` produces.
+    let joined_fn = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let fi = d.apply(f, &[i]);
+        let gi = d.apply(g, &[i]);
+        let ngi = cneg(d, p, gi);
+        let dfi = cadd(d, p, fi, ngi);
+        let body = cadd(d, p, dfi, gi);
+        d.lam_fv(i_fv, nat, body)
+    };
+    let sum_joined = d.const_app(p.sum_range, &[joined_fn, n]);
+
+    // pointwise : forall i, Equiv ((f i − g i) + g i) (f i)
+    let pointwise = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let fi = d.apply(f, &[i]);
+        let gi = d.apply(g, &[i]);
+        let ngi = cneg(d, p, gi);
+        let dfi = cadd(d, p, fi, ngi);
+        let start = cadd(d, p, dfi, gi);
+
+        let a1 = d.lemma(p.add_assoc, &[fi, ngi, gi]);
+        let inner = cadd(d, p, ngi, gi);
+        let mid = cadd(d, p, fi, inner);
+
+        let cm = d.lemma(p.add_comm, &[ngi, gi]);
+        let inner2 = cadd(d, p, gi, ngi);
+        let refl_fi = d.lemma(p.equiv_refl, &[fi]);
+        let step2 = d.lemma(p.add_congr, &[fi, fi, inner, inner2, refl_fi, cm]);
+        let mid2 = cadd(d, p, fi, inner2);
+
+        let an = d.lemma(p.add_neg, &[gi]);
+        let step3 = d.lemma(p.add_congr, &[fi, fi, inner2, zero, refl_fi, an]);
+        let mid3 = cadd(d, p, fi, zero);
+
+        let step4 = d.lemma(p.add_zero, &[fi]);
+        let chain = echain(
+            d,
+            p,
+            start,
+            &[(mid, a1), (mid2, step2), (mid3, step3), (fi, step4)],
+        );
+        d.lam_fv(i_fv, nat, chain)
+    };
+
+    let h_congr = d.lemma(p.sum_range_congr, &[joined_fn, f, n, pointwise]);
+    // h_congr : Equiv sum_joined s1
+    let h_add = d.lemma(p.sum_range_add, &[diff_fn, g, n]);
+    // h_add : Equiv sum_joined (add sd s2)
+    let sd_plus_s2 = cadd(d, p, sd, s2);
+    let h_sym = d.lemma(p.equiv_symm, &[sum_joined, s1, h_congr]);
+    let h_s1 = d.lemma(p.equiv_trans, &[s1, sum_joined, sd_plus_s2, h_sym, h_add]);
+    // h_s1 : Equiv s1 (add sd s2)
+
+    let start = cadd(d, p, s1, neg_s2);
+    let refl_ns2 = d.lemma(p.equiv_refl, &[neg_s2]);
+    let t1 = d.lemma(
+        p.add_congr,
+        &[s1, sd_plus_s2, neg_s2, neg_s2, h_s1, refl_ns2],
+    );
+    let m1 = cadd(d, p, sd_plus_s2, neg_s2);
+
+    let t2 = d.lemma(p.add_assoc, &[sd, s2, neg_s2]);
+    let inner = cadd(d, p, s2, neg_s2);
+    let m2 = cadd(d, p, sd, inner);
+
+    let an = d.lemma(p.add_neg, &[s2]);
+    let refl_sd = d.lemma(p.equiv_refl, &[sd]);
+    let t3 = d.lemma(p.add_congr, &[sd, sd, inner, zero, refl_sd, an]);
+    let m3 = cadd(d, p, sd, zero);
+
+    let t4 = d.lemma(p.add_zero, &[sd]);
+    echain(d, p, start, &[(m1, t1), (m2, t2), (m3, t3), (sd, t4)])
+}
+
+/// From a UNIFORM per-term bound below `Nat.succ m`,
+///
+/// ```text
+/// (∀ i, Nat.lt i (succ m) → le (abs (f i − g i)) kb)
+///   → le (abs (sumRange f (succ m) − sumRange g (succ m)))
+///        (mul (ofNat (succ m)) kb)
+/// ```
+///
+/// [`sum_range_diff_local`] to move the difference inside,
+/// [`CRealPrelude::abs_sum_range_le`] for the triangle inequality,
+/// [`CRealPrelude::sum_range_le`] against the constant function, and
+/// [`CRealPrelude::sum_range_const`] to collapse it. The `succ m` shape is
+/// `sum_range_const`'s own and is exactly `riemannSum`'s term count, so no
+/// `Nat` arithmetic is introduced.
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "the SUM-level half of piece 1 (the close-endpoint estimate); \
+                  its consumer is the per-term Riemann estimate, which is \
+                  exactly what did not land this lane"
+    )
+)]
+fn sum_range_pair_diff_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    g: ExprId,
+    m: ExprId,
+    kb: ExprId,
+    pointwise: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let n = d.succ(m);
+
+    let s1 = d.const_app(p.sum_range, &[f, n]);
+    let s2 = d.const_app(p.sum_range, &[g, n]);
+    let neg_s2 = cneg(d, p, s2);
+    let start = cadd(d, p, s1, neg_s2);
+
+    let diff_fn = diff_fn_of(d, p, f, g);
+    let sd = d.const_app(p.sum_range, &[diff_fn, n]);
+    let h_eq = sum_range_diff_local(d, p, f, g, n); // Equiv start sd
+
+    let abs_start = d.const_app(p.abs, &[start]);
+    let abs_sd = d.const_app(p.abs, &[sd]);
+    let h_abs = d.lemma(p.abs_congr, &[start, sd, h_eq]); // Equiv abs_start abs_sd
+
+    let abs_diff_fn = abs_diff_fn_of(d, p, f, g);
+    let sum_abs = d.const_app(p.sum_range, &[abs_diff_fn, n]);
+    let tri = d.lemma(p.abs_sum_range_le, &[diff_fn, n]); // le abs_sd sum_abs
+
+    // `fun _ : Nat => kb`. The binder is `Nat`, not the carrier: `sumRange`
+    // takes a `Nat → CReal`, and giving the constant function a `CReal`
+    // binder is a SORT mismatch the kernel reports as a bare
+    // `TypeMismatch { expected: ExprId(3), … }` — an unrenderable low id,
+    // naming neither the lambda nor `sumRange`.
+    let const_fn = {
+        let i_fv = d.fresh_fvar();
+        d.lam_fv(i_fv, nat, kb)
+    };
+    let sum_const = d.const_app(p.sum_range, &[const_fn, n]);
+    let mono = d.lemma(p.sum_range_le, &[abs_diff_fn, const_fn, n, pointwise]);
+    // mono : le sum_abs sum_const
+
+    let step = d.lemma(p.le_trans, &[abs_sd, sum_abs, sum_const, tri, mono]);
+    let hconst = d.lemma(p.sum_range_const, &[kb, m]);
+    // hconst : Equiv sum_const (mul (ofNat (succ m)) kb)
+    let n_real = d.const_app(p.of_nat, &[n]);
+    let bound = cmul(d, p, n_real, kb);
+    let h_abs_sym = d.lemma(p.equiv_symm, &[abs_start, abs_sd, h_abs]);
+    d.lemma(
+        p.le_congr,
+        &[abs_sd, abs_start, sum_const, bound, h_abs_sym, hconst, step],
+    )
+}
+
+#[cfg(test)]
+mod sum_range_pair_diff_le_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// Symbolic in the two summand functions, the term count, the bound and
+    /// the pointwise hypothesis, closed into a real `Theorem` — so the claim
+    /// is checked by `Kernel::add_declaration`, not by `cargo check`, and
+    /// against genuinely free variables rather than literals.
+    ///
+    /// **No concrete instantiation, deliberately, and this is the one case
+    /// where adding one would WEAKEN the check.** The only concrete pair
+    /// whose pointwise hypothesis is closed without importing the whole
+    /// per-term estimate is `f = g = (fun _ => zero)` at `kb := zero`, and
+    /// there the bound `(succ m)·0` and the value `0` coincide — precisely
+    /// the situation the eighteenth lane avoided by declining a constant `F`,
+    /// because a transposed term count stays true. The negative control
+    /// below transposes the count instead, where it is visible.
+    #[test]
+    fn sum_range_pair_diff_le_proves_the_stated_bound() {
+        crate::on_a_deep_stack(sum_range_pair_diff_le_proves_the_stated_bound_body);
+    }
+
+    fn sum_range_pair_diff_le_proves_the_stated_bound_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+        let nat = d.nat_ty();
+        let seq_ty = d.arrow(nat, carrier);
+
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let g_fv = d.fresh_fvar();
+        let g = d.kernel().fvar(g_fv);
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let kb_fv = d.fresh_fvar();
+        let kb = d.kernel().fvar(kb_fv);
+
+        let n = d.succ(m);
+
+        // hypothesis : forall i, Nat.lt i (succ m) -> le (abs (f i - g i)) kb
+        let hyp_ty = {
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let lt_ty = d.lt(i, n);
+            let fi = d.apply(f, &[i]);
+            let gi = d.apply(g, &[i]);
+            let ngi = cneg(&mut d, p, gi);
+            let body = cadd(&mut d, p, fi, ngi);
+            let a = d.const_app(p.abs, &[body]);
+            let concl = cle(&mut d, p, a, kb);
+            let inner = d.arrow(lt_ty, concl);
+            d.pi_fv(i_fv, nat, inner)
+        };
+        let hyp_fv = d.fresh_fvar();
+        let hyp = d.kernel().fvar(hyp_fv);
+
+        let proof = sum_range_pair_diff_le(&mut d, p, f, g, m, kb, hyp);
+
+        let s1 = d.const_app(p.sum_range, &[f, n]);
+        let s2 = d.const_app(p.sum_range, &[g, n]);
+        let neg_s2 = cneg(&mut d, p, s2);
+        let lhs = cadd(&mut d, p, s1, neg_s2);
+        let abs_lhs = d.const_app(p.abs, &[lhs]);
+        let n_real = d.const_app(p.of_nat, &[n]);
+        let bound = cmul(&mut d, p, n_real, kb);
+        let concl = cle(&mut d, p, abs_lhs, bound);
+
+        let ty = {
+            let t = d.arrow(hyp_ty, concl);
+            let t = d.pi_fv(kb_fv, carrier, t);
+            let t = d.pi_fv(m_fv, nat, t);
+            let t = d.pi_fv(g_fv, seq_ty, t);
+            d.pi_fv(f_fv, seq_ty, t)
+        };
+        let value = {
+            let v = d.lam_fv(hyp_fv, hyp_ty, proof);
+            let v = d.lam_fv(kb_fv, carrier, v);
+            let v = d.lam_fv(m_fv, nat, v);
+            let v = d.lam_fv(g_fv, seq_ty, v);
+            d.lam_fv(f_fv, seq_ty, v)
+        };
+
+        let anon = d.kernel().anon();
+        let name = d.kernel().name_str(anon, "sumRangePairDiffLeSmoke");
+        let result = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(
+            result.is_ok(),
+            "sum_range_pair_diff_le must prove `le (abs (sumRange f (succ m) - \
+             sumRange g (succ m))) (mul (ofNat (succ m)) kb)` from the pointwise \
+             bound: {:?}",
+            result.err()
+        );
+    }
+
+    /// Negative control: the SAME proof term against a term count of `m`
+    /// rather than `Nat.succ m`. Checked both ways — **not vacuous** (the two
+    /// bounds are asserted not `def_eq`, so the refusal is about the
+    /// statement and not about two spellings of one term) and **not
+    /// inverted** (`mul (ofNat m) kb` is a genuinely FALSE bound: at `m := 0`
+    /// the sum has one term and the claimed bound is `0`, while the
+    /// hypothesis permits `|f 0 − g 0| = kb`).
+    #[test]
+    fn sum_range_pair_diff_le_is_refused_at_a_transposed_term_count() {
+        crate::on_a_deep_stack(sum_range_pair_diff_le_is_refused_at_a_transposed_term_count_body);
+    }
+
+    fn sum_range_pair_diff_le_is_refused_at_a_transposed_term_count_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+        let nat = d.nat_ty();
+        let seq_ty = d.arrow(nat, carrier);
+
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let g_fv = d.fresh_fvar();
+        let g = d.kernel().fvar(g_fv);
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let kb_fv = d.fresh_fvar();
+        let kb = d.kernel().fvar(kb_fv);
+
+        let n = d.succ(m);
+
+        let hyp_ty = {
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let lt_ty = d.lt(i, n);
+            let fi = d.apply(f, &[i]);
+            let gi = d.apply(g, &[i]);
+            let ngi = cneg(&mut d, p, gi);
+            let body = cadd(&mut d, p, fi, ngi);
+            let a = d.const_app(p.abs, &[body]);
+            let concl = cle(&mut d, p, a, kb);
+            let inner = d.arrow(lt_ty, concl);
+            d.pi_fv(i_fv, nat, inner)
+        };
+        let hyp_fv = d.fresh_fvar();
+        let hyp = d.kernel().fvar(hyp_fv);
+
+        let proof = sum_range_pair_diff_le(&mut d, p, f, g, m, kb, hyp);
+
+        let s1 = d.const_app(p.sum_range, &[f, n]);
+        let s2 = d.const_app(p.sum_range, &[g, n]);
+        let neg_s2 = cneg(&mut d, p, s2);
+        let lhs = cadd(&mut d, p, s1, neg_s2);
+        let abs_lhs = d.const_app(p.abs, &[lhs]);
+
+        let n_real = d.const_app(p.of_nat, &[n]);
+        let good = cmul(&mut d, p, n_real, kb);
+        let m_real = d.const_app(p.of_nat, &[m]);
+        let bad = cmul(&mut d, p, m_real, kb);
+        assert!(
+            !d.kernel().def_eq(good, bad),
+            "the transposed term count must not be DEFINITIONALLY the true \
+             bound, or the refusal below proves nothing"
+        );
+
+        let concl_bad = cle(&mut d, p, abs_lhs, bad);
+        let ty_bad = {
+            let t = d.arrow(hyp_ty, concl_bad);
+            let t = d.pi_fv(kb_fv, carrier, t);
+            let t = d.pi_fv(m_fv, nat, t);
+            let t = d.pi_fv(g_fv, seq_ty, t);
+            d.pi_fv(f_fv, seq_ty, t)
+        };
+        let value = {
+            let v = d.lam_fv(hyp_fv, hyp_ty, proof);
+            let v = d.lam_fv(kb_fv, carrier, v);
+            let v = d.lam_fv(m_fv, nat, v);
+            let v = d.lam_fv(g_fv, seq_ty, v);
+            d.lam_fv(f_fv, seq_ty, v)
+        };
+
+        let anon = d.kernel().anon();
+        let name = d.kernel().name_str(anon, "sumRangePairDiffLeBad");
+        let result = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: ty_bad,
+            value,
+        });
+        assert!(
+            result.is_err(),
+            "the SAME proof term must be REFUSED against the transposed term \
+             count `mul (ofNat m) kb`"
+        );
+    }
+}
