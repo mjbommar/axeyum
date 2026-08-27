@@ -126,7 +126,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 380] = [
+    let expected: [(&str, crate::NameId, &str); 382] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -407,6 +407,16 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         ("CReal.crossingIndex", p.crossing_index, "def"),
         ("CReal.crossingUpper", p.crossing_upper, "theorem"),
         ("CReal.crossingLower", p.crossing_lower, "theorem"),
+        (
+            "CReal.crossingSampleUpper",
+            p.crossing_sample_upper,
+            "theorem",
+        ),
+        (
+            "CReal.crossingSampleLower",
+            p.crossing_sample_lower,
+            "theorem",
+        ),
         ("CReal.sampleUpperBound", p.sample_upper_bound, "theorem"),
         ("CReal.sampleLowerBound", p.sample_lower_bound, "theorem"),
         (
@@ -9664,4 +9674,108 @@ fn the_half_cross_check_route_cannot_swap_hx0_and_hlt() {
          the trusted checker -- it was accepted, which means argument \
          positions are not actually being type-checked: {outcome:?}"
     );
+}
+
+/// `CReal.crossingSampleUpper`/`CReal.crossingSampleLower` APPLY at the SAME
+/// concrete `(a, c, delta) := (0, 5/2, 1)` worked example as
+/// `crossing_index_at_zero_one_five_halves_reduces_to_two` above (where
+/// `crossingIndex` reduces to the literal `2`), with `0 < delta`/`a ≤ c` left
+/// as FRESH free variables — mirroring `integral.rs`'s own
+/// `le_add_of_abs_sub_le_applies_at_three_two_and_one` idiom: this is a
+/// concrete-ARGUMENT check (`CReal.le` is not decidable by `refl`, so the
+/// hypothesis proofs cannot be filled in), not a claim that the inequality
+/// itself is verified numerically. It confirms the two theorems apply at
+/// real numeric arguments and that their conclusions' shapes — reconstructed
+/// here independently, using ONLY public `CRealPrelude`/`RatPrelude` fields,
+/// never `crossing.rs`'s own private helpers — match what
+/// `declare_crossing_sample_upper`/`declare_crossing_sample_lower` actually
+/// build.
+#[test]
+fn crossing_sample_upper_and_lower_apply_at_zero_five_halves_one() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let a = d.kernel().const_(p.zero, vec![]);
+    let five = d.num(5);
+    let one_idx = d.num(1);
+    let five_halves = d.const_app(p.rat.nat_div_succ, &[five, one_idx]); // 5/2
+    let c = d.const_app(p.of_rat, &[five_halves]);
+    let delta = crate::rat_prelude::ops::rone(&mut d, p.rat);
+
+    let zero_rat = crate::rat_prelude::ops::rzero(&mut d, p.rat);
+    let hpos_ty = d.const_app(p.rat.lt, &[zero_rat, delta]);
+    let hpos_fv = d.fresh_fvar();
+    let hpos = d.kernel().fvar(hpos_fv);
+    let hac_ty = d.const_app(p.le, &[a, c]);
+    let hac_fv = d.fresh_fvar();
+    let hac = d.kernel().fvar(hac_fv);
+
+    // Reconstruct the shared pieces `declare_crossing_sample_upper`/
+    // `declare_crossing_sample_lower` build internally, at these SAME
+    // concrete arguments -- deliberately left as `crossingIndex a c delta`
+    // rather than forced down to the literal `2` (a SEPARATE test above
+    // already pins that reduction); this test's own job is the SHAPE of the
+    // sample-point conclusion, not re-proving the index computation.
+    let i0 = d.const_app(p.crossing_index, &[a, c, delta]);
+    let delta_embed = d.const_app(p.of_rat, &[delta]);
+    let of_nat_i0 = d.const_app(p.of_nat, &[i0]);
+    let sample_term = d.const_app(p.mul, &[of_nat_i0, delta_embed]);
+    let sample_point = d.const_app(p.add, &[a, sample_term]);
+
+    let zero_nat_for_j = d.num(0);
+    let k1 = d.succ(zero_nat_for_j);
+    let j = NatOps::mul(&mut d, k1, k1);
+    let two_nat = d.num(2);
+    let bound2j = d.const_app(p.rat.nat_div_succ, &[two_nat, j]);
+    let embed_bound2j = d.const_app(p.of_rat, &[bound2j]);
+    let bound2j_term = d.const_app(p.mul, &[delta_embed, embed_bound2j]);
+    let slack_upper = d.const_app(p.add, &[delta_embed, bound2j_term]);
+    let target_upper = d.const_app(p.add, &[sample_point, slack_upper]);
+    let expected_upper = d.const_app(p.le, &[c, target_upper]);
+
+    let three_nat = d.num(3);
+    let bound3j = d.const_app(p.rat.nat_div_succ, &[three_nat, j]);
+    let neg_bound3j = crate::rat_prelude::ops::rneg(&mut d, bound3j);
+    let embed_neg_bound3j = d.const_app(p.of_rat, &[neg_bound3j]);
+    let slack_lower = d.const_app(p.mul, &[delta_embed, embed_neg_bound3j]);
+    let target_lower = d.const_app(p.add, &[sample_point, slack_lower]);
+    let expected_lower = d.const_app(p.le, &[target_lower, c]);
+
+    let applied_upper = d.const_app(p.crossing_sample_upper, &[a, c, delta, hpos]);
+    let applied_lower = d.const_app(p.crossing_sample_lower, &[a, c, delta, hpos, hac]);
+
+    let ty_upper = d.arrow(hpos_ty, expected_upper);
+    let value_upper = d.lam_fv(hpos_fv, hpos_ty, applied_upper);
+    let anon = d.kernel().anon();
+    let name_upper = d
+        .kernel()
+        .name_str(anon, "crossingSampleUpperZeroFiveHalvesOneSmoke");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name: name_upper,
+            uparams: vec![],
+            ty: ty_upper,
+            value: value_upper,
+        })
+        .unwrap_or_else(|error| panic!("crossingSampleUpper must apply at (0, 5/2, 1): {error:?}"));
+
+    let ty_lower = {
+        let with_hac = d.arrow(hac_ty, expected_lower);
+        d.arrow(hpos_ty, with_hac)
+    };
+    let value_lower = {
+        let with_hac = d.lam_fv(hac_fv, hac_ty, applied_lower);
+        d.lam_fv(hpos_fv, hpos_ty, with_hac)
+    };
+    let name_lower = d
+        .kernel()
+        .name_str(anon, "crossingSampleLowerZeroFiveHalvesOneSmoke");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name: name_lower,
+            uparams: vec![],
+            ty: ty_lower,
+            value: value_lower,
+        })
+        .unwrap_or_else(|error| panic!("crossingSampleLower must apply at (0, 5/2, 1): {error:?}"));
 }
