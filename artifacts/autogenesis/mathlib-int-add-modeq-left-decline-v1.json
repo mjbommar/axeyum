@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-add-modeq-left-decline-v1",
+  "state": "clean-import-producer-declines-terminal-not-closed",
+  "contract": "artifacts/autogenesis/producer-contracts/int-modeq-family-v1.json",
+  "fact_id": "F:ml430-int-add-modeq-left-ee732b5b",
+  "fact_sha256": "94f72ddeea1776a3dff1f6f597a131d93e578a9e262720162b426a450a187562",
+  "nursery_partition": "train",
+  "lane": "flywheel-1",
+  "date": "2026-08-27",
+  "adapter": {
+    "host": "s5",
+    "path": "/home/mjbommar/lean-import-scale/mathlib4/AxeyumAutogenesisIntAddModEqLeftV1.lean",
+    "namespace": "Axeyum.Autogenesis.Statement.IntModEqFamily",
+    "definition": "intAddModEqLeft",
+    "statement": "∀ {n a : ℤ}, n + a ≡ a [ZMOD n]",
+    "mathlib_source": "Mathlib/Data/Int/ModEq.lean:351, theorem add_modEq_left : n + a ≡ a [ZMOD n] := by simp, under variable {m n a b c d : ℤ}"
+  },
+  "identity": {
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean4export_commit": "a3e35a584f59b390667db7269cd37fca8575e4bf",
+    "lean_version": "4.30.0",
+    "lean4export_version": "3.1.0",
+    "export_ndjson_sha256": "db2b29da51d66b37aba70021658bfda288b0c5a7d01a84f8d5de7fff5d3122c8",
+    "export_records": 6138,
+    "export_stderr_bytes": 0
+  },
+  "import": {
+    "tool": "crates/axeyum-lean-import/examples/statement_adapter_import.rs",
+    "result": "clean",
+    "declarations": 208,
+    "axioms": 0,
+    "target_dependencies": 5,
+    "target_content_sha256": "3f26ee17f803fe3f9f9ff99708910a31c43981072fc4200088b6cf7ef9a2c9e7",
+    "goal_sha256": "7ace82a88ff8785bea25c9f415790982d38bb119abfa3e3adbbb2fce1cbfa40a",
+    "rendered_goal": "((n : Int) -> ((a : Int) -> Int.ModEq n (HAdd.hAdd.{0, 0, 0} Int Int Int (instHAdd.{0} Int Int.instAdd) n a) a))",
+    "note": "confirms the Nat.div_rec_lemma cascade documented in docs/autogenesis/241-int-modeq-producer-finding.md and docs/autogenesis/242-nat-division-gates-modular-arithmetic.md is still bridged for this target; no TrustedDeclaration refusal."
+  },
+  "producer": {
+    "tool": "crates/axeyum-lean-import/examples/modeq_family_operation.rs",
+    "module": "axeyum_lean_import::producers::modeq_family::propose_modeq_family",
+    "result": "declined",
+    "decline_reason": "TerminalNotClosed",
+    "decline_message": "terminal goal is not an Eq/Iff shape this schema's refl/symm/trans/Iff.intro combinators can close",
+    "why": "the goal has zero leading hypotheses (n + a ≡ a [ZMOD n] is unconditional), so after whnf-unfolding Int.ModEq to (n+a) % n = a % n there is no retained Eq-typed hypothesis for symm/trans to run over, and def_eq((n+a)%n, a%n) does not hold for free (symbolic) n, a -- unlike int-modeq-{refl,symm,trans,comm}, which only ever manipulate an ALREADY-GIVEN equality and never need to derive a new one. Mathlib's own proof is `:= by simp`, not `rfl`, independently confirming this is not a definitional identity."
+  },
+  "existing_kernel_comparison": {
+    "declarations_checked": [
+      "crates/axeyum-lean-kernel/src/int_prelude/modeq.rs::declare_modeq_add_left",
+      "crates/axeyum-lean-kernel/src/int_prelude/modeq.rs::declare_modeq_add_right"
+    ],
+    "finding": "not-identical-not-directly-derivable",
+    "detail": "this kernel's Int.ModEq.add_left / Int.ModEq.add_right are `∀ n a b c, 0 < n → ModEq n a b → ModEq n (c+a) (c+b)` (resp. add_right), routed through modEq_iff_dvd which itself requires `0 < n`. The Mathlib target is unconditional in n (true for n <= 0 too), which is strictly stronger than what modEq_iff_dvd supports today. F-ml430-int-modeq-one-01d9de39.json and F-ml430-int-modeq-neg-d6ff57b6.json already record this same `0 < n` restriction as the reason their siblings stay open; this fact is one of those siblings. The missing ingredient (per those notes) is a natAbs-based generalization of Int.emod_lt_of_pos (int_prelude/division.rs) that would drop the positivity hypothesis -- new kernel-level work, out of scope for this lane (crates/axeyum-lean-kernel/src/ is off-limits per brief)."
+  },
+  "effects": {
+    "fact_status_changes": 0,
+    "evidence_rows_added": 0,
+    "operations_registered": 0,
+    "kernel_declarations_added": 0
+  },
+  "disposition": "epistemic_status stays open; no operation registered per ADR-0602 (admission precedes registration -- fabricating a proved status or a registry entry from a shape match alone is exactly the checker-that-cannot-fail defect this project rejects elsewhere).",
+  "next": "the natAbs-based magnitude bound generalizing Int.emod_lt_of_pos (int_prelude/division.rs) would unblock this fact and its two named siblings at once, but requires kernel-level work outside crates/axeyum-lean-import/.",
+  "full_writeup": "docs/autogenesis/290-int-add-modeq-left-contract-dispatch-decline.md"
+}
