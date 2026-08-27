@@ -1495,6 +1495,37 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   verifies both.** That has already happened once this session, with six private
   helpers copied verbatim rather than reported.
 
+  **PROSE HAS NOT FIXED THIS, AND THE COUNT KEPT CLIMBING AFTER THIS SECTION WAS
+  WRITTEN.** Every brief in the 2026-08-27 session repeated "search for the STEP,
+  not the NAME", and lanes still reported reaching **thirteen** instances, with
+  more landing the same day: `CReal.equiv_of_le_le` and
+  `CReal.equiv_zero_of_small` were both budgeted as new work in a Fermat brief
+  and both already existed.
+
+  The most expensive was `CReal.congr_of_uniformly_continuous`, which stalled a
+  whole rung of `supOn`. A lane needed exactly it, searched
+  `creal/uniform_continuity.rs` -- the module where it BELONGS -- found nothing,
+  and stopped. It lives in `creal/integral.rs:17010`, because
+  `riemann_sum_split_exact_of_uc` consumed it first. **The search was competent
+  and its answer was correct**; you cannot find by name a thing whose name you do
+  not know. (Nor can it be strengthened to a global
+  `∀ x y, Equiv x y → Equiv (F x) (F y)` -- that form is FALSE for an arbitrary
+  witness, since `UniformlyContinuousOn` says nothing about `F` outside `[a,b]`.)
+
+  Because instruction demonstrably does not close it, it is logged as a
+  first-class TOOLING deficiency in
+  [`docs/research/11-design-review/2026-08-27-retrieval-is-the-bottleneck.md`](docs/research/11-design-review/2026-08-27-retrieval-is-the-bottleneck.md),
+  with shape-indexed retrieval over `kernel.environment()` dispatched against it.
+  Two things that write-up is careful about, and you should be too: the thirteen
+  is a **lane-reported tally that has not been independently audited**, and any
+  name index is **structurally blind to hiding place 2** -- an inline step has no
+  declaration to index, so no such tool can ever reach it.
+
+  Retrieval is one of the three gates on marginal cost per theorem named in
+  `docs/formalized-math-2026-08/07-the-cost-model-and-pareto-position.md`
+  (contracts, retrieval, sharding). On this evidence it is the binding one:
+  **more lane-hours went to re-deriving what existed than to proof difficulty.**
+
 - **An empty result from a tool that was never pointed at your subject is
   indistinguishable from a strong negative result.** Distinct from the inert-gate
   trap above: the tool runs, exits 0, and prints a correct empty answer to a
