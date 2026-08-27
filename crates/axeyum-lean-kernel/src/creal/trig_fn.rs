@@ -56,6 +56,42 @@
 //! exact**, and today's work does not change that boundary at all — it only
 //! moves the DOMAIN a genuine function is defined on.
 //!
+//! ## 2026-08-27, third update: `CReal.cosFnWideUniformlyContinuous` is
+//! landed
+//!
+//! [`declare_cos_fn_wide_uniformly_continuous`] admits
+//! `UniformlyContinuousOn cosFnWide zero R` via
+//! `CReal.uniform_limit_uniformly_continuous` applied at
+//! `CReal.cosFnWideUniformConverges`. Its own second hypothesis, `∀ n,
+//! UniformlyContinuousOn (F n) zero R`, was NOT free-standing anywhere in
+//! the tree and is built here by a genuine `Nat.rec` induction on `n` at
+//! `level_one` ([`induct_ty`] -- `UniformlyContinuousOn` is `Type`-valued,
+//! so the trait's own `NatOps::induct` at `level_zero` does not apply). The
+//! step case needs `UniformlyContinuousOn (cosFnTerm n ·) zero R` for the
+//! CURRENT induction variable ([`cos_fn_term_uc`]), which itself needs `pow`
+//! uniform continuity at a symbolic exponent -- a SEPARATE, nested
+//! induction over the base, built once up front
+//! ([`declare_cos_fn_wide_uniformly_continuous`]'s own `pow_uc`) and applied
+//! at `Nat.add n n`. Every `BoundedOn` hypothesis either induction needs
+//! comes from the already-public `CReal.bounded_of_uniformly_continuous`
+//! ([`bounded_via_uc`]), never hand-derived.
+//!
+//! **`Kernel::infer` alone cannot type an application built inside an open
+//! induction step** -- it uses a FRESH, empty context, so a term mentioning
+//! the step's own still-open `j`/`ih` free variables is rejected
+//! `UnboundFVar`, not merely imprecise. [`bounded_via_uc`] registers those
+//! as [`LocalDecl`]s in a scratch [`LocalContext`] and calls
+//! `Kernel::infer_in` instead -- the same mechanism `declare_cos_fn_wide`'s
+//! own `unapp`-based extraction uses on a CLOSED term, extended to an open
+//! one.
+//!
+//! **What this does NOT reach.** `ivt_approx` (`creal/ivt.rs`, out of this
+//! file's scope) still needs a sign-change witness at `cosFnWide`'s two
+//! endpoints before an approximate root family exists at all, and even
+//! then `ivt_approx`'s own conclusion is `∀ e, ∃ x, …` -- an
+//! APPROXIMATE-root family, never `cosFnWide c ≡ zero`. Nothing here
+//! constructs or refutes an exact root; ADR-0603 Amendment 4 is unchanged.
+//!
 //! ## Route
 //!
 //! `CReal.cosFnTerm k x := mul (cosTerm k) (pow x (Nat.add k k))` — the same
@@ -331,12 +367,14 @@ use super::trig::{
 };
 use super::uniform_convergence::close_within_of_within_at;
 use super::{CRealPrelude, DERIVED_HEIGHT, creal_ty, embed, equiv};
+use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::{ExprId, ExprNode};
 use crate::int_prelude::ops::{IntDev, exists_elim};
 use crate::nat_prelude::NatOps;
 use crate::rat_prelude::ops::{one_le_succ, radd, rat_eq_rewrite};
+use crate::tc::{LocalContext, LocalDecl};
 
 /// Height for `cosFnTerm`: one past `powerSeriesTerm`'s own
 /// `DERIVED_HEIGHT + 43` (`creal/power.rs`), matching this development's
@@ -603,6 +641,36 @@ fn declare_cos_fn_term_abs_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(),
 ///
 /// Returns the trusted gate's rejection. An `Err` here means the kernel
 /// **refused** a proof, not that a script gave up.
+/// `fun n pt => sumRange (fun j => cosFnTerm j pt) n` -- the partial-sum
+/// sequence both [`declare_cos_fn`] (domain `[0, 1]`) and
+/// [`declare_cos_fn_wide`] (domain `[0, R]`) ascribe their own
+/// `cosFnUniformConverges`/`cosFnWideUniformConverges` theorems against.
+/// Factored into one builder so every caller reconstructs the IDENTICAL
+/// term (same builder calls, so the same `ExprId` by structural hashing) --
+/// this file's established convention, see e.g.
+/// [`geom_16_over_25_k_final`]'s own doc comment -- rather than three
+/// independently hand-copied blocks drifting apart.
+fn cos_fn_partial_sums_fn(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    carrier: ExprId,
+    nat: ExprId,
+) -> ExprId {
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let pt_fv = d.fresh_fvar();
+    let pt = d.kernel().fvar(pt_fv);
+    let f_pt = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let body = d.const_app(p.cos_fn_term, &[j, pt]);
+        d.lam_fv(j_fv, nat, body)
+    };
+    let body = d.const_app(p.sum_range, &[f_pt, n]);
+    let with_pt = d.lam_fv(pt_fv, carrier, body);
+    d.lam_fv(n_fv, nat, with_pt)
+}
+
 pub(super) fn declare_cos_fn(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
     let carrier = creal_ty(d, p);
     let nat = d.nat_ty();
@@ -681,21 +749,7 @@ pub(super) fn declare_cos_fn(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), 
 
     // Big_f, restated so the ascribed `ty` reads with the same `F` this
     // theorem's own statement will show a caller.
-    let big_f = {
-        let n_fv = d.fresh_fvar();
-        let n = d.kernel().fvar(n_fv);
-        let pt_fv = d.fresh_fvar();
-        let pt = d.kernel().fvar(pt_fv);
-        let f_pt = {
-            let j_fv = d.fresh_fvar();
-            let j = d.kernel().fvar(j_fv);
-            let body = d.const_app(p.cos_fn_term, &[j, pt]);
-            d.lam_fv(j_fv, nat, body)
-        };
-        let body = d.const_app(p.sum_range, &[f_pt, n]);
-        let with_pt = d.lam_fv(pt_fv, carrier, body);
-        d.lam_fv(n_fv, nat, with_pt)
-    };
+    let big_f = cos_fn_partial_sums_fn(d, p, carrier, nat);
     let cos_fn_c = d.kernel().const_(p.cos_fn, vec![]);
     let ty = d.const_app(p.uniform_converges_on, &[big_f, cos_fn_c, zero_c, one_cc]);
 
@@ -2083,21 +2137,7 @@ pub(super) fn declare_cos_fn_wide(d: &mut IntDev<'_>, p: CRealPrelude) -> Result
         hint: ReducibilityHint::Regular(COS_FN_TERM_HEIGHT + 3),
     })?;
 
-    let big_f = {
-        let n_fv = d.fresh_fvar();
-        let n = d.kernel().fvar(n_fv);
-        let pt_fv = d.fresh_fvar();
-        let pt = d.kernel().fvar(pt_fv);
-        let f_pt = {
-            let j_fv = d.fresh_fvar();
-            let j = d.kernel().fvar(j_fv);
-            let body = d.const_app(p.cos_fn_term, &[j, pt]);
-            d.lam_fv(j_fv, nat, body)
-        };
-        let body = d.const_app(p.sum_range, &[f_pt, n]);
-        let with_pt = d.lam_fv(pt_fv, carrier, body);
-        d.lam_fv(n_fv, nat, with_pt)
-    };
+    let big_f = cos_fn_partial_sums_fn(d, p, carrier, nat);
     let cos_fn_wide_c = d.kernel().const_(p.cos_fn_wide, vec![]);
     let ty = d.const_app(p.uniform_converges_on, &[big_f, cos_fn_wide_c, zero_c, r_c]);
 
@@ -2106,5 +2146,305 @@ pub(super) fn declare_cos_fn_wide(d: &mut IntDev<'_>, p: CRealPrelude) -> Result
         uparams: vec![],
         ty,
         value: u0,
+    })
+}
+
+// ============================================================================
+// `CReal.cosFnWideUniformlyContinuous`
+// ============================================================================
+//
+// Route: `CReal.uniform_limit_uniformly_continuous` applied at
+// `CReal.cosFnWideUniformConverges`. Its second hypothesis, `∀ n,
+// UniformlyContinuousOn (F n) zero R`, is built by induction on `n`
+// (`Nat.rec` at `level_one`, [`induct_ty`], since `UniformlyContinuousOn` is
+// `Type`-valued -- see `uniform_continuity.rs`'s own module documentation).
+// The step case needs `UniformlyContinuousOn (cosFnTerm n ·) zero R` for the
+// CURRENT induction variable, which is [`cos_fn_term_uc`] -- itself needing
+// `pow` uniform continuity at a symbolic exponent, a SEPARATE (nested)
+// induction over the base, built once up front and applied at `Nat.add n n`.
+// Every `BoundedOn` hypothesis either induction needs comes from
+// `CReal.bounded_of_uniformly_continuous` ([`bounded_via_uc`]), never
+// hand-derived -- both `CReal.bounded_on_mul` and this generic route exist
+// in the tree; the generic route needs no per-shape bound computation.
+
+/// `fun pt => pow pt m` -- the base-varying dual of [`pow_fn_local`] (`fun n
+/// => pow x n`, exponent-varying). Needed for the `pow` uniform continuity
+/// induction below, which is over the BASE at a fixed (possibly symbolic)
+/// exponent `m`.
+fn pow_base_fn(d: &mut IntDev<'_>, p: CRealPrelude, carrier: ExprId, m: ExprId) -> ExprId {
+    let pt_fv = d.fresh_fvar();
+    let pt = d.kernel().fvar(pt_fv);
+    let body = cpow(d, p, pt, m);
+    d.lam_fv(pt_fv, carrier, body)
+}
+
+/// `le zero R`, `R := ofRat (natDivSucc 8 4) = 8/5` -- reproduced verbatim
+/// from [`declare_cos_fn_wide`]'s own `hab0` block (needed independently
+/// here, since this function's induction does not call that one).
+fn hab_zero_r(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let rat = p.rat;
+    let zero_r = crate::rat_prelude::ops::rzero(d, rat);
+    let r_rat = r_domain_rat(d, p);
+    let n8 = d.num(8);
+    let n4 = d.num(4);
+    let nn = d.lemma(rat.zero_le_nat_div_succ, &[n8, n4]);
+    d.lemma(p.of_rat_le, &[zero_r, r_rat, nn])
+}
+
+/// [`crate::nat_prelude::NatOps::induct`]'s own body, but at universe
+/// `level_one` rather than the trait method's hardcoded `level_zero` --
+/// needed here because `UniformlyContinuousOn` is `Type`-valued, so a
+/// `Nat`-indexed FAMILY of its proofs needs `Nat.rec`'s large-elimination
+/// form, exactly the way `uniform_continuity.rs`'s own `declare_carrier`/
+/// `declare_projections` (`uc_rec` at `level_one`) already need for the
+/// SAME reason.
+fn induct_ty(
+    d: &mut IntDev<'_>,
+    motive: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
+    base: &dyn Fn(&mut IntDev<'_>) -> ExprId,
+    step: &dyn Fn(&mut IntDev<'_>, ExprId, ExprId) -> ExprId,
+    target: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let motive_lam = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let body = motive(d, x);
+        d.lam_fv(x_fv, nat, body)
+    };
+    let base_term = base(d);
+    let step_term = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let ih_fv = d.fresh_fvar();
+        let ih = d.kernel().fvar(ih_fv);
+        let hyp_ty = motive(d, j);
+        let body = step(d, j, ih);
+        let inner = d.lam_fv(ih_fv, hyp_ty, body);
+        d.lam_fv(j_fv, nat, inner)
+    };
+    let one = d.level_one();
+    let rec_name = d.prelude().rec;
+    let rec = d.kernel().const_(rec_name, vec![one]);
+    d.apply(rec, &[motive_lam, base_term, step_term, target])
+}
+
+/// Peel a `Kernel::fvar`-built [`ExprId`] back to its raw id. Used only to
+/// re-register an induction's own bound `j`/`ih` as free-in-context locals
+/// for [`bounded_via_uc`]'s `infer_in` call -- these ids were minted by this
+/// same file's own `d.fresh_fvar()`/`d.kernel().fvar(..)` calls, never
+/// parsed from anything untrusted.
+fn fvar_id(d: &mut IntDev<'_>, e: ExprId) -> u64 {
+    match d.kernel().expr_node(e).clone() {
+        ExprNode::FVar(id) => id,
+        other => panic!("expected a free variable, found {other:?}"),
+    }
+}
+
+/// `CReal.bounded_of_uniformly_continuous` applied at `f, a, b, huc, hab`,
+/// with its computed `K` read back via [`unapp`] rather than hand-derived --
+/// this file's own established convention for reading a lemma application's
+/// own output back off itself (see e.g. [`declare_cos_fn_wide`]'s `G`
+/// extraction). Returns `(K, proof)`, `proof : BoundedOn f a b K`.
+///
+/// `free_vars` lists every `(fvar id, type)` pair the assembled application
+/// mentions but does not yet bind (an enclosing induction's own `j`/`ih`,
+/// still open at the point this is called) -- `Kernel::infer` alone uses a
+/// FRESH, empty context and rejects any such term as `UnboundFVar`, so
+/// these must be registered into a [`LocalContext`] via `infer_in` instead.
+fn bounded_via_uc(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    a: ExprId,
+    b: ExprId,
+    huc: ExprId,
+    hab: ExprId,
+    free_vars: &[(u64, ExprId)],
+) -> (ExprId, ExprId) {
+    let proof = d.lemma(p.bounded_of_uniformly_continuous, &[f, a, b, huc, hab]);
+    let anon = d.anon_name();
+    let mut ctx = LocalContext::new();
+    for &(fvar, ty) in free_vars {
+        ctx.push(LocalDecl {
+            fvar,
+            name: anon,
+            ty,
+            info: BinderInfo::Default,
+        });
+    }
+    let ty = d
+        .kernel()
+        .infer_in(proof, &mut ctx)
+        .expect("bounded_of_uniformly_continuous application must infer a type");
+    let (_inner, k) = unapp(d, ty);
+    (k, proof)
+}
+
+/// `UniformlyContinuousOn (fun pt => cosFnTerm k pt) zero R`, for symbolic
+/// `k`. Built from `pow_uc : ∀ m, UniformlyContinuousOn (fun pt => pow pt m)
+/// zero R` (this file's own nested induction, threaded in already built)
+/// applied at `m := Nat.add k k`, combined with the constant function `fun
+/// _ => cosTerm k` via `CReal.uniformly_continuous_mul`. `cosFnTerm k x ≡
+/// mul (cosTerm k) (pow x (Nat.add k k))` is a `Definition` unfold + beta
+/// away from this function's own conclusion, so no congruence lemma is
+/// needed -- the kernel's own defeq check bridges the two, this file's
+/// "computed, not extracted" convention.
+fn cos_fn_term_uc(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    carrier: ExprId,
+    nat: ExprId,
+    zero_c: ExprId,
+    r_c: ExprId,
+    hab0: ExprId,
+    pow_uc: ExprId,
+    k: ExprId,
+) -> ExprId {
+    let k_id = fvar_id(d, k);
+    let free_k = [(k_id, nat)];
+
+    let two_k = d.add(k, k);
+    let pow_2k_fn = pow_base_fn(d, p, carrier, two_k);
+    let huc_pow2k = d.apply(pow_uc, &[two_k]);
+
+    let cos_term_c = d.kernel().const_(p.cos_term, vec![]);
+    let cos_term_k = d.apply(cos_term_c, &[k]);
+    let const_fn = {
+        let pt_fv = d.fresh_fvar();
+        d.lam_fv(pt_fv, carrier, cos_term_k)
+    };
+    let huc_const = d.lemma(p.uniformly_continuous_const, &[cos_term_k, zero_c, r_c]);
+
+    let (k1, hb1) = bounded_via_uc(d, p, const_fn, zero_c, r_c, huc_const, hab0, &free_k);
+    let (k2, hb2) = bounded_via_uc(d, p, pow_2k_fn, zero_c, r_c, huc_pow2k, hab0, &free_k);
+
+    d.lemma(
+        p.uniformly_continuous_mul,
+        &[
+            const_fn, pow_2k_fn, zero_c, r_c, huc_const, huc_pow2k, k1, k2, hb1, hb2,
+        ],
+    )
+}
+
+/// Admit `CReal.cosFnWideUniformlyContinuous : UniformlyContinuousOn
+/// cosFnWide zero R` -- the hypothesis `creal/ivt.rs`'s `ivt_approx` needs
+/// to reach an approximate root of `cosFnWide` at all. See this file's own
+/// module documentation, "What π still needs".
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_cos_fn_wide_uniformly_continuous(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let zero_c = czero(d, p);
+    let r_c = r_domain(d, p);
+    let hab0 = hab_zero_r(d, p);
+
+    // --- nested induction: `pow` uniform continuity, symbolic exponent ---
+    let id_fn = {
+        let pt_fv = d.fresh_fvar();
+        let pt = d.kernel().fvar(pt_fv);
+        d.lam_fv(pt_fv, carrier, pt)
+    };
+    let huc_id = d.lemma(p.uniformly_continuous_id, &[zero_c, r_c]);
+
+    let pow_motive = |d: &mut IntDev<'_>, v: ExprId| -> ExprId {
+        let f = pow_base_fn(d, p, carrier, v);
+        d.const_app(p.uniformly_continuous_on, &[f, zero_c, r_c])
+    };
+    let pow_base = |d: &mut IntDev<'_>| -> ExprId {
+        let one_cc = one_c(d, p);
+        d.lemma(p.uniformly_continuous_const, &[one_cc, zero_c, r_c])
+    };
+    let pow_step = |d: &mut IntDev<'_>, j: ExprId, ih: ExprId| -> ExprId {
+        let pow_j_fn = pow_base_fn(d, p, carrier, j);
+        let j_id = fvar_id(d, j);
+        let ih_id = fvar_id(d, ih);
+        let ih_ty = pow_motive(d, j);
+        let (k1, hb1) = bounded_via_uc(
+            d,
+            p,
+            pow_j_fn,
+            zero_c,
+            r_c,
+            ih,
+            hab0,
+            &[(j_id, nat), (ih_id, ih_ty)],
+        );
+        let (k2, hb2) = bounded_via_uc(d, p, id_fn, zero_c, r_c, huc_id, hab0, &[]);
+        d.lemma(
+            p.uniformly_continuous_mul,
+            &[pow_j_fn, id_fn, zero_c, r_c, ih, huc_id, k1, k2, hb1, hb2],
+        )
+    };
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let pow_uc_at_m = induct_ty(d, &pow_motive, &pow_base, &pow_step, m);
+    let pow_uc = d.lam_fv(m_fv, nat, pow_uc_at_m);
+    // pow_uc : ∀ m, UniformlyContinuousOn (fun pt => pow pt m) zero R.
+
+    // --- outer induction: partial-sum uniform continuity, over `n` -------
+    let big_f = cos_fn_partial_sums_fn(d, p, carrier, nat);
+
+    let sum_motive = |d: &mut IntDev<'_>, v: ExprId| -> ExprId {
+        let fv = d.apply(big_f, &[v]);
+        d.const_app(p.uniformly_continuous_on, &[fv, zero_c, r_c])
+    };
+    let sum_base = |d: &mut IntDev<'_>| -> ExprId {
+        d.lemma(p.uniformly_continuous_const, &[zero_c, zero_c, r_c])
+    };
+    let sum_step = |d: &mut IntDev<'_>, j: ExprId, ih: ExprId| -> ExprId {
+        let sum_j_fn = {
+            let pt_fv = d.fresh_fvar();
+            let pt = d.kernel().fvar(pt_fv);
+            let f_pt = {
+                let k_fv = d.fresh_fvar();
+                let k = d.kernel().fvar(k_fv);
+                let body = d.const_app(p.cos_fn_term, &[k, pt]);
+                d.lam_fv(k_fv, nat, body)
+            };
+            let body = d.const_app(p.sum_range, &[f_pt, j]);
+            d.lam_fv(pt_fv, carrier, body)
+        };
+        let term_j_fn = {
+            let pt_fv = d.fresh_fvar();
+            let pt = d.kernel().fvar(pt_fv);
+            let body = d.const_app(p.cos_fn_term, &[j, pt]);
+            d.lam_fv(pt_fv, carrier, body)
+        };
+        let term_j_uc = cos_fn_term_uc(d, p, carrier, nat, zero_c, r_c, hab0, pow_uc, j);
+        d.lemma(
+            p.uniformly_continuous_add,
+            &[sum_j_fn, term_j_fn, zero_c, r_c, ih, term_j_uc],
+        )
+    };
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let hc_at_n = induct_ty(d, &sum_motive, &sum_base, &sum_step, n);
+    let hc = d.lam_fv(n_fv, nat, hc_at_n);
+    // hc : ∀ n, UniformlyContinuousOn (App(big_f, n)) zero R.
+
+    let g0 = d.kernel().const_(p.cos_fn_wide, vec![]);
+    let hu = d.kernel().const_(p.cos_fn_wide_uniform_converges, vec![]);
+
+    let value = d.lemma(
+        p.uniform_limit_uniformly_continuous,
+        &[big_f, g0, zero_c, r_c, hu, hc],
+    );
+    let ty = d.const_app(p.uniformly_continuous_on, &[g0, zero_c, r_c]);
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.cos_fn_wide_uniformly_continuous,
+        uparams: vec![],
+        ty,
+        value,
     })
 }

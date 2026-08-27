@@ -10200,6 +10200,7 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "trig_fn::declare_cos_fn_equiv_cos_one",
     "trig_fn::declare_cos_fn_wide_progress",
     "trig_fn::declare_cos_fn_wide",
+    "trig_fn::declare_cos_fn_wide_uniformly_continuous",
     "exp_fn::declare_exp_fn_family",
     "exp_fn::declare_exp_fn_equiv_e",
     "supremum::declare_max_range",
