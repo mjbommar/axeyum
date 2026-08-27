@@ -66,5 +66,16 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.not_apart_one_of_pow_succ_eq_one,
             "theorem",
         ),
+        ("CReal.powerSeriesTerm", p.power_series_term, "def"),
+        (
+            "CReal.powerSeriesTerm_congr",
+            p.power_series_term_congr,
+            "theorem",
+        ),
+        (
+            "CReal.powerSeriesTerm_abs_le",
+            p.power_series_term_abs_le,
+            "theorem",
+        ),
     ]
 }

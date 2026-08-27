@@ -9014,3 +9014,116 @@ fn uniform_converges_add_cannot_swap_the_two_hypotheses() {
          argument positions are not actually being type-checked: {outcome:?}"
     );
 }
+
+/// Concrete corroboration for the power-series domination package
+/// ([`CRealPrelude::power_series_term_abs_le`]): the geometric series
+/// itself, `c j := one`, at `M := abs one` (so the coefficient bound is
+/// `le_refl` alone), `x := zero`, `r := one`, `j := 3` -- a genuinely
+/// CONCRETE instantiation (a Nat literal `j`, not a bound `fvar`), which is
+/// exactly where a transposed `x`/`r` or a wrong `mul_congr`/`abs_le` slot
+/// would show up as a rejected proof rather than an opaque symbolic
+/// mismatch (this file's own history: `powerSeriesTerm_congr`'s first
+/// version passed the raw base points into `mul_congr`'s factor slots
+/// instead of `pow pp j`/`pow qq j`, and only the kernel's own rejection
+/// caught it -- a purely symbolic reading of the proof term looked fine).
+#[test]
+fn power_series_term_abs_le_applies_to_the_geometric_series_at_a_concrete_index() {
+    use crate::int_prelude::ops::IntDev;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let nat = d.nat_ty();
+
+    let zero = d.kernel().const_(p.zero, vec![]);
+    let one = d.kernel().const_(p.one, vec![]);
+
+    // c := fun _ => one -- the constant-one coefficient sequence, i.e. the
+    // geometric series itself.
+    let c = {
+        let ignore_fv = d.fresh_fvar();
+        d.lam_fv(ignore_fv, nat, one)
+    };
+    let m = d.const_app(p.abs, &[one]);
+
+    // hbound : ∀ j, le (abs (c j)) m -- beta-reduces to `le (abs one) (abs
+    // one)`, closed by `le_refl` alone.
+    let hbound = {
+        let j_fv = d.fresh_fvar();
+        let abs_one = d.const_app(p.abs, &[one]);
+        let body = d.lemma(p.le_refl, &[abs_one]);
+        d.lam_fv(j_fv, nat, body)
+    };
+
+    let zlt1 = d.lemma(p.zero_lt_one, &[]);
+    let hxr = d.lemma(p.le_of_lt, &[zero, one, zlt1]); // le zero one
+    let hx0 = d.lemma(p.le_refl, &[zero]); // le zero zero
+
+    let three = d.num(3);
+
+    let instance = d.lemma(
+        p.power_series_term_abs_le,
+        &[c, m, hbound, zero, one, hx0, hxr, three],
+    );
+
+    let inferred = d.kernel().infer(instance).unwrap_or_else(|error| {
+        panic!(
+            "powerSeriesTerm_abs_le refused at the geometric series, x = 0, \
+             r = 1, j = 3: {error:?}"
+        )
+    });
+
+    let rendered = kernel.render_lean(inferred);
+    assert!(
+        rendered.contains("le") && rendered.contains("abs") && rendered.contains("pow"),
+        "the instantiated conclusion does not look like a `pow`/`abs` bound: {rendered}"
+    );
+}
+
+/// [`CRealPrelude::power_series_term_abs_le`] REFUSES its two order
+/// hypotheses swapped: `hx0 : le zero x` and `hxr : le x r` are DIFFERENT
+/// statements once `x != r` (here `le zero zero` vs. `le zero one`), so
+/// passing each where the other is expected is a genuine type error, not
+/// merely a relabelling -- if this were accepted, the two positions would
+/// not actually be checked against their own `x`/`r`.
+#[test]
+fn power_series_term_abs_le_cannot_swap_the_order_hypotheses() {
+    use crate::int_prelude::ops::IntDev;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let nat = d.nat_ty();
+
+    let zero = d.kernel().const_(p.zero, vec![]);
+    let one = d.kernel().const_(p.one, vec![]);
+
+    let c = {
+        let ignore_fv = d.fresh_fvar();
+        d.lam_fv(ignore_fv, nat, one)
+    };
+    let m = d.const_app(p.abs, &[one]);
+    let hbound = {
+        let j_fv = d.fresh_fvar();
+        let abs_one = d.const_app(p.abs, &[one]);
+        let body = d.lemma(p.le_refl, &[abs_one]);
+        d.lam_fv(j_fv, nat, body)
+    };
+
+    let zlt1 = d.lemma(p.zero_lt_one, &[]);
+    let hxr = d.lemma(p.le_of_lt, &[zero, one, zlt1]); // le zero one
+    let hx0 = d.lemma(p.le_refl, &[zero]); // le zero zero
+
+    let three = d.num(3);
+
+    // Swapped: `hxr` (`le zero one`) passed where `hx0 : le zero zero` is
+    // expected, and vice versa.
+    let instance = d.lemma(
+        p.power_series_term_abs_le,
+        &[c, m, hbound, zero, one, hxr, hx0, three],
+    );
+
+    let outcome = d.kernel().infer(instance);
+    assert!(
+        outcome.is_err(),
+        "powerSeriesTerm_abs_le accepted its two order hypotheses SWAPPED: {outcome:?}"
+    );
+}

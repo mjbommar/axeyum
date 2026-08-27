@@ -63,5 +63,10 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             "theorem",
         ),
         ("CReal.weierstrassMTest", p.weierstrass_m_test, "theorem"),
+        (
+            "CReal.powerSeriesUniformConvergesOn",
+            p.power_series_uniform_converges,
+            "theorem",
+        ),
     ]
 }

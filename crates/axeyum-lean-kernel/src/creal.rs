@@ -4532,6 +4532,51 @@ pub struct CRealPrelude {
     /// be built from an unconstrained point directly, and why the
     /// congruence hypothesis is not optional once it can't.
     pub weierstrass_m_test: NameId,
+    /// `CReal.powerSeriesTerm : (Nat → CReal) → Nat → CReal → CReal :=
+    /// fun c j x => mul (c j) (pow x j)` — the `j`-th term of the power
+    /// series with coefficients `c`, evaluated at `x`. A bare `Definition`,
+    /// asserting nothing. See `creal/power.rs`.
+    pub power_series_term: NameId,
+    /// `CReal.powerSeriesTerm_congr : ∀ c j p q, Equiv p q → Equiv
+    /// (powerSeriesTerm c j p) (powerSeriesTerm c j q)` — the fact that
+    /// unlocks feeding `powerSeriesTerm c` to [`Self::weierstrass_m_test`]
+    /// as its own `f`: that theorem's `f` must respect `Equiv` (`CReal` is
+    /// a Bishop SETOID, not a literal quotient — ADR-0512). From
+    /// [`Self::pow_congr`]/[`Self::mul_congr`] directly. See
+    /// `creal/power.rs`.
+    pub power_series_term_congr: NameId,
+    /// `CReal.powerSeriesTerm_abs_le : ∀ c M, (∀ j, le (abs (c j)) M) → ∀ x
+    /// r, le zero x → le x r → ∀ j, le (abs (powerSeriesTerm c j x)) (mul M
+    /// (pow r j))` — the domination package: a coefficient sequence bounded
+    /// by `M` gives, for every `x` in `[0, r]`, `|c_j·x^j| ≤ M·r^j`. From
+    /// [`Self::pow_le_pow_of_base_le`] (base monotonicity, `x ≤ r ⟹ x^j ≤
+    /// r^j`), [`Self::pow_nonneg`] (so `abs (pow x j) ~ pow x j` doesn't
+    /// need a separate `abs_of_nonneg` — the two-sided `abs_le` route mirrors
+    /// `creal/monotone.rs`'s own private `abs_le_of_nonneg_le`, reproduced
+    /// here since that helper is not `pub(super)`) and
+    /// [`Self::abs_mul_le_of_bounds`]. See `creal/power.rs`.
+    pub power_series_term_abs_le: NameId,
+    /// `CReal.powerSeriesUniformConvergesOn : ∀ c M, (∀ j, le (abs (c j))
+    /// M) → ∀ r, le zero r → ∀ k, (∀ pp qq, Within (seq (sumRange mseq pp)
+    /// pp − seq (sumRange mseq qq) qq) (natDivSucc k pp + natDivSucc k qq))
+    /// → UniformConvergesOn (fun n x => sumRange (fun j => powerSeriesTerm c
+    /// j x) n) G zero r`, where `mseq j := mul M (pow r j)` — the
+    /// Weierstrass M-test ([`Self::weierstrass_m_test`]) specialized to a
+    /// bounded-coefficient power series on `[0, r]`: `f`'s congruence comes
+    /// from [`Self::power_series_term_congr`] and the domination hypothesis
+    /// from [`Self::power_series_term_abs_le`], both derived internally
+    /// rather than taken as parameters. The raw Cauchy modulus `(k, …)` for
+    /// the DOMINATING geometric series `M·rʲ` is still a parameter, exactly
+    /// as `weierstrassMTest` itself takes one — a caller obtains it from
+    /// [`Self::geom_scaled_cauchy_of_lt`] plus an `Exists`-elimination of
+    /// their own, which this declaration cannot perform internally: the
+    /// M-test's own limit `G` is built FROM `k`, so a target that must not
+    /// mention the witness (`Exists.rec`'s own restriction) cannot be `G`
+    /// itself. `r < 1` is deliberately NOT a hypothesis here — nothing in
+    /// this construction needs it; it is implicit in whatever Cauchy
+    /// witness a caller can actually produce for `mseq`. See
+    /// `creal/uniform_convergence.rs`.
+    pub power_series_uniform_converges: NameId,
     /// `CReal.sinTerm : Nat → CReal := fun k => mul (pow (neg one) k)
     /// (expTerm (Nat.add (Nat.add k k) 1))` — the `k`-th term of `sin 1`'s
     /// Taylor series, `(-1)^k/(2k+1)!`, the odd index written `Nat.add
@@ -5097,6 +5142,10 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         uniform_converges_add: kernel.name_str(creal, "uniform_converges_add"),
         close_within_of_within: kernel.name_str(creal, "close_within_of_within"),
         weierstrass_m_test: kernel.name_str(creal, "weierstrassMTest"),
+        power_series_term: kernel.name_str(creal, "powerSeriesTerm"),
+        power_series_term_congr: kernel.name_str(creal, "powerSeriesTerm_congr"),
+        power_series_term_abs_le: kernel.name_str(creal, "powerSeriesTerm_abs_le"),
+        power_series_uniform_converges: kernel.name_str(creal, "powerSeriesUniformConvergesOn"),
         sin_term: kernel.name_str(creal, "sinTerm"),
         sin_series_partial: kernel.name_str(creal, "sinSeriesPartial"),
         sin_term_abs_le_dominant: kernel.name_str(creal, "sinTermAbsLeDominant"),
@@ -5631,6 +5680,12 @@ pub(crate) fn build_creal_prelude_uncached(
         // Chapter 11 machinery.
         monotone::declare_inverse_lipschitz_of_pos_deriv(&mut d, prelude)?;
         power::declare_power(&mut d, prelude)?;
+        // `powerSeriesTerm`/`powerSeriesTerm_congr` need only `CReal.pow`/
+        // `CReal.pow_congr`/`CReal.mul_congr` (`power::declare_power`, just
+        // above); no dependency on `geometric`/`ratio_test` at all, so they
+        // land right after their one real dependency.
+        power::declare_power_series_term(&mut d, prelude)?;
+        power::declare_power_series_term_congr(&mut d, prelude)?;
         // `hasDerivative_pow_two` mentions `CReal.pow`, which `power.rs`
         // declares. It cannot live inside `derivative::declare_derivative`,
         // which runs BEFORE `power::declare_power` above: the kernel rejects a
@@ -5645,6 +5700,24 @@ pub(crate) fn build_creal_prelude_uncached(
         // `mul_inv_cancel` via `inverse`) — the latter already ran earlier,
         // the former just above. See `geometric.rs`'s module documentation.
         geometric::declare_geometric(&mut d, prelude)?;
+        // `powerSeriesTerm_abs_le` needs `CReal.pow_le_pow_of_base_le`
+        // (`geometric::declare_geometric`, just above), `CReal.pow_nonneg`
+        // (`power::declare_power`, well above) and
+        // `CReal.abs_mul_le_of_bounds`/`CReal.abs_le`/`CReal.neg_le_neg`
+        // (all well above); it cannot join `power_series_term_congr`'s own
+        // call site above `pow_le_pow_of_base_le` does not exist there yet.
+        power::declare_power_series_term_abs_le(&mut d, prelude)?;
+        // `powerSeriesUniformConvergesOn` needs `CReal.weierstrassMTest`
+        // (`uniform_convergence::declare_weierstrass_m_test`, far above),
+        // `powerSeriesTerm_congr` and `powerSeriesTerm_abs_le` (both just
+        // above) -- no dependency on `geomScaledCauchyOfLt`/`ratio_test` at
+        // all, since this declaration takes the dominating series' own raw
+        // Cauchy modulus `(k, hcauchy)` as a direct parameter pair rather
+        // than deriving it internally (see the field doc on
+        // `CRealPrelude::power_series_uniform_converges` for why: the
+        // M-test's own limit `G` is built FROM `k`, so an `Exists`-elim
+        // whose target is `UniformConvergesOn … G …` cannot hide it).
+        uniform_convergence::declare_power_series_uniform_converges(&mut d, prelude)?;
         // `uniform_converges_geom_half` needs `CReal.pow`/`CReal.pow_nonneg`
         // (`power::declare_power`, well above) and
         // `CReal.pow_half_le_nat_div_succ`, just declared above by
