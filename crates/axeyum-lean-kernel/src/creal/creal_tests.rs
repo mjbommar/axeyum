@@ -126,7 +126,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 349] = [
+    let expected: [(&str, crate::NameId, &str); 350] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -309,6 +309,10 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
             p.converges_upper_bound,
             "theorem",
         ),
+        // Order passes to the limit: composition of `converges_sub` +
+        // `converges_upper_bound` + ring/order algebra, no new accuracy-index
+        // estimate (see `convergence.rs`'s own doc on the declaration).
+        ("CReal.converges_le", p.converges_le, "theorem"),
         // Boundedness and sequential continuity (phase R10).
         ("CReal.Bounded", p.bounded, "def"),
         ("CReal.converges_bounded", p.converges_bounded, "theorem"),

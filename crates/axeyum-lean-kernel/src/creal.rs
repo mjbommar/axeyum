@@ -982,6 +982,20 @@ pub struct CRealPrelude {
     /// Converges f L → le L b`. The mirror of
     /// [`Self::converges_lower_bound`].
     pub converges_upper_bound: NameId,
+    /// `CReal.converges_le : ∀ f g L M, Converges f L → Converges g M →
+    /// (∀ n, le (f n) (g n)) → le L M`.
+    ///
+    /// Order passes to the limit: built from [`Self::converges_sub`] (giving
+    /// `Converges (fun n => add (f n) (neg (g n))) (add L (neg M))`) plus the
+    /// pointwise hypothesis rearranged into `∀ n, le (add (f n) (neg (g n)))
+    /// zero` via [`Self::add_le_add`]/[`Self::add_neg`], then
+    /// [`Self::converges_upper_bound`] against the constant `zero` gives `le
+    /// (add L (neg M)) zero`, and one more `add_le_add`/ring-identity
+    /// rearrangement (add `M` to both sides, cancel) recovers `le L M`. No new
+    /// Riemann-sum or accuracy-index machinery — every step is either an
+    /// already-proved `Converges` combinator or ordinary ring/order algebra
+    /// over `CReal`.
+    pub converges_le: NameId,
 
     // --- boundedness of sequences, and sequential continuity (phase R10) ----
     /// `CReal.Bounded (g : Nat → CReal) : Prop :=
@@ -3780,6 +3794,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         converges_lower_bound: kernel.name_str(creal, "converges_lower_bound"),
         converges_lower_bound_shift: kernel.name_str(creal, "converges_lower_bound_shift"),
         converges_upper_bound: kernel.name_str(creal, "converges_upper_bound"),
+        converges_le: kernel.name_str(creal, "converges_le"),
         bounded: kernel.name_str(creal, "Bounded"),
         converges_bounded: kernel.name_str(creal, "converges_bounded"),
         converges_mul: kernel.name_str(creal, "converges_mul"),
