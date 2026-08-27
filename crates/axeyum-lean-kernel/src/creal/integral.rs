@@ -1283,6 +1283,328 @@ fn declare_of_nat_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelEr
     })
 }
 
+// --- mesh-count alignment (resolves the TWELFTH lane's `integral_split` gap) ---
+
+/// Resolves the mesh-count alignment gap the TWELFTH lane's module-doc entry
+/// diagnoses ("`CReal.integral_split` — checked 2026-08-27"): given three
+/// independently-shaped moduli `deep_ab`, `deep_ac`, `deep_cb : Nat` (e.g.
+/// each a different `deep(F,·,·,u,e)` uniform-continuity modulus) and a free
+/// `big_n : Nat`, derives the EXISTENCE of a `depth_ab : Nat` with
+/// `Eq Nat (add deep_ab depth_ab) combined`, where
+/// `combined := add (succ (add deep_ac depth_ac)) (add deep_cb depth_cb)`
+/// and `depth_ac := depth_cb := add(deep_ab, big_n)` — the literal
+/// `m_ac`/`m_cb`/`combined` shape
+/// [`CRealPrelude::riemann_sum_split_exact_of_uc`]'s own identity needs — via
+/// `Nat.le_dest` + `exists_elim`, **never `Nat.sub`** (the naive
+/// `depth_ab := combined - deep_ab` is exactly the truncation trap this
+/// module's kernel-facts list warns about, since nothing bounds
+/// `deep_ab ≤ combined` a priori without the `le` chain built below).
+///
+/// Continuation-passing rather than returning `(depth_ab, proof)` directly:
+/// `Nat.le_dest`'s witness cannot escape its own elimination scope
+/// ([`declare_of_nat_le`]'s own idiom, reused verbatim here), so a caller
+/// needing a further fact ABOUT `depth_ab` (e.g. transporting a
+/// `riemann_sum_integral_close` application built generically at a bound
+/// depth across the equation via [`nat_rewrite_prop`]) supplies `build`,
+/// invoked with the bound `depth_ab` and the equation proof, and must
+/// return a proof of the caller-fixed `target` (which therefore must not
+/// mention `depth_ab`, exactly [`exists_elim`]'s own precondition).
+///
+/// The `Nat.le deep_ab combined` premise `Nat.le_dest` needs is a four-hop
+/// `le_trans` chain over EXISTING lemmas only, no `add_assoc`/`add_right_comm`
+/// reassociation anywhere:
+///
+/// 1. `Nat.le_add_right(deep_ab, big_n) : Le deep_ab (add deep_ab big_n)`
+///    — literally `Le deep_ab depth_ac`, no rewrite needed.
+/// 2. `Nat.le_add_right(depth_ac, deep_ac) : Le depth_ac (add depth_ac deep_ac)`,
+///    transported across `Nat.add_comm(depth_ac, deep_ac)` via
+///    [`nat_rewrite_prop`] to `Le depth_ac (add deep_ac depth_ac)` — literally
+///    `Le depth_ac m_ac`.
+/// 3. `Nat.le_trans` composes 1 and 2 into `Le deep_ab m_ac`.
+/// 4. `Nat.le_succ(m_ac) : Le m_ac (succ m_ac)`, composed by `Nat.le_trans`
+///    into `Le deep_ab (succ m_ac)`.
+/// 5. `Nat.le_add_right(succ m_ac, m_cb) : Le (succ m_ac) (add (succ m_ac) m_cb)`
+///    — literally `Le (succ m_ac) combined` — composed by `Nat.le_trans`
+///    into the final `Le deep_ab combined`.
+pub(super) fn mesh_count_align(
+    d: &mut IntDev<'_>,
+    deep_ab: ExprId,
+    deep_ac: ExprId,
+    deep_cb: ExprId,
+    big_n: ExprId,
+    target: ExprId,
+    build: &dyn Fn(&mut IntDev<'_>, ExprId, ExprId) -> ExprId,
+) -> ExprId {
+    let np = d.prelude();
+    let nat = d.nat_ty();
+
+    // depth_ac := depth_cb := add(deep_ab, big_n) -- baked into both child
+    // depths so `deep_ab` is available inside `combined` as a term, per the
+    // TWELFTH lane's resolution.
+    let depth_ac = NatOps::add(d, deep_ab, big_n);
+    let m_ac = NatOps::add(d, deep_ac, depth_ac);
+    let m_cb = NatOps::add(d, deep_cb, depth_ac);
+    let succ_m_ac = d.succ(m_ac);
+    let combined = NatOps::add(d, succ_m_ac, m_cb);
+
+    // h1 : Le deep_ab depth_ac.
+    let h1 = d.lemma(np.le_add_right, &[deep_ab, big_n]);
+
+    // h2 : Le depth_ac m_ac.
+    let h2a = d.lemma(np.le_add_right, &[depth_ac, deep_ac]);
+    let depth_ac_plus_deep_ac = NatOps::add(d, depth_ac, deep_ac);
+    let comm = d.lemma(np.add_comm, &[depth_ac, deep_ac]);
+    let h2 = nat_rewrite_prop(d, depth_ac_plus_deep_ac, m_ac, comm, h2a, &|d, x| {
+        d.le(depth_ac, x)
+    });
+
+    // h3 : Le deep_ab m_ac.
+    let h3 = d.lemma(np.le_trans, &[deep_ab, depth_ac, m_ac, h1, h2]);
+
+    // h4 : Le m_ac succ_m_ac; h5 : Le deep_ab succ_m_ac.
+    let h4 = d.lemma(np.le_succ, &[m_ac]);
+    let h5 = d.lemma(np.le_trans, &[deep_ab, m_ac, succ_m_ac, h3, h4]);
+
+    // h6 : Le succ_m_ac combined; h7 : Le deep_ab combined.
+    let h6 = d.lemma(np.le_add_right, &[succ_m_ac, m_cb]);
+    let h7 = d.lemma(np.le_trans, &[deep_ab, succ_m_ac, combined, h5, h6]);
+
+    let represented = d.const_app(np.le_dest, &[deep_ab, combined, h7]);
+
+    // pred := λ k, Eq Nat (add deep_ab k) combined.
+    let pred = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let sum = NatOps::add(d, deep_ab, k);
+        let body = d.eq(sum, combined);
+        d.lam_fv(k_fv, nat, body)
+    };
+
+    let minor = {
+        let depth_ab_fv = d.fresh_fvar();
+        let depth_ab = d.kernel().fvar(depth_ab_fv);
+        let sum = NatOps::add(d, deep_ab, depth_ab);
+        let e_ty = d.eq(sum, combined);
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+        let body = build(d, depth_ab, e);
+        let with_e = d.lam_fv(e_fv, e_ty, body);
+        d.lam_fv(depth_ab_fv, nat, with_e)
+    };
+
+    exists_elim(d, pred, target, represented, minor)
+}
+
+#[cfg(test)]
+mod mesh_count_align_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// The raw existence claim, symbolic in all four inputs, closed into a
+    /// real `Theorem` universally quantified over `deep_ab deep_ac deep_cb
+    /// big_n : Nat` (mirroring [`declare_of_nat_le`]'s own final `pi_fv`/
+    /// `lam_fv` wrapping -- the four moduli are genuinely free variables of
+    /// [`mesh_count_align`]'s own construction, so `Kernel::infer` on the
+    /// unwrapped proof alone rejects them as `UnboundFVar`, exactly as it
+    /// would reject an unclosed term anywhere else in this file). `target :=
+    /// pred`'s own `Exists`, `build` is plain `exists_intro`. Confirms
+    /// [`mesh_count_align`]'s proof is accepted by `Kernel::add_declaration`
+    /// itself, not merely by `cargo check`.
+    #[test]
+    fn mesh_count_align_proves_the_stated_existence() {
+        crate::on_a_deep_stack(mesh_count_align_proves_the_stated_existence_body);
+    }
+
+    fn mesh_count_align_proves_the_stated_existence_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let nat = d.nat_ty();
+
+        let deep_ab_fv = d.fresh_fvar();
+        let deep_ab = d.kernel().fvar(deep_ab_fv);
+        let deep_ac_fv = d.fresh_fvar();
+        let deep_ac = d.kernel().fvar(deep_ac_fv);
+        let deep_cb_fv = d.fresh_fvar();
+        let deep_cb = d.kernel().fvar(deep_cb_fv);
+        let big_n_fv = d.fresh_fvar();
+        let big_n = d.kernel().fvar(big_n_fv);
+
+        // Reconstruct `combined` independently, mirroring
+        // `mesh_count_align`'s own construction, so a defect in ITS
+        // construction (not just a matching bug in this test) is what the
+        // kernel's type-check would catch.
+        let depth_ac = NatOps::add(&mut d, deep_ab, big_n);
+        let m_ac = NatOps::add(&mut d, deep_ac, depth_ac);
+        let m_cb = NatOps::add(&mut d, deep_cb, depth_ac);
+        let succ_m_ac = d.succ(m_ac);
+        let combined = NatOps::add(&mut d, succ_m_ac, m_cb);
+
+        let pred = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let sum = NatOps::add(&mut d, deep_ab, k);
+            let body = d.eq(sum, combined);
+            d.lam_fv(k_fv, nat, body)
+        };
+        let target = exists_ty(&mut d, p, nat, pred);
+        let build = |d: &mut IntDev<'_>, depth_ab: ExprId, e: ExprId| -> ExprId {
+            exists_intro(d, p, nat, pred, depth_ab, e)
+        };
+
+        let proof = mesh_count_align(&mut d, deep_ab, deep_ac, deep_cb, big_n, target, &build);
+
+        // Close over the four free `Nat` variables, outermost-first
+        // `deep_ab`, matching the argument order `mesh_count_align` itself
+        // takes.
+        let ty = {
+            let over_big_n = d.pi_fv(big_n_fv, nat, target);
+            let over_cb = d.pi_fv(deep_cb_fv, nat, over_big_n);
+            let over_ac = d.pi_fv(deep_ac_fv, nat, over_cb);
+            d.pi_fv(deep_ab_fv, nat, over_ac)
+        };
+        let value = {
+            let over_big_n = d.lam_fv(big_n_fv, nat, proof);
+            let over_cb = d.lam_fv(deep_cb_fv, nat, over_big_n);
+            let over_ac = d.lam_fv(deep_ac_fv, nat, over_cb);
+            d.lam_fv(deep_ab_fv, nat, over_ac)
+        };
+
+        let anon = d.kernel().anon();
+        let name = d
+            .kernel()
+            .name_str(anon, "meshCountAlignStatedExistenceSmoke");
+        let result = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(
+            result.is_ok(),
+            "mesh_count_align must prove the stated existence, closed over all four inputs: {:?}",
+            result.err()
+        );
+    }
+
+    /// Non-vacuity: swapping `deep_ac`/`deep_cb` must produce a DIFFERENT
+    /// `combined` -- the `succ` in `combined := add(succ(m_ac), m_cb)` binds
+    /// only the `deep_ac` side, so the construction is not accidentally
+    /// symmetric in its two child moduli. If this rendered identically, the
+    /// positive test above would still pass while `mesh_count_align` ignored
+    /// which modulus is which.
+    #[test]
+    fn mesh_count_align_is_not_symmetric_in_ac_and_cb() {
+        crate::on_a_deep_stack(mesh_count_align_is_not_symmetric_in_ac_and_cb_body);
+    }
+
+    fn mesh_count_align_is_not_symmetric_in_ac_and_cb_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let nat = d.nat_ty();
+
+        let deep_ab_fv = d.fresh_fvar();
+        let deep_ab = d.kernel().fvar(deep_ab_fv);
+        let deep_ac_fv = d.fresh_fvar();
+        let deep_ac = d.kernel().fvar(deep_ac_fv);
+        let deep_cb_fv = d.fresh_fvar();
+        let deep_cb = d.kernel().fvar(deep_cb_fv);
+        let big_n_fv = d.fresh_fvar();
+        let big_n = d.kernel().fvar(big_n_fv);
+
+        let render_target_for = |d: &mut IntDev<'_>, ac: ExprId, cb: ExprId| -> String {
+            let depth = NatOps::add(d, deep_ab, big_n);
+            let m_ac = NatOps::add(d, ac, depth);
+            let m_cb = NatOps::add(d, cb, depth);
+            let succ_m_ac = d.succ(m_ac);
+            let combined = NatOps::add(d, succ_m_ac, m_cb);
+            let pred = {
+                let k_fv = d.fresh_fvar();
+                let k = d.kernel().fvar(k_fv);
+                let sum = NatOps::add(d, deep_ab, k);
+                let body = d.eq(sum, combined);
+                d.lam_fv(k_fv, nat, body)
+            };
+            let target = exists_ty(d, p, nat, pred);
+            d.kernel().render_lean(target)
+        };
+
+        let straight = render_target_for(&mut d, deep_ac, deep_cb);
+        let swapped = render_target_for(&mut d, deep_cb, deep_ac);
+        assert_ne!(
+            straight, swapped,
+            "swapping deep_ac/deep_cb must change `combined`'s rendered target"
+        );
+    }
+
+    /// Concrete instantiation: `deep_ab := 3`, `deep_ac := 5`, `deep_cb := 7`,
+    /// `big_n := 2`, so `depth_ac = depth_cb = 5`, `m_ac = 10`, `m_cb = 12`,
+    /// `combined = succ(10) + 12 = 23`, and the derived `depth_ab` must
+    /// satisfy `3 + depth_ab = 23` -- i.e. `depth_ab = 20`, though this test
+    /// checks the STATEMENT (via `Kernel::infer` against an independently
+    /// reconstructed target), not a hand-computed witness, since
+    /// `mesh_count_align` derives existence rather than the value.
+    #[test]
+    fn mesh_count_align_applies_at_three_five_seven_two() {
+        crate::on_a_deep_stack(mesh_count_align_applies_at_three_five_seven_two_body);
+    }
+
+    fn mesh_count_align_applies_at_three_five_seven_two_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let nat = d.nat_ty();
+
+        let deep_ab = d.num(3);
+        let deep_ac = d.num(5);
+        let deep_cb = d.num(7);
+        let big_n = d.num(2);
+
+        let depth_ac = NatOps::add(&mut d, deep_ab, big_n);
+        let m_ac = NatOps::add(&mut d, deep_ac, depth_ac);
+        let m_cb = NatOps::add(&mut d, deep_cb, depth_ac);
+        let succ_m_ac = d.succ(m_ac);
+        let combined = NatOps::add(&mut d, succ_m_ac, m_cb);
+        let expected_combined = d.num(23);
+        assert!(
+            d.kernel().def_eq(combined, expected_combined),
+            "combined must reduce to the literal 23 at (3,5,7,2): got {}",
+            d.kernel().render_lean(combined)
+        );
+
+        let pred = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let sum = NatOps::add(&mut d, deep_ab, k);
+            let body = d.eq(sum, combined);
+            d.lam_fv(k_fv, nat, body)
+        };
+        let target = exists_ty(&mut d, p, nat, pred);
+        let build = |d: &mut IntDev<'_>, depth_ab: ExprId, e: ExprId| -> ExprId {
+            exists_intro(d, p, nat, pred, depth_ab, e)
+        };
+
+        let proof = mesh_count_align(&mut d, deep_ab, deep_ac, deep_cb, big_n, target, &build);
+
+        let anon = d.kernel().anon();
+        let name = d
+            .kernel()
+            .name_str(anon, "meshCountAlignThreeFiveSevenTwoSmoke");
+        let result = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: target,
+            value: proof,
+        });
+        assert!(
+            result.is_ok(),
+            "mesh_count_align must apply at (3,5,7,2): {:?}",
+            result.err()
+        );
+    }
+}
+
 // --- the declarations ---------------------------------------------------------
 
 /// `CReal.riemannSum (f : CReal -> CReal) (a b : CReal) (m : Nat) : CReal :=
