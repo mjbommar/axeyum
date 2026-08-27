@@ -3698,6 +3698,10 @@ mod sample_point_reblock_tests {
     /// stuck at DIFFERENT rationals and `add_declaration` would return `Err`.
     #[test]
     fn sample_point_reblock_computes_to_five_halves_at_concrete_args() {
+        crate::on_a_deep_stack(sample_point_reblock_computes_to_five_halves_at_concrete_args_body);
+    }
+
+    fn sample_point_reblock_computes_to_five_halves_at_concrete_args_body() {
         let mut kernel = crate::Kernel::new();
         let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
         let mut d = IntDev::new(&mut kernel, p.rat.int);
@@ -3747,6 +3751,10 @@ mod sample_point_reblock_tests {
     /// ground literals the test above uses.
     #[test]
     fn sample_point_reblock_type_checks_symbolically() {
+        crate::on_a_deep_stack(sample_point_reblock_type_checks_symbolically_body);
+    }
+
+    fn sample_point_reblock_type_checks_symbolically_body() {
         let mut kernel = crate::Kernel::new();
         let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
         let mut d = IntDev::new(&mut kernel, p.rat.int);
@@ -5137,6 +5145,10 @@ mod succ_shape_bridge_tests {
     /// `sqrt.rs`'s `bridging_smoke_tests`).
     #[test]
     fn succ_mul_succ_type_checks_symbolically() {
+        crate::on_a_deep_stack(succ_mul_succ_type_checks_symbolically_body);
+    }
+
+    fn succ_mul_succ_type_checks_symbolically_body() {
         let mut kernel = crate::Kernel::new();
         let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
         let mut d = IntDev::new(&mut kernel, p.rat.int);
@@ -5186,6 +5198,10 @@ mod succ_shape_bridge_tests {
     /// reduction, not a comment, is what "reduces" means here.
     #[test]
     fn succ_mul_succ_reduces_at_two_three() {
+        crate::on_a_deep_stack(succ_mul_succ_reduces_at_two_three_body);
+    }
+
+    fn succ_mul_succ_reduces_at_two_three_body() {
         let mut kernel = crate::Kernel::new();
         let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
         let mut d = IntDev::new(&mut kernel, p.rat.int);
@@ -5341,6 +5357,10 @@ mod common_refinement_tests {
     /// for [`succ_mul_succ`] one section up.
     #[test]
     fn common_refinement_type_checks_symbolically() {
+        crate::on_a_deep_stack(common_refinement_type_checks_symbolically_body);
+    }
+
+    fn common_refinement_type_checks_symbolically_body() {
         let mut kernel = crate::Kernel::new();
         let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
         let mut d = IntDev::new(&mut kernel, p.rat.int);
@@ -5388,6 +5408,10 @@ mod common_refinement_tests {
     /// exercises `Nat.mul_comm`/[`nat_add_swap_tail`].
     #[test]
     fn common_refinement_reduces_at_two_three() {
+        crate::on_a_deep_stack(common_refinement_reduces_at_two_three_body);
+    }
+
+    fn common_refinement_reduces_at_two_three_body() {
         let mut kernel = crate::Kernel::new();
         let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
         let mut d = IntDev::new(&mut kernel, p.rat.int);
@@ -5449,6 +5473,10 @@ mod common_refinement_tests {
     /// the kernel must refuse it.
     #[test]
     fn common_refinement_proof_rejected_at_wrong_type() {
+        crate::on_a_deep_stack(common_refinement_proof_rejected_at_wrong_type_body);
+    }
+
+    fn common_refinement_proof_rejected_at_wrong_type_body() {
         let mut kernel = crate::Kernel::new();
         let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
         let mut d = IntDev::new(&mut kernel, p.rat.int);
@@ -5485,6 +5513,10 @@ mod sample_offset_bound_tests {
     /// reject it -- the same idiom as `succ_shape_bridge_tests` above.
     #[test]
     fn sample_offset_bound_type_checks_symbolically() {
+        crate::on_a_deep_stack(sample_offset_bound_type_checks_symbolically_body);
+    }
+
+    fn sample_offset_bound_type_checks_symbolically_body() {
         let mut kernel = crate::Kernel::new();
         let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
         let mut d = IntDev::new(&mut kernel, p.rat.int);
@@ -5582,6 +5614,10 @@ mod le_add_of_abs_sub_le_tests {
     /// yields a term whose type is the expected concrete conclusion.
     #[test]
     fn le_add_of_abs_sub_le_applies_at_three_two_and_one() {
+        crate::on_a_deep_stack(le_add_of_abs_sub_le_applies_at_three_two_and_one_body);
+    }
+
+    fn le_add_of_abs_sub_le_applies_at_three_two_and_one_body() {
         let mut kernel = crate::Kernel::new();
         let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
         let mut d = IntDev::new(&mut kernel, p.rat.int);
@@ -5644,6 +5680,10 @@ mod two_sided_of_abs_sub_le_tests {
     /// wrong endpoint, fails to match.
     #[test]
     fn two_sided_of_abs_sub_le_applies_at_three_two_and_one() {
+        crate::on_a_deep_stack(two_sided_of_abs_sub_le_applies_at_three_two_and_one_body);
+    }
+
+    fn two_sided_of_abs_sub_le_applies_at_three_two_and_one_body() {
         let mut kernel = crate::Kernel::new();
         let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
         let mut d = IntDev::new(&mut kernel, p.rat.int);
@@ -5718,6 +5758,10 @@ mod fine_block_sum_close_tests {
     /// blocks the real declaration uses.
     #[test]
     fn fine_block_sum_close_applies_at_concrete_literals() {
+        crate::on_a_deep_stack(fine_block_sum_close_applies_at_concrete_literals_body);
+    }
+
+    fn fine_block_sum_close_applies_at_concrete_literals_body() {
         let mut kernel = crate::Kernel::new();
         let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
         let mut d = IntDev::new(&mut kernel, p.rat.int);
@@ -5838,6 +5882,10 @@ mod mesh_reciprocal_mul_tests {
     /// symbolically.
     #[test]
     fn mesh_reciprocal_mul_applies_at_one_two_and_reduces_to_five() {
+        crate::on_a_deep_stack(mesh_reciprocal_mul_applies_at_one_two_and_reduces_to_five_body);
+    }
+
+    fn mesh_reciprocal_mul_applies_at_one_two_and_reduces_to_five_body() {
         let mut kernel = crate::Kernel::new();
         let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
         let mut d = IntDev::new(&mut kernel, p.rat.int);
@@ -5889,6 +5937,10 @@ mod equiv_abs_diff_le_tests {
     /// argument or a wrong target bound fails to match.
     #[test]
     fn equiv_abs_diff_le_applies_at_equal_literals() {
+        crate::on_a_deep_stack(equiv_abs_diff_le_applies_at_equal_literals_body);
+    }
+
+    fn equiv_abs_diff_le_applies_at_equal_literals_body() {
         let mut kernel = crate::Kernel::new();
         let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
         let mut d = IntDev::new(&mut kernel, p.rat.int);
@@ -6511,6 +6563,10 @@ mod pointwise_block_equiv_tests {
     /// that a free variable does not get.
     #[test]
     fn pointwise_block_equiv_type_checks_symbolically() {
+        crate::on_a_deep_stack(pointwise_block_equiv_type_checks_symbolically_body);
+    }
+
+    fn pointwise_block_equiv_type_checks_symbolically_body() {
         let mut kernel = crate::Kernel::new();
         let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
         let mut d = IntDev::new(&mut kernel, p.rat.int);

@@ -55,7 +55,7 @@ axiom-freedom:
 # not hide any of them — the chain still fails — it stops them hiding everything
 # else. Note the earlier claim that `adr-remote-collisions` was already last was
 # wrong: it was #40 of 41, so `local-ci-freshness` sat behind it.
-check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls
+check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope deep-stack-call-sites axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls
 
 fmt:
     cargo fmt --all --check
@@ -402,6 +402,13 @@ gate-controls:
     # committed pins passing. Each of the checker's five guards was mutated
     # individually in a scratch tree and kills exactly one control.
     scripts/tests/test-kernel-stack-envelope.sh
+    # Controls for `deep-stack-call-sites` below. Six cases against a scratch
+    # search root (`AXEYUM_DEEP_STACK_SEARCH_ROOT`): the committed tree passes,
+    # a fresh unwrapped call is RED, the same call one hop through a same-file
+    # helper is still RED, both `on_a_deep_stack` shapes (inline closure and
+    # named `_body` function) are GREEN, and an empty search root is exit 2
+    # rather than a vacuous pass.
+    scripts/tests/test-deep-stack-call-sites.sh
     scripts/tests/test-lane-commit.sh
     scripts/tests/test-recount-pinned-inventory.sh
     # The lane stamp must PARSE as a git trailer, not merely appear as text:
@@ -849,6 +856,17 @@ moment-proofs:
 # kernel change plausibly deepened a proof term.
 kernel-stack-envelope:
     ./scripts/check-kernel-stack-envelope.sh --check --profile release
+
+# Static companion to `kernel-stack-envelope` above: that recipe re-measures
+# how much stack each prelude NEEDS; this one catches a `#[test]` that reaches
+# a deep-recursion build (`build_creal_prelude`, `build_complex_prelude`,
+# `build_cpoint_prelude`, `build_creal_model_of_arith`) without an
+# `on_a_deep_stack` guard anywhere on its local call path -- the actual
+# regression shape that hit `creal_tests.rs`, `creal_model_tests.rs` and
+# `prelude_cache_tests.rs` reactively in one session, plus a fourth,
+# previously-undetected instance this script found on its first run.
+deep-stack-call-sites:
+    python3 scripts/check-deep-stack-call-sites.py
 
 # T6.0.3/TL2.15 seed: deterministic generated coverage of the four currently
 # representable Lean-kernel seams. The workspace `test` recipe also discovers

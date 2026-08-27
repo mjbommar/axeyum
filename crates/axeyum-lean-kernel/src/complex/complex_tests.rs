@@ -47,17 +47,28 @@ fn complex_prelude_builds() {
 }
 
 /// Building twice is a no-op, not a duplicate-declaration error.
+///
+/// The rebuild itself is cheap (an already-`complex`-declared kernel hits
+/// `build_complex_prelude`'s early "already registered" return before any
+/// type-checking runs) — but it is wrapped in [`on_a_deep_stack`] anyway
+/// rather than carved out of `scripts/check-deep-stack-call-sites.py`'s
+/// static analysis, which cannot see that "the kernel `built()` handed back
+/// is already fully built" and flags this call the same as a fresh one. An
+/// exception list is one more thing to keep correct by hand; a redundant
+/// thread spawn is not.
 #[test]
 fn complex_prelude_is_idempotent() {
-    let (mut kernel, first) = built();
-    let before = kernel.environment().iter().count();
-    let second = build_complex_prelude(&mut kernel).expect("rebuild must succeed");
-    assert_eq!(first, second, "a rebuild must return the same handles");
-    assert_eq!(
-        before,
-        kernel.environment().iter().count(),
-        "a rebuild must not add declarations"
-    );
+    on_a_deep_stack(|| {
+        let (mut kernel, first) = built();
+        let before = kernel.environment().iter().count();
+        let second = build_complex_prelude(&mut kernel).expect("rebuild must succeed");
+        assert_eq!(first, second, "a rebuild must return the same handles");
+        assert_eq!(
+            before,
+            kernel.environment().iter().count(),
+            "a rebuild must not add declarations"
+        );
+    });
 }
 
 /// **The headline claim, measured.** ℂ over the constructed ℝ costs zero
@@ -386,9 +397,60 @@ fn the_discrimination_witnesses_are_theorems() {
 ///
 /// `x + x` and `x` have different normal forms — coefficients are deliberately
 /// not collected, so the two multisets differ by one monomial.
+///
+/// Runs its body on [`on_a_deep_stack`]'s thread, like every other fresh
+/// `build_creal_prelude` call in this file — but it cannot use
+/// `#[should_panic(expected = "...")]` on the outer test the way a same-thread
+/// test would. Two independent problems, both measured on this toolchain:
+///
+/// - `on_a_deep_stack` re-panics via `JoinHandle::join().expect(..)`, and
+///   `Result::expect`'s message is built from the `Err` payload's `Debug`
+///   impl — for `Box<dyn Any + Send>` that is the fixed string `Any { .. }`,
+///   never the original panic text.
+/// - Even catching the panic *inside* the deep-stack thread and re-throwing
+///   its own payload does not reliably preserve the message: the payload
+///   downcasts to `String` at panic-HOOK time (before unwinding starts, via
+///   `PanicHookInfo::payload_as_str`) but to neither `String` nor `&str` by
+///   the time `catch_unwind` returns it a moment later — something on this
+///   call's unwind path changes the boxed value's dynamic type between those
+///   two observation points. `debug_probe_*`-shaped repros without the real
+///   kernel state came back clean every time; only the genuine
+///   `ring_proof` call under `on_a_deep_stack` showed the mismatch.
+///
+/// So the message is captured where it IS reliable — inside a panic hook,
+/// before unwinding starts — and asserted on directly, rather than re-thrown
+/// for `should_panic` to inspect on the far side of whatever changes it.
 #[test]
-#[should_panic(expected = "different normal forms")]
 fn the_ring_calculus_refuses_a_false_identity() {
+    let (panicked, message) = crate::on_a_deep_stack(|| {
+        use std::sync::{Arc, Mutex};
+
+        let captured: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
+        let captured_hook = Arc::clone(&captured);
+        let previous_hook = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |info| {
+            let message = info
+                .payload_as_str()
+                .map(str::to_string)
+                .unwrap_or_else(|| info.to_string());
+            *captured_hook.lock().unwrap() = Some(message);
+        }));
+        let result = std::panic::catch_unwind(the_ring_calculus_refuses_a_false_identity_body);
+        std::panic::set_hook(previous_hook);
+        (result.is_err(), captured.lock().unwrap().take())
+    });
+    assert!(
+        panicked,
+        "the ring calculus accepted `x + x = x`, a false identity"
+    );
+    let message = message.unwrap_or_default();
+    assert!(
+        message.contains("different normal forms"),
+        "the ring calculus refused the identity for the wrong reason: {message}"
+    );
+}
+
+fn the_ring_calculus_refuses_a_false_identity_body() {
     use crate::int_prelude::ops::IntDev;
 
     let mut kernel = Kernel::new();
@@ -406,6 +468,10 @@ fn the_ring_calculus_refuses_a_false_identity() {
 /// not run at all.
 #[test]
 fn the_ring_calculus_proves_a_true_identity() {
+    crate::on_a_deep_stack(the_ring_calculus_proves_a_true_identity_body);
+}
+
+fn the_ring_calculus_proves_a_true_identity_body() {
     use crate::int_prelude::ops::IntDev;
     use crate::nat_prelude::NatOps;
 
