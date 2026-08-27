@@ -3610,6 +3610,60 @@ pub struct CRealPrelude {
     /// hab u` and `mul c (b−a)`, so the two are `Equiv`. See
     /// `creal/integral.rs`'s `declare_integral_const`.
     pub integral_const: NameId,
+    /// `CReal.hasDerivative_integral_const : ∀ c a b (k : Nat), le (abs c)
+    /// (ofRat (natDivSucc (Nat.succ k) 0)) → HasDerivativeOn (fun x =>
+    /// integral (fun _ => c) a (max a (min x b)) (le_max_left a (min x b))
+    /// (uniformly_continuous_const c a (max a (min x b)))) (fun _ => c) a
+    /// b` — Spivak Ch14's FIRST evaluation instance of the Fundamental
+    /// Theorem of Calculus, part I: the antiderivative of a **constant**
+    /// integrand has that constant as its derivative.
+    ///
+    /// `HasDerivativeOn`'s carrier `G : CReal → CReal` must be a genuinely
+    /// TOTAL function, but [`Self::integral`]'s own second and third
+    /// arguments are PROOFS (`le a x`, `UniformlyContinuousOn F a x`) that
+    /// only exist when `x` is actually in `[a, b]` — so the naive `fun x =>
+    /// integral F a x hax ux` is not well-typed at all. The fix is
+    /// `max a (min x b)`: it clamps ANY `x` into `[a, b]` UNCONDITIONALLY
+    /// (`le_max_left` needs no hypothesis at all), and for a **constant**
+    /// integrand [`Self::uniformly_continuous_const`] is *also*
+    /// unconditional (`UniformlyContinuousOn (fun _ => c) p q` holds for
+    /// ANY `p q`, no ordering needed) — so both proof arguments `integral`
+    /// needs are constructible for every `x`, with no case split on order
+    /// (which would need decidability this development does not have).
+    ///
+    /// This is deliberately NOT the general FTC-I (`HasDerivativeOn G F a b`
+    /// for an arbitrary uniformly continuous `F`, `G := fun x => integral F
+    /// a (clamp x) …`). That needs two pieces this prelude does not yet
+    /// have: additivity of `integral` over a split point (`integral F a y ~
+    /// integral F a x + integral F x y`) — [`super::integral`]'s own module
+    /// documentation flags the `riemannSum` analogue as "**Not attempted**,
+    /// which is false for a FIXED subinterval count" — and a genuine
+    /// Riemann-sum-vs-`F(x)·(y−x)` estimate through `F`'s own modulus of
+    /// uniform continuity (what makes the error term shrink at all).
+    /// Neither is a missing one-line lemma; both are open analytic
+    /// development. The clamp/well-typedness fix proved here is orthogonal
+    /// to that gap and applies unchanged once it closes.
+    ///
+    /// Built from [`Self::has_derivative_id`], [`Self::has_derivative_const`]
+    /// (at `c := a`), [`Self::has_derivative_sub`] and
+    /// [`Self::has_derivative_smul`] (composing to `HasDerivativeOn (fun r
+    /// => mul c (add r (neg a))) (fun x => mul c (add one (neg zero))) a
+    /// b` via pure beta — no `Equiv` lemma needed for that composition, only
+    /// for the final cleanup), then [`Self::has_derivative_congr`] ONCE at
+    /// the end to reach the stated `G`/`(fun _ => c)` on both sides: `G x ~
+    /// mul c (add x (neg a))` on `[a,b]` chains [`Self::integral_const`]
+    /// (global, any `x`) with `max a (min x b) ~ x` on `[a,b]`
+    /// (`equiv_of_le_le` antisymmetry from `min`/`max`'s universal
+    /// properties, needing `le a x`/`le x b`); `c ~ mul c (add one (neg
+    /// zero))` is `mul_one`/`add_zero`/`add_neg` and does not need the
+    /// interval hypotheses at all.
+    ///
+    /// `hasDerivative_smul`'s own magnitude-bound hypothesis (`k`, `hbound`)
+    /// is left universally quantified rather than derived from
+    /// [`Self::archimedean`] — the `hasDerivative_cube`/`hasDerivative_pow`
+    /// pattern of pushing a Skolem witness onto the caller rather than
+    /// solving the `ofNat`-vs-`natDivSucc` conversion inline.
+    pub has_derivative_integral_const: NameId,
 }
 
 impl CRealPrelude {
@@ -4022,6 +4076,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         integral: kernel.name_str(creal, "integral"),
         integral_converges: kernel.name_str(creal, "integral_converges"),
         integral_const: kernel.name_str(creal, "integral_const"),
+        has_derivative_integral_const: kernel.name_str(creal, "hasDerivative_integral_const"),
     }
 }
 
@@ -4368,6 +4423,17 @@ pub(crate) fn build_creal_prelude_uncached(
         // `converges_of_equiv` (`convergence::declare_convergence`, well
         // above) and `converges_unique`/`equiv_symm` (both far above).
         integral::declare_integral_const(&mut d, prelude)?;
+        // `hasDerivative_integral_const` (Spivak Ch14 FTC-I, first evaluation
+        // instance) needs `integral`/`integral_const` (just above, this
+        // dispatch is why it cannot live inside `derivative::declare_derivative`,
+        // which runs long before `CReal.integral` exists) plus
+        // `has_derivative_id`/`has_derivative_const`/`has_derivative_sub`/
+        // `has_derivative_smul`/`has_derivative_congr` (all `derivative.rs`,
+        // far above) and the `max`/`min` lattice laws (`lattice.rs`, far
+        // above). The function body lives in `derivative.rs` (it reuses that
+        // file's private ring-algebra helpers) but is dispatched from here,
+        // after its `integral` dependency, not from `declare_derivative`.
+        derivative::declare_has_derivative_integral_const(&mut d, prelude)?;
         // `order_reflect_of_pos_deriv` needs only `strict_mono_of_pos_deriv`
         // (just declared above) plus `lt_trans`/`lt_irrefl`/`apart` (all far
         // above); nothing later depends on it, so it lands right after its

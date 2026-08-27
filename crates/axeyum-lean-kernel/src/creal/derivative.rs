@@ -8188,3 +8188,342 @@ pub(super) fn declare_has_derivative_pow(
         value,
     })
 }
+
+// --- FTC-I, first evaluation instance: `d/dx integral (const c) a x = c` ----
+//
+// See [`CRealPrelude::has_derivative_integral_const`]'s own doc comment for
+// the well-typedness problem (`HasDerivativeOn`'s carrier must be a genuinely
+// TOTAL `CReal -> CReal` function, but `integral`'s own second and third
+// arguments are proofs that only exist ON `[a, b]`) and why the general case
+// (arbitrary uniformly continuous `F`, not just a constant) needs additivity
+// of `integral` over a split point plus a Riemann-sum-vs-`F(x)*(y-x)`
+// estimate — neither built anywhere in this prelude yet.
+
+/// `max a (min x b)` — clamps ANY `x : CReal` into `[a, b]`. Total and
+/// UNCONDITIONAL: no hypothesis on `x`, `a`, or `b` is needed to build the
+/// term itself (only to prove facts about where it lands).
+fn clamp_into(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, x: ExprId, b: ExprId) -> ExprId {
+    let mn = d.const_app(p.min, &[x, b]);
+    d.const_app(p.max, &[a, mn])
+}
+
+/// `le a (clamp_into a x b)` — UNCONDITIONAL (`le_max_left` alone; `min`
+/// never has to be shown `<= b` for this direction).
+fn le_a_clamp_into(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, x: ExprId, b: ExprId) -> ExprId {
+    let mn = d.const_app(p.min, &[x, b]);
+    d.lemma(p.le_max_left, &[a, mn])
+}
+
+/// `Equiv (clamp_into a x b) x`, GIVEN `hax : le a x` and `hxb : le x b` —
+/// clamping a point already inside `[a, b]` is the identity. Two
+/// antisymmetry closures (`equiv_of_le_le`) off `min`/`max`'s universal
+/// properties: `min x b ~ x` (from `min_le_left` and `le_min` at `le_refl
+/// x`/`hxb`), then `max a x ~ x` (from `max_le` at `hax`/`le_refl x` and
+/// `le_max_right`), chained through `max_congr`.
+fn clamp_into_equiv_on_interval(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    x: ExprId,
+    b: ExprId,
+    hax: ExprId,
+    hxb: ExprId,
+) -> ExprId {
+    let mn = d.const_app(p.min, &[x, b]);
+    let refl_x = d.lemma(p.le_refl, &[x]);
+
+    // Equiv (min x b) x
+    let x_le_mn = d.lemma(p.le_min, &[x, b, x, refl_x, hxb]);
+    let mn_le_x = d.lemma(p.min_le_left, &[x, b]);
+    let min_eq_x = d.lemma(p.equiv_of_le_le, &[mn, x, mn_le_x, x_le_mn]);
+
+    // Equiv (max a x) x
+    let max_a_x = d.const_app(p.max, &[a, x]);
+    let max_ax_le_x = d.lemma(p.max_le, &[a, x, x, hax, refl_x]);
+    let x_le_max_ax = d.lemma(p.le_max_right, &[a, x]);
+    let maxax_eq_x = d.lemma(p.equiv_of_le_le, &[max_a_x, x, max_ax_le_x, x_le_max_ax]);
+
+    let refl_a = d.lemma(p.equiv_refl, &[a]);
+    let step1 = d.lemma(p.max_congr, &[a, a, mn, x, refl_a, min_eq_x]);
+    let clamp_x = d.const_app(p.max, &[a, mn]);
+    echain(d, p, clamp_x, &[(max_a_x, step1), (x, maxax_eq_x)])
+}
+
+/// `Equiv (mul c (add one (neg zero))) c` — the raw derivative
+/// `hasDerivative_sub` then `hasDerivative_smul` compose to (`c * (1 +
+/// (-0))`) collapses to plain `c`: `neg zero ~ zero` ([`neg_zero_equiv`]),
+/// `add one zero ~ one` ([`CRealPrelude::add_zero`]), `mul c one ~ c`
+/// ([`CRealPrelude::mul_one`]).
+fn smul_sub_derivative_equiv_const(d: &mut IntDev<'_>, p: CRealPrelude, c: ExprId) -> ExprId {
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let zero_c = czero(d, p);
+    let neg_zero = cneg(d, p, zero_c);
+
+    let nz_eq = neg_zero_equiv(d, p); // Equiv (neg zero) zero
+    let one_plus_negzero = cadd(d, p, one_c, neg_zero);
+    let one_plus_zero = cadd(d, p, one_c, zero_c);
+    let refl_one = erefl(d, p, one_c);
+    let step_a1 = d.lemma(
+        p.add_congr,
+        &[one_c, one_c, neg_zero, zero_c, refl_one, nz_eq],
+    );
+    let step_a2 = d.lemma(p.add_zero, &[one_c]); // Equiv (add one zero) one
+    let step_a = echain(
+        d,
+        p,
+        one_plus_negzero,
+        &[(one_plus_zero, step_a1), (one_c, step_a2)],
+    );
+    // step_a : Equiv (add one (neg zero)) one
+
+    let lhs = cmul(d, p, c, one_plus_negzero);
+    let mid = cmul(d, p, c, one_c);
+    let refl_c = erefl(d, p, c);
+    let step_b = d.lemma(
+        p.mul_congr,
+        &[c, c, one_plus_negzero, one_c, refl_c, step_a],
+    );
+    let step_c = d.lemma(p.mul_one, &[c]); // Equiv (mul c one) c
+    echain(d, p, lhs, &[(mid, step_b), (c, step_c)])
+}
+
+/// Admit `CReal.hasDerivative_integral_const`. See
+/// [`CRealPrelude::has_derivative_integral_const`]'s own doc comment for the
+/// full statement and the argument.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from the final `Theorem`
+/// here means the kernel **refused** the proof, not that a script gave up.
+pub(super) fn declare_has_derivative_integral_const(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    // hbound : le (abs c) (ofRat (natDivSucc (Nat.succ k) 0))
+    let zero_idx = d.num(0);
+    let succ_k = d.succ(k);
+    let bound_rat = div_succ_expr(d, p, succ_k, zero_idx);
+    let bound_real = d.const_app(p.of_rat, &[bound_rat]);
+    let hbound_ty = within_real(d, p, c, bound_real);
+    let hbound_fv = d.fresh_fvar();
+    let hbound = d.kernel().fvar(hbound_fv);
+
+    // --- Step 1: HasDerivativeOn (fun r => mul c (add r (neg a)))
+    //             (fun x => mul c (add one (neg zero))) a b  -- pure beta,
+    // no `Equiv` lemma needed for this composition.
+    let hd_id_ab = d.const_app(p.has_derivative_id, &[a, b]);
+    let hd_const_a_ab = d.const_app(p.has_derivative_const, &[a, a, b]);
+
+    let id_fn = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+    let one_fn = {
+        let ignore_fv = d.fresh_fvar();
+        let one_c = d.kernel().const_(p.one, vec![]);
+        d.lam_fv(ignore_fv, carrier, one_c)
+    };
+    let const_a_fn = {
+        let ignore_fv = d.fresh_fvar();
+        d.lam_fv(ignore_fv, carrier, a)
+    };
+    let zero_fn = {
+        let ignore_fv = d.fresh_fvar();
+        let zero_c = czero(d, p);
+        d.lam_fv(ignore_fv, carrier, zero_c)
+    };
+
+    let hd_sub = d.const_app(
+        p.has_derivative_sub,
+        &[
+            id_fn,
+            one_fn,
+            const_a_fn,
+            zero_fn,
+            a,
+            b,
+            hd_id_ab,
+            hd_const_a_ab,
+        ],
+    );
+
+    let shift_fn = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let na = cneg(d, p, a);
+        let diff = cadd(d, p, r, na);
+        d.lam_fv(r_fv, carrier, diff)
+    };
+    let one_minus_zero_fn = {
+        let x_fv = d.fresh_fvar();
+        let one_c = d.kernel().const_(p.one, vec![]);
+        let zero_c = czero(d, p);
+        let nz = cneg(d, p, zero_c);
+        let s = cadd(d, p, one_c, nz);
+        d.lam_fv(x_fv, carrier, s)
+    };
+
+    let hd_smul = d.const_app(
+        p.has_derivative_smul,
+        &[c, shift_fn, one_minus_zero_fn, a, b, hd_sub, k, hbound],
+    );
+    // hd_smul : HasDerivativeOn (fun r => mul c (add r (neg a)))
+    //                           (fun x => mul c (add one (neg zero))) a b
+
+    let scaled_fn = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let na = cneg(d, p, a);
+        let diff = cadd(d, p, r, na);
+        let sc = cmul(d, p, c, diff);
+        d.lam_fv(r_fv, carrier, sc)
+    };
+    let scaled_deriv_fn = {
+        let x_fv = d.fresh_fvar();
+        let one_c = d.kernel().const_(p.one, vec![]);
+        let zero_c = czero(d, p);
+        let nz = cneg(d, p, zero_c);
+        let s = cadd(d, p, one_c, nz);
+        let sc = cmul(d, p, c, s);
+        d.lam_fv(x_fv, carrier, sc)
+    };
+
+    // --- Step 2: the target `G` (via `integral`, clamped) and `fun _ => c`.
+    let const_c_fn = {
+        let ignore_fv = d.fresh_fvar();
+        d.lam_fv(ignore_fv, carrier, c)
+    };
+    let g_fn = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let clamp_x = clamp_into(d, p, a, x, b);
+        let hacx = le_a_clamp_into(d, p, a, x, b);
+        let const_c_inner = {
+            let ignore_fv = d.fresh_fvar();
+            d.lam_fv(ignore_fv, carrier, c)
+        };
+        let ucx = d.const_app(p.uniformly_continuous_const, &[c, a, clamp_x]);
+        let integral_val = d.const_app(p.integral, &[const_c_inner, a, clamp_x, hacx, ucx]);
+        d.lam_fv(x_fv, carrier, integral_val)
+    };
+
+    // --- Step 3: agree_g : ∀ x, le a x → le x b → Equiv (G x) (scaled_fn x)
+    let agree_g = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let hax_fv = d.fresh_fvar();
+        let hax = d.kernel().fvar(hax_fv);
+        let hxb_fv = d.fresh_fvar();
+        let hxb = d.kernel().fvar(hxb_fv);
+
+        let clamp_x = clamp_into(d, p, a, x, b);
+        let hacx = le_a_clamp_into(d, p, a, x, b);
+        let const_c_inner = {
+            let ignore_fv = d.fresh_fvar();
+            d.lam_fv(ignore_fv, carrier, c)
+        };
+        let ucx = d.const_app(p.uniformly_continuous_const, &[c, a, clamp_x]);
+
+        // step_ic : Equiv (integral const_c_inner a clamp_x hacx ucx)
+        //                 (mul c (add clamp_x (neg a)))
+        let step_ic = d.const_app(p.integral_const, &[c, a, clamp_x, hacx, ucx]);
+
+        let clamp_eq_x = clamp_into_equiv_on_interval(d, p, a, x, b, hax, hxb);
+        let na = cneg(d, p, a);
+        let refl_na = erefl(d, p, na);
+        let step_clamp_add = d.lemma(p.add_congr, &[clamp_x, x, na, na, clamp_eq_x, refl_na]);
+        let clamp_minus_a = cadd(d, p, clamp_x, na);
+        let x_minus_a = cadd(d, p, x, na);
+        let refl_c = erefl(d, p, c);
+        let step_clamp = d.lemma(
+            p.mul_congr,
+            &[c, c, clamp_minus_a, x_minus_a, refl_c, step_clamp_add],
+        );
+
+        let mid = cmul(d, p, c, clamp_minus_a);
+        let target = cmul(d, p, c, x_minus_a);
+        let integral_val = d.const_app(p.integral, &[const_c_inner, a, clamp_x, hacx, ucx]);
+        let chained = echain(d, p, integral_val, &[(mid, step_ic), (target, step_clamp)]);
+
+        let range_ax = d.const_app(p.le, &[a, x]);
+        let range_xb = d.const_app(p.le, &[x, b]);
+        let with_hxb = d.lam_fv(hxb_fv, range_xb, chained);
+        let with_hax = d.lam_fv(hax_fv, range_ax, with_hxb);
+        d.lam_fv(x_fv, carrier, with_hax)
+    };
+
+    // --- Step 4: agree_gp : ∀ x, le a x → le x b →
+    //             Equiv ((fun _ => c) x) (scaled_deriv_fn x) -- GLOBAL, does
+    // not use hax/hxb at all.
+    let agree_gp = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let hax_fv = d.fresh_fvar();
+        let hxb_fv = d.fresh_fvar();
+        let range_ax = d.const_app(p.le, &[a, x]);
+        let range_xb = d.const_app(p.le, &[x, b]);
+
+        let fwd = smul_sub_derivative_equiv_const(d, p, c); // Equiv (mul c (add one (neg zero))) c
+        let one_c = d.kernel().const_(p.one, vec![]);
+        let zero_c = czero(d, p);
+        let nz = cneg(d, p, zero_c);
+        let s = cadd(d, p, one_c, nz);
+        let mcs = cmul(d, p, c, s);
+        let bwd = esymm(d, p, mcs, c, fwd); // Equiv c (mul c (add one (neg zero)))
+
+        let with_hxb = d.lam_fv(hxb_fv, range_xb, bwd);
+        let with_hax = d.lam_fv(hax_fv, range_ax, with_hxb);
+        d.lam_fv(x_fv, carrier, with_hax)
+    };
+
+    let final_applied = d.const_app(
+        p.has_derivative_congr,
+        &[
+            scaled_fn,
+            scaled_deriv_fn,
+            a,
+            b,
+            hd_smul,
+            g_fn,
+            const_c_fn,
+            agree_g,
+            agree_gp,
+        ],
+    );
+
+    let value = {
+        let with_hbound = d.lam_fv(hbound_fv, hbound_ty, final_applied);
+        let with_k = d.lam_fv(k_fv, nat, with_hbound);
+        let with_b = d.lam_fv(b_fv, carrier, with_k);
+        let with_a = d.lam_fv(a_fv, carrier, with_b);
+        d.lam_fv(c_fv, carrier, with_a)
+    };
+    let ty = {
+        let applied = hd_ty(d, p, g_fn, const_c_fn, a, b);
+        let with_hbound = d.arrow(hbound_ty, applied);
+        let with_k = d.pi_fv(k_fv, nat, with_hbound);
+        let with_b = d.pi_fv(b_fv, carrier, with_k);
+        let with_a = d.pi_fv(a_fv, carrier, with_b);
+        d.pi_fv(c_fv, carrier, with_a)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.has_derivative_integral_const,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
