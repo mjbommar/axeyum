@@ -170,6 +170,55 @@
 //!    what is blocked (the `seq Yₐ b` leaf still would not fuse into a
 //!    `natDivSucc` shape without the harmonic bound), so it was not worth the
 //!    machinery for this slice.
+//!
+//! ## The RAW (non-existential) family, and why it is not more arithmetic
+//!
+//! Everything above proves `Prop`s. A `Type`-valued consumer cannot use them:
+//! [`CRealPrelude::mk`]'s regularity argument and
+//! [`CRealPrelude::weierstrass_m_test`]'s `hcauchy` parameter both need a
+//! **raw** `(k, proof)` pair, and `Exists.rec` is `Prop`-only, so an `∃ K, …`
+//! can never be unwrapped into either. `creal/trig_fn.rs`'s module
+//! documentation traces all three rungs of a Spivak-ch.15 π to exactly this,
+//! and sizes the fix at "~150-300 new lines, redoing this file's chain
+//! EXPLICITLY for one chosen literal ratio".
+//!
+//! **It is neither new arithmetic nor ratio-specific, and it needed no new
+//! proof content at all.** [`declare_geom_cauchy_of_lt_ordered`] already takes
+//! its leaf-bound witness `(bigK, hK)` as explicit parameters at a fully
+//! general ratio -- it was raw the whole time. The only two `Exists` in the
+//! chain above it are introduced at the very END of two proofs whose bodies
+//! are already non-existential:
+//!
+//! * [`declare_pow_le_nat_div_succ_of_lt`] eliminates `lt x one` for a
+//!   rational gap `q` and [`CRealPrelude::pos_bound_of_lt`] for a modulus
+//!   `k3`, then hides the witness `Nat.succ k3` behind an `Exists.intro`.
+//! * [`declare_geom_y_bound`] eliminates that one, then hides
+//!   `(Nat.succ k)*k1` behind another.
+//!
+//! So each body is factored into a shared Rust helper and declared twice --
+//! once existentially (unchanged statement, unchanged proof term) and once
+//! raw:
+//!
+//! | raw | existential twin | shared body |
+//! |---|---|---|
+//! | `CReal.pow_le_natDivSucc_of_gap` | `CReal.pow_le_natDivSucc_of_lt` | [`pow_le_nat_div_succ_gap_leaf`] |
+//! | `CReal.geomYBoundRaw` | `CReal.geomYBound` | [`geom_y_bound_leaf`] |
+//! | `CReal.geomCauchyOrderedOfGap` | -- | pure composition |
+//! | `CReal.geomCauchyBodyOfGap` | `CReal.geomCauchy` (base 1/2 only) | the same `Nat.le_total` split, minus the `Exists.intro` |
+//!
+//! Both raw forms DROP the `lt x one` hypothesis, which existed only to
+//! manufacture the witnesses, and `pow_le_natDivSucc_of_gap` additionally
+//! drops `Rat.lt Rat.zero q` (its `le zero (ofRat q)` comes from `h_pb`).
+//! What a caller owes at a chosen ratio is therefore only rational: a gap `q`
+//! with `x + q ≤ 1`, and two `PosBound` moduli.
+//!
+//! [`declare_geom_cauchy_ordered_16_over_25`] /
+//! [`declare_geom_cauchy_body_16_over_25`] are the first instantiation, at
+//! `16/25`. Read that first function's doc comment before choosing a
+//! different ratio -- in particular, the `9/16` that circulates in the notes
+//! comes from `R := 3/2 = 1.5`, which is BELOW cosine's first zero (≈1.5708)
+//! and so would not have unblocked π. Adding `49/64` (`R := 7/4`) is a copy of
+//! [`ratio_16_over_25_witnesses`] with three numerals changed.
 
 use super::series::{assoc_rev_eq, exists_nat_intro, fuse_same_index, sum_range_cauchy_body};
 use super::{
