@@ -267,6 +267,67 @@ pub fn div(a: &RealAlgebraic, b: &RealAlgebraic) -> Option<RealAlgebraic> {
 }
 
 // ============================================================================
+// Total order and polynomial evaluation, needed by `crate::extremum` (ADR-0603
+// row 3: the polynomial-fragment Extreme Value Theorem) to compare candidate
+// values and to name `p` evaluated at an algebraic argument, exactly.
+// ============================================================================
+
+/// A total order on [`RealAlgebraic`] values, decided exactly via the sign of
+/// the difference: `a.add(&b.neg())` compared against the rational `0`.
+///
+/// This reuses exactly the operations [`algebraic_eq`] already relies on
+/// (`neg`/`add`/`compare_rational`), so it inherits the same soundness
+/// argument — the difference is itself a genuine `RealAlgebraic` value (never
+/// a raw-coefficient artifact), and comparing a `RealAlgebraic` against the
+/// rational `0` is `RealAlgebraic::compare_rational`'s own exact bisection,
+/// not a floating-point approximation.
+///
+/// `None` only on an underlying degree/dimension-cap decline in `neg`/`add`/
+/// `compare_rational` (never a wrong ordering).
+#[must_use]
+pub fn algebraic_cmp(a: &RealAlgebraic, b: &RealAlgebraic) -> Option<Ordering> {
+    let diff = a.add(&b.neg()?)?;
+    diff.compare_rational(&Rational::zero())
+}
+
+/// Evaluate a rational polynomial `poly` (LSB-first) at an algebraic argument
+/// `root`, exactly, returning the result as a [`RealAlgebraic`].
+///
+/// `poly` is reduced modulo `root`'s minimal polynomial first
+/// ([`axeyum_ir::poly::rat_rem`]): since the minimal polynomial vanishes at
+/// `root`, `poly(root) = reduced(root)`, and `deg(reduced) < deg(minimal
+/// polynomial)`. This matters because `RealAlgebraic::mul` computes the
+/// squarefree part of a **resultant**, not necessarily the true minimal
+/// polynomial (see [`algebraic_eq`]'s doc) — so repeated multiplication by the
+/// same value can grow the representative polynomial's degree well past the
+/// true algebraic degree of the result. Reducing `poly` first bounds the
+/// Horner evaluation below to at most `deg(minimal polynomial) − 1`
+/// multiplications instead of `deg(poly) − 1`, which is the difference
+/// between this terminating promptly and tripping the resultant dimension cap
+/// (`axeyum_ir::poly_big`'s `BIG_MAX_SYLVESTER_DIM`) partway through a longer
+/// polynomial. See `crate::extremum`'s module doc for the measured cost curve
+/// this produces.
+///
+/// `None` on overflow, or if the accumulated degree trips that existing
+/// resultant dimension cap inside `RealAlgebraic::add`/`mul` — a sound
+/// decline, never a wrong value.
+#[must_use]
+pub fn eval_poly_at_algebraic(
+    poly_coeffs: &[Rational],
+    root: &AlgebraicReal,
+) -> Option<RealAlgebraic> {
+    let reduced = poly::rat_rem(poly_coeffs, root.minimal_polynomial())?;
+    let alpha = from_algebraic_real(root)?;
+    let mut acc = RealAlgebraic::from_rational(Rational::zero())?;
+    for &coeff in reduced.iter().rev() {
+        acc = acc.mul(&alpha)?;
+        let c = RealAlgebraic::from_rational(coeff)?;
+        acc = acc.add(&c)?;
+    }
+    Some(acc)
+}
+
+// ============================================================================
 // Exact polynomial IVT: a named root as checkable data.
 // ============================================================================
 

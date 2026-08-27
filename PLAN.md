@@ -129,6 +129,8 @@ now. Nothing was deleted.
 | 2026-08-27 | `e0c96569e` | Contract-decline convention (doc 291): `contract_sha256` re-dispatch key added to the seed decline artifact; new `scripts/validate-producer-contract-declines.py` (25 tests). |
 | 2026-08-27 | `96e40ce3d` | `scripts/fact-frontier.py` reads decline artifacts as selector input: live-decline computation, three-population diagnostics, `declined_fact_ids`. Selection moves off the declined fact. |
 | 2026-08-27 | `cdc10b413` | Wired the decline validator into `scripts/check.sh`, `justfile`, and an 8-guard mutation suite in `scripts/tests/mutation_controls.py` (all killed). |
+| 2026-08-27 | `7705b0776` | feat(cas): exact polynomial EXTREMUM certificate (ADR-0603 row 3, EVT) |
+| 2026-08-27 | `86d888a82` | wip(cas): scaffold `extremum` module for ADR-0603 row 3 (EVT) |
 | 2026-08-27 | `PENDING` | Batch dispatch over all 26 currently admissible facts (11 `int-modeq-family-v1`, 15 `nat-coprime-family-v1`). Result: 26 honest declines, 0 proofs — 11 clean-import `TerminalNotClosed` (int-modeq, matching turn one's mechanism), 15 import-stage `TrustedDeclaration` (nat-coprime, a new finding this batch's own predictions missed). After state: admissible_count 0, declined_count 27, selection refused-no-admissible-candidate. All validators green. |
 | 2026-08-27 | `14a6484d3` | `scripts/validate-facts.py`: classify `cas-certificate` evidence as `kernel-reconstructed` vs `cas-internal`, reject an unclassifiable checker_command on that route (ADR-0601 SS2). Mutation-tested. |
 | 2026-08-27 | `17e91d839` | `scripts/gen-import-backlog.py` (new): produce `artifacts/import-backlog.json`, the 164-row import backlog, deterministic and ordered by dependency-readiness then curriculum-DAG position (ADR-0601 SS3). `--check` wired into `scripts/check.sh` and the `justfile`. Mutation-tested. |
@@ -2893,6 +2895,52 @@ feedback-loop question — conflating the two here would do neither carefully).
 **Did not touch:** `artifacts/facts/`, either producer contract instance's
 shape/recipe, `artifacts/autogenesis/operations.json`, anything under
 `crates/`, `python/axeyum/agent/`.
+
+**Landed (`WIP`, cas-extremum, 2026-08-27).** Added
+`crates/axeyum-cas/src/extremum.rs`: `polynomial_extremum` /
+`verify_extremum_certificate`, the exact polynomial-fragment Extreme Value
+Theorem — ADR-0603 row 3, mirroring `real_algebraic.rs`'s `polynomial_ivt` /
+`verify_ivt_certificate` (row 3 for IVT). Differentiates
+(`poly::rat_derivative`), Sturm-isolates `p'`'s real roots
+(`algebraic::real_roots`), filters to the interior of `[a,b]`, and compares
+finitely many candidate values exactly via two new `real_algebraic.rs`
+exports (`algebraic_cmp`, a total order via sign-of-difference;
+`eval_poly_at_algebraic`, polynomial evaluation at an algebraic argument,
+reduced mod the minimal polynomial first to bound Horner cost). The checker
+does not trust the producer's candidate list: it re-isolates `p'`'s roots
+from scratch and rejects on a cardinality mismatch, which is what makes a
+dropped-candidate mutation (the interesting one) actually falsifiable rather
+than merely asserted.
+
+20 tests (all passing): 4 correctness spot-checks (interior max, endpoint
+max, a genuine tie between an interior point and an endpoint, an irrational
+argmax bracketed exactly — no floats), 5 degenerate cases (constant `p`,
+`a == b`, no interior root in range, repeated derivative root), 9 mutation
+tests (corrupted coefficient/derivative/critical-point/bracket, dropped
+candidate, fabricated extra candidate, duplicated candidate, wrong-argmax
+self-consistency, out-of-range argmax index — none panic), 2 cost-curve
+tests. Plus one `#[ignore]`d exploratory probe (not a committed regression
+check) that found the isolation cost curve: sparse critical points up to
+degree 22 cost 16 ms–13.7 s and decline soundly at degree 24; a "thick"
+(every-coefficient-nonzero) degree-6 polynomial costs ~24 s before declining
+— isolation cost tracks coefficient structure, not degree alone.
+
+No panics found in anything called from this module (`crate::algebraic`,
+`crate::sturm`, `axeyum_ir::poly`, `axeyum_ir::RealAlgebraic`) when fed
+adversarial/mutated data; `AlgebraicReal`'s `test_support::make_unchecked`
+(cfg(test), already existed for `real_algebraic.rs`'s own IVT mutation
+tests) is reused for the swapped-critical-point and corrupted-bracket
+fixtures here.
+
+`docs/research/10-cas/decidability-map.md` updated with the EVT
+polynomial-fragment row (per-capability contract table) and a pointer from
+the "Algebraic numbers" zero-testing row.
+
+Next for this row-3 family: a kernel-reconstruction slice (per ADR-0601 §2)
+turning `ExtremumCertificate` into a checked Lean-kernel term, mirroring
+whatever shape the sibling IVT-reconstruction lane lands on
+`polynomial_ivt`'s certificate — coordinated by certificate SHAPE per this
+task's brief, not by editing `axeyum-lean-kernel/` from this lane.
 
 **`DONE` (2026-08-27).** Turn one (`flywheel-1`, status 136) processed
 one fact end to end (`F:ml430-int-add-modeq-left-ee732b5b`, honest decline).
