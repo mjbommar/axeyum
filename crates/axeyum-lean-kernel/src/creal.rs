@@ -1153,6 +1153,18 @@ pub struct CRealPrelude {
     /// motive at a witness `u` mentions `UniformlyContinuousOn.modulus F a b u`,
     /// not a fresh variable.
     pub uc_spec: NameId,
+    /// `CReal.uniformlyContinuousOn_restrict : ∀ F a b a' b',
+    /// UniformlyContinuousOn F a b → le a a' → le a' b' → le b' b →
+    /// UniformlyContinuousOn F a' b'` (`uniform_continuity::
+    /// declare_uniformly_continuous_on_restrict`) -- the sub-interval
+    /// restriction `integral_split`'s own assembly needs to turn ONE
+    /// witness on `[a,b]` into witnesses on `[a,c]`/`[c,b]`. Built directly
+    /// from [`Self::uc_mk`] with the SAME `modulus` field: `a ≤ a' ≤ x`
+    /// and `y ≤ b' ≤ b` compose (via [`Self::le_trans`]) to the ORIGINAL
+    /// witness's own range hypotheses `a ≤ x`/`y ≤ b`, so its `spec` is
+    /// reused verbatim at every `(n, x, y)` -- no new estimate, and no
+    /// modulus change.
+    pub uniformly_continuous_on_restrict: NameId,
     /// `CReal.uniformly_continuous_id : forall a b, UniformlyContinuousOn (fun r
     /// => r) a b` -- modulus `fun n => n`: the hypothesis IS the conclusion,
     /// verbatim.
@@ -4922,6 +4934,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         uc_rec: kernel.name_str(uniformly_continuous_on, "rec"),
         uc_modulus: kernel.name_str(uniformly_continuous_on, "modulus"),
         uc_spec: kernel.name_str(uniformly_continuous_on, "spec"),
+        uniformly_continuous_on_restrict: kernel
+            .name_str(creal, "uniformlyContinuousOn_restrict"),
         uniformly_continuous_id: kernel.name_str(creal, "uniformly_continuous_id"),
         uniformly_continuous_const: kernel.name_str(creal, "uniformly_continuous_const"),
         uniformly_continuous_add: kernel.name_str(creal, "uniformly_continuous_add"),
@@ -5335,6 +5349,11 @@ pub(crate) fn build_creal_prelude_uncached(
         // before `monotone::declare_monotone`, its first NEW consumer.
         uniform_continuity::declare_abs_add_le(&mut d, prelude)?;
         uniform_continuity::declare_uniform_continuity(&mut d, prelude)?;
+        // `uniformlyContinuousOn_restrict` needs only the carrier and its
+        // two projections (just declared) plus `CReal.le_trans` (order.rs,
+        // well above) -- ready as early as `declare_uniform_continuity`
+        // itself finishes.
+        uniform_continuity::declare_uniformly_continuous_on_restrict(&mut d, prelude)?;
         // `crossing::declare_crossing` needs only `CReal.bucketIndex` and its
         // four closeness lemmas (`declare_uniform_continuity`, just above)
         // plus the core order/product toolkit (`product::declare_product`/
