@@ -348,6 +348,7 @@ fn unnamed_but_live_declarations(p: &RatPrelude) -> Vec<crate::NameId> {
         p.pow_zero,
         p.pow_succ,
         p.pow_add,
+        p.pow_sub_add,
         p.pow_nat_div_succ_two,
         p.poly_eval,
         p.poly_eval_zero,
@@ -4704,6 +4705,146 @@ fn sum_range_mul_eq_diag_add_corner_computes_and_the_naive_identity_is_false() {
     );
 }
 
+/// `Rat.pow_add` and `Rat.pow_sub_add` at concrete arguments — the companion
+/// the symbolic kernel acceptance does not give.
+///
+/// Both theorems are built over free `x`, `i`, `k`, so `add_declaration`
+/// already checked them symbolically. Numerals reduce, and reduction hides
+/// definitional-equality gaps; free variables get stuck, and stuck terms hide
+/// transposed arguments and wrong hand-computed values. The two checks fail
+/// on disjoint defect classes, so both are here.
+///
+/// `pow_add` at `x = 2, m = 2, n = 3`: `2^(2+3) = 32` and `2^2 · 2^3 = 4·8`.
+/// A statement that had written `Nat.mul m n` where it means `Nat.add m n`
+/// type-checks just as well and gives `2^6 = 64` — this separates them.
+///
+/// `pow_sub_add` at `x = 2, i = 1, k = 3`: `2^3 = 2^(3−1) · 2^1 = 4·2 = 8`.
+/// Note `k − i = 2 ≠ i = 1` here, deliberately: at `i = 1, k = 2` the two
+/// exponents would both be `1` and a transposed `sub k i` / `i` would be
+/// invisible.
+///
+/// The `Nat.le i k` hypothesis is then shown to be load-bearing rather than
+/// decorative: `Nat.sub` truncates, so at `i = 3 > k = 1` the conclusion
+/// reads `2 = 2^(1−3) · 2^3 = 2^0 · 8 = 8`, and the kernel is asked to
+/// confirm that `2` and `8` are NOT def_eq. A `pow_sub_add` stated without
+/// the hypothesis would be unsound, and this is the instance that says so.
+#[test]
+fn pow_add_and_the_antidiagonal_cell_collapse_compute_at_concrete_arguments() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{req, rmul, rpow};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    let x = literal(&mut d, 2);
+    let n1 = d.num(1);
+    let n2 = d.num(2);
+    let n3 = d.num(3);
+
+    // --- pow_add(2, 2, 3) : 2^(2+3) = 2^2 * 2^3 -----------------------------
+    let proof_add = d.lemma(p.pow_add, &[x, n2, n3]);
+    let inferred_add = d
+        .kernel()
+        .infer(proof_add)
+        .unwrap_or_else(|e| panic!("pow_add(2,2,3) should infer: {e:?}"));
+
+    let sum_23 = d.add(n2, n3);
+    let lhs_add = rpow(&mut d, p, x, sum_23);
+    let pow_2 = rpow(&mut d, p, x, n2);
+    let pow_3 = rpow(&mut d, p, x, n3);
+    let rhs_add = rmul(&mut d, pow_2, pow_3);
+    let expected_add = req(&mut d, lhs_add, rhs_add);
+    assert!(
+        d.kernel().def_eq(inferred_add, expected_add),
+        "pow_add(2,2,3) should state 2^(2+3) = 2^2 · 2^3"
+    );
+
+    let thirty_two = literal(&mut d, 32);
+    assert!(
+        d.kernel().def_eq(lhs_add, thirty_two),
+        "2^(2+3) must reduce to 32"
+    );
+    assert!(
+        d.kernel().def_eq(rhs_add, thirty_two),
+        "2^2 · 2^3 = 4·8 must reduce to the same 32"
+    );
+    // The exponent really is a SUM: 2^(2·3) would be 64, not 32.
+    let sixty_four = literal(&mut d, 64);
+    assert!(
+        !d.kernel().def_eq(thirty_two, sixty_four),
+        "def_eq must separate 32 from 64, or the check above cannot fail"
+    );
+
+    // --- pow_sub_add(2, 1, 3) : 1 <= 3 -> 2^3 = 2^(3-1) * 2^1 ---------------
+    let nat = d.prelude();
+    // `Nat.le 1 3`, built from the prelude's own order facts rather than
+    // assumed: le_succ gives i <= succ i, le_trans chains two of them.
+    let h_le = {
+        let le_1_2 = d.lemma(nat.le_succ, &[n1]);
+        let le_2_3 = d.lemma(nat.le_succ, &[n2]);
+        d.lemma(nat.le_trans, &[n1, n2, n3, le_1_2, le_2_3])
+    };
+    let proof_sub = d.lemma(p.pow_sub_add, &[x, n1, n3, h_le]);
+    let inferred_sub = d
+        .kernel()
+        .infer(proof_sub)
+        .unwrap_or_else(|e| panic!("pow_sub_add(2,1,3,h) should infer: {e:?}"));
+
+    let sub_31 = d.sub(n3, n1);
+    let pow_k = rpow(&mut d, p, x, n3);
+    let pow_sub = rpow(&mut d, p, x, sub_31);
+    let pow_i = rpow(&mut d, p, x, n1);
+    let rhs_sub = rmul(&mut d, pow_sub, pow_i);
+    let expected_sub = req(&mut d, pow_k, rhs_sub);
+    assert!(
+        d.kernel().def_eq(inferred_sub, expected_sub),
+        "pow_sub_add(2,1,3) should state 2^3 = 2^(3−1) · 2^1"
+    );
+
+    let eight = literal(&mut d, 8);
+    assert!(d.kernel().def_eq(pow_k, eight), "2^3 must reduce to 8");
+    assert!(
+        d.kernel().def_eq(rhs_sub, eight),
+        "2^(3−1) · 2^1 = 4·2 must reduce to the same 8"
+    );
+
+    // --- the hypothesis is load-bearing, not decoration ---------------------
+    // At i = 3 > k = 1 truncated `Nat.sub` gives 1 − 3 = 0, so the
+    // conclusion would read 2^1 = 2^0 · 2^3, i.e. 2 = 8.
+    let sub_13 = d.sub(n1, n3);
+    let pow_1 = rpow(&mut d, p, x, n1);
+    let pow_trunc = rpow(&mut d, p, x, sub_13);
+    let bad_rhs = rmul(&mut d, pow_trunc, pow_3);
+    let two_r = literal(&mut d, 2);
+    assert!(d.kernel().def_eq(pow_1, two_r), "2^1 must reduce to 2");
+    assert!(
+        d.kernel().def_eq(bad_rhs, eight),
+        "truncation makes 2^(1−3) · 2^3 reduce to 2^0 · 8 = 8"
+    );
+    assert!(
+        !d.kernel().def_eq(pow_1, bad_rhs),
+        "pow_sub_add WITHOUT its `Nat.le i k` hypothesis would be false here \
+         (2 = 8); if these are def_eq the hypothesis is not load-bearing and \
+         this test proves nothing about it"
+    );
+
+    assert!(
+        d.kernel().axiom_footprint(p.pow_add).is_empty(),
+        "pow_add must rest on zero axioms"
+    );
+    assert!(
+        d.kernel().axiom_footprint(p.pow_sub_add).is_empty(),
+        "pow_sub_add must rest on zero axioms"
+    );
+}
+
 // --- polynomials (`rat_prelude::polynomial`) --------------------------------
 
 /// Every declaration `polynomial::declare_polynomial` adds — `Rat.pow`,
@@ -4722,6 +4863,7 @@ fn the_polynomial_toolkit_is_axiom_free() {
         ("pow_zero", p.pow_zero, true),
         ("pow_succ", p.pow_succ, true),
         ("pow_add", p.pow_add, true),
+        ("pow_sub_add", p.pow_sub_add, true),
         ("polyEval", p.poly_eval, false),
         ("polyEval_zero", p.poly_eval_zero, true),
         ("polyEval_succ", p.poly_eval_succ, true),

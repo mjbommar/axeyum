@@ -1013,6 +1013,14 @@ pub struct RatPrelude {
     /// [`Self::sum_range_mul_eq_diag_add_corner`] and a convolution stated
     /// over [`Self::poly_eval`].
     pub pow_add: NameId,
+    /// `Rat.pow_sub_add : ∀ x i k, Nat.le i k → pow x k = mul (pow x
+    /// (Nat.sub k i)) (pow x i)` — the **antidiagonal cell collapse**: on the
+    /// antidiagonal `i + j = k` the two powers `x^i` and `x^(k−i)` recombine
+    /// into `x^k`. The `Nat.le i k` hypothesis is load-bearing, because
+    /// `Nat.sub` truncates: without it the claim is false at `i = 3, k = 1`.
+    /// No induction — `Nat.sub_add_cancel` lifted through `fun e => pow x e`,
+    /// then [`Self::pow_add`].
+    pub pow_sub_add: NameId,
     /// `Rat.pow_natDivSucc_two : ∀ n, pow (natDivSucc 1 1) n = normalize
     /// (ofNat 1) (Nat.pow 2 n) w`, where `w : 1 ≤ Nat.pow 2 n` is
     /// `Nat.pow_pos 2 n two_pos`.
@@ -1926,6 +1934,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         pow_zero: child(kernel, "pow_zero"),
         pow_succ: child(kernel, "pow_succ"),
         pow_add: child(kernel, "pow_add"),
+        pow_sub_add: child(kernel, "pow_sub_add"),
         pow_nat_div_succ_two: child(kernel, "pow_natDivSucc_two"),
         poly_eval: child(kernel, "polyEval"),
         poly_eval_zero: child(kernel, "polyEval_zero"),

@@ -30,25 +30,46 @@
 //!   `Rat.mul_assoc` pointwise then `Rat.mul_sumRange` (symm'd — that lemma
 //!   runs the other direction).
 //!
-//! No `polyEval_mul` (the Cauchy product) — but the reason has changed, and
-//! this paragraph used to assert the opposite. The `ℚ` reindexing machinery
-//! now EXISTS ([`super::diagonal`]: `Rat.sumRange_split`,
-//! `Rat.sumRange_diagonal`, `Rat.sumRange_rect_eq_diag_add_corner`), and
-//! [`super::diagonal::declare_sum_range_mul_eq_diag_add_corner`] already
-//! carries a PRODUCT of two `sumRange`s all the way to
-//! `(antidiagonal triangle) + corner`. What blocks `polyEval_mul` is no
-//! longer reindexing: it is `Rat.pow_add` (`x^(i+j) = x^i * x^j`) together
-//! with the index round-trip `i + (k−i) = k` for `i ≤ k`, which is what turns
-//! an antidiagonal cell `(a i * x^i) * (b (k−i) * x^(k−i))` into
-//! `(a i * b (k−i)) * x^k` and so collapses the triangle into
-//! `polyEval (conv a b) n x`. Separately, see [`super::diagonal`]'s module
-//! doc for why the SAME-bound square leaves a corner term the literal
-//! two-bound Cauchy statement must still account for.
+//! - `pow_add`/`pow_sub_add`: the exponent law and the **antidiagonal cell
+//!   collapse** `i ≤ k → x^k = x^(k−i) · x^i`, which is what a polynomial
+//!   product needs at every point of the antidiagonal `i + j = k`.
+//!
+//! # Where `polyEval_mul` stands
+//!
+//! Still not here — but this section has now been wrong twice in opposite
+//! directions, so it states what is CHECKED and what is not.
+//!
+//! Checked and available:
+//!
+//! - the `ℚ` reindexing machinery ([`super::diagonal`]:
+//!   `Rat.sumRange_split`, `Rat.sumRange_diagonal`,
+//!   `Rat.sumRange_rect_eq_diag_add_corner`);
+//! - a PRODUCT of two `sumRange`s carried all the way to
+//!   `(antidiagonal triangle) + corner`
+//!   ([`super::diagonal::declare_sum_range_mul_eq_diag_add_corner`]), with
+//!   the rectangle steps ([`super::diagonal::declare_sum_range_mul`],
+//!   [`super::diagonal::declare_sum_range_mul_double`]) general in TWO
+//!   independent bounds;
+//! - the cell collapse [`declare_pow_sub_add`], so the antidiagonal summand
+//!   `(a i · x^i) · (b (k−i) · x^(k−i))` can become `(a i · b (k−i)) · x^k`.
+//!
+//! What remains is therefore neither reindexing nor `pow` arithmetic. It is
+//! (1) a four-factor commutative-ring rearrangement of that cell, done under
+//! `sumRange_congr_lt` because the collapse needs `i ≤ k` and only the
+//! RESTRICTED congruence carries a bound hypothesis; and (2) a decision about
+//! the statement, because **the corner does not simplify to a `polyEval`**.
+//! `polyEval a n x · polyEval b n x` equals `polyEval (conv a b) n x` plus a
+//! corner term that is not itself a polynomial evaluation, so the honest
+//! `polyEval_mul` is a three-term identity, not the two-term one its name
+//! suggests. See [`super::diagonal`]'s module doc for why the corner is
+//! real (the naive identity is refuted at `n = 2`) and
+//! `sum_range_mul_eq_diag_add_corner_computes_and_the_naive_identity_is_false`
+//! for the concrete instance where the corner is 66 of 91.
 
 use super::RatPrelude;
 use super::ops::{
-    radd, rat_ty, rchain, rcongr, req, rmul, rone, rpoly_eval, rpow, rrefl, rsum_range, rsymm,
-    rzero,
+    nat_eq_to_rat, radd, rat_ty, rchain, rcongr, req, rmul, rone, rpoly_eval, rpow, rrefl,
+    rsum_range, rsymm, rzero,
 };
 use crate::BinderInfo;
 use crate::KernelError;
@@ -78,6 +99,7 @@ pub(super) fn declare_polynomial(d: &mut IntDev<'_>, p: RatPrelude) -> Result<()
     declare_pow(d, p)?;
     declare_pow_equations(d, p)?;
     declare_pow_add(d, p)?;
+    declare_pow_sub_add(d, p)?;
     declare_poly_eval(d, p)?;
     declare_poly_eval_equations(d, p)?;
     declare_poly_eval_add(d, p)?;
@@ -290,6 +312,77 @@ fn declare_pow_add(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError>
         d.lam_fv(a_fv, carrier, over_m)
     };
     d.declare_theorem(p.pow_add, ty, value)
+}
+
+/// `Rat.pow_sub_add : ∀ x i k, Nat.le i k →`
+/// `pow x k = mul (pow x (Nat.sub k i)) (pow x i)`.
+///
+/// **The antidiagonal cell collapse**, and the reason [`declare_pow_add`] was
+/// worth landing. On the antidiagonal `i + j = k` the rectangle machinery
+/// hands you the cell at `j = k − i`, so a polynomial product's summand is
+/// `(a i · x^i) · (b (k−i) · x^(k−i))` and turning it into
+/// `(a i · b (k−i)) · x^k` needs exactly this: the two powers recombine into
+/// `x^k` **provided `i ≤ k`**, which on the antidiagonal is free (`i` ranges
+/// over `[0, k]`).
+///
+/// The hypothesis is not decoration. `Nat.sub` TRUNCATES, so without `i ≤ k`
+/// the identity is false — at `i = 3`, `k = 1`, `x = 2` it would claim
+/// `2 = 2^1 = 2^(1−3) · 2^3 = 2^0 · 8 = 8`.
+///
+/// No induction: `Nat.sub_add_cancel` gives the INDEX equation
+/// `(k − i) + i = k`, [`super::ops::nat_eq_to_rat`] lifts it through
+/// `fun e => pow x e` to a VALUE equation, and [`declare_pow_add`] splits the
+/// left side. Two rewrites and a `symm` — the same `np` for index facts /
+/// local prelude for value facts split `super::diagonal` documents.
+fn declare_pow_sub_add(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let carrier = rat_ty(d);
+    let nat = d.nat_ty();
+    let np = d.prelude();
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let hyp_ty = d.le(i, k);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let sub_ki = d.sub(k, i);
+    let pow_k = rpow(d, p, x, k);
+    let pow_sub = rpow(d, p, x, sub_ki);
+    let pow_i = rpow(d, p, x, i);
+    let rhs = rmul(d, pow_sub, pow_i);
+    let stmt = req(d, pow_k, rhs);
+
+    // INDEX level: (k − i) + i = k, from `Nat.sub_add_cancel i k h`.
+    let h_idx = d.lemma(np.sub_add_cancel, &[i, k, h]);
+    let restored = d.add(sub_ki, i);
+    // VALUE level: pow x ((k−i)+i) = pow x k.
+    let h_lift = nat_eq_to_rat(d, restored, k, h_idx, &|d, e| rpow(d, p, x, e));
+    let pow_restored = rpow(d, p, x, restored);
+    // pow x k = pow x ((k−i)+i).
+    let h_back = rsymm(d, pow_restored, pow_k, h_lift);
+    // pow x ((k−i)+i) = pow x (k−i) * pow x i.
+    let h_split = d.lemma(p.pow_add, &[x, sub_ki, i]);
+
+    let (_e, proof) = rchain(d, pow_k, &[(pow_restored, h_back), (rhs, h_split)]);
+
+    let ty = {
+        let over_h = d.pi_fv(h_fv, hyp_ty, stmt);
+        let over_k = d.pi_fv(k_fv, nat, over_h);
+        let over_i = d.pi_fv(i_fv, nat, over_k);
+        d.pi_fv(x_fv, carrier, over_i)
+    };
+    let value = {
+        let over_h = d.lam_fv(h_fv, hyp_ty, proof);
+        let over_k = d.lam_fv(k_fv, nat, over_h);
+        let over_i = d.lam_fv(i_fv, nat, over_k);
+        d.lam_fv(x_fv, carrier, over_i)
+    };
+    d.declare_theorem(p.pow_sub_add, ty, value)
 }
 
 // ---------------------------------------------------------------------------
