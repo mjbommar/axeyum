@@ -421,6 +421,22 @@ def build_machine_frontier(
         if not reasons:
             admissible.append(entry["fact_id"])
 
+    # "no-registered-operation" is one rejection reason, but it hides two very
+    # different situations: a fact with NO decision procedure or kernel-proof
+    # route at all (registering an operation cannot help until new capability
+    # exists), and a fact that IS reachable in principle (decidable by a
+    # terminating route, or provable in the kernel) but simply has nothing
+    # registered yet. Collapsing them into one count is how "0 admissible" got
+    # read as "the registry needs more entries" when the real story is that
+    # `route_class` is `no-route` or `proof-route-only` for almost every ready
+    # fact -- see docs/autogenesis/ for the measurement this powers. Surfaced
+    # here, not just computed ad hoc per report, so the split cannot silently
+    # drift from what `route_class` actually says.
+    unregistered_by_route: dict[str, int] = defaultdict(int)
+    for entry in considered:
+        if not entry["registered_operation_ids"]:
+            unregistered_by_route[entry["route_class"]] += 1
+
     artifact: dict[str, Any] = {
         "schema_version": 1,
         "kind": "axeyum-fact-frontier",
@@ -460,6 +476,17 @@ def build_machine_frontier(
             "selected_fact_id": admissible[0] if admissible else None,
             "outcome": "selected" if admissible else "refused-no-admissible-candidate",
             "rationale": rationale,
+        },
+        "diagnostics": {
+            "ready_count": len(considered),
+            "admissible_count": len(admissible),
+            # Among READY facts with NO registered operation at all, how many
+            # are stuck on missing MATH CAPABILITY (`no-route` / a kernel proof
+            # not yet written, `proof-route-only`) versus stuck on missing
+            # PAPERWORK (`decidable` by an already-terminating route, just
+            # never wired up). Registering an operation can only ever help the
+            # second bucket -- see the note above `unregistered_by_route`.
+            "unregistered_by_route_class": dict(sorted(unregistered_by_route.items())),
         },
     }
     artifact["frontier_sha256"] = digest(artifact)
