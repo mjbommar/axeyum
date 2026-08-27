@@ -1432,6 +1432,20 @@ pub struct ComplexPrelude {
     /// the natural (but, without a vanishing hypothesis, not provably
     /// correct) definition.
     pub poly_mul: NameId,
+    /// `Complex.polyDegreeLt_polyMul : ∀ c g m n, polyDegreeLt c m →
+    /// polyDegreeLt g n → polyDegreeLt (polyMul c g) (Nat.add m n)` —
+    /// completes the degree algebra alongside
+    /// [`Self::poly_degree_lt_poly_add`]/[`Self::poly_degree_lt_poly_scale`].
+    ///
+    /// For `k` with `Nat.le (Nat.add m n) k`, every index `i` of `polyMul c g
+    /// k`'s convolution satisfies `Nat.le m i ∨ Nat.le n (Nat.sub k i)`
+    /// (`Nat.lt_or_ge i m`, then in the `Nat.lt i m` branch the SAME
+    /// restore-and-transport technique the `poly` module's
+    /// `corner_index_contradiction` helper uses derives `Nat.le n (Nat.sub k
+    /// i)` instead of `False`), so `hc`/`hg` collapse each
+    /// summand and [`Self::sum_range_congr`] plus the constant-zero-sum
+    /// lemma finish. No bound on `i` itself is needed for the argument.
+    pub poly_degree_lt_poly_mul: NameId,
     /// `Complex.polyEval_polyMul : ∀ c g m n, polyDegreeLt c m →
     /// polyDegreeLt g n → ∀ x, Equiv (polyEval (polyMul c g) (Nat.add m n) x)
     /// (mul (polyEval c m x) (polyEval g n x))` — evaluation is a
@@ -1629,6 +1643,7 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         poly_degree_lt_poly_add: kernel.name_str(complex, "polyDegreeLt_polyAdd"),
         poly_degree_lt_poly_scale: kernel.name_str(complex, "polyDegreeLt_polyScale"),
         poly_mul: kernel.name_str(complex, "polyMul"),
+        poly_degree_lt_poly_mul: kernel.name_str(complex, "polyDegreeLt_polyMul"),
         poly_eval_poly_mul: kernel.name_str(complex, "polyEval_polyMul"),
     }
 }

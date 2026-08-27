@@ -171,6 +171,7 @@ pub(super) fn declare_polynomial(d: &mut IntDev<'_>, p: ComplexPrelude) -> Resul
     declare_poly_degree_lt_poly_add(d, p)?;
     declare_poly_degree_lt_poly_scale(d, p)?;
     declare_poly_mul(d, p)?;
+    declare_poly_degree_lt_poly_mul(d, p)?;
     declare_poly_eval_poly_mul(d, p)
 }
 
@@ -875,6 +876,213 @@ fn declare_poly_mul(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelE
         ty,
         value,
         hint: ReducibilityHint::Regular(POLY_MUL_HEIGHT),
+    })
+}
+
+/// `Complex.polyDegreeLt_polyMul` — see [`ComplexPrelude::poly_degree_lt_poly_mul`]
+/// for the statement and route. Sized by the predecessor as "a smaller,
+/// structurally similar case split" to [`corner_term_zero`]: for `k` with
+/// `Nat.le (Nat.add m n) k`, every index `i` of `polyMul c g k`'s
+/// convolution — unconditionally in `i`, no bound on it is needed — satisfies
+/// `Nat.le m i ∨ Nat.le n (Nat.sub k i)`, via `Nat.lt_or_ge i m`:
+///
+/// - `Nat.le m i`: `hc` gives `c i ≡ zero`; [`poly_pad_up`]'s two-atom
+///   `mul_congr` + `ring_law_proof` pattern (not [`corner_zero_from_c`]'s
+///   four-atom nested one — `polyMul`'s summand is a plain product) collapses
+///   the term.
+/// - `Nat.lt i m`: derives `Nat.le n (Nat.sub k i)` from `Nat.le (Nat.add m
+///   n) k` and `Nat.lt i m` — `add_le_add_right` plus `succ_add` first give
+///   `Nat.le (Nat.add i n) k`, then the SAME `sub_add_cancel` +
+///   restore-and-transport technique [`corner_index_contradiction`] uses to
+///   reintroduce a subtracted index cancels `i` back off via
+///   [`crate::nat_prelude::NatPrelude::le_of_add_le_add_right`], proving a
+///   genuine fact here instead of `False`. `hg` then gives `g (Nat.sub k i) ≡
+///   zero`.
+fn declare_poly_degree_lt_poly_mul(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+    let fn_ty = d.arrow(nat, carrier);
+    let nat_p = d.prelude();
+    let logic = p.creal.rat.int.logic;
+
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let hc_fv = d.fresh_fvar();
+    let hc = d.kernel().fvar(hc_fv);
+    let hg_fv = d.fresh_fvar();
+    let hg = d.kernel().fvar(hg_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let hk_fv = d.fresh_fvar();
+    let hk = d.kernel().fvar(hk_fv);
+
+    let bound = d.add(m, n);
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let sk = d.succ(k);
+
+    // ----- the per-index pointwise fact, unconditional in `i` ---------------
+    let pointwise = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let ci = d.apply(c, &[i]);
+        let ki = d.sub(k, i);
+        let gki = d.apply(g, &[ki]);
+        let term = d.const_app(p.mul, &[ci, gki]);
+        let goal = zeq(d, p, term, zero_c);
+
+        let split_i = d.lemma(nat_p.lt_or_ge, &[i, m]);
+        let lt_i_m = d.lt(i, m);
+        let le_m_i = d.le(m, i);
+
+        let branch_ge = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let hc_i = d.apply(hc, &[i, h]);
+            // hc_i : Equiv(ci, zero)
+            let refl_gki = d.lemma(p.equiv_refl, &[gki]);
+            let step1 = d.lemma(p.mul_congr, &[ci, zero_c, gki, gki, hc_i, refl_gki]);
+            // step1 : Equiv(mul(ci,gki), mul(zero,gki))
+
+            let gki_v = CExpr::var(d, p, gki);
+            let mid_c = CExpr::mul(CExpr::Zero, gki_v);
+            let mid_term = render_c(d, p, &mid_c);
+            let h_ring = ring_law_proof(d, p, &mid_c, &CExpr::Zero);
+
+            let body = d.lemma(p.equiv_trans, &[term, mid_term, zero_c, step1, h_ring]);
+            d.lam_fv(h_fv, le_m_i, body)
+        };
+
+        let branch_lt = {
+            let h1_fv = d.fresh_fvar();
+            let h1 = d.kernel().fvar(h1_fv);
+            // h1 : Nat.lt i m (defeq Le (succ i) m)
+
+            // ----- Le (add i n) k -------------------------------------------
+            let succ_i = d.succ(i);
+            let step1 = d.lemma(nat_p.add_le_add_right, &[n, succ_i, m, h1]);
+            // step1 : Le (add succ_i n) (add m n) = Le (add succ_i n) bound
+            let add_succi_n = d.add(succ_i, n);
+            let step2 = d.lemma(nat_p.le_trans, &[add_succi_n, bound, k, step1, hk]);
+            // step2 : Le (add succ_i n) k
+
+            let h_succ_add = d.lemma(nat_p.succ_add, &[i, n]);
+            // h_succ_add : Eq Nat (add succ_i n) (succ (add i n))
+            let add_i_n = d.add(i, n);
+            let succ_add_i_n = d.succ(add_i_n);
+            let motive1 = d.eq_motive(add_succi_n, &|dd, xx| dd.le(xx, k));
+            let step3 = d.transport(add_succi_n, motive1, step2, succ_add_i_n, h_succ_add);
+            // step3 : Le (succ add_i_n) k = Nat.lt add_i_n k
+
+            let le_add_in_k = {
+                let s_addin = d.succ(add_i_n);
+                let le_succ_addin = d.lemma(nat_p.le_succ, &[add_i_n]);
+                d.lemma(nat_p.le_trans, &[add_i_n, s_addin, k, le_succ_addin, step3])
+            };
+            // le_add_in_k : Le (add i n) k
+
+            // ----- Le n (sub k i) --------------------------------------------
+            let le_i_addin = d.lemma(nat_p.le_add_right, &[i, n]);
+            // le_i_addin : Le i (add i n)
+            let le_i_k = d.lemma(nat_p.le_trans, &[i, add_i_n, k, le_i_addin, le_add_in_k]);
+            // le_i_k : Le i k
+
+            let h_restore = d.lemma(nat_p.sub_add_cancel, &[i, k, le_i_k]);
+            // h_restore : Eq Nat (add ki i) k
+            let add_ki_i = d.add(ki, i);
+            let h_restore_symm = d.symm(add_ki_i, k, h_restore);
+            // h_restore_symm : Eq Nat k (add ki i)
+
+            let h_comm = d.lemma(nat_p.add_comm, &[i, n]);
+            // h_comm : Eq Nat (add i n) (add n i)
+            let add_n_i = d.add(n, i);
+            let motive2 = d.eq_motive(add_i_n, &|dd, xx| dd.le(xx, k));
+            let step4 = d.transport(add_i_n, motive2, le_add_in_k, add_n_i, h_comm);
+            // step4 : Le (add n i) k
+
+            let motive3 = d.eq_motive(k, &|dd, xx| dd.le(add_n_i, xx));
+            let step5 = d.transport(k, motive3, step4, add_ki_i, h_restore_symm);
+            // step5 : Le (add n i) (add ki i)
+
+            let hn_le_ki = d.lemma(nat_p.le_of_add_le_add_right, &[i, n, ki, step5]);
+            // hn_le_ki : Le n ki
+
+            let hg_j = d.apply(hg, &[ki, hn_le_ki]);
+            // hg_j : Equiv(gki, zero)
+            let refl_ci = d.lemma(p.equiv_refl, &[ci]);
+            let step6 = d.lemma(p.mul_congr, &[ci, ci, gki, zero_c, refl_ci, hg_j]);
+            // step6 : Equiv(mul(ci,gki), mul(ci,zero))
+
+            let ci_v = CExpr::var(d, p, ci);
+            let mid_c2 = CExpr::mul(ci_v, CExpr::Zero);
+            let mid_term2 = render_c(d, p, &mid_c2);
+            let h_ring2 = ring_law_proof(d, p, &mid_c2, &CExpr::Zero);
+
+            let body = d.lemma(p.equiv_trans, &[term, mid_term2, zero_c, step6, h_ring2]);
+            d.lam_fv(h1_fv, lt_i_m, body)
+        };
+
+        let case_proof = d.const_app(
+            logic.or_elim,
+            &[lt_i_m, le_m_i, goal, split_i, branch_lt, branch_ge],
+        );
+        d.lam_fv(i_fv, nat, case_proof)
+    };
+
+    // ----- collapse the sum ---------------------------------------------------
+    let poly_mul_summand = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let ci = d.apply(c, &[i]);
+        let ki = d.sub(k, i);
+        let gki = d.apply(g, &[ki]);
+        let body = d.const_app(p.mul, &[ci, gki]);
+        d.lam_fv(i_fv, nat, body)
+    };
+    let zfn = zero_fn(d, p);
+    let h1 = d.lemma(p.sum_range_congr, &[poly_mul_summand, zfn, sk, pointwise]);
+    let sum_pm_sk = d.const_app(p.sum_range, &[poly_mul_summand, sk]);
+    let sum_zfn_sk = d.const_app(p.sum_range, &[zfn, sk]);
+    let h2 = sum_range_const_zero_proof(d, p, sk);
+    let final_proof = d.lemma(p.equiv_trans, &[sum_pm_sk, sum_zfn_sk, zero_c, h1, h2]);
+
+    let le_bound_k = d.le(bound, k);
+    let poly_mul_cg = d.const_app(p.poly_mul, &[c, g]);
+    let degree_lt_c = poly_degree_lt_applied(d, p, c, m);
+    let degree_lt_g = poly_degree_lt_applied(d, p, g, n);
+    let degree_lt_mul = poly_degree_lt_applied(d, p, poly_mul_cg, bound);
+
+    let value = {
+        let over_hk = d.lam_fv(hk_fv, le_bound_k, final_proof);
+        let over_k = d.lam_fv(k_fv, nat, over_hk);
+        let over_hg = d.lam_fv(hg_fv, degree_lt_g, over_k);
+        let over_hc = d.lam_fv(hc_fv, degree_lt_c, over_hg);
+        let over_n = d.lam_fv(n_fv, nat, over_hc);
+        let over_m = d.lam_fv(m_fv, nat, over_n);
+        let over_g = d.lam_fv(g_fv, fn_ty, over_m);
+        d.lam_fv(c_fv, fn_ty, over_g)
+    };
+    let ty = {
+        let after_hg = d.arrow(degree_lt_g, degree_lt_mul);
+        let after_hc = d.arrow(degree_lt_c, after_hg);
+        let over_n = d.pi_fv(n_fv, nat, after_hc);
+        let over_m = d.pi_fv(m_fv, nat, over_n);
+        let over_g = d.pi_fv(g_fv, fn_ty, over_m);
+        d.pi_fv(c_fv, fn_ty, over_g)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.poly_degree_lt_poly_mul,
+        uparams: vec![],
+        ty,
+        value,
     })
 }
 

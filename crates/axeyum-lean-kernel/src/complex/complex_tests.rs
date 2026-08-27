@@ -262,6 +262,7 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
             p.poly_degree_lt_poly_scale,
         ),
         ("Complex.polyMul", p.poly_mul),
+        ("Complex.polyDegreeLt_polyMul", p.poly_degree_lt_poly_mul),
         ("Complex.polyEval_polyMul", p.poly_eval_poly_mul),
     ];
     // COVERAGE, checked against the ENVIRONMENT rather than against `named`
@@ -2092,5 +2093,339 @@ fn poly_eval_poly_mul_would_reject_add_instead_of_mul() {
         admitted.is_err(),
         "polyEval_polyMul's proof must NOT type-check against an `add`-shaped \
          conclusion: {admitted:?}"
+    );
+}
+
+/// `fun i => Nat.rec(fun _ => Complex, a0, fun n _ => Nat.rec(fun _ =>
+/// Complex, a1, fun _ _ => zero, n), i)` -- coefficients `a0, a1, 0, 0, …`, a
+/// genuine (not opaque-witness) two-term polynomial coefficient function,
+/// built the same way [`super::declare_pow`]'s own `Complex.pow` is (nested
+/// `Nat.rec` at `Complex`'s own universe, not [`crate::nat_prelude::NatOps::induct`]
+/// -- that helper's motive is `Prop`-valued only, so it cannot produce a
+/// `Complex`-valued function).
+///
+/// The inner `Nat.rec`'s step ignores both its arguments and returns `zero`
+/// unconditionally, so `f (succ (succ y)) ≡ zero` by exactly two ι-steps for
+/// ANY `y`, symbolic or not -- the fact
+/// [`two_term_polynomial_vanishes_from_two`] depends on.
+fn two_term_polynomial(
+    d: &mut crate::int_prelude::ops::IntDev<'_>,
+    p: ComplexPrelude,
+    a0: crate::expr::ExprId,
+    a1: crate::expr::ExprId,
+) -> crate::expr::ExprId {
+    use crate::BinderInfo;
+    use crate::nat_prelude::NatOps;
+
+    let carrier = super::complex_ty(d, p);
+    let nat = d.nat_ty();
+    let anon = d.anon_name();
+    let one_level = d.level_one();
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+
+    let motive = d.kernel().lam(anon, nat, carrier, BinderInfo::Default);
+    let rec_name = d.prelude().rec;
+    let rec = d.kernel().const_(rec_name, vec![one_level]);
+
+    let inner_minor_succ = {
+        let j2_fv = d.fresh_fvar();
+        let ih2_fv = d.fresh_fvar();
+        let inner_body = d.lam_fv(ih2_fv, carrier, zero_c);
+        d.lam_fv(j2_fv, nat, inner_body)
+    };
+
+    let outer_minor_succ = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let ih_fv = d.fresh_fvar();
+        let inner_applied = d.apply(rec, &[motive, a1, inner_minor_succ, n]);
+        let with_ih = d.lam_fv(ih_fv, carrier, inner_applied);
+        d.lam_fv(n_fv, nat, with_ih)
+    };
+
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let body = d.apply(rec, &[motive, a0, outer_minor_succ, i]);
+    d.lam_fv(i_fv, nat, body)
+}
+
+/// `Complex.polyDegreeLt f 2`, proved for any `f` built by
+/// [`two_term_polynomial`] -- genuinely, not assumed as a hypothesis fvar the
+/// way every OTHER `poly_eval_poly_mul` test in this file does.
+///
+/// Given `hle : Nat.le 2 i`, `Nat.le_dest` recovers `Exists (fun k => Eq Nat
+/// (add 2 k) i)`; `Exists` is `Prop`-only (`Exists.rec` cannot extract `k` as
+/// DATA), but the GOAL here -- `Equiv (f i) zero` -- is itself a `Prop`, so
+/// eliminating into it is exactly what `Exists.rec` allows, unlike the factor
+/// theorem's quotient. `Nat.add_comm` puts the recovered `k` on the LEFT of
+/// the literal `2` (`add k 2`, not `add 2 k` -- symbolic left, literal right,
+/// the only form `Nat.add`'s right-recursion actually reduces), so `add k 2 ≡
+/// succ (succ k)` by pure ι-reduction for ANY `k`, and `f`'s own nested
+/// `Nat.rec` then collapses to `zero` the same way regardless of `k`. Both
+/// reductions are short and fully structural (no partial evaluation of a
+/// symbolic index against a concrete accumulator), so this does not hit the
+/// "concrete witness costs more than symbolic" trap.
+fn two_term_polynomial_vanishes_from_two(
+    d: &mut crate::int_prelude::ops::IntDev<'_>,
+    p: ComplexPrelude,
+    f: crate::expr::ExprId,
+) -> crate::expr::ExprId {
+    use crate::int_prelude::ops::exists_elim;
+    use crate::nat_prelude::NatOps;
+
+    let nat = d.nat_ty();
+    let nat_p = d.prelude();
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let zero_n = d.zero();
+    let one_n = d.succ(zero_n);
+    let two_n = d.succ(one_n);
+
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let hle_fv = d.fresh_fvar();
+    let hle = d.kernel().fvar(hle_fv);
+
+    let witness = d.lemma(nat_p.le_dest, &[two_n, i, hle]);
+
+    let predicate = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let add_2k = d.add(two_n, k);
+        let eq_ty = d.eq(add_2k, i);
+        d.lam_fv(k_fv, nat, eq_ty)
+    };
+
+    let target = {
+        let fi = d.apply(f, &[i]);
+        super::zeq(d, p, fi, zero_c)
+    };
+
+    let minor = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv);
+
+        let add_2k = d.add(two_n, k);
+        let eq_ty = d.eq(add_2k, i);
+
+        let add_k2 = d.add(k, two_n);
+        let h_comm = d.lemma(nat_p.add_comm, &[two_n, k]);
+        // h_comm : Eq Nat (add two_n k) (add k two_n)
+        let h_comm_symm = d.symm(add_2k, add_k2, h_comm);
+        // h_comm_symm : Eq Nat (add k two_n) (add two_n k)
+        let h_final = d.trans(add_k2, add_2k, i, h_comm_symm, heq);
+        // h_final : Eq Nat (add k two_n) i
+
+        let motive = d.eq_motive(add_k2, &|dd, x| {
+            let fx = dd.apply(f, &[x]);
+            super::zeq(dd, p, fx, zero_c)
+        });
+        let refl_case = d.lemma(p.equiv_refl, &[zero_c]);
+        // refl_case : Equiv(zero, zero), ascribed against Equiv(f (add k
+        // two_n), zero) -- relies on `f (add k two_n)` reducing to `zero`
+        // by pure δι (`add k two_n` ≡ succ(succ k)` since `two_n` is
+        // LITERAL on the right, then two ι-steps of `f`'s own recursion).
+        let body = d.transport(add_k2, motive, refl_case, i, h_final);
+
+        let with_heq = d.lam_fv(heq_fv, eq_ty, body);
+        d.lam_fv(k_fv, nat, with_heq)
+    };
+
+    let case_proof = exists_elim(d, predicate, target, witness, minor);
+    let le_2_i = d.le(two_n, i);
+    let with_hle = d.lam_fv(hle_fv, le_2_i, case_proof);
+    d.lam_fv(i_fv, nat, with_hle)
+}
+
+/// `Equiv (polyEval f 2 x) (add (add zero (mul a0 one)) (mul a1 x))`, given
+/// `f` is [`two_term_polynomial`]`(a0, a1)`.
+///
+/// `polyEval f 2 x` δι-reduces (`n = 2` is literal throughout, so this is
+/// pure, bounded computation, not the "concrete witness" trap -- no symbolic
+/// Nat index is involved anywhere in this step) to `add (add zero (mul (f 0)
+/// (pow x 0))) (mul (f 1) (pow x 1))`; `f 0 ≡ a0` and `f 1 ≡ a1` by the same
+/// two-`Nat.rec`-base-case δι-reduction [`two_term_polynomial`]'s own doc
+/// describes, and `pow x 0 ≡ one` similarly. `pow x 1` alone needs one more
+/// step: `Complex.pow`'s `Nat.rec` gives `mul (pow x 0) x`, not `x` itself, so
+/// [`super::ring_law_proof`] closes `mul one x ~ x`.
+fn two_term_poly_eval_clean(
+    d: &mut crate::int_prelude::ops::IntDev<'_>,
+    p: ComplexPrelude,
+    f: crate::expr::ExprId,
+    a0: crate::expr::ExprId,
+    a1: crate::expr::ExprId,
+    x: crate::expr::ExprId,
+) -> (crate::expr::ExprId, crate::expr::ExprId) {
+    use super::{CExpr, ring_law_proof};
+    use crate::nat_prelude::NatOps;
+
+    let zero_n = d.zero();
+    let one_n = d.succ(zero_n);
+    let two_n = d.succ(one_n);
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    let eval_f_2_x = d.const_app(p.poly_eval, &[f, two_n, x]);
+
+    let f0 = d.apply(f, &[zero_n]);
+    let f1 = d.apply(f, &[one_n]);
+    let p0 = d.const_app(p.pow, &[x, zero_n]);
+    let p1 = d.const_app(p.pow, &[x, one_n]);
+
+    let mul_f0p0 = d.const_app(p.mul, &[f0, p0]);
+    let mul_f1p1 = d.const_app(p.mul, &[f1, p1]);
+    let inner_add = d.const_app(p.add, &[zero_c, mul_f0p0]);
+    let ec = d.const_app(p.add, &[inner_add, mul_f1p1]);
+    let h_defeq = d.lemma(p.equiv_refl, &[ec]);
+    // h_defeq : Equiv(ec, ec), ascribed against Equiv(eval_f_2_x, ec) below
+    // -- relies on `eval_f_2_x` reducing to `ec` by pure δι.
+
+    let h_f0 = d.lemma(p.equiv_refl, &[a0]);
+    let h_f1 = d.lemma(p.equiv_refl, &[a1]);
+    let h_p0 = d.lemma(p.equiv_refl, &[one_c]);
+
+    let mul_p0x = d.const_app(p.mul, &[one_c, x]);
+    let h_p1_base = d.lemma(p.equiv_refl, &[mul_p0x]);
+    // h_p1_base : Equiv(mul(one,x), mul(one,x)), ascribed against
+    // Equiv(p1, mul(one,x)) -- relies on `pow x 1` reducing to `mul(pow x
+    // 0, x)` then `pow x 0` reducing to `one`.
+    let x_v = CExpr::var(d, p, x);
+    let h_p1_ring = ring_law_proof(d, p, &CExpr::mul(CExpr::One, x_v.clone()), &x_v);
+    let h_p1 = d.lemma(p.equiv_trans, &[p1, mul_p0x, x, h_p1_base, h_p1_ring]);
+
+    let h_f0p0 = d.lemma(p.mul_congr, &[f0, a0, p0, one_c, h_f0, h_p0]);
+    let h_f1p1 = d.lemma(p.mul_congr, &[f1, a1, p1, x, h_f1, h_p1]);
+
+    let mul_a0one = d.const_app(p.mul, &[a0, one_c]);
+    let mul_a1x = d.const_app(p.mul, &[a1, x]);
+    let refl_zero = d.lemma(p.equiv_refl, &[zero_c]);
+    let h_inner = d.lemma(
+        p.add_congr,
+        &[zero_c, zero_c, mul_f0p0, mul_a0one, refl_zero, h_f0p0],
+    );
+    let clean_inner = d.const_app(p.add, &[zero_c, mul_a0one]);
+    let h_outer = d.lemma(
+        p.add_congr,
+        &[inner_add, clean_inner, mul_f1p1, mul_a1x, h_inner, h_f1p1],
+    );
+    let clean = d.const_app(p.add, &[clean_inner, mul_a1x]);
+
+    let h_ec = d.lemma(p.equiv_trans, &[eval_f_2_x, ec, clean, h_defeq, h_outer]);
+    (clean, h_ec)
+}
+
+/// The "richer concrete corroboration" the predecessor named and explicitly
+/// deferred: `(X+1)(X-1) = X^2-1` at a point, over GENUINE two-term
+/// coefficient functions built by nested `Nat.rec` (`c := X+1`, coefficients
+/// `1, 1, 0, …`; `g := X-1`, coefficients `-1, 1, 0, …`) with their OWN
+/// `polyDegreeLt` proofs -- not opaque witness fvars carrying only the
+/// hypothesis TYPE the way every other `poly_eval_poly_mul` test in this file
+/// does. Concrete and symbolic checks fail on disjoint defect classes (a
+/// degenerate all-zero concrete instantiation would be vacuous; a
+/// symbolic-only check can hide a defeq-shaped associativity gap numerals
+/// paper over -- see the exponential-chapter incident this project's own
+/// history records), so this exercises the axis the symbolic
+/// `poly_eval_poly_mul` proof does not: it evaluates the point at
+/// `Complex.I`, where `(I+1)(I-1) = I^2 - 1 = -2`, a genuinely nonzero value,
+/// not the degenerate zero the module doc's own vacuity warning names.
+///
+/// Runs on [`on_a_deep_stack`]'s thread: the nested nine-lemma-chain proof
+/// term this builds, plus the ring calculus's own recursion inside
+/// `add_declaration`'s type-check, overflows the default 2 MiB debug stack —
+/// the same reason `the_ring_calculus_proves_a_true_identity` needs it.
+#[test]
+fn poly_eval_poly_mul_x_plus_one_times_x_minus_one_is_x_squared_minus_one() {
+    on_a_deep_stack(poly_eval_poly_mul_x_plus_one_times_x_minus_one_is_x_squared_minus_one_body);
+}
+
+fn poly_eval_poly_mul_x_plus_one_times_x_minus_one_is_x_squared_minus_one_body() {
+    use super::CExpr;
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let neg_one_c = d.const_app(p.neg, &[one_c]);
+    let i_c = d.kernel().const_(p.i, vec![]);
+    let x = i_c;
+
+    let zero_n = d.zero();
+    let one_n = d.succ(zero_n);
+    let two_n = d.succ(one_n);
+
+    let c = two_term_polynomial(&mut d, p, one_c, one_c);
+    let g = two_term_polynomial(&mut d, p, neg_one_c, one_c);
+    let hc = two_term_polynomial_vanishes_from_two(&mut d, p, c);
+    let hg = two_term_polynomial_vanishes_from_two(&mut d, p, g);
+
+    // Equiv (polyEval (polyMul c g) (add 2 2) x) (mul (polyEval c 2 x) (polyEval g 2 x)).
+    let proof_mul = d.lemma(p.poly_eval_poly_mul, &[c, g, two_n, two_n, hc, hg, x]);
+
+    let (clean_c, h_clean_c) = two_term_poly_eval_clean(&mut d, p, c, one_c, one_c, x);
+    let (clean_g, h_clean_g) = two_term_poly_eval_clean(&mut d, p, g, neg_one_c, one_c, x);
+
+    let eval_c_2_x = d.const_app(p.poly_eval, &[c, two_n, x]);
+    let eval_g_2_x = d.const_app(p.poly_eval, &[g, two_n, x]);
+    let h_combined = d.lemma(
+        p.mul_congr,
+        &[
+            eval_c_2_x, clean_c, eval_g_2_x, clean_g, h_clean_c, h_clean_g,
+        ],
+    );
+    // h_combined : Equiv(mul(eval_c_2_x,eval_g_2_x), mul(clean_c,clean_g))
+
+    let x2_minus_1 = {
+        let x_v = CExpr::I;
+        let lhs_ring = CExpr::mul(
+            CExpr::add(
+                CExpr::add(CExpr::Zero, CExpr::mul(CExpr::One, CExpr::One)),
+                CExpr::mul(CExpr::One, x_v.clone()),
+            ),
+            CExpr::add(
+                CExpr::add(CExpr::Zero, CExpr::mul(CExpr::neg(CExpr::One), CExpr::One)),
+                CExpr::mul(CExpr::One, x_v.clone()),
+            ),
+        );
+        let rhs_ring = CExpr::add(CExpr::mul(x_v.clone(), x_v.clone()), CExpr::neg(CExpr::One));
+        let h_ring = super::ring_law_proof(&mut d, p, &lhs_ring, &rhs_ring);
+        let mul_clean = d.const_app(p.mul, &[clean_c, clean_g]);
+        let target = super::render_c(&mut d, p, &rhs_ring);
+        let mul_evals_inner = d.const_app(p.mul, &[eval_c_2_x, eval_g_2_x]);
+        let h_final = d.lemma(
+            p.equiv_trans,
+            &[mul_evals_inner, mul_clean, target, h_combined, h_ring],
+        );
+        (target, h_final)
+    };
+    let (target, h_final) = x2_minus_1;
+
+    let poly_mul_cg = d.const_app(p.poly_mul, &[c, g]);
+    let bound = d.add(two_n, two_n);
+    let lhs_stmt = d.const_app(p.poly_eval, &[poly_mul_cg, bound, x]);
+    let mul_evals = d.const_app(p.mul, &[eval_c_2_x, eval_g_2_x]);
+    let overall = d.lemma(
+        p.equiv_trans,
+        &[lhs_stmt, mul_evals, target, proof_mul, h_final],
+    );
+
+    let ty = super::zeq(&mut d, p, lhs_stmt, target);
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.poly_eval_poly_mul_x_plus_one_x_minus_one");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value: overall,
+    });
+    assert!(
+        admitted.is_ok(),
+        "(X+1)(X-1) evaluated via polyMul/polyEval at genuine two-term \
+         coefficient functions, at the point I, must give EXACTLY \
+         Equiv(polyEval(polyMul c g)(4)(I), mul(I,I) + (-1)): {admitted:?}"
     );
 }
