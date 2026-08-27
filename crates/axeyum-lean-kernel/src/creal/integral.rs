@@ -13192,7 +13192,13 @@ fn rat_sub_add_cancel(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId)
 /// (below), here on three atoms rather than four.
 ///
 /// Returns `(target, proof)` where `target := Rat.add b (Rat.add c a)`.
-fn reassoc3(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId, c: ExprId) -> (ExprId, ExprId) {
+fn reassoc3(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+) -> (ExprId, ExprId) {
     let rat = p.rat;
     let bc = radd(d, b, c);
     let source = radd(d, a, bc);
@@ -13375,7 +13381,9 @@ fn close_of_within_indexed(
         let raw = d.and_right(bn_left, bn_right, bn);
         let ay_ax = rsub(d, rat, ay, ax);
         let neg_sub_eq = d.lemma(rat.neg_sub, &[ax, ay]); // Eq neg_diff ay_ax
-        rat_eq_rewrite(d, neg_diff, ay_ax, neg_sub_eq, raw, &|d, t| rle(d, rat, t, q))
+        rat_eq_rewrite(d, neg_diff, ay_ax, neg_sub_eq, raw, &|d, t| {
+            rle(d, rat, t, q)
+        })
     };
 
     let (bound1, goal_up) = one_sided_two_index(d, p, x, y, i, e, q, hp_upper);
@@ -13396,7 +13404,11 @@ fn close_of_within_indexed(
         let comm = d.lemma(rat.add_comm, &[o_e, o_i]); // Eq oe_oi oi_oe
         let congr_final = rcongr(d, oe_oi, oi_oe, comm, &|d, t| radd(d, q, t));
         // congr_final : Eq mid_target target
-        let (_, chained) = rchain(d, bound2, &[(mid_target, eq_bound2_mid), (target, congr_final)]);
+        let (_, chained) = rchain(
+            d,
+            bound2,
+            &[(mid_target, eq_bound2_mid), (target, congr_final)],
+        );
         chained
     };
 
@@ -13411,7 +13423,10 @@ fn close_of_within_indexed(
         cle(d, p, y, rhs)
     });
 
-    let proof = d.lemma(p.abs_le_of_two_sided, &[x, y, target, goal_up_t, goal_down_t]);
+    let proof = d.lemma(
+        p.abs_le_of_two_sided,
+        &[x, y, target, goal_up_t, goal_down_t],
+    );
     (target, proof)
 }
 

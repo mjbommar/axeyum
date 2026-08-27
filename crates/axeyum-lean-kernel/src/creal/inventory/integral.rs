@@ -147,6 +147,11 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             "theorem",
         ),
         (
+            "CReal.close_within_of_within_indexed",
+            p.close_within_of_within_indexed,
+            "theorem",
+        ),
+        (
             "CReal.riemannSum_split_exact",
             p.riemann_sum_split_exact,
             "theorem",

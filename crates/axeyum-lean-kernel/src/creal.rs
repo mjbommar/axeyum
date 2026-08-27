@@ -5211,8 +5211,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         poly_degree_lt_poly_scale: kernel.name_str(creal, "polyDegreeLt_polyScale"),
         uniform_converges_add: kernel.name_str(creal, "uniform_converges_add"),
         close_within_of_within: kernel.name_str(creal, "close_within_of_within"),
-        close_within_of_within_indexed: kernel
-            .name_str(creal, "close_within_of_within_indexed"),
+        close_within_of_within_indexed: kernel.name_str(creal, "close_within_of_within_indexed"),
         weierstrass_m_test: kernel.name_str(creal, "weierstrassMTest"),
         power_series_term: kernel.name_str(creal, "powerSeriesTerm"),
         power_series_term_congr: kernel.name_str(creal, "powerSeriesTerm_congr"),

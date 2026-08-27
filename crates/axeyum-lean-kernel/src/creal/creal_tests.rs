@@ -9360,3 +9360,87 @@ fn power_series_term_abs_le_cannot_swap_the_order_hypotheses() {
         "powerSeriesTerm_abs_le accepted its two order hypotheses SWAPPED: {outcome:?}"
     );
 }
+
+/// `CReal.close_within_of_within_indexed` at a GENUINELY TWO-INDEPENDENT-INDEX
+/// instance: `x = y = z` (a generic, universally-quantified `CReal` — a fresh
+/// fvar, not a concrete numeral, so this does not fall into the "concrete
+/// instantiation hides the defeq bug a symbolic one exposes" trap), sampled
+/// at two DISTINCT CONCRETE indices `i = 1`, `e = 2` (never `i = e`, which is
+/// exactly the shared-index case `close_within_of_within` already covers and
+/// would not exercise the generalization at all).
+///
+/// `hp := CReal.regular z 1 2 : Within (sub (seq z 1) (seq z 2)) (modulus 1
+/// 2)` is `z`'s own regularity between those two indices — an EXISTING,
+/// already-checked fact for an arbitrary `z`, not a hand-built trivial one,
+/// so this genuinely exercises the two-index bridge rather than a degenerate
+/// zero-diff shortcut. The theorem must then produce `le (abs (add z (neg
+/// z))) (ofRat …)`, and the render must show a real `le`/`abs` conclusion,
+/// not `True` or some other vacuous stand-in.
+#[test]
+fn close_within_of_within_indexed_specializes_to_one_reals_own_regularity_at_two_indices() {
+    use crate::int_prelude::ops::IntDev;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = super::creal_ty(&mut d, p);
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+
+    let one_idx = d.num(1);
+    let two_idx = d.num(2);
+
+    // hp : Within (sub (seq z 1) (seq z 2)) (modulus 1 2), z's OWN
+    // regularity -- an existing fact about an arbitrary `z`, never assumed.
+    let hp = d.lemma(p.regular, &[z, one_idx, two_idx]);
+
+    // q must match `CRealPrelude::regular`'s own bound EXACTLY: `modulus 1
+    // 2 = add (natDivSucc 1 1) (natDivSucc 1 2)`, built the identical way
+    // `super::modulus` builds it, so the two calls intern to the same
+    // `ExprId`.
+    let q = {
+        let one_nat = d.num(1);
+        let m1 = d.const_app(p.rat.nat_div_succ, &[one_nat, one_idx]);
+        let m2 = d.const_app(p.rat.nat_div_succ, &[one_nat, two_idx]);
+        crate::rat_prelude::ops::radd(&mut d, m1, m2)
+    };
+
+    let instance = d.lemma(
+        p.close_within_of_within_indexed,
+        &[z, z, one_idx, two_idx, q, hp],
+    );
+    // `z` is a genuinely free `fvar`, unbound in `Kernel::infer`'s own fresh
+    // `LocalContext` unless something actually BINDS it -- close over it with
+    // a lambda so inference (which pushes the binder's own type while
+    // traversing the `Lam`) can resolve `z`'s type.
+    let closed_instance = d.lam_fv(z_fv, carrier, instance);
+
+    let inferred = d.kernel().infer(closed_instance);
+    let ty = inferred.unwrap_or_else(|error| {
+        panic!(
+            "close_within_of_within_indexed refused at z's own regularity \
+             between two DISTINCT indices (1, 2): {error:?}"
+        )
+    });
+
+    // A genuine negative control: swapping the two indices (`hp` built at
+    // (1, 2) but applied as if the bridge's own `i, e` were (2, 1)) must be
+    // REJECTED -- `hp`'s type would then mismatch the expected `Within (sub
+    // (seq z 2) (seq z 1)) …` shape.
+    let swapped = d.lemma(
+        p.close_within_of_within_indexed,
+        &[z, z, two_idx, one_idx, q, hp],
+    );
+    let closed_swapped = d.lam_fv(z_fv, carrier, swapped);
+    let swapped_outcome = d.kernel().infer(closed_swapped);
+    assert!(
+        swapped_outcome.is_err(),
+        "close_within_of_within_indexed accepted `hp` at the WRONG index order: {swapped_outcome:?}"
+    );
+
+    let rendered = kernel.render_lean(ty);
+    assert!(
+        rendered.contains("le") && rendered.contains("abs"),
+        "the instantiated conclusion is not a genuine `le (abs …) …` bound: {rendered}"
+    );
+}
