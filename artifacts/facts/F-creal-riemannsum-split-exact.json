@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-riemannsum-split-exact",
+  "title": "Riemann-sum interval splitting is an EXACT identity at a mesh-aligned split point",
+  "statement": "For F : CReal -> CReal respecting CReal.Equiv, endpoints a, b, and any two mesh counts m_ac, m_cb, choosing the split point c to BE the (succ m_ac)-th sample point of the [a,b] mesh refined into (succ m_ac)+m_cb subintervals -- c := a + ofNat(succ m_ac) * delta_of(a,b,succ m_ac + m_cb) -- gives an EXACT CReal.Equiv identity, with no estimate and no uniform-continuity witness: riemannSum F a b (succ m_ac + m_cb) is Equiv to riemannSum F a c m_ac + riemannSum F c b m_cb. The only hypothesis beyond a,b,m_ac,m_cb is F's own Equiv-congruence (needed because riemannSum resamples F at points that are merely Equiv, never definitionally equal, once the mesh is refined). This is the NINTH slice this development attempted at Ch.14's interval-additivity gap, and the one that finally closed the RIEMANN-SUM level of it, by restricting the split point to a genuine mesh point of a common refinement instead of an arbitrary CReal. THE FIXED-MESH VERSION OF THIS IDENTITY IS FALSE: taking the SAME subinterval count m shared across all three intervals (rather than the exact succ m_ac + m_cb / m_ac / m_cb triple this theorem uses) is refuted by an exact, kernel-checked rational counterexample at m := 0, F := id, a := 0, c := 1, b := 3: riemannSum id 0 3 0 = 0*3 = 0, while riemannSum id 0 1 0 + riemannSum id 1 3 0 = 0*1 + 1*2 = 0 + 2 = 2, so 0 != 2. The fixed-mesh claim fails for a precise, checkable reason -- it uses n_ac = n_cb = n_ab = 1, violating the ONE index identity (n_ab = n_ac + n_cb) this theorem's own mesh-point choice satisfies by construction -- not because of some subtler estimate that the exact version also lacks.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CReal.riemannSum_split_exact : ((x0 : ((x0 : CReal) -> CReal)) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : ((x5 : CReal) -> ((x6 : CReal) -> ((x7 : CReal.Equiv x5 x6) -> CReal.Equiv (x0 x5) (x0 x6))))) -> CReal.Equiv (CReal.riemannSum x0 x1 x2 (AxNat.add (AxNat.succ x3) x4)) (CReal.add (CReal.riemannSum x0 x1 (CReal.add x1 (CReal.mul (CReal.ofNat (AxNat.succ x3)) (CReal.mul (CReal.add x2 (CReal.neg x1)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) (AxNat.add (AxNat.succ x3) x4)))))) x3) (CReal.riemannSum x0 (CReal.add x1 (CReal.mul (CReal.ofNat (AxNat.succ x3)) (CReal.mul (CReal.add x2 (CReal.neg x1)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) (AxNat.add (AxNat.succ x3) x4)))))) x2 x4))))))))",
+    "fragment": "CReal",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5",
+      "x6",
+      "x7"
+    ],
+    "kernel_theorem": "CReal.riemannSum_split_exact"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:creal-equiv-refl",
+    "F:creal-equiv-symm",
+    "F:creal-equiv-trans",
+    "F:creal-add-assoc",
+    "F:creal-add-comm",
+    "F:creal-add-congr",
+    "F:creal-add-neg",
+    "F:creal-add-zero",
+    "F:creal-left-distrib",
+    "F:creal-mul-assoc",
+    "F:creal-mul-comm",
+    "F:creal-mul-congr"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.riemannSum_split_exact",
+      "kind": "kernel-term",
+      "supports": "CReal.riemannSum_split_exact is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- riemannSum_split_exact 2>/dev/null | grep -cE '^CReal\\.riemannSum_split_exact[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "build_creal_prelude admits CReal.riemannSum_split_exact through the trusted Kernel::add_declaration gate. theorem_dependency_inventory exits non-zero for a named filter matching nothing; grep -c asserts the exact tab-anchored line. Verified with /usr/bin/grep directly (not the ugrep-backed interactive `grep` function) against a freshly built --release binary on this tree, returning count 1. --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-CReal.riemannSum_split_exact",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.riemannSum_split_exact",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: creal: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: creal trusted surface = 0'. That bounds every declaration in the creal environment, including CReal.riemannSum_split_exact, since a declaration cannot depend on a trusted declaration the environment does not contain. --require-axiom-free <name> errors for a prelude never built by this run rather than silently passing on zero rows. --release is MANDATORY here."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/integral.rs, declare_riemann_sum_split_exact)",
+    "source": "canonical type read via kernel_declaration_projection's own UNFILTERED emit mode (cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection, no --require-declaration flag), which prints, per constructed prelude, one TSV row per declaration whose last field is kernel.render_lean(declaration.ty()). That output was piped to a scratchpad file and the exact row for this declaration's creal prelude row was extracted and injected here programmatically (a Python script reading the TSV, never hand-transcribed); direct theorem dependencies were cross-read from the same run's direct_theorems column (second-to-last field) and matched against the ledger's own registered facts (by parsing each candidate fact's formal.statement for its declared theorem/def name) to populate depends_on. No new probe binary was written for this batch; crates/ source was not touched to produce this batch."
+  },
+  "notes": "depends_on omits CReal.mesh_count_width, CReal.ofNat_add, CReal.sumRange_congr and CReal.sumRange_split, all direct proof dependencies per theorem_dependency_inventory, because none is separately registered in this ledger (they are unregistered CReal/series helper theorems, not axioms -- creal's trusted surface is 0, see the footprint evidence). Module documentation: crates/axeyum-lean-kernel/src/creal/integral.rs, the section headed '`CReal.riemannSum_split_exact` -- the NINTH `integral_split` slice' and the module-level 'checked 2026-08-27 (a NINTH lane)' entry, which records the hand-verified numeric examples (a:=0,b:=3,q:=1/3,k:=2 for both F:=const 2 and F:=id) that motivated trying this restriction after eight prior attempts at the general (non-mesh-point) split point. This closes the RIEMANN-SUM half of the still-open F:creal-integral's own interval-additivity question (CReal.integral_split); the INTEGRAL-level statement remains open for a separate, independent-witness-comparison reason documented in the same file (CReal.converges_unique needs syntactically the same limiting sequence, and integral_split's three witnesses u/uac/ucb give three different ones) and is NOT registered here, refuted, or otherwise closed by this fact.",
+  "external_status": "proved"
+}

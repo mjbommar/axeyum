@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-uniformlycontinuouson-restrict",
+  "title": "Uniform continuity on an interval restricts to any sub-interval with the SAME modulus",
+  "statement": "If F is CReal.UniformlyContinuousOn [a,b], and a<=a'<=b'<=b, then F is CReal.UniformlyContinuousOn [a',b'] -- using the identical modulus witness, no new estimate. UniformlyContinuousOn's own spec only ever uses its range hypotheses (a<=x, x<=b, a<=y, y<=b) to state the closeness implication, and a<=a'<=x together with y<=b'<=b compose to exactly those via CReal.le_trans. Built directly against the witness constructor rather than through the recursor: the new spec is a lambda wrapping the ORIGINAL witness's own spec applied to the composed range proofs, so UniformlyContinuousOn's definition is never unfolded.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CReal.uniformlyContinuousOn_restrict : ((x0 : ((x0 : CReal) -> CReal)) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal) -> ((x4 : CReal) -> ((x5 : CReal.UniformlyContinuousOn x0 x1 x2) -> ((x6 : CReal.le x1 x3) -> ((x7 : CReal.le x3 x4) -> ((x8 : CReal.le x4 x2) -> CReal.UniformlyContinuousOn x0 x3 x4)))))))))",
+    "fragment": "CReal",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5",
+      "x6",
+      "x7",
+      "x8"
+    ],
+    "kernel_theorem": "CReal.uniformlyContinuousOn_restrict"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:creal-uniformlycontinuouson-spec",
+    "F:creal-le-trans"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.uniformlyContinuousOn_restrict",
+      "kind": "kernel-term",
+      "supports": "CReal.uniformlyContinuousOn_restrict is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- uniformlyContinuousOn_restrict 2>/dev/null | grep -cE '^CReal\\.uniformlyContinuousOn_restrict[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "build_creal_prelude admits CReal.uniformlyContinuousOn_restrict through the trusted Kernel::add_declaration gate. theorem_dependency_inventory exits non-zero for a named filter matching nothing; grep -c asserts the exact tab-anchored line. Verified with /usr/bin/grep directly (not the ugrep-backed interactive `grep` function) against a freshly built --release binary on this tree, returning count 1. --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-CReal.uniformlyContinuousOn_restrict",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.uniformlyContinuousOn_restrict",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: creal: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: creal trusted surface = 0'. That bounds every declaration in the creal environment, including CReal.uniformlyContinuousOn_restrict, since a declaration cannot depend on a trusted declaration the environment does not contain. --require-axiom-free <name> errors for a prelude never built by this run rather than silently passing on zero rows. --release is MANDATORY here."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/uniform_continuity.rs, declare_uniformly_continuous_on_restrict)",
+    "source": "canonical type read via kernel_declaration_projection's own UNFILTERED emit mode (cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection, no --require-declaration flag), which prints, per constructed prelude, one TSV row per declaration whose last field is kernel.render_lean(declaration.ty()). That output was piped to a scratchpad file and the exact row for this declaration's creal prelude row was extracted and injected here programmatically (a Python script reading the TSV, never hand-transcribed); direct theorem dependencies were cross-read from the same run's direct_theorems column (second-to-last field) and matched against the ledger's own registered facts (by parsing each candidate fact's formal.statement for its declared theorem/def name) to populate depends_on. No new probe binary was written for this batch; crates/ source was not touched to produce this batch."
+  },
+  "notes": "Minimal-dependency theorem: both of its direct proof dependencies per theorem_dependency_inventory are already registered.",
+  "external_status": "proved"
+}

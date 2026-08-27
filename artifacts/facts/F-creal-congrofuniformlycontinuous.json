@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-congrofuniformlycontinuous",
+  "title": "Uniform continuity on [a,b] gives Equiv-congruence, but ONLY inside [a,b]",
+  "statement": "If F is CReal.UniformlyContinuousOn [a,b], and x, y both lie in [a,b] (a<=x<=b, a<=y<=b) and x Equiv y, then F x Equiv F y. This is the DOMAIN-RESTRICTED half of the Equiv-congruence hypothesis CReal.riemannSum_split_exact needs. IT CANNOT BE STRENGTHENED TO THE GLOBAL STATEMENT (forall x y, Equiv x y -> Equiv (F x) (F y)) riemannSum_split_exact's own general form assumes, for a structural reason rather than a missing lemma: CReal.UniformlyContinuousOn's spec says nothing about F's behaviour outside [a,b] at all, so nothing constrains F's values there, and a genuinely global congruence claim is simply FALSE for an arbitrary function that is merely uniformly continuous on [a,b]. Using this lemma to discharge riemannSum_split_exact's own hcong hypothesis at a concrete uniformly-continuous F therefore ALSO needs each sample point the split's proof applies hcong to be shown to lie inside [a,b] first (via CReal.riemannSum_sample_in_bounds-style reasoning) -- which is exactly what CReal.riemannSum_split_exact_of_uc (registered separately in this batch) assembles.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CReal.congrOfUniformlyContinuous : ((x0 : ((x0 : CReal) -> CReal)) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal.UniformlyContinuousOn x0 x1 x2) -> ((x4 : CReal) -> ((x5 : CReal) -> ((x6 : CReal.le x1 x4) -> ((x7 : CReal.le x4 x2) -> ((x8 : CReal.le x1 x5) -> ((x9 : CReal.le x5 x2) -> ((x10 : CReal.Equiv x4 x5) -> CReal.Equiv (x0 x4) (x0 x5))))))))))))",
+    "fragment": "CReal",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5",
+      "x6",
+      "x7",
+      "x8",
+      "x9",
+      "x10"
+    ],
+    "kernel_theorem": "CReal.congrOfUniformlyContinuous"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:creal-equiv-refl",
+    "F:creal-equiv-symm",
+    "F:creal-equiv-trans",
+    "F:creal-uniformlycontinuouson-spec",
+    "F:creal-add-assoc",
+    "F:creal-add-comm",
+    "F:creal-add-congr",
+    "F:creal-add-neg",
+    "F:creal-add-zero"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.congrOfUniformlyContinuous",
+      "kind": "kernel-term",
+      "supports": "CReal.congrOfUniformlyContinuous is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- congrOfUniformlyContinuous 2>/dev/null | grep -cE '^CReal\\.congrOfUniformlyContinuous[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "build_creal_prelude admits CReal.congrOfUniformlyContinuous through the trusted Kernel::add_declaration gate. theorem_dependency_inventory exits non-zero for a named filter matching nothing; grep -c asserts the exact tab-anchored line. Verified with /usr/bin/grep directly (not the ugrep-backed interactive `grep` function) against a freshly built --release binary on this tree, returning count 1. --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-CReal.congrOfUniformlyContinuous",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.congrOfUniformlyContinuous",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: creal: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: creal trusted surface = 0'. That bounds every declaration in the creal environment, including CReal.congrOfUniformlyContinuous, since a declaration cannot depend on a trusted declaration the environment does not contain. --require-axiom-free <name> errors for a prelude never built by this run rather than silently passing on zero rows. --release is MANDATORY here."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/integral.rs, declare_congr_of_uniformly_continuous)",
+    "source": "canonical type read via kernel_declaration_projection's own UNFILTERED emit mode (cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection, no --require-declaration flag), which prints, per constructed prelude, one TSV row per declaration whose last field is kernel.render_lean(declaration.ty()). That output was piped to a scratchpad file and the exact row for this declaration's creal prelude row was extracted and injected here programmatically (a Python script reading the TSV, never hand-transcribed); direct theorem dependencies were cross-read from the same run's direct_theorems column (second-to-last field) and matched against the ledger's own registered facts (by parsing each candidate fact's formal.statement for its declared theorem/def name) to populate depends_on. No new probe binary was written for this batch; crates/ source was not touched to produce this batch."
+  },
+  "notes": "depends_on omits CReal.equivAbsDiffLe and CReal.equiv_zero_of_small, direct proof dependencies per theorem_dependency_inventory not separately registered in this ledger. Route: exactly the middle section of the reblock chain this file already builds (CRealPrelude::equiv_abs_diff_le turning Equiv x y into an abs bound at every accuracy, UniformlyContinuousOn.spec promoting it through F, CRealPrelude::equiv_zero_of_small closing the resulting bound into a full Equiv), reused verbatim rather than duplicated -- see declare_congr_of_uniformly_continuous's doc comment.",
+  "external_status": "proved"
+}
