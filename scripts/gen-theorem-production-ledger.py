@@ -57,8 +57,15 @@ COMMAND = (
 
 # Dropping a prelude from the example would otherwise make this ledger quietly
 # narrower rather than red. A prelude that exists must be listed here.
+#
+# `characterization` (the Peano/initiality package -- `Nat.Peano.*`,
+# `Int.Characterization.*`) added 2026-08-27: `prelude_theorem_inventory`'s
+# `build_groups` never built it before, so its 32 axiom-free theorems were
+# silently absent from `distinct` with no error -- see
+# `docs/research/11-design-review/2026-08-27-rat-reindexing-and-the-denominator-gap.md`.
 EXPECTED_PRELUDES: tuple[str, ...] = (
     "axreal",
+    "characterization",
     "complex",
     "cpoint",
     "creal",
