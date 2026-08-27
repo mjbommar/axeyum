@@ -133,6 +133,8 @@ now. Nothing was deleted.
 | 2026-08-27 | `7705b0776` | feat(cas): exact polynomial EXTREMUM certificate (ADR-0603 row 3, EVT) |
 | 2026-08-27 | `86d888a82` | wip(cas): scaffold `extremum` module for ADR-0603 row 3 (EVT) |
 | 2026-08-27 | `PENDING` | Batch dispatch over all 26 currently admissible facts (11 `int-modeq-family-v1`, 15 `nat-coprime-family-v1`). Result: 26 honest declines, 0 proofs — 11 clean-import `TerminalNotClosed` (int-modeq, matching turn one's mechanism), 15 import-stage `TrustedDeclaration` (nat-coprime, a new finding this batch's own predictions missed). After state: admissible_count 0, declined_count 27, selection refused-no-admissible-candidate. All validators green. |
+| 2026-08-27 | `f9dee8754` | `CReal.uniformlyContinuousOn_restrict` — the sub-interval `UniformlyContinuousOn` restriction `integral_split`'s assembly needs; same modulus, `le_trans`-composed range hypotheses, kernel-checked. |
+| 2026-08-27 | `31aea5551` | docs(integral): pin down exactly what estimate work remains to close `integral_split` — the `l`-shrinks-via-`depth` lever and the `total_eps_sample_le` generalization, so the next lane does not re-derive this. |
 | 2026-08-27 | `14a6484d3` | `scripts/validate-facts.py`: classify `cas-certificate` evidence as `kernel-reconstructed` vs `cas-internal`, reject an unclassifiable checker_command on that route (ADR-0601 SS2). Mutation-tested. |
 | 2026-08-27 | `17e91d839` | `scripts/gen-import-backlog.py` (new): produce `artifacts/import-backlog.json`, the 164-row import backlog, deterministic and ordered by dependency-readiness then curriculum-DAG position (ADR-0601 SS3). `--check` wired into `scripts/check.sh` and the `justfile`. Mutation-tested. |
 | 2026-08-27 | `abb9cb9d9` | `statement_goal_record` module: typed bridge from a completed statement-only import to the ledger-shaped fields (kernel-rendered goal, ADR-0350 content identity, substituted-theorem list). Admits nothing to any kernel. |
@@ -3062,6 +3064,37 @@ operations.json`, anything under `crates/axeyum-lean-kernel/src/` or
 `crates/axeyum-cas/`, or `python/axeyum/agent/` — all out of scope per the
 brief. Did not weaken `TrustedDeclaration`'s import guard or extend
 `propose_modeq_family`'s search.
+
+**`CReal.integral_split` did NOT close this session (`WIP`, split-close,
+2026-08-27), but the one missing prerequisite landed and is kernel-verified.**
+Ten-plus lanes have now worked this exact fact; this session confirmed
+`riemannSum_split_exact_of_uc` and `riemannSum_integral_close` (the two
+estimates the assembly needs) were already landed by prior lanes, built the
+one piece that was not — `CReal.uniformlyContinuousOn_restrict` (sub-interval
+restriction of a `UniformlyContinuousOn` witness, `uniform_continuity.rs`,
+same modulus, `le_trans` composition of the range hypotheses) — and then
+characterized precisely why the final estimate assembly still does not close,
+recorded as a new dated entry in `creal/integral.rs`'s module documentation
+(the file's own established convention for this fact).
+
+**The blocker, in one sentence**: `riemannSum_integral_close`'s bound routes
+through `riemannSum_shared_accuracy_close`, whose shared mid-anchor sample
+point `l` is baked into the statement rather than exposed as a free
+parameter (unlike the more primitive `shared_index_to_canonical`, which
+`riemann_sum_deep_cauchy` uses instead) — but `l` still shrinks to zero via
+`depth` regardless of `u`'s own modulus, and the other opaque term
+(`total_eps_sample_le`) generalizes mechanically to an independent
+accuracy/sample-index pair. Full recipe is in `integral.rs`'s own doc (search
+"a TENTH lane"); no new mathematics, but roughly the volume of
+`bnd_leg_plus_share_le` (~150 lines) done three times and combined, not
+attempted here to avoid landing a half-built, currently-unverifiable estimate
+chain.
+
+**Verification of what DID land**: `uniformlyContinuousOn_restrict` is in
+`creal/inventory/uniform_continuity.rs`'s shard;
+`every_creal_declaration_is_checked_and_axiom_free` passes (theorem kind,
+empty axiom footprint); `creal_prelude_builds` unaffected (32.5s, within the
+32–38s baseline band, both measured this session).
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
