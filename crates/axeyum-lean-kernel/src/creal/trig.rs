@@ -100,7 +100,8 @@ use crate::nat_prelude::NatOps;
 use crate::rat_prelude::RatPrelude;
 use crate::rat_prelude::group::rsub;
 use crate::rat_prelude::ops::{
-    den, den_z, normalize, num, radd, rat_eq_rewrite, rchain, rcongr, rmul, rneg, rone, rzero,
+    den, den_z, iregroup4, normalize, num, one_le_succ, radd, rat_eq_rewrite, rchain, rcongr, rmul,
+    rneg, rone, rzero,
 };
 
 /// Height for `cosTerm`/`cosSeriesPartial`: both are thin definitional
@@ -135,7 +136,46 @@ pub(super) fn declare_trig(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ke
     declare_cos_one(d, p, raw, k_final, cos_series_partial_body)?;
     declare_cos_one_converges(d, p, raw, k_final, cos_series_partial_body)?;
     declare_cos_one_le_four(d, p)?;
-    declare_neg_four_le_cos_one(d, p)
+    declare_neg_four_le_cos_one(d, p)?;
+    // `CReal.expTerm_antitone` needs only `expTerm`/`factorial` (declared
+    // well above, in `exponential::declare_exponential`), not anything from
+    // `alternating::declare_alternating` -- unlike the bracket
+    // instantiation below, which DOES need `alternating_lower_bound`/
+    // `alternating_upper_bound` and so cannot land in this function. See
+    // [`declare_trig_alternating_bounds`], this file's second dispatch entry
+    // point, called from `creal.rs` right after `alternating::
+    // declare_alternating` for exactly this reason: referencing a name
+    // declared in a LATER phase gives `UnknownConst`, not a missing-lemma
+    // error, and looks exactly like the lemma does not exist.
+    declare_exp_term_antitone(d, p)
+}
+
+/// Second dispatch entry point for this file: the alternating-series
+/// sharpening of `cosOne`'s numeric bound, needing
+/// [`CRealPrelude::alternating_lower_bound`]/
+/// [`CRealPrelude::alternating_upper_bound`]
+/// (`alternating::declare_alternating`) — declared in a LATER phase than
+/// [`declare_trig`], so this must be called from `creal.rs` AFTER
+/// `alternating::declare_alternating`, not folded into `declare_trig`
+/// itself. Builds: the bracket instantiated at `cosTerm`'s magnitude
+/// sequence (`∀ m, le (E m) cosOne` / `∀ m, le cosOne (O m)`), and the two
+/// `m = 0` corollaries this closes for free (`0 ≤ cosOne` and
+/// `cosOne ≤ expTerm 0`) — this development's first concrete numeric facts
+/// about `cosOne`, sharper than the prior `[-4, 4]` bound (which does not
+/// even pin the sign).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_trig_alternating_bounds(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_cos_one_alternating_lower(d, p)?;
+    declare_cos_one_alternating_upper(d, p)?;
+    declare_cos_one_nonneg(d, p)?;
+    declare_cos_one_le_exp_term_zero(d, p)
 }
 
 // --- local builders, reproduced verbatim in shape from `exponential.rs`'s
@@ -1739,6 +1779,522 @@ fn declare_neg_four_le_cos_one(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<()
 
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.neg_four_le_cos_one,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// ============================================================================
+// The alternating-series sharpening: `CReal.expTerm_antitone`, the bracket
+// instantiated at `cosTerm`'s magnitude sequence, and the two concrete `m=0`
+// corollaries this closes for free. See this task's own brief: the ONLY
+// missing input for a real numeric bound on `cosOne` was a genuine
+// antitone-reciprocal-of-factorial fact about `CReal.expTerm`, since
+// `expTerm n := ofRat (1/n!)` is a raw normalized rational (never built via
+// `CReal.inv`) -- so the whole route stays at `Rat`/`Nat` cross-multiplication,
+// mirroring `rat_prelude/archimedean.rs::declare_nat_div_succ_antitone`'s
+// numerator-1-both-sides shape exactly, with `factorial_le_succ` (below)
+// standing in for `Nat.succ_le_succ`.
+// ============================================================================
+
+/// `Nat.le (factorial n) (factorial (succ n))` — `n! <= (n+1)!`. Pure
+/// `Nat.mul_le_mul_left` at `c := factorial n`, scaling `Nat.le 1 (succ n)`
+/// ([`one_le_succ`]) up to `Nat.le (factorial n * 1) (factorial n * succ n)`,
+/// then rewriting each side back through `Nat.mul_one`/`Nat.factorial_succ`.
+fn factorial_le_succ(d: &mut IntDev<'_>, n: ExprId) -> ExprId {
+    let np = d.prelude();
+    let one_nat = d.num(1);
+    let succ_n = d.succ(n);
+    let fact_n = d.factorial(n);
+    let fact_succ_n = d.factorial(succ_n);
+
+    let pos = one_le_succ(d, n); // Le 1 (succ n)
+    let step = d.lemma(np.mul_le_mul_left, &[fact_n, one_nat, succ_n, pos]);
+    // step : Le (fact_n*1) (fact_n*succ_n)
+
+    let fact_n_mul_1 = d.mul(fact_n, one_nat);
+    let fact_n_mul_succ_n = d.mul(fact_n, succ_n);
+    let mul_one_eq = d.lemma(np.mul_one, &[fact_n]); // Eq (fact_n*1) fact_n
+    let motive1 = d.eq_motive(fact_n_mul_1, &|d, x| NatOps::le(d, x, fact_n_mul_succ_n));
+    let step2 = d.transport(fact_n_mul_1, motive1, step, fact_n, mul_one_eq);
+    // step2 : Le fact_n (fact_n*succ_n)
+
+    let factorial_succ_eq = d.lemma(np.factorial_succ, &[n]); // Eq fact_succ_n (fact_n*succ_n)
+    let factorial_succ_eq_rev = d.symm(fact_succ_n, fact_n_mul_succ_n, factorial_succ_eq);
+    let motive2 = d.eq_motive(fact_n_mul_succ_n, &|d, x| NatOps::le(d, fact_n, x));
+    d.transport(
+        fact_n_mul_succ_n,
+        motive2,
+        step2,
+        fact_succ_n,
+        factorial_succ_eq_rev,
+    )
+    // : Le fact_n fact_succ_n
+}
+
+/// `Rat.le (normalize 1 (factorial (succ n)) posA) (normalize 1 (factorial n)
+/// posB)` — `1/(n+1)! <= 1/n!`. Mirrors
+/// `rat_prelude/archimedean.rs::declare_nat_div_succ_antitone`'s
+/// cross-multiplication body verbatim in shape (same numerator-1-both-sides
+/// case), substituting [`factorial_le_succ`] for `Nat.succ_le_succ` as the
+/// denominator inequality. Returns `(q, r, proof)`; `q`/`r` are built via
+/// the exact same `normalize`/`one_le_factorial` calls
+/// `exponential.rs::inv_factorial` uses internally, so `embed q`/`embed r`
+/// are defeq to `expTerm (succ n)`/`expTerm n` after one delta-unfold of
+/// [`CRealPrelude::exp_term`].
+#[allow(clippy::too_many_lines)]
+fn exp_term_antitone_rat(
+    d: &mut IntDev<'_>,
+    rp: RatPrelude,
+    n: ExprId,
+) -> (ExprId, ExprId, ExprId) {
+    let nat = rp.int.nat;
+    let one_nat = d.num(1);
+    let one_z = d.of_nat(one_nat);
+
+    let succ_n = d.succ(n);
+    let ea = d.factorial(succ_n);
+    let eb = d.factorial(n);
+    let eaz = d.of_nat(ea);
+    let ebz = d.of_nat(eb);
+    let pos_a = d.lemma(nat.one_le_factorial, &[succ_n]);
+    let pos_b = d.lemma(nat.one_le_factorial, &[n]);
+
+    let rep_a = normalize(d, one_z, ea, pos_a);
+    let rep_b = normalize(d, one_z, eb, pos_b);
+    let na = num(d, rep_a);
+    let da = den(d, rep_a);
+    let daz = den_z(d, rep_a);
+    let nb = num(d, rep_b);
+    let db = den(d, rep_b);
+    let dbz = den_z(d, rep_b);
+
+    // Eq-A : na * eaz = daz.
+    let cross_a = d.lemma(rp.normalize_cross, &[one_z, ea, pos_a]);
+    let one_z_daz = d.imul(one_z, daz);
+    let one_mul_da_nat = d.lemma(nat.one_mul, &[da]);
+    let one_mul_da_product = NatOps::mul(d, one_nat, da);
+    let one_mul_da = d.nat_eq_to_int(one_mul_da_product, da, one_mul_da_nat, &|d, t| d.of_nat(t));
+    let na_eaz = d.imul(na, eaz);
+    let (_, eqa) = d.ichain(na_eaz, &[(one_z_daz, cross_a), (daz, one_mul_da)]);
+
+    // Eq-B : nb * ebz = dbz.
+    let cross_b = d.lemma(rp.normalize_cross, &[one_z, eb, pos_b]);
+    let one_z_dbz = d.imul(one_z, dbz);
+    let one_mul_db_nat = d.lemma(nat.one_mul, &[db]);
+    let one_mul_db_product = NatOps::mul(d, one_nat, db);
+    let one_mul_db = d.nat_eq_to_int(one_mul_db_product, db, one_mul_db_nat, &|d, t| d.of_nat(t));
+    let nb_ebz = d.imul(nb, ebz);
+    let (_, eqb) = d.ichain(nb_ebz, &[(one_z_dbz, cross_b), (dbz, one_mul_db)]);
+
+    // `Nat.le eb ea`, which IS `Int.le ebz eaz` (both `ofNat`s).
+    let hyp_e = factorial_le_succ(d, n);
+
+    // Scale by the (positive) product of the two denominators.
+    let da_db = NatOps::mul(d, da, db);
+    let scaled_hyp = d.lemma(rp.int_mul_le_mul_right, &[ebz, eaz, da_db, hyp_e]);
+
+    let dadbz = d.imul(daz, dbz);
+    let source_lhs = d.imul(ebz, dadbz);
+    let source_rhs = d.imul(eaz, dadbz);
+
+    let ea_eb = d.imul(eaz, ebz);
+    let na_dbz = d.imul(na, dbz);
+    let nb_daz = d.imul(nb, daz);
+    let goal_lhs = d.imul(na_dbz, ea_eb);
+    let goal_rhs = d.imul(nb_daz, ea_eb);
+
+    // --- LHS: (na*dbz)*(eaz*ebz) = ebz*(daz*dbz) ---
+    let goal_lhs_left_head = d.imul(na_dbz, eaz);
+    let goal_lhs_left = d.imul(goal_lhs_left_head, ebz);
+    let bridge_lhs_forward = d.lemma(rp.int.mul_assoc, &[na_dbz, eaz, ebz]);
+    let bridge_lhs = d.isymm(goal_lhs_left, goal_lhs, bridge_lhs_forward);
+
+    let regroup_lhs = iregroup4(d, [na, dbz, eaz, ebz], [na, eaz, dbz, ebz]);
+    let regrouped_lhs_head = d.imul(na_eaz, dbz);
+    let regrouped_lhs = d.imul(regrouped_lhs_head, ebz);
+
+    let subst_lhs = d.icongr(na_eaz, daz, eqa, &|d, t| {
+        let head = d.imul(t, dbz);
+        d.imul(head, ebz)
+    });
+    let subst_lhs_result = d.imul(dadbz, ebz);
+
+    let commute_lhs = d.lemma(rp.int.mul_comm, &[dadbz, ebz]);
+
+    let (_, lhs_chain) = d.ichain(
+        goal_lhs,
+        &[
+            (goal_lhs_left, bridge_lhs),
+            (regrouped_lhs, regroup_lhs),
+            (subst_lhs_result, subst_lhs),
+            (source_lhs, commute_lhs),
+        ],
+    );
+
+    // --- RHS: (nb*daz)*(eaz*ebz) = eaz*(daz*dbz) ---
+    let goal_rhs_left_head = d.imul(nb_daz, eaz);
+    let goal_rhs_left = d.imul(goal_rhs_left_head, ebz);
+    let bridge_rhs_forward = d.lemma(rp.int.mul_assoc, &[nb_daz, eaz, ebz]);
+    let bridge_rhs = d.isymm(goal_rhs_left, goal_rhs, bridge_rhs_forward);
+
+    let regroup_rhs = iregroup4(d, [nb, daz, eaz, ebz], [nb, ebz, daz, eaz]);
+    let regrouped_rhs_head = d.imul(nb_ebz, daz);
+    let regrouped_rhs = d.imul(regrouped_rhs_head, eaz);
+
+    let subst_rhs = d.icongr(nb_ebz, dbz, eqb, &|d, t| {
+        let head = d.imul(t, daz);
+        d.imul(head, eaz)
+    });
+    let dbz_daz = d.imul(dbz, daz);
+    let subst_rhs_mid = d.imul(dbz_daz, eaz);
+
+    let swap_db_da = d.lemma(rp.int.mul_comm, &[dbz, daz]);
+    let commute_inner_rhs = d.icongr(dbz_daz, dadbz, swap_db_da, &|d, t| d.imul(t, eaz));
+    let subst_rhs_final = d.imul(dadbz, eaz);
+
+    let commute_rhs = d.lemma(rp.int.mul_comm, &[dadbz, eaz]);
+
+    let (_, rhs_chain) = d.ichain(
+        goal_rhs,
+        &[
+            (goal_rhs_left, bridge_rhs),
+            (regrouped_rhs, regroup_rhs),
+            (subst_rhs_mid, subst_rhs),
+            (subst_rhs_final, commute_inner_rhs),
+            (source_rhs, commute_rhs),
+        ],
+    );
+
+    let back_lhs = d.isymm(goal_lhs, source_lhs, lhs_chain);
+    let at_lhs = d.int_eq_rewrite(source_lhs, goal_lhs, back_lhs, scaled_hyp, &|d, z| {
+        d.ile(z, source_rhs)
+    });
+    let back_rhs = d.isymm(goal_rhs, source_rhs, rhs_chain);
+    let scaled_goal = d.int_eq_rewrite(source_rhs, goal_rhs, back_rhs, at_lhs, &|d, z| {
+        d.ile(goal_lhs, z)
+    });
+
+    let ea_eb_nat = NatOps::mul(d, ea, eb);
+    let one_le_ea_eb = d.lemma(nat.one_le_mul, &[ea, eb, pos_a, pos_b]);
+    let proof = d.lemma(
+        rp.int_le_of_mul_le_mul_right,
+        &[na_dbz, nb_daz, ea_eb_nat, one_le_ea_eb, scaled_goal],
+    );
+
+    (rep_a, rep_b, proof)
+}
+
+/// `CReal.expTerm_antitone : ∀ n, le (expTerm (succ n)) (expTerm n)` —
+/// `1/(n+1)! <= 1/n!`, the one missing input this task's brief names: the
+/// `hdec` premise `CReal.alternatingLowerBound`/`upperBound` need at
+/// `cosTerm`'s magnitude sequence. See [`exp_term_antitone_rat`].
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_exp_term_antitone(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat_ty = d.nat_ty();
+    let rp = p.rat;
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let (q, r, rat_le) = exp_term_antitone_rat(d, rp, n);
+    let creal_le = d.lemma(p.of_rat_le, &[q, r, rat_le]);
+
+    let succ_n = d.succ(n);
+    let exp_term_c = d.kernel().const_(p.exp_term, vec![]);
+    let exp_term_succ_n = d.apply(exp_term_c, &[succ_n]);
+    let exp_term_n = d.apply(exp_term_c, &[n]);
+
+    let value = d.lam_fv(n_fv, nat_ty, creal_le);
+    let ty = {
+        let stmt = cle(d, p, exp_term_succ_n, exp_term_n);
+        d.pi_fv(n_fv, nat_ty, stmt)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.exp_term_antitone,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `cosTerm`'s magnitude sequence, `a j := expTerm (add j j)`.
+fn cos_magnitude_lam(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let nat = d.nat_ty();
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let dbl = d.add(j, j);
+    let exp_term_c = d.kernel().const_(p.exp_term, vec![]);
+    let body = d.apply(exp_term_c, &[dbl]);
+    d.lam_fv(j_fv, nat, body)
+}
+
+/// `hnn : ∀ k, le zero (expTerm (add k k))` — directly `CReal.exp_term_nonneg`
+/// instantiated at the doubled index.
+fn cos_magnitude_nonneg(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let nat = d.nat_ty();
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let dbl = d.add(k, k);
+    let body = d.lemma(p.exp_term_nonneg, &[dbl]);
+    d.lam_fv(k_fv, nat, body)
+}
+
+/// `hdec : ∀ k, le (expTerm (add (succ k) (succ k))) (expTerm (add k k))` —
+/// two applications of [`declare_exp_term_antitone`]'s
+/// [`CRealPrelude::exp_term_antitone`], bridged across the index identity
+/// `add (succ k) (succ k) = succ (succ (add k k))`: the OUTER `succ` is free
+/// (`Nat.add`'s own ι-reduction on its right argument), the inner one needs
+/// exactly one `Nat.succ_add` step (`add (succ k) k = succ (add k k)`, since
+/// `Nat.add` cannot peel a `succ` off its LEFT argument by ι alone).
+fn cos_magnitude_dec(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let nat = d.nat_ty();
+    let np = p.rat.int.nat;
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let kk = d.add(k, k);
+    let skk = d.succ(kk);
+    let sskk = d.succ(skk);
+
+    let exp_term_c = d.kernel().const_(p.exp_term, vec![]);
+    let e_sskk = d.apply(exp_term_c, &[sskk]);
+    let e_skk = d.apply(exp_term_c, &[skk]);
+    let e_kk = d.apply(exp_term_c, &[kk]);
+
+    let step1 = d.lemma(p.exp_term_antitone, &[skk]); // le e_sskk e_skk
+    let step2 = d.lemma(p.exp_term_antitone, &[kk]); // le e_skk e_kk
+    let composed = d.lemma(p.le_trans, &[e_sskk, e_skk, e_kk, step1, step2]);
+    // composed : le e_sskk e_kk, i.e. le (expTerm sskk) (expTerm kk)
+
+    // Bridge `add (succ k) (succ k)` to `sskk`. Only the inner `succ` needs a
+    // proof: `add (succ k) k = succ (add k k)` (`Nat.succ_add`).
+    let sk = d.succ(k);
+    let sk_k = d.add(sk, k); // add (succ k) k
+    let bridge = d.lemma(np.succ_add, &[k, k]); // Eq sk_k skk
+    let bridge_succ = d.congr(sk_k, skk, bridge, &|d, x| d.succ(x));
+    // bridge_succ : Eq (succ sk_k) sskk, and `succ sk_k` is ι-defeq to
+    // `add (succ k) (succ k)`.
+    let succ_sk_k = d.succ(sk_k);
+    let bridge_rev = d.symm(succ_sk_k, sskk, bridge_succ); // Eq sskk (succ sk_k)
+
+    let motive = d.eq_motive(sskk, &|d, x| {
+        let ex = d.apply(exp_term_c, &[x]);
+        cle(d, p, ex, e_kk)
+    });
+    let lhs_raw = d.add(sk, sk); // add (succ k) (succ k), ι-defeq to `succ sk_k`
+    let result = d.transport(sskk, motive, composed, lhs_raw, bridge_rev);
+    // result : le (expTerm lhs_raw) (expTerm kk), and `lhs_raw` beta-matches
+    // `a (succ k)` while `kk` beta-matches `a k`.
+
+    d.lam_fv(k_fv, nat, result)
+}
+
+/// `CReal.cosOne_alternating_lower : ∀ m, le (sumRange cosTerm (add m m))
+/// cosOne` — [`CRealPrelude::alternating_lower_bound`] instantiated at
+/// `cosTerm`'s magnitude sequence, closing the `hnn`/`hdec` premises with
+/// [`cos_magnitude_nonneg`]/[`cos_magnitude_dec`] and the limit hypothesis
+/// with `CReal.cosOneConverges`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_cos_one_alternating_lower(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let a_fn = cos_magnitude_lam(d, p);
+    let hnn = cos_magnitude_nonneg(d, p);
+    let hdec = cos_magnitude_dec(d, p);
+    let l = d.kernel().const_(p.cos_one, vec![]);
+    let hconv = d.kernel().const_(p.cos_one_converges, vec![]);
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let body = d.const_app(p.alternating_lower_bound, &[a_fn, hnn, hdec, l, hconv, m]);
+    let value = d.lam_fv(m_fv, nat, body);
+
+    let cos_term_c = d.kernel().const_(p.cos_term, vec![]);
+    let ty = {
+        let mm = d.add(m, m);
+        let e_m = d.const_app(p.sum_range, &[cos_term_c, mm]);
+        let stmt = cle(d, p, e_m, l);
+        d.pi_fv(m_fv, nat, stmt)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.cos_one_alternating_lower,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.cosOne_alternating_upper : ∀ m, le cosOne (sumRange cosTerm (succ
+/// (add m m)))` — the mirror of [`declare_cos_one_alternating_lower`], off
+/// [`CRealPrelude::alternating_upper_bound`].
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_cos_one_alternating_upper(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let a_fn = cos_magnitude_lam(d, p);
+    let hnn = cos_magnitude_nonneg(d, p);
+    let hdec = cos_magnitude_dec(d, p);
+    let l = d.kernel().const_(p.cos_one, vec![]);
+    let hconv = d.kernel().const_(p.cos_one_converges, vec![]);
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let body = d.const_app(p.alternating_upper_bound, &[a_fn, hnn, hdec, l, hconv, m]);
+    let value = d.lam_fv(m_fv, nat, body);
+
+    let cos_term_c = d.kernel().const_(p.cos_term, vec![]);
+    let ty = {
+        let mm = d.add(m, m);
+        let smm = d.succ(mm);
+        let o_m = d.const_app(p.sum_range, &[cos_term_c, smm]);
+        let stmt = cle(d, p, l, o_m);
+        d.pi_fv(m_fv, nat, stmt)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.cos_one_alternating_upper,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.cosOne_nonneg : le zero cosOne` — [`declare_cos_one_alternating_lower`]
+/// at `m := 0`: `sumRange cosTerm (add 0 0)` is ι-defeq to `zero` (both
+/// `Nat.add`'s and `CReal.sumRange`'s own base cases), so the general bracket
+/// specializes to the sign bound for free, no `Rat`/`CReal` arithmetic at all.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_cos_one_nonneg(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let zero_nat = d.zero();
+    let cos_one_alt_lower_c = d.kernel().const_(p.cos_one_alternating_lower, vec![]);
+    let value = d.apply(cos_one_alt_lower_c, &[zero_nat]);
+    let zero_c = czero(d, p);
+    let cos_one_c = d.kernel().const_(p.cos_one, vec![]);
+    let ty = cle(d, p, zero_c, cos_one_c);
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.cos_one_nonneg,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.cosOne_le_exp_term_zero : le cosOne (expTerm 0)` —
+/// [`declare_cos_one_alternating_upper`] at `m := 0`:
+/// `sumRange cosTerm (succ (add 0 0))` is ι-defeq to `add zero (cosTerm 0)`
+/// (both `Nat.add`'s and `CReal.sumRange`'s own recursion steps), and
+/// `cosTerm 0` is itself ι-defeq to `mul one (expTerm 0)`
+/// (`CReal.pow_zero` closes `pow (neg one) 0` to `one` by `Eq.refl` alone —
+/// see [`CRealPrelude::pow_zero`]'s own doc). What is NOT free: folding
+/// `add zero (mul one (expTerm 0))` down to `expTerm 0` needs two genuine
+/// `Equiv` steps (`add_comm` + `add_zero` for the outer `add`, `one_mul` for
+/// the inner `mul`), composed and transported across the inequality with
+/// `CReal.le_congr`. `expTerm 0` is mathematically `1` (`1/0! = 1`), but
+/// reducing it further to the literal constant `CReal.one` would need
+/// `Rat.normalize 1 (factorial 0) _ = Rat.one`, i.e. `Nat.gcd 1 1`
+/// computing to `1` — flagged in this task's own brief as the single most
+/// likely stall point, and not attempted here.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_cos_one_le_exp_term_zero(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let zero_nat = d.zero();
+    let cos_one_alt_upper_c = d.kernel().const_(p.cos_one_alternating_upper, vec![]);
+    let raw = d.apply(cos_one_alt_upper_c, &[zero_nat]);
+    // raw : le cosOne (sumRange cosTerm (succ (add 0 0))), ι-defeq to
+    // le cosOne (add zero (cosTerm 0)).
+
+    let cos_one_c = d.kernel().const_(p.cos_one, vec![]);
+    let zero_c = czero(d, p);
+    let cos_term_c = d.kernel().const_(p.cos_term, vec![]);
+    let cos_term_0 = d.apply(cos_term_c, &[zero_nat]);
+    let add_zero_cos_term_0 = cadd(d, p, zero_c, cos_term_0);
+    let cos_term_0_add_zero = cadd(d, p, cos_term_0, zero_c);
+
+    let comm = d.lemma(p.add_comm, &[zero_c, cos_term_0]);
+    // comm : Equiv add_zero_cos_term_0 cos_term_0_add_zero
+    let az = d.lemma(p.add_zero, &[cos_term_0]);
+    // az : Equiv cos_term_0_add_zero cos_term_0
+    let step1 = echain(
+        d,
+        p,
+        add_zero_cos_term_0,
+        &[(cos_term_0_add_zero, comm), (cos_term_0, az)],
+    );
+    // step1 : Equiv add_zero_cos_term_0 cos_term_0
+
+    let exp_term_c = d.kernel().const_(p.exp_term, vec![]);
+    let exp_term_0 = d.apply(exp_term_c, &[zero_nat]);
+    let one_cc = one_c(d, p);
+    let one_mul_exp_term_0 = cmul(d, p, one_cc, exp_term_0);
+    // `cos_term_0` is ι-defeq to `one_mul_exp_term_0` (`pow (neg one) 0`
+    // closes to `one` by `Eq.refl`, `CReal.pow_zero`'s own reason). There is
+    // no CReal-level `one_mul` (only `mul_one : Equiv (mul x one) x`, one of
+    // the 22), so bridge with `mul_comm` first.
+    let exp_term_0_mul_one = cmul(d, p, exp_term_0, one_cc);
+    let mul_comm_step = d.lemma(p.mul_comm, &[one_cc, exp_term_0]);
+    // mul_comm_step : Equiv one_mul_exp_term_0 exp_term_0_mul_one
+    let mul_one_step = d.lemma(p.mul_one, &[exp_term_0]);
+    // mul_one_step : Equiv exp_term_0_mul_one exp_term_0
+    let one_mul_step = echain(
+        d,
+        p,
+        one_mul_exp_term_0,
+        &[
+            (exp_term_0_mul_one, mul_comm_step),
+            (exp_term_0, mul_one_step),
+        ],
+    );
+    // one_mul_step : Equiv one_mul_exp_term_0 exp_term_0
+    let step2 = echain(
+        d,
+        p,
+        add_zero_cos_term_0,
+        &[(cos_term_0, step1), (exp_term_0, one_mul_step)],
+    );
+    // step2 : Equiv add_zero_cos_term_0 exp_term_0
+
+    let refl_cos_one = erefl(d, p, cos_one_c);
+    let value = d.lemma(
+        p.le_congr,
+        &[
+            cos_one_c,
+            cos_one_c,
+            add_zero_cos_term_0,
+            exp_term_0,
+            refl_cos_one,
+            step2,
+            raw,
+        ],
+    );
+    let ty = cle(d, p, cos_one_c, exp_term_0);
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.cos_one_le_exp_term_zero,
         uparams: vec![],
         ty,
         value,

@@ -31,7 +31,7 @@
 //! `hnn` alone, and what lets [`declare_alternating_bracket`]'s pairing step
 //! show `E x ≤ E (succ x)` from `hdec` alone (`E (succ x) - E x = a (add x x)
 //! - a (succ (add x x)) ≥ 0`, i.e. exactly one instance of `hdec`, not a new
-//! domination argument).
+//!   domination argument).
 //!
 //! [`declare_alternating_bracket`] is the pairing induction itself: `∀ m i,
 //! E m ≤ E (add m i) ∧ E m ≤ O (add m i)` — the classical fact that EVERY
@@ -63,7 +63,9 @@
 //! are a well-scoped, separately tractable next step, not attempted in this
 //! file.
 
-use super::trig::{cadd, cle, cmul, cneg, cpow, echain, erefl, esymm, neg_unique, one_c};
+use super::trig::{
+    cadd, cle, cmul, cneg, cpow, echain, erefl, esymm, neg_add_self, neg_unique, one_c,
+};
 use super::{CRealPrelude, creal_ty};
 use crate::KernelError;
 use crate::env::Declaration;
@@ -84,7 +86,10 @@ use crate::nat_prelude::{NatOps, NatPrelude};
 pub(super) fn declare_alternating(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
     declare_neg_one_pow_double(d, p)?;
     declare_alternating_e_le_o(d, p)?;
-    declare_alternating_bracket(d, p)
+    declare_alternating_bracket(d, p)?;
+    declare_alternating_bracket_upper(d, p)?;
+    declare_alternating_lower_bound(d, p)?;
+    declare_alternating_upper_bound(d, p)
 }
 
 // ----------------------------------------------------------------------------
@@ -221,6 +226,54 @@ fn nonneg_of_le(d: &mut IntDev<'_>, p: CRealPrelude, a1: ExprId, a2: ExprId, h: 
         p.le_congr,
         &[add_a1_neg, zero_c, target, target, an, refl_target, grown],
     )
+}
+
+/// `le (add (neg a2) a1) zero`, from `h : le a1 a2` -- the mirror of
+/// [`nonneg_of_le`], needed by [`o_step_le`]'s decreasing-pair argument:
+/// `add_le_add` grows `h` by `neg a2` on the right, `add_comm` puts the
+/// `neg a2` summand first, then `add_neg` collapses `add a2 (neg a2)` to
+/// `zero`.
+fn nonpos_of_le(d: &mut IntDev<'_>, p: CRealPrelude, a1: ExprId, a2: ExprId, h: ExprId) -> ExprId {
+    let neg_a2 = cneg(d, p, a2);
+    let refl_neg = d.lemma(p.le_refl, &[neg_a2]);
+    let grown = d.lemma(p.add_le_add, &[a1, a2, neg_a2, neg_a2, h, refl_neg]);
+    // grown : le (add a1 neg_a2) (add a2 neg_a2)
+    let zero_c = czero(d, p);
+    let source = cadd(d, p, a1, neg_a2);
+    let target = cadd(d, p, neg_a2, a1);
+    let comm = d.lemma(p.add_comm, &[a1, neg_a2]); // Equiv source target
+    let add_a2_neg = cadd(d, p, a2, neg_a2);
+    let refl_add_a2_neg = erefl(d, p, add_a2_neg);
+    let step1 = d.lemma(
+        p.le_congr,
+        &[
+            source,
+            target,
+            add_a2_neg,
+            add_a2_neg,
+            comm,
+            refl_add_a2_neg,
+            grown,
+        ],
+    );
+    // step1 : le target add_a2_neg
+    let an = d.lemma(p.add_neg, &[a2]); // Equiv add_a2_neg zero
+    let refl_target = erefl(d, p, target);
+    d.lemma(
+        p.le_congr,
+        &[target, target, add_a2_neg, zero_c, refl_target, an, step1],
+    )
+}
+
+/// `Equiv (neg (neg x)) x` -- [`neg_add_self`] gives `Equiv (add (neg x) x)
+/// zero`, [`neg_unique`] at `(a, b) := (neg x, x)` turns that into `Equiv x
+/// (neg (neg x))`, and [`esymm`] flips it.
+fn double_neg(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+    let nx = cneg(d, p, x);
+    let h = neg_add_self(d, p, x); // Equiv (add nx x) zero
+    let x_eq_nnx = neg_unique(d, p, nx, x, h); // Equiv x (neg nx)
+    let nnx = cneg(d, p, nx);
+    esymm(d, p, x, nnx, x_eq_nnx)
 }
 
 // ----------------------------------------------------------------------------
@@ -809,6 +862,693 @@ fn declare_alternating_bracket(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<()
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.alternating_bracket,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// ----------------------------------------------------------------------------
+// `CReal.alternatingBracketUpper`.
+// ----------------------------------------------------------------------------
+
+/// `le (O (succ k)) (O k)`, given `hdec : ∀ k, le (a (succ k)) (a k)` --
+/// mirrors [`e_step_le`]: `O (succ k) = O k + (t (succ dbl) + t (succ (succ
+/// dbl)))` (defeq, via [`nat_double_succ_eq`] plus THREE `sumRange` `ι`-steps
+/// this time -- `O`'s own extra `succ` costs one more unfolding than `E`'s),
+/// and the two new terms sum to `a (succ (succ dbl)) - a (succ dbl) ≤ 0`
+/// ([`t_double_eq_a`] at `succ k`, transported across
+/// [`nat_double_succ_eq`], for the even one; [`t_double_succ_eq_neg_mul`] for
+/// the odd one; [`nonpos_of_le`] turns `hdec` at `succ dbl` into that
+/// non-positivity), so `O (succ k) = O k + (that pair) ≤ O k`.
+fn o_step_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a_fn: ExprId,
+    hdec: ExprId,
+    t_lam: ExprId,
+    k: ExprId,
+) -> ExprId {
+    let np = p.rat.int.nat;
+    let e_k = e_of(d, p, t_lam, k);
+    let dbl = d.add(k, k);
+    let sdbl = d.succ(dbl);
+    let t_dbl = d.apply(t_lam, &[dbl]);
+    let t_sdbl = d.apply(t_lam, &[sdbl]);
+    let o_k_shape = cadd(d, p, e_k, t_dbl); // defeq O(k)
+
+    // t_sdbl ~ neg a_sdbl (odd index sdbl).
+    let a_sdbl = d.apply(a_fn, &[sdbl]);
+    let t_sdbl_eq_mul = t_double_succ_eq_neg_mul(d, p, a_fn, k);
+    let one_cc = one_c(d, p);
+    let neg_one = cneg(d, p, one_cc);
+    let mul_negone_asdbl = cmul(d, p, neg_one, a_sdbl);
+    let neg_a_sdbl = cneg(d, p, a_sdbl);
+    let nmn = mul_neg_one_eq_neg(d, p, a_sdbl); // Equiv mul_negone_asdbl neg_a_sdbl
+    let t_sdbl_eq_neg = echain(
+        d,
+        p,
+        t_sdbl,
+        &[(mul_negone_asdbl, t_sdbl_eq_mul), (neg_a_sdbl, nmn)],
+    );
+
+    // ssdbl := succ sdbl = succ(succ dbl). t_ssdbl ~ a_ssdbl (even), via
+    // t_double_eq_a at `succ k` (relative to `lhs_idx`), transported across
+    // nat_double_succ_eq(k).
+    let (ssdbl, nat_eq) = nat_double_succ_eq(d, np, k); // Eq lhs_idx ssdbl
+    let sk = d.succ(k);
+    let lhs_idx = d.add(sk, sk);
+    let t_ssdbl = d.apply(t_lam, &[ssdbl]);
+    let a_ssdbl = d.apply(a_fn, &[ssdbl]);
+    let t_lhs_eq_a_lhs = t_double_eq_a(d, p, a_fn, sk); // Equiv (t lhs_idx)(a lhs_idx)
+    let t_ssdbl_eq_a_ssdbl = {
+        let motive = d.eq_motive(lhs_idx, &|d, x| {
+            let tx = d.apply(t_lam, &[x]);
+            let ax = d.apply(a_fn, &[x]);
+            d.const_app(p.equiv, &[tx, ax])
+        });
+        d.transport(lhs_idx, motive, t_lhs_eq_a_lhs, ssdbl, nat_eq)
+    };
+    // t_ssdbl_eq_a_ssdbl : Equiv t_ssdbl a_ssdbl
+
+    // pair2 := t_sdbl + t_ssdbl ~ neg a_sdbl + a_ssdbl.
+    let pair2 = cadd(d, p, t_sdbl, t_ssdbl);
+    let add_neg_ssdbl = cadd(d, p, neg_a_sdbl, a_ssdbl);
+    let pair2_eq = d.lemma(
+        p.add_congr,
+        &[
+            t_sdbl,
+            neg_a_sdbl,
+            t_ssdbl,
+            a_ssdbl,
+            t_sdbl_eq_neg,
+            t_ssdbl_eq_a_ssdbl,
+        ],
+    ); // Equiv pair2 add_neg_ssdbl
+
+    // pair2 nonpos: hdec at sdbl gives le a_ssdbl a_sdbl (ssdbl = succ sdbl),
+    // so nonpos_of_le gives le add_neg_ssdbl zero.
+    let hdec_sdbl = d.apply(hdec, &[sdbl]); // le a_ssdbl a_sdbl
+    let np_le = nonpos_of_le(d, p, a_ssdbl, a_sdbl, hdec_sdbl); // le add_neg_ssdbl zero
+    let zero_c = czero(d, p);
+    let pair2_eq_symm = esymm(d, p, pair2, add_neg_ssdbl, pair2_eq); // Equiv add_neg_ssdbl pair2
+    let refl_zero = erefl(d, p, zero_c);
+    let pair2_nonpos = d.lemma(
+        p.le_congr,
+        &[
+            add_neg_ssdbl,
+            pair2,
+            zero_c,
+            zero_c,
+            pair2_eq_symm,
+            refl_zero,
+            np_le,
+        ],
+    ); // le pair2 zero
+
+    // O(k) + pair2 <= O(k) + 0 ~ O(k).
+    let refl_ok = d.lemma(p.le_refl, &[o_k_shape]);
+    let grown = d.lemma(
+        p.add_le_add,
+        &[o_k_shape, o_k_shape, pair2, zero_c, refl_ok, pair2_nonpos],
+    ); // le (add o_k_shape pair2) (add o_k_shape zero)
+    let shape2 = cadd(d, p, o_k_shape, pair2);
+    let padded = cadd(d, p, o_k_shape, zero_c);
+    let trim = d.lemma(p.add_zero, &[o_k_shape]); // Equiv padded o_k_shape
+    let refl_shape2 = erefl(d, p, shape2);
+    let shape2_le_ok = d.lemma(
+        p.le_congr,
+        &[shape2, shape2, padded, o_k_shape, refl_shape2, trim, grown],
+    ); // le shape2 o_k_shape
+
+    // RAW = add(add(o_k_shape, t_sdbl), t_ssdbl) ~[assoc]~ shape2.
+    let ok_tsdbl = cadd(d, p, o_k_shape, t_sdbl);
+    let raw = cadd(d, p, ok_tsdbl, t_ssdbl);
+    let assoc = d.lemma(p.add_assoc, &[o_k_shape, t_sdbl, t_ssdbl]); // Equiv raw shape2
+    let assoc_symm = esymm(d, p, raw, shape2, assoc); // Equiv shape2 raw
+    let refl_ok2 = erefl(d, p, o_k_shape);
+    let raw_le_ok = d.lemma(
+        p.le_congr,
+        &[
+            shape2,
+            raw,
+            o_k_shape,
+            o_k_shape,
+            assoc_symm,
+            refl_ok2,
+            shape2_le_ok,
+        ],
+    ); // le raw o_k_shape
+
+    // Bridge: O(succ k)'s raw index is `succ lhs_idx`; RAW is defeq to
+    // `sumRange t (succ ssdbl)` (three ι steps). Transport across
+    // `Eq (succ ssdbl) (succ lhs_idx)`.
+    let succ_lhs_idx = d.succ(lhs_idx);
+    let sssdbl = d.succ(ssdbl);
+    let congr_succ = d.congr(lhs_idx, ssdbl, nat_eq, &|d, x| d.succ(x)); // Eq succ_lhs_idx sssdbl
+    let bridge = d.symm(succ_lhs_idx, sssdbl, congr_succ); // Eq sssdbl succ_lhs_idx
+    let motive_final = d.eq_motive(sssdbl, &|d, x| {
+        let sx = d.const_app(p.sum_range, &[t_lam, x]);
+        cle(d, p, sx, o_k_shape)
+    });
+    d.transport(sssdbl, motive_final, raw_le_ok, succ_lhs_idx, bridge)
+    // : le (O (succ k)) (O k)
+}
+
+/// `CReal.alternatingBracketUpper : ∀ a, (∀ k, le zero (a k)) → (∀ k, le (a
+/// (succ k)) (a k)) → ∀ m i, And (le (E (add m i)) (O m)) (le (O (add m i))
+/// (O m))` -- the DUAL of [`declare_alternating_bracket`], same induction
+/// shape on `i`: base is [`e_le_o_body`] at `m` plus `le_refl`; step chains
+/// [`o_step_le`] against the induction hypothesis's `O` half (`le_trans`)
+/// for the new `O` conjunct, then [`e_le_o_body`] at the new index against
+/// that just-derived `O` bound for the new `E` conjunct.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_alternating_bracket_upper(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let a_fv = d.fresh_fvar();
+    let a_fn = d.kernel().fvar(a_fv);
+    let hnn_fv = d.fresh_fvar();
+    let hnn = d.kernel().fvar(hnn_fv);
+    let hnn_ty = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let zero_c = czero(d, p);
+        let a_k = d.apply(a_fn, &[k]);
+        let body = cle(d, p, zero_c, a_k);
+        d.pi_fv(k_fv, nat, body)
+    };
+    let hdec_fv = d.fresh_fvar();
+    let hdec = d.kernel().fvar(hdec_fv);
+    let hdec_ty = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let sk = d.succ(k);
+        let a_sk = d.apply(a_fn, &[sk]);
+        let a_k = d.apply(a_fn, &[k]);
+        let body = cle(d, p, a_sk, a_k);
+        d.pi_fv(k_fv, nat, body)
+    };
+
+    let t_lam = build_t_lam(d, p, a_fn);
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let o_m = o_of(d, p, t_lam, m);
+
+    // Motive over `i`: And (le (E (add m i)) (O m)) (le (O (add m i)) (O m)).
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let o_m = o_of(d, p, t_lam, m);
+        let mx = d.add(m, x);
+        let e_mx = e_of(d, p, t_lam, mx);
+        let o_mx = o_of(d, p, t_lam, mx);
+        let left = cle(d, p, e_mx, o_m);
+        let right = cle(d, p, o_mx, o_m);
+        and_ty(d, left, right)
+    };
+
+    let base = |d: &mut IntDev<'_>| -> ExprId {
+        // add m 0 ≡ m, pure ι.
+        let left = e_le_o_body(d, p, a_fn, hnn, t_lam, m);
+        let right = d.lemma(p.le_refl, &[o_m]);
+        let e_m = e_of(d, p, t_lam, m);
+        let left_ty = cle(d, p, e_m, o_m);
+        let right_ty = cle(d, p, o_m, o_m);
+        and_intro(d, p, left_ty, right_ty, left, right)
+    };
+
+    let step = |d: &mut IntDev<'_>, j: ExprId, ih: ExprId| -> ExprId {
+        let mj = d.add(m, j);
+        let e_mj = e_of(d, p, t_lam, mj);
+        let o_mj = o_of(d, p, t_lam, mj);
+        let left_ty = cle(d, p, e_mj, o_m);
+        let right_ty = cle(d, p, o_mj, o_m);
+        let ih_right = d.and_right(left_ty, right_ty, ih); // le o_mj o_m
+
+        // O(succ mj) -> O(mj), one antitone step, then chain through ih.
+        let step_le = o_step_le(d, p, a_fn, hdec, t_lam, mj); // le O(succ mj) o_mj
+        let s_mj = d.succ(mj);
+        let o_smj = o_of(d, p, t_lam, s_mj);
+        let new_right = d.lemma(p.le_trans, &[o_smj, o_mj, o_m, step_le, ih_right]);
+        // new_right : le o_smj o_m
+
+        let cross = e_le_o_body(d, p, a_fn, hnn, t_lam, s_mj); // le e_smj o_smj
+        let e_smj = e_of(d, p, t_lam, s_mj);
+        let new_left = d.lemma(p.le_trans, &[e_smj, o_smj, o_m, cross, new_right]);
+        // new_left : le e_smj o_m
+
+        // Bridge index: add m (succ j) ≡ succ (add m j) = s_mj, pure ι.
+        let sj = d.succ(j);
+        let m_sj = d.add(m, sj);
+        let e_m_sj = e_of(d, p, t_lam, m_sj); // defeq to e_smj
+        let o_m_sj = o_of(d, p, t_lam, m_sj); // defeq to o_smj
+        let left_final_ty = cle(d, p, e_m_sj, o_m);
+        let right_final_ty = cle(d, p, o_m_sj, o_m);
+        and_intro(d, p, left_final_ty, right_final_ty, new_left, new_right)
+    };
+
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let value_at_i = d.induct(&motive, &base, &step, i);
+    let stmt_at_i = motive(d, i);
+
+    let value = {
+        let with_i = d.lam_fv(i_fv, nat, value_at_i);
+        let with_m = d.lam_fv(m_fv, nat, with_i);
+        let with_hdec = d.lam_fv(hdec_fv, hdec_ty, with_m);
+        let with_hnn = d.lam_fv(hnn_fv, hnn_ty, with_hdec);
+        d.lam_fv(a_fv, fn_ty, with_hnn)
+    };
+    let ty = {
+        let with_i = d.pi_fv(i_fv, nat, stmt_at_i);
+        let with_m = d.pi_fv(m_fv, nat, with_i);
+        let with_hdec = d.arrow(hdec_ty, with_m);
+        let with_hnn = d.arrow(hnn_ty, with_hdec);
+        d.pi_fv(a_fv, fn_ty, with_hnn)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.alternating_bracket_upper,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// ----------------------------------------------------------------------------
+// Closing the bracket against an actual limit.
+// ----------------------------------------------------------------------------
+
+/// `Eq Nat (add (add a b) (add c e)) (add (add a c) (add b e))` -- reproduced
+/// verbatim in shape from `nat_prelude/fibonacci.rs`'s own private
+/// `add_regroup_four` (this module does not touch that file), retyped over
+/// `&mut IntDev`.
+fn add_regroup_four(
+    d: &mut IntDev<'_>,
+    np: NatPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    e: ExprId,
+) -> ExprId {
+    let ab = d.add(a, b);
+    let ce = d.add(c, e);
+    let start = d.add(ab, ce);
+
+    let abc = d.add(ab, c);
+    let step1 = d.add(abc, e);
+    let h1 = {
+        let fwd = d.lemma(np.add_assoc, &[ab, c, e]); // (ab+c)+e = ab+(c+e)
+        d.symm(step1, start, fwd)
+    };
+
+    let ac = d.add(a, c);
+    let acb = d.add(ac, b);
+    let step2 = d.add(acb, e);
+    let h2 = {
+        let h_comm = d.lemma(np.add_right_comm, &[a, b, c]); // (a+b)+c = (a+c)+b
+        d.congr(abc, acb, h_comm, &|d, x| d.add(x, e))
+    };
+
+    let be = d.add(b, e);
+    let target = d.add(ac, be);
+    let h3 = d.lemma(np.add_assoc, &[ac, b, e]); // (ac+b)+e = ac+(b+e)
+
+    let (_end, proof) = d.chain(start, &[(step1, h1), (step2, h2), (target, h3)]);
+    proof
+}
+
+/// `Eq Nat (add (add k k) (add m m)) (add (add m k) (add m k))` --
+/// [`add_regroup_four`] at `(k, k, m, m)` gives `(k+m)+(k+m)`; one `add_comm`
+/// swap under `fun x => add x x` finishes.
+fn kk_mm_regroup(d: &mut IntDev<'_>, np: NatPrelude, k: ExprId, m: ExprId) -> ExprId {
+    let step = add_regroup_four(d, np, k, k, m, m); // Eq (kk+mm) ((k+m)+(k+m))
+    let km = d.add(k, m);
+    let mk = d.add(m, k);
+    let comm = d.lemma(np.add_comm, &[k, m]); // Eq km mk
+    let swap = d.congr(km, mk, comm, &|d, x| d.add(x, x)); // Eq ((k+m)+(k+m)) ((m+k)+(m+k))
+    let kk = d.add(k, k);
+    let mm = d.add(m, m);
+    let start = d.add(kk, mm);
+    let mid = d.add(km, km);
+    let end = d.add(mk, mk);
+    let (_, proof) = d.chain(start, &[(mid, step), (end, swap)]);
+    proof
+}
+
+/// `CReal.alternatingLowerBound`. See
+/// [`CRealPrelude::alternating_lower_bound`].
+///
+/// Builds `shift_hyp : ∀ n, le (E m) (sumRange t (add n (add m m)))` by
+/// case-splitting `n` via `Nat.even_or_odd` (the COMPUTED parity split,
+/// `k := div n 2`): at `n = add k k`, [`kk_mm_regroup`] plus one `Nat`-level
+/// substitution transports [`declare_alternating_bracket`]'s `le (E m) (E
+/// (add m k))` across the (propositional, not `ι`) index identity onto `le
+/// (E m) (sumRange t (add n (add m m)))`; at `n = succ (add k k)`, one more
+/// `succ_add` step does the same for the `O (add m k)` half. Then
+/// [`CRealPrelude::converges_lower_bound_shift`] at shift `s := add m m`
+/// closes `le (E m) L`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_alternating_lower_bound(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let fn_ty = d.arrow(nat, carrier);
+    let np = p.rat.int.nat;
+
+    let a_fv = d.fresh_fvar();
+    let a_fn = d.kernel().fvar(a_fv);
+    let hnn_fv = d.fresh_fvar();
+    let hnn = d.kernel().fvar(hnn_fv);
+    let hnn_ty = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let zero_c = czero(d, p);
+        let a_k = d.apply(a_fn, &[k]);
+        let body = cle(d, p, zero_c, a_k);
+        d.pi_fv(k_fv, nat, body)
+    };
+    let hdec_fv = d.fresh_fvar();
+    let hdec = d.kernel().fvar(hdec_fv);
+    let hdec_ty = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let sk = d.succ(k);
+        let a_sk = d.apply(a_fn, &[sk]);
+        let a_k = d.apply(a_fn, &[k]);
+        let body = cle(d, p, a_sk, a_k);
+        d.pi_fv(k_fv, nat, body)
+    };
+
+    let t_lam = build_t_lam(d, p, a_fn);
+    let f_expr = d.const_app(p.sum_range, &[t_lam]);
+
+    let l_fv = d.fresh_fvar();
+    let l = d.kernel().fvar(l_fv);
+    let converges_hyp_fv = d.fresh_fvar();
+    let converges_hyp = d.kernel().fvar(converges_hyp_fv);
+    let converges_ty = d.const_app(p.converges, &[f_expr, l]);
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let e_m = e_of(d, p, t_lam, m);
+    let m_m = d.add(m, m);
+
+    // shift_hyp : ∀ n, le (E m) (S (add n (add m m))).
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let two_nat = d.num(2);
+    let k = d.div(n, two_nat);
+    let kk = d.add(k, k);
+    let skk = d.succ(kk);
+    let left_ty = d.eq(n, kk);
+    let right_ty = d.eq(n, skk);
+    let even_or_odd_n = d.lemma(np.even_or_odd, &[n]);
+    let n_mm = d.add(n, m_m);
+    let s_n_mm = d.const_app(p.sum_range, &[t_lam, n_mm]);
+    let target = cle(d, p, e_m, s_n_mm);
+
+    let mk = d.add(m, k);
+    let e_mk = e_of(d, p, t_lam, mk);
+    let o_mk = o_of(d, p, t_lam, mk);
+    let bracket_left_ty = cle(d, p, e_m, e_mk);
+    let bracket_right_ty = cle(d, p, e_m, o_mk);
+    let bracket_at_mk = d.const_app(p.alternating_bracket, &[a_fn, hnn, hdec, m, k]);
+    let bracket_left = d.and_left(bracket_left_ty, bracket_right_ty, bracket_at_mk);
+    let bracket_right = d.and_right(bracket_left_ty, bracket_right_ty, bracket_at_mk);
+
+    let rhs0 = d.add(mk, mk); // matches e_mk's raw Nat argument
+    let rhs1 = d.succ(rhs0); // matches o_mk's raw Nat argument
+    let core_eq = kk_mm_regroup(d, np, k, m); // Eq (add kk m_m) rhs0
+    let lhs0 = d.add(kk, m_m);
+
+    let on_left = |d: &mut IntDev<'_>, heq: ExprId| -> ExprId {
+        // heq : Eq n kk
+        let symm_heq = d.symm(n, kk, heq); // Eq kk n
+        let congr_step = d.congr(kk, n, symm_heq, &|d, x| d.add(x, m_m)); // Eq lhs0 n_mm
+        let symm_core = d.symm(lhs0, rhs0, core_eq); // Eq rhs0 lhs0
+        let h_final = d.trans(rhs0, lhs0, n_mm, symm_core, congr_step); // Eq rhs0 n_mm
+        let motive = d.eq_motive(rhs0, &|d, x| {
+            let sx = d.const_app(p.sum_range, &[t_lam, x]);
+            cle(d, p, e_m, sx)
+        });
+        d.transport(rhs0, motive, bracket_left, n_mm, h_final)
+    };
+
+    let on_right = |d: &mut IntDev<'_>, heq: ExprId| -> ExprId {
+        // heq : Eq n skk
+        let succ_add_eq = d.lemma(np.succ_add, &[kk, m_m]); // Eq (add skk m_m) (succ (add kk m_m))
+        let mid = d.succ(lhs0);
+        let succ_congr = d.congr(lhs0, rhs0, core_eq, &|d, x| d.succ(x)); // Eq mid rhs1
+        let lhs1 = d.add(skk, m_m);
+        let (_, chain_proof) = d.chain(lhs1, &[(mid, succ_add_eq), (rhs1, succ_congr)]);
+        // chain_proof : Eq lhs1 rhs1
+        let symm_heq = d.symm(n, skk, heq); // Eq skk n
+        let congr_step = d.congr(skk, n, symm_heq, &|d, x| d.add(x, m_m)); // Eq lhs1 n_mm
+        let symm_chain = d.symm(lhs1, rhs1, chain_proof); // Eq rhs1 lhs1
+        let h_final = d.trans(rhs1, lhs1, n_mm, symm_chain, congr_step); // Eq rhs1 n_mm
+        let motive = d.eq_motive(rhs1, &|d, x| {
+            let sx = d.const_app(p.sum_range, &[t_lam, x]);
+            cle(d, p, e_m, sx)
+        });
+        d.transport(rhs1, motive, bracket_right, n_mm, h_final)
+    };
+
+    let or_body = d.or_elim(
+        left_ty,
+        right_ty,
+        target,
+        even_or_odd_n,
+        &on_left,
+        &on_right,
+    );
+    let shift_hyp = d.lam_fv(n_fv, nat, or_body);
+
+    let result = d.const_app(
+        p.converges_lower_bound_shift,
+        &[m_m, e_m, f_expr, l, shift_hyp, converges_hyp],
+    );
+
+    let value = {
+        let with_m = d.lam_fv(m_fv, nat, result);
+        let with_converges = d.lam_fv(converges_hyp_fv, converges_ty, with_m);
+        let with_l = d.lam_fv(l_fv, carrier, with_converges);
+        let with_hdec = d.lam_fv(hdec_fv, hdec_ty, with_l);
+        let with_hnn = d.lam_fv(hnn_fv, hnn_ty, with_hdec);
+        d.lam_fv(a_fv, fn_ty, with_hnn)
+    };
+    let stmt_at_m = cle(d, p, e_m, l);
+    let ty = {
+        let with_m = d.pi_fv(m_fv, nat, stmt_at_m);
+        let with_converges = d.arrow(converges_ty, with_m);
+        let with_l = d.pi_fv(l_fv, carrier, with_converges);
+        let with_hdec = d.arrow(hdec_ty, with_l);
+        let with_hnn = d.arrow(hnn_ty, with_hdec);
+        d.pi_fv(a_fv, fn_ty, with_hnn)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.alternating_lower_bound,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.alternatingUpperBound`. See
+/// [`CRealPrelude::alternating_upper_bound`].
+///
+/// Same per-`n` case split as [`declare_alternating_lower_bound`], but off
+/// [`declare_alternating_bracket_upper`] instead, landing directly on
+/// `direct_hyp : ∀ n, le (sumRange t (add n (add m m))) (O m)`. This
+/// development has no `converges_upper_bound_shift`, so closing `le L (O m)`
+/// routes through [`CRealPrelude::converges_neg`]/[`CRealPrelude::neg_le_neg`]:
+/// `neg_le_neg` turns `direct_hyp` into the shift hypothesis
+/// [`CRealPrelude::converges_lower_bound_shift`] needs for the NEGATED
+/// sequence (`a := neg (O m)`, `f := fun n => neg (S n)`,
+/// `L' := neg L`, via `converges_neg`), giving `le (neg (O m)) (neg L)`; one
+/// more `neg_le_neg` plus [`double_neg`] (twice, via `le_congr`) flips that
+/// back to `le L (O m)`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_alternating_upper_bound(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let fn_ty = d.arrow(nat, carrier);
+    let np = p.rat.int.nat;
+
+    let a_fv = d.fresh_fvar();
+    let a_fn = d.kernel().fvar(a_fv);
+    let hnn_fv = d.fresh_fvar();
+    let hnn = d.kernel().fvar(hnn_fv);
+    let hnn_ty = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let zero_c = czero(d, p);
+        let a_k = d.apply(a_fn, &[k]);
+        let body = cle(d, p, zero_c, a_k);
+        d.pi_fv(k_fv, nat, body)
+    };
+    let hdec_fv = d.fresh_fvar();
+    let hdec = d.kernel().fvar(hdec_fv);
+    let hdec_ty = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let sk = d.succ(k);
+        let a_sk = d.apply(a_fn, &[sk]);
+        let a_k = d.apply(a_fn, &[k]);
+        let body = cle(d, p, a_sk, a_k);
+        d.pi_fv(k_fv, nat, body)
+    };
+
+    let t_lam = build_t_lam(d, p, a_fn);
+    let f_expr = d.const_app(p.sum_range, &[t_lam]);
+
+    let l_fv = d.fresh_fvar();
+    let l = d.kernel().fvar(l_fv);
+    let converges_hyp_fv = d.fresh_fvar();
+    let converges_hyp = d.kernel().fvar(converges_hyp_fv);
+    let converges_ty = d.const_app(p.converges, &[f_expr, l]);
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let o_m = o_of(d, p, t_lam, m);
+    let m_m = d.add(m, m);
+
+    // direct_hyp : ∀ n, le (S (add n (add m m))) (O m).
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let two_nat = d.num(2);
+    let k = d.div(n, two_nat);
+    let kk = d.add(k, k);
+    let skk = d.succ(kk);
+    let left_ty = d.eq(n, kk);
+    let right_ty = d.eq(n, skk);
+    let even_or_odd_n = d.lemma(np.even_or_odd, &[n]);
+    let n_mm = d.add(n, m_m);
+    let s_n_mm = d.const_app(p.sum_range, &[t_lam, n_mm]);
+    let direct_target = cle(d, p, s_n_mm, o_m);
+
+    let mk = d.add(m, k);
+    let e_mk = e_of(d, p, t_lam, mk);
+    let o_mk = o_of(d, p, t_lam, mk);
+    let upper_left_ty = cle(d, p, e_mk, o_m);
+    let upper_right_ty = cle(d, p, o_mk, o_m);
+    let upper_at_mk = d.const_app(p.alternating_bracket_upper, &[a_fn, hnn, hdec, m, k]);
+    let upper_left = d.and_left(upper_left_ty, upper_right_ty, upper_at_mk); // le e_mk o_m
+    let upper_right = d.and_right(upper_left_ty, upper_right_ty, upper_at_mk); // le o_mk o_m
+
+    let rhs0 = d.add(mk, mk); // matches e_mk's raw Nat argument
+    let rhs1 = d.succ(rhs0); // matches o_mk's raw Nat argument
+    let core_eq = kk_mm_regroup(d, np, k, m); // Eq (add kk m_m) rhs0
+    let lhs0 = d.add(kk, m_m);
+
+    let on_left = |d: &mut IntDev<'_>, heq: ExprId| -> ExprId {
+        let symm_heq = d.symm(n, kk, heq);
+        let congr_step = d.congr(kk, n, symm_heq, &|d, x| d.add(x, m_m)); // Eq lhs0 n_mm
+        let symm_core = d.symm(lhs0, rhs0, core_eq); // Eq rhs0 lhs0
+        let h_final = d.trans(rhs0, lhs0, n_mm, symm_core, congr_step); // Eq rhs0 n_mm
+        let motive = d.eq_motive(rhs0, &|d, x| {
+            let sx = d.const_app(p.sum_range, &[t_lam, x]);
+            cle(d, p, sx, o_m)
+        });
+        d.transport(rhs0, motive, upper_left, n_mm, h_final)
+    };
+
+    let on_right = |d: &mut IntDev<'_>, heq: ExprId| -> ExprId {
+        let succ_add_eq = d.lemma(np.succ_add, &[kk, m_m]);
+        let mid = d.succ(lhs0);
+        let succ_congr = d.congr(lhs0, rhs0, core_eq, &|d, x| d.succ(x));
+        let lhs1 = d.add(skk, m_m);
+        let (_, chain_proof) = d.chain(lhs1, &[(mid, succ_add_eq), (rhs1, succ_congr)]);
+        let symm_heq = d.symm(n, skk, heq);
+        let congr_step = d.congr(skk, n, symm_heq, &|d, x| d.add(x, m_m));
+        let symm_chain = d.symm(lhs1, rhs1, chain_proof);
+        let h_final = d.trans(rhs1, lhs1, n_mm, symm_chain, congr_step);
+        let motive = d.eq_motive(rhs1, &|d, x| {
+            let sx = d.const_app(p.sum_range, &[t_lam, x]);
+            cle(d, p, sx, o_m)
+        });
+        d.transport(rhs1, motive, upper_right, n_mm, h_final)
+    };
+
+    let direct_body = d.or_elim(
+        left_ty,
+        right_ty,
+        direct_target,
+        even_or_odd_n,
+        &on_left,
+        &on_right,
+    );
+
+    // shift_hyp : ∀ n, le (neg (O m)) (neg (S (add n (add m m)))), via
+    // neg_le_neg on direct_body.
+    let neg_o_m = cneg(d, p, o_m);
+    let flipped = d.lemma(p.neg_le_neg, &[s_n_mm, o_m, direct_body]);
+    let shift_hyp = d.lam_fv(n_fv, nat, flipped);
+
+    let neg_f_lam = {
+        let fresh_n_fv = d.fresh_fvar();
+        let fresh_n = d.kernel().fvar(fresh_n_fv);
+        let f_n = d.apply(f_expr, &[fresh_n]);
+        let neg_f_n = cneg(d, p, f_n);
+        d.lam_fv(fresh_n_fv, nat, neg_f_n)
+    };
+    let neg_l = cneg(d, p, l);
+    let converges_neg_hyp = d.const_app(p.converges_neg, &[f_expr, l, converges_hyp]);
+
+    let lower_result = d.const_app(
+        p.converges_lower_bound_shift,
+        &[m_m, neg_o_m, neg_f_lam, neg_l, shift_hyp, converges_neg_hyp],
+    );
+    // lower_result : le neg_o_m neg_l = le (neg (O m)) (neg L)
+
+    // Flip back: neg_le_neg gives le (neg neg_l) (neg neg_o_m); double_neg
+    // (twice) plus le_congr land on le L (O m).
+    let flipped_back = d.lemma(p.neg_le_neg, &[neg_o_m, neg_l, lower_result]);
+    // flipped_back : le (neg neg_l) (neg neg_o_m)
+    let nn_l = cneg(d, p, neg_l);
+    let nn_o_m = cneg(d, p, neg_o_m);
+    let dn_l = double_neg(d, p, l); // Equiv nn_l l
+    let dn_o_m = double_neg(d, p, o_m); // Equiv nn_o_m o_m
+    let stmt_at_m = cle(d, p, l, o_m);
+    let final_result = d.lemma(
+        p.le_congr,
+        &[nn_l, l, nn_o_m, o_m, dn_l, dn_o_m, flipped_back],
+    );
+    // final_result : le l o_m
+
+    let value = {
+        let with_m = d.lam_fv(m_fv, nat, final_result);
+        let with_converges = d.lam_fv(converges_hyp_fv, converges_ty, with_m);
+        let with_l = d.lam_fv(l_fv, carrier, with_converges);
+        let with_hdec = d.lam_fv(hdec_fv, hdec_ty, with_l);
+        let with_hnn = d.lam_fv(hnn_fv, hnn_ty, with_hdec);
+        d.lam_fv(a_fv, fn_ty, with_hnn)
+    };
+    let ty = {
+        let with_m = d.pi_fv(m_fv, nat, stmt_at_m);
+        let with_converges = d.arrow(converges_ty, with_m);
+        let with_l = d.pi_fv(l_fv, carrier, with_converges);
+        let with_hdec = d.arrow(hdec_ty, with_l);
+        let with_hnn = d.arrow(hnn_ty, with_hdec);
+        d.pi_fv(a_fv, fn_ty, with_hnn)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.alternating_upper_bound,
         uparams: vec![],
         ty,
         value,

@@ -1598,6 +1598,19 @@ pub struct NatPrelude {
     /// [`Self::pow_sq_aux_eq_pow`]'s induction step and [`Self::pow_sq_succ`]
     /// consume.
     pub pow_half_split: NameId,
+    /// `Nat.even_or_odd : ∀ n, Or (Eq n (add (div n 2) (div n 2)))
+    /// (Eq n (succ (add (div n 2) (div n 2))))` — the decidable-parity split
+    /// with a COMPUTED half `div n 2` (never an existential witness, since
+    /// `Exists.rec` is `Prop`-only and cannot produce a term whose type
+    /// mentions the extracted witness). Built from the same
+    /// `div_mod_exec` + `Bool.rec` construction [`Self::pow_half_split`]
+    /// already performs internally (its `e_eq_final` intermediate, in each
+    /// branch, IS this fact) — extracted as its own reusable theorem because
+    /// `creal/alternating.rs` needs exactly this to bridge an arbitrary `Nat`
+    /// index to the even-indexed/odd-indexed partial sum it is closest to,
+    /// and `nat_prelude/fibonacci.rs`'s module doc names the same gap for
+    /// Cassini's identity.
+    pub even_or_odd: NameId,
     /// `Nat.pow_sq_aux_eq_pow : ∀ fuel b e, Le e fuel → powSqAux fuel b e =
     /// pow b e` — sufficiency implies correctness, proved by induction on
     /// `fuel` (NOT the `sizeAux n n = sizeAux (succ n) n` fuel-vs-fuel shape
@@ -2221,6 +2234,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             pow_sq_aux: kernel.name_str(nat, "powSqAux"),
             pow_sq: kernel.name_str(nat, "powSq"),
             pow_half_split: kernel.name_str(nat, "pow_half_split"),
+            even_or_odd: kernel.name_str(nat, "even_or_odd"),
             pow_sq_aux_eq_pow: kernel.name_str(nat, "pow_sq_aux_eq_pow"),
             pow_sq_eq_pow: kernel.name_str(nat, "pow_sq_eq_pow"),
             pow_sq_zero: kernel.name_str(nat, "pow_sq_zero"),

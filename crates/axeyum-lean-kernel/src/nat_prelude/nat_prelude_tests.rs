@@ -758,6 +758,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.coprime_mul_dvd,
         p.crt_unique,
         p.pow_half_split,
+        p.even_or_odd,
         p.pow_sq_aux_eq_pow,
         p.pow_sq_eq_pow,
         p.pow_sq_zero,
@@ -6111,7 +6112,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        65 + 321,
+        65 + 322,
         "every promised definition and theorem must be rendered"
     );
 }
