@@ -50,5 +50,10 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.cos_fn_one_equiv_cos_one,
             "theorem",
         ),
+        (
+            "CReal.cosFnWideUniformlyContinuous",
+            p.cos_fn_wide_uniformly_continuous,
+            "theorem",
+        ),
     ]
 }

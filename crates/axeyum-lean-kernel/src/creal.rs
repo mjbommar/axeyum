@@ -5317,6 +5317,17 @@ pub struct CRealPrelude {
     /// inequality, and closes with `CReal.equiv_zero_of_rate`. See
     /// `creal/trig_fn.rs`.
     pub cos_fn_one_equiv_cos_one: NameId,
+    /// `CReal.cosFnWideUniformlyContinuous : UniformlyContinuousOn cosFnWide
+    /// zero (ofRat (natDivSucc 8 4))` — `CReal.uniform_limit_uniformly_continuous`
+    /// applied at `CReal.cosFnWideUniformConverges`, whose second hypothesis
+    /// (`∀ n, UniformlyContinuousOn (F n) zero R`) is built by induction on
+    /// `n` over `sumRange`'s own `add`/`zero` recursion, each term's own
+    /// uniform continuity coming from a nested induction on `pow`'s base at
+    /// symbolic exponent `Nat.add k k`, combined with the constant `cosTerm
+    /// k` via `CReal.uniformly_continuous_mul` (`BoundedOn` hypotheses from
+    /// `CReal.bounded_of_uniformly_continuous`, never hand-derived). See
+    /// `creal/trig_fn.rs`.
+    pub cos_fn_wide_uniformly_continuous: NameId,
 
     // --- general `exp : CReal → CReal` (creal/exp_fn.rs) -----------------------
     /// `CReal.expFnTermAbsLe : ∀ x, le zero x → le x one → ∀ k, le (abs
@@ -5980,6 +5991,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         cos_fn_wide: kernel.name_str(creal, "cosFnWide"),
         cos_fn_wide_uniform_converges: kernel.name_str(creal, "cosFnWideUniformConverges"),
         cos_fn_one_equiv_cos_one: kernel.name_str(creal, "cosFn_one_equiv_cosOne"),
+        cos_fn_wide_uniformly_continuous: kernel.name_str(creal, "cosFnWideUniformlyContinuous"),
         exp_fn_term_abs_le: kernel.name_str(creal, "expFnTermAbsLe"),
         exp_fn: kernel.name_str(creal, "expFn"),
         exp_fn_uniform_converges: kernel.name_str(creal, "expFnUniformConverges"),
@@ -10187,6 +10199,27 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.cos_fn_wide_uniform_converges,
         ],
         run: trig_fn::declare_cos_fn_wide,
+    },
+    BuildStep {
+        label: "trig_fn::declare_cos_fn_wide_uniformly_continuous",
+        requires: &[
+            |p: CRealPrelude| p.bounded_of_uniformly_continuous,
+            |p: CRealPrelude| p.cos_fn_term,
+            |p: CRealPrelude| p.cos_fn_wide,
+            |p: CRealPrelude| p.cos_fn_wide_uniform_converges,
+            |p: CRealPrelude| p.cos_term,
+            |p: CRealPrelude| p.of_rat_le,
+            |p: CRealPrelude| p.pow,
+            |p: CRealPrelude| p.sum_range,
+            |p: CRealPrelude| p.uniform_limit_uniformly_continuous,
+            |p: CRealPrelude| p.uniformly_continuous_add,
+            |p: CRealPrelude| p.uniformly_continuous_const,
+            |p: CRealPrelude| p.uniformly_continuous_id,
+            |p: CRealPrelude| p.uniformly_continuous_mul,
+            |p: CRealPrelude| p.uniformly_continuous_on,
+        ],
+        provides: &[|p: CRealPrelude| p.cos_fn_wide_uniformly_continuous],
+        run: trig_fn::declare_cos_fn_wide_uniformly_continuous,
     },
     BuildStep {
         label: "exp_fn::declare_exp_fn_family",
