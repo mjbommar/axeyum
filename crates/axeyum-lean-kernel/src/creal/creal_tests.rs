@@ -9258,6 +9258,150 @@ fn the_half_cross_check_route_cannot_swap_hx0_and_hlt() {
     );
 }
 
+/// **The composition control for the raw-witness family.**
+/// `CReal.geomCauchyOrderedOfGap` is the entry point that makes a raw,
+/// non-existential ordered geometric Cauchy witness reachable at an arbitrary
+/// ratio. This eta-applies it to its OWN binders and checks the closed term
+/// against its OWN stored type — so the positive half cannot pass by this test
+/// and the declaration both reconstructing the same wrong statement.
+///
+/// Its negative half is in the same function on purpose: the identical term
+/// with `hq` and the `PosBound (ofRat q) k3` argument transposed must be
+/// REFUSED. Those are unrelated Props (`le (add x (ofRat q)) one` versus
+/// `PosBound (ofRat q) k3`), so a checker that merely counted positional
+/// arguments would accept both.
+///
+/// SYMBOLIC on purpose — see
+/// `geometric::geom_cauchy_ordered_of_gap_self_application`. The concrete
+/// counterpart is the ratio control below.
+#[test]
+fn geom_cauchy_ordered_of_gap_type_checks_at_its_own_binders() {
+    on_a_deep_stack(geom_cauchy_ordered_of_gap_type_checks_at_its_own_binders_body);
+}
+
+fn geom_cauchy_ordered_of_gap_type_checks_at_its_own_binders_body() {
+    use super::geometric::geom_cauchy_ordered_of_gap_self_application;
+    use crate::int_prelude::ops::IntDev;
+
+    let (mut kernel, p) = built();
+    let rat = p.rat;
+    let anon = kernel.anon();
+
+    let expected_ty = match kernel
+        .environment()
+        .get(p.geom_cauchy_ordered_of_gap)
+        .expect("CReal.geomCauchyOrderedOfGap must be declared")
+    {
+        Declaration::Theorem { ty, .. } => *ty,
+        other => panic!("CReal.geomCauchyOrderedOfGap is {other:?}, not a Theorem"),
+    };
+
+    let mut d = IntDev::new(&mut kernel, rat.int);
+
+    let good = geom_cauchy_ordered_of_gap_self_application(&mut d, p, false);
+    let name_ok = d
+        .kernel()
+        .name_str(anon, "Check.geom_cauchy_ordered_of_gap_eta");
+    let accepted = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_ok,
+        uparams: vec![],
+        ty: expected_ty,
+        value: good,
+    });
+    assert!(
+        accepted.is_ok(),
+        "geomCauchyOrderedOfGap applied to its own binders must check against \
+         its OWN stored type: {accepted:?}"
+    );
+
+    let bad = geom_cauchy_ordered_of_gap_self_application(&mut d, p, true);
+    let name_bad = d
+        .kernel()
+        .name_str(anon, "__geom_cauchy_ordered_of_gap_hq_pos_bound_swapped");
+    let refused = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_bad,
+        uparams: vec![],
+        ty: expected_ty,
+        value: bad,
+    });
+    assert!(
+        refused.is_err(),
+        "transposing `hq` and the `PosBound (ofRat q) k3` argument at the \
+         geomCauchyOrderedOfGap call site must be REFUSED -- it was accepted, \
+         so those hypothesis positions are not being type-checked: {refused:?}"
+    );
+}
+
+/// **The ratio control.** `16/25` was chosen over the `9/16` the surrounding
+/// notes once suggested for two reasons, and this test pins the second one:
+/// `16/25` is a ratio at which a transposed numerator/denominator is
+/// *genuinely false*, so a negative control here cannot be vacuous the way
+/// one at `1/2` would be (`natDivSucc 1 1` transposes to itself).
+///
+/// The leg under test is the identity `x + q = 1` that
+/// `geometric::ratio_16_over_25_witnesses` needs. At `(16, 9, 24)` — i.e.
+/// `16/25 + 9/25 = 25/25 = 1` — it must be ACCEPTED. Transposing numerator
+/// and denominator index to `(24, 9, 16)` gives `24/17 + 9/17 = 33/17`, which
+/// is not `1`; and `24/17 > 1`, so the geometric series at that ratio
+/// *diverges* and the theorem the witness feeds is false rather than merely
+/// unproved by this route. The kernel must refuse it.
+///
+/// Both halves run the same three-line script with only the numerals
+/// changed, so the negative half cannot pass for want of a term the positive
+/// half also lacks.
+#[test]
+fn the_gap_identity_holds_at_16_over_25_and_fails_at_the_transposed_ratio() {
+    on_a_deep_stack(the_gap_identity_holds_at_16_over_25_and_fails_at_the_transposed_ratio_body);
+}
+
+fn the_gap_identity_holds_at_16_over_25_and_fails_at_the_transposed_ratio_body() {
+    use super::geometric::nat_div_succ_succ_self_eq_one;
+    use crate::int_prelude::ops::IntDev;
+    use crate::rat_prelude::ops::{radd, req, rone, rtrans};
+
+    let (mut kernel, p) = built();
+    let rat = p.rat;
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, rat.int);
+
+    // `(numerator of x, numerator of q, denominator index)`; the second row
+    // is the first with the `16` and the `24` transposed.
+    let cases = [((16u32, 9u32, 24u32), true), ((24, 9, 16), false)];
+
+    for ((nx, nq, den), should_hold) in cases {
+        let n_x = d.num(nx);
+        let n_q = d.num(nq);
+        let n_d = d.num(den);
+        let x_rat = d.const_app(rat.nat_div_succ, &[n_x, n_d]);
+        let q_rat = d.const_app(rat.nat_div_succ, &[n_q, n_d]);
+        let sum_rat = radd(&mut d, x_rat, q_rat);
+        let one_r = rone(&mut d, rat);
+
+        let add_eq = d.lemma(rat.nat_div_succ_add, &[n_x, n_q, n_d]);
+        let succ_d = d.succ(n_d);
+        let mid_rat = d.const_app(rat.nat_div_succ, &[succ_d, n_d]);
+        let self_one = nat_div_succ_succ_self_eq_one(&mut d, p, n_d);
+        let value = rtrans(&mut d, sum_rat, mid_rat, one_r, add_eq, self_one);
+        let ty = req(&mut d, sum_rat, one_r);
+
+        let label = format!("Check.gap_identity_{nx}_{nq}_{den}");
+        let name = d.kernel().name_str(anon, &label);
+        let outcome = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert_eq!(
+            outcome.is_ok(),
+            should_hold,
+            "natDivSucc {nx} {den} + natDivSucc {nq} {den} = 1 should be \
+             {should_hold} (numerators must sum to den+1); the kernel said \
+             {outcome:?}"
+        );
+    }
+}
+
 /// `CReal.crossingSampleUpper`/`CReal.crossingSampleLower` APPLY at the SAME
 /// concrete `(a, c, delta) := (0, 5/2, 1)` worked example as
 /// `crossing_index_at_zero_one_five_halves_reduces_to_two` above (where
