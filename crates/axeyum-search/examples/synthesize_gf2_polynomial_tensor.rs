@@ -10,7 +10,8 @@ use axeyum_cnf::{
 };
 use axeyum_search::harness::parse_sat_competition_model;
 use axeyum_search::tensor_decomposition::{
-    TensorRankEncodingLimits, encode_tensor_rank, encode_tensor_rank_with_ordered_terms,
+    TensorRankEncodingLimits, encode_full_polynomial_rank_with_group_minimal_first,
+    encode_tensor_rank, encode_tensor_rank_with_ordered_terms,
 };
 
 struct Arguments {
@@ -23,13 +24,14 @@ struct Arguments {
     output_witness: Option<PathBuf>,
     drat: Option<PathBuf>,
     ordered_terms: bool,
+    polynomial_group_min_first: bool,
 }
 
 fn arguments() -> Arguments {
     let args: Vec<String> = std::env::args().skip(1).collect();
     assert!(
         args.len() >= 2,
-        "usage: synthesize_gf2_polynomial_tensor TERMS RANK [SECONDS] [--ordered-terms] [--dimacs PATH] [--witness PATH] [--check-model PATH --output-witness PATH] [--check-drat PATH]"
+        "usage: synthesize_gf2_polynomial_tensor TERMS RANK [SECONDS] [--ordered-terms | --polynomial-group-min-first] [--dimacs PATH] [--witness PATH] [--check-model PATH --output-witness PATH] [--check-drat PATH]"
     );
     let parse = |index: usize, name: &str| {
         args[index]
@@ -50,9 +52,15 @@ fn arguments() -> Arguments {
     let mut output_witness = None;
     let mut drat = None;
     let mut ordered_terms = false;
+    let mut polynomial_group_min_first = false;
     while index < args.len() {
         if args[index] == "--ordered-terms" {
             ordered_terms = true;
+            index += 1;
+            continue;
+        }
+        if args[index] == "--polynomial-group-min-first" {
+            polynomial_group_min_first = true;
             index += 1;
             continue;
         }
@@ -77,6 +85,10 @@ fn arguments() -> Arguments {
     let terminal_modes =
         usize::from(dimacs.is_some()) + usize::from(model.is_some()) + usize::from(drat.is_some());
     assert!(terminal_modes <= 1, "choose at most one terminal file mode");
+    assert!(
+        !(ordered_terms && polynomial_group_min_first),
+        "choose at most one symmetry mode"
+    );
     Arguments {
         terms,
         rank,
@@ -87,6 +99,7 @@ fn arguments() -> Arguments {
         output_witness,
         drat,
         ordered_terms,
+        polynomial_group_min_first,
     }
 }
 
@@ -100,7 +113,13 @@ fn main() {
     let args = arguments();
     let target =
         Gf2Tensor::full_polynomial_multiplication(args.terms).expect("valid polynomial term count");
-    let encoding = if args.ordered_terms {
+    let encoding = if args.polynomial_group_min_first {
+        encode_full_polynomial_rank_with_group_minimal_first(
+            args.terms,
+            args.rank,
+            TensorRankEncodingLimits::default(),
+        )
+    } else if args.ordered_terms {
         encode_tensor_rank_with_ordered_terms(
             &target,
             args.rank,
@@ -115,6 +134,10 @@ fn main() {
     println!("tensor-dimensions={:?}", target.dimensions);
     println!("rank-budget={}", args.rank);
     println!("ordered-terms={}", args.ordered_terms);
+    println!(
+        "polynomial-group-min-first={}",
+        args.polynomial_group_min_first
+    );
     println!("variables={}", encoding.formula().variable_count());
     println!("clauses={}", encoding.formula().clauses().len());
 

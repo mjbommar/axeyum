@@ -661,3 +661,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0588](adr-0588-theta-duals-enter-through-an-instance-separate-artifact.md) | Theta duals enter through an instance-separate artifact | accepted |
 | [0589](adr-0589-hard-cube-leaves-refine-as-recursive-checked-covers.md) | Hard cube leaves refine as recursive checked covers | accepted |
 | [0590](adr-0590-recursive-cube-checking-parallelizes-one-bounded-split.md) | Recursive cube checking parallelizes one bounded split | accepted |
+| [0591](adr-0591-full-polynomial-tensor-search-uses-the-complete-binary-form-action.md) | Full-polynomial tensor search uses the complete binary-form action | accepted |

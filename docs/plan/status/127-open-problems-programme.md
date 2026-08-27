@@ -400,6 +400,17 @@ rank-19 formula is 22,688 variables / 89,388 clauses; CaDiCaL reached 300.19 sec
 and it shows that the `19!` term labels are not the whole obstruction. Search found explicit
 prior term ordering, so no technique-novelty claim is made; stabilizer/basis symmetry is next.
 
+**Complete polynomial-tensor action, 2026-08-26.** ADR-0591 adds the six homogeneous
+binary-form substitutions in `GL(2,GF(2))`, acting contragrediently on both input covectors and
+directly on the output, and composes them with global input interchange. Ordered summands plus
+a globally minimal first term give a complete 12-element breaker rather than an assumed
+stabilizer. All actions preserve all 396 coefficients of a schoolbook `P_6` decomposition;
+the exact `P_2` SAT/checked-DRAT boundary and Wang's rank-17 witness also pass. The open
+rank-16 formula is 26,489 variables / 105,262 clauses / 1,809,746 bytes, SHA-256
+`00e5038f47c1dde3425e03cddd3625151c645ea6ddd1edbc24c3f9dc4291ddb2`; CaDiCaL seed 2606
+is live without a short cutoff. Wang's current source already implements the binary-form
+symmetry mathematics, so this is reusable Axeyum capability, not a novelty claim or rank result.
+
 **Bilinear first-summand normalization, 2026-08-26.** ADR-0568 applies a complete
 matrix-tensor stabilizer reduction: a chosen nonzero summand occupies slot zero, its first
 factor is one of the `min(m,n)` matrix rank-normal forms, and only the remaining slots are
