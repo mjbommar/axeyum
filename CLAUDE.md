@@ -1395,6 +1395,47 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   comment claiming a witness binds "every declared String variable" when it
   binds the source problem's private symbol ids. Prefer a measurement over a
   message, an exit status, or a comment — including the ones you just wrote.
+- **THE LEMMA YOU NEED USUALLY EXISTS, AND THE NAME SEARCH WILL NOT FIND IT.
+  THREE DISTINCT HIDING PLACES, ALL MEASURED 2026-08-27.** Four lanes in one
+  session reported their blocker already solved, in three different ways. The
+  common cost is not the rebuild -- it is that each lane first *sized* the work
+  as new, and two nearly built a duplicate.
+
+  1. **General infrastructure filed under its first consumer's module.**
+     `CReal.bucketIndex` (a computed index on the unit-fraction grid, with four
+     clamp lemmas) lives in `creal/uniform_continuity.rs` because a covering
+     argument needed it first. It is now consumed by `crossing.rs`,
+     `integral.rs` and `sqrt.rs`. A lane sent to build an Archimedean crossing
+     index found it in step 0 and reduced its whole task to a rescaling.
+  2. **A reusable step built INLINE inside a larger declaration and never
+     exposed.** `nat_prelude/powsq.rs`'s `declare_pow_half_split` builds a full
+     `Nat` even/odd split (`e_eq_final`, twice -- once per branch) purely as
+     scaffolding toward a `pow` equation. Nothing named it. A lane sent to build
+     `Nat.even_or_odd` extracted it instead of re-deriving it. The same shape
+     blocks the Weierstrass M-test today: `converges_of_scaled_cauchy`
+     (`creal/convergence.rs:1356`) performs the `Within` -> CReal `close_within`
+     step internally via `speedup_close` + one `Rat.natDivSucc_add` fusion, and
+     the only PUBLIC lemma of that shape, `within_of_two_sided_le`, runs the
+     **opposite direction**.
+  3. **A lemma whose stated hypothesis is WEAKER than everyone assumes.**
+     `CReal.sumRange_cauchy_of_dominated` is `∀ f g, (∀ k, le (abs (f k)) (g k))
+     → …` -- it never required `f` nonnegative, so it **already covers signed
+     series** and the separate absolute-convergence bridge is unnecessary for
+     that purpose. TWO lanes discovered this independently, both against a brief
+     that asserted the opposite. Read the signature, not the surrounding prose.
+
+  **The technique that works: search for the STEP, not the NAME.** Grep for the
+  shape of the intermediate you need -- an index computation, a case split, a
+  direction of transport -- across the whole crate, not for what you would have
+  called the finished lemma. `--include-constructed` inventories are useless
+  here for case 2 by construction: an inline step has no name to list.
+
+  And note the asymmetry when you find one: extracting an inline step into its
+  own declaration is cheap and reusable; **re-deriving it beside the original
+  leaves two proofs of one fact that must stay in sync while the kernel happily
+  verifies both.** That has already happened once this session, with six private
+  helpers copied verbatim rather than reported.
+
 - **An empty result from a tool that was never pointed at your subject is
   indistinguishable from a strong negative result.** Distinct from the inert-gate
   trap above: the tool runs, exits 0, and prints a correct empty answer to a
