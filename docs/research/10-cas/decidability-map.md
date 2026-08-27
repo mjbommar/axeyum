@@ -29,7 +29,7 @@ theory with a decidable zero-test:
 | Domain of the obligation | Zero-test | axeyum route | Witness |
 |---|---|---|---|
 | Polynomials / rational functions over ℚ | **decidable** | `poly.rs` canonical form; QF_NRA identity | normal form / RCF refutation of `≠` |
-| Algebraic numbers | **decidable** | `real_algebraic.rs` (defining poly + interval) | sign/compare certificate |
+| Algebraic numbers | **decidable** | `sturm.rs` (root isolation, shipped) + an algebraic-number arithmetic layer that is **not yet built** (`real_algebraic.rs` does not exist; `RealAlgebraic` in `axeyum-ir` is unwired — see ADR-0601) | sign/compare certificate (planned) |
 | Finite fields 𝔽ₚ, modular / BV | **decidable** | QF_BV bit-blast + DRAT | DRAT/Alethe/Lean UNSAT proof |
 | Linear real/integer | **decidable** | QF_LRA (Farkas) / QF_LIA | Farkas / Lean-kernel certificate |
 | RCF (real-closed field) inequalities | **decidable** (Tarski) | QF_NRA CAD/SOS | SOS/Positivstellensatz cert (partial) |
@@ -58,7 +58,7 @@ theory with a decidable zero-test:
 | Series to finite order | Yes | Yes | **certified** | truncation identity checkable to the order |
 | Summation: Gosper (indefinite) | Yes | Yes | **certified** | telescoping certificate `t(n+1)−t(n)=aₙ`, zero-tested |
 | Summation: Zeilberger (definite, holonomic) | Yes on holonomic | complete on holonomic | **certified** | recurrence + certificate function, checkable identity |
-| Primality | Yes | Yes | **certified** | ECPP/Pratt certificate, or deterministic AKS |
+| Primality | Yes | Yes | **certified** | shipped: deterministic Miller–Rabin, sound for n < 2^64; ECPP/Pratt/AKS certificates are planned, not built (ADR-0601) |
 | Integer factorization | Yes | Yes | **certified** | re-multiply factors (trivial); primality certs on factors |
 | Bounded / modular number theory | Yes | Yes | **certified** | QF_BV/QF_LIA + DRAT/Lean (already in-tree) |
 | Diophantine (general) | **No** (MRDP) | No | **heuristic** | bounded instances only, via QF_LIA |

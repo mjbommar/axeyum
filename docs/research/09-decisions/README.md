@@ -671,3 +671,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0598](adr-0598-whole-tree-checks-expose-non-authoritative-obligation-events.md) | Whole-tree checks expose non-authoritative obligation events | accepted |
 | [0599](adr-0599-palette-orbit-refutations-may-compose-complete-labelled-proof-sets.md) | Palette-orbit refutations may compose complete labelled proof sets | accepted |
 | [0600](adr-0600-finite-proof-set-replay-is-bounded-parallel-and-root-ordered.md) | Finite proof-set replay is bounded-parallel and root-ordered | accepted |
+| [0601](adr-0601-three-producers-one-trust-anchor.md) | The kernel is the sole trust anchor; CAS certificates must reconstruct through it, imports are labeled scaffolding that never enter the headline, and autogenesis operations declare which producer route discharges them. | accepted |
