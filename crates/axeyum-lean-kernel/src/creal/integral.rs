@@ -1449,6 +1449,45 @@
 //! own `#[cfg(test)]` modules, wired into no `CRealPrelude` field, no
 //! `BuildStep`, no `EXPECTED_STEP_ORDER` entry and no inventory shard row;
 //! `creal_prelude_builds` is unaffected.
+//!
+//! ## `CReal.integral_split` — the two gap resolutions COMPOSE, checked:
+//! [`split_identity_at_equiv_point`] (SIXTEENTH lane, same day)
+//!
+//! Rather than assert that Gap A's and Gap B's resolutions fit together, this
+//! is the join, kernel-checked: `Equiv (riemannSum F a b combined) (add
+//! (riemannSum F a c m_ac) (riemannSum F c b m_cb))` — the exact identity
+//! [`CRealPrelude::riemann_sum_split_exact_of_uc`] proves, RESTATED AT THE
+//! CALLER'S OWN `c`, given only `Equiv c_k c`. Two
+//! [`riemann_sum_congr_endpoints`] applications (one moving the right
+//! endpoint, one the left, which is why that helper varies both), combined by
+//! [`CRealPrelude::add_congr`] and chained onto the split identity.
+//!
+//! This is the shape the combine consumes: the three
+//! `riemann_sum_integral_close` legs are stated at the caller's fixed `c`,
+//! and now so is the split identity, so nothing downstream ever mentions
+//! `c_k`.
+//!
+//! **The kernel rejected the first version, and the mistake is worth
+//! recording because the message named nothing relevant.**
+//! [`riemann_sum_congr_endpoints`] takes the outer interval `(aa, bb)` — the
+//! one its `UniformlyContinuousOn` witness is *about* — separately from the
+//! sub-interval endpoints it is moving. The `[c_k, b]` leg was given
+//! `(aa, bb) := (c_k, b)`, reading the leg's own sub-interval as the
+//! witness's interval; `u` witnesses continuity on `[a, b]` and on nothing
+//! else. The rejection was a bare `TypeMismatch` between two `ExprId`s,
+//! mentioning neither `u` nor `c_k`, and it is indistinguishable from a
+//! transposed endpoint pair or a backwards `Equiv` — this file's most common
+//! failure family. **Both legs take `(a, b)`.** Fixed and accepted; the
+//! `[a, c_k]` leg had it right from the start, which is exactly why a helper
+//! that varies both endpoints needs a caller test that exercises both
+//! directions.
+//!
+//! What remains for `integral_split` itself, unchanged: three
+//! `riemann_sum_integral_close` applications,
+//! [`close_within_of_within_indexed`] per leg,
+//! [`bnd_leg_plus_share_le_at`] per leg, `abs_add_le` twice, and
+//! `equiv_zero_of_small` to close, with `big_n`/`e_inner` as explicit
+//! functions of `e`. Not attempted here.
 
 use super::completeness::half_shift_le;
 use super::convergence::{
@@ -2800,6 +2839,231 @@ mod riemann_sum_congr_endpoints_tests {
         assert!(
             result.is_ok(),
             "riemann_sum_congr_endpoints must prove the stated Equiv at the riemannSum type: {:?}",
+            result.err()
+        );
+    }
+}
+
+/// `Equiv (riemannSum F a b combined) (add (riemannSum F a c m_ac)
+/// (riemannSum F c b m_cb))` — [`CRealPrelude::riemann_sum_split_exact_of_uc`]'s
+/// exact identity RESTATED AT THE CALLER'S OWN `c`, given only that `c` is
+/// `Equiv` to that theorem's internally-computed split point `c_k`.
+///
+/// This is the join between the SIXTEENTH `integral_split` entry's two gap
+/// resolutions, and it is the shape `integral_split`'s combine needs: the
+/// three `riemann_sum_integral_close` legs are stated at the caller's fixed
+/// `c` (they must be — the caller supplies `hac`/`uac`/`hcb`/`ucb` once),
+/// while `riemann_sum_split_exact_of_uc` can only speak about `c_k := a +
+/// ofNat(succ m_ac) · delta_of(a, b, combined)`, a fresh `Nat` arithmetic
+/// expression at every accuracy.
+///
+/// `Equiv c_k c` is exactly what
+/// [`CRealPrelude::riemann_sum_split_scale_invariant`] proves, and only for
+/// the [`succ_mul_succ`] family — which is why [`mesh_count_align_mul`] is a
+/// PREREQUISITE for this and [`mesh_count_align`]'s additive padding is not
+/// merely a worse choice but an unusable one (there is no `c_0` to be `Equiv`
+/// to).
+///
+/// Two [`riemann_sum_congr_endpoints`] applications, one per summand — the
+/// first moving the RIGHT endpoint (`[a, c_k] → [a, c]`), the second the LEFT
+/// (`[c_k, b] → [c, b]`), which is why that helper varies both — combined by
+/// [`CRealPrelude::add_congr`] and chained onto the split identity.
+#[allow(clippy::too_many_arguments)]
+fn split_identity_at_equiv_point(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    a: ExprId,
+    b: ExprId,
+    u: ExprId,
+    hab: ExprId,
+    m_ac: ExprId,
+    m_cb: ExprId,
+    c: ExprId,
+    hac_k: ExprId,
+    hc_kb: ExprId,
+    hac: ExprId,
+    hcb: ExprId,
+    hc: ExprId,
+) -> ExprId {
+    // `c_k` and `combined`, rebuilt exactly as
+    // `declare_riemann_sum_split_exact` builds them, so interning makes these
+    // the SAME `ExprId`s the theorem's own conclusion mentions.
+    let n_ac = d.succ(m_ac);
+    let combined = NatOps::add(d, n_ac, m_cb);
+    let delta_ab = delta_of(d, p, a, b, combined);
+    let on_ac = d.const_app(p.of_nat, &[n_ac]);
+    let w1 = cmul(d, p, on_ac, delta_ab);
+    let c_k = cadd(d, p, a, w1);
+
+    let split = d.lemma(
+        p.riemann_sum_split_exact_of_uc,
+        &[f, a, b, m_ac, m_cb, u, hab],
+    );
+
+    let refl_a_le = d.lemma(p.le_refl, &[a]);
+    let refl_b_le = d.lemma(p.le_refl, &[b]);
+    let refl_a_eq = d.lemma(p.equiv_refl, &[a]);
+    let refl_b_eq = d.lemma(p.equiv_refl, &[b]);
+
+    // leg1 : Equiv (riemannSum F a c_k m_ac) (riemannSum F a c m_ac).
+    let leg1 = riemann_sum_congr_endpoints(
+        d, p, f, a, b, u, a, c_k, a, c, m_ac, hac_k, hac, refl_a_le, hc_kb, refl_a_le, hcb,
+        refl_a_eq, hc,
+    );
+    // leg2 : Equiv (riemannSum F c_k b m_cb) (riemannSum F c b m_cb).
+    // NOTE the outer interval is `(a, b)` in BOTH legs, never `(c_k, b)`:
+    // `u` witnesses uniform continuity on `[a, b]` and on nothing else. A
+    // first version passed `(c_k, b)` here -- reading the leg's own
+    // sub-interval as the witness's interval -- and the kernel rejected it
+    // with a bare `TypeMismatch` naming neither `u` nor `c_k`.
+    let leg2 = riemann_sum_congr_endpoints(
+        d, p, f, a, b, u, c_k, b, c, b, m_cb, hc_kb, hcb, hac_k, refl_b_le, hac, refl_b_le, hc,
+        refl_b_eq,
+    );
+
+    let l1 = rsum(d, p, f, a, c_k, m_ac);
+    let l2 = rsum(d, p, f, c_k, b, m_cb);
+    let r1 = rsum(d, p, f, a, c, m_ac);
+    let r2 = rsum(d, p, f, c, b, m_cb);
+    let mid = cadd(d, p, l1, l2);
+    let rhs = cadd(d, p, r1, r2);
+    let combine = d.lemma(p.add_congr, &[l1, r1, l2, r2, leg1, leg2]);
+
+    let lhs = rsum(d, p, f, a, b, combined);
+    echain(d, p, lhs, &[(mid, split), (rhs, combine)])
+}
+
+#[cfg(test)]
+mod split_identity_at_equiv_point_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// Symbolic in every input, closed into a real `Theorem`. This is the
+    /// first thing in this file to CONSUME both of the SIXTEENTH lane's gap
+    /// resolutions at once, so it is also the check that they compose: a
+    /// [`riemann_sum_congr_endpoints`] whose endpoint roles were transposed
+    /// would still prove its own smoke test and fail here.
+    #[test]
+    fn split_identity_at_equiv_point_proves_the_stated_identity() {
+        crate::on_a_deep_stack(split_identity_at_equiv_point_proves_the_stated_identity_body);
+    }
+
+    fn split_identity_at_equiv_point_proves_the_stated_identity_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+        let nat = d.nat_ty();
+        let f_ty = fn_ty(&mut d, p);
+
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+        let u_fv = d.fresh_fvar();
+        let u = d.kernel().fvar(u_fv);
+        let hab_ty = cle(&mut d, p, a, b);
+        let hab_fv = d.fresh_fvar();
+        let hab = d.kernel().fvar(hab_fv);
+
+        let mac_fv = d.fresh_fvar();
+        let m_ac = d.kernel().fvar(mac_fv);
+        let mcb_fv = d.fresh_fvar();
+        let m_cb = d.kernel().fvar(mcb_fv);
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+
+        // Rebuild `c_k` independently, mirroring the helper's own
+        // construction, so a defect in ITS reconstruction is what the kernel
+        // catches rather than a matching bug here.
+        let n_ac = d.succ(m_ac);
+        let combined = NatOps::add(&mut d, n_ac, m_cb);
+        let delta_ab = delta_of(&mut d, p, a, b, combined);
+        let on_ac = d.const_app(p.of_nat, &[n_ac]);
+        let w1 = cmul(&mut d, p, on_ac, delta_ab);
+        let c_k = cadd(&mut d, p, a, w1);
+
+        let hac_k_ty = cle(&mut d, p, a, c_k);
+        let hac_k_fv = d.fresh_fvar();
+        let hac_k = d.kernel().fvar(hac_k_fv);
+        let hc_kb_ty = cle(&mut d, p, c_k, b);
+        let hc_kb_fv = d.fresh_fvar();
+        let hc_kb = d.kernel().fvar(hc_kb_fv);
+        let hac_ty = cle(&mut d, p, a, c);
+        let hac_fv = d.fresh_fvar();
+        let hac = d.kernel().fvar(hac_fv);
+        let hcb_ty = cle(&mut d, p, c, b);
+        let hcb_fv = d.fresh_fvar();
+        let hcb = d.kernel().fvar(hcb_fv);
+        let hc_ty = equiv(&mut d, p, c_k, c);
+        let hc_fv = d.fresh_fvar();
+        let hc = d.kernel().fvar(hc_fv);
+
+        let proof = split_identity_at_equiv_point(
+            &mut d, p, f, a, b, u, hab, m_ac, m_cb, c, hac_k, hc_kb, hac, hcb, hc,
+        );
+
+        let lhs = rsum(&mut d, p, f, a, b, combined);
+        let r1 = rsum(&mut d, p, f, a, c, m_ac);
+        let r2 = rsum(&mut d, p, f, c, b, m_cb);
+        let rhs = cadd(&mut d, p, r1, r2);
+        // Non-vacuity: the conclusion must mention the CALLER's `c`, not the
+        // internally-computed `c_k`. If it collapsed to the latter this would
+        // just be `riemann_sum_split_exact_of_uc` restated, and the two
+        // congruence legs would be doing nothing.
+        let l1 = rsum(&mut d, p, f, a, c_k, m_ac);
+        assert_ne!(
+            r1, l1,
+            "the conclusion must be about the caller's `c`, not the computed `c_k`"
+        );
+        let concl = equiv(&mut d, p, lhs, rhs);
+
+        let ty = {
+            let t = d.arrow(hc_ty, concl);
+            let t = d.arrow(hcb_ty, t);
+            let t = d.arrow(hac_ty, t);
+            let t = d.arrow(hc_kb_ty, t);
+            let t = d.arrow(hac_k_ty, t);
+            let t = d.pi_fv(c_fv, carrier, t);
+            let t = d.pi_fv(mcb_fv, nat, t);
+            let t = d.pi_fv(mac_fv, nat, t);
+            let t = d.arrow(hab_ty, t);
+            let t = d.arrow(u_ty, t);
+            let t = d.pi_fv(b_fv, carrier, t);
+            let t = d.pi_fv(a_fv, carrier, t);
+            d.pi_fv(f_fv, f_ty, t)
+        };
+        let value = {
+            let v = d.lam_fv(hc_fv, hc_ty, proof);
+            let v = d.lam_fv(hcb_fv, hcb_ty, v);
+            let v = d.lam_fv(hac_fv, hac_ty, v);
+            let v = d.lam_fv(hc_kb_fv, hc_kb_ty, v);
+            let v = d.lam_fv(hac_k_fv, hac_k_ty, v);
+            let v = d.lam_fv(c_fv, carrier, v);
+            let v = d.lam_fv(mcb_fv, nat, v);
+            let v = d.lam_fv(mac_fv, nat, v);
+            let v = d.lam_fv(hab_fv, hab_ty, v);
+            let v = d.lam_fv(u_fv, u_ty, v);
+            let v = d.lam_fv(b_fv, carrier, v);
+            let v = d.lam_fv(a_fv, carrier, v);
+            d.lam_fv(f_fv, f_ty, v)
+        };
+
+        let anon = d.kernel().anon();
+        let name = d.kernel().name_str(anon, "splitIdentityAtEquivPointSmoke");
+        let result = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(
+            result.is_ok(),
+            "split_identity_at_equiv_point must prove the identity at the caller's c: {:?}",
             result.err()
         );
     }
