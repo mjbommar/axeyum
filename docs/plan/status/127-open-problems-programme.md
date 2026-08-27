@@ -117,15 +117,15 @@ all-target/all-feature Clippy, and warning-denied Rustdoc pass. Both completed `
 carry no UNSAT or upper-bound credit; the exact proof-producing run remains live.
 
 **Rado exact lower bound advanced, 2026-08-26.** The seed-619 CaDiCaL producer completed every
-canonical formula from 351 through 356 SAT; the 355 run took 5:29:21 and 356 took 1:40.63. Every complete
+canonical formula from 351 through 357 SAT; the 357 run took 24:46.01 at 182,572 KiB. Every complete
 assignment passed the strict SAT Competition importer, regenerated CNF evaluation, unique
 one-hot decoding, independent enumeration of the defining relation, and lifted-witness
-re-encoding. The retained strongest witness has 356 entries, uses all five colours, covers
-27,966 defining triples / 145,167 clauses, and has SHA-256
-`2a32d04ec1799c1dff920603e7df5b1438943f51d330c97663867a321fdac35a`. Therefore the checked
-conclusion is now `R_5(3(x-y)=2z) > 356`; no upper bound or exact value is claimed. A persistent
-exact driver is live at 357 and advances only after both replay routes. A post-result literature
-refresh through 2026-08-26 found no five-colour bound at least 356 for this equation, but that
+re-encoding. The retained strongest witness has 357 entries, uses all five colours, covers
+28,203 defining triples / 146,367 clauses, and has SHA-256
+`545f4f7c8704fff31da07a2a2f946eb70ac1787bb3d4c49f4ac3e2d15d20ee1e`. Therefore the checked
+conclusion is now `R_5(3(x-y)=2z) > 357`; no upper bound or exact value is claimed. A persistent
+exact driver is live at 358 and advances only after both replay routes. A post-result literature
+refresh through 2026-08-26 found no five-colour bound at least 357 for this equation, but that
 negative retrieval is not proof of priority.
 
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
