@@ -50,6 +50,22 @@
       "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib add_modeq_family_computes_at_concrete_values 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
       "artifact": "crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs",
       "notes": "Mutation-verified in an isolated snapshot: replacing the expected reduced literal with a wrong one (2 -> 3 in the modEq_add_mul_left case) kills exactly this one test, 33 passed / 1 failed, confirming the check is not a vacuous type-check-only comparison."
+    },
+    {
+      "id": "kernel-term-authored-declaration-axiom-free-Int.mod_modEq",
+      "kind": "kernel-term",
+      "supports": "This fact was closed via the registered multi-target operation authoritative-kernel-int-modeq-shift-family-v1 (applicability.fact_ids names all five Int.ModEq shift-family facts, not this one alone): `Int.mod_modEq` was authored directly as a kernel declaration in modeq_family.rs and admitted with an empty axiom footprint.",
+      "check_status": "checked",
+      "checkers": [
+        "int_prelude_tests::every_int_declaration_is_checked_and_axiom_free (derives coverage from kernel.environment() directly, not from an inventory list -- an Int-namespace declaration missing from the inventory fails this test by name)",
+        "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks the proof term against its stated type at build time)"
+      ],
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib int_prelude::int_prelude_tests::every_int_declaration_is_checked_and_axiom_free -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/modeq_family.rs",
+      "checker_operation": {
+        "id": "authoritative-kernel-int-modeq-shift-family-v1"
+      },
+      "notes": "checker_operation.id is the join key scripts/gen-production-provenance-ledger.py reads (fact.evidence[].checker_operation.id -> operations.json's applicability.fact_ids) to credit this fact toward facts_via_multi_target. The operation names all five sibling facts (width 5), so this is a genuine multi-target join. This row deliberately carries ONLY the operation id and no sha256/manifest receipt fields: every other checker_operation row in this ledger was produced by scripts/execute-autogenesis-operation.py's run_registered dispatcher, which has NO case for this operation's executor.driver (axeyum-lean-kernel/authored-declaration-v1) -- confirmed by reading run_registered, whose final branch raises ExecutionError(f\"unsupported execution driver {driver!r}\") for exactly this string. There is no executor-generated receipt to reproduce, so inventing sha256/manifest fields here would fabricate provenance data rather than record it."
     }
   ],
   "provenance": {
