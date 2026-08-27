@@ -1004,6 +1004,15 @@ pub struct RatPrelude {
     pub pow_zero: NameId,
     /// `Rat.pow_succ : ∀ a m, pow a (succ m) = mul (pow a m) a` — `Eq.refl`.
     pub pow_succ: NameId,
+    /// `Rat.pow_add : ∀ a (m n : Nat), pow a (Nat.add m n) = mul (pow a m)
+    /// (pow a n)` — the exponent law. Induction on `n` with `m` fixed, the
+    /// `Rat` port of `Int.pow_add`; `Nat`, `Int`, `Complex` and `CReal` all
+    /// already carry it. Needed to collapse an antidiagonal cell
+    /// `(a i · x^i) · (b (k−i) · x^(k−i))` into `(a i · b (k−i)) · x^k`,
+    /// which is the step between
+    /// [`Self::sum_range_mul_eq_diag_add_corner`] and a convolution stated
+    /// over [`Self::poly_eval`].
+    pub pow_add: NameId,
     /// `Rat.pow_natDivSucc_two : ∀ n, pow (natDivSucc 1 1) n = normalize
     /// (ofNat 1) (Nat.pow 2 n) w`, where `w : 1 ≤ Nat.pow 2 n` is
     /// `Nat.pow_pos 2 n two_pos`.
@@ -1916,6 +1925,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         pow: child(kernel, "pow"),
         pow_zero: child(kernel, "pow_zero"),
         pow_succ: child(kernel, "pow_succ"),
+        pow_add: child(kernel, "pow_add"),
         pow_nat_div_succ_two: child(kernel, "pow_natDivSucc_two"),
         poly_eval: child(kernel, "polyEval"),
         poly_eval_zero: child(kernel, "polyEval_zero"),
