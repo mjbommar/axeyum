@@ -264,6 +264,21 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
         ("Complex.polyMul", p.poly_mul),
         ("Complex.polyDegreeLt_polyMul", p.poly_degree_lt_poly_mul),
         ("Complex.polyEval_polyMul", p.poly_eval_poly_mul),
+        ("Complex.hornerFromTop", p.horner_from_top),
+        ("Complex.hornerFromTop_zero", p.horner_from_top_zero),
+        (
+            "Complex.hornerFromTop_succ_zero",
+            p.horner_from_top_succ_zero,
+        ),
+        (
+            "Complex.hornerFromTop_succ_succ",
+            p.horner_from_top_succ_succ,
+        ),
+        ("Complex.factorQuotient", p.factor_quotient),
+        (
+            "Complex.factorQuotient_degreeLt",
+            p.factor_quotient_degree_lt,
+        ),
     ];
     // COVERAGE, checked against the ENVIRONMENT rather than against `named`
     // itself.
@@ -2427,5 +2442,159 @@ fn poly_eval_poly_mul_x_plus_one_times_x_minus_one_is_x_squared_minus_one_body()
         "(X+1)(X-1) evaluated via polyMul/polyEval at genuine two-term \
          coefficient functions, at the point I, must give EXACTLY \
          Equiv(polyEval(polyMul c g)(4)(I), mul(I,I) + (-1)): {admitted:?}"
+    );
+}
+
+/// `fun i => Nat.rec(…, a0, fun _ _ => Nat.rec(…, a1, fun _ _ =>
+/// Nat.rec(…, a2, fun _ _ => zero, _), _), i)` — coefficients `a0, a1, a2,
+/// 0, 0, …`, a genuine three-term coefficient function extending
+/// [`two_term_polynomial`] by one more nested `Nat.rec` level, used here to
+/// build a concrete `X² − 1` (`a0 = -1, a1 = 0, a2 = 1`) for
+/// [`factor_quotient_reproduces_x_plus_one_at_the_root_and_not_elsewhere`].
+fn three_term_polynomial(
+    d: &mut crate::int_prelude::ops::IntDev<'_>,
+    p: ComplexPrelude,
+    a0: crate::expr::ExprId,
+    a1: crate::expr::ExprId,
+    a2: crate::expr::ExprId,
+) -> crate::expr::ExprId {
+    use crate::BinderInfo;
+    use crate::nat_prelude::NatOps;
+
+    let carrier = super::complex_ty(d, p);
+    let nat = d.nat_ty();
+    let anon = d.anon_name();
+    let one_level = d.level_one();
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+
+    let motive = d.kernel().lam(anon, nat, carrier, BinderInfo::Default);
+    let rec_name = d.prelude().rec;
+    let rec = d.kernel().const_(rec_name, vec![one_level]);
+
+    let level3_minor_succ = {
+        let j3_fv = d.fresh_fvar();
+        let ih3_fv = d.fresh_fvar();
+        let inner_body = d.lam_fv(ih3_fv, carrier, zero_c);
+        d.lam_fv(j3_fv, nat, inner_body)
+    };
+    let level2_minor_succ = {
+        let j2_fv = d.fresh_fvar();
+        let j2 = d.kernel().fvar(j2_fv);
+        let ih2_fv = d.fresh_fvar();
+        let inner_applied = d.apply(rec, &[motive, a2, level3_minor_succ, j2]);
+        let with_ih = d.lam_fv(ih2_fv, carrier, inner_applied);
+        d.lam_fv(j2_fv, nat, with_ih)
+    };
+    let level1_minor_succ = {
+        let j1_fv = d.fresh_fvar();
+        let j1 = d.kernel().fvar(j1_fv);
+        let ih1_fv = d.fresh_fvar();
+        let inner_applied = d.apply(rec, &[motive, a1, level2_minor_succ, j1]);
+        let with_ih = d.lam_fv(ih1_fv, carrier, inner_applied);
+        d.lam_fv(j1_fv, nat, with_ih)
+    };
+
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let body = d.apply(rec, &[motive, a0, level1_minor_succ, i]);
+    d.lam_fv(i_fv, nat, body)
+}
+
+/// The reproduce-and-refute check the brief asks for: `factorQuotient`
+/// applied to a genuine `X² − 1` (built by [`three_term_polynomial`], not an
+/// opaque witness) must EXACTLY reproduce `X + 1`'s coefficients at the root
+/// `a = 1` (`q 0 = 1, q 1 = 1`, plus the boundary `q 2 = 0` confirming the
+/// degree bound concretely), and must NOT give the SAME `q 0` at the
+/// non-root `a = 2` — where the correct (unconditional synthetic-division,
+/// no-root-needed) value is `q 0 = a = 2`, distinct from the root case's `1`.
+///
+/// Both directions of "a negative control fails two ways" are covered here:
+/// asserting the WRONG value (`q 0 = 1` at `a = 2`) must be **rejected**
+/// (not vacuously — see the paired assertion that the RIGHT non-root value,
+/// `q 0 = 2`, is accepted, which is what makes the rejection meaningful
+/// rather than "everything about `a = 2` is refused").
+#[test]
+fn factor_quotient_reproduces_x_plus_one_at_the_root_and_not_elsewhere() {
+    on_a_deep_stack(factor_quotient_reproduces_x_plus_one_at_the_root_and_not_elsewhere_body);
+}
+
+fn factor_quotient_reproduces_x_plus_one_at_the_root_and_not_elsewhere_body() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let neg_one_c = d.const_app(p.neg, &[one_c]);
+    let two_c = d.const_app(p.add, &[one_c, one_c]);
+
+    let zero_n = d.zero();
+    let one_n = d.succ(zero_n);
+    let two_n = d.succ(one_n);
+
+    // c := X^2 - 1: coefficients -1, 0, 1, 0, 0, ...
+    let cx = three_term_polynomial(&mut d, p, neg_one_c, zero_c, one_c);
+
+    // One admit-or-reject case: `Equiv(factorQuotient(cx, a, n, k), expect)`,
+    // checked with a freshly-named anonymous `Theorem`.
+    let check = |d: &mut IntDev<'_>,
+                 a: crate::expr::ExprId,
+                 k: crate::expr::ExprId,
+                 expect: crate::expr::ExprId,
+                 label: &str| {
+        let fq_call = d.const_app(p.factor_quotient, &[cx, a, two_n, k]);
+        let stmt = super::zeq(d, p, fq_call, expect);
+        let proof = d.lemma(p.equiv_refl, &[expect]);
+        let name = d.kernel().name_str(anon, label);
+        d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: stmt,
+            value: proof,
+        })
+    };
+
+    // Root case (a = 1): must reproduce X+1 exactly, plus the boundary.
+    let r0 = check(&mut d, one_c, zero_n, one_c, "Check.fq_root_q0");
+    assert!(
+        r0.is_ok(),
+        "factorQuotient(X^2-1, a=1, n=2, k=0) must be 1 (X+1's q0): {r0:?}"
+    );
+    let r1 = check(&mut d, one_c, one_n, one_c, "Check.fq_root_q1");
+    assert!(
+        r1.is_ok(),
+        "factorQuotient(X^2-1, a=1, n=2, k=1) must be 1 (X+1's q1): {r1:?}"
+    );
+    let r2 = check(&mut d, one_c, two_n, zero_c, "Check.fq_root_boundary");
+    assert!(
+        r2.is_ok(),
+        "factorQuotient(X^2-1, a=1, n=2, k=2) must be 0 -- the degree bound, checked concretely: {r2:?}"
+    );
+
+    // Non-root case (a = 2): the CORRECT value differs from the root case's.
+    let nr0_correct = check(&mut d, two_c, zero_n, two_c, "Check.fq_nonroot_q0_correct");
+    assert!(
+        nr0_correct.is_ok(),
+        "factorQuotient(X^2-1, a=2, n=2, k=0) must be 2 (= a, the unconditional \
+         synthetic-division value): {nr0_correct:?}"
+    );
+    let nr1_correct = check(&mut d, two_c, one_n, one_c, "Check.fq_nonroot_q1_correct");
+    assert!(
+        nr1_correct.is_ok(),
+        "factorQuotient(X^2-1, a=2, n=2, k=1) must be 1 (= X^2-1's own leading \
+         coefficient, independent of a): {nr1_correct:?}"
+    );
+
+    // The refute half: claiming the ROOT-case value (1) at the NON-root a=2
+    // must be REJECTED -- not vacuously, since the paired check above just
+    // confirmed a DIFFERENT claim about the same (cx, a=2, k=0) IS accepted.
+    let nr0_wrong = check(&mut d, two_c, zero_n, one_c, "Check.fq_nonroot_q0_wrong");
+    assert!(
+        nr0_wrong.is_err(),
+        "factorQuotient(X^2-1, a=2, n=2, k=0) is 2, not 1 -- claiming it is 1 \
+         (X+1's root-case q0) must be REJECTED: {nr0_wrong:?}"
     );
 }
