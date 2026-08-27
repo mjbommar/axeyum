@@ -4376,6 +4376,28 @@ pub struct CRealPrelude {
     /// transports at `Kc := 2` and [`Self::converges_unique`] closes. See
     /// `creal/integral.rs`'s `declare_integral_split`.
     pub integral_split: NameId,
+    /// `CReal.integral_abs_le : ∀ F a b (k : Nat) (hab : le a b)
+    /// (u : UniformlyContinuousOn F a b), BoundedOn F a b k →
+    /// le (abs (integral F a b hab u))
+    ///    (mul (ofRat (Rat.natDivSucc (Nat.succ k) 0)) (add b (neg a)))`.
+    ///
+    /// **The integral is bounded by `M · (b − a)`.** No new estimate: a
+    /// `BoundedOn` witness squeezes `F` between the two CONSTANT functions
+    /// `±M` pointwise on `[a, b]`, [`Self::integral_le`] carries that to the
+    /// integrals, and [`Self::integral_const`] evaluates both ends exactly.
+    /// Nothing in the proof touches a Riemann sum, a mesh count or a modulus.
+    ///
+    /// `M` is `derivative.rs`'s own `mag_bound k`, the exact term
+    /// [`Self::bounded_on_unfold`]'s conclusion carries — a convenient literal
+    /// would not type-check.
+    ///
+    /// Needed by both remaining pieces of additivity at an ARBITRARY split
+    /// point (it is the `M·δ` leaf of the close-endpoint estimate, and it
+    /// discharges the degenerate branch of the cotransitivity split that
+    /// removes the positivity hypothesis on `b − a`), and by the Fundamental
+    /// Theorem directly for the antiderivative's own continuity. See
+    /// `creal/integral.rs`'s `declare_integral_abs_le`.
+    pub integral_abs_le: NameId,
     /// `CReal.integral_scale : ∀ c F a b hab uF ucF, Equiv (CReal.integral
     /// (fun t => mul c (F t)) a b hab ucF) (mul c (CReal.integral F a b hab
     /// uF))`.
@@ -5460,6 +5482,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         integral_add: kernel.name_str(creal, "integral_add"),
         integral_le: kernel.name_str(creal, "integral_le"),
         integral_split: kernel.name_str(creal, "integral_split"),
+        integral_abs_le: kernel.name_str(creal, "integral_abs_le"),
         integral_scale: kernel.name_str(creal, "integral_scale"),
         riemann_sum_integral_close: kernel.name_str(creal, "riemannSum_integral_close"),
         riemann_sum_split_exact: kernel.name_str(creal, "riemannSum_split_exact"),
@@ -8442,6 +8465,46 @@ const STEPS: &[BuildStep] = &[
         ],
         provides: &[|p: CRealPrelude| p.integral_split],
         run: integral::declare_integral_split,
+    },
+    BuildStep {
+        label: "integral::declare_integral_abs_le",
+        requires: &[
+            |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.abs_le,
+            |p: CRealPrelude| p.add,
+            |p: CRealPrelude| p.add_assoc,
+            |p: CRealPrelude| p.add_comm,
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.bounded_on,
+            |p: CRealPrelude| p.bounded_on_unfold,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.integral,
+            |p: CRealPrelude| p.integral_const,
+            |p: CRealPrelude| p.integral_le,
+            |p: CRealPrelude| p.le,
+            |p: CRealPrelude| p.le_abs_self,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.left_distrib,
+            |p: CRealPrelude| p.mul,
+            |p: CRealPrelude| p.mul_comm,
+            |p: CRealPrelude| p.mul_congr,
+            |p: CRealPrelude| p.mul_zero,
+            |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.neg_congr,
+            |p: CRealPrelude| p.neg_le_abs,
+            |p: CRealPrelude| p.neg_le_neg,
+            |p: CRealPrelude| p.of_rat,
+            |p: CRealPrelude| p.uniformly_continuous_const,
+            |p: CRealPrelude| p.uniformly_continuous_on,
+            |p: CRealPrelude| p.zero,
+        ],
+        provides: &[|p: CRealPrelude| p.integral_abs_le],
+        run: integral::declare_integral_abs_le,
     },
     BuildStep {
         label: "derivative::declare_has_derivative_integral_const",

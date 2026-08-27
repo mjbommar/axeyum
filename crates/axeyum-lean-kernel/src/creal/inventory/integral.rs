@@ -146,6 +146,7 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
         ("CReal.integral_add", p.integral_add, "theorem"),
         ("CReal.integral_le", p.integral_le, "theorem"),
         ("CReal.integral_split", p.integral_split, "theorem"),
+        ("CReal.integral_abs_le", p.integral_abs_le, "theorem"),
         ("CReal.integral_scale", p.integral_scale, "theorem"),
         (
             "CReal.riemannSum_integral_close",
