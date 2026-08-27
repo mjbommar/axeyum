@@ -126,7 +126,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 364] = [
+    let expected: [(&str, crate::NameId, &str); 365] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -1213,6 +1213,18 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         // so `CReal.mul`'s own index-shift complexity is never re-derived
         // by hand (creal/integral.rs's `declare_integral_scale`).
         ("CReal.integral_scale", p.integral_scale, "theorem"),
+        // Riemann-sum-vs-true-value estimate: the FIXED mesh `riemannSum F a
+        // b (deep(e)+depth)` sits within an explicit, `e`-derived distance of
+        // `CReal.integral F a b hab u`, chaining
+        // `riemannSum_shared_accuracy_close` (fixed mesh vs `f_lambda e`)
+        // with `speedup_close` (`f_lambda e` vs the integral's own sample at
+        // `e`, the SAME `integral_witness` triple `CReal.integral` is built
+        // from) (creal/integral.rs's `declare_riemann_sum_integral_close`).
+        (
+            "CReal.riemannSum_integral_close",
+            p.riemann_sum_integral_close,
+            "theorem",
+        ),
         // Spivak Ch14 FTC-I, first evaluation instance: the antiderivative
         // of a constant integrand, `G x := integral (fun _ => c) a (max a
         // (min x b)) …` (the `max`/`min` clamp is what makes `G` a genuinely

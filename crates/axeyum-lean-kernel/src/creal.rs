@@ -3837,6 +3837,46 @@ pub struct CRealPrelude {
     /// `mul_riemann_sum` applied pointwise). See `creal/integral.rs`'s
     /// `declare_integral_scale`.
     pub integral_scale: NameId,
+    /// `CReal.riemannSum_integral_close : ∀ F a b, le a b →
+    /// UniformlyContinuousOn F a b → ∀ e depth i j1 j2 : Nat, Within
+    /// (Rat.sub (seq (riemannSum F a b (Nat.add (deep F a b u e) depth)) i)
+    /// (seq (CReal.integral F a b hab u) e)) (bnd1 + bnd2 + (natDivSucc (K+1)
+    /// e + natDivSucc 1 e))`, `bnd1`/`bnd2` EXACTLY
+    /// [`Self::riemann_sum_shared_accuracy_close`]'s own two-leg bound at
+    /// `(e, k1 := depth, k2 := 0, oi := i, oj := e, j1, j2)`, `K :=
+    /// integral.rs`'s own `fold_k(magnitude)` — the SAME `Nat` `ExprId`
+    /// [`Self::integral`] is itself built from.
+    ///
+    /// **The Riemann-sum-vs-true-value estimate — Chapter 14's last algebra
+    /// gap.** `riemannSum F a b m` at ANY FIXED mesh count `m` at least as
+    /// deep as the `e`-accuracy Archimedean threshold (`m := deep(e) +
+    /// depth`, `depth` free) sits within an explicit, `e`-derived distance of
+    /// `CReal.integral F a b hab u` — the standard "Riemann sums converge to
+    /// the integral" statement, quantitative rather than asymptotic. Two
+    /// legs, chained by `creal/integral.rs`'s own private `chain_within2`:
+    ///
+    /// 1. [`Self::riemann_sum_shared_accuracy_close`] at `k1 := depth`, `k2
+    ///    := 0` — comparing the FIXED mesh `m` against `deep(e) + 0`, which
+    ///    is EXACTLY `integral.rs`'s own private `integral_witness`'s
+    ///    `f_lambda` evaluated at `e`.
+    /// 2. [`Self::speedup_close`] applied to the SAME `(f_lambda, K,
+    ///    cauchy_proof)` triple [`Self::integral`] itself is built from
+    ///    (`integral_witness`, reconstructed rather than reused through
+    ///    [`Self::integral_converges`]'s own `Converges` wrapper, since that
+    ///    `Prop` hides its witness `K` behind an `Exists` and this estimate
+    ///    needs `K` NAMED, not merely known to exist) — bridging `f_lambda
+    ///    e`'s own sample at `e` to `CReal.integral F a b hab u`'s sample at
+    ///    `e` by the same delta/beta unfolding [`Self::integral_converges`]'s
+    ///    own doc comment already relies on.
+    ///
+    /// No new estimate anywhere: every piece is an already-proved lemma or an
+    /// already-built construction, applied at the right arguments — the same
+    /// "the telescope was already there" shape
+    /// [`Self::integral_witness_independent`]'s own doc comment describes.
+    /// Bridging this across a partition split at `c` (`integral_split`'s own
+    /// remaining gap, per `integral.rs`'s module documentation) is NOT
+    /// attempted here.
+    pub riemann_sum_integral_close: NameId,
     /// `CReal.hasDerivative_integral_const : ∀ c a b (k : Nat), le (abs c)
     /// (ofRat (natDivSucc (Nat.succ k) 0)) → HasDerivativeOn (fun x =>
     /// integral (fun _ => c) a (max a (min x b)) (le_max_left a (min x b))
@@ -4318,6 +4358,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         integral_add: kernel.name_str(creal, "integral_add"),
         integral_le: kernel.name_str(creal, "integral_le"),
         integral_scale: kernel.name_str(creal, "integral_scale"),
+        riemann_sum_integral_close: kernel.name_str(creal, "riemannSum_integral_close"),
         has_derivative_integral_const: kernel.name_str(creal, "hasDerivative_integral_const"),
     }
 }
@@ -4720,6 +4761,15 @@ pub(crate) fn build_creal_prelude_uncached(
         // it lands here to stay next to the other `integral_*` law that
         // shares its dependency shape.
         integral::declare_integral_scale(&mut d, prelude)?;
+        // `riemannSum_integral_close` (the Riemann-sum-vs-true-value
+        // estimate) needs `riemannSum_shared_accuracy_close` (well above),
+        // `CReal.speedup_close` (`convergence::declare_cauchy_convergence`,
+        // well above) and `CReal.integral`/`integral_converges` (just
+        // above, for the SAME `integral_witness` triple `CReal.integral`
+        // itself is built from). It does not need
+        // `integral_add`/`integral_le`/`integral_scale`; it lands here to
+        // stay next to the other `integral_*` laws.
+        integral::declare_riemann_sum_integral_close(&mut d, prelude)?;
         // `hasDerivative_integral_const` (Spivak Ch14 FTC-I, first evaluation
         // instance) needs `integral`/`integral_const` (just above, this
         // dispatch is why it cannot live inside `derivative::declare_derivative`,
