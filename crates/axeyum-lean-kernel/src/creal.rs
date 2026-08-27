@@ -844,6 +844,29 @@ pub struct CRealPrelude {
     /// exists, is unique up to `Equiv`. One instance of
     /// [`Self::equiv_of_bounded`], no arbitrary third index.
     pub converges_unique: NameId,
+    /// `CReal.converges_of_close : ∀ f g L (Kc : Nat), (∀ n, Within (seq (g
+    /// n) n − seq (f n) n) (Rat.natDivSucc Kc n)) → Converges f L →
+    /// Converges g L`.
+    ///
+    /// The one-hypothesis, two-SEQUENCE generalization of
+    /// [`Self::converges_unique`]'s own `equiv_of_bounded` idiom: rather
+    /// than comparing two limits of the SAME sequence, this compares two
+    /// DIFFERENT sequences pointwise close at their own shared index `n`
+    /// (`g n`'s sample at `n` against `f n`'s sample at `n`, not a common
+    /// canonical index) and transports `f`'s convergence to `L` over to
+    /// `g`. One `Exists.rec` on the single `Converges f L` hypothesis
+    /// (`Converges g L` does not mention its witness), then the plain
+    /// forward triangle identity `Rat.sub_add_sub` — `(g_n − f_n) + (f_n −
+    /// L_n) = g_n − L_n` — fuses the two rates via `Rat.natDivSucc_add`. No
+    /// `Rat.bounds_neg` step, unlike `converges_unique`'s own `L − M`
+    /// shape, which needs one term negated first.
+    ///
+    /// Built for `creal/integral.rs`'s `CReal.integral_witness_independent`:
+    /// the cross bridge that lets a Riemann-sum diagonal built from one
+    /// uniform-continuity witness inherit convergence to the OTHER
+    /// witness's integral value, once the two diagonals are shown
+    /// pointwise close.
+    pub converges_of_close: NameId,
     /// `CReal.converges_of_const : ∀ c, Converges (fun _ => c) c`.
     pub converges_of_const: NameId,
     /// `CReal.converges_of_equiv : ∀ f target, (∀ n, Equiv (f n) target) →
@@ -3575,6 +3598,39 @@ pub struct CRealPrelude {
     /// See `creal/integral.rs`'s `declare_riemann_sum_deep_cauchy_folded`
     /// and its private `bnd_leg_plus_share_le` for the leaf accounting.
     pub riemann_sum_deep_cauchy_folded: NameId,
+    /// `CReal.riemannSumDeepCauchyCross : ∀ F a b, CReal.le a b → ∀ u1 u2 :
+    /// CReal.UniformlyContinuousOn F a b, ∀ n : Nat, Within (seq (riemannSum
+    /// F a b (deep F a b u1 n)) n − seq (riemannSum F a b (deep F a b u2
+    /// n)) n) (bound n)`.
+    ///
+    /// **The witness/modulus reindexing bridge**, and the resolution of
+    /// this development's sharpest open question: is `CReal.integral`
+    /// witness-independent? [`Self::riemann_sum_deep_cauchy`]'s own
+    /// three-leg telescope is generic enough that using a DIFFERENT
+    /// uniform-continuity witness for each of the two legs — rather than
+    /// the same `u` for both — is the identical construction: neither
+    /// [`Self::riemann_sum_cauchy`] (already `∀ u, …`), nor
+    /// [`Self::shared_index_to_canonical`] (never mentions `u`), nor
+    /// `integral.rs`'s private `common_refinement` (pure `Nat` arithmetic on
+    /// two mesh counts, however they were built) is specific to a single
+    /// witness. Specialized to ONE shared sample index `n` (`pn := qn := n`
+    /// throughout), so the middle `regular` leg collapses to the trivial
+    /// self-comparison `regular rsum_l n n` and no third, genuinely new,
+    /// piece of mathematics is needed. See `creal/integral.rs`'s
+    /// `declare_riemann_sum_deep_cauchy_cross` for the construction and
+    /// [`Self::integral_witness_independent`] for what it is used to prove.
+    pub riemann_sum_deep_cauchy_cross: NameId,
+    /// `CReal.riemannSumDeepCauchyCrossFolded : ∀ F a b, CReal.le a b → ∀ u1
+    /// u2, ∀ n : Nat, Within (seq (riemannSum F a b (deep F a b u1 n)) n −
+    /// seq (riemannSum F a b (deep F a b u2 n)) n) (Rat.natDivSucc K n +
+    /// Rat.natDivSucc K n)` — [`Self::riemann_sum_deep_cauchy_cross`]'s
+    /// three-leg bound folded via the SAME [`Self::riemann_sum_deep_cauchy_folded`]
+    /// route (`integral.rs`'s private `bnd_leg_plus_share_le`, applied twice
+    /// at `idx := n`). `K` depends only on `magnitude := Nat.succ
+    /// (CReal.bound (add b (neg a)))`, so it is the identical `Nat`
+    /// `ExprId` [`Self::integral`]'s own construction uses (both call
+    /// `integral.rs`'s private `fold_k(magnitude)`).
+    pub riemann_sum_deep_cauchy_cross_folded: NameId,
     /// `CReal.integral : ∀ F a b, CReal.le a b → CReal.UniformlyContinuousOn
     /// F a b → CReal := CReal.mk (speedup (diagonal f) K) (regularity
     /// proof)`, `f := fun n => riemannSum F a b (deep F a b u n)` -- built
@@ -3610,6 +3666,22 @@ pub struct CRealPrelude {
     /// hab u` and `mul c (b−a)`, so the two are `Equiv`. See
     /// `creal/integral.rs`'s `declare_integral_const`.
     pub integral_const: NameId,
+    /// `CReal.integral_witness_independent : ∀ F a b hab u1 u2, Equiv
+    /// (CReal.integral F a b hab u1) (CReal.integral F a b hab u2)`.
+    ///
+    /// **`CReal.integral` is the integral of `F`, not "the integral computed
+    /// via THIS modulus"**: choosing a different uniform-continuity witness
+    /// for the same `F`/`a`/`b` produces an `Equiv`-equal value. Combines
+    /// [`Self::integral_converges`] (twice, once per witness) with
+    /// [`Self::converges_of_close`] fed
+    /// [`Self::riemann_sum_deep_cauchy_cross_folded`] (instantiated at
+    /// matching index — the cross-witness closeness bound between the two
+    /// Riemann-sum diagonals) via [`Self::converges_unique`]: `f_lambda`
+    /// built from `u1` provably converges to BOTH `integral … u1` (directly)
+    /// and `integral … u2` (transported across the cross bound from `u2`'s
+    /// own convergence), so the two integral values are `Equiv`. See
+    /// `creal/integral.rs`'s `declare_integral_witness_independent`.
+    pub integral_witness_independent: NameId,
     /// `CReal.hasDerivative_integral_const : ∀ c a b (k : Nat), le (abs c)
     /// (ofRat (natDivSucc (Nat.succ k) 0)) → HasDerivativeOn (fun x =>
     /// integral (fun _ => c) a (max a (min x b)) (le_max_left a (min x b))
@@ -3837,6 +3909,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         limit_dist: kernel.name_str(creal, "limit_dist"),
         converges: kernel.name_str(creal, "Converges"),
         converges_unique: kernel.name_str(creal, "converges_unique"),
+        converges_of_close: kernel.name_str(creal, "converges_of_close"),
         converges_of_const: kernel.name_str(creal, "converges_of_const"),
         converges_of_equiv: kernel.name_str(creal, "converges_of_equiv"),
         cauchy: kernel.name_str(creal, "Cauchy"),
@@ -4073,9 +4146,13 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         riemann_sum_total_eps_le: kernel.name_str(creal, "riemannSumTotalEpsLe"),
         riemann_sum_deep_cauchy: kernel.name_str(creal, "riemannSumDeepCauchy"),
         riemann_sum_deep_cauchy_folded: kernel.name_str(creal, "riemannSumDeepCauchyFolded"),
+        riemann_sum_deep_cauchy_cross: kernel.name_str(creal, "riemannSumDeepCauchyCross"),
+        riemann_sum_deep_cauchy_cross_folded: kernel
+            .name_str(creal, "riemannSumDeepCauchyCrossFolded"),
         integral: kernel.name_str(creal, "integral"),
         integral_converges: kernel.name_str(creal, "integral_converges"),
         integral_const: kernel.name_str(creal, "integral_const"),
+        integral_witness_independent: kernel.name_str(creal, "integral_witness_independent"),
         has_derivative_integral_const: kernel.name_str(creal, "hasDerivative_integral_const"),
     }
 }
@@ -4404,6 +4481,18 @@ pub(crate) fn build_creal_prelude_uncached(
         // shape `regular_of_scaled_cauchy` needs, via `riemannSumTotalEpsLe`
         // (further above) and `half_shift_le` (`completeness.rs`).
         integral::declare_riemann_sum_deep_cauchy_folded(&mut d, prelude)?;
+        // `riemannSumDeepCauchyCross` (the witness/modulus reindexing bridge
+        // resolving whether `CReal.integral` is witness-independent) needs
+        // the same three dependencies as `riemannSumDeepCauchy` just above
+        // (`riemannSum_cauchy`, `sharedIndexToCanonical`, `CReal.regular`) —
+        // nothing from `riemannSumDeepCauchy` itself — and lands here only
+        // to stay next to the construction it mirrors.
+        integral::declare_riemann_sum_deep_cauchy_cross(&mut d, prelude)?;
+        // `riemannSumDeepCauchyCrossFolded` folds `riemannSumDeepCauchyCross`
+        // (just above) the same way `riemannSumDeepCauchyFolded` folds
+        // `riemannSumDeepCauchy`, via the same `riemannSumTotalEpsLe`/
+        // `half_shift_le` pieces.
+        integral::declare_riemann_sum_deep_cauchy_cross_folded(&mut d, prelude)?;
         // `CReal.integral` (`declare_creal_integral` -- named to avoid
         // colliding with this file's own, unrelated, earlier
         // `integral::declare_integral`, which builds `CReal.riemannSum`)
@@ -4423,6 +4512,13 @@ pub(crate) fn build_creal_prelude_uncached(
         // `converges_of_equiv` (`convergence::declare_convergence`, well
         // above) and `converges_unique`/`equiv_symm` (both far above).
         integral::declare_integral_const(&mut d, prelude)?;
+        // `integral_witness_independent` needs `integral_converges` and
+        // `riemannSumDeepCauchyCrossFolded` (both well above),
+        // `converges_of_close` (`convergence::declare_convergence`, far
+        // above) and `converges_unique` (far above). It does not need
+        // `integral_const` (just above); it lands here to stay next to the
+        // other `integral_*` law that shares its dependency shape.
+        integral::declare_integral_witness_independent(&mut d, prelude)?;
         // `hasDerivative_integral_const` (Spivak Ch14 FTC-I, first evaluation
         // instance) needs `integral`/`integral_const` (just above, this
         // dispatch is why it cannot live inside `derivative::declare_derivative`,
