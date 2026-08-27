@@ -16,7 +16,8 @@ live without a short wall-clock cutoff; the upper-bound search is closed by the 
 settled-cell calibration is green for `R_3(x-y=z)=14` (42 variables,
 356 clauses, 25 checked DRAT steps); a mutated DIMACS header fails closed, and the aggregate
 claim sweep reports 104 claims re-checked / 0 errors / 25 rows explicitly not re-checked.
-Frontier claims remain open.
+The SIMD brief's named byte-reversal target is now closed in its explicitly listed fixed
+shuffle set; the other four headline targets remain open.
 
 **Job-shop published-witness import, 2026-08-26.** ADR-0576 adds strict parsing of the common
 one-job-per-machine-order-row solution format and deterministic earliest-schedule reconstruction
@@ -319,6 +320,16 @@ length two only in the exact constant-control SSA language. It excludes memory, 
 logic composition, register allocation, and scheduling, and carries no novelty-priority claim.
 The prior unary formula remains byte-identical, and the sibling package retains deterministic
 compressed CNF/DRAT, a manifest, diary, provenance, and LaTeX write-up.
+
+**SIMD named target closed under the brief's stated set, 2026-08-26.** A completion audit
+compared ADR-0585 family-by-family with the source problem rather than substituting an undefined
+whole-ISA goal. Its fourteen selectors exhaust the brief's listed `vpshufb`, `vpermd`,
+`vpermq`, `vperm2i128`, `vpalignr`, eight low/high unpack forms, and `vpblendd` set. A fresh
+run accepted the retained one-step DRAT, synthesized/lifted/replayed the two-step sequence,
+matched all 11 hardware-oracle modes over 32 bytes, rejected the mutated oracle, and passed the
+two focused tests. Thus global 32-byte reversal has exact length two in that fixed set, meeting
+the brief's concrete completion criterion. This does not expand the theorem to every AVX2
+instruction or establish publication priority.
 
 **Boolean-ANF control route, 2026-08-26.** ADR-0562 adds canonical resource-bounded Boolean
 polynomials, deterministic Bosphorus interchange, and a sparse coefficient-DAG formulation of
