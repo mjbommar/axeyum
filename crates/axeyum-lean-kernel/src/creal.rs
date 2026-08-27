@@ -3465,6 +3465,16 @@ pub struct CRealPrelude {
     /// See `creal/integral.rs`'s `declare_riemann_sum_deep_cauchy_folded`
     /// and its private `bnd_leg_plus_share_le` for the leaf accounting.
     pub riemann_sum_deep_cauchy_folded: NameId,
+    /// `CReal.integral : ∀ F a b, CReal.le a b → CReal.UniformlyContinuousOn
+    /// F a b → CReal := CReal.mk (speedup (diagonal f) K) (regularity
+    /// proof)`, `f := fun n => riemannSum F a b (deep F a b u n)` -- built
+    /// via [`Self::regular_of_scaled_cauchy`] / [`Self::mk`] on the
+    /// `speedup`-reindexed diagonal of `f`, using
+    /// [`Self::riemann_sum_deep_cauchy_folded`] as the `Cauchy` witness. See
+    /// `creal/integral.rs`'s `declare_creal_integral` (named to avoid
+    /// colliding with that file's own, unrelated, pre-existing
+    /// `declare_integral`, which builds `CReal.riemannSum`).
+    pub integral: NameId,
 }
 
 impl CRealPrelude {
@@ -3869,6 +3879,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         riemann_sum_total_eps_le: kernel.name_str(creal, "riemannSumTotalEpsLe"),
         riemann_sum_deep_cauchy: kernel.name_str(creal, "riemannSumDeepCauchy"),
         riemann_sum_deep_cauchy_folded: kernel.name_str(creal, "riemannSumDeepCauchyFolded"),
+        integral: kernel.name_str(creal, "integral"),
     }
 }
 
@@ -4191,6 +4202,14 @@ pub(crate) fn build_creal_prelude_uncached(
         // shape `regular_of_scaled_cauchy` needs, via `riemannSumTotalEpsLe`
         // (further above) and `half_shift_le` (`completeness.rs`).
         integral::declare_riemann_sum_deep_cauchy_folded(&mut d, prelude)?;
+        // `CReal.integral` (`declare_creal_integral` -- named to avoid
+        // colliding with this file's own, unrelated, earlier
+        // `integral::declare_integral`, which builds `CReal.riemannSum`)
+        // needs `riemannSumDeepCauchyFolded` (just above), `CReal.speedup`
+        // (`speedup::declare_speedup`, well above) and
+        // `regular_of_scaled_cauchy` (`convergence::declare_cauchy_convergence`,
+        // well above).
+        integral::declare_creal_integral(&mut d, prelude)?;
         // `order_reflect_of_pos_deriv` needs only `strict_mono_of_pos_deriv`
         // (just declared above) plus `lt_trans`/`lt_irrefl`/`apart` (all far
         // above); nothing later depends on it, so it lands right after its

@@ -9279,3 +9279,149 @@ pub(super) fn declare_riemann_sum_deep_cauchy_folded(
         value,
     })
 }
+
+// --- `CReal.integral` -- `regular_of_scaled_cauchy` / `CReal.mk` on the
+// `speedup`-reindexed diagonal of `n ↦ riemannSum F a b (deep F a b u n)`.
+// Height above `RIEMANN_HEIGHT` (`DERIVED_HEIGHT + 45`) and `CReal.speedup`
+// (`DERIVED_HEIGHT + 44`), the two definitions it is built from. -----------
+
+const INTEGRAL_HEIGHT: u16 = DERIVED_HEIGHT + 46;
+
+/// The `Nat` value `K` [`bnd_leg_plus_share_le`] folds into, computed
+/// independently of `idx`/`m` (that function's own `K` never depends on
+/// either -- see its doc comment). Reproduces the EXACT same `NatOps::add`
+/// sequence over the same literals, so calling this with the SAME
+/// `magnitude` yields the identical `K` `ExprId` [`declare_riemann_sum_deep_cauchy_folded`]'s
+/// own type already carries -- no bridging lemma needed to relate the two.
+fn fold_k(d: &mut IntDev<'_>, magnitude: ExprId) -> ExprId {
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+    let n1 = NatOps::add(d, magnitude, two_nat);
+    let n2 = NatOps::add(d, n1, two_nat);
+    let n3 = NatOps::add(d, one_nat, one_nat);
+    let n4 = NatOps::add(d, n3, n2);
+    let n5 = NatOps::add(d, n4, n3);
+    NatOps::add(d, n5, one_nat)
+}
+
+/// `fun n => CReal.seq (f n) n` -- the raw `Nat -> Rat` diagonal of a
+/// `Nat -> CReal` sequence, [`CRealPrelude::regular_of_scaled_cauchy`]'s own
+/// shape. Mirrors `convergence.rs`'s private `diagonal` recipe exactly (that
+/// helper is private to the sibling `convergence` submodule, so it is not
+/// reachable from here -- rebuilt rather than widened for one caller).
+fn integral_diagonal(d: &mut IntDev<'_>, p: CRealPrelude, f: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let fn_term = d.apply(f, &[n]);
+    let body = sample(d, p, fn_term, n);
+    d.lam_fv(n_fv, nat, body)
+}
+
+/// `CReal.integral : ∀ F a b, CReal.le a b → CReal.UniformlyContinuousOn F a
+/// b → CReal`, defined as `CReal.mk (speedup (diagonal f) K) (regularity
+/// proof)`, `f := fun n => riemannSum F a b (deep F a b u n)`, `K` and the
+/// regularity proof both supplied by
+/// [`CRealPrelude::regular_of_scaled_cauchy`] applied at `f`, `K` (built
+/// purely from `magnitude`, [`fold_k`]) and a `Cauchy`-shaped instance of
+/// [`CRealPrelude::riemann_sum_deep_cauchy_folded`] at two FRESH indices
+/// (rebound as the outermost `∀ m n` `regular_of_scaled_cauchy` itself
+/// expects, rather than reusing that theorem's own `p`/`q` binder names --
+/// which sit INSIDE `hab`/`u` in its own Pi nesting, not outside them).
+///
+/// **Kept generic over `(f, K, cauchy_proof)` until this exact point**:
+/// `regular_of_scaled_cauchy` is an ALREADY-PROVED theorem, so applying it
+/// here is one small `App` node referencing it by name -- it does not
+/// re-run or duplicate that theorem's own proof term. Nothing in `K`'s own
+/// construction is ever combined via `Nat.mul`/`Nat.add` with the bound
+/// index `n` anywhere in this declaration's statement (`K` and `n` are
+/// always SIBLING arguments to `Rat.natDivSucc`, never merged) -- unlike the
+/// `declare_e_converges` kernel-cost trap this module's own history
+/// documents, there is no partial evaluation for a concrete/symbolic mix to
+/// desynchronize on.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_creal_integral(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let f_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+
+    // f_lambda := fun n => riemannSum F a b (deep F a b u n + 0) -- the
+    // raw-indexed sequence `riemannSumDeepCauchyFolded` is itself a Cauchy
+    // witness for.
+    let f_lambda = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let deep_n = deep_at(d, p, f, a, b, u, n);
+        let zero_n = d.num(0);
+        let m_n = NatOps::add(d, deep_n, zero_n);
+        let rsum_n = rsum(d, p, f, a, b, m_n);
+        d.lam_fv(n_fv, nat, rsum_n)
+    };
+
+    let width = width_of(d, p, a, b);
+    let (_c, magnitude, _width_le_mag) = direct_bound_le(d, p, width);
+    let k = fold_k(d, magnitude);
+
+    // cauchy_proof : forall m n, Within (seq (f_lambda m) m - seq (f_lambda
+    // n) n) (natDivSucc k m + natDivSucc k n) -- `riemannSumDeepCauchyFolded`
+    // applied at FRESH indices, rebound as the outermost binders.
+    let cauchy_proof = {
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let inst = d.lemma(p.riemann_sum_deep_cauchy_folded, &[f, a, b, m, n, hab, u]);
+        let with_n = d.lam_fv(n_fv, nat, inst);
+        d.lam_fv(m_fv, nat, with_n)
+    };
+
+    let regularity = d.lemma(p.regular_of_scaled_cauchy, &[f_lambda, k, cauchy_proof]);
+    let diag = integral_diagonal(d, p, f_lambda);
+    let speedup_term = d.const_app(p.speedup, &[diag, k]);
+    let value_body = d.const_app(p.mk, &[speedup_term, regularity]);
+
+    let ty = {
+        let after_u = d.arrow(u_ty, carrier);
+        let after_hab = d.arrow(hab_ty, after_u);
+        let over_b = d.pi_fv(b_fv, carrier, after_hab);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        d.pi_fv(f_fv, f_ty, over_a)
+    };
+    let value = {
+        let with_u = d.lam_fv(u_fv, u_ty, value_body);
+        let with_hab = d.lam_fv(hab_fv, hab_ty, with_u);
+        let over_b = d.lam_fv(b_fv, carrier, with_hab);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        d.lam_fv(f_fv, f_ty, over_a)
+    };
+
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.integral,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(INTEGRAL_HEIGHT),
+    })
+}

@@ -115,7 +115,7 @@ fn on_a_deep_stack_creal<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'stat
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 342] = [
+    let expected: [(&str, crate::NameId, &str); 343] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -1052,6 +1052,16 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
             p.riemann_sum_deep_cauchy_folded,
             "theorem",
         ),
+        // `CReal.mk (speedup (diagonal f) K) (regularity proof)`, `f := fun
+        // n => riemannSum F a b (deep F a b u n)` -- `regular_of_scaled_cauchy`
+        // applied at `f`, `K` (`declare_creal_integral`'s own `fold_k`,
+        // matching `riemannSumDeepCauchyFolded`'s own `K` by construction)
+        // and a `riemannSumDeepCauchyFolded` instance rebound at two fresh
+        // indices as the `Cauchy` witness. Named `declare_creal_integral` in
+        // `creal/integral.rs` to avoid colliding with that file's own,
+        // unrelated, earlier `declare_integral` (which builds
+        // `CReal.riemannSum`).
+        ("CReal.integral", p.integral, "def"),
         // Chapter 18/22: the geometric domination of `expTerm`, ending at the
         // `abs`-shaped form `sumRange_cauchy_of_dominated` consumes.
         ("CReal.expDominant", p.exp_dominant, "def"),
