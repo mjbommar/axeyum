@@ -30,12 +30,20 @@
 //!   `Rat.mul_assoc` pointwise then `Rat.mul_sumRange` (symm'd — that lemma
 //!   runs the other direction).
 //!
-//! No `polyEval_mul` (the Cauchy product): that needs a diagonal/rectangle
-//! reindexing lemma over `ℚ`'s `sumRange`, and `ℚ` has none — only `Nat` does
-//! (`nat_prelude::diagonal`/`nat_prelude::rectangle`, built this week for
-//! exactly this shape after the naive finite Cauchy identity was refuted at
-//! `n = 2`). Porting that machinery to `ℚ` is future work, not attempted
-//! here.
+//! No `polyEval_mul` (the Cauchy product) — but the reason has changed, and
+//! this paragraph used to assert the opposite. The `ℚ` reindexing machinery
+//! now EXISTS ([`super::diagonal`]: `Rat.sumRange_split`,
+//! `Rat.sumRange_diagonal`, `Rat.sumRange_rect_eq_diag_add_corner`), and
+//! [`super::diagonal::declare_sum_range_mul_eq_diag_add_corner`] already
+//! carries a PRODUCT of two `sumRange`s all the way to
+//! `(antidiagonal triangle) + corner`. What blocks `polyEval_mul` is no
+//! longer reindexing: it is `Rat.pow_add` (`x^(i+j) = x^i * x^j`) together
+//! with the index round-trip `i + (k−i) = k` for `i ≤ k`, which is what turns
+//! an antidiagonal cell `(a i * x^i) * (b (k−i) * x^(k−i))` into
+//! `(a i * b (k−i)) * x^k` and so collapses the triangle into
+//! `polyEval (conv a b) n x`. Separately, see [`super::diagonal`]'s module
+//! doc for why the SAME-bound square leaves a corner term the literal
+//! two-bound Cauchy statement must still account for.
 
 use super::RatPrelude;
 use super::ops::{
