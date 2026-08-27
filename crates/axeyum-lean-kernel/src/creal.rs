@@ -4424,6 +4424,19 @@ pub struct CRealPrelude {
     /// across different function indices is needed, only a rearrangement of
     /// the sum.
     pub uniform_converges_add: NameId,
+    /// `CReal.close_within_of_within : ∀ x y n k, Within (Rat.sub (seq x n)
+    /// (seq y n)) (natDivSucc k n) → le (abs (add x (neg y))) (ofRat
+    /// (natDivSucc (1+(k+1)) n))` (`creal/uniform_convergence.rs`) — the
+    /// `Within → close_within` bridge, generic in BOTH `x` and `y`: a raw
+    /// rational sample-level bound at a SHARED index `n` lifts to a genuine
+    /// real-valued closeness fact, via each side's own `1/(n+1)`-slack
+    /// self-approximation ([`Self::sample_upper_bound`]/
+    /// [`Self::sample_lower_bound`]) rather than `CReal.regular` read at a
+    /// shifted index. `Converges`/`Cauchy` (`creal/convergence.rs`) state
+    /// everything in `Within` form; this is what a caller building a
+    /// `CReal.UniformConvergesOn` instance from such an estimate (e.g. the
+    /// Weierstrass M-test) needs to reach `close_within`.
+    pub close_within_of_within: NameId,
 }
 
 impl CRealPrelude {
@@ -4907,6 +4920,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         poly_degree_lt_poly_add: kernel.name_str(creal, "polyDegreeLt_polyAdd"),
         poly_degree_lt_poly_scale: kernel.name_str(creal, "polyDegreeLt_polyScale"),
         uniform_converges_add: kernel.name_str(creal, "uniform_converges_add"),
+        close_within_of_within: kernel.name_str(creal, "close_within_of_within"),
     }
 }
 
@@ -5178,6 +5192,14 @@ pub(crate) fn build_creal_prelude_uncached(
         // `UniformlyContinuousOn` at all, so it could dispatch earlier, but
         // sits beside its sibling theorem in this file for locality.
         uniform_convergence::declare_uniform_converges_add(&mut d, prelude)?;
+        // `close_within_of_within` needs `CReal.sample_upper_bound`/
+        // `sample_lower_bound` (`uniform_continuity::declare_uniform_continuity`,
+        // well above), `CReal.abs_le_of_two_sided` (`order_extra`, also well
+        // above), and `CReal.ofRat_le`/`CReal.ofRat_add`/`CReal.le_congr`
+        // (all predate `creal`'s own theorems or are declared early); no
+        // dependency on `uniform_converges_add` just above, but sits beside
+        // it for locality (both are `uniform_convergence.rs` bridge lemmas).
+        uniform_convergence::declare_close_within_of_within(&mut d, prelude)?;
         // `ofNat_add`/`ofNat_mul` only need `CReal.ofNat`
         // (`archimedean::declare_archimedean`, well above) and the `Rat`-level
         // `ofRat_add`/`ofRat_mul`/`natDivSucc_add`/`natDivSucc_mul` facts that
