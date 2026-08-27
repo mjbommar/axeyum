@@ -137,6 +137,7 @@ now. Nothing was deleted.
 | 2026-08-27 | `31aea5551` | docs(integral): pin down exactly what estimate work remains to close `integral_split` — the `l`-shrinks-via-`depth` lever and the `total_eps_sample_le` generalization, so the next lane does not re-derive this. |
 | 2026-08-27 | `14a6484d3` | `scripts/validate-facts.py`: classify `cas-certificate` evidence as `kernel-reconstructed` vs `cas-internal`, reject an unclassifiable checker_command on that route (ADR-0601 SS2). Mutation-tested. |
 | 2026-08-27 | `17e91d839` | `scripts/gen-import-backlog.py` (new): produce `artifacts/import-backlog.json`, the 164-row import backlog, deterministic and ordered by dependency-readiness then curriculum-DAG position (ADR-0601 SS3). `--check` wired into `scripts/check.sh` and the `justfile`. Mutation-tested. |
+| 2026-08-27 | `DONE` | ADR-0603's four remaining graded statement families (MVT, LUB, Taylor remainder, FTA) stated as measured rows in `docs/curriculum/graded-statement-families.md`; two stale `spivak.md` claims corrected (`Complex.abs`/`CReal.sqrt` no longer absent; `Complex.polyMul` no longer blocked); ADR-0603 given a pointer postscript. |
 | 2026-08-27 | (pending) | `Int.modEq_add_mul_left` + five corollaries (`Int.add_modEq_left`, `Int.add_modEq_right`, `Int.mod_modEq`, `Int.modulus_modEq_zero`, `Int.modEq_sub`) in `crates/axeyum-lean-kernel/src/int_prelude/modeq_family.rs`, proved unconditionally in the modulus via `case_split` on `Int.rec` shape — no `0 < n` hypothesis anywhere, closing five of doc 292's eleven declined `Int.ModEq` facts. `derived_laws` recounted 126 → 132 (counted, not incremented). New concrete-instantiation test at n := 0/5/-4, mutation-verified. Five facts flipped `open` → `proved`; five decline artifacts amended (not deleted). `cargo test -p axeyum-lean-kernel --lib`: 832 passed, 0 failed. |
 | 2026-08-27 | (pending) | New `axeyum-lean-kernel/authored-declaration-v1` execution driver in `scripts/validate-autogenesis-operations.py` (re-checkable fields: declaration source/test file existence, literal declaration-in-source check, literal test-function-in-file check, fact-id binding order); registered doc 293's five `Int.ModEq` closures as one operation; ten discrimination tests + eight mutation-verified guards; ADR-0602 amendment; `docs/autogenesis/296`; regenerated `docs/plan/generated/production-provenance-ledger.md`. |
 | 2026-08-27 | `abb9cb9d9` | `statement_goal_record` module: typed bridge from a completed statement-only import to the ledger-shaped fields (kernel-rendered goal, ADR-0350 content identity, substituted-theorem list). Admits nothing to any kernel. |
@@ -4325,6 +4326,55 @@ whole trusted surface **0**:
 Detail and older landed rows moved to [`../notes/creal.md`](docs/plan/notes/creal.md).
 
 Detail and older landed rows moved to [`../notes/creal.md`](docs/plan/notes/creal.md).
+
+**Done (`DONE`, graded-families, 2026-08-27).** Stated the four rows —
+constructive general form, boundary refutation, exact decidable-fragment
+form, labeled import — for MVT, LUB/completeness, Taylor remainder, and FTA
+(the four theorems the 2026-08-27 architecture review §4 named as owed this
+treatment, IVT/EVT already having it). Deliverable:
+[`docs/curriculum/graded-statement-families.md`](docs/curriculum/graded-statement-families.md),
+linked from `spivak.md` (rows 8, 11, 20, 25–27) and from ADR-0603.
+
+Measured with `prelude_theorem_inventory --release --include-constructed`
+(theorem rows) and `kernel_declaration_projection --require-declaration`
+(definitions; exits non-zero on absence), both rebuilt fresh this session
+(`scripts/cargo-serialized.sh build --release -p axeyum-lean-kernel --example
+prelude_theorem_inventory --example kernel_declaration_projection`), plus
+`cargo test -p axeyum-cas --lib extremum::` (20 passed) and
+`python3 scripts/validate-facts.py` (806 facts). Every negative was paired
+with a positive control of the same declaration kind before being trusted.
+
+**Headline findings** (see the doc for full citations):
+
+- **MVT row 2 is an inherited assertion, not a dedicated refutation** — and
+  the EVT unavailability it inherits from is itself marked "in progress" in
+  `crates/axeyum-cas/src/extremum.rs`. MVT row 3 (`polynomial_mvt`) is
+  unbuilt but every ingredient (`rat_derivative`, `polynomial_ivt`,
+  `polynomial_extremum`) already ships — cheapest next task in this note.
+- **LUB row 2 is a clean absence** — no constructive-LUB counterexample
+  exists anywhere in the codebase; `spivak.md`'s "classical LUB unavailable"
+  was never technically an overclaim (it never said "refuted"), but this is
+  the clearest case of asserted-not-proved unavailability found this
+  session. LUB row 3 is `extremum::polynomial_extremum`, reused from EVT,
+  for the polynomial-range special case only.
+- **Taylor remainder is the least-developed family**: row 1 is explicitly
+  sized in `creal/polynomial.rs`'s own module doc but not started (needs an
+  n-fold `hasDerivative` package — only pairwise combinators exist); row 2 is
+  undecided which statement would even need refuting; the CAS `series` route
+  is certified but answers a weaker question (truncation identity, no error
+  bound) than the remainder theorem.
+- **FTA's infrastructure is far more built than `spivak.md` said**:
+  `CReal.sqrt` (2026-08-23) and `Complex.abs` incl. the triangle inequality
+  `abs_add_le` (2026-08-26) both landed and were still marked absent/blocked
+  in `spivak.md`; `Complex.polyMul` plus its two correctness theorems landed
+  2026-08-27 (the same day as this note) and were still marked "genuinely
+  blocked." Both corrected in `spivak.md`. FTA itself remains unbuilt: row 1
+  needs a compactness argument not attempted here, row 2's applicability is
+  unassessed (FTA may not even be in IVT/EVT's failure class), row 3 needs a
+  complex root-isolation algorithm that does not exist in any form.
+
+No facts were registered, no declarations were built, nothing under
+`crates/` was touched (measurement/documentation task per brief).
 
 **Closed five of doc 292's eleven declined `Int.ModEq` facts** (`DONE`,
 int-modeq-kernel, 2026-08-27). Doc 292's batched flywheel turn declined
