@@ -1414,6 +1414,16 @@ passes at 1,454,994,044 proof bytes, one split / 32 leaves / 33 nodes, 5:04.57 w
 parent remained six terminal leaves short at the same audit, so neither the parent nor any
 higher result is yet claimed.
 
+**Bounded-parallel recursive proof replay, 2026-08-26.** ADR-0590 addresses the measured
+single-core checker bottleneck without multiplying solver processes. The native API schedules
+only independent root children through an explicit worker bound, reuses the unchanged recursive
+formula reconstruction and backward-DRAT checker, orders failures by child index, and checks the
+root cover only after all children pass. Two positive/fail-closed controls and all-target Clippy
+pass. Four workers independently rechecked the retained 1,281,549,482-byte / 32-leaf sibling in
+67.53 wall seconds at 351% CPU and 713,172 KiB peak RSS. Its historical sequential 13:51.34 run
+had uncontrolled cache and contention differences, so no speedup ratio is claimed. The two live
+full-root checks were not restarted; their silence remains uncredited and `[7,8]` is unchanged.
+
 **Regression replay gate made load-stable, 2026-08-26.** The pre-push sweep failed twice on
 different corpus rows because it ran `solve_smtlib` and its direct
 `solve_smtlib_with_model` source projection sequentially under independent one-second
