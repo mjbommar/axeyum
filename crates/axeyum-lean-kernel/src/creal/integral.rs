@@ -20990,15 +20990,6 @@ mod riemann_sum_endpoints_le_tests {
 /// cheaper than the additive-inverse-uniqueness rearrangement
 /// `series.rs`/`monotone.rs` use for their own private copies, neither of
 /// which is reachable from here.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "the `neg (a+b)` half of the sample-point regrouping; consumed by \
-                  add_pair_diff_le, itself awaiting integral_split at an ARBITRARY \
-                  split point"
-    )
-)]
 fn neg_add_local(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
     let rat = p.rat;
     let nat = d.nat_ty();
@@ -23379,4 +23370,471 @@ pub(super) fn declare_split_point_approx(
         ty,
         value,
     })
+}
+
+// --- piece 1, MESH-UNIFORM: the `(succ m)` factor cancelled ---------------
+//
+// `riemann_sum_endpoints_le_uniform`'s bound carries an explicit `succ m`
+// factor, so a caller cannot drive the mesh to infinity with it. Feeding the
+// two slack parameters in the form `<real>·Δ` cancels that factor exactly
+// (`mesh_inverse_identity`), leaving a bound that does not mention `m` at
+// all — which is the form the `equiv_zero_of_small` assembly needs.
+
+/// `le (abs (ofRat (natDivSucc 1 m))) (ofRat (natDivSucc 1 m))` — the mesh
+/// fraction bounds its own absolute value.
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "piece 1 in mesh-UNIFORM form; its consumer is integral_split at an \
+                  ARBITRARY split point, whose remaining gap is the assembly, not \
+                  this estimate"
+    )
+)]
+fn abs_frac_le_frac(d: &mut IntDev<'_>, p: CRealPrelude, m: ExprId) -> ExprId {
+    let rat = p.rat;
+    let one_nat = d.num(1);
+    let q = d.const_app(rat.nat_div_succ, &[one_nat, m]);
+    let frac = embed(d, p, q);
+
+    let hq = d.lemma(rat.zero_le_nat_div_succ, &[one_nat, m]);
+    let rz = rzero(d, rat);
+    let nq = rneg(d, q);
+    let nz = rneg(d, rz);
+    let neg_mono = d.lemma(rat.neg_le_neg, &[rz, q, hq]);
+    let neg_zero = d.lemma(rat.neg_zero, &[]);
+    let to_zero = rat_eq_rewrite(d, nz, rz, neg_zero, neg_mono, &|d, t| rle(d, rat, nq, t));
+    let nq_le_q = d.lemma(rat.le_trans, &[nq, rz, q, to_zero, hq]);
+    let emb = d.lemma(p.of_rat_le, &[nq, q, nq_le_q]);
+    let onq = embed(d, p, nq);
+    let nfrac = cneg(d, p, frac);
+    let of_neg = d.lemma(p.of_rat_neg, &[q]); // Equiv (neg frac) onq
+    let back = d.lemma(p.equiv_symm, &[nfrac, onq, of_neg]);
+    let refl_frac = d.lemma(p.equiv_refl, &[frac]);
+    let neg_le = d.lemma(p.le_congr, &[onq, nfrac, frac, frac, back, refl_frac, emb]);
+    let self_le = d.lemma(p.le_refl, &[frac]);
+    d.lemma(p.abs_le, &[frac, frac, self_le, neg_le])
+}
+
+/// `Equiv (mul ((y−x) − (y2−x2)) Δ) (Δ₁ − Δ₂)` for the two mesh steps at the
+/// SAME count `m` — the two widths' difference, scaled once.
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "piece 1 in mesh-UNIFORM form; its consumer is integral_split at an \
+                  ARBITRARY split point, whose remaining gap is the assembly, not \
+                  this estimate"
+    )
+)]
+fn delta_diff_factors(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    x2: ExprId,
+    y2: ExprId,
+    m: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let one_nat = d.num(1);
+    let q = d.const_app(rat.nat_div_succ, &[one_nat, m]);
+    let frac = embed(d, p, q);
+    let w1 = width_of(d, p, x, y);
+    let w2 = width_of(d, p, x2, y2);
+    let d1 = cmul(d, p, w1, frac);
+    let d2 = cmul(d, p, w2, frac);
+    let nd2 = cneg(d, p, d2);
+    let lhs = cadd(d, p, d1, nd2);
+
+    let nw2 = cneg(d, p, w2);
+    let wd = cadd(d, p, w1, nw2);
+    let start = cmul(d, p, wd, frac);
+    let nw2_frac = cmul(d, p, nw2, frac);
+    let s1 = cadd(d, p, d1, nw2_frac);
+    let h1 = right_distrib(d, p, w1, nw2, frac);
+    let h2 = {
+        let move_neg = neg_mul_left_local(d, p, w2, frac);
+        let refl_d1 = d.lemma(p.equiv_refl, &[d1]);
+        d.lemma(p.add_congr, &[d1, d1, nw2_frac, nd2, refl_d1, move_neg])
+    };
+    echain(d, p, start, &[(s1, h1), (lhs, h2)])
+}
+
+/// [`riemann_sum_endpoints_le_uniform`] with the mesh count CANCELLED:
+///
+/// ```text
+/// … → le (abs (riemannSum F x y m − riemannSum F x2 y2 m))
+///        (add (mul M dw) (mul (1/(e+1)) w2b))
+/// ```
+///
+/// `dw` bounds `|(y−x) − (y2−x2)|` and `w2b` bounds `|y2−x2|` — both about
+/// the INTERVALS, with `m` nowhere in the bound. `M := ofRat (natDivSucc
+/// (succ k) 0)`, `bounded_on_unfold`'s own bound at `derivative.rs`'s
+/// `mag_bound k` recipe.
+#[allow(clippy::too_many_arguments)]
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "piece 1 in mesh-UNIFORM form; its consumer is integral_split at an \
+                  ARBITRARY split point, whose remaining gap is the assembly, not \
+                  this estimate"
+    )
+)]
+fn riemann_sum_endpoints_le_mesh_uniform(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    aa: ExprId,
+    bb: ExprId,
+    u: ExprId,
+    k: ExprId,
+    hb: ExprId,
+    x: ExprId,
+    y: ExprId,
+    x2: ExprId,
+    y2: ExprId,
+    m: ExprId,
+    e: ExprId,
+    dw: ExprId,
+    w2b: ExprId,
+    bx: ExprId,
+    bw: ExprId,
+    hxy: ExprId,
+    hx2y2: ExprId,
+    hax: ExprId,
+    hyb: ExprId,
+    hax2: ExprId,
+    hy2b: ExprId,
+    hdw: ExprId,
+    hw2b: ExprId,
+    hbx: ExprId,
+    hbw: ExprId,
+    hfit: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let one_nat = d.num(1);
+    let zero_nat = d.num(0);
+    let q = d.const_app(rat.nat_div_succ, &[one_nat, m]);
+    let frac = embed(d, p, q);
+    let w1 = width_of(d, p, x, y);
+    let w2 = width_of(d, p, x2, y2);
+    let nw2 = cneg(d, p, w2);
+    let wd = cadd(d, p, w1, nw2);
+
+    let dd = cmul(d, p, dw, frac);
+    let d2b = cmul(d, p, w2b, frac);
+    let habs_frac = abs_frac_le_frac(d, p, m);
+
+    // `hdd : |Δ₁ − Δ₂| ≤ dw·Δ`.
+    let hdd = {
+        let scaled = cmul(d, p, wd, frac);
+        let raw = d.lemma(
+            p.abs_mul_le_of_bounds,
+            &[wd, frac, dw, frac, hdw, habs_frac],
+        );
+        // raw : le (abs (mul wd frac)) dd
+        let factored = delta_diff_factors(d, p, x, y, x2, y2, m);
+        let d1 = cmul(d, p, w1, frac);
+        let d2 = cmul(d, p, w2, frac);
+        let nd2 = cneg(d, p, d2);
+        let target = cadd(d, p, d1, nd2);
+        let abs_scaled = d.const_app(p.abs, &[scaled]);
+        let abs_target = d.const_app(p.abs, &[target]);
+        let abs_eq = d.lemma(p.abs_congr, &[scaled, target, factored]);
+        let refl_dd = d.lemma(p.equiv_refl, &[dd]);
+        d.lemma(
+            p.le_congr,
+            &[abs_scaled, abs_target, dd, dd, abs_eq, refl_dd, raw],
+        )
+    };
+    // `hd2 : |Δ₂| ≤ w2b·Δ` — `delta_of x2 y2 m` IS `mul w2 frac`.
+    let hd2 = d.lemma(
+        p.abs_mul_le_of_bounds,
+        &[w2, frac, w2b, frac, hw2b, habs_frac],
+    );
+
+    let raw = riemann_sum_endpoints_le_uniform(
+        d, p, f, aa, bb, u, k, hb, x, y, x2, y2, m, e, dd, d2b, bx, bw, hxy, hx2y2, hax, hyb, hax2,
+        hy2b, hdd, hd2, hbx, hbw, hfit,
+    );
+
+    // --- cancel the `succ m` factor ---------------------------------------
+    let mbound = {
+        let succ_k = d.succ(k);
+        let qq = d.const_app(rat.nat_div_succ, &[succ_k, zero_nat]);
+        embed(d, p, qq)
+    };
+    let eps = {
+        let qq = d.const_app(rat.nat_div_succ, &[one_nat, e]);
+        embed(d, p, qq)
+    };
+    let kb = {
+        let left = cmul(d, p, mbound, dd);
+        let right = cmul(d, p, eps, d2b);
+        cadd(d, p, left, right)
+    };
+    let big_a = cmul(d, p, mbound, dw);
+    let big_b = cmul(d, p, eps, w2b);
+    let s_term = cadd(d, p, big_a, big_b);
+
+    let kb_eq = {
+        let a_frac = cmul(d, p, big_a, frac);
+        let b_frac = cmul(d, p, big_b, frac);
+        let left = cmul(d, p, mbound, dd);
+        let right = cmul(d, p, eps, d2b);
+        let assoc_a = d.lemma(p.mul_assoc, &[mbound, dw, frac]);
+        let back_a = d.lemma(p.equiv_symm, &[a_frac, left, assoc_a]);
+        let assoc_b = d.lemma(p.mul_assoc, &[eps, w2b, frac]);
+        let back_b = d.lemma(p.equiv_symm, &[b_frac, right, assoc_b]);
+        let sum_frac = cadd(d, p, a_frac, b_frac);
+        let split = d.lemma(p.add_congr, &[left, a_frac, right, b_frac, back_a, back_b]);
+        // split : Equiv kb (add a_frac b_frac)
+        let distrib = right_distrib(d, p, big_a, big_b, frac);
+        let s_frac = cmul(d, p, s_term, frac);
+        let back = d.lemma(p.equiv_symm, &[s_frac, sum_frac, distrib]);
+        d.lemma(p.equiv_trans, &[kb, sum_frac, s_frac, split, back])
+        // : Equiv kb (mul s_term frac)
+    };
+
+    let n = d.succ(m);
+    let n_real = d.const_app(p.of_nat, &[n]);
+    let bound = cmul(d, p, n_real, kb);
+    let s_frac = cmul(d, p, s_term, frac);
+    let n_s_frac = cmul(d, p, n_real, s_frac);
+    let step0 = {
+        let refl_n = d.lemma(p.equiv_refl, &[n_real]);
+        d.lemma(p.mul_congr, &[n_real, n_real, kb, s_frac, refl_n, kb_eq])
+    };
+    let n_s = cmul(d, p, n_real, s_term);
+    let ns_frac = cmul(d, p, n_s, frac);
+    let step1 = {
+        let assoc = d.lemma(p.mul_assoc, &[n_real, s_term, frac]);
+        d.lemma(p.equiv_symm, &[ns_frac, n_s_frac, assoc])
+    };
+    let s_n = cmul(d, p, s_term, n_real);
+    let sn_frac = cmul(d, p, s_n, frac);
+    let step2 = {
+        let comm = d.lemma(p.mul_comm, &[n_real, s_term]);
+        let refl_frac = d.lemma(p.equiv_refl, &[frac]);
+        d.lemma(p.mul_congr, &[n_s, s_n, frac, frac, comm, refl_frac])
+    };
+    let n_frac = cmul(d, p, n_real, frac);
+    let s_nfrac = cmul(d, p, s_term, n_frac);
+    let step3 = d.lemma(p.mul_assoc, &[s_term, n_real, frac]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let s_one = cmul(d, p, s_term, one_c);
+    let step4 = {
+        let unit = mesh_inverse_identity(d, p, m);
+        let refl_s = d.lemma(p.equiv_refl, &[s_term]);
+        d.lemma(p.mul_congr, &[s_term, s_term, n_frac, one_c, refl_s, unit])
+    };
+    let step5 = d.lemma(p.mul_one, &[s_term]);
+    let collapse = echain(
+        d,
+        p,
+        bound,
+        &[
+            (n_s_frac, step0),
+            (ns_frac, step1),
+            (sn_frac, step2),
+            (s_nfrac, step3),
+            (s_one, step4),
+            (s_term, step5),
+        ],
+    );
+
+    let rs1 = rsum(d, p, f, x, y, m);
+    let rs2 = rsum(d, p, f, x2, y2, m);
+    let nrs2 = cneg(d, p, rs2);
+    let diff = cadd(d, p, rs1, nrs2);
+    let abs_diff = d.const_app(p.abs, &[diff]);
+    let refl_abs = d.lemma(p.equiv_refl, &[abs_diff]);
+    d.lemma(
+        p.le_congr,
+        &[abs_diff, abs_diff, bound, s_term, refl_abs, collapse, raw],
+    )
+}
+
+#[cfg(test)]
+mod mesh_uniform_endpoints_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// The mesh-uniform endpoint estimate and its dropped-summand control in
+    /// ONE build. The control varies only the RIGHT-hand side of the `le`
+    /// (dropping `(1/(e+1))·w2b`) and leaves the left-hand side the identical
+    /// `ExprId`, so no failing `def_eq` ever has to unfold a `riemannSum`.
+    fn mesh_uniform_probes() -> Vec<(&'static str, Result<(), crate::KernelError>)> {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+        let nat = d.nat_ty();
+        let f_ty = fn_ty(&mut d, p);
+
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let aa_fv = d.fresh_fvar();
+        let aa = d.kernel().fvar(aa_fv);
+        let bb_fv = d.fresh_fvar();
+        let bb = d.kernel().fvar(bb_fv);
+        let u_ty = d.const_app(p.uniformly_continuous_on, &[f, aa, bb]);
+        let u_fv = d.fresh_fvar();
+        let u = d.kernel().fvar(u_fv);
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hb_ty = d.const_app(p.bounded_on, &[f, aa, bb, k]);
+        let hb_fv = d.fresh_fvar();
+        let hb = d.kernel().fvar(hb_fv);
+
+        let carrier_fvs: Vec<_> = (0..8).map(|_| d.fresh_fvar()).collect();
+        let vals: Vec<_> = carrier_fvs.iter().map(|fv| d.kernel().fvar(*fv)).collect();
+        let (x, y, x2, y2) = (vals[0], vals[1], vals[2], vals[3]);
+        let (dw, w2b, bx, bw) = (vals[4], vals[5], vals[6], vals[7]);
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+
+        let hxy_ty = cle(&mut d, p, x, y);
+        let hx2y2_ty = cle(&mut d, p, x2, y2);
+        let hax_ty = cle(&mut d, p, aa, x);
+        let hyb_ty = cle(&mut d, p, y, bb);
+        let hax2_ty = cle(&mut d, p, aa, x2);
+        let hy2b_ty = cle(&mut d, p, y2, bb);
+
+        let w1 = width_of(&mut d, p, x, y);
+        let w2 = width_of(&mut d, p, x2, y2);
+        let nw2 = cneg(&mut d, p, w2);
+        let wdiff = cadd(&mut d, p, w1, nw2);
+        let abs_wdiff = d.const_app(p.abs, &[wdiff]);
+        let hdw_ty = cle(&mut d, p, abs_wdiff, dw);
+        let abs_w2 = d.const_app(p.abs, &[w2]);
+        let hw2b_ty = cle(&mut d, p, abs_w2, w2b);
+        let nx2 = cneg(&mut d, p, x2);
+        let xdiff = cadd(&mut d, p, x, nx2);
+        let abs_xdiff = d.const_app(p.abs, &[xdiff]);
+        let hbx_ty = cle(&mut d, p, abs_xdiff, bx);
+        let hbw_ty = cle(&mut d, p, abs_wdiff, bw);
+        let hfit_ty = {
+            let modul = d.const_app(p.uc_modulus, &[f, aa, bb, u, e]);
+            let one_nat = d.num(1);
+            let q = d.const_app(p.rat.nat_div_succ, &[one_nat, modul]);
+            let target = embed(&mut d, p, q);
+            let sum = cadd(&mut d, p, bx, bw);
+            cle(&mut d, p, sum, target)
+        };
+
+        let hyp_tys = [
+            hxy_ty, hx2y2_ty, hax_ty, hyb_ty, hax2_ty, hy2b_ty, hdw_ty, hw2b_ty, hbx_ty, hbw_ty,
+            hfit_ty,
+        ];
+        let hyp_fvs: Vec<_> = (0..hyp_tys.len()).map(|_| d.fresh_fvar()).collect();
+        let hyps: Vec<_> = hyp_fvs.iter().map(|fv| d.kernel().fvar(*fv)).collect();
+
+        let proof = riemann_sum_endpoints_le_mesh_uniform(
+            &mut d, p, f, aa, bb, u, k, hb, x, y, x2, y2, m, e, dw, w2b, bx, bw, hyps[0], hyps[1],
+            hyps[2], hyps[3], hyps[4], hyps[5], hyps[6], hyps[7], hyps[8], hyps[9], hyps[10],
+        );
+
+        let rs1 = rsum(&mut d, p, f, x, y, m);
+        let rs2 = rsum(&mut d, p, f, x2, y2, m);
+        assert_ne!(
+            rs1, rs2,
+            "the two riemannSums must be distinct terms, or the estimate is |X − X|"
+        );
+        let nrs2 = cneg(&mut d, p, rs2);
+        let diff = cadd(&mut d, p, rs1, nrs2);
+        let abs_diff = d.const_app(p.abs, &[diff]);
+
+        let mbound = {
+            let succ_k = d.succ(k);
+            let zero_nat = d.num(0);
+            let q = d.const_app(p.rat.nat_div_succ, &[succ_k, zero_nat]);
+            embed(&mut d, p, q)
+        };
+        let eps = {
+            let one_nat = d.num(1);
+            let q = d.const_app(p.rat.nat_div_succ, &[one_nat, e]);
+            embed(&mut d, p, q)
+        };
+        let bound_a = cmul(&mut d, p, mbound, dw);
+        let bound_b = cmul(&mut d, p, eps, w2b);
+        let good_bound = cadd(&mut d, p, bound_a, bound_b);
+        assert_ne!(
+            good_bound, bound_a,
+            "the dropped-summand control must not be the same term as the bound"
+        );
+
+        let concl_good = cle(&mut d, p, abs_diff, good_bound);
+        let concl_bad = cle(&mut d, p, abs_diff, bound_a);
+
+        let mut out = Vec::new();
+        for (label, concl) in [
+            ("meshUniformEndpointsGood", concl_good),
+            ("meshUniformEndpointsDroppedBad", concl_bad),
+        ] {
+            let ty = {
+                let mut t = concl;
+                for (i, ty) in hyp_tys.iter().enumerate().rev() {
+                    let _ = i;
+                    t = d.arrow(*ty, t);
+                }
+                t = d.pi_fv(e_fv, nat, t);
+                t = d.pi_fv(m_fv, nat, t);
+                for fv in carrier_fvs.iter().rev() {
+                    t = d.pi_fv(*fv, carrier, t);
+                }
+                t = d.arrow(hb_ty, t);
+                t = d.pi_fv(k_fv, nat, t);
+                t = d.pi_fv(u_fv, u_ty, t);
+                t = d.pi_fv(bb_fv, carrier, t);
+                t = d.pi_fv(aa_fv, carrier, t);
+                d.pi_fv(f_fv, f_ty, t)
+            };
+            let value = {
+                let mut v = proof;
+                for (fv, ty) in hyp_fvs.iter().zip(hyp_tys.iter()).rev() {
+                    v = d.lam_fv(*fv, *ty, v);
+                }
+                v = d.lam_fv(e_fv, nat, v);
+                v = d.lam_fv(m_fv, nat, v);
+                for fv in carrier_fvs.iter().rev() {
+                    v = d.lam_fv(*fv, carrier, v);
+                }
+                v = d.lam_fv(hb_fv, hb_ty, v);
+                v = d.lam_fv(k_fv, nat, v);
+                v = d.lam_fv(u_fv, u_ty, v);
+                v = d.lam_fv(bb_fv, carrier, v);
+                v = d.lam_fv(aa_fv, carrier, v);
+                d.lam_fv(f_fv, f_ty, v)
+            };
+            let anon = d.kernel().anon();
+            let name = d.kernel().name_str(anon, label);
+            out.push((
+                label,
+                d.kernel().add_declaration(Declaration::Theorem {
+                    name,
+                    uparams: vec![],
+                    ty,
+                    value,
+                }),
+            ));
+        }
+        out
+    }
+
+    #[test]
+    fn the_endpoint_estimate_does_not_mention_the_mesh_count() {
+        let results = crate::on_a_deep_stack(mesh_uniform_probes);
+        for (label, res) in results {
+            if label.ends_with("Good") {
+                res.unwrap_or_else(|e| panic!("{label} must be accepted: {e:?}"));
+            } else {
+                assert!(res.is_err(), "{label} must be REFUSED");
+            }
+        }
+    }
 }
