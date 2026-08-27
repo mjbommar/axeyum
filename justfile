@@ -248,6 +248,15 @@ autogenesis-authoritative-compare first second output:
 facts:
     python3 scripts/validate-facts.py
     python3 -m unittest scripts.tests.test_validate_facts
+    # Landed 2026-08-27 in `scripts/check.sh` only, so `just check` -- the gate
+    # CLAUDE.md calls the preferred one -- did not run them. Two of the three
+    # are the controls written that day BECAUSE a pair of tests could not fail;
+    # a control that runs on one side of the aggregate gate runs for half the
+    # people. `scripts/check-aggregate-scope.sh` is what surfaced the gap.
+    python3 -m unittest scripts.tests.test_validate_facts_allowlist
+    python3 -m unittest scripts.tests.test_check_shape_duplicates
+    python3 -m unittest scripts.tests.test_theorem_inventory_completeness
+    python3 -m unittest scripts.tests.test_check_absence_claims
     python3 -m unittest scripts.tests.test_settled_fact_statements
     python3 scripts/check-settled-fact-statements.py
     # The ledger's `depends_on` graph — the arrow CLAUDE.md's flywheel calls
