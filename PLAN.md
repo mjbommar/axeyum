@@ -1268,6 +1268,14 @@ exact driver is live at 358 and advances only after both replay routes. A post-r
 refresh through 2026-08-26 found no five-colour bound at least 357 for this equation, but that
 negative retrieval is not proof of priority.
 
+**Rado claim ledger synchronized, 2026-08-26.** The canonical claim now supersedes its stale
+350-point title and frontier row with the checked 357-point witness. The retained artifact has
+SHA-256 `545f4f7c8704fff31da07a2a2f946eb70ac1787bb3d4c49f4ac3e2d15d20ee1e`;
+the independent claim checker re-enumerated all defining triples for the 357-, 350-, and
+319-point witnesses and reported zero errors. Structural validation reports 104 claims / zero
+errors, and the generated dashboard records 268 evidence rows. The claim remains `open`: this
+is a stronger lower bound, not an UNSAT certificate for 358 or an exact Rado number.
+
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
 external-certificate replay runner for all five packages.  It validates checker and artifact
 bytes before execution, hard-kills a timed-out process session, requires an observable finding

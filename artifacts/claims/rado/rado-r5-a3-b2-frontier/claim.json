@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "id": "rado-r5-a3-b2-frontier",
-  "title": "R_5(3(x-y)=2z) > 350: first five-colour bound for this family",
-  "statement": "The 5-colour Rado number of 3(x-y) = 2z exceeds 350. No five-colour Rado number of the family a(x-y)=bz appears in the literature, whose tables stop at four colours. The bound also establishes that this work's shell construction, which gives 319 at (a,k)=(3,5), is NOT TIGHT at k=5 -- in contrast to k=3 and k=4, where it is attained at every point tested.",
+  "title": "R_5(3(x-y)=2z) > 357: checked five-colour frontier bound",
+  "statement": "The 5-colour Rado number of 3(x-y) = 2z exceeds 357. Exact web, arXiv, and Scholar-oriented searches through 2026-08-26 located no prior five-colour bound at least 357 for this equation; this is dated negative retrieval evidence, not proof of priority. The bound also establishes that this work's shell construction, which gives 319 at (a,k)=(3,5), is NOT TIGHT at k=5 -- in contrast to k=3 and k=4, where it is attained at every point tested.",
   "epistemic_status": "open",
   "formal": {
     "language": "cnf-family",
@@ -59,8 +59,8 @@
       "axeyum formula.evaluate model self-check",
       "scripts/check-claim-certificates.py witness replay (independent O(n^2) enumerator, 22,472 solution triples enumerated)"
     ],
-    "date": "2026-08-12",
-    "machine": "linux x86-64, 16 cores, contended",
+    "date": "2026-08-26",
+    "machine": "linux x86-64, 24 cores, load-managed and contended",
     "toolchain": {
       "axeyum_commit": "c516b5fac20f38886dfad41433656bad988f9f5c",
       "rustc_version": "rustc 1.94.1 (e408947bf 2026-03-25)",
@@ -81,6 +81,17 @@
     ]
   },
   "evidence": [
+    {
+      "id": "witness-357",
+      "kind": "witness-replay",
+      "supports": "R_5 > 357 (strongest retained lower bound)",
+      "artifact": "artifacts/claims/rado/rado-r5-a3-b2-frontier/witness-357.txt",
+      "artifact_sha256": "545f4f7c8704fff31da07a2a2f946eb70ac1787bb3d4c49f4ac3e2d15d20ee1e",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-claim-certificates.py --only rado-r5-a3-b2-frontier",
+      "notes": "A 5-colouring of [357] using all five colours, with no monochromatic solution among all 28,203 defining triples. CaDiCaL seed 619 found the model on the canonical 1,785-variable / 146,367-clause instance; Axeyum's strict model import and this independent direct relation enumerator both replayed it. This proves only the lower bound; instance 358 remains open.",
+      "artifact_format": "colouring-text"
+    },
     {
       "id": "witness-350",
       "kind": "witness-replay",
@@ -106,13 +117,13 @@
   ],
   "frontier": {
     "known": [
-      "R_5(3(x-y)=2z) > 350, witnessed and verified (evidence row witness-350); the earlier 319 witness is retained as the point that refuted tightness",
+      "R_5(3(x-y)=2z) > 357, witnessed and verified (evidence row witness-357); the earlier 350 and 319 witnesses are retained as reproducibility and historical frontier points",
       "The shell construction of this work yields a verified solution-free colouring of [N] with N+1 = a^k + a^(k-1) - 2a + 1; this is ATTAINED at (a,k)=(3,3) [31], (4,3) [73], (3,4) [103] and (4,4) [313], all independently re-verified, but NOT at (3,5), where it gives 318 while a 5-colouring of [319] exists. The general-k proof is asserted in the construction source and has NOT been independently verified here.",
       "Independent corroboration of k=5 non-tightness in a different column: Li (SSRN 6814341) reports R_5(3)>296>243 for b=1",
-      "The incremental climb stalled at 351 after warm-restart retries; that is a search limit, not evidence of a threshold"
+      "Canonical exact instances 351 through 357 are SAT and replayed; instance 358 is actively solving, and its incomplete proof stream has no evidentiary status"
     ],
     "would_settle": "A verified 5-colouring of [n-1] together with an exhaustive cube cover refuting [n], for the same n. Both artifact kinds and their checkers exist in this family; the obstruction is the cost of refutation at k=5, not the encoding.",
-    "attack_notes": "The satisfiable side is cheap here (14.8 s by cube search, 32.3 s by monolithic CDCL), so the lower bound can be pushed far. The refutation side at five colours is untested at any n and is the real question."
+    "attack_notes": "The satisfiable side remained tractable through 357, although solve time rose to 24:46.01 at 357. The refutation side at five colours is still unclosed and is the real exact-value question."
   },
   "notes": "Recorded because a failed prediction is evidence. The construction's bound remains SOUND -- a lower bound cannot be refuted by finding a larger colouring -- but its tightness, which holds at k=3 and k=4, does not extend to k=5. This is the datum that scopes every tightness claim in this work to k <= 4."
 }
