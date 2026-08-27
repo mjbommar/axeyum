@@ -21824,32 +21824,6 @@ mod piece_one_unconditional_tests {
 // `PosBound` on the width. That hypothesis is the whole content of this
 // section's name: nothing here is universally quantified in `c` without it.
 
-/// `le zero (add y (neg x))` from `hxy : le x y` — an ordered pair's width is
-/// nonnegative.
-///
-/// The same three moves [`delta_nonneg_of`] makes for its own first step,
-/// factored out so a second caller does not restate them.
-fn width_nonneg_of(
-    d: &mut IntDev<'_>,
-    p: CRealPrelude,
-    x: ExprId,
-    y: ExprId,
-    hxy: ExprId,
-) -> ExprId {
-    let zero_c = czero(d, p);
-    let nx = cneg(d, p, x);
-    let refl_nx = d.lemma(p.le_refl, &[nx]);
-    let x_nx = cadd(d, p, x, nx);
-    let y_nx = cadd(d, p, y, nx);
-    let shifted = d.lemma(p.add_le_add, &[x, y, nx, nx, hxy, refl_nx]);
-    let hn = d.lemma(p.add_neg, &[x]); // Equiv (add x (neg x)) zero
-    let refl_ynx = d.lemma(p.equiv_refl, &[y_nx]);
-    d.lemma(
-        p.le_congr,
-        &[x_nx, zero_c, y_nx, y_nx, hn, refl_ynx, shifted],
-    )
-}
-
 /// `t := (b − a)⁻¹ · (c − a)` — the split fraction, with the inverse on the
 /// LEFT so that [`CRealPrelude::mul_le_mul_of_nonneg_left`] applies to it
 /// without a `mul_comm` first.
@@ -22012,7 +21986,7 @@ mod split_fraction_tests {
 
     #[test]
     fn split_fraction_is_in_the_unit_interval() {
-        let results = split_fraction_probes();
+        let results = crate::on_a_deep_stack(split_fraction_probes);
         for (label, res) in results {
             if label.ends_with("Good") {
                 res.unwrap_or_else(|e| panic!("{label} must be accepted: {e:?}"));
