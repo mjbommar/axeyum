@@ -3013,6 +3013,43 @@ pub struct CRealPrelude {
     /// exact form.
     pub order_reflect_of_pos_deriv: NameId,
 
+    /// `CReal.inverse_lipschitz_of_pos_deriv : ∀ F F' a b, HasDerivativeOn F
+    /// F' a b → ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k))
+    /// (F' z)) → ∀ x y, le a x → le x b → le a y → le y b → Apart x y →
+    /// le (abs (add x (neg y))) (mul (ofNat (Nat.succ e_acc))
+    /// (abs (add (F x) (neg (F y)))))`, `e_acc := Nat.succ (Nat.mul 2 k)`
+    /// (`creal/monotone.rs`) — Chapter 12's CONTINUITY-of-the-inverse
+    /// statement: a two-sided Lipschitz bound on the DOMAIN gap in terms of
+    /// the CODOMAIN gap, so a caller who already has `F x` close to `F y`
+    /// (plus `Apart x y` as data) gets `x` close to `y`, without ever
+    /// deciding the order of `x`/`y` from the codomain fact alone the way
+    /// unconditional order-reflection would need.
+    ///
+    /// Composes two already-proved pieces, one per branch of the case split
+    /// on the given `Apart x y`: [`Self::strict_mono_magnitude`] gives the
+    /// RAW bound `(1/(2k+2))·(hi−lo) ≤ F hi − F lo` for whichever of
+    /// `x`/`y` is smaller, and [`Self::scale_cancel_le`] clears the
+    /// fraction to `(hi−lo) ≤ (2k+2)·(F hi − F lo)`. Turning that
+    /// ONE-sided, order-dependent bound into the two-sided `abs` statement
+    /// needs [`Self::abs_le`] plus a small ring identity this file builds
+    /// locally (`neg (add x (neg y))` `Equiv` `add y (neg x)`, i.e.
+    /// `neg (x−y) ~ (y−x)` — the same distributivity fact `creal/series.rs`
+    /// and `creal/derivative.rs` each already carry their own private copy
+    /// of, as `neg_add`/`neg_add_distrib`) to identify `neg (x−y)` with
+    /// `y−x` and transport the one-sided bound across it, plus
+    /// [`Self::mul_le_mul_of_nonneg_left`] to widen `F hi − F lo` to
+    /// `abs (F x − F y)` (needing `0 ≤ (2k+2)`, from [`Self::of_nat_le`]
+    /// against `Nat.zero_le`) and [`Self::add_le_add`]/[`Self::add_neg`] for
+    /// the sign facts (`x−y ≤ 0 ≤ (2k+2)·(F hi−F lo)` in the branch where
+    /// `x < y`, and its mirror).
+    ///
+    /// Unlike [`Self::order_reflect_of_pos_deriv`], this does NOT need the
+    /// codomain hypothesis `lt (F x) (F y)` at all — it bounds the gap in
+    /// BOTH directions from `Apart x y` alone, which is what makes it a
+    /// genuine continuity-of-the-inverse statement rather than a restatement
+    /// of order-reflection.
+    pub inverse_lipschitz_of_pos_deriv: NameId,
+
     /// `CReal.ivt_step : ∀ F P Q eps, lt zero eps → le P Q → le (F P) eps →
     /// le (neg eps) (F Q) → ∃ P' Q', le P P' ∧ le P' Q' ∧ le Q' Q ∧
     /// le (F P') eps ∧ le (neg eps) (F Q') ∧ Equiv (add Q' (neg P')) (mul
@@ -3881,6 +3918,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
             .name_str(creal, "diff_le_of_strict_mono_magnitude"),
         strict_injective_of_pos_deriv: kernel.name_str(creal, "strict_injective_of_pos_deriv"),
         order_reflect_of_pos_deriv: kernel.name_str(creal, "order_reflect_of_pos_deriv"),
+        inverse_lipschitz_of_pos_deriv: kernel.name_str(creal, "inverse_lipschitz_of_pos_deriv"),
         ivt_step: kernel.name_str(creal, "ivt_step"),
         constant_of_zero_deriv: kernel.name_str(creal, "constant_of_zero_deriv"),
         antitone_of_nonpos_deriv: kernel.name_str(creal, "antitone_of_nonpos_deriv"),
@@ -4251,6 +4289,13 @@ pub(crate) fn build_creal_prelude_uncached(
         // above); nothing later depends on it, so it lands right after its
         // one real dependency.
         inverse_fn::declare_order_reflect_of_pos_deriv(&mut d, prelude)?;
+        // `inverse_lipschitz_of_pos_deriv` needs `strict_mono_magnitude` and
+        // `scale_cancel_le` (`monotone::declare_monotone_of_nonneg_deriv_all`,
+        // well above) plus base `abs`/`le`/`add` lemmas (far above); it lands
+        // here, next to its sibling `order_reflect_of_pos_deriv`, since both
+        // are Chapter 12's case-split-on-`Apart` idiom over the same
+        // Chapter 11 machinery.
+        monotone::declare_inverse_lipschitz_of_pos_deriv(&mut d, prelude)?;
         power::declare_power(&mut d, prelude)?;
         // `hasDerivative_pow_two` mentions `CReal.pow`, which `power.rs`
         // declares. It cannot live inside `derivative::declare_derivative`,
