@@ -41,24 +41,35 @@
 //! is, but with no nonnegativity hypothesis — `max`'s own step law
 //! (`le_max_left`) needs none).
 //!
-//! **Not landed this session: `CReal.supOn` itself**, and therefore none of
-//! deliverables (a)/(b)/(c) the assignment names. This is not a hedge —
-//! it is the honest outcome of a real attempt, and the obstruction is
-//! concrete enough to write down precisely, which is the point of recording
-//! it here rather than leaving a silent gap.
+//! **Also landed this session (route 2's first two rungs — see below):**
+//! `CReal.meshLevelCount` (`Nat → Nat`, the geometric doubling schedule
+//! `meshLevelCount j = 2^j − 1`, built additively so it needs no `Nat.mul`)
+//! and `CReal.meshMax` (`(CReal → CReal) → CReal → CReal → Nat → CReal`, the
+//! level-`j` mesh maximum `meshMax F a b j := maxRange (fun i => F(a +
+//! i·Δⱼ)) (meshLevelCount j)`, `Δⱼ := (b−a)/(meshLevelCount j + 1)`). Both
+//! are pure `Definition`s needing no hypothesis on `F`/`a`/`b` and no
+//! continuity witness — the continuity only enters at the NEXT rung.
 //!
-//! ### Why `supOn` did not land, precisely
+//! **Still not landed: `CReal.supOn` itself**, and therefore none of
+//! deliverables (a)/(b)/(c) the assignment names in fully assembled form.
+//! This is not a hedge — it is the honest outcome of a real attempt at the
+//! full route, and the remaining obstruction is now characterized much more
+//! precisely than at the start of this session (below), which is the point
+//! of recording it here rather than leaving a silent gap.
+//!
+//! ### Why `supOn` did not land, precisely — and the now-concrete plan for it
 //!
 //! `supOn` needs `CReal.mk (speedup f_lambda K) (regularity proof)`, built
 //! **without** `Exists.rec` (kernel fact 1 — `K` and `f_lambda` must be
 //! *concrete* data, never extracted from an existential, since they feed
 //! `speedup`, a `Type`-level construction). Landing that regularity proof —
 //! `∀ p q, Within (seq (f_lambda p) p − seq (f_lambda q) q) (natDivSucc K p +
-//! natDivSucc K q)` for `f_lambda n := maxRange (fun i => F(meshPoint a b n
-//! i)) (meshCount n)` — needs, for two *independent* accuracies `p`/`q`, a
-//! bound relating `maxRange` over mesh `p` to `maxRange` over mesh `q`. That
+//! natDivSucc K q)` — needs, for two *independent* accuracies `p`/`q`, a
+//! bound relating a mesh maximum at one accuracy to one at another. That
 //! bound needs, for an arbitrary point of one mesh, the *nearest point of the
-//! other mesh* — a genuine "which cell" lookup.
+//! other mesh* — a genuine "which cell" lookup, UNLESS the two meshes are
+//! chosen to nest exactly, which is exactly what `meshLevelCount`'s doubling
+//! schedule buys (below).
 //!
 //! Two routes were investigated and both are real, existing machinery — this
 //! is not a case of the tool being missing, only of correctly assembling it
@@ -73,33 +84,105 @@
 //!    on the lower clamp, a still-open gap the same file's `crossingClose`
 //!    entry names explicitly). Reusing it correctly for a *different*
 //!    quantity (a running maximum, not a single boundedness witness) is a
-//!    genuine new proof, not a two-line application.
-//! 2. **A NESTED-REFINEMENT construction avoiding bucket-index entirely**,
-//!    using [`Rat.natDivSucc_scale`](crate::RatPrelude::nat_div_succ_scale)
-//!    and [`Rat.natDivSucc_mul`](crate::RatPrelude::nat_div_succ_mul) to make
-//!    consecutive mesh levels *exactly* nest (so a refined mesh's new points
-//!    are related to the coarser mesh's points by closed-form rational
-//!    algebra, never a `Nat.div` search), then telescoping the resulting
-//!    one-step bound (`f(n+1) ≤ f(n) + magBound(n)`, `magBound` geometric so
-//!    the telescoped sum stays finite) via the *already-public*
-//!    [`CReal.sumRange_cauchy_of_dominated`](super::CRealPrelude::sum_range_cauchy_of_dominated)
-//!    family (`creal/series.rs`) — a genuine comparison test for `Cauchy`
-//!    that exists exactly for this shape. This route was worked out in full
-//!    on paper (the block-splitting `maxRange` identity, the displacement
-//!    algebra, the telescoping) and involves no unproved mathematics, but
-//!    assembling roughly fifteen to twenty more kernel declarations correctly
-//!    — a `maxRange_block_split` combinatorial identity, the geometric mesh-
-//!    count recursion, the one-step estimate, and wiring the telescope
-//!    through to `regular_of_scaled_cauchy` — is comparable in scope to
-//!    `creal/integral.rs`'s own cross-mesh development (`riemannSumDeepCauchy`
-//!    and friends) and did not fit the remainder of this session on top of
-//!    the investigation above.
+//!    genuine new proof, not a two-line application. **Rejected**, unchanged
+//!    from the prior assessment.
+//! 2. **A NESTED-REFINEMENT construction avoiding bucket-index entirely**
+//!    (this file, in progress). `meshLevelCount`'s doubling means level `j`'s
+//!    mesh points are EXACTLY a subset of level `j'`'s (`j' ≥ j`): a coarse
+//!    sample `a + i·Δⱼ` equals the fine sample `a + (i·2^(j'−j))·Δⱼ'`, a pure
+//!    index-scaling identity via
+//!    [`Rat.natDivSucc_scale`](crate::RatPrelude::nat_div_succ_scale) /
+//!    [`Rat.natDivSucc_mul`](crate::RatPrelude::nat_div_succ_mul) — no
+//!    `Nat.div`, no search. That is the property route 1 does not have.
 //!
-//! Route 2 is the one to pick up: it needs no bucket-index reuse, no
-//! `Nat.div`, and every lemma it calls (`nat_div_succ_scale`,
-//! `nat_div_succ_mul`, `nat_div_succ_le_scaled`, `nat_div_succ_antitone`,
-//! `mono_of_le_succ`, `sum_range_telescope`, `sum_range_cauchy_of_dominated`)
-//! already exists and is public.
+//! **The remaining assembly, characterized precisely (verified against this
+//! kernel's actual API this session, not just worked out on paper):**
+//!
+//! - **Rung 3, the order half (no continuity needed):**
+//!   `meshMax_step_le : ∀ F a b j, le (meshMax F a b j) (meshMax F a b
+//!   (Nat.succ j))`. This is NOT an instance of
+//!   [`CReal.mono_of_le_succ`](super::CRealPrelude::mono_of_le_succ) the way
+//!   `maxRange_mono` is (`mono_of_le_succ` holds the SAMPLING FUNCTION fixed
+//!   and varies only `maxRange`'s own bound; here both the sampling function
+//!   AND the bound change together as `j` grows). It needs a genuinely new
+//!   combinator, proved once and reusable well beyond this file:
+//!   `maxRange_transport : ∀ f g n n' (e : Nat → Nat), (∀ i, Nat.le i n →
+//!   Nat.le (e i) n') → (∀ i, Nat.le i n → Equiv (f i) (g (e i))) → le
+//!   (maxRange f n) (maxRange g n')` — by induction on an AUXILIARY index `k`
+//!   (motive `fun k => Nat.le k n → le (maxRange f k) (maxRange g n')`, the
+//!   side condition threaded through the motive exactly the way
+//!   [`NatOps::induct`](crate::nat_prelude::NatOps::induct)'s generic `p`
+//!   closure supports — confirmed against its actual signature this session),
+//!   base case via [`CRealPrelude::maxRange_ub`] plus
+//!   [`CRealPrelude::le_congr`], step case via
+//!   [`CRealPrelude::max_le`](super::CRealPrelude::max_le) (confirmed to
+//!   exist: `∀ x y z, le x z → le y z → le (max x y) z`) combining the IH
+//!   with a fresh `maxRange_ub` instance. Instantiated at `e(i) := 2·i`,
+//!   `n := meshLevelCount j`, `n' := meshLevelCount (succ j)` (so `e(i) ≤ n'`
+//!   is `2i ≤ 2·meshLevelCount j + 1`, immediate from `i ≤ meshLevelCount j`),
+//!   the `Equiv` hypothesis is exactly the sample-point identity above,
+//!   closed via [`CRealPrelude::of_nat_mul`] (`ofNat (2i) ~ mul (ofNat 2)
+//!   (ofNat i)`, confirmed to exist) plus the `natDivSucc_scale`/`_mul`
+//!   algebra giving `mul (ofNat 2) Δⱼ' ~ Δⱼ`.
+//! - **Rung 4, general monotonicity, for free once rung 3 lands:**
+//!   `meshMax_mono : ∀ F a b j j', Nat.le j j' → le (meshMax F a b j)
+//!   (meshMax F a b j')`, by [`CRealPrelude::mono_of_le_succ`] applied to
+//!   `fun j => meshMax F a b j` with rung 3 as the adjacent step — EXACTLY
+//!   [`declare_max_range_mono`]'s own construction, one level up.
+//! - **Rung 5, the accuracy-selection scheme (where continuity enters).**
+//!   The naive choice — request the SAME accuracy `k` as the outer `CReal`
+//!   index — fails: uniform continuity at request `k` only bounds the
+//!   one-step gap by `1/(k+1)` (the HARMONIC series, not summable), so the
+//!   telescoped tail never converges. The level-`k` mesh must instead be fine
+//!   enough for accuracy request `2^k − 1` (i.e. `meshLevelCount k` itself,
+//!   reusing that same function as the REQUESTED accuracy index), giving a
+//!   one-step gap `≤ 1/2^k` — summable — via
+//!   `Nat.lt_pow_size : ∀ n, Lt n (pow 2 (size n))` (confirmed to exist,
+//!   `nat_prelude.rs`) to turn `u.modulus(meshLevelCount k)`, an ARBITRARY
+//!   `Nat`, into a POWER-OF-TWO exponent comfortably above it, with NO
+//!   `Nat.div`/search: `exponent(k) := Nat.size (u.modulus (meshLevelCount
+//!   k))`. `exponent` need not be monotone (an arbitrary modulus need not
+//!   be), so nesting needs a running accumulator forcing monotonicity —
+//!   **use `Nat.add`, not `Nat.max`: this kernel's `Nat` prelude has no
+//!   `Nat.max`,** and addition suffices (`trueExponent 0 := exponent 0`,
+//!   `trueExponent (succ k) := add (trueExponent k) (exponent (succ k))`,
+//!   monotone via [`Nat.le_add_right`](crate::NatPrelude::le_add_right) and
+//!   `≥ exponent(k)` via the same lemma read through `Nat.add_comm`). The
+//!   final `f_lambda(k) := meshMax F a b (trueExponent k)` is then genuinely
+//!   nested (rung 3/4 apply, `j := trueExponent k`), and the per-level
+//!   gap is bounded by `1/2^k` via the modulus applied at accuracy request
+//!   `meshLevelCount k` on the KNOWN, closed-form displacement between a
+//!   fine point and its immediate coarse neighbour (no bucket search — the
+//!   doubling nesting makes that displacement exact, not merely bounded).
+//! - **Rung 6, the telescope.** Sum the per-level gaps via
+//!   [`CReal.sumRange_cauchy_of_dominated`](super::CRealPrelude::sum_range_cauchy_of_dominated)
+//!   (`creal/series.rs`) against a CONCRETE ratio-`1/2` geometric dominator —
+//!   **`creal/geometric.rs` already proves `Cauchy (sumRange (fun n => pow x
+//!   n))` for `x` bounded away from `1` by a witnessed `PosBound`**
+//!   (`geom_tail_bounded_div`/`geom_tail_within`, that file's own module
+//!   documentation), and at the CONCRETE `x := natDivSucc 1 1` (`= 1/2`) the
+//!   needed `PosBound (add one (neg x)) k` witness is immediate (no
+//!   apartness search — `1 − 1/2 = 1/2` is a fixed rational, not an arbitrary
+//!   hypothesis). A constant-multiple corollary (scaling a Cauchy bound by a
+//!   fixed positive `CReal` constant) is the one piece here NOT already
+//!   confirmed to exist by name and may need a short derivation.
+//! - **Rung 7.** Feed the resulting `K`-scaled Cauchy witness to
+//!   [`CReal.regular_of_scaled_cauchy`](super::CRealPrelude::regular_of_scaled_cauchy),
+//!   exactly [`declare_creal_integral`](super::integral::declare_creal_integral)'s
+//!   own `CReal.mk (speedup f_lambda K) (regular_of_scaled_cauchy f_lambda K
+//!   h)` shape (kernel fact 1 respected: `f_lambda`/`K` stay concrete data
+//!   throughout, never pulled from an `Exists`).
+//!
+//! This plan is now grounded against the kernel's actual API (every named
+//! lemma above was confirmed present this session, not merely recalled) —
+//! the remaining work is assembling rungs 3–7 as kernel terms, each with its
+//! own real risk of `TypeMismatch` cycles (see this file's own experience
+//! with rungs 1–2, which built cleanly on the first attempt each time by
+//! mirroring `declare_max_range`'s and `integral.rs`'s existing shapes
+//! exactly rather than composing primitives from scratch). Rung 3 is the
+//! next concrete task; do NOT skip to rung 5 without it, since rung 4's
+//! `mono_of_le_succ` application needs rung 3 as its adjacent-step
+//! hypothesis verbatim.
 
 #![allow(clippy::doc_markdown, clippy::too_many_arguments)]
 
