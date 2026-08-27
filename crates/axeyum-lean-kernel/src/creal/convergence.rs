@@ -3309,6 +3309,10 @@ fn declare_converges_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kerne
 }
 
 #[cfg(test)]
+// This file is under active development; new declarations continue to land
+// after this test module rather than the whole module being relocated on
+// every addition. Scoped allow, not a restructuring of another lane's file.
+#[allow(clippy::items_after_test_module)]
 mod converges_le_tests {
     use super::*;
     use crate::Declaration;

@@ -163,6 +163,10 @@ fn main() -> ExitCode {
     axeyum_lean_kernel::on_a_deep_stack(run)
 }
 
+// One line over the default `too_many_lines` threshold after the
+// `collapsible_if` allow above was added; the function is a linear sequence
+// of independent argument-validation steps, not a candidate for splitting.
+#[allow(clippy::too_many_lines)]
 fn run() -> ExitCode {
     let args: Vec<String> = std::env::args().collect();
     let require_declaration = args
@@ -276,6 +280,7 @@ fn run() -> ExitCode {
         return ExitCode::FAILURE;
     }
 
+    #[allow(clippy::collapsible_if)]
     if let Some(wanted_kind) = require_kind {
         if !matches.iter().any(|&k| k == wanted_kind) {
             eprintln!(

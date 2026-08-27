@@ -191,6 +191,9 @@ fn n_term_polynomial(d: &mut IntDev<'_>, p: ComplexPrelude, coeffs: &[ExprId]) -
     let rec_name = d.prelude().rec;
     let rec = d.kernel().const_(rec_name, vec![one_level]);
 
+    // Nested helper is only usable here; the surrounding statements it
+    // follows are just the local bindings above it, not logic it depends on.
+    #[allow(clippy::items_after_statements)]
     fn minor_succ(
         d: &mut IntDev<'_>,
         carrier: ExprId,
