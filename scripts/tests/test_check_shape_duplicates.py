@@ -317,15 +317,25 @@ GUARDS: list[tuple[str, str, str]] = [
 
 # Which test in this module is the one specific to each guard (run by name
 # via unittest's dotted test id, one process per invocation).
+# NOT `__name__`: it is invocation-dependent -- `test_check_shape_duplicates`
+# under `-m unittest` from this directory, `scripts.tests.test_check_shape_duplicates`
+# by dotted path from the repo root, `__main__` when run as a script. `run_one_test`
+# always spawns its subprocess with `cwd=scripts/tests`, so only the bare module name
+# resolves there, and using `__name__` made this suite pass under exactly ONE
+# invocation and fail under the other two -- a gate on one working directory.
+# Caught by the baseline assertion in `test_every_guard_is_killed_by_its_own_mutation`,
+# which refuses to score mutants against a failing baseline.
+_MODULE = "test_check_shape_duplicates"
+
 GUARD_TEST_IDS: dict[str, str] = {
-    "malformed-line-column-count": f"{__name__}.ParseDuplicatesTests.test_malformed_line_missing_a_column_raises",
-    "fewer-than-two-names": f"{__name__}.ParseDuplicatesTests.test_line_with_fewer_than_two_names_raises",
-    "allowlist-empty-reason": f"{__name__}.LoadAllowlistTests.test_entry_with_empty_reason_raises",
-    "allowlist-bad-names-shape": f"{__name__}.LoadAllowlistTests.test_entry_with_one_name_raises",
-    "allowlist-duplicate-entry": f"{__name__}.LoadAllowlistTests.test_duplicate_entries_for_the_same_group_raise",
-    "unrecognized-detection": f"{__name__}.MainEndToEndTests.test_new_duplicate_exits_one",
-    "stale-detection": f"{__name__}.MainEndToEndTests.test_stale_allowlist_entry_exits_one",
-    "verdict-count-mismatch": f"{__name__}.MainEndToEndTests.test_verdict_count_mismatch_exits_two",
+    "malformed-line-column-count": f"{_MODULE}.ParseDuplicatesTests.test_malformed_line_missing_a_column_raises",
+    "fewer-than-two-names": f"{_MODULE}.ParseDuplicatesTests.test_line_with_fewer_than_two_names_raises",
+    "allowlist-empty-reason": f"{_MODULE}.LoadAllowlistTests.test_entry_with_empty_reason_raises",
+    "allowlist-bad-names-shape": f"{_MODULE}.LoadAllowlistTests.test_entry_with_one_name_raises",
+    "allowlist-duplicate-entry": f"{_MODULE}.LoadAllowlistTests.test_duplicate_entries_for_the_same_group_raise",
+    "unrecognized-detection": f"{_MODULE}.MainEndToEndTests.test_new_duplicate_exits_one",
+    "stale-detection": f"{_MODULE}.MainEndToEndTests.test_stale_allowlist_entry_exits_one",
+    "verdict-count-mismatch": f"{_MODULE}.MainEndToEndTests.test_verdict_count_mismatch_exits_two",
 }
 
 
