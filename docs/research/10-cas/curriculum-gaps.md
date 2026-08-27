@@ -20,7 +20,7 @@ are corrected in §5.
 | Branch | Verdict |
 |---|---|
 | **00-foundations** | Essentially covered — the finite/Boolean content correctly routes to the SAT/EUF/BV solver; induction's polynomial-sum need is *shipped* (`sum_polynomial`). One doc-attribution nit (propositional-logic credited to CAS `simplify`; it's SAT). |
-| **01-number-systems** | Naturals/integers/rationals solid. **Reals is the weak point**: `RealAlgebraic` exists in `axeyum-ir` but is *never wired into `axeyum-cas`*, has no `inv`/`div`, and `solve` silently declines degree ≥ 3. Radical simplification, `evalf`, continued fractions absent. Complex = `I`-symbol identity-checking only (not a ℚ(i) type). |
+| **01-number-systems** | Naturals/integers/rationals solid. **Reals, updated**: `axeyum-cas/src/real_algebraic.rs` now wires `RealAlgebraic` in (ADR-0601) — `inv`/`div` added, plus a GCD-based `algebraic_eq` and the exact polynomial IVT as a checkable certificate. `crate::solve` (the `CasExpr`/radical-form entry point) still declines an irreducible cubic-or-higher factor by design; `real_algebraic::real_roots` is the exact (non-radical) route for any degree, already exercised on the classic non-solvable quintic. Radical simplification, `evalf`, continued fractions absent. Complex = `I`-symbol identity-checking only (not a ℚ(i) type). |
 | **02-structures** | Divisibility/modular/polynomial-arithmetic solid. **Finite groups/rings, 𝔽_{pⁿ} extension fields, multivariate factorization, public resultant/discriminant, cyclotomics, permutation-as-object, linear-recurrence closed forms** are all unroadmapped. |
 | **03-destinations** | Calculus analytic core good. **Eigenvectors, minimal polynomial, vector calculus (grad/div/curl)/Jacobian, LU/QR/Cholesky/Gram–Schmidt, Legendre/Jacobi/primitive-roots/CF/Pell, discrete log, Taylor-about-a-point, improper/multiple integrals, Jordan form, Laurent/Puiseux** absent or only label-deep. |
 | **foundational-books** | Confirms 03 + adds **definite/Riemann integration** (cheapest win — `integrate`+`substitute`+`equal` already exist), **Taylor remainder bound**, sup/inf & IVT/EVT shadows, series-convergence tests, continuity/curve-sketching predicates, SOS/Positivstellensatz (the named NRA frontier), inner-product/norm layer. |
@@ -50,7 +50,7 @@ are corrected in §5.
 14. **Public `resultant`/`discriminant`** — expose the existing Sylvester machinery. Cert: cofactor. *(02 #5)*
 15. **Cubic/quartic solve** (Cardano/Ferrari) or documented RootOf routing for degree ≥ 3. Cert: substitute-back. *(01 #6)*
 16. **`evalf`** — n-digit / interval numeric evaluation (rationals exact; `RealAlgebraic::approx_midpoint`; transcendental heads via bounded series). *(01 #4)*
-17. **Wire `RealAlgebraic` into `axeyum-cas`** + add `RealAlgebraic::inv`/`div` — lets `solve`/`equal` return/certify degree ≥ 3 real roots. *(01 #1–2 — the biggest single 01 gap)*
+17. ~~Wire `RealAlgebraic` into `axeyum-cas` + add `RealAlgebraic::inv`/`div`~~ — **shipped**: `axeyum-cas/src/real_algebraic.rs` (ADR-0601). Remaining: `crate::solve`/`equal` themselves still only speak `CasExpr` (radical forms); routing a degree ≥ 3 irreducible factor's exact root through them needs either a new `CasExpr` variant for a named algebraic root, or a documented separate entry point (this file uses the latter for now — see [decidability-map.md](decidability-map.md)). *(01 #1–2)*
 18. **Inequality solving** (linear/quadratic → interval, via sign analysis / real-root isolation). *(k12 #2)*
 19. **Exact trig values at special angles** (`sin(π/6)=1/2` table) + basic trig-equation solving. *(k12 #3)*
 20. **Log-rule simplifier** (product/quotient/power/change-of-base), assumptions-gated. *(k12 #7, foundational-books)*
@@ -109,8 +109,11 @@ linear recurrences (11, `solve_recurrence`) now **certify** (see
 [exp-tower.md](exp-tower.md)); Hermite/Smith (9), permutations, inequality solving
 (18), partial fractions with repeated factors all landed too.
 
-**Still open:** full `RealAlgebraic`/RootOf wiring (17) — the residual exp-tower
-scaling (`exp(x/2)`) and Lazard–Rioboo–Trager (15) both need it; Zeilberger (needs
+**Still open:** the `real_algebraic.rs` wiring (17) landed the arithmetic layer
+(`inv`/`div`, `algebraic_eq`, the exact polynomial IVT); what's still open is
+routing it through `crate::solve`/Rothstein–Trager's irrational branch — the
+residual exp-tower scaling (`exp(x/2)`) and Lazard–Rioboo–Trager (15) both need
+that routing, not the arithmetic itself; Zeilberger (needs
 the exp tower for its geometric fragment — now partly there); assumptions engine
 (34) — the sign layer + the log/exp positivity `refine` rules (`exp(ln x)=x`,
 `ln(xᵏ)=k ln x`, `ln(xy)=ln x+ln y` under `x,y>0`) now shipped, `√(x²)=|x|`/`abs`

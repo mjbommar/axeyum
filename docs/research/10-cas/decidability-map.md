@@ -29,7 +29,7 @@ theory with a decidable zero-test:
 | Domain of the obligation | Zero-test | axeyum route | Witness |
 |---|---|---|---|
 | Polynomials / rational functions over ℚ | **decidable** | `poly.rs` canonical form; QF_NRA identity | normal form / RCF refutation of `≠` |
-| Algebraic numbers | **decidable** | `sturm.rs` (root isolation, shipped) + an algebraic-number arithmetic layer that is **not yet built** (`real_algebraic.rs` does not exist; `RealAlgebraic` in `axeyum-ir` is unwired — see ADR-0601) | sign/compare certificate (planned) |
+| Algebraic numbers | **decidable** | `sturm.rs` (root isolation, shipped) + `axeyum-cas/src/real_algebraic.rs` (shipped, ADR-0601): bridges `AlgebraicReal` (any-degree root isolation, `algebraic.rs`) to `axeyum_ir::RealAlgebraic` (bignum field arithmetic), adds `inv`/`div`, and a GCD-based `algebraic_eq` that is sound where the raw `PartialEq` is not (cross-representation comparison). `crate::solve` (returns `CasExpr`, radical forms only) still declines an irreducible cubic-or-higher factor by design — use `real_algebraic::real_roots` for the exact (non-radical) value | sign/compare certificate: [`real_algebraic::polynomial_ivt`]/`verify_ivt_certificate` (exact polynomial IVT, shipped) |
 | Finite fields 𝔽ₚ, modular / BV | **decidable** | QF_BV bit-blast + DRAT | DRAT/Alethe/Lean UNSAT proof |
 | Linear real/integer | **decidable** | QF_LRA (Farkas) / QF_LIA | Farkas / Lean-kernel certificate |
 | RCF (real-closed field) inequalities | **decidable** (Tarski) | QF_NRA CAD/SOS | SOS/Positivstellensatz cert (partial) |

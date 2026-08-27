@@ -182,6 +182,74 @@ pub fn real_roots(coeffs: &[Rational]) -> Option<Vec<AlgebraicReal>> {
     Some(roots)
 }
 
+/// As [`real_roots`], but pairing each root with its multiplicity **in the
+/// original polynomial** (the multiplicity of the irreducible factor it comes
+/// from, from [`factor_univariate_over_q`]'s square-free decomposition — every
+/// real root of that factor shares the factor's multiplicity). `real_roots`
+/// discards this; `solve`-style callers that need "how many times does this
+/// root repeat" (e.g. to match a classical root-count-with-multiplicity
+/// statement) should use this instead.
+///
+/// ```
+/// use axeyum_cas::algebraic::real_roots_with_multiplicity;
+/// use axeyum_ir::Rational;
+/// // (x-1)^2 = x^2 - 2x + 1: a double root at 1.
+/// let coeffs = [Rational::integer(1), Rational::integer(-2), Rational::integer(1)];
+/// let roots = real_roots_with_multiplicity(&coeffs).unwrap();
+/// assert_eq!(roots.len(), 1);
+/// assert_eq!(roots[0].1, 2);
+/// ```
+#[must_use]
+pub fn real_roots_with_multiplicity(coeffs: &[Rational]) -> Option<Vec<(AlgebraicReal, u32)>> {
+    let factors = factor_univariate_over_q(coeffs)?;
+    let mut roots: Vec<(AlgebraicReal, u32)> = Vec::new();
+    for (factor, multiplicity) in factors {
+        if poly::rat_degree(&factor).unwrap_or(0) == 0 {
+            continue; // a constant factor has no roots
+        }
+        for (lower, upper) in sturm::isolate_real_roots(&factor)? {
+            roots.push((
+                AlgebraicReal {
+                    minimal_poly: factor.clone(),
+                    lower,
+                    upper,
+                },
+                multiplicity,
+            ));
+        }
+    }
+    roots.sort_by(|a, b| {
+        a.0.to_f64()
+            .partial_cmp(&b.0.to_f64())
+            .unwrap_or(core::cmp::Ordering::Equal)
+    });
+    Some(roots)
+}
+
+/// Test-only unchecked construction, for mutation/adversarial tests elsewhere
+/// in this crate (`real_algebraic.rs`'s certificate-checker tests) that need a
+/// deliberately WRONG `AlgebraicReal` — a bracket that does **not** actually
+/// isolate a root of the stated polynomial — to confirm a checker rejects it.
+/// `#[cfg(test)]`-gated: compiled only for `cargo test`, never shipped.
+#[cfg(test)]
+pub(crate) mod test_support {
+    use super::AlgebraicReal;
+    use axeyum_ir::Rational;
+
+    /// Build an `AlgebraicReal` from raw parts with **no** isolation check.
+    pub(crate) fn make_unchecked(
+        minimal_poly: Vec<Rational>,
+        lower: Rational,
+        upper: Rational,
+    ) -> AlgebraicReal {
+        AlgebraicReal {
+            minimal_poly,
+            lower,
+            upper,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -242,5 +310,25 @@ mod tests {
                 .unwrap(),
             core::cmp::Ordering::Greater
         );
+    }
+
+    #[test]
+    fn multiplicity_is_preserved_for_a_repeated_root() {
+        // (x-1)^2 = x^2 - 2x + 1: a double root at 1, one isolated interval,
+        // multiplicity 2.
+        let roots = real_roots_with_multiplicity(&poly_from(&[1, -2, 1])).unwrap();
+        assert_eq!(roots.len(), 1);
+        assert_eq!(roots[0].1, 2);
+        assert_eq!(roots[0].0.rational_value(), Some(Rational::integer(1)));
+    }
+
+    #[test]
+    fn multiplicity_is_one_for_simple_roots() {
+        // (x-1)(x-2)(x-3): three simple rational roots.
+        let roots = real_roots_with_multiplicity(&poly_from(&[-6, 11, -6, 1])).unwrap();
+        assert_eq!(roots.len(), 3);
+        for (_, m) in &roots {
+            assert_eq!(*m, 1);
+        }
     }
 }

@@ -90,6 +90,7 @@ pub mod ntheory_more;
 pub mod orthopoly;
 pub mod permutation;
 mod ratint;
+pub mod real_algebraic;
 mod series;
 pub mod sets;
 pub mod sos;

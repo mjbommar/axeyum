@@ -73,10 +73,15 @@ Per the research note (mapped onto in-tree primitives):
   the whole thing certifies through the *existing* zero-test (the `Ln`
   differentiates away into a rational identity). New: rational root finder over
   `R(t)`.
-- **Slice 2b (real-irrational roots).** Needs `RealAlgebraic::inv`/`div`
-  (algebraic-number field inversion, itself an extended-Euclid) + a
-  coefficient-generic polynomial GCD over `ℚ(cᵢ)` + an algebraic-coefficient
-  zero-test path. Roots isolated via existing `sturm_chain`/`count_roots_in`.
+- **Slice 2b (real-irrational roots).** `RealAlgebraic::inv`/`div` now exist
+  (`axeyum-cas/src/real_algebraic.rs`, ADR-0601), as does a GCD-based algebraic
+  equality test (`algebraic_eq`) usable as the algebraic-coefficient zero-test
+  building block. Still needed for this slice specifically: a
+  coefficient-generic polynomial GCD over `ℚ(cᵢ)` (the general multi-root
+  field, not just pairwise root comparison) + wiring that into the
+  Rothstein–Trager log-part construction. Roots isolated via existing
+  `sturm_chain`/`count_roots_in` (or `real_algebraic::real_roots`, which
+  already composes isolation + the arithmetic layer).
 - **Slice 2c (complex-conjugate pairs → `atan`).** Detect real quadratic factors
   of `R` with negative discriminant; emit `atan`-family closed forms (SymPy's
   `quadratic=True`), certified via `CasExpr::Atan` + `d/dx atan u = u'/(1+u²)`.
