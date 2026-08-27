@@ -634,6 +634,7 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         ),
         ("CReal.ratioDecayBound", p.ratio_decay_bound, "theorem"),
         ("CReal.invLeOfPosBound", p.inv_le_of_pos_bound, "theorem"),
+        ("CReal.geomYBound", p.geom_y_bound, "theorem"),
         (
             "CReal.geomHalfInvLeafBound",
             p.geom_half_inv_leaf_bound,

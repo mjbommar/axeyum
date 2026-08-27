@@ -1078,7 +1078,8 @@ pub(super) fn declare_geometric(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(
     declare_pow_half_le_nat_div_succ(d, p)?;
     declare_pow_le_nat_div_succ_of_lt(d, p)?;
     declare_ratio_decay_bound(d, p)?;
-    declare_inv_le_of_pos_bound(d, p)
+    declare_inv_le_of_pos_bound(d, p)?;
+    declare_geom_y_bound(d, p)
 }
 
 // --- `pow_le_pow_of_base_le` -------------------------------------------------
@@ -3017,6 +3018,225 @@ fn declare_inv_le_of_pos_bound(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<()
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.inv_le_of_pos_bound,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// ---------------------------------------------------------------------------
+// `CReal.geomYBound` -- generalizing `geomHalfInvLeafBound`
+// (`exponential.rs`, concrete base 1/2 only) to a symbolic ratio `x` and a
+// symbolic `PosBound (1 - x) k` witness.
+// ---------------------------------------------------------------------------
+
+/// `CReal.geomYBound`. See the field documentation
+/// ([`super::CRealPrelude::geom_y_bound`]) for the statement and the
+/// derivation.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_geom_y_bound(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let zero_c = czero(d, p);
+    let zero_nat = d.num(0);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let hx0_ty = cle(d, p, zero_c, x);
+    let hx0_fv = d.fresh_fvar();
+    let hx0 = d.kernel().fvar(hx0_fv);
+    let hlt_ty = d.const_app(p.lt, &[x, one_c]);
+    let hlt_fv = d.fresh_fvar();
+    let hlt = d.kernel().fvar(hlt_fv);
+
+    let neg_x = cneg(d, p, x);
+    let a_real = cadd(d, p, one_c, neg_x); // a_real = 1 - x
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let h_ty = pos_bound_of(d, p, a_real, k);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let iv = cinv(d, p, a_real, k, h);
+    let succ_k = d.succ(k);
+    let succk_rat = d.const_app(rat.nat_div_succ, &[succ_k, zero_nat]);
+    let embed_succk = embed(d, p, succk_rat);
+
+    // `predicate1(K1) := ∀ m, le (pow x m) (ofRat (natDivSucc K1 m))` --
+    // reconstructed verbatim in shape to `declare_pow_le_nat_div_succ_of_lt`'s
+    // own bound predicate, so `exists_elim` accepts it against `ex_pow`'s own
+    // substituted type (same technique that function uses for its own nested
+    // `pos_bound_of_lt` elimination).
+    let predicate1 = {
+        let k1_fv = d.fresh_fvar();
+        let k1 = d.kernel().fvar(k1_fv);
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let pow_xm = d.const_app(p.pow, &[x, m]);
+        let bound_rat = d.const_app(rat.nat_div_succ, &[k1, m]);
+        let bound = embed(d, p, bound_rat);
+        let body = cle(d, p, pow_xm, bound);
+        let inner = d.pi_fv(m_fv, nat, body);
+        d.lam_fv(k1_fv, nat, inner)
+    };
+    let ex_pow = d.lemma(p.pow_le_nat_div_succ_of_lt, &[x, hx0, hlt]);
+    let hinv = d.lemma(p.inv_le_of_pos_bound, &[a_real, k, h]);
+    // hinv : le iv (ofNat (succ k)) -- defeq to `le iv embed_succk` through
+    // `CReal.ofNat`'s own definition (`archimedean.rs`), the same gap
+    // `invLeOfPosBound`'s own conclusion already relies on.
+
+    // Target: `∃ K, ∀ a, le (mul iv (pow x a)) (ofRat (natDivSucc K a))`.
+    let target_predicate = {
+        let bigk_fv = d.fresh_fvar();
+        let bigk = d.kernel().fvar(bigk_fv);
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let pow_xa = d.const_app(p.pow, &[x, a]);
+        let mul_iv_pow = cmul(d, p, iv, pow_xa);
+        let bound_rat = d.const_app(rat.nat_div_succ, &[bigk, a]);
+        let bound = embed(d, p, bound_rat);
+        let body = cle(d, p, mul_iv_pow, bound);
+        let inner = d.pi_fv(a_fv, nat, body);
+        d.lam_fv(bigk_fv, nat, inner)
+    };
+    let target = {
+        let one_level = d.level_one();
+        let exists_name = rat.int.logic.exists_;
+        let exists_ = d.kernel().const_(exists_name, vec![one_level]);
+        d.apply(exists_, &[nat, target_predicate])
+    };
+
+    // `minor : ∀ K1, (∀ m, le (pow x m) (ofRat (natDivSucc K1 m))) → target`,
+    // with witness `K := (succ k)*K1`.
+    let minor = {
+        let k1_fv = d.fresh_fvar();
+        let k1 = d.kernel().fvar(k1_fv);
+        let hk1_ty = {
+            let m_fv = d.fresh_fvar();
+            let m = d.kernel().fvar(m_fv);
+            let pow_xm = d.const_app(p.pow, &[x, m]);
+            let bound_rat = d.const_app(rat.nat_div_succ, &[k1, m]);
+            let bound = embed(d, p, bound_rat);
+            let body = cle(d, p, pow_xm, bound);
+            d.pi_fv(m_fv, nat, body)
+        };
+        let hk1_fv = d.fresh_fvar();
+        let hk1 = d.kernel().fvar(hk1_fv);
+
+        let big_k_val = NatOps::mul(d, succ_k, k1);
+
+        let body = {
+            let a_fv = d.fresh_fvar();
+            let a = d.kernel().fvar(a_fv);
+            let pow_xa = d.const_app(p.pow, &[x, a]);
+            let hk1_a = d.apply(hk1, &[a]);
+            // hk1_a : le (pow x a) (ofRat (natDivSucc k1 a))
+
+            let pow_nonneg_a = d.lemma(p.pow_nonneg, &[x, hx0, a]);
+            // pow_nonneg_a : le zero (pow x a)
+
+            // Step A: iv ≤ embed_succk (via hinv, defeq bridge), times
+            // nonneg `pow_xa` on the right.
+            let step_a =
+                mul_le_mul_of_nonneg_right(d, p, iv, embed_succk, pow_xa, pow_nonneg_a, hinv);
+            // step_a : le (mul iv pow_xa) (mul embed_succk pow_xa)
+
+            // Step B: `pow_xa ≤ embed (natDivSucc k1 a)`, times nonneg
+            // `embed_succk` on the left.
+            let c_nonneg = {
+                let succk_rat_nonneg = d.lemma(rat.zero_le_nat_div_succ, &[succ_k, zero_nat]);
+                let zero_r = rzero(d, rat);
+                d.lemma(p.of_rat_le, &[zero_r, succk_rat, succk_rat_nonneg])
+            };
+            let k1a_rat = d.const_app(rat.nat_div_succ, &[k1, a]);
+            let embed_k1a = embed(d, p, k1a_rat);
+            let step_b = d.lemma(
+                p.mul_le_mul_of_nonneg_left,
+                &[embed_succk, pow_xa, embed_k1a, c_nonneg, hk1_a],
+            );
+            // step_b : le (mul embed_succk pow_xa) (mul embed_succk embed_k1a)
+
+            let mul_iv_pow = cmul(d, p, iv, pow_xa);
+            let mul_c_pow = cmul(d, p, embed_succk, pow_xa);
+            let mul_c_k1a = cmul(d, p, embed_succk, embed_k1a);
+            let chained = d.lemma(
+                p.le_trans,
+                &[mul_iv_pow, mul_c_pow, mul_c_k1a, step_a, step_b],
+            );
+            // chained : le mul_iv_pow mul_c_k1a
+
+            // `Equiv mul_c_k1a (embed (natDivSucc ((succ k)*k1) a))`, via
+            // `Rat.natDivSucc_mul` fusing `natDivSucc (succ k) 0` and
+            // `natDivSucc k1 a` into one `natDivSucc`.
+            let target_rat = d.const_app(rat.nat_div_succ, &[big_k_val, a]);
+            let of_rat_mul_eq = d.lemma(p.of_rat_mul, &[succk_rat, k1a_rat]);
+            // of_rat_mul_eq : Equiv mul_c_k1a (embed (rmul succk_rat k1a_rat))
+            let prod_rat = rmul(d, succk_rat, k1a_rat);
+            let fuse_eq = d.lemma(rat.nat_div_succ_mul, &[succ_k, k1, a]);
+            // fuse_eq : Eq prod_rat target_rat
+            let embed_prod_eq = embed_eq_to_equiv(d, p, prod_rat, target_rat, fuse_eq);
+            // embed_prod_eq : Equiv (embed prod_rat) (embed target_rat)
+            let embed_prod = embed(d, p, prod_rat);
+            let embed_target = embed(d, p, target_rat);
+            let combined = d.lemma(
+                p.equiv_trans,
+                &[
+                    mul_c_k1a,
+                    embed_prod,
+                    embed_target,
+                    of_rat_mul_eq,
+                    embed_prod_eq,
+                ],
+            );
+            // combined : Equiv mul_c_k1a embed_target
+
+            let refl_lhs = d.lemma(p.equiv_refl, &[mul_iv_pow]);
+            let final_le_a = d.lemma(
+                p.le_congr,
+                &[
+                    mul_iv_pow,
+                    mul_iv_pow,
+                    mul_c_k1a,
+                    embed_target,
+                    refl_lhs,
+                    combined,
+                    chained,
+                ],
+            );
+            // final_le_a : le mul_iv_pow embed_target
+
+            d.lam_fv(a_fv, nat, final_le_a)
+        };
+
+        let proof_for_k1 = exists_nat_intro(d, p, target_predicate, big_k_val, body);
+        let with_hk1 = d.lam_fv(hk1_fv, hk1_ty, proof_for_k1);
+        d.lam_fv(k1_fv, nat, with_hk1)
+    };
+
+    let proof_body = exists_elim(d, predicate1, target, ex_pow, minor);
+
+    let ty = {
+        let inner = d.pi_fv(h_fv, h_ty, target);
+        let with_k = d.pi_fv(k_fv, nat, inner);
+        let after_hlt = d.arrow(hlt_ty, with_k);
+        let after_hx0 = d.arrow(hx0_ty, after_hlt);
+        d.pi_fv(x_fv, carrier, after_hx0)
+    };
+    let value = {
+        let inner = d.lam_fv(h_fv, h_ty, proof_body);
+        let with_k = d.lam_fv(k_fv, nat, inner);
+        let with_hlt = d.lam_fv(hlt_fv, hlt_ty, with_k);
+        let with_hx0 = d.lam_fv(hx0_fv, hx0_ty, with_hlt);
+        d.lam_fv(x_fv, carrier, with_hx0)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.geom_y_bound,
         uparams: vec![],
         ty,
         value,
