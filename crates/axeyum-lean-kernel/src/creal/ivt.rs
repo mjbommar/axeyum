@@ -188,7 +188,10 @@ pub(super) fn declare_ivt(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
     // The order-free two-point separation bound the EXACT root needs -- see
     // the section header above `declare_abs_diff_le_of_small_image` for why
     // this is a `lt_cotrans` and not the lattice detour the diary proposed.
-    declare_abs_diff_le_of_small_image(d, p)
+    declare_abs_diff_le_of_small_image(d, p)?;
+    // ...and the two composed: the exact root's Cauchy estimate at the
+    // `CReal` level. Runs AFTER both of its inputs.
+    declare_ivt_bisect_cauchy_bound(d, p)
 }
 
 // --- small shared idiom (private to this module, per the codebase's own
@@ -3900,6 +3903,345 @@ fn declare_ivt_bisect_approx(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), 
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.ivt_bisect_approx,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// =============================================================================
+// `CReal.ivt_bisect_cauchy_bound` -- the exact root's Cauchy estimate, at the
+// `CReal` level.
+//
+// Composition of the two declarations above: `ivt_bisect_approx` says the
+// NAMED point `X e := ivt_bisect_hi F a b (succ (2*e)) (K e)` lies in `[a,b]`
+// with `|F (X e)| <= 1/(e+1)`, and `abs_diff_le_of_small_image` says two
+// points of `[a,b]` with small `F`-values are close -- with no ordering and no
+// `Apart`, which is what a bisection can actually supply. Together:
+//
+//     |X m - X n| <= (2k+2)/(m+1) + (2k+2)/(n+1)
+//
+// which is `CReal.Cauchy`'s own rate shape at `K := 2k+2`, one level up: this
+// is the REAL-valued inequality, and `Cauchy` is stated on the canonical
+// rational SAMPLES `seq (X m) m - seq (X n) n`. See this section's closing
+// comment (and `docs/mathematics-2026-08/diary-exact-root-obstruction.md`)
+// for exactly what that last bridge costs and why it is a separate, general
+// lemma rather than part of this one.
+// =============================================================================
+
+/// `(n, bisect_n)` for accuracy index `e` -- the slack index `succ (2*e)` and
+/// the bisection depth, built as TERMS only.
+///
+/// [`approx_setup`] computes the same two terms but also builds
+/// [`width_le_via_bound`]'s whole proof, which a caller that only needs to
+/// NAME the point does not want to pay for. Every line here mirrors
+/// [`approx_setup`]/[`width_le_via_bound`] exactly, so the terms are
+/// structurally identical to the ones `ivt_bisect_approx`'s statement
+/// carries -- if they ever diverge, the `le_congr` in
+/// [`declare_ivt_bisect_cauchy_bound`] stops matching and the kernel says so.
+fn bisect_index_terms(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    a: ExprId,
+    b: ExprId,
+    huc: ExprId,
+    e: ExprId,
+) -> (ExprId, ExprId) {
+    let two_nat = d.num(2);
+    let two_e = d.mul(two_nat, e);
+    let n = d.succ(two_e);
+
+    let mod_fn = d.const_app(p.uc_modulus, &[f, a, b, huc]);
+    let delta = d.apply(mod_fn, &[n]);
+
+    let neg_a = cneg(d, p, a);
+    let w0 = cadd(d, p, b, neg_a);
+    let magnitude = d.const_app(p.bound, &[w0]);
+    let big_m = d.succ(magnitude);
+    let scaled = d.mul(big_m, delta);
+    let bisect_n = d.add(scaled, magnitude);
+    (n, bisect_n)
+}
+
+/// The bisection point at accuracy `e` and the three facts
+/// [`declare_ivt_bisect_approx`] proves about it, split out of its `And`.
+///
+/// Returns `(X e, le a (X e), le (X e) b, le (abs (F (X e))) (ofRat
+/// (natDivSucc 1 e)))`.
+#[allow(clippy::too_many_arguments)]
+fn bisect_point_facts(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    a: ExprId,
+    b: ExprId,
+    huc: ExprId,
+    hab: ExprId,
+    hfa: ExprId,
+    hfb: ExprId,
+    e: ExprId,
+) -> (ExprId, ExprId, ExprId, ExprId) {
+    let (n, bisect_n) = bisect_index_terms(d, p, f, a, b, huc, e);
+    let x = d.const_app(p.ivt_bisect_hi, &[f, a, b, n, bisect_n]);
+    let whole = d.lemma(p.ivt_bisect_approx, &[f, a, b, huc, hab, hfa, hfb, e]);
+
+    let le1 = cle(d, p, a, x);
+    let le2 = cle(d, p, x, b);
+    let fx = d.apply(f, &[x]);
+    let abs_fx = cabs(d, p, fx);
+    let target_rat = div_succ(d, p, 1, e);
+    let target = embed(d, p, target_rat);
+    let le3 = cle(d, p, abs_fx, target);
+    let and2 = d.and(le2, le3);
+
+    let h1 = d.and_left(le1, and2, whole);
+    let rest = d.and_right(le1, and2, whole);
+    let h2 = d.and_left(le2, le3, rest);
+    let h3 = d.and_right(le2, le3, rest);
+    (x, h1, h2, h3)
+}
+
+/// `CReal.ivt_bisect_cauchy_bound` -- see
+/// [`super::CRealPrelude::ivt_bisect_cauchy_bound`] for the statement.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_ivt_bisect_cauchy_bound(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let func_ty = d.arrow(carrier, carrier);
+    let nat = d.nat_ty();
+    let rat = p.rat;
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let fp_fv = d.fresh_fvar();
+    let fp = d.kernel().fvar(fp_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let hf_ty = d.const_app(p.has_derivative_on, &[f, fp, a, b]);
+    let hf_fv = d.fresh_fvar();
+    let hf = d.kernel().fvar(hf_fv);
+
+    let uc_ty_ab = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let huc_fv = d.fresh_fvar();
+    let huc = d.kernel().fvar(huc_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let zero_c = czero(d, p);
+    let fa = d.apply(f, &[a]);
+    let hfa_ty = cle(d, p, fa, zero_c);
+    let hfa_fv = d.fresh_fvar();
+    let hfa = d.kernel().fvar(hfa_fv);
+    let fb = d.apply(f, &[b]);
+    let hfb_ty = cle(d, p, zero_c, fb);
+    let hfb_fv = d.fresh_fvar();
+    let hfb = d.kernel().fvar(hfb_fv);
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let hderiv_ty = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let fpz = d.apply(fp, &[z]);
+        let a_k_rat = div_succ(d, p, 1, k);
+        let a_k = embed(d, p, a_k_rat);
+        let concl = cle(d, p, a_k, fpz);
+        let z_le_b = cle(d, p, z, b);
+        let after_upper = d.arrow(z_le_b, concl);
+        let a_le_z = cle(d, p, a, z);
+        let after_lower = d.arrow(a_le_z, after_upper);
+        d.pi_fv(z_fv, carrier, after_lower)
+    };
+    let hderiv_fv = d.fresh_fvar();
+    let hderiv = d.kernel().fvar(hderiv_fv);
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let (xm, ham, hmb, habs_m) = bisect_point_facts(d, p, f, a, b, huc, hab, hfa, hfb, m);
+    let (xn, han, hnb, habs_n) = bisect_point_facts(d, p, f, a, b, huc, hab, hfa, hfb, n);
+
+    let rm = div_succ(d, p, 1, m);
+    let rn = div_succ(d, p, 1, n);
+    let eps_x = embed(d, p, rm);
+    let eps_y = embed(d, p, rn);
+
+    let raw = d.lemma(
+        p.abs_diff_le_of_small_image,
+        &[
+            f, fp, a, b, hf, k, hderiv, eps_x, eps_y, xm, xn, ham, hmb, han, hnb, habs_m, habs_n,
+        ],
+    );
+
+    // `csucc := ofNat (2k+2)`, matching `abs_diff_le_of_small_image`'s own
+    // conclusion byte for byte.
+    let two_nat = d.num(2);
+    let one_nat = d.num(1);
+    let doubled = NatOps::mul(d, two_nat, k);
+    let e_acc = d.succ(doubled);
+    let big_c = d.succ(e_acc);
+    let csucc = d.const_app(p.of_nat, &[big_c]);
+    let eps_sum = cadd(d, p, eps_x, eps_y);
+    let lhs = cmul(d, p, csucc, eps_sum);
+
+    // `cq` is the rational `CReal.ofNat (2k+2)` δ-unfolds to, so
+    // `mul csucc (ofRat r)` and `mul (ofRat cq) (ofRat r)` are the same term
+    // to the kernel and `ofRat_mul` applies directly.
+    let zero_nat = d.num(0);
+    let cq = d.const_app(rat.nat_div_succ, &[big_c, zero_nat]);
+
+    let sum_rat = radd(d, rm, rn);
+    let of_rat_sum = embed(d, p, sum_rat);
+
+    let chain_to_product = {
+        let refl_c = erefl(d, p, csucc);
+        let add_eq = d.lemma(p.of_rat_add, &[rm, rn]);
+        let step_a = d.lemma(
+            p.mul_congr,
+            &[csucc, csucc, eps_sum, of_rat_sum, refl_c, add_eq],
+        );
+        // step_a : Equiv lhs (mul csucc of_rat_sum)
+        let step_b = d.lemma(p.of_rat_mul, &[cq, sum_rat]);
+        // step_b : Equiv (mul (ofRat cq) of_rat_sum) (ofRat (cq * sum_rat)),
+        // and its left-hand side IS `mul csucc of_rat_sum` by δ.
+        let mul_csucc_sum = cmul(d, p, csucc, of_rat_sum);
+        let prod_rat = rmul(d, cq, sum_rat);
+        let of_rat_prod = embed(d, p, prod_rat);
+        d.lemma(
+            p.equiv_trans,
+            &[lhs, mul_csucc_sum, of_rat_prod, step_a, step_b],
+        )
+    };
+
+    // Now rewrite the RATIONAL, one subterm at a time, under the motive
+    // `fun t => Equiv lhs (ofRat t)`.
+    let prod_rat = rmul(d, cq, sum_rat);
+    let cq_rm = rmul(d, cq, rm);
+    let cq_rn = rmul(d, cq, rn);
+    let distributed = radd(d, cq_rm, cq_rn);
+    let c_times_one = NatOps::mul(d, big_c, one_nat);
+    let folded_m = d.const_app(rat.nat_div_succ, &[c_times_one, m]);
+    let folded_n = d.const_app(rat.nat_div_succ, &[c_times_one, n]);
+    let final_m = d.const_app(rat.nat_div_succ, &[big_c, m]);
+    let final_n = d.const_app(rat.nat_div_succ, &[big_c, n]);
+
+    let whole_motive = |d: &mut IntDev<'_>, t: ExprId| {
+        let oft = d.const_app(p.of_rat, &[t]);
+        d.const_app(p.equiv, &[lhs, oft])
+    };
+
+    let after_distrib = {
+        let eq = d.lemma(rat.left_distrib, &[cq, rm, rn]);
+        rat_eq_rewrite(
+            d,
+            prod_rat,
+            distributed,
+            eq,
+            chain_to_product,
+            &whole_motive,
+        )
+    };
+    // Each remaining step rewrites a SUBTERM, so its `from`/`to` are that
+    // subterm and the motive carries the surrounding sum. Passing the whole
+    // rational as `from` while the motive also wraps it duplicates the
+    // context -- the kernel's first rejection here reported a right-hand side
+    // with `cq * rn` appearing twice, which is exactly that.
+    let after_fold_m = {
+        let eq = d.lemma(rat.nat_div_succ_mul, &[big_c, one_nat, m]);
+        rat_eq_rewrite(d, cq_rm, folded_m, eq, after_distrib, &|d, t| {
+            let sum = radd(d, t, cq_rn);
+            whole_motive(d, sum)
+        })
+    };
+    let after_fold_n = {
+        let eq = d.lemma(rat.nat_div_succ_mul, &[big_c, one_nat, n]);
+        rat_eq_rewrite(d, cq_rn, folded_n, eq, after_fold_m, &|d, t| {
+            let sum = radd(d, folded_m, t);
+            whole_motive(d, sum)
+        })
+    };
+    // `Nat.mul C 1 = C`, lifted into the numerator slot on each side.
+    let mul_one_eq = d.lemma(rat.int.nat.mul_one, &[big_c]);
+    let after_trim_m = {
+        let eq = nat_eq_to_rat(d, c_times_one, big_c, mul_one_eq, &|d, x| {
+            d.const_app(rat.nat_div_succ, &[x, m])
+        });
+        rat_eq_rewrite(d, folded_m, final_m, eq, after_fold_n, &|d, t| {
+            let sum = radd(d, t, folded_n);
+            whole_motive(d, sum)
+        })
+    };
+    let after_trim_n = {
+        let eq = nat_eq_to_rat(d, c_times_one, big_c, mul_one_eq, &|d, x| {
+            d.const_app(rat.nat_div_succ, &[x, n])
+        });
+        rat_eq_rewrite(d, folded_n, final_n, eq, after_trim_m, &|d, t| {
+            let sum = radd(d, final_m, t);
+            whole_motive(d, sum)
+        })
+    };
+    // after_trim_n : Equiv lhs (ofRat (natDivSucc C m + natDivSucc C n))
+
+    let target_rat = radd(d, final_m, final_n);
+    let target = embed(d, p, target_rat);
+    let neg_xn = cneg(d, p, xn);
+    let diff = cadd(d, p, xm, neg_xn);
+    let abs_diff = cabs(d, p, diff);
+
+    let proof = {
+        let refl_lhs = erefl(d, p, abs_diff);
+        d.lemma(
+            p.le_congr,
+            &[abs_diff, abs_diff, lhs, target, refl_lhs, after_trim_n, raw],
+        )
+    };
+
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, proof);
+        let over_m = d.lam_fv(m_fv, nat, over_n);
+        let over_hderiv = d.lam_fv(hderiv_fv, hderiv_ty, over_m);
+        let over_k = d.lam_fv(k_fv, nat, over_hderiv);
+        let over_hfb = d.lam_fv(hfb_fv, hfb_ty, over_k);
+        let over_hfa = d.lam_fv(hfa_fv, hfa_ty, over_hfb);
+        let over_hab = d.lam_fv(hab_fv, hab_ty, over_hfa);
+        let over_huc = d.lam_fv(huc_fv, uc_ty_ab, over_hab);
+        let over_hf = d.lam_fv(hf_fv, hf_ty, over_huc);
+        let over_b = d.lam_fv(b_fv, carrier, over_hf);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        let over_fp = d.lam_fv(fp_fv, func_ty, over_a);
+        d.lam_fv(f_fv, func_ty, over_fp)
+    };
+    let ty = {
+        let concl = cle(d, p, abs_diff, target);
+        let over_n = d.pi_fv(n_fv, nat, concl);
+        let over_m = d.pi_fv(m_fv, nat, over_n);
+        let after_hderiv = d.arrow(hderiv_ty, over_m);
+        let over_k = d.pi_fv(k_fv, nat, after_hderiv);
+        let after_hfb = d.arrow(hfb_ty, over_k);
+        let after_hfa = d.arrow(hfa_ty, after_hfb);
+        let after_hab = d.arrow(hab_ty, after_hfa);
+        // `pi_fv`: the conclusion names `X m`/`X n`, whose bisection depth
+        // reads `ucModulus F a b huc`.
+        let over_huc = d.pi_fv(huc_fv, uc_ty_ab, after_hab);
+        let after_hf = d.arrow(hf_ty, over_huc);
+        let over_b = d.pi_fv(b_fv, carrier, after_hf);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        let over_fp = d.pi_fv(fp_fv, func_ty, over_a);
+        d.pi_fv(f_fv, func_ty, over_fp)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.ivt_bisect_cauchy_bound,
         uparams: vec![],
         ty,
         value,

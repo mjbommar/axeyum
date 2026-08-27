@@ -4034,6 +4034,36 @@ pub struct CRealPrelude {
     /// gives the goal outright, and [`Self::le_of_forall_le_add_small`]
     /// removes the slack. See `creal/ivt.rs`'s own section header.
     pub abs_diff_le_of_small_image: NameId,
+    /// `CReal.ivt_bisect_cauchy_bound : ∀ F F' a b, HasDerivativeOn F F' a b →
+    /// ∀ (u : UniformlyContinuousOn F a b), le a b → le (F a) zero →
+    /// le zero (F b) → ∀ k, (∀ z, le a z → le z b →
+    /// le (ofRat (natDivSucc 1 k)) (F' z)) → ∀ m n : Nat,
+    /// le (abs (add (X m) (neg (X n))))
+    ///    (ofRat (Rat.add (natDivSucc C m) (natDivSucc C n)))`, where
+    /// `X e := ivt_bisect_hi F a b (Nat.succ (Nat.mul 2 e)) K` is
+    /// [`Self::ivt_bisect_approx`]'s named point and
+    /// `C := Nat.succ (Nat.succ (Nat.mul 2 k))` (`creal/ivt.rs`) — **the
+    /// exact IVT root's Cauchy estimate, at the `CReal` level.**
+    ///
+    /// [`Self::ivt_bisect_approx`] bounds `abs (F (X e))` by `1/(e+1)` at a
+    /// NAMED point; [`Self::abs_diff_le_of_small_image`] turns two such
+    /// bounds into closeness of the points themselves, with no ordering and
+    /// no [`Self::apart`] — the two things a bisection cannot supply.
+    ///
+    /// **What separates this from [`Self::cauchy`] is one bridge, and it is
+    /// general rather than IVT-specific.** This is the REAL-valued
+    /// inequality; `Cauchy f` is stated on the canonical rational SAMPLES,
+    /// `Within (seq (f m) m − seq (f n) n) (natDivSucc K m + natDivSucc K n)`.
+    /// Crossing costs [`Self::within_of_two_sided_le`] (real bound → `Within`
+    /// at a shared index) followed by [`Self::shared_index_to_canonical`]
+    /// (shared index → the two canonical indices), plus the rational
+    /// bookkeeping that folds the resulting seven-term bound back to the
+    /// two-term rate. No such bridge exists in either direction as a
+    /// standalone lemma — `close_within_of_within` and
+    /// `close_within_of_within_indexed` run the OTHER way — and
+    /// `riemannSum_cauchy`'s own doc comment records the identical gap for
+    /// the integral. One lemma closes both.
+    pub ivt_bisect_cauchy_bound: NameId,
     /// `CReal.hasDerivative_unique : ∀ F F1 F2 a b, HasDerivativeOn F F1 a b
     /// → HasDerivativeOn F F2 a b → lt a b → ∀ z, le a z → le z b → Equiv
     /// (F1 z) (F2 z)` (`creal/deriv_unique.rs`) — the derivative of a
@@ -5709,6 +5739,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         ivt_bisect_diag_hi: kernel.name_str(creal, "ivt_bisect_diag_hi"),
         ivt_bisect_approx: kernel.name_str(creal, "ivt_bisect_approx"),
         abs_diff_le_of_small_image: kernel.name_str(creal, "abs_diff_le_of_small_image"),
+        ivt_bisect_cauchy_bound: kernel.name_str(creal, "ivt_bisect_cauchy_bound"),
         has_derivative_unique: kernel.name_str(creal, "hasDerivative_unique"),
         fermat_interior_extremum: kernel.name_str(creal, "fermat_interiorExtremum"),
         rolle_interior_extremum: kernel.name_str(creal, "rolle_interiorExtremum"),
@@ -9728,6 +9759,7 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.ivt_bisect_diag_lo,
             |p: CRealPrelude| p.ivt_bisect_hi,
             |p: CRealPrelude| p.ivt_bisect_approx,
+            |p: CRealPrelude| p.ivt_bisect_cauchy_bound,
             |p: CRealPrelude| p.ivt_bisect_invariant,
             |p: CRealPrelude| p.ivt_bisect_lo,
             |p: CRealPrelude| p.ivt_iter,
