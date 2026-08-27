@@ -9754,6 +9754,7 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "derivative::declare_derivative",
     "deriv_unique::declare_deriv_unique",
     "fermat::declare_fermat",
+    "rolle::declare_rolle",
     "uniform_continuity::declare_uniform_continuity_products",
     "uniform_continuity::declare_bounded_of_uniformly_continuous",
     "mul_self_zero::declare_mul_self_zero",

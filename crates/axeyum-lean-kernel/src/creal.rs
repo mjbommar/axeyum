@@ -3873,6 +3873,26 @@ pub struct CRealPrelude {
     /// two-sided bound on `F'(c)` of exactly `1/(e+1)`, for every `e` —
     /// closed by `CReal.equiv_zero_of_small`.
     pub fermat_interior_extremum: NameId,
+    /// `CReal.rolle_interiorExtremum : ∀ F F' lo hi, HasDerivativeOn F F' lo
+    /// hi → Equiv (F lo) (F hi) → ∀ c, lt lo c → lt c hi → (Or (∀ x, le lo x
+    /// → le x hi → le (F x) (F c)) (∀ x, le lo x → le x hi → le (F c) (F
+    /// x))) → Equiv (F' c) zero` (`creal/rolle.rs`) — Rolle's theorem (Spivak
+    /// ch. 11, Thm 2) taking the extremum point `c` as a HYPOTHESIS, exactly
+    /// as [`Self::fermat_interior_extremum`] does. The max branch of the
+    /// `Or` IS [`Self::fermat_interior_extremum`] applied directly; the min
+    /// branch applies it to `neg ∘ F` (via [`Self::has_derivative_neg`]) and
+    /// undoes the negation. `Equiv (F lo) (F hi)` is a FAITHFUL hypothesis
+    /// (kept so this reads as Rolle's, not a coincidental Fermat corollary)
+    /// but, like `fermat_interior_extremum`'s own hypotheses, is never
+    /// consumed by the proof — the classical theorem's one non-constructive
+    /// step is PRODUCING the extremum (the Extreme Value Theorem;
+    /// `creal/extreme_value.rs` shows this kernel cannot do that in
+    /// general), and taking the extremum as given is what makes this row
+    /// unconditionally constructive, at the cost of being close to a thin
+    /// wrapper over Fermat — see `creal/rolle.rs`'s module documentation for
+    /// the full accounting, including why the UNRESTRICTED (existential)
+    /// form is NOT landed here.
+    pub rolle_interior_extremum: NameId,
     /// `CReal.mesh_le_of_ge : ∀ a b outer m, le a b → Nat.le ((Nat.succ
     /// (bound (add b (neg a))))*outer + bound (add b (neg a))) m → le (mul
     /// (add b (neg a)) (ofRat (natDivSucc 1 m))) (ofRat (natDivSucc 1
@@ -5392,6 +5412,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         ivt_bisect_diag_hi: kernel.name_str(creal, "ivt_bisect_diag_hi"),
         has_derivative_unique: kernel.name_str(creal, "hasDerivative_unique"),
         fermat_interior_extremum: kernel.name_str(creal, "fermat_interiorExtremum"),
+        rolle_interior_extremum: kernel.name_str(creal, "rolle_interiorExtremum"),
         mesh_le_of_ge: kernel.name_str(creal, "mesh_le_of_ge"),
         mesh_scaled_le_of_ge: kernel.name_str(creal, "meshScaledLeOfGe"),
         fine_sample_in_bounds: kernel.name_str(creal, "fineSample_in_bounds"),
@@ -6648,6 +6669,31 @@ const STEPS: &[BuildStep] = &[
         ],
         provides: &[|p: CRealPrelude| p.fermat_interior_extremum],
         run: fermat::declare_fermat,
+    },
+    BuildStep {
+        label: "rolle::declare_rolle",
+        requires: &[
+            |p: CRealPrelude| p.add,
+            |p: CRealPrelude| p.add_comm,
+            |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.creal,
+            |p: CRealPrelude| p.equiv,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.fermat_interior_extremum,
+            |p: CRealPrelude| p.has_derivative_neg,
+            |p: CRealPrelude| p.has_derivative_on,
+            |p: CRealPrelude| p.le,
+            |p: CRealPrelude| p.lt,
+            |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.neg_congr,
+            |p: CRealPrelude| p.neg_le_neg,
+            |p: CRealPrelude| p.zero,
+        ],
+        provides: &[|p: CRealPrelude| p.rolle_interior_extremum],
+        run: rolle::declare_rolle,
     },
     BuildStep {
         label: "uniform_continuity::declare_uniform_continuity_products",
@@ -10528,6 +10574,7 @@ mod power;
 mod product;
 mod ratio_test;
 mod ring_helpers;
+mod rolle;
 mod series;
 mod speedup;
 mod sqrt;
