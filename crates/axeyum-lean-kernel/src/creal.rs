@@ -3016,6 +3016,32 @@ pub struct CRealPrelude {
     /// file, is the route taken. Neither `CReal.cosOneConverges` (the
     /// analogue of `CReal.e_converges`) nor a `[0, 1]` bound are built here.
     pub cos_one: NameId,
+    /// `CReal.cosOneConverges : Converges cosSeriesPartial cosOne` -- the
+    /// `e_converges` analogue, built the same way: generically over a BOUND
+    /// `(k, h)` (mirroring `declare_converges_of_cauchy`'s own `minor`
+    /// closure, never over the CONCRETE `k_final` -- see
+    /// `exponential.rs::declare_e_converges`'s own module note on why the
+    /// concrete form overflows a 1 GiB release stack), substituting the
+    /// concrete `(k_final, cosSeriesPartialBody)` only in the final
+    /// Pi-application. See `creal/trig.rs`.
+    pub cos_one_converges: NameId,
+    /// `CReal.cosOne_le_four : le cosOne (mul two two)` -- a LOOSE, UNIFORM
+    /// bound (no case split, holds at every `n` including `n = 0`), the same
+    /// shape as `CReal.e_le_four`: `abs (cosSeriesPartial n) <= sumRange
+    /// expDominant n <= four`, via `CReal.abs_sumRange_le` (the triangle
+    /// inequality) composed with `CReal.sumRange_le` at the pointwise
+    /// `CReal.cosTermAbsLeDominant`, then the SAME closed-form geometric
+    /// bound `e_le_four` derives for `sumRange expDominant n`. Deliberately
+    /// not the sharper `[0, 1]`/`[1/2, 3/5]` a genuine alternating-series
+    /// argument would give (that needs pairing consecutive terms, which is
+    /// real new machinery this slice does not build) -- see
+    /// `creal/trig.rs`'s module documentation for the tradeoff.
+    pub cos_one_le_four: NameId,
+    /// `CReal.neg_four_le_cosOne : le (neg (mul two two)) cosOne` -- the
+    /// lower half of [`Self::cos_one_le_four`]'s bound, by the same `abs
+    /// (cosSeriesPartial n) <= four` per-`n` fact read through
+    /// `neg_le_abs`/`neg_le_neg`/double-negation instead of `le_abs_self`.
+    pub neg_four_le_cos_one: NameId,
     /// `CReal.sumRange_const : ∀ w m,
     /// Equiv (sumRange (fun _ => w) (Nat.succ m)) (mul (ofNat (Nat.succ m))
     /// w)` (`creal/monotone.rs`) — a constant summed `succ m` times is
@@ -4373,6 +4399,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         cos_series_partial: kernel.name_str(creal, "cosSeriesPartial"),
         cos_term_abs_le_dominant: kernel.name_str(creal, "cosTermAbsLeDominant"),
         cos_one: kernel.name_str(creal, "cosOne"),
+        cos_one_converges: kernel.name_str(creal, "cosOneConverges"),
+        cos_one_le_four: kernel.name_str(creal, "cosOne_le_four"),
+        neg_four_le_cos_one: kernel.name_str(creal, "neg_four_le_cosOne"),
         sum_range_const: kernel.name_str(creal, "sumRange_const"),
         mesh_count_width: kernel.name_str(creal, "mesh_count_width"),
         subdivision_point_in_bounds: kernel.name_str(creal, "subdivisionPoint_in_bounds"),

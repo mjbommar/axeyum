@@ -126,7 +126,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 370] = [
+    let expected: [(&str, crate::NameId, &str); 373] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -1331,6 +1331,20 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
             "theorem",
         ),
         ("CReal.cosOne", p.cos_one, "def"),
+        // `CReal.cosOneConverges` -- the `e_converges` analogue, built
+        // generically over a bound `(k, h)` (never the concrete `k_final`)
+        // exactly as `declare_converges_of_cauchy`'s own `minor` closure
+        // does, avoiding the stack-overflow trap `e`'s own construction
+        // documents. `cosOne_le_four`/`neg_four_le_cosOne` -- a LOOSE,
+        // UNIFORM `[-4, 4]` bound (no case split, unlike `e_le_three`): the
+        // triangle inequality (`abs_sumRange_le`) discards the alternation's
+        // cancellation entirely, so the REUSED (not re-derived) `e`-style
+        // domination is loose enough that one formula covers every `n`. See
+        // `creal/trig.rs::declare_cos_one_le_four`'s own doc for where the
+        // genuine kink (pairing consecutive terms) would appear instead.
+        ("CReal.cosOneConverges", p.cos_one_converges, "theorem"),
+        ("CReal.cosOne_le_four", p.cos_one_le_four, "theorem"),
+        ("CReal.neg_four_le_cosOne", p.neg_four_le_cos_one, "theorem"),
         // Found by the coverage assertion above, not by anyone noticing: these
         // seven were live in the prelude and unlisted here, so this test had
         // never checked them. `lt_cotrans`/`apart_cotrans` are Ch 12's

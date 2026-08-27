@@ -86,8 +86,11 @@
 //!   per this task's brief, and `creal/ivt.rs` explicitly refutes the
 //!   exact-root construction.
 
+use super::convergence::{
+    converges_applied, converges_predicate, div_succ_at, exists_intro, kregular_of_cauchy_proof,
+};
 use super::product::{index_le, mul_index, mul_shift, regular_between};
-use super::series::{assoc_rev_eq, fuse_same_index, within_symm};
+use super::series::{assoc_rev_eq, fuse_same_index, sum_range_cauchy_body, within_symm};
 use super::{CRealPrelude, DERIVED_HEIGHT, creal_ty, div_succ, embed, halves, sample, within};
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
@@ -121,7 +124,18 @@ pub(super) fn declare_trig(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ke
     declare_cos_term(d, p)?;
     declare_cos_series_partial(d, p)?;
     declare_cos_term_abs_le_dominant(d, p)?;
-    declare_cos_one(d, p)
+    // `cos_one_ingredients` is computed ONCE and its (raw, k_final, body)
+    // triple is threaded into BOTH `declare_cos_one` and
+    // `declare_cos_one_converges` -- mirroring `exponential.rs::
+    // declare_e_family`'s own `e_ingredients` sharing exactly, and for the
+    // identical reason: `cosOneConverges`'s witness must be built from the
+    // SAME concrete values `cosOne` itself was constructed from, not a
+    // second, independently-derived (merely value-equal) copy.
+    let (raw, k_final, cos_series_partial_body) = cos_one_ingredients(d, p);
+    declare_cos_one(d, p, raw, k_final, cos_series_partial_body)?;
+    declare_cos_one_converges(d, p, raw, k_final, cos_series_partial_body)?;
+    declare_cos_one_le_four(d, p)?;
+    declare_neg_four_le_cos_one(d, p)
 }
 
 // --- local builders, reproduced verbatim in shape from `exponential.rs`'s
@@ -1228,14 +1242,23 @@ fn cos_one_ingredients(d: &mut IntDev<'_>, p: CRealPrelude) -> (ExprId, ExprId, 
 }
 
 /// `CReal.cosOne := CReal.mk (speedup (diagonal cosSeriesPartial) K) (…)` —
-/// mirrors `exponential.rs::declare_e` exactly.
+/// mirrors `exponential.rs::declare_e` exactly. `raw`/`k_final`/
+/// `cos_series_partial_body` are the CALLER's (`declare_trig`'s own
+/// `cos_one_ingredients` call) — see [`declare_trig`]'s doc for why these
+/// must be the SAME `ExprId`s [`declare_cos_one_converges`] uses, not a
+/// second, independently-derived copy.
 ///
 /// # Errors
 ///
 /// Returns the trusted gate's rejection. An `Err` here means the kernel
 /// **refused** a proof, not that a script gave up.
-fn declare_cos_one(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
-    let (raw, k_final, cos_series_partial_body) = cos_one_ingredients(d, p);
+fn declare_cos_one(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    raw: ExprId,
+    k_final: ExprId,
+    cos_series_partial_body: ExprId,
+) -> Result<(), KernelError> {
     let cos_series_partial_c = d.kernel().const_(p.cos_series_partial, vec![]);
 
     let speedup_term = d.const_app(p.speedup, &[raw, k_final]);
@@ -1254,5 +1277,464 @@ fn declare_cos_one(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelErro
         ty,
         value,
         hint: ReducibilityHint::Regular(DERIVED_HEIGHT + 40),
+    })
+}
+
+// ----------------------------------------------------------------------------
+// `CReal.cosOneConverges`, and the loose uniform bound `[-4, 4]` on `cosOne`.
+// ----------------------------------------------------------------------------
+
+/// `CReal.cosOneConverges : Converges cosSeriesPartial cosOne` — the
+/// `e_converges` analogue, reproduced verbatim in SHAPE from
+/// `exponential.rs::declare_e_converges` (that function is not `pub`, and
+/// this module already reproduces private helpers from that file for the
+/// same reason — see the module documentation).
+///
+/// **The concrete-`k_final` stack overflow this avoids.** Building the
+/// per-`n` proof directly against the CONCRETE `k_final` would make
+/// `speedup(raw, k_final)` a partially-concrete `Nat` expression (concrete in
+/// `k_final`, symbolic in `n`); the kernel's lazy-delta `is_def_eq`, forced to
+/// compare `speedup_term(n)` against `seq(l_val, n)` inside `exists_intro`'s
+/// argument check, then unfolds both sides in lock-step and never
+/// re-synchronizes, driving recursion depth into the thousands (measured for
+/// `e`'s own analogous construction: 14.8 s → a 1 GiB stack overflow in
+/// RELEASE). Building GENERICALLY over a BOUND `(k, h)` — exactly mirroring
+/// [`super::convergence::declare_converges_of_cauchy`]'s own `minor` closure
+/// — keeps every `Nat.mul`/`Nat.add` stuck against two free variables
+/// simultaneously, so it never fires; substituting the concrete
+/// `(k_final, cos_series_partial_body)` afterward is then a plain
+/// Pi-application (codomain substitution), never re-entering the per-`n`
+/// comparison.
+///
+/// `raw`/`k_final`/`cos_series_partial_body` are the CALLER's — see
+/// [`declare_trig`]'s doc for why these must be the SAME `ExprId`s
+/// [`declare_cos_one`] uses.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_cos_one_converges(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    raw: ExprId,
+    k_final: ExprId,
+    cos_series_partial_body: ExprId,
+) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let nat = d.nat_ty();
+    let cos_series_partial_const = d.kernel().const_(p.cos_series_partial, vec![]);
+    let cos_one_const = d.kernel().const_(p.cos_one, vec![]);
+
+    let generic = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hp_ty = sum_range_cauchy_body(d, p, cos_series_partial_const, k);
+        let hp_fv = d.fresh_fvar();
+        let hp = d.kernel().fvar(hp_fv);
+
+        let kregular_proof = kregular_of_cauchy_proof(d, p, raw, k, hp);
+        let speedup_term = d.const_app(p.speedup, &[raw, k]);
+        let sc = d.const_app(p.speedup_close, &[raw, k, kregular_proof]);
+
+        let regularity_proof = d.lemma(
+            p.regular_of_scaled_cauchy,
+            &[cos_series_partial_const, k, hp],
+        );
+        let constructor = d.kernel().const_(p.mk, vec![]);
+        let l_val = d.apply(constructor, &[speedup_term, regularity_proof]);
+
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let raw_n = d.apply(raw, &[n]);
+        let speedup_n = d.apply(speedup_term, &[n]);
+        let diff_n = rsub(d, rat, raw_n, speedup_n);
+
+        let succ_k = d.succ(k);
+        let one_nat = d.num(1);
+        let bound_left_n = div_succ_at(d, p, succ_k, n);
+        let bound_right_n = div_succ_at(d, p, one_nat, n);
+        let sc_n_bound = radd(d, bound_left_n, bound_right_n);
+
+        let sc_n = d.apply(sc, &[n]);
+
+        let fuse = d.lemma(rat.nat_div_succ_add, &[succ_k, one_nat, n]);
+        let k2 = NatOps::add(d, succ_k, one_nat);
+        let target_bound_n = div_succ_at(d, p, k2, n);
+        let step = rat_eq_rewrite(d, sc_n_bound, target_bound_n, fuse, sc_n, &|d, t| {
+            within(d, p, diff_n, t)
+        });
+
+        let over_n = d.lam_fv(n_fv, nat, step);
+        let converges_pred = converges_predicate(d, p, cos_series_partial_const, l_val);
+        let converges_proof = exists_intro(d, p, nat, converges_pred, k2, over_n);
+
+        let with_hp = d.lam_fv(hp_fv, hp_ty, converges_proof);
+        d.lam_fv(k_fv, nat, with_hp)
+    };
+
+    let value = d.apply(generic, &[k_final, cos_series_partial_body]);
+
+    let ty = converges_applied(d, p, cos_series_partial_const, cos_one_const);
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.cos_one_converges,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.four := mul two two`, local to this file exactly as
+/// `exponential.rs::declare_e_le_four` builds its own `four` inline (not a
+/// named `CReal` constant).
+fn four(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let t = two(d, p);
+    cmul(d, p, t, t)
+}
+
+/// `le zero four`, reproduced in shape from `exponential.rs::declare_e_le_four`'s
+/// own inline `four_nonneg`.
+fn four_nonneg_proof(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let t = two(d, p);
+    let two_nn = two_nonneg_proof(d, p);
+    d.lemma(p.mul_nonneg, &[t, t, two_nn, two_nn])
+}
+
+/// `le (sumRange expDominant n) four`, for a BOUND `n` — reproduced verbatim
+/// from the closed-form portion of `exponential.rs::declare_e_le_four`'s own
+/// `per_n` closure (the part bounding `sumRange expDominant n` itself, not
+/// the `sumRange expTerm n <= sumRange expDominant n` step, which this file
+/// does not need: `cosTermAbsLeDominant` already bounds `abs (cosTerm k)`
+/// directly against `expDominant k`).
+///
+/// `sumRange expDominant n ~ mul four (add one (neg (pow half n)))`
+/// (`CReal.mul_sumRange`/`CReal.sumRange_pow_half_closed_form`/`mul_assoc`),
+/// and `add one (neg (pow half n)) <= one` since `pow half n >= 0`
+/// (`CReal.pow_nonneg`/`neg_le_neg`/`add_le_add`), so the whole product is
+/// `<= mul four one ~ four`.
+fn exp_dominant_sum_le_four(d: &mut IntDev<'_>, p: CRealPrelude, n: ExprId) -> ExprId {
+    let exp_dominant_const = d.kernel().const_(p.exp_dominant, vec![]);
+    let zero_c = czero(d, p);
+    let one_cc = one_c(d, p);
+    let two_creal = two(d, p);
+    let half_val = half(d, p);
+    let four_c = four(d, p);
+    let four_nonneg = four_nonneg_proof(d, p);
+
+    let pow_half_fn_ = pow_half_fn(d, p);
+    let sum_pow_half_n = d.const_app(p.sum_range, &[pow_half_fn_, n]);
+    let sum_expdom_n = d.const_app(p.sum_range, &[exp_dominant_const, n]);
+    let mul_two_sum = cmul(d, p, two_creal, sum_pow_half_n);
+    let mul_sum_eq = d.lemma(p.mul_sum_range, &[two_creal, pow_half_fn_, n]);
+    let mul_sum_eq_symm = d.lemma(p.equiv_symm, &[mul_two_sum, sum_expdom_n, mul_sum_eq]);
+
+    let n_pow = cpow(d, p, half_val, n);
+    let neg_pow = cneg(d, p, n_pow);
+    let y_n = cadd(d, p, one_cc, neg_pow);
+    let mul_two_y = cmul(d, p, two_creal, y_n);
+    let closed_form = d.const_app(p.sum_pow_half_closed_form, &[n]);
+    let refl_two = d.lemma(p.equiv_refl, &[two_creal]);
+    let mul_two_mul_two_y = cmul(d, p, two_creal, mul_two_y);
+    let step_congr = d.lemma(
+        p.mul_congr,
+        &[
+            two_creal,
+            two_creal,
+            sum_pow_half_n,
+            mul_two_y,
+            refl_two,
+            closed_form,
+        ],
+    );
+    // step_congr : Equiv mul_two_sum mul_two_mul_two_y
+
+    let four_raw = cmul(d, p, four_c, y_n);
+    let assoc = d.lemma(p.mul_assoc, &[two_creal, two_creal, y_n]);
+    // assoc : Equiv four_raw mul_two_mul_two_y
+    let assoc_symm = d.lemma(p.equiv_symm, &[four_raw, mul_two_mul_two_y, assoc]);
+
+    let eq_sum_four = {
+        let t1 = d.lemma(
+            p.equiv_trans,
+            &[
+                sum_expdom_n,
+                mul_two_sum,
+                mul_two_mul_two_y,
+                mul_sum_eq_symm,
+                step_congr,
+            ],
+        );
+        d.lemma(
+            p.equiv_trans,
+            &[sum_expdom_n, mul_two_mul_two_y, four_raw, t1, assoc_symm],
+        )
+    };
+    // eq_sum_four : Equiv sum_expdom_n four_raw
+
+    // y_n <= one, from 0 <= pow half n.
+    let half_nonneg = half_nonneg_proof(d, p);
+    let pow_nonneg_n = d.lemma(p.pow_nonneg, &[half_val, half_nonneg, n]);
+    let neg_le_neg_step = d.lemma(p.neg_le_neg, &[zero_c, n_pow, pow_nonneg_n]);
+    let neg_zero_c = cneg(d, p, zero_c);
+    let nz_equiv = neg_zero_equiv_local(d, p);
+    let refl_neg_pow = d.lemma(p.equiv_refl, &[neg_pow]);
+    let neg_pow_le_zero = d.lemma(
+        p.le_congr,
+        &[
+            neg_pow,
+            neg_pow,
+            neg_zero_c,
+            zero_c,
+            refl_neg_pow,
+            nz_equiv,
+            neg_le_neg_step,
+        ],
+    );
+    let refl_one = d.lemma(p.le_refl, &[one_cc]);
+    let grown_y = d.lemma(
+        p.add_le_add,
+        &[one_cc, one_cc, neg_pow, zero_c, refl_one, neg_pow_le_zero],
+    );
+    let padded_one = cadd(d, p, one_cc, zero_c);
+    let add_zero_eq = d.lemma(p.add_zero, &[one_cc]);
+    let refl_y = d.lemma(p.equiv_refl, &[y_n]);
+    let y_le_one = d.lemma(
+        p.le_congr,
+        &[y_n, y_n, padded_one, one_cc, refl_y, add_zero_eq, grown_y],
+    );
+
+    // mul four y_n <= mul four one ~ four.
+    let mul_le = d.lemma(
+        p.mul_le_mul_of_nonneg_left,
+        &[four_c, y_n, one_cc, four_nonneg, y_le_one],
+    );
+    let mul_four_one = cmul(d, p, four_c, one_cc);
+    let mul_one_eq = d.lemma(p.mul_one, &[four_c]);
+    let refl_four_raw = d.lemma(p.equiv_refl, &[four_raw]);
+    let four_raw_le_four = d.lemma(
+        p.le_congr,
+        &[
+            four_raw,
+            four_raw,
+            mul_four_one,
+            four_c,
+            refl_four_raw,
+            mul_one_eq,
+            mul_le,
+        ],
+    );
+
+    let eq_sum_four_symm = d.lemma(p.equiv_symm, &[sum_expdom_n, four_raw, eq_sum_four]);
+    let refl_four = d.lemma(p.equiv_refl, &[four_c]);
+    d.lemma(
+        p.le_congr,
+        &[
+            four_raw,
+            sum_expdom_n,
+            four_c,
+            four_c,
+            eq_sum_four_symm,
+            refl_four,
+            four_raw_le_four,
+        ],
+    )
+}
+
+/// `le (abs (sumRange cosTerm n)) four` (defeq to `le (abs (cosSeriesPartial
+/// n)) four`), for a BOUND `n`. `CReal.abs_sumRange_le` (the triangle
+/// inequality `|Σf| <= Σ|f|`) composed with `CReal.sumRange_le` at the
+/// pointwise `CReal.cosTermAbsLeDominant`, then [`exp_dominant_sum_le_four`].
+///
+/// The middle-term construction (`abs_cos_term_fn`, `ptwise`) mirrors
+/// `series.rs::declare_sum_range_tail_le`'s own `absf_hf`/`pointwise_proof`
+/// pattern for composing `abs_sumRange_le` with `sumRange_le` — the only
+/// other site in this development chaining these two lemmas.
+fn cos_series_partial_abs_le_four(d: &mut IntDev<'_>, p: CRealPrelude, n: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let cos_term_c = d.kernel().const_(p.cos_term, vec![]);
+    let exp_dominant_const = d.kernel().const_(p.exp_dominant, vec![]);
+    let cos_term_abs_le_dominant_const = d.kernel().const_(p.cos_term_abs_le_dominant, vec![]);
+
+    let s = d.const_app(p.sum_range, &[cos_term_c, n]);
+    let abs_s = cabs(d, p, s);
+
+    // triangle inequality: abs (sumRange cosTerm n) <= sumRange |cosTerm| n.
+    let abs_cos_term_fn = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let ci = d.apply(cos_term_c, &[i]);
+        let body = cabs(d, p, ci);
+        d.lam_fv(i_fv, nat, body)
+    };
+    let sum_abs_cos_term_n = d.const_app(p.sum_range, &[abs_cos_term_fn, n]);
+    let tri = d.lemma(p.abs_sum_range_le, &[cos_term_c, n]);
+    // tri : le abs_s sum_abs_cos_term_n
+
+    // sumRange |cosTerm| n <= sumRange expDominant n, pointwise from
+    // cosTermAbsLeDominant.
+    let ptwise = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let lt_fv = d.fresh_fvar();
+        let lt_ty = d.lt(i, n);
+        let body = d.apply(cos_term_abs_le_dominant_const, &[i]);
+        let with_lt = d.lam_fv(lt_fv, lt_ty, body);
+        d.lam_fv(i_fv, nat, with_lt)
+    };
+    let sum_expdom_n = d.const_app(p.sum_range, &[exp_dominant_const, n]);
+    let step_b = d.lemma(
+        p.sum_range_le,
+        &[abs_cos_term_fn, exp_dominant_const, n, ptwise],
+    );
+    // step_b : le sum_abs_cos_term_n sum_expdom_n
+
+    let t1 = d.lemma(
+        p.le_trans,
+        &[abs_s, sum_abs_cos_term_n, sum_expdom_n, tri, step_b],
+    );
+    // t1 : le abs_s sum_expdom_n
+
+    let sum_expdom_le_four = exp_dominant_sum_le_four(d, p, n);
+    let four_c = four(d, p);
+    d.lemma(
+        p.le_trans,
+        &[abs_s, sum_expdom_n, four_c, t1, sum_expdom_le_four],
+    )
+}
+
+/// `CReal.cosOne_le_four : le cosOne (mul two two)` — a LOOSE, UNIFORM bound
+/// (no case split; holds at every `n` including `n = 0`, where
+/// `cosSeriesPartial 0 = zero` and `sumRange expDominant 0 = zero` both by
+/// `sumRange_zero`'s ι-reduction, so the per-`n` fact is trivially true
+/// there too — UNLIKE `two_le_e`, which needs the eventual/shift form because
+/// `expSeriesPartial 0 = 0 < 2` genuinely violates that bound). `le_abs_self`
+/// plus [`cos_series_partial_abs_le_four`], closed against
+/// [`declare_cos_one_converges`] by `CReal.converges_upper_bound`.
+///
+/// **Where the kink would be, and why this bound has none.** `e_le_three`'s
+/// kink is mathematical: `expTerm 0 = expTerm 1 = 1`, not yet geometric, so
+/// no single uniform formula is both true at every `n` and tight enough to
+/// sum to `3`. This file's domination (`abs (cosTerm k) <= expDominant k`,
+/// REUSED unchanged from `e`) is uniform in exactly that same sense, but
+/// deliberately never tight — `expDominant` bounds `cosTerm`'s TRUE decay
+/// (`1/(2k)!`) by as much as ~180x at `k = 3` (`expDominant 3 = 1/4` against
+/// `abs (cosTerm 3) = 1/720`) precisely because it is `e`'s own bound, reused
+/// rather than re-derived. That looseness is what makes a single uniform
+/// formula suffice: the triangle inequality (`abs_sumRange_le`) discards the
+/// alternation's cancellation entirely, so nothing here ever needs to notice
+/// where the sign pattern is. The genuine kink — where an actual case split
+/// analogous to `e_le_three`'s would appear — is one step further out: a
+/// bound tight enough for `[0, 1]` or `[1/2, 3/5]` needs to PAIR consecutive
+/// terms (`cosTerm (2i) + cosTerm (2i+1) >= 0`, from `abs (cosTerm (2i+1)) <=
+/// abs (cosTerm (2i))`, i.e. genuine decrease of the term sequence, not just
+/// a uniform envelope), which is real alternating-series machinery this
+/// slice does not build. See the module documentation.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_cos_one_le_four(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let cos_series_partial_const = d.kernel().const_(p.cos_series_partial, vec![]);
+    let cos_one_const = d.kernel().const_(p.cos_one, vec![]);
+    let cos_one_converges_proof = d.kernel().const_(p.cos_one_converges, vec![]);
+    let four_c = four(d, p);
+
+    let ptwise_upper = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let sn = d.apply(cos_series_partial_const, &[n]);
+        let abs_sn = cabs(d, p, sn);
+        let abs_bound = cos_series_partial_abs_le_four(d, p, n);
+        let le_abs = d.lemma(p.le_abs_self, &[sn]);
+        let body = d.lemma(p.le_trans, &[sn, abs_sn, four_c, le_abs, abs_bound]);
+        d.lam_fv(n_fv, nat, body)
+    };
+
+    let value = d.const_app(
+        p.converges_upper_bound,
+        &[
+            cos_series_partial_const,
+            cos_one_const,
+            four_c,
+            ptwise_upper,
+            cos_one_converges_proof,
+        ],
+    );
+    let ty = cle(d, p, cos_one_const, four_c);
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.cos_one_le_four,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.neg_four_le_cosOne : le (neg (mul two two)) cosOne` — the lower
+/// half, from the same [`cos_series_partial_abs_le_four`] fact read through
+/// `neg_le_abs` instead of `le_abs_self`, then flipped from `le (neg
+/// cosSeriesPartial n) four` to `le (neg four) (cosSeriesPartial n)` via
+/// `neg_le_neg`/double-negation — the same flip [`sign_abs_le_one`]'s sibling
+/// helpers (`neg_one_le_one`, `double_neg`) already use in this file.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_neg_four_le_cos_one(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let cos_series_partial_const = d.kernel().const_(p.cos_series_partial, vec![]);
+    let cos_one_const = d.kernel().const_(p.cos_one, vec![]);
+    let cos_one_converges_proof = d.kernel().const_(p.cos_one_converges, vec![]);
+    let four_c = four(d, p);
+    let neg_four = cneg(d, p, four_c);
+
+    let ptwise_lower = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let sn = d.apply(cos_series_partial_const, &[n]);
+        let neg_sn = cneg(d, p, sn);
+        let abs_sn = cabs(d, p, sn);
+        let abs_bound = cos_series_partial_abs_le_four(d, p, n);
+        let neg_le_abs_step = d.lemma(p.neg_le_abs, &[sn]);
+        // neg_le_abs_step : le neg_sn abs_sn
+        let neg_sn_le_four = d.lemma(
+            p.le_trans,
+            &[neg_sn, abs_sn, four_c, neg_le_abs_step, abs_bound],
+        );
+        // neg_sn_le_four : le neg_sn four_c
+
+        let step = d.lemma(p.neg_le_neg, &[neg_sn, four_c, neg_sn_le_four]);
+        // step : le neg_four (neg neg_sn)
+        let neg_neg_sn = cneg(d, p, neg_sn);
+        let dn = double_neg(d, p, sn);
+        // dn : Equiv neg_neg_sn sn
+        let refl_neg_four = erefl(d, p, neg_four);
+        let body = d.lemma(
+            p.le_congr,
+            &[neg_four, neg_four, neg_neg_sn, sn, refl_neg_four, dn, step],
+        );
+        d.lam_fv(n_fv, nat, body)
+    };
+
+    let value = d.const_app(
+        p.converges_lower_bound,
+        &[
+            neg_four,
+            cos_series_partial_const,
+            cos_one_const,
+            ptwise_lower,
+            cos_one_converges_proof,
+        ],
+    );
+    let ty = cle(d, p, neg_four, cos_one_const);
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.neg_four_le_cos_one,
+        uparams: vec![],
+        ty,
+        value,
     })
 }
