@@ -1361,6 +1361,37 @@ pub struct CRealPrelude {
     /// to a `Nat.le` on the numerator `bucketIndex w k` itself, scaled by
     /// `k+1`. See `creal/uniform_continuity.rs`.
     pub bucket_index_bound: NameId,
+    /// `CReal.crossingIndex : CReal → CReal → Rat → Nat` — the Archimedean
+    /// **crossing index**: given a base `a`, a target `c` and a positive
+    /// rational step `Δ`, the computed count of `Δ`-steps from `a` at which
+    /// `c` is reached, within a small fixed slack. `crossingIndex a c delta
+    /// := bucketIndex (mul (ofRat (Rat.inv delta)) (add c (neg a))) 0` —
+    /// rescale `c − a` by `Δ⁻¹` and read [`Self::bucket_index`] at the FIXED
+    /// grid `k := 0` (step `1`), reducing an arbitrary step to the one
+    /// `bucketIndex` already handles. Computed, never `Exists`-derived. See
+    /// `creal/crossing.rs`.
+    pub crossing_index: NameId,
+    /// `CReal.crossingUpper : ∀ a c delta, Rat.lt Rat.zero delta →
+    /// CReal.le c (CReal.add a (CReal.mul (CReal.ofRat delta) (CReal.ofRat
+    /// (Rat.add (Rat.natDivSucc (Nat.succ (CReal.crossingIndex a c delta)) 0)
+    /// (Rat.natDivSucc 2 j)))))`, `j` the closed term `bucketIndex` samples
+    /// at when `k = 0` (`(succ 0)*(succ 0)`, definitionally `1`).
+    ///
+    /// **Needs only `0 < Δ` — no `a ≤ c` hypothesis at all.** Both
+    /// `bucketIndexFloorUpper` and `bucketClampUpper` are unconditional, and
+    /// scaling a `CReal.le` fact by a positive rational preserves it
+    /// regardless of `c − a`'s sign. See `creal/crossing.rs`.
+    pub crossing_upper: NameId,
+    /// `CReal.crossingLower : ∀ a c delta, Rat.lt Rat.zero delta →
+    /// CReal.le a c → CReal.le (CReal.add a (CReal.mul (CReal.ofRat delta)
+    /// (CReal.ofRat (Rat.sub (Rat.natDivSucc (CReal.crossingIndex a c delta)
+    /// 0) (Rat.natDivSucc 3 j))))) c`.
+    ///
+    /// **Genuinely needs `a ≤ c`** (unlike [`Self::crossing_upper`]):
+    /// `bucketClampLower`'s hypothesis is `0 ≤` the value being bucketed —
+    /// here `(c−a)·Δ⁻¹` — which `a ≤ c` supplies via `CReal.mul_nonneg` on
+    /// the two nonnegative factors. See `creal/crossing.rs`.
+    pub crossing_lower: NameId,
     /// `CReal.sampleUpperBound : ∀ x m, CReal.le x (CReal.ofRat (Rat.add
     /// (CReal.seq x m) (Rat.natDivSucc 1 m)))` — the general
     /// self-approximation lemma every `CReal` satisfies: it never exceeds
@@ -4248,6 +4279,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         bucket_clamp_upper: kernel.name_str(creal, "bucketClampUpper"),
         bucket_clamp_lower: kernel.name_str(creal, "bucketClampLower"),
         bucket_index_bound: kernel.name_str(creal, "bucketIndexBound"),
+        crossing_index: kernel.name_str(creal, "crossingIndex"),
+        crossing_upper: kernel.name_str(creal, "crossingUpper"),
+        crossing_lower: kernel.name_str(creal, "crossingLower"),
         sample_upper_bound: kernel.name_str(creal, "sampleUpperBound"),
         sample_lower_bound: kernel.name_str(creal, "sampleLowerBound"),
         bounded_of_uniformly_continuous: kernel.name_str(creal, "bounded_of_uniformly_continuous"),
@@ -4560,6 +4594,13 @@ pub(crate) fn build_creal_prelude_uncached(
         // before `monotone::declare_monotone`, its first NEW consumer.
         uniform_continuity::declare_abs_add_le(&mut d, prelude)?;
         uniform_continuity::declare_uniform_continuity(&mut d, prelude)?;
+        // `crossing::declare_crossing` needs only `CReal.bucketIndex` and its
+        // four closeness lemmas (`declare_uniform_continuity`, just above)
+        // plus the core order/product toolkit (`product::declare_product`/
+        // `field::declare_field`, both well above) -- nothing from
+        // `derivative`/`series`/`monotone`, so it lands here rather than
+        // waiting for any of them.
+        crossing::declare_crossing(&mut d, prelude)?;
         // `converges_comp_eventually` needs `UniformlyContinuousOn`/`.spec`/
         // `.modulus` (`declare_uniform_continuity`, just above) plus
         // `Converges`/`converges_lower_bound`/`converges_upper_bound`
@@ -5888,6 +5929,7 @@ mod cancellation;
 mod completeness;
 mod convergence;
 mod cotransitivity;
+mod crossing;
 mod density;
 mod deriv_unique;
 mod derivative;
