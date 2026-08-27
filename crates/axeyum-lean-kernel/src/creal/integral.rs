@@ -19998,15 +19998,6 @@ mod integral_abs_le_tests {
 
 /// `fun i => add (f i) (neg (g i))` — built once so every occurrence interns
 /// to the same `ExprId`, the discipline this file's 74 s incident set.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "piece 1's summand-difference builder; consumed once the \
-                  per-term Riemann estimate that feeds sum_range_pair_diff_le \
-                  lands"
-    )
-)]
 fn diff_fn_of(d: &mut IntDev<'_>, p: CRealPrelude, f: ExprId, g: ExprId) -> ExprId {
     let nat = d.nat_ty();
     let i_fv = d.fresh_fvar();
@@ -20019,14 +20010,6 @@ fn diff_fn_of(d: &mut IntDev<'_>, p: CRealPrelude, f: ExprId, g: ExprId) -> Expr
 }
 
 /// `fun i => abs (add (f i) (neg (g i)))`.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "piece 1's |summand difference| builder; same consumer as \
-                  diff_fn_of"
-    )
-)]
 fn abs_diff_fn_of(d: &mut IntDev<'_>, p: CRealPrelude, f: ExprId, g: ExprId) -> ExprId {
     let nat = d.nat_ty();
     let i_fv = d.fresh_fvar();
@@ -20051,15 +20034,6 @@ fn abs_diff_fn_of(d: &mut IntDev<'_>, p: CRealPrelude, f: ExprId, g: ExprId) -> 
 /// and the summand on the left is pointwise `f i` — so
 /// `sumRange f n ~ sumRange D n + sumRange g n`, which the four standard
 /// additive laws turn into the stated form. No new estimate anywhere.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "the setoid's missing sumRange_neg, reassembled additively; \
-                  consumed by sum_range_pair_diff_le, itself awaiting the \
-                  per-term Riemann estimate"
-    )
-)]
 fn sum_range_diff_local(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -20168,15 +20142,6 @@ fn sum_range_diff_local(
 /// [`CRealPrelude::sum_range_const`] to collapse it. The `succ m` shape is
 /// `sum_range_const`'s own and is exactly `riemannSum`'s term count, so no
 /// `Nat` arithmetic is introduced.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "the SUM-level half of piece 1 (the close-endpoint estimate); \
-                  its consumer is the per-term Riemann estimate, which is \
-                  exactly what did not land this lane"
-    )
-)]
 fn sum_range_pair_diff_le(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -20452,15 +20417,6 @@ mod sum_range_pair_diff_le_tests {
 /// second `ring_helpers::right_distrib`. They are different lemmas here, and
 /// the prelude publishes only the first.
 #[allow(clippy::too_many_arguments)]
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "piece 1's per-term estimate; its consumer is the riemannSum-level \
-                  assembly, which needs the per-index sample-point closeness this \
-                  lane did not discharge"
-    )
-)]
 fn product_pair_diff_le(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -20792,15 +20748,6 @@ mod product_pair_diff_le_tests {
 /// [`CRealPrelude::of_nat_le`] and [`CRealPrelude::mesh_reciprocal_mul`].
 /// See the module documentation.
 #[allow(clippy::too_many_arguments)]
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "piece 1 assembled; its consumer is integral_split at an ARBITRARY \
-                  split point, which is additionally blocked on piece 2 (a PosBound \
-                  on the interval width)"
-    )
-)]
 fn riemann_sum_endpoints_le(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -21197,14 +21144,6 @@ fn neg_add_local(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> E
 
 /// `Equiv (add (add a b) (add c e)) (add (add a c) (add b e))` — the
 /// four-term middle swap, from `add_assoc`/`add_comm` only.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "the regrouping half of add_pair_diff_le, itself awaiting \
-                  integral_split at an ARBITRARY split point"
-    )
-)]
 fn add4_swap_middle(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -21255,14 +21194,6 @@ fn add4_swap_middle(
 /// [`product_pair_diff_le`], and the shape a sample-point difference
 /// `(x + i·Δ₁) − (x₂ + i·Δ₂)` reduces to directly.
 #[allow(clippy::too_many_arguments)]
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "the outer half of sample_point_pair_diff_le, itself awaiting \
-                  integral_split at an ARBITRARY split point"
-    )
-)]
 fn add_pair_diff_le(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -21324,14 +21255,6 @@ fn add_pair_diff_le(
 /// No `Equiv (neg zero) zero` bridge is needed here: [`neg_le_of_nonneg`]
 /// already carries one, which is why this is five lines rather than a second
 /// local restatement of a lemma three modules keep privately.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "the index-magnitude leaf of sample_point_pair_diff_le, itself \
-                  awaiting integral_split at an ARBITRARY split point"
-    )
-)]
 fn abs_of_nat_le(d: &mut IntDev<'_>, p: CRealPrelude, i: ExprId, m: ExprId, hle: ExprId) -> ExprId {
     let oi = d.const_app(p.of_nat, &[i]);
     let sm = d.succ(m);
@@ -21345,14 +21268,6 @@ fn abs_of_nat_le(d: &mut IntDev<'_>, p: CRealPrelude, i: ExprId, m: ExprId, hle:
 
 /// `le (abs (ofRat (Rat.natDivSucc 1 m))) (ofRat (Rat.natDivSucc 1 m))` — the
 /// mesh fraction is its own bound, since it is nonneg ([`frac_nonneg`]).
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "the mesh-factor leaf of sample_point_pair_diff_le, itself \
-                  awaiting integral_split at an ARBITRARY split point"
-    )
-)]
 fn abs_frac_le_self(d: &mut IntDev<'_>, p: CRealPrelude, m: ExprId) -> ExprId {
     let frac = frac_of(d, p, m);
     let nn = frac_nonneg(d, p, m);
@@ -21393,15 +21308,6 @@ fn abs_frac_le_self(d: &mut IntDev<'_>, p: CRealPrelude, m: ExprId) -> ExprId {
 ///    — giving `(succ m)·(bw·frac)`, which `mesh_count_width` collapses to
 ///    `bw`. [`add_pair_diff_le`] then joins it to the `bx` leg.
 #[allow(clippy::too_many_arguments)]
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "the per-index closeness discharge; consumed by \
-                  riemann_sum_endpoints_le_uniform, itself awaiting integral_split \
-                  at an ARBITRARY split point"
-    )
-)]
 fn sample_point_pair_diff_le(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -21526,15 +21432,6 @@ fn sample_point_pair_diff_le(
 /// nothing mentions `Δ` except the two slack bounds that were already
 /// parameters.
 #[allow(clippy::too_many_arguments)]
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "piece 1, unconditional; its consumer is integral_split at an \
-                  ARBITRARY split point, which is separately blocked on piece 2 (a \
-                  PosBound on the interval width)"
-    )
-)]
 fn riemann_sum_endpoints_le_uniform(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -23565,15 +23462,6 @@ pub(super) fn declare_split_point_approx(
 
 /// `le (abs (ofRat (natDivSucc 1 m))) (ofRat (natDivSucc 1 m))` — the mesh
 /// fraction bounds its own absolute value.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "piece 1 in mesh-UNIFORM form; its consumer is integral_split at an \
-                  ARBITRARY split point, whose remaining gap is the assembly, not \
-                  this estimate"
-    )
-)]
 fn abs_frac_le_frac(d: &mut IntDev<'_>, p: CRealPrelude, m: ExprId) -> ExprId {
     let rat = p.rat;
     let one_nat = d.num(1);
@@ -23601,15 +23489,6 @@ fn abs_frac_le_frac(d: &mut IntDev<'_>, p: CRealPrelude, m: ExprId) -> ExprId {
 
 /// `Equiv (mul ((y−x) − (y2−x2)) Δ) (Δ₁ − Δ₂)` for the two mesh steps at the
 /// SAME count `m` — the two widths' difference, scaled once.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "piece 1 in mesh-UNIFORM form; its consumer is integral_split at an \
-                  ARBITRARY split point, whose remaining gap is the assembly, not \
-                  this estimate"
-    )
-)]
 fn delta_diff_factors(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -23656,15 +23535,6 @@ fn delta_diff_factors(
 /// (succ k) 0)`, `bounded_on_unfold`'s own bound at `derivative.rs`'s
 /// `mag_bound k` recipe.
 #[allow(clippy::too_many_arguments)]
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "piece 1 in mesh-UNIFORM form; its consumer is integral_split at an \
-                  ARBITRARY split point, whose remaining gap is the assembly, not \
-                  this estimate"
-    )
-)]
 fn riemann_sum_endpoints_le_mesh_uniform(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -26010,4 +25880,292 @@ mod integral_split_arbitrary_equiv_tests {
         let r = crate::on_a_deep_stack(arbitrary_equiv_probe);
         r.unwrap_or_else(|e| panic!("the arbitrary-c Equiv must be accepted: {e:?}"));
     }
+}
+
+/// Admit `CReal.integralEndpointClose`. See this section's own module
+/// documentation.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_integral_endpoint_close(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let f_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let aa_fv = d.fresh_fvar();
+    let aa = d.kernel().fvar(aa_fv);
+    let bb_fv = d.fresh_fvar();
+    let bb = d.kernel().fvar(bb_fv);
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, aa, bb]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let hb_ty = d.const_app(p.bounded_on, &[f, aa, bb, k]);
+    let hb_fv = d.fresh_fvar();
+    let hb = d.kernel().fvar(hb_fv);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let x2_fv = d.fresh_fvar();
+    let x2 = d.kernel().fvar(x2_fv);
+    let y2_fv = d.fresh_fvar();
+    let y2 = d.kernel().fvar(y2_fv);
+    let dw_fv = d.fresh_fvar();
+    let dw = d.kernel().fvar(dw_fv);
+    let w2b_fv = d.fresh_fvar();
+    let w2b = d.kernel().fvar(w2b_fv);
+    let bx_fv = d.fresh_fvar();
+    let bx = d.kernel().fvar(bx_fv);
+    let bw_fv = d.fresh_fvar();
+    let bw = d.kernel().fvar(bw_fv);
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+
+    let hxy_ty = cle(d, p, x, y);
+    let hxy_fv = d.fresh_fvar();
+    let hxy = d.kernel().fvar(hxy_fv);
+    let hx2y2_ty = cle(d, p, x2, y2);
+    let hx2y2_fv = d.fresh_fvar();
+    let hx2y2 = d.kernel().fvar(hx2y2_fv);
+    let uxy_ty = d.const_app(p.uniformly_continuous_on, &[f, x, y]);
+    let uxy_fv = d.fresh_fvar();
+    let uxy = d.kernel().fvar(uxy_fv);
+    let ux2y2_ty = d.const_app(p.uniformly_continuous_on, &[f, x2, y2]);
+    let ux2y2_fv = d.fresh_fvar();
+    let ux2y2 = d.kernel().fvar(ux2y2_fv);
+
+    let hax_ty = cle(d, p, aa, x);
+    let hyb_ty = cle(d, p, y, bb);
+    let hax2_ty = cle(d, p, aa, x2);
+    let hy2b_ty = cle(d, p, y2, bb);
+
+    let w1 = width_of(d, p, x, y);
+    let w2 = width_of(d, p, x2, y2);
+    let nw2 = cneg(d, p, w2);
+    let wdiff = cadd(d, p, w1, nw2);
+    let abs_wdiff = d.const_app(p.abs, &[wdiff]);
+    let hdw_ty = cle(d, p, abs_wdiff, dw);
+    let abs_w2 = d.const_app(p.abs, &[w2]);
+    let hw2b_ty = cle(d, p, abs_w2, w2b);
+    let nx2 = cneg(d, p, x2);
+    let xdiff = cadd(d, p, x, nx2);
+    let abs_xdiff = d.const_app(p.abs, &[xdiff]);
+    let hbx_ty = cle(d, p, abs_xdiff, bx);
+    let hbw_ty = cle(d, p, abs_wdiff, bw);
+    let hfit_ty = {
+        let modul = d.const_app(p.uc_modulus, &[f, aa, bb, u, e]);
+        let one_nat = d.num(1);
+        let q = d.const_app(p.rat.nat_div_succ, &[one_nat, modul]);
+        let target = embed(d, p, q);
+        let sum = cadd(d, p, bx, bw);
+        cle(d, p, sum, target)
+    };
+
+    let hyp_tys = [
+        hax_ty, hyb_ty, hax2_ty, hy2b_ty, hdw_ty, hw2b_ty, hbx_ty, hbw_ty, hfit_ty,
+    ];
+    let hyp_fvs: Vec<_> = (0..hyp_tys.len()).map(|_| d.fresh_fvar()).collect();
+    let hyps: Vec<_> = hyp_fvs.iter().map(|fv| d.kernel().fvar(*fv)).collect();
+
+    let proof = integral_endpoint_close(
+        d, p, f, aa, bb, u, k, hb, x, y, x2, y2, hxy, hx2y2, uxy, ux2y2, hyps[0], hyps[1], hyps[2],
+        hyps[3], dw, w2b, bx, bw, e, hyps[4], hyps[5], hyps[6], hyps[7], hyps[8],
+    );
+
+    let i1 = d.const_app(p.integral, &[f, x, y, hxy, uxy]);
+    let i2 = d.const_app(p.integral, &[f, x2, y2, hx2y2, ux2y2]);
+    let ni2 = cneg(d, p, i2);
+    let diff = cadd(d, p, i1, ni2);
+    let abs_diff = d.const_app(p.abs, &[diff]);
+    let mbound = {
+        let succ_k = d.succ(k);
+        let zero_nat = d.num(0);
+        let q = d.const_app(p.rat.nat_div_succ, &[succ_k, zero_nat]);
+        embed(d, p, q)
+    };
+    let eps = {
+        let one_nat = d.num(1);
+        let q = d.const_app(p.rat.nat_div_succ, &[one_nat, e]);
+        embed(d, p, q)
+    };
+    let bound = {
+        let l = cmul(d, p, mbound, dw);
+        let r = cmul(d, p, eps, w2b);
+        cadd(d, p, l, r)
+    };
+    let concl = cle(d, p, abs_diff, bound);
+
+    let ty = {
+        let mut t = concl;
+        for hty in hyp_tys.iter().rev() {
+            t = d.arrow(*hty, t);
+        }
+        t = d.pi_fv(e_fv, nat, t);
+        t = d.pi_fv(bw_fv, carrier, t);
+        t = d.pi_fv(bx_fv, carrier, t);
+        t = d.pi_fv(w2b_fv, carrier, t);
+        t = d.pi_fv(dw_fv, carrier, t);
+        t = d.pi_fv(ux2y2_fv, ux2y2_ty, t);
+        t = d.pi_fv(uxy_fv, uxy_ty, t);
+        t = d.pi_fv(hx2y2_fv, hx2y2_ty, t);
+        t = d.pi_fv(hxy_fv, hxy_ty, t);
+        t = d.pi_fv(y2_fv, carrier, t);
+        t = d.pi_fv(x2_fv, carrier, t);
+        t = d.pi_fv(y_fv, carrier, t);
+        t = d.pi_fv(x_fv, carrier, t);
+        t = d.arrow(hb_ty, t);
+        t = d.pi_fv(k_fv, nat, t);
+        t = d.pi_fv(u_fv, u_ty, t);
+        t = d.pi_fv(bb_fv, carrier, t);
+        t = d.pi_fv(aa_fv, carrier, t);
+        d.pi_fv(f_fv, f_ty, t)
+    };
+    let value = {
+        let mut v = proof;
+        for (fv, hty) in hyp_fvs.iter().zip(hyp_tys.iter()).rev() {
+            v = d.lam_fv(*fv, *hty, v);
+        }
+        v = d.lam_fv(e_fv, nat, v);
+        v = d.lam_fv(bw_fv, carrier, v);
+        v = d.lam_fv(bx_fv, carrier, v);
+        v = d.lam_fv(w2b_fv, carrier, v);
+        v = d.lam_fv(dw_fv, carrier, v);
+        v = d.lam_fv(ux2y2_fv, ux2y2_ty, v);
+        v = d.lam_fv(uxy_fv, uxy_ty, v);
+        v = d.lam_fv(hx2y2_fv, hx2y2_ty, v);
+        v = d.lam_fv(hxy_fv, hxy_ty, v);
+        v = d.lam_fv(y2_fv, carrier, v);
+        v = d.lam_fv(x2_fv, carrier, v);
+        v = d.lam_fv(y_fv, carrier, v);
+        v = d.lam_fv(x_fv, carrier, v);
+        v = d.lam_fv(hb_fv, hb_ty, v);
+        v = d.lam_fv(k_fv, nat, v);
+        v = d.lam_fv(u_fv, u_ty, v);
+        v = d.lam_fv(bb_fv, carrier, v);
+        v = d.lam_fv(aa_fv, carrier, v);
+        d.lam_fv(f_fv, f_ty, v)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.integral_endpoint_close,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Admit `CReal.integralSplitArbitrary`. See this section's own module
+/// documentation for the route and for why the `PosBound` is in the
+/// signature.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_integral_split_arbitrary(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let f_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let kb_fv = d.fresh_fvar();
+    let kb = d.kernel().fvar(kb_fv);
+
+    let w = width_of(d, p, a, b);
+    let hpos_ty = d.const_app(p.pos_bound, &[w, k]);
+    let hpos_fv = d.fresh_fvar();
+    let hpos = d.kernel().fvar(hpos_fv);
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let hbnd_ty = d.const_app(p.bounded_on, &[f, a, b, kb]);
+    let hbnd_fv = d.fresh_fvar();
+    let hbnd = d.kernel().fvar(hbnd_fv);
+    let hac_ty = cle(d, p, a, c);
+    let hac_fv = d.fresh_fvar();
+    let hac = d.kernel().fvar(hac_fv);
+    let hcb_ty = cle(d, p, c, b);
+    let hcb_fv = d.fresh_fvar();
+    let hcb = d.kernel().fvar(hcb_fv);
+    let uac_ty = d.const_app(p.uniformly_continuous_on, &[f, a, c]);
+    let uac_fv = d.fresh_fvar();
+    let uac = d.kernel().fvar(uac_fv);
+    let ucb_ty = d.const_app(p.uniformly_continuous_on, &[f, c, b]);
+    let ucb_fv = d.fresh_fvar();
+    let ucb = d.kernel().fvar(ucb_fv);
+
+    let proof = integral_split_arbitrary_proof(
+        d, p, f, a, b, c, k, hpos, hab, u, kb, hbnd, hac, hcb, uac, ucb,
+    );
+
+    let i_ab = d.const_app(p.integral, &[f, a, b, hab, u]);
+    let i_ac = d.const_app(p.integral, &[f, a, c, hac, uac]);
+    let i_cb = d.const_app(p.integral, &[f, c, b, hcb, ucb]);
+    let rhs = cadd(d, p, i_ac, i_cb);
+    let concl = equiv(d, p, i_ab, rhs);
+
+    let ty = {
+        let t = d.pi_fv(ucb_fv, ucb_ty, concl);
+        let t = d.pi_fv(uac_fv, uac_ty, t);
+        let t = d.pi_fv(hcb_fv, hcb_ty, t);
+        let t = d.pi_fv(hac_fv, hac_ty, t);
+        let t = d.arrow(hbnd_ty, t);
+        let t = d.pi_fv(kb_fv, nat, t);
+        let t = d.pi_fv(u_fv, u_ty, t);
+        let t = d.pi_fv(hab_fv, hab_ty, t);
+        let t = d.pi_fv(hpos_fv, hpos_ty, t);
+        let t = d.pi_fv(k_fv, nat, t);
+        let t = d.pi_fv(c_fv, carrier, t);
+        let t = d.pi_fv(b_fv, carrier, t);
+        d.pi_fv(a_fv, carrier, t)
+    };
+    let ty = d.pi_fv(f_fv, f_ty, ty);
+    let value = {
+        let v = d.lam_fv(ucb_fv, ucb_ty, proof);
+        let v = d.lam_fv(uac_fv, uac_ty, v);
+        let v = d.lam_fv(hcb_fv, hcb_ty, v);
+        let v = d.lam_fv(hac_fv, hac_ty, v);
+        let v = d.lam_fv(hbnd_fv, hbnd_ty, v);
+        let v = d.lam_fv(kb_fv, nat, v);
+        let v = d.lam_fv(u_fv, u_ty, v);
+        let v = d.lam_fv(hab_fv, hab_ty, v);
+        let v = d.lam_fv(hpos_fv, hpos_ty, v);
+        let v = d.lam_fv(k_fv, nat, v);
+        let v = d.lam_fv(c_fv, carrier, v);
+        let v = d.lam_fv(b_fv, carrier, v);
+        let v = d.lam_fv(a_fv, carrier, v);
+        d.lam_fv(f_fv, f_ty, v)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.integral_split_arbitrary,
+        uparams: vec![],
+        ty,
+        value,
+    })
 }

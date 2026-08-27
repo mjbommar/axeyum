@@ -10168,6 +10168,8 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "integral::declare_riemann_sum_split_exact_of_uc",
     "integral::declare_integral_split",
     "integral::declare_split_point_approx",
+    "integral::declare_integral_endpoint_close",
+    "integral::declare_integral_split_arbitrary",
     "integral::declare_integral_abs_le",
     "derivative::declare_has_derivative_integral_const",
     "inverse_fn::declare_order_reflect_of_pos_deriv",

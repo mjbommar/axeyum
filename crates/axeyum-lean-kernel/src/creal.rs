@@ -4527,6 +4527,51 @@ pub struct CRealPrelude {
     /// is what made the rescaled-mesh route fail. See
     /// `creal/integral.rs`'s `declare_split_point_approx`.
     pub split_point_approx: NameId,
+    /// `CReal.integralEndpointClose` — **endpoint continuity of the
+    /// integral**, mesh-free:
+    ///
+    /// ```text
+    /// le (abs (integral F x y hxy uxy − integral F x2 y2 hx2y2 ux2y2))
+    ///    (add (mul M dw) (mul (1/(e+1)) w2b))
+    /// ```
+    ///
+    /// under the endpoint hypotheses `|x−x2| ≤ bx`,
+    /// `|(y−x)−(y2−x2)| ≤ bw ≤ dw`, `|y2−x2| ≤ w2b` and
+    /// `bx + bw ≤ 1/(modulus F aa bb u e + 1)`; `M` is `bounded_on_unfold`'s
+    /// own bound at `derivative.rs::mag_bound`'s recipe. No Riemann sum and
+    /// no mesh count appears in the statement.
+    ///
+    /// Built at the `Converges` altitude, NOT against
+    /// [`Self::riemann_sum_integral_close`]'s sample-level `Within`: both
+    /// legs run through `integral.rs`'s own `leg_converges` at ONE shared
+    /// mesh family, the mesh-uniform endpoint estimate bounds the two
+    /// sequences termwise, and [`Self::converges_le`] carries it to the
+    /// limits. See `creal/integral.rs`.
+    pub integral_endpoint_close: NameId,
+    /// `CReal.integralSplitArbitrary : ∀ F a b c (k kb : Nat),
+    /// PosBound (add b (neg a)) k → ∀ (hab : le a b) (u : UniformlyContinuousOn
+    /// F a b), BoundedOn F a b kb → ∀ (hac : le a c) (hcb : le c b)
+    /// (uac : UniformlyContinuousOn F a c) (ucb : UniformlyContinuousOn F c b),
+    /// Equiv (integral F a b hab u)
+    ///       (add (integral F a c hac uac) (integral F c b hcb ucb))` —
+    /// **additivity of the integral over a split at an ARBITRARY interior
+    /// point**, the fact `derivative.rs`'s `hasDerivative_integral_const`
+    /// names as one of the two the general Fundamental Theorem needs.
+    ///
+    /// The `PosBound` on the width is in the signature and cannot be dropped
+    /// at this stratum: locating `c` in [`Self::integral_split`]'s base
+    /// proportion family means forming `t := (c−a)/(b−a)`, and [`Self::inv`]
+    /// takes the positivity witness as an explicit argument.
+    /// `bounded_of_uniformly_continuous` supplies the `BoundedOn` pair for
+    /// free, so that hypothesis costs a caller nothing.
+    ///
+    /// Three named facts and no new estimate: [`Self::integral_split`] at the
+    /// approximating base split point (EXACT, contributes zero),
+    /// [`Self::integral_endpoint_close`] on each leg, and
+    /// [`Self::abs_add_le`]; [`Self::split_point_approx`] supplies the
+    /// approximating point and [`Self::equiv_zero_of_small`] closes. See
+    /// `creal/integral.rs`.
+    pub integral_split_arbitrary: NameId,
     /// `CReal.integral_abs_le : ∀ F a b (k : Nat) (hab : le a b)
     /// (u : UniformlyContinuousOn F a b), BoundedOn F a b k →
     /// le (abs (integral F a b hab u))
@@ -5704,6 +5749,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         integral_le: kernel.name_str(creal, "integral_le"),
         integral_split: kernel.name_str(creal, "integral_split"),
         split_point_approx: kernel.name_str(creal, "splitPointApprox"),
+        integral_endpoint_close: kernel.name_str(creal, "integralEndpointClose"),
+        integral_split_arbitrary: kernel.name_str(creal, "integralSplitArbitrary"),
         integral_abs_le: kernel.name_str(creal, "integral_abs_le"),
         integral_scale: kernel.name_str(creal, "integral_scale"),
         riemann_sum_integral_close: kernel.name_str(creal, "riemannSum_integral_close"),
@@ -8744,6 +8791,102 @@ const STEPS: &[BuildStep] = &[
         ],
         provides: &[|p: CRealPrelude| p.split_point_approx],
         run: integral::declare_split_point_approx,
+    },
+    BuildStep {
+        label: "integral::declare_integral_endpoint_close",
+        requires: &[
+            |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.abs_congr,
+            |p: CRealPrelude| p.abs_le,
+            |p: CRealPrelude| p.abs_mul_le_of_bounds,
+            |p: CRealPrelude| p.add,
+            |p: CRealPrelude| p.add_assoc,
+            |p: CRealPrelude| p.add_comm,
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.bounded_on,
+            |p: CRealPrelude| p.converges_add,
+            |p: CRealPrelude| p.converges_le,
+            |p: CRealPrelude| p.converges_of_const,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.integral,
+            |p: CRealPrelude| p.integral_converges,
+            |p: CRealPrelude| p.le,
+            |p: CRealPrelude| p.le_abs_self,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.mul,
+            |p: CRealPrelude| p.mul_assoc,
+            |p: CRealPrelude| p.mul_comm,
+            |p: CRealPrelude| p.mul_congr,
+            |p: CRealPrelude| p.mul_one,
+            |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.neg_le_abs,
+            |p: CRealPrelude| p.neg_sub_swap,
+            |p: CRealPrelude| p.of_rat,
+            |p: CRealPrelude| p.of_rat_add,
+            |p: CRealPrelude| p.of_rat_le,
+            |p: CRealPrelude| p.of_rat_neg,
+            |p: CRealPrelude| p.riemann_sample_in_bounds,
+            |p: CRealPrelude| p.riemann_sum,
+            |p: CRealPrelude| p.riemann_sum_shared_accuracy_close,
+            |p: CRealPrelude| p.uc_modulus,
+            |p: CRealPrelude| p.uc_spec,
+            |p: CRealPrelude| p.uniformly_continuous_on,
+        ],
+        provides: &[|p: CRealPrelude| p.integral_endpoint_close],
+        run: integral::declare_integral_endpoint_close,
+    },
+    BuildStep {
+        label: "integral::declare_integral_split_arbitrary",
+        requires: &[
+            |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.abs_add_le,
+            |p: CRealPrelude| p.abs_le,
+            |p: CRealPrelude| p.abs_nonneg,
+            |p: CRealPrelude| p.add,
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.bound,
+            |p: CRealPrelude| p.bounded_on,
+            |p: CRealPrelude| p.equiv_of_le_le,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.equiv_zero_of_small,
+            |p: CRealPrelude| p.integral,
+            |p: CRealPrelude| p.integral_endpoint_close,
+            |p: CRealPrelude| p.integral_split,
+            |p: CRealPrelude| p.le,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_of_equiv,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.mul,
+            |p: CRealPrelude| p.mul_comm,
+            |p: CRealPrelude| p.mul_congr,
+            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
+            |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.neg_le_neg,
+            |p: CRealPrelude| p.neg_sub_swap,
+            |p: CRealPrelude| p.of_rat,
+            |p: CRealPrelude| p.of_rat_add,
+            |p: CRealPrelude| p.of_rat_le,
+            |p: CRealPrelude| p.of_rat_mul,
+            |p: CRealPrelude| p.pos_bound,
+            |p: CRealPrelude| p.riemann_sample_in_bounds,
+            |p: CRealPrelude| p.split_point_approx,
+            |p: CRealPrelude| p.uc_modulus,
+            |p: CRealPrelude| p.uniformly_continuous_on,
+            |p: CRealPrelude| p.uniformly_continuous_on_restrict,
+        ],
+        provides: &[|p: CRealPrelude| p.integral_split_arbitrary],
+        run: integral::declare_integral_split_arbitrary,
     },
     BuildStep {
         label: "integral::declare_integral_abs_le",
