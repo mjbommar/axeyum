@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-integral-scale",
+  "title": "A constant factor pulls out of the integral",
+  "statement": "For a constant c, a function F, endpoints a <= b, and uniform-continuity witnesses for F and c*F on [a,b]: integral (fun t => c * F t) a b hab ucF is Equiv to c * integral F a b hab uF.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CReal.integral_scale : ((x0 : CReal) -> ((x1 : ((x1 : CReal) -> CReal)) -> ((x2 : CReal) -> ((x3 : CReal) -> ((x4 : CReal.le x2 x3) -> ((x5 : CReal.UniformlyContinuousOn x1 x2 x3) -> ((x6 : CReal.UniformlyContinuousOn (fun (x6 : CReal) => CReal.mul x0 (x1 x6)) x2 x3) -> CReal.Equiv (CReal.integral (fun (x7 : CReal) => CReal.mul x0 (x1 x7)) x2 x3 x4 x6) (CReal.mul x0 (CReal.integral x1 x2 x3 x4 x5)))))))))",
+    "fragment": "CReal",
+    "free_symbols": ["x0", "x1", "x2", "x3", "x4", "x5", "x6"],
+    "kernel_theorem": "CReal.integral_scale"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:creal-converges-unique",
+    "F:creal-integral-converges",
+    "F:creal-riemannsum-cauchy",
+    "F:creal-sharedindextocanonical",
+    "F:nat-add-assoc",
+    "F:nat-add-comm",
+    "F:nat-mul-comm",
+    "F:rat-add-le-add",
+    "F:rat-add-zero",
+    "F:rat-bounds-add",
+    "F:rat-bounds-neg",
+    "F:rat-le-refl",
+    "F:rat-le-trans",
+    "F:rat-natdivsucc-add",
+    "F:rat-natdivsucc-halve",
+    "F:rat-neg-le-neg",
+    "F:rat-neg-sub",
+    "F:rat-sub-add-sub",
+    "F:rat-zero-le-natdivsucc"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.integral_scale",
+      "kind": "kernel-term",
+      "supports": "CReal.integral_scale is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- integral_scale 2>/dev/null | grep -cE '^CReal\\.integral_scale[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "build_creal_prelude admits CReal.integral_scale through the trusted Kernel::add_declaration gate. theorem_dependency_inventory exits non-zero for a named filter matching nothing; grep -c asserts the exact tab-anchored line. --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-CReal.integral_scale",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.integral_scale",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: creal: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: creal trusted surface = 0'. --require-axiom-free <name> errors for a prelude never built by this run. --release is MANDATORY here."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/integral.rs, declare_integral_scale)",
+    "source": "theorem name and canonical type read via a standalone probe binary depending on axeyum-lean-kernel by path, calling only its public Kernel API. Direct dependency edges cross-checked against theorem_dependency_inventory's own output on the same tree. The probe was built and run in the session scratchpad and deleted after use; crates/ source was not touched to produce this batch."
+  },
+  "notes": "theorem_dependency_inventory's direct-edge set for CReal.integral_scale also includes CReal.converges_mul, CReal.converges_of_close, CReal.converges_of_const, CReal.mul_riemannSum, CReal.riemannSumTotalEpsLe and Rat.le_of_sub_le, none of which is a registered ledger fact; they are omitted from depends_on rather than registered speculatively.",
+  "external_status": "proved"
+}
