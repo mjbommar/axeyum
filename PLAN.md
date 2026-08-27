@@ -1563,6 +1563,13 @@ rank-16 polynomial-action formula has 26,489 variables / 105,310 clauses / 1,811
 SHA-256 `bc932196...c7815`; CaDiCaL seed 2615 is live without a short cutoff. This removes
 zero-product padding but does not change the `[16,17]` interval.
 
+**Deterministic long-check progress, 2026-08-26.** ADR-0593 adds an opt-in callback to the
+bounded-parallel recursive cube checker. Workers may finish out of order, but progress is
+released only as the contiguous root prefix `1..n`, preserving deterministic CLI output. The
+callback reports work completion, never proof credit; lowest-path failure ordering and final
+cover checking remain unchanged. The two live 60/83 GB S-box checks use the older binary and
+were deliberately not restarted for telemetry alone. Their active reads are not verdicts.
+
 **Bilinear first-summand normalization, 2026-08-26.** ADR-0568 applies a complete
 matrix-tensor stabilizer reduction: a chosen nonzero summand occupies slot zero, its first
 factor is one of the `min(m,n)` matrix rank-normal forms, and only the remaining slots are

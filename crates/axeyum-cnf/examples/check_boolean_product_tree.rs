@@ -5,7 +5,7 @@ use std::io::{self, BufRead, BufReader, Read};
 use std::path::{Path, PathBuf};
 
 #[cfg(not(target_arch = "wasm32"))]
-use axeyum_cnf::cube::check_cube_refutation_reader_tree_parallel;
+use axeyum_cnf::cube::check_cube_refutation_reader_tree_parallel_with_progress;
 use axeyum_cnf::cube::{
     CubeRefutationReaderTree, augmented_formula, boolean_product_cubes,
     check_cube_refutation_reader_tree,
@@ -276,8 +276,15 @@ fn main() {
     let tree = build_tree(&root, &tree_dir, 0, &mut stats);
     #[cfg(not(target_arch = "wasm32"))]
     if workers > 1 {
-        check_cube_refutation_reader_tree_parallel(&root, tree, workers)
-            .unwrap_or_else(|error| fail(error));
+        check_cube_refutation_reader_tree_parallel_with_progress(
+            &root,
+            tree,
+            workers,
+            |completed, total| {
+                eprintln!("BOOLEAN_PRODUCT_TREE_PROGRESS|root-children={completed}/{total}");
+            },
+        )
+        .unwrap_or_else(|error| fail(error));
     } else {
         check_cube_refutation_reader_tree(&root, tree).unwrap_or_else(|error| fail(error));
     }

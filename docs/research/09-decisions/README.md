@@ -663,3 +663,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0590](adr-0590-recursive-cube-checking-parallelizes-one-bounded-split.md) | Recursive cube checking parallelizes one bounded split | accepted |
 | [0591](adr-0591-full-polynomial-tensor-search-uses-the-complete-binary-form-action.md) | Full-polynomial tensor search uses the complete binary-form action | accepted |
 | [0592](adr-0592-exact-tensor-rank-search-must-name-its-lower-bound-premise.md) | Exact tensor-rank search must name its lower-bound premise | accepted |
+| [0593](adr-0593-parallel-proof-tree-progress-is-root-ordered.md) | Parallel proof-tree progress is root-ordered | accepted |

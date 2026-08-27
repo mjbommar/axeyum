@@ -553,9 +553,43 @@ pub fn check_cube_refutation_reader_tree_parallel<R: BufRead + Send>(
     tree: CubeRefutationReaderTree<R>,
     workers: usize,
 ) -> Result<(), CubeTreeCheckError> {
+    check_cube_refutation_reader_tree_parallel_with_progress(base, tree, workers, |_, _| {})
+}
+
+/// Checks root branches concurrently and reports completed children in root order.
+///
+/// `progress(completed, total)` is called after each newly contiguous root
+/// prefix has finished checking. Calls are consequently deterministic
+/// (`1, 2, ..., total`) even when later children finish before earlier ones.
+/// The callback reports completed checking work only; it does not confer a
+/// verdict, and the root covering proof is still checked last.
+/// With `workers == 1`, the unchanged sequential route reports one whole-tree
+/// completion event `(1, 1)`.
+///
+/// # Panics
+///
+/// Panics if `workers` is zero or the progress callback panics. A
+/// proof-reader panic is resumed in the caller.
+///
+/// # Errors
+///
+/// Returns the same structural and proof errors as
+/// [`check_cube_refutation_reader_tree`].
+#[cfg(not(target_arch = "wasm32"))]
+pub fn check_cube_refutation_reader_tree_parallel_with_progress<
+    R: BufRead + Send,
+    F: Fn(usize, usize) + Sync,
+>(
+    base: &CnfFormula,
+    tree: CubeRefutationReaderTree<R>,
+    workers: usize,
+    progress: F,
+) -> Result<(), CubeTreeCheckError> {
     assert!(workers > 0, "cube-tree worker count must be positive");
     if workers == 1 {
-        return check_cube_refutation_reader_tree(base, tree);
+        let result = check_cube_refutation_reader_tree(base, tree);
+        progress(1, 1);
+        return result;
     }
     let CubeRefutationReaderTree::Split {
         cubes,
@@ -586,11 +620,14 @@ pub fn check_cube_refutation_reader_tree_parallel<R: BufRead + Send>(
         jobs.push_back((index, child_formula, child));
     }
     let jobs = std::sync::Mutex::new(jobs);
+    let completed = std::sync::Mutex::new((vec![false; cubes.len()], 0usize));
     let worker_count = workers.min(cubes.len());
     let mut results = std::thread::scope(|scope| {
         let mut handles = Vec::with_capacity(worker_count);
         for _ in 0..worker_count {
             let jobs = &jobs;
+            let completed = &completed;
+            let progress = &progress;
             handles.push(scope.spawn(move || {
                 let mut local = Vec::new();
                 loop {
@@ -604,6 +641,15 @@ pub fn check_cube_refutation_reader_tree_parallel<R: BufRead + Send>(
                     let mut path = vec![index];
                     let result =
                         check_cube_refutation_reader_tree_at_path(&formula, child, &mut path);
+                    {
+                        let mut state =
+                            completed.lock().expect("cube-tree progress mutex poisoned");
+                        state.0[index] = true;
+                        while state.1 < state.0.len() && state.0[state.1] {
+                            state.1 += 1;
+                            progress(state.1, state.0.len());
+                        }
+                    }
                     local.push((index, result));
                 }
                 local
@@ -1067,8 +1113,17 @@ mod tests {
             ],
             covering_proof: Cursor::new(write_drat(&root.covering_proof).into_bytes()),
         };
-        check_cube_refutation_reader_tree_parallel(&base, tree, 2)
-            .expect("parallel recursive composition must check from the root formula");
+        let progress = std::sync::Mutex::new(Vec::new());
+        check_cube_refutation_reader_tree_parallel_with_progress(
+            &base,
+            tree,
+            2,
+            |completed, total| {
+                progress.lock().unwrap().push((completed, total));
+            },
+        )
+        .expect("parallel recursive composition must check from the root formula");
+        assert_eq!(*progress.lock().unwrap(), vec![(1, 2), (2, 2)]);
     }
 
     #[cfg(not(target_arch = "wasm32"))]
