@@ -64,17 +64,42 @@ ID_RE = re.compile(r"^F:[a-z0-9]+(-[a-z0-9]+)*$")
 # never be caught, since nothing else reads this field.
 # `axeyum.string.<N>` is the string prelude's ACTUAL namespace -- the alphabet
 # size is a name component, so `build_string_prelude(k, logic, 2)` declares
-# `axeyum.string.2.append_assoc`. `Str` above is the carrier TYPE's short name
-# and matches no declaration this kernel admits, so before this alternative the
-# allowlist rejected every one of the 64 string-prelude theorems. That went
-# unnoticed for as long as the ledger registered ZERO of them (measured
-# 2026-08-27 by `gen-ledger-coverage.py`: string 0/64), which is the coverage
-# trap in miniature -- an allowlist is only tested by the names someone tries.
+# `axeyum.string.2.append_assoc`. The allowlist below includes all actual
+# kernel theorem namespaces (And, Decidable, Eq, Iff, Or added; Str was never used).
+#
+# The logic prelude also declares undotted names (bare identifiers), allowed
+# by a separate LOGIC_UNDOTTED set. Widening to accept any bare identifier
+# would weaken the typo guard this regex provides for other theorems; restricting
+# to only these logic-prelude names maintains that guard while registering real
+# declarations the kernel admits.
 KERNEL_THEOREM_RE = re.compile(
-    r"^(?:AxReal|AxNat|Nat|Int|Real|Rat|List|Bool|Prop|Acc|WellFounded|Str|"
+    r"^(?:AxReal|AxNat|Nat|Int|Real|Rat|List|Bool|Prop|Acc|WellFounded|"
+    r"And|Decidable|Eq|Iff|Or|"
     r"CReal|Complex|CPoint|axeyum\.string\.[0-9]+)"
     r"(?:\.[A-Za-z_][A-Za-z0-9_']*)+$"
 )
+
+# Logic prelude declarations that are not namespaced (bare names from build_logic_prelude).
+# These are the ONLY undotted names permitted in formal.kernel_theorem to avoid
+# weakening the typo guard on dotted names. Verified from kernel.environment() 2026-08-27.
+LOGIC_UNDOTTED = {
+    'congrFun\'',
+    'demorgan_not_or',
+    'demorgan_not_or_converse',
+    'demorgan_or_not_and',
+    'dne_of_em',
+    'em_of_dne',
+    'em_of_peirce',
+    'mt',
+    'noncontradiction',
+    'not_not_and',
+    'not_not_em',
+    'not_not_imp',
+    'not_not_intro',
+    'not_not_not',
+    'not_not_not_intro',
+    'peirce_of_em',
+}
 
 REQUIRED = {"schema_version", "id", "title", "statement", "formal",
             "epistemic_status", "depends_on", "evidence", "provenance"}
@@ -132,13 +157,20 @@ def fail(errors: list[str], msg: str) -> None:
 
 def kernel_theorem_is_valid(value: object) -> bool:
     """`formal.kernel_theorem`: `None` (an explicit "no single kernel theorem",
-    for a package-level fact) or a dotted namespaced kernel theorem name that
+    for a package-level fact), a dotted namespaced kernel theorem name that
     `theorem_of` (scripts/check-fact-depends-derived.py) could plausibly have
-    extracted itself. Anything else is a value none of that field's consumers
-    could use, and nothing else in the ledger would catch it."""
+    extracted itself, or an undotted logic prelude name.
+
+    The undotted allowlist (LOGIC_UNDOTTED) is restricted to declarations the
+    kernel actually admits, preserving the typo-catching function of the dotted
+    regex for other theorem names. Anything outside these two forms is a value
+    none of that field's consumers could use, and nothing else in the ledger
+    would catch it."""
     if value is None:
         return True
-    return isinstance(value, str) and bool(KERNEL_THEOREM_RE.match(value))
+    if not isinstance(value, str):
+        return False
+    return bool(KERNEL_THEOREM_RE.match(value)) or value in LOGIC_UNDOTTED
 
 
 _GREP_INVOCATION_RE = re.compile(r"\bgrep\b((?:\s+(?:-[a-zA-Z]+|--[a-zA-Z-]+))*)")
