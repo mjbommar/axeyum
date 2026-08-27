@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-int-modeq-of-mul-left-decline-v1",
+  "state": "clean-import-producer-declines-terminal-not-closed",
+  "contract": "artifacts/autogenesis/producer-contracts/int-modeq-family-v1.json",
+  "contract_sha256": "c4b52ebf2222226d0a34a11aa99aa06f4bf7a671d8ff90ecf4d40c29977a1dd9",
+  "fact_id": "F:ml430-int-modeq-of-mul-left-c4ccd51e",
+  "fact_sha256": "b7af9b855ccce2c476841ff92432500891d89b04692ab993154dfe53904dcd93",
+  "nursery_partition": "train",
+  "lane": "flywheel-2",
+  "date": "2026-08-27",
+  "adapter": {
+    "host": "s5",
+    "path": "/home/mjbommar/lean-import-scale/mathlib4/AxeyumGeneratedModEqBatchV1.lean",
+    "namespace": "Axeyum.Autogenesis.Statement.Generated",
+    "definition": "intModeqOfMulLeft",
+    "statement": "∀ {n a b : ℤ} (m : ℤ), a ≡ b [ZMOD m * n] → a ≡ b [ZMOD n]",
+    "mathlib_source": "Mathlib/Data/Int/ModEq.lean:200, lemma of_mul_left (m : ℤ) (h : a ≡ b [ZMOD m * n]) : a ≡ b [ZMOD n]",
+    "note": "batched: reused the pre-existing AxeyumGeneratedModEqBatchV1.lean file (already compiled, one `def` per family member) rather than authoring a new standalone adapter per fact -- one s5 compile covered all 11 int-modeq facts in this batch plus the sibling facts already in that file."
+  },
+  "identity": {
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean4export_commit": "a3e35a584f59b390667db7269cd37fca8575e4bf",
+    "lean_version": "4.30.0",
+    "lean4export_version": "3.1.0",
+    "export_ndjson_sha256": "3580276ad58c22489bb4cc8ab4aa5ff3c72e89669b56a169dabe89c7ea328d35",
+    "export_records": 6321,
+    "export_stderr_bytes": 0
+  },
+  "import": {
+    "tool": "crates/axeyum-lean-import/examples/statement_adapter_import.rs",
+    "result": "clean",
+    "axioms": 0
+  },
+  "producer": {
+    "tool": "crates/axeyum-lean-import/examples/modeq_family_operation.rs",
+    "module": "axeyum_lean_import::producers::modeq_family::propose_modeq_family",
+    "result": "declined",
+    "decline_reason": "TerminalNotClosed",
+    "decline_message": "terminal goal is not an Eq/Iff shape this schema's refl/symm/trans/Iff.intro combinators can close"
+  },
+  "effects": {
+    "fact_status_changes": 0,
+    "evidence_rows_added": 0,
+    "operations_registered": 0,
+    "kernel_declarations_added": 0
+  },
+  "disposition": "epistemic_status stays open; no operation registered per ADR-0602 (admission precedes registration).",
+  "full_writeup": "docs/autogenesis/292-flywheel-2-batch-contract-dispatch.md"
+}
