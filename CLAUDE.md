@@ -1506,10 +1506,32 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
      that purpose. TWO lanes discovered this independently, both against a brief
      that asserted the opposite. Read the signature, not the surrounding prose.
 
-  **The technique that works: search for the STEP, not the NAME.** Grep for the
-  shape of the intermediate you need -- an index computation, a case split, a
-  direction of transport -- across the whole crate, not for what you would have
-  called the finished lemma. `--include-constructed` inventories are useless
+  4. **THERE IS NO SINGLE SPELLING, so grep fails even when you DO know the
+     name.** The kernel name is `CReal.congrOfUniformlyContinuous`; the Rust
+     prelude field, the design docs, every brief and this file all say
+     `congr_of_uniformly_continuous`. Measured 2026-08-27 over 447 `CReal`
+     declaration names: **315 carry an underscore, 225 an internal capital, and
+     117 carry BOTH.** So a lane grepping the spelling it read in a doc misses
+     the declaration, and a lane grepping the kernel spelling misses every Rust
+     call site. This is not a naming inconsistency to clean up -- the two
+     conventions serve different layers -- it is a retrieval hazard to route
+     around. `shape_search --name-like <either spelling>` normalizes; grep does
+     not.
+
+  **The technique that works: search for the STEP, not the NAME -- and there is
+  now a tool for it (ADR-0608).** `examples/shape_search.rs` indexes **every**
+  declaration kind by conclusion head, per-hypothesis head and type constants
+  (1,838 declarations, ~13-21 s), and **fails on absence** with exit 1, printing
+  a same-kind positive control; exit 3 means *unanswerable*, deliberately
+  distinct. The canonical miss returns exactly one row from shape alone:
+
+      cargo run --release -p axeyum-lean-kernel --example shape_search -- \
+        --include-constructed --concl CReal.Equiv \
+        --hyp CReal.UniformlyContinuousOn --hyp CReal.Equiv
+
+  Failing that, grep for the shape of the intermediate you need -- an index
+  computation, a case split, a direction of transport -- across the whole crate,
+  not for what you would have called the finished lemma. `--include-constructed` inventories are useless
   here for case 2 by construction: an inline step has no name to list.
 
   And note the asymmetry when you find one: extracting an inline step into its
