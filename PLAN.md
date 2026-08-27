@@ -1392,6 +1392,13 @@ the retained witness is at least 24. This does not raise the palette-orbit dista
 119 permutations have only radius-22 proofs, and does not refute unrestricted 405. The exact
 lower bound remains `R_5(3(x-y)=2z)>404`.
 
+**Bounded-parallel finite proof-set replay, 2026-08-27.** ADR-0600 removes a certificate-
+consumption bottleneck exposed by the 120-member Rado radius-23 set. An explicit 1--64 worker
+bound defaults to the original single-worker route; formulas and proofs check independently, but
+progress, byte accounting, and failure selection remain lexicographic and deterministic. Invalid
+worker counts fail before checking. The focused worker-bound control and warning-denied all-feature
+Clippy pass. The real four-worker replay remains uncredited until all 120 members terminate.
+
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
 external-certificate replay runner for all five packages.  It validates checker and artifact
 bytes before execution, hard-kills a timed-out process session, requires an observable finding
