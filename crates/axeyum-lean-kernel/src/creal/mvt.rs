@@ -101,6 +101,7 @@
 
 #![allow(clippy::too_many_arguments, clippy::many_single_char_names)]
 
+use super::series::neg_zero_equiv;
 use super::{CRealPrelude, cadd, cle, clt, creal_ty, div_succ, equiv};
 use crate::KernelError;
 use crate::env::Declaration;
@@ -257,20 +258,6 @@ fn double_neg(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
     let h = neg_add_self(d, p, x);
     let nu = neg_unique(d, p, nx, x, h);
     esymm(d, p, x, nnx, nu)
-}
-
-/// `Equiv (neg zero) zero`. Copied verbatim from `derivative.rs`'s own
-/// private helper (used by [`close_zero_error`] below).
-fn neg_zero_equiv(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
-    let zero_c = czero(d, p);
-    let nz = cneg(d, p, zero_c);
-    let padded = cadd(d, p, nz, zero_c);
-    let flipped = cadd(d, p, zero_c, nz);
-    let h1 = d.lemma(p.add_zero, &[nz]);
-    let step1 = esymm(d, p, padded, nz, h1);
-    let h2 = d.lemma(p.add_comm, &[nz, zero_c]);
-    let h3 = d.lemma(p.add_neg, &[zero_c]);
-    echain(d, p, nz, &[(padded, step1), (flipped, h2), (zero_c, h3)])
 }
 
 /// `Equiv (mul x (neg y)) (neg (mul x y))`. Copied verbatim from
