@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "id": "rado-r5-a3-b2-frontier",
-  "title": "R_5(3(x-y)=2z) > 368: checked five-colour frontier bound",
-  "statement": "The 5-colour Rado number of 3(x-y) = 2z exceeds 368. Exact web, arXiv, and Scholar-oriented searches through 2026-08-26 located no prior five-colour bound at least 368 for this equation; this is dated negative retrieval evidence, not proof of priority. The bound also establishes that this work's shell construction, which gives 319 at (a,k)=(3,5), is NOT TIGHT at k=5 -- in contrast to k=3 and k=4, where it is attained at every point tested.",
+  "title": "R_5(3(x-y)=2z) > 404: checked five-colour frontier bound",
+  "statement": "The 5-colour Rado number of 3(x-y) = 2z exceeds 404. Exact web, arXiv, and Scholar-oriented searches through 2026-08-26 located no prior five-colour bound at least 404 for this equation; this is dated negative retrieval evidence, not proof of priority. The bound also establishes that this work's shell construction, which gives 319 at (a,k)=(3,5), is NOT TIGHT at k=5 -- in contrast to k=3 and k=4, where it is attained at every point tested.",
   "epistemic_status": "open",
   "formal": {
     "language": "cnf-family",
@@ -82,6 +82,17 @@
   },
   "evidence": [
     {
+      "id": "witness-404",
+      "kind": "witness-replay",
+      "supports": "R_5 > 404 (strongest retained lower bound)",
+      "artifact": "artifacts/claims/rado/rado-r5-a3-b2-frontier/witness-404.txt",
+      "artifact_sha256": "501f783c29a7ad069f604e394d9336118d9c35ed1695897e4440a60ccf00e973",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-claim-certificates.py --only rado-r5-a3-b2-frontier",
+      "notes": "A prefix-guided exact SAT search freed progressively larger tails of the checked 368-point colouring, then climbed through complete models to 404. Axeyum's strict importer evaluated the complete 2,020-variable assignment against all 186,287 clauses of the canonical CNF without the guiding units, decoded this byte-identical witness, and independently enumerated all 36,046 defining triples. At 405, two fixed-prefix restrictions are UNSAT and a weaker restriction timed out; none is an upper bound.",
+      "artifact_format": "colouring-text"
+    },
+    {
       "id": "witness-368",
       "kind": "witness-replay",
       "supports": "R_5 > 368 (strongest retained lower bound)",
@@ -139,13 +150,13 @@
   ],
   "frontier": {
     "known": [
-      "R_5(3(x-y)=2z) > 368, witnessed and verified (evidence row witness-368); the earlier 358, 357, 350, and 319 witnesses are retained as reproducibility and historical frontier points",
+      "R_5(3(x-y)=2z) > 404, witnessed and verified (evidence row witness-404); the earlier 368, 358, 357, 350, and 319 witnesses are retained as reproducibility and historical frontier points",
       "The shell construction of this work yields a verified solution-free colouring of [N] with N+1 = a^k + a^(k-1) - 2a + 1; this is ATTAINED at (a,k)=(3,3) [31], (4,3) [73], (3,4) [103] and (4,4) [313], all independently re-verified, but NOT at (3,5), where it gives 318 while a 5-colouring of [319] exists. The general-k proof is asserted in the construction source and has NOT been independently verified here.",
       "Independent corroboration of k=5 non-tightness in a different column: Li (SSRN 6814341) reports R_5(3)>296>243 for b=1",
-      "Canonical exact instances 351 through 357 are SAT and replayed; deterministic checked extension reaches 368; every colour is locally blocked at 369 for this fixed prefix, but instance 369 remains open"
+      "Canonical exact instances 351 through 404 have checked witnesses. Tail repair first freed points after 140 and later after 60 and 50; every complete model was replayed against its canonical formula. Instance 405 remains open; failures under fixed-prefix restrictions are not an upper bound."
     ],
     "would_settle": "A verified 5-colouring of [n-1] together with an exhaustive cube cover refuting [n], for the same n. Both artifact kinds and their checkers exist in this family; the obstruction is the cost of refutation at k=5, not the encoding.",
-    "attack_notes": "The satisfiable side reaches 368: exact solving produced the 357 witness, then deterministic new-relation audits and two complete replay routes extended it through 368. The fixed prefix does not extend directly to 369; the refutation side remains unclosed and is the real exact-value question."
+    "attack_notes": "The satisfiable side reaches 404. Exact solving produced the 357 witness, deterministic extension reached 368, and a monotone fixed-prefix relaxation found a 369 model before prefix-guided exact solves climbed to 404. Every promoted complete model was checked against the canonical formula without the guiding units. The refutation side remains unclosed and is the real exact-value question."
   },
   "notes": "Recorded because a failed prediction is evidence. The construction's bound remains SOUND -- a lower bound cannot be refuted by finding a larger colouring -- but its tightness, which holds at k=3 and k=4, does not extend to k=5. This is the datum that scopes every tightness claim in this work to k <= 4."
 }
