@@ -4349,6 +4349,37 @@ pub struct CRealPrelude {
     /// q*(b-a)`) to such a mesh point (choosing counts commensurate with `q`'s
     /// denominator) is the remaining assembly step, not attempted here.
     pub riemann_sum_split_exact: NameId,
+    /// `CReal.riemannSum_split_scale_invariant : ∀ a b m_ac0 m_cb0 k, Equiv
+    /// c_k c_0`, where `c_k`/`c_0` are
+    /// [`Self::riemann_sum_split_exact`]'s own `c` formula read at the
+    /// scaled counts `(succ_mul_succ(m_ac0,k).0, succ_mul_succ(m_cb0,k).0)`
+    /// vs. the base counts `(m_ac0, m_cb0)` -- `integral_split`'s gap 1,
+    /// the accuracy-parameterized mesh family's `c`-independence
+    /// (`integral::declare_riemann_sum_split_scale_invariant`,
+    /// `integral.rs`'s own module documentation). Fixing a ratio once and
+    /// scaling both sub-counts by the same `Nat.succ k` leaves the split
+    /// point unchanged, so `k` is free to be grown to whatever accuracy
+    /// threshold [`Self::riemann_sum_integral_close`] needs on all three
+    /// intervals without moving the point the family approximates. Via
+    /// [`Self::mesh_reciprocal_mul`] (exact mesh scaling) and
+    /// `Nat.right_distrib`/`Nat.succ_injective` (the count bookkeeping
+    /// showing the scaled combined count matches
+    /// `riemannSum_split_exact`'s own convention).
+    pub riemann_sum_split_scale_invariant: NameId,
+    /// `CReal.congrOfUniformlyContinuous : ∀ F a b, UniformlyContinuousOn F a
+    /// b → ∀ x y, le a x → le x b → le a y → le y b → Equiv x y → Equiv (F
+    /// x) (F y)` -- the DOMAIN-RESTRICTED half of
+    /// [`Self::riemann_sum_split_exact`]'s `hcong` hypothesis, derived
+    /// directly from a uniform-continuity witness
+    /// (`integral::declare_congr_of_uniformly_continuous`, `integral.rs`'s
+    /// own module documentation). Cannot be strengthened to the GLOBAL
+    /// `hcong` shape `riemannSum_split_exact` states: `UniformlyContinuousOn`
+    /// says nothing about `F` outside `[a, b]`, so a genuinely global
+    /// version is false for an arbitrary witness. Via
+    /// [`Self::equiv_abs_diff_le`] / [`Self::uc_spec`] /
+    /// [`Self::equiv_zero_of_small`], reusing `integral.rs`'s own
+    /// `pointwise_block_equiv` middle section verbatim.
+    pub congr_of_uniformly_continuous: NameId,
     /// `CReal.hasDerivative_integral_const : ∀ c a b (k : Nat), le (abs c)
     /// (ofRat (natDivSucc (Nat.succ k) 0)) → HasDerivativeOn (fun x =>
     /// integral (fun _ => c) a (max a (min x b)) (le_max_left a (min x b))
@@ -5072,6 +5103,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         integral_scale: kernel.name_str(creal, "integral_scale"),
         riemann_sum_integral_close: kernel.name_str(creal, "riemannSum_integral_close"),
         riemann_sum_split_exact: kernel.name_str(creal, "riemannSum_split_exact"),
+        riemann_sum_split_scale_invariant: kernel
+            .name_str(creal, "riemannSum_split_scale_invariant"),
+        congr_of_uniformly_continuous: kernel.name_str(creal, "congrOfUniformlyContinuous"),
         has_derivative_integral_const: kernel.name_str(creal, "hasDerivative_integral_const"),
         neg_sub_swap: kernel.name_str(creal, "neg_sub_swap"),
         abs_le_of_two_sided: kernel.name_str(creal, "abs_le_of_two_sided"),
@@ -5607,6 +5641,17 @@ pub(crate) fn build_creal_prelude_uncached(
         // `riemannSum_integral_close` itself, it lands here to stay next to
         // the other `integral_split` slices' own dispatch history.
         integral::declare_riemann_sum_split_exact(&mut d, prelude)?;
+        // `riemannSum_split_scale_invariant` (integral_split's gap 1) needs
+        // only `CReal.mesh_reciprocal_mul`/`CReal.of_nat_mul`/`CReal.of_rat_mul`
+        // (well above) and pure `Nat` bookkeeping -- nothing from
+        // `riemannSum_split_exact` itself, it lands here to stay next to the
+        // other `integral_split` slices' own dispatch history.
+        integral::declare_riemann_sum_split_scale_invariant(&mut d, prelude)?;
+        // `congrOfUniformlyContinuous` needs `CReal.equiv_abs_diff_le` (well
+        // above), `UniformlyContinuousOn.spec`/`equiv_zero_of_small` (both
+        // well above) -- independent of every other `integral_split` slice,
+        // it lands here to stay next to them.
+        integral::declare_congr_of_uniformly_continuous(&mut d, prelude)?;
         // `hasDerivative_integral_const` (Spivak Ch14 FTC-I, first evaluation
         // instance) needs `integral`/`integral_const` (just above, this
         // dispatch is why it cannot live inside `derivative::declare_derivative`,
