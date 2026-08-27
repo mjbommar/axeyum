@@ -153,6 +153,16 @@ const POLY_COMBINATOR_HEIGHT: u16 = super::DERIVED_HEIGHT + 1;
 /// [`ComplexPrelude::sum_range`]'s `+10` that [`POLY_EVAL_HEIGHT`] already
 /// gives `polyEval` — reused verbatim rather than re-deriving a tighter bound.
 const POLY_MUL_HEIGHT: u16 = POLY_EVAL_HEIGHT;
+/// Height for `Complex.hornerFromTop`: its value embeds only `add`, `mul`
+/// and [`ComplexPrelude::pow`] (`+9`) — no `sum_range`/`poly_eval`/`poly_mul`
+/// callee — so one above [`POLY_EVAL_HEIGHT`] keeps it strictly above every
+/// height declared in this file so far, with margin to spare.
+const HORNER_HEIGHT: u16 = POLY_EVAL_HEIGHT + 1;
+/// Height for `Complex.factorQuotient`: its value embeds [`Self::horner_from_top`]
+/// via [`HORNER_HEIGHT`], so it needs strictly more.
+///
+/// [`Self::horner_from_top`]: super::ComplexPrelude::horner_from_top
+const FACTOR_QUOTIENT_HEIGHT: u16 = HORNER_HEIGHT + 1;
 
 /// Declare `Complex.polyEval` and everything this file proves about it.
 ///
@@ -172,7 +182,11 @@ pub(super) fn declare_polynomial(d: &mut IntDev<'_>, p: ComplexPrelude) -> Resul
     declare_poly_degree_lt_poly_scale(d, p)?;
     declare_poly_mul(d, p)?;
     declare_poly_degree_lt_poly_mul(d, p)?;
-    declare_poly_eval_poly_mul(d, p)
+    declare_poly_eval_poly_mul(d, p)?;
+    declare_horner_from_top(d, p)?;
+    declare_horner_from_top_equations(d, p)?;
+    declare_factor_quotient(d, p)?;
+    declare_factor_quotient_degree_lt(d, p)
 }
 
 // ---------------------------------------------------------------------------
@@ -1855,6 +1869,389 @@ fn declare_poly_eval_poly_mul(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.poly_eval_poly_mul,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// ---------------------------------------------------------------------------
+// The factor theorem's computed quotient: `hornerFromTop` / `factorQuotient`.
+//
+// See [`ComplexPrelude::horner_from_top`]/[`ComplexPrelude::factor_quotient`]
+// for the exact recurrences and the boundary bug the `factorQuotient` shape
+// was chosen to avoid. This section builds the two definitions and the two
+// theorems about them; the general symbolic factor theorem itself
+// (`polyEval p (succ n) a ~ zero -> p ~ polyMul (X-a) (factorQuotient p a n)`)
+// is NOT attempted here — see the module doc above this line for exactly
+// what is missing and why.
+// ---------------------------------------------------------------------------
+
+/// `Complex.hornerFromTop c a m j`, built by a nested `Nat.rec` (outer on
+/// `m`, inner on `j`) at `Complex`'s own universe — see
+/// [`ComplexPrelude::horner_from_top`] for the recurrence.
+fn declare_horner_from_top(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    use crate::BinderInfo;
+
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+    let anon = d.anon_name();
+    let one_level = d.level_one();
+    let fn_ty = d.arrow(nat, carrier);
+    let rec_name = d.prelude().rec;
+
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+
+    // outer motive: fun _ : Nat => (Nat -> Complex)
+    let outer_motive = d.kernel().lam(anon, nat, fn_ty, BinderInfo::Default);
+    let outer_rec = d.kernel().const_(rec_name, vec![one_level]);
+
+    // outer base (m = 0): fun j => c 0 -- ignores j entirely.
+    let outer_base = {
+        let zero_n = d.zero();
+        let c0 = d.apply(c, &[zero_n]);
+        let j_fv = d.fresh_fvar();
+        d.lam_fv(j_fv, nat, c0)
+    };
+
+    // outer step (m -> succ m, ih = hornerFromTop c a m):
+    //   fun m ih => fun j => Nat.rec(motive Complex)
+    //       (c (succ m))
+    //       (fun j' _ => add (ih j') (mul (pow a (succ j')) (c (succ m))))
+    //       j
+    let outer_step = {
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let ih_fv = d.fresh_fvar();
+        let ih = d.kernel().fvar(ih_fv);
+
+        let succ_m = d.succ(m);
+        let c_succ_m = d.apply(c, &[succ_m]);
+
+        let inner_motive = d.kernel().lam(anon, nat, carrier, BinderInfo::Default);
+        let inner_rec = d.kernel().const_(rec_name, vec![one_level]);
+        let inner_base = c_succ_m;
+        let inner_step = {
+            let jp_fv = d.fresh_fvar();
+            let jp = d.kernel().fvar(jp_fv);
+            let jih_fv = d.fresh_fvar();
+            let ih_jp = d.apply(ih, &[jp]);
+            let succ_jp = d.succ(jp);
+            let pow_a_succjp = d.const_app(p.pow, &[a, succ_jp]);
+            let mul_term = d.const_app(p.mul, &[pow_a_succjp, c_succ_m]);
+            let body = d.const_app(p.add, &[ih_jp, mul_term]);
+            let with_jih = d.lam_fv(jih_fv, carrier, body);
+            d.lam_fv(jp_fv, nat, with_jih)
+        };
+
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let s_succ_m_j = d.apply(inner_rec, &[inner_motive, inner_base, inner_step, j]);
+        let s_succ_m = d.lam_fv(j_fv, nat, s_succ_m_j);
+
+        let with_ih = d.lam_fv(ih_fv, fn_ty, s_succ_m);
+        d.lam_fv(m_fv, nat, with_ih)
+    };
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let s_m = d.apply(outer_rec, &[outer_motive, outer_base, outer_step, m]);
+
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let applied = d.apply(s_m, &[j]);
+
+    let value = {
+        let over_j = d.lam_fv(j_fv, nat, applied);
+        let over_m = d.lam_fv(m_fv, nat, over_j);
+        let over_a = d.lam_fv(a_fv, carrier, over_m);
+        d.lam_fv(c_fv, fn_ty, over_a)
+    };
+    let ty = {
+        let over_j = d.arrow(nat, carrier);
+        let over_m = d.arrow(nat, over_j);
+        let over_a = d.arrow(carrier, over_m);
+        d.arrow(fn_ty, over_a)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.horner_from_top,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(HORNER_HEIGHT),
+    })
+}
+
+/// `Complex.hornerFromTop_zero` / `_succ_zero` / `_succ_succ` — the three
+/// defining equations of [`declare_horner_from_top`], each closed by
+/// `Eq.refl` alone (pure `βδι` reduction — see
+/// [`ComplexPrelude::horner_from_top_zero`]/`_succ_zero`/`_succ_succ` for the
+/// exact statements).
+fn declare_horner_from_top_equations(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+    let fn_ty = d.arrow(nat, carrier);
+
+    // hornerFromTop_zero : ∀ c a j, Eq Complex (hornerFromTop c a 0 j) (c 0).
+    {
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+
+        let zero_n = d.zero();
+        let lhs = d.const_app(p.horner_from_top, &[c, a, zero_n, j]);
+        let c0 = d.apply(c, &[zero_n]);
+        let stmt_inner = complex_eq(d, p, lhs, c0);
+        let proof_inner = complex_eq_refl(d, p, c0);
+
+        let ty = {
+            let over_j = d.pi_fv(j_fv, nat, stmt_inner);
+            let over_a = d.pi_fv(a_fv, carrier, over_j);
+            d.pi_fv(c_fv, fn_ty, over_a)
+        };
+        let value = {
+            let over_j = d.lam_fv(j_fv, nat, proof_inner);
+            let over_a = d.lam_fv(a_fv, carrier, over_j);
+            d.lam_fv(c_fv, fn_ty, over_a)
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.horner_from_top_zero,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+
+    // hornerFromTop_succ_zero : ∀ c a m,
+    //   Eq Complex (hornerFromTop c a (succ m) 0) (c (succ m)).
+    {
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+
+        let zero_n = d.zero();
+        let sm = d.succ(m);
+        let lhs = d.const_app(p.horner_from_top, &[c, a, sm, zero_n]);
+        let c_sm = d.apply(c, &[sm]);
+        let stmt_inner = complex_eq(d, p, lhs, c_sm);
+        let proof_inner = complex_eq_refl(d, p, c_sm);
+
+        let ty = {
+            let over_m = d.pi_fv(m_fv, nat, stmt_inner);
+            let over_a = d.pi_fv(a_fv, carrier, over_m);
+            d.pi_fv(c_fv, fn_ty, over_a)
+        };
+        let value = {
+            let over_m = d.lam_fv(m_fv, nat, proof_inner);
+            let over_a = d.lam_fv(a_fv, carrier, over_m);
+            d.lam_fv(c_fv, fn_ty, over_a)
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.horner_from_top_succ_zero,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+
+    // hornerFromTop_succ_succ : ∀ c a m j,
+    //   Eq Complex (hornerFromTop c a (succ m) (succ j))
+    //     (add (hornerFromTop c a m j) (mul (pow a (succ j)) (c (succ m)))).
+    {
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+
+        let sm = d.succ(m);
+        let sj = d.succ(j);
+        let lhs = d.const_app(p.horner_from_top, &[c, a, sm, sj]);
+
+        let prior = d.const_app(p.horner_from_top, &[c, a, m, j]);
+        let c_sm = d.apply(c, &[sm]);
+        let pow_a_sj = d.const_app(p.pow, &[a, sj]);
+        let mul_term = d.const_app(p.mul, &[pow_a_sj, c_sm]);
+        let rhs = d.const_app(p.add, &[prior, mul_term]);
+
+        let stmt_inner = complex_eq(d, p, lhs, rhs);
+        let proof_inner = complex_eq_refl(d, p, rhs);
+
+        let ty = {
+            let over_j = d.pi_fv(j_fv, nat, stmt_inner);
+            let over_m = d.pi_fv(m_fv, nat, over_j);
+            let over_a = d.pi_fv(a_fv, carrier, over_m);
+            d.pi_fv(c_fv, fn_ty, over_a)
+        };
+        let value = {
+            let over_j = d.lam_fv(j_fv, nat, proof_inner);
+            let over_m = d.lam_fv(m_fv, nat, over_j);
+            let over_a = d.lam_fv(a_fv, carrier, over_m);
+            d.lam_fv(c_fv, fn_ty, over_a)
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.horner_from_top_succ_succ,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+
+    Ok(())
+}
+
+/// `Complex.factorQuotient c a n k := Nat.rec (fun _ => Complex) zero (fun r'
+/// _ => hornerFromTop c a n r') (Nat.sub n k)` — see
+/// [`ComplexPrelude::factor_quotient`] for why the `zero` base is prepended
+/// rather than reindexing `hornerFromTop` directly.
+fn declare_factor_quotient(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    use crate::BinderInfo;
+
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+    let anon = d.anon_name();
+    let one_level = d.level_one();
+    let fn_ty = d.arrow(nat, carrier);
+    let rec_name = d.prelude().rec;
+
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let motive = d.kernel().lam(anon, nat, carrier, BinderInfo::Default);
+    let rec = d.kernel().const_(rec_name, vec![one_level]);
+
+    let step = {
+        let rp_fv = d.fresh_fvar();
+        let rp = d.kernel().fvar(rp_fv);
+        let ih_fv = d.fresh_fvar();
+        let horner = d.const_app(p.horner_from_top, &[c, a, n, rp]);
+        let with_ih = d.lam_fv(ih_fv, carrier, horner);
+        d.lam_fv(rp_fv, nat, with_ih)
+    };
+
+    let sub_nk = d.sub(n, k);
+    let value_body = d.apply(rec, &[motive, zero_c, step, sub_nk]);
+
+    let value = {
+        let over_k = d.lam_fv(k_fv, nat, value_body);
+        let over_n = d.lam_fv(n_fv, nat, over_k);
+        let over_a = d.lam_fv(a_fv, carrier, over_n);
+        d.lam_fv(c_fv, fn_ty, over_a)
+    };
+    let ty = {
+        let over_k = d.arrow(nat, carrier);
+        let over_n = d.arrow(nat, over_k);
+        let over_a = d.arrow(carrier, over_n);
+        d.arrow(fn_ty, over_a)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.factor_quotient,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(FACTOR_QUOTIENT_HEIGHT),
+    })
+}
+
+/// `Complex.factorQuotient_degreeLt : ∀ c a n, polyDegreeLt (factorQuotient c
+/// a n) n` — for `k` with `Nat.le n k`,
+/// [`crate::nat_prelude::NatPrelude::sub_eq_zero_of_le`] gives `Eq Nat (sub n
+/// k) zero`; transported through `factorQuotient`'s own `Nat.rec` shape this
+/// lands on the forced `zero` base case.
+fn declare_factor_quotient_degree_lt(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+) -> Result<(), KernelError> {
+    use crate::BinderInfo;
+
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+    let anon = d.anon_name();
+    let one_level = d.level_one();
+    let fn_ty = d.arrow(nat, carrier);
+    let nat_p = d.prelude();
+    let rec_name = d.prelude().rec;
+
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let hk_fv = d.fresh_fvar();
+    let hk = d.kernel().fvar(hk_fv);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let zero_n = d.zero();
+    let le_nk = d.le(n, k);
+
+    let h_sub = d.lemma(nat_p.sub_eq_zero_of_le, &[n, k, hk]);
+    // h_sub : Eq Nat (sub n k) zero
+
+    // Rebuild factorQuotient's own Nat.rec shape (motive/base/step) so the
+    // ascribed Equiv below is defeq to `Equiv (factorQuotient c a n k) zero`
+    // once `factor_quotient` is δ-unfolded and β-reduced on the other side.
+    let motive = d.kernel().lam(anon, nat, carrier, BinderInfo::Default);
+    let rec = d.kernel().const_(rec_name, vec![one_level]);
+    let step = {
+        let rp_fv = d.fresh_fvar();
+        let rp = d.kernel().fvar(rp_fv);
+        let ih_fv = d.fresh_fvar();
+        let horner = d.const_app(p.horner_from_top, &[c, a, n, rp]);
+        let with_ih = d.lam_fv(ih_fv, carrier, horner);
+        d.lam_fv(rp_fv, nat, with_ih)
+    };
+
+    let sub_nk = d.sub(n, k);
+    let f = |dd: &mut IntDev<'_>, x: ExprId| dd.apply(rec, &[motive, zero_c, step, x]);
+    let h_equiv = nat_eq_to_complex_equiv(d, p, sub_nk, zero_n, h_sub, &f);
+    // h_equiv : Equiv (Nat.rec(...)(sub n k)) (Nat.rec(...)(zero))
+    //   -- ascribed below against Equiv (factorQuotient c a n k) zero,
+    //   -- defeq since factorQuotient's δ-unfold + β reproduces the same
+    //   -- Nat.rec application, and Nat.rec(...)(zero) ι-reduces to zero_c.
+
+    let fq = d.const_app(p.factor_quotient, &[c, a, n]);
+    let degree_lt_fq = poly_degree_lt_applied(d, p, fq, n);
+
+    let body_k = d.lam_fv(hk_fv, le_nk, h_equiv);
+
+    let value = {
+        let over_k = d.lam_fv(k_fv, nat, body_k);
+        let over_n = d.lam_fv(n_fv, nat, over_k);
+        let over_a = d.lam_fv(a_fv, carrier, over_n);
+        d.lam_fv(c_fv, fn_ty, over_a)
+    };
+    let ty = {
+        let over_n = d.pi_fv(n_fv, nat, degree_lt_fq);
+        let over_a = d.pi_fv(a_fv, carrier, over_n);
+        d.pi_fv(c_fv, fn_ty, over_a)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.factor_quotient_degree_lt,
         uparams: vec![],
         ty,
         value,

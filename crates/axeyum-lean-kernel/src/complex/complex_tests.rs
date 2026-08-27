@@ -264,6 +264,21 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
         ("Complex.polyMul", p.poly_mul),
         ("Complex.polyDegreeLt_polyMul", p.poly_degree_lt_poly_mul),
         ("Complex.polyEval_polyMul", p.poly_eval_poly_mul),
+        ("Complex.hornerFromTop", p.horner_from_top),
+        ("Complex.hornerFromTop_zero", p.horner_from_top_zero),
+        (
+            "Complex.hornerFromTop_succ_zero",
+            p.horner_from_top_succ_zero,
+        ),
+        (
+            "Complex.hornerFromTop_succ_succ",
+            p.horner_from_top_succ_succ,
+        ),
+        ("Complex.factorQuotient", p.factor_quotient),
+        (
+            "Complex.factorQuotient_degreeLt",
+            p.factor_quotient_degree_lt,
+        ),
     ];
     // COVERAGE, checked against the ENVIRONMENT rather than against `named`
     // itself.

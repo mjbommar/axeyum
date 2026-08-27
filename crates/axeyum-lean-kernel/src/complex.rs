@@ -1465,6 +1465,71 @@ pub struct ComplexPrelude {
     /// antidiagonal convolution with the triangle sum via [`Self::pow_add`]
     /// splitting `pow x k` across each antidiagonal pair.
     pub poly_eval_poly_mul: NameId,
+
+    // --- factor theorem scaffolding: a genuinely COMPUTED quotient --------
+    //
+    // `Exists.rec` is `Prop`-only, so a proof of `∃ q, …` cannot hand back
+    // `q` as *data*; the quotient in `p ≡ polyMul (X − a) q` must be
+    // computed by an explicit construction. See [`poly`]'s module doc for
+    // the "growing bound" design (`Nat.rec` on the DIVIDEND'S bound, never on
+    // a subtracted index) and the boundary bug it has to avoid.
+    /// `Complex.hornerFromTop : (Nat → Complex) → Complex → Nat → Nat →
+    /// Complex` — `hornerFromTop c a m j` is the synthetic-division
+    /// "row `m`, distance `j` from the top" value, built by a NESTED
+    /// `Nat.rec` (outer on `m`, inner on `j`, mirroring [`Self::pow`]'s own
+    /// construction — [`crate::nat_prelude::NatOps::induct`] cannot produce
+    /// this, its motive is `Prop`-only): `hornerFromTop c a 0 j = c 0` for
+    /// any `j`; `hornerFromTop c a (succ m) 0 = c (succ m)`; `hornerFromTop c
+    /// a (succ m) (succ j) = add (hornerFromTop c a m j) (mul (pow a (succ
+    /// j)) (c (succ m)))`. The only appearance of `c` is at `c (succ m)` —
+    /// `m`'s own `Nat.rec` index — so, per [`poly`]'s doc, this never indexes
+    /// `c` by a subtracted quantity.
+    pub horner_from_top: NameId,
+    /// `Complex.hornerFromTop_zero : ∀ c a j, Eq Complex (hornerFromTop c a
+    /// Nat.zero j) (c Nat.zero)`. Closes by `Eq.refl` alone (`β` through the
+    /// outer `Nat.rec`'s ι-reduced, `j`-ignoring base case).
+    pub horner_from_top_zero: NameId,
+    /// `Complex.hornerFromTop_succ_zero : ∀ c a m, Eq Complex (hornerFromTop
+    /// c a (Nat.succ m) Nat.zero) (c (Nat.succ m))`. Closes by `Eq.refl`
+    /// alone.
+    pub horner_from_top_succ_zero: NameId,
+    /// `Complex.hornerFromTop_succ_succ : ∀ c a m j, Eq Complex
+    /// (hornerFromTop c a (Nat.succ m) (Nat.succ j)) (add (hornerFromTop c a
+    /// m j) (mul (pow a (Nat.succ j)) (c (Nat.succ m))))`. Closes by
+    /// `Eq.refl` alone — both sides normalize to the same nested `Nat.rec`
+    /// application.
+    pub horner_from_top_succ_succ: NameId,
+    /// `Complex.factorQuotient : (Nat → Complex) → Complex → Nat → (Nat →
+    /// Complex) := fun c a n k => Nat.rec (fun _ => Complex) zero (fun r' _
+    /// => hornerFromTop c a n r') (Nat.sub n k)` — the computed synthetic
+    /// -division quotient of `c` (read as a bound-`Nat.succ n` polynomial) by
+    /// `(X − a)`.
+    ///
+    /// The `zero`-then-`hornerFromTop` shape is deliberate, not cosmetic: a
+    /// FIRST attempt at this reindexing, `fun k => hornerFromTop c a n (Nat.sub
+    /// n (Nat.succ k))`, is wrong at the boundary — `Nat.sub`'s truncation
+    /// sends every `k ≥ n` to the SAME index `0`, and `hornerFromTop c a n 0`
+    /// is `c n`, the polynomial's own leading coefficient, generically
+    /// nonzero (confirmed by hand at `c = X² − 1`: that formula gives `q 2 =
+    /// c 2 = 1`, refuting `polyDegreeLt q 2` outright, the very property
+    /// [`Self::factor_quotient_degree_lt`] below needs `polyEval_polyMul` to
+    /// apply). Prepending a forced `zero` base at `r = 0` and shifting
+    /// `hornerFromTop`'s own index down by one fixes this: truncation now
+    /// sends every `k ≥ n` to `r = 0`, which is `zero` **by construction**,
+    /// not by coincidence, while every `k < n` still lands on `r = Nat.succ
+    /// r' ≥ 1` and unwraps to the correct `hornerFromTop c a n r'`. See
+    /// [`poly`]'s module doc for the full derivation and the concrete check.
+    pub factor_quotient: NameId,
+    /// `Complex.factorQuotient_degreeLt : ∀ c a n, polyDegreeLt
+    /// (factorQuotient c a n) n` — completes the hypothesis
+    /// [`Self::poly_eval_poly_mul`] needs to reason about `factorQuotient`.
+    ///
+    /// For `k` with `Nat.le n k`: [`crate::nat_prelude::NatPrelude::sub_eq_zero_of_le`]
+    /// gives `Eq Nat (Nat.sub n k) Nat.zero`; transported through
+    /// `factorQuotient`'s own `Nat.rec` shape this collapses to its `zero`
+    /// base case, matching the "beyond the bound" branch exactly, not the
+    /// buggy alternative [`Self::factor_quotient`]'s doc rejects.
+    pub factor_quotient_degree_lt: NameId,
 }
 
 impl ComplexPrelude {
@@ -1645,6 +1710,12 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         poly_mul: kernel.name_str(complex, "polyMul"),
         poly_degree_lt_poly_mul: kernel.name_str(complex, "polyDegreeLt_polyMul"),
         poly_eval_poly_mul: kernel.name_str(complex, "polyEval_polyMul"),
+        horner_from_top: kernel.name_str(complex, "hornerFromTop"),
+        horner_from_top_zero: kernel.name_str(complex, "hornerFromTop_zero"),
+        horner_from_top_succ_zero: kernel.name_str(complex, "hornerFromTop_succ_zero"),
+        horner_from_top_succ_succ: kernel.name_str(complex, "hornerFromTop_succ_succ"),
+        factor_quotient: kernel.name_str(complex, "factorQuotient"),
+        factor_quotient_degree_lt: kernel.name_str(complex, "factorQuotient_degreeLt"),
     }
 }
 
