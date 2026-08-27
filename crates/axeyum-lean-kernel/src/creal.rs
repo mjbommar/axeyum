@@ -4891,6 +4891,22 @@ pub struct CRealPrelude {
     /// (meshLevelCount j)) i)) (meshLevelCount j)` — the level-`j` mesh
     /// maximum of `F` on `[a, b]`. See `creal/supremum.rs`.
     pub mesh_max: NameId,
+    /// `CReal.meshMax_step_le : ∀ F a b j, UniformlyContinuousOn F a b → le a
+    /// b → le (meshMax F a b j) (meshMax F a b (Nat.succ j))` — rung 3 of the
+    /// `supOn` route: adjacent mesh levels are ordered. Instantiates
+    /// [`Self::max_range_transport`] at the two mesh samplers with index
+    /// embedding `e i := add i i`; the `Equiv` hypothesis it needs is closed
+    /// by [`Self::congr_of_uniformly_continuous`] against a point-level
+    /// `Equiv` (the coarse sample at `i` equals the fine sample at `2i`,
+    /// since `meshLevelCount`'s doubling schedule makes the two meshes nest
+    /// exactly). See `creal/supremum.rs`.
+    pub mesh_max_step_le: NameId,
+    /// `CReal.meshMax_mono : ∀ F a b, UniformlyContinuousOn F a b → le a b →
+    /// ∀ j j', Nat.le j j' → le (meshMax F a b j) (meshMax F a b j')` — rung
+    /// 4, general monotonicity across mesh levels, free from rung 3 via
+    /// [`Self::mono_of_le_succ`], exactly [`Self::max_range_mono`]'s own
+    /// construction one level up. See `creal/supremum.rs`.
+    pub mesh_max_mono: NameId,
 }
 
 impl CRealPrelude {
@@ -5421,6 +5437,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         mesh_level_count_zero: kernel.name_str(creal, "meshLevelCount_zero"),
         mesh_level_count_succ: kernel.name_str(creal, "meshLevelCount_succ"),
         mesh_max: kernel.name_str(creal, "meshMax"),
+        mesh_max_step_le: kernel.name_str(creal, "meshMax_step_le"),
+        mesh_max_mono: kernel.name_str(creal, "meshMax_mono"),
     }
 }
 
@@ -9314,6 +9332,37 @@ const STEPS: &[BuildStep] = &[
         ],
         provides: &[|p: CRealPrelude| p.mesh_max],
         run: supremum::declare_mesh_max,
+    },
+    BuildStep {
+        label: "supremum::declare_mesh_max_step_le",
+        requires: &[
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.congr_of_uniformly_continuous,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.left_distrib,
+            |p: CRealPrelude| p.max_range_transport,
+            |p: CRealPrelude| p.mesh_level_count,
+            |p: CRealPrelude| p.mesh_max,
+            |p: CRealPrelude| p.mul_congr,
+            |p: CRealPrelude| p.of_nat_add,
+            |p: CRealPrelude| p.of_rat_add,
+            |p: CRealPrelude| p.riemann_sample_in_bounds,
+            |p: CRealPrelude| p.uniformly_continuous_on,
+        ],
+        provides: &[|p: CRealPrelude| p.mesh_max_step_le],
+        run: supremum::declare_mesh_max_step_le,
+    },
+    BuildStep {
+        label: "supremum::declare_mesh_max_mono",
+        requires: &[
+            |p: CRealPrelude| p.mesh_max,
+            |p: CRealPrelude| p.mesh_max_step_le,
+            |p: CRealPrelude| p.mono_of_le_succ,
+        ],
+        provides: &[|p: CRealPrelude| p.mesh_max_mono],
+        run: supremum::declare_mesh_max_mono,
     },
 ];
 
