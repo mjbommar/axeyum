@@ -126,7 +126,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 408] = [
+    let expected: [(&str, crate::NameId, &str); 409] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -1460,6 +1460,11 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         (
             "CReal.uniform_converges_add",
             p.uniform_converges_add,
+            "theorem",
+        ),
+        (
+            "CReal.close_within_of_within",
+            p.close_within_of_within,
             "theorem",
         ),
     ];

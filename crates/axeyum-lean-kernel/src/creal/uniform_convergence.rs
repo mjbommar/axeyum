@@ -86,10 +86,13 @@ use crate::NatOps;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
-use crate::rat_prelude::ops::{nat_rewrite_prop, radd, rat_eq_rewrite, rle};
+use crate::rat_prelude::group::rsub;
+use crate::rat_prelude::ops::{
+    nat_rewrite_prop, radd, rat_eq_rewrite, rchain, rcongr, rle, rneg, rsymm, rzero,
+};
 
 use super::ring_helpers::add4_comm;
-use super::{CRealPrelude, creal_ty};
+use super::{CRealPrelude, creal_ty, embed, halves, sample, within};
 
 // --- shared term builders ----------------------------------------------------
 
@@ -1493,6 +1496,310 @@ pub(super) fn declare_uniform_converges_add(
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.uniform_converges_add,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// ============================================================================
+// The `Within -> close_within` bridge, generic in `x` and `y`.
+// ============================================================================
+//
+// `UniformConvergesOn`'s `spec` needs a CReal-level `close_within` bound, but
+// `Converges`/`Cauchy`/`regular_of_scaled_cauchy` (`creal/convergence.rs`)
+// speak entirely in terms of `Within` -- raw rational samples matched at a
+// SHARED index. Nothing exposed from this file's own already-landed theorems
+// bridges the two: `converges_of_scaled_cauchy` stays in `Within` throughout
+// (see its own doc comment), and `within_of_two_sided_le`
+// (`creal/integral.rs`) goes the WRONG direction (a real-valued two-sided
+// bound produces a `Within` fact at a chosen index, not the reverse).
+//
+// `creal/convergence.rs` already has this exact bridge, generic in BOTH `x`
+// and `y`, at its own private (unexported) `close_within_of_sample_bound` --
+// see that function's doc comment there. It is not `pub(super)`, and making
+// it so is an edit to a file this session does not own (another lane's), so
+// this section is an INDEPENDENT construction of the same conclusion, not a
+// copy: where `close_within_of_sample_bound` reads `CReal.regular` at a
+// SHIFTED index and telescopes four terms (`shifted_bound_at`), this route
+// goes through `CRealPrelude::sample_upper_bound`/`sample_lower_bound`
+// (`creal/uniform_continuity.rs`) directly at `hp`'s OWN index `n` -- no
+// shift, no telescope, since those two lemmas already say "a value is within
+// `1/(n+1)` of its own `n`-th sample" with no Cauchy hypothesis at all.
+
+/// `Rat.Eq (Rat.add (Rat.sub a b) b) a` — adding back what was subtracted
+/// cancels. A private copy of the technique `convergence.rs`'s own
+/// (unexported) `add_sub_cancel` uses (Rust privacy: sibling module), in the
+/// order [`one_sided_via_samples`] needs it.
+fn sub_add_cancel(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let rat = p.rat;
+    let neg_b = rneg(d, b);
+    let a_negb = radd(d, a, neg_b);
+    let lhs = radd(d, a_negb, b);
+    let assoc = d.lemma(rat.add_assoc, &[a, neg_b, b]);
+    // assoc : Eq lhs (add a (add neg_b b))
+    let negb_b = radd(d, neg_b, b);
+    let cancel_inner = d.lemma(rat.neg_add_cancel, &[b]); // Eq negb_b zero
+    let zero = rzero(d, rat);
+    let cancel = rcongr(d, negb_b, zero, cancel_inner, &|d, t| radd(d, a, t));
+    let a_plus_zero = radd(d, a, zero);
+    let add_zero_proof = d.lemma(rat.add_zero, &[a]); // Eq a_plus_zero a
+    let a_radd_negb_b = radd(d, a, negb_b);
+    let (_, proof) = rchain(
+        d,
+        lhs,
+        &[
+            (a_radd_negb_b, assoc),
+            (a_plus_zero, cancel),
+            (a, add_zero_proof),
+        ],
+    );
+    // proof : Eq lhs a, and `lhs` is defeq `Rat.add (Rat.sub a b) b`
+    // (`Rat.sub a b := Rat.add a (Rat.neg b)`, the same unfold
+    // `Rat.sub_self`'s own proof leans on directly).
+    proof
+}
+
+/// From `upper_uv : Rat.le (Rat.sub (sample u n) (sample v n)) (natDivSucc k
+/// n)`, derive `(bound_rat, proof)` where `bound_rat := Rat.add o (Rat.add
+/// bk o)` (`bk := natDivSucc k n`, `o := natDivSucc 1 n`) and `proof :
+/// CReal.le u (CReal.add v (CReal.ofRat bound_rat))`.
+///
+/// The one-sided half of [`close_within_of_within_at`]'s bridge. `u`'s own
+/// `1/(n+1)`-slack self-approximation
+/// ([`CRealPrelude::sample_upper_bound`]) chains through `upper_uv`
+/// (rearranged via `Rat.le_of_sub_le`) into `v`'s OWN sample `av`; then `av`
+/// is rewritten as `(av - o) + o` ([`sub_add_cancel`]) so that `v`'s own
+/// `1/(n+1)`-slack self-approximation
+/// ([`CRealPrelude::sample_lower_bound`], stated in terms of `av - o`)
+/// applies directly, via `CReal.ofRat_add`/`CReal.add_le_add`/`CReal.le_congr`
+/// to move between the split and fused forms.
+fn one_sided_via_samples(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    u: ExprId,
+    v: ExprId,
+    n: ExprId,
+    bk: ExprId,
+    o: ExprId,
+    upper_uv: ExprId,
+) -> (ExprId, ExprId) {
+    let rat = p.rat;
+    let au = sample(d, p, u, n);
+    let av = sample(d, p, v, n);
+
+    // au_le_avbk : Rat.le au (Rat.add av bk).
+    let au_le_avbk = d.lemma(rat.le_of_sub_le, &[au, av, bk, upper_uv]);
+
+    // step2 : Rat.le (au+o) ((av+bk)+o).
+    let o_refl = d.lemma(rat.le_refl, &[o]);
+    let av_bk = radd(d, av, bk);
+    let step2 = d.lemma(rat.add_le_add, &[au, av_bk, o, o, au_le_avbk, o_refl]);
+
+    // step3 : Rat.le (au+o) (av+(bk+o)), reassociating the RHS.
+    let bk_o = radd(d, bk, o);
+    let av_bk_o = radd(d, av, bk_o);
+    let assoc1 = d.lemma(rat.add_assoc, &[av, bk, o]);
+    let au_o = radd(d, au, o);
+    let av_bk_then_o = radd(d, av_bk, o);
+    let step3 = rat_eq_rewrite(d, av_bk_then_o, av_bk_o, assoc1, step2, &|d, t| {
+        rle(d, rat, au_o, t)
+    });
+
+    // bridge_eq : Eq (av+(bk+o)) ((av-o)+(o+(bk+o))), substituting
+    // `av = (av-o)+o` (`sub_add_cancel`, symmetrized) then reassociating.
+    let av_minus_o = rsub(d, rat, av, o);
+    let cancel = sub_add_cancel(d, p, av, o); // Eq (radd av_minus_o o) av
+    let restored = radd(d, av_minus_o, o);
+    let cancel_symm = rsymm(d, restored, av, cancel); // Eq av restored
+    let av_bko_congr = rcongr(d, av, restored, cancel_symm, &|d, t| radd(d, t, bk_o));
+    // av_bko_congr : Eq (av+bk_o) (restored+bk_o)
+    let o_bk_o = radd(d, o, bk_o);
+    let assoc2 = d.lemma(rat.add_assoc, &[av_minus_o, o, bk_o]);
+    // assoc2 : Eq (restored+bk_o) ((av-o)+(o+bk_o))
+    let target_shape = radd(d, av_minus_o, o_bk_o);
+    let restored_bk_o = radd(d, restored, bk_o);
+    let (_, bridge_eq) = rchain(
+        d,
+        av_bk_o,
+        &[(restored_bk_o, av_bko_congr), (target_shape, assoc2)],
+    );
+
+    // step4 : Rat.le (au+o) ((av-o)+(o+bk_o)).
+    let step4 = rat_eq_rewrite(d, av_bk_o, target_shape, bridge_eq, step3, &|d, t| {
+        rle(d, rat, au_o, t)
+    });
+
+    // chain1 : CReal.le u (ofRat target_shape).
+    let hu_upper = d.lemma(p.sample_upper_bound, &[u, n]);
+    let mid = embed(d, p, au_o);
+    let target1 = embed(d, p, target_shape);
+    let ofrat_le_1 = d.lemma(p.of_rat_le, &[au_o, target_shape, step4]);
+    let chain1 = d.lemma(p.le_trans, &[u, mid, target1, hu_upper, ofrat_le_1]);
+
+    // chain2 : CReal.le u (add (ofRat av_minus_o) (ofRat o_bk_o)), splitting
+    // `target1` via `CReal.ofRat_add`.
+    let embed_av_minus_o = embed(d, p, av_minus_o);
+    let embed_o_bk_o = embed(d, p, o_bk_o);
+    let split = d.const_app(p.add, &[embed_av_minus_o, embed_o_bk_o]);
+    let fuse = d.lemma(p.of_rat_add, &[av_minus_o, o_bk_o]);
+    // fuse : Equiv split target1
+    let fuse_symm = d.lemma(p.equiv_symm, &[split, target1, fuse]);
+    let refl_u = d.lemma(p.equiv_refl, &[u]);
+    let chain2 = d.lemma(
+        p.le_congr,
+        &[u, u, target1, split, refl_u, fuse_symm, chain1],
+    );
+
+    // step5 : CReal.le split (add v (ofRat o_bk_o)), via `sample_lower_bound`.
+    let hv_lower = d.lemma(p.sample_lower_bound, &[v, n]);
+    let o_bk_o_refl = d.lemma(p.le_refl, &[embed_o_bk_o]);
+    let step5 = d.lemma(
+        p.add_le_add,
+        &[
+            embed_av_minus_o,
+            v,
+            embed_o_bk_o,
+            embed_o_bk_o,
+            hv_lower,
+            o_bk_o_refl,
+        ],
+    );
+
+    let final_target = d.const_app(p.add, &[v, embed_o_bk_o]);
+    let result = d.lemma(p.le_trans, &[u, split, final_target, chain2, step5]);
+    (o_bk_o, result)
+}
+
+/// From `hp : Within (Rat.sub (sample x n) (sample y n)) (natDivSucc k n)`,
+/// derive `(rate, proof)` where `proof : close_within x y (natDivSucc rate
+/// n)` — the `Within -> close_within` bridge, generic in BOTH `x` and `y`
+/// (stronger than the task needed: no bespoke construction of either is
+/// assumed anywhere above or below).
+///
+/// `rate := 1+(k+1)`: `hp`'s own `k/(n+1)` slack plus `1/(n+1)` for each of
+/// `x`/`y`'s own self-approximation gap ([`one_sided_via_samples`], called
+/// once per direction with `(u,v) := (x,y)` and `(u,v) := (y,x)`), fused via
+/// two `Rat.natDivSucc_add` applications. See this section's own module
+/// documentation for why this is an independent construction of
+/// `convergence.rs`'s own (unexported, un-reused) `close_within_of_sample_bound`
+/// rather than a copy of it.
+pub(super) fn close_within_of_within_at(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    n: ExprId,
+    k: ExprId,
+    hp: ExprId,
+) -> (ExprId, ExprId) {
+    let rat = p.rat;
+    let ax = sample(d, p, x, n);
+    let ay = sample(d, p, y, n);
+    let diff = rsub(d, rat, ax, ay);
+    let bk = div_succ_at(d, p, k, n);
+    let one_nat = d.num(1);
+    let o = div_succ_at(d, p, one_nat, n);
+
+    let (hp_lower, hp_upper) = halves(d, p, diff, bk, hp);
+
+    // hp_upper_swapped : Rat.le (sub ay ax) bk, via `bounds_neg` + `neg_sub`.
+    let hp_upper_swapped = {
+        let neg_bk = rneg(d, bk);
+        let neg_diff = rneg(d, diff);
+        let bn_left = rle(d, rat, neg_bk, neg_diff);
+        let bn_right = rle(d, rat, neg_diff, bk);
+        let bn = d.lemma(rat.bounds_neg, &[diff, bk, hp_lower, hp_upper]);
+        let raw = d.and_right(bn_left, bn_right, bn);
+        let ay_ax = rsub(d, rat, ay, ax);
+        let neg_sub_eq = d.lemma(rat.neg_sub, &[ax, ay]); // Eq neg_diff ay_ax
+        rat_eq_rewrite(d, neg_diff, ay_ax, neg_sub_eq, raw, &|d, t| {
+            rle(d, rat, t, bk)
+        })
+    };
+
+    let (bound_rat, goal_up) = one_sided_via_samples(d, p, x, y, n, bk, o, hp_upper);
+    let (_, goal_down) = one_sided_via_samples(d, p, y, x, n, bk, o, hp_upper_swapped);
+
+    let close = d.lemma(
+        p.abs_le_of_two_sided,
+        &[x, y, bound_rat, goal_up, goal_down],
+    );
+
+    // Fuse `bound_rat = o + (bk + o)` into a single `natDivSucc rate n`.
+    let k1 = NatOps::add(d, k, one_nat);
+    let eq_a = d.lemma(rat.nat_div_succ_add, &[k, one_nat, n]);
+    // eq_a : Eq (radd bk o) (natDivSucc k1 n)
+    let bk_o = radd(d, bk, o);
+    let k1_nat_div = div_succ_at(d, p, k1, n);
+    let inner_congr = rcongr(d, bk_o, k1_nat_div, eq_a, &|d, t| radd(d, o, t));
+    // inner_congr : Eq bound_rat (radd o k1_nat_div)
+    let rate = NatOps::add(d, one_nat, k1);
+    let eq_b = d.lemma(rat.nat_div_succ_add, &[one_nat, k1, n]);
+    // eq_b : Eq (radd o k1_nat_div) (natDivSucc rate n)
+    let final_bound = div_succ_at(d, p, rate, n);
+    let o_k1 = radd(d, o, k1_nat_div);
+    let (_, eq_k) = rchain(d, bound_rat, &[(o_k1, inner_congr), (final_bound, eq_b)]);
+
+    let refl_le = d.lemma(rat.le_refl, &[bound_rat]);
+    let rat_le_final = rat_eq_rewrite(d, bound_rat, final_bound, eq_k, refl_le, &|d, t| {
+        rle(d, rat, bound_rat, t)
+    });
+    let final_close = weaken_close_within(d, p, x, y, bound_rat, final_bound, close, rat_le_final);
+    (rate, final_close)
+}
+
+/// Admit `CReal.close_within_of_within`. See
+/// [`close_within_of_within_at`]'s own doc comment for the route.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// refused a proof, not that a script gave up.
+pub(super) fn declare_close_within_of_within(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let ax = sample(d, p, x, n);
+    let ay = sample(d, p, y, n);
+    let diff = rsub(d, p.rat, ax, ay);
+    let bk = div_succ_at(d, p, k, n);
+    let hyp_ty = within(d, p, diff, bk);
+    let hp_fv = d.fresh_fvar();
+    let hp = d.kernel().fvar(hp_fv);
+
+    let (rate, proof) = close_within_of_within_at(d, p, x, y, n, k, hp);
+
+    let value = {
+        let with_hp = d.lam_fv(hp_fv, hyp_ty, proof);
+        let with_k = d.lam_fv(k_fv, nat, with_hp);
+        let with_n = d.lam_fv(n_fv, nat, with_k);
+        let with_y = d.lam_fv(y_fv, carrier, with_n);
+        d.lam_fv(x_fv, carrier, with_y)
+    };
+    let ty = {
+        let final_bound = div_succ_at(d, p, rate, n);
+        let concl = close_within(d, p, x, y, final_bound);
+        let inner = d.arrow(hyp_ty, concl);
+        let with_k = d.pi_fv(k_fv, nat, inner);
+        let with_n = d.pi_fv(n_fv, nat, with_k);
+        let with_y = d.pi_fv(y_fv, carrier, with_n);
+        d.pi_fv(x_fv, carrier, with_y)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.close_within_of_within,
         uparams: vec![],
         ty,
         value,
