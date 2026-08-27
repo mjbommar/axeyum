@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-polyeval-polyscale",
+  "title": "polyEval is scalar-linear: evaluating a scaled polynomial equals scaling the evaluation",
+  "statement": "CReal.Equiv (polyEval (polyScale s c) n x) (s * polyEval c n x) -- polyEval commutes with scalar multiplication, for every scalar s, coefficient function c, degree bound n, and point x.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : CReal) -> ((x1 : ((x1 : AxNat) -> CReal)) -> ((x2 : AxNat) -> ((x3 : CReal) -> CReal.Equiv (CReal.polyEval (CReal.polyScale x0 x1) x2 x3) (CReal.mul x0 (CReal.polyEval x1 x2 x3))))))",
+    "fragment": "CReal",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "kernel_theorem": "CReal.polyEval_polyScale"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:creal-equiv-refl",
+    "F:creal-equiv-symm",
+    "F:creal-equiv-trans",
+    "F:creal-mul-assoc"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.polyEval_polyScale",
+      "kind": "kernel-term",
+      "supports": "CReal.polyEval_polyScale is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CReal.polyEval_polyScale 2>/dev/null | grep -cE '^CReal\\.polyEval_polyScale[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "The producing prelude admits CReal.polyEval_polyScale through the trusted Kernel::add_declaration gate, which re-checks the proof term against the stated type. theorem_dependency_inventory exits non-zero for a named filter matching nothing (a deleted/renamed theorem cannot read as a re-derived one), and grep -c (never -q) both avoids a SIGPIPE-under-pipefail false negative and independently asserts the exact tab-anchored line is present. --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-CReal.polyEval_polyScale",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.polyEval_polyScale",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: creal: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: creal trusted surface = 0'. That bounds every declaration in the creal environment, including CReal.polyEval_polyScale, since a declaration cannot depend on a trusted declaration the environment does not contain. --require-axiom-free <name> errors for a prelude never built by this run rather than silently passing on zero rows. --release is MANDATORY here."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/polynomial.rs, declare_poly_eval_poly_scale)",
+    "source": "theorem name, canonical type and direct dependency edges read via theorem_dependency_inventory's own per-name output (cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- <Name>), which prints '<Name>\\t<comma-separated direct deps>'; the canonical type itself was cross-extracted from kernel_declaration_projection's unfiltered TSV dump the same way as the Definition facts in this batch, and confirmed byte-for-byte identical between the two tools' output for every name in this batch. crates/ source was not touched to produce this batch."
+  },
+  "notes": "theorem_dependency_inventory's direct-edge set also names CReal.mul_sumRange and CReal.sumRange_congr, not yet registered ledger facts under the CReal namespace, so omitted from depends_on rather than fabricated.",
+  "external_status": "proved"
+}

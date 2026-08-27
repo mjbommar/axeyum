@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-uniform-converges-geom-half",
+  "title": "x*(1/2)^n converges uniformly to the zero function on [0,1]",
+  "statement": "CReal.UniformConvergesOn (fun n x => mul x (pow (ofRat 1/2) n)) (fun _ => zero) zero one -- the sequence F n x := x*(1/2)^n converges uniformly to the zero function on [0,1]. A fully CONCRETE instance (a := zero, b := one are baked into the statement, unlike uniform_converges_id's arbitrary a, b), and a SECOND entry point admitting CReal.UniformConvergesOn's constructor, dispatched separately from declare_uniform_converges_id because the two witnesses are genuinely different constructions, not the same proof instantiated at different arguments.",
+  "formal": {
+    "language": "lean4",
+    "statement": "CReal.UniformConvergesOn (fun (x0 : AxNat) => fun (x1 : CReal) => CReal.mul x1 (CReal.pow (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) (AxNat.succ AxNat.zero))) x0)) (fun (x0 : CReal) => CReal.zero) CReal.zero CReal.one",
+    "fragment": "CReal",
+    "free_symbols": [],
+    "kernel_theorem": "CReal.uniform_converges_geom_half"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:creal-abs-congr",
+    "F:creal-abs-le",
+    "F:creal-add-comm",
+    "F:creal-add-congr",
+    "F:creal-add-neg",
+    "F:creal-add-zero",
+    "F:creal-equiv-refl",
+    "F:creal-equiv-symm",
+    "F:creal-equiv-trans",
+    "F:creal-le-congr",
+    "F:creal-le-trans",
+    "F:creal-mul-comm",
+    "F:creal-mul-le-mul-of-nonneg-left",
+    "F:creal-mul-nonneg",
+    "F:creal-mul-one",
+    "F:creal-ofrat-le",
+    "F:rat-zero-le-natdivsucc"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.uniform_converges_geom_half",
+      "kind": "kernel-term",
+      "supports": "CReal.uniform_converges_geom_half is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CReal.uniform_converges_geom_half 2>/dev/null | grep -cE '^CReal\\.uniform_converges_geom_half[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "The producing prelude admits CReal.uniform_converges_geom_half through the trusted Kernel::add_declaration gate, which re-checks the proof term against the stated type. theorem_dependency_inventory exits non-zero for a named filter matching nothing (a deleted/renamed theorem cannot read as a re-derived one), and grep -c (never -q) both avoids a SIGPIPE-under-pipefail false negative and independently asserts the exact tab-anchored line is present. --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-CReal.uniform_converges_geom_half",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.uniform_converges_geom_half",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: creal: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: creal trusted surface = 0'. That bounds every declaration in the creal environment, including CReal.uniform_converges_geom_half, since a declaration cannot depend on a trusted declaration the environment does not contain. --require-axiom-free <name> errors for a prelude never built by this run rather than silently passing on zero rows. --release is MANDATORY here."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/uniform_convergence.rs, declare_uniform_converges_geom_half)",
+    "source": "theorem name, canonical type and direct dependency edges read via theorem_dependency_inventory's own per-name output (cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- <Name>), which prints '<Name>\\t<comma-separated direct deps>'; the canonical type itself was cross-extracted from kernel_declaration_projection's unfiltered TSV dump the same way as the Definition facts in this batch, and confirmed byte-for-byte identical between the two tools' output for every name in this batch. crates/ source was not touched to produce this batch."
+  },
+  "notes": "theorem_dependency_inventory's direct-edge set also names CReal.neg_le_neg, CReal.pow_half_le_natDivSucc and CReal.pow_nonneg, none yet registered ledger facts under the CReal namespace (a differently-named F:rat-neg-le-neg exists for Rat.neg_le_neg, a distinct declaration), so they are omitted from depends_on rather than fabricated.",
+  "external_status": "proved"
+}

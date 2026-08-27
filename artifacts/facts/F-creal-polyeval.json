@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-polyeval",
+  "title": "polyEval: total Horner-style evaluation of a coefficient function over CReal",
+  "statement": "CReal.polyEval c n x := sumRange (fun i => c i * x^i) n -- evaluate the polynomial with coefficient function c at point x, truncated to degree < n. A total, axiom-free definition over the constructed reals; not a computed degree (see F:creal-polydegreelt's own notes for why no coefficient of a CReal-valued polynomial can be tested for zero).",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : ((x0 : AxNat) -> CReal)) -> ((x1 : AxNat) -> ((x2 : CReal) -> CReal)))",
+    "fragment": "CReal",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "kernel_theorem": "CReal.polyEval"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.polyEval",
+      "kind": "kernel-term",
+      "supports": "CReal.polyEval is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "kernel_declaration_projection --require-declaration (DIRECT, fail-on-absence)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration CReal.polyEval --require-kind definition 2>/dev/null | grep -cE '^found[[:space:]]creal[[:space:]]definition[[:space:]]CReal\\.polyEval[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "CReal.polyEval is a Declaration::Definition. theorem_dependency_inventory / nat_theorem_inventory / prelude_theorem_inventory all filter to Declaration::Theorem and exclude Definitions/Inductives, so this fact uses the DIRECT 'kernel_declaration_projection --require-declaration' checker: it searches every constructed prelude's environment for an exact display-name match and exits non-zero on no match or kind mismatch. Verified on this tree: the command prints exactly one 'found\\tcreal\\tdefinition\\tCReal.polyEval\\t...' line. --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-CReal.polyEval",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.polyEval",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: creal: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: creal trusted surface = 0'. That bounds every declaration in the creal environment, including CReal.polyEval, since a declaration cannot depend on a trusted declaration the environment does not contain. --require-axiom-free <name> errors for a prelude never built by this run rather than silently passing on zero rows. --release is MANDATORY here."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/polynomial.rs, declare_poly_eval)",
+    "source": "canonical type read via kernel_declaration_projection's own UNFILTERED emit mode (cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection, no --require-declaration flag), which prints, per constructed prelude, one TSV row per declaration whose last field is kernel.render_lean(declaration.ty()) -- the same Kernel::render_lean canonical form nat_theorem_inventory prints, just not filtered to Declaration::Theorem. That output was piped to a scratchpad file and the exact row for this declaration's own prelude label was extracted and injected here programmatically (a Python script reading the TSV, never hand-transcribed); crates/ source was not touched to produce this batch."
+  },
+  "notes": "depends_on is empty: polyEval is built from CReal.sumRange, CReal.mul, CReal.pow, plain Definitions.",
+  "external_status": "proved"
+}

@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "id": "F:complex-factorquotient",
+  "title": "factorQuotient: the COMPUTED synthetic-division quotient, never extracted by Exists-elimination",
+  "statement": "Complex.factorQuotient c a n k := Nat.rec (fun _ => Complex) zero (fun r' _ => hornerFromTop c a n r') (n - k) -- the synthetic-division quotient of the degree-<n+1 polynomial c by (X - a), COMPUTED via hornerFromTop rather than extracted from an existence proof. The zero-then-hornerFromTop shape (prepending a forced zero base case and reindexing hornerFromTop's own index DOWN by one) is deliberate, not cosmetic: the natural first attempt, reindexing directly as hornerFromTop c a n (n - k), sends every k >= n through truncated Nat.sub to the SAME index 0, and hornerFromTop c a n 0 returns c(n) -- the polynomial's own LEADING coefficient, not zero -- which would make the intended degree bound on factorQuotient flatly false once type-checked against a real k >= n. Reindexing hornerFromTop's own index down by one instead sends every k >= n through n - k = 0 to the forced zero base case, and any k < n unwraps to n - k >= 1 and the correct hornerFromTop c a n (n-k-1).",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : ((x0 : AxNat) -> Complex)) -> ((x1 : Complex) -> ((x2 : AxNat) -> ((x3 : AxNat) -> Complex))))",
+    "fragment": "Complex",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "kernel_theorem": "Complex.factorQuotient"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Complex.factorQuotient",
+      "kind": "kernel-term",
+      "supports": "Complex.factorQuotient is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "kernel_declaration_projection --require-declaration (DIRECT, fail-on-absence)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration Complex.factorQuotient --require-kind definition 2>/dev/null | grep -cE '^found[[:space:]]complex[[:space:]]definition[[:space:]]Complex\\.factorQuotient[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "Complex.factorQuotient is a Declaration::Definition. theorem_dependency_inventory / nat_theorem_inventory / prelude_theorem_inventory all filter to Declaration::Theorem and exclude Definitions/Inductives, so this fact uses the DIRECT 'kernel_declaration_projection --require-declaration' checker: it searches every constructed prelude's environment for an exact display-name match and exits non-zero on no match or kind mismatch. Verified on this tree: the command prints exactly one 'found\\tcomplex\\tdefinition\\tComplex.factorQuotient\\t...' line. --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-Complex.factorQuotient",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the complex prelude's trusted surface is empty, which bounds Complex.factorQuotient",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free complex",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: complex: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: complex trusted surface = 0'. That bounds every declaration in the complex environment, including Complex.factorQuotient, since a declaration cannot depend on a trusted declaration the environment does not contain. --require-axiom-free <name> errors for a prelude never built by this run rather than silently passing on zero rows. --release is MANDATORY here."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-lean-kernel build_complex_prelude (crates/axeyum-lean-kernel/src/complex/poly.rs, declare_factor_quotient)",
+    "source": "canonical type read via kernel_declaration_projection's own UNFILTERED emit mode (cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection, no --require-declaration flag), which prints, per constructed prelude, one TSV row per declaration whose last field is kernel.render_lean(declaration.ty()) -- the same Kernel::render_lean canonical form nat_theorem_inventory prints, just not filtered to Declaration::Theorem. That output was piped to a scratchpad file and the exact row for this declaration's own prelude label was extracted and injected here programmatically (a Python script reading the TSV, never hand-transcribed); crates/ source was not touched to produce this batch."
+  },
+  "notes": "depends_on is empty: factorQuotient is built from Complex.hornerFromTop, Complex.zero and Nat.rec/Nat.sub, plain Definitions.",
+  "external_status": "proved"
+}

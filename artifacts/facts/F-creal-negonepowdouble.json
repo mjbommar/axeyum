@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-negonepowdouble",
+  "title": "(-1)^(2k) = 1 for every k, by plain induction (no parity case split)",
+  "statement": "For every k : Nat, CReal.Equiv (CReal.pow (CReal.neg CReal.one) (k+k)) CReal.one. The parity fact underneath the Ch.22-23 alternating-series bracket theorems. Proved by plain induction on k using Nat.succ_add to relate pow(-1)^(succ k + succ k) to pow(-1)^(k+k) times (neg one)*(neg one), never by a decidable-parity case split on an arbitrary Nat (which this kernel does not have machinery for).",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : AxNat) -> CReal.Equiv (CReal.pow (CReal.neg CReal.one) (AxNat.add x0 x0)) CReal.one)",
+    "fragment": "CReal",
+    "free_symbols": [
+      "x0"
+    ],
+    "kernel_theorem": "CReal.negOnePowDouble"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:creal-equiv-refl",
+    "F:creal-equiv-trans",
+    "F:creal-mul-comm",
+    "F:creal-mul-congr",
+    "F:creal-mul-one",
+    "F:creal-neg-mul-neg",
+    "F:nat-succ-add"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.negOnePowDouble",
+      "kind": "kernel-term",
+      "supports": "CReal.negOnePowDouble is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CReal.negOnePowDouble 2>/dev/null | grep -cE '^CReal\\.negOnePowDouble[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "The producing prelude admits CReal.negOnePowDouble through the trusted Kernel::add_declaration gate, which re-checks the proof term against the stated type. theorem_dependency_inventory exits non-zero for a named filter matching nothing (a deleted/renamed theorem cannot read as a re-derived one), and grep -c (never -q) both avoids a SIGPIPE-under-pipefail false negative and independently asserts the exact tab-anchored line is present. --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-CReal.negOnePowDouble",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.negOnePowDouble",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: creal: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: creal trusted surface = 0'. That bounds every declaration in the creal environment, including CReal.negOnePowDouble, since a declaration cannot depend on a trusted declaration the environment does not contain. --require-axiom-free <name> errors for a prelude never built by this run rather than silently passing on zero rows. --release is MANDATORY here."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/alternating.rs, declare_neg_one_pow_double)",
+    "source": "theorem name, canonical type and direct dependency edges read via theorem_dependency_inventory's own per-name output (cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- <Name>), which prints '<Name>\\t<comma-separated direct deps>'; the canonical type itself was cross-extracted from kernel_declaration_projection's unfiltered TSV dump the same way as the Definition facts in this batch, and confirmed byte-for-byte identical between the two tools' output for every name in this batch. crates/ source was not touched to produce this batch."
+  },
+  "notes": "",
+  "external_status": "proved"
+}

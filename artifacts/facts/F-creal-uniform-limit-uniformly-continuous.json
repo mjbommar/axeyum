@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-uniform-limit-uniformly-continuous",
+  "title": "A uniform limit of uniformly continuous functions is uniformly continuous",
+  "statement": "For F : Nat -> CReal -> CReal, G : CReal -> CReal, a b : CReal: if F converges uniformly to G on [a,b] (CReal.UniformConvergesOn F G a b) and every F n is uniformly continuous on [a,b], then G is uniformly continuous on [a,b]. Ch.24's headline theorem. Proving it requires CONSTRUCTING a UniformlyContinuousOn witness for G, whose modulus field is built from literal Nat data derived from the convergence rate -- exactly the construction UniformConvergesOn's Type-valued (not Prop-valued) design exists to make possible, since Exists.rec cannot eliminate a Prop witness into Type-valued data.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : ((x0 : AxNat) -> ((x1 : CReal) -> CReal))) -> ((x1 : ((x1 : CReal) -> CReal)) -> ((x2 : CReal) -> ((x3 : CReal) -> ((x4 : CReal.UniformConvergesOn x0 x1 x2 x3) -> ((x5 : ((x5 : AxNat) -> CReal.UniformlyContinuousOn (x0 x5) x2 x3)) -> CReal.UniformlyContinuousOn x1 x2 x3))))))",
+    "fragment": "CReal",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ],
+    "kernel_theorem": "CReal.uniform_limit_uniformly_continuous"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:creal-add-assoc",
+    "F:creal-add-congr",
+    "F:creal-add-le-add",
+    "F:creal-equiv-refl",
+    "F:creal-equiv-trans",
+    "F:creal-le-congr",
+    "F:creal-le-refl",
+    "F:creal-le-trans",
+    "F:creal-ofrat-add",
+    "F:creal-ofrat-le",
+    "F:creal-uniformlycontinuouson-spec",
+    "F:logic-and-left",
+    "F:logic-and-right",
+    "F:rat-natdivsucc-add",
+    "F:rat-natdivsucc-le-add-left",
+    "F:rat-natdivsucc-scale"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.uniform_limit_uniformly_continuous",
+      "kind": "kernel-term",
+      "supports": "CReal.uniform_limit_uniformly_continuous is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CReal.uniform_limit_uniformly_continuous 2>/dev/null | grep -cE '^CReal\\.uniform_limit_uniformly_continuous[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "The producing prelude admits CReal.uniform_limit_uniformly_continuous through the trusted Kernel::add_declaration gate, which re-checks the proof term against the stated type. theorem_dependency_inventory exits non-zero for a named filter matching nothing (a deleted/renamed theorem cannot read as a re-derived one), and grep -c (never -q) both avoids a SIGPIPE-under-pipefail false negative and independently asserts the exact tab-anchored line is present. --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-CReal.uniform_limit_uniformly_continuous",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.uniform_limit_uniformly_continuous",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: creal: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: creal trusted surface = 0'. That bounds every declaration in the creal environment, including CReal.uniform_limit_uniformly_continuous, since a declaration cannot depend on a trusted declaration the environment does not contain. --require-axiom-free <name> errors for a prelude never built by this run rather than silently passing on zero rows. --release is MANDATORY here."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/uniform_convergence.rs, declare_uniform_limit_uniformly_continuous)",
+    "source": "theorem name, canonical type and direct dependency edges read via theorem_dependency_inventory's own per-name output (cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- <Name>), which prints '<Name>\\t<comma-separated direct deps>'; the canonical type itself was cross-extracted from kernel_declaration_projection's unfiltered TSV dump the same way as the Definition facts in this batch, and confirmed byte-for-byte identical between the two tools' output for every name in this batch. crates/ source was not touched to produce this batch."
+  },
+  "notes": "theorem_dependency_inventory's direct-edge set also names CReal.UniformConvergesOn.spec (a projection of the same-batch inductive, not itself a separately registered fact), CReal.abs_le_of_two_sided and CReal.two_sided_of_abs_sub_le (helper lemmas not yet registered ledger facts), omitted from depends_on rather than fabricated. This is the theorem whose PROOF needs UniformConvergesOn to be Type-valued: it constructs a UniformlyContinuousOn.mk application whose modulus argument is a literal function of the rate extracted via UniformConvergesOn.rate (a Type-eliminator, valid only because the source is Type-valued).",
+  "external_status": "proved"
+}
