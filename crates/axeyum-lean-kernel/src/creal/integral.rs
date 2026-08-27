@@ -24021,3 +24021,506 @@ mod mesh_uniform_endpoints_tests {
         }
     }
 }
+
+// --- integral-level endpoint continuity ----------------------------------
+//
+// The single lemma the arbitrary-`c` assembly still needed. Built at the
+// `Converges` altitude, NOT against `riemannSum_integral_close`'s
+// sample-level `Within` statement: `leg_converges` takes its mesh family as
+// callbacks, so both legs can be run at ONE shared count and the
+// mesh-uniform endpoint estimate then bounds the two sequences termwise,
+// which `converges_le` carries to the limits.
+
+/// `le x (add y bnd)` from `h : le (abs (add x (neg y))) bnd` — the
+/// CReal-bound analogue of [`CRealPrelude::le_add_of_abs_sub_le`], whose own
+/// bound must be an `ofRat`.
+fn le_add_of_abs_sub_le_real(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    bnd: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let ny = cneg(d, p, y);
+    let diff = cadd(d, p, x, ny);
+    let abs_diff = d.const_app(p.abs, &[diff]);
+    let self_le = d.lemma(p.le_abs_self, &[diff]);
+    let diff_le = d.lemma(p.le_trans, &[diff, abs_diff, bnd, self_le, h]);
+
+    let refl_y = d.lemma(p.le_refl, &[y]);
+    let stepped = d.lemma(p.add_le_add, &[diff, bnd, y, y, diff_le, refl_y]);
+    // stepped : le (add diff y) (add bnd y)
+
+    let diff_y = cadd(d, p, diff, y);
+    let ny_y = cadd(d, p, ny, y);
+    let x_nyy = cadd(d, p, x, ny_y);
+    let zero_c = czero(d, p);
+    let x_zero = cadd(d, p, x, zero_c);
+    let left_eq = {
+        let assoc = d.lemma(p.add_assoc, &[x, ny, y]);
+        let y_ny = cadd(d, p, y, ny);
+        let comm = d.lemma(p.add_comm, &[ny, y]);
+        let cancel = d.lemma(p.add_neg, &[y]);
+        let to_zero = d.lemma(p.equiv_trans, &[ny_y, y_ny, zero_c, comm, cancel]);
+        let refl_x = d.lemma(p.equiv_refl, &[x]);
+        let inner = d.lemma(p.add_congr, &[x, x, ny_y, zero_c, refl_x, to_zero]);
+        let drop = d.lemma(p.add_zero, &[x]);
+        echain(d, p, diff_y, &[(x_nyy, assoc), (x_zero, inner), (x, drop)])
+    };
+    let bnd_y = cadd(d, p, bnd, y);
+    let y_bnd = cadd(d, p, y, bnd);
+    let right_eq = d.lemma(p.add_comm, &[bnd, y]);
+    d.lemma(
+        p.le_congr,
+        &[diff_y, x, bnd_y, y_bnd, left_eq, right_eq, stepped],
+    )
+}
+
+/// `le (add x (neg y)) bnd` from `h : le x (add y bnd)` — the inverse of
+/// [`le_add_of_abs_sub_le_real`]'s own final move.
+fn sub_le_of_le_add_real(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    bnd: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let ny = cneg(d, p, y);
+    let y_bnd = cadd(d, p, y, bnd);
+    let refl_ny = d.lemma(p.le_refl, &[ny]);
+    let stepped = d.lemma(p.add_le_add, &[x, y_bnd, ny, ny, h, refl_ny]);
+    // stepped : le (add x ny) (add (add y bnd) ny)
+
+    let start = cadd(d, p, y_bnd, ny);
+    let bnd_ny = cadd(d, p, bnd, ny);
+    let s1 = cadd(d, p, y, bnd_ny);
+    let h1 = d.lemma(p.add_assoc, &[y, bnd, ny]);
+    let ny_bnd = cadd(d, p, ny, bnd);
+    let s2 = cadd(d, p, y, ny_bnd);
+    let h2 = {
+        let comm = d.lemma(p.add_comm, &[bnd, ny]);
+        let refl_y = d.lemma(p.equiv_refl, &[y]);
+        d.lemma(p.add_congr, &[y, y, bnd_ny, ny_bnd, refl_y, comm])
+    };
+    let y_ny = cadd(d, p, y, ny);
+    let s3 = cadd(d, p, y_ny, bnd);
+    let h3 = {
+        let assoc = d.lemma(p.add_assoc, &[y, ny, bnd]);
+        d.lemma(p.equiv_symm, &[s3, s2, assoc])
+    };
+    let zero_c = czero(d, p);
+    let s4 = cadd(d, p, zero_c, bnd);
+    let h4 = {
+        let cancel = d.lemma(p.add_neg, &[y]);
+        let refl_bnd = d.lemma(p.equiv_refl, &[bnd]);
+        d.lemma(p.add_congr, &[y_ny, zero_c, bnd, bnd, cancel, refl_bnd])
+    };
+    let s5 = cadd(d, p, bnd, zero_c);
+    let h5 = d.lemma(p.add_comm, &[zero_c, bnd]);
+    let h6 = d.lemma(p.add_zero, &[bnd]);
+    let right_eq = echain(
+        d,
+        p,
+        start,
+        &[(s1, h1), (s2, h2), (s3, h3), (s4, h4), (s5, h5), (bnd, h6)],
+    );
+    let diff = cadd(d, p, x, ny);
+    let refl_diff = d.lemma(p.equiv_refl, &[diff]);
+    d.lemma(
+        p.le_congr,
+        &[diff, diff, start, bnd, refl_diff, right_eq, stepped],
+    )
+}
+
+/// **The lemma the arbitrary-`c` assembly needed.** Endpoint continuity of
+/// the integral, mesh-free:
+///
+/// ```text
+/// le (abs (integral F x y hxy uxy − integral F x2 y2 hx2y2 ux2y2))
+///    (add (mul M dw) (mul (1/(e+1)) w2b))
+/// ```
+///
+/// under exactly [`riemann_sum_endpoints_le_mesh_uniform`]'s endpoint
+/// hypotheses. Both legs are run through [`leg_converges`] at the SHARED
+/// mesh family `M(n) := (deep₁(n) + deep₂(n)) + n`, which is fine enough for
+/// each leg's own modulus and at least as deep as the accuracy index — the
+/// three obligations `leg_converges` asks for, all pure `Nat.le_add_right` /
+/// `nat_le_add_left` bookkeeping. The termwise bound is then carried to the
+/// limits by [`CRealPrelude::converges_le`], twice, and the two shifted
+/// inequalities are folded back into one `abs` by
+/// [`CRealPrelude::neg_sub_swap`] and [`CRealPrelude::abs_le`].
+#[allow(clippy::too_many_arguments)]
+fn integral_endpoint_close(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    aa: ExprId,
+    bb: ExprId,
+    u: ExprId,
+    k: ExprId,
+    hb: ExprId,
+    x: ExprId,
+    y: ExprId,
+    x2: ExprId,
+    y2: ExprId,
+    hxy: ExprId,
+    hx2y2: ExprId,
+    uxy: ExprId,
+    ux2y2: ExprId,
+    hax: ExprId,
+    hyb: ExprId,
+    hax2: ExprId,
+    hy2b: ExprId,
+    dw: ExprId,
+    w2b: ExprId,
+    bx: ExprId,
+    bw: ExprId,
+    e: ExprId,
+    hdw: ExprId,
+    hw2b: ExprId,
+    hbx: ExprId,
+    hbw: ExprId,
+    hfit: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let rat = p.rat;
+    let np = d.prelude();
+
+    let deeps = |d: &mut IntDev<'_>, n: ExprId| -> (ExprId, ExprId, ExprId, ExprId) {
+        let d1 = deep_at(d, p, f, x, y, uxy, n);
+        let d2 = deep_at(d, p, f, x2, y2, ux2y2, n);
+        let s = NatOps::add(d, d1, d2);
+        let m = NatOps::add(d, s, n);
+        (d1, d2, s, m)
+    };
+    let mesh = |d: &mut IntDev<'_>, n: ExprId| -> ExprId { deeps(d, n).3 };
+    let deep_le1 = |d: &mut IntDev<'_>, n: ExprId| -> ExprId {
+        let (d1, d2, s, m) = deeps(d, n);
+        let h1 = d.lemma(np.le_add_right, &[d1, d2]);
+        let h2 = d.lemma(np.le_add_right, &[s, n]);
+        d.lemma(np.le_trans, &[d1, s, m, h1, h2])
+    };
+    let deep_le2 = |d: &mut IntDev<'_>, n: ExprId| -> ExprId {
+        let (d1, d2, s, m) = deeps(d, n);
+        let h1 = nat_le_add_left(d, d1, d2);
+        let h2 = d.lemma(np.le_add_right, &[s, n]);
+        d.lemma(np.le_trans, &[d2, s, m, h1, h2])
+    };
+    let idx_le = |d: &mut IntDev<'_>, n: ExprId| -> ExprId {
+        let (_, _, s, _) = deeps(d, n);
+        nat_le_add_left(d, s, n)
+    };
+
+    let (g1, conv1) = leg_converges(d, p, f, x, y, hxy, uxy, &mesh, &deep_le1, &idx_le);
+    let (g2, conv2) = leg_converges(d, p, f, x2, y2, hx2y2, ux2y2, &mesh, &deep_le2, &idx_le);
+
+    let mbound = {
+        let succ_k = d.succ(k);
+        let zero_nat = d.num(0);
+        let q = d.const_app(rat.nat_div_succ, &[succ_k, zero_nat]);
+        embed(d, p, q)
+    };
+    let eps = {
+        let one_nat = d.num(1);
+        let q = d.const_app(rat.nat_div_succ, &[one_nat, e]);
+        embed(d, p, q)
+    };
+    let big_b = {
+        let left = cmul(d, p, mbound, dw);
+        let right = cmul(d, p, eps, w2b);
+        cadd(d, p, left, right)
+    };
+
+    let const_b = {
+        let n_fv = d.fresh_fvar();
+        d.lam_fv(n_fv, nat, big_b)
+    };
+    let conv_const = d.lemma(p.converges_of_const, &[big_b]);
+
+    let i1 = d.const_app(p.integral, &[f, x, y, hxy, uxy]);
+    let i2 = d.const_app(p.integral, &[f, x2, y2, hx2y2, ux2y2]);
+
+    // The shifted sequences, built exactly as `converges_add`'s conclusion
+    // builds them so the two are the same `ExprId`.
+    let shifted = |d: &mut IntDev<'_>, g: ExprId| -> ExprId {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let gn = d.apply(g, &[n]);
+        let bn = d.apply(const_b, &[n]);
+        let body = cadd(d, p, gn, bn);
+        d.lam_fv(n_fv, nat, body)
+    };
+    let g2b = shifted(d, g2);
+    let g1b = shifted(d, g1);
+    let conv2b = d.lemma(
+        p.converges_add,
+        &[g2, const_b, i2, big_b, conv2, conv_const],
+    );
+    let conv1b = d.lemma(
+        p.converges_add,
+        &[g1, const_b, i1, big_b, conv1, conv_const],
+    );
+
+    // The termwise bound, in both directions.
+    let termwise = |d: &mut IntDev<'_>, forward: bool| -> ExprId {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let m_n = mesh(d, n);
+        let est = riemann_sum_endpoints_le_mesh_uniform(
+            d, p, f, aa, bb, u, k, hb, x, y, x2, y2, m_n, e, dw, w2b, bx, bw, hxy, hx2y2, hax, hyb,
+            hax2, hy2b, hdw, hw2b, hbx, hbw, hfit,
+        );
+        let s1 = rsum(d, p, f, x, y, m_n);
+        let s2 = rsum(d, p, f, x2, y2, m_n);
+        let body = if forward {
+            le_add_of_abs_sub_le_real(d, p, s1, s2, big_b, est)
+        } else {
+            // `|s1 − s2| ≤ B` gives the OTHER direction through the same
+            // helper once the difference is reversed.
+            let n1 = cneg(d, p, s1);
+            let n2 = cneg(d, p, s2);
+            let diff12 = cadd(d, p, s1, n2);
+            let diff21 = cadd(d, p, s2, n1);
+            let abs12 = d.const_app(p.abs, &[diff12]);
+            let abs21 = d.const_app(p.abs, &[diff21]);
+            let ndiff12 = cneg(d, p, diff12);
+            let swap = d.lemma(p.neg_sub_swap, &[s1, s2]);
+            let abs_neg = d.lemma(p.abs_congr, &[ndiff12, diff21, swap]);
+            let abs_ndiff = d.const_app(p.abs, &[ndiff12]);
+            // `|−z| ≤ |z|` from `neg_le_abs`/`le_abs_self` through `abs_le`.
+            let self_le = d.lemma(p.le_abs_self, &[diff12]);
+            let neg_le = d.lemma(p.neg_le_abs, &[diff12]);
+            let abs_of_neg = d.lemma(p.abs_le, &[ndiff12, abs12, neg_le, self_le]);
+            // abs_of_neg : le (abs ndiff12) (abs diff12)
+            let refl_abs12 = d.lemma(p.equiv_refl, &[abs12]);
+            let moved = d.lemma(
+                p.le_congr,
+                &[
+                    abs_ndiff, abs21, abs12, abs12, abs_neg, refl_abs12, abs_of_neg,
+                ],
+            );
+            // moved : le (abs diff21) (abs diff12)
+            let chained = d.lemma(p.le_trans, &[abs21, abs12, big_b, moved, est]);
+            le_add_of_abs_sub_le_real(d, p, s2, s1, big_b, chained)
+        };
+        d.lam_fv(n_fv, nat, body)
+    };
+
+    let pt1 = termwise(d, true);
+    let pt2 = termwise(d, false);
+    let i2b = cadd(d, p, i2, big_b);
+    let i1b = cadd(d, p, i1, big_b);
+    let hle1 = d.lemma(p.converges_le, &[g1, g2b, i1, i2b, conv1, conv2b, pt1]);
+    let hle2 = d.lemma(p.converges_le, &[g2, g1b, i2, i1b, conv2, conv1b, pt2]);
+
+    let up = sub_le_of_le_add_real(d, p, i1, i2, big_b, hle1);
+    let lo = {
+        let other = sub_le_of_le_add_real(d, p, i2, i1, big_b, hle2);
+        let ni2 = cneg(d, p, i2);
+        let diff = cadd(d, p, i1, ni2);
+        let ndiff = cneg(d, p, diff);
+        let ni1 = cneg(d, p, i1);
+        let rev = cadd(d, p, i2, ni1);
+        let swap = d.lemma(p.neg_sub_swap, &[i1, i2]);
+        let back = d.lemma(p.equiv_symm, &[ndiff, rev, swap]);
+        let refl_b = d.lemma(p.equiv_refl, &[big_b]);
+        d.lemma(p.le_congr, &[rev, ndiff, big_b, big_b, back, refl_b, other])
+    };
+    let ni2 = cneg(d, p, i2);
+    let diff = cadd(d, p, i1, ni2);
+    d.lemma(p.abs_le, &[diff, big_b, up, lo])
+}
+
+#[cfg(test)]
+mod integral_endpoint_close_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// Endpoint continuity of the integral and its dropped-summand control in
+    /// ONE build. The control varies only the right-hand side of the `le` and
+    /// leaves the left-hand side the identical `ExprId`.
+    fn integral_endpoint_probes() -> Vec<(&'static str, Result<(), crate::KernelError>)> {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+        let nat = d.nat_ty();
+        let f_ty = fn_ty(&mut d, p);
+
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let aa_fv = d.fresh_fvar();
+        let aa = d.kernel().fvar(aa_fv);
+        let bb_fv = d.fresh_fvar();
+        let bb = d.kernel().fvar(bb_fv);
+        let u_ty = d.const_app(p.uniformly_continuous_on, &[f, aa, bb]);
+        let u_fv = d.fresh_fvar();
+        let u = d.kernel().fvar(u_fv);
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hb_ty = d.const_app(p.bounded_on, &[f, aa, bb, k]);
+        let hb_fv = d.fresh_fvar();
+        let hb = d.kernel().fvar(hb_fv);
+
+        let carrier_fvs: Vec<_> = (0..8).map(|_| d.fresh_fvar()).collect();
+        let vals: Vec<_> = carrier_fvs.iter().map(|fv| d.kernel().fvar(*fv)).collect();
+        let (x, y, x2, y2) = (vals[0], vals[1], vals[2], vals[3]);
+        let (dw, w2b, bx, bw) = (vals[4], vals[5], vals[6], vals[7]);
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+
+        let hxy_ty = cle(&mut d, p, x, y);
+        let hxy_fv = d.fresh_fvar();
+        let hxy = d.kernel().fvar(hxy_fv);
+        let hx2y2_ty = cle(&mut d, p, x2, y2);
+        let hx2y2_fv = d.fresh_fvar();
+        let hx2y2 = d.kernel().fvar(hx2y2_fv);
+        let uxy_ty = d.const_app(p.uniformly_continuous_on, &[f, x, y]);
+        let uxy_fv = d.fresh_fvar();
+        let uxy = d.kernel().fvar(uxy_fv);
+        let ux2y2_ty = d.const_app(p.uniformly_continuous_on, &[f, x2, y2]);
+        let ux2y2_fv = d.fresh_fvar();
+        let ux2y2 = d.kernel().fvar(ux2y2_fv);
+
+        let hax_ty = cle(&mut d, p, aa, x);
+        let hyb_ty = cle(&mut d, p, y, bb);
+        let hax2_ty = cle(&mut d, p, aa, x2);
+        let hy2b_ty = cle(&mut d, p, y2, bb);
+
+        let w1 = width_of(&mut d, p, x, y);
+        let w2 = width_of(&mut d, p, x2, y2);
+        let nw2 = cneg(&mut d, p, w2);
+        let wdiff = cadd(&mut d, p, w1, nw2);
+        let abs_wdiff = d.const_app(p.abs, &[wdiff]);
+        let hdw_ty = cle(&mut d, p, abs_wdiff, dw);
+        let abs_w2 = d.const_app(p.abs, &[w2]);
+        let hw2b_ty = cle(&mut d, p, abs_w2, w2b);
+        let nx2 = cneg(&mut d, p, x2);
+        let xdiff = cadd(&mut d, p, x, nx2);
+        let abs_xdiff = d.const_app(p.abs, &[xdiff]);
+        let hbx_ty = cle(&mut d, p, abs_xdiff, bx);
+        let hbw_ty = cle(&mut d, p, abs_wdiff, bw);
+        let hfit_ty = {
+            let modul = d.const_app(p.uc_modulus, &[f, aa, bb, u, e]);
+            let one_nat = d.num(1);
+            let q = d.const_app(p.rat.nat_div_succ, &[one_nat, modul]);
+            let target = embed(&mut d, p, q);
+            let sum = cadd(&mut d, p, bx, bw);
+            cle(&mut d, p, sum, target)
+        };
+
+        let hyp_tys = [
+            hax_ty, hyb_ty, hax2_ty, hy2b_ty, hdw_ty, hw2b_ty, hbx_ty, hbw_ty, hfit_ty,
+        ];
+        let hyp_fvs: Vec<_> = (0..hyp_tys.len()).map(|_| d.fresh_fvar()).collect();
+        let hyps: Vec<_> = hyp_fvs.iter().map(|fv| d.kernel().fvar(*fv)).collect();
+
+        let proof = integral_endpoint_close(
+            &mut d, p, f, aa, bb, u, k, hb, x, y, x2, y2, hxy, hx2y2, uxy, ux2y2, hyps[0], hyps[1],
+            hyps[2], hyps[3], dw, w2b, bx, bw, e, hyps[4], hyps[5], hyps[6], hyps[7], hyps[8],
+        );
+
+        let i1 = d.const_app(p.integral, &[f, x, y, hxy, uxy]);
+        let i2 = d.const_app(p.integral, &[f, x2, y2, hx2y2, ux2y2]);
+        assert_ne!(i1, i2, "the two integrals must be distinct terms");
+        let ni2 = cneg(&mut d, p, i2);
+        let diff = cadd(&mut d, p, i1, ni2);
+        let abs_diff = d.const_app(p.abs, &[diff]);
+
+        let mbound = {
+            let succ_k = d.succ(k);
+            let zero_nat = d.num(0);
+            let q = d.const_app(p.rat.nat_div_succ, &[succ_k, zero_nat]);
+            embed(&mut d, p, q)
+        };
+        let eps = {
+            let one_nat = d.num(1);
+            let q = d.const_app(p.rat.nat_div_succ, &[one_nat, e]);
+            embed(&mut d, p, q)
+        };
+        let bound_a = cmul(&mut d, p, mbound, dw);
+        let bound_b = cmul(&mut d, p, eps, w2b);
+        let good_bound = cadd(&mut d, p, bound_a, bound_b);
+        assert_ne!(
+            good_bound, bound_a,
+            "the control must differ from the bound"
+        );
+
+        let concl_good = cle(&mut d, p, abs_diff, good_bound);
+        let concl_bad = cle(&mut d, p, abs_diff, bound_a);
+
+        let mut out = Vec::new();
+        for (label, concl) in [
+            ("integralEndpointCloseGood", concl_good),
+            ("integralEndpointCloseDroppedBad", concl_bad),
+        ] {
+            let ty = {
+                let mut t = concl;
+                for (fv, ty) in hyp_fvs.iter().zip(hyp_tys.iter()).rev() {
+                    let _ = fv;
+                    t = d.arrow(*ty, t);
+                }
+                t = d.pi_fv(e_fv, nat, t);
+                t = d.pi_fv(ux2y2_fv, ux2y2_ty, t);
+                t = d.pi_fv(uxy_fv, uxy_ty, t);
+                t = d.pi_fv(hx2y2_fv, hx2y2_ty, t);
+                t = d.pi_fv(hxy_fv, hxy_ty, t);
+                for fv in carrier_fvs.iter().rev() {
+                    t = d.pi_fv(*fv, carrier, t);
+                }
+                t = d.arrow(hb_ty, t);
+                t = d.pi_fv(k_fv, nat, t);
+                t = d.pi_fv(u_fv, u_ty, t);
+                t = d.pi_fv(bb_fv, carrier, t);
+                t = d.pi_fv(aa_fv, carrier, t);
+                d.pi_fv(f_fv, f_ty, t)
+            };
+            let value = {
+                let mut v = proof;
+                for (fv, ty) in hyp_fvs.iter().zip(hyp_tys.iter()).rev() {
+                    v = d.lam_fv(*fv, *ty, v);
+                }
+                v = d.lam_fv(e_fv, nat, v);
+                v = d.lam_fv(ux2y2_fv, ux2y2_ty, v);
+                v = d.lam_fv(uxy_fv, uxy_ty, v);
+                v = d.lam_fv(hx2y2_fv, hx2y2_ty, v);
+                v = d.lam_fv(hxy_fv, hxy_ty, v);
+                for fv in carrier_fvs.iter().rev() {
+                    v = d.lam_fv(*fv, carrier, v);
+                }
+                v = d.lam_fv(hb_fv, hb_ty, v);
+                v = d.lam_fv(k_fv, nat, v);
+                v = d.lam_fv(u_fv, u_ty, v);
+                v = d.lam_fv(bb_fv, carrier, v);
+                v = d.lam_fv(aa_fv, carrier, v);
+                d.lam_fv(f_fv, f_ty, v)
+            };
+            let anon = d.kernel().anon();
+            let name = d.kernel().name_str(anon, label);
+            out.push((
+                label,
+                d.kernel().add_declaration(Declaration::Theorem {
+                    name,
+                    uparams: vec![],
+                    ty,
+                    value,
+                }),
+            ));
+        }
+        out
+    }
+
+    #[test]
+    fn the_integral_is_continuous_in_its_endpoints() {
+        let results = crate::on_a_deep_stack(integral_endpoint_probes);
+        for (label, res) in results {
+            if label.ends_with("Good") {
+                res.unwrap_or_else(|e| panic!("{label} must be accepted: {e:?}"));
+            } else {
+                assert!(res.is_err(), "{label} must be REFUSED");
+            }
+        }
+    }
+}
