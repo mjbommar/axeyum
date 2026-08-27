@@ -1095,14 +1095,67 @@
 //! `mesh_count_align` is a private helper with its own `#[cfg(test)]`
 //! module, wired into no `CRealPrelude` field, no `BuildStep`, no
 //! `EXPECTED_STEP_ORDER` entry, and no inventory shard row —
-//! `creal_prelude_builds` is unaffected. **Next leg, sized precisely**: the
-//! `[a,c]` leg's bound-weakening (deliverable (b) in this lane's own brief),
-//! mirroring [`bnd_leg_plus_share_le`]'s structure exactly but consuming
-//! `total_eps_sample_le_at(a, c, e, m_ac, magnitude_ac, jj1)` in place of
-//! `total_eps_sample_le`'s shared-index call — `total_eps_sample_le_at`
-//! already exists and needs no further generalization. That leg, plus the
-//! `[c,b]` leg (symmetric) and the final three-way `abs_add_le` combine
-//! sized in the TWELFTH lane's own entry above, are what remain.
+//! `creal_prelude_builds` is unaffected.
+//!
+//! ## `CReal.integral_split` `[a,c]`-leg bound-weakening — LANDED 2026-08-27
+//! (a FOURTEENTH lane), `bnd_leg_plus_share_le_at`
+//!
+//! [`bnd_leg_plus_share_le_at`] is [`bnd_leg_plus_share_le`]'s independent-
+//! accuracy/sample-index generalization: same `a1`/`a2`/`shift`/`b1`
+//! bookkeeping, same `half_shift_le`-weakened `modulus` pair, same fold into
+//! a single `natDivSucc`, but the `bound_at_idx` weakening step consumes
+//! [`total_eps_sample_le_at`] at an accuracy `e` and a sample index `jj1`
+//! that are never assumed equal (`e := jj1` recovers `bnd_leg_plus_share_le`
+//! exactly, since `total_eps_sample_le` is that specialization).
+//!
+//! **The one genuine obstacle, not visible until the fold was attempted**:
+//! `m_term := natDivSucc(magnitude, e)` and every other leaf (`a1`/`a2`/`b1`)
+//! are built at `jj1`, and [`fuse_nds`] only fuses two `natDivSucc`s at the
+//! SAME index. So `m_term` cannot join the fold at all — it is pulled to the
+//! front of the sum instead: one `Rat.add_assoc` isolates `b1+b1`, one
+//! [`reassoc3`] application moves `m_term` past the first `a1a1`, and from
+//! there every remaining step is a plain `Rat.add_assoc` (never another
+//! commute) because `m_term` is already in front. The final shape is
+//! `Rat.le (bnd_leg_actual + natDivSucc(1,jj1)) (m_term + natDivSucc(k,jj1))`
+//! — `k` defeq `9` at concrete inputs, matching `bnd_leg_plus_share_le`'s own
+//! `magnitude + 9` leaf count with `magnitude`'s term now carried separately.
+//!
+//! **`magnitude` is not an independent input, and treating it as one is the
+//! mistake that cost this lane its first two failed attempts.**
+//! `riemann_sum_total_eps_le`'s own conclusion embeds `succ(CReal.bound
+//! (width_of a b))` as ITS magnitude; a caller's `magnitude` argument must be
+//! that SAME `ExprId` (`width_of` then [`direct_bound_le`], hash-consed) or
+//! `total_eps_sample_le_at`'s own internal `le_of_sub_le` application fails
+//! to type-check — invisible in `d.lemma`'s construction, surfacing only when
+//! the whole closed term is inferred, and failing identically whether `a`/`b`
+//! are symbolic or concrete (an arbitrary literal magnitude at CONCRETE `a
+//! := zero, b := one` is just as wrong; nothing about concreteness excuses
+//! deriving `magnitude` correctly). `total_eps_sample_le_at`'s own test
+//! already used this exact recipe — the miss was not rereading it before
+//! picking a convenient value.
+//!
+//! Kernel-verified three ways, mirroring `mesh_count_align_tests`: symbolic
+//! (closed over `a b e jj1 m` via a real `Theorem`, `magnitude` derived from
+//! `a`/`b` rather than separately quantified), a non-vacuity control
+//! (swapping `e`/`jj1` changes the rendered target, since `e` appears only in
+//! `m_term` and `jj1` only in the folded side), and a concrete instantiation
+//! (`e:=6, jj1:=3, m:=6, a:=zero, b:=one` — `k` defeq `9` via `Kernel::def_eq`).
+//! `bnd_leg_plus_share_le_at` is a private helper with its own `#[cfg(test)]`
+//! module, wired into no `CRealPrelude` field, no `BuildStep`, no
+//! `EXPECTED_STEP_ORDER` entry, and no inventory shard row —
+//! `creal_prelude_builds` is unaffected (33 s, unchanged from baseline).
+//!
+//! **The `[c,b]` leg needs NO new derivation — it is the SAME function,
+//! called at different arguments.** The `succ` in `mesh_count_align`'s
+//! `combined := add(succ(m_ac), m_cb)` is bookkeeping for how the two legs'
+//! mesh counts combine into `riemann_sum_split_exact_of_uc`'s identity; it
+//! never appears inside a leg's OWN Cauchy-bound-weakening, which only ever
+//! sees ITS OWN mesh count as an opaque `jj1`. So the `[c,b]` leg is
+//! `bnd_leg_plus_share_le_at(d, p, c, b, e, m_cb, m, magnitude_cb,
+//! bound_at_idx_cb)` — the identical call with `(c,b,m_cb,magnitude_cb)` in
+//! place of `(a,c,m_ac,magnitude_ac)` — not a mirror-image derivation to
+//! write. What remains is the final three-way `abs_add_le` combine sized in
+//! the TWELFTH lane's own entry above (unchanged by this landing).
 
 use super::completeness::half_shift_le;
 use super::convergence::{
@@ -11402,6 +11455,459 @@ fn bnd_leg_plus_share_le(
     );
 
     (k, final_le)
+}
+
+/// The `[a,c]`-leg generalization of [`bnd_leg_plus_share_le`]: identical
+/// structure (same `a1`/`a2`/`shift`/`b1` bookkeeping, same
+/// `half_shift_le`-weakened `modulus` pair, same fold into a single
+/// `natDivSucc`), but the `bound_at_idx` weakening step consumes
+/// [`total_eps_sample_le_at`] at an INDEPENDENT accuracy `e` and sample
+/// index `jj1` — `bnd_leg_plus_share_le`'s own `total_eps_sample_le` call is
+/// that function's `n := idx` specialization, so `e := jj1` recovers it
+/// exactly.
+///
+/// Because `m_term := nds(magnitude, e)` and every other leaf
+/// (`a1`/`a2`/`b1`) is built at `jj1`, [`fuse_nds`] cannot fold `m_term`
+/// together with them (it fuses two `natDivSucc`s at the SAME index only).
+/// So `m_term` is pulled out to the front of the sum instead of into it: one
+/// `Rat.add_assoc` isolates `b1+b1` inside `inner_target`, one
+/// [`reassoc3`] application (`Eq (a1a1 + (m_term + b1b1)) (m_term + (b1b1 +
+/// a1a1))`) moves `m_term` past the first `a1a1`, and every step after that
+/// stays in the shape `radd(m_term, natDivSucc(_, jj1))` by construction, so
+/// only plain `Rat.add_assoc` (never another commute) is needed to keep
+/// folding the `jj1`-side terms as [`bnd_leg_plus_share_le`] itself does.
+///
+/// Returns `(k, proof)`, `proof : Rat.le (radd(bnd_leg_actual, natDivSucc(1,
+/// jj1))) (radd(m_term, natDivSucc(k, jj1)))` — `bnd_leg_actual` is
+/// EXACTLY [`bnd_leg_plus_share_le`]'s own leaf shape (`modulus(jj1,shift
+/// jj1) + bound_at_idx) + modulus(shift jj1,jj1)`, at `jj1` throughout, so a
+/// caller substitutes this directly wherever `bnd_leg_plus_share_le`'s own
+/// result is substituted today. `k` is independent of `magnitude` and of
+/// `e` — a concrete instantiation confirms it is defeq to the literal `9`,
+/// matching [`bnd_leg_plus_share_le`]'s own doc-commented leaf count
+/// (`magnitude + 9`) with the `magnitude` term now carried separately in
+/// `m_term` instead of folded in.
+#[allow(clippy::too_many_arguments)]
+fn bnd_leg_plus_share_le_at(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    e: ExprId,
+    jj1: ExprId,
+    m: ExprId,
+    magnitude: ExprId,
+    bound_at_idx: ExprId,
+) -> (ExprId, ExprId) {
+    let rat = p.rat;
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+
+    let a1 = div_succ(d, p, 1, jj1);
+    let shift_jj1 = shift(d, jj1);
+    let a2 = div_succ(d, p, 1, shift_jj1);
+    let b1 = div_succ(d, p, 2, jj1);
+    let m_term = nds(d, p, magnitude, e);
+
+    // --- order half: bnd_leg(jj1,m) + natDivSucc(1,jj1) ≤ R. --------------
+    let a2_le_a1 = half_shift_le(d, p, jj1);
+    let refl_a1 = d.lemma(rat.le_refl, &[a1]);
+
+    let modulus_idx_shift = modulus(d, p, jj1, shift_jj1); // = radd(a1,a2)
+    let modulus_shift_idx = modulus(d, p, shift_jj1, jj1); // = radd(a2,a1)
+
+    let mod1_le = d.lemma(rat.add_le_add, &[a1, a1, a2, a1, refl_a1, a2_le_a1]);
+    let mod2_le = d.lemma(rat.add_le_add, &[a2, a1, a1, a1, a2_le_a1, refl_a1]);
+
+    // bound_at_idx ≤ (m_term + b1) + b1 [up to the one-beta defeq noted on
+    // `bnd_leg_plus_share_le`], via the independent-index generalization.
+    let sample_le = total_eps_sample_le_at(d, p, a, b, e, m, magnitude, jj1);
+    let refl_b1 = d.lemma(rat.le_refl, &[b1]);
+    let total_eps = total_eps_of(d, p, a, b, e, m);
+    let sample_te = sample(d, p, total_eps, jj1);
+    let m_plus_b1 = radd(d, m_term, b1);
+    let bound_le = d.lemma(
+        rat.add_le_add,
+        &[sample_te, m_plus_b1, b1, b1, sample_le, refl_b1],
+    );
+
+    let a1a1 = radd(d, a1, a1);
+    let inner_target = radd(d, m_plus_b1, b1);
+    let part1_actual = radd(d, modulus_idx_shift, bound_at_idx);
+    let part1_target = radd(d, a1a1, inner_target);
+    let part1_le = d.lemma(
+        rat.add_le_add,
+        &[
+            modulus_idx_shift,
+            a1a1,
+            bound_at_idx,
+            inner_target,
+            mod1_le,
+            bound_le,
+        ],
+    );
+
+    let bnd_leg_actual = radd(d, part1_actual, modulus_shift_idx);
+    let bnd_leg_target = radd(d, part1_target, a1a1);
+    let bnd_leg_le = d.lemma(
+        rat.add_le_add,
+        &[
+            part1_actual,
+            part1_target,
+            modulus_shift_idx,
+            a1a1,
+            part1_le,
+            mod2_le,
+        ],
+    );
+
+    let with_extra_target = radd(d, bnd_leg_target, a1);
+    let with_extra_le = d.lemma(
+        rat.add_le_add,
+        &[bnd_leg_actual, bnd_leg_target, a1, a1, bnd_leg_le, refl_a1],
+    );
+
+    // --- equality half: pull `m_term` to the front, fold the rest at `jj1`.
+    // inner_target = (m_term+b1)+b1 ≡ m_term+(b1+b1) ≡ m_term+natDivSucc(nb4,jj1).
+    let assoc_inner = d.lemma(rat.add_assoc, &[m_term, b1, b1]);
+    let b1_b1 = radd(d, b1, b1);
+    let m_term_plus_b1b1 = radd(d, m_term, b1_b1);
+    let (nb4, eq_b1b1) = fuse_nds(d, p, two_nat, two_nat, jj1);
+    let nb4_idx = nds(d, p, nb4, jj1);
+    let eq_inner_right = rcongr(d, b1_b1, nb4_idx, eq_b1b1, &|d, t| radd(d, m_term, t));
+    let m_term_plus_nb4 = radd(d, m_term, nb4_idx);
+    let eq_inner = rtrans(
+        d,
+        inner_target,
+        m_term_plus_b1b1,
+        m_term_plus_nb4,
+        assoc_inner,
+        eq_inner_right,
+    );
+
+    // a1a1 = natDivSucc(n3,jj1).
+    let (n3, eq_c) = fuse_nds(d, p, one_nat, one_nat, jj1);
+    let n3_idx = nds(d, p, n3, jj1);
+
+    // part1_target = a1a1 + inner_target ≡ n3_idx + (m_term + nb4_idx)
+    //              ≡ [reassoc3] m_term + (nb4_idx + n3_idx)
+    //              ≡ m_term + natDivSucc(n4,jj1).
+    let eq_part1_left = rcongr(d, a1a1, n3_idx, eq_c, &|d, t| radd(d, t, inner_target));
+    let n3_idx_plus_inner = radd(d, n3_idx, inner_target);
+    let eq_part1_right = rcongr(d, inner_target, m_term_plus_nb4, eq_inner, &|d, t| {
+        radd(d, n3_idx, t)
+    });
+    let n3_idx_plus_mnb4 = radd(d, n3_idx, m_term_plus_nb4);
+    let eq_part1_pre = rtrans(
+        d,
+        part1_target,
+        n3_idx_plus_inner,
+        n3_idx_plus_mnb4,
+        eq_part1_left,
+        eq_part1_right,
+    );
+    let (reassoc1_target, reassoc1_proof) = reassoc3(d, p, n3_idx, m_term, nb4_idx);
+    let eq_part1_full = rtrans(
+        d,
+        part1_target,
+        n3_idx_plus_mnb4,
+        reassoc1_target,
+        eq_part1_pre,
+        reassoc1_proof,
+    );
+    let (n4, eq_d) = fuse_nds(d, p, nb4, n3, jj1);
+    let n4_idx = nds(d, p, n4, jj1);
+    let nb4_plus_n3 = radd(d, nb4_idx, n3_idx);
+    let eq_part1_inner = rcongr(d, nb4_plus_n3, n4_idx, eq_d, &|d, t| radd(d, m_term, t));
+    let m_term_plus_n4 = radd(d, m_term, n4_idx);
+    let eq_part1_final = rtrans(
+        d,
+        part1_target,
+        reassoc1_target,
+        m_term_plus_n4,
+        eq_part1_full,
+        eq_part1_inner,
+    );
+
+    // bnd_leg_target = part1_target + a1a1 ≡ (m_term+n4_idx) + n3_idx
+    //                ≡ [add_assoc] m_term + (n4_idx+n3_idx)
+    //                ≡ m_term + natDivSucc(n5,jj1).
+    let eq_bnd_step1 = rcongr(d, part1_target, m_term_plus_n4, eq_part1_final, &|d, t| {
+        radd(d, t, a1a1)
+    });
+    let m_term_n4_plus_a1a1 = radd(d, m_term_plus_n4, a1a1);
+    let eq_bnd_step2 = rcongr(d, a1a1, n3_idx, eq_c, &|d, t| radd(d, m_term_plus_n4, t));
+    let m_term_n4_plus_n3 = radd(d, m_term_plus_n4, n3_idx);
+    let eq_bnd_pre = rtrans(
+        d,
+        bnd_leg_target,
+        m_term_n4_plus_a1a1,
+        m_term_n4_plus_n3,
+        eq_bnd_step1,
+        eq_bnd_step2,
+    );
+    let assoc_bnd = d.lemma(rat.add_assoc, &[m_term, n4_idx, n3_idx]);
+    let n4_plus_n3 = radd(d, n4_idx, n3_idx);
+    let m_term_plus_n4n3 = radd(d, m_term, n4_plus_n3);
+    let eq_bnd_full = rtrans(
+        d,
+        bnd_leg_target,
+        m_term_n4_plus_n3,
+        m_term_plus_n4n3,
+        eq_bnd_pre,
+        assoc_bnd,
+    );
+    let (n5, eq_e) = fuse_nds(d, p, n4, n3, jj1);
+    let n5_idx = nds(d, p, n5, jj1);
+    let eq_bnd_inner = rcongr(d, n4_plus_n3, n5_idx, eq_e, &|d, t| radd(d, m_term, t));
+    let m_term_plus_n5 = radd(d, m_term, n5_idx);
+    let eq_bnd_final = rtrans(
+        d,
+        bnd_leg_target,
+        m_term_plus_n4n3,
+        m_term_plus_n5,
+        eq_bnd_full,
+        eq_bnd_inner,
+    );
+
+    // with_extra_target = bnd_leg_target + a1 ≡ (m_term+n5_idx) + a1
+    //                   ≡ [add_assoc] m_term + (n5_idx+a1)
+    //                   ≡ m_term + natDivSucc(k,jj1).
+    let eq_we_pre = rcongr(d, bnd_leg_target, m_term_plus_n5, eq_bnd_final, &|d, t| {
+        radd(d, t, a1)
+    });
+    let m_term_n5_plus_a1 = radd(d, m_term_plus_n5, a1);
+    let assoc_we = d.lemma(rat.add_assoc, &[m_term, n5_idx, a1]);
+    let n5_plus_a1 = radd(d, n5_idx, a1);
+    let m_term_plus_n5a1 = radd(d, m_term, n5_plus_a1);
+    let eq_we_full = rtrans(
+        d,
+        with_extra_target,
+        m_term_n5_plus_a1,
+        m_term_plus_n5a1,
+        eq_we_pre,
+        assoc_we,
+    );
+    let (k, eq_f) = fuse_nds(d, p, n5, one_nat, jj1);
+    let k_idx = nds(d, p, k, jj1);
+    let eq_we_inner = rcongr(d, n5_plus_a1, k_idx, eq_f, &|d, t| radd(d, m_term, t));
+    let m_term_plus_k = radd(d, m_term, k_idx);
+    let eq_with_extra = rtrans(
+        d,
+        with_extra_target,
+        m_term_plus_n5a1,
+        m_term_plus_k,
+        eq_we_full,
+        eq_we_inner,
+    );
+
+    let with_extra_actual = radd(d, bnd_leg_actual, a1);
+    let final_le = rat_eq_rewrite(
+        d,
+        with_extra_target,
+        m_term_plus_k,
+        eq_with_extra,
+        with_extra_le,
+        &|d, t| rle(d, rat, with_extra_actual, t),
+    );
+
+    (k, final_le)
+}
+
+#[cfg(test)]
+mod bnd_leg_plus_share_le_at_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// The raw bound, symbolic in `a b e jj1 m magnitude`, closed into a
+    /// real `Theorem`. `bound_at_idx` is built literally as `radd(sample_te,
+    /// b1)` (the zero-step-defeq case the doc comment names), since this
+    /// leg has no real `riemann_sum_integral_close`-shaped caller yet — the
+    /// construction under test is `bnd_leg_plus_share_le_at` itself, not a
+    /// hand-built stand-in for a future caller.
+    #[test]
+    fn bnd_leg_plus_share_le_at_proves_the_stated_bound() {
+        crate::on_a_deep_stack(bnd_leg_plus_share_le_at_proves_the_stated_bound_body);
+    }
+
+    fn bnd_leg_plus_share_le_at_proves_the_stated_bound_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let nat = d.nat_ty();
+        let carrier = creal_ty(&mut d, p);
+
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+        let jj1_fv = d.fresh_fvar();
+        let jj1 = d.kernel().fvar(jj1_fv);
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+
+        // `magnitude` is NOT an independent free input: `total_eps_sample_le_at`
+        // (via `riemann_sum_total_eps_le`) embeds `succ(CReal.bound(width_of(a,b)))`
+        // in its own conclusion, so the caller's `magnitude` must be that SAME
+        // `ExprId` (hash-consed), exactly the recipe `total_eps_sample_le_at`'s
+        // own test uses — an unrelated `magnitude` fails to type-check.
+        let width = width_of(&mut d, p, a, b);
+        let (_c, magnitude, _width_le) = direct_bound_le(&mut d, p, width);
+
+        let total_eps = total_eps_of(&mut d, p, a, b, e, m);
+        let sample_te = sample(&mut d, p, total_eps, jj1);
+        let b1 = div_succ(&mut d, p, 2, jj1);
+        let bound_at_idx = radd(&mut d, sample_te, b1);
+
+        let (k, proof) =
+            bnd_leg_plus_share_le_at(&mut d, p, a, b, e, jj1, m, magnitude, bound_at_idx);
+
+        let a1 = div_succ(&mut d, p, 1, jj1);
+        let shift_jj1 = shift(&mut d, jj1);
+        let modulus_idx_shift = modulus(&mut d, p, jj1, shift_jj1);
+        let modulus_shift_idx = modulus(&mut d, p, shift_jj1, jj1);
+        let part1_actual = radd(&mut d, modulus_idx_shift, bound_at_idx);
+        let bnd_leg_actual = radd(&mut d, part1_actual, modulus_shift_idx);
+        let with_extra_actual = radd(&mut d, bnd_leg_actual, a1);
+        let m_term = nds(&mut d, p, magnitude, e);
+        let k_idx = nds(&mut d, p, k, jj1);
+        let target = radd(&mut d, m_term, k_idx);
+        let concl_ty = rle(&mut d, p.rat, with_extra_actual, target);
+
+        // `Kernel::infer` on the unwrapped `proof` hits `UnboundFVar` (the
+        // free variables of `bnd_leg_plus_share_le_at`'s own construction) —
+        // close over them into a real `Theorem` first, `declare_of_nat_le`'s
+        // own idiom, and let `add_declaration` be the check. `magnitude` is
+        // NOT separately quantified: it is a term built from `a`/`b`, not an
+        // independent input.
+        let ty = {
+            let over_m = d.pi_fv(m_fv, nat, concl_ty);
+            let over_jj1 = d.pi_fv(jj1_fv, nat, over_m);
+            let over_e = d.pi_fv(e_fv, nat, over_jj1);
+            let over_b = d.pi_fv(b_fv, carrier, over_e);
+            d.pi_fv(a_fv, carrier, over_b)
+        };
+        let value = {
+            let over_m = d.lam_fv(m_fv, nat, proof);
+            let over_jj1 = d.lam_fv(jj1_fv, nat, over_m);
+            let over_e = d.lam_fv(e_fv, nat, over_jj1);
+            let over_b = d.lam_fv(b_fv, carrier, over_e);
+            d.lam_fv(a_fv, carrier, over_b)
+        };
+
+        let anon = d.kernel().anon();
+        let name = d
+            .kernel()
+            .name_str(anon, "bndLegPlusShareLeAtStatedBoundSmoke");
+        let result = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(
+            result.is_ok(),
+            "bnd_leg_plus_share_le_at must prove the stated bound, closed over a b e jj1 m: {:?}",
+            result.err()
+        );
+    }
+
+    /// Non-vacuity, aimed at the specific thing this generalization adds:
+    /// swapping `e` and `jj1` must change the rendered target, since `e`
+    /// appears ONLY in `m_term` and `jj1` appears ONLY in the folded
+    /// `natDivSucc(k,jj1)` side. If swapping them rendered identically, the
+    /// construction would be silently collapsing back to the shared-index
+    /// case rather than genuinely separating the two indices.
+    #[test]
+    fn bnd_leg_plus_share_le_at_is_not_symmetric_in_e_and_jj1() {
+        crate::on_a_deep_stack(bnd_leg_plus_share_le_at_is_not_symmetric_in_e_and_jj1_body);
+    }
+
+    fn bnd_leg_plus_share_le_at_is_not_symmetric_in_e_and_jj1_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+        let a = d.kernel().const_(p.zero, vec![]);
+        let b = d.kernel().const_(p.one, vec![]);
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+        let jj1_fv = d.fresh_fvar();
+        let jj1 = d.kernel().fvar(jj1_fv);
+        let m = d.num(6);
+        // `magnitude` must be the SAME `ExprId` `riemann_sum_total_eps_le`
+        // embeds internally (`succ(CReal.bound(width_of(a,b)))`), not an
+        // arbitrary literal — see `bnd_leg_plus_share_le_at_proves_the_stated_bound`.
+        let width = width_of(&mut d, p, a, b);
+        let (_c, magnitude, _width_le) = direct_bound_le(&mut d, p, width);
+
+        let render_target_for = |d: &mut IntDev<'_>, e: ExprId, jj1: ExprId| -> String {
+            let total_eps = total_eps_of(d, p, a, b, e, m);
+            let sample_te = sample(d, p, total_eps, jj1);
+            let b1 = div_succ(d, p, 2, jj1);
+            let bound_at_idx = radd(d, sample_te, b1);
+            let (k, _proof) =
+                bnd_leg_plus_share_le_at(d, p, a, b, e, jj1, m, magnitude, bound_at_idx);
+            let m_term = nds(d, p, magnitude, e);
+            let k_idx = nds(d, p, k, jj1);
+            let target = radd(d, m_term, k_idx);
+            d.kernel().render_lean(target)
+        };
+
+        let straight = render_target_for(&mut d, e, jj1);
+        let swapped = render_target_for(&mut d, jj1, e);
+        assert_ne!(
+            straight, swapped,
+            "swapping e/jj1 must change the rendered target"
+        );
+    }
+
+    /// Concrete instantiation: `e := 6`, `jj1 := 3`, `m := 6`, `a := zero`,
+    /// `b := one`, `magnitude := succ(CReal.bound(width_of(a,b)))` (the
+    /// correct derived value — see the stated-bound test's own doc comment
+    /// for why an arbitrary literal does not type-check). `k` must be defeq
+    /// to the literal `9`, matching
+    /// [`bnd_leg_plus_share_le`]'s own doc-commented leaf count with the
+    /// `magnitude` term now carried separately rather than folded in.
+    #[test]
+    fn bnd_leg_plus_share_le_at_k_is_nine_at_concrete_inputs() {
+        crate::on_a_deep_stack(bnd_leg_plus_share_le_at_k_is_nine_at_concrete_inputs_body);
+    }
+
+    fn bnd_leg_plus_share_le_at_k_is_nine_at_concrete_inputs_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+        let a = d.kernel().const_(p.zero, vec![]);
+        let b = d.kernel().const_(p.one, vec![]);
+        let e = d.num(6);
+        let jj1 = d.num(3);
+        let m = d.num(6);
+        let width = width_of(&mut d, p, a, b);
+        let (_c, magnitude, _width_le) = direct_bound_le(&mut d, p, width);
+
+        let total_eps = total_eps_of(&mut d, p, a, b, e, m);
+        let sample_te = sample(&mut d, p, total_eps, jj1);
+        let b1 = div_succ(&mut d, p, 2, jj1);
+        let bound_at_idx = radd(&mut d, sample_te, b1);
+
+        let (k, proof) =
+            bnd_leg_plus_share_le_at(&mut d, p, a, b, e, jj1, m, magnitude, bound_at_idx);
+
+        d.kernel()
+            .infer(proof)
+            .expect("bnd_leg_plus_share_le_at's proof must type-check at concrete inputs");
+
+        let nine = d.num(9);
+        assert!(
+            d.kernel().def_eq(k, nine),
+            "k must be defeq to the literal 9 at concrete inputs, matching \
+             bnd_leg_plus_share_le's own `magnitude + 9` leaf count"
+        );
+    }
 }
 
 /// `CReal.riemannSumDeepCauchyFolded : ∀ F a b, CReal.le a b →
