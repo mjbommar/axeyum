@@ -48,13 +48,19 @@ were simply never propagated.
 |---|---|
 | **1. Constructive general form** | Not MVT — MVT is unavailable (see row 2). What IS proved, axiom-free, over `CReal`, without invoking MVT: `CReal.monotone_of_nonneg_deriv`, `CReal.antitone_of_nonpos_deriv`, `CReal.constant_of_zero_deriv`, `CReal.strict_mono_of_pos_deriv`, `CReal.strict_injective_of_pos_deriv`, `CReal.strict_antitone_of_neg_deriv`, `CReal.strict_mono_comp` — all confirmed present (`kernel_declaration_projection --require-declaration`, `found … theorem … 0` axiom footprint). The **rate** chain — `CReal.strict_mono_magnitude` → `CReal.scale_cancel_le` → `CReal.diff_le_of_strict_mono_magnitude` (`\|x−y\| ≤ 2(k+1)(\|Fx\|+\|Fy\|)`) — is likewise present. None of these seven are registered in `artifacts/facts/` (`ls artifacts/facts | grep -i` finds no `monotone-of-nonneg-deriv`/`strict-mono`/etc. entry); they exist only as kernel declarations. |
 | **2. Boundary refutation** | **Absence, not refutation.** `crates/axeyum-lean-kernel/src/creal/monotone.rs:5029-5032`'s own module doc states MVT is "unavailable here — it rests on the extreme value theorem, not constructively provable" — an *inherited* unavailability argument (MVT needs EVT; EVT is unavailable), never a **dedicated MVT counterexample**. No declaration, test, or fact constructs a function `F` for which the MVT conclusion (`∃c ∈ (a,b), F'(c) = (F(b)−F(a))/(b−a)`) is false — contrast with IVT's row 2, which has a **kernel-computed** reduction test (`ivt_bisect_diag_reduces_on_the_identity_bracket_neg_one_two`, `creal_tests.rs:6026`) exhibiting a concrete bracket converging to the *wrong* value. And EVT's own row 2 — the theorem MVT is said to inherit its unavailability from — is itself marked **"in progress"** in `crates/axeyum-cas/src/extremum.rs:11` ("Row 2 (kernel side, in progress): attainment is refuted as constructively unavailable…"), not landed. So MVT's row 2 rests on an argument whose own foundation is not yet built. This is a genuine gap in the family, not a documentation gap: building it needs either (a) a direct MVT counterexample (a function with a bounded derivative-difference structure but no interior point matching the secant slope — the standard classical counterexamples all secretly use EVT/attainment, so a genuinely *independent* MVT counterexample is not obviously easier than finishing EVT's own row 2), or (b) finishing EVT's row 2 first and then formally deriving MVT's unavailability from it. |
-| **3. Exact form on the decidable fragment** | **Reachable, not built.** For a polynomial `p` with rational coefficients on `[a,b]`, MVT's conclusion becomes: does `q(x) := p'(x) − (p(b)−p(a))/(b−a)` have a root in the *open* interval `(a,b)`? Every ingredient already ships: `poly::rat_derivative` (exact differentiation), `real_algebraic::polynomial_ivt`/`verify_ivt_certificate` (exact sign-change root existence, the same machinery IVT's row 3 uses), and `extremum::polynomial_extremum` (differentiate + Sturm-isolate + exact compare) as the nearest existing analog — its 20 in-file unit tests (`cargo test -p axeyum-cas --lib extremum::`, confirmed 20 passed / 1 ignored / 0 failed this session) include a family of adversarial `verify_rejects_*` fixtures, which is the right shape for a re-derivation checker. Nothing in `axeyum-cas` currently assembles these into a `polynomial_mvt`/`verify_mvt_certificate` pair (`grep -rliE "mean_value\|mvt" crates/axeyum-cas/src/` is empty) — it is unbuilt, not blocked, and it is the **same shape** as `extremum.rs`, sized as a same-day task once someone picks it up. |
+| **3. Exact form on the decidable fragment** | **Landed, same day as this row was last marked "reachable, not built."** `crates/axeyum-cas/src/mvt.rs`: `polynomial_mvt`/`verify_mvt_certificate`, confirmed present this session (`cargo test -p axeyum-cas --lib mvt::` — **18 passed, 0 failed**, re-run fresh, not read from the lane's own report). For a polynomial `p` with rational coefficients on `[a,b]`, it forms the Rolle reduction `g(x) := p(x) − p(a) − m(x−a)` (`m` the exact secant slope), reuses `extremum::polynomial_extremum` on `g` (and `−g` on a tie) to locate an interior critical point when `deg(p) ≥ 2`, and handles `deg(p) ≤ 1` as its own degenerate branch (`g' ≡ 0` identically, every interior point a witness) — `c` is produced as a **named** `AlgebraicReal`, not merely asserted. `verify_mvt_certificate` independently re-derives the slope, `g`/`g'`, the bracket's Sturm recount, strict interiority, and the conclusion `p'(c) = m`, all from `poly`/`a`/`b` alone. The adversarial case worth naming: `p = x³ − 4x²` on `[0,4]` has `m = 0` and `p'(x) = x(3x−8)`, whose roots are `x = 0` (the **left endpoint itself**) and `x = 8/3` (genuinely interior) — both satisfy the slope equation, so a checker that skipped the strict-interiority re-check would wrongly accept the endpoint (`verify_rejects_an_endpoint_witness` confirms this). **Cost is not simply inherited from `extremum.rs`**: reusing EVT's cheap all-rational degree-5 case (`3x⁵−5x³` on `[−2,2]`) gives a nonzero secant slope, which destroys the factorization that made the *original* derivative cheap to isolate — `g'` becomes an irreducible quartic that declines soundly at ~2–4s instead of resolving cleanly. Measured cost curve (debug build): degree 2 ~2ms, degree 3 (√3 witness) ~5ms, degree 5 (degree-4 algebraic witness) ~27ms. Kernel reconstruction (ADR-0601 §2) is not attempted — this is a CAS-internal-only row 3 until that lands. |
 | **4. Labeled import** | Not attempted. `AxReal`'s 30-axiom package (`crates/axeyum-lean-kernel/src/arith_model.rs:1-13`) axiomatizes only "a commutative ring with 1, compatibly ordered" — no `inv`, no `div`, no completeness/supremum axiom, no Archimedean axiom, no MVT. There is no axiomatized carrier in this repository a classical MVT import would even attach to; building row 4 means adding new axioms first. |
 
-**Verdict**: MVT's family is 1 real row (constructive substitutes, unregistered
-as facts), 1 half-row (row 2 is an inherited assertion resting on an
-unfinished EVT row 2, not a dedicated refutation), 1 reachable-but-unbuilt row
-(row 3), 1 not-applicable-yet row (row 4, no axiomatized target exists).
+**Verdict (updated 2026-08-27, same day as the `cas-mvt` lane's landing)**:
+MVT's family is 1 real row (constructive substitutes, unregistered as facts),
+1 half-row (row 2 is an inherited assertion resting on an unfinished EVT
+row 2 — **re-confirmed still "in progress" this session**, `extremum.rs`'s
+module doc unchanged; a separate lane is actively building the kernel-side
+EVT refutation in `creal/extreme_value.rs`, not yet landed, outcome not
+guessed here — not a dedicated refutation), **1 landed row (row 3,
+`polynomial_mvt`/`verify_mvt_certificate`, CAS-internal only pending kernel
+reconstruction)**, 1 not-applicable-yet row (row 4, no axiomatized target
+exists).
 
 ---
 
@@ -100,17 +106,111 @@ than the remainder theorem. Row 4 has no target.
 |---|---|
 | **1. Constructive general form** | **Not built.** No FTA-shaped declaration exists under any name tried (`Complex.fundamentalTheoremOfAlgebra` confirmed absent via `kernel_declaration_projection`, non-zero exit). What HAS landed and is directly load-bearing, all confirmed present via `kernel_declaration_projection`: `Complex.polyEval`, `Complex.polyAdd`, `Complex.polyScale`, `Complex.polyDegreeLt`, `Complex.polyMul` (**with its two correctness theorems, `Complex.polyDegreeLt_polyMul` and `Complex.polyEval_polyMul`, both confirmed present** — landed 2026-08-27, same day as this note), `Complex.hornerFromTop` (+ its three reduction lemmas), and `Complex.factorQuotient` (+ `Complex.factorQuotient_degreeLt`). **`CReal.sqrt` now exists** (landed 2026-08-23, `crates/axeyum-lean-kernel/src/creal/sqrt.rs`, total, no `0 ≤ x` hypothesis) and **`Complex.abs` now exists on top of it**, confirmed present, with `Complex.abs_nonneg`, `Complex.abs_congr`, `Complex.abs_one`, `Complex.abs_mul`, and — landed 2026-08-26 — **`Complex.abs_add_le`, the triangle inequality for the modulus**. `Complex.exp` and `Complex.arg` remain confirmed absent. None of this assembles into FTA itself: a general constructive FTA needs a minimum-modulus / compactness argument over ℂ that this repository has not attempted (no holomorphic-function theory, no argument principle, no min-modulus machinery beyond the single-polynomial `extremum.rs` construction, which is real-valued and interval-bounded, not a 2-D compactness argument). |
 | **2. Boundary refutation** | **Not established, and unlike MVT/LUB/IVT/EVT it is not clear one is even true.** No refutation of a constructive FTA exists in this codebase (`grep -rliE "\bfta\b\|fundamental theorem of algebra"` across `docs/` finds only "Lean-horizon"/scope-boundary notes, e.g. `docs/curriculum/02-structures/polynomials.md:46`, `docs/learn/math/complex-analysis-theorem-boundary.md:48`, never a counterexample). More importantly: FTA is **not obviously in the same constructive-failure class as IVT/EVT/MVT/LUB**. Those all fail because they assert something is *found* via an undecidable comparison over an unbounded domain. FTA is stated over a *compact* set (any disk large enough to contain all roots by the standard bound), and Bishop-style constructive analysis is known to have approximate constructive proofs of FTA using an infimum-of-modulus argument that does not require deciding real equality anywhere — this project has neither built that route nor refuted it. This row should read **"unassessed"**, not "unavailable": the honest gap is that nobody has yet determined whether FTA belongs with IVT/EVT (genuinely refuted) or with the ch. 9–10 derivative rules (constructively fine, just not yet built). |
-| **3. Exact form on the decidable fragment** | **Not reachable today — this is the real gap, and it is an infrastructure gap, not a proof-difficulty one.** For rational-coefficient polynomials, an "FTA on the decidable fragment" would mean: isolate and name every complex root exactly (real root isolation's 2-D analogue). Searched for any such route (`weyl`, `durand.kerner`, `argument principle`, `complex.*isolat` across `crates/axeyum-cas/src/`) and found **none**. `axeyum-cas`'s `solve()` handles complex roots only for degree ≤ 2 in closed radical form and declines irreducible cubic-or-higher factors by design (same restriction `real_algebraic::real_roots` was built to lift for the *real* line only). `real_algebraic.rs`/`sturm.rs` isolate REAL roots of a real polynomial; there is no companion that isolates complex roots of a general (possibly complex-coefficient) polynomial via, e.g., a certified 2-D bisection or a resultant-based real/imaginary decomposition. `docs/research/10-cas/gap-analysis.md` G17 labels "roots/factorization over ℂ" as `certified (arithmetic/algebraic); complex analysis → heuristic` for the parts that exist (ℚ(i) arithmetic, radical-form quadratics/cubics), which is a much narrower claim than "isolate all roots of a degree-n polynomial." Building this would need a genuinely new algorithm, not an assembly of existing pieces the way MVT's row 3 is. |
+| **3. Exact form on the decidable fragment** | **Not reachable today — this is the real gap, and it is an infrastructure gap, not a proof-difficulty one.** For rational-coefficient polynomials, an "FTA on the decidable fragment" would mean: isolate and name every complex root exactly (real root isolation's 2-D analogue). Searched for any such route (`weyl`, `durand.kerner`, `argument principle`, `complex.*isolat` across `crates/axeyum-cas/src/`) and found **none**. `axeyum-cas`'s `solve()` handles complex roots only for degree ≤ 2 in closed radical form and declines irreducible cubic-or-higher factors by design (same restriction `real_algebraic::real_roots` was built to lift for the *real* line only). `real_algebraic.rs`/`sturm.rs` isolate REAL roots of a real polynomial; there is no companion that isolates complex roots of a general (possibly complex-coefficient) polynomial via, e.g., a certified 2-D bisection or a resultant-based real/imaginary decomposition. `docs/research/10-cas/gap-analysis.md` G17 labels "roots/factorization over ℂ" as `certified (arithmetic/algebraic); complex analysis → heuristic`. **Re-checked this session, and the parenthetical needs to be more precise than "radical-form quadratics/cubics"**: `solve()`'s own source (`crates/axeyum-cas/src/lib.rs`) shows only degree ≤ 2 gets a closed radical form (real or complex, via `quadratic_roots`); an irreducible cubic-or-higher factor is dropped from `solve()`'s output entirely — `_ => {}`, no root at all, real or complex — and no Cardano/Ferrari radical solver exists anywhere in the crate (`grep -rniE "fn.*cubic|cubic_roots|solve_cubic"` finds only test names and an unrelated `gf2.rs` criterion). What G17's "certified (arithmetic/algebraic)" actually covers for degree ≥ 3 is `real_algebraic.rs`/`sturm.rs`'s Sturm-isolated **real** roots as algebraic-number witnesses — never a radical form, and never a complex root. So the gap is not "cubics need a slightly bigger radical formula"; it is "no complex root of any irreducible cubic-or-higher polynomial is named at all, in any representation." Building the FTA-row-3 route would need a genuinely new algorithm, not an assembly of existing pieces the way MVT's row 3 is. |
 | **4. Labeled import** | Not attempted; same "no target axiom package" situation. |
+
+**Re-assessment, 2026-08-27 (`fta-assess` lane, independent re-verification, no
+declarations built):**
+
+1. **Does `CReal.sqrt`/`Complex.abs` still gate an approximate FTA?** No —
+   re-confirmed with fresh positive controls this session
+   (`kernel_declaration_projection --require-declaration`, all `found`,
+   exit 0): `CReal.sqrt`, `Complex.abs`, `Complex.abs_add_le`,
+   `Complex.polyMul`, `Complex.polyDegreeLt_polyMul`,
+   `Complex.polyEval_polyMul`, `Complex.factorQuotient`. Negative controls of
+   the same declaration kind (`Complex.exp`, `Complex.arg`,
+   `Complex.fundamentalTheoremOfAlgebra`) all correctly absent (non-zero
+   exit). So the modulus/triangle-inequality machinery an infimum-of-modulus
+   argument would need is present; what is **not** present is the
+   compactness/infimum-attainment argument itself (row 1) — nobody has
+   attempted the Bishop-style construction (a decreasing sequence of shrinking
+   disks + an infimum-of-modulus witness at every accuracy `e`, mirroring
+   `ivt_approx`'s "root within `e`" rather than an exact root). Sizing that
+   attempt is future work, not part of this assessment.
+2. **Does complex root isolation genuinely not exist?** Confirmed, with a
+   methodology note: the naive grep for
+   `weyl|durand.kerner|argument principle|complex.*isolat` "matches"
+   `extremum.rs`, but the hit is `complex**ity**...**isolat**ion` in one
+   sentence — a false positive from the wildcard, not a real hit (verified by
+   reading the matched line). The real evidence is code-level: `solve()`
+   (`crates/axeyum-cas/src/lib.rs`) gives a closed radical form only for
+   degree ≤ 2 factors and **drops** any irreducible cubic-or-higher factor
+   entirely (`_ => {}`, no root at all, real or complex) — confirmed by
+   reading the match arm directly, not inferred from a doc. No
+   Cardano/Ferrari radical solver exists anywhere in the crate. `real_algebraic.rs`/`sturm.rs` isolate real roots of a real polynomial only.
+3. **Cheapest sound route to FTA row 3, sized.** Pieces that already exist and
+   would compose into it: a general multivariate Gröbner basis
+   (`groebner_basis` in `groebner.rs`, with `lex_cmp` — i.e. elimination
+   order is already available), a resultant (`resultant()` in `lib.rs`, but
+   **only for two genuinely univariate polynomials with rational
+   coefficients** — it calls `to_univariate`, so it cannot eliminate a
+   variable from two *bivariate* polynomials treating the other as a
+   parameter; that generalization does not exist), and real root isolation
+   (`sturm.rs`/`real_algebraic.rs`). The standard route this composes toward
+   is a **Rational Univariate Representation (RUR)**: write a complex root
+   `x+iy` of `p` as the real solution pair of `A(x,y)=0, B(x,y)=0` (the real
+   and imaginary parts of `p(x+iy)`), pick a generic primitive element
+   `t = x + c·y`, compute its minimal polynomial via the lex Gröbner basis of
+   `(A,B)`, isolate `t`'s real roots with the existing Sturm machinery, and
+   express `x`, `y` as polynomial images of `t` (each root pair becomes a
+   *derived* real algebraic number from a shared witness `t₀`, not two
+   independently-isolated ones). Searched for this by name and found nothing
+   (`primitive element`, `rational univariate`, `RUR` — the one grep hit is
+   "rational univariate **series**" in `series.rs`, unrelated). **This is a
+   genuinely new algorithm, not an assembly**: none of the missing pieces
+   (bivariate real/imaginary decomposition of a `Complex` polynomial, a
+   generic-primitive-element genericity check, RUR extraction from a
+   Gröbner basis, and a certificate/checker for a *derived* algebraic number
+   rather than `real_algebraic.rs`'s single-minimal-polynomial
+   `AlgebraicReal`) exists today, even though the underlying Gröbner-basis
+   and Sturm primitives do. Scope estimate: comparable to building
+   `sturm.rs` + `real_algebraic.rs` again, plus a new certificate shape — a
+   multi-file, multi-day effort, not the same-day, single-new-file shape
+   `mvt.rs` had (which reused `extremum.rs`'s existing scalar witness type
+   unchanged).
+4. **Does FTA need row 2 at all?** **No — and this is the interesting
+   finding.** IVT/EVT/MVT/LUB all fail the SAME way: the classical statement
+   asserts existence of a point found by deciding an undecidable real
+   comparison over an *unbounded* or *open* search (`CReal.lt` has no
+   `lt_total`), so row 2 exhibits a concrete function for which that search
+   provably cannot terminate on the right answer. FTA has no analogous
+   step to refute: the classical proof (minimize `|p(z)|` over a
+   sufficiently large closed disk, show the minimum is 0) is a compactness
+   argument over a **bounded, closed** domain, and Bishop-style constructive
+   analysis is documented to prove exactly this — an infimum of a uniformly
+   continuous function over a compact set is always constructively
+   computable to any accuracy, unlike an *attained* maximum/root search over
+   an unbounded or open domain. So an "FTA-approx" (row 1, `ivt_approx`-shaped: for every accuracy `e`,
+   produce `z` with `|p(z)| ≤ 1/(e+1)`) is plausibly provable **without ever
+   needing a boundary refutation**, because there is no boundary — the
+   general constructive form is not "weaker than classical, and provably so"
+   the way IVT's general form is; it may simply equal the classical
+   existence statement's *computational content* directly. If that holds up
+   once row 1 is attempted, **FTA is a three-row theorem (1, 3, 4) with no
+   row 2**, not a four-row family missing one row. This is a claim about
+   ADR-0603's own row-count assumption, not a gap in this theorem: the
+   framework should read "up to four rows," and a theorem needing only three
+   is a finding about which class the theorem belongs to, not unfinished
+   work on row 2. (This is *not* fully certain — nobody has attempted the
+   row-1 construction yet to confirm no undecidable step sneaks in, e.g. in
+   distinguishing "the infimum is exactly 0" from "the infimum is positive
+   but arbitrarily small," which is itself the FTA-specific analogue of the
+   comparison IVT/EVT get stuck on. So the honest claim is: **the failure
+   mode that produces row 2 for the other four does not obviously apply to
+   FTA**, not "row 2 is proved impossible.")
 
 **Verdict**: the polynomial infrastructure (evaluation, multiplication with
 its correctness theorems, synthetic division/factor-quotient, `sqrt`, `abs`
 with the triangle inequality) is much further along than `spivak.md` says —
-see corrections below. But this infrastructure does not compose toward any
-FTA row without genuinely new mathematics: row 1 needs a compactness
-argument this repository has never attempted, row 2's very applicability is
-unassessed, and row 3 needs a complex root-isolation algorithm that does not
-exist in any form here.
+see corrections below, and it fully covers what an approximate-FTA row 1
+attempt would need on the `Complex.abs` side. But this infrastructure does
+not compose toward any FTA row without genuinely new mathematics: row 1
+needs a compactness argument this repository has never attempted (though
+unlike IVT/EVT/MVT/LUB, nothing here suggests it is constructively
+unavailable — see point 4 above), row 2 may not exist as a distinct row for
+this theorem at all, and row 3 needs a complex root-isolation algorithm
+(sized above as RUR, not an assembly of existing pieces) that does not exist
+in any form here.
 
 ---
 
@@ -153,8 +253,15 @@ checked against the declarations they name and matched).
   per ADR-0603's own stated purpose for row 2), these two are the ones that
   need a genuine counterexample construction, not documentation.
 - EVT's own row 2 (`extremum.rs`'s "in progress" note) should be finished
-  before leaning on it to justify MVT's inherited unavailability.
-- MVT row 3 (`polynomial_mvt`) is the single cheapest win named in this
-  note: every ingredient it needs already ships and is unit-tested.
+  before leaning on it to justify MVT's inherited unavailability. **As of
+  this update a lane is actively building that refutation in
+  `creal/extreme_value.rs`; it had not landed on `main` at merge time, and
+  this note does not guess its outcome.**
+- **MVT row 3 landed 2026-08-27, same day it was named the cheapest win**:
+  `crates/axeyum-cas/src/mvt.rs`, `polynomial_mvt`/`verify_mvt_certificate`,
+  18 tests. Kernel reconstruction (ADR-0601 §2) is the remaining step, not
+  attempted here.
 - FTA is the one family where the right question is still open ("does a
-  constructive counterexample exist at all?"), not just unbuilt.
+  constructive counterexample exist at all?"), not just unbuilt — see the
+  re-assessment below, which confirms this and sharpens it: FTA's row 2 may
+  not exist at all as a *distinct* row (see the FTA verdict).
