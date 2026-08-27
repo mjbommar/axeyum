@@ -67,6 +67,28 @@ footprint. It is what the self-extension loop consumes — take an `open` fact
 whose `depends_on` are established, dispatch `formal.statement`, reconstruct,
 attach evidence, flip the status, record the footprint.
 
+
+The strategy layer above the flywheel is now decided and documented — read
+these before framing any "how do we compare to Mathlib / Mathematica" work:
+
+- [ADR-0601](docs/research/09-decisions/adr-0601-three-producers-one-trust-anchor.md)
+  — autogenesis, the CAS, and the importer are producers behind ONE trust
+  anchor (`Kernel::add_declaration`); CAS evidence must reconstruct or be
+  visibly `cas-internal`; imports are labeled scaffolding, never headline.
+- [ADR-0602](docs/research/09-decisions/adr-0602-operations-are-receipts-dispatch-needs-producer-contracts.md)
+  — operations are retrospective receipts; dispatch requires a separate
+  prospective producer contract with no `proved` field at all.
+- [ADR-0603](docs/research/09-decisions/adr-0603-classical-theorems-land-as-graded-statement-families.md)
+  — a classical theorem lands as a graded statement family (general
+  constructive form + boundary refutation + decidable-fragment exact form +
+  labeled import), one fact per statement.
+- [07-the-cost-model-and-pareto-position.md](docs/formalized-math-2026-08/07-the-cost-model-and-pareto-position.md)
+  — tokens are capex, not opex: encoded strategies (producers) drive marginal
+  cost per theorem toward CPU; the three gates (contracts, retrieval,
+  sharding) each carry a running metric. Do not price future work at today's
+  tokens-per-theorem constant, and do not claim coverage parity — the
+  Pareto claim is per-statement dominance plus uncontested axes.
+
 ## Session Protocol
 
 1. Read [PLAN.md](PLAN.md) **first** — it carries current status, the next
