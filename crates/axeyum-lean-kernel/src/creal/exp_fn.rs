@@ -40,52 +40,69 @@
 //! decomposing its application spine, identically to
 //! [`super::trig_fn::declare_cos_fn`].
 //!
-//! ## What is NOT built here
+//! ## `expFn 1 ≡ CReal.e` — landed
 //!
-//! - **`expFn 1 ≡ CReal.e`.** Investigated in full. The "reverse `Within`
-//!   bridge" `creal/trig_fn.rs`'s own module documentation names as missing
-//!   for `cosFn 1 ≡ cosOne` is **NOT** the actual obstacle here — that
-//!   documentation is stale (see `CLAUDE.md`'s "hiding place" retrospective,
-//!   2026-08-27 correction): `CReal.close_within_of_within`
-//!   (`creal/uniform_convergence.rs`) already bridges `Within` (the raw
-//!   sample-level Cauchy shape `CReal.e_converges`/`CReal.Converges` use) to
-//!   `close_within` (the CReal-level `le`/`abs` shape
-//!   `UniformConvergesOn.spec` produces) — the FORWARD direction, and it is
-//!   exactly the direction this bridge needs: apply it, per `n`, to
-//!   `e_converges`'s `Exists`-eliminated witness to get `close_within
-//!   (expSeriesPartial n) e K₁` for every `n`, transport
-//!   `expFnUniformConverges`'s own `spec` at `x := one` along `powerSeriesTerm
-//!   expTerm j one ≡ expTerm j` (`mul_one` + `pow one j ≡ one`) to get
-//!   `close_within (expSeriesPartial n) (expFn one) K₂` for every `n`, and
-//!   combine the two via the triangle inequality (`abs_add_le` twice) into a
-//!   single `∀ n, le (abs (add e (neg (expFn one)))) (ofRat (natDivSucc K₃
-//!   n))` for a FUSED constant `K₃` (`Rat.natDivSucc_add`, since both
-//!   `close_within` facts already share the SAME sample index `n` — no
-//!   arbitrary third index needed).
+//! `CReal.expFn_one_equiv_e : Equiv (expFn one) e`, below. Two corrections to
+//! earlier diagnoses of this bridge, both confirmed by the kernel:
 //!
-//!   **The actual missing piece is downstream of all of that**: turning this
-//!   `∀ n, le (abs v) (ofRat (natDivSucc K₃ n))` (`v` a FIXED `CReal`,
-//!   independent of `n`) into `Equiv v zero` needs
-//!   `CReal.equiv_zero_of_small` (`creal/archimedean_squeeze.rs`) — but that
-//!   lemma, and the `CReal.le_of_forall_le_add_small` bridge underneath it,
-//!   are both hard-coded to accuracy rate **exactly 1**
-//!   (`∀ e, le (abs v) (ofRat (natDivSucc 1 e))`), not a free `K`. The
-//!   underlying Archimedean-property lemma they bottom out in
-//!   (`Rat.le_of_le_add_natDivSucc`) IS already general in its constant (the
-//!   `5` in `le_of_forall_le_add_small`'s own proof is one particular
-//!   instantiation, not a structural limit) — but generalizing the WRAPPER
-//!   to a free `K₃` means re-deriving essentially the whole ~150-line
-//!   telescoping argument in `archimedean_squeeze.rs` (regrouping five
-//!   `natDivSucc` terms via `Rat.natDivSucc_add`/`nat_div_succ_halve`), since
-//!   every one of ITS internal `1`s (not just the exposed hypothesis's) would
-//!   need to become `K₃`-scaled, and its helper `half_shift_le` is private
-//!   (this development's convention is to reproduce a sibling's private
-//!   helper rather than widen its visibility, which would make this a
-//!   genuinely new, separately-sized proof rather than an application of an
-//!   existing one). This is a real, honestly-sized piece of new machinery —
-//!   a general-`K` Archimedean squeeze — not attempted in this slice. It
-//!   would benefit `Equiv`-from-bounded-difference arguments generally, not
-//!   just this bridge, and is a reasonable next increment.
+//! - The "reverse `Within` bridge" `creal/trig_fn.rs`'s own module
+//!   documentation once named as missing for `cosFn 1 ≡ cosOne` was never the
+//!   obstacle here (2026-08-27 correction, `CLAUDE.md`'s "hiding place"
+//!   retrospective): `CReal.close_within_of_within`
+//!   (`creal/uniform_convergence.rs`, via its `close_within_of_within_at`
+//!   builder) already bridges `Within` (the raw sample-level Cauchy shape
+//!   `CReal.e_converges`/`CReal.Converges` use) to `close_within` (the
+//!   CReal-level `le`/`abs` shape `UniformConvergesOn.spec` produces) — the
+//!   FORWARD direction, and exactly the one this bridge needs.
+//! - The blocker THIS file's own module doc previously named — that
+//!   `CReal.equiv_zero_of_small` was hard-coded to accuracy rate **exactly
+//!   1** and would need "re-deriving essentially the whole ~150-line
+//!   telescoping argument" to generalize — is now stale: `equiv_zero_of_rate`
+//!   (`creal/archimedean_squeeze.rs`) already generalizes it to a free rate
+//!   `K`, with `equiv_zero_of_small` demoted to that theorem's own `K := 1`
+//!   instance. No new Archimedean machinery was needed.
+//!
+//! The route: eliminate `e_converges`'s `Exists`-wrapped `Within` witness
+//! (`Exists.rec`, `crate::int_prelude::ops::exists_elim`) into a per-`n`
+//! `close_within (expSeriesPartial n) e K₁` fact via
+//! `close_within_of_within_at` (leg 1); transport
+//! `expFnUniformConverges`'s own `.spec` at `x := one` from
+//! `powerSeriesTerm expTerm j one` to `expTerm j` (`pow_one_equiv`, a fresh
+//! induction, plus `mul_one`/`mul_congr`, fed through `CReal.sumRange_congr`)
+//! to get `close_within (expSeriesPartial n) (expFn one) K₂` for the SAME `n`
+//! (leg 2); combine the two via the triangle inequality
+//! (`combine_two_legs`: `abs_add_le` + `add_le_add`, after swapping leg 1
+//! with `close_within_symm`) into a single `∀ n, le (abs (add e (neg (expFn
+//! one)))) (ofRat (natDivSucc K₃ n))` for a fused `K₃` (`Rat.natDivSucc_add`,
+//! since both legs already share the sample index `n` — no arbitrary third
+//! index needed); close with `equiv_zero_of_rate` (at `k := K₃`) then
+//! `equiv_of_sub_equiv_zero`.
+//!
+//! Verified against the kernel, not merely `cargo check`: both
+//! `creal_prelude_builds` (the full `add_declaration` sweep) and
+//! `every_creal_declaration_is_checked_and_axiom_free` (environment-derived
+//! coverage) pass with this declaration in the prelude.
+//!
+//! **`cosFn 1 ≡ cosOne` transports, and every piece it needs already
+//! exists.** Verified (not merely conjectured) before writing this: `CReal.
+//! cosOneConverges : Converges cosSeriesPartial cosOne`
+//! (`p.cos_one_converges`, `creal/trig.rs::declare_cos_one_converges`) is
+//! already the exact analogue of `e_converges` this bridge's leg 1 needs, and
+//! `cosFnUniformConverges` is the same `UniformConvergesOn` `.spec` shape
+//! `expFnUniformConverges` is. Leg 2's transport needs only `pow one j ≡
+//! one` again (`pow_one_equiv` below is not specific to `expTerm`) composed
+//! against `cosFnTerm`'s own per-file congruence instead of
+//! `powerSeriesTerm_congr` directly (`cosFn`'s domain is even-index-only —
+//! see this file's own top-of-file doc — so its `f` is `cosFnTerm`, not a
+//! bare `powerSeriesTerm expTerm` partial application; the transport
+//! argument itself does not care). `close_within_of_within_at`,
+//! `combine_two_legs`, `equiv_zero_of_rate`, `equiv_of_sub_equiv_zero` are
+//! all verbatim reusable, none of them mentioning `exp` anywhere in their
+//! statements. Not attempted in this slice — a same-shape sibling file, sized
+//! like this one.
+//!
+//! ## Also not built here
+//!
 //! - **Unbounded `expFn`.** Same reason `cosFn` stays on `[0, 1]`: the
 //!   domination series `expDominant` bounds `pow x k` by the CONSTANT `one`,
 //!   valid only for `0 ≤ x ≤ 1`. Past `x = 1`, `pow x k` grows without bound
