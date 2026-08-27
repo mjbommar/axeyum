@@ -1744,27 +1744,206 @@
 //! own `#[cfg(test)]` module, so a bare `expect` is UNFULFILLED there and
 //! errors under `-D warnings` (four warnings, before the gate was added).
 //!
-//! ## Piece 1 (the close-endpoint ESTIMATE) — NINETEENTH lane, 2026-08-27
+//! ## Piece 1 (the close-endpoint ESTIMATE) — NINETEENTH lane, 2026-08-27.
+//! LANDED, in three verified increments, under three explicit hypotheses
 //!
 //! **Absence re-verified a third time before any code was written**, since a
-//! stale recorded obstacle has twice sent a lane at an already-solved problem.
-//! `/usr/bin/grep -rniE 'endpoint.*(le|bound|estimate|close)|(le|bound|
-//! estimate|close).*endpoint'` over every `creal/*.rs` returns only prose
-//! (module docs and test comments) and not one declaration, against **21**
-//! hits for [`riemann_sum_congr_endpoints`] as the same-shape positive
-//! control. So the estimate is unbuilt.
+//! stale recorded obstacle has twice sent a lane at an already-solved
+//! problem. `/usr/bin/grep -rniE 'endpoint.*(le|bound|estimate|close)|
+//! (le|bound|estimate|close).*endpoint'` over every `creal/*.rs` returns only
+//! prose (module docs and test comments) and not one declaration, against
+//! **21** hits for [`riemann_sum_congr_endpoints`] as the same-shape positive
+//! control.
 //!
-//! **The register's own question — *which declaration already does this?* —
-//! answered at the SUM level rather than the integral level, and it paid
-//! again.** `shape_search --ns CReal --name-like sumrange --kind theorem`
-//! lists [`CRealPrelude::sum_range_const`]
-//! (`Equiv (sumRange (fun _ => c) n) (mul (ofNat n) c)`), which turns the
-//! uniform per-term bound into `n · K` in one lemma application and removes
-//! the need for any bespoke "sum of a constant" induction. Paired with
-//! [`CRealPrelude::abs_sum_range_le`] and [`CRealPrelude::sum_range_le`] it
-//! gives the whole sum-level half of piece 1 as ONE general lemma about
-//! `sumRange`, with no `riemannSum`, no mesh and no modulus in it.
-
+//! ### The shorter route existed AGAIN, and it was one lemma
+//!
+//! The register's closing lesson — *ask which declaration already does this*
+//! — pays a third time, but only when asked at the right LEVEL. Asked about
+//! integrals it finds nothing (the endpoint estimate is genuinely a
+//! `riemannSum` fact). Asked about **finite sums** it finds
+//! [`CRealPrelude::sum_range_const`]
+//! (`Equiv (sumRange (fun _ => w) (succ m)) (mul (ofNat (succ m)) w)`), which
+//! turns a uniform per-term bound into `(succ m)·K` in ONE lemma application
+//! and removes the induction the eighteenth lane's sizing implied. Found with
+//! `shape_search --ns CReal --name-like sumrange --kind theorem` in one query.
+//!
+//! `shape_search` earned its keep twice more here: `--concl CReal.le --const
+//! CReal.riemannSum` returns exactly two rows
+//! ([`CRealPrelude::riemann_sum_le`], [`CRealPrelude::riemann_sum_le_on`]),
+//! both same-endpoint, which is the negative result piece 1 rests on; and
+//! `--ns CReal --name-like abs` surfaced
+//! [`CRealPrelude::abs_mul_le_of_bounds`], `derivative.rs`'s product-rule
+//! lemma, which is the entire analytic content of the per-term estimate.
+//!
+//! ### What landed
+//!
+//! Three increments, each kernel-verified before the next was written:
+//!
+//! 1. [`sum_range_pair_diff_le`] — the SUM-level half, no `riemannSum`, no
+//!    mesh, no modulus:
+//!    ```text
+//!    (∀ i, Nat.lt i (succ m) → le (abs (f i − g i)) kb)
+//!      → le (abs (sumRange f (succ m) − sumRange g (succ m)))
+//!           (mul (ofNat (succ m)) kb)
+//!    ```
+//!    [`sum_range_diff_local`] supplies the `sumRange_neg` the setoid does
+//!    not publish. Routing one through [`CRealPrelude::mul_sum_range`] at
+//!    `neg one` would need a `one_mul` that does not exist (the prelude has
+//!    [`CRealPrelude::mul_one`] only), so the difference is reassembled from
+//!    [`CRealPrelude::sum_range_add`] instead.
+//!
+//! 2. [`product_pair_diff_le`] — the PER-TERM half, purely algebraic and
+//!    stated on four bare factors rather than on [`summand_fn`]:
+//!    ```text
+//!    |f₁| ≤ mb → |d₁ − d₂| ≤ dd → |f₁ − f₂| ≤ eb → |d₂| ≤ d2b
+//!      → le (abs (f₁·d₁ − f₂·d₂)) (mb·dd + eb·d2b)
+//!    ```
+//!    via `f₁·d₁ − f₂·d₂ = f₁·(d₁−d₂) + (f₁−f₂)·d₂`,
+//!    [`CRealPrelude::abs_add_le`] and two
+//!    [`CRealPrelude::abs_mul_le_of_bounds`]. The two legs need DIFFERENT
+//!    distributivity lemmas — [`CRealPrelude::left_distrib`] and
+//!    `ring_helpers::right_distrib` — and [`neg_mul_left_local`] moves a
+//!    `neg` out of the LEFT factor only, so `f₁·(−d₂) ~ −(f₁·d₂)` costs two
+//!    [`CRealPrelude::mul_comm`]s around it.
+//!
+//! 3. [`riemann_sum_endpoints_le`] — the assembly, stated at the [`rsum`]
+//!    type:
+//!    ```text
+//!    ∀ F aa bb (u : UniformlyContinuousOn F aa bb) k, BoundedOn F aa bb k →
+//!    ∀ x y x2 y2 m e (dd d2b : CReal),
+//!      le x y → le x2 y2 → le aa x → le y bb → le aa x2 → le y2 bb →
+//!      le (abs (Δ₁ − Δ₂)) dd →
+//!      le (abs Δ₂) d2b →
+//!      (∀ i, Nat.lt i (succ m) →
+//!         le (abs (p_i − p'_i)) (ofRat (1/(modulus F aa bb u e + 1)))) →
+//!      le (abs (riemannSum F x y m − riemannSum F x2 y2 m))
+//!         ((succ m) · (M·dd + (1/(e+1))·d2b))
+//!    ```
+//!    `M := ofRat (natDivSucc (succ k) 0)` — `bounded_on_unfold`'s own bound,
+//!    at `derivative.rs::mag_bound`'s exact recipe. The sample-point
+//!    placement is [`riemann_sum_congr_endpoints`]'s four-step one verbatim
+//!    ([`CRealPrelude::riemann_sample_in_bounds`] into each sub-interval,
+//!    two [`CRealPrelude::le_trans`] out to `[aa,bb]`), because `u` and the
+//!    `BoundedOn` witness know only `[aa, bb]` — the same lemma whose one
+//!    kernel rejection the sixteenth lane recorded.
+//!
+//! ### Three HYPOTHESES, and one of them is the remaining gap
+//!
+//! `dd`, `d2b` and the per-index sample-point closeness are parameters, not
+//! estimates. The first two are cheap for a caller (`Δ₂` is
+//! `w₂ · 1/(m+1)` by construction and
+//! [`CRealPrelude::mesh_count_width`] cancels the `(succ m)` factor against
+//! either of them, which is exactly what makes the bound uniform in the mesh
+//! count). **The third is not, and it is what this lane did not discharge**:
+//! `p_i − p'_i = (x − x₂) + i·(Δ₁ − Δ₂)`, so bounding it uniformly in `i`
+//! needs `i ≤ m` carried through [`CRealPrelude::of_nat_le`] and
+//! [`CRealPrelude::mesh_reciprocal_mul`] to turn `i·|Δ₁−Δ₂|` into
+//! `|w₁ − w₂|`. Both lemmas exist; the chain was not built.
+//!
+//! So piece 1 is landed as a **conditional** estimate. That is a real
+//! deliverable — the analytic content (the product estimate, the triangle
+//! inequality, the sum collapse) is all kernel-checked, and what remains is
+//! one index-arithmetic chain over lemmas that already exist — but it is
+//! NOT the unconditional lemma the eighteenth lane sized, and a caller
+//! cannot use it without that chain.
+//!
+//! ### Piece 2 was NOT attempted, and the reason is a decision, not a stall
+//!
+//! Locating an arbitrary `c` in the proportion family needs
+//! `t := (c−a)/(b−a)`, hence [`CRealPrelude::inv`], hence a `PosBound` on
+//! `b − a` that `hab : le a b` does not give. The eighteenth lane's analysis
+//! stands unmodified and is not repeated here. What this lane adds is only
+//! that piece 1's landing does not move it: every hypothesis above is about
+//! `[x,y]` versus `[x₂,y₂]` at a FIXED mesh count, and none of them
+//! constructs the split point. **The next stratum is `integral_split` at
+//! arbitrary `c` GIVEN a `PosBound` on the interval width**, and it must not
+//! be shipped under a universally-quantified name.
+//!
+//! ### Cost: none measurable, and a SINGLE PAIR would have said otherwise
+//!
+//! All six helpers are private and consumed only from `#[cfg(test)]`, so no
+//! declaration enters the prelude. Matched A/B on one tree, this file swapped
+//! to its pre-lane content and back (restore verified byte-identical with
+//! `cmp`), `creal_prelude_builds` isolated:
+//!
+//! | tree | end load | reading |
+//! | --- | --- | --- |
+//! | WITHOUT | 2.69 | 36.10 s |
+//! | WITHOUT | 4.88 | 40.32 s |
+//! | WITH | 4.10 | 41.91 s |
+//! | WITH | 4.44 | 41.18 s |
+//!
+//! **The first pair alone reads as +5 s and that would have been wrong.** The
+//! `WITHOUT` run happened to land at load 2.69 and the `WITH` runs at 4.1-4.4;
+//! a second `WITHOUT` reading at load 4.88 gives 40.32 s, against 41.18 s
+//! `WITH` at 4.44 — 0.86 s, which is nothing. This box carried 2-5 load
+//! throughout, so read the pair at matched load, not the pair you took first.
+//!
+//! The structural check is the decisive one and it is not a timing at all:
+//! `git diff` against this lane's base over `creal.rs`, `creal_tests.rs`,
+//! `inventory.rs` and `inventory/` is **empty**, so the prelude
+//! `creal_prelude_builds` builds is the same environment on both sides. A
+//! timing difference here could only have been the harness.
+//!
+//! **Dead code 4 → 8, none silenced.** [`diff_fn_of`], [`abs_diff_fn_of`],
+//! [`sum_range_diff_local`], [`sum_range_pair_diff_le`],
+//! [`product_pair_diff_le`] and [`riemann_sum_endpoints_le`] join
+//! [`mesh_count_align`], [`MeshAlignMul`] + [`mesh_count_align_mul`] and
+//! [`bnd_leg_plus_share_le_at`], each with a
+//! `#[cfg_attr(not(test), expect(dead_code, reason = "…"))]` naming its own
+//! specific future consumer. `expect` still ERRORS the moment the item is
+//! used, so the signal survives in both directions; `allow` would switch it
+//! off.
+//!
+//! ### What the kernel rejected
+//!
+//! **Once, and it was a SORT error wearing a `TypeMismatch`'s clothes.**
+//! [`sum_range_pair_diff_le`]'s constant function was built with a `CReal`
+//! binder instead of `Nat`. `sumRange` takes a `Nat → CReal`, so the kernel
+//! reported `TypeMismatch { expected: ExprId(3), got: ExprId(1503219) }` —
+//! an unrenderable low id naming neither the lambda nor `sumRange`, and
+//! indistinguishable at a glance from this file's usual `le_congr`
+//! direction bugs. **The tell is the tiny `expected` id**: a sort lives at a
+//! single-digit `ExprId`, a real term does not.
+//!
+//!
+//! ### A FAILING `def_eq` between two `riemannSum`s is PATHOLOGICAL
+//!
+//! Measured this lane, and it is a new entry in this file's failure register.
+//! [`riemann_sum_endpoints_le`]'s first negative control transposed the two
+//! `riemannSum`s in the CONCLUSION
+//! (`riemannSum F x2 y2 m − riemannSum F x y m`), and asserted
+//! `!Kernel::def_eq` on the two `abs` terms beforehand for non-vacuity. Both
+//! of those are FAILING defeq checks between two `riemannSum`s at different
+//! endpoints, and the kernel has to unfold both `Definition`s — `sumRange`'s
+//! `Nat.rec` over a symbolic `succ m`, with `delta_of` inside — before it can
+//! conclude they differ.
+//!
+//! It ran **> 300 s with RSS climbing 2.0 → 3.1 GB and no sign of stopping**,
+//! against **34.9 s** for the positive check on the identical proof term.
+//! Not slow — pathological, and the same shape this file's own 74 s incident
+//! established: a SUCCEEDING defeq stops at the first shared head, a failing
+//! one has no such stopping rule.
+//!
+//! The control was replaced, not investigated, per this repository's standing
+//! rule. The replacement varies **only the term count in the bound**
+//! (`mul (ofNat m) kb` against `mul (ofNat (succ m)) kb`) and leaves the
+//! left-hand side the identical `ExprId`, so nothing large is ever compared:
+//! it is equally discriminating (false at `m := 0`, where the sum has one
+//! term and the claimed bound is `0`) and costs nothing. Non-vacuity is
+//! asserted STRUCTURALLY with `assert_ne!` on the two hash-consed
+//! `riemannSum` ids instead of through `def_eq`.
+//!
+//! **The rule to carry: a negative control must differ in a SMALL term.** If
+//! the two conclusions differ deep inside a `Definition`-heavy subterm, the
+//! refusal you are testing for is a defeq search, and it can cost more than
+//! the whole proof.
+//!
+//! And a lesson about the controls themselves: on that run the NEGATIVE
+//! control PASSED while the positive failed. A refusal proves nothing until
+//! the acceptance is green beside it, so [`product_pair_diff_le`]'s and
+//! [`riemann_sum_endpoints_le`]'s controls build both probes in ONE
+//! function and assert both outcomes together.
 use super::completeness::half_shift_le;
 use super::convergence::{
     converges_applied, converges_predicate, div_succ_at, exists_intro, exists_ty,
