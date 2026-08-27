@@ -52,9 +52,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::{
-    Declaration, Kernel, build_arith_prelude, build_complex_prelude, build_cpoint_prelude,
-    build_creal_prelude, build_int_prelude, build_logic_prelude, build_nat_prelude,
-    build_rat_prelude, build_string_prelude, on_a_deep_stack,
+    Declaration, Kernel, build_arith_prelude, build_characterization, build_complex_prelude,
+    build_cpoint_prelude, build_creal_prelude, build_int_prelude, build_logic_prelude,
+    build_nat_prelude, build_rat_prelude, build_string_prelude, on_a_deep_stack,
 };
 
 /// Every declaration name currently in `kernel`'s environment, in canonical
@@ -115,6 +115,23 @@ fn build_groups() -> Vec<Group> {
         all: declared_names(&integer),
     });
 
+    // The Peano/initiality characterization package (`Nat.Peano.*`,
+    // `Int.Characterization.*`). Built after `integer`, before `rat` -- the
+    // same dependency-order position `prelude_theorem_inventory.rs` and
+    // `kernel_declaration_projection.rs` use. This is the group whose
+    // omission from THIS file's `build_groups` motivated
+    // `docs/plan/status/146-collision-gap.md`: identical to the gap fixed in
+    // `prelude_theorem_inventory.rs` (32 theorems silently invisible), except
+    // here the missing coverage was a cross-prelude COLLISION check rather
+    // than a theorem count -- 32 declarations that had never been checked
+    // for a name clash against any other prelude.
+    let mut characterization = Kernel::new();
+    build_characterization(&mut characterization).expect("Nat/Int characterization must build");
+    groups.push(Group {
+        label: "characterization",
+        all: declared_names(&characterization),
+    });
+
     let mut rat = Kernel::new();
     build_rat_prelude(&mut rat).expect("Rat prelude must build");
     groups.push(Group {
@@ -165,6 +182,11 @@ const DEPENDS_ON: &[(&str, Option<&str>)] = &[
     ("nat", Some("logic")),
     ("axreal", Some("logic")),
     ("integer", Some("nat")),
+    // `build_characterization` builds `Int` internally (`build_int_prelude`,
+    // which itself builds `Nat`/`logic`) before admitting the Peano/
+    // initiality theorems, so its OWN contribution is what it adds beyond
+    // `integer` -- never `integer`'s own declarations.
+    ("characterization", Some("integer")),
     ("rat", Some("integer")),
     ("string", Some("logic")),
     ("creal", Some("rat")),
