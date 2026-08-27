@@ -89,11 +89,48 @@ are properties 1 and 2 from the brief); both killed cleanly.
 **Live-fire demonstration (not just the unit mutation): a genuinely new
 duplicate, constructed in an isolated `/data0` snapshot, makes the real
 `shape_search` + gate pipeline go red; the unmutated tree is the control and
-is green.** See the run transcript below. [Coordinator: fill in the actual
-counts/output from the demonstration once run — the mutation-test section
-above is what is machine-verified in this commit; the live-fire run is
-recorded as its own paragraph so it is not conflated with the unit-level
-mutation loop.]
+is green.** Run: `scripts/lane-snapshot.sh HEAD` (this commit) to
+`/data0/axeyum/scratch/snap-dup-ratchet-0a4655064` (never the shared checkout
+or this lane's own worktree); in that copy only, added a third declaration
+of `nat_prelude/order_extra.rs`'s existing `Nat -> Nat -> Nat.le -> Nat.le`
+shape (`ScratchDuplicateSuccLeSucc`, forwarding to `le_succ_succ`'s proof
+term — a real, kernel-checked declaration, not a fabricated log line), built
+`shape_search` in release there (fresh `target/`, 36.8s), and ran it:
+
+```
+DUPLICATE  Nat -> Nat -> Nat.le -> Nat.le  Nat.le_succ_succ Nat.succ_le_succ ScratchDuplicateSuccLeSucc
+verdict: DUPLICATE-GROUPS 10
+```
+
+(count stays 10 — the group grew from 2 members to 3, it did not become an
+11th group, which is exactly why `--expect <N>` alone, the count-only check
+`shape_search` already ships, could not have caught this.) Then:
+
+```
+$ python3 -B scripts/check-shape-duplicates.py --duplicates-file dup-output-mutant.txt
+FAIL: 1 duplicate group(s) not on the allowlist:
+  NEW/UNADJUDICATED  Nat -> Nat -> Nat.le -> Nat.le  Nat.le_succ_succ Nat.succ_le_succ ScratchDuplicateSuccLeSucc
+  ...
+FAIL: 1 allowlist entry is stale (no longer reported):
+  STALE  Nat.le_succ_succ Nat.succ_le_succ  ...
+MUTANT exit=1
+```
+
+Both failure modes fired from one real mutation, because a group gaining a
+member changes its name-set identity: the new 3-member group is unrecognized
+AND the old 2-member allowlist entry is simultaneously stale. Control, same
+gate script, the real (unmutated) tree's real `shape_search` output captured
+earlier in this session:
+
+```
+$ python3 -B scripts/check-shape-duplicates.py --duplicates-file <captured real output>
+OK: 10 duplicate group(s), all allowlisted with a reason.
+CONTROL exit=0
+```
+
+Scratch snapshot deleted after the demonstration (`rm -rf`), per the
+"isolated scratch tree, never committed" instruction — nothing from the
+mutation is part of this lane's diff.
 
 **On the 6 "safe" groups, re-examined:** nothing new. Re-reading
 `characterization.rs`'s four bundle entries, `weak_law_of_large_numbers`, and
