@@ -211,6 +211,7 @@ fn n_term_polynomial(d: &mut IntDev<'_>, p: RatPrelude, coeffs: &[ExprId]) -> Ex
     let rec_name = d.prelude().rec;
     let rec = d.kernel().const_(rec_name, vec![one_level]);
 
+    #[allow(clippy::items_after_statements)]
     fn minor_succ(
         d: &mut IntDev<'_>,
         carrier: ExprId,

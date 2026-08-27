@@ -9444,3 +9444,248 @@ fn close_within_of_within_indexed_specializes_to_one_reals_own_regularity_at_two
         "the instantiated conclusion is not a genuine `le (abs …) …` bound: {rendered}"
     );
 }
+
+// ---------------------------------------------------------------------------
+// STEPS build-order table (level 1 of the phase-order fix)
+// ---------------------------------------------------------------------------
+//
+// Mirrors `complex_tests`'s own `order_violation_*`/`steps_table_matches_*`
+// tests (the prototype: `docs/research/11-design-review/
+// 2026-08-27-prelude-build-spike.md`), applied here to `creal.rs`'s own
+// `STEPS`/`validate_step_order`/`BuildStep`.
+
+/// The build order `STEPS` is generated from -- one label per top-level call
+/// in `build_creal_prelude_uncached`'s existing sequence, extracted by static
+/// analysis (see the module docs above `STEPS` in `creal.rs`). Pinned here so
+/// a silent reorder or drop in `STEPS` fails naming which position changed,
+/// rather than showing up as an opaque `Kernel::add_declaration` rejection
+/// several steps later.
+const EXPECTED_STEP_ORDER: &[&str] = &[
+    "declare_predicates",
+    "declare_carrier",
+    "declare_projections",
+    "declare_equiv",
+    "declare_reflexivity",
+    "declare_symmetry",
+    "declare_transitivity",
+    "declare_of_rat",
+    "declare_discrimination",
+    "declare_constants",
+    "declare_pointwise",
+    "declare_negation",
+    "declare_addition",
+    "declare_additive_laws",
+    "declare_of_rat_add",
+    "declare_of_rat_neg",
+    "declare_of_rat_sub",
+    "declare_order",
+    "declare_neg_le_neg",
+    "declare_strict_order",
+    "order_extra::declare_order_extra",
+    "product::declare_product",
+    "field::declare_field",
+    "inverse::declare_inverse",
+    "cancellation::declare_cancellation",
+    "lattice::declare_lattice",
+    "product::declare_mul_self_abs",
+    "order_extra::declare_order_extra_abs",
+    "uniform_convergence::declare_uniform_converges_on",
+    "archimedean_squeeze::declare_archimedean_squeeze",
+    "archimedean::declare_archimedean",
+    "density::declare_density",
+    "cotransitivity::declare_cotransitivity",
+    "completeness::declare_completeness",
+    "convergence::declare_convergence",
+    "uniform_continuity::declare_abs_add_le",
+    "uniform_continuity::declare_uniform_continuity",
+    "uniform_continuity::declare_uniformly_continuous_on_restrict",
+    "crossing::declare_crossing",
+    "convergence::declare_converges_comp_eventually",
+    "derivative::declare_derivative",
+    "deriv_unique::declare_deriv_unique",
+    "uniform_continuity::declare_uniform_continuity_products",
+    "uniform_continuity::declare_bounded_of_uniformly_continuous",
+    "mul_self_zero::declare_mul_self_zero",
+    "crossing::declare_crossing_sample",
+    "crossing::declare_crossing_close",
+    "crossing::declare_crossing_close_clamped",
+    "crossing::declare_crossing_sample_pairing_close",
+    "sqrt::declare_sqrt",
+    "speedup::declare_speedup",
+    "sqrt::declare_sqrt_approx_kregular",
+    "sqrt::declare_sqrt_ctor",
+    "sqrt::declare_sqrt_congr",
+    "sqrt::declare_sqrt_le_sqrt",
+    "sqrt::declare_sqrt_one",
+    "sqrt::declare_sqrt_zero",
+    "sqrt::declare_sqrt_sq",
+    "sqrt::declare_sqrt_nonneg",
+    "sqrt::declare_mul_self_sqrt",
+    "sqrt::declare_sqrt_mul",
+    "sqrt::declare_le_of_sq_le",
+    "convergence::declare_cauchy_convergence",
+    "series::declare_series",
+    "uniform_continuity::declare_uniform_continuity_sums",
+    "monotone::declare_monotone",
+    "integral::declare_integral",
+    "integral::declare_sum_range_double",
+    "integral::declare_sum_range_reblock",
+    "integral::declare_within_of_two_sided_le",
+    "integral::declare_le_add_of_abs_sub_le",
+    "integral::declare_two_sided_of_abs_sub_le",
+    "uniform_convergence::declare_uniform_convergence_continuity",
+    "uniform_convergence::declare_uniform_converges_add",
+    "uniform_convergence::declare_close_within_of_within",
+    "integral::declare_close_within_of_within_indexed",
+    "uniform_convergence::declare_weierstrass_m_test",
+    "integral::declare_of_nat_hom",
+    "monotone::declare_monotone_of_nonneg_deriv_all",
+    "integral::declare_fine_sample_in_bounds",
+    "integral::declare_fine_sample_close",
+    "integral::declare_fine_block_sum_close",
+    "integral::declare_mesh_reciprocal_mul",
+    "integral::declare_equiv_abs_diff_le",
+    "integral::declare_sample_point_reblock",
+    "integral::declare_reblock_block_eq_fine_block_sum",
+    "integral::declare_riemann_sum_reblock_close",
+    "integral::declare_riemann_sum_cauchy",
+    "integral::declare_shared_index_to_canonical",
+    "integral::declare_riemann_sum_shared_accuracy_close",
+    "integral::declare_riemann_sum_total_eps_le",
+    "integral::declare_riemann_sum_deep_cauchy",
+    "integral::declare_riemann_sum_deep_cauchy_folded",
+    "integral::declare_riemann_sum_deep_cauchy_cross",
+    "integral::declare_riemann_sum_deep_cauchy_cross_folded",
+    "integral::declare_riemann_sum_add_cauchy_cross",
+    "integral::declare_creal_integral",
+    "integral::declare_integral_converges",
+    "integral::declare_integral_const",
+    "integral::declare_integral_witness_independent",
+    "integral::declare_integral_add",
+    "integral::declare_integral_le",
+    "integral::declare_integral_scale",
+    "integral::declare_riemann_sum_integral_close",
+    "integral::declare_riemann_sum_split_exact",
+    "integral::declare_riemann_sum_split_scale_invariant",
+    "integral::declare_congr_of_uniformly_continuous",
+    "integral::declare_riemann_sum_split_exact_of_uc",
+    "derivative::declare_has_derivative_integral_const",
+    "inverse_fn::declare_order_reflect_of_pos_deriv",
+    "monotone::declare_inverse_lipschitz_of_pos_deriv",
+    "power::declare_power",
+    "power::declare_power_series_term",
+    "power::declare_power_series_term_congr",
+    "derivative::declare_has_derivative_pow_two",
+    "derivative::declare_has_derivative_pow",
+    "geometric::declare_geometric",
+    "power::declare_power_series_term_abs_le",
+    "uniform_convergence::declare_power_series_uniform_converges",
+    "uniform_convergence::declare_uniform_converges_geom",
+    "geometric::declare_geom_cauchy_of_lt_family",
+    "exponential::declare_exponential",
+    "exponential::declare_geom_cauchy_family",
+    "exponential::declare_exp_convergence",
+    "ratio_test::declare_geom_scaled_cauchy_of_lt",
+    "ratio_test::declare_sum_range_ratio_test",
+    "exponential::declare_e_family",
+    "trig::declare_trig",
+    "trig::declare_sin_trig",
+    "alternating::declare_alternating",
+    "trig::declare_trig_alternating_bounds",
+    "trig::declare_sin_trig_alternating_bounds",
+    "ivt::declare_ivt",
+    "polynomial::declare_polynomial",
+    "congruence::declare_congruence_extras",
+];
+
+/// `STEPS` (the data-driven build order that replaced the hand-written call
+/// sequence) reproduces that sequence exactly, in order. A silent reorder or
+/// drop fails here, naming which position changed, rather than showing up as
+/// an opaque `Kernel::add_declaration` rejection several steps later.
+#[test]
+fn steps_table_matches_recorded_extraction() {
+    let labels: Vec<&str> = super::STEPS.iter().map(|s| s.label).collect();
+    assert_eq!(
+        labels.as_slice(),
+        EXPECTED_STEP_ORDER,
+        "STEPS no longer matches the recorded build order -- see \
+         docs/research/11-design-review/2026-08-27-prelude-build-spike.md"
+    );
+}
+
+/// The existing, hand-written build order is already a valid topological
+/// order for the dependencies `STEPS` declares: every `requires` entry is
+/// satisfied by a strictly earlier step. This is the level-2 question the
+/// architecture review asks (§1) -- answered here structurally, without
+/// reordering anything at runtime.
+#[test]
+fn existing_step_order_is_topologically_valid() {
+    let (_, prelude) = built();
+    let result = super::validate_step_order(prelude, super::STEPS);
+    assert!(
+        result.is_ok(),
+        "the existing STEPS order should already be topologically valid, \
+         found: {result:?}"
+    );
+}
+
+/// The deliberate-failure control: a two-step order where the consumer comes
+/// BEFORE its provider must be rejected, and the rejection must be precise --
+/// naming the missing declaration, the step that would produce it, and both
+/// steps' positions. This is what proves `validate_step_order` can actually
+/// fail, not merely that it passes on the one order it has ever seen.
+static BROKEN_ORDER: &[super::BuildStep] = &[
+    super::BuildStep {
+        label: "consumer_before_its_provider",
+        requires: &[|p: CRealPrelude| p.equiv],
+        provides: &[],
+        run: super::declare_carrier, // never invoked; validate_step_order does not call `run`
+    },
+    super::BuildStep {
+        label: "provider_after_its_consumer",
+        requires: &[],
+        provides: &[|p: CRealPrelude| p.equiv],
+        run: super::declare_equiv, // never invoked; validate_step_order does not call `run`
+    },
+];
+
+#[test]
+fn order_violation_is_detected_and_precise() {
+    let (_, prelude) = built();
+    let violation = super::validate_step_order(prelude, BROKEN_ORDER)
+        .expect_err("a consumer placed before its provider must be rejected");
+    assert_eq!(violation.consumer_index, 0);
+    assert_eq!(violation.consumer_label, "consumer_before_its_provider");
+    assert_eq!(
+        violation.missing, prelude.equiv,
+        "must name the exact missing declaration, not merely that one is missing"
+    );
+    assert_eq!(
+        violation.provider,
+        Some((1, "provider_after_its_consumer")),
+        "must name which step provides the missing declaration and at what position"
+    );
+}
+
+/// A dependency table naming a declaration nothing in the order provides is a
+/// bug in the table itself, not merely a misordering -- and must still be
+/// reported precisely (`provider: None`), not panic or silently pass.
+static INCOMPLETE_ORDER: &[super::BuildStep] = &[super::BuildStep {
+    label: "requires_something_nobody_provides",
+    requires: &[|p: CRealPrelude| p.equiv],
+    provides: &[],
+    run: super::declare_carrier, // never invoked
+}];
+
+#[test]
+fn order_violation_reports_missing_provider_as_table_bug() {
+    let (_, prelude) = built();
+    let violation = super::validate_step_order(prelude, INCOMPLETE_ORDER)
+        .expect_err("a requirement nobody provides must be rejected");
+    assert_eq!(violation.consumer_index, 0);
+    assert_eq!(violation.missing, prelude.equiv);
+    assert_eq!(
+        violation.provider, None,
+        "no step in this table provides `equiv`, so provider must be None"
+    );
+}
