@@ -50,4 +50,5 @@ task's brief, not by editing `axeyum-lean-kernel/` from this lane.
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-27 | `7705b0776` | feat(cas): exact polynomial EXTREMUM certificate (ADR-0603 row 3, EVT) |
 | 2026-08-27 | `86d888a82` | wip(cas): scaffold `extremum` module for ADR-0603 row 3 (EVT) |
