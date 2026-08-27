@@ -1544,6 +1544,39 @@ rank-19 formula is 22,688 variables / 89,388 clauses; CaDiCaL reached 300.19 sec
 and it shows that the `19!` term labels are not the whole obstruction. Search found explicit
 prior term ordering, so no technique-novelty claim is made; stabilizer/basis symmetry is next.
 
+**Complete polynomial-tensor action, 2026-08-26.** ADR-0591 adds the six homogeneous
+binary-form substitutions in `GL(2,GF(2))`, acting contragrediently on both input covectors and
+directly on the output, and composes them with global input interchange. Ordered summands plus
+a globally minimal first term give a complete 12-element breaker rather than an assumed
+stabilizer. All actions preserve all 396 coefficients of a schoolbook `P_6` decomposition;
+the exact `P_2` SAT/checked-DRAT boundary and Wang's rank-17 witness also pass. The open
+rank-16 formula is 26,489 variables / 105,262 clauses / 1,809,746 bytes, SHA-256
+`00e5038f47c1dde3425e03cddd3625151c645ea6ddd1edbc24c3f9dc4291ddb2`; CaDiCaL seed 2606
+is live without a short cutoff. Wang's current source already implements the binary-form
+symmetry mathematics, so this is reusable Axeyum capability, not a novelty claim or rank result.
+
+**Premise-explicit exact tensor rank, 2026-08-26.** ADR-0592 leaves ordinary at-most-rank
+encoding unchanged and adds three nonzero-factor clauses per summand only when a caller names a
+checked rank-`k-1` exclusion. The checked `P_2` rank-two DRAT plus rank-three SAT/lift/replay is
+the two-sided control. Composed with the independently replayed `P_6 >= 16` certificate, the
+rank-16 polynomial-action formula has 26,489 variables / 105,310 clauses / 1,811,206 bytes,
+SHA-256 `bc932196...c7815`; CaDiCaL seed 2615 is live without a short cutoff. This removes
+zero-product padding but does not change the `[16,17]` interval.
+
+**Deterministic long-check progress, 2026-08-26.** ADR-0593 adds an opt-in callback to the
+bounded-parallel recursive cube checker. Workers may finish out of order, but progress is
+released only as the contiguous root prefix `1..n`, preserving deterministic CLI output. The
+callback reports work completion, never proof credit; lowest-path failure ordering and final
+cover checking remain unchanged. The two live 60/83 GB S-box checks use the older binary and
+were deliberately not restarted for telemetry alone. Their active reads are not verdicts.
+
+**Proof-reader descriptor bound, 2026-08-26.** Live inspection found 561 open descriptors in
+the sequential recursive S-box checker. ADR-0594 makes the CLI's lazy reader close its file at
+EOF and retain an explicit exhausted state so later reads cannot reopen from byte zero. Both
+`Read` and `BufRead` controls pin handle closure and stable EOF. The host's 524,288 limit meant
+the old run was not immediately endangered, so neither live checker was restarted; no proof
+credit follows from this resource repair.
+
 **Bilinear first-summand normalization, 2026-08-26.** ADR-0568 applies a complete
 matrix-tensor stabilizer reduction: a chosen nonzero summand occupies slot zero, its first
 factor is one of the `min(m,n)` matrix rank-normal forms, and only the remaining slots are

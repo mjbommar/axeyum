@@ -661,3 +661,7 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0588](adr-0588-theta-duals-enter-through-an-instance-separate-artifact.md) | Theta duals enter through an instance-separate artifact | accepted |
 | [0589](adr-0589-hard-cube-leaves-refine-as-recursive-checked-covers.md) | Hard cube leaves refine as recursive checked covers | accepted |
 | [0590](adr-0590-recursive-cube-checking-parallelizes-one-bounded-split.md) | Recursive cube checking parallelizes one bounded split | accepted |
+| [0591](adr-0591-full-polynomial-tensor-search-uses-the-complete-binary-form-action.md) | Full-polynomial tensor search uses the complete binary-form action | accepted |
+| [0592](adr-0592-exact-tensor-rank-search-must-name-its-lower-bound-premise.md) | Exact tensor-rank search must name its lower-bound premise | accepted |
+| [0593](adr-0593-parallel-proof-tree-progress-is-root-ordered.md) | Parallel proof-tree progress is root-ordered | accepted |
+| [0594](adr-0594-lazy-proof-readers-close-at-eof.md) | Lazy proof readers close at EOF | accepted |

@@ -70,6 +70,186 @@ struct FactorLayout {
     c: Vec<Vec<usize>>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct PolynomialTensorAction {
+    input_dual: Vec<Vec<usize>>,
+    output: Vec<Vec<usize>>,
+    swap_inputs: bool,
+}
+
+fn binomial_is_odd(n: usize, k: usize) -> bool {
+    k & !n == 0
+}
+
+fn bit_power(base: bool, exponent: usize) -> bool {
+    exponent == 0 || base
+}
+
+#[allow(clippy::needless_range_loop)] // input columns contribute to several output rows
+fn binary_form_substitution(degree: usize, matrix: [bool; 4]) -> Vec<Vec<bool>> {
+    let [a, b, c, d] = matrix;
+    let dimension = degree + 1;
+    let mut result = vec![vec![false; dimension]; dimension];
+    for input in 0..dimension {
+        for left_x in 0..=input {
+            if !binomial_is_odd(input, left_x)
+                || !bit_power(a, left_x)
+                || !bit_power(b, input - left_x)
+            {
+                continue;
+            }
+            let right_degree = degree - input;
+            for right_x in 0..=right_degree {
+                if binomial_is_odd(right_degree, right_x)
+                    && bit_power(c, right_x)
+                    && bit_power(d, right_degree - right_x)
+                {
+                    result[left_x + right_x][input] ^= true;
+                }
+            }
+        }
+    }
+    result
+}
+
+fn invert_binary_matrix(mut matrix: Vec<Vec<bool>>) -> Vec<Vec<bool>> {
+    let dimension = matrix.len();
+    for (row, values) in matrix.iter_mut().enumerate() {
+        values.extend((0..dimension).map(|column| row == column));
+    }
+    for column in 0..dimension {
+        let pivot = (column..dimension)
+            .find(|&row| matrix[row][column])
+            .expect("GL(2,F2) substitution representation must be invertible");
+        matrix.swap(column, pivot);
+        let pivot_tail = matrix[column][column..].to_vec();
+        for (row, values) in matrix.iter_mut().enumerate().take(dimension) {
+            if row != column && values[column] {
+                for (entry, pivot_entry) in values[column..].iter_mut().zip(&pivot_tail) {
+                    *entry ^= pivot_entry;
+                }
+            }
+        }
+    }
+    matrix
+        .into_iter()
+        .map(|row| row[dimension..].to_vec())
+        .collect()
+}
+
+fn support_rows(matrix: &[Vec<bool>]) -> Vec<Vec<usize>> {
+    matrix
+        .iter()
+        .map(|row| {
+            row.iter()
+                .enumerate()
+                .filter_map(|(column, &set)| set.then_some(column))
+                .collect()
+        })
+        .collect()
+}
+
+fn polynomial_tensor_actions(terms: usize) -> Vec<PolynomialTensorAction> {
+    let matrices = [
+        [true, false, false, true],
+        [false, true, true, false],
+        [true, true, false, true],
+        [true, false, true, true],
+        [false, true, true, true],
+        [true, true, true, false],
+    ];
+    let mut actions = Vec::with_capacity(12);
+    for matrix in matrices {
+        let input = binary_form_substitution(terms - 1, matrix);
+        let input_inverse = invert_binary_matrix(input);
+        let input_dual: Vec<Vec<usize>> = (0..terms)
+            .map(|row| {
+                (0..terms)
+                    .filter(|&column| input_inverse[column][row])
+                    .collect()
+            })
+            .collect();
+        let output = support_rows(&binary_form_substitution(2 * terms - 2, matrix));
+        for swap_inputs in [false, true] {
+            actions.push(PolynomialTensorAction {
+                input_dual: input_dual.clone(),
+                output: output.clone(),
+                swap_inputs,
+            });
+        }
+    }
+    actions
+}
+
+fn map_support(rows: &[Vec<usize>], support: &[usize]) -> Vec<usize> {
+    rows.iter()
+        .enumerate()
+        .filter_map(|(output, row)| {
+            (row.iter().filter(|index| support.contains(index)).count() % 2 == 1).then_some(output)
+        })
+        .collect()
+}
+
+fn transform_polynomial_term(
+    term: &Gf2RankOneTerm,
+    action: &PolynomialTensorAction,
+) -> Gf2RankOneTerm {
+    let mut a = map_support(&action.input_dual, &term.a);
+    let mut b = map_support(&action.input_dual, &term.b);
+    if action.swap_inputs {
+        core::mem::swap(&mut a, &mut b);
+    }
+    Gf2RankOneTerm {
+        a,
+        b,
+        c: map_support(&action.output, &term.c),
+    }
+}
+
+fn term_bits(term: Option<&Gf2RankOneTerm>, terms: usize) -> Vec<bool> {
+    let dimensions = [terms, terms, 2 * terms - 1];
+    let supports = term.map(|term| [&term.a[..], &term.b[..], &term.c[..]]);
+    dimensions
+        .into_iter()
+        .enumerate()
+        .flat_map(|(mode, dimension)| {
+            (0..dimension)
+                .map(move |index| supports.is_some_and(|entries| entries[mode].contains(&index)))
+        })
+        .collect()
+}
+
+fn canonical_polynomial_group_image(
+    supplied: &[Option<Gf2RankOneTerm>],
+    terms: usize,
+) -> Result<Vec<Option<Gf2RankOneTerm>>, TensorRankEncodingError> {
+    if terms == 0 {
+        return Err(TensorRankEncodingError::InvalidWitness(
+            "polynomial term count must be positive".to_owned(),
+        ));
+    }
+    polynomial_tensor_actions(terms)
+        .into_iter()
+        .map(|action| {
+            let mut image = supplied
+                .iter()
+                .map(|term| {
+                    term.as_ref()
+                        .map(|term| transform_polynomial_term(term, &action))
+                })
+                .collect::<Vec<_>>();
+            image.sort_by_key(|term| term_bits(term.as_ref(), terms));
+            image
+        })
+        .min_by_key(|image| {
+            image
+                .iter()
+                .flat_map(|term| term_bits(term.as_ref(), terms))
+                .collect::<Vec<_>>()
+        })
+        .ok_or_else(|| TensorRankEncodingError::InvalidWitness("empty symmetry group".to_owned()))
+}
+
 /// One admitted first-factor stabilizer orbit in a normalized matrix-tensor encoding.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TensorFirstFactorOrbit {
@@ -88,6 +268,7 @@ pub struct TensorRankEncoding {
     budget: usize,
     ordered_from: Option<usize>,
     first_factor_orbits: Vec<TensorFirstFactorOrbit>,
+    polynomial_symmetry_terms: Option<usize>,
 }
 
 impl TensorRankEncoding {
@@ -183,23 +364,26 @@ impl TensorRankEncoding {
             ));
         }
         let mut formula = self.formula.clone();
-        let mut supplied_terms = witness.terms.iter().map(Some).collect::<Vec<_>>();
+        let mut supplied_terms = witness.terms.iter().cloned().map(Some).collect::<Vec<_>>();
         supplied_terms.resize(self.budget, None);
+        if let Some(terms) = self.polynomial_symmetry_terms {
+            supplied_terms = canonical_polynomial_group_image(&supplied_terms, terms)?;
+        }
         if let Some(ordered_from) = self.ordered_from {
             supplied_terms[ordered_from..].sort_by_key(|term| {
                 let mut bits = Vec::with_capacity(self.target.dimensions.iter().sum());
                 for (dimension, support) in [
                     (
                         self.target.dimensions[0],
-                        term.map(|item| item.a.as_slice()),
+                        term.as_ref().map(|item| item.a.as_slice()),
                     ),
                     (
                         self.target.dimensions[1],
-                        term.map(|item| item.b.as_slice()),
+                        term.as_ref().map(|item| item.b.as_slice()),
                     ),
                     (
                         self.target.dimensions[2],
-                        term.map(|item| item.c.as_slice()),
+                        term.as_ref().map(|item| item.c.as_slice()),
                     ),
                 ] {
                     bits.extend(
@@ -228,11 +412,20 @@ impl TensorRankEncoding {
                 ));
             }
         }
-        for (term, &supplied) in supplied_terms.iter().enumerate() {
+        for (term, supplied) in supplied_terms.iter().enumerate() {
             for (variables, support) in [
-                (&self.layout.a[term], supplied.map(|item| item.a.as_slice())),
-                (&self.layout.b[term], supplied.map(|item| item.b.as_slice())),
-                (&self.layout.c[term], supplied.map(|item| item.c.as_slice())),
+                (
+                    &self.layout.a[term],
+                    supplied.as_ref().map(|item| item.a.as_slice()),
+                ),
+                (
+                    &self.layout.b[term],
+                    supplied.as_ref().map(|item| item.b.as_slice()),
+                ),
+                (
+                    &self.layout.c[term],
+                    supplied.as_ref().map(|item| item.c.as_slice()),
+                ),
             ] {
                 for (index, &variable) in variables.iter().enumerate() {
                     let value = support.is_some_and(|entries| entries.contains(&index));
@@ -245,6 +438,43 @@ impl TensorRankEncoding {
                         }]))
                         .map_err(|error| TensorRankEncodingError::Cnf(format!("pin: {error:?}")))?;
                 }
+            }
+        }
+        Ok(formula)
+    }
+
+    /// Require every one of the `budget` rank-one summands to be nonzero.
+    ///
+    /// This changes an at-most-rank query into an exact-rank normal form and is
+    /// complete only when a separately checked lower bound rules out rank below
+    /// `budget`. A rank-one tensor is nonzero exactly when each of its three
+    /// factor vectors is nonzero, so the augmentation is three clauses per
+    /// summand and introduces no auxiliary variables.
+    ///
+    /// # Errors
+    ///
+    /// Refuses a clause that cannot be represented by the CNF layer.
+    pub fn formula_with_exact_rank_nonzero_summands(
+        &self,
+    ) -> Result<CnfFormula, TensorRankEncodingError> {
+        let mut formula = self.formula.clone();
+        for term in 0..self.budget {
+            for factor in [
+                &self.layout.a[term],
+                &self.layout.b[term],
+                &self.layout.c[term],
+            ] {
+                let literals = factor
+                    .iter()
+                    .map(|&variable| Ok(CnfLit::positive(cnf_var(variable)?)))
+                    .collect::<Result<Vec<_>, TensorRankEncodingError>>()?;
+                formula
+                    .add_clause(CnfClause::new(literals))
+                    .map_err(|error| {
+                        TensorRankEncodingError::Cnf(format!(
+                            "exact-rank nonzero factor: {error:?}"
+                        ))
+                    })?;
             }
         }
         Ok(formula)
@@ -315,6 +545,16 @@ impl Builder {
         self.clause(&[(a, false), (b, true), (output, false)])?;
         self.clause(&[(a, true), (b, false), (output, false)])?;
         Ok(output)
+    }
+
+    fn xor_terms(&mut self, terms: &[usize]) -> Result<usize, TensorRankEncodingError> {
+        let (&first, rest) = terms.split_first().ok_or_else(|| {
+            TensorRankEncodingError::InvalidWitness(
+                "invertible linear action produced an empty output row".to_owned(),
+            )
+        })?;
+        rest.iter()
+            .try_fold(first, |parity, &term| self.xor(parity, term))
     }
 
     fn parity(&mut self, terms: &[usize], value: bool) -> Result<(), TensorRankEncodingError> {
@@ -397,7 +637,7 @@ pub fn encode_tensor_rank(
     budget: usize,
     limits: TensorRankEncodingLimits,
 ) -> Result<TensorRankEncoding, TensorRankEncodingError> {
-    encode_tensor_rank_internal(target, budget, limits, None, Vec::new())
+    encode_tensor_rank_internal(target, budget, limits, None, Vec::new(), None)
 }
 
 /// Encode bounded rank with a complete lexicographic breaker for the
@@ -415,7 +655,30 @@ pub fn encode_tensor_rank_with_ordered_terms(
     budget: usize,
     limits: TensorRankEncodingLimits,
 ) -> Result<TensorRankEncoding, TensorRankEncodingError> {
-    encode_tensor_rank_internal(target, budget, limits, Some(0), Vec::new())
+    encode_tensor_rank_internal(target, budget, limits, Some(0), Vec::new(), None)
+}
+
+/// Encode full polynomial multiplication with term ordering and its complete
+/// 12-element binary-form symmetry (`GL(2, GF(2))` and input swap).
+///
+/// The six substitutions act contragrediently on both input-covector factors
+/// and directly on the output factor; global input swap doubles the action.
+/// After ordering summands, the first term
+/// is constrained to be no larger than every image of every term. Every orbit
+/// has such a representative: choose its globally smallest term image, move
+/// that term to slot zero, then sort the remaining terms.
+///
+/// # Errors
+///
+/// Refuses zero terms, dimension overflow, or any construction exceeding the
+/// explicit limits.
+pub fn encode_full_polynomial_rank_with_group_minimal_first(
+    terms: usize,
+    budget: usize,
+    limits: TensorRankEncodingLimits,
+) -> Result<TensorRankEncoding, TensorRankEncodingError> {
+    let target = Gf2Tensor::full_polynomial_multiplication(terms)?;
+    encode_tensor_rank_internal(&target, budget, limits, Some(0), Vec::new(), Some(terms))
 }
 
 /// Encode matrix-multiplication tensor rank after normalizing one nonzero
@@ -448,7 +711,7 @@ pub fn encode_matrix_tensor_rank_with_normalized_first_factor(
     let forms = (1..=m.min(n))
         .map(|rank| (0..rank).map(|index| index * n + index).collect())
         .collect();
-    encode_tensor_rank_internal(&target, budget, limits, Some(1), forms)
+    encode_tensor_rank_internal(&target, budget, limits, Some(1), forms, None)
 }
 
 fn add_first_factor_normalization(
@@ -503,12 +766,56 @@ fn add_first_factor_normalization(
         .collect()
 }
 
+fn linear_image_variables(
+    builder: &mut Builder,
+    variables: &[usize],
+    rows: &[Vec<usize>],
+) -> Result<Vec<usize>, TensorRankEncodingError> {
+    rows.iter()
+        .map(|row| {
+            let inputs = row
+                .iter()
+                .map(|&index| variables[index])
+                .collect::<Vec<_>>();
+            builder.xor_terms(&inputs)
+        })
+        .collect()
+}
+
+fn add_polynomial_group_minimal_first(
+    builder: &mut Builder,
+    layout: &FactorLayout,
+    terms: usize,
+) -> Result<(), TensorRankEncodingError> {
+    if layout.a.is_empty() {
+        return Ok(());
+    }
+    let first = [&layout.a[0][..], &layout.b[0][..], &layout.c[0][..]].concat();
+    for (action_index, action) in polynomial_tensor_actions(terms).into_iter().enumerate() {
+        if action_index == 0 {
+            continue;
+        }
+        for term in 0..layout.a.len() {
+            let mut a = linear_image_variables(builder, &layout.a[term], &action.input_dual)?;
+            let mut b = linear_image_variables(builder, &layout.b[term], &action.input_dual)?;
+            if action.swap_inputs {
+                core::mem::swap(&mut a, &mut b);
+            }
+            let c = linear_image_variables(builder, &layout.c[term], &action.output)?;
+            let transformed = [&a[..], &b[..], &c[..]].concat();
+            builder.lex_le(&first, &transformed)?;
+        }
+    }
+    Ok(())
+}
+
 fn encode_tensor_rank_internal(
     target: &Gf2Tensor,
     budget: usize,
     limits: TensorRankEncodingLimits,
     ordered_from: Option<usize>,
     first_factor_forms: Vec<Vec<usize>>,
+    polynomial_symmetry_terms: Option<usize>,
 ) -> Result<TensorRankEncoding, TensorRankEncodingError> {
     if budget > limits.max_rank {
         return Err(TensorRankEncodingError::LimitExceeded {
@@ -552,6 +859,14 @@ fn encode_tensor_rank_internal(
             builder.lex_le(&left, &right)?;
         }
     }
+    if let Some(terms) = polynomial_symmetry_terms {
+        if target.dimensions != [terms, terms, 2 * terms - 1] {
+            return Err(TensorRankEncodingError::InvalidWitness(
+                "polynomial symmetry dimensions do not match the target".to_owned(),
+            ));
+        }
+        add_polynomial_group_minimal_first(&mut builder, &layout, terms)?;
+    }
     let [a_dimension, b_dimension, c_dimension] = target.dimensions;
     for a in 0..a_dimension {
         for b in 0..b_dimension {
@@ -577,6 +892,7 @@ fn encode_tensor_rank_internal(
         budget,
         ordered_from,
         first_factor_orbits,
+        polynomial_symmetry_terms,
     })
 }
 
@@ -587,6 +903,200 @@ mod tests {
     use axeyum_cnf::{
         ProofSolveOutcome, SatResult, check_drat, solve_with_drat_proof, solve_with_rustsat_batsat,
     };
+
+    fn karatsuba() -> Gf2TensorDecomposition {
+        Gf2TensorDecomposition {
+            schema: GF2_TENSOR_DECOMPOSITION_SCHEMA.to_owned(),
+            dimensions: [2, 2, 3],
+            terms: vec![
+                Gf2RankOneTerm {
+                    a: vec![0],
+                    b: vec![0],
+                    c: vec![0, 1],
+                },
+                Gf2RankOneTerm {
+                    a: vec![1],
+                    b: vec![1],
+                    c: vec![1, 2],
+                },
+                Gf2RankOneTerm {
+                    a: vec![0, 1],
+                    b: vec![0, 1],
+                    c: vec![1],
+                },
+            ],
+        }
+    }
+
+    fn schoolbook_polynomial(terms: usize) -> Gf2TensorDecomposition {
+        Gf2TensorDecomposition {
+            schema: GF2_TENSOR_DECOMPOSITION_SCHEMA.to_owned(),
+            dimensions: [terms, terms, 2 * terms - 1],
+            terms: (0..terms)
+                .flat_map(|left| {
+                    (0..terms).map(move |right| Gf2RankOneTerm {
+                        a: vec![left],
+                        b: vec![right],
+                        c: vec![left + right],
+                    })
+                })
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn polynomial_group_has_twelve_tensor_automorphisms() {
+        let target = Gf2Tensor::full_polynomial_multiplication(2).unwrap();
+        let mut actions = polynomial_tensor_actions(2);
+        assert_eq!(actions.len(), 12);
+        actions.sort_by_key(|action| {
+            (
+                action.input_dual.clone(),
+                action.output.clone(),
+                action.swap_inputs,
+            )
+        });
+        actions.dedup();
+        assert_eq!(actions.len(), 12, "the encoded action itself has order 12");
+        let mut images = Vec::new();
+        for action in &actions {
+            let decomposition = Gf2TensorDecomposition {
+                schema: GF2_TENSOR_DECOMPOSITION_SCHEMA.to_owned(),
+                dimensions: [2, 2, 3],
+                terms: karatsuba()
+                    .terms
+                    .iter()
+                    .map(|term| transform_polynomial_term(term, action))
+                    .collect(),
+            };
+            assert_eq!(
+                check_gf2_tensor_decomposition(
+                    &target,
+                    &decomposition,
+                    Gf2TensorCheckLimits::default(),
+                ),
+                Ok(Gf2TensorCheck::Verified {
+                    rank: 3,
+                    coefficients_checked: 12,
+                })
+            );
+            images.push(decomposition.terms);
+        }
+        images.sort_by_key(|terms| {
+            terms
+                .iter()
+                .flat_map(|term| term_bits(Some(term), 2))
+                .collect::<Vec<_>>()
+        });
+        images.dedup();
+        assert_eq!(
+            images.len(),
+            6,
+            "symmetric Karatsuba is fixed by global input swap"
+        );
+    }
+
+    #[test]
+    fn polynomial_group_minimal_first_preserves_the_exact_p2_boundary() {
+        let encoding = encode_full_polynomial_rank_with_group_minimal_first(
+            2,
+            3,
+            TensorRankEncodingLimits::default(),
+        )
+        .unwrap();
+        let mut witness = karatsuba();
+        witness.terms.reverse();
+        let pinned = encoding.formula_with_witness(&witness).unwrap();
+        let SatResult::Sat(model) = solve_with_rustsat_batsat(&pinned).unwrap() else {
+            panic!("canonicalized Karatsuba witness must remain satisfiable");
+        };
+        assert_eq!(encoding.lift_model(&model).unwrap().terms.len(), 3);
+
+        let rank_two = encode_full_polynomial_rank_with_group_minimal_first(
+            2,
+            2,
+            TensorRankEncodingLimits::default(),
+        )
+        .unwrap();
+        let ProofSolveOutcome::Unsat(proof) = solve_with_drat_proof(rank_two.formula()) else {
+            panic!("P2 rank two must remain unsatisfiable");
+        };
+        assert_eq!(check_drat(rank_two.formula(), &proof), Ok(true));
+    }
+
+    #[test]
+    fn checked_lower_bound_allows_exact_rank_nonzero_summands() {
+        let lower = encode_full_polynomial_rank_with_group_minimal_first(
+            2,
+            2,
+            TensorRankEncodingLimits::default(),
+        )
+        .unwrap();
+        let ProofSolveOutcome::Unsat(proof) = solve_with_drat_proof(lower.formula()) else {
+            panic!("P2 rank two must supply the checked lower-bound premise");
+        };
+        assert_eq!(check_drat(lower.formula(), &proof), Ok(true));
+
+        let exact = encode_full_polynomial_rank_with_group_minimal_first(
+            2,
+            3,
+            TensorRankEncodingLimits::default(),
+        )
+        .unwrap();
+        let formula = exact.formula_with_exact_rank_nonzero_summands().unwrap();
+        assert_eq!(
+            formula.clauses().len(),
+            exact.formula().clauses().len() + 3 * 3
+        );
+        let SatResult::Sat(model) = solve_with_rustsat_batsat(&formula).unwrap() else {
+            panic!("the exact P2 rank-three normal form must remain satisfiable");
+        };
+        let witness = exact.lift_model(&model).unwrap();
+        assert!(
+            witness
+                .terms
+                .iter()
+                .all(|term| { !term.a.is_empty() && !term.b.is_empty() && !term.c.is_empty() })
+        );
+    }
+
+    #[test]
+    fn polynomial_group_preserves_every_p6_coefficient() {
+        let target = Gf2Tensor::full_polynomial_multiplication(6).unwrap();
+        let source = schoolbook_polynomial(6);
+        let mut actions = polynomial_tensor_actions(6);
+        actions.sort_by_key(|action| {
+            (
+                action.input_dual.clone(),
+                action.output.clone(),
+                action.swap_inputs,
+            )
+        });
+        actions.dedup();
+        assert_eq!(actions.len(), 12);
+        for action in &actions {
+            let decomposition = Gf2TensorDecomposition {
+                schema: GF2_TENSOR_DECOMPOSITION_SCHEMA.to_owned(),
+                dimensions: source.dimensions,
+                terms: source
+                    .terms
+                    .iter()
+                    .map(|term| transform_polynomial_term(term, action))
+                    .collect(),
+            };
+            assert_eq!(
+                check_gf2_tensor_decomposition(
+                    &target,
+                    &decomposition,
+                    Gf2TensorCheckLimits::default(),
+                ),
+                Ok(Gf2TensorCheck::Verified {
+                    rank: 36,
+                    coefficients_checked: 396,
+                })
+            );
+        }
+    }
 
     fn strassen() -> Gf2TensorDecomposition {
         Gf2TensorDecomposition {
