@@ -1501,9 +1501,15 @@ pub struct CRealPrelude {
     /// s s) → le t s`.
     ///
     /// "Cancel the square" at the `CReal` level — the `CReal` analogue of
-    /// [`crate::RatPrelude::lt_of_sq_lt`] (`Rat`, strict), and the step
-    /// `Complex.abs_add_le` (not yet declared) needs to close its own squared
-    /// bound. Composable from already-landed facts, no new epsilon estimate:
+    /// [`crate::RatPrelude::lt_of_sq_lt`] (`Rat`, strict). `Complex.abs_add_le`
+    /// (landed, `complex.rs`) uses this at `t := abs (Re (z · conj w))`,
+    /// `s := abs z · abs w` — NOT at the final sqrt-cancellation step, which
+    /// needs only `sqrt_le_sqrt`/`sqrt_sq` directly, both nonneg already —
+    /// because `t` there is an `abs`, whose nonnegativity is unconditional,
+    /// where the RAW Cauchy–Schwarz cross term is not (see
+    /// `ComplexPrelude::abs_add_le`'s own doc, and
+    /// [`Self::mul_self_abs`]). Composable from already-landed facts, no new
+    /// epsilon estimate:
     /// `sqrt_le_sqrt` on the hypothesis gives `sqrt(t·t) ≤ sqrt(s·s)`;
     /// `sqrt_sq` at `t` and at `s` (using the two nonnegativity hypotheses)
     /// give `sqrt(t·t) ~ t` and `sqrt(s·s) ~ s`; `le_congr` transports the

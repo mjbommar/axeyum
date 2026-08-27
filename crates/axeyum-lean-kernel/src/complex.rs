@@ -375,15 +375,16 @@ pub struct ComplexPrelude {
     /// below, e.g. a Cauchy–Schwarz-style bound on the cross term
     /// `Re(z·conj w)` against `‖z‖·‖w‖`.
     ///
-    /// **`abs`'s multiplicativity is no longer the missing piece — `abs_mul`
-    /// landed the same day this doc's counterexample did — and
-    /// `CReal.le_of_sq_le` (`creal/sqrt.rs`, 2026-08-26: `t²≤s² → 0≤t → 0≤s →
-    /// t≤s`, composed from `sqrt_le_sqrt`/`sqrt_sq`/`le_congr`) is exactly
-    /// the "cancel the square at the `CReal` level" step [`Self::abs`]'s own
-    /// doc used to name as missing. Neither closes the Cauchy–Schwarz step by
-    /// itself, and the reason is a genuine gap, checked rather than assumed:
-    /// the cross term `Re(z·conj w) = re z·re w + im z·im w` has NO known
-    /// sign, and `le_of_sq_le` needs `0 ≤ t` on the term being bounded — at
+    /// **RESOLVED (2026-08-26): the sharp bound is landed as
+    /// [`Self::abs_add_le`], via `CReal.mul_self_abs` — read this paragraph
+    /// as the trace of why the earlier attempts genuinely failed, not as an
+    /// open gap.** `abs`'s multiplicativity (`abs_mul`) and
+    /// `CReal.le_of_sq_le` (`creal/sqrt.rs`: `t²≤s² → 0≤t → 0≤s → t≤s`,
+    /// composed from `sqrt_le_sqrt`/`sqrt_sq`/`le_congr`) are each real
+    /// pieces but NEITHER closes the Cauchy–Schwarz step alone, and the
+    /// reason is a genuine gap, checked rather than assumed: the cross term
+    /// `Re(z·conj w) = re z·re w + im z·im w` has NO known sign, and
+    /// `le_of_sq_le` needs `0 ≤ t` on the term being bounded — at
     /// `z := one, w := neg one`, the cross term is `-1 < 0`. Recovering `t ≤
     /// s` from `t² ≤ s²` and `0 ≤ s` ALONE (no sign hypothesis on `t`) is
     /// true (`Rat.ratSqLe` proves exactly this at the RATIONAL level, via
@@ -391,12 +392,15 @@ pub struct ComplexPrelude {
     /// not transfer to `CReal`, which has no decidable order — `CReal` has no
     /// `le_or_lt`. The route that DOES survive constructively needs an
     /// unconditional identity relating `sqrt (mul t t)` to `CReal.abs t`
-    /// (equivalently `CReal.mul (abs t) (abs t) ~ mul t t`) — NOT built, and
-    /// a genuinely new result, not a composition of `sqrt_le_sqrt`/`sqrt_sq`/
-    /// `abs_mul`: `sqrt_sq` itself needs `0 ≤ t` for exactly the same
-    /// reason (`sqrt(mul t t) ~ t` is simply false for negative `t`), so the
-    /// `abs`-shaped version needs its own per-sample argument, in the shape
-    /// of `sqrt_sq`'s own construction, not a shortcut through it.**
+    /// (equivalently `CReal.mul (abs t) (abs t) ~ mul t t`) — landed as
+    /// `CReal.mul_self_abs` (`creal/product.rs`, via a `Rat.le_or_lt` case
+    /// split one level down, at the rational representative), not a
+    /// composition of `sqrt_le_sqrt`/`sqrt_sq`/`abs_mul`: `sqrt_sq` itself
+    /// needs `0 ≤ t` for exactly the same reason (`sqrt(mul t t) ~ t` is
+    /// simply false for negative `t`), so the `abs`-shaped version needed
+    /// its own per-sample argument, in the shape of `sqrt_sq`'s own
+    /// construction, not a shortcut through it. See [`Self::abs_add_le`]'s
+    /// own doc for the full closing chain.
     /// `normSq_add` (this
     /// module) is the parallelogram law, not subadditivity — it is an
     /// EQUALITY mentioning `normSq (add z (neg w))` as well as `normSq (add z
@@ -1218,21 +1222,24 @@ pub struct ComplexPrelude {
     /// classical inequality needs a SHARPER bound on `normSq(z+w)` first —
     /// a Cauchy–Schwarz-style estimate on the cross term.
     ///
-    /// **`abs`'s multiplicativity landed (`Self::abs_mul`) and `CReal`'s own
-    /// "cancel the square" step landed too (`CReal.le_of_sq_le`,
-    /// `creal/sqrt.rs`, 2026-08-26), and NEITHER is, by itself, the
-    /// remaining piece — checked, not assumed.** The Cauchy–Schwarz cross
-    /// term `Re(z·conj w) = re z·re w + im z·im w` has no known sign (e.g.
-    /// negative at `z := one, w := neg one`), and `le_of_sq_le` requires
-    /// `0 ≤` the term it cancels the square of. The rational analogue
-    /// (`Rat.ratSqLe`: `t²≤s² ∧ 0≤s → t≤s`, no sign hypothesis on `t`) uses
-    /// `Rat.le_or_lt`'s DECIDABLE case split, and `CReal` has no such
-    /// decision procedure. What is still missing is an unconditional
-    /// `CReal` identity relating `sqrt (mul t t)` to `CReal.abs t` — not a
+    /// **RESOLVED (2026-08-26): [`Self::abs_add_le`] is landed, via the
+    /// unconditional identity this paragraph names as missing.** `abs`'s
+    /// multiplicativity (`Self::abs_mul`) and `CReal`'s own "cancel the
+    /// square" step (`CReal.le_of_sq_le`, `creal/sqrt.rs`) were each real
+    /// pieces but NEITHER was, by itself, the remaining one — checked, not
+    /// assumed. The Cauchy–Schwarz cross term `Re(z·conj w) = re z·re w +
+    /// im z·im w` has no known sign (e.g. negative at `z := one,
+    /// w := neg one`), and `le_of_sq_le` requires `0 ≤` the term it cancels
+    /// the square of. The rational analogue (`Rat.ratSqLe`: `t²≤s² ∧ 0≤s →
+    /// t≤s`, no sign hypothesis on `t`) uses `Rat.le_or_lt`'s DECIDABLE case
+    /// split, and `CReal` has no such decision procedure. The unconditional
+    /// `CReal` identity relating `sqrt (mul t t)` to `CReal.abs t` this
+    /// needed is `CReal.mul_self_abs` (`creal/product.rs`) — not a
     /// composition of `sqrt_le_sqrt`/`sqrt_sq`/`abs_mul`/`le_of_sq_le`, since
     /// `sqrt_sq` itself needs `0 ≤ t` for the identical reason
-    /// (`sqrt(mul t t) ~ t` is simply false for negative `t`) — a genuinely
-    /// new piece of work in the shape of `sqrt_sq`'s OWN per-sample
+    /// (`sqrt(mul t t) ~ t` is simply false for negative `t`); its own proof
+    /// is a `Rat.le_or_lt` case split one level down, at the rational
+    /// representative, in the shape of `sqrt_sq`'s OWN per-sample
     /// construction, not a rename of this one.
     ///
     /// [`Self::abs_nonneg`] needed none of this: it is a single-index sign
@@ -1295,6 +1302,38 @@ pub struct ComplexPrelude {
     /// z)·(normSq w)) ~ (abs z)·(abs w)`. `CReal.equiv_trans` composes the
     /// two.
     pub abs_mul: NameId,
+    /// `Complex.abs_add_le : ∀ z w, CReal.le (abs (add z w)) (add (abs z)
+    /// (abs w))` — the modulus TRIANGLE INEQUALITY, the classical fact this
+    /// whole file's `abs`/`normSq` machinery was building toward.
+    ///
+    /// [`Self::norm_sq_add_le`] and this constant's own doc (before this
+    /// declaration landed) trace the failed and refuted shortcuts in detail;
+    /// this is the route that actually closes, and it needed exactly the
+    /// piece both docs named as missing: `CReal.mul_self_abs` (`mul (abs t)
+    /// (abs t) ~ mul t t`, unconditional — `creal/product.rs`), because the
+    /// Cauchy–Schwarz cross term `Re(z·conj w) = re z·re w + im z·im w` has
+    /// no known sign (negative at `z := one, w := neg one`), so
+    /// `CReal.le_of_sq_le` cannot cancel its square directly — only `abs`'s
+    /// square can be cancelled unconditionally.
+    ///
+    /// The proof: `normSq(z+w) ~ normSq z + normSq w + 2·(ac+be)` (a ring
+    /// identity, `ring::ring_proof`); `normSq(mul z (conj w)) ~
+    /// (ac+be)² + (bc−ae)²` (another ring identity) `~ normSq z · normSq w`
+    /// (via [`Self::norm_sq_mul`] at `(z, conj w)` then
+    /// [`Self::norm_sq_conj`] at `w`), so `(ac+be)² ≤ normSq z · normSq w`
+    /// (dropping the nonnegative `(bc−ae)²` residue); `CReal.mul_self_abs`
+    /// plus `CReal.le_of_sq_le` turn that into `ac+be ≤ abs z · abs w` (via
+    /// `abs (ac+be)`, which — unlike `ac+be` itself — is provably
+    /// nonnegative); substituting `normSq z ~ (abs z)²`/`normSq w ~
+    /// (abs w)²` (`CReal.mul_self_sqrt`, since `abs` is `sqrt ∘ normSq`) and
+    /// the bound on the cross term gives `normSq(z+w) ≤ (abs z + abs w)²`
+    /// (one more ring identity, one `CReal.add_le_add`); `CReal.sqrt_le_sqrt`
+    /// then `CReal.sqrt_sq` at `abs z + abs w` (nonneg via
+    /// `Complex.abs_nonneg` on each summand) close the square on the
+    /// right-hand side, landing exactly on `abs (add z w) ≤ add (abs z)
+    /// (abs w)` since `abs (add z w)` **is** `sqrt (normSq (add z w))`
+    /// definitionally.
+    pub abs_add_le: NameId,
 }
 
 impl ComplexPrelude {
@@ -1461,6 +1500,7 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         abs_congr: kernel.name_str(complex, "abs_congr"),
         abs_one: kernel.name_str(complex, "abs_one"),
         abs_mul: kernel.name_str(complex, "abs_mul"),
+        abs_add_le: kernel.name_str(complex, "abs_add_le"),
     }
 }
 
@@ -1579,7 +1619,14 @@ pub fn build_complex_prelude(kernel: &mut Kernel) -> Result<ComplexPrelude, Kern
         // analysis, so it does not depend on `abs_congr`/`abs_one` and is
         // placed right after them only because both round out "the laws
         // relating `abs` to the operations it is built from".
-        declare_abs_mul(&mut d, prelude)
+        declare_abs_mul(&mut d, prelude)?;
+        // `abs_add_le` needs `norm_sq_mul`/`norm_sq_conj`/`norm_sq_add_le`
+        // (all declared far above) and `CReal.mul_self_abs`
+        // (`creal/product.rs`) plus `CReal.sqrt_le_sqrt`/`CReal.sqrt_sq`/
+        // `CReal.le_of_sq_le` (`creal/sqrt.rs`) -- no new analysis of its
+        // own, so it is placed last only because it is the heaviest
+        // consumer of everything above it.
+        declare_abs_add_le(&mut d, prelude)
     })();
     match built {
         Ok(()) => Ok(prelude),
@@ -10453,6 +10500,498 @@ fn declare_abs_mul(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelEr
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.abs_mul,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.le a c`, rewritten along two `Equiv`s -- `CReal.le_congr` under a
+/// shorter name, since [`declare_abs_add_le`] chains a great many of these.
+fn le_rewrite(
+    d: &mut IntDev<'_>,
+    creal: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    e: ExprId,
+    hab: ExprId,
+    hce: ExprId,
+    hac: ExprId,
+) -> ExprId {
+    d.lemma(creal.le_congr, &[a, b, c, e, hab, hce, hac])
+}
+
+/// `x ≤ x + y`, given `0 ≤ y` -- [`declare_norm_sq_add_le`]'s own
+/// `step2`/`le_a_ab` construction, extracted so [`declare_abs_add_le`] can
+/// reuse the same three-lemma shape (`add_zero`, `le_refl`, `add_le_add`)
+/// without re-deriving it.
+fn le_self_add_of_nonneg(
+    d: &mut IntDev<'_>,
+    creal: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    hy: ExprId,
+) -> ExprId {
+    let zero = czero(d, creal);
+    let x_plus_zero = cadd(d, creal, x, zero);
+    let add_zero_x = d.lemma(creal.add_zero, &[x]);
+    let le_refl_x = d.lemma(creal.le_refl, &[x]);
+    let step = d.lemma(creal.add_le_add, &[x, x, zero, y, le_refl_x, hy]);
+    let sum = cadd(d, creal, x, y);
+    let refl_sum = crefl(d, creal, sum);
+    le_rewrite(
+        d,
+        creal,
+        x_plus_zero,
+        x,
+        sum,
+        sum,
+        add_zero_x,
+        refl_sum,
+        step,
+    )
+}
+
+/// `0 ≤ x + y`, given `0 ≤ x` and `0 ≤ y` -- the two-hypothesis companion of
+/// [`le_self_add_of_nonneg`], needed for `0 ≤ abs z + abs w` before
+/// `CReal.le_of_sq_le` can be applied to that sum.
+fn le_add_nonneg(
+    d: &mut IntDev<'_>,
+    creal: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    hx: ExprId,
+    hy: ExprId,
+) -> ExprId {
+    let zero = czero(d, creal);
+    let step = d.lemma(creal.add_le_add, &[zero, x, zero, y, hx, hy]);
+    let zero_plus_zero = cadd(d, creal, zero, zero);
+    let add_zero_zero = d.lemma(creal.add_zero, &[zero]);
+    let sum = cadd(d, creal, x, y);
+    let refl_sum = crefl(d, creal, sum);
+    le_rewrite(
+        d,
+        creal,
+        zero_plus_zero,
+        zero,
+        sum,
+        sum,
+        add_zero_zero,
+        refl_sum,
+        step,
+    )
+}
+
+/// `Complex.abs_add_le : ∀ z w, CReal.le (abs (add z w)) (add (abs z)
+/// (abs w))` -- the modulus triangle inequality. See
+/// [`ComplexPrelude::abs_add_le`] for the full proof outline; this is that
+/// outline, executed.
+///
+/// Notation below: `a := re z`, `b := im z`, `c := re w`, `e := im w`,
+/// `cross := a·c + b·e` (`Re(z · conj w)`), `absz/absw := abs z/abs w`,
+/// `mulzw := absz · absw`.
+fn declare_abs_add_le(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let w_fv = d.fresh_fvar();
+    let w = d.kernel().fvar(w_fv);
+
+    let a = re_of(d, p, z);
+    let b = im_of(d, p, z);
+    let c = re_of(d, p, w);
+    let e = im_of(d, p, w);
+
+    let sum_zw = d.const_app(p.add, &[z, w]);
+    let norm_sum = d.const_app(p.norm_sq, &[sum_zw]);
+    let norm_z = d.const_app(p.norm_sq, &[z]);
+    let norm_w = d.const_app(p.norm_sq, &[w]);
+
+    let ac_term = cmul(d, creal, a, c);
+    let be_term = cmul(d, creal, b, e);
+    let cross = cadd(d, creal, ac_term, be_term);
+
+    // --- Part 1: `cross ≤ absz · absw`, via Cauchy-Schwarz -----------------
+    //
+    // `normSq (mul z (conj w)) ~ cross² + diff²` (a ring identity: `conj w`
+    // has `re = c`, `im = neg e`, so `Complex.mul`'s formula gives
+    // `re (mul z (conj w)) = a·c + neg (b · neg e)` [~ cross] and
+    // `im (mul z (conj w)) = a · neg e + b·c` [~ diff]).
+    let conj_w = d.const_app(p.conj, &[w]);
+    let mul_z_conjw = d.const_app(p.mul, &[z, conj_w]);
+    let norm_mul_conjw = d.const_app(p.norm_sq, &[mul_z_conjw]);
+    let ae_term = cmul(d, creal, a, e);
+    let neg_ae_term = cneg(d, creal, ae_term);
+    let bc_term = cmul(d, creal, b, c);
+    let diff = cadd(d, creal, neg_ae_term, bc_term);
+
+    let expand_lhs = {
+        let neg_e = RExpr::neg(RExpr::Atom(e));
+        let ac = RExpr::mul(RExpr::Atom(a), RExpr::Atom(c));
+        let b_neg_e = RExpr::mul(RExpr::Atom(b), neg_e.clone());
+        let real_part = RExpr::add(ac, RExpr::neg(b_neg_e));
+        let a_neg_e = RExpr::mul(RExpr::Atom(a), neg_e);
+        let bc = RExpr::mul(RExpr::Atom(b), RExpr::Atom(c));
+        let imag_part = RExpr::add(a_neg_e, bc);
+        RExpr::add(
+            RExpr::mul(real_part.clone(), real_part),
+            RExpr::mul(imag_part.clone(), imag_part),
+        )
+    };
+    let expand_rhs = {
+        let cross_expr = RExpr::add(
+            RExpr::mul(RExpr::Atom(a), RExpr::Atom(c)),
+            RExpr::mul(RExpr::Atom(b), RExpr::Atom(e)),
+        );
+        let diff_expr = RExpr::add(
+            RExpr::neg(RExpr::mul(RExpr::Atom(a), RExpr::Atom(e))),
+            RExpr::mul(RExpr::Atom(b), RExpr::Atom(c)),
+        );
+        RExpr::add(
+            RExpr::mul(cross_expr.clone(), cross_expr),
+            RExpr::mul(diff_expr.clone(), diff_expr),
+        )
+    };
+    let h_expand = ring_proof(d, creal, &expand_lhs, &expand_rhs);
+    // h_expand : Equiv norm_mul_conjw (add (mul cross cross) (mul diff diff))
+    let cross_sq_pre = cmul(d, creal, cross, cross);
+    let diff_sq_pre = cmul(d, creal, diff, diff);
+    let cross_sq_plus_diff_sq = cadd(d, creal, cross_sq_pre, diff_sq_pre);
+
+    let h_mul = d.lemma(p.norm_sq_mul, &[z, conj_w]);
+    // h_mul : Equiv norm_mul_conjw (mul norm_z (normSq (conj w)))
+    let norm_conjw = d.const_app(p.norm_sq, &[conj_w]);
+    let h_conj = d.lemma(p.norm_sq_conj, &[w]);
+    // h_conj : Equiv norm_conjw norm_w
+    let refl_norm_z = crefl(d, creal, norm_z);
+    let h_mul2 = d.lemma(
+        creal.mul_congr,
+        &[norm_z, norm_z, norm_conjw, norm_w, refl_norm_z, h_conj],
+    );
+    // h_mul2 : Equiv (mul norm_z norm_conjw) (mul norm_z norm_w)
+    let norm_z_conjw = cmul(d, creal, norm_z, norm_conjw);
+    let norm_z_w = cmul(d, creal, norm_z, norm_w);
+    let h_mul_final = ctrans(
+        d,
+        creal,
+        norm_mul_conjw,
+        norm_z_conjw,
+        norm_z_w,
+        h_mul,
+        h_mul2,
+    );
+    // h_mul_final : Equiv norm_mul_conjw (mul norm_z norm_w)
+    let h_expand_symm = csymm(d, creal, norm_mul_conjw, cross_sq_plus_diff_sq, h_expand);
+    let h_full = ctrans(
+        d,
+        creal,
+        cross_sq_plus_diff_sq,
+        norm_mul_conjw,
+        norm_z_w,
+        h_expand_symm,
+        h_mul_final,
+    );
+    // h_full : Equiv cross_sq_plus_diff_sq (mul norm_z norm_w)
+
+    let diff_sq = cmul(d, creal, diff, diff);
+    let cross_sq = cmul(d, creal, cross, cross);
+    let h_diff_nonneg = d.lemma(creal.sq_nonneg, &[diff]);
+    let h_cross_le_sum = le_self_add_of_nonneg(d, creal, cross_sq, diff_sq, h_diff_nonneg);
+    // h_cross_le_sum : le cross_sq cross_sq_plus_diff_sq
+    let refl_cross_sq = crefl(d, creal, cross_sq);
+    let h_cross_le_prod = le_rewrite(
+        d,
+        creal,
+        cross_sq,
+        cross_sq,
+        cross_sq_plus_diff_sq,
+        norm_z_w,
+        refl_cross_sq,
+        h_full,
+        h_cross_le_sum,
+    );
+    // h_cross_le_prod : le cross_sq (mul norm_z norm_w)
+
+    let absz = d.const_app(p.abs, &[z]);
+    let absw = d.const_app(p.abs, &[w]);
+    let hnz = d.lemma(p.norm_sq_nonneg, &[z]);
+    let hnw = d.lemma(p.norm_sq_nonneg, &[w]);
+    let h_mss_z = d.lemma(creal.mul_self_sqrt, &[norm_z, hnz]);
+    // h_mss_z : Equiv (mul (sqrt norm_z) (sqrt norm_z)) norm_z
+    //         = Equiv (mul absz absz) norm_z  (`abs` unfolds to `sqrt (normSq ·)`)
+    let h_mss_w = d.lemma(creal.mul_self_sqrt, &[norm_w, hnw]);
+    let absz_sq = cmul(d, creal, absz, absz);
+    let absw_sq = cmul(d, creal, absw, absw);
+    let h_mss_z_symm = csymm(d, creal, absz_sq, norm_z, h_mss_z);
+    let h_mss_w_symm = csymm(d, creal, absw_sq, norm_w, h_mss_w);
+    let h_prod_sqrt = d.lemma(
+        creal.mul_congr,
+        &[norm_z, absz_sq, norm_w, absw_sq, h_mss_z_symm, h_mss_w_symm],
+    );
+    // h_prod_sqrt : Equiv (mul norm_z norm_w) (mul absz_sq absw_sq)
+
+    let mulzw = cmul(d, creal, absz, absw);
+    let rearrange_lhs = RExpr::mul(
+        RExpr::mul(RExpr::Atom(absz), RExpr::Atom(absz)),
+        RExpr::mul(RExpr::Atom(absw), RExpr::Atom(absw)),
+    );
+    let rearrange_rhs = RExpr::mul(
+        RExpr::mul(RExpr::Atom(absz), RExpr::Atom(absw)),
+        RExpr::mul(RExpr::Atom(absz), RExpr::Atom(absw)),
+    );
+    let h_rearrange = ring_proof(d, creal, &rearrange_lhs, &rearrange_rhs);
+    // h_rearrange : Equiv (mul absz_sq absw_sq) (mul mulzw mulzw)
+
+    let mulzw_sq = cmul(d, creal, mulzw, mulzw);
+    let absz_sq_absw_sq = cmul(d, creal, absz_sq, absw_sq);
+    let refl_cross_sq2 = crefl(d, creal, cross_sq);
+    let h_cross_le2 = le_rewrite(
+        d,
+        creal,
+        cross_sq,
+        cross_sq,
+        norm_z_w,
+        absz_sq_absw_sq,
+        refl_cross_sq2,
+        h_prod_sqrt,
+        h_cross_le_prod,
+    );
+    let refl_cross_sq3 = crefl(d, creal, cross_sq);
+    let h_cross_le3 = le_rewrite(
+        d,
+        creal,
+        cross_sq,
+        cross_sq,
+        absz_sq_absw_sq,
+        mulzw_sq,
+        refl_cross_sq3,
+        h_rearrange,
+        h_cross_le2,
+    );
+    // h_cross_le3 : le cross_sq mulzw_sq
+
+    // `mul_self_abs` cancels the square on the LEFT unconditionally --
+    // `cross` itself is not known nonnegative, but `abs cross` is.
+    let abs_cross = d.const_app(creal.abs, &[cross]);
+    let abs_cross_sq = cmul(d, creal, abs_cross, abs_cross);
+    let h_mul_self_abs_cross = d.lemma(creal.mul_self_abs, &[cross]);
+    // h_mul_self_abs_cross : Equiv abs_cross_sq cross_sq -- h_cross_le3's
+    // LEFT side is `cross_sq`, so rewriting it to `abs_cross_sq` needs this
+    // fact SYMM'd (`Equiv cross_sq abs_cross_sq`), not used forwards.
+    let h_mul_self_abs_cross_symm = csymm(d, creal, abs_cross_sq, cross_sq, h_mul_self_abs_cross);
+    let refl_mulzw_sq = crefl(d, creal, mulzw_sq);
+    let h_sq_le = le_rewrite(
+        d,
+        creal,
+        cross_sq,
+        abs_cross_sq,
+        mulzw_sq,
+        mulzw_sq,
+        h_mul_self_abs_cross_symm,
+        refl_mulzw_sq,
+        h_cross_le3,
+    );
+    // h_sq_le : le abs_cross_sq mulzw_sq
+
+    let h_abscross_nonneg = d.lemma(creal.abs_nonneg, &[cross]);
+    let absz_nonneg = d.lemma(p.abs_nonneg, &[z]);
+    let absw_nonneg = d.lemma(p.abs_nonneg, &[w]);
+    let h_mulzw_nonneg = d.lemma(creal.mul_nonneg, &[absz, absw, absz_nonneg, absw_nonneg]);
+    let h_le_sq = d.lemma(
+        creal.le_of_sq_le,
+        &[abs_cross, mulzw, h_abscross_nonneg, h_mulzw_nonneg, h_sq_le],
+    );
+    // h_le_sq : le abs_cross mulzw
+    let h_cross_le_abscross = d.lemma(creal.le_abs_self, &[cross]);
+    let h_cross_final = d.lemma(
+        creal.le_trans,
+        &[cross, abs_cross, mulzw, h_cross_le_abscross, h_le_sq],
+    );
+    // h_cross_final : le cross mulzw  ("ac+be ≤ abs z · abs w")
+
+    // --- Part 2: fold that bound into `normSq (add z w)` -------------------
+    let sum_re_expr = RExpr::add(RExpr::Atom(a), RExpr::Atom(c));
+    let sum_im_expr = RExpr::add(RExpr::Atom(b), RExpr::Atom(e));
+    let sum_expand_lhs = RExpr::add(
+        RExpr::mul(sum_re_expr.clone(), sum_re_expr),
+        RExpr::mul(sum_im_expr.clone(), sum_im_expr),
+    );
+    let sum_expand_rhs = {
+        let aa_bb = RExpr::add(
+            RExpr::mul(RExpr::Atom(a), RExpr::Atom(a)),
+            RExpr::mul(RExpr::Atom(b), RExpr::Atom(b)),
+        );
+        let cc_ee = RExpr::add(
+            RExpr::mul(RExpr::Atom(c), RExpr::Atom(c)),
+            RExpr::mul(RExpr::Atom(e), RExpr::Atom(e)),
+        );
+        let cross_expr = RExpr::add(
+            RExpr::mul(RExpr::Atom(a), RExpr::Atom(c)),
+            RExpr::mul(RExpr::Atom(b), RExpr::Atom(e)),
+        );
+        RExpr::add(
+            RExpr::add(aa_bb, cc_ee),
+            RExpr::add(cross_expr.clone(), cross_expr),
+        )
+    };
+    let h_sum_expand = ring_proof(d, creal, &sum_expand_lhs, &sum_expand_rhs);
+    // h_sum_expand : Equiv norm_sum (add (add norm_z norm_w) (add cross cross))
+    let norm_zw_sum = cadd(d, creal, norm_z, norm_w);
+    let cross_cross = cadd(d, creal, cross, cross);
+    let mulzw_mulzw = cadd(d, creal, mulzw, mulzw);
+    let expand_target = cadd(d, creal, norm_zw_sum, cross_cross);
+
+    let h_cross_pair_le = d.lemma(
+        creal.add_le_add,
+        &[cross, mulzw, cross, mulzw, h_cross_final, h_cross_final],
+    );
+    // h_cross_pair_le : le cross_cross mulzw_mulzw
+    let h_refl_norm_zw_sum = d.lemma(creal.le_refl, &[norm_zw_sum]);
+    let h_bound_mid = d.lemma(
+        creal.add_le_add,
+        &[
+            norm_zw_sum,
+            norm_zw_sum,
+            cross_cross,
+            mulzw_mulzw,
+            h_refl_norm_zw_sum,
+            h_cross_pair_le,
+        ],
+    );
+    // h_bound_mid : le expand_target (add norm_zw_sum mulzw_mulzw)
+    let bound_via_mulzw = cadd(d, creal, norm_zw_sum, mulzw_mulzw);
+    // `h_bound_mid`'s LEFT side is `expand_target`, not `norm_sum` --
+    // rewriting it needs `h_sum_expand` (`Equiv norm_sum expand_target`)
+    // SYMM'd (`Equiv expand_target norm_sum`), matching `le_congr`'s first
+    // slot in the direction it actually reads.
+    let h_sum_expand_symm = csymm(d, creal, norm_sum, expand_target, h_sum_expand);
+    let refl_bound_via_mulzw = crefl(d, creal, bound_via_mulzw);
+    let h_step1 = le_rewrite(
+        d,
+        creal,
+        expand_target,
+        norm_sum,
+        bound_via_mulzw,
+        bound_via_mulzw,
+        h_sum_expand_symm,
+        refl_bound_via_mulzw,
+        h_bound_mid,
+    );
+    // h_step1 : le norm_sum bound_via_mulzw
+
+    // `norm_zw_sum + mulzw_mulzw ~ (absz+absw)²`.
+    let h_mss_z_symm2 = csymm(d, creal, absz_sq, norm_z, h_mss_z);
+    let h_mss_w_symm2 = csymm(d, creal, absw_sq, norm_w, h_mss_w);
+    let h_first = d.lemma(
+        creal.add_congr,
+        &[
+            norm_z,
+            absz_sq,
+            norm_w,
+            absw_sq,
+            h_mss_z_symm2,
+            h_mss_w_symm2,
+        ],
+    );
+    // h_first : Equiv norm_zw_sum absz_sq_plus_absw_sq
+    let absz_sq_plus_absw_sq = cadd(d, creal, absz_sq, absw_sq);
+    let refl_mulzw_mulzw = crefl(d, creal, mulzw_mulzw);
+    let h_normzw_as_abs = d.lemma(
+        creal.add_congr,
+        &[
+            norm_zw_sum,
+            absz_sq_plus_absw_sq,
+            mulzw_mulzw,
+            mulzw_mulzw,
+            h_first,
+            refl_mulzw_mulzw,
+        ],
+    );
+    // h_normzw_as_abs : Equiv bound_via_mulzw (add absz_sq_plus_absw_sq mulzw_mulzw)
+    let final_ring_lhs = RExpr::add(
+        RExpr::add(
+            RExpr::mul(RExpr::Atom(absz), RExpr::Atom(absz)),
+            RExpr::mul(RExpr::Atom(absw), RExpr::Atom(absw)),
+        ),
+        RExpr::add(
+            RExpr::mul(RExpr::Atom(absz), RExpr::Atom(absw)),
+            RExpr::mul(RExpr::Atom(absz), RExpr::Atom(absw)),
+        ),
+    );
+    let sum_absz_absw = RExpr::add(RExpr::Atom(absz), RExpr::Atom(absw));
+    let final_ring_rhs = RExpr::mul(sum_absz_absw.clone(), sum_absz_absw);
+    let h_final_ring = ring_proof(d, creal, &final_ring_lhs, &final_ring_rhs);
+    // h_final_ring : Equiv (add absz_sq_plus_absw_sq mulzw_mulzw)
+    //                      (mul (add absz absw) (add absz absw))
+    let target_sum = cadd(d, creal, absz, absw);
+    let target_sq = cmul(d, creal, target_sum, target_sum);
+    let absz_sq_absw_sq_plus_mulzw_mulzw = cadd(d, creal, absz_sq_plus_absw_sq, mulzw_mulzw);
+    let h_normzw_eq_sq = ctrans(
+        d,
+        creal,
+        bound_via_mulzw,
+        absz_sq_absw_sq_plus_mulzw_mulzw,
+        target_sq,
+        h_normzw_as_abs,
+        h_final_ring,
+    );
+    // h_normzw_eq_sq : Equiv bound_via_mulzw target_sq
+
+    let refl_norm_sum2 = crefl(d, creal, norm_sum);
+    let h_normsq_le_sq = le_rewrite(
+        d,
+        creal,
+        norm_sum,
+        norm_sum,
+        bound_via_mulzw,
+        target_sq,
+        refl_norm_sum2,
+        h_normzw_eq_sq,
+        h_step1,
+    );
+    // h_normsq_le_sq : le norm_sum target_sq
+
+    // --- Part 3: sqrt both sides, cancel the square on the right ----------
+    let h_sqrt_mono = d.lemma(creal.sqrt_le_sqrt, &[norm_sum, target_sq, h_normsq_le_sq]);
+    // h_sqrt_mono : le (sqrt norm_sum) (sqrt target_sq)
+    //             = le (abs (add z w)) (sqrt target_sq)  (`abs` ~ `sqrt (normSq ·)`)
+    let h_sum_nonneg = le_add_nonneg(d, creal, absz, absw, absz_nonneg, absw_nonneg);
+    let h_sqrt_sq = d.lemma(creal.sqrt_sq, &[target_sum, h_sum_nonneg]);
+    // h_sqrt_sq : Equiv (sqrt target_sq) target_sum
+
+    let sqrt_norm_sum = d.const_app(creal.sqrt, &[norm_sum]);
+    let sqrt_target_sq = d.const_app(creal.sqrt, &[target_sq]);
+    let refl_sqrt_norm_sum = crefl(d, creal, sqrt_norm_sum);
+    let final_proof = le_rewrite(
+        d,
+        creal,
+        sqrt_norm_sum,
+        sqrt_norm_sum,
+        sqrt_target_sq,
+        target_sum,
+        refl_sqrt_norm_sum,
+        h_sqrt_sq,
+        h_sqrt_mono,
+    );
+    // final_proof : le sqrt_norm_sum target_sum
+    //             = le (abs (add z w)) (add absz absw)  -- the goal.
+
+    let abs_sum = d.const_app(p.abs, &[sum_zw]);
+    let goal_rhs = cadd(d, creal, absz, absw);
+    let value = {
+        let with_w = d.lam_fv(w_fv, carrier, final_proof);
+        d.lam_fv(z_fv, carrier, with_w)
+    };
+    let ty = {
+        let claim = d.const_app(creal.le, &[abs_sum, goal_rhs]);
+        let with_w = d.pi_fv(w_fv, carrier, claim);
+        d.pi_fv(z_fv, carrier, with_w)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.abs_add_le,
         uparams: vec![],
         ty,
         value,

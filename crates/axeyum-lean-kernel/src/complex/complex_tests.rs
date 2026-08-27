@@ -236,6 +236,7 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
         ("Complex.abs_congr", p.abs_congr),
         ("Complex.abs_one", p.abs_one),
         ("Complex.abs_mul", p.abs_mul),
+        ("Complex.abs_add_le", p.abs_add_le),
     ];
     // COVERAGE, checked against the ENVIRONMENT rather than against `named`
     // itself.
@@ -1534,6 +1535,87 @@ fn abs_mul_argument_is_load_bearing() {
         admitted.is_err(),
         "abs_mul's proof at (I, one) must NOT type-check against `abs (mul \
          I one) ~ CReal.zero`: {admitted:?}"
+    );
+}
+
+/// A concrete instantiation of [`ComplexPrelude::abs_add_le`] at `z := I`,
+/// `w := one` -- the same discriminating pair [`abs_mul_concrete_instantiation`]
+/// uses, and one where the bound is genuinely non-trivial: `abs (I+1) =
+/// sqrt 2 ≈ 1.41`, strictly less than `abs I + abs one = 2`, so this is not
+/// a case where the inequality degenerates to equality and hides a swapped
+/// direction.
+#[test]
+fn abs_add_le_concrete_instantiation() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let i_c = d.kernel().const_(p.i, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    let proof = d.lemma(p.abs_add_le, &[i_c, one_c]);
+
+    let sum_zw = d.const_app(p.add, &[i_c, one_c]);
+    let abs_sum = d.const_app(p.abs, &[sum_zw]);
+    let abs_i = d.const_app(p.abs, &[i_c]);
+    let abs_one = d.const_app(p.abs, &[one_c]);
+    let rhs = d.const_app(p.creal.add, &[abs_i, abs_one]);
+    let ty = d.const_app(p.creal.le, &[abs_sum, rhs]);
+
+    let name = d.kernel().name_str(anon, "Check.abs_add_le_at_I_one");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value: proof,
+    });
+    assert!(
+        admitted.is_ok(),
+        "abs_add_le at (I, one) must give EXACTLY CReal.le (abs (add I one)) \
+         (add (abs I) (abs one)): {admitted:?}"
+    );
+}
+
+/// Negative control for [`abs_add_le_concrete_instantiation`]: the SAME
+/// proof term must be REFUSED against the REVERSED inequality `le (add
+/// (abs I) (abs one)) (abs (add I one))` -- `le` is not symmetric, and this
+/// is the direction the classical triangle inequality does NOT claim.
+#[test]
+fn abs_add_le_direction_is_load_bearing() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let i_c = d.kernel().const_(p.i, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let proof = d.lemma(p.abs_add_le, &[i_c, one_c]);
+
+    let sum_zw = d.const_app(p.add, &[i_c, one_c]);
+    let abs_sum = d.const_app(p.abs, &[sum_zw]);
+    let abs_i = d.const_app(p.abs, &[i_c]);
+    let abs_one = d.const_app(p.abs, &[one_c]);
+    let rhs = d.const_app(p.creal.add, &[abs_i, abs_one]);
+    let wrong_ty = d.const_app(p.creal.le, &[rhs, abs_sum]);
+
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.abs_add_le_wrong_direction");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty: wrong_ty,
+        value: proof,
+    });
+    assert!(
+        admitted.is_err(),
+        "abs_add_le's proof at (I, one) must NOT type-check against the \
+         REVERSED `le (add (abs I) (abs one)) (abs (add I one))`: {admitted:?}"
     );
 }
 
