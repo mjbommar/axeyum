@@ -20,6 +20,7 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
         ("CReal.maxRange_self_le", p.max_range_self_le, "theorem"),
         ("CReal.maxRange_mono", p.max_range_mono, "theorem"),
         ("CReal.maxRange_ub", p.max_range_ub, "theorem"),
+        ("CReal.maxRange_transport", p.max_range_transport, "theorem"),
         ("CReal.meshLevelCount", p.mesh_level_count, "def"),
         (
             "CReal.meshLevelCount_zero",
