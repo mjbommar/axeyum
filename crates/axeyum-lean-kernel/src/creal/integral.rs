@@ -21311,15 +21311,7 @@ fn sample_point_pair_diff_le(
     let habs = d.lemma(p.abs_congr, &[oi_wprod, target_diff, hprod]);
     let leg2 = d.lemma(
         p.le_congr,
-        &[
-            abs_oiwprod,
-            abs_target,
-            scaled,
-            bw,
-            habs,
-            mcw,
-            h_oiwprod,
-        ],
+        &[abs_oiwprod, abs_target, scaled, bw, habs, mcw, h_oiwprod],
     );
 
     add_pair_diff_le(d, p, x, a1, x2, b1, bx, bw, hbx, leg2)
@@ -21420,8 +21412,8 @@ fn riemann_sum_endpoints_le_uniform(
     };
 
     riemann_sum_endpoints_le(
-        d, p, f, aa, bb, u, k, hb, x, y, x2, y2, m, e, dd, d2b, hxy, hx2y2, hax, hyb, hax2,
-        hy2b, hdd, hd2, hclose,
+        d, p, f, aa, bb, u, k, hb, x, y, x2, y2, m, e, dd, d2b, hxy, hx2y2, hax, hyb, hax2, hy2b,
+        hdd, hd2, hclose,
     )
 }
 
@@ -21499,9 +21491,7 @@ mod piece_one_unconditional_tests {
         let hbw_fv = d.fresh_fvar();
         let hbw = d.kernel().fvar(hbw_fv);
 
-        let proof = sample_point_pair_diff_le(
-            &mut d, p, x, y, x2, y2, m, i, bx, bw, hle, hbx, hbw,
-        );
+        let proof = sample_point_pair_diff_le(&mut d, p, x, y, x2, y2, m, i, bx, bw, hle, hbx, hbw);
 
         let delta1 = delta_of(&mut d, p, x, y, m);
         let delta2 = delta_of(&mut d, p, x2, y2, m);
@@ -21679,8 +21669,8 @@ mod piece_one_unconditional_tests {
         let hfit = d.kernel().fvar(hfit_fv);
 
         let proof = riemann_sum_endpoints_le_uniform(
-            &mut d, p, f, aa, bb, u, k, hb, x, y, x2, y2, m, e, dd, d2b, bx, bw, hxy, hx2y2,
-            hax, hyb, hax2, hy2b, hdd, hd2, hbx, hbw, hfit,
+            &mut d, p, f, aa, bb, u, k, hb, x, y, x2, y2, m, e, dd, d2b, bx, bw, hxy, hx2y2, hax,
+            hyb, hax2, hy2b, hdd, hd2, hbx, hbw, hfit,
         );
 
         let rs1 = rsum(&mut d, p, f, x, y, m);
