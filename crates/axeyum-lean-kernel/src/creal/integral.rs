@@ -13840,11 +13840,15 @@ pub(super) fn declare_riemann_sum_split_scale_invariant(
     let mul_cb = NatOps::mul(d, n_cb0, succ_k);
 
     let pf_ac_symm = d.symm(mul_ac, n_ac_k, pf_ac); // Eq Nat n_ac_k mul_ac
-    let step_a = d.congr(n_ac_k, mul_ac, pf_ac_symm, &|d, x| NatOps::add(d, x, n_cb_k));
+    let step_a = d.congr(n_ac_k, mul_ac, pf_ac_symm, &|d, x| {
+        NatOps::add(d, x, n_cb_k)
+    });
     // step_a : Eq Nat (add n_ac_k n_cb_k) (add mul_ac n_cb_k)
 
     let pf_cb_symm = d.symm(mul_cb, n_cb_k, pf_cb); // Eq Nat n_cb_k mul_cb
-    let step_b = d.congr(n_cb_k, mul_cb, pf_cb_symm, &|d, x| NatOps::add(d, mul_ac, x));
+    let step_b = d.congr(n_cb_k, mul_cb, pf_cb_symm, &|d, x| {
+        NatOps::add(d, mul_ac, x)
+    });
     // step_b : Eq Nat (add mul_ac n_cb_k) (add mul_ac mul_cb)
 
     let n_ab0 = NatOps::add(d, n_ac0, n_cb0);
@@ -13892,11 +13896,18 @@ pub(super) fn declare_riemann_sum_split_scale_invariant(
     });
     // rat_eq_km : Eq Rat fr_k_exp fr_prime_exp
     let refl_delta_k = d.lemma(p.equiv_refl, &[delta_ab_k]);
-    let h_delta_k_prime = rat_eq_rewrite(d, fr_k_exp, fr_prime_exp, rat_eq_km, refl_delta_k, &|d, t| {
-        let embedded = embed(d, p, t);
-        let rhs = cmul(d, p, width_ab, embedded);
-        equiv(d, p, delta_ab_k, rhs)
-    });
+    let h_delta_k_prime = rat_eq_rewrite(
+        d,
+        fr_k_exp,
+        fr_prime_exp,
+        rat_eq_km,
+        refl_delta_k,
+        &|d, t| {
+            let embedded = embed(d, p, t);
+            let rhs = cmul(d, p, width_ab, embedded);
+            equiv(d, p, delta_ab_k, rhs)
+        },
+    );
     // h_delta_k_prime : Equiv delta_ab_k (delta_of a b m_ab_prime)
 
     let on_succ_k = d.const_app(p.of_nat, &[succ_k]);
@@ -13938,7 +13949,14 @@ pub(super) fn declare_riemann_sum_split_scale_invariant(
     let refl_delta_ab_k2 = d.lemma(p.equiv_refl, &[delta_ab_k]);
     let step_x1 = d.lemma(
         p.mul_congr,
-        &[ofnat_nack, rhs_ac, delta_ab_k, delta_ab_k, e_ac, refl_delta_ab_k2],
+        &[
+            ofnat_nack,
+            rhs_ac,
+            delta_ab_k,
+            delta_ab_k,
+            e_ac,
+            refl_delta_ab_k2,
+        ],
     );
     // step_x1 : Equiv (mul ofnat_nack delta_ab_k) (mul rhs_ac delta_ab_k)
     let masc_x = d.lemma(p.mul_assoc, &[ofnat_nac0, on_succ_k, delta_ab_k]);
