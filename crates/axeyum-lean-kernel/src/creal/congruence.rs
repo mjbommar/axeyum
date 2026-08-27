@@ -120,7 +120,7 @@ fn op_name(p: CRealPrelude, op: Op) -> NameId {
 /// The argument shape a congruence lemma takes, i.e. how many
 /// hypothesis/witness pairs [`derive`] must supply it.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-enum Arity {
+pub(crate) enum Arity {
     /// `∀ x y, Equiv x y → Equiv (f x) (f y)` — applied as `lemma(x, y, h)`.
     Unary,
     /// `∀ x x' y y', Equiv x x' → Equiv y y' → Equiv (f x y) (f x' y')` —
@@ -137,7 +137,7 @@ enum Arity {
 /// One row of the congruence registry: an operation, its own `CReal`
 /// constant, its congruence lemma, and the lemma's argument shape.
 #[derive(Clone, Copy)]
-struct CongrEntry {
+pub(crate) struct CongrEntry {
     op: Op,
     op_name: NameId,
     congr_name: NameId,
@@ -196,7 +196,10 @@ fn registry(p: CRealPrelude) -> Vec<CongrEntry> {
 /// built only from the remaining operations still succeed in the same run.
 #[cfg(test)]
 fn registry_without(p: CRealPrelude, dropped: Op) -> Vec<CongrEntry> {
-    registry(p).into_iter().filter(|e| e.op != dropped).collect()
+    registry(p)
+        .into_iter()
+        .filter(|e| e.op != dropped)
+        .collect()
 }
 
 fn lookup(reg: &[CongrEntry], op: Op) -> Option<&CongrEntry> {
@@ -211,6 +214,11 @@ fn lookup(reg: &[CongrEntry], op: Op) -> Option<&CongrEntry> {
 /// building the negative control. An enum rather than a closure: [`derive`]
 /// must inspect a node to pick its congruence lemma without ever running the
 /// term, and a closure over `ExprId`s offers no such inspection.
+// `Unary` and `Opaque` are constructed only by this module's own
+// `#[cfg(test)]` demos today (a non-test build never builds an expression
+// using either), which is expected for general-purpose term-representation
+// machinery — see `declare_derived_congr`'s own doc comment.
+#[allow(dead_code)]
 pub(crate) enum CongruExpr {
     /// The point being varied — evaluates to whichever of the two compared
     /// points [`eval`]/[`derive`] is currently working with.
@@ -324,12 +332,9 @@ pub(crate) fn derive(
             let ex = eval(d, p, inner, x);
             let ey = eval(d, p, inner, y);
             let proof = d.lemma(entry.congr_name, &[ex, ey, inner_proof]);
-            let stmt = equiv(
-                d,
-                p,
-                d.const_app(entry.op_name, &[ex]),
-                d.const_app(entry.op_name, &[ey]),
-            );
+            let lhs = d.const_app(entry.op_name, &[ex]);
+            let rhs = d.const_app(entry.op_name, &[ey]);
+            let stmt = equiv(d, p, lhs, rhs);
             Ok((stmt, proof))
         }
         CongruExpr::Binary(op, l, r) => {
@@ -346,12 +351,9 @@ pub(crate) fn derive(
             // Argument order verified against three independent existing
             // call sites — see `Arity::Binary`'s own doc comment.
             let proof = d.lemma(entry.congr_name, &[lx, ly, rx, ry, l_proof, r_proof]);
-            let stmt = equiv(
-                d,
-                p,
-                d.const_app(entry.op_name, &[lx, rx]),
-                d.const_app(entry.op_name, &[ly, ry]),
-            );
+            let lhs = d.const_app(entry.op_name, &[lx, rx]);
+            let rhs = d.const_app(entry.op_name, &[ly, ry]);
+            let stmt = equiv(d, p, lhs, rhs);
             Ok((stmt, proof))
         }
         CongruExpr::Pow(base, n) => {
@@ -361,12 +363,9 @@ pub(crate) fn derive(
             // `pow_congr x y h n`, per `CongruExpr::Pow`'s own doc comment:
             // the exponent is the LAST argument, after the hypothesis.
             let proof = d.lemma(p.pow_congr, &[bx, by, base_proof, *n]);
-            let stmt = equiv(
-                d,
-                p,
-                d.const_app(p.pow, &[bx, *n]),
-                d.const_app(p.pow, &[by, *n]),
-            );
+            let lhs = d.const_app(p.pow, &[bx, *n]);
+            let rhs = d.const_app(p.pow, &[by, *n]);
+            let stmt = equiv(d, p, lhs, rhs);
             Ok((stmt, proof))
         }
         CongruExpr::Opaque(..) => Err(CongrError::Unregistered(
@@ -389,6 +388,14 @@ pub(crate) enum DeclareError {
 /// running [`derive`] and handing the result straight to
 /// `Kernel::add_declaration` — the judge, per declaration, exactly like every
 /// other theorem in this crate.
+///
+/// General-purpose deriving machinery, like `IntDev::congr` — exercised today
+/// by this module's own `#[cfg(test)]` demos rather than by a second
+/// production call site, so a non-test build sees it as unused. Kept public
+/// (`pub(crate)`) rather than test-gated because a future producer composing
+/// a NEW derived congruence under a permanent name is exactly the intended
+/// reuse.
+#[allow(dead_code)]
 pub(crate) fn declare_derived_congr(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -625,12 +632,15 @@ mod tests {
         let reg = registry(p);
         let mut d = IntDev::new(&mut kernel, p.rat.int);
 
-        // `q`: an arbitrary but fixed real, standing in for `ofRat q` --
-        // a `CReal`-typed free variable that does not mention `Var` is
-        // exactly what `CongruExpr::Const` requires, and is agnostic to
-        // which concrete rational `q` denotes.
-        let q_fv = d.fresh_fvar();
-        let q = d.kernel().fvar(q_fv);
+        // `q := ofRat 0`: a CLOSED `CReal` term that does not mention `Var`,
+        // exactly what `CongruExpr::Const` requires. A fresh `fvar` would
+        // NOT work here and did not on the first attempt: `declare_derived_
+        // congr` only binds `x`/`y`/`h` with `pi_fv`/`lam_fv`, so any other
+        // fvar the expression mentions is left unbound in the final closed
+        // term and the kernel rejects it with `UnboundFVar` -- caught by
+        // this very test failing on its first run.
+        let zero_rat = d.kernel().const_(p.rat.zero, vec![]);
+        let q = d.const_app(p.of_rat, &[zero_rat]);
 
         // abs(min(add x q, mul x x))
         let expr = CongruExpr::Unary(
@@ -659,9 +669,7 @@ mod tests {
         // reporter): this is the deepest demo, so its cost is the number
         // `docs/formalized-math-2026-08/07-the-cost-model-and-pareto-position.md`
         // §3 asks a producer to report.
-        eprintln!(
-            "congruence deriver: composite_clamp_like_term derive+check = {elapsed:?}"
-        );
+        eprintln!("congruence deriver: composite_clamp_like_term derive+check = {elapsed:?}");
     }
 
     /// Demo (d), the negative control: a term built from a raw,
