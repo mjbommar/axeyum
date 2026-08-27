@@ -239,8 +239,15 @@ def main() -> int:
     with cf.ThreadPoolExecutor(max_workers=jobs) as ex:
         results = list(ex.map(lambda n: run_one(n, args.timeout), mine))
 
-    failed = [r for r in results if r["rc"] != 0]
-    vacuous = [r for r in results if r["rc"] == 0 and r["tests"] == 0]
+    # A suite that COLLECTED NOTHING is reported as such and not as a generic
+    # failure, whatever its exit code. Python >= 3.12 exits 5 for "no tests ran"
+    # and older interpreters exit 0 with `Ran 0 tests ... OK`; the first reads as
+    # an ordinary failure and the second as a pass, and neither names the actual
+    # problem. The condition is `tests == 0`, not an exit code, so it holds on
+    # both.
+    vacuous = [r for r in results if r["tests"] == 0]
+    vacuous_names = {r["name"] for r in vacuous}
+    failed = [r for r in results if r["rc"] != 0 and r["name"] not in vacuous_names]
     total_tests = sum(r["tests"] for r in results)
 
     print(
@@ -254,7 +261,7 @@ def main() -> int:
         print("  " + r["tail"].replace("\n", "\n  "), file=sys.stderr)
     for r in vacuous:
         print(
-            f"PYTHON_CONTROLS_ERROR|{r['name']} ran ZERO tests and exited 0. "
+            f"PYTHON_CONTROLS_ERROR|{r['name']} ran ZERO tests (rc={r['rc']}). "
             f"`python3 -m unittest` collects `unittest.TestCase` methods only, so a "
             f"pytest-dialect suite (bare `def test_x()`) is a step that cannot fail.",
             file=sys.stderr,

@@ -17,6 +17,48 @@
 #
 # So: the registry is derived from the filesystem, not maintained by hand. A new
 # `scripts/tests/*.sh` is red until some gate names it.
+#
+# ---------------------------------------------------------------------------
+# 2026-08-27: THE PYTHON HALF NO LONGER RATCHETS A NUMBER.
+#
+# It used to. `PY_ORPHAN_BASELINE=188` pinned the count of Python suites no
+# caller named, so the gate went red when a NEW orphan appeared and stayed green
+# over the standing 188 -- 49% of the corpus, permanently invisible, at a floor
+# nobody chose. It accumulated one lane at a time and the ratchet was set to
+# whatever the number happened to be the day it was written.
+#
+# That is the defect this file exists to prevent, arriving one level out. Three
+# orphans appeared on 2026-08-27 and all three were checks written THAT DAY to
+# close real defects, including the replacement for a pair of tests that could
+# not fail.
+#
+# The floor is gone. Registration is now DERIVED: `scripts/run-python-controls.py`
+# discovers every `scripts/tests/test_*.py`, subtracts the suites a caller names
+# by hand and the reasoned exclusions in `scripts/control-optout.tsv`, and runs
+# the rest. So a new Python control runs the moment it is committed, with no
+# registration step to forget.
+#
+# What this gate checks is therefore no longer "how many are unnamed" (zero, by
+# construction) but that the CONSTRUCTION IS INTACT:
+#
+#   G1  the catch-all runner is itself invoked by a caller. If it is not, every
+#       suite falls through it and the whole scheme is inert -- the exact
+#       failure this file is about, so it is checked FIRST and by an
+#       independent grep rather than by asking the runner.
+#   G2  no hyphenated `.py` under scripts/tests/. Confirmed by probe the same
+#       day: the `test_*.py` glob cannot see `test-foo.py`, AND such a name is
+#       not an importable module, so `python3 -m unittest scripts.tests.test-foo`
+#       cannot run it either. Inert twice over. `.sh` controls are unaffected --
+#       hyphens are their convention and all 20 are registered.
+#   G3  every opt-out entry names a file that exists (a stale exclusion hides
+#       nothing and misstates the corpus).
+#   G4  every opt-out entry carries a reason.
+#   G5  no suite is both opted out and named by a caller.
+#   G6  the opt-out list does not grow silently (ratchet, as before -- but now
+#       over 19 NAMED entries a reader can argue with, not an anonymous 188).
+#   G7  this gate's own partition agrees with the runner's. Two independent
+#       implementations of "which suites are covered"; a disagreement means one
+#       of them is wrong, and neither can be trusted to audit itself.
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 2
 
@@ -24,22 +66,14 @@ cd "$(dirname "$0")/.." || exit 2
 # caller even though it is not the aggregate gate.
 CALLERS=(scripts/check.sh justfile hooks/pre-push .github/workflows)
 
-# The Python half. Measured 2026-08-22: this gate scanned 13 `.sh` controls and
-# was blind to 322 `scripts/tests/test_*.py` suites, of which **199 are named by
-# no caller at all**. That is precisely the defect this file exists to prevent --
-# "a control nobody invokes is indistinguishable from a control that does not
-# exist" -- at fifteen times the scale, in the file type it never looked at.
-#
-# Confirmed not to be a query artifact before being written down: there is no
-# `unittest discover` anywhere in a caller, registered suites are named twice
-# each (check.sh + justfile), and sampled orphans are referenced nowhere.
-#
-# A RATCHET, not a cliff. Turning 199 suites red today would break the gate for
-# every lane and it would be switched off within the hour, which is worse than
-# the blind spot. So the count is pinned: a RISE fails, and a FALL is a result
-# that must lower the pin. New Python controls therefore have to be registered,
-# which is the property that was missing.
-PY_ORPHAN_BASELINE=${AXEYUM_PY_ORPHAN_BASELINE:-188}
+RUNNER=scripts/run-python-controls.py
+OPTOUT=scripts/control-optout.tsv
+
+# G6. A ratchet over the opt-out list. Every entry is a written liability;
+# adding one must be deliberate, and removing one is a RESULT that lowers this.
+OPTOUT_CEILING=${AXEYUM_CONTROL_OPTOUT_CEILING:-19}
+
+rc=0
 
 orphans=()
 total=0
@@ -84,41 +118,124 @@ if [ "$total" -lt 5 ]; then
   exit 1
 fi
 
-# --- Python suites: ratcheted, see PY_ORPHAN_BASELINE above -------------------
-py_total=0
-py_orphans=0
-py_names=()
 callers_text=$(for c in "${CALLERS[@]}"; do
     [ -e "$c" ] || continue
     if [ -d "$c" ]; then cat "$c"/* 2>/dev/null; else sed 's/^[[:space:]]*#.*$//' "$c"; fi
   done)
+
+# --- G1: is the catch-all runner itself invoked? -----------------------------
+# Checked before anything else and WITHOUT asking the runner, because if the
+# answer is no then every number the runner reports is about work that never
+# happens. `grep -c` for the SIGPIPE reason above.
+runner_named=$(printf '%s' "$callers_text" | grep -cF "$RUNNER")
+if [ "${runner_named:-0}" -eq 0 ]; then
+  echo "CONTROL_REGISTRATION_ERROR|$RUNNER is invoked by no caller, so every" \
+       "python control it would run is inert. Registration is DERIVED from that" \
+       "script; if nothing calls it, nothing calls them. Add it as a step in" \
+       "scripts/check.sh and the justfile's check recipe." >&2
+  rc=1
+fi
+
+# --- G2: hyphenated .py controls are unreachable ------------------------------
+hyphen_py=()
+for f in scripts/tests/*.py; do
+  [ -e "$f" ] || continue
+  b=$(basename "$f")
+  case "$b" in *-*) hyphen_py+=("$b") ;; esac
+done
+if [ "${#hyphen_py[@]}" -gt 0 ]; then
+  for h in "${hyphen_py[@]}"; do
+    echo "CONTROL_REGISTRATION_ERROR|scripts/tests/$h is unreachable TWICE: the" \
+         "test_*.py discovery glob does not match a hyphen, and a hyphenated name" \
+         "is not an importable module so \`python3 -m unittest scripts.tests.${h%.py}\`" \
+         "cannot run it either. Rename it with underscores. (.sh controls keep" \
+         "hyphens -- they are invoked by path.)" >&2
+  done
+  rc=1
+fi
+
+# --- G3/G4/G5: the opt-out list ----------------------------------------------
+py_optout=0
+optout_names=()
+if [ ! -e "$OPTOUT" ]; then
+  echo "CONTROL_REGISTRATION_ERROR|$OPTOUT is missing; it is the authority for" \
+       "which python controls are deliberately not run" >&2
+  exit 1
+fi
+lineno=0
+while IFS= read -r line || [ -n "$line" ]; do
+  lineno=$((lineno + 1))
+  case "$line" in ''|'#'*) continue ;; esac
+  name=${line%%$'\t'*}
+  reason=${line#*$'\t'}
+  if [ "$name" = "$line" ]; then
+    echo "CONTROL_REGISTRATION_ERROR|$OPTOUT:$lineno: no TAB. Every exclusion" \
+         "needs \`name<TAB>reason\` -- a name without a reason is the anonymous" \
+         "numeric floor again with extra steps." >&2
+    rc=1
+    continue
+  fi
+  # G4: reason must be non-blank.
+  if [ -z "${reason//[[:space:]]/}" ]; then
+    echo "CONTROL_REGISTRATION_ERROR|$OPTOUT:$lineno: $name has no reason" >&2
+    rc=1
+  fi
+  # G3: the file must exist.
+  if [ ! -e "scripts/tests/$name.py" ]; then
+    echo "CONTROL_REGISTRATION_ERROR|$OPTOUT:$lineno: $name does not exist." \
+         "Delete the line: a stale exclusion hides nothing and misstates the corpus." >&2
+    rc=1
+  fi
+  # G5: opted out AND named by a caller is a contradiction -- one of the two is
+  # a lie about whether this suite runs.
+  claimed=$(printf '%s' "$callers_text" | grep -cF "scripts.tests.$name")
+  claimed=$((claimed + $(printf '%s' "$callers_text" | grep -cF "scripts/tests/$name.py")))
+  if [ "$claimed" -gt 0 ]; then
+    echo "CONTROL_REGISTRATION_ERROR|$OPTOUT:$lineno: $name is opted OUT here and" \
+         "named by a caller. It cannot be both excluded and run; delete one." >&2
+    rc=1
+  fi
+  optout_names+=("$name")
+  py_optout=$((py_optout + 1))
+done < "$OPTOUT"
+
+# --- the partition, computed HERE, independently of the runner ---------------
+py_total=0
+py_named=0
+py_mine=()
 for f in scripts/tests/test_*.py; do
   [ -e "$f" ] || continue
   b=$(basename "$f" .py)
   py_total=$((py_total + 1))
-  # `grep -c`, never `grep -q`: under `set -o pipefail` a `-q` consumer SIGPIPEs
-  # the producer and the pipeline reports 141, which reads as "not found".
   # BOTH invocation forms count. A suite run as `python3 scripts/tests/x.py` is
   # just as run as one named `python3 -m unittest scripts.tests.x`, and counting
   # only the module form reported 217 orphans against a true 199 -- an 18-suite
   # overcount that would have been written down as a finding.
   named=$(printf '%s' "$callers_text" | grep -cF "scripts.tests.$b")
   named=$((named + $(printf '%s' "$callers_text" | grep -cF "scripts/tests/$b.py")))
-  if [ "$named" -eq 0 ]; then
-    py_orphans=$((py_orphans + 1))
-    py_names+=("$b")
+  if [ "$named" -gt 0 ]; then
+    py_named=$((py_named + 1))
+    continue
   fi
+  excluded=0
+  for o in ${optout_names[@]+"${optout_names[@]}"}; do
+    [ "$o" = "$b" ] && excluded=1 && break
+  done
+  [ "$excluded" = 0 ] && py_mine+=("$b")
 done
 if [ "$py_total" -lt 50 ]; then
   echo "CONTROL_REGISTRATION_ERROR|found only $py_total python suite(s); the glob" \
-       "is looking at the wrong place and an empty corpus would ratchet vacuously" >&2
+       "is looking at the wrong place and an empty corpus would pass vacuously" >&2
   exit 1
 fi
-py_status=ok
-[ "$py_orphans" -gt "$PY_ORPHAN_BASELINE" ] && py_status=ROSE
-[ "$py_orphans" -lt "$PY_ORPHAN_BASELINE" ] && py_status=FELL
 
-echo "CONTROL_REGISTRATION|controls=$total|orphans=${#orphans[@]}|py_controls=$py_total|py_orphans=$py_orphans|py_baseline=$PY_ORPHAN_BASELINE|py=$py_status"
+# Everything is named, run by the catch-all, or excluded with a reason. This is
+# true by construction, which is the point of the redesign -- so it is printed,
+# not celebrated, and the guards that can actually fail are G1-G7.
+py_orphans=0
+
+echo "CONTROL_REGISTRATION|controls=$total|orphans=${#orphans[@]}|py_controls=$py_total|py_orphans=$py_orphans|py_named=$py_named|py_catchall=${#py_mine[@]}|py_optout=$py_optout|py_optout_ceiling=$OPTOUT_CEILING"
+
 if [ "${#orphans[@]}" -gt 0 ]; then
   for o in "${orphans[@]}"; do
     echo "CONTROL_REGISTRATION_ERROR|$o is run by nothing. Register it as a" \
@@ -126,20 +243,45 @@ if [ "${#orphans[@]}" -gt 0 ]; then
          "it belongs in the aggregate gate). A control nobody invokes cannot" \
          "fail, so it is not a control" >&2
   done
-  exit 1
+  rc=1
 fi
-echo "  all $total control script(s) are invoked by a gate"
 
-if [ "$py_status" = ROSE ]; then
-  echo "CONTROL_REGISTRATION_ERROR|python control orphans ROSE" \
-       "$PY_ORPHAN_BASELINE -> $py_orphans. A new scripts/tests/test_*.py is run" \
-       "by nothing: name it in scripts/check.sh or the justfile. Candidates:" \
-       "${py_names[*]:0:6}" >&2
-  exit 1
+# --- G6: the opt-out ratchet, both directions --------------------------------
+if [ "$py_optout" -gt "$OPTOUT_CEILING" ]; then
+  echo "CONTROL_REGISTRATION_ERROR|python control opt-outs ROSE" \
+       "$OPTOUT_CEILING -> $py_optout. Excluding a control from the catch-all is" \
+       "a decision: raise OPTOUT_CEILING in this file and say why in the commit." >&2
+  rc=1
 fi
-if [ "$py_status" = FELL ]; then
-  echo "CONTROL_REGISTRATION_ERROR|python control orphans FELL" \
-       "$PY_ORPHAN_BASELINE -> $py_orphans. That is a result: lower" \
-       "PY_ORPHAN_BASELINE to $py_orphans" >&2
-  exit 1
+if [ "$py_optout" -lt "$OPTOUT_CEILING" ]; then
+  echo "CONTROL_REGISTRATION_ERROR|python control opt-outs FELL" \
+       "$OPTOUT_CEILING -> $py_optout. That is a result: lower OPTOUT_CEILING" \
+       "to $py_optout." >&2
+  rc=1
 fi
+
+# --- G7: cross-check the partition against the runner's own -------------------
+# Two independent implementations. The runner decides what to RUN; this gate
+# decides what SHOULD be run. If they disagree, at least one is wrong, and the
+# failure mode a single implementation cannot detect is exactly the one this
+# whole file exists for -- a set that silently shrinks.
+if [ -x "$RUNNER" ] || [ -e "$RUNNER" ]; then
+  runner_list=$(python3 "$RUNNER" --list 2>/dev/null | sort)
+  gate_list=$(printf '%s\n' ${py_mine[@]+"${py_mine[@]}"} | sort)
+  if [ "$runner_list" != "$gate_list" ]; then
+    echo "CONTROL_REGISTRATION_ERROR|the catch-all set this gate computes" \
+         "(${#py_mine[@]}) differs from what $RUNNER --list reports. One of the" \
+         "two partitions is wrong; they are deliberately separate implementations." >&2
+    diff <(printf '%s\n' "$gate_list") <(printf '%s\n' "$runner_list") | head -20 >&2
+    rc=1
+  fi
+else
+  echo "CONTROL_REGISTRATION_ERROR|$RUNNER does not exist" >&2
+  rc=1
+fi
+
+[ "$rc" -eq 0 ] || exit 1
+
+echo "  all $total control script(s) are invoked by a gate"
+echo "  $py_total python control(s): $py_named named by a step, ${#py_mine[@]} run by" \
+     "the catch-all, $py_optout excluded with a written reason"

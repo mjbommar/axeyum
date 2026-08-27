@@ -360,6 +360,19 @@ step lean-golden-pin-controls ./scripts/tests/test-check-lean-golden-pins.sh
 # were written, both pass, and one of them was invoked by nothing for a day
 # because registering a control is a manual step separate from writing it.
 step control-registration ./scripts/check-control-registration.sh
+# The registration gate's OWN controls. It had none until 2026-08-27 -- the gate
+# whose subject is "a check nobody invokes cannot fail" was itself unverified,
+# and its python half then pinned an unexplained floor of 188 unnamed suites.
+# 15 cases, each mutation-verified to die when its guard is deleted.
+step control-registration-controls ./scripts/tests/test-check-control-registration.sh
+# ...and the catch-all that makes registration DERIVED rather than remembered.
+# Measured 2026-08-27: 188 of 382 python control suites -- 49% -- were named by
+# no caller at all, pinned as a numeric floor nobody had chosen. This runs every
+# `scripts/tests/test_*.py` that no step above names, minus the reasoned
+# exclusions in `scripts/control-optout.tsv`. 169 suites, 1193 tests, ~39s at 8
+# jobs. It fails on a suite that FAILS and on a suite that runs ZERO tests --
+# ten of those 188 were pytest-dialect files that `unittest` collects as nothing.
+step python-controls ./scripts/run-python-controls.py
 # Ban the shell idioms that print a WRONG ANSWER while exiting 0. Both pinned
 # patterns were real defects on 2026-08-20: `grep -q` piped under pipefail
 # made the SAME tree report 7 orphans then 3, and `$?` after a pipeline

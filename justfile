@@ -464,6 +464,16 @@ gate-controls:
     # because registering a control is a manual step separate from writing it.
     # A control nobody runs cannot fail, so it is not a control.
     scripts/check-control-registration.sh
+    # The registration gate's OWN controls -- it had none, which is the joke
+    # this file exists to stop being. 15 cases, each mutation-verified.
+    scripts/tests/test-check-control-registration.sh
+    # ...and the catch-all that makes registration DERIVED rather than
+    # remembered. 188 of 382 python control suites were named by no caller at
+    # all on 2026-08-27 -- 49%, pinned as a floor nobody had chosen. This runs
+    # every `scripts/tests/test_*.py` no step names, minus the reasoned
+    # exclusions in `scripts/control-optout.tsv`, and fails both on a suite that
+    # FAILS and on one that collects ZERO tests.
+    scripts/run-python-controls.py
     # `grep -q` in a pipeline under pipefail, and `$?` read after a pipeline:
     # both print a wrong answer while exiting 0, and both shipped here.
     scripts/check-shell-antipatterns.sh
