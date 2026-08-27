@@ -14,5 +14,13 @@ publish = false
 [dependencies]
 num-bigint = "0.4"
 
+[dev-dependencies]
+# CAS -> kernel polynomial-identity bridge tests only (`complex/cas_bridge_tests.rs`,
+# `#[cfg(test)]`). This is the "untrusted fast search" half depending on the
+# "trusted small checking" half for TEST purposes only -- axeyum-cas does not
+# depend back on axeyum-lean-kernel, so there is no cycle, and the default
+# library build (what ships) never links it.
+axeyum-cas.workspace = true
+
 [lints]
 workspace = true

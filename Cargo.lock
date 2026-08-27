@@ -149,6 +149,7 @@ dependencies = [
 name = "axeyum-lean-kernel"
 version = "0.1.0"
 dependencies = [
+ "axeyum-cas",
  "num-bigint",
 ]
 
