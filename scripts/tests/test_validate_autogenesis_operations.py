@@ -455,6 +455,175 @@ class OperationRegistryTests(unittest.TestCase):
                         registry_module.validate_registry(mutated, ROOT)
 
 
+    def _authored_declaration_operation_index(self) -> int:
+        for index, operation in enumerate(self.registry["operations"]):
+            if operation["id"] == "authoritative-kernel-int-modeq-shift-family-v1":
+                return index
+        raise AssertionError(
+            "authoritative-kernel-int-modeq-shift-family-v1 is missing from "
+            "the committed registry"
+        )
+
+    def test_committed_registry_carries_the_general_kernel_lane_driver(self) -> None:
+        # doc 293's five Int.ModEq closures, registered under ONE operation
+        # naming all five -- CLAUDE.md's "applicability.fact_ids is a LIST
+        # and nothing ever required length one" applied to a driver that had
+        # no shape for hand-authored kernel work at all before this.
+        index = self._authored_declaration_operation_index()
+        operation = self.registry["operations"][index]
+        self.assertEqual(operation["scope"], "authoritative")
+        self.assertEqual(
+            operation["executor"]["driver"], "axeyum-lean-kernel/authored-declaration-v1"
+        )
+        self.assertEqual(len(operation["applicability"]["fact_ids"]), 5)
+        self.assertEqual(len(operation["executor"]["targets"]), 5)
+        registry_module.validate_registry(self.registry, ROOT)
+
+    def test_authored_declaration_driver_rejects_a_declaration_absent_from_its_source(
+        self,
+    ) -> None:
+        # The whole point of this driver: a receipt naming a declaration the
+        # source file never mentions must fail, not silently pass.
+        index = self._authored_declaration_operation_index()
+        mutated = copy.deepcopy(self.registry)
+        mutated["operations"][index]["executor"]["targets"][0]["declaration"] = (
+            "Int.add_modEq_never_written"
+        )
+        with self.assertRaisesRegex(
+            registry_module.RegistryError, "does not appear in"
+        ):
+            registry_module.validate_registry(mutated, ROOT)
+
+    def test_authored_declaration_driver_rejects_a_missing_verifying_test(self) -> None:
+        index = self._authored_declaration_operation_index()
+        mutated = copy.deepcopy(self.registry)
+        mutated["operations"][index]["executor"]["verifying_tests"].append(
+            "this_test_function_does_not_exist"
+        )
+        with self.assertRaisesRegex(
+            registry_module.RegistryError, "not a test function declared"
+        ):
+            registry_module.validate_registry(mutated, ROOT)
+
+    def test_authored_declaration_driver_rejects_a_source_outside_the_kernel_crate(
+        self,
+    ) -> None:
+        index = self._authored_declaration_operation_index()
+        mutated = copy.deepcopy(self.registry)
+        mutated["operations"][index]["executor"]["declaration_source"] = (
+            "scripts/validate-autogenesis-operations.py"
+        )
+        with self.assertRaisesRegex(
+            registry_module.RegistryError, "inside crates/axeyum-lean-kernel"
+        ):
+            registry_module.validate_registry(mutated, ROOT)
+
+    def test_authored_declaration_driver_rejects_a_malformed_declaration_name(
+        self,
+    ) -> None:
+        index = self._authored_declaration_operation_index()
+        for bad_name in ("add_modEq_left", "int.add_modEq_left", "Int."):
+            with self.subTest(bad_name=bad_name):
+                mutated = copy.deepcopy(self.registry)
+                mutated["operations"][index]["executor"]["targets"][0]["declaration"] = (
+                    bad_name
+                )
+                with self.assertRaisesRegex(
+                    registry_module.RegistryError,
+                    "not a qualified Lean declaration name",
+                ):
+                    registry_module.validate_registry(mutated, ROOT)
+
+    def test_authored_declaration_driver_rejects_one_declaration_bound_twice(
+        self,
+    ) -> None:
+        index = self._authored_declaration_operation_index()
+        mutated = copy.deepcopy(self.registry)
+        targets = mutated["operations"][index]["executor"]["targets"]
+        targets[1]["declaration"] = targets[0]["declaration"]
+        with self.assertRaisesRegex(
+            registry_module.RegistryError, "bound to more than one fact"
+        ):
+            registry_module.validate_registry(mutated, ROOT)
+
+    def test_authored_declaration_driver_rejects_a_duplicate_fact_id(self) -> None:
+        index = self._authored_declaration_operation_index()
+        mutated = copy.deepcopy(self.registry)
+        mutated["operations"][index]["executor"]["additional_fact_ids"][0] = mutated[
+            "operations"
+        ][index]["executor"]["input_fact_id"]
+        with self.assertRaisesRegex(
+            registry_module.RegistryError, "names a fact id more than once"
+        ):
+            registry_module.validate_registry(mutated, ROOT)
+
+    def test_authored_declaration_driver_rejects_target_order_mismatch(self) -> None:
+        index = self._authored_declaration_operation_index()
+        mutated = copy.deepcopy(self.registry)
+        mutated["operations"][index]["executor"]["targets"] = list(
+            reversed(mutated["operations"][index]["executor"]["targets"])
+        )
+        with self.assertRaisesRegex(
+            registry_module.RegistryError, "fact_id order must match"
+        ):
+            registry_module.validate_registry(mutated, ROOT)
+
+    def test_authored_declaration_driver_rejects_applicability_fact_id_mismatch(
+        self,
+    ) -> None:
+        index = self._authored_declaration_operation_index()
+        mutated = copy.deepcopy(self.registry)
+        mutated["operations"][index]["applicability"]["fact_ids"] = list(
+            reversed(mutated["operations"][index]["applicability"]["fact_ids"])
+        )
+        with self.assertRaisesRegex(
+            registry_module.RegistryError, "must bind exactly its applicable fact"
+        ):
+            registry_module.validate_registry(mutated, ROOT)
+
+    def test_authored_declaration_driver_is_inconsistent_with_wrong_admission(
+        self,
+    ) -> None:
+        index = self._authored_declaration_operation_index()
+        mutated = copy.deepcopy(self.registry)
+        # Keep the admission tuple itself valid (still in ADMISSION_CONTRACTS)
+        # and every fact's actual fragment ("Int") still inside the list, so
+        # only THIS driver's own closed-set check can be what fires.
+        mutated["operations"][index]["applicability"]["fragments"] = [
+            "Int",
+            "Nat",
+            "Extra",
+        ]
+        with self.assertRaisesRegex(
+            registry_module.RegistryError, "inconsistent with applicability/admission"
+        ):
+            registry_module.validate_registry(mutated, ROOT)
+
+    def test_gen_production_provenance_ledger_counts_the_new_multi_target_operation(
+        self,
+    ) -> None:
+        # `applicability.fact_ids` is the SOLE input to the width computation
+        # (`gen-production-provenance-ledger.py`'s `operation_widths`), so the
+        # multi_target_operations counter must see this operation regardless
+        # of whether any fact's evidence row has bound `checker_operation` to
+        # it yet -- unlike `facts_via_multi_target`, which needs that binding
+        # and is NOT expected to move here (see docs/autogenesis/296).
+        import importlib.util as _ilu
+
+        spec = _ilu.spec_from_file_location(
+            "gen_production_provenance_ledger",
+            ROOT / "scripts/gen-production-provenance-ledger.py",
+        )
+        assert spec is not None and spec.loader is not None
+        ledger_module = _ilu.module_from_spec(spec)
+        spec.loader.exec_module(ledger_module)
+        widths, scopes = ledger_module.operation_widths()
+        index = self._authored_declaration_operation_index()
+        operation_id = self.registry["operations"][index]["id"]
+        self.assertEqual(widths[operation_id], 5)
+        self.assertEqual(scopes[operation_id], "authoritative")
+
+
 class FactProvenanceExclusivityTests(unittest.TestCase):
     """`check_fact_provenance_is_exclusive` -- see Defect 1 of the
     2026-08-25 structural-defects session: `F:ml430-nat-descfactorial-zero-966b01df`

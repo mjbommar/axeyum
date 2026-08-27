@@ -54,3 +54,54 @@ decoration.
   contract needs at least one named NON-example it provably does not match.
 - The held-out nursery partition (ADR-0542) binds contract-driven dispatch
   exactly as it binds manual dispatch.
+
+## Amendment (2026-08-27): receipts could only describe PIPELINED work
+
+Doc 293 proved five `Int.ModEq` theorems directly against the kernel
+(`Kernel::add_declaration`, no producer/checker/executor pipeline component
+running at all — no adapter authored, no export run, no importer invoked)
+and tried to register the retrospective receipt this ADR calls for. It was
+genuinely blocked: `validate-autogenesis-operations.py`'s
+`EXECUTION_DRIVERS` was a closed set of ten, of which eight are
+`axeyum-lean-import/*` (adapter -> export -> import -> checker) and two are
+named for specific one-off episodes. None described "an agent hand-authored
+a kernel proof directly." Per doc 288's measurement this is not an edge
+case — **125 of 132 dependency-ready facts are exactly this
+`proof-route-only` shape** — so the receipt system was structurally blind to
+the dominant route this decision's own §1 ("receipts stay receipts") assumes
+exists.
+
+Doc 296 closes it: a general `axeyum-lean-kernel/authored-declaration-v1`
+driver whose fields are chosen to be independently re-checkable — the
+declaration name(s), the source file each must literally appear in, and the
+exact test functions that must exist and fail on their absence — rather
+than a narrative of how the work happened. Registered doc 293's five
+closures as ONE operation naming all five facts, per this project's
+standing "applicability.fact_ids is a LIST, and nothing ever required
+length one" rule (doc 228): a driver, and a registration under it, that
+names only one target would recreate the dispatch-table failure mode this
+project has already paid for once. Discrimination proven both ways —
+mutation-tested guards reject a declaration absent from its claimed source,
+a test name absent from its claimed file, a source file outside the kernel
+crate, a malformed or duplicated declaration name, and a misordered or
+repeated fact-id binding — with controls in
+`scripts/tests/test_validate_autogenesis_operations.py` and mutation
+guards in `scripts/tests/mutation_controls.py`
+(`autogenesis-authored-declaration-driver`).
+
+This decision's substance is unchanged: operations remain retrospective
+receipts, admission still requires `proved`, and nothing prospective enters
+the registry. What changed is that a receipt can now describe kernel-lane
+work as well as import-mediated work — the trust anchor was always
+`Kernel::add_declaration` (ADR-0601), and the registry's driver vocabulary
+had simply never caught up to that.
+
+One measured gap, left to whichever lane next touches
+`artifacts/facts/`'s evidence rows for these five facts (out of this
+lane's scope): `scripts/gen-production-provenance-ledger.py`'s
+`multi_target_operations` counter (derived from `operations.json` alone)
+saw the new operation immediately (3 -> 4), but its `facts_via_multi_target`
+counter — the actual generality metric — joins through
+`fact.evidence[].checker_operation.id`, which none of the five facts'
+evidence rows carry yet. The registration is real; the ledger will not
+credit it until that binding is added.

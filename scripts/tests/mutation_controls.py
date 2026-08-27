@@ -3074,6 +3074,94 @@ SUITES["import-backlog-classification"] = (
     ],
 )
 
+SUITES["autogenesis-authored-declaration-driver"] = (
+    "scripts/validate-autogenesis-operations.py",
+    "scripts.tests.test_validate_autogenesis_operations",
+    [
+        # docs/autogenesis/296: the registry could only describe PIPELINED
+        # work (8 of 10 EXECUTION_DRIVERS were axeyum-lean-import/*); this
+        # driver is the general shape for "an agent hand-authored a kernel
+        # declaration directly", and every guard below exists so a receipt
+        # naming work that never happened must fail, not silently pass.
+        (
+            "a declaration must appear in its claimed source file",
+            "            if declaration not in declaration_source_text:",
+            "            if False:",
+        ),
+        (
+            "one Lean declaration may not be bound to two facts",
+            "            if declaration in seen_declarations:",
+            "            if False:",
+        ),
+        (
+            "a verifying test must exist as a fn in the named test file",
+            'if not re.search(rf"fn\\s+{re.escape(test_name)}\\s*\\(", test_source):',
+            "if False:",
+        ),
+        (
+            "declaration_source/test_path must stay inside the kernel crate",
+            '''        if not declaration_source.is_relative_to(
+            crate_root
+        ) or not test_path.is_relative_to(crate_root):''',
+            "        if False:",
+        ),
+        (
+            "a target declaration must be a qualified Lean name",
+            """            if not isinstance(declaration, str) or not LEAN_DECLARATION_RE.fullmatch(
+                declaration
+            ):""",
+            "            if False:",
+        ),
+        (
+            "no fact id may repeat across input_fact_id/additional_fact_ids",
+            '''        if len(all_fact_ids) != len(set(all_fact_ids)):
+            raise RegistryError(
+                f"{label} names a fact id more than once across "
+                "input_fact_id/additional_fact_ids"
+            )
+        declaration_source = repository_file(''',
+            '''        if False:
+            raise RegistryError(
+                f"{label} names a fact id more than once across "
+                "input_fact_id/additional_fact_ids"
+            )
+        declaration_source = repository_file(''',
+        ),
+        (
+            "targets must bind fact ids in input+additional order",
+            '''        if target_fact_ids != all_fact_ids:
+            raise RegistryError(
+                f"{label}.targets fact_id order must match input_fact_id "
+                "followed by additional_fact_ids"
+            )
+    elif driver == "axeyum-lean-import/statement-reflexivity-v1":''',
+            '''        if False:
+            raise RegistryError(
+                f"{label}.targets fact_id order must match input_fact_id "
+                "followed by additional_fact_ids"
+            )
+    elif driver == "axeyum-lean-import/statement-reflexivity-v1":''',
+        ),
+        (
+            "this driver's applicability/admission must stay in its closed set",
+            '''            elif executor["driver"] == "axeyum-lean-kernel/authored-declaration-v1":
+                # Fragment-agnostic like modeq-family-multi-target-v1 (this
+                # driver is not tied to Int specifically -- a future
+                # hand-authored Nat closure is the same shape), but the proof
+                # itself runs entirely inside this repository's own kernel
+                # crate, never through the importer.
+                if (''',
+            '''            elif executor["driver"] == "axeyum-lean-kernel/authored-declaration-v1":
+                # Fragment-agnostic like modeq-family-multi-target-v1 (this
+                # driver is not tied to Int specifically -- a future
+                # hand-authored Nat closure is the same shape), but the proof
+                # itself runs entirely inside this repository's own kernel
+                # crate, never through the importer.
+                if False and (''',
+        ),
+    ],
+)
+
 
 def main(argv: list[str]) -> int:
     if argv[1:2] == ["--check-anchors"]:
