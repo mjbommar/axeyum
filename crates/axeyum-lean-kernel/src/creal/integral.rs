@@ -14152,6 +14152,456 @@ pub(super) fn declare_congr_of_uniformly_continuous(
     })
 }
 
+/// `CReal.riemannSum_split_exact_of_uc : ∀ F a b m_ac m_cb,
+/// UniformlyContinuousOn F a b → le a b → Equiv (riemannSum F a b (add
+/// (Nat.succ m_ac) m_cb)) (add (riemannSum F a c m_ac) (riemannSum F c b
+/// m_cb))`, `c` exactly as in [`declare_riemann_sum_split_exact`].
+///
+/// [`declare_riemann_sum_split_exact`]'s own `hcong` hypothesis (`∀ x y,
+/// Equiv x y → Equiv (F x) (F y)`, GLOBAL) is genuinely false for an
+/// arbitrary `F` uniformly continuous only on `[a, b]`
+/// ([`declare_congr_of_uniformly_continuous`]'s own doc comment: `spec`
+/// says nothing about `F` outside `[a, b]`). This variant discharges the
+/// SAME identity from a `UniformlyContinuousOn` witness instead --
+/// [`declare_riemann_sum_split_exact`] itself is UNCHANGED, both theorems
+/// exist.
+///
+/// Route: every sample point the original proof's two `sumRange`-congruence
+/// steps touch is shown inside `[a, b]` first
+/// ([`CRealPrelude::riemann_sample_in_bounds`], read at the parent mesh
+/// count `m_ab` for the "shifted" indices and at the two child mesh counts
+/// `m_ac`/`m_cb` for the per-child indices, the two child intervals placed
+/// inside `[a, b]` via `hac : le a c` / `hcb : le c b` derived here from
+/// `w1`/`w2`'s nonnegativity exactly as
+/// [`declare_riemann_sample_in_bounds`]'s own lower half does), then
+/// [`CRealPrelude::congr_of_uniformly_continuous`] is applied there instead
+/// of the (unavailable) global congruence. Since a term of `hcong`'s own
+/// GLOBAL `Pi`-type is exactly what is unavailable, the two
+/// `sumRange`-congruence steps use the file-local BOUNDED analogue
+/// [`sum_range_congr_lt_proof`] (via [`bounded_equiv_pointwise`]) in place of
+/// [`CRealPrelude::sum_range_congr`] -- the same substitution
+/// [`declare_reblock_block_eq_fine_block_sum`] already makes for the same
+/// reason.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_riemann_sum_split_exact_of_uc(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let f_ty = fn_ty(d, p);
+    let logic = p.rat.int.logic;
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let mac_fv = d.fresh_fvar();
+    let m_ac = d.kernel().fvar(mac_fv);
+    let mcb_fv = d.fresh_fvar();
+    let m_cb = d.kernel().fvar(mcb_fv);
+
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let n_ac = d.succ(m_ac);
+    let n_cb = d.succ(m_cb);
+    let m_ab = NatOps::add(d, n_ac, m_cb);
+    let succ_m_ab = d.succ(m_ab);
+
+    let (delta_ab, delta_ab_nonneg) = delta_nonneg_of(d, p, a, b, m_ab, hab);
+    let width_ab = width_of(d, p, a, b);
+
+    let on_ac = d.const_app(p.of_nat, &[n_ac]);
+    let on_cb = d.const_app(p.of_nat, &[n_cb]);
+    let w1 = cmul(d, p, on_ac, delta_ab);
+    let w2 = cmul(d, p, on_cb, delta_ab);
+    let c = cadd(d, p, a, w1);
+
+    // --- H_split : Equiv width_ab (add w1 w2) --- IDENTICAL algebra to
+    // `declare_riemann_sum_split_exact`; duplicated (rather than shared)
+    // since that function is not factored into reusable pieces.
+    let h_split = {
+        let mcw_ab = d.lemma(p.mesh_count_width, &[width_ab, m_ab]);
+        let sm_ab = d.succ(m_ab);
+        let on_sm_ab = d.const_app(p.of_nat, &[sm_ab]);
+        let mid0 = cmul(d, p, on_sm_ab, delta_ab);
+        let hw_ab = d.lemma(p.equiv_symm, &[mid0, width_ab, mcw_ab]);
+
+        let h_ofnat_split = d.lemma(p.of_nat_add, &[n_ac, n_cb]);
+        let sum_on = cadd(d, p, on_ac, on_cb);
+        let mid1 = cmul(d, p, sum_on, delta_ab);
+        let refl_delta_ab = d.lemma(p.equiv_refl, &[delta_ab]);
+        let step_a = d.lemma(
+            p.mul_congr,
+            &[
+                on_sm_ab,
+                sum_on,
+                delta_ab,
+                delta_ab,
+                h_ofnat_split,
+                refl_delta_ab,
+            ],
+        );
+
+        let add_w1w2 = cadd(d, p, w1, w2);
+        let step_b = right_distrib(d, p, on_ac, on_cb, delta_ab);
+
+        echain(
+            d,
+            p,
+            width_ab,
+            &[(mid0, hw_ab), (mid1, step_a), (add_w1w2, step_b)],
+        )
+    };
+
+    let h_ac = cancel_width(d, p, a, w1); // Equiv (width_of a c) w1
+
+    // --- H_b : Equiv b (add c w2) ---
+    let h_b = {
+        let unc_ab = uncancel_width(d, p, a, b); // Equiv b (add a width_ab)
+        let a_width_ab = cadd(d, p, a, width_ab);
+        let w1w2 = cadd(d, p, w1, w2);
+        let a_w1w2 = cadd(d, p, a, w1w2);
+        let refl_a = d.lemma(p.equiv_refl, &[a]);
+        let step1 = d.lemma(p.add_congr, &[a, a, width_ab, w1w2, refl_a, h_split]);
+
+        let c_w2 = cadd(d, p, c, w2);
+        let assoc = d.lemma(p.add_assoc, &[a, w1, w2]); // Equiv c_w2 a_w1w2
+        let step2 = d.lemma(p.equiv_symm, &[c_w2, a_w1w2, assoc]); // Equiv a_w1w2 c_w2
+
+        echain(
+            d,
+            p,
+            b,
+            &[(a_width_ab, unc_ab), (a_w1w2, step1), (c_w2, step2)],
+        )
+    };
+
+    // --- H_cb : Equiv (width_of c b) w2 ---
+    let h_cb = {
+        let neg_c = cneg(d, p, c);
+        let start = width_of(d, p, c, b); // add b (neg c)
+        let c_w2 = cadd(d, p, c, w2);
+        let refl_neg_c = d.lemma(p.equiv_refl, &[neg_c]);
+        let cw2_negc = cadd(d, p, c_w2, neg_c);
+        let step1 = d.lemma(p.add_congr, &[b, c_w2, neg_c, neg_c, h_b, refl_neg_c]);
+        let cancel = cancel_width(d, p, c, w2); // Equiv cw2_negc w2
+
+        echain(d, p, start, &[(cw2_negc, step1), (w2, cancel)])
+    };
+
+    // --- deltas ---
+    let frac_ac = frac_of(d, p, m_ac);
+    let width_ac = width_of(d, p, a, c);
+    let delta_ac = delta_of(d, p, a, c, m_ac);
+    let h_delta_ac = delta_from_width_equiv(
+        d, p, width_ac, h_ac, w1, delta_ab, on_ac, frac_ac, delta_ac, m_ac,
+    );
+
+    let frac_cb = frac_of(d, p, m_cb);
+    let width_cb = width_of(d, p, c, b);
+    let delta_cb = delta_of(d, p, c, b, m_cb);
+    let h_delta_cb = delta_from_width_equiv(
+        d, p, width_cb, h_cb, w2, delta_ab, on_cb, frac_cb, delta_cb, m_cb,
+    );
+
+    // --- NEW: hac : le a c, hcb : le c b -- from `w1`/`w2`'s
+    // nonnegativity, exactly `declare_riemann_sample_in_bounds`'s own lower
+    // half. Needed to place BOTH child intervals inside `[a, b]`.
+    let on_ac_nonneg = zero_le_of_nat(d, p, n_ac);
+    let w1_nonneg = d.lemma(p.mul_nonneg, &[on_ac, delta_ab, on_ac_nonneg, delta_ab_nonneg]);
+    let hac = shift_le_of_nonneg(d, p, a, w1, w1_nonneg); // le a (add a w1) = le a c
+
+    let on_cb_nonneg = zero_le_of_nat(d, p, n_cb);
+    let w2_nonneg = d.lemma(p.mul_nonneg, &[on_cb, delta_ab, on_cb_nonneg, delta_ab_nonneg]);
+    let hcb = {
+        let c_w2 = cadd(d, p, c, w2);
+        let shifted = shift_le_of_nonneg(d, p, c, w2, w2_nonneg); // le c c_w2
+        let refl_c_eq = d.lemma(p.equiv_refl, &[c]);
+        let h_b_symm = d.lemma(p.equiv_symm, &[b, c_w2, h_b]); // Equiv c_w2 b
+        d.lemma(p.le_congr, &[c, c, c_w2, b, refl_c_eq, h_b_symm, shifted])
+        // : le c b
+    };
+
+    // --- piece 1 : Equiv (sumRange f_ab n_ac) (riemannSum F a c m_ac) ---
+    // BOUNDED pointwise (i < n_ac), unlike `declare_riemann_sum_split_exact`'s
+    // global `hcong` application.
+    let f_ab = summand_fn(d, p, f, a, delta_ab);
+    let f_ac = summand_fn(d, p, f, a, delta_ac);
+    let bounded_pointwise1 = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let hi_ty = d.lt(i, n_ac);
+        let hi_fv = d.fresh_fvar();
+        let hi = d.kernel().fvar(hi_fv);
+
+        let oi = d.const_app(p.of_nat, &[i]);
+        let sp_ab = sample_point(d, p, a, delta_ab, i);
+        let sp_ac = sample_point(d, p, a, delta_ac, i);
+
+        // sp_ab in [a, b]: i < n_ac <= succ m_ab via `le_add_right`/`le_succ`/
+        // `le_trans`/`lt_of_lt_of_le`, then `riemann_sample_in_bounds` on
+        // [a, b] at the parent mesh count `m_ab`.
+        let np = d.prelude();
+        let n_ac_le_m_ab = d.lemma(np.le_add_right, &[n_ac, m_cb]); // le n_ac m_ab
+        let m_ab_le_succ_m_ab = d.lemma(np.le_succ, &[m_ab]); // le m_ab succ_m_ab
+        let n_ac_le_succ_mab = d.lemma(
+            np.le_trans,
+            &[n_ac, m_ab, succ_m_ab, n_ac_le_m_ab, m_ab_le_succ_m_ab],
+        );
+        let hi_succ_mab = d.lemma(np.lt_of_lt_of_le, &[i, n_ac, succ_m_ab, hi, n_ac_le_succ_mab]);
+        let and_ab = d.lemma(p.riemann_sample_in_bounds, &[a, b, m_ab, i, hab, hi_succ_mab]);
+        let a_le_spab_ty = cle(d, p, a, sp_ab);
+        let spab_le_b_ty = cle(d, p, sp_ab, b);
+        let a_le_spab = d.const_app(logic.and_left, &[a_le_spab_ty, spab_le_b_ty, and_ab]);
+        let spab_le_b = d.const_app(logic.and_right, &[a_le_spab_ty, spab_le_b_ty, and_ab]);
+
+        // sp_ac in [a, b]: directly in [a, c] via `riemann_sample_in_bounds`
+        // at the EXACT bound `i < n_ac` (`m_ac`'s own mesh count), then
+        // `c <= b` (`hcb`) extends the upper bound.
+        let and_ac = d.lemma(p.riemann_sample_in_bounds, &[a, c, m_ac, i, hac, hi]);
+        let a_le_spac_ty = cle(d, p, a, sp_ac);
+        let spac_le_c_ty = cle(d, p, sp_ac, c);
+        let a_le_spac = d.const_app(logic.and_left, &[a_le_spac_ty, spac_le_c_ty, and_ac]);
+        let spac_le_c = d.const_app(logic.and_right, &[a_le_spac_ty, spac_le_c_ty, and_ac]);
+        let spac_le_b = d.lemma(p.le_trans, &[sp_ac, c, b, spac_le_c, hcb]);
+
+        // h_sp : Equiv sp_ab sp_ac -- IDENTICAL to
+        // `declare_riemann_sum_split_exact`'s own `pointwise1`.
+        let symm_ac1 = d.lemma(p.equiv_symm, &[delta_ac, delta_ab, h_delta_ac]);
+        let refl_oi = d.lemma(p.equiv_refl, &[oi]);
+        let mc = d.lemma(
+            p.mul_congr,
+            &[oi, oi, delta_ab, delta_ac, refl_oi, symm_ac1],
+        );
+        let refl_a = d.lemma(p.equiv_refl, &[a]);
+        let oi_delta_ab = cmul(d, p, oi, delta_ab);
+        let oi_delta_ac = cmul(d, p, oi, delta_ac);
+        let h_sp = d.lemma(p.add_congr, &[a, a, oi_delta_ab, oi_delta_ac, refl_a, mc]);
+
+        let f_spab = d.apply(f, &[sp_ab]);
+        let f_spac = d.apply(f, &[sp_ac]);
+        let hcong_i = d.lemma(
+            p.congr_of_uniformly_continuous,
+            &[f, a, b, u, sp_ab, sp_ac, a_le_spab, spab_le_b, a_le_spac, spac_le_b, h_sp],
+        );
+        let symm_ac2 = d.lemma(p.equiv_symm, &[delta_ac, delta_ab, h_delta_ac]);
+        let final_i = d.lemma(
+            p.mul_congr,
+            &[f_spab, f_spac, delta_ab, delta_ac, hcong_i, symm_ac2],
+        );
+
+        let inner = d.lam_fv(hi_fv, hi_ty, final_i);
+        d.lam_fv(i_fv, nat, inner)
+    };
+    let piece1 = {
+        let proof_fn = sum_range_congr_lt_proof(d, p, f_ab, f_ac, n_ac);
+        d.apply(proof_fn, &[bounded_pointwise1])
+    };
+
+    // --- piece 2 : Equiv (sumRange (shifted n_ac f_ab) n_cb) (riemannSum F c
+    // b m_cb) --- BOUNDED pointwise (k < n_cb).
+    let f_cb = summand_fn(d, p, f, c, delta_cb);
+    let f_ab_shifted = shifted_fn(d, n_ac, f_ab);
+    let bounded_pointwise2 = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hk_ty = d.lt(k, n_cb);
+        let hk_fv = d.fresh_fvar();
+        let hk = d.kernel().fvar(hk_fv);
+
+        let ok = d.const_app(p.of_nat, &[k]);
+        let nack = NatOps::add(d, n_ac, k);
+        let onack = d.const_app(p.of_nat, &[nack]);
+        let sp_shift = sample_point(d, p, a, delta_ab, nack);
+        let sp_cb = sample_point(d, p, c, delta_cb, k);
+
+        // sp_shift in [a, b]: `n_ac + k < n_ac + n_cb`, defeq `succ m_ab`
+        // (`Nat.add` recurses on its right argument, and `n_cb` is literally
+        // `Nat.succ m_cb`), via `add_lt_add_left`.
+        let np = d.prelude();
+        let hk_full = d.lemma(np.add_lt_add_left, &[n_ac, k, n_cb, hk]);
+        let and_shift = d.lemma(p.riemann_sample_in_bounds, &[a, b, m_ab, nack, hab, hk_full]);
+        let a_le_spshift_ty = cle(d, p, a, sp_shift);
+        let spshift_le_b_ty = cle(d, p, sp_shift, b);
+        let a_le_spshift = d.const_app(logic.and_left, &[a_le_spshift_ty, spshift_le_b_ty, and_shift]);
+        let spshift_le_b = d.const_app(logic.and_right, &[a_le_spshift_ty, spshift_le_b_ty, and_shift]);
+
+        // sp_cb in [a, b]: directly in [c, b] via `riemann_sample_in_bounds`
+        // at the EXACT bound `k < n_cb`, then `a <= c` (`hac`) extends the
+        // lower bound.
+        let and_cb = d.lemma(p.riemann_sample_in_bounds, &[c, b, m_cb, k, hcb, hk]);
+        let c_le_spcb_ty = cle(d, p, c, sp_cb);
+        let spcb_le_b_ty = cle(d, p, sp_cb, b);
+        let c_le_spcb = d.const_app(logic.and_left, &[c_le_spcb_ty, spcb_le_b_ty, and_cb]);
+        let spcb_le_b = d.const_app(logic.and_right, &[c_le_spcb_ty, spcb_le_b_ty, and_cb]);
+        let a_le_spcb = d.lemma(p.le_trans, &[a, c, sp_cb, hac, c_le_spcb]);
+
+        // h_sp2 : Equiv sp_shift sp_cb -- IDENTICAL to
+        // `declare_riemann_sum_split_exact`'s own `pointwise2`.
+        let of_nat_add_step = d.lemma(p.of_nat_add, &[n_ac, k]); // Equiv onack (add on_ac ok)
+        let sum_on2 = cadd(d, p, on_ac, ok);
+        let refl_delta_ab2 = d.lemma(p.equiv_refl, &[delta_ab]);
+        let mul_onack_delta = cmul(d, p, onack, delta_ab);
+        let mul_sumon2_delta = cmul(d, p, sum_on2, delta_ab);
+        let step_m1 = d.lemma(
+            p.mul_congr,
+            &[
+                onack,
+                sum_on2,
+                delta_ab,
+                delta_ab,
+                of_nat_add_step,
+                refl_delta_ab2,
+            ],
+        );
+
+        let ok_delta_ab = cmul(d, p, ok, delta_ab);
+        let add_w1_okdab = cadd(d, p, w1, ok_delta_ab);
+        let step_rd = right_distrib(d, p, on_ac, ok, delta_ab); // Equiv mul_sumon2_delta add_w1_okdab
+
+        let chain_inner = echain(
+            d,
+            p,
+            mul_onack_delta,
+            &[(mul_sumon2_delta, step_m1), (add_w1_okdab, step_rd)],
+        );
+
+        let a_add_w1_okdab = cadd(d, p, a, add_w1_okdab);
+        let refl_a2 = d.lemma(p.equiv_refl, &[a]);
+        let step_outer = d.lemma(
+            p.add_congr,
+            &[a, a, mul_onack_delta, add_w1_okdab, refl_a2, chain_inner],
+        );
+
+        let c_add_okdab = cadd(d, p, c, ok_delta_ab);
+        let assoc3 = d.lemma(p.add_assoc, &[a, w1, ok_delta_ab]); // Equiv c_add_okdab a_add_w1_okdab
+        let assoc3_symm = d.lemma(p.equiv_symm, &[c_add_okdab, a_add_w1_okdab, assoc3]);
+
+        let symm_cb1 = d.lemma(p.equiv_symm, &[delta_cb, delta_ab, h_delta_cb]);
+        let refl_ok = d.lemma(p.equiv_refl, &[ok]);
+        let step_okdelta = d.lemma(
+            p.mul_congr,
+            &[ok, ok, delta_ab, delta_cb, refl_ok, symm_cb1],
+        );
+        let ok_delta_cb = cmul(d, p, ok, delta_cb);
+        let refl_c = d.lemma(p.equiv_refl, &[c]);
+        let step_final_inner = d.lemma(
+            p.add_congr,
+            &[c, c, ok_delta_ab, ok_delta_cb, refl_c, step_okdelta],
+        );
+
+        let h_sp2 = echain(
+            d,
+            p,
+            sp_shift,
+            &[
+                (a_add_w1_okdab, step_outer),
+                (c_add_okdab, assoc3_symm),
+                (sp_cb, step_final_inner),
+            ],
+        );
+
+        let f_spshift = d.apply(f, &[sp_shift]);
+        let f_spcb = d.apply(f, &[sp_cb]);
+        let hcong_k = d.lemma(
+            p.congr_of_uniformly_continuous,
+            &[
+                f,
+                a,
+                b,
+                u,
+                sp_shift,
+                sp_cb,
+                a_le_spshift,
+                spshift_le_b,
+                a_le_spcb,
+                spcb_le_b,
+                h_sp2,
+            ],
+        );
+        let symm_cb2 = d.lemma(p.equiv_symm, &[delta_cb, delta_ab, h_delta_cb]);
+        let final_k = d.lemma(
+            p.mul_congr,
+            &[f_spshift, f_spcb, delta_ab, delta_cb, hcong_k, symm_cb2],
+        );
+
+        let inner = d.lam_fv(hk_fv, hk_ty, final_k);
+        d.lam_fv(k_fv, nat, inner)
+    };
+    let piece2 = {
+        let proof_fn = sum_range_congr_lt_proof(d, p, f_ab_shifted, f_cb, n_cb);
+        d.apply(proof_fn, &[bounded_pointwise2])
+    };
+
+    // --- assemble --- IDENTICAL to `declare_riemann_sum_split_exact`.
+    let split = d.lemma(p.sum_range_split, &[f_ab, n_ac, n_cb]);
+    let sum_f_ab_nac = d.const_app(p.sum_range, &[f_ab, n_ac]);
+    let sum_shifted_ncb = d.const_app(p.sum_range, &[f_ab_shifted, n_cb]);
+    let riemann_ac = rsum(d, p, f, a, c, m_ac);
+    let riemann_cb = rsum(d, p, f, c, b, m_cb);
+    let combine = d.lemma(
+        p.add_congr,
+        &[
+            sum_f_ab_nac,
+            riemann_ac,
+            sum_shifted_ncb,
+            riemann_cb,
+            piece1,
+            piece2,
+        ],
+    );
+
+    let sum_split_domain = NatOps::add(d, n_ac, n_cb);
+    let sumrange_full = d.const_app(p.sum_range, &[f_ab, sum_split_domain]);
+    let combined_rhs = cadd(d, p, sum_f_ab_nac, sum_shifted_ncb);
+    let target_rhs = cadd(d, p, riemann_ac, riemann_cb);
+    let proof = d.lemma(
+        p.equiv_trans,
+        &[sumrange_full, combined_rhs, target_rhs, split, combine],
+    );
+
+    let ty = {
+        let lhs = rsum(d, p, f, a, b, m_ab);
+        let concl = equiv(d, p, lhs, target_rhs);
+        let after_hab = d.arrow(hab_ty, concl);
+        let after_u = d.arrow(u_ty, after_hab);
+        let over_mcb = d.pi_fv(mcb_fv, nat, after_u);
+        let over_mac = d.pi_fv(mac_fv, nat, over_mcb);
+        let over_b = d.pi_fv(b_fv, carrier, over_mac);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        d.pi_fv(f_fv, f_ty, over_a)
+    };
+    let value = {
+        let with_hab = d.lam_fv(hab_fv, hab_ty, proof);
+        let with_u = d.lam_fv(u_fv, u_ty, with_hab);
+        let over_mcb = d.lam_fv(mcb_fv, nat, with_u);
+        let over_mac = d.lam_fv(mac_fv, nat, over_mcb);
+        let over_b = d.lam_fv(b_fv, carrier, over_mac);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        d.lam_fv(f_fv, f_ty, over_a)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.riemann_sum_split_exact_of_uc,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 #[cfg(test)]
 mod integral_scale_tests {
     use super::*;

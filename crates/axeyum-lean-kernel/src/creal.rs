@@ -4380,6 +4380,18 @@ pub struct CRealPrelude {
     /// [`Self::equiv_zero_of_small`], reusing `integral.rs`'s own
     /// `pointwise_block_equiv` middle section verbatim.
     pub congr_of_uniformly_continuous: NameId,
+    /// `CReal.riemannSum_split_exact_of_uc : ∀ F a b m_ac m_cb,
+    /// UniformlyContinuousOn F a b → le a b → Equiv (riemannSum F a b (add
+    /// (Nat.succ m_ac) m_cb)) (add (riemannSum F a c m_ac) (riemannSum F c b
+    /// m_cb))`, `c` exactly as in [`Self::riemann_sum_split_exact`] — the
+    /// SAME identity, discharged from a `UniformlyContinuousOn` witness
+    /// instead of the (structurally unsatisfiable-in-general)
+    /// `hcong`. [`Self::riemann_sum_split_exact`] itself is UNCHANGED; see
+    /// `integral::declare_riemann_sum_split_exact_of_uc`'s own doc comment
+    /// for the route (bounded `sumRange` congruence against
+    /// [`Self::riemann_sample_in_bounds`] and
+    /// [`Self::congr_of_uniformly_continuous`]).
+    pub riemann_sum_split_exact_of_uc: NameId,
     /// `CReal.hasDerivative_integral_const : ∀ c a b (k : Nat), le (abs c)
     /// (ofRat (natDivSucc (Nat.succ k) 0)) → HasDerivativeOn (fun x =>
     /// integral (fun _ => c) a (max a (min x b)) (le_max_left a (min x b))
@@ -5158,6 +5170,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         riemann_sum_split_scale_invariant: kernel
             .name_str(creal, "riemannSum_split_scale_invariant"),
         congr_of_uniformly_continuous: kernel.name_str(creal, "congrOfUniformlyContinuous"),
+        riemann_sum_split_exact_of_uc: kernel
+            .name_str(creal, "riemannSum_split_exact_of_uc"),
         has_derivative_integral_const: kernel.name_str(creal, "hasDerivative_integral_const"),
         neg_sub_swap: kernel.name_str(creal, "neg_sub_swap"),
         abs_le_of_two_sided: kernel.name_str(creal, "abs_le_of_two_sided"),
@@ -5709,6 +5723,12 @@ pub(crate) fn build_creal_prelude_uncached(
         // well above) -- independent of every other `integral_split` slice,
         // it lands here to stay next to them.
         integral::declare_congr_of_uniformly_continuous(&mut d, prelude)?;
+        // `riemannSum_split_exact_of_uc` needs `riemannSum_sample_in_bounds`
+        // (well above) and `congrOfUniformlyContinuous` (just above) --
+        // nothing from `riemannSum_split_exact`/`riemannSum_split_scale_invariant`
+        // themselves, it lands here to stay next to the other
+        // `integral_split` slices' own dispatch history.
+        integral::declare_riemann_sum_split_exact_of_uc(&mut d, prelude)?;
         // `hasDerivative_integral_const` (Spivak Ch14 FTC-I, first evaluation
         // instance) needs `integral`/`integral_const` (just above, this
         // dispatch is why it cannot live inside `derivative::declare_derivative`,
