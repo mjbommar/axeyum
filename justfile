@@ -1139,6 +1139,12 @@ generated-trackers:
     # count. docs/autogenesis/289-import-backlog-artifact.md.
     python3 -m unittest scripts.tests.test_gen_import_backlog
     python3 scripts/gen-import-backlog.py --check
+    # docs/plan/status/141-ledger-6-backlog.md's closing paragraph: the full
+    # diff of the kernel's theorem inventory against artifacts/facts/'s
+    # registered names had never been measured. Permanent gate, not a
+    # one-off count. docs/autogenesis/297-ledger-coverage-gate.md.
+    python3 -m unittest scripts.tests.test_gen_ledger_coverage
+    python3 scripts/gen-ledger-coverage.py --check
     python3 scripts/gen-claims-dashboard.py --check
 
 # The `axeyum-solver` decomposition ratchet (docs/refactor-2026-08/03).

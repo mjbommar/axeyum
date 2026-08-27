@@ -3074,6 +3074,82 @@ SUITES["import-backlog-classification"] = (
     ],
 )
 
+SUITES["ledger-coverage"] = (
+    "scripts/gen-ledger-coverage.py",
+    "scripts.tests.test_gen_ledger_coverage",
+    [
+        # F:real-lattice-is-constructed-axiom-free's literal "TODO: the
+        # formal statement..." placeholder otherwise parses as a declared
+        # name "TODO" -- a checker-that-cannot-fail shape one layer removed
+        # (a placeholder read as real data). Kills exactly
+        # `test_placeholder_todo_statement_is_not_treated_as_a_declared_name`.
+        (
+            "placeholder ALL-CAPS statement heads are not declared names",
+            "        if match and not match.group(1).isupper():",
+            "        if match:",
+        ),
+        # An explicit `kernel_theorem: null` means "no single subject" and
+        # must stop resolution rather than fall through to the
+        # statement/checker_command tiers -- the exact collision
+        # (`F:complex-mul-assoc` / `F:complex-ring-constructed-axiom-free`
+        # both extracting `Complex.mul_assoc`) this field exists to prevent.
+        # Kills exactly
+        # `test_explicit_field_null_means_no_single_subject_and_does_not_fall_through`.
+        (
+            "an explicit null kernel_theorem stops resolution, not falsy-skipped",
+            '    if "kernel_theorem" in formal:',
+            '    if formal.get("kernel_theorem"):',
+        ),
+        # `axeyum.string.2.*` names carry no capitalised namespace segment,
+        # so without this case-first check `"axeyum".split(...)` would match
+        # nothing in NAMESPACE_TO_PRELUDE and silently misfile every string-
+        # prelude theorem under `logic`. Kills exactly
+        # `test_string_prelude_has_no_capitalised_namespace`.
+        (
+            "string-prelude names are recognised before the namespace split",
+            '    if name.startswith("axeyum.string."):',
+            "    if False:",
+        ),
+        # A theorem name printed with two different footprint sizes across
+        # nested prelude groups means the inventory tool's own output is
+        # internally inconsistent -- silently picking the last one would
+        # hide that rather than fail the gate. Kills exactly
+        # `test_disagreeing_footprint_sizes_for_the_same_name_is_an_error`.
+        (
+            "disagreeing footprint sizes for one theorem name is an error",
+            "        if previous is not None and previous != size:",
+            "        if False:",
+        ),
+        # Zero inventory rows must be a hard error, not an empty (and
+        # therefore vacuously "fully covered") denominator -- the debug-
+        # build SIGABRT / missing --include-constructed trap CLAUDE.md
+        # documents. Kills exactly
+        # `test_zero_rows_is_an_error_not_a_silent_empty_denominator`.
+        (
+            "an empty theorem inventory is an error, not a silent zero",
+            "    if not footprints:",
+            "    if False:",
+        ),
+        # Only `proof_route == kernel-lean` facts are joined -- an
+        # `smt-term-level` or `open` fact makes no claim this kernel's own
+        # environment could corroborate. Kills exactly
+        # `test_non_kernel_route_facts_are_not_joined`.
+        (
+            "only kernel-lean facts are joined against the kernel inventory",
+            '        if fact.get("proof_route") not in KERNEL_ROUTES:',
+            "        if False:",
+        ),
+        # Only `proved`/`computed` facts are joined -- an `open` fact
+        # establishes nothing yet. Kills exactly
+        # `test_open_facts_are_not_joined`.
+        (
+            "only established (proved/computed) facts are joined",
+            '        if fact.get("epistemic_status") not in OURS_ESTABLISHED:',
+            "        if False:",
+        ),
+    ],
+)
+
 SUITES["autogenesis-authored-declaration-driver"] = (
     "scripts/validate-autogenesis-operations.py",
     "scripts.tests.test_validate_autogenesis_operations",

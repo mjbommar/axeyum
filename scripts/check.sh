@@ -587,6 +587,14 @@ step adr-index      python3 scripts/gen-adr-index.py --check
 # validate-facts.py's summary. docs/autogenesis/289-import-backlog-artifact.md.
 step import-backlog-tests python3 -m unittest scripts.tests.test_gen_import_backlog
 step import-backlog python3 scripts/gen-import-backlog.py --check
+# docs/plan/status/141-ledger-6-backlog.md's own closing paragraph: nobody
+# had ever measured the full diff of prelude_theorem_inventory's theorem
+# list against artifacts/facts/'s registered names -- six ledger batches each
+# hand-picked a short list instead. This is that measurement, permanent
+# rather than one-off: fails when a kernel theorem lands unregistered and
+# the artifact is not regenerated to match. docs/autogenesis/297-ledger-coverage-gate.md.
+step ledger-coverage-tests python3 -m unittest scripts.tests.test_gen_ledger_coverage
+step ledger-coverage python3 scripts/gen-ledger-coverage.py --check
 # The formalized-math strand's status block, re-derived from the tree.
 step import-status-tests python3 -m unittest scripts.tests.test_check_import_status
 step import-status  python3 scripts/check-import-status.py
