@@ -1833,6 +1833,16 @@ stabilize after one productive round. A matched 180-second SAT run remained unkn
 redundant time-capacity encoding was measured at 2.27 million variables / 7.97 million clauses
 and 2.12 GiB RSS, then removed rather than retained as a misleading capability.
 
+**Open-problems stop state, 2026-08-27.** All three outstanding proof producers were explicitly
+stopped after the shared-filesystem incident: the paused S-box cell-10 and bilinear normalized
+rank-16 CaDiCaL processes were resumed only to terminate; the sole `abz7@655` Pumpkin process
+required `SIGKILL` after remaining briefly in uninterruptible I/O. A final process/open-file
+audit found no active owner of their retained incomplete prefixes. The five separate,
+signal-killed uncredited proof blobs were removed under explicit authority, restoring `/data0`
+to 339 GiB free. No partial stream is credited: S-box remains `[7,8]`, bilinear remains
+`[16,17]`, and the replayed `abz7 = 656` schedule remains an upper bound only. No active
+open-problem proof producer remains.
+
 **Job-shop DRCP proof interchange, 2026-08-26.** ADR-0575 adds strict deterministic bounded
 job-shop FlatZinc export on the exact predicate surface shared by Pumpkin and its checkers:
 job-chain domains, `int_lin_le` precedences, and unit-demand/capacity-one cumulative machine
