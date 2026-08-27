@@ -1390,6 +1390,46 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   ABSENT. That is the coverage trap below, with the tool broken rather than
   misaimed.
 
+- **`prelude_theorem_inventory` LISTS THEOREMS, NOT DEFINITIONS — so `Nat.add`
+  returns ZERO ROWS, and every construction this project is proudest of is
+  invisible to it.** Measured 2026-08-27 on one inventory of 5,130 rows, each
+  name matched against the whole row's second field rather than by substring:
+
+      Nat.add  Nat.mul  Rat.polyEval  CReal.integral  CReal.e  CReal.sqrt
+      Complex.conj                                        -> 0 rows EACH
+      Nat.add_comm 6,  CReal.integral_const 3,  Rat.sub_mul 4   (control)
+
+  Every one of those zeros is a `Definition` that certainly exists. The tool
+  filters to `Declaration::Theorem`, which is correct for what it was built for
+  and catastrophic for the question agents actually ask it: *does `X` exist?*
+
+  **The prefix grep is what makes it dangerous, because it answers NONZERO.**
+  `grep -c 'Rat.polyEval'` returns **16** — every hit a `Rat.polyEval_add` /
+  `_smul` / `_succ` lemma, and not one of them the definition. So the careless
+  query confirms presence, and the careful anchored query reports absence, and
+  **both are wrong about the definition itself.** It bit in both directions
+  within one hour: a lane recorded that no in-tree tool inventories definitions
+  by name with fail-on-absence semantics (true, and it had to weaken a fact
+  ledger checker because of it), and separately a coordinator grep for `Nat.max`
+  came back empty and proved nothing at all, because the control — `Nat.add` —
+  came back empty too.
+
+  This is the coverage trap above with the tool **correctly aimed and answering
+  a narrower question than the one asked**, which is why the usual remedy
+  ("confirm the tool covers your subject") is not enough on its own. Two rules:
+
+  - **Pair every negative with a positive control of the SAME DECLARATION KIND.**
+    A theorem is not a control for a definition. `Nat.add` returning zero is the
+    fastest way to tell you are asking this tool the wrong question.
+  - **To ask whether a definition exists, read the environment** —
+    `kernel.environment().iter()` — or the source, never a theorem inventory.
+
+  Related and load-bearing: a fact-ledger `checker_command` asserting a
+  CONSTRUCTION (`CReal.integral`, `CReal.e`) cannot use the theorem inventory as
+  its discriminator; it must either name a theorem whose admission entails the
+  definition, and say so, or use a checker that fails on absence for the kind it
+  is actually checking.
+
 - **`AxNat` IS NOT AN AXIOMATIZED `Nat` — the `Ax` is *axeyum*, and the prefix
   means the opposite of what it means in `AxReal`.** Every rendered type in this
   kernel prints the naturals as `AxNat`: `AxNat.sumRange`, `AxNat.injectiveOn`,

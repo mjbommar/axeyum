@@ -1361,6 +1361,37 @@ pub struct CRealPrelude {
     /// to a `Nat.le` on the numerator `bucketIndex w k` itself, scaled by
     /// `k+1`. See `creal/uniform_continuity.rs`.
     pub bucket_index_bound: NameId,
+    /// `CReal.crossingIndex : CReal → CReal → Rat → Nat` — the Archimedean
+    /// **crossing index**: given a base `a`, a target `c` and a positive
+    /// rational step `Δ`, the computed count of `Δ`-steps from `a` at which
+    /// `c` is reached, within a small fixed slack. `crossingIndex a c delta
+    /// := bucketIndex (mul (ofRat (Rat.inv delta)) (add c (neg a))) 0` —
+    /// rescale `c − a` by `Δ⁻¹` and read [`Self::bucket_index`] at the FIXED
+    /// grid `k := 0` (step `1`), reducing an arbitrary step to the one
+    /// `bucketIndex` already handles. Computed, never `Exists`-derived. See
+    /// `creal/crossing.rs`.
+    pub crossing_index: NameId,
+    /// `CReal.crossingUpper : ∀ a c delta, Rat.lt Rat.zero delta →
+    /// CReal.le c (CReal.add a (CReal.mul (CReal.ofRat delta) (CReal.ofRat
+    /// (Rat.add (Rat.natDivSucc (Nat.succ (CReal.crossingIndex a c delta)) 0)
+    /// (Rat.natDivSucc 2 j)))))`, `j` the closed term `bucketIndex` samples
+    /// at when `k = 0` (`(succ 0)*(succ 0)`, definitionally `1`).
+    ///
+    /// **Needs only `0 < Δ` — no `a ≤ c` hypothesis at all.** Both
+    /// `bucketIndexFloorUpper` and `bucketClampUpper` are unconditional, and
+    /// scaling a `CReal.le` fact by a positive rational preserves it
+    /// regardless of `c − a`'s sign. See `creal/crossing.rs`.
+    pub crossing_upper: NameId,
+    /// `CReal.crossingLower : ∀ a c delta, Rat.lt Rat.zero delta →
+    /// CReal.le a c → CReal.le (CReal.add a (CReal.mul (CReal.ofRat delta)
+    /// (CReal.ofRat (Rat.sub (Rat.natDivSucc (CReal.crossingIndex a c delta)
+    /// 0) (Rat.natDivSucc 3 j))))) c`.
+    ///
+    /// **Genuinely needs `a ≤ c`** (unlike [`Self::crossing_upper`]):
+    /// `bucketClampLower`'s hypothesis is `0 ≤` the value being bucketed —
+    /// here `(c−a)·Δ⁻¹` — which `a ≤ c` supplies via `CReal.mul_nonneg` on
+    /// the two nonnegative factors. See `creal/crossing.rs`.
+    pub crossing_lower: NameId,
     /// `CReal.sampleUpperBound : ∀ x m, CReal.le x (CReal.ofRat (Rat.add
     /// (CReal.seq x m) (Rat.natDivSucc 1 m)))` — the general
     /// self-approximation lemma every `CReal` satisfies: it never exceeds
@@ -2364,6 +2395,40 @@ pub struct CRealPrelude {
     /// no rewrite needed in the `n ≤ m` branch), with the single fixed
     /// witness `K := 7` in place of that theorem's `k + 8`.
     pub geom_cauchy: NameId,
+    /// `CReal.geomCauchyOfLtOrdered : ∀ x, le zero x → ∀ k (h : PosBound (add
+    /// one (neg x)) k) (bigK : Nat) (hK : ∀ a, le (mul (inv (add one (neg
+    /// x)) k h) (pow x a)) (ofRat (natDivSucc bigK a))) a b, Nat.le a b →
+    /// Within (seq (sumRange (pow x) b) b − seq (sumRange (pow x) a) a)
+    /// (natDivSucc ((bigK+1)+7) b + natDivSucc ((bigK+1)+7) a)` — the
+    /// ordered-pair geometric Cauchy bound at a GENERAL ratio `x` and a
+    /// symbolic leaf-bound witness `bigK`, mirroring
+    /// [`Self::geom_cauchy_ordered_half`]'s derivation with
+    /// [`Self::geom_y_bound`]'s general leaf bound in place of
+    /// [`Self::geom_half_inv_leaf_bound`]'s literal `2` and the symbolic
+    /// modulus `(bigK+1)+7` in place of the literal `7`. `(bigK+1)` fuses the
+    /// `a`-side leaf with the regularity constant `natDivSucc 1 a`
+    /// (`geometric.rs`'s own `fuse_same_index`); `7` on the `b` side is
+    /// untouched from `geomCauchyOrderedHalf`'s own derivation (it never
+    /// depended on the base). Since `bigK` is symbolic, the smaller side is
+    /// padded up to the common target `(bigK+1)+7` via two
+    /// `Rat.natDivSucc_le_add_left` applications plus one `Nat.add_comm`
+    /// bridge, never via a literal coincidence like `geomCauchy`'s own
+    /// `3+4=7`.
+    pub geom_cauchy_of_lt_ordered: NameId,
+    /// `CReal.geomCauchyOfLt : ∀ x, le zero x → lt x one → ∀ k (h : PosBound
+    /// (add one (neg x)) k), Cauchy (sumRange (fun n => pow x n))` —
+    /// geometric-series Cauchyness at a GENERAL ratio `0 ≤ x < 1`, the
+    /// generalization of [`Self::geom_cauchy`] (concrete base `1/2`) needed
+    /// for Chapter 22–23's ratio test.
+    ///
+    /// Eliminates [`Self::geom_y_bound`]'s outer existential `∃ K, …` to
+    /// obtain a concrete-but-symbolic witness `(bigK, hK)`, then runs the
+    /// same `Nat.le_total` case split [`Self::geom_cauchy`] runs against
+    /// [`Self::geom_cauchy_ordered_half`] — here against
+    /// [`Self::geom_cauchy_of_lt_ordered`] — with the witness `(bigK+1)+7`
+    /// (a function of `bigK`, never simplified to a literal) in place of that
+    /// theorem's fixed `K := 7`.
+    pub geom_cauchy_of_lt: NameId,
     /// `CReal.one_le_pow_of_one_le : ∀ x, le one x → ∀ n, le one (pow x n)` —
     /// the mirror of [`Self::pow_le_one`]: powers of a base at least `1` stay
     /// at least `1`. Induction on `n`, and simpler than `pow_le_one`'s own
@@ -2985,6 +3050,37 @@ pub struct CRealPrelude {
     /// index `2` rather than an artifact of the formalization. See
     /// `creal/exponential.rs::declare_e_le_three`.
     pub e_le_three: NameId,
+    /// `CReal.cosTerm : Nat → CReal := fun k => mul (pow (neg one) k)
+    /// (expTerm (Nat.add k k))` — the `k`-th term of `cos 1`'s Taylor series,
+    /// `(-1)^k/(2k)!`, the doubled index written `Nat.add k k` (not `Nat.mul
+    /// 2 k`) so `CReal.pow_add` applies to it with no reduction bookkeeping.
+    /// See `creal/trig.rs`.
+    pub cos_term: NameId,
+    /// `CReal.cosSeriesPartial : Nat → CReal := CReal.sumRange CReal.cosTerm`
+    /// — the `k`-th partial sum `Σ_{n<k} (-1)^n/(2n)!`. See `creal/trig.rs`.
+    pub cos_series_partial: NameId,
+    /// `CReal.cosTermAbsLeDominant : ∀ k, le (abs (cosTerm k)) (expDominant
+    /// k)` — the domination bound closing `Cauchy (sumRange cosTerm)` against
+    /// `CReal.e`'s own `expDominant`/`expDominantCauchy` machinery, reused
+    /// unchanged rather than re-derived: no new geometric series. From a
+    /// sign bound (`abs (pow (neg one) k) ≤ one`, by induction, no parity
+    /// case split) and `CReal.exp_term_abs_le_dominant` (already built for
+    /// `e`) composed via `CReal.abs_mul_le_of_bounds`, plus a small
+    /// monotonicity argument (`expDominant (Nat.add k k) ≤ expDominant k`,
+    /// since `pow half` squares into `[0,1]`). See `creal/trig.rs`.
+    pub cos_term_abs_le_dominant: NameId,
+    /// `CReal.cosOne := CReal.mk (speedup (diagonal cosSeriesPartial) K) (…)`
+    /// — `cos 1`, the first transcendental-function-family constant in this
+    /// kernel, built via `CReal.mk` on an explicit regular sequence exactly
+    /// as `CReal.e` is (never by `Exists`-elimination). `K` and its concrete
+    /// Cauchy-body proof come from reproducing
+    /// `exponential.rs::exp_dominant_cauchy_body_concrete` (the SAME value
+    /// `CReal.e`'s own construction uses, since `cosOne`'s domination series
+    /// **is** `expDominant`, not a new one) — see `creal/trig.rs`'s module
+    /// documentation for why that reproduction, rather than an edit to that
+    /// file, is the route taken. Neither `CReal.cosOneConverges` (the
+    /// analogue of `CReal.e_converges`) nor a `[0, 1]` bound are built here.
+    pub cos_one: NameId,
     /// `CReal.sumRange_const : ∀ w m,
     /// Equiv (sumRange (fun _ => w) (Nat.succ m)) (mul (ofNat (Nat.succ m))
     /// w)` (`creal/monotone.rs`) — a constant summed `succ m` times is
@@ -4183,6 +4279,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         bucket_clamp_upper: kernel.name_str(creal, "bucketClampUpper"),
         bucket_clamp_lower: kernel.name_str(creal, "bucketClampLower"),
         bucket_index_bound: kernel.name_str(creal, "bucketIndexBound"),
+        crossing_index: kernel.name_str(creal, "crossingIndex"),
+        crossing_upper: kernel.name_str(creal, "crossingUpper"),
+        crossing_lower: kernel.name_str(creal, "crossingLower"),
         sample_upper_bound: kernel.name_str(creal, "sampleUpperBound"),
         sample_lower_bound: kernel.name_str(creal, "sampleLowerBound"),
         bounded_of_uniformly_continuous: kernel.name_str(creal, "bounded_of_uniformly_continuous"),
@@ -4276,6 +4375,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         geom_half_inv_leaf_bound: kernel.name_str(creal, "geomHalfInvLeafBound"),
         geom_cauchy_ordered_half: kernel.name_str(creal, "geomCauchyOrderedHalf"),
         geom_cauchy: kernel.name_str(creal, "geomCauchy"),
+        geom_cauchy_of_lt_ordered: kernel.name_str(creal, "geomCauchyOfLtOrdered"),
+        geom_cauchy_of_lt: kernel.name_str(creal, "geomCauchyOfLt"),
         one_le_pow_of_one_le: kernel.name_str(creal, "one_le_pow_of_one_le"),
         pow_le_pow_of_one_le: kernel.name_str(creal, "pow_le_pow_of_one_le"),
         pow_pos: kernel.name_str(creal, "pow_pos"),
@@ -4338,6 +4439,10 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         two_le_e: kernel.name_str(creal, "two_le_e"),
         e_le_four: kernel.name_str(creal, "e_le_four"),
         e_le_three: kernel.name_str(creal, "e_le_three"),
+        cos_term: kernel.name_str(creal, "cosTerm"),
+        cos_series_partial: kernel.name_str(creal, "cosSeriesPartial"),
+        cos_term_abs_le_dominant: kernel.name_str(creal, "cosTermAbsLeDominant"),
+        cos_one: kernel.name_str(creal, "cosOne"),
         sum_range_const: kernel.name_str(creal, "sumRange_const"),
         mesh_count_width: kernel.name_str(creal, "mesh_count_width"),
         subdivision_point_in_bounds: kernel.name_str(creal, "subdivisionPoint_in_bounds"),
@@ -4489,6 +4594,13 @@ pub(crate) fn build_creal_prelude_uncached(
         // before `monotone::declare_monotone`, its first NEW consumer.
         uniform_continuity::declare_abs_add_le(&mut d, prelude)?;
         uniform_continuity::declare_uniform_continuity(&mut d, prelude)?;
+        // `crossing::declare_crossing` needs only `CReal.bucketIndex` and its
+        // four closeness lemmas (`declare_uniform_continuity`, just above)
+        // plus the core order/product toolkit (`product::declare_product`/
+        // `field::declare_field`, both well above) -- nothing from
+        // `derivative`/`series`/`monotone`, so it lands here rather than
+        // waiting for any of them.
+        crossing::declare_crossing(&mut d, prelude)?;
         // `converges_comp_eventually` needs `UniformlyContinuousOn`/`.spec`/
         // `.modulus` (`declare_uniform_continuity`, just above) plus
         // `Converges`/`converges_lower_bound`/`converges_upper_bound`
@@ -4843,6 +4955,12 @@ pub(crate) fn build_creal_prelude_uncached(
         // `mul_inv_cancel` via `inverse`) — the latter already ran earlier,
         // the former just above. See `geometric.rs`'s module documentation.
         geometric::declare_geometric(&mut d, prelude)?;
+        // `geomCauchyOfLtOrdered`/`geomCauchyOfLt` need only `geometric.rs`'s
+        // own `geom_pair_within`/`geom_y_bound` (just above, well before
+        // `exponential`'s base-1/2 `geom_cauchy_ordered_half`/`geom_cauchy`
+        // family) plus ordinary ring/order laws, so this lands right after
+        // its one real dependency rather than beside its base-1/2 sibling.
+        geometric::declare_geom_cauchy_of_lt_family(&mut d, prelude)?;
         // `expTerm`/`expSeriesPartial` need `Nat.factorial` (already in
         // `nat_prelude`, consumed here through `IntDev`'s `NatOps` impl) and
         // `Rat.normalize`; nothing else in this file depends on them, so they
@@ -4873,6 +4991,18 @@ pub(crate) fn build_creal_prelude_uncached(
         // just above, but shares enough of its own dependency reasoning that
         // it is placed next to it.
         exponential::declare_e_family(&mut d, prelude)?;
+        // `trig::declare_trig` (`CReal.cosOne`, the first transcendental
+        // constant) needs `expTerm`/`expDominant`/`exp_term_abs_le_dominant`
+        // (`declare_exponential`, above), `geom_cauchy_ordered_half`
+        // (`declare_geom_cauchy_family`, above),
+        // `sum_range_cauchy_dominated_ordered_normalized` (`series`, well
+        // above), `regular_of_scaled_cauchy`/`speedup` (`convergence`/
+        // `speedup`, well above) and `abs_mul_le_of_bounds`
+        // (`derivative::declare_has_derivative_pow`, well above). It reuses
+        // `expDominant`'s own concrete Cauchy witness rather than deriving a
+        // new one, so it does not depend on `declare_e_family`'s own
+        // declarations, only on the machinery both share.
+        trig::declare_trig(&mut d, prelude)?;
         // `ivt::declare_ivt` needs `CReal.lt_cotrans` (`cotransitivity`, well
         // above), `CReal.mesh_count_width` (`monotone::declare_monotone_of_nonneg_deriv_all`,
         // also above) and ordinary ring/order laws; nothing later depends on
@@ -5799,6 +5929,7 @@ mod cancellation;
 mod completeness;
 mod convergence;
 mod cotransitivity;
+mod crossing;
 mod density;
 mod deriv_unique;
 mod derivative;
@@ -5819,6 +5950,7 @@ mod ring_helpers;
 mod series;
 mod speedup;
 mod sqrt;
+mod trig;
 mod uniform_continuity;
 
 #[cfg(test)]

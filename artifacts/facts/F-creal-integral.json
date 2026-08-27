@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-integral",
+  "title": "The constructed Riemann integral exists as a total, axiom-free CReal function",
+  "statement": "There is a total function CReal.integral taking a function F, endpoints a <= b, and a witness that F is uniformly continuous on [a,b], and returning a CReal -- built as speedup(diagonal(f_lambda), K) with a regularity proof, where f_lambda n := riemannSum F a b (deep F a b u n) is the sequence of Riemann sums at accuracy-driven mesh counts. Admitted by the trusted kernel gate with an empty axiom footprint. This is Spivak Ch.13/14's definite integral, constructed rather than assumed.",
+  "formal": {
+    "language": "lean4",
+    "statement": "def CReal.integral : ((x0 : ((x0 : CReal) -> CReal)) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal.le x1 x2) -> ((x4 : CReal.UniformlyContinuousOn x0 x1 x2) -> CReal)))))",
+    "fragment": "CReal",
+    "free_symbols": ["x0", "x1", "x2", "x3", "x4"],
+    "kernel_theorem": "CReal.integral"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.integral",
+      "kind": "kernel-term",
+      "supports": "CReal.integral is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list (indirect, via a citing theorem)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- integral_const 2>/dev/null | grep -cE '^CReal\\.integral_const[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "CReal.integral is a Declaration::Definition, not a Theorem, and theorem_dependency_inventory (like prelude_theorem_inventory and nat_theorem_inventory) deliberately excludes Definitions from its listing -- 'Definitions, inductives and axioms are excluded' is the tool's own stated contract, and no in-tree example inventories Definitions by name with fail-on-absence semantics. So this checker is INDIRECT: declare_integral_const builds CReal.integral (fun _ => x0) x1 x2 x3 x4 as a 5-argument const_app and the kernel can only admit CReal.integral_const by first resolving CReal.integral's own declared arrow type against that application. If CReal.integral were removed or its arity changed, build_creal_prelude's own .expect(\"CReal prelude must build\") call inside this very binary would panic before printing anything, so the grep would see empty input and fail (exit 1) rather than silently reporting an absent row -- the same discriminating property the direct-name checkers have, one level removed. Verified on this tree: the command currently prints exactly one matching line. --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-CReal.integral",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.integral",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: creal: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: creal trusted surface = 0'. That bounds every declaration in the creal environment, including CReal.integral, since a declaration cannot depend on a trusted declaration the environment does not contain. --require-axiom-free <name> errors for a prelude never built by this run. --release is MANDATORY here."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/integral.rs, declare_creal_integral)",
+    "source": "canonical type read via a standalone probe binary depending on axeyum-lean-kernel by path, calling only its public Kernel API (environment(), display_name(), render_lean(), axiom_footprint()) -- no in-tree example prints CReal.integral's own type, since every theorem-inventory example filters to Declaration::Theorem and excludes Definitions. The probe was built and run in the session scratchpad and deleted after use; crates/ source was not touched to produce this batch."
+  },
+  "notes": "depends_on is empty because the construction's own direct building blocks (CReal.riemannSum, the deep threshold, CReal.regular_of_scaled_cauchy, CReal.speedup, CReal.mk) are either plain Definitions (nothing to register as a proposition) or an unregistered theorem (regular_of_scaled_cauchy) -- per crates/axeyum-lean-kernel/src/creal/integral.rs's own doc comment on declare_creal_integral. The propositions ABOUT this construction (that it converges to the Riemann-sum limit, that it does not depend on the continuity witness, its algebra) are the separate facts F:creal-integral-converges, F:creal-integral-witness-independent, F:creal-integral-const, F:creal-integral-add, F:creal-integral-le, F:creal-integral-scale.",
+  "external_status": "proved"
+}

@@ -196,6 +196,95 @@
 //! precisely: that mesh-splitting bridge, using
 //! `riemann_sum_integral_close` (this file) on all three intervals once
 //! it exists.
+//!
+//! ## `CReal.integral_split` — checked 2026-08-27, still blocked; the
+//! remaining gap is structurally different from every other cross-object
+//! bridge this file has, and here is precisely why
+//!
+//! Task: attempt the mesh-splitting bridge the 2026-08-26 entry names.
+//! **Not built.** Two findings, one positive (a real simplification for
+//! whoever attempts this next) and one negative (why the attempt still does
+//! not close):
+//!
+//! **Positive: the "same sequence" objection in the 2026-08-26 entry is
+//! avoidable, and does not need to be solved.** That entry's point (3)
+//! argued `converges_unique` needs the two `Converges` facts to name the
+//! syntactically same sequence, which three independent witnesses `u`,
+//! `uac`, `ucb` do not give. `CReal.le_of_forall_le_add_small` / its wrapper
+//! `CReal.equiv_zero_of_small` (`creal/archimedean_squeeze.rs`, already in
+//! the prelude, callable from here) sidestep this entirely: `equiv_zero_of_small
+//! : ∀ v, (∀ e, le (abs v) (ofRat (natDivSucc 1 e))) → Equiv v zero` proves an
+//! `Equiv` from an arbitrary-accuracy **rational** bound on one difference,
+//! with no shared underlying sequence required at all. Applied to `v :=
+//! integral F a b hab u − (integral F a c hac uac + integral F c b hcb
+//! ucb)`, this is the right tool to FINISH the proof once the per-`e` bound
+//! exists. It is not, itself, that bound.
+//!
+//! **Negative, and this is the actual remaining gap: producing that per-`e`
+//! bound needs a term-by-term comparison between Riemann sums over
+//! DIFFERENT, generally incommensurate-width intervals, and nothing in this
+//! file's arithmetic toolkit does that.** Every "combine several riemannSums"
+//! construction that already exists here — `common_refinement`,
+//! `common_refinement3`, `sharedIndexToCanonical`,
+//! `riemannSumDeepCauchyCross`, `riemannSumAddCauchyCross`, `sumRange_split`,
+//! `fineBlockSum_close`, and the whole `sumRange_reblock` family underneath
+//! `riemann_sum_integral_close` itself — compares riemann sums over the
+//! **same interval** `[a, b]` at different mesh counts (refining `m` to a
+//! common multiple `l`), or the same interval/mesh at a different function or
+//! different continuity witness. Every one of those refinements is a PURE
+//! `Nat` computation: `mesh_reciprocal_mul`/`succ_mul_succ` show a refined
+//! step `(b−a)/(l+1)` is an EXACT algebraic multiple of the coarse step
+//! `(b−a)/(m+1)`, so no comparison between two different CReal widths is
+//! ever needed — only `Nat.mul`/`Nat.add` identities.
+//!
+//! `[a, c]` and `[c, b]` are different intervals from `[a, b]`, with widths
+//! `c − a` and `b − c` that are, for an arbitrary `CReal c` with `a ≤ c ≤ b`,
+//! **not** rational multiples of `b − a`, and not computably comparable to it
+//! at all (CReal apartness/order is not decidable). So there is no Nat count
+//! `m_ac`/`m_cb` whose step size `(c−a)/(m_ac+1)` / `(b−c)/(m_cb+1)` can be
+//! made to EQUAL `(b−a)/(m_ab+1)` by the `common_refinement`-style algebra —
+//! confirmed by trying: `common_refinement`/`common_refinement3` both take
+//! their two or three `Nat` counts over a SINGLE shared interval as a
+//! precondition baked into their construction (`succ_mul_succ` multiplies
+//! `Nat` counts, never touches a `CReal` width), and neither has, nor can be
+//! made to have by rearranging their existing calls, a step that relates a
+//! count on `[a, c]` to a count on `[a, b]`.
+//!
+//! A correct proof needs machinery this development does not have on either
+//! side of the arithmetic: (1) an Archimedean "crossing index" fact — given
+//! the coarse step `Δ_ab := (b−a)/(m_ab+1)` and `c` with `a ≤ c ≤ b`, a `Nat`
+//! `i0` such that `a + i0·Δ_ab` is within one step of `c` (existence alone is
+//! already delicate: `CReal` order is not decidable, so `i0` cannot be found
+//! by comparing `a + i·Δ_ab` against `c` one `i` at a time and stopping — the
+//! stopping test is not decidable); and (2) a term-by-term bound on the
+//! difference between the partial sum over the crossing block's indices
+//! (built from `Δ_ab`, hence sampling slightly outside `[a, c]`) and
+//! `riemannSum F a c m_ac` for a comparably-fine `m_ac` (built from the
+//! genuinely different step `Δ_ac`), via `F`'s uniform continuity — structurally
+//! close to what `pointwise_block_equiv`/`sample_point_reblock_proof` do for
+//! a SAME-interval refinement, but neither is stated for two different
+//! interval endpoints and neither reduces to the other by substitution
+//! (`sample_point_reblock_proof`'s own mesh identity is proved via
+//! `mesh_reblock_delta_eq`, which is `Nat`-refinement algebra over ONE
+//! `(a, b)` pair, not a fact relating a `[a,b]`-step to an `[a,c]`-step).
+//!
+//! Neither (1) nor (2) exists anywhere in `creal/` as checked against
+//! `prelude_theorem_inventory --include-constructed --release` (2026-08-27,
+//! 916 `CReal.*` rows, `riemannSum_integral_close` present as the positive
+//! control, `integral_split` absent as expected). Building them is a new
+//! sub-development on the scale of the `sumRange_reblock`/
+//! `riemann_sum_reblock_close`/`riemann_sum_shared_accuracy_close` chain this
+//! file already carries for the single-interval case (roughly 2,500 lines,
+//! `declare_riemann_sum` through `declare_riemann_sum_integral_close`) — not
+//! a composition of what is already here. **Next open goal, precisely:**
+//! build (1), the Archimedean crossing-index fact for `CReal`, first and
+//! independently (it is reusable outside this file and does not mention
+//! `riemannSum` at all), then (2), the cross-width term comparison, before
+//! attempting `integral_split` itself again.
+//!
+//! No declaration was added by this entry. Nothing above is a kernel
+//! rejection — the construction was not attempted at the term level because
+//! the two prerequisite facts it would need to cite do not exist to cite.
 
 use super::completeness::half_shift_le;
 use super::convergence::{

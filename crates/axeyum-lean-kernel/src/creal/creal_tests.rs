@@ -126,7 +126,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 366] = [
+    let expected: [(&str, crate::NameId, &str); 375] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -404,6 +404,9 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         ("CReal.bucketClampUpper", p.bucket_clamp_upper, "theorem"),
         ("CReal.bucketClampLower", p.bucket_clamp_lower, "theorem"),
         ("CReal.bucketIndexBound", p.bucket_index_bound, "theorem"),
+        ("CReal.crossingIndex", p.crossing_index, "def"),
+        ("CReal.crossingUpper", p.crossing_upper, "theorem"),
+        ("CReal.crossingLower", p.crossing_lower, "theorem"),
         ("CReal.sampleUpperBound", p.sample_upper_bound, "theorem"),
         ("CReal.sampleLowerBound", p.sample_lower_bound, "theorem"),
         (
@@ -646,6 +649,12 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
             "theorem",
         ),
         ("CReal.geomCauchy", p.geom_cauchy, "theorem"),
+        (
+            "CReal.geomCauchyOfLtOrdered",
+            p.geom_cauchy_of_lt_ordered,
+            "theorem",
+        ),
+        ("CReal.geomCauchyOfLt", p.geom_cauchy_of_lt, "theorem"),
         (
             "CReal.one_le_pow_of_one_le",
             p.one_le_pow_of_one_le,
@@ -1317,6 +1326,20 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         // `e_le_four` -- `expTerm 0 = expTerm 1 = 1` is not yet geometric).
         // See `exponential.rs::declare_e_le_three`.
         ("CReal.e_le_three", p.e_le_three, "theorem"),
+        // `CReal.cosTerm`/`CReal.cosSeriesPartial`/`CReal.cosTermAbsLeDominant`/
+        // `CReal.cosOne` -- the first transcendental-function-family constant
+        // in this kernel, `cos 1`, built via `CReal.mk` on an explicit
+        // regular sequence exactly as `CReal.e` is. The domination bound
+        // reuses `CReal.e`'s own `expDominant`/`expDominantCauchy` machinery
+        // unchanged (no new geometric series). See `creal/trig.rs`.
+        ("CReal.cosTerm", p.cos_term, "def"),
+        ("CReal.cosSeriesPartial", p.cos_series_partial, "def"),
+        (
+            "CReal.cosTermAbsLeDominant",
+            p.cos_term_abs_le_dominant,
+            "theorem",
+        ),
+        ("CReal.cosOne", p.cos_one, "def"),
         // Found by the coverage assertion above, not by anyone noticing: these
         // seven were live in the prelude and unlisted here, so this test had
         // never checked them. `lt_cotrans`/`apart_cotrans` are Ch 12's
@@ -9371,4 +9394,81 @@ fn bounded_of_uniformly_continuous_instantiates_on_identity() {
          against K's own predecessor (t_m_bound, without the final succ) \
          -- a checker that accepts both K and K-1 has not verified the bound"
     );
+}
+
+/// `CReal.crossingIndex CReal.zero (CReal.ofRat (5/2)) Rat.one` computes to
+/// the literal `2` -- `a := 0`, `Δ := 1`, `c := 5/2`, so the crossing lands
+/// between the 2nd and 3rd unit step, matching a hand computation
+/// (`floor(5/2) = 2`). Checked by `Eq.refl`, so this exercises the FULL
+/// reduction: `Rat.inv 1 = 1`, `CReal.add`'s index shift, `CReal.mul`'s
+/// `mulShift`-dependent sampling index, `Rat.max`, `Int.natAbs` and
+/// `Nat.div`, not merely `bucketIndex`'s own final division step.
+#[test]
+fn crossing_index_at_zero_one_five_halves_reduces_to_two() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let a = d.kernel().const_(p.zero, vec![]);
+    let five = d.num(5);
+    let one_idx = d.num(1);
+    let five_halves = d.const_app(p.rat.nat_div_succ, &[five, one_idx]); // 5/2
+    let c = d.const_app(p.of_rat, &[five_halves]);
+    let delta = crate::rat_prelude::ops::rone(&mut d, p.rat);
+
+    let i0 = d.const_app(p.crossing_index, &[a, c, delta]);
+    let two_nat = d.num(2);
+    let i0_eq_two = NatOps::eq(&mut d, i0, two_nat);
+    let i0_proof = NatOps::refl(&mut d, i0);
+    let anon = d.kernel().anon();
+    let name = d
+        .kernel()
+        .name_str(anon, "__crossing_index_zero_one_five_halves_reduces_to_two");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: i0_eq_two,
+            value: i0_proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!("crossingIndex 0 (5/2) 1 must reduce to 2 by refl: {error:?}")
+        });
+}
+
+/// `CReal.crossingIndex CReal.zero (CReal.ofRat (7/2)) Rat.one` computes to
+/// the literal `3` -- a DIFFERENT concrete case from the sibling test above,
+/// with a DIFFERENT expected output. A construction that (wrongly) returned
+/// a constant regardless of its arguments would pass a single concrete
+/// check; it cannot pass two concrete checks that disagree.
+#[test]
+fn crossing_index_at_zero_one_seven_halves_reduces_to_three() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let a = d.kernel().const_(p.zero, vec![]);
+    let seven = d.num(7);
+    let one_idx = d.num(1);
+    let seven_halves = d.const_app(p.rat.nat_div_succ, &[seven, one_idx]); // 7/2
+    let c = d.const_app(p.of_rat, &[seven_halves]);
+    let delta = crate::rat_prelude::ops::rone(&mut d, p.rat);
+
+    let i0 = d.const_app(p.crossing_index, &[a, c, delta]);
+    let three_nat = d.num(3);
+    let i0_eq_three = NatOps::eq(&mut d, i0, three_nat);
+    let i0_proof = NatOps::refl(&mut d, i0);
+    let anon = d.kernel().anon();
+    let name = d.kernel().name_str(
+        anon,
+        "__crossing_index_zero_one_seven_halves_reduces_to_three",
+    );
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: i0_eq_three,
+            value: i0_proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!("crossingIndex 0 (7/2) 1 must reduce to 3 by refl: {error:?}")
+        });
 }
