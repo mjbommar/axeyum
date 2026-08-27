@@ -126,13 +126,26 @@
 //! [`polynomial_mvt`] costs at most two calls to
 //! [`crate::extremum::polynomial_extremum`] (on `g` and, only if the first
 //! does not locate an interior critical point, on `−g`) plus O(deg `p`) exact
-//! arithmetic to build `g`/`g'` — so its cost curve **is**
-//! [`crate::extremum`]'s cost curve, inherited rather than re-derived; see
-//! that module's doc for the measured Sturm-isolation-dominated numbers.
-//! `cost_curve_by_degree` (below) measures degrees 2/3/5 directly through this
-//! module's own entry point; `verify_mvt_certificate` itself is cheap by
-//! comparison (one Sturm recount + a handful of exact polynomial evaluations,
-//! no search).
+//! arithmetic to build `g`/`g'`. **This is NOT simply [`crate::extremum`]'s
+//! cost curve inherited unchanged**, and an earlier draft of this doc claimed
+//! it was before measuring: subtracting a nonzero secant slope `m` from `p'`
+//! generally destroys whatever rational/low-degree factorization made the
+//! *original* `p'` cheap to isolate, because `p' − m` is a differently-shaped
+//! polynomial with no reason to share `p'`'s roots or factor structure.
+//! `cost_curve_where_it_hurts_thick_degree_5_declines_soundly` (below) is the
+//! measured counterexample: it reuses the exact polynomial
+//! `crate::extremum::tests::cost_curve_by_degree` reports as its *cheap,
+//! all-rational* degree-5 case (because there `p' = 0` is solved directly,
+//! with `m` implicitly `0`), and on `[−2, 2]` (secant slope `28 ≠ 0`) it
+//! instead declines in a few seconds hitting the resultant dimension cap, because
+//! `p' − 28` is an irreducible quartic with none of `p'`'s structure.
+//! `cost_curve_by_degree` measures three *chosen-to-be-cheap* cases directly
+//! through this module's own entry point (deg 2: ~3 ms; deg 3, irrational
+//! witness: ~8 ms; deg 5 with a degree-4 algebraic witness, chosen so the
+//! evaluation reduces to a single linear term: ~43 ms; debug build, one
+//! measurement, not a ratchet). `verify_mvt_certificate` itself is cheap by
+//! comparison regardless (one Sturm recount + a handful of exact polynomial
+//! evaluations, no search).
 
 use core::cmp::Ordering;
 
@@ -174,7 +187,12 @@ pub struct MvtCertificate {
 
 /// The Rolle reduction `g(x) = p(x) − p(a) − slope·(x − a)`, given `p(a)`
 /// already evaluated. `None` on overflow.
-fn build_g(trimmed: &[Rational], a: Rational, pa: Rational, slope: Rational) -> Option<Vec<Rational>> {
+fn build_g(
+    trimmed: &[Rational],
+    a: Rational,
+    pa: Rational,
+    slope: Rational,
+) -> Option<Vec<Rational>> {
     let c0 = pa.checked_sub(slope.checked_mul(a)?)?;
     let mut g = trimmed.to_vec();
     while g.len() < 2 {
@@ -200,40 +218,59 @@ fn build_deriv_g(trimmed: &[Rational], slope: Rational) -> Option<Vec<Rational>>
 /// [`crate::algebraic::real_roots`] — reusing the existing isolation route
 /// rather than hand-building an unchecked bracket.
 fn rational_as_algebraic_real(c: Rational) -> Option<AlgebraicReal> {
-    let linear = vec![Rational::integer(c.numerator()).checked_neg()?, Rational::integer(c.denominator())];
+    let linear = vec![
+        Rational::integer(c.numerator()).checked_neg()?,
+        Rational::integer(c.denominator()),
+    ];
     let mut roots = crate::algebraic::real_roots(&linear)?;
     roots.pop()
 }
 
+/// The outcome of one attempt (on `g` or `−g`) to locate an interior
+/// critical point via [`crate::extremum::polynomial_extremum`].
+enum WitnessSearch {
+    /// The underlying extremum search declined (a sound decline;
+    /// [`polynomial_mvt`] propagates it rather than trying to guess).
+    Decline,
+    /// The search succeeded but the extremum sat at an endpoint (a tie with
+    /// `g(a) = g(b) = 0`) rather than interior; try the other sign.
+    NotInterior,
+    /// A genuine interior critical point, strictly inside `(a, b)`.
+    Found(AlgebraicReal),
+}
+
 /// Try to locate an interior critical point of `g` (or, if `negate`, of `−g`)
-/// via [`crate::extremum::polynomial_extremum`], returning it only if the
+/// via [`crate::extremum::polynomial_extremum`], reporting it only if the
 /// located extremum is **strictly greater than zero** — which (given
 /// `g(a) = g(b) = 0`) is exactly the condition that forces the argmax to be
-/// interior rather than an endpoint tie. `Some(None)` means the search
-/// succeeded but the extremum sat at an endpoint (try the other sign); `None`
-/// means the underlying search declined (propagate as a sound decline).
+/// interior rather than an endpoint tie.
 fn interior_extremum_witness(
     g: &[Rational],
     a: Rational,
     b: Rational,
     negate: bool,
-) -> Option<Option<AlgebraicReal>> {
-    let target: Vec<Rational> = if negate {
-        g.iter()
-            .map(|coeff| coeff.checked_neg())
-            .collect::<Option<Vec<_>>>()?
+) -> WitnessSearch {
+    let target: Option<Vec<Rational>> = if negate {
+        g.iter().map(|coeff| coeff.checked_neg()).collect()
     } else {
-        g.to_vec()
+        Some(g.to_vec())
     };
-    let cert = crate::extremum::polynomial_extremum(&target, a, b)?;
+    let Some(target) = target else {
+        return WitnessSearch::Decline;
+    };
+    let Some(cert) = crate::extremum::polynomial_extremum(&target, a, b) else {
+        return WitnessSearch::Decline;
+    };
     let ExtremumLocation::Critical(idx) = cert.argmax else {
-        return Some(None);
+        return WitnessSearch::NotInterior;
     };
-    let zero = RealAlgebraic::from_rational(Rational::zero())?;
-    if algebraic_cmp(&cert.max_value, &zero)? == Ordering::Greater {
-        Some(Some(cert.critical_points[idx].clone()))
-    } else {
-        Some(None)
+    let Some(zero) = RealAlgebraic::from_rational(Rational::zero()) else {
+        return WitnessSearch::Decline;
+    };
+    match algebraic_cmp(&cert.max_value, &zero) {
+        Some(Ordering::Greater) => WitnessSearch::Found(cert.critical_points[idx].clone()),
+        Some(_) => WitnessSearch::NotInterior,
+        None => WitnessSearch::Decline,
     }
 }
 
@@ -245,7 +282,11 @@ fn interior_extremum_witness(
 /// here is sound: it never returns a certificate whose witness is wrong or
 /// non-interior.
 #[must_use]
-pub fn polynomial_mvt(poly_coeffs: &[Rational], a: Rational, b: Rational) -> Option<MvtCertificate> {
+pub fn polynomial_mvt(
+    poly_coeffs: &[Rational],
+    a: Rational,
+    b: Rational,
+) -> Option<MvtCertificate> {
     if a.checked_cmp(&b)? != Ordering::Less {
         return None;
     }
@@ -276,7 +317,7 @@ pub fn polynomial_mvt(poly_coeffs: &[Rational], a: Rational, b: Rational) -> Opt
 
     // General case (deg p >= 2): Rolle via an interior extremum of g -- see
     // the module doc's existence argument.
-    if let Some(c) = interior_extremum_witness(&g, a, b, false)? {
+    if let WitnessSearch::Found(c) = interior_extremum_witness(&g, a, b, false) {
         return Some(MvtCertificate {
             poly: trimmed,
             a,
@@ -287,7 +328,7 @@ pub fn polynomial_mvt(poly_coeffs: &[Rational], a: Rational, b: Rational) -> Opt
             c,
         });
     }
-    if let Some(c) = interior_extremum_witness(&g, a, b, true)? {
+    if let WitnessSearch::Found(c) = interior_extremum_witness(&g, a, b, true) {
         return Some(MvtCertificate {
             poly: trimmed,
             a,
@@ -300,7 +341,7 @@ pub fn polynomial_mvt(poly_coeffs: &[Rational], a: Rational, b: Rational) -> Opt
     }
     // Mathematically unreachable per the module doc's existence argument (one
     // of the two calls above must locate an interior critical point when
-    // deg(p) >= 2) -- if both returned Some(None), the underlying extremum
+    // deg(p) >= 2) -- if both returned NotInterior, the underlying extremum
     // search itself must have found max(g) = min(g) = 0 with g not
     // identically zero, a contradiction; treat it as a sound decline rather
     // than trust that reasoning at the call site.
@@ -437,7 +478,11 @@ mod tests {
         assert_eq!(cert.slope, Rational::integer(9));
         // c must be genuinely irrational (no rational value) and of algebraic
         // degree 2, the minimal polynomial of sqrt(3) (x^2 - 3, up to scale).
-        assert_eq!(cert.c.rational_value(), None, "c = sqrt(3) must be irrational");
+        assert_eq!(
+            cert.c.rational_value(),
+            None,
+            "c = sqrt(3) must be irrational"
+        );
         assert_eq!(cert.c.degree(), 2);
         // Bracket sqrt(3) ~= 1.732 exactly, no floating point: 1 < c < 2.
         let lifted = crate::real_algebraic::from_algebraic_real(&cert.c).unwrap();
@@ -460,7 +505,10 @@ mod tests {
         let cert = polynomial_mvt(&p, Rational::integer(0), Rational::integer(1))
             .expect("must not decline");
         assert_eq!(verify_mvt_certificate(&cert), Some(true));
-        assert!(poly::rat_trim(cert.deriv_g.clone()).is_empty(), "g' must be identically zero");
+        assert!(
+            poly::rat_trim(cert.deriv_g.clone()).is_empty(),
+            "g' must be identically zero"
+        );
         assert_eq!(cert.slope, Rational::integer(1));
         assert_eq!(
             cert.c.rational_value(),
@@ -479,7 +527,11 @@ mod tests {
         assert_eq!(verify_mvt_certificate(&cert), Some(true));
         assert_eq!(cert.slope, Rational::zero());
         assert!(poly::rat_trim(cert.deriv_g.clone()).is_empty());
-        assert_eq!(cert.c.rational_value(), Some(Rational::zero()), "midpoint of [-1,1]");
+        assert_eq!(
+            cert.c.rational_value(),
+            Some(Rational::zero()),
+            "midpoint of [-1,1]"
+        );
     }
 
     #[test]
@@ -520,7 +572,10 @@ mod tests {
         let t0 = Instant::now();
         let result = polynomial_mvt(&p, Rational::integer(-3), Rational::integer(3));
         let elapsed = t0.elapsed();
-        eprintln!("high-degree probe: elapsed={elapsed:?} declined={}", result.is_none());
+        eprintln!(
+            "high-degree probe: elapsed={elapsed:?} declined={}",
+            result.is_none()
+        );
         if let Some(cert) = result {
             assert_eq!(verify_mvt_certificate(&cert), Some(true));
         }
@@ -545,7 +600,12 @@ mod tests {
     #[test]
     fn verify_rejects_corrupted_polynomial_coefficient() {
         let mut cert = tie_case_cert();
-        cert.poly[0] = cert.poly[0].checked_add(Rational::integer(5)).unwrap();
+        // Corrupt the LINEAR coefficient, not the constant one: adding a
+        // constant to `poly` leaves `p'`, the secant slope, and `g` all
+        // unchanged (shifting a function vertically changes neither its
+        // derivative nor its secant slope), so that mutation is invisible to
+        // this certificate by construction, not a gap in the checker.
+        cert.poly[1] = cert.poly[1].checked_add(Rational::integer(5)).unwrap();
         assert_eq!(verify_mvt_certificate(&cert), Some(false));
     }
 
@@ -603,8 +663,8 @@ mod tests {
         // the slope equation would WRONGLY accept c = 0 as an MVT witness.
         // Only the strict-interiority check (step 5) catches this.
         let p = poly_from(&[0, 0, -4, 1]);
-        let cert =
-            polynomial_mvt(&p, Rational::integer(0), Rational::integer(4)).expect("must not decline");
+        let cert = polynomial_mvt(&p, Rational::integer(0), Rational::integer(4))
+            .expect("must not decline");
         assert_eq!(cert.slope, Rational::zero());
         // Sanity: the genuine witness the producer found must be interior.
         assert_eq!(verify_mvt_certificate(&cert), Some(true));
@@ -619,7 +679,10 @@ mod tests {
         let p_prime = poly::rat_derivative(&mutated.poly).unwrap();
         let value_at_0 = eval_poly_at_algebraic(&p_prime, &mutated.c).unwrap();
         assert_eq!(
-            algebraic_cmp(&value_at_0, &RealAlgebraic::from_rational(mutated.slope).unwrap()),
+            algebraic_cmp(
+                &value_at_0,
+                &RealAlgebraic::from_rational(mutated.slope).unwrap()
+            ),
             Some(Ordering::Equal),
             "sanity: p'(0) = slope really does hold, making this the adversarial case"
         );
@@ -634,24 +697,67 @@ mod tests {
 
     #[test]
     fn cost_curve_by_degree() {
-        let d2 = poly_from(&[0, 0, 1]); // x^2
+        // Degree 2: p = x^2 on [0, 2] (rational witness, see
+        // `quadratic_rational_witness`).
+        let d2 = poly_from(&[0, 0, 1]);
         let t0 = Instant::now();
         let c2 = polynomial_mvt(&d2, Rational::integer(0), Rational::integer(2)).unwrap();
         let e2 = t0.elapsed();
         assert_eq!(verify_mvt_certificate(&c2), Some(true));
 
-        let d3 = poly_from(&[0, 0, 0, 1]); // x^3
+        // Degree 3: p = x^3 on [0, 3] (irrational witness c = sqrt(3)).
+        let d3 = poly_from(&[0, 0, 0, 1]);
         let t1 = Instant::now();
         let c3 = polynomial_mvt(&d3, Rational::integer(0), Rational::integer(3)).unwrap();
         let e3 = t1.elapsed();
         assert_eq!(verify_mvt_certificate(&c3), Some(true));
 
-        let d5 = poly_from(&[0, 0, 0, -5, 0, 3]); // 3x^5 - 5x^3
+        // Degree 5: p = x^5 on [0, 1]. slope = 1, p' = 5x^4, so the witness
+        // solves 5x^4 = 1 -- a degree-4 irrational algebraic number. Chosen
+        // (like `crate::extremum`'s own degree-5 case) so `g = x^5 - x`
+        // reduces to a single linear term modulo the degree-4 minimal
+        // polynomial (`rat_rem` gives `-4/5 * x`), keeping evaluation cheap
+        // even though the critical point's own algebraic degree is 4.
+        let d5 = poly_from(&[0, 0, 0, 0, 0, 1]);
         let t2 = Instant::now();
-        let c5 = polynomial_mvt(&d5, Rational::integer(-2), Rational::integer(2)).unwrap();
+        let c5 = polynomial_mvt(&d5, Rational::integer(0), Rational::integer(1)).unwrap();
         let e5 = t2.elapsed();
         assert_eq!(verify_mvt_certificate(&c5), Some(true));
+        assert_eq!(c5.c.degree(), 4);
 
-        eprintln!("mvt cost curve: deg2={e2:?}, deg3={e3:?}, deg5={e5:?}");
+        eprintln!("mvt cost curve: deg2={e2:?}, deg3={e3:?}, deg5(critical-degree4)={e5:?}");
+    }
+
+    #[test]
+    fn cost_curve_where_it_hurts_thick_degree_5_declines_soundly() {
+        // p = 3x^5 - 5x^3 on [-2, 2] -- the SAME polynomial
+        // `crate::extremum::tests::cost_curve_by_degree` uses for its own
+        // (cheap, all-rational) degree-5 case, because there p' = 0 is being
+        // solved directly. Here the secant slope is 28 (nonzero), so MVT
+        // instead needs a root of p' - 28 = 15x^4 - 15x^2 - 28, an
+        // IRREDUCIBLE quartic with none of p''s rational structure -- and
+        // evaluating `g` at that quartic root grows the accumulated
+        // resultant degree fast enough to trip
+        // `axeyum_ir::poly_big::BIG_MAX_SYLVESTER_DIM` (each single
+        // evaluation declines in under 100 ms; `polynomial_mvt` tries both
+        // `g` and `-g`, each evaluating both critical points before giving
+        // up, so the whole call measures a few seconds -- 2-4 s measured
+        // across runs, debug build). This is the module doc's warning
+        // made concrete: subtracting a nonzero secant slope can turn an
+        // `extremum`-cheap polynomial into an `mvt`-expensive one, because
+        // the shifted derivative rarely inherits the original's factorable
+        // structure. A sound decline (`None`), never a wrong witness or a
+        // panic, either way.
+        let p = poly_from(&[0, 0, 0, -5, 0, 3]);
+        let t0 = Instant::now();
+        let result = polynomial_mvt(&p, Rational::integer(-2), Rational::integer(2));
+        let elapsed = t0.elapsed();
+        eprintln!(
+            "mvt cost curve (hurts): elapsed={elapsed:?} declined={}",
+            result.is_none()
+        );
+        if let Some(cert) = result {
+            assert_eq!(verify_mvt_certificate(&cert), Some(true));
+        }
     }
 }
