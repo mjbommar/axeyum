@@ -261,3 +261,148 @@ is not the estimate machinery — it is the size of the aligned mesh terms
 are stated at. **No `CReal.integral` `Definition` is unfolded anywhere**: every
 `integral` is one shared `const_app` on both sides of every step, which is the
 discipline `riemannSum_integral_close`'s own 74 s incident established.
+
+## Piece 1 — LANDED conditionally, NINETEENTH lane, 2026-08-27
+
+The eighteenth lane named two missing pieces. Piece 1 (the close-endpoint
+estimate) is now built and kernel-verified, in three increments, **under three
+explicit hypotheses** — one of which is the residual gap. Piece 2 was not
+attempted and its analysis is unchanged.
+
+### Absence re-verified a third time
+
+`/usr/bin/grep -rniE 'endpoint.*(le|bound|estimate|close)|(le|bound|estimate|
+close).*endpoint'` over every `creal/*.rs`: only prose (module docs, test
+comments), zero declarations, against **21** hits for
+`riemann_sum_congr_endpoints` as the same-shape positive control. The third
+check cost one command and confirmed the eighteenth lane's finding.
+
+### The shorter route existed AGAIN — and the level matters
+
+The register's own closing lesson pays a third time, but only when the
+question is asked at the right LEVEL. Asked about *integrals*, "which
+declaration already relates two of these under a bound?" finds nothing: the
+endpoint estimate is genuinely a `riemannSum` fact and there is no way around
+it. Asked about **finite sums** it finds `CReal.sumRange_const`
+(`Equiv (sumRange (fun _ => w) (succ m)) (mul (ofNat (succ m)) w)`), which
+turns a uniform per-term bound into `(succ m)·K` in ONE lemma application and
+deletes the induction the eighteenth lane's sizing implied.
+
+`shape_search` (ADR-0608) found it in one query and earned its keep twice
+more: `--concl CReal.le --const CReal.riemannSum` returns exactly two rows,
+both same-endpoint — the negative result piece 1 rests on — and `--ns CReal
+--name-like abs` surfaced `CReal.abs_mul_le_of_bounds`, `derivative.rs`'s
+product-rule lemma, which turns out to be the entire analytic content of the
+per-term estimate. Note the prebuilt binary in the SHARED checkout's
+`target/release/examples/` was stale (it lacks `integral_abs_le`, landed
+hours earlier), which does not affect a query about older declarations but
+would silently produce a false ABSENT for a recent one.
+
+### The three increments
+
+1. `sum_range_pair_diff_le` — SUM level, no `riemannSum`/mesh/modulus.
+2. `product_pair_diff_le` — PER-TERM, purely algebraic on four bare factors.
+3. `riemann_sum_endpoints_le` — the assembly, stated at the `rsum` type.
+
+Exact statements are in `creal/integral.rs`'s module documentation.
+
+### The residual gap is ONE index-arithmetic chain
+
+`riemann_sum_endpoints_le` takes `dd` (a bound on `|Δ₁ − Δ₂|`), `d2b` (a
+bound on `|Δ₂|`) and — the one that matters — a per-index hypothesis that
+`|p_i − p'_i|` is inside the modulus at accuracy `e`. The first two are cheap
+for a caller. The third is not: `p_i − p'_i = (x − x₂) + i·(Δ₁ − Δ₂)`, so
+bounding it uniformly in `i` needs `i ≤ m` carried through `CReal.ofNat_le`
+and `CReal.meshReciprocalMul` (Rust field `mesh_reciprocal_mul` -- the two
+spellings differ, which is exactly the retrieval hazard `shape_search
+--name-like` exists for) to turn `i·|Δ₁−Δ₂|` into `|w₁ − w₂|`. Both
+lemmas exist; the chain was not built.
+
+**So piece 1 is a CONDITIONAL estimate, and calling it "piece 1 landed"
+without that qualifier would be the overstatement this register exists to
+prevent.** The analytic content is all kernel-checked; what remains is
+arithmetic over existing lemmas.
+
+### Piece 2 unchanged, and piece 1 does not move it
+
+Every hypothesis in `riemann_sum_endpoints_le` is about `[x,y]` versus
+`[x₂,y₂]` at a FIXED mesh count. None of them constructs a split point. The
+`PosBound`-on-the-width obstruction stands exactly as the eighteenth lane
+stated it, and the next stratum remains **`integral_split` at arbitrary `c`
+GIVEN a `PosBound` on the interval width** — not a universally quantified
+`c`.
+
+### Dead code 4 → 8, none silenced
+
+Six new private helpers, each with
+`#[cfg_attr(not(test), expect(dead_code, reason = "…"))]` naming its own
+specific future consumer. No prelude declaration was added.
+
+### Cost: none — and a SINGLE PAIR would have said +5 s
+
+Matched A/B on one tree, `integral.rs` swapped to its pre-lane content and
+back (restore verified byte-identical with `cmp`), `creal_prelude_builds`
+isolated:
+
+| tree | end load | reading |
+| --- | --- | --- |
+| WITHOUT | 2.69 | 36.10 s |
+| WITHOUT | 4.88 | 40.32 s |
+| WITH | 4.10 | 41.91 s |
+| WITH | 4.44 | 41.18 s |
+
+The first pair taken (36.10 / 41.18) reads as **+5 s**, and it is an artifact
+of load: the `WITHOUT` run landed at 2.69 and the `WITH` runs at 4.1–4.4. A
+second `WITHOUT` reading at 4.88 gives 40.32 s against 41.18 s `WITH` at
+4.44 — 0.86 s. **Read the pair at matched load, not the pair you took
+first**; this register has recorded the same trap before from the other
+direction (a batched run reading 35.93 s).
+
+The decisive check is structural, not a timing: `git diff` against this
+lane's base over `creal.rs`, `creal_tests.rs`, `inventory.rs` and
+`inventory/` is **empty**, so both sides build the identical environment and
+any difference could only have been the harness.
+
+### A FAILING `def_eq` between two `riemannSum`s is PATHOLOGICAL
+
+New entry in this register's failure list, and it cost the only wasted run of
+the lane. `riemann_sum_endpoints_le`'s first negative control transposed the
+two `riemannSum`s in the CONCLUSION and asserted `!Kernel::def_eq` on the two
+`abs` terms beforehand for non-vacuity. Both are FAILING defeq checks between
+`riemannSum`s at different endpoints, so the kernel must unfold both
+`Definition`s — `sumRange`'s `Nat.rec` over a symbolic `succ m`, `delta_of`
+inside — before it can conclude they differ.
+
+Measured: **> 300 s with RSS climbing 2.0 → 3.1 GB and no sign of stopping**,
+against **34.9 s** for the positive check on the identical proof term. A
+succeeding defeq stops at the first shared head; a failing one has no such
+stopping rule. Same family as this file's own 74 s incident, arriving through
+a test rather than a declaration.
+
+Replaced, not investigated, per the standing rule. The control now varies
+**only the term count in the bound** (`mul (ofNat m) kb`) and leaves the
+left-hand side the identical `ExprId`: equally discriminating (false at
+`m := 0`, where the sum has one term and the claimed bound is `0`) and free —
+both tests together run in 34.45 s. Non-vacuity is asserted STRUCTURALLY with
+`assert_ne!` on the two hash-consed `riemannSum` ids.
+
+**The rule to carry: a negative control must differ in a SMALL term.** If the
+two conclusions differ deep inside a `Definition`-heavy subterm, the refusal
+you are testing for is a defeq search, and it can cost more than the proof.
+
+### What the kernel rejected
+
+Once, in the first increment, and it is a family this register has not
+recorded before: a **SORT** error wearing a `TypeMismatch`'s clothes. The
+constant function fed to `sumRange` was built with a `CReal` binder instead
+of `Nat`, and the kernel printed
+`TypeMismatch { expected: ExprId(3), got: ExprId(1503219) }` — an
+unrenderable low id naming neither the lambda nor `sumRange`, and at a glance
+indistinguishable from this file's usual `le_congr` direction bugs. **The
+tell is the tiny `expected` id**: a sort lives at a single-digit `ExprId`; a
+real term does not.
+
+That same run also produced a control lesson worth keeping: the NEGATIVE
+control PASSED while the positive was rejected. A refusal proves nothing
+until the acceptance is green beside it, so the later increments build both
+probes in ONE function and assert both outcomes together.
