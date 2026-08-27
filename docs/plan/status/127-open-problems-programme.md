@@ -27,6 +27,12 @@ path; the terminal log and root manifest/cover are hash-bound in the sibling rec
 closes one of the 32 exhaustive semantic cells, not the remaining 31 and not the full MC<=7
 formula, so the `[7,8]` interval and five-problem scoreboard do not move.
 
+**S-box top-level semantic cell 4 checked, 2026-08-27.** The same bounded checker reached
+`385/385` and terminal `unsat-checked`: 373 leaf DRAT refutations plus 12 covering proofs,
+57,326,968,062 manifest-selected bytes. The base, typed cube, manifests, cover, checker binary,
+terminal log, and counts are hash-bound in the sibling receipt. Cells 4 and 8 now close 2/32
+exhaustive semantic cells. The other 30 remain open, so the `[7,8]` interval does not move.
+
 **Whole-tree obligation observability, 2026-08-27.** ADR-0598 adds non-authoritative start and
 finish events carrying obligation index, total, tree path, and leaf/cover/structural kind. The
 existing contiguous deterministic progress stream and lowest-index error remain unchanged.
