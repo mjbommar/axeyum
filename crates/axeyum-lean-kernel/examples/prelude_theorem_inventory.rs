@@ -188,8 +188,8 @@ fn build_groups(include_constructed: bool) -> Vec<(&'static str, Vec<Row>)> {
     // why this group's absence was a real, silent denominator gap rather
     // than one of this tool's deliberate declaration-kind exclusions.
     let mut characterization = Kernel::new();
-    let _ = build_characterization(&mut characterization)
-        .expect("Nat/Int characterization must build");
+    let _ =
+        build_characterization(&mut characterization).expect("Nat/Int characterization must build");
     groups.push(("characterization", theorems(&characterization)));
 
     let mut rational = Kernel::new();
