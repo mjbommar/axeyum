@@ -58,6 +58,42 @@ and `lean_pp`/`render_lean` already render kernel declarations as Lean.
    can never be exempted, by hard rule. So of doc 292's fifteen
    `TrustedDeclaration` declines, some are closable by extending the
    substitution allowlist and some are permanent.
+
+   **Amended again 2026-08-27, and the split is worse than the first amendment
+   estimated — measured, not projected.** Decoding the real
+   `nat-coprime-add-self-left` export and enumerating every theorem-kind
+   declaration in the stream found **15 uncovered names, not 2**, and **none
+   is closable by an allowlist extension**:
+
+   - **1 permanent** — `Quot` (hard rule, never exemptable).
+   - **5 permanent** — the `eq_self` cascade decodes to `eq_true (Eq.refl a)`,
+     and `eq_true` fundamentally requires `propext`. **This kernel is
+     intuitionistic by construction**: `prelude.rs` states that
+     `Classical.em`, `propext` and `funext` "are not declared anywhere, so
+     every theorem below had to be proved without them". These statements are
+     therefore **architecturally unimportable, not deferred**.
+   - **9 deferred** — `Nat.modCore_lt`, `Nat.modCoreGo_lt`,
+     `WellFounded.Nat.eager_eq`, `WellFounded.Nat.fix._proof_*` and a private
+     `Nat.gcd` termination obligation: generic `WellFounded.fix` internals, a
+     materially larger construction class than `nat_order_substitution`
+     covers.
+
+   Note also that `Nat.mod_lt` looked closable and is not: our kernel proves
+   the identical STATEMENT (`nat_prelude/gcd.rs`'s `mod_lt`), but against our
+   own structural `Nat.mod`, whereas the wire carries Lean 4 core's
+   well-founded-recursion `Nat.mod`. **A matching statement is not a
+   substitution** — the pattern requires an independent reconstruction against
+   the wire's own primitives.
+
+   **The consequence for this ADR's decision is a stated boundary, not a
+   retraction.** Lean remains the surface syntax; but a Mathlib statement
+   whose transitive closure reaches `propext`, `funext`, `Classical.em`, or
+   `Quot` **cannot come through the front door at all** — not statement-only,
+   not ever, while the kernel stays intuitionistic. Such statements are
+   reachable only as ADR-0603 row-4 labeled imports in a hypothetical
+   classical-carrier package, or not at all. The import backlog artifact
+   (ADR-0601 §3) should eventually carry this classification per row, so the
+   selector never dispatches an architecturally impossible target.
 3. **Producer contracts (ADR-0602) are the tactic layer.** A contract —
    "goals of this shape are dischargeable via route R" — is what a tactic is,
    with the difference that discharge produces checkable artifacts and a
