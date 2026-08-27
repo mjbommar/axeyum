@@ -175,6 +175,32 @@ class ResolveTheoremNameTests(unittest.TestCase):
         self.assertEqual(MODULE.resolve_theorem_name(f), (None, None))
 
 
+class IsCuratedTests(unittest.TestCase):
+    def test_fact_without_provenance_is_curated(self) -> None:
+        # Facts hand-written before the curation field was introduced
+        self.assertTrue(MODULE.is_curated({"id": "F:old-hand-written"}))
+
+    def test_fact_with_curation_absent_is_curated(self) -> None:
+        # Facts with provenance but no curation field are curated
+        self.assertTrue(MODULE.is_curated({"id": "F:x", "provenance": {}}))
+
+    def test_fact_with_generated_unreviewed_is_not_curated(self) -> None:
+        # Generated facts explicitly marked as unreviewed
+        self.assertFalse(
+            MODULE.is_curated(
+                {"id": "F:x", "provenance": {"curation": "generated-unreviewed"}}
+            )
+        )
+
+    def test_fact_with_any_other_curation_value_is_curated(self) -> None:
+        # Non-"generated-unreviewed" curation values are treated as curated
+        self.assertTrue(
+            MODULE.is_curated(
+                {"id": "F:x", "provenance": {"curation": "curated"}}
+            )
+        )
+
+
 class JoinTests(unittest.TestCase):
     def test_open_facts_are_not_joined(self) -> None:
         facts = {"F:x": fact("F:x", epistemic_status="open")}
@@ -242,6 +268,56 @@ class BuildDocumentTests(unittest.TestCase):
         first = MODULE.render(MODULE.build_document(footprints, result))
         second = MODULE.render(MODULE.build_document(footprints, result))
         self.assertEqual(first, second)
+
+    def test_curated_count_includes_facts_without_curation_field(self) -> None:
+        # Old hand-written facts without the curation field are curated
+        footprints = {"Nat.add_comm": 0}
+        result = MODULE.join({
+            "F:x": fact("F:x", formal={"language": "lean4", "kernel_theorem": "Nat.add_comm"},
+                       provenance={})
+        })
+        document = MODULE.build_document(footprints, result)
+        self.assertEqual(document["counts"]["overall"]["curated"], 1)
+        self.assertEqual(document["counts"]["overall"]["registered"], 1)
+
+    def test_curated_count_excludes_generated_unreviewed_facts(self) -> None:
+        # Generated facts explicitly marked as unreviewed are NOT curated
+        footprints = {"Nat.add_comm": 0}
+        result = MODULE.join({
+            "F:x": fact("F:x", formal={"language": "lean4", "kernel_theorem": "Nat.add_comm"},
+                       provenance={"curation": "generated-unreviewed"})
+        })
+        document = MODULE.build_document(footprints, result)
+        self.assertEqual(document["counts"]["overall"]["registered"], 1)
+        self.assertEqual(document["counts"]["overall"]["curated"], 0)
+
+    def test_curated_and_registered_can_move_independently(self) -> None:
+        # Verify curated count moves independently from registered
+        footprints = {"Nat.add_comm": 0, "Nat.mul_comm": 0}
+        facts_before = {
+            "F:x": fact("F:x", formal={"language": "lean4", "kernel_theorem": "Nat.add_comm"},
+                       provenance={"curation": "generated-unreviewed"}),
+            "F:y": fact("F:y", formal={"language": "lean4", "kernel_theorem": "Nat.mul_comm"},
+                       provenance={})
+        }
+        result_before = MODULE.join(facts_before)
+        doc_before = MODULE.build_document(footprints, result_before)
+
+        # Now change F:x from generated-unreviewed to curated (absent curation field)
+        facts_after = {
+            "F:x": fact("F:x", formal={"language": "lean4", "kernel_theorem": "Nat.add_comm"},
+                       provenance={}),
+            "F:y": fact("F:y", formal={"language": "lean4", "kernel_theorem": "Nat.mul_comm"},
+                       provenance={})
+        }
+        result_after = MODULE.join(facts_after)
+        doc_after = MODULE.build_document(footprints, result_after)
+
+        # Verify the independence
+        self.assertEqual(doc_before["counts"]["overall"]["registered"], 2)
+        self.assertEqual(doc_after["counts"]["overall"]["registered"], 2)
+        self.assertEqual(doc_before["counts"]["overall"]["curated"], 1)
+        self.assertEqual(doc_after["counts"]["overall"]["curated"], 2)
 
 
 if __name__ == "__main__":

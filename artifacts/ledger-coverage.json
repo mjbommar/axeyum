@@ -9,10 +9,10 @@
   "join_rule": "A fact counts toward `registered` when proof_route == 'kernel-lean', epistemic_status in {proved, computed}, and one of three tiers names a theorem in the denominator: (1) formal.kernel_theorem, when the key is present (an explicit null means no single subject and stops here); (2) the declared name at the head of a lean4 formal.statement ('theorem <Name> :' / 'def <Name> :' / '<Name> :'); (3) the fallback dotted-theorem-name extraction from check-fact-depends-derived.py::theorem_of. See module docstring for why tier 2 is load-bearing, not optional.",
   "counts": {
     "overall": {
-      "kernel_theorems": 1402,
+      "kernel_theorems": 1409,
       "registered": 538,
       "curated": 474,
-      "unregistered": 864
+      "unregistered": 871
     },
     "by_prelude": {
       "complex": {
@@ -177,10 +177,10 @@
         ]
       },
       "creal": {
-        "kernel_theorems": 372,
+        "kernel_theorems": 379,
         "registered_count": 132,
         "curated_count": 132,
-        "unregistered_count": 240,
+        "unregistered_count": 247,
         "unregistered": [
           "CReal.Equiv.not_zero_one",
           "CReal.UniformConvergesOn.spec",
@@ -296,6 +296,13 @@
           "CReal.lt_of_lt_of_le",
           "CReal.lt_trans",
           "CReal.mag_bound_le_sumRange_of_lt",
+          "CReal.maxRange_mono",
+          "CReal.maxRange_self_le",
+          "CReal.maxRange_succ",
+          "CReal.maxRange_ub",
+          "CReal.maxRange_zero",
+          "CReal.meshLevelCount_succ",
+          "CReal.meshLevelCount_zero",
           "CReal.meshReciprocalMul",
           "CReal.mesh_count_width",
           "CReal.mesh_le_of_ge",
@@ -1122,6 +1129,13 @@
     "CReal.lt_of_lt_of_le",
     "CReal.lt_trans",
     "CReal.mag_bound_le_sumRange_of_lt",
+    "CReal.maxRange_mono",
+    "CReal.maxRange_self_le",
+    "CReal.maxRange_succ",
+    "CReal.maxRange_ub",
+    "CReal.maxRange_zero",
+    "CReal.meshLevelCount_succ",
+    "CReal.meshLevelCount_zero",
     "CReal.meshReciprocalMul",
     "CReal.mesh_count_width",
     "CReal.mesh_le_of_ge",
