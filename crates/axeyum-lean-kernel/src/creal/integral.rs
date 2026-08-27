@@ -1944,6 +1944,18 @@
 //! the acceptance is green beside it, so [`product_pair_diff_le`]'s and
 //! [`riemann_sum_endpoints_le`]'s controls build both probes in ONE
 //! function and assert both outcomes together.
+//!
+//! ## Arbitrary-`c` `integral_split` under a `PosBound` — TWENTY-FIRST lane,
+//! 2026-08-27 (IN PROGRESS, this entry is a marker committed before the work)
+//!
+//! Target stratum, stated up front so it cannot be shipped under the wrong
+//! name: **`integral_split` at an arbitrary `c` with `a <= c <= b`, GIVEN a
+//! `PosBound` on the interval width `b - a`** — not universally quantified in
+//! `c`. Locating `c` in the base proportion family needs `t := (c-a)/(b-a)`,
+//! hence [`super::inverse`]'s `CReal.inv`, which takes a positivity witness
+//! that `hab : le a b` does not supply.
+//!
+//! Findings replace this marker as they land.
 use super::completeness::half_shift_le;
 use super::convergence::{
     converges_applied, converges_predicate, div_succ_at, exists_intro, exists_ty,
