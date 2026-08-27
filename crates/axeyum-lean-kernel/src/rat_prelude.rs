@@ -1999,3 +1999,6 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
 
 #[cfg(test)]
 mod rat_prelude_tests;
+
+#[cfg(test)]
+mod cas_ivt_bridge_tests;

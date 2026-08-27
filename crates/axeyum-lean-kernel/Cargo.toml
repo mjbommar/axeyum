@@ -16,11 +16,18 @@ num-bigint = "0.4"
 
 [dev-dependencies]
 # CAS -> kernel polynomial-identity bridge tests only (`complex/cas_bridge_tests.rs`,
-# `#[cfg(test)]`). This is the "untrusted fast search" half depending on the
-# "trusted small checking" half for TEST purposes only -- axeyum-cas does not
-# depend back on axeyum-lean-kernel, so there is no cycle, and the default
-# library build (what ships) never links it.
+# `rat_prelude/cas_ivt_bridge_tests.rs`, both `#[cfg(test)]`). This is the
+# "untrusted fast search" half depending on the "trusted small checking" half
+# for TEST purposes only -- axeyum-cas does not depend back on
+# axeyum-lean-kernel, so there is no cycle, and the default library build
+# (what ships) never links it.
 axeyum-cas.workspace = true
+# `rat_prelude/cas_ivt_bridge_tests.rs` builds `axeyum_cas::real_algebraic`
+# certificates directly from `axeyum_ir::Rational` literals (the CAS's own
+# fixed-width `i128` rational, not this kernel's bignum `Rat` carrier) --
+# `axeyum-cas` does not re-export it, so this needs to be named directly.
+# Same dev-only, no-cycle reasoning as `axeyum-cas` above.
+axeyum-ir.workspace = true
 
 [lints]
 workspace = true
