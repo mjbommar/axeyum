@@ -312,7 +312,10 @@ pub fn algebraic_cmp(a: &RealAlgebraic, b: &RealAlgebraic) -> Option<Ordering> {
 /// resultant dimension cap inside `RealAlgebraic::add`/`mul` — a sound
 /// decline, never a wrong value.
 #[must_use]
-pub fn eval_poly_at_algebraic(poly_coeffs: &[Rational], root: &AlgebraicReal) -> Option<RealAlgebraic> {
+pub fn eval_poly_at_algebraic(
+    poly_coeffs: &[Rational],
+    root: &AlgebraicReal,
+) -> Option<RealAlgebraic> {
     let reduced = poly::rat_rem(poly_coeffs, root.minimal_polynomial())?;
     let alpha = from_algebraic_real(root)?;
     let mut acc = RealAlgebraic::from_rational(Rational::zero())?;
