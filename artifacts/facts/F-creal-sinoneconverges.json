@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-sinoneconverges",
+  "title": "sin(1)'s partial sums converge to the constructed value sinOne",
+  "statement": "CReal.Converges CReal.sinSeriesPartial CReal.sinOne -- mirrors CReal.cosOneConverges exactly, including building GENERICALLY over a bound (k, h) rather than the concrete k_final that CReal.sinOne's own construction uses internally, for the same stack-overflow-avoidance reason declare_cos_one_converges documents (a concrete Nat witness fed into an exists_intro's argument check can drive an unbounded partial evaluation against a still-symbolic index; staying generic over a bound variable keeps the arithmetic stuck against two free variables and never runs).",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CReal.sinOneConverges : CReal.Converges CReal.sinSeriesPartial CReal.sinOne",
+    "fragment": "CReal",
+    "free_symbols": [],
+    "kernel_theorem": "CReal.sinOneConverges"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:creal-bound-within",
+    "F:creal-regular",
+    "F:creal-sintermabsledominant",
+    "F:nat-le-total",
+    "F:rat-add-assoc",
+    "F:rat-add-comm",
+    "F:rat-add-le-add",
+    "F:rat-bounds-add",
+    "F:rat-bounds-mul",
+    "F:rat-bounds-neg",
+    "F:rat-le-refl",
+    "F:rat-le-trans",
+    "F:rat-left-distrib",
+    "F:rat-mul-neg",
+    "F:rat-natdivsucc-add",
+    "F:rat-natdivsucc-le-add-left",
+    "F:rat-natdivsucc-le-scaled",
+    "F:rat-natdivsucc-mul",
+    "F:rat-neg-le-neg",
+    "F:rat-neg-sub",
+    "F:rat-sub-add-sub",
+    "F:rat-zero-le-natdivsucc"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.sinOneConverges",
+      "kind": "kernel-term",
+      "supports": "CReal.sinOneConverges is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- sinOneConverges 2>/dev/null | grep -cE '^CReal\\.sinOneConverges[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "build_creal_prelude admits CReal.sinOneConverges through the trusted Kernel::add_declaration gate. theorem_dependency_inventory exits non-zero for a named filter matching nothing; grep -c asserts the exact tab-anchored line. --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-CReal.sinOneConverges",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.sinOneConverges",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: creal: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: creal trusted surface = 0'. That bounds every declaration in the creal environment, including CReal.sinOneConverges, since a declaration cannot depend on a trusted declaration the environment does not contain. --require-axiom-free <name> errors for a prelude never built by this run rather than silently passing on zero rows. --release is MANDATORY here."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/trig.rs, declare_sin_one_converges)",
+    "source": "canonical type read via kernel_declaration_projection's own UNFILTERED emit mode (cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection, no --require-declaration flag), which prints, per constructed prelude, one TSV row per declaration whose last field is kernel.render_lean(declaration.ty()) -- the same Kernel::render_lean canonical form nat_theorem_inventory prints, just not filtered to Declaration::Theorem. That output was piped to a scratchpad file and the exact row for this declaration's own prelude label was extracted and injected here programmatically (a Python script reading the TSV, never hand-transcribed); direct theorem dependencies were cross-read from the same run's direct_theorems column (field 6) and matched against the ledger's own registered kernel_theorem/formal.statement names to populate depends_on. No new probe binary was written for this batch; crates/ source was not touched to produce this batch."
+  },
+  "notes": "Building block for CReal.sinOne_alternating_lower and CReal.sinOne_alternating_upper (this batch), which instantiate CReal.alternatingLowerBound/alternatingUpperBound (this batch) with this convergence fact as the limit hypothesis. depends_on lists every registered building block; CReal.geomCauchyOrderedHalf, CReal.mul_sumRange, CReal.regular_of_scaled_cauchy, CReal.speedup_close and CReal.sumRange_cauchy_dominated_ordered_normalized are unregistered private/carrier lemmas. CReal.sinTermAbsLeDominant is registered separately in this same batch (F:creal-sintermabsledominant) and is added to depends_on explicitly below.",
+  "external_status": "proved"
+}

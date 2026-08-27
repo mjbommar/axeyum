@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-sinone",
+  "title": "sin(1) is constructed as a total, axiom-free CReal value",
+  "statement": "The sine of 1 (radian) is built as CReal.mk on an explicit, concrete regular sequence -- speedup(diagonal(sinSeriesPartial), K) -- via the SAME construction pattern as CReal.e and CReal.cosOne, never Exists-elimination into data. This is the kernel's second transcendental-function-family value, alongside CReal.cosOne, sharing the same expDominant/expDominantCauchy domination machinery. Admitted by the trusted kernel gate with an empty axiom footprint.",
+  "formal": {
+    "language": "lean4",
+    "statement": "def CReal.sinOne : CReal",
+    "fragment": "CReal",
+    "free_symbols": [],
+    "kernel_theorem": "CReal.sinOne"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.sinOne",
+      "kind": "kernel-term",
+      "supports": "CReal.sinOne is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "kernel_declaration_projection --require-declaration (DIRECT, fail-on-absence)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration CReal.sinOne --require-kind definition 2>/dev/null | grep -cE '^found[[:space:]]creal[[:space:]]definition[[:space:]]CReal\\.sinOne[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "CReal.sinOne is a Declaration::Definition. theorem_dependency_inventory / nat_theorem_inventory / prelude_theorem_inventory all filter to Declaration::Theorem and exclude Definitions, so this fact uses the DIRECT 'kernel_declaration_projection --require-declaration' checker: it searches every constructed prelude's environment for an exact display-name match and exits non-zero on no match or kind mismatch. Verified on this tree: the command prints exactly one 'found\\tcreal\\tdefinition\\tCReal.sinOne\\t...' line. --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-CReal.sinOne",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.sinOne",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: creal: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: creal trusted surface = 0'. That bounds every declaration in the creal environment, including CReal.sinOne, since a declaration cannot depend on a trusted declaration the environment does not contain. --require-axiom-free <name> errors for a prelude never built by this run rather than silently passing on zero rows. --release is MANDATORY here."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/trig.rs, declare_sin_one)",
+    "source": "canonical type read via kernel_declaration_projection's own UNFILTERED emit mode (cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection, no --require-declaration flag), which prints, per constructed prelude, one TSV row per declaration whose last field is kernel.render_lean(declaration.ty()) -- the same Kernel::render_lean canonical form nat_theorem_inventory prints, just not filtered to Declaration::Theorem. That output was piped to a scratchpad file and the exact row for this declaration's own prelude label was extracted and injected here programmatically (a Python script reading the TSV, never hand-transcribed); direct theorem dependencies were cross-read from the same run's direct_theorems column (field 6) and matched against the ledger's own registered kernel_theorem/formal.statement names to populate depends_on. No new probe binary was written for this batch; crates/ source was not touched to produce this batch."
+  },
+  "notes": "depends_on is empty for the same reason F:creal-cosone's is: sinOne's own direct building blocks (CReal.sinSeriesPartial, CReal.sinTerm (this batch), CReal.speedup, CReal.mk, the diagonal sequence, and the REUSED CReal.e Cauchy-witness machinery via CReal.regular_of_scaled_cauchy) are either plain Definitions or private/already-namespaced helpers. The propositions ABOUT sinOne (convergence, numeric bounds) are the separate facts registered alongside this one in this same batch.",
+  "external_status": "proved"
+}

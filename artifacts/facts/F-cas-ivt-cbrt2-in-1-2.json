@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-ivt-cbrt2-in-1-2",
+  "title": "x^3-2 has exactly one real root in (1,2), named exactly by the CAS's IVT certificate",
+  "statement": "The polynomial p(x) = x^3 - 2 satisfies p(1) < 0 and p(2) > 0, so by the intermediate value theorem it has a real root in the open interval (1,2); that root (cbrt(2) ~ 1.26) is genuinely the ONLY real root of p in (1,2), and axeyum-cas's real_algebraic::polynomial_ivt route names it EXACTLY -- as a minimal polynomial (x^3-2 itself, degree 3, hence irreducible over Q by the rational root theorem) plus a Sturm-isolated bracket contained in (1,2) -- rather than approximating it numerically. real_algebraic::verify_ivt_certificate then independently RE-DERIVES every check the certificate asserts (recomputes the sign bracket from p/1/2, confirms the root's minimal polynomial genuinely divides p by exact division, confirms the isolating interval sits inside (1,2), and RE-COUNTS the Sturm sequence's real-root count on that interval rather than trusting the certificate's own bookkeeping) and accepts it: Some(true).",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(define-poly p (- (^ x 3) 2))\n(assert (< (poly-eval p 1) 0))\n(assert (> (poly-eval p 2) 0))\n(assert (exists ((r Real))\n  (and (< 1 r) (< r 2) (= (poly-eval p r) 0)\n       (forall ((s Real))\n         (=> (and (< 1 s) (< s 2) (= (poly-eval p s) 0))\n             (= s r))))))",
+    "fragment": "real-algebraic-ivt",
+    "free_symbols": [
+      "x",
+      "r",
+      "s"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.exact-rational-polynomial-normal-form",
+    "cas.sturm-sequence-real-root-isolation-and-counting",
+    "cas.ivt-certificate-not-kernel-reconstructed"
+  ],
+  "evidence": [
+    {
+      "id": "cas-internal-ivt-cbrt2-in-1-2",
+      "kind": "witness-replay",
+      "supports": "the IVT certificate (sign bracket, minimal polynomial, isolating interval) is independently re-derived and accepted by a checker (verify_ivt_certificate) that shares no code with the search that produced it (polynomial_ivt)",
+      "check_status": "checked",
+      "checkers": [
+        "real_algebraic::polynomial_ivt (untrusted producer: sign-bracket search + Sturm root isolation + bracket refinement)",
+        "real_algebraic::verify_ivt_certificate (independent checker: recomputes the sign bracket, confirms exact division of poly by the root's minimal polynomial, RE-COUNTS the Sturm sequence on the isolating interval rather than trusting the certificate)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib real_algebraic::tests::ivt_names_the_root_of_a_cubic -- --exact 2>/dev/null | grep -cE '^test real_algebraic::tests::ivt_names_the_root_of_a_cubic \\.\\.\\. ok$'",
+      "artifact": "crates/axeyum-cas/src/real_algebraic.rs",
+      "notes": "THIS EVIDENCE IS cas-internal, NOT kernel-reconstructed (ADR-0601 SS2): the checker_command only ever names the axeyum-cas package (never axeyum-lean-kernel), so scripts/validate-facts.py's classify_cas_certificate_checker classifies this fact's evidence as cas-internal -- verified by the CAS's own verify_ivt_certificate (which is independently re-derived from poly/a/b/root alone, and IS mutation-tested -- see verify_rejects_corrupted_interval_endpoint / verify_rejects_corrupted_polynomial_coefficient / verify_rejects_corrupted_bracket_bounds in the same test module), but NOT YET reconstructed through Kernel::add_declaration. The ledger must not let this read as kernel-checked: no Lean/kernel term exists for this claim, and 'checked' in this evidence row's check_status means 'independently re-derived by a second CAS routine', not 'admitted by the trusted kernel gate'. The test asserts p := x^3-2 (poly_from([-2,0,0,1])), cert := polynomial_ivt(p, 1, 2).unwrap(), verify_ivt_certificate(&cert) == Some(true), and cert.root.degree() == 3 (confirming the named root is genuinely irrational -- an irreducible cubic, not a value the rational-root theorem would have found). This is the first cas-certificate fact registered against the kernel-reconstructed/cas-internal split introduced in this validator batch, and it is deliberately chosen to demonstrate the split doing its job: an honest, checked-but-not-kernel-reconstructed result, labeled as such rather than folded into the same 'checked' bucket as a kernel-lean fact."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-cas real_algebraic::polynomial_ivt / verify_ivt_certificate (crates/axeyum-cas/src/real_algebraic.rs, landed same day per ADR-0601)",
+    "source": "classical intermediate value theorem, specialized to an exact rational polynomial with a Sturm-isolated real root; the concrete instance (p = x^3-2, bracket (1,2)) is the existing unit test real_algebraic::tests::ivt_names_the_root_of_a_cubic, read directly from crates/axeyum-cas/src/real_algebraic.rs rather than hand-transcribed.",
+    "prior_art": [
+      {
+        "who": "Bolzano; Cauchy",
+        "what": "the intermediate value theorem for continuous real functions",
+        "year": 1817,
+        "where": "classical analysis; this instance is a routine polynomial application",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Registered per ADR-0601 SS2 and docs/research/10-cas/decidability-map.md's 'Algebraic numbers' row: real_algebraic::polynomial_ivt/verify_ivt_certificate is a SHIPPED, checkable certificate route for the exact polynomial IVT, added alongside the real_algebraic.rs wiring (ADR-0601). This fact is deliberately the SIMPLEST concrete instance already covered by an existing test (a cubic with an irrational, irreducible root) rather than a new derivation, because the point of this registration is the classification, not the mathematics: it demonstrates that the ledger can hold a cas-certificate fact honestly labeled cas-internal (evidence terminates in the CAS's own normal form) rather than letting it read identically to a kernel-reconstructed cas-certificate fact (of which there are currently zero) or to a kernel-lean fact. No Kernel::add_declaration term exists for this claim; bridging it through the kernel (per ADR-0601's own roadmap, 'starting with the polynomial-identity slice landing against Complex.polyEval/polyMul') is future work, not claimed here."
+}

@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-cosone-nonneg",
+  "title": "cos(1) is nonnegative: 0 <= cos(1)",
+  "statement": "CReal.cosOne_alternating_lower (this batch) at m := 0: sumRange cosTerm (0+0) is \u03b9-defeq to zero, so the general bracket specializes to the sign bound for free, no Rat/CReal arithmetic at all. THIS SUPERSEDES the loose lower bound on cos(1) recorded in F:creal-cosone-le-four's companion fact (the loose [-4,4]-style bound) without deleting it: this is the exact real lower bound 0, not a coarse envelope.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CReal.cosOne_nonneg : CReal.le CReal.zero CReal.cosOne",
+    "fragment": "CReal",
+    "free_symbols": [],
+    "kernel_theorem": "CReal.cosOne_nonneg"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:creal-cosone-alternating-lower"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.cosOne_nonneg",
+      "kind": "kernel-term",
+      "supports": "CReal.cosOne_nonneg is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- cosOne_nonneg 2>/dev/null | grep -cE '^CReal\\.cosOne_nonneg[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "build_creal_prelude admits CReal.cosOne_nonneg through the trusted Kernel::add_declaration gate. theorem_dependency_inventory exits non-zero for a named filter matching nothing; grep -c asserts the exact tab-anchored line. --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-CReal.cosOne_nonneg",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.cosOne_nonneg",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: creal: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: creal trusted surface = 0'. That bounds every declaration in the creal environment, including CReal.cosOne_nonneg, since a declaration cannot depend on a trusted declaration the environment does not contain. --require-axiom-free <name> errors for a prelude never built by this run rather than silently passing on zero rows. --release is MANDATORY here."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/trig.rs, declare_cos_one_nonneg)",
+    "source": "canonical type read via kernel_declaration_projection's own UNFILTERED emit mode (cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection, no --require-declaration flag), which prints, per constructed prelude, one TSV row per declaration whose last field is kernel.render_lean(declaration.ty()) -- the same Kernel::render_lean canonical form nat_theorem_inventory prints, just not filtered to Declaration::Theorem. That output was piped to a scratchpad file and the exact row for this declaration's own prelude label was extracted and injected here programmatically (a Python script reading the TSV, never hand-transcribed); direct theorem dependencies were cross-read from the same run's direct_theorems column (field 6) and matched against the ledger's own registered kernel_theorem/formal.statement names to populate depends_on. No new probe binary was written for this batch; crates/ source was not touched to produce this batch."
+  },
+  "notes": "depends_on lists CReal.cosOne_alternating_lower (this batch), its only direct dependency.",
+  "external_status": "proved"
+}

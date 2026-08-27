@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-uniform-converges-add",
+  "title": "Uniform convergence is closed under termwise addition",
+  "statement": "If F converges uniformly to G on [a,b] and H converges uniformly to K on [a,b], then the termwise sum (fun n x => F n x + H n x) converges uniformly on [a,b] to the pointwise sum (fun x => G x + K x). The proof rearranges a four-term sum (two convergence gaps) via add4_comm so the two gap terms land together, fuses the two ofRat-embedded rational gaps into one via CReal.ofRat_add, rebuilds a single close_within bound via CReal.abs_le_of_two_sided, and widens that bound by an exact Rat equality (Rat.natDivSucc_add) to the stated combined rate.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CReal.uniform_converges_add : ((x0 : ((x0 : AxNat) -> ((x1 : CReal) -> CReal))) -> ((x1 : ((x1 : AxNat) -> ((x2 : CReal) -> CReal))) -> ((x2 : ((x2 : CReal) -> CReal)) -> ((x3 : ((x3 : CReal) -> CReal)) -> ((x4 : CReal) -> ((x5 : CReal) -> ((x6 : CReal.UniformConvergesOn x0 x2 x4 x5) -> ((x7 : CReal.UniformConvergesOn x1 x3 x4 x5) -> CReal.UniformConvergesOn (fun (x8 : AxNat) => fun (x9 : CReal) => CReal.add (x0 x8 x9) (x1 x8 x9)) (fun (x8 : CReal) => CReal.add (x2 x8) (x3 x8)) x4 x5))))))))",
+    "fragment": "CReal",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5",
+      "x6",
+      "x7"
+    ],
+    "kernel_theorem": "CReal.uniform_converges_add"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:creal-add-assoc",
+    "F:creal-add-comm",
+    "F:creal-add-congr",
+    "F:creal-add-le-add",
+    "F:creal-equiv-refl",
+    "F:creal-equiv-symm",
+    "F:creal-equiv-trans",
+    "F:creal-le-congr",
+    "F:creal-le-trans",
+    "F:creal-ofrat-add",
+    "F:creal-ofrat-le",
+    "F:logic-and-left",
+    "F:logic-and-right",
+    "F:rat-le-refl",
+    "F:rat-natdivsucc-add"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.uniform_converges_add",
+      "kind": "kernel-term",
+      "supports": "CReal.uniform_converges_add is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- uniform_converges_add 2>/dev/null | grep -cE '^CReal\\.uniform_converges_add[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "build_creal_prelude admits CReal.uniform_converges_add through the trusted Kernel::add_declaration gate. theorem_dependency_inventory exits non-zero for a named filter matching nothing; grep -c asserts the exact tab-anchored line. --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-CReal.uniform_converges_add",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.uniform_converges_add",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: creal: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: creal trusted surface = 0'. That bounds every declaration in the creal environment, including CReal.uniform_converges_add, since a declaration cannot depend on a trusted declaration the environment does not contain. --require-axiom-free <name> errors for a prelude never built by this run rather than silently passing on zero rows. --release is MANDATORY here."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/uniform_convergence.rs, declare_uniform_converges_add)",
+    "source": "canonical type read via kernel_declaration_projection's own UNFILTERED emit mode (cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection, no --require-declaration flag), which prints, per constructed prelude, one TSV row per declaration whose last field is kernel.render_lean(declaration.ty()) -- the same Kernel::render_lean canonical form nat_theorem_inventory prints, just not filtered to Declaration::Theorem. That output was piped to a scratchpad file and the exact row for this declaration's own prelude label was extracted and injected here programmatically (a Python script reading the TSV, never hand-transcribed); direct theorem dependencies were cross-read from the same run's direct_theorems column (field 6) and matched against the ledger's own registered kernel_theorem/formal.statement names to populate depends_on. No new probe binary was written for this batch; crates/ source was not touched to produce this batch."
+  },
+  "notes": "Closes uniform convergence under the arithmetic operation this development's trig construction (F:creal-sinone, F:creal-cosone family) implicitly needs when combining series. depends_on lists every registered building block; CReal.UniformConvergesOn.spec, CReal.abs_le_of_two_sided and CReal.two_sided_of_abs_sub_le are unregistered private/carrier-projection helpers, not separately registered ledger facts.",
+  "external_status": "proved"
+}

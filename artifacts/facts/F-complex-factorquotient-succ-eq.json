@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "id": "F:complex-factorquotient-succ-eq",
+  "title": "factorQuotient's recursive relationship across a degree increment",
+  "statement": "For c, a, n, k with k < n: factorQuotient c a (n+1) k is Equiv to factorQuotient c a n k plus the correction term pow(a, n-k) * c(n+1) -- the correction Complex.hornerFromTop_diag_eq_polyEval's own doc names as the reason a naive induction reusing the smaller factorQuotient wholesale does not work, made precise and proved. This turns out to need NO fresh induction at all: once k < n gives n-k a successor shape (Nat.succ j, via succ_pred_of_pos + le_of_lt_succ from the PUBLIC nat prelude -- deliberately not the module-private nat_prelude::choose::sub_succ_of_lt, which proves the identical fact but is not reachable across the module boundary, so this re-derives it from public building blocks), a public Nat.succ_sub_of_le-style reindexing puts (n+1)-k at the same successor-of-successor shape, and BOTH sides reduce (one Nat.rec iota-step each) to hornerFromTop c a (n+1) (j+1) and hornerFromTop c a n j respectively -- at which point Complex.hornerFromTop_succ_succ (an Eq.refl fact, proved before this theorem existed) IS the correction term, verbatim.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Complex.factorQuotient_succ_eq : ((x0 : ((x0 : AxNat) -> Complex)) -> ((x1 : Complex) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat.lt x3 x2) -> Complex.Equiv (Complex.factorQuotient x0 x1 (AxNat.succ x2) x3) (Complex.add (Complex.factorQuotient x0 x1 x2 x3) (Complex.mul (Complex.pow x1 (AxNat.sub x2 x3)) (x0 (AxNat.succ x2)))))))))",
+    "fragment": "Complex",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4"
+    ],
+    "kernel_theorem": "Complex.factorQuotient_succ_eq"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:complex-add-congr",
+    "F:complex-equiv-refl",
+    "F:complex-equiv-symm",
+    "F:complex-equiv-trans",
+    "F:complex-hornerfromtop-succsucc",
+    "F:nat-le-trans",
+    "F:nat-zero-le"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Complex.factorQuotient_succ_eq",
+      "kind": "kernel-term",
+      "supports": "Complex.factorQuotient_succ_eq is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- factorQuotient_succ_eq 2>/dev/null | grep -cE '^Complex\\.factorQuotient_succ_eq[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "build_complex_prelude admits Complex.factorQuotient_succ_eq through the trusted Kernel::add_declaration gate. theorem_dependency_inventory exits non-zero for a named filter matching nothing; grep -c asserts the exact tab-anchored line. --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-Complex.factorQuotient_succ_eq",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the complex prelude's trusted surface is empty, which bounds Complex.factorQuotient_succ_eq",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free complex",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: complex: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: complex trusted surface = 0'. That bounds every declaration in the complex environment, including Complex.factorQuotient_succ_eq, since a declaration cannot depend on a trusted declaration the environment does not contain. --require-axiom-free <name> errors for a prelude never built by this run rather than silently passing on zero rows. --release is MANDATORY here."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-lean-kernel build_complex_prelude (crates/axeyum-lean-kernel/src/complex/poly.rs, declare_factor_quotient_succ_eq)",
+    "source": "canonical type read via kernel_declaration_projection's own UNFILTERED emit mode (cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection, no --require-declaration flag), which prints, per constructed prelude, one TSV row per declaration whose last field is kernel.render_lean(declaration.ty()) -- the same Kernel::render_lean canonical form nat_theorem_inventory prints, just not filtered to Declaration::Theorem. That output was piped to a scratchpad file and the exact row for this declaration's own prelude label was extracted and injected here programmatically (a Python script reading the TSV, never hand-transcribed); direct theorem dependencies were cross-read from the same run's direct_theorems column (field 6) and matched against the ledger's own registered kernel_theorem/formal.statement names to populate depends_on. No new probe binary was written for this batch; crates/ source was not touched to produce this batch."
+  },
+  "notes": "Closes the correction-term gap Complex.hornerFromTop_diag_eq_polyEval's own module doc flags. depends_on lists every registered building block. Note F:complex-hornerfromtop-diag-eq-polyeval (this batch) is NOT a dependency of this fact -- the relationship runs the other way: hornerFromTop_succ_succ, already registered as F:complex-hornerfromtop-succsucc, is what this theorem reduces to. Nat.le_of_lt_succ, Nat.le_succ, Nat.lt_of_le_of_lt, Nat.succ_pred_of_pos and Nat.succ_sub_of_le are unregistered Nat-prelude lemmas, not separately registered ledger facts.",
+  "external_status": "proved"
+}
