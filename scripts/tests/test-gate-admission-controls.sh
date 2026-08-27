@@ -158,6 +158,54 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# 6b. CPU WEIGHT, and — the part that matters — AT THE RIGHT CGROUP LEVEL.
+#
+# `nice` alone measured as doing NOTHING (1.85x vs 1.82x, 27 competitors in both
+# arms) because `sched_autogroup_enabled=1` keeps nice inside a session. The
+# cgroup `cpu` controller is what crosses the boundary, and two attempts at it
+# were correctly APPLIED and completely INEFFECTIVE:
+#
+#   scope only          user@.service/app.slice/run-*.scope        weight 10
+#   --slice=axeyum-lane user@.service/axeyum.slice/axeyum-lane...  weight 10
+#
+# In both, the sibling of the session scope holding the battery was some OTHER
+# cgroup at the default weight, so the 10 ordered lane jobs against each other
+# and nothing else. Reading `cpu.weight` back said "applied" both times.
+#
+# So this asserts the LEVEL, not just the value: the job's cgroup must sit
+# directly under the same parent as an ordinary session scope. A test that only
+# checked `cpu.weight = 10` would have passed on both broken versions.
+# Guard: the `--slice=axeyumlane` + `set-property` block in cargo-serialized.sh.
+# ---------------------------------------------------------------------------
+if systemctl --user show-environment >/dev/null 2>&1 \
+   && [ -r /proc/self/cgroup ]; then
+  cg_prog='import sys; print(open("/proc/self/cgroup").read().strip().split("::")[1])'
+  mine="$(python3 -c "$cg_prog" 2>/dev/null)"
+  jobcg="$(AXEYUM_CARGO_BIN=python3 "$CS" -c "$cg_prog" 2>/dev/null | tail -1)"
+  off="$(AXEYUM_CARGO_CPUWEIGHT=0 AXEYUM_CARGO_BIN=python3 "$CS" -c "$cg_prog" 2>/dev/null | tail -1)"
+  case "$jobcg" in
+    */axeyumlane.slice/*) ok "lane work runs in axeyumlane.slice" ;;
+    *) bad "lane work is not in axeyumlane.slice (got '$jobcg')" ;;
+  esac
+  # The level assertion: strip the leaf scope from each and compare parents.
+  mine_parent="${mine%/*}"
+  job_parent="${jobcg%/*}"        # .../axeyumlane.slice
+  job_gparent="${job_parent%/*}"  # .../user@N.service
+  if [ "$job_gparent" = "$mine_parent" ]; then
+    ok "…and that slice is a SIBLING of an ordinary session scope"
+  else
+    bad "slice is at the wrong cgroup level: session parent '$mine_parent' vs slice parent '$job_gparent' — the weight will order lane jobs against each other and nothing else"
+  fi
+  case "$off" in
+    */axeyumlane.slice/*) bad "AXEYUM_CARGO_CPUWEIGHT=0 still used the lane slice" ;;
+    '') echo "  skip — could not read the opted-out job's cgroup" ;;
+    *) ok "control: AXEYUM_CARGO_CPUWEIGHT=0 opts out of the slice" ;;
+  esac
+else
+  echo "  skip — no user systemd manager / cgroup v2 readable here"
+fi
+
+# ---------------------------------------------------------------------------
 # 7. `hooks/pre-push` sees a Cargo.lock-only change.
 #
 # It did not until 2026-08-27: `'*.rs' '*.toml'` does not match `Cargo.lock`, so

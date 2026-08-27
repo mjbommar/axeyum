@@ -60,7 +60,9 @@
 #   AXEYUM_CARGO_SWAP  scope MemorySwapMax      (default 0 -- see above)
 #   AXEYUM_CARGO_WAIT  seconds to wait for lock (default 5400; 0 = fail fast)
 #   AXEYUM_CARGO_CPUS  taskset list             (default unset -- no pinning)
-#   AXEYUM_CARGO_NICE  scheduling priority      (default 10; 0 = no nice/ionice)
+#   AXEYUM_CARGO_NICE  nice(1) increment        (default 10; 0 = no nice/ionice)
+#   AXEYUM_CARGO_CPUWEIGHT  scope CPUWeight     (default 10 vs systemd's 100;
+#                                                0 = do not set it)
 #
 # Exit status is the cargo job's, unchanged, EXCEPT 75 (EX_TEMPFAIL) when the
 # lock could not be taken in time -- distinguishable from a test failure, which
@@ -88,6 +90,7 @@ MEM="${AXEYUM_CARGO_MEM:-24G}"
 SWAP="${AXEYUM_CARGO_SWAP:-0}"
 WAIT="${AXEYUM_CARGO_WAIT:-5400}"
 NICE="${AXEYUM_CARGO_NICE:-10}"
+CPUW="${AXEYUM_CARGO_CPUWEIGHT:-10}"
 
 if [ "$#" -eq 0 ]; then
   echo "usage: $0 <cargo args...>   |   $0 --batch <cmd...>   |   $0 --self-check" >&2
@@ -173,8 +176,17 @@ fi
 if [ "$BATCH" = "1" ]; then
   : # a supervisor, not a cargo job -- see the --batch comment above
 elif systemctl --user show-environment >/dev/null 2>&1; then
-  run=(systemd-run --user --scope -q \
-       -p "MemoryMax=$MEM" -p "MemorySwapMax=$SWAP" "${run[@]}")
+  scope=(systemd-run --user --scope -q
+         -p "MemoryMax=$MEM" -p "MemorySwapMax=$SWAP")
+  # The knob that actually crosses a session boundary -- see the header. The
+  # slice property is set here rather than shipped as a unit file so the wrapper
+  # stays self-contained; it is idempotent and costs a few milliseconds.
+  if [ "$CPUW" != "0" ]; then
+    systemctl --user set-property axeyumlane.slice "CPUWeight=$CPUW" \
+      >/dev/null 2>&1 || true
+    scope+=(--slice=axeyumlane -p "CPUWeight=$CPUW")
+  fi
+  run=("${scope[@]}" "${run[@]}")
 else
   echo "cargo-serialized: no user systemd manager; running WITHOUT MemoryMax=$MEM" >&2
 fi

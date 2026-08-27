@@ -116,6 +116,15 @@ run_case "re-entrancy check neutered" scripts/cargo-serialized.sh \
 run_case "--batch scope suppression removed" scripts/cargo-serialized.sh \
   's|^  : # a supervisor, not a cargo job.*|  run=(systemd-run --user --scope -q -p "MemoryMax=$MEM" -p "MemorySwapMax=$SWAP" "${run[@]}")|' 1 || bad=1
 
+# The slice renamed back to the DASHED form -- the version that was correctly
+# applied (cpu.weight really was 10) and completely ineffective, because systemd
+# reads `-` as hierarchy and the sibling of the session scope became
+# `axeyum.slice` at the default weight. This is the mutant that a naive
+# "cpu.weight == 10" assertion would survive, which is why the suite asserts the
+# cgroup LEVEL. Two halves of one guard: the name and the level.
+run_case "slice renamed to the dashed (wrong-level) form" scripts/cargo-serialized.sh \
+  's/axeyumlane/axeyum-lane/g' 2 || bad=1
+
 # Cargo.lock dropped from the pre-push filter -> a dependency bump skips the
 # whole battery, which is how it behaved until 2026-08-27.
 run_case "Cargo.lock dropped from pre-push filter" hooks/pre-push \
