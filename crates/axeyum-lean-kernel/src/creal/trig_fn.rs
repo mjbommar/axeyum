@@ -104,20 +104,30 @@
 //! through the named `CReal.powerSeriesTerm` while its own proof works with
 //! the raw `mul`/`pow` term underneath.
 //!
+//! ## `cosFn 1 ≡ cosOne` — landed (2026-08-27)
+//!
+//! `CReal.cosFn_one_equiv_cosOne : Equiv (cosFn one) cosOne`,
+//! [`declare_cos_fn_equiv_cos_one`] below — the mechanical sibling of
+//! `creal/exp_fn.rs::declare_exp_fn_one_equiv_e`, predicted (and confirmed)
+//! to transport step for step. The blocker this section used to name here —
+//! "no public bridge from `close_within` back to the sample-level `Within`
+//! `Converges` needs" — was never real: `CReal.close_within_of_within`
+//! (`creal/uniform_convergence.rs`, via `close_within_of_within_at`) already
+//! runs the FORWARD direction (`Within` to `close_within`) this bridge
+//! needs, confirmed first for `expFn 1 ≡ e` and unchanged here. The one real
+//! difference from the `expFn` template: `cosFnTerm` is this file's own
+//! even-only wrapper (`cosFnTerm k x := mul (cosTerm k) (pow x (Nat.add k
+//! k))`), not a `CReal.powerSeriesTerm` partial application, so leg 2's
+//! transport (`cosFnTerm j one ≡ cosTerm j`) is built directly against
+//! `cosFnTerm` ([`cos_fn_term_one_equiv`]) rather than through
+//! `powerSeriesTerm_one_equiv`'s generic route — otherwise identical
+//! (`pow_one_equiv` itself is exponent-generic and reused verbatim).
+//! Verified against the kernel (`creal_prelude_builds` and
+//! `every_creal_declaration_is_checked_and_axiom_free`), not merely `cargo
+//! check`.
+//!
 //! ## What is NOT built here
 //!
-//! - **`cosFn 1 ≡ cosOne`.** This needs turning `cosFn`'s own
-//!   `UniformConvergesOn`/`close_within` evidence at `x := one` into a raw
-//!   `Converges` witness comparable (via `CReal.converges_unique`) against
-//!   `cosOneConverges`. That bridge — `close_within` back to the sample-level
-//!   `Within` `Converges` needs — does not exist as a public lemma today:
-//!   `converges_of_scaled_cauchy`'s own version of this step is buried inside
-//!   that theorem's private proof, and the one PUBLIC lemma of this shape,
-//!   `within_of_two_sided_le`, runs the *opposite* direction (`Within` to
-//!   `close_within`, the direction [`super::uniform_convergence`]'s own
-//!   `close_within_of_within` already needed). Building it is a real,
-//!   separately-sized proof, not attempted in this file — see this module's
-//!   own status note for the exact shape needed.
 //! - **`sinFn`**, by the identical route with `sinTerm` — mechanically
 //!   parallel to `cosFn` once `cosFn` itself was the open question; not
 //!   attempted in the time this slice had.
@@ -311,20 +321,23 @@
 //! widened" prediction) is still the correct explanation of the shape of
 //! the work — only its concluding sentence is now false.
 
+use super::convergence::{converges_predicate, div_succ_at};
 use super::geometric::ratio_16_over_25_witnesses;
 use super::series::sum_range_cauchy_body;
 use super::trig::{
-    cabs, cadd, cauchy_body_transport, cle, cmul, cneg, cpow, czero, echain, erefl,
-    exp_dominant_cauchy_body_concrete, magnitude_of, mul_ordered_half_body, one_c,
-    promote_ordered_half_to_full, sign_abs_le_one, two, two_normalize,
+    cabs, cadd, cauchy_body_transport, cle, cmul, cneg, cpow, czero, double_neg, echain, erefl,
+    esymm, exp_dominant_cauchy_body_concrete, magnitude_of, mul_ordered_half_body, neg_add_self,
+    one_c, promote_ordered_half_to_full, sign_abs_le_one, two, two_normalize,
 };
+use super::uniform_convergence::close_within_of_within_at;
 use super::{CRealPrelude, DERIVED_HEIGHT, creal_ty, embed, equiv};
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::{ExprId, ExprNode};
-use crate::int_prelude::ops::IntDev;
+use crate::int_prelude::ops::{IntDev, exists_elim};
 use crate::nat_prelude::NatOps;
 use crate::rat_prelude::ops::{one_le_succ, rat_eq_rewrite};
+use crate::rat_prelude::ops::{radd, rat_eq_rewrite};
 
 /// Height for `cosFnTerm`: one past `powerSeriesTerm`'s own
 /// `DERIVED_HEIGHT + 43` (`creal/power.rs`), matching this development's
@@ -703,6 +716,461 @@ pub(super) fn declare_cos_fn_family(
     declare_cos_fn_term_congr(d, p)?;
     declare_cos_fn_term_abs_le(d, p)?;
     declare_cos_fn(d, p)
+}
+
+// ---------------------------------------------------------------------------
+// `CReal.cosFn_one_equiv_cosOne : Equiv (cosFn one) cosOne` — the mechanical
+// sibling of `creal/exp_fn.rs::declare_exp_fn_equiv_e`, following that
+// file's route step for step (see this file's own module documentation,
+// "What is NOT built here", now stale on this point — `creal/exp_fn.rs`'s
+// 2026-08-27 corrections apply here unchanged: `close_within_of_within`'s
+// own per-index builder already bridges `Within` to `close_within` in the
+// FORWARD direction this needs, and `equiv_zero_of_rate` already
+// generalizes past rate `1`, so neither blocker this module doc once named
+// is live). `echain`/`erefl`/`esymm`/`neg_add_self`/`double_neg` are reused
+// directly from `creal/trig.rs` (already `pub(super)` there); the remaining
+// helpers below are reproduced (Rust privacy — `creal/exp_fn.rs`'s copies
+// are private) rather than imported, matching this development's
+// established convention for a sibling module's private helper.
+// ---------------------------------------------------------------------------
+
+/// `Equiv a b` from `h : Equiv (add a (neg b)) zero`. Reproduced (Rust
+/// privacy) from `creal/exp_fn.rs`'s own private `equiv_of_sub_equiv_zero`
+/// (itself reproduced there from `creal/monotone.rs`/`creal/deriv_unique.rs`).
+fn equiv_of_sub_equiv_zero(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let nb = cneg(d, p, b);
+    let diff = cadd(d, p, a, nb);
+    let lhs = cadd(d, p, diff, b);
+    let zero_c = czero(d, p);
+
+    let a_from_lhs = {
+        let assoc = d.lemma(p.add_assoc, &[a, nb, b]);
+        let nb_b = cadd(d, p, nb, b);
+        let a_nbb = cadd(d, p, a, nb_b);
+        let nas = neg_add_self(d, p, b);
+        let refl_a = erefl(d, p, a);
+        let cong = d.lemma(p.add_congr, &[a, a, nb_b, zero_c, refl_a, nas]);
+        let a_zero = cadd(d, p, a, zero_c);
+        let trim = d.lemma(p.add_zero, &[a]);
+        echain(d, p, lhs, &[(a_nbb, assoc), (a_zero, cong), (a, trim)])
+    };
+    let b_from_lhs = {
+        let refl_b = erefl(d, p, b);
+        let cong = d.lemma(p.add_congr, &[diff, zero_c, b, b, h, refl_b]);
+        let zero_b = cadd(d, p, zero_c, b);
+        let comm = d.lemma(p.add_comm, &[zero_c, b]);
+        let b_zero = cadd(d, p, b, zero_c);
+        let trim = d.lemma(p.add_zero, &[b]);
+        echain(d, p, lhs, &[(zero_b, cong), (b_zero, comm), (b, trim)])
+    };
+    let a_from_lhs_symm = esymm(d, p, lhs, a, a_from_lhs);
+    d.lemma(p.equiv_trans, &[a, lhs, b, a_from_lhs_symm, b_from_lhs])
+}
+
+/// From `h : le (abs w) bound`, derive `le (abs (neg w)) bound`. Reproduced
+/// (Rust privacy) from `creal/exp_fn.rs`'s own private `abs_neg_le` (itself
+/// reproduced there from `creal/uniform_continuity.rs`). Uses
+/// `creal/trig.rs::double_neg` directly rather than a further private copy.
+fn abs_neg_le(d: &mut IntDev<'_>, p: CRealPrelude, w: ExprId, q: ExprId, h: ExprId) -> ExprId {
+    let abs_w = cabs(d, p, w);
+    let neg_w = cneg(d, p, w);
+    let w_le_absw = d.lemma(p.le_abs_self, &[w]);
+    let w_le_q = d.lemma(p.le_trans, &[w, abs_w, q, w_le_absw, h]);
+    let negw_le_absw = d.lemma(p.neg_le_abs, &[w]);
+    let negw_le_q = d.lemma(p.le_trans, &[neg_w, abs_w, q, negw_le_absw, h]);
+
+    let neg_neg_w = cneg(d, p, neg_w);
+    let nn = double_neg(d, p, w); // Equiv neg_neg_w w
+    let nn_symm = esymm(d, p, neg_neg_w, w, nn); // Equiv w neg_neg_w
+    let refl_q = erefl(d, p, q);
+    let nnw_le_q = d.lemma(p.le_congr, &[w, neg_neg_w, q, q, nn_symm, refl_q, w_le_q]);
+
+    d.lemma(p.abs_le, &[neg_w, q, negw_le_q, nnw_le_q])
+}
+
+/// From `h : close_within x y q`, derive `close_within y x q`. Reproduced
+/// (Rust privacy) from `creal/exp_fn.rs`'s own private `close_within_symm`.
+fn close_within_symm(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    q: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let ny = cneg(d, p, y);
+    let nx = cneg(d, p, x);
+    let diff = cadd(d, p, x, ny);
+    let diff2 = cadd(d, p, y, nx);
+    let abs_neg_diff_le = abs_neg_le(d, p, diff, q, h);
+    let swap = d.lemma(p.neg_sub_swap, &[x, y]); // Equiv (neg diff) diff2
+    let neg_diff = cneg(d, p, diff);
+    let ac = d.lemma(p.abs_congr, &[neg_diff, diff2, swap]);
+    let refl_q = erefl(d, p, q);
+    let abs_neg_diff = cabs(d, p, neg_diff);
+    let abs_diff2 = cabs(d, p, diff2);
+    d.lemma(
+        p.le_congr,
+        &[abs_neg_diff, abs_diff2, q, q, ac, refl_q, abs_neg_diff_le],
+    )
+}
+
+/// `Equiv (add zero w) w`. Reproduced (Rust privacy) from
+/// `creal/exp_fn.rs`'s own private `zero_add_proof`.
+fn zero_add_proof(d: &mut IntDev<'_>, p: CRealPrelude, w: ExprId) -> ExprId {
+    let zero_c = czero(d, p);
+    let zw = cadd(d, p, zero_c, w);
+    let wz = cadd(d, p, w, zero_c);
+    let comm = d.lemma(p.add_comm, &[zero_c, w]);
+    let az = d.lemma(p.add_zero, &[w]);
+    d.lemma(p.equiv_trans, &[zw, wz, w, comm, az])
+}
+
+/// `Equiv (add (neg u) (add u w)) w`. Reproduced (Rust privacy) from
+/// `creal/exp_fn.rs`'s own private `cancel_neg_add`.
+fn cancel_neg_add(d: &mut IntDev<'_>, p: CRealPrelude, u: ExprId, w: ExprId) -> ExprId {
+    let nu = cneg(d, p, u);
+    let nu_u = cadd(d, p, nu, u);
+    let inner = cadd(d, p, u, w);
+    let lhs = cadd(d, p, nu, inner);
+    let nu_u_w = cadd(d, p, nu_u, w);
+    let assoc = d.lemma(p.add_assoc, &[nu, u, w]); // Equiv nu_u_w lhs
+    let assoc_symm = esymm(d, p, nu_u_w, lhs, assoc);
+    let nas = neg_add_self(d, p, u); // Equiv nu_u zero
+    let zero_c = czero(d, p);
+    let refl_w = erefl(d, p, w);
+    let congr1 = d.lemma(p.add_congr, &[nu_u, zero_c, w, w, nas, refl_w]);
+    let zero_w = cadd(d, p, zero_c, w);
+    let za = zero_add_proof(d, p, w);
+    echain(
+        d,
+        p,
+        lhs,
+        &[(nu_u_w, assoc_symm), (zero_w, congr1), (w, za)],
+    )
+}
+
+/// `Equiv (add (add e (neg x1)) (add x1 (neg g))) (add e (neg g))` — the
+/// shared-`x1` cancellation the two `close_within` legs need to fuse into
+/// one `e - g` bound. Reproduced (Rust privacy) from `creal/exp_fn.rs`'s own
+/// private `diff_regroup`.
+fn diff_regroup(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    e_const: ExprId,
+    x1: ExprId,
+    g: ExprId,
+) -> ExprId {
+    let ne_x1 = cneg(d, p, x1);
+    let a1 = cadd(d, p, e_const, ne_x1);
+    let ng = cneg(d, p, g);
+    let d2 = cadd(d, p, x1, ng);
+    let lhs = cadd(d, p, a1, d2);
+
+    let inner_sum = cadd(d, p, ne_x1, d2);
+    let mid = cadd(d, p, e_const, inner_sum);
+    let assoc = d.lemma(p.add_assoc, &[e_const, ne_x1, d2]); // Equiv lhs mid
+
+    let inner_cancel = cancel_neg_add(d, p, x1, ng); // Equiv inner_sum ng
+    let refl_e = erefl(d, p, e_const);
+    let congr_outer = d.lemma(
+        p.add_congr,
+        &[e_const, e_const, inner_sum, ng, refl_e, inner_cancel],
+    );
+    let target = cadd(d, p, e_const, ng);
+    echain(d, p, lhs, &[(mid, assoc), (target, congr_outer)])
+}
+
+/// From `proof1_symm : le (abs (add e (neg x1))) q1` and `proof2 : le (abs
+/// (add x1 (neg g))) q2`, derive `le (abs (add e (neg g))) (add q1 q2)` —
+/// the triangle-inequality combination of the two `close_within` legs
+/// sharing the midpoint `x1`. Reproduced (Rust privacy) from
+/// `creal/exp_fn.rs`'s own private `combine_two_legs`.
+#[allow(clippy::too_many_arguments)]
+fn combine_two_legs(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    e_const: ExprId,
+    x1: ExprId,
+    g: ExprId,
+    q1_embed: ExprId,
+    q2_embed: ExprId,
+    proof1_symm: ExprId,
+    proof2: ExprId,
+) -> ExprId {
+    let ne_x1 = cneg(d, p, x1);
+    let a1 = cadd(d, p, e_const, ne_x1);
+    let ng = cneg(d, p, g);
+    let d2 = cadd(d, p, x1, ng);
+    let lhs = cadd(d, p, a1, d2);
+
+    let abs_a1 = cabs(d, p, a1);
+    let abs_d2 = cabs(d, p, d2);
+    let triangle = d.lemma(p.abs_add_le, &[a1, d2]); // le (abs lhs) (add abs_a1 abs_d2)
+    let combined_bound = d.lemma(
+        p.add_le_add,
+        &[abs_a1, q1_embed, abs_d2, q2_embed, proof1_symm, proof2],
+    );
+    let bound_sum = cadd(d, p, q1_embed, q2_embed);
+    let abs_ab = cadd(d, p, abs_a1, abs_d2);
+    let abs_lhs = cabs(d, p, lhs);
+    let chain_le = d.lemma(
+        p.le_trans,
+        &[abs_lhs, abs_ab, bound_sum, triangle, combined_bound],
+    );
+
+    let identity = diff_regroup(d, p, e_const, x1, g); // Equiv lhs target
+    let target = cadd(d, p, e_const, ng);
+    let abs_identity = d.lemma(p.abs_congr, &[lhs, target, identity]);
+    let refl_bound = erefl(d, p, bound_sum);
+    let abs_target = cabs(d, p, target);
+    d.lemma(
+        p.le_congr,
+        &[
+            abs_lhs,
+            abs_target,
+            bound_sum,
+            bound_sum,
+            abs_identity,
+            refl_bound,
+            chain_le,
+        ],
+    )
+}
+
+/// `Equiv (pow one j) one`, for any `j` (including symbolic). Reproduced
+/// (Rust privacy) from `creal/exp_fn.rs`'s own private `pow_one_equiv` —
+/// not specific to `expTerm`, reused here verbatim for `cosFnTerm`'s own
+/// exponent `Nat.add j j`.
+fn pow_one_equiv(d: &mut IntDev<'_>, p: CRealPrelude, j: ExprId) -> ExprId {
+    let one_cc = one_c(d, p);
+    let motive = |d: &mut IntDev<'_>, v: ExprId| -> ExprId {
+        let pow_v = cpow(d, p, one_cc, v);
+        equiv(d, p, pow_v, one_cc)
+    };
+    d.induct(
+        &motive,
+        &|d| d.lemma(p.equiv_refl, &[one_cc]),
+        &|d, j, ih| {
+            let pow_j = cpow(d, p, one_cc, j);
+            let mul_pow_j_one = cmul(d, p, pow_j, one_cc);
+            let step1 = d.lemma(p.mul_one, &[pow_j]); // Equiv mul_pow_j_one pow_j
+            d.lemma(p.equiv_trans, &[mul_pow_j_one, pow_j, one_cc, step1, ih])
+        },
+        j,
+    )
+}
+
+/// `Equiv (cosFnTerm j one) (cosTerm j)` — `cosFnTerm j x := mul (cosTerm j)
+/// (pow x (Nat.add j j))`, so at `x := one`, `pow one (Nat.add j j) ≡ one`
+/// ([`pow_one_equiv`], generic in the exponent) transported through
+/// `mul_congr`, then `mul_one`. Unlike `creal/exp_fn.rs`'s own
+/// `power_series_term_one_equiv`, this goes through `cosFnTerm` DIRECTLY
+/// rather than the generic `CReal.powerSeriesTerm`: `cosFnTerm` is this
+/// file's own even-only wrapper (see the module documentation), so there is
+/// no generic `powerSeriesTerm c j x` to transport through here.
+fn cos_fn_term_one_equiv(d: &mut IntDev<'_>, p: CRealPrelude, j: ExprId) -> ExprId {
+    let one_cc = one_c(d, p);
+    let cos_term_c = d.kernel().const_(p.cos_term, vec![]);
+    let cos_term_j = d.apply(cos_term_c, &[j]);
+    let two_j = d.add(j, j);
+    let pow_one_2j = cpow(d, p, one_cc, two_j);
+    let pow_eq = pow_one_equiv(d, p, two_j);
+    let refl_ctj = d.lemma(p.equiv_refl, &[cos_term_j]);
+    let mul_congr_step = d.lemma(
+        p.mul_congr,
+        &[cos_term_j, cos_term_j, pow_one_2j, one_cc, refl_ctj, pow_eq],
+    );
+    let mul_one_step = d.lemma(p.mul_one, &[cos_term_j]);
+    let mul_pow = cmul(d, p, cos_term_j, pow_one_2j);
+    let mul_one_term = cmul(d, p, cos_term_j, one_cc);
+    d.lemma(
+        p.equiv_trans,
+        &[
+            mul_pow,
+            mul_one_term,
+            cos_term_j,
+            mul_congr_step,
+            mul_one_step,
+        ],
+    )
+}
+
+/// Admit `CReal.cosFn_one_equiv_cosOne : Equiv (cosFn one) cosOne`. Mirrors
+/// `creal/exp_fn.rs::declare_exp_fn_equiv_e` step for step: eliminate
+/// `CReal.cosOneConverges`'s `Exists` witness into a per-`n` `Within` fact,
+/// bridge it to `close_within` via [`close_within_of_within_at`] (leg 1),
+/// transport `CReal.cosFnUniformConverges`'s own `.spec` at `x := one` from
+/// `cosFnTerm j one` to `cosTerm j` via [`cos_fn_term_one_equiv`] +
+/// `CReal.sumRange_congr` (leg 2), combine the two legs by the triangle
+/// inequality ([`combine_two_legs`]), and close with
+/// `CReal.equiv_zero_of_rate` + [`equiv_of_sub_equiv_zero`].
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_cos_fn_equiv_cos_one(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let one_cc = one_c(d, p);
+    let cos_one_const = d.kernel().const_(p.cos_one, vec![]);
+    let cos_term_c = d.kernel().const_(p.cos_term, vec![]);
+    let cos_series_partial_c = d.kernel().const_(p.cos_series_partial, vec![]);
+
+    // Peel `F`/`G`/`a`/`b` off `cosFnUniformConverges`'s own INFERRED type,
+    // rather than reconstructing `big_f` by hand — guarantees an exact match
+    // with the declared theorem's actual ascribed type.
+    let u_conv = d.kernel().const_(p.cos_fn_uniform_converges, vec![]);
+    let ty_u = d.kernel().infer(u_conv)?;
+    let (inner1, b_u) = unapp(d, ty_u);
+    let (inner2, a_u) = unapp(d, inner1);
+    let (inner3, g_u) = unapp(d, inner2);
+    let (_, f_u) = unapp(d, inner3);
+    let uconv_rate_val = d.const_app(p.uconv_rate, &[f_u, g_u, a_u, b_u, u_conv]);
+    let uconv_spec_val = d.const_app(p.uconv_spec, &[f_u, g_u, a_u, b_u, u_conv]);
+
+    let hab_lo = zero_le_one(d, p);
+    let hab_hi = d.lemma(p.le_refl, &[one_cc]);
+
+    let g_one = d.apply(g_u, &[one_cc]); // cosFn one
+    let target = equiv(d, p, g_one, cos_one_const);
+
+    let predicate = converges_predicate(d, p, cos_series_partial_c, cos_one_const);
+    let cos_one_converges_c = d.kernel().const_(p.cos_one_converges, vec![]);
+
+    let minor = {
+        let k1_fv = d.fresh_fvar();
+        let k1 = d.kernel().fvar(k1_fv);
+        let hk1_ty = d.apply(predicate, &[k1]);
+        let hk1_fv = d.fresh_fvar();
+        let hk1 = d.kernel().fvar(hk1_fv);
+
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+
+        // --- leg 1: cosOneConverges's raw `Within` fact, bridged to `close_within`.
+        let x1 = d.apply(cos_series_partial_c, &[n]);
+        let hp = d.apply(hk1, &[n]);
+        let (rate1, proof1) = close_within_of_within_at(d, p, x1, cos_one_const, n, k1, hp);
+        let q1_rat = div_succ_at(d, p, rate1, n);
+        let q1_embed = embed(d, p, q1_rat);
+        let proof1_symm = close_within_symm(d, p, x1, cos_one_const, q1_embed, proof1);
+
+        // --- leg 2: cosFnUniformConverges's own `.spec` at (n, one),
+        // transported from `cosFnTerm j one` to `cosTerm j`.
+        let spec_at_n = d.apply(uconv_spec_val, &[n, one_cc, hab_lo, hab_hi]);
+        let rate2 = uconv_rate_val;
+        let q2_rat = div_succ_at(d, p, rate2, n);
+        let q2_embed = embed(d, p, q2_rat);
+
+        let f_pt_one = {
+            let j_fv = d.fresh_fvar();
+            let j = d.kernel().fvar(j_fv);
+            let body = d.const_app(p.cos_fn_term, &[j, one_cc]);
+            d.lam_fv(j_fv, nat, body)
+        };
+        let per_j = {
+            let j_fv = d.fresh_fvar();
+            let j = d.kernel().fvar(j_fv);
+            let body = cos_fn_term_one_equiv(d, p, j);
+            d.lam_fv(j_fv, nat, body)
+        };
+        let hn = d.lemma(p.sum_range_congr, &[f_pt_one, cos_term_c, n, per_j]);
+        // hn : Equiv (sum_range f_pt_one n) (sum_range cos_term_c n)
+        //    = Equiv (big_f n one) x1, by defeq (big_f's own beta-reduction
+        //      and cos_series_partial's own delta-unfold, respectively).
+
+        let big_f_n_one = d.apply(f_u, &[n, one_cc]);
+        let ng_one = cneg(d, p, g_one);
+        let raw_diff = cadd(d, p, big_f_n_one, ng_one);
+        let x1_diff = cadd(d, p, x1, ng_one);
+        let refl_ng = erefl(d, p, ng_one);
+        let hn2 = d.lemma(p.add_congr, &[big_f_n_one, x1, ng_one, ng_one, hn, refl_ng]);
+        let abs_raw_diff = cabs(d, p, raw_diff);
+        let abs_x1_diff = cabs(d, p, x1_diff);
+        let habs = d.lemma(p.abs_congr, &[raw_diff, x1_diff, hn2]);
+        let refl_q2 = erefl(d, p, q2_embed);
+        let proof2 = d.lemma(
+            p.le_congr,
+            &[
+                abs_raw_diff,
+                abs_x1_diff,
+                q2_embed,
+                q2_embed,
+                habs,
+                refl_q2,
+                spec_at_n,
+            ],
+        );
+
+        // --- combine, fuse the two bounds, and close.
+        let combined = combine_two_legs(
+            d,
+            p,
+            cos_one_const,
+            x1,
+            g_one,
+            q1_embed,
+            q2_embed,
+            proof1_symm,
+            proof2,
+        );
+        // combined : le (abs (add cos_one_const (neg g_one))) (add q1_embed q2_embed)
+
+        let radd_val = radd(d, q1_rat, q2_rat);
+        let of_add_eq = d.lemma(p.of_rat_add, &[q1_rat, q2_rat]);
+        let v_term = cadd(d, p, cos_one_const, ng_one);
+        let abs_v = cabs(d, p, v_term);
+        let refl_abs_v = erefl(d, p, abs_v);
+        let bound_sum = cadd(d, p, q1_embed, q2_embed);
+        let radd_embed = embed(d, p, radd_val);
+        let step_a = d.lemma(
+            p.le_congr,
+            &[
+                abs_v, abs_v, bound_sum, radd_embed, refl_abs_v, of_add_eq, combined,
+            ],
+        );
+        // step_a : le abs_v (ofRat radd_val)
+
+        let k3 = NatOps::add(d, rate1, rate2);
+        let eq_fuse = d.lemma(p.rat.nat_div_succ_add, &[rate1, rate2, n]);
+        // eq_fuse : Eq (radd q1_rat q2_rat) (natDivSucc k3 n)
+        let final_bound_rat = div_succ_at(d, p, k3, n);
+        let final_le = rat_eq_rewrite(d, radd_val, final_bound_rat, eq_fuse, step_a, &|d, t| {
+            let target_embed = embed(d, p, t);
+            cle(d, p, abs_v, target_embed)
+        });
+        // final_le : le abs_v (ofRat (natDivSucc k3 n))
+
+        let per_idx = d.lam_fv(n_fv, nat, final_le);
+        let v_equiv_zero = d.lemma(p.equiv_zero_of_rate, &[k3, v_term, per_idx]);
+        // v_equiv_zero : Equiv v_term zero  (v_term = add cos_one_const (neg g_one))
+        let equiv_e_g = equiv_of_sub_equiv_zero(d, p, cos_one_const, g_one, v_equiv_zero);
+        // equiv_e_g : Equiv cos_one_const g_one
+        let final_result = d.lemma(p.equiv_symm, &[cos_one_const, g_one, equiv_e_g]);
+        // final_result : Equiv g_one cos_one_const
+
+        let with_hk1 = d.lam_fv(hk1_fv, hk1_ty, final_result);
+        d.lam_fv(k1_fv, nat, with_hk1)
+    };
+
+    let value = exists_elim(d, predicate, target, cos_one_converges_c, minor);
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.cos_fn_one_equiv_cos_one,
+        uparams: vec![],
+        ty: target,
+        value,
+    })
 }
 
 // ============================================================================
