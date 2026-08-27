@@ -1039,6 +1039,47 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   located hotspot is the deliverable. Give the lane a way to finish, not just a
   way to fail.
 
+  **ELEVENTH STALL, 2026-08-27, AND THE BRIEF HAD ALREADY ENUMERATED MONITORS.**
+  The prohibition above was followed to the letter in the brief — *"do not defer
+  the answer by ANY mechanism — not a background task, not a monitor, not a
+  scheduled wakeup, not a second agent"* — and the lane started a monitor and
+  returned *"I'll pause here and wait for the monitor's notification."*
+  Enumerating the forbidden mechanisms does not work either, because the lane is
+  not reasoning about mechanisms; it is reasoning that one more check would make
+  its report complete.
+
+  **So stop trying to prevent the stall and make it CHEAP.** What separated this
+  incident from a costly one was purely whether commits existed:
+
+      git log --oneline main..worktree-agent-<id>   -> EMPTY
+      git -C .claude/worktrees/agent-<id> status --porcelain
+        M crates/axeyum-lean-kernel/src/creal.rs
+        M crates/axeyum-lean-kernel/src/creal/creal_tests.rs
+        M crates/axeyum-lean-kernel/src/creal/crossing.rs
+
+  Three modified files, zero commits, ~30 minutes of work visible to nobody. The
+  brief said *"Commit BEFORE running any long check"* — the instruction exists,
+  and a lane that is about to stall is exactly the lane that skips it, because
+  it intends to commit *after* the check confirms the work.
+
+  Two things that actually help, neither of which is another prohibition:
+
+  - **Require an EARLY commit, not a pre-check commit.** "Your first commit must
+    land within your first ten tool calls, containing whatever you have, even if
+    it does not compile — say so in the message." A stalled lane with commits is
+    resumed by reading its branch; a stalled lane without them needs a
+    round-trip, and its work is one `git worktree remove` from gone.
+  - **Diagnose before waking it.** `git log --oneline main..<branch>` plus
+    `git status --porcelain` in the worktree tells you in one command whether
+    there is work to rescue and what the resume message should demand. Do not
+    infer a stall from a quiet transcript alone — see
+    `is-a-subagent-actually-stalled`.
+
+  The resume message that works names the recovery, not the failure: tell it to
+  treat any unfinished check as **"did not run"**, commit what it has *even if
+  broken*, and report — explicitly, that partial results reported now beat
+  complete results reported never.
+
   **TENTH STALL, 2026-08-26, AND IT HAD A MECHANICAL CAUSE — EVERY LANE WORKTREE
   BUILDS ITS OWN `target/` FROM SCRATCH.** Measured that day: **83 GB of lane
   `target/` directories across 125 worktrees**, 400-800 MB each. Nothing is
