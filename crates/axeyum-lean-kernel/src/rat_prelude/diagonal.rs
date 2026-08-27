@@ -42,21 +42,39 @@
 //! `sumRange_diagonal`, and `sumRange_rect_eq_diag_add_corner`, nothing
 //! `sum.rs` did not already have a use for.
 //!
-//! # What this file does NOT establish
+//! # The two-bound gap, and how it closed
 //!
-//! `Rat.sumRange_rect_eq_diag_add_corner` is the SAME-bound `n×n` square
-//! decomposition `Nat`'s version is (`rect_row`/`corner_row` both take the
-//! single bound `n`). The Cauchy product target `polyEval_mul` needs a
-//! TWO-different-bounds statement (`polyEval a m x * polyEval b n x`, `m ≠ n`
-//! in general), and porting a same-bound square to a same-bound square does
-//! not by itself supply that — see `rat_prelude/polynomial.rs`'s module doc
-//! for the counterexample showing why the literal Cauchy-product statement
-//! needs additional hypotheses (or a differently-bounded `conv`) beyond what
-//! this file's machinery alone gives.
+//! This section previously read "what this file does NOT establish", and said
+//! that `Rat.sumRange_rect_eq_diag_add_corner` is the SAME-bound `n×n` square
+//! `Nat`'s version is (`rect_row`/`corner_row` both take the single bound
+//! `n`), while the Cauchy product needs `Σ f m · Σ g n` with `m ≠ n` — and
+//! that porting a same-bound square to a same-bound square cannot supply
+//! that. The premise is right and the conclusion was wrong, in a way worth
+//! recording because it is the general shape of the mistake.
+//!
+//! The two-bound generality never had to come from the RECTANGLE theorem. It
+//! comes from the step BEFORE it: [`declare_sum_range_mul`] and
+//! [`declare_sum_range_mul_double`] carry `Σ f m · Σ g n` to the double sum
+//! `Σ_{i<m} Σ_{j<n} f i · g j` for arbitrary independent `m` and `n`, by
+//! `mul_comm` + `mul_sumRange` + `sumRange_congr` alone — no induction, no
+//! `Nat.sub`, and nothing that could care whether the bounds agree. The
+//! same-bound square is only needed once you additionally want the
+//! ANTIDIAGONAL grouping, which is a genuinely square-shaped statement.
+//!
+//! So the honest split is: two bounds for the rectangle, one bound for the
+//! diagonal decomposition, and [`declare_sum_range_mul_eq_diag_add_corner`]
+//! at `m = n`.
+//!
+//! `Rat.polyEval_mul` is still not here, but reindexing no longer blocks it.
+//! What remains is `Rat.pow_add` (`x^(i+j) = x^i · x^j`) plus the index
+//! round-trip `i + (k−i) = k` for `i ≤ k`, which is what turns an
+//! antidiagonal cell `(a i · x^i) · (b (k−i) · x^(k−i))` into
+//! `(a i · b (k−i)) · x^k`. That is `pow` arithmetic, not summation
+//! reindexing.
 
 use super::RatPrelude;
 use super::ops::{
-    nat_eq_to_rat, radd, rat_ty, rchain, rcongr, req, rrefl, rsum_range, rsymm, rtrans, rzero,
+    nat_eq_to_rat, radd, rat_ty, rchain, rcongr, req, rmul, rrefl, rsum_range, rsymm, rtrans, rzero,
 };
 use crate::KernelError;
 use crate::expr::ExprId;
@@ -691,15 +709,356 @@ pub(super) fn declare_sum_range_rect_eq_diag_add_corner(
     d.declare_theorem(rp.sum_range_rect_eq_diag_add_corner, ty, value)
 }
 
+// ---------------------------------------------------------------------------
+// The PRODUCT of two finite sums, and its honest Cauchy decomposition.
+//
+// Everything above this line is generic in `F : Nat → Nat → Rat`. Everything
+// below specialises it to the SEPARABLE summand `F i j := f i * g j`, which is
+// the only shape a product of two `sumRange`s ever produces — and the shape
+// both blocked consumers (`Rat.polyEval_mul`, general-degree `Rat` Taylor)
+// need. The `Rat` port of `Complex.sumRange_mul` /
+// `Complex.sumRange_mul_double` / `Complex.sumRange_mul_eq_diag_add_corner`
+// (`complex.rs`), which already ran this exact argument over `ℂ`'s setoid:
+// `Equiv`/`equiv_trans` there become `Eq`/[`rchain`] here, and `ℂ`'s
+// `const_app(p.mul, …)`/`const_app(p.sum_range, …)` become `rmul`/`rsum_range`.
+// No step of the argument changes, because none of it touches `Nat.sub` or any
+// other index arithmetic — see this module's `# Does this port mechanically?`
+// note, which applies to the `ℂ → ℚ` direction for the same reason.
+// ---------------------------------------------------------------------------
+
+/// `fun i => mul (f i) c` — each summand scaled on the RIGHT by a constant.
+fn scaled_right(d: &mut IntDev<'_>, f: ExprId, c: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let fi = d.apply(f, &[i]);
+    let body = rmul(d, fi, c);
+    d.lam_fv(i_fv, nat, body)
+}
+
+/// `fun i => mul c (f i)` — each summand scaled on the LEFT, which is the
+/// shape [`RatPrelude::mul_sum_range`](super::RatPrelude::mul_sum_range)'s own
+/// right-hand side is built in. The only reason both this and
+/// [`scaled_right`] exist is that `Rat` has a left-distribution lemma and no
+/// right one; `mul_comm` under the sum converts between them.
+fn scaled_left(d: &mut IntDev<'_>, f: ExprId, c: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let fi = d.apply(f, &[i]);
+    let body = rmul(d, c, fi);
+    d.lam_fv(i_fv, nat, body)
+}
+
+/// `fun i => sumRange (fun j => mul (f i) (g j)) n` — one row of the separable
+/// rectangle, written DIRECTLY rather than as an `F i j` application.
+fn double_fn(d: &mut IntDev<'_>, p: RatPrelude, f: ExprId, g: ExprId, n: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let fi = d.apply(f, &[i]);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let gj = d.apply(g, &[j]);
+    let body = rmul(d, fi, gj);
+    let inner = d.lam_fv(j_fv, nat, body);
+    let row = rsum_range(d, p, inner, n);
+    d.lam_fv(i_fv, nat, row)
+}
+
+/// `fun i => fun j => mul (f i) (g j)` — the same separable summand CURRIED,
+/// i.e. the `F : Nat → Nat → Rat` that
+/// [`declare_sum_range_rect_eq_diag_add_corner`] quantifies over.
+fn separable_fn(d: &mut IntDev<'_>, f: ExprId, g: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let fi = d.apply(f, &[i]);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let gj = d.apply(g, &[j]);
+    let body = rmul(d, fi, gj);
+    let inner = d.lam_fv(j_fv, nat, body);
+    d.lam_fv(i_fv, nat, inner)
+}
+
+/// `sumRange (fun k => sumRange (fun i => mul (f i) (g (sub k i))) (succ k)) n`
+/// — the antidiagonal-grouped convolution `Σ_{k<n} Σ_{i≤k} f i · g (k−i)`,
+/// written WITHOUT the `F i (k−i)` redex [`triangle_sum`] leaves behind.
+///
+/// Building the STATEMENT this way and the PROOF through [`triangle_sum`] is
+/// deliberate: the two are beta-equivalent, and paying one beta bridge in the
+/// kernel buys every downstream consumer a statement it can read and match
+/// against without first reducing a redex. `Complex` kept the applied form and
+/// its pinned type carries `(fun x5 x6 => Complex.mul (x0 x5) (x1 x6)) x4
+/// (AxNat.sub x3 x4)` in the middle of the convolution — legible to nobody.
+fn separable_triangle(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    f: ExprId,
+    g: ExprId,
+    n: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let fi = d.apply(f, &[i]);
+    let ki = d.sub(k, i);
+    let gki = d.apply(g, &[ki]);
+    let cell = rmul(d, fi, gki);
+    let inner = d.lam_fv(i_fv, nat, cell);
+    let sk = d.succ(k);
+    let row = rsum_range(d, p, inner, sk);
+    let t = d.lam_fv(k_fv, nat, row);
+    rsum_range(d, p, t, n)
+}
+
+/// `sumRange (fun i => sumRange (fun k => mul (f i) (g (add (sub n i) k))) i) n`
+/// — the corner mass the naive finite Cauchy identity silently drops, in the
+/// same redex-free shape [`separable_triangle`] uses.
+///
+/// Note the `Nat.add` operand order: `add (sub n i) k`, the shifted index
+/// LEFT and the running index right, matching [`shifted`] exactly. This is
+/// not cosmetic — reversing it changes which argument `Nat.add`'s recursion
+/// is stuck on.
+fn separable_corner(d: &mut IntDev<'_>, p: RatPrelude, f: ExprId, g: ExprId, n: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let fi = d.apply(f, &[i]);
+    let sub_ni = d.sub(n, i);
+    let idx = d.add(sub_ni, k);
+    let gidx = d.apply(g, &[idx]);
+    let cell = rmul(d, fi, gidx);
+    let inner = d.lam_fv(k_fv, nat, cell);
+    let row = rsum_range(d, p, inner, i);
+    let c = d.lam_fv(i_fv, nat, row);
+    rsum_range(d, p, c, n)
+}
+
+/// `Rat.sumRange_mul : ∀ f g m n,`
+/// `mul (sumRange f m) (sumRange g n) = sumRange (fun i => mul (f i) (sumRange g n)) m`.
+///
+/// **Not an induction.** `S := sumRange g n` plays exactly the "constant"
+/// role [`RatPrelude::mul_sum_range`](super::RatPrelude::mul_sum_range)
+/// already handles, on the other side of the product: `mul_comm` swaps the
+/// product, `mul_sumRange S f m` distributes `S` through the sum, and
+/// `sumRange_congr` commutes each summand back. Three existing lemmas chained
+/// by `Eq.trans`.
+///
+/// TWO independent bounds `m`, `n` — nothing here requires them equal, and
+/// the two-bound form is what a general-degree polynomial product needs.
+pub(super) fn declare_sum_range_mul(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let s = rsum_range(d, p, g, n);
+    let sf = rsum_range(d, p, f, m);
+    let lhs = rmul(d, sf, s);
+    let scaled_r = scaled_right(d, f, s);
+    let rhs = rsum_range(d, p, scaled_r, m);
+    let stmt = req(d, lhs, rhs);
+
+    // mul (sumRange f m) S = mul S (sumRange f m)
+    let mid = rmul(d, s, sf);
+    let h1 = d.lemma(p.mul_comm, &[sf, s]);
+
+    // mul S (sumRange f m) = sumRange (fun i => mul S (f i)) m
+    let scaled_l = scaled_left(d, f, s);
+    let mid2 = rsum_range(d, p, scaled_l, m);
+    let h2 = d.lemma(p.mul_sum_range, &[s, f, m]);
+
+    // pointwise mul_comm puts the constant back on the right.
+    let pointwise = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let fi = d.apply(f, &[i]);
+        let body = d.lemma(p.mul_comm, &[s, fi]);
+        d.lam_fv(i_fv, nat, body)
+    };
+    let h3 = d.lemma(p.sum_range_congr, &[scaled_l, scaled_r, m, pointwise]);
+
+    let (_e, proof) = rchain(d, lhs, &[(mid, h1), (mid2, h2), (rhs, h3)]);
+
+    let ty = {
+        let over_n = d.pi_fv(n_fv, nat, stmt);
+        let over_m = d.pi_fv(m_fv, nat, over_n);
+        let over_g = d.pi_fv(g_fv, fn_ty, over_m);
+        d.pi_fv(f_fv, fn_ty, over_g)
+    };
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, proof);
+        let over_m = d.lam_fv(m_fv, nat, over_n);
+        let over_g = d.lam_fv(g_fv, fn_ty, over_m);
+        d.lam_fv(f_fv, fn_ty, over_g)
+    };
+    d.declare_theorem(p.sum_range_mul, ty, value)
+}
+
+/// `Rat.sumRange_mul_double : ∀ f g m n,`
+/// `mul (sumRange f m) (sumRange g n)`
+/// `= sumRange (fun i => sumRange (fun j => mul (f i) (g j)) n) m`.
+///
+/// The un-grouped, **subtraction-free** rectangle form of the Cauchy product:
+/// a product of two finite sums as one double sum with `f i * g j` at every
+/// pair `(i, j)`, `i < m`, `j < n`. From [`declare_sum_range_mul`] (whose RHS
+/// is already `sumRange (fun i => mul (f i) (sumRange g n)) m`) plus
+/// `sumRange_congr` moving `mul_sumRange` (at `c := f i`) under the outer sum.
+///
+/// This is NOT the diagonal-grouped convolution — see
+/// [`declare_sum_range_mul_eq_diag_add_corner`], which is.
+pub(super) fn declare_sum_range_mul_double(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let s = rsum_range(d, p, g, n);
+    let sf = rsum_range(d, p, f, m);
+    let lhs = rmul(d, sf, s);
+    let double = double_fn(d, p, f, g, n);
+    let rhs = rsum_range(d, p, double, m);
+    let stmt = req(d, lhs, rhs);
+
+    let h1 = d.lemma(p.sum_range_mul, &[f, g, m, n]);
+    let scaled = scaled_right(d, f, s);
+    let mid = rsum_range(d, p, scaled, m);
+
+    let pointwise = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let fi = d.apply(f, &[i]);
+        let body = d.lemma(p.mul_sum_range, &[fi, g, n]);
+        d.lam_fv(i_fv, nat, body)
+    };
+    let h2 = d.lemma(p.sum_range_congr, &[scaled, double, m, pointwise]);
+
+    let (_e, proof) = rchain(d, lhs, &[(mid, h1), (rhs, h2)]);
+
+    let ty = {
+        let over_n = d.pi_fv(n_fv, nat, stmt);
+        let over_m = d.pi_fv(m_fv, nat, over_n);
+        let over_g = d.pi_fv(g_fv, fn_ty, over_m);
+        d.pi_fv(f_fv, fn_ty, over_g)
+    };
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, proof);
+        let over_m = d.lam_fv(m_fv, nat, over_n);
+        let over_g = d.lam_fv(g_fv, fn_ty, over_m);
+        d.lam_fv(f_fv, fn_ty, over_g)
+    };
+    d.declare_theorem(p.sum_range_mul_double, ty, value)
+}
+
+/// `Rat.sumRange_mul_eq_diag_add_corner : ∀ f g n,`
+/// `mul (sumRange f n) (sumRange g n)`
+/// `= add (sumRange (fun k => sumRange (fun i => mul (f i) (g (sub k i))) (succ k)) n)`
+/// `      (sumRange (fun i => sumRange (fun k => mul (f i) (g (add (sub n i) k))) i) n)`
+///
+/// **The finite Cauchy product's honest form over `ℚ`**: a product of two
+/// partial sums equals the antidiagonal-grouped convolution PLUS a corner term
+/// that the naive (false) identity silently drops. The corner is not an
+/// artefact of the proof — `nat_prelude`'s development records that the naive
+/// identity is refuted already at `n = 2`.
+///
+/// Composes [`declare_sum_range_mul_double`] at `[f, g, n, n]` (product =
+/// rectangle) with [`declare_sum_range_rect_eq_diag_add_corner`] at
+/// `[fun i j => f i * g j, n]` (rectangle = triangle + corner).
+///
+/// Two beta bridges, both discharged by the kernel's own defeq and neither
+/// requiring a lemma: `sum_range_mul_double`'s rectangle is built from the
+/// UNCURRIED summand while the rectangle theorem's is `F` applied through this
+/// module's curried helpers; and the statement's triangle/corner are written
+/// redex-free ([`separable_triangle`]/[`separable_corner`]) while the proof's
+/// come from [`triangle_sum`]/[`corner_sum`] applied to the curried `F`.
+/// `Complex.sumRange_mul_eq_diag_add_corner` already relies on the first;
+/// the second is this port's own, and is what keeps the `ℚ` statement
+/// readable where `ℂ`'s is not.
+pub(super) fn declare_sum_range_mul_eq_diag_add_corner(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let sf = rsum_range(d, p, f, n);
+    let sg = rsum_range(d, p, g, n);
+    let lhs = rmul(d, sf, sg);
+
+    let tri = separable_triangle(d, p, f, g, n);
+    let corner = separable_corner(d, p, f, g, n);
+    let rhs_stmt = radd(d, tri, corner);
+    let stmt = req(d, lhs, rhs_stmt);
+
+    let big_f = separable_fn(d, f, g);
+    let rect = rectangle_sum(d, p, big_f, n);
+
+    let h1 = d.lemma(p.sum_range_mul_double, &[f, g, n, n]);
+    let h2 = d.lemma(p.sum_range_rect_eq_diag_add_corner, &[big_f, n]);
+
+    let (_e, proof) = rchain(d, lhs, &[(rect, h1), (rhs_stmt, h2)]);
+
+    let ty = {
+        let over_n = d.pi_fv(n_fv, nat, stmt);
+        let over_g = d.pi_fv(g_fv, fn_ty, over_n);
+        d.pi_fv(f_fv, fn_ty, over_g)
+    };
+    let value = {
+        let over_n = d.lam_fv(n_fv, nat, proof);
+        let over_g = d.lam_fv(g_fv, fn_ty, over_n);
+        d.lam_fv(f_fv, fn_ty, over_g)
+    };
+    d.declare_theorem(p.sum_range_mul_eq_diag_add_corner, ty, value)
+}
+
 /// Declare this module's results in order: the general split lemma
 /// [`declare_sum_range_split`] (which [`rect_pointwise`] needs), the diagonal
 /// reindexing [`declare_sum_range_diagonal`] (which the rectangle theorem's
-/// final assembly needs), then the rectangle/corner headline
-/// [`declare_sum_range_rect_eq_diag_add_corner`].
+/// final assembly needs), the rectangle/corner headline
+/// [`declare_sum_range_rect_eq_diag_add_corner`], and then the three
+/// separable-summand consumers that turn it into a statement about a PRODUCT
+/// of two sums ([`declare_sum_range_mul`], [`declare_sum_range_mul_double`],
+/// [`declare_sum_range_mul_eq_diag_add_corner`]).
 pub(super) fn declare_diagonal(d: &mut IntDev<'_>, rp: RatPrelude) -> Result<(), KernelError> {
     let np = d.prelude();
     declare_sum_range_split(d, rp)?;
     declare_sum_range_diagonal(d, np, rp)?;
     declare_sum_range_rect_eq_diag_add_corner(d, np, rp)?;
+    declare_sum_range_mul(d, rp)?;
+    declare_sum_range_mul_double(d, rp)?;
+    declare_sum_range_mul_eq_diag_add_corner(d, rp)?;
     Ok(())
 }

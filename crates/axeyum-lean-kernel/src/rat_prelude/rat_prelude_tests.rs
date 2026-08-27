@@ -341,9 +341,14 @@ fn unnamed_but_live_declarations(p: &RatPrelude) -> Vec<crate::NameId> {
         p.sum_range_split,
         p.sum_range_diagonal,
         p.sum_range_rect_eq_diag_add_corner,
+        p.sum_range_mul,
+        p.sum_range_mul_double,
+        p.sum_range_mul_eq_diag_add_corner,
         p.pow,
         p.pow_zero,
         p.pow_succ,
+        p.pow_add,
+        p.pow_sub_add,
         p.pow_nat_div_succ_two,
         p.poly_eval,
         p.poly_eval_zero,
@@ -4210,6 +4215,12 @@ fn the_diagonal_toolkit_is_axiom_free() {
             "sumRange_rect_eq_diag_add_corner",
             p.sum_range_rect_eq_diag_add_corner,
         ),
+        ("sumRange_mul", p.sum_range_mul),
+        ("sumRange_mul_double", p.sum_range_mul_double),
+        (
+            "sumRange_mul_eq_diag_add_corner",
+            p.sum_range_mul_eq_diag_add_corner,
+        ),
     ];
     for (label, name) in expected {
         let declaration = kernel
@@ -4434,6 +4445,406 @@ fn sum_range_rect_eq_diag_add_corner_computes_at_a_concrete_instance_over_rat() 
     );
 }
 
+/// `Rat.sumRange_mul_double` at **two different bounds** — the generality the
+/// same-bound square could not supply, and the reason this lemma carries `m`
+/// and `n` separately.
+///
+/// `f i := 2^i`, `g j := 3^j`, `m = 2`, `n = 3`. Independently:
+/// `(2^0+2^1)·(3^0+3^1+3^2) = 3·13 = 39`, and the double sum
+/// `Σ_{i<2} Σ_{j<3} 2^i·3^j` is the same 39. Checked as the theorem's own
+/// statement AND by reducing both sides to the numeral.
+///
+/// Index-DEPENDENT summands are the point: with `f` and `g` constant every
+/// cell of the rectangle carries the same value, so a transposed bound
+/// (`m` for `n`) would still balance. Here it does not — `3·13` and `13·3`
+/// agree, but `Σ_{i<2}Σ_{j<3}` and `Σ_{i<3}Σ_{j<2}` are built from different
+/// cells and the structural `def_eq` below separates them.
+#[test]
+fn sum_range_mul_double_computes_at_two_different_bounds() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{req, rmul, rpow, rsum_range};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    let base_two = literal(&mut d, 2);
+    let base_three = literal(&mut d, 3);
+
+    // f := fun i => 2^i,  g := fun j => 3^j.
+    let f = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let body = rpow(&mut d, p, base_two, i);
+        d.lam_fv(i_fv, nat, body)
+    };
+    let g = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let body = rpow(&mut d, p, base_three, j);
+        d.lam_fv(j_fv, nat, body)
+    };
+
+    let two = d.num(2);
+    let three = d.num(3);
+
+    let proof = d.lemma(p.sum_range_mul_double, &[f, g, two, three]);
+    let inferred = d
+        .kernel()
+        .infer(proof)
+        .unwrap_or_else(|e| panic!("sumRange_mul_double(f,g,2,3) should infer: {e:?}"));
+
+    let sum_f = rsum_range(&mut d, p, f, two);
+    let sum_g = rsum_range(&mut d, p, g, three);
+    let lhs = rmul(&mut d, sum_f, sum_g);
+
+    // Σ_{i<2} Σ_{j<3} f i * g j, rebuilt here from raw pieces.
+    let double = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let fi = d.apply(f, &[i]);
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let gj = d.apply(g, &[j]);
+        let cell = rmul(&mut d, fi, gj);
+        let inner = d.lam_fv(j_fv, nat, cell);
+        let row = rsum_range(&mut d, p, inner, three);
+        d.lam_fv(i_fv, nat, row)
+    };
+    let rhs = rsum_range(&mut d, p, double, two);
+    let expected = req(&mut d, lhs, rhs);
+    assert!(
+        d.kernel().def_eq(inferred, expected),
+        "sumRange_mul_double(f,g,2,3) should state (Σ_{{i<2}} f i)·(Σ_{{j<3}} g j) \
+         = Σ_{{i<2}} Σ_{{j<3}} f i · g j"
+    );
+
+    let thirty_nine = literal(&mut d, 39);
+    assert!(
+        d.kernel().def_eq(lhs, thirty_nine),
+        "(2^0+2^1)·(3^0+3^1+3^2) must reduce to 3·13 = 39"
+    );
+    assert!(
+        d.kernel().def_eq(rhs, thirty_nine),
+        "the 2×3 rectangle of 2^i·3^j must reduce to the same 39"
+    );
+
+    assert!(
+        d.kernel()
+            .axiom_footprint(p.sum_range_mul_double)
+            .is_empty(),
+        "sumRange_mul_double must rest on zero axioms"
+    );
+}
+
+/// `Rat.sumRange_mul_eq_diag_add_corner` at a concrete instance, **and the
+/// naive corner-dropping identity refuted at that same instance**.
+///
+/// `f i := 2^i`, `g j := 3^j`, `n = 3`. By hand:
+///
+/// - product `(1+2+4)·(1+3+9) = 7·13 = 91`;
+/// - antidiagonal triangle `Σ_{k<3} Σ_{i≤k} 2^i·3^(k−i)`
+///   `= 1 + (3+2) + (9+6+4) = 1 + 5 + 19 = 25`;
+/// - corner `Σ_{i<3} Σ_{k<i} 2^i·3^((3−i)+k)`
+///   `= 0 + (2·3^2) + (4·3^1 + 4·3^2) = 18 + 48 = 66`;
+/// - `25 + 66 = 91`.
+///
+/// **`n = 3` and not `n = 2`, deliberately.** At `n = 2` the corner is the
+/// single cell `i = 1`, where `n − i = 1 = i` — so `g ((n−i)+k)` and
+/// `g (i+k)` coincide there and the test cannot tell a transposed corner
+/// index from the right one. That is exactly the vacuous-negative-control
+/// trap: the "wrong" variant is literally the same term. At `n = 3` the
+/// corner spans `i = 1` and `i = 2` with `n − i ∈ {2, 1}` against `i ∈
+/// {1, 2}`, and the same transposition moves the corner from 66 to 150.
+///
+/// One symmetry no instance can break, stated so nobody looks for it:
+/// `Σ_{i≤k} f i · g (k−i)` and `Σ_{i≤k} f (k−i) · g i` are the SAME sum
+/// reindexed, so no choice of `f`, `g`, `n` separates them. That swap is
+/// caught by reading the statement, not by computing it.
+///
+/// The corner is **most of the product** here, which is the point: the naive
+/// finite Cauchy identity is not a small-error approximation, it is simply
+/// false. The last assertion is that negative control — `91` and `25` are
+/// distinct numerals, so it can be neither vacuous (the two sides are not the
+/// same term) nor inverted (the dropped-corner identity is genuinely false at
+/// this instance, not accidentally true).
+#[test]
+fn sum_range_mul_eq_diag_add_corner_computes_and_the_naive_identity_is_false() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{radd, req, rmul, rpow, rsum_range};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    let base_two = literal(&mut d, 2);
+    let base_three = literal(&mut d, 3);
+
+    let f = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let body = rpow(&mut d, p, base_two, i);
+        d.lam_fv(i_fv, nat, body)
+    };
+    let g = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let body = rpow(&mut d, p, base_three, j);
+        d.lam_fv(j_fv, nat, body)
+    };
+    let three_n = d.num(3);
+
+    let proof = d.lemma(p.sum_range_mul_eq_diag_add_corner, &[f, g, three_n]);
+    let inferred = d
+        .kernel()
+        .infer(proof)
+        .unwrap_or_else(|e| panic!("sumRange_mul_eq_diag_add_corner(f,g,3) should infer: {e:?}"));
+
+    let sum_f = rsum_range(&mut d, p, f, three_n);
+    let sum_g = rsum_range(&mut d, p, g, three_n);
+    let product = rmul(&mut d, sum_f, sum_g);
+
+    // Σ_{k<2} Σ_{i<k+1} f i * g (k−i), rebuilt from raw pieces.
+    let triangle = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let fi = d.apply(f, &[i]);
+        let ki = d.sub(k, i);
+        let gki = d.apply(g, &[ki]);
+        let cell = rmul(&mut d, fi, gki);
+        let inner = d.lam_fv(i_fv, nat, cell);
+        let sk = d.succ(k);
+        let row = rsum_range(&mut d, p, inner, sk);
+        let t = d.lam_fv(k_fv, nat, row);
+        rsum_range(&mut d, p, t, three_n)
+    };
+    // Σ_{i<2} Σ_{k<i} f i * g ((2−i)+k), rebuilt from raw pieces.
+    let corner = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let fi = d.apply(f, &[i]);
+        let sub_ni = d.sub(three_n, i);
+        let idx = d.add(sub_ni, k);
+        let gidx = d.apply(g, &[idx]);
+        let cell = rmul(&mut d, fi, gidx);
+        let inner = d.lam_fv(k_fv, nat, cell);
+        let row = rsum_range(&mut d, p, inner, i);
+        let c = d.lam_fv(i_fv, nat, row);
+        rsum_range(&mut d, p, c, three_n)
+    };
+
+    let rhs = radd(&mut d, triangle, corner);
+    let expected = req(&mut d, product, rhs);
+    assert!(
+        d.kernel().def_eq(inferred, expected),
+        "sumRange_mul_eq_diag_add_corner(f,g,3) should state product = triangle + corner"
+    );
+
+    let ninety_one = literal(&mut d, 91);
+    let twenty_five = literal(&mut d, 25);
+    let sixty_six = literal(&mut d, 66);
+    assert!(
+        d.kernel().def_eq(product, ninety_one),
+        "(2^0+2^1+2^2)·(3^0+3^1+3^2) = 7·13 must reduce to 91"
+    );
+    assert!(
+        d.kernel().def_eq(triangle, twenty_five),
+        "the antidiagonal convolution Σ_{{k<3}} Σ_{{i≤k}} 2^i·3^(k−i) must reduce to 1+5+19 = 25"
+    );
+    assert!(
+        d.kernel().def_eq(corner, sixty_six),
+        "the corner Σ_{{i<3}} Σ_{{k<i}} 2^i·3^((3−i)+k) must reduce to 18+48 = 66"
+    );
+
+    // The negative control below is only worth anything if `def_eq` can tell
+    // two distinct `Rat` numerals apart at all. Pin that here rather than
+    // assuming it: a `def_eq` that said `true` for everything would make the
+    // assertion after this one pass for the wrong reason.
+    assert!(
+        !d.kernel().def_eq(twenty_five, sixty_six),
+        "def_eq must separate the distinct Rat numerals 25 and 66; if it does \
+         not, the corner-dropping negative control below cannot fail either"
+    );
+
+    // THE NEGATIVE CONTROL. Dropping the corner -- the naive finite Cauchy
+    // identity -- claims 91 = 25.
+    assert!(
+        !d.kernel().def_eq(product, triangle),
+        "the corner-dropping identity must be FALSE here; if the product and the \
+         convolution are def_eq at this instance then this test's f/g were chosen \
+         badly and it proves nothing about the corner"
+    );
+
+    assert!(
+        d.kernel()
+            .axiom_footprint(p.sum_range_mul_eq_diag_add_corner)
+            .is_empty(),
+        "sumRange_mul_eq_diag_add_corner must rest on zero axioms"
+    );
+    assert!(
+        d.kernel().axiom_footprint(p.sum_range_mul).is_empty(),
+        "sumRange_mul must rest on zero axioms"
+    );
+}
+
+/// `Rat.pow_add` and `Rat.pow_sub_add` at concrete arguments — the companion
+/// the symbolic kernel acceptance does not give.
+///
+/// Both theorems are built over free `x`, `i`, `k`, so `add_declaration`
+/// already checked them symbolically. Numerals reduce, and reduction hides
+/// definitional-equality gaps; free variables get stuck, and stuck terms hide
+/// transposed arguments and wrong hand-computed values. The two checks fail
+/// on disjoint defect classes, so both are here.
+///
+/// `pow_add` at `x = 2, m = 2, n = 3`: `2^(2+3) = 32` and `2^2 · 2^3 = 4·8`.
+/// A statement that had written `Nat.mul m n` where it means `Nat.add m n`
+/// type-checks just as well and gives `2^6 = 64` — this separates them.
+///
+/// `pow_sub_add` at `x = 2, i = 1, k = 3`: `2^3 = 2^(3−1) · 2^1 = 4·2 = 8`.
+/// Note `k − i = 2 ≠ i = 1` here, deliberately: at `i = 1, k = 2` the two
+/// exponents would both be `1` and a transposed `sub k i` / `i` would be
+/// invisible.
+///
+/// The `Nat.le i k` hypothesis is then shown to be load-bearing rather than
+/// decorative: `Nat.sub` truncates, so at `i = 3 > k = 1` the conclusion
+/// reads `2 = 2^(1−3) · 2^3 = 2^0 · 8 = 8`, and the kernel is asked to
+/// confirm that `2` and `8` are NOT `def_eq`. A `pow_sub_add` stated without
+/// the hypothesis would be unsound, and this is the instance that says so.
+#[test]
+fn pow_add_and_the_antidiagonal_cell_collapse_compute_at_concrete_arguments() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{req, rmul, rpow};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    let x = literal(&mut d, 2);
+    let n1 = d.num(1);
+    let n2 = d.num(2);
+    let n3 = d.num(3);
+
+    // --- pow_add(2, 2, 3) : 2^(2+3) = 2^2 * 2^3 -----------------------------
+    let proof_add = d.lemma(p.pow_add, &[x, n2, n3]);
+    let inferred_add = d
+        .kernel()
+        .infer(proof_add)
+        .unwrap_or_else(|e| panic!("pow_add(2,2,3) should infer: {e:?}"));
+
+    let sum_23 = d.add(n2, n3);
+    let lhs_add = rpow(&mut d, p, x, sum_23);
+    let pow_2 = rpow(&mut d, p, x, n2);
+    let pow_3 = rpow(&mut d, p, x, n3);
+    let rhs_add = rmul(&mut d, pow_2, pow_3);
+    let expected_add = req(&mut d, lhs_add, rhs_add);
+    assert!(
+        d.kernel().def_eq(inferred_add, expected_add),
+        "pow_add(2,2,3) should state 2^(2+3) = 2^2 · 2^3"
+    );
+
+    let thirty_two = literal(&mut d, 32);
+    assert!(
+        d.kernel().def_eq(lhs_add, thirty_two),
+        "2^(2+3) must reduce to 32"
+    );
+    assert!(
+        d.kernel().def_eq(rhs_add, thirty_two),
+        "2^2 · 2^3 = 4·8 must reduce to the same 32"
+    );
+    // The exponent really is a SUM: 2^(2·3) would be 64, not 32.
+    let sixty_four = literal(&mut d, 64);
+    assert!(
+        !d.kernel().def_eq(thirty_two, sixty_four),
+        "def_eq must separate 32 from 64, or the check above cannot fail"
+    );
+
+    // --- pow_sub_add(2, 1, 3) : 1 <= 3 -> 2^3 = 2^(3-1) * 2^1 ---------------
+    let nat = d.prelude();
+    // `Nat.le 1 3`, built from the prelude's own order facts rather than
+    // assumed: le_succ gives i <= succ i, le_trans chains two of them.
+    let h_le = {
+        let le_1_2 = d.lemma(nat.le_succ, &[n1]);
+        let le_2_3 = d.lemma(nat.le_succ, &[n2]);
+        d.lemma(nat.le_trans, &[n1, n2, n3, le_1_2, le_2_3])
+    };
+    let proof_sub = d.lemma(p.pow_sub_add, &[x, n1, n3, h_le]);
+    let inferred_sub = d
+        .kernel()
+        .infer(proof_sub)
+        .unwrap_or_else(|e| panic!("pow_sub_add(2,1,3,h) should infer: {e:?}"));
+
+    let sub_31 = d.sub(n3, n1);
+    let pow_k = rpow(&mut d, p, x, n3);
+    let pow_sub = rpow(&mut d, p, x, sub_31);
+    let pow_i = rpow(&mut d, p, x, n1);
+    let rhs_sub = rmul(&mut d, pow_sub, pow_i);
+    let expected_sub = req(&mut d, pow_k, rhs_sub);
+    assert!(
+        d.kernel().def_eq(inferred_sub, expected_sub),
+        "pow_sub_add(2,1,3) should state 2^3 = 2^(3−1) · 2^1"
+    );
+
+    let eight = literal(&mut d, 8);
+    assert!(d.kernel().def_eq(pow_k, eight), "2^3 must reduce to 8");
+    assert!(
+        d.kernel().def_eq(rhs_sub, eight),
+        "2^(3−1) · 2^1 = 4·2 must reduce to the same 8"
+    );
+
+    // --- the hypothesis is load-bearing, not decoration ---------------------
+    // At i = 3 > k = 1 truncated `Nat.sub` gives 1 − 3 = 0, so the
+    // conclusion would read 2^1 = 2^0 · 2^3, i.e. 2 = 8.
+    let sub_13 = d.sub(n1, n3);
+    let pow_1 = rpow(&mut d, p, x, n1);
+    let pow_trunc = rpow(&mut d, p, x, sub_13);
+    let bad_rhs = rmul(&mut d, pow_trunc, pow_3);
+    let two_r = literal(&mut d, 2);
+    assert!(d.kernel().def_eq(pow_1, two_r), "2^1 must reduce to 2");
+    assert!(
+        d.kernel().def_eq(bad_rhs, eight),
+        "truncation makes 2^(1−3) · 2^3 reduce to 2^0 · 8 = 8"
+    );
+    assert!(
+        !d.kernel().def_eq(pow_1, bad_rhs),
+        "pow_sub_add WITHOUT its `Nat.le i k` hypothesis would be false here \
+         (2 = 8); if these are def_eq the hypothesis is not load-bearing and \
+         this test proves nothing about it"
+    );
+
+    assert!(
+        d.kernel().axiom_footprint(p.pow_add).is_empty(),
+        "pow_add must rest on zero axioms"
+    );
+    assert!(
+        d.kernel().axiom_footprint(p.pow_sub_add).is_empty(),
+        "pow_sub_add must rest on zero axioms"
+    );
+}
+
 // --- polynomials (`rat_prelude::polynomial`) --------------------------------
 
 /// Every declaration `polynomial::declare_polynomial` adds — `Rat.pow`,
@@ -4451,6 +4862,8 @@ fn the_polynomial_toolkit_is_axiom_free() {
         ("pow", p.pow, false),
         ("pow_zero", p.pow_zero, true),
         ("pow_succ", p.pow_succ, true),
+        ("pow_add", p.pow_add, true),
+        ("pow_sub_add", p.pow_sub_add, true),
         ("polyEval", p.poly_eval, false),
         ("polyEval_zero", p.poly_eval_zero, true),
         ("polyEval_succ", p.poly_eval_succ, true),

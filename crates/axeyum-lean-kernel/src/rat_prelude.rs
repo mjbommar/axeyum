@@ -964,6 +964,36 @@ pub struct RatPrelude {
     /// (`rat_prelude/diagonal.rs`'s module doc). The `Rat` port of
     /// `Nat.sumRange_rect_eq_diag_add_corner` (`nat_prelude::rectangle`).
     pub sum_range_rect_eq_diag_add_corner: NameId,
+    /// `Rat.sumRange_mul : ∀ f g m n, mul (sumRange f m) (sumRange g n) =
+    /// sumRange (fun i => mul (f i) (sumRange g n)) m` — one factor's sum
+    /// distributes over a product with a second sum. TWO independent bounds:
+    /// nothing requires `m = n`. Not an induction — `sumRange g n` plays the
+    /// "constant" role [`Self::mul_sum_range`] already handles, reached by
+    /// `mul_comm` on both sides of it.
+    pub sum_range_mul: NameId,
+    /// `Rat.sumRange_mul_double : ∀ f g m n, mul (sumRange f m) (sumRange g n)
+    /// = sumRange (fun i => sumRange (fun j => mul (f i) (g j)) n) m` — the
+    /// un-grouped, **subtraction-free** rectangle form of the Cauchy product,
+    /// `f i * g j` at every `(i, j)` with `i < m`, `j < n`. From
+    /// [`Self::sum_range_mul`] plus [`Self::sum_range_congr`] moving
+    /// [`Self::mul_sum_range`] under the outer sum. Not the diagonal-grouped
+    /// convolution — that is [`Self::sum_range_mul_eq_diag_add_corner`].
+    pub sum_range_mul_double: NameId,
+    /// `Rat.sumRange_mul_eq_diag_add_corner : ∀ f g n,`
+    /// `mul (sumRange f n) (sumRange g n) = add (sumRange (fun k => sumRange`
+    /// `(fun i => mul (f i) (g (sub k i))) (succ k)) n) (sumRange (fun i =>`
+    /// `sumRange (fun k => mul (f i) (g (add (sub n i) k))) i) n)` — **the
+    /// finite Cauchy product over `ℚ`, in its honest form**: a product of two
+    /// partial sums is the antidiagonal-grouped convolution PLUS a corner term
+    /// the naive identity drops (refuted at `n = 2` already over `ℕ`).
+    ///
+    /// Composes [`Self::sum_range_mul_double`] at `[f, g, n, n]` with
+    /// [`Self::sum_range_rect_eq_diag_add_corner`] at the separable
+    /// `F i j := f i * g j`. The `ℚ` counterpart of
+    /// [`ComplexPrelude::sum_range_mul_eq_diag_add_corner`](crate::ComplexPrelude::sum_range_mul_eq_diag_add_corner),
+    /// but stated redex-free: the triangle and corner here read as ordinary
+    /// convolution sums rather than as `F` applications awaiting beta.
+    pub sum_range_mul_eq_diag_add_corner: NameId,
 
     // --- polynomials (rat_prelude::polynomial) ------------------------------
     /// `Rat.pow : Rat → Nat → Rat`, `Nat.rec` on the exponent: `pow a zero ≡
@@ -974,6 +1004,23 @@ pub struct RatPrelude {
     pub pow_zero: NameId,
     /// `Rat.pow_succ : ∀ a m, pow a (succ m) = mul (pow a m) a` — `Eq.refl`.
     pub pow_succ: NameId,
+    /// `Rat.pow_add : ∀ a (m n : Nat), pow a (Nat.add m n) = mul (pow a m)
+    /// (pow a n)` — the exponent law. Induction on `n` with `m` fixed, the
+    /// `Rat` port of `Int.pow_add`; `Nat`, `Int`, `Complex` and `CReal` all
+    /// already carry it. Needed to collapse an antidiagonal cell
+    /// `(a i · x^i) · (b (k−i) · x^(k−i))` into `(a i · b (k−i)) · x^k`,
+    /// which is the step between
+    /// [`Self::sum_range_mul_eq_diag_add_corner`] and a convolution stated
+    /// over [`Self::poly_eval`].
+    pub pow_add: NameId,
+    /// `Rat.pow_sub_add : ∀ x i k, Nat.le i k → pow x k = mul (pow x
+    /// (Nat.sub k i)) (pow x i)` — the **antidiagonal cell collapse**: on the
+    /// antidiagonal `i + j = k` the two powers `x^i` and `x^(k−i)` recombine
+    /// into `x^k`. The `Nat.le i k` hypothesis is load-bearing, because
+    /// `Nat.sub` truncates: without it the claim is false at `i = 3, k = 1`.
+    /// No induction — `Nat.sub_add_cancel` lifted through `fun e => pow x e`,
+    /// then [`Self::pow_add`].
+    pub pow_sub_add: NameId,
     /// `Rat.pow_natDivSucc_two : ∀ n, pow (natDivSucc 1 1) n = normalize
     /// (ofNat 1) (Nat.pow 2 n) w`, where `w : 1 ≤ Nat.pow 2 n` is
     /// `Nat.pow_pos 2 n two_pos`.
@@ -1880,9 +1927,14 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         sum_range_split: child(kernel, "sumRange_split"),
         sum_range_diagonal: child(kernel, "sumRange_diagonal"),
         sum_range_rect_eq_diag_add_corner: child(kernel, "sumRange_rect_eq_diag_add_corner"),
+        sum_range_mul: child(kernel, "sumRange_mul"),
+        sum_range_mul_double: child(kernel, "sumRange_mul_double"),
+        sum_range_mul_eq_diag_add_corner: child(kernel, "sumRange_mul_eq_diag_add_corner"),
         pow: child(kernel, "pow"),
         pow_zero: child(kernel, "pow_zero"),
         pow_succ: child(kernel, "pow_succ"),
+        pow_add: child(kernel, "pow_add"),
+        pow_sub_add: child(kernel, "pow_sub_add"),
         pow_nat_div_succ_two: child(kernel, "pow_natDivSucc_two"),
         poly_eval: child(kernel, "polyEval"),
         poly_eval_zero: child(kernel, "polyEval_zero"),
