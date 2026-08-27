@@ -10348,3 +10348,110 @@ fn max_range_finds_the_true_maximum_not_the_last_term() {
          a last-term defect from a genuine maximum"
     );
 }
+
+/// **`CReal.ivt_exact_root` is not vacuous.** Every hypothesis is discharged
+/// at a concrete instance, so the theorem is about an inhabited situation
+/// rather than an empty one.
+///
+/// `F := fun r => r` on `[0, 1]`, derivative `fun _ => one`, modulus index
+/// `k := 0` (so the derivative bound reads `1/(0+1) <= 1`, discharged through
+/// [`crate::CRealPrelude::rat_unit_eq_one`]). The root the theorem then
+/// asserts to exist is `0`, and every hypothesis holds:
+/// `hasDerivative_id`, `uniformly_continuous_id`, `le zero one` from
+/// `zero_lt_one`, and `F 0 = 0 <= 0 <= 1 = F 1` by beta-reduction plus
+/// `le_refl`.
+///
+/// The check is `Kernel::infer` on the closed application, the same method
+/// [`sum_range_tail_within_specializes_to_the_zero_series_against_itself`]
+/// uses: a hypothesis that could not be built, or one whose type did not
+/// match, is a kernel rejection here rather than a green run. The rendered
+/// conclusion is then asserted to mention `Equiv` -- the EXACT part of the
+/// statement -- so an accidental weakening to `ivt_approx`'s `abs`-bound
+/// form would fail this test rather than pass it.
+#[test]
+fn ivt_exact_root_is_inhabited_by_the_identity_on_the_unit_interval() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::rat_prelude::ops::{rat_eq_rewrite, rone, rsymm};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    // `F := fun r => r`, `F' := fun _ => one` -- the two lambdas
+    // `hasDerivative_id` itself names, up to alpha.
+    let id_fn = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+    let const_one = {
+        let r_fv = d.fresh_fvar();
+        let _r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, one_c)
+    };
+
+    let hf = d.lemma(p.has_derivative_id, &[zero_c, one_c]);
+    let huc = d.lemma(p.uniformly_continuous_id, &[zero_c, one_c]);
+
+    // `le zero one`, used for the interval and for `0 <= F 1`.
+    let hz1 = {
+        let lt = d.lemma(p.zero_lt_one, &[]);
+        d.lemma(p.le_of_lt, &[zero_c, one_c, lt])
+    };
+    // `le (F 0) zero`: `(fun r => r) zero` beta-reduces to `zero`.
+    let hfa = d.lemma(p.le_refl, &[zero_c]);
+
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+
+    // `forall z, le zero z -> le z one -> le (ofRat (natDivSucc 1 0)) one`.
+    let hderiv = {
+        let unit_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, zero_nat]);
+        let rat_one = rone(&mut d, p.rat);
+        let eq = d.lemma(p.rat_unit_eq_one, &[]);
+        let back = rsymm(&mut d, unit_rat, rat_one, eq);
+        let base = d.lemma(p.le_refl, &[one_c]);
+        let body = rat_eq_rewrite(&mut d, rat_one, unit_rat, back, base, &|d, t| {
+            let ot = d.const_app(p.of_rat, &[t]);
+            d.const_app(p.le, &[ot, one_c])
+        });
+
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let hlo_ty = d.const_app(p.le, &[zero_c, z]);
+        let hlo_fv = d.fresh_fvar();
+        let hhi_ty = d.const_app(p.le, &[z, one_c]);
+        let hhi_fv = d.fresh_fvar();
+        let over_hhi = d.lam_fv(hhi_fv, hhi_ty, body);
+        let over_hlo = d.lam_fv(hlo_fv, hlo_ty, over_hhi);
+        d.lam_fv(z_fv, carrier, over_hlo)
+    };
+
+    let instance = d.lemma(
+        p.ivt_exact_root,
+        &[
+            id_fn, const_one, zero_c, one_c, hf, huc, hz1, hfa, hz1, zero_nat, hderiv,
+        ],
+    );
+
+    let ty = d.kernel().infer(instance).unwrap_or_else(|error| {
+        panic!(
+            "ivt_exact_root refused at F = (fun r => r) on [0, 1] with k = 0 -- \
+             the theorem's hypotheses are not jointly inhabitable as stated: {error:?}"
+        )
+    });
+
+    let rendered = kernel.render_lean(ty);
+    assert!(
+        rendered.contains("Exists"),
+        "the instantiated conclusion is not an existential: {rendered}"
+    );
+    assert!(
+        rendered.contains("Equiv"),
+        "the instantiated conclusion does not assert an EXACT root -- a weakening \
+         to an `abs`-bound would look like this: {rendered}"
+    );
+}

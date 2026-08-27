@@ -3888,10 +3888,11 @@ pub struct CRealPrelude {
     ///   [`Self::ivt_bisect_lo`]/[`Self::ivt_bisect_hi`] are exactly those
     ///   two applications, packaged as their own one-line definitions.
     ///
-    /// **Landed as the data-valued construction only** (`declare_ivt_bisect`
-    /// in `creal/ivt.rs`); the invariant spec theorem showing this bracket
-    /// satisfies the same six-part invariant `ivt_iter` proves is a
-    /// separate, not-yet-landed slice.
+    /// The invariant spec theorem this comment once called "a separate,
+    /// not-yet-landed slice" is [`Self::ivt_bisect_invariant`], landed; and
+    /// the bracket is what [`Self::ivt_exact_root`] runs on, so this
+    /// construction is now load-bearing for an EXACT root rather than a
+    /// promising shape.
     pub ivt_bisect: NameId,
     /// `CReal.ivt_bisect_lo : (CReal → CReal) → CReal → CReal → Nat → Nat →
     /// CReal := fun F P Q n k => ivt_bisect F P Q n k Bool.false` — the
@@ -3964,6 +3965,16 @@ pub struct CRealPrelude {
     /// bracket above are not nested). Both routes to an exact IVT root from
     /// this bisection are closed for general `F`; see the diary for the full
     /// derivation and both counterexamples.
+    ///
+    /// **"For general `F`" is the operative phrase, and it stays true.**
+    /// [`Self::ivt_exact_root`] does reach an exact root, from
+    /// [`Self::ivt_bisect`] (the EXTERNAL-slack construction, not this
+    /// diagonal one) and one extra hypothesis: a uniformly positive
+    /// derivative. Neither counterexample above is affected — both are
+    /// derivative-free — and neither route named here is the one that
+    /// worked: the sequence is re-instantiated at a fresh slack per accuracy
+    /// and its convergence comes from the derivative bound, never from
+    /// nesting.
     pub ivt_bisect_diag: NameId,
     /// `CReal.ivt_bisect_diag_lo : (CReal → CReal) → CReal → CReal → Nat →
     /// CReal := fun F P Q k => ivt_bisect_diag F P Q k Bool.false` — the
@@ -3975,6 +3986,169 @@ pub struct CRealPrelude {
     /// upper endpoint after `k` diagonal bisection steps. See
     /// [`Self::ivt_bisect_diag`].
     pub ivt_bisect_diag_hi: NameId,
+    /// `CReal.ivt_bisect_approx : ∀ F a b, UniformlyContinuousOn F a b →
+    /// le a b → le (F a) zero → le zero (F b) → ∀ e : Nat,
+    /// And (le a (ivt_bisect_hi F a b (Nat.succ (Nat.mul 2 e)) K))
+    ///     (And (le (ivt_bisect_hi F a b (Nat.succ (Nat.mul 2 e)) K) b)
+    ///          (le (abs (F (ivt_bisect_hi F a b (Nat.succ (Nat.mul 2 e)) K)))
+    ///              (ofRat (natDivSucc 1 e))))`, where
+    /// `K := Nat.add (Nat.mul (Nat.succ (bound (add b (neg a))))
+    /// (ucModulus F a b u (Nat.succ (Nat.mul 2 e)))) (bound (add b (neg a)))`
+    /// (`creal/ivt.rs`) — **[`Self::ivt_approx`] with the `Exists` removed.**
+    ///
+    /// [`Self::ivt_approx`] quantifies its witness existentially because
+    /// [`Self::ivt_iter`]'s bracket is existential, so nothing outside that
+    /// proof can name the point — and a *sequence* of such points cannot be
+    /// formed at all, since `∀ e, ∃ x` → `Nat → CReal` is an `Exists`
+    /// elimination into a `Type`-valued target. This states the identical
+    /// bound about the NAMED point [`Self::ivt_bisect_hi`] computes, at the
+    /// depth [`Self::ivt_approx`]'s own schedule already chose, so
+    /// `fun e => ivt_bisect_hi F a b (Nat.succ (Nat.mul 2 e)) K` is an
+    /// ordinary lambda.
+    ///
+    /// One estimate, not two: `creal/ivt.rs`'s `approx_endpoint_bound` is
+    /// shared verbatim by both declarations, applied here to the concrete
+    /// pair [`Self::ivt_bisect_invariant`] supplies instead of to
+    /// [`Self::ivt_iter`]'s eliminated witness.
+    pub ivt_bisect_approx: NameId,
+    /// `CReal.abs_diff_le_of_small_image : ∀ F F' a b, HasDerivativeOn F F' a
+    /// b → ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k)) (F' z)) →
+    /// ∀ epsX epsY x y, le a x → le x b → le a y → le y b →
+    /// le (abs (F x)) epsX → le (abs (F y)) epsY →
+    /// le (abs (add x (neg y))) (mul (ofNat (Nat.succ (Nat.succ (Nat.mul 2
+    /// k)))) (add epsX epsY))` (`creal/ivt.rs`) — **two points of `[a,b]`
+    /// whose `F`-values are small are close**, with NO hypothesis ordering
+    /// them and no [`Self::apart`] witness.
+    ///
+    /// The two accuracies are kept separate rather than shared: a Cauchy
+    /// caller comparing indices `m` and `n` has `1/(m+1)` and `1/(n+1)`, and
+    /// this shape puts its conclusion one [`Self::of_rat_add`] away from the
+    /// `natDivSucc K m + natDivSucc K n` form [`Self::cauchy`] states.
+    ///
+    /// This is the Cauchy criterion an exact IVT root needs: the bisection
+    /// brackets at two different accuracies are not nested and cannot be
+    /// ordered ([`Self::ivt_bisect_diag`]'s own doc records the verified
+    /// non-nesting), so [`Self::diff_le_of_strict_mono_magnitude`] — which
+    /// takes `le x y` — and [`Self::inverse_lipschitz_of_pos_deriv`] — which
+    /// takes `Apart x y` — are both out of reach at the point of use.
+    ///
+    /// `docs/mathematics-2026-08/diary-exact-root-obstruction.md` proposed
+    /// closing that gap through the LATTICE, at the pair `(min x y, max x y)`.
+    /// That does not close: the bound it yields mentions
+    /// `abs (F (min x y))`, and recovering `le (abs (F (min x y))) eps` needs
+    /// a LOWER bound on `F (min x y)`, which the meet-semilattice interface
+    /// ([`Self::min_le_left`], [`Self::min_le_right`], [`Self::le_min`]) plus
+    /// monotonicity cannot supply — every one of them bounds it ABOVE. The
+    /// route that does close is [`Self::lt_cotrans`] at the fixed strict pair
+    /// `(zero, 1/(e+1))`, evaluated at the difference: one disjunct hands
+    /// back the ordering `diff_le_of_strict_mono_magnitude` wants, the other
+    /// gives the goal outright, and [`Self::le_of_forall_le_add_small`]
+    /// removes the slack. See `creal/ivt.rs`'s own section header.
+    pub abs_diff_le_of_small_image: NameId,
+    /// `CReal.ivt_bisect_cauchy_bound : ∀ F F' a b, HasDerivativeOn F F' a b →
+    /// ∀ (u : UniformlyContinuousOn F a b), le a b → le (F a) zero →
+    /// le zero (F b) → ∀ k, (∀ z, le a z → le z b →
+    /// le (ofRat (natDivSucc 1 k)) (F' z)) → ∀ m n : Nat,
+    /// le (abs (add (X m) (neg (X n))))
+    ///    (ofRat (Rat.add (natDivSucc C m) (natDivSucc C n)))`, where
+    /// `X e := ivt_bisect_hi F a b (Nat.succ (Nat.mul 2 e)) K` is
+    /// [`Self::ivt_bisect_approx`]'s named point and
+    /// `C := Nat.succ (Nat.succ (Nat.mul 2 k))` (`creal/ivt.rs`) — **the
+    /// exact IVT root's Cauchy estimate, at the `CReal` level.**
+    ///
+    /// [`Self::ivt_bisect_approx`] bounds `abs (F (X e))` by `1/(e+1)` at a
+    /// NAMED point; [`Self::abs_diff_le_of_small_image`] turns two such
+    /// bounds into closeness of the points themselves, with no ordering and
+    /// no [`Self::apart`] — the two things a bisection cannot supply.
+    ///
+    /// **What separates this from [`Self::cauchy`] is one bridge, and it is
+    /// general rather than IVT-specific.** This is the REAL-valued
+    /// inequality; `Cauchy f` is stated on the canonical rational SAMPLES,
+    /// `Within (seq (f m) m − seq (f n) n) (natDivSucc K m + natDivSucc K n)`.
+    /// Crossing costs [`Self::within_of_two_sided_le`] (real bound → `Within`
+    /// at a shared index) followed by [`Self::shared_index_to_canonical`]
+    /// (shared index → the two canonical indices), plus the rational
+    /// bookkeeping that folds the resulting seven-term bound back to the
+    /// two-term rate. No such bridge exists in either direction as a
+    /// standalone lemma — `close_within_of_within` and
+    /// `close_within_of_within_indexed` run the OTHER way — and
+    /// `riemannSum_cauchy`'s own doc comment records the identical gap for
+    /// the integral. One lemma closes both.
+    pub ivt_bisect_cauchy_bound: NameId,
+    /// `CReal.cauchy_of_abs_diff_le : ∀ (f : Nat → CReal) (K : Nat),
+    /// (∀ m n, le (abs (add (f m) (neg (f n))))
+    ///           (ofRat (Rat.add (natDivSucc K m) (natDivSucc K n)))) →
+    /// Cauchy f` (`creal/ivt.rs`) — **the REAL-valued Cauchy criterion,
+    /// bridged to [`Self::cauchy`]'s canonical-sample form.**
+    ///
+    /// Every estimate in this development that establishes a Cauchy sequence
+    /// produces a real inequality about `abs (f m − f n)`; [`Self::cauchy`]
+    /// is stated on the rational SAMPLES `seq (f m) m − seq (f n) n`. Nothing
+    /// crossed that gap in this direction — [`Self::close_within_of_within`]
+    /// and [`Self::close_within_of_within_indexed`] run the other way — and
+    /// `riemannSum_cauchy`'s own doc records the same gap for the integral.
+    ///
+    /// [`Self::within_of_two_sided_le`] reaches a `Within` at an arbitrary
+    /// SHARED index; [`Self::shared_index_to_canonical`] moves to the two
+    /// canonical ones at the cost of two regularity legs. **The index choice
+    /// `j := 3m+2` makes the whole seven-term bound an EQUALITY**, not a
+    /// chain of widenings: `Rat.natDivSucc_halve` collapses the two
+    /// `1/(2j+2)` legs to `1/(j+1)`, `Rat.natDivSucc_add` fuses that with the
+    /// `2/(j+1)` slack to `3/(j+1)`, and `Rat.natDivSucc_scale 2 m` makes
+    /// `3/(j+1)` exactly `1/(m+1)`. The only inequality in the proof is the
+    /// final `Rat.natDivSucc_le_add_left` raising one numerator from `K+1` to
+    /// the shared witness `K+2`.
+    ///
+    /// Filed in `creal/ivt.rs` because the exact IVT root is what first
+    /// needed it; nothing in the statement or the proof mentions the IVT.
+    pub cauchy_of_abs_diff_le: NameId,
+    /// `CReal.ivt_bisect_cauchy : ∀ F F' a b, HasDerivativeOn F F' a b →
+    /// ∀ (u : UniformlyContinuousOn F a b), le a b → le (F a) zero →
+    /// le zero (F b) → ∀ k, (∀ z, le a z → le z b →
+    /// le (ofRat (natDivSucc 1 k)) (F' z)) →
+    /// Cauchy (fun e => ivt_bisect_hi F a b (Nat.succ (Nat.mul 2 e)) K)`
+    /// (`creal/ivt.rs`) — [`Self::ivt_bisect_cauchy_bound`] composed with
+    /// [`Self::cauchy_of_abs_diff_le`].
+    ///
+    /// **The shape is the point, not the estimate.** The sequence is an
+    /// ordinary `Nat → CReal` lambda, so it can be the argument of
+    /// [`Self::cauchy`], [`Self::converges`], [`Self::converges_of_cauchy`],
+    /// [`Self::converges_lower_bound`] and
+    /// [`Self::converges_comp_eventually`] — none of which a sequence of
+    /// [`Self::ivt_approx`] witnesses could ever be, since `∀ e, ∃ x` does
+    /// not eliminate into a `Type`. That was the first obstruction recorded
+    /// in `docs/mathematics-2026-08/diary-exact-root-obstruction.md`.
+    pub ivt_bisect_cauchy: NameId,
+    /// `CReal.ivt_exact_root : ∀ F F' a b, HasDerivativeOn F F' a b →
+    /// UniformlyContinuousOn F a b → le a b → le (F a) zero → le zero (F b) →
+    /// ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k)) (F' z)) →
+    /// ∃ c, le a c ∧ (le c b ∧ Equiv (F c) zero)` (`creal/ivt.rs`) — **an
+    /// EXACT root**: `Equiv (F c) zero` outright, not
+    /// [`Self::ivt_approx`]'s `|F c| ≤ eps` per accuracy.
+    ///
+    /// The classical IVT is genuinely unavailable constructively (this
+    /// file's module documentation says why, and nothing here decides the
+    /// sign of a real). What unlocks the exact statement is ONE extra
+    /// hypothesis, a uniformly positive derivative: it does not make any
+    /// sign decidable, it makes the root unique WITH A MODULUS, which is
+    /// what turns a sequence of approximate roots into a Cauchy sequence.
+    ///
+    /// Five steps, each a named declaration:
+    /// [`Self::ivt_bisect_hi`] (the sequence, as data),
+    /// [`Self::ivt_bisect_approx`] (`|F (X e)| ≤ 1/(e+1)` at a NAMED point),
+    /// [`Self::ivt_bisect_cauchy`] (via
+    /// [`Self::abs_diff_le_of_small_image`] and
+    /// [`Self::cauchy_of_abs_diff_le`]), [`Self::converges_of_cauchy`] with
+    /// [`Self::converges_lower_bound`]/[`Self::converges_upper_bound`] for
+    /// the domain conjuncts, and [`Self::converges_comp_eventually`] plus
+    /// [`Self::equiv_zero_of_small`] for `Equiv (F L) zero`.
+    ///
+    /// Every `Exists` eliminated here has a `Prop` target, which is the
+    /// elimination this kernel permits — the wall
+    /// `docs/mathematics-2026-08/diary-exact-root-obstruction.md` records
+    /// only ever blocked `Type`-valued elimination, and the bisection being
+    /// DATA is what keeps the sequence itself out of that case.
+    pub ivt_exact_root: NameId,
     /// `CReal.hasDerivative_unique : ∀ F F1 F2 a b, HasDerivativeOn F F1 a b
     /// → HasDerivativeOn F F2 a b → lt a b → ∀ z, le a z → le z b → Equiv
     /// (F1 z) (F2 z)` (`creal/deriv_unique.rs`) — the derivative of a
@@ -5703,6 +5877,12 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         ivt_bisect_diag: kernel.name_str(creal, "ivt_bisect_diag"),
         ivt_bisect_diag_lo: kernel.name_str(creal, "ivt_bisect_diag_lo"),
         ivt_bisect_diag_hi: kernel.name_str(creal, "ivt_bisect_diag_hi"),
+        ivt_bisect_approx: kernel.name_str(creal, "ivt_bisect_approx"),
+        abs_diff_le_of_small_image: kernel.name_str(creal, "abs_diff_le_of_small_image"),
+        ivt_bisect_cauchy_bound: kernel.name_str(creal, "ivt_bisect_cauchy_bound"),
+        cauchy_of_abs_diff_le: kernel.name_str(creal, "cauchy_of_abs_diff_le"),
+        ivt_bisect_cauchy: kernel.name_str(creal, "ivt_bisect_cauchy"),
+        ivt_exact_root: kernel.name_str(creal, "ivt_exact_root"),
         has_derivative_unique: kernel.name_str(creal, "hasDerivative_unique"),
         fermat_interior_extremum: kernel.name_str(creal, "fermat_interiorExtremum"),
         rolle_interior_extremum: kernel.name_str(creal, "rolle_interiorExtremum"),
@@ -7021,6 +7201,7 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.equiv_refl,
             |p: CRealPrelude| p.equiv_symm,
             |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.equiv_zero_of_small,
             |p: CRealPrelude| p.has_derivative_on,
             |p: CRealPrelude| p.has_derivative_sub,
             |p: CRealPrelude| p.hd_mk,
@@ -7164,6 +7345,8 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.rat_sq_le,
             |p: CRealPrelude| p.rat_sq_sandwich,
             |p: CRealPrelude| p.rat_unit_eq_one,
+            |p: CRealPrelude| p.seq,
+            |p: CRealPrelude| p.shared_index_to_canonical,
         ],
         run: mul_self_zero::declare_mul_self_zero,
     },
@@ -9664,6 +9847,7 @@ const STEPS: &[BuildStep] = &[
         requires: &[
             |p: CRealPrelude| p.abs,
             |p: CRealPrelude| p.abs_le,
+            |p: CRealPrelude| p.abs_nonneg,
             |p: CRealPrelude| p.add_assoc,
             |p: CRealPrelude| p.add_comm,
             |p: CRealPrelude| p.add_congr,
@@ -9673,12 +9857,23 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.add_zero,
             |p: CRealPrelude| p.bound,
             |p: CRealPrelude| p.bound_within,
+            |p: CRealPrelude| p.abs_add_le,
+            |p: CRealPrelude| p.abs_congr,
+            |p: CRealPrelude| p.cauchy,
+            |p: CRealPrelude| p.converges,
+            |p: CRealPrelude| p.converges_comp_eventually,
+            |p: CRealPrelude| p.converges_lower_bound,
+            |p: CRealPrelude| p.converges_of_cauchy,
+            |p: CRealPrelude| p.converges_upper_bound,
+            |p: CRealPrelude| p.diff_le_of_strict_mono_magnitude,
             |p: CRealPrelude| p.equiv,
             |p: CRealPrelude| p.equiv_refl,
             |p: CRealPrelude| p.equiv_symm,
             |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.has_derivative_on,
             |p: CRealPrelude| p.le_abs_self,
             |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_of_forall_le_add_small,
             |p: CRealPrelude| p.le_of_lt,
             |p: CRealPrelude| p.le_refl,
             |p: CRealPrelude| p.le_trans,
@@ -9694,7 +9889,9 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.mul_nonneg,
             |p: CRealPrelude| p.mul_one,
             |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.neg_le_abs,
             |p: CRealPrelude| p.neg_le_neg,
+            |p: CRealPrelude| p.neg_sub_swap,
             |p: CRealPrelude| p.of_nat,
             |p: CRealPrelude| p.of_rat,
             |p: CRealPrelude| p.of_rat_add,
@@ -9711,15 +9908,23 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.uc_modulus,
             |p: CRealPrelude| p.uc_spec,
             |p: CRealPrelude| p.uniformly_continuous_on,
+            |p: CRealPrelude| p.within,
+            |p: CRealPrelude| p.within_of_two_sided_le,
             |p: CRealPrelude| p.zero,
         ],
         provides: &[
+            |p: CRealPrelude| p.abs_diff_le_of_small_image,
+            |p: CRealPrelude| p.cauchy_of_abs_diff_le,
             |p: CRealPrelude| p.ivt_approx,
             |p: CRealPrelude| p.ivt_bisect,
             |p: CRealPrelude| p.ivt_bisect_diag,
             |p: CRealPrelude| p.ivt_bisect_diag_hi,
             |p: CRealPrelude| p.ivt_bisect_diag_lo,
             |p: CRealPrelude| p.ivt_bisect_hi,
+            |p: CRealPrelude| p.ivt_exact_root,
+            |p: CRealPrelude| p.ivt_bisect_approx,
+            |p: CRealPrelude| p.ivt_bisect_cauchy,
+            |p: CRealPrelude| p.ivt_bisect_cauchy_bound,
             |p: CRealPrelude| p.ivt_bisect_invariant,
             |p: CRealPrelude| p.ivt_bisect_lo,
             |p: CRealPrelude| p.ivt_iter,

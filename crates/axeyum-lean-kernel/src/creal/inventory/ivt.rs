@@ -42,5 +42,23 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
         ("CReal.ivt_bisect_diag", p.ivt_bisect_diag, "def"),
         ("CReal.ivt_bisect_diag_lo", p.ivt_bisect_diag_lo, "def"),
         ("CReal.ivt_bisect_diag_hi", p.ivt_bisect_diag_hi, "def"),
+        ("CReal.ivt_bisect_approx", p.ivt_bisect_approx, "theorem"),
+        (
+            "CReal.abs_diff_le_of_small_image",
+            p.abs_diff_le_of_small_image,
+            "theorem",
+        ),
+        (
+            "CReal.ivt_bisect_cauchy_bound",
+            p.ivt_bisect_cauchy_bound,
+            "theorem",
+        ),
+        (
+            "CReal.cauchy_of_abs_diff_le",
+            p.cauchy_of_abs_diff_le,
+            "theorem",
+        ),
+        ("CReal.ivt_bisect_cauchy", p.ivt_bisect_cauchy, "theorem"),
+        ("CReal.ivt_exact_root", p.ivt_exact_root, "theorem"),
     ]
 }
