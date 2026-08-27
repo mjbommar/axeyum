@@ -126,7 +126,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 357] = [
+    let expected: [(&str, crate::NameId, &str); 358] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -625,6 +625,11 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         (
             "CReal.pow_half_le_natDivSucc",
             p.pow_half_le_nat_div_succ,
+            "theorem",
+        ),
+        (
+            "CReal.pow_le_natDivSucc_of_lt",
+            p.pow_le_nat_div_succ_of_lt,
             "theorem",
         ),
         (

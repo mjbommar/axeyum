@@ -2233,6 +2233,21 @@ pub struct CRealPrelude {
     /// never forming `Rat.inv`, matching `bernoulli_harmonic_bound`'s own
     /// design.
     pub pow_half_le_nat_div_succ: NameId,
+    /// `CReal.pow_le_natDivSucc_of_lt : ∀ x, le zero x → lt x one →
+    /// Exists (fun (K : Nat) => ∀ m, le (pow x m) (ofRat (natDivSucc K m)))`.
+    ///
+    /// The general-base generalization of [`Self::pow_half_le_nat_div_succ`]:
+    /// geometric decay at ANY ratio `0 ≤ x < 1` (the strict bound supplied as
+    /// `CReal.lt` data, never assumed) dominates *some* harmonic-shaped rate,
+    /// entirely `CReal.inv`/`PosBound`-free. See `geometric.rs`'s
+    /// `declare_pow_le_nat_div_succ_of_lt` for the derivation: the rational
+    /// gap `q` from `lt x one` and the `Nat` witness `k` from
+    /// [`Self::pos_bound_of_lt`] applied to `ofRat q` together bound a
+    /// `CReal`-level companion to `Rat.bernoulli_harmonic_bound` (redone over
+    /// `CReal` rather than reusing the `ℚ` original, since bridging a
+    /// `Rat`-level bound back across a `CReal.pow` sample is exactly the open
+    /// gap `rat_prelude/bernoulli.rs`'s own module doc names).
+    pub pow_le_nat_div_succ_of_lt: NameId,
     /// `CReal.geomHalfInvLeafBound : ∀ a, le (mul (inv (add one (neg half)) 1
     /// h) (pow half a)) (ofRat (natDivSucc 2 a))`, `h` built internally (not
     /// a parameter) — the leaf [`Self::geom_pair_within`]'s own field doc
@@ -4061,6 +4076,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         pow_le_pow_of_base_le: kernel.name_str(creal, "pow_le_pow_of_base_le"),
         of_rat_pow: kernel.name_str(creal, "ofRat_pow"),
         pow_half_le_nat_div_succ: kernel.name_str(creal, "pow_half_le_natDivSucc"),
+        pow_le_nat_div_succ_of_lt: kernel.name_str(creal, "pow_le_natDivSucc_of_lt"),
         geom_half_inv_leaf_bound: kernel.name_str(creal, "geomHalfInvLeafBound"),
         geom_cauchy_ordered_half: kernel.name_str(creal, "geomCauchyOrderedHalf"),
         geom_cauchy: kernel.name_str(creal, "geomCauchy"),
