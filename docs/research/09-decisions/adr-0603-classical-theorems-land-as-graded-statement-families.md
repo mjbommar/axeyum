@@ -96,3 +96,43 @@ ingredient shipped today — `rat_derivative`, `polynomial_ivt`,
 refutations are genuine research: each needs a kernel-computed counterexample
 of the kind `creal/ivt.rs` already demonstrates is achievable.
 
+## Amendment 2, 2026-08-27: EVT row 2 closed — and "refuted" was the wrong word
+
+`CReal.evt_attained_max_decides_sign` (`creal/extreme_value.rs`) is landed and
+kernel-accepted on first attempt:
+
+    ∀ v c, le zero c → le c one →
+      (∀ t, le zero t → le t one → le (mul t v) (mul c v)) →
+      Or (le v zero) (le zero v)
+
+An attained maximum on `[0,1]` for `evtLinear v := fun t => mul t v` yields a
+sign decision for arbitrary `v`. An `argmax : CReal → CReal` operator would
+discharge that hypothesis at every `v` at once, handing back exactly the
+comparison `creal/cotransitivity.rs` states verbatim is "not assumed or
+provable" here — the absence that cotransitivity exists to work around. So
+`bounded_of_uniformly_continuous`'s **computed** bound with no attaining point
+is OPTIMAL, not merely unimproved. **Row 2 now holds for two theorems of five**,
+and MVT's row 2, which this amendment previously recorded as inheriting an
+unproven assertion, now inherits a landed foundation.
+
+**This form is stronger than IVT's.** `ivt.rs` closes off two specific
+CONSTRUCTIONS by computed counterexample and argues the general case in prose
+("as hard as deciding the sign of an arbitrary real"). EVT's row 2 makes that
+argument itself the theorem.
+
+**And it corrects this ADR's vocabulary.** Neither row 2 derives `False`.
+Analytic LLPO is consistent with BISH, so what both establish is that the
+classical conclusion is **at least as strong as a decision principle this
+kernel demonstrably lacks** — i.e. *unprovable here*, not *refutable*. That is
+the honest claim, and it is falsifiable in a way "refuted" is not: **land
+`lt_total` over `CReal` and EVT's row 2 stops being a boundary result.** Row 2
+should be described as an UNPROVABILITY WITNESS, and any row 2 that cannot name
+the decision principle it reduces to is not yet one.
+
+**The non-vacuity control is mandatory for this shape.** A row 2 stated as an
+implication is unfalsifiable if its hypothesis has no models. The EVT lane
+DISCHARGED its maximality hypothesis twice — at `v=c=1` (true argmax at the
+right endpoint) and `v=c=0` (every point a maximiser) — with `Kernel::infer`
+accepting both, plus computed endpoint instances whose strict comparison flips
+with the sign of `v`. Future row 2s must carry the same control.
+
