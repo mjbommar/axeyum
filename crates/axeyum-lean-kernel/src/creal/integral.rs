@@ -22471,28 +22471,11 @@ fn unit_fraction_approx(
 
     // --- the statement -----------------------------------------------------
     let predicate_at = |d: &mut IntDev<'_>, m_ac0: ExprId| -> ExprId {
-        let cb_fv = d.fresh_fvar();
-        let m_cb0 = d.kernel().fvar(cb_fv);
-        let n_ac = d.succ(m_ac0);
-        let total = NatOps::add(d, n_ac, m_cb0);
-        let eq_part = d.eq(total, kb);
-        let qq = div_succ_at(d, p, n_ac, kb);
-        let oqq = d.const_app(p.of_rat, &[qq]);
-        let noqq = cneg(d, p, oqq);
-        let diff = cadd(d, p, t, noqq);
-        let abs_diff = d.const_app(p.abs, &[diff]);
-        let bound_part = cle(d, p, abs_diff, o_four);
-        let body = and_ty(d, p, eq_part, bound_part);
-        d.lam_fv(cb_fv, nat, body)
+        unit_fraction_inner_pred(d, p, t, g, m_ac0)
     };
-    let outer_predicate = {
-        let ac_fv = d.fresh_fvar();
-        let m_ac0 = d.kernel().fvar(ac_fv);
-        let inner = predicate_at(d, m_ac0);
-        let body = exists_ty(d, p, nat, inner);
-        d.lam_fv(ac_fv, nat, body)
-    };
+    let outer_predicate = unit_fraction_outer_pred(d, p, t, g);
     let target = exists_ty(d, p, nat, outer_predicate);
+    let _ = o_four;
 
     // Package one branch: witnesses `(m_ac0, m_cb0)`, the index equation, and
     // the two one-sided bounds at the SAME `four_r`.
@@ -22743,6 +22726,558 @@ mod unit_fraction_approx_tests {
     #[test]
     fn every_real_in_the_unit_interval_has_a_nearby_proportion() {
         let results = crate::on_a_deep_stack(unit_fraction_probes);
+        for (label, res) in results {
+            if label.ends_with("Good") {
+                res.unwrap_or_else(|e| panic!("{label} must be accepted: {e:?}"));
+            } else {
+                assert!(res.is_err(), "{label} must be REFUSED");
+            }
+        }
+    }
+}
+
+/// `(1/(g+2), 3/(g+2), 4/(g+2))` — the slack terms, kept as SUMS of
+/// `Rat.natDivSucc 1 (succ g)` so that every comparison in this section
+/// happens at one denominator.
+fn unit_slack(d: &mut IntDev<'_>, p: CRealPrelude, g: ExprId) -> (ExprId, ExprId, ExprId) {
+    let kb = d.succ(g);
+    let nds1 = div_succ(d, p, 1, kb);
+    let two_r = radd(d, nds1, nds1);
+    let three_r = radd(d, nds1, two_r);
+    let four_r = radd(d, three_r, nds1);
+    (nds1, three_r, four_r)
+}
+
+/// `fun m_cb0 => (succ m_ac0 + m_cb0 = succ g) ∧ |t − (succ m_ac0)/(g+2)| ≤ 4/(g+2)`
+/// — [`unit_fraction_approx`]'s inner predicate, exposed so a caller can
+/// `exists_elim` it without rebuilding it by eye.
+fn unit_fraction_inner_pred(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    t: ExprId,
+    g: ExprId,
+    m_ac0: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let kb = d.succ(g);
+    let (_, _, four_r) = unit_slack(d, p, g);
+    let o_four = d.const_app(p.of_rat, &[four_r]);
+    let cb_fv = d.fresh_fvar();
+    let m_cb0 = d.kernel().fvar(cb_fv);
+    let n_ac = d.succ(m_ac0);
+    let total = NatOps::add(d, n_ac, m_cb0);
+    let eq_part = d.eq(total, kb);
+    let qq = div_succ_at(d, p, n_ac, kb);
+    let oqq = d.const_app(p.of_rat, &[qq]);
+    let noqq = cneg(d, p, oqq);
+    let diff = cadd(d, p, t, noqq);
+    let abs_diff = d.const_app(p.abs, &[diff]);
+    let bound_part = cle(d, p, abs_diff, o_four);
+    let body = and_ty(d, p, eq_part, bound_part);
+    d.lam_fv(cb_fv, nat, body)
+}
+
+/// [`unit_fraction_approx`]'s outer predicate.
+fn unit_fraction_outer_pred(d: &mut IntDev<'_>, p: CRealPrelude, t: ExprId, g: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let ac_fv = d.fresh_fvar();
+    let m_ac0 = d.kernel().fvar(ac_fv);
+    let inner = unit_fraction_inner_pred(d, p, t, g, m_ac0);
+    let body = exists_ty(d, p, nat, inner);
+    d.lam_fv(ac_fv, nat, body)
+}
+
+/// `Equiv (mul t (b − a)) (c − a)` for `t := ` [`split_fraction`] — the
+/// inverse cancels, so scaling the fraction back by the width returns the
+/// residue it was formed from.
+fn split_fraction_times_width(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    k: ExprId,
+    hpos: ExprId,
+) -> ExprId {
+    let w = width_of(d, p, a, b);
+    let inv_w = d.const_app(p.inv, &[w, k, hpos]);
+    let ca = width_of(d, p, a, c);
+    let t = cmul(d, p, inv_w, ca);
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    let start = cmul(d, p, t, w);
+    let ca_inv = cmul(d, p, ca, inv_w);
+    let s1 = cmul(d, p, ca_inv, w);
+    let comm_in = d.lemma(p.mul_comm, &[inv_w, ca]);
+    let refl_w = d.lemma(p.equiv_refl, &[w]);
+    let h1 = d.lemma(p.mul_congr, &[t, ca_inv, w, w, comm_in, refl_w]);
+
+    let inv_w_w = cmul(d, p, inv_w, w);
+    let s2 = cmul(d, p, ca, inv_w_w);
+    let h2 = d.lemma(p.mul_assoc, &[ca, inv_w, w]);
+
+    let unit = {
+        let w_inv_w = cmul(d, p, w, inv_w);
+        let comm = d.lemma(p.mul_comm, &[inv_w, w]);
+        let cancel = d.lemma(p.mul_inv_cancel, &[w, k, hpos]);
+        d.lemma(p.equiv_trans, &[inv_w_w, w_inv_w, one_c, comm, cancel])
+    };
+    let s3 = cmul(d, p, ca, one_c);
+    let refl_ca = d.lemma(p.equiv_refl, &[ca]);
+    let h3 = d.lemma(p.mul_congr, &[ca, ca, inv_w_w, one_c, refl_ca, unit]);
+    let h4 = d.lemma(p.mul_one, &[ca]);
+
+    echain(d, p, start, &[(s1, h1), (s2, h2), (s3, h3), (ca, h4)])
+}
+
+/// `Equiv (mul (ofNat n) (ofRat (natDivSucc 1 kb))) (ofRat (natDivSucc n kb))`
+/// — the same `ofRat_mul` + `natDivSucc_mul` + `mul_one` route
+/// [`mesh_inverse_identity`] takes, at a symbolic numerator instead of the
+/// cancelling one.
+fn of_nat_times_frac(d: &mut IntDev<'_>, p: CRealPrelude, n: ExprId, kb: ExprId) -> ExprId {
+    let rat = p.rat;
+    let nat = rat.int.nat;
+    let one_nat = d.num(1);
+    let zero_nat = d.num(0);
+    let whole = d.const_app(rat.nat_div_succ, &[n, zero_nat]);
+    let frac = d.const_app(rat.nat_div_succ, &[one_nat, kb]);
+    let qq = d.const_app(rat.nat_div_succ, &[n, kb]);
+
+    let embed_whole = embed(d, p, whole);
+    let embed_frac = embed(d, p, frac);
+    let product_real = cmul(d, p, embed_whole, embed_frac);
+    let of_rat_mul_step = d.lemma(p.of_rat_mul, &[whole, frac]);
+
+    let product_rat = rmul(d, whole, frac);
+    let scaled = NatOps::mul(d, n, one_nat);
+    let scaled_frac = d.const_app(rat.nat_div_succ, &[scaled, kb]);
+    let fuse = d.lemma(rat.nat_div_succ_mul, &[n, one_nat, kb]);
+    let collapse = {
+        let identity = d.lemma(nat.mul_one, &[n]);
+        nat_eq_to_rat(d, scaled, n, identity, &|d, x| {
+            d.const_app(rat.nat_div_succ, &[x, kb])
+        })
+    };
+    let (_, eqr) = rchain(d, product_rat, &[(scaled_frac, fuse), (qq, collapse)]);
+    rat_eq_rewrite(d, product_rat, qq, eqr, of_rat_mul_step, &|d, x| {
+        let ox = embed(d, p, x);
+        equiv(d, p, product_real, ox)
+    })
+}
+
+/// `Equiv (split_point_base-at-`kb`) (add a (mul (ofRat (natDivSucc n_ac kb)) (b − a)))`.
+///
+/// Pure `mul_assoc`/`mul_comm` around [`of_nat_times_frac`]; the mesh count
+/// is fixed at `kb` here and the caller transports it onto its own
+/// `succ m_ac0 + m_cb0` afterwards.
+fn split_point_as_fraction(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    n_ac: ExprId,
+    kb: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let one_nat = d.num(1);
+    let w = width_of(d, p, a, b);
+    let frac = d.const_app(rat.nat_div_succ, &[one_nat, kb]);
+    let ofrac = embed(d, p, frac);
+    let delta = cmul(d, p, w, ofrac);
+    let x = d.const_app(p.of_nat, &[n_ac]);
+    let qq = d.const_app(rat.nat_div_succ, &[n_ac, kb]);
+    let oqq = embed(d, p, qq);
+
+    let start = cmul(d, p, x, delta);
+    let xw = cmul(d, p, x, w);
+    let s1 = cmul(d, p, xw, ofrac);
+    let h1 = {
+        let assoc = d.lemma(p.mul_assoc, &[x, w, ofrac]);
+        d.lemma(p.equiv_symm, &[s1, start, assoc])
+    };
+    let wx = cmul(d, p, w, x);
+    let s2 = cmul(d, p, wx, ofrac);
+    let h2 = {
+        let comm = d.lemma(p.mul_comm, &[x, w]);
+        let refl_frac = d.lemma(p.equiv_refl, &[ofrac]);
+        d.lemma(p.mul_congr, &[xw, wx, ofrac, ofrac, comm, refl_frac])
+    };
+    let xfrac = cmul(d, p, x, ofrac);
+    let s3 = cmul(d, p, w, xfrac);
+    let h3 = d.lemma(p.mul_assoc, &[w, x, ofrac]);
+    let s4 = cmul(d, p, w, oqq);
+    let h4 = {
+        let refl_w = d.lemma(p.equiv_refl, &[w]);
+        let inner = of_nat_times_frac(d, p, n_ac, kb);
+        d.lemma(p.mul_congr, &[w, w, xfrac, oqq, refl_w, inner])
+    };
+    let s5 = cmul(d, p, oqq, w);
+    let h5 = d.lemma(p.mul_comm, &[w, oqq]);
+    let inner_eq = echain(
+        d,
+        p,
+        start,
+        &[(s1, h1), (s2, h2), (s3, h3), (s4, h4), (s5, h5)],
+    );
+    let refl_a = d.lemma(p.equiv_refl, &[a]);
+    d.lemma(p.add_congr, &[a, a, start, s5, refl_a, inner_eq])
+}
+
+/// `Equiv (c − (a + q·(b−a))) ((t − q)·(b−a))` for `t := ` [`split_fraction`].
+#[allow(clippy::too_many_arguments)]
+fn split_residue_factors(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    k: ExprId,
+    hpos: ExprId,
+    oqq: ExprId,
+) -> ExprId {
+    let w = width_of(d, p, a, b);
+    let ca = width_of(d, p, a, c);
+    let t = split_fraction(d, p, a, b, c, k, hpos);
+    let qw = cmul(d, p, oqq, w);
+    let nqw = cneg(d, p, qw);
+    let point = cadd(d, p, a, qw);
+    let npoint0 = cneg(d, p, point);
+    let lhs = cadd(d, p, c, npoint0);
+
+    // lhs ~ (c − a) + (−(q·w))
+    let na = cneg(d, p, a);
+    let split_neg = neg_add_local(d, p, a, qw); // Equiv (neg point) (add na nqw)
+    let mid = {
+        let refl_c = d.lemma(p.equiv_refl, &[c]);
+        let npoint = cneg(d, p, point);
+        let na_nqw = cadd(d, p, na, nqw);
+        d.lemma(p.add_congr, &[c, c, npoint, na_nqw, refl_c, split_neg])
+    };
+    let na_nqw = cadd(d, p, na, nqw);
+    let s1 = cadd(d, p, c, na_nqw);
+    let target = cadd(d, p, ca, nqw);
+    let regroup = {
+        let assoc = d.lemma(p.add_assoc, &[c, na, nqw]);
+        d.lemma(p.equiv_symm, &[target, s1, assoc])
+    };
+    let left_chain = echain(d, p, lhs, &[(s1, mid), (target, regroup)]);
+
+    // (t − q)·w ~ (c − a) + (−(q·w))
+    let noqq = cneg(d, p, oqq);
+    let u = cadd(d, p, t, noqq);
+    let start = cmul(d, p, u, w);
+    let tw = cmul(d, p, t, w);
+    let nqq_w = cmul(d, p, noqq, w);
+    let r1 = cadd(d, p, tw, nqq_w);
+    let h1 = right_distrib(d, p, t, noqq, w);
+    let r2 = cadd(d, p, ca, nqq_w);
+    let h2 = {
+        let tw_eq = split_fraction_times_width(d, p, a, b, c, k, hpos);
+        let refl_r = d.lemma(p.equiv_refl, &[nqq_w]);
+        d.lemma(p.add_congr, &[tw, ca, nqq_w, nqq_w, tw_eq, refl_r])
+    };
+    let h3 = {
+        let move_neg = neg_mul_left_local(d, p, oqq, w); // Equiv (mul (neg oqq) w) (neg (mul oqq w))
+        let refl_l = d.lemma(p.equiv_refl, &[ca]);
+        d.lemma(p.add_congr, &[ca, ca, nqq_w, nqw, refl_l, move_neg])
+    };
+    let right_chain = echain(d, p, start, &[(r1, h1), (r2, h2), (target, h3)]);
+    let back = d.lemma(p.equiv_symm, &[start, target, right_chain]);
+    d.lemma(p.equiv_trans, &[lhs, target, start, left_chain, back])
+}
+
+/// **Piece 2, complete.** For an arbitrary `c` in `[a, b]` and a `PosBound`
+/// on the width, a base split point of [`declare_integral_split`]'s own
+/// proportion family within `4/(g+2)·|b−a|` of `c`, for every `g`:
+///
+/// ```text
+/// ∃ m_ac0 m_cb0,
+///   le (abs (c − split_point_base a b m_ac0 m_cb0))
+///      (mul (ofRat (4/(g+2))) (abs (b − a)))
+/// ```
+///
+/// The `PosBound` is load-bearing and cannot be dropped here: the fraction
+/// `t := (c−a)/(b−a)` is what locates `c` at all, and `CReal.inv` takes the
+/// positivity witness as an explicit argument. See this file's module
+/// documentation for the case split that removes it, and what that costs.
+#[allow(clippy::too_many_arguments)]
+fn split_point_approx_proof(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    k: ExprId,
+    hpos: ExprId,
+    hac: ExprId,
+    hcb: ExprId,
+    g: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let kb = d.succ(g);
+    let (_, _, four_r) = unit_slack(d, p, g);
+    let o_four = d.const_app(p.of_rat, &[four_r]);
+    let w = width_of(d, p, a, b);
+    let abs_w = d.const_app(p.abs, &[w]);
+    let bound = cmul(d, p, o_four, abs_w);
+
+    let t = split_fraction(d, p, a, b, c, k, hpos);
+    let h0t = split_fraction_nonneg(d, p, a, b, c, k, hpos, hac);
+    let h1t = split_fraction_le_one(d, p, a, b, c, k, hpos, hcb);
+    let approx = unit_fraction_approx(d, p, t, g, h0t, h1t);
+
+    // The outer statement.
+    let out_inner_pred = |d: &mut IntDev<'_>, m_ac0: ExprId| -> ExprId {
+        let cb_fv = d.fresh_fvar();
+        let m_cb0 = d.kernel().fvar(cb_fv);
+        let point = split_point_base(d, p, a, b, m_ac0, m_cb0);
+        let npoint = cneg(d, p, point);
+        let diff = cadd(d, p, c, npoint);
+        let abs_diff = d.const_app(p.abs, &[diff]);
+        let body = cle(d, p, abs_diff, bound);
+        d.lam_fv(cb_fv, nat, body)
+    };
+    let out_outer_pred = {
+        let ac_fv = d.fresh_fvar();
+        let m_ac0 = d.kernel().fvar(ac_fv);
+        let inner = out_inner_pred(d, m_ac0);
+        let body = exists_ty(d, p, nat, inner);
+        d.lam_fv(ac_fv, nat, body)
+    };
+    let target = exists_ty(d, p, nat, out_outer_pred);
+
+    let outer_pred_in = unit_fraction_outer_pred(d, p, t, g);
+    let minor = {
+        let ac_fv = d.fresh_fvar();
+        let m_ac0 = d.kernel().fvar(ac_fv);
+        let inner_pred = unit_fraction_inner_pred(d, p, t, g, m_ac0);
+        let hyp_ty = exists_ty(d, p, nat, inner_pred);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        let minor2 = {
+            let cb_fv = d.fresh_fvar();
+            let m_cb0 = d.kernel().fvar(cb_fv);
+            let n_ac = d.succ(m_ac0);
+            let total = NatOps::add(d, n_ac, m_cb0);
+            let eq_part = d.eq(total, kb);
+            let qq = div_succ_at(d, p, n_ac, kb);
+            let oqq = d.const_app(p.of_rat, &[qq]);
+            let noqq = cneg(d, p, oqq);
+            let udiff = cadd(d, p, t, noqq);
+            let abs_udiff = d.const_app(p.abs, &[udiff]);
+            let bound_part = cle(d, p, abs_udiff, o_four);
+            let hyp2_ty = and_ty(d, p, eq_part, bound_part);
+            let h2_fv = d.fresh_fvar();
+            let h2 = d.kernel().fvar(h2_fv);
+            let logic = p.rat.int.logic;
+            let heq = d.const_app(logic.and_left, &[eq_part, bound_part, h2]);
+            let hb = d.const_app(logic.and_right, &[eq_part, bound_part, h2]);
+
+            // The bound at mesh count `kb`, then transported onto `total`.
+            let refl_absw = d.lemma(p.le_refl, &[abs_w]);
+            let scaled = d.lemma(
+                p.abs_mul_le_of_bounds,
+                &[udiff, w, o_four, abs_w, hb, refl_absw],
+            );
+            // scaled : le (abs (mul udiff w)) bound
+            let residue = split_residue_factors(d, p, a, b, c, k, hpos, oqq);
+            // residue : Equiv (c − (a + q·w)) ((t − q)·w)
+            let point_frac = {
+                let qw = cmul(d, p, oqq, w);
+                cadd(d, p, a, qw)
+            };
+            let as_fraction = split_point_as_fraction(d, p, a, b, n_ac, kb);
+            // as_fraction : Equiv (split_point at kb) point_frac
+            let point_kb = split_point_base(d, p, a, b, m_ac0, m_cb0);
+            let _ = point_kb;
+            let raw_point = {
+                let frac_delta = delta_of(d, p, a, b, kb);
+                let x = d.const_app(p.of_nat, &[n_ac]);
+                let shift_term = cmul(d, p, x, frac_delta);
+                cadd(d, p, a, shift_term)
+            };
+            let lhs_at_kb = {
+                let npoint = cneg(d, p, raw_point);
+                cadd(d, p, c, npoint)
+            };
+            let lhs_frac = {
+                let npoint = cneg(d, p, point_frac);
+                cadd(d, p, c, npoint)
+            };
+            let move_point = {
+                let neg_eq = d.lemma(p.neg_congr, &[raw_point, point_frac, as_fraction]);
+                let refl_c = d.lemma(p.equiv_refl, &[c]);
+                let n_raw = cneg(d, p, raw_point);
+                let n_frac = cneg(d, p, point_frac);
+                d.lemma(p.add_congr, &[c, c, n_raw, n_frac, refl_c, neg_eq])
+            };
+            let uw = cmul(d, p, udiff, w);
+            let whole_eq = d.lemma(
+                p.equiv_trans,
+                &[lhs_at_kb, lhs_frac, uw, move_point, residue],
+            );
+            let abs_lhs = d.const_app(p.abs, &[lhs_at_kb]);
+            let abs_uw = d.const_app(p.abs, &[uw]);
+            let abs_eq = d.lemma(p.abs_congr, &[lhs_at_kb, uw, whole_eq]);
+            let back = d.lemma(p.equiv_symm, &[abs_lhs, abs_uw, abs_eq]);
+            let refl_bound = d.lemma(p.equiv_refl, &[bound]);
+            let proof_kb = d.lemma(
+                p.le_congr,
+                &[abs_uw, abs_lhs, bound, bound, back, refl_bound, scaled],
+            );
+            // proof_kb : le (abs (c − raw_point)) bound
+
+            let proof_at = {
+                let symm_eq = {
+                    let refl_total = d.refl(total);
+                    nat_rewrite_prop(d, total, kb, heq, refl_total, &|d, x| d.eq(x, total))
+                };
+                // symm_eq : Eq Nat kb total
+                nat_rewrite_prop(d, kb, total, symm_eq, proof_kb, &|d, x| {
+                    let frac_delta = delta_of(d, p, a, b, x);
+                    let xx = d.const_app(p.of_nat, &[n_ac]);
+                    let shift_term = cmul(d, p, xx, frac_delta);
+                    let point = cadd(d, p, a, shift_term);
+                    let npoint = cneg(d, p, point);
+                    let diff = cadd(d, p, c, npoint);
+                    let abs_diff = d.const_app(p.abs, &[diff]);
+                    cle(d, p, abs_diff, bound)
+                })
+            };
+
+            let out_inner = out_inner_pred(d, m_ac0);
+            let witness = exists_intro(d, p, nat, out_inner, m_cb0, proof_at);
+            let full = exists_intro(d, p, nat, out_outer_pred, m_ac0, witness);
+            let with_h2 = d.lam_fv(h2_fv, hyp2_ty, full);
+            d.lam_fv(cb_fv, nat, with_h2)
+        };
+
+        let body = exists_elim(d, inner_pred, target, h, minor2);
+        let with_h = d.lam_fv(h_fv, hyp_ty, body);
+        d.lam_fv(ac_fv, nat, with_h)
+    };
+    exists_elim(d, outer_pred_in, target, approx, minor)
+}
+
+#[cfg(test)]
+mod split_point_approx_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// The whole of piece 2 and its flipped control in ONE build. The control
+    /// transposes the two sides of the bound's `le` — a small term on each
+    /// side, neither `Definition`-heavy — and is genuinely false (at `g := 0`,
+    /// `a := b := c`, the residue is `0` and the bound is `0`, so the flipped
+    /// form claims `0 <= 0` … which holds; at `a := 0, b := c := 1, g := 0`
+    /// the split point is `1/2`, the residue `1/2`, the bound `2`, and
+    /// `2 <= 1/2` is false).
+    fn split_point_approx_probes() -> Vec<(&'static str, Result<(), crate::KernelError>)> {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+        let nat = d.nat_ty();
+
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let g_fv = d.fresh_fvar();
+        let g = d.kernel().fvar(g_fv);
+
+        let w = width_of(&mut d, p, a, b);
+        let hpos_ty = d.const_app(p.pos_bound, &[w, k]);
+        let hpos_fv = d.fresh_fvar();
+        let hpos = d.kernel().fvar(hpos_fv);
+        let hac_ty = cle(&mut d, p, a, c);
+        let hac_fv = d.fresh_fvar();
+        let hac = d.kernel().fvar(hac_fv);
+        let hcb_ty = cle(&mut d, p, c, b);
+        let hcb_fv = d.fresh_fvar();
+        let hcb = d.kernel().fvar(hcb_fv);
+
+        let proof = split_point_approx_proof(&mut d, p, a, b, c, k, hpos, hac, hcb, g);
+
+        let (_, _, four_r) = unit_slack(&mut d, p, g);
+        let o_four = d.const_app(p.of_rat, &[four_r]);
+        let abs_w = d.const_app(p.abs, &[w]);
+        let bound = cmul(&mut d, p, o_four, abs_w);
+
+        let statement = |d: &mut IntDev<'_>, flip: bool| -> ExprId {
+            let outer = {
+                let ac_fv = d.fresh_fvar();
+                let m_ac0 = d.kernel().fvar(ac_fv);
+                let inner = {
+                    let cb_fv = d.fresh_fvar();
+                    let m_cb0 = d.kernel().fvar(cb_fv);
+                    let point = split_point_base(d, p, a, b, m_ac0, m_cb0);
+                    let npoint = cneg(d, p, point);
+                    let diff = cadd(d, p, c, npoint);
+                    let abs_diff = d.const_app(p.abs, &[diff]);
+                    let body = if flip {
+                        cle(d, p, bound, abs_diff)
+                    } else {
+                        cle(d, p, abs_diff, bound)
+                    };
+                    d.lam_fv(cb_fv, nat, body)
+                };
+                let body = exists_ty(d, p, nat, inner);
+                d.lam_fv(ac_fv, nat, body)
+            };
+            exists_ty(d, p, nat, outer)
+        };
+
+        let good = statement(&mut d, false);
+        let bad = statement(&mut d, true);
+
+        let mut out = Vec::new();
+        for (label, concl) in [
+            ("splitPointApproxGood", good),
+            ("splitPointApproxFlippedBad", bad),
+        ] {
+            let ty = {
+                let t0 = d.pi_fv(g_fv, nat, concl);
+                let t0 = d.arrow(hcb_ty, t0);
+                let t0 = d.arrow(hac_ty, t0);
+                let t0 = d.pi_fv(hpos_fv, hpos_ty, t0);
+                let t0 = d.pi_fv(k_fv, nat, t0);
+                let t0 = d.pi_fv(c_fv, carrier, t0);
+                let t0 = d.pi_fv(b_fv, carrier, t0);
+                d.pi_fv(a_fv, carrier, t0)
+            };
+            let body = {
+                let v = d.lam_fv(g_fv, nat, proof);
+                let v = d.lam_fv(hcb_fv, hcb_ty, v);
+                let v = d.lam_fv(hac_fv, hac_ty, v);
+                let v = d.lam_fv(hpos_fv, hpos_ty, v);
+                let v = d.lam_fv(k_fv, nat, v);
+                let v = d.lam_fv(c_fv, carrier, v);
+                let v = d.lam_fv(b_fv, carrier, v);
+                d.lam_fv(a_fv, carrier, v)
+            };
+            let anon = d.kernel().anon();
+            let name = d.kernel().name_str(anon, label);
+            out.push((
+                label,
+                d.kernel().add_declaration(Declaration::Theorem {
+                    name,
+                    uparams: vec![],
+                    ty,
+                    value: body,
+                }),
+            ));
+        }
+        out
+    }
+
+    #[test]
+    fn an_arbitrary_split_point_is_approximated_by_the_proportion_family() {
+        let results = crate::on_a_deep_stack(split_point_approx_probes);
         for (label, res) in results {
             if label.ends_with("Good") {
                 res.unwrap_or_else(|e| panic!("{label} must be accepted: {e:?}"));
