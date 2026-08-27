@@ -9849,6 +9849,7 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "congruence::declare_congruence_extras",
     "extreme_value::declare_extreme_value",
     "trig_fn::declare_cos_fn_family",
+    "supremum::declare_max_range",
 ];
 
 /// `STEPS` (the data-driven build order that replaced the hand-written call
@@ -9940,5 +9941,52 @@ fn order_violation_reports_missing_provider_as_table_bug() {
     assert_eq!(
         violation.provider, None,
         "no step in this table provides `equiv`, so provider must be None"
+    );
+}
+
+/// **Concrete corroboration for `CReal.maxRange`** — not `CReal.supOn`, which
+/// this session did not land (see `creal/supremum.rs`'s own module
+/// documentation for exactly why). `f i := ofNat (i · (2 − i))` over `i = 0,
+/// 1, 2` takes values `0, 1, 0`: the maximum sits at the MIDDLE index, not
+/// the last one, so a defect that returned `f n` (the last sampled term)
+/// instead of the genuine running maximum would still pass a monotonically
+/// increasing `f` and only fails here.
+#[test]
+fn max_range_finds_the_true_maximum_not_the_last_term() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let nat = d.nat_ty();
+
+    let f = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let two_nat = d.num(2);
+        let diff = NatOps::sub(&mut d, two_nat, i);
+        let prod = NatOps::mul(&mut d, i, diff);
+        let val = d.const_app(p.of_nat, &[prod]);
+        d.lam_fv(i_fv, nat, val)
+    };
+
+    let two = d.num(2);
+    let mr = d.const_app(p.max_range, &[f, two]);
+    let idx0 = d.zero();
+    let got = d.const_app(p.seq, &[mr, idx0]);
+    let expected_one = ivt_bisect_rat_lit(&mut d, p, 1, 0, false); // 1/(0+1) = 1
+    assert!(
+        ivt_bisect_rat_eq(&mut d, p, got, expected_one),
+        "maxRange f 2 must reduce to 1 (the middle term's value), not 0 \
+         (every other term's value)"
+    );
+
+    // Negative control: the LAST term alone is 0, not 1 -- confirms `1`
+    // genuinely discriminates "true running maximum" from "last term".
+    let two_nat2 = d.num(2);
+    let last_only = d.apply(f, &[two_nat2]);
+    let last_val = d.const_app(p.seq, &[last_only, idx0]);
+    let expected_zero = ivt_bisect_rat_lit(&mut d, p, 0, 0, false);
+    assert!(
+        ivt_bisect_rat_eq(&mut d, p, last_val, expected_zero),
+        "sanity: f(2) itself must be 0, or this test does not discriminate \
+         a last-term defect from a genuine maximum"
     );
 }
