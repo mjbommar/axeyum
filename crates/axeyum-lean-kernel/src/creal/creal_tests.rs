@@ -1433,6 +1433,8 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         (
             "CReal.uniform_limit_uniformly_continuous",
             p.uniform_limit_uniformly_continuous,
+            "theorem",
+        ),
         ("CReal.polyEval", p.poly_eval, "def"),
         ("CReal.polyEval_zero", p.poly_eval_zero, "theorem"),
         ("CReal.polyEval_succ", p.poly_eval_succ, "theorem"),
@@ -9746,7 +9748,6 @@ fn the_half_cross_check_route_cannot_swap_hx0_and_hlt() {
          the trusted checker -- it was accepted, which means argument \
          positions are not actually being type-checked: {outcome:?}"
     );
-<<<<<<< HEAD
 }
 
 /// `CReal.crossingSampleUpper`/`CReal.crossingSampleLower` APPLY at the SAME
@@ -9851,8 +9852,6 @@ fn crossing_sample_upper_and_lower_apply_at_zero_five_halves_one() {
             value: value_lower,
         })
         .unwrap_or_else(|error| panic!("crossingSampleLower must apply at (0, 5/2, 1): {error:?}"));
-=======
->>>>>>> worktree-agent-a957832aea434d59a
 }
 
 // ---------------------------------------------------------------------------
