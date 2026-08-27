@@ -1468,6 +1468,29 @@ pub struct CRealPrelude {
     /// tightening — [`Self::crossing_sample_ge_a`] discharges the OTHER half
     /// of this pair (`a ≤ samplePt`, unconditionally on `0 < Δ`).
     pub crossing_close: NameId,
+    /// `CReal.crossingCloseClamped : ...` -- `crossingClose` with `samplePt`
+    /// replaced by `clampedPt := CReal.min samplePt b`.
+    ///
+    /// Both domain-membership hypotheses `crossingClose` needs (`a <=
+    /// samplePt`, `samplePt <= b`) are GONE from this statement, discharged
+    /// by construction rather than assumed: `clampedPt <= b` is
+    /// `min_le_right`, unconditional; `a <= clampedPt` is `le_min` applied
+    /// to `crossingSampleGeA` (`a <= samplePt`) and `a <= b` (`le_trans` on
+    /// the two hypotheses this theorem already carries). `samplePt <= b` is
+    /// not itself provable (per `integral.rs`'s 2026-08-27 module doc
+    /// entries), but the theorem never needed `samplePt` un-clamped --
+    /// clamping into range costs nothing (`min` is fully constructive, no
+    /// comparison decided) and the closeness bound survives the
+    /// substitution via the SAME `le_min` move applied to `c - bound_embed`:
+    /// `c - bound_embed <= samplePt` (from `crossingSampleUpper` widened by
+    /// the `h_upper` hypothesis) and `c - bound_embed <= b` (from `hcb`
+    /// widened by `le_add_of_nonneg`) give, by `le_min`, `c - bound_embed <=
+    /// clampedPt`, and adding `bound_embed` back gives the upper half
+    /// `abs_le` needs. The lower half needs no `le_min` at all: `clampedPt
+    /// <= samplePt` (`min_le_left`) transfers `crossingSampleLower`'s
+    /// existing bound on `c - samplePt` up to `c - clampedPt` by plain
+    /// transitivity, no case split anywhere. See `creal/crossing.rs`.
+    pub crossing_close_clamped: NameId,
     /// `CReal.sampleUpperBound : ∀ x m, CReal.le x (CReal.ofRat (Rat.add
     /// (CReal.seq x m) (Rat.natDivSucc 1 m)))` — the general
     /// self-approximation lemma every `CReal` satisfies: it never exceeds
@@ -4570,6 +4593,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         crossing_sample_upper: kernel.name_str(creal, "crossingSampleUpper"),
         crossing_sample_lower: kernel.name_str(creal, "crossingSampleLower"),
         crossing_close: kernel.name_str(creal, "crossingClose"),
+        crossing_close_clamped: kernel.name_str(creal, "crossingCloseClamped"),
         sample_upper_bound: kernel.name_str(creal, "sampleUpperBound"),
         sample_lower_bound: kernel.name_str(creal, "sampleLowerBound"),
         bounded_of_uniformly_continuous: kernel.name_str(creal, "bounded_of_uniformly_continuous"),
@@ -4975,6 +4999,13 @@ pub(crate) fn build_creal_prelude_uncached(
         // `CReal.abs_le` (`lattice::declare_abs_laws`, earlier still) — this
         // is the earliest point all three are available.
         crossing::declare_crossing_close(&mut d, prelude)?;
+        // `crossing::declare_crossing_close_clamped` needs the same three
+        // dependencies as `declare_crossing_close` just above, plus the
+        // lattice's `min`/`le_min`/`min_le_left`/`min_le_right`
+        // (`lattice::declare_lattice`, already available well before this
+        // point since `crossing_close` itself already needs `abs_le` from
+        // that same module).
+        crossing::declare_crossing_close_clamped(&mut d, prelude)?;
         sqrt::declare_sqrt(&mut d, prelude)?;
         speedup::declare_speedup(&mut d, prelude)?;
         // `sqrtApproxKRegular` needs `speedup.rs`'s `KRegular` predicate

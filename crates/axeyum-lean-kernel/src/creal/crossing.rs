@@ -1609,3 +1609,345 @@ pub(super) fn declare_crossing_close(
         value,
     })
 }
+
+// --- `crossingCloseClamped`: `samplePt` replaced by `clampedPt := min
+// samplePt b`, discharging BOTH domain-membership hypotheses by
+// construction instead of assuming them -- see the module documentation's
+// "what needs which hypothesis" section and `integral.rs`'s 2026-08-27
+// entry on why `samplePt ≤ b` is not provable outright. ---------------------
+//
+// `min_le_right` gives `clampedPt ≤ b` unconditionally, no case split. `a ≤
+// clampedPt` follows from `le_min` applied to `a ≤ samplePt`
+// ([`CRealPrelude::crossing_sample_ge_a`]) and `a ≤ b` (`le_trans hac hcb`).
+// The closeness bound survives the substitution too, via the SAME `le_min`
+// move applied to `c − bound_embed`: showing `c − bound_embed ≤ samplePt`
+// (from `crossingSampleUpper` widened by `h_upper`) and `c − bound_embed ≤
+// b` (from `hcb` widened by `le_add_of_nonneg`) gives, by `le_min`, `c −
+// bound_embed ≤ clampedPt` -- and adding `bound_embed` back gives `c −
+// clampedPt ≤ bound_embed`, the upper half `abs_le` needs. The lower half
+// needs no `le_min` at all: `clampedPt ≤ samplePt` (`min_le_left`) transfers
+// `crossingSampleLower`'s existing bound on `c − samplePt` up to `c −
+// clampedPt` by plain transitivity.
+
+/// `Equiv (add (add u v) (neg v)) u` — "(u+v)−v ~ u", cancelling a term
+/// added on the RIGHT. Built from [`cancel_added_left`] (which cancels a
+/// term added on the LEFT) via one `add_comm` swap: cheaper than re-deriving
+/// `add_assoc`/`add_neg`/`add_zero` from scratch for the mirror shape.
+fn cancel_added_right(d: &mut IntDev<'_>, p: CRealPrelude, u: ExprId, v: ExprId) -> ExprId {
+    let uv = cadd(d, p, u, v);
+    let vu = cadd(d, p, v, u);
+    let comm = d.lemma(p.add_comm, &[u, v]); // Equiv uv vu
+    let neg_v = cneg(d, p, v);
+    let refl_neg_v = d.lemma(p.equiv_refl, &[neg_v]);
+    let congr_step = d.lemma(p.add_congr, &[uv, vu, neg_v, neg_v, comm, refl_neg_v]);
+    // congr_step : Equiv (add uv neg_v) (add vu neg_v)
+    let (_, base_proof) = cancel_added_left(d, p, v, u); // Equiv (add vu neg_v) u
+    let lhs = cadd(d, p, uv, neg_v);
+    let rhs = cadd(d, p, vu, neg_v);
+    d.lemma(p.equiv_trans, &[lhs, rhs, u, congr_step, base_proof])
+}
+
+/// `Equiv (add (neg s) s) zero` — the mirror of `add_neg`'s own order, via
+/// one `add_comm` swap.
+fn neg_then_add_to_zero(d: &mut IntDev<'_>, p: CRealPrelude, s: ExprId) -> ExprId {
+    let neg_s = cneg(d, p, s);
+    let neg_s_s = cadd(d, p, neg_s, s);
+    let s_neg_s = cadd(d, p, s, neg_s);
+    let comm = d.lemma(p.add_comm, &[neg_s, s]); // Equiv neg_s_s s_neg_s
+    let cancel = d.lemma(p.add_neg, &[s]); // Equiv s_neg_s zero
+    let zero_c = czero(d, p);
+    d.lemma(p.equiv_trans, &[neg_s_s, s_neg_s, zero_c, comm, cancel])
+}
+
+/// `Equiv (add (add x (neg s)) s) x` — "(x−s)+s ~ x", adding back a
+/// subtracted term. The inverse cancellation [`cancel_added_right`] does not
+/// give (that one cancels a term added, not subtracted).
+fn sub_then_add_cancel(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, s: ExprId) -> ExprId {
+    let neg_s = cneg(d, p, s);
+    let x_negs = cadd(d, p, x, neg_s);
+    let start = cadd(d, p, x_negs, s); // (x + (-s)) + s
+
+    let neg_s_s = cadd(d, p, neg_s, s);
+    let s1 = cadd(d, p, x, neg_s_s); // x + ((-s)+s)
+    let assoc = d.lemma(p.add_assoc, &[x, neg_s, s]); // Equiv start s1
+
+    let zero_c = czero(d, p);
+    let s2 = cadd(d, p, x, zero_c); // x + 0
+    let cancel = neg_then_add_to_zero(d, p, s); // Equiv neg_s_s zero
+    let refl_x = d.lemma(p.equiv_refl, &[x]);
+    let congr = d.lemma(p.add_congr, &[x, x, neg_s_s, zero_c, refl_x, cancel]); // Equiv s1 s2
+
+    let final_step = d.lemma(p.add_zero, &[x]); // Equiv s2 x
+
+    echain(d, p, start, &[(s1, assoc), (s2, congr), (x, final_step)])
+}
+
+/// `le x (add y s) -> le (add x (neg s)) y` — move `s`, added on the RIGHT
+/// of the sum, across to cancel against a matching `neg s`. Mirrors
+/// [`le_sub_of_le_add`], which handles `s` added on the LEFT.
+fn le_sub_of_le_add_right(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    s: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let neg_s = cneg(d, p, s);
+    let ys = cadd(d, p, y, s);
+    let refl_neg_s = d.lemma(p.le_refl, &[neg_s]);
+    let step1 = d.lemma(p.add_le_add, &[x, ys, neg_s, neg_s, h, refl_neg_s]);
+    // step1 : le (add x neg_s) (add ys neg_s)
+    let lhs = cadd(d, p, x, neg_s);
+    let rhs = cadd(d, p, ys, neg_s);
+    let cancel = cancel_added_right(d, p, y, s); // Equiv rhs y
+    let refl_lhs = d.lemma(p.equiv_refl, &[lhs]);
+    d.lemma(p.le_congr, &[lhs, lhs, rhs, y, refl_lhs, cancel, step1])
+}
+
+/// `le (add x (neg s)) y -> le x (add y s)` — the inverse of
+/// [`le_sub_of_le_add_right`]: add `s` back to recover the un-subtracted
+/// bound.
+fn le_add_of_le_sub_right(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    s: ExprId,
+    y: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let refl_s = d.lemma(p.le_refl, &[s]);
+    let neg_s = cneg(d, p, s);
+    let x_negs = cadd(d, p, x, neg_s);
+    let step1 = d.lemma(p.add_le_add, &[x_negs, y, s, s, h, refl_s]);
+    // step1 : le (add x_negs s) (add y s)
+    let lhs = cadd(d, p, x_negs, s);
+    let rhs = cadd(d, p, y, s);
+    let cancel = sub_then_add_cancel(d, p, x, s); // Equiv lhs x
+    let refl_rhs = d.lemma(p.equiv_refl, &[rhs]);
+    d.lemma(p.le_congr, &[lhs, x, rhs, rhs, cancel, refl_rhs, step1])
+}
+
+/// Admit [`CRealPrelude::crossing_close_clamped`]. See the module
+/// documentation section just above and that field's own doc comment for
+/// the statement and for why both domain-membership hypotheses
+/// [`declare_crossing_close`] needs (`a ≤ samplePt`, `samplePt ≤ b`) are
+/// gone from this theorem's signature rather than merely re-derived inside
+/// it.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here
+/// means the kernel **refused** a proof, not that a script gave up.
+#[allow(clippy::too_many_lines)]
+pub(super) fn declare_crossing_close_clamped(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let rat_ty_ = crate::rat_prelude::ops::rat_ty(d);
+    let fn_ty = d.arrow(carrier, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let delta_fv = d.fresh_fvar();
+    let delta = d.kernel().fvar(delta_fv);
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+
+    let zero_rat = rzero(d, p.rat);
+    let hpos_ty = d.const_app(p.rat.lt, &[zero_rat, delta]);
+    let hpos_fv = d.fresh_fvar();
+    let hpos = d.kernel().fvar(hpos_fv);
+
+    let hac_ty = cle(d, p, a, c);
+    let hac_fv = d.fresh_fvar();
+    let hac = d.kernel().fvar(hac_fv);
+    let hcb_ty = cle(d, p, c, b);
+    let hcb_fv = d.fresh_fvar();
+    let hcb = d.kernel().fvar(hcb_fv);
+
+    let slack = sample_slack(d, p, a, c, delta);
+    let clamped_pt = d.const_app(p.min, &[slack.sample_pt, b]);
+
+    let modulus_fn = d.const_app(p.uc_modulus, &[f, a, b, u]);
+    let outer = d.apply(modulus_fn, &[e]);
+    let one_nat = d.num(1);
+    let bound_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, outer]);
+    let bound_embed = embed(d, p, bound_rat);
+
+    let h_upper_ty = cle(d, p, slack.slack_upper, bound_embed);
+    let h_upper_fv = d.fresh_fvar();
+    let h_upper = d.kernel().fvar(h_upper_fv);
+    let neg_slack_lower = cneg(d, p, slack.slack_lower);
+    let h_lower_ty = cle(d, p, neg_slack_lower, bound_embed);
+    let h_lower_fv = d.fresh_fvar();
+    let h_lower = d.kernel().fvar(h_lower_fv);
+
+    // --- the proof body -------------------------------------------------
+
+    let hu_sample = d.lemma(p.crossing_sample_upper, &[a, c, delta, hpos]);
+    // hu_sample : le c (add samplePt slackUpper)
+    let hl_sample = d.lemma(p.crossing_sample_lower, &[a, c, delta, hpos, hac]);
+    // hl_sample : le (add samplePt slackLower) c
+
+    // --- domain membership: `a ≤ clampedPt` and `clampedPt ≤ b`, both
+    // unconditional on the mesh, no case split -----------------------------
+
+    let a_le_samplept = d.lemma(p.crossing_sample_ge_a, &[a, c, delta, hpos]);
+    let a_le_b = d.lemma(p.le_trans, &[a, c, b, hac, hcb]);
+    let hap_clamped = d.lemma(p.le_min, &[slack.sample_pt, b, a, a_le_samplept, a_le_b]);
+    let hpb_clamped = d.lemma(p.min_le_right, &[slack.sample_pt, b]);
+
+    // --- upper half: `c - clampedPt ≤ bound_embed`, via `le_min` on
+    // `c - bound_embed` -----------------------------------------------------
+
+    let refl_samplept = d.lemma(p.le_refl, &[slack.sample_pt]);
+    let samplept_plus_upper = cadd(d, p, slack.sample_pt, slack.slack_upper);
+    let samplept_plus_bound = cadd(d, p, slack.sample_pt, bound_embed);
+    let widen_upper = d.lemma(
+        p.add_le_add,
+        &[
+            slack.sample_pt,
+            slack.sample_pt,
+            slack.slack_upper,
+            bound_embed,
+            refl_samplept,
+            h_upper,
+        ],
+    );
+    let hs_direct = d.lemma(
+        p.le_trans,
+        &[
+            c,
+            samplept_plus_upper,
+            samplept_plus_bound,
+            hu_sample,
+            widen_upper,
+        ],
+    );
+    // hs_direct : le c (add samplePt bound_embed)
+
+    let nonneg_bound = d.lemma(p.rat.zero_le_nat_div_succ, &[one_nat, outer]);
+    let b_plus_bound = cadd(d, p, b, bound_embed);
+    let b_le_b_plus = d.lemma(p.le_add_of_nonneg, &[b, bound_rat, nonneg_bound]);
+    let hb_direct = d.lemma(p.le_trans, &[c, b, b_plus_bound, hcb, b_le_b_plus]);
+    // hb_direct : le c (add b bound_embed)
+
+    let hs_prime = le_sub_of_le_add_right(d, p, c, slack.sample_pt, bound_embed, hs_direct);
+    // hs_prime : le (add c (neg bound_embed)) samplePt
+    let hb_prime = le_sub_of_le_add_right(d, p, c, b, bound_embed, hb_direct);
+    // hb_prime : le (add c (neg bound_embed)) b
+
+    let neg_bound_embed = cneg(d, p, bound_embed);
+    let z_val = cadd(d, p, c, neg_bound_embed);
+    let hz = d.lemma(p.le_min, &[slack.sample_pt, b, z_val, hs_prime, hb_prime]);
+    // hz : le z_val clampedPt
+
+    let h_a_bound = le_add_of_le_sub_right(d, p, c, bound_embed, clamped_pt, hz);
+    // h_a_bound : le c (add clampedPt bound_embed)
+    let h1p = le_sub_of_le_add(d, p, c, clamped_pt, bound_embed, h_a_bound);
+    // h1p : le (add c (neg clampedPt)) bound_embed
+
+    let x_val_clamped = {
+        let neg_clamped = cneg(d, p, clamped_pt);
+        cadd(d, p, c, neg_clamped)
+    };
+
+    // --- lower half: `clampedPt - c ≤ bound_embed`, via `min_le_left` and
+    // plain transitivity, no `le_min` needed -------------------------------
+
+    let h2 = le_sub_of_add_le_left(d, p, slack.sample_pt, slack.slack_lower, c, hl_sample);
+    // h2 : le slackLower x_val   (x_val = add c (neg samplePt))
+    let x_val = cadd(d, p, c, cneg(d, p, slack.sample_pt));
+
+    let min_le_left_inst = d.lemma(p.min_le_left, &[slack.sample_pt, b]);
+    // min_le_left_inst : le clampedPt samplePt
+    let neg_samplept = cneg(d, p, slack.sample_pt);
+    let neg_clamped = cneg(d, p, clamped_pt);
+    let neg_le_neg_inst = d.lemma(
+        p.neg_le_neg,
+        &[clamped_pt, slack.sample_pt, min_le_left_inst],
+    );
+    // neg_le_neg_inst : le (neg samplePt) (neg clampedPt)
+    let refl_c2 = d.lemma(p.le_refl, &[c]);
+    let x_to_xclamped = d.lemma(
+        p.add_le_add,
+        &[c, c, neg_samplept, neg_clamped, refl_c2, neg_le_neg_inst],
+    );
+    // x_to_xclamped : le x_val x_val_clamped
+    let h2_chain = d.lemma(
+        p.le_trans,
+        &[slack.slack_lower, x_val, x_val_clamped, h2, x_to_xclamped],
+    );
+    // h2_chain : le slackLower x_val_clamped
+    let neg_x_val_clamped = cneg(d, p, x_val_clamped);
+    let h2n = d.lemma(p.neg_le_neg, &[slack.slack_lower, x_val_clamped, h2_chain]);
+    // h2n : le (neg x_val_clamped) (neg slackLower)
+    let h2p = d.lemma(
+        p.le_trans,
+        &[neg_x_val_clamped, neg_slack_lower, bound_embed, h2n, h_lower],
+    );
+    // h2p : le (neg x_val_clamped) bound_embed
+
+    let abs_bound = d.lemma(p.abs_le, &[x_val_clamped, bound_embed, h1p, h2p]);
+    // abs_bound : le (abs x_val_clamped) bound_embed
+
+    let uc_spec_term = d.const_app(p.uc_spec, &[f, a, b, u]);
+    let conclusion_proof = d.apply(
+        uc_spec_term,
+        &[e, c, clamped_pt, hac, hcb, hap_clamped, hpb_clamped, abs_bound],
+    );
+
+    let out_rat_e = d.const_app(p.rat.nat_div_succ, &[one_nat, e]);
+    let fc = d.apply(f, &[c]);
+    let f_clamped = d.apply(f, &[clamped_pt]);
+    let conclusion_ty = close_within(d, p, fc, f_clamped, out_rat_e);
+
+    let ty = {
+        let after_hlower = d.arrow(h_lower_ty, conclusion_ty);
+        let after_hupper = d.arrow(h_upper_ty, after_hlower);
+        let after_hcb = d.arrow(hcb_ty, after_hupper);
+        let after_hac = d.arrow(hac_ty, after_hcb);
+        let after_hpos = d.arrow(hpos_ty, after_hac);
+        let after_u = d.pi_fv(u_fv, u_ty, after_hpos);
+        let over_e = d.pi_fv(e_fv, nat, after_u);
+        let over_delta = d.pi_fv(delta_fv, rat_ty_, over_e);
+        let over_c = d.pi_fv(c_fv, carrier, over_delta);
+        let over_b = d.pi_fv(b_fv, carrier, over_c);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        d.pi_fv(f_fv, fn_ty, over_a)
+    };
+    let value = {
+        let with_hlower = d.lam_fv(h_lower_fv, h_lower_ty, conclusion_proof);
+        let with_hupper = d.lam_fv(h_upper_fv, h_upper_ty, with_hlower);
+        let with_hcb = d.lam_fv(hcb_fv, hcb_ty, with_hupper);
+        let with_hac = d.lam_fv(hac_fv, hac_ty, with_hcb);
+        let with_hpos = d.lam_fv(hpos_fv, hpos_ty, with_hac);
+        let with_u = d.lam_fv(u_fv, u_ty, with_hpos);
+        let over_e = d.lam_fv(e_fv, nat, with_u);
+        let over_delta = d.lam_fv(delta_fv, rat_ty_, over_e);
+        let over_c = d.lam_fv(c_fv, carrier, over_delta);
+        let over_b = d.lam_fv(b_fv, carrier, over_c);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        d.lam_fv(f_fv, fn_ty, over_a)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.crossing_close_clamped,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
