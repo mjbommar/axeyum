@@ -9597,6 +9597,7 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "ivt::declare_ivt",
     "polynomial::declare_polynomial",
     "congruence::declare_congruence_extras",
+    "extreme_value::declare_extreme_value",
 ];
 
 /// `STEPS` (the data-driven build order that replaced the hand-written call
