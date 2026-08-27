@@ -17841,6 +17841,357 @@ pub(super) fn declare_riemann_sum_split_exact_of_uc(
     })
 }
 
+// --- `CReal.integral_split`, the SEVENTEENTH lane: one leg's `Converges`
+// fact at an ARBITRARY mesh family ------------------------------------------
+//
+// The TWELFTH lane's sizing routed the combine through
+// `close_within_of_within_indexed` + `abs_add_le` twice +
+// `equiv_zero_of_small`. This lane takes a shorter route that needs none of
+// those three: [`declare_integral_add`] and [`declare_integral_le`] both show
+// that once every leg is a `Converges` fact at a mesh family the caller
+// chooses, the combine is `converges_add` + `converges_of_close` +
+// `converges_unique`, and no `abs` estimate is done by hand at all.
+//
+// [`leg_converges`] is that per-leg step, and it is where the whole estimate
+// lives. It is `declare_integral_le`'s own `step_f`/`step_g` construction with
+// ONE generalization: that declaration reaches only the specific refinement
+// `common_refinement(m1, m2)`, whereas an `integral_split` leg must reach
+// whatever mesh count [`mesh_count_align_mul`] hands it. The generalization is
+// [`CRealPrelude::riemann_sum_shared_accuracy_close`] at a FREE `k1`
+// (`declare_integral_le` calls `riemann_sum_cauchy` directly, which fixes the
+// refinement), plus one inequality `declare_integral_le` never needs:
+//
+// ```text
+// natDivSucc 1 l  ≤  natDivSucc 1 n      [Rat.natDivSucc_antitone, needs n ≤ l]
+// ```
+//
+// `riemann_sum_shared_accuracy_close`'s bound carries `modulus(l, shift jj1)`
+// where `l := common_refinement(m1, m2).0` is its internal shared refinement,
+// while [`bnd_leg_plus_share_le`] folds only the all-at-one-index shape
+// `modulus(idx, shift idx)`. With `oi = oj = jj1 = jj2 := n` the two differ in
+// exactly that one leaf, and `Nat.le n l` closes the gap:
+// `l = succ_mul_succ(m2, m1).0 = ((m2·m1) + m2) + m1 ≥ m1` ([`nat_le_add_left`]),
+// so the caller's own `Nat.le n (M n)` suffices. That is why this helper takes
+// `idx_le` as well as `deep_le`.
+
+/// Build `Converges (fun n => riemannSum F x y (M n)) (CReal.integral F x y
+/// hxy uxy)` for ANY mesh family `M` at least as fine as the native modulus
+/// and at least as deep as the accuracy index itself.
+///
+/// `mesh(d, n)` builds `M n`; `deep_le(d, n)` proves
+/// `Nat.le (deep_at(F, x, y, uxy, n)) (M n)`; `idx_le(d, n)` proves
+/// `Nat.le n (M n)`. All three are called at ONE shared symbolic `n`, so what
+/// they return may mention it freely — but nothing they return may mention the
+/// `Nat.le_dest` depth, which does not exist yet when they run.
+///
+/// Returns `(seq, proof)`, `seq := fun n => riemannSum F x y (M n)`.
+#[allow(clippy::too_many_arguments)]
+fn leg_converges(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    x: ExprId,
+    y: ExprId,
+    hxy: ExprId,
+    uxy: ExprId,
+    mesh: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
+    deep_le: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
+    idx_le: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
+) -> (ExprId, ExprId) {
+    let nat = d.nat_ty();
+    let rat = p.rat;
+
+    let (f_lambda, _k_native, _cauchy) = integral_witness(d, p, f, x, y, hxy, uxy);
+    let integral_val = d.const_app(p.integral, &[f, x, y, hxy, uxy]);
+    let conv_native = d.lemma(p.integral_converges, &[f, x, y, hxy, uxy]);
+
+    let width = width_of(d, p, x, y);
+    let (_c0, magnitude, _width_le_mag) = direct_bound_le(d, p, width);
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let m_n = mesh(d, n);
+    let deep = deep_at(d, p, f, x, y, uxy, n);
+    let zero = d.num(0);
+    let m2 = NatOps::add(d, deep, zero);
+
+    let shift_n = shift(d, n);
+    let m_n_sn = modulus(d, p, n, shift_n);
+    let m_sn_n = modulus(d, p, shift_n, n);
+    let a1_n = div_succ(d, p, 1, n);
+    let a2 = div_succ(d, p, 1, shift_n);
+
+    // `k` is a deterministic function of `magnitude` and the index ALONE
+    // (never of `m` or `bound_at_idx` -- see `bnd_leg_plus_share_le`'s own
+    // doc comment), so this OUTER call returns the same `ExprId` the two calls
+    // inside the `le_dest_elim` continuation do. It has to be available out
+    // here: `target` may not mention the bound depth, and `kc` is built from
+    // `k`.
+    let bound2_fn = shared_accuracy_bound_fn(d, p, x, y, n, m2);
+    let b2n = d.apply(bound2_fn, &[n]);
+    let (k, leg2_le) = bnd_leg_plus_share_le(d, p, x, y, n, m2, magnitude, b2n);
+    let k_n = nds(d, p, k, n);
+    let (kc, eq_fuse) = fuse_nds(d, p, k, k, n);
+    let kc_n = nds(d, p, kc, n);
+
+    let seq_g = rsum(d, p, f, x, y, m_n);
+    let seq_native = rsum(d, p, f, x, y, m2);
+    let sg = sample(d, p, seq_g, n);
+    let sf = sample(d, p, seq_native, n);
+    let diff_target = rsub(d, rat, sg, sf);
+    let target = within(d, p, diff_target, kc_n);
+
+    let hle = deep_le(d, n);
+    let hn = idx_le(d, n);
+
+    let per_n = le_dest_elim(d, deep, m_n, hle, target, &|d, depth, eq| {
+        // `m1` is `riemann_sum_shared_accuracy_close`'s own `deep + k1` at
+        // `k1 := depth`, so `raw` is stated about `rsum(m1)` and only the
+        // final `nat_rewrite_prop` moves it onto `M n`.
+        let m1 = NatOps::add(d, deep, depth);
+        let (l, _l2, _l2_eq_l) = common_refinement(d, m1, m2);
+
+        let raw = d.lemma(
+            p.riemann_sum_shared_accuracy_close,
+            &[f, x, y, n, depth, zero, hxy, uxy, n, n, n, n],
+        );
+
+        // `raw`'s bound, reconstructed term-for-term from
+        // `shared_accuracy_close_at_proof` at `oi = oj = jj1 = jj2 = n`.
+        let m_l_sn = modulus(d, p, l, shift_n);
+        let bound1_fn = shared_accuracy_bound_fn(d, p, x, y, n, m1);
+        let b1n = d.apply(bound1_fn, &[n]);
+        let bnd1 = {
+            let inner = radd(d, m_l_sn, b1n);
+            radd(d, inner, m_sn_n)
+        };
+        let bnd2 = {
+            let inner = radd(d, m_l_sn, b2n);
+            radd(d, inner, m_sn_n)
+        };
+        let total = radd(d, bnd1, bnd2);
+
+        // --- `Nat.le n l`, the one step `declare_integral_le` never needs.
+        let hn_m1 = {
+            let eq_symm = d.symm(m1, m_n, eq); // Eq Nat (M n) m1
+            nat_rewrite_prop(d, m_n, m1, eq_symm, hn, &|d, t| d.le(n, t))
+        };
+        let np = d.prelude();
+        let head = {
+            let mm = NatOps::mul(d, m2, m1);
+            d.const_app(np.add, &[mm, m2])
+        };
+        let m1_le_l = nat_le_add_left(d, head, m1);
+        let n_le_l = d.lemma(np.le_trans, &[n, m1, l, hn_m1, m1_le_l]);
+        let anti = d.lemma(rat.nat_div_succ_antitone, &[n, l, n_le_l]);
+        let a1_l = div_succ(d, p, 1, l);
+        let refl_a2 = d.lemma(rat.le_refl, &[a2]);
+        // mod_le : modulus(l, shift n) ≤ modulus(n, shift n).
+        let mod_le = d.lemma(rat.add_le_add, &[a1_l, a1_n, a2, a2, anti, refl_a2]);
+
+        let refl_msn = d.lemma(rat.le_refl, &[m_sn_n]);
+
+        let refl_b1 = d.lemma(rat.le_refl, &[b1n]);
+        let inner1_actual = radd(d, m_l_sn, b1n);
+        let inner1_target = radd(d, m_n_sn, b1n);
+        let inner1_le = d.lemma(rat.add_le_add, &[m_l_sn, m_n_sn, b1n, b1n, mod_le, refl_b1]);
+        let bnd1_target = radd(d, inner1_target, m_sn_n);
+        let bnd1_le_t = d.lemma(
+            rat.add_le_add,
+            &[
+                inner1_actual,
+                inner1_target,
+                m_sn_n,
+                m_sn_n,
+                inner1_le,
+                refl_msn,
+            ],
+        );
+
+        let refl_b2 = d.lemma(rat.le_refl, &[b2n]);
+        let inner2_actual = radd(d, m_l_sn, b2n);
+        let inner2_target = radd(d, m_n_sn, b2n);
+        let inner2_le = d.lemma(rat.add_le_add, &[m_l_sn, m_n_sn, b2n, b2n, mod_le, refl_b2]);
+        let bnd2_target = radd(d, inner2_target, m_sn_n);
+        let bnd2_le_t = d.lemma(
+            rat.add_le_add,
+            &[
+                inner2_actual,
+                inner2_target,
+                m_sn_n,
+                m_sn_n,
+                inner2_le,
+                refl_msn,
+            ],
+        );
+
+        // --- fold each standard-shaped leg into `natDivSucc(k, n)`, dropping
+        // the extra `+natDivSucc(1,n)` share exactly the way
+        // `declare_integral_le` does (no partner leg to absorb it into).
+        let (_k1, leg1_le) = bnd_leg_plus_share_le(d, p, x, y, n, m1, magnitude, b1n);
+        let one_nat = d.num(1);
+        let a1_nonneg = d.lemma(rat.zero_le_nat_div_succ, &[one_nat, n]);
+
+        let t1_le_extra = le_add_nonneg_right(d, p, bnd1_target, a1_n, a1_nonneg);
+        let t1_extra = radd(d, bnd1_target, a1_n);
+        let t1_le_k = d.lemma(
+            rat.le_trans,
+            &[bnd1_target, t1_extra, k_n, t1_le_extra, leg1_le],
+        );
+        let bnd1_le_k = d.lemma(rat.le_trans, &[bnd1, bnd1_target, k_n, bnd1_le_t, t1_le_k]);
+
+        let t2_le_extra = le_add_nonneg_right(d, p, bnd2_target, a1_n, a1_nonneg);
+        let t2_extra = radd(d, bnd2_target, a1_n);
+        let t2_le_k = d.lemma(
+            rat.le_trans,
+            &[bnd2_target, t2_extra, k_n, t2_le_extra, leg2_le],
+        );
+        let bnd2_le_k = d.lemma(rat.le_trans, &[bnd2, bnd2_target, k_n, bnd2_le_t, t2_le_k]);
+
+        let sum_k = radd(d, k_n, k_n);
+        let total_le_sum = d.lemma(
+            rat.add_le_add,
+            &[bnd1, k_n, bnd2, k_n, bnd1_le_k, bnd2_le_k],
+        );
+        let total_le_kc = rat_eq_rewrite(d, sum_k, kc_n, eq_fuse, total_le_sum, &|d, t| {
+            rle(d, rat, total, t)
+        });
+
+        let rsum_m1 = rsum(d, p, f, x, y, m1);
+        let s1 = sample(d, p, rsum_m1, n);
+        let diff1 = rsub(d, rat, s1, sf);
+        let weakened = weaken(d, p, diff1, total, kc_n, raw, total_le_kc);
+
+        nat_rewrite_prop(d, m1, m_n, eq, weakened, &|d, t| {
+            let rs = rsum(d, p, f, x, y, t);
+            let s = sample(d, p, rs, n);
+            let df = rsub(d, rat, s, sf);
+            within(d, p, df, kc_n)
+        })
+    });
+
+    let cross = d.lam_fv(n_fv, nat, per_n);
+    let new_seq = d.lam_fv(n_fv, nat, seq_g);
+
+    let proof = d.lemma(
+        p.converges_of_close,
+        &[f_lambda, new_seq, integral_val, kc, cross, conv_native],
+    );
+    (new_seq, proof)
+}
+
+#[cfg(test)]
+mod leg_converges_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// Symbolic in `F`, `a`, `b`, the order proof and the continuity witness,
+    /// at the mesh family `M n := deep(n) + n` — the simplest family that is
+    /// genuinely NEITHER the native one (`deep(n) + 0`, which
+    /// `integral_converges` already covers) NOR reachable by
+    /// `declare_integral_le`'s `common_refinement`, and which exercises both
+    /// callbacks: `deep_le` is `Nat.le_add_right` and `idx_le` is
+    /// [`nat_le_add_left`], the two opposite sides of one `Nat.add`.
+    #[test]
+    fn leg_converges_proves_convergence_at_a_padded_mesh_family() {
+        crate::on_a_deep_stack(leg_converges_padded_body);
+    }
+
+    fn leg_converges_padded_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+        let f_ty = fn_ty(&mut d, p);
+
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let hab_ty = cle(&mut d, p, a, b);
+        let hab_fv = d.fresh_fvar();
+        let hab = d.kernel().fvar(hab_fv);
+        let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+        let u_fv = d.fresh_fvar();
+        let u = d.kernel().fvar(u_fv);
+
+        let (seq, proof) = leg_converges(
+            &mut d,
+            p,
+            f,
+            a,
+            b,
+            hab,
+            u,
+            &|d, n| {
+                let deep = deep_at(d, p, f, a, b, u, n);
+                NatOps::add(d, deep, n)
+            },
+            &|d, n| {
+                let deep = deep_at(d, p, f, a, b, u, n);
+                let np = d.prelude();
+                d.lemma(np.le_add_right, &[deep, n])
+            },
+            &|d, n| {
+                let deep = deep_at(d, p, f, a, b, u, n);
+                nat_le_add_left(d, deep, n)
+            },
+        );
+
+        // Non-vacuity: the sequence must be the PADDED family, not the native
+        // one `integral_converges` already gives for free.
+        let native = {
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let deep = deep_at(&mut d, p, f, a, b, u, n);
+            let zero = d.num(0);
+            let m = NatOps::add(&mut d, deep, zero);
+            let rs = rsum(&mut d, p, f, a, b, m);
+            let nat = d.nat_ty();
+            d.lam_fv(n_fv, nat, rs)
+        };
+        assert_ne!(
+            seq, native,
+            "leg_converges must land on the caller's mesh family, not the native one"
+        );
+
+        let integral_val = d.const_app(p.integral, &[f, a, b, hab, u]);
+        let concl = converges_applied(&mut d, p, seq, integral_val);
+
+        let ty = {
+            let t = d.pi_fv(u_fv, u_ty, concl);
+            let t = d.pi_fv(hab_fv, hab_ty, t);
+            let t = d.pi_fv(b_fv, carrier, t);
+            let t = d.pi_fv(a_fv, carrier, t);
+            d.pi_fv(f_fv, f_ty, t)
+        };
+        let value = {
+            let v = d.lam_fv(u_fv, u_ty, proof);
+            let v = d.lam_fv(hab_fv, hab_ty, v);
+            let v = d.lam_fv(b_fv, carrier, v);
+            let v = d.lam_fv(a_fv, carrier, v);
+            d.lam_fv(f_fv, f_ty, v)
+        };
+
+        let anon = d.kernel().anon();
+        let name = d.kernel().name_str(anon, "legConvergesPaddedSmoke");
+        let result = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(
+            result.is_ok(),
+            "leg_converges must prove Converges at a padded mesh family: {:?}",
+            result.err()
+        );
+    }
+}
+
 #[cfg(test)]
 mod integral_scale_tests {
     use super::*;
