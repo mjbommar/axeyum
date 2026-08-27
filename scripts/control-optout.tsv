@@ -1,0 +1,69 @@
+# Python control suites deliberately NOT run by `scripts/run-python-controls.py`.
+#
+# Format: <suite name><TAB><reason>.  A missing reason is a hard error, and so is
+# an entry naming a file that no longer exists -- this list fails in BOTH
+# directions, the same shape `scripts/check-shape-duplicates.py` uses for
+# duplicate declarations and `scripts/check-absence-claims.py` for absence
+# claims.  It replaces an unexplained numeric floor of 188.
+#
+# Adding a line here is a decision that someone can read and argue with.  That
+# is the entire point: `PY_ORPHAN_BASELINE=188` was a number nobody chose,
+# accumulated one lane at a time, and it made 49% of this repository's Python
+# controls permanently invisible.
+#
+# EVERY LINE BELOW IS A LIABILITY, NOT A SETTLEMENT.  These 19 suites were
+# measured on 2026-08-27 (commit a00924af0) and each one is either unrunnable by
+# the gate's invocation form or RED TODAY.  Nothing here is "fine" -- it is
+# named so it can be fixed.
+#
+# --------------------------------------------------------------------------
+# (a) pytest dialect, and `pytest` is not installed on this fleet.
+#
+# `import pytest` -> ModuleNotFoundError under `python3 -m unittest`, so these
+# six cannot run under ANY gate in this repository: no caller invokes pytest and
+# the module is absent.  They use pytest only for `pytest.raises(E, match=...)`,
+# which is `self.assertRaisesRegex(E, ...)` in the dialect every other suite
+# here uses -- so the fix is a mechanical rewrite, not a redesign.  Not done in
+# this lane: converting a suite is a change to what it ASSERTS, and these six
+# guard capture/census producers owned elsewhere.
+test_capture_maestro_device_id	pytest dialect; `import pytest` and pytest is not installed. Convert `pytest.raises(E, match=)` to `assertRaisesRegex`.
+test_capture_maestro_device_id_v2	pytest dialect; `import pytest` and pytest is not installed. Convert `pytest.raises(E, match=)` to `assertRaisesRegex`.
+test_capture_maestro_device_id_v3	pytest dialect; `import pytest` and pytest is not installed. Convert `pytest.raises(E, match=)` to `assertRaisesRegex`.
+test_qf_linear_a5_census	pytest dialect; `import pytest` and pytest is not installed. Convert `pytest.raises(E, match=)` to `assertRaisesRegex`.
+test_qf_nia_a3_census	pytest dialect; `import pytest` and pytest is not installed. Convert `pytest.raises(E, match=)` to `assertRaisesRegex`.
+test_qf_uflia_a4_census	pytest dialect; `import pytest` and pytest is not installed. Convert `pytest.raises(E, match=)` to `assertRaisesRegex`.
+#
+# --------------------------------------------------------------------------
+# (b) pytest dialect AND red on its own terms.
+#
+# Nine of its ten sibling suites were converted to `unittest.TestCase` in this
+# lane and now run; this one could not be, because two of its four functions
+# fail when executed directly: one takes pytest's `tmp_path` fixture (a
+# TypeError outside pytest) and one raises `CaptureError` on an ADR path.
+# Converting it would have registered a RED step.
+test_diagnose_maestro_llvm_root_drift	pytest dialect AND red when executed directly: one function needs pytest's `tmp_path` fixture, another raises CaptureError on adr-0324. Needs a fix, not a wrapper.
+#
+# --------------------------------------------------------------------------
+# (c) RED on `main` today (a00924af0), measured by running them.
+#
+# These are drift detectors that have been firing into an empty room.  Each one
+# compares a recorded digest against a producer file that has since moved, or
+# asserts an error string a checker no longer emits.  Registering them would
+# turn the aggregate gate red for a reason that is real but belongs to the lane
+# that owns the artifact -- `artifacts/` and `crates/` are outside this lane's
+# scope.  THEY ARE NOT PASSING AND MUST NOT BE READ AS PASSING.
+test_prove_tock_log2	RED on a00924af0: registration/producer_files_hash mismatch for crates/axeyum-verify/tests/tock_log2_external.rs. Real content drift; owner must re-capture.
+test_prove_tock_log2_v2	RED on a00924af0: registration/producer_files_hash mismatch for crates/axeyum-verify/tests/tock_log2_external.rs. Real content drift; owner must re-capture.
+test_prove_tock_log2_v3	RED on a00924af0: registration/producer_files_hash mismatch for crates/axeyum-verify/tests/tock_log2_external.rs. Real content drift; owner must re-capture.
+test_prove_tock_log2_v4	RED on a00924af0: registration/producer_files_hash mismatch for crates/axeyum-verify/tests/tock_log2_external.rs. Real content drift; owner must re-capture.
+test_validate_glaurung_llvm_loop_semantic_census	RED on a00924af0: `producer drift: Cargo.lock` -- the recorded result no longer binds the current lockfile.
+test_check_autogenesis_official_gcd_balanced_bezout_generic_base_result	RED on a00924af0: `implementation identity changed` -- the pinned implementation digest no longer matches.
+test_check_autogenesis_official_gcd_balanced_bezout_official_kernel_result	RED on a00924af0: `implementation identity changed` -- the pinned implementation digest no longer matches.
+test_check_autogenesis_nat_fib_gcd_surface_plan	RED on a00924af0: asserts a `budget` error message; the checker now says `target fact changed without axiom-free kernel settlement`.
+test_check_autogenesis_nat_gcd_fib_add_self_qualification	RED on a00924af0: asserts a `boundary` error message; the checker now says `dispatch_baseline identity changed`.
+test_check_autogenesis_nat_gcd_greatest_plan	RED on a00924af0: asserts a `dependency` error message; the checker now says `target fact identity or open state changed`.
+test_gen_autogenesis_mathlib_stable_statement_comparison	RED on a00924af0: 7 of 8 assert `comparison differs`; the generator now says `current-stable checkout identity changed`.
+#
+# --------------------------------------------------------------------------
+# (d) needs a build artifact the fast gate does not produce.
+test_check_autogenesis_balanced_bezout_euclidean_update_dependency_audit_plan	Needs target/debug/examples/theorem_footprint_batch_audit, which no fast gate builds. Belongs behind a cargo build step.
