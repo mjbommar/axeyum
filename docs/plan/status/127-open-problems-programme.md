@@ -251,7 +251,15 @@ consumption bottleneck exposed by the 120-member Rado radius-23 set. An explicit
 bound defaults to the original single-worker route; formulas and proofs check independently, but
 progress, byte accounting, and failure selection remain lexicographic and deterministic. Invalid
 worker counts fail before checking. The focused worker-bound control and warning-denied all-feature
-Clippy pass. The real four-worker replay remains uncredited until all 120 members terminate.
+Clippy pass.
+
+**Palette-invariant Rado radius 23 checked, 2026-08-27.** All 120 permutation producers
+terminated UNSAT with 23,049,937,396 textual DRAT bytes. ADR-0600's four-worker checker
+independently enumerated the complete 5! set, regenerated every 12,150-variable / 329,778-clause
+labelled radius-23 formula, and accepted every proof in 766.75 seconds with ordered terminal
+verdict `orbit-unsat-checked`. Thus every valid 405-point colouring has minimum palette-orbit
+distance at least 24 from the retained witness on points 1--404. This remains a local theorem;
+unrestricted 405 is open and `R_5(3(x-y)=2z)>404` does not move.
 
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
 external-certificate replay runner for all five packages.  It validates checker and artifact
