@@ -19,6 +19,15 @@ An entry therefore starts at either form, and only those two:
     ^        \($        -- the head of a wrapped entry
 
 Exit 0 when the pin is correct, 1 when it is not (rewriting it unless --check).
+
+`creal_tests.rs` -- the file that motivated this script and the one measured
+above -- no longer carries this pin as of the per-module inventory split
+(`crates/axeyum-lean-kernel/src/creal/inventory.rs`): its single 432-entry
+array is now one `Vec` per `creal/` module, none of them length-pinned, and
+coverage is asserted against `kernel.environment()` instead (see that file's
+module docs for why the pin stopped being load-bearing once that assertion
+existed). This tool is unchanged and still applies verbatim to any other
+`*_tests.rs` that declares `let expected: [(&str, crate::NameId, &str); N]`.
 """
 
 import argparse

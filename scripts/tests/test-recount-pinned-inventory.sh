@@ -108,12 +108,42 @@ else
   bad an_absent_array_is_an_error_not_a_zero "expected nonzero + diagnostic; got rc=$rc: $out"
 fi
 
-# --- the real file in the tree agrees with itself --------------------------
-real="$ROOT/crates/axeyum-lean-kernel/src/creal/creal_tests.rs"
-if [ -f "$real" ]; then
-  out="$(python3 "$SCRIPT" --check "$real" 2>&1)"; rc=$?
-  if [ "$rc" -eq 0 ]; then ok the_committed_creal_pin_is_correct
-  else bad the_committed_creal_pin_is_correct "$out"; fi
+# --- every real pinned array in the tree agrees with itself ----------------
+#
+# `creal_tests.rs` was the ONLY file in the tree matching this pin shape when
+# this control was written, and is deliberately no longer one of them: its
+# single 432-entry `expected` array was sharded per `creal/` module (one
+# `Vec` per file under `creal/inventory/`, no fixed length) precisely because
+# a single shared pin collided every pair of concurrent `creal` lanes -- see
+# `crates/axeyum-lean-kernel/src/creal/inventory.rs`'s module docs. Recounting
+# it here would therefore report "no pinned inventory array found", which is
+# the CORRECT answer now, not a regression -- so this control no longer names
+# that file specifically and instead checks whatever file(s) in the tree
+# still carry this exact pin shape, if any. The tool itself is unchanged and
+# remains available to any future `*_tests.rs` that adopts it; the fixture
+# cases above are what actually exercise its counting logic.
+# Anchored to the start of the (whitespace-stripped) line, NOT a bare
+# substring search: `creal/inventory.rs`'s own module docs quote this exact
+# pin shape in prose (`//! ... let expected: [(&str, crate::NameId, &str);
+# 432] = [ ... ];` explaining why it is gone), and an unanchored grep matches
+# that doc line too -- then fails on it as "not terminated by `];`", which is
+# the comment ending in prose, not code. `recount-pinned-inventory.py` itself
+# has this same blind spot (it also just `.search()`s each line), so the
+# anchor here is doing double duty: it is also the right fix for the tool.
+mapfile -t pinned_files < <(grep -rlE '^[[:space:]]*let expected: \[\(&str, crate::NameId, &str\); [0-9]+\] = \[' \
+  "$ROOT/crates/axeyum-lean-kernel/src" 2>/dev/null)
+if [ "${#pinned_files[@]}" -eq 0 ]; then
+  ok no_real_file_currently_uses_this_pin_shape
+else
+  real_fail=0
+  for real in "${pinned_files[@]}"; do
+    out="$(python3 "$SCRIPT" --check "$real" 2>&1)"; rc=$?
+    if [ "$rc" -ne 0 ]; then
+      bad the_committed_pin_is_correct "$real: $out"
+      real_fail=1
+    fi
+  done
+  [ "$real_fail" -eq 0 ] && ok the_committed_pin_is_correct
 fi
 
 [ "$fail" -eq 0 ] && echo "recount-pinned-inventory: all controls pass"
