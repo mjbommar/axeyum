@@ -1877,6 +1877,526 @@ mod mesh_count_align_tests {
     }
 }
 
+// --- ratio-preserving (MULTIPLICATIVE) mesh-count alignment ---------------
+//
+// Resolves Gap A of this module's SIXTEENTH `integral_split` entry:
+// [`mesh_count_align`]'s additive padding pins the split ratio at the
+// midpoint, and takes no ratio argument at all. The helpers below realign the
+// same three accuracy thresholds through [`succ_mul_succ`] instead, which
+// leaves an arbitrary base ratio `(m_ac0, m_cb0)` EXACTLY fixed at every
+// scale -- the same family [`CRealPrelude::riemann_sum_split_scale_invariant`]
+// already proves `Equiv c_k c_0` for.
+
+/// `Nat.le n (Nat.add k n)` — the prelude has `le_add_right` (`Le n (add n
+/// k)`) but no `le_add_left`, so this is that lemma transported across
+/// [`crate::nat_prelude::NatPrelude::add_comm`] via [`nat_rewrite_prop`],
+/// exactly the idiom [`mesh_count_align`]'s own `h2` step already uses for
+/// the same reason.
+fn nat_le_add_left(d: &mut IntDev<'_>, k: ExprId, n: ExprId) -> ExprId {
+    let np = d.prelude();
+    let h = d.lemma(np.le_add_right, &[n, k]); // Le n (add n k)
+    let n_plus_k = NatOps::add(d, n, k);
+    let k_plus_n = NatOps::add(d, k, n);
+    let comm = d.lemma(np.add_comm, &[n, k]); // Eq (add n k) (add k n)
+    nat_rewrite_prop(d, n_plus_k, k_plus_n, comm, h, &|d, x| d.le(n, x))
+}
+
+/// From `hle : Nat.le base total`, bind a `depth : Nat` together with
+/// `Eq Nat (add base depth) total` for the rest of a proof — `Nat.le_dest`
+/// plus [`exists_elim`], **never `Nat.sub`** (the truncation trap this
+/// module's kernel-facts list warns about).
+///
+/// Continuation-passing for the same reason [`mesh_count_align`] is:
+/// `Nat.le_dest`'s witness cannot escape its own elimination scope, so
+/// `target` must not mention `depth` ([`exists_elim`]'s own precondition).
+/// Factored out of [`mesh_count_align`]'s own tail so
+/// [`mesh_count_align_mul`] can nest three of them without repeating the
+/// `pred`/`minor` boilerplate three times.
+fn le_dest_elim(
+    d: &mut IntDev<'_>,
+    base: ExprId,
+    total: ExprId,
+    hle: ExprId,
+    target: ExprId,
+    build: &dyn Fn(&mut IntDev<'_>, ExprId, ExprId) -> ExprId,
+) -> ExprId {
+    let np = d.prelude();
+    let nat = d.nat_ty();
+    let represented = d.const_app(np.le_dest, &[base, total, hle]);
+    let pred = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let sum = NatOps::add(d, base, k);
+        let body = d.eq(sum, total);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let minor = {
+        let depth_fv = d.fresh_fvar();
+        let depth = d.kernel().fvar(depth_fv);
+        let sum = NatOps::add(d, base, depth);
+        let e_ty = d.eq(sum, total);
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+        let body = build(d, depth, e);
+        let with_e = d.lam_fv(e_fv, e_ty, body);
+        d.lam_fv(depth_fv, nat, with_e)
+    };
+    exists_elim(d, pred, target, represented, minor)
+}
+
+/// The mesh counts and the three `Nat.le_dest` decompositions
+/// [`mesh_count_align_mul`] hands its continuation.
+///
+/// `m_ac`/`m_cb`/`combined` are the terms the caller must build its three
+/// `riemann_sum_integral_close` applications and its
+/// [`CRealPrelude::riemann_sum_split_exact_of_uc`] application at;
+/// `depth_X`/`eq_X` are what let a `riemann_sum_integral_close` application
+/// built generically at a bound depth be transported onto them via
+/// [`nat_rewrite_prop`].
+#[derive(Clone, Copy)]
+pub(super) struct MeshAlignMul {
+    /// `succ_mul_succ(m_ac0, k).0` — the scaled `[a, c]` mesh count.
+    pub m_ac: ExprId,
+    /// `succ_mul_succ(m_cb0, k).0` — the scaled `[c, b]` mesh count.
+    pub m_cb: ExprId,
+    /// `add (succ m_ac) m_cb` — `riemann_sum_split_exact_of_uc`'s own
+    /// combined `[a, b]` count.
+    pub combined: ExprId,
+    /// Bound witness of `Eq Nat (add deep_ab depth_ab) combined`.
+    pub depth_ab: ExprId,
+    /// That equation.
+    pub eq_ab: ExprId,
+    /// Bound witness of `Eq Nat (add deep_ac depth_ac) m_ac`.
+    pub depth_ac: ExprId,
+    /// That equation.
+    pub eq_ac: ExprId,
+    /// Bound witness of `Eq Nat (add deep_cb depth_cb) m_cb`.
+    pub depth_cb: ExprId,
+    /// That equation.
+    pub eq_cb: ExprId,
+}
+
+/// The RATIO-PRESERVING replacement for [`mesh_count_align`], resolving
+/// Gap A of this module's SIXTEENTH `integral_split` documentation entry.
+///
+/// Given the three uniform-continuity moduli `deep_ab`, `deep_ac`, `deep_cb`,
+/// a **base ratio** `(m_ac0, m_cb0)` (which [`mesh_count_align`] has no
+/// parameter for at all), and a free `big_n : Nat`, this scales BOTH sub-counts
+/// by the single common factor
+///
+/// ```text
+/// k := ((deep_ab + deep_ac) + deep_cb) + big_n
+/// ```
+///
+/// through [`succ_mul_succ`], so `m_ac := succ_mul_succ(m_ac0, k).0` and
+/// `m_cb := succ_mul_succ(m_cb0, k).0` satisfy `succ m_ac = succ(m_ac0)·succ k`
+/// and `succ m_cb = succ(m_cb0)·succ k`. Since
+/// [`declare_riemann_sum_split_exact`]'s split point is
+/// `a + ofNat(succ m_ac) · (b − a)/(combined + 1)` and
+/// `combined + 1 = succ m_ac + succ m_cb`, the split fraction is
+///
+/// ```text
+/// succ(m_ac0)·succ k / ((succ(m_ac0) + succ(m_cb0))·succ k)
+///   = succ(m_ac0) / (succ(m_ac0) + succ(m_cb0))
+/// ```
+///
+/// — the `succ k` cancels identically, so the ratio is the caller's base
+/// ratio at EVERY `k`, not merely in the limit. (That is the same family
+/// [`CRealPrelude::riemann_sum_split_scale_invariant`] proves `Equiv c_k c_0`
+/// for; this helper supplies the `Nat` side that theorem does not address —
+/// which `k` makes all three accuracy thresholds clear at once.)
+///
+/// [`mesh_count_align`] gets `deep_ac ≤ m_ac` for free by *defining*
+/// `m_ac := deep_ac + depth_ac`; that syntactic trick is exactly what forces
+/// the additive shape, so it is unavailable here and all three thresholds
+/// become obligations. All three reduce to ONE inequality:
+///
+/// ```text
+/// succ_mul_succ(m0, k).0 = ((m0·k) + m0) + k  ≥  k     [nat_le_add_left]
+/// ```
+///
+/// so `deep_ac ≤ k ≤ m_ac`, `deep_cb ≤ k ≤ m_cb`, and
+/// `deep_ab ≤ k ≤ m_ac ≤ succ m_ac ≤ combined`, each a `le_trans` chain over
+/// `le_add_right`/[`nat_le_add_left`]/`le_succ` only — no `add_assoc`, no
+/// `Nat.sub`. The three [`le_dest_elim`] calls are then nested (outermost
+/// `ab`, then `ac`, then `cb`), so `build` sees all three depths and all
+/// three equations at once; `target` must mention none of them.
+pub(super) fn mesh_count_align_mul(
+    d: &mut IntDev<'_>,
+    deep_ab: ExprId,
+    deep_ac: ExprId,
+    deep_cb: ExprId,
+    m_ac0: ExprId,
+    m_cb0: ExprId,
+    big_n: ExprId,
+    target: ExprId,
+    build: &dyn Fn(&mut IntDev<'_>, MeshAlignMul) -> ExprId,
+) -> ExprId {
+    let np = d.prelude();
+
+    // k := ((deep_ab + deep_ac) + deep_cb) + big_n.
+    let t1 = NatOps::add(d, deep_ab, deep_ac);
+    let t2 = NatOps::add(d, t1, deep_cb);
+    let k = NatOps::add(d, t2, big_n);
+
+    // The two scaled counts and the combined count.
+    let (m_ac, _) = succ_mul_succ(d, m_ac0, k);
+    let (m_cb, _) = succ_mul_succ(d, m_cb0, k);
+    let succ_m_ac = d.succ(m_ac);
+    let combined = NatOps::add(d, succ_m_ac, m_cb);
+
+    // Shared tail of all three "modulus ≤ k" chains: `Le t2 k` and
+    // `Le t1 t2`.
+    let s_t2_k = d.lemma(np.le_add_right, &[t2, big_n]); // Le t2 k
+    let s_t1_t2 = d.lemma(np.le_add_right, &[t1, deep_cb]); // Le t1 t2
+    let s_t1_k = d.lemma(np.le_trans, &[t1, t2, k, s_t1_t2, s_t2_k]);
+
+    // Le deep_ab k.
+    let ab_t1 = d.lemma(np.le_add_right, &[deep_ab, deep_ac]);
+    let h_ab_k = d.lemma(np.le_trans, &[deep_ab, t1, k, ab_t1, s_t1_k]);
+
+    // Le deep_ac k.
+    let ac_t1 = nat_le_add_left(d, deep_ab, deep_ac);
+    let h_ac_k = d.lemma(np.le_trans, &[deep_ac, t1, k, ac_t1, s_t1_k]);
+
+    // Le deep_cb k.
+    let cb_t2 = nat_le_add_left(d, t1, deep_cb);
+    let h_cb_k = d.lemma(np.le_trans, &[deep_cb, t2, k, cb_t2, s_t2_k]);
+
+    // Le k m_ac and Le k m_cb -- the ONE inequality all three thresholds
+    // reduce to. `succ_mul_succ(m0, k).0` is literally `add ((m0·k) + m0) k`,
+    // so this is `nat_le_add_left` at that head.
+    let ac_head = {
+        let mk = NatOps::mul(d, m_ac0, k);
+        d.const_app(np.add, &[mk, m_ac0])
+    };
+    let h_k_mac = nat_le_add_left(d, ac_head, k);
+    let cb_head = {
+        let mk = NatOps::mul(d, m_cb0, k);
+        d.const_app(np.add, &[mk, m_cb0])
+    };
+    let h_k_mcb = nat_le_add_left(d, cb_head, k);
+
+    // The three threshold facts.
+    let hle_ac = d.lemma(np.le_trans, &[deep_ac, k, m_ac, h_ac_k, h_k_mac]);
+    let hle_cb = d.lemma(np.le_trans, &[deep_cb, k, m_cb, h_cb_k, h_k_mcb]);
+    let hle_ab = {
+        let to_mac = d.lemma(np.le_trans, &[deep_ab, k, m_ac, h_ab_k, h_k_mac]);
+        let mac_succ = d.lemma(np.le_succ, &[m_ac]);
+        let to_succ = d.lemma(np.le_trans, &[deep_ab, m_ac, succ_m_ac, to_mac, mac_succ]);
+        let succ_comb = d.lemma(np.le_add_right, &[succ_m_ac, m_cb]);
+        d.lemma(
+            np.le_trans,
+            &[deep_ab, succ_m_ac, combined, to_succ, succ_comb],
+        )
+    };
+
+    le_dest_elim(
+        d,
+        deep_ab,
+        combined,
+        hle_ab,
+        target,
+        &|d, depth_ab, eq_ab| {
+            le_dest_elim(d, deep_ac, m_ac, hle_ac, target, &|d, depth_ac, eq_ac| {
+                le_dest_elim(d, deep_cb, m_cb, hle_cb, target, &|d, depth_cb, eq_cb| {
+                    build(
+                        d,
+                        MeshAlignMul {
+                            m_ac,
+                            m_cb,
+                            combined,
+                            depth_ab,
+                            eq_ab,
+                            depth_ac,
+                            eq_ac,
+                            depth_cb,
+                            eq_cb,
+                        },
+                    )
+                })
+            })
+        },
+    )
+}
+
+#[cfg(test)]
+mod mesh_count_align_mul_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// Rebuild [`mesh_count_align_mul`]'s own `k`/`m_ac`/`m_cb`/`combined`
+    /// independently, so a defect in ITS construction — not merely a matching
+    /// bug in a test — is what the kernel's type-check catches.
+    fn counts(
+        d: &mut IntDev<'_>,
+        deep_ab: ExprId,
+        deep_ac: ExprId,
+        deep_cb: ExprId,
+        m_ac0: ExprId,
+        m_cb0: ExprId,
+        big_n: ExprId,
+    ) -> (ExprId, ExprId, ExprId) {
+        let t1 = NatOps::add(d, deep_ab, deep_ac);
+        let t2 = NatOps::add(d, t1, deep_cb);
+        let k = NatOps::add(d, t2, big_n);
+        let (m_ac, _) = succ_mul_succ(d, m_ac0, k);
+        let (m_cb, _) = succ_mul_succ(d, m_cb0, k);
+        let succ_m_ac = d.succ(m_ac);
+        let combined = NatOps::add(d, succ_m_ac, m_cb);
+        (m_ac, m_cb, combined)
+    }
+
+    /// The `[a, b]` leg's existence claim (`∃ depth_ab, deep_ab + depth_ab =
+    /// combined`), symbolic in all six inputs, closed into a real `Theorem`
+    /// universally quantified over them — the same wrapping
+    /// [`mesh_count_align_tests`]'s own positive control uses, and for the
+    /// same reason (`Kernel::infer` on the unwrapped proof rejects the six as
+    /// `UnboundFVar`). Confirms the proof is accepted by
+    /// `Kernel::add_declaration`, not merely by `cargo check`.
+    #[test]
+    fn mesh_count_align_mul_proves_the_combined_threshold() {
+        crate::on_a_deep_stack(mesh_count_align_mul_proves_the_combined_threshold_body);
+    }
+
+    fn mesh_count_align_mul_proves_the_combined_threshold_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let nat = d.nat_ty();
+
+        let fvs: Vec<_> = (0..6).map(|_| d.fresh_fvar()).collect();
+        let vars: Vec<ExprId> = fvs.iter().map(|fv| d.kernel().fvar(*fv)).collect();
+        let (deep_ab, deep_ac, deep_cb, m_ac0, m_cb0, big_n) =
+            (vars[0], vars[1], vars[2], vars[3], vars[4], vars[5]);
+
+        let (exp_m_ac, exp_m_cb, combined) =
+            counts(&mut d, deep_ab, deep_ac, deep_cb, m_ac0, m_cb0, big_n);
+
+        let pred = {
+            let j_fv = d.fresh_fvar();
+            let j = d.kernel().fvar(j_fv);
+            let sum = NatOps::add(&mut d, deep_ab, j);
+            let body = d.eq(sum, combined);
+            d.lam_fv(j_fv, nat, body)
+        };
+        let target = exists_ty(&mut d, p, nat, pred);
+        // The struct's REPORTED counts must be the same terms the proof is
+        // about; a helper that proved the threshold for one `combined` while
+        // handing the caller a different one would pass the kernel check and
+        // still be unusable, so this is asserted rather than assumed.
+        let build = |d: &mut IntDev<'_>, m: MeshAlignMul| -> ExprId {
+            assert_eq!(m.m_ac, exp_m_ac, "reported m_ac must be the scaled count");
+            assert_eq!(m.m_cb, exp_m_cb, "reported m_cb must be the scaled count");
+            assert_eq!(
+                m.combined, combined,
+                "reported combined must be `add (succ m_ac) m_cb`"
+            );
+            exists_intro(d, p, nat, pred, m.depth_ab, m.eq_ab)
+        };
+
+        let proof = mesh_count_align_mul(
+            &mut d, deep_ab, deep_ac, deep_cb, m_ac0, m_cb0, big_n, target, &build,
+        );
+
+        let mut ty = target;
+        let mut value = proof;
+        for fv in fvs.iter().rev() {
+            ty = d.pi_fv(*fv, nat, ty);
+            value = d.lam_fv(*fv, nat, value);
+        }
+
+        let anon = d.kernel().anon();
+        let name = d
+            .kernel()
+            .name_str(anon, "meshCountAlignMulCombinedThresholdSmoke");
+        let result = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(
+            result.is_ok(),
+            "mesh_count_align_mul must prove the [a,b] threshold, closed over all six inputs: {:?}",
+            result.err()
+        );
+    }
+
+    /// The two CHILD legs' existence claims (`∃ depth_ac, deep_ac + depth_ac =
+    /// m_ac` and its `cb` mirror), which [`mesh_count_align`] never had to
+    /// prove — it obtained them syntactically by *defining* `m_ac := deep_ac +
+    /// depth_ac`, which is exactly what pins its split ratio at the midpoint.
+    /// A version of [`mesh_count_align_mul`] whose `hle_ac`/`hle_cb` chains
+    /// were wrong would still pass the combined-threshold test above, so this
+    /// is a genuinely separate assertion, not a restatement.
+    #[test]
+    fn mesh_count_align_mul_proves_both_child_thresholds() {
+        crate::on_a_deep_stack(mesh_count_align_mul_proves_both_child_thresholds_body);
+    }
+
+    fn mesh_count_align_mul_proves_both_child_thresholds_body() {
+        for leg in ["ac", "cb"] {
+            let mut kernel = crate::Kernel::new();
+            let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+            let mut d = IntDev::new(&mut kernel, p.rat.int);
+            let nat = d.nat_ty();
+
+            let fvs: Vec<_> = (0..6).map(|_| d.fresh_fvar()).collect();
+            let vars: Vec<ExprId> = fvs.iter().map(|fv| d.kernel().fvar(*fv)).collect();
+            let (deep_ab, deep_ac, deep_cb, m_ac0, m_cb0, big_n) =
+                (vars[0], vars[1], vars[2], vars[3], vars[4], vars[5]);
+
+            let (m_ac, m_cb, _) = counts(&mut d, deep_ab, deep_ac, deep_cb, m_ac0, m_cb0, big_n);
+            let (base, total) = if leg == "ac" {
+                (deep_ac, m_ac)
+            } else {
+                (deep_cb, m_cb)
+            };
+
+            let pred = {
+                let j_fv = d.fresh_fvar();
+                let j = d.kernel().fvar(j_fv);
+                let sum = NatOps::add(&mut d, base, j);
+                let body = d.eq(sum, total);
+                d.lam_fv(j_fv, nat, body)
+            };
+            let target = exists_ty(&mut d, p, nat, pred);
+            let build = |d: &mut IntDev<'_>, m: MeshAlignMul| -> ExprId {
+                let (depth, eq) = if leg == "ac" {
+                    (m.depth_ac, m.eq_ac)
+                } else {
+                    (m.depth_cb, m.eq_cb)
+                };
+                exists_intro(d, p, nat, pred, depth, eq)
+            };
+
+            let proof = mesh_count_align_mul(
+                &mut d, deep_ab, deep_ac, deep_cb, m_ac0, m_cb0, big_n, target, &build,
+            );
+
+            let mut ty = target;
+            let mut value = proof;
+            for fv in fvs.iter().rev() {
+                ty = d.pi_fv(*fv, nat, ty);
+                value = d.lam_fv(*fv, nat, value);
+            }
+
+            let anon = d.kernel().anon();
+            let name = d
+                .kernel()
+                .name_str(anon, "meshCountAlignMulChildThresholdSmoke");
+            let result = d.kernel().add_declaration(Declaration::Theorem {
+                name,
+                uparams: vec![],
+                ty,
+                value,
+            });
+            assert!(
+                result.is_ok(),
+                "mesh_count_align_mul must prove the [{leg}] child threshold: {:?}",
+                result.err()
+            );
+        }
+    }
+
+    /// **The property [`mesh_count_align`] does not have**: the split fraction
+    /// `succ(m_ac) / (combined + 1)` equals the caller's base fraction
+    /// `succ(m_ac0) / (succ(m_ac0) + succ(m_cb0))` at every scale.
+    ///
+    /// Checked by `Kernel::def_eq` on concrete `Nat` literals rather than by
+    /// rendering: `Nat.add`/`Nat.mul` do not reduce in `render_lean`, and a
+    /// textual comparison reported a false mismatch for
+    /// [`mesh_count_align`]'s own concrete test before that was noticed.
+    /// Cross-multiplied to stay inside `Nat` (no rationals in the kernel's
+    /// `Nat`): `succ(m_ac) · (succ(m_ac0) + succ(m_cb0)) = succ(m_ac0) ·
+    /// (combined + 1)`.
+    #[test]
+    fn mesh_count_align_mul_preserves_the_base_ratio_at_every_scale() {
+        crate::on_a_deep_stack(mesh_count_align_mul_preserves_the_base_ratio_at_every_scale_body);
+    }
+
+    fn mesh_count_align_mul_preserves_the_base_ratio_at_every_scale_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+        // (m_ac0, m_cb0) = (0, 3) is a 1:5 split (c at 20% of [a,b]) -- the
+        // FIFTEENTH lane's own worked example, the one the additive scheme
+        // drives to 50%.
+        for (m_ac0_v, m_cb0_v) in [(0u32, 3u32), (2, 5), (4, 1), (9, 90)] {
+            for big_n_v in [0u32, 1, 4, 17] {
+                let deep_ab = d.num(3);
+                let deep_ac = d.num(5);
+                let deep_cb = d.num(7);
+                let m_ac0 = d.num(m_ac0_v);
+                let m_cb0 = d.num(m_cb0_v);
+                let big_n = d.num(big_n_v);
+
+                let (m_ac, _m_cb, combined) =
+                    counts(&mut d, deep_ab, deep_ac, deep_cb, m_ac0, m_cb0, big_n);
+                let succ_m_ac = d.succ(m_ac);
+                let combined_plus = d.succ(combined);
+                let n_ac0 = d.succ(m_ac0);
+                let n_cb0 = d.succ(m_cb0);
+                let base_denom = NatOps::add(&mut d, n_ac0, n_cb0);
+
+                let lhs = NatOps::mul(&mut d, succ_m_ac, base_denom);
+                let rhs = NatOps::mul(&mut d, n_ac0, combined_plus);
+                assert!(
+                    d.kernel().def_eq(lhs, rhs),
+                    "ratio must be preserved at (m_ac0={m_ac0_v}, m_cb0={m_cb0_v}, big_n={big_n_v}): \
+                     succ(m_ac)*(n_ac0+n_cb0) = {} vs n_ac0*(combined+1) = {}",
+                    d.kernel().render_lean(lhs),
+                    d.kernel().render_lean(rhs)
+                );
+            }
+        }
+    }
+
+    /// Negative control for the test above: [`mesh_count_align`]'s ADDITIVE
+    /// counts FAIL that same cross-multiplied identity for a non-1:1 base
+    /// ratio, so the assertion is discriminating rather than an arithmetic
+    /// tautology that any pair of counts would satisfy.
+    #[test]
+    fn additive_mesh_count_align_does_not_preserve_the_base_ratio() {
+        crate::on_a_deep_stack(additive_mesh_count_align_does_not_preserve_the_base_ratio_body);
+    }
+
+    fn additive_mesh_count_align_does_not_preserve_the_base_ratio_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+        // The additive scheme's counts, exactly as `mesh_count_align` builds
+        // them, at the same intended 1:5 base ratio (m_ac0=0, m_cb0=3).
+        let deep_ab = d.num(3);
+        let deep_ac = d.num(5);
+        let deep_cb = d.num(7);
+        let big_n = d.num(17);
+        let m_ac0 = d.num(0);
+        let m_cb0 = d.num(3);
+
+        let depth = NatOps::add(&mut d, deep_ab, big_n);
+        let m_ac = NatOps::add(&mut d, deep_ac, depth);
+        let m_cb = NatOps::add(&mut d, deep_cb, depth);
+        let succ_m_ac = d.succ(m_ac);
+        let combined = NatOps::add(&mut d, succ_m_ac, m_cb);
+        let combined_plus = d.succ(combined);
+        let n_ac0 = d.succ(m_ac0);
+        let n_cb0 = d.succ(m_cb0);
+        let base_denom = NatOps::add(&mut d, n_ac0, n_cb0);
+
+        let lhs = NatOps::mul(&mut d, succ_m_ac, base_denom);
+        let rhs = NatOps::mul(&mut d, n_ac0, combined_plus);
+        assert!(
+            !d.kernel().def_eq(lhs, rhs),
+            "the ADDITIVE scheme must NOT preserve a 1:5 base ratio -- if it does, \
+             the positive ratio test above proves nothing"
+        );
+    }
+}
+
 // --- the declarations ---------------------------------------------------------
 
 /// `CReal.riemannSum (f : CReal -> CReal) (a b : CReal) (m : Nat) : CReal :=
