@@ -5302,8 +5302,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         exp_term_one_eq_one: kernel.name_str(creal, "expTerm_one_eq_one"),
         mul_pow_congr: kernel.name_str(creal, "mulPowCongr"),
         evt_linear: kernel.name_str(creal, "evtLinear"),
-        evt_attained_max_decides_sign: kernel
-            .name_str(creal, "evt_attained_max_decides_sign"),
+        evt_attained_max_decides_sign: kernel.name_str(creal, "evt_attained_max_decides_sign"),
     }
 }
 

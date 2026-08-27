@@ -120,6 +120,7 @@ use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::{IntDev, exists_elim};
+use crate::nat_prelude::NatOps;
 
 /// Admit `CReal.evtLinear` and `CReal.evt_attained_max_decides_sign`.
 ///
@@ -477,8 +478,10 @@ fn declare_evt_attained_max_decides_sign(
                     ],
                 );
                 let refl_lhs = d.lemma(p.equiv_refl, &[lhs]);
-                let shifted =
-                    d.lemma(p.le_congr, &[lhs, lhs, rhs, v_zero, refl_lhs, rhs_eq2, widened]);
+                let shifted = d.lemma(
+                    p.le_congr,
+                    &[lhs, lhs, rhs, v_zero, refl_lhs, rhs_eq2, widened],
+                );
                 // shifted : le (add v kv) (add v zero)
 
                 // Cancel the common `v`: add (−v) to both sides.
