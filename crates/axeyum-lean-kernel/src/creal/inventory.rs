@@ -66,6 +66,7 @@ mod ratio_test;
 mod series;
 mod speedup;
 mod sqrt;
+mod supremum;
 mod trig;
 mod trig_fn;
 mod uniform_continuity;
@@ -109,6 +110,7 @@ pub(crate) fn all_entries(
     all.extend(series::entries(p));
     all.extend(speedup::entries(p));
     all.extend(sqrt::entries(p));
+    all.extend(supremum::entries(p));
     all.extend(trig::entries(p));
     all.extend(trig_fn::entries(p));
     all.extend(uniform_continuity::entries(p));
