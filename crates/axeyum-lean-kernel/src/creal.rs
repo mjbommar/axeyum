@@ -4306,6 +4306,34 @@ pub struct CRealPrelude {
     /// `riemannSum_le_on` at `l(n)` supplies `converges_le`'s pointwise
     /// hypothesis directly. See `creal/integral.rs`'s `declare_integral_le`.
     pub integral_le: NameId,
+    /// `CReal.integral_split : ∀ F a b (m_ac0 m_cb0 : Nat) (hab : le a b)
+    /// (u : UniformlyContinuousOn F a b) (hac : le a c) (hcb : le c b)
+    /// (uac : UniformlyContinuousOn F a c) (ucb : UniformlyContinuousOn F c b),
+    /// Equiv (integral F a b hab u)
+    ///       (add (integral F a c hac uac) (integral F c b hcb ucb))`,
+    /// where `c := add a (mul (ofNat (succ m_ac0)) (delta_of a b (add (succ
+    /// m_ac0) m_cb0)))`.
+    ///
+    /// **Additivity over a split interval** — the law seventeen lanes worked
+    /// on. `c` is not universally quantified: it is the base split point of
+    /// the caller's rational proportion `succ m_ac0 : succ m_cb0`, because
+    /// [`Self::riemann_sum_split_scale_invariant`] proves `Equiv c_k c_0` for
+    /// the `succ_mul_succ` mesh family and for no other, so a free `c` has
+    /// nothing to be `Equiv` to. Every rational proportion is reachable
+    /// (`m_ac0`/`m_cb0` are free `Nat`s); the midpoint is `m_ac0 = m_cb0`.
+    ///
+    /// Route — no rational estimate is done by hand at this level at all.
+    /// Each of the three intervals gets a `Converges` fact at a mesh family
+    /// scaled by one common factor (`integral.rs`'s `leg_converges`, over
+    /// `mesh_count_align_mul_bounds`); [`Self::converges_add`] combines the
+    /// two children; the split identity restated at `c`
+    /// (`split_identity_at_equiv_point`, over
+    /// [`Self::riemann_sum_split_exact_of_uc`] and
+    /// `riemann_sum_congr_endpoints`) is APPLIED at each index, `Equiv` being
+    /// exactly the per-index `Within` at `2/(n+1)`; [`Self::converges_of_close`]
+    /// transports at `Kc := 2` and [`Self::converges_unique`] closes. See
+    /// `creal/integral.rs`'s `declare_integral_split`.
+    pub integral_split: NameId,
     /// `CReal.integral_scale : ∀ c F a b hab uF ucF, Equiv (CReal.integral
     /// (fun t => mul c (F t)) a b hab ucF) (mul c (CReal.integral F a b hab
     /// uF))`.
@@ -5371,6 +5399,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         integral_witness_independent: kernel.name_str(creal, "integral_witness_independent"),
         integral_add: kernel.name_str(creal, "integral_add"),
         integral_le: kernel.name_str(creal, "integral_le"),
+        integral_split: kernel.name_str(creal, "integral_split"),
         integral_scale: kernel.name_str(creal, "integral_scale"),
         riemann_sum_integral_close: kernel.name_str(creal, "riemannSum_integral_close"),
         riemann_sum_split_exact: kernel.name_str(creal, "riemannSum_split_exact"),
@@ -8250,6 +8279,42 @@ const STEPS: &[BuildStep] = &[
         ],
         provides: &[|p: CRealPrelude| p.riemann_sum_split_exact_of_uc],
         run: integral::declare_riemann_sum_split_exact_of_uc,
+    },
+    BuildStep {
+        label: "integral::declare_integral_split",
+        requires: &[
+            |p: CRealPrelude| p.add,
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.bound,
+            |p: CRealPrelude| p.bound_within,
+            |p: CRealPrelude| p.congr_of_uniformly_continuous,
+            |p: CRealPrelude| p.converges_add,
+            |p: CRealPrelude| p.converges_of_close,
+            |p: CRealPrelude| p.converges_unique,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.integral,
+            |p: CRealPrelude| p.integral_converges,
+            |p: CRealPrelude| p.le,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.mul,
+            |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.of_nat,
+            |p: CRealPrelude| p.riemann_sample_in_bounds,
+            |p: CRealPrelude| p.riemann_sum,
+            |p: CRealPrelude| p.riemann_sum_deep_cauchy_folded,
+            |p: CRealPrelude| p.riemann_sum_shared_accuracy_close,
+            |p: CRealPrelude| p.riemann_sum_split_exact_of_uc,
+            |p: CRealPrelude| p.riemann_sum_split_scale_invariant,
+            |p: CRealPrelude| p.riemann_sum_total_eps_le,
+            |p: CRealPrelude| p.uc_modulus,
+            |p: CRealPrelude| p.uniformly_continuous_on,
+        ],
+        provides: &[|p: CRealPrelude| p.integral_split],
+        run: integral::declare_integral_split,
     },
     BuildStep {
         label: "derivative::declare_has_derivative_integral_const",

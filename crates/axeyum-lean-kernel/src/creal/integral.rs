@@ -18475,6 +18475,101 @@ fn integral_split_proof(
     )
 }
 
+/// Admit `CReal.integral_split`. See this section's own module documentation
+/// for the route and for why `c` is the base split point rather than a free
+/// `CReal`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_integral_split(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let f_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let mac0_fv = d.fresh_fvar();
+    let m_ac0 = d.kernel().fvar(mac0_fv);
+    let mcb0_fv = d.fresh_fvar();
+    let m_cb0 = d.kernel().fvar(mcb0_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+
+    let c = split_point_base(d, p, a, b, m_ac0, m_cb0);
+
+    let hac_ty = cle(d, p, a, c);
+    let hac_fv = d.fresh_fvar();
+    let hac = d.kernel().fvar(hac_fv);
+    let hcb_ty = cle(d, p, c, b);
+    let hcb_fv = d.fresh_fvar();
+    let hcb = d.kernel().fvar(hcb_fv);
+    let uac_ty = d.const_app(p.uniformly_continuous_on, &[f, a, c]);
+    let uac_fv = d.fresh_fvar();
+    let uac = d.kernel().fvar(uac_fv);
+    let ucb_ty = d.const_app(p.uniformly_continuous_on, &[f, c, b]);
+    let ucb_fv = d.fresh_fvar();
+    let ucb = d.kernel().fvar(ucb_fv);
+
+    let proof = integral_split_proof(d, p, f, a, b, m_ac0, m_cb0, hab, u, hac, hcb, uac, ucb);
+
+    let integral_ab = d.const_app(p.integral, &[f, a, b, hab, u]);
+    let integral_ac = d.const_app(p.integral, &[f, a, c, hac, uac]);
+    let integral_cb = d.const_app(p.integral, &[f, c, b, hcb, ucb]);
+    let rhs = cadd(d, p, integral_ac, integral_cb);
+    let concl = equiv(d, p, integral_ab, rhs);
+
+    // `concl` mentions every hypothesis (through the three `integral`
+    // applications), so ALL of them bind with `pi_fv`, never `d.arrow` -- the
+    // trap `declare_integral_const`'s own doc comment names.
+    let ty = {
+        let t = d.pi_fv(ucb_fv, ucb_ty, concl);
+        let t = d.pi_fv(uac_fv, uac_ty, t);
+        let t = d.pi_fv(hcb_fv, hcb_ty, t);
+        let t = d.pi_fv(hac_fv, hac_ty, t);
+        let t = d.pi_fv(u_fv, u_ty, t);
+        let t = d.pi_fv(hab_fv, hab_ty, t);
+        let t = d.pi_fv(mcb0_fv, nat, t);
+        let t = d.pi_fv(mac0_fv, nat, t);
+        let t = d.pi_fv(b_fv, carrier, t);
+        let t = d.pi_fv(a_fv, carrier, t);
+        d.pi_fv(f_fv, f_ty, t)
+    };
+    let value = {
+        let v = d.lam_fv(ucb_fv, ucb_ty, proof);
+        let v = d.lam_fv(uac_fv, uac_ty, v);
+        let v = d.lam_fv(hcb_fv, hcb_ty, v);
+        let v = d.lam_fv(hac_fv, hac_ty, v);
+        let v = d.lam_fv(u_fv, u_ty, v);
+        let v = d.lam_fv(hab_fv, hab_ty, v);
+        let v = d.lam_fv(mcb0_fv, nat, v);
+        let v = d.lam_fv(mac0_fv, nat, v);
+        let v = d.lam_fv(b_fv, carrier, v);
+        let v = d.lam_fv(a_fv, carrier, v);
+        d.lam_fv(f_fv, f_ty, v)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.integral_split,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 #[cfg(test)]
 mod integral_split_tests {
     use super::*;
@@ -18518,6 +18613,15 @@ mod integral_split_tests {
         let u = d.kernel().fvar(u_fv);
 
         let c = split_point_base(&mut d, p, a, b, m_ac0, m_cb0);
+
+        // Non-vacuity, aimed at the FIFTEENTH lane's worry that the reachable
+        // stratum is bisection-only: the split point must genuinely depend on
+        // the proportion, so transposing it must give a DIFFERENT `CReal`.
+        let c_transposed = split_point_base(&mut d, p, a, b, m_cb0, m_ac0);
+        assert_ne!(
+            c, c_transposed,
+            "the split point must depend on the proportion, not be the midpoint"
+        );
 
         let hac_ty = cle(&mut d, p, a, c);
         let hac_fv = d.fresh_fvar();

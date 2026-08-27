@@ -9821,6 +9821,7 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "integral::declare_riemann_sum_split_scale_invariant",
     "integral::declare_congr_of_uniformly_continuous",
     "integral::declare_riemann_sum_split_exact_of_uc",
+    "integral::declare_integral_split",
     "derivative::declare_has_derivative_integral_const",
     "inverse_fn::declare_order_reflect_of_pos_deriv",
     "monotone::declare_inverse_lipschitz_of_pos_deriv",
