@@ -87,6 +87,7 @@ mod normalforms;
 pub mod ntheory;
 pub mod ntheory_advanced;
 pub mod ntheory_more;
+pub mod extremum;
 pub mod orthopoly;
 pub mod permutation;
 mod ratint;
