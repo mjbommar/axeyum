@@ -1393,6 +1393,18 @@ Its four authority hashes are retained in the sibling package. Both accepted rep
 now composable into their incomplete ancestors; neither is promoted to a top-level or MC=7
 verdict.
 
+**Third multi-gigabyte S-box subtree accepted, 2026-08-26.** The next sibling replacement
+passes at 1,353,759,260 proof bytes, one split / 32 leaves / 33 nodes, 6:53.92 wall, and
+191,996 KiB peak RSS against another reconstructed 69,839-clause root. Formula, manifest,
+cover, and checker output are hash-bound in the sibling package. This remains subtree-local;
+the adjacent final replacement has completed proof production and entered independent replay.
+
+**Fourth multi-gigabyte S-box subtree accepted, 2026-08-26.** The final targeted replacement
+passes at 1,454,994,044 proof bytes, one split / 32 leaves / 33 nodes, 5:04.57 wall, and
+235,748 KiB peak RSS. Its four authority hashes are retained in the sibling package. Its
+parent remained six terminal leaves short at the same audit, so neither the parent nor any
+higher result is yet claimed.
+
 **Regression replay gate made load-stable, 2026-08-26.** The pre-push sweep failed twice on
 different corpus rows because it ran `solve_smtlib` and its direct
 `solve_smtlib_with_model` source projection sequentially under independent one-second
