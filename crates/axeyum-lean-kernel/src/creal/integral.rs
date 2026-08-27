@@ -977,6 +977,47 @@
 //! bookkeeping as [`bnd_leg_plus_share_le`] (~150 lines) done THREE times and
 //! then combined, plus the final `Nat`-valued choice of `N`/`e_inner`, and
 //! was not attempted in this slice.
+//!
+//! ## `CReal.integral_split` — checked 2026-08-27 (a TWELFTH lane), attempting
+//! the assembly the TENTH lane sized
+//!
+//! Starting point confirmed present: [`CRealPrelude::riemann_sum_shared_accuracy_close_at`],
+//! `total_eps_sample_le_at` (private, this file, generalizes
+//! `total_eps_sample_le` off the shared-index assumption),
+//! [`CRealPrelude::riemann_sum_split_exact_of_uc`],
+//! [`CRealPrelude::riemann_sum_split_scale_invariant`],
+//! [`CRealPrelude::close_within_of_within_indexed`],
+//! [`CRealPrelude::uniformly_continuous_on_restrict`], and
+//! [`CRealPrelude::integral_witness_independent`] all build and their doc
+//! comments confirm the shapes this section names.
+//!
+//! **The mesh-count alignment this lane worked out, not yet built**:
+//! `riemann_sum_integral_close`'s conclusion is valid at mesh count
+//! `deep(e)+depth` for `depth` a FREE `Nat` the caller picks — it is NOT
+//! required to equal `deep(e)+depth` syntactically anywhere else. So rather
+//! than trying to force `riemannSum_split_exact_of_uc`'s `m_ac`/`m_cb` to be
+//! literally `deep_ac(e)+N`/`deep_cb(e)+N` (which would need `Nat.sub` to
+//! recover the matching `[a,b]` depth and hits the truncation trap this
+//! file's own kernel-facts list warns about), the plan is the other
+//! direction: **pick `m_ac := deep_ac(e_inner)+N`, `m_cb := deep_cb(e_inner)+N`
+//! (both FREE choices `riemann_sum_integral_close` allows on `[a,c]`/`[c,b]`
+//! directly), let `combined := add (succ m_ac) m_cb` be WHATEVER `Nat`
+//! expression that produces, and transport `riemann_sum_integral_close`'s
+//! `[a,b]` conclusion — stated at `deep_ab(e_inner)+depth_ab` for a `depth_ab`
+//! chosen to make `deep_ab(e_inner)+depth_ab = combined` a PROPOSITIONAL
+//! (not definitional) `Nat` equality — across that equality via
+//! `nat_rewrite_prop`**, the same idiom [`declare_of_nat_le`] already uses to
+//! avoid needing definitional equality of two independently-built `Nat`
+//! sums. `hac`/`hcb`/`c` for this specific `(m_ac, m_cb)` reuse
+//! [`declare_riemann_sum_split_exact_of_uc`]'s own internal derivation
+//! (`shift_le_of_nonneg`, `zero_le_of_nat`, `cancel_width`), not a
+//! reconstruction from scratch. The final combine is `abs_add_le` (the
+//! triangle inequality) applied twice against the exact split identity
+//! substituted in via `le_congr`, then `equiv_zero_of_small` closes once the
+//! three `riemann_sum_integral_close` bounds and the mesh-alignment slack are
+//! all shown `≤ natDivSucc 1 e` for suitable `N`, `depth_ab` as functions of
+//! `e`. Attempting the build now; this entry is a checkpoint, not a result —
+//! see the next dated entry for the outcome.
 
 use super::completeness::half_shift_le;
 use super::convergence::{
