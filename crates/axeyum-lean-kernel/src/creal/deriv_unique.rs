@@ -466,10 +466,13 @@ fn abs_add_le_local(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -
     d.lemma(p.abs_le, &[s, bound, premise1, premise2])
 }
 
-/// From `h : Equiv (add a (neg b)) zero`, derive `Equiv a b`. Copied
-/// verbatim from `monotone.rs`'s private helper of the same shape (private
-/// to that module).
-fn equiv_of_sub_equiv_zero(
+/// From `h : Equiv (add a (neg b)) zero`, derive `Equiv a b`. Also built
+/// (independently, before this one was widened to `pub(super)`) as
+/// private helpers of the same shape in `creal/monotone.rs` and
+/// `creal/trig_fn.rs` — both out of scope for this refactor (live lanes),
+/// so those two copies remain. `creal/exp_fn.rs` imports this one instead
+/// of keeping its own third copy.
+pub(super) fn equiv_of_sub_equiv_zero(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     a: ExprId,

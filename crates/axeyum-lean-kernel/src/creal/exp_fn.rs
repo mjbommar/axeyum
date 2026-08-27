@@ -117,6 +117,7 @@
 //!   not attempted in the time this slice had.
 
 use super::convergence::{converges_predicate, div_succ_at};
+use super::deriv_unique::equiv_of_sub_equiv_zero;
 use super::trig::{
     cabs, cadd, cle, cmul, cneg, cpow, czero, exp_dominant_cauchy_body_concrete, one_c,
 };
@@ -516,45 +517,6 @@ fn neg_add_self(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
     let comm_symm = esymm(d, p, x_nx, nx_x, comm);
     let cancel = d.lemma(p.add_neg, &[x]);
     echain(d, p, nx_x, &[(x_nx, comm_symm), (zero_c, cancel)])
-}
-
-/// From `h : Equiv (add a (neg b)) zero`, derive `Equiv a b`. Reproduced
-/// (Rust privacy) from `creal/monotone.rs`'s/`creal/deriv_unique.rs`'s
-/// private helper of the same shape.
-fn equiv_of_sub_equiv_zero(
-    d: &mut IntDev<'_>,
-    p: CRealPrelude,
-    a: ExprId,
-    b: ExprId,
-    h: ExprId,
-) -> ExprId {
-    let nb = cneg(d, p, b);
-    let diff = cadd(d, p, a, nb);
-    let lhs = cadd(d, p, diff, b);
-    let zero_c = czero(d, p);
-
-    let a_from_lhs = {
-        let assoc = d.lemma(p.add_assoc, &[a, nb, b]);
-        let nb_b = cadd(d, p, nb, b);
-        let a_nbb = cadd(d, p, a, nb_b);
-        let nas = neg_add_self(d, p, b);
-        let refl_a = erefl(d, p, a);
-        let cong = d.lemma(p.add_congr, &[a, a, nb_b, zero_c, refl_a, nas]);
-        let a_zero = cadd(d, p, a, zero_c);
-        let trim = d.lemma(p.add_zero, &[a]);
-        echain(d, p, lhs, &[(a_nbb, assoc), (a_zero, cong), (a, trim)])
-    };
-    let b_from_lhs = {
-        let refl_b = erefl(d, p, b);
-        let cong = d.lemma(p.add_congr, &[diff, zero_c, b, b, h, refl_b]);
-        let zero_b = cadd(d, p, zero_c, b);
-        let comm = d.lemma(p.add_comm, &[zero_c, b]);
-        let b_zero = cadd(d, p, b, zero_c);
-        let trim = d.lemma(p.add_zero, &[b]);
-        echain(d, p, lhs, &[(zero_b, cong), (b_zero, comm), (b, trim)])
-    };
-    let a_from_lhs_symm = esymm(d, p, lhs, a, a_from_lhs);
-    d.lemma(p.equiv_trans, &[a, lhs, b, a_from_lhs_symm, b_from_lhs])
 }
 
 /// `Equiv (neg (neg x)) x`. Reproduced (Rust privacy) from
