@@ -118,6 +118,65 @@
 //! vs. `riemannSum f a b` plus `riemannSum f b c`), which is false for a
 //! FIXED subinterval count unless the two partitions happen to line up — see
 //! `declare_integral`'s caller for that check.
+//!
+//! ## `CReal.integral_split` — checked 2026-08-26, blocked, with the
+//! `riemannSum` counterexample this doc had only asserted
+//!
+//! Task: settle whether `CReal.integral_split : ∀ F a b c hab hac hcb u uac
+//! ucb, le a c → le c b → Equiv (integral F a b hab u) (add (integral F a c
+//! hac uac) (integral F c b hcb ucb))` is (1) false at the `riemannSum`
+//! level, (2) true and provable for `integral`, or (3) blocked on the same
+//! witness-comparison wall found the same day to block `integral_add` /
+//! `integral_scale` / `integral_le`. **Answer: (1) is confirmed by an exact
+//! counterexample, and (3) holds for `integral` itself — nothing was added.**
+//!
+//! **(1), the `riemannSum` counterexample**, exact rational arithmetic, no
+//! kernel needed: at `m = 0` (`n = 1` subinterval, `Δ = b − a`,
+//! `riemannSum f a b 0 = f(a)·(b − a)`), take `f := id`, `a := 0`, `c := 1`,
+//! `b := 3`. Then `riemannSum id 0 3 0 = 0·3 = 0`, while `riemannSum id 0 1 0
+//! = 0·1 = 0` and `riemannSum id 1 3 0 = 1·2 = 2`, so the parts sum to `2 ≠
+//! 0`. The doc paragraph above was right; this pins it to a checkable
+//! instance.
+//!
+//! **(3), why `integral_split` itself is blocked, precisely**: every
+//! `Equiv`/`Converges` bridge this file has (`declare_integral_const` is the
+//! template) goes through `CReal.converges_unique : ∀ f L M, Converges f L →
+//! Converges f M → Equiv L M` — both `Converges` facts must name the
+//! **syntactically same** sequence `f`. `integral F a b hab u`'s own
+//! sequence is `f_lambda_ab n := riemannSum F a b (deep F a b u n + 0)`
+//! ([`integral_witness`]), tied to `u`'s own modulus. `integral_split`
+//! states three INDEPENDENT witnesses `u`, `uac`, `ucb`, so
+//! `CReal.converges_add` gives `Converges (fun n => add (f_lambda_ac n)
+//! (f_lambda_cb n)) (add (integral F a c hac uac) (integral F c b hcb
+//! ucb))`, but that sequence is a different one from `f_lambda_ab`, and
+//! `converges_unique` cannot compare across two different sequences that
+//! merely converge to related values. Closing the gap needs either a
+//! Riemann-sum-vs-true-value estimate through a modulus of continuity (the
+//! same thing the paragraph above already named as missing — bounding how
+//! far `riemannSum F a b m` sits from the limit, independent of which
+//! witness produced `m`), or a direct proof that `CReal.integral`'s VALUE
+//! does not depend on the choice of `UniformlyContinuousOn` witness. Neither
+//! exists in this prelude; **this is one gap, not two** — a witness-
+//! independence proof would itself be built from exactly such an estimate.
+//!
+//! `CReal.sumRange_split` (`series.rs`) does NOT dissolve this: it splits a
+//! sum over `Nat.add m n` INDICES into a sum over `m` plus a shifted sum over
+//! `n` — a fact about one fixed sequence's own index range, not about two
+//! `riemannSum`s built from different intervals and different moduli. It
+//! could only feed a split proof if `c` were forced to land exactly on a
+//! shared partition's grid point, which the general statement (arbitrary
+//! `c`, arbitrary independent `uac`/`ucb`) does not give.
+//!
+//! Checked against `prelude_theorem_inventory --include-constructed --release`
+//! (2026-08-26): no `riemannSum_split`, `integral_split`, `integral_add`, or
+//! any modulus-/witness-independence lemma exists anywhere in the `creal`
+//! prelude; `sumRange_split` and `riemannSum_const` (the positive control)
+//! are both present as named above. Next open goal, precisely: the
+//! Riemann-sum-vs-true-value estimate through a modulus of continuity —
+//! equivalently, `UniformlyContinuousOn`-witness independence of
+//! `CReal.integral`'s value — which a parallel lane is pursuing directly for
+//! `integral_add`/`integral_scale`/`integral_le`; `integral_split` needs the
+//! identical estimate and should not be attempted again before that lands.
 
 use super::completeness::half_shift_le;
 use super::convergence::converges_applied;
