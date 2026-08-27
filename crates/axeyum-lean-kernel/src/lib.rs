@@ -71,6 +71,7 @@ mod prelude;
 pub mod prelude_cache;
 mod quotient;
 mod rat_prelude;
+pub mod shape_index;
 mod stack;
 mod string_prelude;
 mod tc;
