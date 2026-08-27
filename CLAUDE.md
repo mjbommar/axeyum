@@ -1167,6 +1167,43 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   nothing ever required length one. Full retrospective:
   `docs/autogenesis/228-capsule-lane-retrospective.md`.
 
+- **`le_congr`'s PREMISE TAKES THE PRE-SUBSTITUTION TYPE, AND AN `Equiv` PROOF IN
+  A `le` SLOT FAILS IDENTICALLY TO A DIRECTION BUG.** Measured across 2026-08-26.
+  Eleven separate rejections in one session came from this family, in six
+  different files, and every one presented as an opaque `TypeMismatch`:
+
+  - `le_congr(x, x', y, y', hxx', hyy', h)` needs `h : le x y` — the type
+    **before** the rewrite. A lane twice passed a proof about a sub-term where
+    the whole product's bound was needed; the kernel rendered `Equiv A A` (the
+    reflexivity witness for the wrong side) against `A`'s unfolded definition.
+  - The same call needs `Equiv x' x`, not `Equiv x x'`, when `h` is about `x`.
+    Getting `x`/`x'` backwards is the single most common bug in this
+    development.
+  - **`Equiv` and `le` are different props.** Passing `equiv_refl` into an
+    `add_le_add` slot that wants `le_refl` produces a failure indistinguishable
+    from either of the above.
+
+  Three habits that actually work, each of which produced a first-attempt
+  kernel accept the same day:
+  - **Mirror an existing helper's construction** rather than building a term by
+    hand. Two lanes reported first-attempt accepts from this alone.
+  - **Check a lemma's stated direction rather than assuming it matches its
+    neighbour.** `Rat.sub_add_add`'s direction is the OPPOSITE of
+    `sub_add_sub`'s, in the same file.
+  - When both sides of a `TypeMismatch` are multi-hundred-KB and `Read` cannot
+    load them, **write a small differ**. One lane found a swapped `rsymm` that
+    way in minutes.
+
+- **A SYMBOLIC TEST CAN BE PATHOLOGICAL, AND THE RIGHT MOVE IS TO DELETE IT AND
+  SAY SO.** Measured 2026-08-26: a lane added an extra symbolic negative control
+  that built fvars from a separate `IntDev`; it pegged one core at **10.7 GB RSS
+  for over twelve minutes** before being killed. Not slow — pathological. The
+  lane removed the test, recorded it in the commit message, and did **not**
+  investigate. That is correct: the real verification is `creal_prelude_builds`
+  plus the environment-derived coverage assertion, and a hanging test in the
+  suite is worse than a missing one. If a test behaves this way, delete it,
+  say so, and move on.
+
 - **A CONCRETE WITNESS CAN COST THE KERNEL MORE THAN A SYMBOLIC ONE, and the
   symptom is unbounded WORK rather than a stuck term.** Measured 2026-08-26.
   `declare_e_converges` built its per-`n` proof against the **concrete**
