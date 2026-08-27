@@ -9618,6 +9618,319 @@ fn le_add_nonneg_right(
     rat_eq_rewrite(d, padded, x, trim, widened, &|d, t| rle(d, rat, t, sum))
 }
 
+/// `Π i, Within (sample (add x (neg y)) i) (bound.apply i)` -- the shared-
+/// index closeness hypothesis [`CRealPrelude::shared_index_to_canonical`]
+/// itself takes, factored out here so
+/// [`declare_riemann_sum_shared_accuracy_close_at`] can build the same
+/// hypothesis TYPE twice (once per `y`) without duplicating
+/// [`declare_shared_index_to_canonical`]'s own `h_ty` construction verbatim.
+fn shared_index_hyp_ty(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    bound: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let neg_y = cneg(d, p, y);
+    let t = cadd(d, p, x, neg_y);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let seq_t_i = sample(d, p, t, i);
+    let bound_i = d.apply(bound, &[i]);
+    let claim = within(d, p, seq_t_i, bound_i);
+    d.pi_fv(i_fv, nat, claim)
+}
+
+/// The pure "wiring" step behind [`CRealPrelude::riemann_sum_shared_accuracy_close`]:
+/// two applications of [`CRealPrelude::shared_index_to_canonical`] that
+/// SHARE `l` as `x`'s own sample index, combined via [`chain_within2`] into
+/// one bound on `sample(y1,oi) − sample(y2,oj)`.
+///
+/// **This is the generalization this module's own doc comment (the
+/// "eleventh lane" entry, above [`rat_sub_add_cancel`]) names as missing**:
+/// `riemannSum_sharedAccuracyClose`'s own conclusion used to bake `l :=
+/// common_refinement(m1,m2).0` in as a fixed subterm rather than exposing it
+/// as a free parameter the way `shared_index_to_canonical` exposes `pp`.
+/// Here `l`, `h1`, `h2`, `x`, `y1`, `y2`, `bound1_fn`, `bound2_fn` are all
+/// free parameters -- nothing about `f`, `a`, `b`, `hab`, `u`, `k1`, `k2`, or
+/// `riemannSum_cauchy`/`common_refinement` appears in this function at all.
+/// [`declare_riemann_sum_shared_accuracy_close`] (the specialized version,
+/// which still derives `l`/`h1`/`h2` internally via `riemann_sum_cauchy` +
+/// [`common_refinement`]) now calls this directly, so its own proof is
+/// LITERALLY built by this general construction rather than a hand-copy of
+/// it; [`declare_riemann_sum_shared_accuracy_close_at`] exposes the same
+/// construction as its own kernel-checked theorem, with `l`, `h1`, `h2`
+/// genuinely `Π`-bound rather than internally derived.
+///
+/// Returns `(proof, bound)`, `proof : Within (sub (sample y1 oi) (sample y2
+/// oj)) bound`.
+#[allow(clippy::too_many_arguments)]
+fn shared_accuracy_close_at_proof(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y1: ExprId,
+    y2: ExprId,
+    bound1_fn: ExprId,
+    bound2_fn: ExprId,
+    l: ExprId,
+    h1: ExprId,
+    h2: ExprId,
+    oi: ExprId,
+    oj: ExprId,
+    jj1: ExprId,
+    jj2: ExprId,
+) -> (ExprId, ExprId) {
+    let app1 = d.lemma(
+        p.shared_index_to_canonical,
+        &[x, y1, bound1_fn, h1, l, oi, jj1],
+    );
+    let app2 = d.lemma(
+        p.shared_index_to_canonical,
+        &[x, y2, bound2_fn, h2, l, oj, jj2],
+    );
+
+    let b_val = sample(d, p, x, l);
+    let a_val = sample(d, p, y1, oi);
+    let c_val = sample(d, p, y2, oj);
+
+    let shift_jj1 = shift(d, jj1);
+    let m_l_sj1 = modulus(d, p, l, shift_jj1);
+    let bound1_jj1 = d.apply(bound1_fn, &[jj1]);
+    let m_sj1_oi = modulus(d, p, shift_jj1, oi);
+    let m_l_sj1_plus_bound1 = radd(d, m_l_sj1, bound1_jj1);
+    let bnd1 = radd(d, m_l_sj1_plus_bound1, m_sj1_oi);
+
+    let shift_jj2 = shift(d, jj2);
+    let m_l_sj2 = modulus(d, p, l, shift_jj2);
+    let bound2_jj2 = d.apply(bound2_fn, &[jj2]);
+    let m_sj2_oj = modulus(d, p, shift_jj2, oj);
+    let m_l_sj2_plus_bound2 = radd(d, m_l_sj2, bound2_jj2);
+    let bnd2 = radd(d, m_l_sj2_plus_bound2, m_sj2_oj);
+
+    let app1_symm = within_symm(d, p, b_val, a_val, bnd1, app1);
+    let final_proof = chain_within2(d, p, a_val, b_val, c_val, bnd1, bnd2, app1_symm, app2);
+
+    let final_bound = radd(d, bnd1, bnd2);
+    (final_proof, final_bound)
+}
+
+/// `CReal.riemannSum_sharedAccuracyClose_at`. See
+/// [`shared_accuracy_close_at_proof`]'s own doc comment for the full
+/// generalization this exposes at the kernel level: `l` (the shared
+/// mid-anchor sample index) and the two closeness hypotheses `h1`/`h2` are
+/// genuinely `Π`-bound parameters here, not internally derived from
+/// `riemann_sum_cauchy`/`common_refinement` the way
+/// [`CRealPrelude::riemann_sum_shared_accuracy_close`] derives them.
+///
+/// `CReal.riemannSum_sharedAccuracyClose_at : ∀ (x y1 y2 : CReal) (bound1
+/// bound2 : Nat → Rat) (l : Nat), (∀ i, Within (sample (x − y1) i) (bound1
+/// i)) → (∀ i, Within (sample (x − y2) i) (bound2 i)) → ∀ oi oj jj1 jj2,
+/// Within (sample y1 oi − sample y2 oj) (bnd1(l,jj1,oi,bound1) +
+/// bnd2(l,jj2,oj,bound2))`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_riemann_sum_shared_accuracy_close_at(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let rat = rat_ty(d);
+    let bound_ty = d.arrow(nat, rat);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y1_fv = d.fresh_fvar();
+    let y1 = d.kernel().fvar(y1_fv);
+    let y2_fv = d.fresh_fvar();
+    let y2 = d.kernel().fvar(y2_fv);
+    let bound1_fv = d.fresh_fvar();
+    let bound1 = d.kernel().fvar(bound1_fv);
+    let bound2_fv = d.fresh_fvar();
+    let bound2 = d.kernel().fvar(bound2_fv);
+    let l_fv = d.fresh_fvar();
+    let l = d.kernel().fvar(l_fv);
+
+    let h1_ty = shared_index_hyp_ty(d, p, x, y1, bound1);
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let h2_ty = shared_index_hyp_ty(d, p, x, y2, bound2);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+
+    let oi_fv = d.fresh_fvar();
+    let oi = d.kernel().fvar(oi_fv);
+    let oj_fv = d.fresh_fvar();
+    let oj = d.kernel().fvar(oj_fv);
+    let jj1_fv = d.fresh_fvar();
+    let jj1 = d.kernel().fvar(jj1_fv);
+    let jj2_fv = d.fresh_fvar();
+    let jj2 = d.kernel().fvar(jj2_fv);
+
+    let (final_proof, final_bound) = shared_accuracy_close_at_proof(
+        d, p, x, y1, y2, bound1, bound2, l, h1, h2, oi, oj, jj1, jj2,
+    );
+
+    let a_val = sample(d, p, y1, oi);
+    let c_val = sample(d, p, y2, oj);
+    let diff = rsub(d, p.rat, a_val, c_val);
+    let concl_ty = within(d, p, diff, final_bound);
+
+    let ty = {
+        let after_jj2 = d.pi_fv(jj2_fv, nat, concl_ty);
+        let after_jj1 = d.pi_fv(jj1_fv, nat, after_jj2);
+        let after_oj = d.pi_fv(oj_fv, nat, after_jj1);
+        let after_oi = d.pi_fv(oi_fv, nat, after_oj);
+        let after_h2 = d.arrow(h2_ty, after_oi);
+        let after_h1 = d.arrow(h1_ty, after_h2);
+        let after_l = d.pi_fv(l_fv, nat, after_h1);
+        let after_bound2 = d.pi_fv(bound2_fv, bound_ty, after_l);
+        let after_bound1 = d.pi_fv(bound1_fv, bound_ty, after_bound2);
+        let after_y2 = d.pi_fv(y2_fv, carrier, after_bound1);
+        let after_y1 = d.pi_fv(y1_fv, carrier, after_y2);
+        d.pi_fv(x_fv, carrier, after_y1)
+    };
+    let value = {
+        let with_jj2 = d.lam_fv(jj2_fv, nat, final_proof);
+        let with_jj1 = d.lam_fv(jj1_fv, nat, with_jj2);
+        let with_oj = d.lam_fv(oj_fv, nat, with_jj1);
+        let with_oi = d.lam_fv(oi_fv, nat, with_oj);
+        let with_h2 = d.lam_fv(h2_fv, h2_ty, with_oi);
+        let with_h1 = d.lam_fv(h1_fv, h1_ty, with_h2);
+        let with_l = d.lam_fv(l_fv, nat, with_h1);
+        let with_bound2 = d.lam_fv(bound2_fv, bound_ty, with_l);
+        let with_bound1 = d.lam_fv(bound1_fv, bound_ty, with_bound2);
+        let with_y2 = d.lam_fv(y2_fv, carrier, with_bound1);
+        let with_y1 = d.lam_fv(y1_fv, carrier, with_y2);
+        d.lam_fv(x_fv, carrier, with_y1)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.riemann_sum_shared_accuracy_close_at,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+#[cfg(test)]
+mod riemann_sum_shared_accuracy_close_at_tests {
+    use super::*;
+
+    /// **Reproduces the specialization.** [`declare_riemann_sum_shared_accuracy_close`]
+    /// now builds its own proof by calling
+    /// [`shared_accuracy_close_at_proof`] -- the SAME construction
+    /// [`CRealPrelude::riemann_sum_shared_accuracy_close_at`] exposes with
+    /// `l`/`h1`/`h2` genuinely `Π`-bound. This test re-derives `l`, `h1`,
+    /// `h2`, `bound1_fn`, `bound2_fn` EXTERNALLY, at genuinely FREE `f`, `a`,
+    /// `b`, `e`, `k1`, `k2`, `hab`, `u` (never concrete literals -- the
+    /// load-bearing case, since a concrete instantiation could paper over a
+    /// wrong `Nat.mul_comm`/reassociation the way [`common_refinement`]'s
+    /// own test module documents), then applies BOTH the specialized
+    /// theorem and the general `_at` theorem and confirms their conclusion
+    /// types render IDENTICALLY. A "generalization" that cannot reproduce
+    /// its own specialization is wrong.
+    #[test]
+    fn shared_accuracy_close_at_reproduces_shared_accuracy_close() {
+        crate::on_a_deep_stack(shared_accuracy_close_at_reproduces_shared_accuracy_close_body);
+    }
+
+    fn shared_accuracy_close_at_reproduces_shared_accuracy_close_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let nat = d.nat_ty();
+
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+        let k1_fv = d.fresh_fvar();
+        let k1 = d.kernel().fvar(k1_fv);
+        let k2_fv = d.fresh_fvar();
+        let k2 = d.kernel().fvar(k2_fv);
+        let hab_fv = d.fresh_fvar();
+        let hab = d.kernel().fvar(hab_fv);
+        let u_fv = d.fresh_fvar();
+        let u = d.kernel().fvar(u_fv);
+        let oi_fv = d.fresh_fvar();
+        let oi = d.kernel().fvar(oi_fv);
+        let oj_fv = d.fresh_fvar();
+        let oj = d.kernel().fvar(oj_fv);
+        let jj1_fv = d.fresh_fvar();
+        let jj1 = d.kernel().fvar(jj1_fv);
+        let jj2_fv = d.fresh_fvar();
+        let jj2 = d.kernel().fvar(jj2_fv);
+
+        // Reproduce `declare_riemann_sum_shared_accuracy_close`'s own
+        // derivation of `l`, `h1`, `h2`, `bound1_fn`, `bound2_fn` -- see that
+        // function's own body for the identical sequence.
+        let deep = deep_at(&mut d, p, f, a, b, u, e);
+        let m1 = NatOps::add(&mut d, deep, k1);
+        let m2 = NatOps::add(&mut d, deep, k2);
+
+        let h1 = d.lemma(p.riemann_sum_cauchy, &[f, a, b, e, m2, k1, hab, u]);
+        let h2_raw = d.lemma(p.riemann_sum_cauchy, &[f, a, b, e, m1, k2, hab, u]);
+        let (l, l2, l2_eq_l) = common_refinement(&mut d, m1, m2);
+        let h2 = {
+            let rsum_m2_for_motive = rsum(&mut d, p, f, a, b, m2);
+            let neg_rsum_m2_for_motive = cneg(&mut d, p, rsum_m2_for_motive);
+            nat_rewrite_prop(&mut d, l2, l, l2_eq_l, h2_raw, &|d, x| {
+                let rsum_x = rsum(d, p, f, a, b, x);
+                let t = cadd(d, p, rsum_x, neg_rsum_m2_for_motive);
+                let i_fv = d.fresh_fvar();
+                let i = d.kernel().fvar(i_fv);
+                let seq_t_i = sample(d, p, t, i);
+                let bound_i = shared_accuracy_bound(d, p, a, b, e, m2, i);
+                let claim = within(d, p, seq_t_i, bound_i);
+                d.pi_fv(i_fv, nat, claim)
+            })
+        };
+
+        let rsum_l = rsum(&mut d, p, f, a, b, l);
+        let rsum_m1 = rsum(&mut d, p, f, a, b, m1);
+        let rsum_m2 = rsum(&mut d, p, f, a, b, m2);
+        let bound1_fn = shared_accuracy_bound_fn(&mut d, p, a, b, e, m1);
+        let bound2_fn = shared_accuracy_bound_fn(&mut d, p, a, b, e, m2);
+
+        let specialized = d.lemma(
+            p.riemann_sum_shared_accuracy_close,
+            &[f, a, b, e, k1, k2, hab, u, oi, oj, jj1, jj2],
+        );
+        let general = d.lemma(
+            p.riemann_sum_shared_accuracy_close_at,
+            &[
+                rsum_l, rsum_m1, rsum_m2, bound1_fn, bound2_fn, l, h1, h2, oi, oj, jj1, jj2,
+            ],
+        );
+
+        let specialized_ty = d
+            .kernel()
+            .infer(specialized)
+            .expect("riemann_sum_shared_accuracy_close application must type-check");
+        let general_ty = d
+            .kernel()
+            .infer(general)
+            .expect("riemann_sum_shared_accuracy_close_at application must type-check");
+
+        assert_eq!(
+            d.kernel().render_lean(specialized_ty),
+            d.kernel().render_lean(general_ty),
+            "riemann_sum_shared_accuracy_close_at at the previously-baked (l, h1, h2) \
+             must reproduce riemann_sum_shared_accuracy_close's own conclusion"
+        );
+    }
+}
+
 /// `CReal.riemannSum_sharedAccuracyClose`. See
 /// [`CRealPrelude::riemann_sum_shared_accuracy_close`] for the full
 /// statement and exactly what this is -- and is not yet -- toward
@@ -9704,37 +10017,19 @@ pub(super) fn declare_riemann_sum_shared_accuracy_close(
     let bound1_fn = shared_accuracy_bound_fn(d, p, a, b, e, m1);
     let bound2_fn = shared_accuracy_bound_fn(d, p, a, b, e, m2);
 
-    let app1 = d.lemma(
-        p.shared_index_to_canonical,
-        &[rsum_l, rsum_m1, bound1_fn, h1, l, oi, jj1],
-    );
-    let app2 = d.lemma(
-        p.shared_index_to_canonical,
-        &[rsum_l, rsum_m2, bound2_fn, h2, l, oj, jj2],
+    // The wiring from here on (two `shared_index_to_canonical` applications
+    // sharing `l` as `x`'s own sample index, combined via `chain_within2`)
+    // is fully general in `l`/`h1`/`h2` -- see
+    // [`shared_accuracy_close_at_proof`]'s own doc comment for why it is
+    // factored out rather than inlined here, and
+    // [`CRealPrelude::riemann_sum_shared_accuracy_close_at`] for the
+    // kernel-visible theorem exposing that generality directly.
+    let (final_proof, final_bound) = shared_accuracy_close_at_proof(
+        d, p, rsum_l, rsum_m1, rsum_m2, bound1_fn, bound2_fn, l, h1, h2, oi, oj, jj1, jj2,
     );
 
-    let b_val = sample(d, p, rsum_l, l);
     let a_val = sample(d, p, rsum_m1, oi);
     let c_val = sample(d, p, rsum_m2, oj);
-
-    let shift_jj1 = shift(d, jj1);
-    let m_l_sj1 = modulus(d, p, l, shift_jj1);
-    let bound1_jj1 = d.apply(bound1_fn, &[jj1]);
-    let m_sj1_oi = modulus(d, p, shift_jj1, oi);
-    let m_l_sj1_plus_bound1 = radd(d, m_l_sj1, bound1_jj1);
-    let bnd1 = radd(d, m_l_sj1_plus_bound1, m_sj1_oi);
-
-    let shift_jj2 = shift(d, jj2);
-    let m_l_sj2 = modulus(d, p, l, shift_jj2);
-    let bound2_jj2 = d.apply(bound2_fn, &[jj2]);
-    let m_sj2_oj = modulus(d, p, shift_jj2, oj);
-    let m_l_sj2_plus_bound2 = radd(d, m_l_sj2, bound2_jj2);
-    let bnd2 = radd(d, m_l_sj2_plus_bound2, m_sj2_oj);
-
-    let app1_symm = within_symm(d, p, b_val, a_val, bnd1, app1);
-    let final_proof = chain_within2(d, p, a_val, b_val, c_val, bnd1, bnd2, app1_symm, app2);
-
-    let final_bound = radd(d, bnd1, bnd2);
     let diff = rsub(d, p.rat, a_val, c_val);
     let concl_ty = within(d, p, diff, final_bound);
 
@@ -10296,6 +10591,45 @@ fn fuse_nds(
     (sum, eq)
 }
 
+/// `Rat.le (sample(totalEps(a,b,e,m), n)) (radd(natDivSucc(magnitude,e),
+/// natDivSucc(2,n)))` -- the INDEPENDENT-index generalization of
+/// [`total_eps_sample_le`]: `e` (the accuracy `totalEps` and `bound_rat` are
+/// BUILT from) and `n` (the raw index the resulting `CReal.le` proof term is
+/// APPLIED at) are two free parameters, never assumed equal. This is the
+/// generalization this module's own doc comment (the "eleventh lane" entry,
+/// just above [`rat_sub_add_cancel`]) names as needed before an
+/// `integral_split` assembly can combine three sub-intervals' bounds at
+/// independently chosen accuracies -- "mechanical, not new mathematics",
+/// since [`CRealPrelude::le`]'s underlying proof term can be `d.apply`'d at
+/// ANY raw `Nat` index regardless of which index built the witness (the
+/// SAME transparency [`one_sided_two_index`]'s own two-index generalization
+/// of `uniform_convergence.rs`'s `one_sided_via_samples` already relies on).
+///
+/// [`total_eps_sample_le`] is now this function's `n := e` specialization
+/// (see that function's own body); `bnd_leg_plus_share_le`, its one existing
+/// caller, is unaffected -- it still calls [`total_eps_sample_le`] at a
+/// single shared index, unchanged.
+#[allow(clippy::too_many_arguments)]
+fn total_eps_sample_le_at(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    e: ExprId,
+    m: ExprId,
+    magnitude: ExprId,
+    n: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let total_eps = total_eps_of(d, p, a, b, e, m);
+    let bound_rat = nds(d, p, magnitude, e);
+    let t = d.lemma(p.riemann_sum_total_eps_le, &[a, b, e, m]);
+    let applied = d.apply(t, &[n]);
+    let sample_te = sample(d, p, total_eps, n);
+    let two_n = div_succ(d, p, 2, n);
+    d.lemma(rat.le_of_sub_le, &[sample_te, bound_rat, two_n, applied])
+}
+
 /// `Rat.le (sample(totalEps(a,b,idx,m), idx)) (radd(natDivSucc(magnitude,idx),
 /// natDivSucc(2,idx)))`.
 ///
@@ -10309,6 +10643,10 @@ fn fuse_nds(
 /// CReal.mk (fun _ => q) _`) so the applied term's second (subtracted)
 /// sample collapses to the bare rational bound. [`RatPrelude::le_of_sub_le`]
 /// then turns the resulting `u − v ≤ q` into `u ≤ v + q`.
+///
+/// Now [`total_eps_sample_le_at`]'s `n := idx` specialization, kept as a
+/// separate named function (rather than inlined at its one call site) so
+/// [`bnd_leg_plus_share_le`]'s own doc comment can keep naming it directly.
 fn total_eps_sample_le(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -10318,14 +10656,72 @@ fn total_eps_sample_le(
     m: ExprId,
     magnitude: ExprId,
 ) -> ExprId {
-    let rat = p.rat;
-    let total_eps = total_eps_of(d, p, a, b, idx, m);
-    let bound_rat = nds(d, p, magnitude, idx);
-    let t = d.lemma(p.riemann_sum_total_eps_le, &[a, b, idx, m]);
-    let applied = d.apply(t, &[idx]);
-    let sample_te = sample(d, p, total_eps, idx);
-    let two_idx = div_succ(d, p, 2, idx);
-    d.lemma(rat.le_of_sub_le, &[sample_te, bound_rat, two_idx, applied])
+    total_eps_sample_le_at(d, p, a, b, idx, m, magnitude, idx)
+}
+
+#[cfg(test)]
+mod total_eps_sample_le_at_tests {
+    use super::*;
+
+    /// **Reproduces the specialization, and is not vacuously general.**
+    /// [`total_eps_sample_le`] is now defined as [`total_eps_sample_le_at`]'s
+    /// `n := idx` case; confirm the two produce the SAME proof term's type
+    /// at concrete `a := zero, b := one, idx := m := 6` -- the
+    /// discriminating "reproduces the specialization" check this module's
+    /// own generalization standard asks for (mirroring `congruence.rs`'s
+    /// `rederive_abs_congr_matches_hand_built`).
+    ///
+    /// The SAME construction at a genuinely DIFFERENT sample index `n := 3
+    /// != idx` must NOT render identically -- confirming the generalization
+    /// actually depends on `n` (via `sample(total_eps, n)` and
+    /// `natDivSucc(2, n)`), rather than silently ignoring it.
+    #[test]
+    fn total_eps_sample_le_at_reproduces_shared_index_case() {
+        crate::on_a_deep_stack(total_eps_sample_le_at_reproduces_shared_index_case_body);
+    }
+
+    fn total_eps_sample_le_at_reproduces_shared_index_case_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+        let a = d.kernel().const_(p.zero, vec![]);
+        let b = d.kernel().const_(p.one, vec![]);
+        let idx = d.num(6);
+        let m = d.num(6);
+        let n = d.num(3);
+
+        let width = width_of(&mut d, p, a, b);
+        let (_c, magnitude, _width_le) = direct_bound_le(&mut d, p, width);
+
+        let shared = total_eps_sample_le(&mut d, p, a, b, idx, m, magnitude);
+        let shared_via_at = total_eps_sample_le_at(&mut d, p, a, b, idx, m, magnitude, idx);
+        let independent = total_eps_sample_le_at(&mut d, p, a, b, idx, m, magnitude, n);
+
+        let shared_ty = d
+            .kernel()
+            .infer(shared)
+            .expect("total_eps_sample_le's proof must type-check");
+        let shared_via_at_ty = d
+            .kernel()
+            .infer(shared_via_at)
+            .expect("total_eps_sample_le_at at n:=idx must type-check");
+        let independent_ty = d
+            .kernel()
+            .infer(independent)
+            .expect("total_eps_sample_le_at at an independent n must type-check");
+
+        assert_eq!(
+            d.kernel().render_lean(shared_ty),
+            d.kernel().render_lean(shared_via_at_ty),
+            "total_eps_sample_le must reproduce total_eps_sample_le_at's n:=idx case"
+        );
+        assert_ne!(
+            d.kernel().render_lean(shared_ty),
+            d.kernel().render_lean(independent_ty),
+            "total_eps_sample_le_at at an INDEPENDENT n must differ from the shared-index case"
+        );
+    }
 }
 
 /// Folds one side (`idx ∈ {p, q}`) of [`declare_riemann_sum_deep_cauchy`]'s

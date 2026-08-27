@@ -101,6 +101,11 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             "theorem",
         ),
         (
+            "CReal.riemannSum_sharedAccuracyClose_at",
+            p.riemann_sum_shared_accuracy_close_at,
+            "theorem",
+        ),
+        (
             "CReal.riemannSumTotalEpsLe",
             p.riemann_sum_total_eps_le,
             "theorem",
