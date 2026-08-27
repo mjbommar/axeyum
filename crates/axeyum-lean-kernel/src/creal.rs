@@ -5329,6 +5329,63 @@ pub struct CRealPrelude {
     /// `creal/trig_fn.rs`.
     pub cos_fn_wide_uniformly_continuous: NameId,
 
+    // --- general `sin : CReal → CReal` (creal/trig_fn.rs) ---------------------
+    /// `CReal.sinFnTerm : Nat → CReal → CReal := fun k x => mul (sinTerm k)
+    /// (pow x (Nat.add (Nat.add k k) 1))` — the `k`-th power-series term of
+    /// general sine at the point `x`, mirroring [`Self::cos_fn_term`] with
+    /// the ODD exponent `2k+1` `sinTerm`'s own definition already uses
+    /// (`creal/trig.rs::declare_sin_term`). See `creal/trig_fn.rs`.
+    pub sin_fn_term: NameId,
+    /// `CReal.sinFnTerm_congr : ∀ k x y, Equiv x y → Equiv (sinFnTerm k x)
+    /// (sinFnTerm k y)` — [`Self::mul_pow_congr`] applied at the constant
+    /// coefficient function `fun _ => sinTerm k` and exponent `Nat.add
+    /// (Nat.add k k) 1`, mirroring [`Self::cos_fn_term_congr`]. See
+    /// `creal/trig_fn.rs`.
+    pub sin_fn_term_congr: NameId,
+    /// `CReal.sinFnTermAbsLeWide : ∀ x, le zero x → ∀ R, le x R → ∀ k, le
+    /// (abs (sinFnTerm k x)) (mul (expDominant (Nat.add (Nat.add k k) 1))
+    /// (pow R (Nat.add (Nat.add k k) 1)))` — the [`Self::cos_fn_term_abs_le_wide`]
+    /// analogue at the ODD index, via [`Self::exp_term_abs_le_dominant`] at
+    /// `2k+1` (the pre-collapse bound `sin_term_abs_le_dominant`'s own proof
+    /// computes internally, one step before its final collapse to
+    /// `expDominant k` via `exp_dominant_odd_le`) plus
+    /// [`Self::pow_le_pow_of_base_le`]. See `creal/trig_fn.rs`.
+    pub sin_fn_term_abs_le_wide: NameId,
+    /// `CReal.sinDominant16Over25 : Nat → CReal := fun k => mul (ofRat
+    /// (natDivSucc 8 4)) (pow (ofRat (natDivSucc 16 24)) k)` — the
+    /// dominating series for `sinFnTerm` at ratio `16/25`, mirroring
+    /// [`Self::cos_dominant_16_over_25`] but at coefficient `R := 8/5`
+    /// rather than `2`: the extra factor of `x` the odd exponent
+    /// contributes collapses to `half · R = 4/5` at the bridge, and `2 ·
+    /// (4/5) = 8/5 = R` is the coefficient here (verified by the same
+    /// `Rat.normalize_mul_normalize`/`normalize_congr` route
+    /// [`Self::pow_mul_distrib`]'s own bridge already uses, not assumed
+    /// from the numeric coincidence). See `creal/trig_fn.rs`.
+    pub sin_dominant_16_over_25: NameId,
+    /// `CReal.sinDominant16Over25CauchyBody : sum_range_cauchy_body
+    /// (sumRange sinDominant16Over25) K` for a concrete `K` — the raw,
+    /// non-existential Cauchy witness [`Self::weierstrass_m_test`]'s
+    /// `hcauchy` parameter needs, mirroring
+    /// [`Self::cos_dominant_16_over_25_cauchy_body`] with `c := R` in place
+    /// of `c := two`. See `creal/trig_fn.rs`.
+    pub sin_dominant_16_over_25_cauchy_body: NameId,
+    /// `CReal.sinFn : CReal → CReal` — general sine on the domain `[0,
+    /// 8/5]`, by [`Self::weierstrass_m_test`] applied at `f := sinFnTerm`,
+    /// `mseq := sinDominant16Over25`, `a := zero`, `b := ofRat (natDivSucc 8
+    /// 4)`, mirroring [`Self::cos_fn_wide`]. See `creal/trig_fn.rs`.
+    pub sin_fn: NameId,
+    /// `CReal.sinFnUniformConverges : UniformConvergesOn (fun n x =>
+    /// sumRange (fun k => sinFnTerm k x) n) sinFn zero (ofRat (natDivSucc 8
+    /// 4))` — the M-test applied at sine's series, mirroring
+    /// [`Self::cos_fn_wide_uniform_converges`]. See `creal/trig_fn.rs`.
+    pub sin_fn_uniform_converges: NameId,
+    /// `CReal.sinFnUniformlyContinuous : UniformlyContinuousOn sinFn zero
+    /// (ofRat (natDivSucc 8 4))` — mirroring
+    /// [`Self::cos_fn_wide_uniformly_continuous`]'s induction, with
+    /// `sinFnTerm`'s own odd exponent `Nat.add (Nat.add k k) 1` in place of
+    /// `Nat.add k k`. See `creal/trig_fn.rs`.
+    pub sin_fn_uniformly_continuous: NameId,
+
     // --- general `exp : CReal → CReal` (creal/exp_fn.rs) -----------------------
     /// `CReal.expFnTermAbsLe : ∀ x, le zero x → le x one → ∀ k, le (abs
     /// (powerSeriesTerm expTerm k x)) (expDominant k)` — the domination bound
@@ -5992,6 +6049,15 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         cos_fn_wide_uniform_converges: kernel.name_str(creal, "cosFnWideUniformConverges"),
         cos_fn_one_equiv_cos_one: kernel.name_str(creal, "cosFn_one_equiv_cosOne"),
         cos_fn_wide_uniformly_continuous: kernel.name_str(creal, "cosFnWideUniformlyContinuous"),
+        sin_fn_term: kernel.name_str(creal, "sinFnTerm"),
+        sin_fn_term_congr: kernel.name_str(creal, "sinFnTerm_congr"),
+        sin_fn_term_abs_le_wide: kernel.name_str(creal, "sinFnTermAbsLeWide"),
+        sin_dominant_16_over_25: kernel.name_str(creal, "sinDominant16Over25"),
+        sin_dominant_16_over_25_cauchy_body: kernel
+            .name_str(creal, "sinDominant16Over25CauchyBody"),
+        sin_fn: kernel.name_str(creal, "sinFn"),
+        sin_fn_uniform_converges: kernel.name_str(creal, "sinFnUniformConverges"),
+        sin_fn_uniformly_continuous: kernel.name_str(creal, "sinFnUniformlyContinuous"),
         exp_fn_term_abs_le: kernel.name_str(creal, "expFnTermAbsLe"),
         exp_fn: kernel.name_str(creal, "expFn"),
         exp_fn_uniform_converges: kernel.name_str(creal, "expFnUniformConverges"),
@@ -10220,6 +10286,102 @@ const STEPS: &[BuildStep] = &[
         ],
         provides: &[|p: CRealPrelude| p.cos_fn_wide_uniformly_continuous],
         run: trig_fn::declare_cos_fn_wide_uniformly_continuous,
+    },
+    BuildStep {
+        label: "trig_fn::declare_sin_fn_term_family",
+        requires: &[
+            |p: CRealPrelude| p.abs_le,
+            |p: CRealPrelude| p.abs_mul_le_of_bounds,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.exp_dominant,
+            |p: CRealPrelude| p.exp_term,
+            |p: CRealPrelude| p.exp_term_abs_le_dominant,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.mul_comm,
+            |p: CRealPrelude| p.mul_one,
+            |p: CRealPrelude| p.mul_pow_congr,
+            |p: CRealPrelude| p.neg_le_neg,
+            |p: CRealPrelude| p.pow_le_pow_of_base_le,
+            |p: CRealPrelude| p.pow_nonneg,
+            |p: CRealPrelude| p.sin_term,
+        ],
+        provides: &[
+            |p: CRealPrelude| p.sin_fn_term,
+            |p: CRealPrelude| p.sin_fn_term_congr,
+            |p: CRealPrelude| p.sin_fn_term_abs_le_wide,
+        ],
+        run: trig_fn::declare_sin_fn_term_family,
+    },
+    BuildStep {
+        label: "trig_fn::declare_sin_fn_dominant",
+        requires: &[
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.geom_cauchy_ordered_16_over_25,
+            |p: CRealPrelude| p.mul_congr,
+            |p: CRealPrelude| p.mul_sum_range,
+            |p: CRealPrelude| p.of_rat_mul,
+            |p: CRealPrelude| p.sum_range,
+        ],
+        provides: &[
+            |p: CRealPrelude| p.sin_dominant_16_over_25,
+            |p: CRealPrelude| p.sin_dominant_16_over_25_cauchy_body,
+        ],
+        run: trig_fn::declare_sin_fn_dominant,
+    },
+    BuildStep {
+        label: "trig_fn::declare_sin_fn",
+        requires: &[
+            |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.exp_dominant,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.mul_assoc,
+            |p: CRealPrelude| p.mul_congr,
+            |p: CRealPrelude| p.of_rat_le,
+            |p: CRealPrelude| p.of_rat_mul,
+            |p: CRealPrelude| p.pow_add,
+            |p: CRealPrelude| p.pow_congr,
+            |p: CRealPrelude| p.pow_mul_distrib,
+            |p: CRealPrelude| p.sin_dominant_16_over_25,
+            |p: CRealPrelude| p.sin_dominant_16_over_25_cauchy_body,
+            |p: CRealPrelude| p.sin_fn_term,
+            |p: CRealPrelude| p.sin_fn_term_abs_le_wide,
+            |p: CRealPrelude| p.sin_fn_term_congr,
+            |p: CRealPrelude| p.sum_range,
+            |p: CRealPrelude| p.uniform_converges_on,
+            |p: CRealPrelude| p.weierstrass_m_test,
+        ],
+        provides: &[
+            |p: CRealPrelude| p.sin_fn,
+            |p: CRealPrelude| p.sin_fn_uniform_converges,
+        ],
+        run: trig_fn::declare_sin_fn,
+    },
+    BuildStep {
+        label: "trig_fn::declare_sin_fn_uniformly_continuous",
+        requires: &[
+            |p: CRealPrelude| p.bounded_of_uniformly_continuous,
+            |p: CRealPrelude| p.of_rat_le,
+            |p: CRealPrelude| p.pow,
+            |p: CRealPrelude| p.sin_fn,
+            |p: CRealPrelude| p.sin_fn_term,
+            |p: CRealPrelude| p.sin_fn_uniform_converges,
+            |p: CRealPrelude| p.sin_term,
+            |p: CRealPrelude| p.sum_range,
+            |p: CRealPrelude| p.uniform_limit_uniformly_continuous,
+            |p: CRealPrelude| p.uniformly_continuous_add,
+            |p: CRealPrelude| p.uniformly_continuous_const,
+            |p: CRealPrelude| p.uniformly_continuous_id,
+            |p: CRealPrelude| p.uniformly_continuous_mul,
+            |p: CRealPrelude| p.uniformly_continuous_on,
+        ],
+        provides: &[|p: CRealPrelude| p.sin_fn_uniformly_continuous],
+        run: trig_fn::declare_sin_fn_uniformly_continuous,
     },
     BuildStep {
         label: "exp_fn::declare_exp_fn_family",

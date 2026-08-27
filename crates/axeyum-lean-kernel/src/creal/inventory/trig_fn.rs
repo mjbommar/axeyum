@@ -55,5 +55,33 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.cos_fn_wide_uniformly_continuous,
             "theorem",
         ),
+        ("CReal.sinFnTerm", p.sin_fn_term, "def"),
+        ("CReal.sinFnTerm_congr", p.sin_fn_term_congr, "theorem"),
+        (
+            "CReal.sinFnTermAbsLeWide",
+            p.sin_fn_term_abs_le_wide,
+            "theorem",
+        ),
+        (
+            "CReal.sinDominant16Over25",
+            p.sin_dominant_16_over_25,
+            "def",
+        ),
+        (
+            "CReal.sinDominant16Over25CauchyBody",
+            p.sin_dominant_16_over_25_cauchy_body,
+            "theorem",
+        ),
+        ("CReal.sinFn", p.sin_fn, "def"),
+        (
+            "CReal.sinFnUniformConverges",
+            p.sin_fn_uniform_converges,
+            "theorem",
+        ),
+        (
+            "CReal.sinFnUniformlyContinuous",
+            p.sin_fn_uniformly_continuous,
+            "theorem",
+        ),
     ]
 }

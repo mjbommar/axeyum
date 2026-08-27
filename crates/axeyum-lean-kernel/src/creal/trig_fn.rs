@@ -2448,3 +2448,1082 @@ pub(super) fn declare_cos_fn_wide_uniformly_continuous(
         value,
     })
 }
+
+// ============================================================================
+// `CReal.sinFn` — general sine on `[0, 8/5]`, MECHANICALLY PARALLEL to
+// `CReal.cosFnWide` above, per this task's own brief. Every step below is
+// `cos_fn_wide`'s route with `Nat.add k k` (cosine's even exponent) replaced
+// by `Nat.add (Nat.add k k) 1` (`sinTerm`'s own odd exponent,
+// `creal/trig.rs::declare_sin_term`) wherever cosine used the doubled one.
+// The one genuine extra cost, exactly where the task brief predicted it:
+// `wide_bound_bridge`'s analogue ([`sin_wide_bound_bridge`]) needs ONE more
+// step than `wide_bound_bridge` -- an extra `pow_add` split off the odd
+// exponent's trailing `+1`, collapsing to a coefficient `2 · (half · R) =
+// 2 · (4/5) = 8/5 = R` that has to be identified with the literal `R` by
+// the SAME `Rat.normalize_mul_normalize` route `half_r_squared_eq_16_over_25`
+// already uses for ITS OWN squaring step ([`two_y_eq_r_domain`], below).
+// Nothing else in the route differs in shape from `cosFnWide`'s.
+// ============================================================================
+
+/// `Nat.add (Nat.add k k) 1` — `sinTerm`/`sinFnTerm`'s own odd index,
+/// reproduced identically wherever this file needs it (structural hashing
+/// makes every call site's result the same `ExprId`).
+fn odd_index(d: &mut IntDev<'_>, k: ExprId) -> ExprId {
+    let dbl_k = d.add(k, k);
+    let one_nat = d.num(1);
+    d.add(dbl_k, one_nat)
+}
+
+/// `CReal.sinFnTerm : Nat → CReal → CReal := fun k x => mul (sinTerm k) (pow
+/// x (Nat.add (Nat.add k k) 1))` — [`declare_cos_fn_term`]'s analogue at the
+/// ODD exponent `sinTerm` itself already uses.
+fn declare_sin_fn_term(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+
+    let sin_term_c = d.kernel().const_(p.sin_term, vec![]);
+    let sin_term_k = d.apply(sin_term_c, &[k]);
+    let odd_k = odd_index(d, k);
+    let pow_x_odd = cpow(d, p, x, odd_k);
+    let body = cmul(d, p, sin_term_k, pow_x_odd);
+
+    let value = {
+        let with_x = d.lam_fv(x_fv, carrier, body);
+        d.lam_fv(k_fv, nat, with_x)
+    };
+    let ty = {
+        let with_x = d.arrow(carrier, carrier);
+        d.arrow(nat, with_x)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.sin_fn_term,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(COS_FN_TERM_HEIGHT),
+    })
+}
+
+/// `CReal.sinFnTerm_congr : ∀ k x y, Equiv x y → Equiv (sinFnTerm k x)
+/// (sinFnTerm k y)` — [`declare_cos_fn_term_congr`]'s analogue, `mulPowCongr`
+/// applied at the constant coefficient function `fun _ => sinTerm k` and the
+/// ODD exponent `Nat.add (Nat.add k k) 1`.
+fn declare_sin_fn_term_congr(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let heq_ty = equiv(d, p, x, y);
+    let heq_fv = d.fresh_fvar();
+    let heq = d.kernel().fvar(heq_fv);
+
+    let sin_term_c = d.kernel().const_(p.sin_term, vec![]);
+    let sin_term_k = d.apply(sin_term_c, &[k]);
+    let dummy_fv = d.fresh_fvar();
+    let const_fn = d.lam_fv(dummy_fv, nat, sin_term_k);
+    let odd_k = odd_index(d, k);
+
+    let proof = d.lemma(p.mul_pow_congr, &[const_fn, odd_k, x, y, heq]);
+
+    let value = {
+        let with_heq = d.lam_fv(heq_fv, heq_ty, proof);
+        let with_y = d.lam_fv(y_fv, carrier, with_heq);
+        let with_x = d.lam_fv(x_fv, carrier, with_y);
+        d.lam_fv(k_fv, nat, with_x)
+    };
+    let ty = {
+        let sft_k_x = d.const_app(p.sin_fn_term, &[k, x]);
+        let sft_k_y = d.const_app(p.sin_fn_term, &[k, y]);
+        let concl = equiv(d, p, sft_k_x, sft_k_y);
+        let with_heq = d.arrow(heq_ty, concl);
+        let with_y = d.pi_fv(y_fv, carrier, with_heq);
+        let with_x = d.pi_fv(x_fv, carrier, with_y);
+        d.pi_fv(k_fv, nat, with_x)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sin_fn_term_congr,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `le (abs (sinTerm k)) (expDominant (Nat.add (Nat.add k k) 1))` — the
+/// TIGHT, pre-collapse bound `CReal.sinTermAbsLeDominant`'s own proof
+/// computes internally (`creal/trig.rs::declare_sin_term_abs_le_dominant`),
+/// one step before its final `exp_dominant_odd_le` collapse down to
+/// `expDominant k`. [`cos_term_abs_le_dom_double`]'s analogue at the ODD
+/// index rather than the doubled one.
+///
+/// Returns `(expDominant (Nat.add (Nat.add k k) 1), proof)`.
+fn sin_term_abs_le_dom_odd(d: &mut IntDev<'_>, p: CRealPrelude, k: ExprId) -> (ExprId, ExprId) {
+    let one_cc = one_c(d, p);
+    let neg_one = cneg(d, p, one_cc);
+    let sign_k = cpow(d, p, neg_one, k);
+    let sign_abs = sign_abs_le_one(d, p, k);
+
+    let odd_k = odd_index(d, k);
+    let exp_term_c = d.kernel().const_(p.exp_term, vec![]);
+    let e_term = d.apply(exp_term_c, &[odd_k]);
+    let exp_dominant_c = d.kernel().const_(p.exp_dominant, vec![]);
+    let dom_odd = d.apply(exp_dominant_c, &[odd_k]);
+
+    let e_dom_bound = d.lemma(p.exp_term_abs_le_dominant, &[odd_k]);
+    // e_dom_bound : le (abs e_term) dom_odd
+
+    let prod_bound = d.lemma(
+        p.abs_mul_le_of_bounds,
+        &[sign_k, e_term, one_cc, dom_odd, sign_abs, e_dom_bound],
+    );
+    // prod_bound : le (abs (mul sign_k e_term)) (mul one_cc dom_odd)
+
+    let mul_comm_1e = d.lemma(p.mul_comm, &[one_cc, dom_odd]);
+    let mul_one_e = d.lemma(p.mul_one, &[dom_odd]);
+    let mul_one_cc_dom = cmul(d, p, one_cc, dom_odd);
+    let mul_dom_one = cmul(d, p, dom_odd, one_cc);
+    let one_dom_equiv = echain(
+        d,
+        p,
+        mul_one_cc_dom,
+        &[(mul_dom_one, mul_comm_1e), (dom_odd, mul_one_e)],
+    );
+
+    let sin_term_k = cmul(d, p, sign_k, e_term);
+    let abs_sin_term_k = cabs(d, p, sin_term_k);
+    let refl_abs_sin = erefl(d, p, abs_sin_term_k);
+    let abs_sin_le_dom_odd = d.lemma(
+        p.le_congr,
+        &[
+            abs_sin_term_k,
+            abs_sin_term_k,
+            mul_one_cc_dom,
+            dom_odd,
+            refl_abs_sin,
+            one_dom_equiv,
+            prod_bound,
+        ],
+    );
+
+    (dom_odd, abs_sin_le_dom_odd)
+}
+
+/// `CReal.sinFnTermAbsLeWide : ∀ x, le zero x → ∀ R, le x R → ∀ k, le (abs
+/// (sinFnTerm k x)) (mul (expDominant (Nat.add (Nat.add k k) 1)) (pow R
+/// (Nat.add (Nat.add k k) 1)))` — [`declare_cos_fn_term_abs_le_wide`]'s
+/// analogue at the ODD exponent, via [`sin_term_abs_le_dom_odd`] in place of
+/// [`cos_term_abs_le_dom_double`]. Otherwise byte-for-byte the same route:
+/// `0 ≤ x ≤ R` (any `R`) via `le_trans`, base monotonicity
+/// (`pow_le_pow_of_base_le`) plus nonnegativity (`pow_nonneg`) for the two
+/// `abs`/`le` bookkeeping steps, folded by `abs_mul_le_of_bounds`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_sin_fn_term_abs_le_wide(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let zero_c = czero(d, p);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let hax_ty = cle(d, p, zero_c, x);
+    let hax_fv = d.fresh_fvar();
+    let hax = d.kernel().fvar(hax_fv);
+
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let hxr_ty = cle(d, p, x, r);
+    let hxr_fv = d.fresh_fvar();
+    let hxr = d.kernel().fvar(hxr_fv);
+
+    let hr0 = d.lemma(p.le_trans, &[zero_c, x, r, hax, hxr]);
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let odd_k = odd_index(d, k);
+    let pow_x_odd = cpow(d, p, x, odd_k);
+    let pow_r_odd = cpow(d, p, r, odd_k);
+
+    let (dom_odd_k, abs_sin_le_dom_odd) = sin_term_abs_le_dom_odd(d, p, k);
+
+    // pow_x_odd <= pow_r_odd, zero <= pow_r_odd, zero <= pow_x_odd.
+    let pow_bound = d.lemma(p.pow_le_pow_of_base_le, &[x, r, hax, hxr, odd_k]);
+    let pow_r_nonneg = d.lemma(p.pow_nonneg, &[r, hr0, odd_k]);
+    let pow_x_nonneg = d.lemma(p.pow_nonneg, &[x, hax, odd_k]);
+
+    // neg pow_x_odd <= pow_r_odd, via neg pow_x_odd <= neg zero ~ zero <= pow_r_odd.
+    let neg_pow = cneg(d, p, pow_x_odd);
+    let neg_zero = cneg(d, p, zero_c);
+    let step1 = d.lemma(p.neg_le_neg, &[zero_c, pow_x_odd, pow_x_nonneg]); // le neg_pow neg_zero
+    let nz_eq = neg_zero_equiv_here(d, p); // Equiv neg_zero zero_c
+    let refl_neg_pow = d.lemma(p.equiv_refl, &[neg_pow]);
+    let neg_pow_le_zero = d.lemma(
+        p.le_congr,
+        &[
+            neg_pow,
+            neg_pow,
+            neg_zero,
+            zero_c,
+            refl_neg_pow,
+            nz_eq,
+            step1,
+        ],
+    );
+    let neg_pow_le_r = d.lemma(
+        p.le_trans,
+        &[neg_pow, zero_c, pow_r_odd, neg_pow_le_zero, pow_r_nonneg],
+    );
+
+    let abs_pow_le_r = d.lemma(p.abs_le, &[pow_x_odd, pow_r_odd, pow_bound, neg_pow_le_r]);
+
+    // abs (mul (sinTerm k) pow_x_odd) <= mul dom_odd_k pow_r_odd.
+    let sin_term_c = d.kernel().const_(p.sin_term, vec![]);
+    let sin_term_k = d.apply(sin_term_c, &[k]);
+    let mul_bound = d.lemma(
+        p.abs_mul_le_of_bounds,
+        &[
+            sin_term_k,
+            pow_x_odd,
+            dom_odd_k,
+            pow_r_odd,
+            abs_sin_le_dom_odd,
+            abs_pow_le_r,
+        ],
+    );
+
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, mul_bound);
+        let with_hxr = d.lam_fv(hxr_fv, hxr_ty, with_k);
+        let with_r = d.lam_fv(r_fv, carrier, with_hxr);
+        let with_hax = d.lam_fv(hax_fv, hax_ty, with_r);
+        d.lam_fv(x_fv, carrier, with_hax)
+    };
+    let ty = {
+        let sft_k_x = d.const_app(p.sin_fn_term, &[k, x]);
+        let abs_sft = cabs(d, p, sft_k_x);
+        let bound = cmul(d, p, dom_odd_k, pow_r_odd);
+        let concl = cle(d, p, abs_sft, bound);
+        let with_k = d.pi_fv(k_fv, nat, concl);
+        let with_hxr = d.arrow(hxr_ty, with_k);
+        let with_r = d.pi_fv(r_fv, carrier, with_hxr);
+        let with_hax = d.arrow(hax_ty, with_r);
+        d.pi_fv(x_fv, carrier, with_hax)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sin_fn_term_abs_le_wide,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Admit `CReal.sinFnTerm`, `CReal.sinFnTerm_congr` and
+/// `CReal.sinFnTermAbsLeWide` — rung 1 of general sine (the task brief's own
+/// scoping): the series term at a point, its `Equiv`-congruence, and the
+/// odd-exponent domination bound past `[0, 1]`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_sin_fn_term_family(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_sin_fn_term(d, p)?;
+    declare_sin_fn_term_congr(d, p)?;
+    declare_sin_fn_term_abs_le_wide(d, p)
+}
+
+/// `Equiv (pow y (Nat.num 1)) y` — `pow y (succ zero)` ι-reduces to `mul
+/// (pow y zero) y = mul one y` (`CReal.pow`'s own `Nat.rec` definition,
+/// `creal/power.rs::declare_pow`), so this is `mul_comm` + `mul_one`
+/// chained, ascribed against the ι-reduced LHS via the kernel's own defeq
+/// check — this file's "computed, not extracted" convention (see
+/// [`cos_fn_term_uc`]'s own doc comment for the same technique), no
+/// `pow_succ`/`pow_zero` lemma application needed.
+fn pow_one_equiv_here(d: &mut IntDev<'_>, p: CRealPrelude, y: ExprId) -> ExprId {
+    let one_cc = one_c(d, p);
+    let one_nat = d.num(1);
+    let pow_y_one = cpow(d, p, y, one_nat);
+    let mul_y_one = cmul(d, p, y, one_cc);
+    let step_a = d.lemma(p.mul_comm, &[one_cc, y]);
+    let step_b = d.lemma(p.mul_one, &[y]);
+    echain(d, p, pow_y_one, &[(mul_y_one, step_a), (y, step_b)])
+}
+
+/// `(Equiv y (embed q1), q1, n2, e2, h2)`, `y := mul half R`, `q1` computing
+/// to `Rat.normalize (Int.ofNat 4) 5 _` (`n2 := Int.ofNat 4`, `e2 := 5`,
+/// `h2` its positivity proof) — the FIRST half of
+/// [`half_r_squared_eq_16_over_25`]'s own computation (`half_rat * R_rat =
+/// 8/10 = 4/5`), reproduced here (rather than refactoring that function's
+/// return type, which [`declare_cos_fn_wide`] already depends on unchanged)
+/// so [`two_y_eq_r_domain`] can build on it independently, returning the raw
+/// `(n2, e2, h2)` triple too so that caller can feed it straight into a
+/// SECOND `normalize_mul_normalize` application without re-deriving `q1`'s
+/// own components.
+fn half_r_eq_q1(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(ExprId, ExprId, ExprId, ExprId, ExprId), KernelError> {
+    let rat = p.rat;
+    let half_rat = super::exponential::half_rat(d, p);
+    let r_rat = r_domain_rat(d, p);
+
+    // step0 : Eq Rat (Rat.mul half_rat R_rat) (normalize (1*8) (2*5) _).
+    let one_a = d.num(1);
+    let one_int = d.of_nat(one_a);
+    let one_b = d.num(1);
+    let succ1 = d.succ(one_b);
+    let one_c_nat = d.num(1);
+    let h_a = one_le_succ(d, one_c_nat);
+    let eight_a = d.num(8);
+    let eight_int = d.of_nat(eight_a);
+    let four_a = d.num(4);
+    let succ4 = d.succ(four_a);
+    let four_b = d.num(4);
+    let h_b = one_le_succ(d, four_b);
+    let step0 = d.lemma(
+        rat.normalize_mul_normalize,
+        &[one_int, succ1, h_a, eight_int, succ4, h_b],
+    );
+    let (_, q0_raw) = req_sides(d, step0)?;
+
+    // step1 : Eq Rat (normalize 8 10 _) (normalize 4 5 _), via
+    // normalize_congr at the cross-multiplication identity 8*5 = 4*10.
+    let n8 = d.num(8);
+    let n1 = d.of_nat(n8);
+    let n9 = d.num(9);
+    let e1 = d.succ(n9); // 10
+    let h1 = one_le_succ(d, n9);
+    let n4 = d.num(4);
+    let n2 = d.of_nat(n4);
+    let n4b = d.num(4);
+    let e2 = d.succ(n4b); // 5
+    let n4c = d.num(4);
+    let h2 = one_le_succ(d, n4c);
+    let hyp = {
+        let e2_z = d.of_nat(e2);
+        let lhs = d.imul(n1, e2_z);
+        d.irefl(lhs)
+    };
+    let step1 = d.lemma(rat.normalize_congr, &[n1, e1, h1, n2, e2, h2, hyp]);
+    let (_, q1) = req_sides(d, step1)?;
+
+    let half_r_eq = {
+        let target_lhs = rmul_here(d, half_rat, r_rat);
+        let motive_at = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+            crate::rat_prelude::ops::req(d, target_lhs, x)
+        };
+        rat_rewrite(d, q0_raw, q1, step1, step0, &motive_at)
+    };
+
+    let half_c = super::exponential::half(d, p);
+    let r_c = r_domain(d, p);
+    let y = cmul(d, p, half_c, r_c);
+    let y_eq = {
+        let step_of_rat = d.lemma(p.of_rat_mul, &[half_rat, r_rat]); // Equiv y (embed(Rat.mul half_rat r_rat))
+        let half_r_raw = rmul_here(d, half_rat, r_rat);
+        let embed_raw = embed(d, p, half_r_raw);
+        let embed_q1 = embed(d, p, q1);
+        let bridge = embed_eq_to_equiv_here(d, p, half_r_raw, q1, half_r_eq);
+        d.lemma(
+            p.equiv_trans,
+            &[y, embed_raw, embed_q1, step_of_rat, bridge],
+        )
+    };
+
+    Ok((y_eq, q1, n2, e2, h2))
+}
+
+/// `mul half R` — reproduced as a tiny helper so [`two_y_eq_r_domain`] does
+/// not have to thread `y` through as an extra parameter; cheap to
+/// reconstruct (two `pub(super)` lookups plus one `cmul`), and structural
+/// hashing makes every call site's result the identical `ExprId`.
+fn y_from(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let half_c = super::exponential::half(d, p);
+    let r_c = r_domain(d, p);
+    cmul(d, p, half_c, r_c)
+}
+
+/// `Equiv (mul two y) R`, `y := mul half R`, `R := ofRat (natDivSucc 8 4)` —
+/// `2 · (4/5) = 8/5 = R`, verified by `Rat.normalize_mul_normalize` (fusing
+/// `two_rat * q1` into `normalize (2*4) (1*5) _`, which COMPUTES —
+/// ordinary `Int.mul`/`Nat.mul` on concrete literals, no `Rat.normalize`
+/// GCD-reduction involved on EITHER side, unlike
+/// [`half_r_squared_eq_16_over_25`]'s own `8/10 -> 4/5` step, which
+/// genuinely needs `normalize_congr`'s cross-multiplication because `8/10`
+/// and `4/5` are a DIFFERENT numerator/denominator pair — down to the SAME
+/// `(8, 5)` pair `R`'s own `natDivSucc 8 4` unfolds to. This is exactly the
+/// "one extra factor" the odd exponent costs
+/// [`sin_wide_bound_bridge`] over [`wide_bound_bridge`], and no more.
+fn two_y_eq_r_domain(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<ExprId, KernelError> {
+    let rat = p.rat;
+    let (y_eq, q1, q1_n, q1_e, q1_h) = half_r_eq_q1(d, p)?;
+
+    let (two_rat, two_z, h1_two) = two_normalize(d, p);
+    let one_nat_denom = d.num(1);
+
+    // step0 : Eq Rat (Rat.mul two_rat q1) (normalize (Int.mul two_z q1_n)
+    // (Nat.mul one_nat_denom q1_e) _), whose RHS computes (2*4=8, 1*5=5) to
+    // the SAME (8, 5) pair `r_domain_rat`'s own `natDivSucc 8 4` unfolds to.
+    let step0 = d.lemma(
+        rat.normalize_mul_normalize,
+        &[two_z, one_nat_denom, h1_two, q1_n, q1_e, q1_h],
+    );
+
+    let r_c = r_domain(d, p);
+    let embed_q1 = embed(d, p, q1);
+    let two_c = two(d, p);
+    let refl_two = d.lemma(p.equiv_refl, &[two_c]);
+    let y = y_from(d, p);
+
+    let mul_two_y = cmul(d, p, two_c, y);
+    let step_congr = d.lemma(p.mul_congr, &[two_c, two_c, y, embed_q1, refl_two, y_eq]);
+    let mul_two_embedq1 = cmul(d, p, two_c, embed_q1);
+
+    let step_ofrat = d.lemma(p.of_rat_mul, &[two_rat, q1]);
+    // step_ofrat : Equiv (mul two_c embed_q1) (embed (Rat.mul two_rat q1))
+    let two_q1_raw = rmul_here(d, two_rat, q1);
+    let embed_prod = embed(d, p, two_q1_raw);
+
+    let r_rat = r_domain_rat(d, p);
+    // step0's actual RHS is DEFEQ to r_rat (matching (num, denom) literals,
+    // no GCD reduction needed) -- ascribed here via `embed_eq_to_equiv_here`,
+    // relying on that defeq exactly the way this file's other bridges do.
+    let bridge = embed_eq_to_equiv_here(d, p, two_q1_raw, r_rat, step0);
+
+    Ok(echain(
+        d,
+        p,
+        mul_two_y,
+        &[
+            (mul_two_embedq1, step_congr),
+            (embed_prod, step_ofrat),
+            (r_c, bridge),
+        ],
+    ))
+}
+
+/// `CReal.sinDominant16Over25 : Nat → CReal := fun k => mul R (pow (ofRat
+/// (natDivSucc 16 24)) k)`, `R := ofRat (natDivSucc 8 4)` —
+/// [`declare_cos_dominant_16_over_25`]'s analogue at coefficient `R` rather
+/// than `two`: the odd exponent's extra factor of the base collapses
+/// ([`sin_wide_bound_bridge`]) to `2 · (half · R) = 2 · (4/5) = 8/5 = R`
+/// (verified by [`two_y_eq_r_domain`], not assumed from the numeric
+/// coincidence).
+fn declare_sin_dominant_16_over_25(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let (x, ..) = ratio_16_over_25_witnesses(d, p);
+    let r_c = r_domain(d, p);
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let pow_x_k = cpow(d, p, x, k);
+    let body = cmul(d, p, r_c, pow_x_k);
+
+    let value = d.lam_fv(k_fv, nat, body);
+    let ty = d.arrow(nat, carrier);
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.sin_dominant_16_over_25,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(COS_FN_TERM_HEIGHT + 2),
+    })
+}
+
+/// A CONCRETE `(K, proof : sum_range_cauchy_body (sumRange
+/// sinDominant16Over25) K)` —
+/// [`cos_dominant_16_over_25_cauchy_body_concrete`]'s analogue at
+/// coefficient `c := R` (`q := R`'s own `Rat` witness, `r_domain_rat`)
+/// rather than `c := two`. [`mul_ordered_half_body`] is generic in `c`/`q`,
+/// so this is the SAME construction, confirmed to finish unchanged once the
+/// coefficient is substituted, exactly as predicted by
+/// [`cos_dominant_16_over_25_cauchy_body_concrete`]'s own doc comment.
+fn sin_dominant_16_over_25_cauchy_body_concrete(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> (ExprId, ExprId) {
+    let nat = d.nat_ty();
+    let (x, _, _, _, n24, _, _) = ratio_16_over_25_witnesses(d, p);
+    let raw_pow_x = pow_fn_local(d, p, x);
+    let s_fn = d.const_app(p.sum_range, &[raw_pow_x]);
+    let r_c = r_domain(d, p);
+    let r_rat = r_domain_rat(d, p);
+
+    let k_s = geom_16_over_25_k_final(d, n24);
+    let two_nat = d.num(2);
+    let ka = magnitude_of(d, p, r_c);
+    let kg_num = NatOps::mul(d, ka, k_s);
+    let ka2 = NatOps::mul(d, ka, two_nat);
+    let k_g = d.add(kg_num, ka2);
+
+    // `G := fun n => mul R (S n)`, `S := sumRange (pow (16/25) ·)`.
+    let g_fn = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let sn = d.apply(s_fn, &[n]);
+        let prod = cmul(d, p, r_c, sn);
+        d.lam_fv(n_fv, nat, prod)
+    };
+
+    let ordered_half = |d: &mut IntDev<'_>, a: ExprId, b: ExprId, hab: ExprId| -> ExprId {
+        let (_, proof) = mul_ordered_half_body(
+            d,
+            p,
+            r_c,
+            r_rat,
+            s_fn,
+            k_s,
+            a,
+            b,
+            &|d, aa, bb, hh| d.lemma(p.geom_cauchy_ordered_16_over_25, &[aa, bb, hh]),
+            hab,
+        );
+        proof
+    };
+
+    let g_case_proof = promote_ordered_half_to_full(d, p, g_fn, k_g, &ordered_half);
+
+    let sin_dominant_const = d.kernel().const_(p.sin_dominant_16_over_25, vec![]);
+    let f_fn = d.const_app(p.sum_range, &[sin_dominant_const]);
+    let heq = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let body = d.lemma(p.mul_sum_range, &[r_c, raw_pow_x, n]);
+        d.lam_fv(n_fv, nat, body)
+    };
+
+    cauchy_body_transport(d, p, g_fn, f_fn, heq, k_g, g_case_proof)
+}
+
+/// `CReal.sinDominant16Over25CauchyBody : sum_range_cauchy_body (sumRange
+/// sinDominant16Over25) K` for the concrete `K`
+/// [`sin_dominant_16_over_25_cauchy_body_concrete`] returns — the raw,
+/// non-existential Cauchy witness `weierstrassMTest`'s `hcauchy` parameter
+/// needs, at coefficient `R`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_sin_dominant_16_over_25_cauchy_body(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let (k_final, proof) = sin_dominant_16_over_25_cauchy_body_concrete(d, p);
+    let sin_dominant_const = d.kernel().const_(p.sin_dominant_16_over_25, vec![]);
+    let f_fn = d.const_app(p.sum_range, &[sin_dominant_const]);
+    let ty = sum_range_cauchy_body(d, p, f_fn, k_final);
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sin_dominant_16_over_25_cauchy_body,
+        uparams: vec![],
+        ty,
+        value: proof,
+    })
+}
+
+/// Admit `CReal.sinDominant16Over25` and its raw Cauchy body — rung 2's
+/// dominating-series half.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_sin_fn_dominant(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_sin_dominant_16_over_25(d, p)?;
+    declare_sin_dominant_16_over_25_cauchy_body(d, p)
+}
+
+/// `Equiv (mul (expDominant (Nat.add (Nat.add j j) 1)) (pow R (Nat.add
+/// (Nat.add j j) 1))) (sinDominant16Over25 j)`, `R := ofRat (natDivSucc 8
+/// 4)` — [`wide_bound_bridge`]'s analogue at the ODD exponent
+/// `sinFnTerm`/`sinTerm` themselves already use. ONE more step than
+/// [`wide_bound_bridge`]: the odd exponent `2j+1` needs an extra `pow_add`
+/// split off its trailing `+1` (`pow y (2j+1)` reduces DEFINITIONALLY —
+/// `Nat.add` recurses on its right argument — to `mul (pow y (2j)) y`, so
+/// no lemma is needed for that reduction itself, only for the resulting
+/// extra factor of `y`, collapsed by [`pow_one_equiv_here`]) plus
+/// identifying the resulting coefficient `2 · y = 2 · (4/5) = 8/5` with the
+/// literal `R` via [`two_y_eq_r_domain`] — exactly the "one extra factor"
+/// the task brief predicted, and no more.
+fn sin_wide_bound_bridge(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    j: ExprId,
+) -> Result<ExprId, KernelError> {
+    let half_c = super::exponential::half(d, p);
+    let r_c = r_domain(d, p);
+    let two_c = two(d, p);
+    let dbl_j = d.add(j, j);
+    let one_nat = d.num(1);
+    let odd_j = d.add(dbl_j, one_nat);
+
+    let pow_half_odd = cpow(d, p, half_c, odd_j);
+    let pow_r_odd = cpow(d, p, r_c, odd_j);
+    let start = {
+        let ed_odd = cmul(d, p, two_c, pow_half_odd);
+        cmul(d, p, ed_odd, pow_r_odd)
+    };
+
+    // s1 := two * (pow_half_odd * pow_r_odd), via mul_assoc.
+    let inner_hr = cmul(d, p, pow_half_odd, pow_r_odd);
+    let s1 = cmul(d, p, two_c, inner_hr);
+    let h1 = d.lemma(p.mul_assoc, &[two_c, pow_half_odd, pow_r_odd]);
+
+    let y = cmul(d, p, half_c, r_c);
+    let refl_two = d.lemma(p.equiv_refl, &[two_c]);
+
+    // s2 := two * (pow y odd_j), via pow_mul_distrib(half, R, odd_j).
+    let distrib1 = d.lemma(p.pow_mul_distrib, &[half_c, r_c, odd_j]);
+    let pow_y_odd = cpow(d, p, y, odd_j);
+    let h2 = d.lemma(
+        p.mul_congr,
+        &[two_c, two_c, inner_hr, pow_y_odd, refl_two, distrib1],
+    );
+    let s2 = cmul(d, p, two_c, pow_y_odd);
+
+    // s3 := two * (mul pow_y_dbl pow_y_one), via pow_add(y, dbl_j, 1).
+    let pow_y_dbl = cpow(d, p, y, dbl_j);
+    let pow_y_one = cpow(d, p, y, one_nat);
+    let split1 = d.lemma(p.pow_add, &[y, dbl_j, one_nat]);
+    let mul_dbl_one = cmul(d, p, pow_y_dbl, pow_y_one);
+    let h3 = d.lemma(
+        p.mul_congr,
+        &[two_c, two_c, pow_y_odd, mul_dbl_one, refl_two, split1],
+    );
+    let s3 = cmul(d, p, two_c, mul_dbl_one);
+
+    // s4 := two * (mul pow_y_dbl y), collapsing `pow y 1` to `y`.
+    let pow_one_eq = pow_one_equiv_here(d, p, y);
+    let refl_dbl = d.lemma(p.equiv_refl, &[pow_y_dbl]);
+    let inner_c1 = d.lemma(
+        p.mul_congr,
+        &[pow_y_dbl, pow_y_dbl, pow_y_one, y, refl_dbl, pow_one_eq],
+    );
+    let mul_dbl_y = cmul(d, p, pow_y_dbl, y);
+    let h4 = d.lemma(
+        p.mul_congr,
+        &[two_c, two_c, mul_dbl_one, mul_dbl_y, refl_two, inner_c1],
+    );
+    let s4 = cmul(d, p, two_c, mul_dbl_y);
+
+    // s5 := two * (mul (mul pow_y_j pow_y_j) y), via pow_add(y, j, j)
+    // splitting `pow_y_dbl` inside the left factor.
+    let pow_y_j = cpow(d, p, y, j);
+    let mul_jj = cmul(d, p, pow_y_j, pow_y_j);
+    let split2 = d.lemma(p.pow_add, &[y, j, j]);
+    let refl_y = d.lemma(p.equiv_refl, &[y]);
+    let inner_c2 = d.lemma(p.mul_congr, &[pow_y_dbl, mul_jj, y, y, split2, refl_y]);
+    let mul_jj_y = cmul(d, p, mul_jj, y);
+    let h5 = d.lemma(
+        p.mul_congr,
+        &[two_c, two_c, mul_dbl_y, mul_jj_y, refl_two, inner_c2],
+    );
+    let s5 = cmul(d, p, two_c, mul_jj_y);
+
+    // s6 := two * (mul (pow yy j) y), via pow_mul_distrib(y, y, j) fusing
+    // `mul_jj` inside the left factor.
+    let yy = cmul(d, p, y, y);
+    let pow_yy_j = cpow(d, p, yy, j);
+    let distrib2 = d.lemma(p.pow_mul_distrib, &[y, y, j]);
+    let inner_c3 = d.lemma(p.mul_congr, &[mul_jj, pow_yy_j, y, y, distrib2, refl_y]);
+    let pow_yy_j_y = cmul(d, p, pow_yy_j, y);
+    let h6 = d.lemma(
+        p.mul_congr,
+        &[two_c, two_c, mul_jj_y, pow_yy_j_y, refl_two, inner_c3],
+    );
+    let s6 = cmul(d, p, two_c, pow_yy_j_y);
+
+    // s7 := two * (mul y (pow yy j)), via mul_comm.
+    let comm_step = d.lemma(p.mul_comm, &[pow_yy_j, y]);
+    let y_pow_yy_j = cmul(d, p, y, pow_yy_j);
+    let h7 = d.lemma(
+        p.mul_congr,
+        &[two_c, two_c, pow_yy_j_y, y_pow_yy_j, refl_two, comm_step],
+    );
+    let s7 = cmul(d, p, two_c, y_pow_yy_j);
+
+    // s8 := (two * y) * (pow yy j), via mul_assoc (reversed).
+    let two_y = cmul(d, p, two_c, y);
+    let s8 = cmul(d, p, two_y, pow_yy_j);
+    let assoc_fwd = d.lemma(p.mul_assoc, &[two_c, y, pow_yy_j]);
+    // assoc_fwd : Equiv (mul (mul two y) (pow yy j)) (mul two (mul y (pow yy j))) = Equiv s8 s7
+    let h8 = d.lemma(p.equiv_symm, &[s8, s7, assoc_fwd]);
+
+    // s9 := R * (pow yy j), via two_y_eq_r_domain.
+    let two_y_eq_r = two_y_eq_r_domain(d, p)?;
+    let refl_pow_yy_j = d.lemma(p.equiv_refl, &[pow_yy_j]);
+    let h9 = d.lemma(
+        p.mul_congr,
+        &[two_y, r_c, pow_yy_j, pow_yy_j, two_y_eq_r, refl_pow_yy_j],
+    );
+    let s9 = cmul(d, p, r_c, pow_yy_j);
+
+    // target := R * (pow embed_q2 j), rewriting the base via
+    // half_r_squared_eq_16_over_25.
+    let yy_eq = half_r_squared_eq_16_over_25(d, p)?;
+    let yy_ty = d.kernel().infer(yy_eq)?;
+    let (_, embed_q2) = two_sides(d, yy_ty);
+    let pow_target_j = cpow(d, p, embed_q2, j);
+    let h10 = d.lemma(p.pow_congr, &[yy, embed_q2, yy_eq, j]);
+    let refl_r = d.lemma(p.equiv_refl, &[r_c]);
+    let h10c = d.lemma(
+        p.mul_congr,
+        &[r_c, r_c, pow_yy_j, pow_target_j, refl_r, h10],
+    );
+    let target = cmul(d, p, r_c, pow_target_j);
+
+    Ok(echain(
+        d,
+        p,
+        start,
+        &[
+            (s1, h1),
+            (s2, h2),
+            (s3, h3),
+            (s4, h4),
+            (s5, h5),
+            (s6, h6),
+            (s7, h7),
+            (s8, h8),
+            (s9, h9),
+            (target, h10c),
+        ],
+    ))
+}
+
+/// `fun n pt => sumRange (fun j => sinFnTerm j pt) n` — [`cos_fn_partial_sums_fn`]'s
+/// analogue for `sinFn`.
+fn sin_fn_partial_sums_fn(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    carrier: ExprId,
+    nat: ExprId,
+) -> ExprId {
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let pt_fv = d.fresh_fvar();
+    let pt = d.kernel().fvar(pt_fv);
+    let f_pt = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let body = d.const_app(p.sin_fn_term, &[j, pt]);
+        d.lam_fv(j_fv, nat, body)
+    };
+    let body = d.const_app(p.sum_range, &[f_pt, n]);
+    let with_pt = d.lam_fv(pt_fv, carrier, body);
+    d.lam_fv(n_fv, nat, with_pt)
+}
+
+/// Admit `CReal.sinFn` and `CReal.sinFnUniformConverges` — rung 2:
+/// [`declare_cos_fn_wide`]'s analogue, `weierstrassMTest` applied at `f :=
+/// sinFnTerm`, `mseq := sinDominant16Over25`, `a := zero`, `b := R`,
+/// bridging [`declare_sin_fn_term_abs_le_wide`]'s domination bound to
+/// [`declare_sin_dominant_16_over_25`]'s dominating series via
+/// [`sin_wide_bound_bridge`]. Run after [`declare_sin_fn_term_family`] and
+/// [`declare_sin_fn_dominant`].
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_sin_fn(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let zero_c = czero(d, p);
+    let r_c = r_domain(d, p);
+
+    let f0 = d.kernel().const_(p.sin_fn_term, vec![]);
+    let mseq0 = d.kernel().const_(p.sin_dominant_16_over_25, vec![]);
+
+    let hab0 = hab_zero_r(d, p);
+
+    // hcong0 : forall j p q, Equiv p q -> Equiv (f0 j p) (f0 j q).
+    let hcong0 = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let pp_fv = d.fresh_fvar();
+        let pp = d.kernel().fvar(pp_fv);
+        let qq_fv = d.fresh_fvar();
+        let qq = d.kernel().fvar(qq_fv);
+        let heq_ty = equiv(d, p, pp, qq);
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv);
+        let body = d.lemma(p.sin_fn_term_congr, &[j, pp, qq, heq]);
+        let with_heq = d.lam_fv(heq_fv, heq_ty, body);
+        let with_qq = d.lam_fv(qq_fv, carrier, with_heq);
+        let with_pp = d.lam_fv(pp_fv, carrier, with_qq);
+        d.lam_fv(j_fv, nat, with_pp)
+    };
+
+    let (k_g, hcauchy0) = sin_dominant_16_over_25_cauchy_body_concrete(d, p);
+
+    // hdom0 : forall j pt, le zero pt -> le pt R -> le (abs (f0 j pt)) (mseq0 j).
+    let hdom0 = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let pt_fv = d.fresh_fvar();
+        let pt = d.kernel().fvar(pt_fv);
+        let hax_fv = d.fresh_fvar();
+        let hax = d.kernel().fvar(hax_fv);
+        let hxr_fv = d.fresh_fvar();
+        let hxr = d.kernel().fvar(hxr_fv);
+
+        let raw_bound = d.lemma(p.sin_fn_term_abs_le_wide, &[pt, hax, r_c, hxr, j]);
+
+        let bridge = sin_wide_bound_bridge(d, p, j)?;
+
+        let abs_sft = {
+            let sft = d.const_app(p.sin_fn_term, &[j, pt]);
+            cabs(d, p, sft)
+        };
+        let refl_lhs = d.lemma(p.equiv_refl, &[abs_sft]);
+        let bound = {
+            let ed = d.kernel().const_(p.exp_dominant, vec![]);
+            let odd_j = odd_index(d, j);
+            let ed_odd = d.apply(ed, &[odd_j]);
+            let pow_r_odd = cpow(d, p, r_c, odd_j);
+            cmul(d, p, ed_odd, pow_r_odd)
+        };
+        let mseq0_j = d.apply(mseq0, &[j]);
+        let transported = d.lemma(
+            p.le_congr,
+            &[
+                abs_sft, abs_sft, bound, mseq0_j, refl_lhs, bridge, raw_bound,
+            ],
+        );
+
+        let hxr_ty = cle(d, p, pt, r_c);
+        let hax_ty = cle(d, p, zero_c, pt);
+        let with_hxr = d.lam_fv(hxr_fv, hxr_ty, transported);
+        let with_hax = d.lam_fv(hax_fv, hax_ty, with_hxr);
+        let with_pt = d.lam_fv(pt_fv, carrier, with_hax);
+        d.lam_fv(j_fv, nat, with_pt)
+    };
+
+    let u0 = d.lemma(
+        p.weierstrass_m_test,
+        &[f0, mseq0, zero_c, r_c, hab0, hcong0, k_g, hdom0, hcauchy0],
+    );
+    let ty0 = d.kernel().infer(u0)?;
+
+    let (inner1, _b0) = unapp(d, ty0);
+    let (inner2, _a0) = unapp(d, inner1);
+    let (_inner3, g0) = unapp(d, inner2);
+
+    let sin_fn_ty = d.arrow(carrier, carrier);
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.sin_fn,
+        uparams: vec![],
+        ty: sin_fn_ty,
+        value: g0,
+        hint: ReducibilityHint::Regular(COS_FN_TERM_HEIGHT + 3),
+    })?;
+
+    let big_f = sin_fn_partial_sums_fn(d, p, carrier, nat);
+    let sin_fn_c = d.kernel().const_(p.sin_fn, vec![]);
+    let ty = d.const_app(p.uniform_converges_on, &[big_f, sin_fn_c, zero_c, r_c]);
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sin_fn_uniform_converges,
+        uparams: vec![],
+        ty,
+        value: u0,
+    })
+}
+
+// ============================================================================
+// `CReal.sinFnUniformlyContinuous`
+// ============================================================================
+//
+// Route: [`declare_cos_fn_wide_uniformly_continuous`]'s, verbatim in shape.
+// The one difference: [`pow_uc`] (the nested induction over `pow`'s base at
+// a symbolic exponent) is already generic in ITS OWN exponent argument, so
+// [`sin_fn_term_uc`] applies it directly at `m := Nat.add (Nat.add k k) 1`
+// -- no SEPARATE induction is needed for the odd exponent.
+
+/// `UniformlyContinuousOn (fun pt => sinFnTerm k pt) zero R`, for symbolic
+/// `k`. [`cos_fn_term_uc`]'s analogue.
+fn sin_fn_term_uc(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    carrier: ExprId,
+    nat: ExprId,
+    zero_c: ExprId,
+    r_c: ExprId,
+    hab0: ExprId,
+    pow_uc: ExprId,
+    k: ExprId,
+) -> ExprId {
+    let k_id = fvar_id(d, k);
+    let free_k = [(k_id, nat)];
+
+    let odd_k = odd_index(d, k);
+    let pow_odd_fn = pow_base_fn(d, p, carrier, odd_k);
+    let huc_pow_odd = d.apply(pow_uc, &[odd_k]);
+
+    let sin_term_c = d.kernel().const_(p.sin_term, vec![]);
+    let sin_term_k = d.apply(sin_term_c, &[k]);
+    let const_fn = {
+        let pt_fv = d.fresh_fvar();
+        d.lam_fv(pt_fv, carrier, sin_term_k)
+    };
+    let huc_const = d.lemma(p.uniformly_continuous_const, &[sin_term_k, zero_c, r_c]);
+
+    let (k1, hb1) = bounded_via_uc(d, p, const_fn, zero_c, r_c, huc_const, hab0, &free_k);
+    let (k2, hb2) = bounded_via_uc(d, p, pow_odd_fn, zero_c, r_c, huc_pow_odd, hab0, &free_k);
+
+    d.lemma(
+        p.uniformly_continuous_mul,
+        &[
+            const_fn,
+            pow_odd_fn,
+            zero_c,
+            r_c,
+            huc_const,
+            huc_pow_odd,
+            k1,
+            k2,
+            hb1,
+            hb2,
+        ],
+    )
+}
+
+/// Admit `CReal.sinFnUniformlyContinuous : UniformlyContinuousOn sinFn zero
+/// (ofRat (natDivSucc 8 4))` — [`declare_cos_fn_wide_uniformly_continuous`]'s
+/// analogue.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_sin_fn_uniformly_continuous(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let zero_c = czero(d, p);
+    let r_c = r_domain(d, p);
+    let hab0 = hab_zero_r(d, p);
+
+    // --- nested induction: `pow` uniform continuity, symbolic exponent ---
+    let id_fn = {
+        let pt_fv = d.fresh_fvar();
+        let pt = d.kernel().fvar(pt_fv);
+        d.lam_fv(pt_fv, carrier, pt)
+    };
+    let huc_id = d.lemma(p.uniformly_continuous_id, &[zero_c, r_c]);
+
+    let pow_motive = |d: &mut IntDev<'_>, v: ExprId| -> ExprId {
+        let f = pow_base_fn(d, p, carrier, v);
+        d.const_app(p.uniformly_continuous_on, &[f, zero_c, r_c])
+    };
+    let pow_base = |d: &mut IntDev<'_>| -> ExprId {
+        let one_cc = one_c(d, p);
+        d.lemma(p.uniformly_continuous_const, &[one_cc, zero_c, r_c])
+    };
+    let pow_step = |d: &mut IntDev<'_>, j: ExprId, ih: ExprId| -> ExprId {
+        let pow_j_fn = pow_base_fn(d, p, carrier, j);
+        let j_id = fvar_id(d, j);
+        let ih_id = fvar_id(d, ih);
+        let ih_ty = pow_motive(d, j);
+        let (k1, hb1) = bounded_via_uc(
+            d,
+            p,
+            pow_j_fn,
+            zero_c,
+            r_c,
+            ih,
+            hab0,
+            &[(j_id, nat), (ih_id, ih_ty)],
+        );
+        let (k2, hb2) = bounded_via_uc(d, p, id_fn, zero_c, r_c, huc_id, hab0, &[]);
+        d.lemma(
+            p.uniformly_continuous_mul,
+            &[pow_j_fn, id_fn, zero_c, r_c, ih, huc_id, k1, k2, hb1, hb2],
+        )
+    };
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let pow_uc_at_m = induct_ty(d, &pow_motive, &pow_base, &pow_step, m);
+    let pow_uc = d.lam_fv(m_fv, nat, pow_uc_at_m);
+    // pow_uc : ∀ m, UniformlyContinuousOn (fun pt => pow pt m) zero R.
+
+    // --- outer induction: partial-sum uniform continuity, over `n` -------
+    let big_f = sin_fn_partial_sums_fn(d, p, carrier, nat);
+
+    let sum_motive = |d: &mut IntDev<'_>, v: ExprId| -> ExprId {
+        let fv = d.apply(big_f, &[v]);
+        d.const_app(p.uniformly_continuous_on, &[fv, zero_c, r_c])
+    };
+    let sum_base = |d: &mut IntDev<'_>| -> ExprId {
+        d.lemma(p.uniformly_continuous_const, &[zero_c, zero_c, r_c])
+    };
+    let sum_step = |d: &mut IntDev<'_>, j: ExprId, ih: ExprId| -> ExprId {
+        let sum_j_fn = {
+            let pt_fv = d.fresh_fvar();
+            let pt = d.kernel().fvar(pt_fv);
+            let f_pt = {
+                let k_fv = d.fresh_fvar();
+                let k = d.kernel().fvar(k_fv);
+                let body = d.const_app(p.sin_fn_term, &[k, pt]);
+                d.lam_fv(k_fv, nat, body)
+            };
+            let body = d.const_app(p.sum_range, &[f_pt, j]);
+            d.lam_fv(pt_fv, carrier, body)
+        };
+        let term_j_fn = {
+            let pt_fv = d.fresh_fvar();
+            let pt = d.kernel().fvar(pt_fv);
+            let body = d.const_app(p.sin_fn_term, &[j, pt]);
+            d.lam_fv(pt_fv, carrier, body)
+        };
+        let term_j_uc = sin_fn_term_uc(d, p, carrier, nat, zero_c, r_c, hab0, pow_uc, j);
+        d.lemma(
+            p.uniformly_continuous_add,
+            &[sum_j_fn, term_j_fn, zero_c, r_c, ih, term_j_uc],
+        )
+    };
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let hc_at_n = induct_ty(d, &sum_motive, &sum_base, &sum_step, n);
+    let hc = d.lam_fv(n_fv, nat, hc_at_n);
+    // hc : ∀ n, UniformlyContinuousOn (App(big_f, n)) zero R.
+
+    let g0 = d.kernel().const_(p.sin_fn, vec![]);
+    let hu = d.kernel().const_(p.sin_fn_uniform_converges, vec![]);
+
+    let value = d.lemma(
+        p.uniform_limit_uniformly_continuous,
+        &[big_f, g0, zero_c, r_c, hu, hc],
+    );
+    let ty = d.const_app(p.uniformly_continuous_on, &[g0, zero_c, r_c]);
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sin_fn_uniformly_continuous,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
