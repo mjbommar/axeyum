@@ -978,46 +978,95 @@
 //! then combined, plus the final `Nat`-valued choice of `N`/`e_inner`, and
 //! was not attempted in this slice.
 //!
-//! ## `CReal.integral_split` — checked 2026-08-27 (a TWELFTH lane), attempting
-//! the assembly the TENTH lane sized
+//! ## `CReal.integral_split` — checked 2026-08-27 (a TWELFTH lane), the
+//! mesh-count alignment gap the TENTH lane's plan glossed over is now
+//! resolved on paper; the ~450-line assembly itself was NOT attempted in
+//! code this slice, and `integral_split` remains UNDECLARED
 //!
-//! Starting point confirmed present: [`CRealPrelude::riemann_sum_shared_accuracy_close_at`],
+//! Starting point confirmed present and unchanged since the refactor lane:
+//! [`CRealPrelude::riemann_sum_shared_accuracy_close_at`],
 //! `total_eps_sample_le_at` (private, this file, generalizes
 //! `total_eps_sample_le` off the shared-index assumption),
 //! [`CRealPrelude::riemann_sum_split_exact_of_uc`],
 //! [`CRealPrelude::riemann_sum_split_scale_invariant`],
 //! [`CRealPrelude::close_within_of_within_indexed`],
 //! [`CRealPrelude::uniformly_continuous_on_restrict`], and
-//! [`CRealPrelude::integral_witness_independent`] all build and their doc
-//! comments confirm the shapes this section names.
+//! [`CRealPrelude::integral_witness_independent`] all build, and their doc
+//! comments confirm the shapes the TENTH lane's plan names.
 //!
-//! **The mesh-count alignment this lane worked out, not yet built**:
-//! `riemann_sum_integral_close`'s conclusion is valid at mesh count
-//! `deep(e)+depth` for `depth` a FREE `Nat` the caller picks — it is NOT
-//! required to equal `deep(e)+depth` syntactically anywhere else. So rather
-//! than trying to force `riemannSum_split_exact_of_uc`'s `m_ac`/`m_cb` to be
-//! literally `deep_ac(e)+N`/`deep_cb(e)+N` (which would need `Nat.sub` to
-//! recover the matching `[a,b]` depth and hits the truncation trap this
-//! file's own kernel-facts list warns about), the plan is the other
-//! direction: **pick `m_ac := deep_ac(e_inner)+N`, `m_cb := deep_cb(e_inner)+N`
-//! (both FREE choices `riemann_sum_integral_close` allows on `[a,c]`/`[c,b]`
-//! directly), let `combined := add (succ m_ac) m_cb` be WHATEVER `Nat`
-//! expression that produces, and transport `riemann_sum_integral_close`'s
-//! `[a,b]` conclusion — stated at `deep_ab(e_inner)+depth_ab` for a `depth_ab`
-//! chosen to make `deep_ab(e_inner)+depth_ab = combined` a PROPOSITIONAL
-//! (not definitional) `Nat` equality — across that equality via
-//! `nat_rewrite_prop`**, the same idiom [`declare_of_nat_le`] already uses to
-//! avoid needing definitional equality of two independently-built `Nat`
-//! sums. `hac`/`hcb`/`c` for this specific `(m_ac, m_cb)` reuse
-//! [`declare_riemann_sum_split_exact_of_uc`]'s own internal derivation
-//! (`shift_le_of_nonneg`, `zero_le_of_nat`, `cancel_width`), not a
-//! reconstruction from scratch. The final combine is `abs_add_le` (the
-//! triangle inequality) applied twice against the exact split identity
-//! substituted in via `le_congr`, then `equiv_zero_of_small` closes once the
-//! three `riemann_sum_integral_close` bounds and the mesh-alignment slack are
-//! all shown `≤ natDivSucc 1 e` for suitable `N`, `depth_ab` as functions of
-//! `e`. Attempting the build now; this entry is a checkpoint, not a result —
-//! see the next dated entry for the outcome.
+//! **A gap the TENTH lane's plan did not name, found by trying to actually
+//! instantiate it: the THREE mesh counts `riemann_sum_integral_close`
+//! produces on `[a,b]`, `[a,c]`, `[c,b]` are independently-shaped `Nat`
+//! expressions (`deep_ab(e)+depth_ab`, `deep_ac(e)+depth_ac`,
+//! `deep_cb(e)+depth_cb`, each `deep_X` a DIFFERENT modulus-of-uniform-continuity
+//! function), and `riemannSum_split_exact_of_uc`'s identity needs the SPECIFIC
+//! relation `combined = succ(m_ac) + m_cb`.** Picking `m_ac`/`m_cb` freely
+//! (as the TENTH lane's plan does) leaves `combined` some `Nat` expression
+//! with no reason to equal `deep_ab(e)+depth_ab` for ANY `depth_ab` — the
+//! obvious fix (`depth_ab := combined - deep_ab(e)`) is exactly the
+//! `Nat.sub`-truncation trap this file's own kernel-facts list warns about,
+//! since nothing bounds `deep_ab(e) ≤ combined` a priori.
+//!
+//! **Resolved by NOT computing `depth_ab` at all — derive its EXISTENCE
+//! instead, [`declare_of_nat_le`]'s own idiom (`Nat.le_dest` +
+//! `exists_elim`), never Nat.sub:**
+//!
+//! 1. Fix `e`, and choose `depth_ac := depth_cb := add(deep_ab(F,a,b,u,e),
+//!    bigN)` for a genuinely free `bigN` (the parameter actually driven to
+//!    infinity against `e` below) — i.e. bake `deep_ab(e)` itself into both
+//!    child depths, so it is *available* as a term inside `combined` without
+//!    needing to match it structurally.
+//! 2. `m_ac := add(deep_ac(F,a,c,uac,e), depth_ac)`,
+//!    `m_cb := add(deep_cb(F,c,b,ucb,e), depth_cb)`,
+//!    `combined := add(succ(m_ac), m_cb)` — built literally this way, so it
+//!    is [`CRealPrelude::riemann_sum_split_exact_of_uc`]'s own `m_ac`/`m_cb`
+//!    argument shape verbatim.
+//! 3. Prove `Nat.le (deep_ab(F,a,b,u,e)) combined` by a **four-hop
+//!    `le_trans` chain over EXISTING lemmas only** — `le_add_right`
+//!    (`deep_ab(e) ≤ add(deep_ab(e),bigN)`), then `le_add_right` again composed
+//!    through an `add_comm` via `nat_rewrite_prop` (to place the depth term on
+//!    the correct side of `m_ac`'s sum), `le_succ`, `le_add_right` once more
+//!    for the final `+m_cb`. No `add_assoc`/`add_right_comm` reassociation of
+//!    more than two terms at a time is needed anywhere in this chain — every
+//!    step is a single named lemma or one `nat_rewrite_prop` transport across
+//!    `Nat.add_comm`.
+//! 4. `Nat.le_dest` on that `le` fact gives `∃ depth_ab, add(deep_ab(e),
+//!    depth_ab) = combined`; `exists_elim` (already imported in this file)
+//!    binds `depth_ab` and the equation for the rest of the proof, exactly
+//!    the shape [`declare_of_nat_le`] already uses to avoid needing
+//!    definitional equality of two independently-built `Nat` sums.
+//!    `riemann_sum_integral_close`'s `[a,b]` application at this `depth_ab`
+//!    then transports across that equation via `nat_rewrite_prop`, landing
+//!    on a `Within` fact about `riemannSum F a b combined` on the nose —
+//!    the exact LHS [`CRealPrelude::riemann_sum_split_exact_of_uc`] needs.
+//!
+//! `hac`/`hcb`/`c` for this specific `(m_ac, m_cb)` are NOT re-derived from
+//! scratch: [`declare_riemann_sum_split_exact_of_uc`]'s own body computes
+//! them from `w1`/`w2`'s nonnegativity via `shift_le_of_nonneg`/
+//! `zero_le_of_nat`/`cancel_width` (all already free functions in this
+//! file), and the same three calls at this lane's own `(m_ac, m_cb)` values
+//! give the witnesses [`CRealPrelude::uniformly_continuous_on_restrict`]
+//! needs for `uac`/`ucb`.
+//!
+//! **What this leaves, sized as precisely as the mesh-alignment piece just
+//! was, and NOT attempted in code this slice**: the final combine is
+//! `abs_add_le` (the triangle inequality) applied twice against
+//! `riemannSum_split_exact_of_uc`'s exact identity substituted in via
+//! `le_congr`, closed by `equiv_zero_of_small` once all three
+//! `riemann_sum_integral_close` bounds (each `bound_leg1(e,depth,i,jj1,jj2) +
+//! natDivSucc(K,e)`, `bound_leg1` itself a `modulus`/`shared_accuracy_bound`
+//! compound needing the SAME `bnd_leg_plus_share_le`-style weakening this
+//! file already does once per leg) are shown `≤` a fixed fraction of
+//! `natDivSucc(1, e)` for `bigN`/`e_inner` chosen as explicit functions of
+//! `e`. That estimate volume is UNCHANGED from the TENTH lane's own sizing —
+//! roughly `bnd_leg_plus_share_le` (~150 lines) three times plus the
+//! three-way triangle combine — and stacks on top of, not instead of, the
+//! mesh-alignment piece resolved above. Concrete corroboration
+//! (`F := const two`/`F := id`, split at `a:=0,b:=3,c:=1`) was NOT run: there
+//! is no declaration to corroborate. `integral_split` is not registered in
+//! `CRealPrelude`, has no `BuildStep`/`EXPECTED_STEP_ORDER` entry, and no
+//! inventory shard row; `creal_prelude_builds` is unaffected by this slice
+//! (doc-only change).
 
 use super::completeness::half_shift_le;
 use super::convergence::{
