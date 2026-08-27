@@ -59,6 +59,7 @@ mod ivt;
 mod lattice;
 mod monotone;
 mod mul_self_zero;
+mod mvt;
 mod order_extra;
 mod polynomial;
 mod power;
@@ -105,6 +106,7 @@ pub(crate) fn all_entries(
     all.extend(lattice::entries(p));
     all.extend(monotone::entries(p));
     all.extend(mul_self_zero::entries(p));
+    all.extend(mvt::entries(p));
     all.extend(order_extra::entries(p));
     all.extend(polynomial::entries(p));
     all.extend(power::entries(p));
