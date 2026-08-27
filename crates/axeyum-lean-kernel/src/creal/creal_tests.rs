@@ -9551,6 +9551,7 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "integral::declare_riemann_sum_cauchy",
     "integral::declare_shared_index_to_canonical",
     "integral::declare_riemann_sum_shared_accuracy_close",
+    "integral::declare_riemann_sum_shared_accuracy_close_at",
     "integral::declare_riemann_sum_total_eps_le",
     "integral::declare_riemann_sum_deep_cauchy",
     "integral::declare_riemann_sum_deep_cauchy_folded",
