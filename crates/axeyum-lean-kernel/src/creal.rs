@@ -2630,10 +2630,10 @@ pub struct CRealPrelude {
     /// `CReal.geomCauchyOrderedOfGap : ∀ x, le zero x → ∀ (q : Rat), le
     /// (add x (ofRat q)) one → ∀ (k3 : Nat), PosBound (ofRat q) k3 → ∀ k (h
     /// : PosBound (add one (neg x)) k) a b, Nat.le a b → Within (seq
-    /// (sumRange (pow x) b) b − seq (sumRange (pow x) a) a) (natDivSucc N b
-    /// + natDivSucc N a)`, with `N := ((Nat.succ k * Nat.succ k3) + 1) + 7`
-    /// — **the raw, non-existential ordered geometric Cauchy witness at an
-    /// ARBITRARY ratio**, and the point of this family.
+    /// (sumRange (pow x) b) b − seq (sumRange (pow x) a) a) (natDivSucc N
+    /// b + natDivSucc N a)`, with `N := ((Nat.succ k * Nat.succ k3) + 1) +
+    /// 7` — **the raw, non-existential ordered geometric Cauchy witness at
+    /// an ARBITRARY ratio**, and the point of this family.
     ///
     /// Exactly one such witness existed before this
     /// (`CReal.geomCauchyOrderedHalf`, `exponential.rs`), hardcoded to the
@@ -5478,8 +5478,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         geom_cauchy: kernel.name_str(creal, "geomCauchy"),
         geom_cauchy_of_lt_ordered: kernel.name_str(creal, "geomCauchyOfLtOrdered"),
         geom_cauchy_ordered_of_gap: kernel.name_str(creal, "geomCauchyOrderedOfGap"),
-        geom_cauchy_ordered_16_over_25: kernel
-            .name_str(creal, "geomCauchyOrdered16Over25"),
+        geom_cauchy_ordered_16_over_25: kernel.name_str(creal, "geomCauchyOrdered16Over25"),
         geom_cauchy_of_lt: kernel.name_str(creal, "geomCauchyOfLt"),
         geom_scaled_cauchy_of_lt: kernel.name_str(creal, "geomScaledCauchyOfLt"),
         sum_range_ratio_test: kernel.name_str(creal, "sumRangeRatioTest"),

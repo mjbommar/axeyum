@@ -1742,7 +1742,11 @@ fn creal_right_distrib(
 /// to a symbolic `n`: `nat_div_succ_scale(n, 0)` gives `natDivSucc (succ n)
 /// ((succ n)*0 + n) = natDivSucc 1 0`, and `(succ n)*0 + n` reduces to `n` via
 /// `Nat.mul_zero` + `Nat.zero_add`.
-fn nat_div_succ_succ_self_eq_one(d: &mut IntDev<'_>, p: CRealPrelude, n: ExprId) -> ExprId {
+pub(super) fn nat_div_succ_succ_self_eq_one(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    n: ExprId,
+) -> ExprId {
     let rat = p.rat;
     let zero_nat = d.num(0);
     let succ_n = d.succ(n);
@@ -2209,11 +2213,9 @@ fn pow_le_nat_div_succ_gap_leaf(
         let one_r = rone(d, rat);
         let sum_unit = radd(d, k3_rat, unit_rat);
         let sum_one = radd(d, k3_rat, one_r);
-        let unit_to_one =
-            rcongr(d, unit_rat, one_r, unit_eq_one, &|d, t| radd(d, k3_rat, t));
+        let unit_to_one = rcongr(d, unit_rat, one_r, unit_eq_one, &|d, t| radd(d, k3_rat, t));
         let sum_one_to_unit = rsymm(d, sum_unit, sum_one, unit_to_one);
-        let sum_one_to_k =
-            rtrans(d, sum_one, sum_unit, k_rat, sum_one_to_unit, sum_add);
+        let sum_one_to_k = rtrans(d, sum_one, sum_unit, k_rat, sum_one_to_unit, sum_add);
         let k3_rat_nonneg = d.lemma(rat.zero_le_nat_div_succ, &[k3, zero_nat]);
         let refl_one_r = d.lemma(rat.le_refl, &[one_r]);
         let zero_r3 = rzero(d, rat);
@@ -2223,22 +2225,14 @@ fn pow_le_nat_div_succ_gap_leaf(
         );
         let zero_plus_one = radd(d, zero_r3, one_r);
         let zero_add_eq = d.lemma(rat.zero_add, &[one_r]);
-        let sum_le_at_one = rat_eq_rewrite(
-            d,
-            zero_plus_one,
-            one_r,
-            zero_add_eq,
-            sum_le,
-            &|d, t| rle(d, rat, t, sum_one),
-        );
-        let rone_le_k_rat = rat_eq_rewrite(
-            d,
-            sum_one,
-            k_rat,
-            sum_one_to_k,
-            sum_le_at_one,
-            &|d, t| rle(d, rat, one_r, t),
-        );
+        let sum_le_at_one =
+            rat_eq_rewrite(d, zero_plus_one, one_r, zero_add_eq, sum_le, &|d, t| {
+                rle(d, rat, t, sum_one)
+            });
+        let rone_le_k_rat =
+            rat_eq_rewrite(d, sum_one, k_rat, sum_one_to_k, sum_le_at_one, &|d, t| {
+                rle(d, rat, one_r, t)
+            });
         d.lemma(p.of_rat_le, &[one_r, k_rat, rone_le_k_rat])
     };
 
@@ -2265,13 +2259,11 @@ fn pow_le_nat_div_succ_gap_leaf(
         let mid2_rat = d.const_app(rat.nat_div_succ, &[big_k, k3]);
         let mul_one_nat_name = d.prelude().mul_one;
         let mul_one_nat_h = d.lemma(mul_one_nat_name, &[big_k]);
-        let idx_step =
-            nat_eq_to_rat(d, big_k_mul_one, big_k, mul_one_nat_h, &|d, kk| {
-                d.const_app(rat.nat_div_succ, &[kk, k3])
-            });
+        let idx_step = nat_eq_to_rat(d, big_k_mul_one, big_k, mul_one_nat_h, &|d, kk| {
+            d.const_app(rat.nat_div_succ, &[kk, k3])
+        });
         let x0 = nat_div_succ_succ_self_eq_one(d, p, k3);
-        let prod_to_mid2 =
-            rtrans(d, prod_rat, mid_rat, mid2_rat, scale_eq, idx_step);
+        let prod_to_mid2 = rtrans(d, prod_rat, mid_rat, mid2_rat, scale_eq, idx_step);
         let one_r2 = rone(d, rat);
         let prod_to_one = rtrans(d, prod_rat, mid2_rat, one_r2, prod_to_mid2, x0);
         let prod_equiv_one = embed_eq_to_equiv(d, p, prod_rat, one_r2, prod_to_one);
@@ -2302,8 +2294,7 @@ fn pow_le_nat_div_succ_gap_leaf(
         let q_plus_negq = cadd(d, p, q_emb, neg_q_emb);
         let add_neg_h = d.lemma(p.add_neg, &[q_emb]);
         let refl_x = d.lemma(p.equiv_refl, &[x]);
-        let congr_xz =
-            d.lemma(p.add_congr, &[x, x, q_plus_negq, zero_c, refl_x, add_neg_h]);
+        let congr_xz = d.lemma(p.add_congr, &[x, x, q_plus_negq, zero_c, refl_x, add_neg_h]);
         let x_plus_qnq = cadd(d, p, x, q_plus_negq);
         let x_plus_zero = cadd(d, p, x, zero_c);
         let step_xz = d.lemma(
@@ -2343,8 +2334,7 @@ fn pow_le_nat_div_succ_gap_leaf(
                 p.equiv_trans,
                 &[zero_plus_negzero, negzero_plus_zero, neg_zero_c, comm0, az],
             );
-            let e1_symm =
-                d.lemma(p.equiv_symm, &[zero_plus_negzero, neg_zero_c, e1]);
+            let e1_symm = d.lemma(p.equiv_symm, &[zero_plus_negzero, neg_zero_c, e1]);
             let neg_zero_eq_zero = d.lemma(
                 p.equiv_trans,
                 &[neg_zero_c, zero_plus_negzero, zero_c, e1_symm, an],
@@ -2388,8 +2378,7 @@ fn pow_le_nat_div_succ_gap_leaf(
         // xq_le_q : le (mul x q_emb) q_emb
         let xq = cmul(d, p, x, q_emb);
         let xq_le_q = {
-            let raw =
-                mul_le_mul_of_nonneg_right(d, p, x, one_c, q_emb, ht, hx_le_one);
+            let raw = mul_le_mul_of_nonneg_right(d, p, x, one_c, q_emb, ht, hx_le_one);
             let one_q = cmul(d, p, one_c, q_emb);
             let one_mul_q = creal_one_mul(d, p, q_emb);
             let refl_xq = d.lemma(p.equiv_refl, &[xq]);
@@ -2469,8 +2458,7 @@ fn pow_le_nat_div_succ_gap_leaf(
         let dist = d.lemma(p.left_distrib, &[x, one_c, q_emb]);
         let mul_one_x = d.lemma(p.mul_one, &[x]);
         let refl_xq2 = d.lemma(p.equiv_refl, &[xq]);
-        let congr_x =
-            d.lemma(p.add_congr, &[x_one_c, x, xq, xq, mul_one_x, refl_xq2]);
+        let congr_x = d.lemma(p.add_congr, &[x_one_c, x, xq, xq, mul_one_x, refl_xq2]);
         let x_plus_xq = cadd(d, p, x, xq);
         let x_one_c_plus_xq = cadd(d, p, x_one_c, xq);
         let dist2 = d.lemma(
@@ -2479,8 +2467,7 @@ fn pow_le_nat_div_succ_gap_leaf(
         );
 
         let le_refl_xq = d.lemma(p.le_refl, &[xq]);
-        let bound1 =
-            d.lemma(p.add_le_add, &[x, one_minus_q, xq, xq, hr_le, le_refl_xq]);
+        let bound1 = d.lemma(p.add_le_add, &[x, one_minus_q, xq, xq, hr_le, le_refl_xq]);
         let chain1 = d.lemma(
             p.le_trans,
             &[x_plus_xq, sum4lhs, one_c, bound1, final_bound],
@@ -2515,8 +2502,7 @@ fn pow_le_nat_div_succ_gap_leaf(
     let lm_rat = l_term(d, rat, q, m);
     let lm = embed(d, p, lm_rat);
     let k_lm = cmul(d, p, k_emb, lm);
-    let step_ar =
-        mul_le_mul_of_nonneg_right(d, p, a_m, k_lm, pow_xm, pow_nonneg_m, kr_m);
+    let step_ar = mul_le_mul_of_nonneg_right(d, p, a_m, k_lm, pow_xm, pow_nonneg_m, kr_m);
     // step_ar : le (mul a_m pow_xm) (mul k_lm pow_xm)
     let a_m_pow = cmul(d, p, a_m, pow_xm);
     let k_lm_pow = cmul(d, p, k_lm, pow_xm);
@@ -2583,13 +2569,11 @@ fn pow_le_nat_div_succ_gap_leaf(
         let mid2_rat2 = d.const_app(rat.nat_div_succ, &[succ_m, m]);
         let mul_one_nat_name2 = d.prelude().mul_one;
         let mul_one_h2 = d.lemma(mul_one_nat_name2, &[succ_m]);
-        let idx_step2 =
-            nat_eq_to_rat(d, succ_m_mul_one, succ_m, mul_one_h2, &|d, kk| {
-                d.const_app(rat.nat_div_succ, &[kk, m])
-            });
+        let idx_step2 = nat_eq_to_rat(d, succ_m_mul_one, succ_m, mul_one_h2, &|d, kk| {
+            d.const_app(rat.nat_div_succ, &[kk, m])
+        });
         let x0b = nat_div_succ_succ_self_eq_one(d, p, m);
-        let prod_to_mid2b =
-            rtrans(d, prod2, mid_rat2, mid2_rat2, scale_eq2, idx_step2);
+        let prod_to_mid2b = rtrans(d, prod2, mid_rat2, mid2_rat2, scale_eq2, idx_step2);
         let one_r3 = rone(d, rat);
         rtrans(d, prod2, mid2_rat2, one_r3, prod_to_mid2b, x0b)
     };
@@ -2622,16 +2606,14 @@ fn pow_le_nat_div_succ_gap_leaf(
     let mid2_rat3 = d.const_app(rat.nat_div_succ, &[big_k, m]);
     let mul_one_nat_name3 = d.prelude().mul_one;
     let mul_one_h3 = d.lemma(mul_one_nat_name3, &[big_k]);
-    let idx_step3 =
-        nat_eq_to_rat(d, big_k_mul_one2, big_k, mul_one_h3, &|d, kk| {
-            d.const_app(rat.nat_div_succ, &[kk, m])
-        });
+    let idx_step3 = nat_eq_to_rat(d, big_k_mul_one2, big_k, mul_one_h3, &|d, kk| {
+        d.const_app(rat.nat_div_succ, &[kk, m])
+    });
     let kdd_rat = rmul(d, k_rat, dd_rat);
     let comm_dk = d.lemma(rat.mul_comm, &[dd_rat, k_rat]); // Eq final_rat kdd_rat
     let kdd_to_mid = rtrans(d, kdd_rat, mid_rat3, mid2_rat3, scale_eq3, idx_step3);
     let final_to_kdd = comm_dk;
-    let final_to_mid2 =
-        rtrans(d, final_rat, kdd_rat, mid2_rat3, final_to_kdd, kdd_to_mid);
+    let final_to_mid2 = rtrans(d, final_rat, kdd_rat, mid2_rat3, final_to_kdd, kdd_to_mid);
     // final_to_mid2 : Eq final_rat (natDivSucc big_k m)
     let final_equiv = embed_eq_to_equiv(d, p, final_rat, mid2_rat3, final_to_mid2);
     let dd_rat_emb = embed(d, p, dd_rat);
@@ -3205,8 +3187,7 @@ fn geom_y_bound_leaf(
 
     // Step A: iv ≤ embed_succk (via hinv, defeq bridge), times
     // nonneg `pow_xa` on the right.
-    let step_a =
-        mul_le_mul_of_nonneg_right(d, p, iv, embed_succk, pow_xa, pow_nonneg_a, hinv);
+    let step_a = mul_le_mul_of_nonneg_right(d, p, iv, embed_succk, pow_xa, pow_nonneg_a, hinv);
     // step_a : le (mul iv pow_xa) (mul embed_succk pow_xa)
 
     // Step B: `pow_xa ≤ embed (natDivSucc k1 a)`, times nonneg
@@ -4205,6 +4186,89 @@ fn declare_geom_cauchy_ordered_of_gap(
     })
 }
 
+/// `CReal.geomCauchyOrderedOfGap` eta-applied to its OWN binders, closed back
+/// up -- the term `creal_tests` checks against that theorem's stored type.
+///
+/// With `swapped = true` the `hq` and `PosBound (ofRat q) k3` arguments are
+/// transposed at the call site and nothing else changes, which the kernel must
+/// refuse: those two hypotheses are unrelated Props, and a checker that merely
+/// counted positional arguments would accept both.
+///
+/// Deliberately SYMBOLIC -- every argument is a fresh fvar. The concrete
+/// counterpart of this control lives in
+/// `creal_tests::the_gap_identity_holds_at_16_over_25_and_fails_at_the_transposed_ratio`,
+/// and an earlier version of THIS control that ran at the concrete `16/25`
+/// witnesses cost 440 s in a debug build, because a failing defeq on numerals
+/// unfolds everything before giving up. Against fvars there is nothing to
+/// unfold.
+#[cfg(test)]
+pub(super) fn geom_cauchy_ordered_of_gap_self_application(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    swapped: bool,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let rat_carrier = rat_ty(d);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let zero_c = czero(d, p);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let hx0_ty = cle(d, p, zero_c, x);
+    let hx0_fv = d.fresh_fvar();
+    let hx0 = d.kernel().fvar(hx0_fv);
+
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+    let q_emb = embed(d, p, q);
+    let x_plus_q = cadd(d, p, x, q_emb);
+    let hq_ty = cle(d, p, x_plus_q, one_c);
+    let hq_fv = d.fresh_fvar();
+    let hq = d.kernel().fvar(hq_fv);
+
+    let k3_fv = d.fresh_fvar();
+    let k3 = d.kernel().fvar(k3_fv);
+    let hpb_ty = d.const_app(p.pos_bound, &[q_emb, k3]);
+    let hpb_fv = d.fresh_fvar();
+    let hpb = d.kernel().fvar(hpb_fv);
+
+    let neg_x = cneg(d, p, x);
+    let a_real = cadd(d, p, one_c, neg_x);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let h_ty = pos_bound_of(d, p, a_real, k);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let hab_ty = d.le(a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let args = if swapped {
+        [x, hx0, q, hpb, k3, hq, k, h, a, b, hab]
+    } else {
+        [x, hx0, q, hq, k3, hpb, k, h, a, b, hab]
+    };
+    let applied = d.lemma(p.geom_cauchy_ordered_of_gap, &args);
+
+    let with_hab = d.lam_fv(hab_fv, hab_ty, applied);
+    let over_b = d.lam_fv(b_fv, nat, with_hab);
+    let over_a = d.lam_fv(a_fv, nat, over_b);
+    let with_h = d.lam_fv(h_fv, h_ty, over_a);
+    let with_k = d.lam_fv(k_fv, nat, with_h);
+    let with_hpb = d.lam_fv(hpb_fv, hpb_ty, with_k);
+    let with_k3 = d.lam_fv(k3_fv, nat, with_hpb);
+    let with_hq = d.lam_fv(hq_fv, hq_ty, with_k3);
+    let with_q = d.lam_fv(q_fv, rat_carrier, with_hq);
+    let with_hx0 = d.lam_fv(hx0_fv, hx0_ty, with_q);
+    d.lam_fv(x_fv, carrier, with_hx0)
+}
+
 /// `CReal.geomCauchyOrdered16Over25` -- [`declare_geom_cauchy_ordered_of_gap`]
 /// instantiated at the concrete ratio `16/25`, i.e. `natDivSucc 16 24`.
 ///
@@ -4253,12 +4317,19 @@ fn declare_geom_cauchy_ordered_of_gap(
 ///
 /// Returns the trusted gate's rejection. An `Err` here means the kernel
 /// **refused** a proof, not that a script gave up.
-fn declare_geom_cauchy_ordered_16_over_25(
+/// The three rational obligations `CReal.geomCauchyOrderedOfGap` needs at
+/// the ratio `16/25`, as `(x, hx0, q_rat, hq, k3 = 24, hpb_q, h)`.
+///
+/// Split out of [`declare_geom_cauchy_ordered_16_over_25`] so that a second
+/// ratio (`49/64` at `R := 7/4`, say) is a copy of THIS function with three
+/// numerals changed and nothing else, rather than a copy of the whole
+/// declaration.
+#[allow(clippy::type_complexity)]
+pub(super) fn ratio_16_over_25_witnesses(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
-) -> Result<(), KernelError> {
+) -> (ExprId, ExprId, ExprId, ExprId, ExprId, ExprId, ExprId) {
     let rat = p.rat;
-    let nat = d.nat_ty();
     let one_c = d.kernel().const_(p.one, vec![]);
     let zero_c = czero(d, p);
     let zero_r = rzero(d, rat);
@@ -4308,7 +4379,9 @@ fn declare_geom_cauchy_ordered_16_over_25(
         let le_one_one = d.lemma(p.le_refl, &[one_c]);
         d.lemma(
             p.le_congr,
-            &[one_c, x_plus_q, one_c, one_c, h_sum_symm, refl_one, le_one_one],
+            &[
+                one_c, x_plus_q, one_c, one_c, h_sum_symm, refl_one, le_one_one,
+            ],
         )
     };
 
@@ -4348,24 +4421,21 @@ fn declare_geom_cauchy_ordered_16_over_25(
         // step4 : Equiv (add q (add x (neg x))) (add q zero)
         let refl_q = d.lemma(p.equiv_refl, &[q_emb]);
         let addneg = d.lemma(p.add_neg, &[x]);
-        let step4 = d.lemma(
-            p.add_congr,
-            &[q_emb, q_emb, x_negx, zero_c, refl_q, addneg],
-        );
+        let step4 = d.lemma(p.add_congr, &[q_emb, q_emb, x_negx, zero_c, refl_q, addneg]);
         let q_plus_zero = cadd(d, p, q_emb, zero_c);
         // step5 : Equiv (add q zero) q
         let step5 = d.lemma(p.add_zero, &[q_emb]);
 
-        let c1 = d.lemma(p.equiv_trans, &[one_minus_x, xq_negx, qx_negx, step1, step2]);
+        let c1 = d.lemma(
+            p.equiv_trans,
+            &[one_minus_x, xq_negx, qx_negx, step1, step2],
+        );
         let c2 = d.lemma(p.equiv_trans, &[one_minus_x, qx_negx, q_x_negx, c1, step3]);
         let c3 = d.lemma(
             p.equiv_trans,
             &[one_minus_x, q_x_negx, q_plus_zero, c2, step4],
         );
-        d.lemma(
-            p.equiv_trans,
-            &[one_minus_x, q_plus_zero, q_emb, c3, step5],
-        )
+        d.lemma(p.equiv_trans, &[one_minus_x, q_plus_zero, q_emb, c3, step5])
     };
 
     // h : PosBound (add one (neg x)) 24
@@ -4386,6 +4456,25 @@ fn declare_geom_cauchy_ordered_16_over_25(
             ],
         )
     };
+
+    (x, hx0, q_rat, hq, n24, hpb_q, h)
+}
+
+/// `CReal.geomCauchyOrdered16Over25`. See the note above
+/// [`ratio_16_over_25_witnesses`] and the field documentation
+/// ([`super::CRealPrelude::geom_cauchy_ordered_16_over_25`]).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_geom_cauchy_ordered_16_over_25(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let nat = d.nat_ty();
+    let (x, hx0, q_rat, hq, n24, hpb_q, h) = ratio_16_over_25_witnesses(d, p);
 
     let a_fv = d.fresh_fvar();
     let a = d.kernel().fvar(a_fv);
