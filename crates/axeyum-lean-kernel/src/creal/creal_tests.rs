@@ -126,7 +126,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 385] = [
+    let expected: [(&str, crate::NameId, &str); 388] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -1380,6 +1380,21 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         ("CReal.negOnePowDouble", p.neg_one_pow_double, "theorem"),
         ("CReal.alternatingELeO", p.alternating_e_le_o, "theorem"),
         ("CReal.alternatingBracket", p.alternating_bracket, "theorem"),
+        (
+            "CReal.alternatingBracketUpper",
+            p.alternating_bracket_upper,
+            "theorem",
+        ),
+        (
+            "CReal.alternatingLowerBound",
+            p.alternating_lower_bound,
+            "theorem",
+        ),
+        (
+            "CReal.alternatingUpperBound",
+            p.alternating_upper_bound,
+            "theorem",
+        ),
         // Found by the coverage assertion above, not by anyone noticing: these
         // seven were live in the prelude and unlisted here, so this test had
         // never checked them. `lt_cotrans`/`apart_cotrans` are Ch 12's

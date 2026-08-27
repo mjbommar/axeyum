@@ -3195,6 +3195,35 @@ pub struct CRealPrelude {
     /// hence a concrete numeric bound on `cosOne`) is a sized, separately
     /// tractable next step this declaration does not itself reach.
     pub alternating_bracket: NameId,
+    /// `CReal.alternatingBracketUpper : ∀ a, (∀ k, le zero (a k)) → (∀ k, le
+    /// (a (succ k)) (a k)) → ∀ m i, And (le (E (add m i)) (O m)) (le (O (add
+    /// m i)) (O m))` -- the DUAL of [`Self::alternating_bracket`]: from `m`
+    /// onward, every even-count AND every odd-count partial sum sits at or
+    /// below `O m`. Same induction shape, using `O`'s own one-step decrease
+    /// (`creal/alternating.rs`'s private `o_step_le`) in place of `E`'s
+    /// one-step increase. Needed because this development has no
+    /// `converges_upper_bound_shift`: closing `L ≤ O m` routes through
+    /// [`Self::converges_lower_bound_shift`] on the NEGATED sequence, which
+    /// needs this dual bracket's per-index upper bound, not
+    /// `alternating_bracket`'s lower one. See `creal/alternating.rs`.
+    pub alternating_bracket_upper: NameId,
+    /// `CReal.alternatingLowerBound : ∀ a, (∀ k, le zero (a k)) → (∀ k, le (a
+    /// (succ k)) (a k)) → ∀ L, Converges (sumRange t) L → ∀ m, le (E m) L`,
+    /// `t`/`E` as in [`Self::alternating_bracket`] -- the bracket CLOSED
+    /// against the actual limit, using `Nat.even_or_odd`'s computed parity
+    /// split to bridge an arbitrary shift `n` to `alternating_bracket`'s
+    /// paired-index conclusion (`n = k+k` lands on the `E` side, `n =
+    /// succ(k+k)` on the `O` side), then
+    /// [`Self::converges_lower_bound_shift`] at shift `s := add m m`. See
+    /// `creal/alternating.rs`.
+    pub alternating_lower_bound: NameId,
+    /// `CReal.alternatingUpperBound : ∀ a, (∀ k, le zero (a k)) → (∀ k, le (a
+    /// (succ k)) (a k)) → ∀ L, Converges (sumRange t) L → ∀ m, le L (O m)` --
+    /// the mirror of [`Self::alternating_lower_bound`], via
+    /// [`Self::converges_neg`]/[`Self::neg_le_neg`] rather than a second
+    /// shift-bound direction (this development has no
+    /// `converges_upper_bound_shift`). See `creal/alternating.rs`.
+    pub alternating_upper_bound: NameId,
     /// `CReal.sumRange_const : ∀ w m,
     /// Equiv (sumRange (fun _ => w) (Nat.succ m)) (mul (ofNat (Nat.succ m))
     /// w)` (`creal/monotone.rs`) — a constant summed `succ m` times is
@@ -4567,6 +4596,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         neg_one_pow_double: kernel.name_str(creal, "negOnePowDouble"),
         alternating_e_le_o: kernel.name_str(creal, "alternatingELeO"),
         alternating_bracket: kernel.name_str(creal, "alternatingBracket"),
+        alternating_bracket_upper: kernel.name_str(creal, "alternatingBracketUpper"),
+        alternating_lower_bound: kernel.name_str(creal, "alternatingLowerBound"),
+        alternating_upper_bound: kernel.name_str(creal, "alternatingUpperBound"),
         sum_range_const: kernel.name_str(creal, "sumRange_const"),
         mesh_count_width: kernel.name_str(creal, "mesh_count_width"),
         subdivision_point_in_bounds: kernel.name_str(creal, "subdivisionPoint_in_bounds"),
