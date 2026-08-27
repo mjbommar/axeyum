@@ -59,5 +59,6 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             "theorem",
         ),
         ("CReal.ivt_bisect_cauchy", p.ivt_bisect_cauchy, "theorem"),
+        ("CReal.ivt_exact_root", p.ivt_exact_root, "theorem"),
     ]
 }

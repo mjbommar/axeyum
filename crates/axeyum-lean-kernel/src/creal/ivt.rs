@@ -152,7 +152,8 @@ use crate::name::NameId;
 use crate::nat_prelude::NatOps;
 use crate::rat_prelude::group::{rsub, rsum, rsum_append, rsum_perm};
 use crate::rat_prelude::ops::{
-    nat_eq_to_rat, radd, rat_eq_rewrite, rchain, rcongr, rle, rlt, rmul, rneg, rone, rsymm, rzero,
+    nat_eq_to_rat, nat_rewrite_prop, radd, rat_eq_rewrite, rchain, rcongr, rle, rlt, rmul, rneg,
+    rone, rsymm, rzero,
 };
 
 /// Admit `CReal.ivt_step`.
@@ -198,7 +199,9 @@ pub(super) fn declare_ivt(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
     // needed it.
     declare_cauchy_of_abs_diff_le(d, p)?;
     // ...applied to the bisection sequence, as a `Nat -> CReal` LAMBDA.
-    declare_ivt_bisect_cauchy(d, p)
+    declare_ivt_bisect_cauchy(d, p)?;
+    // ...and the EXACT root the whole chapter is aimed at.
+    declare_ivt_exact_root(d, p)
 }
 
 // --- small shared idiom (private to this module, per the codebase's own
@@ -4784,6 +4787,433 @@ fn declare_ivt_bisect_cauchy(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), 
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.ivt_bisect_cauchy,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// =============================================================================
+// `CReal.ivt_exact_root` -- an EXACT root: a point `c` with `Equiv (F c) zero`
+// outright, not `|F c| <= eps` per accuracy.
+//
+// This is the statement `ivt_approx` deliberately declines to prove, and the
+// classical IVT is genuinely unavailable constructively (see this file's
+// module documentation). It becomes available under ONE extra hypothesis:
+// a uniformly positive derivative, `1/(k+1) <= F' z` on `[a,b]`. That
+// hypothesis does not make the sign of a real decidable -- nothing here
+// decides one -- it makes the root UNIQUE with a modulus, which is exactly
+// what turns a sequence of approximate roots into a Cauchy sequence.
+//
+// The five steps, each discharged by a named declaration:
+//
+//   1. the sequence, as DATA -- `ivt_bisect_hi`, and `ivt_bisect_cauchy`'s
+//      `fun e => ...` lambda. No `Exists.rec` into `Type` anywhere.
+//   2. `|F (X e)| <= 1/(e+1)` -- `ivt_bisect_approx`.
+//   3. `X` is Cauchy -- `ivt_bisect_cauchy` (via `abs_diff_le_of_small_image`
+//      and `cauchy_of_abs_diff_le`).
+//   4. the limit -- `converges_of_cauchy`, whose existential IS eliminable
+//      here because the final target is a `Prop`; the domain conjuncts are
+//      `converges_lower_bound`/`converges_upper_bound` against step 2's own
+//      per-index bounds.
+//   5. `F L ~ 0` -- `converges_comp_eventually` at accuracy `2e+1` gives an
+//      `N` past which `|F (X n) - F L| <= 1/(2e+2)`; step 2 at any
+//      `n := N + (2e+1)` gives `|F (X n)| <= 1/(n+1) <= 1/(2e+2)`; the
+//      triangle inequality sums them to `1/(e+1)`, and
+//      `equiv_zero_of_small` converts "under every 1/(e+1)" into `Equiv`.
+//
+// Step 5's two `1/(2e+2)` halves fuse to `1/(e+1)` by the same
+// `sgn_eps_double_eq_target` identity `ivt_approx` uses, at the same index
+// shape `2e+1`.
+// =============================================================================
+
+/// `le (abs (add x (neg y))) (ofRat q)` — the real-valued closeness bound
+/// `converges_comp_eventually` concludes in. A private copy of the same
+/// helper in `convergence.rs`/`uniform_continuity.rs`/`integral.rs`, per this
+/// file's own convention (each is a sibling module, so none sees another's
+/// `fn`).
+fn close_within(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId, q: ExprId) -> ExprId {
+    let ny = cneg(d, p, y);
+    let diff = cadd(d, p, x, ny);
+    let magnitude = cabs(d, p, diff);
+    let target = embed(d, p, q);
+    cle(d, p, magnitude, target)
+}
+
+/// From `h : le (abs (add x (neg y))) bound`, the same bound on the REVERSED
+/// difference, `le (abs (add y (neg x))) bound`.
+///
+/// [`super::CRealPrelude::abs_le`] over the two halves, each transported
+/// across [`super::CRealPrelude::neg_sub_swap`]; there is no
+/// `CReal.abs_neg`/`abs_sub_comm` to do it in one step.
+fn abs_diff_symm(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    bound: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let neg_y = cneg(d, p, y);
+    let neg_x = cneg(d, p, x);
+    let diff_xy = cadd(d, p, x, neg_y);
+    let diff_yx = cadd(d, p, y, neg_x);
+    let abs_xy = cabs(d, p, diff_xy);
+    let neg_diff_yx = cneg(d, p, diff_yx);
+
+    let upper_xy = {
+        let self_le = d.lemma(p.le_abs_self, &[diff_xy]);
+        d.lemma(p.le_trans, &[diff_xy, abs_xy, bound, self_le, h])
+    };
+    let lower_xy = {
+        let neg_diff_xy = cneg(d, p, diff_xy);
+        let neg_le = d.lemma(p.neg_le_abs, &[diff_xy]);
+        d.lemma(p.le_trans, &[neg_diff_xy, abs_xy, bound, neg_le, h])
+    };
+
+    // `neg (add y (neg x)) ~ add x (neg y)`, so `upper_xy` IS the lower half
+    // of the reversed bound.
+    let lower_yx = {
+        let swap = d.lemma(p.neg_sub_swap, &[y, x]);
+        let back = esymm(d, p, neg_diff_yx, diff_xy, swap);
+        let refl_bound = erefl(d, p, bound);
+        d.lemma(
+            p.le_congr,
+            &[
+                diff_xy,
+                neg_diff_yx,
+                bound,
+                bound,
+                back,
+                refl_bound,
+                upper_xy,
+            ],
+        )
+    };
+    // `neg (add x (neg y)) ~ add y (neg x)`, so `lower_xy` IS the upper half.
+    let upper_yx = {
+        let neg_diff_xy = cneg(d, p, diff_xy);
+        let swap = d.lemma(p.neg_sub_swap, &[x, y]);
+        let refl_bound = erefl(d, p, bound);
+        d.lemma(
+            p.le_congr,
+            &[
+                neg_diff_xy,
+                diff_yx,
+                bound,
+                bound,
+                swap,
+                refl_bound,
+                lower_xy,
+            ],
+        )
+    };
+    d.lemma(p.abs_le, &[diff_yx, bound, upper_yx, lower_yx])
+}
+
+/// `CReal.ivt_exact_root` -- see
+/// [`super::CRealPrelude::ivt_exact_root`] for the statement and this
+/// section's header for the five steps.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+#[allow(clippy::too_many_lines)]
+fn declare_ivt_exact_root(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let func_ty = d.arrow(carrier, carrier);
+    let nat = d.nat_ty();
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let fp_fv = d.fresh_fvar();
+    let fp = d.kernel().fvar(fp_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let hf_ty = d.const_app(p.has_derivative_on, &[f, fp, a, b]);
+    let hf_fv = d.fresh_fvar();
+    let hf = d.kernel().fvar(hf_fv);
+
+    let uc_ty_ab = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let huc_fv = d.fresh_fvar();
+    let huc = d.kernel().fvar(huc_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let zero_c = czero(d, p);
+    let fa = d.apply(f, &[a]);
+    let hfa_ty = cle(d, p, fa, zero_c);
+    let hfa_fv = d.fresh_fvar();
+    let hfa = d.kernel().fvar(hfa_fv);
+    let fb = d.apply(f, &[b]);
+    let hfb_ty = cle(d, p, zero_c, fb);
+    let hfb_fv = d.fresh_fvar();
+    let hfb = d.kernel().fvar(hfb_fv);
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let hderiv_ty = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let fpz = d.apply(fp, &[z]);
+        let a_k_rat = div_succ(d, p, 1, k);
+        let a_k = embed(d, p, a_k_rat);
+        let concl = cle(d, p, a_k, fpz);
+        let z_le_b = cle(d, p, z, b);
+        let after_upper = d.arrow(z_le_b, concl);
+        let a_le_z = cle(d, p, a, z);
+        let after_lower = d.arrow(a_le_z, after_upper);
+        d.pi_fv(z_fv, carrier, after_lower)
+    };
+    let hderiv_fv = d.fresh_fvar();
+    let hderiv = d.kernel().fvar(hderiv_fv);
+
+    let seq_lam = bisect_sequence(d, p, f, a, b, huc);
+
+    // The three per-index facts, as lambdas over the accuracy. Each body's
+    // type names the bisection point directly; `seq_lam e` β-reduces to it.
+    let mk_pointwise = |d: &mut IntDev<'_>, which: usize| -> ExprId {
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+        let (_, h1, h2, h3) = bisect_point_facts(d, p, f, a, b, huc, hab, hfa, hfb, e);
+        let body = match which {
+            0 => h1,
+            1 => h2,
+            _ => h3,
+        };
+        d.lam_fv(e_fv, nat, body)
+    };
+    let hlow = mk_pointwise(d, 0);
+    let hhigh = mk_pointwise(d, 1);
+    let habs = mk_pointwise(d, 2);
+
+    let hcauchy = d.lemma(
+        p.ivt_bisect_cauchy,
+        &[f, fp, a, b, hf, huc, hab, hfa, hfb, k, hderiv],
+    );
+    let hex = d.lemma(p.converges_of_cauchy, &[seq_lam, hcauchy]);
+
+    // The target: `∃ c, le a c ∧ (le c b ∧ Equiv (F c) zero)`.
+    let root_pred = {
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let le1 = cle(d, p, a, c);
+        let le2 = cle(d, p, c, b);
+        let fc = d.apply(f, &[c]);
+        let eq0 = equiv(d, p, fc, zero_c);
+        let inner = d.and(le2, eq0);
+        let body = d.and(le1, inner);
+        d.lam_fv(c_fv, carrier, body)
+    };
+    let target_ty = cexists_ty(d, p, carrier, root_pred);
+
+    // `λ L, Converges seq_lam L` -- `converges_of_cauchy`'s own predicate.
+    let conv_pred = {
+        let l_fv = d.fresh_fvar();
+        let l = d.kernel().fvar(l_fv);
+        let body = d.const_app(p.converges, &[seq_lam, l]);
+        d.lam_fv(l_fv, carrier, body)
+    };
+
+    let minor = {
+        let l_fv = d.fresh_fvar();
+        let big_l = d.kernel().fvar(l_fv);
+        let hl_ty = d.const_app(p.converges, &[seq_lam, big_l]);
+        let hl_fv = d.fresh_fvar();
+        let hl = d.kernel().fvar(hl_fv);
+
+        let ha_l = d.lemma(p.converges_lower_bound, &[a, seq_lam, big_l, hlow, hl]);
+        let hl_b = d.lemma(p.converges_upper_bound, &[seq_lam, big_l, b, hhigh, hl]);
+
+        let f_l = d.apply(f, &[big_l]);
+
+        // `∀ e, le (abs (F L)) (ofRat (natDivSucc 1 e))`.
+        let per_e = {
+            let e_fv = d.fresh_fvar();
+            let e = d.kernel().fvar(e_fv);
+            let (n0, sgn_eps, sgn_eps_rat, _sgn_eps_pos) = sgn_eps_of(d, p, e);
+            let (target_e_rat, double_eq_target) =
+                sgn_eps_double_eq_target(d, p, e, n0, sgn_eps, sgn_eps_rat);
+            let target_e = embed(d, p, target_e_rat);
+            let abs_f_l = cabs(d, p, f_l);
+            let goal_e = cle(d, p, abs_f_l, target_e);
+
+            let h_big_n = d.lemma(
+                p.converges_comp_eventually,
+                &[f, a, b, huc, seq_lam, big_l, hlow, hhigh, hl, n0],
+            );
+
+            // `λ N, ∀ n, Nat.le N n → close_within (F (seq_lam n)) (F L)
+            //   (natDivSucc 1 n0)` -- `convergence.rs`'s own `comp_predicate`.
+            let comp_pred = {
+                let bign_fv = d.fresh_fvar();
+                let bign = d.kernel().fvar(bign_fv);
+                let body = {
+                    let n_fv = d.fresh_fvar();
+                    let n = d.kernel().fvar(n_fv);
+                    let hn_ty = d.le(bign, n);
+                    let x_n = d.apply(seq_lam, &[n]);
+                    let f_x_n = d.apply(f, &[x_n]);
+                    let concl = close_within(d, p, f_x_n, f_l, sgn_eps_rat);
+                    let inner = d.arrow(hn_ty, concl);
+                    d.pi_fv(n_fv, nat, inner)
+                };
+                d.lam_fv(bign_fv, nat, body)
+            };
+
+            let inner_minor = {
+                let bign_fv = d.fresh_fvar();
+                let bign = d.kernel().fvar(bign_fv);
+                let spec_ty = {
+                    let n_fv = d.fresh_fvar();
+                    let n = d.kernel().fvar(n_fv);
+                    let hn_ty = d.le(bign, n);
+                    let x_n = d.apply(seq_lam, &[n]);
+                    let f_x_n = d.apply(f, &[x_n]);
+                    let concl = close_within(d, p, f_x_n, f_l, sgn_eps_rat);
+                    let inner = d.arrow(hn_ty, concl);
+                    d.pi_fv(n_fv, nat, inner)
+                };
+                let spec_fv = d.fresh_fvar();
+                let spec = d.kernel().fvar(spec_fv);
+
+                // `n := N + (2e+1)`, so BOTH `N <= n` and `n0 <= n` hold and
+                // `1/(n+1) <= 1/(n0+1)`.
+                let n_idx = d.add(bign, n0);
+                let hle_n = d.lemma(p.rat.int.nat.le_add_right, &[bign, n0]);
+                let hle_n0 = {
+                    let swapped = d.add(n0, bign);
+                    let raw = d.lemma(p.rat.int.nat.le_add_right, &[n0, bign]);
+                    let comm = d.lemma(p.rat.int.nat.add_comm, &[n0, bign]);
+                    nat_rewrite_prop(d, swapped, n_idx, comm, raw, &|d, t| d.le(n0, t))
+                };
+
+                let x_n = d.apply(seq_lam, &[n_idx]);
+                let f_x_n = d.apply(f, &[x_n]);
+                let cw = d.apply(spec, &[n_idx, hle_n]);
+                // cw : le (abs (add (F Xn) (neg (F L)))) sgn_eps
+
+                // Reversed: `|F L - F Xn| <= sgn_eps`.
+                let gap = abs_diff_symm(d, p, f_x_n, f_l, sgn_eps, cw);
+
+                // `|F Xn| <= 1/(n+1) <= 1/(n0+1) = sgn_eps`.
+                let habs_n = d.apply(habs, &[n_idx]);
+                let small_n = {
+                    let rat_n = div_succ(d, p, 1, n_idx);
+                    let creal_n = embed(d, p, rat_n);
+                    let antitone = d.lemma(p.rat.nat_div_succ_antitone, &[n0, n_idx, hle_n0]);
+                    let lifted = d.lemma(p.of_rat_le, &[rat_n, sgn_eps_rat, antitone]);
+                    let abs_f_x_n = cabs(d, p, f_x_n);
+                    d.lemma(p.le_trans, &[abs_f_x_n, creal_n, sgn_eps, habs_n, lifted])
+                };
+
+                // `|F L| <= |F L - F Xn| + |F Xn| <= sgn_eps + sgn_eps
+                //        ~ 1/(e+1)`.
+                let neg_f_x_n = cneg(d, p, f_x_n);
+                let gap_term = cadd(d, p, f_l, neg_f_x_n);
+                let abs_gap = cabs(d, p, gap_term);
+                let abs_f_x_n = cabs(d, p, f_x_n);
+                let sum_abs = cadd(d, p, abs_gap, abs_f_x_n);
+                let rebuilt = cadd(d, p, gap_term, f_x_n);
+                let abs_rebuilt = cabs(d, p, rebuilt);
+
+                let triangle = d.lemma(p.abs_add_le, &[gap_term, f_x_n]);
+                // triangle : le abs_rebuilt sum_abs
+                let cancel = add_sub_cancel(d, p, f_l, f_x_n);
+                // cancel : Equiv rebuilt f_l
+                let abs_cancel = d.lemma(p.abs_congr, &[rebuilt, f_l, cancel]);
+                let refl_sum = erefl(d, p, sum_abs);
+                let step_a = d.lemma(
+                    p.le_congr,
+                    &[
+                        abs_rebuilt,
+                        abs_f_l,
+                        sum_abs,
+                        sum_abs,
+                        abs_cancel,
+                        refl_sum,
+                        triangle,
+                    ],
+                );
+                let eps_eps = cadd(d, p, sgn_eps, sgn_eps);
+                let step_b = d.lemma(
+                    p.add_le_add,
+                    &[abs_gap, sgn_eps, abs_f_x_n, sgn_eps, gap, small_n],
+                );
+                let chained = d.lemma(p.le_trans, &[abs_f_l, sum_abs, eps_eps, step_a, step_b]);
+                let refl_abs = erefl(d, p, abs_f_l);
+                let final_bound = d.lemma(
+                    p.le_congr,
+                    &[
+                        abs_f_l,
+                        abs_f_l,
+                        eps_eps,
+                        target_e,
+                        refl_abs,
+                        double_eq_target,
+                        chained,
+                    ],
+                );
+                let over_spec = d.lam_fv(spec_fv, spec_ty, final_bound);
+                d.lam_fv(bign_fv, nat, over_spec)
+            };
+
+            let body = cexists_elim(d, p, nat, comp_pred, goal_e, h_big_n, inner_minor);
+            d.lam_fv(e_fv, nat, body)
+        };
+
+        let hzero = d.lemma(p.equiv_zero_of_small, &[f_l, per_e]);
+
+        let le2 = cle(d, p, big_l, b);
+        let eq0 = equiv(d, p, f_l, zero_c);
+        let inner_ty = d.and(le2, eq0);
+        let inner = and_intro(d, p, le2, eq0, hl_b, hzero);
+        let le1 = cle(d, p, a, big_l);
+        let conj = and_intro(d, p, le1, inner_ty, ha_l, inner);
+        let witness = cexists_intro(d, p, carrier, root_pred, big_l, conj);
+
+        let over_hl = d.lam_fv(hl_fv, hl_ty, witness);
+        d.lam_fv(l_fv, carrier, over_hl)
+    };
+
+    let proof = cexists_elim(d, p, carrier, conv_pred, target_ty, hex, minor);
+
+    let value = {
+        let over_hderiv = d.lam_fv(hderiv_fv, hderiv_ty, proof);
+        let over_k = d.lam_fv(k_fv, nat, over_hderiv);
+        let over_hfb = d.lam_fv(hfb_fv, hfb_ty, over_k);
+        let over_hfa = d.lam_fv(hfa_fv, hfa_ty, over_hfb);
+        let over_hab = d.lam_fv(hab_fv, hab_ty, over_hfa);
+        let over_huc = d.lam_fv(huc_fv, uc_ty_ab, over_hab);
+        let over_hf = d.lam_fv(hf_fv, hf_ty, over_huc);
+        let over_b = d.lam_fv(b_fv, carrier, over_hf);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        let over_fp = d.lam_fv(fp_fv, func_ty, over_a);
+        d.lam_fv(f_fv, func_ty, over_fp)
+    };
+    let ty = {
+        let after_hderiv = d.arrow(hderiv_ty, target_ty);
+        let over_k = d.pi_fv(k_fv, nat, after_hderiv);
+        let after_hfb = d.arrow(hfb_ty, over_k);
+        let after_hfa = d.arrow(hfa_ty, after_hfb);
+        let after_hab = d.arrow(hab_ty, after_hfa);
+        // `arrow` is enough here, unlike the declarations above: the target
+        // never names the bisection point, so `huc` does not occur in it.
+        let after_huc = d.arrow(uc_ty_ab, after_hab);
+        let after_hf = d.arrow(hf_ty, after_huc);
+        let over_b = d.pi_fv(b_fv, carrier, after_hf);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        let over_fp = d.pi_fv(fp_fv, func_ty, over_a);
+        d.pi_fv(f_fv, func_ty, over_fp)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.ivt_exact_root,
         uparams: vec![],
         ty,
         value,

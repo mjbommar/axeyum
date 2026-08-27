@@ -4108,6 +4108,36 @@ pub struct CRealPrelude {
     /// not eliminate into a `Type`. That was the first obstruction recorded
     /// in `docs/mathematics-2026-08/diary-exact-root-obstruction.md`.
     pub ivt_bisect_cauchy: NameId,
+    /// `CReal.ivt_exact_root : ∀ F F' a b, HasDerivativeOn F F' a b →
+    /// UniformlyContinuousOn F a b → le a b → le (F a) zero → le zero (F b) →
+    /// ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k)) (F' z)) →
+    /// ∃ c, le a c ∧ (le c b ∧ Equiv (F c) zero)` (`creal/ivt.rs`) — **an
+    /// EXACT root**: `Equiv (F c) zero` outright, not
+    /// [`Self::ivt_approx`]'s `|F c| ≤ eps` per accuracy.
+    ///
+    /// The classical IVT is genuinely unavailable constructively (this
+    /// file's module documentation says why, and nothing here decides the
+    /// sign of a real). What unlocks the exact statement is ONE extra
+    /// hypothesis, a uniformly positive derivative: it does not make any
+    /// sign decidable, it makes the root unique WITH A MODULUS, which is
+    /// what turns a sequence of approximate roots into a Cauchy sequence.
+    ///
+    /// Five steps, each a named declaration:
+    /// [`Self::ivt_bisect_hi`] (the sequence, as data),
+    /// [`Self::ivt_bisect_approx`] (`|F (X e)| ≤ 1/(e+1)` at a NAMED point),
+    /// [`Self::ivt_bisect_cauchy`] (via
+    /// [`Self::abs_diff_le_of_small_image`] and
+    /// [`Self::cauchy_of_abs_diff_le`]), [`Self::converges_of_cauchy`] with
+    /// [`Self::converges_lower_bound`]/[`Self::converges_upper_bound`] for
+    /// the domain conjuncts, and [`Self::converges_comp_eventually`] plus
+    /// [`Self::equiv_zero_of_small`] for `Equiv (F L) zero`.
+    ///
+    /// Every `Exists` eliminated here has a `Prop` target, which is the
+    /// elimination this kernel permits — the wall
+    /// `docs/mathematics-2026-08/diary-exact-root-obstruction.md` records
+    /// only ever blocked `Type`-valued elimination, and the bisection being
+    /// DATA is what keeps the sequence itself out of that case.
+    pub ivt_exact_root: NameId,
     /// `CReal.hasDerivative_unique : ∀ F F1 F2 a b, HasDerivativeOn F F1 a b
     /// → HasDerivativeOn F F2 a b → lt a b → ∀ z, le a z → le z b → Equiv
     /// (F1 z) (F2 z)` (`creal/deriv_unique.rs`) — the derivative of a
@@ -5786,6 +5816,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         ivt_bisect_cauchy_bound: kernel.name_str(creal, "ivt_bisect_cauchy_bound"),
         cauchy_of_abs_diff_le: kernel.name_str(creal, "cauchy_of_abs_diff_le"),
         ivt_bisect_cauchy: kernel.name_str(creal, "ivt_bisect_cauchy"),
+        ivt_exact_root: kernel.name_str(creal, "ivt_exact_root"),
         has_derivative_unique: kernel.name_str(creal, "hasDerivative_unique"),
         fermat_interior_extremum: kernel.name_str(creal, "fermat_interiorExtremum"),
         rolle_interior_extremum: kernel.name_str(creal, "rolle_interiorExtremum"),
@@ -7099,6 +7130,7 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.equiv_refl,
             |p: CRealPrelude| p.equiv_symm,
             |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.equiv_zero_of_small,
             |p: CRealPrelude| p.has_derivative_on,
             |p: CRealPrelude| p.has_derivative_sub,
             |p: CRealPrelude| p.hd_mk,
@@ -9754,7 +9786,14 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.add_zero,
             |p: CRealPrelude| p.bound,
             |p: CRealPrelude| p.bound_within,
+            |p: CRealPrelude| p.abs_add_le,
+            |p: CRealPrelude| p.abs_congr,
             |p: CRealPrelude| p.cauchy,
+            |p: CRealPrelude| p.converges,
+            |p: CRealPrelude| p.converges_comp_eventually,
+            |p: CRealPrelude| p.converges_lower_bound,
+            |p: CRealPrelude| p.converges_of_cauchy,
+            |p: CRealPrelude| p.converges_upper_bound,
             |p: CRealPrelude| p.diff_le_of_strict_mono_magnitude,
             |p: CRealPrelude| p.equiv,
             |p: CRealPrelude| p.equiv_refl,
@@ -9811,6 +9850,7 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.ivt_bisect_diag_hi,
             |p: CRealPrelude| p.ivt_bisect_diag_lo,
             |p: CRealPrelude| p.ivt_bisect_hi,
+            |p: CRealPrelude| p.ivt_exact_root,
             |p: CRealPrelude| p.ivt_bisect_approx,
             |p: CRealPrelude| p.ivt_bisect_cauchy,
             |p: CRealPrelude| p.ivt_bisect_cauchy_bound,
