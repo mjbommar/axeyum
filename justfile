@@ -1145,6 +1145,12 @@ generated-trackers:
     # one-off count. docs/autogenesis/297-ledger-coverage-gate.md.
     python3 -m unittest scripts.tests.test_gen_ledger_coverage
     python3 scripts/gen-ledger-coverage.py --check
+    # The generated half of that ledger: `--audit` keeps every mechanically
+    # written fact distinguishable from a curated one and refuses any whose
+    # checker_command cannot fail.
+    # docs/autogenesis/298-mechanical-fact-registration.md.
+    python3 -m unittest scripts.tests.test_gen_kernel_facts
+    python3 scripts/gen-kernel-facts.py --audit
     python3 scripts/gen-claims-dashboard.py --check
 
 # The `axeyum-solver` decomposition ratchet (docs/refactor-2026-08/03).
