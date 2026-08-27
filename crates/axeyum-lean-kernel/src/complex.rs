@@ -1569,6 +1569,33 @@ pub struct ComplexPrelude {
     /// new top coefficient — the reason a naive induction reusing the
     /// smaller `factorQuotient` wholesale still does not work.
     pub horner_from_top_diag_eq_poly_eval: NameId,
+    /// `Complex.factorQuotient_succ_eq : ∀ c a n k, Lt k n → Equiv
+    /// (factorQuotient c a (Nat.succ n) k) (add (factorQuotient c a n k)
+    /// (mul (pow a (Nat.sub n k)) (c (Nat.succ n))))` — the correction term
+    /// [`Self::horner_from_top_diag_eq_poly_eval`]'s doc names as the reason
+    /// a naive induction reusing the smaller `factorQuotient` wholesale does
+    /// not work, made precise and proved.
+    ///
+    /// **This turns out to need no fresh induction at all.** Once `Lt k n`
+    /// gives `Nat.sub n k` a successor shape (`Nat.succ j`, via
+    /// `succ_pred_of_pos` + `le_of_lt_succ` from the standard nat prelude —
+    /// deliberately NOT `nat_prelude::choose::sub_succ_of_lt`, which proves
+    /// the identical fact but is `pub(super)` to that module, so this
+    /// re-derives it from public building blocks rather than reaching across
+    /// the boundary), [`Self::succ_sub_of_le`]-style reindexing (via the
+    /// public `Nat.succ_sub_of_le`) puts `Nat.sub (Nat.succ n) k` at `Nat.succ
+    /// (Nat.succ j)` too, and BOTH `factorQuotient c a (Nat.succ n) k` and
+    /// `factorQuotient c a n k` reduce (one `Nat.rec` ι-step each, via
+    /// `nat_eq_to_complex_equiv` transport exactly as
+    /// [`Self::factor_quotient_degree_lt`] already transports through this
+    /// same `Nat.rec` shape) to `hornerFromTop c a (Nat.succ n) (Nat.succ j)`
+    /// and `hornerFromTop c a n j` respectively — at which point
+    /// [`Self::horner_from_top_succ_succ`] (an `Eq.refl` fact, proved before
+    /// this theorem existed) IS the correction term, verbatim. The "new
+    /// recursive relationship" the module doc worried about is a single
+    /// existing defining equation once the `Nat.sub` reindexing is out of the
+    /// way.
+    pub factor_quotient_succ_eq: NameId,
 }
 
 impl ComplexPrelude {
@@ -1757,6 +1784,7 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         factor_quotient_degree_lt: kernel.name_str(complex, "factorQuotient_degreeLt"),
         horner_from_top_diag_eq_poly_eval: kernel
             .name_str(complex, "hornerFromTop_diag_eq_polyEval"),
+        factor_quotient_succ_eq: kernel.name_str(complex, "factorQuotient_succ_eq"),
     }
 }
 
