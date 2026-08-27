@@ -2248,6 +2248,51 @@ pub struct CRealPrelude {
     /// `Rat`-level bound back across a `CReal.pow` sample is exactly the open
     /// gap `rat_prelude/bernoulli.rs`'s own module doc names).
     pub pow_le_nat_div_succ_of_lt: NameId,
+    /// `CReal.ratioDecayBound : ∀ f r, le zero r → (∀ n, le (f (Nat.succ n))
+    /// (mul r (f n))) → ∀ n, le (f n) (mul (f Nat.zero) (pow r n))` — the
+    /// ratio test's decay induction: a sequence shrinking by a factor `r` at
+    /// each step (`f(n+1) ≤ r·f(n)`) stays under the geometric envelope
+    /// `f(0)·rⁿ`. The correct orientation, established by counterexample: the
+    /// reverse hypothesis `le (mul r (f n)) (f (Nat.succ n))` degenerates at
+    /// `r := 0` to `0 ≤ f(n+1)`, satisfied by any nonnegative sequence
+    /// including divergent ones (`f(n) := n+1`).
+    ///
+    /// Induction on `n`. Base case: `le (f 0) (mul (f 0) one)`, from
+    /// `le_refl (f 0)` transported across `Equiv (f 0) (mul (f 0) one)`
+    /// ([`Self::mul_one`], symmetrised) via [`Self::le_congr`] — the target
+    /// type `mul (f 0) (pow r 0)` is defeq to `mul (f 0) one` since `pow`
+    /// ι-reduces at `0`, so no further rewrite of the goal itself is needed.
+    /// Step: multiplies the inductive hypothesis `f j ≤ f 0 · rʲ` by the
+    /// nonnegative `r` on the left ([`Self::mul_le_mul_of_nonneg_left`]) to
+    /// get `r·f(j) ≤ r·(f 0·rʲ)`, chains it below the decay hypothesis at `j`
+    /// via [`Self::le_trans`], and transports the result across the
+    /// three-step commute/associate chain `r·(f0·rʲ) ~ f0·(rʲ·r)`
+    /// ([`Self::mul_assoc`]/[`Self::mul_comm`]/[`Self::mul_congr`]) via
+    /// [`Self::le_congr`] — the target `f0·pow(r,succ j)` is defeq to
+    /// `f0·(rʲ·r)` since `pow` ι-reduces its recursive factor on the right.
+    pub ratio_decay_bound: NameId,
+    /// `CReal.invLeOfPosBound : ∀ x k h, le (inv x k h) (ofNat (Nat.succ
+    /// k))` — the inverse of a `PosBound`-witnessed positive real is bounded
+    /// by a whole number computed from the very modulus that witnesses its
+    /// positivity: `PosBound x k` says `1/(k+1) ≤ x`, so `x⁻¹ ≤ k+1`.
+    ///
+    /// Built without touching `inv`'s own representative (`creal/inverse.rs`
+    /// is out of scope for this lane): from the `Rat`-level identity
+    /// `(1/(k+1))·(k+1) = 1` ([`crate::RatPrelude::mul_inv_cancel`] at
+    /// `q := natDivSucc 1 k` composed with
+    /// [`crate::RatPrelude::inv_nat_div_succ`], never
+    /// `Rat.normalize`/`Nat.gcd`), lifted to `Equiv (mul (ofRat (natDivSucc 1
+    /// k)) (ofNat (Nat.succ k))) one` via [`Self::of_rat_mul`]. Multiplying
+    /// `h : PosBound x k` (unfolds to `le (ofRat (natDivSucc 1 k)) x`) by the
+    /// nonnegative `ofNat (Nat.succ k)` on the right gives `le (mul (ofRat
+    /// (natDivSucc 1 k)) (ofNat (Nat.succ k))) (mul x (ofNat (Nat.succ
+    /// k)))`, transported by the identity above into `le one (mul x (ofNat
+    /// (Nat.succ k)))`, then into `le (mul x (inv x k h)) (mul x (ofNat
+    /// (Nat.succ k)))` via [`Self::mul_inv_cancel`] (symmetrised) and
+    /// [`Self::le_congr`], and finally cancelled by
+    /// [`Self::le_of_mul_le_mul_left`] at the SAME witness `(k, h)` `inv`
+    /// itself takes — no second modulus is invented.
+    pub inv_le_of_pos_bound: NameId,
     /// `CReal.geomHalfInvLeafBound : ∀ a, le (mul (inv (add one (neg half)) 1
     /// h) (pow half a)) (ofRat (natDivSucc 2 a))`, `h` built internally (not
     /// a parameter) — the leaf [`Self::geom_pair_within`]'s own field doc
@@ -4131,6 +4176,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         of_rat_pow: kernel.name_str(creal, "ofRat_pow"),
         pow_half_le_nat_div_succ: kernel.name_str(creal, "pow_half_le_natDivSucc"),
         pow_le_nat_div_succ_of_lt: kernel.name_str(creal, "pow_le_natDivSucc_of_lt"),
+        ratio_decay_bound: kernel.name_str(creal, "ratioDecayBound"),
+        inv_le_of_pos_bound: kernel.name_str(creal, "invLeOfPosBound"),
         geom_half_inv_leaf_bound: kernel.name_str(creal, "geomHalfInvLeafBound"),
         geom_cauchy_ordered_half: kernel.name_str(creal, "geomCauchyOrderedHalf"),
         geom_cauchy: kernel.name_str(creal, "geomCauchy"),
