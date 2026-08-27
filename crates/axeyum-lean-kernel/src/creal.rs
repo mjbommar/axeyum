@@ -3793,14 +3793,15 @@ pub struct CRealPrelude {
     /// `declare_integral_scale`.
     pub integral_scale: NameId,
     /// `CReal.riemannSum_integral_close : ∀ F a b, le a b →
-    /// UniformlyContinuousOn F a b → ∀ e depth i j1 j2 : Nat, Within
+    /// UniformlyContinuousOn F a b → ∃ K, ∀ e depth i j1 j2 : Nat, Within
     /// (Rat.sub (seq (riemannSum F a b (Nat.add (deep F a b u e) depth)) i)
-    /// (seq (CReal.integral F a b hab u) e)) (bnd1 + bnd2 + (natDivSucc (K+1)
-    /// e + natDivSucc 1 e))`, `bnd1`/`bnd2` EXACTLY
-    /// [`Self::riemann_sum_shared_accuracy_close`]'s own two-leg bound at
-    /// `(e, k1 := depth, k2 := 0, oi := i, oj := e, j1, j2)`, `K :=
-    /// integral.rs`'s own `fold_k(magnitude)` — the SAME `Nat` `ExprId`
-    /// [`Self::integral`] is itself built from.
+    /// (seq (CReal.integral F a b hab u) e)) (bnd1 + bnd2 + natDivSucc K e)`,
+    /// `bnd1`/`bnd2` EXACTLY [`Self::riemann_sum_shared_accuracy_close`]'s
+    /// own two-leg bound at `(e, k1 := depth, k2 := 0, oi := i, oj := e, j1,
+    /// j2)`. `K` is a SINGLE rate valid for every accuracy `e` (it depends
+    /// only on `F`/`a`/`b`, via [`Self::integral_converges`]'s own witness),
+    /// so it sits OUTSIDE the `∀ e …` quantifiers rather than threaded
+    /// through them.
     ///
     /// **The Riemann-sum-vs-true-value estimate — Chapter 14's last algebra
     /// gap.** `riemannSum F a b m` at ANY FIXED mesh count `m` at least as
@@ -3814,15 +3815,32 @@ pub struct CRealPrelude {
     ///    := 0` — comparing the FIXED mesh `m` against `deep(e) + 0`, which
     ///    is EXACTLY `integral.rs`'s own private `integral_witness`'s
     ///    `f_lambda` evaluated at `e`.
-    /// 2. [`Self::speedup_close`] applied to the SAME `(f_lambda, K,
-    ///    cauchy_proof)` triple [`Self::integral`] itself is built from
-    ///    (`integral_witness`, reconstructed rather than reused through
-    ///    [`Self::integral_converges`]'s own `Converges` wrapper, since that
-    ///    `Prop` hides its witness `K` behind an `Exists` and this estimate
-    ///    needs `K` NAMED, not merely known to exist) — bridging `f_lambda
-    ///    e`'s own sample at `e` to `CReal.integral F a b hab u`'s sample at
-    ///    `e` by the same delta/beta unfolding [`Self::integral_converges`]'s
-    ///    own doc comment already relies on.
+    /// 2. [`Self::integral_converges`]'s own `Converges f_lambda
+    ///    integral_val` fact, ELIMINATED (rather than re-derived by hand)
+    ///    to bridge `f_lambda e`'s own sample at `e` to `CReal.integral F a
+    ///    b hab u`'s sample at `e`.
+    ///
+    /// **Leg 2 was originally built by reconstructing `integral_witness`'s
+    /// `(f_lambda, K, cauchy_proof)` triple and applying
+    /// [`Self::speedup_close`] directly, to get `K` NAMED rather than
+    /// hidden behind [`Self::integral_converges`]'s `Exists`. Measured
+    /// 2026-08-27: that route cost 74s of a 75s prelude build** (isolated by
+    /// disabling each leg in turn — leg 1 alone cost no more than the ~18s
+    /// baseline, leg 2 alone reproduced the full cost). The mechanism: that
+    /// route's `z := sample(integral_val, e)` (built from `CReal.integral`,
+    /// a `Definition` whose stored value embeds a full
+    /// `regular_of_scaled_cauchy` construction) had to be shown DEFEQ
+    /// against a raw `speedup(raw, K) e` term that never mentions
+    /// `CReal.integral` at all — bridging them forces a full delta-unfold of
+    /// `CReal.integral`'s definition. The current route never triggers that
+    /// unfold: leg 2's `z`-side comes from [`Self::integral_converges`]'s
+    /// own eliminated witness, whose type builds `integral_val` via the
+    /// IDENTICAL `d.const_app(p.integral, …)` recipe used here, so the two
+    /// are the SAME `ExprId`, not merely defeq. `K` is still genuinely
+    /// NAMED (bound by the elimination's own minor premise) — just
+    /// re-exposed as an outer `∃ K` on this declaration's own statement
+    /// instead of reconstructed from scratch. Verified back to the ~18s
+    /// `creal_prelude_builds` baseline after the rebuild.
     ///
     /// No new estimate anywhere: every piece is an already-proved lemma or an
     /// already-built construction, applied at the right arguments — the same
