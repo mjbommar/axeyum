@@ -598,6 +598,236 @@ fn declare_pow_congr(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelEr
     })
 }
 
+// ---------------------------------------------------------------------------
+// `CReal.powerSeriesTerm` -- the power series term family, its
+// `Equiv`-congruence, and the coefficient-boundedness domination package.
+// ---------------------------------------------------------------------------
+
+fn cpow(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, n: ExprId) -> ExprId {
+    d.const_app(p.pow, &[x, n])
+}
+
+fn cabs(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+    d.const_app(p.abs, &[x])
+}
+
+/// `CReal.powerSeriesTerm : (Nat → CReal) → Nat → CReal → CReal :=
+/// fun c j x => mul (c j) (pow x j)` — the `j`-th term of the power series
+/// with coefficients `c`, evaluated at `x`. A bare `Definition`, asserting
+/// nothing. `pow`'s own height is `DERIVED_HEIGHT + 42`
+/// ([`declare_pow`]); this sits one above it, matching this development's
+/// own convention of giving a thin wrapper a height just past what it
+/// unfolds to.
+pub(super) fn declare_power_series_term(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let coeff_ty = d.arrow(nat, carrier);
+
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+
+    let cj = d.apply(c, &[j]);
+    let pow_x_j = cpow(d, p, x, j);
+    let body = cmul(d, p, cj, pow_x_j);
+
+    let value = {
+        let with_x = d.lam_fv(x_fv, carrier, body);
+        let with_j = d.lam_fv(j_fv, nat, with_x);
+        d.lam_fv(c_fv, coeff_ty, with_j)
+    };
+    let ty = {
+        let with_x = d.arrow(carrier, carrier);
+        let with_j = d.arrow(nat, with_x);
+        d.arrow(coeff_ty, with_j)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.power_series_term,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(DERIVED_HEIGHT + 43),
+    })
+}
+
+/// `CReal.powerSeriesTerm_congr : ∀ c j p q, Equiv p q → Equiv
+/// (powerSeriesTerm c j p) (powerSeriesTerm c j q)` — from
+/// [`CRealPrelude::pow_congr`] (`Equiv p q → Equiv (pow p j) (pow q j)`) and
+/// [`CRealPrelude::mul_congr`] against `Equiv (c j) (c j)` reflexivity on
+/// the left factor. No induction: `pow_congr` already did the induction on
+/// the exponent.
+pub(super) fn declare_power_series_term_congr(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let coeff_ty = d.arrow(nat, carrier);
+
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let pp_fv = d.fresh_fvar();
+    let pp = d.kernel().fvar(pp_fv);
+    let qq_fv = d.fresh_fvar();
+    let qq = d.kernel().fvar(qq_fv);
+    let heq_ty = equiv(d, p, pp, qq);
+    let heq_fv = d.fresh_fvar();
+    let heq = d.kernel().fvar(heq_fv);
+
+    let cj = d.apply(c, &[j]);
+    let refl_cj = d.lemma(p.equiv_refl, &[cj]);
+    let pow_congr_proof = d.lemma(p.pow_congr, &[pp, qq, heq, j]);
+    let proof = d.lemma(p.mul_congr, &[cj, cj, pp, qq, refl_cj, pow_congr_proof]);
+
+    let value = {
+        let with_heq = d.lam_fv(heq_fv, heq_ty, proof);
+        let with_qq = d.lam_fv(qq_fv, carrier, with_heq);
+        let with_pp = d.lam_fv(pp_fv, carrier, with_qq);
+        let with_j = d.lam_fv(j_fv, nat, with_pp);
+        d.lam_fv(c_fv, coeff_ty, with_j)
+    };
+    let ty = {
+        let pst_c_j_p = d.const_app(p.power_series_term, &[c, j, pp]);
+        let pst_c_j_q = d.const_app(p.power_series_term, &[c, j, qq]);
+        let concl = equiv(d, p, pst_c_j_p, pst_c_j_q);
+        let inner = d.arrow(heq_ty, concl);
+        let with_qq = d.pi_fv(qq_fv, carrier, inner);
+        let with_pp = d.pi_fv(pp_fv, carrier, with_qq);
+        let with_j = d.pi_fv(j_fv, nat, with_pp);
+        d.pi_fv(c_fv, coeff_ty, with_j)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.power_series_term_congr,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.powerSeriesTerm_abs_le : ∀ c M, (∀ j, le (abs (c j)) M) → ∀ x r,
+/// le zero x → le x r → ∀ j, le (abs (powerSeriesTerm c j x)) (mul M (pow r
+/// j))`. See the field documentation on
+/// [`CRealPrelude::power_series_term_abs_le`] for the route: base
+/// monotonicity of `pow` plus a two-sided `abs_le` (mirroring
+/// `creal/monotone.rs`'s own private `abs_le_of_nonneg_le`, reproduced here
+/// since that helper is not `pub(super)`) plus `abs_mul_le_of_bounds`. No
+/// induction on `j` is needed — everything is a direct combination for an
+/// arbitrary `j`.
+pub(super) fn declare_power_series_term_abs_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let coeff_ty = d.arrow(nat, carrier);
+    let zero_c = czero(d, p);
+
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let hbound_ty = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let cj = d.apply(c, &[j]);
+        let abs_cj = cabs(d, p, cj);
+        let body = cle(d, p, abs_cj, m);
+        d.pi_fv(j_fv, nat, body)
+    };
+    let hbound_fv = d.fresh_fvar();
+    let hbound = d.kernel().fvar(hbound_fv);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let hx0_ty = cle(d, p, zero_c, x);
+    let hx0_fv = d.fresh_fvar();
+    let hx0 = d.kernel().fvar(hx0_fv);
+    let hxr_ty = cle(d, p, x, r);
+    let hxr_fv = d.fresh_fvar();
+    let hxr = d.kernel().fvar(hxr_fv);
+
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+
+    let cj = d.apply(c, &[j]);
+    let hcj_le_m = d.apply(hbound, &[j]);
+
+    let pow_x_j = cpow(d, p, x, j);
+    let pow_r_j = cpow(d, p, r, j);
+
+    // h_le : le pow_x_j pow_r_j.
+    let h_le = d.lemma(p.pow_le_pow_of_base_le, &[x, r, hx0, hxr, j]);
+
+    // hv_nonneg : le zero pow_x_j; h_bound_nonneg : le zero pow_r_j (via
+    // le zero r, from le_trans on hx0/hxr).
+    let hv_nonneg = d.lemma(p.pow_nonneg, &[x, hx0, j]);
+    let hr0 = d.lemma(p.le_trans, &[zero_c, x, r, hx0, hxr]);
+    let h_bound_nonneg = d.lemma(p.pow_nonneg, &[r, hr0, j]);
+
+    // abs_le_of_nonneg_le route: le (neg pow_x_j) pow_r_j, from
+    // neg_le_neg + neg_zero_equiv + le_trans.
+    let neg_pow_x_j = cneg(d, p, pow_x_j);
+    let neg_zero_c = cneg(d, p, zero_c);
+    let step1 = d.lemma(p.neg_le_neg, &[zero_c, pow_x_j, hv_nonneg]);
+    let nz_eq = neg_zero_equiv(d, p);
+    let refl_npxj = d.lemma(p.equiv_refl, &[neg_pow_x_j]);
+    let npxj_le_zero = d.lemma(
+        p.le_congr,
+        &[
+            neg_pow_x_j,
+            neg_pow_x_j,
+            neg_zero_c,
+            zero_c,
+            refl_npxj,
+            nz_eq,
+            step1,
+        ],
+    );
+    let npxj_le_pow_r_j = d.lemma(p.le_trans, &[neg_pow_x_j, zero_c, pow_r_j, npxj_le_zero, h_bound_nonneg]);
+    let abs_pow_x_j_le_pow_r_j = d.lemma(p.abs_le, &[pow_x_j, pow_r_j, h_le, npxj_le_pow_r_j]);
+
+    let concl_proof = d.lemma(
+        p.abs_mul_le_of_bounds,
+        &[cj, pow_x_j, m, pow_r_j, hcj_le_m, abs_pow_x_j_le_pow_r_j],
+    );
+
+    let value = {
+        let with_j = d.lam_fv(j_fv, nat, concl_proof);
+        let with_hxr = d.lam_fv(hxr_fv, hxr_ty, with_j);
+        let with_hx0 = d.lam_fv(hx0_fv, hx0_ty, with_hxr);
+        let with_r = d.lam_fv(r_fv, carrier, with_hx0);
+        let with_x = d.lam_fv(x_fv, carrier, with_r);
+        let with_hbound = d.lam_fv(hbound_fv, hbound_ty, with_x);
+        let with_m = d.lam_fv(m_fv, carrier, with_hbound);
+        d.lam_fv(c_fv, coeff_ty, with_m)
+    };
+    let ty = {
+        let pst = d.const_app(p.power_series_term, &[c, j, x]);
+        let mul_m_pow_r_j = cmul(d, p, m, pow_r_j);
+        let abs_pst = cabs(d, p, pst);
+        let concl_j = cle(d, p, abs_pst, mul_m_pow_r_j);
+        let with_j = d.pi_fv(j_fv, nat, concl_j);
+        let with_hxr = d.arrow(hxr_ty, with_j);
+        let with_hx0 = d.arrow(hx0_ty, with_hxr);
+        let with_r = d.pi_fv(r_fv, carrier, with_hx0);
+        let with_x = d.pi_fv(x_fv, carrier, with_r);
+        let with_hbound = d.arrow(hbound_ty, with_x);
+        let with_m = d.pi_fv(m_fv, carrier, with_hbound);
+        d.pi_fv(c_fv, coeff_ty, with_m)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.power_series_term_abs_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 /// `CReal.pow_nonneg : ∀ x n, le zero x → le zero (pow x n)`. Induction on
 /// `n`: the base case is `le_of_lt zero_lt_one` up to `pow`'s ι-reduction,
 /// the step is [`CRealPrelude::mul_nonneg`] against the inductive hypothesis

@@ -2273,3 +2273,168 @@ pub(super) fn declare_weierstrass_m_test(
         value,
     })
 }
+
+// ============================================================================
+// Theorem: the Weierstrass M-test specialized to a bounded-coefficient power
+// series -- `CReal.powerSeriesUniformConvergesOn`.
+// ============================================================================
+//
+// `∀ c M, (∀ j, le (abs (c j)) M) → ∀ r, le zero r → ∀ k, (∀ pp qq, Within
+// (seq (sumRange mseq pp) pp − seq (sumRange mseq qq) qq) (natDivSucc k pp +
+// natDivSucc k qq)) → UniformConvergesOn (fun n x => sumRange (fun j =>
+// powerSeriesTerm c j x) n) G zero r`, where `mseq j := mul M (pow r j)`.
+//
+// This is [`declare_weierstrass_m_test`] applied at `f := powerSeriesTerm
+// c`, `a := zero`, `b := r`, `hab := hr0` (`le zero r`, reused directly --
+// choosing `[0, r]` rather than `[−r, r]` means `hab` costs nothing beyond
+// the domination hypothesis's own lower bound, where `[−r, r]` would need a
+// separate `le (neg r) r` lemma from `le zero r`), `hcong :=
+// CReal.powerSeriesTerm_congr c` and `hdom` built inline from
+// `CReal.powerSeriesTerm_abs_le`. The dominating series' own raw Cauchy
+// modulus `(k, …)` stays a direct parameter, exactly as
+// `CReal.weierstrassMTest` itself takes one: `G` is built FROM `k` inside
+// that theorem's own proof (see its module documentation), so a caller
+// cannot supply a `Cauchy`-`Prop`-wrapped fact and have this declaration
+// eliminate the existential internally -- `Exists.rec`'s target must not
+// mention the witness, and here it would (through `G`). A caller obtains
+// `(k, …)` from [`CRealPrelude::geom_scaled_cauchy_of_lt`] plus their own
+// `Exists`-elimination, same as any other consumer of a `Cauchy` fact.
+//
+// `r < 1` is deliberately not a hypothesis: nothing in this construction
+// needs it directly, and it is implicit in whatever Cauchy witness a caller
+// can actually produce for `mseq`.
+//
+// The `ty` here is read off with [`crate::tc::Kernel::infer`] rather than
+// hand-built: `weierstrassMTest`'s own conclusion embeds its limit `G`,
+// which is a large expression this declaration has no reason to reconstruct
+// by hand a second time (see [`declare_weierstrass_m_test`]'s own `ty`
+// construction for how large that reconstruction is when done directly).
+
+/// Admit `CReal.powerSeriesUniformConvergesOn`. See the section
+/// documentation above for the route.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_power_series_uniform_converges(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let coeff_ty = d.arrow(nat, carrier);
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    // hbound_ty : ∀ j, le (abs (c j)) m.
+    let hbound_ty = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let cj = d.apply(c, &[j]);
+        let abs_cj = d.const_app(p.abs, &[cj]);
+        let body = d.const_app(p.le, &[abs_cj, m]);
+        d.pi_fv(j_fv, nat, body)
+    };
+    let hbound_fv = d.fresh_fvar();
+    let hbound = d.kernel().fvar(hbound_fv);
+
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let hr0_ty = d.const_app(p.le, &[zero_c, r]);
+    let hr0_fv = d.fresh_fvar();
+    let hr0 = d.kernel().fvar(hr0_fv);
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    // mseq := λ n, mul m (pow r n) -- the dominating geometric series.
+    let mseq = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let pow_r_n = d.const_app(p.pow, &[r, n]);
+        let prod = d.const_app(p.mul, &[m, pow_r_n]);
+        d.lam_fv(n_fv, nat, prod)
+    };
+
+    // hcauchy_ty : ∀ pp qq, Within (seq (sumRange mseq pp) pp − seq
+    // (sumRange mseq qq) qq) (natDivSucc k pp + natDivSucc k qq) --
+    // verbatim in SHAPE to `declare_weierstrass_m_test`'s own `hcauchy_ty`.
+    let hcauchy_ty = {
+        let pp_fv = d.fresh_fvar();
+        let pp = d.kernel().fvar(pp_fv);
+        let qq_fv = d.fresh_fvar();
+        let qq = d.kernel().fvar(qq_fv);
+        let sum_pp = d.const_app(p.sum_range, &[mseq, pp]);
+        let sum_qq = d.const_app(p.sum_range, &[mseq, qq]);
+        let left = sample(d, p, sum_pp, pp);
+        let right = sample(d, p, sum_qq, qq);
+        let diff = rsub(d, p.rat, left, right);
+        let bpp = div_succ_at(d, p, k, pp);
+        let bqq = div_succ_at(d, p, k, qq);
+        let bound = radd(d, bpp, bqq);
+        let claim = within(d, p, diff, bound);
+        let over_qq = d.pi_fv(qq_fv, nat, claim);
+        d.pi_fv(pp_fv, nat, over_qq)
+    };
+    let hcauchy_fv = d.fresh_fvar();
+    let hcauchy = d.kernel().fvar(hcauchy_fv);
+
+    // f := powerSeriesTerm c : Nat -> CReal -> CReal.
+    let f = d.const_app(p.power_series_term, &[c]);
+    // hcong := powerSeriesTerm_congr c : ∀ j p q, Equiv p q → Equiv (f j p)
+    // (f j q).
+    let hcong = d.const_app(p.power_series_term_congr, &[c]);
+    // hab := hr0 (a := zero, b := r).
+    let hab = hr0;
+
+    // hdom : ∀ j pt, le zero pt → le pt r → le (abs (f j pt)) (mseq j).
+    let hdom = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let pt_fv = d.fresh_fvar();
+        let pt = d.kernel().fvar(pt_fv);
+        let hax_fv = d.fresh_fvar();
+        let hax = d.kernel().fvar(hax_fv);
+        let hxb_fv = d.fresh_fvar();
+        let hxb = d.kernel().fvar(hxb_fv);
+        let inner = d.lemma(
+            p.power_series_term_abs_le,
+            &[c, m, hbound, pt, r, hax, hxb, j],
+        );
+        let hxb_ty = d.const_app(p.le, &[pt, r]);
+        let hax_ty = d.const_app(p.le, &[zero_c, pt]);
+        let with_hxb = d.lam_fv(hxb_fv, hxb_ty, inner);
+        let with_hax = d.lam_fv(hax_fv, hax_ty, with_hxb);
+        let with_pt = d.lam_fv(pt_fv, carrier, with_hax);
+        d.lam_fv(j_fv, nat, with_pt)
+    };
+
+    let weierstrass_applied = d.lemma(
+        p.weierstrass_m_test,
+        &[f, mseq, zero_c, r, hab, hcong, k, hdom, hcauchy],
+    );
+
+    let value = {
+        let with_hcauchy = d.lam_fv(hcauchy_fv, hcauchy_ty, weierstrass_applied);
+        let with_k = d.lam_fv(k_fv, nat, with_hcauchy);
+        let with_hr0 = d.lam_fv(hr0_fv, hr0_ty, with_k);
+        let with_r = d.lam_fv(r_fv, carrier, with_hr0);
+        let with_hbound = d.lam_fv(hbound_fv, hbound_ty, with_r);
+        let with_m = d.lam_fv(m_fv, carrier, with_hbound);
+        d.lam_fv(c_fv, coeff_ty, with_m)
+    };
+
+    let ty = d.kernel().infer(value)?;
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.power_series_uniform_converges,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
