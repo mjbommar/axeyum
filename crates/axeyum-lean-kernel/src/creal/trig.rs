@@ -142,41 +142,41 @@ pub(super) fn declare_trig(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ke
 // own private copies (each `creal/*` module keeps its own; see e.g.
 // `geometric.rs::echain`, `derivative.rs::cneg`/`cmul`/`czero`). -------------
 
-fn cmul(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
+pub(super) fn cmul(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
     d.const_app(p.mul, &[x, y])
 }
 
-fn cneg(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+pub(super) fn cneg(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
     d.const_app(p.neg, &[x])
 }
 
-fn czero(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+pub(super) fn czero(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
     d.kernel().const_(p.zero, vec![])
 }
 
-fn one_c(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+pub(super) fn one_c(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
     d.kernel().const_(p.one, vec![])
 }
 
-fn cabs(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+pub(super) fn cabs(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
     d.const_app(p.abs, &[x])
 }
 
-fn cpow(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, n: ExprId) -> ExprId {
+pub(super) fn cpow(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, n: ExprId) -> ExprId {
     d.const_app(p.pow, &[x, n])
 }
 
-fn cadd(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
+pub(super) fn cadd(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
     d.const_app(p.add, &[x, y])
 }
 
-fn cle(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
+pub(super) fn cle(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
     d.const_app(p.le, &[x, y])
 }
 
 /// `Equiv` chain composition, verbatim in shape to every other `creal/*`
 /// module's own private `echain`.
-fn echain(
+pub(super) fn echain(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     start: ExprId,
@@ -192,18 +192,24 @@ fn echain(
 }
 
 /// `Equiv a a`.
-fn erefl(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId) -> ExprId {
+pub(super) fn erefl(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId) -> ExprId {
     d.lemma(p.equiv_refl, &[a])
 }
 
 /// From `h : Equiv a b`, `Equiv b a`.
-fn esymm(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
+pub(super) fn esymm(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+) -> ExprId {
     d.lemma(p.equiv_symm, &[a, b, h])
 }
 
 /// `Equiv (add (neg x) x) zero` — reproduced verbatim from `derivative.rs`'s
 /// own private `neg_add_self`.
-fn neg_add_self(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+pub(super) fn neg_add_self(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
     let zero_c = czero(d, p);
     let nx = cneg(d, p, x);
     let x_nx = cadd(d, p, x, nx);
@@ -216,7 +222,7 @@ fn neg_add_self(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
 
 /// From `h_ab_zero : Equiv (add a b) zero`, `Equiv b (neg a)` — reproduced
 /// verbatim from `derivative.rs`'s own private `neg_unique`.
-fn neg_unique(
+pub(super) fn neg_unique(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     a: ExprId,
@@ -282,7 +288,7 @@ fn neg_unique(
 
 /// `Equiv (neg (neg x)) x` — reproduced verbatim from `derivative.rs`'s own
 /// private `double_neg`.
-fn double_neg(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+pub(super) fn double_neg(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
     let nx = cneg(d, p, x);
     let nnx = cneg(d, p, nx);
     let h = neg_add_self(d, p, x);
@@ -292,7 +298,7 @@ fn double_neg(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
 
 /// `Equiv (neg zero) zero` — reproduced verbatim from `exponential.rs`'s own
 /// private `neg_zero_equiv_local` (itself reproduced from `series.rs`).
-fn neg_zero_equiv_local(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+pub(super) fn neg_zero_equiv_local(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
     let zero_c = czero(d, p);
     let nz = cneg(d, p, zero_c);
     let padded = cadd(d, p, nz, zero_c);
@@ -358,7 +364,7 @@ fn abs_neg_one_le_one(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
 /// `(pow (neg one) k, neg one, one, one)` (IH and [`abs_neg_one_le_one`])
 /// against `pow (neg one) (succ k) = mul (pow (neg one) k) (neg one)`
 /// (`pow_succ` ι-reduction), then folds `mul one one ~ one`.
-fn sign_abs_le_one(d: &mut IntDev<'_>, p: CRealPrelude, k: ExprId) -> ExprId {
+pub(super) fn sign_abs_le_one(d: &mut IntDev<'_>, p: CRealPrelude, k: ExprId) -> ExprId {
     let one_cc = one_c(d, p);
     let neg_one = cneg(d, p, one_cc);
     let neg_one_bound = abs_neg_one_le_one(d, p);

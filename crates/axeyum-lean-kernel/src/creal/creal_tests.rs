@@ -126,7 +126,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 382] = [
+    let expected: [(&str, crate::NameId, &str); 385] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -1370,6 +1370,16 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         ("CReal.cosOneConverges", p.cos_one_converges, "theorem"),
         ("CReal.cosOne_le_four", p.cos_one_le_four, "theorem"),
         ("CReal.neg_four_le_cosOne", p.neg_four_le_cos_one, "theorem"),
+        // `creal/alternating.rs` -- the Leibniz (alternating series) pairing
+        // argument the `cosOne_le_four`/`neg_four_le_cosOne` bound's own doc
+        // comment names as the missing piece for a tighter bound. Generic
+        // over an abstract term magnitude `a : Nat -> CReal`; see that
+        // module's own doc for why closing it to a limit bound (and a
+        // concrete numeric bound on `cosOne`) is a separate, sized next
+        // step this slice does not reach.
+        ("CReal.negOnePowDouble", p.neg_one_pow_double, "theorem"),
+        ("CReal.alternatingELeO", p.alternating_e_le_o, "theorem"),
+        ("CReal.alternatingBracket", p.alternating_bracket, "theorem"),
         // Found by the coverage assertion above, not by anyone noticing: these
         // seven were live in the prelude and unlisted here, so this test had
         // never checked them. `lt_cotrans`/`apart_cotrans` are Ch 12's
