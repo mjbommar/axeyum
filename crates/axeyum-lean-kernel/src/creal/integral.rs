@@ -119,11 +119,12 @@
 //! FIXED subinterval count unless the two partitions happen to line up — see
 //! `declare_integral`'s caller for that check.
 
+use super::completeness::half_shift_le;
 use super::ring_helpers::right_distrib;
 use super::series::{chain_within3, within_symm};
 use super::{
     CRealPrelude, DERIVED_HEIGHT, and_intro, cadd, creal_ty, div_succ, embed, equiv, halves,
-    modulus, sample, shift, within,
+    modulus, sample, shift, weaken, within,
 };
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
@@ -133,7 +134,7 @@ use crate::nat_prelude::NatOps;
 use crate::rat_prelude::group::rsub;
 use crate::rat_prelude::ops::{
     nat_eq_to_rat, nat_rewrite_prop, normalize, one_le_succ, radd, rat_eq_rewrite, rat_ty, rchain,
-    req, rle, rmul, rneg, rone, rtrans, rzero,
+    rcongr, req, rle, rmul, rneg, rone, rsymm, rtrans, rzero,
 };
 
 /// Delta height for `CReal.riemannSum`: above `CReal.sumRange`
@@ -8820,6 +8821,459 @@ pub(super) fn declare_riemann_sum_deep_cauchy(
 
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.riemann_sum_deep_cauchy,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- `CReal.riemannSumDeepCauchyFolded` -- folding `riemannSumDeepCauchy`'s
+// three-leg `bound(p,q)` into the literal `Cauchy`-rate shape
+// `natDivSucc(K,p) + natDivSucc(K,q)`, `K` a `Nat` expression built purely
+// from `magnitude := Nat.succ (CReal.bound (width_of a b))` -- independent
+// of `p`, `q`, `F`, `u`. This is the last gate before `CReal.integral`:
+// `CReal.regular_of_scaled_cauchy` needs EXACTLY this shape. -------------
+
+/// `Rat.natDivSucc k idx`, for a (possibly non-literal) `Nat` expression
+/// `k` -- [`div_succ`]'s generalization off a `u32` literal.
+fn nds(d: &mut IntDev<'_>, p: CRealPrelude, k: ExprId, idx: ExprId) -> ExprId {
+    d.const_app(p.rat.nat_div_succ, &[k, idx])
+}
+
+/// Fuse `radd(nds(a,idx), nds(b,idx))` into `nds(a+b,idx)` via
+/// [`RatPrelude::nat_div_succ_add`](crate::RatPrelude::nat_div_succ_add).
+/// Returns `(a+b, Eq Rat (radd(nds(a,idx),nds(b,idx))) (nds(a+b,idx)))`.
+fn fuse_nds(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    idx: ExprId,
+) -> (ExprId, ExprId) {
+    let sum = NatOps::add(d, a, b);
+    let eq = d.lemma(p.rat.nat_div_succ_add, &[a, b, idx]);
+    (sum, eq)
+}
+
+/// `Rat.le (sample(totalEps(a,b,idx,m), idx)) (radd(natDivSucc(magnitude,idx),
+/// natDivSucc(2,idx)))`.
+///
+/// Applies [`CRealPrelude::riemann_sum_total_eps_le`] directly to `idx` --
+/// relying on [`CRealPrelude::le`]'s `Regular` hint to unfold the resulting
+/// `CReal.le` proof term into its `Rat.le` body at that index (mirroring
+/// [`direct_bound_le`]'s own converse use of that transparency: building a
+/// `le`-typed term FROM a Pi-shaped lambda; this is the same unfolding used
+/// in the other direction), and on [`embed`] (`CReal.ofRat`)'s own `seq`
+/// reduction (`seq (ofRat q) n` iota/beta-reduces to `q`, since `ofRat q :=
+/// CReal.mk (fun _ => q) _`) so the applied term's second (subtracted)
+/// sample collapses to the bare rational bound. [`RatPrelude::le_of_sub_le`]
+/// then turns the resulting `u − v ≤ q` into `u ≤ v + q`.
+fn total_eps_sample_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    idx: ExprId,
+    m: ExprId,
+    magnitude: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let total_eps = total_eps_of(d, p, a, b, idx, m);
+    let bound_rat = nds(d, p, magnitude, idx);
+    let t = d.lemma(p.riemann_sum_total_eps_le, &[a, b, idx, m]);
+    let applied = d.apply(t, &[idx]);
+    let sample_te = sample(d, p, total_eps, idx);
+    let two_idx = div_succ(d, p, 2, idx);
+    d.lemma(rat.le_of_sub_le, &[sample_te, bound_rat, two_idx, applied])
+}
+
+/// Folds one side (`idx ∈ {p, q}`) of [`declare_riemann_sum_deep_cauchy`]'s
+/// own three-leg bound (`bnd_a`/`bnd_c`), TOGETHER with the matching half of
+/// the shared `bnd_b := modulus(p, q)` leg, into a single `natDivSucc(K,
+/// idx)`. `K` is built purely from `magnitude` (never from `idx`, `m`, or
+/// `bound_at_idx`), so calling this twice -- once at `idx := p`, once at
+/// `idx := q`, both with the SAME `magnitude` -- yields the identical `K`
+/// `ExprId` by construction (this module's pervasive hash-consing idiom;
+/// see [`deep_at`]'s own doc comment for the precedent).
+///
+/// `bound_at_idx` is the caller's own already-built leaf term (`bound1_pn`/
+/// `bound2_qn` in [`declare_riemann_sum_deep_cauchy_folded`], the same
+/// `d.apply(bound_fn, &[idx])` shape [`declare_riemann_sum_deep_cauchy`]
+/// itself builds). This function's own bound on it is stated against the
+/// UNFOLDED `radd(sample_te, natDivSucc(2,idx))` shape instead -- one beta
+/// step away, with every other subterm identical by construction -- so the
+/// combining step below is accepted up to that one-step defeq rather than
+/// needing an explicit bridging lemma, mirroring how
+/// `declare_riemann_sum_deep_cauchy` itself already mixes the two forms.
+///
+/// Returns `(K, proof)`, `proof : Rat.le (radd(bnd_leg, natDivSucc(1,idx)))
+/// (natDivSucc(K,idx))`, `bnd_leg := radd(radd(modulus(idx,shift idx),
+/// bound_at_idx), modulus(shift idx,idx))` -- EXACTLY
+/// [`declare_riemann_sum_deep_cauchy`]'s own `bnd_a`/`bnd_c`, so `proof`'s
+/// left side is that declaration's own leaf term, not a reconstruction of
+/// it.
+///
+/// The leaf count: `modulus(idx,shift idx)`'s exact leg is `natDivSucc(1,
+/// idx)` outright; its `shift`-side leg is weakened to `natDivSucc(1,idx)`
+/// via [`half_shift_le`] (no `Nat.le idx (shift idx)` needed at all --
+/// `half_shift_le` reaches the same bound through the halving identity
+/// `Rat.natDivSucc_halve` instead of antitonicity); `bound_at_idx` weakens to
+/// `natDivSucc(magnitude,idx) + 2×natDivSucc(2,idx)` via
+/// [`total_eps_sample_le`]; `modulus(shift idx,idx)` mirrors the first pair.
+/// Fusing all of it plus the shared `natDivSucc(1,idx)` extra gives
+/// `magnitude + (1+1) + (1+1) + (2+2) + 1 = magnitude + 9` -- matching the
+/// roadmap's own `K := CReal.bound(b−a) + 1 + 9` (`magnitude = CReal.bound
+/// (width) + 1` by [`direct_bound_le`]) -- though `K` is returned as
+/// whatever `Nat` expression this fold naturally produces (a deterministic
+/// function of `magnitude` alone), not re-normalized into that literal
+/// shape.
+fn bnd_leg_plus_share_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    idx: ExprId,
+    m: ExprId,
+    magnitude: ExprId,
+    bound_at_idx: ExprId,
+) -> (ExprId, ExprId) {
+    let rat = p.rat;
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+
+    let a1 = div_succ(d, p, 1, idx);
+    let shift_idx = shift(d, idx);
+    let a2 = div_succ(d, p, 1, shift_idx);
+    let b1 = div_succ(d, p, 2, idx);
+    let m_term = nds(d, p, magnitude, idx);
+
+    // --- order half: bnd_leg(idx,m) + natDivSucc(1,idx) ≤ R. --------------
+    let a2_le_a1 = half_shift_le(d, p, idx);
+    let refl_a1 = d.lemma(rat.le_refl, &[a1]);
+
+    let modulus_idx_shift = modulus(d, p, idx, shift_idx); // = radd(a1,a2)
+    let modulus_shift_idx = modulus(d, p, shift_idx, idx); // = radd(a2,a1)
+
+    // modulus(idx, shift idx) ≤ a1 + a1.
+    let mod1_le = d.lemma(rat.add_le_add, &[a1, a1, a2, a1, refl_a1, a2_le_a1]);
+    // modulus(shift idx, idx) ≤ a1 + a1.
+    let mod2_le = d.lemma(rat.add_le_add, &[a2, a1, a1, a1, a2_le_a1, refl_a1]);
+
+    // bound_at_idx ≤ (m_term + b1) + b1  [up to the one-beta defeq noted above].
+    let sample_le = total_eps_sample_le(d, p, a, b, idx, m, magnitude);
+    let refl_b1 = d.lemma(rat.le_refl, &[b1]);
+    let total_eps = total_eps_of(d, p, a, b, idx, m);
+    let sample_te = sample(d, p, total_eps, idx);
+    let m_plus_b1 = radd(d, m_term, b1);
+    let bound_le = d.lemma(
+        rat.add_le_add,
+        &[sample_te, m_plus_b1, b1, b1, sample_le, refl_b1],
+    );
+
+    let a1a1 = radd(d, a1, a1);
+    let inner_target = radd(d, m_plus_b1, b1);
+    let part1_actual = radd(d, modulus_idx_shift, bound_at_idx);
+    let part1_target = radd(d, a1a1, inner_target);
+    let part1_le = d.lemma(
+        rat.add_le_add,
+        &[
+            modulus_idx_shift,
+            a1a1,
+            bound_at_idx,
+            inner_target,
+            mod1_le,
+            bound_le,
+        ],
+    );
+
+    let bnd_leg_actual = radd(d, part1_actual, modulus_shift_idx);
+    let bnd_leg_target = radd(d, part1_target, a1a1);
+    let bnd_leg_le = d.lemma(
+        rat.add_le_add,
+        &[
+            part1_actual,
+            part1_target,
+            modulus_shift_idx,
+            a1a1,
+            part1_le,
+            mod2_le,
+        ],
+    );
+
+    let with_extra_target = radd(d, bnd_leg_target, a1);
+    let with_extra_le = d.lemma(
+        rat.add_le_add,
+        &[bnd_leg_actual, bnd_leg_target, a1, a1, bnd_leg_le, refl_a1],
+    );
+
+    // --- equality half: fold `with_extra_target` into one `natDivSucc`. ---
+    let (n1, eq_a) = fuse_nds(d, p, magnitude, two_nat, idx); // m_term+b1 = nds(n1,idx)
+    let n1_idx = nds(d, p, n1, idx);
+    let (n2, eq_b) = fuse_nds(d, p, n1, two_nat, idx); // nds(n1,idx)+b1 = nds(n2,idx)
+    let n2_idx = nds(d, p, n2, idx);
+    let eq_inner_left = rcongr(d, m_plus_b1, n1_idx, eq_a, &|d, t| radd(d, t, b1));
+    let n1_idx_plus_b1 = radd(d, n1_idx, b1);
+    let eq_inner = rtrans(d, inner_target, n1_idx_plus_b1, n2_idx, eq_inner_left, eq_b);
+
+    let (n3, eq_c) = fuse_nds(d, p, one_nat, one_nat, idx); // a1+a1 = nds(n3,idx)
+    let n3_idx = nds(d, p, n3, idx);
+
+    let eq_part1_left = rcongr(d, a1a1, n3_idx, eq_c, &|d, t| radd(d, t, inner_target));
+    let eq_part1_right = rcongr(d, inner_target, n2_idx, eq_inner, &|d, t| {
+        radd(d, n3_idx, t)
+    });
+    let n3_idx_plus_inner = radd(d, n3_idx, inner_target);
+    let n3_idx_plus_n2_idx = radd(d, n3_idx, n2_idx);
+    let eq_part1 = rtrans(
+        d,
+        part1_target,
+        n3_idx_plus_inner,
+        n3_idx_plus_n2_idx,
+        eq_part1_left,
+        eq_part1_right,
+    );
+    let (n4, eq_d) = fuse_nds(d, p, n3, n2, idx);
+    let n4_idx = nds(d, p, n4, idx);
+    let eq_part1_full = rtrans(d, part1_target, n3_idx_plus_n2_idx, n4_idx, eq_part1, eq_d);
+
+    let eq_bnd_leg_left = rcongr(d, part1_target, n4_idx, eq_part1_full, &|d, t| {
+        radd(d, t, a1a1)
+    });
+    let eq_bnd_leg_right = rcongr(d, a1a1, n3_idx, eq_c, &|d, t| radd(d, n4_idx, t));
+    let n4_idx_plus_a1a1 = radd(d, n4_idx, a1a1);
+    let n4_idx_plus_n3_idx = radd(d, n4_idx, n3_idx);
+    let eq_bnd_leg = rtrans(
+        d,
+        bnd_leg_target,
+        n4_idx_plus_a1a1,
+        n4_idx_plus_n3_idx,
+        eq_bnd_leg_left,
+        eq_bnd_leg_right,
+    );
+    let (n5, eq_e) = fuse_nds(d, p, n4, n3, idx);
+    let n5_idx = nds(d, p, n5, idx);
+    let eq_bnd_leg_full = rtrans(
+        d,
+        bnd_leg_target,
+        n4_idx_plus_n3_idx,
+        n5_idx,
+        eq_bnd_leg,
+        eq_e,
+    );
+
+    let eq_with_extra_left = rcongr(d, bnd_leg_target, n5_idx, eq_bnd_leg_full, &|d, t| {
+        radd(d, t, a1)
+    });
+    let (k, eq_f) = fuse_nds(d, p, n5, one_nat, idx);
+    let k_idx = nds(d, p, k, idx);
+    let n5_idx_plus_a1 = radd(d, n5_idx, a1);
+    let eq_with_extra = rtrans(
+        d,
+        with_extra_target,
+        n5_idx_plus_a1,
+        k_idx,
+        eq_with_extra_left,
+        eq_f,
+    );
+
+    let with_extra_actual = radd(d, bnd_leg_actual, a1);
+    let final_le = rat_eq_rewrite(
+        d,
+        with_extra_target,
+        k_idx,
+        eq_with_extra,
+        with_extra_le,
+        &|d, t| rle(d, rat, with_extra_actual, t),
+    );
+
+    (k, final_le)
+}
+
+/// `CReal.riemannSumDeepCauchyFolded : ∀ F a b, CReal.le a b →
+/// CReal.UniformlyContinuousOn F a b → ∀ p q : Nat, Within (seq (riemannSum
+/// F a b (deep F a b u p)) p − seq (riemannSum F a b (deep F a b u q)) q)
+/// (Rat.natDivSucc K p + Rat.natDivSucc K q)` -- folding
+/// [`CRealPrelude::riemann_sum_deep_cauchy`]'s three-leg `bound(p,q)` into
+/// the literal `Cauchy`-rate shape [`CRealPrelude::regular_of_scaled_cauchy`]
+/// needs, via [`bnd_leg_plus_share_le`] applied once at each side plus one
+/// `Rat` associativity/commutativity reassociation absorbing the shared
+/// `modulus(p,q)` leg into each side's own bundle. See
+/// [`bnd_leg_plus_share_le`]'s doc comment for the exact leaf accounting.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_riemann_sum_deep_cauchy_folded(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let f_ty = fn_ty(d, p);
+    let rat = p.rat;
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let pn_fv = d.fresh_fvar();
+    let pn = d.kernel().fvar(pn_fv);
+    let qn_fv = d.fresh_fvar();
+    let qn = d.kernel().fvar(qn_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+
+    // raw : Within diff final_bound -- `riemannSumDeepCauchy` itself. Its
+    // own binder order is `F a b p q hab u` (see that declaration's `ty`
+    // construction), NOT `F a b hab u p q`.
+    let raw = d.lemma(p.riemann_sum_deep_cauchy, &[f, a, b, pn, qn, hab, u]);
+
+    // Reconstruct `deep_at`'s two witnesses and their `+0` shape, EXACTLY as
+    // `declare_riemann_sum_deep_cauchy` does, so the pieces below match
+    // `raw`'s own conclusion type on the nose.
+    let deep1 = deep_at(d, p, f, a, b, u, pn);
+    let deep2 = deep_at(d, p, f, a, b, u, qn);
+    let zero1 = d.num(0);
+    let m1 = NatOps::add(d, deep1, zero1);
+    let zero2 = d.num(0);
+    let m2 = NatOps::add(d, deep2, zero2);
+
+    let rsum_m1 = rsum(d, p, f, a, b, m1);
+    let rsum_m2 = rsum(d, p, f, a, b, m2);
+    let x_val = sample(d, p, rsum_m1, pn);
+    let w_val = sample(d, p, rsum_m2, qn);
+    let diff = rsub(d, rat, x_val, w_val);
+
+    let width = width_of(d, p, a, b);
+    let (_c, magnitude, _width_le_mag) = direct_bound_le(d, p, width);
+
+    let bound1_fn = shared_accuracy_bound_fn(d, p, a, b, pn, m1);
+    let bound2_fn = shared_accuracy_bound_fn(d, p, a, b, qn, m2);
+    let bound1_pn = d.apply(bound1_fn, &[pn]);
+    let bound2_qn = d.apply(bound2_fn, &[qn]);
+
+    let shift_pn = shift(d, pn);
+    let m_pn_spn = modulus(d, p, pn, shift_pn);
+    let m_spn_pn = modulus(d, p, shift_pn, pn);
+    let bnd_a = {
+        let inner = radd(d, m_pn_spn, bound1_pn);
+        radd(d, inner, m_spn_pn)
+    };
+
+    let bnd_b = modulus(d, p, pn, qn);
+
+    let shift_qn = shift(d, qn);
+    let m_qn_sqn = modulus(d, p, qn, shift_qn);
+    let m_sqn_qn = modulus(d, p, shift_qn, qn);
+    let bnd_c = {
+        let inner = radd(d, m_qn_sqn, bound2_qn);
+        radd(d, inner, m_sqn_qn)
+    };
+
+    let final_bound = {
+        let ab = radd(d, bnd_a, bnd_b);
+        radd(d, ab, bnd_c)
+    };
+
+    let (k, leg_p_le) = bnd_leg_plus_share_le(d, p, a, b, pn, m1, magnitude, bound1_pn);
+    let (_k_q, leg_q_le) = bnd_leg_plus_share_le(d, p, a, b, qn, m2, magnitude, bound2_qn);
+
+    let mb_p = div_succ(d, p, 1, pn);
+    let mb_q = div_succ(d, p, 1, qn);
+
+    // final_bound = (bnd_a + (mb_p+mb_q)) + bnd_c  =  (bnd_a+mb_p) + (bnd_c+mb_q).
+    let bnd_a_plus_mb_p = radd(d, bnd_a, mb_p);
+    let bnd_c_plus_mb_q = radd(d, bnd_c, mb_q);
+    let mb_q_plus_bnd_c = radd(d, mb_q, bnd_c);
+    let bnd_a_plus_mb_p_plus_mb_q = radd(d, bnd_a_plus_mb_p, mb_q);
+
+    let bnd_a_plus_bnd_b = radd(d, bnd_a, bnd_b);
+    let step1_eq = {
+        let assoc = d.lemma(rat.add_assoc, &[bnd_a, mb_p, mb_q]);
+        // assoc : Eq (radd(radd(bnd_a,mb_p),mb_q)) (radd(bnd_a,bnd_b))
+        rsymm(d, bnd_a_plus_mb_p_plus_mb_q, bnd_a_plus_bnd_b, assoc)
+    };
+    let step1_full = rcongr(
+        d,
+        bnd_a_plus_bnd_b,
+        bnd_a_plus_mb_p_plus_mb_q,
+        step1_eq,
+        &|d, t| radd(d, t, bnd_c),
+    );
+    let step2_eq = d.lemma(rat.add_assoc, &[bnd_a_plus_mb_p, mb_q, bnd_c]);
+    let step3_eq = d.lemma(rat.add_comm, &[mb_q, bnd_c]);
+    let step3_full = rcongr(d, mb_q_plus_bnd_c, bnd_c_plus_mb_q, step3_eq, &|d, t| {
+        radd(d, bnd_a_plus_mb_p, t)
+    });
+
+    let mid1 = radd(d, bnd_a_plus_mb_p_plus_mb_q, bnd_c);
+    let mid2 = radd(d, bnd_a_plus_mb_p, mb_q_plus_bnd_c);
+    let mid3 = radd(d, bnd_a_plus_mb_p, bnd_c_plus_mb_q);
+    let (_, reassoc_eq) = rchain(
+        d,
+        final_bound,
+        &[(mid1, step1_full), (mid2, step2_eq), (mid3, step3_full)],
+    );
+
+    let k_pn = nds(d, p, k, pn);
+    let k_qn = nds(d, p, k, qn);
+    let regrouped_le = d.lemma(
+        rat.add_le_add,
+        &[
+            bnd_a_plus_mb_p,
+            k_pn,
+            bnd_c_plus_mb_q,
+            k_qn,
+            leg_p_le,
+            leg_q_le,
+        ],
+    );
+
+    let target = radd(d, k_pn, k_qn);
+    let reassoc_eq_symm = rsymm(d, final_bound, mid3, reassoc_eq);
+    let final_order = rat_eq_rewrite(
+        d,
+        mid3,
+        final_bound,
+        reassoc_eq_symm,
+        regrouped_le,
+        &|d, t| rle(d, rat, t, target),
+    );
+
+    let proof = weaken(d, p, diff, final_bound, target, raw, final_order);
+
+    let concl_ty = within(d, p, diff, target);
+
+    let ty = {
+        let after_u = d.pi_fv(u_fv, u_ty, concl_ty);
+        let after_hab = d.arrow(hab_ty, after_u);
+        let over_qn = d.pi_fv(qn_fv, nat, after_hab);
+        let over_pn = d.pi_fv(pn_fv, nat, over_qn);
+        let over_b = d.pi_fv(b_fv, carrier, over_pn);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        d.pi_fv(f_fv, f_ty, over_a)
+    };
+    let value = {
+        let with_u = d.lam_fv(u_fv, u_ty, proof);
+        let with_hab = d.lam_fv(hab_fv, hab_ty, with_u);
+        let over_qn = d.lam_fv(qn_fv, nat, with_hab);
+        let over_pn = d.lam_fv(pn_fv, nat, over_qn);
+        let over_b = d.lam_fv(b_fv, carrier, over_pn);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        d.lam_fv(f_fv, f_ty, over_a)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.riemann_sum_deep_cauchy_folded,
         uparams: vec![],
         ty,
         value,

@@ -3453,6 +3453,18 @@ pub struct CRealPrelude {
     /// [`Self::regular`]/`shared_index_to_canonical`/`shared_index_to_canonical`
     /// telescope via `series::chain_within3`.
     pub riemann_sum_deep_cauchy: NameId,
+    /// `CReal.riemannSumDeepCauchyFolded : ∀ F a b, CReal.le a b →
+    /// CReal.UniformlyContinuousOn F a b → ∀ p q : Nat, Within (seq
+    /// (riemannSum F a b (deep F a b u p)) p − seq (riemannSum F a b (deep F
+    /// a b u q)) q) (Rat.natDivSucc K p + Rat.natDivSucc K q)` --
+    /// [`Self::riemann_sum_deep_cauchy`]'s own three-leg `bound(p,q)` folded
+    /// into the literal `Cauchy`-rate shape, `K` a `Nat` expression built
+    /// purely from `magnitude := Nat.succ (CReal.bound (add b (neg a)))` --
+    /// independent of `p`, `q`, `F`, `u`. This is the shape
+    /// [`Self::regular_of_scaled_cauchy`] needs to build `CReal.integral`.
+    /// See `creal/integral.rs`'s `declare_riemann_sum_deep_cauchy_folded`
+    /// and its private `bnd_leg_plus_share_le` for the leaf accounting.
+    pub riemann_sum_deep_cauchy_folded: NameId,
 }
 
 impl CRealPrelude {
@@ -3856,6 +3868,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         riemann_sum_shared_accuracy_close: kernel.name_str(creal, "riemannSum_sharedAccuracyClose"),
         riemann_sum_total_eps_le: kernel.name_str(creal, "riemannSumTotalEpsLe"),
         riemann_sum_deep_cauchy: kernel.name_str(creal, "riemannSumDeepCauchy"),
+        riemann_sum_deep_cauchy_folded: kernel.name_str(creal, "riemannSumDeepCauchyFolded"),
     }
 }
 
@@ -4173,6 +4186,11 @@ pub(crate) fn build_creal_prelude_uncached(
         // above) or `riemannSum_shared_accuracy_close` -- it lands here only
         // to stay next to the roadmap step chain it continues.
         integral::declare_riemann_sum_deep_cauchy(&mut d, prelude)?;
+        // `riemannSumDeepCauchyFolded` folds `riemannSumDeepCauchy`'s own
+        // three-leg `bound(p,q)` (just above) into the literal `Cauchy`-rate
+        // shape `regular_of_scaled_cauchy` needs, via `riemannSumTotalEpsLe`
+        // (further above) and `half_shift_le` (`completeness.rs`).
+        integral::declare_riemann_sum_deep_cauchy_folded(&mut d, prelude)?;
         // `order_reflect_of_pos_deriv` needs only `strict_mono_of_pos_deriv`
         // (just declared above) plus `lt_trans`/`lt_irrefl`/`apart` (all far
         // above); nothing later depends on it, so it lands right after its

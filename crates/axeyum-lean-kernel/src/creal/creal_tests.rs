@@ -115,7 +115,7 @@ fn on_a_deep_stack_creal<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'stat
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 341] = [
+    let expected: [(&str, crate::NameId, &str); 342] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -1037,6 +1037,19 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         (
             "CReal.riemannSumDeepCauchy",
             p.riemann_sum_deep_cauchy,
+            "theorem",
+        ),
+        // Folds `riemannSumDeepCauchy`'s own three-leg `bound(p,q)` into the
+        // literal `Cauchy`-rate shape `natDivSucc(K,p) + natDivSucc(K,q)`,
+        // `K` built purely from `magnitude := CReal.bound(b-a) + 1`
+        // (independent of `p`, `q`, `F`, `u`) via `riemannSumTotalEpsLe` and
+        // `half_shift_le` (`completeness.rs`) -- no `Nat.le idx (shift idx)`
+        // needed, since `half_shift_le` already reaches the antitone-shaped
+        // bound through the halving identity. See `creal/integral.rs`'s
+        // `declare_riemann_sum_deep_cauchy_folded`.
+        (
+            "CReal.riemannSumDeepCauchyFolded",
+            p.riemann_sum_deep_cauchy_folded,
             "theorem",
         ),
         // Chapter 18/22: the geometric domination of `expTerm`, ending at the
