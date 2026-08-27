@@ -11,7 +11,11 @@ Note on the filename: ADR-0601's own brief asked for
 `docs/autogenesis/263-import-backlog-artifact.md`, but `263` was already
 claimed by `263-holdout-contamination-by-ordinary-development.md` by the time
 this lane landed (concurrent numbering; this directory has no uniqueness
-gate). This document is `288`, the next free number at commit time.
+gate). `288` was the next free number when this lane first checked, but a
+concurrent lane claimed it too (`288-admission-precedes-registration.md`,
+merged into `main` before this lane's own commit) -- caught by re-merging
+local `main` before finishing, not by any gate. This document is `289`, the
+next free number after that merge.
 
 ## What this is
 

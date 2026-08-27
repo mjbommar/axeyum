@@ -580,7 +580,7 @@ step adr-index-tests python3 -m unittest scripts.tests.test_gen_adr_index
 step adr-index      python3 scripts/gen-adr-index.py --check
 # ADR-0601 SS3: the import backlog (external-proved, epistemically-open facts)
 # as a produced, deterministic artifact rather than a bare count in
-# validate-facts.py's summary. docs/autogenesis/288-import-backlog-artifact.md.
+# validate-facts.py's summary. docs/autogenesis/289-import-backlog-artifact.md.
 step import-backlog-tests python3 -m unittest scripts.tests.test_gen_import_backlog
 step import-backlog python3 scripts/gen-import-backlog.py --check
 # The formalized-math strand's status block, re-derived from the tree.

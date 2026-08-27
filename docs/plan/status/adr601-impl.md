@@ -19,7 +19,7 @@ elsewhere but not here" count into a produced, deterministic artifact,
 `artifacts/import-backlog.json`: 164 rows, 117 `dependency_ready`, 1
 `curriculum_node`-mapped (the curriculum-mapping is an EXACT match on
 `concept_refs[].graph == "math-education"` against a `curriculum.toml` node
-id — see `docs/autogenesis/288-import-backlog-artifact.md` for why this is
+id — see `docs/autogenesis/289-import-backlog-artifact.md` for why this is
 exact rather than fuzzy, and why the mapped count is small and honest).
 `--check` mode mirrors `gen-plan.py --check`'s convention; registered in
 `scripts/check.sh` and the `justfile` next to `gen-adr-index.py --check`.
