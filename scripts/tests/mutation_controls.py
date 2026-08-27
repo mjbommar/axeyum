@@ -2898,6 +2898,29 @@ SUITES["fact-checker-kernel-theorem-shape"] = (
     ],
 )
 
+SUITES["fact-cas-certificate-classification"] = (
+    "scripts/validate-facts.py",
+    "scripts.tests.test_validate_facts",
+    [
+        # ADR-0601 SS2: a `cas-certificate` fact's evidence must classify as
+        # `kernel-reconstructed` or `cas-internal`, never an unclassifiable
+        # third case -- otherwise a bogus checker_command could hide inside
+        # the route the same way the 40-of-162 vacuous checkers did before
+        # this project made "a checker that cannot fail is worse than no
+        # checker" a standing rule. Deleting this guard must kill exactly the
+        # one test that asserts a bogus checker_command is rejected THROUGH
+        # `validate_one` -- the broader classifier coverage
+        # (`classify_cas_certificate_checker` / `classify_cas_certificate_fact`
+        # exercised directly) does not touch this call site and must keep
+        # passing.
+        (
+            "unrecognized cas-certificate checker_command is refused",
+            "            if classification == \"unrecognized\":",
+            "            if False:",
+        ),
+    ],
+)
+
 SUITES["fact-theorem-of-explicit-field"] = (
     "scripts/check-fact-depends-derived.py",
     "scripts.tests.test_check_fact_depends_derived",

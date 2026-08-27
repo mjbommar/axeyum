@@ -232,6 +232,85 @@ def checker_command_needs_release_for_deep_stack(cmd: str) -> bool:
     return "--include-constructed" in cmd
 
 
+# ADR-0601 SS2: "The `cas-certificate` route splits observably: evidence that
+# reconstructs through the kernel ... versus evidence that terminates in the
+# CAS's own normal form. The validator must distinguish these; a fact of the
+# second kind is honest but is not `checked` in the sense the headline uses,
+# and the ledger must not let the two read identically."
+#
+# Only `cargo test`/`cargo run` segments are inspected -- `cargo check`,
+# `cargo build`, and `cargo doc` compile but never EXECUTE anything, so a
+# package name appearing only after one of those subcommands consults
+# nothing. This is deliberately narrower than "the string axeyum-cas appears
+# anywhere in the command": CLAUDE.md documents a classifier that "flags a
+# whole shape" nearly reporting 126 legitimate `cargo test` checkers as
+# vacuous when they were fine, and the fix there was the same one applied
+# here -- ask what the command actually RUNS, not what substring it contains.
+_CARGO_TEST_RUN_SEGMENT_RE = re.compile(r"\bcargo\s+(?:test|run)\b([^&;|]*)")
+
+
+def classify_cas_certificate_checker(cmd: str) -> str:
+    """Classify a `cas-certificate` fact's `checker_command` by what it
+    actually consults (ADR-0601 SS2).
+
+    Returns one of:
+      * ``"kernel-reconstructed"`` -- some executed (`cargo test`/`cargo run`)
+        segment names the `axeyum-lean-kernel` package (via `-p`,
+        `--package`, or `--manifest-path`): an independent, kernel-checked
+        re-derivation exists, so this evidence reconstructs through the
+        trust anchor rather than terminating in the CAS's own normal form.
+      * ``"cas-internal"`` -- every executed segment names only `axeyum-cas`;
+        the checker never leaves the CAS's own normal form.
+      * ``"unrecognized"`` -- neither package is named by any executed cargo
+        segment (a bogus command, or one this classifier cannot identify).
+        Flagged, not silently folded into `"cas-internal"`: CLAUDE.md's
+        central lesson is that a checker which cannot fail is worse than no
+        checker, and binning an unclassifiable command into the "fine"
+        bucket would recreate exactly that defect one level up.
+
+    A command consulting BOTH packages (e.g. a bridge checker that runs a
+    CAS derivation and then re-checks it through the kernel) classifies as
+    `"kernel-reconstructed"`, since that is the stronger, and the accurate,
+    claim -- an independent re-derivation exists.
+    """
+    if not cmd or not cmd.strip():
+        return "unrecognized"
+    consults_kernel = False
+    consults_cas = False
+    for match in _CARGO_TEST_RUN_SEGMENT_RE.finditer(cmd):
+        segment = match.group(1)
+        if "axeyum-lean-kernel" in segment:
+            consults_kernel = True
+        if "axeyum-cas" in segment:
+            consults_cas = True
+    if consults_kernel:
+        return "kernel-reconstructed"
+    if consults_cas:
+        return "cas-internal"
+    return "unrecognized"
+
+
+def classify_cas_certificate_fact(fact: dict) -> str:
+    """Aggregate a `cas-certificate` fact's classification across its
+    evidence rows: `kernel-reconstructed` wins if ANY row reconstructs
+    through the kernel (the stronger, accurate claim); otherwise
+    `unrecognized` if any row is unclassifiable (`validate_one` already
+    rejects a `cas-certificate` fact carrying such a row, so a fact reaching
+    this function in a passing ledger should never actually hit this case --
+    kept as the safe default rather than silently reading as `cas-internal`
+    if that guard is ever weakened); otherwise `cas-internal`.
+    """
+    classifications = {
+        classify_cas_certificate_checker(ev.get("checker_command") or "")
+        for ev in fact.get("evidence", [])
+    }
+    if "kernel-reconstructed" in classifications:
+        return "kernel-reconstructed"
+    if "unrecognized" in classifications:
+        return "unrecognized"
+    return "cas-internal"
+
+
 def validate_one(path: Path, fact: dict, known_ids: set[str]) -> list[str]:
     errors: list[str] = []
     fid = fact.get("id", f"<{path.name}>")
@@ -302,6 +381,11 @@ def validate_one(path: Path, fact: dict, known_ids: set[str]) -> list[str]:
             fail(errors, f"{fid}: depends_on {dep} does not exist -- a dependency DAG "
                          f"with dangling edges is not a build order")
 
+    # Read early: the cas-certificate classification guard below (ADR-0601
+    # SS2) needs it inside the evidence loop, ahead of the route-membership
+    # check further down which reuses this same value.
+    route = fact.get("proof_route")
+
     checked = 0
     for ev in fact["evidence"]:
         for key in ("id", "kind", "supports", "check_status"):
@@ -323,6 +407,23 @@ def validate_one(path: Path, fact: dict, known_ids: set[str]) -> list[str]:
         # solver flipping `unsat` to `sat` would have passed silently, which is
         # the exact regression the gate exists to catch.
         cmd = ev.get("checker_command") or ""
+        # ADR-0601 SS2: a `cas-certificate` fact's evidence must classify as
+        # either `kernel-reconstructed` or `cas-internal` -- both are honest
+        # positions the summary reports separately -- but never
+        # `unrecognized`. An unclassifiable checker_command is exactly the
+        # "checker that cannot fail" defect one level up: nothing here would
+        # otherwise stop a `cas-certificate` fact from citing a command that
+        # consults neither the kernel nor the CAS at all.
+        if route == "cas-certificate":
+            classification = classify_cas_certificate_checker(cmd)
+            if classification == "unrecognized":
+                fail(errors, f"{fid}: cas-certificate checker_command {cmd!r} does not "
+                             f"consult a recognized checker. "
+                             f"classify_cas_certificate_checker found no `cargo test`/"
+                             f"`cargo run` segment naming `axeyum-lean-kernel` "
+                             f"(kernel-reconstructed) or `axeyum-cas` (cas-internal) -- "
+                             f"ADR-0601 SS2 requires every cas-certificate evidence row to "
+                             f"be one or the other, not an unclassifiable third case.")
         if "smtcomp_cli" in cmd and not re.search(r"\btest\b|\bgrep\b|\[\[?", cmd):
             fail(errors, f"{fid}: checker_command invokes smtcomp_cli without asserting a "
                          f"verdict. It exits 0 on sat AND unsat, so as written it checks "
@@ -412,7 +513,6 @@ def validate_one(path: Path, fact: dict, known_ids: set[str]) -> list[str]:
         fail(errors, f"{fid}: status `open` must carry an empty evidence array -- an open fact "
                      f"with evidence is a contradiction, and the empty array is a statement.")
 
-    route = fact.get("proof_route")
     if route is not None and route not in ROUTES:
         fail(errors, f"{fid}: proof_route {route!r} is not one of {sorted(ROUTES)}")
     if status in ESTABLISHED and route is None:
@@ -536,6 +636,19 @@ def main() -> int:
             routes[r] = routes.get(r, 0) + 1
         if r in AXIOM_FREE_CAPABLE and f.get("axiom_footprint") == []:
             axiom_free += 1
+    # ADR-0601 SS2: `cas-certificate` is not one homogeneous class. Split it
+    # by what each fact's evidence actually consults -- `kernel-reconstructed`
+    # (an independent re-derivation through the trust anchor exists) versus
+    # `cas-internal` (the checker never leaves the CAS's own normal form) --
+    # so the ledger cannot let the two read identically. `validate_one`
+    # rejects a fact reaching `unrecognized` in a passing ledger, so that
+    # bucket is expected to be empty here; it is still computed and reported
+    # rather than assumed, in case that guard is ever weakened.
+    cas_certificate_facts = [f for f in facts.values() if f.get("proof_route") == "cas-certificate"]
+    cas_breakdown: dict[str, int] = {}
+    for f in cas_certificate_facts:
+        c = classify_cas_certificate_fact(f)
+        cas_breakdown[c] = cas_breakdown.get(c, 0) + 1
     # Independent re-derivations. Cross-oracle agreement is the strongest signal
     # here, and it was invisible while every row said `checked` and nothing else.
     multi = sum(
@@ -548,9 +661,29 @@ def main() -> int:
     spread = " ".join(f"{k}={v}" for k, v in sorted(by_status.items()))
     print(f"{len(facts)} facts checked, 0 errors  ({spread})")
     if routes:
-        print("  routes: " + " ".join(f"{k}={v}" for k, v in sorted(routes.items()))
+        route_parts = []
+        for k, v in sorted(routes.items()):
+            if k == "cas-certificate" and cas_certificate_facts:
+                route_parts.append(
+                    f"{k}={v}(kernel-reconstructed="
+                    f"{cas_breakdown.get('kernel-reconstructed', 0)},cas-internal="
+                    f"{cas_breakdown.get('cas-internal', 0)})"
+                )
+            else:
+                route_parts.append(f"{k}={v}")
+        print("  routes: " + " ".join(route_parts)
               + f"; {axiom_free} axiom-free on {sorted(AXIOM_FREE_CAPABLE)[0]}"
               + " (not comparable across routes)")
+    if cas_certificate_facts:
+        kr = cas_breakdown.get("kernel-reconstructed", 0)
+        ci = cas_breakdown.get("cas-internal", 0)
+        unrec = cas_breakdown.get("unrecognized", 0)
+        line = (f"  cas-certificate: {len(cas_certificate_facts)} total -- "
+                f"kernel-reconstructed {kr}, cas-internal {ci}")
+        if unrec:
+            line += (f", unrecognized {unrec} (FLAGGED -- validate_one should have "
+                      f"rejected this)")
+        print(line)
     # Constructed here vs. checked here but authored elsewhere. Reported apart
     # because the project's headline claim is about the first number, and an
     # ingestion pipeline can move the second one arbitrarily far.

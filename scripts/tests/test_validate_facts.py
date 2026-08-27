@@ -375,5 +375,110 @@ class KernelTheoremFieldTests(unittest.TestCase):
                 self.assertTrue(MODULE.kernel_theorem_is_valid(value))
 
 
+CAS_CERTIFICATE_FACT = ROOT / "artifacts" / "facts" / "F-alternating-binomial-row-sum-zero.json"
+
+
+class CasCertificateClassificationTests(unittest.TestCase):
+    """ADR-0601 SS2: `cas-certificate` evidence must classify as either
+    `kernel-reconstructed` (an independent re-derivation through the kernel
+    exists) or `cas-internal` (the checker never leaves the CAS's own normal
+    form) -- never a third, unclassifiable case that would let a bogus
+    checker_command hide inside the route silently.
+    """
+
+    def setUp(self) -> None:
+        self.fact = json.loads(CAS_CERTIFICATE_FACT.read_text(encoding="utf-8"))
+        self.assertEqual(self.fact.get("proof_route"), "cas-certificate")
+
+    def errors_for_checker_command(self, cmd: str, index: int = 0) -> list[str]:
+        fact = copy.deepcopy(self.fact)
+        fact["evidence"][index]["checker_command"] = cmd
+        known_ids = {fact["id"], *fact.get("depends_on", [])}
+        return MODULE.validate_one(CAS_CERTIFICATE_FACT, fact, known_ids)
+
+    def test_committed_cas_internal_checker_commands_are_accepted(self) -> None:
+        # The real, already-committed form must not trip the guard -- every
+        # evidence row here is a `cargo test -p axeyum-cas ...` invocation.
+        for index in range(len(self.fact["evidence"])):
+            with self.subTest(index=index):
+                cmd = self.fact["evidence"][index]["checker_command"]
+                self.assertEqual(self.errors_for_checker_command(cmd, index=index), [])
+
+    def test_rewriting_the_checker_to_a_kernel_consulting_form_is_accepted(self) -> None:
+        # ADR-0601's own example of the OTHER honest class: a checker that
+        # reconstructs through the kernel. This must NOT be rejected --
+        # validate_one only refuses the unclassifiable third case.
+        self.assertEqual(
+            self.errors_for_checker_command(
+                "cargo test -p axeyum-lean-kernel --test bridge_polynomial_identity"
+            ),
+            [],
+        )
+
+    def test_bogus_checker_command_is_rejected(self) -> None:
+        # Deliberately ONE assertion (see the analogous note on the grep -q,
+        # grep \t, and deep-stack guards above): the mutation harness counts
+        # each subTest failure as a separate death, and this suite's
+        # contract is that deleting the guard kills exactly one test.
+        errors = self.errors_for_checker_command("echo this consults nothing")
+        self.assertTrue(
+            any("does not consult a recognized checker" in e for e in errors),
+            f"expected a cas-certificate classification rejection, got {errors!r}",
+        )
+
+    def test_classifier_distinguishes_kernel_cas_and_bogus(self) -> None:
+        # Exercises `classify_cas_certificate_checker` directly, so this
+        # test's outcome is independent of the `validate_one` call site and
+        # of the mutation control's own deletion.
+        for cmd in (
+            "cargo test -p axeyum-lean-kernel --test bridge_polynomial_identity",
+            "cargo run -p axeyum-lean-kernel --example prelude_theorem_inventory",
+            # Both packages named: kernel wins, since that is the stronger,
+            # accurate claim (an independent re-derivation exists).
+            "cargo test -p axeyum-cas --test telescoping_identities && "
+            "cargo test -p axeyum-lean-kernel --test bridge_polynomial_identity",
+        ):
+            with self.subTest(cmd=cmd):
+                self.assertEqual(
+                    MODULE.classify_cas_certificate_checker(cmd), "kernel-reconstructed"
+                )
+        for cmd in (
+            "cargo test -p axeyum-cas --test telescoping_identities",
+            "cargo test -p axeyum-cas --all-features composition_shape_classification",
+            "cargo test -p axeyum-cas --test geometry_certificate_artifacts && "
+            "python3 scripts/check-geometry-fact-transcription.py F:x",
+        ):
+            with self.subTest(cmd=cmd):
+                self.assertEqual(MODULE.classify_cas_certificate_checker(cmd), "cas-internal")
+        for cmd in (
+            "",
+            "echo this consults nothing",
+            # cargo check/build/doc never EXECUTE anything -- naming a
+            # package after one of those subcommands does not count as
+            # "consulted".
+            "cargo check -p axeyum-cas",
+            "cargo doc -p axeyum-lean-kernel",
+        ):
+            with self.subTest(cmd=cmd):
+                self.assertEqual(MODULE.classify_cas_certificate_checker(cmd), "unrecognized")
+
+    def test_fact_level_classification_prefers_kernel_then_flags_unrecognized(self) -> None:
+        # `classify_cas_certificate_fact` aggregates across evidence rows:
+        # kernel-reconstructed wins if present; otherwise unrecognized is
+        # surfaced rather than silently read as cas-internal.
+        cas_only = json.loads(CAS_CERTIFICATE_FACT.read_text(encoding="utf-8"))
+        self.assertEqual(MODULE.classify_cas_certificate_fact(cas_only), "cas-internal")
+
+        mixed = copy.deepcopy(cas_only)
+        mixed["evidence"][0]["checker_command"] = (
+            "cargo test -p axeyum-lean-kernel --test bridge_polynomial_identity"
+        )
+        self.assertEqual(MODULE.classify_cas_certificate_fact(mixed), "kernel-reconstructed")
+
+        bogus = copy.deepcopy(cas_only)
+        bogus["evidence"][0]["checker_command"] = "echo nothing"
+        self.assertEqual(MODULE.classify_cas_certificate_fact(bogus), "unrecognized")
+
+
 if __name__ == "__main__":
     unittest.main()
