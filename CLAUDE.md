@@ -1476,6 +1476,29 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
      step internally via `speedup_close` + one `Rat.natDivSucc_add` fusion, and
      the only PUBLIC lemma of that shape, `within_of_two_sided_le`, runs the
      **opposite direction**.
+  **CORRECTION, 2026-08-27: the M-test example above is STALE, and it cost two
+  lanes.** `CReal.weierstrassMTest` was landed in full generality
+  (`creal/uniform_convergence.rs`, commit `1d08388a3`), along with
+  `CReal.close_within_of_within` — which solved the `Within` -> `close_within`
+  step NOT by extracting `convergence.rs`'s private helper as the text above
+  speculates, but by an independent route through the already-public
+  `sample_upper_bound`/`sample_lower_bound`. The coordinator read the stale text
+  as a live blocker and dispatched a lane at a finished task.
+
+  It happened TWICE in one hour. The same coordinator logged a deficiency
+  asserting `Rat.sumRange` had no diagonal/rectangle reindexing and dispatched an
+  Opus lane; `rat_prelude/diagonal.rs` already carried it, AND `complex.rs`
+  already ran the same argument over ℂ including the two-bound form that
+  `diagonal.rs`'s own module doc called missing.
+
+  **So the rule this section states for LANES applies to whoever writes the
+  brief, and more sharply**, because a brief multiplies the error by the lane it
+  dispatches: **verify a blocker still exists in the tree before treating it as
+  one — including a blocker this file names.** A file that records obstacles
+  accumulates stale ones by construction, and its authority is exactly what makes
+  them expensive. Cheap check, and the only one that works: grep the tree for the
+  declaration, with a positive control of the same kind.
+
   3. **A lemma whose stated hypothesis is WEAKER than everyone assumes.**
      `CReal.sumRange_cauchy_of_dominated` is `∀ f g, (∀ k, le (abs (f k)) (g k))
      → …` -- it never required `f` nonnegative, so it **already covers signed

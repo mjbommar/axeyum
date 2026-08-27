@@ -3,37 +3,71 @@
 Both were found by lanes doing something else, and both were reported rather
 than worked around. Neither is fixed here.
 
-## 1. `Rat.sumRange` has no diagonal/rectangle reindexing, and it blocks two things
+## 1. RETRACTED — the `Rat.sumRange` reindexing already existed
 
-The kernel-Taylor lane landed the degree-≤1 expansion
-(`Rat.taylor_deg1`) and stopped at general degree with the obstacle named
-exactly: a **general-degree closed form needs a diagonal/rectangle double-sum
-reindexing lemma over `Rat.sumRange`**, because `q(x)`'s coefficients are
+**This section originally asserted that `Rat.sumRange` had no diagonal/rectangle
+double-sum reindexing, and dispatched an Opus lane against it. That was wrong,
+and the error was the coordinator's.**
 
-    Σ_{i=k+1}^{n-1} c(i)·a^(i−1−k)
+It already existed, in two places:
 
-which cannot be built or evaluated without it.
+- **`rat_prelude/diagonal.rs`** — `Rat.sumRange_split`,
+  `Rat.sumRange_diagonal`, `Rat.sumRange_rect_eq_diag_add_corner`, landed
+  earlier by lane `rat-cauchy-diagonal` (`a9fd852cb`).
+- **`complex.rs`** — `Complex.sumRange_mul`, `Complex.sumRange_mul_double`,
+  `Complex.sumRange_mul_eq_diag_add_corner` had already run the same argument
+  over ℂ's setoid, **including the two-bound form that `diagonal.rs`'s own
+  module doc said was missing.**
 
-**That machinery exists for `ℕ`** — `nat_prelude::diagonal` / `rectangle` — and
-**not for `ℚ`**.
+The second is hiding place #1 exactly: general infrastructure filed under its
+first consumer's module, invisible to any ℚ- or ℕ-shaped search.
 
-What makes this worth its own entry rather than a line in a status file: it is
-the **same gap `rat_prelude/polynomial.rs`'s own module doc already names** as
-blocking `Rat.polyEval_mul`, the Cauchy product. So it has now been reached
-independently from two directions, by lanes that did not know about each other.
-A blocker hit twice from different sides is infrastructure, not a local
-difficulty.
+### What the lane did with the retraction, which was the right thing
 
-Note also what this is *not*: it is **not a failed proof attempt**. The lane did
-not try and fail to prove general-degree Taylor; it identified the missing
-prerequisite before spending effort on it. That is the sizing behaviour that has
-worked all session.
+Rather than stopping, it **transported from `complex.rs`** — deliberately not
+from `nat_prelude`, because the argument touches no `Nat.sub` and no index
+arithmetic at all (`mul_comm` + `mul_sumRange` + `sumRange_congr`), making the
+port a substitution: `Equiv`/`equiv_trans` → `Eq`/`rchain`,
+`const_app(p.mul,…)` → `rmul`. Re-deriving would have left a **fourth** proof of
+one fact to keep in sync across `Nat`, `ℂ`, `CReal` and `ℚ`.
 
-**The `ℕ` version existing is the strongest evidence the `ℚ` version is
-reachable** — and also the reason to check carefully whether it can be
-transported rather than re-derived. Re-deriving beside the original is how this
-repository ends up with two proofs of one fact that must stay in sync while the
-kernel happily verifies both.
+**All five theorems were kernel-accepted on the first attempt.** Landed:
+
+    Rat.sumRange_mul, Rat.sumRange_mul_double (two INDEPENDENT bounds),
+    Rat.sumRange_mul_eq_diag_add_corner, Rat.pow_add, Rat.pow_sub_add
+
+The two-bound gap closed **without touching the rectangle theorem**:
+`diagonal.rs`'s premise was right (the square is same-bound) and its conclusion
+wrong — the generality comes from the step *before* the rectangle, which cannot
+care whether the bounds agree.
+
+### The one real ℚ-vs-ℕ divergence
+
+**`Rat.mul` renormalises, so unit and zero laws are laws rather than `Eq.refl`.**
+`pow_add`'s base case needs `Rat.mul_one` where `Nat.pow_add` needed nothing —
+the same place `Rat.mul_sumRange` needs `Rat.mul_zero`. Nothing else about ℚ is
+harder; the reindexing is index-level and ℚ never sees it.
+
+### A vacuous test the lane caught on itself
+
+Its first corner test at `n = 2` **could not fail**: the corner is the single
+cell `i = 1`, where `n−i = 1 = i`, so `g((n−i)+k)` and `g(i+k)` are literally the
+same term and a transposed index is invisible. At `n = 3` the same transposition
+moves the corner 66 → 150. Both tests now carry in-test discriminators, so a
+`def_eq` returning `true` for everything would fail *there* rather than silently
+passing the negative control.
+
+It also recorded a limit worth keeping: `Σ_{i≤k} f i·g(k−i)` and
+`Σ_{i≤k} f(k−i)·g i` are the same sum reindexed, so **no instance can separate
+them** — that swap is caught by reading, never by computing.
+
+### Still open
+
+`Rat.polyEval_mul` did **not** land, and the lane recommends it not land under
+that name: the corner does not simplify to a `polyEval`, so the honest statement
+is a three-term identity. General-degree `Rat` Taylor was not attempted; its
+offset reindexing (`Σ_{i=k+1}^{n-1}`) is now supplied by `Rat.sumRange_split`,
+but the fit was not verified.
 
 ## 2. Two tools disagree on how many `Nat` theorems exist, and the ledger's
    denominator is the loser
