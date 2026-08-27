@@ -1392,6 +1392,25 @@ pub struct CRealPrelude {
     /// here `(c−a)·Δ⁻¹` — which `a ≤ c` supplies via `CReal.mul_nonneg` on
     /// the two nonnegative factors. See `creal/crossing.rs`.
     pub crossing_lower: NameId,
+    /// `CReal.crossingSampleUpper : ∀ a c delta, Rat.lt Rat.zero delta →
+    /// CReal.le c (CReal.add (CReal.add a (CReal.mul (CReal.ofNat
+    /// (CReal.crossingIndex a c delta)) delta)) (CReal.add delta (CReal.mul
+    /// delta (CReal.ofRat (Rat.natDivSucc 2 j)))))` — [`Self::crossing_upper`]
+    /// restated against an ORDINARY Riemann-sum sample point `a + ofNat(i)·Δ`
+    /// (`integral.rs`'s own `sample_point` shape) rather than the raw
+    /// rational bound `crossingUpper` computes internally: `c` is within a
+    /// fixed slack (unreduced here, but equal to `2Δ`) ABOVE the coarse
+    /// mesh's `crossingIndex`-th sample point. See `creal/crossing.rs`.
+    pub crossing_sample_upper: NameId,
+    /// `CReal.crossingSampleLower : ∀ a c delta, Rat.lt Rat.zero delta →
+    /// CReal.le a c → CReal.le (CReal.add (CReal.add a (CReal.mul (CReal.ofNat
+    /// (CReal.crossingIndex a c delta)) delta)) (CReal.mul delta (CReal.ofRat
+    /// (Rat.neg (Rat.natDivSucc 3 j))))) c` — the mirror of
+    /// [`Self::crossing_sample_upper`]: `c` is no more than a fixed slack
+    /// (`1.5Δ`, left as `Δ·(negative rational)` rather than rewritten to
+    /// `neg(Δ·positive)`) BELOW the same sample point. See
+    /// `creal/crossing.rs`.
+    pub crossing_sample_lower: NameId,
     /// `CReal.sampleUpperBound : ∀ x m, CReal.le x (CReal.ofRat (Rat.add
     /// (CReal.seq x m) (Rat.natDivSucc 1 m)))` — the general
     /// self-approximation lemma every `CReal` satisfies: it never exceeds
@@ -4282,6 +4301,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         crossing_index: kernel.name_str(creal, "crossingIndex"),
         crossing_upper: kernel.name_str(creal, "crossingUpper"),
         crossing_lower: kernel.name_str(creal, "crossingLower"),
+        crossing_sample_upper: kernel.name_str(creal, "crossingSampleUpper"),
+        crossing_sample_lower: kernel.name_str(creal, "crossingSampleLower"),
         sample_upper_bound: kernel.name_str(creal, "sampleUpperBound"),
         sample_lower_bound: kernel.name_str(creal, "sampleLowerBound"),
         bounded_of_uniformly_continuous: kernel.name_str(creal, "bounded_of_uniformly_continuous"),
@@ -4631,6 +4652,14 @@ pub(crate) fn build_creal_prelude_uncached(
         // than waiting for the third `uniform_continuity` entry point below.
         uniform_continuity::declare_bounded_of_uniformly_continuous(&mut d, prelude)?;
         mul_self_zero::declare_mul_self_zero(&mut d, prelude)?;
+        // `crossing::declare_crossing_sample` (`crossingSampleUpper`/
+        // `crossingSampleLower`, restating `crossingUpper`/`crossingLower`
+        // -- `crossing::declare_crossing`, well above -- against an ordinary
+        // `sample_point`) needs `CReal.ratUnitEqOne`, just admitted by
+        // `mul_self_zero::declare_mul_self_zero` immediately above, so it
+        // cannot be folded into `declare_crossing` itself (see that
+        // function's own doc comment).
+        crossing::declare_crossing_sample(&mut d, prelude)?;
         sqrt::declare_sqrt(&mut d, prelude)?;
         speedup::declare_speedup(&mut d, prelude)?;
         // `sqrtApproxKRegular` needs `speedup.rs`'s `KRegular` predicate
