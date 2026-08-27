@@ -4934,8 +4934,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         uc_rec: kernel.name_str(uniformly_continuous_on, "rec"),
         uc_modulus: kernel.name_str(uniformly_continuous_on, "modulus"),
         uc_spec: kernel.name_str(uniformly_continuous_on, "spec"),
-        uniformly_continuous_on_restrict: kernel
-            .name_str(creal, "uniformlyContinuousOn_restrict"),
+        uniformly_continuous_on_restrict: kernel.name_str(creal, "uniformlyContinuousOn_restrict"),
         uniformly_continuous_id: kernel.name_str(creal, "uniformly_continuous_id"),
         uniformly_continuous_const: kernel.name_str(creal, "uniformly_continuous_const"),
         uniformly_continuous_add: kernel.name_str(creal, "uniformly_continuous_add"),
