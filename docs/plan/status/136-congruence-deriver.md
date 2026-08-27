@@ -46,8 +46,9 @@ Four demos, all `#[cfg(test)]` in `congruence.rs`, each kernel-checked via
   (`declare_congruence_extras`) `build_creal_prelude` itself runs — checks
   `CReal.mulPowCongr`'s rendered type mentions `CReal.mul`/`CReal.pow`/
   `CReal.Equiv`.
-- (c) the deepest demo, `abs(min(add x (ofRat q), mul x x))` — five
-  registered-op nodes deep, its own cost measured and reported.
+- (c) the deepest demo, `abs(min(add x (ofRat 0), mul x x))` — five
+  registered-op nodes deep, its own cost measured and reported: **7.62 ms**
+  derive+check.
 - (d) the negative control: a term built from a raw non-congruent function
   `fvar` (`Opaque`) — asserted to return `Err(CongrError::Unregistered)`,
   never reaching `Kernel::add_declaration`.
@@ -77,21 +78,38 @@ struct field, not a dynamically-recomputed `kernel.name_str` call. No other
   already reported (25 pre-existing errors, same files) — not this lane's to
   fix.
 - `env -u RUST_MIN_STACK scripts/cargo-serialized.sh test -p
-  axeyum-lean-kernel --lib creal:: -- --nocapture`: PENDING_RESULT
+  axeyum-lean-kernel --lib creal:: -- --nocapture`: **137 passed, 0
+  failed**, 316.13s wall (full `creal::` module, second run after fixing
+  the bug below; first run was 136 passed / 1 failed). Deepest demo
+  (`composite_clamp_like_term_derives_and_checks`, `abs(min(add x (ofRat
+  0), mul x x))`) derive+check cost: **7.62 ms**.
 - `scripts/check-deep-stack-call-sites.py`: OK, 225 files, 0 unprotected
   sites.
 - `rustfmt --edition 2024` on every touched/new file: clean (one reformat
   pass on `congruence.rs` itself, no content change).
 
-**Kernel rejections during development**: three `E0499` borrow-checker
-errors (not kernel rejections) from calling `equiv(d, p, d.const_app(...),
-d.const_app(...))` inline — Rust's evaluation order requires both mutable
-borrows of `d` live simultaneously. Fixed by binding each side to a `let`
-first. Zero actual `Kernel::add_declaration` rejections once that compiled —
-every congruence lemma's argument order was read from an existing call site
-before use (see `Arity::Binary`'s doc comment for the three sites checked),
-which is exactly the retrospective this task's brief was warning against
-("assuming a mirror exists").
+**Kernel rejections during development**: two distinct problems, both
+found by actually running the gate rather than by inspection.
+1. Three `E0499` borrow-checker errors (compile-time, not kernel rejections)
+   from calling `equiv(d, p, d.const_app(...), d.const_app(...))` inline —
+   Rust's evaluation order requires both mutable borrows of `d` live
+   simultaneously. Fixed by binding each side to a `let` first.
+2. One REAL `Kernel::add_declaration` rejection,
+   `Kernel(UnboundFVar { id: 1001 })`, caught by the first full
+   `cargo test -p axeyum-lean-kernel --lib creal::` run (136 passed / 1
+   failed) — demo (c)'s `Const` leaf was a fresh `IntDev` fvar (`q`) that
+   `declare_derived_congr` never quantified (it only binds `x`/`y`/`h`), so
+   the closed term still mentioned an unbound variable. Not a deriver design
+   flaw: `CongruExpr::Const` is documented as requiring a term that does not
+   mention `Var`, but nothing enforces "closed" vs. "merely `Var`-free", and
+   a test built one that was `Var`-free but NOT closed. Fixed by using
+   `ofRat (Rat.zero)` instead of a free variable; confirmed by a second full
+   run, 137 passed / 0 failed. Every congruence LEMMA's own argument order,
+   separately, was read from an existing call site before use (see
+   `Arity::Binary`'s doc comment for the three sites checked) and never
+   needed correction — the retrospective this task's brief warns about
+   ("assuming a mirror exists") did not recur for the lemma-application
+   side, only for this one test-construction mistake.
 
 **Candidates for retirement** (not retired by this lane — report only, per
 scope): none of the CURRENT hand-built congruences in the merged tree are
