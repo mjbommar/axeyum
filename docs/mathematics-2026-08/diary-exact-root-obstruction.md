@@ -367,3 +367,132 @@ by `le_trans`'s "compare at an arbitrary third index" idiom routed through
 refutation came with the true neighbouring statement already built. Briefs that
 ask for a verdict *before* building keep converting my wrong targets into right
 ones instead of into wasted lanes.
+
+---
+
+## Correction, 2026-08-27: BOTH engineering obstacles were already landed
+
+The "What the route actually is" section above ends by naming two engineering
+obstacles and calling the mathematics done. **Neither obstacle exists.** Both
+were closed by earlier lanes, and this file was never updated — so a lane was
+dispatched to build two things that are already in the kernel, registered, and
+under test.
+
+### Obstacle 1 ("the global bound is not exposed") — resolved
+
+The claim was that the magnitude bound "exists only *mid-proof* inside
+`declare_strict_mono_of_pos_deriv`" and that reaching it from `ivt.rs` "means
+duplicating the whole subdivision argument". It was hoisted out. `monotone.rs`
+now declares **three** public theorems on this axis, all with `BuildStep`s in
+`creal.rs`, entries in `creal/inventory/monotone.rs`, and axiom footprint 0:
+
+- **`CReal.strict_mono_magnitude`** (`declare_strict_mono_magnitude`,
+  `monotone.rs:2883`) — the hoisted bound itself, stated on `le x y` rather
+  than `lt x y` because nothing up to this bound needs strictness:
+
+      ∀ F F' a b, HasDerivativeOn F F' a b →
+      ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k)) (F' z)) →
+      ∀ x y, le a x → le x y → le y b →
+        le (mul (ofRat (natDivSucc 1 (Nat.succ (Nat.mul 2 k)))) (add y (neg x)))
+           (add (F y) (neg (F x)))
+
+  Its own doc comment states it is exactly `strict_mono_of_pos_deriv`'s internal
+  `chained2`, and that `strict_mono_of_pos_deriv` is now a corollary of it plus
+  the strict-gap-to-rational-witness step. So there is **one** proof of this
+  fact, not two — the aliasing hazard this file warns about was avoided.
+
+- **`CReal.diff_le_of_strict_mono_magnitude`**
+  (`declare_diff_le_of_strict_mono_magnitude`, `monotone.rs:3815`) — and this is
+  the exact statement this diary derived by hand and called the route's
+  quantitative core:
+
+      ∀ F F' a b, HasDerivativeOn F F' a b →
+      ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k)) (F' z)) →
+      ∀ x y, le a x → le x y → le y b →
+        le (add y (neg x))
+           (mul (ofNat (Nat.succ (Nat.succ (Nat.mul 2 k))))
+                (add (abs (F x)) (abs (F y))))
+
+  `Nat.succ (Nat.succ (Nat.mul 2 k))` is `2k+2 = 2(k+1)`, so this is literally
+  `|x − y| ≤ 2(k+1)·(|F x| + |F y|)` — the bound written out above, cancelled
+  through `scale_cancel_le` and the two-term triangle inequality. Its doc
+  comment names the two consumers this diary predicted: "This is what an exact
+  IVT root needs … and what Chapter 12's inverse-function continuity needs."
+
+- **`CReal.inverse_lipschitz_of_pos_deriv`**
+  (`declare_inverse_lipschitz_of_pos_deriv`, `monotone.rs:5980`) — the
+  order-free two-sided `abs` form, taking `Apart x y` as data instead of an
+  ordering:
+
+      … → ∀ x y, le a x → le x b → le a y → le y b → Apart x y →
+        le (abs (add x (neg y)))
+           (mul (ofNat (Nat.succ (Nat.succ (Nat.mul 2 k))))
+                (abs (add (F x) (neg (F y)))))
+
+  This is precisely the "would also serve Chapter 12's inverse-function
+  continuity" the paragraph above speculated about, built.
+
+The private helpers this section worried about — `half_frac_eq`, `cabs`,
+`cdiff`, the mesh toolkit — never had to move: the extraction happened **inside
+`monotone.rs`**, where they are already in scope, and `ivt.rs` consumes the
+result by kernel name (`d.lemma(p.diff_le_of_strict_mono_magnitude, …)`). A
+private Rust `fn` scoped to a file is not a barrier to another file at all once
+the fact it proves is a *declaration*; only an un-named inline step is. That
+distinction is the whole content of obstacle 1, and stating it as "the helpers
+are private" pointed the next reader at the wrong thing.
+
+### Obstacle 2 ("continuity transports convergence does not exist") — resolved
+
+`CReal.converges_comp_eventually` (`creal/convergence.rs`, documented at
+`creal.rs:1085`, `BuildStep` `convergence::declare_converges_comp_eventually`):
+
+    ∀ F a b (u : UniformlyContinuousOn F a b) f L,
+      (∀ n, le a (f n)) → (∀ n, le (f n) b) → Converges f L →
+      ∀ e, ∃ N, ∀ n, Nat.le N n → close_within (F (f n)) (F L) (natDivSucc 1 e)
+
+Its doc comment opens by naming this file: "**The repair for
+`docs/mathematics-2026-08/diary-exact-root-obstruction.md`'s refuted
+`converges_comp`.**" It is repair **(1)** from the section above — weaken the
+conclusion to the eventual `∃ N` form — with the witness `N := K·(modulus(e)+1)`
+by forward evaluation, no `Nat` division and no search, exactly as that section
+predicted. Repair (2) (bound the modulus) was not needed and was not built.
+
+Two consumption notes, since the shape is not what the naive statement would be:
+
+- The conclusion is **`close_within`**, not `Within`. `close_within` is the
+  real-valued bound `uc_spec` itself produces; `Within` is the index-tied
+  canonical-sample form `Converges` uses. They are different, deliberately, and
+  the spec application is a one-step consumer of `close_within`.
+- The domain hypotheses `le a L` / `le L b` are **not** separate arguments —
+  `converges_lower_bound` / `converges_upper_bound` (landed by the same lane
+  that refuted `converges_comp`, recorded above) derive them from the pointwise
+  bounds plus `Converges f L`.
+
+And the refutation stands: do not try to strengthen this to the fixed-rate
+`Converges (F ∘ f) (F L)`. That statement is false here for the reason this file
+gives, and the doc comment repeats it.
+
+### What this cost, and the rule
+
+This is the twenty-first instance this session of a lane being dispatched at
+work already in the tree, and the second where **this file itself** was the
+authority that sent it. The failure is structural, not careless: a document that
+records obstacles accumulates stale ones by construction, and its authority is
+exactly what makes them expensive.
+
+The cheap check that would have caught both, and did:
+
+    grep -n 'strict_mono_magnitude\|converges_comp' crates/axeyum-lean-kernel/src/creal.rs
+
+Two seconds, against a brief that budgeted an ~830-line proof extraction and a
+new convergence lemma. Note that **`shape_search` could not have answered
+obstacle 1** — an inline step has no declaration to index — but it answers it
+perfectly *now*, because the step has a name. That asymmetry is the argument for
+extracting inline steps eagerly: extraction converts an unsearchable fact into a
+searchable one, and the retrieval saving outlives the proof saving.
+
+**So: verify a blocker still exists in the tree before treating it as one —
+including, and especially, a blocker this file names.** When a diary section is
+acted on, the acting lane should update it in the same commit; the sections
+above were each written by a lane that had just learned something and had no
+reason to re-read what came before.
