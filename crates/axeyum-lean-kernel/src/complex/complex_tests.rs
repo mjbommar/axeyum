@@ -279,6 +279,10 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
             "Complex.factorQuotient_degreeLt",
             p.factor_quotient_degree_lt,
         ),
+        (
+            "Complex.hornerFromTop_diag_eq_polyEval",
+            p.horner_from_top_diag_eq_poly_eval,
+        ),
     ];
     // COVERAGE, checked against the ENVIRONMENT rather than against `named`
     // itself.
@@ -2597,4 +2601,132 @@ fn factor_quotient_reproduces_x_plus_one_at_the_root_and_not_elsewhere_body() {
         "factorQuotient(X^2-1, a=2, n=2, k=0) is 2, not 1 -- claiming it is 1 \
          (X+1's root-case q0) must be REJECTED: {nr0_wrong:?}"
     );
+}
+
+/// Corroborates [`ComplexPrelude::horner_from_top_diag_eq_poly_eval`] at a
+/// genuine three-term polynomial with a NONZERO middle coefficient (`1 + 2X +
+/// 3X²`, at the non-root point `a = 2`) -- `X² − 1`'s middle coefficient is
+/// zero, which would make this lemma's `a`-dependence invisible.
+///
+/// `hornerFromTop c a n n` and `polyEval c (succ n) a` are checked
+/// SEPARATELY against the same hand-computed value at `n = 0, 1, 2` (`1`,
+/// `5`, `17`), each paired with a wrong-value control that must be REJECTED,
+/// so this is a discriminating check of the lemma's stated meaning and not
+/// just of the kernel's willingness to accept `equiv_refl`.
+#[test]
+fn horner_from_top_diag_matches_poly_eval_at_a_nonzero_middle_coefficient() {
+    on_a_deep_stack(horner_from_top_diag_matches_poly_eval_at_a_nonzero_middle_coefficient_body);
+}
+
+fn horner_from_top_diag_matches_poly_eval_at_a_nonzero_middle_coefficient_body() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let two_c = d.const_app(p.add, &[one_c, one_c]);
+    let three_c = d.const_app(p.add, &[two_c, one_c]);
+    let five_c = d.const_app(p.add, &[three_c, two_c]);
+    let seventeen_c = {
+        // 5 + 3*2*2 = 17, built as repeated `add` of `one_c` to stay in the
+        // same "small ring expression, checked by defeq" idiom the rest of
+        // this file uses rather than introducing a numeral encoding.
+        let mut acc = five_c;
+        for _ in 0..12 {
+            acc = d.const_app(p.add, &[acc, one_c]);
+        }
+        acc
+    };
+
+    let zero_n = d.zero();
+    let one_n = d.succ(zero_n);
+    let two_n = d.succ(one_n);
+    let three_n = d.succ(two_n);
+
+    // c := 1 + 2X + 3X^2.
+    let cx = three_term_polynomial(&mut d, p, one_c, two_c, three_c);
+    let a = two_c;
+
+    let check = |d: &mut IntDev<'_>,
+                 call: crate::expr::ExprId,
+                 expect: crate::expr::ExprId,
+                 label: &str| {
+        let stmt = super::zeq(d, p, call, expect);
+        let proof = d.lemma(p.equiv_refl, &[expect]);
+        let name = d.kernel().name_str(anon, label);
+        d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: stmt,
+            value: proof,
+        })
+    };
+
+    // n = 0: hornerFromTop c a 0 0 = c 0 = 1 = polyEval c 1 a.
+    let h00 = d.const_app(p.horner_from_top, &[cx, a, zero_n, zero_n]);
+    let pe1 = d.const_app(p.poly_eval, &[cx, one_n, a]);
+    assert!(
+        check(&mut d, h00, one_c, "Check.diag_h00_right").is_ok(),
+        "hornerFromTop(c,a,0,0) must be 1"
+    );
+    assert!(
+        check(&mut d, h00, two_c, "Check.diag_h00_wrong").is_err(),
+        "hornerFromTop(c,a,0,0) is 1, not 2 -- must be REJECTED"
+    );
+    assert!(
+        check(&mut d, pe1, one_c, "Check.diag_pe1_right").is_ok(),
+        "polyEval(c,1,a) must be 1"
+    );
+
+    // n = 1: hornerFromTop c a 1 1 = c0 + a*c1 = 1 + 2*2 = 5 = polyEval c 2 a.
+    let h11 = d.const_app(p.horner_from_top, &[cx, a, one_n, one_n]);
+    let pe2 = d.const_app(p.poly_eval, &[cx, two_n, a]);
+    assert!(
+        check(&mut d, h11, five_c, "Check.diag_h11_right").is_ok(),
+        "hornerFromTop(c,a,1,1) must be 5"
+    );
+    assert!(
+        check(&mut d, h11, one_c, "Check.diag_h11_wrong").is_err(),
+        "hornerFromTop(c,a,1,1) is 5, not 1 -- must be REJECTED"
+    );
+    assert!(
+        check(&mut d, pe2, five_c, "Check.diag_pe2_right").is_ok(),
+        "polyEval(c,2,a) must be 5"
+    );
+
+    // n = 2: hornerFromTop c a 2 2 = c0 + a*c1 + a^2*c2 = 1+4+12 = 17
+    //      = polyEval c 3 a.
+    let h22 = d.const_app(p.horner_from_top, &[cx, a, two_n, two_n]);
+    let pe3 = d.const_app(p.poly_eval, &[cx, three_n, a]);
+    assert!(
+        check(&mut d, h22, seventeen_c, "Check.diag_h22_right").is_ok(),
+        "hornerFromTop(c,a,2,2) must be 17"
+    );
+    assert!(
+        check(&mut d, h22, five_c, "Check.diag_h22_wrong").is_err(),
+        "hornerFromTop(c,a,2,2) is 17, not 5 -- must be REJECTED"
+    );
+    assert!(
+        check(&mut d, pe3, seventeen_c, "Check.diag_pe3_right").is_ok(),
+        "polyEval(c,3,a) must be 17"
+    );
+
+    // And the actual theorem applies at these concrete arguments.
+    let applied0 = d.const_app(p.horner_from_top_diag_eq_poly_eval, &[cx, a, zero_n]);
+    let applied1 = d.const_app(p.horner_from_top_diag_eq_poly_eval, &[cx, a, one_n]);
+    let applied2 = d.const_app(p.horner_from_top_diag_eq_poly_eval, &[cx, a, two_n]);
+    for (label, applied) in [
+        ("Check.diag_theorem_n0", applied0),
+        ("Check.diag_theorem_n1", applied1),
+        ("Check.diag_theorem_n2", applied2),
+    ] {
+        let inferred = d.kernel().infer(applied);
+        assert!(
+            inferred.is_ok(),
+            "{label}: the diagonal theorem must apply at concrete (c,a,n): {inferred:?}"
+        );
+    }
 }

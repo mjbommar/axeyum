@@ -135,24 +135,61 @@
 //! REJECTED — a non-vacuous refutation, since the accept/reject pair is about
 //! the same call with two different claimed answers.
 //!
-//! **NOT attempted: the general symbolic factor theorem itself**
+//! **The row-growth claim, corrected, and the sum-level bridge it was
+//! gesturing at.** This section used to claim the natural induction needed a
+//! NEW fact — `s^{(m+1)}_k = s^{(m)}_k + a^{m+1-k}·p_{m+1}` for every `k ≤
+//! m` — and called it "not attempted". That was imprecise in a way worth
+//! recording rather than silently fixing: read against `hornerFromTop`'s OWN
+//! indexing (`j` counts UP from the top — `j = 0` is the leading coefficient
+//! `c (succ m)` — not down from some fixed window), the claimed relation
+//! *is* [`declare_horner_from_top_equations`]'s `hornerFromTop_succ_succ`,
+//! already proved by `Eq.refl` at the time that paragraph was written.
+//! Growing the bound does not "change every value in the row" in any sense
+//! that needed a new lemma — it is exactly one ι-reduction step of a
+//! recursion that was already total.
+//!
+//! What THAT defeq-level fact does not give for free is any connection to
+//! `polyEval`'s `sumRange`-shaped value — a nested `Nat.rec` and a
+//! `sumRange` fold are structurally unrelated data, and nothing above
+//! bridges them. [`declare_horner_from_top_diag_eq_poly_eval`] is that
+//! bridge: `Equiv (hornerFromTop c a n n) (polyEval c (Nat.succ n) a)`,
+//! proved by induction on `n` (base case: both sides reduce, via
+//! `hornerFromTop_zero`/`polyEval_zero`/`polyEval_succ`/`pow_zero`, each an
+//! `Eq` lifted to `Equiv`, plus a `ring_law_proof` collapse, to `c 0`; step:
+//! `hornerFromTop_succ_succ`/`polyEval_succ` unfold one term each, the
+//! inductive hypothesis rewrites in via `add_congr`, and a `mul_comm`-shaped
+//! `ring_law_proof` closes the one remaining mismatch). Corroborated
+//! concretely in `complex_tests.rs`'s
+//! `horner_from_top_diag_matches_poly_eval_at_a_nonzero_middle_coefficient`
+//! at a three-term polynomial with a NONZERO middle coefficient (`X² − 1`'s
+//! is zero, and would have made this lemma's `a`-dependence invisible to a
+//! concrete check).
+//!
+//! **STILL NOT attempted: the general symbolic factor theorem itself**
 //! (`polyEval p (succ n) a ~ zero → ∀ x, Equiv (polyEval p (succ n) x)
-//! (polyEval (polyMul (X − a) (factorQuotient p a n)) (Nat.add 2 n) x)`).
-//! `hornerFromTop c a (succ m) j` is NOT simply related to `hornerFromTop c a
-//! m j` at a fixed `j` — growing the bound changes EVERY value in the row,
-//! not just the new top one (`s^{(m+1)}_k = s^{(m)}_k + a^{m+1-k}·p_{m+1}`
-//! for every `k ≤ m`, by hand-derivation), so the natural induction for the
-//! evaluation identity is on `m` directly against `hornerFromTop`'s own
-//! recursive shape, not a naive induction on `n` that reuses the previous
-//! `factorQuotient` wholesale. Landing that, plus the `Nat.add`-ordering and
-//! [`poly_pad_up`] bookkeeping [`declare_poly_eval_poly_mul`] already needs
-//! for a bound mismatch of `+1` (`Nat.add 2 n = n + 2`, one more than `p`'s
-//! own `succ n`), is real, sized, and not attempted here.
+//! (polyEval (polyMul (X − a) (factorQuotient p a n)) (Nat.add 2 n) x)`), and
+//! the diagonal bridge above does not close it by itself. It supplies one
+//! anchor point — `hornerFromTop c a n n` (the value `factorQuotient c a n
+//! 0` reduces to) is literally `polyEval c (succ n) a`, the very quantity the
+//! factor hypothesis says vanishes — but the theorem needs a sum over ALL of
+//! `factorQuotient c a n`'s coefficients, not just its bottom one, matched
+//! term-by-term against a telescoping rearrangement of `polyEval c (succ n)
+//! x`. A naive induction on `n` that reuses the smaller `factorQuotient c a
+//! n` wholesale still does not close it: `factorQuotient c a (succ n)` and
+//! `factorQuotient c a n` differ at every SHARED index `k ≤ n − 1` by a
+//! correction term `a^{n-k}·c(succ n)` (the new top coefficient's
+//! contribution), so the induction has to carry that correction explicitly
+//! rather than treat the smaller quotient as reusable as-is. Landing that,
+//! plus the `Nat.add`-ordering and [`poly_pad_up`] bookkeeping
+//! [`declare_poly_eval_poly_mul`] already needs for a bound mismatch of `+1`
+//! (`Nat.add 2 n = n + 2`, one more than `p`'s own `succ n`), remains real,
+//! sized work.
 
 use super::{
-    CExpr, ComplexPrelude, complex_eq, complex_eq_refl, complex_ty, corner_inner_c, corner_row_c,
-    corner_sum_c, diag_inner_c, diag_t_fn_c, diag_triangle_sum_c, nat_eq_to_complex_equiv,
-    render_c, ring_law_proof, shifted_c, sum_range_const_zero_proof, zeq, zero_fn,
+    CExpr, ComplexPrelude, complex_eq, complex_eq_refl, complex_eq_to_equiv, complex_ty,
+    corner_inner_c, corner_row_c, corner_sum_c, diag_inner_c, diag_t_fn_c, diag_triangle_sum_c,
+    nat_eq_to_complex_equiv, render_c, ring_law_proof, shifted_c, sum_range_const_zero_proof, zeq,
+    zero_fn,
 };
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
@@ -209,6 +246,7 @@ pub(super) fn declare_polynomial(d: &mut IntDev<'_>, p: ComplexPrelude) -> Resul
     declare_poly_eval_poly_mul(d, p)?;
     declare_horner_from_top(d, p)?;
     declare_horner_from_top_equations(d, p)?;
+    declare_horner_from_top_diag_eq_poly_eval(d, p)?;
     declare_factor_quotient(d, p)?;
     declare_factor_quotient_degree_lt(d, p)
 }
@@ -2137,6 +2175,199 @@ fn declare_horner_from_top_equations(
     }
 
     Ok(())
+}
+
+/// `Complex.hornerFromTop_diag_eq_polyEval : ∀ c a n, Equiv (hornerFromTop c
+/// a n n) (polyEval c (Nat.succ n) a)` — the sum-level bridge between
+/// `hornerFromTop`'s nested `Nat.rec` and `polyEval`'s `sumRange` fold. See
+/// [`ComplexPrelude::horner_from_top_diag_eq_poly_eval`] for the statement's
+/// role and for why the module doc's original "row growth" formula, restated
+/// correctly, turns out to already be [`ComplexPrelude::horner_from_top_succ_succ`]
+/// (proved by `Eq.refl` before this lemma existed) — the genuinely open part
+/// was connecting that recursion to `polyEval` at all, which is what this
+/// theorem closes.
+///
+/// Induction on `n` via [`NatOps::induct`]:
+/// - Base (`n = 0`): `hornerFromTop c a 0 0` and `polyEval c 1 a` both reduce
+///   — the first by [`ComplexPrelude::horner_from_top_zero`], the second by
+///   chaining [`ComplexPrelude::poly_eval_succ`], [`ComplexPrelude::poly_eval_zero`],
+///   [`ComplexPrelude::pow_zero`] (each an `Eq` lifted to `Equiv` via
+///   `complex_eq_to_equiv`) and a `ring_law_proof` collapse of `add zero (mul
+///   c0 one)` — to the same value `c 0`.
+/// - Step (`n = succ j`, `ih : Equiv (hornerFromTop c a j j) (polyEval c
+///   (succ j) a)`): [`ComplexPrelude::horner_from_top_succ_succ`] unfolds the
+///   LHS to `add (hornerFromTop c a j j) (mul (pow a (succ j)) (c (succ
+///   j)))`; `ih` rewrites the first summand via `add_congr`;
+///   [`ComplexPrelude::poly_eval_succ`] unfolds the RHS to `add (polyEval c
+///   (succ j) a) (mul (c (succ j)) (pow a (succ j)))`; the two `add`s then
+///   differ only by `mul_comm` inside the second summand, closed by
+///   `ring_law_proof`.
+fn declare_horner_from_top_diag_eq_poly_eval(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+    let fn_ty = d.arrow(nat, carrier);
+
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+
+    let motive = |d: &mut IntDev<'_>, n: ExprId| -> ExprId {
+        let hn = d.const_app(p.horner_from_top, &[c, a, n, n]);
+        let sn = d.succ(n);
+        let pe = d.const_app(p.poly_eval, &[c, sn, a]);
+        zeq(d, p, hn, pe)
+    };
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let stmt_inner = motive(d, n);
+
+    let proof_inner = d.induct(
+        &motive,
+        &|d| {
+            // ----- base case: Equiv (hornerFromTop c a 0 0) (polyEval c 1 a) --
+            let zero_n = d.zero();
+            let c0 = d.apply(c, &[zero_n]);
+            let one_c = d.kernel().const_(p.one, vec![]);
+            let zero_c = d.kernel().const_(p.zero, vec![]);
+
+            // LHS: Equiv (hornerFromTop c a 0 0) c0.
+            let h0_lhs = d.const_app(p.horner_from_top, &[c, a, zero_n, zero_n]);
+            let h_lhs_eq = d.lemma(p.horner_from_top_zero, &[c, a, zero_n]);
+            let h_lhs = complex_eq_to_equiv(d, p, h0_lhs, c0, h_lhs_eq);
+
+            // RHS, unrolled: Equiv (polyEval c 1 a) c0.
+            let pe0 = d.const_app(p.poly_eval, &[c, zero_n, a]);
+            let h_pz_eq = d.lemma(p.poly_eval_zero, &[c, a]);
+            let h_pz = complex_eq_to_equiv(d, p, pe0, zero_c, h_pz_eq);
+
+            let pow_a0 = d.const_app(p.pow, &[a, zero_n]);
+            let h_pow0_eq = d.lemma(p.pow_zero, &[a]);
+            let h_pow0 = complex_eq_to_equiv(d, p, pow_a0, one_c, h_pow0_eq);
+
+            let sn0 = d.succ(zero_n);
+            let pe1 = d.const_app(p.poly_eval, &[c, sn0, a]);
+            let mul_c0_pow0 = d.const_app(p.mul, &[c0, pow_a0]);
+            let sum_term = d.const_app(p.add, &[pe0, mul_c0_pow0]);
+            let h_ps_eq = d.lemma(p.poly_eval_succ, &[c, zero_n, a]);
+            let h_ps = complex_eq_to_equiv(d, p, pe1, sum_term, h_ps_eq);
+
+            let refl_c0 = d.lemma(p.equiv_refl, &[c0]);
+            let h_mul_cong = d.lemma(p.mul_congr, &[c0, c0, pow_a0, one_c, refl_c0, h_pow0]);
+            // h_mul_cong : Equiv (mul c0 (pow a 0)) (mul c0 one)
+            let mul_c0_one = d.const_app(p.mul, &[c0, one_c]);
+
+            let h_add_cong = d.lemma(
+                p.add_congr,
+                &[pe0, zero_c, mul_c0_pow0, mul_c0_one, h_pz, h_mul_cong],
+            );
+            // h_add_cong : Equiv sum_term (add zero (mul c0 one))
+            let add_zero_mulone = d.const_app(p.add, &[zero_c, mul_c0_one]);
+
+            let c0_v = CExpr::var(d, p, c0);
+            let ring_lhs = CExpr::add(CExpr::Zero, CExpr::mul(c0_v.clone(), CExpr::One));
+            let h_ring = ring_law_proof(d, p, &ring_lhs, &c0_v);
+            // h_ring : Equiv (add zero (mul c0 one)) c0
+
+            let (_e, h_reduce) = zchain(
+                d,
+                p,
+                sum_term,
+                &[(add_zero_mulone, h_add_cong), (c0, h_ring)],
+            );
+            // h_reduce : Equiv sum_term c0
+
+            let h_rhs = d.lemma(p.equiv_trans, &[pe1, sum_term, c0, h_ps, h_reduce]);
+            // h_rhs : Equiv pe1 c0
+            let h_rhs_symm = d.lemma(p.equiv_symm, &[pe1, c0, h_rhs]);
+            // h_rhs_symm : Equiv c0 pe1
+
+            d.lemma(p.equiv_trans, &[h0_lhs, c0, pe1, h_lhs, h_rhs_symm])
+        },
+        &|d, j, ih| {
+            // ----- step: from ih : Equiv (hornerFromTop c a j j) (polyEval c
+            // (succ j) a), show Equiv (hornerFromTop c a (succ j) (succ j))
+            // (polyEval c (succ (succ j)) a). ----------------------------------
+            let sj = d.succ(j);
+            let c_sj = d.apply(c, &[sj]);
+            let pow_a_sj = d.const_app(p.pow, &[a, sj]);
+
+            let h_lhs_eq = d.lemma(p.horner_from_top_succ_succ, &[c, a, j, j]);
+            let hjj = d.const_app(p.horner_from_top, &[c, a, j, j]);
+            let mul_pow_c = d.const_app(p.mul, &[pow_a_sj, c_sj]);
+            let unrolled_lhs = d.const_app(p.add, &[hjj, mul_pow_c]);
+            let h_ssj = d.const_app(p.horner_from_top, &[c, a, sj, sj]);
+            let h_lhs = complex_eq_to_equiv(d, p, h_ssj, unrolled_lhs, h_lhs_eq);
+            // h_lhs : Equiv h_ssj unrolled_lhs
+
+            let refl_mul = d.lemma(p.equiv_refl, &[mul_pow_c]);
+            let pe_sj = d.const_app(p.poly_eval, &[c, sj, a]);
+            let h_ih_lift = d.lemma(
+                p.add_congr,
+                &[hjj, pe_sj, mul_pow_c, mul_pow_c, ih, refl_mul],
+            );
+            // h_ih_lift : Equiv unrolled_lhs (add pe_sj mul_pow_c)
+            let mid = d.const_app(p.add, &[pe_sj, mul_pow_c]);
+
+            let pow_v = CExpr::var(d, p, pow_a_sj);
+            let c_sj_v = CExpr::var(d, p, c_sj);
+            let comm_lhs = CExpr::mul(pow_v.clone(), c_sj_v.clone());
+            let comm_rhs = CExpr::mul(c_sj_v.clone(), pow_v.clone());
+            let h_comm = ring_law_proof(d, p, &comm_lhs, &comm_rhs);
+            // h_comm : Equiv mul_pow_c (mul c_sj pow_a_sj)
+            let mul_c_pow = d.const_app(p.mul, &[c_sj, pow_a_sj]);
+            let refl_pe_sj = d.lemma(p.equiv_refl, &[pe_sj]);
+            let h_mid_to_rhs_inner = d.lemma(
+                p.add_congr,
+                &[pe_sj, pe_sj, mul_pow_c, mul_c_pow, refl_pe_sj, h_comm],
+            );
+            // h_mid_to_rhs_inner : Equiv mid (add pe_sj mul_c_pow)
+            let rhs_inner = d.const_app(p.add, &[pe_sj, mul_c_pow]);
+
+            let h_rhs_eq = d.lemma(p.poly_eval_succ, &[c, sj, a]);
+            let ssj = d.succ(sj);
+            let pe_ssj = d.const_app(p.poly_eval, &[c, ssj, a]);
+            let h_rhs = complex_eq_to_equiv(d, p, pe_ssj, rhs_inner, h_rhs_eq);
+            // h_rhs : Equiv pe_ssj rhs_inner
+            let h_rhs_symm = d.lemma(p.equiv_symm, &[pe_ssj, rhs_inner, h_rhs]);
+            // h_rhs_symm : Equiv rhs_inner pe_ssj
+
+            let (_e, chain_proof) = zchain(
+                d,
+                p,
+                h_ssj,
+                &[
+                    (unrolled_lhs, h_lhs),
+                    (mid, h_ih_lift),
+                    (rhs_inner, h_mid_to_rhs_inner),
+                    (pe_ssj, h_rhs_symm),
+                ],
+            );
+            chain_proof
+        },
+        n,
+    );
+
+    let ty = {
+        let inner = d.pi_fv(n_fv, nat, stmt_inner);
+        let inner2 = d.pi_fv(a_fv, carrier, inner);
+        d.pi_fv(c_fv, fn_ty, inner2)
+    };
+    let value = {
+        let inner = d.lam_fv(n_fv, nat, proof_inner);
+        let inner2 = d.lam_fv(a_fv, carrier, inner);
+        d.lam_fv(c_fv, fn_ty, inner2)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.horner_from_top_diag_eq_poly_eval,
+        uparams: vec![],
+        ty,
+        value,
+    })
 }
 
 /// `Complex.factorQuotient c a n k := Nat.rec (fun _ => Complex) zero (fun r'
