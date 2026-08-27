@@ -59,6 +59,15 @@ these before framing any "how do we compare to Mathlib / Mathematica" work:
   — a classical theorem lands as a graded statement family (general
   constructive form + boundary refutation + decidable-fragment exact form +
   labeled import), one fact per statement.
+- [2026-08-27 architecture review](docs/research/11-design-review/2026-08-27-architecture-review.md)
+  — the measured root causes: `creal.rs` fuses name registry, field
+  struct, build ORDER and dispatch (441 fields, 364 linear `declare_*`
+  calls) which is why phase-order bugs and helper duplication recur;
+  the integral's mesh is INTERVAL-RELATIVE, which is why additivity was
+  hard and why `riemannSum_split_exact` is free at mesh points; and the
+  two design patterns lanes rediscover every time — **computed, not
+  extracted** and the **two congruence regimes**. Read it before
+  proposing a refactor or fighting a congruence obligation.
 - [07-the-cost-model-and-pareto-position.md](docs/formalized-math-2026-08/07-the-cost-model-and-pareto-position.md)
   — tokens are capex, not opex: encoded strategies (producers) drive marginal
   cost per theorem toward CPU; the three gates (contracts, retrieval,
