@@ -5064,6 +5064,368 @@ fn triangle_step(
     d.lemma(p.le_trans, &[abs_cur, target, sum_bound, step1, combine])
 }
 
+/// `CReal.bucketClose : ∀ (bnd : CReal) (k : Nat) (cap : Rat), Rat.le
+/// (Rat.sub (CReal.seq bnd j) (Rat.natDivSucc 1 j)) cap → ∀ (w : CReal),
+/// CReal.le CReal.zero w → CReal.le w bnd → ∀ (m0 : Nat), CReal.le
+/// (CReal.abs (CReal.add w (CReal.neg (CReal.ofRat (Rat.min (Rat.natDivSucc
+/// (CReal.bucketIndex w k) k) cap))))) (CReal.ofRat (Rat.natDivSucc 1 m0))`
+/// -- `j := (Nat.succ k) * (Nat.succ k)`.
+///
+/// The "`w` is close to its own clamped grid-point sample" fact from
+/// Spivak ch.7's covering argument (see
+/// [`declare_bounded_of_uniformly_continuous`]'s own doc comment for the
+/// whole argument this is one piece of): `w`'s clamped grid point
+/// `GP(bucketIndex(w,k)) := min(natDivSucc(bucketIndex(w,k), k), cap)`
+/// lands within `1/(m0+1)` of `w`, for ANY target accuracy `m0` -- nothing
+/// here is specific to a uniformly-continuous function or its interval;
+/// `m0` is supplied by the caller (in the covering argument, `uc_modulus`
+/// read at accuracy 0) purely as an opaque `Nat`. `cap` is any clamp bound
+/// satisfying the two hypotheses above (`bounded_of_uniformly_continuous`
+/// instantiates it at `max(seq bnd j - natDivSucc 1 j, 0)`, but nothing
+/// below depends on that choice).
+///
+/// Extracted from `declare_bounded_of_uniformly_continuous`, which used to
+/// assemble exactly this fact INLINE, behind five private helpers
+/// ([`clamp_setup`], [`k_le_j`], [`creal_le_of_sub_le`],
+/// [`rat_le_add_left_of_nonneg`], [`creal_le_ofrat_add_of_le_ofrat_sum`]) --
+/// structurally invisible to both grep and `shape_search`, since an inline
+/// step has no declaration to index (CLAUDE.md's "hiding place 2").
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_bucket_close(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let rat_ty_top = rat_ty(d);
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+
+    let bnd_fv = d.fresh_fvar();
+    let bnd = d.kernel().fvar(bnd_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let cap_fv = d.fresh_fvar();
+    let cap = d.kernel().fvar(cap_fv);
+
+    let k1 = d.succ(k);
+    let j = NatOps::mul(d, k1, k1);
+    let bnd_j_ty_probe = sample(d, p, bnd, j);
+    let nds1j_ty_probe = div_succ(d, p, 1, j);
+    let raw_ty_probe = rsub(d, rat, bnd_j_ty_probe, nds1j_ty_probe);
+    let cap_le_raw_side_ty = rle(d, rat, raw_ty_probe, cap);
+    let cap_le_raw_side_fv = d.fresh_fvar();
+    let cap_le_raw_side = d.kernel().fvar(cap_le_raw_side_fv);
+
+    let w_fv = d.fresh_fvar();
+    let w = d.kernel().fvar(w_fv);
+    let h0w_ty = {
+        let zero_c = czero(d, p);
+        d.const_app(p.le, &[zero_c, w])
+    };
+    let h0w_fv = d.fresh_fvar();
+    let h0w = d.kernel().fvar(h0w_fv);
+    let hle_ty = d.const_app(p.le, &[w, bnd]);
+    let hle_fv = d.fresh_fvar();
+    let hle = d.kernel().fvar(hle_fv);
+
+    let m0_fv = d.fresh_fvar();
+    let m0 = d.kernel().fvar(m0_fv);
+
+    let m = d.const_app(p.bucket_index, &[w, k]);
+    let deltauc = div_succ(d, p, 1, m0);
+    let odeltauc = d.const_app(p.of_rat, &[deltauc]);
+
+    // --- body, identical to `declare_bounded_of_uniformly_continuous`'s own
+    // former inline "z close to GP(m)" step (now called from there instead
+    // of duplicated). -----------------------------------------------------
+    let (jw, _wj, qw) = clamp_setup(d, p, w, k);
+    let _ = jw;
+    let raw_m = div_succ_at(d, p, m, k);
+    let succ_m = d.succ(m);
+    let raw_sm = div_succ_at(d, p, succ_m, k);
+    let delta = div_succ(d, p, 1, k);
+    let nds1j = div_succ(d, p, 1, j);
+    let nds2j = div_succ(d, p, 2, j);
+    let nds3j = div_succ(d, p, 3, j);
+    let e_expr = radd(d, delta, nds3j);
+    let oe = d.const_app(p.of_rat, &[e_expr]);
+
+    let floor_lower = d.lemma(p.bucket_index_floor_lower, &[w, k]);
+    let floor_upper = d.lemma(p.bucket_index_floor_upper, &[w, k]);
+    let clamp_up = d.lemma(p.bucket_clamp_upper, &[w, k]);
+    let clamp_lo = d.lemma(p.bucket_clamp_lower, &[w, k, h0w]);
+
+    // shared: `ofRat q_w <= add w (ofRat nds3j)`.
+    let oqw = d.const_app(p.of_rat, &[qw]);
+    let onds3j = d.const_app(p.of_rat, &[nds3j]);
+    let qw_le_w_plus = {
+        let of_rat_sub_eq = d.lemma(p.of_rat_sub, &[qw, nds3j]);
+        // of_rat_sub_eq : Equiv (add oqw (neg onds3j)) (ofRat (rsub qw nds3j))
+        let neg_onds3j = cneg(d, p, onds3j);
+        let diff_form = cadd(d, p, oqw, neg_onds3j);
+        let qw_minus_nds3j = rsub(d, rat, qw, nds3j);
+        let sub_embed = d.const_app(p.of_rat, &[qw_minus_nds3j]);
+        let of_rat_sub_eq_rev = esymm(d, p, diff_form, sub_embed, of_rat_sub_eq);
+        let refl_w2 = erefl(d, p, w);
+        let clamp_lo2 = d.lemma(
+            p.le_congr,
+            &[
+                sub_embed,
+                diff_form,
+                w,
+                w,
+                of_rat_sub_eq_rev,
+                refl_w2,
+                clamp_lo,
+            ],
+        );
+        // clamp_lo2 : le diff_form w = le (add oqw (neg onds3j)) w
+        let raw = creal_le_of_sub_le(d, p, oqw, onds3j, w, clamp_lo2);
+        // raw : le oqw (add onds3j w)
+        let onds3j_w = cadd(d, p, onds3j, w);
+        let w_onds3j = cadd(d, p, w, onds3j);
+        let comm = d.lemma(p.add_comm, &[onds3j, w]);
+        let refl_oqw = erefl(d, p, oqw);
+        d.lemma(
+            p.le_congr,
+            &[oqw, oqw, onds3j_w, w_onds3j, refl_oqw, comm, raw],
+        )
+        // : le oqw (add w onds3j)
+    };
+    let delta_nonneg = d.lemma(rat.zero_le_nat_div_succ, &[one_nat, k]);
+    let nds3j_le_e = rat_le_add_left_of_nonneg(d, p, delta, nds3j, delta_nonneg);
+
+    let hkj = k_le_j(d, p, k);
+    let e_le_deltauc = e_le_delta_uc(d, p, k, m0, j, hkj);
+
+    let z_close_predicate = {
+        let rat_ty_e2 = rat_ty(d);
+        let t_fv = d.fresh_fvar();
+        let t = d.kernel().fvar(t_fv);
+        let ot = d.const_app(p.of_rat, &[t]);
+        let body_ty = close_of_bounds_ty(d, p, w, ot, oe);
+        d.lam_fv(t_fv, rat_ty_e2, body_ty)
+    };
+    let on_le_branch = {
+        let h_fv = d.fresh_fvar();
+        let _hle_branch = d.kernel().fvar(h_fv);
+        let hyp_ty = rle(d, rat, raw_m, cap);
+
+        let h1 = {
+            let eq_sm = d.lemma(rat.nat_div_succ_add, &[m, one_nat, k]);
+            let sum_m_delta = radd(d, raw_m, delta);
+            let eq_sm_rev = rsymm(d, sum_m_delta, raw_sm, eq_sm);
+            let qw_le_summdelta =
+                rat_eq_rewrite(d, raw_sm, sum_m_delta, eq_sm_rev, floor_upper, &|d, t| {
+                    rle(d, rat, qw, t)
+                });
+            let refl_nds2j = d.lemma(rat.le_refl, &[nds2j]);
+            let widen0 = d.lemma(
+                rat.add_le_add,
+                &[qw, sum_m_delta, nds2j, nds2j, qw_le_summdelta, refl_nds2j],
+            );
+            let assoc = d.lemma(rat.add_assoc, &[raw_m, delta, nds2j]);
+            let sum_m_delta_nds2j = radd(d, sum_m_delta, nds2j);
+            let raw_m_dn = radd(d, delta, nds2j);
+            let raw_m_plus_dn = radd(d, raw_m, raw_m_dn);
+            let qw_nds2j = radd(d, qw, nds2j);
+            let step1 = rat_eq_rewrite(
+                d,
+                sum_m_delta_nds2j,
+                raw_m_plus_dn,
+                assoc,
+                widen0,
+                &|d, t| rle(d, rat, qw_nds2j, t),
+            );
+            let mono23 = d.lemma(rat.nat_div_succ_le_add_left, &[two_nat, one_nat, j]);
+            let refl_delta2 = d.lemma(rat.le_refl, &[delta]);
+            let widen1 = d.lemma(
+                rat.add_le_add,
+                &[delta, delta, nds2j, nds3j, refl_delta2, mono23],
+            );
+            let refl_rawm = d.lemma(rat.le_refl, &[raw_m]);
+            let raw_m_plus_e = radd(d, raw_m, e_expr);
+            let widen2 = d.lemma(
+                rat.add_le_add,
+                &[raw_m, raw_m, raw_m_dn, e_expr, refl_rawm, widen1],
+            );
+            let step2 = d.lemma(
+                rat.le_trans,
+                &[qw_nds2j, raw_m_plus_dn, raw_m_plus_e, step1, widen2],
+            );
+            let ofrat_step2 = d.lemma(p.of_rat_le, &[qw_nds2j, raw_m_plus_e, step2]);
+            let o_qw_nds2j = d.const_app(p.of_rat, &[qw_nds2j]);
+            let o_raw_m_plus_e = d.const_app(p.of_rat, &[raw_m_plus_e]);
+            let w_le = d.lemma(
+                p.le_trans,
+                &[w, o_qw_nds2j, o_raw_m_plus_e, clamp_up, ofrat_step2],
+            );
+            creal_le_ofrat_add_of_le_ofrat_sum(d, p, w, raw_m, e_expr, w_le)
+        };
+        let h2 = {
+            let ofrat_le = d.lemma(p.of_rat_le, &[raw_m, qw, floor_lower]);
+            let onds3j2 = d.const_app(p.of_rat, &[nds3j]);
+            let orawm = d.const_app(p.of_rat, &[raw_m]);
+            let w_plus_nds3j = cadd(d, p, w, onds3j2);
+            let step1 = d.lemma(
+                p.le_trans,
+                &[orawm, oqw, w_plus_nds3j, ofrat_le, qw_le_w_plus],
+            );
+            let widen_final = d.lemma(p.of_rat_le, &[nds3j, e_expr, nds3j_le_e]);
+            let refl_w3 = d.lemma(p.le_refl, &[w]);
+            let step2 = d.lemma(p.add_le_add, &[w, w, onds3j2, oe, refl_w3, widen_final]);
+            let w_plus_oe = cadd(d, p, w, oe);
+            d.lemma(p.le_trans, &[orawm, w_plus_nds3j, w_plus_oe, step1, step2])
+        };
+        let ot_rm = d.const_app(p.of_rat, &[raw_m]);
+        let closeval = close_of_bounds(d, p, w, ot_rm, oe, h1, h2);
+        d.lam_fv(h_fv, hyp_ty, closeval)
+    };
+    let on_ge_branch = {
+        let h_fv = d.fresh_fvar();
+        let hge_branch = d.kernel().fvar(h_fv);
+        let hyp_ty = rle(d, rat, cap, raw_m);
+        let ot_cap = d.const_app(p.of_rat, &[cap]);
+
+        let h1 = {
+            let bnd_j = sample(d, p, bnd, j);
+            let sample_ub = d.lemma(p.sample_upper_bound, &[bnd, j]);
+            // sample_ub : le bnd (ofRat (radd (seq bnd j) (natDivSucc 1 j)))
+            let bndj_nds1j = radd(d, bnd_j, nds1j);
+            let o_bndj_nds1j = d.const_app(p.of_rat, &[bndj_nds1j]);
+            let w_le_bnd = d.lemma(p.le_trans, &[w, bnd, o_bndj_nds1j, hle, sample_ub]);
+            // seq(bnd,j) <= radd(nds1j,cap)
+            let seq_le_cap_nds1j =
+                d.lemma(rat.le_of_sub_le, &[bnd_j, nds1j, cap, cap_le_raw_side]);
+            let refl_nds1j = d.lemma(rat.le_refl, &[nds1j]);
+            let nds1j_cap = radd(d, nds1j, cap);
+            let widen0 = d.lemma(
+                rat.add_le_add,
+                &[bnd_j, nds1j_cap, nds1j, nds1j, seq_le_cap_nds1j, refl_nds1j],
+            );
+            // widen0 : le (radd bnd_j nds1j) (radd (radd nds1j cap) nds1j)
+            let target0 = radd(d, nds1j_cap, nds1j);
+            let comm1 = d.lemma(rat.add_comm, &[nds1j, cap]);
+            let cap_nds1j = radd(d, cap, nds1j);
+            let step_c1 = rcongr(d, nds1j_cap, cap_nds1j, comm1, &|d, t| radd(d, t, nds1j));
+            let target1 = radd(d, cap_nds1j, nds1j);
+            let assoc1 = d.lemma(rat.add_assoc, &[cap, nds1j, nds1j]);
+            let nds1j_nds1j = radd(d, nds1j, nds1j);
+            let target2 = radd(d, cap, nds1j_nds1j);
+            let (_, eq_target) = rchain(d, target0, &[(target1, step_c1), (target2, assoc1)]);
+            let step1 = rat_eq_rewrite(d, target0, target2, eq_target, widen0, &|d, t| {
+                rle(d, rat, bndj_nds1j, t)
+            });
+            // step1 : le (radd bnd_j nds1j) (radd cap nds1j_nds1j)
+            let fuse2 = d.lemma(rat.nat_div_succ_add, &[one_nat, one_nat, j]);
+            // Eq nds1j_nds1j (natDivSucc (add 1 1) j) -- defeq nds2j
+            let step2 = rat_eq_rewrite(d, nds1j_nds1j, nds2j, fuse2, step1, &|d, t| {
+                let target = radd(d, cap, t);
+                rle(d, rat, bndj_nds1j, target)
+            });
+            // step2 : le (radd bnd_j nds1j) (radd cap nds2j)
+            let mono23 = d.lemma(rat.nat_div_succ_le_add_left, &[two_nat, one_nat, j]);
+            let refl_cap = d.lemma(rat.le_refl, &[cap]);
+            let widen1 = d.lemma(rat.add_le_add, &[cap, cap, nds2j, nds3j, refl_cap, mono23]);
+            let cap_nds2j2 = radd(d, cap, nds2j);
+            let cap_nds3j = radd(d, cap, nds3j);
+            let step3 = d.lemma(
+                rat.le_trans,
+                &[bndj_nds1j, cap_nds2j2, cap_nds3j, step2, widen1],
+            );
+            let ofrat_step3 = d.lemma(p.of_rat_le, &[bndj_nds1j, cap_nds3j, step3]);
+            let o_bndj_nds1j2 = d.const_app(p.of_rat, &[bndj_nds1j]);
+            let o_cap_nds3j = d.const_app(p.of_rat, &[cap_nds3j]);
+            let w_le2 = d.lemma(
+                p.le_trans,
+                &[w, o_bndj_nds1j2, o_cap_nds3j, w_le_bnd, ofrat_step3],
+            );
+            let h1_nds3j = creal_le_ofrat_add_of_le_ofrat_sum(d, p, w, cap, nds3j, w_le2);
+            // h1_nds3j : le w (add ot_cap (ofRat nds3j))
+            let widen_final1 = d.lemma(p.of_rat_le, &[nds3j, e_expr, nds3j_le_e]);
+            let refl_cap3 = d.lemma(p.le_refl, &[ot_cap]);
+            let onds3j4 = d.const_app(p.of_rat, &[nds3j]);
+            let cap_plus_onds3j = cadd(d, p, ot_cap, onds3j4);
+            let cap_plus_oe = cadd(d, p, ot_cap, oe);
+            let step_final = d.lemma(
+                p.add_le_add,
+                &[ot_cap, ot_cap, onds3j4, oe, refl_cap3, widen_final1],
+            );
+            // step_final : le cap_plus_onds3j cap_plus_oe
+            d.lemma(
+                p.le_trans,
+                &[w, cap_plus_onds3j, cap_plus_oe, h1_nds3j, step_final],
+            )
+        };
+        let h2 = {
+            let cap_le_qw = d.lemma(rat.le_trans, &[cap, raw_m, qw, hge_branch, floor_lower]);
+            let ocap2 = d.const_app(p.of_rat, &[cap]);
+            let onds3j3 = d.const_app(p.of_rat, &[nds3j]);
+            let ofrat_le = d.lemma(p.of_rat_le, &[cap, qw, cap_le_qw]);
+            let w_plus_nds3j = cadd(d, p, w, onds3j3);
+            let step1 = d.lemma(
+                p.le_trans,
+                &[ocap2, oqw, w_plus_nds3j, ofrat_le, qw_le_w_plus],
+            );
+            let widen_final = d.lemma(p.of_rat_le, &[nds3j, e_expr, nds3j_le_e]);
+            let refl_w4 = d.lemma(p.le_refl, &[w]);
+            let step2 = d.lemma(p.add_le_add, &[w, w, onds3j3, oe, refl_w4, widen_final]);
+            let w_plus_oe2 = cadd(d, p, w, oe);
+            d.lemma(p.le_trans, &[ocap2, w_plus_nds3j, w_plus_oe2, step1, step2])
+        };
+        let closeval = close_of_bounds(d, p, w, ot_cap, oe, h1, h2);
+        d.lam_fv(h_fv, hyp_ty, closeval)
+    };
+    let close_w_gpm_e = d.lemma(
+        rat.min_cases,
+        &[raw_m, cap, z_close_predicate, on_le_branch, on_ge_branch],
+    );
+    // close_w_gpm_e : close_within w (ofRat (gp_rat k cap m)) oe
+
+    let widen_e = d.lemma(p.of_rat_le, &[e_expr, deltauc, e_le_deltauc]);
+    let gpm_rat = gp_rat(d, p, k, cap, m);
+    let ogpm = d.const_app(p.of_rat, &[gpm_rat]);
+    let neg_ogpm = cneg(d, p, ogpm);
+    let diff_w_gpm = cadd(d, p, w, neg_ogpm);
+    let abs_w_gpm = cabs(d, p, diff_w_gpm);
+    let close_w_gpm = d.lemma(
+        p.le_trans,
+        &[abs_w_gpm, oe, odeltauc, close_w_gpm_e, widen_e],
+    );
+    // close_w_gpm : close_within w (ofRat (gp_rat k cap m)) odeltauc
+
+    let ty = {
+        let concl = close_of_bounds_ty(d, p, w, ogpm, odeltauc);
+        let with_m0 = d.pi_fv(m0_fv, nat, concl);
+        let with_hle = d.pi_fv(hle_fv, hle_ty, with_m0);
+        let with_h0w = d.pi_fv(h0w_fv, h0w_ty, with_hle);
+        let with_w = d.pi_fv(w_fv, carrier, with_h0w);
+        let with_cap_le = d.pi_fv(cap_le_raw_side_fv, cap_le_raw_side_ty, with_w);
+        let with_cap = d.pi_fv(cap_fv, rat_ty_top, with_cap_le);
+        let with_k = d.pi_fv(k_fv, nat, with_cap);
+        d.pi_fv(bnd_fv, carrier, with_k)
+    };
+    let value = {
+        let with_m0 = d.lam_fv(m0_fv, nat, close_w_gpm);
+        let with_hle = d.lam_fv(hle_fv, hle_ty, with_m0);
+        let with_h0w = d.lam_fv(h0w_fv, h0w_ty, with_hle);
+        let with_w = d.lam_fv(w_fv, carrier, with_h0w);
+        let with_cap_le = d.lam_fv(cap_le_raw_side_fv, cap_le_raw_side_ty, with_w);
+        let with_cap = d.lam_fv(cap_fv, rat_ty_top, with_cap_le);
+        let with_k = d.lam_fv(k_fv, nat, with_cap);
+        d.lam_fv(bnd_fv, carrier, with_k)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.bucket_close,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 /// `CReal.bounded_of_uniformly_continuous : ∀ F a b, UniformlyContinuousOn F
 /// a b → CReal.le a b → CReal.BoundedOn F a b K` for a COMPUTED `K` (never an
 /// `Exists`-elimination: `Exists.rec` is `Prop`-only and `K` is used inside a
@@ -5447,260 +5809,14 @@ pub(super) fn declare_bounded_of_uniformly_continuous(
         // bound_on_gpm : le (abs (F (GP m))) (mag_bound t_m_bound)
 
         // --- `z` close to `GP(m)`. --------------------------------------
-        let (jw, _wj, qw) = clamp_setup(d, p, w, k);
-        let _ = jw;
-        let raw_m = div_succ_at(d, p, m, k);
-        let succ_m = d.succ(m);
-        let raw_sm = div_succ_at(d, p, succ_m, k);
-        let delta = div_succ(d, p, 1, k);
-        let nds1j = div_succ(d, p, 1, j);
-        let nds2j = div_succ(d, p, 2, j);
-        let nds3j = div_succ(d, p, 3, j);
-        let e_expr = radd(d, delta, nds3j);
-        let oe = d.const_app(p.of_rat, &[e_expr]);
-
-        let floor_lower = d.lemma(p.bucket_index_floor_lower, &[w, k]);
-        let floor_upper = d.lemma(p.bucket_index_floor_upper, &[w, k]);
-        let clamp_up = d.lemma(p.bucket_clamp_upper, &[w, k]);
-        let clamp_lo = d.lemma(p.bucket_clamp_lower, &[w, k, h0w]);
-
-        // shared: `ofRat q_w <= add w (ofRat nds3j)`.
-        let oqw = d.const_app(p.of_rat, &[qw]);
-        let onds3j = d.const_app(p.of_rat, &[nds3j]);
-        let qw_le_w_plus = {
-            let of_rat_sub_eq = d.lemma(p.of_rat_sub, &[qw, nds3j]);
-            // of_rat_sub_eq : Equiv (add oqw (neg onds3j)) (ofRat (rsub qw nds3j))
-            let neg_onds3j = cneg(d, p, onds3j);
-            let diff_form = cadd(d, p, oqw, neg_onds3j);
-            let qw_minus_nds3j = rsub(d, rat, qw, nds3j);
-            let sub_embed = d.const_app(p.of_rat, &[qw_minus_nds3j]);
-            let of_rat_sub_eq_rev = esymm(d, p, diff_form, sub_embed, of_rat_sub_eq);
-            let refl_w2 = erefl(d, p, w);
-            let clamp_lo2 = d.lemma(
-                p.le_congr,
-                &[
-                    sub_embed,
-                    diff_form,
-                    w,
-                    w,
-                    of_rat_sub_eq_rev,
-                    refl_w2,
-                    clamp_lo,
-                ],
-            );
-            // clamp_lo2 : le diff_form w = le (add oqw (neg onds3j)) w
-            let raw = creal_le_of_sub_le(d, p, oqw, onds3j, w, clamp_lo2);
-            // raw : le oqw (add onds3j w)
-            let onds3j_w = cadd(d, p, onds3j, w);
-            let w_onds3j = cadd(d, p, w, onds3j);
-            let comm = d.lemma(p.add_comm, &[onds3j, w]);
-            let refl_oqw = erefl(d, p, oqw);
-            d.lemma(
-                p.le_congr,
-                &[oqw, oqw, onds3j_w, w_onds3j, refl_oqw, comm, raw],
-            )
-            // : le oqw (add w onds3j)
-        };
-        let delta_nonneg = d.lemma(rat.zero_le_nat_div_succ, &[one_nat, k]);
-        let nds3j_le_e = rat_le_add_left_of_nonneg(d, p, delta, nds3j, delta_nonneg);
-
-        let hkj = k_le_j(d, p, k);
-        let e_le_deltauc = e_le_delta_uc(d, p, k, m0, j, hkj);
-
-        let z_close_predicate = {
-            let rat_ty_e2 = rat_ty(d);
-            let t_fv = d.fresh_fvar();
-            let t = d.kernel().fvar(t_fv);
-            let ot = d.const_app(p.of_rat, &[t]);
-            let body_ty = close_of_bounds_ty(d, p, w, ot, oe);
-            d.lam_fv(t_fv, rat_ty_e2, body_ty)
-        };
-        let on_le_branch = {
-            let h_fv = d.fresh_fvar();
-            let _hle_branch = d.kernel().fvar(h_fv);
-            let hyp_ty = rle(d, rat, raw_m, cap);
-
-            let h1 = {
-                let eq_sm = d.lemma(rat.nat_div_succ_add, &[m, one_nat, k]);
-                let sum_m_delta = radd(d, raw_m, delta);
-                let eq_sm_rev = rsymm(d, sum_m_delta, raw_sm, eq_sm);
-                let qw_le_summdelta =
-                    rat_eq_rewrite(d, raw_sm, sum_m_delta, eq_sm_rev, floor_upper, &|d, t| {
-                        rle(d, rat, qw, t)
-                    });
-                let refl_nds2j = d.lemma(rat.le_refl, &[nds2j]);
-                let widen0 = d.lemma(
-                    rat.add_le_add,
-                    &[qw, sum_m_delta, nds2j, nds2j, qw_le_summdelta, refl_nds2j],
-                );
-                let assoc = d.lemma(rat.add_assoc, &[raw_m, delta, nds2j]);
-                let sum_m_delta_nds2j = radd(d, sum_m_delta, nds2j);
-                let raw_m_dn = radd(d, delta, nds2j);
-                let raw_m_plus_dn = radd(d, raw_m, raw_m_dn);
-                let qw_nds2j = radd(d, qw, nds2j);
-                let step1 = rat_eq_rewrite(
-                    d,
-                    sum_m_delta_nds2j,
-                    raw_m_plus_dn,
-                    assoc,
-                    widen0,
-                    &|d, t| rle(d, rat, qw_nds2j, t),
-                );
-                let mono23 = d.lemma(rat.nat_div_succ_le_add_left, &[two_nat, one_nat, j]);
-                let refl_delta2 = d.lemma(rat.le_refl, &[delta]);
-                let widen1 = d.lemma(
-                    rat.add_le_add,
-                    &[delta, delta, nds2j, nds3j, refl_delta2, mono23],
-                );
-                let refl_rawm = d.lemma(rat.le_refl, &[raw_m]);
-                let raw_m_plus_e = radd(d, raw_m, e_expr);
-                let widen2 = d.lemma(
-                    rat.add_le_add,
-                    &[raw_m, raw_m, raw_m_dn, e_expr, refl_rawm, widen1],
-                );
-                let step2 = d.lemma(
-                    rat.le_trans,
-                    &[qw_nds2j, raw_m_plus_dn, raw_m_plus_e, step1, widen2],
-                );
-                let ofrat_step2 = d.lemma(p.of_rat_le, &[qw_nds2j, raw_m_plus_e, step2]);
-                let o_qw_nds2j = d.const_app(p.of_rat, &[qw_nds2j]);
-                let o_raw_m_plus_e = d.const_app(p.of_rat, &[raw_m_plus_e]);
-                let w_le = d.lemma(
-                    p.le_trans,
-                    &[w, o_qw_nds2j, o_raw_m_plus_e, clamp_up, ofrat_step2],
-                );
-                creal_le_ofrat_add_of_le_ofrat_sum(d, p, w, raw_m, e_expr, w_le)
-            };
-            let h2 = {
-                let ofrat_le = d.lemma(p.of_rat_le, &[raw_m, qw, floor_lower]);
-                let onds3j2 = d.const_app(p.of_rat, &[nds3j]);
-                let orawm = d.const_app(p.of_rat, &[raw_m]);
-                let w_plus_nds3j = cadd(d, p, w, onds3j2);
-                let step1 = d.lemma(
-                    p.le_trans,
-                    &[orawm, oqw, w_plus_nds3j, ofrat_le, qw_le_w_plus],
-                );
-                let widen_final = d.lemma(p.of_rat_le, &[nds3j, e_expr, nds3j_le_e]);
-                let refl_w3 = d.lemma(p.le_refl, &[w]);
-                let step2 = d.lemma(p.add_le_add, &[w, w, onds3j2, oe, refl_w3, widen_final]);
-                let w_plus_oe = cadd(d, p, w, oe);
-                d.lemma(p.le_trans, &[orawm, w_plus_nds3j, w_plus_oe, step1, step2])
-            };
-            let ot_rm = d.const_app(p.of_rat, &[raw_m]);
-            let closeval = close_of_bounds(d, p, w, ot_rm, oe, h1, h2);
-            d.lam_fv(h_fv, hyp_ty, closeval)
-        };
-        let on_ge_branch = {
-            let h_fv = d.fresh_fvar();
-            let hge_branch = d.kernel().fvar(h_fv);
-            let hyp_ty = rle(d, rat, cap, raw_m);
-            let ot_cap = d.const_app(p.of_rat, &[cap]);
-
-            let h1 = {
-                let bnd_j = sample(d, p, bnd, j);
-                let sample_ub = d.lemma(p.sample_upper_bound, &[bnd, j]);
-                // sample_ub : le bnd (ofRat (radd (seq bnd j) (natDivSucc 1 j)))
-                let bndj_nds1j = radd(d, bnd_j, nds1j);
-                let o_bndj_nds1j = d.const_app(p.of_rat, &[bndj_nds1j]);
-                let w_le_bnd = d.lemma(p.le_trans, &[w, bnd, o_bndj_nds1j, hle, sample_ub]);
-                // seq(bnd,j) <= radd(nds1j,cap)
-                let seq_le_cap_nds1j =
-                    d.lemma(rat.le_of_sub_le, &[bnd_j, nds1j, cap, cap_le_raw_side]);
-                let refl_nds1j = d.lemma(rat.le_refl, &[nds1j]);
-                let nds1j_cap = radd(d, nds1j, cap);
-                let widen0 = d.lemma(
-                    rat.add_le_add,
-                    &[bnd_j, nds1j_cap, nds1j, nds1j, seq_le_cap_nds1j, refl_nds1j],
-                );
-                // widen0 : le (radd bnd_j nds1j) (radd (radd nds1j cap) nds1j)
-                let target0 = radd(d, nds1j_cap, nds1j);
-                let comm1 = d.lemma(rat.add_comm, &[nds1j, cap]);
-                let cap_nds1j = radd(d, cap, nds1j);
-                let step_c1 = rcongr(d, nds1j_cap, cap_nds1j, comm1, &|d, t| radd(d, t, nds1j));
-                let target1 = radd(d, cap_nds1j, nds1j);
-                let assoc1 = d.lemma(rat.add_assoc, &[cap, nds1j, nds1j]);
-                let nds1j_nds1j = radd(d, nds1j, nds1j);
-                let target2 = radd(d, cap, nds1j_nds1j);
-                let (_, eq_target) = rchain(d, target0, &[(target1, step_c1), (target2, assoc1)]);
-                let step1 = rat_eq_rewrite(d, target0, target2, eq_target, widen0, &|d, t| {
-                    rle(d, rat, bndj_nds1j, t)
-                });
-                // step1 : le (radd bnd_j nds1j) (radd cap nds1j_nds1j)
-                let fuse2 = d.lemma(rat.nat_div_succ_add, &[one_nat, one_nat, j]);
-                // Eq nds1j_nds1j (natDivSucc (add 1 1) j) -- defeq nds2j
-                let step2 = rat_eq_rewrite(d, nds1j_nds1j, nds2j, fuse2, step1, &|d, t| {
-                    let target = radd(d, cap, t);
-                    rle(d, rat, bndj_nds1j, target)
-                });
-                // step2 : le (radd bnd_j nds1j) (radd cap nds2j)
-                let mono23 = d.lemma(rat.nat_div_succ_le_add_left, &[two_nat, one_nat, j]);
-                let refl_cap = d.lemma(rat.le_refl, &[cap]);
-                let widen1 = d.lemma(rat.add_le_add, &[cap, cap, nds2j, nds3j, refl_cap, mono23]);
-                let cap_nds2j2 = radd(d, cap, nds2j);
-                let cap_nds3j = radd(d, cap, nds3j);
-                let step3 = d.lemma(
-                    rat.le_trans,
-                    &[bndj_nds1j, cap_nds2j2, cap_nds3j, step2, widen1],
-                );
-                let ofrat_step3 = d.lemma(p.of_rat_le, &[bndj_nds1j, cap_nds3j, step3]);
-                let o_bndj_nds1j2 = d.const_app(p.of_rat, &[bndj_nds1j]);
-                let o_cap_nds3j = d.const_app(p.of_rat, &[cap_nds3j]);
-                let w_le2 = d.lemma(
-                    p.le_trans,
-                    &[w, o_bndj_nds1j2, o_cap_nds3j, w_le_bnd, ofrat_step3],
-                );
-                let h1_nds3j = creal_le_ofrat_add_of_le_ofrat_sum(d, p, w, cap, nds3j, w_le2);
-                // h1_nds3j : le w (add ot_cap (ofRat nds3j))
-                let widen_final1 = d.lemma(p.of_rat_le, &[nds3j, e_expr, nds3j_le_e]);
-                let refl_cap3 = d.lemma(p.le_refl, &[ot_cap]);
-                let onds3j4 = d.const_app(p.of_rat, &[nds3j]);
-                let cap_plus_onds3j = cadd(d, p, ot_cap, onds3j4);
-                let cap_plus_oe = cadd(d, p, ot_cap, oe);
-                let step_final = d.lemma(
-                    p.add_le_add,
-                    &[ot_cap, ot_cap, onds3j4, oe, refl_cap3, widen_final1],
-                );
-                // step_final : le cap_plus_onds3j cap_plus_oe
-                d.lemma(
-                    p.le_trans,
-                    &[w, cap_plus_onds3j, cap_plus_oe, h1_nds3j, step_final],
-                )
-            };
-            let h2 = {
-                let cap_le_qw = d.lemma(rat.le_trans, &[cap, raw_m, qw, hge_branch, floor_lower]);
-                let ocap2 = d.const_app(p.of_rat, &[cap]);
-                let onds3j3 = d.const_app(p.of_rat, &[nds3j]);
-                let ofrat_le = d.lemma(p.of_rat_le, &[cap, qw, cap_le_qw]);
-                let w_plus_nds3j = cadd(d, p, w, onds3j3);
-                let step1 = d.lemma(
-                    p.le_trans,
-                    &[ocap2, oqw, w_plus_nds3j, ofrat_le, qw_le_w_plus],
-                );
-                let widen_final = d.lemma(p.of_rat_le, &[nds3j, e_expr, nds3j_le_e]);
-                let refl_w4 = d.lemma(p.le_refl, &[w]);
-                let step2 = d.lemma(p.add_le_add, &[w, w, onds3j3, oe, refl_w4, widen_final]);
-                let w_plus_oe2 = cadd(d, p, w, oe);
-                d.lemma(p.le_trans, &[ocap2, w_plus_nds3j, w_plus_oe2, step1, step2])
-            };
-            let closeval = close_of_bounds(d, p, w, ot_cap, oe, h1, h2);
-            d.lam_fv(h_fv, hyp_ty, closeval)
-        };
-        let close_w_gpm_e = d.lemma(
-            rat.min_cases,
-            &[raw_m, cap, z_close_predicate, on_le_branch, on_ge_branch],
+        let close_w_gpm = d.lemma(
+            p.bucket_close,
+            &[bnd, k, cap, cap_le_raw_side, w, h0w, hle, m0],
         );
-        // close_w_gpm_e : close_within w (ofRat (gp_rat k cap m)) oe
+        // close_w_gpm : close_within w (ofRat (gp_rat k cap m)) odeltauc
 
-        let widen_e = d.lemma(p.of_rat_le, &[e_expr, deltauc, e_le_deltauc]);
         let gpm_rat = gp_rat(d, p, k, cap, m);
         let ogpm = d.const_app(p.of_rat, &[gpm_rat]);
-        let neg_ogpm = cneg(d, p, ogpm);
-        let diff_w_gpm = cadd(d, p, w, neg_ogpm);
-        let abs_w_gpm = cabs(d, p, diff_w_gpm);
-        let close_w_gpm = d.lemma(
-            p.le_trans,
-            &[abs_w_gpm, oe, odeltauc, close_w_gpm_e, widen_e],
-        );
 
         let close_aw_gpm = close_within_shift(d, p, a, w, ogpm, odeltauc, close_w_gpm);
         // close_aw_gpm : close_within (add a w) (add a ogpm) odeltauc

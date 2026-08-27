@@ -105,6 +105,7 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
         ("CReal.bucketIndexBound", p.bucket_index_bound, "theorem"),
         ("CReal.sampleUpperBound", p.sample_upper_bound, "theorem"),
         ("CReal.sampleLowerBound", p.sample_lower_bound, "theorem"),
+        ("CReal.bucketClose", p.bucket_close, "theorem"),
         (
             "CReal.bounded_of_uniformly_continuous",
             p.bounded_of_uniformly_continuous,
