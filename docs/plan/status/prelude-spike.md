@@ -23,3 +23,4 @@ churn across the full 441-field struct.
 <!-- plan-section: landed-changes -->
 
 | 2026-08-27 | `00797f01d` | Level-1 fix: `STEPS` build-order table + `validate_step_order` structural preflight, replacing the 89-call hand-written sequence in `build_complex_prelude`. `cargo check` clean. |
+| 2026-08-27 | `e0984768a` | Part B: real (not simulated) module split for `poly.rs` (21 fields into `poly::PolyNames`, 144 call sites rewritten). Full suite: 48 passed / 0 failed in 441.92s (contended host, load ~11). Write-up with all Part C numbers: `docs/research/11-design-review/2026-08-27-prelude-build-spike.md`. |
