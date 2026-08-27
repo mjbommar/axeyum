@@ -49,3 +49,13 @@ existing 2+-checker pattern), never duplicate facts.
   row 1 is the general ceiling, with a machine-checked certificate.
 - Row 3 is the Pareto showpiece per topic and inherits ADR-0601's
   reconstruction requirement — a CAS-internal-only row 3 must read as such.
+
+## Postscript: the four rows stated for MVT, LUB, Taylor remainder, FTA
+
+IVT and EVT had their families stated at acceptance. The 2026-08-27
+architecture review §4 named four more theorems still owed this treatment;
+[`docs/curriculum/graded-statement-families.md`](../../curriculum/graded-statement-families.md)
+states all four rows for each, as measured status rather than aspiration —
+including that EVT's own row 2 is itself only "in progress"
+(`crates/axeyum-cas/src/extremum.rs`), and that MVT's and LUB's row 2 are
+currently asserted unavailability rather than proved refutations.
