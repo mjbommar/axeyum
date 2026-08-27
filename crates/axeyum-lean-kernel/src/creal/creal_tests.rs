@@ -126,7 +126,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 426] = [
+    let expected: [(&str, crate::NameId, &str); 428] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -1434,6 +1434,17 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
             p.sin_one_le_exp_term_one,
             "theorem",
         ),
+        // The `Rat.normalize`/`Nat.gcd`-on-literals obstacle
+        // `cosOne_le_exp_term_zero`'s own doc names, solved without touching
+        // `Nat.gcd`: `Rat.self_normalize` at `q := Rat.one` plus two free
+        // ι-reductions and proof irrelevance on the positivity argument. See
+        // `creal/trig.rs::exp_term_lit_eq_one`.
+        (
+            "CReal.expTerm_zero_eq_one",
+            p.exp_term_zero_eq_one,
+            "theorem",
+        ),
+        ("CReal.expTerm_one_eq_one", p.exp_term_one_eq_one, "theorem"),
         // `creal/alternating.rs` -- the Leibniz (alternating series) pairing
         // argument the `cosOne_le_four`/`neg_four_le_cosOne` bound's own doc
         // comment names as the missing piece for a tighter bound. Generic

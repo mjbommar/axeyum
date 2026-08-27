@@ -100,8 +100,8 @@ use crate::nat_prelude::NatOps;
 use crate::rat_prelude::RatPrelude;
 use crate::rat_prelude::group::rsub;
 use crate::rat_prelude::ops::{
-    den, den_z, iregroup4, normalize, num, one_le_succ, radd, rat_eq_rewrite, rchain, rcongr, rmul,
-    rneg, rone, rzero,
+    den, den_z, iregroup4, normalize, num, one_le_succ, radd, rat_eq_rewrite, rchain, rcongr,
+    req_motive, rmul, rneg, rone, rtransport, rzero,
 };
 
 /// Height for `cosTerm`/`cosSeriesPartial`: both are thin definitional
@@ -147,7 +147,12 @@ pub(super) fn declare_trig(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ke
     // declare_alternating` for exactly this reason: referencing a name
     // declared in a LATER phase gives `UnknownConst`, not a missing-lemma
     // error, and looks exactly like the lemma does not exist.
-    declare_exp_term_antitone(d, p)
+    declare_exp_term_antitone(d, p)?;
+    // The `Rat.normalize`/`Nat.gcd`-on-literals obstacle this file's own
+    // `declare_cos_one_le_exp_term_zero` names as out of scope, solved
+    // without touching `Nat.gcd`: see `exp_term_lit_eq_one`'s own doc.
+    declare_exp_term_zero_eq_one(d, p)?;
+    declare_exp_term_one_eq_one(d, p)
 }
 
 /// Second dispatch entry point for this file: the alternating-series
@@ -2960,6 +2965,145 @@ fn declare_sin_one_le_exp_term_one(d: &mut IntDev<'_>, p: CRealPrelude) -> Resul
     let ty = cle(d, p, sin_one_c, exp_term_1);
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.sin_one_le_exp_term_one,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// ============================================================================
+// The `Rat.normalize`-on-literals obstacle
+// [`declare_cos_one_le_exp_term_zero`]'s own doc names, solved WITHOUT
+// touching `Nat.gcd` at all: `Rat.self_normalize` gives `Eq Rat (normalize
+// (num q) (den q) (den_pos q)) q` for ANY `q`, including `q := Rat.one`,
+// where `num`/`den` of a `Rat.mk`-built value reduce by ι for free and the
+// remaining positivity argument is a `Prop` (definitional PROOF
+// IRRELEVANCE identifies it with any other proof of `1 ≤ 1`, `Nat.gcd`
+// never enters). Lifted through `CReal.ofRat`'s ordinary function
+// congruence (`Eq`, not `Equiv` — `embed` is a plain function).
+// ============================================================================
+
+/// `Eq.{1} CReal a b`, reproduced verbatim in shape from `series.rs`'s own
+/// private `creal_eq`.
+fn creal_eq(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let one = d.level_one();
+    let logic = p.rat.int.logic;
+    let eq = d.kernel().const_(logic.eq, vec![one]);
+    let carrier = creal_ty(d, p);
+    d.apply(eq, &[carrier, a, b])
+}
+
+/// `Eq.refl.{1} CReal a`.
+fn creal_eq_refl(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId) -> ExprId {
+    let one = d.level_one();
+    let logic = p.rat.int.logic;
+    let refl = d.kernel().const_(logic.eq_refl, vec![one]);
+    let carrier = creal_ty(d, p);
+    d.apply(refl, &[carrier, a])
+}
+
+/// From `h : Eq Rat a b`, derive `Eq CReal (f a) (f b)` — the `ℚ → CReal`
+/// congruence [`exp_term_lit_eq_one`] needs to lift a `Rat`-level equation
+/// through `embed`.
+fn req_congr_creal(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+    f: &dyn Fn(&mut IntDev<'_>, CRealPrelude, ExprId) -> ExprId,
+) -> ExprId {
+    let fa = f(d, p, a);
+    let motive = req_motive(d, a, &|d, x| {
+        let fx = f(d, p, x);
+        creal_eq(d, p, fa, fx)
+    });
+    let refl_case = creal_eq_refl(d, p, fa);
+    rtransport(d, a, motive, refl_case, b, h)
+}
+
+/// `Eq CReal (embed (normalize (ofNat 1) (factorial n) _)) CReal.one` for a
+/// Nat LITERAL `n` whose `factorial n` reduces to `1` by ι alone — `n := 0`
+/// (the base case) and `n := 1` (`mul 1 (factorial 0)`, `Nat.mul`'s own
+/// ι-reduction on a literal right argument) both qualify; a SYMBOLIC `n`
+/// does not, since `factorial n` is stuck.
+///
+/// Route: `Rat.self_normalize` at `q := Rat.one` is a proof of `Eq Rat
+/// (normalize (num Rat.one) (den Rat.one) (den_pos Rat.one)) Rat.one`.
+/// `num Rat.one`/`den Rat.one` reduce by ι (built via `Rat.mk` directly, not
+/// `normalize`) to `ofNat 1`/`1`, and `den_pos Rat.one` — a `Prop` — is
+/// definitionally interchangeable with `Nat.one_le_factorial n` by proof
+/// irrelevance. So this SAME proof term, stated at the type `Eq Rat
+/// (normalize (ofNat 1) (factorial n) (one_le_factorial n)) Rat.one`,
+/// type-checks by defeq alone — no `Nat.gcd` reduction anywhere. `rcongr`
+/// with `f := embed` lifts it to `CReal`.
+fn exp_term_lit_eq_one(d: &mut IntDev<'_>, p: CRealPrelude, n: ExprId) -> ExprId {
+    let rat = p.rat;
+    let np = d.prelude();
+
+    let rat_one_c = d.kernel().const_(rat.one, vec![]);
+    let self_norm = d.lemma(rat.self_normalize, &[rat_one_c]);
+    // self_norm : Eq Rat (normalize (num rat_one_c) (den rat_one_c)
+    //                       (den_pos rat_one_c)) rat_one_c
+    // -- defeq (ι + proof irrelevance) to
+    //    Eq Rat (normalize one_int (factorial n) posn) rat_one_c.
+
+    let one_nat = d.num(1);
+    let one_int = d.of_nat(one_nat);
+    let posn = d.lemma(np.one_le_factorial, &[n]);
+    let factorial_n = d.factorial(n);
+    let normalized_at_n = normalize(d, one_int, factorial_n, posn);
+
+    let embed_fn = |d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId| -> ExprId { embed(d, p, x) };
+    req_congr_creal(d, p, normalized_at_n, rat_one_c, self_norm, &embed_fn)
+    // : Eq CReal (embed normalized_at_n) (embed rat_one_c)
+    //   -- defeq to Eq CReal (expTerm n) CReal.one, since `expTerm n :=
+    //   embed (normalize (ofNat 1) (factorial n) (one_le_factorial n))`
+    //   and `CReal.one := embed Rat.one`.
+}
+
+/// `CReal.expTerm_zero_eq_one : Eq CReal (expTerm 0) CReal.one`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_exp_term_zero_eq_one(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let zero_nat = d.zero();
+    let value = exp_term_lit_eq_one(d, p, zero_nat);
+
+    let exp_term_c = d.kernel().const_(p.exp_term, vec![]);
+    let exp_term_0 = d.apply(exp_term_c, &[zero_nat]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let ty = creal_eq(d, p, exp_term_0, one_c);
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.exp_term_zero_eq_one,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.expTerm_one_eq_one : Eq CReal (expTerm 1) CReal.one` — the
+/// [`declare_exp_term_zero_eq_one`] analogue at `n := 1`, reused for
+/// `sinOne_le_exp_term_one`'s own `expTerm 1`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_exp_term_one_eq_one(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let one_nat = d.num(1);
+    let value = exp_term_lit_eq_one(d, p, one_nat);
+
+    let exp_term_c = d.kernel().const_(p.exp_term, vec![]);
+    let exp_term_1 = d.apply(exp_term_c, &[one_nat]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let ty = creal_eq(d, p, exp_term_1, one_c);
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.exp_term_one_eq_one,
         uparams: vec![],
         ty,
         value,

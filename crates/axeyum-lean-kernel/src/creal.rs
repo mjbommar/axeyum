@@ -4483,6 +4483,24 @@ pub struct CRealPrelude {
     /// reason [`Self::cos_one_le_exp_term_zero`]'s doc names. See
     /// `creal/trig.rs`.
     pub sin_one_le_exp_term_one: NameId,
+    /// `CReal.expTerm_zero_eq_one : Eq CReal (expTerm 0) CReal.one` — the
+    /// literal-`CReal.one` reduction [`Self::cos_one_le_exp_term_zero`]'s own
+    /// doc names as out of scope: `Rat.normalize (ofNat 1) (factorial 0) _`
+    /// does NOT hold `Eq.refl`-equal to `Rat.one`, since `Nat.gcd` does not
+    /// unfold by ι even on literals. Solved WITHOUT touching `Nat.gcd` at
+    /// all: `Rat.self_normalize` at `q := Rat.one` already proves `Eq Rat
+    /// (normalize (ofNat 1) 1 _) Rat.one` up to two free ι-reductions
+    /// (`num`/`den` of a `Rat.mk`-built value) and definitional PROOF
+    /// IRRELEVANCE on the positivity argument (a `Prop`), then lifted
+    /// through `CReal.ofRat`'s ordinary function congruence. See
+    /// `creal/trig.rs::exp_term_lit_eq_one`.
+    pub exp_term_zero_eq_one: NameId,
+    /// `CReal.expTerm_one_eq_one : Eq CReal (expTerm 1) CReal.one` — the
+    /// SAME route as [`Self::exp_term_zero_eq_one`] (`factorial 1` also
+    /// reduces to `1` by ι alone, one more step: `Nat.mul 1 (factorial 0)`
+    /// with its right argument a literal), reused unchanged for
+    /// `sinOne_le_exp_term_one`'s own `expTerm 1`.
+    pub exp_term_one_eq_one: NameId,
 }
 
 impl CRealPrelude {
@@ -4975,6 +4993,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sin_one_alternating_upper: kernel.name_str(creal, "sinOne_alternating_upper"),
         sin_one_nonneg: kernel.name_str(creal, "sinOne_nonneg"),
         sin_one_le_exp_term_one: kernel.name_str(creal, "sinOne_le_exp_term_one"),
+        exp_term_zero_eq_one: kernel.name_str(creal, "expTerm_zero_eq_one"),
+        exp_term_one_eq_one: kernel.name_str(creal, "expTerm_one_eq_one"),
     }
 }
 
