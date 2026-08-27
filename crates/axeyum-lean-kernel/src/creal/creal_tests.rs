@@ -126,7 +126,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 357] = [
+    let expected: [(&str, crate::NameId, &str); 359] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -1133,6 +1133,19 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
             p.riemann_sum_deep_cauchy_cross_folded,
             "theorem",
         ),
+        // The THREE-sequence cross-bridge `integral_add` needs: `riemannSum
+        // (F+G)` at its own combo-witness mesh, bridged to `riemannSum F`
+        // and `riemannSum G` at THEIR OWN (generally different) meshes, at
+        // a shared sample index. Needs `common_refinement3` (three counts,
+        // not two) plus two extra `CReal.regular` shift-corrections
+        // `riemannSumDeepCauchyCross` never needed (`CReal.add` shifts its
+        // own index). Already the FOLDED single-`natDivSucc(K,n)` shape
+        // (creal/integral.rs's `declare_riemann_sum_add_cauchy_cross`).
+        (
+            "CReal.riemannSumAddCauchyCross",
+            p.riemann_sum_add_cauchy_cross,
+            "theorem",
+        ),
         // `CReal.mk (speedup (diagonal f) K) (regularity proof)`, `f := fun
         // n => riemannSum F a b (deep F a b u n)` -- `regular_of_scaled_cauchy`
         // applied at `f`, `K` (`declare_creal_integral`'s own `fold_k`,
@@ -1162,6 +1175,15 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
             p.integral_witness_independent,
             "theorem",
         ),
+        // The integral of a sum is the sum of the integrals: `Equiv
+        // (integral (fun t => add (F t) (G t)) a b hab uFG) (add (integral F
+        // a b hab uF) (integral G a b hab uG))`. Three `integral_converges`
+        // applications + `converges_add` + `riemannSumAddCauchyCross`
+        // (the three-sequence cross-bridge) + `converges_of_close` +
+        // `converges_unique`, the same technique
+        // `integral_witness_independent` uses, one sequence wider
+        // (creal/integral.rs's `declare_integral_add`).
+        ("CReal.integral_add", p.integral_add, "theorem"),
         // Spivak Ch14 FTC-I, first evaluation instance: the antiderivative
         // of a constant integrand, `G x := integral (fun _ => c) a (max a
         // (min x b)) …` (the `max`/`min` clamp is what makes `G` a genuinely
