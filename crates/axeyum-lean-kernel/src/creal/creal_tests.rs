@@ -126,7 +126,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 417] = [
+    let expected: [(&str, crate::NameId, &str); 426] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -1403,6 +1403,35 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         (
             "CReal.cosOne_le_exp_term_zero",
             p.cos_one_le_exp_term_zero,
+            "theorem",
+        ),
+        // `sinOne`, mirroring `cosOne` exactly (odd index `Nat.add (Nat.add
+        // k k) 1` in place of the doubled `Nat.add k k`), including the full
+        // alternating-series bracket. See `creal/trig.rs`'s `declare_sin_trig`/
+        // `declare_sin_trig_alternating_bounds`.
+        ("CReal.sinTerm", p.sin_term, "def"),
+        ("CReal.sinSeriesPartial", p.sin_series_partial, "def"),
+        (
+            "CReal.sinTermAbsLeDominant",
+            p.sin_term_abs_le_dominant,
+            "theorem",
+        ),
+        ("CReal.sinOne", p.sin_one, "def"),
+        ("CReal.sinOneConverges", p.sin_one_converges, "theorem"),
+        (
+            "CReal.sinOne_alternating_lower",
+            p.sin_one_alternating_lower,
+            "theorem",
+        ),
+        (
+            "CReal.sinOne_alternating_upper",
+            p.sin_one_alternating_upper,
+            "theorem",
+        ),
+        ("CReal.sinOne_nonneg", p.sin_one_nonneg, "theorem"),
+        (
+            "CReal.sinOne_le_exp_term_one",
+            p.sin_one_le_exp_term_one,
             "theorem",
         ),
         // `creal/alternating.rs` -- the Leibniz (alternating series) pairing
