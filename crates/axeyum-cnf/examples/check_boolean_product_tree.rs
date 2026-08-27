@@ -28,6 +28,7 @@ struct Stats {
 struct LazyProofReader {
     path: PathBuf,
     reader: Option<BufReader<File>>,
+    exhausted: bool,
 }
 
 impl LazyProofReader {
@@ -41,20 +42,76 @@ impl LazyProofReader {
 
 impl Read for LazyProofReader {
     fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
-        self.reader()?.read(buffer)
+        if self.exhausted {
+            return Ok(0);
+        }
+        let read = self.reader()?.read(buffer)?;
+        if read == 0 {
+            self.reader = None;
+            self.exhausted = true;
+        }
+        Ok(read)
     }
 }
 
 impl BufRead for LazyProofReader {
     fn fill_buf(&mut self) -> io::Result<&[u8]> {
-        self.reader()?.fill_buf()
+        if self.exhausted {
+            return Ok(&[]);
+        }
+        let exhausted = self.reader()?.fill_buf()?.is_empty();
+        if exhausted {
+            self.reader = None;
+            self.exhausted = true;
+            Ok(&[])
+        } else {
+            self.reader()?.fill_buf()
+        }
     }
 
     fn consume(&mut self, amount: usize) {
-        self.reader
-            .as_mut()
-            .expect("consume follows a successful fill_buf")
-            .consume(amount);
+        if let Some(reader) = self.reader.as_mut() {
+            reader.consume(amount);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lazy_reader_closes_its_file_at_eof() {
+        let path = std::env::temp_dir().join(format!(
+            "axeyum-lazy-proof-reader-{}-{}.drat",
+            std::process::id(),
+            std::thread::current().name().unwrap_or("unnamed")
+        ));
+        std::fs::write(&path, b"1 0\n0\n").unwrap();
+
+        let mut read_route = LazyProofReader {
+            path: path.clone(),
+            reader: None,
+            exhausted: false,
+        };
+        let mut bytes = Vec::new();
+        read_route.read_to_end(&mut bytes).unwrap();
+        assert_eq!(bytes, b"1 0\n0\n");
+        assert!(read_route.reader.is_none());
+        assert_eq!(read_route.read(&mut [0; 1]).unwrap(), 0);
+
+        let mut buffered_route = LazyProofReader {
+            path: path.clone(),
+            reader: None,
+            exhausted: false,
+        };
+        let mut line = String::new();
+        while buffered_route.read_line(&mut line).unwrap() != 0 {}
+        assert_eq!(line, "1 0\n0\n");
+        assert!(buffered_route.reader.is_none());
+        assert!(buffered_route.fill_buf().unwrap().is_empty());
+
+        std::fs::remove_file(path).unwrap();
     }
 }
 
@@ -91,6 +148,7 @@ fn proof_reader(path: &Path, stats: &mut Stats) -> LazyProofReader {
     LazyProofReader {
         path: path.to_owned(),
         reader: None,
+        exhausted: false,
     }
 }
 
