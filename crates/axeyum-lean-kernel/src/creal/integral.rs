@@ -21814,3 +21814,211 @@ mod piece_one_unconditional_tests {
         );
     }
 }
+
+// --- piece 2: locating an ARBITRARY `c` in the base proportion family ------
+//
+// `declare_integral_split` reaches every split point of the shape
+// `a + (succ m_ac0)/(succ m_ac0 + succ m_cb0) * (b - a)` -- every rational
+// proportion, and no other `c`. Reaching an arbitrary `c` means approximating
+// the fraction `t := (c - a)/(b - a)`, which needs `CReal.inv`, which needs a
+// `PosBound` on the width. That hypothesis is the whole content of this
+// section's name: nothing here is universally quantified in `c` without it.
+
+/// `le zero (add y (neg x))` from `hxy : le x y` — an ordered pair's width is
+/// nonnegative.
+///
+/// The same three moves [`delta_nonneg_of`] makes for its own first step,
+/// factored out so a second caller does not restate them.
+fn width_nonneg_of(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    hxy: ExprId,
+) -> ExprId {
+    let zero_c = czero(d, p);
+    let nx = cneg(d, p, x);
+    let refl_nx = d.lemma(p.le_refl, &[nx]);
+    let x_nx = cadd(d, p, x, nx);
+    let y_nx = cadd(d, p, y, nx);
+    let shifted = d.lemma(p.add_le_add, &[x, y, nx, nx, hxy, refl_nx]);
+    let hn = d.lemma(p.add_neg, &[x]); // Equiv (add x (neg x)) zero
+    let refl_ynx = d.lemma(p.equiv_refl, &[y_nx]);
+    d.lemma(
+        p.le_congr,
+        &[x_nx, zero_c, y_nx, y_nx, hn, refl_ynx, shifted],
+    )
+}
+
+/// `t := (b − a)⁻¹ · (c − a)` — the split fraction, with the inverse on the
+/// LEFT so that [`CRealPrelude::mul_le_mul_of_nonneg_left`] applies to it
+/// without a `mul_comm` first.
+fn split_fraction(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    k: ExprId,
+    hpos: ExprId,
+) -> ExprId {
+    let w = width_of(d, p, a, b);
+    let inv_w = d.const_app(p.inv, &[w, k, hpos]);
+    let ca = width_of(d, p, a, c);
+    cmul(d, p, inv_w, ca)
+}
+
+/// `le zero (split_fraction …)` — from `hac : le a c` and
+/// [`CRealPrelude::inv_nonneg`].
+fn split_fraction_nonneg(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    k: ExprId,
+    hpos: ExprId,
+    hac: ExprId,
+) -> ExprId {
+    let w = width_of(d, p, a, b);
+    let inv_w = d.const_app(p.inv, &[w, k, hpos]);
+    let ca = width_of(d, p, a, c);
+    let hinv = d.lemma(p.inv_nonneg, &[w, k, hpos]);
+    let hca = width_nonneg_of(d, p, a, c, hac);
+    d.lemma(p.mul_nonneg, &[inv_w, ca, hinv, hca])
+}
+
+/// `le (split_fraction …) one` — `(c−a) ≤ (b−a)` multiplied through by the
+/// nonnegative `(b−a)⁻¹`, then [`CRealPrelude::mul_inv_cancel`].
+fn split_fraction_le_one(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    k: ExprId,
+    hpos: ExprId,
+    hcb: ExprId,
+) -> ExprId {
+    let w = width_of(d, p, a, b);
+    let inv_w = d.const_app(p.inv, &[w, k, hpos]);
+    let ca = width_of(d, p, a, c);
+    let t = cmul(d, p, inv_w, ca);
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    let na = cneg(d, p, a);
+    let refl_na = d.lemma(p.le_refl, &[na]);
+    let hca_le_w = d.lemma(p.add_le_add, &[c, b, na, na, hcb, refl_na]);
+    let hinv = d.lemma(p.inv_nonneg, &[w, k, hpos]);
+    let step = d.lemma(p.mul_le_mul_of_nonneg_left, &[inv_w, ca, w, hinv, hca_le_w]);
+    // step : le (mul inv_w ca) (mul inv_w w)
+
+    let inv_w_w = cmul(d, p, inv_w, w);
+    let w_inv_w = cmul(d, p, w, inv_w);
+    let comm = d.lemma(p.mul_comm, &[inv_w, w]);
+    let cancel = d.lemma(p.mul_inv_cancel, &[w, k, hpos]);
+    let unit = d.lemma(p.equiv_trans, &[inv_w_w, w_inv_w, one_c, comm, cancel]);
+    let refl_t = d.lemma(p.equiv_refl, &[t]);
+    d.lemma(p.le_congr, &[t, t, inv_w_w, one_c, refl_t, unit, step])
+}
+
+#[cfg(test)]
+mod split_fraction_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// Both facts about `t := (b−a)⁻¹·(c−a)` in ONE build, each with a
+    /// negative control that varies a SMALL term (the two sides of one `le`,
+    /// transposed) so nothing large is ever compared by a failing `def_eq`.
+    fn split_fraction_probes() -> Vec<(&'static str, Result<(), crate::KernelError>)> {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+        let nat = d.nat_ty();
+
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+
+        let w = width_of(&mut d, p, a, b);
+        let hpos_ty = d.const_app(p.pos_bound, &[w, k]);
+        let hpos_fv = d.fresh_fvar();
+        let hpos = d.kernel().fvar(hpos_fv);
+
+        let hac_ty = cle(&mut d, p, a, c);
+        let hac_fv = d.fresh_fvar();
+        let hac = d.kernel().fvar(hac_fv);
+        let hcb_ty = cle(&mut d, p, c, b);
+        let hcb_fv = d.fresh_fvar();
+        let hcb = d.kernel().fvar(hcb_fv);
+
+        let t = split_fraction(&mut d, p, a, b, c, k, hpos);
+        let zero_c = czero(&mut d, p);
+        let one_c = d.kernel().const_(p.one, vec![]);
+
+        let nonneg = split_fraction_nonneg(&mut d, p, a, b, c, k, hpos, hac);
+        let le_one = split_fraction_le_one(&mut d, p, a, b, c, k, hpos, hcb);
+
+        let concl_nonneg_good = cle(&mut d, p, zero_c, t);
+        let concl_nonneg_bad = cle(&mut d, p, t, zero_c);
+        let concl_one_good = cle(&mut d, p, t, one_c);
+        let concl_one_bad = cle(&mut d, p, one_c, t);
+
+        let mut out = Vec::new();
+        for (label, concl, value) in [
+            ("splitFractionNonnegGood", concl_nonneg_good, nonneg),
+            ("splitFractionNonnegBad", concl_nonneg_bad, nonneg),
+            ("splitFractionLeOneGood", concl_one_good, le_one),
+            ("splitFractionLeOneBad", concl_one_bad, le_one),
+        ] {
+            let ty = {
+                let t0 = d.arrow(hcb_ty, concl);
+                let t0 = d.arrow(hac_ty, t0);
+                let t0 = d.pi_fv(hpos_fv, hpos_ty, t0);
+                let t0 = d.pi_fv(k_fv, nat, t0);
+                let t0 = d.pi_fv(c_fv, carrier, t0);
+                let t0 = d.pi_fv(b_fv, carrier, t0);
+                d.pi_fv(a_fv, carrier, t0)
+            };
+            let body = {
+                let v = d.lam_fv(hcb_fv, hcb_ty, value);
+                let v = d.lam_fv(hac_fv, hac_ty, v);
+                let v = d.lam_fv(hpos_fv, hpos_ty, v);
+                let v = d.lam_fv(k_fv, nat, v);
+                let v = d.lam_fv(c_fv, carrier, v);
+                let v = d.lam_fv(b_fv, carrier, v);
+                d.lam_fv(a_fv, carrier, v)
+            };
+            let anon = d.kernel().anon();
+            let name = d.kernel().name_str(anon, label);
+            out.push((
+                label,
+                d.kernel().add_declaration(Declaration::Theorem {
+                    name,
+                    uparams: vec![],
+                    ty,
+                    value: body,
+                }),
+            ));
+        }
+        out
+    }
+
+    #[test]
+    fn split_fraction_is_in_the_unit_interval() {
+        let results = split_fraction_probes();
+        for (label, res) in results {
+            if label.ends_with("Good") {
+                res.unwrap_or_else(|e| panic!("{label} must be accepted: {e:?}"));
+            } else {
+                assert!(res.is_err(), "{label} must be REFUSED");
+            }
+        }
+    }
+}
