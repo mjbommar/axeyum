@@ -328,6 +328,20 @@ step parity-freshness ./scripts/check-parity-freshness.py
 step parity-freshness-controls ./scripts/tests/test-check-parity-freshness.sh
 step new-fact-controls ./scripts/tests/test-new-fact-controls.sh
 step lane-commit-controls ./scripts/tests/test-lane-commit.sh
+# The gate-ADMISSION mechanism (2026-08-27): lane cargo work is niced so the
+# push battery stops being starved by it, and this script takes a cargo slot.
+# Scheduling changes are an easy place to write a check that cannot fail --
+# "it went faster" is not an exit status -- so every assertion here is paired
+# with the input that makes it fail, and each guard is mutation-verified by
+# `scripts/tests/mutate-gate-admission.sh` to be killed by exactly its own case.
+step gate-admission-controls ./scripts/tests/test-gate-admission-controls.sh
+# ...and the mutation harness over those controls. It runs in the gate rather
+# than by hand because a guard that stops discriminating does so silently: the
+# suite above stays green either way. Safe here only because it mutates a
+# four-file SCRATCH COPY -- these are shell scripts read fresh on every
+# invocation, so an in-place mutant would be executed by any lane running a
+# gate during the window.
+step gate-admission-mutation ./scripts/tests/mutate-gate-admission.sh
 step recount-pinned-inventory-controls ./scripts/tests/test-recount-pinned-inventory.sh
 step commit-msg-trailer-controls ./scripts/tests/test-commit-msg-trailer.sh
 step lane-merge-additive-controls python3 -m unittest scripts.tests.test_lane_merge_additive

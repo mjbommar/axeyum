@@ -411,6 +411,22 @@ gate-controls:
     # the REAL committed ledger, because a parser never pointed at its subject
     # returns the same empty answer as a strong negative result.
     scripts/tests/test-check-parity-freshness.sh
+    # Controls for the gate-ADMISSION mechanism (2026-08-27). The push battery
+    # was starved because `scripts/cargo-serialized.sh` bounds MEMORY and
+    # nothing bounded CPU, and because pre-push, check.sh and this file called
+    # the wrapper zero times between them. Twelve cases, each paired with the
+    # input that makes it fail -- notably a REAL deadlock probe: every slot is
+    # held, and the re-entrant job must complete while the non-re-entrant one
+    # must report 75. Without that second half the first would pass on a host
+    # where slots were never contended. Guards mutation-verified individually
+    # by scripts/tests/mutate-gate-admission.sh.
+    scripts/tests/test-gate-admission-controls.sh
+    # ...and the mutation harness over them, in the gate rather than by hand:
+    # a guard that stops discriminating does so silently, and the suite above
+    # stays green either way. It mutates a four-file scratch copy, never the
+    # checkout -- these are shell scripts, so an in-place mutant would be run
+    # by any lane invoking a gate during the window.
+    scripts/tests/mutate-gate-admission.sh
     scripts/tests/test-new-fact-controls.sh
     # Controls for `kernel-stack-envelope` below. Six cases: an outgrown budget,
     # a budget so large it cannot fail, an empty ledger, a missing pin file, a
