@@ -220,7 +220,9 @@
 //! and so would not have unblocked π. Adding `49/64` (`R := 7/4`) is a copy of
 //! [`ratio_16_over_25_witnesses`] with three numerals changed.
 
-use super::series::{assoc_rev_eq, exists_nat_intro, fuse_same_index, sum_range_cauchy_body};
+use super::series::{
+    assoc_rev_eq, exists_nat_intro, fuse_same_index, neg_zero_equiv, sum_range_cauchy_body,
+};
 use super::{
     CRealPrelude, and_intro, creal_ty, div_succ, embed, equiv, gap_elim, gap_halves, halves,
     modulus, sample, shift, weaken, within,
@@ -503,22 +505,6 @@ fn cancel_right(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> Ex
     let h4 = d.lemma(p.add_zero, &[b]); // s3 ~ b
 
     echain(d, p, start, &[(s1, h1), (s2, h2), (s3, h3), (b, h4)])
-}
-
-/// `Equiv (neg zero) zero`. Verbatim copy of `series.rs::neg_zero_equiv`
-/// (private there): the group identity `−0 = 0`, from
-/// [`CRealPrelude::add_zero`]/[`CRealPrelude::add_comm`]/
-/// [`CRealPrelude::add_neg`] rather than any `Rat`-level fact.
-fn neg_zero_equiv(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
-    let zero_c = czero(d, p);
-    let nz = cneg(d, p, zero_c);
-    let padded = cadd(d, p, nz, zero_c);
-    let flipped = cadd(d, p, zero_c, nz);
-    let h1 = d.lemma(p.add_zero, &[nz]); // padded ~ nz
-    let step1 = d.lemma(p.equiv_symm, &[padded, nz, h1]); // nz ~ padded
-    let h2 = d.lemma(p.add_comm, &[nz, zero_c]); // padded ~ flipped
-    let h3 = d.lemma(p.add_neg, &[zero_c]); // flipped ~ zero
-    echain(d, p, nz, &[(padded, step1), (flipped, h2), (zero_c, h3)])
 }
 
 /// From `Rat.le (Rat.sub u v) w` and `Rat.le (Rat.sub (Rat.neg u) v) w`,

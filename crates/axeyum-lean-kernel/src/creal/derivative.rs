@@ -290,6 +290,7 @@
 )]
 
 use super::ring_helpers::{add4_comm, right_distrib};
+use super::series::neg_zero_equiv;
 use super::{CRealPrelude, DERIVED_HEIGHT, creal_ty};
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
@@ -426,21 +427,6 @@ fn echain(
         current = next;
     }
     proof
-}
-
-/// `Equiv (neg zero) zero` — the group identity `-0 = 0`, copied from
-/// `series.rs::neg_zero_equiv` (private to its own module) rather than
-/// imported.
-fn neg_zero_equiv(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
-    let zero_c = czero(d, p);
-    let nz = cneg(d, p, zero_c);
-    let padded = cadd(d, p, nz, zero_c);
-    let flipped = cadd(d, p, zero_c, nz);
-    let h1 = d.lemma(p.add_zero, &[nz]); // padded ~ nz
-    let step1 = d.lemma(p.equiv_symm, &[padded, nz, h1]); // nz ~ padded
-    let h2 = d.lemma(p.add_comm, &[nz, zero_c]); // padded ~ flipped
-    let h3 = d.lemma(p.add_neg, &[zero_c]); // flipped ~ zero_c
-    echain(d, p, nz, &[(padded, step1), (flipped, h2), (zero_c, h3)])
 }
 
 /// `(term, proof)` = `(ofRat (natDivSucc k idx), le zero term)` — the

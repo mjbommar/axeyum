@@ -533,7 +533,15 @@ fn echain(
 /// from [`CRealPrelude::add_zero`]/[`CRealPrelude::add_comm`]/
 /// [`CRealPrelude::add_neg`] rather than any `Rat`-level fact (`CReal` has no
 /// standalone `neg_zero` law).
-fn neg_zero_equiv(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+/// (`creal/derivative.rs`, `creal/fermat.rs`, `creal/geometric.rs`,
+/// `creal/mvt.rs`, `creal/power.rs`, `creal/rolle.rs` all had a
+/// byte-identical, modulo comments, private copy of this helper —
+/// consolidated here, the traced origin per each copy's own doc comment.
+/// `creal/uniform_convergence.rs` also has a `neg_zero_equiv`, but it is a
+/// genuinely different construction — raw `const_app`/`equiv_trans` rather
+/// than `echain`, not merely a differently-commented copy — and is left
+/// alone.)
+pub(super) fn neg_zero_equiv(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
     let zero_c = czero(d, p);
     let nz = cneg(d, p, zero_c);
     let padded = cadd(d, p, nz, zero_c);

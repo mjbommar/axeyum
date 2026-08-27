@@ -63,6 +63,7 @@
 //! statement because this statement does not reach that claim.
 
 use super::ring_helpers::right_distrib;
+use super::series::neg_zero_equiv;
 use super::{CRealPrelude, DERIVED_HEIGHT, clt, creal_ty, equiv};
 use crate::BinderInfo;
 use crate::KernelError;
@@ -155,20 +156,6 @@ fn echain(
         current = next;
     }
     proof
-}
-
-/// `Equiv (neg zero) zero`, as a proof term — rebuilt from `add_zero`/
-/// `add_comm`/`add_neg`, exactly `series.rs::neg_zero_equiv` (private there).
-fn neg_zero_equiv(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
-    let zero_c = czero(d, p);
-    let nz = cneg(d, p, zero_c);
-    let padded = cadd(d, p, nz, zero_c);
-    let flipped = cadd(d, p, zero_c, nz);
-    let h1 = d.lemma(p.add_zero, &[nz]); // add nz zero ~ nz
-    let step1 = d.lemma(p.equiv_symm, &[padded, nz, h1]); // nz ~ padded
-    let h2 = d.lemma(p.add_comm, &[nz, zero_c]); // padded ~ flipped
-    let h3 = d.lemma(p.add_neg, &[zero_c]); // flipped ~ zero
-    echain(d, p, nz, &[(padded, step1), (flipped, h2), (zero_c, h3)])
 }
 
 /// Given `f_proof : Equiv (add s t) zero`, produce `Equiv (neg s) t` — "any

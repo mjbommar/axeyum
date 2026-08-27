@@ -404,8 +404,9 @@ fn le_abs_neg_of_le_abs(
 /// `Equiv (abs (neg x)) (abs x)` — from [`le_abs_neg_of_le_abs`] applied
 /// twice (once at `bound := abs x` via `le_refl`, once at `bound := abs (neg
 /// x)` via `le_refl` transported back through [`double_neg`]) and
-/// `equiv_of_le_le`.
-fn abs_neg_equiv(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+/// `equiv_of_le_le`. `creal/fermat.rs` had a byte-identical (modulo
+/// comments) private copy; it now imports this one instead.
+pub(super) fn abs_neg_equiv(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
     let abs_x = cabs(d, p, x);
     let nx = cneg(d, p, x);
     let abs_nx = cabs(d, p, nx);
@@ -466,10 +467,13 @@ fn abs_add_le_local(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -
     d.lemma(p.abs_le, &[s, bound, premise1, premise2])
 }
 
-/// From `h : Equiv (add a (neg b)) zero`, derive `Equiv a b`. Copied
-/// verbatim from `monotone.rs`'s private helper of the same shape (private
-/// to that module).
-fn equiv_of_sub_equiv_zero(
+/// From `h : Equiv (add a (neg b)) zero`, derive `Equiv a b`. Also built
+/// (independently, before this one was widened to `pub(super)`) as
+/// private helpers of the same shape in `creal/monotone.rs` and
+/// `creal/trig_fn.rs` — both out of scope for this refactor (live lanes),
+/// so those two copies remain. `creal/exp_fn.rs` imports this one instead
+/// of keeping its own third copy.
+pub(super) fn equiv_of_sub_equiv_zero(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     a: ExprId,
@@ -507,8 +511,15 @@ fn equiv_of_sub_equiv_zero(
 
 /// `Equiv (abs (ofRat q)) (ofRat q)` for `q_nonneg : Rat.le Rat.zero q` —
 /// `abs_le` (upper via `Rat.neg_nonpos_of_nonneg` + `Rat.le_trans`, lower via
-/// `le_abs_self`) sandwiches the embedding between itself.
-fn abs_of_nonneg(d: &mut IntDev<'_>, p: CRealPrelude, q: ExprId, q_nonneg: ExprId) -> ExprId {
+/// `le_abs_self`) sandwiches the embedding between itself. `creal/fermat.rs`
+/// had a byte-identical (modulo comments) private copy; it now imports this
+/// one instead.
+pub(super) fn abs_of_nonneg(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    q: ExprId,
+    q_nonneg: ExprId,
+) -> ExprId {
     let rat = p.rat;
     let q_emb = embed(d, p, q);
     let abs_q = cabs(d, p, q_emb);
@@ -559,7 +570,14 @@ fn abs_of_nonneg(d: &mut IntDev<'_>, p: CRealPrelude, q: ExprId, q_nonneg: ExprI
 /// `Equiv (add (add v u) (neg v)) u` — `(v+u)-v ~ u`, for ANY `u`. Used at
 /// `v := z` with `u := embed q` (the upper branch) or `u := neg (embed q)`
 /// (the lower branch) to identify `y - z` with the exact signed gap.
-fn add_sub_cancel(d: &mut IntDev<'_>, p: CRealPrelude, v: ExprId, u: ExprId) -> ExprId {
+/// `creal/fermat.rs` had a byte-identical private copy; it now imports this
+/// one instead. `creal/add_sub_cancel`'s name collides with two OTHER,
+/// genuinely different helpers of the same name (`creal/convergence.rs`'s
+/// is over `Rat`, not `CReal`, and returns a pair; `creal/uniform_continuity.rs`'s
+/// takes its arguments in the other order and proves `Equiv (add a (add b
+/// (neg a))) b`, not this statement) — do not treat those as more copies
+/// of this one.
+pub(super) fn add_sub_cancel(d: &mut IntDev<'_>, p: CRealPrelude, v: ExprId, u: ExprId) -> ExprId {
     let nv = cneg(d, p, v);
     let vu = cadd(d, p, v, u);
     let start = cadd(d, p, vu, nv);
@@ -591,8 +609,9 @@ fn add_sub_cancel(d: &mut IntDev<'_>, p: CRealPrelude, v: ExprId, u: ExprId) -> 
 }
 
 /// From `h : le (add x q) y`, derive `le x (add y (neg q))` — the CReal-level
-/// "subtract `q` from a `le`" step.
-fn le_sub_of_add_le(
+/// "subtract `q` from a `le`" step. `creal/fermat.rs` had a byte-identical
+/// (modulo comments) private copy; it now imports this one instead.
+pub(super) fn le_sub_of_add_le(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     x: ExprId,

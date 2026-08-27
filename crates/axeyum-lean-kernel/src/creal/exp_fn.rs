@@ -117,9 +117,11 @@
 //!   not attempted in the time this slice had.
 
 use super::convergence::{converges_predicate, div_succ_at};
+use super::deriv_unique::equiv_of_sub_equiv_zero;
 use super::trig::{
     cabs, cadd, cle, cmul, cneg, cpow, czero, exp_dominant_cauchy_body_concrete, one_c,
 };
+use super::uniform_continuity::abs_neg_le;
 use super::uniform_convergence::close_within_of_within_at;
 use super::{CRealPrelude, DERIVED_HEIGHT, creal_ty, embed, equiv};
 use crate::KernelError;
@@ -516,79 +518,6 @@ fn neg_add_self(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
     let comm_symm = esymm(d, p, x_nx, nx_x, comm);
     let cancel = d.lemma(p.add_neg, &[x]);
     echain(d, p, nx_x, &[(x_nx, comm_symm), (zero_c, cancel)])
-}
-
-/// From `h : Equiv (add a (neg b)) zero`, derive `Equiv a b`. Reproduced
-/// (Rust privacy) from `creal/monotone.rs`'s/`creal/deriv_unique.rs`'s
-/// private helper of the same shape.
-fn equiv_of_sub_equiv_zero(
-    d: &mut IntDev<'_>,
-    p: CRealPrelude,
-    a: ExprId,
-    b: ExprId,
-    h: ExprId,
-) -> ExprId {
-    let nb = cneg(d, p, b);
-    let diff = cadd(d, p, a, nb);
-    let lhs = cadd(d, p, diff, b);
-    let zero_c = czero(d, p);
-
-    let a_from_lhs = {
-        let assoc = d.lemma(p.add_assoc, &[a, nb, b]);
-        let nb_b = cadd(d, p, nb, b);
-        let a_nbb = cadd(d, p, a, nb_b);
-        let nas = neg_add_self(d, p, b);
-        let refl_a = erefl(d, p, a);
-        let cong = d.lemma(p.add_congr, &[a, a, nb_b, zero_c, refl_a, nas]);
-        let a_zero = cadd(d, p, a, zero_c);
-        let trim = d.lemma(p.add_zero, &[a]);
-        echain(d, p, lhs, &[(a_nbb, assoc), (a_zero, cong), (a, trim)])
-    };
-    let b_from_lhs = {
-        let refl_b = erefl(d, p, b);
-        let cong = d.lemma(p.add_congr, &[diff, zero_c, b, b, h, refl_b]);
-        let zero_b = cadd(d, p, zero_c, b);
-        let comm = d.lemma(p.add_comm, &[zero_c, b]);
-        let b_zero = cadd(d, p, b, zero_c);
-        let trim = d.lemma(p.add_zero, &[b]);
-        echain(d, p, lhs, &[(zero_b, cong), (b_zero, comm), (b, trim)])
-    };
-    let a_from_lhs_symm = esymm(d, p, lhs, a, a_from_lhs);
-    d.lemma(p.equiv_trans, &[a, lhs, b, a_from_lhs_symm, b_from_lhs])
-}
-
-/// `Equiv (neg (neg x)) x`. Reproduced (Rust privacy) from
-/// `creal/deriv_unique.rs`'s private helper of the same shape.
-fn double_neg(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
-    let nx = cneg(d, p, x);
-    let nnx = cneg(d, p, nx);
-    let nx_nnx = cadd(d, p, nx, nnx);
-    let nnx_nx = cadd(d, p, nnx, nx);
-    let comm = d.lemma(p.add_comm, &[nx, nnx]);
-    let comm_symm = esymm(d, p, nx_nnx, nnx_nx, comm);
-    let an = d.lemma(p.add_neg, &[nx]);
-    let zero_c = czero(d, p);
-    let h = echain(d, p, nnx_nx, &[(nx_nnx, comm_symm), (zero_c, an)]);
-    equiv_of_sub_equiv_zero(d, p, nnx, x, h)
-}
-
-/// From `h : le (abs w) bound`, derive `le (abs (neg w)) bound`. Reproduced
-/// (Rust privacy) from `creal/uniform_continuity.rs`'s private `abs_neg_le`.
-fn abs_neg_le(d: &mut IntDev<'_>, p: CRealPrelude, w: ExprId, q: ExprId, h: ExprId) -> ExprId {
-    let abs_w = cabs(d, p, w);
-    let neg_w = cneg(d, p, w);
-    let w_le_absw = d.lemma(p.le_abs_self, &[w]);
-    let w_le_q = d.lemma(p.le_trans, &[w, abs_w, q, w_le_absw, h]);
-    let negw_le_absw = d.lemma(p.neg_le_abs, &[w]);
-    let negw_le_q = d.lemma(p.le_trans, &[neg_w, abs_w, q, negw_le_absw, h]);
-
-    let neg_neg_w = cneg(d, p, neg_w);
-    let nn = double_neg(d, p, w); // Equiv neg_neg_w w
-    let nn_symm = esymm(d, p, neg_neg_w, w, nn); // Equiv w neg_neg_w
-    let refl_q = erefl(d, p, q);
-    let nnw_le_q = d.lemma(p.le_congr, &[w, neg_neg_w, q, q, nn_symm, refl_q, w_le_q]);
-
-    d.lemma(p.abs_le, &[neg_w, q, negw_le_q, nnw_le_q])
 }
 
 /// From `h : close_within x y q`, derive `close_within y x q`. Reproduced
