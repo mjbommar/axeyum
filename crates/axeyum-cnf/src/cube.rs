@@ -705,6 +705,67 @@ enum CubeTreeObligation<R> {
     },
 }
 
+/// The independently checked kind of one flattened cube-tree obligation.
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CubeTreeObligationKind {
+    /// A terminal cube's DRAT refutation.
+    Leaf,
+    /// A split node's proof that its child cubes cover the parent formula.
+    Covering,
+    /// A deterministic tree-shape failure occupying an obligation position.
+    Structural,
+}
+
+/// The lifecycle state of one cube-tree proof obligation.
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CubeTreeObligationState {
+    /// A worker has begun reconstructing and checking the obligation.
+    Started,
+    /// Checking ended; `accepted` says whether this obligation itself passed.
+    Finished {
+        /// Whether the individual obligation passed its independent check.
+        accepted: bool,
+    },
+}
+
+/// Non-authoritative observability for a whole-tree proof obligation.
+///
+/// Event ordering is deliberately scheduler-dependent. The checker still sorts
+/// results by `index` before returning, so these events cannot affect which
+/// proof error is authoritative.
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CubeTreeObligationEvent {
+    /// Zero-based depth-first obligation index.
+    pub index: usize,
+    /// Total number of flattened obligations.
+    pub total: usize,
+    /// Child indices from the checked tree root to this obligation.
+    pub path: Vec<usize>,
+    /// Whether this obligation is a leaf, covering proof, or structural error.
+    pub kind: CubeTreeObligationKind,
+    /// Start or terminal state observed by the assigned worker.
+    pub state: CubeTreeObligationState,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn cube_tree_obligation_identity<R>(
+    obligation: &CubeTreeObligation<R>,
+) -> (Vec<usize>, CubeTreeObligationKind) {
+    match obligation {
+        CubeTreeObligation::Leaf { path, .. } => (path.clone(), CubeTreeObligationKind::Leaf),
+        CubeTreeObligation::Covering { path, .. } => {
+            (path.clone(), CubeTreeObligationKind::Covering)
+        }
+        CubeTreeObligation::Structural { cube_path, .. } => (
+            cube_path.iter().map(|(index, _)| *index).collect(),
+            CubeTreeObligationKind::Structural,
+        ),
+    }
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 fn flatten_cube_tree_obligations<R>(
     tree: CubeRefutationReaderTree<R>,
@@ -886,6 +947,44 @@ pub fn check_cube_refutation_reader_tree_fully_parallel_with_progress<
     workers: usize,
     progress: F,
 ) -> Result<(), CubeTreeCheckError> {
+    check_cube_refutation_reader_tree_fully_parallel_with_events(
+        base,
+        tree,
+        workers,
+        progress,
+        |_| {},
+    )
+}
+
+/// Checks every recursive cube-tree obligation with deterministic progress and
+/// scheduler-level start/finish events.
+///
+/// `progress` retains the deterministic contiguous-prefix contract of
+/// [`check_cube_refutation_reader_tree_fully_parallel_with_progress`]. `event`
+/// exposes the actual worker lifecycle for diagnosing large or imbalanced proof
+/// trees; event order is scheduler-dependent and has no evidentiary authority.
+///
+/// # Panics
+///
+/// Panics if `workers` is zero or either callback panics. A proof-reader panic
+/// is resumed in the caller.
+///
+/// # Errors
+///
+/// Returns the same deterministic first structural or proof error as
+/// [`check_cube_refutation_reader_tree`].
+#[cfg(not(target_arch = "wasm32"))]
+pub fn check_cube_refutation_reader_tree_fully_parallel_with_events<
+    R: BufRead + Send,
+    F: Fn(usize, usize) + Sync,
+    E: Fn(CubeTreeObligationEvent) + Sync,
+>(
+    base: &CnfFormula,
+    tree: CubeRefutationReaderTree<R>,
+    workers: usize,
+    progress: F,
+    event: E,
+) -> Result<(), CubeTreeCheckError> {
     assert!(workers > 0, "cube-tree worker count must be positive");
     let mut obligations = Vec::new();
     flatten_cube_tree_obligations(tree, &mut Vec::new(), &mut Vec::new(), &mut obligations);
@@ -904,6 +1003,7 @@ pub fn check_cube_refutation_reader_tree_fully_parallel_with_progress<
             let jobs = &jobs;
             let completed = &completed;
             let progress = &progress;
+            let event = &event;
             handles.push(scope.spawn(move || {
                 let mut local = Vec::new();
                 loop {
@@ -914,7 +1014,24 @@ pub fn check_cube_refutation_reader_tree_fully_parallel_with_progress<
                     let Some((index, obligation)) = job else {
                         break;
                     };
+                    let (path, kind) = cube_tree_obligation_identity(&obligation);
+                    event(CubeTreeObligationEvent {
+                        index,
+                        total,
+                        path: path.clone(),
+                        kind,
+                        state: CubeTreeObligationState::Started,
+                    });
                     let result = check_cube_tree_obligation(base, obligation);
+                    event(CubeTreeObligationEvent {
+                        index,
+                        total,
+                        path,
+                        kind,
+                        state: CubeTreeObligationState::Finished {
+                            accepted: result.is_ok(),
+                        },
+                    });
                     {
                         let mut state =
                             completed.lock().expect("cube-tree progress mutex poisoned");
@@ -1424,19 +1541,51 @@ mod tests {
             covering_proof: Cursor::new(write_drat(&root.covering_proof).into_bytes()),
         };
         let progress = std::sync::Mutex::new(Vec::new());
-        check_cube_refutation_reader_tree_fully_parallel_with_progress(
+        let events = std::sync::Mutex::new(Vec::new());
+        check_cube_refutation_reader_tree_fully_parallel_with_events(
             &base,
             tree,
             4,
             |completed, total| {
                 progress.lock().unwrap().push((completed, total));
             },
+            |event| events.lock().unwrap().push(event),
         )
         .expect("whole-tree parallel composition must check from the root formula");
         assert_eq!(
             *progress.lock().unwrap(),
             vec![(1, 5), (2, 5), (3, 5), (4, 5), (5, 5)]
         );
+        let mut events = events.into_inner().unwrap();
+        events.sort_by_key(|event| {
+            (
+                event.index,
+                matches!(event.state, CubeTreeObligationState::Finished { .. }),
+            )
+        });
+        let expected = [
+            (vec![0, 0], CubeTreeObligationKind::Leaf),
+            (vec![0, 1], CubeTreeObligationKind::Leaf),
+            (vec![0], CubeTreeObligationKind::Covering),
+            (vec![1], CubeTreeObligationKind::Leaf),
+            (Vec::new(), CubeTreeObligationKind::Covering),
+        ];
+        assert_eq!(events.len(), expected.len() * 2);
+        for (index, ((path, kind), pair)) in expected.iter().zip(events.chunks_exact(2)).enumerate()
+        {
+            assert_eq!(pair[0].index, index);
+            assert_eq!(pair[0].total, expected.len());
+            assert_eq!(&pair[0].path, path);
+            assert_eq!(pair[0].kind, *kind);
+            assert_eq!(pair[0].state, CubeTreeObligationState::Started);
+            assert_eq!(pair[1].index, index);
+            assert_eq!(&pair[1].path, path);
+            assert_eq!(pair[1].kind, *kind);
+            assert_eq!(
+                pair[1].state,
+                CubeTreeObligationState::Finished { accepted: true }
+            );
+        }
     }
 
     #[cfg(not(target_arch = "wasm32"))]
