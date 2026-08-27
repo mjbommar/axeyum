@@ -9913,13 +9913,43 @@ mod riemann_sum_shared_accuracy_close_at_tests {
             ],
         );
 
+        // `specialized`/`general` mention twelve genuinely FREE fvars
+        // (`f, a, b, e, k1, k2, hab, u, oi, oj, jj1, jj2`), none bound by any
+        // enclosing `pi_fv`/`lam_fv` -- `Kernel::infer` requires every fvar a
+        // term mentions to be bound somewhere reachable from the call, else
+        // `UnboundFVar` (this module's own doc comment, kernel fact #1).
+        // Close both terms over the SAME twelve binders before inferring,
+        // mirroring `common_refinement_type_checks_symbolically_body`'s own
+        // "wrap in a throwaway binder" idiom.
+        let f_ty = fn_ty(&mut d, p);
+        let carrier = creal_ty(&mut d, p);
+        let hab_ty = cle(&mut d, p, a, b);
+        let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+
+        let close = |d: &mut IntDev<'_>, body: ExprId| -> ExprId {
+            let w = d.lam_fv(jj2_fv, nat, body);
+            let w = d.lam_fv(jj1_fv, nat, w);
+            let w = d.lam_fv(oj_fv, nat, w);
+            let w = d.lam_fv(oi_fv, nat, w);
+            let w = d.lam_fv(u_fv, u_ty, w);
+            let w = d.lam_fv(hab_fv, hab_ty, w);
+            let w = d.lam_fv(k2_fv, nat, w);
+            let w = d.lam_fv(k1_fv, nat, w);
+            let w = d.lam_fv(e_fv, nat, w);
+            let w = d.lam_fv(b_fv, carrier, w);
+            let w = d.lam_fv(a_fv, carrier, w);
+            d.lam_fv(f_fv, f_ty, w)
+        };
+        let specialized_closed = close(&mut d, specialized);
+        let general_closed = close(&mut d, general);
+
         let specialized_ty = d
             .kernel()
-            .infer(specialized)
+            .infer(specialized_closed)
             .expect("riemann_sum_shared_accuracy_close application must type-check");
         let general_ty = d
             .kernel()
-            .infer(general)
+            .infer(general_closed)
             .expect("riemann_sum_shared_accuracy_close_at application must type-check");
 
         assert_eq!(
