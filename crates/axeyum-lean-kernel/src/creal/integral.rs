@@ -1657,12 +1657,15 @@
 //!   `[x, x+h]` in hand at every point where the derivative estimate is
 //!   taken).
 //! - The hypothesis is removable, but by a **case split, not an estimate**:
-//!   a cotransitivity step decides, per accuracy `e`, either
+//!   [`CRealPrelude::lt_cotrans`] decides, per accuracy `e`, either
 //!   `b − a < 1/(e+1)` (in which case all three integrals are within
 //!   `M/(e+1)` of `0` by the width bound below, and the identity holds at
-//!   that accuracy for free) or `b − a > 1/(2e+2)` (in which case `CReal.inv`
-//!   is available). `equiv_zero_of_small` consumes one accuracy at a time, so
-//!   the case split is legal exactly where it is needed. Not attempted here;
+//!   that accuracy for free) or `b − a > 1/(2e+2)`, whence
+//!   [`CRealPrelude::pos_bound_of_lt`] supplies the `PosBound` witness
+//!   [`CRealPrelude::inv`] takes (`CReal.inv : (x : CReal) → (k : Nat) →
+//!   PosBound x k → CReal`, checked). `equiv_zero_of_small` consumes one
+//!   accuracy at a time, so the case split is legal exactly where it is
+//!   needed. Not attempted here;
 //!   named so the next lane does not re-derive that arbitrary-`c` is blocked
 //!   and stop there, which is what the plain reading of piece 2 invites.
 //!
