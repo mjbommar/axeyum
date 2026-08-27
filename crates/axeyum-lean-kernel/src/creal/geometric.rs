@@ -4205,6 +4205,235 @@ fn declare_geom_cauchy_ordered_of_gap(
     })
 }
 
+/// `CReal.geomCauchyOrdered16Over25` -- [`declare_geom_cauchy_ordered_of_gap`]
+/// instantiated at the concrete ratio `16/25`, i.e. `natDivSucc 16 24`.
+///
+/// ## Why this ratio and not another
+///
+/// Spivak's `π := 2·(first zero of cos)` needs `cosFn` past `x = 1`, and
+/// `creal/trig_fn.rs`'s module documentation derives the pointwise bound
+/// `abs (cosFnTerm k x) ≤ 2·((R/2)²)^k` for `0 ≤ x ≤ R`. So the dominating
+/// series is geometric at ratio `(R/2)²`, and the ratio must be large enough
+/// that `R` clears cosine's first zero, `≈ 1.5708`:
+///
+/// * `R := 8/5 = 1.6 > 1.5708`, ratio `(4/5)² = 16/25 = 0.64`. **This one.**
+/// * `R := 3/2 = 1.5`, ratio `9/16 = 0.5625` -- named as an example
+///   elsewhere, but `1.5 < 1.5708`, so it does **not** clear the zero and
+///   does not unblock π.
+/// * `R := 7/4 = 1.75`, ratio `49/64 ≈ 0.766` -- also clears it, and is
+///   equally reachable by this route (only the three rational obligations
+///   below change).
+///
+/// Note `16/25 > 1/2`, so this is genuinely outside what
+/// `CReal.geomCauchyOrderedHalf` and `CRealPrelude::pow_half_le_nat_div_succ`
+/// reach: `pow_le_pow_of_base_le` compares upward, not downward, so no
+/// amount of base monotonicity gets `(16/25)^k` under `(1/2)^k`.
+///
+/// ## What the caller owes, and how each obligation is discharged
+///
+/// The denominator index `24` (denominator `25`) is chosen so that all three
+/// rational obligations are single lemma applications at ONE common
+/// denominator, with no `Rat` division, no `Rat.normalize`, and no ℕ
+/// subtraction:
+///
+/// * `hq : le (add x (ofRat q)) one` at `q := 9/25` -- because
+///   `16/25 + 9/25 = 25/25 = 1`, i.e. `Rat.natDivSucc_add` followed by
+///   [`nat_div_succ_succ_self_eq_one`], lifted by
+///   [`super::CRealPrelude::of_rat_add`]. It is an `Equiv`, weakened to `le`.
+/// * `PosBound (ofRat q) 24` -- `1/25 ≤ 9/25`, one
+///   `Rat.natDivSucc_le_add_left` at `(1, 8, 24)`.
+/// * `PosBound (add one (neg x)) 24` -- the SAME fact transported across
+///   `Equiv (add one (neg x)) (ofRat q)`, which follows from the `hq` `Equiv`
+///   by pure group algebra (`add_comm`/`add_assoc`/`add_neg`/`add_zero`), so
+///   no rational subtraction and no `of_rat_neg` is needed.
+///
+/// The resulting modulus is `((25*25) + 1) + 7`, left unreduced.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_geom_cauchy_ordered_16_over_25(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let nat = d.nat_ty();
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let zero_c = czero(d, p);
+    let zero_r = rzero(d, rat);
+    let one_r = rone(d, rat);
+
+    let n1 = d.num(1);
+    let n8 = d.num(8);
+    let n9 = d.num(9);
+    let n16 = d.num(16);
+    let n24 = d.num(24);
+
+    let x_rat = d.const_app(rat.nat_div_succ, &[n16, n24]);
+    let x = embed(d, p, x_rat);
+    let q_rat = d.const_app(rat.nat_div_succ, &[n9, n24]);
+    let q_emb = embed(d, p, q_rat);
+
+    // hx0 : le zero x
+    let hx0 = {
+        let nn = d.lemma(rat.zero_le_nat_div_succ, &[n16, n24]);
+        d.lemma(p.of_rat_le, &[zero_r, x_rat, nn])
+    };
+
+    // h_sum_rat : Eq (16/25 + 9/25) 1, via `natDivSucc_add` then
+    // `natDivSucc (succ 24) 24 = 1`. `Nat.add 16 9` and `Nat.succ 24` are the
+    // same unary numeral, so no bridge lemma is needed between them.
+    let sum_rat = radd(d, x_rat, q_rat);
+    let add_eq = d.lemma(rat.nat_div_succ_add, &[n16, n9, n24]);
+    let succ24 = d.succ(n24);
+    let mid_rat = d.const_app(rat.nat_div_succ, &[succ24, n24]);
+    let self_one = nat_div_succ_succ_self_eq_one(d, p, n24);
+    let h_sum_rat = rtrans(d, sum_rat, mid_rat, one_r, add_eq, self_one);
+
+    // h_sum : Equiv (add x (ofRat q)) one
+    let x_plus_q = cadd(d, p, x, q_emb);
+    let of_add = d.lemma(p.of_rat_add, &[x_rat, q_rat]);
+    let sum_equiv_one = embed_eq_to_equiv(d, p, sum_rat, one_r, h_sum_rat);
+    let embed_sum = embed(d, p, sum_rat);
+    let h_sum = d.lemma(
+        p.equiv_trans,
+        &[x_plus_q, embed_sum, one_c, of_add, sum_equiv_one],
+    );
+
+    // hq : le (add x (ofRat q)) one -- `le_refl one` moved across `h_sum`.
+    let hq = {
+        let h_sum_symm = d.lemma(p.equiv_symm, &[x_plus_q, one_c, h_sum]);
+        let refl_one = d.lemma(p.equiv_refl, &[one_c]);
+        let le_one_one = d.lemma(p.le_refl, &[one_c]);
+        d.lemma(
+            p.le_congr,
+            &[one_c, x_plus_q, one_c, one_c, h_sum_symm, refl_one, le_one_one],
+        )
+    };
+
+    // hpb_q : PosBound (ofRat q) 24, i.e. `le (ofRat (1/25)) (ofRat (9/25))`.
+    let small_rat = d.const_app(rat.nat_div_succ, &[n1, n24]);
+    let hpb_q = {
+        let raw = d.lemma(rat.nat_div_succ_le_add_left, &[n1, n8, n24]);
+        d.lemma(p.of_rat_le, &[small_rat, q_rat, raw])
+    };
+
+    // h_gap : Equiv (add one (neg x)) (ofRat q) -- pure group algebra from
+    // `h_sum`, so nothing here needs `Rat` subtraction or `of_rat_neg`.
+    let neg_x = cneg(d, p, x);
+    let one_minus_x = cadd(d, p, one_c, neg_x);
+    let h_gap = {
+        let refl_negx = d.lemma(p.equiv_refl, &[neg_x]);
+        let h_sum_symm = d.lemma(p.equiv_symm, &[x_plus_q, one_c, h_sum]);
+        // step1 : Equiv (add one (neg x)) (add (add x q) (neg x))
+        let xq_negx = cadd(d, p, x_plus_q, neg_x);
+        let step1 = d.lemma(
+            p.add_congr,
+            &[one_c, x_plus_q, neg_x, neg_x, h_sum_symm, refl_negx],
+        );
+        // step2 : Equiv (add (add x q) (neg x)) (add (add q x) (neg x))
+        let comm_xq = d.lemma(p.add_comm, &[x, q_emb]);
+        let q_plus_x = cadd(d, p, q_emb, x);
+        let refl_negx2 = d.lemma(p.equiv_refl, &[neg_x]);
+        let step2 = d.lemma(
+            p.add_congr,
+            &[x_plus_q, q_plus_x, neg_x, neg_x, comm_xq, refl_negx2],
+        );
+        let qx_negx = cadd(d, p, q_plus_x, neg_x);
+        // step3 : Equiv (add (add q x) (neg x)) (add q (add x (neg x)))
+        let step3 = d.lemma(p.add_assoc, &[q_emb, x, neg_x]);
+        let x_negx = cadd(d, p, x, neg_x);
+        let q_x_negx = cadd(d, p, q_emb, x_negx);
+        // step4 : Equiv (add q (add x (neg x))) (add q zero)
+        let refl_q = d.lemma(p.equiv_refl, &[q_emb]);
+        let addneg = d.lemma(p.add_neg, &[x]);
+        let step4 = d.lemma(
+            p.add_congr,
+            &[q_emb, q_emb, x_negx, zero_c, refl_q, addneg],
+        );
+        let q_plus_zero = cadd(d, p, q_emb, zero_c);
+        // step5 : Equiv (add q zero) q
+        let step5 = d.lemma(p.add_zero, &[q_emb]);
+
+        let c1 = d.lemma(p.equiv_trans, &[one_minus_x, xq_negx, qx_negx, step1, step2]);
+        let c2 = d.lemma(p.equiv_trans, &[one_minus_x, qx_negx, q_x_negx, c1, step3]);
+        let c3 = d.lemma(
+            p.equiv_trans,
+            &[one_minus_x, q_x_negx, q_plus_zero, c2, step4],
+        );
+        d.lemma(
+            p.equiv_trans,
+            &[one_minus_x, q_plus_zero, q_emb, c3, step5],
+        )
+    };
+
+    // h : PosBound (add one (neg x)) 24
+    let h = {
+        let small_emb = embed(d, p, small_rat);
+        let refl_small = d.lemma(p.equiv_refl, &[small_emb]);
+        let gap_symm = d.lemma(p.equiv_symm, &[one_minus_x, q_emb, h_gap]);
+        d.lemma(
+            p.le_congr,
+            &[
+                small_emb,
+                small_emb,
+                q_emb,
+                one_minus_x,
+                refl_small,
+                gap_symm,
+                hpb_q,
+            ],
+        )
+    };
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let hab_ty = d.le(a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let result = d.lemma(
+        p.geom_cauchy_ordered_of_gap,
+        &[x, hx0, q_rat, hq, n24, hpb_q, n24, h, a, b, hab],
+    );
+
+    // Restate the conclusion at the concrete moduli, matching
+    // `declare_geom_cauchy_ordered_of_gap`'s own construction exactly.
+    let f = pow_fn(d, p, x);
+    let sum_f_b = d.const_app(p.sum_range, &[f, b]);
+    let sum_f_a = d.const_app(p.sum_range, &[f, a]);
+    let y_pt = sample(d, p, sum_f_b, b);
+    let z_pt = sample(d, p, sum_f_a, a);
+    let diff = rsub(d, rat, y_pt, z_pt);
+    let succ24b = d.succ(n24);
+    let bigk = NatOps::mul(d, succ24b, succ24b);
+    let k_final = geom_cauchy_of_lt_k_final(d, bigk);
+    let nds_b = div_succ_var(d, p, k_final, b);
+    let nds_a = div_succ_var(d, p, k_final, a);
+    let target_bound = radd(d, nds_b, nds_a);
+    let claim = within(d, p, diff, target_bound);
+
+    let ty = {
+        let after_hab = d.arrow(hab_ty, claim);
+        let over_b = d.pi_fv(b_fv, nat, after_hab);
+        d.pi_fv(a_fv, nat, over_b)
+    };
+    let value = {
+        let with_hab = d.lam_fv(hab_fv, hab_ty, result);
+        let over_b = d.lam_fv(b_fv, nat, with_hab);
+        d.lam_fv(a_fv, nat, over_b)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.geom_cauchy_ordered_16_over_25,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 /// Admit `CReal.geomCauchyOfLtOrdered` and `CReal.geomCauchyOfLt`.
 ///
 /// # Errors
@@ -4217,5 +4446,6 @@ pub(super) fn declare_geom_cauchy_of_lt_family(
 ) -> Result<(), KernelError> {
     declare_geom_cauchy_of_lt_ordered(d, p)?;
     declare_geom_cauchy_of_lt(d, p)?;
-    declare_geom_cauchy_ordered_of_gap(d, p)
+    declare_geom_cauchy_ordered_of_gap(d, p)?;
+    declare_geom_cauchy_ordered_16_over_25(d, p)
 }

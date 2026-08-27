@@ -2654,6 +2654,26 @@ pub struct CRealPrelude {
     /// The ratio-specific work a caller must supply is only rational: the
     /// gap `q` with `x + q ≤ 1`, and two `PosBound` moduli.
     pub geom_cauchy_ordered_of_gap: NameId,
+    /// `CReal.geomCauchyOrdered16Over25 : ∀ a b, Nat.le a b → Within (seq
+    /// (sumRange (pow (ofRat (natDivSucc 16 24))) b) b − seq (sumRange (pow
+    /// (ofRat (natDivSucc 16 24))) a) a) (natDivSucc N b + natDivSucc N a)`,
+    /// `N := ((25*25)+1)+7` — [`Self::geom_cauchy_ordered_of_gap`]
+    /// instantiated at the concrete ratio `16/25`, the **first raw geometric
+    /// Cauchy witness in this kernel at a ratio other than `1/2`**.
+    ///
+    /// `16/25 = (4/5)² = ((8/5)/2)²`, which is the ratio
+    /// `creal/trig_fn.rs`'s pointwise bound `abs (cosFnTerm k x) ≤
+    /// 2·((R/2)²)^k` produces at `R := 8/5 = 1.6`. `1.6 > 1.5708`, so this
+    /// ratio *does* clear cosine's first zero; the commonly-quoted
+    /// alternative `9/16` (`R := 3/2`) does **not**, since `1.5 < 1.5708`.
+    ///
+    /// It is also genuinely outside the reach of the base-`1/2` machinery:
+    /// `16/25 > 1/2`, and [`Self::pow_le_pow_of_base_le`] compares upward,
+    /// so no amount of base monotonicity puts `(16/25)^k` under `(1/2)^k`.
+    ///
+    /// See `geometric.rs::declare_geom_cauchy_ordered_16_over_25` for how the
+    /// three rational obligations are discharged at one common denominator.
+    pub geom_cauchy_ordered_16_over_25: NameId,
     /// `CReal.geomCauchyOfLt : ∀ x, le zero x → lt x one → ∀ k (h : PosBound
     /// (add one (neg x)) k), Cauchy (sumRange (fun n => pow x n))` —
     /// geometric-series Cauchyness at a GENERAL ratio `0 ≤ x < 1`, the
@@ -5458,6 +5478,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         geom_cauchy: kernel.name_str(creal, "geomCauchy"),
         geom_cauchy_of_lt_ordered: kernel.name_str(creal, "geomCauchyOfLtOrdered"),
         geom_cauchy_ordered_of_gap: kernel.name_str(creal, "geomCauchyOrderedOfGap"),
+        geom_cauchy_ordered_16_over_25: kernel
+            .name_str(creal, "geomCauchyOrdered16Over25"),
         geom_cauchy_of_lt: kernel.name_str(creal, "geomCauchyOfLt"),
         geom_scaled_cauchy_of_lt: kernel.name_str(creal, "geomScaledCauchyOfLt"),
         sum_range_ratio_test: kernel.name_str(creal, "sumRangeRatioTest"),
@@ -9010,11 +9032,24 @@ const STEPS: &[BuildStep] = &[
         label: "geometric::declare_geom_cauchy_of_lt_family",
         requires: &[
             |p: CRealPrelude| p.add,
+            |p: CRealPrelude| p.add_assoc,
+            |p: CRealPrelude| p.add_comm,
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.add_zero,
             |p: CRealPrelude| p.cauchy,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
             |p: CRealPrelude| p.geom_pair_within,
             |p: CRealPrelude| p.geom_y_bound,
             |p: CRealPrelude| p.geom_y_bound_raw,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.of_rat_add,
+            |p: CRealPrelude| p.of_rat_le,
             |p: CRealPrelude| p.pow_le_nat_div_succ_of_gap,
+            |p: CRealPrelude| p.rat_unit_eq_one,
             |p: CRealPrelude| p.inv,
             |p: CRealPrelude| p.le,
             |p: CRealPrelude| p.lt,
@@ -9029,6 +9064,7 @@ const STEPS: &[BuildStep] = &[
         provides: &[
             |p: CRealPrelude| p.geom_cauchy_of_lt,
             |p: CRealPrelude| p.geom_cauchy_of_lt_ordered,
+            |p: CRealPrelude| p.geom_cauchy_ordered_16_over_25,
             |p: CRealPrelude| p.geom_cauchy_ordered_of_gap,
         ],
         run: geometric::declare_geom_cauchy_of_lt_family,
