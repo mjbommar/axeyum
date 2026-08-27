@@ -2181,6 +2181,89 @@ pub(super) fn mesh_count_align_mul(
     target: ExprId,
     build: &dyn Fn(&mut IntDev<'_>, MeshAlignMul) -> ExprId,
 ) -> ExprId {
+    let b = mesh_count_align_mul_bounds(d, deep_ab, deep_ac, deep_cb, m_ac0, m_cb0, big_n);
+    let MeshAlignMulBounds {
+        m_ac,
+        m_cb,
+        combined,
+        hle_ab,
+        hle_ac,
+        hle_cb,
+        ..
+    } = b;
+
+    le_dest_elim(
+        d,
+        deep_ab,
+        combined,
+        hle_ab,
+        target,
+        &|d, depth_ab, eq_ab| {
+            le_dest_elim(d, deep_ac, m_ac, hle_ac, target, &|d, depth_ac, eq_ac| {
+                le_dest_elim(d, deep_cb, m_cb, hle_cb, target, &|d, depth_cb, eq_cb| {
+                    build(
+                        d,
+                        MeshAlignMul {
+                            m_ac,
+                            m_cb,
+                            combined,
+                            depth_ab,
+                            eq_ab,
+                            depth_ac,
+                            eq_ac,
+                            depth_cb,
+                            eq_cb,
+                        },
+                    )
+                })
+            })
+        },
+    )
+}
+
+/// The three scaled mesh counts and the six `Nat.le` facts about them, WITHOUT
+/// the `Nat.le_dest` elimination [`mesh_count_align_mul`] wraps around them.
+///
+/// [`mesh_count_align_mul`] is continuation-passing because its consumer needs
+/// the *depths*; [`leg_converges`] needs only the `Nat.le` facts (it runs its
+/// own `le_dest_elim` internally, once per leg, at whichever mesh it is given),
+/// and a CPS helper cannot supply those. Both callers share this body so the
+/// scaling argument exists once.
+#[derive(Clone, Copy)]
+pub(super) struct MeshAlignMulBounds {
+    /// `succ_mul_succ(m_ac0, k).0`.
+    pub m_ac: ExprId,
+    /// `succ_mul_succ(m_cb0, k).0`.
+    pub m_cb: ExprId,
+    /// `add (succ m_ac) m_cb`.
+    pub combined: ExprId,
+    /// `((deep_ab + deep_ac) + deep_cb) + big_n` — the common scale factor,
+    /// exposed because [`CRealPrelude::riemann_sum_split_scale_invariant`]
+    /// takes it as its own `k` argument.
+    pub k: ExprId,
+    /// `Nat.le deep_ab combined`.
+    pub hle_ab: ExprId,
+    /// `Nat.le deep_ac m_ac`.
+    pub hle_ac: ExprId,
+    /// `Nat.le deep_cb m_cb`.
+    pub hle_cb: ExprId,
+    /// `Nat.le big_n combined`.
+    pub hn_ab: ExprId,
+    /// `Nat.le big_n m_ac`.
+    pub hn_ac: ExprId,
+    /// `Nat.le big_n m_cb`.
+    pub hn_cb: ExprId,
+}
+
+pub(super) fn mesh_count_align_mul_bounds(
+    d: &mut IntDev<'_>,
+    deep_ab: ExprId,
+    deep_ac: ExprId,
+    deep_cb: ExprId,
+    m_ac0: ExprId,
+    m_cb0: ExprId,
+    big_n: ExprId,
+) -> MeshAlignMulBounds {
     let np = d.prelude();
 
     // k := ((deep_ab + deep_ac) + deep_cb) + big_n.
@@ -2240,33 +2323,31 @@ pub(super) fn mesh_count_align_mul(
         )
     };
 
-    le_dest_elim(
-        d,
-        deep_ab,
+    // `Nat.le big_n X` for each of the three counts. `big_n ≤ k` is
+    // `nat_le_add_left` at `k`'s own head, and from there the three chains
+    // reuse `h_k_mac`/`h_k_mcb` verbatim.
+    let h_n_k = nat_le_add_left(d, t2, big_n);
+    let hn_ac = d.lemma(np.le_trans, &[big_n, k, m_ac, h_n_k, h_k_mac]);
+    let hn_cb = d.lemma(np.le_trans, &[big_n, k, m_cb, h_n_k, h_k_mcb]);
+    let hn_ab = {
+        let mac_succ = d.lemma(np.le_succ, &[m_ac]);
+        let to_succ = d.lemma(np.le_trans, &[big_n, m_ac, succ_m_ac, hn_ac, mac_succ]);
+        let succ_comb = d.lemma(np.le_add_right, &[succ_m_ac, m_cb]);
+        d.lemma(np.le_trans, &[big_n, succ_m_ac, combined, to_succ, succ_comb])
+    };
+
+    MeshAlignMulBounds {
+        m_ac,
+        m_cb,
         combined,
+        k,
         hle_ab,
-        target,
-        &|d, depth_ab, eq_ab| {
-            le_dest_elim(d, deep_ac, m_ac, hle_ac, target, &|d, depth_ac, eq_ac| {
-                le_dest_elim(d, deep_cb, m_cb, hle_cb, target, &|d, depth_cb, eq_cb| {
-                    build(
-                        d,
-                        MeshAlignMul {
-                            m_ac,
-                            m_cb,
-                            combined,
-                            depth_ab,
-                            eq_ab,
-                            depth_ac,
-                            eq_ac,
-                            depth_cb,
-                            eq_cb,
-                        },
-                    )
-                })
-            })
-        },
-    )
+        hle_ac,
+        hle_cb,
+        hn_ab,
+        hn_ac,
+        hn_cb,
+    }
 }
 
 #[cfg(test)]
@@ -18187,6 +18268,322 @@ mod leg_converges_tests {
         assert!(
             result.is_ok(),
             "leg_converges must prove Converges at a padded mesh family: {:?}",
+            result.err()
+        );
+    }
+}
+
+// --- `CReal.integral_split` -- the assembly ---------------------------------
+//
+// Every piece is now a `Converges` fact, so the combine has no rational
+// estimate in it at all:
+//
+// ```text
+// conv_ab  : Converges (fun n => riemannSum F a b (combined n)) (integral F a b hab u)
+// conv_ac  : Converges (fun n => riemannSum F a c (m_ac   n)) (integral F a c hac uac)
+// conv_cb  : Converges (fun n => riemannSum F c b (m_cb   n)) (integral F c b hcb ucb)
+//   [leg_converges, three times]
+// conv_sum : Converges (fun n => add (g_ac n) (g_cb n)) (add I_ac I_cb)
+//   [converges_add]
+// cross    : ∀ n, Within (seq (g_ab n) n − seq (sum_seq n) n) (natDivSucc 2 n)
+//   [split_identity_at_equiv_point at (m_ac n, m_cb n), APPLIED at n -- `Equiv`
+//    unfolds to exactly this per-index `Within` at bound `2/(n+1)`, which is
+//    the same step `declare_converges_of_equiv` takes]
+// step     : Converges g_ab (add I_ac I_cb)      [converges_of_close at Kc := 2]
+// final    : Equiv I_ab (add I_ac I_cb)          [converges_unique]
+// ```
+//
+// `c` is NOT universally quantified: it is the base split point `c_0` of the
+// caller's rational proportion `(m_ac0, m_cb0)`, because
+// [`CRealPrelude::riemann_sum_split_scale_invariant`] proves `Equiv c_k c_0`
+// for that family and for no other — the SIXTEENTH lane's Gap B entry says so
+// in as many words. `big_n` is likewise not free: `leg_converges` needs
+// `Nat.le n (M n)` on every leg, so `big_n := n`.
+
+/// `c_0 := a + ofNat(succ m_ac0) · delta_of(a, b, succ m_ac0 + m_cb0)` — the
+/// base split point of the rational proportion `succ m_ac0 : succ m_cb0`,
+/// built with the identical `delta_of`/`of_nat`/`cmul`/`cadd` recipe
+/// [`declare_riemann_sum_split_scale_invariant`]'s own `c_0` uses, so the two
+/// intern to the SAME `ExprId` and its `Equiv c_k c_0` applies on the nose.
+fn split_point_base(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    m_ac0: ExprId,
+    m_cb0: ExprId,
+) -> ExprId {
+    let n_ac0 = d.succ(m_ac0);
+    let m_ab0 = NatOps::add(d, n_ac0, m_cb0);
+    let delta_ab0 = delta_of(d, p, a, b, m_ab0);
+    let on_ac0 = d.const_app(p.of_nat, &[n_ac0]);
+    let w = cmul(d, p, on_ac0, delta_ab0);
+    cadd(d, p, a, w)
+}
+
+/// [`mesh_count_align_mul_bounds`] at the three moduli this split needs, with
+/// `big_n := n`. Called once per `leg_converges` callback and once for the
+/// cross bound; hash-consing makes every call return the same `ExprId`s.
+#[allow(clippy::too_many_arguments)]
+fn split_mesh_bounds(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    u: ExprId,
+    uac: ExprId,
+    ucb: ExprId,
+    m_ac0: ExprId,
+    m_cb0: ExprId,
+    n: ExprId,
+) -> MeshAlignMulBounds {
+    let deep_ab = deep_at(d, p, f, a, b, u, n);
+    let deep_ac = deep_at(d, p, f, a, c, uac, n);
+    let deep_cb = deep_at(d, p, f, c, b, ucb, n);
+    mesh_count_align_mul_bounds(d, deep_ab, deep_ac, deep_cb, m_ac0, m_cb0, n)
+}
+
+/// `Equiv (integral F a b hab u) (add (integral F a c hac uac) (integral F c b
+/// hcb ucb))` at `c := ` [`split_point_base`]`(a, b, m_ac0, m_cb0)`.
+///
+/// Shared by [`declare_integral_split`] and its own symbolic test so the two
+/// cannot drift.
+#[allow(clippy::too_many_arguments)]
+fn integral_split_proof(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    a: ExprId,
+    b: ExprId,
+    m_ac0: ExprId,
+    m_cb0: ExprId,
+    hab: ExprId,
+    u: ExprId,
+    hac: ExprId,
+    hcb: ExprId,
+    uac: ExprId,
+    ucb: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let c = split_point_base(d, p, a, b, m_ac0, m_cb0);
+
+    let integral_ab = d.const_app(p.integral, &[f, a, b, hab, u]);
+    let integral_ac = d.const_app(p.integral, &[f, a, c, hac, uac]);
+    let integral_cb = d.const_app(p.integral, &[f, c, b, hcb, ucb]);
+
+    let (g_ab, conv_ab) = leg_converges(
+        d,
+        p,
+        f,
+        a,
+        b,
+        hab,
+        u,
+        &|d, n| split_mesh_bounds(d, p, f, a, b, c, u, uac, ucb, m_ac0, m_cb0, n).combined,
+        &|d, n| split_mesh_bounds(d, p, f, a, b, c, u, uac, ucb, m_ac0, m_cb0, n).hle_ab,
+        &|d, n| split_mesh_bounds(d, p, f, a, b, c, u, uac, ucb, m_ac0, m_cb0, n).hn_ab,
+    );
+    let (g_ac, conv_ac) = leg_converges(
+        d,
+        p,
+        f,
+        a,
+        c,
+        hac,
+        uac,
+        &|d, n| split_mesh_bounds(d, p, f, a, b, c, u, uac, ucb, m_ac0, m_cb0, n).m_ac,
+        &|d, n| split_mesh_bounds(d, p, f, a, b, c, u, uac, ucb, m_ac0, m_cb0, n).hle_ac,
+        &|d, n| split_mesh_bounds(d, p, f, a, b, c, u, uac, ucb, m_ac0, m_cb0, n).hn_ac,
+    );
+    let (g_cb, conv_cb) = leg_converges(
+        d,
+        p,
+        f,
+        c,
+        b,
+        hcb,
+        ucb,
+        &|d, n| split_mesh_bounds(d, p, f, a, b, c, u, uac, ucb, m_ac0, m_cb0, n).m_cb,
+        &|d, n| split_mesh_bounds(d, p, f, a, b, c, u, uac, ucb, m_ac0, m_cb0, n).hle_cb,
+        &|d, n| split_mesh_bounds(d, p, f, a, b, c, u, uac, ucb, m_ac0, m_cb0, n).hn_cb,
+    );
+
+    let sum_target = cadd(d, p, integral_ac, integral_cb);
+    let conv_sum = d.lemma(
+        p.converges_add,
+        &[g_ac, g_cb, integral_ac, integral_cb, conv_ac, conv_cb],
+    );
+    let sum_seq = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let ga = d.apply(g_ac, &[n]);
+        let gb = d.apply(g_cb, &[n]);
+        let added = cadd(d, p, ga, gb);
+        d.lam_fv(n_fv, nat, added)
+    };
+
+    // --- the per-index cross bound. `Equiv` IS the `2/(n+1)` per-index
+    // `Within`, so the split identity applied at `n` is already the shape
+    // `converges_of_close` takes -- the same step `declare_converges_of_equiv`
+    // makes, and the reason no `abs_add_le`/`equiv_zero_of_small` appears in
+    // this construction.
+    let cross = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let mb = split_mesh_bounds(d, p, f, a, b, c, u, uac, ucb, m_ac0, m_cb0, n);
+
+        // hc : Equiv c_k c, at THIS accuracy's own scale factor.
+        let hc = d.lemma(
+            p.riemann_sum_split_scale_invariant,
+            &[a, b, m_ac0, m_cb0, mb.k],
+        );
+        let c_k = {
+            let n_ac = d.succ(mb.m_ac);
+            let delta_ab = delta_of(d, p, a, b, mb.combined);
+            let on_ac = d.const_app(p.of_nat, &[n_ac]);
+            let w1 = cmul(d, p, on_ac, delta_ab);
+            cadd(d, p, a, w1)
+        };
+        let hc_symm = d.lemma(p.equiv_symm, &[c_k, c, hc]); // Equiv c c_k
+
+        // The caller's order proofs transported onto `c_k`. `le_congr`'s
+        // `Equiv` arguments run OLD -> NEW and its `le` premise is the
+        // PRE-substitution one, the shape `declare_riemann_sum_split_exact_of_uc`
+        // already uses for its own `hcb`.
+        let refl_a = d.lemma(p.equiv_refl, &[a]);
+        let refl_b = d.lemma(p.equiv_refl, &[b]);
+        let hac_k = d.lemma(p.le_congr, &[a, a, c, c_k, refl_a, hc_symm, hac]);
+        let hc_kb = d.lemma(p.le_congr, &[c, c_k, b, b, hc_symm, refl_b, hcb]);
+
+        let split_id = split_identity_at_equiv_point(
+            d, p, f, a, b, u, hab, mb.m_ac, mb.m_cb, c, hac_k, hc_kb, hac, hcb, hc,
+        );
+        let inst = d.apply(split_id, &[n]);
+        d.lam_fv(n_fv, nat, inst)
+    };
+
+    let two_nat = d.num(2);
+    let step = d.lemma(
+        p.converges_of_close,
+        &[sum_seq, g_ab, sum_target, two_nat, cross, conv_sum],
+    );
+    d.lemma(
+        p.converges_unique,
+        &[g_ab, integral_ab, sum_target, conv_ab, step],
+    )
+}
+
+#[cfg(test)]
+mod integral_split_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// Symbolic in `F`, `a`, `b`, the proportion `(m_ac0, m_cb0)`, all three
+    /// continuity witnesses and all three order proofs — closed into a real
+    /// `Theorem`. This is what consumes `mesh_count_align_mul_bounds`,
+    /// `leg_converges`, `split_identity_at_equiv_point`,
+    /// `riemann_sum_split_scale_invariant` and `riemann_sum_congr_endpoints`
+    /// at once.
+    #[test]
+    fn integral_split_proves_additivity_at_the_base_split_point() {
+        crate::on_a_deep_stack(integral_split_body);
+    }
+
+    fn integral_split_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+        let nat = d.nat_ty();
+        let f_ty = fn_ty(&mut d, p);
+
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let mac0_fv = d.fresh_fvar();
+        let m_ac0 = d.kernel().fvar(mac0_fv);
+        let mcb0_fv = d.fresh_fvar();
+        let m_cb0 = d.kernel().fvar(mcb0_fv);
+
+        let hab_ty = cle(&mut d, p, a, b);
+        let hab_fv = d.fresh_fvar();
+        let hab = d.kernel().fvar(hab_fv);
+        let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+        let u_fv = d.fresh_fvar();
+        let u = d.kernel().fvar(u_fv);
+
+        let c = split_point_base(&mut d, p, a, b, m_ac0, m_cb0);
+
+        let hac_ty = cle(&mut d, p, a, c);
+        let hac_fv = d.fresh_fvar();
+        let hac = d.kernel().fvar(hac_fv);
+        let hcb_ty = cle(&mut d, p, c, b);
+        let hcb_fv = d.fresh_fvar();
+        let hcb = d.kernel().fvar(hcb_fv);
+        let uac_ty = d.const_app(p.uniformly_continuous_on, &[f, a, c]);
+        let uac_fv = d.fresh_fvar();
+        let uac = d.kernel().fvar(uac_fv);
+        let ucb_ty = d.const_app(p.uniformly_continuous_on, &[f, c, b]);
+        let ucb_fv = d.fresh_fvar();
+        let ucb = d.kernel().fvar(ucb_fv);
+
+        let proof = integral_split_proof(
+            &mut d, p, f, a, b, m_ac0, m_cb0, hab, u, hac, hcb, uac, ucb,
+        );
+
+        let integral_ab = d.const_app(p.integral, &[f, a, b, hab, u]);
+        let integral_ac = d.const_app(p.integral, &[f, a, c, hac, uac]);
+        let integral_cb = d.const_app(p.integral, &[f, c, b, hcb, ucb]);
+        let rhs = cadd(&mut d, p, integral_ac, integral_cb);
+        assert_ne!(
+            integral_ab, rhs,
+            "the two sides must be different terms, or the statement is `Equiv x x`"
+        );
+        let concl = equiv(&mut d, p, integral_ab, rhs);
+
+        let ty = {
+            let t = d.pi_fv(ucb_fv, ucb_ty, concl);
+            let t = d.pi_fv(uac_fv, uac_ty, t);
+            let t = d.pi_fv(hcb_fv, hcb_ty, t);
+            let t = d.pi_fv(hac_fv, hac_ty, t);
+            let t = d.pi_fv(u_fv, u_ty, t);
+            let t = d.pi_fv(hab_fv, hab_ty, t);
+            let t = d.pi_fv(mcb0_fv, nat, t);
+            let t = d.pi_fv(mac0_fv, nat, t);
+            let t = d.pi_fv(b_fv, carrier, t);
+            let t = d.pi_fv(a_fv, carrier, t);
+            d.pi_fv(f_fv, f_ty, t)
+        };
+        let value = {
+            let v = d.lam_fv(ucb_fv, ucb_ty, proof);
+            let v = d.lam_fv(uac_fv, uac_ty, v);
+            let v = d.lam_fv(hcb_fv, hcb_ty, v);
+            let v = d.lam_fv(hac_fv, hac_ty, v);
+            let v = d.lam_fv(u_fv, u_ty, v);
+            let v = d.lam_fv(hab_fv, hab_ty, v);
+            let v = d.lam_fv(mcb0_fv, nat, v);
+            let v = d.lam_fv(mac0_fv, nat, v);
+            let v = d.lam_fv(b_fv, carrier, v);
+            let v = d.lam_fv(a_fv, carrier, v);
+            d.lam_fv(f_fv, f_ty, v)
+        };
+
+        let anon = d.kernel().anon();
+        let name = d.kernel().name_str(anon, "integralSplitSmoke");
+        let result = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(
+            result.is_ok(),
+            "integral_split_proof must prove additivity at the base split point: {:?}",
             result.err()
         );
     }
