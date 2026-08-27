@@ -1280,6 +1280,21 @@ checker re-enumerates every defining relation rather than trusting the SAT encod
 remains `open`: this is a stronger lower bound, not an UNSAT certificate for 369 or an exact
 Rado number.
 
+**Rado repaired-tail climb to 404, 2026-08-26.** The local obstruction at 369 was only an
+obstruction to appending one colour to a fixed prefix. A monotone relaxation audit proved that
+retaining prefixes through point 180 is incompatible with 369, while retaining only points
+1--140 yields a complete model. Prefix-guided exact SAT then climbed through 391; further
+relaxation to 60 fixed points crossed 392 and to 50 fixed points crossed 395, reaching 404.
+Axeyum imported the strongest complete assignment and evaluated it against the canonical formula
+without any guiding units: 2,020 variables / 186,287 clauses. It decoded byte-identically to the
+retained witness and an independent enumerator accepted all 36,046 defining triples. Witness
+SHA-256 is `501f783c29a7ad069f604e394d9336118d9c35ed1695897e4440a60ccf00e973`;
+canonical-CNF SHA-256 is `809d21c90860a5de661b555a856317905139f09603ca6f7df44c93748244338d`.
+Thus the checked conclusion is `R_5(3(x-y)=2z) > 404`. At 405, two stronger fixed-prefix
+restrictions are UNSAT and a 20-point restriction remained undecided after 120 seconds; none is
+an upper bound. Fresh exact web, arXiv, and Scholar-oriented searches found no indexed matching
+404 bound, which remains dated negative retrieval rather than proof of priority.
+
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
 external-certificate replay runner for all five packages.  It validates checker and artifact
 bytes before execution, hard-kills a timed-out process session, requires an observable finding
