@@ -46,17 +46,17 @@ built authority:
 
 ```
 authority: 1861 distinct kernel declarations (floor 1750), roots covered: ...
-scanned: 3992 files
-markers: 4 (0 absent, 4 was-absent), naming 8 declaration(s); 7 more QUOTED
+scanned: 3993 files
+markers: 5 (1 absent, 4 was-absent), naming 9 declaration(s); 10 more QUOTED
   in a code span or fence and read as documentation of the grammar
-census: 702 absence-claim site(s); 144 name a declaration (3 carry a marker,
-  141 do NOT); 558 name no declaration and are STRUCTURALLY UNCHECKABLE by
+census: 705 absence-claim site(s); 145 name a declaration (4 carry a marker,
+  141 do NOT); 560 name no declaration and are STRUCTURALLY UNCHECKABLE by
   any authority-derived gate
-OK: 4 marker(s) checked against the kernel; every claim still holds.
-  Marker coverage of checkable claim sites: 3/144.
+OK: 5 marker(s) checked against the kernel; every claim still holds.
+  Marker coverage of checkable claim sites: 4/145.
 ```
 
-**3 of 144 checkable sites are annotated. 141 are not.** Those four numbers
+**4 of 145 checkable sites are annotated. 141 are not.** Those four numbers
 print on every run, pass or fail — a partial rollout reported as complete is
 the same defect one level up, so the number is in the output rather than in a
 claim about the output. `--list` prints the worklist. `bare_named_claim_budget`
@@ -71,6 +71,7 @@ records of 2026-08-27 are annotated:
 `CLAUDE.md`'s M-test paragraph.
 
 **The fifth is NOT stale, and I checked before annotating it.**
+<!-- absent: CReal.within_of_close_within -- the reverse close_within -> Within bridge trig_fn.rs:63 reports missing; verified against the live environment, and this paragraph goes red the day it lands -->
 `crates/axeyum-lean-kernel/src/creal/trig_fn.rs:63` claims a `close_within` →
 `Within` bridge "does not exist as a public lemma today". Read literally that
 is **still true**: there is no `CReal.within_of_close_within`, and the twelve
@@ -83,7 +84,8 @@ is **still true**: there is no `CReal.within_of_close_within`, and the twelve
 was the *inference* a reader drew from it (that the M-test was blocked), and
 **no authority-derived gate can catch a wrong inference from a true claim.**
 That file is also out of this lane's scope (`crates/` has five live lanes), so
-it carries no marker; it appears in the census as a bare site.
+it carries no marker there; this paragraph carries the LIVE `absent:` marker
+for it instead, and goes red the day the bridge lands.
 
 **Demonstration: red before, green after.**
 `scripts/tests/demo-absence-expiry-seeds.sh` copies the three seeded files
@@ -101,7 +103,7 @@ it, and both were parsed as live markers naming a declaration called `...`
 (exit 2, malformed marker). The document defining the mechanism failed the
 mechanism. Fixed by reading a marker inside a code span or a fence as
 documentation of the grammar rather than as a claim — and by **counting**
-those rather than dropping them silently (`7 more QUOTED`), because a
+those rather than dropping them silently (`10 more QUOTED`), because a
 swallowed marker is a false green, the one outcome this gate must not produce.
 
 **Mutation evidence: 25 of 25 guards killed, 0 SURVIVED, 0 unmeasured**
@@ -131,7 +133,7 @@ all fixed:
 **What it is structurally blind to**, stated rather than left to be found:
 
 1. **A claim naming no declaration** — "the mesh toolkit is private", "no
-   in-tree tool does this". 558 of 702 sites. No authority-derived gate can
+   in-tree tool does this". 560 of 705 sites. No authority-derived gate can
    check these; the census reports them as `STRUCTURALLY UNCHECKABLE` rather
    than excluding them from the ratio.
 2. **A wrong inference from a true claim** — seed 5 above.
@@ -157,4 +159,4 @@ taken from `git ls-tree origin/main`, not the local maximum.
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-27 | (pending commit) | ADR-0611 + `scripts/check-absence-claims.py`: an absence claim in prose carries `<!-- absent: Root.name -->` and the gate fails the moment that declaration exists in `kernel.environment()` — `#[expect(dead_code)]` for documentation. `<!-- was-absent: … -->` is checked in the opposite direction so a historical record cannot point at nothing. Seeded on four of the five known-stale records of 2026-08-27 (the fifth, `trig_fn.rs`, verified still literally true); demonstrated red-then-green by `scripts/tests/demo-absence-expiry-seeds.sh`; 25/25 guards mutation-killed, 0 survived. Adoption printed on every run: 3 of 144 checkable claim sites annotated, 141 not, 558 sites structurally uncheckable. |
+| 2026-08-27 | (pending commit) | ADR-0611 + `scripts/check-absence-claims.py`: an absence claim in prose carries `<!-- absent: Root.name -->` and the gate fails the moment that declaration exists in `kernel.environment()` — `#[expect(dead_code)]` for documentation. `<!-- was-absent: … -->` is checked in the opposite direction so a historical record cannot point at nothing. Seeded on four of the five known-stale records of 2026-08-27 (the fifth, `trig_fn.rs`, verified still literally true); demonstrated red-then-green by `scripts/tests/demo-absence-expiry-seeds.sh`; 25/25 guards mutation-killed, 0 survived, 0 unmeasured. Adoption printed on every run: 4 of 145 checkable claim sites annotated (one of them a LIVE `absent:` claim on `CReal.within_of_close_within`, which reds the day that bridge lands), 141 not, 560 sites structurally uncheckable. |
