@@ -11,7 +11,10 @@
 
 use std::collections::BTreeSet;
 
-use super::{DeclKind, Entry, Outcome, Query, ShapeIndex, index_kernel, namespace_root, run};
+use super::{
+    DeclKind, Entry, Outcome, Query, ShapeIndex, index_kernel, namespace_root, run,
+    spelling_insensitive,
+};
 use crate::{Kernel, build_nat_prelude};
 
 fn entry(name: &str, kind: DeclKind, hyps: &[&str], concl: &str) -> Entry {
@@ -232,13 +235,20 @@ fn an_export_name_is_unanswerable_with_a_pointer_to_the_kernel_name() {
         concl: Some("AxNat.add".to_owned()),
         ..Query::default()
     };
-    match run(&index, &query) {
-        Outcome::Unanswerable(reasons) => assert!(
-            reasons.iter().any(|reason| reason.contains("Nat.add")),
-            "the hint must name the kernel spelling: {reasons:?}"
-        ),
-        other => panic!("expected Unanswerable, got {other:?}"),
-    }
+    assert_eq!(run(&index, &query).status(), 3);
+
+    // Assert on `nearest` DIRECTLY, not on the rendered reason. The reason
+    // string contains the queried name `AxNat.add`, which CONTAINS `Nat.add`
+    // as a substring — so `reasons.contains("Nat.add")` passes even when the
+    // hint is empty, and the mutation run measured exactly that: deleting the
+    // hint's needle extraction left this test green. It is the same substring
+    // hazard that makes `contains("Real.")` match `CReal.`, inside the very
+    // test written to catch a naming confusion.
+    let nearest = index.nearest("AxNat.add", 6);
+    assert!(
+        nearest.contains(&"Nat.add".to_owned()),
+        "the hint must offer the kernel spelling: {nearest:?}"
+    );
 }
 
 /// GUARD: a query constraining nothing is unanswerable. An unconstrained query
@@ -266,6 +276,14 @@ fn value_const_without_value_indexing_is_unanswerable() {
     let mut row = entry("Pkg.thm", DeclKind::Theorem, &["P"], "Q");
     row.value_consts = Some(["CReal.le".to_owned()].into_iter().collect());
     with_values.insert(row);
+    // A row that HAS an indexed value not containing the queried constant.
+    // Without it the `--value-const` conjunct is decoration: every other row in
+    // the index is excluded by the "values were not indexed" arm instead, and
+    // deleting the membership loop leaves the test green. The mutation run
+    // measured exactly that before this row existed.
+    let mut unrelated = entry("Pkg.other", DeclKind::Theorem, &["P"], "Q");
+    unrelated.value_consts = Some(["Other.thing".to_owned()].into_iter().collect());
+    with_values.insert(unrelated);
     with_values.insert(entry("CReal.le", DeclKind::Definition, &["CReal"], "Prop"));
     with_values.finish();
     assert_eq!(names(&run(&with_values, &query)), vec!["Pkg.thm"]);
@@ -398,5 +416,107 @@ fn a_shape_query_over_the_nat_prelude_retrieves_by_structure() {
     assert!(
         found.iter().any(|name| name == "Nat.add_comm"),
         "an equation about Nat.add must be retrievable by shape: {found:?}"
+    );
+
+    // …and the `--const` conjunct must EXCLUDE. Without this the guard is
+    // decoration: deleting the type-constant filter widens the result set and
+    // the assertion above still passes, which is what the mutation run
+    // measured before this line existed. `Nat.mul_comm` is the same shape
+    // (`Nat -> Nat -> Eq`) with type constants `[Eq, Nat, Nat.mul]` and no
+    // `Nat.add`, so it is in the unfiltered answer and must not be in this one.
+    assert!(
+        !found.iter().any(|name| name == "Nat.mul_comm"),
+        "--const Nat.add must exclude an equation that does not mention it: {found:?}"
+    );
+}
+
+/// GUARD: a hypothesis head is taken UNDER that binder's own telescope.
+///
+/// `Nat.cantor_no_fixed_point` has three premises and TWO of them are
+/// themselves `Pi` telescopes — `f : Nat -> Bool` and a universally quantified
+/// refutation. Reading only the outermost node files both as `None`, and a
+/// `--hyp Bool` query then misses the theorem entirely. Most of the premises a
+/// lane needs to search for (domination bounds, moduli, "for all k" side
+/// conditions) have exactly this shape, so this is not an edge case.
+#[test]
+fn a_quantified_hypothesis_is_headed_by_its_own_conclusion() {
+    let mut kernel = Kernel::new();
+    let _ = build_nat_prelude(&mut kernel).expect("Nat prelude must build");
+    let mut index = ShapeIndex::new(vec!["nat".to_owned()], false);
+    index_kernel(&kernel, "nat", &mut index, false);
+    index.finish();
+
+    let entry = index
+        .entries()
+        .iter()
+        .find(|entry| entry.name == "Nat.cantor_no_fixed_point")
+        .expect("Nat.cantor_no_fixed_point must be declared");
+    assert_eq!(
+        entry.hyp_heads,
+        vec![
+            Some("Bool".to_owned()),
+            Some("False".to_owned()),
+            Some("Exists".to_owned()),
+        ],
+        "each premise is headed by the constant its own telescope concludes in"
+    );
+
+    // …and the retrieval that depends on it.
+    let query = Query {
+        concl: Some("False".to_owned()),
+        hyps: vec!["Bool".to_owned(), "Exists".to_owned()],
+        kinds: vec![DeclKind::Theorem],
+        ..Query::default()
+    };
+    let found = names(&run(&index, &query));
+    assert!(
+        found.iter().any(|name| name == "Nat.cantor_no_fixed_point"),
+        "a quantified premise must be reachable by --hyp: {found:?}"
+    );
+}
+
+/// GUARD: `--name-like` ignores case, `_` and `.` on BOTH sides, so the
+/// snake_case spelling every design document and Rust field uses retrieves the
+/// camelCase declaration the kernel actually holds. Without it a lane grepping
+/// for `congr_of_uniformly_continuous` gets zero rows for a lemma that exists —
+/// which is the exact failure this whole index is for, arriving through the
+/// spelling rather than through the module it is filed in.
+#[test]
+fn a_snake_case_guess_retrieves_a_camel_case_declaration() {
+    let mut index = ShapeIndex::new(vec!["synthetic".to_owned()], false);
+    index.insert(entry(
+        "CReal.congrOfUniformlyContinuous",
+        DeclKind::Theorem,
+        &["CReal"],
+        "CReal.Equiv",
+    ));
+    index.insert(entry("CReal", DeclKind::Inductive, &[], "Sort"));
+    index.insert(entry("CReal.Equiv", DeclKind::Definition, &["CReal"], "Prop"));
+    index.finish();
+
+    // The exact-substring form fails, which is the status quo.
+    let literal = Query {
+        name_contains: Some("congr_of_uniformly_continuous".to_owned()),
+        ..Query::default()
+    };
+    assert_eq!(run(&index, &literal), Outcome::Absent);
+
+    // The spelling-insensitive form finds it.
+    let normalized = Query {
+        name_like: Some("congr_of_uniformly_continuous".to_owned()),
+        ..Query::default()
+    };
+    assert_eq!(
+        names(&run(&index, &normalized)),
+        vec!["CReal.congrOfUniformlyContinuous"]
+    );
+
+    assert_eq!(
+        spelling_insensitive("CReal.congrOfUniformlyContinuous"),
+        "crealcongrofuniformlycontinuous"
+    );
+    assert_eq!(
+        spelling_insensitive("congr_of_uniformly_continuous"),
+        "congrofuniformlycontinuous"
     );
 }

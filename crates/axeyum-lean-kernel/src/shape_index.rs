@@ -323,13 +323,13 @@ impl ShapeIndex {
     /// mean" list printed with an unanswerable vocabulary error.
     #[must_use]
     pub fn nearest(&self, name: &str, limit: usize) -> Vec<String> {
-        let needle = name.rsplit('.').next().unwrap_or(name);
+        let needle = spelling_insensitive(name.rsplit('.').next().unwrap_or(name));
         if needle.is_empty() {
             return Vec::new();
         }
         self.names
             .iter()
-            .filter(|candidate| candidate.contains(needle))
+            .filter(|candidate| spelling_insensitive(candidate).contains(&needle))
             .take(limit)
             .cloned()
             .collect()
@@ -374,6 +374,29 @@ pub fn namespace_root(name: &str) -> &str {
     name.split('.').next().unwrap_or(name)
 }
 
+/// A name with its SPELLING removed: lowercased, with `_` and `.` dropped.
+///
+/// This repository has no single naming convention and cannot be searched as if
+/// it did. Measured 2026-08-27 over the 464 `CReal` declarations in the built
+/// environment: 315 contain an underscore, 200 contain an internal capital, and
+/// **114 contain both** — `CReal.equiv_of_le_le` sits beside
+/// `CReal.congrOfUniformlyContinuous`, and `CReal.abs_sumRange_le` mixes the two
+/// inside one name. The Rust FIELD for the second is
+/// `congr_of_uniformly_continuous`, which is also the spelling every design
+/// document and brief uses, so a lane grepping the kernel inventory for it gets
+/// zero rows for a declaration that exists.
+///
+/// Normalising both sides makes `--name-like congr_of_uniformly_continuous`
+/// retrieve `CReal.congrOfUniformlyContinuous`, and is what the nearest-name
+/// hint matches on.
+#[must_use]
+pub fn spelling_insensitive(name: &str) -> String {
+    name.chars()
+        .filter(|character| *character != '_' && *character != '.')
+        .flat_map(char::to_lowercase)
+        .collect()
+}
+
 /// A retrieval query. Every populated field is a conjunct.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Query {
@@ -389,6 +412,9 @@ pub struct Query {
     pub name: Option<String>,
     /// Substring of the rendered name.
     pub name_contains: Option<String>,
+    /// Substring of the rendered name after [`spelling_insensitive`] on both
+    /// sides, so a snake_case guess retrieves a camelCase declaration.
+    pub name_like: Option<String>,
     /// Restrict to these kinds (empty = every kind).
     pub kinds: Vec<DeclKind>,
     /// Restrict to this namespace root.
@@ -410,6 +436,7 @@ impl Query {
             && self.value_consts.is_empty()
             && self.name.is_none()
             && self.name_contains.is_none()
+            && self.name_like.is_none()
             && self.kinds.is_empty()
             && self.namespace.is_none()
             && self.arity.is_none()
@@ -471,6 +498,11 @@ impl Query {
         }
         if let Some(fragment) = &self.name_contains
             && !entry.name.contains(fragment.as_str())
+        {
+            return false;
+        }
+        if let Some(fragment) = &self.name_like
+            && !spelling_insensitive(&entry.name).contains(&spelling_insensitive(fragment))
         {
             return false;
         }

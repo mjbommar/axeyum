@@ -1,6 +1,12 @@
 //! `shape_search` — *"does a declaration of this SHAPE exist, anywhere, under
 //! any name?"*
 //!
+//! Not a replacement for `kernel_declaration_projection --require-declaration`,
+//! which already answers *"does a declaration with EXACTLY this name exist?"*
+//! with a non-zero exit on absence, across every kind. Use that when you know
+//! the name. Use this when you do not — which, per the retrospective, is the
+//! case that has cost this repository real work.
+//!
 //! Every other instrument in this crate answers *"is this name taken?"*. That
 //! question cannot find a lemma whose name you do not know, and lanes here have
 //! repeatedly declared themselves blocked on a lemma that already exists,
@@ -43,11 +49,21 @@
 //!
 //! # Coverage is declared, and unbuilt is not absent
 //!
-//! The default index covers `logic`, `nat`, `axreal`, `integer`, `rat` and
-//! `string`. `--include-constructed` adds `creal`, `complex` and `cpoint`,
+//! The default index covers `logic`, `nat`, `axreal`, `integer`, `rat`,
+//! `characterization` and `string`. `--include-constructed` adds `creal`, `complex` and `cpoint`,
 //! which cost real kernel type-checking. Querying a `CReal` name without it is
 //! **unanswerable**, not absent. Every run prints the groups it covered and a
 //! per-kind census before any verdict.
+//!
+//! # There is no single naming convention, so `--name-like` ignores spelling
+//!
+//! Measured over the 464 `CReal` declarations: 315 contain an underscore, 200
+//! contain an internal capital, **114 contain both**.
+//! `CReal.congrOfUniformlyContinuous` and `CReal.equiv_of_le_le` are in one
+//! namespace, and the Rust FIELD for the first is
+//! `congr_of_uniformly_continuous` — the spelling every design document uses.
+//! `--name-like congr_of_uniformly_continuous` retrieves it anyway; a grep for
+//! that string against the kernel inventory returns nothing.
 //!
 //! # Names are KERNEL names
 //!
@@ -84,9 +100,9 @@ use axeyum_lean_kernel::shape_index::{
     DeclKind, Outcome, Query, ShapeIndex, index_kernel, namespace_root, run,
 };
 use axeyum_lean_kernel::{
-    Kernel, build_arith_prelude, build_complex_prelude, build_cpoint_prelude, build_creal_prelude,
-    build_int_prelude, build_logic_prelude, build_nat_prelude, build_rat_prelude,
-    build_string_prelude,
+    Kernel, build_arith_prelude, build_characterization, build_complex_prelude,
+    build_cpoint_prelude, build_creal_prelude, build_int_prelude, build_logic_prelude,
+    build_nat_prelude, build_rat_prelude, build_string_prelude, on_a_deep_stack,
 };
 
 const USAGE: &str = "\
@@ -100,6 +116,8 @@ shape_search — retrieve a declaration by the SHAPE of its type, not its name.
                            requires --index-values)
   --name <Name>            exact rendered name
   --name-contains <S>      substring of the rendered name
+  --name-like <S>          substring ignoring case, `_` and `.` — a snake_case
+                           guess retrieves a camelCase declaration
   --kind <k>               axiom|definition|theorem|opaque|inductive|
                            constructor|recursor|quot (repeatable, OR)
   --ns <Root>              restrict to a namespace root
@@ -173,6 +191,7 @@ fn parse_args() -> Result<Args, String> {
             "--name-contains" => {
                 args.query.name_contains = Some(value(iter.next(), "--name-contains")?);
             }
+            "--name-like" => args.query.name_like = Some(value(iter.next(), "--name-like")?),
             "--kind" => {
                 let spelling = value(iter.next(), "--kind")?;
                 let kind = DeclKind::parse(&spelling)
@@ -215,6 +234,7 @@ fn build_index(include_constructed: bool, index_values: bool) -> ShapeIndex {
         "axreal".to_owned(),
         "integer".to_owned(),
         "rat".to_owned(),
+        "characterization".to_owned(),
         "string".to_owned(),
     ];
     if include_constructed {
@@ -242,6 +262,13 @@ fn build_index(include_constructed: bool, index_values: bool) -> ShapeIndex {
     let _ = build_rat_prelude(&mut rational).expect("Rat prelude must build");
     index_kernel(&rational, "rat", &mut index, index_values);
 
+    // The Nat/Int characterization package: `kernel_declaration_projection`
+    // builds it and this index would otherwise report its declarations absent.
+    let mut characterization = Kernel::new();
+    let _ = build_characterization(&mut characterization)
+        .expect("Nat/Int characterization must build");
+    index_kernel(&characterization, "characterization", &mut index, index_values);
+
     let mut string = Kernel::new();
     let string_handle = build_logic_prelude(&mut string).expect("logic prelude must build");
     let _ = build_string_prelude(&mut string, string_handle, 2).expect("string prelude must build");
@@ -267,8 +294,20 @@ fn build_index(include_constructed: bool, index_values: bool) -> ShapeIndex {
 
 // The reporting arms are deliberately inline: each verdict prints its own
 // positive control, and splitting them apart is how a control gets dropped.
-#[allow(clippy::too_many_lines)]
 fn main() -> ExitCode {
+    // Build every prelude on a DEEP stack, not the process's main thread.
+    // `Kernel::add_declaration` recurses deeply enough through the constructed
+    // preludes to overflow the default main-thread stack in a debug build, and
+    // that failure (`SIGABRT`, exit 134) is indistinguishable from a broken
+    // tool or an absent declaration — which is exactly the confusion this
+    // whole example exists to prevent. A doc note saying "use --release"
+    // cannot reach a caller that does not read it; carrying the documented
+    // envelope makes every caller work unchanged.
+    on_a_deep_stack(run)
+}
+
+#[allow(clippy::too_many_lines)]
+fn run() -> ExitCode {
     let args = match parse_args() {
         Ok(args) => args,
         Err(message) => {
@@ -399,7 +438,13 @@ fn main() -> ExitCode {
             // A name-shaped query that found nothing gets the nearest declared
             // names, because "absent" is most often a spelling, and this is the
             // moment a lane would otherwise conclude the work is new.
-            for probe in args.query.name.iter().chain(args.query.name_contains.iter()) {
+            for probe in args
+                .query
+                .name
+                .iter()
+                .chain(args.query.name_contains.iter())
+                .chain(args.query.name_like.iter())
+            {
                 let nearest = index.nearest(probe, 8);
                 if !nearest.is_empty() {
                     println!("hint: names containing that component: {}", nearest.join(", "));
