@@ -465,6 +465,7 @@ fn the_ring_calculus_refuses_a_false_identity() {
         let captured_hook = Arc::clone(&captured);
         let previous_hook = std::panic::take_hook();
         std::panic::set_hook(Box::new(move |info| {
+            #[allow(clippy::map_unwrap_or)]
             let message = info
                 .payload_as_str()
                 .map(str::to_string)

@@ -69,17 +69,17 @@
 //! function-index `N` deep enough that `F`'s own uniform-convergence rate
 //! contributes at most `1/(3(n+1))` on EACH side (via `Rat.natDivSucc_scale`
 //! + `Rat.natDivSucc_le_add_left`, the same pattern
-//! [`super::convergence::converges_comp_eventually`]'s own doc flags as
-//! necessary and which this file's sibling lemmas make available), consult
-//! `F_N`'s own `UniformlyContinuousOn` modulus at that SAME split accuracy
-//! for the middle term, and combine the three `close_within` legs via
-//! `CReal.abs_le_of_two_sided`. Every piece of that route is now in place
-//! (`neg_sub_swap`, `abs_le_of_two_sided`, and this file's own
-//! [`declare_uniform_converges_on`]/projections); what remains is the
-//! Rust-level assembly of roughly a dozen more `le_congr`/`add_le_add`/
-//! `add_assoc` steps mirroring `convergence.rs`'s own `shifted_bound_at`/
-//! `close_within_of_sample_bound` in scale, which a later slice can complete
-//! without re-deriving anything above it.
+//!   [`super::convergence::converges_comp_eventually`]'s own doc flags as
+//!   necessary and which this file's sibling lemmas make available), consult
+//!   `F_N`'s own `UniformlyContinuousOn` modulus at that SAME split accuracy
+//!   for the middle term, and combine the three `close_within` legs via
+//!   `CReal.abs_le_of_two_sided`. Every piece of that route is now in place
+//!   (`neg_sub_swap`, `abs_le_of_two_sided`, and this file's own
+//!   [`declare_uniform_converges_on`]/projections); what remains is the
+//!   Rust-level assembly of roughly a dozen more `le_congr`/`add_le_add`/
+//!   `add_assoc` steps mirroring `convergence.rs`'s own `shifted_bound_at`/
+//!   `close_within_of_sample_bound` in scale, which a later slice can complete
+//!   without re-deriving anything above it.
 
 use crate::KernelError;
 use crate::NatOps;

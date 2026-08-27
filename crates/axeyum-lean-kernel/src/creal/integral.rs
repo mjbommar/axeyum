@@ -491,7 +491,7 @@
 //!
 //! `creal_prelude_builds`: measured 22.17 s on this lane's merge of `main`
 //! + the previous lane's branch, BEFORE this entry (pure prose, no new
-//! declaration) and unaffected by it.
+//!   declaration) and unaffected by it.
 //!
 //! ## `CReal.integral_split` — checked 2026-08-27 (a FIFTH lane), a TIGHTER
 //! `crossingIndex` bound was searched for, found, and shown to still NOT
@@ -6382,6 +6382,10 @@ mod common_refinement_tests {
         let m2 = d.num(3);
         let (l, _l2, l2_eq_l) = common_refinement(&mut d, m1, m2);
         let succ_l = d.succ(l);
+        // `_l2` is deliberately underscore-prefixed by `common_refinement`'s
+        // own destructured return shape; this test intentionally uses it to
+        // build a wrong-typed theorem, not a naming oversight.
+        #[allow(clippy::used_underscore_binding)]
         let wrong = d.eq(_l2, succ_l);
 
         let anon = d.kernel().anon();

@@ -48,7 +48,7 @@ use crate::{Kernel, build_creal_prelude, on_a_deep_stack};
 /// model from a restatement.
 #[test]
 fn every_law_is_witnessed_and_axiom_free() {
-    let (mut k, model) = on_a_deep_stack(|| {
+    let (k, model) = on_a_deep_stack(|| {
         let mut k = Kernel::new();
         let model = build_creal_model_of_arith(&mut k).expect("the CReal model must build");
         (k, model)
@@ -96,7 +96,7 @@ fn every_law_is_witnessed_and_axiom_free() {
 /// exit status, not as the load-bearing guard.
 #[test]
 fn the_pairing_is_by_leaf_name() {
-    let (mut k, model) = on_a_deep_stack(|| {
+    let (k, model) = on_a_deep_stack(|| {
         let mut k = Kernel::new();
         let model = build_creal_model_of_arith(&mut k).expect("the CReal model must build");
         (k, model)
@@ -129,7 +129,7 @@ fn the_pairing_is_by_leaf_name() {
 /// fragment did not have, and an eighth means one was dropped.
 #[test]
 fn exactly_nine_laws_are_restated_over_equiv() {
-    let (mut k, model) = on_a_deep_stack(|| {
+    let (k, model) = on_a_deep_stack(|| {
         let mut k = Kernel::new();
         let model = build_creal_model_of_arith(&mut k).expect("the CReal model must build");
         (k, model)
@@ -165,7 +165,7 @@ fn exactly_nine_laws_are_restated_over_equiv() {
 /// cannot slip past this model while the count still reads "all covered".
 #[test]
 fn the_interpretation_covers_every_real_declaration() {
-    let (mut k, model) = on_a_deep_stack(|| {
+    let (k, model) = on_a_deep_stack(|| {
         let mut k = Kernel::new();
         let model = build_creal_model_of_arith(&mut k).expect("the CReal model must build");
         (k, model)
@@ -213,7 +213,7 @@ fn the_interpretation_covers_every_real_declaration() {
 /// deleted — which is how a presence test in this development once did.
 #[test]
 fn the_model_is_worthless_without_the_discrimination_witnesses() {
-    let (mut k, model) = on_a_deep_stack(|| {
+    let (k, model) = on_a_deep_stack(|| {
         let mut k = Kernel::new();
         let model = build_creal_model_of_arith(&mut k).expect("the CReal model must build");
         (k, model)
@@ -263,7 +263,7 @@ fn the_equality_slot_is_not_eq() {
         let model = build_creal_model_of_arith(&mut k).expect("the CReal model must build");
         (k, model)
     });
-    let (mut k2, p) = on_a_deep_stack(|| {
+    let (k2, p) = on_a_deep_stack(|| {
         let mut k2 = Kernel::new();
         let p = build_creal_prelude(&mut k2).expect("the CReal development must build");
         (k2, p)
@@ -294,7 +294,7 @@ fn the_equality_slot_is_not_eq() {
 /// buy: 30, and exactly 30.
 #[test]
 fn the_only_trusted_declarations_left_are_the_real_package() {
-    let mut k = on_a_deep_stack(|| {
+    let k = on_a_deep_stack(|| {
         let mut k = Kernel::new();
         let _ = build_creal_model_of_arith(&mut k).expect("the CReal model must build");
         k
