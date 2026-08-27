@@ -76,7 +76,18 @@ while read -r _local_ref local_sha _remote_ref remote_sha; do
   else
     base="$remote_sha"
   fi
-  if [ -n "$(git diff --name-only "$base" "$local_sha" -- '*.rs' '*.toml' | head -1)" ]; then
+  # `Cargo.lock` IS LOAD-BEARING HERE AND WAS MISSING, so a dependency bump
+  # skipped the ENTIRE battery. Measured 2026-08-27 against a real commit:
+  #
+  #   git diff --name-only f8173a069~1 f8173a069                 -> 4 files
+  #   git diff --name-only f8173a069~1 f8173a069 -- '*.rs' '*.toml' -> 0
+  #
+  # `Cargo.lock` is not `*.toml`, and it decides which source is compiled. That
+  # push exited at the "no cargo gate needed" line below while changing the
+  # resolved dependency graph of the whole workspace -- the skip-too-much
+  # direction, which this file exists to prevent. Widening, not narrowing: this
+  # can only cause the battery to run where it previously did not.
+  if [ -n "$(git diff --name-only "$base" "$local_sha" -- '*.rs' '*.toml' 'Cargo.lock' | head -1)" ]; then
     shas_to_gate+=("$local_sha")
     # Kept for the path-conditional suites below, which need the diff range and
     # not just the tip SHA.
@@ -127,6 +138,50 @@ if command -v flock >/dev/null 2>&1; then
   exec 9>"$GATE_ROOT/.lock"
   flock 9
 fi
+
+# THIS LOCK IS NOT THE CARGO SEMAPHORE, and confusing the two is what made this
+# gate the slowest thing on the box. Measured 2026-08-27
+# (docs/research/11-design-review/2026-08-27-gate-throughput.md):
+#
+#   $GATE_ROOT/.lock                      serializes BATTERY against BATTERY
+#   /var/tmp/axeyum-cargo.lock.{1..5}     admits five LANE cargo jobs
+#
+# They are disjoint. Nothing serialized a battery against a lane, so the gate
+# ran as a sixth equal consumer of a 16-core box already carrying five
+# `nproc`-wide jobs. Every step inflated ~4-7x and the battery went from ~250 s
+# to 2,152 s. It is not a regression in any gate; it is starvation.
+#
+# Two things follow, and NEITHER drops a step. Correctness is not what is being
+# traded here -- only scheduling.
+#
+# 1. The battery runs at nice 0 while `scripts/cargo-serialized.sh` puts lane
+#    work at nice 10. Nothing changes on a quiet box; under oversubscription the
+#    interactive gate stops being time-sliced against batch work.
+export AXEYUM_CARGO_NICE=0
+#
+# 2. ADVISORY admission: take a cargo slot if one is free, so the battery is
+#    counted against the host's memory budget like everything else, and export
+#    the marker so nested wrapper calls do not take a SECOND slot.
+#
+#    Advisory, and fail-OPEN, deliberately. A scheduling mechanism must never be
+#    able to block a correctness gate: if every slot is busy we proceed anyway
+#    and say so. The alternative -- a battery that waits for the box -- turns a
+#    slow gate into a stalled one, and a lane that cannot push is worse than a
+#    lane that pushes slowly. The whole benefit here is the nice level, which
+#    needs no lock at all; the slot is a bonus when it is free.
+prepush_slot_status="none (all busy — proceeding anyway, this is advisory)"
+if command -v flock >/dev/null 2>&1; then
+  _cargo_lock="${AXEYUM_CARGO_LOCK:-/var/tmp/axeyum-cargo.lock}"
+  _slots="$(scripts/cargo-serialized.sh --slots 2>/dev/null || echo 1)"
+  for _i in $(seq 1 "$_slots"); do
+    if exec 8>"$_cargo_lock.$_i" 2>/dev/null && flock -n 8 2>/dev/null; then
+      prepush_slot_status="slot $_i of $_slots"
+      export AXEYUM_CARGO_SLOT_HELD=1
+      break
+    fi
+  done
+fi
+echo "pre-push: cargo admission — $prepush_slot_status; nice 0 (lanes are nice 10)" >&2
 
 echo "pre-push: Rust/TOML changed — compile + fmt gate on pushed SHA ${target_sha:0:12} (mem-capped)" >&2
 
