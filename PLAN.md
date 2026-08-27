@@ -1174,6 +1174,12 @@ path; the terminal log and root manifest/cover are hash-bound in the sibling rec
 closes one of the 32 exhaustive semantic cells, not the remaining 31 and not the full MC<=7
 formula, so the `[7,8]` interval and five-problem scoreboard do not move.
 
+**S-box top-level semantic cell 4 checked, 2026-08-27.** The same bounded checker reached
+`385/385` and terminal `unsat-checked`: 373 leaf DRAT refutations plus 12 covering proofs,
+57,326,968,062 manifest-selected bytes. The base, typed cube, manifests, cover, checker binary,
+terminal log, and counts are hash-bound in the sibling receipt. Cells 4 and 8 now close 2/32
+exhaustive semantic cells. The other 30 remain open, so the `[7,8]` interval does not move.
+
 **Whole-tree obligation observability, 2026-08-27.** ADR-0598 adds non-authoritative start and
 finish events carrying obligation index, total, tree path, and leaf/cover/structural kind. The
 existing contiguous deterministic progress stream and lowest-index error remain unchanged.
@@ -1378,6 +1384,14 @@ every palette renaming. This supersedes the earlier labelled-coordinate restrict
 a local repair-neighbourhood theorem: unrestricted 405 remains open and the exact lower bound
 does not move. The proof manifest, receipt, diary, provenance, and rebuilt paper are retained;
 the redundant single-bijection producer stopped with an uncredited 26.32 GB prefix.
+
+**Labelled Rado radius 23 checked, 2026-08-27.** The next labelled formula has 12,150 variables,
+329,778 clauses, and SHA-256 `7ab8fb91...6b2`. CaDiCaL seed 725 returned UNSAT in 155.40 seconds
+with a 736,089,882-byte DRAT, SHA-256 `0f740d18...fc9b`; Axeyum's independent file-backed checker
+accepted the complete proof in 127.658 seconds. Thus the canonical labelled minimum distance from
+the retained witness is at least 24. This does not raise the palette-orbit distance, whose other
+119 permutations have only radius-22 proofs, and does not refute unrestricted 405. The exact
+lower bound remains `R_5(3(x-y)=2z)>404`.
 
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
 external-certificate replay runner for all five packages.  It validates checker and artifact
