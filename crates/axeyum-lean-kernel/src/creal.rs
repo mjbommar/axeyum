@@ -5100,6 +5100,22 @@ pub struct CRealPrelude {
     /// otherwise) against [`Self::geom_cauchy_ordered_16_over_25`] as the
     /// base series' own ordered-half witness. See `creal/trig_fn.rs`.
     pub cos_dominant_16_over_25_cauchy_body: NameId,
+    /// `CReal.cosFn_one_equiv_cosOne : Equiv (cosFn one) cosOne` — the
+    /// `expFn_one_equiv_e` analogue for cosine: the bridge between the
+    /// general power-series `cosFn` (bounded to `[0, 1]`) and the concrete
+    /// `CReal.cosOne` construction, at the shared endpoint `x := 1`.
+    /// Eliminates `CReal.cosOneConverges`'s `Exists` witness into a per-`n`
+    /// `Within` fact, bridges it to `close_within` via
+    /// `CReal.close_within_of_within`'s own per-index construction (leg 1),
+    /// transports `cosFnUniformConverges`'s `.spec` at `x := one` from
+    /// `cosFnTerm j one` to `cosTerm j` via `CReal.sumRange_congr` (leg 2;
+    /// unlike `expFn_one_equiv_e`, this goes through `cosFnTerm` directly
+    /// rather than the generic `CReal.powerSeriesTerm`, since cosine's
+    /// coefficients are even-index-only — see `creal/trig_fn.rs`'s own
+    /// module documentation), combines both legs by the triangle
+    /// inequality, and closes with `CReal.equiv_zero_of_rate`. See
+    /// `creal/trig_fn.rs`.
+    pub cos_fn_one_equiv_cos_one: NameId,
 
     // --- general `exp : CReal → CReal` (creal/exp_fn.rs) -----------------------
     /// `CReal.expFnTermAbsLe : ∀ x, le zero x → le x one → ∀ k, le (abs
@@ -5753,6 +5769,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         cos_dominant_16_over_25: kernel.name_str(creal, "cosDominant16Over25"),
         cos_dominant_16_over_25_cauchy_body: kernel
             .name_str(creal, "cosDominant16Over25CauchyBody"),
+        cos_fn_one_equiv_cos_one: kernel.name_str(creal, "cosFn_one_equiv_cosOne"),
         exp_fn_term_abs_le: kernel.name_str(creal, "expFnTermAbsLe"),
         exp_fn: kernel.name_str(creal, "expFn"),
         exp_fn_uniform_converges: kernel.name_str(creal, "expFnUniformConverges"),
@@ -9818,6 +9835,57 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.cos_fn_uniform_converges,
         ],
         run: trig_fn::declare_cos_fn_family,
+    },
+    BuildStep {
+        label: "trig_fn::declare_cos_fn_equiv_cos_one",
+        requires: &[
+            |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.abs_add_le,
+            |p: CRealPrelude| p.abs_congr,
+            |p: CRealPrelude| p.abs_le,
+            |p: CRealPrelude| p.abs_le_of_two_sided,
+            |p: CRealPrelude| p.add,
+            |p: CRealPrelude| p.add_assoc,
+            |p: CRealPrelude| p.add_comm,
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.close_within_of_within,
+            |p: CRealPrelude| p.cos_fn,
+            |p: CRealPrelude| p.cos_fn_term,
+            |p: CRealPrelude| p.cos_fn_uniform_converges,
+            |p: CRealPrelude| p.cos_one,
+            |p: CRealPrelude| p.cos_one_converges,
+            |p: CRealPrelude| p.cos_series_partial,
+            |p: CRealPrelude| p.cos_term,
+            |p: CRealPrelude| p.equiv,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.equiv_zero_of_rate,
+            |p: CRealPrelude| p.le,
+            |p: CRealPrelude| p.le_abs_self,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.mul_congr,
+            |p: CRealPrelude| p.mul_one,
+            |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.neg_le_abs,
+            |p: CRealPrelude| p.neg_sub_swap,
+            |p: CRealPrelude| p.of_rat,
+            |p: CRealPrelude| p.of_rat_add,
+            |p: CRealPrelude| p.of_rat_le,
+            |p: CRealPrelude| p.sample_lower_bound,
+            |p: CRealPrelude| p.sample_upper_bound,
+            |p: CRealPrelude| p.sum_range_congr,
+            |p: CRealPrelude| p.uconv_rate,
+            |p: CRealPrelude| p.uconv_spec,
+            |p: CRealPrelude| p.zero_lt_one,
+        ],
+        provides: &[|p: CRealPrelude| p.cos_fn_one_equiv_cos_one],
+        run: trig_fn::declare_cos_fn_equiv_cos_one,
     },
     BuildStep {
         label: "trig_fn::declare_cos_fn_wide_progress",

@@ -38,5 +38,10 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.cos_dominant_16_over_25_cauchy_body,
             "theorem",
         ),
+        (
+            "CReal.cosFn_one_equiv_cosOne",
+            p.cos_fn_one_equiv_cos_one,
+            "theorem",
+        ),
     ]
 }
