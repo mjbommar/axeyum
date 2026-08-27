@@ -1,7 +1,7 @@
 {
   "authority": "planning projection only; no proof, operation applicability, dispatch, or admission authority",
   "census": {
-    "accepted_ready_facts": 1,
+    "accepted_ready_facts": 2,
     "families": 10,
     "measured_facts": 32,
     "operation_integration_ready_families": 0,
@@ -11,7 +11,7 @@
   "derivation": {
     "binomial_arrow_retrieved_induction": {
       "path": "artifacts/autogenesis/binomial-arrow-retrieved-induction-census-v1.json",
-      "sha256": "0ecc4694ed0b835410c9ae1610095abf934409bc6e100ee3b1940147a911b926"
+      "sha256": "75917cdb8ec0eba4305cc784cdf80bddd83837130824f4d0a1b0c848a4a0ce49"
     },
     "bitwise_clean_family": {
       "path": "artifacts/autogenesis/bitwise-clean-family-projection-v1.json",
@@ -36,12 +36,13 @@
   "rows": [
     {
       "accepted_fact_ids": [
-        "F:ml430-nat-choose-one-right-7eda8e39"
+        "F:ml430-nat-choose-one-right-7eda8e39",
+        "F:ml430-nat-choose-symm-of-eq-add-9b5f9a20"
       ],
       "already_registered_fact_ids": [],
       "capability_demands": {
-        "authoritative-operation-integration": 1,
-        "missing-rewrite-or-induction-plan": 3,
+        "authoritative-operation-integration": 2,
+        "missing-rewrite-or-induction-plan": 2,
         "non-equality-terminal-family": 3,
         "type-slice-generalization": 1
       },
@@ -54,8 +55,8 @@
       ],
       "priority_class": 1,
       "producer_results": {
-        "accepted": 1,
-        "declined": 6,
+        "accepted": 2,
+        "declined": 5,
         "import_rejected": 1
       },
       "rank": 1,

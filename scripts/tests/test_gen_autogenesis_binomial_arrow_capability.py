@@ -30,6 +30,10 @@ MEASURE = load(
     "binomial_arrow_measurement",
     ROOT / "scripts/check-autogenesis-binomial-arrow-measurement.py",
 )
+RANK = load(
+    "binomial_arrow_connective_ranking",
+    ROOT / "scripts/gen-autogenesis-binomial-connective-ranking.py",
+)
 
 
 class CapabilityTests(unittest.TestCase):
@@ -83,6 +87,50 @@ class MeasurementTests(unittest.TestCase):
         changed["outcomes"][0]["capsule_sha256"] = "0" * 64
         with self.assertRaisesRegex(ValueError, "capsule changed"):
             MEASURE.check(changed, self.capability)
+
+    def test_erased_real_acceptance_is_refused(self) -> None:
+        changed = copy.deepcopy(self.result)
+        row = next(row for row in changed["outcomes"] if row["fact_id"] == MEASURE.SYMMETRY_FACT)
+        row["result"] = "declined"
+        with self.assertRaisesRegex(ValueError, "symmetry composition regressed"):
+            MEASURE.check(changed, self.capability)
+
+    def test_axiom_or_dependency_drift_is_refused(self) -> None:
+        for field, value, message in (
+            ("axiom_footprint", ["Classical.choice"], "not axiom-free"),
+            ("theorem_dependencies", ["Nat.choose_symm"], "dependency spine changed"),
+        ):
+            changed = copy.deepcopy(self.result)
+            row = next(
+                row for row in changed["outcomes"] if row["fact_id"] == MEASURE.SYMMETRY_FACT
+            )
+            row[field] = value
+            with self.assertRaisesRegex(ValueError, message):
+                MEASURE.check(changed, self.capability)
+
+
+class ConnectiveRankingTests(unittest.TestCase):
+    def test_graph_projection_finds_the_three_lemma_spine(self) -> None:
+        result = RANK.build(
+            json.loads(RANK.BASE.read_text()),
+            json.loads(RANK.INDEX.read_text()),
+            json.loads(RANK.CAPABILITY.read_text()),
+        )
+        goal = next(row for row in result["goals"] if row["fact_id"] == MEASURE.SYMMETRY_FACT)
+        self.assertEqual(
+            [row["kernel_declaration_id"] for row in goal["candidates"]],
+            ["Nat.choose_symm", "Nat.add_sub_cancel_left", "Nat.le_add_right"],
+        )
+        self.assertEqual([row["dependency_depth"] for row in goal["candidates"]], [1, 2, 3])
+        self.assertNotIn("producer outcome or decline trace", json.dumps(result["goals"]))
+
+    def test_projection_covers_exact_capability_population(self) -> None:
+        result = json.loads(RANK.OUTPUT.read_text())
+        capability = json.loads(RANK.CAPABILITY.read_text())
+        self.assertEqual(
+            {row["fact_id"] for row in result["goals"]},
+            {row["fact_id"] for row in capability["rows"]},
+        )
 
 
 if __name__ == "__main__":

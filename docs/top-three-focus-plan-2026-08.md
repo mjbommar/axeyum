@@ -64,17 +64,19 @@ now joins the dependency-ready evaluation frontier, measured producer
 obstructions, clean semantic analogues, and operation registry at the family
 level. It excludes held-out and answer-bearing mutation controls before
 ranking. Of 91 ready train/development facts across ten families, only 32 have
-a current measured producer outcome and only one is accepted by an unchanged
+a current measured producer outcome and two are accepted by an unchanged
 producer. No family yet has three accepted siblings.
 
 The next family is therefore **natural binomial**, not bitwise or another
-one-off theorem. `Nat.choose_one_right` already passes the retrieved-induction
-producer axiom-free. All eight ready siblings are now measured: one accepts,
-six decline, and one is rejected at the statement boundary. The three rows
-formerly classified as unreachable arrows import cleanly; two expose missing
-rewrite/induction composition and one exposes the non-equality terminal
-grammar. The falsifiable next step is to improve those reusable producer
-mechanisms, rerun all eight unchanged, and convert two more siblings. Natural
+one-off theorem. `Nat.choose_one_right` and the implication-bearing
+`Nat.choose_symm_of_eq_add` now pass the retrieved-induction producer
+axiom-free. All eight ready siblings are measured: two accept, five decline,
+and one is rejected at the statement boundary. Of the three rows formerly
+classified as unreachable arrows, one now closes through a graph-selected
+three-lemma dependency spine, one still exposes missing rewrite/induction
+composition, and one exposes the non-equality terminal grammar. The falsifiable
+next step is to improve either remaining reusable producer mechanism, rerun all
+eight unchanged, and convert one more sibling before operation integration. Natural
 bitwise remains third:
 it has twelve ready facts and three clean target-owned analogues, but exact
 imported identity is still blocked, so promoting those analogues would be a
@@ -92,15 +94,22 @@ proofs. The large NDJSON remains in a read-only external reference pack; Git
 stores exact hashes, source identity, rendered goals, and a regenerable checked
 [`capability receipt`](../artifacts/autogenesis/binomial-arrow-export-capability-v1.json).
 
-The unchanged held-out-safe retrieved-induction producer then measured those
-three goals. All imports passed and 59 of 60 ranked-premise transport attempts
-were executable; no theorem was produced. `choose_eq_zero_of_lt` and
-`choose_symm_of_eq_add` now reach `TerminalNotDefEqNoRewrite` after failed
-speculative induction correctly restores the eight-binder budget before plain
-generalization; `choose_ne_zero` reaches a non-equality terminal (`≠`) outside
-the producer grammar. This localizes the next reusable implementation work to
-rewrite/induction composition plus negative-proposition terminal support—not a
-new exporter and not per-target binomial proof code. The exact
+The first held-out-safe retrieved-induction measurement imported all three and
+produced no theorem. The next increment closed the connective gap rather than
+writing binomial proof code. A compact additive ranking starts from an
+IDF-weighted visible-identity seed, follows checked theorem-dependency edges to
+an equality simplifier, then to a non-equality premise producer. For
+`choose_symm_of_eq_add` it independently selects `Nat.choose_symm`,
+`Nat.add_sub_cancel_left`, and `Nat.le_add_right`. A bounded two-round typed
+closure feeds the generated order proof into symmetry; local equality is used
+in both directions; and one-step definition-head alignment crosses imported
+`HAdd` notation without unfolding native addition into its recursor. The
+independent kernel admits the actual imported statement with an empty axiom
+footprint, exactly those three theorem dependencies, four binders, and zero
+inductions. `choose_eq_zero_of_lt` still reaches
+`TerminalNotDefEqNoRewrite`; `choose_ne_zero` still reaches the unsupported
+non-equality (`≠`) terminal. The original population-wide ranking remains
+unchanged, so concurrent historical measurements are not invalidated. The exact
 [`measurement`](../artifacts/autogenesis/binomial-arrow-retrieved-induction-census-v1.json)
 feeds the generated family queue.
 

@@ -1170,6 +1170,26 @@ impl Kernel {
         self.whnf_core(e, &mut ctx)
     }
 
+    /// Reduce beta, zeta, iota, and projection redexes without delta-unfolding
+    /// any named declaration. This is useful to inspect one explicitly
+    /// unfolded definition before deciding whether another delta step is
+    /// appropriate; unlike [`Kernel::whnf`], it cannot run through the next
+    /// recursive constant and expose its implementation recursor.
+    #[must_use]
+    pub fn whnf_without_delta(&mut self, e: ExprId) -> ExprId {
+        let mut ctx = LocalContext::new();
+        self.whnf_no_unfolding(e, &mut ctx)
+    }
+
+    /// Delta-unfold exactly the outer applied definition once, reapplying its
+    /// argument spine but performing no further reduction. Axioms, opaque
+    /// declarations, constructors, and expressions without a definition head
+    /// return `None`.
+    #[must_use]
+    pub fn unfold_definition_once(&mut self, e: ExprId) -> Option<ExprId> {
+        self.unfold_def(e)
+    }
+
     /// The **pre-fix** reduction entry point, kept so that the unsoundness it
     /// carries can be *run* rather than argued about.
     ///
