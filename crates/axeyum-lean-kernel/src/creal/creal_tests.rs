@@ -115,7 +115,7 @@ fn on_a_deep_stack_creal<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'stat
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 341] = [
+    let expected: [(&str, crate::NameId, &str); 342] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -177,6 +177,7 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         ("CReal.mul_nonneg", p.mul_nonneg, "theorem"),
         ("CReal.sq_nonneg", p.sq_nonneg, "theorem"),
         ("CReal.neg_mul_neg", p.neg_mul_neg, "theorem"),
+        ("CReal.mul_self_abs", p.mul_self_abs, "theorem"),
         (
             "CReal.not_equiv_mul_one_one_zero",
             p.not_equiv_mul_one_one_zero,
