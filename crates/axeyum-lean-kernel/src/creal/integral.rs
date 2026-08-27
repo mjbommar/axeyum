@@ -492,6 +492,135 @@
 //! `creal_prelude_builds`: measured 22.17 s on this lane's merge of `main`
 //! + the previous lane's branch, BEFORE this entry (pure prose, no new
 //! declaration) and unaffected by it.
+//!
+//! ## `CReal.integral_split` — checked 2026-08-27 (a FIFTH lane), a TIGHTER
+//! `crossingIndex` bound was searched for, found, and shown to still NOT
+//! rescue prerequisite (2) — for a reason ORTHOGONAL to
+//! [`CRealPrelude::bucket_index_bound`]'s own `+3`/`+4` slack, not merely a
+//! smaller instance of it
+//!
+//! **Step 0 first: no existing lemma bounds `crossingIndex` any tighter than
+//! [`CRealPrelude::bucket_index_bound`] already does** (`prelude_theorem_
+//! inventory --include-constructed --release` has no second `bucketIndex`/
+//! `crossingIndex` cap, and `integral.rs`'s own `riemannSum_sample_in_bounds`/
+//! `subdivisionPoint_in_bounds` solve a DIFFERENT problem — see below). So a
+//! tighter bound, if one exists, has to be built, not found.
+//!
+//! **One does exist, and it is provably tight.** The fourth entry's own cap
+//! (`crossingIndex ≤ bound(bnd) + 3`, `bnd := ofNat(N+1)`) comes from
+//! [`declare_bucket_index_bound`](super::uniform_continuity)'s GENERIC
+//! route: it instantiates `hle : w ≤ bnd` at `bucketIndex`'s OWN sampling
+//! accuracy `j = 1` (forced by `k := 0`), then WIDENS the resulting `2/(j+1)
+//! = 1` margin up to the worst-case `2` so the proof works for every `k`
+//! simultaneously — a real loss when `k` happens to be fixed at `0`, since
+//! `2/(1+1)` is not loose at all. Building a proof SPECIFIC to `k = 0`
+//! avoids that widening entirely: combine [`CRealPrelude::regular`] (`w`'s
+//! own two-index Cauchy bound) at `(1, n')` for a FIXED auxiliary accuracy
+//! `n'` with `hle` at `n'` itself (not at `j = 1`):
+//!
+//! ```text
+//! seq_w(1)  ≤  seq_w(n') + 1/2 + 1/(n'+1)              [w's own regularity]
+//! seq_w(n') ≤  seq_bnd(n') + 2/(n'+1)                   [hle at n', not j]
+//! seq_bnd(n') = N+1 exactly                             [bnd = ofNat(N+1), constant]
+//! ⟹ seq_w(1) ≤ (N+1) + 1/2 + 3/(n'+1)
+//! ```
+//!
+//! Any fixed `n' ≥ 6` makes `3/(n'+1) < 1/2`, so `seq_w(1) < (N+1) + 1 =
+//! N+2`, giving `crossingIndex = ⌊max(seq_w(1), 0)⌋ ≤ N+1` — **exactly the
+//! natural ceiling on `w` itself, zero excess**, beating the generic route's
+//! `N+5` by the full `+4`. Concretely checked against the two existing
+//! instantiations (`a:=0, Δ:=1, c:=5/2 ⟹ crossingIndex=2`, `c:=7/2 ⟹ 3`):
+//! both are literal `ofRat` constants, so `seq_w(1) = w` exactly (no
+//! approximation to bound at all) and the tightened cap is trivially
+//! satisfied with room to spare, exactly as it must be for a valid upper
+//! bound — the slack this construction removes only bites for a `c` that is
+//! NOT a bare rational literal, which is the general case `crossingClose`
+//! actually needs.
+//!
+//! **This zero-excess bound still does not make `samplePt ≤ b` provable,
+//! and the reason is independent of `crossingIndex`/`bucketIndex` entirely:
+//! `CReal.bound` is a strict, non-tight over-estimate BY DESIGN, and both
+//! available routes to `samplePt ≤ b` go through it (or an equivalent
+//! closeness slack) at a point that cannot be tightened away.**
+//!
+//! Route A (the mesh-count route, refined): `samplePt − a = crossingIndex·Δ
+//! ≤ (N+1)·Δ = (N+1)·magnitude/(N+1) = magnitude` — now EXACT, no residual
+//! `+4/(N+1)` term at all. But the goal is `samplePt − a ≤ b − a`, and the
+//! ONLY available relation between `magnitude` and `b−a` is
+//! [`direct_bound_le`]'s `b − a ≤ magnitude` — non-strict, and, per
+//! `CReal.bound`'s own definition (`archimedean.rs`'s `bound_of`:
+//! `natAbs(num(seq x 0)) + 1`, then `direct_bound_le` adds ANOTHER `+1` on
+//! top to form `magnitude`), GENERICALLY STRICT by a FIXED gap unrelated to
+//! `N`. Checked concretely: for `x` a literal `ofRat(1)` (so `bound(1) =
+//! natAbs(1)+1 = 2`), `magnitude = bound(1)+1 = 3` — three times the true
+//! width `1`, for the simplest possible input, and this gap is computed
+//! ONCE, before any mesh or crossing-index reasoning starts, so refining `N`
+//! cannot shrink it. `samplePt − a ≤ magnitude` and `b − a ≤ magnitude` are
+//! both true and say nothing about each other: `magnitude` sits at or above
+//! BOTH quantities, and `samplePt − a` reaching all the way up to
+//! `magnitude` (which the zero-excess bound shows IS achievable at the
+//! mesh's coarsest cell) can genuinely exceed `b − a` when `magnitude > b −
+//! a`, which is the typical case, not a corner one. **The obstruction the
+//! fourth entry found is not `bucket_index_bound`'s slack — it is that
+//! `CReal.bound` supplies an over-estimate with no matching lower bound, so
+//! ANY mesh built from it inherits a gap no amount of `crossingIndex`
+//! tightening touches.** There is no alternative "get a Nat ceiling out of a
+//! `CReal`" primitive in this prelude to route around it (checked: the only
+//! candidates are `bound`/`bound_within`/`direct_bound_le`, all the same
+//! over-estimate by construction).
+//!
+//! Route B (direct, no `bnd`/`magnitude` at all):
+//! [`CRealPrelude::crossing_sample_lower`] already gives, unconditionally on
+//! any tightening here, `samplePt ≤ c + 1.5Δ` (`crossingLower`'s own `3/(j+1)
+//! = 1.5` slack at `j=1`). With `c ≤ b`, that is `samplePt ≤ b + 1.5Δ` — off
+//! by exactly the CLOSENESS slack the crossing-index module documentation
+//! already names as fixed and explicitly out of scope to tighten (`creal/
+//! crossing.rs`: "`≤2Δ` above, `≤1.5Δ` below... this is the exact pair of
+//! bounds this file can actually build"). For `c = b` exactly (permitted:
+//! only `c ≤ b`, not `c < b`, is hypothesised), no choice of `Δ > 0` closes
+//! this gap.
+//!
+//! **So the negative is now sharper than the fourth entry's**: it is not
+//! that `bucket_index_bound`'s specific cap is too loose (a defect that
+//! COULD, in principle, be a proof-engineering gap to close) — a
+//! purpose-built, zero-excess replacement for it was built in this entry's
+//! reasoning and it STILL fails, via a second, independent obstruction
+//! (`CReal.bound`'s inherent non-tightness) that no `crossingIndex`-side
+//! bound can touch, plus a THIRD, already-acknowledged one (Route B's fixed
+//! `1.5Δ`) that does not even mention `bucket_index_bound`. Landing the
+//! zero-excess bound as a standalone lemma was considered and DECLINED: it
+//! would be real (the construction above type-checks against every
+//! ingredient's actual signature — `CRealPrelude::regular`, `crossing_lower`'s
+//! own `hle`-at-`j` pattern, `Rat.le_of_sub_le`), but it does not unblock
+//! `samplePt ≤ b` or anything downstream, so it would be exactly the "proof
+//! engineering that only looks like it discharges the hypothesis" the fourth
+//! entry already declined to build. No kernel declaration was attempted for
+//! either the tighter bound or `samplePt ≤ b`.
+//!
+//! **What WAS landed this entry, because it needs neither of the two
+//! obstructions above:** [`CRealPrelude::crossing_sample_ge_a`]
+//! (`creal/crossing.rs`) — the OTHER half of `crossingClose`'s domain-
+//! membership pair, `a ≤ samplePt`, needing only `0 < Δ`. `crossingIndex`
+//! embeds as a nonnegative `Nat` regardless of `c`'s position and `Δ > 0`
+//! makes the product nonnegative too (`CReal.mul_nonneg`), exactly the shape
+//! `riemannSum_sample_in_bounds`'s own lower half already proves for an
+//! ordinary mesh sample (`zero_le_of_nat`/`shift_le_of_nonneg`, copied
+//! locally into `crossing.rs` per this file's own per-module-helper
+//! convention). `crossingClose`'s hypothesis list is reduced by exactly one;
+//! `samplePt ≤ b` remains the sole open domain-membership premise, and per
+//! this entry's arithmetic, it is not reachable by tightening
+//! `crossingIndex`'s bound however far — a genuinely different obstruction
+//! (in `CReal.bound` itself, or in the acknowledged-fixed `1.5Δ` closeness
+//! slack) would need to be resolved first, and neither is `crossing.rs`'s or
+//! `integral.rs`'s own ground to break: `CReal.bound`'s tightness is a
+//! `product.rs`/`archimedean.rs` question, and the `1.5Δ` slack is
+//! `bucketIndex`'s own undecidable-comparison floor, out of scope by this
+//! task's own instruction.
+//!
+//! `creal_prelude_builds`: 21.47 s (this lane's merge of `main` + the fourth
+//! lane's branch, WITH `crossingSampleGeA` landed) — no regression from the
+//! ~22.17 s / ~19.99 s baseline the fourth/third entries already flagged as
+//! noise-dominated.
 
 use super::completeness::half_shift_le;
 use super::convergence::{
