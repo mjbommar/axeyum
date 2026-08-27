@@ -1495,6 +1495,37 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   verifies both.** That has already happened once this session, with six private
   helpers copied verbatim rather than reported.
 
+  **PROSE HAS NOT FIXED THIS, AND THE COUNT KEPT CLIMBING AFTER THIS SECTION WAS
+  WRITTEN.** Every brief in the 2026-08-27 session repeated "search for the STEP,
+  not the NAME", and lanes still reported reaching **thirteen** instances, with
+  more landing the same day: `CReal.equiv_of_le_le` and
+  `CReal.equiv_zero_of_small` were both budgeted as new work in a Fermat brief
+  and both already existed.
+
+  The most expensive was `CReal.congr_of_uniformly_continuous`, which stalled a
+  whole rung of `supOn`. A lane needed exactly it, searched
+  `creal/uniform_continuity.rs` -- the module where it BELONGS -- found nothing,
+  and stopped. It lives in `creal/integral.rs:17010`, because
+  `riemann_sum_split_exact_of_uc` consumed it first. **The search was competent
+  and its answer was correct**; you cannot find by name a thing whose name you do
+  not know. (Nor can it be strengthened to a global
+  `∀ x y, Equiv x y → Equiv (F x) (F y)` -- that form is FALSE for an arbitrary
+  witness, since `UniformlyContinuousOn` says nothing about `F` outside `[a,b]`.)
+
+  Because instruction demonstrably does not close it, it is logged as a
+  first-class TOOLING deficiency in
+  [`docs/research/11-design-review/2026-08-27-retrieval-is-the-bottleneck.md`](docs/research/11-design-review/2026-08-27-retrieval-is-the-bottleneck.md),
+  with shape-indexed retrieval over `kernel.environment()` dispatched against it.
+  Two things that write-up is careful about, and you should be too: the thirteen
+  is a **lane-reported tally that has not been independently audited**, and any
+  name index is **structurally blind to hiding place 2** -- an inline step has no
+  declaration to index, so no such tool can ever reach it.
+
+  Retrieval is one of the three gates on marginal cost per theorem named in
+  `docs/formalized-math-2026-08/07-the-cost-model-and-pareto-position.md`
+  (contracts, retrieval, sharding). On this evidence it is the binding one:
+  **more lane-hours went to re-deriving what existed than to proof difficulty.**
+
 - **An empty result from a tool that was never pointed at your subject is
   indistinguishable from a strong negative result.** Distinct from the inert-gate
   trap above: the tool runs, exits 0, and prints a correct empty answer to a
@@ -1622,11 +1653,38 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   `scripts/tests/test_lean_axiom_ledger.py`. Decide which package you mean by
   its declaration, never by a substring; if you must match text, anchor it.
 
-  **Declared is not reached, and both numbers are published** (ADR-0509). The 30
-  are declared; no shipped route reaches them — `Lra`, `DisjunctiveLra`, `Sos`
-  and `IntFarkas` all reconstruct over constructed carriers. So "we have 30
-  axioms" and "our proofs rest on 30 axioms" are both wrong: the first ignores
-  that nothing reaches them, the second is simply false. Quote the pair.
+  **Declared is not reached by the DEFAULT route, and both numbers are
+  published** (ADR-0509). The 30 are declared; the default reconstruction does
+  not reach them — `Lra`, `DisjunctiveLra`, `Sos` and `IntFarkas` all
+  reconstruct over constructed carriers. So "we have 30 axioms" and "our proofs
+  rest on 30 axioms" are both wrong: the first ignores that the shipped route
+  does not reach them, the second is simply false. Quote the pair.
+
+  **"No route reaches them" is too strong, and a lane that reads it that way
+  will distrust a correct measurement.** One route deliberately does, and
+  measured 2026-08-27 it is live and green:
+
+      cargo run --release -p axeyum-solver --features full \
+        --example infeasibility_farkas_lean -- \
+        artifacts/instances/infeasibility/schedule-deadline.smt2 \
+        --require-kernel --expect-axioms 26
+      ->  kernel-lean route   REACHED (term infers to False)
+          kernel axioms       26 = 17 prelude + 4 variable + 5 hypothesis
+          axiom-free          no -- the ordered field and every core row are asserted
+
+  Nothing about that is a leak, and every part of it is opt-in and loud:
+  `examples/infeasibility_farkas_lean.rs:292` calls
+  `LraReconstructCtx::new_over_axreal()` — a constructor NAMED for the choice it
+  makes, which is ADR-0605's fix for a plain `new()` that used to make it
+  silently. `prove_unsat_to_lean_module` stopped routing pure-AxReal on
+  2026-08-15. The tool prints `axiom-free no` itself, and the fact
+  `F:schedule-critical-chain-infeasible` publishes all 26 in its
+  `axiom_footprint` with a `--expect-axioms 26` checker that fails if the count
+  moves.
+
+  The distinction to carry: **the default route reaches zero; an explicitly
+  opted-in demonstrator reaches 26 and says so.** Both are true, both are
+  measured, and only the pair is honest.
 
   The count is not a dial. `Real`'s carrier is opaque, so nothing over it is
   definable and every operation and law must be assumed — **30 is the floor for

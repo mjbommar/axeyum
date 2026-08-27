@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-mvt-cubic-witness-sqrt3",
+  "title": "Mean Value Theorem for p(x)=x^3 on [0,3]: axeyum-cas names the witness c = sqrt(3) exactly",
+  "statement": "For the polynomial p(x) = x^3 on the closed interval [0, 3], the classical Mean Value Theorem asserts there exists c strictly between 0 and 3 with p'(c) equal to the secant slope (p(3) - p(0)) / (3 - 0) = 27/3 = 9. axeyum-cas's mvt::polynomial_mvt route does not merely assert this: it forms the exact Rolle reduction g(x) = p(x) - p(0) - 9x, searches for an interior root of g' via crate::extremum::polynomial_extremum, and NAMES the witness exactly -- c = sqrt(3), represented as a genuine AlgebraicReal (minimal polynomial x^2 - 3, a Sturm-isolated bracket 1 < c < 2) rather than approximated numerically. mvt::verify_mvt_certificate then independently re-derives every step the certificate asserts from poly/a/b alone: it recomputes the secant slope, recomputes g and g' and confirms they match the stored values, re-derives the Sturm root count on c's own isolating interval (rejecting a certificate whose bracket does not genuinely isolate exactly one root), confirms c is strictly interior to (0,3) rather than resting at an endpoint, and confirms p'(c) = 9 by direct exact evaluation of the recomputed derivative at c. It accepts: Some(true).",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(define-poly p (^ x 3))\n(assert (exists ((c Real))\n  (and (< 0 c) (< c 3)\n       (= (deriv p c) (/ (- (poly-eval p 3) (poly-eval p 0)) (- 3 0))))))\n; the certificate additionally names c = sqrt(3) exactly (minimal polynomial x^2 - 3)\n; rather than merely asserting existence.",
+    "fragment": "real-algebraic-mvt",
+    "free_symbols": ["x", "c"]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.exact-rational-polynomial-normal-form",
+    "cas.sturm-sequence-real-root-isolation-and-counting",
+    "cas.reuses-extremum-completeness-argument-for-existence-not-just-verification",
+    "cas.mvt-certificate-not-kernel-reconstructed"
+  ],
+  "evidence": [
+    {
+      "id": "cas-internal-mvt-cubic-witness-sqrt3",
+      "kind": "witness-replay",
+      "supports": "the MVT certificate (secant slope, Rolle reduction g/g', named witness c = sqrt(3), its bracket and Sturm count) is independently re-derived and accepted by a checker (verify_mvt_certificate) that shares no code with the search that produced it (polynomial_mvt, which in turn reuses crate::extremum::polynomial_extremum as a black box)",
+      "check_status": "checked",
+      "checkers": [
+        "mvt::polynomial_mvt (untrusted producer: builds the Rolle reduction g(x) = p(x) - p(a) - slope*(x-a), searches g'/-g' for an interior critical point via crate::extremum::polynomial_extremum, reusing that module's Sturm-isolated root search rather than duplicating it)",
+        "mvt::verify_mvt_certificate (independent checker: recomputes the secant slope, g and g' from poly/a/b alone and compares against the stored values; re-derives the Sturm sign-variation count on c's own isolating interval rather than trusting the certificate's bookkeeping; confirms c is strictly interior to (a,b); confirms p'(c) = slope by direct exact evaluation of the recomputed derivative)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib mvt::tests::cubic_irrational_witness_x_cubed_on_0_3 -- --exact 2>/dev/null | grep -cE '^test mvt::tests::cubic_irrational_witness_x_cubed_on_0_3 \\.\\.\\. ok$'",
+      "checker_seconds": 1,
+      "artifact": "crates/axeyum-cas/src/mvt.rs",
+      "notes": "THIS EVIDENCE IS cas-internal, NOT kernel-reconstructed (ADR-0601 SS2): the checker_command only ever names the axeyum-cas package (never axeyum-lean-kernel), so scripts/validate-facts.py's classify_cas_certificate_checker classifies this fact's evidence as cas-internal. verify_mvt_certificate is independently re-derived from poly/a/b/slope/g/deriv_g/c alone and is itself mutation-tested in the same module (verify_rejects_corrupted_polynomial_coefficient, verify_rejects_corrupted_slope, verify_rejects_corrupted_g, verify_rejects_corrupted_deriv_g, verify_rejects_a_swapped_witness, verify_rejects_a_corrupted_bracket, verify_rejects_an_endpoint_witness -- 7 dedicated adversarial fixtures against this one checker), but NO Kernel::add_declaration term exists for this claim and none is claimed here. mvt.rs's own module doc states the graded family this belongs to (ADR-0603): row 3 (this file, the decidable polynomial fragment) is landed; rows 1/2/4 (kernel-side constructive substitutes and refutations for arbitrary continuous/differentiable functions, and a labeled classical import) are separate, unaddressed by this fact. The test asserts p := x^3 (poly_from([0,0,0,1])), cert := polynomial_mvt(p, 0, 3).unwrap(), verify_mvt_certificate(&cert) == Some(true), cert.slope == 9, cert.c.rational_value() == None (c is genuinely irrational), cert.c.degree() == 2 (minimal polynomial x^2-3), and 1 < c < 2 via exact comparison against the lifted RealAlgebraic -- no floating point anywhere in the decision."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-cas mvt::polynomial_mvt / mvt::verify_mvt_certificate (crates/axeyum-cas/src/mvt.rs, landed per ADR-0603 row 3)",
+    "source": "classical Mean Value Theorem via Rolle's theorem, specialized to an exact rational polynomial with an irrational MVT witness; the concrete instance (p = x^3, interval [0,3]) is the existing unit test mvt::tests::cubic_irrational_witness_x_cubed_on_0_3, read directly from crates/axeyum-cas/src/mvt.rs rather than hand-transcribed.",
+    "prior_art": [
+      {
+        "who": "Rolle; Lagrange; Cauchy",
+        "what": "Rolle's theorem and its generalization to the Mean Value Theorem for differentiable real functions",
+        "year": 1823,
+        "where": "classical analysis; this instance is a routine cubic-polynomial application",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Registered per ADR-0601 SS2 and the CAS Spivak-spine table (mvt.rs). Deliberately the simplest concrete instance already covered by an existing test (a cubic with an irrational MVT witness, sqrt(3)) rather than a new derivation -- the point of this registration is the ADR-0601 classification (cas-internal, labeled as such, never read as kernel-checked), not new mathematics. No Kernel::add_declaration term exists for this claim; the kernel side of the graded MVT family (rows 1/2/4, per mvt.rs's own module doc) is separate future work, not claimed here. This is the second cas-certificate fact registered against the kernel-reconstructed/cas-internal split (after F:cas-ivt-cbrt2-in-1-2 / F:cas-ivt-sign-bracket-cbrt2-kernel-checked), and, like the first, it is chosen to demonstrate the split doing its job honestly rather than to claim more than the code delivers."
+}

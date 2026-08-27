@@ -44,14 +44,42 @@
 //! cargo run --release -p axeyum-lean-kernel --example prelude_theorem_inventory \
 //!   -- --include-constructed
 //! ```
+//!
+//! ## `characterization` — a group this tool omitted entirely until 2026-08-27
+//!
+//! `build_characterization` (the Peano/initiality package: `Nat.Peano.*`,
+//! `Int.Characterization.*`) is a real, axiom-free `Declaration::Theorem`
+//! producer — `crates/axeyum-lean-kernel/examples/kernel_declaration_projection.rs`
+//! has always built it, under the label `characterization` — but this tool's
+//! own `build_groups` never called it, so every one of its theorems was
+//! **silently absent from the distinct total and from every `--expect`
+//! bucket**, with no error and no zero to notice: `gen-ledger-coverage.py`'s
+//! denominator undercounted `nat` by 9 and `integer` by 23 for as long as this
+//! gap existed (`docs/research/11-design-review/
+//! 2026-08-27-rat-reindexing-and-the-denominator-gap.md`). This was not one of
+//! the exclusions in the "Coverage is declared" section above — those are
+//! `Declaration` KINDS excluded on purpose; this was a whole prelude GROUP
+//! never built, which is the same "empty answer from a tool that was never
+//! pointed at your subject" trap CLAUDE.md documents, just short by 32 instead
+//! of empty. Built here in the same dependency-order position
+//! `kernel_declaration_projection` uses (after `integer`, before `rat`), and
+//! unconditionally rather than gated on `--include-constructed`: it costs no
+//! more than the already-unconditional `integer` group, since it is exactly
+//! `build_int_prelude` plus 32 more theorems.
+//!
+//! `scripts/tests/test_gen_ledger_coverage.py::CharacterizationCoverageTests`
+//! guards this from recurring: a synthetic theorem-inventory TSV missing the
+//! `Int.Characterization.*`/`Nat.Peano.*` rows must make
+//! `check-ledger-coverage-denominator-agreement.py` fail loudly rather than
+//! silently under-bucket `nat`/`integer`.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::process::ExitCode;
 
 use axeyum_lean_kernel::{
-    Declaration, Kernel, build_arith_prelude, build_complex_prelude, build_cpoint_prelude,
-    build_creal_prelude, build_int_prelude, build_logic_prelude, build_nat_prelude,
-    build_rat_prelude, build_string_prelude,
+    Declaration, Kernel, build_arith_prelude, build_characterization, build_complex_prelude,
+    build_cpoint_prelude, build_creal_prelude, build_int_prelude, build_logic_prelude,
+    build_nat_prelude, build_rat_prelude, build_string_prelude,
 };
 
 /// One row: theorem name and the axioms it rests on, both display-rendered.
@@ -150,6 +178,19 @@ fn build_groups(include_constructed: bool) -> Vec<(&'static str, Vec<Row>)> {
     let mut integer = Kernel::new();
     let _ = build_int_prelude(&mut integer).expect("Int prelude must build");
     groups.push(("integer", theorems(&integer)));
+
+    // The Peano/initiality characterization package (`Nat.Peano.*`,
+    // `Int.Characterization.*`): NOT gated on `--include-constructed`, unlike
+    // `creal`/`complex`/`cpoint` below -- it costs no more than the
+    // already-unconditional `integer` group above, since it is exactly
+    // `build_int_prelude` plus 32 more theorems. See the module doc's
+    // "`characterization` — a group this tool omitted entirely" section for
+    // why this group's absence was a real, silent denominator gap rather
+    // than one of this tool's deliberate declaration-kind exclusions.
+    let mut characterization = Kernel::new();
+    let _ =
+        build_characterization(&mut characterization).expect("Nat/Int characterization must build");
+    groups.push(("characterization", theorems(&characterization)));
 
     let mut rational = Kernel::new();
     let _ = build_rat_prelude(&mut rational).expect("Rat prelude must build");

@@ -74,6 +74,7 @@ mod product;
 mod scaling;
 mod statements;
 mod sum;
+mod taylor;
 mod vector;
 
 pub use model::{RatModel, RatModelLaw, build_rat_model_of_arith};
@@ -1000,6 +1001,52 @@ pub struct RatPrelude {
     /// polyEval c n x` — a scalar distributes through evaluation.
     pub poly_eval_smul: NameId,
 
+    // --- the finite Taylor expansion identity (rat_prelude::taylor) ---------
+    /// `Rat.pow_one : ∀ a, pow a (succ zero) = a` — the missing `n = 1`
+    /// instance `polynomial.rs` never needed (every other file's degree-1
+    /// term arrived pre-simplified). Proved via `pow_succ` + `pow_zero` +
+    /// `mul_comm` + `mul_one` (`pow a 1 = one * a = a * one = a`, the middle
+    /// step because this prelude has no `one_mul`).
+    pub pow_one: NameId,
+    /// `Rat.add_sub_cancel_left : ∀ a x, add a (sub x a) = x` — the residue
+    /// of a point from its own basepoint is the basepoint's error, restated:
+    /// what turns `p(a) + c·(x−a)` back into a statement about `p(a)` and
+    /// `x` without ever exposing `Rat.sub`'s own definition to the caller.
+    pub add_sub_cancel_left: NameId,
+    /// `Rat.sq_sub_sq : ∀ x a, sub (mul x x) (mul a a) = mul (sub x a) (add x
+    /// a)` — the difference-of-squares factor theorem, `x² − a²
+    /// factors through (x−a)`. The reusable algebraic core of the factor
+    /// theorem at degree 2: [`Self::taylor_deg2`] (if built) and any future
+    /// even-degree rung reach for this rather than re-deriving it. Proved
+    /// via `mul_sub_mul` + `mul_comm` + `left_distrib`, no induction.
+    pub sq_sub_sq: NameId,
+    /// `Rat.polyEval_deg1 : ∀ c0 c1 t, polyEval (coeff2 c0 c1) 2 t = add c0
+    /// (mul c1 t)` — the closed form for evaluating a degree-≤1 polynomial,
+    /// where `coeff2 c0 c1` is the coefficient function built inline by
+    /// `Nat.rec` (`i = 0 ↦ c0`, `i ≥ 1 ↦ c1`). Not itself a public
+    /// `Definition` — `coeff2` is scaffolding local to this file, the same
+    /// "inline `Nat.rec`, no named cast" move `bernoulli.rs`'s `L` uses —
+    /// but its *evaluation law* is the reusable rung: [`Self::taylor_deg1`]
+    /// instantiates it at `t = x` and `t = a` and needs nothing else about
+    /// `coeff2`'s internals.
+    pub poly_eval_deg1: NameId,
+    /// `Rat.taylor_deg1 : ∀ c0 c1 x a, polyEval (coeff2 c0 c1) 2 x =
+    /// polyEval (coeff2 c0 c1) 2 a + c1 * (x − a)` — the finite Taylor
+    /// expansion identity (ADR-0603 row 3's algebraic core, no analysis, no
+    /// limits, no MVT) at degree 1: a degree-≤1 polynomial equals its value
+    /// at the center plus its (constant) derivative times `x − a`, exactly
+    /// and for every `x`, `a` — not an approximation, and no remainder term
+    /// (a degree-≤1 polynomial's own Taylor polynomial of degree 1 is
+    /// itself). Reduces, at `n = 0`, to the ordinary Mean Value Theorem's
+    /// polynomial case handled instead by [`crate::mvt`] over `CReal`; this
+    /// is the same headline identity, over `ℚ`, algebraically, with the
+    /// factor `c1` — the formal derivative's only nonzero coefficient — read
+    /// off directly rather than searched for. Proved via
+    /// [`Self::poly_eval_deg1`] (twice, at `x` and at `a`),
+    /// [`Self::add_sub_cancel_left`], and `left_distrib` — no
+    /// [`Self::sq_sub_sq`], which degree-1 has no use for.
+    pub taylor_deg1: NameId,
+
     // --- Bernoulli's inequality and the harmonic power bound (rat_prelude::bernoulli) ---
     /// `Rat.bernoulli : ∀ t, Rat.le Rat.zero t →`
     /// `∀ n, Rat.le (L t n) (Rat.pow (Rat.add Rat.one t) n)`, where `L t n`
@@ -1842,6 +1889,11 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         poly_eval_succ: child(kernel, "polyEval_succ"),
         poly_eval_add: child(kernel, "polyEval_add"),
         poly_eval_smul: child(kernel, "polyEval_smul"),
+        pow_one: child(kernel, "pow_one"),
+        add_sub_cancel_left: child(kernel, "add_sub_cancel_left"),
+        sq_sub_sq: child(kernel, "sq_sub_sq"),
+        poly_eval_deg1: child(kernel, "polyEval_deg1"),
+        taylor_deg1: child(kernel, "taylor_deg1"),
         bernoulli: child(kernel, "bernoulli"),
         bernoulli_harmonic_bound: child(kernel, "bernoulli_harmonic_bound"),
         dot_n: child(kernel, "dotN"),
@@ -1982,6 +2034,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         sum::declare_sum(&mut d, prelude)?;
         diagonal::declare_diagonal(&mut d, prelude)?;
         polynomial::declare_polynomial(&mut d, prelude)?;
+        taylor::declare_taylor(&mut d, prelude)?;
         pow_bridge::declare_pow_bridge(&mut d, prelude)?;
         bernoulli::declare_bernoulli(&mut d, prelude)?;
         vector::declare_vector(&mut d, prelude)?;

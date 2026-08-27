@@ -1095,14 +1095,399 @@
 //! `mesh_count_align` is a private helper with its own `#[cfg(test)]`
 //! module, wired into no `CRealPrelude` field, no `BuildStep`, no
 //! `EXPECTED_STEP_ORDER` entry, and no inventory shard row —
-//! `creal_prelude_builds` is unaffected. **Next leg, sized precisely**: the
-//! `[a,c]` leg's bound-weakening (deliverable (b) in this lane's own brief),
-//! mirroring [`bnd_leg_plus_share_le`]'s structure exactly but consuming
-//! `total_eps_sample_le_at(a, c, e, m_ac, magnitude_ac, jj1)` in place of
-//! `total_eps_sample_le`'s shared-index call — `total_eps_sample_le_at`
-//! already exists and needs no further generalization. That leg, plus the
-//! `[c,b]` leg (symmetric) and the final three-way `abs_add_le` combine
-//! sized in the TWELFTH lane's own entry above, are what remain.
+//! `creal_prelude_builds` is unaffected.
+//!
+//! ## `CReal.integral_split` `[a,c]`-leg bound-weakening — LANDED 2026-08-27
+//! (a FOURTEENTH lane), `bnd_leg_plus_share_le_at`
+//!
+//! [`bnd_leg_plus_share_le_at`] is [`bnd_leg_plus_share_le`]'s independent-
+//! accuracy/sample-index generalization: same `a1`/`a2`/`shift`/`b1`
+//! bookkeeping, same `half_shift_le`-weakened `modulus` pair, same fold into
+//! a single `natDivSucc`, but the `bound_at_idx` weakening step consumes
+//! [`total_eps_sample_le_at`] at an accuracy `e` and a sample index `jj1`
+//! that are never assumed equal (`e := jj1` recovers `bnd_leg_plus_share_le`
+//! exactly, since `total_eps_sample_le` is that specialization).
+//!
+//! **The one genuine obstacle, not visible until the fold was attempted**:
+//! `m_term := natDivSucc(magnitude, e)` and every other leaf (`a1`/`a2`/`b1`)
+//! are built at `jj1`, and [`fuse_nds`] only fuses two `natDivSucc`s at the
+//! SAME index. So `m_term` cannot join the fold at all — it is pulled to the
+//! front of the sum instead: one `Rat.add_assoc` isolates `b1+b1`, one
+//! [`reassoc3`] application moves `m_term` past the first `a1a1`, and from
+//! there every remaining step is a plain `Rat.add_assoc` (never another
+//! commute) because `m_term` is already in front. The final shape is
+//! `Rat.le (bnd_leg_actual + natDivSucc(1,jj1)) (m_term + natDivSucc(k,jj1))`
+//! — `k` defeq `9` at concrete inputs, matching `bnd_leg_plus_share_le`'s own
+//! `magnitude + 9` leaf count with `magnitude`'s term now carried separately.
+//!
+//! **`magnitude` is not an independent input, and treating it as one is the
+//! mistake that cost this lane its first two failed attempts.**
+//! `riemann_sum_total_eps_le`'s own conclusion embeds `succ(CReal.bound
+//! (width_of a b))` as ITS magnitude; a caller's `magnitude` argument must be
+//! that SAME `ExprId` (`width_of` then [`direct_bound_le`], hash-consed) or
+//! `total_eps_sample_le_at`'s own internal `le_of_sub_le` application fails
+//! to type-check — invisible in `d.lemma`'s construction, surfacing only when
+//! the whole closed term is inferred, and failing identically whether `a`/`b`
+//! are symbolic or concrete (an arbitrary literal magnitude at CONCRETE `a
+//! := zero, b := one` is just as wrong; nothing about concreteness excuses
+//! deriving `magnitude` correctly). `total_eps_sample_le_at`'s own test
+//! already used this exact recipe — the miss was not rereading it before
+//! picking a convenient value.
+//!
+//! Kernel-verified three ways, mirroring `mesh_count_align_tests`: symbolic
+//! (closed over `a b e jj1 m` via a real `Theorem`, `magnitude` derived from
+//! `a`/`b` rather than separately quantified), a non-vacuity control
+//! (swapping `e`/`jj1` changes the rendered target, since `e` appears only in
+//! `m_term` and `jj1` only in the folded side), and a concrete instantiation
+//! (`e:=6, jj1:=3, m:=6, a:=zero, b:=one` — `k` defeq `9` via `Kernel::def_eq`).
+//! `bnd_leg_plus_share_le_at` is a private helper with its own `#[cfg(test)]`
+//! module, wired into no `CRealPrelude` field, no `BuildStep`, no
+//! `EXPECTED_STEP_ORDER` entry, and no inventory shard row —
+//! `creal_prelude_builds` is unaffected (33 s, unchanged from baseline).
+//!
+//! **The `[c,b]` leg needs NO new derivation — it is the SAME function,
+//! called at different arguments.** The `succ` in `mesh_count_align`'s
+//! `combined := add(succ(m_ac), m_cb)` is bookkeeping for how the two legs'
+//! mesh counts combine into `riemann_sum_split_exact_of_uc`'s identity; it
+//! never appears inside a leg's OWN Cauchy-bound-weakening, which only ever
+//! sees ITS OWN mesh count as an opaque `jj1`. So the `[c,b]` leg is
+//! `bnd_leg_plus_share_le_at(d, p, c, b, e, m_cb, m, magnitude_cb,
+//! bound_at_idx_cb)` — the identical call with `(c,b,m_cb,magnitude_cb)` in
+//! place of `(a,c,m_ac,magnitude_ac)` — not a mirror-image derivation to
+//! write. What remains is the final three-way `abs_add_le` combine sized in
+//! the TWELFTH lane's own entry above (unchanged by this landing).
+//!
+//! ## `CReal.integral_split` — checked 2026-08-27 (a FIFTEENTH lane), the
+//! assembly was NOT attempted in code; TWO gaps found that no prior entry
+//! names, one of which makes [`mesh_count_align`] unusable for a general
+//! split ratio as landed
+//!
+//! Starting point confirmed unchanged: [`mesh_count_align`] and
+//! [`bnd_leg_plus_share_le_at`] both build and both pass their own tests
+//! post-merge; `creal_prelude_builds` is 31.5 s (band 29-39 s). Before
+//! writing the ~450-line combine, this lane worked out EXACTLY which
+//! `ExprId`s the combine's three legs must share (`riemann_sum_integral_close`
+//! on `[a,b]`, `[a,c]`, `[c,b]`; `close_within_of_within_indexed` bridging
+//! each `Within` to a `CReal.le (abs …)`; [`declare_riemann_sum_split_exact_of_uc`]'s
+//! exact identity substituted in via `le_congr`), and found two obstacles
+//! neither the TENTH, TWELFTH, THIRTEENTH nor FOURTEENTH lane's sizing
+//! mentions.
+//!
+//! **Gap A: [`mesh_count_align`]'s padding scheme forces the split ratio
+//! toward the MIDPOINT as its own `big_n` grows, for any target ratio other
+//! than 1:1 — confirmed by direct computation, not just inspection.**
+//! `mesh_count_align` fixes `depth_ac := depth_cb := add(deep_ab, big_n)`
+//! (the SAME padding term for both legs, per its own doc comment above).
+//! `riemann_sum_split_exact_of_uc`'s split point is exactly `a +
+//! ofNat(succ m_ac) * delta_of(a,b,combined)`, i.e. the ratio `succ(m_ac) :
+//! combined`. At `m_ac0 := 0, m_cb0 := 3` (an intended 1:4 split, `c` at
+//! 20% of `[a,b]`), `deep_ab := 2, deep_ac := 1, deep_cb := 1`, this ratio
+//! measures:
+//!
+//! ```text
+//! big_n =     10 -> ratio 0.5185
+//! big_n =    100 -> ratio 0.5024
+//! big_n =  10000 -> ratio 0.50002
+//! big_n = 1e6    -> ratio 0.500000
+//! ```
+//!
+//! — converging to **0.5**, not the intended **0.2**, because `big_n` is
+//! ADDED identically to both legs' mesh counts and therefore dominates and
+//! equalizes them as it grows, regardless of `m_ac0`/`m_cb0`. Since
+//! `equiv_zero_of_small` needs the mesh counts to grow WITHOUT BOUND as the
+//! outer accuracy `e` does (so `big_n` cannot be held at a small fixed
+//! value), [`mesh_count_align`] as landed can only support the bisection
+//! case (`m_ac0 = m_cb0`) — for which the drift target (midpoint) happens
+//! to coincide with the intended one — and NOT the general "every rational
+//! proportion" claim [`declare_riemann_sum_split_exact_of_uc`]'s own
+//! ADR-0603 stratum aims for. `riemann_sum_split_scale_invariant` cannot
+//! rescue this after the fact either: it only proves the split point fixed
+//! for the *multiplicative* `succ_mul_succ` family (`m_ac_k`/`m_cb_k` both
+//! scaled by the SAME factor `succ k`), which [`mesh_count_align`]'s
+//! additive `deep_ac + (deep_ab+big_n)` shape does not belong to for any
+//! `big_n`. The fix is a differently-parameterized alignment helper (or a
+//! generalized [`mesh_count_align`]) that pads `m_ac`/`m_cb` by
+//! `n_ac0 * (deep_ab+big_n)` / `n_cb0 * (deep_ab+big_n)` respectively (or
+//! goes through `succ_mul_succ` directly, proving `deep_X(e) ≤ m_X_k` for
+//! the multiplicative family by a separate Archimedean argument) — not
+//! attempted here; this is new scope, not a rewiring of what exists.
+//!
+//! **Gap B: nothing in this file (or elsewhere in `creal/`) lets a `CReal
+//! .integral` taken at one endpoint be related to the SAME integral at an
+//! `Equiv` — not equal — endpoint, and the combine needs exactly that.**
+//! Even with Gap A fixed, `riemann_sum_split_exact_of_uc(F,a,b,m_ac,m_cb,
+//! u,hab)`'s split point `c` is whatever `a + ofNat(succ m_ac) *
+//! delta_of(a,b,combined)` computes to for the mesh counts actually used at
+//! a given outer accuracy `e` — call it `c_e`. `integral_split`'s STATED
+//! conclusion needs a single FIXED `c` (with fixed `hac`/`u_ac`/`hcb`/
+//! `u_cb`, supplied once by the caller), so closing it needs `integral F a
+//! c_e hac_e u_ac_e` related to `integral F a c hac u_ac` for `c_e` merely
+//! `Equiv c` (never definitionally equal, since `c_e` is a fresh Nat
+//! arithmetic expression at every `e`). [`CRealPrelude::integral_witness_independent`]
+//! is the closest existing lemma and does NOT cover this: its own two
+//! endpoints are the SAME `b`, varying only the *witness* (`u1` vs `u2`);
+//! nothing here varies the endpoint itself. Note too that this cannot be
+//! discharged by a `riemannSum`-level congruence in `b` under `Equiv`, even
+//! in principle: `riemannSum`'s value at a sample index is a RATIONAL
+//! (`sample x n`), and two `Equiv` `CReal`s are only guaranteed to agree in
+//! the LIMIT, never sample-by-sample — so any bridge has to go through the
+//! `CReal`-level `Equiv`/`le_congr` route (the same one
+//! [`declare_integral_witness_independent`] already uses for its own,
+//! narrower, same-endpoint case), which is why this is a genuinely new
+//! lemma (`integral_congr_endpoint`, sketched but not built: same
+//! `Converges`/`riemann_sum_deep_cauchy_cross`-family route as
+//! `integral_witness_independent`, with the cross-bridge additionally
+//! needing to relate `f_lambda`'s own mesh-count family across the two
+//! `b`s) rather than a rewiring of anything landed.
+//!
+//! **Net effect on sizing**: the combine's own volume (three-way
+//! `abs_add_le`, one `bnd_leg_plus_share_le_at` call per leg,
+//! `le_of_forall_le_add_small`/`equiv_zero_of_small` to close) is unchanged
+//! from the TWELFTH lane's own estimate, but it now has two PREREQUISITES
+//! neither the TENTH, TWELFTH, THIRTEENTH nor FOURTEENTH lane's sizing
+//! counted: a re-parameterized mesh-alignment helper (Gap A, comparable in
+//! size to [`mesh_count_align`] itself, ~100 lines) and a new
+//! `integral_congr_endpoint` lemma (Gap B, comparable in size to
+//! [`declare_integral_witness_independent`], ~70-100 lines). Neither was
+//! attempted in code this slice: writing either without kernel-verifying it
+//! risks exactly the "checker that cannot fail" and "certificate must carry
+//! every distinction" failure modes this repository's own CLAUDE.md warns
+//! against, and this lane's remaining budget did not cover both plus the
+//! combine itself with the compile-and-verify cadence the file's own
+//! kernel-facts list requires. `integral_split` is not registered in
+//! `CRealPrelude`, has no `BuildStep`/`EXPECTED_STEP_ORDER` entry, and no
+//! inventory shard row; `creal_prelude_builds` is unaffected (doc-only
+//! change, confirmed 31.5 s post-merge, same band as the FOURTEENTH lane's
+//! 33 s).
+//!
+//! ## `CReal.integral_split` — 2026-08-27 (a SIXTEENTH lane), Gap A resolved
+//! in the direction the FIFTEENTH lane conjectured: a MULTIPLICATIVE
+//! alignment preserves an arbitrary rational ratio EXACTLY, at every scale
+//!
+//! **First, a correction to the FIFTEENTH lane's own numbers, which does not
+//! change its conclusion but does change how bad the situation is.** That
+//! entry computed the split ratio as `succ(m_ac) / combined`. The correct
+//! fraction is `succ(m_ac) / (combined + 1)`: `riemann_sum_split_exact`'s
+//! `c := a + ofNat(succ m_ac) * delta_of(a, b, combined)` and `delta_of a b m
+//! := (b − a) * natDivSucc(1, m)` = `(b − a)/(m + 1)`, so
+//!
+//! ```text
+//! (c − a)/(b − a) = succ(m_ac) / (combined + 1)
+//!                 = n_ac / (n_ac + n_cb),   n_X := m_X + 1
+//! ```
+//!
+//! since `combined + 1 = succ(m_ac) + succ(m_cb)`. Read correctly, the
+//! additive scheme is worse than "drifting": with `mesh_count_align`'s own
+//! `depth_ac := depth_cb := deep_ab + big_n` and `deep_ac = deep_cb`, the
+//! ratio is **exactly 0.5 for every `big_n`, including `big_n = 0`** — not
+//! 0.5185 → 0.5024 → 0.50002 converging to it. Recomputed:
+//!
+//! ```text
+//! deep_ab=2, deep_ac=deep_cb=1:    big_n = 0, 10, 100, 1e4, 1e6 -> 0.5 exactly, every time
+//! deep_ab=2, deep_ac=1, deep_cb=7: 0.2857 -> 0.4118 -> 0.4860 -> 0.49985 -> 0.4999985
+//! ```
+//!
+//! The asymmetric row is the only one that moves, and it moves TOWARD 0.5.
+//! And note what the symmetric row means: [`mesh_count_align`] has **no ratio
+//! input at all** — its parameters are `deep_ab`, `deep_ac`, `deep_cb`,
+//! `big_n`, three of which are uniform-continuity moduli the caller does not
+//! choose. There is nowhere to put `(m_ac0, m_cb0)`. So the FIFTEENTH lane's
+//! verdict stands and is strengthened: **as landed, [`mesh_count_align`]
+//! supports the MIDPOINT only**, and the "every rational proportion" stratum
+//! that [`declare_riemann_sum_split_exact_of_uc`]'s ADR-0603 entry aims at is
+//! not reachable through it by any choice of its arguments.
+//!
+//! **Second, the multiplicative hypothesis: CONFIRMED, and exactly, not
+//! asymptotically.** Take the base ratio `(m_ac0, m_cb0)` and scale both
+//! counts through [`succ_mul_succ`] at a common factor `succ k`:
+//! `m_ac_k := succ_mul_succ(m_ac0, k).0`, `m_cb_k := succ_mul_succ(m_cb0, k).0`,
+//! so `succ(m_ac_k) = succ(m_ac0)·succ(k)` and likewise for `cb`. Then
+//!
+//! ```text
+//! ratio = succ(m_ac0)·succ(k) / ((succ(m_ac0) + succ(m_cb0))·succ(k))
+//!       = succ(m_ac0) / (succ(m_ac0) + succ(m_cb0))
+//! ```
+//!
+//! — the `succ(k)` cancels identically, so the ratio is the base ratio for
+//! EVERY `k`, with no limit taken. Checked as exact `Fraction` arithmetic at
+//! `(m_ac0, m_cb0) ∈ {(0,3), (0,0), (2,5), (4,1), (9,90)}` and
+//! `k ∈ {0, 1, 2, 3, 10, 100, 1e4, 1e6}`: 40 of 40 exactly equal to the base
+//! ratio (1/5, 1/2, 1/3, 5/7, 10/101 respectively). This is the same family
+//! [`CRealPrelude::riemann_sum_split_scale_invariant`] already proves
+//! `Equiv c_k c_0` for — that theorem is the kernel-verified statement of
+//! precisely this cancellation, and it is why the multiplicative route was
+//! worth testing before building anything.
+//!
+//! **Third, the piece that made the additive scheme necessary in the first
+//! place — clearing the three accuracy thresholds — survives the switch, and
+//! gets SHORTER.** [`mesh_count_align`] bakes `deep_ac`/`deep_cb` into the
+//! mesh counts syntactically (`m_ac := deep_ac + depth_ac`) precisely so
+//! `deep_ac ≤ m_ac` needs no proof; that is exactly what forces the additive
+//! shape. The multiplicative family cannot do that, so all three thresholds
+//! become obligations — but all three follow from ONE inequality:
+//!
+//! ```text
+//! succ_mul_succ(m0, k).0 = (m0·k + m0) + k  >=  k        [Nat.le_add_left]
+//! ```
+//!
+//! so picking `k := ((deep_ab + deep_ac) + deep_cb) + big_n` gives
+//! `deep_ac ≤ k ≤ m_ac_k`, `deep_cb ≤ k ≤ m_cb_k`, and
+//! `deep_ab ≤ k ≤ m_cb_k ≤ combined`, each by a `le_trans` over
+//! `le_add_left`/`le_add_right` only. Randomised check over 200,000 draws of
+//! `(deep_ab, deep_ac, deep_cb, m_ac0, m_cb0, big_n)`: **0 counterexamples**.
+//! Negative control (`k := big_n` alone, dropping the moduli from the scale
+//! factor): **1,435 counterexamples in 20,000 draws**, so the check is not
+//! vacuous. `big_n` remains free and drives all three counts to infinity, as
+//! `equiv_zero_of_small` requires.
+//!
+//! **Fourth, Gap A is LANDED as [`mesh_count_align_mul`]** — the
+//! multiplicative alignment above, kernel-verified four ways: the `[a,b]`
+//! combined threshold symbolic in all six inputs; BOTH child thresholds
+//! (`deep_ac ≤ m_ac`, `deep_cb ≤ m_cb`), which [`mesh_count_align`] never had
+//! to prove because it obtained them by *defining* `m_ac := deep_ac +
+//! depth_ac`; ratio preservation cross-multiplied into `Nat` and checked by
+//! `Kernel::def_eq` at four base ratios × four scales; and a negative control
+//! asserting the ADDITIVE counts FAIL that same identity at a 1:5 base ratio,
+//! so the positive test is discriminating rather than an arithmetic tautology.
+//! Two small private helpers came out of it: [`nat_le_add_left`] (the prelude
+//! has `le_add_right` only) and [`le_dest_elim`] ([`mesh_count_align`]'s own
+//! `Nat.le_dest` + [`exists_elim`] tail, factored so three can nest).
+//!
+//! ## `CReal.integral_split` — Gap B (SIXTEENTH lane, same day): load-bearing,
+//! but it is a `riemannSum` congruence and NOT the `integral` congruence the
+//! FIFTEENTH lane sized — and the "impossible even in principle" argument
+//! against it is refuted by a kernel-checked term
+//!
+//! **Gap B is NOT avoidable by construction, and the "shared literal `c`"
+//! hypothesis fails for a reason worth writing down.** The combine's mismatch
+//! is visible only once the three legs are named:
+//!
+//! ```text
+//! (A) riemann_sum_integral_close on [a, b] at `combined`        -> riemannSum F a b combined
+//! (B) riemann_sum_integral_close on [a, c] at `m_ac`            -> riemannSum F a c   m_ac
+//! (C) riemann_sum_integral_close on [c, b] at `m_cb`            -> riemannSum F c b   m_cb
+//! (D) riemann_sum_split_exact_of_uc(F, a, b, m_ac, m_cb, u, hab)
+//!       -> Equiv (riemannSum F a b combined)
+//!                (add (riemannSum F a c_k m_ac) (riemannSum F c_k b m_cb))
+//! ```
+//!
+//! (B)/(C) are stated at the CALLER's fixed `c` — they must be, since the
+//! caller supplies `hac`/`uac`/`hcb`/`ucb` once. (D)'s split point is
+//! `c_k := a + ofNat(succ m_ac) · delta_of(a, b, combined)`, computed from the
+//! mesh counts actually used at the current accuracy, hence a fresh `Nat`
+//! arithmetic expression at every `e` and never definitionally `c`. There is
+//! nowhere to put a shared literal: `c_k` is *derived from* `m_ac`/`m_cb`, and
+//! those are exactly what must grow without bound.
+//!
+//! **But what is missing is `Equiv (riemannSum F a c_k m_ac) (riemannSum F a c
+//! m_ac)`, a `riemannSum` fact — not `integral F a c_k … ` versus `integral F
+//! a c …`.** The FIFTEENTH lane's entry above reached for
+//! `integral_congr_endpoint` and sized it against
+//! [`declare_integral_witness_independent`]'s `Converges`/
+//! `riemann_sum_deep_cauchy_cross` route. That is the wrong (and larger)
+//! lemma: the two `integral`s never have to be compared at all, because (B)
+//! and (C) already relate the caller's `c`-integrals to `c`-Riemann sums, and
+//! only the SUMS need bridging.
+//!
+//! **And the FIFTEENTH lane's argument that a `riemannSum`-level congruence is
+//! impossible "even in principle" is wrong.** It reads: "`riemannSum`'s value
+//! at a sample index is a RATIONAL (`sample x n`), and two `Equiv` `CReal`s
+//! are only guaranteed to agree in the LIMIT, never sample-by-sample". True,
+//! and it rules out proving the congruence *sample by sample* — which nothing
+//! requires. `riemannSum F x y m` is `sumRange` of `mul (F (add x (mul (ofNat
+//! i) Δ))) Δ`, a `CReal` built compositionally out of `add`/`mul`/`ofNat`, so
+//! the congruence follows from the setoid's own congruence lemmas without
+//! `sample` appearing anywhere.
+//!
+//! [`riemann_sum_congr_endpoints`] is that proof, **kernel-accepted on the
+//! first attempt**, symbolic in `F`, the outer interval `[aa, bb]`, its
+//! `UniformlyContinuousOn` witness, both endpoint pairs and the mesh count,
+//! closed into a real `Theorem` over all of them and stated at the [`rsum`]
+//! type rather than the `sumRange` type its term builds (so the test also
+//! pins that the two are one `Definition` body at one hash-consed `ExprId`).
+//! Every step names an existing lemma:
+//! [`CRealPrelude::neg_congr`]/[`CRealPrelude::add_congr`]/
+//! [`CRealPrelude::mul_congr`] for `Equiv Δ Δ'` and the sample points,
+//! [`CRealPrelude::riemann_sample_in_bounds`] plus two
+//! [`CRealPrelude::le_trans`] to place both sample points in `[aa, bb]`,
+//! [`CRealPrelude::congr_of_uniformly_continuous`] for `Equiv (F pt) (F pt')`
+//! (which exists precisely because a global congruence is unavailable for an
+//! `F` continuous only on `[aa, bb]`), and [`sum_range_congr_lt_proof`] — the
+//! `Nat.lt`-BOUNDED sum congruence, for the same reason
+//! [`declare_riemann_sum_split_exact_of_uc`] uses the bounded one.
+//!
+//! It varies BOTH endpoints at once, which is what the combine needs: `[a,
+//! c_k] → [a, c]` moves the right endpoint and `[c_k, b] → [c, b]` moves the
+//! left, and one lemma covers both.
+//!
+//! **`Equiv c_k c` is available exactly when the mesh family is the
+//! multiplicative one.** [`CRealPrelude::riemann_sum_split_scale_invariant`]
+//! proves `Equiv c_k c_0` for the [`succ_mul_succ`] family and for no other,
+//! so Gap A's resolution is a PREREQUISITE for Gap B's, not an independent
+//! item: with [`mesh_count_align`]'s additive padding there is no `c_0` to be
+//! `Equiv` to. `integral_split` would therefore be stated with `c` bound to
+//! the base split point `c_0` of a caller-chosen rational proportion
+//! `(m_ac0, m_cb0)`, not with `c` universally quantified.
+//!
+//! **What remains, and it is now only the combine.** Both prerequisites the
+//! FIFTEENTH lane named are landed and kernel-checked. The remaining volume is
+//! the TWELFTH lane's own estimate, unchanged: three `riemann_sum_integral_close`
+//! applications, [`close_within_of_within_indexed`] to move each `Within` to a
+//! `CReal.le (abs …)`, [`bnd_leg_plus_share_le_at`] once per leg to weaken the
+//! bounds to a common `natDivSucc`, `abs_add_le` twice for the three-way
+//! triangle, `le_congr` to substitute
+//! [`CRealPrelude::riemann_sum_split_exact_of_uc`]'s exact identity (now
+//! composed with [`riemann_sum_congr_endpoints`] on each of its two summands),
+//! and `equiv_zero_of_small` to close, with `big_n`/`e_inner` chosen as
+//! explicit functions of `e`. NOT attempted here: this lane's budget covered
+//! resolving the two gaps with the compile-and-verify cadence, not the combine
+//! on top of them, and writing ~450 unverified lines is what failed eleven
+//! times before.
+//!
+//! [`mesh_count_align_mul`], [`riemann_sum_congr_endpoints`],
+//! [`nat_le_add_left`] and [`le_dest_elim`] are all private helpers with their
+//! own `#[cfg(test)]` modules, wired into no `CRealPrelude` field, no
+//! `BuildStep`, no `EXPECTED_STEP_ORDER` entry and no inventory shard row;
+//! `creal_prelude_builds` is unaffected.
+//!
+//! ## `CReal.integral_split` — the two gap resolutions COMPOSE, checked:
+//! [`split_identity_at_equiv_point`] (SIXTEENTH lane, same day)
+//!
+//! Rather than assert that Gap A's and Gap B's resolutions fit together, this
+//! is the join, kernel-checked: `Equiv (riemannSum F a b combined) (add
+//! (riemannSum F a c m_ac) (riemannSum F c b m_cb))` — the exact identity
+//! [`CRealPrelude::riemann_sum_split_exact_of_uc`] proves, RESTATED AT THE
+//! CALLER'S OWN `c`, given only `Equiv c_k c`. Two
+//! [`riemann_sum_congr_endpoints`] applications (one moving the right
+//! endpoint, one the left, which is why that helper varies both), combined by
+//! [`CRealPrelude::add_congr`] and chained onto the split identity.
+//!
+//! This is the shape the combine consumes: the three
+//! `riemann_sum_integral_close` legs are stated at the caller's fixed `c`,
+//! and now so is the split identity, so nothing downstream ever mentions
+//! `c_k`.
+//!
+//! **The kernel rejected the first version, and the mistake is worth
+//! recording because the message named nothing relevant.**
+//! [`riemann_sum_congr_endpoints`] takes the outer interval `(aa, bb)` — the
+//! one its `UniformlyContinuousOn` witness is *about* — separately from the
+//! sub-interval endpoints it is moving. The `[c_k, b]` leg was given
+//! `(aa, bb) := (c_k, b)`, reading the leg's own sub-interval as the
+//! witness's interval; `u` witnesses continuity on `[a, b]` and on nothing
+//! else. The rejection was a bare `TypeMismatch` between two `ExprId`s,
+//! mentioning neither `u` nor `c_k`, and it is indistinguishable from a
+//! transposed endpoint pair or a backwards `Equiv` — this file's most common
+//! failure family. **Both legs take `(a, b)`.** Fixed and accepted; the
+//! `[a, c_k]` leg had it right from the start, which is exactly why a helper
+//! that varies both endpoints needs a caller test that exercises both
+//! directions.
+//!
+//! What remains for `integral_split` itself, unchanged: three
+//! `riemann_sum_integral_close` applications,
+//! [`close_within_of_within_indexed`] per leg,
+//! [`bnd_leg_plus_share_le_at`] per leg, `abs_add_le` twice, and
+//! `equiv_zero_of_small` to close, with `big_n`/`e_inner` as explicit
+//! functions of `e`. Not attempted here.
 
 use super::completeness::half_shift_le;
 use super::convergence::{
@@ -1636,6 +2021,1049 @@ mod mesh_count_align_tests {
         assert!(
             result.is_ok(),
             "mesh_count_align must apply at (3,5,7,2): {:?}",
+            result.err()
+        );
+    }
+}
+
+// --- ratio-preserving (MULTIPLICATIVE) mesh-count alignment ---------------
+//
+// Resolves Gap A of this module's SIXTEENTH `integral_split` entry:
+// [`mesh_count_align`]'s additive padding pins the split ratio at the
+// midpoint, and takes no ratio argument at all. The helpers below realign the
+// same three accuracy thresholds through [`succ_mul_succ`] instead, which
+// leaves an arbitrary base ratio `(m_ac0, m_cb0)` EXACTLY fixed at every
+// scale -- the same family [`CRealPrelude::riemann_sum_split_scale_invariant`]
+// already proves `Equiv c_k c_0` for.
+
+/// `Nat.le n (Nat.add k n)` — the prelude has `le_add_right` (`Le n (add n
+/// k)`) but no `le_add_left`, so this is that lemma transported across
+/// [`crate::nat_prelude::NatPrelude::add_comm`] via [`nat_rewrite_prop`],
+/// exactly the idiom [`mesh_count_align`]'s own `h2` step already uses for
+/// the same reason.
+fn nat_le_add_left(d: &mut IntDev<'_>, k: ExprId, n: ExprId) -> ExprId {
+    let np = d.prelude();
+    let h = d.lemma(np.le_add_right, &[n, k]); // Le n (add n k)
+    let n_plus_k = NatOps::add(d, n, k);
+    let k_plus_n = NatOps::add(d, k, n);
+    let comm = d.lemma(np.add_comm, &[n, k]); // Eq (add n k) (add k n)
+    nat_rewrite_prop(d, n_plus_k, k_plus_n, comm, h, &|d, x| d.le(n, x))
+}
+
+/// From `hle : Nat.le base total`, bind a `depth : Nat` together with
+/// `Eq Nat (add base depth) total` for the rest of a proof — `Nat.le_dest`
+/// plus [`exists_elim`], **never `Nat.sub`** (the truncation trap this
+/// module's kernel-facts list warns about).
+///
+/// Continuation-passing for the same reason [`mesh_count_align`] is:
+/// `Nat.le_dest`'s witness cannot escape its own elimination scope, so
+/// `target` must not mention `depth` ([`exists_elim`]'s own precondition).
+/// Factored out of [`mesh_count_align`]'s own tail so
+/// [`mesh_count_align_mul`] can nest three of them without repeating the
+/// `pred`/`minor` boilerplate three times.
+fn le_dest_elim(
+    d: &mut IntDev<'_>,
+    base: ExprId,
+    total: ExprId,
+    hle: ExprId,
+    target: ExprId,
+    build: &dyn Fn(&mut IntDev<'_>, ExprId, ExprId) -> ExprId,
+) -> ExprId {
+    let np = d.prelude();
+    let nat = d.nat_ty();
+    let represented = d.const_app(np.le_dest, &[base, total, hle]);
+    let pred = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let sum = NatOps::add(d, base, k);
+        let body = d.eq(sum, total);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let minor = {
+        let depth_fv = d.fresh_fvar();
+        let depth = d.kernel().fvar(depth_fv);
+        let sum = NatOps::add(d, base, depth);
+        let e_ty = d.eq(sum, total);
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+        let body = build(d, depth, e);
+        let with_e = d.lam_fv(e_fv, e_ty, body);
+        d.lam_fv(depth_fv, nat, with_e)
+    };
+    exists_elim(d, pred, target, represented, minor)
+}
+
+/// The mesh counts and the three `Nat.le_dest` decompositions
+/// [`mesh_count_align_mul`] hands its continuation.
+///
+/// `m_ac`/`m_cb`/`combined` are the terms the caller must build its three
+/// `riemann_sum_integral_close` applications and its
+/// [`CRealPrelude::riemann_sum_split_exact_of_uc`] application at;
+/// `depth_X`/`eq_X` are what let a `riemann_sum_integral_close` application
+/// built generically at a bound depth be transported onto them via
+/// [`nat_rewrite_prop`].
+#[derive(Clone, Copy)]
+pub(super) struct MeshAlignMul {
+    /// `succ_mul_succ(m_ac0, k).0` — the scaled `[a, c]` mesh count.
+    pub m_ac: ExprId,
+    /// `succ_mul_succ(m_cb0, k).0` — the scaled `[c, b]` mesh count.
+    pub m_cb: ExprId,
+    /// `add (succ m_ac) m_cb` — `riemann_sum_split_exact_of_uc`'s own
+    /// combined `[a, b]` count.
+    pub combined: ExprId,
+    /// Bound witness of `Eq Nat (add deep_ab depth_ab) combined`.
+    pub depth_ab: ExprId,
+    /// That equation.
+    pub eq_ab: ExprId,
+    /// Bound witness of `Eq Nat (add deep_ac depth_ac) m_ac`.
+    pub depth_ac: ExprId,
+    /// That equation.
+    pub eq_ac: ExprId,
+    /// Bound witness of `Eq Nat (add deep_cb depth_cb) m_cb`.
+    pub depth_cb: ExprId,
+    /// That equation.
+    pub eq_cb: ExprId,
+}
+
+/// The RATIO-PRESERVING replacement for [`mesh_count_align`], resolving
+/// Gap A of this module's SIXTEENTH `integral_split` documentation entry.
+///
+/// Given the three uniform-continuity moduli `deep_ab`, `deep_ac`, `deep_cb`,
+/// a **base ratio** `(m_ac0, m_cb0)` (which [`mesh_count_align`] has no
+/// parameter for at all), and a free `big_n : Nat`, this scales BOTH sub-counts
+/// by the single common factor
+///
+/// ```text
+/// k := ((deep_ab + deep_ac) + deep_cb) + big_n
+/// ```
+///
+/// through [`succ_mul_succ`], so `m_ac := succ_mul_succ(m_ac0, k).0` and
+/// `m_cb := succ_mul_succ(m_cb0, k).0` satisfy `succ m_ac = succ(m_ac0)·succ k`
+/// and `succ m_cb = succ(m_cb0)·succ k`. Since
+/// [`declare_riemann_sum_split_exact`]'s split point is
+/// `a + ofNat(succ m_ac) · (b − a)/(combined + 1)` and
+/// `combined + 1 = succ m_ac + succ m_cb`, the split fraction is
+///
+/// ```text
+/// succ(m_ac0)·succ k / ((succ(m_ac0) + succ(m_cb0))·succ k)
+///   = succ(m_ac0) / (succ(m_ac0) + succ(m_cb0))
+/// ```
+///
+/// — the `succ k` cancels identically, so the ratio is the caller's base
+/// ratio at EVERY `k`, not merely in the limit. (That is the same family
+/// [`CRealPrelude::riemann_sum_split_scale_invariant`] proves `Equiv c_k c_0`
+/// for; this helper supplies the `Nat` side that theorem does not address —
+/// which `k` makes all three accuracy thresholds clear at once.)
+///
+/// [`mesh_count_align`] gets `deep_ac ≤ m_ac` for free by *defining*
+/// `m_ac := deep_ac + depth_ac`; that syntactic trick is exactly what forces
+/// the additive shape, so it is unavailable here and all three thresholds
+/// become obligations. All three reduce to ONE inequality:
+///
+/// ```text
+/// succ_mul_succ(m0, k).0 = ((m0·k) + m0) + k  ≥  k     [nat_le_add_left]
+/// ```
+///
+/// so `deep_ac ≤ k ≤ m_ac`, `deep_cb ≤ k ≤ m_cb`, and
+/// `deep_ab ≤ k ≤ m_ac ≤ succ m_ac ≤ combined`, each a `le_trans` chain over
+/// `le_add_right`/[`nat_le_add_left`]/`le_succ` only — no `add_assoc`, no
+/// `Nat.sub`. The three [`le_dest_elim`] calls are then nested (outermost
+/// `ab`, then `ac`, then `cb`), so `build` sees all three depths and all
+/// three equations at once; `target` must mention none of them.
+pub(super) fn mesh_count_align_mul(
+    d: &mut IntDev<'_>,
+    deep_ab: ExprId,
+    deep_ac: ExprId,
+    deep_cb: ExprId,
+    m_ac0: ExprId,
+    m_cb0: ExprId,
+    big_n: ExprId,
+    target: ExprId,
+    build: &dyn Fn(&mut IntDev<'_>, MeshAlignMul) -> ExprId,
+) -> ExprId {
+    let np = d.prelude();
+
+    // k := ((deep_ab + deep_ac) + deep_cb) + big_n.
+    let t1 = NatOps::add(d, deep_ab, deep_ac);
+    let t2 = NatOps::add(d, t1, deep_cb);
+    let k = NatOps::add(d, t2, big_n);
+
+    // The two scaled counts and the combined count.
+    let (m_ac, _) = succ_mul_succ(d, m_ac0, k);
+    let (m_cb, _) = succ_mul_succ(d, m_cb0, k);
+    let succ_m_ac = d.succ(m_ac);
+    let combined = NatOps::add(d, succ_m_ac, m_cb);
+
+    // Shared tail of all three "modulus ≤ k" chains: `Le t2 k` and
+    // `Le t1 t2`.
+    let s_t2_k = d.lemma(np.le_add_right, &[t2, big_n]); // Le t2 k
+    let s_t1_t2 = d.lemma(np.le_add_right, &[t1, deep_cb]); // Le t1 t2
+    let s_t1_k = d.lemma(np.le_trans, &[t1, t2, k, s_t1_t2, s_t2_k]);
+
+    // Le deep_ab k.
+    let ab_t1 = d.lemma(np.le_add_right, &[deep_ab, deep_ac]);
+    let h_ab_k = d.lemma(np.le_trans, &[deep_ab, t1, k, ab_t1, s_t1_k]);
+
+    // Le deep_ac k.
+    let ac_t1 = nat_le_add_left(d, deep_ab, deep_ac);
+    let h_ac_k = d.lemma(np.le_trans, &[deep_ac, t1, k, ac_t1, s_t1_k]);
+
+    // Le deep_cb k.
+    let cb_t2 = nat_le_add_left(d, t1, deep_cb);
+    let h_cb_k = d.lemma(np.le_trans, &[deep_cb, t2, k, cb_t2, s_t2_k]);
+
+    // Le k m_ac and Le k m_cb -- the ONE inequality all three thresholds
+    // reduce to. `succ_mul_succ(m0, k).0` is literally `add ((m0·k) + m0) k`,
+    // so this is `nat_le_add_left` at that head.
+    let ac_head = {
+        let mk = NatOps::mul(d, m_ac0, k);
+        d.const_app(np.add, &[mk, m_ac0])
+    };
+    let h_k_mac = nat_le_add_left(d, ac_head, k);
+    let cb_head = {
+        let mk = NatOps::mul(d, m_cb0, k);
+        d.const_app(np.add, &[mk, m_cb0])
+    };
+    let h_k_mcb = nat_le_add_left(d, cb_head, k);
+
+    // The three threshold facts.
+    let hle_ac = d.lemma(np.le_trans, &[deep_ac, k, m_ac, h_ac_k, h_k_mac]);
+    let hle_cb = d.lemma(np.le_trans, &[deep_cb, k, m_cb, h_cb_k, h_k_mcb]);
+    let hle_ab = {
+        let to_mac = d.lemma(np.le_trans, &[deep_ab, k, m_ac, h_ab_k, h_k_mac]);
+        let mac_succ = d.lemma(np.le_succ, &[m_ac]);
+        let to_succ = d.lemma(np.le_trans, &[deep_ab, m_ac, succ_m_ac, to_mac, mac_succ]);
+        let succ_comb = d.lemma(np.le_add_right, &[succ_m_ac, m_cb]);
+        d.lemma(
+            np.le_trans,
+            &[deep_ab, succ_m_ac, combined, to_succ, succ_comb],
+        )
+    };
+
+    le_dest_elim(
+        d,
+        deep_ab,
+        combined,
+        hle_ab,
+        target,
+        &|d, depth_ab, eq_ab| {
+            le_dest_elim(d, deep_ac, m_ac, hle_ac, target, &|d, depth_ac, eq_ac| {
+                le_dest_elim(d, deep_cb, m_cb, hle_cb, target, &|d, depth_cb, eq_cb| {
+                    build(
+                        d,
+                        MeshAlignMul {
+                            m_ac,
+                            m_cb,
+                            combined,
+                            depth_ab,
+                            eq_ab,
+                            depth_ac,
+                            eq_ac,
+                            depth_cb,
+                            eq_cb,
+                        },
+                    )
+                })
+            })
+        },
+    )
+}
+
+#[cfg(test)]
+mod mesh_count_align_mul_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// Rebuild [`mesh_count_align_mul`]'s own `k`/`m_ac`/`m_cb`/`combined`
+    /// independently, so a defect in ITS construction — not merely a matching
+    /// bug in a test — is what the kernel's type-check catches.
+    fn counts(
+        d: &mut IntDev<'_>,
+        deep_ab: ExprId,
+        deep_ac: ExprId,
+        deep_cb: ExprId,
+        m_ac0: ExprId,
+        m_cb0: ExprId,
+        big_n: ExprId,
+    ) -> (ExprId, ExprId, ExprId) {
+        let t1 = NatOps::add(d, deep_ab, deep_ac);
+        let t2 = NatOps::add(d, t1, deep_cb);
+        let k = NatOps::add(d, t2, big_n);
+        let (m_ac, _) = succ_mul_succ(d, m_ac0, k);
+        let (m_cb, _) = succ_mul_succ(d, m_cb0, k);
+        let succ_m_ac = d.succ(m_ac);
+        let combined = NatOps::add(d, succ_m_ac, m_cb);
+        (m_ac, m_cb, combined)
+    }
+
+    /// The `[a, b]` leg's existence claim (`∃ depth_ab, deep_ab + depth_ab =
+    /// combined`), symbolic in all six inputs, closed into a real `Theorem`
+    /// universally quantified over them — the same wrapping
+    /// [`mesh_count_align_tests`]'s own positive control uses, and for the
+    /// same reason (`Kernel::infer` on the unwrapped proof rejects the six as
+    /// `UnboundFVar`). Confirms the proof is accepted by
+    /// `Kernel::add_declaration`, not merely by `cargo check`.
+    #[test]
+    fn mesh_count_align_mul_proves_the_combined_threshold() {
+        crate::on_a_deep_stack(mesh_count_align_mul_proves_the_combined_threshold_body);
+    }
+
+    fn mesh_count_align_mul_proves_the_combined_threshold_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let nat = d.nat_ty();
+
+        let fvs: Vec<_> = (0..6).map(|_| d.fresh_fvar()).collect();
+        let vars: Vec<ExprId> = fvs.iter().map(|fv| d.kernel().fvar(*fv)).collect();
+        let (deep_ab, deep_ac, deep_cb, m_ac0, m_cb0, big_n) =
+            (vars[0], vars[1], vars[2], vars[3], vars[4], vars[5]);
+
+        let (exp_m_ac, exp_m_cb, combined) =
+            counts(&mut d, deep_ab, deep_ac, deep_cb, m_ac0, m_cb0, big_n);
+
+        let pred = {
+            let j_fv = d.fresh_fvar();
+            let j = d.kernel().fvar(j_fv);
+            let sum = NatOps::add(&mut d, deep_ab, j);
+            let body = d.eq(sum, combined);
+            d.lam_fv(j_fv, nat, body)
+        };
+        let target = exists_ty(&mut d, p, nat, pred);
+        // The struct's REPORTED counts must be the same terms the proof is
+        // about; a helper that proved the threshold for one `combined` while
+        // handing the caller a different one would pass the kernel check and
+        // still be unusable, so this is asserted rather than assumed.
+        let build = |d: &mut IntDev<'_>, m: MeshAlignMul| -> ExprId {
+            assert_eq!(m.m_ac, exp_m_ac, "reported m_ac must be the scaled count");
+            assert_eq!(m.m_cb, exp_m_cb, "reported m_cb must be the scaled count");
+            assert_eq!(
+                m.combined, combined,
+                "reported combined must be `add (succ m_ac) m_cb`"
+            );
+            exists_intro(d, p, nat, pred, m.depth_ab, m.eq_ab)
+        };
+
+        let proof = mesh_count_align_mul(
+            &mut d, deep_ab, deep_ac, deep_cb, m_ac0, m_cb0, big_n, target, &build,
+        );
+
+        let mut ty = target;
+        let mut value = proof;
+        for fv in fvs.iter().rev() {
+            ty = d.pi_fv(*fv, nat, ty);
+            value = d.lam_fv(*fv, nat, value);
+        }
+
+        let anon = d.kernel().anon();
+        let name = d
+            .kernel()
+            .name_str(anon, "meshCountAlignMulCombinedThresholdSmoke");
+        let result = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(
+            result.is_ok(),
+            "mesh_count_align_mul must prove the [a,b] threshold, closed over all six inputs: {:?}",
+            result.err()
+        );
+    }
+
+    /// The two CHILD legs' existence claims (`∃ depth_ac, deep_ac + depth_ac =
+    /// m_ac` and its `cb` mirror), which [`mesh_count_align`] never had to
+    /// prove — it obtained them syntactically by *defining* `m_ac := deep_ac +
+    /// depth_ac`, which is exactly what pins its split ratio at the midpoint.
+    /// A version of [`mesh_count_align_mul`] whose `hle_ac`/`hle_cb` chains
+    /// were wrong would still pass the combined-threshold test above, so this
+    /// is a genuinely separate assertion, not a restatement.
+    #[test]
+    fn mesh_count_align_mul_proves_both_child_thresholds() {
+        crate::on_a_deep_stack(mesh_count_align_mul_proves_both_child_thresholds_body);
+    }
+
+    fn mesh_count_align_mul_proves_both_child_thresholds_body() {
+        for leg in ["ac", "cb"] {
+            let mut kernel = crate::Kernel::new();
+            let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+            let mut d = IntDev::new(&mut kernel, p.rat.int);
+            let nat = d.nat_ty();
+
+            let fvs: Vec<_> = (0..6).map(|_| d.fresh_fvar()).collect();
+            let vars: Vec<ExprId> = fvs.iter().map(|fv| d.kernel().fvar(*fv)).collect();
+            let (deep_ab, deep_ac, deep_cb, m_ac0, m_cb0, big_n) =
+                (vars[0], vars[1], vars[2], vars[3], vars[4], vars[5]);
+
+            let (m_ac, m_cb, _) = counts(&mut d, deep_ab, deep_ac, deep_cb, m_ac0, m_cb0, big_n);
+            let (base, total) = if leg == "ac" {
+                (deep_ac, m_ac)
+            } else {
+                (deep_cb, m_cb)
+            };
+
+            let pred = {
+                let j_fv = d.fresh_fvar();
+                let j = d.kernel().fvar(j_fv);
+                let sum = NatOps::add(&mut d, base, j);
+                let body = d.eq(sum, total);
+                d.lam_fv(j_fv, nat, body)
+            };
+            let target = exists_ty(&mut d, p, nat, pred);
+            let build = |d: &mut IntDev<'_>, m: MeshAlignMul| -> ExprId {
+                let (depth, eq) = if leg == "ac" {
+                    (m.depth_ac, m.eq_ac)
+                } else {
+                    (m.depth_cb, m.eq_cb)
+                };
+                exists_intro(d, p, nat, pred, depth, eq)
+            };
+
+            let proof = mesh_count_align_mul(
+                &mut d, deep_ab, deep_ac, deep_cb, m_ac0, m_cb0, big_n, target, &build,
+            );
+
+            let mut ty = target;
+            let mut value = proof;
+            for fv in fvs.iter().rev() {
+                ty = d.pi_fv(*fv, nat, ty);
+                value = d.lam_fv(*fv, nat, value);
+            }
+
+            let anon = d.kernel().anon();
+            let name = d
+                .kernel()
+                .name_str(anon, "meshCountAlignMulChildThresholdSmoke");
+            let result = d.kernel().add_declaration(Declaration::Theorem {
+                name,
+                uparams: vec![],
+                ty,
+                value,
+            });
+            assert!(
+                result.is_ok(),
+                "mesh_count_align_mul must prove the [{leg}] child threshold: {:?}",
+                result.err()
+            );
+        }
+    }
+
+    /// **The property [`mesh_count_align`] does not have**: the split fraction
+    /// `succ(m_ac) / (combined + 1)` equals the caller's base fraction
+    /// `succ(m_ac0) / (succ(m_ac0) + succ(m_cb0))` at every scale.
+    ///
+    /// Checked by `Kernel::def_eq` on concrete `Nat` literals rather than by
+    /// rendering: `Nat.add`/`Nat.mul` do not reduce in `render_lean`, and a
+    /// textual comparison reported a false mismatch for
+    /// [`mesh_count_align`]'s own concrete test before that was noticed.
+    /// Cross-multiplied to stay inside `Nat` (no rationals in the kernel's
+    /// `Nat`): `succ(m_ac) · (succ(m_ac0) + succ(m_cb0)) = succ(m_ac0) ·
+    /// (combined + 1)`.
+    #[test]
+    fn mesh_count_align_mul_preserves_the_base_ratio_at_every_scale() {
+        crate::on_a_deep_stack(mesh_count_align_mul_preserves_the_base_ratio_at_every_scale_body);
+    }
+
+    fn mesh_count_align_mul_preserves_the_base_ratio_at_every_scale_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+        // (m_ac0, m_cb0) = (0, 3) is a 1:5 split (c at 20% of [a,b]) -- the
+        // FIFTEENTH lane's own worked example, the one the additive scheme
+        // drives to 50%.
+        for (m_ac0_v, m_cb0_v) in [(0u32, 3u32), (2, 5), (4, 1), (9, 90)] {
+            for big_n_v in [0u32, 1, 4, 17] {
+                let deep_ab = d.num(3);
+                let deep_ac = d.num(5);
+                let deep_cb = d.num(7);
+                let m_ac0 = d.num(m_ac0_v);
+                let m_cb0 = d.num(m_cb0_v);
+                let big_n = d.num(big_n_v);
+
+                let (m_ac, _m_cb, combined) =
+                    counts(&mut d, deep_ab, deep_ac, deep_cb, m_ac0, m_cb0, big_n);
+                let succ_m_ac = d.succ(m_ac);
+                let combined_plus = d.succ(combined);
+                let n_ac0 = d.succ(m_ac0);
+                let n_cb0 = d.succ(m_cb0);
+                let base_denom = NatOps::add(&mut d, n_ac0, n_cb0);
+
+                let lhs = NatOps::mul(&mut d, succ_m_ac, base_denom);
+                let rhs = NatOps::mul(&mut d, n_ac0, combined_plus);
+                assert!(
+                    d.kernel().def_eq(lhs, rhs),
+                    "ratio must be preserved at (m_ac0={m_ac0_v}, m_cb0={m_cb0_v}, big_n={big_n_v}): \
+                     succ(m_ac)*(n_ac0+n_cb0) = {} vs n_ac0*(combined+1) = {}",
+                    d.kernel().render_lean(lhs),
+                    d.kernel().render_lean(rhs)
+                );
+            }
+        }
+    }
+
+    /// Negative control for the test above: [`mesh_count_align`]'s ADDITIVE
+    /// counts FAIL that same cross-multiplied identity for a non-1:1 base
+    /// ratio, so the assertion is discriminating rather than an arithmetic
+    /// tautology that any pair of counts would satisfy.
+    #[test]
+    fn additive_mesh_count_align_does_not_preserve_the_base_ratio() {
+        crate::on_a_deep_stack(additive_mesh_count_align_does_not_preserve_the_base_ratio_body);
+    }
+
+    fn additive_mesh_count_align_does_not_preserve_the_base_ratio_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+        // The additive scheme's counts, exactly as `mesh_count_align` builds
+        // them, at the same intended 1:5 base ratio (m_ac0=0, m_cb0=3).
+        let deep_ab = d.num(3);
+        let deep_ac = d.num(5);
+        let deep_cb = d.num(7);
+        let big_n = d.num(17);
+        let m_ac0 = d.num(0);
+        let m_cb0 = d.num(3);
+
+        let depth = NatOps::add(&mut d, deep_ab, big_n);
+        let m_ac = NatOps::add(&mut d, deep_ac, depth);
+        let m_cb = NatOps::add(&mut d, deep_cb, depth);
+        let succ_m_ac = d.succ(m_ac);
+        let combined = NatOps::add(&mut d, succ_m_ac, m_cb);
+        let combined_plus = d.succ(combined);
+        let n_ac0 = d.succ(m_ac0);
+        let n_cb0 = d.succ(m_cb0);
+        let base_denom = NatOps::add(&mut d, n_ac0, n_cb0);
+
+        let lhs = NatOps::mul(&mut d, succ_m_ac, base_denom);
+        let rhs = NatOps::mul(&mut d, n_ac0, combined_plus);
+        assert!(
+            !d.kernel().def_eq(lhs, rhs),
+            "the ADDITIVE scheme must NOT preserve a 1:5 base ratio -- if it does, \
+             the positive ratio test above proves nothing"
+        );
+    }
+}
+
+// --- Gap B: riemannSum congruence in BOTH endpoints under `Equiv` ---------
+//
+// The SIXTEENTH `integral_split` entry's Gap B analysis: the combine does NOT
+// need an `integral`-level endpoint congruence. It needs this one, at the
+// `riemannSum` level, which the FIFTEENTH lane ruled out "even in principle"
+// on the grounds that `sample x n` is rational while `Equiv` reals agree only
+// in the limit. That argument is about proving the congruence SAMPLE BY
+// SAMPLE; the route below never touches `sample`, and is assembled entirely
+// out of machinery `declare_riemann_sum_split_exact_of_uc` already uses.
+
+/// `Equiv (riemannSum F x y m) (riemannSum F x2 y2 m)` from `Equiv x x2` and
+/// `Equiv y y2`, with `F` uniformly continuous on a common outer interval
+/// `[aa, bb]` containing both sub-intervals.
+///
+/// **Why this is the lemma `integral_split` actually needs.** The combine's
+/// three legs are `riemann_sum_integral_close` on `[a,b]`, `[a,c]`, `[c,b]`
+/// at the CALLER's fixed `c`, glued by
+/// [`CRealPrelude::riemann_sum_split_exact_of_uc`] — whose own split point is
+/// `c_k := a + ofNat(succ m_ac) · delta_of(a, b, combined)`, a fresh `Nat`
+/// arithmetic expression at every outer accuracy and therefore never
+/// definitionally the caller's `c`. What has to be bridged is
+/// `riemannSum F a c_k m_ac` against `riemannSum F a c m_ac` —
+/// a `riemannSum`, not an `integral`. `Equiv c_k c` is exactly what
+/// [`CRealPrelude::riemann_sum_split_scale_invariant`] already proves, once
+/// the mesh family is [`mesh_count_align_mul`]'s multiplicative one.
+///
+/// **Route** (nothing new; every step names an existing lemma):
+///
+/// 1. `Equiv delta1 delta2` — [`CRealPrelude::neg_congr`] on the left
+///    endpoints, [`CRealPrelude::add_congr`] into the width, then
+///    [`CRealPrelude::mul_congr`] against a reflexive `1/(m+1)`.
+/// 2. Per index `i < succ m`, `Equiv (samplePt1 i) (samplePt2 i)` — the same
+///    two congruences again.
+/// 3. Both sample points land in `[aa, bb]`:
+///    [`CRealPrelude::riemann_sample_in_bounds`] places each inside its OWN
+///    sub-interval, and two [`CRealPrelude::le_trans`] steps carry that out
+///    to `[aa, bb]`.
+/// 4. `Equiv (F samplePt1) (F samplePt2)` —
+///    [`CRealPrelude::congr_of_uniformly_continuous`], which exists precisely
+///    because a GLOBAL congruence hypothesis is unavailable for an `F`
+///    continuous only on `[aa, bb]`.
+/// 5. `mul_congr` on the summand, and [`sum_range_congr_lt_proof`] — the
+///    `Nat.lt`-BOUNDED sum congruence, not
+///    [`CRealPrelude::sum_range_congr`], for the same reason
+///    [`declare_riemann_sum_split_exact_of_uc`] uses the bounded one: step 3
+///    only places a sample point in range for `i < succ m`.
+///
+/// The result is stated against `sumRange` of the two [`summand_fn`]s, which
+/// is `riemannSum`'s own `Definition` body at the same hash-consed `ExprId`s,
+/// so a caller may use it directly at the [`rsum`] type.
+#[allow(clippy::too_many_arguments)]
+fn riemann_sum_congr_endpoints(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    aa: ExprId,
+    bb: ExprId,
+    u: ExprId,
+    x: ExprId,
+    y: ExprId,
+    x2: ExprId,
+    y2: ExprId,
+    m: ExprId,
+    hxy: ExprId,
+    hx2y2: ExprId,
+    hax: ExprId,
+    hyb: ExprId,
+    hax2: ExprId,
+    hy2b: ExprId,
+    hex: ExprId,
+    hey: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let logic = p.rat.int.logic;
+
+    let frac = frac_of(d, p, m);
+    let w1 = width_of(d, p, x, y);
+    let w2 = width_of(d, p, x2, y2);
+    let delta1 = delta_of(d, p, x, y, m);
+    let delta2 = delta_of(d, p, x2, y2, m);
+
+    // h_delta : Equiv delta1 delta2.
+    let h_delta = {
+        let neg_x = cneg(d, p, x);
+        let neg_x2 = cneg(d, p, x2);
+        let h_neg = d.lemma(p.neg_congr, &[x, x2, hex]);
+        let h_w = d.lemma(p.add_congr, &[y, y2, neg_x, neg_x2, hey, h_neg]);
+        let refl_frac = d.lemma(p.equiv_refl, &[frac]);
+        d.lemma(p.mul_congr, &[w1, w2, frac, frac, h_w, refl_frac])
+    };
+
+    let n = d.succ(m);
+    let f_summand = summand_fn(d, p, f, x, delta1);
+    let g_summand = summand_fn(d, p, f, x2, delta2);
+
+    let bounded_pointwise = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let lt_ty = d.lt(i, n);
+        let lt_fv = d.fresh_fvar();
+        let lt = d.kernel().fvar(lt_fv);
+
+        let sp1 = sample_point(d, p, x, delta1, i);
+        let sp2 = sample_point(d, p, x2, delta2, i);
+
+        // Both sample points inside `[aa, bb]`, via their OWN sub-interval.
+        let and1 = d.const_app(p.riemann_sample_in_bounds, &[x, y, m, i, hxy, lt]);
+        let x_le_sp1 = cle(d, p, x, sp1);
+        let sp1_le_y = cle(d, p, sp1, y);
+        let lo1 = d.const_app(logic.and_left, &[x_le_sp1, sp1_le_y, and1]);
+        let hi1 = d.const_app(logic.and_right, &[x_le_sp1, sp1_le_y, and1]);
+        let h_a_sp1 = d.lemma(p.le_trans, &[aa, x, sp1, hax, lo1]);
+        let h_sp1_b = d.lemma(p.le_trans, &[sp1, y, bb, hi1, hyb]);
+
+        let and2 = d.const_app(p.riemann_sample_in_bounds, &[x2, y2, m, i, hx2y2, lt]);
+        let x2_le_sp2 = cle(d, p, x2, sp2);
+        let sp2_le_y2 = cle(d, p, sp2, y2);
+        let lo2 = d.const_app(logic.and_left, &[x2_le_sp2, sp2_le_y2, and2]);
+        let hi2 = d.const_app(logic.and_right, &[x2_le_sp2, sp2_le_y2, and2]);
+        let h_a_sp2 = d.lemma(p.le_trans, &[aa, x2, sp2, hax2, lo2]);
+        let h_sp2_b = d.lemma(p.le_trans, &[sp2, y2, bb, hi2, hy2b]);
+
+        // h_pt : Equiv sp1 sp2.
+        let oi = d.const_app(p.of_nat, &[i]);
+        let sh1 = cmul(d, p, oi, delta1);
+        let sh2 = cmul(d, p, oi, delta2);
+        let refl_oi = d.lemma(p.equiv_refl, &[oi]);
+        let h_sh = d.lemma(p.mul_congr, &[oi, oi, delta1, delta2, refl_oi, h_delta]);
+        let h_pt = d.lemma(p.add_congr, &[x, x2, sh1, sh2, hex, h_sh]);
+
+        // h_f : Equiv (F sp1) (F sp2) -- the BOUNDED congruence, since `F` is
+        // uniformly continuous only on `[aa, bb]` and a global one does not
+        // exist for such an `F` (that is `congr_of_uniformly_continuous`'s
+        // whole reason for existing).
+        let h_f = d.lemma(
+            p.congr_of_uniformly_continuous,
+            &[
+                f, aa, bb, u, sp1, sp2, h_a_sp1, h_sp1_b, h_a_sp2, h_sp2_b, h_pt,
+            ],
+        );
+
+        let fz1 = d.apply(f, &[sp1]);
+        let fz2 = d.apply(f, &[sp2]);
+        let h_summand = d.lemma(p.mul_congr, &[fz1, fz2, delta1, delta2, h_f, h_delta]);
+
+        let with_lt = d.lam_fv(lt_fv, lt_ty, h_summand);
+        d.lam_fv(i_fv, nat, with_lt)
+    };
+
+    let congr = sum_range_congr_lt_proof(d, p, f_summand, g_summand, n);
+    d.apply(congr, &[bounded_pointwise])
+}
+
+#[cfg(test)]
+mod riemann_sum_congr_endpoints_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// Symbolic in `F`, both interval pairs, the outer interval, the witness
+    /// and the mesh count, closed into a real `Theorem` — so the claim is
+    /// checked by `Kernel::add_declaration`, not by `cargo check`, and against
+    /// genuinely free variables rather than literals (numerals reduce, and
+    /// reduction hides every defeq-shaped gap).
+    ///
+    /// The stated conclusion is written at the [`rsum`] type
+    /// (`Equiv (riemannSum F x y m) (riemannSum F x2 y2 m)`), NOT at the
+    /// `sumRange` type the proof term builds, so the test also pins that the
+    /// two are the same `Definition` body at the same hash-consed `ExprId`s.
+    #[test]
+    fn riemann_sum_congr_endpoints_proves_the_stated_equiv() {
+        crate::on_a_deep_stack(riemann_sum_congr_endpoints_proves_the_stated_equiv_body);
+    }
+
+    fn riemann_sum_congr_endpoints_proves_the_stated_equiv_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+        let nat = d.nat_ty();
+        let f_ty = fn_ty(&mut d, p);
+
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let aa_fv = d.fresh_fvar();
+        let aa = d.kernel().fvar(aa_fv);
+        let bb_fv = d.fresh_fvar();
+        let bb = d.kernel().fvar(bb_fv);
+        let u_ty = d.const_app(p.uniformly_continuous_on, &[f, aa, bb]);
+        let u_fv = d.fresh_fvar();
+        let u = d.kernel().fvar(u_fv);
+
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let x2_fv = d.fresh_fvar();
+        let x2 = d.kernel().fvar(x2_fv);
+        let y2_fv = d.fresh_fvar();
+        let y2 = d.kernel().fvar(y2_fv);
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+
+        let hxy_ty = cle(&mut d, p, x, y);
+        let hxy_fv = d.fresh_fvar();
+        let hxy = d.kernel().fvar(hxy_fv);
+        let hx2y2_ty = cle(&mut d, p, x2, y2);
+        let hx2y2_fv = d.fresh_fvar();
+        let hx2y2 = d.kernel().fvar(hx2y2_fv);
+        let hax_ty = cle(&mut d, p, aa, x);
+        let hax_fv = d.fresh_fvar();
+        let hax = d.kernel().fvar(hax_fv);
+        let hyb_ty = cle(&mut d, p, y, bb);
+        let hyb_fv = d.fresh_fvar();
+        let hyb = d.kernel().fvar(hyb_fv);
+        let hax2_ty = cle(&mut d, p, aa, x2);
+        let hax2_fv = d.fresh_fvar();
+        let hax2 = d.kernel().fvar(hax2_fv);
+        let hy2b_ty = cle(&mut d, p, y2, bb);
+        let hy2b_fv = d.fresh_fvar();
+        let hy2b = d.kernel().fvar(hy2b_fv);
+        let hex_ty = equiv(&mut d, p, x, x2);
+        let hex_fv = d.fresh_fvar();
+        let hex = d.kernel().fvar(hex_fv);
+        let hey_ty = equiv(&mut d, p, y, y2);
+        let hey_fv = d.fresh_fvar();
+        let hey = d.kernel().fvar(hey_fv);
+
+        let proof = riemann_sum_congr_endpoints(
+            &mut d, p, f, aa, bb, u, x, y, x2, y2, m, hxy, hx2y2, hax, hyb, hax2, hy2b, hex, hey,
+        );
+
+        let lhs = rsum(&mut d, p, f, x, y, m);
+        let rhs = rsum(&mut d, p, f, x2, y2, m);
+        // Non-vacuity: the two sides must be genuinely different terms. A
+        // conclusion that had collapsed to `Equiv X X` would be discharged by
+        // `equiv_refl` and would prove nothing about endpoint congruence,
+        // while still passing `add_declaration` below.
+        assert_ne!(
+            lhs, rhs,
+            "the two riemannSums must be distinct terms, or the theorem is `Equiv X X`"
+        );
+        let concl = equiv(&mut d, p, lhs, rhs);
+
+        let ty = {
+            let t = d.arrow(hey_ty, concl);
+            let t = d.arrow(hex_ty, t);
+            let t = d.arrow(hy2b_ty, t);
+            let t = d.arrow(hax2_ty, t);
+            let t = d.arrow(hyb_ty, t);
+            let t = d.arrow(hax_ty, t);
+            let t = d.arrow(hx2y2_ty, t);
+            let t = d.arrow(hxy_ty, t);
+            let t = d.pi_fv(m_fv, nat, t);
+            let t = d.pi_fv(y2_fv, carrier, t);
+            let t = d.pi_fv(x2_fv, carrier, t);
+            let t = d.pi_fv(y_fv, carrier, t);
+            let t = d.pi_fv(x_fv, carrier, t);
+            let t = d.arrow(u_ty, t);
+            let t = d.pi_fv(bb_fv, carrier, t);
+            let t = d.pi_fv(aa_fv, carrier, t);
+            d.pi_fv(f_fv, f_ty, t)
+        };
+        let value = {
+            let v = d.lam_fv(hey_fv, hey_ty, proof);
+            let v = d.lam_fv(hex_fv, hex_ty, v);
+            let v = d.lam_fv(hy2b_fv, hy2b_ty, v);
+            let v = d.lam_fv(hax2_fv, hax2_ty, v);
+            let v = d.lam_fv(hyb_fv, hyb_ty, v);
+            let v = d.lam_fv(hax_fv, hax_ty, v);
+            let v = d.lam_fv(hx2y2_fv, hx2y2_ty, v);
+            let v = d.lam_fv(hxy_fv, hxy_ty, v);
+            let v = d.lam_fv(m_fv, nat, v);
+            let v = d.lam_fv(y2_fv, carrier, v);
+            let v = d.lam_fv(x2_fv, carrier, v);
+            let v = d.lam_fv(y_fv, carrier, v);
+            let v = d.lam_fv(x_fv, carrier, v);
+            let v = d.lam_fv(u_fv, u_ty, v);
+            let v = d.lam_fv(bb_fv, carrier, v);
+            let v = d.lam_fv(aa_fv, carrier, v);
+            d.lam_fv(f_fv, f_ty, v)
+        };
+
+        let anon = d.kernel().anon();
+        let name = d.kernel().name_str(anon, "riemannSumCongrEndpointsSmoke");
+        let result = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(
+            result.is_ok(),
+            "riemann_sum_congr_endpoints must prove the stated Equiv at the riemannSum type: {:?}",
+            result.err()
+        );
+    }
+}
+
+/// `Equiv (riemannSum F a b combined) (add (riemannSum F a c m_ac)
+/// (riemannSum F c b m_cb))` — [`CRealPrelude::riemann_sum_split_exact_of_uc`]'s
+/// exact identity RESTATED AT THE CALLER'S OWN `c`, given only that `c` is
+/// `Equiv` to that theorem's internally-computed split point `c_k`.
+///
+/// This is the join between the SIXTEENTH `integral_split` entry's two gap
+/// resolutions, and it is the shape `integral_split`'s combine needs: the
+/// three `riemann_sum_integral_close` legs are stated at the caller's fixed
+/// `c` (they must be — the caller supplies `hac`/`uac`/`hcb`/`ucb` once),
+/// while `riemann_sum_split_exact_of_uc` can only speak about `c_k := a +
+/// ofNat(succ m_ac) · delta_of(a, b, combined)`, a fresh `Nat` arithmetic
+/// expression at every accuracy.
+///
+/// `Equiv c_k c` is exactly what
+/// [`CRealPrelude::riemann_sum_split_scale_invariant`] proves, and only for
+/// the [`succ_mul_succ`] family — which is why [`mesh_count_align_mul`] is a
+/// PREREQUISITE for this and [`mesh_count_align`]'s additive padding is not
+/// merely a worse choice but an unusable one (there is no `c_0` to be `Equiv`
+/// to).
+///
+/// Two [`riemann_sum_congr_endpoints`] applications, one per summand — the
+/// first moving the RIGHT endpoint (`[a, c_k] → [a, c]`), the second the LEFT
+/// (`[c_k, b] → [c, b]`), which is why that helper varies both — combined by
+/// [`CRealPrelude::add_congr`] and chained onto the split identity.
+#[allow(clippy::too_many_arguments)]
+fn split_identity_at_equiv_point(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    a: ExprId,
+    b: ExprId,
+    u: ExprId,
+    hab: ExprId,
+    m_ac: ExprId,
+    m_cb: ExprId,
+    c: ExprId,
+    hac_k: ExprId,
+    hc_kb: ExprId,
+    hac: ExprId,
+    hcb: ExprId,
+    hc: ExprId,
+) -> ExprId {
+    // `c_k` and `combined`, rebuilt exactly as
+    // `declare_riemann_sum_split_exact` builds them, so interning makes these
+    // the SAME `ExprId`s the theorem's own conclusion mentions.
+    let n_ac = d.succ(m_ac);
+    let combined = NatOps::add(d, n_ac, m_cb);
+    let delta_ab = delta_of(d, p, a, b, combined);
+    let on_ac = d.const_app(p.of_nat, &[n_ac]);
+    let w1 = cmul(d, p, on_ac, delta_ab);
+    let c_k = cadd(d, p, a, w1);
+
+    let split = d.lemma(
+        p.riemann_sum_split_exact_of_uc,
+        &[f, a, b, m_ac, m_cb, u, hab],
+    );
+
+    let refl_a_le = d.lemma(p.le_refl, &[a]);
+    let refl_b_le = d.lemma(p.le_refl, &[b]);
+    let refl_a_eq = d.lemma(p.equiv_refl, &[a]);
+    let refl_b_eq = d.lemma(p.equiv_refl, &[b]);
+
+    // leg1 : Equiv (riemannSum F a c_k m_ac) (riemannSum F a c m_ac).
+    let leg1 = riemann_sum_congr_endpoints(
+        d, p, f, a, b, u, a, c_k, a, c, m_ac, hac_k, hac, refl_a_le, hc_kb, refl_a_le, hcb,
+        refl_a_eq, hc,
+    );
+    // leg2 : Equiv (riemannSum F c_k b m_cb) (riemannSum F c b m_cb).
+    // NOTE the outer interval is `(a, b)` in BOTH legs, never `(c_k, b)`:
+    // `u` witnesses uniform continuity on `[a, b]` and on nothing else. A
+    // first version passed `(c_k, b)` here -- reading the leg's own
+    // sub-interval as the witness's interval -- and the kernel rejected it
+    // with a bare `TypeMismatch` naming neither `u` nor `c_k`.
+    let leg2 = riemann_sum_congr_endpoints(
+        d, p, f, a, b, u, c_k, b, c, b, m_cb, hc_kb, hcb, hac_k, refl_b_le, hac, refl_b_le, hc,
+        refl_b_eq,
+    );
+
+    let l1 = rsum(d, p, f, a, c_k, m_ac);
+    let l2 = rsum(d, p, f, c_k, b, m_cb);
+    let r1 = rsum(d, p, f, a, c, m_ac);
+    let r2 = rsum(d, p, f, c, b, m_cb);
+    let mid = cadd(d, p, l1, l2);
+    let rhs = cadd(d, p, r1, r2);
+    let combine = d.lemma(p.add_congr, &[l1, r1, l2, r2, leg1, leg2]);
+
+    let lhs = rsum(d, p, f, a, b, combined);
+    echain(d, p, lhs, &[(mid, split), (rhs, combine)])
+}
+
+#[cfg(test)]
+mod split_identity_at_equiv_point_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// Symbolic in every input, closed into a real `Theorem`. This is the
+    /// first thing in this file to CONSUME both of the SIXTEENTH lane's gap
+    /// resolutions at once, so it is also the check that they compose: a
+    /// [`riemann_sum_congr_endpoints`] whose endpoint roles were transposed
+    /// would still prove its own smoke test and fail here.
+    #[test]
+    fn split_identity_at_equiv_point_proves_the_stated_identity() {
+        crate::on_a_deep_stack(split_identity_at_equiv_point_proves_the_stated_identity_body);
+    }
+
+    fn split_identity_at_equiv_point_proves_the_stated_identity_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+        let nat = d.nat_ty();
+        let f_ty = fn_ty(&mut d, p);
+
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+        let u_fv = d.fresh_fvar();
+        let u = d.kernel().fvar(u_fv);
+        let hab_ty = cle(&mut d, p, a, b);
+        let hab_fv = d.fresh_fvar();
+        let hab = d.kernel().fvar(hab_fv);
+
+        let mac_fv = d.fresh_fvar();
+        let m_ac = d.kernel().fvar(mac_fv);
+        let mcb_fv = d.fresh_fvar();
+        let m_cb = d.kernel().fvar(mcb_fv);
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+
+        // Rebuild `c_k` independently, mirroring the helper's own
+        // construction, so a defect in ITS reconstruction is what the kernel
+        // catches rather than a matching bug here.
+        let n_ac = d.succ(m_ac);
+        let combined = NatOps::add(&mut d, n_ac, m_cb);
+        let delta_ab = delta_of(&mut d, p, a, b, combined);
+        let on_ac = d.const_app(p.of_nat, &[n_ac]);
+        let w1 = cmul(&mut d, p, on_ac, delta_ab);
+        let c_k = cadd(&mut d, p, a, w1);
+
+        let hac_k_ty = cle(&mut d, p, a, c_k);
+        let hac_k_fv = d.fresh_fvar();
+        let hac_k = d.kernel().fvar(hac_k_fv);
+        let hc_kb_ty = cle(&mut d, p, c_k, b);
+        let hc_kb_fv = d.fresh_fvar();
+        let hc_kb = d.kernel().fvar(hc_kb_fv);
+        let hac_ty = cle(&mut d, p, a, c);
+        let hac_fv = d.fresh_fvar();
+        let hac = d.kernel().fvar(hac_fv);
+        let hcb_ty = cle(&mut d, p, c, b);
+        let hcb_fv = d.fresh_fvar();
+        let hcb = d.kernel().fvar(hcb_fv);
+        let hc_ty = equiv(&mut d, p, c_k, c);
+        let hc_fv = d.fresh_fvar();
+        let hc = d.kernel().fvar(hc_fv);
+
+        let proof = split_identity_at_equiv_point(
+            &mut d, p, f, a, b, u, hab, m_ac, m_cb, c, hac_k, hc_kb, hac, hcb, hc,
+        );
+
+        let lhs = rsum(&mut d, p, f, a, b, combined);
+        let r1 = rsum(&mut d, p, f, a, c, m_ac);
+        let r2 = rsum(&mut d, p, f, c, b, m_cb);
+        let rhs = cadd(&mut d, p, r1, r2);
+        // Non-vacuity: the conclusion must mention the CALLER's `c`, not the
+        // internally-computed `c_k`. If it collapsed to the latter this would
+        // just be `riemann_sum_split_exact_of_uc` restated, and the two
+        // congruence legs would be doing nothing.
+        let l1 = rsum(&mut d, p, f, a, c_k, m_ac);
+        assert_ne!(
+            r1, l1,
+            "the conclusion must be about the caller's `c`, not the computed `c_k`"
+        );
+        let concl = equiv(&mut d, p, lhs, rhs);
+
+        let ty = {
+            let t = d.arrow(hc_ty, concl);
+            let t = d.arrow(hcb_ty, t);
+            let t = d.arrow(hac_ty, t);
+            let t = d.arrow(hc_kb_ty, t);
+            let t = d.arrow(hac_k_ty, t);
+            let t = d.pi_fv(c_fv, carrier, t);
+            let t = d.pi_fv(mcb_fv, nat, t);
+            let t = d.pi_fv(mac_fv, nat, t);
+            let t = d.arrow(hab_ty, t);
+            let t = d.arrow(u_ty, t);
+            let t = d.pi_fv(b_fv, carrier, t);
+            let t = d.pi_fv(a_fv, carrier, t);
+            d.pi_fv(f_fv, f_ty, t)
+        };
+        let value = {
+            let v = d.lam_fv(hc_fv, hc_ty, proof);
+            let v = d.lam_fv(hcb_fv, hcb_ty, v);
+            let v = d.lam_fv(hac_fv, hac_ty, v);
+            let v = d.lam_fv(hc_kb_fv, hc_kb_ty, v);
+            let v = d.lam_fv(hac_k_fv, hac_k_ty, v);
+            let v = d.lam_fv(c_fv, carrier, v);
+            let v = d.lam_fv(mcb_fv, nat, v);
+            let v = d.lam_fv(mac_fv, nat, v);
+            let v = d.lam_fv(hab_fv, hab_ty, v);
+            let v = d.lam_fv(u_fv, u_ty, v);
+            let v = d.lam_fv(b_fv, carrier, v);
+            let v = d.lam_fv(a_fv, carrier, v);
+            d.lam_fv(f_fv, f_ty, v)
+        };
+
+        let anon = d.kernel().anon();
+        let name = d.kernel().name_str(anon, "splitIdentityAtEquivPointSmoke");
+        let result = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(
+            result.is_ok(),
+            "split_identity_at_equiv_point must prove the identity at the caller's c: {:?}",
             result.err()
         );
     }
@@ -11402,6 +12830,459 @@ fn bnd_leg_plus_share_le(
     );
 
     (k, final_le)
+}
+
+/// The `[a,c]`-leg generalization of [`bnd_leg_plus_share_le`]: identical
+/// structure (same `a1`/`a2`/`shift`/`b1` bookkeeping, same
+/// `half_shift_le`-weakened `modulus` pair, same fold into a single
+/// `natDivSucc`), but the `bound_at_idx` weakening step consumes
+/// [`total_eps_sample_le_at`] at an INDEPENDENT accuracy `e` and sample
+/// index `jj1` — `bnd_leg_plus_share_le`'s own `total_eps_sample_le` call is
+/// that function's `n := idx` specialization, so `e := jj1` recovers it
+/// exactly.
+///
+/// Because `m_term := nds(magnitude, e)` and every other leaf
+/// (`a1`/`a2`/`b1`) is built at `jj1`, [`fuse_nds`] cannot fold `m_term`
+/// together with them (it fuses two `natDivSucc`s at the SAME index only).
+/// So `m_term` is pulled out to the front of the sum instead of into it: one
+/// `Rat.add_assoc` isolates `b1+b1` inside `inner_target`, one
+/// [`reassoc3`] application (`Eq (a1a1 + (m_term + b1b1)) (m_term + (b1b1 +
+/// a1a1))`) moves `m_term` past the first `a1a1`, and every step after that
+/// stays in the shape `radd(m_term, natDivSucc(_, jj1))` by construction, so
+/// only plain `Rat.add_assoc` (never another commute) is needed to keep
+/// folding the `jj1`-side terms as [`bnd_leg_plus_share_le`] itself does.
+///
+/// Returns `(k, proof)`, `proof : Rat.le (radd(bnd_leg_actual, natDivSucc(1,
+/// jj1))) (radd(m_term, natDivSucc(k, jj1)))` — `bnd_leg_actual` is
+/// EXACTLY [`bnd_leg_plus_share_le`]'s own leaf shape (`modulus(jj1,shift
+/// jj1) + bound_at_idx) + modulus(shift jj1,jj1)`, at `jj1` throughout, so a
+/// caller substitutes this directly wherever `bnd_leg_plus_share_le`'s own
+/// result is substituted today. `k` is independent of `magnitude` and of
+/// `e` — a concrete instantiation confirms it is defeq to the literal `9`,
+/// matching [`bnd_leg_plus_share_le`]'s own doc-commented leaf count
+/// (`magnitude + 9`) with the `magnitude` term now carried separately in
+/// `m_term` instead of folded in.
+#[allow(clippy::too_many_arguments)]
+fn bnd_leg_plus_share_le_at(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    e: ExprId,
+    jj1: ExprId,
+    m: ExprId,
+    magnitude: ExprId,
+    bound_at_idx: ExprId,
+) -> (ExprId, ExprId) {
+    let rat = p.rat;
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+
+    let a1 = div_succ(d, p, 1, jj1);
+    let shift_jj1 = shift(d, jj1);
+    let a2 = div_succ(d, p, 1, shift_jj1);
+    let b1 = div_succ(d, p, 2, jj1);
+    let m_term = nds(d, p, magnitude, e);
+
+    // --- order half: bnd_leg(jj1,m) + natDivSucc(1,jj1) ≤ R. --------------
+    let a2_le_a1 = half_shift_le(d, p, jj1);
+    let refl_a1 = d.lemma(rat.le_refl, &[a1]);
+
+    let modulus_idx_shift = modulus(d, p, jj1, shift_jj1); // = radd(a1,a2)
+    let modulus_shift_idx = modulus(d, p, shift_jj1, jj1); // = radd(a2,a1)
+
+    let mod1_le = d.lemma(rat.add_le_add, &[a1, a1, a2, a1, refl_a1, a2_le_a1]);
+    let mod2_le = d.lemma(rat.add_le_add, &[a2, a1, a1, a1, a2_le_a1, refl_a1]);
+
+    // bound_at_idx ≤ (m_term + b1) + b1 [up to the one-beta defeq noted on
+    // `bnd_leg_plus_share_le`], via the independent-index generalization.
+    let sample_le = total_eps_sample_le_at(d, p, a, b, e, m, magnitude, jj1);
+    let refl_b1 = d.lemma(rat.le_refl, &[b1]);
+    let total_eps = total_eps_of(d, p, a, b, e, m);
+    let sample_te = sample(d, p, total_eps, jj1);
+    let m_plus_b1 = radd(d, m_term, b1);
+    let bound_le = d.lemma(
+        rat.add_le_add,
+        &[sample_te, m_plus_b1, b1, b1, sample_le, refl_b1],
+    );
+
+    let a1a1 = radd(d, a1, a1);
+    let inner_target = radd(d, m_plus_b1, b1);
+    let part1_actual = radd(d, modulus_idx_shift, bound_at_idx);
+    let part1_target = radd(d, a1a1, inner_target);
+    let part1_le = d.lemma(
+        rat.add_le_add,
+        &[
+            modulus_idx_shift,
+            a1a1,
+            bound_at_idx,
+            inner_target,
+            mod1_le,
+            bound_le,
+        ],
+    );
+
+    let bnd_leg_actual = radd(d, part1_actual, modulus_shift_idx);
+    let bnd_leg_target = radd(d, part1_target, a1a1);
+    let bnd_leg_le = d.lemma(
+        rat.add_le_add,
+        &[
+            part1_actual,
+            part1_target,
+            modulus_shift_idx,
+            a1a1,
+            part1_le,
+            mod2_le,
+        ],
+    );
+
+    let with_extra_target = radd(d, bnd_leg_target, a1);
+    let with_extra_le = d.lemma(
+        rat.add_le_add,
+        &[bnd_leg_actual, bnd_leg_target, a1, a1, bnd_leg_le, refl_a1],
+    );
+
+    // --- equality half: pull `m_term` to the front, fold the rest at `jj1`.
+    // inner_target = (m_term+b1)+b1 ≡ m_term+(b1+b1) ≡ m_term+natDivSucc(nb4,jj1).
+    let assoc_inner = d.lemma(rat.add_assoc, &[m_term, b1, b1]);
+    let b1_b1 = radd(d, b1, b1);
+    let m_term_plus_b1b1 = radd(d, m_term, b1_b1);
+    let (nb4, eq_b1b1) = fuse_nds(d, p, two_nat, two_nat, jj1);
+    let nb4_idx = nds(d, p, nb4, jj1);
+    let eq_inner_right = rcongr(d, b1_b1, nb4_idx, eq_b1b1, &|d, t| radd(d, m_term, t));
+    let m_term_plus_nb4 = radd(d, m_term, nb4_idx);
+    let eq_inner = rtrans(
+        d,
+        inner_target,
+        m_term_plus_b1b1,
+        m_term_plus_nb4,
+        assoc_inner,
+        eq_inner_right,
+    );
+
+    // a1a1 = natDivSucc(n3,jj1).
+    let (n3, eq_c) = fuse_nds(d, p, one_nat, one_nat, jj1);
+    let n3_idx = nds(d, p, n3, jj1);
+
+    // part1_target = a1a1 + inner_target ≡ n3_idx + (m_term + nb4_idx)
+    //              ≡ [reassoc3] m_term + (nb4_idx + n3_idx)
+    //              ≡ m_term + natDivSucc(n4,jj1).
+    let eq_part1_left = rcongr(d, a1a1, n3_idx, eq_c, &|d, t| radd(d, t, inner_target));
+    let n3_idx_plus_inner = radd(d, n3_idx, inner_target);
+    let eq_part1_right = rcongr(d, inner_target, m_term_plus_nb4, eq_inner, &|d, t| {
+        radd(d, n3_idx, t)
+    });
+    let n3_idx_plus_mnb4 = radd(d, n3_idx, m_term_plus_nb4);
+    let eq_part1_pre = rtrans(
+        d,
+        part1_target,
+        n3_idx_plus_inner,
+        n3_idx_plus_mnb4,
+        eq_part1_left,
+        eq_part1_right,
+    );
+    let (reassoc1_target, reassoc1_proof) = reassoc3(d, p, n3_idx, m_term, nb4_idx);
+    let eq_part1_full = rtrans(
+        d,
+        part1_target,
+        n3_idx_plus_mnb4,
+        reassoc1_target,
+        eq_part1_pre,
+        reassoc1_proof,
+    );
+    let (n4, eq_d) = fuse_nds(d, p, nb4, n3, jj1);
+    let n4_idx = nds(d, p, n4, jj1);
+    let nb4_plus_n3 = radd(d, nb4_idx, n3_idx);
+    let eq_part1_inner = rcongr(d, nb4_plus_n3, n4_idx, eq_d, &|d, t| radd(d, m_term, t));
+    let m_term_plus_n4 = radd(d, m_term, n4_idx);
+    let eq_part1_final = rtrans(
+        d,
+        part1_target,
+        reassoc1_target,
+        m_term_plus_n4,
+        eq_part1_full,
+        eq_part1_inner,
+    );
+
+    // bnd_leg_target = part1_target + a1a1 ≡ (m_term+n4_idx) + n3_idx
+    //                ≡ [add_assoc] m_term + (n4_idx+n3_idx)
+    //                ≡ m_term + natDivSucc(n5,jj1).
+    let eq_bnd_step1 = rcongr(d, part1_target, m_term_plus_n4, eq_part1_final, &|d, t| {
+        radd(d, t, a1a1)
+    });
+    let m_term_n4_plus_a1a1 = radd(d, m_term_plus_n4, a1a1);
+    let eq_bnd_step2 = rcongr(d, a1a1, n3_idx, eq_c, &|d, t| radd(d, m_term_plus_n4, t));
+    let m_term_n4_plus_n3 = radd(d, m_term_plus_n4, n3_idx);
+    let eq_bnd_pre = rtrans(
+        d,
+        bnd_leg_target,
+        m_term_n4_plus_a1a1,
+        m_term_n4_plus_n3,
+        eq_bnd_step1,
+        eq_bnd_step2,
+    );
+    let assoc_bnd = d.lemma(rat.add_assoc, &[m_term, n4_idx, n3_idx]);
+    let n4_plus_n3 = radd(d, n4_idx, n3_idx);
+    let m_term_plus_n4n3 = radd(d, m_term, n4_plus_n3);
+    let eq_bnd_full = rtrans(
+        d,
+        bnd_leg_target,
+        m_term_n4_plus_n3,
+        m_term_plus_n4n3,
+        eq_bnd_pre,
+        assoc_bnd,
+    );
+    let (n5, eq_e) = fuse_nds(d, p, n4, n3, jj1);
+    let n5_idx = nds(d, p, n5, jj1);
+    let eq_bnd_inner = rcongr(d, n4_plus_n3, n5_idx, eq_e, &|d, t| radd(d, m_term, t));
+    let m_term_plus_n5 = radd(d, m_term, n5_idx);
+    let eq_bnd_final = rtrans(
+        d,
+        bnd_leg_target,
+        m_term_plus_n4n3,
+        m_term_plus_n5,
+        eq_bnd_full,
+        eq_bnd_inner,
+    );
+
+    // with_extra_target = bnd_leg_target + a1 ≡ (m_term+n5_idx) + a1
+    //                   ≡ [add_assoc] m_term + (n5_idx+a1)
+    //                   ≡ m_term + natDivSucc(k,jj1).
+    let eq_we_pre = rcongr(d, bnd_leg_target, m_term_plus_n5, eq_bnd_final, &|d, t| {
+        radd(d, t, a1)
+    });
+    let m_term_n5_plus_a1 = radd(d, m_term_plus_n5, a1);
+    let assoc_we = d.lemma(rat.add_assoc, &[m_term, n5_idx, a1]);
+    let n5_plus_a1 = radd(d, n5_idx, a1);
+    let m_term_plus_n5a1 = radd(d, m_term, n5_plus_a1);
+    let eq_we_full = rtrans(
+        d,
+        with_extra_target,
+        m_term_n5_plus_a1,
+        m_term_plus_n5a1,
+        eq_we_pre,
+        assoc_we,
+    );
+    let (k, eq_f) = fuse_nds(d, p, n5, one_nat, jj1);
+    let k_idx = nds(d, p, k, jj1);
+    let eq_we_inner = rcongr(d, n5_plus_a1, k_idx, eq_f, &|d, t| radd(d, m_term, t));
+    let m_term_plus_k = radd(d, m_term, k_idx);
+    let eq_with_extra = rtrans(
+        d,
+        with_extra_target,
+        m_term_plus_n5a1,
+        m_term_plus_k,
+        eq_we_full,
+        eq_we_inner,
+    );
+
+    let with_extra_actual = radd(d, bnd_leg_actual, a1);
+    let final_le = rat_eq_rewrite(
+        d,
+        with_extra_target,
+        m_term_plus_k,
+        eq_with_extra,
+        with_extra_le,
+        &|d, t| rle(d, rat, with_extra_actual, t),
+    );
+
+    (k, final_le)
+}
+
+#[cfg(test)]
+mod bnd_leg_plus_share_le_at_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// The raw bound, symbolic in `a b e jj1 m magnitude`, closed into a
+    /// real `Theorem`. `bound_at_idx` is built literally as `radd(sample_te,
+    /// b1)` (the zero-step-defeq case the doc comment names), since this
+    /// leg has no real `riemann_sum_integral_close`-shaped caller yet — the
+    /// construction under test is `bnd_leg_plus_share_le_at` itself, not a
+    /// hand-built stand-in for a future caller.
+    #[test]
+    fn bnd_leg_plus_share_le_at_proves_the_stated_bound() {
+        crate::on_a_deep_stack(bnd_leg_plus_share_le_at_proves_the_stated_bound_body);
+    }
+
+    fn bnd_leg_plus_share_le_at_proves_the_stated_bound_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let nat = d.nat_ty();
+        let carrier = creal_ty(&mut d, p);
+
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+        let jj1_fv = d.fresh_fvar();
+        let jj1 = d.kernel().fvar(jj1_fv);
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+
+        // `magnitude` is NOT an independent free input: `total_eps_sample_le_at`
+        // (via `riemann_sum_total_eps_le`) embeds `succ(CReal.bound(width_of(a,b)))`
+        // in its own conclusion, so the caller's `magnitude` must be that SAME
+        // `ExprId` (hash-consed), exactly the recipe `total_eps_sample_le_at`'s
+        // own test uses — an unrelated `magnitude` fails to type-check.
+        let width = width_of(&mut d, p, a, b);
+        let (_c, magnitude, _width_le) = direct_bound_le(&mut d, p, width);
+
+        let total_eps = total_eps_of(&mut d, p, a, b, e, m);
+        let sample_te = sample(&mut d, p, total_eps, jj1);
+        let b1 = div_succ(&mut d, p, 2, jj1);
+        let bound_at_idx = radd(&mut d, sample_te, b1);
+
+        let (k, proof) =
+            bnd_leg_plus_share_le_at(&mut d, p, a, b, e, jj1, m, magnitude, bound_at_idx);
+
+        let a1 = div_succ(&mut d, p, 1, jj1);
+        let shift_jj1 = shift(&mut d, jj1);
+        let modulus_idx_shift = modulus(&mut d, p, jj1, shift_jj1);
+        let modulus_shift_idx = modulus(&mut d, p, shift_jj1, jj1);
+        let part1_actual = radd(&mut d, modulus_idx_shift, bound_at_idx);
+        let bnd_leg_actual = radd(&mut d, part1_actual, modulus_shift_idx);
+        let with_extra_actual = radd(&mut d, bnd_leg_actual, a1);
+        let m_term = nds(&mut d, p, magnitude, e);
+        let k_idx = nds(&mut d, p, k, jj1);
+        let target = radd(&mut d, m_term, k_idx);
+        let concl_ty = rle(&mut d, p.rat, with_extra_actual, target);
+
+        // `Kernel::infer` on the unwrapped `proof` hits `UnboundFVar` (the
+        // free variables of `bnd_leg_plus_share_le_at`'s own construction) —
+        // close over them into a real `Theorem` first, `declare_of_nat_le`'s
+        // own idiom, and let `add_declaration` be the check. `magnitude` is
+        // NOT separately quantified: it is a term built from `a`/`b`, not an
+        // independent input.
+        let ty = {
+            let over_m = d.pi_fv(m_fv, nat, concl_ty);
+            let over_jj1 = d.pi_fv(jj1_fv, nat, over_m);
+            let over_e = d.pi_fv(e_fv, nat, over_jj1);
+            let over_b = d.pi_fv(b_fv, carrier, over_e);
+            d.pi_fv(a_fv, carrier, over_b)
+        };
+        let value = {
+            let over_m = d.lam_fv(m_fv, nat, proof);
+            let over_jj1 = d.lam_fv(jj1_fv, nat, over_m);
+            let over_e = d.lam_fv(e_fv, nat, over_jj1);
+            let over_b = d.lam_fv(b_fv, carrier, over_e);
+            d.lam_fv(a_fv, carrier, over_b)
+        };
+
+        let anon = d.kernel().anon();
+        let name = d
+            .kernel()
+            .name_str(anon, "bndLegPlusShareLeAtStatedBoundSmoke");
+        let result = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(
+            result.is_ok(),
+            "bnd_leg_plus_share_le_at must prove the stated bound, closed over a b e jj1 m: {:?}",
+            result.err()
+        );
+    }
+
+    /// Non-vacuity, aimed at the specific thing this generalization adds:
+    /// swapping `e` and `jj1` must change the rendered target, since `e`
+    /// appears ONLY in `m_term` and `jj1` appears ONLY in the folded
+    /// `natDivSucc(k,jj1)` side. If swapping them rendered identically, the
+    /// construction would be silently collapsing back to the shared-index
+    /// case rather than genuinely separating the two indices.
+    #[test]
+    fn bnd_leg_plus_share_le_at_is_not_symmetric_in_e_and_jj1() {
+        crate::on_a_deep_stack(bnd_leg_plus_share_le_at_is_not_symmetric_in_e_and_jj1_body);
+    }
+
+    fn bnd_leg_plus_share_le_at_is_not_symmetric_in_e_and_jj1_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+        let a = d.kernel().const_(p.zero, vec![]);
+        let b = d.kernel().const_(p.one, vec![]);
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+        let jj1_fv = d.fresh_fvar();
+        let jj1 = d.kernel().fvar(jj1_fv);
+        let m = d.num(6);
+        // `magnitude` must be the SAME `ExprId` `riemann_sum_total_eps_le`
+        // embeds internally (`succ(CReal.bound(width_of(a,b)))`), not an
+        // arbitrary literal — see `bnd_leg_plus_share_le_at_proves_the_stated_bound`.
+        let width = width_of(&mut d, p, a, b);
+        let (_c, magnitude, _width_le) = direct_bound_le(&mut d, p, width);
+
+        let render_target_for = |d: &mut IntDev<'_>, e: ExprId, jj1: ExprId| -> String {
+            let total_eps = total_eps_of(d, p, a, b, e, m);
+            let sample_te = sample(d, p, total_eps, jj1);
+            let b1 = div_succ(d, p, 2, jj1);
+            let bound_at_idx = radd(d, sample_te, b1);
+            let (k, _proof) =
+                bnd_leg_plus_share_le_at(d, p, a, b, e, jj1, m, magnitude, bound_at_idx);
+            let m_term = nds(d, p, magnitude, e);
+            let k_idx = nds(d, p, k, jj1);
+            let target = radd(d, m_term, k_idx);
+            d.kernel().render_lean(target)
+        };
+
+        let straight = render_target_for(&mut d, e, jj1);
+        let swapped = render_target_for(&mut d, jj1, e);
+        assert_ne!(
+            straight, swapped,
+            "swapping e/jj1 must change the rendered target"
+        );
+    }
+
+    /// Concrete instantiation: `e := 6`, `jj1 := 3`, `m := 6`, `a := zero`,
+    /// `b := one`, `magnitude := succ(CReal.bound(width_of(a,b)))` (the
+    /// correct derived value — see the stated-bound test's own doc comment
+    /// for why an arbitrary literal does not type-check). `k` must be defeq
+    /// to the literal `9`, matching
+    /// [`bnd_leg_plus_share_le`]'s own doc-commented leaf count with the
+    /// `magnitude` term now carried separately rather than folded in.
+    #[test]
+    fn bnd_leg_plus_share_le_at_k_is_nine_at_concrete_inputs() {
+        crate::on_a_deep_stack(bnd_leg_plus_share_le_at_k_is_nine_at_concrete_inputs_body);
+    }
+
+    fn bnd_leg_plus_share_le_at_k_is_nine_at_concrete_inputs_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+        let a = d.kernel().const_(p.zero, vec![]);
+        let b = d.kernel().const_(p.one, vec![]);
+        let e = d.num(6);
+        let jj1 = d.num(3);
+        let m = d.num(6);
+        let width = width_of(&mut d, p, a, b);
+        let (_c, magnitude, _width_le) = direct_bound_le(&mut d, p, width);
+
+        let total_eps = total_eps_of(&mut d, p, a, b, e, m);
+        let sample_te = sample(&mut d, p, total_eps, jj1);
+        let b1 = div_succ(&mut d, p, 2, jj1);
+        let bound_at_idx = radd(&mut d, sample_te, b1);
+
+        let (k, proof) =
+            bnd_leg_plus_share_le_at(&mut d, p, a, b, e, jj1, m, magnitude, bound_at_idx);
+
+        d.kernel()
+            .infer(proof)
+            .expect("bnd_leg_plus_share_le_at's proof must type-check at concrete inputs");
+
+        let nine = d.num(9);
+        assert!(
+            d.kernel().def_eq(k, nine),
+            "k must be defeq to the literal 9 at concrete inputs, matching \
+             bnd_leg_plus_share_le's own `magnitude + 9` leaf count"
+        );
+    }
 }
 
 /// `CReal.riemannSumDeepCauchyFolded : ∀ F a b, CReal.le a b →
