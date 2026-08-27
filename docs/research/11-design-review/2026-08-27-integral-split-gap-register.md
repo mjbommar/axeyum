@@ -1,7 +1,11 @@
 # The `integral_split` gap register — two prerequisites four sizings missed
 
-Status: **both gaps CLOSED** 2026-08-27. Kept as the record of how they
-were found, what was wrong about the first characterisation, and what remains.
+Status: **`CReal.integral_split` is PROVED** (seventeenth lane, 2026-08-27),
+admitted axiom-free and registered in the prelude. Both gaps below were closed
+by the sixteenth lane; the seventeenth found no further gap. Kept as the record
+of how the gaps were found, what was wrong about the first characterisation,
+and — in the closing section — what the four sizings got wrong about the
+*remaining* work, which is a separate and more interesting error.
 
 ## Why this file exists
 
@@ -141,3 +145,119 @@ be silenced with `#[allow]`.** The fifteenth lane deliberately declined to wire
 them into an unverified assembly, on the grounds that doing so would ship a
 checker that cannot fail. Wiring them into a *verified* declaration is the only
 acceptable fix.
+
+**Resolved to 4 by the seventeenth lane, and the residue is the finding.** See
+the closing section.
+
+## The close — SEVENTEENTH lane, 2026-08-27: proved, and no seventeenth gap
+
+`CReal.integral_split` is admitted, axiom-free, and in `EXPECTED_STEP_ORDER`:
+
+```text
+∀ F a b (m_ac0 m_cb0 : Nat) (hab : le a b) (u : UniformlyContinuousOn F a b)
+  (hac : le a c) (hcb : le c b)
+  (uac : UniformlyContinuousOn F a c) (ucb : UniformlyContinuousOn F c b),
+    Equiv (integral F a b hab u)
+          (add (integral F a c hac uac) (integral F c b hcb ucb))
+  where c := add a (mul (ofNat (succ m_ac0))
+                        (delta_of a b (add (succ m_ac0) m_cb0)))
+```
+
+Kernel-accepted symbolically in every one of those, **on the first attempt**,
+with zero rejections in the whole lane.
+
+### The remaining volume was an estimate of a different proof
+
+Four sizings (tenth, twelfth, fifteenth, sixteenth) agreed on what was left:
+three `riemann_sum_integral_close` legs, `close_within_of_within_indexed` and
+`bnd_leg_plus_share_le_at` per leg, `abs_add_le` twice, `equiv_zero_of_small`
+to close, `big_n`/`e_inner` as explicit functions of `e`. **Not one of those
+five lemmas is in the proof.** They size a route that builds a three-way
+triangle inequality on `abs` by hand.
+
+`declare_integral_add` and `declare_integral_le` already show the shorter one:
+once every leg is a `Converges` fact at a shared mesh family, the combine is
+three named lemmas and no `abs` estimate is done at this level at all.
+
+```text
+conv_ab/ac/cb  leg_converges, three times
+conv_sum       converges_add
+cross          split_identity_at_equiv_point APPLIED at n -- `CReal.Equiv x y`
+               IS `∀ n, Within (seq x n − seq y n) (2/(n+1))`, so the split
+               identity at n is already `converges_of_close`'s hypothesis;
+               the same step `declare_converges_of_equiv` takes
+step           converges_of_close at Kc := 2
+final          converges_unique
+```
+
+The whole rational estimate collapses into one private helper,
+`leg_converges`, which is `declare_integral_le`'s own `step_f` plus exactly two
+things: `riemann_sum_shared_accuracy_close` at a **free** `k1` (so the leg
+reaches the caller's mesh rather than `common_refinement`'s), and
+`Rat.natDivSucc_antitone` at `Nat.le n l` (reconciling that lemma's
+`modulus(l, shift n)` leaf with `bnd_leg_plus_share_le`'s `modulus(n, shift n)`
+shape).
+
+Generalizing the mistake: **a sizing derived from the shape of the obstruction
+is not a sizing of the cheapest proof.** Every one of the four estimates was
+produced by staring at what `riemann_sum_integral_close` hands you and asking
+how to combine three of them. None asked which *existing declaration in the
+same file* already combines two integrals, which is `integral_add`, twenty
+lines of lemma applications.
+
+### Two parameters that turned out not to be free
+
+- **`c` is not universally quantified.** Gap B's entry already said why —
+  `riemann_sum_split_scale_invariant` gives `Equiv c_k c_0` for the
+  `succ_mul_succ` family and no other — but this is where it becomes a
+  signature. `c` is the base split point of the caller's proportion
+  `succ m_ac0 : succ m_cb0`. Every rational proportion is reachable, and the
+  test asserts the transposed proportion yields a *different* `CReal`, so the
+  reachable stratum is demonstrably not bisection-only.
+- **`big_n := n`.** `leg_converges` needs `Nat.le n (M n)` per leg for the
+  antitone step, and the scale factor is
+  `((deep_ab + deep_ac) + deep_cb) + big_n`. The twelfth lane's plan left
+  `big_n` free "to be driven to infinity against `e`"; nothing drives it.
+
+### Dead code 7 → 4, and the residue is the measurement
+
+Consumed by the verified declaration: `riemann_sum_congr_endpoints`,
+`split_identity_at_equiv_point`, `nat_le_add_left`, `le_dest_elim`.
+
+Still unconsumed, still not `#[allow]`-ed:
+
+| helper | why the shipped proof does not need it |
+| --- | --- |
+| `mesh_count_align` | additive predecessor, superseded by `mesh_count_align_mul` |
+| `MeshAlignMul`, `mesh_count_align_mul` | the CPS form. `leg_converges` runs its own `le_dest_elim` per leg and needs the `Nat.le` facts as plain terms, so the scaling argument was factored into a new non-CPS `mesh_count_align_mul_bounds` and the CPS wrapper now calls it |
+| `bnd_leg_plus_share_le_at` | the independent-index variant. This route runs every index at `n`, so the same-index `bnd_leg_plus_share_le` suffices |
+
+Those three rows are exactly the distance between the sized proof and the
+shipped one. `bnd_leg_plus_share_le_at` in particular was built *because* the
+twelfth lane's plan called for it once per leg at independent accuracies.
+
+### Cost
+
+Matched A/B on one tree, the declaration disabled and re-enabled between
+readings, `creal_prelude_builds` isolated:
+
+| load | without | with |
+| --- | --- | --- |
+| ≈18.7 | 42.82 s | 78.00 s |
+| ≈10.9 | — | 46.53 s |
+| ≈8.4 | **31.55 s** | — |
+| ≈4.6 | — | **39.70 s** |
+
+The box was carrying 5–19 load throughout (two sibling `axeyum-cas` test
+binaries at ~450 % CPU each), so no reading here is isolated in the sense the
+band was set in. The bottom pair is the closest matched one and the `with`
+reading was taken at the *lower* load, so **+8 s is a floor; +8 to +15 s is the
+honest range**, putting the gate at the top edge of its 29–39 s band.
+
+Bisected as this file's own guidance requires: a `leg_converges` at a SIMPLE
+mesh family (`deep(n) + n`) costs **0.3 s** over the bare prelude. So the cost
+is not the estimate machinery — it is the size of the aligned mesh terms
+(`succ_mul_succ` over three `deep_at` moduli) that all three legs and the cross
+are stated at. **No `CReal.integral` `Definition` is unfolded anywhere**: every
+`integral` is one shared `const_app` on both sides of every step, which is the
+discipline `riemannSum_integral_close`'s own 74 s incident established.
