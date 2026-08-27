@@ -126,7 +126,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 364] = [
+    let expected: [(&str, crate::NameId, &str); 365] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -634,6 +634,7 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         ),
         ("CReal.ratioDecayBound", p.ratio_decay_bound, "theorem"),
         ("CReal.invLeOfPosBound", p.inv_le_of_pos_bound, "theorem"),
+        ("CReal.geomYBound", p.geom_y_bound, "theorem"),
         (
             "CReal.geomHalfInvLeafBound",
             p.geom_half_inv_leaf_bound,

@@ -2293,6 +2293,22 @@ pub struct CRealPrelude {
     /// [`Self::le_of_mul_le_mul_left`] at the SAME witness `(k, h)` `inv`
     /// itself takes — no second modulus is invented.
     pub inv_le_of_pos_bound: NameId,
+    /// `CReal.geomYBound : ∀ x, le zero x → lt x one → ∀ k (h : PosBound (add
+    /// one (neg x)) k), ∃ K, ∀ a, le (mul (inv (add one (neg x)) k h) (pow x
+    /// a)) (ofRat (natDivSucc K a))` — the general-base, symbolic-modulus
+    /// generalization of [`Self::geom_half_inv_leaf_bound`] (concrete base
+    /// `1/2`, `inv`-value pinned to the literal `2`).
+    ///
+    /// Combines [`Self::pow_le_nat_div_succ_of_lt`]'s harmonic witness `K1`
+    /// (at `x`) with [`Self::inv_le_of_pos_bound`]'s `ofNat (succ k)` bound
+    /// (at `add one (neg x)`, `k`, `h`) via two
+    /// [`Self::mul_le_mul_of_nonneg_left`]/`_right` applications —
+    /// `iv · xᵃ ≤ (succ k) · xᵃ ≤ (succ k) · natDivSucc K1 a` — then fuses the
+    /// scaled bound into a single `natDivSucc` via `Rat.natDivSucc_mul`,
+    /// giving the witness `K := (succ k)·K1`. `inv` and `PosBound` enter only
+    /// through the hypothesis `h` this theorem already carries; nothing here
+    /// invents a second modulus.
+    pub geom_y_bound: NameId,
     /// `CReal.geomHalfInvLeafBound : ∀ a, le (mul (inv (add one (neg half)) 1
     /// h) (pow half a)) (ofRat (natDivSucc 2 a))`, `h` built internally (not
     /// a parameter) — the leaf [`Self::geom_pair_within`]'s own field doc
@@ -4198,6 +4214,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         pow_le_nat_div_succ_of_lt: kernel.name_str(creal, "pow_le_natDivSucc_of_lt"),
         ratio_decay_bound: kernel.name_str(creal, "ratioDecayBound"),
         inv_le_of_pos_bound: kernel.name_str(creal, "invLeOfPosBound"),
+        geom_y_bound: kernel.name_str(creal, "geomYBound"),
         geom_half_inv_leaf_bound: kernel.name_str(creal, "geomHalfInvLeafBound"),
         geom_cauchy_ordered_half: kernel.name_str(creal, "geomCauchyOrderedHalf"),
         geom_cauchy: kernel.name_str(creal, "geomCauchy"),
