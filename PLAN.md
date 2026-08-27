@@ -158,6 +158,7 @@ now. Nothing was deleted.
 | 2026-08-27 | `0880356d8` | Share `abs_neg_equiv`/`abs_of_nonneg`/`le_sub_of_add_le`: `deriv_unique.rs` (canonical) ← `fermat.rs`; delete orphaned `le_abs_neg_of_le_abs` in `fermat.rs`. |
 | 2026-08-27 | `780eb52f1` | Share `add_sub_cancel`: `deriv_unique.rs` (canonical) ← `fermat.rs`; document the two genuinely-different same-named helpers in `convergence.rs`/`uniform_continuity.rs`. |
 | 2026-08-27 | `e8a444879` | Share `neg_zero_equiv` (7 copies -> 1): `series.rs` (canonical) ← `derivative.rs`, `fermat.rs`, `geometric.rs`, `mvt.rs`, `power.rs`, `rolle.rs`. |
+| 2026-08-27 | `pending` | Open the lane; record the starting measurement. |
 | 2026-08-27 | `14a6484d3` | `scripts/validate-facts.py`: classify `cas-certificate` evidence as `kernel-reconstructed` vs `cas-internal`, reject an unclassifiable checker_command on that route (ADR-0601 SS2). Mutation-tested. |
 | 2026-08-27 | `17e91d839` | `scripts/gen-import-backlog.py` (new): produce `artifacts/import-backlog.json`, the 164-row import backlog, deterministic and ordered by dependency-readiness then curriculum-DAG position (ADR-0601 SS3). `--check` wired into `scripts/check.sh` and the `justfile`. Mutation-tested. |
 | 2026-08-27 | `de853af65` | Level-1 fix: `STEPS` (135 entries) + `validate_step_order` structural preflight for `creal.rs`, replacing the hand-written `declare_*` sequence in `build_creal_prelude_uncached` with `for step in STEPS { (step.run)(&mut d, prelude)?; }`. 0 violations across 2,264 edges against the existing order. `cargo check -p axeyum-lean-kernel --lib` clean, 0 warnings. |
@@ -4888,6 +4889,19 @@ while diffing `abs_neg_equiv`'s neighbours) and `neg_zero_equiv` (found while
 diffing `neg_zero_equiv`'s siblings, the single widest win in the census).
 `le_abs_neg_of_le_abs` (3 editable-file duplicate, orphaned but not yet
 removed from `derivative.rs`) is a concrete next task.
+
+**Triage in progress (`WIP`, inert-controls, 2026-08-27).** Starting state
+measured in this worktree:
+
+```
+CONTROL_REGISTRATION|controls=20|orphans=0|py_controls=382|py_orphans=188|py_baseline=188|py=ok
+```
+
+188 of 382 `scripts/tests/test_*.py` suites are named by no caller
+(`scripts/check.sh`, `justfile`, `hooks/pre-push`, `.github/workflows`). The
+ratchet pins the count, so the floor is permanent and nobody chose it. Task is
+the three-way split — obsolete / deliberately slow / live-but-unwired — not a
+bulk registration.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
