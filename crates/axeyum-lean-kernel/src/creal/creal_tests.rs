@@ -10199,6 +10199,7 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "trig_fn::declare_cos_fn_family",
     "trig_fn::declare_cos_fn_wide_progress",
     "exp_fn::declare_exp_fn_family",
+    "exp_fn::declare_exp_fn_equiv_e",
     "supremum::declare_max_range",
     "supremum::declare_max_range_transport",
     "supremum::declare_mesh_level_count",

@@ -21,5 +21,6 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.exp_fn_uniform_converges,
             "theorem",
         ),
+        ("CReal.expFn_one_equiv_e", p.exp_fn_one_equiv_e, "theorem"),
     ]
 }

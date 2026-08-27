@@ -5133,6 +5133,18 @@ pub struct CRealPrelude {
     /// `(k, hcauchy)` pair DIRECTLY — no bridge needed. See
     /// `creal/exp_fn.rs`.
     pub exp_fn_uniform_converges: NameId,
+    /// `CReal.expFn_one_equiv_e : Equiv (expFn one) e` — the bridge between
+    /// the general power-series `expFn` (bounded to `[0, 1]`) and the
+    /// concrete `CReal.e` construction, at the shared endpoint `x := 1`.
+    /// Eliminates `CReal.e_converges`'s `Exists` witness into a per-`n`
+    /// `Within` fact, bridges it to `close_within` via
+    /// `CReal.close_within_of_within`'s own per-index construction (leg 1),
+    /// transports `expFnUniformConverges`'s `.spec` at `x := one` from
+    /// `powerSeriesTerm expTerm j one` to `expTerm j` via
+    /// `CReal.sumRange_congr` (leg 2), combines both legs by the triangle
+    /// inequality, and closes with `CReal.equiv_zero_of_rate`. See
+    /// `creal/exp_fn.rs`.
+    pub exp_fn_one_equiv_e: NameId,
     /// `CReal.maxRange : (Nat → CReal) → Nat → CReal` — the `max`-lattice
     /// analogue of [`Self::sum_range`]: `maxRange f 0 := f 0`, `maxRange f
     /// (succ n) := max (maxRange f n) (f (succ n))`, so `maxRange f n` is
@@ -5744,6 +5756,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         exp_fn_term_abs_le: kernel.name_str(creal, "expFnTermAbsLe"),
         exp_fn: kernel.name_str(creal, "expFn"),
         exp_fn_uniform_converges: kernel.name_str(creal, "expFnUniformConverges"),
+        exp_fn_one_equiv_e: kernel.name_str(creal, "expFn_one_equiv_e"),
         max_range: kernel.name_str(creal, "maxRange"),
         max_range_zero: kernel.name_str(creal, "maxRange_zero"),
         max_range_succ: kernel.name_str(creal, "maxRange_succ"),
@@ -9872,6 +9885,57 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.exp_fn_uniform_converges,
         ],
         run: exp_fn::declare_exp_fn_family,
+    },
+    BuildStep {
+        label: "exp_fn::declare_exp_fn_equiv_e",
+        requires: &[
+            |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.abs_add_le,
+            |p: CRealPrelude| p.abs_congr,
+            |p: CRealPrelude| p.abs_le,
+            |p: CRealPrelude| p.abs_le_of_two_sided,
+            |p: CRealPrelude| p.add,
+            |p: CRealPrelude| p.add_assoc,
+            |p: CRealPrelude| p.add_comm,
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.close_within_of_within,
+            |p: CRealPrelude| p.e,
+            |p: CRealPrelude| p.e_converges,
+            |p: CRealPrelude| p.equiv,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.equiv_zero_of_rate,
+            |p: CRealPrelude| p.exp_fn,
+            |p: CRealPrelude| p.exp_fn_uniform_converges,
+            |p: CRealPrelude| p.exp_series_partial,
+            |p: CRealPrelude| p.exp_term,
+            |p: CRealPrelude| p.le,
+            |p: CRealPrelude| p.le_abs_self,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.mul_congr,
+            |p: CRealPrelude| p.mul_one,
+            |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.neg_le_abs,
+            |p: CRealPrelude| p.neg_sub_swap,
+            |p: CRealPrelude| p.of_rat,
+            |p: CRealPrelude| p.of_rat_add,
+            |p: CRealPrelude| p.of_rat_le,
+            |p: CRealPrelude| p.power_series_term,
+            |p: CRealPrelude| p.sample_lower_bound,
+            |p: CRealPrelude| p.sample_upper_bound,
+            |p: CRealPrelude| p.sum_range_congr,
+            |p: CRealPrelude| p.uconv_rate,
+            |p: CRealPrelude| p.uconv_spec,
+            |p: CRealPrelude| p.zero_lt_one,
+        ],
+        provides: &[|p: CRealPrelude| p.exp_fn_one_equiv_e],
+        run: exp_fn::declare_exp_fn_equiv_e,
     },
     BuildStep {
         label: "supremum::declare_max_range",
