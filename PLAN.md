@@ -140,6 +140,8 @@ now. Nothing was deleted.
 | 2026-08-27 | `DONE` | ADR-0603's four remaining graded statement families (MVT, LUB, Taylor remainder, FTA) stated as measured rows in `docs/curriculum/graded-statement-families.md`; two stale `spivak.md` claims corrected (`Complex.abs`/`CReal.sqrt` no longer absent; `Complex.polyMul` no longer blocked); ADR-0603 given a pointer postscript. |
 | 2026-08-27 | (pending) | `Int.modEq_add_mul_left` + five corollaries (`Int.add_modEq_left`, `Int.add_modEq_right`, `Int.mod_modEq`, `Int.modulus_modEq_zero`, `Int.modEq_sub`) in `crates/axeyum-lean-kernel/src/int_prelude/modeq_family.rs`, proved unconditionally in the modulus via `case_split` on `Int.rec` shape — no `0 < n` hypothesis anywhere, closing five of doc 292's eleven declined `Int.ModEq` facts. `derived_laws` recounted 126 → 132 (counted, not incremented). New concrete-instantiation test at n := 0/5/-4, mutation-verified. Five facts flipped `open` → `proved`; five decline artifacts amended (not deleted). `cargo test -p axeyum-lean-kernel --lib`: 832 passed, 0 failed. |
 | 2026-08-27 | (pending) | New `axeyum-lean-kernel/authored-declaration-v1` execution driver in `scripts/validate-autogenesis-operations.py` (re-checkable fields: declaration source/test file existence, literal declaration-in-source check, literal test-function-in-file check, fact-id binding order); registered doc 293's five `Int.ModEq` closures as one operation; ten discrimination tests + eight mutation-verified guards; ADR-0602 amendment; `docs/autogenesis/296`; regenerated `docs/plan/generated/production-provenance-ledger.md`. |
+| 2026-08-27 | `00797f01d` | Level-1 fix: `STEPS` build-order table + `validate_step_order` structural preflight, replacing the 89-call hand-written sequence in `build_complex_prelude`. `cargo check` clean. |
+| 2026-08-27 | `e0984768a` | Part B: real (not simulated) module split for `poly.rs` (21 fields into `poly::PolyNames`, 144 call sites rewritten). Full suite: 48 passed / 0 failed in 441.92s (contended host, load ~11). Write-up with all Part C numbers: `docs/research/11-design-review/2026-08-27-prelude-build-spike.md`. |
 | 2026-08-27 | `abb9cb9d9` | `statement_goal_record` module: typed bridge from a completed statement-only import to the ledger-shaped fields (kernel-rendered goal, ADR-0350 content identity, substituted-theorem list). Admits nothing to any kernel. |
 | 2026-08-27 | `ec8e0f5ec` | Worked-example CLI + integration tests, including a new `TrustedDeclaration` shape (theorem reached only through an auxiliary admitted `Definition`, mirroring the real `Nat.gcd -> Nat.mod_lt` blocker) and a by-hand mutation test on the fail-closed guard. |
 | 2026-08-26 | `f1fb56564` | Compose a held-out-safe three-lemma retrieval spine and admit Mathlib's real `Nat.choose_symm_of_eq_add` axiom-free, moving natural binomial from one to two accepted siblings. |
@@ -4539,6 +4541,24 @@ that are pure ℕ schemas (`telescoping`, `parity-argument`, `pigeonhole` at
 fixed hole count). Second, the census wants a third corpus — its two are both
 school-and-olympiad, adversarial along the *shape* axis but not the
 *difficulty* axis.
+
+**Prototype landed and green** (`WIP`, prelude-spike, 2026-08-27). Built the
+level-1 phase-order fix and the level-2 topological-order validation from
+[2026-08-27-architecture-review.md](docs/research/11-design-review/2026-08-27-architecture-review.md)
+§1 on `crates/axeyum-lean-kernel/src/complex.rs`, plus a real (not simulated)
+Part B module-registry split for `complex/poly.rs`. Full writeup:
+[2026-08-27-prelude-build-spike.md](docs/research/11-design-review/2026-08-27-prelude-build-spike.md).
+
+Headline: the existing hand-written build order is already a valid
+topological order (0 violations across 1,279 extracted dependency edges, now
+enforced by a structural preflight + two pinned tests), and splitting one
+already-modularized group (`poly`, 21 of 148 fields) out of the shared struct
+eliminates its hub footprint entirely — 0 lines touched in `complex.rs` for a
+new declaration inside `poly.rs`, down from up to 3. Recommend applying level 1
+(dependency table + structural preflight) to `creal.rs` without reservation;
+recommend piloting the module-split (level Part B) on ONE already-separate
+`creal/*.rs` file before generalizing, given the estimated ~9,000 call-site
+churn across the full 441-field struct.
 
 **WIP (agent-python-layer, 2026-08-24).** Strand
 [`docs/python-2026-08/`](docs/python-2026-08/README.md). Plans 01-03 and the

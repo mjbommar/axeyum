@@ -341,7 +341,7 @@ fn n_term_poly_eval_clean(
     let n = coeffs.len();
     let zero_c = d.kernel().const_(p.zero, vec![]);
     let n_lit = d.num(u32::try_from(n).expect("polynomial length fits u32"));
-    let eval_f_n_x = d.const_app(p.poly_eval, &[f, n_lit, x]);
+    let eval_f_n_x = d.const_app(p.poly.poly_eval, &[f, n_lit, x]);
 
     // The raw (unreduced) accumulate form `polyEval` unfolds to by pure δι
     // (`sumRange f (succ n) = add(sumRange f n, f n)`, `n_lit` literal).
@@ -453,7 +453,10 @@ fn build_true_identity(
     let x = d.kernel().fvar(x_fv);
     let x_v = CExpr::var(d, p, x);
 
-    let proof_mul = d.lemma(p.poly_eval_poly_mul, &[c1, c2, n1_lit, n2_lit, h1, h2, x]);
+    let proof_mul = d.lemma(
+        p.poly.poly_eval_poly_mul,
+        &[c1, c2, n1_lit, n2_lit, h1, h2, x],
+    );
 
     let (clean1, clean1_raw, h_clean1) =
         n_term_poly_eval_clean(d, p, c1, &coeffs1, &terms1, &x_v, x);
@@ -462,9 +465,9 @@ fn build_true_identity(
     let (clean_t, clean_t_raw, h_clean_t) =
         n_term_poly_eval_clean(d, p, ct, &coeffs_t, &terms_t, &x_v, x);
 
-    let eval_c1 = d.const_app(p.poly_eval, &[c1, n1_lit, x]);
-    let eval_c2 = d.const_app(p.poly_eval, &[c2, n2_lit, x]);
-    let eval_t = d.const_app(p.poly_eval, &[ct, nt_lit, x]);
+    let eval_c1 = d.const_app(p.poly.poly_eval, &[c1, n1_lit, x]);
+    let eval_c2 = d.const_app(p.poly.poly_eval, &[c2, n2_lit, x]);
+    let eval_t = d.const_app(p.poly.poly_eval, &[ct, nt_lit, x]);
 
     let mul_eval = d.const_app(p.mul, &[eval_c1, eval_c2]);
     let mul_clean_raw = d.const_app(p.mul, &[clean1_raw, clean2_raw]);
@@ -494,9 +497,9 @@ fn build_true_identity(
         ],
     );
 
-    let poly_mul_c1c2 = d.const_app(p.poly_mul, &[c1, c2]);
+    let poly_mul_c1c2 = d.const_app(p.poly.poly_mul, &[c1, c2]);
     let bound = d.add(n1_lit, n2_lit);
-    let lhs_stmt = d.const_app(p.poly_eval, &[poly_mul_c1c2, bound, x]);
+    let lhs_stmt = d.const_app(p.poly.poly_eval, &[poly_mul_c1c2, bound, x]);
     let overall = d.lemma(
         p.equiv_trans,
         &[lhs_stmt, mul_eval, eval_t, proof_mul, h_final],
@@ -605,11 +608,11 @@ fn cas_verified_difference_of_squares_true_and_false_body() {
         .collect();
     let cw = n_term_polynomial(&mut d, p, &terms_wrong);
     let nw_lit = d.num(u32::try_from(coeffs_wrong.len()).expect("fits"));
-    let eval_w = d.const_app(p.poly_eval, &[cw, nw_lit, x]);
+    let eval_w = d.const_app(p.poly.poly_eval, &[cw, nw_lit, x]);
 
-    let poly_mul_c1c2 = d.const_app(p.poly_mul, &[c1, c2]);
+    let poly_mul_c1c2 = d.const_app(p.poly.poly_mul, &[c1, c2]);
     let bound = d.add(n1_lit, n2_lit);
-    let lhs_stmt = d.const_app(p.poly_eval, &[poly_mul_c1c2, bound, x]);
+    let lhs_stmt = d.const_app(p.poly.poly_eval, &[poly_mul_c1c2, bound, x]);
     let wrong_stmt = zeq(&mut d, p, lhs_stmt, eval_w);
     let carrier = complex_ty(&mut d, p);
     let wrong_ty = d.pi_fv(x_fv, carrier, wrong_stmt);

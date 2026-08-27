@@ -122,7 +122,7 @@
 //! (truncation), and `hornerFromTop c a n 0` is `c n` — the polynomial's own
 //! leading coefficient, generically nonzero. Confirmed by hand at `c = X² −
 //! 1`: this formula gives `q 2 = c 2 = 1`, refuting `polyDegreeLt q 2`
-//! outright. The fix ([`ComplexPrelude::factor_quotient`]'s doc has the full
+//! outright. The fix ([`poly::PolyNames::factor_quotient`]'s doc has the full
 //! derivation) prepends a forced `zero` base and shifts `hornerFromTop`'s own
 //! index down by one, so truncation lands on the forced zero **by
 //! construction**, not by coincidence. [`declare_factor_quotient_degree_lt`]
@@ -191,11 +191,77 @@ use super::{
     nat_eq_to_complex_equiv, render_c, ring_law_proof, shifted_c, sum_range_const_zero_proof, zeq,
     zero_fn,
 };
+use crate::Kernel;
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
+use crate::name::NameId;
 use crate::nat_prelude::{NatOps, NatPrelude};
+
+/// The names [`declare_polynomial`] declares, owned by this module rather
+/// than by [`ComplexPrelude`] directly.
+///
+/// This is Part B of
+/// `docs/research/11-design-review/2026-08-27-prelude-build-spike.md`: no
+/// step outside this file requires any of these 21 names (checked against
+/// every other `BuildStep`'s `requires` list), so a new declaration added
+/// inside `poly.rs` needs a new field here and a new line in
+/// [`declare_polynomial`]'s call sequence -- never a hub edit in
+/// `complex.rs`'s struct, `STEPS` table, or `intern_names`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PolyNames {
+    pub poly_eval: NameId,
+    pub poly_eval_zero: NameId,
+    pub poly_eval_succ: NameId,
+    pub poly_add: NameId,
+    pub poly_eval_poly_add: NameId,
+    pub poly_scale: NameId,
+    pub poly_eval_poly_scale: NameId,
+    pub poly_degree_lt: NameId,
+    pub poly_degree_lt_poly_add: NameId,
+    pub poly_degree_lt_poly_scale: NameId,
+    pub poly_mul: NameId,
+    pub poly_degree_lt_poly_mul: NameId,
+    pub poly_eval_poly_mul: NameId,
+    pub horner_from_top: NameId,
+    pub horner_from_top_zero: NameId,
+    pub horner_from_top_succ_zero: NameId,
+    pub horner_from_top_succ_succ: NameId,
+    pub factor_quotient: NameId,
+    pub factor_quotient_degree_lt: NameId,
+    pub horner_from_top_diag_eq_poly_eval: NameId,
+    pub factor_quotient_succ_eq: NameId,
+}
+
+/// Interns this module's 21 names under `complex` (e.g. `Complex.polyEval`).
+/// Called once from [`super::intern_names`] as `poly: poly::intern_names(kernel, complex)`.
+pub(super) fn intern_names(kernel: &mut Kernel, complex: NameId) -> PolyNames {
+    PolyNames {
+        poly_eval: kernel.name_str(complex, "polyEval"),
+        poly_eval_zero: kernel.name_str(complex, "polyEval_zero"),
+        poly_eval_succ: kernel.name_str(complex, "polyEval_succ"),
+        poly_add: kernel.name_str(complex, "polyAdd"),
+        poly_eval_poly_add: kernel.name_str(complex, "polyEval_polyAdd"),
+        poly_scale: kernel.name_str(complex, "polyScale"),
+        poly_eval_poly_scale: kernel.name_str(complex, "polyEval_polyScale"),
+        poly_degree_lt: kernel.name_str(complex, "polyDegreeLt"),
+        poly_degree_lt_poly_add: kernel.name_str(complex, "polyDegreeLt_polyAdd"),
+        poly_degree_lt_poly_scale: kernel.name_str(complex, "polyDegreeLt_polyScale"),
+        poly_mul: kernel.name_str(complex, "polyMul"),
+        poly_degree_lt_poly_mul: kernel.name_str(complex, "polyDegreeLt_polyMul"),
+        poly_eval_poly_mul: kernel.name_str(complex, "polyEval_polyMul"),
+        horner_from_top: kernel.name_str(complex, "hornerFromTop"),
+        horner_from_top_zero: kernel.name_str(complex, "hornerFromTop_zero"),
+        horner_from_top_succ_zero: kernel.name_str(complex, "hornerFromTop_succ_zero"),
+        horner_from_top_succ_succ: kernel.name_str(complex, "hornerFromTop_succ_succ"),
+        factor_quotient: kernel.name_str(complex, "factorQuotient"),
+        factor_quotient_degree_lt: kernel.name_str(complex, "factorQuotient_degreeLt"),
+        horner_from_top_diag_eq_poly_eval: kernel
+            .name_str(complex, "hornerFromTop_diag_eq_polyEval"),
+        factor_quotient_succ_eq: kernel.name_str(complex, "factorQuotient_succ_eq"),
+    }
+}
 
 /// Height for `Complex.polyEval`: above [`super::DERIVED_HEIGHT`] `+ 11`
 /// (`Complex.ofNat`, the highest height declared in this file before this
@@ -222,7 +288,7 @@ const HORNER_HEIGHT: u16 = POLY_EVAL_HEIGHT + 1;
 /// Height for `Complex.factorQuotient`: its value embeds [`Self::horner_from_top`]
 /// via [`HORNER_HEIGHT`], so it needs strictly more.
 ///
-/// [`Self::horner_from_top`]: super::ComplexPrelude::horner_from_top
+/// [`Self::horner_from_top`]: super::poly::PolyNames::horner_from_top
 const FACTOR_QUOTIENT_HEIGHT: u16 = HORNER_HEIGHT + 1;
 
 /// Declare `Complex.polyEval` and everything this file proves about it.
@@ -321,7 +387,7 @@ fn declare_poly_eval(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), Kernel
         d.arrow(fn_ty, over_n)
     };
     d.kernel().add_declaration(Declaration::Definition {
-        name: p.poly_eval,
+        name: p.poly.poly_eval,
         uparams: vec![],
         ty,
         value,
@@ -348,7 +414,7 @@ fn declare_poly_eval_equations(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<
         let x = d.kernel().fvar(x_fv);
 
         let zero_n = d.zero();
-        let lhs = d.const_app(p.poly_eval, &[c, zero_n, x]);
+        let lhs = d.const_app(p.poly.poly_eval, &[c, zero_n, x]);
         let zero_c = d.kernel().const_(p.zero, vec![]);
         let stmt_inner = complex_eq(d, p, lhs, zero_c);
         let proof_inner = complex_eq_refl(d, p, zero_c);
@@ -362,7 +428,7 @@ fn declare_poly_eval_equations(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<
             d.lam_fv(c_fv, fn_ty, inner)
         };
         d.kernel().add_declaration(Declaration::Theorem {
-            name: p.poly_eval_zero,
+            name: p.poly.poly_eval_zero,
             uparams: vec![],
             ty,
             value,
@@ -381,8 +447,8 @@ fn declare_poly_eval_equations(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<
         let x = d.kernel().fvar(x_fv);
 
         let sn = d.succ(n);
-        let lhs = d.const_app(p.poly_eval, &[c, sn, x]);
-        let prior = d.const_app(p.poly_eval, &[c, n, x]);
+        let lhs = d.const_app(p.poly.poly_eval, &[c, sn, x]);
+        let prior = d.const_app(p.poly.poly_eval, &[c, n, x]);
         let cn = d.apply(c, &[n]);
         let xn = d.const_app(p.pow, &[x, n]);
         let term_n = d.const_app(p.mul, &[cn, xn]);
@@ -401,7 +467,7 @@ fn declare_poly_eval_equations(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<
             d.lam_fv(c_fv, fn_ty, over_n)
         };
         d.kernel().add_declaration(Declaration::Theorem {
-            name: p.poly_eval_succ,
+            name: p.poly.poly_eval_succ,
             uparams: vec![],
             ty,
             value,
@@ -443,7 +509,7 @@ fn declare_poly_add(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelE
         d.arrow(fn_ty, over_g)
     };
     d.kernel().add_declaration(Declaration::Definition {
-        name: p.poly_add,
+        name: p.poly.poly_add,
         uparams: vec![],
         ty,
         value,
@@ -479,7 +545,7 @@ fn declare_poly_eval_poly_add(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(
     let x_fv = d.fresh_fvar();
     let x = d.kernel().fvar(x_fv);
 
-    let poly_add_cg = d.const_app(p.poly_add, &[c, g]);
+    let poly_add_cg = d.const_app(p.poly.poly_add, &[c, g]);
     let summand_added = poly_summand(d, p, poly_add_cg, x);
     let summand_c = poly_summand(d, p, c, x);
     let summand_g = poly_summand(d, p, g, x);
@@ -514,9 +580,9 @@ fn declare_poly_eval_poly_add(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(
 
     let (_e, proof) = zchain(d, p, start, &[(mid, h1), (final_rhs, h2)]);
 
-    let lhs_stmt = d.const_app(p.poly_eval, &[poly_add_cg, n, x]);
-    let eval_c = d.const_app(p.poly_eval, &[c, n, x]);
-    let eval_g = d.const_app(p.poly_eval, &[g, n, x]);
+    let lhs_stmt = d.const_app(p.poly.poly_eval, &[poly_add_cg, n, x]);
+    let eval_c = d.const_app(p.poly.poly_eval, &[c, n, x]);
+    let eval_g = d.const_app(p.poly.poly_eval, &[g, n, x]);
     let rhs_stmt = d.const_app(p.add, &[eval_c, eval_g]);
     let stmt = zeq(d, p, lhs_stmt, rhs_stmt);
 
@@ -533,7 +599,7 @@ fn declare_poly_eval_poly_add(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(
         d.lam_fv(c_fv, fn_ty, over_g)
     };
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.poly_eval_poly_add,
+        name: p.poly.poly_eval_poly_add,
         uparams: vec![],
         ty,
         value,
@@ -596,7 +662,7 @@ fn declare_poly_scale(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), Kerne
         d.arrow(carrier, over_c)
     };
     d.kernel().add_declaration(Declaration::Definition {
-        name: p.poly_scale,
+        name: p.poly.poly_scale,
         uparams: vec![],
         ty,
         value,
@@ -629,7 +695,7 @@ fn declare_poly_eval_poly_scale(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result
     let x_fv = d.fresh_fvar();
     let x = d.kernel().fvar(x_fv);
 
-    let poly_scale_ac = d.const_app(p.poly_scale, &[a, c]);
+    let poly_scale_ac = d.const_app(p.poly.poly_scale, &[a, c]);
     let summand_scaled = poly_summand(d, p, poly_scale_ac, x);
     let summand_c = poly_summand(d, p, c, x);
     let scaled_summand = scaled_mul(d, p, a, summand_c);
@@ -665,8 +731,8 @@ fn declare_poly_eval_poly_scale(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result
 
     let (_e, proof) = zchain(d, p, start, &[(mid, h1), (final_rhs, h2_symm)]);
 
-    let lhs_stmt = d.const_app(p.poly_eval, &[poly_scale_ac, n, x]);
-    let eval_c = d.const_app(p.poly_eval, &[c, n, x]);
+    let lhs_stmt = d.const_app(p.poly.poly_eval, &[poly_scale_ac, n, x]);
+    let eval_c = d.const_app(p.poly.poly_eval, &[c, n, x]);
     let rhs_stmt = d.const_app(p.mul, &[a, eval_c]);
     let stmt = zeq(d, p, lhs_stmt, rhs_stmt);
 
@@ -683,7 +749,7 @@ fn declare_poly_eval_poly_scale(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result
         d.lam_fv(a_fv, carrier, over_c)
     };
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.poly_eval_poly_scale,
+        name: p.poly.poly_eval_poly_scale,
         uparams: vec![],
         ty,
         value,
@@ -728,7 +794,7 @@ fn declare_poly_degree_lt(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), K
         d.arrow(fn_ty, over_n)
     };
     d.kernel().add_declaration(Declaration::Definition {
-        name: p.poly_degree_lt,
+        name: p.poly.poly_degree_lt,
         uparams: vec![],
         ty,
         value,
@@ -793,7 +859,7 @@ fn declare_poly_degree_lt_poly_add(
 
     let degree_lt_c = poly_degree_lt_applied(d, p, c, n);
     let degree_lt_g = poly_degree_lt_applied(d, p, g, n);
-    let poly_add_cg = d.const_app(p.poly_add, &[c, g]);
+    let poly_add_cg = d.const_app(p.poly.poly_add, &[c, g]);
     let degree_lt_add = poly_degree_lt_applied(d, p, poly_add_cg, n);
 
     let value = {
@@ -812,7 +878,7 @@ fn declare_poly_degree_lt_poly_add(
         d.pi_fv(c_fv, fn_ty, over_g)
     };
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.poly_degree_lt_poly_add,
+        name: p.poly.poly_degree_lt_poly_add,
         uparams: vec![],
         ty,
         value,
@@ -824,7 +890,7 @@ fn declare_poly_degree_lt_poly_add(
 /// [`declare_poly_degree_lt_poly_scale`] both need the *type* `polyDegreeLt f
 /// n` as an arrow's domain, not just a term applying it.
 fn poly_degree_lt_applied(d: &mut IntDev<'_>, p: ComplexPrelude, f: ExprId, n: ExprId) -> ExprId {
-    d.const_app(p.poly_degree_lt, &[f, n])
+    d.const_app(p.poly.poly_degree_lt, &[f, n])
 }
 
 /// `Complex.polyDegreeLt_polyScale : ∀ a c n, polyDegreeLt c n →
@@ -899,7 +965,7 @@ fn declare_poly_degree_lt_poly_scale(
         d.pi_fv(a_fv, carrier, over_c)
     };
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.poly_degree_lt_poly_scale,
+        name: p.poly.poly_degree_lt_poly_scale,
         uparams: vec![],
         ty,
         value,
@@ -914,7 +980,7 @@ fn declare_poly_degree_lt_poly_scale(
 /// fun c g k => sumRange (fun i => mul (c i) (g (Nat.sub k i))) (Nat.succ k)`
 /// — the antidiagonal convolution, a first-class named operation. See
 /// [`poly`]'s module doc for why this is the *natural* definition and
-/// [`ComplexPrelude::poly_eval_poly_mul`] for the vanishing hypotheses that
+/// [`poly::PolyNames::poly_eval_poly_mul`] for the vanishing hypotheses that
 /// make it the *correct* one.
 fn declare_poly_mul(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
     let carrier = complex_ty(d, p);
@@ -948,7 +1014,7 @@ fn declare_poly_mul(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelE
         d.arrow(fn_ty, over_g)
     };
     d.kernel().add_declaration(Declaration::Definition {
-        name: p.poly_mul,
+        name: p.poly.poly_mul,
         uparams: vec![],
         ty,
         value,
@@ -956,7 +1022,7 @@ fn declare_poly_mul(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelE
     })
 }
 
-/// `Complex.polyDegreeLt_polyMul` — see [`ComplexPrelude::poly_degree_lt_poly_mul`]
+/// `Complex.polyDegreeLt_polyMul` — see [`poly::PolyNames::poly_degree_lt_poly_mul`]
 /// for the statement and route. Sized by the predecessor as "a smaller,
 /// structurally similar case split" to [`corner_term_zero`]: for `k` with
 /// `Nat.le (Nat.add m n) k`, every index `i` of `polyMul c g k`'s
@@ -1132,7 +1198,7 @@ fn declare_poly_degree_lt_poly_mul(
     let final_proof = d.lemma(p.equiv_trans, &[sum_pm_sk, sum_zfn_sk, zero_c, h1, h2]);
 
     let le_bound_k = d.le(bound, k);
-    let poly_mul_cg = d.const_app(p.poly_mul, &[c, g]);
+    let poly_mul_cg = d.const_app(p.poly.poly_mul, &[c, g]);
     let degree_lt_c = poly_degree_lt_applied(d, p, c, m);
     let degree_lt_g = poly_degree_lt_applied(d, p, g, n);
     let degree_lt_mul = poly_degree_lt_applied(d, p, poly_mul_cg, bound);
@@ -1156,7 +1222,7 @@ fn declare_poly_degree_lt_poly_mul(
         d.pi_fv(c_fv, fn_ty, over_g)
     };
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.poly_degree_lt_poly_mul,
+        name: p.poly.poly_degree_lt_poly_mul,
         uparams: vec![],
         ty,
         value,
@@ -1758,7 +1824,7 @@ fn poly_mul_k_pointwise(
     )
 }
 
-/// `Complex.polyEval_polyMul`: see [`ComplexPrelude::poly_eval_poly_mul`] for
+/// `Complex.polyEval_polyMul`: see [`poly::PolyNames::poly_eval_poly_mul`] for
 /// the statement and route.
 fn declare_poly_eval_poly_mul(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
     let carrier = complex_ty(d, p);
@@ -1879,7 +1945,7 @@ fn declare_poly_eval_poly_mul(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(
     // h_mul_eq_triangle : Equiv(mul_bound, triangle)
 
     // ----- polyMul's antidiagonal convolution equals the triangle sum --------
-    let poly_mul_cg = d.const_app(p.poly_mul, &[c, g]);
+    let poly_mul_cg = d.const_app(p.poly.poly_mul, &[c, g]);
     let poly_mul_summand = poly_summand(d, p, poly_mul_cg, x);
     let diag_t_fn = diag_t_fn_c(d, p, big_f);
     let pointwise_k = {
@@ -1906,9 +1972,9 @@ fn declare_poly_eval_poly_mul(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(
         &[sum_pm_bound, mul_bound, target_rhs, h_final1, h_mul_pad],
     );
 
-    let lhs_stmt = d.const_app(p.poly_eval, &[poly_mul_cg, bound, x]);
-    let eval_c_m = d.const_app(p.poly_eval, &[c, m, x]);
-    let eval_g_n = d.const_app(p.poly_eval, &[g, n, x]);
+    let lhs_stmt = d.const_app(p.poly.poly_eval, &[poly_mul_cg, bound, x]);
+    let eval_c_m = d.const_app(p.poly.poly_eval, &[c, m, x]);
+    let eval_g_n = d.const_app(p.poly.poly_eval, &[g, n, x]);
     let rhs_stmt = d.const_app(p.mul, &[eval_c_m, eval_g_n]);
     let stmt = zeq(d, p, lhs_stmt, rhs_stmt);
 
@@ -1931,7 +1997,7 @@ fn declare_poly_eval_poly_mul(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(
         d.lam_fv(c_fv, fn_ty, over_g)
     };
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.poly_eval_poly_mul,
+        name: p.poly.poly_eval_poly_mul,
         uparams: vec![],
         ty,
         value,
@@ -1941,7 +2007,7 @@ fn declare_poly_eval_poly_mul(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(
 // ---------------------------------------------------------------------------
 // The factor theorem's computed quotient: `hornerFromTop` / `factorQuotient`.
 //
-// See [`ComplexPrelude::horner_from_top`]/[`ComplexPrelude::factor_quotient`]
+// See [`poly::PolyNames::horner_from_top`]/[`poly::PolyNames::factor_quotient`]
 // for the exact recurrences and the boundary bug the `factorQuotient` shape
 // was chosen to avoid. This section builds the two definitions and the two
 // theorems about them; the general symbolic factor theorem itself
@@ -1952,7 +2018,7 @@ fn declare_poly_eval_poly_mul(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(
 
 /// `Complex.hornerFromTop c a m j`, built by a nested `Nat.rec` (outer on
 /// `m`, inner on `j`) at `Complex`'s own universe — see
-/// [`ComplexPrelude::horner_from_top`] for the recurrence.
+/// [`poly::PolyNames::horner_from_top`] for the recurrence.
 fn declare_horner_from_top(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
     use crate::BinderInfo;
 
@@ -2040,7 +2106,7 @@ fn declare_horner_from_top(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), 
         d.arrow(fn_ty, over_a)
     };
     d.kernel().add_declaration(Declaration::Definition {
-        name: p.horner_from_top,
+        name: p.poly.horner_from_top,
         uparams: vec![],
         ty,
         value,
@@ -2051,7 +2117,7 @@ fn declare_horner_from_top(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), 
 /// `Complex.hornerFromTop_zero` / `_succ_zero` / `_succ_succ` — the three
 /// defining equations of [`declare_horner_from_top`], each closed by
 /// `Eq.refl` alone (pure `βδι` reduction — see
-/// [`ComplexPrelude::horner_from_top_zero`]/`_succ_zero`/`_succ_succ` for the
+/// [`poly::PolyNames::horner_from_top_zero`]/`_succ_zero`/`_succ_succ` for the
 /// exact statements).
 fn declare_horner_from_top_equations(
     d: &mut IntDev<'_>,
@@ -2071,7 +2137,7 @@ fn declare_horner_from_top_equations(
         let j = d.kernel().fvar(j_fv);
 
         let zero_n = d.zero();
-        let lhs = d.const_app(p.horner_from_top, &[c, a, zero_n, j]);
+        let lhs = d.const_app(p.poly.horner_from_top, &[c, a, zero_n, j]);
         let c0 = d.apply(c, &[zero_n]);
         let stmt_inner = complex_eq(d, p, lhs, c0);
         let proof_inner = complex_eq_refl(d, p, c0);
@@ -2087,7 +2153,7 @@ fn declare_horner_from_top_equations(
             d.lam_fv(c_fv, fn_ty, over_a)
         };
         d.kernel().add_declaration(Declaration::Theorem {
-            name: p.horner_from_top_zero,
+            name: p.poly.horner_from_top_zero,
             uparams: vec![],
             ty,
             value,
@@ -2106,7 +2172,7 @@ fn declare_horner_from_top_equations(
 
         let zero_n = d.zero();
         let sm = d.succ(m);
-        let lhs = d.const_app(p.horner_from_top, &[c, a, sm, zero_n]);
+        let lhs = d.const_app(p.poly.horner_from_top, &[c, a, sm, zero_n]);
         let c_sm = d.apply(c, &[sm]);
         let stmt_inner = complex_eq(d, p, lhs, c_sm);
         let proof_inner = complex_eq_refl(d, p, c_sm);
@@ -2122,7 +2188,7 @@ fn declare_horner_from_top_equations(
             d.lam_fv(c_fv, fn_ty, over_a)
         };
         d.kernel().add_declaration(Declaration::Theorem {
-            name: p.horner_from_top_succ_zero,
+            name: p.poly.horner_from_top_succ_zero,
             uparams: vec![],
             ty,
             value,
@@ -2144,9 +2210,9 @@ fn declare_horner_from_top_equations(
 
         let sm = d.succ(m);
         let sj = d.succ(j);
-        let lhs = d.const_app(p.horner_from_top, &[c, a, sm, sj]);
+        let lhs = d.const_app(p.poly.horner_from_top, &[c, a, sm, sj]);
 
-        let prior = d.const_app(p.horner_from_top, &[c, a, m, j]);
+        let prior = d.const_app(p.poly.horner_from_top, &[c, a, m, j]);
         let c_sm = d.apply(c, &[sm]);
         let pow_a_sj = d.const_app(p.pow, &[a, sj]);
         let mul_term = d.const_app(p.mul, &[pow_a_sj, c_sm]);
@@ -2168,7 +2234,7 @@ fn declare_horner_from_top_equations(
             d.lam_fv(c_fv, fn_ty, over_a)
         };
         d.kernel().add_declaration(Declaration::Theorem {
-            name: p.horner_from_top_succ_succ,
+            name: p.poly.horner_from_top_succ_succ,
             uparams: vec![],
             ty,
             value,
@@ -2181,25 +2247,25 @@ fn declare_horner_from_top_equations(
 /// `Complex.hornerFromTop_diag_eq_polyEval : ∀ c a n, Equiv (hornerFromTop c
 /// a n n) (polyEval c (Nat.succ n) a)` — the sum-level bridge between
 /// `hornerFromTop`'s nested `Nat.rec` and `polyEval`'s `sumRange` fold. See
-/// [`ComplexPrelude::horner_from_top_diag_eq_poly_eval`] for the statement's
+/// [`poly::PolyNames::horner_from_top_diag_eq_poly_eval`] for the statement's
 /// role and for why the module doc's original "row growth" formula, restated
-/// correctly, turns out to already be [`ComplexPrelude::horner_from_top_succ_succ`]
+/// correctly, turns out to already be [`poly::PolyNames::horner_from_top_succ_succ`]
 /// (proved by `Eq.refl` before this lemma existed) — the genuinely open part
 /// was connecting that recursion to `polyEval` at all, which is what this
 /// theorem closes.
 ///
 /// Induction on `n` via [`NatOps::induct`]:
 /// - Base (`n = 0`): `hornerFromTop c a 0 0` and `polyEval c 1 a` both reduce
-///   — the first by [`ComplexPrelude::horner_from_top_zero`], the second by
-///   chaining [`ComplexPrelude::poly_eval_succ`], [`ComplexPrelude::poly_eval_zero`],
+///   — the first by [`poly::PolyNames::horner_from_top_zero`], the second by
+///   chaining [`poly::PolyNames::poly_eval_succ`], [`poly::PolyNames::poly_eval_zero`],
 ///   [`ComplexPrelude::pow_zero`] (each an `Eq` lifted to `Equiv` via
 ///   `complex_eq_to_equiv`) and a `ring_law_proof` collapse of `add zero (mul
 ///   c0 one)` — to the same value `c 0`.
 /// - Step (`n = succ j`, `ih : Equiv (hornerFromTop c a j j) (polyEval c
-///   (succ j) a)`): [`ComplexPrelude::horner_from_top_succ_succ`] unfolds the
+///   (succ j) a)`): [`poly::PolyNames::horner_from_top_succ_succ`] unfolds the
 ///   LHS to `add (hornerFromTop c a j j) (mul (pow a (succ j)) (c (succ
 ///   j)))`; `ih` rewrites the first summand via `add_congr`;
-///   [`ComplexPrelude::poly_eval_succ`] unfolds the RHS to `add (polyEval c
+///   [`poly::PolyNames::poly_eval_succ`] unfolds the RHS to `add (polyEval c
 ///   (succ j) a) (mul (c (succ j)) (pow a (succ j)))`; the two `add`s then
 ///   differ only by `mul_comm` inside the second summand, closed by
 ///   `ring_law_proof`.
@@ -2217,9 +2283,9 @@ fn declare_horner_from_top_diag_eq_poly_eval(
     let a = d.kernel().fvar(a_fv);
 
     let motive = |d: &mut IntDev<'_>, n: ExprId| -> ExprId {
-        let hn = d.const_app(p.horner_from_top, &[c, a, n, n]);
+        let hn = d.const_app(p.poly.horner_from_top, &[c, a, n, n]);
         let sn = d.succ(n);
-        let pe = d.const_app(p.poly_eval, &[c, sn, a]);
+        let pe = d.const_app(p.poly.poly_eval, &[c, sn, a]);
         zeq(d, p, hn, pe)
     };
 
@@ -2237,13 +2303,13 @@ fn declare_horner_from_top_diag_eq_poly_eval(
             let zero_c = d.kernel().const_(p.zero, vec![]);
 
             // LHS: Equiv (hornerFromTop c a 0 0) c0.
-            let h0_lhs = d.const_app(p.horner_from_top, &[c, a, zero_n, zero_n]);
-            let h_lhs_eq = d.lemma(p.horner_from_top_zero, &[c, a, zero_n]);
+            let h0_lhs = d.const_app(p.poly.horner_from_top, &[c, a, zero_n, zero_n]);
+            let h_lhs_eq = d.lemma(p.poly.horner_from_top_zero, &[c, a, zero_n]);
             let h_lhs = complex_eq_to_equiv(d, p, h0_lhs, c0, h_lhs_eq);
 
             // RHS, unrolled: Equiv (polyEval c 1 a) c0.
-            let pe0 = d.const_app(p.poly_eval, &[c, zero_n, a]);
-            let h_pz_eq = d.lemma(p.poly_eval_zero, &[c, a]);
+            let pe0 = d.const_app(p.poly.poly_eval, &[c, zero_n, a]);
+            let h_pz_eq = d.lemma(p.poly.poly_eval_zero, &[c, a]);
             let h_pz = complex_eq_to_equiv(d, p, pe0, zero_c, h_pz_eq);
 
             let pow_a0 = d.const_app(p.pow, &[a, zero_n]);
@@ -2251,10 +2317,10 @@ fn declare_horner_from_top_diag_eq_poly_eval(
             let h_pow0 = complex_eq_to_equiv(d, p, pow_a0, one_c, h_pow0_eq);
 
             let sn0 = d.succ(zero_n);
-            let pe1 = d.const_app(p.poly_eval, &[c, sn0, a]);
+            let pe1 = d.const_app(p.poly.poly_eval, &[c, sn0, a]);
             let mul_c0_pow0 = d.const_app(p.mul, &[c0, pow_a0]);
             let sum_term = d.const_app(p.add, &[pe0, mul_c0_pow0]);
-            let h_ps_eq = d.lemma(p.poly_eval_succ, &[c, zero_n, a]);
+            let h_ps_eq = d.lemma(p.poly.poly_eval_succ, &[c, zero_n, a]);
             let h_ps = complex_eq_to_equiv(d, p, pe1, sum_term, h_ps_eq);
 
             let refl_c0 = d.lemma(p.equiv_refl, &[c0]);
@@ -2297,16 +2363,16 @@ fn declare_horner_from_top_diag_eq_poly_eval(
             let c_sj = d.apply(c, &[sj]);
             let pow_a_sj = d.const_app(p.pow, &[a, sj]);
 
-            let h_lhs_eq = d.lemma(p.horner_from_top_succ_succ, &[c, a, j, j]);
-            let hjj = d.const_app(p.horner_from_top, &[c, a, j, j]);
+            let h_lhs_eq = d.lemma(p.poly.horner_from_top_succ_succ, &[c, a, j, j]);
+            let hjj = d.const_app(p.poly.horner_from_top, &[c, a, j, j]);
             let mul_pow_c = d.const_app(p.mul, &[pow_a_sj, c_sj]);
             let unrolled_lhs = d.const_app(p.add, &[hjj, mul_pow_c]);
-            let h_ssj = d.const_app(p.horner_from_top, &[c, a, sj, sj]);
+            let h_ssj = d.const_app(p.poly.horner_from_top, &[c, a, sj, sj]);
             let h_lhs = complex_eq_to_equiv(d, p, h_ssj, unrolled_lhs, h_lhs_eq);
             // h_lhs : Equiv h_ssj unrolled_lhs
 
             let refl_mul = d.lemma(p.equiv_refl, &[mul_pow_c]);
-            let pe_sj = d.const_app(p.poly_eval, &[c, sj, a]);
+            let pe_sj = d.const_app(p.poly.poly_eval, &[c, sj, a]);
             let h_ih_lift = d.lemma(
                 p.add_congr,
                 &[hjj, pe_sj, mul_pow_c, mul_pow_c, ih, refl_mul],
@@ -2329,9 +2395,9 @@ fn declare_horner_from_top_diag_eq_poly_eval(
             // h_mid_to_rhs_inner : Equiv mid (add pe_sj mul_c_pow)
             let rhs_inner = d.const_app(p.add, &[pe_sj, mul_c_pow]);
 
-            let h_rhs_eq = d.lemma(p.poly_eval_succ, &[c, sj, a]);
+            let h_rhs_eq = d.lemma(p.poly.poly_eval_succ, &[c, sj, a]);
             let ssj = d.succ(sj);
-            let pe_ssj = d.const_app(p.poly_eval, &[c, ssj, a]);
+            let pe_ssj = d.const_app(p.poly.poly_eval, &[c, ssj, a]);
             let h_rhs = complex_eq_to_equiv(d, p, pe_ssj, rhs_inner, h_rhs_eq);
             // h_rhs : Equiv pe_ssj rhs_inner
             let h_rhs_symm = d.lemma(p.equiv_symm, &[pe_ssj, rhs_inner, h_rhs]);
@@ -2364,7 +2430,7 @@ fn declare_horner_from_top_diag_eq_poly_eval(
         d.lam_fv(c_fv, fn_ty, inner2)
     };
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.horner_from_top_diag_eq_poly_eval,
+        name: p.poly.horner_from_top_diag_eq_poly_eval,
         uparams: vec![],
         ty,
         value,
@@ -2373,7 +2439,7 @@ fn declare_horner_from_top_diag_eq_poly_eval(
 
 /// `Complex.factorQuotient c a n k := Nat.rec (fun _ => Complex) zero (fun r'
 /// _ => hornerFromTop c a n r') (Nat.sub n k)` — see
-/// [`ComplexPrelude::factor_quotient`] for why the `zero` base is prepended
+/// [`poly::PolyNames::factor_quotient`] for why the `zero` base is prepended
 /// rather than reindexing `hornerFromTop` directly.
 fn declare_factor_quotient(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
     use crate::BinderInfo;
@@ -2402,7 +2468,7 @@ fn declare_factor_quotient(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), 
         let rp_fv = d.fresh_fvar();
         let rp = d.kernel().fvar(rp_fv);
         let ih_fv = d.fresh_fvar();
-        let horner = d.const_app(p.horner_from_top, &[c, a, n, rp]);
+        let horner = d.const_app(p.poly.horner_from_top, &[c, a, n, rp]);
         let with_ih = d.lam_fv(ih_fv, carrier, horner);
         d.lam_fv(rp_fv, nat, with_ih)
     };
@@ -2423,7 +2489,7 @@ fn declare_factor_quotient(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), 
         d.arrow(fn_ty, over_a)
     };
     d.kernel().add_declaration(Declaration::Definition {
-        name: p.factor_quotient,
+        name: p.poly.factor_quotient,
         uparams: vec![],
         ty,
         value,
@@ -2492,9 +2558,9 @@ fn nat_sub_pos_succ_shape(
 /// `Complex.factorQuotient_succ_eq : ∀ c a n k, Lt k n → Equiv (factorQuotient
 /// c a (Nat.succ n) k) (add (factorQuotient c a n k) (mul (pow a (Nat.sub n
 /// k)) (c (Nat.succ n))))` — see
-/// [`ComplexPrelude::factor_quotient_succ_eq`] for the derivation and why it
+/// [`poly::PolyNames::factor_quotient_succ_eq`] for the derivation and why it
 /// needs no fresh induction: once `Nat.sub n k` is known to have a successor
-/// shape (`nat_sub_pos_succ_shape`), [`ComplexPrelude::horner_from_top_succ_succ`]
+/// shape (`nat_sub_pos_succ_shape`), [`poly::PolyNames::horner_from_top_succ_succ`]
 /// — an existing `Eq.refl` fact — IS the correction term, verbatim.
 fn declare_factor_quotient_succ_eq(
     d: &mut IntDev<'_>,
@@ -2553,7 +2619,7 @@ fn declare_factor_quotient_succ_eq(
         let rp_fv = d.fresh_fvar();
         let rp = d.kernel().fvar(rp_fv);
         let ih_fv = d.fresh_fvar();
-        let horner = d.const_app(p.horner_from_top, &[c, a, sn, rp]);
+        let horner = d.const_app(p.poly.horner_from_top, &[c, a, sn, rp]);
         let with_ih = d.lam_fv(ih_fv, carrier, horner);
         d.lam_fv(rp_fv, nat, with_ih)
     };
@@ -2561,7 +2627,7 @@ fn declare_factor_quotient_succ_eq(
         let rp_fv = d.fresh_fvar();
         let rp = d.kernel().fvar(rp_fv);
         let ih_fv = d.fresh_fvar();
-        let horner = d.const_app(p.horner_from_top, &[c, a, n, rp]);
+        let horner = d.const_app(p.poly.horner_from_top, &[c, a, n, rp]);
         let with_ih = d.lam_fv(ih_fv, carrier, horner);
         d.lam_fv(rp_fv, nat, with_ih)
     };
@@ -2577,18 +2643,18 @@ fn declare_factor_quotient_succ_eq(
     // h_lift_inner : Equiv (factorQuotient c a n k) (hornerFromTop c a n j)
 
     // ----- horner_from_top_succ_succ IS the correction term. ---------------
-    let horner_sn_sj = d.const_app(p.horner_from_top, &[c, a, sn, succ_j]);
-    let horner_n_j = d.const_app(p.horner_from_top, &[c, a, n, j]);
+    let horner_sn_sj = d.const_app(p.poly.horner_from_top, &[c, a, sn, succ_j]);
+    let horner_n_j = d.const_app(p.poly.horner_from_top, &[c, a, n, j]);
     let c_sn = d.apply(c, &[sn]);
     let pow_a_sj = d.const_app(p.pow, &[a, succ_j]);
     let mul_pow_sj = d.const_app(p.mul, &[pow_a_sj, c_sn]);
     let rhs_succj = d.const_app(p.add, &[horner_n_j, mul_pow_sj]);
 
-    let h_horner_eq = d.lemma(p.horner_from_top_succ_succ, &[c, a, n, j]);
+    let h_horner_eq = d.lemma(p.poly.horner_from_top_succ_succ, &[c, a, n, j]);
     let h_horner = complex_eq_to_equiv(d, p, horner_sn_sj, rhs_succj, h_horner_eq);
 
     // ----- rewrite hornerFromTop c a n j back to factorQuotient c a n k. ---
-    let fq_n_k = d.const_app(p.factor_quotient, &[c, a, n, k]);
+    let fq_n_k = d.const_app(p.poly.factor_quotient, &[c, a, n, k]);
     let h_inner_symm = d.lemma(p.equiv_symm, &[fq_n_k, horner_n_j, h_lift_inner]);
     let refl_mul = d.lemma(p.equiv_refl, &[mul_pow_sj]);
     let h_rewrite_inner = d.lemma(
@@ -2616,7 +2682,7 @@ fn declare_factor_quotient_succ_eq(
     };
     let h_reindex_pow = nat_eq_to_complex_equiv(d, p, succ_j, sub_nk, h_final_rev, &target_f);
 
-    let fq_sn_k = d.const_app(p.factor_quotient, &[c, a, sn, k]);
+    let fq_sn_k = d.const_app(p.poly.factor_quotient, &[c, a, sn, k]);
     let (_e, chain_proof) = zchain(
         d,
         p,
@@ -2645,7 +2711,7 @@ fn declare_factor_quotient_succ_eq(
         d.lam_fv(c_fv, fn_ty, over_a)
     };
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.factor_quotient_succ_eq,
+        name: p.poly.factor_quotient_succ_eq,
         uparams: vec![],
         ty,
         value,
@@ -2698,7 +2764,7 @@ fn declare_factor_quotient_degree_lt(
         let rp_fv = d.fresh_fvar();
         let rp = d.kernel().fvar(rp_fv);
         let ih_fv = d.fresh_fvar();
-        let horner = d.const_app(p.horner_from_top, &[c, a, n, rp]);
+        let horner = d.const_app(p.poly.horner_from_top, &[c, a, n, rp]);
         let with_ih = d.lam_fv(ih_fv, carrier, horner);
         d.lam_fv(rp_fv, nat, with_ih)
     };
@@ -2711,7 +2777,7 @@ fn declare_factor_quotient_degree_lt(
     //   -- defeq since factorQuotient's δ-unfold + β reproduces the same
     //   -- Nat.rec application, and Nat.rec(...)(zero) ι-reduces to zero_c.
 
-    let fq = d.const_app(p.factor_quotient, &[c, a, n]);
+    let fq = d.const_app(p.poly.factor_quotient, &[c, a, n]);
     let degree_lt_fq = poly_degree_lt_applied(d, p, fq, n);
 
     let body_k = d.lam_fv(hk_fv, le_nk, h_equiv);
@@ -2728,7 +2794,7 @@ fn declare_factor_quotient_degree_lt(
         d.pi_fv(c_fv, fn_ty, over_a)
     };
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.factor_quotient_degree_lt,
+        name: p.poly.factor_quotient_degree_lt,
         uparams: vec![],
         ty,
         value,
