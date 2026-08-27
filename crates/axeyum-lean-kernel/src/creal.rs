@@ -9013,6 +9013,8 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.cauchy,
             |p: CRealPrelude| p.geom_pair_within,
             |p: CRealPrelude| p.geom_y_bound,
+            |p: CRealPrelude| p.geom_y_bound_raw,
+            |p: CRealPrelude| p.pow_le_nat_div_succ_of_gap,
             |p: CRealPrelude| p.inv,
             |p: CRealPrelude| p.le,
             |p: CRealPrelude| p.lt,

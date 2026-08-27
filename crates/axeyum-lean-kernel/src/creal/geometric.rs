@@ -4069,6 +4069,142 @@ fn div_succ_var(d: &mut IntDev<'_>, p: CRealPrelude, k: ExprId, j: ExprId) -> Ex
     d.const_app(p.rat.nat_div_succ, &[k, j])
 }
 
+/// `CReal.geomCauchyOrderedOfGap`. See the field documentation
+/// ([`super::CRealPrelude::geom_cauchy_ordered_of_gap`]) for the statement
+/// and why it exists.
+///
+/// Pure composition, no new arithmetic:
+/// [`declare_pow_le_nat_div_succ_of_gap`] at `(q, k3)` gives the raw
+/// harmonic bound at `k1 := Nat.succ k3`; [`declare_geom_y_bound_raw`] scales
+/// it by `inv (1 - x)` to `bigK := (Nat.succ k) * k1`; and that is exactly
+/// [`declare_geom_cauchy_of_lt_ordered`]'s own `hK` parameter, which was
+/// already raw. The final modulus is
+/// [`geom_cauchy_of_lt_k_final`] of that `bigK`, i.e. `((succ k * succ k3) +
+/// 1) + 7`, reconstructed here by the same shared Rust function so both sites
+/// build the identical `ExprId`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_geom_cauchy_ordered_of_gap(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let rat_carrier = rat_ty(d);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let zero_c = czero(d, p);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let hx0_ty = cle(d, p, zero_c, x);
+    let hx0_fv = d.fresh_fvar();
+    let hx0 = d.kernel().fvar(hx0_fv);
+
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+    let q_emb = embed(d, p, q);
+    let x_plus_q = cadd(d, p, x, q_emb);
+    let hq_ty = cle(d, p, x_plus_q, one_c);
+    let hq_fv = d.fresh_fvar();
+    let hq = d.kernel().fvar(hq_fv);
+
+    let k3_fv = d.fresh_fvar();
+    let k3 = d.kernel().fvar(k3_fv);
+    let hpb_ty = d.const_app(p.pos_bound, &[q_emb, k3]);
+    let hpb_fv = d.fresh_fvar();
+    let hpb = d.kernel().fvar(hpb_fv);
+
+    let neg_x = cneg(d, p, x);
+    let a_real = cadd(d, p, one_c, neg_x);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let h_ty = pos_bound_of(d, p, a_real, k);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let hab_ty = d.le(a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    // hk1 : ∀ m, le (pow x m) (ofRat (natDivSucc (succ k3) m))
+    let hk1 = {
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let leaf = d.lemma(p.pow_le_nat_div_succ_of_gap, &[x, hx0, q, hq, k3, hpb, m]);
+        d.lam_fv(m_fv, nat, leaf)
+    };
+    let k1 = d.succ(k3);
+
+    // hk : ∀ a, le (mul (inv (1-x) k h) (pow x a)) (ofRat (natDivSucc bigk a))
+    let hk = {
+        let a0_fv = d.fresh_fvar();
+        let a0 = d.kernel().fvar(a0_fv);
+        let leaf = d.lemma(p.geom_y_bound_raw, &[x, hx0, k, h, k1, hk1, a0]);
+        d.lam_fv(a0_fv, nat, leaf)
+    };
+    let succ_k = d.succ(k);
+    let bigk = NatOps::mul(d, succ_k, k1);
+
+    let result = d.lemma(
+        p.geom_cauchy_of_lt_ordered,
+        &[x, hx0, k, h, bigk, hk, a, b, hab],
+    );
+
+    // Reconstruct `geomCauchyOfLtOrdered`'s own conclusion at `bigk`.
+    let f = pow_fn(d, p, x);
+    let sum_f_b = d.const_app(p.sum_range, &[f, b]);
+    let sum_f_a = d.const_app(p.sum_range, &[f, a]);
+    let y_pt = sample(d, p, sum_f_b, b);
+    let z_pt = sample(d, p, sum_f_a, a);
+    let diff = rsub(d, rat, y_pt, z_pt);
+    let k_final = geom_cauchy_of_lt_k_final(d, bigk);
+    let nds_b = div_succ_var(d, p, k_final, b);
+    let nds_a = div_succ_var(d, p, k_final, a);
+    let target_bound = radd(d, nds_b, nds_a);
+    let claim = within(d, p, diff, target_bound);
+
+    let ty = {
+        let after_hab = d.arrow(hab_ty, claim);
+        let over_b = d.pi_fv(b_fv, nat, after_hab);
+        let over_a = d.pi_fv(a_fv, nat, over_b);
+        let with_h = d.pi_fv(h_fv, h_ty, over_a);
+        let with_k = d.pi_fv(k_fv, nat, with_h);
+        let with_hpb = d.pi_fv(hpb_fv, hpb_ty, with_k);
+        let with_k3 = d.pi_fv(k3_fv, nat, with_hpb);
+        let with_hq = d.pi_fv(hq_fv, hq_ty, with_k3);
+        let with_q = d.pi_fv(q_fv, rat_carrier, with_hq);
+        let with_hx0 = d.pi_fv(hx0_fv, hx0_ty, with_q);
+        d.pi_fv(x_fv, carrier, with_hx0)
+    };
+    let value = {
+        let with_hab = d.lam_fv(hab_fv, hab_ty, result);
+        let over_b = d.lam_fv(b_fv, nat, with_hab);
+        let over_a = d.lam_fv(a_fv, nat, over_b);
+        let with_h = d.lam_fv(h_fv, h_ty, over_a);
+        let with_k = d.lam_fv(k_fv, nat, with_h);
+        let with_hpb = d.lam_fv(hpb_fv, hpb_ty, with_k);
+        let with_k3 = d.lam_fv(k3_fv, nat, with_hpb);
+        let with_hq = d.lam_fv(hq_fv, hq_ty, with_k3);
+        let with_q = d.lam_fv(q_fv, rat_carrier, with_hq);
+        let with_hx0 = d.lam_fv(hx0_fv, hx0_ty, with_q);
+        d.lam_fv(x_fv, carrier, with_hx0)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.geom_cauchy_ordered_of_gap,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 /// Admit `CReal.geomCauchyOfLtOrdered` and `CReal.geomCauchyOfLt`.
 ///
 /// # Errors
@@ -4080,5 +4216,6 @@ pub(super) fn declare_geom_cauchy_of_lt_family(
     p: CRealPrelude,
 ) -> Result<(), KernelError> {
     declare_geom_cauchy_of_lt_ordered(d, p)?;
-    declare_geom_cauchy_of_lt(d, p)
+    declare_geom_cauchy_of_lt(d, p)?;
+    declare_geom_cauchy_ordered_of_gap(d, p)
 }

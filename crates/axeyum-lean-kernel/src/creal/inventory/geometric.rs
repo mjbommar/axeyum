@@ -70,6 +70,11 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.geom_cauchy_of_lt_ordered,
             "theorem",
         ),
+        (
+            "CReal.geomCauchyOrderedOfGap",
+            p.geom_cauchy_ordered_of_gap,
+            "theorem",
+        ),
         ("CReal.geomCauchyOfLt", p.geom_cauchy_of_lt, "theorem"),
     ]
 }
