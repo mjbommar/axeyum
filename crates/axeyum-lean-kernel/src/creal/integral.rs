@@ -1684,6 +1684,62 @@
 //! what discharges the degenerate branch of piece 2's cotransitivity split.
 //! It is also what FTC needs directly for the antiderivative's own
 //! continuity (`|G(y) − G(x)| ≤ M·|y − x|`).
+//!
+//! **Landed**: [`CRealPrelude::integral_abs_le`]
+//! ([`declare_integral_abs_le`]), kernel-accepted and axiom-free, with a
+//! concrete instantiation at `F := id` on `[0, mag_bound 0]` (`k := 0`, the
+//! one setting where a closed `BoundedOn` witness exists —
+//! [`CRealPrelude::bounded_on_id_unit`]) and a transposed-width negative
+//! control checked BOTH ways: not vacuous (`add zero (neg unit)` and
+//! `add unit (neg zero)` are distinct terms, asserted via `Kernel::def_eq`,
+//! and their values differ, `−1` against `1`) and not inverted (the variant
+//! is genuinely false — `abs` is nonnegative, the transposed bound strictly
+//! negative). `F` is deliberately not constant: for a constant `F` the bound
+//! and the value coincide, so a transposed factor would still land on a true
+//! statement.
+//!
+//! Three private helpers came out of it, all from PUBLIC prelude lemmas
+//! only: [`neg_of_add_eq_zero_local`] (`add x y ~ 0 → y ~ −x`, spelled out
+//! because the prelude publishes `add_zero` but no `zero_add`),
+//! [`neg_neg_equiv_local`] and [`neg_mul_left_local`]. `power.rs`
+//! (`neg_mul_left`) and `deriv_unique.rs` (`neg_mul_equiv_left`) each have
+//! the last one already, both **private** to their own file, so a third
+//! derivation is the only option from here — the situation
+//! [`of_nat_one_equiv_local`] documents.
+//!
+//! **What the kernel rejected, once.** An [`CRealPrelude::equiv_trans`] whose
+//! middle term was `neg (mul M w)` where the preceding
+//! [`CRealPrelude::neg_congr`] step had produced `neg (neg (mul M w))`. The
+//! message named neither lemma: it printed the fully unfolded per-index
+//! `Within` form of the `Equiv` it wanted against the `Equiv` it got, which
+//! is indistinguishable from a transposed endpoint pair or a backwards
+//! `Equiv` — this file's own most common failure family. Fixed by inserting
+//! the doubly-negated middle term; nothing else changed.
+//!
+//! **Cost: none measurable.** Matched A/B on one tree, the declaration
+//! disabled and re-enabled between readings: `creal_prelude_builds` reads
+//! **38.71 s** WITHOUT it (load 7.0) and **32.99 s** WITH it (load 6.2) —
+//! the with-reading is the FASTER of the two, so the declaration's cost is
+//! below this box's noise floor, not merely small. Consistent with the
+//! construction: no `CReal.integral` `Definition` is ever unfolded (every
+//! `integral` is a shared `const_app` on both sides of every step), and no
+//! mesh-derived `Nat.mul`/`Nat.add` term appears anywhere, so none of this
+//! file's documented lazy-delta traps apply.
+//!
+//! **Dead code: 4 → 4, none consumed, and none silenced.** This route uses
+//! [`CRealPrelude::integral_le`]/[`CRealPrelude::integral_const`] and touches
+//! no mesh machinery, so [`mesh_count_align`], [`MeshAlignMul`] +
+//! [`mesh_count_align_mul`] and [`bnd_leg_plus_share_le_at`] all remain
+//! unconsumed — which is the honest signal, since the estimate that consumes
+//! them (piece 1 above) is exactly what did not land. They now carry
+//! `#[cfg_attr(not(test), expect(dead_code, reason = "…"))]`, each reason
+//! naming its specific future consumer: an `expect` still ERRORS the moment
+//! the item is used, so the signal survives in both directions instead of
+//! being switched off, which `allow` would do. The `not(test)` gate is
+//! load-bearing and was measured, not guessed: under `--all-targets` the lib
+//! is also built as a test target, where every one of the four IS used by its
+//! own `#[cfg(test)]` module, so a bare `expect` is UNFULFILLED there and
+//! errors under `-D warnings` (four warnings, before the gate was added).
 
 use super::completeness::half_shift_le;
 use super::convergence::{
@@ -19106,10 +19162,7 @@ fn neg_neg_equiv_local(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId
     let x_plus_negx = cadd(d, p, x, neg_x);
     let comm = d.lemma(p.add_comm, &[neg_x, x]); // Equiv (neg x + x) (x + neg x)
     let an = d.lemma(p.add_neg, &[x]); // Equiv (x + neg x) zero
-    let hsum = d.lemma(
-        p.equiv_trans,
-        &[negx_plus_x, x_plus_negx, zero, comm, an],
-    ); // Equiv (neg x + x) zero
+    let hsum = d.lemma(p.equiv_trans, &[negx_plus_x, x_plus_negx, zero, comm, an]); // Equiv (neg x + x) zero
 
     // neg_of_add_eq_zero_local at (neg x, x) : Equiv x (neg (neg x))
     let fwd = neg_of_add_eq_zero_local(d, p, neg_x, x, hsum);
@@ -19303,13 +19356,7 @@ pub(super) fn declare_integral_abs_le(
             d.lemma(
                 p.le_congr,
                 &[
-                    neg_mbound,
-                    neg_mbound,
-                    neg_neg_ft,
-                    ft,
-                    refl_neg_m,
-                    nn,
-                    flipped,
+                    neg_mbound, neg_mbound, neg_neg_ft, ft, refl_neg_m, nn, flipped,
                 ],
             )
         };
@@ -19328,13 +19375,7 @@ pub(super) fn declare_integral_abs_le(
     let upper = d.lemma(
         p.le_congr,
         &[
-            integral_f,
-            integral_f,
-            integral_m,
-            m_width,
-            refl_if,
-            ic_m,
-            up_raw,
+            integral_f, integral_f, integral_m, m_width, refl_if, ic_m, up_raw,
         ],
     );
 
@@ -19414,4 +19455,135 @@ pub(super) fn declare_integral_abs_le(
         ty,
         value,
     })
+}
+
+#[cfg(test)]
+mod integral_abs_le_tests {
+    use super::*;
+    use crate::Declaration;
+    use crate::rat_prelude::ops::rzero;
+
+    /// **Mandatory concrete instantiation, with a negative control.**
+    ///
+    /// `F := id`, `[a, b] := [0, mag_bound 0]` (the kernel's own
+    /// representation of `[0, 1]`), `k := 0` — the one setting where a
+    /// `BoundedOn` witness is available as a closed term
+    /// ([`CRealPrelude::bounded_on_id_unit`]), so nothing about the bound is
+    /// assumed. The conclusion is `|∫₀¹ x dx| ≤ 1 · (1 − 0)`, and `∫₀¹ x dx`
+    /// is `1/2`, so the instance is TRUE with room to spare.
+    ///
+    /// `F` is deliberately **not** constant. A constant `F` would make this
+    /// vacuous in the direction that matters: `integral (const c) a b ~
+    /// c·(b−a)` exactly, so the bound and the value would coincide for every
+    /// `k` and a transposed factor would still land on a true statement.
+    ///
+    /// **The negative control transposes the WIDTH**, asserting the same
+    /// proof term at `mul M (add a (neg b))` — i.e. `|∫| ≤ 1·(0 − 1) = −1`.
+    /// Checked both ways the repository's own guidance demands: it is not
+    /// *vacuous* (`add zero (neg unit)` and `add unit (neg zero)` are
+    /// different terms, and their VALUES differ — `−1` against `1` — so a
+    /// bug that transposed the width inside `declare_integral_abs_le` would
+    /// be caught here rather than coinciding), and it is not *inverted* (the
+    /// variant is genuinely FALSE: `abs` is nonnegative and the transposed
+    /// bound is strictly negative).
+    #[test]
+    fn integral_abs_le_concrete_and_negative_control() {
+        crate::on_a_deep_stack(integral_abs_le_concrete_and_negative_control_body);
+    }
+
+    fn integral_abs_le_concrete_and_negative_control_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+
+        let zero_c = czero(&mut d, p);
+        let zero_idx = d.num(0);
+        let succ0 = d.succ(zero_idx);
+
+        // `unit := mag_bound 0 = ofRat (natDivSucc (succ 0) 0)`, built with
+        // `uniform_continuity.rs`'s own recipe so `bounded_on_id_unit`
+        // applies on the nose rather than up to a bridge lemma.
+        let unit = {
+            let q = div_succ_at(&mut d, p, succ0, zero_idx);
+            embed(&mut d, p, q)
+        };
+
+        let identity = {
+            let r_fv = d.fresh_fvar();
+            let r = d.kernel().fvar(r_fv);
+            d.lam_fv(r_fv, carrier, r)
+        };
+
+        // `hab : le zero unit` -- `mag_bound_nonneg`'s route (that helper is
+        // private to `uniform_continuity.rs`).
+        let hab = {
+            let bound_rat = div_succ_at(&mut d, p, succ0, zero_idx);
+            let rz = rzero(&mut d, p.rat);
+            let rat_nonneg = d.lemma(p.rat.zero_le_nat_div_succ, &[succ0, zero_idx]);
+            d.lemma(p.of_rat_le, &[rz, bound_rat, rat_nonneg])
+        };
+
+        let uc_id = d.lemma(p.uniformly_continuous_id, &[zero_c, unit]);
+        let hb_id = d.lemma(p.bounded_on_id_unit, &[]);
+
+        let proof = d.lemma(
+            p.integral_abs_le,
+            &[identity, zero_c, unit, zero_idx, hab, uc_id, hb_id],
+        );
+
+        // The conclusion, rebuilt independently of the declaration's own body.
+        let integral_val = d.const_app(p.integral, &[identity, zero_c, unit, hab, uc_id]);
+        let abs_integral = d.const_app(p.abs, &[integral_val]);
+        let mbound = {
+            let q = div_succ_at(&mut d, p, succ0, zero_idx);
+            embed(&mut d, p, q)
+        };
+        let neg_zero = cneg(&mut d, p, zero_c);
+        let width = cadd(&mut d, p, unit, neg_zero);
+        let m_width = cmul(&mut d, p, mbound, width);
+
+        let anon = d.kernel().anon();
+
+        let true_ty = cle(&mut d, p, abs_integral, m_width);
+        let name_ok = d.kernel().name_str(anon, "__integralAbsLeConcreteOk");
+        let result_ok = d.kernel().add_declaration(Declaration::Theorem {
+            name: name_ok,
+            uparams: vec![],
+            ty: true_ty,
+            value: proof,
+        });
+        assert!(
+            result_ok.is_ok(),
+            "integral_abs_le at F := id, [a,b] := [0, mag_bound 0], k := 0 \
+             must prove `le (abs (integral id ...)) (mul (mag_bound 0) \
+             (add unit (neg zero)))`: {:?}",
+            result_ok.err()
+        );
+
+        // Negative control: the width transposed, `mul M (add a (neg b))`,
+        // is `−1` -- a strictly negative bound on a nonnegative `abs`.
+        let neg_unit = cneg(&mut d, p, unit);
+        let width_swapped = cadd(&mut d, p, zero_c, neg_unit);
+        let m_width_swapped = cmul(&mut d, p, mbound, width_swapped);
+        assert!(
+            !d.kernel().def_eq(m_width, m_width_swapped),
+            "the transposed-width control must not be DEFINITIONALLY the same \
+             term as the true bound, or the negative assertion below is vacuous"
+        );
+        let false_ty = cle(&mut d, p, abs_integral, m_width_swapped);
+        let name_bad = d.kernel().name_str(anon, "__integralAbsLeConcreteBad");
+        let result_bad = d.kernel().add_declaration(Declaration::Theorem {
+            name: name_bad,
+            uparams: vec![],
+            ty: false_ty,
+            value: proof,
+        });
+        assert!(
+            result_bad.is_err(),
+            "the SAME proof term must be REFUSED against the transposed-width \
+             (false) conclusion `le (abs (integral id ...)) (mul M (add zero \
+             (neg unit)))`"
+        );
+    }
 }
