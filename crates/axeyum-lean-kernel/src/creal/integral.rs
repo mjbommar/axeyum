@@ -329,6 +329,169 @@
 //! free `Rat` fvar throughout `crossing_close`, never a mesh-derived
 //! `Nat.mul`/`Nat.add` term, so none of the concrete-witness/lazy-delta
 //! traps this file's own history warns about apply here).
+//!
+//! ## `CReal.integral_split` — checked 2026-08-27 (later still), a THIRD
+//! lane: prerequisite (1) landed as [`CRealPrelude::mesh_scaled_le_of_ge`],
+//! prerequisite (2) NOT attempted, and here is exactly why
+//!
+//! [`declare_mesh_scaled_le_of_ge`] proves the SCALED analogue prerequisite
+//! (1) names: `le (mul (ofNat k) Δ_m) (ofRat (natDivSucc 1 outer))` for an
+//! explicit Nat multiplier `k := Nat.succ k0`, by reusing
+//! [`declare_mesh_le_of_ge`] wholesale at a substituted `outer' := k*outer +
+//! k0` and collapsing `k·(1/(outer'+1))` back to `1/(outer+1)` with the same
+//! `magnitude_times_frac_eq_outer` helper `mesh_le_of_ge` itself uses (its
+//! `(c, magnitude, deep)` slots taking `(k0, k, outer')`, which is EXACTLY
+//! `Rat.natDivSucc_scale`'s required syntactic shape). Reusable well beyond
+//! this file, and a complete result on its own, independent of everything
+//! below.
+//!
+//! Prerequisite (2) — `samplePt`'s domain membership — was investigated and
+//! NOT attempted, because the investigation surfaced a genuine type
+//! mismatch prerequisite (2)'s own one-line gloss papers over. `crossing.rs`
+//! types `Δ` as a **`Rat`** (`crossingIndex a c Δ`, `Δ : Rat`, invertible via
+//! the DECIDABLE `Rat.inv`), while `mesh_le_of_ge`/`mesh_scaled_le_of_ge`'s
+//! own mesh step `Δ_m := (b−a)·natDivSucc(1,m)` is a **`CReal`** (`b−a` is an
+//! arbitrary real, not generally rational). "`Δ_ab := (b−a)/(m+1)`" — this
+//! entry's own predecessor's gloss, repeated in [`CRealPrelude::crossing_close`]'s
+//! doc comment — is not literally well-typed as `crossingIndex`'s argument;
+//! at best it names a **rational upper bound** for the true real mesh step
+//! (e.g. `Δ := natDivSucc(magnitude, m)` for `magnitude := bound(b−a)+1`,
+//! since `b−a ≤ ofNat(magnitude)` makes `(b−a)/(m+1) ≤ magnitude/(m+1)`).
+//!
+//! Working through THAT reading to its end does not land prerequisite (2)
+//! either. With `w := (c−a)·Δ⁻¹` (`crossingIndex`'s own rescaled argument),
+//! `0 ≤ c−a ≤ b−a ≤ ofNat(magnitude)` and `Δ⁻¹ = ofNat(m+1)/magnitude`
+//! (exactly, since `Δ = magnitude/(m+1)`) give `w ≤ ofNat(m+1)` — clean, and
+//! [`CRealPrelude::bucket_index_bound`] (`creal/uniform_continuity.rs`,
+//! already proved) would then bound `crossingIndex a c Δ = bucketIndex w 0 ≤
+//! (bound(ofNat(m+1))+3)*1`, roughly `m+4`, NOT `≤ m`. That gap alone is
+//! absorbable (widen the target interval's own slack). The genuinely
+//! disqualifying direction is the OTHER one: this `Δ` is an upper bound for
+//! the true step, so it can UNDERSHOOT the number of steps actually needed
+//! to cross `[a, c]` at accuracy comparable to `Δ`'s own denominator, and
+//! nothing above bounds `crossingIndex` in terms of `m` alone without ALSO
+//! bounding `magnitude := bound(b−a)+1` — which is data about the interval,
+//! not about `m` — so "a caller supplying only a mesh count" cannot be made
+//! literally true for THIS reading of `Δ` either. Resolving prerequisite
+//! (2) needs a considered choice of what `Δ` actually denotes for
+//! `integral_split`'s crossing block (a `Rat` derived from `m` and the
+//! interval's own Archimedean bound, per above, OR a different bracketing
+//! that avoids `crossingIndex`'s `Rat`-typed step altogether) before further
+//! proof engineering is worth attempting — a design question, not a proof
+//! gap. Left exactly as prerequisite (2) was before this entry:
+//! unattempted, hypothesis, explicit.
+//!
+//! `creal_prelude_builds`: 23.07 s test-run (was ~19.99 s on the previous
+//! lane's build; `Δ`/`k`/`k0`/`outer`/`m` all stay free fvars throughout
+//! [`declare_mesh_scaled_le_of_ge`], so none of this file's documented
+//! concrete-witness/lazy-delta traps apply — the increase is consistent
+//! with ordinary machine load, not a construction cost).
+//!
+//! ## `CReal.integral_split` — checked 2026-08-27 (a FOURTH lane), tested
+//! and REFUTED the hypothesis that "`magnitude` is a fixed constant of
+//! `[a,b]`" rescues prerequisite (2); the obstruction is not data
+//! availability, it is that `bucket_index_bound`'s existing cap is
+//! provably too loose BY EXACTLY THE MARGIN THAT MATTERS, for every mesh
+//! count
+//!
+//! The immediately preceding entry's own "genuinely disqualifying
+//! direction" reads, correctly interpreted, as an availability claim: `Δ`
+//! being an upper bound for the true step "cannot be made literally true
+//! for THIS reading of `Δ`... without ALSO bounding `magnitude`... which is
+//! data about the interval, not about `m`". That is true as stated, but
+//! `integral_split` FIXES the interval `[a,b]` before this lemma is ever
+//! invoked, so `magnitude := bound(b−a)+1` is not a free parameter the
+//! caller lacks — it is a closed `Nat` term the caller already has in
+//! hand, exactly like `a`, `b` themselves. So the question worth actually
+//! testing is: does a bound in the PAIR `(m, magnitude)` — not `m` alone —
+//! suffice? It does not, and the reason is arithmetic, not a missing
+//! input.
+//!
+//! **The exact chain, with no step hand-waved.** Fix `bnd := ofNat(N+1)`
+//! for whatever Nat `N` the caller picks to build `Δ := natDivSucc
+//! (magnitude, N)` (i.e. `Δ = magnitude/(N+1)`, `[CRealPrelude::direct_bound_le`]'s
+//! own `(c, magnitude, proof)` triple applied to `width := b−a`, so
+//! `proof : le (b−a) (ofNat magnitude)` is exactly what is in hand — no
+//! stronger, no `<`, a plain `≤`). Then:
+//!
+//! 1. `w := (c−a)·Δ⁻¹` satisfies `le w bnd`: `Δ⁻¹ = ofNat(N+1)/magnitude`
+//!    exactly (both positive, `Rat.inv` of a `natDivSucc`), and `c−a ≤ b−a
+//!    ≤ ofNat(magnitude)`, so `w ≤ magnitude·(N+1)/magnitude = ofNat(N+1) =
+//!    bnd`.
+//! 2. [`CRealPrelude::bucket_index_bound`] at `(w, bnd, k := 0, that
+//!    proof)` gives `crossingIndex a c Δ = bucketIndex w 0 ≤ (bound(bnd) +
+//!    3)·1`. `bnd = ofNat(N+1)` is itself a `direct_bound_le`-shaped
+//!    embedding, and `CReal.bound`'s literal definition
+//!    (`product.rs::declare_bound`, `Int.natAbs (Rat.num (seq x 0)) + 1`)
+//!    gives `bound (ofNat (N+1)) = N+2` exactly (the 0th sample of a
+//!    constant-`Nat` embedding is that Nat as an integer-denominator
+//!    rational, numerator `N+1`, `natAbs (N+1) = N+1`). So the cap is
+//!    **exactly `N + 5`**, not `N + 1` — a fixed excess of `4`, independent
+//!    of `N` and of `magnitude`.
+//! 3. Multiply back by `Δ = magnitude/(N+1)`: the PROVABLE bound on
+//!    `crossingIndex a c Δ · Δ` (hence on `samplePt − a`) is `(N+5)·
+//!    magnitude/(N+1) = magnitude · (1 + 4/(N+1))`. This is **strictly
+//!    greater than `magnitude` for every finite `N`** — the `4/(N+1)` term
+//!    is always strictly positive, however large `N` is chosen.
+//! 4. The only available fact relating `b−a` to `magnitude` is
+//!    `direct_bound_le`'s own `le (b−a) (ofNat magnitude)` — non-strict,
+//!    and nothing in the prelude proves a strict `lt (b−a) (ofNat
+//!    magnitude)` with any quantified gap. So the best available ceiling
+//!    on `samplePt − a` needed for `samplePt ≤ b` is `magnitude` itself,
+//!    and step 3's provable bound is *always* strictly above that ceiling.
+//!
+//! **`samplePt ≤ b` is therefore not derivable via `bucket_index_bound` +
+//! `direct_bound_le` for ANY choice of the internal parameter `N`** — not
+//! "not yet, for small `N`", not "needs `N` past some threshold": the
+//! excess `4·magnitude/(N+1)` shrinks toward `0` as `N → ∞`, but the
+//! bound it is added to is already pinned at exactly `magnitude`, the same
+//! constant the ceiling sits at, so the sum never crosses below it. Refining
+//! the mesh makes the bound TIGHTER, never makes it SUFFICIENT. Checked
+//! concretely: `magnitude := 10` (i.e. `b−a` bounded by `10`), `N := 10^6`
+//! gives a provable cap of `10·(1 + 4/1000001) ≈ 10.00004`, still `> 10 ≥
+//! b−a`'s only known ceiling; `N := 10^9` gives `≈ 10.00000004`, same
+//! verdict. The gap never closes because it is not a convergence-speed
+//! problem, it is that the limit itself (`magnitude`) already sits at the
+//! ceiling `b−a` is only known to be `≤`, not `<`, by any provable margin.
+//!
+//! **So my own working hypothesis for this lane — "since `magnitude` is a
+//! determined constant of the fixed interval, a bound in `(m, magnitude)`
+//! should suffice" — is REFUTED, but not for the reason the hypothesis
+//! disputed.** `magnitude` genuinely IS usable, closed data at a fixed
+//! interval; that part of the hypothesis was correct, and the previous
+//! entry's framing ("data about the interval, not about `m`") is easy to
+//! misread as saying the obstruction is unavailable information. It is not.
+//! The actual obstruction is that [`CRealPrelude::bucket_index_bound`] — the
+//! ONLY existing `Nat` cap on `bucketIndex`/`crossingIndex` — carries a
+//! FIXED additive slack (`+3`, becoming `+4` once composed with `bnd`'s own
+//! `+1` embedding offset) that, once multiplied back through `Δ`'s
+//! denominator, lands EXACTLY on `magnitude` from above, and `magnitude` is
+//! also exactly where `b−a`'s only known ceiling sits. A strictly TIGHTER,
+//! purpose-built bound on `crossingIndex` specifically (not the generic
+//! clamp-based `bucket_index_bound`, which was designed for `bounded_of_
+//! uniformly_continuous`'s covering argument and never promises tightness
+//! beyond "some `Nat` cap exists") — one whose slack vanishes relative to
+//! `magnitude`, not merely relative to `N` — would be needed before
+//! prerequisite (2) is even attemptable at the term level. That is new
+//! proof engineering on `crossing.rs`'s own ground, not a matter of
+//! supplying `bucket_index_bound` with more inputs, and not attempted here:
+//! doing so without first fixing the +4 slack would be building something
+//! that only LOOKS like it discharges the hypothesis.
+//!
+//! No declaration was added or attempted at the term level — the
+//! arithmetic above rules out the natural construction before any kernel
+//! call, the same discipline the immediately preceding entry followed.
+//! `samplePt`'s domain membership remains open; [`CRealPrelude::crossing_close`]
+//! is UNCHANGED and still takes it as an explicit hypothesis alongside the
+//! Archimedean-smallness one (which IS now dischargeable, via
+//! [`CRealPrelude::mesh_scaled_le_of_ge`], per the entry above — that
+//! wiring is also not attempted here, since it is orthogonal to this
+//! entry's negative finding and better left for whoever next revisits
+//! `crossing_close`'s statement as a whole).
+//!
+//! `creal_prelude_builds`: measured 22.17 s on this lane's merge of `main`
+//! + the previous lane's branch, BEFORE this entry (pure prose, no new
+//! declaration) and unaffected by it.
 
 use super::completeness::half_shift_le;
 use super::convergence::{
@@ -373,7 +536,8 @@ pub(super) fn declare_integral(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<()
     declare_riemann_sample_in_bounds(d, p)?;
     declare_riemann_sum_le_on(d, p)?;
     declare_riemann_sum_const(d, p)?;
-    declare_mesh_le_of_ge(d, p)
+    declare_mesh_le_of_ge(d, p)?;
+    declare_mesh_scaled_le_of_ge(d, p)
 }
 
 // --- shared term builders ----------------------------------------------------
@@ -4633,6 +4797,127 @@ fn declare_mesh_le_of_ge(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kern
 
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.mesh_le_of_ge,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Admit [`CRealPrelude::mesh_scaled_le_of_ge`]. See that field's own doc
+/// comment for the statement and the route: reuse [`declare_mesh_le_of_ge`]
+/// wholesale at a substituted `outer' := k*outer + k0`, scale by the nonneg
+/// `k := Nat.succ k0`, then collapse `k·(1/(outer'+1))` back to
+/// `1/(outer+1)` with [`magnitude_times_frac_eq_outer`] at `c := k0`,
+/// `magnitude := k`, `deep := outer'`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+fn declare_mesh_scaled_le_of_ge(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let outer_fv = d.fresh_fvar();
+    let outer = d.kernel().fvar(outer_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let k0_fv = d.fresh_fvar();
+    let k0 = d.kernel().fvar(k0_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let width = width_of(d, p, a, b);
+    let (c, magnitude, _width_le_mag) = direct_bound_le(d, p, width);
+
+    // k := Nat.succ k0, outer' := k*outer + k0 -- exactly the syntactic
+    // shape `Rat.natDivSucc_scale` (via `magnitude_times_frac_eq_outer`)
+    // needs at `(c, magnitude, deep) := (k0, k, outer')`.
+    let k = d.succ(k0);
+    let k_outer = NatOps::mul(d, k, outer);
+    let outer_prime = NatOps::add(d, k_outer, k0);
+
+    // hge_ty : Nat.le (magnitude*outer' + c) m -- EXACTLY `mesh_le_of_ge`'s
+    // own hypothesis shape with `outer` substituted by `outer'`, so
+    // `mesh_le_of_ge` applies wholesale below.
+    let me = NatOps::mul(d, magnitude, outer_prime);
+    let deep = NatOps::add(d, me, c);
+    let hge_ty = d.le(deep, m);
+    let hge_fv = d.fresh_fvar();
+    let hge = d.kernel().fvar(hge_fv);
+
+    // mesh_result : le (mul width (ofRat (natDivSucc 1 m)))
+    //                  (ofRat (natDivSucc 1 outer'))
+    let mesh_result = d.lemma(p.mesh_le_of_ge, &[a, b, outer_prime, m, hab, hge]);
+
+    let one_nat = d.num(1);
+    let frac_m_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, m]);
+    let frac_m_real = embed(d, p, frac_m_rat);
+    let step_m = cmul(d, p, width, frac_m_real);
+
+    let out_bound_prime_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, outer_prime]);
+    let out_bound_prime = embed(d, p, out_bound_prime_rat);
+
+    let k_real = d.const_app(p.of_nat, &[k]);
+    let k_nonneg = zero_le_of_nat(d, p, k);
+
+    // scaled : le (mul k_real step_m) (mul k_real out_bound_prime)
+    let scaled = d.lemma(
+        p.mul_le_mul_of_nonneg_left,
+        &[k_real, step_m, out_bound_prime, k_nonneg, mesh_result],
+    );
+
+    // collapse : Equiv (mul (ofNat k) (ofRat (natDivSucc 1 outer')))
+    //                  (ofRat (natDivSucc 1 outer))
+    let collapse = magnitude_times_frac_eq_outer(d, p, k0, k, outer, outer_prime);
+
+    let out_bound_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, outer]);
+    let out_bound = embed(d, p, out_bound_rat);
+
+    let k_step_m = cmul(d, p, k_real, step_m);
+    let k_out_bound_prime = cmul(d, p, k_real, out_bound_prime);
+    let refl_k_step_m = d.lemma(p.equiv_refl, &[k_step_m]);
+    let final_le = d.lemma(
+        p.le_congr,
+        &[
+            k_step_m,
+            k_step_m,
+            k_out_bound_prime,
+            out_bound,
+            refl_k_step_m,
+            collapse,
+            scaled,
+        ],
+    );
+
+    let concl = cle(d, p, k_step_m, out_bound);
+    let ty = {
+        let after_hge = d.arrow(hge_ty, concl);
+        let after_hab = d.arrow(hab_ty, after_hge);
+        let over_k0 = d.pi_fv(k0_fv, nat, after_hab);
+        let over_m = d.pi_fv(m_fv, nat, over_k0);
+        let over_outer = d.pi_fv(outer_fv, nat, over_m);
+        let over_b = d.pi_fv(b_fv, carrier, over_outer);
+        d.pi_fv(a_fv, carrier, over_b)
+    };
+    let value = {
+        let with_hge = d.lam_fv(hge_fv, hge_ty, final_le);
+        let with_hab = d.lam_fv(hab_fv, hab_ty, with_hge);
+        let over_k0 = d.lam_fv(k0_fv, nat, with_hab);
+        let over_m = d.lam_fv(m_fv, nat, over_k0);
+        let over_outer = d.lam_fv(outer_fv, nat, over_m);
+        let over_b = d.lam_fv(b_fv, carrier, over_outer);
+        d.lam_fv(a_fv, carrier, over_b)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mesh_scaled_le_of_ge,
         uparams: vec![],
         ty,
         value,

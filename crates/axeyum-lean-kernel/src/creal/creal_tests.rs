@@ -126,7 +126,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 396] = [
+    let expected: [(&str, crate::NameId, &str); 397] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -1000,6 +1000,12 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         // No existential elimination -- the threshold is read directly off
         // `CReal.bound`.
         ("CReal.mesh_le_of_ge", p.mesh_le_of_ge, "theorem"),
+        // The SCALED analogue `crossingClose`'s Archimedean-smallness
+        // hypothesis needs (`creal/integral.rs`, 2026-08-27): bounds
+        // `k·Δ_m` for an explicit Nat multiplier `k := Nat.succ k0` rather
+        // than `Δ_m` itself, by reusing `mesh_le_of_ge` wholesale at a
+        // substituted `outer' := k*outer + k0`.
+        ("CReal.meshScaledLeOfGe", p.mesh_scaled_le_of_ge, "theorem"),
         // The fine-sample placement lemma `riemannSum_cauchy`'s per-block
         // fold needs (`creal/integral.rs`): every FINE sample point inside a
         // COARSE block lies in `[a, b]`, the one-index-shift generalization
