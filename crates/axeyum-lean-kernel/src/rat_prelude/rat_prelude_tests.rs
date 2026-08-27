@@ -350,6 +350,11 @@ fn unnamed_but_live_declarations(p: &RatPrelude) -> Vec<crate::NameId> {
         p.poly_eval_succ,
         p.poly_eval_add,
         p.poly_eval_smul,
+        p.pow_one,
+        p.add_sub_cancel_left,
+        p.sq_sub_sq,
+        p.poly_eval_deg1,
+        p.taylor_deg1,
         p.dot_n,
         p.dot_n_zero,
         p.dot_n_succ,
@@ -4657,6 +4662,267 @@ fn rat_poly_eval_computation_check_can_fail() {
         d.declare_theorem(name, stmt, proof).is_err(),
         "the kernel accepted `polyEval (1+2i) 2 3 = 8`, so the polyEval computation \
          check proves nothing"
+    );
+}
+
+// --- the finite Taylor expansion identity (`rat_prelude::taylor`) ----------
+
+/// Every declaration `taylor::declare_taylor` adds — `Rat.pow_one`,
+/// `Rat.add_sub_cancel_left`, `Rat.sq_sub_sq`, `Rat.polyEval_deg1`, and
+/// `Rat.taylor_deg1` — is a checked `Theorem` with an empty axiom footprint,
+/// read out of the kernel (`built()` already implies the kernel accepted
+/// every one of these proofs — a rejection would have made
+/// `build_rat_prelude` return `Err` and `built()`'s own `.expect` panic, so
+/// this test's job is the *kind*/footprint check, not re-proving
+/// acceptance).
+#[test]
+fn the_taylor_toolkit_is_axiom_free() {
+    let (kernel, p) = built();
+    let expected = [
+        ("pow_one", p.pow_one),
+        ("add_sub_cancel_left", p.add_sub_cancel_left),
+        ("sq_sub_sq", p.sq_sub_sq),
+        ("polyEval_deg1", p.poly_eval_deg1),
+        ("taylor_deg1", p.taylor_deg1),
+    ];
+    for (label, name) in expected {
+        let declaration = kernel
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("Rat.{label} was interned but never declared"));
+        assert!(
+            matches!(declaration, Declaration::Theorem { .. }),
+            "Rat.{label} must be a checked Theorem, found a different kind"
+        );
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|entry| kernel.display_name(entry).to_string())
+            .collect();
+        assert!(footprint.is_empty(), "Rat.{label} rests on {footprint:?}");
+    }
+}
+
+/// A local `fun i => Nat.rec … i` two-term coefficient function, built the
+/// same way [`super::taylor`]'s own (private) `coeff2` is — mirroring
+/// [`rat_poly_eval_computes_a_concrete_polynomial`]'s own inline
+/// construction rather than reaching across the module boundary for a
+/// helper this file has no access to.
+fn concrete_coeff2(d: &mut crate::int_prelude::ops::IntDev<'_>, c0: ExprId, c1: ExprId) -> ExprId {
+    use crate::BinderInfo;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::rat_ty;
+
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let anon_binder = d.anon_name();
+    let one_level = d.level_one();
+    let motive = d
+        .kernel()
+        .lam(anon_binder, nat, carrier, BinderInfo::Default);
+    let minor_succ = {
+        let j_fv = d.fresh_fvar();
+        let ih_fv = d.fresh_fvar();
+        let inner = d.lam_fv(ih_fv, carrier, c1);
+        d.lam_fv(j_fv, nat, inner)
+    };
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let rec_name = d.prelude().rec;
+    let rec = d.kernel().const_(rec_name, vec![one_level]);
+    let body = d.apply(rec, &[motive, c0, minor_succ, i]);
+    d.lam_fv(i_fv, nat, body)
+}
+
+/// **The mandatory concrete instantiation.** `Rat.taylor_deg1` applied at
+/// `c0 = 2, c1 = 3, x = 7, a = 5` — the polynomial `p(t) = 2 + 3t` — must,
+/// once every `Rat` operation in its conclusion reduces on these literals,
+/// assert `Eq Rat 23 23`: `p(7) = 2 + 21 = 23` and `p(5) + 3·(7−5) = 17 + 6 =
+/// 23`. This is not re-checking that the kernel accepted `taylor_deg1` (it
+/// already did, or `built()` would have panicked) — it is checking that the
+/// theorem's *content*, not just its shape, is the identity claimed: a
+/// swapped `x`/`a` or a dropped factor of `c1` would still type-check
+/// symbolically but would make this concrete instantiation reduce to a
+/// wrong pair of numerals, which the declared `Eq Rat 23 23` statement below
+/// would then fail to accept by defeq.
+#[test]
+fn taylor_deg1_computes_at_a_concrete_linear_polynomial() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{req, rrefl};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    let c0 = literal(&mut d, 2);
+    let c1 = literal(&mut d, 3);
+    let x = literal(&mut d, 7);
+    let a = literal(&mut d, 5);
+    let twenty_three = literal(&mut d, 23);
+
+    let proof = d.lemma(p.taylor_deg1, &[c0, c1, x, a]);
+    let stmt = req(&mut d, twenty_three, twenty_three);
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.taylor_deg1_two_plus_three_t_at_seven_and_five");
+    d.declare_theorem(name, stmt, proof).unwrap_or_else(|e| {
+        panic!(
+            "Rat.taylor_deg1 did not reduce to `23 = 23` on p(t)=2+3t, x=7, a=5: {}",
+            d.explain(&e)
+        )
+    });
+
+    // A pure sanity cross-check, independent of `taylor_deg1`: the same
+    // polynomial computed directly via `polyEval` reduces to the same 23,
+    // by `Eq.refl` alone (mirrors `rat_poly_eval_computes_a_concrete_polynomial`).
+    let coeffs = concrete_coeff2(&mut d, c0, c1);
+    let two_n = d.num(2);
+    let evaluated = crate::rat_prelude::ops::rpoly_eval(&mut d, p, coeffs, two_n, x);
+    let direct_stmt = req(&mut d, evaluated, twenty_three);
+    let direct_proof = rrefl(&mut d, evaluated);
+    let direct_name = d
+        .kernel()
+        .name_str(anon, "Check.taylor_deg1_direct_poly_eval_cross_check");
+    d.declare_theorem(direct_name, direct_stmt, direct_proof)
+        .unwrap_or_else(|e| {
+            panic!(
+                "direct polyEval(2+3t, 7) did not reduce to 23: {}",
+                d.explain(&e)
+            )
+        });
+}
+
+/// **Negative control**, both ways at once, for
+/// [`taylor_deg1_computes_at_a_concrete_linear_polynomial`]: swapping `x`
+/// and `a` in the DECLARED statement (while leaving the proof — the genuine
+/// `taylor_deg1` application at the ORIGINAL `x`, `a` — unchanged) must be
+/// REFUSED. If this were accepted, the concrete check above would be
+/// vacuous: it would mean the kernel accepts `Eq Rat 23 23` no matter which
+/// literals were actually fed to the theorem, which is not what the
+/// positive test is supposed to be measuring.
+#[test]
+fn taylor_deg1_concrete_check_can_fail() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{req, rrefl};
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    let c0 = literal(&mut d, 2);
+    let c1 = literal(&mut d, 3);
+    let x = literal(&mut d, 7);
+    let a = literal(&mut d, 5);
+    let twenty_three = literal(&mut d, 23);
+    let seventeen = literal(&mut d, 17);
+
+    // The real theorem, at the real point (x=7): concludes `... = 23`, not
+    // `... = 17` (which is `p(5)` itself, the value at `a`, not at `x`).
+    let proof = d.lemma(p.taylor_deg1, &[c0, c1, x, a]);
+    let stmt = req(&mut d, twenty_three, seventeen);
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.taylor_deg1_twenty_three_is_not_seventeen");
+    assert!(
+        d.declare_theorem(name, stmt, proof).is_err(),
+        "the kernel accepted `23 = 17` from `taylor_deg1`, so the concrete \
+         instantiation check above proves nothing"
+    );
+
+    // And directly: `polyEval` of `2+3t` at `t=7` is not `17`.
+    let coeffs = concrete_coeff2(&mut d, c0, c1);
+    let two_n = d.num(2);
+    let evaluated = crate::rat_prelude::ops::rpoly_eval(&mut d, p, coeffs, two_n, x);
+    let direct_stmt = req(&mut d, evaluated, seventeen);
+    let direct_proof = rrefl(&mut d, evaluated);
+    let direct_name = d
+        .kernel()
+        .name_str(anon, "Check.taylor_deg1_direct_poly_eval_is_not_seventeen");
+    assert!(
+        d.declare_theorem(direct_name, direct_stmt, direct_proof)
+            .is_err(),
+        "the kernel accepted `polyEval(2+3t,7) = 17`, so the direct cross-check \
+         above proves nothing"
+    );
+}
+
+/// **Concrete check for [`RatPrelude::sq_sub_sq`].** `5² − 3² = (5−3)·(5+3)`:
+/// `25 − 9 = 16` and `2·8 = 16`. Applying the general (symbolic) theorem at
+/// these literals and asserting the result equals `Eq Rat 16 16` catches a
+/// swapped `x`/`a` or a sign error that a symbolic-only check would miss.
+#[test]
+fn sq_sub_sq_computes_at_five_and_three() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::req;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    let x = literal(&mut d, 5);
+    let a = literal(&mut d, 3);
+    let sixteen = literal(&mut d, 16);
+
+    let proof = d.lemma(p.sq_sub_sq, &[x, a]);
+    let stmt = req(&mut d, sixteen, sixteen);
+    let name = d.kernel().name_str(anon, "Check.sq_sub_sq_five_three");
+    d.declare_theorem(name, stmt, proof).unwrap_or_else(|e| {
+        panic!(
+            "Rat.sq_sub_sq did not reduce to `16 = 16` at x=5, a=3: {}",
+            d.explain(&e)
+        )
+    });
+}
+
+/// Negative control for [`sq_sub_sq_computes_at_five_and_three`]: `16` is
+/// not `15`.
+#[test]
+fn sq_sub_sq_concrete_check_can_fail() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::req;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    let x = literal(&mut d, 5);
+    let a = literal(&mut d, 3);
+    let sixteen = literal(&mut d, 16);
+    let fifteen = literal(&mut d, 15);
+
+    let proof = d.lemma(p.sq_sub_sq, &[x, a]);
+    let stmt = req(&mut d, sixteen, fifteen);
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.sq_sub_sq_sixteen_is_not_fifteen");
+    assert!(
+        d.declare_theorem(name, stmt, proof).is_err(),
+        "the kernel accepted `16 = 15` from `sq_sub_sq`, so the concrete check above \
+         proves nothing"
     );
 }
 
