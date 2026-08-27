@@ -118,24 +118,23 @@ all-target/all-feature Clippy, and warning-denied Rustdoc pass. Both completed `
 carry no UNSAT or upper-bound credit; the exact proof-producing run remains live.
 
 **Rado exact lower bound advanced, 2026-08-26.** The seed-619 CaDiCaL producer completed every
-canonical formula from 351 through 357 SAT; the 357 run took 24:46.01 at 182,572 KiB. Every complete
-assignment passed the strict SAT Competition importer, regenerated CNF evaluation, unique
-one-hot decoding, independent enumeration of the defining relation, and lifted-witness
-re-encoding. The retained strongest witness has 357 entries, uses all five colours, covers
-28,203 defining triples / 146,367 clauses, and has SHA-256
-`545f4f7c8704fff31da07a2a2f946eb70ac1787bb3d4c49f4ac3e2d15d20ee1e`. Therefore the checked
-conclusion is now `R_5(3(x-y)=2z) > 357`; no upper bound or exact value is claimed. A persistent
-exact driver is live at 358 and advances only after both replay routes. A post-result literature
-refresh through 2026-08-26 found no five-colour bound at least 357 for this equation, but that
-negative retrieval is not proof of priority.
+canonical formula from 351 through 357 SAT. Exact new-relation audits then extend that checked
+colouring deterministically through 368, appending `4 1 3 1 2 3 3 2 4 3` at points 359--368.
+Direct enumeration accepts all 29,890 defining relations; separately, a complete 1,840-variable
+assignment satisfies all 154,967 canonical CNF clauses and decodes to the byte-identical witness.
+The retained witness SHA-256 is
+`50b49b68ce4f5727edda7bbbcb80f69baeff69ff642c64c3557cd83956d4c517`. Therefore the checked
+conclusion is now `R_5(3(x-y)=2z) > 368`; no upper bound or exact value is claimed. Every colour
+is locally blocked at 369 for this fixed prefix, but that is not an UNSAT result. The obsolete
+358 producer remains paused and its incomplete prefix receives no credit. Exact searches through
+2026-08-26 found no indexed matching 368 bound, but that is not proof of priority.
 
-**Rado claim ledger synchronized, 2026-08-26.** The canonical claim now supersedes its stale
-350-point title and frontier row with the checked 357-point witness. The retained artifact has
-SHA-256 `545f4f7c8704fff31da07a2a2f946eb70ac1787bb3d4c49f4ac3e2d15d20ee1e`;
-the independent claim checker re-enumerated all defining triples for the 357-, 350-, and
-319-point witnesses and reported zero errors. Structural validation reports 104 claims / zero
-errors, and the generated dashboard records 268 evidence rows. The claim remains `open`: this
-is a stronger lower bound, not an UNSAT certificate for 358 or an exact Rado number.
+**Rado claim ledger synchronized, 2026-08-26.** The canonical claim now carries the checked
+368-point witness ahead of the historical 358-, 357-, 350-, and 319-point artifacts. Its SHA-256 is
+`50b49b68ce4f5727edda7bbbcb80f69baeff69ff642c64c3557cd83956d4c517`; the independent claim
+checker re-enumerates every defining relation rather than trusting the SAT encoding. The claim
+remains `open`: this is a stronger lower bound, not an UNSAT certificate for 369 or an exact
+Rado number.
 
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
 external-certificate replay runner for all five packages.  It validates checker and artifact
