@@ -120,10 +120,10 @@ Counts are `CReal.*` declarations matching the topic, from
 | **13** | **Integrals** | **K** | **`CReal.riemannSum_cauchy` proved**, then the representative-index bridge (`sharedIndexToCanonical`, general in `X`/`Y`/bound — closes `series.rs`'s analogous gap too) and the **common-refinement construction** (`riemannSum_sharedAccuracyClose`: two counts sharing one accuracy `e` are close, via `Nat.mul_comm`-identified `succ_mul_succ` refinements plus `riemannSum_cauchy`/`sharedIndexToCanonical` each applied twice) — all landed and kernel-verified. **`CReal.integral` is not yet reached, and the remaining gap is NOT the common-refinement construction** (that concern, in this row as of the previous measurement, is resolved): it is (1) the raw-indexed sequence `fun n => riemannSum F a b n` cannot be `RegularSeq`/`Cauchy` for a fully general (unconstrained `Nat → Nat`) continuity modulus without inverting it — the same class of search `uniform_continuity.rs` already declines to build elsewhere — so the defining sequence must be **reindexed** via `deep` instead (`e := n` directly, no inversion); and (2) a genuinely new CReal-magnitude lemma turning `riemannSum_cauchy`'s `totalEps` sample into a closed-form rational bound. Sized precisely in `creal/integral.rs`'s `declare_shared_index_to_canonical` doc comment |
 | 14 | Fundamental Theorem of Calculus | — | open, downstream of `CReal.integral` — sized precisely above, not open-ended |
 | 15–17 | Trig, π irrational, planetary motion | — | open; no transcendental functions exist |
-| **18** | **Log and exp** | **K** | **`CReal.e` is constructed** — via `CReal.mk` on an explicit regular sequence, never `Exists`-elimination. Five lanes: `expTerm`/`expSeriesPartial` → `expTerm_le_geom` → `Rat.pow_natDivSucc_two` (the representation bridge) → the closed form, after a bisect found **one stray `equiv_symm`** reversing a chain link → `cauchyOfPointwiseEquiv` → `expDominantCauchy` → **`e`**. The whole domination bridge is **`inv`-free**. `2 ≤ e ≤ 3` open: needs `sumRange` monotonicity in the OUTER index, genuinely new content rather than more index bookkeeping |
+| **18** | **Log and exp** | **K** | **`CReal.e` is constructed** — via `CReal.mk` on an explicit regular sequence, never `Exists`-elimination. Five lanes: `expTerm`/`expSeriesPartial` → `expTerm_le_geom` → `Rat.pow_natDivSucc_two` (the representation bridge) → the closed form, after a bisect found **one stray `equiv_symm`** reversing a chain link → `cauchyOfPointwiseEquiv` → `expDominantCauchy` → **`e`**. The whole domination bridge is **`inv`-free**. **`2 ≤ e ≤ 3` is now PROVED** (`CReal.two_le_e`, `CReal.e_le_three`, plus the looser but uniform-in-`n` `CReal.e_le_four`), once `CReal.sumRange_mono_outer` supplied the missing outer-index monotonicity this row previously called for. `two_le_e` needs an EVENTUAL argument (`converges_lower_bound_shift`, since `expSeriesPartial 0 = 0 < 2`); `e_le_three` needs a genuine `{0, 1, k+2}` case split — the index-2 kink is mathematical, not an artifact — while `e_le_four` is one uniform bound at every `n` |
 | 20 | Taylor polynomials | — | open |
 | 21 | `e` is irrational | — | open — but **`CReal.e` now exists** (see Ch 18), so this is downstream of a constructed object rather than of nothing. √2's irrationality **is** proved (`Nat.no_rational_sqrt_two`) |
-| 22–23 | Sequences and series | **K** | comparison test, dominated convergence, telescoping, geometric tail bounds, and **`geomCauchy`** — `Cauchy (sumRange (pow half ·))`, with `CReal.inv` contained to exactly two declarations so the rest of the bridge stays `inv`-free |
+| 22–23 | Sequences and series | **K** | comparison test (nonnegative series, `0 ≤ a k ≤ b k`), dominated convergence, telescoping, geometric tail bounds, **`geomCauchy`** — `Cauchy (sumRange (pow half ·))` — and **`sumRange_cauchy_of_abs_cauchy`/`sumRange_converges_of_abs_converges`** (absolute convergence implies convergence, landed this session), which is what makes the comparison test usable on a SIGNED series. **The "exactly two declarations" `inv`-containment claim this row previously made was undercounted, corrected here: `CReal.inv` is directly built by SIX declarations along `geomCauchy`'s own dependency chain** — four in `geometric.rs` (`geom_tail_bounded_div`, `geom_tail_within`, `geom_tail_within_le`, `geom_pair_within`, all pre-existing infrastructure for the quotient-form tail bound `tail ≤ xᵐ/(1−x)`) plus the two in `exponential.rs` this row already named (`geomHalfInvLeafBound`, `geomCauchyOrderedHalf`) that consume `geom_pair_within` at the concrete base `1/2`. `geomCauchy` itself constructs no `inv` term directly. **Ratio test and `e` irrational (Ch21): assessed, not built** — see below |
 | 24 | Uniform convergence, power series | — | open |
 | 25–27 | Complex numbers and functions | **K** | ~1,000 `Complex.*` declarations; field, `conj`, `normSq`, roots of unity, Ptolemy, `add_pow`, `mul_sub_one_geom`; conjugation now closed over the ring and division: `conj_zero`, `conj_one`, `conj_pow`, `conj_div`, `div_congr`. `Complex.exp`/`abs`/`arg` absent — all gated on a general `CReal.sqrt`, itself an open climb. **FTA needs polynomial infrastructure that does not exist at all** |
 | 28 | Fields | **K** | `Rat`, `CReal`, `Complex` field laws |
@@ -211,3 +211,49 @@ whether it is still there** — read the inventory, not the prose. And when a la
 finds a doc wrong, correcting the doc is part of the deliverable, not a
 courtesy. Two of the three above were corrected in the same commit that used
 the finding; the third is this note.
+
+## Postscript III: absolute convergence landed; the ratio test and `e`
+irrational, precisely sized
+
+Chapters 22–23's comparison test (`CReal.sumRange_comparisonTest`) only ever
+took a NONNEGATIVE series, `0 ≤ a k ≤ b k` — it cannot be applied to a series
+that changes sign. **`CReal.sumRange_cauchy_of_abs_cauchy` /
+`CReal.sumRange_converges_of_abs_converges`** close that gap: `Cauchy (sumRange
+(fun k => abs (f k))) → Cauchy (sumRange f)`, and the `Converges`/`Exists` form
+that composes directly with `sumRange_comparisonTest`'s own output (apply it at
+`fun k => abs (a k)` against a dominating `b`, then feed the result through
+this theorem to reach `Converges (sumRange a)` for a signed `a`). Both are pure
+corollaries of the already-proved `sumRange_cauchy_of_dominated`, taken at
+`g := abs ∘ f` — the pointwise hypothesis is `le_refl (abs (f k))` after one
+beta reduction, so this needed no new real-analysis content, and neither
+declaration touches `CReal.inv`.
+
+Two candidate targets were assessed and NOT built, for reasons specific enough
+to act on:
+
+- **The ratio test.** `CReal.le` is not decidable and `CReal.inv` needs a
+  *witnessed* `PosBound` (a rational modulus `k` plus a proof every sample from
+  `k` on is `≥ 1/(k+1)`), so the classical `f(n+1)/f(n) ≤ r < 1` statement is
+  not directly expressible without first manufacturing that witness for every
+  `n` — exactly the obstacle `geometric.rs`'s own module documentation already
+  names for the quotient-form tail bound (`0 ≤ x` says nothing about how close
+  `x` is to `1`; a `PosBound` has to be carried as data, not derived). The
+  reachable statement is almost certainly the **multiplicative** form this row
+  previously flagged — `(∀n, le (mul r (f n)) (f (succ n))) → …`, `r` a fixed
+  rational with `0 ≤ r < 1`, avoiding `inv` entirely by never dividing — proved
+  by comparison against a geometric series built by `r`-scaled induction on
+  `f 0`, the same shape `geom_sum_bounded`/`geom_tail_bounded` already use.
+  This is a genuinely new construction (not a corollary of anything landed this
+  session) and was not attempted here; it is sized enough to be a direct next
+  task.
+- **`e` is irrational (Ch 21).** `CReal.e` now exists with proved bounds
+  (`2 ≤ e ≤ 3`, this session — see Ch 18's corrected row). The classical proof
+  multiplies by `n!` and argues the tail becomes an integer plus a strictly
+  fractional remainder in `(0, 1)` for every `n` past some point — an
+  INTEGRALITY argument with no analogue anywhere in this development. Nothing
+  here connects a `CReal` built from a `sumRange` of rationals back to `Nat`/
+  `Int` divisibility facts about the partial sums' denominators; `int_prelude`
+  has no theory of `n!·e`'s fractional part, and building one is a genuinely
+  new piece of arithmetic, not an assembly of existing `CReal` lemmas the way
+  this session's addition was. **Assessed as out of reach without new
+  machinery, not attempted as a corollary.**
