@@ -283,6 +283,7 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
             "Complex.hornerFromTop_diag_eq_polyEval",
             p.horner_from_top_diag_eq_poly_eval,
         ),
+        ("Complex.factorQuotient_succ_eq", p.factor_quotient_succ_eq),
     ];
     // COVERAGE, checked against the ENVIRONMENT rather than against `named`
     // itself.
@@ -2729,4 +2730,100 @@ fn horner_from_top_diag_matches_poly_eval_at_a_nonzero_middle_coefficient_body()
             "{label}: the diagonal theorem must apply at concrete (c,a,n): {inferred:?}"
         );
     }
+}
+
+/// Corroborates [`ComplexPrelude::factor_quotient_succ_eq`] at a genuine
+/// three-term polynomial with a NONZERO middle coefficient (`1 + 2X + 3X²`,
+/// at the non-root point `a = 2`), at the smallest nontrivial instance
+/// (`n = 1, k = 0`, so `k < n` holds and `succ n = 2`).
+///
+/// Independently hand-computed (not by re-using the theorem's own RHS
+/// shape): `factorQuotient(c,a,1,0) = hornerFromTop(c,a,1,0) = c(1) = 2`, and
+/// `factorQuotient(c,a,2,0) = hornerFromTop(c,a,2,1) = c(1) + a·c(2) = 2 +
+/// 2·3 = 8` -- matching the theorem's own correction-term formula `8 = 2 +
+/// pow(a,1)·c(2)`. Each accept is paired with a wrong-value control that
+/// must be REJECTED, and the theorem itself is applied at these concrete
+/// arguments to confirm the statement actually types there.
+#[test]
+fn factor_quotient_succ_eq_matches_the_correction_term_at_a_nonzero_middle_coefficient() {
+    on_a_deep_stack(
+        factor_quotient_succ_eq_matches_the_correction_term_at_a_nonzero_middle_coefficient_body,
+    );
+}
+
+fn factor_quotient_succ_eq_matches_the_correction_term_at_a_nonzero_middle_coefficient_body() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let two_c = d.const_app(p.add, &[one_c, one_c]);
+    let three_c = d.const_app(p.add, &[two_c, one_c]);
+    let eight_c = {
+        // 2 + 2*3 = 8, built as repeated `add` of `one_c` to stay in the
+        // same "small ring expression, checked by defeq" idiom the rest of
+        // this file uses rather than introducing a numeral encoding.
+        let mut acc = two_c;
+        for _ in 0..6 {
+            acc = d.const_app(p.add, &[acc, one_c]);
+        }
+        acc
+    };
+
+    let zero_n = d.zero();
+    let one_n = d.succ(zero_n);
+
+    // c := 1 + 2X + 3X^2.
+    let cx = three_term_polynomial(&mut d, p, one_c, two_c, three_c);
+    let a = two_c;
+
+    let check = |d: &mut IntDev<'_>,
+                 call: crate::expr::ExprId,
+                 expect: crate::expr::ExprId,
+                 label: &str| {
+        let stmt = super::zeq(d, p, call, expect);
+        let proof = d.lemma(p.equiv_refl, &[expect]);
+        let name = d.kernel().name_str(anon, label);
+        d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: stmt,
+            value: proof,
+        })
+    };
+
+    // factorQuotient(c,a,1,0) = c(1) = 2.
+    let fq_1_0 = d.const_app(p.factor_quotient, &[cx, a, one_n, zero_n]);
+    assert!(
+        check(&mut d, fq_1_0, two_c, "Check.fq_succ_eq_small_right").is_ok(),
+        "factorQuotient(c,a,1,0) must be 2"
+    );
+    assert!(
+        check(&mut d, fq_1_0, three_c, "Check.fq_succ_eq_small_wrong").is_err(),
+        "factorQuotient(c,a,1,0) is 2, not 3 -- must be REJECTED"
+    );
+
+    // factorQuotient(c,a,2,0) = c(1) + a*c(2) = 2 + 2*3 = 8.
+    let two_n = d.succ(one_n);
+    let fq_2_0 = d.const_app(p.factor_quotient, &[cx, a, two_n, zero_n]);
+    assert!(
+        check(&mut d, fq_2_0, eight_c, "Check.fq_succ_eq_big_right").is_ok(),
+        "factorQuotient(c,a,2,0) must be 8"
+    );
+    assert!(
+        check(&mut d, fq_2_0, two_c, "Check.fq_succ_eq_big_wrong").is_err(),
+        "factorQuotient(c,a,2,0) is 8, not 2 -- must be REJECTED"
+    );
+
+    // And the actual theorem applies at these concrete arguments.
+    let hlt = d.zero_lt_succ(zero_n);
+    let applied = d.lemma(p.factor_quotient_succ_eq, &[cx, a, one_n, zero_n, hlt]);
+    let inferred = d.kernel().infer(applied);
+    assert!(
+        inferred.is_ok(),
+        "the correction theorem must apply at concrete (c,a,n=1,k=0): {inferred:?}"
+    );
 }

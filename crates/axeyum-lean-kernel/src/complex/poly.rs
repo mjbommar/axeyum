@@ -248,6 +248,7 @@ pub(super) fn declare_polynomial(d: &mut IntDev<'_>, p: ComplexPrelude) -> Resul
     declare_horner_from_top_equations(d, p)?;
     declare_horner_from_top_diag_eq_poly_eval(d, p)?;
     declare_factor_quotient(d, p)?;
+    declare_factor_quotient_succ_eq(d, p)?;
     declare_factor_quotient_degree_lt(d, p)
 }
 
@@ -2427,6 +2428,227 @@ fn declare_factor_quotient(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), 
         ty,
         value,
         hint: ReducibilityHint::Regular(FACTOR_QUOTIENT_HEIGHT),
+    })
+}
+
+/// From `hlt : Lt k n`, derive `j` with `Eq Nat (sub n k) (succ j)` — makes
+/// the truncated difference's successor shape explicit once it is known
+/// positive.
+///
+/// Composed from PUBLIC `nat_prelude` facts only
+/// (`zero_le`/`lt_of_le_of_lt`/`succ_pred_of_pos`/`le_of_lt_succ`/
+/// `succ_sub_of_le`) — **deliberately NOT**
+/// `nat_prelude::choose::sub_succ_of_lt`, which proves the identical fact
+/// (`Lt k n → sub n k = succ (sub n (succ k))`, a different but equivalent
+/// witness) but is `pub(super)` to `nat_prelude::choose`, out of this file's
+/// scope. Per the standing rule ("a Nat lemma from a file you do not own is a
+/// finding, not something to copy"): `nat_prelude::choose::sub_succ_of_lt`
+/// would have made this shorter, and is reported here by exact name rather
+/// than duplicated.
+fn nat_sub_pos_succ_shape(
+    d: &mut IntDev<'_>,
+    n: ExprId,
+    k: ExprId,
+    hlt: ExprId,
+) -> (ExprId, ExprId) {
+    let nat_p = d.prelude();
+    let zero_n = d.zero();
+
+    // Lt zero n, from Le zero k and Lt k n.
+    let h_zero_le_k = d.lemma(nat_p.zero_le, &[k]);
+    let h_pos_n = d.lemma(nat_p.lt_of_le_of_lt, &[zero_n, k, n, h_zero_le_k, hlt]);
+
+    // n = succ (pred n).
+    let pn = d.pred(n);
+    let spn = d.succ(pn);
+    let h_n_eq = d.lemma(nat_p.succ_pred_of_pos, &[n, h_pos_n]);
+
+    // Lt k (succ (pred n)), transporting hlt along h_n_eq.
+    let motive_lt = d.eq_motive(n, &|d, x| d.lt(k, x));
+    let hlt2 = d.transport(n, motive_lt, hlt, spn, h_n_eq);
+
+    // Le k (pred n).
+    let hle = d.lemma(nat_p.le_of_lt_succ, &[k, pn, hlt2]);
+
+    // sub (succ (pred n)) k = succ (sub (pred n) k).
+    let h_ss = d.lemma(nat_p.succ_sub_of_le, &[pn, k, hle]);
+    let sub_pn_k = d.sub(pn, k);
+    let succ_sub_pn_k = d.succ(sub_pn_k);
+    let sub_spn_k = d.sub(spn, k);
+
+    // sub n k = sub (succ (pred n)) k, via h_n_eq, then chain with h_ss.
+    let h_n_eq_rev = d.symm(n, spn, h_n_eq);
+    let h_sub_congr = d.congr(spn, n, h_n_eq_rev, &|d, x| d.sub(x, k));
+    // h_sub_congr : Eq (sub spn k) (sub n k)
+    let sub_n_k = d.sub(n, k);
+    let h_sub_congr_rev = d.symm(sub_spn_k, sub_n_k, h_sub_congr);
+    // h_sub_congr_rev : Eq (sub n k) (sub spn k)
+
+    let h_final = d.trans(sub_n_k, sub_spn_k, succ_sub_pn_k, h_sub_congr_rev, h_ss);
+    // h_final : Eq (sub n k) (succ (sub pn k))
+    (sub_pn_k, h_final)
+}
+
+/// `Complex.factorQuotient_succ_eq : ∀ c a n k, Lt k n → Equiv (factorQuotient
+/// c a (Nat.succ n) k) (add (factorQuotient c a n k) (mul (pow a (Nat.sub n
+/// k)) (c (Nat.succ n))))` — see
+/// [`ComplexPrelude::factor_quotient_succ_eq`] for the derivation and why it
+/// needs no fresh induction: once `Nat.sub n k` is known to have a successor
+/// shape (`nat_sub_pos_succ_shape`), [`ComplexPrelude::horner_from_top_succ_succ`]
+/// — an existing `Eq.refl` fact — IS the correction term, verbatim.
+fn declare_factor_quotient_succ_eq(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+) -> Result<(), KernelError> {
+    use crate::BinderInfo;
+
+    let carrier = complex_ty(d, p);
+    let nat = d.nat_ty();
+    let anon = d.anon_name();
+    let one_level = d.level_one();
+    let fn_ty = d.arrow(nat, carrier);
+    let rec_name = d.prelude().rec;
+
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let hlt_fv = d.fresh_fvar();
+    let hlt = d.kernel().fvar(hlt_fv);
+
+    let sn = d.succ(n);
+    let lt_kn = d.lt(k, n);
+
+    // ----- Nat-side bookkeeping: sub n k = succ j, for some j. -------------
+    let (j, h_final) = nat_sub_pos_succ_shape(d, n, k, hlt);
+    let sub_nk = d.sub(n, k);
+    let succ_j = d.succ(j);
+
+    // Le k n, from Lt k n (le_succ + le_trans, mirroring `diagonal_pointwise_c`).
+    let nat_p = d.prelude();
+    let sk = d.succ(k);
+    let le_succ_k = d.lemma(nat_p.le_succ, &[k]);
+    let le_kn = d.lemma(nat_p.le_trans, &[k, sk, n, le_succ_k, hlt]);
+
+    // sub (succ n) k = succ (sub n k).
+    let h_outer = d.lemma(nat_p.succ_sub_of_le, &[n, k, le_kn]);
+    let sub_snk = d.sub(sn, k);
+    let succ_sub_nk = d.succ(sub_nk);
+
+    // sub (succ n) k = succ (succ j).
+    let h_final_succ = d.congr(sub_nk, succ_j, h_final, &|d, x| d.succ(x));
+    let succ_succ_j = d.succ(succ_j);
+    let h_outer2 = d.trans(sub_snk, succ_sub_nk, succ_succ_j, h_outer, h_final_succ);
+
+    // ----- unfold both `factorQuotient`s to `hornerFromTop`. ---------------
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let motive = d.kernel().lam(anon, nat, carrier, BinderInfo::Default);
+    let rec = d.kernel().const_(rec_name, vec![one_level]);
+
+    let step_sn = {
+        let rp_fv = d.fresh_fvar();
+        let rp = d.kernel().fvar(rp_fv);
+        let ih_fv = d.fresh_fvar();
+        let horner = d.const_app(p.horner_from_top, &[c, a, sn, rp]);
+        let with_ih = d.lam_fv(ih_fv, carrier, horner);
+        d.lam_fv(rp_fv, nat, with_ih)
+    };
+    let step_n = {
+        let rp_fv = d.fresh_fvar();
+        let rp = d.kernel().fvar(rp_fv);
+        let ih_fv = d.fresh_fvar();
+        let horner = d.const_app(p.horner_from_top, &[c, a, n, rp]);
+        let with_ih = d.lam_fv(ih_fv, carrier, horner);
+        d.lam_fv(rp_fv, nat, with_ih)
+    };
+
+    let f_outer = |dd: &mut IntDev<'_>, x: ExprId| dd.apply(rec, &[motive, zero_c, step_sn, x]);
+    let h_lift_outer = nat_eq_to_complex_equiv(d, p, sub_snk, succ_succ_j, h_outer2, &f_outer);
+    // h_lift_outer : Equiv (factorQuotient c a (succ n) k) (hornerFromTop c a
+    // (succ n) (succ j)) -- LHS defeq via factorQuotient's own Definition
+    // unfold at sub_snk; RHS defeq via ONE Nat.rec ι-step at succ(succ j).
+
+    let f_inner = |dd: &mut IntDev<'_>, x: ExprId| dd.apply(rec, &[motive, zero_c, step_n, x]);
+    let h_lift_inner = nat_eq_to_complex_equiv(d, p, sub_nk, succ_j, h_final, &f_inner);
+    // h_lift_inner : Equiv (factorQuotient c a n k) (hornerFromTop c a n j)
+
+    // ----- horner_from_top_succ_succ IS the correction term. ---------------
+    let horner_sn_sj = d.const_app(p.horner_from_top, &[c, a, sn, succ_j]);
+    let horner_n_j = d.const_app(p.horner_from_top, &[c, a, n, j]);
+    let c_sn = d.apply(c, &[sn]);
+    let pow_a_sj = d.const_app(p.pow, &[a, succ_j]);
+    let mul_pow_sj = d.const_app(p.mul, &[pow_a_sj, c_sn]);
+    let rhs_succj = d.const_app(p.add, &[horner_n_j, mul_pow_sj]);
+
+    let h_horner_eq = d.lemma(p.horner_from_top_succ_succ, &[c, a, n, j]);
+    let h_horner = complex_eq_to_equiv(d, p, horner_sn_sj, rhs_succj, h_horner_eq);
+
+    // ----- rewrite hornerFromTop c a n j back to factorQuotient c a n k. ---
+    let fq_n_k = d.const_app(p.factor_quotient, &[c, a, n, k]);
+    let h_inner_symm = d.lemma(p.equiv_symm, &[fq_n_k, horner_n_j, h_lift_inner]);
+    let refl_mul = d.lemma(p.equiv_refl, &[mul_pow_sj]);
+    let h_rewrite_inner = d.lemma(
+        p.add_congr,
+        &[
+            horner_n_j,
+            fq_n_k,
+            mul_pow_sj,
+            mul_pow_sj,
+            h_inner_symm,
+            refl_mul,
+        ],
+    );
+    let target_succj = d.const_app(p.add, &[fq_n_k, mul_pow_sj]);
+
+    // ----- rewrite `pow a (succ j)` to `pow a (sub n k)`. -------------------
+    let pow_a_subnk = d.const_app(p.pow, &[a, sub_nk]);
+    let mul_pow_subnk = d.const_app(p.mul, &[pow_a_subnk, c_sn]);
+    let target_final = d.const_app(p.add, &[fq_n_k, mul_pow_subnk]);
+    let h_final_rev = d.symm(sub_nk, succ_j, h_final);
+    let target_f = |dd: &mut IntDev<'_>, x: ExprId| {
+        let pow_x = dd.const_app(p.pow, &[a, x]);
+        let mul_x = dd.const_app(p.mul, &[pow_x, c_sn]);
+        dd.const_app(p.add, &[fq_n_k, mul_x])
+    };
+    let h_reindex_pow = nat_eq_to_complex_equiv(d, p, succ_j, sub_nk, h_final_rev, &target_f);
+
+    let fq_sn_k = d.const_app(p.factor_quotient, &[c, a, sn, k]);
+    let (_e, chain_proof) = zchain(
+        d,
+        p,
+        fq_sn_k,
+        &[
+            (horner_sn_sj, h_lift_outer),
+            (rhs_succj, h_horner),
+            (target_succj, h_rewrite_inner),
+            (target_final, h_reindex_pow),
+        ],
+    );
+
+    let stmt_inner = zeq(d, p, fq_sn_k, target_final);
+    let ty = {
+        let over_hlt = d.pi_fv(hlt_fv, lt_kn, stmt_inner);
+        let over_k = d.pi_fv(k_fv, nat, over_hlt);
+        let over_n = d.pi_fv(n_fv, nat, over_k);
+        let over_a = d.pi_fv(a_fv, carrier, over_n);
+        d.pi_fv(c_fv, fn_ty, over_a)
+    };
+    let value = {
+        let with_hlt = d.lam_fv(hlt_fv, lt_kn, chain_proof);
+        let over_k = d.lam_fv(k_fv, nat, with_hlt);
+        let over_n = d.lam_fv(n_fv, nat, over_k);
+        let over_a = d.lam_fv(a_fv, carrier, over_n);
+        d.lam_fv(c_fv, fn_ty, over_a)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.factor_quotient_succ_eq,
+        uparams: vec![],
+        ty,
+        value,
     })
 }
 
