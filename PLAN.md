@@ -125,6 +125,9 @@ now. Nothing was deleted.
 | 2026-08-27 | `PENDING` | Implemented ADR-0602: `artifacts/ontology/producer-contract.schema.json` + `scripts/validate-producer-contracts.py` (a capability claim, never a completion claim — no `proved`/`epistemic_status` field exists in the schema at all), two seed contracts (Int.ModEq congruence family, Nat.Coprime family — both checked held-out-clean against `nursery-v1.json`), and redefined `fact-frontier.py` admissibility as dependency-ready × (registered operation OR matched capable-route contract). `admissible_count` moved 0 → 27 on the real ledger; all 8 existing `test_fact_frontier.py` tests pass unmodified, 7 new added. `docs/autogenesis/289-producer-contract-admissibility.md`. |
 | 2026-08-27 | `PENDING` | Sharded `creal_tests.rs`'s single 432-entry pinned inventory array into 33 per-module `Vec`s under new `crates/axeyum-lean-kernel/src/creal/inventory/`, registered from a new `creal/inventory.rs`; `creal_tests.rs` now derives coverage from the union plus a new duplicate-across-shards check, both mutation-verified; no per-shard pin (superseded by the environment-derived assertion). Purely additive one-line change to `creal.rs` (`mod inventory;`); no existing `creal/*.rs` module content touched. Updated `scripts/recount-pinned-inventory.py`/its test controls and `CLAUDE.md`'s pin-guidance sections for the new shape. |
 | 2026-08-27 | `PENDING` | First real execution of a producer-contract dispatch (`F:ml430-int-add-modeq-left-ee732b5b`): clean s5 export/import, honest producer decline (`TerminalNotClosed`), recorded as a decline artifact + fact note rather than a fabricated admission. No fact status changed, no operation registered. |
+| 2026-08-27 | `e0c96569e` | Contract-decline convention (doc 291): `contract_sha256` re-dispatch key added to the seed decline artifact; new `scripts/validate-producer-contract-declines.py` (25 tests). |
+| 2026-08-27 | `96e40ce3d` | `scripts/fact-frontier.py` reads decline artifacts as selector input: live-decline computation, three-population diagnostics, `declined_fact_ids`. Selection moves off the declined fact. |
+| 2026-08-27 | `cdc10b413` | Wired the decline validator into `scripts/check.sh`, `justfile`, and an 8-guard mutation suite in `scripts/tests/mutation_controls.py` (all killed). |
 | 2026-08-27 | `14a6484d3` | `scripts/validate-facts.py`: classify `cas-certificate` evidence as `kernel-reconstructed` vs `cas-internal`, reject an unclassifiable checker_command on that route (ADR-0601 SS2). Mutation-tested. |
 | 2026-08-27 | `17e91d839` | `scripts/gen-import-backlog.py` (new): produce `artifacts/import-backlog.json`, the 164-row import backlog, deterministic and ordered by dependency-readiness then curriculum-DAG position (ADR-0601 SS3). `--check` wired into `scripts/check.sh` and the `justfile`. Mutation-tested. |
 | 2026-08-26 | `f1fb56564` | Compose a held-out-safe three-lemma retrieval spine and admit Mathlib's real `Nat.choose_symm_of_eq_add` axiom-free, moving natural binomial from one to two accepted siblings. |
@@ -2545,6 +2548,90 @@ contracts.py`, either producer contract instance, `artifacts/import-backlog.json
 `emod_lt_of_pos` would unblock this fact and its two named siblings at once
 (three open facts, one missing kernel lemma) — but that is
 `axeyum-lean-kernel` work for a lane with that crate in scope, not this one.
+
+**Closed the loop doc 290 exposed** (`DONE`, decline-feedback, 2026-08-27).
+Verified first: on the merged tree, `scripts/fact-frontier.py --json` still
+selected `F:ml430-int-add-modeq-left-ee732b5b` (`admissible_count: 27`) even
+though the fact's own decline artifact
+(`artifacts/autogenesis/mathlib-int-add-modeq-left-decline-v1.json`) already
+recorded a real, typed producer decline (`TerminalNotClosed`) against it —
+nothing read the decline back, so the selector would loop on it forever.
+
+**Convention (doc
+[291](docs/autogenesis/291-decline-feedback-loop.md)):** a contract-driven
+decline is identified structurally (top-level `contract` + `fact_id`,
+`producer.result == "declined"`), distinguishing it from the eleven
+pre-ADR-0602 decline files with no such shape. Extended the one existing
+instance with `contract_sha256` (purely additive) — the sha256 of the
+contract's full canonical JSON at decline time, which is the re-dispatch key:
+a decline is live only while it matches the contract's *current* digest, so
+editing a contract's recipe/shape automatically re-opens everything it
+declined, with no manual clearing.
+
+**`scripts/validate-producer-contract-declines.py`** (new; 25 unit tests,
+8 mutation guards, all killed — `python3 scripts/tests/mutation_controls.py
+producer-contract-declines`) enforces the failure mode named in the brief:
+*a decline artifact must not become a cheap way to make the selector shut up
+about a fact forever.* `decline_reason` must be a bare typed identifier
+(`^[A-Z][A-Za-z0-9]*$`, the shape of a Rust `DeclineReason` enum variant),
+never free text; `fact_id`/`contract` must resolve to real committed
+artifacts; `producer.result` must be exactly `"declined"`; `producer.tool` /
+`decline_message` must be non-empty.
+
+**`scripts/fact-frontier.py`** now loads and validates every decline
+(`load_decline_artifacts`, mirroring `load_producer_contracts`), computes
+live `(fact, contract)` pairs (`live_declined_pairs`), and a live decline
+removes exactly that pair from admission via the CONTRACT path only (never
+the operation-receipt path, never widening anything). `declines=None`
+defaults to empty, asymmetric with auto-loading, matching the existing
+`contracts=None` convention — all 15 pre-existing `test_fact_frontier.py`
+tests pass **unmodified**.
+
+**Three populations, not two**, in `diagnostics`: `shape_matched_count`
+(what `admissible_count` used to measure), `declined_count` (previously
+invisible), `admissible_count`/`admissible_via_contract_count` (now
+correctly excludes declined pairs). `declined_by_contract` gives per-contract
+counts; `selection.declined_fact_ids` lists declined facts visibly (doc
+288's `no_route_ready_fact_ids` precedent — never silently dropped).
+
+**New selection on the current tree**, verbatim from `--json`:
+
+```
+selected_fact_id: F:ml430-int-add-modeq-right-e58108ee
+admissible_count: 26          (was 27)
+shape_matched_count: 27
+declined_count: 1
+declined_by_contract: {'producer-contract-int-modeq-family-v1': 1}
+declined_fact_ids: ['F:ml430-int-add-modeq-left-ee732b5b']
+```
+
+A different `Int.ModEq` family member, exactly as the task predicted — the
+loop moved on rather than re-selecting the same declined fact.
+
+**Re-dispatch verified both directions** (`test_live_decline_removes_
+admissibility_and_reports_declined`, `test_stale_decline_against_a_changed_
+contract_does_not_suppress`): a decline whose `contract_sha256` matches the
+contract's current digest suppresses; a decline with any other digest
+(simulating an edited contract) does not, and the fact stays admissible.
+
+**Verified:** `python3 scripts/validate-facts.py` (unchanged distribution),
+`python3 scripts/validate-producer-contracts.py` (2 contracts, unchanged),
+`python3 scripts/check-autogenesis-holdout-isolation.py`
+(`held_out=37|settled=0|verdict=PASS`, unchanged), `python3 scripts/fact-
+frontier.py --verify` round-trips the freshly generated artifact,
+`python3 -m unittest scripts.tests.test_fact_frontier` (21 tests, 6 new),
+`python3 -m unittest scripts.tests.test_validate_producer_contract_declines`
+(25 tests).
+
+**Explicitly not attempted**, per the brief: no refinement of the shape
+predicates themselves (a finer-grained shape distinguishing
+combinator-over-hypotheses from derive-a-new-identity facts *at match time*
+is real future work, a producer-capability question rather than a
+feedback-loop question — conflating the two here would do neither carefully).
+
+**Did not touch:** `artifacts/facts/`, either producer contract instance's
+shape/recipe, `artifacts/autogenesis/operations.json`, anything under
+`crates/`, `python/axeyum/agent/`.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
