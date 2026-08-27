@@ -354,7 +354,8 @@ fn sub_add_self_left(d: &mut IntDev<'_>, a: ExprId, x: ExprId) -> ExprId {
         d.itrans(target_rhs0, negx_zero, neg_x, comm, add_zero_negx)
     };
 
-    let neg_xa = d.ineg(d.iadd(x, a));
+    let xa_raw = d.iadd(x, a);
+    let neg_xa = d.ineg(xa_raw);
     let full_lhs = d.iadd(za, neg_xa);
     let a_form = d.iadd(a, neg_xa);
     let step1 = d.icongr(za, a, zero_add_a, &|d, t| d.iadd(t, neg_xa));
@@ -531,7 +532,8 @@ pub(super) fn declare_modeq_add_mul_left(d: &mut IntDev<'_>) -> Result<(), Kerne
                         d.icongr(shifted, a, chained, &|d, t| d.iemod(t, n0))
                     };
                     let step = |d: &mut IntDev<'_>, k: ExprId, _ih: ExprId| {
-                        let m = d.of_nat(d.succ(k));
+                        let succ_k = d.succ(k);
+                        let m = d.of_nat(succ_k);
                         let x = d.imul(m, q);
                         let x_eq_mc = d.irefl(x);
                         modeq_shift_pos(d, k, a, x, q, x_eq_mc)
@@ -540,7 +542,8 @@ pub(super) fn declare_modeq_add_mul_left(d: &mut IntDev<'_>) -> Result<(), Kerne
                 }
                 Shape::NegSucc => {
                     let k = nm;
-                    let m = d.of_nat(d.succ(k));
+                    let succ_k = d.succ(k);
+                    let m = d.of_nat(succ_k);
                     let neg_q = d.ineg(q);
                     let x_for_m = d.imul(m, neg_q);
                     let x_eq_mc = d.irefl(x_for_m);
