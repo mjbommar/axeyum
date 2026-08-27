@@ -3476,6 +3476,11 @@ SUITES["absence-claims"] = (
             "        if False:",
         ),
         (
+            "the authority tool's own exit status",
+            "    if proc.returncode != 0:",
+            "    if False:",
+        ),
+        (
             "G8 a marker that names nothing",
             "    if not names:",
             "    if False:",
@@ -3529,6 +3534,21 @@ SUITES["absence-claims"] = (
             "G17 Rust claims are read from comments only",
             "        return bool(RUST_COMMENT_RE.match(line))",
             "        return True",
+        ),
+        (
+            "G19 a marker quoted in a code span is documentation, not a claim",
+            "            for match in MARKER_RE.finditer(CODE_SPAN_RE.sub(\" \", line)):",
+            "            for match in MARKER_RE.finditer(line):",
+        ),
+        (
+            "G20 a marker inside a code fence is documentation, not a claim",
+            "            if FENCE_RE.match(line):\n                in_fence = not in_fence\n                continue",
+            "            if False:\n                in_fence = not in_fence\n                continue",
+        ),
+        (
+            "quoted markers are counted rather than silently dropped",
+            '            quoted += len(MARKER_RE.findall("".join(CODE_SPAN_RE.findall(line))))',
+            "            quoted += 0",
         ),
         (
             "a marker attaches to its own block",

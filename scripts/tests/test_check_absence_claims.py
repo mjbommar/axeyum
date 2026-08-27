@@ -270,6 +270,60 @@ class MarkerGrammarGuards(Harness):
         self.assertEqual(status, 0, self.quoted(out))
 
 
+class QuotedMarkerGuards(Harness):
+    """Documentation ABOUT the grammar must not be read as claims.
+
+    Found by running the gate for real: the ADR that DEFINES this marker
+    quoted `<!-- was-absent: ... -->` as an example, and the generated ADR
+    index copied it, so the gate failed on two markers naming a declaration
+    called `...`. The document defining the mechanism failed the mechanism.
+    """
+
+    def test_G19_a_marker_in_a_code_span_is_documentation_not_a_claim(self) -> None:
+        self.seed_baseline_claim()
+        self.write(
+            "docs/adr.md",
+            "Write `<!-- absent: Root.name -->` beside the claim.\n"
+            "It does not exist.\n<!-- absent: CReal.nope -->\n",
+        )
+        status, out = self.run_gate()
+        self.assertEqual(status, 0, self.quoted(out))
+
+    def test_G20_a_marker_in_a_code_fence_is_documentation_not_a_claim(self) -> None:
+        self.seed_baseline_claim()
+        self.write(
+            "docs/adr.md",
+            "It does not exist.\n<!-- absent: CReal.nope -->\n"
+            "\n```text\n<!-- absent: CReal.weierstrassMTest -->\n```\n",
+        )
+        status, out = self.run_gate()
+        self.assertEqual(status, 0, self.quoted(out))
+
+    def test_quoted_markers_are_counted_never_silently_dropped(self) -> None:
+        """A swallowed marker is a false green, the one outcome to avoid."""
+        self.seed_baseline_claim()
+        self.write(
+            "docs/adr.md",
+            "Write `<!-- absent: Root.name -->` beside the claim.\n"
+            "It does not exist.\n<!-- absent: CReal.nope -->\n",
+        )
+        status, out = self.run_gate()
+        self.assertEqual(status, 0, self.quoted(out))
+        self.assertIn("1 more QUOTED", out)
+
+    def test_an_unquoted_marker_on_the_same_line_still_counts(self) -> None:
+        """Stripping code spans must not swallow a real marker beside one."""
+        self.seed_baseline_claim()
+        self.write(
+            "docs/adr.md",
+            "As in `<!-- absent: Root.name -->`. It does not exist. "
+            "<!-- absent: CReal.weierstrassMTest -->\n",
+        )
+        status, out = self.run_gate()
+        self.assertEqual(status, 1, self.quoted(out))
+        self.assertIn("CReal.weierstrassMTest", out)
+
+
 class VacuityGuards(Harness):
     def test_G10_scanning_zero_files_cannot_be_a_pass(self) -> None:
         """G10: the failure mode this gate is FOR -- exiting 0 on completion alone."""
@@ -398,6 +452,58 @@ class SurfaceGuards(Harness):
         status, out = self.run_gate(census_path=self.census(bare_named_claim_budget=0))
         self.assertEqual(status, 1, self.quoted(out))
         self.assertIn("docs/split.md", out)
+
+
+class AuthoritySubprocessGuards(Harness):
+    """The DEFAULT path -- no `--projection-file` -- shells out to the tool.
+
+    Every other test injects a captured projection, so nothing else exercises
+    the subprocess plumbing. A `--projection-file`-only suite would leave the
+    path the gate actually uses in CI unmeasured.
+    """
+
+    def stub(self, body: str) -> str:
+        path = self.root / "stub-cargo"
+        path.write_text("#!/usr/bin/env bash\n" + body)
+        path.chmod(0o755)
+        return str(path)
+
+    def run_with_cargo(self, cargo_bin: str) -> tuple[int, str]:
+        import contextlib
+        import io
+
+        argv = [
+            "--root",
+            str(self.root),
+            "--census",
+            str(self.census()),
+            "--cargo-bin",
+            cargo_bin,
+        ]
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            status = cac.main(argv)
+        return status, out.getvalue() + err.getvalue()
+
+    def test_a_failing_authority_is_a_broken_gate_not_a_clean_tree(self) -> None:
+        """The tool failing must not read as 'nothing is present, all claims hold'."""
+        self.seed_baseline_claim()
+        self.write("docs/claim.md", "It does not exist.\n<!-- absent: CReal.nope -->\n")
+        status, out = self.run_with_cargo(self.stub('echo boom >&2; exit 101\n'))
+        self.assertEqual(status, 2, self.quoted(out))
+        self.assertIn("the tool itself failed", out)
+
+    def test_the_default_path_reads_the_tools_stdout(self) -> None:
+        self.seed_baseline_claim()
+        self.write(
+            "docs/claim.md",
+            "The M-test does not exist here.\n<!-- absent: CReal.weierstrassMTest -->\n",
+        )
+        rows = projection().replace("\\", "\\\\")
+        script = "cat <<'TSV'\n" + rows + "TSV\n"
+        status, out = self.run_with_cargo(self.stub(script))
+        self.assertEqual(status, 1, self.quoted(out))
+        self.assertIn("EXPIRED", out)
 
 
 class ExitStatusGuards(Harness):

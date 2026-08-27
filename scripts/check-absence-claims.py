@@ -48,8 +48,9 @@ that *keeps* the claim under the gate rather than removing it from it.
 
 # Spelling
 
-There is no single spelling: of 483 `CReal` declarations, most carry an
-underscore, many an internal capital, and 117 carry both. The kernel name is
+There is no single spelling. Measured 2026-08-27 over the 483 `CReal`
+declarations in the live environment: 324 carry an underscore, 243 an internal
+capital, and **119 carry both**. The kernel name is
 `CReal.congrOfUniformlyContinuous`; every design document says
 `congr_of_uniformly_continuous`. A marker matching only one spelling would
 produce a **false green** -- the claim reads as still-valid because the gate
@@ -67,7 +68,7 @@ never pointed at -- the same structural positive control `shape_search` uses.
 
 The authority is `kernel_declaration_projection` run FRESH, never a committed
 snapshot: `artifacts/autogenesis/kernel-dependency-projection-v1.json` carried
-1,644 declarations on 2026-08-27 against a live 1,860, and a stale index is
+1,644 declarations on 2026-08-27 against a live 1,861, and a stale index is
 wrong in the direction that matters -- it reports a newly-landed declaration
 as still absent, which is precisely the failure this gate exists to catch.
 `authority_declaration_floor` in the census file is the guard against being
@@ -155,6 +156,12 @@ CLAIM_RE = re.compile("|".join(CLAIM_PHRASES), re.IGNORECASE)
 # A `//`, `//!`, `///`, `*` or `/*` line -- Rust prose, not Rust code. A claim
 # in a string literal or an identifier is not a claim.
 RUST_COMMENT_RE = re.compile(r"^\s*(?://|\*|/\*)")
+
+# A fenced code block, in Markdown or in a `//!` doc comment.
+FENCE_RE = re.compile(r"^\s*(?://[/!]?\s*)?(?:```|~~~)")
+# An inline code span. Documentation ABOUT this marker grammar has to be able
+# to quote it, and the natural way to quote anything here is backticks.
+CODE_SPAN_RE = re.compile(r"`[^`]*`")
 
 SCAN_GLOBS = ("docs/**/*.md", "*.md", "crates/**/*.rs")
 
@@ -349,7 +356,7 @@ def scan(
     root: Path,
     globs: tuple[str, ...] = SCAN_GLOBS,
     excluded: frozenset[str] = frozenset(),
-) -> tuple[list[Path], list[Marker], list[ClaimSite], list[MarkerError]]:
+) -> tuple[list[Path], list[Marker], list[ClaimSite], list[MarkerError], int]:
     """Walk the prose surface once, collecting markers AND census sites."""
     files: list[Path] = []
     seen: set[Path] = set()
@@ -365,6 +372,7 @@ def scan(
     markers: list[Marker] = []
     sites: list[ClaimSite] = []
     errors: list[MarkerError] = []
+    quoted = 0
     for path in files:
         rel = path.relative_to(root).as_posix()
         try:
@@ -372,10 +380,26 @@ def scan(
         except OSError:
             continue
         lines = text.splitlines()
+        in_fence = False
         for i, line in enumerate(lines, start=1):
+            if FENCE_RE.match(line):
+                in_fence = not in_fence
+                continue
             if not is_prose_line(rel, line):
                 continue
-            for match in MARKER_RE.finditer(line):
+            # A marker QUOTED in a code span or a code fence is documentation
+            # of the grammar, not a claim. Without this, the ADR that defines
+            # the marker fails the gate it defines: measured on this gate's
+            # first real run, `<!-- was-absent: ... -->` written as an example
+            # in ADR-0611 and copied into the generated ADR index was parsed as
+            # two live markers naming a declaration called `...`. Counted and
+            # reported, never silently dropped -- a swallowed marker is a false
+            # green, which is the one outcome this gate must not produce.
+            if in_fence:
+                quoted += len(MARKER_RE.findall(line))
+                continue
+            quoted += len(MARKER_RE.findall("".join(CODE_SPAN_RE.findall(line))))
+            for match in MARKER_RE.finditer(CODE_SPAN_RE.sub(" ", line)):
                 try:
                     markers.append(parse_marker(rel, i, match))
                 except MarkerError as exc:
@@ -394,7 +418,7 @@ def scan(
             sites.append(
                 ClaimSite(rel, start + offset, body.splitlines()[offset].strip()[:200], candidates, annotated)
             )
-    return files, markers, sites, errors
+    return files, markers, sites, errors, quoted
 
 
 def load_census(path: Path) -> dict:
@@ -529,7 +553,7 @@ def main(argv: list[str] | None = None) -> int:  # noqa: PLR0911, PLR0912, PLR09
         return 2
 
     excluded = frozenset(entry["path"] for entry in census["excluded_paths"])
-    files, markers, sites, marker_errors = scan(args.root, excluded=excluded)
+    files, markers, sites, marker_errors, quoted_markers = scan(args.root, excluded=excluded)
 
     # Vacuity: a gate that scans nothing exits 0 on completion alone.
     if not files:
@@ -616,6 +640,12 @@ def main(argv: list[str] | None = None) -> int:  # noqa: PLR0911, PLR0912, PLR09
         f"({sum(1 for m in markers if m.kind == 'absent')} absent, "
         f"{sum(1 for m in markers if m.kind == 'was-absent')} was-absent), "
         f"naming {sum(len(m.names) for m in markers)} declaration(s)"
+        + (
+            f"; {quoted_markers} more QUOTED in a code span or fence and read as "
+            "documentation of the grammar, not as claims"
+            if quoted_markers
+            else ""
+        )
     )
     print(
         f"census: {len(sites)} absence-claim site(s); "
