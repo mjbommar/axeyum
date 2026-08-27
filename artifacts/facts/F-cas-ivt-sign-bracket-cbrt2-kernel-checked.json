@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-ivt-sign-bracket-cbrt2-kernel-checked",
+  "title": "The sign bracket of x^3-2 on (1,2) is kernel-reconstructed, not just CAS-internal",
+  "statement": "For p(x) = x^3 - 2: p(1) < 0 and 0 < p(2), reconstructed through crate::Kernel::add_declaration over Rat.polyEval rather than trusted from axeyum-cas's own normal form. This is a SIBLING fact to F:cas-ivt-cbrt2-in-1-2, not a replacement for it -- it deliberately claims LESS than that fact's full IvtCertificate: it says nothing about the named root cbrt(2), nothing about that root's minimal polynomial dividing p by exact division, and nothing about the Sturm count establishing p has EXACTLY ONE real root in (1,2). Those three remain cas-internal, checked only by axeyum-cas's own verify_ivt_certificate (see F:cas-ivt-cbrt2-in-1-2's own evidence and notes) -- reconstructing the root-containment division and the Sturm sign-variation count through this kernel is future work, sized in this fact's notes. What IS newly true here: the exact sign bracket that IVT's classical hypothesis needs is no longer merely CAS-internal -- an independent, axiom-free kernel proof exists for it, over the SAME certificate (same p, same bracket (1,2)) F:cas-ivt-cbrt2-in-1-2 names.",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(define-poly p (- (^ x 3) 2))\n(assert (< (poly-eval p 1) 0))\n(assert (> (poly-eval p 2) 0))",
+    "fragment": "real-algebraic-ivt-sign-bracket",
+    "free_symbols": ["x"],
+    "kernel_theorem": null
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.route-label-reserves-axiom-free-tally-to-kernel-lean: this fact's OWN evidence is a kernel-reconstructed Kernel::add_declaration acceptance over Rat.polyEval whose proof consults no Axiom/Opaque/Quotient declaration (every constant it calls -- Rat.pow_zero/pow_succ, Rat.ofInt_add/ofInt_mul, Nat.le.refl/le.step, Int.lt's own definitional negSucc/ofNat case, True.intro -- traces to rat_prelude/int_prelude/nat_prelude, all measured axiom-free by rat_prelude_is_axiom_free), but ADR-0601 SS2's classify_cas_certificate_fact / AXIOM_FREE_CAPABLE reserves the headline axiom-free TALLY to proof_route kernel-lean alone, so an empty array here would be read by scripts/validate-facts.py as a claim this route cannot support even though the underlying kernel derivation genuinely has no axioms.",
+    "cas.ivt-certificate-root-containment-and-sturm-count-not-claimed-here: this fact states ONLY the sign bracket (item 1 of the three-part IvtCertificate in F:cas-ivt-cbrt2-in-1-2's notes) -- root containment (item 2, exact division of p by cert.root's minimal polynomial) and the Sturm uniqueness count (item 3) are NOT reconstructed by this fact's evidence and remain cas-internal, checked only by real_algebraic::verify_ivt_certificate."
+  ],
+  "evidence": [
+    {
+      "id": "kernel-reconstructed-ivt-sign-bracket-cbrt2-lower",
+      "kind": "kernel-term",
+      "supports": "p(1) < 0 for p = x^3-2, admitted by crate::Kernel::add_declaration over a Rat.polyEval-stated theorem built from a translated axeyum-cas IvtCertificate; paired with a negative control (the same proof term rejected against the swapped-sign statement 0 < p(1))",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude::cas_ivt_bridge_tests::poly_eval_to_of_int (untrusted-ish translator/proof-assembly: CAS IvtCertificate -> Rat.ofInt literal chain via Rat.ofInt_add/Rat.ofInt_mul, entirely Rust-side construction)",
+        "crate::Kernel::add_declaration (the sole trusted judge: independently re-derives the stated Rat.lt fact from the supplied proof term, admits the TRUE statement and rejects the SAME proof term ascribed against the FALSE swapped-sign statement)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib rat_prelude::cas_ivt_bridge_tests::tests::ivt_sign_bracket_cbrt2_kernel_checked -- --exact 2>/dev/null | grep -cE '^test rat_prelude::cas_ivt_bridge_tests::tests::ivt_sign_bracket_cbrt2_kernel_checked \\.\\.\\. ok$'",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/cas_ivt_bridge_tests.rs",
+      "notes": "The named test builds BOTH sign-bracket halves (Check.ivt_sign_bracket_cbrt2_lower : Rat.lt (Rat.polyEval c 4 (Rat.ofInt 1)) Rat.zero, and Check.ivt_sign_bracket_cbrt2_upper : Rat.lt Rat.zero (Rat.polyEval c 4 (Rat.ofInt 2))) plus the paired negative control (Check.ivt_sign_bracket_cbrt2_wrong: the p(1)<0 proof term ascribed against 0<p(1), asserted REJECTED via admitted_wrong.is_err()). c is built by n_term_polynomial from the SAME [-2,0,0,1] integer coefficients axeyum-cas's real_algebraic::polynomial_ivt(x^3-2, 1, 2) actually returns (translated by sign_bracket_to_int, asserted equal in the test) -- not hand-picked. Mutation-tested in an isolated snapshot (scripts/lane-snapshot.sh): (1) corrupting the CAS input polynomial to x^3+2 makes polynomial_ivt itself decline (no sign change on (1,2)), failing the test at the .expect(); (2) corrupting ONLY the kernel-side Nat.le bound the upper-bracket proof is built against (6 -> 8, a wrong-but-plausible 'safe slack' value) makes Kernel::add_declaration reject with TypeMismatch, failing the test -- confirming the KERNEL check itself, not merely the CAS input, is load-bearing. An unmutated control run in the same snapshot passed both times. Measured wall-clock (this machine, cold `cargo-serialized.sh test`, single invocation via --exact): ~8.4s including the one-time Rat prelude build (~5.3s of that, measured separately via rat_prelude::rat_prelude_tests::rat_prelude_is_axiom_free run alone) -- so the bridge construction itself costs roughly 3s at this degree-3 instance. See F:cas-ivt-degree4-sign-bracket-kernel-checked-cost-curve in this fact's sibling test (ivt_sign_bracket_degree_four_kernel_checked, same file) for the one-degree-higher data point (~4.1s bridge cost, ~9.4s total)."
+    },
+    {
+      "id": "kernel-reconstructed-ivt-sign-bracket-cbrt2-upper",
+      "kind": "kernel-term",
+      "supports": "0 < p(2) for p = x^3-2, admitted by crate::Kernel::add_declaration over a Rat.polyEval-stated theorem; the companion half of the same certificate's sign bracket",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude::cas_ivt_bridge_tests::poly_eval_to_of_int (same translator/proof-assembly as the lower-bracket row)",
+        "crate::Kernel::add_declaration (re-derives Rat.lt Rat.zero (Rat.polyEval c 4 (Rat.ofInt 2)) from the supplied Nat.le 1 6 witness -- the EXACT value the fully-reduced polynomial evaluates to, not a rounded bound; a wrong bound is rejected, see the lower row's mutation-testing note)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib rat_prelude::cas_ivt_bridge_tests::tests::ivt_sign_bracket_cbrt2_kernel_checked -- --exact 2>/dev/null | grep -cE '^test rat_prelude::cas_ivt_bridge_tests::tests::ivt_sign_bracket_cbrt2_kernel_checked \\.\\.\\. ok$'",
+      "artifact": "crates/axeyum-lean-kernel/src/rat_prelude/cas_ivt_bridge_tests.rs",
+      "notes": "Same single test as the lower-bracket row (both halves are asserted in one #[test] fn, so the checker_command is identical -- this is a separate evidence row because it supports a distinct half of the statement, not a distinct command). Rat.lt (ofInt m) Rat.zero and Rat.lt Rat.zero (ofInt n) are NOT symmetric to reconstruct: the negative half reduces (Int.lt's own negSucc/ofNat definitional case) to True unconditionally, while the positive half reduces to a genuine Nat.le obligation that must be supplied -- see the module's own doc comment (crates/axeyum-lean-kernel/src/rat_prelude/cas_ivt_bridge_tests.rs, `zero_lt_via_nat_le` and `lt_zero_via_true`) for why these needed two different closing lemmas rather than one shared one."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "rat_prelude::cas_ivt_bridge_tests (crates/axeyum-lean-kernel/src/rat_prelude/cas_ivt_bridge_tests.rs), bridge-ivt lane, per this session's ADR-0601 SS2 kernel-reconstructed-row task",
+    "source": "classical intermediate value theorem's sign-change hypothesis, specialized to p(x)=x^3-2 on (1,2) -- the exact instance F:cas-ivt-cbrt2-in-1-2 already names, reconstructed one level deeper (through Kernel::add_declaration rather than axeyum-cas's own verify_ivt_certificate alone)",
+    "prior_art": [
+      {
+        "who": "Bolzano; Cauchy",
+        "what": "the intermediate value theorem for continuous real functions",
+        "year": 1817,
+        "where": "classical analysis; this instance is a routine polynomial application",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "First cas-certificate fact to classify as kernel-reconstructed under scripts/validate-facts.py's classify_cas_certificate_fact (measured before this fact: cas-certificate 24 total -- kernel-reconstructed 0, cas-internal 24). Scoped deliberately to the SIGN BRACKET ONLY -- item 1 of the three-part IvtCertificate F:cas-ivt-cbrt2-in-1-2's own notes enumerate. Item 2 (root containment: cert.root's minimal polynomial divides p, checkable by Rat polynomial exact division IF that division routine existed in this kernel -- it does not yet) and item 3 (the Sturm count establishing exactly one root in the bracket) are NOT attempted here and are sized as future work: item 2 needs a Rat polynomial long-division/remainder construction reconstructed through the kernel (a moderate lift -- the arithmetic is the same Rat.ofInt_add/mul machinery this fact already uses, generalized from evaluation to division with remainder); item 3 needs a Sturm CHAIN (a sequence of polynomials via repeated polynomial remainder, i.e. it needs item 2 as a prerequisite) plus a sign-variation COUNT reconstructed and proved equal to the number of real roots in an interval, which is a substantially larger lift -- this is Sturm's theorem itself, not a corollary of it, and has no partial credit shortcut the way the sign bracket did (pure Rat.polyEval evaluation, already a first-class kernel citizen via rat_prelude/polynomial.rs) or the way root containment will (exact division, a direct generalization of existing Rat.ofInt algebra). Do not read this fact as reconstructing F:cas-ivt-cbrt2-in-1-2's full claim; that fact's own evidence and notes remain the accurate description of what is and is not kernel-checked for the FULL certificate, and this fact does not change its status."
+}
