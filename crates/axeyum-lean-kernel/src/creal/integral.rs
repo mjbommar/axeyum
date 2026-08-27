@@ -1944,6 +1944,223 @@
 //! the acceptance is green beside it, so [`product_pair_diff_le`]'s and
 //! [`riemann_sum_endpoints_le`]'s controls build both probes in ONE
 //! function and assert both outcomes together.
+//!
+//! ## Arbitrary-`c` `integral_split` under a `PosBound` — TWENTY-FIRST lane,
+//! 2026-08-27. **LANDED.** `CReal.integralSplitArbitrary` is admitted,
+//! axiom-free, and carries its `PosBound` in its own signature
+//!
+//! ```text
+//! CReal.integralSplitArbitrary :
+//!   ∀ F a b c (k kb : Nat), PosBound (b − a) k →
+//!   ∀ (hab : le a b) (u : UniformlyContinuousOn F a b), BoundedOn F a b kb →
+//!   ∀ (hac : le a c) (hcb : le c b)
+//!     (uac : UniformlyContinuousOn F a c) (ucb : UniformlyContinuousOn F c b),
+//!     Equiv (integral F a b hab u)
+//!           (add (integral F a c hac uac) (integral F c b hcb ucb))
+//! ```
+//!
+//! **The stratum, stated so it cannot be misread: an arbitrary `c` with
+//! `a ≤ c ≤ b`, GIVEN a `PosBound` on the interval width — never universally
+//! quantified in `c` alone.** Locating `c` in [`CRealPrelude::integral_split`]'s
+//! base proportion family means forming `t := (c−a)/(b−a)`, hence
+//! [`super::inverse`]'s `CReal.inv`, which takes a positivity witness that
+//! `hab : le a b` does not supply. The `BoundedOn` witness is free
+//! ([`CRealPrelude::bounded_of_uniformly_continuous`]) and costs a caller
+//! nothing.
+//!
+//! Three declarations landed, all axiom-free and in the inventory shard:
+//!
+//! | name | what it says |
+//! | --- | --- |
+//! | [`CRealPrelude::split_point_approx`] | every `c` in `[a,b]` is within `4/(g+2)·\|b−a\|` of a base split point, for every `g` |
+//! | [`CRealPrelude::integral_endpoint_close`] | `\|∫ₓ^y F − ∫ₓ₂^y₂ F\| ≤ M·dw + (1/(e+1))·w2b` — endpoint continuity, mesh-free |
+//! | [`CRealPrelude::integral_split_arbitrary`] | the theorem above |
+//!
+//! ### The shorter route existed AGAIN — at the level of `bucketIndex`, and
+//! the whole five-lane `crossingIndex` obstruction is off this route
+//!
+//! Entries four through seven above measure, in increasing sharpness, why
+//! locating `c` on the `[a,b]` mesh cannot work: `crossingIndex`'s step is a
+//! **`Rat`** while the mesh step `(b−a)/(m+1)` is a `CReal`; reading a
+//! rational upper bound for it instead makes `bucket_index_bound`'s `+3`
+//! slack land exactly on `magnitude` from above; and a purpose-built
+//! zero-excess replacement still fails on `CReal.bound`'s own non-tightness.
+//! All of that is correct and **none of it applies here.**
+//!
+//! The `PosBound` changes the question. With `t := (c−a)·(b−a)⁻¹` the problem
+//! moves into the UNIT interval, where the grid is rational **by
+//! construction**: [`CRealPrelude::bucket_index`] is read at grid `succ g`
+//! directly, with no rescaling and no `crossingIndex` at all. Two
+//! consequences, and both are what made this cheap:
+//!
+//! - **One denominator everywhere.** Bucketing at `succ g` puts the
+//!   approximant `(succ m_ac0)/(g+2)`, the floor slack `1/(g+2)` and the
+//!   clamp slack — read back from `j := (g+2)²` by
+//!   [`RatPrelude::nat_div_succ_antitone`] — all at the SAME denominator.
+//!   Every comparison in [`bucket_close_bounds`] and
+//!   [`unit_fraction_approx`] is then `Rat.add_le_add` plus
+//!   [`RatPrelude::nat_div_succ_add`]; **no cross-denominator `Rat`
+//!   arithmetic appears anywhere**, which is the thing this prelude has no
+//!   general lemma for (`natDivSucc_antitone` is numerator-`1` only).
+//! - **The index cap is `Nat.le_total`, not `bucket_index_bound`.** The
+//!   numerator must be at most `g` for the complementary count to exist;
+//!   `bucket_index_bound` gives `≤ 5(g+2)`, five times too loose, and that
+//!   looseness is exactly the fourth entry's obstruction. But `Nat` order IS
+//!   decidable even though `CReal` order is not, so `Nat.le_total` splits it:
+//!   on `idx ≤ g` take `(idx, dd)` from `Nat.le_dest`; on `g ≤ idx` take
+//!   `(g, 0)` and close the branch with `t ≤ 1`. `bucket_index_bound` is
+//!   never called.
+//!
+//! The same "ask at the right LEVEL" move pays twice more:
+//!
+//! - **`integral_endpoint_close` must NOT be sized against
+//!   `riemannSum_integral_close`.** That theorem's statement is sample-level
+//!   (`Within (Rat.sub (seq S i) (seq I e)) …`) and assembling two of them by
+//!   hand is the twelfth lane's shape. At the `Converges` altitude it is four
+//!   named lemmas: [`leg_converges`] takes its mesh family as CALLBACKS, so
+//!   both legs run at the SHARED count `M(n) := (deep₁(n) + deep₂(n)) + n`
+//!   (three `Nat.le_add_right`/`nat_le_add_left` obligations),
+//!   [`riemann_sum_endpoints_le_mesh_uniform`] bounds them termwise, and
+//!   [`CRealPrelude::converges_le`] carries it to the limits.
+//! - **The final accuracy arithmetic never compares two `natDivSucc` terms
+//!   across denominators.** [`RatPrelude::nat_div_succ_scale`] gives each
+//!   required depth EXACTLY — choosing its `c` as a SUCCESSOR
+//!   ([`depth_for`]) is what keeps every index a syntactic `Nat.succ`, so
+//!   `g`'s predecessor can be named without a `Nat.sub` — and ONE composed
+//!   index serves the two independent depth requirements on `g` because
+//!   [`RatPrelude::nat_div_succ_le_scaled`] reads it back to the argument
+//!   while [`RatPrelude::nat_index_symm`] flips it and reads it back to the
+//!   shift. That pair is exactly what `nat_div_succ_le_scaled`'s own doc
+//!   comment says it exists for.
+//!
+//! ### `bucket_close_bounds` is a rebuild of an INLINE step, and that is a
+//! tooling deficiency, not a design choice
+//!
+//! `declare_bounded_of_uniformly_continuous` (`creal/uniform_continuity.rs`)
+//! already assembles exactly this fact — `|w − bucketIndex(w,k)/(k+1)| ≤
+//! 1/(k+1) + 3/(j+1)` — inside its own `z` close to `GP(m)` block, using the
+//! private `clamp_setup` / `k_le_j` / `creal_le_of_sub_le` /
+//! `rat_le_add_left_of_nonneg` / `creal_le_ofrat_add_of_le_ofrat_sum`
+//! helpers. None of them is `pub(super)` and the assembly has no name, so it
+//! is **hiding place 2** from `CLAUDE.md`'s retrieval section: a reusable
+//! step built inline inside a larger declaration, structurally invisible to
+//! any name- or shape-indexed search. `uniform_continuity.rs` was read-only
+//! for this lane, so the four PUBLIC ingredients
+//! ([`CRealPrelude::bucket_index_floor_lower`]/`_upper`,
+//! [`CRealPrelude::bucket_clamp_lower`]/`_upper`) were re-assembled here
+//! instead. The right fix is to extract it there — as a `pub(super)` helper
+//! or as a public `CReal.bucketClose` — and have both callers use it.
+//!
+//! The same section's first hiding place bit too, and the compiler caught it:
+//! `width_nonneg_of` was written fresh and already existed 14,000 lines up in
+//! THIS file. A Rust duplicate is a build error; a kernel duplicate is not,
+//! which is the whole reason that rule is stated.
+//!
+//! ### What the kernel rejected: ONCE, in nine increments
+//!
+//! Nine constructions were built and kernel-checked in order
+//! (`split_fraction` and its two unit-interval bounds,
+//! [`bucket_close_bounds`], [`unit_fraction_approx`],
+//! [`split_point_approx_proof`], [`riemann_sum_endpoints_le_mesh_uniform`],
+//! [`integral_endpoint_close`], [`integral_split_arbitrary_close`],
+//! [`integral_split_arbitrary_proof`]). Eight were accepted on the first
+//! attempt.
+//!
+//! The one rejection: **`neg (neg x)` is NOT defeq to `x` in this setoid.**
+//! `CReal.neg` negates each sample and `Rat.neg_neg` is a THEOREM, not a
+//! reduction, so an [`CRealPrelude::abs_le`] whose second premise was
+//! `le x (abs x)` where `le (neg (neg x)) (abs x)` was wanted failed with a
+//! bare `TypeMismatch` between two ADJACENT `ExprId`s — adjacency being the
+//! only hint that the two terms differed by one constructor. The fix is not
+//! to prove `neg_neg`: it is to never form the double negation.
+//! [`CRealPrelude::neg_le_abs`] bounds `−(x−y)` directly and
+//! [`CRealPrelude::neg_sub_swap`] rewrites that term to `y−x` outright, which
+//! is also what [`abs_sub_symm_le`] does for the `abs` of a reversed
+//! difference (this prelude publishes no `abs_neg`).
+//!
+//! Every negative control varies a SMALL term (the two sides of one `le`, a
+//! dropped summand, or `g` for `succ g` in an index equation), per the
+//! pathological-`def_eq` rule the nineteenth lane established. The
+//! arbitrary-`c` `Equiv` itself carries **no kernel negative control on
+//! purpose** — both sides are `CReal.integral` applications, and a FAILING
+//! `def_eq` between two `Definition`-heavy terms has no stopping rule
+//! (measured >300 s, RSS 2.0 → 3.1 GB). `integral_split_tests` made the same
+//! call for the same reason. Non-vacuity is asserted structurally, and the
+//! discriminating controls live one level down on
+//! [`integral_split_arbitrary_close`] and [`integral_endpoint_close`], where
+//! both sides of the varied `le` are small.
+//!
+//! ### Cost, and a mistake worth keeping
+//!
+//! Matched A/B on one tree, each side checked out and back with restoration
+//! verified by `git hash-object` against `git rev-parse HEAD:<path>` (all
+//! four files byte-identical), `creal_prelude_builds` isolated:
+//!
+//! | tree | load before → after | reading |
+//! | --- | --- | --- |
+//! | `splitPointApprox` only | 3.73 → 2.44 | 40.03 s |
+//! | `splitPointApprox` only | 4.69 → 4.05 | 39.24 s |
+//! | + both integral theorems, endpoint estimate INLINED | 7.20 → 12.87 | 69.66 s |
+//! | + both, INLINED | 12.72 → 13.79 | 65.96 s |
+//! | + both, endpoint theorem CITED | 3.53 → 4.57 | 48.39 s |
+//! | + both, CITED | 4.20 → 5.84 | 47.74 s |
+//!
+//! `splitPointApprox` on its own was free (+0.9 s at matched load, and the
+//! `with` reading was taken at twice the load). The two integral theorems
+//! cost **about +8 s at matched load**, in the same band
+//! `declare_integral_split` itself does.
+//!
+//! **The mistake: [`integral_split_arbitrary_close`] first called
+//! [`integral_endpoint_close`] as a FUNCTION, so its proof term carried two
+//! full copies of that estimate.** Citing the published theorem instead —
+//! `d.lemma(p.integral_endpoint_close, …)` — bought 18 s. The general rule
+//! this file already teaches for `Definition` unfolds has an analogue for
+//! `Theorem`s: **once a step is published, cite it; a private helper called
+//! twice duplicates its whole term.**
+//!
+//! ### Dead code 8 → 4, and the four that remain are the honest signal
+//!
+//! Publishing makes the nineteenth lane's piece-1 chain and all of this
+//! lane's helpers REACHABLE, so eleven `expect(dead_code)` annotations became
+//! UNFULFILLED — which is precisely the signal `expect` carries and `allow`
+//! would not — and are removed. [`neg_add_local`], [`add4_swap_middle`] and
+//! [`add_pair_diff_le`]'s neighbours are among them.
+//!
+//! Still unconsumed, still annotated, still not `#[allow]`-ed:
+//! `mesh_count_align` (the additive predecessor), `MeshAlignMul` +
+//! `mesh_count_align_mul` (the CPS form), and `bnd_leg_plus_share_le_at` (the
+//! independent-index variant). Unchanged by this lane.
+//! `clippy --all-targets --all-features -D warnings` is green; the whole
+//! `creal_tests` suite is 125 passed / 0 failed, and `creal::integral` is
+//! 53 passed / 0 failed.
+//!
+//! ### What FTC needs next, precisely
+//!
+//! `derivative.rs`'s `declare_has_derivative_integral_const` names TWO
+//! missing facts for the general Fundamental Theorem: *"additivity of
+//! `integral` over a split point plus a Riemann-sum-vs-`F(x)*(y−x)`
+//! estimate"*. **The first is now landed** (under a `PosBound`; see below
+//! for what removing it costs). The second is not, and it is a different
+//! shape: `|∫ₓ^y F − F(x)·(y−x)| ≤ modulus-bounded`, which is
+//! [`CRealPrelude::integral_abs_le`] applied to `F − F(x)` rather than to `F`
+//! — so it needs `integral` of a DIFFERENCE, i.e.
+//! [`CRealPrelude::integral_add`] plus [`CRealPrelude::integral_scale`] at
+//! `−1`, both already landed, and one uniform-continuity bound on
+//! `F(z) − F(x)` over `[x,y]`. That is a composition, not a new estimate.
+//!
+//! ### The `PosBound` removal was NOT attempted, and here is the cost
+//!
+//! The per-accuracy `lt_cotrans` split does work in principle — `b−a <
+//! 1/(e+1)` closes by [`CRealPrelude::integral_abs_le`] and `b−a >
+//! 1/(2e+2)` feeds [`CRealPrelude::pos_bound_of_lt`] — and it is sound only
+//! because the target is a `Prop`, so `pos_bound_of_lt`'s `Exists` may be
+//! eliminated. But it has to be run at EVERY accuracy, so the
+//! `PosBound`-hypothesised theorem is applied inside the split with a `k`
+//! that changes per accuracy, and `integral`'s own value must then be shown
+//! independent of that choice. [`CRealPrelude::inv_index_irrelevant`] is the
+//! lemma that makes that possible and it is not yet wired anywhere near
+//! here. That is the next rung, and it is now the ONLY thing standing between
+//! this theorem and an unconditional one.
 use super::completeness::half_shift_le;
 use super::convergence::{
     converges_applied, converges_predicate, div_succ_at, exists_intro, exists_ty,
@@ -19803,15 +20020,6 @@ mod integral_abs_le_tests {
 
 /// `fun i => add (f i) (neg (g i))` — built once so every occurrence interns
 /// to the same `ExprId`, the discipline this file's 74 s incident set.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "piece 1's summand-difference builder; consumed once the \
-                  per-term Riemann estimate that feeds sum_range_pair_diff_le \
-                  lands"
-    )
-)]
 fn diff_fn_of(d: &mut IntDev<'_>, p: CRealPrelude, f: ExprId, g: ExprId) -> ExprId {
     let nat = d.nat_ty();
     let i_fv = d.fresh_fvar();
@@ -19824,14 +20032,6 @@ fn diff_fn_of(d: &mut IntDev<'_>, p: CRealPrelude, f: ExprId, g: ExprId) -> Expr
 }
 
 /// `fun i => abs (add (f i) (neg (g i)))`.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "piece 1's |summand difference| builder; same consumer as \
-                  diff_fn_of"
-    )
-)]
 fn abs_diff_fn_of(d: &mut IntDev<'_>, p: CRealPrelude, f: ExprId, g: ExprId) -> ExprId {
     let nat = d.nat_ty();
     let i_fv = d.fresh_fvar();
@@ -19856,15 +20056,6 @@ fn abs_diff_fn_of(d: &mut IntDev<'_>, p: CRealPrelude, f: ExprId, g: ExprId) -> 
 /// and the summand on the left is pointwise `f i` — so
 /// `sumRange f n ~ sumRange D n + sumRange g n`, which the four standard
 /// additive laws turn into the stated form. No new estimate anywhere.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "the setoid's missing sumRange_neg, reassembled additively; \
-                  consumed by sum_range_pair_diff_le, itself awaiting the \
-                  per-term Riemann estimate"
-    )
-)]
 fn sum_range_diff_local(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -19973,15 +20164,6 @@ fn sum_range_diff_local(
 /// [`CRealPrelude::sum_range_const`] to collapse it. The `succ m` shape is
 /// `sum_range_const`'s own and is exactly `riemannSum`'s term count, so no
 /// `Nat` arithmetic is introduced.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "the SUM-level half of piece 1 (the close-endpoint estimate); \
-                  its consumer is the per-term Riemann estimate, which is \
-                  exactly what did not land this lane"
-    )
-)]
 fn sum_range_pair_diff_le(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -20257,15 +20439,6 @@ mod sum_range_pair_diff_le_tests {
 /// second `ring_helpers::right_distrib`. They are different lemmas here, and
 /// the prelude publishes only the first.
 #[allow(clippy::too_many_arguments)]
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "piece 1's per-term estimate; its consumer is the riemannSum-level \
-                  assembly, which needs the per-index sample-point closeness this \
-                  lane did not discharge"
-    )
-)]
 fn product_pair_diff_le(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -20597,15 +20770,6 @@ mod product_pair_diff_le_tests {
 /// [`CRealPrelude::of_nat_le`] and [`CRealPrelude::mesh_reciprocal_mul`].
 /// See the module documentation.
 #[allow(clippy::too_many_arguments)]
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "piece 1 assembled; its consumer is integral_split at an ARBITRARY \
-                  split point, which is additionally blocked on piece 2 (a PosBound \
-                  on the interval width)"
-    )
-)]
 fn riemann_sum_endpoints_le(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -20978,15 +21142,6 @@ mod riemann_sum_endpoints_le_tests {
 /// cheaper than the additive-inverse-uniqueness rearrangement
 /// `series.rs`/`monotone.rs` use for their own private copies, neither of
 /// which is reachable from here.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "the `neg (a+b)` half of the sample-point regrouping; consumed by \
-                  add_pair_diff_le, itself awaiting integral_split at an ARBITRARY \
-                  split point"
-    )
-)]
 fn neg_add_local(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
     let rat = p.rat;
     let nat = d.nat_ty();
@@ -21011,14 +21166,6 @@ fn neg_add_local(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> E
 
 /// `Equiv (add (add a b) (add c e)) (add (add a c) (add b e))` — the
 /// four-term middle swap, from `add_assoc`/`add_comm` only.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "the regrouping half of add_pair_diff_le, itself awaiting \
-                  integral_split at an ARBITRARY split point"
-    )
-)]
 fn add4_swap_middle(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -21069,14 +21216,6 @@ fn add4_swap_middle(
 /// [`product_pair_diff_le`], and the shape a sample-point difference
 /// `(x + i·Δ₁) − (x₂ + i·Δ₂)` reduces to directly.
 #[allow(clippy::too_many_arguments)]
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "the outer half of sample_point_pair_diff_le, itself awaiting \
-                  integral_split at an ARBITRARY split point"
-    )
-)]
 fn add_pair_diff_le(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -21138,14 +21277,6 @@ fn add_pair_diff_le(
 /// No `Equiv (neg zero) zero` bridge is needed here: [`neg_le_of_nonneg`]
 /// already carries one, which is why this is five lines rather than a second
 /// local restatement of a lemma three modules keep privately.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "the index-magnitude leaf of sample_point_pair_diff_le, itself \
-                  awaiting integral_split at an ARBITRARY split point"
-    )
-)]
 fn abs_of_nat_le(d: &mut IntDev<'_>, p: CRealPrelude, i: ExprId, m: ExprId, hle: ExprId) -> ExprId {
     let oi = d.const_app(p.of_nat, &[i]);
     let sm = d.succ(m);
@@ -21159,14 +21290,6 @@ fn abs_of_nat_le(d: &mut IntDev<'_>, p: CRealPrelude, i: ExprId, m: ExprId, hle:
 
 /// `le (abs (ofRat (Rat.natDivSucc 1 m))) (ofRat (Rat.natDivSucc 1 m))` — the
 /// mesh fraction is its own bound, since it is nonneg ([`frac_nonneg`]).
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "the mesh-factor leaf of sample_point_pair_diff_le, itself \
-                  awaiting integral_split at an ARBITRARY split point"
-    )
-)]
 fn abs_frac_le_self(d: &mut IntDev<'_>, p: CRealPrelude, m: ExprId) -> ExprId {
     let frac = frac_of(d, p, m);
     let nn = frac_nonneg(d, p, m);
@@ -21207,15 +21330,6 @@ fn abs_frac_le_self(d: &mut IntDev<'_>, p: CRealPrelude, m: ExprId) -> ExprId {
 ///    — giving `(succ m)·(bw·frac)`, which `mesh_count_width` collapses to
 ///    `bw`. [`add_pair_diff_le`] then joins it to the `bx` leg.
 #[allow(clippy::too_many_arguments)]
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "the per-index closeness discharge; consumed by \
-                  riemann_sum_endpoints_le_uniform, itself awaiting integral_split \
-                  at an ARBITRARY split point"
-    )
-)]
 fn sample_point_pair_diff_le(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -21340,15 +21454,6 @@ fn sample_point_pair_diff_le(
 /// nothing mentions `Δ` except the two slack bounds that were already
 /// parameters.
 #[allow(clippy::too_many_arguments)]
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "piece 1, unconditional; its consumer is integral_split at an \
-                  ARBITRARY split point, which is separately blocked on piece 2 (a \
-                  PosBound on the interval width)"
-    )
-)]
 fn riemann_sum_endpoints_le_uniform(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -21801,4 +21906,4296 @@ mod piece_one_unconditional_tests {
              `mul (ofNat m) kb`"
         );
     }
+}
+
+// --- piece 2: locating an ARBITRARY `c` in the base proportion family ------
+//
+// `declare_integral_split` reaches every split point of the shape
+// `a + (succ m_ac0)/(succ m_ac0 + succ m_cb0) * (b - a)` -- every rational
+// proportion, and no other `c`. Reaching an arbitrary `c` means approximating
+// the fraction `t := (c - a)/(b - a)`, which needs `CReal.inv`, which needs a
+// `PosBound` on the width. That hypothesis is the whole content of this
+// section's name: nothing here is universally quantified in `c` without it.
+
+/// `t := (b − a)⁻¹ · (c − a)` — the split fraction, with the inverse on the
+/// LEFT so that [`CRealPrelude::mul_le_mul_of_nonneg_left`] applies to it
+/// without a `mul_comm` first.
+fn split_fraction(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    k: ExprId,
+    hpos: ExprId,
+) -> ExprId {
+    let w = width_of(d, p, a, b);
+    let inv_w = d.const_app(p.inv, &[w, k, hpos]);
+    let ca = width_of(d, p, a, c);
+    cmul(d, p, inv_w, ca)
+}
+
+/// `le zero (split_fraction …)` — from `hac : le a c` and
+/// [`CRealPrelude::inv_nonneg`].
+fn split_fraction_nonneg(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    k: ExprId,
+    hpos: ExprId,
+    hac: ExprId,
+) -> ExprId {
+    let w = width_of(d, p, a, b);
+    let inv_w = d.const_app(p.inv, &[w, k, hpos]);
+    let ca = width_of(d, p, a, c);
+    let hinv = d.lemma(p.inv_nonneg, &[w, k, hpos]);
+    let hca = width_nonneg_of(d, p, a, c, hac);
+    d.lemma(p.mul_nonneg, &[inv_w, ca, hinv, hca])
+}
+
+/// `le (split_fraction …) one` — `(c−a) ≤ (b−a)` multiplied through by the
+/// nonnegative `(b−a)⁻¹`, then [`CRealPrelude::mul_inv_cancel`].
+fn split_fraction_le_one(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    k: ExprId,
+    hpos: ExprId,
+    hcb: ExprId,
+) -> ExprId {
+    let w = width_of(d, p, a, b);
+    let inv_w = d.const_app(p.inv, &[w, k, hpos]);
+    let ca = width_of(d, p, a, c);
+    let t = cmul(d, p, inv_w, ca);
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    let na = cneg(d, p, a);
+    let refl_na = d.lemma(p.le_refl, &[na]);
+    let hca_le_w = d.lemma(p.add_le_add, &[c, b, na, na, hcb, refl_na]);
+    let hinv = d.lemma(p.inv_nonneg, &[w, k, hpos]);
+    let step = d.lemma(p.mul_le_mul_of_nonneg_left, &[inv_w, ca, w, hinv, hca_le_w]);
+    // step : le (mul inv_w ca) (mul inv_w w)
+
+    let inv_w_w = cmul(d, p, inv_w, w);
+    let w_inv_w = cmul(d, p, w, inv_w);
+    let comm = d.lemma(p.mul_comm, &[inv_w, w]);
+    let cancel = d.lemma(p.mul_inv_cancel, &[w, k, hpos]);
+    let unit = d.lemma(p.equiv_trans, &[inv_w_w, w_inv_w, one_c, comm, cancel]);
+    let refl_t = d.lemma(p.equiv_refl, &[t]);
+    d.lemma(p.le_congr, &[t, t, inv_w_w, one_c, refl_t, unit, step])
+}
+
+#[cfg(test)]
+mod split_fraction_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// Both facts about `t := (b−a)⁻¹·(c−a)` in ONE build, each with a
+    /// negative control that varies a SMALL term (the two sides of one `le`,
+    /// transposed) so nothing large is ever compared by a failing `def_eq`.
+    fn split_fraction_probes() -> Vec<(&'static str, Result<(), crate::KernelError>)> {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+        let nat = d.nat_ty();
+
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+
+        let w = width_of(&mut d, p, a, b);
+        let hpos_ty = d.const_app(p.pos_bound, &[w, k]);
+        let hpos_fv = d.fresh_fvar();
+        let hpos = d.kernel().fvar(hpos_fv);
+
+        let hac_ty = cle(&mut d, p, a, c);
+        let hac_fv = d.fresh_fvar();
+        let hac = d.kernel().fvar(hac_fv);
+        let hcb_ty = cle(&mut d, p, c, b);
+        let hcb_fv = d.fresh_fvar();
+        let hcb = d.kernel().fvar(hcb_fv);
+
+        let t = split_fraction(&mut d, p, a, b, c, k, hpos);
+        let zero_c = czero(&mut d, p);
+        let one_c = d.kernel().const_(p.one, vec![]);
+
+        let nonneg = split_fraction_nonneg(&mut d, p, a, b, c, k, hpos, hac);
+        let le_one = split_fraction_le_one(&mut d, p, a, b, c, k, hpos, hcb);
+
+        let concl_nonneg_good = cle(&mut d, p, zero_c, t);
+        let concl_nonneg_bad = cle(&mut d, p, t, zero_c);
+        let concl_one_good = cle(&mut d, p, t, one_c);
+        let concl_one_bad = cle(&mut d, p, one_c, t);
+
+        let mut out = Vec::new();
+        for (label, concl, value) in [
+            ("splitFractionNonnegGood", concl_nonneg_good, nonneg),
+            ("splitFractionNonnegBad", concl_nonneg_bad, nonneg),
+            ("splitFractionLeOneGood", concl_one_good, le_one),
+            ("splitFractionLeOneBad", concl_one_bad, le_one),
+        ] {
+            let ty = {
+                let t0 = d.arrow(hcb_ty, concl);
+                let t0 = d.arrow(hac_ty, t0);
+                let t0 = d.pi_fv(hpos_fv, hpos_ty, t0);
+                let t0 = d.pi_fv(k_fv, nat, t0);
+                let t0 = d.pi_fv(c_fv, carrier, t0);
+                let t0 = d.pi_fv(b_fv, carrier, t0);
+                d.pi_fv(a_fv, carrier, t0)
+            };
+            let body = {
+                let v = d.lam_fv(hcb_fv, hcb_ty, value);
+                let v = d.lam_fv(hac_fv, hac_ty, v);
+                let v = d.lam_fv(hpos_fv, hpos_ty, v);
+                let v = d.lam_fv(k_fv, nat, v);
+                let v = d.lam_fv(c_fv, carrier, v);
+                let v = d.lam_fv(b_fv, carrier, v);
+                d.lam_fv(a_fv, carrier, v)
+            };
+            let anon = d.kernel().anon();
+            let name = d.kernel().name_str(anon, label);
+            out.push((
+                label,
+                d.kernel().add_declaration(Declaration::Theorem {
+                    name,
+                    uparams: vec![],
+                    ty,
+                    value: body,
+                }),
+            ));
+        }
+        out
+    }
+
+    #[test]
+    fn split_fraction_is_in_the_unit_interval() {
+        let results = crate::on_a_deep_stack(split_fraction_probes);
+        for (label, res) in results {
+            if label.ends_with("Good") {
+                res.unwrap_or_else(|e| panic!("{label} must be accepted: {e:?}"));
+            } else {
+                assert!(res.is_err(), "{label} must be REFUSED");
+            }
+        }
+    }
+}
+
+/// `le (ofRat x) (add w (ofRat s))` from `h : le (ofRat (Rat.sub x s)) w`.
+///
+/// The one order move [`CRealPrelude::bucket_clamp_lower`]'s shape needs:
+/// add `ofRat s` back to both sides, collapse the left with
+/// [`RatPrelude::add_sub_cancel_left`] across
+/// [`CRealPrelude::of_rat_add`], and commute the right.
+fn creal_shift_back(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    s: ExprId,
+    w: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let os = d.const_app(p.of_rat, &[s]);
+    let ox = d.const_app(p.of_rat, &[x]);
+    let diff = rsub(d, rat, x, s);
+    let odiff = d.const_app(p.of_rat, &[diff]);
+
+    let refl_os = d.lemma(p.le_refl, &[os]);
+    let step = d.lemma(p.add_le_add, &[os, os, odiff, w, refl_os, h]);
+    // step : le (add os odiff) (add os w)
+
+    let sum_rat = radd(d, s, diff);
+    let os_odiff = cadd(d, p, os, odiff);
+    let fold = d.lemma(p.of_rat_add, &[s, diff]); // Equiv os_odiff osum
+    let cancel = d.lemma(rat.add_sub_cancel_left, &[s, x]); // Eq Rat sum_rat x
+    let folded = rat_eq_rewrite(d, sum_rat, x, cancel, fold, &|d, t| {
+        let ot = d.const_app(p.of_rat, &[t]);
+        equiv(d, p, os_odiff, ot)
+    });
+    // folded : Equiv (add os odiff) ox
+
+    let os_w = cadd(d, p, os, w);
+    let w_os = cadd(d, p, w, os);
+    let comm = d.lemma(p.add_comm, &[os, w]);
+    d.lemma(p.le_congr, &[os_odiff, ox, os_w, w_os, folded, comm, step])
+}
+
+/// The two closeness bounds `CReal.bucketIndex w k` satisfies, in the SHIFTED
+/// additive form [`CRealPrelude::abs_le_of_two_sided`] consumes:
+///
+/// ```text
+/// upper : le w (add (ofRat (natDivSucc (succ (bucketIndex w k)) k)) (ofRat two_k))
+/// lower : le (ofRat (natDivSucc (bucketIndex w k) k)) (add w (ofRat three_k))
+/// ```
+///
+/// with `two_k := 1/(k+1) + 1/(k+1)` and `three_k := 1/(k+1) + two_k` — the
+/// slack kept as a SUM of `1/(k+1)`s rather than as `Rat.natDivSucc 2 k`, so
+/// that every comparison in this section happens at ONE denominator and no
+/// cross-denominator `Rat` arithmetic is ever needed.
+///
+/// **This is the step `declare_bounded_of_uniformly_continuous` already
+/// performs INLINE** (`creal/uniform_continuity.rs`, its `z` close to `GP(m)`
+/// block, via the private `clamp_setup`/`k_le_j`/`creal_le_of_sub_le`
+/// helpers). Nothing exposes it: the four ingredients are public prelude
+/// theorems, the assembly is not. Extracting it there is the right fix and is
+/// out of this lane's scope, so it is rebuilt here from the four PUBLIC
+/// lemmas only — see this file's module documentation.
+fn bucket_close_bounds(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    w: ExprId,
+    k: ExprId,
+    h0w: ExprId,
+) -> (ExprId, ExprId) {
+    let rat = p.rat;
+    let one_nat = d.num(1);
+    let two_nat = NatOps::add(d, one_nat, one_nat);
+    let k1 = d.succ(k);
+    let j = NatOps::mul(d, k1, k1);
+
+    let idx = d.const_app(p.bucket_index, &[w, k]);
+    let succ_idx = d.succ(idx);
+    let raw_m = div_succ_at(d, p, idx, k);
+    let raw_sm = div_succ_at(d, p, succ_idx, k);
+
+    let nds1k = div_succ(d, p, 1, k);
+    let nds1j = div_succ(d, p, 1, j);
+    let two_k = radd(d, nds1k, nds1k);
+    let three_k = radd(d, nds1k, two_k);
+
+    let wj = sample(d, p, w, j);
+    let zero_rat = rzero(d, rat);
+    let qw = d.const_app(rat.max, &[wj, zero_rat]);
+
+    let floor_lower = d.lemma(p.bucket_index_floor_lower, &[w, k]);
+    let floor_upper = d.lemma(p.bucket_index_floor_upper, &[w, k]);
+    let clamp_up = d.lemma(p.bucket_clamp_upper, &[w, k]);
+    let clamp_lo = d.lemma(p.bucket_clamp_lower, &[w, k, h0w]);
+
+    // hkj : Nat.le k j. `mul k1 (succ k)` reduces to `succ (add (mul k1 k) k)`,
+    // so `le_succ_of_le` on `k <= (mul k1 k) + k` lands on `j` definitionally.
+    let hkj = {
+        let np = d.prelude();
+        let mul_k1_k = NatOps::mul(d, k1, k);
+        let base = nat_le_add_left(d, mul_k1_k, k);
+        let sum = NatOps::add(d, mul_k1_k, k);
+        d.lemma(np.le_succ_of_le, &[k, sum, base])
+    };
+    let anti = d.lemma(rat.nat_div_succ_antitone, &[k, j, hkj]); // rle nds1j nds1k
+
+    let inner_j = radd(d, nds1j, nds1j);
+    let nds2j = d.const_app(rat.nat_div_succ, &[two_nat, j]);
+    let fuse_inner = d.lemma(rat.nat_div_succ_add, &[one_nat, one_nat, j]);
+    // fuse_inner : Eq Rat inner_j nds2j
+
+    let le_inner = d.lemma(rat.add_le_add, &[nds1j, nds1k, nds1j, nds1k, anti, anti]);
+    // le_inner : rle inner_j two_k
+    let slack2 = rat_eq_rewrite(d, inner_j, nds2j, fuse_inner, le_inner, &|d, t| {
+        rle(d, rat, t, two_k)
+    });
+    // slack2 : rle nds2j two_k
+
+    let slack3 = {
+        let le_outer = d.lemma(
+            rat.add_le_add,
+            &[nds1j, nds1k, inner_j, two_k, anti, le_inner],
+        );
+        // le_outer : rle outer_j three_k
+        let with_inner = rat_eq_rewrite(d, inner_j, nds2j, fuse_inner, le_outer, &|d, t| {
+            let sum = radd(d, nds1j, t);
+            rle(d, rat, sum, three_k)
+        });
+        // with_inner : rle (radd nds1j nds2j) three_k
+        let three_nat = NatOps::add(d, one_nat, two_nat);
+        let nds3j = d.const_app(rat.nat_div_succ, &[three_nat, j]);
+        let fuse_outer = d.lemma(rat.nat_div_succ_add, &[one_nat, two_nat, j]);
+        let lhs = radd(d, nds1j, nds2j);
+        rat_eq_rewrite(d, lhs, nds3j, fuse_outer, with_inner, &|d, t| {
+            rle(d, rat, t, three_k)
+        })
+        // : rle nds3j three_k
+    };
+
+    let upper = {
+        let sum_le = d.lemma(
+            rat.add_le_add,
+            &[qw, raw_sm, nds2j, two_k, floor_upper, slack2],
+        );
+        let left = radd(d, qw, nds2j);
+        let right = radd(d, raw_sm, two_k);
+        let emb = d.lemma(p.of_rat_le, &[left, right, sum_le]);
+        let oleft = d.const_app(p.of_rat, &[left]);
+        let oright = d.const_app(p.of_rat, &[right]);
+        let tr = d.lemma(p.le_trans, &[w, oleft, oright, clamp_up, emb]);
+        // tr : le w (ofRat (radd raw_sm two_k))
+        let o_sm = d.const_app(p.of_rat, &[raw_sm]);
+        let o_two = d.const_app(p.of_rat, &[two_k]);
+        let split = d.lemma(p.of_rat_add, &[raw_sm, two_k]);
+        // split : Equiv (add o_sm o_two) oright
+        let sum_real = cadd(d, p, o_sm, o_two);
+        let split_rev = d.lemma(p.equiv_symm, &[sum_real, oright, split]);
+        let refl_w = d.lemma(p.equiv_refl, &[w]);
+        d.lemma(p.le_congr, &[w, w, oright, sum_real, refl_w, split_rev, tr])
+    };
+
+    let lower = {
+        let three_nat = NatOps::add(d, one_nat, two_nat);
+        let nds3j = d.const_app(rat.nat_div_succ, &[three_nat, j]);
+        let neg_three_k = rneg(d, three_k);
+        let neg_nds3j = rneg(d, nds3j);
+        let neg3 = d.lemma(rat.neg_le_neg, &[nds3j, three_k, slack3]);
+        // neg3 : rle neg_three_k neg_nds3j
+        let diff_le = d.lemma(
+            rat.add_le_add,
+            &[raw_m, qw, neg_three_k, neg_nds3j, floor_lower, neg3],
+        );
+        // diff_le : rle (raw_m - three_k) (qw - nds3j), up to `Rat.sub`'s unfolding
+        let left = rsub(d, rat, raw_m, three_k);
+        let right = rsub(d, rat, qw, nds3j);
+        let emb = d.lemma(p.of_rat_le, &[left, right, diff_le]);
+        let oleft = d.const_app(p.of_rat, &[left]);
+        let oright = d.const_app(p.of_rat, &[right]);
+        let tr = d.lemma(p.le_trans, &[oleft, oright, w, emb, clamp_lo]);
+        // tr : le (ofRat (raw_m - three_k)) w
+        creal_shift_back(d, p, raw_m, three_k, w, tr)
+    };
+
+    (upper, lower)
+}
+
+#[cfg(test)]
+mod bucket_close_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// Both bucket-closeness bounds and both transposed controls in ONE
+    /// build. The controls vary a SMALL term — the two sides of one `le`,
+    /// neither of which is `Definition`-heavy — so no failing `def_eq` ever
+    /// has to unfold a `sumRange`.
+    fn bucket_close_probes() -> Vec<(&'static str, Result<(), crate::KernelError>)> {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+        let nat = d.nat_ty();
+        let rat = p.rat;
+
+        let w_fv = d.fresh_fvar();
+        let w = d.kernel().fvar(w_fv);
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let zero_c = czero(&mut d, p);
+        let h0w_ty = cle(&mut d, p, zero_c, w);
+        let h0w_fv = d.fresh_fvar();
+        let h0w = d.kernel().fvar(h0w_fv);
+
+        let (upper, lower) = bucket_close_bounds(&mut d, p, w, k, h0w);
+
+        let idx = d.const_app(p.bucket_index, &[w, k]);
+        let succ_idx = d.succ(idx);
+        let raw_m = div_succ_at(&mut d, p, idx, k);
+        let raw_sm = div_succ_at(&mut d, p, succ_idx, k);
+        let nds1k = div_succ(&mut d, p, 1, k);
+        let two_k = radd(&mut d, nds1k, nds1k);
+        let three_k = radd(&mut d, nds1k, two_k);
+        let o_sm = d.const_app(p.of_rat, &[raw_sm]);
+        let o_two = d.const_app(p.of_rat, &[two_k]);
+        let o_m = d.const_app(p.of_rat, &[raw_m]);
+        let o_three = d.const_app(p.of_rat, &[three_k]);
+        let upper_rhs = cadd(&mut d, p, o_sm, o_two);
+        let lower_rhs = cadd(&mut d, p, w, o_three);
+
+        let concl_upper_good = cle(&mut d, p, w, upper_rhs);
+        let concl_upper_bad = cle(&mut d, p, upper_rhs, w);
+        let concl_lower_good = cle(&mut d, p, o_m, lower_rhs);
+        let concl_lower_bad = cle(&mut d, p, lower_rhs, o_m);
+        let _ = rat;
+
+        let mut out = Vec::new();
+        for (label, concl, value) in [
+            ("bucketCloseUpperGood", concl_upper_good, upper),
+            ("bucketCloseUpperBad", concl_upper_bad, upper),
+            ("bucketCloseLowerGood", concl_lower_good, lower),
+            ("bucketCloseLowerBad", concl_lower_bad, lower),
+        ] {
+            let ty = {
+                let t0 = d.arrow(h0w_ty, concl);
+                let t0 = d.pi_fv(k_fv, nat, t0);
+                d.pi_fv(w_fv, carrier, t0)
+            };
+            let body = {
+                let v = d.lam_fv(h0w_fv, h0w_ty, value);
+                let v = d.lam_fv(k_fv, nat, v);
+                d.lam_fv(w_fv, carrier, v)
+            };
+            let anon = d.kernel().anon();
+            let name = d.kernel().name_str(anon, label);
+            out.push((
+                label,
+                d.kernel().add_declaration(Declaration::Theorem {
+                    name,
+                    uparams: vec![],
+                    ty,
+                    value: body,
+                }),
+            ));
+        }
+        out
+    }
+
+    #[test]
+    fn bucket_index_sample_is_within_one_step() {
+        let results = crate::on_a_deep_stack(bucket_close_probes);
+        for (label, res) in results {
+            if label.ends_with("Good") {
+                res.unwrap_or_else(|e| panic!("{label} must be accepted: {e:?}"));
+            } else {
+                assert!(res.is_err(), "{label} must be REFUSED");
+            }
+        }
+    }
+}
+
+/// `And left right`, the type — the companion of [`and_intro`], which this
+/// file already has but which builds only the proof.
+fn and_ty(d: &mut IntDev<'_>, p: CRealPrelude, left: ExprId, right: ExprId) -> ExprId {
+    let name = p.rat.int.logic.and;
+    d.const_app(name, &[left, right])
+}
+
+/// `rle a (Rat.add a b)` from `hb : rle Rat.zero b`.
+fn rle_add_right(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId, hb: ExprId) -> ExprId {
+    let rat = p.rat;
+    let z = rzero(d, rat);
+    let refl_a = d.lemma(rat.le_refl, &[a]);
+    let step = d.lemma(rat.add_le_add, &[a, a, z, b, refl_a, hb]);
+    let az = radd(d, a, z);
+    let ab = radd(d, a, b);
+    let eq = d.lemma(rat.add_zero, &[a]);
+    rat_eq_rewrite(d, az, a, eq, step, &|d, t| rle(d, rat, t, ab))
+}
+
+/// `rle b (Rat.add a b)` from `ha : rle Rat.zero a`.
+fn rle_add_left(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId, ha: ExprId) -> ExprId {
+    let rat = p.rat;
+    let z = rzero(d, rat);
+    let refl_b = d.lemma(rat.le_refl, &[b]);
+    let step = d.lemma(rat.add_le_add, &[z, a, b, b, ha, refl_b]);
+    let zb = radd(d, z, b);
+    let ab = radd(d, a, b);
+    let eq = d.lemma(rat.zero_add, &[b]);
+    rat_eq_rewrite(d, zb, b, eq, step, &|d, t| rle(d, rat, t, ab))
+}
+
+/// From `h : le x (add y (ofRat s))` and `hs : rle s s2`, get
+/// `le x (add y (ofRat s2))`.
+fn widen_slack(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    s: ExprId,
+    s2: ExprId,
+    h: ExprId,
+    hs: ExprId,
+) -> ExprId {
+    let os = d.const_app(p.of_rat, &[s]);
+    let os2 = d.const_app(p.of_rat, &[s2]);
+    let emb = d.lemma(p.of_rat_le, &[s, s2, hs]);
+    let refl_y = d.lemma(p.le_refl, &[y]);
+    let mono = d.lemma(p.add_le_add, &[y, y, os, os2, refl_y, emb]);
+    let ys = cadd(d, p, y, os);
+    let ys2 = cadd(d, p, y, os2);
+    d.lemma(p.le_trans, &[x, ys, ys2, h, mono])
+}
+
+/// `Eq Rat (Rat.natDivSucc (succ m) m) Rat.one` — a full mesh of `m+1` steps
+/// of `1/(m+1)` is exactly `1`.
+///
+/// The `scale`-then-`rat_unit_eq_one` half of
+/// [`nat_div_succ_inverse_pair_eq_one`], which needs the product form this
+/// caller does not.
+fn nat_div_succ_full_eq_one(d: &mut IntDev<'_>, p: CRealPrelude, m: ExprId) -> ExprId {
+    let rat = p.rat;
+    let nat = rat.int.nat;
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+    let successor = d.succ(m);
+    let whole = d.const_app(rat.nat_div_succ, &[successor, m]);
+    let unit = d.const_app(rat.nat_div_succ, &[one_nat, zero_nat]);
+    let one_val = rone(d, rat);
+
+    let scale = {
+        let deep = NatOps::mul(d, successor, zero_nat);
+        let index = NatOps::add(d, deep, m);
+        let law = d.lemma(rat.nat_div_succ_scale, &[m, zero_nat]);
+        let flatten = d.lemma(nat.zero_add, &[m]);
+        nat_rewrite_prop(d, index, m, flatten, law, &|d, t| {
+            let left = d.const_app(rat.nat_div_succ, &[successor, t]);
+            req(d, left, unit)
+        })
+    };
+    let unit_is_one = d.lemma(p.rat_unit_eq_one, &[]);
+    let (_, proof) = rchain(d, whole, &[(unit, scale), (one_val, unit_is_one)]);
+    proof
+}
+
+/// From `hm : le (ofRat (natDivSucc n kb)) (add t (ofRat three_r))`, derive
+/// `le (ofRat (natDivSucc (succ n) kb)) (add t (ofRat four_r))`, where
+/// `four_r` must be the term `Rat.add three_r (natDivSucc 1 kb)`.
+///
+/// One step of the numerator costs exactly one `1/(kb+1)` of slack, and both
+/// sides stay at the SAME denominator throughout — which is the whole reason
+/// this section buckets at grid `kb` rather than rescaling a mesh.
+#[allow(clippy::too_many_arguments)]
+fn shift_numerator_up(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    t: ExprId,
+    n: ExprId,
+    kb: ExprId,
+    three_r: ExprId,
+    four_r: ExprId,
+    hm: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let one_nat = d.num(1);
+    let nds1 = div_succ(d, p, 1, kb);
+    let ndsn = div_succ_at(d, p, n, kb);
+    let n_plus_1 = NatOps::add(d, n, one_nat);
+    let ndssn = div_succ_at(d, p, n_plus_1, kb);
+
+    let o_n = d.const_app(p.of_rat, &[ndsn]);
+    let o_1 = d.const_app(p.of_rat, &[nds1]);
+    let o_sn = d.const_app(p.of_rat, &[ndssn]);
+    let o_three = d.const_app(p.of_rat, &[three_r]);
+    let o_four = d.const_app(p.of_rat, &[four_r]);
+
+    let addo = cadd(d, p, o_n, o_1);
+    let sum_rat = radd(d, ndsn, nds1);
+    let fold = d.lemma(p.of_rat_add, &[ndsn, nds1]);
+    let fuse = d.lemma(rat.nat_div_succ_add, &[n, one_nat, kb]);
+    let left_eq = rat_eq_rewrite(d, sum_rat, ndssn, fuse, fold, &|d, x| {
+        let ox = d.const_app(p.of_rat, &[x]);
+        equiv(d, p, addo, ox)
+    });
+    // left_eq : Equiv (add o_n o_1) o_sn
+
+    let t3 = cadd(d, p, t, o_three);
+    let refl_o1 = d.lemma(p.le_refl, &[o_1]);
+    let stepped = d.lemma(p.add_le_add, &[o_n, t3, o_1, o_1, hm, refl_o1]);
+    // stepped : le (add o_n o_1) (add (add t o_three) o_1)
+
+    let three_1 = cadd(d, p, o_three, o_1);
+    let lhs_rhs = cadd(d, p, t3, o_1);
+    let t_three_1 = cadd(d, p, t, three_1);
+    let assoc = d.lemma(p.add_assoc, &[t, o_three, o_1]);
+    let fold2 = d.lemma(p.of_rat_add, &[three_r, nds1]);
+    let refl_t = d.lemma(p.equiv_refl, &[t]);
+    let inner = d.lemma(p.add_congr, &[t, t, three_1, o_four, refl_t, fold2]);
+    let t_four = cadd(d, p, t, o_four);
+    let rhs_eq = d.lemma(p.equiv_trans, &[lhs_rhs, t_three_1, t_four, assoc, inner]);
+    d.lemma(
+        p.le_congr,
+        &[addo, o_sn, lhs_rhs, t_four, left_eq, rhs_eq, stepped],
+    )
+}
+
+/// **Piece 2, the core step.** For `t` in `[0, 1]` and any `g`, a pair of `Nat`s
+/// whose proportion is within `4/(g+2)` of `t`:
+///
+/// ```text
+/// ∃ m_ac0 m_cb0, (succ m_ac0) + m_cb0 = succ g
+///              ∧ le (abs (t − ofRat (natDivSucc (succ m_ac0) (succ g))))
+///                   (ofRat four_r)
+/// ```
+///
+/// `four_r := 1/(g+2) + 1/(g+2) + 1/(g+2) + 1/(g+2)`, kept additively.
+///
+/// The numerator is `CReal.bucketIndex t (succ g)` when that is at most `g`
+/// and `g` itself otherwise — a `Nat.le_total` split, which is available
+/// because `Nat` order IS decidable even though `CReal` order is not. The
+/// `Exists` and the `Or` both eliminate into a `Prop`, which is why no
+/// witness ever has to escape into a `CReal`.
+fn unit_fraction_approx(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    t: ExprId,
+    g: ExprId,
+    h0t: ExprId,
+    h1t: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let nat = d.nat_ty();
+    let one_nat = d.num(1);
+    let kb = d.succ(g);
+    let nds1 = div_succ(d, p, 1, kb);
+    let two_r = radd(d, nds1, nds1);
+    let three_r = radd(d, nds1, two_r);
+    let four_r = radd(d, three_r, nds1);
+    let o_four = d.const_app(p.of_rat, &[four_r]);
+
+    let (upper, lower) = bucket_close_bounds(d, p, t, kb, h0t);
+    let idx = d.const_app(p.bucket_index, &[t, kb]);
+
+    // The three slack widenings, all at ONE denominator.
+    let h0_1 = d.lemma(rat.zero_le_nat_div_succ, &[one_nat, kb]);
+    let two_le_three = rle_add_left(d, p, nds1, two_r, h0_1);
+    let three_le_four = rle_add_right(d, p, three_r, nds1, h0_1);
+    let two_le_four = d.lemma(
+        rat.le_trans,
+        &[two_r, three_r, four_r, two_le_three, three_le_four],
+    );
+    let one_le_two = rle_add_right(d, p, nds1, nds1, h0_1);
+    let one_le_four = d.lemma(
+        rat.le_trans,
+        &[nds1, two_r, four_r, one_le_two, two_le_four],
+    );
+
+    // --- the statement -----------------------------------------------------
+    let predicate_at = |d: &mut IntDev<'_>, m_ac0: ExprId| -> ExprId {
+        unit_fraction_inner_pred(d, p, t, g, m_ac0)
+    };
+    let outer_predicate = unit_fraction_outer_pred(d, p, t, g);
+    let target = exists_ty(d, p, nat, outer_predicate);
+    let _ = o_four;
+
+    // Package one branch: witnesses `(m_ac0, m_cb0)`, the index equation, and
+    // the two one-sided bounds at the SAME `four_r`.
+    let package = |d: &mut IntDev<'_>,
+                   m_ac0: ExprId,
+                   m_cb0: ExprId,
+                   heq: ExprId,
+                   hu: ExprId,
+                   hl: ExprId|
+     -> ExprId {
+        let n_ac = d.succ(m_ac0);
+        let qq = div_succ_at(d, p, n_ac, kb);
+        let oqq = d.const_app(p.of_rat, &[qq]);
+        let hbound = d.lemma(p.abs_le_of_two_sided, &[t, oqq, four_r, hu, hl]);
+        let total = NatOps::add(d, n_ac, m_cb0);
+        let eq_part = d.eq(total, kb);
+        let noqq = cneg(d, p, oqq);
+        let diff = cadd(d, p, t, noqq);
+        let abs_diff = d.const_app(p.abs, &[diff]);
+        let bound_part = cle(d, p, abs_diff, o_four);
+        let paired = and_intro(d, p, eq_part, bound_part, heq, hbound);
+        let inner = predicate_at(d, m_ac0);
+        let inner_witness = exists_intro(d, p, nat, inner, m_cb0, paired);
+        exists_intro(d, p, nat, outer_predicate, m_ac0, inner_witness)
+    };
+
+    let np = d.prelude();
+    let le_ig = d.le(idx, g);
+    let le_gi = d.le(g, idx);
+    let total = d.lemma(np.le_total, &[idx, g]);
+    let or_name = p.rat.int.logic.or;
+    let or_ty = d.const_app(or_name, &[le_ig, le_gi]);
+    let motive = {
+        let h_fv = d.fresh_fvar();
+        d.lam_fv(h_fv, or_ty, target)
+    };
+
+    // --- branch 1: `bucketIndex t (succ g) <= g` ---------------------------
+    let left_minor = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let body = le_dest_elim(d, idx, g, h, target, &|d, dd, eqd| {
+            let n_ac = d.succ(idx);
+            let qq = div_succ_at(d, p, n_ac, kb);
+            let oqq = d.const_app(p.of_rat, &[qq]);
+            let hu = widen_slack(d, p, t, oqq, two_r, four_r, upper, two_le_four);
+            let hl = shift_numerator_up(d, p, t, idx, kb, three_r, four_r, lower);
+            let heq = {
+                let sum = NatOps::add(d, idx, dd);
+                let law = d.lemma(np.succ_add, &[idx, dd]);
+                // law : Eq (add (succ idx) dd) (succ (add idx dd))
+                let lhs = NatOps::add(d, n_ac, dd);
+                nat_rewrite_prop(d, sum, g, eqd, law, &|d, x| {
+                    let sx = d.succ(x);
+                    d.eq(lhs, sx)
+                })
+            };
+            package(d, idx, dd, heq, hu, hl)
+        });
+        d.lam_fv(h_fv, le_ig, body)
+    };
+
+    // --- branch 2: `g <= bucketIndex t (succ g)` ---------------------------
+    let right_minor = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let body = le_dest_elim(d, g, idx, h, target, &|d, dd, eqd| {
+            let zero_nat = d.num(0);
+            let n_ac = d.succ(g); // definitionally `kb`
+            let qq = div_succ_at(d, p, n_ac, kb);
+            let oqq = d.const_app(p.of_rat, &[qq]);
+
+            // upper: `t <= one ~ ofRat qq + ofRat (1/(kb+1))`.
+            let hu = {
+                let o_1 = d.const_app(p.of_rat, &[nds1]);
+                let sum_real = cadd(d, p, oqq, o_1);
+                let sum_rat = radd(d, qq, nds1);
+                let fold = d.lemma(p.of_rat_add, &[qq, nds1]);
+                let succ_kb = d.succ(kb);
+                let whole = div_succ_at(d, p, succ_kb, kb);
+                let fuse = d.lemma(rat.nat_div_succ_add, &[n_ac, one_nat, kb]);
+                let step1 = rat_eq_rewrite(d, sum_rat, whole, fuse, fold, &|d, x| {
+                    let ox = d.const_app(p.of_rat, &[x]);
+                    equiv(d, p, sum_real, ox)
+                });
+                // step1 : Equiv sum_real (ofRat (natDivSucc (succ kb) kb))
+                let one_rat = rone(d, rat);
+                let unit_eq = nat_div_succ_full_eq_one(d, p, kb);
+                let o_whole = d.const_app(p.of_rat, &[whole]);
+                let o_one = d.const_app(p.of_rat, &[one_rat]);
+                let step2 = rat_eq_rewrite(d, whole, one_rat, unit_eq, step1, &|d, x| {
+                    let ox = d.const_app(p.of_rat, &[x]);
+                    equiv(d, p, sum_real, ox)
+                });
+                let _ = o_whole;
+                // step2 : Equiv sum_real (ofRat Rat.one), defeq to CReal.one
+                let back = d.lemma(p.equiv_symm, &[sum_real, o_one, step2]);
+                let refl_t = d.lemma(p.equiv_refl, &[t]);
+                let raw = d.lemma(p.le_congr, &[t, t, o_one, sum_real, refl_t, back, h1t]);
+                // raw : le t (add oqq (ofRat nds1))
+                widen_slack(d, p, t, oqq, nds1, four_r, raw, one_le_four)
+            };
+
+            // lower: `natDivSucc g kb <= natDivSucc idx kb`, then one numerator step.
+            let hl = {
+                let nds_g = div_succ_at(d, p, g, kb);
+                let nds_idx = div_succ_at(d, p, idx, kb);
+                let sum = NatOps::add(d, g, dd);
+                let mono = d.lemma(rat.nat_div_succ_le_add_left, &[g, dd, kb]);
+                let mono_at = nat_rewrite_prop(d, sum, idx, eqd, mono, &|d, x| {
+                    let nx = div_succ_at(d, p, x, kb);
+                    rle(d, rat, nds_g, nx)
+                });
+                let emb = d.lemma(p.of_rat_le, &[nds_g, nds_idx, mono_at]);
+                let o_g = d.const_app(p.of_rat, &[nds_g]);
+                let o_idx = d.const_app(p.of_rat, &[nds_idx]);
+                let o_three = d.const_app(p.of_rat, &[three_r]);
+                let t3 = cadd(d, p, t, o_three);
+                let chained = d.lemma(p.le_trans, &[o_g, o_idx, t3, emb, lower]);
+                shift_numerator_up(d, p, t, g, kb, three_r, four_r, chained)
+            };
+
+            let heq = {
+                let lhs = NatOps::add(d, n_ac, zero_nat);
+                let _ = lhs;
+                d.refl(kb)
+            };
+            package(d, g, zero_nat, heq, hu, hl)
+        });
+        d.lam_fv(h_fv, le_gi, body)
+    };
+
+    let or_rec = {
+        let name = p.rat.int.logic.or_rec;
+        d.kernel().const_(name, vec![])
+    };
+    d.apply(
+        or_rec,
+        &[le_ig, le_gi, motive, left_minor, right_minor, total],
+    )
+}
+
+#[cfg(test)]
+mod unit_fraction_approx_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// The approximation and two controls in ONE build. Both controls vary a
+    /// SMALL term: the two sides of the bound's `le`, and the right-hand side
+    /// of the index equation (`g` for `succ g`). Neither touches a
+    /// `Definition`-heavy subterm, so no failing `def_eq` can run away.
+    fn unit_fraction_probes() -> Vec<(&'static str, Result<(), crate::KernelError>)> {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+        let nat = d.nat_ty();
+
+        let t_fv = d.fresh_fvar();
+        let t = d.kernel().fvar(t_fv);
+        let g_fv = d.fresh_fvar();
+        let g = d.kernel().fvar(g_fv);
+        let zero_c = czero(&mut d, p);
+        let one_c = d.kernel().const_(p.one, vec![]);
+        let h0t_ty = cle(&mut d, p, zero_c, t);
+        let h0t_fv = d.fresh_fvar();
+        let h0t = d.kernel().fvar(h0t_fv);
+        let h1t_ty = cle(&mut d, p, t, one_c);
+        let h1t_fv = d.fresh_fvar();
+        let h1t = d.kernel().fvar(h1t_fv);
+
+        let proof = unit_fraction_approx(&mut d, p, t, g, h0t, h1t);
+
+        let kb = d.succ(g);
+        let nds1 = div_succ(&mut d, p, 1, kb);
+        let two_r = radd(&mut d, nds1, nds1);
+        let three_r = radd(&mut d, nds1, two_r);
+        let four_r = radd(&mut d, three_r, nds1);
+        let o_four = d.const_app(p.of_rat, &[four_r]);
+
+        // Rebuild the three statements independently of the proof.
+        let statement = |d: &mut IntDev<'_>, denom: ExprId, flip: bool| -> ExprId {
+            let outer = {
+                let ac_fv = d.fresh_fvar();
+                let m_ac0 = d.kernel().fvar(ac_fv);
+                let inner = {
+                    let cb_fv = d.fresh_fvar();
+                    let m_cb0 = d.kernel().fvar(cb_fv);
+                    let n_ac = d.succ(m_ac0);
+                    let total = NatOps::add(d, n_ac, m_cb0);
+                    let eq_part = d.eq(total, denom);
+                    let qq = div_succ_at(d, p, n_ac, kb);
+                    let oqq = d.const_app(p.of_rat, &[qq]);
+                    let noqq = cneg(d, p, oqq);
+                    let diff = cadd(d, p, t, noqq);
+                    let abs_diff = d.const_app(p.abs, &[diff]);
+                    let bound_part = if flip {
+                        cle(d, p, o_four, abs_diff)
+                    } else {
+                        cle(d, p, abs_diff, o_four)
+                    };
+                    let body = and_ty(d, p, eq_part, bound_part);
+                    d.lam_fv(cb_fv, nat, body)
+                };
+                let body = exists_ty(d, p, nat, inner);
+                d.lam_fv(ac_fv, nat, body)
+            };
+            exists_ty(d, p, nat, outer)
+        };
+
+        let good = statement(&mut d, kb, false);
+        let bad_flip = statement(&mut d, kb, true);
+        let bad_denom = statement(&mut d, g, false);
+
+        let mut out = Vec::new();
+        for (label, concl) in [
+            ("unitFractionApproxGood", good),
+            ("unitFractionApproxFlippedBad", bad_flip),
+            ("unitFractionApproxDenomBad", bad_denom),
+        ] {
+            let ty = {
+                let t0 = d.arrow(h1t_ty, concl);
+                let t0 = d.arrow(h0t_ty, t0);
+                let t0 = d.pi_fv(g_fv, nat, t0);
+                d.pi_fv(t_fv, carrier, t0)
+            };
+            let body = {
+                let v = d.lam_fv(h1t_fv, h1t_ty, proof);
+                let v = d.lam_fv(h0t_fv, h0t_ty, v);
+                let v = d.lam_fv(g_fv, nat, v);
+                d.lam_fv(t_fv, carrier, v)
+            };
+            let anon = d.kernel().anon();
+            let name = d.kernel().name_str(anon, label);
+            out.push((
+                label,
+                d.kernel().add_declaration(Declaration::Theorem {
+                    name,
+                    uparams: vec![],
+                    ty,
+                    value: body,
+                }),
+            ));
+        }
+        out
+    }
+
+    #[test]
+    fn every_real_in_the_unit_interval_has_a_nearby_proportion() {
+        let results = crate::on_a_deep_stack(unit_fraction_probes);
+        for (label, res) in results {
+            if label.ends_with("Good") {
+                res.unwrap_or_else(|e| panic!("{label} must be accepted: {e:?}"));
+            } else {
+                assert!(res.is_err(), "{label} must be REFUSED");
+            }
+        }
+    }
+}
+
+/// `(1/(g+2), 3/(g+2), 4/(g+2))` — the slack terms, kept as SUMS of
+/// `Rat.natDivSucc 1 (succ g)` so that every comparison in this section
+/// happens at one denominator.
+fn unit_slack(d: &mut IntDev<'_>, p: CRealPrelude, g: ExprId) -> (ExprId, ExprId, ExprId) {
+    let kb = d.succ(g);
+    let nds1 = div_succ(d, p, 1, kb);
+    let two_r = radd(d, nds1, nds1);
+    let three_r = radd(d, nds1, two_r);
+    let four_r = radd(d, three_r, nds1);
+    (nds1, three_r, four_r)
+}
+
+/// `fun m_cb0 => (succ m_ac0 + m_cb0 = succ g) ∧ |t − (succ m_ac0)/(g+2)| ≤ 4/(g+2)`
+/// — [`unit_fraction_approx`]'s inner predicate, exposed so a caller can
+/// `exists_elim` it without rebuilding it by eye.
+fn unit_fraction_inner_pred(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    t: ExprId,
+    g: ExprId,
+    m_ac0: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let kb = d.succ(g);
+    let (_, _, four_r) = unit_slack(d, p, g);
+    let o_four = d.const_app(p.of_rat, &[four_r]);
+    let cb_fv = d.fresh_fvar();
+    let m_cb0 = d.kernel().fvar(cb_fv);
+    let n_ac = d.succ(m_ac0);
+    let total = NatOps::add(d, n_ac, m_cb0);
+    let eq_part = d.eq(total, kb);
+    let qq = div_succ_at(d, p, n_ac, kb);
+    let oqq = d.const_app(p.of_rat, &[qq]);
+    let noqq = cneg(d, p, oqq);
+    let diff = cadd(d, p, t, noqq);
+    let abs_diff = d.const_app(p.abs, &[diff]);
+    let bound_part = cle(d, p, abs_diff, o_four);
+    let body = and_ty(d, p, eq_part, bound_part);
+    d.lam_fv(cb_fv, nat, body)
+}
+
+/// [`unit_fraction_approx`]'s outer predicate.
+fn unit_fraction_outer_pred(d: &mut IntDev<'_>, p: CRealPrelude, t: ExprId, g: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let ac_fv = d.fresh_fvar();
+    let m_ac0 = d.kernel().fvar(ac_fv);
+    let inner = unit_fraction_inner_pred(d, p, t, g, m_ac0);
+    let body = exists_ty(d, p, nat, inner);
+    d.lam_fv(ac_fv, nat, body)
+}
+
+/// `Equiv (mul t (b − a)) (c − a)` for `t := ` [`split_fraction`] — the
+/// inverse cancels, so scaling the fraction back by the width returns the
+/// residue it was formed from.
+fn split_fraction_times_width(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    k: ExprId,
+    hpos: ExprId,
+) -> ExprId {
+    let w = width_of(d, p, a, b);
+    let inv_w = d.const_app(p.inv, &[w, k, hpos]);
+    let ca = width_of(d, p, a, c);
+    let t = cmul(d, p, inv_w, ca);
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    let start = cmul(d, p, t, w);
+    let ca_inv = cmul(d, p, ca, inv_w);
+    let s1 = cmul(d, p, ca_inv, w);
+    let comm_in = d.lemma(p.mul_comm, &[inv_w, ca]);
+    let refl_w = d.lemma(p.equiv_refl, &[w]);
+    let h1 = d.lemma(p.mul_congr, &[t, ca_inv, w, w, comm_in, refl_w]);
+
+    let inv_w_w = cmul(d, p, inv_w, w);
+    let s2 = cmul(d, p, ca, inv_w_w);
+    let h2 = d.lemma(p.mul_assoc, &[ca, inv_w, w]);
+
+    let unit = {
+        let w_inv_w = cmul(d, p, w, inv_w);
+        let comm = d.lemma(p.mul_comm, &[inv_w, w]);
+        let cancel = d.lemma(p.mul_inv_cancel, &[w, k, hpos]);
+        d.lemma(p.equiv_trans, &[inv_w_w, w_inv_w, one_c, comm, cancel])
+    };
+    let s3 = cmul(d, p, ca, one_c);
+    let refl_ca = d.lemma(p.equiv_refl, &[ca]);
+    let h3 = d.lemma(p.mul_congr, &[ca, ca, inv_w_w, one_c, refl_ca, unit]);
+    let h4 = d.lemma(p.mul_one, &[ca]);
+
+    echain(d, p, start, &[(s1, h1), (s2, h2), (s3, h3), (ca, h4)])
+}
+
+/// `Equiv (mul (ofNat n) (ofRat (natDivSucc 1 kb))) (ofRat (natDivSucc n kb))`
+/// — the same `ofRat_mul` + `natDivSucc_mul` + `mul_one` route
+/// [`mesh_inverse_identity`] takes, at a symbolic numerator instead of the
+/// cancelling one.
+fn of_nat_times_frac(d: &mut IntDev<'_>, p: CRealPrelude, n: ExprId, kb: ExprId) -> ExprId {
+    let rat = p.rat;
+    let nat = rat.int.nat;
+    let one_nat = d.num(1);
+    let zero_nat = d.num(0);
+    let whole = d.const_app(rat.nat_div_succ, &[n, zero_nat]);
+    let frac = d.const_app(rat.nat_div_succ, &[one_nat, kb]);
+    let qq = d.const_app(rat.nat_div_succ, &[n, kb]);
+
+    let embed_whole = embed(d, p, whole);
+    let embed_frac = embed(d, p, frac);
+    let product_real = cmul(d, p, embed_whole, embed_frac);
+    let of_rat_mul_step = d.lemma(p.of_rat_mul, &[whole, frac]);
+
+    let product_rat = rmul(d, whole, frac);
+    let scaled = NatOps::mul(d, n, one_nat);
+    let scaled_frac = d.const_app(rat.nat_div_succ, &[scaled, kb]);
+    let fuse = d.lemma(rat.nat_div_succ_mul, &[n, one_nat, kb]);
+    let collapse = {
+        let identity = d.lemma(nat.mul_one, &[n]);
+        nat_eq_to_rat(d, scaled, n, identity, &|d, x| {
+            d.const_app(rat.nat_div_succ, &[x, kb])
+        })
+    };
+    let (_, eqr) = rchain(d, product_rat, &[(scaled_frac, fuse), (qq, collapse)]);
+    rat_eq_rewrite(d, product_rat, qq, eqr, of_rat_mul_step, &|d, x| {
+        let ox = embed(d, p, x);
+        equiv(d, p, product_real, ox)
+    })
+}
+
+/// `Equiv (split_point_base-at-`kb`) (add a (mul (ofRat (natDivSucc n_ac kb)) (b − a)))`.
+///
+/// Pure `mul_assoc`/`mul_comm` around [`of_nat_times_frac`]; the mesh count
+/// is fixed at `kb` here and the caller transports it onto its own
+/// `succ m_ac0 + m_cb0` afterwards.
+fn split_point_as_fraction(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    n_ac: ExprId,
+    kb: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let one_nat = d.num(1);
+    let w = width_of(d, p, a, b);
+    let frac = d.const_app(rat.nat_div_succ, &[one_nat, kb]);
+    let ofrac = embed(d, p, frac);
+    let delta = cmul(d, p, w, ofrac);
+    let x = d.const_app(p.of_nat, &[n_ac]);
+    let qq = d.const_app(rat.nat_div_succ, &[n_ac, kb]);
+    let oqq = embed(d, p, qq);
+
+    let start = cmul(d, p, x, delta);
+    let xw = cmul(d, p, x, w);
+    let s1 = cmul(d, p, xw, ofrac);
+    let h1 = {
+        let assoc = d.lemma(p.mul_assoc, &[x, w, ofrac]);
+        d.lemma(p.equiv_symm, &[s1, start, assoc])
+    };
+    let wx = cmul(d, p, w, x);
+    let s2 = cmul(d, p, wx, ofrac);
+    let h2 = {
+        let comm = d.lemma(p.mul_comm, &[x, w]);
+        let refl_frac = d.lemma(p.equiv_refl, &[ofrac]);
+        d.lemma(p.mul_congr, &[xw, wx, ofrac, ofrac, comm, refl_frac])
+    };
+    let xfrac = cmul(d, p, x, ofrac);
+    let s3 = cmul(d, p, w, xfrac);
+    let h3 = d.lemma(p.mul_assoc, &[w, x, ofrac]);
+    let s4 = cmul(d, p, w, oqq);
+    let h4 = {
+        let refl_w = d.lemma(p.equiv_refl, &[w]);
+        let inner = of_nat_times_frac(d, p, n_ac, kb);
+        d.lemma(p.mul_congr, &[w, w, xfrac, oqq, refl_w, inner])
+    };
+    let s5 = cmul(d, p, oqq, w);
+    let h5 = d.lemma(p.mul_comm, &[w, oqq]);
+    let inner_eq = echain(
+        d,
+        p,
+        start,
+        &[(s1, h1), (s2, h2), (s3, h3), (s4, h4), (s5, h5)],
+    );
+    let refl_a = d.lemma(p.equiv_refl, &[a]);
+    d.lemma(p.add_congr, &[a, a, start, s5, refl_a, inner_eq])
+}
+
+/// `Equiv (c − (a + q·(b−a))) ((t − q)·(b−a))` for `t := ` [`split_fraction`].
+#[allow(clippy::too_many_arguments)]
+fn split_residue_factors(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    k: ExprId,
+    hpos: ExprId,
+    oqq: ExprId,
+) -> ExprId {
+    let w = width_of(d, p, a, b);
+    let ca = width_of(d, p, a, c);
+    let t = split_fraction(d, p, a, b, c, k, hpos);
+    let qw = cmul(d, p, oqq, w);
+    let nqw = cneg(d, p, qw);
+    let point = cadd(d, p, a, qw);
+    let npoint0 = cneg(d, p, point);
+    let lhs = cadd(d, p, c, npoint0);
+
+    // lhs ~ (c − a) + (−(q·w))
+    let na = cneg(d, p, a);
+    let split_neg = neg_add_local(d, p, a, qw); // Equiv (neg point) (add na nqw)
+    let mid = {
+        let refl_c = d.lemma(p.equiv_refl, &[c]);
+        let npoint = cneg(d, p, point);
+        let na_nqw = cadd(d, p, na, nqw);
+        d.lemma(p.add_congr, &[c, c, npoint, na_nqw, refl_c, split_neg])
+    };
+    let na_nqw = cadd(d, p, na, nqw);
+    let s1 = cadd(d, p, c, na_nqw);
+    let target = cadd(d, p, ca, nqw);
+    let regroup = {
+        let assoc = d.lemma(p.add_assoc, &[c, na, nqw]);
+        d.lemma(p.equiv_symm, &[target, s1, assoc])
+    };
+    let left_chain = echain(d, p, lhs, &[(s1, mid), (target, regroup)]);
+
+    // (t − q)·w ~ (c − a) + (−(q·w))
+    let noqq = cneg(d, p, oqq);
+    let u = cadd(d, p, t, noqq);
+    let start = cmul(d, p, u, w);
+    let tw = cmul(d, p, t, w);
+    let nqq_w = cmul(d, p, noqq, w);
+    let r1 = cadd(d, p, tw, nqq_w);
+    let h1 = right_distrib(d, p, t, noqq, w);
+    let r2 = cadd(d, p, ca, nqq_w);
+    let h2 = {
+        let tw_eq = split_fraction_times_width(d, p, a, b, c, k, hpos);
+        let refl_r = d.lemma(p.equiv_refl, &[nqq_w]);
+        d.lemma(p.add_congr, &[tw, ca, nqq_w, nqq_w, tw_eq, refl_r])
+    };
+    let h3 = {
+        let move_neg = neg_mul_left_local(d, p, oqq, w); // Equiv (mul (neg oqq) w) (neg (mul oqq w))
+        let refl_l = d.lemma(p.equiv_refl, &[ca]);
+        d.lemma(p.add_congr, &[ca, ca, nqq_w, nqw, refl_l, move_neg])
+    };
+    let right_chain = echain(d, p, start, &[(r1, h1), (r2, h2), (target, h3)]);
+    let back = d.lemma(p.equiv_symm, &[start, target, right_chain]);
+    d.lemma(p.equiv_trans, &[lhs, target, start, left_chain, back])
+}
+
+/// **Piece 2, complete.** For an arbitrary `c` in `[a, b]` and a `PosBound`
+/// on the width, a base split point of [`declare_integral_split`]'s own
+/// proportion family within `4/(g+2)·|b−a|` of `c`, for every `g`:
+///
+/// ```text
+/// ∃ m_ac0 m_cb0,
+///   le (abs (c − split_point_base a b m_ac0 m_cb0))
+///      (mul (ofRat (4/(g+2))) (abs (b − a)))
+/// ```
+///
+/// The `PosBound` is load-bearing and cannot be dropped here: the fraction
+/// `t := (c−a)/(b−a)` is what locates `c` at all, and `CReal.inv` takes the
+/// positivity witness as an explicit argument. See this file's module
+/// documentation for the case split that removes it, and what that costs.
+#[allow(clippy::too_many_arguments)]
+fn split_point_approx_proof(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    k: ExprId,
+    hpos: ExprId,
+    hac: ExprId,
+    hcb: ExprId,
+    g: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let kb = d.succ(g);
+    let (_, _, four_r) = unit_slack(d, p, g);
+    let o_four = d.const_app(p.of_rat, &[four_r]);
+    let w = width_of(d, p, a, b);
+    let abs_w = d.const_app(p.abs, &[w]);
+    let bound = cmul(d, p, o_four, abs_w);
+
+    let t = split_fraction(d, p, a, b, c, k, hpos);
+    let h0t = split_fraction_nonneg(d, p, a, b, c, k, hpos, hac);
+    let h1t = split_fraction_le_one(d, p, a, b, c, k, hpos, hcb);
+    let approx = unit_fraction_approx(d, p, t, g, h0t, h1t);
+
+    // The outer statement.
+    let out_inner_pred = |d: &mut IntDev<'_>, m_ac0: ExprId| -> ExprId {
+        let cb_fv = d.fresh_fvar();
+        let m_cb0 = d.kernel().fvar(cb_fv);
+        let point = split_point_base(d, p, a, b, m_ac0, m_cb0);
+        let npoint = cneg(d, p, point);
+        let diff = cadd(d, p, c, npoint);
+        let abs_diff = d.const_app(p.abs, &[diff]);
+        let body = cle(d, p, abs_diff, bound);
+        d.lam_fv(cb_fv, nat, body)
+    };
+    let out_outer_pred = {
+        let ac_fv = d.fresh_fvar();
+        let m_ac0 = d.kernel().fvar(ac_fv);
+        let inner = out_inner_pred(d, m_ac0);
+        let body = exists_ty(d, p, nat, inner);
+        d.lam_fv(ac_fv, nat, body)
+    };
+    let target = exists_ty(d, p, nat, out_outer_pred);
+
+    let outer_pred_in = unit_fraction_outer_pred(d, p, t, g);
+    let minor = {
+        let ac_fv = d.fresh_fvar();
+        let m_ac0 = d.kernel().fvar(ac_fv);
+        let inner_pred = unit_fraction_inner_pred(d, p, t, g, m_ac0);
+        let hyp_ty = exists_ty(d, p, nat, inner_pred);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        let minor2 = {
+            let cb_fv = d.fresh_fvar();
+            let m_cb0 = d.kernel().fvar(cb_fv);
+            let n_ac = d.succ(m_ac0);
+            let total = NatOps::add(d, n_ac, m_cb0);
+            let eq_part = d.eq(total, kb);
+            let qq = div_succ_at(d, p, n_ac, kb);
+            let oqq = d.const_app(p.of_rat, &[qq]);
+            let noqq = cneg(d, p, oqq);
+            let udiff = cadd(d, p, t, noqq);
+            let abs_udiff = d.const_app(p.abs, &[udiff]);
+            let bound_part = cle(d, p, abs_udiff, o_four);
+            let hyp2_ty = and_ty(d, p, eq_part, bound_part);
+            let h2_fv = d.fresh_fvar();
+            let h2 = d.kernel().fvar(h2_fv);
+            let logic = p.rat.int.logic;
+            let heq = d.const_app(logic.and_left, &[eq_part, bound_part, h2]);
+            let hb = d.const_app(logic.and_right, &[eq_part, bound_part, h2]);
+
+            // The bound at mesh count `kb`, then transported onto `total`.
+            let refl_absw = d.lemma(p.le_refl, &[abs_w]);
+            let scaled = d.lemma(
+                p.abs_mul_le_of_bounds,
+                &[udiff, w, o_four, abs_w, hb, refl_absw],
+            );
+            // scaled : le (abs (mul udiff w)) bound
+            let residue = split_residue_factors(d, p, a, b, c, k, hpos, oqq);
+            // residue : Equiv (c − (a + q·w)) ((t − q)·w)
+            let point_frac = {
+                let qw = cmul(d, p, oqq, w);
+                cadd(d, p, a, qw)
+            };
+            let as_fraction = split_point_as_fraction(d, p, a, b, n_ac, kb);
+            // as_fraction : Equiv (split_point at kb) point_frac
+            let point_kb = split_point_base(d, p, a, b, m_ac0, m_cb0);
+            let _ = point_kb;
+            let raw_point = {
+                let frac_delta = delta_of(d, p, a, b, kb);
+                let x = d.const_app(p.of_nat, &[n_ac]);
+                let shift_term = cmul(d, p, x, frac_delta);
+                cadd(d, p, a, shift_term)
+            };
+            let lhs_at_kb = {
+                let npoint = cneg(d, p, raw_point);
+                cadd(d, p, c, npoint)
+            };
+            let lhs_frac = {
+                let npoint = cneg(d, p, point_frac);
+                cadd(d, p, c, npoint)
+            };
+            let move_point = {
+                let neg_eq = d.lemma(p.neg_congr, &[raw_point, point_frac, as_fraction]);
+                let refl_c = d.lemma(p.equiv_refl, &[c]);
+                let n_raw = cneg(d, p, raw_point);
+                let n_frac = cneg(d, p, point_frac);
+                d.lemma(p.add_congr, &[c, c, n_raw, n_frac, refl_c, neg_eq])
+            };
+            let uw = cmul(d, p, udiff, w);
+            let whole_eq = d.lemma(
+                p.equiv_trans,
+                &[lhs_at_kb, lhs_frac, uw, move_point, residue],
+            );
+            let abs_lhs = d.const_app(p.abs, &[lhs_at_kb]);
+            let abs_uw = d.const_app(p.abs, &[uw]);
+            let abs_eq = d.lemma(p.abs_congr, &[lhs_at_kb, uw, whole_eq]);
+            let back = d.lemma(p.equiv_symm, &[abs_lhs, abs_uw, abs_eq]);
+            let refl_bound = d.lemma(p.equiv_refl, &[bound]);
+            let proof_kb = d.lemma(
+                p.le_congr,
+                &[abs_uw, abs_lhs, bound, bound, back, refl_bound, scaled],
+            );
+            // proof_kb : le (abs (c − raw_point)) bound
+
+            let proof_at = {
+                let symm_eq = {
+                    let refl_total = d.refl(total);
+                    nat_rewrite_prop(d, total, kb, heq, refl_total, &|d, x| d.eq(x, total))
+                };
+                // symm_eq : Eq Nat kb total
+                nat_rewrite_prop(d, kb, total, symm_eq, proof_kb, &|d, x| {
+                    let frac_delta = delta_of(d, p, a, b, x);
+                    let xx = d.const_app(p.of_nat, &[n_ac]);
+                    let shift_term = cmul(d, p, xx, frac_delta);
+                    let point = cadd(d, p, a, shift_term);
+                    let npoint = cneg(d, p, point);
+                    let diff = cadd(d, p, c, npoint);
+                    let abs_diff = d.const_app(p.abs, &[diff]);
+                    cle(d, p, abs_diff, bound)
+                })
+            };
+
+            let out_inner = out_inner_pred(d, m_ac0);
+            let witness = exists_intro(d, p, nat, out_inner, m_cb0, proof_at);
+            let full = exists_intro(d, p, nat, out_outer_pred, m_ac0, witness);
+            let with_h2 = d.lam_fv(h2_fv, hyp2_ty, full);
+            d.lam_fv(cb_fv, nat, with_h2)
+        };
+
+        let body = exists_elim(d, inner_pred, target, h, minor2);
+        let with_h = d.lam_fv(h_fv, hyp_ty, body);
+        d.lam_fv(ac_fv, nat, with_h)
+    };
+    exists_elim(d, outer_pred_in, target, approx, minor)
+}
+
+#[cfg(test)]
+mod split_point_approx_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// The whole of piece 2 and its flipped control in ONE build. The control
+    /// transposes the two sides of the bound's `le` — a small term on each
+    /// side, neither `Definition`-heavy — and is genuinely false (at `g := 0`,
+    /// `a := b := c`, the residue is `0` and the bound is `0`, so the flipped
+    /// form claims `0 <= 0` … which holds; at `a := 0, b := c := 1, g := 0`
+    /// the split point is `1/2`, the residue `1/2`, the bound `2`, and
+    /// `2 <= 1/2` is false).
+    fn split_point_approx_probes() -> Vec<(&'static str, Result<(), crate::KernelError>)> {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+        let nat = d.nat_ty();
+
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let g_fv = d.fresh_fvar();
+        let g = d.kernel().fvar(g_fv);
+
+        let w = width_of(&mut d, p, a, b);
+        let hpos_ty = d.const_app(p.pos_bound, &[w, k]);
+        let hpos_fv = d.fresh_fvar();
+        let hpos = d.kernel().fvar(hpos_fv);
+        let hac_ty = cle(&mut d, p, a, c);
+        let hac_fv = d.fresh_fvar();
+        let hac = d.kernel().fvar(hac_fv);
+        let hcb_ty = cle(&mut d, p, c, b);
+        let hcb_fv = d.fresh_fvar();
+        let hcb = d.kernel().fvar(hcb_fv);
+
+        let proof = split_point_approx_proof(&mut d, p, a, b, c, k, hpos, hac, hcb, g);
+
+        let (_, _, four_r) = unit_slack(&mut d, p, g);
+        let o_four = d.const_app(p.of_rat, &[four_r]);
+        let abs_w = d.const_app(p.abs, &[w]);
+        let bound = cmul(&mut d, p, o_four, abs_w);
+
+        let statement = |d: &mut IntDev<'_>, flip: bool| -> ExprId {
+            let outer = {
+                let ac_fv = d.fresh_fvar();
+                let m_ac0 = d.kernel().fvar(ac_fv);
+                let inner = {
+                    let cb_fv = d.fresh_fvar();
+                    let m_cb0 = d.kernel().fvar(cb_fv);
+                    let point = split_point_base(d, p, a, b, m_ac0, m_cb0);
+                    let npoint = cneg(d, p, point);
+                    let diff = cadd(d, p, c, npoint);
+                    let abs_diff = d.const_app(p.abs, &[diff]);
+                    let body = if flip {
+                        cle(d, p, bound, abs_diff)
+                    } else {
+                        cle(d, p, abs_diff, bound)
+                    };
+                    d.lam_fv(cb_fv, nat, body)
+                };
+                let body = exists_ty(d, p, nat, inner);
+                d.lam_fv(ac_fv, nat, body)
+            };
+            exists_ty(d, p, nat, outer)
+        };
+
+        let good = statement(&mut d, false);
+        let bad = statement(&mut d, true);
+
+        let mut out = Vec::new();
+        for (label, concl) in [
+            ("splitPointApproxGood", good),
+            ("splitPointApproxFlippedBad", bad),
+        ] {
+            let ty = {
+                let t0 = d.pi_fv(g_fv, nat, concl);
+                let t0 = d.arrow(hcb_ty, t0);
+                let t0 = d.arrow(hac_ty, t0);
+                let t0 = d.pi_fv(hpos_fv, hpos_ty, t0);
+                let t0 = d.pi_fv(k_fv, nat, t0);
+                let t0 = d.pi_fv(c_fv, carrier, t0);
+                let t0 = d.pi_fv(b_fv, carrier, t0);
+                d.pi_fv(a_fv, carrier, t0)
+            };
+            let body = {
+                let v = d.lam_fv(g_fv, nat, proof);
+                let v = d.lam_fv(hcb_fv, hcb_ty, v);
+                let v = d.lam_fv(hac_fv, hac_ty, v);
+                let v = d.lam_fv(hpos_fv, hpos_ty, v);
+                let v = d.lam_fv(k_fv, nat, v);
+                let v = d.lam_fv(c_fv, carrier, v);
+                let v = d.lam_fv(b_fv, carrier, v);
+                d.lam_fv(a_fv, carrier, v)
+            };
+            let anon = d.kernel().anon();
+            let name = d.kernel().name_str(anon, label);
+            out.push((
+                label,
+                d.kernel().add_declaration(Declaration::Theorem {
+                    name,
+                    uparams: vec![],
+                    ty,
+                    value: body,
+                }),
+            ));
+        }
+        out
+    }
+
+    #[test]
+    fn an_arbitrary_split_point_is_approximated_by_the_proportion_family() {
+        let results = crate::on_a_deep_stack(split_point_approx_probes);
+        for (label, res) in results {
+            if label.ends_with("Good") {
+                res.unwrap_or_else(|e| panic!("{label} must be accepted: {e:?}"));
+            } else {
+                assert!(res.is_err(), "{label} must be REFUSED");
+            }
+        }
+    }
+}
+
+/// Admit `CReal.splitPointApprox`. See this section's own module
+/// documentation for the route and for why the `PosBound` cannot be dropped
+/// at this stratum.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_split_point_approx(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+
+    let w = width_of(d, p, a, b);
+    let hpos_ty = d.const_app(p.pos_bound, &[w, k]);
+    let hpos_fv = d.fresh_fvar();
+    let hpos = d.kernel().fvar(hpos_fv);
+    let hac_ty = cle(d, p, a, c);
+    let hac_fv = d.fresh_fvar();
+    let hac = d.kernel().fvar(hac_fv);
+    let hcb_ty = cle(d, p, c, b);
+    let hcb_fv = d.fresh_fvar();
+    let hcb = d.kernel().fvar(hcb_fv);
+
+    let proof = split_point_approx_proof(d, p, a, b, c, k, hpos, hac, hcb, g);
+
+    let (_, _, four_r) = unit_slack(d, p, g);
+    let o_four = d.const_app(p.of_rat, &[four_r]);
+    let abs_w = d.const_app(p.abs, &[w]);
+    let bound = cmul(d, p, o_four, abs_w);
+
+    let concl = {
+        let outer = {
+            let ac_fv = d.fresh_fvar();
+            let m_ac0 = d.kernel().fvar(ac_fv);
+            let inner = {
+                let cb_fv = d.fresh_fvar();
+                let m_cb0 = d.kernel().fvar(cb_fv);
+                let point = split_point_base(d, p, a, b, m_ac0, m_cb0);
+                let npoint = cneg(d, p, point);
+                let diff = cadd(d, p, c, npoint);
+                let abs_diff = d.const_app(p.abs, &[diff]);
+                let body = cle(d, p, abs_diff, bound);
+                d.lam_fv(cb_fv, nat, body)
+            };
+            let body = exists_ty(d, p, nat, inner);
+            d.lam_fv(ac_fv, nat, body)
+        };
+        exists_ty(d, p, nat, outer)
+    };
+
+    let ty = {
+        let t = d.pi_fv(g_fv, nat, concl);
+        let t = d.arrow(hcb_ty, t);
+        let t = d.arrow(hac_ty, t);
+        let t = d.pi_fv(hpos_fv, hpos_ty, t);
+        let t = d.pi_fv(k_fv, nat, t);
+        let t = d.pi_fv(c_fv, carrier, t);
+        let t = d.pi_fv(b_fv, carrier, t);
+        d.pi_fv(a_fv, carrier, t)
+    };
+    let value = {
+        let v = d.lam_fv(g_fv, nat, proof);
+        let v = d.lam_fv(hcb_fv, hcb_ty, v);
+        let v = d.lam_fv(hac_fv, hac_ty, v);
+        let v = d.lam_fv(hpos_fv, hpos_ty, v);
+        let v = d.lam_fv(k_fv, nat, v);
+        let v = d.lam_fv(c_fv, carrier, v);
+        let v = d.lam_fv(b_fv, carrier, v);
+        d.lam_fv(a_fv, carrier, v)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.split_point_approx,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- piece 1, MESH-UNIFORM: the `(succ m)` factor cancelled ---------------
+//
+// `riemann_sum_endpoints_le_uniform`'s bound carries an explicit `succ m`
+// factor, so a caller cannot drive the mesh to infinity with it. Feeding the
+// two slack parameters in the form `<real>·Δ` cancels that factor exactly
+// (`mesh_inverse_identity`), leaving a bound that does not mention `m` at
+// all — which is the form the `equiv_zero_of_small` assembly needs.
+
+/// `le (abs (ofRat (natDivSucc 1 m))) (ofRat (natDivSucc 1 m))` — the mesh
+/// fraction bounds its own absolute value.
+fn abs_frac_le_frac(d: &mut IntDev<'_>, p: CRealPrelude, m: ExprId) -> ExprId {
+    let rat = p.rat;
+    let one_nat = d.num(1);
+    let q = d.const_app(rat.nat_div_succ, &[one_nat, m]);
+    let frac = embed(d, p, q);
+
+    let hq = d.lemma(rat.zero_le_nat_div_succ, &[one_nat, m]);
+    let rz = rzero(d, rat);
+    let nq = rneg(d, q);
+    let nz = rneg(d, rz);
+    let neg_mono = d.lemma(rat.neg_le_neg, &[rz, q, hq]);
+    let neg_zero = d.lemma(rat.neg_zero, &[]);
+    let to_zero = rat_eq_rewrite(d, nz, rz, neg_zero, neg_mono, &|d, t| rle(d, rat, nq, t));
+    let nq_le_q = d.lemma(rat.le_trans, &[nq, rz, q, to_zero, hq]);
+    let emb = d.lemma(p.of_rat_le, &[nq, q, nq_le_q]);
+    let onq = embed(d, p, nq);
+    let nfrac = cneg(d, p, frac);
+    let of_neg = d.lemma(p.of_rat_neg, &[q]); // Equiv (neg frac) onq
+    let back = d.lemma(p.equiv_symm, &[nfrac, onq, of_neg]);
+    let refl_frac = d.lemma(p.equiv_refl, &[frac]);
+    let neg_le = d.lemma(p.le_congr, &[onq, nfrac, frac, frac, back, refl_frac, emb]);
+    let self_le = d.lemma(p.le_refl, &[frac]);
+    d.lemma(p.abs_le, &[frac, frac, self_le, neg_le])
+}
+
+/// `Equiv (mul ((y−x) − (y2−x2)) Δ) (Δ₁ − Δ₂)` for the two mesh steps at the
+/// SAME count `m` — the two widths' difference, scaled once.
+fn delta_diff_factors(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    x2: ExprId,
+    y2: ExprId,
+    m: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let one_nat = d.num(1);
+    let q = d.const_app(rat.nat_div_succ, &[one_nat, m]);
+    let frac = embed(d, p, q);
+    let w1 = width_of(d, p, x, y);
+    let w2 = width_of(d, p, x2, y2);
+    let d1 = cmul(d, p, w1, frac);
+    let d2 = cmul(d, p, w2, frac);
+    let nd2 = cneg(d, p, d2);
+    let lhs = cadd(d, p, d1, nd2);
+
+    let nw2 = cneg(d, p, w2);
+    let wd = cadd(d, p, w1, nw2);
+    let start = cmul(d, p, wd, frac);
+    let nw2_frac = cmul(d, p, nw2, frac);
+    let s1 = cadd(d, p, d1, nw2_frac);
+    let h1 = right_distrib(d, p, w1, nw2, frac);
+    let h2 = {
+        let move_neg = neg_mul_left_local(d, p, w2, frac);
+        let refl_d1 = d.lemma(p.equiv_refl, &[d1]);
+        d.lemma(p.add_congr, &[d1, d1, nw2_frac, nd2, refl_d1, move_neg])
+    };
+    echain(d, p, start, &[(s1, h1), (lhs, h2)])
+}
+
+/// [`riemann_sum_endpoints_le_uniform`] with the mesh count CANCELLED:
+///
+/// ```text
+/// … → le (abs (riemannSum F x y m − riemannSum F x2 y2 m))
+///        (add (mul M dw) (mul (1/(e+1)) w2b))
+/// ```
+///
+/// `dw` bounds `|(y−x) − (y2−x2)|` and `w2b` bounds `|y2−x2|` — both about
+/// the INTERVALS, with `m` nowhere in the bound. `M := ofRat (natDivSucc
+/// (succ k) 0)`, `bounded_on_unfold`'s own bound at `derivative.rs`'s
+/// `mag_bound k` recipe.
+#[allow(clippy::too_many_arguments)]
+fn riemann_sum_endpoints_le_mesh_uniform(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    aa: ExprId,
+    bb: ExprId,
+    u: ExprId,
+    k: ExprId,
+    hb: ExprId,
+    x: ExprId,
+    y: ExprId,
+    x2: ExprId,
+    y2: ExprId,
+    m: ExprId,
+    e: ExprId,
+    dw: ExprId,
+    w2b: ExprId,
+    bx: ExprId,
+    bw: ExprId,
+    hxy: ExprId,
+    hx2y2: ExprId,
+    hax: ExprId,
+    hyb: ExprId,
+    hax2: ExprId,
+    hy2b: ExprId,
+    hdw: ExprId,
+    hw2b: ExprId,
+    hbx: ExprId,
+    hbw: ExprId,
+    hfit: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let one_nat = d.num(1);
+    let zero_nat = d.num(0);
+    let q = d.const_app(rat.nat_div_succ, &[one_nat, m]);
+    let frac = embed(d, p, q);
+    let w1 = width_of(d, p, x, y);
+    let w2 = width_of(d, p, x2, y2);
+    let nw2 = cneg(d, p, w2);
+    let wd = cadd(d, p, w1, nw2);
+
+    let dd = cmul(d, p, dw, frac);
+    let d2b = cmul(d, p, w2b, frac);
+    let habs_frac = abs_frac_le_frac(d, p, m);
+
+    // `hdd : |Δ₁ − Δ₂| ≤ dw·Δ`.
+    let hdd = {
+        let scaled = cmul(d, p, wd, frac);
+        let raw = d.lemma(
+            p.abs_mul_le_of_bounds,
+            &[wd, frac, dw, frac, hdw, habs_frac],
+        );
+        // raw : le (abs (mul wd frac)) dd
+        let factored = delta_diff_factors(d, p, x, y, x2, y2, m);
+        let d1 = cmul(d, p, w1, frac);
+        let d2 = cmul(d, p, w2, frac);
+        let nd2 = cneg(d, p, d2);
+        let target = cadd(d, p, d1, nd2);
+        let abs_scaled = d.const_app(p.abs, &[scaled]);
+        let abs_target = d.const_app(p.abs, &[target]);
+        let abs_eq = d.lemma(p.abs_congr, &[scaled, target, factored]);
+        let refl_dd = d.lemma(p.equiv_refl, &[dd]);
+        d.lemma(
+            p.le_congr,
+            &[abs_scaled, abs_target, dd, dd, abs_eq, refl_dd, raw],
+        )
+    };
+    // `hd2 : |Δ₂| ≤ w2b·Δ` — `delta_of x2 y2 m` IS `mul w2 frac`.
+    let hd2 = d.lemma(
+        p.abs_mul_le_of_bounds,
+        &[w2, frac, w2b, frac, hw2b, habs_frac],
+    );
+
+    let raw = riemann_sum_endpoints_le_uniform(
+        d, p, f, aa, bb, u, k, hb, x, y, x2, y2, m, e, dd, d2b, bx, bw, hxy, hx2y2, hax, hyb, hax2,
+        hy2b, hdd, hd2, hbx, hbw, hfit,
+    );
+
+    // --- cancel the `succ m` factor ---------------------------------------
+    let mbound = {
+        let succ_k = d.succ(k);
+        let qq = d.const_app(rat.nat_div_succ, &[succ_k, zero_nat]);
+        embed(d, p, qq)
+    };
+    let eps = {
+        let qq = d.const_app(rat.nat_div_succ, &[one_nat, e]);
+        embed(d, p, qq)
+    };
+    let kb = {
+        let left = cmul(d, p, mbound, dd);
+        let right = cmul(d, p, eps, d2b);
+        cadd(d, p, left, right)
+    };
+    let big_a = cmul(d, p, mbound, dw);
+    let big_b = cmul(d, p, eps, w2b);
+    let s_term = cadd(d, p, big_a, big_b);
+
+    let kb_eq = {
+        let a_frac = cmul(d, p, big_a, frac);
+        let b_frac = cmul(d, p, big_b, frac);
+        let left = cmul(d, p, mbound, dd);
+        let right = cmul(d, p, eps, d2b);
+        let assoc_a = d.lemma(p.mul_assoc, &[mbound, dw, frac]);
+        let back_a = d.lemma(p.equiv_symm, &[a_frac, left, assoc_a]);
+        let assoc_b = d.lemma(p.mul_assoc, &[eps, w2b, frac]);
+        let back_b = d.lemma(p.equiv_symm, &[b_frac, right, assoc_b]);
+        let sum_frac = cadd(d, p, a_frac, b_frac);
+        let split = d.lemma(p.add_congr, &[left, a_frac, right, b_frac, back_a, back_b]);
+        // split : Equiv kb (add a_frac b_frac)
+        let distrib = right_distrib(d, p, big_a, big_b, frac);
+        let s_frac = cmul(d, p, s_term, frac);
+        let back = d.lemma(p.equiv_symm, &[s_frac, sum_frac, distrib]);
+        d.lemma(p.equiv_trans, &[kb, sum_frac, s_frac, split, back])
+        // : Equiv kb (mul s_term frac)
+    };
+
+    let n = d.succ(m);
+    let n_real = d.const_app(p.of_nat, &[n]);
+    let bound = cmul(d, p, n_real, kb);
+    let s_frac = cmul(d, p, s_term, frac);
+    let n_s_frac = cmul(d, p, n_real, s_frac);
+    let step0 = {
+        let refl_n = d.lemma(p.equiv_refl, &[n_real]);
+        d.lemma(p.mul_congr, &[n_real, n_real, kb, s_frac, refl_n, kb_eq])
+    };
+    let n_s = cmul(d, p, n_real, s_term);
+    let ns_frac = cmul(d, p, n_s, frac);
+    let step1 = {
+        let assoc = d.lemma(p.mul_assoc, &[n_real, s_term, frac]);
+        d.lemma(p.equiv_symm, &[ns_frac, n_s_frac, assoc])
+    };
+    let s_n = cmul(d, p, s_term, n_real);
+    let sn_frac = cmul(d, p, s_n, frac);
+    let step2 = {
+        let comm = d.lemma(p.mul_comm, &[n_real, s_term]);
+        let refl_frac = d.lemma(p.equiv_refl, &[frac]);
+        d.lemma(p.mul_congr, &[n_s, s_n, frac, frac, comm, refl_frac])
+    };
+    let n_frac = cmul(d, p, n_real, frac);
+    let s_nfrac = cmul(d, p, s_term, n_frac);
+    let step3 = d.lemma(p.mul_assoc, &[s_term, n_real, frac]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let s_one = cmul(d, p, s_term, one_c);
+    let step4 = {
+        let unit = mesh_inverse_identity(d, p, m);
+        let refl_s = d.lemma(p.equiv_refl, &[s_term]);
+        d.lemma(p.mul_congr, &[s_term, s_term, n_frac, one_c, refl_s, unit])
+    };
+    let step5 = d.lemma(p.mul_one, &[s_term]);
+    let collapse = echain(
+        d,
+        p,
+        bound,
+        &[
+            (n_s_frac, step0),
+            (ns_frac, step1),
+            (sn_frac, step2),
+            (s_nfrac, step3),
+            (s_one, step4),
+            (s_term, step5),
+        ],
+    );
+
+    let rs1 = rsum(d, p, f, x, y, m);
+    let rs2 = rsum(d, p, f, x2, y2, m);
+    let nrs2 = cneg(d, p, rs2);
+    let diff = cadd(d, p, rs1, nrs2);
+    let abs_diff = d.const_app(p.abs, &[diff]);
+    let refl_abs = d.lemma(p.equiv_refl, &[abs_diff]);
+    d.lemma(
+        p.le_congr,
+        &[abs_diff, abs_diff, bound, s_term, refl_abs, collapse, raw],
+    )
+}
+
+#[cfg(test)]
+mod mesh_uniform_endpoints_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// The mesh-uniform endpoint estimate and its dropped-summand control in
+    /// ONE build. The control varies only the RIGHT-hand side of the `le`
+    /// (dropping `(1/(e+1))·w2b`) and leaves the left-hand side the identical
+    /// `ExprId`, so no failing `def_eq` ever has to unfold a `riemannSum`.
+    fn mesh_uniform_probes() -> Vec<(&'static str, Result<(), crate::KernelError>)> {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+        let nat = d.nat_ty();
+        let f_ty = fn_ty(&mut d, p);
+
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let aa_fv = d.fresh_fvar();
+        let aa = d.kernel().fvar(aa_fv);
+        let bb_fv = d.fresh_fvar();
+        let bb = d.kernel().fvar(bb_fv);
+        let u_ty = d.const_app(p.uniformly_continuous_on, &[f, aa, bb]);
+        let u_fv = d.fresh_fvar();
+        let u = d.kernel().fvar(u_fv);
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hb_ty = d.const_app(p.bounded_on, &[f, aa, bb, k]);
+        let hb_fv = d.fresh_fvar();
+        let hb = d.kernel().fvar(hb_fv);
+
+        let carrier_fvs: Vec<_> = (0..8).map(|_| d.fresh_fvar()).collect();
+        let vals: Vec<_> = carrier_fvs.iter().map(|fv| d.kernel().fvar(*fv)).collect();
+        let (x, y, x2, y2) = (vals[0], vals[1], vals[2], vals[3]);
+        let (dw, w2b, bx, bw) = (vals[4], vals[5], vals[6], vals[7]);
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+
+        let hxy_ty = cle(&mut d, p, x, y);
+        let hx2y2_ty = cle(&mut d, p, x2, y2);
+        let hax_ty = cle(&mut d, p, aa, x);
+        let hyb_ty = cle(&mut d, p, y, bb);
+        let hax2_ty = cle(&mut d, p, aa, x2);
+        let hy2b_ty = cle(&mut d, p, y2, bb);
+
+        let w1 = width_of(&mut d, p, x, y);
+        let w2 = width_of(&mut d, p, x2, y2);
+        let nw2 = cneg(&mut d, p, w2);
+        let wdiff = cadd(&mut d, p, w1, nw2);
+        let abs_wdiff = d.const_app(p.abs, &[wdiff]);
+        let hdw_ty = cle(&mut d, p, abs_wdiff, dw);
+        let abs_w2 = d.const_app(p.abs, &[w2]);
+        let hw2b_ty = cle(&mut d, p, abs_w2, w2b);
+        let nx2 = cneg(&mut d, p, x2);
+        let xdiff = cadd(&mut d, p, x, nx2);
+        let abs_xdiff = d.const_app(p.abs, &[xdiff]);
+        let hbx_ty = cle(&mut d, p, abs_xdiff, bx);
+        let hbw_ty = cle(&mut d, p, abs_wdiff, bw);
+        let hfit_ty = {
+            let modul = d.const_app(p.uc_modulus, &[f, aa, bb, u, e]);
+            let one_nat = d.num(1);
+            let q = d.const_app(p.rat.nat_div_succ, &[one_nat, modul]);
+            let target = embed(&mut d, p, q);
+            let sum = cadd(&mut d, p, bx, bw);
+            cle(&mut d, p, sum, target)
+        };
+
+        let hyp_tys = [
+            hxy_ty, hx2y2_ty, hax_ty, hyb_ty, hax2_ty, hy2b_ty, hdw_ty, hw2b_ty, hbx_ty, hbw_ty,
+            hfit_ty,
+        ];
+        let hyp_fvs: Vec<_> = (0..hyp_tys.len()).map(|_| d.fresh_fvar()).collect();
+        let hyps: Vec<_> = hyp_fvs.iter().map(|fv| d.kernel().fvar(*fv)).collect();
+
+        let proof = riemann_sum_endpoints_le_mesh_uniform(
+            &mut d, p, f, aa, bb, u, k, hb, x, y, x2, y2, m, e, dw, w2b, bx, bw, hyps[0], hyps[1],
+            hyps[2], hyps[3], hyps[4], hyps[5], hyps[6], hyps[7], hyps[8], hyps[9], hyps[10],
+        );
+
+        let rs1 = rsum(&mut d, p, f, x, y, m);
+        let rs2 = rsum(&mut d, p, f, x2, y2, m);
+        assert_ne!(
+            rs1, rs2,
+            "the two riemannSums must be distinct terms, or the estimate is |X − X|"
+        );
+        let nrs2 = cneg(&mut d, p, rs2);
+        let diff = cadd(&mut d, p, rs1, nrs2);
+        let abs_diff = d.const_app(p.abs, &[diff]);
+
+        let mbound = {
+            let succ_k = d.succ(k);
+            let zero_nat = d.num(0);
+            let q = d.const_app(p.rat.nat_div_succ, &[succ_k, zero_nat]);
+            embed(&mut d, p, q)
+        };
+        let eps = {
+            let one_nat = d.num(1);
+            let q = d.const_app(p.rat.nat_div_succ, &[one_nat, e]);
+            embed(&mut d, p, q)
+        };
+        let bound_a = cmul(&mut d, p, mbound, dw);
+        let bound_b = cmul(&mut d, p, eps, w2b);
+        let good_bound = cadd(&mut d, p, bound_a, bound_b);
+        assert_ne!(
+            good_bound, bound_a,
+            "the dropped-summand control must not be the same term as the bound"
+        );
+
+        let concl_good = cle(&mut d, p, abs_diff, good_bound);
+        let concl_bad = cle(&mut d, p, abs_diff, bound_a);
+
+        let mut out = Vec::new();
+        for (label, concl) in [
+            ("meshUniformEndpointsGood", concl_good),
+            ("meshUniformEndpointsDroppedBad", concl_bad),
+        ] {
+            let ty = {
+                let mut t = concl;
+                for (i, ty) in hyp_tys.iter().enumerate().rev() {
+                    let _ = i;
+                    t = d.arrow(*ty, t);
+                }
+                t = d.pi_fv(e_fv, nat, t);
+                t = d.pi_fv(m_fv, nat, t);
+                for fv in carrier_fvs.iter().rev() {
+                    t = d.pi_fv(*fv, carrier, t);
+                }
+                t = d.arrow(hb_ty, t);
+                t = d.pi_fv(k_fv, nat, t);
+                t = d.pi_fv(u_fv, u_ty, t);
+                t = d.pi_fv(bb_fv, carrier, t);
+                t = d.pi_fv(aa_fv, carrier, t);
+                d.pi_fv(f_fv, f_ty, t)
+            };
+            let value = {
+                let mut v = proof;
+                for (fv, ty) in hyp_fvs.iter().zip(hyp_tys.iter()).rev() {
+                    v = d.lam_fv(*fv, *ty, v);
+                }
+                v = d.lam_fv(e_fv, nat, v);
+                v = d.lam_fv(m_fv, nat, v);
+                for fv in carrier_fvs.iter().rev() {
+                    v = d.lam_fv(*fv, carrier, v);
+                }
+                v = d.lam_fv(hb_fv, hb_ty, v);
+                v = d.lam_fv(k_fv, nat, v);
+                v = d.lam_fv(u_fv, u_ty, v);
+                v = d.lam_fv(bb_fv, carrier, v);
+                v = d.lam_fv(aa_fv, carrier, v);
+                d.lam_fv(f_fv, f_ty, v)
+            };
+            let anon = d.kernel().anon();
+            let name = d.kernel().name_str(anon, label);
+            out.push((
+                label,
+                d.kernel().add_declaration(Declaration::Theorem {
+                    name,
+                    uparams: vec![],
+                    ty,
+                    value,
+                }),
+            ));
+        }
+        out
+    }
+
+    #[test]
+    fn the_endpoint_estimate_does_not_mention_the_mesh_count() {
+        let results = crate::on_a_deep_stack(mesh_uniform_probes);
+        for (label, res) in results {
+            if label.ends_with("Good") {
+                res.unwrap_or_else(|e| panic!("{label} must be accepted: {e:?}"));
+            } else {
+                assert!(res.is_err(), "{label} must be REFUSED");
+            }
+        }
+    }
+}
+
+// --- integral-level endpoint continuity ----------------------------------
+//
+// The single lemma the arbitrary-`c` assembly still needed. Built at the
+// `Converges` altitude, NOT against `riemannSum_integral_close`'s
+// sample-level `Within` statement: `leg_converges` takes its mesh family as
+// callbacks, so both legs can be run at ONE shared count and the
+// mesh-uniform endpoint estimate then bounds the two sequences termwise,
+// which `converges_le` carries to the limits.
+
+/// `le x (add y bnd)` from `h : le (abs (add x (neg y))) bnd` — the
+/// CReal-bound analogue of [`CRealPrelude::le_add_of_abs_sub_le`], whose own
+/// bound must be an `ofRat`.
+fn le_add_of_abs_sub_le_real(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    bnd: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let ny = cneg(d, p, y);
+    let diff = cadd(d, p, x, ny);
+    let abs_diff = d.const_app(p.abs, &[diff]);
+    let self_le = d.lemma(p.le_abs_self, &[diff]);
+    let diff_le = d.lemma(p.le_trans, &[diff, abs_diff, bnd, self_le, h]);
+    le_add_of_sub_le_real(d, p, x, y, bnd, diff_le)
+}
+
+/// `le x (add y bnd)` from `diff_le : le (add x (neg y)) bnd` — the inverse
+/// of [`sub_le_of_le_add_real`], and the shared tail of
+/// [`le_add_of_abs_sub_le_real`].
+fn le_add_of_sub_le_real(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    bnd: ExprId,
+    diff_le: ExprId,
+) -> ExprId {
+    let ny = cneg(d, p, y);
+    let diff = cadd(d, p, x, ny);
+
+    let refl_y = d.lemma(p.le_refl, &[y]);
+    let stepped = d.lemma(p.add_le_add, &[diff, bnd, y, y, diff_le, refl_y]);
+    // stepped : le (add diff y) (add bnd y)
+
+    let diff_y = cadd(d, p, diff, y);
+    let ny_y = cadd(d, p, ny, y);
+    let x_nyy = cadd(d, p, x, ny_y);
+    let zero_c = czero(d, p);
+    let x_zero = cadd(d, p, x, zero_c);
+    let left_eq = {
+        let assoc = d.lemma(p.add_assoc, &[x, ny, y]);
+        let y_ny = cadd(d, p, y, ny);
+        let comm = d.lemma(p.add_comm, &[ny, y]);
+        let cancel = d.lemma(p.add_neg, &[y]);
+        let to_zero = d.lemma(p.equiv_trans, &[ny_y, y_ny, zero_c, comm, cancel]);
+        let refl_x = d.lemma(p.equiv_refl, &[x]);
+        let inner = d.lemma(p.add_congr, &[x, x, ny_y, zero_c, refl_x, to_zero]);
+        let drop = d.lemma(p.add_zero, &[x]);
+        echain(d, p, diff_y, &[(x_nyy, assoc), (x_zero, inner), (x, drop)])
+    };
+    let bnd_y = cadd(d, p, bnd, y);
+    let y_bnd = cadd(d, p, y, bnd);
+    let right_eq = d.lemma(p.add_comm, &[bnd, y]);
+    d.lemma(
+        p.le_congr,
+        &[diff_y, x, bnd_y, y_bnd, left_eq, right_eq, stepped],
+    )
+}
+
+/// `le (add x (neg y)) bnd` from `h : le x (add y bnd)` — the inverse of
+/// [`le_add_of_abs_sub_le_real`]'s own final move.
+fn sub_le_of_le_add_real(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    bnd: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let ny = cneg(d, p, y);
+    let y_bnd = cadd(d, p, y, bnd);
+    let refl_ny = d.lemma(p.le_refl, &[ny]);
+    let stepped = d.lemma(p.add_le_add, &[x, y_bnd, ny, ny, h, refl_ny]);
+    // stepped : le (add x ny) (add (add y bnd) ny)
+
+    let start = cadd(d, p, y_bnd, ny);
+    let bnd_ny = cadd(d, p, bnd, ny);
+    let s1 = cadd(d, p, y, bnd_ny);
+    let h1 = d.lemma(p.add_assoc, &[y, bnd, ny]);
+    let ny_bnd = cadd(d, p, ny, bnd);
+    let s2 = cadd(d, p, y, ny_bnd);
+    let h2 = {
+        let comm = d.lemma(p.add_comm, &[bnd, ny]);
+        let refl_y = d.lemma(p.equiv_refl, &[y]);
+        d.lemma(p.add_congr, &[y, y, bnd_ny, ny_bnd, refl_y, comm])
+    };
+    let y_ny = cadd(d, p, y, ny);
+    let s3 = cadd(d, p, y_ny, bnd);
+    let h3 = {
+        let assoc = d.lemma(p.add_assoc, &[y, ny, bnd]);
+        d.lemma(p.equiv_symm, &[s3, s2, assoc])
+    };
+    let zero_c = czero(d, p);
+    let s4 = cadd(d, p, zero_c, bnd);
+    let h4 = {
+        let cancel = d.lemma(p.add_neg, &[y]);
+        let refl_bnd = d.lemma(p.equiv_refl, &[bnd]);
+        d.lemma(p.add_congr, &[y_ny, zero_c, bnd, bnd, cancel, refl_bnd])
+    };
+    let s5 = cadd(d, p, bnd, zero_c);
+    let h5 = d.lemma(p.add_comm, &[zero_c, bnd]);
+    let h6 = d.lemma(p.add_zero, &[bnd]);
+    let right_eq = echain(
+        d,
+        p,
+        start,
+        &[(s1, h1), (s2, h2), (s3, h3), (s4, h4), (s5, h5), (bnd, h6)],
+    );
+    let diff = cadd(d, p, x, ny);
+    let refl_diff = d.lemma(p.equiv_refl, &[diff]);
+    d.lemma(
+        p.le_congr,
+        &[diff, diff, start, bnd, refl_diff, right_eq, stepped],
+    )
+}
+
+/// **The lemma the arbitrary-`c` assembly needed.** Endpoint continuity of
+/// the integral, mesh-free:
+///
+/// ```text
+/// le (abs (integral F x y hxy uxy − integral F x2 y2 hx2y2 ux2y2))
+///    (add (mul M dw) (mul (1/(e+1)) w2b))
+/// ```
+///
+/// under exactly [`riemann_sum_endpoints_le_mesh_uniform`]'s endpoint
+/// hypotheses. Both legs are run through [`leg_converges`] at the SHARED
+/// mesh family `M(n) := (deep₁(n) + deep₂(n)) + n`, which is fine enough for
+/// each leg's own modulus and at least as deep as the accuracy index — the
+/// three obligations `leg_converges` asks for, all pure `Nat.le_add_right` /
+/// `nat_le_add_left` bookkeeping. The termwise bound is then carried to the
+/// limits by [`CRealPrelude::converges_le`], twice, and the two shifted
+/// inequalities are folded back into one `abs` by
+/// [`CRealPrelude::neg_sub_swap`] and [`CRealPrelude::abs_le`].
+#[allow(clippy::too_many_arguments)]
+fn integral_endpoint_close(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    aa: ExprId,
+    bb: ExprId,
+    u: ExprId,
+    k: ExprId,
+    hb: ExprId,
+    x: ExprId,
+    y: ExprId,
+    x2: ExprId,
+    y2: ExprId,
+    hxy: ExprId,
+    hx2y2: ExprId,
+    uxy: ExprId,
+    ux2y2: ExprId,
+    hax: ExprId,
+    hyb: ExprId,
+    hax2: ExprId,
+    hy2b: ExprId,
+    dw: ExprId,
+    w2b: ExprId,
+    bx: ExprId,
+    bw: ExprId,
+    e: ExprId,
+    hdw: ExprId,
+    hw2b: ExprId,
+    hbx: ExprId,
+    hbw: ExprId,
+    hfit: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let rat = p.rat;
+    let np = d.prelude();
+
+    let deeps = |d: &mut IntDev<'_>, n: ExprId| -> (ExprId, ExprId, ExprId, ExprId) {
+        let d1 = deep_at(d, p, f, x, y, uxy, n);
+        let d2 = deep_at(d, p, f, x2, y2, ux2y2, n);
+        let s = NatOps::add(d, d1, d2);
+        let m = NatOps::add(d, s, n);
+        (d1, d2, s, m)
+    };
+    let mesh = |d: &mut IntDev<'_>, n: ExprId| -> ExprId { deeps(d, n).3 };
+    let deep_le1 = |d: &mut IntDev<'_>, n: ExprId| -> ExprId {
+        let (d1, d2, s, m) = deeps(d, n);
+        let h1 = d.lemma(np.le_add_right, &[d1, d2]);
+        let h2 = d.lemma(np.le_add_right, &[s, n]);
+        d.lemma(np.le_trans, &[d1, s, m, h1, h2])
+    };
+    let deep_le2 = |d: &mut IntDev<'_>, n: ExprId| -> ExprId {
+        let (d1, d2, s, m) = deeps(d, n);
+        let h1 = nat_le_add_left(d, d1, d2);
+        let h2 = d.lemma(np.le_add_right, &[s, n]);
+        d.lemma(np.le_trans, &[d2, s, m, h1, h2])
+    };
+    let idx_le = |d: &mut IntDev<'_>, n: ExprId| -> ExprId {
+        let (_, _, s, _) = deeps(d, n);
+        nat_le_add_left(d, s, n)
+    };
+
+    let (g1, conv1) = leg_converges(d, p, f, x, y, hxy, uxy, &mesh, &deep_le1, &idx_le);
+    let (g2, conv2) = leg_converges(d, p, f, x2, y2, hx2y2, ux2y2, &mesh, &deep_le2, &idx_le);
+
+    let mbound = {
+        let succ_k = d.succ(k);
+        let zero_nat = d.num(0);
+        let q = d.const_app(rat.nat_div_succ, &[succ_k, zero_nat]);
+        embed(d, p, q)
+    };
+    let eps = {
+        let one_nat = d.num(1);
+        let q = d.const_app(rat.nat_div_succ, &[one_nat, e]);
+        embed(d, p, q)
+    };
+    let big_b = {
+        let left = cmul(d, p, mbound, dw);
+        let right = cmul(d, p, eps, w2b);
+        cadd(d, p, left, right)
+    };
+
+    let const_b = {
+        let n_fv = d.fresh_fvar();
+        d.lam_fv(n_fv, nat, big_b)
+    };
+    let conv_const = d.lemma(p.converges_of_const, &[big_b]);
+
+    let i1 = d.const_app(p.integral, &[f, x, y, hxy, uxy]);
+    let i2 = d.const_app(p.integral, &[f, x2, y2, hx2y2, ux2y2]);
+
+    // The shifted sequences, built exactly as `converges_add`'s conclusion
+    // builds them so the two are the same `ExprId`.
+    let shifted = |d: &mut IntDev<'_>, g: ExprId| -> ExprId {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let gn = d.apply(g, &[n]);
+        let bn = d.apply(const_b, &[n]);
+        let body = cadd(d, p, gn, bn);
+        d.lam_fv(n_fv, nat, body)
+    };
+    let g2b = shifted(d, g2);
+    let g1b = shifted(d, g1);
+    let conv2b = d.lemma(
+        p.converges_add,
+        &[g2, const_b, i2, big_b, conv2, conv_const],
+    );
+    let conv1b = d.lemma(
+        p.converges_add,
+        &[g1, const_b, i1, big_b, conv1, conv_const],
+    );
+
+    // The termwise bound, in both directions.
+    let termwise = |d: &mut IntDev<'_>, forward: bool| -> ExprId {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let m_n = mesh(d, n);
+        let est = riemann_sum_endpoints_le_mesh_uniform(
+            d, p, f, aa, bb, u, k, hb, x, y, x2, y2, m_n, e, dw, w2b, bx, bw, hxy, hx2y2, hax, hyb,
+            hax2, hy2b, hdw, hw2b, hbx, hbw, hfit,
+        );
+        let s1 = rsum(d, p, f, x, y, m_n);
+        let s2 = rsum(d, p, f, x2, y2, m_n);
+        let body = if forward {
+            le_add_of_abs_sub_le_real(d, p, s1, s2, big_b, est)
+        } else {
+            // The OTHER direction, WITHOUT ever forming `neg (neg _)`:
+            // `neg_le_abs` bounds `-(s1-s2)` by `|s1-s2| <= B`, and
+            // `neg_sub_swap` turns that term into `s2 - s1` outright.
+            let n1 = cneg(d, p, s1);
+            let n2 = cneg(d, p, s2);
+            let diff12 = cadd(d, p, s1, n2);
+            let diff21 = cadd(d, p, s2, n1);
+            let abs12 = d.const_app(p.abs, &[diff12]);
+            let ndiff12 = cneg(d, p, diff12);
+            let neg_le = d.lemma(p.neg_le_abs, &[diff12]);
+            let chained = d.lemma(p.le_trans, &[ndiff12, abs12, big_b, neg_le, est]);
+            let swap = d.lemma(p.neg_sub_swap, &[s1, s2]);
+            let refl_b = d.lemma(p.equiv_refl, &[big_b]);
+            let moved = d.lemma(
+                p.le_congr,
+                &[ndiff12, diff21, big_b, big_b, swap, refl_b, chained],
+            );
+            le_add_of_sub_le_real(d, p, s2, s1, big_b, moved)
+        };
+        d.lam_fv(n_fv, nat, body)
+    };
+
+    let pt1 = termwise(d, true);
+    let pt2 = termwise(d, false);
+    let i2b = cadd(d, p, i2, big_b);
+    let i1b = cadd(d, p, i1, big_b);
+    let hle1 = d.lemma(p.converges_le, &[g1, g2b, i1, i2b, conv1, conv2b, pt1]);
+    let hle2 = d.lemma(p.converges_le, &[g2, g1b, i2, i1b, conv2, conv1b, pt2]);
+
+    let up = sub_le_of_le_add_real(d, p, i1, i2, big_b, hle1);
+    let lo = {
+        let other = sub_le_of_le_add_real(d, p, i2, i1, big_b, hle2);
+        let ni2 = cneg(d, p, i2);
+        let diff = cadd(d, p, i1, ni2);
+        let ndiff = cneg(d, p, diff);
+        let ni1 = cneg(d, p, i1);
+        let rev = cadd(d, p, i2, ni1);
+        let swap = d.lemma(p.neg_sub_swap, &[i1, i2]);
+        let back = d.lemma(p.equiv_symm, &[ndiff, rev, swap]);
+        let refl_b = d.lemma(p.equiv_refl, &[big_b]);
+        d.lemma(p.le_congr, &[rev, ndiff, big_b, big_b, back, refl_b, other])
+    };
+    let ni2 = cneg(d, p, i2);
+    let diff = cadd(d, p, i1, ni2);
+    d.lemma(p.abs_le, &[diff, big_b, up, lo])
+}
+
+#[cfg(test)]
+mod integral_endpoint_close_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// Endpoint continuity of the integral and its dropped-summand control in
+    /// ONE build. The control varies only the right-hand side of the `le` and
+    /// leaves the left-hand side the identical `ExprId`.
+    fn integral_endpoint_probes() -> Vec<(&'static str, Result<(), crate::KernelError>)> {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+        let nat = d.nat_ty();
+        let f_ty = fn_ty(&mut d, p);
+
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let aa_fv = d.fresh_fvar();
+        let aa = d.kernel().fvar(aa_fv);
+        let bb_fv = d.fresh_fvar();
+        let bb = d.kernel().fvar(bb_fv);
+        let u_ty = d.const_app(p.uniformly_continuous_on, &[f, aa, bb]);
+        let u_fv = d.fresh_fvar();
+        let u = d.kernel().fvar(u_fv);
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hb_ty = d.const_app(p.bounded_on, &[f, aa, bb, k]);
+        let hb_fv = d.fresh_fvar();
+        let hb = d.kernel().fvar(hb_fv);
+
+        let carrier_fvs: Vec<_> = (0..8).map(|_| d.fresh_fvar()).collect();
+        let vals: Vec<_> = carrier_fvs.iter().map(|fv| d.kernel().fvar(*fv)).collect();
+        let (x, y, x2, y2) = (vals[0], vals[1], vals[2], vals[3]);
+        let (dw, w2b, bx, bw) = (vals[4], vals[5], vals[6], vals[7]);
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+
+        let hxy_ty = cle(&mut d, p, x, y);
+        let hxy_fv = d.fresh_fvar();
+        let hxy = d.kernel().fvar(hxy_fv);
+        let hx2y2_ty = cle(&mut d, p, x2, y2);
+        let hx2y2_fv = d.fresh_fvar();
+        let hx2y2 = d.kernel().fvar(hx2y2_fv);
+        let uxy_ty = d.const_app(p.uniformly_continuous_on, &[f, x, y]);
+        let uxy_fv = d.fresh_fvar();
+        let uxy = d.kernel().fvar(uxy_fv);
+        let ux2y2_ty = d.const_app(p.uniformly_continuous_on, &[f, x2, y2]);
+        let ux2y2_fv = d.fresh_fvar();
+        let ux2y2 = d.kernel().fvar(ux2y2_fv);
+
+        let hax_ty = cle(&mut d, p, aa, x);
+        let hyb_ty = cle(&mut d, p, y, bb);
+        let hax2_ty = cle(&mut d, p, aa, x2);
+        let hy2b_ty = cle(&mut d, p, y2, bb);
+
+        let w1 = width_of(&mut d, p, x, y);
+        let w2 = width_of(&mut d, p, x2, y2);
+        let nw2 = cneg(&mut d, p, w2);
+        let wdiff = cadd(&mut d, p, w1, nw2);
+        let abs_wdiff = d.const_app(p.abs, &[wdiff]);
+        let hdw_ty = cle(&mut d, p, abs_wdiff, dw);
+        let abs_w2 = d.const_app(p.abs, &[w2]);
+        let hw2b_ty = cle(&mut d, p, abs_w2, w2b);
+        let nx2 = cneg(&mut d, p, x2);
+        let xdiff = cadd(&mut d, p, x, nx2);
+        let abs_xdiff = d.const_app(p.abs, &[xdiff]);
+        let hbx_ty = cle(&mut d, p, abs_xdiff, bx);
+        let hbw_ty = cle(&mut d, p, abs_wdiff, bw);
+        let hfit_ty = {
+            let modul = d.const_app(p.uc_modulus, &[f, aa, bb, u, e]);
+            let one_nat = d.num(1);
+            let q = d.const_app(p.rat.nat_div_succ, &[one_nat, modul]);
+            let target = embed(&mut d, p, q);
+            let sum = cadd(&mut d, p, bx, bw);
+            cle(&mut d, p, sum, target)
+        };
+
+        let hyp_tys = [
+            hax_ty, hyb_ty, hax2_ty, hy2b_ty, hdw_ty, hw2b_ty, hbx_ty, hbw_ty, hfit_ty,
+        ];
+        let hyp_fvs: Vec<_> = (0..hyp_tys.len()).map(|_| d.fresh_fvar()).collect();
+        let hyps: Vec<_> = hyp_fvs.iter().map(|fv| d.kernel().fvar(*fv)).collect();
+
+        let proof = integral_endpoint_close(
+            &mut d, p, f, aa, bb, u, k, hb, x, y, x2, y2, hxy, hx2y2, uxy, ux2y2, hyps[0], hyps[1],
+            hyps[2], hyps[3], dw, w2b, bx, bw, e, hyps[4], hyps[5], hyps[6], hyps[7], hyps[8],
+        );
+
+        let i1 = d.const_app(p.integral, &[f, x, y, hxy, uxy]);
+        let i2 = d.const_app(p.integral, &[f, x2, y2, hx2y2, ux2y2]);
+        assert_ne!(i1, i2, "the two integrals must be distinct terms");
+        let ni2 = cneg(&mut d, p, i2);
+        let diff = cadd(&mut d, p, i1, ni2);
+        let abs_diff = d.const_app(p.abs, &[diff]);
+
+        let mbound = {
+            let succ_k = d.succ(k);
+            let zero_nat = d.num(0);
+            let q = d.const_app(p.rat.nat_div_succ, &[succ_k, zero_nat]);
+            embed(&mut d, p, q)
+        };
+        let eps = {
+            let one_nat = d.num(1);
+            let q = d.const_app(p.rat.nat_div_succ, &[one_nat, e]);
+            embed(&mut d, p, q)
+        };
+        let bound_a = cmul(&mut d, p, mbound, dw);
+        let bound_b = cmul(&mut d, p, eps, w2b);
+        let good_bound = cadd(&mut d, p, bound_a, bound_b);
+        assert_ne!(
+            good_bound, bound_a,
+            "the control must differ from the bound"
+        );
+
+        let concl_good = cle(&mut d, p, abs_diff, good_bound);
+        let concl_bad = cle(&mut d, p, abs_diff, bound_a);
+
+        let mut out = Vec::new();
+        for (label, concl) in [
+            ("integralEndpointCloseGood", concl_good),
+            ("integralEndpointCloseDroppedBad", concl_bad),
+        ] {
+            let ty = {
+                let mut t = concl;
+                for (fv, ty) in hyp_fvs.iter().zip(hyp_tys.iter()).rev() {
+                    let _ = fv;
+                    t = d.arrow(*ty, t);
+                }
+                t = d.pi_fv(e_fv, nat, t);
+                t = d.pi_fv(ux2y2_fv, ux2y2_ty, t);
+                t = d.pi_fv(uxy_fv, uxy_ty, t);
+                t = d.pi_fv(hx2y2_fv, hx2y2_ty, t);
+                t = d.pi_fv(hxy_fv, hxy_ty, t);
+                for fv in carrier_fvs.iter().rev() {
+                    t = d.pi_fv(*fv, carrier, t);
+                }
+                t = d.arrow(hb_ty, t);
+                t = d.pi_fv(k_fv, nat, t);
+                t = d.pi_fv(u_fv, u_ty, t);
+                t = d.pi_fv(bb_fv, carrier, t);
+                t = d.pi_fv(aa_fv, carrier, t);
+                d.pi_fv(f_fv, f_ty, t)
+            };
+            let value = {
+                let mut v = proof;
+                for (fv, ty) in hyp_fvs.iter().zip(hyp_tys.iter()).rev() {
+                    v = d.lam_fv(*fv, *ty, v);
+                }
+                v = d.lam_fv(e_fv, nat, v);
+                v = d.lam_fv(ux2y2_fv, ux2y2_ty, v);
+                v = d.lam_fv(uxy_fv, uxy_ty, v);
+                v = d.lam_fv(hx2y2_fv, hx2y2_ty, v);
+                v = d.lam_fv(hxy_fv, hxy_ty, v);
+                for fv in carrier_fvs.iter().rev() {
+                    v = d.lam_fv(*fv, carrier, v);
+                }
+                v = d.lam_fv(hb_fv, hb_ty, v);
+                v = d.lam_fv(k_fv, nat, v);
+                v = d.lam_fv(u_fv, u_ty, v);
+                v = d.lam_fv(bb_fv, carrier, v);
+                v = d.lam_fv(aa_fv, carrier, v);
+                d.lam_fv(f_fv, f_ty, v)
+            };
+            let anon = d.kernel().anon();
+            let name = d.kernel().name_str(anon, label);
+            out.push((
+                label,
+                d.kernel().add_declaration(Declaration::Theorem {
+                    name,
+                    uparams: vec![],
+                    ty,
+                    value,
+                }),
+            ));
+        }
+        out
+    }
+
+    #[test]
+    fn the_integral_is_continuous_in_its_endpoints() {
+        let results = crate::on_a_deep_stack(integral_endpoint_probes);
+        for (label, res) in results {
+            if label.ends_with("Good") {
+                res.unwrap_or_else(|e| panic!("{label} must be accepted: {e:?}"));
+            } else {
+                assert!(res.is_err(), "{label} must be REFUSED");
+            }
+        }
+    }
+}
+
+// --- the assembly: `integral_split` at an ARBITRARY `c` -------------------
+
+/// `le (abs (add y (neg x))) bnd` from `h : le (abs (add x (neg y))) bnd` —
+/// an `abs` of a difference does not care which way round the difference is.
+///
+/// Built WITHOUT `abs_neg` (which this prelude does not publish) and without
+/// ever forming `neg (neg _)`: [`CRealPrelude::neg_sub_swap`] rewrites each
+/// one-sided half into the other orientation directly.
+fn abs_sub_symm_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    bnd: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let nx = cneg(d, p, x);
+    let ny = cneg(d, p, y);
+    let xy = cadd(d, p, x, ny);
+    let yx = cadd(d, p, y, nx);
+    let abs_xy = d.const_app(p.abs, &[xy]);
+    let refl_b = d.lemma(p.equiv_refl, &[bnd]);
+
+    let self_le = d.lemma(p.le_abs_self, &[xy]);
+    let h1 = d.lemma(p.le_trans, &[xy, abs_xy, bnd, self_le, h]);
+    let neg_le = d.lemma(p.neg_le_abs, &[xy]);
+    let nxy = cneg(d, p, xy);
+    let h2 = d.lemma(p.le_trans, &[nxy, abs_xy, bnd, neg_le, h]);
+
+    // `u1 : le (add y (neg x)) bnd`, from `h2` through `neg (x−y) ~ y−x`.
+    let swap1 = d.lemma(p.neg_sub_swap, &[x, y]);
+    let u1 = d.lemma(p.le_congr, &[nxy, yx, bnd, bnd, swap1, refl_b, h2]);
+
+    // `u2 : le (neg (add y (neg x))) bnd`, from `h1` through `neg (y−x) ~ x−y`.
+    let nyx = cneg(d, p, yx);
+    let swap2 = d.lemma(p.neg_sub_swap, &[y, x]);
+    let back = d.lemma(p.equiv_symm, &[nyx, xy, swap2]);
+    let u2 = d.lemma(p.le_congr, &[xy, nyx, bnd, bnd, back, refl_b, h1]);
+
+    d.lemma(p.abs_le, &[yx, bnd, u1, u2])
+}
+
+/// `Equiv ((u − w) − (v − w)) (u − v)` — a shared BASE point cancels.
+fn shared_base_diff(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    u: ExprId,
+    v: ExprId,
+    w: ExprId,
+) -> ExprId {
+    let nw = cneg(d, p, w);
+    let nv = cneg(d, p, v);
+    let uw = cadd(d, p, u, nw);
+    let vw = cadd(d, p, v, nw);
+    let nvw = cneg(d, p, vw);
+    let start = cadd(d, p, uw, nvw);
+
+    let w_nv = cadd(d, p, w, nv);
+    let s1 = cadd(d, p, uw, w_nv);
+    let h1 = {
+        let swap = d.lemma(p.neg_sub_swap, &[v, w]);
+        let refl_uw = d.lemma(p.equiv_refl, &[uw]);
+        d.lemma(p.add_congr, &[uw, uw, nvw, w_nv, refl_uw, swap])
+    };
+    let nw_wnv = cadd(d, p, nw, w_nv);
+    let s2 = cadd(d, p, u, nw_wnv);
+    let h2 = d.lemma(p.add_assoc, &[u, nw, w_nv]);
+    let nw_w = cadd(d, p, nw, w);
+    let nww_nv = cadd(d, p, nw_w, nv);
+    let s3 = cadd(d, p, u, nww_nv);
+    let h3 = {
+        let assoc = d.lemma(p.add_assoc, &[nw, w, nv]);
+        let back = d.lemma(p.equiv_symm, &[nww_nv, nw_wnv, assoc]);
+        let refl_u = d.lemma(p.equiv_refl, &[u]);
+        d.lemma(p.add_congr, &[u, u, nw_wnv, nww_nv, refl_u, back])
+    };
+    let zero_c = czero(d, p);
+    let zero_nv = cadd(d, p, zero_c, nv);
+    let s4 = cadd(d, p, u, zero_nv);
+    let h4 = {
+        let w_nw = cadd(d, p, w, nw);
+        let comm = d.lemma(p.add_comm, &[nw, w]);
+        let cancel = d.lemma(p.add_neg, &[w]);
+        let to_zero = d.lemma(p.equiv_trans, &[nw_w, w_nw, zero_c, comm, cancel]);
+        let refl_nv = d.lemma(p.equiv_refl, &[nv]);
+        let inner = d.lemma(p.add_congr, &[nw_w, zero_c, nv, nv, to_zero, refl_nv]);
+        let refl_u = d.lemma(p.equiv_refl, &[u]);
+        d.lemma(p.add_congr, &[u, u, nww_nv, zero_nv, refl_u, inner])
+    };
+    let target = cadd(d, p, u, nv);
+    let h5 = {
+        let nv_zero = cadd(d, p, nv, zero_c);
+        let comm = d.lemma(p.add_comm, &[zero_c, nv]);
+        let drop = d.lemma(p.add_zero, &[nv]);
+        let to_nv = d.lemma(p.equiv_trans, &[zero_nv, nv_zero, nv, comm, drop]);
+        let refl_u = d.lemma(p.equiv_refl, &[u]);
+        d.lemma(p.add_congr, &[u, u, zero_nv, nv, refl_u, to_nv])
+    };
+    echain(
+        d,
+        p,
+        start,
+        &[(s1, h1), (s2, h2), (s3, h3), (s4, h4), (target, h5)],
+    )
+}
+
+/// `Equiv ((w − u) − (w − v)) (v − u)` — a shared LEFT endpoint cancels, and
+/// the difference comes out REVERSED.
+fn shared_top_diff(d: &mut IntDev<'_>, p: CRealPrelude, u: ExprId, v: ExprId, w: ExprId) -> ExprId {
+    let nu = cneg(d, p, u);
+    let nv = cneg(d, p, v);
+    let nw = cneg(d, p, w);
+    let wu = cadd(d, p, w, nu);
+    let wv = cadd(d, p, w, nv);
+    let nwv = cneg(d, p, wv);
+    let start = cadd(d, p, wu, nwv);
+
+    let v_nw = cadd(d, p, v, nw);
+    let s1 = cadd(d, p, wu, v_nw);
+    let h1 = {
+        let swap = d.lemma(p.neg_sub_swap, &[w, v]);
+        let refl_wu = d.lemma(p.equiv_refl, &[wu]);
+        d.lemma(p.add_congr, &[wu, wu, nwv, v_nw, refl_wu, swap])
+    };
+    let nw_v = cadd(d, p, nw, v);
+    let s2 = cadd(d, p, wu, nw_v);
+    let h2 = {
+        let comm = d.lemma(p.add_comm, &[v, nw]);
+        let refl_wu = d.lemma(p.equiv_refl, &[wu]);
+        d.lemma(p.add_congr, &[wu, wu, v_nw, nw_v, refl_wu, comm])
+    };
+    let w_nw = cadd(d, p, w, nw);
+    let nu_v = cadd(d, p, nu, v);
+    let s3 = cadd(d, p, w_nw, nu_v);
+    let h3 = add4_swap_middle(d, p, w, nu, nw, v);
+    let zero_c = czero(d, p);
+    let s4 = cadd(d, p, zero_c, nu_v);
+    let h4 = {
+        let cancel = d.lemma(p.add_neg, &[w]);
+        let refl_r = d.lemma(p.equiv_refl, &[nu_v]);
+        d.lemma(p.add_congr, &[w_nw, zero_c, nu_v, nu_v, cancel, refl_r])
+    };
+    let s5 = cadd(d, p, nu_v, zero_c);
+    let h5 = d.lemma(p.add_comm, &[zero_c, nu_v]);
+    let h6 = d.lemma(p.add_zero, &[nu_v]);
+    let target = cadd(d, p, v, nu);
+    let h7 = d.lemma(p.add_comm, &[nu, v]);
+    echain(
+        d,
+        p,
+        start,
+        &[
+            (s1, h1),
+            (s2, h2),
+            (s3, h3),
+            (s4, h4),
+            (s5, h5),
+            (nu_v, h6),
+            (target, h7),
+        ],
+    )
+}
+
+/// `le (abs (add z (neg z))) zero` — a point's residue from itself is bounded
+/// by `0`, without any `abs_zero`/`neg_zero` lemma: `neg_sub_swap z z` says
+/// `neg (z − z) ~ z − z`, so both halves of [`CRealPrelude::abs_le`] are the
+/// same fact.
+fn abs_self_diff_le_zero(d: &mut IntDev<'_>, p: CRealPrelude, z: ExprId) -> ExprId {
+    let nz = cneg(d, p, z);
+    let diff = cadd(d, p, z, nz);
+    let zero_c = czero(d, p);
+    let cancel = d.lemma(p.add_neg, &[z]);
+    let refl_zero = d.lemma(p.le_refl, &[zero_c]);
+    let back = d.lemma(p.equiv_symm, &[diff, zero_c, cancel]);
+    let refl_z0 = d.lemma(p.equiv_refl, &[zero_c]);
+    let h1 = d.lemma(
+        p.le_congr,
+        &[zero_c, diff, zero_c, zero_c, back, refl_z0, refl_zero],
+    );
+    // h1 : le diff zero
+    let ndiff = cneg(d, p, diff);
+    let swap = d.lemma(p.neg_sub_swap, &[z, z]);
+    // swap : Equiv (neg (z − z)) (z − z)
+    let refl_z1 = d.lemma(p.equiv_refl, &[zero_c]);
+    let h2 = {
+        let back2 = d.lemma(p.equiv_symm, &[ndiff, diff, swap]);
+        // back2 : Equiv diff ndiff
+        d.lemma(
+            p.le_congr,
+            &[diff, ndiff, zero_c, zero_c, back2, refl_z1, h1],
+        )
+    };
+    d.lemma(p.abs_le, &[diff, zero_c, h1, h2])
+}
+
+/// **`integral_split` at an ARBITRARY `c`, as an ESTIMATE.**
+///
+/// ```text
+/// le (abs (integral F a b hab u − (integral F a c hac uac + integral F c b hcb ucb)))
+///    (B1 + B2)
+/// ```
+///
+/// with `B_i := M·δ + (1/(e+1))·W_i`, `δ := (4/(g+2))·|b−a|` the
+/// [`CRealPrelude::split_point_approx`] bound, `M` the `BoundedOn` bound and
+/// `W_1 := |c−a|`, `W_2 := |b−c|`. The whole estimate is uniform in the mesh
+/// — no Riemann sum appears in the statement at all.
+///
+/// Three named facts and no new estimate: [`CRealPrelude::integral_split`] at
+/// the approximating base split point (EXACT, contributes zero),
+/// [`integral_endpoint_close`] on each leg, and
+/// [`CRealPrelude::abs_add_le`]. The `PosBound` enters only through
+/// `splitPointApprox`.
+#[allow(clippy::too_many_arguments)]
+fn integral_split_arbitrary_close(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    k: ExprId,
+    hpos: ExprId,
+    hab: ExprId,
+    u: ExprId,
+    kb: ExprId,
+    hbnd: ExprId,
+    hac: ExprId,
+    hcb: ExprId,
+    uac: ExprId,
+    ucb: ExprId,
+    g: ExprId,
+    e: ExprId,
+    hfit: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let np = d.prelude();
+    let rat = p.rat;
+    let zero_c = czero(d, p);
+
+    let w = width_of(d, p, a, b);
+    let abs_w = d.const_app(p.abs, &[w]);
+    let (_, _, four_r) = unit_slack(d, p, g);
+    let o_four = d.const_app(p.of_rat, &[four_r]);
+    let delta = cmul(d, p, o_four, abs_w);
+
+    let mbound = {
+        let succ_kb = d.succ(kb);
+        let zero_nat = d.num(0);
+        let q = d.const_app(rat.nat_div_succ, &[succ_kb, zero_nat]);
+        embed(d, p, q)
+    };
+    let eps = {
+        let one_nat = d.num(1);
+        let q = d.const_app(rat.nat_div_succ, &[one_nat, e]);
+        embed(d, p, q)
+    };
+    let w_ac = {
+        let na = cneg(d, p, a);
+        let diff = cadd(d, p, c, na);
+        d.const_app(p.abs, &[diff])
+    };
+    let w_cb = {
+        let nc = cneg(d, p, c);
+        let diff = cadd(d, p, b, nc);
+        d.const_app(p.abs, &[diff])
+    };
+    let b1 = {
+        let l = cmul(d, p, mbound, delta);
+        let r = cmul(d, p, eps, w_ac);
+        cadd(d, p, l, r)
+    };
+    let b2 = {
+        let l = cmul(d, p, mbound, delta);
+        let r = cmul(d, p, eps, w_cb);
+        cadd(d, p, l, r)
+    };
+    let total = cadd(d, p, b1, b2);
+
+    let i_ab = d.const_app(p.integral, &[f, a, b, hab, u]);
+    let i_ac = d.const_app(p.integral, &[f, a, c, hac, uac]);
+    let i_cb = d.const_app(p.integral, &[f, c, b, hcb, ucb]);
+    let rhs = cadd(d, p, i_ac, i_cb);
+    let nrhs = cneg(d, p, rhs);
+    let target_diff = cadd(d, p, i_ab, nrhs);
+    let abs_target = d.const_app(p.abs, &[target_diff]);
+    let target = cle(d, p, abs_target, total);
+
+    // `0 ≤ δ`, needed to widen leg 1's `bx + bw = 0 + δ` up to `δ + δ`.
+    let delta_nonneg = {
+        // `four_r` is a sum of four nonneg terms; `Rat.add_nonneg` folds them.
+        let one_nat = d.num(1);
+        let rz = rzero(d, rat);
+        let kbz = d.succ(g);
+        let nds1 = div_succ(d, p, 1, kbz);
+        let h1 = d.lemma(rat.zero_le_nat_div_succ, &[one_nat, kbz]);
+        let two_r = radd(d, nds1, nds1);
+        let h2 = d.lemma(rat.add_nonneg, &[nds1, nds1, h1, h1]);
+        let three_r = radd(d, nds1, two_r);
+        let h3 = d.lemma(rat.add_nonneg, &[nds1, two_r, h1, h2]);
+        let h4 = d.lemma(rat.add_nonneg, &[three_r, nds1, h3, h1]);
+        let embedded = d.lemma(p.of_rat_le, &[rz, four_r, h4]);
+        let abs_nn = d.lemma(p.abs_nonneg, &[w]);
+        d.lemma(p.mul_nonneg, &[o_four, abs_w, embedded, abs_nn])
+    };
+
+    let outer_pred = {
+        let ac_fv = d.fresh_fvar();
+        let m_ac0 = d.kernel().fvar(ac_fv);
+        let inner = {
+            let cb_fv = d.fresh_fvar();
+            let m_cb0 = d.kernel().fvar(cb_fv);
+            let point = split_point_base(d, p, a, b, m_ac0, m_cb0);
+            let npoint = cneg(d, p, point);
+            let diff = cadd(d, p, c, npoint);
+            let abs_diff = d.const_app(p.abs, &[diff]);
+            let body = cle(d, p, abs_diff, delta);
+            d.lam_fv(cb_fv, nat, body)
+        };
+        let body = exists_ty(d, p, nat, inner);
+        d.lam_fv(ac_fv, nat, body)
+    };
+    let approx = d.lemma(p.split_point_approx, &[a, b, c, k, hpos, hac, hcb, g]);
+
+    let minor = {
+        let ac_fv = d.fresh_fvar();
+        let m_ac0 = d.kernel().fvar(ac_fv);
+        let inner_pred = {
+            let cb_fv = d.fresh_fvar();
+            let m_cb0 = d.kernel().fvar(cb_fv);
+            let point = split_point_base(d, p, a, b, m_ac0, m_cb0);
+            let npoint = cneg(d, p, point);
+            let diff = cadd(d, p, c, npoint);
+            let abs_diff = d.const_app(p.abs, &[diff]);
+            let body = cle(d, p, abs_diff, delta);
+            d.lam_fv(cb_fv, nat, body)
+        };
+        let hyp_ty = exists_ty(d, p, nat, inner_pred);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        let minor2 = {
+            let cb_fv = d.fresh_fvar();
+            let m_cb0 = d.kernel().fvar(cb_fv);
+            let cn = split_point_base(d, p, a, b, m_ac0, m_cb0);
+            let ncn = cneg(d, p, cn);
+            let c_cn = cadd(d, p, c, ncn);
+            let abs_c_cn = d.const_app(p.abs, &[c_cn]);
+            let hyp2_ty = cle(d, p, abs_c_cn, delta);
+            let h2_fv = d.fresh_fvar();
+            let hdelta = d.kernel().fvar(h2_fv);
+
+            // `a ≤ cn ≤ b`, from `riemannSample_in_bounds` at index `succ m_ac0`.
+            let n_ac0 = d.succ(m_ac0);
+            let m_ab0 = NatOps::add(d, n_ac0, m_cb0);
+            let hlt = {
+                let inner_le = d.lemma(np.le_add_right, &[n_ac0, m_cb0]);
+                d.lemma(np.succ_le_succ, &[n_ac0, m_ab0, inner_le])
+            };
+            let bounds = d.const_app(p.riemann_sample_in_bounds, &[a, b, m_ab0, n_ac0, hab, hlt]);
+            let logic = p.rat.int.logic;
+            let a_le_cn = cle(d, p, a, cn);
+            let cn_le_b = cle(d, p, cn, b);
+            let hacn = d.const_app(logic.and_left, &[a_le_cn, cn_le_b, bounds]);
+            let hcnb = d.const_app(logic.and_right, &[a_le_cn, cn_le_b, bounds]);
+
+            let refl_a = d.lemma(p.le_refl, &[a]);
+            let refl_b = d.lemma(p.le_refl, &[b]);
+            let uacn = d.lemma(
+                p.uniformly_continuous_on_restrict,
+                &[f, a, b, a, cn, u, refl_a, hacn, hcnb],
+            );
+            let ucnb = d.lemma(
+                p.uniformly_continuous_on_restrict,
+                &[f, a, b, cn, b, u, hacn, hcnb, refl_b],
+            );
+
+            let split = d.lemma(
+                p.integral_split,
+                &[f, a, b, m_ac0, m_cb0, hab, u, hacn, hcnb, uacn, ucnb],
+            );
+            let i_acn = d.const_app(p.integral, &[f, a, cn, hacn, uacn]);
+            let i_cnb = d.const_app(p.integral, &[f, cn, b, hcnb, ucnb]);
+
+            // --- leg 1: `[a, cn]` against `[a, c]` ------------------------
+            let hcn_c = abs_sub_symm_le(d, p, c, cn, delta, hdelta);
+            // hcn_c : le (abs (cn − c)) delta
+            let hdw1 = {
+                let factored = shared_base_diff(d, p, cn, c, a);
+                // factored : Equiv ((cn−a)−(c−a)) (cn−c)
+                let na = cneg(d, p, a);
+                let cn_a = cadd(d, p, cn, na);
+                let c_a = cadd(d, p, c, na);
+                let nc_a = cneg(d, p, c_a);
+                let lhs = cadd(d, p, cn_a, nc_a);
+                let cn_c = {
+                    let nc = cneg(d, p, c);
+                    cadd(d, p, cn, nc)
+                };
+                let abs_lhs = d.const_app(p.abs, &[lhs]);
+                let abs_cn_c = d.const_app(p.abs, &[cn_c]);
+                let abs_eq = d.lemma(p.abs_congr, &[lhs, cn_c, factored]);
+                let back = d.lemma(p.equiv_symm, &[abs_lhs, abs_cn_c, abs_eq]);
+                let refl_d = d.lemma(p.equiv_refl, &[delta]);
+                d.lemma(
+                    p.le_congr,
+                    &[abs_cn_c, abs_lhs, delta, delta, back, refl_d, hcn_c],
+                )
+            };
+            let hw2b1 = d.lemma(p.le_refl, &[w_ac]);
+            let hbx1 = abs_self_diff_le_zero(d, p, a);
+            let hfit1 = {
+                // `0 + δ ≤ δ + δ`, then the caller's own fit.
+                let zero_delta = cadd(d, p, zero_c, delta);
+                let delta_delta = cadd(d, p, delta, delta);
+                let refl_delta = d.lemma(p.le_refl, &[delta]);
+                let grown = d.lemma(
+                    p.add_le_add,
+                    &[zero_c, delta, delta, delta, delta_nonneg, refl_delta],
+                );
+                // grown : le (add zero delta) (add delta delta)
+                let modul = d.const_app(p.uc_modulus, &[f, a, b, u, e]);
+                let one_nat = d.num(1);
+                let q = d.const_app(rat.nat_div_succ, &[one_nat, modul]);
+                let bound_r = embed(d, p, q);
+                d.lemma(p.le_trans, &[zero_delta, delta_delta, bound_r, grown, hfit])
+            };
+            // The PUBLISHED theorem, not the function: inlining its proof term
+            // twice cost ~14 s on `creal_prelude_builds`, measured.
+            let leg1 = d.lemma(
+                p.integral_endpoint_close,
+                &[
+                    f, a, b, u, kb, hbnd, a, cn, a, c, hacn, hac, uacn, uac, delta, w_ac, zero_c,
+                    delta, e, refl_a, hcnb, refl_a, hcb, hdw1, hw2b1, hbx1, hdw1, hfit1,
+                ],
+            );
+            // leg1 : le (abs (i_acn − i_ac)) b1
+
+            // --- leg 2: `[cn, b]` against `[c, b]` ------------------------
+            let hdw2 = {
+                let factored = shared_top_diff(d, p, cn, c, b);
+                // factored : Equiv ((b−cn)−(b−c)) (c−cn)
+                let ncn2 = cneg(d, p, cn);
+                let nc2 = cneg(d, p, c);
+                let b_cn = cadd(d, p, b, ncn2);
+                let b_c = cadd(d, p, b, nc2);
+                let nb_c = cneg(d, p, b_c);
+                let lhs = cadd(d, p, b_cn, nb_c);
+                let abs_lhs = d.const_app(p.abs, &[lhs]);
+                let abs_eq = d.lemma(p.abs_congr, &[lhs, c_cn, factored]);
+                let back = d.lemma(p.equiv_symm, &[abs_lhs, abs_c_cn, abs_eq]);
+                let refl_d = d.lemma(p.equiv_refl, &[delta]);
+                d.lemma(
+                    p.le_congr,
+                    &[abs_c_cn, abs_lhs, delta, delta, back, refl_d, hdelta],
+                )
+            };
+            let hw2b2 = d.lemma(p.le_refl, &[w_cb]);
+            let leg2 = d.lemma(
+                p.integral_endpoint_close,
+                &[
+                    f, a, b, u, kb, hbnd, cn, b, c, b, hcnb, hcb, ucnb, ucb, delta, w_cb, delta,
+                    delta, e, hacn, refl_b, hac, refl_b, hdw2, hw2b2, hcn_c, hdw2, hfit,
+                ],
+            );
+            // leg2 : le (abs (i_cnb − i_cb)) b2
+
+            // --- the triangle ---------------------------------------------
+            let ni_ac = cneg(d, p, i_ac);
+            let ni_cb = cneg(d, p, i_cb);
+            let x1 = cadd(d, p, i_acn, ni_ac);
+            let x2 = cadd(d, p, i_cnb, ni_cb);
+            let sum_x = cadd(d, p, x1, x2);
+            let abs_x1 = d.const_app(p.abs, &[x1]);
+            let abs_x2 = d.const_app(p.abs, &[x2]);
+            let abs_sum = d.const_app(p.abs, &[sum_x]);
+            let tri = d.lemma(p.abs_add_le, &[x1, x2]);
+            let parts = cadd(d, p, abs_x1, abs_x2);
+            let legs = d.lemma(p.add_le_add, &[abs_x1, b1, abs_x2, b2, leg1, leg2]);
+            let bounded = d.lemma(p.le_trans, &[abs_sum, parts, total, tri, legs]);
+            // bounded : le (abs (x1 + x2)) total
+
+            // `i_ab − (i_ac + i_cb) ~ x1 + x2`.
+            let split_rhs = cadd(d, p, i_acn, i_cnb);
+            let whole_eq = {
+                let refl_nrhs = d.lemma(p.equiv_refl, &[nrhs]);
+                let step1 = d.lemma(
+                    p.add_congr,
+                    &[i_ab, split_rhs, nrhs, nrhs, split, refl_nrhs],
+                );
+                // step1 : Equiv (i_ab − rhs) (split_rhs − rhs)
+                let neg_pair = neg_add_local(d, p, i_ac, i_cb);
+                // neg_pair : Equiv (neg (i_ac + i_cb)) ((−i_ac) + (−i_cb))
+                let npair = cadd(d, p, ni_ac, ni_cb);
+                let refl_sr = d.lemma(p.equiv_refl, &[split_rhs]);
+                let mid = cadd(d, p, split_rhs, npair);
+                let step2 = d.lemma(
+                    p.add_congr,
+                    &[split_rhs, split_rhs, nrhs, npair, refl_sr, neg_pair],
+                );
+                let step3 = add4_swap_middle(d, p, i_acn, i_cnb, ni_ac, ni_cb);
+                // step3 : Equiv ((i_acn + i_cnb) + ((−i_ac) + (−i_cb)))
+                //               ((i_acn + (−i_ac)) + (i_cnb + (−i_cb)))
+                let sr_nrhs = cadd(d, p, split_rhs, nrhs);
+                echain(
+                    d,
+                    p,
+                    target_diff,
+                    &[(sr_nrhs, step1), (mid, step2), (sum_x, step3)],
+                )
+            };
+            let abs_eq = d.lemma(p.abs_congr, &[target_diff, sum_x, whole_eq]);
+            let refl_total = d.lemma(p.equiv_refl, &[total]);
+            let back = d.lemma(p.equiv_symm, &[abs_target, abs_sum, abs_eq]);
+            let final_proof = d.lemma(
+                p.le_congr,
+                &[abs_sum, abs_target, total, total, back, refl_total, bounded],
+            );
+            let with_h2 = d.lam_fv(h2_fv, hyp2_ty, final_proof);
+            d.lam_fv(cb_fv, nat, with_h2)
+        };
+
+        let body = exists_elim(d, inner_pred, target, h, minor2);
+        let with_h = d.lam_fv(h_fv, hyp_ty, body);
+        d.lam_fv(ac_fv, nat, with_h)
+    };
+    exists_elim(d, outer_pred, target, approx, minor)
+}
+
+#[cfg(test)]
+mod integral_split_arbitrary_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// The arbitrary-`c` estimate and its dropped-leg control in ONE build.
+    /// The control drops `B2` from the right-hand side and leaves the
+    /// left-hand side the identical `ExprId`.
+    fn arbitrary_split_probes() -> Vec<(&'static str, Result<(), crate::KernelError>)> {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+        let nat = d.nat_ty();
+        let f_ty = fn_ty(&mut d, p);
+
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let kb_fv = d.fresh_fvar();
+        let kb = d.kernel().fvar(kb_fv);
+        let g_fv = d.fresh_fvar();
+        let g = d.kernel().fvar(g_fv);
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+
+        let w = width_of(&mut d, p, a, b);
+        let hpos_ty = d.const_app(p.pos_bound, &[w, k]);
+        let hpos_fv = d.fresh_fvar();
+        let hpos = d.kernel().fvar(hpos_fv);
+        let hab_ty = cle(&mut d, p, a, b);
+        let hab_fv = d.fresh_fvar();
+        let hab = d.kernel().fvar(hab_fv);
+        let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+        let u_fv = d.fresh_fvar();
+        let u = d.kernel().fvar(u_fv);
+        let hbnd_ty = d.const_app(p.bounded_on, &[f, a, b, kb]);
+        let hbnd_fv = d.fresh_fvar();
+        let hbnd = d.kernel().fvar(hbnd_fv);
+        let hac_ty = cle(&mut d, p, a, c);
+        let hac_fv = d.fresh_fvar();
+        let hac = d.kernel().fvar(hac_fv);
+        let hcb_ty = cle(&mut d, p, c, b);
+        let hcb_fv = d.fresh_fvar();
+        let hcb = d.kernel().fvar(hcb_fv);
+        let uac_ty = d.const_app(p.uniformly_continuous_on, &[f, a, c]);
+        let uac_fv = d.fresh_fvar();
+        let uac = d.kernel().fvar(uac_fv);
+        let ucb_ty = d.const_app(p.uniformly_continuous_on, &[f, c, b]);
+        let ucb_fv = d.fresh_fvar();
+        let ucb = d.kernel().fvar(ucb_fv);
+
+        let abs_w = d.const_app(p.abs, &[w]);
+        let (_, _, four_r) = unit_slack(&mut d, p, g);
+        let o_four = d.const_app(p.of_rat, &[four_r]);
+        let delta = cmul(&mut d, p, o_four, abs_w);
+        let hfit_ty = {
+            let modul = d.const_app(p.uc_modulus, &[f, a, b, u, e]);
+            let one_nat = d.num(1);
+            let q = d.const_app(p.rat.nat_div_succ, &[one_nat, modul]);
+            let target = embed(&mut d, p, q);
+            let sum = cadd(&mut d, p, delta, delta);
+            cle(&mut d, p, sum, target)
+        };
+        let hfit_fv = d.fresh_fvar();
+        let hfit = d.kernel().fvar(hfit_fv);
+
+        let proof = integral_split_arbitrary_close(
+            &mut d, p, f, a, b, c, k, hpos, hab, u, kb, hbnd, hac, hcb, uac, ucb, g, e, hfit,
+        );
+
+        let mbound = {
+            let succ_kb = d.succ(kb);
+            let zero_nat = d.num(0);
+            let q = d.const_app(p.rat.nat_div_succ, &[succ_kb, zero_nat]);
+            embed(&mut d, p, q)
+        };
+        let eps = {
+            let one_nat = d.num(1);
+            let q = d.const_app(p.rat.nat_div_succ, &[one_nat, e]);
+            embed(&mut d, p, q)
+        };
+        let w_ac = {
+            let na = cneg(&mut d, p, a);
+            let diff = cadd(&mut d, p, c, na);
+            d.const_app(p.abs, &[diff])
+        };
+        let w_cb = {
+            let nc = cneg(&mut d, p, c);
+            let diff = cadd(&mut d, p, b, nc);
+            d.const_app(p.abs, &[diff])
+        };
+        let b1 = {
+            let l = cmul(&mut d, p, mbound, delta);
+            let r = cmul(&mut d, p, eps, w_ac);
+            cadd(&mut d, p, l, r)
+        };
+        let b2 = {
+            let l = cmul(&mut d, p, mbound, delta);
+            let r = cmul(&mut d, p, eps, w_cb);
+            cadd(&mut d, p, l, r)
+        };
+        let total = cadd(&mut d, p, b1, b2);
+        assert_ne!(
+            total, b1,
+            "the dropped-leg control must differ from the bound"
+        );
+
+        let i_ab = d.const_app(p.integral, &[f, a, b, hab, u]);
+        let i_ac = d.const_app(p.integral, &[f, a, c, hac, uac]);
+        let i_cb = d.const_app(p.integral, &[f, c, b, hcb, ucb]);
+        let rhs = cadd(&mut d, p, i_ac, i_cb);
+        let nrhs = cneg(&mut d, p, rhs);
+        let diff = cadd(&mut d, p, i_ab, nrhs);
+        let abs_diff = d.const_app(p.abs, &[diff]);
+
+        let concl_good = cle(&mut d, p, abs_diff, total);
+        let concl_bad = cle(&mut d, p, abs_diff, b1);
+
+        let mut out = Vec::new();
+        for (label, concl) in [
+            ("integralSplitArbitraryGood", concl_good),
+            ("integralSplitArbitraryDroppedBad", concl_bad),
+        ] {
+            let ty = {
+                let t = d.arrow(hfit_ty, concl);
+                let t = d.pi_fv(e_fv, nat, t);
+                let t = d.pi_fv(g_fv, nat, t);
+                let t = d.pi_fv(ucb_fv, ucb_ty, t);
+                let t = d.pi_fv(uac_fv, uac_ty, t);
+                let t = d.pi_fv(hcb_fv, hcb_ty, t);
+                let t = d.pi_fv(hac_fv, hac_ty, t);
+                let t = d.arrow(hbnd_ty, t);
+                let t = d.pi_fv(kb_fv, nat, t);
+                let t = d.pi_fv(u_fv, u_ty, t);
+                let t = d.pi_fv(hab_fv, hab_ty, t);
+                let t = d.pi_fv(hpos_fv, hpos_ty, t);
+                let t = d.pi_fv(k_fv, nat, t);
+                let t = d.pi_fv(c_fv, carrier, t);
+                let t = d.pi_fv(b_fv, carrier, t);
+                let t = d.pi_fv(a_fv, carrier, t);
+                d.pi_fv(f_fv, f_ty, t)
+            };
+            let value = {
+                let v = d.lam_fv(hfit_fv, hfit_ty, proof);
+                let v = d.lam_fv(e_fv, nat, v);
+                let v = d.lam_fv(g_fv, nat, v);
+                let v = d.lam_fv(ucb_fv, ucb_ty, v);
+                let v = d.lam_fv(uac_fv, uac_ty, v);
+                let v = d.lam_fv(hcb_fv, hcb_ty, v);
+                let v = d.lam_fv(hac_fv, hac_ty, v);
+                let v = d.lam_fv(hbnd_fv, hbnd_ty, v);
+                let v = d.lam_fv(kb_fv, nat, v);
+                let v = d.lam_fv(u_fv, u_ty, v);
+                let v = d.lam_fv(hab_fv, hab_ty, v);
+                let v = d.lam_fv(hpos_fv, hpos_ty, v);
+                let v = d.lam_fv(k_fv, nat, v);
+                let v = d.lam_fv(c_fv, carrier, v);
+                let v = d.lam_fv(b_fv, carrier, v);
+                let v = d.lam_fv(a_fv, carrier, v);
+                d.lam_fv(f_fv, f_ty, v)
+            };
+            let anon = d.kernel().anon();
+            let name = d.kernel().name_str(anon, label);
+            out.push((
+                label,
+                d.kernel().add_declaration(Declaration::Theorem {
+                    name,
+                    uparams: vec![],
+                    ty,
+                    value,
+                }),
+            ));
+        }
+        out
+    }
+
+    #[test]
+    fn additivity_holds_at_an_arbitrary_split_point_as_an_estimate() {
+        let results = crate::on_a_deep_stack(arbitrary_split_probes);
+        for (label, res) in results {
+            if label.ends_with("Good") {
+                res.unwrap_or_else(|e| panic!("{label} must be accepted: {e:?}"));
+            } else {
+                assert!(res.is_err(), "{label} must be REFUSED");
+            }
+        }
+    }
+}
+
+// --- driving the estimate to an `Equiv` ------------------------------------
+//
+// Everything below is index arithmetic: no new analytic content. The only
+// two moving parts are `Rat.natDivSucc_scale` (an EXACT identity, so no
+// cross-denominator comparison is ever needed) and `Rat.natDivSucc_le_scaled`
+// + `Rat.nat_index_symm`, which let ONE composed index satisfy two
+// independent depth requirements at once.
+
+/// `le (neg z) zero` from `h0z : le zero z`.
+fn neg_nonpos_real(d: &mut IntDev<'_>, p: CRealPrelude, z: ExprId, h0z: ExprId) -> ExprId {
+    let zero_c = czero(d, p);
+    let nz = cneg(d, p, z);
+    let refl_nz = d.lemma(p.le_refl, &[nz]);
+    let grown = d.lemma(p.add_le_add, &[zero_c, z, nz, nz, h0z, refl_nz]);
+    // grown : le (add zero (neg z)) (add z (neg z))
+    let zero_nz = cadd(d, p, zero_c, nz);
+    let z_nz = cadd(d, p, z, nz);
+    let left_eq = {
+        let nz_zero = cadd(d, p, nz, zero_c);
+        let comm = d.lemma(p.add_comm, &[zero_c, nz]);
+        let drop = d.lemma(p.add_zero, &[nz]);
+        d.lemma(p.equiv_trans, &[zero_nz, nz_zero, nz, comm, drop])
+    };
+    let right_eq = d.lemma(p.add_neg, &[z]);
+    d.lemma(
+        p.le_congr,
+        &[zero_nz, nz, z_nz, zero_c, left_eq, right_eq, grown],
+    )
+}
+
+/// `le (abs z) bnd` from `h0z : le zero z` and `hz : le z bnd`.
+fn abs_le_of_nonneg(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    z: ExprId,
+    bnd: ExprId,
+    h0z: ExprId,
+    hz: ExprId,
+) -> ExprId {
+    let zero_c = czero(d, p);
+    let nz = cneg(d, p, z);
+    let nonpos = neg_nonpos_real(d, p, z, h0z);
+    let to_z = d.lemma(p.le_trans, &[nz, zero_c, z, nonpos, h0z]);
+    let to_bnd = d.lemma(p.le_trans, &[nz, z, bnd, to_z, hz]);
+    d.lemma(p.abs_le, &[z, bnd, hz, to_bnd])
+}
+
+/// `Eq Rat ((u+v)+(u2+v2)) ((u+u2)+(v+v2))` — the four-term middle swap over
+/// `Rat`, from `add_assoc`/`add_comm` only.
+fn rat_add4_swap(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    u: ExprId,
+    v: ExprId,
+    u2: ExprId,
+    v2: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let uv = radd(d, u, v);
+    let u2v2 = radd(d, u2, v2);
+    let start = radd(d, uv, u2v2);
+
+    let v_u2v2 = radd(d, v, u2v2);
+    let s1 = radd(d, u, v_u2v2);
+    let h1 = d.lemma(rat.add_assoc, &[u, v, u2v2]);
+
+    let vu2 = radd(d, v, u2);
+    let vu2_v2 = radd(d, vu2, v2);
+    let s2 = radd(d, u, vu2_v2);
+    let h2 = {
+        let assoc = d.lemma(rat.add_assoc, &[v, u2, v2]);
+        let back = rsymm(d, vu2_v2, v_u2v2, assoc);
+        rcongr(d, v_u2v2, vu2_v2, back, &|d, t| radd(d, u, t))
+    };
+
+    let u2v = radd(d, u2, v);
+    let u2v_v2 = radd(d, u2v, v2);
+    let s3 = radd(d, u, u2v_v2);
+    let h3 = {
+        let comm = d.lemma(rat.add_comm, &[v, u2]);
+        let lifted = rcongr(d, vu2, u2v, comm, &|d, t| radd(d, t, v2));
+        rcongr(d, vu2_v2, u2v_v2, lifted, &|d, t| radd(d, u, t))
+    };
+
+    let vv2 = radd(d, v, v2);
+    let u2_vv2 = radd(d, u2, vv2);
+    let s4 = radd(d, u, u2_vv2);
+    let h4 = {
+        let assoc = d.lemma(rat.add_assoc, &[u2, v, v2]);
+        rcongr(d, u2v_v2, u2_vv2, assoc, &|d, t| radd(d, u, t))
+    };
+
+    let uu2 = radd(d, u, u2);
+    let target = radd(d, uu2, vv2);
+    let h5 = {
+        let assoc = d.lemma(rat.add_assoc, &[u, u2, vv2]);
+        rsymm(d, target, s4, assoc)
+    };
+
+    let (_, proof) = rchain(
+        d,
+        start,
+        &[(s1, h1), (s2, h2), (s3, h3), (s4, h4), (target, h5)],
+    );
+    proof
+}
+
+/// The EXACT depth at which numerator `n` shrinks to `1/(m+1)`, and the proof.
+///
+/// `J := (n+2)·m + (n+1)`; `Rat.natDivSucc_scale` at `c := succ n` reads
+/// `natDivSucc (n+2) J` as `natDivSucc 1 m` outright, and
+/// `Rat.natDivSucc_le_add_left` widens the numerator `n ↦ n+2` at the same
+/// index. Choosing `c` as a SUCCESSOR rather than as `n` itself is what
+/// keeps every index in this section a syntactic `Nat.succ`, so a caller can
+/// name `J`'s predecessor without a `Nat.sub`.
+fn depth_for(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    n: ExprId,
+    m: ExprId,
+) -> (ExprId, ExprId, ExprId) {
+    let rat = p.rat;
+    let c = d.succ(n);
+    let cc = d.succ(c);
+    let scaled = NatOps::mul(d, cc, m);
+    let j = NatOps::add(d, scaled, c);
+    let j_pred = NatOps::add(d, scaled, n);
+    let two_nat = d.num(2);
+    let widen = d.lemma(rat.nat_div_succ_le_add_left, &[n, two_nat, j]);
+    // widen : rle (nds n j) (nds (n+2) j), and `n+2` is defeq `succ (succ n)`
+    let exact = d.lemma(rat.nat_div_succ_scale, &[c, m]);
+    // exact : Eq Rat (nds (succ c) ((succ c)*m + c)) (nds 1 m)
+    let one_nat = d.num(1);
+    let rhs = d.const_app(rat.nat_div_succ, &[one_nat, m]);
+    let source = d.const_app(rat.nat_div_succ, &[cc, j]);
+    let bridged = rat_eq_rewrite(d, source, rhs, exact, widen, &|d, t| {
+        let ndsn = d.const_app(rat.nat_div_succ, &[n, j]);
+        rle(d, rat, ndsn, t)
+    });
+    (j, j_pred, bridged)
+}
+
+/// `Eq Rat four_r (natDivSucc 4 (succ g))` — [`unit_slack`]'s additive slack,
+/// fused. Three `Rat.natDivSucc_add`s at ONE denominator.
+fn four_slack_fused(d: &mut IntDev<'_>, p: CRealPrelude, g: ExprId) -> (ExprId, ExprId, ExprId) {
+    let rat = p.rat;
+    let sg = d.succ(g);
+    let one_nat = d.num(1);
+    let two_nat = NatOps::add(d, one_nat, one_nat);
+    let three_nat = NatOps::add(d, one_nat, two_nat);
+    let four_nat = NatOps::add(d, three_nat, one_nat);
+    let nds1 = d.const_app(rat.nat_div_succ, &[one_nat, sg]);
+    let nds2 = d.const_app(rat.nat_div_succ, &[two_nat, sg]);
+    let nds3 = d.const_app(rat.nat_div_succ, &[three_nat, sg]);
+    let nds4 = d.const_app(rat.nat_div_succ, &[four_nat, sg]);
+
+    let two_r = radd(d, nds1, nds1);
+    let three_r = radd(d, nds1, two_r);
+    let four_r = radd(d, three_r, nds1);
+
+    let a1 = d.lemma(rat.nat_div_succ_add, &[one_nat, one_nat, sg]);
+    let t1 = rcongr(d, two_r, nds2, a1, &|d, t| radd(d, nds1, t));
+    let mid = radd(d, nds1, nds2);
+    let a2 = d.lemma(rat.nat_div_succ_add, &[one_nat, two_nat, sg]);
+    let (_, three_eq) = rchain(d, three_r, &[(mid, t1), (nds3, a2)]);
+
+    let f1 = rcongr(d, three_r, nds3, three_eq, &|d, t| radd(d, t, nds1));
+    let mid2 = radd(d, nds3, nds1);
+    let f2 = d.lemma(rat.nat_div_succ_add, &[three_nat, one_nat, sg]);
+    let (_, four_eq) = rchain(d, four_r, &[(mid2, f1), (nds4, f2)]);
+    (four_r, nds4, four_eq)
+}
+
+/// `Equiv (mul (ofRat (natDivSucc n1 0)) (ofRat (natDivSucc n2 j)))
+///        (ofRat (natDivSucc (n1*n2) j))` — one `ofRat_mul` and one
+/// `natDivSucc_mul`, the fusion every bound in this section ends with.
+fn embed_mul_fuse(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    n1: ExprId,
+    n2: ExprId,
+    j: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let zero_nat = d.num(0);
+    let q1 = d.const_app(rat.nat_div_succ, &[n1, zero_nat]);
+    let q2 = d.const_app(rat.nat_div_succ, &[n2, j]);
+    let e1 = embed(d, p, q1);
+    let e2 = embed(d, p, q2);
+    let prod = cmul(d, p, e1, e2);
+    let fold = d.lemma(p.of_rat_mul, &[q1, q2]);
+    let raw = rmul(d, q1, q2);
+    let fuse = d.lemma(rat.nat_div_succ_mul, &[n1, n2, j]);
+    let scaled = NatOps::mul(d, n1, n2);
+    let target = d.const_app(rat.nat_div_succ, &[scaled, j]);
+    rat_eq_rewrite(d, raw, target, fuse, fold, &|d, t| {
+        let ot = embed(d, p, t);
+        equiv(d, p, prod, ot)
+    })
+}
+
+/// **`CReal.integral_split` at an ARBITRARY `c`.** The `Equiv`, under a
+/// `PosBound` on the interval width and a `BoundedOn` witness.
+///
+/// Everything analytic is [`integral_split_arbitrary_close`]; this is the
+/// accuracy bookkeeping that drives its two free parameters. `e` is chosen so
+/// the `(1/(e+1))·|width|` half is exactly `1/(2E+2)`; `g` is chosen so the
+/// `M·δ` half is too AND the modulus-fit hypothesis holds, by composing the
+/// two required depths into ONE index and reading it back BOTH ways
+/// ([`RatPrelude::nat_div_succ_le_scaled`] plus
+/// [`RatPrelude::nat_index_symm`], which is exactly the pair that lemma's own
+/// doc comment says exists for this purpose).
+#[allow(clippy::too_many_arguments)]
+fn integral_split_arbitrary_proof(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    k: ExprId,
+    hpos: ExprId,
+    hab: ExprId,
+    u: ExprId,
+    kb: ExprId,
+    hbnd: ExprId,
+    hac: ExprId,
+    hcb: ExprId,
+    uac: ExprId,
+    ucb: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let rat = p.rat;
+    let zero_c = czero(d, p);
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+    let four_nat = d.num(4);
+
+    let i_ab = d.const_app(p.integral, &[f, a, b, hab, u]);
+    let i_ac = d.const_app(p.integral, &[f, a, c, hac, uac]);
+    let i_cb = d.const_app(p.integral, &[f, c, b, hcb, ucb]);
+    let rhs = cadd(d, p, i_ac, i_cb);
+    let nrhs = cneg(d, p, rhs);
+    let vdiff = cadd(d, p, i_ab, nrhs);
+    let abs_v = d.const_app(p.abs, &[vdiff]);
+
+    // --- interval-width bounds, all against ONE rational `magn/1` ---------
+    let w = width_of(d, p, a, b);
+    let abs_w = d.const_app(p.abs, &[w]);
+    let (_c0, magn, hw_le) = direct_bound_le(d, p, w);
+    let mag_rat = d.const_app(rat.nat_div_succ, &[magn, zero_nat]);
+    let mag_real = embed(d, p, mag_rat);
+    let hw0 = width_nonneg_of(d, p, a, b, hab);
+    let hw_abs = abs_le_of_nonneg(d, p, w, mag_real, hw0, hw_le);
+
+    let w_ac = width_of(d, p, a, c);
+    let w_cb = width_of(d, p, c, b);
+    let na = cneg(d, p, a);
+    let nc = cneg(d, p, c);
+    let h0ac = width_nonneg_of(d, p, a, c, hac);
+    let h0cb = width_nonneg_of(d, p, c, b, hcb);
+    let refl_na = d.lemma(p.le_refl, &[na]);
+    let hac_le_w = d.lemma(p.add_le_add, &[c, b, na, na, hcb, refl_na]);
+    let hac_le = d.lemma(p.le_trans, &[w_ac, w, mag_real, hac_le_w, hw_le]);
+    let hac_abs = abs_le_of_nonneg(d, p, w_ac, mag_real, h0ac, hac_le);
+    let refl_b = d.lemma(p.le_refl, &[b]);
+    let nn = d.lemma(p.neg_le_neg, &[a, c, hac]);
+    let hcb_le_w = d.lemma(p.add_le_add, &[b, b, nc, na, refl_b, nn]);
+    let hcb_le = d.lemma(p.le_trans, &[w_cb, w, mag_real, hcb_le_w, hw_le]);
+    let hcb_abs = abs_le_of_nonneg(d, p, w_cb, mag_real, h0cb, hcb_le);
+
+    let mn = d.succ(kb);
+    let mn_rat = d.const_app(rat.nat_div_succ, &[mn, zero_nat]);
+    let mbound = embed(d, p, mn_rat);
+    let m_nonneg = {
+        let rz = rzero(d, rat);
+        let h = d.lemma(rat.zero_le_nat_div_succ, &[mn, zero_nat]);
+        d.lemma(p.of_rat_le, &[rz, mn_rat, h])
+    };
+
+    // --- the per-accuracy bound -------------------------------------------
+    let big_e_fv = d.fresh_fvar();
+    let big_e = d.kernel().fvar(big_e_fv);
+    let n1_idx = {
+        let doubled = NatOps::mul(d, two_nat, big_e);
+        NatOps::add(d, doubled, one_nat)
+    };
+
+    let pnum = NatOps::mul(d, magn, four_nat);
+    let p2 = NatOps::add(d, pnum, pnum);
+    let magn2 = NatOps::add(d, magn, magn);
+    let (e_idx, _e_pred, pf_eps) = depth_for(d, p, magn2, n1_idx);
+    let modul = d.const_app(p.uc_modulus, &[f, a, b, u, e_idx]);
+    let (j2, j2p, pf_fit) = depth_for(d, p, p2, modul);
+    let n1 = NatOps::mul(d, mn, pnum);
+    let n1_2 = NatOps::add(d, n1, n1);
+    let (j1, _j1p, pf_mdelta) = depth_for(d, p, n1_2, n1_idx);
+    let g = {
+        let sj2 = d.succ(j2);
+        let scaled = NatOps::mul(d, sj2, j1);
+        NatOps::add(d, scaled, j2p)
+    };
+    let sg = d.succ(g);
+    let eps_rat = d.const_app(rat.nat_div_succ, &[one_nat, e_idx]);
+    let eps = embed(d, p, eps_rat);
+    let eps_nonneg = {
+        let rz = rzero(d, rat);
+        let h = d.lemma(rat.zero_le_nat_div_succ, &[one_nat, e_idx]);
+        d.lemma(p.of_rat_le, &[rz, eps_rat, h])
+    };
+
+    // `nds K (succ g) ≤ nds K j1`, and the same index read the OTHER way.
+    let step_to_j1 = |d: &mut IntDev<'_>, kk: ExprId| -> ExprId {
+        d.lemma(rat.nat_div_succ_le_scaled, &[kk, j2, j1])
+    };
+    let step_to_j2 = |d: &mut IntDev<'_>, kk: ExprId| -> ExprId {
+        let symm = d.lemma(rat.nat_index_symm, &[j2, j1]);
+        let other = d.lemma(rat.nat_div_succ_le_scaled, &[kk, j1, j2]);
+        let sj1 = d.succ(j1);
+        let scaled2 = NatOps::mul(d, sj1, j2);
+        let idx2 = NatOps::add(d, scaled2, j1);
+        let sj2 = d.succ(j2);
+        let scaled1 = NatOps::mul(d, sj2, j1);
+        let idx1 = NatOps::add(d, scaled1, j2);
+        let back = {
+            let refl = d.refl(idx1);
+            nat_rewrite_prop(d, idx1, idx2, symm, refl, &|d, t| d.eq(t, idx1))
+        };
+        let target = d.const_app(rat.nat_div_succ, &[kk, j2]);
+        nat_rewrite_prop(d, idx2, idx1, back, other, &|d, t| {
+            let l = d.const_app(rat.nat_div_succ, &[kk, t]);
+            rle(d, rat, l, target)
+        })
+    };
+
+    // `δ ≤ ofRat (natDivSucc pnum (succ g))`.
+    let (four_r, nds4, four_eq) = four_slack_fused(d, p, g);
+    let o_four = embed(d, p, four_r);
+    let o_nds4 = embed(d, p, nds4);
+    let delta = cmul(d, p, o_four, abs_w);
+    let pnum_rat = d.const_app(rat.nat_div_succ, &[pnum, sg]);
+    let o_pnum = embed(d, p, pnum_rat);
+    let delta_le = {
+        let four_real_eq = {
+            let refl = d.lemma(p.equiv_refl, &[o_four]);
+            rat_eq_rewrite(d, four_r, nds4, four_eq, refl, &|d, t| {
+                let ot = embed(d, p, t);
+                equiv(d, p, o_four, ot)
+            })
+        };
+        let o_four_nonneg = {
+            let rz = rzero(d, rat);
+            let nds1 = d.const_app(rat.nat_div_succ, &[one_nat, sg]);
+            let h1 = d.lemma(rat.zero_le_nat_div_succ, &[one_nat, sg]);
+            let two_r = radd(d, nds1, nds1);
+            let h2 = d.lemma(rat.add_nonneg, &[nds1, nds1, h1, h1]);
+            let three_r = radd(d, nds1, two_r);
+            let h3 = d.lemma(rat.add_nonneg, &[nds1, two_r, h1, h2]);
+            let h4 = d.lemma(rat.add_nonneg, &[three_r, nds1, h3, h1]);
+            d.lemma(p.of_rat_le, &[rz, four_r, h4])
+        };
+        let scaled = d.lemma(
+            p.mul_le_mul_of_nonneg_left,
+            &[o_four, abs_w, mag_real, o_four_nonneg, hw_abs],
+        );
+        let prod = cmul(d, p, o_four, mag_real);
+        let prod4 = cmul(d, p, o_nds4, mag_real);
+        let prod_rev = cmul(d, p, mag_real, o_nds4);
+        let refl_mag = d.lemma(p.equiv_refl, &[mag_real]);
+        let to4 = d.lemma(
+            p.mul_congr,
+            &[o_four, o_nds4, mag_real, mag_real, four_real_eq, refl_mag],
+        );
+        let comm = d.lemma(p.mul_comm, &[o_nds4, mag_real]);
+        let folded = embed_mul_fuse(d, p, magn, four_nat, sg);
+        let chain = echain(
+            d,
+            p,
+            prod,
+            &[(prod4, to4), (prod_rev, comm), (o_pnum, folded)],
+        );
+        let refl_delta = d.lemma(p.equiv_refl, &[delta]);
+        d.lemma(
+            p.le_congr,
+            &[delta, delta, prod, o_pnum, refl_delta, chain, scaled],
+        )
+    };
+
+    // --- discharge the modulus fit ----------------------------------------
+    let modul_rat = d.const_app(rat.nat_div_succ, &[one_nat, modul]);
+    let modul_real = embed(d, p, modul_rat);
+    let p2_rat = d.const_app(rat.nat_div_succ, &[p2, sg]);
+    let o_p2 = embed(d, p, p2_rat);
+    let sum_real = cadd(d, p, o_pnum, o_pnum);
+    let sum_fold = {
+        let fold = d.lemma(p.of_rat_add, &[pnum_rat, pnum_rat]);
+        let sum_rat = radd(d, pnum_rat, pnum_rat);
+        let fuse = d.lemma(rat.nat_div_succ_add, &[pnum, pnum, sg]);
+        rat_eq_rewrite(d, sum_rat, p2_rat, fuse, fold, &|d, t| {
+            let ot = embed(d, p, t);
+            equiv(d, p, sum_real, ot)
+        })
+    };
+    let hfit = {
+        let pair = d.lemma(
+            p.add_le_add,
+            &[delta, o_pnum, delta, o_pnum, delta_le, delta_le],
+        );
+        let shrunk = step_to_j2(d, p2);
+        let p2_j2 = d.const_app(rat.nat_div_succ, &[p2, j2]);
+        let combined = d.lemma(rat.le_trans, &[p2_rat, p2_j2, modul_rat, shrunk, pf_fit]);
+        let embedded = d.lemma(p.of_rat_le, &[p2_rat, modul_rat, combined]);
+        let back = d.lemma(p.equiv_symm, &[sum_real, o_p2, sum_fold]);
+        let refl_m = d.lemma(p.equiv_refl, &[modul_real]);
+        let moved = d.lemma(
+            p.le_congr,
+            &[
+                o_p2, sum_real, modul_real, modul_real, back, refl_m, embedded,
+            ],
+        );
+        let delta_delta = cadd(d, p, delta, delta);
+        d.lemma(
+            p.le_trans,
+            &[delta_delta, sum_real, modul_real, pair, moved],
+        )
+    };
+
+    let estimate = integral_split_arbitrary_close(
+        d, p, f, a, b, c, k, hpos, hab, u, kb, hbnd, hac, hcb, uac, ucb, g, e_idx, hfit,
+    );
+
+    // --- bound `total` by `1/(E+1)` ---------------------------------------
+    let n1_rat = d.const_app(rat.nat_div_succ, &[n1, sg]);
+    let o_n1 = embed(d, p, n1_rat);
+    let magn_e_rat = d.const_app(rat.nat_div_succ, &[magn, e_idx]);
+    let o_magn_e = embed(d, p, magn_e_rat);
+
+    // `M·δ ≤ ofRat (n1/(g+2))`.
+    let m_delta_le = {
+        let scaled = d.lemma(
+            p.mul_le_mul_of_nonneg_left,
+            &[mbound, delta, o_pnum, m_nonneg, delta_le],
+        );
+        let prod = cmul(d, p, mbound, o_pnum);
+        let folded = embed_mul_fuse(d, p, mn, pnum, sg);
+        let l = cmul(d, p, mbound, delta);
+        let refl_l = d.lemma(p.equiv_refl, &[l]);
+        d.lemma(p.le_congr, &[l, l, prod, o_n1, refl_l, folded, scaled])
+    };
+    // `eps·W ≤ ofRat (magn/(e+1))`, for either width bound.
+    let eps_w_le = |d: &mut IntDev<'_>, wq: ExprId, hwq: ExprId| -> ExprId {
+        let scaled = d.lemma(
+            p.mul_le_mul_of_nonneg_left,
+            &[eps, wq, mag_real, eps_nonneg, hwq],
+        );
+        let prod = cmul(d, p, eps, mag_real);
+        let prod_rev = cmul(d, p, mag_real, eps);
+        let comm = d.lemma(p.mul_comm, &[eps, mag_real]);
+        let folded = embed_mul_fuse(d, p, magn, one_nat, e_idx);
+        // folded : Equiv (mul mag_real eps) (embed (nds (magn*1) e_idx))
+        let scaled_num = NatOps::mul(d, magn, one_nat);
+        let scaled_rat = d.const_app(rat.nat_div_succ, &[scaled_num, e_idx]);
+        let o_scaled = embed(d, p, scaled_rat);
+        let collapse = {
+            let identity = d.lemma(rat.int.nat.mul_one, &[magn]);
+            let eqr = nat_eq_to_rat(d, scaled_num, magn, identity, &|d, t| {
+                d.const_app(rat.nat_div_succ, &[t, e_idx])
+            });
+            let refl_scaled = d.lemma(p.equiv_refl, &[o_scaled]);
+            rat_eq_rewrite(d, scaled_rat, magn_e_rat, eqr, refl_scaled, &|d, t| {
+                let ot = embed(d, p, t);
+                equiv(d, p, o_scaled, ot)
+            })
+        };
+        let chain = echain(
+            d,
+            p,
+            prod,
+            &[(prod_rev, comm), (o_scaled, folded), (o_magn_e, collapse)],
+        );
+        let l = cmul(d, p, eps, wq);
+        let refl_l = d.lemma(p.equiv_refl, &[l]);
+        d.lemma(p.le_congr, &[l, l, prod, o_magn_e, refl_l, chain, scaled])
+    };
+    let abs_w_ac = d.const_app(p.abs, &[w_ac]);
+    let abs_w_cb = d.const_app(p.abs, &[w_cb]);
+    let eps_ac = eps_w_le(d, abs_w_ac, hac_abs);
+    let eps_cb = eps_w_le(d, abs_w_cb, hcb_abs);
+
+    let leg_bound = cadd(d, p, o_n1, o_magn_e);
+    let b1 = {
+        let l = cmul(d, p, mbound, delta);
+        let r = {
+            let z = d.const_app(p.abs, &[w_ac]);
+            cmul(d, p, eps, z)
+        };
+        cadd(d, p, l, r)
+    };
+    let b2 = {
+        let l = cmul(d, p, mbound, delta);
+        let r = {
+            let z = d.const_app(p.abs, &[w_cb]);
+            cmul(d, p, eps, z)
+        };
+        cadd(d, p, l, r)
+    };
+    let total = cadd(d, p, b1, b2);
+    let b1_le = {
+        let l = cmul(d, p, mbound, delta);
+        let r = {
+            let z = d.const_app(p.abs, &[w_ac]);
+            cmul(d, p, eps, z)
+        };
+        d.lemma(p.add_le_add, &[l, o_n1, r, o_magn_e, m_delta_le, eps_ac])
+    };
+    let b2_le = {
+        let l = cmul(d, p, mbound, delta);
+        let r = {
+            let z = d.const_app(p.abs, &[w_cb]);
+            cmul(d, p, eps, z)
+        };
+        d.lemma(p.add_le_add, &[l, o_n1, r, o_magn_e, m_delta_le, eps_cb])
+    };
+    let pair_bound = cadd(d, p, leg_bound, leg_bound);
+    let total_le = d.lemma(p.add_le_add, &[b1, leg_bound, b2, leg_bound, b1_le, b2_le]);
+
+    // `(X+Y)+(X+Y) ~ ofRat ((n1+n1)/(g+2) + (magn+magn)/(e+1)) ≤ 1/(E+1)`.
+    let final_le = {
+        let inner_fold = d.lemma(p.of_rat_add, &[n1_rat, magn_e_rat]);
+        let inner_rat = radd(d, n1_rat, magn_e_rat);
+        let o_inner = embed(d, p, inner_rat);
+        let outer_fold = d.lemma(p.of_rat_add, &[inner_rat, inner_rat]);
+        let outer_rat = radd(d, inner_rat, inner_rat);
+        let o_outer = embed(d, p, outer_rat);
+        let lifted = d.lemma(
+            p.add_congr,
+            &[
+                leg_bound, o_inner, leg_bound, o_inner, inner_fold, inner_fold,
+            ],
+        );
+        let two_inner = cadd(d, p, o_inner, o_inner);
+        let pair_eq = d.lemma(
+            p.equiv_trans,
+            &[pair_bound, two_inner, o_outer, lifted, outer_fold],
+        );
+        // `outer_rat = (n1/(g+2) + magn/(e+1)) + (n1/(g+2) + magn/(e+1))`
+        let swap = rat_add4_swap(d, p, n1_rat, magn_e_rat, n1_rat, magn_e_rat);
+        let n1_pair = radd(d, n1_rat, n1_rat);
+        let magn_pair = radd(d, magn_e_rat, magn_e_rat);
+        let swapped = radd(d, n1_pair, magn_pair);
+        let n1_2_rat = d.const_app(rat.nat_div_succ, &[n1_2, sg]);
+        let magn2_rat = d.const_app(rat.nat_div_succ, &[magn2, e_idx]);
+        let fuse1 = d.lemma(rat.nat_div_succ_add, &[n1, n1, sg]);
+        let fuse2 = d.lemma(rat.nat_div_succ_add, &[magn, magn, e_idx]);
+        let step_a = rcongr(d, n1_pair, n1_2_rat, fuse1, &|d, t| radd(d, t, magn_pair));
+        let mid_a = radd(d, n1_2_rat, magn_pair);
+        let step_b = rcongr(d, magn_pair, magn2_rat, fuse2, &|d, t| radd(d, n1_2_rat, t));
+        let fused = radd(d, n1_2_rat, magn2_rat);
+        let (_, outer_eq) = rchain(
+            d,
+            outer_rat,
+            &[(swapped, swap), (mid_a, step_a), (fused, step_b)],
+        );
+        // each half down to `1/(2E+2)`
+        let n1_2_j1 = d.const_app(rat.nat_div_succ, &[n1_2, j1]);
+        let shrunk = step_to_j1(d, n1_2);
+        let half_rat = d.const_app(rat.nat_div_succ, &[one_nat, n1_idx]);
+        let half_a = d.lemma(
+            rat.le_trans,
+            &[n1_2_rat, n1_2_j1, half_rat, shrunk, pf_mdelta],
+        );
+        let halves_sum = radd(d, half_rat, half_rat);
+        let both = d.lemma(
+            rat.add_le_add,
+            &[n1_2_rat, half_rat, magn2_rat, half_rat, half_a, pf_eps],
+        );
+        let two_rat = d.const_app(rat.nat_div_succ, &[two_nat, n1_idx]);
+        let fuse_halves = d.lemma(rat.nat_div_succ_add, &[one_nat, one_nat, n1_idx]);
+        let both_fused = rat_eq_rewrite(d, halves_sum, two_rat, fuse_halves, both, &|d, t| {
+            rle(d, rat, fused, t)
+        });
+        let target_rat = d.const_app(rat.nat_div_succ, &[one_nat, big_e]);
+        let halve = d.lemma(rat.nat_div_succ_halve, &[big_e]);
+        let to_target = rat_eq_rewrite(d, two_rat, target_rat, halve, both_fused, &|d, t| {
+            rle(d, rat, fused, t)
+        });
+        let outer_back = rsymm(d, outer_rat, fused, outer_eq);
+        let arith = rat_eq_rewrite(d, fused, outer_rat, outer_back, to_target, &|d, t| {
+            rle(d, rat, t, target_rat)
+        });
+        // arith : rle outer_rat (nds 1 big_e)
+        let o_target = embed(d, p, target_rat);
+        let embedded = d.lemma(p.of_rat_le, &[outer_rat, target_rat, arith]);
+        let refl_t = d.lemma(p.equiv_refl, &[o_target]);
+        let pair_back = d.lemma(p.equiv_symm, &[pair_bound, o_outer, pair_eq]);
+        let moved = d.lemma(
+            p.le_congr,
+            &[
+                o_outer, pair_bound, o_target, o_target, pair_back, refl_t, embedded,
+            ],
+        );
+        let chained = d.lemma(p.le_trans, &[total, pair_bound, o_target, total_le, moved]);
+        d.lemma(p.le_trans, &[abs_v, total, o_target, estimate, chained])
+    };
+
+    // --- close ------------------------------------------------------------
+    let per = d.lam_fv(big_e_fv, nat, final_le);
+    let vzero = d.lemma(p.equiv_zero_of_small, &[vdiff, per]);
+    let up = {
+        let hle = d.lemma(p.le_of_equiv, &[vdiff, zero_c, vzero]);
+        let raw = le_add_of_sub_le_real(d, p, i_ab, rhs, zero_c, hle);
+        let rhs_zero = cadd(d, p, rhs, zero_c);
+        let drop = d.lemma(p.add_zero, &[rhs]);
+        let refl_i = d.lemma(p.equiv_refl, &[i_ab]);
+        d.lemma(p.le_congr, &[i_ab, i_ab, rhs_zero, rhs, refl_i, drop, raw])
+    };
+    let down = {
+        let back = d.lemma(p.equiv_symm, &[vdiff, zero_c, vzero]);
+        let h0 = d.lemma(p.le_of_equiv, &[zero_c, vdiff, back]);
+        let nonpos = neg_nonpos_real(d, p, vdiff, h0);
+        // nonpos : le (neg vdiff) zero
+        let nv = cneg(d, p, vdiff);
+        let ni_ab = cneg(d, p, i_ab);
+        let rev = cadd(d, p, rhs, ni_ab);
+        let swap = d.lemma(p.neg_sub_swap, &[i_ab, rhs]);
+        let refl_z = d.lemma(p.equiv_refl, &[zero_c]);
+        let moved = d.lemma(p.le_congr, &[nv, rev, zero_c, zero_c, swap, refl_z, nonpos]);
+        let raw = le_add_of_sub_le_real(d, p, rhs, i_ab, zero_c, moved);
+        let i_zero = cadd(d, p, i_ab, zero_c);
+        let drop = d.lemma(p.add_zero, &[i_ab]);
+        let refl_r = d.lemma(p.equiv_refl, &[rhs]);
+        d.lemma(p.le_congr, &[rhs, rhs, i_zero, i_ab, refl_r, drop, raw])
+    };
+    d.lemma(p.equiv_of_le_le, &[i_ab, rhs, up, down])
+}
+
+#[cfg(test)]
+mod integral_split_arbitrary_equiv_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// The arbitrary-`c` `Equiv`, symbolic in everything.
+    ///
+    /// **No kernel negative control here, deliberately.** Both sides of the
+    /// conclusion are `CReal.integral` applications, and this file's own
+    /// module documentation records that a FAILING `def_eq` between two
+    /// `Definition`-heavy terms has no stopping rule (measured >300 s, RSS
+    /// 2.0 → 3.1 GB). `integral_split_tests` made the same call for the same
+    /// reason. Non-vacuity is asserted STRUCTURALLY instead: the two
+    /// summands must be distinct hash-consed terms, so the statement is not
+    /// `Equiv X (X + X)`-shaped, and the DISCRIMINATING controls live one
+    /// level down, on
+    /// `integral_split_arbitrary_close`/`integral_endpoint_close`, where
+    /// both sides of the varied `le` are small.
+    fn arbitrary_equiv_probe() -> Result<(), crate::KernelError> {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+        let nat = d.nat_ty();
+        let f_ty = fn_ty(&mut d, p);
+
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let kb_fv = d.fresh_fvar();
+        let kb = d.kernel().fvar(kb_fv);
+
+        let w = width_of(&mut d, p, a, b);
+        let hpos_ty = d.const_app(p.pos_bound, &[w, k]);
+        let hpos_fv = d.fresh_fvar();
+        let hpos = d.kernel().fvar(hpos_fv);
+        let hab_ty = cle(&mut d, p, a, b);
+        let hab_fv = d.fresh_fvar();
+        let hab = d.kernel().fvar(hab_fv);
+        let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+        let u_fv = d.fresh_fvar();
+        let u = d.kernel().fvar(u_fv);
+        let hbnd_ty = d.const_app(p.bounded_on, &[f, a, b, kb]);
+        let hbnd_fv = d.fresh_fvar();
+        let hbnd = d.kernel().fvar(hbnd_fv);
+        let hac_ty = cle(&mut d, p, a, c);
+        let hac_fv = d.fresh_fvar();
+        let hac = d.kernel().fvar(hac_fv);
+        let hcb_ty = cle(&mut d, p, c, b);
+        let hcb_fv = d.fresh_fvar();
+        let hcb = d.kernel().fvar(hcb_fv);
+        let uac_ty = d.const_app(p.uniformly_continuous_on, &[f, a, c]);
+        let uac_fv = d.fresh_fvar();
+        let uac = d.kernel().fvar(uac_fv);
+        let ucb_ty = d.const_app(p.uniformly_continuous_on, &[f, c, b]);
+        let ucb_fv = d.fresh_fvar();
+        let ucb = d.kernel().fvar(ucb_fv);
+
+        let proof = integral_split_arbitrary_proof(
+            &mut d, p, f, a, b, c, k, hpos, hab, u, kb, hbnd, hac, hcb, uac, ucb,
+        );
+
+        let i_ab = d.const_app(p.integral, &[f, a, b, hab, u]);
+        let i_ac = d.const_app(p.integral, &[f, a, c, hac, uac]);
+        let i_cb = d.const_app(p.integral, &[f, c, b, hcb, ucb]);
+        assert_ne!(i_ac, i_cb, "the two sub-integrals must be distinct terms");
+        assert_ne!(i_ab, i_ac, "the whole and the first part must be distinct");
+        let rhs = cadd(&mut d, p, i_ac, i_cb);
+        let concl = equiv(&mut d, p, i_ab, rhs);
+
+        let ty = {
+            let t = d.pi_fv(ucb_fv, ucb_ty, concl);
+            let t = d.pi_fv(uac_fv, uac_ty, t);
+            let t = d.pi_fv(hcb_fv, hcb_ty, t);
+            let t = d.pi_fv(hac_fv, hac_ty, t);
+            let t = d.arrow(hbnd_ty, t);
+            let t = d.pi_fv(kb_fv, nat, t);
+            let t = d.pi_fv(u_fv, u_ty, t);
+            let t = d.pi_fv(hab_fv, hab_ty, t);
+            let t = d.pi_fv(hpos_fv, hpos_ty, t);
+            let t = d.pi_fv(k_fv, nat, t);
+            let t = d.pi_fv(c_fv, carrier, t);
+            let t = d.pi_fv(b_fv, carrier, t);
+            let t = d.pi_fv(a_fv, carrier, t);
+            d.pi_fv(f_fv, f_ty, t)
+        };
+        let value = {
+            let v = d.lam_fv(ucb_fv, ucb_ty, proof);
+            let v = d.lam_fv(uac_fv, uac_ty, v);
+            let v = d.lam_fv(hcb_fv, hcb_ty, v);
+            let v = d.lam_fv(hac_fv, hac_ty, v);
+            let v = d.lam_fv(hbnd_fv, hbnd_ty, v);
+            let v = d.lam_fv(kb_fv, nat, v);
+            let v = d.lam_fv(u_fv, u_ty, v);
+            let v = d.lam_fv(hab_fv, hab_ty, v);
+            let v = d.lam_fv(hpos_fv, hpos_ty, v);
+            let v = d.lam_fv(k_fv, nat, v);
+            let v = d.lam_fv(c_fv, carrier, v);
+            let v = d.lam_fv(b_fv, carrier, v);
+            let v = d.lam_fv(a_fv, carrier, v);
+            d.lam_fv(f_fv, f_ty, v)
+        };
+        let anon = d.kernel().anon();
+        let name = d.kernel().name_str(anon, "integralSplitArbitraryEquiv");
+        d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+    }
+
+    #[test]
+    fn additivity_holds_at_an_arbitrary_split_point() {
+        let r = crate::on_a_deep_stack(arbitrary_equiv_probe);
+        r.unwrap_or_else(|e| panic!("the arbitrary-c Equiv must be accepted: {e:?}"));
+    }
+}
+
+/// Admit `CReal.integralEndpointClose`. See this section's own module
+/// documentation.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_integral_endpoint_close(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let f_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let aa_fv = d.fresh_fvar();
+    let aa = d.kernel().fvar(aa_fv);
+    let bb_fv = d.fresh_fvar();
+    let bb = d.kernel().fvar(bb_fv);
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, aa, bb]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let hb_ty = d.const_app(p.bounded_on, &[f, aa, bb, k]);
+    let hb_fv = d.fresh_fvar();
+    let hb = d.kernel().fvar(hb_fv);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let x2_fv = d.fresh_fvar();
+    let x2 = d.kernel().fvar(x2_fv);
+    let y2_fv = d.fresh_fvar();
+    let y2 = d.kernel().fvar(y2_fv);
+    let dw_fv = d.fresh_fvar();
+    let dw = d.kernel().fvar(dw_fv);
+    let w2b_fv = d.fresh_fvar();
+    let w2b = d.kernel().fvar(w2b_fv);
+    let bx_fv = d.fresh_fvar();
+    let bx = d.kernel().fvar(bx_fv);
+    let bw_fv = d.fresh_fvar();
+    let bw = d.kernel().fvar(bw_fv);
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+
+    let hxy_ty = cle(d, p, x, y);
+    let hxy_fv = d.fresh_fvar();
+    let hxy = d.kernel().fvar(hxy_fv);
+    let hx2y2_ty = cle(d, p, x2, y2);
+    let hx2y2_fv = d.fresh_fvar();
+    let hx2y2 = d.kernel().fvar(hx2y2_fv);
+    let uxy_ty = d.const_app(p.uniformly_continuous_on, &[f, x, y]);
+    let uxy_fv = d.fresh_fvar();
+    let uxy = d.kernel().fvar(uxy_fv);
+    let ux2y2_ty = d.const_app(p.uniformly_continuous_on, &[f, x2, y2]);
+    let ux2y2_fv = d.fresh_fvar();
+    let ux2y2 = d.kernel().fvar(ux2y2_fv);
+
+    let hax_ty = cle(d, p, aa, x);
+    let hyb_ty = cle(d, p, y, bb);
+    let hax2_ty = cle(d, p, aa, x2);
+    let hy2b_ty = cle(d, p, y2, bb);
+
+    let w1 = width_of(d, p, x, y);
+    let w2 = width_of(d, p, x2, y2);
+    let nw2 = cneg(d, p, w2);
+    let wdiff = cadd(d, p, w1, nw2);
+    let abs_wdiff = d.const_app(p.abs, &[wdiff]);
+    let hdw_ty = cle(d, p, abs_wdiff, dw);
+    let abs_w2 = d.const_app(p.abs, &[w2]);
+    let hw2b_ty = cle(d, p, abs_w2, w2b);
+    let nx2 = cneg(d, p, x2);
+    let xdiff = cadd(d, p, x, nx2);
+    let abs_xdiff = d.const_app(p.abs, &[xdiff]);
+    let hbx_ty = cle(d, p, abs_xdiff, bx);
+    let hbw_ty = cle(d, p, abs_wdiff, bw);
+    let hfit_ty = {
+        let modul = d.const_app(p.uc_modulus, &[f, aa, bb, u, e]);
+        let one_nat = d.num(1);
+        let q = d.const_app(p.rat.nat_div_succ, &[one_nat, modul]);
+        let target = embed(d, p, q);
+        let sum = cadd(d, p, bx, bw);
+        cle(d, p, sum, target)
+    };
+
+    let hyp_tys = [
+        hax_ty, hyb_ty, hax2_ty, hy2b_ty, hdw_ty, hw2b_ty, hbx_ty, hbw_ty, hfit_ty,
+    ];
+    let hyp_fvs: Vec<_> = (0..hyp_tys.len()).map(|_| d.fresh_fvar()).collect();
+    let hyps: Vec<_> = hyp_fvs.iter().map(|fv| d.kernel().fvar(*fv)).collect();
+
+    let proof = integral_endpoint_close(
+        d, p, f, aa, bb, u, k, hb, x, y, x2, y2, hxy, hx2y2, uxy, ux2y2, hyps[0], hyps[1], hyps[2],
+        hyps[3], dw, w2b, bx, bw, e, hyps[4], hyps[5], hyps[6], hyps[7], hyps[8],
+    );
+
+    let i1 = d.const_app(p.integral, &[f, x, y, hxy, uxy]);
+    let i2 = d.const_app(p.integral, &[f, x2, y2, hx2y2, ux2y2]);
+    let ni2 = cneg(d, p, i2);
+    let diff = cadd(d, p, i1, ni2);
+    let abs_diff = d.const_app(p.abs, &[diff]);
+    let mbound = {
+        let succ_k = d.succ(k);
+        let zero_nat = d.num(0);
+        let q = d.const_app(p.rat.nat_div_succ, &[succ_k, zero_nat]);
+        embed(d, p, q)
+    };
+    let eps = {
+        let one_nat = d.num(1);
+        let q = d.const_app(p.rat.nat_div_succ, &[one_nat, e]);
+        embed(d, p, q)
+    };
+    let bound = {
+        let l = cmul(d, p, mbound, dw);
+        let r = cmul(d, p, eps, w2b);
+        cadd(d, p, l, r)
+    };
+    let concl = cle(d, p, abs_diff, bound);
+
+    let ty = {
+        let mut t = concl;
+        for hty in hyp_tys.iter().rev() {
+            t = d.arrow(*hty, t);
+        }
+        t = d.pi_fv(e_fv, nat, t);
+        t = d.pi_fv(bw_fv, carrier, t);
+        t = d.pi_fv(bx_fv, carrier, t);
+        t = d.pi_fv(w2b_fv, carrier, t);
+        t = d.pi_fv(dw_fv, carrier, t);
+        t = d.pi_fv(ux2y2_fv, ux2y2_ty, t);
+        t = d.pi_fv(uxy_fv, uxy_ty, t);
+        t = d.pi_fv(hx2y2_fv, hx2y2_ty, t);
+        t = d.pi_fv(hxy_fv, hxy_ty, t);
+        t = d.pi_fv(y2_fv, carrier, t);
+        t = d.pi_fv(x2_fv, carrier, t);
+        t = d.pi_fv(y_fv, carrier, t);
+        t = d.pi_fv(x_fv, carrier, t);
+        t = d.arrow(hb_ty, t);
+        t = d.pi_fv(k_fv, nat, t);
+        t = d.pi_fv(u_fv, u_ty, t);
+        t = d.pi_fv(bb_fv, carrier, t);
+        t = d.pi_fv(aa_fv, carrier, t);
+        d.pi_fv(f_fv, f_ty, t)
+    };
+    let value = {
+        let mut v = proof;
+        for (fv, hty) in hyp_fvs.iter().zip(hyp_tys.iter()).rev() {
+            v = d.lam_fv(*fv, *hty, v);
+        }
+        v = d.lam_fv(e_fv, nat, v);
+        v = d.lam_fv(bw_fv, carrier, v);
+        v = d.lam_fv(bx_fv, carrier, v);
+        v = d.lam_fv(w2b_fv, carrier, v);
+        v = d.lam_fv(dw_fv, carrier, v);
+        v = d.lam_fv(ux2y2_fv, ux2y2_ty, v);
+        v = d.lam_fv(uxy_fv, uxy_ty, v);
+        v = d.lam_fv(hx2y2_fv, hx2y2_ty, v);
+        v = d.lam_fv(hxy_fv, hxy_ty, v);
+        v = d.lam_fv(y2_fv, carrier, v);
+        v = d.lam_fv(x2_fv, carrier, v);
+        v = d.lam_fv(y_fv, carrier, v);
+        v = d.lam_fv(x_fv, carrier, v);
+        v = d.lam_fv(hb_fv, hb_ty, v);
+        v = d.lam_fv(k_fv, nat, v);
+        v = d.lam_fv(u_fv, u_ty, v);
+        v = d.lam_fv(bb_fv, carrier, v);
+        v = d.lam_fv(aa_fv, carrier, v);
+        d.lam_fv(f_fv, f_ty, v)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.integral_endpoint_close,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Admit `CReal.integralSplitArbitrary`. See this section's own module
+/// documentation for the route and for why the `PosBound` is in the
+/// signature.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_integral_split_arbitrary(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let f_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let kb_fv = d.fresh_fvar();
+    let kb = d.kernel().fvar(kb_fv);
+
+    let w = width_of(d, p, a, b);
+    let hpos_ty = d.const_app(p.pos_bound, &[w, k]);
+    let hpos_fv = d.fresh_fvar();
+    let hpos = d.kernel().fvar(hpos_fv);
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let hbnd_ty = d.const_app(p.bounded_on, &[f, a, b, kb]);
+    let hbnd_fv = d.fresh_fvar();
+    let hbnd = d.kernel().fvar(hbnd_fv);
+    let hac_ty = cle(d, p, a, c);
+    let hac_fv = d.fresh_fvar();
+    let hac = d.kernel().fvar(hac_fv);
+    let hcb_ty = cle(d, p, c, b);
+    let hcb_fv = d.fresh_fvar();
+    let hcb = d.kernel().fvar(hcb_fv);
+    let uac_ty = d.const_app(p.uniformly_continuous_on, &[f, a, c]);
+    let uac_fv = d.fresh_fvar();
+    let uac = d.kernel().fvar(uac_fv);
+    let ucb_ty = d.const_app(p.uniformly_continuous_on, &[f, c, b]);
+    let ucb_fv = d.fresh_fvar();
+    let ucb = d.kernel().fvar(ucb_fv);
+
+    let proof = integral_split_arbitrary_proof(
+        d, p, f, a, b, c, k, hpos, hab, u, kb, hbnd, hac, hcb, uac, ucb,
+    );
+
+    let i_ab = d.const_app(p.integral, &[f, a, b, hab, u]);
+    let i_ac = d.const_app(p.integral, &[f, a, c, hac, uac]);
+    let i_cb = d.const_app(p.integral, &[f, c, b, hcb, ucb]);
+    let rhs = cadd(d, p, i_ac, i_cb);
+    let concl = equiv(d, p, i_ab, rhs);
+
+    let ty = {
+        let t = d.pi_fv(ucb_fv, ucb_ty, concl);
+        let t = d.pi_fv(uac_fv, uac_ty, t);
+        let t = d.pi_fv(hcb_fv, hcb_ty, t);
+        let t = d.pi_fv(hac_fv, hac_ty, t);
+        let t = d.arrow(hbnd_ty, t);
+        let t = d.pi_fv(kb_fv, nat, t);
+        let t = d.pi_fv(u_fv, u_ty, t);
+        let t = d.pi_fv(hab_fv, hab_ty, t);
+        let t = d.pi_fv(hpos_fv, hpos_ty, t);
+        let t = d.pi_fv(k_fv, nat, t);
+        let t = d.pi_fv(c_fv, carrier, t);
+        let t = d.pi_fv(b_fv, carrier, t);
+        d.pi_fv(a_fv, carrier, t)
+    };
+    let ty = d.pi_fv(f_fv, f_ty, ty);
+    let value = {
+        let v = d.lam_fv(ucb_fv, ucb_ty, proof);
+        let v = d.lam_fv(uac_fv, uac_ty, v);
+        let v = d.lam_fv(hcb_fv, hcb_ty, v);
+        let v = d.lam_fv(hac_fv, hac_ty, v);
+        let v = d.lam_fv(hbnd_fv, hbnd_ty, v);
+        let v = d.lam_fv(kb_fv, nat, v);
+        let v = d.lam_fv(u_fv, u_ty, v);
+        let v = d.lam_fv(hab_fv, hab_ty, v);
+        let v = d.lam_fv(hpos_fv, hpos_ty, v);
+        let v = d.lam_fv(k_fv, nat, v);
+        let v = d.lam_fv(c_fv, carrier, v);
+        let v = d.lam_fv(b_fv, carrier, v);
+        let v = d.lam_fv(a_fv, carrier, v);
+        d.lam_fv(f_fv, f_ty, v)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.integral_split_arbitrary,
+        uparams: vec![],
+        ty,
+        value,
+    })
 }

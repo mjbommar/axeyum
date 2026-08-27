@@ -146,6 +146,17 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
         ("CReal.integral_add", p.integral_add, "theorem"),
         ("CReal.integral_le", p.integral_le, "theorem"),
         ("CReal.integral_split", p.integral_split, "theorem"),
+        ("CReal.splitPointApprox", p.split_point_approx, "theorem"),
+        (
+            "CReal.integralEndpointClose",
+            p.integral_endpoint_close,
+            "theorem",
+        ),
+        (
+            "CReal.integralSplitArbitrary",
+            p.integral_split_arbitrary,
+            "theorem",
+        ),
         ("CReal.integral_abs_le", p.integral_abs_le, "theorem"),
         ("CReal.integral_scale", p.integral_scale, "theorem"),
         (
