@@ -42,22 +42,39 @@
 //! `sumRange_diagonal`, and `sumRange_rect_eq_diag_add_corner`, nothing
 //! `sum.rs` did not already have a use for.
 //!
-//! # What this file does NOT establish
+//! # The two-bound gap, and how it closed
 //!
-//! `Rat.sumRange_rect_eq_diag_add_corner` is the SAME-bound `n×n` square
-//! decomposition `Nat`'s version is (`rect_row`/`corner_row` both take the
-//! single bound `n`). The Cauchy product target `polyEval_mul` needs a
-//! TWO-different-bounds statement (`polyEval a m x * polyEval b n x`, `m ≠ n`
-//! in general), and porting a same-bound square to a same-bound square does
-//! not by itself supply that — see `rat_prelude/polynomial.rs`'s module doc
-//! for the counterexample showing why the literal Cauchy-product statement
-//! needs additional hypotheses (or a differently-bounded `conv`) beyond what
-//! this file's machinery alone gives.
+//! This section previously read "what this file does NOT establish", and said
+//! that `Rat.sumRange_rect_eq_diag_add_corner` is the SAME-bound `n×n` square
+//! `Nat`'s version is (`rect_row`/`corner_row` both take the single bound
+//! `n`), while the Cauchy product needs `Σ f m · Σ g n` with `m ≠ n` — and
+//! that porting a same-bound square to a same-bound square cannot supply
+//! that. The premise is right and the conclusion was wrong, in a way worth
+//! recording because it is the general shape of the mistake.
+//!
+//! The two-bound generality never had to come from the RECTANGLE theorem. It
+//! comes from the step BEFORE it: [`declare_sum_range_mul`] and
+//! [`declare_sum_range_mul_double`] carry `Σ f m · Σ g n` to the double sum
+//! `Σ_{i<m} Σ_{j<n} f i · g j` for arbitrary independent `m` and `n`, by
+//! `mul_comm` + `mul_sumRange` + `sumRange_congr` alone — no induction, no
+//! `Nat.sub`, and nothing that could care whether the bounds agree. The
+//! same-bound square is only needed once you additionally want the
+//! ANTIDIAGONAL grouping, which is a genuinely square-shaped statement.
+//!
+//! So the honest split is: two bounds for the rectangle, one bound for the
+//! diagonal decomposition, and [`declare_sum_range_mul_eq_diag_add_corner`]
+//! at `m = n`.
+//!
+//! `Rat.polyEval_mul` is still not here, but reindexing no longer blocks it.
+//! What remains is `Rat.pow_add` (`x^(i+j) = x^i · x^j`) plus the index
+//! round-trip `i + (k−i) = k` for `i ≤ k`, which is what turns an
+//! antidiagonal cell `(a i · x^i) · (b (k−i) · x^(k−i))` into
+//! `(a i · b (k−i)) · x^k`. That is `pow` arithmetic, not summation
+//! reindexing.
 
 use super::RatPrelude;
 use super::ops::{
-    nat_eq_to_rat, radd, rat_ty, rchain, rcongr, req, rmul, rrefl, rsum_range, rsymm, rtrans,
-    rzero,
+    nat_eq_to_rat, radd, rat_ty, rchain, rcongr, req, rmul, rrefl, rsum_range, rsymm, rtrans, rzero,
 };
 use crate::KernelError;
 use crate::expr::ExprId;
@@ -735,13 +752,7 @@ fn scaled_left(d: &mut IntDev<'_>, f: ExprId, c: ExprId) -> ExprId {
 
 /// `fun i => sumRange (fun j => mul (f i) (g j)) n` — one row of the separable
 /// rectangle, written DIRECTLY rather than as an `F i j` application.
-fn double_fn(
-    d: &mut IntDev<'_>,
-    p: RatPrelude,
-    f: ExprId,
-    g: ExprId,
-    n: ExprId,
-) -> ExprId {
+fn double_fn(d: &mut IntDev<'_>, p: RatPrelude, f: ExprId, g: ExprId, n: ExprId) -> ExprId {
     let nat = d.nat_ty();
     let i_fv = d.fresh_fvar();
     let i = d.kernel().fvar(i_fv);
@@ -812,13 +823,7 @@ fn separable_triangle(
 /// LEFT and the running index right, matching [`shifted`] exactly. This is
 /// not cosmetic — reversing it changes which argument `Nat.add`'s recursion
 /// is stuck on.
-fn separable_corner(
-    d: &mut IntDev<'_>,
-    p: RatPrelude,
-    f: ExprId,
-    g: ExprId,
-    n: ExprId,
-) -> ExprId {
+fn separable_corner(d: &mut IntDev<'_>, p: RatPrelude, f: ExprId, g: ExprId, n: ExprId) -> ExprId {
     let nat = d.nat_ty();
     let i_fv = d.fresh_fvar();
     let i = d.kernel().fvar(i_fv);
@@ -847,10 +852,7 @@ fn separable_corner(
 ///
 /// TWO independent bounds `m`, `n` — nothing here requires them equal, and
 /// the two-bound form is what a general-degree polynomial product needs.
-pub(super) fn declare_sum_range_mul(
-    d: &mut IntDev<'_>,
-    p: RatPrelude,
-) -> Result<(), KernelError> {
+pub(super) fn declare_sum_range_mul(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
     let nat = d.nat_ty();
     let carrier = rat_ty(d);
     let fn_ty = d.arrow(nat, carrier);

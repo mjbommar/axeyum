@@ -4443,6 +4443,266 @@ fn sum_range_rect_eq_diag_add_corner_computes_at_a_concrete_instance_over_rat() 
     );
 }
 
+/// `Rat.sumRange_mul_double` at **two different bounds** — the generality the
+/// same-bound square could not supply, and the reason this lemma carries `m`
+/// and `n` separately.
+///
+/// `f i := 2^i`, `g j := 3^j`, `m = 2`, `n = 3`. Independently:
+/// `(2^0+2^1)·(3^0+3^1+3^2) = 3·13 = 39`, and the double sum
+/// `Σ_{i<2} Σ_{j<3} 2^i·3^j` is the same 39. Checked as the theorem's own
+/// statement AND by reducing both sides to the numeral.
+///
+/// Index-DEPENDENT summands are the point: with `f` and `g` constant every
+/// cell of the rectangle carries the same value, so a transposed bound
+/// (`m` for `n`) would still balance. Here it does not — `3·13` and `13·3`
+/// agree, but `Σ_{i<2}Σ_{j<3}` and `Σ_{i<3}Σ_{j<2}` are built from different
+/// cells and the structural `def_eq` below separates them.
+#[test]
+fn sum_range_mul_double_computes_at_two_different_bounds() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{req, rmul, rpow, rsum_range};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    let base_two = literal(&mut d, 2);
+    let base_three = literal(&mut d, 3);
+
+    // f := fun i => 2^i,  g := fun j => 3^j.
+    let f = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let body = rpow(&mut d, p, base_two, i);
+        d.lam_fv(i_fv, nat, body)
+    };
+    let g = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let body = rpow(&mut d, p, base_three, j);
+        d.lam_fv(j_fv, nat, body)
+    };
+
+    let two = d.num(2);
+    let three = d.num(3);
+
+    let proof = d.lemma(p.sum_range_mul_double, &[f, g, two, three]);
+    let inferred = d
+        .kernel()
+        .infer(proof)
+        .unwrap_or_else(|e| panic!("sumRange_mul_double(f,g,2,3) should infer: {e:?}"));
+
+    let sum_f = rsum_range(&mut d, p, f, two);
+    let sum_g = rsum_range(&mut d, p, g, three);
+    let lhs = rmul(&mut d, sum_f, sum_g);
+
+    // Σ_{i<2} Σ_{j<3} f i * g j, rebuilt here from raw pieces.
+    let double = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let fi = d.apply(f, &[i]);
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let gj = d.apply(g, &[j]);
+        let cell = rmul(&mut d, fi, gj);
+        let inner = d.lam_fv(j_fv, nat, cell);
+        let row = rsum_range(&mut d, p, inner, three);
+        d.lam_fv(i_fv, nat, row)
+    };
+    let rhs = rsum_range(&mut d, p, double, two);
+    let expected = req(&mut d, lhs, rhs);
+    assert!(
+        d.kernel().def_eq(inferred, expected),
+        "sumRange_mul_double(f,g,2,3) should state (Σ_{{i<2}} f i)·(Σ_{{j<3}} g j) \
+         = Σ_{{i<2}} Σ_{{j<3}} f i · g j"
+    );
+
+    let thirty_nine = literal(&mut d, 39);
+    assert!(
+        d.kernel().def_eq(lhs, thirty_nine),
+        "(2^0+2^1)·(3^0+3^1+3^2) must reduce to 3·13 = 39"
+    );
+    assert!(
+        d.kernel().def_eq(rhs, thirty_nine),
+        "the 2×3 rectangle of 2^i·3^j must reduce to the same 39"
+    );
+
+    assert!(
+        d.kernel()
+            .axiom_footprint(p.sum_range_mul_double)
+            .is_empty(),
+        "sumRange_mul_double must rest on zero axioms"
+    );
+}
+
+/// `Rat.sumRange_mul_eq_diag_add_corner` at a concrete instance, **and the
+/// naive corner-dropping identity refuted at that same instance**.
+///
+/// `f i := 2^i`, `g j := 3^j`, `n = 3`. By hand:
+///
+/// - product `(1+2+4)·(1+3+9) = 7·13 = 91`;
+/// - antidiagonal triangle `Σ_{k<3} Σ_{i≤k} 2^i·3^(k−i)`
+///   `= 1 + (3+2) + (9+6+4) = 1 + 5 + 19 = 25`;
+/// - corner `Σ_{i<3} Σ_{k<i} 2^i·3^((3−i)+k)`
+///   `= 0 + (2·3^2) + (4·3^1 + 4·3^2) = 18 + 48 = 66`;
+/// - `25 + 66 = 91`.
+///
+/// **`n = 3` and not `n = 2`, deliberately.** At `n = 2` the corner is the
+/// single cell `i = 1`, where `n − i = 1 = i` — so `g ((n−i)+k)` and
+/// `g (i+k)` coincide there and the test cannot tell a transposed corner
+/// index from the right one. That is exactly the vacuous-negative-control
+/// trap: the "wrong" variant is literally the same term. At `n = 3` the
+/// corner spans `i = 1` and `i = 2` with `n − i ∈ {2, 1}` against `i ∈
+/// {1, 2}`, and the same transposition moves the corner from 66 to 150.
+///
+/// One symmetry no instance can break, stated so nobody looks for it:
+/// `Σ_{i≤k} f i · g (k−i)` and `Σ_{i≤k} f (k−i) · g i` are the SAME sum
+/// reindexed, so no choice of `f`, `g`, `n` separates them. That swap is
+/// caught by reading the statement, not by computing it.
+///
+/// The corner is **most of the product** here, which is the point: the naive
+/// finite Cauchy identity is not a small-error approximation, it is simply
+/// false. The last assertion is that negative control — `91` and `25` are
+/// distinct numerals, so it can be neither vacuous (the two sides are not the
+/// same term) nor inverted (the dropped-corner identity is genuinely false at
+/// this instance, not accidentally true).
+#[test]
+fn sum_range_mul_eq_diag_add_corner_computes_and_the_naive_identity_is_false() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{radd, req, rmul, rpow, rsum_range};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+    let nat = d.nat_ty();
+
+    let literal = |d: &mut IntDev<'_>, k: u32| -> ExprId {
+        let numerator = d.num(k);
+        let index = d.num(0);
+        d.const_app(p.nat_div_succ, &[numerator, index])
+    };
+
+    let base_two = literal(&mut d, 2);
+    let base_three = literal(&mut d, 3);
+
+    let f = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let body = rpow(&mut d, p, base_two, i);
+        d.lam_fv(i_fv, nat, body)
+    };
+    let g = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let body = rpow(&mut d, p, base_three, j);
+        d.lam_fv(j_fv, nat, body)
+    };
+    let three_n = d.num(3);
+
+    let proof = d.lemma(p.sum_range_mul_eq_diag_add_corner, &[f, g, three_n]);
+    let inferred = d
+        .kernel()
+        .infer(proof)
+        .unwrap_or_else(|e| panic!("sumRange_mul_eq_diag_add_corner(f,g,3) should infer: {e:?}"));
+
+    let sum_f = rsum_range(&mut d, p, f, three_n);
+    let sum_g = rsum_range(&mut d, p, g, three_n);
+    let product = rmul(&mut d, sum_f, sum_g);
+
+    // Σ_{k<2} Σ_{i<k+1} f i * g (k−i), rebuilt from raw pieces.
+    let triangle = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let fi = d.apply(f, &[i]);
+        let ki = d.sub(k, i);
+        let gki = d.apply(g, &[ki]);
+        let cell = rmul(&mut d, fi, gki);
+        let inner = d.lam_fv(i_fv, nat, cell);
+        let sk = d.succ(k);
+        let row = rsum_range(&mut d, p, inner, sk);
+        let t = d.lam_fv(k_fv, nat, row);
+        rsum_range(&mut d, p, t, three_n)
+    };
+    // Σ_{i<2} Σ_{k<i} f i * g ((2−i)+k), rebuilt from raw pieces.
+    let corner = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let fi = d.apply(f, &[i]);
+        let sub_ni = d.sub(three_n, i);
+        let idx = d.add(sub_ni, k);
+        let gidx = d.apply(g, &[idx]);
+        let cell = rmul(&mut d, fi, gidx);
+        let inner = d.lam_fv(k_fv, nat, cell);
+        let row = rsum_range(&mut d, p, inner, i);
+        let c = d.lam_fv(i_fv, nat, row);
+        rsum_range(&mut d, p, c, three_n)
+    };
+
+    let rhs = radd(&mut d, triangle, corner);
+    let expected = req(&mut d, product, rhs);
+    assert!(
+        d.kernel().def_eq(inferred, expected),
+        "sumRange_mul_eq_diag_add_corner(f,g,3) should state product = triangle + corner"
+    );
+
+    let ninety_one = literal(&mut d, 91);
+    let twenty_five = literal(&mut d, 25);
+    let sixty_six = literal(&mut d, 66);
+    assert!(
+        d.kernel().def_eq(product, ninety_one),
+        "(2^0+2^1+2^2)·(3^0+3^1+3^2) = 7·13 must reduce to 91"
+    );
+    assert!(
+        d.kernel().def_eq(triangle, twenty_five),
+        "the antidiagonal convolution Σ_{{k<3}} Σ_{{i≤k}} 2^i·3^(k−i) must reduce to 1+5+19 = 25"
+    );
+    assert!(
+        d.kernel().def_eq(corner, sixty_six),
+        "the corner Σ_{{i<3}} Σ_{{k<i}} 2^i·3^((3−i)+k) must reduce to 18+48 = 66"
+    );
+
+    // The negative control below is only worth anything if `def_eq` can tell
+    // two distinct `Rat` numerals apart at all. Pin that here rather than
+    // assuming it: a `def_eq` that said `true` for everything would make the
+    // assertion after this one pass for the wrong reason.
+    assert!(
+        !d.kernel().def_eq(twenty_five, sixty_six),
+        "def_eq must separate the distinct Rat numerals 25 and 66; if it does \
+         not, the corner-dropping negative control below cannot fail either"
+    );
+
+    // THE NEGATIVE CONTROL. Dropping the corner -- the naive finite Cauchy
+    // identity -- claims 91 = 25.
+    assert!(
+        !d.kernel().def_eq(product, triangle),
+        "the corner-dropping identity must be FALSE here; if the product and the \
+         convolution are def_eq at this instance then this test's f/g were chosen \
+         badly and it proves nothing about the corner"
+    );
+
+    assert!(
+        d.kernel()
+            .axiom_footprint(p.sum_range_mul_eq_diag_add_corner)
+            .is_empty(),
+        "sumRange_mul_eq_diag_add_corner must rest on zero axioms"
+    );
+    assert!(
+        d.kernel().axiom_footprint(p.sum_range_mul).is_empty(),
+        "sumRange_mul must rest on zero axioms"
+    );
+}
+
 // --- polynomials (`rat_prelude::polynomial`) --------------------------------
 
 /// Every declaration `polynomial::declare_polynomial` adds — `Rat.pow`,
