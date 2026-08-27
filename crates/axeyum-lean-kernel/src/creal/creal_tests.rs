@@ -10171,6 +10171,7 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "integral::declare_integral_endpoint_close",
     "integral::declare_integral_split_arbitrary",
     "integral::declare_integral_abs_le",
+    "integral::declare_ftc_estimates",
     "derivative::declare_has_derivative_integral_const",
     "inverse_fn::declare_order_reflect_of_pos_deriv",
     "monotone::declare_inverse_lipschitz_of_pos_deriv",

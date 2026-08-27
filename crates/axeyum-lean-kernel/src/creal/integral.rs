@@ -26544,19 +26544,13 @@ pub(super) fn declare_integral_sub_linear_le(
     let uc_nfx = d.lemma(p.uniformly_continuous_const, &[nfx, x, y]);
     // u_h : UniformlyContinuousOn (fun r => add (F r) (neg ((fun _ => F x) r))) x y
     // -- beta-equal to `H`, which is what every consumer below writes.
-    let u_h = d.lemma(
-        p.uniformly_continuous_sub,
-        &[f, const_fx, x, y, u, uc_fx],
-    );
+    let u_h = d.lemma(p.uniformly_continuous_sub, &[f, const_fx, x, y, u, uc_fx]);
 
     let int_h = d.const_app(p.integral, &[h_lam, x, y, hxy, u_h]);
     let int_f = d.const_app(p.integral, &[f, x, y, hxy, u]);
     let int_cn = d.const_app(p.integral, &[const_nfx, x, y, hxy, uc_nfx]);
 
-    let ha = d.lemma(
-        p.integral_add,
-        &[f, const_nfx, x, y, hxy, u_h, u, uc_nfx],
-    );
+    let ha = d.lemma(p.integral_add, &[f, const_nfx, x, y, hxy, u_h, u, uc_nfx]);
     let sum1 = cadd(d, p, int_f, int_cn);
 
     let hc = d.lemma(p.integral_const, &[nfx, x, y, hxy, uc_nfx]);
@@ -26574,12 +26568,7 @@ pub(super) fn declare_integral_sub_linear_le(
     );
     let target = cadd(d, p, int_f, neg_fx_w);
 
-    let h_eq = echain(
-        d,
-        p,
-        int_h,
-        &[(sum1, ha), (sum2, step2), (target, step3)],
-    );
+    let h_eq = echain(d, p, int_h, &[(sum1, ha), (sum2, step2), (target, step3)]);
 
     let hb = d.lemma(
         p.integral_abs_le_of_bound,
@@ -26652,7 +26641,7 @@ fn antiderivative_at(
     hab: ExprId,
     u: ExprId,
     x: ExprId,
-) -> (ExprId, ExprId, ExprId, ExprId) {
+) -> (ExprId, ExprId, ExprId, ExprId, ExprId) {
     let mn = d.const_app(p.min, &[x, b]);
     let clamp = d.const_app(p.max, &[a, mn]);
     let h_a_clamp = d.lemma(p.le_max_left, &[a, mn]);
@@ -26664,7 +26653,7 @@ fn antiderivative_at(
         &[f, a, b, a, clamp, u, refl_a, h_a_clamp, h_clamp_b],
     );
     let value = d.const_app(p.integral, &[f, a, clamp, h_a_clamp, urest]);
-    (clamp, h_a_clamp, h_clamp_b, value)
+    (clamp, h_a_clamp, h_clamp_b, urest, value)
 }
 
 /// `CReal.antiderivative : ∀ (F : CReal → CReal) (a b : CReal), le a b →
@@ -26706,7 +26695,7 @@ pub(super) fn declare_antiderivative(
     let x_fv = d.fresh_fvar();
     let x = d.kernel().fvar(x_fv);
 
-    let (_clamp, _h1, _h2, body) = antiderivative_at(d, p, f, a, b, hab, u, x);
+    let (_clamp, _h1, _h2, _urest, body) = antiderivative_at(d, p, f, a, b, hab, u, x);
 
     let ty = {
         let after_x = d.arrow(carrier, carrier);
@@ -26799,14 +26788,7 @@ pub(super) fn declare_antiderivative_abs_le(
     let x_fv = d.fresh_fvar();
     let x = d.kernel().fvar(x_fv);
 
-    let (clamp, h_a_clamp, h_clamp_b, int_val) = antiderivative_at(d, p, f, a, b, hab, u, x);
-    let urest = d.lemma(
-        p.uniformly_continuous_on_restrict,
-        &[f, a, b, a, clamp, u, {
-            let r = d.lemma(p.le_refl, &[a]);
-            r
-        }, h_a_clamp, h_clamp_b],
-    );
+    let (clamp, h_a_clamp, h_clamp_b, urest, int_val) = antiderivative_at(d, p, f, a, b, hab, u, x);
 
     // hbnd' : ∀ t, le a t → le t (clamp) → le (abs (F t)) M
     let hbnd_restricted = {
@@ -26862,4 +26844,23 @@ pub(super) fn declare_antiderivative_abs_le(
         ty,
         value,
     })
+}
+
+/// Admit the Fundamental-Theorem slice: the generalized integral bound, the
+/// `|∫ₓ^y F − F(x)·(y − x)|` estimate, the antiderivative `G` and its growth
+/// bound. One `BuildStep`, four declarations, in dependency order.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from any `Theorem` or
+/// `Definition` here means the kernel **refused** a proof, not that a script
+/// gave up.
+pub(super) fn declare_ftc_estimates(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_integral_abs_le_of_bound(d, p)?;
+    declare_integral_sub_linear_le(d, p)?;
+    declare_antiderivative(d, p)?;
+    declare_antiderivative_abs_le(d, p)
 }
