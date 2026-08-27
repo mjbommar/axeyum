@@ -21424,3 +21424,391 @@ fn riemann_sum_endpoints_le_uniform(
         hy2b, hdd, hd2, hclose,
     )
 }
+
+#[cfg(test)]
+mod piece_one_unconditional_tests {
+    use super::*;
+    use crate::Declaration;
+
+    fn abs_le_ty(d: &mut IntDev<'_>, p: CRealPrelude, value: ExprId, bound: ExprId) -> ExprId {
+        let a = d.const_app(p.abs, &[value]);
+        cle(d, p, a, bound)
+    }
+
+    fn diff(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
+        let nb = cneg(d, p, b);
+        cadd(d, p, a, nb)
+    }
+
+    /// Both directions of [`sample_point_pair_diff_le`] in ONE build: the
+    /// stated bound `bx + bw`, and the SAME proof term against `bx` alone.
+    ///
+    /// The `bx`-only control is **genuinely false**, not a different
+    /// spelling: at `x = x2 = 0`, `y = 1`, `y2 = 0`, `m = 0`, `i = 1` the
+    /// hypotheses hold with `bx = 0` and `bw = 1` (`Δ₁ = 1`, `Δ₂ = 0`), the
+    /// sample-point difference is `1`, and the claimed bound is `0`.
+    ///
+    /// It also varies only a SMALL term — the right-hand side of one `le`,
+    /// with the left-hand side the identical `ExprId` — which this file's
+    /// module documentation records as mandatory: a control that transposed
+    /// two `riemannSum`s was measured pathological (>300 s, RSS 2.0 →
+    /// 3.1 GB) because a FAILING `def_eq` between two `Definition`-heavy
+    /// terms has no stopping rule.
+    #[allow(clippy::type_complexity)]
+    fn sample_point_pair_probes() -> (
+        Result<(), crate::KernelError>,
+        Result<(), crate::KernelError>,
+    ) {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+        let nat = d.nat_ty();
+
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let x2_fv = d.fresh_fvar();
+        let x2 = d.kernel().fvar(x2_fv);
+        let y2_fv = d.fresh_fvar();
+        let y2 = d.kernel().fvar(y2_fv);
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let bx_fv = d.fresh_fvar();
+        let bx = d.kernel().fvar(bx_fv);
+        let bw_fv = d.fresh_fvar();
+        let bw = d.kernel().fvar(bw_fv);
+
+        let n = d.succ(m);
+        let hle_ty = d.le(i, n);
+        let hle_fv = d.fresh_fvar();
+        let hle = d.kernel().fvar(hle_fv);
+
+        let xdiff = diff(&mut d, p, x, x2);
+        let hbx_ty = abs_le_ty(&mut d, p, xdiff, bx);
+        let hbx_fv = d.fresh_fvar();
+        let hbx = d.kernel().fvar(hbx_fv);
+
+        let w1 = width_of(&mut d, p, x, y);
+        let w2 = width_of(&mut d, p, x2, y2);
+        let wdiff = diff(&mut d, p, w1, w2);
+        let hbw_ty = abs_le_ty(&mut d, p, wdiff, bw);
+        let hbw_fv = d.fresh_fvar();
+        let hbw = d.kernel().fvar(hbw_fv);
+
+        let proof = sample_point_pair_diff_le(
+            &mut d, p, x, y, x2, y2, m, i, bx, bw, hle, hbx, hbw,
+        );
+
+        let delta1 = delta_of(&mut d, p, x, y, m);
+        let delta2 = delta_of(&mut d, p, x2, y2, m);
+        let sp1 = sample_point(&mut d, p, x, delta1, i);
+        let sp2 = sample_point(&mut d, p, x2, delta2, i);
+        assert_ne!(
+            sp1, sp2,
+            "the two sample points must be distinct terms, or the estimate is |X − X|"
+        );
+        let spdiff = diff(&mut d, p, sp1, sp2);
+        let good = cadd(&mut d, p, bx, bw);
+        let concl_good = abs_le_ty(&mut d, p, spdiff, good);
+        let concl_bad = abs_le_ty(&mut d, p, spdiff, bx);
+
+        let mut results = Vec::new();
+        for (label, concl) in [
+            ("samplePointPairDiffLeGood", concl_good),
+            ("samplePointPairDiffLeBad", concl_bad),
+        ] {
+            let ty = {
+                let t = d.arrow(hbw_ty, concl);
+                let t = d.arrow(hbx_ty, t);
+                let t = d.arrow(hle_ty, t);
+                let t = d.pi_fv(bw_fv, carrier, t);
+                let t = d.pi_fv(bx_fv, carrier, t);
+                let t = d.pi_fv(i_fv, nat, t);
+                let t = d.pi_fv(m_fv, nat, t);
+                let t = d.pi_fv(y2_fv, carrier, t);
+                let t = d.pi_fv(x2_fv, carrier, t);
+                let t = d.pi_fv(y_fv, carrier, t);
+                d.pi_fv(x_fv, carrier, t)
+            };
+            let value = {
+                let v = d.lam_fv(hbw_fv, hbw_ty, proof);
+                let v = d.lam_fv(hbx_fv, hbx_ty, v);
+                let v = d.lam_fv(hle_fv, hle_ty, v);
+                let v = d.lam_fv(bw_fv, carrier, v);
+                let v = d.lam_fv(bx_fv, carrier, v);
+                let v = d.lam_fv(i_fv, nat, v);
+                let v = d.lam_fv(m_fv, nat, v);
+                let v = d.lam_fv(y2_fv, carrier, v);
+                let v = d.lam_fv(x2_fv, carrier, v);
+                let v = d.lam_fv(y_fv, carrier, v);
+                d.lam_fv(x_fv, carrier, v)
+            };
+            let anon = d.kernel().anon();
+            let name = d.kernel().name_str(anon, label);
+            results.push(d.kernel().add_declaration(Declaration::Theorem {
+                name,
+                uparams: vec![],
+                ty,
+                value,
+            }));
+        }
+        let bad = results.pop().expect("two probes");
+        let ok = results.pop().expect("two probes");
+        (ok, bad)
+    }
+
+    #[test]
+    fn sample_point_pair_diff_le_proves_the_stated_bound() {
+        crate::on_a_deep_stack(sample_point_pair_diff_le_body);
+    }
+
+    fn sample_point_pair_diff_le_body() {
+        let (ok, bad) = sample_point_pair_probes();
+        assert!(
+            ok.is_ok(),
+            "sample_point_pair_diff_le must prove `le (abs (sp1 − sp2)) (add bx bw)`: {ok:?}"
+        );
+        assert!(
+            bad.is_err(),
+            "the SAME proof term must be REFUSED against the `bx`-only bound"
+        );
+    }
+
+    /// [`riemann_sum_endpoints_le_uniform`] with NO `∀ i` premise, closed
+    /// into a real `Theorem` at the [`rsum`] type, plus the short-term-count
+    /// negative control the sibling `riemann_sum_endpoints_le` probe uses.
+    #[allow(clippy::type_complexity, clippy::too_many_lines)]
+    fn endpoints_uniform_probes() -> (
+        Result<(), crate::KernelError>,
+        Result<(), crate::KernelError>,
+    ) {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+        let nat = d.nat_ty();
+        let f_ty = fn_ty(&mut d, p);
+
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let aa_fv = d.fresh_fvar();
+        let aa = d.kernel().fvar(aa_fv);
+        let bb_fv = d.fresh_fvar();
+        let bb = d.kernel().fvar(bb_fv);
+        let u_ty = d.const_app(p.uniformly_continuous_on, &[f, aa, bb]);
+        let u_fv = d.fresh_fvar();
+        let u = d.kernel().fvar(u_fv);
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hb_ty = d.const_app(p.bounded_on, &[f, aa, bb, k]);
+        let hb_fv = d.fresh_fvar();
+        let hb = d.kernel().fvar(hb_fv);
+
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let x2_fv = d.fresh_fvar();
+        let x2 = d.kernel().fvar(x2_fv);
+        let y2_fv = d.fresh_fvar();
+        let y2 = d.kernel().fvar(y2_fv);
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+        let dd_fv = d.fresh_fvar();
+        let dd = d.kernel().fvar(dd_fv);
+        let d2b_fv = d.fresh_fvar();
+        let d2b = d.kernel().fvar(d2b_fv);
+        let bx_fv = d.fresh_fvar();
+        let bx = d.kernel().fvar(bx_fv);
+        let bw_fv = d.fresh_fvar();
+        let bw = d.kernel().fvar(bw_fv);
+
+        let hxy_ty = cle(&mut d, p, x, y);
+        let hxy_fv = d.fresh_fvar();
+        let hxy = d.kernel().fvar(hxy_fv);
+        let hx2y2_ty = cle(&mut d, p, x2, y2);
+        let hx2y2_fv = d.fresh_fvar();
+        let hx2y2 = d.kernel().fvar(hx2y2_fv);
+        let hax_ty = cle(&mut d, p, aa, x);
+        let hax_fv = d.fresh_fvar();
+        let hax = d.kernel().fvar(hax_fv);
+        let hyb_ty = cle(&mut d, p, y, bb);
+        let hyb_fv = d.fresh_fvar();
+        let hyb = d.kernel().fvar(hyb_fv);
+        let hax2_ty = cle(&mut d, p, aa, x2);
+        let hax2_fv = d.fresh_fvar();
+        let hax2 = d.kernel().fvar(hax2_fv);
+        let hy2b_ty = cle(&mut d, p, y2, bb);
+        let hy2b_fv = d.fresh_fvar();
+        let hy2b = d.kernel().fvar(hy2b_fv);
+
+        let delta1 = delta_of(&mut d, p, x, y, m);
+        let delta2 = delta_of(&mut d, p, x2, y2, m);
+        let ddiff = diff(&mut d, p, delta1, delta2);
+        let hdd_ty = abs_le_ty(&mut d, p, ddiff, dd);
+        let hdd_fv = d.fresh_fvar();
+        let hdd = d.kernel().fvar(hdd_fv);
+        let hd2_ty = abs_le_ty(&mut d, p, delta2, d2b);
+        let hd2_fv = d.fresh_fvar();
+        let hd2 = d.kernel().fvar(hd2_fv);
+
+        let xdiff = diff(&mut d, p, x, x2);
+        let hbx_ty = abs_le_ty(&mut d, p, xdiff, bx);
+        let hbx_fv = d.fresh_fvar();
+        let hbx = d.kernel().fvar(hbx_fv);
+        let w1 = width_of(&mut d, p, x, y);
+        let w2 = width_of(&mut d, p, x2, y2);
+        let wdiff = diff(&mut d, p, w1, w2);
+        let hbw_ty = abs_le_ty(&mut d, p, wdiff, bw);
+        let hbw_fv = d.fresh_fvar();
+        let hbw = d.kernel().fvar(hbw_fv);
+
+        let modul = d.const_app(p.uc_modulus, &[f, aa, bb, u, e]);
+        let one_nat = d.num(1);
+        let q = d.const_app(p.rat.nat_div_succ, &[one_nat, modul]);
+        let target = embed(&mut d, p, q);
+        let sum_b = cadd(&mut d, p, bx, bw);
+        let hfit_ty = cle(&mut d, p, sum_b, target);
+        let hfit_fv = d.fresh_fvar();
+        let hfit = d.kernel().fvar(hfit_fv);
+
+        let proof = riemann_sum_endpoints_le_uniform(
+            &mut d, p, f, aa, bb, u, k, hb, x, y, x2, y2, m, e, dd, d2b, bx, bw, hxy, hx2y2,
+            hax, hyb, hax2, hy2b, hdd, hd2, hbx, hbw, hfit,
+        );
+
+        let rs1 = rsum(&mut d, p, f, x, y, m);
+        let rs2 = rsum(&mut d, p, f, x2, y2, m);
+        assert_ne!(
+            rs1, rs2,
+            "the two riemannSums must be distinct terms, or the estimate is |X − X|"
+        );
+        let rdiff = diff(&mut d, p, rs1, rs2);
+        let abs_diff = d.const_app(p.abs, &[rdiff]);
+
+        let mbound = {
+            let succ_k = d.succ(k);
+            let zero_nat = d.num(0);
+            let qq = d.const_app(p.rat.nat_div_succ, &[succ_k, zero_nat]);
+            embed(&mut d, p, qq)
+        };
+        let eps = {
+            let one = d.num(1);
+            let qq = d.const_app(p.rat.nat_div_succ, &[one, e]);
+            embed(&mut d, p, qq)
+        };
+        let kb = {
+            let left = cmul(&mut d, p, mbound, dd);
+            let right = cmul(&mut d, p, eps, d2b);
+            cadd(&mut d, p, left, right)
+        };
+        let n = d.succ(m);
+        let good_count = d.const_app(p.of_nat, &[n]);
+        let bad_count = d.const_app(p.of_nat, &[m]);
+        let good = cmul(&mut d, p, good_count, kb);
+        let bad_bound = cmul(&mut d, p, bad_count, kb);
+        let concl_good = cle(&mut d, p, abs_diff, good);
+        let concl_bad = cle(&mut d, p, abs_diff, bad_bound);
+
+        let mut results = Vec::new();
+        for (label, concl) in [
+            ("riemannSumEndpointsLeUniformGood", concl_good),
+            ("riemannSumEndpointsLeUniformBad", concl_bad),
+        ] {
+            let ty = {
+                let t = d.arrow(hfit_ty, concl);
+                let t = d.arrow(hbw_ty, t);
+                let t = d.arrow(hbx_ty, t);
+                let t = d.arrow(hd2_ty, t);
+                let t = d.arrow(hdd_ty, t);
+                let t = d.arrow(hy2b_ty, t);
+                let t = d.arrow(hax2_ty, t);
+                let t = d.arrow(hyb_ty, t);
+                let t = d.arrow(hax_ty, t);
+                let t = d.arrow(hx2y2_ty, t);
+                let t = d.arrow(hxy_ty, t);
+                let t = d.pi_fv(bw_fv, carrier, t);
+                let t = d.pi_fv(bx_fv, carrier, t);
+                let t = d.pi_fv(d2b_fv, carrier, t);
+                let t = d.pi_fv(dd_fv, carrier, t);
+                let t = d.pi_fv(e_fv, nat, t);
+                let t = d.pi_fv(m_fv, nat, t);
+                let t = d.pi_fv(y2_fv, carrier, t);
+                let t = d.pi_fv(x2_fv, carrier, t);
+                let t = d.pi_fv(y_fv, carrier, t);
+                let t = d.pi_fv(x_fv, carrier, t);
+                let t = d.arrow(hb_ty, t);
+                let t = d.pi_fv(k_fv, nat, t);
+                let t = d.pi_fv(u_fv, u_ty, t);
+                let t = d.pi_fv(bb_fv, carrier, t);
+                let t = d.pi_fv(aa_fv, carrier, t);
+                d.pi_fv(f_fv, f_ty, t)
+            };
+            let value = {
+                let v = d.lam_fv(hfit_fv, hfit_ty, proof);
+                let v = d.lam_fv(hbw_fv, hbw_ty, v);
+                let v = d.lam_fv(hbx_fv, hbx_ty, v);
+                let v = d.lam_fv(hd2_fv, hd2_ty, v);
+                let v = d.lam_fv(hdd_fv, hdd_ty, v);
+                let v = d.lam_fv(hy2b_fv, hy2b_ty, v);
+                let v = d.lam_fv(hax2_fv, hax2_ty, v);
+                let v = d.lam_fv(hyb_fv, hyb_ty, v);
+                let v = d.lam_fv(hax_fv, hax_ty, v);
+                let v = d.lam_fv(hx2y2_fv, hx2y2_ty, v);
+                let v = d.lam_fv(hxy_fv, hxy_ty, v);
+                let v = d.lam_fv(bw_fv, carrier, v);
+                let v = d.lam_fv(bx_fv, carrier, v);
+                let v = d.lam_fv(d2b_fv, carrier, v);
+                let v = d.lam_fv(dd_fv, carrier, v);
+                let v = d.lam_fv(e_fv, nat, v);
+                let v = d.lam_fv(m_fv, nat, v);
+                let v = d.lam_fv(y2_fv, carrier, v);
+                let v = d.lam_fv(x2_fv, carrier, v);
+                let v = d.lam_fv(y_fv, carrier, v);
+                let v = d.lam_fv(x_fv, carrier, v);
+                let v = d.lam_fv(hb_fv, hb_ty, v);
+                let v = d.lam_fv(k_fv, nat, v);
+                let v = d.lam_fv(u_fv, u_ty, v);
+                let v = d.lam_fv(bb_fv, carrier, v);
+                let v = d.lam_fv(aa_fv, carrier, v);
+                d.lam_fv(f_fv, f_ty, v)
+            };
+            let anon = d.kernel().anon();
+            let name = d.kernel().name_str(anon, label);
+            results.push(d.kernel().add_declaration(Declaration::Theorem {
+                name,
+                uparams: vec![],
+                ty,
+                value,
+            }));
+        }
+        let bad = results.pop().expect("two probes");
+        let ok = results.pop().expect("two probes");
+        (ok, bad)
+    }
+
+    #[test]
+    fn riemann_sum_endpoints_le_uniform_proves_the_stated_bound() {
+        crate::on_a_deep_stack(riemann_sum_endpoints_le_uniform_body);
+    }
+
+    fn riemann_sum_endpoints_le_uniform_body() {
+        let (ok, bad) = endpoints_uniform_probes();
+        assert!(
+            ok.is_ok(),
+            "riemann_sum_endpoints_le_uniform must prove the stated bound with NO \
+             per-index premise: {ok:?}"
+        );
+        assert!(
+            bad.is_err(),
+            "the SAME proof term must be REFUSED against the short term count \
+             `mul (ofNat m) kb`"
+        );
+    }
+}
