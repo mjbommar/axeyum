@@ -9848,6 +9848,7 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "polynomial::declare_polynomial",
     "congruence::declare_congruence_extras",
     "extreme_value::declare_extreme_value",
+    "supremum::declare_max_range",
 ];
 
 /// `STEPS` (the data-driven build order that replaced the hand-written call

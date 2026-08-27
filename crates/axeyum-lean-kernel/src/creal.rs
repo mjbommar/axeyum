@@ -4796,6 +4796,30 @@ pub struct CRealPrelude {
     /// kernel does not have, NOT that the principle is false (it is
     /// consistent, hence unprovable here rather than refutable).
     pub evt_attained_max_decides_sign: NameId,
+    /// `CReal.maxRange : (Nat → CReal) → Nat → CReal` — the `max`-lattice
+    /// analogue of [`Self::sum_range`]: `maxRange f 0 := f 0`, `maxRange f
+    /// (succ n) := max (maxRange f n) (f (succ n))`, so `maxRange f n` is
+    /// `max_{k≤n} f k`. See `creal/supremum.rs` — the finite-mesh-maximum
+    /// primitive for the LUB family's honest row 1 (a uniformly continuous
+    /// function's supremum on a compact interval), landed without the full
+    /// `CReal.supOn` construction; that file's own module documentation
+    /// records exactly what remains and why.
+    pub max_range: NameId,
+    /// `CReal.maxRange_zero : ∀ f, Eq CReal (maxRange f Nat.zero) (f
+    /// Nat.zero)`. See `creal/supremum.rs`.
+    pub max_range_zero: NameId,
+    /// `CReal.maxRange_succ : ∀ f n, Eq CReal (maxRange f (Nat.succ n)) (max
+    /// (maxRange f n) (f (Nat.succ n)))`. See `creal/supremum.rs`.
+    pub max_range_succ: NameId,
+    /// `CReal.maxRange_self_le : ∀ f n, le (f n) (maxRange f n)`. See
+    /// `creal/supremum.rs`.
+    pub max_range_self_le: NameId,
+    /// `CReal.maxRange_mono : ∀ f m n, Nat.le m n → le (maxRange f m)
+    /// (maxRange f n)`. See `creal/supremum.rs`.
+    pub max_range_mono: NameId,
+    /// `CReal.maxRange_ub : ∀ f n i, Nat.le i n → le (f i) (maxRange f n)`.
+    /// See `creal/supremum.rs`.
+    pub max_range_ub: NameId,
 }
 
 impl CRealPrelude {
@@ -5310,6 +5334,12 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         mul_pow_congr: kernel.name_str(creal, "mulPowCongr"),
         evt_linear: kernel.name_str(creal, "evtLinear"),
         evt_attained_max_decides_sign: kernel.name_str(creal, "evt_attained_max_decides_sign"),
+        max_range: kernel.name_str(creal, "maxRange"),
+        max_range_zero: kernel.name_str(creal, "maxRange_zero"),
+        max_range_succ: kernel.name_str(creal, "maxRange_succ"),
+        max_range_self_le: kernel.name_str(creal, "maxRange_self_le"),
+        max_range_mono: kernel.name_str(creal, "maxRange_mono"),
+        max_range_ub: kernel.name_str(creal, "maxRange_ub"),
     }
 }
 
@@ -9106,6 +9136,28 @@ const STEPS: &[BuildStep] = &[
         ],
         run: extreme_value::declare_extreme_value,
     },
+    BuildStep {
+        label: "supremum::declare_max_range",
+        requires: &[
+            |p: CRealPrelude| p.creal,
+            |p: CRealPrelude| p.le,
+            |p: CRealPrelude| p.le_max_left,
+            |p: CRealPrelude| p.le_max_right,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.max,
+            |p: CRealPrelude| p.mono_of_le_succ,
+        ],
+        provides: &[
+            |p: CRealPrelude| p.max_range,
+            |p: CRealPrelude| p.max_range_mono,
+            |p: CRealPrelude| p.max_range_self_le,
+            |p: CRealPrelude| p.max_range_succ,
+            |p: CRealPrelude| p.max_range_ub,
+            |p: CRealPrelude| p.max_range_zero,
+        ],
+        run: supremum::declare_max_range,
+    },
 ];
 
 /// Build the real prelude: `ℝ` as a Bishop setoid over the constructed `ℚ`,
@@ -10136,6 +10188,7 @@ mod ring_helpers;
 mod series;
 mod speedup;
 mod sqrt;
+mod supremum;
 mod trig;
 mod uniform_continuity;
 mod uniform_convergence;
