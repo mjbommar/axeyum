@@ -1596,6 +1596,94 @@
 //! this route runs every index at `n`, so the same-index
 //! [`bnd_leg_plus_share_le`] suffices). Those four are the honest measure of
 //! how far the shipped proof diverges from the plan that predicted them.
+//!
+//! ## `CReal.integral_split` at an ARBITRARY split point — checked 2026-08-27
+//! (an EIGHTEENTH lane). The closing lane named ONE missing piece; there are
+//! **two**, and the second one is not a proof gap at all — it is a
+//! constructive obstruction that changes what the theorem's statement can be
+//!
+//! Starting point verified, not assumed: `git grep` for any close-endpoint
+//! congruence (`close_endpoint`, `endpoints_close`, `congr_endpoints_close`)
+//! over the whole of `creal/` returns **zero** hits, while
+//! [`riemann_sum_congr_endpoints`] — the `Equiv` version — has **18**. So the
+//! SEVENTEENTH lane's named obstruction is real and unbuilt, and the control
+//! confirms the query is not simply misaimed.
+//!
+//! **Missing piece 1, as named by the closing lane and confirmed here: the
+//! endpoint estimate at merely-close endpoints.** [`riemann_sum_split_exact`]
+//! is exact only when the split point IS a mesh point, and
+//! [`CRealPrelude::riemann_sum_split_scale_invariant`] pins the mesh-point
+//! family to `c_0` EXACTLY, so for an arbitrary `c` the reachable mesh point
+//! is only *close*. What is needed is
+//!
+//! ```text
+//! |riemannSum F a c m − riemannSum F a c' m|  ≤  M·δ + (c'−a)·ω(δ),   δ := |c − c'|
+//! ```
+//!
+//! uniformly in `m` — the `≤` analogue of [`riemann_sum_congr_endpoints`],
+//! with each of that proof's congruence steps
+//! ([`CRealPrelude::neg_congr`]/[`CRealPrelude::add_congr`]/
+//! [`CRealPrelude::mul_congr`] and
+//! [`CRealPrelude::congr_of_uniformly_continuous`]) replaced by a
+//! triangle-inequality estimate and `sum_range_congr_lt_proof` replaced by
+//! [`CRealPrelude::abs_sum_range_le`]/[`CRealPrelude::sum_range_le`]. The
+//! term-by-term shape is
+//! `|F(p_i)Δ − F(p'_i)Δ'| ≤ |F(p_i)|·|Δ−Δ'| + Δ'·ω(|p_i − p'_i|)` with
+//! `|p_i − p'_i| = i·|Δ−Δ'| ≤ δ`, summed over `m+1` terms — so the `m`
+//! cancels and the bound is uniform in the mesh count, which is what lets
+//! [`CRealPrelude::riemann_sum_integral_close`] carry it to the integrals.
+//!
+//! **Missing piece 2, which no register entry states and which the
+//! "endpoint estimate" framing hides: even with piece 1 in hand, an
+//! arbitrary `c` cannot be LOCATED in the proportion family without a
+//! positivity witness on `b − a`.** [`CRealPrelude::integral_split`]'s split
+//! point is `a + q·(b−a)` for the rational proportion
+//! `q := succ(m_ac0)/(succ(m_ac0)+succ(m_cb0))`. Hitting an arbitrary `c`
+//! within `δ` requires approximating `t := (c−a)/(b−a)`, i.e. **dividing by
+//! `b − a`**, and `CReal.inv` ([`super::inverse`]) takes a `PosBound`
+//! argument. `hab : le a b` is non-strict, so `b − a` is not known positive
+//! and `t` is not constructible. This is the same wall the FOURTH and FIFTH
+//! lanes hit from the `crossingIndex` side — `crossing.rs`'s step parameter
+//! is a `Rat` and the mesh step `(b−a)/(m+1)` is a `CReal` — but stated at
+//! the level where it is actionable rather than as a signature mismatch.
+//!
+//! Consequences, and they are the useful part:
+//!
+//! - The next stratum in the ADR-0603 sense is **not** "`c` universally
+//!   quantified". It is `integral_split` at arbitrary `c` **given a
+//!   `PosBound` on the interval width** — a genuine strengthening of the
+//!   landed dense-proportion form, and the form FTC actually consumes (`G(x)
+//!   := integral F a x`; the split of `[a, x+h]` at `x` has a nondegenerate
+//!   `[x, x+h]` in hand at every point where the derivative estimate is
+//!   taken).
+//! - The hypothesis is removable, but by a **case split, not an estimate**:
+//!   a cotransitivity step decides, per accuracy `e`, either
+//!   `b − a < 1/(e+1)` (in which case all three integrals are within
+//!   `M/(e+1)` of `0` by the width bound below, and the identity holds at
+//!   that accuracy for free) or `b − a > 1/(2e+2)` (in which case `CReal.inv`
+//!   is available). `equiv_zero_of_small` consumes one accuracy at a time, so
+//!   the case split is legal exactly where it is needed. Not attempted here;
+//!   named so the next lane does not re-derive that arbitrary-`c` is blocked
+//!   and stop there, which is what the plain reading of piece 2 invites.
+//!
+//! **What was built this lane, and why this and not a slice of piece 1**:
+//! the previous lane's own closing lesson is that four sizings all failed
+//! because none asked *which declaration in this file already relates two
+//! integrals under a bound*. Asking that question here gives
+//! [`CRealPrelude::integral_le`] + [`CRealPrelude::integral_const`], and they
+//! compose immediately into the width bound
+//!
+//! ```text
+//! CReal.integral_abs_le : ∀ F a b k hab u, BoundedOn F a b k →
+//!   le (abs (integral F a b hab u))
+//!      (mul (ofRat (natDivSucc (succ k) 0)) (add b (neg a)))
+//! ```
+//!
+//! — the `M·(b−a)` bound. It is on the critical path for BOTH pieces: it is
+//! piece 1's own `M·δ` leaf (the `|F(p_i)|·|Δ−Δ'|` term), and it is exactly
+//! what discharges the degenerate branch of piece 2's cotransitivity split.
+//! It is also what FTC needs directly for the antiderivative's own
+//! continuity (`|G(y) − G(x)| ≤ M·|y − x|`).
 
 use super::completeness::half_shift_le;
 use super::convergence::{
