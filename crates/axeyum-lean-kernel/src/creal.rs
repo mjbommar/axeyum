@@ -1392,6 +1392,24 @@ pub struct CRealPrelude {
     /// here `(c−a)·Δ⁻¹` — which `a ≤ c` supplies via `CReal.mul_nonneg` on
     /// the two nonnegative factors. See `creal/crossing.rs`.
     pub crossing_lower: NameId,
+    /// `CReal.crossingSampleGeA : ∀ a c delta, Rat.lt Rat.zero delta →
+    /// CReal.le a (CReal.add a (CReal.mul (CReal.ofNat (CReal.crossingIndex a
+    /// c delta)) (CReal.ofRat delta)))` — `samplePt` (the SAME closed term
+    /// [`Self::crossing_sample_upper`]/[`Self::crossing_sample_lower`] use)
+    /// never falls BELOW its own base point `a`.
+    ///
+    /// **Needs only `0 < Δ` — no `a ≤ c` hypothesis at all**, unlike
+    /// [`Self::crossing_lower`]: `crossingIndex` embeds as a nonnegative
+    /// `Nat` regardless of `c`'s position, and `Δ > 0` makes the product
+    /// nonnegative too, via [`Self::mul_nonneg`] — the same shape
+    /// `integral.rs`'s `riemannSum_sample_in_bounds` already proves for an
+    /// ordinary mesh sample. This is HALF of `crossingClose`'s domain
+    /// membership hypothesis pair; the other half, `samplePt ≤ b`, is
+    /// discharged nowhere in this prelude — see `creal/integral.rs`'s
+    /// 2026-08-27 module doc entries (the fifth: it is not a `+3`-slack
+    /// artifact of [`Self::bucket_index_bound`] and cannot be fixed by
+    /// tightening that bound, however far). See `creal/crossing.rs`.
+    pub crossing_sample_ge_a: NameId,
     /// `CReal.crossingSampleUpper : ∀ a c delta, Rat.lt Rat.zero delta →
     /// CReal.le c (CReal.add (CReal.add a (CReal.mul (CReal.ofNat
     /// (CReal.crossingIndex a c delta)) delta)) (CReal.add delta (CReal.mul
@@ -1436,14 +1454,19 @@ pub struct CRealPrelude {
     /// `Δ` and finds it does not make `samplePt ≤ b` provable from `m`
     /// alone without also bounding the interval's own Archimedean constant,
     /// which is data about `[a,b]`, not about `m`. See `creal/crossing.rs`
-    /// and `creal/integral.rs`'s 2026-08-27 module doc entries (all four —
+    /// and `creal/integral.rs`'s 2026-08-27 module doc entries (all five —
     /// the fourth tests and REFUTES, with an exact worked bound, the
     /// hypothesis that fixing `[a,b]` (so `magnitude` is a known constant)
-    /// rescues this: `bucket_index_bound`'s cap has a `+4` slack that lands
-    /// the provable `samplePt − a` bound exactly at `magnitude` for every
-    /// mesh count, and `b−a ≤ magnitude` is the tightest available ceiling,
-    /// so the two never cross. Still open; needs a tighter, purpose-built
-    /// `crossingIndex` bound, not more inputs to the existing one).
+    /// rescues this via `bucket_index_bound`'s `+4` slack; the fifth then
+    /// builds the tighter, purpose-built `crossingIndex` bound the fourth
+    /// called for — a genuine, ZERO-excess replacement — and shows it STILL
+    /// does not rescue `samplePt ≤ b`, because the real obstruction is
+    /// `CReal.bound`'s own non-tight over-estimate of `b − a`
+    /// (`magnitude`), independent of `crossingIndex`'s tightness, plus
+    /// `crossingLower`'s own already-fixed `1.5Δ` closeness slack). Still
+    /// open, and not reachable by any further `crossingIndex`-side
+    /// tightening — [`Self::crossing_sample_ge_a`] discharges the OTHER half
+    /// of this pair (`a ≤ samplePt`, unconditionally on `0 < Δ`).
     pub crossing_close: NameId,
     /// `CReal.sampleUpperBound : ∀ x m, CReal.le x (CReal.ofRat (Rat.add
     /// (CReal.seq x m) (Rat.natDivSucc 1 m)))` — the general
@@ -4455,6 +4478,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         crossing_index: kernel.name_str(creal, "crossingIndex"),
         crossing_upper: kernel.name_str(creal, "crossingUpper"),
         crossing_lower: kernel.name_str(creal, "crossingLower"),
+        crossing_sample_ge_a: kernel.name_str(creal, "crossingSampleGeA"),
         crossing_sample_upper: kernel.name_str(creal, "crossingSampleUpper"),
         crossing_sample_lower: kernel.name_str(creal, "crossingSampleLower"),
         crossing_close: kernel.name_str(creal, "crossingClose"),

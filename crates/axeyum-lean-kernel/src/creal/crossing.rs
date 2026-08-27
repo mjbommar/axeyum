@@ -670,6 +670,104 @@ fn declare_crossing_lower(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
     })
 }
 
+/// `CReal.le zero (CReal.ofNat n)` — local copy of `integral.rs`'s private
+/// `zero_le_of_nat` (this file cannot reach it — see the module
+/// documentation's per-module small-helper convention). Just
+/// [`embed_nonneg`] applied to `natDivSucc n 0` via
+/// [`CRealPrelude::zero_le_nat_div_succ`] on the `Rat` side.
+fn zero_le_of_nat(d: &mut IntDev<'_>, p: CRealPrelude, n: ExprId) -> ExprId {
+    let zero_nat = d.num(0);
+    let rat_n = d.const_app(p.rat.nat_div_succ, &[n, zero_nat]);
+    let rle = d.lemma(p.rat.zero_le_nat_div_succ, &[n, zero_nat]);
+    embed_nonneg(d, p, rat_n, rle)
+}
+
+/// `CReal.le x (add x w)`, given `hw : CReal.le zero w` — local copy of
+/// `integral.rs`'s private `shift_le_of_nonneg` (same reason as
+/// [`zero_le_of_nat`]).
+fn shift_le_of_nonneg(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    w: ExprId,
+    hw: ExprId,
+) -> ExprId {
+    let zero_c = czero(d, p);
+    let refl_x = d.lemma(p.le_refl, &[x]);
+    let grown = d.lemma(p.add_le_add, &[x, x, zero_c, w, refl_x, hw]);
+    // grown : le (add x zero) (add x w)
+    let padded = cadd(d, p, x, zero_c);
+    let target = cadd(d, p, x, w);
+    let trim = d.lemma(p.add_zero, &[x]); // Equiv (add x zero) x
+    let refl_target = d.lemma(p.equiv_refl, &[target]);
+    d.lemma(
+        p.le_congr,
+        &[padded, x, target, target, trim, refl_target, grown],
+    )
+    // : le x (add x w)
+}
+
+/// Admit [`CRealPrelude::crossing_sample_ge_a`]. See that field's own doc
+/// comment for the statement and scope: `samplePt := a + ofNat(crossingIndex
+/// a c delta)·ofRat(delta)` never falls below its own base point `a`, needing
+/// only `0 < Δ`. The SAME `sample_term`/`sample_point` shape
+/// [`declare_crossing_sample_upper`]/[`declare_crossing_sample_lower`] build,
+/// rebuilt here via [`build_scaled`] so `CReal.crossingIndex a c delta`'s own
+/// `ExprId` matches.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_crossing_sample_ge_a(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let rat_ty_ = crate::rat_prelude::ops::rat_ty(d);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let delta_fv = d.fresh_fvar();
+    let delta = d.kernel().fvar(delta_fv);
+    let zero_rat = rzero(d, p.rat);
+    let hpos_ty = d.const_app(p.rat.lt, &[zero_rat, delta]);
+    let hpos_fv = d.fresh_fvar();
+    let hpos = d.kernel().fvar(hpos_fv);
+
+    let scaled = build_scaled(d, p, a, c, delta);
+    let of_nat_i0 = d.const_app(p.of_nat, &[scaled.i0]);
+    let sample_term = cmul(d, p, of_nat_i0, scaled.delta_embed);
+    let sample_point = cadd(d, p, a, sample_term);
+
+    let delta_le = d.lemma(p.rat.le_of_lt, &[zero_rat, delta, hpos]);
+    let delta_nonneg = embed_nonneg(d, p, delta, delta_le);
+    let i0_nonneg = zero_le_of_nat(d, p, scaled.i0);
+    let term_nonneg = d.lemma(
+        p.mul_nonneg,
+        &[of_nat_i0, scaled.delta_embed, i0_nonneg, delta_nonneg],
+    );
+    let proof = shift_le_of_nonneg(d, p, a, sample_term, term_nonneg);
+
+    let ty_body = cle(d, p, a, sample_point);
+    let ty = {
+        let with_hpos = d.arrow(hpos_ty, ty_body);
+        let with_delta = d.pi_fv(delta_fv, rat_ty_, with_hpos);
+        let with_c = d.pi_fv(c_fv, carrier, with_delta);
+        d.pi_fv(a_fv, carrier, with_c)
+    };
+    let value = {
+        let with_hpos = d.lam_fv(hpos_fv, hpos_ty, proof);
+        let with_delta = d.lam_fv(delta_fv, rat_ty_, with_hpos);
+        let with_c = d.lam_fv(c_fv, carrier, with_delta);
+        d.lam_fv(a_fv, carrier, with_c)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.crossing_sample_ge_a,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 // --- `crossingSampleUpper`/`crossingSampleLower`: restating the two halves
 // above against an ORDINARY Riemann-sum sample point `a + ofNat(i)·Δ`
 // (`integral.rs`'s own `sample_point` shape, rebuilt locally since that
@@ -1183,7 +1281,8 @@ fn declare_crossing_sample_lower(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<
 pub(super) fn declare_crossing(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
     declare_crossing_index(d, p)?;
     declare_crossing_upper(d, p)?;
-    declare_crossing_lower(d, p)
+    declare_crossing_lower(d, p)?;
+    declare_crossing_sample_ge_a(d, p)
 }
 
 /// Admit `CReal.crossingSampleUpper` and `CReal.crossingSampleLower`. Split
