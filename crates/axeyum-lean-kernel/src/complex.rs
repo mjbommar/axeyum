@@ -91,6 +91,7 @@ use crate::nat_prelude::{NatOps, NatPrelude};
 use crate::rat_prelude::ops::{den, num, radd, rat_eq_rewrite, rle, rneg, rsymm, rzero};
 use crate::{Kernel, KernelError};
 
+mod poly;
 mod ring;
 
 #[cfg(test)]
@@ -1334,6 +1335,96 @@ pub struct ComplexPrelude {
     /// (abs w)` since `abs (add z w)` **is** `sqrt (normSq (add z w))`
     /// definitionally.
     pub abs_add_le: NameId,
+
+    // --- polynomials over ℂ: coefficient function + explicit bound ---------
+    //
+    // No `List`/tuple type exists in this kernel (the same reason
+    // `Rat.polyEval`, `rat_prelude/polynomial.rs`, represents a polynomial
+    // this way), so a polynomial is a **coefficient function** `Nat →
+    // Complex` together with an explicit bound `n : Nat` naming how many
+    // leading coefficients (indices `0..n`) are read — never a computed
+    // "true degree", since `Complex.Equiv` is not decidable and no
+    // coefficient can be tested for being zero. See [`poly`] for the module
+    // doc: representation choice, the sum-of-monomials-over-Horner
+    // reduction-cost argument, and exactly what is and is not proved.
+    /// `Complex.polyEval : (Nat → Complex) → Nat → Complex → Complex`,
+    /// `polyEval c n x := sumRange (fun i => mul (c i) (pow x i)) n` — a
+    /// plain (non-recursive) `Definition` wrapping [`Self::sum_range`],
+    /// mirroring `Rat.polyEval` (`rat_prelude/polynomial.rs`) verbatim with
+    /// `Complex` in place of `Rat`.
+    pub poly_eval: NameId,
+    /// `Complex.polyEval_zero : ∀ c x, Eq Complex (polyEval c Nat.zero x)
+    /// zero`. Closes by `Eq.refl` alone — `polyEval`'s `sumRange`-unfolded
+    /// application ι-reduces directly, exactly [`Self::sum_range_zero`]'s
+    /// own shape.
+    pub poly_eval_zero: NameId,
+    /// `Complex.polyEval_succ : ∀ c n x, Eq Complex (polyEval c (Nat.succ n)
+    /// x) (add (polyEval c n x) (mul (c n) (pow x n)))`. Closes by `Eq.refl`
+    /// alone, exactly [`Self::sum_range_succ`]'s own shape.
+    pub poly_eval_succ: NameId,
+    /// `Complex.polyAdd : (Nat → Complex) → (Nat → Complex) → (Nat →
+    /// Complex) := fun c g i => add (c i) (g i)` — pointwise coefficient
+    /// addition, a first-class named operation (not an anonymous combinator
+    /// built at each call site the way `Rat.polyEval_add`'s proof does it).
+    pub poly_add: NameId,
+    /// `Complex.polyEval_polyAdd : ∀ c g n x, Equiv (polyEval (polyAdd c g)
+    /// n x) (add (polyEval c n x) (polyEval g n x))` — evaluation is a
+    /// homomorphism from `(polyAdd, polyEval)` to `(add, ·)`, **at the same
+    /// bound `n` for both operands** (no padding is needed or claimed for
+    /// mismatched bounds — see [`poly`]'s module doc for exactly where
+    /// padding to a common bound stops being free).
+    ///
+    /// Route: pointwise right-distributivity (`mul (add (c i) (g i)) (pow x
+    /// i) ~ add (mul (c i) (pow x i)) (mul (g i) (pow x i))`, via the `ring`
+    /// calculus over the three opaque atoms `c i`, `g i`, `pow x i` — cheaper
+    /// than deriving it by hand from [`Self::left_distrib`] plus
+    /// [`Self::mul_comm`] twice) lifted to the sums via
+    /// [`Self::sum_range_congr`], then [`Self::sum_range_add`] splits the
+    /// combined sum. Mirrors `Rat.polyEval_add`'s route exactly.
+    pub poly_eval_poly_add: NameId,
+    /// `Complex.polyScale : Complex → (Nat → Complex) → (Nat → Complex) :=
+    /// fun a c i => mul a (c i)` — scaling every coefficient by a constant, a
+    /// first-class named operation.
+    pub poly_scale: NameId,
+    /// `Complex.polyEval_polyScale : ∀ a c n x, Equiv (polyEval (polyScale a
+    /// c) n x) (mul a (polyEval c n x))` — evaluation is a homomorphism from
+    /// `(polyScale, polyEval)` to `(mul, ·)`.
+    ///
+    /// Route: pointwise re-association (`mul (mul a (c i)) (pow x i) ~ mul a
+    /// (mul (c i) (pow x i))`, via the `ring` calculus) lifted to the sums
+    /// via [`Self::sum_range_congr`], then [`Self::mul_sum_range`] symm'd
+    /// (that lemma runs `mul a (sumRange f n) ~ sumRange (fun i => mul a (f
+    /// i)) n`, the opposite direction). Mirrors `Rat.polyEval_smul`'s route
+    /// exactly.
+    pub poly_eval_poly_scale: NameId,
+    /// `Complex.polyDegreeLt : (Nat → Complex) → Nat → Prop := fun c n => ∀
+    /// i, Nat.le n i → Equiv (c i) zero` — "`c`'s coefficients vanish from
+    /// index `n` on", the honest stand-in for a *computed* degree bound
+    /// (which `Complex.Equiv`'s undecidability rules out): a **hypothesis**
+    /// a caller supplies, exactly the idiom [`Self::inv`]'s `PosBound`
+    /// witness and [`Self::geom_series_div`]'s modulus witness already use,
+    /// never a fact derived from `c` and `n` alone.
+    pub poly_degree_lt: NameId,
+    /// `Complex.polyDegreeLt_polyAdd : ∀ c g n, polyDegreeLt c n →
+    /// polyDegreeLt g n → polyDegreeLt (polyAdd c g) n` — the degree bound of
+    /// a sum is preserved **at the same bound** (no `Nat.max` is needed or
+    /// available in this kernel; widening either hypothesis to a larger
+    /// shared bound first is the caller's job via `Nat.le` transitivity, not
+    /// proved here).
+    ///
+    /// No induction: for `i` with `Nat.le n i`, [`Self::add_congr`] combines
+    /// the two vanishing hypotheses into `Equiv (add (c i) (g i)) (add zero
+    /// zero)`, and [`Self::add_zero`] at `zero` closes `Equiv (add zero
+    /// zero) zero`.
+    pub poly_degree_lt_poly_add: NameId,
+    /// `Complex.polyDegreeLt_polyScale : ∀ a c n, polyDegreeLt c n →
+    /// polyDegreeLt (polyScale a c) n`.
+    ///
+    /// No induction: for `i` with `Nat.le n i`, [`Self::mul_congr`] (with
+    /// [`Self::equiv_refl`] on `a`) combines the vanishing hypothesis into
+    /// `Equiv (mul a (c i)) (mul a zero)`, and [`Self::mul_zero`] at `a`
+    /// closes `Equiv (mul a zero) zero`.
+    pub poly_degree_lt_poly_scale: NameId,
 }
 
 impl ComplexPrelude {
@@ -1501,6 +1592,16 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         abs_one: kernel.name_str(complex, "abs_one"),
         abs_mul: kernel.name_str(complex, "abs_mul"),
         abs_add_le: kernel.name_str(complex, "abs_add_le"),
+        poly_eval: kernel.name_str(complex, "polyEval"),
+        poly_eval_zero: kernel.name_str(complex, "polyEval_zero"),
+        poly_eval_succ: kernel.name_str(complex, "polyEval_succ"),
+        poly_add: kernel.name_str(complex, "polyAdd"),
+        poly_eval_poly_add: kernel.name_str(complex, "polyEval_polyAdd"),
+        poly_scale: kernel.name_str(complex, "polyScale"),
+        poly_eval_poly_scale: kernel.name_str(complex, "polyEval_polyScale"),
+        poly_degree_lt: kernel.name_str(complex, "polyDegreeLt"),
+        poly_degree_lt_poly_add: kernel.name_str(complex, "polyDegreeLt_polyAdd"),
+        poly_degree_lt_poly_scale: kernel.name_str(complex, "polyDegreeLt_polyScale"),
     }
 }
 
@@ -1594,6 +1695,7 @@ pub fn build_complex_prelude(kernel: &mut Kernel) -> Result<ComplexPrelude, Kern
         declare_sum_range_diagonal(&mut d, prelude)?;
         declare_sum_range_rect_eq_diag_add_corner(&mut d, prelude)?;
         declare_sum_range_mul_eq_diag_add_corner(&mut d, prelude)?;
+        poly::declare_polynomial(&mut d, prelude)?;
         declare_add_pow(&mut d, prelude)?;
         declare_is_root_of_unity(&mut d, prelude)?;
         declare_one_is_root_of_unity(&mut d, prelude)?;

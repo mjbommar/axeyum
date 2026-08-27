@@ -248,6 +248,19 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
         ("Complex.abs_one", p.abs_one),
         ("Complex.abs_mul", p.abs_mul),
         ("Complex.abs_add_le", p.abs_add_le),
+        ("Complex.polyEval", p.poly_eval),
+        ("Complex.polyEval_zero", p.poly_eval_zero),
+        ("Complex.polyEval_succ", p.poly_eval_succ),
+        ("Complex.polyAdd", p.poly_add),
+        ("Complex.polyEval_polyAdd", p.poly_eval_poly_add),
+        ("Complex.polyScale", p.poly_scale),
+        ("Complex.polyEval_polyScale", p.poly_eval_poly_scale),
+        ("Complex.polyDegreeLt", p.poly_degree_lt),
+        ("Complex.polyDegreeLt_polyAdd", p.poly_degree_lt_poly_add),
+        (
+            "Complex.polyDegreeLt_polyScale",
+            p.poly_degree_lt_poly_scale,
+        ),
     ];
     // COVERAGE, checked against the ENVIRONMENT rather than against `named`
     // itself.
@@ -1735,5 +1748,170 @@ fn abs_one_value_is_load_bearing() {
         admitted.is_err(),
         "abs_one's proof must NOT type-check against `abs one ~ \
          CReal.zero`: {admitted:?}"
+    );
+}
+
+/// `Complex.polyEval_polyAdd` instantiated at two PAIRWISE DISTINCT constant
+/// coefficient functions (`c := fun _ => I`, `g := fun _ => one`) and a
+/// concrete bound/point (`n = 2`, `x = I`), mirroring
+/// `sub_div_concrete_instantiation`'s own "distinct values, not just I and
+/// one collapsed together" discipline: a `c`/`g` swap in the production code
+/// would produce a term that does not match this independently-built
+/// expected type (`add` is not *definitionally* commutative here -- only
+/// `Complex.add_comm`-provably so), so this genuinely exercises argument
+/// order, not just "the Pi-type is what it says it is".
+#[test]
+fn poly_eval_poly_add_concrete_instantiation() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let nat = d.nat_ty();
+    let i_c = d.kernel().const_(p.i, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    let c_i_fv = d.fresh_fvar();
+    let c = d.lam_fv(c_i_fv, nat, i_c);
+    let g_i_fv = d.fresh_fvar();
+    let g = d.lam_fv(g_i_fv, nat, one_c);
+
+    let zero_n = d.zero();
+    let one_n = d.succ(zero_n);
+    let two_n = d.succ(one_n);
+    let x = i_c;
+
+    // Equiv (polyEval (polyAdd c g) 2 I) (add (polyEval c 2 I) (polyEval g 2 I)).
+    let proof = d.lemma(p.poly_eval_poly_add, &[c, g, two_n, x]);
+
+    let poly_add_cg = d.const_app(p.poly_add, &[c, g]);
+    let lhs_stmt = d.const_app(p.poly_eval, &[poly_add_cg, two_n, x]);
+    let eval_c = d.const_app(p.poly_eval, &[c, two_n, x]);
+    let eval_g = d.const_app(p.poly_eval, &[g, two_n, x]);
+    let rhs_stmt = d.const_app(p.add, &[eval_c, eval_g]);
+    let ty = super::zeq(&mut d, p, lhs_stmt, rhs_stmt);
+
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.poly_eval_poly_add_concrete");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value: proof,
+    });
+    assert!(
+        admitted.is_ok(),
+        "polyEval_polyAdd at (c := const I, g := const one, n := 2, x := I) \
+         must give EXACTLY Equiv (polyEval (polyAdd c g) 2 I) \
+         (add (polyEval c 2 I) (polyEval g 2 I)): {admitted:?}"
+    );
+}
+
+/// `Complex.polyEval_polyScale` instantiated at a constant coefficient
+/// function distinct from the scalar (`a := I`, `c := fun _ => one`) and a
+/// concrete bound/point.
+#[test]
+fn poly_eval_poly_scale_concrete_instantiation() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let nat = d.nat_ty();
+    let i_c = d.kernel().const_(p.i, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    let a = i_c;
+    let c_i_fv = d.fresh_fvar();
+    let c = d.lam_fv(c_i_fv, nat, one_c);
+
+    let zero_n = d.zero();
+    let one_n = d.succ(zero_n);
+    let two_n = d.succ(one_n);
+    let x = one_c;
+
+    // Equiv (polyEval (polyScale I c) 2 one) (mul I (polyEval c 2 one)).
+    let proof = d.lemma(p.poly_eval_poly_scale, &[a, c, two_n, x]);
+
+    let poly_scale_ac = d.const_app(p.poly_scale, &[a, c]);
+    let lhs_stmt = d.const_app(p.poly_eval, &[poly_scale_ac, two_n, x]);
+    let eval_c = d.const_app(p.poly_eval, &[c, two_n, x]);
+    let rhs_stmt = d.const_app(p.mul, &[a, eval_c]);
+    let ty = super::zeq(&mut d, p, lhs_stmt, rhs_stmt);
+
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.poly_eval_poly_scale_concrete");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value: proof,
+    });
+    assert!(
+        admitted.is_ok(),
+        "polyEval_polyScale at (a := I, c := const one, n := 2, x := one) \
+         must give EXACTLY Equiv (polyEval (polyScale I c) 2 one) \
+         (mul I (polyEval c 2 one)): {admitted:?}"
+    );
+}
+
+/// Negative control for `Complex.polyEval_polyAdd`: its proof must NOT
+/// type-check against a `mul`-shaped conclusion (`mul (polyEval c n x)
+/// (polyEval g n x)` in place of `add (...) (...)`) -- otherwise the
+/// homomorphism statement would be too weak to distinguish `polyAdd`'s
+/// evaluation behaviour from `polyScale`'s, or from no homomorphism at all.
+/// Mirrors `abs_one_value_is_load_bearing`'s own "the proof is load-bearing
+/// for the specific operation, not vacuously anything" shape.
+#[test]
+fn poly_eval_poly_add_would_reject_mul_instead_of_add() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let nat = d.nat_ty();
+    let i_c = d.kernel().const_(p.i, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    let c_i_fv = d.fresh_fvar();
+    let c = d.lam_fv(c_i_fv, nat, i_c);
+    let g_i_fv = d.fresh_fvar();
+    let g = d.lam_fv(g_i_fv, nat, one_c);
+
+    let zero_n = d.zero();
+    let one_n = d.succ(zero_n);
+    let two_n = d.succ(one_n);
+    let x = i_c;
+
+    let proof = d.lemma(p.poly_eval_poly_add, &[c, g, two_n, x]);
+
+    let poly_add_cg = d.const_app(p.poly_add, &[c, g]);
+    let lhs_stmt = d.const_app(p.poly_eval, &[poly_add_cg, two_n, x]);
+    let eval_c = d.const_app(p.poly_eval, &[c, two_n, x]);
+    let eval_g = d.const_app(p.poly_eval, &[g, two_n, x]);
+    let wrong_rhs = d.const_app(p.mul, &[eval_c, eval_g]);
+    let wrong_ty = super::zeq(&mut d, p, lhs_stmt, wrong_rhs);
+
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.poly_eval_poly_add_wrong_mul");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty: wrong_ty,
+        value: proof,
+    });
+    assert!(
+        admitted.is_err(),
+        "polyEval_polyAdd's proof must NOT type-check against a `mul`-shaped \
+         conclusion: {admitted:?}"
     );
 }
