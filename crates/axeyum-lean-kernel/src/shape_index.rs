@@ -152,7 +152,7 @@ impl DeclKind {
             Declaration::Inductive { .. } => Self::Inductive,
             Declaration::Constructor { .. } => Self::Constructor,
             Declaration::Recursor { .. } => Self::Recursor,
-            Declaration::Quot { .. } => Self::Quot,
+            Declaration::Quotient { .. } => Self::Quot,
         }
     }
 }
@@ -168,8 +168,14 @@ pub struct Entry {
     pub kind: DeclKind,
     /// Number of leading `Pi` binders in the type.
     pub arity: usize,
-    /// Head constant of each `Pi` binder's type, in order. `None` where the
-    /// binder's type is not headed by a constant (a `Sort`, a bound variable).
+    /// Head constant of each `Pi` binder's type, in order, taken UNDER that
+    /// binder's own telescope: a hypothesis `(k : Nat) -> CReal.le (f k) (g k)`
+    /// is headed by `CReal.le`, not by `Nat`. Recording only the outermost head
+    /// would file every quantified hypothesis — which is most of the
+    /// interesting ones, including every domination and modulus premise — under
+    /// `None`, and `--hyp CReal.le` would then miss the lemmas a lane most
+    /// needs. `None` remains for a binder headed by a `Sort` or a bound
+    /// variable.
     pub hyp_heads: Vec<Option<String>>,
     /// Head constant of the type's conclusion, after stripping every binder.
     pub concl_head: Option<String>,
@@ -335,8 +341,24 @@ impl ShapeIndex {
     /// both.
     #[must_use]
     pub fn duplicate_shapes(&self) -> Vec<Vec<&Entry>> {
+        self.duplicate_shapes_where(|entry| entry.kind == DeclKind::Theorem)
+    }
+
+    /// [`ShapeIndex::duplicate_shapes`] over the rows `keep` accepts.
+    ///
+    /// The default restriction to theorems is not cosmetic. For a DEFINITION
+    /// the type is not the statement — `Nat.add` and `Nat.mul` are both
+    /// `Nat -> Nat -> Nat` and are not duplicates of each other — so an
+    /// unrestricted scan is dominated by rows that share an arity and nothing
+    /// else. Measured over the constructed library on 2026-08-27: 67 groups
+    /// unrestricted against 6 for theorems alone, and only the second set
+    /// contains anything a lane should act on. A theorem duplicating a
+    /// CONSTRUCTOR is a real duplicate this default hides — pass
+    /// `--kind theorem --kind constructor` to see those too.
+    #[must_use]
+    pub fn duplicate_shapes_where(&self, keep: impl Fn(&Entry) -> bool) -> Vec<Vec<&Entry>> {
         let mut by_shape: BTreeMap<&str, Vec<&Entry>> = BTreeMap::new();
-        for entry in &self.entries {
+        for entry in self.entries.iter().filter(|entry| keep(entry)) {
             by_shape.entry(entry.shape.as_str()).or_default().push(entry);
         }
         by_shape
@@ -559,9 +581,22 @@ pub fn run(index: &ShapeIndex, query: &Query) -> Outcome {
     }
     for root in roots {
         if namespaces.get(&root).copied().unwrap_or(0) == 0 {
+            // The hint matters most for the export-name trap: `AxNat.add` is
+            // `lean_pp`'s rendering and the kernel name is `Nat.add`, so the
+            // nearest list turns an unanswerable query into a fixed one.
+            let nearest = query
+                .name
+                .as_ref()
+                .map(|name| index.nearest(name, 6))
+                .unwrap_or_default();
+            let hint = if nearest.is_empty() {
+                String::new()
+            } else {
+                format!(" (nearest declared: {})", nearest.join(", "))
+            };
             reasons.push(format!(
                 "the index carries zero declarations under namespace {root:?}; build \
-                 the package that owns it before reading a zero as absence"
+                 the package that owns it before reading a zero as absence{hint}"
             ));
         }
     }
@@ -696,7 +731,8 @@ pub fn index_kernel(kernel: &Kernel, group: &str, index: &mut ShapeIndex, index_
         let hyp_heads = binders
             .iter()
             .map(|&domain| {
-                head_const(kernel, domain).map(|head| kernel.display_name(head).to_string())
+                let (_, inner) = telescope(kernel, domain);
+                head_const(kernel, inner).map(|head| kernel.display_name(head).to_string())
             })
             .collect();
         let concl_head =

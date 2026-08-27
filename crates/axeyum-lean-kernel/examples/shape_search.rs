@@ -120,6 +120,9 @@ shape_search — retrieve a declaration by the SHAPE of its type, not its name.
 
 Exit: 0 assertion held, 1 assertion failed, 2 usage, 3 UNANSWERABLE.";
 
+// Ten independent CLI toggles; a state machine would be less legible than the
+// flags they mirror one-for-one.
+#[allow(clippy::struct_excessive_bools)]
 struct Args {
     query: Query,
     include_constructed: bool,
@@ -220,7 +223,7 @@ fn build_index(include_constructed: bool, index_values: bool) -> ShapeIndex {
     let mut index = ShapeIndex::new(groups, index_values);
 
     let mut logic = Kernel::new();
-    let handle = build_logic_prelude(&mut logic).expect("logic prelude must build");
+    let _handle = build_logic_prelude(&mut logic).expect("logic prelude must build");
     index_kernel(&logic, "logic", &mut index, index_values);
 
     let mut nat = Kernel::new();
@@ -243,7 +246,6 @@ fn build_index(include_constructed: bool, index_values: bool) -> ShapeIndex {
     let string_handle = build_logic_prelude(&mut string).expect("logic prelude must build");
     let _ = build_string_prelude(&mut string, string_handle, 2).expect("string prelude must build");
     index_kernel(&string, "string", &mut index, index_values);
-    drop(handle);
 
     if include_constructed {
         let mut creal = Kernel::new();
@@ -263,6 +265,9 @@ fn build_index(include_constructed: bool, index_values: bool) -> ShapeIndex {
     index
 }
 
+// The reporting arms are deliberately inline: each verdict prints its own
+// positive control, and splitting them apart is how a control gets dropped.
+#[allow(clippy::too_many_lines)]
 fn main() -> ExitCode {
     let args = match parse_args() {
         Ok(args) => args,
@@ -311,7 +316,15 @@ fn main() -> ExitCode {
     }
 
     if args.duplicates {
-        let groups = index.duplicate_shapes();
+        // A DEFINITION's type is not its statement, so an unrestricted scan is
+        // dominated by rows sharing only an arity. Theorems unless told
+        // otherwise; `--kind definition` opts back in deliberately.
+        let kinds = args.query.kinds.clone();
+        let groups = if kinds.is_empty() {
+            index.duplicate_shapes()
+        } else {
+            index.duplicate_shapes_where(|entry| kinds.contains(&entry.kind))
+        };
         let mut reported = 0usize;
         for group in &groups {
             let names: Vec<&str> = group.iter().map(|entry| entry.name.as_str()).collect();
@@ -383,6 +396,15 @@ fn main() -> ExitCode {
                 if root_line.is_empty() { "" } else { " ns " },
                 root_line.join(" ")
             );
+            // A name-shaped query that found nothing gets the nearest declared
+            // names, because "absent" is most often a spelling, and this is the
+            // moment a lane would otherwise conclude the work is new.
+            for probe in args.query.name.iter().chain(args.query.name_contains.iter()) {
+                let nearest = index.nearest(probe, 8);
+                if !nearest.is_empty() {
+                    println!("hint: names containing that component: {}", nearest.join(", "));
+                }
+            }
         }
         Outcome::Found(matched) => {
             for name in matched.iter().take(args.limit) {
