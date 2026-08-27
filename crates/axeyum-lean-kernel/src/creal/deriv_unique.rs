@@ -570,7 +570,14 @@ pub(super) fn abs_of_nonneg(
 /// `Equiv (add (add v u) (neg v)) u` — `(v+u)-v ~ u`, for ANY `u`. Used at
 /// `v := z` with `u := embed q` (the upper branch) or `u := neg (embed q)`
 /// (the lower branch) to identify `y - z` with the exact signed gap.
-fn add_sub_cancel(d: &mut IntDev<'_>, p: CRealPrelude, v: ExprId, u: ExprId) -> ExprId {
+/// `creal/fermat.rs` had a byte-identical private copy; it now imports this
+/// one instead. `creal/add_sub_cancel`'s name collides with two OTHER,
+/// genuinely different helpers of the same name (`creal/convergence.rs`'s
+/// is over `Rat`, not `CReal`, and returns a pair; `creal/uniform_continuity.rs`'s
+/// takes its arguments in the other order and proves `Equiv (add a (add b
+/// (neg a))) b`, not this statement) — do not treat those as more copies
+/// of this one.
+pub(super) fn add_sub_cancel(d: &mut IntDev<'_>, p: CRealPrelude, v: ExprId, u: ExprId) -> ExprId {
     let nv = cneg(d, p, v);
     let vu = cadd(d, p, v, u);
     let start = cadd(d, p, vu, nv);

@@ -62,7 +62,7 @@
     clippy::too_many_lines
 )]
 
-use super::deriv_unique::{abs_neg_equiv, abs_of_nonneg, le_sub_of_add_le};
+use super::deriv_unique::{abs_neg_equiv, abs_of_nonneg, add_sub_cancel, le_sub_of_add_le};
 use super::{CRealPrelude, cadd, cle, clt, creal_ty, div_succ, embed, gap_elim, gap_halves};
 use crate::KernelError;
 use crate::env::Declaration;
@@ -325,39 +325,6 @@ fn mul_neg_equiv(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> E
     );
 
     neg_unique(d, p, xy, x_ny, h_sum_zero)
-}
-
-/// `Equiv (add (add v u) (neg v)) u` — for ANY `u`. Copied verbatim from
-/// `deriv_unique.rs`'s private helper of the same shape.
-fn add_sub_cancel(d: &mut IntDev<'_>, p: CRealPrelude, v: ExprId, u: ExprId) -> ExprId {
-    let nv = cneg(d, p, v);
-    let vu = cadd(d, p, v, u);
-    let start = cadd(d, p, vu, nv);
-
-    let uv = cadd(d, p, u, v);
-    let comm1 = d.lemma(p.add_comm, &[v, u]);
-    let refl_nv = erefl(d, p, nv);
-    let step1 = d.lemma(p.add_congr, &[vu, uv, nv, nv, comm1, refl_nv]);
-    let uv_nv = cadd(d, p, uv, nv);
-
-    let assoc = d.lemma(p.add_assoc, &[u, v, nv]);
-    let vnv = cadd(d, p, v, nv);
-    let u_vnv = cadd(d, p, u, vnv);
-
-    let an = d.lemma(p.add_neg, &[v]);
-    let refl_u = erefl(d, p, u);
-    let zero_c = czero(d, p);
-    let step2 = d.lemma(p.add_congr, &[u, u, vnv, zero_c, refl_u, an]);
-    let u_zero = cadd(d, p, u, zero_c);
-
-    let trim = d.lemma(p.add_zero, &[u]);
-
-    echain(
-        d,
-        p,
-        start,
-        &[(uv_nv, step1), (u_vnv, assoc), (u_zero, step2), (u, trim)],
-    )
 }
 
 /// `Equiv (neg zero) zero`. Copied verbatim from `derivative.rs`'s private
