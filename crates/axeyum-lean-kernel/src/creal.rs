@@ -3853,6 +3853,22 @@ pub struct CRealPrelude {
     /// there); see that module's own documentation for the refutation and
     /// the `lt_cotrans`-based nearby-point construction that replaces it.
     pub has_derivative_unique: NameId,
+    /// `CReal.fermat_interior_extremum : ∀ F F' lo hi, HasDerivativeOn F F'
+    /// lo hi → ∀ c, lt lo c → lt c hi → (∀ x, le lo x → le x hi →
+    /// le (F x) (F c)) → Equiv (F' c) zero` (`creal/fermat.rs`) — Fermat's
+    /// interior-extremum theorem (Spivak ch. 11, Thm 1). Unlike the classical
+    /// statement, this needs **no** case split and **no** existence argument:
+    /// the maximum point `c` is a hypothesis, not a conclusion, so the one
+    /// genuinely non-constructive ingredient of the classical theorem (the
+    /// Extreme Value Theorem, which produces the maximiser — see
+    /// `creal/extreme_value.rs`) never enters. The route is direct: for each
+    /// accuracy `e`, pick a rational gap `q` small enough to (a) keep `c ± q`
+    /// inside `[lo, hi]` (from the two `lt` witnesses via `gap_elim`) and (b)
+    /// satisfy `hd_spec`'s own modulus at `e`; the max hypothesis bounds
+    /// `F(c±q) - F(c)` above by zero, and `hd_spec` at `c` and `c±q` gives a
+    /// two-sided bound on `F'(c)` of exactly `1/(e+1)`, for every `e` —
+    /// closed by `CReal.equiv_zero_of_small`.
+    pub fermat_interior_extremum: NameId,
     /// `CReal.mesh_le_of_ge : ∀ a b outer m, le a b → Nat.le ((Nat.succ
     /// (bound (add b (neg a))))*outer + bound (add b (neg a))) m → le (mul
     /// (add b (neg a)) (ofRat (natDivSucc 1 m))) (ofRat (natDivSucc 1
@@ -5327,6 +5343,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         ivt_bisect_diag_lo: kernel.name_str(creal, "ivt_bisect_diag_lo"),
         ivt_bisect_diag_hi: kernel.name_str(creal, "ivt_bisect_diag_hi"),
         has_derivative_unique: kernel.name_str(creal, "hasDerivative_unique"),
+        fermat_interior_extremum: kernel.name_str(creal, "fermat_interiorExtremum"),
         mesh_le_of_ge: kernel.name_str(creal, "mesh_le_of_ge"),
         mesh_scaled_le_of_ge: kernel.name_str(creal, "meshScaledLeOfGe"),
         fine_sample_in_bounds: kernel.name_str(creal, "fineSample_in_bounds"),
@@ -6530,6 +6547,56 @@ const STEPS: &[BuildStep] = &[
         ],
         provides: &[|p: CRealPrelude| p.has_derivative_unique],
         run: deriv_unique::declare_deriv_unique,
+    },
+    BuildStep {
+        label: "fermat::declare_fermat",
+        requires: &[
+            |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.abs_congr,
+            |p: CRealPrelude| p.abs_le,
+            |p: CRealPrelude| p.add,
+            |p: CRealPrelude| p.add_assoc,
+            |p: CRealPrelude| p.add_comm,
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.equiv,
+            |p: CRealPrelude| p.equiv_of_le_le,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.equiv_zero_of_small,
+            |p: CRealPrelude| p.has_derivative_on,
+            |p: CRealPrelude| p.hd_modulus,
+            |p: CRealPrelude| p.hd_spec,
+            |p: CRealPrelude| p.le,
+            |p: CRealPrelude| p.le_abs_self,
+            |p: CRealPrelude| p.le_add_of_nonneg,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_of_lt,
+            |p: CRealPrelude| p.le_of_mul_le_mul_left,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.left_distrib,
+            |p: CRealPrelude| p.lt,
+            |p: CRealPrelude| p.mul,
+            |p: CRealPrelude| p.mul_comm,
+            |p: CRealPrelude| p.mul_congr,
+            |p: CRealPrelude| p.mul_zero,
+            |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.neg_congr,
+            |p: CRealPrelude| p.neg_le_abs,
+            |p: CRealPrelude| p.neg_le_neg,
+            |p: CRealPrelude| p.of_rat,
+            |p: CRealPrelude| p.of_rat_le,
+            |p: CRealPrelude| p.of_rat_pos,
+            |p: CRealPrelude| p.pos_bound,
+            |p: CRealPrelude| p.pos_bound_of_lt,
+            |p: CRealPrelude| p.zero,
+        ],
+        provides: &[|p: CRealPrelude| p.fermat_interior_extremum],
+        run: fermat::declare_fermat,
     },
     BuildStep {
         label: "uniform_continuity::declare_uniform_continuity_products",
@@ -10327,6 +10394,7 @@ mod deriv_unique;
 mod derivative;
 mod exponential;
 mod extreme_value;
+mod fermat;
 mod field;
 mod geometric;
 mod integral;
