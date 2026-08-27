@@ -211,6 +211,27 @@ formula is 14,194 variables / 327,843 clauses / 6,960,997 bytes, SHA-256
 written 5.55 GB after 18.55 million conflicts. This prefix has no mathematical credit. A
 palette-invariant conclusion requires its terminal proof and independent replay.
 
+**Finite palette-orbit proof composition, 2026-08-27.** The tempting shortcut from labelled
+UNSAT to orbit UNSAT is invalid because the canonical colouring CNF's least-first-occurrence
+clauses are not invariant under arbitrary relabelling. ADR-0599 instead adds a complete bounded
+lexicographic permutation enumerator, fail-closed witness relabelling, and a checker that
+regenerates and checks one labelled Hamming formula for every palette permutation. A first
+nonidentity five-colour control closed in 6.29 seconds, emitted a 38,821,222-byte DRAT, and
+Axeyum accepted it in 1.763 seconds. Four no-cutoff workers are producing the complete 120-proof
+set while the original existential producer remains live. No orbit claim is credited until all
+120 proofs pass the independent proof-set checker.
+
+**Palette-invariant Rado neighbourhood checked, 2026-08-27.** Complete production yielded
+120 textual DRAT proofs / 17,595,727,192 bytes, one for every five-colour permutation. The
+ADR-0599 checker independently enumerated the complete lexicographic 5! set, permuted the
+hash-bound 404 witness, regenerated every 11,745-variable / 319,249-clause labelled radius-22
+formula, and accepted all proofs with terminal verdict `orbit-unsat-checked`. Therefore every
+valid 405-point colouring has Hamming distance at least 23 from the witness under
+every palette renaming. This supersedes the earlier labelled-coordinate restriction but remains
+a local repair-neighbourhood theorem: unrestricted 405 remains open and the exact lower bound
+does not move. The proof manifest, receipt, diary, provenance, and rebuilt paper are retained;
+the redundant single-bijection producer stopped with an uncredited 26.32 GB prefix.
+
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
 external-certificate replay runner for all five packages.  It validates checker and artifact
 bytes before execution, hard-kills a timed-out process session, requires an observable finding

@@ -101,7 +101,7 @@ pub mod tensor_decomposition;
 pub mod vdw;
 
 pub use certify::certify_dumped_cover;
-pub use colouring::{ColouringProblem, Witness};
+pub use colouring::{ColouringProblem, Witness, palette_permutations};
 pub use cover::{
     BranchGroup, BranchPlan, Cell, CellCheck, CellRecord, CellVerdict, CoverCertificate,
 };

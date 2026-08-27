@@ -669,3 +669,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0596](adr-0596-recursive-proof-trees-use-one-whole-tree-worker-pool.md) | Recursive proof trees use one whole-tree worker pool | accepted |
 | [0597](adr-0597-palette-orbit-distance-is-one-existential-bijection.md) | Palette-orbit distance is one existential bijection | accepted |
 | [0598](adr-0598-whole-tree-checks-expose-non-authoritative-obligation-events.md) | Whole-tree checks expose non-authoritative obligation events | accepted |
+| [0599](adr-0599-palette-orbit-refutations-may-compose-complete-labelled-proof-sets.md) | Palette-orbit refutations may compose complete labelled proof sets | accepted |
