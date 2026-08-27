@@ -426,13 +426,6 @@ callback reports work completion, never proof credit; lowest-path failure orderi
 cover checking remain unchanged. The two live 60/83 GB S-box checks use the older binary and
 were deliberately not restarted for telemetry alone. Their active reads are not verdicts.
 
-**Proof-reader descriptor bound, 2026-08-26.** Live inspection found 561 open descriptors in
-the sequential recursive S-box checker. ADR-0594 makes the CLI's lazy reader close its file at
-EOF and retain an explicit exhausted state so later reads cannot reopen from byte zero. Both
-`Read` and `BufRead` controls pin handle closure and stable EOF. The host's 524,288 limit meant
-the old run was not immediately endangered, so neither live checker was restarted; no proof
-credit follows from this resource repair.
-
 **Bilinear first-summand normalization, 2026-08-26.** ADR-0568 applies a complete
 matrix-tensor stabilizer reduction: a chosen nonzero summand occupies slot zero, its first
 factor is one of the `min(m,n)` matrix rank-normal forms, and only the remaining slots are
