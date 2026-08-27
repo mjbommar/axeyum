@@ -1164,6 +1164,22 @@ claim sweep reports 104 claims re-checked / 0 errors / 25 rows explicitly not re
 The SIMD brief's named byte-reversal target is now closed in its explicitly listed fixed
 shuffle set; the other four headline targets remain open.
 
+**S-box top-level semantic cell 8 checked, 2026-08-27.** The bounded whole-tree checker
+accepted all 961 manifest-selected obligations beneath top-level Boolean-product cell 8:
+931 leaf DRAT refutations and 30 covering proofs totaling 62,886,514,460 consumed bytes.
+Every formula was reconstructed from the hash-bound exact-irredundant base and its typed cube
+path; the terminal log and root manifest/cover are hash-bound in the sibling receipt. This
+closes one of the 32 exhaustive semantic cells, not the remaining 31 and not the full MC<=7
+formula, so the `[7,8]` interval and five-problem scoreboard do not move.
+
+**Whole-tree obligation observability, 2026-08-27.** ADR-0598 adds non-authoritative start and
+finish events carrying obligation index, total, tree path, and leaf/cover/structural kind. The
+existing contiguous deterministic progress stream and lowest-index error remain unchanged.
+The live 62.89 GB replay exposed the gap when its counter paused at 940/961 on a 921 MB leaf;
+the new API makes such work visible without granting partial proof credit. The five-obligation
+control pins both lifecycle events for every path and kind; focused tests and all-target/all-
+feature Clippy pass.
+
 **Job-shop published-witness import, 2026-08-26.** ADR-0576 adds strict parsing of the common
 one-job-per-machine-order-row solution format and deterministic earliest-schedule reconstruction
 over the combined job/machine precedence DAG. Malformed permutations and cyclic rows fail closed;

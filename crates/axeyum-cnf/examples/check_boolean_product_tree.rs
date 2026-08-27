@@ -4,11 +4,14 @@ use std::fs::File;
 use std::io::{self, BufRead, BufReader, Read};
 use std::path::{Path, PathBuf};
 
-#[cfg(not(target_arch = "wasm32"))]
-use axeyum_cnf::cube::check_cube_refutation_reader_tree_fully_parallel_with_progress;
 use axeyum_cnf::cube::{
     CubeRefutationReaderTree, augmented_formula, boolean_product_cubes,
     check_cube_refutation_reader_tree,
+};
+#[cfg(not(target_arch = "wasm32"))]
+use axeyum_cnf::cube::{
+    CubeTreeObligationEvent, CubeTreeObligationKind, CubeTreeObligationState,
+    check_cube_refutation_reader_tree_fully_parallel_with_events,
 };
 use axeyum_cnf::{CnfFormula, CnfVar, parse_dimacs};
 
@@ -61,6 +64,31 @@ impl BufRead for LazyProofReader {
 fn fail(message: impl std::fmt::Display) -> ! {
     eprintln!("BOOLEAN_PRODUCT_TREE_CHECK|failed|{message}");
     std::process::exit(2);
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn report_obligation_event(event: &CubeTreeObligationEvent) {
+    let kind = match event.kind {
+        CubeTreeObligationKind::Leaf => "leaf",
+        CubeTreeObligationKind::Covering => "covering",
+        CubeTreeObligationKind::Structural => "structural",
+    };
+    let outcome = match event.state {
+        CubeTreeObligationState::Started => "started",
+        CubeTreeObligationState::Finished { accepted: true } => "accepted",
+        CubeTreeObligationState::Finished { accepted: false } => "rejected",
+    };
+    let path = event
+        .path
+        .iter()
+        .map(usize::to_string)
+        .collect::<Vec<_>>()
+        .join(".");
+    eprintln!(
+        "BOOLEAN_PRODUCT_TREE_EVENT|obligation={}/{}|path={path}|kind={kind}|state={outcome}",
+        event.index + 1,
+        event.total,
+    );
 }
 
 fn parse_usize(text: &str, what: &str) -> usize {
@@ -276,13 +304,14 @@ fn main() {
     let tree = build_tree(&root, &tree_dir, 0, &mut stats);
     #[cfg(not(target_arch = "wasm32"))]
     if workers > 1 {
-        check_cube_refutation_reader_tree_fully_parallel_with_progress(
+        check_cube_refutation_reader_tree_fully_parallel_with_events(
             &root,
             tree,
             workers,
             |completed, total| {
                 eprintln!("BOOLEAN_PRODUCT_TREE_PROGRESS|obligations={completed}/{total}");
             },
+            |event| report_obligation_event(&event),
         )
         .unwrap_or_else(|error| fail(error));
     } else {
