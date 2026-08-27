@@ -56,6 +56,58 @@ use axeyum_cnf::{
 
 use crate::SearchError;
 
+/// Enumerate every permutation of `1..=colours` in lexicographic order.
+///
+/// `max_permutations` is an explicit factorial-growth ceiling. The function
+/// refuses rather than returning an incomplete prefix.
+///
+/// # Errors
+///
+/// Refuses zero colours, a zero ceiling, or a palette whose complete
+/// permutation set exceeds the ceiling.
+pub fn palette_permutations(
+    colours: usize,
+    max_permutations: usize,
+) -> Result<Vec<Vec<usize>>, SearchError> {
+    if colours == 0 {
+        return Err(SearchError::InvalidParameter {
+            what: "palette permutations need at least one colour".to_string(),
+        });
+    }
+    if max_permutations == 0 {
+        return Err(SearchError::InvalidParameter {
+            what: "palette permutation ceiling must be positive".to_string(),
+        });
+    }
+    let mut current = (1..=colours).collect::<Vec<_>>();
+    let mut permutations = Vec::new();
+    loop {
+        if permutations.len() == max_permutations {
+            return Err(SearchError::InvalidParameter {
+                what: format!("palette has more than {max_permutations} permutations"),
+            });
+        }
+        permutations.push(current.clone());
+        let Some(pivot) = (0..current.len().saturating_sub(1))
+            .rev()
+            .find(|&index| current[index] < current[index + 1])
+        else {
+            break;
+        };
+        let Some(successor) = (pivot + 1..current.len())
+            .rev()
+            .find(|&index| current[pivot] < current[index])
+        else {
+            return Err(SearchError::InvalidParameter {
+                what: "palette permutation successor invariant failed".to_string(),
+            });
+        };
+        current.swap(pivot, successor);
+        current[pivot + 1..].reverse();
+    }
+    Ok(permutations)
+}
+
 /// A colouring formula restricted by Hamming distance after an existential
 /// bijection of palette labels.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -919,6 +971,52 @@ impl Witness {
         out
     }
 
+    /// Rename every colour through a complete one-based palette permutation.
+    ///
+    /// `permutation[c - 1]` is the new name of colour `c`. Unlike
+    /// [`Self::canonicalize_palette`], this preserves the caller's explicit
+    /// naming and is suitable for enumerating every representative of a
+    /// palette orbit.
+    ///
+    /// # Errors
+    ///
+    /// Refuses a permutation of the wrong width, an out-of-range image, or a
+    /// duplicate/missing image.
+    pub fn permute_palette(&self, permutation: &[usize]) -> Result<Self, SearchError> {
+        if permutation.len() != self.colours {
+            return Err(SearchError::InvalidParameter {
+                what: format!(
+                    "palette permutation has {} entries, expected {}",
+                    permutation.len(),
+                    self.colours
+                ),
+            });
+        }
+        let mut seen = vec![false; self.colours];
+        for &image in permutation {
+            if image == 0 || image > self.colours {
+                return Err(SearchError::ColourOutOfRange {
+                    colour: image,
+                    colours: self.colours,
+                });
+            }
+            if std::mem::replace(&mut seen[image - 1], true) {
+                return Err(SearchError::InvalidParameter {
+                    what: format!("palette permutation repeats image {image}"),
+                });
+            }
+        }
+        let colouring = self
+            .colouring
+            .iter()
+            .map(|&colour| permutation[colour - 1])
+            .collect();
+        Ok(Self {
+            colours: self.colours,
+            colouring,
+        })
+    }
+
     /// Rename colours by order of first occurrence.
     ///
     /// The first observed colour becomes 1, the next previously unseen colour
@@ -969,6 +1067,29 @@ mod tests {
 
     fn triangle_problem() -> ColouringProblem {
         ColouringProblem::new(3, 2, vec![vec![1, 2, 3]]).expect("valid problem")
+    }
+
+    #[test]
+    fn palette_permutation_enumeration_is_complete_ordered_and_bounded() {
+        assert_eq!(
+            palette_permutations(3, 6).unwrap(),
+            vec![
+                vec![1, 2, 3],
+                vec![1, 3, 2],
+                vec![2, 1, 3],
+                vec![2, 3, 1],
+                vec![3, 1, 2],
+                vec![3, 2, 1],
+            ]
+        );
+        assert_eq!(
+            palette_permutations(3, 5).unwrap_err(),
+            SearchError::InvalidParameter {
+                what: "palette has more than 5 permutations".to_string()
+            }
+        );
+        assert!(palette_permutations(0, 1).is_err());
+        assert!(palette_permutations(1, 0).is_err());
     }
 
     #[test]
@@ -1038,6 +1159,34 @@ mod tests {
         let assignment = problem.witness_assignment(&canonical).unwrap();
         assert_eq!(problem.decode_model(&assignment), Ok(canonical));
         assert_eq!(problem.encode().unwrap().evaluate(&assignment), Ok(true));
+    }
+
+    #[test]
+    fn witness_palette_permutation_is_explicit_and_fail_closed() {
+        let witness = Witness::new(3, vec![1, 3, 2, 1]).unwrap();
+        assert_eq!(
+            witness.permute_palette(&[2, 3, 1]).unwrap().colouring(),
+            &[2, 1, 3, 2]
+        );
+        assert_eq!(
+            witness.permute_palette(&[1, 2]).unwrap_err(),
+            SearchError::InvalidParameter {
+                what: "palette permutation has 2 entries, expected 3".to_string()
+            }
+        );
+        assert_eq!(
+            witness.permute_palette(&[1, 1, 3]).unwrap_err(),
+            SearchError::InvalidParameter {
+                what: "palette permutation repeats image 1".to_string()
+            }
+        );
+        assert_eq!(
+            witness.permute_palette(&[1, 2, 4]).unwrap_err(),
+            SearchError::ColourOutOfRange {
+                colour: 4,
+                colours: 3
+            }
+        );
     }
 
     #[test]

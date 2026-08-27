@@ -20,6 +20,8 @@
 //!      hamming_witness=witness-404.txt hamming_points=404 max_changes=10`
 //! Add `hamming_mod_palette=true` to minimize distance over all colour
 //! permutations in one checked bijection encoding.
+//! Or add `hamming_permutation=2,1,3,4,5` to generate one explicit labelled
+//! representative for finite proof-set composition.
 //!
 //! exit: 0 written, 2 usage.
 
@@ -29,6 +31,26 @@ use std::process::ExitCode;
 
 use axeyum_cnf::WeightedAtMostLimits;
 use axeyum_search::{ColouringFamily, Rado, Witness};
+
+fn apply_hamming_permutation(args: &BTreeMap<String, String>, witness: Witness) -> Witness {
+    let Some(permutation) = args.get("hamming_permutation") else {
+        return witness;
+    };
+    let permutation = permutation
+        .split(',')
+        .map(|value| value.parse::<usize>().expect("palette image number"))
+        .collect::<Vec<_>>();
+    witness
+        .permute_palette(&permutation)
+        .expect("permute Hamming witness palette")
+}
+
+fn usage() {
+    eprintln!(
+        "usage: rado_dump_cnf a=5 b=4 k=4 n=741 out=<file.cnf> \
+         [prefix_witness=<path> prefix_points=<count>]"
+    );
+}
 
 fn main() -> ExitCode {
     let args: BTreeMap<String, String> = std::env::args()
@@ -43,10 +65,7 @@ fn main() -> ExitCode {
             .map_or(fallback, |value| value.parse().expect("number"))
     };
     let Some(out) = args.get("out") else {
-        eprintln!(
-            "usage: rado_dump_cnf a=5 b=4 k=4 n=741 out=<file.cnf> \
-             [prefix_witness=<path> prefix_points=<count>]"
-        );
+        usage();
         return ExitCode::from(2);
     };
     let (a, b, k, n) = (
@@ -80,7 +99,10 @@ fn main() -> ExitCode {
         }
         ((None, None), (Some(path), Some(points), Some(changes))) => {
             let text = fs::read_to_string(path).expect("read Hamming witness");
-            let witness = Witness::parse(k, &text).expect("parse Hamming witness");
+            let witness = apply_hamming_permutation(
+                &args,
+                Witness::parse(k, &text).expect("parse Hamming witness"),
+            );
             let points = points.parse::<usize>().expect("hamming_points number");
             let changes = changes.parse::<u64>().expect("max_changes number");
             if args.get("hamming_mod_palette").map(String::as_str) == Some("true") {
