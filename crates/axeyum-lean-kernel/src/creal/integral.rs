@@ -24047,6 +24047,22 @@ fn le_add_of_abs_sub_le_real(
     let abs_diff = d.const_app(p.abs, &[diff]);
     let self_le = d.lemma(p.le_abs_self, &[diff]);
     let diff_le = d.lemma(p.le_trans, &[diff, abs_diff, bnd, self_le, h]);
+    le_add_of_sub_le_real(d, p, x, y, bnd, diff_le)
+}
+
+/// `le x (add y bnd)` from `diff_le : le (add x (neg y)) bnd` — the inverse
+/// of [`sub_le_of_le_add_real`], and the shared tail of
+/// [`le_add_of_abs_sub_le_real`].
+fn le_add_of_sub_le_real(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    bnd: ExprId,
+    diff_le: ExprId,
+) -> ExprId {
+    let ny = cneg(d, p, y);
+    let diff = cadd(d, p, x, ny);
 
     let refl_y = d.lemma(p.le_refl, &[y]);
     let stepped = d.lemma(p.add_le_add, &[diff, bnd, y, y, diff_le, refl_y]);
@@ -24277,33 +24293,24 @@ fn integral_endpoint_close(
         let body = if forward {
             le_add_of_abs_sub_le_real(d, p, s1, s2, big_b, est)
         } else {
-            // `|s1 − s2| ≤ B` gives the OTHER direction through the same
-            // helper once the difference is reversed.
+            // The OTHER direction, WITHOUT ever forming `neg (neg _)`:
+            // `neg_le_abs` bounds `-(s1-s2)` by `|s1-s2| <= B`, and
+            // `neg_sub_swap` turns that term into `s2 - s1` outright.
             let n1 = cneg(d, p, s1);
             let n2 = cneg(d, p, s2);
             let diff12 = cadd(d, p, s1, n2);
             let diff21 = cadd(d, p, s2, n1);
             let abs12 = d.const_app(p.abs, &[diff12]);
-            let abs21 = d.const_app(p.abs, &[diff21]);
             let ndiff12 = cneg(d, p, diff12);
-            let swap = d.lemma(p.neg_sub_swap, &[s1, s2]);
-            let abs_neg = d.lemma(p.abs_congr, &[ndiff12, diff21, swap]);
-            let abs_ndiff = d.const_app(p.abs, &[ndiff12]);
-            // `|−z| ≤ |z|` from `neg_le_abs`/`le_abs_self` through `abs_le`.
-            let self_le = d.lemma(p.le_abs_self, &[diff12]);
             let neg_le = d.lemma(p.neg_le_abs, &[diff12]);
-            let abs_of_neg = d.lemma(p.abs_le, &[ndiff12, abs12, neg_le, self_le]);
-            // abs_of_neg : le (abs ndiff12) (abs diff12)
-            let refl_abs12 = d.lemma(p.equiv_refl, &[abs12]);
+            let chained = d.lemma(p.le_trans, &[ndiff12, abs12, big_b, neg_le, est]);
+            let swap = d.lemma(p.neg_sub_swap, &[s1, s2]);
+            let refl_b = d.lemma(p.equiv_refl, &[big_b]);
             let moved = d.lemma(
                 p.le_congr,
-                &[
-                    abs_ndiff, abs21, abs12, abs12, abs_neg, refl_abs12, abs_of_neg,
-                ],
+                &[ndiff12, diff21, big_b, big_b, swap, refl_b, chained],
             );
-            // moved : le (abs diff21) (abs diff12)
-            let chained = d.lemma(p.le_trans, &[abs21, abs12, big_b, moved, est]);
-            le_add_of_abs_sub_le_real(d, p, s2, s1, big_b, chained)
+            le_add_of_sub_le_real(d, p, s2, s1, big_b, moved)
         };
         d.lam_fv(n_fv, nat, body)
     };
