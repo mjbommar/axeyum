@@ -31,9 +31,27 @@
 # semaphore of N slots, N derived from RAM / the per-job ceiling, and a single
 # runaway is still capped by its own cgroup rather than by everyone else waiting.
 #
+# THE SLOTS BOUND MEMORY AND NOTHING BOUNDS CPU, which is a different problem
+# and it is now the binding one. Measured 2026-08-27 (see
+# docs/research/11-design-review/2026-08-27-gate-throughput.md): five slots x
+# `nproc`-wide rustc and test threads is a 5x oversubscription of a 16-core box,
+# and `hooks/pre-push` -- the authoritative pre-merge gate -- was one of six
+# EQUAL consumers competing for it. Load reached 17.7/16 and the battery went
+# from ~250 s to 2,152 s, uniformly inflated across every step: starvation, not
+# a regression in any one gate.
+#
+# The fix is PRIORITY, not tighter admission. Capping each job's `-j` would make
+# a lone job N times slower on an idle box, and blocking lanes destroys the
+# parallelism that produces the work in the first place. `nice` costs nothing
+# when the box is quiet (a lone job still gets all 16 cores) and only bites when
+# it is oversubscribed -- which is exactly the condition being fixed. So lane
+# work runs at AXEYUM_CARGO_NICE (default 10) and the push battery runs at 0.
+#
 # Usage:
 #   scripts/cargo-serialized.sh test -p axeyum-solver --lib --features full
 #   scripts/cargo-serialized.sh --self-check   # does the ceiling actually bite HERE?
+#   scripts/cargo-serialized.sh --slots        # print the computed slot count
+#   scripts/cargo-serialized.sh --batch <cmd...>  # one slot for a whole gate
 #   AXEYUM_CARGO_MEM=48G scripts/cargo-serialized.sh test --workspace --all-features
 #
 # Env:
@@ -42,6 +60,9 @@
 #   AXEYUM_CARGO_SWAP  scope MemorySwapMax      (default 0 -- see above)
 #   AXEYUM_CARGO_WAIT  seconds to wait for lock (default 5400; 0 = fail fast)
 #   AXEYUM_CARGO_CPUS  taskset list             (default unset -- no pinning)
+#   AXEYUM_CARGO_NICE  nice(1) increment        (default 10; 0 = no nice/ionice)
+#   AXEYUM_CARGO_CPUWEIGHT  scope CPUWeight     (default 10 vs systemd's 100;
+#                                                0 = do not set it)
 #
 # Exit status is the cargo job's, unchanged, EXCEPT 75 (EX_TEMPFAIL) when the
 # lock could not be taken in time -- distinguishable from a test failure, which
@@ -68,10 +89,46 @@ SLOTS="${AXEYUM_CARGO_SLOTS:-$(slots_default)}"
 MEM="${AXEYUM_CARGO_MEM:-24G}"
 SWAP="${AXEYUM_CARGO_SWAP:-0}"
 WAIT="${AXEYUM_CARGO_WAIT:-5400}"
+NICE="${AXEYUM_CARGO_NICE:-10}"
+CPUW="${AXEYUM_CARGO_CPUWEIGHT:-10}"
 
 if [ "$#" -eq 0 ]; then
-  echo "usage: $0 <cargo args...>   |   $0 --self-check" >&2
+  echo "usage: $0 <cargo args...>   |   $0 --batch <cmd...>   |   $0 --self-check" >&2
   exit 2
+fi
+
+# `--slots` prints what this host would admit, with no side effects. It exists
+# so a control can assert the arithmetic without re-deriving it, and so an agent
+# can see the number rather than infer it: CLAUDE.md and several docs still say
+# "one cargo at a time", which stopped being true on 2026-08-18.
+if [ "$1" = "--slots" ]; then
+  echo "$SLOTS"
+  exit 0
+fi
+
+# BATCH MODE: one slot for an entire gate, not one per cargo invocation.
+#
+# `scripts/check.sh` fires ~100 bare `cargo` calls. Wrapping each would take and
+# drop 100 slots and still let 5 aggregate gates run at once; wrapping the whole
+# script takes ONE slot for the run and holds it. The nested calls see
+# AXEYUM_CARGO_SLOT_HELD and skip the slot (see below), so this cannot deadlock
+# against itself -- which is the failure a naive "wrap everything" would produce
+# the moment a wrapped script called a wrapped script.
+#
+# Deliberately NO memory scope here: a batch is a SUPERVISOR, not a cargo job.
+# Putting `MemoryMax=24G` on `check.sh` would have the cgroup SIGKILL the whole
+# aggregate gate at a threshold none of its steps individually exceeded, and the
+# gate would report a failure that is not a failure -- the "checker that cannot
+# fail" defect inverted, which is just as bad. The nested cargo jobs each still
+# get their own scope, so the ceiling that actually matters is unchanged.
+BATCH=0
+if [ "$1" = "--batch" ]; then
+  BATCH=1
+  shift
+  if [ "$#" -eq 0 ]; then
+    echo "usage: $0 --batch <cmd...>" >&2
+    exit 2
+  fi
 fi
 
 # `--self-check` runs a deliberate over-allocation through the SAME lock and the
@@ -104,7 +161,11 @@ touch "$LOCK" 2>/dev/null || LOCK="${TMPDIR:-/tmp}/axeyum-cargo.lock"
 
 # `AXEYUM_CARGO_BIN` exists so `--self-check` can drive this exact path with a
 # probe instead of cargo. Nothing else should set it.
-run=("${AXEYUM_CARGO_BIN:-cargo}" "$@")
+if [ "$BATCH" = "1" ]; then
+  run=("$@")
+else
+  run=("${AXEYUM_CARGO_BIN:-cargo}" "$@")
+fi
 if [ -n "${AXEYUM_CARGO_CPUS:-}" ]; then
   run=(taskset -c "$AXEYUM_CARGO_CPUS" "${run[@]}")
 fi
@@ -112,12 +173,50 @@ fi
 # service, so stdout/stderr and the exit status pass through unchanged. Without
 # a working user manager (a bare ssh session may have none) fall back to running
 # it directly: the lock is still worth having even when the ceiling is not.
-if systemctl --user show-environment >/dev/null 2>&1; then
-  run=(systemd-run --user --scope -q \
-       -p "MemoryMax=$MEM" -p "MemorySwapMax=$SWAP" "${run[@]}")
+if [ "$BATCH" = "1" ]; then
+  : # a supervisor, not a cargo job -- see the --batch comment above
+elif systemctl --user show-environment >/dev/null 2>&1; then
+  scope=(systemd-run --user --scope -q
+         -p "MemoryMax=$MEM" -p "MemorySwapMax=$SWAP")
+  # The knob that actually crosses a session boundary -- see the header. The
+  # slice property is set here rather than shipped as a unit file so the wrapper
+  # stays self-contained; it is idempotent and costs a few milliseconds.
+  if [ "$CPUW" != "0" ]; then
+    systemctl --user set-property axeyumlane.slice "CPUWeight=$CPUW" \
+      >/dev/null 2>&1 || true
+    scope+=(--slice=axeyumlane -p "CPUWeight=$CPUW")
+  fi
+  run=("${scope[@]}" "${run[@]}")
 else
   echo "cargo-serialized: no user systemd manager; running WITHOUT MemoryMax=$MEM" >&2
 fi
+
+# PRIORITY. `nice` is applied OUTSIDE the systemd scope so it covers the scope
+# and every descendant, and `ionice -c 3` (idle) because a cold workspace build
+# is I/O bound as often as it is CPU bound -- 246 lane worktrees each building
+# their own `target/` is 363 GB of write traffic that the push battery competes
+# with for the same disk.
+#
+# `AXEYUM_CARGO_NICE=0` disables both, and that is what `hooks/pre-push` sets:
+# the gate is latency-sensitive interactive work with a human (or a stalled
+# lane) waiting on it, while lane builds are throughput work that does not care
+# about a few minutes. Renicing DOWN is unprivileged; renicing UP is not, which
+# is why this yields the lanes rather than promoting the battery.
+if [ "$NICE" != "0" ] && command -v nice >/dev/null 2>&1; then
+  run=(nice -n "$NICE" "${run[@]}")
+  if command -v ionice >/dev/null 2>&1; then
+    run=(ionice -c 3 "${run[@]}")
+  fi
+fi
+
+# RE-ENTRANCY. A job that is already inside somebody's slot must not take a
+# second one, or a wrapped script calling a wrapped script deadlocks the moment
+# the slots run out -- and it would deadlock silently, as a 5,400 s wait.
+# The marker is exported below for the children of a slot we actually took.
+if [ "${AXEYUM_CARGO_SLOT_HELD:-0}" = "1" ]; then
+  exec "${run[@]}"
+fi
+export AXEYUM_CARGO_SLOT_HELD=1
 
 # Take the first FREE slot without blocking; only if every slot is busy do we
 # wait, and then on slot 1 -- so a queue forms in one place instead of N lanes

@@ -18,6 +18,39 @@ set -uo pipefail
 
 cd "$(dirname "$0")/.."
 
+# THIS GATE TAKES A CARGO SLOT, and until 2026-08-27 it took none.
+#
+# CLAUDE.md's standing rule is "heavy cargo goes through
+# scripts/cargo-serialized.sh". Measured that day, the three things that
+# actually consume this box -- `hooks/pre-push`, this script, and the justfile's
+# `check` recipe -- called it ZERO times between them; the only real callers in
+# `scripts/` were `check-kernel-stack-envelope.sh` and the mutation harness. The
+# semaphore was well built, documented, and unwired, so the admitted concurrency
+# on this host was not five. It was unbounded, and the push battery starved.
+#
+# ONE slot for the whole run rather than one per `cargo` call: this script fires
+# ~100 of them, and per-call acquisition would still let five aggregate gates run
+# at once while adding 100 lock round-trips. The nested calls are re-entrant
+# (`AXEYUM_CARGO_SLOT_HELD`), so a wrapped script calling a wrapped script does
+# not deadlock -- which it would, silently and for 5,400 s, without that marker.
+#
+# `--batch` deliberately applies no memory scope to this script: it is a
+# supervisor, and a `MemoryMax` on the aggregate would SIGKILL the gate at a
+# threshold no individual step exceeded, reporting a failure that is not one.
+# Each nested cargo job still gets its own ceiling.
+#
+# AXEYUM_CHECK_NO_SLOT=1 opts out (for a nested or already-admitted caller).
+if [ "${AXEYUM_CHECK_LIST:-0}" != "1" ] \
+   && [ "${AXEYUM_CHECK_NO_SLOT:-0}" != "1" ] \
+   && [ "${AXEYUM_CARGO_SLOT_HELD:-0}" != "1" ] \
+   && [ -x scripts/cargo-serialized.sh ]; then
+  # `scripts/check.sh` and not `$0`: the `cd` above has already put us at the
+  # repository root, so this path is correct however the script was invoked,
+  # whereas a relative `$0` from another directory would not survive the `cd`.
+  export AXEYUM_CHECK_NO_SLOT=1
+  exec scripts/cargo-serialized.sh --batch scripts/check.sh "$@"
+fi
+
 fail=0
 ran=0
 failed_steps=()
@@ -295,6 +328,20 @@ step parity-freshness ./scripts/check-parity-freshness.py
 step parity-freshness-controls ./scripts/tests/test-check-parity-freshness.sh
 step new-fact-controls ./scripts/tests/test-new-fact-controls.sh
 step lane-commit-controls ./scripts/tests/test-lane-commit.sh
+# The gate-ADMISSION mechanism (2026-08-27): lane cargo work is niced so the
+# push battery stops being starved by it, and this script takes a cargo slot.
+# Scheduling changes are an easy place to write a check that cannot fail --
+# "it went faster" is not an exit status -- so every assertion here is paired
+# with the input that makes it fail, and each guard is mutation-verified by
+# `scripts/tests/mutate-gate-admission.sh` to be killed by exactly its own case.
+step gate-admission-controls ./scripts/tests/test-gate-admission-controls.sh
+# ...and the mutation harness over those controls. It runs in the gate rather
+# than by hand because a guard that stops discriminating does so silently: the
+# suite above stays green either way. Safe here only because it mutates a
+# four-file SCRATCH COPY -- these are shell scripts read fresh on every
+# invocation, so an in-place mutant would be executed by any lane running a
+# gate during the window.
+step gate-admission-mutation ./scripts/tests/mutate-gate-admission.sh
 step recount-pinned-inventory-controls ./scripts/tests/test-recount-pinned-inventory.sh
 step commit-msg-trailer-controls ./scripts/tests/test-commit-msg-trailer.sh
 step lane-merge-additive-controls python3 -m unittest scripts.tests.test_lane_merge_additive
