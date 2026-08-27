@@ -50,6 +50,7 @@ mod nat_order_substitution;
 pub mod producers;
 mod semantic_contract_receipt;
 mod source_delta_trace;
+mod statement_goal_record;
 mod theorem_composition;
 mod theorem_specialization;
 mod trace_contract_receipt;
@@ -85,6 +86,9 @@ pub use semantic_contract_receipt::{
 };
 pub use source_delta_trace::{
     CheckedSourceDeltaStep, SourceDeltaStepError, build_source_delta_step, verify_source_delta_step,
+};
+pub use statement_goal_record::{
+    StatementGoalRecord, StatementGoalRecordError, build_statement_goal_record,
 };
 pub use theorem_composition::{
     AddedDefinitionReceipt, AddedSingletonInductiveReceipt, AddedTheoremReceipt,
