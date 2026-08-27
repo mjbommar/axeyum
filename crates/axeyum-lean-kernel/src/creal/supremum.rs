@@ -539,6 +539,208 @@ pub(super) fn declare_max_range(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(
 }
 
 // ---------------------------------------------------------------------------
+// `CReal.maxRange_transport` -- rung 3's general combinator: comparing two
+// DIFFERENT `maxRange` folds (different sampling function, different bound)
+// related by an index embedding. See this module's own documentation,
+// "Rung 3, the order half", for why this is NOT an instance of
+// `mono_of_le_succ` and for the induction this builds.
+// ---------------------------------------------------------------------------
+
+/// `CReal.equiv x y` — mirrors the file's own `cle`/`cadd`/`embed` helpers
+/// (imported from `super`), re-derived here since none of the sibling files
+/// exports an `Equiv`-application helper under a name this file can import.
+fn cequiv(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
+    d.const_app(p.equiv, &[x, y])
+}
+
+/// `CReal.maxRange_transport : ∀ f g n n' e, (∀ i, Nat.le i n → Nat.le (e i)
+/// n') → (∀ i, Nat.le i n → Equiv (f i) (g (e i))) → le (maxRange f n)
+/// (maxRange g n')`.
+///
+/// Proved by induction on an AUXILIARY index `k`, motive `fun k => Nat.le k
+/// n → le (maxRange f k) (maxRange g n')`, instantiated at `k := n` (target
+/// of the [`NatOps::induct`] call) and discharged with `Nat.le_refl n` —
+/// **not** induction on `n` itself, since `n` is a parameter shared by every
+/// case, not the thing being inducted on.
+///
+/// - **Base** (`k = 0`, hypothesis `h0 : Nat.le 0 n`): `maxRange_ub g n' (e
+///   0) (hbound 0 h0)` gives `le (g (e 0)) (maxRange g n')`; `le_congr`
+///   transports it across `equiv_symm (heq 0 h0) : Equiv (g (e 0)) (f 0)`
+///   (the pre-substitution type is `le (g (e 0)) (maxRange g n')`, matching
+///   `le_congr`'s own convention) to `le (f 0) (maxRange g n')` — defeq to
+///   the goal since `maxRange f 0 ≡ f 0` by ι-reduction, exactly the defeq
+///   [`declare_max_range_self_le`]'s own base case leans on.
+/// - **Step** (`k = succ j`, hypothesis `hsj : Nat.le (succ j) n`, `ih : Nat.le
+///   j n → le (maxRange f j) (maxRange g n')`): `hj := le_trans (le_succ j)
+///   hsj : Nat.le j n` feeds `ih hj`; a second `maxRange_ub`/`le_congr`
+///   instance at `succ j` (identical shape to the base case) gives `le (f
+///   (succ j)) (maxRange g n')`; [`CRealPrelude::max_le`] combines the two
+///   into `le (max (maxRange f j) (f (succ j))) (maxRange g n')`, defeq to
+///   the goal since `maxRange f (succ j) ≡ max (maxRange f j) (f (succ
+///   j))`, exactly the defeq [`declare_max_range_mono`]'s own step leans on.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_max_range_transport_thm(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let fn_ty = d.arrow(nat, carrier);
+    let nat_fn_ty = d.arrow(nat, nat);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let np_fv = d.fresh_fvar();
+    let np = d.kernel().fvar(np_fv);
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+
+    let hbound_ty = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let hi_ty = d.le(i, n);
+        let ei = d.apply(e, &[i]);
+        let concl = d.le(ei, np);
+        let inner = d.arrow(hi_ty, concl);
+        d.pi_fv(i_fv, nat, inner)
+    };
+    let hbound_fv = d.fresh_fvar();
+    let hbound = d.kernel().fvar(hbound_fv);
+
+    let heq_ty = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let hi_ty = d.le(i, n);
+        let fi = d.apply(f, &[i]);
+        let ei = d.apply(e, &[i]);
+        let gei = d.apply(g, &[ei]);
+        let equiv_i = cequiv(d, p, fi, gei);
+        let inner = d.arrow(hi_ty, equiv_i);
+        d.pi_fv(i_fv, nat, inner)
+    };
+    let heq_fv = d.fresh_fvar();
+    let heq = d.kernel().fvar(heq_fv);
+
+    // Auxiliary induction motive: `fun k => Nat.le k n -> le (maxRange f k)
+    // (maxRange g n')`. `h` (the `Nat.le k n` witness) is never used inside
+    // the conclusion, so this is a plain (non-dependent) arrow.
+    let motive = |d: &mut IntDev<'_>, k: ExprId| -> ExprId {
+        let h_ty = d.le(k, n);
+        let mrk = d.const_app(p.max_range, &[f, k]);
+        let mrnp = d.const_app(p.max_range, &[g, np]);
+        let concl = cle(d, p, mrk, mrnp);
+        d.arrow(h_ty, concl)
+    };
+
+    let proof = d.induct(
+        &motive,
+        &|d: &mut IntDev<'_>| -> ExprId {
+            let zero_n = d.zero();
+            let h0_fv = d.fresh_fvar();
+            let h0 = d.kernel().fvar(h0_fv);
+            let h0_ty = d.le(zero_n, n);
+
+            let f0 = d.apply(f, &[zero_n]);
+            let e0 = d.apply(e, &[zero_n]);
+            let g_e0 = d.apply(g, &[e0]);
+            let mrnp = d.const_app(p.max_range, &[g, np]);
+
+            let heq0 = d.apply(heq, &[zero_n, h0]);
+            let he0 = d.apply(hbound, &[zero_n, h0]);
+            let ub0 = d.lemma(p.max_range_ub, &[g, np, e0, he0]);
+            let symm0 = d.lemma(p.equiv_symm, &[f0, g_e0, heq0]);
+            let refl_mrnp = d.lemma(p.equiv_refl, &[mrnp]);
+            let result0 = d.lemma(p.le_congr, &[g_e0, f0, mrnp, mrnp, symm0, refl_mrnp, ub0]);
+
+            d.lam_fv(h0_fv, h0_ty, result0)
+        },
+        &|d: &mut IntDev<'_>, j: ExprId, ih: ExprId| -> ExprId {
+            let sj = d.succ(j);
+            let hsj_fv = d.fresh_fvar();
+            let hsj = d.kernel().fvar(hsj_fv);
+            let hsj_ty = d.le(sj, n);
+
+            let le_succ_j = d.lemma(p.rat.int.nat.le_succ, &[j]);
+            let hj = d.lemma(p.rat.int.nat.le_trans, &[j, sj, n, le_succ_j, hsj]);
+            let ih_hj = d.apply(ih, &[hj]);
+
+            let fsj = d.apply(f, &[sj]);
+            let esj = d.apply(e, &[sj]);
+            let g_esj = d.apply(g, &[esj]);
+            let mrj = d.const_app(p.max_range, &[f, j]);
+            let mrnp = d.const_app(p.max_range, &[g, np]);
+
+            let heq_sj = d.apply(heq, &[sj, hsj]);
+            let he_sj = d.apply(hbound, &[sj, hsj]);
+            let ub_sj = d.lemma(p.max_range_ub, &[g, np, esj, he_sj]);
+            let symm_sj = d.lemma(p.equiv_symm, &[fsj, g_esj, heq_sj]);
+            let refl_mrnp = d.lemma(p.equiv_refl, &[mrnp]);
+            let fsj_le = d.lemma(
+                p.le_congr,
+                &[g_esj, fsj, mrnp, mrnp, symm_sj, refl_mrnp, ub_sj],
+            );
+
+            let combine = d.lemma(p.max_le, &[mrj, fsj, mrnp, ih_hj, fsj_le]);
+            d.lam_fv(hsj_fv, hsj_ty, combine)
+        },
+        n,
+    );
+
+    let le_refl_n = d.lemma(p.rat.int.nat.le_refl, &[n]);
+    let value_body = d.apply(proof, &[le_refl_n]);
+
+    let mrn = d.const_app(p.max_range, &[f, n]);
+    let mrnp_final = d.const_app(p.max_range, &[g, np]);
+    let conclusion = cle(d, p, mrn, mrnp_final);
+
+    let ty = {
+        let out = d.pi_fv(heq_fv, heq_ty, conclusion);
+        let out = d.pi_fv(hbound_fv, hbound_ty, out);
+        let out = d.pi_fv(e_fv, nat_fn_ty, out);
+        let out = d.pi_fv(np_fv, nat, out);
+        let out = d.pi_fv(n_fv, nat, out);
+        let out = d.pi_fv(g_fv, fn_ty, out);
+        d.pi_fv(f_fv, fn_ty, out)
+    };
+    let value = {
+        let out = d.lam_fv(heq_fv, heq_ty, value_body);
+        let out = d.lam_fv(hbound_fv, hbound_ty, out);
+        let out = d.lam_fv(e_fv, nat_fn_ty, out);
+        let out = d.lam_fv(np_fv, nat, out);
+        let out = d.lam_fv(n_fv, nat, out);
+        let out = d.lam_fv(g_fv, fn_ty, out);
+        d.lam_fv(f_fv, fn_ty, out)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.max_range_transport,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Land `CReal.maxRange_transport` alone (a one-declaration `BuildStep`,
+/// mirroring the shape of every other single-theorem step in this file's
+/// `STEPS` table entries).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_max_range_transport(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_max_range_transport_thm(d, p)
+}
+
+// ---------------------------------------------------------------------------
 // `CReal.meshLevelCount` -- the geometric (doubling) mesh-count schedule
 // route 2's nested refinement runs on. See this module's own documentation,
 // "Route 2 is the one to pick up", for why doubling (rather than an

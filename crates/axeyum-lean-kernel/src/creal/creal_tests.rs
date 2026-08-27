@@ -9850,6 +9850,7 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "extreme_value::declare_extreme_value",
     "trig_fn::declare_cos_fn_family",
     "supremum::declare_max_range",
+    "supremum::declare_max_range_transport",
     "supremum::declare_mesh_level_count",
     "supremum::declare_mesh_max",
 ];
