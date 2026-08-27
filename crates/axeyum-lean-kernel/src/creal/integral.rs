@@ -373,7 +373,8 @@ pub(super) fn declare_integral(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<()
     declare_riemann_sample_in_bounds(d, p)?;
     declare_riemann_sum_le_on(d, p)?;
     declare_riemann_sum_const(d, p)?;
-    declare_mesh_le_of_ge(d, p)
+    declare_mesh_le_of_ge(d, p)?;
+    declare_mesh_scaled_le_of_ge(d, p)
 }
 
 // --- shared term builders ----------------------------------------------------
@@ -4633,6 +4634,127 @@ fn declare_mesh_le_of_ge(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kern
 
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.mesh_le_of_ge,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Admit [`CRealPrelude::mesh_scaled_le_of_ge`]. See that field's own doc
+/// comment for the statement and the route: reuse [`declare_mesh_le_of_ge`]
+/// wholesale at a substituted `outer' := k*outer + k0`, scale by the nonneg
+/// `k := Nat.succ k0`, then collapse `k·(1/(outer'+1))` back to
+/// `1/(outer+1)` with [`magnitude_times_frac_eq_outer`] at `c := k0`,
+/// `magnitude := k`, `deep := outer'`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+fn declare_mesh_scaled_le_of_ge(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let outer_fv = d.fresh_fvar();
+    let outer = d.kernel().fvar(outer_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let k0_fv = d.fresh_fvar();
+    let k0 = d.kernel().fvar(k0_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let width = width_of(d, p, a, b);
+    let (c, magnitude, _width_le_mag) = direct_bound_le(d, p, width);
+
+    // k := Nat.succ k0, outer' := k*outer + k0 -- exactly the syntactic
+    // shape `Rat.natDivSucc_scale` (via `magnitude_times_frac_eq_outer`)
+    // needs at `(c, magnitude, deep) := (k0, k, outer')`.
+    let k = d.succ(k0);
+    let k_outer = NatOps::mul(d, k, outer);
+    let outer_prime = NatOps::add(d, k_outer, k0);
+
+    // hge_ty : Nat.le (magnitude*outer' + c) m -- EXACTLY `mesh_le_of_ge`'s
+    // own hypothesis shape with `outer` substituted by `outer'`, so
+    // `mesh_le_of_ge` applies wholesale below.
+    let me = NatOps::mul(d, magnitude, outer_prime);
+    let deep = NatOps::add(d, me, c);
+    let hge_ty = d.le(deep, m);
+    let hge_fv = d.fresh_fvar();
+    let hge = d.kernel().fvar(hge_fv);
+
+    // mesh_result : le (mul width (ofRat (natDivSucc 1 m)))
+    //                  (ofRat (natDivSucc 1 outer'))
+    let mesh_result = d.lemma(p.mesh_le_of_ge, &[a, b, outer_prime, m, hab, hge]);
+
+    let one_nat = d.num(1);
+    let frac_m_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, m]);
+    let frac_m_real = embed(d, p, frac_m_rat);
+    let step_m = cmul(d, p, width, frac_m_real);
+
+    let out_bound_prime_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, outer_prime]);
+    let out_bound_prime = embed(d, p, out_bound_prime_rat);
+
+    let k_real = d.const_app(p.of_nat, &[k]);
+    let k_nonneg = zero_le_of_nat(d, p, k);
+
+    // scaled : le (mul k_real step_m) (mul k_real out_bound_prime)
+    let scaled = d.lemma(
+        p.mul_le_mul_of_nonneg_left,
+        &[k_real, step_m, out_bound_prime, k_nonneg, mesh_result],
+    );
+
+    // collapse : Equiv (mul (ofNat k) (ofRat (natDivSucc 1 outer')))
+    //                  (ofRat (natDivSucc 1 outer))
+    let collapse = magnitude_times_frac_eq_outer(d, p, k0, k, outer, outer_prime);
+
+    let out_bound_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, outer]);
+    let out_bound = embed(d, p, out_bound_rat);
+
+    let k_step_m = cmul(d, p, k_real, step_m);
+    let k_out_bound_prime = cmul(d, p, k_real, out_bound_prime);
+    let refl_k_step_m = d.lemma(p.equiv_refl, &[k_step_m]);
+    let final_le = d.lemma(
+        p.le_congr,
+        &[
+            k_step_m,
+            k_step_m,
+            k_out_bound_prime,
+            out_bound,
+            refl_k_step_m,
+            collapse,
+            scaled,
+        ],
+    );
+
+    let concl = cle(d, p, k_step_m, out_bound);
+    let ty = {
+        let after_hge = d.arrow(hge_ty, concl);
+        let after_hab = d.arrow(hab_ty, after_hge);
+        let over_k0 = d.pi_fv(k0_fv, nat, after_hab);
+        let over_m = d.pi_fv(m_fv, nat, over_k0);
+        let over_outer = d.pi_fv(outer_fv, nat, over_m);
+        let over_b = d.pi_fv(b_fv, carrier, over_outer);
+        d.pi_fv(a_fv, carrier, over_b)
+    };
+    let value = {
+        let with_hge = d.lam_fv(hge_fv, hge_ty, final_le);
+        let with_hab = d.lam_fv(hab_fv, hab_ty, with_hge);
+        let over_k0 = d.lam_fv(k0_fv, nat, with_hab);
+        let over_m = d.lam_fv(m_fv, nat, over_k0);
+        let over_outer = d.lam_fv(outer_fv, nat, over_m);
+        let over_b = d.lam_fv(b_fv, carrier, over_outer);
+        d.lam_fv(a_fv, carrier, over_b)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mesh_scaled_le_of_ge,
         uparams: vec![],
         ty,
         value,
