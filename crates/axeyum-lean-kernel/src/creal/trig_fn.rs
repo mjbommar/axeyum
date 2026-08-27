@@ -336,8 +336,7 @@ use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::{ExprId, ExprNode};
 use crate::int_prelude::ops::{IntDev, exists_elim};
 use crate::nat_prelude::NatOps;
-use crate::rat_prelude::ops::{one_le_succ, rat_eq_rewrite};
-use crate::rat_prelude::ops::{radd, rat_eq_rewrite};
+use crate::rat_prelude::ops::{one_le_succ, radd, rat_eq_rewrite};
 
 /// Height for `cosFnTerm`: one past `powerSeriesTerm`'s own
 /// `DERIVED_HEIGHT + 43` (`creal/power.rs`), matching this development's
