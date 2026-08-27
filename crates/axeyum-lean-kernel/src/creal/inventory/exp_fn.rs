@@ -14,11 +14,7 @@
 /// declaration built by `crates/axeyum-lean-kernel/src/creal/exp_fn.rs`.
 pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameId, &'static str)> {
     vec![
-        (
-            "CReal.expFnTermAbsLe",
-            p.exp_fn_term_abs_le,
-            "theorem",
-        ),
+        ("CReal.expFnTermAbsLe", p.exp_fn_term_abs_le, "theorem"),
         ("CReal.expFn", p.exp_fn, "def"),
         (
             "CReal.expFnUniformConverges",
