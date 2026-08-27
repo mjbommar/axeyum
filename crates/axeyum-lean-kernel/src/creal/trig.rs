@@ -1234,7 +1234,10 @@ fn cauchy_body_transport(
 /// `exp_dominant_cauchy_body_concrete` — the SAME value `CReal.e`'s own
 /// construction uses, so `cosOne`'s domination series does not need a fresh
 /// concrete Cauchy witness of its own.
-fn exp_dominant_cauchy_body_concrete(d: &mut IntDev<'_>, p: CRealPrelude) -> (ExprId, ExprId) {
+pub(super) fn exp_dominant_cauchy_body_concrete(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> (ExprId, ExprId) {
     let nat = d.nat_ty();
     let raw_pow_half = pow_half_fn(d, p);
     let s_fn = d.const_app(p.sum_range, &[raw_pow_half]);
