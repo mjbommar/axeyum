@@ -3429,6 +3429,125 @@ SUITES["ledger-coverage"] = (
 )
 
 
+
+SUITES["absence-claims"] = (
+    "scripts/check-absence-claims.py",
+    Unittest("scripts.tests.test_check_absence_claims"),
+    [
+        (
+            "G1 an `absent:` claim whose declaration is present",
+            '            if marker.kind == "absent" and present:',
+            "            if False:",
+        ),
+        (
+            "G2 the spelling-normalized fallback (snake_case vs camelCase)",
+            "        hit = self.normalized.get(normalize_spelling(name))",
+            "        hit = None",
+        ),
+        (
+            "G3 a `was-absent:` record pointing at a declaration that is gone",
+            '            elif marker.kind == "was-absent" and not present:',
+            "            elif False:",
+        ),
+        (
+            # Reordering the regex alternation is an EQUIVALENT mutant --
+            # leftmost-first still cannot match `absent` at the `w` of
+            # `was-absent` -- so it survives without meaning anything. The real
+            # hazard is the one CLAUDE.md's `AxNat`/`Nat` entry describes:
+            # comparing the kind by substring instead of by equality, which
+            # silently reads every historical record as a live claim.
+            "G4 the marker kind is compared by equality, not substring",
+            '            if marker.kind == "absent" and present:',
+            '            if "absent" in marker.kind and present:',
+        ),
+        (
+            "G5 a marker naming a root the authority does not carry",
+            "            if root not in authority.roots:",
+            "            if False:",
+        ),
+        (
+            "G6 the stale-projection floor",
+            "    if len(exact) < floor:",
+            "    if False:",
+        ),
+        (
+            "G7 the projection-row shape",
+            "        if len(fields) < 4:",
+            "        if False:",
+        ),
+        (
+            "G8 a marker that names nothing",
+            "    if not names:",
+            "    if False:",
+        ),
+        (
+            "G9 a marker naming something that is not a declaration name",
+            "        if not DECL_RE.fullmatch(name):",
+            "        if False:",
+        ),
+        (
+            "G10 vacuity: zero files scanned",
+            "    if not files:",
+            "    if False:",
+        ),
+        (
+            "G11 vacuity: zero claim sites detected",
+            "    if not sites:",
+            "    if False:",
+        ),
+        (
+            "G12 vacuity: zero markers",
+            "    if not markers:",
+            "    if False:",
+        ),
+        (
+            "G13 the unexpirable-claim budget",
+            "    if len(bare_named) > budget:",
+            "    if False:",
+        ),
+        (
+            "G14 claim names derive from the authority, not a literal root list",
+            '        return tuple(n for n in self.candidates if n.split(".", 1)[0] in authority.roots)',
+            "        return tuple(self.candidates)",
+        ),
+        (
+            "G15 a stale exclusion (a carve-out for a path that is gone)",
+            '        if not (root / entry["path"]).exists()',
+            "        if False",
+        ),
+        (
+            "G16 an exclusion without a written reason",
+            "        if not isinstance(reason, str) or not reason.strip():",
+            "        if False:",
+        ),
+        (
+            "the exclusion actually skips the file",
+            "            if path.relative_to(root).as_posix() in excluded:",
+            "            if False:",
+        ),
+        (
+            "G17 Rust claims are read from comments only",
+            "        return bool(RUST_COMMENT_RE.match(line))",
+            "        return True",
+        ),
+        (
+            "a marker attaches to its own block",
+            "            annotated = any(MARKER_RE.search(line) for line in block)",
+            "            annotated = True",
+        ),
+        (
+            "--update-budget reports that the number moved",
+            "        if recorded != counted:",
+            "        if False:",
+        ),
+        (
+            "G18 the exit status depends on the finding",
+            "        return 0\n    return 1",
+            "        return 0\n    return 0",
+        ),
+    ],
+)
+
 def main(argv: list[str]) -> int:
     if argv[1:2] == ["--check-anchors"]:
         return check_anchors()
