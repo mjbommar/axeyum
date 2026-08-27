@@ -100,8 +100,8 @@ use crate::nat_prelude::NatOps;
 use crate::rat_prelude::RatPrelude;
 use crate::rat_prelude::group::rsub;
 use crate::rat_prelude::ops::{
-    den, den_z, iregroup4, normalize, num, one_le_succ, radd, rat_eq_rewrite, rchain, rcongr, rmul,
-    rneg, rone, rzero,
+    den, den_z, iregroup4, normalize, num, one_le_succ, radd, rat_eq_rewrite, rchain, rcongr,
+    req_motive, rmul, rneg, rone, rtransport, rzero,
 };
 
 /// Height for `cosTerm`/`cosSeriesPartial`: both are thin definitional
@@ -147,7 +147,12 @@ pub(super) fn declare_trig(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ke
     // declare_alternating` for exactly this reason: referencing a name
     // declared in a LATER phase gives `UnknownConst`, not a missing-lemma
     // error, and looks exactly like the lemma does not exist.
-    declare_exp_term_antitone(d, p)
+    declare_exp_term_antitone(d, p)?;
+    // The `Rat.normalize`/`Nat.gcd`-on-literals obstacle this file's own
+    // `declare_cos_one_le_exp_term_zero` names as out of scope, solved
+    // without touching `Nat.gcd`: see `exp_term_lit_eq_one`'s own doc.
+    declare_exp_term_zero_eq_one(d, p)?;
+    declare_exp_term_one_eq_one(d, p)
 }
 
 /// Second dispatch entry point for this file: the alternating-series
@@ -176,6 +181,43 @@ pub(super) fn declare_trig_alternating_bounds(
     declare_cos_one_alternating_upper(d, p)?;
     declare_cos_one_nonneg(d, p)?;
     declare_cos_one_le_exp_term_zero(d, p)
+}
+
+/// `CReal.sinOne`, mirroring [`declare_trig`] exactly except for the odd
+/// index (`Nat.add (Nat.add k k) 1` in place of `Nat.add k k`). Run after
+/// [`declare_trig`] (no ordering dependency on it beyond sharing the file's
+/// local builders and `exponential::declare_e_family`'s machinery).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_sin_trig(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    declare_sin_term(d, p)?;
+    declare_sin_series_partial(d, p)?;
+    declare_sin_term_abs_le_dominant(d, p)?;
+    let (raw, k_final, sin_series_partial_body) = sin_one_ingredients(d, p);
+    declare_sin_one(d, p, raw, k_final, sin_series_partial_body)?;
+    declare_sin_one_converges(d, p, raw, k_final, sin_series_partial_body)
+}
+
+/// The `sinOne` analogue of [`declare_trig_alternating_bounds`] — same
+/// phase-order reason (needs `alternating_lower_bound`/
+/// `alternating_upper_bound`, declared in a later phase than
+/// [`declare_sin_trig`]).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_sin_trig_alternating_bounds(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_sin_one_alternating_lower(d, p)?;
+    declare_sin_one_alternating_upper(d, p)?;
+    declare_sin_one_nonneg(d, p)?;
+    declare_sin_one_le_exp_term_one(d, p)
 }
 
 // --- local builders, reproduced verbatim in shape from `exponential.rs`'s
@@ -2295,6 +2337,773 @@ fn declare_cos_one_le_exp_term_zero(
     let ty = cle(d, p, cos_one_c, exp_term_0);
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.cos_one_le_exp_term_zero,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// ============================================================================
+// `CReal.sinOne` — `sin 1 := Σ_{k≥0} (-1)^k/(2k+1)!`, mirroring `cosOne`
+// exactly except for the index: the odd `Nat.add (Nat.add k k) 1` in place
+// of the doubled `Nat.add k k`. Written symbolic-left/literal-right (as
+// `cosTerm`'s own doubled index is) so `Nat.add (Nat.add k k) 1` ι-reduces
+// to `Nat.succ (Nat.add k k)` for FREE — no `Nat.succ_add`/`Nat.add_comm`
+// bookkeeping needed to see the odd index as "one past the even index".
+// ============================================================================
+
+/// `le (expDominant (Nat.add (Nat.add k k) 1)) (expDominant k)` — the
+/// [`exp_dominant_double_le`] analogue for the odd index. One extra
+/// [`CRealPrelude::pow_le_pow_of_le_one`] step past that function: `pow
+/// half` is antitone one step at a time for a base in `[0,1]`
+/// ([`half_nonneg_proof`]/[`half_le_one_proof`]), so `expDominant (succ (add
+/// k k)) ≤ expDominant (add k k)` directly — the odd index's own `Nat.add`
+/// ι-reduction already exposes the `succ`, so `CReal.pow_add` is not needed
+/// here — then [`exp_dominant_double_le`] finishes the descent from `add k
+/// k` down to `k`.
+fn exp_dominant_odd_le(d: &mut IntDev<'_>, p: CRealPrelude, k: ExprId) -> ExprId {
+    let h = half(d, p);
+    let half_nonneg = half_nonneg_proof(d, p);
+    let half_le_one = half_le_one_proof(d, p);
+    let dbl_k = d.add(k, k);
+    let succ_dbl_k = d.succ(dbl_k);
+
+    let pow_step = d.lemma(
+        p.pow_le_pow_of_le_one,
+        &[h, half_nonneg, half_le_one, dbl_k],
+    );
+    // pow_step : le (pow h succ_dbl_k) (pow h dbl_k)
+
+    let pow_succ_dbl_k = cpow(d, p, h, succ_dbl_k);
+    let pow_dbl_k = cpow(d, p, h, dbl_k);
+    let two_c = two(d, p);
+    let two_nonneg = two_nonneg_proof(d, p);
+    let scale = d.lemma(
+        p.mul_le_mul_of_nonneg_left,
+        &[two_c, pow_succ_dbl_k, pow_dbl_k, two_nonneg, pow_step],
+    );
+    // scale : le (mul two_c pow_succ_dbl_k) (mul two_c pow_dbl_k)
+    //       = le (expDominant succ_dbl_k) (expDominant dbl_k)
+
+    let dom_succ_dbl_k = exp_dominant_at(d, p, succ_dbl_k);
+    let dom_dbl_k = exp_dominant_at(d, p, dbl_k);
+    let dom_k = exp_dominant_at(d, p, k);
+
+    let step_b = exp_dominant_double_le(d, p, k);
+    // step_b : le (expDominant dbl_k) (expDominant k)
+
+    d.lemma(
+        p.le_trans,
+        &[dom_succ_dbl_k, dom_dbl_k, dom_k, scale, step_b],
+    )
+}
+
+/// `CReal.sinTerm : Nat → CReal := fun k => mul (pow (neg one) k) (expTerm
+/// (Nat.add (Nat.add k k) 1))`.
+fn declare_sin_term(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let one_cc = one_c(d, p);
+    let neg_one = cneg(d, p, one_cc);
+    let sign_k = cpow(d, p, neg_one, k);
+    let dbl_k = d.add(k, k);
+    let one_nat = d.num(1);
+    let odd_k = d.add(dbl_k, one_nat);
+    let exp_term_c = d.kernel().const_(p.exp_term, vec![]);
+    let e_term = d.apply(exp_term_c, &[odd_k]);
+    let body = cmul(d, p, sign_k, e_term);
+
+    let value = d.lam_fv(k_fv, nat, body);
+    let ty = d.arrow(nat, carrier);
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.sin_term,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(TRIG_HEIGHT),
+    })
+}
+
+/// `CReal.sinSeriesPartial : Nat → CReal := CReal.sumRange CReal.sinTerm`.
+fn declare_sin_series_partial(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+
+    let sin_term_c = d.kernel().const_(p.sin_term, vec![]);
+    let value = d.const_app(p.sum_range, &[sin_term_c]);
+    let ty = d.arrow(nat, carrier);
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.sin_series_partial,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(TRIG_HEIGHT),
+    })
+}
+
+/// `CReal.sinTermAbsLeDominant : ∀ k, le (abs (sinTerm k)) (expDominant k)`
+/// — the [`declare_cos_term_abs_le_dominant`] analogue, using the odd index
+/// and [`exp_dominant_odd_le`] in place of the doubled index and
+/// [`exp_dominant_double_le`].
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_sin_term_abs_le_dominant(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let one_cc = one_c(d, p);
+    let neg_one = cneg(d, p, one_cc);
+    let sign_k = cpow(d, p, neg_one, k);
+    let sign_abs = sign_abs_le_one(d, p, k);
+
+    let dbl_k = d.add(k, k);
+    let one_nat = d.num(1);
+    let odd_k = d.add(dbl_k, one_nat);
+    let exp_term_c = d.kernel().const_(p.exp_term, vec![]);
+    let e_term = d.apply(exp_term_c, &[odd_k]);
+    let dom_odd = exp_dominant_at(d, p, odd_k);
+    let dom_k = exp_dominant_at(d, p, k);
+
+    let e_dom_bound = d.lemma(p.exp_term_abs_le_dominant, &[odd_k]);
+    // e_dom_bound : le (abs e_term) dom_odd
+
+    let prod_bound = d.lemma(
+        p.abs_mul_le_of_bounds,
+        &[sign_k, e_term, one_cc, dom_odd, sign_abs, e_dom_bound],
+    );
+    // prod_bound : le (abs (mul sign_k e_term)) (mul one_cc dom_odd)
+
+    let mul_comm_1e = d.lemma(p.mul_comm, &[one_cc, dom_odd]);
+    let mul_one_e = d.lemma(p.mul_one, &[dom_odd]);
+    let mul_one_cc_dom = cmul(d, p, one_cc, dom_odd);
+    let mul_dom_one = cmul(d, p, dom_odd, one_cc);
+    let one_dom_equiv = echain(
+        d,
+        p,
+        mul_one_cc_dom,
+        &[(mul_dom_one, mul_comm_1e), (dom_odd, mul_one_e)],
+    );
+
+    let sin_term_k = cmul(d, p, sign_k, e_term);
+    let abs_sin_term_k = cabs(d, p, sin_term_k);
+    let refl_abs_sin = erefl(d, p, abs_sin_term_k);
+    let abs_sin_le_dom_odd = d.lemma(
+        p.le_congr,
+        &[
+            abs_sin_term_k,
+            abs_sin_term_k,
+            mul_one_cc_dom,
+            dom_odd,
+            refl_abs_sin,
+            one_dom_equiv,
+            prod_bound,
+        ],
+    );
+
+    let dom_odd_le_dom_k = exp_dominant_odd_le(d, p, k);
+
+    let final_bound = d.lemma(
+        p.le_trans,
+        &[
+            abs_sin_term_k,
+            dom_odd,
+            dom_k,
+            abs_sin_le_dom_odd,
+            dom_odd_le_dom_k,
+        ],
+    );
+
+    let value = d.lam_fv(k_fv, nat, final_bound);
+    let ty = {
+        let stmt = cle(d, p, abs_sin_term_k, dom_k);
+        d.pi_fv(k_fv, nat, stmt)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sin_term_abs_le_dominant,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `(raw, k_final, sin_series_partial_body)` — the [`declare_sin_one`]
+/// analogue of [`cos_one_ingredients`]. Calls
+/// [`exp_dominant_cauchy_body_concrete`] AGAIN rather than threading
+/// `cosOne`'s own `(k_dom, hyp2)` through: that function builds no
+/// declarations of its own (only `ExprId` terms), so the only cost of
+/// calling it twice is the kernel re-checking an equivalent proof term once
+/// more when `sinOne`/`sinOneConverges` are declared — not a second
+/// `CReal.e`-style constant.
+fn sin_one_ingredients(d: &mut IntDev<'_>, p: CRealPrelude) -> (ExprId, ExprId, ExprId) {
+    let (k_dom, hyp2) = exp_dominant_cauchy_body_concrete(d, p);
+
+    let sin_term_c = d.kernel().const_(p.sin_term, vec![]);
+    let exp_dominant_const = d.kernel().const_(p.exp_dominant, vec![]);
+    let sin_series_partial_c = d.kernel().const_(p.sin_series_partial, vec![]);
+    let hyp1 = d.lemma(p.sin_term_abs_le_dominant, &[]);
+
+    let ordered_half = |d: &mut IntDev<'_>, a: ExprId, b: ExprId, hab: ExprId| -> ExprId {
+        d.lemma(
+            p.sum_range_cauchy_dominated_ordered_normalized,
+            &[sin_term_c, exp_dominant_const, k_dom, a, b, hyp1, hyp2, hab],
+        )
+    };
+
+    let mut k_final = k_dom;
+    for _ in 0..8 {
+        k_final = d.succ(k_final);
+    }
+
+    let sin_series_partial_body =
+        promote_ordered_half_to_full(d, p, sin_series_partial_c, k_final, &ordered_half);
+
+    let raw = diagonal_seq(d, p, sin_series_partial_c);
+    (raw, k_final, sin_series_partial_body)
+}
+
+/// `CReal.sinOne := CReal.mk (speedup (diagonal sinSeriesPartial) K) (…)` —
+/// mirrors [`declare_cos_one`] exactly. `raw`/`k_final`/
+/// `sin_series_partial_body` are the CALLER's (`declare_sin_trig`'s own
+/// [`sin_one_ingredients`] call) — see that function's doc for why these
+/// must be the SAME `ExprId`s [`declare_sin_one_converges`] uses.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_sin_one(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    raw: ExprId,
+    k_final: ExprId,
+    sin_series_partial_body: ExprId,
+) -> Result<(), KernelError> {
+    let sin_series_partial_c = d.kernel().const_(p.sin_series_partial, vec![]);
+
+    let speedup_term = d.const_app(p.speedup, &[raw, k_final]);
+    let regularity_proof = d.lemma(
+        p.regular_of_scaled_cauchy,
+        &[sin_series_partial_c, k_final, sin_series_partial_body],
+    );
+
+    let constructor = d.kernel().const_(p.mk, vec![]);
+    let value = d.apply(constructor, &[speedup_term, regularity_proof]);
+    let ty = creal_ty(d, p);
+
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.sin_one,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(DERIVED_HEIGHT + 40),
+    })
+}
+
+/// `CReal.sinOneConverges : Converges sinSeriesPartial sinOne` — mirrors
+/// [`declare_cos_one_converges`] exactly, including building GENERICALLY
+/// over a bound `(k, h)` rather than the concrete `k_final` for the same
+/// stack-overflow reason documented there.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_sin_one_converges(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    raw: ExprId,
+    k_final: ExprId,
+    sin_series_partial_body: ExprId,
+) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let nat = d.nat_ty();
+    let sin_series_partial_const = d.kernel().const_(p.sin_series_partial, vec![]);
+    let sin_one_const = d.kernel().const_(p.sin_one, vec![]);
+
+    let generic = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hp_ty = sum_range_cauchy_body(d, p, sin_series_partial_const, k);
+        let hp_fv = d.fresh_fvar();
+        let hp = d.kernel().fvar(hp_fv);
+
+        let kregular_proof = kregular_of_cauchy_proof(d, p, raw, k, hp);
+        let speedup_term = d.const_app(p.speedup, &[raw, k]);
+        let sc = d.const_app(p.speedup_close, &[raw, k, kregular_proof]);
+
+        let regularity_proof = d.lemma(
+            p.regular_of_scaled_cauchy,
+            &[sin_series_partial_const, k, hp],
+        );
+        let constructor = d.kernel().const_(p.mk, vec![]);
+        let l_val = d.apply(constructor, &[speedup_term, regularity_proof]);
+
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let raw_n = d.apply(raw, &[n]);
+        let speedup_n = d.apply(speedup_term, &[n]);
+        let diff_n = rsub(d, rat, raw_n, speedup_n);
+
+        let succ_k = d.succ(k);
+        let one_nat = d.num(1);
+        let bound_left_n = div_succ_at(d, p, succ_k, n);
+        let bound_right_n = div_succ_at(d, p, one_nat, n);
+        let sc_n_bound = radd(d, bound_left_n, bound_right_n);
+
+        let sc_n = d.apply(sc, &[n]);
+
+        let fuse = d.lemma(rat.nat_div_succ_add, &[succ_k, one_nat, n]);
+        let k2 = NatOps::add(d, succ_k, one_nat);
+        let target_bound_n = div_succ_at(d, p, k2, n);
+        let step = rat_eq_rewrite(d, sc_n_bound, target_bound_n, fuse, sc_n, &|d, t| {
+            within(d, p, diff_n, t)
+        });
+
+        let over_n = d.lam_fv(n_fv, nat, step);
+        let converges_pred = converges_predicate(d, p, sin_series_partial_const, l_val);
+        let converges_proof = exists_intro(d, p, nat, converges_pred, k2, over_n);
+
+        let with_hp = d.lam_fv(hp_fv, hp_ty, converges_proof);
+        d.lam_fv(k_fv, nat, with_hp)
+    };
+
+    let value = d.apply(generic, &[k_final, sin_series_partial_body]);
+
+    let ty = converges_applied(d, p, sin_series_partial_const, sin_one_const);
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sin_one_converges,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// ----------------------------------------------------------------------------
+// The alternating-series sharpening of `sinOne`, mirroring
+// `cos_magnitude_lam`/`cos_magnitude_nonneg`/`cos_magnitude_dec` and the
+// bracket instantiation exactly, except the magnitude sequence is `sinTerm`'s
+// own `b j := expTerm (add (add j j) 1)` (odd index) rather than `cosTerm`'s
+// `a j := expTerm (add j j)` (doubled index).
+// ----------------------------------------------------------------------------
+
+/// `sinTerm`'s magnitude sequence, `b j := expTerm (add (add j j) 1)`.
+fn sin_magnitude_lam(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let nat = d.nat_ty();
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let dbl = d.add(j, j);
+    let one_nat = d.num(1);
+    let odd = d.add(dbl, one_nat);
+    let exp_term_c = d.kernel().const_(p.exp_term, vec![]);
+    let body = d.apply(exp_term_c, &[odd]);
+    d.lam_fv(j_fv, nat, body)
+}
+
+/// `hnn : ∀ k, le zero (expTerm (add (add k k) 1))` — directly
+/// `CReal.exp_term_nonneg` instantiated at the odd index.
+fn sin_magnitude_nonneg(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let nat = d.nat_ty();
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let dbl = d.add(k, k);
+    let one_nat = d.num(1);
+    let odd = d.add(dbl, one_nat);
+    let body = d.lemma(p.exp_term_nonneg, &[odd]);
+    d.lam_fv(k_fv, nat, body)
+}
+
+/// `hdec : ∀ k, le (expTerm (add (add (succ k) (succ k)) 1)) (expTerm (add
+/// (add k k) 1))` — the [`cos_magnitude_dec`] analogue for the odd index.
+/// One extra `Nat.succ` layer past that function (the odd index is one
+/// `succ` further out than the doubled index), closed by the SAME single
+/// `Nat.succ_add` bridge, composed with two `CReal.expTerm_antitone`
+/// applications rather than [`cos_magnitude_dec`]'s two — the odd index also
+/// increases by exactly 2 from `k` to `succ k`, since `2(k+1)+1 = (2k+1) +
+/// 2`.
+fn sin_magnitude_dec(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let nat = d.nat_ty();
+    let np = p.rat.int.nat;
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let kk = d.add(k, k);
+    let skk = d.succ(kk);
+    let sskk = d.succ(skk);
+    let ssskk = d.succ(sskk);
+
+    let exp_term_c = d.kernel().const_(p.exp_term, vec![]);
+    let e_ssskk = d.apply(exp_term_c, &[ssskk]);
+    let e_sskk = d.apply(exp_term_c, &[sskk]);
+    let e_skk = d.apply(exp_term_c, &[skk]);
+
+    let step1 = d.lemma(p.exp_term_antitone, &[sskk]); // le e_ssskk e_sskk
+    let step2 = d.lemma(p.exp_term_antitone, &[skk]); // le e_sskk e_skk
+    let composed = d.lemma(p.le_trans, &[e_ssskk, e_sskk, e_skk, step1, step2]);
+    // composed : le e_ssskk e_skk, i.e. le (expTerm ssskk) (expTerm skk)
+
+    // Bridge `add (succ k) (succ k)` (dbl(succ k)) to `sskk`, exactly as
+    // `cos_magnitude_dec` does, then wrap ONE more `succ` on each side to
+    // reach the odd index.
+    let sk = d.succ(k);
+    let sk_k = d.add(sk, k); // add (succ k) k
+    let bridge = d.lemma(np.succ_add, &[k, k]); // Eq sk_k skk
+    let bridge_succ = d.congr(sk_k, skk, bridge, &|d, x| d.succ(x));
+    // bridge_succ : Eq (succ sk_k) sskk
+    let succ_sk_k = d.succ(sk_k);
+    let bridge_succ2 = d.congr(succ_sk_k, sskk, bridge_succ, &|d, x| d.succ(x));
+    // bridge_succ2 : Eq (succ succ_sk_k) ssskk
+    let succ_succ_sk_k = d.succ(succ_sk_k);
+    let bridge_rev = d.symm(succ_succ_sk_k, ssskk, bridge_succ2);
+    // bridge_rev : Eq ssskk succ_succ_sk_k
+
+    let motive = d.eq_motive(ssskk, &|d, x| {
+        let ex = d.apply(exp_term_c, &[x]);
+        cle(d, p, ex, e_skk)
+    });
+    let sk_sk = d.add(sk, sk); // add (succ k) (succ k), ι-defeq to succ_sk_k
+    let one_nat = d.num(1);
+    let lhs_raw = d.add(sk_sk, one_nat); // = odd(succ k), ι-defeq to succ_succ_sk_k
+    let result = d.transport(ssskk, motive, composed, lhs_raw, bridge_rev);
+    // result : le (expTerm lhs_raw) e_skk, and `lhs_raw` beta-matches
+    // `b (succ k)` while `skk` beta-matches `b k` (ι-defeq to `add kk 1`).
+
+    d.lam_fv(k_fv, nat, result)
+}
+
+/// `CReal.sinOne_alternating_lower : ∀ m, le (sumRange sinTerm (add m m))
+/// sinOne` — mirrors [`declare_cos_one_alternating_lower`] exactly, at
+/// `sinTerm`'s own magnitude sequence.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_sin_one_alternating_lower(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let a_fn = sin_magnitude_lam(d, p);
+    let hnn = sin_magnitude_nonneg(d, p);
+    let hdec = sin_magnitude_dec(d, p);
+    let l = d.kernel().const_(p.sin_one, vec![]);
+    let hconv = d.kernel().const_(p.sin_one_converges, vec![]);
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let body = d.const_app(p.alternating_lower_bound, &[a_fn, hnn, hdec, l, hconv, m]);
+    let value = d.lam_fv(m_fv, nat, body);
+
+    let sin_term_c = d.kernel().const_(p.sin_term, vec![]);
+    let ty = {
+        let mm = d.add(m, m);
+        let e_m = d.const_app(p.sum_range, &[sin_term_c, mm]);
+        let stmt = cle(d, p, e_m, l);
+        d.pi_fv(m_fv, nat, stmt)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sin_one_alternating_lower,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.sinOne_alternating_upper : ∀ m, le sinOne (sumRange sinTerm (succ
+/// (add m m)))` — mirrors [`declare_cos_one_alternating_upper`] exactly.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_sin_one_alternating_upper(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let a_fn = sin_magnitude_lam(d, p);
+    let hnn = sin_magnitude_nonneg(d, p);
+    let hdec = sin_magnitude_dec(d, p);
+    let l = d.kernel().const_(p.sin_one, vec![]);
+    let hconv = d.kernel().const_(p.sin_one_converges, vec![]);
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let body = d.const_app(p.alternating_upper_bound, &[a_fn, hnn, hdec, l, hconv, m]);
+    let value = d.lam_fv(m_fv, nat, body);
+
+    let sin_term_c = d.kernel().const_(p.sin_term, vec![]);
+    let ty = {
+        let mm = d.add(m, m);
+        let smm = d.succ(mm);
+        let o_m = d.const_app(p.sum_range, &[sin_term_c, smm]);
+        let stmt = cle(d, p, l, o_m);
+        d.pi_fv(m_fv, nat, stmt)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sin_one_alternating_upper,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.sinOne_nonneg : le zero sinOne` —
+/// [`declare_sin_one_alternating_lower`] at `m := 0`, mirroring
+/// [`declare_cos_one_nonneg`] exactly.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_sin_one_nonneg(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let zero_nat = d.zero();
+    let sin_one_alt_lower_c = d.kernel().const_(p.sin_one_alternating_lower, vec![]);
+    let value = d.apply(sin_one_alt_lower_c, &[zero_nat]);
+    let zero_c = czero(d, p);
+    let sin_one_c = d.kernel().const_(p.sin_one, vec![]);
+    let ty = cle(d, p, zero_c, sin_one_c);
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sin_one_nonneg,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.sinOne_le_exp_term_one : le sinOne (expTerm 1)` —
+/// [`declare_sin_one_alternating_upper`] at `m := 0`, mirroring
+/// [`declare_cos_one_le_exp_term_zero`] exactly except that `sinTerm 0`
+/// reduces (by ι alone: `pow (neg one) 0 = one`, and `add (add 0 0) 1 = 1`)
+/// to `mul one (expTerm 1)` — odd index `1`, not `0`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_sin_one_le_exp_term_one(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let zero_nat = d.zero();
+    let sin_one_alt_upper_c = d.kernel().const_(p.sin_one_alternating_upper, vec![]);
+    let raw = d.apply(sin_one_alt_upper_c, &[zero_nat]);
+    // raw : le sinOne (sumRange sinTerm (succ (add 0 0))), ι-defeq to
+    // le sinOne (add zero (sinTerm 0)).
+
+    let sin_one_c = d.kernel().const_(p.sin_one, vec![]);
+    let zero_c = czero(d, p);
+    let sin_term_c = d.kernel().const_(p.sin_term, vec![]);
+    let sin_term_0 = d.apply(sin_term_c, &[zero_nat]);
+    let add_zero_sin_term_0 = cadd(d, p, zero_c, sin_term_0);
+    let sin_term_0_add_zero = cadd(d, p, sin_term_0, zero_c);
+
+    let comm = d.lemma(p.add_comm, &[zero_c, sin_term_0]);
+    // comm : Equiv add_zero_sin_term_0 sin_term_0_add_zero
+    let az = d.lemma(p.add_zero, &[sin_term_0]);
+    // az : Equiv sin_term_0_add_zero sin_term_0
+    let step1 = echain(
+        d,
+        p,
+        add_zero_sin_term_0,
+        &[(sin_term_0_add_zero, comm), (sin_term_0, az)],
+    );
+    // step1 : Equiv add_zero_sin_term_0 sin_term_0
+
+    let one_nat = d.num(1);
+    let exp_term_c = d.kernel().const_(p.exp_term, vec![]);
+    let exp_term_1 = d.apply(exp_term_c, &[one_nat]);
+    let one_cc = one_c(d, p);
+    let one_mul_exp_term_1 = cmul(d, p, one_cc, exp_term_1);
+    // `sin_term_0` is ι-defeq to `one_mul_exp_term_1` (`pow (neg one) 0`
+    // closes to `one` by `Eq.refl`, and `add (add 0 0) 1` closes to `1` by
+    // `Eq.refl` too). No `one_mul` in `CRealPrelude` (only `mul_one`), so
+    // bridge with `mul_comm` first, exactly as
+    // `declare_cos_one_le_exp_term_zero` does.
+    let exp_term_1_mul_one = cmul(d, p, exp_term_1, one_cc);
+    let mul_comm_step = d.lemma(p.mul_comm, &[one_cc, exp_term_1]);
+    // mul_comm_step : Equiv one_mul_exp_term_1 exp_term_1_mul_one
+    let mul_one_step = d.lemma(p.mul_one, &[exp_term_1]);
+    // mul_one_step : Equiv exp_term_1_mul_one exp_term_1
+    let one_mul_step = echain(
+        d,
+        p,
+        one_mul_exp_term_1,
+        &[
+            (exp_term_1_mul_one, mul_comm_step),
+            (exp_term_1, mul_one_step),
+        ],
+    );
+    // one_mul_step : Equiv one_mul_exp_term_1 exp_term_1
+    let step2 = echain(
+        d,
+        p,
+        add_zero_sin_term_0,
+        &[(sin_term_0, step1), (exp_term_1, one_mul_step)],
+    );
+    // step2 : Equiv add_zero_sin_term_0 exp_term_1
+
+    let refl_sin_one = erefl(d, p, sin_one_c);
+    let value = d.lemma(
+        p.le_congr,
+        &[
+            sin_one_c,
+            sin_one_c,
+            add_zero_sin_term_0,
+            exp_term_1,
+            refl_sin_one,
+            step2,
+            raw,
+        ],
+    );
+    let ty = cle(d, p, sin_one_c, exp_term_1);
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sin_one_le_exp_term_one,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// ============================================================================
+// The `Rat.normalize`-on-literals obstacle
+// [`declare_cos_one_le_exp_term_zero`]'s own doc names, solved WITHOUT
+// touching `Nat.gcd` at all: `Rat.self_normalize` gives `Eq Rat (normalize
+// (num q) (den q) (den_pos q)) q` for ANY `q`, including `q := Rat.one`,
+// where `num`/`den` of a `Rat.mk`-built value reduce by ι for free and the
+// remaining positivity argument is a `Prop` (definitional PROOF
+// IRRELEVANCE identifies it with any other proof of `1 ≤ 1`, `Nat.gcd`
+// never enters). Lifted through `CReal.ofRat`'s ordinary function
+// congruence (`Eq`, not `Equiv` — `embed` is a plain function).
+// ============================================================================
+
+/// `Eq.{1} CReal a b`, reproduced verbatim in shape from `series.rs`'s own
+/// private `creal_eq`.
+fn creal_eq(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let one = d.level_one();
+    let logic = p.rat.int.logic;
+    let eq = d.kernel().const_(logic.eq, vec![one]);
+    let carrier = creal_ty(d, p);
+    d.apply(eq, &[carrier, a, b])
+}
+
+/// `Eq.refl.{1} CReal a`.
+fn creal_eq_refl(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId) -> ExprId {
+    let one = d.level_one();
+    let logic = p.rat.int.logic;
+    let refl = d.kernel().const_(logic.eq_refl, vec![one]);
+    let carrier = creal_ty(d, p);
+    d.apply(refl, &[carrier, a])
+}
+
+/// From `h : Eq Rat a b`, derive `Eq CReal (f a) (f b)` — the `ℚ → CReal`
+/// congruence [`exp_term_lit_eq_one`] needs to lift a `Rat`-level equation
+/// through `embed`.
+fn req_congr_creal(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+    f: &dyn Fn(&mut IntDev<'_>, CRealPrelude, ExprId) -> ExprId,
+) -> ExprId {
+    let fa = f(d, p, a);
+    let motive = req_motive(d, a, &|d, x| {
+        let fx = f(d, p, x);
+        creal_eq(d, p, fa, fx)
+    });
+    let refl_case = creal_eq_refl(d, p, fa);
+    rtransport(d, a, motive, refl_case, b, h)
+}
+
+/// `Eq CReal (embed (normalize (ofNat 1) (factorial n) _)) CReal.one` for a
+/// Nat LITERAL `n` whose `factorial n` reduces to `1` by ι alone — `n := 0`
+/// (the base case) and `n := 1` (`mul 1 (factorial 0)`, `Nat.mul`'s own
+/// ι-reduction on a literal right argument) both qualify; a SYMBOLIC `n`
+/// does not, since `factorial n` is stuck.
+///
+/// Route: `Rat.self_normalize` at `q := Rat.one` is a proof of `Eq Rat
+/// (normalize (num Rat.one) (den Rat.one) (den_pos Rat.one)) Rat.one`.
+/// `num Rat.one`/`den Rat.one` reduce by ι (built via `Rat.mk` directly, not
+/// `normalize`) to `ofNat 1`/`1`, and `den_pos Rat.one` — a `Prop` — is
+/// definitionally interchangeable with `Nat.one_le_factorial n` by proof
+/// irrelevance. So this SAME proof term, stated at the type `Eq Rat
+/// (normalize (ofNat 1) (factorial n) (one_le_factorial n)) Rat.one`,
+/// type-checks by defeq alone — no `Nat.gcd` reduction anywhere. `rcongr`
+/// with `f := embed` lifts it to `CReal`.
+fn exp_term_lit_eq_one(d: &mut IntDev<'_>, p: CRealPrelude, n: ExprId) -> ExprId {
+    let rat = p.rat;
+    let np = d.prelude();
+
+    let rat_one_c = d.kernel().const_(rat.one, vec![]);
+    let self_norm = d.lemma(rat.self_normalize, &[rat_one_c]);
+    // self_norm : Eq Rat (normalize (num rat_one_c) (den rat_one_c)
+    //                       (den_pos rat_one_c)) rat_one_c
+    // -- defeq (ι + proof irrelevance) to
+    //    Eq Rat (normalize one_int (factorial n) posn) rat_one_c.
+
+    let one_nat = d.num(1);
+    let one_int = d.of_nat(one_nat);
+    let posn = d.lemma(np.one_le_factorial, &[n]);
+    let factorial_n = d.factorial(n);
+    let normalized_at_n = normalize(d, one_int, factorial_n, posn);
+
+    let embed_fn = |d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId| -> ExprId { embed(d, p, x) };
+    req_congr_creal(d, p, normalized_at_n, rat_one_c, self_norm, &embed_fn)
+    // : Eq CReal (embed normalized_at_n) (embed rat_one_c)
+    //   -- defeq to Eq CReal (expTerm n) CReal.one, since `expTerm n :=
+    //   embed (normalize (ofNat 1) (factorial n) (one_le_factorial n))`
+    //   and `CReal.one := embed Rat.one`.
+}
+
+/// `CReal.expTerm_zero_eq_one : Eq CReal (expTerm 0) CReal.one`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_exp_term_zero_eq_one(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let zero_nat = d.zero();
+    let value = exp_term_lit_eq_one(d, p, zero_nat);
+
+    let exp_term_c = d.kernel().const_(p.exp_term, vec![]);
+    let exp_term_0 = d.apply(exp_term_c, &[zero_nat]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let ty = creal_eq(d, p, exp_term_0, one_c);
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.exp_term_zero_eq_one,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.expTerm_one_eq_one : Eq CReal (expTerm 1) CReal.one` — the
+/// [`declare_exp_term_zero_eq_one`] analogue at `n := 1`, reused for
+/// `sinOne_le_exp_term_one`'s own `expTerm 1`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_exp_term_one_eq_one(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let one_nat = d.num(1);
+    let value = exp_term_lit_eq_one(d, p, one_nat);
+
+    let exp_term_c = d.kernel().const_(p.exp_term, vec![]);
+    let exp_term_1 = d.apply(exp_term_c, &[one_nat]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let ty = creal_eq(d, p, exp_term_1, one_c);
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.exp_term_one_eq_one,
         uparams: vec![],
         ty,
         value,
