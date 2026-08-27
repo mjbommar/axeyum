@@ -126,7 +126,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 431] = [
+    let expected: [(&str, crate::NameId, &str); 432] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -1267,6 +1267,17 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         (
             "CReal.riemannSum_integral_close",
             p.riemann_sum_integral_close,
+            "theorem",
+        ),
+        // The ninth `integral_split` slice: an EXACT (no estimate) interval
+        // split for `riemannSum` when the split point `c` is chosen to
+        // literally BE a sample point of a refined `[a,b]` mesh (rather than
+        // an arbitrary `CReal`), plus a hypothesis that `F` respects `Equiv`
+        // (`creal/integral.rs`'s `declare_riemann_sum_split_exact`; see that
+        // file's ninth `integral_split` module-doc entry).
+        (
+            "CReal.riemannSum_split_exact",
+            p.riemann_sum_split_exact,
             "theorem",
         ),
         // Spivak Ch14 FTC-I, first evaluation instance: the antiderivative

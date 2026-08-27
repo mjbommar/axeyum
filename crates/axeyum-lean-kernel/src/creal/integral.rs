@@ -13277,13 +13277,25 @@ pub(super) fn declare_riemann_sum_split_exact(
         let refl_delta_ab = d.lemma(p.equiv_refl, &[delta_ab]);
         let step_a = d.lemma(
             p.mul_congr,
-            &[on_sm_ab, sum_on, delta_ab, delta_ab, h_ofnat_split, refl_delta_ab],
+            &[
+                on_sm_ab,
+                sum_on,
+                delta_ab,
+                delta_ab,
+                h_ofnat_split,
+                refl_delta_ab,
+            ],
         );
 
         let add_w1w2 = cadd(d, p, w1, w2);
         let step_b = right_distrib(d, p, on_ac, on_cb, delta_ab);
 
-        echain(d, p, width_ab, &[(mid0, hw_ab), (mid1, step_a), (add_w1w2, step_b)])
+        echain(
+            d,
+            p,
+            width_ab,
+            &[(mid0, hw_ab), (mid1, step_a), (add_w1w2, step_b)],
+        )
     };
 
     let h_ac = cancel_width(d, p, a, w1); // Equiv (width_of a c) w1
@@ -13301,7 +13313,12 @@ pub(super) fn declare_riemann_sum_split_exact(
         let assoc = d.lemma(p.add_assoc, &[a, w1, w2]); // Equiv c_w2 a_w1w2
         let step2 = d.lemma(p.equiv_symm, &[c_w2, a_w1w2, assoc]); // Equiv a_w1w2 c_w2
 
-        echain(d, p, b, &[(a_width_ab, unc_ab), (a_w1w2, step1), (c_w2, step2)])
+        echain(
+            d,
+            p,
+            b,
+            &[(a_width_ab, unc_ab), (a_w1w2, step1), (c_w2, step2)],
+        )
     };
 
     // --- H_cb : Equiv (width_of c b) w2 ---
@@ -13321,14 +13338,16 @@ pub(super) fn declare_riemann_sum_split_exact(
     let frac_ac = frac_of(d, p, m_ac);
     let width_ac = width_of(d, p, a, c);
     let delta_ac = delta_of(d, p, a, c, m_ac);
-    let h_delta_ac =
-        delta_from_width_equiv(d, p, width_ac, h_ac, w1, delta_ab, on_ac, frac_ac, delta_ac, m_ac);
+    let h_delta_ac = delta_from_width_equiv(
+        d, p, width_ac, h_ac, w1, delta_ab, on_ac, frac_ac, delta_ac, m_ac,
+    );
 
     let frac_cb = frac_of(d, p, m_cb);
     let width_cb = width_of(d, p, c, b);
     let delta_cb = delta_of(d, p, c, b, m_cb);
-    let h_delta_cb =
-        delta_from_width_equiv(d, p, width_cb, h_cb, w2, delta_ab, on_cb, frac_cb, delta_cb, m_cb);
+    let h_delta_cb = delta_from_width_equiv(
+        d, p, width_cb, h_cb, w2, delta_ab, on_cb, frac_cb, delta_cb, m_cb,
+    );
 
     // --- piece 1 : Equiv (sumRange f_ab n_ac) (riemannSum F a c m_ac) ---
     let f_ab = summand_fn(d, p, f, a, delta_ab);
@@ -13342,7 +13361,10 @@ pub(super) fn declare_riemann_sum_split_exact(
 
         let symm_ac1 = d.lemma(p.equiv_symm, &[delta_ac, delta_ab, h_delta_ac]);
         let refl_oi = d.lemma(p.equiv_refl, &[oi]);
-        let mc = d.lemma(p.mul_congr, &[oi, oi, delta_ab, delta_ac, refl_oi, symm_ac1]);
+        let mc = d.lemma(
+            p.mul_congr,
+            &[oi, oi, delta_ab, delta_ac, refl_oi, symm_ac1],
+        );
         let refl_a = d.lemma(p.equiv_refl, &[a]);
         let oi_delta_ab = cmul(d, p, oi, delta_ab);
         let oi_delta_ac = cmul(d, p, oi, delta_ac);
@@ -13414,7 +13436,10 @@ pub(super) fn declare_riemann_sum_split_exact(
 
         let symm_cb1 = d.lemma(p.equiv_symm, &[delta_cb, delta_ab, h_delta_cb]);
         let refl_ok = d.lemma(p.equiv_refl, &[ok]);
-        let step_okdelta = d.lemma(p.mul_congr, &[ok, ok, delta_ab, delta_cb, refl_ok, symm_cb1]);
+        let step_okdelta = d.lemma(
+            p.mul_congr,
+            &[ok, ok, delta_ab, delta_cb, refl_ok, symm_cb1],
+        );
         let ok_delta_cb = cmul(d, p, ok, delta_cb);
         let refl_c = d.lemma(p.equiv_refl, &[c]);
         let step_final_inner = d.lemma(
@@ -13454,7 +13479,14 @@ pub(super) fn declare_riemann_sum_split_exact(
     let riemann_cb = rsum(d, p, f, c, b, m_cb);
     let combine = d.lemma(
         p.add_congr,
-        &[sum_f_ab_nac, riemann_ac, sum_shifted_ncb, riemann_cb, piece1, piece2],
+        &[
+            sum_f_ab_nac,
+            riemann_ac,
+            sum_shifted_ncb,
+            riemann_cb,
+            piece1,
+            piece2,
+        ],
     );
 
     let sum_split_domain = NatOps::add(d, n_ac, n_cb);
