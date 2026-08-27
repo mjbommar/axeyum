@@ -1943,6 +1943,18 @@ fn declare_of_nat_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelEr
 /// 5. `Nat.le_add_right(succ m_ac, m_cb) : Le (succ m_ac) (add (succ m_ac) m_cb)`
 ///    — literally `Le (succ m_ac) combined` — composed by `Nat.le_trans`
 ///    into the final `Le deep_ab combined`.
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "the ADDITIVE mesh-count alignment, superseded by \
+                  `mesh_count_align_mul` because its shared `deep_ab + big_n` padding \
+                  drives the split ratio to the midpoint for every base proportion \
+                  (module documentation, FIFTEENTH/SIXTEENTH lane entries). Kept as \
+                  the measured negative result; consumed only by a bisection-only \
+                  caller, which nothing needs today."
+    )
+)]
 pub(super) fn mesh_count_align(
     d: &mut IntDev<'_>,
     deep_ab: ExprId,
@@ -2299,6 +2311,18 @@ fn le_dest_elim(
 /// built generically at a bound depth be transported onto them via
 /// [`nat_rewrite_prop`].
 #[derive(Clone, Copy)]
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "CPS form of the multiplicative mesh alignment; `declare_integral_split` \
+                  took the plain `mesh_count_align_mul_bounds` instead, because \
+                  `leg_converges` runs its OWN `le_dest_elim` per leg and needs the \
+                  `Nat.le` facts as terms rather than inside a continuation. Consumed \
+                  by the first caller that aligns three meshes in one continuation \
+                  rather than three times."
+    )
+)]
 pub(super) struct MeshAlignMul {
     /// `succ_mul_succ(m_ac0, k).0` — the scaled `[a, c]` mesh count.
     pub m_ac: ExprId,
@@ -2366,6 +2390,15 @@ pub(super) struct MeshAlignMul {
 /// `Nat.sub`. The three [`le_dest_elim`] calls are then nested (outermost
 /// `ab`, then `ac`, then `cb`), so `build` sees all three depths and all
 /// three equations at once; `target` must mention none of them.
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "CPS wrapper over `mesh_count_align_mul_bounds`; see `MeshAlignMul`. \
+                  Consumed by a caller that wants the six `Nat.le` facts scoped \
+                  inside one continuation instead of as plain terms."
+    )
+)]
 pub(super) fn mesh_count_align_mul(
     d: &mut IntDev<'_>,
     deep_ab: ExprId,
@@ -13143,6 +13176,18 @@ fn bnd_leg_plus_share_le(
 /// (`magnitude + 9`) with the `magnitude` term now carried separately in
 /// `m_term` instead of folded in.
 #[allow(clippy::too_many_arguments)]
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "the INDEPENDENT-index bound weakening. `declare_integral_split` runs \
+                  every index at `n`, so the same-index `bnd_leg_plus_share_le` \
+                  suffices; this is the prerequisite for additivity at an ARBITRARY \
+                  split point, whose close-endpoint estimate combines three legs at \
+                  accuracies and sample indices that are NOT equal. Consumed when \
+                  that estimate lands."
+    )
+)]
 fn bnd_leg_plus_share_le_at(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -18982,4 +19027,391 @@ mod integral_scale_tests {
              combined...) (integral F...)`"
         );
     }
+}
+
+// --- `CReal.integral_abs_le` ------------------------------------------------
+
+/// `Equiv (add x y) zero → Equiv y (neg x)` — the additive inverse is unique,
+/// spelled out because the prelude has `add_zero` but no `zero_add` and no
+/// public `neg_neg`.
+///
+/// `y ~ y + 0 ~ y + (x + (−x)) ~ (y + x) + (−x) ~ 0 + (−x) ~ (−x) + 0 ~ −x`.
+fn neg_of_add_eq_zero_local(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    hsum: ExprId,
+) -> ExprId {
+    let zero = czero(d, p);
+    let neg_x = cneg(d, p, x);
+
+    let y_zero_sum = cadd(d, p, y, zero);
+    let az_y = d.lemma(p.add_zero, &[y]); // Equiv (add y zero) y
+    let s1 = d.lemma(p.equiv_symm, &[y_zero_sum, y, az_y]); // Equiv y (add y zero)
+
+    let x_pair = cadd(d, p, x, neg_x);
+    let an = d.lemma(p.add_neg, &[x]); // Equiv (add x (neg x)) zero
+    let an_sym = d.lemma(p.equiv_symm, &[x_pair, zero, an]);
+    let refl_y = d.lemma(p.equiv_refl, &[y]);
+    let y_plus_pair = cadd(d, p, y, x_pair);
+    let s2 = d.lemma(p.add_congr, &[y, y, zero, x_pair, refl_y, an_sym]);
+
+    let y_plus_x = cadd(d, p, y, x);
+    let assoc_lhs = cadd(d, p, y_plus_x, neg_x);
+    let assoc = d.lemma(p.add_assoc, &[y, x, neg_x]);
+    let s3 = d.lemma(p.equiv_symm, &[assoc_lhs, y_plus_pair, assoc]);
+
+    let sum_xy = cadd(d, p, x, y);
+    let comm_yx = d.lemma(p.add_comm, &[y, x]); // Equiv (add y x) (add x y)
+    let yx_zero = d.lemma(p.equiv_trans, &[y_plus_x, sum_xy, zero, comm_yx, hsum]);
+    let refl_neg_x = d.lemma(p.equiv_refl, &[neg_x]);
+    let zero_plus_neg = cadd(d, p, zero, neg_x);
+    let s4 = d.lemma(
+        p.add_congr,
+        &[y_plus_x, zero, neg_x, neg_x, yx_zero, refl_neg_x],
+    );
+
+    let neg_plus_zero = cadd(d, p, neg_x, zero);
+    let s5 = d.lemma(p.add_comm, &[zero, neg_x]);
+    let s6 = d.lemma(p.add_zero, &[neg_x]);
+
+    echain(
+        d,
+        p,
+        y,
+        &[
+            (y_zero_sum, s1),
+            (y_plus_pair, s2),
+            (assoc_lhs, s3),
+            (zero_plus_neg, s4),
+            (neg_plus_zero, s5),
+            (neg_x, s6),
+        ],
+    )
+}
+
+/// `Equiv (neg (neg x)) x` — `neg_neg`, absent from the public prelude.
+///
+/// `add (neg x) (neg (neg x)) ~ 0` is [`CRealPrelude::add_neg`] at `neg x`, so
+/// [`neg_of_add_eq_zero_local`] at `(neg x, x)` needs only the mirrored
+/// `add (neg x) x ~ 0` (one `add_comm` onto `add_neg` at `x`) and returns
+/// `Equiv x (neg (neg x))`; one `equiv_symm` flips it.
+fn neg_neg_equiv_local(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+    let zero = czero(d, p);
+    let neg_x = cneg(d, p, x);
+    let neg_neg_x = cneg(d, p, neg_x);
+
+    let negx_plus_x = cadd(d, p, neg_x, x);
+    let x_plus_negx = cadd(d, p, x, neg_x);
+    let comm = d.lemma(p.add_comm, &[neg_x, x]); // Equiv (neg x + x) (x + neg x)
+    let an = d.lemma(p.add_neg, &[x]); // Equiv (x + neg x) zero
+    let hsum = d.lemma(
+        p.equiv_trans,
+        &[negx_plus_x, x_plus_negx, zero, comm, an],
+    ); // Equiv (neg x + x) zero
+
+    // neg_of_add_eq_zero_local at (neg x, x) : Equiv x (neg (neg x))
+    let fwd = neg_of_add_eq_zero_local(d, p, neg_x, x, hsum);
+    d.lemma(p.equiv_symm, &[x, neg_neg_x, fwd])
+}
+
+/// `Equiv (mul (neg x) y) (neg (mul x y))` — moving a negation out of the left
+/// factor of a product.
+///
+/// `creal/power.rs` has this as `neg_mul_left` and `creal/deriv_unique.rs` as
+/// `neg_mul_equiv_left`; both are **private** to their own files, so this is a
+/// third local derivation rather than a call — the same situation
+/// [`of_nat_one_equiv_local`] documents for `derivative.rs`'s `of_nat_*`
+/// helpers. It uses only public prelude lemmas and [`right_distrib`], never
+/// either private helper's own route.
+///
+/// `x + (−x) ~ 0` distributed on the right gives `x·y + (−x)·y ~ 0`, and
+/// [`neg_of_add_eq_zero_local`] closes it.
+fn neg_mul_left_local(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
+    let neg_x = cneg(d, p, x);
+    let big_x = cmul(d, p, x, y);
+    let big_y = cmul(d, p, neg_x, y);
+    let zero = czero(d, p);
+
+    let x_plus_negx = cadd(d, p, x, neg_x);
+    let lhs = cmul(d, p, x_plus_negx, y);
+    let rd = right_distrib(d, p, x, neg_x, y); // Equiv lhs (add X Y)
+    let sum_xy = cadd(d, p, big_x, big_y);
+    let rd_sym = d.lemma(p.equiv_symm, &[lhs, sum_xy, rd]);
+
+    let an = d.lemma(p.add_neg, &[x]);
+    let refl_y = d.lemma(p.equiv_refl, &[y]);
+    let zero_y = cmul(d, p, zero, y);
+    let mc = d.lemma(p.mul_congr, &[x_plus_negx, zero, y, y, an, refl_y]);
+    let y_zero = cmul(d, p, y, zero);
+    let cm = d.lemma(p.mul_comm, &[zero, y]);
+    let mz = d.lemma(p.mul_zero, &[y]);
+
+    let hsum = echain(
+        d,
+        p,
+        sum_xy,
+        &[(lhs, rd_sym), (zero_y, mc), (y_zero, cm), (zero, mz)],
+    ); // Equiv (add X Y) zero
+
+    neg_of_add_eq_zero_local(d, p, big_x, big_y, hsum)
+}
+
+/// `CReal.integral_abs_le : ∀ (F : CReal → CReal) (a b : CReal) (k : Nat)
+/// (hab : le a b) (u : UniformlyContinuousOn F a b), BoundedOn F a b k →
+/// le (abs (integral F a b hab u))
+///    (mul (ofRat (Rat.natDivSucc (Nat.succ k) 0)) (add b (neg a)))`
+/// — the integral is bounded by `M · (b − a)`.
+///
+/// # Why this one, and why it is short
+///
+/// The SEVENTEENTH lane's own closing lesson (module documentation) is that
+/// four sizings of `integral_split` all failed because none asked *which
+/// declaration in this file already relates two integrals under a bound*.
+/// Asked here, the answer is [`declare_integral_le`] plus
+/// [`declare_integral_const`], and they compose with no new estimate at all:
+/// `BoundedOn` gives `|F t| ≤ M` pointwise on `[a, b]`, so `F` is squeezed
+/// between the two CONSTANT functions `±M`, and a constant's integral is
+/// already known exactly. Nothing here touches a Riemann sum, a mesh count or
+/// a modulus, and no mesh-level estimate is written.
+///
+/// ```text
+/// upper   integral_le F (fun _ => M)      -> le (integral F …) (integral (const M) …)
+/// lower   integral_le (fun _ => −M) F     -> le (integral (const −M) …) (integral F …)
+/// const   integral_const at M and at −M   -> Equiv (integral (const c) …) (mul c (b−a))
+/// flip    neg_le_neg + neg_mul_left_local -> le (neg (integral F …)) (mul M (b−a))
+/// close   abs_le
+/// ```
+///
+/// `M := ofRat (Rat.natDivSucc (Nat.succ k) 0)` is not a convenience choice:
+/// it is the EXACT right-hand side [`CRealPrelude::bounded_on_unfold`]'s own
+/// conclusion carries (`derivative.rs`'s `mag_bound`), so the pointwise
+/// hypotheses `integral_le` needs are one [`CRealPrelude::le_abs_self`] /
+/// [`CRealPrelude::neg_le_abs`] plus one [`CRealPrelude::le_trans`] each, with
+/// no rational bookkeeping. A convenient literal would fail to type-check for
+/// the same reason `bnd_leg_plus_share_le_at`'s `magnitude` argument must be
+/// the hash-consed term `riemann_sum_total_eps_le` embeds.
+///
+/// The lower leg needs `Equiv (mul (neg M) (b−a)) (neg (mul M (b−a)))`
+/// ([`neg_mul_left_local`]) and `Equiv (neg (neg x)) x`
+/// ([`neg_neg_equiv_local`]); the prelude publishes neither `neg_mul` nor
+/// `neg_neg`, and both fall straight out of one shared "the additive inverse
+/// is unique" helper ([`neg_of_add_eq_zero_local`]).
+///
+/// # What it is for
+///
+/// Both remaining pieces of arbitrary-split additivity (module documentation,
+/// this lane's entry) need it: it is the `M·δ` leaf of the close-endpoint
+/// estimate, and it discharges the degenerate branch of the cotransitivity
+/// case split that removes the positivity hypothesis on `b − a`. It is also
+/// what the Fundamental Theorem needs directly for the antiderivative's own
+/// continuity, `|G(y) − G(x)| ≤ M·|y − x|`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_integral_abs_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let f_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+
+    let hb_ty = d.const_app(p.bounded_on, &[f, a, b, k]);
+    let hb_fv = d.fresh_fvar();
+    let hb = d.kernel().fvar(hb_fv);
+
+    // M := ofRat (natDivSucc (succ k) 0) -- `bounded_on_unfold`'s own bound,
+    // built with `derivative.rs::mag_bound`'s exact recipe.
+    let mbound = {
+        let succ_k = d.succ(k);
+        let zero_nat = d.num(0);
+        let q = d.const_app(p.rat.nat_div_succ, &[succ_k, zero_nat]);
+        embed(d, p, q)
+    };
+    let neg_mbound = cneg(d, p, mbound);
+    let width = width_of(d, p, a, b);
+    let m_width = cmul(d, p, mbound, width);
+
+    let const_m = {
+        let ignore_fv = d.fresh_fvar();
+        d.lam_fv(ignore_fv, carrier, mbound)
+    };
+    let const_neg_m = {
+        let ignore_fv = d.fresh_fvar();
+        d.lam_fv(ignore_fv, carrier, neg_mbound)
+    };
+    let uc_m = d.lemma(p.uniformly_continuous_const, &[mbound, a, b]);
+    let uc_neg_m = d.lemma(p.uniformly_continuous_const, &[neg_mbound, a, b]);
+
+    let integral_f = d.const_app(p.integral, &[f, a, b, hab, u]);
+    let integral_m = d.const_app(p.integral, &[const_m, a, b, hab, uc_m]);
+    let integral_neg_m = d.const_app(p.integral, &[const_neg_m, a, b, hab, uc_neg_m]);
+
+    // --- the two pointwise hypotheses, both from `bounded_on_unfold` -------
+    //
+    // Shape is `integral_le`'s own: ∀ t, le a t → le t b → le _ _.
+    let pointwise = |d: &mut IntDev<'_>, upper: bool| -> ExprId {
+        let t_fv = d.fresh_fvar();
+        let t = d.kernel().fvar(t_fv);
+        let ht1_fv = d.fresh_fvar();
+        let ht1 = d.kernel().fvar(ht1_fv);
+        let ht1_ty = cle(d, p, a, t);
+        let ht2_fv = d.fresh_fvar();
+        let ht2 = d.kernel().fvar(ht2_fv);
+        let ht2_ty = cle(d, p, t, b);
+
+        let ft = d.apply(f, &[t]);
+        let abs_ft = d.const_app(p.abs, &[ft]);
+        let habs = d.lemma(p.bounded_on_unfold, &[f, a, b, k, hb, t, ht1, ht2]);
+
+        let body = if upper {
+            let self_le = d.lemma(p.le_abs_self, &[ft]);
+            d.lemma(p.le_trans, &[ft, abs_ft, mbound, self_le, habs])
+        } else {
+            // le (neg M) (F t). `neg_le_abs` + `le_trans` give
+            // le (neg (F t)) M; `neg_le_neg` flips it to
+            // le (neg M) (neg (neg (F t))), and `neg_neg_equiv_local`
+            // rewrites the right-hand side back to `F t`.
+            let neg_le = d.lemma(p.neg_le_abs, &[ft]);
+            let neg_ft = cneg(d, p, ft);
+            let neg_ft_le_m = d.lemma(p.le_trans, &[neg_ft, abs_ft, mbound, neg_le, habs]);
+            let neg_neg_ft = cneg(d, p, neg_ft);
+            let flipped = d.lemma(p.neg_le_neg, &[neg_ft, mbound, neg_ft_le_m]);
+            let nn = neg_neg_equiv_local(d, p, ft);
+            let refl_neg_m = d.lemma(p.equiv_refl, &[neg_mbound]);
+            d.lemma(
+                p.le_congr,
+                &[
+                    neg_mbound,
+                    neg_mbound,
+                    neg_neg_ft,
+                    ft,
+                    refl_neg_m,
+                    nn,
+                    flipped,
+                ],
+            )
+        };
+        let after_upper = d.lam_fv(ht2_fv, ht2_ty, body);
+        let after_lower = d.lam_fv(ht1_fv, ht1_ty, after_upper);
+        d.lam_fv(t_fv, carrier, after_lower)
+    };
+
+    let h_up_pt = pointwise(d, true);
+    let h_lo_pt = pointwise(d, false);
+
+    // --- upper: le (integral F …) (mul M width) ---------------------------
+    let up_raw = d.lemma(p.integral_le, &[f, const_m, a, b, hab, u, uc_m, h_up_pt]);
+    let ic_m = d.lemma(p.integral_const, &[mbound, a, b, hab, uc_m]);
+    let refl_if = d.lemma(p.equiv_refl, &[integral_f]);
+    let upper = d.lemma(
+        p.le_congr,
+        &[
+            integral_f,
+            integral_f,
+            integral_m,
+            m_width,
+            refl_if,
+            ic_m,
+            up_raw,
+        ],
+    );
+
+    // --- lower: le (neg (integral F …)) (mul M width) ----------------------
+    let lo_raw = d.lemma(
+        p.integral_le,
+        &[const_neg_m, f, a, b, hab, uc_neg_m, u, h_lo_pt],
+    );
+    let ic_neg_m = d.lemma(p.integral_const, &[neg_mbound, a, b, hab, uc_neg_m]);
+    let neg_m_width = cmul(d, p, neg_mbound, width);
+    let lo_shifted = d.lemma(
+        p.le_congr,
+        &[
+            integral_neg_m,
+            neg_m_width,
+            integral_f,
+            integral_f,
+            ic_neg_m,
+            refl_if,
+            lo_raw,
+        ],
+    );
+    let flipped = d.lemma(p.neg_le_neg, &[neg_m_width, integral_f, lo_shifted]);
+    let neg_integral_f = cneg(d, p, integral_f);
+    let neg_neg_m_width = cneg(d, p, neg_m_width);
+    let nml = neg_mul_left_local(d, p, mbound, width);
+    let neg_m_width_target = cneg(d, p, m_width);
+    let dbl_neg_m_width = cneg(d, p, neg_m_width_target);
+    let cong = d.lemma(p.neg_congr, &[neg_m_width, neg_m_width_target, nml]);
+    // cong : Equiv (neg (mul (neg M) width)) (neg (neg (mul M width)))
+    let nn_mw = neg_neg_equiv_local(d, p, m_width);
+    let bridge = d.lemma(
+        p.equiv_trans,
+        &[neg_neg_m_width, dbl_neg_m_width, m_width, cong, nn_mw],
+    );
+    let refl_neg_if = d.lemma(p.equiv_refl, &[neg_integral_f]);
+    let lower = d.lemma(
+        p.le_congr,
+        &[
+            neg_integral_f,
+            neg_integral_f,
+            neg_neg_m_width,
+            m_width,
+            refl_neg_if,
+            bridge,
+            flipped,
+        ],
+    );
+
+    let body = d.lemma(p.abs_le, &[integral_f, m_width, upper, lower]);
+
+    let abs_integral_f = d.const_app(p.abs, &[integral_f]);
+    let concl = cle(d, p, abs_integral_f, m_width);
+
+    let ty = {
+        let with_hb = d.arrow(hb_ty, concl);
+        let with_u = d.pi_fv(u_fv, u_ty, with_hb);
+        let with_hab = d.pi_fv(hab_fv, hab_ty, with_u);
+        let over_k = d.pi_fv(k_fv, nat, with_hab);
+        let over_b = d.pi_fv(b_fv, carrier, over_k);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        d.pi_fv(f_fv, f_ty, over_a)
+    };
+    let value = {
+        let with_hb = d.lam_fv(hb_fv, hb_ty, body);
+        let with_u = d.lam_fv(u_fv, u_ty, with_hb);
+        let with_hab = d.lam_fv(hab_fv, hab_ty, with_u);
+        let over_k = d.lam_fv(k_fv, nat, with_hab);
+        let over_b = d.lam_fv(b_fv, carrier, over_k);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        d.lam_fv(f_fv, f_ty, over_a)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.integral_abs_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
 }
