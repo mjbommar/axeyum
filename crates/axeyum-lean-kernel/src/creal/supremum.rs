@@ -103,7 +103,7 @@
 
 #![allow(clippy::doc_markdown, clippy::too_many_arguments)]
 
-use super::{CRealPrelude, cle, creal_ty};
+use super::{CRealPrelude, cadd, cle, creal_ty, embed};
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
@@ -578,4 +578,124 @@ pub(super) fn declare_mesh_level_count(
     declare_mesh_level_count_def(d, p)?;
     declare_mesh_level_count_equations(d, p)?;
     Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// `CReal.meshMax` -- the level-`j` mesh maximum: `maxRange` sampled over the
+// `meshLevelCount j`-point mesh of `[a, b]`.
+// ---------------------------------------------------------------------------
+
+/// `CReal.mul x y` -- mirrors the `cmul` private to several sibling files
+/// (`trig.rs`, `integral.rs`, …), re-derived here rather than imported per
+/// this development's own convention (see [`creal_eq`]'s doc comment).
+fn cmul(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
+    d.const_app(p.mul, &[x, y])
+}
+
+/// `CReal.neg x` -- mirrors sibling files' private `cneg`.
+fn cneg(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+    d.const_app(p.neg, &[x])
+}
+
+/// `add (mul (b + (neg a)) (embed (Rat.natDivSucc 1 m)))` — the mesh width
+/// `Δ = (b − a)/(m + 1)`, the SAME formula and SAME total-in-`m` design
+/// `integral.rs`'s own private `delta_of` uses (see that file's own doc
+/// comment for why no `CReal.inv`/`PosBound` is needed); re-derived here
+/// rather than imported, per this development's convention.
+fn mesh_delta(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId, m: ExprId) -> ExprId {
+    let na = cneg(d, p, a);
+    let width = cadd(d, p, b, na);
+    let one_nat = d.num(1);
+    let frac = d.const_app(p.rat.nat_div_succ, &[one_nat, m]);
+    let frac_real = embed(d, p, frac);
+    cmul(d, p, width, frac_real)
+}
+
+/// `add a (mul (ofNat i) delta)` — the `i`-th LEFT sample point `a + i·Δ`.
+/// Mirrors `integral.rs`'s own private `sample_point`, re-derived here per
+/// this development's convention.
+fn mesh_sample_point(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    delta: ExprId,
+    i: ExprId,
+) -> ExprId {
+    let oi = d.const_app(p.of_nat, &[i]);
+    let shift = cmul(d, p, oi, delta);
+    cadd(d, p, a, shift)
+}
+
+/// `(CReal → CReal) → CReal → CReal → Nat → CReal`.
+fn mesh_max_ty(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let func_ty = d.arrow(carrier, carrier);
+    let over_j = d.arrow(nat, carrier);
+    let over_b = d.arrow(carrier, over_j);
+    let over_a = d.arrow(carrier, over_b);
+    d.arrow(func_ty, over_a)
+}
+
+/// `CReal.meshMax : (CReal → CReal) → CReal → CReal → Nat → CReal :=
+/// fun F a b j => maxRange (fun i => F (meshSamplePoint a (meshDelta a b
+/// (meshLevelCount j)) i)) (meshLevelCount j)` — the level-`j` mesh maximum:
+/// `max_{i ≤ meshLevelCount j} F(a + i·Δⱼ)`, `Δⱼ := (b−a)/(meshLevelCount j +
+/// 1)`. Building block for `CReal.supOn` (this module's own documentation):
+/// route 2's telescoping construction produces `supOn` as `CReal.mk` on the
+/// sequence `fun j => meshMax F a b j` (or a `speedup` of it), once the
+/// regularity estimate lands.
+fn declare_mesh_max_def(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let anon = d.anon_name();
+    let func_ty = d.arrow(carrier, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+
+    let m = d.const_app(p.mesh_level_count, &[j]);
+    let delta = mesh_delta(d, p, a, b, m);
+
+    // The maxRange sampling function: fun i => F (meshSamplePoint a delta i).
+    let sampler = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let sp = mesh_sample_point(d, p, a, delta, i);
+        let fx = d.apply(f, &[sp]);
+        d.lam_fv(i_fv, nat, fx)
+    };
+    let body = d.const_app(p.max_range, &[sampler, m]);
+
+    let value = {
+        let with_j = d.lam_fv(j_fv, nat, body);
+        let with_b = d.lam_fv(b_fv, carrier, with_j);
+        let with_a = d.lam_fv(a_fv, carrier, with_b);
+        d.lam_fv(f_fv, func_ty, with_a)
+    };
+    let ty = mesh_max_ty(d, p);
+    let _ = anon;
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.mesh_max,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(MAX_RANGE_HEIGHT),
+    })
+}
+
+/// Land `CReal.meshMax`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_mesh_max(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    declare_mesh_max_def(d, p)
 }

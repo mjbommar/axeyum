@@ -4873,6 +4873,11 @@ pub struct CRealPrelude {
     /// (add (meshLevelCount j) (meshLevelCount j)))`. See
     /// `creal/supremum.rs`.
     pub mesh_level_count_succ: NameId,
+    /// `CReal.meshMax : (CReal → CReal) → CReal → CReal → Nat → CReal :=
+    /// fun F a b j => maxRange (fun i => F (meshSamplePoint a (meshDelta a b
+    /// (meshLevelCount j)) i)) (meshLevelCount j)` — the level-`j` mesh
+    /// maximum of `F` on `[a, b]`. See `creal/supremum.rs`.
+    pub mesh_max: NameId,
 }
 
 impl CRealPrelude {
@@ -5401,6 +5406,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         mesh_level_count: kernel.name_str(creal, "meshLevelCount"),
         mesh_level_count_zero: kernel.name_str(creal, "meshLevelCount_zero"),
         mesh_level_count_succ: kernel.name_str(creal, "meshLevelCount_succ"),
+        mesh_max: kernel.name_str(creal, "meshMax"),
     }
 }
 
@@ -9267,6 +9273,20 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.mesh_level_count_zero,
         ],
         run: supremum::declare_mesh_level_count,
+    },
+    BuildStep {
+        label: "supremum::declare_mesh_max",
+        requires: &[
+            |p: CRealPrelude| p.max_range,
+            |p: CRealPrelude| p.mesh_level_count,
+            |p: CRealPrelude| p.mul,
+            |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.add,
+            |p: CRealPrelude| p.of_nat,
+            |p: CRealPrelude| p.of_rat,
+        ],
+        provides: &[|p: CRealPrelude| p.mesh_max],
+        run: supremum::declare_mesh_max,
     },
 ];
 

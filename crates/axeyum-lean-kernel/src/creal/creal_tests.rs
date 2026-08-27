@@ -9851,6 +9851,7 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "trig_fn::declare_cos_fn_family",
     "supremum::declare_max_range",
     "supremum::declare_mesh_level_count",
+    "supremum::declare_mesh_max",
 ];
 
 /// `STEPS` (the data-driven build order that replaced the hand-written call
