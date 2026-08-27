@@ -100,7 +100,8 @@
 //! `deriv_unique.rs`, `integral.rs`) is unaffected.
 
 use super::{
-    CRealPrelude, cadd, cle, creal_ty, div_succ, embed, equiv, halves, modulus, sample, shift,
+    CRealPrelude, cadd, cle, creal_ty, div_succ, div_succ_k, embed, equiv, halves, modulus, sample,
+    shift,
 };
 use crate::KernelError;
 use crate::env::Declaration;
@@ -127,13 +128,6 @@ pub(super) fn declare_archimedean_squeeze(
     declare_le_of_forall_le_add_small(d, p)?;
     declare_equiv_zero_of_rate(d, p)?;
     declare_equiv_zero_of_small(d, p)
-}
-
-/// `Rat.natDivSucc k j`, with `k` a `Nat`-typed [`ExprId`] rather than a
-/// literal — the rate-`K` companion of [`super::div_succ`], needed once the
-/// accuracy family's numerator is a bound variable instead of a numeral.
-fn div_succ_k(d: &mut IntDev<'_>, p: CRealPrelude, k: ExprId, j: ExprId) -> ExprId {
-    d.const_app(p.rat.nat_div_succ, &[k, j])
 }
 
 /// `1/(2j+2) ≤ 1/(j+1)` — half of a `natDivSucc` term is at most itself,

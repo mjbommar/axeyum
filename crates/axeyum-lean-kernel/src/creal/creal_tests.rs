@@ -4889,6 +4889,205 @@ fn equiv_zero_of_small_at_zero_proves_equiv_zero_zero() {
         });
 }
 
+/// **`K := 1` instantiation of `CReal.le_of_forall_le_add_rate` recovers
+/// `le_of_forall_le_add_small_at_zero_one_proves_le_zero_one`'s statement.**
+/// Same hypothesis shape and goal, built against the GENERAL lemma at an
+/// explicit `k := 1` rather than through the `le_of_forall_le_add_small`
+/// wrapper — the cheapest evidence that generalizing did not silently change
+/// the `K = 1` behaviour.
+#[test]
+fn le_of_forall_le_add_rate_at_k1_matches_small() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let nat = d.nat_ty();
+    let one_nat = d.num(1);
+
+    let zero_real = d.kernel().const_(p.zero, vec![]);
+    let one_real = d.kernel().const_(p.one, vec![]);
+
+    let lt01 = d.lemma(p.zero_lt_one, &[]);
+    let le01 = d.lemma(p.le_of_lt, &[zero_real, one_real, lt01]);
+
+    // hyp : ∀ e, le zero (add one (ofRat (natDivSucc 1 e))).
+    let hyp = {
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+        let qe_rat = super::div_succ(&mut d, p, 1, e);
+        let qe = super::embed(&mut d, p, qe_rat);
+        let nonneg = d.lemma(p.rat.zero_le_nat_div_succ, &[one_nat, e]);
+        let le1_add = d.lemma(p.le_add_of_nonneg, &[one_real, qe_rat, nonneg]);
+        let sum = super::cadd(&mut d, p, one_real, qe);
+        let step = d.lemma(p.le_trans, &[zero_real, one_real, sum, le01, le1_add]);
+        d.lam_fv(e_fv, nat, step)
+    };
+
+    let value = d.lemma(
+        p.le_of_forall_le_add_rate,
+        &[one_nat, zero_real, one_real, hyp],
+    );
+    let ty = super::cle(&mut d, p, zero_real, one_real);
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(anon, "__le_of_forall_le_add_rate_at_k1_matches_small");
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.le_of_forall_le_add_rate 1 zero one hyp did NOT check \
+                 against le zero one: {error:?}"
+            )
+        });
+}
+
+/// **`K := 2` instantiation of `CReal.le_of_forall_le_add_rate`,
+/// DISCRIMINATING from `K := 1`.** The hypothesis's accuracy family is
+/// `2/(e+1)`, not `1/(e+1)` — a rate a wrong generalization that merely
+/// special-cased `K = 1` (e.g. hard-coding term B's fused bound at `3`/`4`/`5`
+/// instead of `k+2`/`k+3`/`k+4`) could not consume, since `Rat.natDivSucc_add`
+/// is invoked here with `k := 2` at every fusion step.
+#[test]
+fn le_of_forall_le_add_rate_at_k2_zero_one() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let nat = d.nat_ty();
+    let two_nat = d.num(2);
+
+    let zero_real = d.kernel().const_(p.zero, vec![]);
+    let one_real = d.kernel().const_(p.one, vec![]);
+
+    let lt01 = d.lemma(p.zero_lt_one, &[]);
+    let le01 = d.lemma(p.le_of_lt, &[zero_real, one_real, lt01]);
+
+    // hyp : ∀ e, le zero (add one (ofRat (natDivSucc 2 e))).
+    let hyp = {
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+        let qe_rat = super::div_succ(&mut d, p, 2, e);
+        let qe = super::embed(&mut d, p, qe_rat);
+        let nonneg = d.lemma(p.rat.zero_le_nat_div_succ, &[two_nat, e]);
+        let le1_add = d.lemma(p.le_add_of_nonneg, &[one_real, qe_rat, nonneg]);
+        let sum = super::cadd(&mut d, p, one_real, qe);
+        let step = d.lemma(p.le_trans, &[zero_real, one_real, sum, le01, le1_add]);
+        d.lam_fv(e_fv, nat, step)
+    };
+
+    let value = d.lemma(
+        p.le_of_forall_le_add_rate,
+        &[two_nat, zero_real, one_real, hyp],
+    );
+    let ty = super::cle(&mut d, p, zero_real, one_real);
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(anon, "__le_of_forall_le_add_rate_at_k2_zero_one");
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.le_of_forall_le_add_rate 2 zero one hyp did NOT check \
+                 against le zero one: {error:?}"
+            )
+        });
+}
+
+/// **`K := 2` instantiation of `CReal.equiv_zero_of_rate` at `v := zero`,
+/// DISCRIMINATING from `K := 1`.** Mirrors
+/// `equiv_zero_of_small_at_zero_proves_equiv_zero_zero`'s hypothesis
+/// construction at the rate `2/(e+1)` instead of `1/(e+1)`.
+#[test]
+fn equiv_zero_of_rate_at_k2_zero() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::{rle, rneg};
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let rat = p.rat;
+    let nat = d.nat_ty();
+    let two_nat = d.num(2);
+
+    let zero_real = d.kernel().const_(p.zero, vec![]);
+    let zero_rat = d.kernel().const_(rat.zero, vec![]);
+
+    let hyp = {
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+        let qe_rat = super::div_succ(&mut d, p, 2, e);
+        let qe = super::embed(&mut d, p, qe_rat);
+        let nonneg = d.lemma(rat.zero_le_nat_div_succ, &[two_nat, e]);
+        // h1 : le zero qe
+        let h1 = d.lemma(p.of_rat_le, &[zero_rat, qe_rat, nonneg]);
+
+        // h2 : le (neg zero) qe.
+        let eq1 = d.lemma(p.of_rat_neg, &[zero_rat]);
+        let neg_zero_rat = rneg(&mut d, zero_rat);
+        let nz_eq = d.lemma(rat.neg_zero, &[]);
+        let nz_eq_sym = crate::rat_prelude::ops::rsymm(&mut d, zero_rat, neg_zero_rat, nz_eq);
+        let le_negzr_qe = crate::rat_prelude::ops::rat_eq_rewrite(
+            &mut d,
+            zero_rat,
+            neg_zero_rat,
+            nz_eq_sym,
+            nonneg,
+            &|d, t| rle(d, rat, t, qe_rat),
+        );
+        let embedded = d.lemma(p.of_rat_le, &[neg_zero_rat, qe_rat, le_negzr_qe]);
+        let neg_zero = d.const_app(p.neg, &[zero_real]);
+        let embedded_neg_zero = super::embed(&mut d, p, neg_zero_rat);
+        let eq1_sym = d.lemma(p.equiv_symm, &[neg_zero, embedded_neg_zero, eq1]);
+        let refl_qe = d.lemma(p.equiv_refl, &[qe]);
+        let h2 = d.lemma(
+            p.le_congr,
+            &[
+                embedded_neg_zero,
+                neg_zero,
+                qe,
+                qe,
+                eq1_sym,
+                refl_qe,
+                embedded,
+            ],
+        );
+        // h2 : le (neg zero) qe
+        let step = d.lemma(p.abs_le, &[zero_real, qe, h1, h2]);
+        d.lam_fv(e_fv, nat, step)
+    };
+
+    let value = d.lemma(p.equiv_zero_of_rate, &[two_nat, zero_real, hyp]);
+    let ty = super::equiv(&mut d, p, zero_real, zero_real);
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(anon, "__equiv_zero_of_rate_at_k2_zero");
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "CReal.equiv_zero_of_rate 2 zero hyp did NOT check against \
+                 Equiv zero zero: {error:?}"
+            )
+        });
+}
+
 /// `Rat.normalize (Int.ofNat num_val) (Nat.succ k) (one_le_succ k)`, where
 /// `k := Nat.num(den_val - 1)` -- the literal rational `num_val/den_val`,
 /// built so the denominator passed to `normalize` and the denominator named

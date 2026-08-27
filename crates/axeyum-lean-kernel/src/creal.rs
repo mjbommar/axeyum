@@ -9901,6 +9901,14 @@ fn div_succ(d: &mut IntDev<'_>, p: CRealPrelude, k: u32, j: ExprId) -> ExprId {
     d.const_app(p.rat.nat_div_succ, &[numerator, j])
 }
 
+/// `Rat.natDivSucc k j`, with `k` a `Nat`-typed [`ExprId`] rather than a
+/// literal — the rate-`K` companion of [`div_succ`], needed once the
+/// accuracy family's numerator is a bound variable instead of a numeral. See
+/// `creal/archimedean_squeeze.rs`.
+fn div_succ_k(d: &mut IntDev<'_>, p: CRealPrelude, k: ExprId, j: ExprId) -> ExprId {
+    d.const_app(p.rat.nat_div_succ, &[k, j])
+}
+
 /// `Rat.add (natDivSucc 1 m) (natDivSucc 1 n)` — the regularity modulus,
 /// written inline rather than behind a constant so the rearrangement in
 /// [`declare_transitivity`] sees the two summands.

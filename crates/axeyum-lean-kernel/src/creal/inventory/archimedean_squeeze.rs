@@ -43,10 +43,6 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.le_of_forall_le_add_rate,
             "theorem",
         ),
-        (
-            "CReal.equiv_zero_of_rate",
-            p.equiv_zero_of_rate,
-            "theorem",
-        ),
+        ("CReal.equiv_zero_of_rate", p.equiv_zero_of_rate, "theorem"),
     ]
 }
