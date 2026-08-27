@@ -174,3 +174,56 @@ row 1 and row 3 simply *dominate* the classical entry with nothing conceded —
 strictly better for the Pareto argument than a theorem whose boundary must be
 mapped. The four-row template was a worst case mistaken for a law.
 
+
+## Amendment 4 (2026-08-27) — prose describing an absence is NOT a row 2
+
+**A design-level remark that a principle is unavailable does not constitute an
+unprovability witness, and mistaking one for the other silently converts this
+ADR's hardest row into a freebie.**
+
+Measured while sizing π. `creal/trig_fn.rs`'s module doc refers to
+"`creal/ivt.rs`'s **refutation** of exact-root construction", and
+`creal/cotransitivity.rs` states that "`CReal.lt` is not decidable and no
+`lt_total` is assumed or provable over `CReal`". The coordinator read those and
+concluded that π's row 2 already existed and was proved — that π would land as
+a graded family whose hardest row was finished.
+
+It does not exist. Checked by the lane, three ways:
+
+- `shape_search --name-like lt_total` → **ABSENT** (no declaration of that name
+  or shape, positive or negative).
+- `shape_search --name-like ivt` → 12 hits (`ivt_approx`, `ivt_step`,
+  `ivt_iter`, `ivt_bisect*`), **all constructive**, none concluding `False` or
+  `Not (...)`.
+- `grep -n "refut"` across `ivt.rs` and `cotransitivity.rs` → **zero hits**.
+
+Both statements are meta-theoretic prose about what this development supports.
+Neither is a `Kernel::add_declaration`-checked term. What `ivt.rs` actually
+provides is
+
+    CReal.ivt_approx : ∀ F a b, UniformlyContinuousOn F a b → le a b →
+      le (F a) zero → le zero (F b) →
+      ∀ e : Nat, ∃ x, le a x ∧ le x b ∧ le (abs (F x)) (ofRat (natDivSucc 1 e))
+
+an approximate-root family — never `F c ≡ zero`.
+
+**This is the same failure Amendments 1 and 2 already corrected, arriving by a
+new route.** Amendment 1 found EVT's row 2 was an assertion inherited from a
+curriculum map. Amendment 2 fixed the word "refuted", because a row 2 is a
+falsifiable unprovability witness rather than a refutation. Amendment 4 is the
+third form: a row 2 inferred from *someone else's prose* about an absence.
+
+**Rule.** A row 2 exists only when a kernel-checked declaration exhibits the
+reduction — classical statement ⟹ decision principle the kernel lacks. Until
+then the row is **unassessed**, which is a legitimate and honest state (Rolle's
+and MVT's row 2 are both recorded that way today). Specifically:
+
+- **Never cite a module doc, a status note, or this ADR's own prose as evidence
+  that a row 2 is proved.** Cite the declaration, by name, and confirm it is
+  present with `shape_search` or `kernel.environment()`.
+- **"No `lt_total` exists" and "`lt_total` is unprovable" are different
+  claims.** The first is a measurement. The second is a theorem nobody has
+  written, and it is exactly what a row 2 would be.
+- The asymmetry is what makes this expensive: prose asserting an absence reads
+  as more authoritative than an unassessed row, so it *removes* the pressure to
+  build the row while conceding the same ground.
