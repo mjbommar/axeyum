@@ -49,6 +49,8 @@ use super::{
 
 use axeyum_lean_kernel::{build_arith_prelude, build_creal_prelude, build_int_prelude};
 
+#[cfg(test)]
+mod axreal_call_site_guard;
 pub(crate) mod control;
 pub(crate) mod monomial_bound;
 pub(crate) mod product_positivstellensatz;
@@ -151,7 +153,7 @@ pub struct LraReconstructCtx {
     ///
     /// A [`RingSignature`], not an
     /// [`ArithPrelude`](axeyum_lean_kernel::ArithPrelude): the carrier is a
-    /// *parameter* of the route, and [`Self::new`] simply supplies the `Real`
+    /// *parameter* of the route, and [`Self::new_over_axreal`] simply supplies the `Real`
     /// package's instance of it. The field keeps its historical name so the 158
     /// reads of it across this module, `ordered_ring` and
     /// `ordered_ring::setoid` are unchanged.
@@ -209,36 +211,54 @@ impl core::fmt::Debug for LraReconstructCtx {
     }
 }
 
-impl Default for LraReconstructCtx {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 #[allow(dead_code)]
 impl LraReconstructCtx {
-    /// Build a fresh LRA reconstruction context over the **`Real` package**: a
-    /// kernel with the arithmetic prelude declared, its 30 declarations as the
-    /// [`RingSignature`], and an empty variable map.
+    /// Build a fresh LRA reconstruction context over the **`AxReal` package**:
+    /// a kernel with the axiomatized arithmetic prelude declared, its 30
+    /// **axioms** as the [`RingSignature`], and an empty variable map.
     ///
-    /// This is the default carrier and the only one the shipped routes use
-    /// today. [`Self::with_ring_signature`] is the same context over any other
+    /// # This is the AxReal-selecting constructor — read before calling it
+    ///
+    /// `AxReal` is this repository's entire remaining trusted surface (30
+    /// axioms; every other prelude measures 0 — ADR-0605). It is retained
+    /// deliberately as the negative control axiom-freedom is measured against
+    /// and as the instantiation proving the ordered-ring interface
+    /// generalization is genuine, **not** as a default carrier. No shipped
+    /// route calls this constructor (ADR-0605 §3; guarded by this crate's
+    /// `axreal_call_site_guard` test module); shipped
+    /// routes use [`Self::try_new_over_integers`] or
+    /// [`Self::try_new_over_constructed_reals`], both axiom-free.
+    ///
+    /// There used to be a `LraReconstructCtx::new`/`::try_new` pair with no
+    /// carrier named in the identifier, and `Default` delegated to it — so a
+    /// caller reaching for the obvious no-argument constructor silently
+    /// inherited 30 axioms. Renamed here so the axiom-bearing choice is
+    /// explicit at every call site, and `Default` is removed rather than
+    /// repointed at a constructed carrier: a silently-changed default is its
+    /// own hazard, and every caller must now say which carrier it wants.
+    ///
+    /// [`Self::with_ring_signature`] is the same context over any other
     /// carrier that satisfies the interface.
     ///
     /// # Panics
     ///
-    /// Panics if the fixed real prelude is rejected in a fresh kernel, or if the
-    /// package it just built fails [`RingSignature::validate_in`] — both are
-    /// invariant failures of this crate, not of any input, and input terms are
-    /// not consulted during this initialization. [`Self::try_new`] is the
-    /// non-panicking form.
+    /// Panics if the fixed `AxReal` prelude is rejected in a fresh kernel, or
+    /// if the package it just built fails [`RingSignature::validate_in`] —
+    /// both are invariant failures of this crate, not of any input, and input
+    /// terms are not consulted during this initialization.
+    /// [`Self::try_new_over_axreal`] is the non-panicking form.
     #[must_use]
-    pub fn new() -> Self {
-        Self::try_new().expect("real prelude should build in a fresh reconstruction kernel")
+    pub fn new_over_axreal() -> Self {
+        Self::try_new_over_axreal()
+            .expect("AxReal prelude should build in a fresh reconstruction kernel")
     }
 
-    /// [`Self::new`] without the panic: build the `Real` package into a fresh
-    /// kernel and validate it as an ordered-ring signature.
+    /// [`Self::new_over_axreal`] without the panic: build the `AxReal`
+    /// package into a fresh kernel and validate it as an ordered-ring
+    /// signature.
+    ///
+    /// See [`Self::new_over_axreal`] for why this constructor names its
+    /// carrier explicitly and why nothing shipped calls it.
     ///
     /// # Errors
     ///
@@ -246,9 +266,9 @@ impl LraReconstructCtx {
     /// the prelude's 30 declarations, or if the package it built does not
     /// satisfy the interface [`RingSignature::validate_in`] checks. The second
     /// is the interesting one: it is this crate's independent restatement of
-    /// what the `Real` package is supposed to be, checked against what the
+    /// what the `AxReal` package is supposed to be, checked against what the
     /// kernel actually declared.
-    pub fn try_new() -> Result<Self, ReconstructError> {
+    pub fn try_new_over_axreal() -> Result<Self, ReconstructError> {
         let mut kernel = Kernel::new();
         let arith =
             build_arith_prelude(&mut kernel).map_err(|e| ReconstructError::KernelRejected {
@@ -261,7 +281,7 @@ impl LraReconstructCtx {
     /// Build a fresh LRA reconstruction context over the **constructed
     /// integers**: `Int`, with the kernel's own `Eq` as ring equality.
     ///
-    /// The axiom-free counterpart of [`Self::try_new`] that keeps kernel
+    /// The axiom-free counterpart of [`Self::try_new_over_axreal`] that keeps kernel
     /// equality. [`Self::try_new_over_constructed_reals`] is also axiom-free but
     /// its equality is the defined relation `CReal.Equiv`, so a consumer that
     /// wants `Eq` back has to go through the equality slot; here `Eq` *is* ring
@@ -292,7 +312,7 @@ impl LraReconstructCtx {
     /// `CReal`, the Bishop setoid over the constructed ℚ, with its equality slot
     /// already adopted from `CRealPrelude`'s own theorems.
     ///
-    /// This is [`Self::try_new`]'s axiom-free counterpart, and the difference is
+    /// This is [`Self::try_new_over_axreal`]'s axiom-free counterpart, and the difference is
     /// the whole point of the seam. `Real` is 30 **axioms**; `CReal` is 30
     /// declarations the kernel checked, so a refutation built here and abstracted
     /// by
@@ -495,7 +515,7 @@ impl LraReconstructCtx {
     /// The ordered-ring signature this context reconstructs over (`R`, `le`,
     /// `lt`, `le_trans`, …).
     ///
-    /// For a context built by [`Self::new`] these are the `Real` package's 30
+    /// For a context built by [`Self::new_over_axreal`] these are the `Real` package's 30
     /// declarations; for one built by [`Self::with_ring_signature`] they are
     /// whatever carrier that signature named.
     #[must_use]

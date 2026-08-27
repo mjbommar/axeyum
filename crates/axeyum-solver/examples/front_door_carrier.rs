@@ -203,7 +203,7 @@ fn run(require_axiom_free: bool) -> Result<(), String> {
         let assertions = build(&mut arena);
 
         // (a) the control: the axiomatized `AxReal` package.
-        let mut real_ctx = LraReconstructCtx::try_new()
+        let mut real_ctx = LraReconstructCtx::try_new_over_axreal()
             .map_err(|e| format!("{label}: the AxReal package did not build: {e:?}"))?;
         let real_proof = reconstruct(&mut real_ctx, route, &arena, &assertions)
             .map_err(|e| format!("{label}: AxReal reconstruction failed: {e:?}"))?;

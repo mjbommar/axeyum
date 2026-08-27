@@ -162,7 +162,7 @@ fn the_shipped_front_door_never_builds_the_real_axiom_package() {
     // The control, and the reason the four zeros above are worth reading: the
     // counter does move. Without this an `arith_prelude_builds` that had been
     // wired to a constant would pass every assertion in this test.
-    let _real = LraReconstructCtx::try_new().expect("the AxReal package still builds");
+    let _real = LraReconstructCtx::try_new_over_axreal().expect("the AxReal package still builds");
     let after_control = arith_prelude_builds();
     println!("FRONT_DOOR_REACH control | arith_prelude_builds={after_control}");
     assert_eq!(

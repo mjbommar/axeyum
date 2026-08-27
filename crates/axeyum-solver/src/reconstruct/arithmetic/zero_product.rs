@@ -247,7 +247,7 @@ mod tests {
 
     /// **The measurement that decides whether any of this is worth having.**
     ///
-    /// `LraReconstructCtx::new()` builds `AxReal` — the legacy AXIOMATIZED
+    /// `LraReconstructCtx::new_over_axreal()` builds `AxReal` — the legacy AXIOMATIZED
     /// ordered field, 30 assumptions, the repository's only nonzero trusted-surface
     /// row. A refutation checked there rests on all 30. The constructed carrier
     /// `CReal` (ADR-0512) is a Bishop setoid over the constructed rationals at
@@ -276,7 +276,7 @@ mod tests {
 
     #[test]
     fn the_kernel_infers_the_refutation_to_false() {
-        let mut ctx = LraReconstructCtx::new();
+        let mut ctx = LraReconstructCtx::new_over_axreal();
         let proof = reconstruct_real_zero_product(&mut ctx, &certificate(ZERO_SUBSET))
             .expect("reconstruction succeeds");
         // `reconstruct_real_zero_product` gates on this internally; assert it
@@ -291,7 +291,7 @@ mod tests {
 
     #[test]
     fn the_degenerate_equal_products_case_also_closes() {
-        let mut ctx = LraReconstructCtx::new();
+        let mut ctx = LraReconstructCtx::new_over_axreal();
         let proof = reconstruct_real_zero_product(&mut ctx, &certificate(IDENTICAL))
             .expect("reconstruction succeeds");
         let inferred = ctx.kernel_mut().infer(proof).expect("infer");
@@ -304,7 +304,7 @@ mod tests {
 
     #[test]
     fn the_disjunctive_form_is_declined_not_approximated() {
-        let mut ctx = LraReconstructCtx::new();
+        let mut ctx = LraReconstructCtx::new_over_axreal();
         let result = reconstruct_real_zero_product(&mut ctx, &certificate(DISJUNCTIVE));
         assert!(
             matches!(result, Err(ReconstructError::UnsupportedTerm { .. })),
@@ -323,7 +323,7 @@ mod tests {
             cert.nonzero_factors().to_vec(),
         );
         cert = forged;
-        let mut ctx = LraReconstructCtx::new();
+        let mut ctx = LraReconstructCtx::new_over_axreal();
         let result = reconstruct_real_zero_product(&mut ctx, &cert);
         assert!(matches!(
             result,
