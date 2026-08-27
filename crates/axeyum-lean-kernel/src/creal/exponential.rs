@@ -616,13 +616,13 @@ fn cpow(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, n: ExprId) -> ExprId {
 }
 
 /// `Rat.natDivSucc 1 1` — `1/2`, as a `Rat` term.
-fn half_rat(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+pub(super) fn half_rat(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
     let one_nat = d.num(1);
     div_succ(d, p, 1, one_nat)
 }
 
 /// `CReal.ofRat (Rat.natDivSucc 1 1)` — the constant `1/2`.
-fn half(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+pub(super) fn half(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
     let hr = half_rat(d, p);
     embed(d, p, hr)
 }
@@ -1300,7 +1300,7 @@ fn neg_half_add_half_equiv_zero(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
 /// `Equiv (add half half) one` ([`rat_half_add_half_eq_one`] lifted through
 /// `CReal.ofRat_add`), then cancelling the shared `half` on the right by
 /// adding `neg half` to both sides.
-fn one_sub_half_equiv_half(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+pub(super) fn one_sub_half_equiv_half(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
     let one_c = d.kernel().const_(p.one, vec![]);
     let h = half(d, p);
     let neg_h = cneg(d, p, h);
@@ -1833,7 +1833,7 @@ fn declare_geom_half_inv_leaf_bound(
 /// [`CRealPrelude::geom_half_inv_leaf_bound`]'s own stored type mentions,
 /// letting a call to that theorem plug directly into an expression built
 /// from this pair with no extra `Equiv`/`Eq` bridge.
-fn geom_half_a_real_pos_bound(d: &mut IntDev<'_>, p: CRealPrelude) -> (ExprId, ExprId) {
+pub(super) fn geom_half_a_real_pos_bound(d: &mut IntDev<'_>, p: CRealPrelude) -> (ExprId, ExprId) {
     let one_nat = d.num(1);
     let one_c = d.kernel().const_(p.one, vec![]);
     let h = half(d, p);
@@ -3838,7 +3838,7 @@ fn two_mul_half_equiv_one(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
 /// inside [`one_sub_half_equiv_half`] so the additive form of the index-shift
 /// identity (used by [`exp_tail_partial_bound`]'s induction step) can reuse
 /// it without re-deriving.
-fn half_add_half_equiv_one(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+pub(super) fn half_add_half_equiv_one(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
     let h = half(d, p);
     let (half_r, rat_eq) = rat_half_add_half_eq_one(d, p);
     let add_proof = d.lemma(p.of_rat_add, &[half_r, half_r]);
