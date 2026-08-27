@@ -1743,6 +1743,27 @@
 //! is also built as a test target, where every one of the four IS used by its
 //! own `#[cfg(test)]` module, so a bare `expect` is UNFULFILLED there and
 //! errors under `-D warnings` (four warnings, before the gate was added).
+//!
+//! ## Piece 1 (the close-endpoint ESTIMATE) — NINETEENTH lane, 2026-08-27
+//!
+//! **Absence re-verified a third time before any code was written**, since a
+//! stale recorded obstacle has twice sent a lane at an already-solved problem.
+//! `/usr/bin/grep -rniE 'endpoint.*(le|bound|estimate|close)|(le|bound|
+//! estimate|close).*endpoint'` over every `creal/*.rs` returns only prose
+//! (module docs and test comments) and not one declaration, against **21**
+//! hits for [`riemann_sum_congr_endpoints`] as the same-shape positive
+//! control. So the estimate is unbuilt.
+//!
+//! **The register's own question — *which declaration already does this?* —
+//! answered at the SUM level rather than the integral level, and it paid
+//! again.** `shape_search --ns CReal --name-like sumrange --kind theorem`
+//! lists [`CRealPrelude::sum_range_const`]
+//! (`Equiv (sumRange (fun _ => c) n) (mul (ofNat n) c)`), which turns the
+//! uniform per-term bound into `n · K` in one lemma application and removes
+//! the need for any bespoke "sum of a constant" induction. Paired with
+//! [`CRealPrelude::abs_sum_range_le`] and [`CRealPrelude::sum_range_le`] it
+//! gives the whole sum-level half of piece 1 as ONE general lemma about
+//! `sumRange`, with no `riemannSum`, no mesh and no modulus in it.
 
 use super::completeness::half_shift_le;
 use super::convergence::{
