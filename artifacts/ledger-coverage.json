@@ -10,9 +10,9 @@
   "counts": {
     "overall": {
       "kernel_theorems": 1469,
-      "registered": 1467,
+      "registered": 1461,
       "curated": 474,
-      "unregistered": 2
+      "unregistered": 8
     },
     "by_prelude": {
       "complex": {
@@ -45,10 +45,17 @@
       },
       "logic": {
         "kernel_theorems": 32,
-        "registered_count": 32,
+        "registered_count": 26,
         "curated_count": 24,
-        "unregistered_count": 0,
-        "unregistered": []
+        "unregistered_count": 6,
+        "unregistered": [
+          "Eq.symm",
+          "Or.resolve_right",
+          "congrFun'",
+          "demorgan_or_not_and",
+          "not_not_imp",
+          "not_not_not_intro"
+        ]
       },
       "nat": {
         "kernel_theorems": 338,
@@ -77,8 +84,14 @@
     }
   },
   "unregistered": [
+    "Eq.symm",
     "Nat.le_refl",
-    "Nat.le_succ"
+    "Nat.le_succ",
+    "Or.resolve_right",
+    "congrFun'",
+    "demorgan_or_not_and",
+    "not_not_imp",
+    "not_not_not_intro"
   ],
   "registered_kernel_theorems_not_in_denominator": [
     "CReal.Equiv",
@@ -110,9 +123,9 @@
     "Rat.normalize"
   ],
   "join": {
-    "facts_scanned": 1815,
-    "kernel_route_established_facts": 1569,
-    "resolved_via_kernel_theorem_field": 1120,
+    "facts_scanned": 1809,
+    "kernel_route_established_facts": 1563,
+    "resolved_via_kernel_theorem_field": 1114,
     "resolved_via_statement_name": 373,
     "resolved_via_checker_command_fallback": 2,
     "unresolved_fact_ids": [
@@ -192,6 +205,6 @@
       "F:wilson-theorem-over-constructed-integers"
     ],
     "curated_facts_claimed": 502,
-    "unreviewed_generated_facts": 993
+    "unreviewed_generated_facts": 987
   }
 }
