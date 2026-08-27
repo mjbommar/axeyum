@@ -88,6 +88,7 @@ use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
 use crate::rat_prelude::ops::{nat_rewrite_prop, radd, rat_eq_rewrite, rle};
 
+use super::ring_helpers::add4_comm;
 use super::{CRealPrelude, creal_ty};
 
 // --- shared term builders ----------------------------------------------------
@@ -1227,4 +1228,273 @@ pub(super) fn declare_uniform_convergence_continuity(
     p: CRealPrelude,
 ) -> Result<(), KernelError> {
     declare_uniform_limit_uniformly_continuous(d, p)
+}
+
+// ============================================================================
+// Theorem: sums preserve uniform convergence.
+// ============================================================================
+//
+// `∀ F H G K a b, UniformConvergesOn F G a b → UniformConvergesOn H K a b →
+// UniformConvergesOn (fun n x => add (F n x) (H n x)) (fun x => add (G x) (K
+// x)) a b`.
+//
+// The rate for the sum is EXACTLY `k1 + k2` (the two component rates added),
+// because both `close_within` bounds already share the SAME denominator
+// index `n` -- `Rat.natDivSucc_add` fuses `natDivSucc k1 n + natDivSucc k2 n`
+// into `natDivSucc (k1+k2) n` with no widening/scaling step at all, unlike
+// [`declare_uniform_limit_uniformly_continuous`]'s `weaken_rate`, which is
+// needed there only because that theorem compares bounds at TWO DIFFERENT
+// indices (the target accuracy `n` and a deeper function-index `N`). The
+// route: split each `close_within` hypothesis into its two one-sided `le`
+// legs via `CReal.two_sided_of_abs_sub_le`, combine the matching legs with
+// `CReal.add_le_add`, rearrange the resulting four-term sum with
+// [`add4_comm`] so the two "gap" terms land together, fuse the two
+// `ofRat`-embedded gaps into one `ofRat (Rat.add b1 b2)` via
+// `CReal.ofRat_add`, rebuild a single `close_within` bound at that fused
+// rational via `CReal.abs_le_of_two_sided`, and finally widen that bound (by
+// an EXACT `Rat` equality this time, not merely an inequality) to the stated
+// `natDivSucc (k1+k2) n` shape via `Rat.natDivSucc_add` and
+// [`weaken_close_within`].
+
+/// `CReal.uniform_converges_add : ∀ F H G K a b, UniformConvergesOn F G a b →
+/// UniformConvergesOn H K a b → UniformConvergesOn (fun n x => add (F n x) (H
+/// n x)) (fun x => add (G x) (K x)) a b`.
+///
+/// See the section documentation above for the route.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_uniform_converges_add(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let carrier = creal_ty(d, p);
+    let seq_ty = seq_fn_ty(d, p);
+    let func_ty = fn_ty(d, p);
+    let nat = d.nat_ty();
+    let logic = rat.int.logic;
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let hu1_ty = uconv_ty(d, p, f, g, a, b);
+    let hu1_fv = d.fresh_fvar();
+    let hu1 = d.kernel().fvar(hu1_fv);
+    let hu2_ty = uconv_ty(d, p, h, k, a, b);
+    let hu2_fv = d.fresh_fvar();
+    let hu2 = d.kernel().fvar(hu2_fv);
+
+    // `sum_seq := fun n x => add (F n x) (H n x)`, `sum_fn := fun x => add (G
+    // x) (K x)` -- the subject of the conclusion's `UniformConvergesOn`.
+    let sum_seq = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let fnx = d.apply(f, &[n, x]);
+        let hnx = d.apply(h, &[n, x]);
+        let sum = d.const_app(p.add, &[fnx, hnx]);
+        let with_x = d.lam_fv(x_fv, carrier, sum);
+        d.lam_fv(n_fv, nat, with_x)
+    };
+    let sum_fn = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let gx = d.apply(g, &[x]);
+        let kx = d.apply(k, &[x]);
+        let sum = d.const_app(p.add, &[gx, kx]);
+        d.lam_fv(x_fv, carrier, sum)
+    };
+
+    let k1 = d.const_app(p.uconv_rate, &[f, g, a, b, hu1]);
+    let k2 = d.const_app(p.uconv_rate, &[h, k, a, b, hu2]);
+    let rate = NatOps::add(d, k1, k2);
+
+    let huspec1 = d.const_app(p.uconv_spec, &[f, g, a, b, hu1]);
+    let huspec2 = d.const_app(p.uconv_spec, &[h, k, a, b, hu2]);
+
+    let spec = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let hax_fv = d.fresh_fvar();
+        let hax = d.kernel().fvar(hax_fv);
+        let hxb_fv = d.fresh_fvar();
+        let hxb = d.kernel().fvar(hxb_fv);
+
+        let fnx = d.apply(f, &[n, x]);
+        let hnx = d.apply(h, &[n, x]);
+        let gx = d.apply(g, &[x]);
+        let kx = d.apply(k, &[x]);
+        let sumf = d.const_app(p.add, &[fnx, hnx]);
+        let sumg = d.const_app(p.add, &[gx, kx]);
+
+        let b1 = div_succ_at(d, p, k1, n);
+        let b2 = div_succ_at(d, p, k2, n);
+        let e1 = d.const_app(p.of_rat, &[b1]);
+        let e2 = d.const_app(p.of_rat, &[b2]);
+
+        // t1 : close_within fnx gx b1, t2 : close_within hnx kx b2.
+        let t1 = d.apply(huspec1, &[n, x, hax, hxb]);
+        let t2 = d.apply(huspec2, &[n, x, hax, hxb]);
+
+        // Split each into its two one-sided legs.
+        let gx_plus_e1 = d.const_app(p.add, &[gx, e1]);
+        let fnx_plus_e1 = d.const_app(p.add, &[fnx, e1]);
+        let f1u_ty = d.const_app(p.le, &[fnx, gx_plus_e1]);
+        let f1l_ty = d.const_app(p.le, &[gx, fnx_plus_e1]);
+        let split1 = d.const_app(p.two_sided_of_abs_sub_le, &[fnx, gx, b1, t1]);
+        let f1u = d.const_app(logic.and_left, &[f1u_ty, f1l_ty, split1]);
+        let f1l = d.const_app(logic.and_right, &[f1u_ty, f1l_ty, split1]);
+
+        let kx_plus_e2 = d.const_app(p.add, &[kx, e2]);
+        let hnx_plus_e2 = d.const_app(p.add, &[hnx, e2]);
+        let f2u_ty = d.const_app(p.le, &[hnx, kx_plus_e2]);
+        let f2l_ty = d.const_app(p.le, &[kx, hnx_plus_e2]);
+        let split2 = d.const_app(p.two_sided_of_abs_sub_le, &[hnx, kx, b2, t2]);
+        let f2u = d.const_app(logic.and_left, &[f2u_ty, f2l_ty, split2]);
+        let f2l = d.const_app(logic.and_right, &[f2u_ty, f2l_ty, split2]);
+
+        // su : le sumf (add gx_plus_e1 kx_plus_e2)
+        let su = d.lemma(p.add_le_add, &[fnx, gx_plus_e1, hnx, kx_plus_e2, f1u, f2u]);
+        // sl : le sumg (add fnx_plus_e1 hnx_plus_e2)
+        let sl = d.lemma(p.add_le_add, &[gx, fnx_plus_e1, kx, hnx_plus_e2, f1l, f2l]);
+
+        // Rearrange each RHS: (a+e1)+(c+e2) ~ (a+c)+(e1+e2).
+        let (target_u, pu) = add4_comm(d, p, gx, e1, kx, e2);
+        // target_u = add (add gx kx) (add e1 e2)
+        let rhs_u = d.const_app(p.add, &[gx_plus_e1, kx_plus_e2]);
+        let refl_sumf = d.lemma(p.equiv_refl, &[sumf]);
+        let su2 = d.lemma(
+            p.le_congr,
+            &[sumf, sumf, rhs_u, target_u, refl_sumf, pu, su],
+        );
+        // su2 : le sumf target_u
+
+        let (target_l, pl) = add4_comm(d, p, fnx, e1, hnx, e2);
+        // target_l = add sumf (add e1 e2)   (add fnx hnx is exactly sumf)
+        let rhs_l = d.const_app(p.add, &[fnx_plus_e1, hnx_plus_e2]);
+        let refl_sumg = d.lemma(p.equiv_refl, &[sumg]);
+        let sl2 = d.lemma(
+            p.le_congr,
+            &[sumg, sumg, rhs_l, target_l, refl_sumg, pl, sl],
+        );
+        // sl2 : le sumg target_l
+
+        // Fuse the two `ofRat`-embedded gaps into one.
+        let e1e2 = d.const_app(p.add, &[e1, e2]);
+        let radd_b1b2 = radd(d, b1, b2);
+        let fuse = d.lemma(p.of_rat_add, &[b1, b2]);
+        // fuse : Equiv e1e2 (ofRat radd_b1b2)
+        let ofrat_radd = d.const_app(p.of_rat, &[radd_b1b2]);
+
+        let sumg_add4 = d.const_app(p.add, &[gx, kx]);
+        let final_u_rhs = d.const_app(p.add, &[sumg_add4, ofrat_radd]);
+        let congr_u = {
+            let refl_sumg4 = d.lemma(p.equiv_refl, &[sumg_add4]);
+            d.lemma(
+                p.add_congr,
+                &[sumg_add4, sumg_add4, e1e2, ofrat_radd, refl_sumg4, fuse],
+            )
+        };
+        // congr_u : Equiv target_u final_u_rhs
+        let hxy = d.lemma(
+            p.le_congr,
+            &[sumf, sumf, target_u, final_u_rhs, refl_sumf, congr_u, su2],
+        );
+        // hxy : le sumf final_u_rhs
+
+        let final_l_rhs = d.const_app(p.add, &[sumf, ofrat_radd]);
+        let congr_l = {
+            let refl_sumf2 = d.lemma(p.equiv_refl, &[sumf]);
+            d.lemma(
+                p.add_congr,
+                &[sumf, sumf, e1e2, ofrat_radd, refl_sumf2, fuse],
+            )
+        };
+        // congr_l : Equiv target_l final_l_rhs
+        let hyx = d.lemma(
+            p.le_congr,
+            &[sumg, sumg, target_l, final_l_rhs, refl_sumg, congr_l, sl2],
+        );
+        // hyx : le sumg final_l_rhs
+
+        let combined = d.lemma(p.abs_le_of_two_sided, &[sumf, sumg, radd_b1b2, hxy, hyx]);
+        // combined : close_within sumf sumg radd_b1b2
+
+        // Widen the bound from `radd b1 b2` to `natDivSucc rate n` -- an
+        // EXACT equality via `Rat.natDivSucc_add`, not merely an
+        // inequality.
+        let eq_k = d.lemma(rat.nat_div_succ_add, &[k1, k2, n]);
+        // eq_k : Eq Rat radd_b1b2 (natDivSucc rate n)
+        let final_bound = div_succ_at(d, p, rate, n);
+        let refl_le = d.lemma(rat.le_refl, &[radd_b1b2]);
+        let rat_le_final = rat_eq_rewrite(d, radd_b1b2, final_bound, eq_k, refl_le, &|d, t| {
+            rle(d, rat, radd_b1b2, t)
+        });
+        // rat_le_final : Rat.le radd_b1b2 final_bound
+
+        let final_close = weaken_close_within(
+            d,
+            p,
+            sumf,
+            sumg,
+            radd_b1b2,
+            final_bound,
+            combined,
+            rat_le_final,
+        );
+        // final_close : close_within sumf sumg final_bound
+
+        let range_xb = d.const_app(p.le, &[x, b]);
+        let range_ax = d.const_app(p.le, &[a, x]);
+        let with_hxb = d.lam_fv(hxb_fv, range_xb, final_close);
+        let with_hax = d.lam_fv(hax_fv, range_ax, with_hxb);
+        let with_x = d.lam_fv(x_fv, carrier, with_hax);
+        d.lam_fv(n_fv, nat, with_x)
+    };
+
+    let mk_applied = d.const_app(p.uconv_mk, &[sum_seq, sum_fn, a, b, rate, spec]);
+
+    let value = {
+        let with_hu2 = d.lam_fv(hu2_fv, hu2_ty, mk_applied);
+        let with_hu1 = d.lam_fv(hu1_fv, hu1_ty, with_hu2);
+        let with_b = d.lam_fv(b_fv, carrier, with_hu1);
+        let with_a = d.lam_fv(a_fv, carrier, with_b);
+        let with_k = d.lam_fv(k_fv, func_ty, with_a);
+        let with_g = d.lam_fv(g_fv, func_ty, with_k);
+        let with_h = d.lam_fv(h_fv, seq_ty, with_g);
+        d.lam_fv(f_fv, seq_ty, with_h)
+    };
+    let ty = {
+        let conclusion = uconv_ty(d, p, sum_seq, sum_fn, a, b);
+        let after_hu2 = d.arrow(hu2_ty, conclusion);
+        let after_hu1 = d.arrow(hu1_ty, after_hu2);
+        let with_b = d.pi_fv(b_fv, carrier, after_hu1);
+        let with_a = d.pi_fv(a_fv, carrier, with_b);
+        let with_k = d.pi_fv(k_fv, func_ty, with_a);
+        let with_g = d.pi_fv(g_fv, func_ty, with_k);
+        let with_h = d.pi_fv(h_fv, seq_ty, with_g);
+        d.pi_fv(f_fv, seq_ty, with_h)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.uniform_converges_add,
+        uparams: vec![],
+        ty,
+        value,
+    })
 }

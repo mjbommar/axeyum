@@ -4321,6 +4321,20 @@ pub struct CRealPrelude {
     /// `CReal.polyDegreeLt_polyScale : ∀ a c n, polyDegreeLt c n →
     /// polyDegreeLt (polyScale a c) n`.
     pub poly_degree_lt_poly_scale: NameId,
+    /// `CReal.uniform_converges_add : ∀ F H G K a b, UniformConvergesOn F G a
+    /// b → UniformConvergesOn H K a b → UniformConvergesOn (fun n x => add (F
+    /// n x) (H n x)) (fun x => add (G x) (K x)) a b`
+    /// (`creal/uniform_convergence.rs`) — sums preserve uniform convergence:
+    /// the pointwise-sum rate is the SUM of the two rates (`k1 + k2`),
+    /// exactly, via `Rat.natDivSucc_add` fusing the two per-index bounds.
+    /// Uses [`Self::two_sided_of_abs_sub_le`]/[`Self::abs_le_of_two_sided`] to
+    /// split and recombine each `close_within` fact, exactly as
+    /// [`Self::uniform_limit_uniformly_continuous`] does, but skips that
+    /// theorem's private `weaken_rate` index-widening step entirely: both
+    /// bounds already share the SAME denominator index `n`, so no scaling
+    /// across different function indices is needed, only a rearrangement of
+    /// the sum.
+    pub uniform_converges_add: NameId,
 }
 
 impl CRealPrelude {
@@ -4794,6 +4808,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         poly_degree_lt: kernel.name_str(creal, "polyDegreeLt"),
         poly_degree_lt_poly_add: kernel.name_str(creal, "polyDegreeLt_polyAdd"),
         poly_degree_lt_poly_scale: kernel.name_str(creal, "polyDegreeLt_polyScale"),
+        uniform_converges_add: kernel.name_str(creal, "uniform_converges_add"),
     }
 }
 
@@ -5058,6 +5073,13 @@ pub(crate) fn build_creal_prelude_uncached(
         // cannot join `declare_uniform_continuity`'s own call site, well
         // above `two_sided_of_abs_sub_le` in this build order.
         uniform_convergence::declare_uniform_convergence_continuity(&mut d, prelude)?;
+        // `uniform_converges_add` needs `CReal.two_sided_of_abs_sub_le`/
+        // `CReal.abs_le_of_two_sided` (both well above, same as
+        // `uniform_limit_uniformly_continuous` just above) plus
+        // `Rat.natDivSucc_add` (predates `creal` entirely); no dependency on
+        // `UniformlyContinuousOn` at all, so it could dispatch earlier, but
+        // sits beside its sibling theorem in this file for locality.
+        uniform_convergence::declare_uniform_converges_add(&mut d, prelude)?;
         // `ofNat_add`/`ofNat_mul` only need `CReal.ofNat`
         // (`archimedean::declare_archimedean`, well above) and the `Rat`-level
         // `ofRat_add`/`ofRat_mul`/`natDivSucc_add`/`natDivSucc_mul` facts that
