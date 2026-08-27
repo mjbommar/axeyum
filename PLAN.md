@@ -121,6 +121,7 @@ now. Nothing was deleted.
 | 2026-08-27 | (uncommitted at status-file write time) | Ten new `artifacts/facts/F-creal-*.json` entries for the Ch.13/14 Riemann integral construction and algebra (`riemannSum_cauchy`, `integral`, `integral_converges`, `integral_const`, `integral_add`, `integral_le`, `integral_scale`, `integral_witness_independent`, `riemannSum_integral_close`, `sharedIndexToCanonical`); `python3 scripts/validate-facts.py` green (708 facts, 0 errors). |
 | 2026-08-27 | (uncommitted at status-file write time) | Added `--require-declaration <name> [--require-kind <kind>]` to `crates/axeyum-lean-kernel/examples/kernel_declaration_projection.rs`: a direct, fail-on-absence presence checker for `Declaration::Definition`s (and any other kind), mutation-tested against `CReal.integral`. Upgraded `F:creal-integral`'s `kernel-CReal.integral` evidence to use it. Registered 14 new `artifacts/facts/F-creal-*.json` entries for Spivak Ch.18 (`e`) and Ch.22-23 (series convergence tests): `creal-e`, `creal-e-converges`, `creal-two-le-e`, `creal-e-le-three`, `creal-e-le-four`, `creal-expterm-le-geom`, `creal-expdominantcauchy`, `creal-cauchyofpointwiseequiv`, `creal-geomcauchy`, `creal-sumrange-comparisontest`, `creal-sumrange-cauchy-of-dominated`, `creal-sumrange-converges-of-dominated`, `creal-sumrange-cauchy-of-abs-cauchy`, `creal-sumrange-converges-of-abs-converges`. `python3 scripts/validate-facts.py` green (722 facts, 0 errors). |
 | 2026-08-27 | (uncommitted at status-file write time) | Registered 28 new `artifacts/facts/F-*.json` entries: Ch.15 cosine-at-1 construction and bounds (`creal-cosone`, `creal-costerm`, `creal-cosseriespartial`, `creal-costermabsledominant`, `creal-cosoneconverges`, `creal-cosone-le-four`, `creal-neg-four-le-cosone`); Ch.22-23 general-ratio geometric series and ratio test (`creal-geomcauchyoflt`, `creal-geomcauchyofltordered`, `creal-geomscaledcauchyoflt`, `creal-sumrangeratiotest`); Ch.14 crossing-index construction (`creal-crossingindex`, `creal-crossingupper`, `creal-crossinglower`, `creal-crossingsampleupper`, `creal-crossingsamplelower`); Ch.25-27 polynomials over `Complex` (`complex-polyeval`, `complex-polyeval-zero`, `complex-polyeval-succ`, `complex-polyadd`, `complex-polyeval-polyadd`, `complex-polyscale`, `complex-polyeval-polyscale`, `complex-polydegreelt`, `complex-polydegreelt-polyadd`, `complex-polydegreelt-polyscale`, `complex-polymul`, `complex-polyeval-polymul`). `python3 scripts/validate-facts.py` green (750 facts, 0 errors). Mutation-tested 3 representative checkers (1 definition, 2 theorems) in an isolated snapshot; all failed correctly on the mutated name while unrelated controls in the same rebuild passed. |
+| 2026-08-27 | `PENDING` | Diagnosed why `fact-frontier.py --json` reports `admissible: 0` over 132 dependency-ready facts: operation registration requires a completed, independently-checked proof (`ADMISSION_CONTRACTS` allows only `proved`), and none exists for any open fact. Added a purely additive `diagnostics.unregistered_by_route_class` split to `fact-frontier.py`; declined to fabricate an operation over unproved work. `docs/autogenesis/288-admission-precedes-registration.md`. |
 | 2026-08-26 | `f1fb56564` | Compose a held-out-safe three-lemma retrieval spine and admit Mathlib's real `Nat.choose_symm_of_eq_add` axiom-free, moving natural binomial from one to two accepted siblings. |
 | 2026-08-26 | `dc1a92029` | Restore the complete producer-search checkpoint after a failed induction alternative; preserve the eight-binder contract while replacing two false budget declines with their real missing-composition obstruction. |
 | 2026-08-26 | `963977dde` | Falsify the supposed lean4export arrow ceiling with three proof-isolated binomial exports; measure all three under unchanged retrieval and feed the two binder plus one negative-terminal declines into the reusable-family queue. |
@@ -2274,6 +2275,57 @@ exist, that is a finding to report, not a thing to build"), none of the
 above were built, and none of the unmerged sibling branches were merged in
 to source them — `main`/`origin/main` do not contain these commits as of
 this run.
+
+**Frontier admissibility diagnosis (`done-for-now`, frontier-fix, 2026-08-27).**
+Re-measured doc 262's `fact-frontier.py --json` result on today's 776-fact
+ledger: ready 141→132, admissible unchanged at 0. Root-caused it precisely,
+against the validator rather than by inference: `validate-autogenesis-
+operations.py`'s `ADMISSION_CONTRACTS` is a closed set of exactly two tuples,
+both requiring `epistemic_status: "proved"` — so no operation can be
+registered for a fact whose proof does not already exist somewhere,
+independently checked. Confirmed empirically that all 27 currently-registered
+operations name already-proved facts, and that zero orphaned
+"candidate-checked-not-admitted" manifests exist for any open fact (nothing
+free to wire in). Of 776 facts ledger-wide, exactly one open fact
+(`F:fp16-add-monotone-rne`) is in a decidable SMT fragment; the other 125
+ready-but-unregistered facts need a genuinely new kernel proof via the
+s5-hosted Mathlib/lean4export pipeline. Did not fabricate an operation
+claiming `proved` for unproved work — that is the exact "checker that cannot
+fail" defect this project repeatedly finds and repairs. Full writeup:
+`docs/autogenesis/288-admission-precedes-registration.md`.
+
+**Landed.** A purely additive `diagnostics` key in `fact-frontier.py --json`
+(`ready_count`, `admissible_count`, `unregistered_by_route_class`) so the
+decidable/proof-route-only/no-route split doesn't have to be reconstructed by
+hand every time; 8/8 existing `test_fact_frontier.py` cases still pass
+unmodified. No change to `artifacts/autogenesis/operations.json`,
+`nursery-v1.json`, or any fact — `check-autogenesis-holdout-isolation.py`
+still passes (`held_out=37|verdict=PASS`), confirming the partition is
+untouched.
+
+**Curriculum.** Did not edit `docs/curriculum/curriculum.toml`. This week's
+~30 new `proved` `CReal`/`Complex` facts (uniform convergence, alternating
+series, polynomial evaluation, Complex factor-quotient/Horner form) map onto
+`sequences-and-limits`/`calculus`/`complex` — three nodes that already exist,
+currently `status = "lean-horizon"` on the SOLVER axis (no `axeyum-scenarios`
+family). Adding finer nodes would each need a real `gen-foundational-
+concepts.py` `CURRICULUM_MAP` entry naming an EXISTING example pack, which
+none of the plausible finer topics has yet; asserting one without a pack
+risks exactly the "asserts coverage it cannot demonstrate" defect
+`check-curriculum-coverage.py` exists to catch. Recorded as a finding in doc
+288 instead of a curriculum.toml edit.
+
+**Next, for whoever has s5/Mathlib iteration time.** Doc 288 names four
+sibling `Int.ModEq` facts already dependency-ready
+(`F:ml430-int-modeq-add-left-6e17c69a`, `-neg-f649f6c5`, `-of-dvd-b9c41fce`,
+`-sub-3148f130`) as the best next candidate for a genuinely general
+multi-target operation, since the shape-generic checker
+(`modeq_family_operation`, declines by typed `UnsupportedRecursorShape`/
+`UnsupportedIffShape` rather than fixed theorem names) already exists and
+only needs new s5-side Lean exports for these four targets. Separately,
+`F:fp16-add-monotone-rne` is the one open fact reachable by pure compute (no
+new proof needed) — worth a bounded, explicitly-timed attempt at the existing
+`smtcomp_cli` route.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
