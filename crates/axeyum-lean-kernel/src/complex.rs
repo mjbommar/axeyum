@@ -1530,6 +1530,45 @@ pub struct ComplexPrelude {
     /// base case, matching the "beyond the bound" branch exactly, not the
     /// buggy alternative [`Self::factor_quotient`]'s doc rejects.
     pub factor_quotient_degree_lt: NameId,
+    /// `Complex.hornerFromTop_diag_eq_polyEval : ∀ c a n, Equiv (hornerFromTop
+    /// c a n n) (polyEval c (Nat.succ n) a)` — the sum-level bridge between
+    /// `hornerFromTop`'s nested `Nat.rec` and `polyEval`'s `sumRange` fold,
+    /// proved by induction on `n`.
+    ///
+    /// This is the corrected form of the module doc's original "row growth"
+    /// claim (`s^{(m+1)}_k = s^{(m)}_k + a^{m+1-k} p_{m+1}`), and the finding
+    /// worth recording: read with `hornerFromTop`'s OWN indexing (`j` counts
+    /// UP from the top, `j = 0` is the leading coefficient), that relation
+    /// already *is* [`Self::horner_from_top_succ_succ`] — proved by `Eq.refl`
+    /// before this lemma was written. What that defeq-level fact does not
+    /// give for free is any connection to `polyEval`'s `sumRange`-shaped
+    /// value; the two recursions (a nested `Nat.rec` vs. a `sumRange` fold)
+    /// are structurally unrelated data, and this theorem is the bridge.
+    ///
+    /// Route, by induction on `n`: the base case (`n = 0`) reduces both sides
+    /// — via [`Self::horner_from_top_zero`] on the left and
+    /// [`Self::poly_eval_succ`]/[`Self::poly_eval_zero`]/[`Self::pow_zero`]
+    /// (each `Eq` lifted to `Equiv`) plus a `ring_law_proof` collapse of `add
+    /// zero (mul c0 one)` on the right — to the same value `c 0`. The step
+    /// (`n = succ j`) unfolds both sides one term via
+    /// [`Self::horner_from_top_succ_succ`]/[`Self::poly_eval_succ`], rewrites
+    /// the inductive hypothesis in on the left via `add_congr`, and closes
+    /// the remaining mismatch (`mul (pow a (succ j)) (c (succ j))` vs. `mul
+    /// (c (succ j)) (pow a (succ j))`) with a `mul_comm`-shaped
+    /// `ring_law_proof`.
+    ///
+    /// **NOT attempted from here: the general symbolic factor theorem
+    /// itself.** Closing it needs a further, separate induction connecting
+    /// `polyEval (factorQuotient c a n) n x` (a *sum* of `hornerFromTop`
+    /// values, reindexed through `Nat.sub`) to a telescoping rearrangement of
+    /// `polyEval c (succ n) x` — this diagonal lemma supplies one anchor
+    /// point (`hornerFromTop c a n n` is literally `polyEval c (succ n) a`,
+    /// the remainder term at the induction's top), but does not by itself
+    /// relate `factorQuotient c a (succ n)` to `factorQuotient c a n`, which
+    /// differ at every shared index by a correction term proportional to the
+    /// new top coefficient — the reason a naive induction reusing the
+    /// smaller `factorQuotient` wholesale still does not work.
+    pub horner_from_top_diag_eq_poly_eval: NameId,
 }
 
 impl ComplexPrelude {
@@ -1716,6 +1755,8 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         horner_from_top_succ_succ: kernel.name_str(complex, "hornerFromTop_succ_succ"),
         factor_quotient: kernel.name_str(complex, "factorQuotient"),
         factor_quotient_degree_lt: kernel.name_str(complex, "factorQuotient_degreeLt"),
+        horner_from_top_diag_eq_poly_eval: kernel
+            .name_str(complex, "hornerFromTop_diag_eq_polyEval"),
     }
 }
 
