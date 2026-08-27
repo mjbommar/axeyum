@@ -4754,6 +4754,48 @@ pub struct CRealPrelude {
     /// rather than by hand. See that module's own doc comment for the
     /// deriver this permanent registration exercises.
     pub mul_pow_congr: NameId,
+
+    // --- the Extreme Value Theorem's boundary certificate (ADR-0603 row 2) ---
+    /// `CReal.evtLinear : CReal -> CReal -> CReal := fun v t => mul t v` --
+    /// the EVT counterexample family (`creal/extreme_value.rs`). Classical
+    /// supremum `max(0, v)` on `[0, 1]`, attained at `1` when `v >= 0` and at
+    /// `0` when `v <= 0`, so *which endpoint attains it* IS the sign of `v` --
+    /// checked by kernel reduction to exact rationals, both signs, in
+    /// `creal_tests::evt_linear_endpoint_values_reduce_and_flip_with_the_sign_of_v`.
+    ///
+    /// It is also Lipschitz with constant `|v|`, hence uniformly continuous
+    /// and inside classical EVT's hypothesis class -- but that is **asserted,
+    /// not proved**: no declaration here states it. See that module's
+    /// "LABELED GAP" section for the sized route and the one private helper
+    /// (`creal/uniform_continuity.rs`'s `abs_bound_of_self`) whose promotion
+    /// unblocks it.
+    pub evt_linear: NameId,
+    /// `CReal.evt_attained_max_decides_sign : forall v c, le zero c ->
+    /// le c one -> (forall t, le zero t -> le t one -> le (mul t v)
+    /// (mul c v)) -> Or (le v zero) (le zero v)` --
+    /// **ADR-0603 row 2 for the Extreme Value Theorem**, machine-checked
+    /// rather than asserted (`creal/extreme_value.rs`).
+    ///
+    /// An *attained* maximiser for [`Self::evt_linear`] on `[0, 1]` yields
+    /// `v <= 0` or `0 <= v` for an ARBITRARY real -- analytic LLPO,
+    /// equivalently the total order `le_total` that
+    /// `creal/cotransitivity.rs`'s module documentation states is neither
+    /// assumed nor provable here. So an operator handing back a maximiser for
+    /// every `v` would hand back the comparison the order deliberately lacks,
+    /// which is what makes [`Self::bounded_of_uniformly_continuous`] -- a
+    /// COMPUTED bound, no attaining point -- optimal rather than merely
+    /// unimproved.
+    ///
+    /// One [`Self::lt_cotrans`] call on the fixed strict pair
+    /// [`Self::zero_lt_one`] at `z := c`, then
+    /// [`Self::le_of_mul_le_mul_left`] against the modulus
+    /// [`Self::pos_bound_of_lt`] supplies -- at `c` in the `0 < c` branch and
+    /// at `1 + (-c)` in the `c < 1` branch. See that module's own
+    /// documentation, including its "Honest scope" section: this proves the
+    /// classical conclusion at least as strong as a decision principle this
+    /// kernel does not have, NOT that the principle is false (it is
+    /// consistent, hence unprovable here rather than refutable).
+    pub evt_attained_max_decides_sign: NameId,
 }
 
 impl CRealPrelude {
@@ -5266,6 +5308,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         exp_term_zero_eq_one: kernel.name_str(creal, "expTerm_zero_eq_one"),
         exp_term_one_eq_one: kernel.name_str(creal, "expTerm_one_eq_one"),
         mul_pow_congr: kernel.name_str(creal, "mulPowCongr"),
+        evt_linear: kernel.name_str(creal, "evtLinear"),
+        evt_attained_max_decides_sign: kernel.name_str(creal, "evt_attained_max_decides_sign"),
     }
 }
 
@@ -9019,6 +9063,49 @@ const STEPS: &[BuildStep] = &[
         provides: &[|p: CRealPrelude| p.mul_pow_congr],
         run: congruence::declare_congruence_extras,
     },
+    BuildStep {
+        label: "extreme_value::declare_extreme_value",
+        requires: &[
+            |p: CRealPrelude| p.add,
+            |p: CRealPrelude| p.add_assoc,
+            |p: CRealPrelude| p.add_comm,
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.add_lt_add_of_le_of_lt,
+            |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.creal,
+            |p: CRealPrelude| p.equiv,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.le,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_of_lt,
+            |p: CRealPrelude| p.le_of_mul_le_mul_left,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.left_distrib,
+            |p: CRealPrelude| p.lt,
+            |p: CRealPrelude| p.lt_congr,
+            |p: CRealPrelude| p.lt_cotrans,
+            |p: CRealPrelude| p.mul,
+            |p: CRealPrelude| p.mul_comm,
+            |p: CRealPrelude| p.mul_congr,
+            |p: CRealPrelude| p.mul_one,
+            |p: CRealPrelude| p.mul_zero,
+            |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.one,
+            |p: CRealPrelude| p.pos_bound,
+            |p: CRealPrelude| p.pos_bound_of_lt,
+            |p: CRealPrelude| p.zero,
+            |p: CRealPrelude| p.zero_lt_one,
+        ],
+        provides: &[
+            |p: CRealPrelude| p.evt_attained_max_decides_sign,
+            |p: CRealPrelude| p.evt_linear,
+        ],
+        run: extreme_value::declare_extreme_value,
+    },
 ];
 
 /// Build the real prelude: `ℝ` as a Bishop setoid over the constructed `ℚ`,
@@ -10030,6 +10117,7 @@ mod density;
 mod deriv_unique;
 mod derivative;
 mod exponential;
+mod extreme_value;
 mod field;
 mod geometric;
 mod integral;
