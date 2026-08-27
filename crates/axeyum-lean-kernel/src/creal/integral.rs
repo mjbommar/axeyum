@@ -329,6 +329,63 @@
 //! free `Rat` fvar throughout `crossing_close`, never a mesh-derived
 //! `Nat.mul`/`Nat.add` term, so none of the concrete-witness/lazy-delta
 //! traps this file's own history warns about apply here).
+//!
+//! ## `CReal.integral_split` — checked 2026-08-27 (later still), a THIRD
+//! lane: prerequisite (1) landed as [`CRealPrelude::mesh_scaled_le_of_ge`],
+//! prerequisite (2) NOT attempted, and here is exactly why
+//!
+//! [`declare_mesh_scaled_le_of_ge`] proves the SCALED analogue prerequisite
+//! (1) names: `le (mul (ofNat k) Δ_m) (ofRat (natDivSucc 1 outer))` for an
+//! explicit Nat multiplier `k := Nat.succ k0`, by reusing
+//! [`declare_mesh_le_of_ge`] wholesale at a substituted `outer' := k*outer +
+//! k0` and collapsing `k·(1/(outer'+1))` back to `1/(outer+1)` with the same
+//! `magnitude_times_frac_eq_outer` helper `mesh_le_of_ge` itself uses (its
+//! `(c, magnitude, deep)` slots taking `(k0, k, outer')`, which is EXACTLY
+//! `Rat.natDivSucc_scale`'s required syntactic shape). Reusable well beyond
+//! this file, and a complete result on its own, independent of everything
+//! below.
+//!
+//! Prerequisite (2) — `samplePt`'s domain membership — was investigated and
+//! NOT attempted, because the investigation surfaced a genuine type
+//! mismatch prerequisite (2)'s own one-line gloss papers over. `crossing.rs`
+//! types `Δ` as a **`Rat`** (`crossingIndex a c Δ`, `Δ : Rat`, invertible via
+//! the DECIDABLE `Rat.inv`), while `mesh_le_of_ge`/`mesh_scaled_le_of_ge`'s
+//! own mesh step `Δ_m := (b−a)·natDivSucc(1,m)` is a **`CReal`** (`b−a` is an
+//! arbitrary real, not generally rational). "`Δ_ab := (b−a)/(m+1)`" — this
+//! entry's own predecessor's gloss, repeated in [`CRealPrelude::crossing_close`]'s
+//! doc comment — is not literally well-typed as `crossingIndex`'s argument;
+//! at best it names a **rational upper bound** for the true real mesh step
+//! (e.g. `Δ := natDivSucc(magnitude, m)` for `magnitude := bound(b−a)+1`,
+//! since `b−a ≤ ofNat(magnitude)` makes `(b−a)/(m+1) ≤ magnitude/(m+1)`).
+//!
+//! Working through THAT reading to its end does not land prerequisite (2)
+//! either. With `w := (c−a)·Δ⁻¹` (`crossingIndex`'s own rescaled argument),
+//! `0 ≤ c−a ≤ b−a ≤ ofNat(magnitude)` and `Δ⁻¹ = ofNat(m+1)/magnitude`
+//! (exactly, since `Δ = magnitude/(m+1)`) give `w ≤ ofNat(m+1)` — clean, and
+//! [`CRealPrelude::bucket_index_bound`] (`creal/uniform_continuity.rs`,
+//! already proved) would then bound `crossingIndex a c Δ = bucketIndex w 0 ≤
+//! (bound(ofNat(m+1))+3)*1`, roughly `m+4`, NOT `≤ m`. That gap alone is
+//! absorbable (widen the target interval's own slack). The genuinely
+//! disqualifying direction is the OTHER one: this `Δ` is an upper bound for
+//! the true step, so it can UNDERSHOOT the number of steps actually needed
+//! to cross `[a, c]` at accuracy comparable to `Δ`'s own denominator, and
+//! nothing above bounds `crossingIndex` in terms of `m` alone without ALSO
+//! bounding `magnitude := bound(b−a)+1` — which is data about the interval,
+//! not about `m` — so "a caller supplying only a mesh count" cannot be made
+//! literally true for THIS reading of `Δ` either. Resolving prerequisite
+//! (2) needs a considered choice of what `Δ` actually denotes for
+//! `integral_split`'s crossing block (a `Rat` derived from `m` and the
+//! interval's own Archimedean bound, per above, OR a different bracketing
+//! that avoids `crossingIndex`'s `Rat`-typed step altogether) before further
+//! proof engineering is worth attempting — a design question, not a proof
+//! gap. Left exactly as prerequisite (2) was before this entry:
+//! unattempted, hypothesis, explicit.
+//!
+//! `creal_prelude_builds`: 23.07 s test-run (was ~19.99 s on the previous
+//! lane's build; `Δ`/`k`/`k0`/`outer`/`m` all stay free fvars throughout
+//! [`declare_mesh_scaled_le_of_ge`], so none of this file's documented
+//! concrete-witness/lazy-delta traps apply — the increase is consistent
+//! with ordinary machine load, not a construction cost).
 
 use super::completeness::half_shift_le;
 use super::convergence::{

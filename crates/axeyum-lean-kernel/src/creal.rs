@@ -1428,9 +1428,15 @@ pub struct CRealPrelude {
     /// already within `UniformlyContinuousOn`'s modulus at accuracy `e`.
     /// Does **not** derive that Archimedean smallness from a mesh count, nor
     /// `samplePt`'s own domain membership — both are explicit hypotheses
-    /// here, left as the next steps toward `CReal.integral_split`. See
-    /// `creal/crossing.rs` and `creal/integral.rs`'s 2026-08-27 module doc
-    /// entry.
+    /// here. The first is now DISCHARGEABLE in general via
+    /// [`Self::mesh_scaled_le_of_ge`] (not yet wired into this theorem's own
+    /// statement). The second remains open, and is NOT merely unattempted —
+    /// `integral.rs`'s third 2026-08-27 module doc entry works through the
+    /// natural reading of "a mesh count `m`" for this theorem's `Rat`-typed
+    /// `Δ` and finds it does not make `samplePt ≤ b` provable from `m`
+    /// alone without also bounding the interval's own Archimedean constant,
+    /// which is data about `[a,b]`, not about `m`. See `creal/crossing.rs`
+    /// and `creal/integral.rs`'s 2026-08-27 module doc entries (all three).
     pub crossing_close: NameId,
     /// `CReal.sampleUpperBound : ∀ x m, CReal.le x (CReal.ofRat (Rat.add
     /// (CReal.seq x m) (Rat.natDivSucc 1 m)))` — the general
