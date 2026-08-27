@@ -126,7 +126,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 407] = [
+    let expected: [(&str, crate::NameId, &str); 408] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -1455,6 +1455,11 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         (
             "CReal.polyDegreeLt_polyScale",
             p.poly_degree_lt_poly_scale,
+            "theorem",
+        ),
+        (
+            "CReal.uniform_converges_add",
+            p.uniform_converges_add,
             "theorem",
         ),
     ];
@@ -10027,5 +10032,161 @@ fn poly_eval_poly_add_would_reject_mul_instead_of_add() {
         admitted.is_err(),
         "polyEval_polyAdd's proof must NOT type-check against a `mul`-shaped \
          conclusion: {admitted:?}"
+/// `CReal.uniform_converges_add` at a GENUINELY non-degenerate pair: `F n x
+/// := x` (via `uniform_converges_id`, instantiated at `[0, 1]`) and `H n x
+/// := x * (1/2)^n` (via `uniform_converges_geom_half`, already at `[0, 1]`)
+/// -- two structurally DIFFERENT sequences (at `n = 0`, `F 0 x = x` while `H
+/// 0 x = x * 1`, and they diverge at every later `n`), converging to two
+/// DIFFERENT limits (`id` vs. the constant `0`). This is deliberately NOT
+/// the `F = H` case: a lane's own prior control accidentally picked an
+/// index where both sides were the same term, and this instance avoids that
+/// by construction (`seq_identity` and `geom_half`'s own `seq_fn` have no
+/// shared head symbol).
+#[test]
+fn uniform_converges_add_applies_to_id_plus_geom_half() {
+    use super::exponential::half;
+    use crate::int_prelude::ops::IntDev;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = super::creal_ty(&mut d, p);
+    let nat = d.nat_ty();
+
+    let zero = d.kernel().const_(p.zero, vec![]);
+    let one = d.kernel().const_(p.one, vec![]);
+
+    // seq_identity := fun n x => x, identity := fun x => x (the witness
+    // `uniform_converges_id` uses internally).
+    let seq_identity = {
+        let n_fv = d.fresh_fvar();
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let inner = d.lam_fv(x_fv, carrier, x);
+        d.lam_fv(n_fv, nat, inner)
+    };
+    let identity = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        d.lam_fv(x_fv, carrier, x)
+    };
+
+    // seq_geom := fun n x => x * half^n, const_zero := fun x => zero (the
+    // witness `uniform_converges_geom_half` uses internally).
+    let half = half(&mut d, p);
+    let seq_geom = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let pow_half_n = d.const_app(p.pow, &[half, n]);
+        let w = d.const_app(p.mul, &[x, pow_half_n]);
+        let inner = d.lam_fv(x_fv, carrier, w);
+        d.lam_fv(n_fv, nat, inner)
+    };
+    let const_zero = {
+        let x_fv = d.fresh_fvar();
+        d.lam_fv(x_fv, carrier, zero)
+    };
+
+    let hu1 = d.lemma(p.uniform_converges_id, &[zero, one]);
+    let hu2 = d.kernel().const_(p.uniform_converges_geom_half, vec![]);
+
+    let instance = d.lemma(
+        p.uniform_converges_add,
+        &[
+            seq_identity,
+            seq_geom,
+            identity,
+            const_zero,
+            zero,
+            one,
+            hu1,
+            hu2,
+        ],
+    );
+
+    let inferred = d.kernel().infer(instance).unwrap_or_else(|error| {
+        panic!("uniform_converges_add refused at id + geom_half: {error:?}")
+    });
+
+    let rendered = kernel.render_lean(inferred);
+    assert!(
+        rendered.contains("UniformConvergesOn"),
+        "the instantiated conclusion is not a `UniformConvergesOn` fact: {rendered}"
+    );
+}
+
+/// `CReal.uniform_converges_add` REFUSES an argument-position swap: passing
+/// `uniform_converges_geom_half`'s witness where `uniform_converges_id`'s is
+/// expected (both slots are `UniformConvergesOn _ _ zero one`, so the TYPES
+/// only differ in which functions they name -- if this were accepted, it
+/// would mean the two hypothesis slots are not actually checked against
+/// their own `F, G` / `H, K` arguments).
+#[test]
+fn uniform_converges_add_cannot_swap_the_two_hypotheses() {
+    use super::exponential::half;
+    use crate::int_prelude::ops::IntDev;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = super::creal_ty(&mut d, p);
+    let nat = d.nat_ty();
+
+    let zero = d.kernel().const_(p.zero, vec![]);
+    let one = d.kernel().const_(p.one, vec![]);
+
+    let seq_identity = {
+        let n_fv = d.fresh_fvar();
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let inner = d.lam_fv(x_fv, carrier, x);
+        d.lam_fv(n_fv, nat, inner)
+    };
+    let identity = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        d.lam_fv(x_fv, carrier, x)
+    };
+
+    let half = half(&mut d, p);
+    let seq_geom = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let pow_half_n = d.const_app(p.pow, &[half, n]);
+        let w = d.const_app(p.mul, &[x, pow_half_n]);
+        let inner = d.lam_fv(x_fv, carrier, w);
+        d.lam_fv(n_fv, nat, inner)
+    };
+    let const_zero = {
+        let x_fv = d.fresh_fvar();
+        d.lam_fv(x_fv, carrier, zero)
+    };
+
+    let hu1 = d.lemma(p.uniform_converges_id, &[zero, one]);
+    let hu2 = d.kernel().const_(p.uniform_converges_geom_half, vec![]);
+
+    // Swapped: `hu2` (about `seq_geom`/`const_zero`) passed where the FIRST
+    // hypothesis (about `seq_identity`/`identity`) is required.
+    let instance = d.lemma(
+        p.uniform_converges_add,
+        &[
+            seq_identity,
+            seq_geom,
+            identity,
+            const_zero,
+            zero,
+            one,
+            hu2,
+            hu1,
+        ],
+    );
+
+    let outcome = d.kernel().infer(instance);
+    assert!(
+        outcome.is_err(),
+        "uniform_converges_add accepted its two hypotheses SWAPPED -- \
+         argument positions are not actually being type-checked: {outcome:?}"
     );
 }
