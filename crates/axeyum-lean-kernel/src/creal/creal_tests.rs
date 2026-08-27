@@ -3989,6 +3989,111 @@ fn riemann_sum_split_exact_at_id_zero_three_one_three_body() {
 }
 
 /// **Mandatory concrete instantiation for
+/// `CReal.riemannSum_split_exact_of_uc`** -- the SAME identity as
+/// `riemannSum_split_exact`, discharged from a `UniformlyContinuousOn`
+/// witness (`CReal.uniformly_continuous_id`) instead of a global `hcong`.
+/// `F := id` (again, not a constant: a constant cannot discriminate a wrong
+/// split point), `a := 0`, `b := ofNat 3`, `m_ac := 1`, `m_cb := 3` (so
+/// `n_ac = 2`, `n_cb = 4`, `m_ab = 5`, matching this file's own
+/// `riemann_sum_split_exact_at_id_zero_three_one_three` test's hand
+/// computation, `b` built via `ofNat 3` here rather than an add-chain since
+/// `hab` needs an actual `le zero (ofNat 3)` proof this route already knows
+/// how to build). Asserts the kernel accepts the theorem applied at these
+/// exact arguments against the INDEPENDENTLY built expected type.
+#[test]
+fn riemann_sum_split_exact_of_uc_at_id_zero_three_one_three() {
+    crate::on_a_deep_stack(riemann_sum_split_exact_of_uc_at_id_zero_three_one_three_body);
+}
+
+fn riemann_sum_split_exact_of_uc_at_id_zero_three_one_three_body() {
+    use crate::int_prelude::ops::IntDev;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = super::creal_ty(&mut d, p);
+
+    let zero_nat = d.num(0);
+    let three_nat = d.num(3);
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let b = d.const_app(p.of_nat, &[three_nat]);
+
+    let id_fn = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        d.lam_fv(x_fv, carrier, x)
+    };
+
+    let m_ac = d.num(1);
+    let m_cb = d.num(3);
+
+    let u = d.lemma(p.uniformly_continuous_id, &[zero_c, b]);
+
+    // hab : CReal.le zero (ofNat 3) -- same route as this file's own
+    // `riemann_sum_reblock_close`-family tests (`Rat.zero_le_natDivSucc`
+    // lifted across `CReal.ofRat_le`).
+    let hab = {
+        let rat_3 = d.const_app(p.rat.nat_div_succ, &[three_nat, zero_nat]);
+        let rzero = d.kernel().const_(p.rat.zero, vec![]);
+        let rle = d.lemma(p.rat.zero_le_nat_div_succ, &[three_nat, zero_nat]);
+        d.lemma(p.of_rat_le, &[rzero, rat_3, rle])
+    };
+
+    let proof = d.lemma(
+        p.riemann_sum_split_exact_of_uc,
+        &[id_fn, zero_c, b, m_ac, m_cb, u, hab],
+    );
+
+    // Independently built expected type -- the same recipe
+    // `riemann_sum_split_exact_at_id_zero_three_one_three`'s own expected
+    // type uses, with `b := ofNat 3` in place of that test's add-chain
+    // `three_c` (interning makes `ofNat 3` here line up with what the
+    // theorem's own proof term produces for THIS `b`).
+    let n_ac = d.succ(m_ac);
+    let m_ab = {
+        let nat_add = d.prelude().add;
+        d.const_app(nat_add, &[n_ac, m_cb])
+    };
+    let width_ab = {
+        let neg_a = d.const_app(p.neg, &[zero_c]);
+        d.const_app(p.add, &[b, neg_a])
+    };
+    let one_nat = d.num(1);
+    let frac_ab_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, m_ab]);
+    let frac_ab = super::embed(&mut d, p, frac_ab_rat);
+    let delta_ab = d.const_app(p.mul, &[width_ab, frac_ab]);
+    let on_ac = d.const_app(p.of_nat, &[n_ac]);
+    let w1 = d.const_app(p.mul, &[on_ac, delta_ab]);
+    let c = d.const_app(p.add, &[zero_c, w1]);
+
+    let riemann_ab = d.const_app(p.riemann_sum, &[id_fn, zero_c, b, m_ab]);
+    let riemann_ac = d.const_app(p.riemann_sum, &[id_fn, zero_c, c, m_ac]);
+    let riemann_cb = d.const_app(p.riemann_sum, &[id_fn, c, b, m_cb]);
+    let rhs = d.const_app(p.add, &[riemann_ac, riemann_cb]);
+    let expected_ty = super::equiv(&mut d, p, riemann_ab, rhs);
+
+    let anon = kernel.anon();
+    let name = kernel.name_str(
+        anon,
+        "__riemann_sum_split_exact_of_uc_at_id_zero_three_one_three",
+    );
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty: expected_ty,
+            value: proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "riemannSum_split_exact_of_uc at F := id, a := 0, \
+                 b := ofNat 3, m_ac := 1, m_cb := 3 did NOT type-check \
+                 against the independently rebuilt expected statement: \
+                 {error:?}"
+            )
+        });
+}
+
+/// **Mandatory concrete instantiation for
 /// `CReal.riemannSum_split_scale_invariant`, with a negative (swapped-count)
 /// control.** `a := 0`, `b := 3`, `m_ac0 := 0`, `m_cb0 := 1` (so `n_ac0 :=
 /// 1`, `n_cb0 := 2`, `m_ab0 := 2`, `delta_ab0 := 3 * (1/3) = 1`, `c_0 := 0 +
