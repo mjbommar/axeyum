@@ -2192,7 +2192,14 @@ pub(super) fn declare_weierstrass_m_test(
         let inner_after = d.const_app(p.add, &[sum_fpt_n, neg_g_pt]);
         let add_cong = d.lemma(
             p.add_congr,
-            &[x_term, sum_fpt_n, neg_g_pt, neg_g_pt, heq_sum, refl_neg_g_pt],
+            &[
+                x_term,
+                sum_fpt_n,
+                neg_g_pt,
+                neg_g_pt,
+                heq_sum,
+                refl_neg_g_pt,
+            ],
         );
         // add_cong : Equiv inner_before inner_after
         let abs_cong = d.lemma(p.abs_congr, &[inner_before, inner_after, add_cong]);
@@ -2241,12 +2248,19 @@ pub(super) fn declare_weierstrass_m_test(
         d.lam_fv(f_fv, seq_ty, with_mseq)
     };
     let ty = {
+        // `hab`/`hdom`/`hcauchy` are each genuinely referenced inside
+        // `big_g` (via `hax_c`/`hxb_c`/`hyp1_c`/`case_proof`), so
+        // `conclusion` mentions all three free variables and each must bind
+        // with `pi_fv`, never `d.arrow` -- an `arrow` leaves the occurrence
+        // inside `conclusion` unabstracted, `UnboundFVar` at kernel check
+        // time. `hcong` is NOT referenced by `conclusion` (only by `spec`,
+        // which is not part of the TYPE), so it alone stays `arrow`.
         let conclusion = uconv_ty(d, p, big_f, big_g, a, b);
-        let after_hcauchy = d.arrow(hcauchy_ty, conclusion);
-        let after_hdom = d.arrow(hdom_ty, after_hcauchy);
+        let after_hcauchy = d.pi_fv(hcauchy_fv, hcauchy_ty, conclusion);
+        let after_hdom = d.pi_fv(hdom_fv, hdom_ty, after_hcauchy);
         let with_k = d.pi_fv(k_fv, nat, after_hdom);
         let after_hcong = d.arrow(hcong_ty, with_k);
-        let after_hab = d.arrow(hab_ty, after_hcong);
+        let after_hab = d.pi_fv(hab_fv, hab_ty, after_hcong);
         let with_b = d.pi_fv(b_fv, carrier, after_hab);
         let with_a = d.pi_fv(a_fv, carrier, with_b);
         let with_mseq = d.pi_fv(mseq_fv, mseq_ty, with_a);
