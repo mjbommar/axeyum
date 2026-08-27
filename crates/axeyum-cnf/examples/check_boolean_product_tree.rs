@@ -1,7 +1,6 @@
 //! Check a recursively subdivided Boolean-product cube refutation.
 
-use std::fs::File;
-use std::io::{self, BufRead, BufReader, Read};
+use std::io::{self, BufRead, Read};
 use std::path::{Path, PathBuf};
 
 use axeyum_cnf::cube::{
@@ -13,8 +12,9 @@ use axeyum_cnf::cube::{
     CubeTreeObligationEvent, CubeTreeObligationKind, CubeTreeObligationState,
     check_cube_refutation_reader_tree_fully_parallel_with_events,
 };
-use axeyum_cnf::{CnfFormula, CnfVar, parse_dimacs};
-
+use axeyum_cnf::{
+    CnfFormula, CnfVar, DratFileReader, open_drat_reader, parse_dimacs, resolve_drat_or_gzip_path,
+};
 const MAX_TREE_DEPTH: usize = 16;
 const MAX_TREE_NODES: usize = 65_536;
 const MAX_PROOF_BYTES: u64 = 64 * 1024 * 1024 * 1024;
@@ -30,13 +30,13 @@ struct Stats {
 
 struct LazyProofReader {
     path: PathBuf,
-    reader: Option<BufReader<File>>,
+    reader: Option<DratFileReader>,
 }
 
 impl LazyProofReader {
-    fn reader(&mut self) -> io::Result<&mut BufReader<File>> {
+    fn reader(&mut self) -> io::Result<&mut DratFileReader> {
         if self.reader.is_none() {
-            self.reader = Some(BufReader::new(File::open(&self.path)?));
+            self.reader = Some(open_drat_reader(&self.path, 1 << 20, MAX_PROOF_BYTES)?);
         }
         Ok(self.reader.as_mut().expect("reader was initialized"))
     }
@@ -97,7 +97,9 @@ fn parse_usize(text: &str, what: &str) -> usize {
 }
 
 fn proof_reader(path: &Path, stats: &mut Stats) -> LazyProofReader {
-    let metadata = std::fs::metadata(path)
+    let path = resolve_drat_or_gzip_path(path)
+        .unwrap_or_else(|error| fail(format!("{} metadata: {error}", path.display())));
+    let metadata = std::fs::metadata(&path)
         .unwrap_or_else(|error| fail(format!("{} metadata: {error}", path.display())));
     if metadata.len() > MAX_PROOF_BYTES {
         fail(format!(
@@ -116,10 +118,7 @@ fn proof_reader(path: &Path, stats: &mut Stats) -> LazyProofReader {
             stats.proof_bytes
         ));
     }
-    LazyProofReader {
-        path: path.to_owned(),
-        reader: None,
-    }
+    LazyProofReader { path, reader: None }
 }
 
 fn manifest_cubes(dir: &Path, formula: &CnfFormula) -> Vec<Vec<axeyum_cnf::CnfLit>> {
@@ -329,4 +328,87 @@ fn main() {
     println!("workers={workers}");
     println!("checker=file-backed-whole-tree-parallel-backward-plus-covering-drat");
     println!("verdict=unsat-checked");
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io::{Read, Write};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    use flate2::{Compression, write::GzEncoder};
+
+    use super::{Stats, proof_reader};
+
+    #[test]
+    fn gzip_fallback_is_lazy_and_counts_stored_bytes() {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock is after the epoch")
+            .as_nanos();
+        let directory = std::env::temp_dir().join(format!(
+            "axeyum-check-boolean-product-tree-gzip-{}-{nonce}",
+            std::process::id()
+        ));
+        std::fs::create_dir(&directory).expect("temporary directory is created");
+        let plain = directory.join("proof.drat");
+        let compressed = plain.with_extension("drat.gz");
+        let mut encoder = GzEncoder::new(
+            std::fs::File::create(&compressed).expect("compressed proof is created"),
+            Compression::default(),
+        );
+        encoder.write_all(b"0\n").expect("proof text is compressed");
+        encoder.finish().expect("gzip stream is finalized");
+
+        let expected_bytes = std::fs::metadata(&compressed)
+            .expect("compressed proof metadata")
+            .len();
+        let mut stats = Stats::default();
+        let mut reader = proof_reader(&plain, &mut stats);
+        let mut text = String::new();
+        reader
+            .read_to_string(&mut text)
+            .expect("gzip proof is read lazily");
+        assert_eq!(text, "0\n");
+        assert_eq!(stats.proof_bytes, expected_bytes);
+
+        std::fs::remove_dir_all(directory).expect("temporary directory is removed");
+    }
+
+    #[test]
+    fn plain_manifest_path_takes_precedence_over_gzip_sibling() {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock is after the epoch")
+            .as_nanos();
+        let directory = std::env::temp_dir().join(format!(
+            "axeyum-check-boolean-product-tree-plain-precedence-{}-{nonce}",
+            std::process::id()
+        ));
+        std::fs::create_dir(&directory).expect("temporary directory is created");
+        let plain = directory.join("proof.drat");
+        std::fs::write(&plain, b"0\n").expect("plain proof is written");
+        let compressed = plain.with_extension("drat.gz");
+        let mut encoder = GzEncoder::new(
+            std::fs::File::create(&compressed).expect("compressed sibling is created"),
+            Compression::default(),
+        );
+        encoder
+            .write_all(b"1 0\n")
+            .expect("different proof text is compressed");
+        encoder.finish().expect("gzip sibling is finalized");
+
+        let expected_bytes = std::fs::metadata(&plain)
+            .expect("plain proof metadata")
+            .len();
+        let mut stats = Stats::default();
+        let mut reader = proof_reader(&plain, &mut stats);
+        let mut text = String::new();
+        reader
+            .read_to_string(&mut text)
+            .expect("plain proof is read lazily");
+        assert_eq!(text, "0\n");
+        assert_eq!(stats.proof_bytes, expected_bytes);
+
+        std::fs::remove_dir_all(directory).expect("temporary directory is removed");
+    }
 }

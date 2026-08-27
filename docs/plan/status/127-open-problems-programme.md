@@ -33,6 +33,18 @@ formula, so the `[7,8]` interval and five-problem scoreboard do not move.
 terminal log, and counts are hash-bound in the sibling receipt. Cells 4 and 8 now close 2/32
 exhaustive semantic cells. The other 30 remain open, so the `[7,8]` interval does not move.
 
+**Compressed whole-tree proof consumption, 2026-08-27.** The generic file-backed
+Boolean-product checker now accepts a manifest's ordinary `.drat` path or, when that file is
+absent, its `.drat.gz` sibling. It opens either stream lazily and accounts for the stored artifact
+bytes under the existing per-proof and aggregate limits; the named plain path deterministically
+wins when both forms exist. Focused controls write, discover, and read a gzip proof and prove that
+the competing sibling cannot replace a named plain proof. The implementation now lives in the
+reusable CNF proof-I/O API and is shared by the Rado palette-orbit checker, not copied between
+examples. This preserves the no-C/C++ default dependency boundary with flate2's locked pure-Rust
+`zlib-rs` backend. The reader additionally enforces the selected proof's decompressed-byte cap,
+so a small gzip cannot turn into unbounded checker work. It is checker/readiness work, not
+permission to compress a live prefix or credit a nonterminal proof.
+
 **Whole-tree obligation observability, 2026-08-27.** ADR-0598 adds non-authoritative start and
 finish events carrying obligation index, total, tree path, and leaf/cover/structural kind. The
 existing contiguous deterministic progress stream and lowest-index error remain unchanged.

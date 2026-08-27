@@ -98,6 +98,7 @@ dependencies = [
  "axeyum-bv",
  "axeyum-ir",
  "batsat",
+ "flate2",
  "rustix",
  "rustsat",
  "rustsat-batsat",

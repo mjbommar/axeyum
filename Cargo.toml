@@ -61,6 +61,10 @@ web-time = { version = "1" }
 # 2026-08 item 05.1). default-features off + "fs"/"std" keeps the linux_raw
 # backend selected on this target and libc out of the dependency graph.
 rustix = { version = "1", default-features = false, features = ["fs", "std"] }
+# Streaming gzip support for checkers that retain large proof trees in compressed form.
+# `flate2` is pure Rust with the locked `zlib-rs` backend, preserving the default
+# no-C/C++ dependency boundary.
+flate2 = { version = "1", default-features = false, features = ["zlib-rs"] }
 
 [workspace.lints.rust]
 missing_docs = "warn"

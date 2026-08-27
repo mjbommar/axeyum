@@ -8,12 +8,14 @@
 
 use std::collections::BTreeMap;
 use std::fs::{self, File};
-use std::io::{BufReader, Read};
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc;
 
-use axeyum_cnf::{WeightedAtMostLimits, check_drat_backward_reader};
+use axeyum_cnf::{
+    WeightedAtMostLimits, check_drat_backward_reader, open_drat_reader, resolve_drat_or_gzip_path,
+};
 use axeyum_search::{ColouringFamily, ColouringProblem, Rado, Witness, palette_permutations};
 
 const MAX_PERMUTATIONS: usize = 40_320;
@@ -66,7 +68,9 @@ fn check_proof(
     max_changes: u64,
     proof_dir: &Path,
 ) -> Result<u64, String> {
-    let path = proof_path(proof_dir, permutation);
+    let requested_path = proof_path(proof_dir, permutation);
+    let path = resolve_drat_or_gzip_path(&requested_path)
+        .map_err(|error| format!("{}: {error}", requested_path.display()))?;
     let permuted = witness
         .permute_palette(permutation)
         .map_err(|error| error.to_string())?;
@@ -87,10 +91,10 @@ fn check_proof(
             path.display()
         ));
     }
-    let file = File::open(&path).map_err(|error| format!("{}: {error}", path.display()))?;
-    let accepted =
-        check_drat_backward_reader(encoding.formula(), BufReader::with_capacity(1 << 20, file))
-            .map_err(|error| format!("{}: {error}", path.display()))?;
+    let reader = open_drat_reader(&path, 1 << 20, MAX_PROOF_BYTES)
+        .map_err(|error| format!("{}: {error}", path.display()))?;
+    let accepted = check_drat_backward_reader(encoding.formula(), reader)
+        .map_err(|error| format!("{}: {error}", path.display()))?;
     if !accepted {
         return Err(format!(
             "{} does not derive the empty clause",

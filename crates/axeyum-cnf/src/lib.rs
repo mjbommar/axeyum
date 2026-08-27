@@ -50,6 +50,7 @@ mod drat_resource;
 mod gf2;
 mod interpolant;
 mod lrat;
+mod proof_io;
 mod proof_sat;
 mod simplify;
 mod vivify;
@@ -99,6 +100,7 @@ pub use lrat::{
     elaborate_drat_to_lrat, elaborate_drat_to_lrat_backward,
     elaborate_drat_to_lrat_with_limits_and_progress, parse_lrat, write_lrat,
 };
+pub use proof_io::{DratFileReader, open_drat_reader, resolve_drat_or_gzip_path};
 pub use proof_sat::{
     DEFAULT_PROGRESS_CONFLICT_INTERVAL, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, ProofSearchProgress,
     ProofSolveOutcome, StreamingProofOutcome, solve_with_drat_proof,

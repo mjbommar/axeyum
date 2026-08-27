@@ -16,6 +16,7 @@ axeyum-aig.workspace = true
 batsat.workspace = true
 rustsat.workspace = true
 rustsat-batsat.workspace = true
+flate2.workspace = true
 
 # Browser-compatible monotonic clock for timeouts/telemetry (ADR-0017); only on
 # wasm32, where `std::time::Instant` has no clock in the browser.
