@@ -1411,6 +1411,27 @@ pub struct CRealPrelude {
     /// `neg(Δ·positive)`) BELOW the same sample point. See
     /// `creal/crossing.rs`.
     pub crossing_sample_lower: NameId,
+    /// `CReal.crossingClose : ∀ F a b c delta e (u : UniformlyContinuousOn F
+    /// a b), Rat.lt Rat.zero delta → CReal.le a c → CReal.le c b → CReal.le a
+    /// samplePt → CReal.le samplePt b → CReal.le slackUpper (CReal.ofRat
+    /// (Rat.natDivSucc 1 (UniformlyContinuousOn.modulus F a b u e))) →
+    /// CReal.le (CReal.neg slackLower) (CReal.ofRat (Rat.natDivSucc 1
+    /// (UniformlyContinuousOn.modulus F a b u e))) → CReal.le (CReal.abs
+    /// (CReal.add (F c) (CReal.neg (F samplePt)))) (CReal.ofRat
+    /// (Rat.natDivSucc 1 e))`, `samplePt`/`slackUpper`/`slackLower` the SAME
+    /// closed terms [`Self::crossing_sample_upper`]/
+    /// [`Self::crossing_sample_lower`] place `c` within.
+    ///
+    /// The analytic half of the cross-width Riemann comparison's single
+    /// block: `F(c)` is close to `F` at the coarse mesh's crossing-index
+    /// sample point, PROVIDED the two crossing slacks (`≈2Δ`, `≈1.5Δ`) are
+    /// already within `UniformlyContinuousOn`'s modulus at accuracy `e`.
+    /// Does **not** derive that Archimedean smallness from a mesh count, nor
+    /// `samplePt`'s own domain membership — both are explicit hypotheses
+    /// here, left as the next steps toward `CReal.integral_split`. See
+    /// `creal/crossing.rs` and `creal/integral.rs`'s 2026-08-27 module doc
+    /// entry.
+    pub crossing_close: NameId,
     /// `CReal.sampleUpperBound : ∀ x m, CReal.le x (CReal.ofRat (Rat.add
     /// (CReal.seq x m) (Rat.natDivSucc 1 m)))` — the general
     /// self-approximation lemma every `CReal` satisfies: it never exceeds
@@ -4303,6 +4324,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         crossing_lower: kernel.name_str(creal, "crossingLower"),
         crossing_sample_upper: kernel.name_str(creal, "crossingSampleUpper"),
         crossing_sample_lower: kernel.name_str(creal, "crossingSampleLower"),
+        crossing_close: kernel.name_str(creal, "crossingClose"),
         sample_upper_bound: kernel.name_str(creal, "sampleUpperBound"),
         sample_lower_bound: kernel.name_str(creal, "sampleLowerBound"),
         bounded_of_uniformly_continuous: kernel.name_str(creal, "bounded_of_uniformly_continuous"),
@@ -4660,6 +4682,12 @@ pub(crate) fn build_creal_prelude_uncached(
         // cannot be folded into `declare_crossing` itself (see that
         // function's own doc comment).
         crossing::declare_crossing_sample(&mut d, prelude)?;
+        // `crossing::declare_crossing_close` needs `crossingSampleUpper`/
+        // `crossingSampleLower` (just above) plus `UniformlyContinuousOn`'s
+        // `.modulus`/`.spec` (`declare_uniform_continuity`, well above) and
+        // `CReal.abs_le` (`lattice::declare_abs_laws`, earlier still) — this
+        // is the earliest point all three are available.
+        crossing::declare_crossing_close(&mut d, prelude)?;
         sqrt::declare_sqrt(&mut d, prelude)?;
         speedup::declare_speedup(&mut d, prelude)?;
         // `sqrtApproxKRegular` needs `speedup.rs`'s `KRegular` predicate
