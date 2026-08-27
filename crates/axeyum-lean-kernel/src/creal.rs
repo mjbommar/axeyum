@@ -2293,6 +2293,22 @@ pub struct CRealPrelude {
     /// [`Self::le_of_mul_le_mul_left`] at the SAME witness `(k, h)` `inv`
     /// itself takes — no second modulus is invented.
     pub inv_le_of_pos_bound: NameId,
+    /// `CReal.geomYBound : ∀ x, le zero x → lt x one → ∀ k (h : PosBound (add
+    /// one (neg x)) k), ∃ K, ∀ a, le (mul (inv (add one (neg x)) k h) (pow x
+    /// a)) (ofRat (natDivSucc K a))` — the general-base, symbolic-modulus
+    /// generalization of [`Self::geom_half_inv_leaf_bound`] (concrete base
+    /// `1/2`, `inv`-value pinned to the literal `2`).
+    ///
+    /// Combines [`Self::pow_le_nat_div_succ_of_lt`]'s harmonic witness `K1`
+    /// (at `x`) with [`Self::inv_le_of_pos_bound`]'s `ofNat (succ k)` bound
+    /// (at `add one (neg x)`, `k`, `h`) via two
+    /// [`Self::mul_le_mul_of_nonneg_left`]/`_right` applications —
+    /// `iv · xᵃ ≤ (succ k) · xᵃ ≤ (succ k) · natDivSucc K1 a` — then fuses the
+    /// scaled bound into a single `natDivSucc` via `Rat.natDivSucc_mul`,
+    /// giving the witness `K := (succ k)·K1`. `inv` and `PosBound` enter only
+    /// through the hypothesis `h` this theorem already carries; nothing here
+    /// invents a second modulus.
+    pub geom_y_bound: NameId,
     /// `CReal.geomHalfInvLeafBound : ∀ a, le (mul (inv (add one (neg half)) 1
     /// h) (pow half a)) (ofRat (natDivSucc 2 a))`, `h` built internally (not
     /// a parameter) — the leaf [`Self::geom_pair_within`]'s own field doc
@@ -3837,6 +3853,64 @@ pub struct CRealPrelude {
     /// `mul_riemann_sum` applied pointwise). See `creal/integral.rs`'s
     /// `declare_integral_scale`.
     pub integral_scale: NameId,
+    /// `CReal.riemannSum_integral_close : ∀ F a b, le a b →
+    /// UniformlyContinuousOn F a b → ∃ K, ∀ e depth i j1 j2 : Nat, Within
+    /// (Rat.sub (seq (riemannSum F a b (Nat.add (deep F a b u e) depth)) i)
+    /// (seq (CReal.integral F a b hab u) e)) (bnd1 + bnd2 + natDivSucc K e)`,
+    /// `bnd1`/`bnd2` EXACTLY [`Self::riemann_sum_shared_accuracy_close`]'s
+    /// own two-leg bound at `(e, k1 := depth, k2 := 0, oi := i, oj := e, j1,
+    /// j2)`. `K` is a SINGLE rate valid for every accuracy `e` (it depends
+    /// only on `F`/`a`/`b`, via [`Self::integral_converges`]'s own witness),
+    /// so it sits OUTSIDE the `∀ e …` quantifiers rather than threaded
+    /// through them.
+    ///
+    /// **The Riemann-sum-vs-true-value estimate — Chapter 14's last algebra
+    /// gap.** `riemannSum F a b m` at ANY FIXED mesh count `m` at least as
+    /// deep as the `e`-accuracy Archimedean threshold (`m := deep(e) +
+    /// depth`, `depth` free) sits within an explicit, `e`-derived distance of
+    /// `CReal.integral F a b hab u` — the standard "Riemann sums converge to
+    /// the integral" statement, quantitative rather than asymptotic. Two
+    /// legs, chained by `creal/integral.rs`'s own private `chain_within2`:
+    ///
+    /// 1. [`Self::riemann_sum_shared_accuracy_close`] at `k1 := depth`, `k2
+    ///    := 0` — comparing the FIXED mesh `m` against `deep(e) + 0`, which
+    ///    is EXACTLY `integral.rs`'s own private `integral_witness`'s
+    ///    `f_lambda` evaluated at `e`.
+    /// 2. [`Self::integral_converges`]'s own `Converges f_lambda
+    ///    integral_val` fact, ELIMINATED (rather than re-derived by hand)
+    ///    to bridge `f_lambda e`'s own sample at `e` to `CReal.integral F a
+    ///    b hab u`'s sample at `e`.
+    ///
+    /// **Leg 2 was originally built by reconstructing `integral_witness`'s
+    /// `(f_lambda, K, cauchy_proof)` triple and applying
+    /// [`Self::speedup_close`] directly, to get `K` NAMED rather than
+    /// hidden behind [`Self::integral_converges`]'s `Exists`. Measured
+    /// 2026-08-27: that route cost 74s of a 75s prelude build** (isolated by
+    /// disabling each leg in turn — leg 1 alone cost no more than the ~18s
+    /// baseline, leg 2 alone reproduced the full cost). The mechanism: that
+    /// route's `z := sample(integral_val, e)` (built from `CReal.integral`,
+    /// a `Definition` whose stored value embeds a full
+    /// `regular_of_scaled_cauchy` construction) had to be shown DEFEQ
+    /// against a raw `speedup(raw, K) e` term that never mentions
+    /// `CReal.integral` at all — bridging them forces a full delta-unfold of
+    /// `CReal.integral`'s definition. The current route never triggers that
+    /// unfold: leg 2's `z`-side comes from [`Self::integral_converges`]'s
+    /// own eliminated witness, whose type builds `integral_val` via the
+    /// IDENTICAL `d.const_app(p.integral, …)` recipe used here, so the two
+    /// are the SAME `ExprId`, not merely defeq. `K` is still genuinely
+    /// NAMED (bound by the elimination's own minor premise) — just
+    /// re-exposed as an outer `∃ K` on this declaration's own statement
+    /// instead of reconstructed from scratch. Verified back to the ~18s
+    /// `creal_prelude_builds` baseline after the rebuild.
+    ///
+    /// No new estimate anywhere: every piece is an already-proved lemma or an
+    /// already-built construction, applied at the right arguments — the same
+    /// "the telescope was already there" shape
+    /// [`Self::integral_witness_independent`]'s own doc comment describes.
+    /// Bridging this across a partition split at `c` (`integral_split`'s own
+    /// remaining gap, per `integral.rs`'s module documentation) is NOT
+    /// attempted here.
+    pub riemann_sum_integral_close: NameId,
     /// `CReal.hasDerivative_integral_const : ∀ c a b (k : Nat), le (abs c)
     /// (ofRat (natDivSucc (Nat.succ k) 0)) → HasDerivativeOn (fun x =>
     /// integral (fun _ => c) a (max a (min x b)) (le_max_left a (min x b))
@@ -4198,6 +4272,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         pow_le_nat_div_succ_of_lt: kernel.name_str(creal, "pow_le_natDivSucc_of_lt"),
         ratio_decay_bound: kernel.name_str(creal, "ratioDecayBound"),
         inv_le_of_pos_bound: kernel.name_str(creal, "invLeOfPosBound"),
+        geom_y_bound: kernel.name_str(creal, "geomYBound"),
         geom_half_inv_leaf_bound: kernel.name_str(creal, "geomHalfInvLeafBound"),
         geom_cauchy_ordered_half: kernel.name_str(creal, "geomCauchyOrderedHalf"),
         geom_cauchy: kernel.name_str(creal, "geomCauchy"),
@@ -4318,6 +4393,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         integral_add: kernel.name_str(creal, "integral_add"),
         integral_le: kernel.name_str(creal, "integral_le"),
         integral_scale: kernel.name_str(creal, "integral_scale"),
+        riemann_sum_integral_close: kernel.name_str(creal, "riemannSum_integral_close"),
         has_derivative_integral_const: kernel.name_str(creal, "hasDerivative_integral_const"),
     }
 }
@@ -4720,6 +4796,15 @@ pub(crate) fn build_creal_prelude_uncached(
         // it lands here to stay next to the other `integral_*` law that
         // shares its dependency shape.
         integral::declare_integral_scale(&mut d, prelude)?;
+        // `riemannSum_integral_close` (the Riemann-sum-vs-true-value
+        // estimate) needs `riemannSum_shared_accuracy_close` (well above),
+        // `CReal.speedup_close` (`convergence::declare_cauchy_convergence`,
+        // well above) and `CReal.integral`/`integral_converges` (just
+        // above, for the SAME `integral_witness` triple `CReal.integral`
+        // itself is built from). It does not need
+        // `integral_add`/`integral_le`/`integral_scale`; it lands here to
+        // stay next to the other `integral_*` laws.
+        integral::declare_riemann_sum_integral_close(&mut d, prelude)?;
         // `hasDerivative_integral_const` (Spivak Ch14 FTC-I, first evaluation
         // instance) needs `integral`/`integral_const` (just above, this
         // dispatch is why it cannot live inside `derivative::declare_derivative`,

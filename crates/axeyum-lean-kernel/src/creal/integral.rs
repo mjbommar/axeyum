@@ -169,17 +169,38 @@
 //!
 //! Checked against `prelude_theorem_inventory --include-constructed --release`
 //! (2026-08-26): no `riemannSum_split`, `integral_split`, `integral_add`, or
-//! any modulus-/witness-independence lemma exists anywhere in the `creal`
-//! prelude; `sumRange_split` and `riemannSum_const` (the positive control)
-//! are both present as named above. Next open goal, precisely: the
-//! Riemann-sum-vs-true-value estimate through a modulus of continuity —
-//! equivalently, `UniformlyContinuousOn`-witness independence of
-//! `CReal.integral`'s value — which a parallel lane is pursuing directly for
-//! `integral_add`/`integral_scale`/`integral_le`; `integral_split` needs the
-//! identical estimate and should not be attempted again before that lands.
+//! any modulus-/witness-independence lemma existed anywhere in the `creal`
+//! prelude at that time; `sumRange_split` and `riemannSum_const` (the
+//! positive control) were both present as named above. `integral_add`,
+//! `integral_le`, `integral_scale` and `integral_witness_independent` landed
+//! shortly after (this file's own history), and
+//! [`CRealPrelude::riemann_sum_integral_close`] (`declare_riemann_sum_integral_close`,
+//! this file) now supplies the Riemann-sum-vs-true-value estimate itself:
+//! for ANY fixed mesh `m := deep(e) + depth` at least as deep as accuracy
+//! `e`'s Archimedean threshold, `riemannSum F a b m` sits within an
+//! explicit, `e`-derived distance of `CReal.integral F a b hab u`, built by
+//! chaining `riemannSum_shared_accuracy_close` (fixed mesh vs `f_lambda e`)
+//! with `speedup_close` (`f_lambda e` vs the integral's own sample at `e`,
+//! reconstructing `integral_witness`'s triple rather than going through
+//! `integral_converges`'s `Exists`-wrapped `Converges`, which hides the rate
+//! this estimate needs to NAME).
+//!
+//! **`integral_split` itself is still open.** The estimate above compares
+//! ONE `riemannSum F a b m` to ITS OWN interval's integral; `integral_split`
+//! needs to compare `riemannSum F a b m` (over `[a,b]`) against a SUM of two
+//! Riemann sums over `[a,c]`/`[c,b]` built at generally different, refined
+//! mesh counts — a genuinely new bridging step (splitting `m`'s own sample
+//! points at `c`, relating the split sub-sums back to `riemannSum F a c
+//! m_ac`/`riemannSum F c b m_cb` at SOME refined `m_ac`/`m_cb`) that this
+//! estimate is the prerequisite for, not a proof of. Next open goal,
+//! precisely: that mesh-splitting bridge, using
+//! `riemann_sum_integral_close` (this file) on all three intervals once
+//! it exists.
 
 use super::completeness::half_shift_le;
-use super::convergence::converges_applied;
+use super::convergence::{
+    converges_applied, converges_predicate, div_succ_at, exists_intro, exists_ty,
+};
 use super::ring_helpers::right_distrib;
 use super::series::{chain_within3, within_symm};
 use super::{
@@ -12069,6 +12090,218 @@ pub(super) fn declare_integral_scale(
 
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.integral_scale,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// The Riemann-sum-vs-true-value estimate. See
+/// [`CRealPrelude::riemann_sum_integral_close`] for the full statement.
+///
+/// **Measured 2026-08-27, and rebuilt because of it: routing leg 2 through
+/// `speedup_close`/`kregular_of_cauchy_proof` (reconstructing
+/// `integral_witness`'s triple to reach a NAMED rate) cost 74s of a 75s
+/// prelude build, isolated by disabling each leg in turn and confirmed the
+/// entire cost sat in leg 2 alone.** The mechanism: that route's `z :=
+/// sample(integral_val, e)` (built directly from `CReal.integral`, a
+/// `Definition` whose stored value embeds a full `regular_of_scaled_cauchy`
+/// construction) has to be shown DEFEQ against a raw `speedup(raw,K) e`
+/// term that never mentions `CReal.integral` at all -- the only way to
+/// bridge them is a full delta-unfold of `CReal.integral`'s definition, and
+/// that unfold is what was expensive. **Fixed by never triggering that
+/// unfold**: leg 2 now goes through [`CRealPrelude::integral_converges`]
+/// (an ALREADY-CHECKED fact) via [`exists_elim`], so the "z-side" bound
+/// comes from ELIMINATING `Converges f_lambda integral_val`'s existential
+/// rather than from re-deriving `speedup_close` by hand. The eliminated
+/// witness's own type builds `integral_val` via the identical
+/// `d.const_app(p.integral, ...)` recipe used here, so it is the SAME
+/// `ExprId`, not merely defeq -- `CReal.integral`'s definition is never
+/// unfolded at all. The rate `K` this needs is now genuinely NAMED (bound by
+/// `exists_elim`'s own minor premise), just wrapped in an outer `∃ K` on the
+/// final statement instead of hidden inside `Converges`'s wrapper -- a
+/// single rate valid for every accuracy `e` (it depends only on `F`/`a`/`b`,
+/// not on `e`), so it belongs OUTSIDE the `∀ e …` quantifiers rather than
+/// threaded through them. Verified back to the ~18s prelude-build baseline
+/// (`creal_prelude_builds`) after this change.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_riemann_sum_integral_close(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let f_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+
+    // `f_lambda` -- same recipe `integral_witness` uses, needed only to
+    // STATE `integral_converges`'s own `Converges` predicate; the OTHER two
+    // outputs of `integral_witness` (`K`, `cauchy_proof`) are not used --
+    // see this function's own doc comment for why the `speedup_close` route
+    // that DID use them was replaced.
+    let (f_lambda, _kk_unused, _cauchy_unused) = integral_witness(d, p, f, a, b, hab, u);
+    let integral_val = d.const_app(p.integral, &[f, a, b, hab, u]);
+
+    let converges_fact = d.lemma(p.integral_converges, &[f, a, b, hab, u]);
+    let predicate = converges_predicate(d, p, f_lambda, integral_val);
+
+    // `k_fv`/`h_fv`: the eliminated witness/proof of `Converges f_lambda
+    // integral_val` -- in scope for the whole `minor` body below, bound by
+    // `exists_elim` itself (via `minor`'s own two lambdas), not by an outer
+    // `pi_fv` on this declaration's own type.
+    let k_fv = d.fresh_fvar();
+    let kk = d.kernel().fvar(k_fv);
+    let h_fv = d.fresh_fvar();
+    let hh = d.kernel().fvar(h_fv);
+    let hh_ty = d.apply(predicate, &[kk]);
+
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+    let depth_fv = d.fresh_fvar();
+    let depth = d.kernel().fvar(depth_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let jj1_fv = d.fresh_fvar();
+    let jj1 = d.kernel().fvar(jj1_fv);
+    let jj2_fv = d.fresh_fvar();
+    let jj2 = d.kernel().fvar(jj2_fv);
+
+    // m1 := deep(e) + depth -- the FIXED, arbitrary-depth mesh this estimate
+    // is about. m2 := deep(e) + 0, EXACTLY `integral_witness`'s own
+    // `f_lambda` evaluated at `e` (same `deep_at`/`NatOps::add`/`d.num(0)`
+    // recipe -- see that function's own body).
+    let deep = deep_at(d, p, f, a, b, u, e);
+    let zero_nat = d.num(0);
+    let m1 = NatOps::add(d, deep, depth);
+    let m2 = NatOps::add(d, deep, zero_nat);
+
+    // --- Leg 1: fixed mesh `m1` vs `m2` (= `f_lambda e`), at
+    // (oi, oj, jj1, jj2) := (i, e, jj1, jj2). --------------------------------
+    let leg1 = d.lemma(
+        p.riemann_sum_shared_accuracy_close,
+        &[f, a, b, e, depth, zero_nat, hab, u, i, e, jj1, jj2],
+    );
+
+    // Reconstruct `riemann_sum_shared_accuracy_close`'s own final bound
+    // EXTERNALLY, term-for-term (SAME `common_refinement`/
+    // `shared_accuracy_bound_fn` recipe at the SAME `m1`/`m2`), so `bound_leg1`
+    // is the SAME `ExprId` its own conclusion carries -- the same
+    // reconstruction discipline `total_eps_of`'s own doc comment explains.
+    // (Confirmed CHEAP in isolation: this leg alone costs no more than the
+    // ~18s baseline -- the expensive leg was leg 2, above.)
+    let (l, _l2, _l2_eq_l) = common_refinement(d, m1, m2);
+    let shift_jj1 = shift(d, jj1);
+    let shift_jj2 = shift(d, jj2);
+    let bound1_fn = shared_accuracy_bound_fn(d, p, a, b, e, m1);
+    let bound2_fn = shared_accuracy_bound_fn(d, p, a, b, e, m2);
+    let bound1_jj1 = d.apply(bound1_fn, &[jj1]);
+    let bound2_jj2 = d.apply(bound2_fn, &[jj2]);
+    let m_l_sj1 = modulus(d, p, l, shift_jj1);
+    let m_sj1_i = modulus(d, p, shift_jj1, i);
+    let m_l_sj2 = modulus(d, p, l, shift_jj2);
+    let m_sj2_e = modulus(d, p, shift_jj2, e);
+    let m_l_sj1_plus_bound1 = radd(d, m_l_sj1, bound1_jj1);
+    let bnd1 = radd(d, m_l_sj1_plus_bound1, m_sj1_i);
+    let m_l_sj2_plus_bound2 = radd(d, m_l_sj2, bound2_jj2);
+    let bnd2 = radd(d, m_l_sj2_plus_bound2, m_sj2_e);
+    let bound_leg1 = radd(d, bnd1, bnd2);
+
+    let rsum_m1 = rsum(d, p, f, a, b, m1);
+    let rsum_m2 = rsum(d, p, f, a, b, m2);
+    let x = sample(d, p, rsum_m1, i);
+    let y = sample(d, p, rsum_m2, e);
+
+    // --- Leg 2: `hh` applied at `e` -- EXACTLY `converges_predicate`'s own
+    // per-index bound at (kk, e): `Within(sample(f_lambda e, e) -
+    // sample(integral_val, e))(natDivSucc kk e)`. `f_lambda e` beta-reduces
+    // (pure substitution on a LOCAL lambda -- no Definition unfold) to
+    // `rsum_m2`'s own sample at `e` (`y`, above); `integral_val` is the
+    // SAME `ExprId` on both sides. Neither side ever needs
+    // `CReal.integral`'s definition unfolded. -------------------------------
+    let leg2 = d.apply(hh, &[e]);
+    let bound_leg2 = div_succ_at(d, p, kk, e);
+
+    let z = sample(d, p, integral_val, e);
+
+    let final_proof_inner = chain_within2(d, p, x, y, z, bound_leg1, bound_leg2, leg1, leg2);
+    let final_bound = radd(d, bound_leg1, bound_leg2);
+
+    let diff = rsub(d, p.rat, x, z);
+    let concl_ty = within(d, p, diff, final_bound);
+
+    // per-K statement: `∀ e depth i j1 j2, Within(diff)(final_bound(K))`.
+    let per_k_ty = {
+        let after_jj2 = d.pi_fv(jj2_fv, nat, concl_ty);
+        let after_jj1 = d.pi_fv(jj1_fv, nat, after_jj2);
+        let after_i = d.pi_fv(i_fv, nat, after_jj1);
+        let after_depth = d.pi_fv(depth_fv, nat, after_i);
+        d.pi_fv(e_fv, nat, after_depth)
+    };
+    let per_k_value = {
+        let with_jj2 = d.lam_fv(jj2_fv, nat, final_proof_inner);
+        let with_jj1 = d.lam_fv(jj1_fv, nat, with_jj2);
+        let with_i = d.lam_fv(i_fv, nat, with_jj1);
+        let with_depth = d.lam_fv(depth_fv, nat, with_i);
+        d.lam_fv(e_fv, nat, with_depth)
+    };
+
+    // outer_predicate(K) := `∀ e depth i j1 j2, Within(diff)(final_bound(K))`,
+    // as an actual `Nat -> Prop` term, for `exists_ty`'s own `predicate`
+    // argument.
+    let outer_predicate = d.lam_fv(k_fv, nat, per_k_ty);
+    let target_ty = exists_ty(d, p, nat, outer_predicate);
+
+    // `minor : ∀ K, (predicate K) -> target_ty`, `predicate` here being
+    // `Converges f_lambda integral_val`'s own per-`K` body (`hh_ty`'s own
+    // binder) -- built as `Exists.intro` at witness `kk`, using `hh`
+    // (bound by this SAME `minor`) to build `leg2` above.
+    let target_witness_proof = exists_intro(d, p, nat, outer_predicate, kk, per_k_value);
+    let minor = {
+        let with_h = d.lam_fv(h_fv, hh_ty, target_witness_proof);
+        d.lam_fv(k_fv, nat, with_h)
+    };
+
+    let full_proof = exists_elim(d, predicate, target_ty, converges_fact, minor);
+
+    // `target_ty` mentions `hab`/`u` (via `integral_val`, inside `z`/`diff`
+    // inside `per_k_ty`), so both must be bound with `pi_fv`, not
+    // `d.arrow` -- the identical trap `declare_integral_const`'s own doc
+    // comment names.
+    let ty = {
+        let after_u = d.pi_fv(u_fv, u_ty, target_ty);
+        let after_hab = d.pi_fv(hab_fv, hab_ty, after_u);
+        let over_b = d.pi_fv(b_fv, carrier, after_hab);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        d.pi_fv(f_fv, f_ty, over_a)
+    };
+    let value = {
+        let with_u = d.lam_fv(u_fv, u_ty, full_proof);
+        let with_hab = d.lam_fv(hab_fv, hab_ty, with_u);
+        let over_b = d.lam_fv(b_fv, carrier, with_hab);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        d.lam_fv(f_fv, f_ty, over_a)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.riemann_sum_integral_close,
         uparams: vec![],
         ty,
         value,

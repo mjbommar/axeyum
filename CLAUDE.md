@@ -1167,6 +1167,75 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   nothing ever required length one. Full retrospective:
   `docs/autogenesis/228-capsule-lane-retrospective.md`.
 
+- **TWO STRUCTURALLY-UNRELATED REPRESENTATIONS OF THE SAME VALUE FORCE A FULL
+  `Definition` UNFOLD, AND THE COST LANDS ON EVERY PRELUDE BUILD.** Measured
+  2026-08-26. `riemannSum_integral_close`'s second leg built
+  `sample(CReal.integral F a b hab u, e)` and had to show it defeq to a
+  hand-rebuilt `speedup(raw, K)` term that never mentions `CReal.integral` at
+  all. The two share no head symbol, so the kernel fully delta-unfolded
+  `CReal.integral`'s `Definition` -- whose stored value embeds an entire
+  `regular_of_scaled_cauchy` construction -- **on every prelude build**.
+
+  `creal_prelude_builds` went **18.7 s -> 92.6 s** from that one declaration,
+  and because dozens of tests build a prelude, the full `--lib` sweep went from
+  802 tests in 316 s to **timing out at 1700 s with 95 tests done**. An
+  unrunnable gate blocks all publication, including other lanes' finished work.
+
+  **The fix is to make the two sides the SAME `ExprId`, not merely defeq.**
+  Route through the already-checked theorem (`integral_converges` via
+  `exists_elim`) instead of re-deriving its witness triple by hand: the
+  eliminated witness builds the value with the identical `const_app` recipe, so
+  the definition is never unfolded. Restored to **18.4 s**, statement unchanged.
+
+  **This is NOT the concrete-witness/lazy-delta family above**, and treating it
+  as one wastes the diagnosis -- everything here was symbolic, with no concrete
+  `Nat` partial evaluation. Nor is `--release` the discriminator. What found it
+  was **bisecting WITHIN the declaration**: build a throwaway variant keeping
+  only leg 1, then only leg 2, and time each. Leg 1 was 18.35 s, leg 2 alone was
+  95.15 s -- the whole regression, isolated in one experiment.
+
+  The general rule: **when a proof must relate a value produced by a
+  `Definition` to a value you rebuilt yourself, reach for the theorem that
+  already names it.** If a prelude build slows by a multiple, bisect the
+  declaration by legs before reaching for any of the documented families.
+
+- **`le_congr`'s PREMISE TAKES THE PRE-SUBSTITUTION TYPE, AND AN `Equiv` PROOF IN
+  A `le` SLOT FAILS IDENTICALLY TO A DIRECTION BUG.** Measured across 2026-08-26.
+  Eleven separate rejections in one session came from this family, in six
+  different files, and every one presented as an opaque `TypeMismatch`:
+
+  - `le_congr(x, x', y, y', hxx', hyy', h)` needs `h : le x y` — the type
+    **before** the rewrite. A lane twice passed a proof about a sub-term where
+    the whole product's bound was needed; the kernel rendered `Equiv A A` (the
+    reflexivity witness for the wrong side) against `A`'s unfolded definition.
+  - The same call needs `Equiv x' x`, not `Equiv x x'`, when `h` is about `x`.
+    Getting `x`/`x'` backwards is the single most common bug in this
+    development.
+  - **`Equiv` and `le` are different props.** Passing `equiv_refl` into an
+    `add_le_add` slot that wants `le_refl` produces a failure indistinguishable
+    from either of the above.
+
+  Three habits that actually work, each of which produced a first-attempt
+  kernel accept the same day:
+  - **Mirror an existing helper's construction** rather than building a term by
+    hand. Two lanes reported first-attempt accepts from this alone.
+  - **Check a lemma's stated direction rather than assuming it matches its
+    neighbour.** `Rat.sub_add_add`'s direction is the OPPOSITE of
+    `sub_add_sub`'s, in the same file.
+  - When both sides of a `TypeMismatch` are multi-hundred-KB and `Read` cannot
+    load them, **write a small differ**. One lane found a swapped `rsymm` that
+    way in minutes.
+
+- **A SYMBOLIC TEST CAN BE PATHOLOGICAL, AND THE RIGHT MOVE IS TO DELETE IT AND
+  SAY SO.** Measured 2026-08-26: a lane added an extra symbolic negative control
+  that built fvars from a separate `IntDev`; it pegged one core at **10.7 GB RSS
+  for over twelve minutes** before being killed. Not slow — pathological. The
+  lane removed the test, recorded it in the commit message, and did **not**
+  investigate. That is correct: the real verification is `creal_prelude_builds`
+  plus the environment-derived coverage assertion, and a hanging test in the
+  suite is worse than a missing one. If a test behaves this way, delete it,
+  say so, and move on.
+
 - **A CONCRETE WITNESS CAN COST THE KERNEL MORE THAN A SYMBOLIC ONE, and the
   symptom is unbounded WORK rather than a stuck term.** Measured 2026-08-26.
   `declare_e_converges` built its per-`n` proof against the **concrete**
