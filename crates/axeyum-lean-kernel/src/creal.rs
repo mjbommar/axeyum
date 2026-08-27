@@ -4502,6 +4502,21 @@ pub struct CRealPrelude {
     /// `CReal.UniformConvergesOn` instance from such an estimate (e.g. the
     /// Weierstrass M-test) needs to reach `close_within`.
     pub close_within_of_within: NameId,
+    /// `CReal.weierstrassMTest : ∀ (f : Nat → CReal → CReal) (mseq : Nat →
+    /// CReal) (a b : CReal), le a b → (∀ j p q, Equiv p q → Equiv (f j p) (f
+    /// j q)) → ∀ k, (∀ j pt, le a pt → le pt b → le (abs (f j pt)) (mseq
+    /// j)) → (∀ pp qq, Within (seq (sumRange mseq pp) pp − seq (sumRange
+    /// mseq qq) qq) (natDivSucc k pp + natDivSucc k qq)) →
+    /// UniformConvergesOn (fun n pt => sumRange (fun j => f j pt) n) (fun pt
+    /// => …the limit built at `clamp a b pt`…) a b` — the Weierstrass M-test
+    /// (`creal/uniform_convergence.rs`). Two hypotheses beyond a first
+    /// reading of the textbook statement: `le a b` and pointwise congruence
+    /// of `f`, both needed so `G` can be built as a TOTAL `CReal → CReal` by
+    /// clamping into `[a, b]` before invoking the domination hypothesis —
+    /// see that declaration's own module documentation for why `G` cannot
+    /// be built from an unconstrained point directly, and why the
+    /// congruence hypothesis is not optional once it can't.
+    pub weierstrass_m_test: NameId,
     /// `CReal.sinTerm : Nat → CReal := fun k => mul (pow (neg one) k)
     /// (expTerm (Nat.add (Nat.add k k) 1))` — the `k`-th term of `sin 1`'s
     /// Taylor series, `(-1)^k/(2k+1)!`, the odd index written `Nat.add
@@ -5065,6 +5080,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         poly_degree_lt_poly_scale: kernel.name_str(creal, "polyDegreeLt_polyScale"),
         uniform_converges_add: kernel.name_str(creal, "uniform_converges_add"),
         close_within_of_within: kernel.name_str(creal, "close_within_of_within"),
+        weierstrass_m_test: kernel.name_str(creal, "weierstrassMTest"),
         sin_term: kernel.name_str(creal, "sinTerm"),
         sin_series_partial: kernel.name_str(creal, "sinSeriesPartial"),
         sin_term_abs_le_dominant: kernel.name_str(creal, "sinTermAbsLeDominant"),
@@ -5368,6 +5384,15 @@ pub(crate) fn build_creal_prelude_uncached(
         // dependency on `uniform_converges_add` just above, but sits beside
         // it for locality (both are `uniform_convergence.rs` bridge lemmas).
         uniform_convergence::declare_close_within_of_within(&mut d, prelude)?;
+        // `weierstrassMTest` needs `close_within_of_within` (just above),
+        // `series::sum_range_cauchy_dominated_ordered_normalized` and
+        // `series::within_symm` (`series::declare_series`, well above),
+        // `convergence::kregular_of_cauchy_proof`/`regular_of_kregular`/
+        // `speedup`/`speedup_close` (`convergence::declare_cauchy_convergence`,
+        // well above), and the lattice/congruence toolkit (`order_extra`/
+        // `lattice`/`product`, all far above) -- every dependency is already
+        // in scope here.
+        uniform_convergence::declare_weierstrass_m_test(&mut d, prelude)?;
         // `ofNat_add`/`ofNat_mul` only need `CReal.ofNat`
         // (`archimedean::declare_archimedean`, well above) and the `Rat`-level
         // `ofRat_add`/`ofRat_mul`/`natDivSucc_add`/`natDivSucc_mul` facts that

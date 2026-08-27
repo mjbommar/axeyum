@@ -91,7 +91,9 @@ use crate::rat_prelude::ops::{
     nat_rewrite_prop, radd, rat_eq_rewrite, rchain, rcongr, rle, rneg, rsymm, rzero,
 };
 
+use super::convergence::kregular_of_cauchy_proof;
 use super::ring_helpers::add4_comm;
+use super::series::within_symm;
 use super::{CRealPrelude, creal_ty, embed, halves, sample, within};
 
 // --- shared term builders ----------------------------------------------------
@@ -1800,6 +1802,472 @@ pub(super) fn declare_close_within_of_within(
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.close_within_of_within,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// ============================================================================
+// Theorem: the Weierstrass M-test.
+// ============================================================================
+//
+// `CReal.weierstrassMTest : ∀ (f : Nat → CReal → CReal) (mseq : Nat → CReal)
+// (a b : CReal), le a b → (∀ j p q, Equiv p q → Equiv (f j p) (f j q)) →
+// ∀ k, (∀ j pt, le a pt → le pt b → le (abs (f j pt)) (mseq j)) →
+// (∀ pp qq, Within (seq (sumRange mseq pp) pp − seq (sumRange mseq qq) qq)
+//   (natDivSucc k pp + natDivSucc k qq)) →
+// UniformConvergesOn (fun n pt => sumRange (fun j => f j pt) n)
+//                     (fun pt => ⟨the limit built at `clamp a b pt`⟩) a b`.
+//
+// **The totality obstruction, and how it is resolved.** `UniformConvergesOn`'s
+// own `G` field is a raw, TOTAL `CReal → CReal` -- one of `UniformConvergesOn
+// F G a b`'s four PARAMETERS, fixed before `rate`/`spec` are built -- but the
+// only route this file has to a well-defined limit (`series.rs`'s raw,
+// non-existential Cauchy-comparison machinery, `convergence.rs`'s
+// `regular_of_scaled_cauchy`/`converges_of_scaled_cauchy`) needs, at each
+// point, a POINTWISE DOMINATION PROOF `∀ j, le (abs (f j pt)) (mseq j)`,
+// which this theorem's own hypothesis only supplies for `pt` ALREADY KNOWN to
+// satisfy `le a pt`/`le pt b`. `CReal.le` is not decidable (this
+// development's own standing rule: never branch on it), so there is no way
+// to conjure that membership proof for an arbitrary symbolic `pt` -- `G`
+// genuinely cannot be built from `pt` directly, and this is exactly the
+// obstruction the module documentation of this declaration's own caller was
+// written to flag before assembly began.
+//
+// The fix is the same one `creal.rs`'s own `crossing_close_clamped` names for
+// an unrelated theorem: **clamp first, for free.** `pt_clamped := max a (min
+// pt b)` is UNCONDITIONALLY in `[a, b]` (`le_max_left` gives the lower bound
+// outright; `max_le` + `min_le_right` gives the upper bound from the new
+// `le a b` hypothesis alone, no case split, no decidability), so `G := fun pt
+// => <limit built from pt_clamped>` is total by construction. The price is a
+// SECOND hypothesis this route needs beyond what a first reading of the
+// M-test states: `f`'s pointwise congruence (`∀ j p q, Equiv p q → Equiv (f j
+// p) (f j q)`). Without it, `f j` is only a function of a REPRESENTATIVE
+// (this development's `CReal` is a Bishop SETOID, not a literal quotient --
+// ADR-0512 -- so an arbitrary `CReal → CReal` term need not respect `Equiv`
+// at all), and nothing relates `f j pt` to `f j pt_clamped` even once `pt ~
+// pt_clamped` is shown (`equiv_of_le_le` from `min_le_left`/`le_min`, then
+// again from `max_le`/`le_max_right`, chained by `equiv_trans`). This
+// congruence hypothesis is not a proof-engineering convenience; it is the
+// same assumption -- "`f` is a genuine function of the real number, not of
+// its representative" -- that is invisible (automatically true) in a
+// classical set-theoretic treatment and must be stated explicitly here.
+//
+// With both in hand, [`declare_weierstrass_m_test`] builds exactly ONE Cauchy
+// structure -- at `pt_clamped`, reusing
+// [`CRealPrelude::sum_range_cauchy_dominated_ordered_normalized`] the same
+// way `series.rs`'s own (`Prop`-`Exists`-wrapped) `sumRange_cauchy_of_dominated`
+// assembles it (`Nat.le_total` case split, [`within_symm`] flip in one
+// branch -- an INDEPENDENT construction, not a copy, since here the Cauchy
+// witness for `mseq` is already raw rather than needing its own
+// `exists_elim`) -- and derives `G pt`'s `CReal.mk` from it via
+// [`kregular_of_cauchy_proof`] + `regular_of_kregular` + `speedup`/
+// `speedup_close`, mirroring `convergence.rs`'s own `converges_of_scaled_cauchy`
+// construction (independent again: that theorem's conclusion is `Prop`-wrapped
+// `Converges`, and this file needs the raw per-`n` `Within` fact underneath
+// it, generic in `pt`). [`close_within_of_within_at`] turns that fact into
+// `close_within (sumRange f_clamped n) (G pt) …`; one `sumRange_congr`/
+// `add_congr`/`abs_congr`/`le_congr` chain (using the congruence hypothesis
+// and `pt ~ pt_clamped`) transports it to the UNCLAMPED `close_within
+// (sumRange f_pt n) (G pt) …` that `spec` actually needs.
+
+/// `λ n, seq (f n) n` -- a private copy of `convergence.rs`'s own
+/// (unexported) `diagonal` (Rust privacy: sibling module), needed here to
+/// build `G`'s `CReal.mk` directly rather than through
+/// `converges_of_scaled_cauchy`'s own `Prop`-wrapped `Converges` conclusion
+/// (this file needs the raw per-`n` `Within` fact underneath it, generic in
+/// a symbolic point, which an `Exists`-wrapped `Converges` cannot supply
+/// into a `Type`-valued construction).
+fn diagonal_seq(d: &mut IntDev<'_>, p: CRealPrelude, f: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let fn_term = d.apply(f, &[n]);
+    let body = sample(d, p, fn_term, n);
+    d.lam_fv(n_fv, nat, body)
+}
+
+/// Admit `CReal.weierstrassMTest`. See the section documentation above for
+/// the route, the clamping construction that makes `G` total, and why the
+/// pointwise-congruence hypothesis is needed.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+#[allow(clippy::too_many_lines)]
+pub(super) fn declare_weierstrass_m_test(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let seq_ty = seq_fn_ty(d, p); // Nat -> CReal -> CReal
+    let mseq_ty = d.arrow(nat, carrier); // Nat -> CReal
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let mseq_fv = d.fresh_fvar();
+    let mseq = d.kernel().fvar(mseq_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let hab_ty = d.const_app(p.le, &[a, b]);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    // hcong : ∀ j p q, Equiv p q → Equiv (f j p) (f j q).
+    let hcong_ty = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let pp_fv = d.fresh_fvar();
+        let pp = d.kernel().fvar(pp_fv);
+        let qq_fv = d.fresh_fvar();
+        let qq = d.kernel().fvar(qq_fv);
+        let heq_ty = d.const_app(p.equiv, &[pp, qq]);
+        let fjp = d.apply(f, &[j, pp]);
+        let fjq = d.apply(f, &[j, qq]);
+        let concl = d.const_app(p.equiv, &[fjp, fjq]);
+        let inner = d.arrow(heq_ty, concl);
+        let with_qq = d.pi_fv(qq_fv, carrier, inner);
+        let with_pp = d.pi_fv(pp_fv, carrier, with_qq);
+        d.pi_fv(j_fv, nat, with_pp)
+    };
+    let hcong_fv = d.fresh_fvar();
+    let hcong = d.kernel().fvar(hcong_fv);
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    // hdom : ∀ j pt, le a pt → le pt b → le (abs (f j pt)) (mseq j).
+    let hdom_ty = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let pt_fv = d.fresh_fvar();
+        let pt = d.kernel().fvar(pt_fv);
+        let fjpt = d.apply(f, &[j, pt]);
+        let abs_fjpt = d.const_app(p.abs, &[fjpt]);
+        let mj = d.apply(mseq, &[j]);
+        let concl = d.const_app(p.le, &[abs_fjpt, mj]);
+        let range_ax = d.const_app(p.le, &[a, pt]);
+        let range_xb = d.const_app(p.le, &[pt, b]);
+        let with_xb = d.arrow(range_xb, concl);
+        let with_ax = d.arrow(range_ax, with_xb);
+        let with_pt = d.pi_fv(pt_fv, carrier, with_ax);
+        d.pi_fv(j_fv, nat, with_pt)
+    };
+    let hdom_fv = d.fresh_fvar();
+    let hdom = d.kernel().fvar(hdom_fv);
+
+    // hcauchy : ∀ pp qq, Within (seq (sumRange mseq pp) pp − seq (sumRange
+    // mseq qq) qq) (natDivSucc k pp + natDivSucc k qq) -- the raw,
+    // non-existential Cauchy witness for `mseq`'s own partial sums.
+    let hcauchy_ty = {
+        let pp_fv = d.fresh_fvar();
+        let pp = d.kernel().fvar(pp_fv);
+        let qq_fv = d.fresh_fvar();
+        let qq = d.kernel().fvar(qq_fv);
+        let sum_pp = d.const_app(p.sum_range, &[mseq, pp]);
+        let sum_qq = d.const_app(p.sum_range, &[mseq, qq]);
+        let left = sample(d, p, sum_pp, pp);
+        let right = sample(d, p, sum_qq, qq);
+        let diff = rsub(d, rat, left, right);
+        let bpp = div_succ_at(d, p, k, pp);
+        let bqq = div_succ_at(d, p, k, qq);
+        let bound = radd(d, bpp, bqq);
+        let claim = within(d, p, diff, bound);
+        let over_qq = d.pi_fv(qq_fv, nat, claim);
+        d.pi_fv(pp_fv, nat, over_qq)
+    };
+    let hcauchy_fv = d.fresh_fvar();
+    let hcauchy = d.kernel().fvar(hcauchy_fv);
+
+    // `F' := fun n pt => sumRange (fun j => f j pt) n` -- the conclusion's
+    // own sequence-of-functions.
+    let big_f = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let pt_fv = d.fresh_fvar();
+        let pt = d.kernel().fvar(pt_fv);
+        let f_pt = {
+            let j_fv = d.fresh_fvar();
+            let j = d.kernel().fvar(j_fv);
+            let body = d.apply(f, &[j, pt]);
+            d.lam_fv(j_fv, nat, body)
+        };
+        let body = d.const_app(p.sum_range, &[f_pt, n]);
+        let with_pt = d.lam_fv(pt_fv, carrier, body);
+        d.lam_fv(n_fv, nat, with_pt)
+    };
+
+    // --- one shared point `pt`, used both to build `G` (standalone,
+    // total) and, reusing the SAME fvar, to build `spec`'s own binder --
+    // see the section documentation for why `G` cannot depend on `hax`/
+    // `hxb` and must route through the clamp instead.
+    let pt_fv = d.fresh_fvar();
+    let pt = d.kernel().fvar(pt_fv);
+
+    let min_pt_b = d.const_app(p.min, &[pt, b]);
+    let pt_clamped = d.const_app(p.max, &[a, min_pt_b]);
+
+    let hax_c = d.lemma(p.le_max_left, &[a, min_pt_b]); // le a pt_clamped
+    let hxb_c = {
+        let min_le_right_pt_b = d.lemma(p.min_le_right, &[pt, b]); // le (min pt b) b
+        d.lemma(p.max_le, &[a, min_pt_b, b, hab, min_le_right_pt_b]) // le pt_clamped b
+    };
+
+    let f_pt_clamped = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let body = d.apply(f, &[j, pt_clamped]);
+        d.lam_fv(j_fv, nat, body)
+    };
+    let hyp1_c = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let body = d.apply(hdom, &[j, pt_clamped, hax_c, hxb_c]);
+        d.lam_fv(j_fv, nat, body)
+    };
+
+    // `k_prime := k + 8`, eight bare `Nat.succ`s -- already fully reduced,
+    // matching `series.rs::declare_sum_range_cauchy_of_dominated`'s own
+    // choice (see that function's doc comment for why a `succ` tower rather
+    // than the source theorem's own nested-`Nat.add` chain).
+    let k_prime = {
+        let mut kp = k;
+        for _ in 0..8 {
+            kp = d.succ(kp);
+        }
+        kp
+    };
+
+    // `case_proof : ∀ m n, Within (seq (sumRange f_pt_clamped m) m − seq
+    // (sumRange f_pt_clamped n) n) (natDivSucc k_prime m + natDivSucc
+    // k_prime n)` -- the `Nat.le_total` case split, verbatim in SHAPE to
+    // `series.rs::declare_sum_range_cauchy_of_dominated`'s own `case_proof`,
+    // independent in that `hcauchy` here is already raw (no `exists_elim`
+    // needed).
+    let case_proof = {
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let n2_fv = d.fresh_fvar();
+        let n2 = d.kernel().fvar(n2_fv);
+
+        let sum_fc_m = d.const_app(p.sum_range, &[f_pt_clamped, m]);
+        let sum_fc_n = d.const_app(p.sum_range, &[f_pt_clamped, n2]);
+        let y_m = sample(d, p, sum_fc_m, m);
+        let z_n = sample(d, p, sum_fc_n, n2);
+        let diff_mn = rsub(d, rat, y_m, z_n);
+        let bm = div_succ_at(d, p, k_prime, m);
+        let bn = div_succ_at(d, p, k_prime, n2);
+        let bound_mn = radd(d, bm, bn);
+        let claim_mn = within(d, p, diff_mn, bound_mn);
+
+        let left_ty = d.le(m, n2);
+        let right_ty = d.le(n2, m);
+        let total_mn = {
+            let name = d.prelude().le_total;
+            d.const_app(name, &[m, n2])
+        };
+
+        let body = d.or_elim(
+            left_ty,
+            right_ty,
+            claim_mn,
+            total_mn,
+            &|d, hmn| {
+                let raw = d.lemma(
+                    p.sum_range_cauchy_dominated_ordered_normalized,
+                    &[f_pt_clamped, mseq, k, m, n2, hyp1_c, hcauchy, hmn],
+                );
+                let bound_nm = radd(d, bn, bm);
+                let flipped = within_symm(d, p, z_n, y_m, bound_nm, raw);
+                let comm_eq = d.lemma(rat.add_comm, &[bn, bm]);
+                rat_eq_rewrite(d, bound_nm, bound_mn, comm_eq, flipped, &|d, t| {
+                    within(d, p, diff_mn, t)
+                })
+            },
+            &|d, hnm| {
+                d.lemma(
+                    p.sum_range_cauchy_dominated_ordered_normalized,
+                    &[f_pt_clamped, mseq, k, n2, m, hyp1_c, hcauchy, hnm],
+                )
+            },
+        );
+        let over_n2 = d.lam_fv(n2_fv, nat, body);
+        d.lam_fv(m_fv, nat, over_n2)
+    };
+
+    // `G pt := CReal.mk (speedup (diagonal (sumRange f_pt_clamped)) k_prime)
+    // (regularity proof)` -- total, since `pt_clamped`/`hax_c`/`hxb_c`/
+    // `case_proof` above never touched `hax`/`hxb`.
+    let sum_fc_all = d.const_app(p.sum_range, &[f_pt_clamped]);
+    let raw_pt = diagonal_seq(d, p, sum_fc_all);
+    let kregular_proof_pt = kregular_of_cauchy_proof(d, p, raw_pt, k_prime, case_proof);
+    let reg_proof_pt = d.const_app(p.regular_of_kregular, &[raw_pt, k_prime, kregular_proof_pt]);
+    let speedup_term_pt = d.const_app(p.speedup, &[raw_pt, k_prime]);
+    let g_pt = d.const_app(p.mk, &[speedup_term_pt, reg_proof_pt]);
+    let sc_pt = d.const_app(p.speedup_close, &[raw_pt, k_prime, kregular_proof_pt]);
+    let succ_k_prime = d.succ(k_prime);
+    let one_nat = d.num(1);
+    let k2 = NatOps::add(d, succ_k_prime, one_nat);
+
+    let big_g = d.lam_fv(pt_fv, carrier, g_pt);
+
+    // --- `spec`, reusing `pt_fv` so `apply(big_g, [pt])` and this file's
+    // own reconstructed `g_pt` coincide exactly, not merely up to defeq.
+    let (rate, spec) = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let hax_fv = d.fresh_fvar();
+        let hax = d.kernel().fvar(hax_fv);
+        let hxb_fv = d.fresh_fvar();
+        let hxb = d.kernel().fvar(hxb_fv);
+
+        let sc_pt_n = d.apply(sc_pt, &[n]);
+        let bound_left_n = div_succ_at(d, p, succ_k_prime, n);
+        let bound_right_n = div_succ_at(d, p, one_nat, n);
+        let sc_n_bound = radd(d, bound_left_n, bound_right_n);
+        let raw_pt_n = d.apply(raw_pt, &[n]);
+        let speedup_n = d.apply(speedup_term_pt, &[n]);
+        let diff_n = rsub(d, rat, raw_pt_n, speedup_n);
+
+        let fuse = d.lemma(rat.nat_div_succ_add, &[succ_k_prime, one_nat, n]);
+        let target_bound_n = div_succ_at(d, p, k2, n);
+        let step_n = rat_eq_rewrite(d, sc_n_bound, target_bound_n, fuse, sc_pt_n, &|d, t| {
+            within(d, p, diff_n, t)
+        });
+        // step_n : Within (raw_pt n − speedup_term_pt n) (natDivSucc k2 n)
+        //        = Within (sample (sumRange f_pt_clamped n) n
+        //                  − sample g_pt n) (natDivSucc k2 n), by beta/iota.
+
+        let x_term = d.const_app(p.sum_range, &[f_pt_clamped, n]);
+        let (rate, proof_clamped) = close_within_of_within_at(d, p, x_term, g_pt, n, k2, step_n);
+        // proof_clamped : close_within x_term g_pt (natDivSucc rate n).
+
+        // --- congruence bridge: `pt ~ pt_clamped`, then transport along
+        // `hcong`/`sumRange_congr` to the UNCLAMPED sequence.
+        let le_refl_pt = d.lemma(p.le_refl, &[pt]);
+        let low_min = d.lemma(p.min_le_left, &[pt, b]); // le (min pt b) pt
+        let high_min = d.lemma(p.le_min, &[pt, b, pt, le_refl_pt, hxb]); // le pt (min pt b)
+        let e1 = d.lemma(p.equiv_of_le_le, &[min_pt_b, pt, low_min, high_min]);
+        // e1 : Equiv (min pt b) pt
+
+        let equiv_refl_a = d.lemma(p.equiv_refl, &[a]);
+        let max_a_pt = d.const_app(p.max, &[a, pt]);
+        let max_cong = d.lemma(p.max_congr, &[a, a, min_pt_b, pt, equiv_refl_a, e1]);
+        // max_cong : Equiv pt_clamped max_a_pt
+
+        let low_max = d.lemma(p.max_le, &[a, pt, pt, hax, le_refl_pt]); // le max_a_pt pt
+        let high_max = d.lemma(p.le_max_right, &[a, pt]); // le pt max_a_pt
+        let e2 = d.lemma(p.equiv_of_le_le, &[max_a_pt, pt, low_max, high_max]);
+        // e2 : Equiv max_a_pt pt
+
+        let hclamp_eq = d.lemma(p.equiv_trans, &[pt_clamped, max_a_pt, pt, max_cong, e2]);
+        // hclamp_eq : Equiv pt_clamped pt
+
+        let f_pt = {
+            let j_fv = d.fresh_fvar();
+            let j = d.kernel().fvar(j_fv);
+            let body = d.apply(f, &[j, pt]);
+            d.lam_fv(j_fv, nat, body)
+        };
+        let heq_pointwise = {
+            let j_fv = d.fresh_fvar();
+            let j = d.kernel().fvar(j_fv);
+            let body = d.apply(hcong, &[j, pt_clamped, pt, hclamp_eq]);
+            d.lam_fv(j_fv, nat, body)
+        };
+        let heq_sum = d.lemma(p.sum_range_congr, &[f_pt_clamped, f_pt, n, heq_pointwise]);
+        // heq_sum : Equiv (sumRange f_pt_clamped n) (sumRange f_pt n)
+
+        let sum_fpt_n = d.const_app(p.sum_range, &[f_pt, n]);
+        let neg_g_pt = d.const_app(p.neg, &[g_pt]);
+        let refl_neg_g_pt = d.lemma(p.equiv_refl, &[neg_g_pt]);
+        let inner_before = d.const_app(p.add, &[x_term, neg_g_pt]);
+        let inner_after = d.const_app(p.add, &[sum_fpt_n, neg_g_pt]);
+        let add_cong = d.lemma(
+            p.add_congr,
+            &[
+                x_term,
+                sum_fpt_n,
+                neg_g_pt,
+                neg_g_pt,
+                heq_sum,
+                refl_neg_g_pt,
+            ],
+        );
+        // add_cong : Equiv inner_before inner_after
+        let abs_cong = d.lemma(p.abs_congr, &[inner_before, inner_after, add_cong]);
+        // abs_cong : Equiv (abs inner_before) (abs inner_after)
+
+        let final_bound = div_succ_at(d, p, rate, n);
+        let rhs_embed = embed(d, p, final_bound);
+        let refl_rhs = d.lemma(p.equiv_refl, &[rhs_embed]);
+        let lhs_before = d.const_app(p.abs, &[inner_before]);
+        let lhs_after = d.const_app(p.abs, &[inner_after]);
+        let final_proof = d.lemma(
+            p.le_congr,
+            &[
+                lhs_before,
+                lhs_after,
+                rhs_embed,
+                rhs_embed,
+                abs_cong,
+                refl_rhs,
+                proof_clamped,
+            ],
+        );
+        // final_proof : close_within (sumRange f_pt n) g_pt (natDivSucc rate n)
+        //             = close_within (F' n pt) (G pt) (natDivSucc rate n).
+
+        let range_ax = d.const_app(p.le, &[a, pt]);
+        let range_xb = d.const_app(p.le, &[pt, b]);
+        let with_hxb = d.lam_fv(hxb_fv, range_xb, final_proof);
+        let with_hax = d.lam_fv(hax_fv, range_ax, with_hxb);
+        let with_pt = d.lam_fv(pt_fv, carrier, with_hax);
+        let spec = d.lam_fv(n_fv, nat, with_pt);
+        (rate, spec)
+    };
+
+    let mk_applied = d.const_app(p.uconv_mk, &[big_f, big_g, a, b, rate, spec]);
+
+    let value = {
+        let with_hcauchy = d.lam_fv(hcauchy_fv, hcauchy_ty, mk_applied);
+        let with_hdom = d.lam_fv(hdom_fv, hdom_ty, with_hcauchy);
+        let with_k = d.lam_fv(k_fv, nat, with_hdom);
+        let with_hcong = d.lam_fv(hcong_fv, hcong_ty, with_k);
+        let with_hab = d.lam_fv(hab_fv, hab_ty, with_hcong);
+        let with_b = d.lam_fv(b_fv, carrier, with_hab);
+        let with_a = d.lam_fv(a_fv, carrier, with_b);
+        let with_mseq = d.lam_fv(mseq_fv, mseq_ty, with_a);
+        d.lam_fv(f_fv, seq_ty, with_mseq)
+    };
+    let ty = {
+        // `hab`/`hdom`/`hcauchy` are each genuinely referenced inside
+        // `big_g` (via `hax_c`/`hxb_c`/`hyp1_c`/`case_proof`), so
+        // `conclusion` mentions all three free variables and each must bind
+        // with `pi_fv`, never `d.arrow` -- an `arrow` leaves the occurrence
+        // inside `conclusion` unabstracted, `UnboundFVar` at kernel check
+        // time. `hcong` is NOT referenced by `conclusion` (only by `spec`,
+        // which is not part of the TYPE), so it alone stays `arrow`.
+        let conclusion = uconv_ty(d, p, big_f, big_g, a, b);
+        let after_hcauchy = d.pi_fv(hcauchy_fv, hcauchy_ty, conclusion);
+        let after_hdom = d.pi_fv(hdom_fv, hdom_ty, after_hcauchy);
+        let with_k = d.pi_fv(k_fv, nat, after_hdom);
+        let after_hcong = d.arrow(hcong_ty, with_k);
+        let after_hab = d.pi_fv(hab_fv, hab_ty, after_hcong);
+        let with_b = d.pi_fv(b_fv, carrier, after_hab);
+        let with_a = d.pi_fv(a_fv, carrier, with_b);
+        let with_mseq = d.pi_fv(mseq_fv, mseq_ty, with_a);
+        d.pi_fv(f_fv, seq_ty, with_mseq)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.weierstrass_m_test,
         uparams: vec![],
         ty,
         value,

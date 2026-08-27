@@ -1560,6 +1560,7 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
             p.close_within_of_within,
             "theorem",
         ),
+        ("CReal.weierstrassMTest", p.weierstrass_m_test, "theorem"),
     ];
     // COVERAGE, checked against the ENVIRONMENT rather than against this list.
     //
