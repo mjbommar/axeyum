@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-polydegreelt",
+  "title": "polyDegreeLt: the PROPOSITION that a coefficient function vanishes past a bound, not a computed degree",
+  "statement": "CReal.polyDegreeLt c n := forall k, n <= k -> Equiv (c k) zero -- c has degree less than n, stated as a proposition quantifying over all sufficiently large indices, NOT as a computed integer degree. Over CReal this is the only option: both CReal.Equiv and CReal.le are undecidable, so no coefficient can be tested for zero to compute an actual degree. A total, axiom-free definition.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : ((x0 : AxNat) -> CReal)) -> ((x1 : AxNat) -> Prop))",
+    "fragment": "CReal",
+    "free_symbols": [
+      "x0",
+      "x1"
+    ],
+    "kernel_theorem": "CReal.polyDegreeLt"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.polyDegreeLt",
+      "kind": "kernel-term",
+      "supports": "CReal.polyDegreeLt is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "kernel_declaration_projection --require-declaration (DIRECT, fail-on-absence)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration CReal.polyDegreeLt --require-kind definition 2>/dev/null | grep -cE '^found[[:space:]]creal[[:space:]]definition[[:space:]]CReal\\.polyDegreeLt[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "CReal.polyDegreeLt is a Declaration::Definition. theorem_dependency_inventory / nat_theorem_inventory / prelude_theorem_inventory all filter to Declaration::Theorem and exclude Definitions/Inductives, so this fact uses the DIRECT 'kernel_declaration_projection --require-declaration' checker: it searches every constructed prelude's environment for an exact display-name match and exits non-zero on no match or kind mismatch. Verified on this tree: the command prints exactly one 'found\\tcreal\\tdefinition\\tCReal.polyDegreeLt\\t...' line. --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-CReal.polyDegreeLt",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.polyDegreeLt",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: creal: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: creal trusted surface = 0'. That bounds every declaration in the creal environment, including CReal.polyDegreeLt, since a declaration cannot depend on a trusted declaration the environment does not contain. --require-axiom-free <name> errors for a prelude never built by this run rather than silently passing on zero rows. --release is MANDATORY here."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/polynomial.rs, declare_poly_degree_lt)",
+    "source": "canonical type read via kernel_declaration_projection's own UNFILTERED emit mode (cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection, no --require-declaration flag), which prints, per constructed prelude, one TSV row per declaration whose last field is kernel.render_lean(declaration.ty()) -- the same Kernel::render_lean canonical form nat_theorem_inventory prints, just not filtered to Declaration::Theorem. That output was piped to a scratchpad file and the exact row for this declaration's own prelude label was extracted and injected here programmatically (a Python script reading the TSV, never hand-transcribed); crates/ source was not touched to produce this batch."
+  },
+  "notes": "depends_on is empty: polyDegreeLt is a universally-quantified Prop built from CReal.Equiv, CReal.zero, Nat.le, all plain Definitions/Props.",
+  "external_status": "proved"
+}

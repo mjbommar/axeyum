@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-alternatingeleo",
+  "title": "Alternating series: the even partial sum is <= the next (odd-length) partial sum",
+  "statement": "For a : Nat -> CReal with every a k >= 0: for every k, sumRange (fun i => (-1)^i * a i) (2k) <= sumRange (fun i => (-1)^i * a i) (2k+1) -- the even-index partial sum E(k) is at most the very next partial sum O(k), the E <= O half of the Leibniz alternating-series bracket, using only nonnegativity of the terms (not monotonicity).",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : ((x0 : AxNat) -> CReal)) -> ((x1 : ((x1 : AxNat) -> CReal.le CReal.zero (x0 x1))) -> ((x2 : AxNat) -> CReal.le (CReal.sumRange (fun (x3 : AxNat) => CReal.mul (CReal.pow (CReal.neg CReal.one) x3) (x0 x3)) (AxNat.add x2 x2)) (CReal.sumRange (fun (x3 : AxNat) => CReal.mul (CReal.pow (CReal.neg CReal.one) x3) (x0 x3)) (AxNat.succ (AxNat.add x2 x2))))))",
+    "fragment": "CReal",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "kernel_theorem": "CReal.alternatingELeO"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:creal-add-le-add",
+    "F:creal-add-zero",
+    "F:creal-equiv-refl",
+    "F:creal-equiv-symm",
+    "F:creal-equiv-trans",
+    "F:creal-le-congr",
+    "F:creal-le-refl",
+    "F:creal-mul-comm",
+    "F:creal-mul-congr",
+    "F:creal-mul-one",
+    "F:creal-negonepowdouble"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.alternatingELeO",
+      "kind": "kernel-term",
+      "supports": "CReal.alternatingELeO is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CReal.alternatingELeO 2>/dev/null | grep -cE '^CReal\\.alternatingELeO[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "The producing prelude admits CReal.alternatingELeO through the trusted Kernel::add_declaration gate, which re-checks the proof term against the stated type. theorem_dependency_inventory exits non-zero for a named filter matching nothing (a deleted/renamed theorem cannot read as a re-derived one), and grep -c (never -q) both avoids a SIGPIPE-under-pipefail false negative and independently asserts the exact tab-anchored line is present. --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-CReal.alternatingELeO",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.alternatingELeO",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: creal: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: creal trusted surface = 0'. That bounds every declaration in the creal environment, including CReal.alternatingELeO, since a declaration cannot depend on a trusted declaration the environment does not contain. --require-axiom-free <name> errors for a prelude never built by this run rather than silently passing on zero rows. --release is MANDATORY here."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/alternating.rs, declare_alternating_e_le_o)",
+    "source": "theorem name, canonical type and direct dependency edges read via theorem_dependency_inventory's own per-name output (cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- <Name>), which prints '<Name>\\t<comma-separated direct deps>'; the canonical type itself was cross-extracted from kernel_declaration_projection's unfiltered TSV dump the same way as the Definition facts in this batch, and confirmed byte-for-byte identical between the two tools' output for every name in this batch. crates/ source was not touched to produce this batch."
+  },
+  "notes": "depends_on includes F:creal-negonepowdouble, a sibling fact registered in this same batch.",
+  "external_status": "proved"
+}
