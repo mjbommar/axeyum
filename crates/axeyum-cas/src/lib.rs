@@ -90,6 +90,7 @@ pub mod ntheory;
 pub mod ntheory_advanced;
 pub mod ntheory_more;
 pub mod orthopoly;
+pub mod partial_fractions;
 pub mod permutation;
 mod ratint;
 pub mod real_algebraic;
