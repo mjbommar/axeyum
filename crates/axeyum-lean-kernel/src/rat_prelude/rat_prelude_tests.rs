@@ -4726,7 +4726,7 @@ fn sum_range_mul_eq_diag_add_corner_computes_and_the_naive_identity_is_false() {
 /// The `Nat.le i k` hypothesis is then shown to be load-bearing rather than
 /// decorative: `Nat.sub` truncates, so at `i = 3 > k = 1` the conclusion
 /// reads `2 = 2^(1−3) · 2^3 = 2^0 · 8 = 8`, and the kernel is asked to
-/// confirm that `2` and `8` are NOT def_eq. A `pow_sub_add` stated without
+/// confirm that `2` and `8` are NOT `def_eq`. A `pow_sub_add` stated without
 /// the hypothesis would be unsound, and this is the instance that says so.
 #[test]
 fn pow_add_and_the_antidiagonal_cell_collapse_compute_at_concrete_arguments() {
