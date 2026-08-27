@@ -115,7 +115,7 @@ fn on_a_deep_stack_creal<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'stat
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 348] = [
+    let expected: [(&str, crate::NameId, &str); 349] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -828,6 +828,18 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         (
             "CReal.order_reflect_of_pos_deriv",
             p.order_reflect_of_pos_deriv,
+            "theorem",
+        ),
+        // Chapter 12's CONTINUITY-of-the-inverse statement
+        // (creal/monotone.rs): a two-sided Lipschitz bound on `abs (x-y)` in
+        // terms of `abs (F x - F y)`, conditional on `Apart x y` as data --
+        // unlike `order_reflect_of_pos_deriv`, this needs no codomain
+        // hypothesis at all, since it bounds the gap in BOTH directions.
+        // Composes `strict_mono_magnitude` + `scale_cancel_le` (both above)
+        // with `abs_le` and a local `neg (x-y) ~ (y-x)` ring identity.
+        (
+            "CReal.inverse_lipschitz_of_pos_deriv",
+            p.inverse_lipschitz_of_pos_deriv,
             "theorem",
         ),
         // The one bisection step of the constructive approximate IVT
@@ -5892,6 +5904,115 @@ fn order_reflect_of_pos_deriv_applies_to_the_identity_on_0_1() {
     assert_eq!(
         rendered, expected_rendered,
         "must conclude exactly `lt zero one`, not some other CReal.lt statement"
+    );
+}
+
+/// **Mandatory concrete instantiation** for
+/// `CReal.inverse_lipschitz_of_pos_deriv`: the identity function on `[0, 1]`
+/// again, at `x := zero`, `y := one`, with `CReal.apart_zero_one` supplying
+/// `Apart x y`. Unlike `order_reflect_of_pos_deriv`'s instantiation, this one
+/// needs NO codomain hypothesis at all -- there is no `hcodom` argument.
+///
+/// At `k := 0`, `e_acc = Nat.succ (Nat.mul 2 0)` reduces to `1`, so the
+/// pinned constant is `ofNat (Nat.succ 1) = ofNat 2`. This is checked by
+/// `def_eq` against the FULLY REDUCED statement `le (abs (add zero (neg
+/// one))) (mul (ofNat 2) (abs (add zero (neg one))))`, not merely that SOME
+/// bound was accepted: a wrong `e_acc` (off by one, or using `k` directly
+/// instead of `Nat.succ (Nat.mul 2 k)`) pins a DIFFERENT `Nat` numeral, and
+/// two distinct closed `Nat` numerals are never defeq.
+#[test]
+fn inverse_lipschitz_of_pos_deriv_applies_to_the_identity_on_0_1() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+    use crate::rat_prelude::ops::rat_eq_rewrite;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let carrier = d.kernel().const_(p.creal, vec![]);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+
+    let identity = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+    let const_one = {
+        let r_fv = d.fresh_fvar();
+        d.lam_fv(r_fv, carrier, one_c)
+    };
+
+    let hf = d.lemma(p.has_derivative_id, &[zero_c, one_c]);
+
+    let embed_le_one = {
+        let unit_rat = d.const_app(p.rat.nat_div_succ, &[one_nat, zero_nat]);
+        let one_rat = d.kernel().const_(p.rat.one, vec![]);
+        let unit_eq_one = d.lemma(p.rat_unit_eq_one, &[]);
+        let unit_embed = d.const_app(p.of_rat, &[unit_rat]);
+        let refl_start = d.lemma(p.equiv_refl, &[unit_embed]);
+        let bridge = rat_eq_rewrite(
+            &mut d,
+            unit_rat,
+            one_rat,
+            unit_eq_one,
+            refl_start,
+            &|d, t| {
+                let embedded = d.const_app(p.of_rat, &[t]);
+                d.const_app(p.equiv, &[unit_embed, embedded])
+            },
+        );
+        d.lemma(p.le_of_equiv, &[unit_embed, one_c, bridge])
+    };
+
+    let hderiv = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let haz_ty = d.const_app(p.le, &[zero_c, z]);
+        let hzb_ty = d.const_app(p.le, &[z, one_c]);
+        let haz_fv = d.fresh_fvar();
+        let hzb_fv = d.fresh_fvar();
+        let with_hzb = d.lam_fv(hzb_fv, hzb_ty, embed_le_one);
+        let with_haz = d.lam_fv(haz_fv, haz_ty, with_hzb);
+        d.lam_fv(z_fv, carrier, with_haz)
+    };
+
+    let hax = d.lemma(p.le_refl, &[zero_c]);
+    let hxb = {
+        let lt = d.lemma(p.zero_lt_one, &[]);
+        d.lemma(p.le_of_lt, &[zero_c, one_c, lt])
+    };
+    let hay = hxb;
+    let hyb = d.lemma(p.le_refl, &[one_c]);
+    let hap = d.lemma(p.apart_zero_one, &[]);
+
+    let instance = d.lemma(
+        p.inverse_lipschitz_of_pos_deriv,
+        &[
+            identity, const_one, zero_c, one_c, hf, zero_nat, hderiv, zero_c, one_c, hax, hxb, hay,
+            hyb, hap,
+        ],
+    );
+
+    let ty = d.kernel().infer(instance).unwrap_or_else(|error| {
+        panic!("inverse_lipschitz_of_pos_deriv refused at the identity on [0,1]: {error:?}")
+    });
+
+    let diff = {
+        let neg_one = d.const_app(p.neg, &[one_c]);
+        d.const_app(p.add, &[zero_c, neg_one])
+    };
+    let abs_diff = d.const_app(p.abs, &[diff]);
+    let of_nat_two = d.const_app(p.of_nat, &[two_nat]);
+    let scaled = d.const_app(p.mul, &[of_nat_two, abs_diff]);
+    let expected_reduced = d.const_app(p.le, &[abs_diff, scaled]);
+    assert!(
+        d.kernel().def_eq(ty, expected_reduced),
+        "must reduce to `le (abs (zero-one)) (mul (ofNat 2) (abs (zero-one)))`; \
+         a wrong `e_acc` pins a different `Nat` numeral, which is never defeq"
     );
 }
 
