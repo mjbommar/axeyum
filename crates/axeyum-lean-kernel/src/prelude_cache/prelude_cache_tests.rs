@@ -70,7 +70,25 @@ fn trusted_surface(kernel: &Kernel) -> Vec<String> {
 
 /// Builds `key` twice — once through the uncached trusted gate, once through the
 /// process-wide template — and requires the two kernels to be indistinguishable.
-fn assert_reuse_matches_fresh_build(key: PreludeKey, label: &str) {
+/// Runs the comparison on an explicit deep stack.
+///
+/// Measured 2026-08-26: `CReal.integral` and its convergence bridges grew the
+/// shared prelude past the default 2 MiB a `#[test]` thread gets, and this was
+/// the THIRD module to cross that line in one session (after `creal_tests` and
+/// `creal_model_tests`). Per `artifacts/kernel-stack-envelope.tsv` the `creal`
+/// prelude needed **exactly** the default in debug, so there was never any
+/// margin and each new declaration spends into a deficit.
+///
+/// Wrapped at the shared HELPER rather than at any one test, because the
+/// failing test name is arbitrary when a shared builder blows the stack —
+/// whichever caller runs first pays the whole cost, so protecting one just
+/// elects a new victim. Confirmed a resource limit, not runaway recursion, by
+/// `--release` passing.
+fn assert_reuse_matches_fresh_build(key: PreludeKey, label: &'static str) {
+    crate::on_a_deep_stack(move || assert_reuse_matches_fresh_build_body(key, label));
+}
+
+fn assert_reuse_matches_fresh_build_body(key: PreludeKey, label: &'static str) {
     let mut fresh = Kernel::new();
     match key {
         PreludeKey::Logic => {

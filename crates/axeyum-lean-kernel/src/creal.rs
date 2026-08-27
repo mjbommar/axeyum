@@ -846,6 +846,15 @@ pub struct CRealPrelude {
     pub converges_unique: NameId,
     /// `CReal.converges_of_const : ∀ c, Converges (fun _ => c) c`.
     pub converges_of_const: NameId,
+    /// `CReal.converges_of_equiv : ∀ f target, (∀ n, Equiv (f n) target) →
+    /// Converges f target`.
+    ///
+    /// A sequence EXACTLY `Equiv` to a fixed target at every index (not just
+    /// in the limit) `Converges` to it at rate `K := 2` — one instantiation
+    /// of `Equiv`'s own per-index bound, no new estimate. See
+    /// `convergence.rs`'s `declare_converges_of_equiv` for why this is the
+    /// second half of the general bridge `CReal.integral_const` needs.
+    pub converges_of_equiv: NameId,
     /// `CReal.Cauchy (f : Nat → CReal) : Prop :=
     /// ∃ (K : Nat), ∀ m n, Within (seq (f m) m − seq (f n) n)
     /// (Rat.natDivSucc K m + Rat.natDivSucc K n)`.
@@ -877,6 +886,26 @@ pub struct CRealPrelude {
     /// bridge (the speed-up's own sample *is* the diagonal value, not a
     /// resampling of it), and closes exactly.
     pub regular_of_scaled_cauchy: NameId,
+    /// `CReal.converges_of_scaled_cauchy : ∀ f K,
+    /// (∀ m n, Within (seq (f m) m − seq (f n) n)
+    ///    (Rat.natDivSucc K m + Rat.natDivSucc K n)) →
+    /// Converges f (CReal.mk (speedup (diagonal f) K)
+    ///   (regular_of_scaled_cauchy f K h))`.
+    ///
+    /// The "speedup transported" bridge, and [`Self::regular_of_scaled_cauchy`]'s
+    /// companion: whenever `f` satisfies the SAME `K`-scaled Cauchy estimate
+    /// that makes `speedup (diagonal f) K` `Regular`, `f` also `Converges` to
+    /// the exact `CReal` that estimate builds via `CReal.mk`. Shares its
+    /// whole proof body with [`Self::converges_of_cauchy`]'s own inner
+    /// derivation (`speedup_close` plus one `Rat.natDivSucc_add` fusion); the
+    /// only difference is that `h`/`K` are bare hypotheses here rather than
+    /// an eliminated `Cauchy f` witness, so the conclusion NAMES the
+    /// constructed limit instead of hiding it behind an `Exists`. Built for
+    /// `creal/integral.rs`'s `CReal.integral_converges`, which ties
+    /// `CReal.integral`'s own `mk`/`speedup` construction back to
+    /// `Converges` — reusable by any future `integral_*` evaluation law that
+    /// needs the same tie.
+    pub converges_of_scaled_cauchy: NameId,
     /// `CReal.converges_of_cauchy : ∀ f, Cauchy f →
     /// Exists (fun L => Converges f L)`.
     ///
@@ -3013,6 +3042,43 @@ pub struct CRealPrelude {
     /// exact form.
     pub order_reflect_of_pos_deriv: NameId,
 
+    /// `CReal.inverse_lipschitz_of_pos_deriv : ∀ F F' a b, HasDerivativeOn F
+    /// F' a b → ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k))
+    /// (F' z)) → ∀ x y, le a x → le x b → le a y → le y b → Apart x y →
+    /// le (abs (add x (neg y))) (mul (ofNat (Nat.succ e_acc))
+    /// (abs (add (F x) (neg (F y)))))`, `e_acc := Nat.succ (Nat.mul 2 k)`
+    /// (`creal/monotone.rs`) — Chapter 12's CONTINUITY-of-the-inverse
+    /// statement: a two-sided Lipschitz bound on the DOMAIN gap in terms of
+    /// the CODOMAIN gap, so a caller who already has `F x` close to `F y`
+    /// (plus `Apart x y` as data) gets `x` close to `y`, without ever
+    /// deciding the order of `x`/`y` from the codomain fact alone the way
+    /// unconditional order-reflection would need.
+    ///
+    /// Composes two already-proved pieces, one per branch of the case split
+    /// on the given `Apart x y`: [`Self::strict_mono_magnitude`] gives the
+    /// RAW bound `(1/(2k+2))·(hi−lo) ≤ F hi − F lo` for whichever of
+    /// `x`/`y` is smaller, and [`Self::scale_cancel_le`] clears the
+    /// fraction to `(hi−lo) ≤ (2k+2)·(F hi − F lo)`. Turning that
+    /// ONE-sided, order-dependent bound into the two-sided `abs` statement
+    /// needs [`Self::abs_le`] plus a small ring identity this file builds
+    /// locally (`neg (add x (neg y))` `Equiv` `add y (neg x)`, i.e.
+    /// `neg (x−y) ~ (y−x)` — the same distributivity fact `creal/series.rs`
+    /// and `creal/derivative.rs` each already carry their own private copy
+    /// of, as `neg_add`/`neg_add_distrib`) to identify `neg (x−y)` with
+    /// `y−x` and transport the one-sided bound across it, plus
+    /// [`Self::mul_le_mul_of_nonneg_left`] to widen `F hi − F lo` to
+    /// `abs (F x − F y)` (needing `0 ≤ (2k+2)`, from [`Self::of_nat_le`]
+    /// against `Nat.zero_le`) and [`Self::add_le_add`]/[`Self::add_neg`] for
+    /// the sign facts (`x−y ≤ 0 ≤ (2k+2)·(F hi−F lo)` in the branch where
+    /// `x < y`, and its mirror).
+    ///
+    /// Unlike [`Self::order_reflect_of_pos_deriv`], this does NOT need the
+    /// codomain hypothesis `lt (F x) (F y)` at all — it bounds the gap in
+    /// BOTH directions from `Apart x y` alone, which is what makes it a
+    /// genuine continuity-of-the-inverse statement rather than a restatement
+    /// of order-reflection.
+    pub inverse_lipschitz_of_pos_deriv: NameId,
+
     /// `CReal.ivt_step : ∀ F P Q eps, lt zero eps → le P Q → le (F P) eps →
     /// le (neg eps) (F Q) → ∃ P' Q', le P P' ∧ le P' Q' ∧ le Q' Q ∧
     /// le (F P') eps ∧ le (neg eps) (F Q') ∧ Equiv (add Q' (neg P')) (mul
@@ -3505,6 +3571,31 @@ pub struct CRealPrelude {
     /// colliding with that file's own, unrelated, pre-existing
     /// `declare_integral`, which builds `CReal.riemannSum`).
     pub integral: NameId,
+    /// `CReal.integral_converges : ∀ F a b hab u, Converges (fun n =>
+    /// riemannSum F a b (Nat.add (deep F a b u n) 0)) (CReal.integral F a b
+    /// hab u)`.
+    ///
+    /// Ties `CReal.integral`'s own `mk`/`speedup` construction back to
+    /// `Converges`, fully generically in `F`/`a`/`b`/`hab`/`u` — the
+    /// `f_lambda`/`K`/`cauchy_proof` triple this reconstructs is EXACTLY
+    /// [`Self::integral`]'s own (`creal/integral.rs`'s `integral_witness`,
+    /// shared by both declarations so they cannot drift), so
+    /// [`Self::converges_of_scaled_cauchy`] applied to it produces a term
+    /// whose type is `CReal.integral F a b hab u` by unfolding alone — no
+    /// new estimate. See `creal/integral.rs`'s `declare_integral_converges`.
+    pub integral_converges: NameId,
+    /// `CReal.integral_const : ∀ c a b hab u, Equiv (CReal.integral (fun _ =>
+    /// c) a b hab u) (mul c (add b (neg a)))`.
+    ///
+    /// The first evaluation law for `CReal.integral`: a constant function's
+    /// integral is base times height. Combines [`Self::integral_converges`]
+    /// (specialised at `F := fun _ => c`) with [`Self::converges_of_equiv`]
+    /// (built from [`Self::riemann_sum_const`], exact for every subdivision
+    /// count) via [`Self::converges_unique`] — the SAME `Nat → CReal`
+    /// sequence provably converges to both `CReal.integral (fun _ => c) a b
+    /// hab u` and `mul c (b−a)`, so the two are `Equiv`. See
+    /// `creal/integral.rs`'s `declare_integral_const`.
+    pub integral_const: NameId,
 }
 
 impl CRealPrelude {
@@ -3679,6 +3770,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         converges: kernel.name_str(creal, "Converges"),
         converges_unique: kernel.name_str(creal, "converges_unique"),
         converges_of_const: kernel.name_str(creal, "converges_of_const"),
+        converges_of_equiv: kernel.name_str(creal, "converges_of_equiv"),
         cauchy: kernel.name_str(creal, "Cauchy"),
         converges_cauchy: kernel.name_str(creal, "converges_cauchy"),
         converges_add: kernel.name_str(creal, "converges_add"),
@@ -3754,6 +3846,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         regular_of_kregular: kernel.name_str(creal, "regular_of_kregular"),
         speedup_close: kernel.name_str(creal, "speedup_close"),
         regular_of_scaled_cauchy: kernel.name_str(creal, "regular_of_scaled_cauchy"),
+        converges_of_scaled_cauchy: kernel.name_str(creal, "converges_of_scaled_cauchy"),
         converges_of_cauchy: kernel.name_str(creal, "converges_of_cauchy"),
         sum_range: kernel.name_str(creal, "sumRange"),
         sum_range_zero: kernel.name_str(creal, "sumRange_zero"),
@@ -3881,6 +3974,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
             .name_str(creal, "diff_le_of_strict_mono_magnitude"),
         strict_injective_of_pos_deriv: kernel.name_str(creal, "strict_injective_of_pos_deriv"),
         order_reflect_of_pos_deriv: kernel.name_str(creal, "order_reflect_of_pos_deriv"),
+        inverse_lipschitz_of_pos_deriv: kernel.name_str(creal, "inverse_lipschitz_of_pos_deriv"),
         ivt_step: kernel.name_str(creal, "ivt_step"),
         constant_of_zero_deriv: kernel.name_str(creal, "constant_of_zero_deriv"),
         antitone_of_nonpos_deriv: kernel.name_str(creal, "antitone_of_nonpos_deriv"),
@@ -3911,6 +4005,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         riemann_sum_deep_cauchy: kernel.name_str(creal, "riemannSumDeepCauchy"),
         riemann_sum_deep_cauchy_folded: kernel.name_str(creal, "riemannSumDeepCauchyFolded"),
         integral: kernel.name_str(creal, "integral"),
+        integral_converges: kernel.name_str(creal, "integral_converges"),
+        integral_const: kernel.name_str(creal, "integral_const"),
     }
 }
 
@@ -4246,11 +4342,29 @@ pub(crate) fn build_creal_prelude_uncached(
         // `regular_of_scaled_cauchy` (`convergence::declare_cauchy_convergence`,
         // well above).
         integral::declare_creal_integral(&mut d, prelude)?;
+        // `integral_converges` ties `CReal.integral` (just above) back to
+        // `Converges` via `converges_of_scaled_cauchy`
+        // (`convergence::declare_cauchy_convergence`, well above); it is the
+        // reusable half of the transport every future `integral_*`
+        // evaluation law needs.
+        integral::declare_integral_converges(&mut d, prelude)?;
+        // `integral_const` needs `integral_converges` (just above),
+        // `riemannSum_const` (`integral::declare_integral`, well above),
+        // `converges_of_equiv` (`convergence::declare_convergence`, well
+        // above) and `converges_unique`/`equiv_symm` (both far above).
+        integral::declare_integral_const(&mut d, prelude)?;
         // `order_reflect_of_pos_deriv` needs only `strict_mono_of_pos_deriv`
         // (just declared above) plus `lt_trans`/`lt_irrefl`/`apart` (all far
         // above); nothing later depends on it, so it lands right after its
         // one real dependency.
         inverse_fn::declare_order_reflect_of_pos_deriv(&mut d, prelude)?;
+        // `inverse_lipschitz_of_pos_deriv` needs `strict_mono_magnitude` and
+        // `scale_cancel_le` (`monotone::declare_monotone_of_nonneg_deriv_all`,
+        // well above) plus base `abs`/`le`/`add` lemmas (far above); it lands
+        // here, next to its sibling `order_reflect_of_pos_deriv`, since both
+        // are Chapter 12's case-split-on-`Apart` idiom over the same
+        // Chapter 11 machinery.
+        monotone::declare_inverse_lipschitz_of_pos_deriv(&mut d, prelude)?;
         power::declare_power(&mut d, prelude)?;
         // `hasDerivative_pow_two` mentions `CReal.pow`, which `power.rs`
         // declares. It cannot live inside `derivative::declare_derivative`,

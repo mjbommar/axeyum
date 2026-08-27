@@ -40,6 +40,21 @@
 //! and within that, the SIGN of the apartness — which one is bigger —
 //! matches up in both directions), even though the disjunction itself is
 //! never manufactured from nothing.
+//!
+//! ## Continuity of the inverse, also conditional on `Apart`
+//!
+//! `creal/monotone.rs`'s `CReal.inverse_lipschitz_of_pos_deriv` is the
+//! CONTINUITY half of the same story, built by the same case-split-on-given-
+//! `Apart` idiom: `Apart x y → abs (x − y) ≤ (2k+2)·abs (F x − F y)`, with NO
+//! codomain hypothesis at all. This is not the "bounding `y − x` below by a
+//! rescaled `F y − F x`" route the section above rules out for UNCONDITIONAL
+//! order-reflection — it never tries to derive `Apart x y` from a codomain
+//! fact, only to bound a gap once `Apart x y` is already given, exactly the
+//! same legitimate case split `order_reflect_of_pos_deriv` performs above.
+//! It composes `CReal.strict_mono_magnitude` (the exact per-side rate
+//! `strict_mono_of_pos_deriv` proves internally) with `CReal.scale_cancel_le`
+//! and `CReal.abs_le`. See its own doc comment
+//! (`CRealPrelude::inverse_lipschitz_of_pos_deriv`) for the full statement.
 
 use super::{CRealPrelude, cle, clt, creal_ty, div_succ, embed};
 use crate::KernelError;
