@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-riemannsum-integral-close",
+  "title": "A sufficiently fine fixed-mesh Riemann sum lies within an explicit, accuracy-derived distance of the integral",
+  "statement": "For F, a <= b, and a uniform-continuity witness u, there is a threshold e0 such that for ANY mesh depth built as deep(e)+depth with e at least e0, and any further indices, the fixed-mesh Riemann sum riemannSum F a b m sits within an explicit, e-derived rational bound of CReal.integral F a b hab u. This is the Riemann-sum-vs-true-value estimate that was missing from the earlier riemannSum-only development: it compares ONE riemannSum at a FIXED mesh count against ITS OWN interval's integral, chaining riemannSum_shared_accuracy_close (fixed mesh vs a witness sample) with speedup_close (that sample vs the integral's own construction).",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CReal.riemannSum_integral_close : ((x0 : ((x0 : CReal) -> CReal)) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal.le x1 x2) -> ((x4 : CReal.UniformlyContinuousOn x0 x1 x2) -> Exists.{1} AxNat (fun (x5 : AxNat) => ((x6 : AxNat) -> ((x7 : AxNat) -> ((x8 : AxNat) -> ((x9 : AxNat) -> ((x10 : AxNat) -> CReal.Within (Rat.sub (CReal.seq (CReal.riemannSum x0 x1 x2 (AxNat.add (AxNat.add (AxNat.mul (AxNat.succ (CReal.bound (CReal.add x2 (CReal.neg x1)))) (CReal.UniformlyContinuousOn.modulus x0 x1 x2 x4 x6)) (CReal.bound (CReal.add x2 (CReal.neg x1)))) x7)) x8) (CReal.seq (CReal.integral x0 x1 x2 x3 x4) x6)) (Rat.add (Rat.add (Rat.add (Rat.add (Rat.add (Rat.natDivSucc (AxNat.succ AxNat.zero) (AxNat.add (AxNat.add (AxNat.mul (AxNat.add (AxNat.add (AxNat.mul (AxNat.succ (CReal.bound (CReal.add x2 (CReal.neg x1)))) (CReal.UniformlyContinuousOn.modulus x0 x1 x2 x4 x6)) (CReal.bound (CReal.add x2 (CReal.neg x1)))) AxNat.zero) (AxNat.add (AxNat.add (AxNat.mul (AxNat.succ (CReal.bound (CReal.add x2 (CReal.neg x1)))) (CReal.UniformlyContinuousOn.modulus x0 x1 x2 x4 x6)) (CReal.bound (CReal.add x2 (CReal.neg x1)))) x7)) (AxNat.add (AxNat.add (AxNat.mul (AxNat.succ (CReal.bound (CReal.add x2 (CReal.neg x1)))) (CReal.UniformlyContinuousOn.modulus x0 x1 x2 x4 x6)) (CReal.bound (CReal.add x2 (CReal.neg x1)))) AxNat.zero)) (AxNat.add (AxNat.add (AxNat.mul (AxNat.succ (CReal.bound (CReal.add x2 (CReal.neg x1)))) (CReal.UniformlyContinuousOn.modulus x0 x1 x2 x4 x6)) (CReal.bound (CReal.add x2 (CReal.neg x1)))) x7))) (Rat.natDivSucc (AxNat.succ AxNat.zero) (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x9)))) ((fun (x11 : AxNat) => Rat.add (CReal.seq (CReal.mul (CReal.ofNat (AxNat.succ (AxNat.add (AxNat.add (AxNat.mul (AxNat.succ (CReal.bound (CReal.add x2 (CReal.neg x1)))) (CReal.UniformlyContinuousOn.modulus x0 x1 x2 x4 x6)) (CReal.bound (CReal.add x2 (CReal.neg x1)))) x7))) (CReal.mul (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x6)) (CReal.mul (CReal.add x2 (CReal.neg x1)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) (AxNat.add (AxNat.add (AxNat.mul (AxNat.succ (CReal.bound (CReal.add x2 (CReal.neg x1)))) (CReal.UniformlyContinuousOn.modulus x0 x1 x2 x4 x6)) (CReal.bound (CReal.add x2 (CReal.neg x1)))) x7)))))) x11) (Rat.natDivSucc (AxNat.succ (AxNat.succ AxNat.zero)) x11)) x9)) (Rat.add (Rat.natDivSucc (AxNat.succ AxNat.zero) (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x9))) (Rat.natDivSucc (AxNat.succ AxNat.zero) x8))) (Rat.add (Rat.add (Rat.add (Rat.natDivSucc (AxNat.succ AxNat.zero) (AxNat.add (AxNat.add (AxNat.mul (AxNat.add (AxNat.add (AxNat.mul (AxNat.succ (CReal.bound (CReal.add x2 (CReal.neg x1)))) (CReal.UniformlyContinuousOn.modulus x0 x1 x2 x4 x6)) (CReal.bound (CReal.add x2 (CReal.neg x1)))) AxNat.zero) (AxNat.add (AxNat.add (AxNat.mul (AxNat.succ (CReal.bound (CReal.add x2 (CReal.neg x1)))) (CReal.UniformlyContinuousOn.modulus x0 x1 x2 x4 x6)) (CReal.bound (CReal.add x2 (CReal.neg x1)))) x7)) (AxNat.add (AxNat.add (AxNat.mul (AxNat.succ (CReal.bound (CReal.add x2 (CReal.neg x1)))) (CReal.UniformlyContinuousOn.modulus x0 x1 x2 x4 x6)) (CReal.bound (CReal.add x2 (CReal.neg x1)))) AxNat.zero)) (AxNat.add (AxNat.add (AxNat.mul (AxNat.succ (CReal.bound (CReal.add x2 (CReal.neg x1)))) (CReal.UniformlyContinuousOn.modulus x0 x1 x2 x4 x6)) (CReal.bound (CReal.add x2 (CReal.neg x1)))) x7))) (Rat.natDivSucc (AxNat.succ AxNat.zero) (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x10)))) ((fun (x11 : AxNat) => Rat.add (CReal.seq (CReal.mul (CReal.ofNat (AxNat.succ (AxNat.add (AxNat.add (AxNat.mul (AxNat.succ (CReal.bound (CReal.add x2 (CReal.neg x1)))) (CReal.UniformlyContinuousOn.modulus x0 x1 x2 x4 x6)) (CReal.bound (CReal.add x2 (CReal.neg x1)))) AxNat.zero))) (CReal.mul (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x6)) (CReal.mul (CReal.add x2 (CReal.neg x1)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) (AxNat.add (AxNat.add (AxNat.mul (AxNat.succ (CReal.bound (CReal.add x2 (CReal.neg x1)))) (CReal.UniformlyContinuousOn.modulus x0 x1 x2 x4 x6)) (CReal.bound (CReal.add x2 (CReal.neg x1)))) AxNat.zero)))))) x11) (Rat.natDivSucc (AxNat.succ (AxNat.succ AxNat.zero)) x11)) x10)) (Rat.add (Rat.natDivSucc (AxNat.succ AxNat.zero) (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x10))) (Rat.natDivSucc (AxNat.succ AxNat.zero) x6)))) (Rat.natDivSucc x5 x6)))))))))))))",
+    "fragment": "CReal",
+    "free_symbols": ["x0", "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10"],
+    "kernel_theorem": "CReal.riemannSum_integral_close"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": ["F:creal-integral-converges", "F:rat-bounds-add", "F:rat-sub-add-sub"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.riemannSum_integral_close",
+      "kind": "kernel-term",
+      "supports": "CReal.riemannSum_integral_close is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- riemannSum_integral_close 2>/dev/null | grep -cE '^CReal\\.riemannSum_integral_close[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "build_creal_prelude admits CReal.riemannSum_integral_close through the trusted Kernel::add_declaration gate. theorem_dependency_inventory exits non-zero for a named filter matching nothing; grep -c asserts the exact tab-anchored line. Verified on this tree (unmutated): the command prints exactly one matching line. --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack. This is also the theorem CLAUDE.md's own briefing cites as freshly landed and absent from the stale prebuilt target/release/examples binaries -- confirming a rebuild, not a stale artifact, is what this checker_command exercises."
+    },
+    {
+      "id": "footprint-CReal.riemannSum_integral_close",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.riemannSum_integral_close",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: creal: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: creal trusted surface = 0'. --require-axiom-free <name> errors for a prelude never built by this run. --release is MANDATORY here."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/integral.rs, declare_riemann_sum_integral_close)",
+    "source": "theorem name and canonical type read via a standalone probe binary depending on axeyum-lean-kernel by path, calling only its public Kernel API. Direct dependency edges cross-checked against theorem_dependency_inventory's own output on the same tree. The probe was built and run in the session scratchpad and deleted after use; crates/ source was not touched to produce this batch."
+  },
+  "notes": "theorem_dependency_inventory's direct-edge set for CReal.riemannSum_integral_close also includes CReal.riemannSum_sharedAccuracyClose, which is not a registered ledger fact; it is omitted from depends_on rather than registered speculatively. This estimate compares ONE riemannSum at a fixed mesh to ITS OWN interval's integral; it is the prerequisite for, but is NOT, CReal.integral_split (interval additivity), which remains open -- crates/axeyum-lean-kernel/src/creal/integral.rs's module documentation records an exact counterexample (m=0, f:=id, a:=0, c:=1, b:=3: riemannSum id 0 3 0 = 0 while the two halves sum to 2) showing the FIXED-MESH version of additivity is false, and states that only the limit (CReal.integral) version is even a candidate, still unproved. Do not register CReal.integral_split as proved or refuted from this fact.",
+  "external_status": "proved"
+}
