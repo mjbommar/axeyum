@@ -26199,3 +26199,667 @@ pub(super) fn declare_integral_split_arbitrary(
         value,
     })
 }
+
+// --- FTC-I, the general case: the antiderivative and the estimate it needs ---
+//
+// `derivative.rs`'s `hasDerivative_integral_const` names TWO facts the general
+// Fundamental Theorem needs. The first — additivity of `integral` over an
+// arbitrary interior split — landed as
+// [`CRealPrelude::integral_split_arbitrary`]. This section lands the second,
+// `|∫ₓ^y F − F(x)·(y − x)| ≤ B·(y − x)`, and the antiderivative `G` itself.
+
+/// Delta height for `CReal.antiderivative`: one above `CReal.integral`, the
+/// only definition it is built from.
+const ANTIDERIV_HEIGHT: u16 = DERIVED_HEIGHT + 47;
+
+/// `CReal.integral_abs_le_of_bound : ∀ (F : CReal → CReal) (a b M : CReal)
+/// (hab : le a b) (u : UniformlyContinuousOn F a b),
+/// (∀ t, le a t → le t b → le (abs (F t)) M) →
+/// le (abs (integral F a b hab u)) (mul M (add b (neg a)))`.
+///
+/// [`declare_integral_abs_le`] with its bound generalized from the
+/// `Nat`-derived `mag_bound k` to an **arbitrary `CReal` `M`**, and its
+/// `BoundedOn` witness replaced by the pointwise hypothesis that witness was
+/// only ever used to produce (one [`CRealPrelude::bounded_on_unfold`] call).
+///
+/// # Why the generalization is the load-bearing step, not a convenience
+///
+/// [`CRealPrelude::integral_abs_le`]'s bound is `mag_bound k := ofRat
+/// (natDivSucc (Nat.succ k) 0)`, i.e. the natural number `k + 1` — **always
+/// at least one**. The Fundamental Theorem's estimate needs a bound that
+/// *shrinks*: `|∫ₓ^y (F − F(x))| ≤ (1/(e+1))·(y − x)`, whose `B` is
+/// `1/(e+1)`, and no `k` makes `mag_bound k` small. So the sizing "the
+/// second missing fact is `integral_abs_le` applied to `F − F(x)`, a
+/// composition and not a new estimate" is *nearly* right and does not close
+/// as stated: it composes with `integral_abs_le`'s **route**
+/// ([`declare_integral_le`] + [`declare_integral_const`]), not with
+/// `integral_abs_le`'s **statement**. This declaration is that route, stated
+/// at the altitude the composition actually needs.
+///
+/// Nothing here touches a Riemann sum, a mesh count or a modulus; the proof
+/// is [`declare_integral_abs_le`]'s own, term for term.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_integral_abs_le_of_bound(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let f_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let m_fv = d.fresh_fvar();
+    let mbound = d.kernel().fvar(m_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+
+    // hbnd : ∀ t, le a t → le t b → le (abs (F t)) M
+    let hbnd_ty = {
+        let t_fv = d.fresh_fvar();
+        let t = d.kernel().fvar(t_fv);
+        let h1 = cle(d, p, a, t);
+        let h2 = cle(d, p, t, b);
+        let ft = d.apply(f, &[t]);
+        let abs_ft = d.const_app(p.abs, &[ft]);
+        let concl = cle(d, p, abs_ft, mbound);
+        let inner = d.arrow(h2, concl);
+        let outer = d.arrow(h1, inner);
+        d.pi_fv(t_fv, carrier, outer)
+    };
+    let hbnd_fv = d.fresh_fvar();
+    let hbnd = d.kernel().fvar(hbnd_fv);
+
+    let neg_mbound = cneg(d, p, mbound);
+    let width = width_of(d, p, a, b);
+    let m_width = cmul(d, p, mbound, width);
+
+    let const_m = {
+        let ignore_fv = d.fresh_fvar();
+        d.lam_fv(ignore_fv, carrier, mbound)
+    };
+    let const_neg_m = {
+        let ignore_fv = d.fresh_fvar();
+        d.lam_fv(ignore_fv, carrier, neg_mbound)
+    };
+    let uc_m = d.lemma(p.uniformly_continuous_const, &[mbound, a, b]);
+    let uc_neg_m = d.lemma(p.uniformly_continuous_const, &[neg_mbound, a, b]);
+
+    let integral_f = d.const_app(p.integral, &[f, a, b, hab, u]);
+    let integral_m = d.const_app(p.integral, &[const_m, a, b, hab, uc_m]);
+    let integral_neg_m = d.const_app(p.integral, &[const_neg_m, a, b, hab, uc_neg_m]);
+
+    let pointwise = |d: &mut IntDev<'_>, upper: bool| -> ExprId {
+        let t_fv = d.fresh_fvar();
+        let t = d.kernel().fvar(t_fv);
+        let ht1_fv = d.fresh_fvar();
+        let ht1 = d.kernel().fvar(ht1_fv);
+        let ht1_ty = cle(d, p, a, t);
+        let ht2_fv = d.fresh_fvar();
+        let ht2 = d.kernel().fvar(ht2_fv);
+        let ht2_ty = cle(d, p, t, b);
+
+        let ft = d.apply(f, &[t]);
+        let abs_ft = d.const_app(p.abs, &[ft]);
+        let habs = d.apply(hbnd, &[t, ht1, ht2]);
+
+        let body = if upper {
+            let self_le = d.lemma(p.le_abs_self, &[ft]);
+            d.lemma(p.le_trans, &[ft, abs_ft, mbound, self_le, habs])
+        } else {
+            let neg_le = d.lemma(p.neg_le_abs, &[ft]);
+            let neg_ft = cneg(d, p, ft);
+            let neg_ft_le_m = d.lemma(p.le_trans, &[neg_ft, abs_ft, mbound, neg_le, habs]);
+            let neg_neg_ft = cneg(d, p, neg_ft);
+            let flipped = d.lemma(p.neg_le_neg, &[neg_ft, mbound, neg_ft_le_m]);
+            let nn = neg_neg_equiv_local(d, p, ft);
+            let refl_neg_m = d.lemma(p.equiv_refl, &[neg_mbound]);
+            d.lemma(
+                p.le_congr,
+                &[
+                    neg_mbound, neg_mbound, neg_neg_ft, ft, refl_neg_m, nn, flipped,
+                ],
+            )
+        };
+        let after_upper = d.lam_fv(ht2_fv, ht2_ty, body);
+        let after_lower = d.lam_fv(ht1_fv, ht1_ty, after_upper);
+        d.lam_fv(t_fv, carrier, after_lower)
+    };
+
+    let h_up_pt = pointwise(d, true);
+    let h_lo_pt = pointwise(d, false);
+
+    let up_raw = d.lemma(p.integral_le, &[f, const_m, a, b, hab, u, uc_m, h_up_pt]);
+    let ic_m = d.lemma(p.integral_const, &[mbound, a, b, hab, uc_m]);
+    let refl_if = d.lemma(p.equiv_refl, &[integral_f]);
+    let upper = d.lemma(
+        p.le_congr,
+        &[
+            integral_f, integral_f, integral_m, m_width, refl_if, ic_m, up_raw,
+        ],
+    );
+
+    let lo_raw = d.lemma(
+        p.integral_le,
+        &[const_neg_m, f, a, b, hab, uc_neg_m, u, h_lo_pt],
+    );
+    let ic_neg_m = d.lemma(p.integral_const, &[neg_mbound, a, b, hab, uc_neg_m]);
+    let neg_m_width = cmul(d, p, neg_mbound, width);
+    let lo_shifted = d.lemma(
+        p.le_congr,
+        &[
+            integral_neg_m,
+            neg_m_width,
+            integral_f,
+            integral_f,
+            ic_neg_m,
+            refl_if,
+            lo_raw,
+        ],
+    );
+    let flipped = d.lemma(p.neg_le_neg, &[neg_m_width, integral_f, lo_shifted]);
+    let neg_integral_f = cneg(d, p, integral_f);
+    let neg_neg_m_width = cneg(d, p, neg_m_width);
+    let nml = neg_mul_left_local(d, p, mbound, width);
+    let neg_m_width_target = cneg(d, p, m_width);
+    let dbl_neg_m_width = cneg(d, p, neg_m_width_target);
+    let cong = d.lemma(p.neg_congr, &[neg_m_width, neg_m_width_target, nml]);
+    let nn_mw = neg_neg_equiv_local(d, p, m_width);
+    let bridge = d.lemma(
+        p.equiv_trans,
+        &[neg_neg_m_width, dbl_neg_m_width, m_width, cong, nn_mw],
+    );
+    let refl_neg_if = d.lemma(p.equiv_refl, &[neg_integral_f]);
+    let lower = d.lemma(
+        p.le_congr,
+        &[
+            neg_integral_f,
+            neg_integral_f,
+            neg_neg_m_width,
+            m_width,
+            refl_neg_if,
+            bridge,
+            flipped,
+        ],
+    );
+
+    let body = d.lemma(p.abs_le, &[integral_f, m_width, upper, lower]);
+
+    let abs_integral_f = d.const_app(p.abs, &[integral_f]);
+    let concl = cle(d, p, abs_integral_f, m_width);
+
+    let ty = {
+        let with_hbnd = d.arrow(hbnd_ty, concl);
+        let with_u = d.pi_fv(u_fv, u_ty, with_hbnd);
+        let with_hab = d.pi_fv(hab_fv, hab_ty, with_u);
+        let over_m = d.pi_fv(m_fv, carrier, with_hab);
+        let over_b = d.pi_fv(b_fv, carrier, over_m);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        d.pi_fv(f_fv, f_ty, over_a)
+    };
+    let value = {
+        let with_hbnd = d.lam_fv(hbnd_fv, hbnd_ty, body);
+        let with_u = d.lam_fv(u_fv, u_ty, with_hbnd);
+        let with_hab = d.lam_fv(hab_fv, hab_ty, with_u);
+        let over_m = d.lam_fv(m_fv, carrier, with_hab);
+        let over_b = d.lam_fv(b_fv, carrier, over_m);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        d.lam_fv(f_fv, f_ty, over_a)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.integral_abs_le_of_bound,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.integral_sub_linear_le : ∀ (F : CReal → CReal) (x y B : CReal)
+/// (hxy : le x y) (u : UniformlyContinuousOn F x y),
+/// (∀ t, le x t → le t y → le (abs (add (F t) (neg (F x)))) B) →
+/// le (abs (add (integral F x y hxy u) (neg (mul (F x) (add y (neg x))))))
+///    (mul B (add y (neg x)))`
+///
+/// **`|∫ₓ^y F − F(x)·(y − x)| ≤ B·(y − x)`** — the SECOND of the two facts
+/// `derivative.rs`'s [`CRealPrelude::has_derivative_integral_const`] names as
+/// missing for the general Fundamental Theorem (the first,
+/// [`CRealPrelude::integral_split_arbitrary`], is landed).
+///
+/// # It IS a composition, but not of `integral_abs_le`
+///
+/// The sizing this lane inherited — "`integral_abs_le` applied to `F − F(x)`,
+/// i.e. `integral_add` + `integral_scale` at −1 plus one uniform-continuity
+/// bound; a composition, not a new estimate" — is right about the shape and
+/// wrong about two of its three parts, both in the direction of being
+/// CHEAPER than costed once the right altitude is asked for:
+///
+/// - **`integral_abs_le` cannot be the bound.** Its right-hand side is
+///   `mag_bound k = k + 1 ≥ 1`, and the Fundamental Theorem needs `B =
+///   1/(e+1)`. [`declare_integral_abs_le_of_bound`] is that statement with
+///   an arbitrary `CReal` bound; its proof is `integral_abs_le`'s own, so
+///   nothing new is proved, but the generalization is mandatory, not
+///   cosmetic.
+/// - **`integral_scale` is not needed at all.** The `−F(x)` leg is a
+///   CONSTANT function, so [`CRealPrelude::integral_const`] evaluates it
+///   exactly (`∫ₓ^y (−F(x)) = −F(x)·(y − x)`) with no scaling law in sight.
+///   Asking at the level of *which integrand* rather than *which algebraic
+///   operation* is what removes it.
+/// - The uniform-continuity witness for `t ↦ F t − F x` is likewise free:
+///   [`CRealPrelude::uniformly_continuous_sub`] against
+///   [`CRealPrelude::uniformly_continuous_const`]. The caller supplies
+///   nothing.
+///
+/// So the whole proof is: `integral_add` splits the integrand,
+/// `integral_const` evaluates the constant leg, [`neg_mul_left_local`] moves
+/// the negation out, and `integral_abs_le_of_bound` bounds the combined
+/// integrand — four named facts, no mesh count, no modulus, no Riemann sum.
+///
+/// The bound `B` is left as a free `CReal` rather than specialized to
+/// `ofRat (natDivSucc 1 e)`: the modulus-driven instantiation is one
+/// [`CRealPrelude::uc_spec`] application at the call site, and leaving `B`
+/// free keeps this statement usable for the `BoundedOn` reading as well.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_integral_sub_linear_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let f_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let bb_fv = d.fresh_fvar();
+    let bb = d.kernel().fvar(bb_fv);
+
+    let hxy_ty = cle(d, p, x, y);
+    let hxy_fv = d.fresh_fvar();
+    let hxy = d.kernel().fvar(hxy_fv);
+
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, x, y]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+
+    let fx = d.apply(f, &[x]);
+    let nfx = cneg(d, p, fx);
+    let width = width_of(d, p, x, y);
+
+    // hbnd : ∀ t, le x t → le t y → le (abs (add (F t) (neg (F x)))) B
+    let hbnd_ty = {
+        let t_fv = d.fresh_fvar();
+        let t = d.kernel().fvar(t_fv);
+        let h1 = cle(d, p, x, t);
+        let h2 = cle(d, p, t, y);
+        let ft = d.apply(f, &[t]);
+        let diff = cadd(d, p, ft, nfx);
+        let abs_diff = d.const_app(p.abs, &[diff]);
+        let concl = cle(d, p, abs_diff, bb);
+        let inner = d.arrow(h2, concl);
+        let outer = d.arrow(h1, inner);
+        d.pi_fv(t_fv, carrier, outer)
+    };
+    let hbnd_fv = d.fresh_fvar();
+    let hbnd = d.kernel().fvar(hbnd_fv);
+
+    // H := fun t => add (F t) (neg (F x)); const_fx := fun _ => F x;
+    // const_nfx := fun _ => neg (F x).
+    let h_lam = {
+        let t_fv = d.fresh_fvar();
+        let t = d.kernel().fvar(t_fv);
+        let ft = d.apply(f, &[t]);
+        let body = cadd(d, p, ft, nfx);
+        d.lam_fv(t_fv, carrier, body)
+    };
+    let const_fx = {
+        let i_fv = d.fresh_fvar();
+        d.lam_fv(i_fv, carrier, fx)
+    };
+    let const_nfx = {
+        let i_fv = d.fresh_fvar();
+        d.lam_fv(i_fv, carrier, nfx)
+    };
+
+    let uc_fx = d.lemma(p.uniformly_continuous_const, &[fx, x, y]);
+    let uc_nfx = d.lemma(p.uniformly_continuous_const, &[nfx, x, y]);
+    // u_h : UniformlyContinuousOn (fun r => add (F r) (neg ((fun _ => F x) r))) x y
+    // -- beta-equal to `H`, which is what every consumer below writes.
+    let u_h = d.lemma(
+        p.uniformly_continuous_sub,
+        &[f, const_fx, x, y, u, uc_fx],
+    );
+
+    let int_h = d.const_app(p.integral, &[h_lam, x, y, hxy, u_h]);
+    let int_f = d.const_app(p.integral, &[f, x, y, hxy, u]);
+    let int_cn = d.const_app(p.integral, &[const_nfx, x, y, hxy, uc_nfx]);
+
+    let ha = d.lemma(
+        p.integral_add,
+        &[f, const_nfx, x, y, hxy, u_h, u, uc_nfx],
+    );
+    let sum1 = cadd(d, p, int_f, int_cn);
+
+    let hc = d.lemma(p.integral_const, &[nfx, x, y, hxy, uc_nfx]);
+    let nfx_w = cmul(d, p, nfx, width);
+    let refl_intf = d.lemma(p.equiv_refl, &[int_f]);
+    let step2 = d.lemma(p.add_congr, &[int_f, int_f, int_cn, nfx_w, refl_intf, hc]);
+    let sum2 = cadd(d, p, int_f, nfx_w);
+
+    let nml = neg_mul_left_local(d, p, fx, width);
+    let fx_w = cmul(d, p, fx, width);
+    let neg_fx_w = cneg(d, p, fx_w);
+    let step3 = d.lemma(
+        p.add_congr,
+        &[int_f, int_f, nfx_w, neg_fx_w, refl_intf, nml],
+    );
+    let target = cadd(d, p, int_f, neg_fx_w);
+
+    let h_eq = echain(
+        d,
+        p,
+        int_h,
+        &[(sum1, ha), (sum2, step2), (target, step3)],
+    );
+
+    let hb = d.lemma(
+        p.integral_abs_le_of_bound,
+        &[h_lam, x, y, bb, hxy, u_h, hbnd],
+    );
+
+    let abs_int_h = d.const_app(p.abs, &[int_h]);
+    let abs_target = d.const_app(p.abs, &[target]);
+    let b_width = cmul(d, p, bb, width);
+    let habs = d.lemma(p.abs_congr, &[int_h, target, h_eq]);
+    let refl_bw = d.lemma(p.equiv_refl, &[b_width]);
+    let body = d.lemma(
+        p.le_congr,
+        &[abs_int_h, abs_target, b_width, b_width, habs, refl_bw, hb],
+    );
+
+    let concl = cle(d, p, abs_target, b_width);
+
+    let ty = {
+        let with_hbnd = d.arrow(hbnd_ty, concl);
+        let with_u = d.pi_fv(u_fv, u_ty, with_hbnd);
+        let with_hxy = d.pi_fv(hxy_fv, hxy_ty, with_u);
+        let over_b = d.pi_fv(bb_fv, carrier, with_hxy);
+        let over_y = d.pi_fv(y_fv, carrier, over_b);
+        let over_x = d.pi_fv(x_fv, carrier, over_y);
+        d.pi_fv(f_fv, f_ty, over_x)
+    };
+    let value = {
+        let with_hbnd = d.lam_fv(hbnd_fv, hbnd_ty, body);
+        let with_u = d.lam_fv(u_fv, u_ty, with_hbnd);
+        let with_hxy = d.lam_fv(hxy_fv, hxy_ty, with_u);
+        let over_b = d.lam_fv(bb_fv, carrier, with_hxy);
+        let over_y = d.lam_fv(y_fv, carrier, over_b);
+        let over_x = d.lam_fv(x_fv, carrier, over_y);
+        d.lam_fv(f_fv, f_ty, over_x)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.integral_sub_linear_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// The antiderivative's own body at a point `x`: `integral F a (max a (min x
+/// b)) …`, together with the two proof arguments `CReal.integral` demands.
+///
+/// Shared verbatim by [`declare_antiderivative`] and
+/// [`declare_antiderivative_abs_le`] so the definition and the theorem about
+/// it cannot drift — the same discipline [`integral_witness`] enforces for
+/// `CReal.integral` itself.
+///
+/// The clamp `max a (min x b)` is `derivative.rs`'s own
+/// `hasDerivative_integral_const` trick, and it is what makes `G` a
+/// genuinely TOTAL `CReal → CReal`: `le a (max a _)` is
+/// [`CRealPrelude::le_max_left`], which needs no hypothesis at all, and
+/// `le (max a (min x b)) b` is [`CRealPrelude::max_le`] at `hab` and
+/// [`CRealPrelude::min_le_right`]. The per-`x` uniform-continuity witness —
+/// the piece that made this look hard — is NOT rebuilt per `x`: the single
+/// witness `u : UniformlyContinuousOn F a b` is restricted to `[a, clamp x]`
+/// by [`CRealPrelude::uniformly_continuous_on_restrict`], which keeps `u`'s
+/// own modulus unchanged.
+fn antiderivative_at(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    a: ExprId,
+    b: ExprId,
+    hab: ExprId,
+    u: ExprId,
+    x: ExprId,
+) -> (ExprId, ExprId, ExprId, ExprId) {
+    let mn = d.const_app(p.min, &[x, b]);
+    let clamp = d.const_app(p.max, &[a, mn]);
+    let h_a_clamp = d.lemma(p.le_max_left, &[a, mn]);
+    let h_mn_b = d.lemma(p.min_le_right, &[x, b]);
+    let h_clamp_b = d.lemma(p.max_le, &[a, mn, b, hab, h_mn_b]);
+    let refl_a = d.lemma(p.le_refl, &[a]);
+    let urest = d.lemma(
+        p.uniformly_continuous_on_restrict,
+        &[f, a, b, a, clamp, u, refl_a, h_a_clamp, h_clamp_b],
+    );
+    let value = d.const_app(p.integral, &[f, a, clamp, h_a_clamp, urest]);
+    (clamp, h_a_clamp, h_clamp_b, value)
+}
+
+/// `CReal.antiderivative : ∀ (F : CReal → CReal) (a b : CReal), le a b →
+/// UniformlyContinuousOn F a b → CReal → CReal
+///   := fun F a b hab u x => integral F a (max a (min x b)) _ _` — the
+/// antiderivative `G(x) := ∫ₐˣ F` of Spivak Ch. 14, as a **total** function.
+///
+/// `HasDerivativeOn`'s carrier must be a genuinely total `CReal → CReal`,
+/// but `CReal.integral`'s second and third arguments are PROOFS that exist
+/// only when the upper endpoint is actually in `[a, b]`. Both are supplied
+/// unconditionally by clamping — see [`antiderivative_at`] for the two order
+/// facts and for how the per-`x` uniform-continuity witness is threaded.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+pub(super) fn declare_antiderivative(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let f_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+
+    let (_clamp, _h1, _h2, body) = antiderivative_at(d, p, f, a, b, hab, u, x);
+
+    let ty = {
+        let after_x = d.arrow(carrier, carrier);
+        let after_u = d.arrow(u_ty, after_x);
+        let after_hab = d.arrow(hab_ty, after_u);
+        let over_b = d.pi_fv(b_fv, carrier, after_hab);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        d.pi_fv(f_fv, f_ty, over_a)
+    };
+    let value = {
+        let with_x = d.lam_fv(x_fv, carrier, body);
+        let with_u = d.lam_fv(u_fv, u_ty, with_x);
+        let with_hab = d.lam_fv(hab_fv, hab_ty, with_u);
+        let over_b = d.lam_fv(b_fv, carrier, with_hab);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        d.lam_fv(f_fv, f_ty, over_a)
+    };
+
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.antiderivative,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(ANTIDERIV_HEIGHT),
+    })
+}
+
+/// `CReal.antiderivative_abs_le : ∀ (F : CReal → CReal) (a b M : CReal)
+/// (hab : le a b) (u : UniformlyContinuousOn F a b),
+/// (∀ t, le a t → le t b → le (abs (F t)) M) → ∀ x,
+/// le (abs (antiderivative F a b hab u x))
+///    (mul M (add (max a (min x b)) (neg a)))`
+///
+/// **The antiderivative's growth bound**, `|G(x)| ≤ M·(x − a)` at the
+/// clamped `x` — [`declare_integral_abs_le_of_bound`] read at `[a, clamp x]`,
+/// with the pointwise hypothesis transported from `[a, b]` by one
+/// [`CRealPrelude::le_trans`] against `clamp x ≤ b`.
+///
+/// This is NOT the Lipschitz estimate `|G(y) − G(x)| ≤ M·|y − x|`, and the
+/// difference is exactly the open part of the Fundamental Theorem: the
+/// Lipschitz form needs `G(y) − G(x) ~ ∫ₓ^y F`, i.e.
+/// [`CRealPrelude::integral_split_arbitrary`], which carries a `PosBound` on
+/// the outer width and a `le` between the split points — neither available
+/// for an unordered pair `x, y` in `HasDerivativeOn`'s spec. See this file's
+/// module documentation for the orientation-free route that removes the
+/// ordering obstruction and for what remains.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+pub(super) fn declare_antiderivative_abs_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let f_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let m_fv = d.fresh_fvar();
+    let mbound = d.kernel().fvar(m_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+
+    let hbnd_ty = {
+        let t_fv = d.fresh_fvar();
+        let t = d.kernel().fvar(t_fv);
+        let h1 = cle(d, p, a, t);
+        let h2 = cle(d, p, t, b);
+        let ft = d.apply(f, &[t]);
+        let abs_ft = d.const_app(p.abs, &[ft]);
+        let concl = cle(d, p, abs_ft, mbound);
+        let inner = d.arrow(h2, concl);
+        let outer = d.arrow(h1, inner);
+        d.pi_fv(t_fv, carrier, outer)
+    };
+    let hbnd_fv = d.fresh_fvar();
+    let hbnd = d.kernel().fvar(hbnd_fv);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+
+    let (clamp, h_a_clamp, h_clamp_b, int_val) = antiderivative_at(d, p, f, a, b, hab, u, x);
+    let urest = d.lemma(
+        p.uniformly_continuous_on_restrict,
+        &[f, a, b, a, clamp, u, {
+            let r = d.lemma(p.le_refl, &[a]);
+            r
+        }, h_a_clamp, h_clamp_b],
+    );
+
+    // hbnd' : ∀ t, le a t → le t (clamp) → le (abs (F t)) M
+    let hbnd_restricted = {
+        let t_fv = d.fresh_fvar();
+        let t = d.kernel().fvar(t_fv);
+        let ht1_fv = d.fresh_fvar();
+        let ht1 = d.kernel().fvar(ht1_fv);
+        let ht1_ty = cle(d, p, a, t);
+        let ht2_fv = d.fresh_fvar();
+        let ht2 = d.kernel().fvar(ht2_fv);
+        let ht2_ty = cle(d, p, t, clamp);
+        let t_le_b = d.lemma(p.le_trans, &[t, clamp, b, ht2, h_clamp_b]);
+        let applied = d.apply(hbnd, &[t, ht1, t_le_b]);
+        let after2 = d.lam_fv(ht2_fv, ht2_ty, applied);
+        let after1 = d.lam_fv(ht1_fv, ht1_ty, after2);
+        d.lam_fv(t_fv, carrier, after1)
+    };
+
+    let body = d.lemma(
+        p.integral_abs_le_of_bound,
+        &[f, a, clamp, mbound, h_a_clamp, urest, hbnd_restricted],
+    );
+
+    let clamp_width = width_of(d, p, a, clamp);
+    let m_clamp_width = cmul(d, p, mbound, clamp_width);
+    let abs_int = d.const_app(p.abs, &[int_val]);
+    let concl = cle(d, p, abs_int, m_clamp_width);
+
+    let ty = {
+        let over_x = d.pi_fv(x_fv, carrier, concl);
+        let with_hbnd = d.arrow(hbnd_ty, over_x);
+        let with_u = d.pi_fv(u_fv, u_ty, with_hbnd);
+        let with_hab = d.pi_fv(hab_fv, hab_ty, with_u);
+        let over_m = d.pi_fv(m_fv, carrier, with_hab);
+        let over_b = d.pi_fv(b_fv, carrier, over_m);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        d.pi_fv(f_fv, f_ty, over_a)
+    };
+    let value = {
+        let over_x = d.lam_fv(x_fv, carrier, body);
+        let with_hbnd = d.lam_fv(hbnd_fv, hbnd_ty, over_x);
+        let with_u = d.lam_fv(u_fv, u_ty, with_hbnd);
+        let with_hab = d.lam_fv(hab_fv, hab_ty, with_u);
+        let over_m = d.lam_fv(m_fv, carrier, with_hab);
+        let over_b = d.lam_fv(b_fv, carrier, over_m);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        d.lam_fv(f_fv, f_ty, over_a)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.antiderivative_abs_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
