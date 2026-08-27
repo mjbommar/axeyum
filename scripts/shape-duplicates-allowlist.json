@@ -1,0 +1,62 @@
+[
+  {
+    "names": ["Int.Characterization.zero_lt_one", "Int.zero_lt_one"],
+    "reason": "characterization.rs re-exports Int.zero_lt_one's own proof term verbatim as part of the Peano/order-pinning categoricity bundle (crates/axeyum-lean-kernel/src/characterization/int.rs). One proof term, two names.",
+    "adjudicated": "2026-08-27",
+    "source": "docs/research/11-design-review/2026-08-27-shape-search-duplicates-adjudicated.md#groups-1-6-7-9-characterizationrs-deliberate-b"
+  },
+  {
+    "names": ["Rat.chebyshev_sampleMean_uncorrelated", "Rat.weak_law_of_large_numbers"],
+    "reason": "weak_law_of_large_numbers is a documented discoverability alias for readers searching by the law's common name; its body forwards to chebyshev_sample_mean_uncorrelated's proof term unchanged (rat_prelude/probability.rs:5352). Same statement, same proof, one extra entry point.",
+    "adjudicated": "2026-08-27",
+    "source": "docs/research/11-design-review/2026-08-27-shape-search-duplicates-adjudicated.md#groups-1-6-7-9-characterizationrs-deliberate-b"
+  },
+  {
+    "names": ["CPoint.apollonius_from_stewart", "CPoint.apollonius_median"],
+    "reason": "Intentional cross-check, not an accident: two genuinely independent proof routes (Stewart's-median doubling vs. the direct coordinate route) for the identical Apollonius statement, landed deliberately beside each other as a bridge (creal_point.rs module doc says so explicitly). Deleting either would remove the cross-check that is the point.",
+    "adjudicated": "2026-08-27",
+    "source": "docs/research/11-design-review/2026-08-27-shape-search-duplicates-adjudicated.md#group-3--apollonius-intentional-a"
+  },
+  {
+    "names": ["CReal.rat_approx_upper", "CReal.sampleUpperBound"],
+    "reason": "Fixed 2026-08-27 (dup-ratchet lane), was accidental: sampleUpperBound (uniform_continuity.rs, 2026-08-26) now forwards to rat_approx_upper's proof term instead of re-deriving the same estimate independently. rat_approx_upper (density.rs, 2026-08-22) stays the canonical name -- not because it is older, but because density::declare_density runs before uniform_continuity::declare_uniform_continuity in CRealPrelude's build order, so only that direction of alias can reference an already-admitted name.",
+    "adjudicated": "2026-08-27",
+    "source": "docs/research/11-design-review/2026-08-27-shape-search-duplicates-adjudicated.md#groups-4--5--rat_approxupperlower--sampleupperlowerbound-the-predicted-case-confirmed"
+  },
+  {
+    "names": ["CReal.rat_approx_lower", "CReal.sampleLowerBound"],
+    "reason": "Mirror of the rat_approx_upper/sampleUpperBound entry above -- same fix, same build-order reason, opposite bound direction.",
+    "adjudicated": "2026-08-27",
+    "source": "docs/research/11-design-review/2026-08-27-shape-search-duplicates-adjudicated.md#groups-4--5--rat_approxupperlower--sampleupperlowerbound-the-predicted-case-confirmed"
+  },
+  {
+    "names": ["Int.Characterization.le_total", "Int.le_total"],
+    "reason": "characterization.rs re-exports Int.le_total's own proof term verbatim as part of the Peano/order-pinning categoricity bundle (crates/axeyum-lean-kernel/src/characterization/int.rs). One proof term, two names.",
+    "adjudicated": "2026-08-27",
+    "source": "docs/research/11-design-review/2026-08-27-shape-search-duplicates-adjudicated.md#groups-1-6-7-9-characterizationrs-deliberate-b"
+  },
+  {
+    "names": ["Int.Characterization.discrete", "Int.no_int_between"],
+    "reason": "characterization.rs re-exports Int.no_int_between's own proof term verbatim as part of the Peano/order-pinning categoricity bundle (crates/axeyum-lean-kernel/src/characterization/int.rs). One proof term, two names.",
+    "adjudicated": "2026-08-27",
+    "source": "docs/research/11-design-review/2026-08-27-shape-search-duplicates-adjudicated.md#groups-1-6-7-9-characterizationrs-deliberate-b"
+  },
+  {
+    "names": ["Nat.succ_sub_succ", "Nat.succ_sub_succ_eq_sub"],
+    "reason": "Fixed in the prior dedup pass (2026-08-27), was accidental: succ_sub_succ_eq_sub (nat_prelude/order_extra.rs) now forwards to succ_sub_succ's proof term (nat_prelude/algebra.rs) instead of an independent re-derivation, matching this file's own established alias pattern (see succ_le_succ below). shape_search still reports the pair after the fix because it compares admitted TYPES, not proof terms -- the statement is unchanged, only the proof is now shared.",
+    "adjudicated": "2026-08-27",
+    "source": "docs/research/11-design-review/2026-08-27-shape-search-duplicates-adjudicated.md#group-8--natsucc_sub_succnatsucc_sub_succ_eq_sub-accidental-and-fixed-this-pass"
+  },
+  {
+    "names": ["Nat.Peano.succ_injective", "Nat.succ_injective"],
+    "reason": "characterization.rs re-exports Nat.succ_injective's own proof term verbatim as part of the Peano-categoricity bundle (crates/axeyum-lean-kernel/src/characterization/nat.rs:176). One proof term, two names.",
+    "adjudicated": "2026-08-27",
+    "source": "docs/research/11-design-review/2026-08-27-shape-search-duplicates-adjudicated.md#groups-1-6-7-9-characterizationrs-deliberate-b"
+  },
+  {
+    "names": ["Nat.le_succ_succ", "Nat.succ_le_succ"],
+    "reason": "Corpus-name alias, by design: nat_prelude/order_extra.rs restates a fixed list of lemmas (F:nat-order-lemma-census) under Lean-core's exact flat names, because an imported corpus's proofs resolve against Lean-core spelling. succ_le_succ's body is a one-line forward to le_succ_succ's proof term.",
+    "adjudicated": "2026-08-27",
+    "source": "docs/research/11-design-review/2026-08-27-shape-search-duplicates-adjudicated.md#groups-1-6-7-9-characterizationrs-deliberate-b"
+  }
+]
