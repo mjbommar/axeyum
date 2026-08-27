@@ -89,7 +89,7 @@ fn square_with_non_unit_form_coefficient_reconstructs_to_false() {
     let zero = arena.real_const(Rational::integer(0));
     let assertion = arena.real_lt(sq, zero).unwrap();
 
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let proof = reconstruct_sos_proof(&mut ctx, &arena, &[assertion]).expect(
         "(x+2y)² < 0 is UNSAT; the integer-coefficient form encoder (2y = y+y) reconstructs it \
          to a kernel-checked False",
@@ -327,7 +327,7 @@ fn oversized_weight_square_is_declined() {
     let zero = arena.real_const(Rational::integer(0));
     let assertion = arena.real_lt(lhs, zero).unwrap();
 
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let result = reconstruct_sos_proof(&mut ctx, &arena, &[assertion]);
     assert!(
         result.is_err(),
@@ -361,7 +361,7 @@ fn oversized_cleared_denominator_is_declined() {
     let zero = arena.real_const(Rational::integer(0));
     let assertion = arena.real_lt(lhs, zero).unwrap();
 
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let result = reconstruct_sos_proof(&mut ctx, &arena, &[assertion]);
     assert!(
         result.is_err(),

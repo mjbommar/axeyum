@@ -250,7 +250,7 @@ mod tests {
 
     /// **The measurement that decides whether this is worth having.**
     ///
-    /// `LraReconstructCtx::new()` builds `AxReal` — 30 assumptions. The shipped
+    /// `LraReconstructCtx::new_over_axreal()` builds `AxReal` — 30 assumptions. The shipped
     /// route's `lra_ctx()` builds `CReal`, trusted surface 0 (ADR-0512). A
     /// refutation checked over the first rests on all 30; this asserts the
     /// second by name, so the module cannot quietly regress onto the axiomatized
@@ -279,7 +279,7 @@ mod tests {
         // Coefficients are built from `one` by repeated addition, which is
         // linear in their size. A large one must decline rather than emit a term
         // proportional to the constant.
-        let mut ctx = LraReconstructCtx::new();
+        let mut ctx = LraReconstructCtx::new_over_axreal();
         assert!(integer_expr(&mut ctx, MAX_COEFF).is_some());
         assert!(integer_expr(&mut ctx, -MAX_COEFF).is_some());
         assert!(integer_expr(&mut ctx, MAX_COEFF + 1).is_none());
@@ -294,7 +294,7 @@ mod tests {
             (declare-fun x () Real)(declare-fun y () Real)\n\
             (assert (> x 0))(assert (> y 0))(assert (<= (* x y) 0))\n(check-sat)";
         let cert = certificate(text);
-        let mut ctx = LraReconstructCtx::new();
+        let mut ctx = LraReconstructCtx::new_over_axreal();
         let result = reconstruct_real_product(&mut ctx, &cert);
         assert!(
             matches!(result, Err(ReconstructError::UnsupportedTerm { .. })),

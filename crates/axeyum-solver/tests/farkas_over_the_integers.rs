@@ -72,7 +72,7 @@ struct Measured {
 
 fn measure(label: &'static str, build: fn() -> (TermArena, Vec<TermId>)) -> Measured {
     let (arena, assertions) = build();
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let proof = reconstruct_lra_proof(&mut ctx, &arena, &assertions).expect("LRA refutation");
     let generalized = generalize_over_ordered_ring(&mut ctx, proof, RingTelescope::FullInterface)
         .expect("generalizes over the ordered ring");
@@ -144,7 +144,7 @@ fn the_integer_statement_is_about_int_and_keeps_its_hypotheses() {
     // this route), so it cannot show that several distinct integer variables
     // survive the instantiation.
     let (arena, assertions) = farkas_three();
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let proof = reconstruct_lra_proof(&mut ctx, &arena, &assertions).expect("LRA refutation");
     let generalized = generalize_over_ordered_ring(&mut ctx, proof, RingTelescope::FullInterface)
         .expect("generalizes");
@@ -188,7 +188,7 @@ fn the_integer_statement_is_about_int_and_keeps_its_hypotheses() {
 #[test]
 fn the_tight_telescope_also_instantiates_and_stays_axiom_free() {
     let (arena, assertions) = strict_cycle();
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let proof = reconstruct_lra_proof(&mut ctx, &arena, &assertions).expect("LRA refutation");
     let tight = generalize_over_ordered_ring(&mut ctx, proof, RingTelescope::Used)
         .expect("tight generalization");
@@ -232,7 +232,7 @@ fn the_refutations_binder_shapes_are_what_was_measured() {
         ),
     ] {
         let (arena, assertions) = build();
-        let mut ctx = LraReconstructCtx::new();
+        let mut ctx = LraReconstructCtx::new_over_axreal();
         let proof = reconstruct_lra_proof(&mut ctx, &arena, &assertions).expect("refutation");
         let g = generalize_over_ordered_ring(&mut ctx, proof, RingTelescope::Used).expect("gen");
         println!(
@@ -267,7 +267,7 @@ fn the_query_that_renders_an_attestation_has_an_axiom_free_integer_refutation() 
     let a1 = arena.real_lt(five, x).expect("5 < x");
     let a2 = arena.real_lt(x, three).expect("x < 3");
 
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let proof = reconstruct_lra_proof(&mut ctx, &arena, &[a1, a2]).expect("Farkas refutation");
     let generalized = generalize_over_ordered_ring(&mut ctx, proof, RingTelescope::FullInterface)
         .expect("generalizes over the ordered ring");
@@ -303,7 +303,7 @@ fn the_query_that_renders_an_attestation_has_an_axiom_free_integer_refutation() 
 #[test]
 fn the_integer_refutation_closes_and_renders_a_theory_module() {
     let (arena, assertions) = farkas_three();
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let proof = reconstruct_lra_proof(&mut ctx, &arena, &assertions).expect("Farkas refutation");
     let generalized = generalize_over_ordered_ring(&mut ctx, proof, RingTelescope::FullInterface)
         .expect("generalizes");

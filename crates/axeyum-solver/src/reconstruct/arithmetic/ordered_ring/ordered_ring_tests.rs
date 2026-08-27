@@ -51,7 +51,7 @@ fn general_farkas() -> (TermArena, Vec<TermId>) {
 #[test]
 fn generalized_refutation_has_an_empty_axiom_footprint() {
     let (arena, assertions) = baby_farkas();
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let proof = reconstruct_lra_proof(&mut ctx, &arena, &assertions)
         .expect("baby-Farkas instance reconstructs to False");
     let generalized = generalize_over_ordered_ring(&mut ctx, proof, RingTelescope::FullInterface)
@@ -89,7 +89,7 @@ fn generalized_refutation_has_an_empty_axiom_footprint() {
 #[test]
 fn instantiating_at_real_recovers_the_original_statement() {
     let (arena, assertions) = baby_farkas();
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let proof = reconstruct_lra_proof(&mut ctx, &arena, &assertions).expect("reconstructs");
     let generalized = generalize_over_ordered_ring(&mut ctx, proof, RingTelescope::FullInterface)
         .expect("generalizes");
@@ -118,7 +118,7 @@ fn instantiating_at_real_recovers_the_original_statement() {
 #[test]
 fn used_scope_instantiation_reproduces_the_original_footprint_exactly() {
     let (arena, assertions) = baby_farkas();
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let proof = reconstruct_lra_proof(&mut ctx, &arena, &assertions).expect("reconstructs");
     let generalized =
         generalize_over_ordered_ring(&mut ctx, proof, RingTelescope::Used).expect("generalizes");
@@ -139,7 +139,7 @@ fn used_scope_instantiation_reproduces_the_original_footprint_exactly() {
 #[test]
 fn general_farkas_refutation_also_generalizes_axiom_free() {
     let (arena, assertions) = general_farkas();
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let proof = reconstruct_lra_proof(&mut ctx, &arena, &assertions)
         .expect("the two-variable Farkas instance reconstructs");
     let generalized = generalize_over_ordered_ring(&mut ctx, proof, RingTelescope::FullInterface)
@@ -172,7 +172,7 @@ fn sum_of_squares_refutation_generalizes_axiom_free() {
     let square = arena.real_mul(x, x).unwrap();
     let negative = arena.real_lt(square, zero).unwrap();
 
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let proof = reconstruct_sos_proof(&mut ctx, &arena, &[negative])
         .expect("x*x < 0 reconstructs to False");
     let generalized = generalize_over_ordered_ring(&mut ctx, proof, RingTelescope::Used)
@@ -204,7 +204,7 @@ fn strict_cycle_refutation_generalizes_axiom_free() {
     let a1 = arena.real_lt(x, y).unwrap();
     let a2 = arena.real_lt(y, x).unwrap();
 
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let proof =
         reconstruct_lra_proof(&mut ctx, &arena, &[a1, a2]).expect("strict cycle reconstructs");
     let generalized = generalize_over_ordered_ring(&mut ctx, proof, RingTelescope::Used)
@@ -277,7 +277,7 @@ fn round_trip(
     super::EqSpecialization,
 ) {
     let (arena, assertions) = fixture;
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let eq_proof = reconstruct_lra_proof(&mut ctx, &arena, &assertions).expect("reconstructs");
     let full = generalize_over_ordered_ring(&mut ctx, eq_proof, RingTelescope::FullInterface)
         .expect("the Eq-shaped refutation generalizes");
@@ -375,7 +375,7 @@ fn the_setoid_generalization_is_axiom_free() {
 #[test]
 fn the_setoid_proof_mentions_no_kernel_equality_and_the_eq_proof_does() {
     let (arena, assertions) = general_farkas();
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let eq_proof = reconstruct_lra_proof(&mut ctx, &arena, &assertions).expect("reconstructs");
     let with_eq = super::residual_eq_constants(&ctx, eq_proof);
     ctx.enable_setoid_equality()
@@ -401,7 +401,7 @@ fn the_setoid_proof_mentions_no_kernel_equality_and_the_eq_proof_does() {
 #[test]
 fn the_setoid_telescope_refuses_an_eq_shaped_proof() {
     let (arena, assertions) = baby_farkas();
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let proof = reconstruct_lra_proof(&mut ctx, &arena, &assertions).expect("reconstructs");
     let refused = generalize_over_ordered_ring(&mut ctx, proof, RingTelescope::SetoidInterface);
     assert!(
@@ -526,7 +526,7 @@ fn the_standalone_telescope_is_the_generalized_statements_own_prefix() {
     use axeyum_lean_kernel::ExprNode;
 
     let (arena, assertions) = baby_farkas();
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let proof = reconstruct_lra_proof(&mut ctx, &arena, &assertions)
         .expect("baby-Farkas instance reconstructs to False");
     let generalized = generalize_over_ordered_ring(&mut ctx, proof, RingTelescope::FullInterface)

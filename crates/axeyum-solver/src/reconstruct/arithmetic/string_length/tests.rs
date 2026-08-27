@@ -49,7 +49,7 @@ fn declines(certificate: &StringLengthRefutationCertificate) -> String {
 
 /// **The measurement that decides whether any of this is worth having.**
 ///
-/// `LraReconstructCtx::new()` builds `AxReal` — the legacy AXIOMATIZED ordered
+/// `LraReconstructCtx::new_over_axreal()` builds `AxReal` — the legacy AXIOMATIZED ordered
 /// field, 30 assumptions, this repository's only nonzero trusted-surface row. A
 /// refutation checked there rests on all 30. `try_new_over_integers` builds the
 /// constructed `Int` development, whose 30 ordered-ring declarations are

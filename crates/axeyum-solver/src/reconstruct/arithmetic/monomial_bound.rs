@@ -725,13 +725,13 @@ mod tests {
     fn refutes(text: &str) -> Result<ExprId, ReconstructError> {
         let (arena, assertions) = query(text);
         let cert = monomial_bound_refutation(&arena, &assertions).expect("certificate");
-        let mut ctx = LraReconstructCtx::new();
+        let mut ctx = LraReconstructCtx::new_over_axreal();
         reconstruct_monomial_bound(&mut ctx, &arena, &assertions, &cert)
     }
 
     /// **The measurement that decides whether any of this is worth having.**
     ///
-    /// `LraReconstructCtx::new()` builds `AxReal` — the legacy AXIOMATIZED
+    /// `LraReconstructCtx::new_over_axreal()` builds `AxReal` — the legacy AXIOMATIZED
     /// ordered field, 30 assumptions, this repository's only nonzero
     /// trusted-surface row. A refutation checked there rests on all 30.
     /// `CReal` (ADR-0512) is a Bishop setoid over the constructed rationals at
@@ -768,7 +768,7 @@ mod tests {
         // from outside so the gate cannot be deleted silently.
         let (arena, assertions) = query(ONES);
         let cert = monomial_bound_refutation(&arena, &assertions).expect("certificate");
-        let mut ctx = LraReconstructCtx::new();
+        let mut ctx = LraReconstructCtx::new_over_axreal();
         let proof =
             reconstruct_monomial_bound(&mut ctx, &arena, &assertions, &cert).expect("reconstructs");
         let inferred = ctx.kernel_mut().infer(proof).expect("infer");
@@ -851,7 +851,7 @@ mod tests {
             (1, 1),
             RefutedAtom::LessThan,
         );
-        let mut ctx = LraReconstructCtx::new();
+        let mut ctx = LraReconstructCtx::new_over_axreal();
         declines(
             &reconstruct_monomial_bound(&mut ctx, &arena, &assertions, &zero_exponent),
             "positive exponent and an integer bound",
@@ -864,7 +864,7 @@ mod tests {
             (1, 1),
             RefutedAtom::LessThan,
         );
-        let mut ctx = LraReconstructCtx::new();
+        let mut ctx = LraReconstructCtx::new_over_axreal();
         declines(
             &reconstruct_monomial_bound(&mut ctx, &arena, &assertions, &empty),
             "no factor occurrences",
@@ -907,7 +907,7 @@ mod tests {
             (1, 1),
             RefutedAtom::LessThan,
         );
-        let mut ctx = LraReconstructCtx::new();
+        let mut ctx = LraReconstructCtx::new_over_axreal();
         declines(
             &reconstruct_monomial_bound(&mut ctx, &arena, &assertions, &forged),
             "the query's own atom",
@@ -927,7 +927,7 @@ mod tests {
             (1, 1),
             RefutedAtom::LessThan,
         );
-        let mut ctx = LraReconstructCtx::new();
+        let mut ctx = LraReconstructCtx::new_over_axreal();
         declines(
             &reconstruct_monomial_bound(&mut ctx, &arena, &assertions, &forged),
             "but they multiply to",
@@ -948,7 +948,7 @@ mod tests {
             (5, 1),
             RefutedAtom::LessThan,
         );
-        let mut ctx = LraReconstructCtx::new();
+        let mut ctx = LraReconstructCtx::new_over_axreal();
         declines(
             &reconstruct_monomial_bound(&mut ctx, &arena, &assertions, &forged),
             "does not reach the refuted constant",
@@ -961,7 +961,7 @@ mod tests {
         // it is correct by construction. `Eq.refl zero` is a perfectly
         // well-typed term whose type is not `False`, which is precisely the
         // thing a reconstruction must never return as a refutation.
-        let mut ctx = LraReconstructCtx::new();
+        let mut ctx = LraReconstructCtx::new_over_axreal();
         let zero = ctx.mk_zero();
         let not_a_refutation = ctx.eq_refl_r(zero);
         assert!(matches!(
@@ -972,7 +972,7 @@ mod tests {
 
     #[test]
     fn the_numeral_fold_is_total_exactly_where_it_claims_to_be() {
-        let mut ctx = LraReconstructCtx::new();
+        let mut ctx = LraReconstructCtx::new_over_axreal();
         assert!(le_numeral(&mut ctx, 0, 0).is_some());
         assert!(le_numeral(&mut ctx, 0, 1).is_some());
         assert!(le_numeral(&mut ctx, 3, MAX_NUMERAL).is_some());
@@ -989,7 +989,7 @@ mod tests {
         // which is an invariant of `numeral` rather than of the kernel. If it
         // ever stops holding the fold silently builds the wrong proposition, so
         // check the inferred type at a spread of rungs.
-        let mut ctx = LraReconstructCtx::new();
+        let mut ctx = LraReconstructCtx::new_over_axreal();
         for (from, to) in [(0_i128, 1_i128), (0, 5), (1, 2), (2, 7), (7, 7)] {
             let proof = le_numeral(&mut ctx, from, to).expect("in range");
             let inferred = ctx.kernel_mut().infer(proof).expect("infer");

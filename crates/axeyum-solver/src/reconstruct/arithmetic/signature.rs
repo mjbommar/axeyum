@@ -89,14 +89,20 @@ pub enum RingEquality {
 /// relation playing the role of equality.
 ///
 /// Field names mirror [`ArithPrelude`] exactly; [`From<ArithPrelude>`] is the
-/// `AxReal`-package instance and is what [`LraReconstructCtx::new`] uses, so the
-/// default route is bit-for-bit what it was.
+/// `AxReal`-package instance, selected only by
+/// [`new_over_axreal`](super::LraReconstructCtx::new_over_axreal) /
+/// [`try_new_over_axreal`](super::LraReconstructCtx::try_new_over_axreal)
+/// (ADR-0605 §3: renamed off the bare `new`/`try_new`/`Default` so the
+/// axiom-bearing choice can no longer be reached by accident). Nothing shipped
+/// calls it; the shipped routes are
+/// [`try_new_over_integers`](super::LraReconstructCtx::try_new_over_integers)
+/// and
+/// [`try_new_over_constructed_reals`](super::LraReconstructCtx::try_new_over_constructed_reals),
+/// both axiom-free.
 ///
 /// Handles belong to the kernel they were interned in; do not mix them across
 /// kernels. [`RingSignature::validate_in`] is the check that they belong to the
 /// kernel you are about to reconstruct in.
-///
-/// [`LraReconstructCtx::new`]: super::LraReconstructCtx::new
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RingSignature {
     /// The propositional prelude (`False`, `Not`, `Eq`, …) the laws and the

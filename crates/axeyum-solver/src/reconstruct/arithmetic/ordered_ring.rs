@@ -791,9 +791,11 @@ pub fn refutation_over_int_axioms(
 ///
 /// # Why this no longer goes through the `AxReal` package
 ///
-/// Until 2026-08-18 this route built [`LraReconstructCtx::new`] — the
-/// axiomatized `AxReal` package, this repository's entire remaining trusted
-/// surface — refuted there, abstracted the proof over the 22 ordered-ring laws
+/// Until 2026-08-18 this route built what is now named
+/// [`LraReconstructCtx::new_over_axreal`] (then called `new`, before the
+/// ADR-0605 rename) — the axiomatized `AxReal` package, this repository's
+/// entire remaining trusted surface — refuted there, abstracted the proof
+/// over the 22 ordered-ring laws
 /// with [`generalize_over_ordered_ring`], and instantiated the result at `ℤ`
 /// through [`instantiate_at_int_model`]. The finished term named no `AxReal`
 /// axiom, so the emitted module was already clean; but the route *constructed*

@@ -9,18 +9,18 @@
 | | |
 |---|---:|
 | Established facts (`proved` or `computed`) | 628 |
-| …via an operation covering **more than one** fact | **14** |
+| …via an operation covering **more than one** fact | **19** |
 | …via a single-target operation (a capsule) | 21 |
-| …with no registered operation (hand-constructed or imported) | 593 |
+| …with no registered operation (hand-constructed or imported) | 588 |
 | Registered operations | 28 |
 | …**authoritative** and covering more than one fact | **4** |
 | …fixture-scope covering more than one fact (NOT the metric) | 0 |
 
-**14 fact(s) were established through an operation that
+**19 fact(s) were established through an operation that
 covers more than one fact.** That is the first evidence of generality this
 ledger has ever recorded; it is necessary, not sufficient.
 
-Facts: `F:ml430-int-modeq-comm-1e4bcc07`, `F:ml430-int-modeq-refl-30e15520`, `F:ml430-int-modeq-symm-984a6e67`, `F:ml430-int-modeq-trans-6d7863e0`, `F:ml430-nat-add-modeq-left-e3b1fba9`, `F:ml430-nat-add-modeq-right-e2f11f21`, `F:ml430-nat-descfactorial-one-d4856d4a`, `F:ml430-nat-modeq-comm-24b71e7a`, `F:ml430-nat-modeq-refl-d870c8f5`, `F:ml430-nat-modeq-symm-0a3d4d18`, `F:ml430-nat-modeq-trans-ef9d1c46`, `F:ml430-nat-modulus-modeq-zero-fd9af096`, `F:ml430-nat-one-ascfactorial-8bacb017`, `F:ml430-nat-zero-ascfactorial-af4fcdca`
+Facts: `F:ml430-int-add-modeq-left-ee732b5b`, `F:ml430-int-add-modeq-right-e58108ee`, `F:ml430-int-mod-modeq-6bec7847`, `F:ml430-int-modeq-comm-1e4bcc07`, `F:ml430-int-modeq-refl-30e15520`, `F:ml430-int-modeq-sub-3148f130`, `F:ml430-int-modeq-symm-984a6e67`, `F:ml430-int-modeq-trans-6d7863e0`, `F:ml430-int-modulus-modeq-zero-5b57a898`, `F:ml430-nat-add-modeq-left-e3b1fba9`, `F:ml430-nat-add-modeq-right-e2f11f21`, `F:ml430-nat-descfactorial-one-d4856d4a`, `F:ml430-nat-modeq-comm-24b71e7a`, `F:ml430-nat-modeq-refl-d870c8f5`, `F:ml430-nat-modeq-symm-0a3d4d18`, `F:ml430-nat-modeq-trans-ef9d1c46`, `F:ml430-nat-modulus-modeq-zero-fd9af096`, `F:ml430-nat-one-ascfactorial-8bacb017`, `F:ml430-nat-zero-ascfactorial-af4fcdca`
 
 ## By route
 
@@ -28,7 +28,7 @@ Facts: `F:ml430-int-modeq-comm-1e4bcc07`, `F:ml430-int-modeq-refl-30e15520`, `F:
 |---|---:|---:|---:|---|
 | `cas-certificate` | 0 | 0 | 24 | computer-algebra certificate |
 | `imported-kernel-lean` | 0 | 0 | 5 | kernel proof imported from an external development |
-| `kernel-lean` | 14 | 20 | 530 | kernel proof, reconstructed and checked here |
+| `kernel-lean` | 19 | 20 | 525 | kernel proof, reconstructed and checked here |
 | `search-certificate` | 0 | 0 | 9 | search certificate |
 | `smt-clausal` | 0 | 0 | 9 | SMT decision with clausal (DRAT) evidence |
 | `smt-term-level` | 0 | 1 | 16 | SMT decision with term-level evidence |

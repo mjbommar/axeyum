@@ -173,12 +173,13 @@ fn claiming_a_defined_equality_while_the_laws_still_use_eq_is_refused() {
 /// The seam carries the real route: a context built through the parameterized
 /// constructor — kernel supplied by the caller, carrier named by a signature —
 /// reconstructs and generalizes a Farkas refutation identically to
-/// [`LraReconstructCtx::new`].
+/// [`LraReconstructCtx::new_over_axreal`], the AxReal-specific convenience
+/// constructor (not a default — see ADR-0605 §3 — but the same package).
 #[test]
-fn the_parameterized_constructor_reproduces_the_default_route() {
+fn the_parameterized_constructor_reproduces_the_axreal_convenience_constructor() {
     let (arena, assertions) = baby_farkas();
 
-    let mut default_ctx = LraReconstructCtx::new();
+    let mut default_ctx = LraReconstructCtx::new_over_axreal();
     let default_proof = reconstruct_lra_proof(&mut default_ctx, &arena, &assertions)
         .expect("baby-Farkas reconstructs");
     let default_general = generalize_over_ordered_ring(
@@ -225,11 +226,12 @@ fn the_parameterized_constructor_refuses_an_invalid_signature() {
         .expect_err("a context must not be built over a signature the kernel does not support");
 }
 
-/// `try_new` is `new` without the panic, and agrees with it.
+/// `try_new_over_axreal` is `new_over_axreal` without the panic, and agrees
+/// with it.
 #[test]
-fn try_new_agrees_with_new() {
-    let a = LraReconstructCtx::try_new().expect("the AxReal package builds");
-    let b = LraReconstructCtx::new();
+fn try_new_over_axreal_agrees_with_new_over_axreal() {
+    let a = LraReconstructCtx::try_new_over_axreal().expect("the AxReal package builds");
+    let b = LraReconstructCtx::new_over_axreal();
     assert_eq!(a.arith().declarations(), b.arith().declarations());
     assert_eq!(a.equality(), RingEquality::KernelEq);
 }
@@ -440,7 +442,7 @@ fn adopting_the_slot_from_the_constructed_reals_declares_nothing() {
     );
 
     // The control: the same slot over `AxReal`, which cannot prove any of it.
-    let mut real_ctx = LraReconstructCtx::new();
+    let mut real_ctx = LraReconstructCtx::new_over_axreal();
     let before = real_ctx.kernel().environment().len();
     real_ctx
         .enable_setoid_equality()
@@ -517,7 +519,7 @@ fn a_farkas_refutation_reconstructs_over_the_constructed_reals() {
 #[test]
 fn adopting_a_slot_over_the_kernels_own_eq_is_refused() {
     let (_kernel, _sig, slot) = creal_signature();
-    let mut real_ctx = LraReconstructCtx::new();
+    let mut real_ctx = LraReconstructCtx::new_over_axreal();
 
     let err = real_ctx
         .adopt_setoid_equality(&slot)

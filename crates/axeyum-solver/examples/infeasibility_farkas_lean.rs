@@ -289,7 +289,7 @@ fn run() -> Result<(), String> {
     }
 
     // --- the direct arithmetic reconstruction ------------------------------
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let direct = reconstruct_lra_proof(&mut ctx, &script.arena, &core_terms);
     match direct {
         Ok(proof) => {

@@ -225,7 +225,7 @@ fn run() -> Result<(), String> {
     let mut ever_used: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
     for (label, route, build) in fixtures {
         let (arena, assertions) = build();
-        let mut ctx = LraReconstructCtx::new();
+        let mut ctx = LraReconstructCtx::new_over_axreal();
         let proof = match route {
             Route::Lra => reconstruct_lra_proof(&mut ctx, &arena, &assertions),
             Route::Sos => reconstruct_sos_proof(&mut ctx, &arena, &assertions),
@@ -548,7 +548,7 @@ fn over_the_constructed_reals(fixtures: &[Fixture]) -> Result<bool, String> {
         .adopt_setoid_equality(&slot)
         .map_err(|error| format!("the equality slot did not adopt: {error:?}"))?;
     let real_slot_cost = {
-        let mut real = LraReconstructCtx::new();
+        let mut real = LraReconstructCtx::new_over_axreal();
         let before = real.kernel().environment().len();
         real.enable_setoid_equality()
             .map_err(|error| format!("the AxReal route did not declare its slot: {error:?}"))?;
@@ -566,7 +566,7 @@ fn over_the_constructed_reals(fixtures: &[Fixture]) -> Result<bool, String> {
         let (arena, assertions) = build();
 
         // (a) The `AxReal` route, as the control.
-        let mut real_ctx = LraReconstructCtx::new();
+        let mut real_ctx = LraReconstructCtx::new_over_axreal();
         let real_proof = reconstruct(&mut real_ctx, route, &arena, &assertions)
             .map_err(|error| format!("{label}: AxReal reconstruction failed: {error:?}"))?;
         let real_general =

@@ -3766,7 +3766,7 @@ fn arithmetic_family_generated_source_is_byte_stable() {
     let one = arena.real_const(Rational::integer(1));
     let upper = arena.real_le(x, zero).unwrap();
     let lower = arena.real_le(one, x).unwrap();
-    let mut ctx = super::LraReconstructCtx::new();
+    let mut ctx = super::LraReconstructCtx::new_over_axreal();
     let proof = super::reconstruct_lra_proof(&mut ctx, &arena, &[upper, lower])
         .expect("linear fixture reconstructs");
     let source =
@@ -3786,7 +3786,7 @@ fn arithmetic_family_generated_source_is_byte_stable() {
     // make a 2.5 MB diff the review surface for every printer change.
     // `front_door_carrier_emits_the_constructed_carrier` is what checks the
     // shipped route's carrier.
-    let mut ctx = super::LraReconstructCtx::new();
+    let mut ctx = super::LraReconstructCtx::new_over_axreal();
     let proof = super::reconstruct_sos_proof(&mut ctx, &arena, &[negative_square])
         .expect("SOS fixture reconstructs");
     let source =
@@ -3847,7 +3847,7 @@ fn the_shipped_sos_route_is_carrier_axiom_free() {
          axioms vanished, which is a broken measurement rather than a result"
     );
 
-    let mut real_ctx = super::LraReconstructCtx::new();
+    let mut real_ctx = super::LraReconstructCtx::new_over_axreal();
     let real_proof = super::reconstruct_sos_proof(&mut real_ctx, &arena, &[negative_square])
         .expect("SOS reconstructs over the AxReal package");
     let real_footprint =
@@ -3882,7 +3882,7 @@ fn ordered_ring_generalized_module_is_byte_stable_and_axiom_free() {
     let upper = arena.real_le(x, zero).unwrap();
     let lower = arena.real_le(one, x).unwrap();
 
-    let mut ctx = super::LraReconstructCtx::new();
+    let mut ctx = super::LraReconstructCtx::new_over_axreal();
     let proof = super::reconstruct_lra_proof(&mut ctx, &arena, &[upper, lower])
         .expect("linear fixture reconstructs");
     let generalized = generalize_over_ordered_ring(&mut ctx, proof, RingTelescope::FullInterface)
@@ -3916,7 +3916,7 @@ fn lra_transitivity_reconstructs_to_false() {
     let a1 = arena.real_le(x, zero).unwrap(); // x ≤ 0
     let a2 = arena.real_le(one, x).unwrap(); // 1 ≤ x
 
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let proof = reconstruct_lra_proof(&mut ctx, &arena, &[a1, a2])
         .expect("transitivity LRA unsat reconstructs to False");
 
@@ -3948,7 +3948,7 @@ fn lra_transitivity_ge_phrasing_reconstructs() {
     let a1 = arena.real_le(x, zero).unwrap(); // x ≤ 0
     let a2 = arena.real_ge(x, one).unwrap(); // x ≥ 1
 
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let proof = reconstruct_lra_proof(&mut ctx, &arena, &[a1, a2])
         .expect("≥-phrased transitivity LRA unsat reconstructs to False");
     let inferred = ctx.kernel_mut().infer(proof).unwrap();
@@ -3974,7 +3974,7 @@ fn lra_strict_antisymmetry_reconstructs() {
     let a1 = arena.real_lt(x, y).unwrap(); // x < y
     let a2 = arena.real_lt(y, x).unwrap(); // y < x
 
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let proof = reconstruct_lra_proof(&mut ctx, &arena, &[a1, a2])
         .expect("strict antisymmetry LRA unsat reconstructs to False");
     let inferred = ctx.kernel_mut().infer(proof).unwrap();
@@ -4005,7 +4005,7 @@ fn lra_strict_3cycle_reconstructs() {
     let a2 = arena.real_lt(y, z).unwrap(); // y < z
     let a3 = arena.real_lt(z, x).unwrap(); // z < x
 
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let proof = reconstruct_lra_proof(&mut ctx, &arena, &[a1, a2, a3])
         .expect("strict 3-cycle LRA unsat reconstructs to False");
     let inferred = ctx.kernel_mut().infer(proof).unwrap();
@@ -4032,7 +4032,7 @@ fn lra_satisfiable_is_rejected() {
     let five = arena.real_const(Rational::integer(5));
     let a = arena.real_le(x, five).unwrap(); // x ≤ 5, satisfiable
 
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let err = reconstruct_lra_proof(&mut ctx, &arena, &[a])
         .expect_err("a satisfiable instance has no Farkas refutation");
     assert!(
@@ -4060,7 +4060,7 @@ fn lra_general_two_coeff_with_constant_reconstructs() {
     let a1 = arena.real_le(two_x, neg_one).unwrap(); // 2x ≤ -1
     let a2 = arena.real_ge(x, zero).unwrap(); // x ≥ 0
 
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let proof = reconstruct_lra_proof(&mut ctx, &arena, &[a1, a2])
         .expect("integer-coefficient Farkas shape reconstructs via the general engine");
     assert_lra_infers_false(&mut ctx, proof);
@@ -4085,7 +4085,7 @@ fn lra_noninteger_coefficient_is_rejected() {
     let a1 = arena.real_le(half_x, neg_one).unwrap(); // (1/2)x ≤ -1
     let a2 = arena.real_ge(x, zero).unwrap(); // x ≥ 0
 
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let err = reconstruct_lra_proof(&mut ctx, &arena, &[a1, a2])
         .expect_err("a non-integer-coefficient atom is outside the additive ring engine");
     assert!(
@@ -4105,7 +4105,7 @@ fn lra_noninteger_coefficient_is_rejected() {
 fn lra_bogus_combination_is_kernel_rejected() {
     use super::LraReconstructCtx;
 
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let zlo = {
         let n = ctx.arith().zero_lt_one;
         ctx.kernel_mut().const_(n, vec![])
@@ -4136,7 +4136,7 @@ fn lra_reconstruction_is_deterministic() {
         let one = arena.real_const(Rational::integer(1));
         let a1 = arena.real_le(x, zero).unwrap();
         let a2 = arena.real_le(one, x).unwrap();
-        let mut ctx = LraReconstructCtx::new();
+        let mut ctx = LraReconstructCtx::new_over_axreal();
         reconstruct_lra_proof(&mut ctx, &arena, &[a1, a2]).unwrap()
     };
     assert_eq!(build(), build(), "LRA reconstruction must be deterministic");
@@ -4174,7 +4174,7 @@ fn lra_general_two_constraint_nonunit_reconstructs() {
     let a1 = arena.real_le(two_x, zero).unwrap(); // 2x ≤ 0
     let a2 = arena.real_le(one, x).unwrap(); // 1 ≤ x
 
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let proof = reconstruct_lra_proof(&mut ctx, &arena, &[a1, a2])
         .expect("non-unit-multiplier 2-constraint Farkas reconstructs to False");
     assert_lra_infers_false(&mut ctx, proof);
@@ -4200,7 +4200,7 @@ fn lra_general_three_constraint_multivar_reconstructs() {
     let a2 = arena.real_le(one, x).unwrap(); // 1 ≤ x
     let a3 = arena.real_le(one, y).unwrap(); // 1 ≤ y
 
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let proof = reconstruct_lra_proof(&mut ctx, &arena, &[a1, a2, a3])
         .expect("3-constraint multivar Farkas reconstructs to False");
     assert_lra_infers_false(&mut ctx, proof);
@@ -4226,7 +4226,7 @@ fn lra_general_larger_multipliers_reconstructs() {
     let a1 = arena.real_le(three_x, zero).unwrap(); // 3x ≤ 0
     let a2 = arena.real_le(two, two_x).unwrap(); // 2 ≤ 2x
 
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let proof = reconstruct_lra_proof(&mut ctx, &arena, &[a1, a2])
         .expect("larger-multiplier Farkas reconstructs to False");
     assert_lra_infers_false(&mut ctx, proof);
@@ -4252,7 +4252,7 @@ fn lra_general_engine_handles_unit_baby_shape() {
     let cert = crate::lra_farkas_certificate(&arena, &[a1, a2])
         .unwrap()
         .expect("unsat");
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let proof = try_general_farkas(&mut ctx, &cert)
         .expect("no error")
         .expect("general engine reconstructs the unit baby shape");
@@ -4301,7 +4301,7 @@ fn lra_general_rational_multipliers_reconstructs() {
     // Multipliers genuinely carry a denominator > 1 (exercise the clearing path).
     assert_eq!(cert.multipliers[0].denominator(), 3);
 
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let proof = try_general_farkas(&mut ctx, &cert)
         .expect("no error")
         .expect("rational-multiplier general Farkas reconstructs");
@@ -4344,7 +4344,7 @@ fn lra_mixed_rational_multipliers_reconstructs() {
     );
     assert_eq!(cert.multipliers[0].denominator(), 3);
 
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let proof = try_mixed_farkas(&mut ctx, &cert)
         .expect("no error")
         .expect("strict rational-multiplier mixed Farkas reconstructs");
@@ -4395,7 +4395,7 @@ fn lra_bogus_farkas_combination_is_rejected() {
         !non_refutation.verify(),
         "x ≤ 0 ∧ −x ≤ 0 is satisfiable (x = 0); not a Farkas refutation"
     );
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let outcome = try_general_farkas(&mut ctx, &non_refutation)
         .expect("a non-refutation must not error-out the engine, only fall through");
     assert!(
@@ -4924,7 +4924,7 @@ fn lra_mixed_strict_nonstrict_reconstructs() {
     let a1 = arena.real_lt(x, zero).unwrap(); // x < 0  (strict)
     let a2 = arena.real_le(zero, x).unwrap(); // 0 ≤ x  (non-strict)
 
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let proof = reconstruct_lra_proof(&mut ctx, &arena, &[a1, a2])
         .expect("mixed strict/non-strict Farkas reconstructs to False");
     assert_lra_infers_false(&mut ctx, proof);
@@ -4954,7 +4954,7 @@ fn lra_mixed_three_constraint_nonunit_strict_reconstructs() {
     let a2 = arena.real_le(one, x).unwrap(); // 1 ≤ x   (non-strict)
     let a3 = arena.real_le(one, y).unwrap(); // 1 ≤ y   (decoy, unused)
 
-    let mut ctx = LraReconstructCtx::new();
+    let mut ctx = LraReconstructCtx::new_over_axreal();
     let proof = reconstruct_lra_proof(&mut ctx, &arena, &[a1, a2, a3])
         .expect("mixed 3-constraint non-unit-strict Farkas reconstructs to False");
     assert_lra_infers_false(&mut ctx, proof);

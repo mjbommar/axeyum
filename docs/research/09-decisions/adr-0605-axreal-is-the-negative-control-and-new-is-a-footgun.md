@@ -67,3 +67,20 @@ Measured on this tree:
   repository before.
 - The review's §4 item "axreal's role" is closed; the other two (ADR-0603's
   family beyond IVT/EVT, suite wall-clock) remain open.
+
+## Amendment (2026-08-27, lane axreal-rename): item 3 landed
+
+`6bdb1e35f` renamed `LraReconstructCtx::new`/`::try_new` to
+`new_over_axreal`/`try_new_over_axreal` (matching the existing
+`try_new_over_integers`/`try_new_over_constructed_reals` convention) and
+**removed** the `Default` impl rather than repointing it at a constructed
+carrier — a silently-changed default is its own hazard, and this ADR already
+ranked a rename above a guard alone. There is now no no-argument constructor
+on `LraReconstructCtx` at all; every caller names its carrier explicitly.
+Both remedies landed together: `reconstruct::arithmetic::axreal_call_site_guard`
+(three tests — a positive control, a negative control, and the real gate over
+`src/reconstruct/`'s on-disk tree) asserts no shipped call site can pick the
+AxReal signature again, proved discriminating by temporarily reintroducing
+such a call and confirming exactly that gate went red. `axreal`'s 30
+declarations are untouched. Full account:
+[`docs/plan/status/140-axreal-constructor-rename.md`](../../plan/status/140-axreal-constructor-rename.md).
