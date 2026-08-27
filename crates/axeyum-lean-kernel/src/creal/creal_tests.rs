@@ -126,7 +126,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 351] = [
+    let expected: [(&str, crate::NameId, &str); 355] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -269,6 +269,13 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         // build sequence would read as "axiom-free" rather than as absent.
         ("CReal.Converges", p.converges, "def"),
         ("CReal.converges_unique", p.converges_unique, "theorem"),
+        // The one-`Exists.rec`, two-sequence generalization of
+        // `converges_unique`'s own `equiv_of_bounded` idiom: transports
+        // `f`'s convergence to `L` over to a DIFFERENT sequence `g` shown
+        // pointwise close to `f` at their shared index
+        // (creal/convergence.rs's `declare_converges_of_close`). Built for
+        // `CReal.integral_witness_independent`.
+        ("CReal.converges_of_close", p.converges_of_close, "theorem"),
         ("CReal.converges_of_const", p.converges_of_const, "theorem"),
         // The "speedup transported" bridge's second half: a sequence EXACTLY
         // `Equiv` to a fixed target at every index `Converges` to it, at rate
@@ -1093,6 +1100,29 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
             p.riemann_sum_deep_cauchy_folded,
             "theorem",
         ),
+        // The witness/modulus reindexing bridge settling whether
+        // `CReal.integral` is witness-independent: the SAME `riemannSumDeepCauchy`
+        // telescope, specialized to one shared sample index `n` (so the
+        // middle `regular` leg is the trivial `regular rsum_l n n`) but
+        // generalized to TWO INDEPENDENT uniform-continuity witnesses `u1`,
+        // `u2` (`riemann_sum_cauchy` is already `∀ u, …`,
+        // `sharedIndexToCanonical` never mentions `u`, `common_refinement`
+        // is pure `Nat` arithmetic) -- creal/integral.rs's
+        // `declare_riemann_sum_deep_cauchy_cross`.
+        (
+            "CReal.riemannSumDeepCauchyCross",
+            p.riemann_sum_deep_cauchy_cross,
+            "theorem",
+        ),
+        // Folds `riemannSumDeepCauchyCross`'s own three-leg bound into a
+        // single `natDivSucc(2K, n)`, `K` the SAME `ExprId`
+        // `CReal.integral`'s own construction uses (creal/integral.rs's
+        // `declare_riemann_sum_deep_cauchy_cross_folded`).
+        (
+            "CReal.riemannSumDeepCauchyCrossFolded",
+            p.riemann_sum_deep_cauchy_cross_folded,
+            "theorem",
+        ),
         // `CReal.mk (speedup (diagonal f) K) (regularity proof)`, `f := fun
         // n => riemannSum F a b (deep F a b u n)` -- `regular_of_scaled_cauchy`
         // applied at `f`, `K` (`declare_creal_integral`'s own `fold_k`,
@@ -1111,6 +1141,17 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         // function's integral is base times height (creal/integral.rs's
         // `declare_integral_const`), Spivak Ch14's opening computation.
         ("CReal.integral_const", p.integral_const, "theorem"),
+        // `CReal.integral` is the integral of `F`, not "the integral
+        // computed via THIS modulus": `Equiv (integral F a b hab u1)
+        // (integral F a b hab u2)` for ANY two uniform-continuity
+        // witnesses. `integral_converges` (twice) + `riemannSumDeepCauchyCrossFolded`
+        // + `converges_of_close` + `converges_unique`, no new estimate
+        // (creal/integral.rs's `declare_integral_witness_independent`).
+        (
+            "CReal.integral_witness_independent",
+            p.integral_witness_independent,
+            "theorem",
+        ),
         // Spivak Ch14 FTC-I, first evaluation instance: the antiderivative
         // of a constant integrand, `G x := integral (fun _ => c) a (max a
         // (min x b)) …` (the `max`/`min` clamp is what makes `G` a genuinely

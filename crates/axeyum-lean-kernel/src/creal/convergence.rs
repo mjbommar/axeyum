@@ -239,6 +239,7 @@ use crate::rat_prelude::ops::{
 pub(super) fn declare_convergence(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
     declare_converges(d, p)?;
     declare_converges_unique(d, p)?;
+    declare_converges_of_close(d, p)?;
     declare_converges_of_const(d, p)?;
     declare_converges_of_equiv(d, p)?;
     declare_cauchy(d, p)?;
@@ -595,6 +596,139 @@ fn declare_converges_unique(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), K
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.converges_unique,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.converges_of_close : ∀ f g L (Kc : Nat), (∀ n, Within (seq (g n) n
+/// − seq (f n) n) (Rat.natDivSucc Kc n)) → Converges f L → Converges g L`.
+///
+/// See [`CRealPrelude::converges_of_close`] for the statement and the
+/// one-`Exists.rec` idiom this reuses from [`declare_converges_unique`],
+/// simplified: only ONE hypothesis is eliminated (`Converges f L`; the
+/// target `Converges g L` does not mention its witness `K`), and the
+/// pointwise step is the plain forward triangle identity
+/// `Rat.sub_add_sub` — `(g_n − f_n) + (f_n − L_n) = g_n − L_n` — rather than
+/// `converges_unique`'s negated `L − M` shape, so no `Rat.bounds_neg` step
+/// is needed: `Rat.bounds_add` combines the two halved bounds directly.
+fn declare_converges_of_close(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let seq_ty = seq_fn_ty(d, p);
+    let nat_add = d.prelude().add;
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let l_fv = d.fresh_fvar();
+    let l = d.kernel().fvar(l_fv);
+    let kc_fv = d.fresh_fvar();
+    let kc = d.kernel().fvar(kc_fv);
+
+    // cross_ty : ∀ n, Within (seq (g n) n − seq (f n) n) (natDivSucc kc n).
+    let cross_ty = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let g_term = d.apply(g, &[n]);
+        let gseq = sample(d, p, g_term, n);
+        let f_term = d.apply(f, &[n]);
+        let fseq = sample(d, p, f_term, n);
+        let diff = rsub(d, rat, gseq, fseq);
+        let bound = div_succ_at(d, p, kc, n);
+        let claim = within(d, p, diff, bound);
+        d.pi_fv(n_fv, nat, claim)
+    };
+    let cross_fv = d.fresh_fvar();
+    let cross = d.kernel().fvar(cross_fv);
+
+    let converges_fl = converges_applied(d, p, f, l);
+    let hconv_fv = d.fresh_fvar();
+    let hconv = d.kernel().fvar(hconv_fv);
+
+    let target = converges_applied(d, p, g, l);
+
+    let predicate = converges_predicate(d, p, f, l);
+    let minor = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hp_ty = converges_body(d, p, f, l, k);
+        let hp_fv = d.fresh_fvar();
+        let hp = d.kernel().fvar(hp_fv);
+
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+
+        let g_term = d.apply(g, &[n]);
+        let gseq = sample(d, p, g_term, n);
+        let f_term = d.apply(f, &[n]);
+        let fseq = sample(d, p, f_term, n);
+        let lseq = sample(d, p, l, n);
+
+        let u_val = rsub(d, rat, gseq, fseq);
+        let v_val = rsub(d, rat, fseq, lseq);
+
+        let bkc = div_succ_at(d, p, kc, n);
+        let bk = div_succ_at(d, p, k, n);
+
+        let within_u = d.apply(cross, &[n]);
+        let within_v = d.apply(hp, &[n]);
+
+        let (lower_u, upper_u) = halves(d, p, u_val, bkc, within_u);
+        let (lower_v, upper_v) = halves(d, p, v_val, bk, within_v);
+
+        let combined = d.lemma(
+            rat.bounds_add,
+            &[u_val, bkc, v_val, bk, lower_u, upper_u, lower_v, upper_v],
+        );
+        // combined : Within (u_val + v_val) (bkc + bk).
+        let sum_uv = radd(d, u_val, v_val);
+        let target_diff = rsub(d, rat, gseq, lseq);
+        let sub_add_sub_eq = d.lemma(rat.sub_add_sub, &[gseq, fseq, lseq]);
+        let bkc_plus_bk = radd(d, bkc, bk);
+        let at_target =
+            rat_eq_rewrite(d, sum_uv, target_diff, sub_add_sub_eq, combined, &|d, t| {
+                within(d, p, t, bkc_plus_bk)
+            });
+
+        let ksum = d.const_app(nat_add, &[kc, k]);
+        let bound_final = div_succ_at(d, p, ksum, n);
+        let bound_eq = d.lemma(rat.nat_div_succ_add, &[kc, k, n]);
+        let at_final = rat_eq_rewrite(d, bkc_plus_bk, bound_final, bound_eq, at_target, &|d, t| {
+            within(d, p, target_diff, t)
+        });
+
+        let per_n = d.lam_fv(n_fv, nat, at_final);
+        let predicate_g = converges_predicate(d, p, g, l);
+        let intro = exists_intro(d, p, nat, predicate_g, ksum, per_n);
+
+        let with_hp = d.lam_fv(hp_fv, hp_ty, intro);
+        d.lam_fv(k_fv, nat, with_hp)
+    };
+    let proof_body = exists_elim(d, p, nat, predicate, target, hconv, minor);
+
+    let value = {
+        let with_hconv = d.lam_fv(hconv_fv, converges_fl, proof_body);
+        let with_cross = d.lam_fv(cross_fv, cross_ty, with_hconv);
+        let with_kc = d.lam_fv(kc_fv, nat, with_cross);
+        let with_l = d.lam_fv(l_fv, carrier, with_kc);
+        let with_g = d.lam_fv(g_fv, seq_ty, with_l);
+        d.lam_fv(f_fv, seq_ty, with_g)
+    };
+    let ty = {
+        let after_hconv = d.arrow(converges_fl, target);
+        let after_cross = d.arrow(cross_ty, after_hconv);
+        let after_kc = d.pi_fv(kc_fv, nat, after_cross);
+        let after_l = d.pi_fv(l_fv, carrier, after_kc);
+        let after_g = d.pi_fv(g_fv, seq_ty, after_l);
+        d.pi_fv(f_fv, seq_ty, after_g)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.converges_of_close,
         uparams: vec![],
         ty,
         value,
