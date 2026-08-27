@@ -1436,7 +1436,14 @@ pub struct CRealPrelude {
     /// `Δ` and finds it does not make `samplePt ≤ b` provable from `m`
     /// alone without also bounding the interval's own Archimedean constant,
     /// which is data about `[a,b]`, not about `m`. See `creal/crossing.rs`
-    /// and `creal/integral.rs`'s 2026-08-27 module doc entries (all three).
+    /// and `creal/integral.rs`'s 2026-08-27 module doc entries (all four —
+    /// the fourth tests and REFUTES, with an exact worked bound, the
+    /// hypothesis that fixing `[a,b]` (so `magnitude` is a known constant)
+    /// rescues this: `bucket_index_bound`'s cap has a `+4` slack that lands
+    /// the provable `samplePt − a` bound exactly at `magnitude` for every
+    /// mesh count, and `b−a ≤ magnitude` is the tightest available ceiling,
+    /// so the two never cross. Still open; needs a tighter, purpose-built
+    /// `crossingIndex` bound, not more inputs to the existing one).
     pub crossing_close: NameId,
     /// `CReal.sampleUpperBound : ∀ x m, CReal.le x (CReal.ofRat (Rat.add
     /// (CReal.seq x m) (Rat.natDivSucc 1 m)))` — the general

@@ -386,6 +386,112 @@
 //! [`declare_mesh_scaled_le_of_ge`], so none of this file's documented
 //! concrete-witness/lazy-delta traps apply — the increase is consistent
 //! with ordinary machine load, not a construction cost).
+//!
+//! ## `CReal.integral_split` — checked 2026-08-27 (a FOURTH lane), tested
+//! and REFUTED the hypothesis that "`magnitude` is a fixed constant of
+//! `[a,b]`" rescues prerequisite (2); the obstruction is not data
+//! availability, it is that `bucket_index_bound`'s existing cap is
+//! provably too loose BY EXACTLY THE MARGIN THAT MATTERS, for every mesh
+//! count
+//!
+//! The immediately preceding entry's own "genuinely disqualifying
+//! direction" reads, correctly interpreted, as an availability claim: `Δ`
+//! being an upper bound for the true step "cannot be made literally true
+//! for THIS reading of `Δ`... without ALSO bounding `magnitude`... which is
+//! data about the interval, not about `m`". That is true as stated, but
+//! `integral_split` FIXES the interval `[a,b]` before this lemma is ever
+//! invoked, so `magnitude := bound(b−a)+1` is not a free parameter the
+//! caller lacks — it is a closed `Nat` term the caller already has in
+//! hand, exactly like `a`, `b` themselves. So the question worth actually
+//! testing is: does a bound in the PAIR `(m, magnitude)` — not `m` alone —
+//! suffice? It does not, and the reason is arithmetic, not a missing
+//! input.
+//!
+//! **The exact chain, with no step hand-waved.** Fix `bnd := ofNat(N+1)`
+//! for whatever Nat `N` the caller picks to build `Δ := natDivSucc
+//! (magnitude, N)` (i.e. `Δ = magnitude/(N+1)`, `[CRealPrelude::direct_bound_le`]'s
+//! own `(c, magnitude, proof)` triple applied to `width := b−a`, so
+//! `proof : le (b−a) (ofNat magnitude)` is exactly what is in hand — no
+//! stronger, no `<`, a plain `≤`). Then:
+//!
+//! 1. `w := (c−a)·Δ⁻¹` satisfies `le w bnd`: `Δ⁻¹ = ofNat(N+1)/magnitude`
+//!    exactly (both positive, `Rat.inv` of a `natDivSucc`), and `c−a ≤ b−a
+//!    ≤ ofNat(magnitude)`, so `w ≤ magnitude·(N+1)/magnitude = ofNat(N+1) =
+//!    bnd`.
+//! 2. [`CRealPrelude::bucket_index_bound`] at `(w, bnd, k := 0, that
+//!    proof)` gives `crossingIndex a c Δ = bucketIndex w 0 ≤ (bound(bnd) +
+//!    3)·1`. `bnd = ofNat(N+1)` is itself a `direct_bound_le`-shaped
+//!    embedding, and `CReal.bound`'s literal definition
+//!    (`product.rs::declare_bound`, `Int.natAbs (Rat.num (seq x 0)) + 1`)
+//!    gives `bound (ofNat (N+1)) = N+2` exactly (the 0th sample of a
+//!    constant-`Nat` embedding is that Nat as an integer-denominator
+//!    rational, numerator `N+1`, `natAbs (N+1) = N+1`). So the cap is
+//!    **exactly `N + 5`**, not `N + 1` — a fixed excess of `4`, independent
+//!    of `N` and of `magnitude`.
+//! 3. Multiply back by `Δ = magnitude/(N+1)`: the PROVABLE bound on
+//!    `crossingIndex a c Δ · Δ` (hence on `samplePt − a`) is `(N+5)·
+//!    magnitude/(N+1) = magnitude · (1 + 4/(N+1))`. This is **strictly
+//!    greater than `magnitude` for every finite `N`** — the `4/(N+1)` term
+//!    is always strictly positive, however large `N` is chosen.
+//! 4. The only available fact relating `b−a` to `magnitude` is
+//!    `direct_bound_le`'s own `le (b−a) (ofNat magnitude)` — non-strict,
+//!    and nothing in the prelude proves a strict `lt (b−a) (ofNat
+//!    magnitude)` with any quantified gap. So the best available ceiling
+//!    on `samplePt − a` needed for `samplePt ≤ b` is `magnitude` itself,
+//!    and step 3's provable bound is *always* strictly above that ceiling.
+//!
+//! **`samplePt ≤ b` is therefore not derivable via `bucket_index_bound` +
+//! `direct_bound_le` for ANY choice of the internal parameter `N`** — not
+//! "not yet, for small `N`", not "needs `N` past some threshold": the
+//! excess `4·magnitude/(N+1)` shrinks toward `0` as `N → ∞`, but the
+//! bound it is added to is already pinned at exactly `magnitude`, the same
+//! constant the ceiling sits at, so the sum never crosses below it. Refining
+//! the mesh makes the bound TIGHTER, never makes it SUFFICIENT. Checked
+//! concretely: `magnitude := 10` (i.e. `b−a` bounded by `10`), `N := 10^6`
+//! gives a provable cap of `10·(1 + 4/1000001) ≈ 10.00004`, still `> 10 ≥
+//! b−a`'s only known ceiling; `N := 10^9` gives `≈ 10.00000004`, same
+//! verdict. The gap never closes because it is not a convergence-speed
+//! problem, it is that the limit itself (`magnitude`) already sits at the
+//! ceiling `b−a` is only known to be `≤`, not `<`, by any provable margin.
+//!
+//! **So my own working hypothesis for this lane — "since `magnitude` is a
+//! determined constant of the fixed interval, a bound in `(m, magnitude)`
+//! should suffice" — is REFUTED, but not for the reason the hypothesis
+//! disputed.** `magnitude` genuinely IS usable, closed data at a fixed
+//! interval; that part of the hypothesis was correct, and the previous
+//! entry's framing ("data about the interval, not about `m`") is easy to
+//! misread as saying the obstruction is unavailable information. It is not.
+//! The actual obstruction is that [`CRealPrelude::bucket_index_bound`] — the
+//! ONLY existing `Nat` cap on `bucketIndex`/`crossingIndex` — carries a
+//! FIXED additive slack (`+3`, becoming `+4` once composed with `bnd`'s own
+//! `+1` embedding offset) that, once multiplied back through `Δ`'s
+//! denominator, lands EXACTLY on `magnitude` from above, and `magnitude` is
+//! also exactly where `b−a`'s only known ceiling sits. A strictly TIGHTER,
+//! purpose-built bound on `crossingIndex` specifically (not the generic
+//! clamp-based `bucket_index_bound`, which was designed for `bounded_of_
+//! uniformly_continuous`'s covering argument and never promises tightness
+//! beyond "some `Nat` cap exists") — one whose slack vanishes relative to
+//! `magnitude`, not merely relative to `N` — would be needed before
+//! prerequisite (2) is even attemptable at the term level. That is new
+//! proof engineering on `crossing.rs`'s own ground, not a matter of
+//! supplying `bucket_index_bound` with more inputs, and not attempted here:
+//! doing so without first fixing the +4 slack would be building something
+//! that only LOOKS like it discharges the hypothesis.
+//!
+//! No declaration was added or attempted at the term level — the
+//! arithmetic above rules out the natural construction before any kernel
+//! call, the same discipline the immediately preceding entry followed.
+//! `samplePt`'s domain membership remains open; [`CRealPrelude::crossing_close`]
+//! is UNCHANGED and still takes it as an explicit hypothesis alongside the
+//! Archimedean-smallness one (which IS now dischargeable, via
+//! [`CRealPrelude::mesh_scaled_le_of_ge`], per the entry above — that
+//! wiring is also not attempted here, since it is orthogonal to this
+//! entry's negative finding and better left for whoever next revisits
+//! `crossing_close`'s statement as a whole).
+//!
+//! `creal_prelude_builds`: measured 22.17 s on this lane's merge of `main`
+//! + the previous lane's branch, BEFORE this entry (pure prose, no new
+//! declaration) and unaffected by it.
 
 use super::completeness::half_shift_le;
 use super::convergence::{
