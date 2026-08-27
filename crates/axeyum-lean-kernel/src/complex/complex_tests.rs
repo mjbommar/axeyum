@@ -248,6 +248,8 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
         ("Complex.abs_one", p.abs_one),
         ("Complex.abs_mul", p.abs_mul),
         ("Complex.abs_add_le", p.abs_add_le),
+        ("Complex.abs_neg", p.abs_neg),
+        ("Complex.abs_le_add_abs_sub", p.abs_le_add_abs_sub),
         ("Complex.polyEval", p.poly.poly_eval),
         ("Complex.polyEval_zero", p.poly.poly_eval_zero),
         ("Complex.polyEval_succ", p.poly.poly_eval_succ),
@@ -1731,6 +1733,162 @@ fn abs_add_le_direction_is_load_bearing() {
     );
 }
 
+/// A concrete instantiation of [`ComplexPrelude::abs_neg`] at `z := I`:
+/// `abs (neg I) ~ abs I`, i.e. `abs (-i) ~ abs i` (both `1`) -- a genuinely
+/// discriminating instance (`neg I` is a distinct term from `I`, not a case
+/// where `neg` happens to fix its argument).
+#[test]
+fn abs_neg_concrete_instantiation() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let i_c = d.kernel().const_(p.i, vec![]);
+    let proof = d.lemma(p.abs_neg, &[i_c]);
+
+    let neg_i = d.const_app(p.neg, &[i_c]);
+    let abs_neg_i = d.const_app(p.abs, &[neg_i]);
+    let abs_i = d.const_app(p.abs, &[i_c]);
+    let ty = d.const_app(p.creal.equiv, &[abs_neg_i, abs_i]);
+
+    let name = d.kernel().name_str(anon, "Check.abs_neg_at_I");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value: proof,
+    });
+    assert!(
+        admitted.is_ok(),
+        "abs_neg at I must give EXACTLY CReal.Equiv (abs (neg I)) (abs I): \
+         {admitted:?}"
+    );
+}
+
+/// Negative control for [`abs_neg_concrete_instantiation`]: the SAME proof
+/// term must be REFUSED against `Equiv (abs (neg I)) (abs Complex.zero)` --
+/// `abs I ~ CReal.one`, `abs zero ~ CReal.zero`, genuinely different values,
+/// so this is not a vacuous mismatch.
+#[test]
+fn abs_neg_wrong_value_is_load_bearing() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let i_c = d.kernel().const_(p.i, vec![]);
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let proof = d.lemma(p.abs_neg, &[i_c]);
+
+    let neg_i = d.const_app(p.neg, &[i_c]);
+    let abs_neg_i = d.const_app(p.abs, &[neg_i]);
+    let abs_zero = d.const_app(p.abs, &[zero_c]);
+    let wrong_ty = d.const_app(p.creal.equiv, &[abs_neg_i, abs_zero]);
+
+    let name = d.kernel().name_str(anon, "Check.abs_neg_wrong_value");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty: wrong_ty,
+        value: proof,
+    });
+    assert!(
+        admitted.is_err(),
+        "abs_neg's proof at I must NOT type-check against `Equiv (abs (neg \
+         I)) (abs zero)`: {admitted:?}"
+    );
+}
+
+/// A concrete instantiation of [`ComplexPrelude::abs_le_add_abs_sub`] at
+/// `a := I`, `b := one`: `abs I ~ 1`, `abs one ~ 1`, `abs (I - 1) ~ sqrt 2`,
+/// so the claim is `le 1 (1 + sqrt 2)` -- true, and not an equality (so a
+/// swapped direction would be caught, unlike an instance where both sides
+/// coincide).
+#[test]
+fn abs_le_add_abs_sub_concrete_instantiation() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let i_c = d.kernel().const_(p.i, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let proof = d.lemma(p.abs_le_add_abs_sub, &[i_c, one_c]);
+
+    let neg_one = d.const_app(p.neg, &[one_c]);
+    let diff = d.const_app(p.add, &[i_c, neg_one]);
+    let abs_i = d.const_app(p.abs, &[i_c]);
+    let abs_one = d.const_app(p.abs, &[one_c]);
+    let abs_diff = d.const_app(p.abs, &[diff]);
+    let rhs = d.const_app(p.creal.add, &[abs_one, abs_diff]);
+    let ty = d.const_app(p.creal.le, &[abs_i, rhs]);
+
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.abs_le_add_abs_sub_at_I_one");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value: proof,
+    });
+    assert!(
+        admitted.is_ok(),
+        "abs_le_add_abs_sub at (I, one) must give EXACTLY CReal.le (abs I) \
+         (add (abs one) (abs (add I (neg one)))): {admitted:?}"
+    );
+}
+
+/// Negative control for [`abs_le_add_abs_sub_concrete_instantiation`]: the
+/// SAME proof term must be REFUSED against the REVERSED inequality `le (add
+/// (abs one) (abs (add I (neg one)))) (abs I)` -- `le 1+sqrt2 1` is false,
+/// so this is a genuinely discriminating (not merely vacuous) direction
+/// swap.
+#[test]
+fn abs_le_add_abs_sub_direction_is_load_bearing() {
+    use crate::int_prelude::ops::IntDev;
+    use crate::nat_prelude::NatOps;
+
+    let (mut kernel, p) = built();
+    let anon = kernel.anon();
+    let mut d = IntDev::new(&mut kernel, p.creal.rat.int);
+
+    let i_c = d.kernel().const_(p.i, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let proof = d.lemma(p.abs_le_add_abs_sub, &[i_c, one_c]);
+
+    let neg_one = d.const_app(p.neg, &[one_c]);
+    let diff = d.const_app(p.add, &[i_c, neg_one]);
+    let abs_i = d.const_app(p.abs, &[i_c]);
+    let abs_one = d.const_app(p.abs, &[one_c]);
+    let abs_diff = d.const_app(p.abs, &[diff]);
+    let rhs = d.const_app(p.creal.add, &[abs_one, abs_diff]);
+    let wrong_ty = d.const_app(p.creal.le, &[rhs, abs_i]);
+
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.abs_le_add_abs_sub_wrong_direction");
+    let admitted = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty: wrong_ty,
+        value: proof,
+    });
+    assert!(
+        admitted.is_err(),
+        "abs_le_add_abs_sub's proof at (I, one) must NOT type-check against \
+         the REVERSED `le (add (abs one) (abs (add I (neg one)))) (abs I)`: \
+         {admitted:?}"
+    );
+}
+
 /// `Complex.abs_one` states `abs one ~ CReal.one`, checked directly against
 /// the declared theorem's type rather than by re-deriving it, since
 /// `declare_abs_one`'s own proof already exercises the derivation.
@@ -2849,7 +3007,7 @@ fn factor_quotient_succ_eq_matches_the_correction_term_at_a_nonzero_middle_coeff
 /// steps downstream. Recount by re-running the extraction described in
 /// `docs/research/11-design-review/2026-08-27-prelude-build-spike.md`, never
 /// by hand-editing this list to make a failure go away.
-const EXPECTED_STEP_ORDER: [&str; 89] = [
+const EXPECTED_STEP_ORDER: [&str; 91] = [
     "declare_carrier",
     "declare_projections",
     "declare_equiv",
@@ -2939,6 +3097,8 @@ const EXPECTED_STEP_ORDER: [&str; 89] = [
     "declare_abs_one",
     "declare_abs_mul",
     "declare_abs_add_le",
+    "declare_abs_neg",
+    "declare_abs_le_add_abs_sub",
 ];
 
 /// `STEPS` (the data-driven build order that replaced the hand-written call

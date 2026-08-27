@@ -1338,6 +1338,39 @@ pub struct ComplexPrelude {
     /// (abs w)` since `abs (add z w)` **is** `sqrt (normSq (add z w))`
     /// definitionally.
     pub abs_add_le: NameId,
+    /// `Complex.abs_neg : ∀ z, CReal.Equiv (abs (neg z)) (abs z)`.
+    ///
+    /// `normSq (neg z)` unfolds to `(-a)·(-a) + (-b)·(-b)` (`neg` is
+    /// componentwise, same shape [`Self::norm_sq_conj`] already exploits for
+    /// a single negated component); the ring calculus cancels the double
+    /// negation on both, landing on `normSq z`. `CReal.sqrt_congr` then
+    /// carries that `Equiv` across `sqrt` to `abs (neg z) ~ abs z`, exactly
+    /// [`Self::abs_congr`]'s own last step. Landed for the FTA-approx row 1
+    /// attempt (`docs/curriculum/graded-statement-families.md` §4): it lets
+    /// `|-R| = |R|` simplify a lower-order-terms bound without a sign case
+    /// split.
+    pub abs_neg: NameId,
+    /// `Complex.abs_le_add_abs_sub : ∀ a b, CReal.le (abs a) (add (abs b)
+    /// (abs (add a (neg b))))` — the directional reverse triangle
+    /// inequality `|a| ≤ |b| + |a − b|` (no dedicated `Complex.sub`; `a − b`
+    /// is `add a (neg b)`, the same convention [`Self::conj_sub`] uses).
+    ///
+    /// Proof: `b + (a + (-b))` is `a` by the plain ring laws
+    /// ([`declare_ring_laws`]'s calculus, the same one `complex_law`/
+    /// `ring_law_proof` decide automatically), so [`Self::abs_congr`] gives
+    /// `abs (add b (add a (neg b))) ~ abs a`; [`Self::abs_add_le`] at
+    /// `(b, add a (neg b))` bounds that same left side by `add (abs b) (abs
+    /// (add a (neg b)))`; `CReal.le_congr` transports the bound across the
+    /// `Equiv` to land on `abs a` unchanged.
+    ///
+    /// Landed for the FTA-approx row 1 attempt: this is the "big outside"
+    /// bound's core step (bounding `|p(z)|` below by `|leading term| - |rest|`
+    /// via `a := leading term`, `b := p(z)`, so `a - b = -rest`), listed by
+    /// `graded-statement-families.md` §4 as a `Complex.abs` fact row 1 would
+    /// need. Composing it into the full growth bound (needs a `CReal`
+    /// subtraction/rearrangement step from `|a| ≤ |b| + |a-b|` to
+    /// `|b| ≥ |a| - |a-b|`) is future work, not attempted here.
+    pub abs_le_add_abs_sub: NameId,
 
     // --- polynomials over ℂ: coefficient function + explicit bound ---------
     //
@@ -1532,6 +1565,8 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         abs_one: kernel.name_str(complex, "abs_one"),
         abs_mul: kernel.name_str(complex, "abs_mul"),
         abs_add_le: kernel.name_str(complex, "abs_add_le"),
+        abs_neg: kernel.name_str(complex, "abs_neg"),
+        abs_le_add_abs_sub: kernel.name_str(complex, "abs_le_add_abs_sub"),
         poly: poly::intern_names(kernel, complex),
     }
 }
@@ -3658,6 +3693,34 @@ const STEPS: &[BuildStep] = &[
         ],
         provides: &[|p: ComplexPrelude| p.abs_add_le],
         run: declare_abs_add_le,
+    },
+    BuildStep {
+        label: "declare_abs_neg",
+        requires: &[
+            |p: ComplexPrelude| p.abs,
+            |p: ComplexPrelude| p.complex,
+            |p: ComplexPrelude| p.neg,
+            |p: ComplexPrelude| p.norm_sq,
+        ],
+        provides: &[|p: ComplexPrelude| p.abs_neg],
+        run: declare_abs_neg,
+    },
+    BuildStep {
+        label: "declare_abs_le_add_abs_sub",
+        requires: &[
+            |p: ComplexPrelude| p.abs,
+            |p: ComplexPrelude| p.abs_add_le,
+            |p: ComplexPrelude| p.abs_congr,
+            |p: ComplexPrelude| p.add,
+            |p: ComplexPrelude| p.add_assoc,
+            |p: ComplexPrelude| p.add_comm,
+            |p: ComplexPrelude| p.add_neg,
+            |p: ComplexPrelude| p.add_zero,
+            |p: ComplexPrelude| p.complex,
+            |p: ComplexPrelude| p.neg,
+        ],
+        provides: &[|p: ComplexPrelude| p.abs_le_add_abs_sub],
+        run: declare_abs_le_add_abs_sub,
     },
 ];
 
@@ -13078,6 +13141,125 @@ fn declare_abs_add_le(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), Kerne
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.abs_add_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.abs_neg : ∀ z, CReal.Equiv (abs (neg z)) (abs z)`. See
+/// [`ComplexPrelude::abs_neg`] for the route.
+fn declare_abs_neg(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let a = re_of(d, p, z);
+    let b = im_of(d, p, z);
+
+    let neg_z = d.const_app(p.neg, &[z]);
+    let norm_neg = d.const_app(p.norm_sq, &[neg_z]);
+    let norm_z = d.const_app(p.norm_sq, &[z]);
+
+    // normSq (neg z) ~ (-a)·(-a) + (-b)·(-b) ~ a·a + b·b ~ normSq z, the same
+    // ring cancellation `declare_norm_conjugation`'s `norm_sq_conj` performs
+    // for a single negated component, here applied to both.
+    let lhs = RExpr::add(
+        RExpr::mul(RExpr::neg(RExpr::Atom(a)), RExpr::neg(RExpr::Atom(a))),
+        RExpr::mul(RExpr::neg(RExpr::Atom(b)), RExpr::neg(RExpr::Atom(b))),
+    );
+    let rhs = RExpr::add(
+        RExpr::mul(RExpr::Atom(a), RExpr::Atom(a)),
+        RExpr::mul(RExpr::Atom(b), RExpr::Atom(b)),
+    );
+    let norm_proof = ring_proof(d, creal, &lhs, &rhs);
+    // norm_proof : CReal.Equiv (normSq (neg z)) (normSq z)
+
+    let sqrt_proof = d.lemma(creal.sqrt_congr, &[norm_neg, norm_z, norm_proof]);
+    // sqrt_proof : CReal.Equiv (sqrt (normSq (neg z))) (sqrt (normSq z))
+    //            = CReal.Equiv (abs (neg z)) (abs z)  (`abs` ~ `sqrt (normSq ·)`)
+
+    let abs_neg_z = d.const_app(p.abs, &[neg_z]);
+    let abs_z = d.const_app(p.abs, &[z]);
+
+    let value = d.lam_fv(z_fv, carrier, sqrt_proof);
+    let ty = {
+        let claim = ceq(d, creal, abs_neg_z, abs_z);
+        d.pi_fv(z_fv, carrier, claim)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.abs_neg,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.abs_le_add_abs_sub : ∀ a b, CReal.le (abs a) (add (abs b)
+/// (abs (add a (neg b))))` — the directional reverse triangle inequality
+/// `|a| ≤ |b| + |a − b|`. See [`ComplexPrelude::abs_le_add_abs_sub`] for the
+/// route.
+fn declare_abs_le_add_abs_sub(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let creal = p.creal;
+    let carrier = complex_ty(d, p);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    // diff := add a (neg b), i.e. "a - b" (no dedicated `Complex.sub`, same
+    // convention `conj_sub` uses).
+    let ca = CExpr::var(d, p, a);
+    let cb = CExpr::var(d, p, b);
+    let diff_expr = CExpr::add(ca.clone(), CExpr::neg(cb.clone()));
+    let diff = render_c(d, p, &diff_expr);
+
+    // h_eq : Complex.Equiv (add b diff) a -- b + (a + (-b)) = a, a plain ring
+    // identity decided by the same calculus `declare_ring_laws` uses.
+    let sum_expr = CExpr::add(cb.clone(), diff_expr.clone());
+    let h_eq = ring_law_proof(d, p, &sum_expr, &ca);
+    let sum_b_diff = render_c(d, p, &sum_expr);
+
+    // h_abs_eq : CReal.Equiv (abs (add b diff)) (abs a)
+    let h_abs_eq = d.lemma(p.abs_congr, &[sum_b_diff, a, h_eq]);
+
+    // h_triangle : CReal.le (abs (add b diff)) (add (abs b) (abs diff))
+    let h_triangle = d.lemma(p.abs_add_le, &[b, diff]);
+
+    let abs_a = d.const_app(p.abs, &[a]);
+    let abs_b = d.const_app(p.abs, &[b]);
+    let abs_diff = d.const_app(p.abs, &[diff]);
+    let abs_sum_b_diff = d.const_app(p.abs, &[sum_b_diff]);
+    let goal_rhs = cadd(d, creal, abs_b, abs_diff);
+    let refl_rhs = crefl(d, creal, goal_rhs);
+
+    // le_rewrite transports `le (abs (add b diff)) goal_rhs` along
+    // `h_abs_eq : Equiv (abs (add b diff)) (abs a)` to `le (abs a) goal_rhs`.
+    let final_proof = le_rewrite(
+        d,
+        creal,
+        abs_sum_b_diff,
+        abs_a,
+        goal_rhs,
+        goal_rhs,
+        h_abs_eq,
+        refl_rhs,
+        h_triangle,
+    );
+
+    let value = {
+        let with_b = d.lam_fv(b_fv, carrier, final_proof);
+        d.lam_fv(a_fv, carrier, with_b)
+    };
+    let ty = {
+        let claim = d.const_app(creal.le, &[abs_a, goal_rhs]);
+        let with_b = d.pi_fv(b_fv, carrier, claim);
+        d.pi_fv(a_fv, carrier, with_b)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.abs_le_add_abs_sub,
         uparams: vec![],
         ty,
         value,
