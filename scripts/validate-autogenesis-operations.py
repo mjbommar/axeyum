@@ -15,11 +15,16 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 REGISTRY = ROOT / "artifacts/autogenesis/operations.json"
 ID_RE = re.compile(r"^[a-z0-9]+(?:[a-z0-9./-]*[a-z0-9])?$")
 FACT_ID_RE = re.compile(r"^F:[a-z0-9]+(?:-[a-z0-9]+)*$")
+# A qualified Lean declaration name as this kernel renders it, e.g.
+# `Int.add_modEq_left` -- one namespace segment, a dot, then an identifier
+# (mixed case and primes are both real in this development's naming).
+LEAN_DECLARATION_RE = re.compile(r"^[A-Z][A-Za-z0-9]*\.[A-Za-z_][A-Za-z0-9_']*$")
 SCOPES = {"counterfactual-fixture-only", "authoritative"}
 EXECUTION_DRIVERS = {
     "axeyum-bench/smtcomp-evidence-v1",
     "axeyum-lean-kernel/nat-zero-add-induction-v1",
     "axeyum-lean-kernel/nat-mul-one-episode-apply-v1",
+    "axeyum-lean-kernel/authored-declaration-v1",
     "axeyum-lean-import/statement-reflexivity-v1",
     "axeyum-lean-import/bounded-induction-multi-target-v1",
     "axeyum-lean-import/modeq-family-multi-target-v1",
@@ -248,6 +253,14 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
             "premise_budget",
             "budget",
         }
+    elif driver == "axeyum-lean-kernel/authored-declaration-v1":
+        expected = common | {
+            "additional_fact_ids",
+            "declaration_source",
+            "test_path",
+            "verifying_tests",
+            "targets",
+        }
     elif driver == "axeyum-lean-import/statement-reflexivity-v1":
         expected = common | {
             "statement_adapter_manifest",
@@ -339,6 +352,99 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
             raise RegistryError(f"{label}.denied_theorems exceeds the exact A scope")
         if value["premise_budget"] != 2 or value["budget"] != 1:
             raise RegistryError(f"{label} requires premise budget 2 and apply budget 1")
+    elif driver == "axeyum-lean-kernel/authored-declaration-v1":
+        # A general driver for "an agent read a Mathlib statement and hand-
+        # authored a new kernel declaration directly against
+        # `Kernel::add_declaration`, with no producer/checker/executor
+        # pipeline component running at all" (docs/autogenesis/293, the
+        # motivating case: five `Int.ModEq` closures with no adapter authored,
+        # no export run, no import-side producer ever invoked). Every field
+        # here exists to make the claim RE-CHECKABLE from the repository as it
+        # sits today -- the declaration name(s), the source file that must
+        # literally mention them, and the exact test functions that fail on
+        # their absence -- never a narrative of how the work happened.
+        additional = nonempty_strings(
+            value["additional_fact_ids"], f"{label}.additional_fact_ids"
+        )
+        for fid in additional:
+            if not FACT_ID_RE.fullmatch(fid):
+                raise RegistryError(
+                    f"{label}.additional_fact_ids has invalid fact id {fid!r}"
+                )
+        all_fact_ids = [value["input_fact_id"], *additional]
+        if len(all_fact_ids) != len(set(all_fact_ids)):
+            raise RegistryError(
+                f"{label} names a fact id more than once across "
+                "input_fact_id/additional_fact_ids"
+            )
+        declaration_source = repository_file(
+            value["declaration_source"], f"{label}.declaration_source", root
+        )
+        test_path = repository_file(value["test_path"], f"{label}.test_path", root)
+        crate_root = (root / "crates/axeyum-lean-kernel").resolve()
+        if not declaration_source.is_relative_to(
+            crate_root
+        ) or not test_path.is_relative_to(crate_root):
+            raise RegistryError(
+                f"{label}.declaration_source/test_path must be inside "
+                "crates/axeyum-lean-kernel -- this driver names a kernel-lane "
+                "authored declaration, not an imported or bench-produced one"
+            )
+        verifying_tests = nonempty_strings(
+            value["verifying_tests"], f"{label}.verifying_tests"
+        )
+        test_source = test_path.read_text()
+        for test_name in verifying_tests:
+            if not re.search(rf"fn\s+{re.escape(test_name)}\s*\(", test_source):
+                raise RegistryError(
+                    f"{label}.verifying_tests names {test_name!r}, which is "
+                    f"not a test function declared in {value['test_path']} -- "
+                    "a receipt naming a test that does not exist there must "
+                    "fail, not silently pass"
+                )
+        declaration_source_text = declaration_source.read_text()
+        targets = value["targets"]
+        if not isinstance(targets, list) or len(targets) != len(all_fact_ids):
+            raise RegistryError(
+                f"{label}.targets must have exactly one entry per named fact id"
+            )
+        target_fact_ids: list[str] = []
+        seen_declarations: set[str] = set()
+        for t_index, target in enumerate(targets):
+            t_label = f"{label}.targets[{t_index}]"
+            if not isinstance(target, dict):
+                raise RegistryError(f"{t_label} must be an object")
+            exact_keys(target, {"fact_id", "declaration"}, t_label)
+            fid = target["fact_id"]
+            if not isinstance(fid, str) or not FACT_ID_RE.fullmatch(fid):
+                raise RegistryError(f"{t_label}.fact_id is invalid")
+            target_fact_ids.append(fid)
+            declaration = target["declaration"]
+            if not isinstance(declaration, str) or not LEAN_DECLARATION_RE.fullmatch(
+                declaration
+            ):
+                raise RegistryError(
+                    f"{t_label}.declaration is not a qualified Lean "
+                    "declaration name"
+                )
+            if declaration in seen_declarations:
+                raise RegistryError(
+                    f"{t_label}.declaration {declaration!r} is bound to more "
+                    "than one fact in this operation"
+                )
+            seen_declarations.add(declaration)
+            if declaration not in declaration_source_text:
+                raise RegistryError(
+                    f"{t_label}.declaration {declaration!r} does not appear "
+                    f"in {value['declaration_source']} -- the receipt names a "
+                    "declaration the source file never mentions, which is "
+                    "exactly the forgery this driver exists to reject"
+                )
+        if target_fact_ids != all_fact_ids:
+            raise RegistryError(
+                f"{label}.targets fact_id order must match input_fact_id "
+                "followed by additional_fact_ids"
+            )
     elif driver == "axeyum-lean-import/statement-reflexivity-v1":
         adapter_path = repository_file(
             value["statement_adapter_manifest"],
@@ -1091,6 +1197,7 @@ def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
         if scope == "authoritative":
             executor = operation["executor"]
             if executor["driver"] in {
+                "axeyum-lean-kernel/authored-declaration-v1",
                 "axeyum-lean-import/bounded-induction-multi-target-v1",
                 "axeyum-lean-import/modeq-family-multi-target-v1",
                 "axeyum-lean-import/imported-candidate-family-multi-target-v1",
@@ -1124,6 +1231,23 @@ def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
                     applicability["formal_languages"] != ["smtlib2"]
                     or admission["proof_route"] != "smt-term-level"
                     or admission["evidence_kind"] != "unsat-certificate"
+                ):
+                    raise RegistryError(
+                        f"{label}.executor driver is inconsistent with applicability/admission"
+                    )
+            elif executor["driver"] == "axeyum-lean-kernel/authored-declaration-v1":
+                # Fragment-agnostic like modeq-family-multi-target-v1 (this
+                # driver is not tied to Int specifically -- a future
+                # hand-authored Nat closure is the same shape), but the proof
+                # itself runs entirely inside this repository's own kernel
+                # crate, never through the importer.
+                if (
+                    applicability["formal_languages"] != ["lean4-surface"]
+                    or applicability["fragments"]
+                    not in (["Int"], ["Nat"], ["Int", "Nat"])
+                    or admission["proof_route"] != "kernel-lean"
+                    or admission["evidence_kind"] != "kernel-term"
+                    or admission["axiom_footprint"] != []
                 ):
                     raise RegistryError(
                         f"{label}.executor driver is inconsistent with applicability/admission"

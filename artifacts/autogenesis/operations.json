@@ -1522,6 +1522,93 @@
         "axiom_footprint_policy": "must-be-empty",
         "axiom_footprint": []
       }
+    },
+    {
+      "id": "authoritative-kernel-int-modeq-shift-family-v1",
+      "scope": "authoritative",
+      "reviewed_gate_mentions": [
+        "validate-autogenesis-operations.py",
+        "validate-facts.py",
+        "check-autogenesis-holdout-isolation.py",
+        "gen-production-provenance-ledger.py"
+      ],
+      "applicability": {
+        "fact_ids": [
+          "F:ml430-int-add-modeq-left-ee732b5b",
+          "F:ml430-int-add-modeq-right-e58108ee",
+          "F:ml430-int-mod-modeq-6bec7847",
+          "F:ml430-int-modulus-modeq-zero-5b57a898",
+          "F:ml430-int-modeq-sub-3148f130"
+        ],
+        "formal_languages": [
+          "lean4-surface"
+        ],
+        "fragments": [
+          "Int"
+        ]
+      },
+      "producer": {
+        "operation": "author-kernel-declaration-modeq-shift-family-v1",
+        "implementation": "crates/axeyum-lean-kernel/src/int_prelude/modeq_family.rs",
+        "input_kind": "axeyum-fact-formal-statement",
+        "output_kind": "axeyum-lean-kernel-declaration"
+      },
+      "checker": {
+        "operation": "int-prelude-modeq-shift-family-kernel-check-v1",
+        "implementation": "crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs",
+        "input_kind": "axeyum-lean-kernel-declaration",
+        "output_kind": "axeyum-autogenesis-kernel-evidence-v1"
+      },
+      "executor": {
+        "driver": "axeyum-lean-kernel/authored-declaration-v1",
+        "implementation": "scripts/execute-autogenesis-operation.py",
+        "input_fact_id": "F:ml430-int-add-modeq-left-ee732b5b",
+        "additional_fact_ids": [
+          "F:ml430-int-add-modeq-right-e58108ee",
+          "F:ml430-int-mod-modeq-6bec7847",
+          "F:ml430-int-modulus-modeq-zero-5b57a898",
+          "F:ml430-int-modeq-sub-3148f130"
+        ],
+        "declaration_source": "crates/axeyum-lean-kernel/src/int_prelude/modeq_family.rs",
+        "test_path": "crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs",
+        "verifying_tests": [
+          "the_modeq_ledger_rows_are_stated_without_a_positivity_hypothesis",
+          "derived_laws_have_no_axiom_footprint",
+          "every_int_declaration_is_checked_and_axiom_free",
+          "add_modeq_family_computes_at_concrete_values"
+        ],
+        "targets": [
+          {
+            "fact_id": "F:ml430-int-add-modeq-left-ee732b5b",
+            "declaration": "Int.add_modEq_left"
+          },
+          {
+            "fact_id": "F:ml430-int-add-modeq-right-e58108ee",
+            "declaration": "Int.add_modEq_right"
+          },
+          {
+            "fact_id": "F:ml430-int-mod-modeq-6bec7847",
+            "declaration": "Int.mod_modEq"
+          },
+          {
+            "fact_id": "F:ml430-int-modulus-modeq-zero-5b57a898",
+            "declaration": "Int.modulus_modEq_zero"
+          },
+          {
+            "fact_id": "F:ml430-int-modeq-sub-3148f130",
+            "declaration": "Int.modEq_sub"
+          }
+        ],
+        "timeout_seconds": 120,
+        "expected_evidence_label": "kernel-term-authored-declaration-axiom-free"
+      },
+      "admission": {
+        "epistemic_status": "proved",
+        "proof_route": "kernel-lean",
+        "evidence_kind": "kernel-term",
+        "axiom_footprint_policy": "must-be-empty",
+        "axiom_footprint": []
+      }
     }
   ]
 }
