@@ -248,42 +248,51 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
         ("Complex.abs_one", p.abs_one),
         ("Complex.abs_mul", p.abs_mul),
         ("Complex.abs_add_le", p.abs_add_le),
-        ("Complex.polyEval", p.poly_eval),
-        ("Complex.polyEval_zero", p.poly_eval_zero),
-        ("Complex.polyEval_succ", p.poly_eval_succ),
-        ("Complex.polyAdd", p.poly_add),
-        ("Complex.polyEval_polyAdd", p.poly_eval_poly_add),
-        ("Complex.polyScale", p.poly_scale),
-        ("Complex.polyEval_polyScale", p.poly_eval_poly_scale),
-        ("Complex.polyDegreeLt", p.poly_degree_lt),
-        ("Complex.polyDegreeLt_polyAdd", p.poly_degree_lt_poly_add),
+        ("Complex.polyEval", p.poly.poly_eval),
+        ("Complex.polyEval_zero", p.poly.poly_eval_zero),
+        ("Complex.polyEval_succ", p.poly.poly_eval_succ),
+        ("Complex.polyAdd", p.poly.poly_add),
+        ("Complex.polyEval_polyAdd", p.poly.poly_eval_poly_add),
+        ("Complex.polyScale", p.poly.poly_scale),
+        ("Complex.polyEval_polyScale", p.poly.poly_eval_poly_scale),
+        ("Complex.polyDegreeLt", p.poly.poly_degree_lt),
+        (
+            "Complex.polyDegreeLt_polyAdd",
+            p.poly.poly_degree_lt_poly_add,
+        ),
         (
             "Complex.polyDegreeLt_polyScale",
-            p.poly_degree_lt_poly_scale,
+            p.poly.poly_degree_lt_poly_scale,
         ),
-        ("Complex.polyMul", p.poly_mul),
-        ("Complex.polyDegreeLt_polyMul", p.poly_degree_lt_poly_mul),
-        ("Complex.polyEval_polyMul", p.poly_eval_poly_mul),
-        ("Complex.hornerFromTop", p.horner_from_top),
-        ("Complex.hornerFromTop_zero", p.horner_from_top_zero),
+        ("Complex.polyMul", p.poly.poly_mul),
+        (
+            "Complex.polyDegreeLt_polyMul",
+            p.poly.poly_degree_lt_poly_mul,
+        ),
+        ("Complex.polyEval_polyMul", p.poly.poly_eval_poly_mul),
+        ("Complex.hornerFromTop", p.poly.horner_from_top),
+        ("Complex.hornerFromTop_zero", p.poly.horner_from_top_zero),
         (
             "Complex.hornerFromTop_succ_zero",
-            p.horner_from_top_succ_zero,
+            p.poly.horner_from_top_succ_zero,
         ),
         (
             "Complex.hornerFromTop_succ_succ",
-            p.horner_from_top_succ_succ,
+            p.poly.horner_from_top_succ_succ,
         ),
-        ("Complex.factorQuotient", p.factor_quotient),
+        ("Complex.factorQuotient", p.poly.factor_quotient),
         (
             "Complex.factorQuotient_degreeLt",
-            p.factor_quotient_degree_lt,
+            p.poly.factor_quotient_degree_lt,
         ),
         (
             "Complex.hornerFromTop_diag_eq_polyEval",
-            p.horner_from_top_diag_eq_poly_eval,
+            p.poly.horner_from_top_diag_eq_poly_eval,
         ),
-        ("Complex.factorQuotient_succ_eq", p.factor_quotient_succ_eq),
+        (
+            "Complex.factorQuotient_succ_eq",
+            p.poly.factor_quotient_succ_eq,
+        ),
     ];
     // COVERAGE, checked against the ENVIRONMENT rather than against `named`
     // itself.
@@ -1807,12 +1816,12 @@ fn poly_eval_poly_add_concrete_instantiation() {
     let x = i_c;
 
     // Equiv (polyEval (polyAdd c g) 2 I) (add (polyEval c 2 I) (polyEval g 2 I)).
-    let proof = d.lemma(p.poly_eval_poly_add, &[c, g, two_n, x]);
+    let proof = d.lemma(p.poly.poly_eval_poly_add, &[c, g, two_n, x]);
 
-    let poly_add_cg = d.const_app(p.poly_add, &[c, g]);
-    let lhs_stmt = d.const_app(p.poly_eval, &[poly_add_cg, two_n, x]);
-    let eval_c = d.const_app(p.poly_eval, &[c, two_n, x]);
-    let eval_g = d.const_app(p.poly_eval, &[g, two_n, x]);
+    let poly_add_cg = d.const_app(p.poly.poly_add, &[c, g]);
+    let lhs_stmt = d.const_app(p.poly.poly_eval, &[poly_add_cg, two_n, x]);
+    let eval_c = d.const_app(p.poly.poly_eval, &[c, two_n, x]);
+    let eval_g = d.const_app(p.poly.poly_eval, &[g, two_n, x]);
     let rhs_stmt = d.const_app(p.add, &[eval_c, eval_g]);
     let ty = super::zeq(&mut d, p, lhs_stmt, rhs_stmt);
 
@@ -1859,11 +1868,11 @@ fn poly_eval_poly_scale_concrete_instantiation() {
     let x = one_c;
 
     // Equiv (polyEval (polyScale I c) 2 one) (mul I (polyEval c 2 one)).
-    let proof = d.lemma(p.poly_eval_poly_scale, &[a, c, two_n, x]);
+    let proof = d.lemma(p.poly.poly_eval_poly_scale, &[a, c, two_n, x]);
 
-    let poly_scale_ac = d.const_app(p.poly_scale, &[a, c]);
-    let lhs_stmt = d.const_app(p.poly_eval, &[poly_scale_ac, two_n, x]);
-    let eval_c = d.const_app(p.poly_eval, &[c, two_n, x]);
+    let poly_scale_ac = d.const_app(p.poly.poly_scale, &[a, c]);
+    let lhs_stmt = d.const_app(p.poly.poly_eval, &[poly_scale_ac, two_n, x]);
+    let eval_c = d.const_app(p.poly.poly_eval, &[c, two_n, x]);
     let rhs_stmt = d.const_app(p.mul, &[a, eval_c]);
     let ty = super::zeq(&mut d, p, lhs_stmt, rhs_stmt);
 
@@ -1914,12 +1923,12 @@ fn poly_eval_poly_add_would_reject_mul_instead_of_add() {
     let two_n = d.succ(one_n);
     let x = i_c;
 
-    let proof = d.lemma(p.poly_eval_poly_add, &[c, g, two_n, x]);
+    let proof = d.lemma(p.poly.poly_eval_poly_add, &[c, g, two_n, x]);
 
-    let poly_add_cg = d.const_app(p.poly_add, &[c, g]);
-    let lhs_stmt = d.const_app(p.poly_eval, &[poly_add_cg, two_n, x]);
-    let eval_c = d.const_app(p.poly_eval, &[c, two_n, x]);
-    let eval_g = d.const_app(p.poly_eval, &[g, two_n, x]);
+    let poly_add_cg = d.const_app(p.poly.poly_add, &[c, g]);
+    let lhs_stmt = d.const_app(p.poly.poly_eval, &[poly_add_cg, two_n, x]);
+    let eval_c = d.const_app(p.poly.poly_eval, &[c, two_n, x]);
+    let eval_g = d.const_app(p.poly.poly_eval, &[g, two_n, x]);
     let wrong_rhs = d.const_app(p.mul, &[eval_c, eval_g]);
     let wrong_ty = super::zeq(&mut d, p, lhs_stmt, wrong_rhs);
 
@@ -1980,20 +1989,20 @@ fn poly_eval_poly_mul_argument_order_is_load_bearing() {
     let x_fv = d.fresh_fvar();
     let x = d.kernel().fvar(x_fv);
 
-    let degree_lt_c = d.const_app(p.poly_degree_lt, &[c, m]);
-    let degree_lt_g = d.const_app(p.poly_degree_lt, &[g, n]);
+    let degree_lt_c = d.const_app(p.poly.poly_degree_lt, &[c, m]);
+    let degree_lt_g = d.const_app(p.poly.poly_degree_lt, &[g, n]);
     let hc_fv = d.fresh_fvar();
     let hc = d.kernel().fvar(hc_fv);
     let hg_fv = d.fresh_fvar();
     let hg = d.kernel().fvar(hg_fv);
 
-    let proof = d.lemma(p.poly_eval_poly_mul, &[c, g, m, n, hc, hg, x]);
+    let proof = d.lemma(p.poly.poly_eval_poly_mul, &[c, g, m, n, hc, hg, x]);
 
-    let poly_mul_cg = d.const_app(p.poly_mul, &[c, g]);
+    let poly_mul_cg = d.const_app(p.poly.poly_mul, &[c, g]);
     let bound = d.add(m, n);
-    let lhs_stmt = d.const_app(p.poly_eval, &[poly_mul_cg, bound, x]);
-    let eval_c = d.const_app(p.poly_eval, &[c, m, x]);
-    let eval_g = d.const_app(p.poly_eval, &[g, n, x]);
+    let lhs_stmt = d.const_app(p.poly.poly_eval, &[poly_mul_cg, bound, x]);
+    let eval_c = d.const_app(p.poly.poly_eval, &[c, m, x]);
+    let eval_g = d.const_app(p.poly.poly_eval, &[g, n, x]);
     let rhs_stmt = d.const_app(p.mul, &[eval_c, eval_g]);
     let inner_ty = super::zeq(&mut d, p, lhs_stmt, rhs_stmt);
 
@@ -2064,20 +2073,20 @@ fn poly_eval_poly_mul_would_reject_add_instead_of_mul() {
     let x_fv = d.fresh_fvar();
     let x = d.kernel().fvar(x_fv);
 
-    let degree_lt_c = d.const_app(p.poly_degree_lt, &[c, m]);
-    let degree_lt_g = d.const_app(p.poly_degree_lt, &[g, n]);
+    let degree_lt_c = d.const_app(p.poly.poly_degree_lt, &[c, m]);
+    let degree_lt_g = d.const_app(p.poly.poly_degree_lt, &[g, n]);
     let hc_fv = d.fresh_fvar();
     let hc = d.kernel().fvar(hc_fv);
     let hg_fv = d.fresh_fvar();
     let hg = d.kernel().fvar(hg_fv);
 
-    let proof = d.lemma(p.poly_eval_poly_mul, &[c, g, m, n, hc, hg, x]);
+    let proof = d.lemma(p.poly.poly_eval_poly_mul, &[c, g, m, n, hc, hg, x]);
 
-    let poly_mul_cg = d.const_app(p.poly_mul, &[c, g]);
+    let poly_mul_cg = d.const_app(p.poly.poly_mul, &[c, g]);
     let bound = d.add(m, n);
-    let lhs_stmt = d.const_app(p.poly_eval, &[poly_mul_cg, bound, x]);
-    let eval_c = d.const_app(p.poly_eval, &[c, m, x]);
-    let eval_g = d.const_app(p.poly_eval, &[g, n, x]);
+    let lhs_stmt = d.const_app(p.poly.poly_eval, &[poly_mul_cg, bound, x]);
+    let eval_c = d.const_app(p.poly.poly_eval, &[c, m, x]);
+    let eval_g = d.const_app(p.poly.poly_eval, &[g, n, x]);
     let wrong_rhs = d.const_app(p.add, &[eval_c, eval_g]);
     let inner_ty = super::zeq(&mut d, p, lhs_stmt, wrong_rhs);
 
@@ -2286,7 +2295,7 @@ fn two_term_poly_eval_clean(
     let zero_c = d.kernel().const_(p.zero, vec![]);
     let one_c = d.kernel().const_(p.one, vec![]);
 
-    let eval_f_2_x = d.const_app(p.poly_eval, &[f, two_n, x]);
+    let eval_f_2_x = d.const_app(p.poly.poly_eval, &[f, two_n, x]);
 
     let f0 = d.apply(f, &[zero_n]);
     let f1 = d.apply(f, &[one_n]);
@@ -2383,13 +2392,13 @@ fn poly_eval_poly_mul_x_plus_one_times_x_minus_one_is_x_squared_minus_one_body()
     let hg = two_term_polynomial_vanishes_from_two(&mut d, p, g);
 
     // Equiv (polyEval (polyMul c g) (add 2 2) x) (mul (polyEval c 2 x) (polyEval g 2 x)).
-    let proof_mul = d.lemma(p.poly_eval_poly_mul, &[c, g, two_n, two_n, hc, hg, x]);
+    let proof_mul = d.lemma(p.poly.poly_eval_poly_mul, &[c, g, two_n, two_n, hc, hg, x]);
 
     let (clean_c, h_clean_c) = two_term_poly_eval_clean(&mut d, p, c, one_c, one_c, x);
     let (clean_g, h_clean_g) = two_term_poly_eval_clean(&mut d, p, g, neg_one_c, one_c, x);
 
-    let eval_c_2_x = d.const_app(p.poly_eval, &[c, two_n, x]);
-    let eval_g_2_x = d.const_app(p.poly_eval, &[g, two_n, x]);
+    let eval_c_2_x = d.const_app(p.poly.poly_eval, &[c, two_n, x]);
+    let eval_g_2_x = d.const_app(p.poly.poly_eval, &[g, two_n, x]);
     let h_combined = d.lemma(
         p.mul_congr,
         &[
@@ -2423,9 +2432,9 @@ fn poly_eval_poly_mul_x_plus_one_times_x_minus_one_is_x_squared_minus_one_body()
     };
     let (target, h_final) = x2_minus_1;
 
-    let poly_mul_cg = d.const_app(p.poly_mul, &[c, g]);
+    let poly_mul_cg = d.const_app(p.poly.poly_mul, &[c, g]);
     let bound = d.add(two_n, two_n);
-    let lhs_stmt = d.const_app(p.poly_eval, &[poly_mul_cg, bound, x]);
+    let lhs_stmt = d.const_app(p.poly.poly_eval, &[poly_mul_cg, bound, x]);
     let mul_evals = d.const_app(p.mul, &[eval_c_2_x, eval_g_2_x]);
     let overall = d.lemma(
         p.equiv_trans,
@@ -2550,7 +2559,7 @@ fn factor_quotient_reproduces_x_plus_one_at_the_root_and_not_elsewhere_body() {
                  k: crate::expr::ExprId,
                  expect: crate::expr::ExprId,
                  label: &str| {
-        let fq_call = d.const_app(p.factor_quotient, &[cx, a, two_n, k]);
+        let fq_call = d.const_app(p.poly.factor_quotient, &[cx, a, two_n, k]);
         let stmt = super::zeq(d, p, fq_call, expect);
         let proof = d.lemma(p.equiv_refl, &[expect]);
         let name = d.kernel().name_str(anon, label);
@@ -2604,7 +2613,7 @@ fn factor_quotient_reproduces_x_plus_one_at_the_root_and_not_elsewhere_body() {
     );
 }
 
-/// Corroborates [`ComplexPrelude::horner_from_top_diag_eq_poly_eval`] at a
+/// Corroborates [`poly::PolyNames::horner_from_top_diag_eq_poly_eval`] at a
 /// genuine three-term polynomial with a NONZERO middle coefficient (`1 + 2X +
 /// 3X²`, at the non-root point `a = 2`) -- `X² − 1`'s middle coefficient is
 /// zero, which would make this lemma's `a`-dependence invisible.
@@ -2667,8 +2676,8 @@ fn horner_from_top_diag_matches_poly_eval_at_a_nonzero_middle_coefficient_body()
     };
 
     // n = 0: hornerFromTop c a 0 0 = c 0 = 1 = polyEval c 1 a.
-    let h00 = d.const_app(p.horner_from_top, &[cx, a, zero_n, zero_n]);
-    let pe1 = d.const_app(p.poly_eval, &[cx, one_n, a]);
+    let h00 = d.const_app(p.poly.horner_from_top, &[cx, a, zero_n, zero_n]);
+    let pe1 = d.const_app(p.poly.poly_eval, &[cx, one_n, a]);
     assert!(
         check(&mut d, h00, one_c, "Check.diag_h00_right").is_ok(),
         "hornerFromTop(c,a,0,0) must be 1"
@@ -2683,8 +2692,8 @@ fn horner_from_top_diag_matches_poly_eval_at_a_nonzero_middle_coefficient_body()
     );
 
     // n = 1: hornerFromTop c a 1 1 = c0 + a*c1 = 1 + 2*2 = 5 = polyEval c 2 a.
-    let h11 = d.const_app(p.horner_from_top, &[cx, a, one_n, one_n]);
-    let pe2 = d.const_app(p.poly_eval, &[cx, two_n, a]);
+    let h11 = d.const_app(p.poly.horner_from_top, &[cx, a, one_n, one_n]);
+    let pe2 = d.const_app(p.poly.poly_eval, &[cx, two_n, a]);
     assert!(
         check(&mut d, h11, five_c, "Check.diag_h11_right").is_ok(),
         "hornerFromTop(c,a,1,1) must be 5"
@@ -2700,8 +2709,8 @@ fn horner_from_top_diag_matches_poly_eval_at_a_nonzero_middle_coefficient_body()
 
     // n = 2: hornerFromTop c a 2 2 = c0 + a*c1 + a^2*c2 = 1+4+12 = 17
     //      = polyEval c 3 a.
-    let h22 = d.const_app(p.horner_from_top, &[cx, a, two_n, two_n]);
-    let pe3 = d.const_app(p.poly_eval, &[cx, three_n, a]);
+    let h22 = d.const_app(p.poly.horner_from_top, &[cx, a, two_n, two_n]);
+    let pe3 = d.const_app(p.poly.poly_eval, &[cx, three_n, a]);
     assert!(
         check(&mut d, h22, seventeen_c, "Check.diag_h22_right").is_ok(),
         "hornerFromTop(c,a,2,2) must be 17"
@@ -2716,9 +2725,9 @@ fn horner_from_top_diag_matches_poly_eval_at_a_nonzero_middle_coefficient_body()
     );
 
     // And the actual theorem applies at these concrete arguments.
-    let applied0 = d.const_app(p.horner_from_top_diag_eq_poly_eval, &[cx, a, zero_n]);
-    let applied1 = d.const_app(p.horner_from_top_diag_eq_poly_eval, &[cx, a, one_n]);
-    let applied2 = d.const_app(p.horner_from_top_diag_eq_poly_eval, &[cx, a, two_n]);
+    let applied0 = d.const_app(p.poly.horner_from_top_diag_eq_poly_eval, &[cx, a, zero_n]);
+    let applied1 = d.const_app(p.poly.horner_from_top_diag_eq_poly_eval, &[cx, a, one_n]);
+    let applied2 = d.const_app(p.poly.horner_from_top_diag_eq_poly_eval, &[cx, a, two_n]);
     for (label, applied) in [
         ("Check.diag_theorem_n0", applied0),
         ("Check.diag_theorem_n1", applied1),
@@ -2732,7 +2741,7 @@ fn horner_from_top_diag_matches_poly_eval_at_a_nonzero_middle_coefficient_body()
     }
 }
 
-/// Corroborates [`ComplexPrelude::factor_quotient_succ_eq`] at a genuine
+/// Corroborates [`poly::PolyNames::factor_quotient_succ_eq`] at a genuine
 /// three-term polynomial with a NONZERO middle coefficient (`1 + 2X + 3X²`,
 /// at the non-root point `a = 2`), at the smallest nontrivial instance
 /// (`n = 1, k = 0`, so `k < n` holds and `succ n = 2`).
@@ -2796,7 +2805,7 @@ fn factor_quotient_succ_eq_matches_the_correction_term_at_a_nonzero_middle_coeff
     };
 
     // factorQuotient(c,a,1,0) = c(1) = 2.
-    let fq_1_0 = d.const_app(p.factor_quotient, &[cx, a, one_n, zero_n]);
+    let fq_1_0 = d.const_app(p.poly.factor_quotient, &[cx, a, one_n, zero_n]);
     assert!(
         check(&mut d, fq_1_0, two_c, "Check.fq_succ_eq_small_right").is_ok(),
         "factorQuotient(c,a,1,0) must be 2"
@@ -2808,7 +2817,7 @@ fn factor_quotient_succ_eq_matches_the_correction_term_at_a_nonzero_middle_coeff
 
     // factorQuotient(c,a,2,0) = c(1) + a*c(2) = 2 + 2*3 = 8.
     let two_n = d.succ(one_n);
-    let fq_2_0 = d.const_app(p.factor_quotient, &[cx, a, two_n, zero_n]);
+    let fq_2_0 = d.const_app(p.poly.factor_quotient, &[cx, a, two_n, zero_n]);
     assert!(
         check(&mut d, fq_2_0, eight_c, "Check.fq_succ_eq_big_right").is_ok(),
         "factorQuotient(c,a,2,0) must be 8"
@@ -2820,10 +2829,205 @@ fn factor_quotient_succ_eq_matches_the_correction_term_at_a_nonzero_middle_coeff
 
     // And the actual theorem applies at these concrete arguments.
     let hlt = d.zero_lt_succ(zero_n);
-    let applied = d.lemma(p.factor_quotient_succ_eq, &[cx, a, one_n, zero_n, hlt]);
+    let applied = d.lemma(p.poly.factor_quotient_succ_eq, &[cx, a, one_n, zero_n, hlt]);
     let inferred = d.kernel().infer(applied);
     assert!(
         inferred.is_ok(),
         "the correction theorem must apply at concrete (c,a,n=1,k=0): {inferred:?}"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Build-order tests (level 1 of the phase-order fix, architecture review §1)
+// ---------------------------------------------------------------------------
+
+/// The `STEPS` labels, in the order the (now-deleted) hand-written
+/// `build_complex_prelude` call sequence used. Pinned so a `STEPS` edit that
+/// silently reorders or drops a step fails HERE, naming exactly that, instead
+/// of only surfacing later as a `Kernel::add_declaration` rejection several
+/// steps downstream. Recount by re-running the extraction described in
+/// `docs/research/11-design-review/2026-08-27-prelude-build-spike.md`, never
+/// by hand-editing this list to make a failure go away.
+const EXPECTED_STEP_ORDER: [&str; 89] = [
+    "declare_carrier",
+    "declare_projections",
+    "declare_equiv",
+    "declare_setoid_laws",
+    "declare_constants",
+    "declare_operations",
+    "declare_congruences",
+    "declare_projection_congruences",
+    "declare_ring_laws",
+    "declare_pinning",
+    "declare_re_add_im",
+    "declare_conj_laws",
+    "declare_conj_sub_ofreal_i",
+    "declare_conj_zero_one",
+    "declare_eq_conj_iff_real",
+    "declare_norm",
+    "declare_norm_conjugation",
+    "declare_norm_sq_eq_zero_of_eq_zero",
+    "declare_eq_zero_of_norm_sq_eq_zero",
+    "declare_norm_sq_eq_zero_iff",
+    "declare_norm_sq_add",
+    "declare_norm_sq_add_le",
+    "declare_no_order",
+    "declare_inv",
+    "declare_complex_mul_inv_cancel",
+    "declare_complex_inv_congr",
+    "declare_inv_mul",
+    "declare_div",
+    "declare_div_congr",
+    "declare_div_self",
+    "declare_apart",
+    "declare_apart_irrefl",
+    "declare_apart_symm",
+    "declare_apart_of_normsq_pos",
+    "declare_mul_apart_zero",
+    "declare_mul_eq_zero_not_both_apart_zero",
+    "declare_complex_inv_mul_cancel",
+    "declare_pos_bound_conj",
+    "declare_conj_inv",
+    "declare_conj_div",
+    "declare_mul_div_assoc",
+    "declare_div_mul_cancel",
+    "declare_add_div",
+    "declare_neg_div",
+    "declare_sub_div",
+    "declare_pow",
+    "declare_pow_equations",
+    "declare_pow_add",
+    "declare_norm_sq_pow",
+    "declare_conj_pow",
+    "declare_sum_range",
+    "declare_sum_range_equations",
+    "declare_sum_range_congr",
+    "declare_mul_sum_range",
+    "declare_sum_range_mul",
+    "declare_sum_range_mul_double",
+    "declare_mul_sub_one_geom",
+    "declare_geom_series_div",
+    "declare_of_nat",
+    "declare_of_nat_equations",
+    "declare_of_nat_add",
+    "declare_of_nat_mul",
+    "declare_of_nat_eq_cast",
+    "declare_sum_range_add",
+    "declare_sum_range_shift_front",
+    "declare_sum_range_congr_lt",
+    "declare_sum_range_split",
+    "declare_sum_range_swap",
+    "declare_sum_range_diagonal",
+    "declare_sum_range_rect_eq_diag_add_corner",
+    "declare_sum_range_mul_eq_diag_add_corner",
+    "poly::declare_polynomial",
+    "declare_add_pow",
+    "declare_is_root_of_unity",
+    "declare_one_is_root_of_unity",
+    "declare_i_is_fourth_root",
+    "declare_pow_mul",
+    "declare_geom_sum_eq_zero_of_root_of_unity",
+    "declare_root_of_unity_mul",
+    "declare_root_of_unity_pow",
+    "declare_ptolemy_identity",
+    "declare_norm_sq_congr",
+    "declare_ptolemy_inequality_sq",
+    "declare_abs",
+    "declare_abs_nonneg",
+    "declare_abs_congr",
+    "declare_abs_one",
+    "declare_abs_mul",
+    "declare_abs_add_le",
+];
+
+/// `STEPS` (the data-driven build order that replaced the hand-written call
+/// sequence) reproduces that sequence exactly, in order. A silent reorder or
+/// drop fails here, naming which position changed, rather than showing up as
+/// an opaque `Kernel::add_declaration` rejection several steps later.
+#[test]
+fn steps_table_matches_recorded_extraction() {
+    let labels: Vec<&str> = super::STEPS.iter().map(|s| s.label).collect();
+    assert_eq!(
+        labels.as_slice(),
+        EXPECTED_STEP_ORDER.as_slice(),
+        "STEPS no longer matches the recorded build order -- see \
+         docs/research/11-design-review/2026-08-27-prelude-build-spike.md"
+    );
+}
+
+/// The existing, hand-written build order is already a valid topological
+/// order for the dependencies `STEPS` declares: every `requires` entry is
+/// satisfied by a strictly earlier step. This is the level-2 question the
+/// architecture review asks (§1) -- answered here structurally, without
+/// reordering anything at runtime.
+#[test]
+fn existing_step_order_is_topologically_valid() {
+    let (_, prelude) = built();
+    let result = super::validate_step_order(prelude, super::STEPS);
+    assert!(
+        result.is_ok(),
+        "the existing STEPS order should already be topologically valid, \
+         found: {result:?}"
+    );
+}
+
+/// The deliberate-failure control: a two-step order where the consumer comes
+/// BEFORE its provider must be rejected, and the rejection must be precise --
+/// naming the missing declaration, the step that would produce it, and both
+/// steps' positions. This is what proves `validate_step_order` can actually
+/// fail, not merely that it passes on the one order it has ever seen.
+static BROKEN_ORDER: &[super::BuildStep] = &[
+    super::BuildStep {
+        label: "consumer_before_its_provider",
+        requires: &[|p: ComplexPrelude| p.equiv],
+        provides: &[],
+        run: super::declare_carrier, // never invoked; validate_step_order does not call `run`
+    },
+    super::BuildStep {
+        label: "provider_after_its_consumer",
+        requires: &[],
+        provides: &[|p: ComplexPrelude| p.equiv],
+        run: super::declare_equiv, // never invoked; validate_step_order does not call `run`
+    },
+];
+
+#[test]
+fn order_violation_is_detected_and_precise() {
+    let (_, prelude) = built();
+    let violation = super::validate_step_order(prelude, BROKEN_ORDER)
+        .expect_err("a consumer placed before its provider must be rejected");
+    assert_eq!(violation.consumer_index, 0);
+    assert_eq!(violation.consumer_label, "consumer_before_its_provider");
+    assert_eq!(
+        violation.missing, prelude.equiv,
+        "must name the exact missing declaration, not merely that one is missing"
+    );
+    assert_eq!(
+        violation.provider,
+        Some((1, "provider_after_its_consumer")),
+        "must name which step provides the missing declaration and at what position"
+    );
+}
+
+/// A dependency table naming a declaration nothing in the order provides is a
+/// bug in the table itself, not merely a misordering -- and must still be
+/// reported precisely (`provider: None`), not panic or silently pass.
+static INCOMPLETE_ORDER: &[super::BuildStep] = &[super::BuildStep {
+    label: "requires_something_nobody_provides",
+    requires: &[|p: ComplexPrelude| p.equiv],
+    provides: &[],
+    run: super::declare_carrier, // never invoked
+}];
+
+#[test]
+fn order_violation_reports_missing_provider_as_table_bug() {
+    let (_, prelude) = built();
+    let violation = super::validate_step_order(prelude, INCOMPLETE_ORDER)
+        .expect_err("a requirement nobody provides must be rejected");
+    assert_eq!(violation.consumer_index, 0);
+    assert_eq!(violation.missing, prelude.equiv);
+    assert_eq!(
+        violation.provider, None,
+        "no step in this table provides `equiv`, so provider must be None"
     );
 }
