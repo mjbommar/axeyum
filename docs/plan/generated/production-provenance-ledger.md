@@ -8,27 +8,27 @@
 
 | | |
 |---|---:|
-| Established facts (`proved` or `computed`) | 504 |
-| …via an operation covering **more than one** fact | **11** |
+| Established facts (`proved` or `computed`) | 628 |
+| …via an operation covering **more than one** fact | **14** |
 | …via a single-target operation (a capsule) | 21 |
-| …with no registered operation (hand-constructed or imported) | 472 |
-| Registered operations | 26 |
-| …**authoritative** and covering more than one fact | **2** |
+| …with no registered operation (hand-constructed or imported) | 593 |
+| Registered operations | 28 |
+| …**authoritative** and covering more than one fact | **4** |
 | …fixture-scope covering more than one fact (NOT the metric) | 0 |
 
-**11 fact(s) were established through an operation that
+**14 fact(s) were established through an operation that
 covers more than one fact.** That is the first evidence of generality this
 ledger has ever recorded; it is necessary, not sufficient.
 
-Facts: `F:ml430-int-modeq-comm-1e4bcc07`, `F:ml430-int-modeq-refl-30e15520`, `F:ml430-int-modeq-symm-984a6e67`, `F:ml430-int-modeq-trans-6d7863e0`, `F:ml430-nat-descfactorial-one-d4856d4a`, `F:ml430-nat-modeq-comm-24b71e7a`, `F:ml430-nat-modeq-refl-d870c8f5`, `F:ml430-nat-modeq-symm-0a3d4d18`, `F:ml430-nat-modeq-trans-ef9d1c46`, `F:ml430-nat-one-ascfactorial-8bacb017`, `F:ml430-nat-zero-ascfactorial-af4fcdca`
+Facts: `F:ml430-int-modeq-comm-1e4bcc07`, `F:ml430-int-modeq-refl-30e15520`, `F:ml430-int-modeq-symm-984a6e67`, `F:ml430-int-modeq-trans-6d7863e0`, `F:ml430-nat-add-modeq-left-e3b1fba9`, `F:ml430-nat-add-modeq-right-e2f11f21`, `F:ml430-nat-descfactorial-one-d4856d4a`, `F:ml430-nat-modeq-comm-24b71e7a`, `F:ml430-nat-modeq-refl-d870c8f5`, `F:ml430-nat-modeq-symm-0a3d4d18`, `F:ml430-nat-modeq-trans-ef9d1c46`, `F:ml430-nat-modulus-modeq-zero-fd9af096`, `F:ml430-nat-one-ascfactorial-8bacb017`, `F:ml430-nat-zero-ascfactorial-af4fcdca`
 
 ## By route
 
 | Route | Multi-target | Capsule | No operation | Meaning |
 |---|---:|---:|---:|---|
-| `cas-certificate` | 0 | 0 | 22 | computer-algebra certificate |
+| `cas-certificate` | 0 | 0 | 24 | computer-algebra certificate |
 | `imported-kernel-lean` | 0 | 0 | 5 | kernel proof imported from an external development |
-| `kernel-lean` | 11 | 20 | 411 | kernel proof, reconstructed and checked here |
+| `kernel-lean` | 14 | 20 | 530 | kernel proof, reconstructed and checked here |
 | `search-certificate` | 0 | 0 | 9 | search certificate |
 | `smt-clausal` | 0 | 0 | 9 | SMT decision with clausal (DRAT) evidence |
 | `smt-term-level` | 0 | 1 | 16 | SMT decision with term-level evidence |
@@ -50,7 +50,7 @@ is no proof-affecting intervention, which this join cannot see. Multi-target
 coverage is the **necessary** condition that is measurable today, and a
 single-target registry fails it without needing a harder test.
 
-Of the 504 established facts, 441 record an
+Of the 628 established facts, 563 record an
 empty axiom footprint. That is a different axis from provenance: a
 hand-written proof can be axiom-free and a produced one need not be.
 
