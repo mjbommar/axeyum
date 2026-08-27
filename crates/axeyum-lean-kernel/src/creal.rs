@@ -4654,6 +4654,13 @@ pub struct CRealPrelude {
     /// with its right argument a literal), reused unchanged for
     /// `sinOne_le_exp_term_one`'s own `expTerm 1`.
     pub exp_term_one_eq_one: NameId,
+    /// `CReal.mulPowCongr : ∀ (c : Nat → CReal) (j : Nat) (x y : CReal),
+    /// Equiv x y → Equiv (mul (c j) (pow x j)) (mul (c j) (pow y j))` — the
+    /// power-series term congruence, built by `creal/congruence.rs`'s setoid
+    /// congruence deriver by composing `mul_congr`/`pow_congr` structurally
+    /// rather than by hand. See that module's own doc comment for the
+    /// deriver this permanent registration exercises.
+    pub mul_pow_congr: NameId,
 }
 
 impl CRealPrelude {
@@ -5157,6 +5164,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sin_one_le_exp_term_one: kernel.name_str(creal, "sinOne_le_exp_term_one"),
         exp_term_zero_eq_one: kernel.name_str(creal, "expTerm_zero_eq_one"),
         exp_term_one_eq_one: kernel.name_str(creal, "expTerm_one_eq_one"),
+        mul_pow_congr: kernel.name_str(creal, "mulPowCongr"),
     }
 }
 
@@ -5826,7 +5834,14 @@ pub(crate) fn build_creal_prelude_uncached(
         // (`series::declare_series`, well above) and `CRealPrelude::pow`
         // (`power::declare_power`, well above); placed last since nothing
         // else in this prelude depends on it.
-        polynomial::declare_polynomial(&mut d, prelude)
+        polynomial::declare_polynomial(&mut d, prelude)?;
+        // `congruence::declare_congruence_extras` (`CReal.mulPowCongr`, the
+        // power-series term congruence built by the setoid congruence
+        // deriver) needs only `CReal.mul_congr`/`CReal.pow_congr`
+        // (`product::declare_product`/`power::declare_power`, both far
+        // above) and `CReal.equiv_refl`/`equiv_trans`; placed last since
+        // nothing else in this prelude depends on it, same as `polynomial`.
+        congruence::declare_congruence_extras(&mut d, prelude)
     })();
     match built {
         Ok(()) => {
@@ -6744,6 +6759,7 @@ mod archimedean;
 mod archimedean_squeeze;
 mod cancellation;
 mod completeness;
+mod congruence;
 mod convergence;
 mod cotransitivity;
 mod crossing;

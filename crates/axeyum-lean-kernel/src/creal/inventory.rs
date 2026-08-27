@@ -40,6 +40,7 @@ mod archimedean_squeeze;
 mod base;
 mod cancellation;
 mod completeness;
+mod congruence;
 mod convergence;
 mod cotransitivity;
 mod crossing;
@@ -80,6 +81,7 @@ pub(crate) fn all_entries(
     all.extend(base::entries(p));
     all.extend(cancellation::entries(p));
     all.extend(completeness::entries(p));
+    all.extend(congruence::entries(p));
     all.extend(convergence::entries(p));
     all.extend(cotransitivity::entries(p));
     all.extend(crossing::entries(p));
