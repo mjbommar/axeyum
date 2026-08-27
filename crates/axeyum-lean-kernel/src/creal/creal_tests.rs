@@ -4,7 +4,7 @@ use super::{CRealPrelude, build_creal_prelude};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
-use crate::{Declaration, Kernel};
+use crate::{Declaration, Kernel, on_a_deep_stack};
 
 /// A built `CReal` kernel, as a **clone of one template**.
 ///
@@ -32,8 +32,11 @@ fn built() -> (Kernel, CRealPrelude) {
     // margin overrun disappears under either, runaway recursion does not).
     // Every call is wrapped, not just the build -- the clone that runs on
     // EVERY call is itself not free to assume is shallow just because one
-    // caller's stack happened to survive it.
-    on_a_deep_stack_creal(move || {
+    // caller's stack happened to survive it. Uses the crate's shared
+    // `on_a_deep_stack` (256 MiB, ADR-0584) rather than a local copy -- this
+    // file used to carry its own 1 GiB thread-spawning helper, unexplained
+    // and never re-measured against the shared constant.
+    on_a_deep_stack(move || {
         let (kernel, prelude) = TEMPLATE.get_or_init(|| {
             let mut kernel = Kernel::new();
             let prelude = build_creal_prelude(&mut kernel).expect("CReal prelude must build");
@@ -46,8 +49,25 @@ fn built() -> (Kernel, CRealPrelude) {
 /// The build itself, with the kernel's rejection **rendered**. A `Debug` of
 /// `KernelError` says nothing about what was refused; this says which two types
 /// failed to match.
+///
+/// Runs on [`on_a_deep_stack`] like every other call in this file. It once did
+/// not: `creal` in debug needs **exactly** the default 2 MiB `#[test]` thread
+/// stack (`artifacts/kernel-stack-envelope.tsv`, ADR-0584), so this was the
+/// test with zero margin left over for anything a future declaration might
+/// add, and its purpose — "does the trusted gate accept this proof" — has
+/// nothing to do with how much stack the type checker's recursion happens to
+/// need. `scripts/check-kernel-stack-envelope.sh` is the dedicated,
+/// self-demonstrating measurement of that envelope (it bisects and proves it
+/// can fail); this test is not a substitute stack canary and should not block
+/// the whole debug suite — and therefore `just check`, and therefore
+/// publication — over a margin question this test was never designed to
+/// answer.
 #[test]
 fn creal_prelude_builds() {
+    on_a_deep_stack(creal_prelude_builds_body);
+}
+
+fn creal_prelude_builds_body() {
     let mut kernel = Kernel::new();
     match build_creal_prelude(&mut kernel) {
         Ok(_) => {}
@@ -84,12 +104,6 @@ fn the_constructed_reals_add_no_trusted_declaration() {
 
 /// Every declaration is the kind it claims to be and has an empty axiom
 /// footprint, read out of the kernel rather than off the diff.
-#[test]
-fn every_creal_declaration_is_checked_and_axiom_free() {
-    on_a_deep_stack_creal(every_creal_declaration_is_checked_and_axiom_free_body);
-}
-
-/// Runs `f` on a 1 GiB stack.
 ///
 /// This test rebuilds the whole constructed environment and walks every
 /// declaration's `axiom_footprint`. Once `CReal.e` landed, that recursion
@@ -97,20 +111,17 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 /// limit, not a soundness problem, and the same class as the one that makes
 /// `prelude_theorem_inventory` require `--release`.
 ///
-/// It carries the stack EXPLICITLY rather than relying on an ambient
-/// `RUST_MIN_STACK`. A lane once reported a suite green that only passed
-/// because it had that variable exported from an earlier hand-bisect; the
-/// same test SIGABRTed in a clean shell. A test whose result depends on an
-/// ambient environment variable is a gate on one shell, and this particular
-/// test is the guard that every `CReal` declaration is derived and
-/// axiom-free -- the last one that should silently stop running.
-fn on_a_deep_stack_creal<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> T {
-    std::thread::Builder::new()
-        .stack_size(1024 * 1024 * 1024)
-        .spawn(f)
-        .expect("spawning a deep-stack thread must succeed")
-        .join()
-        .expect("the deep-stack thread must not panic")
+/// Runs on [`on_a_deep_stack`]'s shared 256 MiB thread (ADR-0584) rather than
+/// a bespoke size for this one test, and carries the stack EXPLICITLY rather
+/// than relying on an ambient `RUST_MIN_STACK`. A lane once reported a suite
+/// green that only passed because it had that variable exported from an
+/// earlier hand-bisect; the same test SIGABRTed in a clean shell. A test whose
+/// result depends on an ambient environment variable is a gate on one shell,
+/// and this particular test is the guard that every `CReal` declaration is
+/// derived and axiom-free -- the last one that should silently stop running.
+#[test]
+fn every_creal_declaration_is_checked_and_axiom_free() {
+    on_a_deep_stack(every_creal_declaration_is_checked_and_axiom_free_body);
 }
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
@@ -4630,6 +4641,10 @@ fn the_lattice_route_cannot_prove_the_one_token_mutations() {
 ///   closeness bound unchanged.
 #[test]
 fn the_derivative_is_stated_exactly() {
+    on_a_deep_stack(the_derivative_is_stated_exactly_body);
+}
+
+fn the_derivative_is_stated_exactly_body() {
     use crate::env::Declaration;
     let mut k = Kernel::new();
     let p = build_creal_prelude(&mut k).expect("CReal prelude must build");

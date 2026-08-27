@@ -4520,6 +4520,10 @@ mod bridging_smoke_tests {
     /// only `Kernel::add_declaration`'s trusted checker is.
     #[test]
     fn one_le_implies_succ_pred_type_checks() {
+        crate::on_a_deep_stack(one_le_implies_succ_pred_type_checks_body);
+    }
+
+    fn one_le_implies_succ_pred_type_checks_body() {
         let mut kernel = crate::Kernel::new();
         let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
         let mut d = IntDev::new(&mut kernel, p.rat.int);
@@ -4564,6 +4568,10 @@ mod bridging_smoke_tests {
     /// explicit conversion step.
     #[test]
     fn nat_floor_bracket_type_checks() {
+        crate::on_a_deep_stack(nat_floor_bracket_type_checks_body);
+    }
+
+    fn nat_floor_bracket_type_checks_body() {
         let mut kernel = crate::Kernel::new();
         let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
         let mut d = IntDev::new(&mut kernel, p.rat.int);
@@ -4628,6 +4636,12 @@ mod bridging_smoke_tests {
     /// of `declare_sqrt_one` itself compiling.
     #[test]
     fn one_bracket_pieces_are_defeq_to_concrete_one_even_at_symbolic_index() {
+        crate::on_a_deep_stack(
+            one_bracket_pieces_are_defeq_to_concrete_one_even_at_symbolic_index_body,
+        );
+    }
+
+    fn one_bracket_pieces_are_defeq_to_concrete_one_even_at_symbolic_index_body() {
         use crate::rat_prelude::ops::{den, num, req, rone, rrefl, rzero};
 
         let mut kernel = crate::Kernel::new();
@@ -4750,6 +4764,10 @@ mod bridging_smoke_tests {
     /// `declare_sqrt_one` itself compiling.
     #[test]
     fn rone_times_rone_is_defeq_rone() {
+        crate::on_a_deep_stack(rone_times_rone_is_defeq_rone_body);
+    }
+
+    fn rone_times_rone_is_defeq_rone_body() {
         use crate::rat_prelude::ops::{req, rmul, rone, rrefl};
 
         let mut kernel = crate::Kernel::new();

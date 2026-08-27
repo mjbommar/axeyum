@@ -73,6 +73,14 @@ step fact-dag python3 scripts/check-fact-dag.py --quiet
 # where `cargo test` actually runs.
 step kernel-stack-envelope-controls scripts/tests/test-kernel-stack-envelope.sh
 step kernel-stack-envelope scripts/check-kernel-stack-envelope.sh --check --profile release
+# Static regression guard: a `#[test]` reaching build_creal_prelude/
+# build_complex_prelude/build_cpoint_prelude/build_creal_model_of_arith
+# without an on_a_deep_stack guard on its local call path. Complements
+# kernel-stack-envelope above (which re-measures the STACK REQUIREMENT) by
+# catching the actual regression shape that hit three modules in one session:
+# a new call site that never gets protected in the first place.
+step deep-stack-call-sites-controls scripts/tests/test-deep-stack-call-sites.sh
+step deep-stack-call-sites python3 scripts/check-deep-stack-call-sites.py
 step fact-depends-tests python3 -m unittest scripts.tests.test_check_fact_depends_derived
 # `fact-dag` measures the ledger's dependency graph; this one DERIVES it. A
 # kernel-route fact's `depends_on` is read out of the admitted proof term
