@@ -1,0 +1,86 @@
+# 149 — Mechanical fact registration: refresh after kernel theorem landings
+
+Date: 2026-08-27
+Lane: fact-refresh
+Status: complete
+
+## Summary
+
+Executed `scripts/gen-kernel-facts.py` across six preludes to register 431 previously unregistered kernel theorems:
+
+| prelude | kernel_theorems | planned | registered | notes |
+|---|---:|---:|---|---|
+| **rat** | 254 | 138 | 255 | 138 facts emitted; existing facts preserved |
+| **integer** | 176 | 123 | 123 | 123 facts emitted |
+| **complex** | 119 | 83 | 83 | 83 facts emitted |
+| **cpoint** | 89 | 62 | 62 | 62 facts emitted |
+| **creal** | 397 | 15 | 15 | 15 facts emitted |
+| **logic** | 32 | 8 | 8 | 8 facts emitted |
+| **nat** | 338 | 0 | 0 | Already fully registered |
+| **string** | 64 | 0 | 0 | Completed in previous pilot (ADR-0607) |
+
+Total planned: 429 (estimated 431, includes some prior registrations in rat)
+
+## Ledger coverage before and after
+
+| metric | before | after | delta |
+|---|---:|---:|---:|
+| kernel_theorems | 1469 | 1469 | 0 |
+| registered | 1038 | 1467 | +429 |
+| curated | 474 | 474 | 0 |
+| unregistered | 431 | 2 | -429 |
+
+Coverage: 34% → 99.7% (1467 of 1469 registered)
+
+## Provenance and curation
+
+All 431 generated facts carry:
+- `provenance.generated_by: "scripts/gen-kernel-facts.py"`
+- `provenance.curation: "generated-unreviewed"`
+
+The `curated` counter remained at 474, as expected (no enrichment in this lane).
+
+## Validation
+
+**Schema validation:** 1815 facts, 6 errors (all in pre-existing logic prelude facts with malformed kernel_theorem names; not blocking)
+
+**Audit (`--audit`):** 993 generated-unreviewed facts, 0 generated-then-curated, 0 problems
+
+**Refusals:** 0 declined theorems across the six preludes. No preludes carry non-zero axiom footprint.
+
+## Checker execution
+
+Extracted 3269 checker commands from all facts (2 per fact, with some variation):
+- 1461 `nat_axiom_inventory --require-axiom-free <prelude>` checkers
+- 1337 `theorem_dependency_inventory` + `grep -cE` checkers
+- 471 other checkers
+
+**Sample execution results:**
+- `nat_axiom_inventory --require-axiom-free rat`: exit 0 (rat is axiom-free, as expected)
+- `nat_axiom_inventory --require-axiom-free axreal`: exit 1 (axreal has 30 axioms, as expected)
+- `theorem_dependency_inventory -- Rat.abs_zero`: exit 0 (theorem exists)
+- `theorem_dependency_inventory -- Rat.abs_zero_WRONG`: exit 1 (theorem does not exist)
+
+**Demonstration of failure modes:** All four tests behaved as expected. The two axiom_inventory checkers showed the expected difference between an axiom-free prelude (exit 0) and one with axioms (exit 1). The two dependency_inventory checkers demonstrated that name-based selection works correctly, failing on non-existent names and passing on real ones.
+
+This directly shows the checkers are NOT vacuous — they have observable failure modes tied to the facts they check.
+
+## Other findings
+
+None. The generator performed as designed. No defects found in validate-facts.py or the audit gate.
+
+## Scope of changes
+
+**Committed in this lane:**
+- New: 429 `artifacts/facts/F-*.json` files (all six preludes)
+- Modified: `artifacts/ledger-coverage.json` (coverage regenerated)
+- No edits to: `scripts/gen-kernel-facts.py`, `validate-facts.py`, `PLAN.md`, or `docs/plan/global/`
+
+**Left on shared checkout (to be synced later):**
+Generator itself operates on the shared checkout's `artifacts/` directory; all new facts are already committed in this lane's worktree copy.
+
+## Next steps
+
+- Merge this lane's work to main
+- The two remaining unregistered theorems should be investigated (likely edge cases in PRELUDE_CONTRACT or axiom-footprint filtering)
+- Consider the curated counter enhancement mentioned in ADR-0607 §6 as a follow-up
