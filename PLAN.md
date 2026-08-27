@@ -124,6 +124,7 @@ now. Nothing was deleted.
 | 2026-08-27 | `PENDING` | Diagnosed why `fact-frontier.py --json` reports `admissible: 0` over 132 dependency-ready facts: operation registration requires a completed, independently-checked proof (`ADMISSION_CONTRACTS` allows only `proved`), and none exists for any open fact. Added a purely additive `diagnostics.unregistered_by_route_class` split to `fact-frontier.py`; declined to fabricate an operation over unproved work. `docs/autogenesis/288-admission-precedes-registration.md`. |
 | 2026-08-27 | `PENDING` | Implemented ADR-0602: `artifacts/ontology/producer-contract.schema.json` + `scripts/validate-producer-contracts.py` (a capability claim, never a completion claim — no `proved`/`epistemic_status` field exists in the schema at all), two seed contracts (Int.ModEq congruence family, Nat.Coprime family — both checked held-out-clean against `nursery-v1.json`), and redefined `fact-frontier.py` admissibility as dependency-ready × (registered operation OR matched capable-route contract). `admissible_count` moved 0 → 27 on the real ledger; all 8 existing `test_fact_frontier.py` tests pass unmodified, 7 new added. `docs/autogenesis/289-producer-contract-admissibility.md`. |
 | 2026-08-27 | `PENDING` | Sharded `creal_tests.rs`'s single 432-entry pinned inventory array into 33 per-module `Vec`s under new `crates/axeyum-lean-kernel/src/creal/inventory/`, registered from a new `creal/inventory.rs`; `creal_tests.rs` now derives coverage from the union plus a new duplicate-across-shards check, both mutation-verified; no per-shard pin (superseded by the environment-derived assertion). Purely additive one-line change to `creal.rs` (`mod inventory;`); no existing `creal/*.rs` module content touched. Updated `scripts/recount-pinned-inventory.py`/its test controls and `CLAUDE.md`'s pin-guidance sections for the new shape. |
+| 2026-08-27 | `cb8b54e20` (+fixups) | Setoid congruence deriver: new `creal/congruence.rs` (registry of 6 congruence lemmas + `Op`/`Arity`/`CongruExpr`/`derive`/`declare_derived_congr`) and `creal/inventory/congruence.rs`; one permanent registration `CReal.mulPowCongr` (power-series term congruence) dispatched from `build_creal_prelude_uncached`; four kernel-checked demos plus a negative control and its mutation test. One new `CRealPrelude` field (`mul_pow_congr`). No other `creal/*.rs` module touched. |
 | 2026-08-27 | `PENDING` | First real execution of a producer-contract dispatch (`F:ml430-int-add-modeq-left-ee732b5b`): clean s5 export/import, honest producer decline (`TerminalNotClosed`), recorded as a decline artifact + fact note rather than a fabricated admission. No fact status changed, no operation registered. |
 | 2026-08-27 | `e0c96569e` | Contract-decline convention (doc 291): `contract_sha256` re-dispatch key added to the seed decline artifact; new `scripts/validate-producer-contract-declines.py` (25 tests). |
 | 2026-08-27 | `96e40ce3d` | `scripts/fact-frontier.py` reads decline artifacts as selector input: live-decline computation, three-population diagnostics, `declined_fact_ids`. Selection moves off the declined fact. |
@@ -2335,6 +2336,143 @@ only needs new s5-side Lean exports for these four targets. Separately,
 new proof needed) — worth a bounded, explicitly-timed attempt at the existing
 `smtcomp_cli` route.
 
+**Your lane's block (`DONE`, ledger-5, 2026-08-27).** Registered 29 new facts
+in `artifacts/facts/` (28 `kernel-lean` + 1 `cas-certificate`).
+`python3 scripts/validate-facts.py` is green:
+
+```
+805 facts checked, 0 errors  (computed=2 conjectured=3 open=176 proved=620 refuted=4)
+  routes: cas-certificate=24(kernel-reconstructed=0,cas-internal=24) imported-kernel-lean=5 kernel-lean=559 search-certificate=12 smt-clausal=9 smt-term-level=17; 557 axiom-free on kernel-lean (not comparable across routes)
+  cas-certificate: 24 total -- kernel-reconstructed 0, cas-internal 24
+```
+
+(776 pre-existing + 29 new = 805.)
+
+**Ch.24 completion (uniform convergence):** `F:creal-weierstrassmtest` (the
+Weierstrass M-test — notes record its two mathematically-necessary
+hypotheses: `f` must respect `CReal.Equiv` because `CReal` is a Bishop
+setoid, not a literal quotient (ADR-0512); the limit is built at the CLAMPED
+point `max a (min pt b)` because `CReal.le` is undecidable and there is no
+way to conjure the domain-membership proof an arbitrary symbolic point would
+need), `F:creal-uniform-converges-add`, `F:creal-close-within-of-within`.
+
+**The five skipped from batch 4 (`ledger-uc`, see
+[133-ledger-uc.md](docs/plan/status/133-ledger-uc.md)'s Findings — these did not exist on that
+lane's base and were correctly refused there; they exist on this lane's
+merged `main`):** `F:nat-even-or-odd` (the computed `k := n/2` parity split,
+never existential), `F:creal-alternatingbracketupper`,
+`F:creal-alternatinglowerbound`, `F:creal-alternatingupperbound`. (The fifth
+named in that lane's findings, `CReal.weierstrassMTest`, is registered above
+as its own Ch.24-completion entry, not duplicated here.)
+
+**Trig (16 facts):** `F:creal-sinterm`, `F:creal-sinseriespartial`,
+`F:creal-sintermabsledominant`, `F:creal-sinone`, `F:creal-sinoneconverges`,
+`F:creal-sinone-alternating-lower`/`-upper`, `F:creal-sinone-nonneg`,
+`F:creal-sinone-le-exp-term-one`, `F:creal-expterm-antitone`,
+`F:creal-expterm-zero-eq-one`, `F:creal-expterm-one-eq-one`,
+`F:creal-cosone-alternating-lower`/`-upper`, `F:creal-cosone-nonneg`,
+`F:creal-cosone-le-exp-term-zero`. The last two are the REAL `[0,
+expTerm(0)]` bound on `cos(1)` and are recorded as SUPERSEDING (without
+deleting) the loose `[-4,4]`-style bound in `F:creal-cosone-le-four`;
+`F:creal-sinone-nonneg`/`F:creal-sinone-le-exp-term-one` do the same for
+`sin(1)`.
+
+**Ch.14 crossing chain:** `F:creal-crossingcloseclamped` (notes record that
+BOTH domain hypotheses `crossingClose` needs are discharged BY CONSTRUCTION
+via `min`/`max` clamping — no comparison decided), `F:creal-crossingsamplegea`,
+`F:creal-riemannsamplecrossingclose`. (`CReal.meshScaledLeOfGe` was already
+registered as `F:creal-meshscaledleofge` by `ledger-uc` — confirmed, not
+re-registered.)
+
+**Complex polynomials — only 2 of the 8 named were unregistered; the other 6
+already exist from `ledger-uc`** (`F:complex-polydegreelt-polymul`,
+`F:complex-hornerfromtop`, `-zero`, `-succzero`, `-succsucc`,
+`F:complex-factorquotient`, `F:complex-factorquotient-degreelt` — confirmed
+present, not duplicated): `F:complex-factorquotient-succ-eq`,
+`F:complex-hornerfromtop-diag-eq-polyeval`.
+
+**`CReal` polynomials:** already fully registered by `ledger-uc`
+(`F:creal-polyeval` family, `F:creal-polyadd`, `F:creal-polyscale`,
+`F:creal-polydegreelt` family) — confirmed present, nothing to add.
+
+**The first `cas-certificate` fact under the `kernel-reconstructed`/
+`cas-internal` split (ADR-0601 SS2):** `F:cas-ivt-cbrt2-in-1-2` — "`x^3-2` has
+exactly one real root in `(1,2)`", the existing `axeyum-cas` unit test
+`real_algebraic::tests::ivt_names_the_root_of_a_cubic`. Checker:
+
+```
+cargo test -p axeyum-cas --lib real_algebraic::tests::ivt_names_the_root_of_a_cubic -- --exact \
+  2>/dev/null | grep -cE '^test real_algebraic::tests::ivt_names_the_root_of_a_cubic \.\.\. ok$'
+```
+
+Notes state PLAINLY: *"THIS EVIDENCE IS cas-internal, NOT kernel-reconstructed
+(ADR-0601 SS2) ... verified by the CAS's own `verify_ivt_certificate` ... but
+NOT YET reconstructed through `Kernel::add_declaration`. The ledger must not
+let this read as kernel-checked."* `axiom_footprint` includes
+`cas.ivt-certificate-not-kernel-reconstructed` as an explicit, honest
+footprint entry.
+
+## Checker forms used
+
+- Theorems: `cargo run -q --release -p axeyum-lean-kernel --example
+  theorem_dependency_inventory -- <Name> 2>/dev/null | grep -cE
+  '^<Name>[[:space:]]'`
+- Definitions (`sinTerm`, `sinSeriesPartial`, `sinOne`): `cargo run -q
+  --release -p axeyum-lean-kernel --example kernel_declaration_projection --
+  --require-declaration <Name> --require-kind definition 2>/dev/null | grep
+  -cE '^found[[:space:]]<prelude>[[:space:]]definition[[:space:]]<Name>[[:space:]]'`
+- Axiom footprint (all 28 kernel facts): `cargo run -q --release -p
+  axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed
+  --require-axiom-free {creal|complex|nat}`. Re-measured on this tree:
+  `creal: axiom=0 opaque=0 quotient=0 total_trusted=0`, `complex: axiom=0
+  opaque=0 quotient=0 total_trusted=0`, `nat: axiom=0 opaque=0 quotient=0
+  total_trusted=0`, all exit 0.
+- `cas-certificate` (1 fact): `cargo test -p axeyum-cas --lib
+  real_algebraic::tests::ivt_names_the_root_of_a_cubic -- --exact` piped to
+  `grep -cE` on the exact `... ok` line.
+
+Every checker for every one of the 29 new facts was run individually against
+the freshly-built (same-session) `target/release/examples/*` binaries and
+confirmed to print a nonzero count before being written into a fact file
+(`--release` confirmed mandatory throughout: this tree's binaries are
+same-session, built at the point of use).
+
+## Mutation testing (isolated snapshot, never the shared checkout)
+
+`AXEYUM_AGENT=ledger-5 scripts/lane-snapshot.sh HEAD` ->
+`/data0/axeyum/scratch/snap-ledger-5-80bbef601` (reclaimed with `rm -rf`
+after use). Two kernel mutations plus one CAS mutation, all in the SAME
+rebuild for the two kernel ones:
+
+- `CReal.weierstrassMTest` -> `CReal.weierstrassMTest_MUTATED`
+  (`creal.rs:5083`): `theorem_dependency_inventory weierstrassMTest` count
+  **0** (was 1). Control in the SAME rebuild, `CReal.uniform_converges_add`:
+  count **1**, unaffected.
+- `CReal.sinOne` -> `CReal.sinOne_MUTATED` (`creal.rs:5087`, same rebuild as
+  above): `kernel_declaration_projection --require-declaration CReal.sinOne
+  --require-kind definition` count **0** (was 1). Control `CReal.sinTerm`
+  (a Definition too, same rebuild): count **1**, unaffected.
+- CAS: `real_algebraic.rs`'s `ivt_names_the_root_of_a_cubic` test's
+  `assert_eq!(cert.root.degree(), 3)` mutated to `4`
+  (`crates/axeyum-cas/src/real_algebraic.rs:744`): the fact's exact checker
+  command count went **0** (was 1, test fails on the wrong assertion).
+  Control in the same rebuild, `verify_accepts_the_unmutated_control`: count
+  **1**, unaffected.
+
+All three targets killed cleanly; both controls in each rebuild survived
+unaffected, confirming the checkers discriminate on the named
+declaration/test rather than on the build succeeding globally.
+
+## Not registered, with reasons
+
+- Anything from lanes still running (`integral_split_rat`, power series,
+  producer contracts, shard-inventory outputs), Ch 21, FTA — per brief, out
+  of scope for this lane.
+- `CReal` polynomials and 6 of the 8 named `Complex` polynomial declarations
+  — already registered by `ledger-uc` (batch 4); confirmed present via an
+  environment-derived scan of every fact's `formal.kernel_theorem` before
+  writing anything, not duplicated.
+
 **ADR-0602 implemented (`done-for-now`, producer-contracts, 2026-08-27).**
 Doc 288 diagnosed `fact-frontier.py --json` reporting `admissible: 0` over 132
 dependency-ready facts as structural, not a registry gap: the operation
@@ -2487,6 +2625,126 @@ both touched the same `creal_tests.rs` array. `CLAUDE.md`'s pin-recounting
 and zero-conflict-trap sections were updated to describe the sharded shape
 while keeping the incident history (kept, not deleted, since the failure
 mode is general to any similarly-shaped pin elsewhere).
+
+**Built the setoid congruence deriver (`done`, congruence-deriver,
+2026-08-27).** `07-the-cost-model-and-pareto-position.md` §3's "known token
+sink to mechanize next": `CReal` is a Bishop setoid, so every function used
+under `Equiv` needs its own `Equiv`-respect theorem, and lanes hand-assembled
+`mul_congr ∘ pow_congr`-style compositions all week. Structural recursion over
+a term's shape, encoded once.
+
+New `crates/axeyum-lean-kernel/src/creal/congruence.rs`:
+- **Registry** (`registry(p: CRealPrelude) -> Vec<CongrEntry>`): six entries
+  (`Neg`/`Abs`/`Add`/`Mul`/`Min`/`Max`), each an operation's own `CReal`
+  constant, its congruence lemma's `NameId`, and its `Arity` (`Unary`:
+  `lemma(x, y, h)`; `Binary`: `lemma(x, x', y, y', h1, h2)`, verified against
+  three independent existing call sites before being encoded —
+  `power.rs::declare_pow_congr`, `series.rs::declare_sum_range_congr`,
+  `lattice.rs`'s `abs_congr` derivation). `Pow` is handled separately
+  (`CongruExpr::Pow`) since `pow_congr`'s signature is congruent only in the
+  base with the `Nat` exponent trailing the hypothesis, a shape no other entry
+  shares.
+- **Term representation** (`CongruExpr`, an enum, not a closure — chosen so
+  the deriver can *inspect* a node to pick its lemma without ever running the
+  term): `Var` (the point), `Const` (`Equiv`-irrelevant, refl), `Unary`/
+  `Binary` (registered ops), `Pow`, and `Opaque` (a raw function term that
+  ALWAYS declines — the negative control's building block, independent of
+  what the registry happens to contain).
+- **`derive`**: structural recursion, `Result<(ExprId, ExprId), CongrError>`
+  — never panics, declines with a typed error the moment it reaches an
+  unregistered op or an `Opaque` node.
+- **One permanent registration**: `CReal.mulPowCongr : ∀ (c : Nat → CReal) (j
+  : Nat) (x y : CReal), Equiv x y → Equiv (mul (c j) (pow x j)) (mul (c j)
+  (pow y j))` — the power-series term congruence, dispatched last in
+  `build_creal_prelude_uncached` (after `polynomial::declare_polynomial`).
+  Grepped the whole merged tree for a hand-built equivalent before writing
+  this (co-occurring `mul_congr`/`pow_congr` in a congruence proof across
+  every `creal/*.rs`); none exists, so this is a new name, not a verified
+  match — documented in the declaring function's own doc comment.
+
+Four demos, all `#[cfg(test)]` in `congruence.rs`, each kernel-checked via
+`Kernel::add_declaration`:
+- (a) re-derives `CReal.abs_congr` under a throwaway name; asserts
+  `kernel.render_lean` renders identically to the hand-built theorem's type.
+- (b) exercised through the SAME production dispatch path
+  (`declare_congruence_extras`) `build_creal_prelude` itself runs — checks
+  `CReal.mulPowCongr`'s rendered type mentions `CReal.mul`/`CReal.pow`/
+  `CReal.Equiv`.
+- (c) the deepest demo, `abs(min(add x (ofRat 0), mul x x))` — five
+  registered-op nodes deep, its own cost measured and reported: **7.62 ms**
+  derive+check.
+- (d) the negative control: a term built from a raw non-congruent function
+  `fvar` (`Opaque`) — asserted to return `Err(CongrError::Unregistered)`,
+  never reaching `Kernel::add_declaration`.
+- Mutation test: `registry_without(p, Op::Add)` — an `Add`-using term declines
+  through the SAME `Unregistered` path (name-checked), while a `Neg`-using
+  term still derives against the SAME pruned registry in the same run.
+
+Inventory shard: new `creal/inventory/congruence.rs` (one entry,
+`CReal.mulPowCongr`, `"theorem"`). Registrations: `mod congruence;` in
+`creal.rs` (alphabetical, between `completeness`/`convergence`) plus its
+dispatch call at the tail of the phase chain; `mod congruence;` +
+`all.extend(congruence::entries(p))` in `creal/inventory.rs`. Added exactly
+one field to `CRealPrelude` (`mul_pow_congr: NameId`) and its intern line —
+required because the inventory shard's `entries(p: CRealPrelude)` signature
+has no `Kernel` access, so a permanent, coverage-checked name has to be a
+struct field, not a dynamically-recomputed `kernel.name_str` call. No other
+`creal/*.rs` module file touched.
+
+**Verified:**
+- `cargo check -p axeyum-lean-kernel --lib`: clean (after fixing 3 initial
+  `E0499` double-mutable-borrow errors from building both `equiv()` arguments
+  inline — each fixed by binding `lhs`/`rhs` to locals first).
+- `cargo clippy -p axeyum-lean-kernel --lib --tests -- -D warnings`: 23
+  pre-existing errors, ALL in `creal/integral.rs`/other files this lane did
+  not touch (confirmed: `grep -c congruence` on the clippy output is 0).
+  Matches the shape the `shard-inventory` lane (`135-shard-inventory.md`)
+  already reported (25 pre-existing errors, same files) — not this lane's to
+  fix.
+- `env -u RUST_MIN_STACK scripts/cargo-serialized.sh test -p
+  axeyum-lean-kernel --lib creal:: -- --nocapture`: **137 passed, 0
+  failed**, 316.13s wall (full `creal::` module, second run after fixing
+  the bug below; first run was 136 passed / 1 failed). Deepest demo
+  (`composite_clamp_like_term_derives_and_checks`, `abs(min(add x (ofRat
+  0), mul x x))`) derive+check cost: **7.62 ms**.
+- `scripts/check-deep-stack-call-sites.py`: OK, 225 files, 0 unprotected
+  sites.
+- `rustfmt --edition 2024` on every touched/new file: clean (one reformat
+  pass on `congruence.rs` itself, no content change).
+
+**Kernel rejections during development**: two distinct problems, both
+found by actually running the gate rather than by inspection.
+1. Three `E0499` borrow-checker errors (compile-time, not kernel rejections)
+   from calling `equiv(d, p, d.const_app(...), d.const_app(...))` inline —
+   Rust's evaluation order requires both mutable borrows of `d` live
+   simultaneously. Fixed by binding each side to a `let` first.
+2. One REAL `Kernel::add_declaration` rejection,
+   `Kernel(UnboundFVar { id: 1001 })`, caught by the first full
+   `cargo test -p axeyum-lean-kernel --lib creal::` run (136 passed / 1
+   failed) — demo (c)'s `Const` leaf was a fresh `IntDev` fvar (`q`) that
+   `declare_derived_congr` never quantified (it only binds `x`/`y`/`h`), so
+   the closed term still mentioned an unbound variable. Not a deriver design
+   flaw: `CongruExpr::Const` is documented as requiring a term that does not
+   mention `Var`, but nothing enforces "closed" vs. "merely `Var`-free", and
+   a test built one that was `Var`-free but NOT closed. Fixed by using
+   `ofRat (Rat.zero)` instead of a free variable; confirmed by a second full
+   run, 137 passed / 0 failed. Every congruence LEMMA's own argument order,
+   separately, was read from an existing call site before use (see
+   `Arity::Binary`'s doc comment for the three sites checked) and never
+   needed correction — the retrospective this task's brief warns about
+   ("assuming a mirror exists") did not recur for the lemma-application
+   side, only for this one test-construction mistake.
+
+**Candidates for retirement** (not retired by this lane — report only, per
+scope): none of the CURRENT hand-built congruences in the merged tree are
+pure compositions this deriver could replace outright — `neg_congr`,
+`add_congr`, `mul_congr`, `min_congr`/`max_congr`/`abs_congr`, `pow_congr`,
+`sum_range_congr` are all BASE cases the registry itself depends on (deriving
+them via the deriver would be circular). The deriver's value is for
+COMPOSITE congruences built ON TOP of these — `CReal.mulPowCongr` is the
+first such composite, and any future power-series/clamp-style congruence
+should go through `derive`/`declare_derived_congr` rather than being
+hand-assembled.
 
 **Executed the first machine-selected, contract-matched dispatch** (`DONE`,
 flywheel-1, 2026-08-27): `scripts/fact-frontier.py --json` selected
