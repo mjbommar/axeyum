@@ -13292,12 +13292,10 @@ pub(super) fn declare_riemann_sum_split_exact(
     let h_b = {
         let unc_ab = uncancel_width(d, p, a, b); // Equiv b (add a width_ab)
         let a_width_ab = cadd(d, p, a, width_ab);
-        let a_w1w2 = cadd(d, p, a, cadd(d, p, w1, w2));
+        let w1w2 = cadd(d, p, w1, w2);
+        let a_w1w2 = cadd(d, p, a, w1w2);
         let refl_a = d.lemma(p.equiv_refl, &[a]);
-        let step1 = d.lemma(
-            p.add_congr,
-            &[a, a, width_ab, cadd(d, p, w1, w2), refl_a, h_split],
-        );
+        let step1 = d.lemma(p.add_congr, &[a, a, width_ab, w1w2, refl_a, h_split]);
 
         let c_w2 = cadd(d, p, c, w2);
         let assoc = d.lemma(p.add_assoc, &[a, w1, w2]); // Equiv c_w2 a_w1w2
@@ -13346,17 +13344,9 @@ pub(super) fn declare_riemann_sum_split_exact(
         let refl_oi = d.lemma(p.equiv_refl, &[oi]);
         let mc = d.lemma(p.mul_congr, &[oi, oi, delta_ab, delta_ac, refl_oi, symm_ac1]);
         let refl_a = d.lemma(p.equiv_refl, &[a]);
-        let h_sp = d.lemma(
-            p.add_congr,
-            &[
-                a,
-                a,
-                cmul(d, p, oi, delta_ab),
-                cmul(d, p, oi, delta_ac),
-                refl_a,
-                mc,
-            ],
-        );
+        let oi_delta_ab = cmul(d, p, oi, delta_ab);
+        let oi_delta_ac = cmul(d, p, oi, delta_ac);
+        let h_sp = d.lemma(p.add_congr, &[a, a, oi_delta_ab, oi_delta_ac, refl_a, mc]);
 
         let f_spab = d.apply(f, &[sp_ab]);
         let f_spac = d.apply(f, &[sp_ac]);
