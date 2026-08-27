@@ -1339,6 +1339,116 @@
 //! factor): **1,435 counterexamples in 20,000 draws**, so the check is not
 //! vacuous. `big_n` remains free and drives all three counts to infinity, as
 //! `equiv_zero_of_small` requires.
+//!
+//! **Fourth, Gap A is LANDED as [`mesh_count_align_mul`]** — the
+//! multiplicative alignment above, kernel-verified four ways: the `[a,b]`
+//! combined threshold symbolic in all six inputs; BOTH child thresholds
+//! (`deep_ac ≤ m_ac`, `deep_cb ≤ m_cb`), which [`mesh_count_align`] never had
+//! to prove because it obtained them by *defining* `m_ac := deep_ac +
+//! depth_ac`; ratio preservation cross-multiplied into `Nat` and checked by
+//! `Kernel::def_eq` at four base ratios × four scales; and a negative control
+//! asserting the ADDITIVE counts FAIL that same identity at a 1:5 base ratio,
+//! so the positive test is discriminating rather than an arithmetic tautology.
+//! Two small private helpers came out of it: [`nat_le_add_left`] (the prelude
+//! has `le_add_right` only) and [`le_dest_elim`] ([`mesh_count_align`]'s own
+//! `Nat.le_dest` + [`exists_elim`] tail, factored so three can nest).
+//!
+//! ## `CReal.integral_split` — Gap B (SIXTEENTH lane, same day): load-bearing,
+//! but it is a `riemannSum` congruence and NOT the `integral` congruence the
+//! FIFTEENTH lane sized — and the "impossible even in principle" argument
+//! against it is refuted by a kernel-checked term
+//!
+//! **Gap B is NOT avoidable by construction, and the "shared literal `c`"
+//! hypothesis fails for a reason worth writing down.** The combine's mismatch
+//! is visible only once the three legs are named:
+//!
+//! ```text
+//! (A) riemann_sum_integral_close on [a, b] at `combined`        -> riemannSum F a b combined
+//! (B) riemann_sum_integral_close on [a, c] at `m_ac`            -> riemannSum F a c   m_ac
+//! (C) riemann_sum_integral_close on [c, b] at `m_cb`            -> riemannSum F c b   m_cb
+//! (D) riemann_sum_split_exact_of_uc(F, a, b, m_ac, m_cb, u, hab)
+//!       -> Equiv (riemannSum F a b combined)
+//!                (add (riemannSum F a c_k m_ac) (riemannSum F c_k b m_cb))
+//! ```
+//!
+//! (B)/(C) are stated at the CALLER's fixed `c` — they must be, since the
+//! caller supplies `hac`/`uac`/`hcb`/`ucb` once. (D)'s split point is
+//! `c_k := a + ofNat(succ m_ac) · delta_of(a, b, combined)`, computed from the
+//! mesh counts actually used at the current accuracy, hence a fresh `Nat`
+//! arithmetic expression at every `e` and never definitionally `c`. There is
+//! nowhere to put a shared literal: `c_k` is *derived from* `m_ac`/`m_cb`, and
+//! those are exactly what must grow without bound.
+//!
+//! **But what is missing is `Equiv (riemannSum F a c_k m_ac) (riemannSum F a c
+//! m_ac)`, a `riemannSum` fact — not `integral F a c_k … ` versus `integral F
+//! a c …`.** The FIFTEENTH lane's entry above reached for
+//! `integral_congr_endpoint` and sized it against
+//! [`declare_integral_witness_independent`]'s `Converges`/
+//! `riemann_sum_deep_cauchy_cross` route. That is the wrong (and larger)
+//! lemma: the two `integral`s never have to be compared at all, because (B)
+//! and (C) already relate the caller's `c`-integrals to `c`-Riemann sums, and
+//! only the SUMS need bridging.
+//!
+//! **And the FIFTEENTH lane's argument that a `riemannSum`-level congruence is
+//! impossible "even in principle" is wrong.** It reads: "`riemannSum`'s value
+//! at a sample index is a RATIONAL (`sample x n`), and two `Equiv` `CReal`s
+//! are only guaranteed to agree in the LIMIT, never sample-by-sample". True,
+//! and it rules out proving the congruence *sample by sample* — which nothing
+//! requires. `riemannSum F x y m` is `sumRange` of `mul (F (add x (mul (ofNat
+//! i) Δ))) Δ`, a `CReal` built compositionally out of `add`/`mul`/`ofNat`, so
+//! the congruence follows from the setoid's own congruence lemmas without
+//! `sample` appearing anywhere.
+//!
+//! [`riemann_sum_congr_endpoints`] is that proof, **kernel-accepted on the
+//! first attempt**, symbolic in `F`, the outer interval `[aa, bb]`, its
+//! `UniformlyContinuousOn` witness, both endpoint pairs and the mesh count,
+//! closed into a real `Theorem` over all of them and stated at the [`rsum`]
+//! type rather than the `sumRange` type its term builds (so the test also
+//! pins that the two are one `Definition` body at one hash-consed `ExprId`).
+//! Every step names an existing lemma:
+//! [`CRealPrelude::neg_congr`]/[`CRealPrelude::add_congr`]/
+//! [`CRealPrelude::mul_congr`] for `Equiv Δ Δ'` and the sample points,
+//! [`CRealPrelude::riemann_sample_in_bounds`] plus two
+//! [`CRealPrelude::le_trans`] to place both sample points in `[aa, bb]`,
+//! [`CRealPrelude::congr_of_uniformly_continuous`] for `Equiv (F pt) (F pt')`
+//! (which exists precisely because a global congruence is unavailable for an
+//! `F` continuous only on `[aa, bb]`), and [`sum_range_congr_lt_proof`] — the
+//! `Nat.lt`-BOUNDED sum congruence, for the same reason
+//! [`declare_riemann_sum_split_exact_of_uc`] uses the bounded one.
+//!
+//! It varies BOTH endpoints at once, which is what the combine needs: `[a,
+//! c_k] → [a, c]` moves the right endpoint and `[c_k, b] → [c, b]` moves the
+//! left, and one lemma covers both.
+//!
+//! **`Equiv c_k c` is available exactly when the mesh family is the
+//! multiplicative one.** [`CRealPrelude::riemann_sum_split_scale_invariant`]
+//! proves `Equiv c_k c_0` for the [`succ_mul_succ`] family and for no other,
+//! so Gap A's resolution is a PREREQUISITE for Gap B's, not an independent
+//! item: with [`mesh_count_align`]'s additive padding there is no `c_0` to be
+//! `Equiv` to. `integral_split` would therefore be stated with `c` bound to
+//! the base split point `c_0` of a caller-chosen rational proportion
+//! `(m_ac0, m_cb0)`, not with `c` universally quantified.
+//!
+//! **What remains, and it is now only the combine.** Both prerequisites the
+//! FIFTEENTH lane named are landed and kernel-checked. The remaining volume is
+//! the TWELFTH lane's own estimate, unchanged: three `riemann_sum_integral_close`
+//! applications, [`close_within_of_within_indexed`] to move each `Within` to a
+//! `CReal.le (abs …)`, [`bnd_leg_plus_share_le_at`] once per leg to weaken the
+//! bounds to a common `natDivSucc`, `abs_add_le` twice for the three-way
+//! triangle, `le_congr` to substitute
+//! [`CRealPrelude::riemann_sum_split_exact_of_uc`]'s exact identity (now
+//! composed with [`riemann_sum_congr_endpoints`] on each of its two summands),
+//! and `equiv_zero_of_small` to close, with `big_n`/`e_inner` chosen as
+//! explicit functions of `e`. NOT attempted here: this lane's budget covered
+//! resolving the two gaps with the compile-and-verify cadence, not the combine
+//! on top of them, and writing ~450 unverified lines is what failed eleven
+//! times before.
+//!
+//! [`mesh_count_align_mul`], [`riemann_sum_congr_endpoints`],
+//! [`nat_le_add_left`] and [`le_dest_elim`] are all private helpers with their
+//! own `#[cfg(test)]` modules, wired into no `CRealPrelude` field, no
+//! `BuildStep`, no `EXPECTED_STEP_ORDER` entry and no inventory shard row;
+//! `creal_prelude_builds` is unaffected.
 
 use super::completeness::half_shift_le;
 use super::convergence::{
@@ -2393,6 +2503,304 @@ mod mesh_count_align_mul_tests {
             !d.kernel().def_eq(lhs, rhs),
             "the ADDITIVE scheme must NOT preserve a 1:5 base ratio -- if it does, \
              the positive ratio test above proves nothing"
+        );
+    }
+}
+
+// --- Gap B: riemannSum congruence in BOTH endpoints under `Equiv` ---------
+//
+// The SIXTEENTH `integral_split` entry's Gap B analysis: the combine does NOT
+// need an `integral`-level endpoint congruence. It needs this one, at the
+// `riemannSum` level, which the FIFTEENTH lane ruled out "even in principle"
+// on the grounds that `sample x n` is rational while `Equiv` reals agree only
+// in the limit. That argument is about proving the congruence SAMPLE BY
+// SAMPLE; the route below never touches `sample`, and is assembled entirely
+// out of machinery `declare_riemann_sum_split_exact_of_uc` already uses.
+
+/// `Equiv (riemannSum F x y m) (riemannSum F x2 y2 m)` from `Equiv x x2` and
+/// `Equiv y y2`, with `F` uniformly continuous on a common outer interval
+/// `[aa, bb]` containing both sub-intervals.
+///
+/// **Why this is the lemma `integral_split` actually needs.** The combine's
+/// three legs are `riemann_sum_integral_close` on `[a,b]`, `[a,c]`, `[c,b]`
+/// at the CALLER's fixed `c`, glued by
+/// [`CRealPrelude::riemann_sum_split_exact_of_uc`] — whose own split point is
+/// `c_k := a + ofNat(succ m_ac) · delta_of(a, b, combined)`, a fresh `Nat`
+/// arithmetic expression at every outer accuracy and therefore never
+/// definitionally the caller's `c`. What has to be bridged is
+/// `riemannSum F a c_k m_ac` against `riemannSum F a c m_ac` —
+/// a `riemannSum`, not an `integral`. `Equiv c_k c` is exactly what
+/// [`CRealPrelude::riemann_sum_split_scale_invariant`] already proves, once
+/// the mesh family is [`mesh_count_align_mul`]'s multiplicative one.
+///
+/// **Route** (nothing new; every step names an existing lemma):
+///
+/// 1. `Equiv delta1 delta2` — [`CRealPrelude::neg_congr`] on the left
+///    endpoints, [`CRealPrelude::add_congr`] into the width, then
+///    [`CRealPrelude::mul_congr`] against a reflexive `1/(m+1)`.
+/// 2. Per index `i < succ m`, `Equiv (samplePt1 i) (samplePt2 i)` — the same
+///    two congruences again.
+/// 3. Both sample points land in `[aa, bb]`:
+///    [`CRealPrelude::riemann_sample_in_bounds`] places each inside its OWN
+///    sub-interval, and two [`CRealPrelude::le_trans`] steps carry that out
+///    to `[aa, bb]`.
+/// 4. `Equiv (F samplePt1) (F samplePt2)` —
+///    [`CRealPrelude::congr_of_uniformly_continuous`], which exists precisely
+///    because a GLOBAL congruence hypothesis is unavailable for an `F`
+///    continuous only on `[aa, bb]`.
+/// 5. `mul_congr` on the summand, and [`sum_range_congr_lt_proof`] — the
+///    `Nat.lt`-BOUNDED sum congruence, not
+///    [`CRealPrelude::sum_range_congr`], for the same reason
+///    [`declare_riemann_sum_split_exact_of_uc`] uses the bounded one: step 3
+///    only places a sample point in range for `i < succ m`.
+///
+/// The result is stated against `sumRange` of the two [`summand_fn`]s, which
+/// is `riemannSum`'s own `Definition` body at the same hash-consed `ExprId`s,
+/// so a caller may use it directly at the [`rsum`] type.
+#[allow(clippy::too_many_arguments)]
+fn riemann_sum_congr_endpoints(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    aa: ExprId,
+    bb: ExprId,
+    u: ExprId,
+    x: ExprId,
+    y: ExprId,
+    x2: ExprId,
+    y2: ExprId,
+    m: ExprId,
+    hxy: ExprId,
+    hx2y2: ExprId,
+    hax: ExprId,
+    hyb: ExprId,
+    hax2: ExprId,
+    hy2b: ExprId,
+    hex: ExprId,
+    hey: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let logic = p.rat.int.logic;
+
+    let frac = frac_of(d, p, m);
+    let w1 = width_of(d, p, x, y);
+    let w2 = width_of(d, p, x2, y2);
+    let delta1 = delta_of(d, p, x, y, m);
+    let delta2 = delta_of(d, p, x2, y2, m);
+
+    // h_delta : Equiv delta1 delta2.
+    let h_delta = {
+        let neg_x = cneg(d, p, x);
+        let neg_x2 = cneg(d, p, x2);
+        let h_neg = d.lemma(p.neg_congr, &[x, x2, hex]);
+        let h_w = d.lemma(p.add_congr, &[y, y2, neg_x, neg_x2, hey, h_neg]);
+        let refl_frac = d.lemma(p.equiv_refl, &[frac]);
+        d.lemma(p.mul_congr, &[w1, w2, frac, frac, h_w, refl_frac])
+    };
+
+    let n = d.succ(m);
+    let f_summand = summand_fn(d, p, f, x, delta1);
+    let g_summand = summand_fn(d, p, f, x2, delta2);
+
+    let bounded_pointwise = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let lt_ty = d.lt(i, n);
+        let lt_fv = d.fresh_fvar();
+        let lt = d.kernel().fvar(lt_fv);
+
+        let sp1 = sample_point(d, p, x, delta1, i);
+        let sp2 = sample_point(d, p, x2, delta2, i);
+
+        // Both sample points inside `[aa, bb]`, via their OWN sub-interval.
+        let and1 = d.const_app(p.riemann_sample_in_bounds, &[x, y, m, i, hxy, lt]);
+        let x_le_sp1 = cle(d, p, x, sp1);
+        let sp1_le_y = cle(d, p, sp1, y);
+        let lo1 = d.const_app(logic.and_left, &[x_le_sp1, sp1_le_y, and1]);
+        let hi1 = d.const_app(logic.and_right, &[x_le_sp1, sp1_le_y, and1]);
+        let h_a_sp1 = d.lemma(p.le_trans, &[aa, x, sp1, hax, lo1]);
+        let h_sp1_b = d.lemma(p.le_trans, &[sp1, y, bb, hi1, hyb]);
+
+        let and2 = d.const_app(p.riemann_sample_in_bounds, &[x2, y2, m, i, hx2y2, lt]);
+        let x2_le_sp2 = cle(d, p, x2, sp2);
+        let sp2_le_y2 = cle(d, p, sp2, y2);
+        let lo2 = d.const_app(logic.and_left, &[x2_le_sp2, sp2_le_y2, and2]);
+        let hi2 = d.const_app(logic.and_right, &[x2_le_sp2, sp2_le_y2, and2]);
+        let h_a_sp2 = d.lemma(p.le_trans, &[aa, x2, sp2, hax2, lo2]);
+        let h_sp2_b = d.lemma(p.le_trans, &[sp2, y2, bb, hi2, hy2b]);
+
+        // h_pt : Equiv sp1 sp2.
+        let oi = d.const_app(p.of_nat, &[i]);
+        let sh1 = cmul(d, p, oi, delta1);
+        let sh2 = cmul(d, p, oi, delta2);
+        let refl_oi = d.lemma(p.equiv_refl, &[oi]);
+        let h_sh = d.lemma(p.mul_congr, &[oi, oi, delta1, delta2, refl_oi, h_delta]);
+        let h_pt = d.lemma(p.add_congr, &[x, x2, sh1, sh2, hex, h_sh]);
+
+        // h_f : Equiv (F sp1) (F sp2) -- the BOUNDED congruence, since `F` is
+        // uniformly continuous only on `[aa, bb]` and a global one does not
+        // exist for such an `F` (that is `congr_of_uniformly_continuous`'s
+        // whole reason for existing).
+        let h_f = d.lemma(
+            p.congr_of_uniformly_continuous,
+            &[
+                f, aa, bb, u, sp1, sp2, h_a_sp1, h_sp1_b, h_a_sp2, h_sp2_b, h_pt,
+            ],
+        );
+
+        let fz1 = d.apply(f, &[sp1]);
+        let fz2 = d.apply(f, &[sp2]);
+        let h_summand = d.lemma(p.mul_congr, &[fz1, fz2, delta1, delta2, h_f, h_delta]);
+
+        let with_lt = d.lam_fv(lt_fv, lt_ty, h_summand);
+        d.lam_fv(i_fv, nat, with_lt)
+    };
+
+    let congr = sum_range_congr_lt_proof(d, p, f_summand, g_summand, n);
+    d.apply(congr, &[bounded_pointwise])
+}
+
+#[cfg(test)]
+mod riemann_sum_congr_endpoints_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// Symbolic in `F`, both interval pairs, the outer interval, the witness
+    /// and the mesh count, closed into a real `Theorem` — so the claim is
+    /// checked by `Kernel::add_declaration`, not by `cargo check`, and against
+    /// genuinely free variables rather than literals (numerals reduce, and
+    /// reduction hides every defeq-shaped gap).
+    ///
+    /// The stated conclusion is written at the [`rsum`] type
+    /// (`Equiv (riemannSum F x y m) (riemannSum F x2 y2 m)`), NOT at the
+    /// `sumRange` type the proof term builds, so the test also pins that the
+    /// two are the same `Definition` body at the same hash-consed `ExprId`s.
+    #[test]
+    fn riemann_sum_congr_endpoints_proves_the_stated_equiv() {
+        crate::on_a_deep_stack(riemann_sum_congr_endpoints_proves_the_stated_equiv_body);
+    }
+
+    fn riemann_sum_congr_endpoints_proves_the_stated_equiv_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+        let nat = d.nat_ty();
+        let f_ty = fn_ty(&mut d, p);
+
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let aa_fv = d.fresh_fvar();
+        let aa = d.kernel().fvar(aa_fv);
+        let bb_fv = d.fresh_fvar();
+        let bb = d.kernel().fvar(bb_fv);
+        let u_ty = d.const_app(p.uniformly_continuous_on, &[f, aa, bb]);
+        let u_fv = d.fresh_fvar();
+        let u = d.kernel().fvar(u_fv);
+
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let x2_fv = d.fresh_fvar();
+        let x2 = d.kernel().fvar(x2_fv);
+        let y2_fv = d.fresh_fvar();
+        let y2 = d.kernel().fvar(y2_fv);
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+
+        let hxy_ty = cle(&mut d, p, x, y);
+        let hxy_fv = d.fresh_fvar();
+        let hxy = d.kernel().fvar(hxy_fv);
+        let hx2y2_ty = cle(&mut d, p, x2, y2);
+        let hx2y2_fv = d.fresh_fvar();
+        let hx2y2 = d.kernel().fvar(hx2y2_fv);
+        let hax_ty = cle(&mut d, p, aa, x);
+        let hax_fv = d.fresh_fvar();
+        let hax = d.kernel().fvar(hax_fv);
+        let hyb_ty = cle(&mut d, p, y, bb);
+        let hyb_fv = d.fresh_fvar();
+        let hyb = d.kernel().fvar(hyb_fv);
+        let hax2_ty = cle(&mut d, p, aa, x2);
+        let hax2_fv = d.fresh_fvar();
+        let hax2 = d.kernel().fvar(hax2_fv);
+        let hy2b_ty = cle(&mut d, p, y2, bb);
+        let hy2b_fv = d.fresh_fvar();
+        let hy2b = d.kernel().fvar(hy2b_fv);
+        let hex_ty = equiv(&mut d, p, x, x2);
+        let hex_fv = d.fresh_fvar();
+        let hex = d.kernel().fvar(hex_fv);
+        let hey_ty = equiv(&mut d, p, y, y2);
+        let hey_fv = d.fresh_fvar();
+        let hey = d.kernel().fvar(hey_fv);
+
+        let proof = riemann_sum_congr_endpoints(
+            &mut d, p, f, aa, bb, u, x, y, x2, y2, m, hxy, hx2y2, hax, hyb, hax2, hy2b, hex, hey,
+        );
+
+        let lhs = rsum(&mut d, p, f, x, y, m);
+        let rhs = rsum(&mut d, p, f, x2, y2, m);
+        // Non-vacuity: the two sides must be genuinely different terms. A
+        // conclusion that had collapsed to `Equiv X X` would be discharged by
+        // `equiv_refl` and would prove nothing about endpoint congruence,
+        // while still passing `add_declaration` below.
+        assert_ne!(
+            lhs, rhs,
+            "the two riemannSums must be distinct terms, or the theorem is `Equiv X X`"
+        );
+        let concl = equiv(&mut d, p, lhs, rhs);
+
+        let ty = {
+            let t = d.arrow(hey_ty, concl);
+            let t = d.arrow(hex_ty, t);
+            let t = d.arrow(hy2b_ty, t);
+            let t = d.arrow(hax2_ty, t);
+            let t = d.arrow(hyb_ty, t);
+            let t = d.arrow(hax_ty, t);
+            let t = d.arrow(hx2y2_ty, t);
+            let t = d.arrow(hxy_ty, t);
+            let t = d.pi_fv(m_fv, nat, t);
+            let t = d.pi_fv(y2_fv, carrier, t);
+            let t = d.pi_fv(x2_fv, carrier, t);
+            let t = d.pi_fv(y_fv, carrier, t);
+            let t = d.pi_fv(x_fv, carrier, t);
+            let t = d.arrow(u_ty, t);
+            let t = d.pi_fv(bb_fv, carrier, t);
+            let t = d.pi_fv(aa_fv, carrier, t);
+            d.pi_fv(f_fv, f_ty, t)
+        };
+        let value = {
+            let v = d.lam_fv(hey_fv, hey_ty, proof);
+            let v = d.lam_fv(hex_fv, hex_ty, v);
+            let v = d.lam_fv(hy2b_fv, hy2b_ty, v);
+            let v = d.lam_fv(hax2_fv, hax2_ty, v);
+            let v = d.lam_fv(hyb_fv, hyb_ty, v);
+            let v = d.lam_fv(hax_fv, hax_ty, v);
+            let v = d.lam_fv(hx2y2_fv, hx2y2_ty, v);
+            let v = d.lam_fv(hxy_fv, hxy_ty, v);
+            let v = d.lam_fv(m_fv, nat, v);
+            let v = d.lam_fv(y2_fv, carrier, v);
+            let v = d.lam_fv(x2_fv, carrier, v);
+            let v = d.lam_fv(y_fv, carrier, v);
+            let v = d.lam_fv(x_fv, carrier, v);
+            let v = d.lam_fv(u_fv, u_ty, v);
+            let v = d.lam_fv(bb_fv, carrier, v);
+            let v = d.lam_fv(aa_fv, carrier, v);
+            d.lam_fv(f_fv, f_ty, v)
+        };
+
+        let anon = d.kernel().anon();
+        let name = d.kernel().name_str(anon, "riemannSumCongrEndpointsSmoke");
+        let result = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(
+            result.is_ok(),
+            "riemann_sum_congr_endpoints must prove the stated Equiv at the riemannSum type: {:?}",
+            result.err()
         );
     }
 }
