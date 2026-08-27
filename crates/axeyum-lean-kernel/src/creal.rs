@@ -4859,6 +4859,19 @@ pub struct CRealPrelude {
     /// `CReal.maxRange_ub : ∀ f n i, Nat.le i n → le (f i) (maxRange f n)`.
     /// See `creal/supremum.rs`.
     pub max_range_ub: NameId,
+    /// `CReal.maxRange_transport : ∀ f g n n' e, (∀ i, Nat.le i n → Nat.le (e
+    /// i) n') → (∀ i, Nat.le i n → Equiv (f i) (g (e i))) → le (maxRange f n)
+    /// (maxRange g n')` — the general combinator route 2's nested-refinement
+    /// construction needs (rung 3): comparing two DIFFERENT `maxRange` folds
+    /// — different sampling function, different bound — related by an
+    /// index-embedding `e` under which `f`'s samples are `Equiv` to `g`'s.
+    /// **Not** an instance of [`Self::mono_of_le_succ`] (that combinator
+    /// holds the sampling function fixed); proved instead by induction on an
+    /// auxiliary index `k ≤ n`, base case via [`Self::max_range_ub`] plus
+    /// [`Self::le_congr`], step case via [`Self::max_le`] combining the
+    /// inductive hypothesis with a fresh `maxRange_ub` instance. See
+    /// `creal/supremum.rs`.
+    pub max_range_transport: NameId,
     /// `CReal.meshLevelCount : Nat → Nat` — the geometric (doubling) mesh-count
     /// schedule route 2's nested refinement runs on: `meshLevelCount 0 :=
     /// 0`, `meshLevelCount (succ j) := succ (add (meshLevelCount j)
@@ -5403,6 +5416,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         max_range_self_le: kernel.name_str(creal, "maxRange_self_le"),
         max_range_mono: kernel.name_str(creal, "maxRange_mono"),
         max_range_ub: kernel.name_str(creal, "maxRange_ub"),
+        max_range_transport: kernel.name_str(creal, "maxRange_transport"),
         mesh_level_count: kernel.name_str(creal, "meshLevelCount"),
         mesh_level_count_zero: kernel.name_str(creal, "meshLevelCount_zero"),
         mesh_level_count_succ: kernel.name_str(creal, "meshLevelCount_succ"),
@@ -9263,6 +9277,19 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.max_range_zero,
         ],
         run: supremum::declare_max_range,
+    },
+    BuildStep {
+        label: "supremum::declare_max_range_transport",
+        requires: &[
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.max_le,
+            |p: CRealPrelude| p.max_range,
+            |p: CRealPrelude| p.max_range_ub,
+        ],
+        provides: &[|p: CRealPrelude| p.max_range_transport],
+        run: supremum::declare_max_range_transport,
     },
     BuildStep {
         label: "supremum::declare_mesh_level_count",
