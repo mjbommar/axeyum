@@ -4317,6 +4317,192 @@ pub(super) fn geom_cauchy_ordered_of_gap_self_application(
 ///
 /// Returns the trusted gate's rejection. An `Err` here means the kernel
 /// **refused** a proof, not that a script gave up.
+/// `CReal.geomCauchyBodyOfGap`. See the field documentation
+/// ([`super::CRealPrelude::geom_cauchy_body_of_gap`]) for the statement and
+/// why the ORDER-FREE, still-raw form is the one a `Type`-valued consumer
+/// actually takes.
+///
+/// Verbatim in technique to `exponential.rs::declare_geom_cauchy`'s own
+/// `Nat.le_total` case split against `geomCauchyOrderedHalf`, here against
+/// [`declare_geom_cauchy_ordered_of_gap`] and at the symbolic modulus
+/// [`geom_cauchy_of_lt_k_final`] rather than the literal `7` -- and, the one
+/// difference that matters, **stopping before that theorem's
+/// `Exists.intro`**. `declare_geom_cauchy` wraps this same body into
+/// `CReal.Cauchy`, a `Prop` existential, which `Exists.rec` cannot then
+/// unwrap into a `Type`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_geom_cauchy_body_of_gap(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let rat_carrier = rat_ty(d);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let zero_c = czero(d, p);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let hx0_ty = cle(d, p, zero_c, x);
+    let hx0_fv = d.fresh_fvar();
+    let hx0 = d.kernel().fvar(hx0_fv);
+
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+    let q_emb = embed(d, p, q);
+    let x_plus_q = cadd(d, p, x, q_emb);
+    let hq_ty = cle(d, p, x_plus_q, one_c);
+    let hq_fv = d.fresh_fvar();
+    let hq = d.kernel().fvar(hq_fv);
+
+    let k3_fv = d.fresh_fvar();
+    let k3 = d.kernel().fvar(k3_fv);
+    let hpb_ty = d.const_app(p.pos_bound, &[q_emb, k3]);
+    let hpb_fv = d.fresh_fvar();
+    let hpb = d.kernel().fvar(hpb_fv);
+
+    let neg_x = cneg(d, p, x);
+    let a_real = cadd(d, p, one_c, neg_x);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let h_ty = pos_bound_of(d, p, a_real, k);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let f = pow_fn(d, p, x);
+    let sum_f = d.const_app(p.sum_range, &[f]);
+    let succ_k = d.succ(k);
+    let k1 = d.succ(k3);
+    let bigk = NatOps::mul(d, succ_k, k1);
+    let k_final = geom_cauchy_of_lt_k_final(d, bigk);
+
+    let case_proof = {
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+
+        let sum_f_m = d.const_app(p.sum_range, &[f, m]);
+        let sum_f_n = d.const_app(p.sum_range, &[f, n]);
+        let y_m = sample(d, p, sum_f_m, m);
+        let z_n = sample(d, p, sum_f_n, n);
+        let diff_mn = rsub(d, rat, y_m, z_n);
+        let bm = div_succ_var(d, p, k_final, m);
+        let bn = div_succ_var(d, p, k_final, n);
+        let bound_mn = radd(d, bm, bn);
+        let claim_mn = within(d, p, diff_mn, bound_mn);
+
+        let left_ty = d.le(m, n);
+        let right_ty = d.le(n, m);
+        let total_mn = {
+            let name = d.prelude().le_total;
+            d.const_app(name, &[m, n])
+        };
+
+        let body = d.or_elim(
+            left_ty,
+            right_ty,
+            claim_mn,
+            total_mn,
+            // m <= n: the ordered theorem at (a := m, b := n) gives
+            // `Within (z_n - y_m) (bn + bm)`; flip the difference, then
+            // reorder the bound.
+            &|d, hmn| {
+                let raw = d.lemma(
+                    p.geom_cauchy_ordered_of_gap,
+                    &[x, hx0, q, hq, k3, hpb, k, h, m, n, hmn],
+                );
+                let bn2 = div_succ_var(d, p, k_final, n);
+                let bm2 = div_succ_var(d, p, k_final, m);
+                let bound_nm = radd(d, bn2, bm2);
+                let flipped = within_symm(d, p, z_n, y_m, bound_nm, raw);
+                let comm_eq = d.lemma(rat.add_comm, &[bn2, bm2]);
+                rat_eq_rewrite(d, bound_nm, bound_mn, comm_eq, flipped, &|d, t| {
+                    within(d, p, diff_mn, t)
+                })
+            },
+            // n <= m: the ordered theorem at (a := n, b := m) lands exactly on
+            // `Within (y_m - z_n) (bm + bn)` -- no rewrite.
+            &|d, hnm| {
+                d.lemma(
+                    p.geom_cauchy_ordered_of_gap,
+                    &[x, hx0, q, hq, k3, hpb, k, h, n, m, hnm],
+                )
+            },
+        );
+        let over_n = d.lam_fv(n_fv, nat, body);
+        d.lam_fv(m_fv, nat, over_n)
+    };
+
+    let claim = sum_range_cauchy_body(d, p, sum_f, k_final);
+
+    let ty = {
+        let with_h = d.pi_fv(h_fv, h_ty, claim);
+        let with_k = d.pi_fv(k_fv, nat, with_h);
+        let with_hpb = d.pi_fv(hpb_fv, hpb_ty, with_k);
+        let with_k3 = d.pi_fv(k3_fv, nat, with_hpb);
+        let with_hq = d.pi_fv(hq_fv, hq_ty, with_k3);
+        let with_q = d.pi_fv(q_fv, rat_carrier, with_hq);
+        let with_hx0 = d.pi_fv(hx0_fv, hx0_ty, with_q);
+        d.pi_fv(x_fv, carrier, with_hx0)
+    };
+    let value = {
+        let with_h = d.lam_fv(h_fv, h_ty, case_proof);
+        let with_k = d.lam_fv(k_fv, nat, with_h);
+        let with_hpb = d.lam_fv(hpb_fv, hpb_ty, with_k);
+        let with_k3 = d.lam_fv(k3_fv, nat, with_hpb);
+        let with_hq = d.lam_fv(hq_fv, hq_ty, with_k3);
+        let with_q = d.lam_fv(q_fv, rat_carrier, with_hq);
+        let with_hx0 = d.lam_fv(hx0_fv, hx0_ty, with_q);
+        d.lam_fv(x_fv, carrier, with_hx0)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.geom_cauchy_body_of_gap,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.geomCauchyBody16Over25` -- [`declare_geom_cauchy_body_of_gap`] at
+/// the concrete ratio `16/25`, sharing [`ratio_16_over_25_witnesses`] with
+/// [`declare_geom_cauchy_ordered_16_over_25`].
+///
+/// This is the object `CReal.weierstrassMTest` takes as its `hcauchy`
+/// argument at a dominating series of ratio `16/25`, and the first such
+/// object in this kernel at any ratio other than `1/2`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_geom_cauchy_body_16_over_25(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let (x, hx0, q_rat, hq, n24, hpb_q, h) = ratio_16_over_25_witnesses(d, p);
+    let value = d.lemma(
+        p.geom_cauchy_body_of_gap,
+        &[x, hx0, q_rat, hq, n24, hpb_q, n24, h],
+    );
+
+    let f = pow_fn(d, p, x);
+    let sum_f = d.const_app(p.sum_range, &[f]);
+    let succ24 = d.succ(n24);
+    let bigk = NatOps::mul(d, succ24, succ24);
+    let k_final = geom_cauchy_of_lt_k_final(d, bigk);
+    let ty = sum_range_cauchy_body(d, p, sum_f, k_final);
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.geom_cauchy_body_16_over_25,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 /// The three rational obligations `CReal.geomCauchyOrderedOfGap` needs at
 /// the ratio `16/25`, as `(x, hx0, q_rat, hq, k3 = 24, hpb_q, h)`.
 ///
@@ -4536,5 +4722,7 @@ pub(super) fn declare_geom_cauchy_of_lt_family(
     declare_geom_cauchy_of_lt_ordered(d, p)?;
     declare_geom_cauchy_of_lt(d, p)?;
     declare_geom_cauchy_ordered_of_gap(d, p)?;
-    declare_geom_cauchy_ordered_16_over_25(d, p)
+    declare_geom_cauchy_body_of_gap(d, p)?;
+    declare_geom_cauchy_ordered_16_over_25(d, p)?;
+    declare_geom_cauchy_body_16_over_25(d, p)
 }

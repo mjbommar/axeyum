@@ -2674,6 +2674,32 @@ pub struct CRealPrelude {
     /// See `geometric.rs::declare_geom_cauchy_ordered_16_over_25` for how the
     /// three rational obligations are discharged at one common denominator.
     pub geom_cauchy_ordered_16_over_25: NameId,
+    /// `CReal.geomCauchyBodyOfGap : ∀ x, le zero x → ∀ (q : Rat), le (add x
+    /// (ofRat q)) one → ∀ (k3 : Nat), PosBound (ofRat q) k3 → ∀ k (h :
+    /// PosBound (add one (neg x)) k) m n, Within (seq (sumRange (pow x) m) m
+    /// − seq (sumRange (pow x) n) n) (natDivSucc N m + natDivSucc N n)`, `N`
+    /// as in [`Self::geom_cauchy_ordered_of_gap`] — that theorem with the `m
+    /// ≤ n` side condition removed by `Nat.le_total`, and **still raw**.
+    ///
+    /// This is the shape `series.rs::sum_range_cauchy_body` builds, which is
+    /// exactly `CReal.weierstrassMTest`'s `hcauchy` parameter and exactly
+    /// what `CReal.mk` needs for a regularity argument. It is what
+    /// [`Self::geom_cauchy`] proves internally and then throws away: that
+    /// theorem's last step is an `Exists.intro` into [`Self::cauchy`], a
+    /// `Prop`, and `Exists.rec` cannot eliminate a `Prop` into a `Type`.
+    /// Stopping one step earlier is the whole difference.
+    pub geom_cauchy_body_of_gap: NameId,
+    /// `CReal.geomCauchyBody16Over25 : ∀ m n, Within (seq (sumRange (pow
+    /// (ofRat (natDivSucc 16 24))) m) m − seq (sumRange (pow (ofRat
+    /// (natDivSucc 16 24))) n) n) (natDivSucc N m + natDivSucc N n)`,
+    /// `N := ((25*25)+1)+7` — [`Self::geom_cauchy_body_of_gap`] at the
+    /// concrete ratio `16/25`.
+    ///
+    /// **The first `weierstrassMTest`-shaped raw Cauchy witness in this
+    /// kernel at a ratio other than `1/2`.** See
+    /// [`Self::geom_cauchy_ordered_16_over_25`] for why `16/25` and not
+    /// `9/16`.
+    pub geom_cauchy_body_16_over_25: NameId,
     /// `CReal.geomCauchyOfLt : ∀ x, le zero x → lt x one → ∀ k (h : PosBound
     /// (add one (neg x)) k), Cauchy (sumRange (fun n => pow x n))` —
     /// geometric-series Cauchyness at a GENERAL ratio `0 ≤ x < 1`, the
@@ -5479,6 +5505,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         geom_cauchy_of_lt_ordered: kernel.name_str(creal, "geomCauchyOfLtOrdered"),
         geom_cauchy_ordered_of_gap: kernel.name_str(creal, "geomCauchyOrderedOfGap"),
         geom_cauchy_ordered_16_over_25: kernel.name_str(creal, "geomCauchyOrdered16Over25"),
+        geom_cauchy_body_of_gap: kernel.name_str(creal, "geomCauchyBodyOfGap"),
+        geom_cauchy_body_16_over_25: kernel.name_str(creal, "geomCauchyBody16Over25"),
         geom_cauchy_of_lt: kernel.name_str(creal, "geomCauchyOfLt"),
         geom_scaled_cauchy_of_lt: kernel.name_str(creal, "geomScaledCauchyOfLt"),
         sum_range_ratio_test: kernel.name_str(creal, "sumRangeRatioTest"),
@@ -9063,6 +9091,8 @@ const STEPS: &[BuildStep] = &[
         provides: &[
             |p: CRealPrelude| p.geom_cauchy_of_lt,
             |p: CRealPrelude| p.geom_cauchy_of_lt_ordered,
+            |p: CRealPrelude| p.geom_cauchy_body_16_over_25,
+            |p: CRealPrelude| p.geom_cauchy_body_of_gap,
             |p: CRealPrelude| p.geom_cauchy_ordered_16_over_25,
             |p: CRealPrelude| p.geom_cauchy_ordered_of_gap,
         ],

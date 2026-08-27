@@ -80,6 +80,16 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.geom_cauchy_ordered_16_over_25,
             "theorem",
         ),
+        (
+            "CReal.geomCauchyBodyOfGap",
+            p.geom_cauchy_body_of_gap,
+            "theorem",
+        ),
+        (
+            "CReal.geomCauchyBody16Over25",
+            p.geom_cauchy_body_16_over_25,
+            "theorem",
+        ),
         ("CReal.geomCauchyOfLt", p.geom_cauchy_of_lt, "theorem"),
     ]
 }
