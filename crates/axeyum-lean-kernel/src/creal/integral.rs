@@ -285,6 +285,50 @@
 //! No declaration was added by this entry. Nothing above is a kernel
 //! rejection — the construction was not attempted at the term level because
 //! the two prerequisite facts it would need to cite do not exist to cite.
+//!
+//! ## `CReal.integral_split` — checked 2026-08-27 (later the same day), fact
+//! (1) above landed as [`super::crossing::declare_crossing_close`]
+//!
+//! A second lane landed [`super::CRealPrelude::crossing_index`] /
+//! `crossingUpper` / `crossingLower` / `crossingSampleUpper` /
+//! `crossingSampleLower` in `creal/crossing.rs` — the Archimedean
+//! crossing-index fact (1) the entry above named as the first prerequisite,
+//! reusable outside this file and mentioning no `riemannSum`. This entry
+//! landed one bounded slice of (2), the cross-width term comparison: **the
+//! single-block bound**, [`super::CRealPrelude::crossing_close`] —
+//! `|F(c) − F(sample_point a Δ (crossingIndex a c Δ))| ≤ 1/(e+1)`, via
+//! `crossingSampleUpper`/`crossingSampleLower` (two one-sided bounds, moved
+//! across the `≤` by two small new local order lemmas,
+//! `crossing.rs::le_sub_of_le_add`/`le_sub_of_add_le_left`) combined by
+//! `CReal.abs_le` into exactly `UniformlyContinuousOn.spec`'s own hypothesis
+//! shape.
+//!
+//! **`crossing_close` takes two facts as explicit hypotheses rather than
+//! deriving them, and both are genuinely separate, not-yet-attempted
+//! sub-developments — not simplifications of what it proves:**
+//!
+//! 1. The Archimedean smallness of the two crossing slacks (`≈2Δ`, `≈1.5Δ`)
+//!    relative to `UniformlyContinuousOn`'s modulus at the target accuracy —
+//!    this needs a SCALED analogue of [`declare_mesh_le_of_ge`] (which
+//!    bounds a mesh step `Δ_m` itself by `1/(n+1)` for `m` past a threshold,
+//!    never a small constant MULTIPLE of `Δ_m`), applied to whichever mesh
+//!    count produces `Δ := Δ_ab` in the caller's actual setting.
+//! 2. `samplePt`'s own domain membership (`a ≤ samplePt ≤ b`) — needs
+//!    bounding `crossingIndex` against a mesh count `m` (i.e. `crossingIndex
+//!    a c Δ_ab ≤ m` when `Δ_ab := (b−a)/(m+1)`), which `crossing.rs` does
+//!    not attempt (it is deliberately interval-count-agnostic — see that
+//!    file's own module documentation on where it generalizes).
+//!
+//! Once both exist for a caller's concrete `a, b, m_ab` setting,
+//! `crossing_close` gives EXACTLY the per-block estimate `integral_split`
+//! needs for the crossing block's boundary sample; the roadmap step after
+//! that (unattempted here) is summing an analogous bound across every index
+//! in the crossing block via `sumRange`/`sum_range_le`-style machinery, as
+//! the task briefing for this lane named as the (optional) second slice.
+//! `creal_prelude_builds` unaffected (~20 s before and after — `Δ` stays a
+//! free `Rat` fvar throughout `crossing_close`, never a mesh-derived
+//! `Nat.mul`/`Nat.add` term, so none of the concrete-witness/lazy-delta
+//! traps this file's own history warns about apply here).
 
 use super::completeness::half_shift_le;
 use super::convergence::{
