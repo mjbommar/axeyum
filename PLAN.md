@@ -1295,6 +1295,16 @@ restrictions are UNSAT and a 20-point restriction remained undecided after 120 s
 an upper bound. Fresh exact web, arXiv, and Scholar-oriented searches found no indexed matching
 404 bound, which remains dated negative retrieval rather than proof of priority.
 
+**Reusable colouring-prefix restriction, 2026-08-26.** ADR-0594 moves the successful repair
+method out of shell DIMACS arithmetic. `ColouringProblem::encode_with_witness_prefix` appends
+typed unit clauses only after checking problem length, witness length, and palette;
+`rado_dump_cnf` exposes it with paired explicit arguments. Tests pin the untouched canonical
+clause prefix, exact units, satisfying assignment, and refusals. The new API reproduces the
+discovery-time 404/50-prefix formula byte-for-byte at SHA-256
+`9e1f86ee99658b1448306381f9043027f5818602dfc1c1023da136ef2051f4e4`. Its contract states the
+critical asymmetry: restricted SAT may be promoted only after unrestricted replay, while
+restricted UNSAT is never an upper bound.
+
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
 external-certificate replay runner for all five packages.  It validates checker and artifact
 bytes before execution, hard-kills a timed-out process session, requires an observable finding

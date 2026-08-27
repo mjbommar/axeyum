@@ -355,6 +355,54 @@ impl ColouringProblem {
         Ok(formula)
     }
 
+    /// Encodes the canonical problem and fixes the first `prefix_points` to a
+    /// supplied witness's colours.
+    ///
+    /// This is a search restriction, not an equivalent encoding: UNSAT proves
+    /// only that this particular prefix cannot extend. A SAT model remains a
+    /// model of the canonical formula because this method only adds unit
+    /// clauses. Callers promoting a model should still replay it against
+    /// [`Self::encode`] without these units.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SearchError::WitnessLength`] when either the problem or the
+    /// witness is shorter than `prefix_points`, and
+    /// [`SearchError::InvalidParameter`] when the palettes differ.
+    pub fn encode_with_witness_prefix(
+        &self,
+        witness: &Witness,
+        prefix_points: usize,
+    ) -> Result<CnfFormula, SearchError> {
+        if prefix_points > self.points {
+            return Err(SearchError::WitnessLength {
+                expected: prefix_points,
+                found: self.points,
+            });
+        }
+        if prefix_points > witness.points() {
+            return Err(SearchError::WitnessLength {
+                expected: prefix_points,
+                found: witness.points(),
+            });
+        }
+        if witness.colours() != self.colours {
+            return Err(SearchError::InvalidParameter {
+                what: format!(
+                    "witness has {} colours, problem has {}",
+                    witness.colours(),
+                    self.colours
+                ),
+            });
+        }
+
+        let mut formula = self.encode()?;
+        for (offset, &colour) in witness.colouring().iter().take(prefix_points).enumerate() {
+            formula.add_clause(CnfClause::new(vec![self.literal(offset + 1, colour)?]))?;
+        }
+        Ok(formula)
+    }
+
     /// Clause group 4, restricted to blocks of interchangeable colours.
     ///
     /// For a block `[c_0 < c_1 < … < c_{m-1}]` this orders the block's colour
@@ -692,6 +740,54 @@ mod tests {
         let assignment = problem.witness_assignment(&canonical).unwrap();
         assert_eq!(problem.decode_model(&assignment), Ok(canonical));
         assert_eq!(problem.encode().unwrap().evaluate(&assignment), Ok(true));
+    }
+
+    #[test]
+    fn witness_prefix_encoding_only_appends_the_requested_units() {
+        let problem = ColouringProblem::new(4, 3, Vec::new()).unwrap();
+        let witness = Witness::new(3, vec![1, 2, 3, 1]).unwrap();
+        let canonical = problem.encode().unwrap();
+        let guided = problem.encode_with_witness_prefix(&witness, 2).unwrap();
+
+        assert_eq!(
+            &guided.clauses()[..canonical.clauses().len()],
+            canonical.clauses()
+        );
+        assert_eq!(guided.clauses().len(), canonical.clauses().len() + 2);
+        assert_eq!(
+            guided.clauses()[canonical.clauses().len()].lits(),
+            &[problem.literal(1, 1).unwrap()]
+        );
+        assert_eq!(
+            guided.clauses()[canonical.clauses().len() + 1].lits(),
+            &[problem.literal(2, 2).unwrap()]
+        );
+        let assignment = problem.witness_assignment(&witness).unwrap();
+        assert_eq!(guided.evaluate(&assignment), Ok(true));
+    }
+
+    #[test]
+    fn witness_prefix_encoding_rejects_bad_lengths_and_palette() {
+        let problem = ColouringProblem::new(4, 3, Vec::new()).unwrap();
+        let short = Witness::new(3, vec![1, 2]).unwrap();
+        assert_eq!(
+            problem.encode_with_witness_prefix(&short, 3),
+            Err(SearchError::WitnessLength {
+                expected: 3,
+                found: 2
+            })
+        );
+        assert!(matches!(
+            problem.encode_with_witness_prefix(&Witness::new(2, vec![1, 2]).unwrap(), 2),
+            Err(SearchError::InvalidParameter { .. })
+        ));
+        assert_eq!(
+            problem.encode_with_witness_prefix(&short, 5),
+            Err(SearchError::WitnessLength {
+                expected: 5,
+                found: 4
+            })
+        );
     }
 
     #[test]
