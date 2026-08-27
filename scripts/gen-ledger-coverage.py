@@ -160,6 +160,18 @@ OURS_ESTABLISHED = {"proved", "computed"}
 STATEMENT_NAME_RE = re.compile(r"^(?:theorem\s+|def\s+|axiom\s+)?([A-Za-z][A-Za-z0-9_.']*)\s*:")
 
 
+def is_curated(fact: dict[str, Any]) -> bool:
+    """True if the fact is curated (not marked as generated-unreviewed).
+
+    Facts without a curation field are counted as curated (they were
+    deliberately hand-written before the field was introduced).
+    """
+    provenance = fact.get("provenance") or {}
+    curation = provenance.get("curation")
+    # If curation field is missing or not "generated-unreviewed", it's curated
+    return curation != "generated-unreviewed"
+
+
 def resolve_theorem_name(fact: dict[str, Any]) -> tuple[str | None, str | None]:
     """`(name, tier)` -- `tier` is `"field"`, `"statement"` or
     `"checker_command"` when `name` is not None, else `None`.
@@ -292,12 +304,16 @@ class JoinResult:
     def __init__(self) -> None:
         # theorem name -> sorted list of fact ids claiming it
         self.registered: dict[str, list[str]] = {}
+        # theorem name -> sorted list of fact ids with curated provenance
+        self.curated: dict[str, list[str]] = {}
         self.facts_scanned = 0
         self.kernel_route_established = 0
         self.via_field = 0
         self.via_statement = 0
         self.via_checker_command = 0
         self.unresolved: list[str] = []
+        self.curated_facts = 0
+        self.unreviewed_facts = 0
 
 
 def join(facts: dict[str, dict[str, Any]]) -> JoinResult:
@@ -321,7 +337,17 @@ def join(facts: dict[str, dict[str, Any]]) -> JoinResult:
         else:
             result.via_checker_command += 1
         result.registered.setdefault(name, []).append(fid)
+
+        # Track curated facts separately
+        if is_curated(fact):
+            result.curated.setdefault(name, []).append(fid)
+            result.curated_facts += 1
+        else:
+            result.unreviewed_facts += 1
+
     for names in result.registered.values():
+        names.sort()
+    for names in result.curated.values():
         names.sort()
     return result
 
@@ -344,14 +370,21 @@ def build_document(footprints: dict[str, int], join_result: JoinResult) -> dict[
     by_prelude_out: dict[str, Any] = {}
     for prelude in sorted(by_prelude):
         bucket = by_prelude[prelude]
+        # Count curated facts within this prelude's registered
+        curated_in_prelude = sum(
+            1 for name in bucket["registered"]
+            if name in join_result.curated
+        )
         by_prelude_out[prelude] = {
             "kernel_theorems": bucket["kernel_theorems"],
             "registered_count": len(bucket["registered"]),
+            "curated_count": curated_in_prelude,
             "unregistered_count": len(bucket["unregistered"]),
             "unregistered": sorted(bucket["unregistered"]),
         }
 
     registered_names = sorted(n for n in footprints if n in join_result.registered)
+    curated_names = sorted(n for n in footprints if n in join_result.curated)
     unregistered_names = sorted(n for n in footprints if n not in join_result.registered)
 
     # Facts that named a kernel theorem the denominator does not contain --
@@ -391,6 +424,7 @@ def build_document(footprints: dict[str, int], join_result: JoinResult) -> dict[
             "overall": {
                 "kernel_theorems": len(footprints),
                 "registered": len(registered_names),
+                "curated": len(curated_names),
                 "unregistered": len(unregistered_names),
             },
             "by_prelude": by_prelude_out,
@@ -404,6 +438,8 @@ def build_document(footprints: dict[str, int], join_result: JoinResult) -> dict[
             "resolved_via_statement_name": join_result.via_statement,
             "resolved_via_checker_command_fallback": join_result.via_checker_command,
             "unresolved_fact_ids": sorted(join_result.unresolved),
+            "curated_facts_claimed": join_result.curated_facts,
+            "unreviewed_generated_facts": join_result.unreviewed_facts,
         },
     }
     return document
@@ -472,7 +508,9 @@ def main() -> int:
         "LEDGER-COVERAGE|"
         f"kernel_theorems={overall['kernel_theorems']}|"
         f"registered={overall['registered']}|"
+        f"curated={overall['curated']}|"
         f"unregistered={overall['unregistered']}|"
+        f"curation_convention=absent-field-is-curated|"
         f"bytes={len(rendered.encode('utf-8'))}"
     )
     return 0
