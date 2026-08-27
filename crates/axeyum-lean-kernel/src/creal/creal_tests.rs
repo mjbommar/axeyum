@@ -3988,6 +3988,134 @@ fn riemann_sum_split_exact_at_id_zero_three_one_three_body() {
         });
 }
 
+/// **Mandatory concrete instantiation for
+/// `CReal.riemannSum_split_scale_invariant`, with a negative (swapped-count)
+/// control.** `a := 0`, `b := 3`, `m_ac0 := 0`, `m_cb0 := 1` (so `n_ac0 :=
+/// 1`, `n_cb0 := 2`, `m_ab0 := 2`, `delta_ab0 := 3 * (1/3) = 1`, `c_0 := 0 +
+/// 1*1 = 1`), `k := 1` (so, via `succ_mul_succ`, `m_ac_k := 1`, `m_cb_k :=
+/// 3`, `n_ac_k := 2`, `m_ab_k := 5`, `delta_ab_k := 3 * (1/6) = 0.5`, `c_k :=
+/// 0 + 2*0.5 = 1`) — the SAME numeric case as this module's own hand
+/// computation for `riemannSum_split_exact`'s aligned family (`q := 1/3, k :=
+/// 2`), read one level up: two DIFFERENT mesh counts computing the SAME
+/// split point. Positive: the kernel accepts the theorem applied at these
+/// exact arguments against the INDEPENDENTLY rebuilt expected type `Equiv
+/// c_k c_0`. Negative: the SAME proof term is asserted against a
+/// deliberately WRONG conclusion built with `n_cb0` (`= 2`) in place of
+/// `n_ac0` inside `c_0`'s own formula — genuinely a different concrete value
+/// (`2` vs `1`), not a vacuous or symbolic swap, so no risk of the
+/// unbounded-typechecker cost this file's own `riemannSum_split_exact` test
+/// documents and avoids.
+#[test]
+fn riemann_sum_split_scale_invariant_at_zero_three_zero_one_one() {
+    crate::on_a_deep_stack(riemann_sum_split_scale_invariant_at_zero_three_zero_one_one_body);
+}
+
+fn riemann_sum_split_scale_invariant_at_zero_three_zero_one_one_body() {
+    use crate::int_prelude::ops::IntDev;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let two_c = d.const_app(p.add, &[one_c, one_c]);
+    let three_c = d.const_app(p.add, &[two_c, one_c]);
+
+    let m_ac0 = d.num(0);
+    let m_cb0 = d.num(1);
+    let k = d.num(1);
+
+    let proof = d.lemma(
+        p.riemann_sum_split_scale_invariant,
+        &[zero_c, three_c, m_ac0, m_cb0, k],
+    );
+
+    // Independently rebuilt expected type, using the SAME public-API recipe
+    // (`p.add`/`p.neg`/`p.mul`/`p.of_nat`/`p.rat.nat_div_succ`/
+    // `super::embed`) `riemannSum_split_exact`'s own concrete test above
+    // uses -- `width_of`/`delta_of` are private to `integral.rs`, not
+    // visible from this sibling module.
+    let width_ab = {
+        let neg_a = d.const_app(p.neg, &[zero_c]);
+        d.const_app(p.add, &[three_c, neg_a])
+    };
+    let one_nat = d.num(1);
+
+    // c_0 at (m_ac0 := 0, m_cb0 := 1): n_ac0 := 1, m_ab0 := 2.
+    let n_ac0 = d.num(1);
+    let n_cb0 = d.num(2);
+    let m_ab0 = d.num(2);
+    let frac_ab0 = d.const_app(p.rat.nat_div_succ, &[one_nat, m_ab0]);
+    let embed_ab0 = super::embed(&mut d, p, frac_ab0);
+    let delta_ab0 = d.const_app(p.mul, &[width_ab, embed_ab0]);
+    let on_ac0 = d.const_app(p.of_nat, &[n_ac0]);
+    let w0 = d.const_app(p.mul, &[on_ac0, delta_ab0]);
+    let c_0 = d.const_app(p.add, &[zero_c, w0]);
+
+    // c_k at (m_ac_k := 1, m_cb_k := 3), i.e. `succ_mul_succ(0,1).0 = 1`,
+    // `succ_mul_succ(1,1).0 = 3`: n_ac_k := 2, m_ab_k := add(2,3) = 5.
+    let n_ac_k = d.num(2);
+    let m_ab_k = d.num(5);
+    let frac_ab_k = d.const_app(p.rat.nat_div_succ, &[one_nat, m_ab_k]);
+    let embed_ab_k = super::embed(&mut d, p, frac_ab_k);
+    let delta_ab_k = d.const_app(p.mul, &[width_ab, embed_ab_k]);
+    let on_ac_k = d.const_app(p.of_nat, &[n_ac_k]);
+    let w_k = d.const_app(p.mul, &[on_ac_k, delta_ab_k]);
+    let c_k = d.const_app(p.add, &[zero_c, w_k]);
+
+    let expected_ty = super::equiv(&mut d, p, c_k, c_0);
+
+    // Negative control built BEFORE any `add_declaration` call below, since
+    // `d` holds `kernel` mutably borrowed for as long as it is in scope --
+    // asserted against a FALSE conclusion that uses `n_cb0` (= 2) instead of
+    // `n_ac0` (= 1) inside `c_0`'s own formula -- genuinely a different
+    // concrete value (`w0_wrong = 2*1 = 2` vs the true `w0 = 1*1 = 1`),
+    // all-concrete (no symbolic swap), so this is exactly the discriminating
+    // instance the positive check below cannot rule out on its own.
+    let on_cb0 = d.const_app(p.of_nat, &[n_cb0]);
+    let w0_wrong = d.const_app(p.mul, &[on_cb0, delta_ab0]);
+    let c_0_wrong = d.const_app(p.add, &[zero_c, w0_wrong]);
+    let false_ty = super::equiv(&mut d, p, c_k, c_0_wrong);
+
+    let anon = d.kernel().anon();
+    let name_ok = d.kernel().name_str(
+        anon,
+        "__riemann_sum_split_scale_invariant_at_zero_three_zero_one_one_ok",
+    );
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name: name_ok,
+            uparams: vec![],
+            ty: expected_ty,
+            value: proof,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "riemannSum_split_scale_invariant at a := 0, b := 3, \
+                 m_ac0 := 0, m_cb0 := 1, k := 1 did NOT type-check against \
+                 the independently rebuilt expected statement `Equiv c_k \
+                 c_0`: {error:?}"
+            )
+        });
+
+    let name_bad = d.kernel().name_str(
+        anon,
+        "__riemann_sum_split_scale_invariant_at_zero_three_zero_one_one_bad",
+    );
+    let result_bad = d.kernel().add_declaration(Declaration::Theorem {
+        name: name_bad,
+        uparams: vec![],
+        ty: false_ty,
+        value: proof,
+    });
+    assert!(
+        result_bad.is_err(),
+        "the SAME proof term must be REFUSED against the FALSE conclusion \
+         built with n_cb0 in place of n_ac0 (genuinely different concrete \
+         values, 2 vs 1)"
+    );
+}
+
 /// **Mandatory computation test for `CReal.ofNat_le`.** Instantiates it at
 /// explicit small naturals `i := 1`, `j := 3` against a CONCRETE
 /// `Nat.le 1 3` witness built from `Nat.le_intro 1 3 2 (rfl : 1+2=3)` — not a

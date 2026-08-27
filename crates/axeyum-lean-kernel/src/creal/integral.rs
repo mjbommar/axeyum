@@ -13614,6 +13614,544 @@ pub(super) fn declare_riemann_sum_split_exact(
     })
 }
 
+// --- `CReal.integral_split`, gap 1: the accuracy-parameterized mesh family
+// and its `c`-independence ----------------------------------------------
+//
+// `riemannSum_split_exact`'s split point `c := a + (ofNat (succ m_ac)) *
+// delta_of a b (add (succ m_ac) m_cb)` depends on the CHOSEN counts
+// `(m_ac, m_cb)`, not just on their ratio. `riemannSum_integral_close`
+// (well above) needs the mesh count to clear an accuracy-`e`-dependent
+// Archimedean threshold on ALL THREE intervals simultaneously. The natural
+// family fixes a ratio once (`m_ac0`/`m_cb0`) and scales BOTH sub-counts by
+// the SAME factor `Nat.succ k`, via [`succ_mul_succ`] (so `succ (m_ac at k)
+// = (succ m_ac0)*(succ k)` EXACTLY, not merely close, and likewise for
+// `m_cb`) — and this section shows the resulting `c` does not move at all
+// as `k` grows, so `k` is free to be chosen purely to satisfy the accuracy
+// threshold, with no back-reaction on which split point the family
+// approximates.
+//
+// The pure `Nat`/`Rat` half of the argument (`delta_of a b m` scales down by
+// EXACTLY `1/(succ k)` when `m` is refined by [`succ_mul_succ`]) is isolated
+// in [`mesh_scale_by_succ_k`], via [`CRealPrelude::mesh_reciprocal_mul`] (the
+// exact reciprocal-mesh identity) and [`mesh_inverse_identity`] (cancelling
+// the introduced `succ k` factor back out) — the same two pieces
+// `riemannSum_cauchy`'s own common-refinement chain already leans on,
+// reused rather than re-derived.
+
+/// Given `a, b, m_ab0, k : Nat`/`CReal`, returns `(m_ab_prime, proof)` where
+/// `m_ab_prime := `[`succ_mul_succ`]`(m_ab0, k).0` (so `Nat.succ m_ab_prime`
+/// is definitionally `(Nat.succ m_ab0)*(Nat.succ k)`) and
+///
+/// `proof : Equiv (mul (ofNat (Nat.succ k)) (delta_of a b m_ab_prime))
+///                (delta_of a b m_ab0)`
+///
+/// — refining the SAME interval `[a, b]`'s mesh by a factor `Nat.succ k`
+/// scales its step down by EXACTLY `1/(Nat.succ k)`, not merely closely.
+///
+/// Route: [`CRealPrelude::mesh_reciprocal_mul`] gives `natDivSucc 1 m_ab0 *
+/// natDivSucc 1 k = natDivSucc 1 m_ab_prime` EXACTLY (Rat-level `Eq`); lifted
+/// to `CReal` via [`CRealPrelude::of_rat_mul`], the goal becomes an
+/// eight-atom associativity/commutativity rearrangement — identical in kind
+/// to [`mesh_times_count_eq_width`]'s and [`riemann_sum_const_core`]'s own
+/// rearrangements, just with two extra factors — landing on `(width_ab *
+/// embed(natDivSucc 1 m_ab0)) * (ofNat (succ k) * embed(natDivSucc 1 k))`,
+/// and [`mesh_inverse_identity`] cancels the second parenthesis to `one`.
+fn mesh_scale_by_succ_k(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    m_ab0: ExprId,
+    k: ExprId,
+) -> (ExprId, ExprId) {
+    let (m_ab_prime, _pf_ab) = succ_mul_succ(d, m_ab0, k);
+    let width_ab = width_of(d, p, a, b);
+    let succ_k = d.succ(k);
+    let on_succ_k = d.const_app(p.of_nat, &[succ_k]);
+
+    let one_nat = d.num(1);
+    let fr_ab0 = d.const_app(p.rat.nat_div_succ, &[one_nat, m_ab0]);
+    let fr_k = d.const_app(p.rat.nat_div_succ, &[one_nat, k]);
+    let fr_prime = d.const_app(p.rat.nat_div_succ, &[one_nat, m_ab_prime]);
+
+    let embed_ab0 = embed(d, p, fr_ab0);
+    let embed_k = embed(d, p, fr_k);
+    let embed_prime = embed(d, p, fr_prime);
+
+    let delta_prime = cmul(d, p, width_ab, embed_prime); // = delta_of(a, b, m_ab_prime)
+
+    // rat_recip : Eq Rat (rmul fr_ab0 fr_k) fr_prime
+    let rat_recip = d.lemma(p.mesh_reciprocal_mul, &[m_ab0, k]);
+    // of_rat_mul_step : Equiv (mul embed_ab0 embed_k) (embed (rmul fr_ab0 fr_k))
+    let of_rat_mul_step = d.lemma(p.of_rat_mul, &[fr_ab0, fr_k]);
+    let mul_ab0_k = cmul(d, p, embed_ab0, embed_k);
+    let rmul_fr = rmul(d, fr_ab0, fr_k);
+    let bridge = rat_eq_rewrite(d, rmul_fr, fr_prime, rat_recip, of_rat_mul_step, &|d, t| {
+        let embedded = embed(d, p, t);
+        equiv(d, p, mul_ab0_k, embedded)
+    });
+    // bridge : Equiv mul_ab0_k embed_prime
+    let bridge_symm = d.lemma(p.equiv_symm, &[mul_ab0_k, embed_prime, bridge]);
+    // bridge_symm : Equiv embed_prime mul_ab0_k
+
+    // Atoms: A := on_succ_k, B := width_ab, C := embed_ab0, D := embed_k.
+    let a_atom = on_succ_k;
+    let b_atom = width_ab;
+    let c_atom = embed_ab0;
+    let d_atom = embed_k;
+
+    let cd = cmul(d, p, c_atom, d_atom);
+    let b_cd = cmul(d, p, b_atom, cd);
+    let refl_b = d.lemma(p.equiv_refl, &[b_atom]);
+    let step_inner = d.lemma(
+        p.mul_congr,
+        &[b_atom, b_atom, embed_prime, cd, refl_b, bridge_symm],
+    );
+    // step_inner : Equiv delta_prime b_cd
+
+    let a_delta_prime = cmul(d, p, a_atom, delta_prime);
+    let a_bcd = cmul(d, p, a_atom, b_cd);
+    let refl_a = d.lemma(p.equiv_refl, &[a_atom]);
+    let step0 = d.lemma(
+        p.mul_congr,
+        &[a_atom, a_atom, delta_prime, b_cd, refl_a, step_inner],
+    );
+    // step0 : Equiv a_delta_prime a_bcd
+
+    let ab = cmul(d, p, a_atom, b_atom);
+    let ab_cd = cmul(d, p, ab, cd);
+    let masc1 = d.lemma(p.mul_assoc, &[a_atom, b_atom, cd]); // Equiv ab_cd a_bcd
+    let step1 = d.lemma(p.equiv_symm, &[ab_cd, a_bcd, masc1]); // Equiv a_bcd ab_cd
+
+    let abc = cmul(d, p, ab, c_atom);
+    let abc_d = cmul(d, p, abc, d_atom);
+    let masc2 = d.lemma(p.mul_assoc, &[ab, c_atom, d_atom]); // Equiv abc_d ab_cd
+    let step2 = d.lemma(p.equiv_symm, &[abc_d, ab_cd, masc2]); // Equiv ab_cd abc_d
+
+    let bc = cmul(d, p, b_atom, c_atom);
+    let a_bc = cmul(d, p, a_atom, bc);
+    let masc3 = d.lemma(p.mul_assoc, &[a_atom, b_atom, c_atom]); // Equiv abc a_bc
+    let bc_a = cmul(d, p, bc, a_atom);
+    let mcomm3 = d.lemma(p.mul_comm, &[a_atom, bc]); // Equiv a_bc bc_a
+    let chain3 = d.lemma(p.equiv_trans, &[abc, a_bc, bc_a, masc3, mcomm3]); // Equiv abc bc_a
+
+    let bca_d = cmul(d, p, bc_a, d_atom);
+    let refl_d = d.lemma(p.equiv_refl, &[d_atom]);
+    let step4 = d.lemma(p.mul_congr, &[abc, bc_a, d_atom, d_atom, chain3, refl_d]);
+    // step4 : Equiv abc_d bca_d
+
+    let a_d = cmul(d, p, a_atom, d_atom);
+    let bc_ad = cmul(d, p, bc, a_d);
+    let masc5 = d.lemma(p.mul_assoc, &[bc, a_atom, d_atom]); // Equiv bca_d bc_ad
+
+    let mii = mesh_inverse_identity(d, p, k); // Equiv a_d one
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let refl_bc = d.lemma(p.equiv_refl, &[bc]);
+    let step6 = d.lemma(p.mul_congr, &[bc, bc, a_d, one_c, refl_bc, mii]);
+    // step6 : Equiv bc_ad (mul bc one)
+    let bc_one = cmul(d, p, bc, one_c);
+    let step7 = d.lemma(p.mul_one, &[bc]); // Equiv bc_one bc
+
+    let proof = echain(
+        d,
+        p,
+        a_delta_prime,
+        &[
+            (a_bcd, step0),
+            (ab_cd, step1),
+            (abc_d, step2),
+            (bca_d, step4),
+            (bc_ad, masc5),
+            (bc_one, step6),
+            (bc, step7),
+        ],
+    );
+    // proof : Equiv a_delta_prime bc, i.e. Equiv (mul on_succ_k delta_prime)
+    // delta_ab0 (`bc = mul width_ab embed_ab0 = delta_of a b m_ab0` exactly).
+    (m_ab_prime, proof)
+}
+
+/// Admit `CReal.riemannSum_split_scale_invariant`: fixing a ratio
+/// `(m_ac0, m_cb0)` once and scaling BOTH sub-counts by the same factor
+/// `Nat.succ k` (via [`succ_mul_succ`]) leaves
+/// [`CRealPrelude::riemann_sum_split_exact`]'s own split point `c`
+/// UNCHANGED — `Equiv c_k c_0` for every `k`, where `c_k`/`c_0` are
+/// `riemannSum_split_exact`'s `c` formula read at the scaled/base counts.
+///
+/// This is gap 1 of `integral_split`'s remaining assembly (see this file's
+/// own module documentation, "the accuracy-parameterized mesh choice"): it
+/// makes `k` free to pick however deep `riemannSum_integral_close` needs on
+/// all three intervals, without moving the split point the family
+/// approximates. The two scaled counts themselves
+/// (`succ_mul_succ(m_ac0, k).0`, `succ_mul_succ(m_cb0, k).0`) are exactly
+/// the `(m_ac(e), m_cb(e))` a caller would use at whichever `k` clears the
+/// accuracy threshold.
+///
+/// Proof: [`mesh_scale_by_succ_k`] at `(a, b, m_ab0, k)` gives the pure
+/// mesh-scaling identity for the COMBINED interval's own step; a `Nat`
+/// bookkeeping chain (`Nat.right_distrib` plus two more
+/// [`succ_mul_succ`] witnesses, closed with `Nat.succ_injective` to strip
+/// the outer `Nat.succ`) shows the scaled COMBINED count
+/// `riemannSum_split_exact` itself would compute at `(m_ac(k), m_cb(k))` —
+/// `add (succ (succ_mul_succ(m_ac0,k).0)) (succ_mul_succ(m_cb0,k).0)` —
+/// literally EQUALS [`mesh_scale_by_succ_k`]'s own `m_ab_prime`; then
+/// [`CRealPrelude::of_nat_mul`] turns the scaled `m_ac` count's own
+/// `Nat.succ` shape into `(succ m_ac0) * (succ k)`, and the same
+/// `mul_assoc`/`mul_congr` idiom folds everything down to `Equiv c_k c_0`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_riemann_sum_split_scale_invariant(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let np = d.prelude();
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let mac0_fv = d.fresh_fvar();
+    let m_ac0 = d.kernel().fvar(mac0_fv);
+    let mcb0_fv = d.fresh_fvar();
+    let m_cb0 = d.kernel().fvar(mcb0_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let n_ac0 = d.succ(m_ac0);
+    let n_cb0 = d.succ(m_cb0);
+    let succ_k = d.succ(k);
+    let m_ab0 = NatOps::add(d, n_ac0, m_cb0);
+
+    let (m_ac_k, pf_ac) = succ_mul_succ(d, m_ac0, k); // Eq Nat (mul n_ac0 succ_k) n_ac_k
+    let (m_cb_k, pf_cb) = succ_mul_succ(d, m_cb0, k); // Eq Nat (mul n_cb0 succ_k) n_cb_k
+    let n_ac_k = d.succ(m_ac_k);
+    let n_cb_k = d.succ(m_cb_k);
+    let m_ab_k = NatOps::add(d, n_ac_k, m_cb_k); // riemannSum_split_exact's own "m_ab" at (m_ac_k, m_cb_k)
+
+    let (m_ab_prime, h_scale) = mesh_scale_by_succ_k(d, p, a, b, m_ab0, k);
+
+    // --- Nat bookkeeping: Eq Nat m_ab_k m_ab_prime ---
+    let mul_ac = NatOps::mul(d, n_ac0, succ_k);
+    let mul_cb = NatOps::mul(d, n_cb0, succ_k);
+
+    let pf_ac_symm = d.symm(mul_ac, n_ac_k, pf_ac); // Eq Nat n_ac_k mul_ac
+    let step_a = d.congr(n_ac_k, mul_ac, pf_ac_symm, &|d, x| {
+        NatOps::add(d, x, n_cb_k)
+    });
+    // step_a : Eq Nat (add n_ac_k n_cb_k) (add mul_ac n_cb_k)
+
+    let pf_cb_symm = d.symm(mul_cb, n_cb_k, pf_cb); // Eq Nat n_cb_k mul_cb
+    let step_b = d.congr(n_cb_k, mul_cb, pf_cb_symm, &|d, x| {
+        NatOps::add(d, mul_ac, x)
+    });
+    // step_b : Eq Nat (add mul_ac n_cb_k) (add mul_ac mul_cb)
+
+    let n_ab0 = NatOps::add(d, n_ac0, n_cb0);
+    let rd = d.lemma(np.right_distrib, &[n_ac0, n_cb0, succ_k]);
+    // rd : Eq Nat (mul n_ab0 succ_k) (add mul_ac mul_cb)
+    let add_ac_cb = NatOps::add(d, mul_ac, mul_cb);
+    let mul_n_ab0_succk = NatOps::mul(d, n_ab0, succ_k);
+    let step_c = d.symm(mul_n_ab0_succk, add_ac_cb, rd); // Eq Nat add_ac_cb mul_n_ab0_succk
+
+    let (m_ab_prime2, pf_ab) = succ_mul_succ(d, m_ab0, k);
+    debug_assert_eq!(m_ab_prime, m_ab_prime2);
+    // pf_ab : Eq Nat (mul (succ m_ab0) succ_k) (succ m_ab_prime), and
+    // `succ m_ab0` is definitionally `n_ab0` (both `add n_ac0 (succ m_cb0)`
+    // reduce to `succ (add n_ac0 m_cb0)`), so `pf_ab` is directly usable at
+    // `Eq Nat mul_n_ab0_succk (succ m_ab_prime)`.
+
+    let nack_ncbk = NatOps::add(d, n_ac_k, n_cb_k);
+    let mulac_ncbk = NatOps::add(d, mul_ac, n_cb_k);
+    let succ_m_ab_prime = d.succ(m_ab_prime);
+    let (_, h_succ_eq) = d.chain(
+        nack_ncbk,
+        &[
+            (mulac_ncbk, step_a),
+            (add_ac_cb, step_b),
+            (mul_n_ab0_succk, step_c),
+            (succ_m_ab_prime, pf_ab),
+        ],
+    );
+    // h_succ_eq : Eq Nat (add n_ac_k n_cb_k) (succ m_ab_prime), and
+    // `add n_ac_k n_cb_k` is definitionally `succ (add n_ac_k m_cb_k)` =
+    // `succ m_ab_k` (add recurses on its right, succ-shaped, argument), so
+    // this is directly usable at `Eq Nat (succ m_ab_k) (succ m_ab_prime)`.
+    let h_ab_eq = d.lemma(np.succ_injective, &[m_ab_k, m_ab_prime, h_succ_eq]);
+    // h_ab_eq : Eq Nat m_ab_k m_ab_prime
+
+    // --- bridge delta_of(a,b,m_ab_k) ~ delta_of(a,b,m_ab_prime) ---
+    let width_ab = width_of(d, p, a, b);
+    let delta_ab_k = delta_of(d, p, a, b, m_ab_k);
+    let delta_ab0 = delta_of(d, p, a, b, m_ab0);
+    let one_nat = d.num(1);
+    let fr_k_exp = d.const_app(p.rat.nat_div_succ, &[one_nat, m_ab_k]);
+    let fr_prime_exp = d.const_app(p.rat.nat_div_succ, &[one_nat, m_ab_prime]);
+    let rat_eq_km = nat_eq_to_rat(d, m_ab_k, m_ab_prime, h_ab_eq, &|d, x| {
+        d.const_app(p.rat.nat_div_succ, &[one_nat, x])
+    });
+    // rat_eq_km : Eq Rat fr_k_exp fr_prime_exp
+    let refl_delta_k = d.lemma(p.equiv_refl, &[delta_ab_k]);
+    let h_delta_k_prime = rat_eq_rewrite(
+        d,
+        fr_k_exp,
+        fr_prime_exp,
+        rat_eq_km,
+        refl_delta_k,
+        &|d, t| {
+            let embedded = embed(d, p, t);
+            let rhs = cmul(d, p, width_ab, embedded);
+            equiv(d, p, delta_ab_k, rhs)
+        },
+    );
+    // h_delta_k_prime : Equiv delta_ab_k (delta_of a b m_ab_prime)
+
+    let on_succ_k = d.const_app(p.of_nat, &[succ_k]);
+    let refl_succk = d.lemma(p.equiv_refl, &[on_succ_k]);
+    let embed_prime_exp = embed(d, p, fr_prime_exp);
+    let delta_ab_prime = cmul(d, p, width_ab, embed_prime_exp);
+    let step_y1 = d.lemma(
+        p.mul_congr,
+        &[
+            on_succ_k,
+            on_succ_k,
+            delta_ab_k,
+            delta_ab_prime,
+            refl_succk,
+            h_delta_k_prime,
+        ],
+    );
+    // step_y1 : Equiv (mul on_succ_k delta_ab_k) (mul on_succ_k delta_ab_prime)
+    let succk_deltak = cmul(d, p, on_succ_k, delta_ab_k);
+    let succk_deltaprime = cmul(d, p, on_succ_k, delta_ab_prime);
+    let h_scale_full = d.lemma(
+        p.equiv_trans,
+        &[succk_deltak, succk_deltaprime, delta_ab0, step_y1, h_scale],
+    );
+    // h_scale_full : Equiv (mul on_succ_k delta_ab_k) delta_ab0
+
+    // --- E_ac : Equiv (ofNat n_ac_k) (mul (ofNat n_ac0) on_succ_k) ---
+    let of_nat_mul_ac = d.lemma(p.of_nat_mul, &[n_ac0, succ_k]);
+    let ofnat_nac0 = d.const_app(p.of_nat, &[n_ac0]);
+    let rhs_ac = cmul(d, p, ofnat_nac0, on_succ_k);
+    let e_ac = nat_rewrite_prop(d, mul_ac, n_ac_k, pf_ac, of_nat_mul_ac, &|d, x| {
+        let ofx = d.const_app(p.of_nat, &[x]);
+        equiv(d, p, ofx, rhs_ac)
+    });
+    // e_ac : Equiv (ofNat n_ac_k) rhs_ac
+
+    // --- combine: ofNat(n_ac_k) * delta_ab_k ~ ofNat(n_ac0) * delta_ab0 ---
+    let ofnat_nack = d.const_app(p.of_nat, &[n_ac_k]);
+    let refl_delta_ab_k2 = d.lemma(p.equiv_refl, &[delta_ab_k]);
+    let step_x1 = d.lemma(
+        p.mul_congr,
+        &[
+            ofnat_nack,
+            rhs_ac,
+            delta_ab_k,
+            delta_ab_k,
+            e_ac,
+            refl_delta_ab_k2,
+        ],
+    );
+    // step_x1 : Equiv (mul ofnat_nack delta_ab_k) (mul rhs_ac delta_ab_k)
+    let masc_x = d.lemma(p.mul_assoc, &[ofnat_nac0, on_succ_k, delta_ab_k]);
+    // masc_x : Equiv (mul rhs_ac delta_ab_k) (mul ofnat_nac0 (mul on_succ_k delta_ab_k))
+    let refl_nac0 = d.lemma(p.equiv_refl, &[ofnat_nac0]);
+    let nac0_succk_deltak = cmul(d, p, ofnat_nac0, succk_deltak);
+    let nac0_delta0 = cmul(d, p, ofnat_nac0, delta_ab0);
+    let step_x2 = d.lemma(
+        p.mul_congr,
+        &[
+            ofnat_nac0,
+            ofnat_nac0,
+            succk_deltak,
+            delta_ab0,
+            refl_nac0,
+            h_scale_full,
+        ],
+    );
+    // step_x2 : Equiv (mul ofnat_nac0 (mul on_succ_k delta_ab_k)) (mul ofnat_nac0 delta_ab0)
+
+    let nack_deltak = cmul(d, p, ofnat_nack, delta_ab_k);
+    let rhsac_deltak = cmul(d, p, rhs_ac, delta_ab_k);
+    let h_offset = echain(
+        d,
+        p,
+        nack_deltak,
+        &[
+            (rhsac_deltak, step_x1),
+            (nac0_succk_deltak, masc_x),
+            (nac0_delta0, step_x2),
+        ],
+    );
+    // h_offset : Equiv (mul (ofNat n_ac_k) delta_ab_k) (mul (ofNat n_ac0) delta_ab0)
+
+    let refl_a = d.lemma(p.equiv_refl, &[a]);
+    let c_k = cadd(d, p, a, nack_deltak);
+    let c_0 = cadd(d, p, a, nac0_delta0);
+    let proof = d.lemma(
+        p.add_congr,
+        &[a, a, nack_deltak, nac0_delta0, refl_a, h_offset],
+    );
+    // proof : Equiv c_k c_0
+
+    let concl = equiv(d, p, c_k, c_0);
+    let ty = {
+        let over_k = d.pi_fv(k_fv, nat, concl);
+        let over_mcb0 = d.pi_fv(mcb0_fv, nat, over_k);
+        let over_mac0 = d.pi_fv(mac0_fv, nat, over_mcb0);
+        let over_b = d.pi_fv(b_fv, carrier, over_mac0);
+        d.pi_fv(a_fv, carrier, over_b)
+    };
+    let value = {
+        let over_k = d.lam_fv(k_fv, nat, proof);
+        let over_mcb0 = d.lam_fv(mcb0_fv, nat, over_k);
+        let over_mac0 = d.lam_fv(mac0_fv, nat, over_mcb0);
+        let over_b = d.lam_fv(b_fv, carrier, over_mac0);
+        d.lam_fv(a_fv, carrier, over_b)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.riemann_sum_split_scale_invariant,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.congrOfUniformlyContinuous : ∀ F a b, UniformlyContinuousOn F a b →
+/// ∀ x y, le a x → le x b → le a y → le y b → Equiv x y → Equiv (F x) (F y)`
+/// — the DOMAIN-RESTRICTED half of [`CRealPrelude::riemann_sum_split_exact`]'s
+/// `hcong` hypothesis, derived directly from a uniform-continuity witness.
+///
+/// **This is restricted to `x, y ∈ [a, b]`, and cannot be strengthened to the
+/// GLOBAL `∀ x y, Equiv x y → Equiv (F x) (F y)` `riemannSum_split_exact`
+/// actually demands, for a structural reason, not a missing lemma**:
+/// `UniformlyContinuousOn F a b`'s own `spec` says nothing about `F` outside
+/// `[a, b]` at all (`uc_spec_body`'s hypothesis list requires `a ≤ x ≤ b` and
+/// `a ≤ y ≤ b`), so a genuinely global `hcong` is simply FALSE for an
+/// arbitrary uniformly-continuous-on-`[a,b]` `F` (nothing constrains its
+/// values elsewhere). Using this lemma to discharge `riemannSum_split_exact`'s
+/// `hcong` at a concrete `(F, a, b, u)` therefore additionally needs each
+/// sample point `riemannSum_split_exact`'s own proof applies `hcong` to to be
+/// shown inside `[a, b]` first (e.g. via
+/// [`CRealPrelude::riemann_sample_in_bounds`]-style reasoning) — not attempted
+/// here, and it is a SEPARATE, bounded gap from this lemma's own construction.
+///
+/// Route: EXACTLY [`pointwise_block_equiv`]'s own middle section
+/// (`CRealPrelude::equiv_abs_diff_le` turning `Equiv x y` into an abs bound at
+/// every accuracy, `UniformlyContinuousOn.spec` promoting it through `F`,
+/// `CRealPrelude::equiv_zero_of_small` + [`equiv_of_sub_equiv_zero_local`]
+/// closing the resulting `∀ e, …` bound into a full `Equiv`) — reused
+/// verbatim rather than duplicated, since this file already builds it for
+/// the reblock chain.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_congr_of_uniformly_continuous(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let f_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+
+    let hax_ty = cle(d, p, a, x);
+    let hax_fv = d.fresh_fvar();
+    let hax = d.kernel().fvar(hax_fv);
+    let hxb_ty = cle(d, p, x, b);
+    let hxb_fv = d.fresh_fvar();
+    let hxb = d.kernel().fvar(hxb_fv);
+    let hay_ty = cle(d, p, a, y);
+    let hay_fv = d.fresh_fvar();
+    let hay = d.kernel().fvar(hay_fv);
+    let hyb_ty = cle(d, p, y, b);
+    let hyb_fv = d.fresh_fvar();
+    let hyb = d.kernel().fvar(hyb_fv);
+
+    let hxy_ty = equiv(d, p, x, y);
+    let hxy_fv = d.fresh_fvar();
+    let hxy = d.kernel().fvar(hxy_fv);
+
+    let f_x = d.apply(f, &[x]);
+    let f_y = d.apply(f, &[y]);
+    let neg_fy = cneg(d, p, f_y);
+    let v = cadd(d, p, f_x, neg_fy);
+
+    let hyp_small = {
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+        let modulus_fn = d.const_app(p.uc_modulus, &[f, a, b, u]);
+        let mod_e = d.apply(modulus_fn, &[e]);
+        let hclose_input = d.lemma(p.equiv_abs_diff_le, &[x, y, hxy, mod_e]);
+        let spec_out = d.lemma(
+            p.uc_spec,
+            &[f, a, b, u, e, x, y, hax, hxb, hay, hyb, hclose_input],
+        );
+        d.lam_fv(e_fv, nat, spec_out)
+    };
+    let v_equiv_zero = d.lemma(p.equiv_zero_of_small, &[v, hyp_small]);
+    let concl_proof = equiv_of_sub_equiv_zero_local(d, p, f_x, f_y, v_equiv_zero);
+
+    let concl_ty = equiv(d, p, f_x, f_y);
+
+    let ty = {
+        let after_hxy = d.arrow(hxy_ty, concl_ty);
+        let after_hyb = d.arrow(hyb_ty, after_hxy);
+        let after_hay = d.arrow(hay_ty, after_hyb);
+        let after_hxb = d.arrow(hxb_ty, after_hay);
+        let after_hax = d.arrow(hax_ty, after_hxb);
+        let over_y = d.pi_fv(y_fv, carrier, after_hax);
+        let over_x = d.pi_fv(x_fv, carrier, over_y);
+        let after_u = d.arrow(u_ty, over_x);
+        let over_b = d.pi_fv(b_fv, carrier, after_u);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        d.pi_fv(f_fv, f_ty, over_a)
+    };
+    let value = {
+        let with_hxy = d.lam_fv(hxy_fv, hxy_ty, concl_proof);
+        let with_hyb = d.lam_fv(hyb_fv, hyb_ty, with_hxy);
+        let with_hay = d.lam_fv(hay_fv, hay_ty, with_hyb);
+        let with_hxb = d.lam_fv(hxb_fv, hxb_ty, with_hay);
+        let with_hax = d.lam_fv(hax_fv, hax_ty, with_hxb);
+        let over_y = d.lam_fv(y_fv, carrier, with_hax);
+        let over_x = d.lam_fv(x_fv, carrier, over_y);
+        let with_u = d.lam_fv(u_fv, u_ty, over_x);
+        let over_b = d.lam_fv(b_fv, carrier, with_u);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        d.lam_fv(f_fv, f_ty, over_a)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.congr_of_uniformly_continuous,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 #[cfg(test)]
 mod integral_scale_tests {
     use super::*;
