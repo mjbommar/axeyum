@@ -79,51 +79,75 @@
 //! rule that a concrete check alone can hide a defeq-shaped gap a symbolic
 //! one would expose.
 //!
-//! # What is *not* attempted here, and precisely why
+//! # `polyMul`, `hornerFromTop`, `factorQuotient`
 //!
-//! **`polyMul` (the Cauchy product) and its evaluation homomorphism.** The
-//! natural per-coefficient convolution,
-//! `polyMul c g k := sumRange (fun i => mul (c i) (g (Nat.sub k i))) (Nat.succ k)`,
-//! is only the *correct* coefficient of `c(x)·g(x)` at index `k` if `c`/`g`
-//! are the zero function beyond their own bounds — an arbitrary `Nat →
-//! Complex` need not be, since nothing in this representation forces it.
-//! Proving
-//! `Equiv (mul (polyEval c m x) (polyEval g n x)) (polyEval (polyMul c g) (Nat.add m n) x)`
-//! under explicit [`declare_poly_degree_lt`]-style hypotheses for both
-//! factors needs, beyond what this file proves:
+//! **This section used to say `polyMul` and the factor theorem were not
+//! attempted — that became false as the file grew and nobody updated the
+//! doc. It is corrected here rather than left to mislead the next reader.**
 //!
-//! 1. Padding each sum up to the shared bound `Nat.add m n`:
-//!    [`ComplexPrelude::sum_range_split`] splits `sumRange f (Nat.add m n)`
-//!    into the kept prefix plus a tail; the tail must be shown to vanish
-//!    termwise from the `polyDegreeLt` hypothesis
-//!    ([`ComplexPrelude::mul_congr`]/[`ComplexPrelude::mul_comm`]/
-//!    [`ComplexPrelude::mul_zero`] turn each vanishing coefficient into a
-//!    vanishing summand, and the private `sum_range_const_zero_proof` helper
-//!    this module has access to but does not use collapses the resulting
-//!    all-zero sum) — plus commuting `Nat.add m n` against `Nat.add n m` for
-//!    whichever operand needs the other order.
-//! 2. [`ComplexPrelude::sum_range_mul_eq_diag_add_corner`] then relates the
-//!    padded product to a diagonal (antidiagonal-convolution) term plus a
-//!    **corner** term — the module's own doc records that the identity
-//!    *without* the corner is FALSE, refuted by hand at `n = 2`.
-//! 3. The corner term must *itself* be shown to vanish under the same
-//!    `polyDegreeLt` hypotheses (it sums products `f i · g j` with `i, j`
-//!    individually below the padded bound but `i + j` at or beyond it) — a
-//!    genuinely new vanishing argument, not a reassembly of anything
-//!    `sum_range_mul_eq_diag_add_corner` already proves.
+//! [`declare_poly_mul`]/[`declare_poly_degree_lt_poly_mul`]/
+//! [`declare_poly_eval_poly_mul`] give `polyMul` (the finite Cauchy product)
+//! and its evaluation homomorphism `Equiv (mul (polyEval c m x) (polyEval g n
+//! x)) (polyEval (polyMul c g) (Nat.add m n) x)`, under `polyDegreeLt`
+//! hypotheses for both factors — padding each sum to the shared bound via
+//! [`ComplexPrelude::sum_range_split`], decomposing via
+//! [`ComplexPrelude::sum_range_mul_eq_diag_add_corner`] (the identity
+//! *without* the corner term is FALSE, refuted by hand at `n = 2`), and
+//! showing the corner vanishes.
 //!
-//! `polyMul` is left undeclared rather than declared-but-unproved-about: an
-//! operation with no theorem connecting it to `polyEval` would be dead
-//! weight sitting in a checked kernel.
+//! **The factor theorem's computed quotient.** `Exists.rec` is `Prop`-only,
+//! so a proof of `∃ q, …` cannot hand back `q` as *data* — the quotient in
+//! `p ≡ polyMul (X − a) q` must be **computed**, not extracted. The design:
+//! grow the DIVIDEND's bound via `Nat.rec` directly, reusing `c` at smaller
+//! bounds so the "new" top coefficient at each step is `c`'s own `Nat.rec`
+//! index, never a subtracted one — as opposed to the backward synthetic-
+//! division recursion (`q_k` needs `p_{k+1}` and `q_{k+1}`, inherently
+//! top-down), where every "ascending on a reversed index" reformulation just
+//! relocates the `Nat.sub` dependency into indexing `c` rather than
+//! eliminating it.
 //!
-//! **The factor theorem**
-//! (`polyEval p n a ~ zero → ∃ q, ∀ x, Equiv (polyEval p n x) (mul (add x (neg a)) (polyEval q (Nat.sub n 1) x))`)
-//! needs `polyMul`/a division construction just to *state* honestly, and —
-//! per this kernel's `Exists.rec` being `Prop`-only, so it cannot eliminate
-//! an existential into the *data* `q` — needs `q` **computed** by an
-//! explicit synthetic-division recursion, not extracted from a proof of
-//! existence. That is a further, separate development layered on top of
-//! `polyMul`. Not attempted; blocked on both of the above.
+//! [`declare_horner_from_top`] builds `Complex.hornerFromTop c a m j` this
+//! way: a nested `Nat.rec` (outer on `m`, inner on `j`, mirroring
+//! [`ComplexPrelude::pow`]'s own construction — `NatOps::induct` cannot
+//! produce this, its motive is `Prop`-only) whose only reference to `c` is
+//! `c (succ m)`, `m`'s own index. [`declare_factor_quotient`] then
+//! re-indexes this top-down family into the forward (bottom-up) coefficient
+//! function `polyMul`/`polyEval` expect, via **one** top-level `Nat.sub`
+//! rather than a subtraction embedded in a recursion.
+//!
+//! That reindexing has a boundary bug on the first attempt, found and fixed
+//! here — worth recording because it is exactly the "quietly wrong at a
+//! boundary" shape `Nat.sub`'s truncation invites. `fun k => hornerFromTop c
+//! a n (Nat.sub n (Nat.succ k))` sends every `k ≥ n` to the SAME index `0`
+//! (truncation), and `hornerFromTop c a n 0` is `c n` — the polynomial's own
+//! leading coefficient, generically nonzero. Confirmed by hand at `c = X² −
+//! 1`: this formula gives `q 2 = c 2 = 1`, refuting `polyDegreeLt q 2`
+//! outright. The fix ([`ComplexPrelude::factor_quotient`]'s doc has the full
+//! derivation) prepends a forced `zero` base and shifts `hornerFromTop`'s own
+//! index down by one, so truncation lands on the forced zero **by
+//! construction**, not by coincidence. [`declare_factor_quotient_degree_lt`]
+//! proves `polyDegreeLt (factorQuotient c a n) n` from this, and
+//! `complex_tests.rs`'s `factor_quotient_reproduces_x_plus_one_at_the_root_and_not_elsewhere`
+//! corroborates it concretely: at a genuine `X² − 1` and the root `a = 1`,
+//! `factorQuotient` reproduces `X + 1`'s coefficients exactly (including the
+//! `q 2 = 0` boundary); at the non-root `a = 2`, the correct value (`q 0 =
+//! 2`) is accepted and the root-case value (`1`) at that same call is
+//! REJECTED — a non-vacuous refutation, since the accept/reject pair is about
+//! the same call with two different claimed answers.
+//!
+//! **NOT attempted: the general symbolic factor theorem itself**
+//! (`polyEval p (succ n) a ~ zero → ∀ x, Equiv (polyEval p (succ n) x)
+//! (polyEval (polyMul (X − a) (factorQuotient p a n)) (Nat.add 2 n) x)`).
+//! `hornerFromTop c a (succ m) j` is NOT simply related to `hornerFromTop c a
+//! m j` at a fixed `j` — growing the bound changes EVERY value in the row,
+//! not just the new top one (`s^{(m+1)}_k = s^{(m)}_k + a^{m+1-k}·p_{m+1}`
+//! for every `k ≤ m`, by hand-derivation), so the natural induction for the
+//! evaluation identity is on `m` directly against `hornerFromTop`'s own
+//! recursive shape, not a naive induction on `n` that reuses the previous
+//! `factorQuotient` wholesale. Landing that, plus the `Nat.add`-ordering and
+//! [`poly_pad_up`] bookkeeping [`declare_poly_eval_poly_mul`] already needs
+//! for a bound mismatch of `+1` (`Nat.add 2 n = n + 2`, one more than `p`'s
+//! own `succ n`), is real, sized, and not attempted here.
 
 use super::{
     CExpr, ComplexPrelude, complex_eq, complex_eq_refl, complex_ty, corner_inner_c, corner_row_c,
