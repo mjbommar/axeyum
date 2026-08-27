@@ -3107,6 +3107,28 @@ pub struct CRealPrelude {
     /// (cosSeriesPartial n) <= four` per-`n` fact read through
     /// `neg_le_abs`/`neg_le_neg`/double-negation instead of `le_abs_self`.
     pub neg_four_le_cos_one: NameId,
+    /// `CReal.negOnePowDouble : ∀ k, Equiv (pow (neg one) (add k k)) one` --
+    /// `(-1)^(2k) = 1` for every `k`, by plain induction on `k` (no parity
+    /// case split). `creal/alternating.rs`'s parity fact underneath the
+    /// Leibniz (alternating series) pairing argument.
+    pub neg_one_pow_double: NameId,
+    /// `CReal.alternatingELeO : ∀ a, (∀ k, le zero (a k)) → ∀ k, le
+    /// (sumRange t (add k k)) (sumRange t (succ (add k k)))`, where `t j :=
+    /// mul (pow (neg one) j) (a j)` -- the same-index half of
+    /// `creal/alternating.rs`'s Leibniz pairing argument: an even-count
+    /// partial sum never exceeds the odd-count partial sum one term past it.
+    pub alternating_e_le_o: NameId,
+    /// `CReal.alternatingBracket : ∀ a, (∀ k, le zero (a k)) → (∀ k, le (a
+    /// (succ k)) (a k)) → ∀ m i, And (le (E m) (E (add m i))) (le (E m) (O
+    /// (add m i)))`, `E x := sumRange t (add x x)`, `O x := sumRange t (succ
+    /// (add x x))`, `t j := mul (pow (neg one) j) (a j)` -- the Leibniz
+    /// (alternating series) criterion's pairing argument: from `m` onward,
+    /// every even-count partial sum climbs monotonically and stays below
+    /// every odd-count partial sum. `creal/alternating.rs`'s module
+    /// documentation explains why closing this to an actual limit bound (and
+    /// hence a concrete numeric bound on `cosOne`) is a sized, separately
+    /// tractable next step this declaration does not itself reach.
+    pub alternating_bracket: NameId,
     /// `CReal.sumRange_const : ∀ w m,
     /// Equiv (sumRange (fun _ => w) (Nat.succ m)) (mul (ofNat (Nat.succ m))
     /// w)` (`creal/monotone.rs`) — a constant summed `succ m` times is
@@ -4472,6 +4494,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         cos_one_converges: kernel.name_str(creal, "cosOneConverges"),
         cos_one_le_four: kernel.name_str(creal, "cosOne_le_four"),
         neg_four_le_cos_one: kernel.name_str(creal, "neg_four_le_cosOne"),
+        neg_one_pow_double: kernel.name_str(creal, "negOnePowDouble"),
+        alternating_e_le_o: kernel.name_str(creal, "alternatingELeO"),
+        alternating_bracket: kernel.name_str(creal, "alternatingBracket"),
         sum_range_const: kernel.name_str(creal, "sumRange_const"),
         mesh_count_width: kernel.name_str(creal, "mesh_count_width"),
         subdivision_point_in_bounds: kernel.name_str(creal, "subdivisionPoint_in_bounds"),
@@ -5032,6 +5057,15 @@ pub(crate) fn build_creal_prelude_uncached(
         // new one, so it does not depend on `declare_e_family`'s own
         // declarations, only on the machinery both share.
         trig::declare_trig(&mut d, prelude)?;
+        // `alternating::declare_alternating` (the Leibniz/alternating-series
+        // pairing argument, `CReal.negOnePowDouble`/`alternatingELeO`/
+        // `alternatingBracket`) reuses `trig.rs`'s own `pub(super)` local
+        // builders but is otherwise independent of anything `declare_trig`
+        // DECLARES: it is entirely about an abstract term magnitude `a :
+        // Nat -> CReal`, not `CReal.cosOne` specifically. Placed right after
+        // `trig` because it is the pairing argument that file's own
+        // `cosOne_le_four` doc comment names as the missing piece.
+        alternating::declare_alternating(&mut d, prelude)?;
         // `ivt::declare_ivt` needs `CReal.lt_cotrans` (`cotransitivity`, well
         // above), `CReal.mesh_count_width` (`monotone::declare_monotone_of_nonneg_deriv_all`,
         // also above) and ordinary ring/order laws; nothing later depends on
@@ -5952,6 +5986,7 @@ fn declare_discrimination(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
     })
 }
 
+mod alternating;
 mod archimedean;
 mod archimedean_squeeze;
 mod cancellation;
