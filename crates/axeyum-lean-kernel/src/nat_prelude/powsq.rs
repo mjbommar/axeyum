@@ -401,6 +401,121 @@ fn declare_pow_half_split(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Kern
     Ok(())
 }
 
+/// `even_or_odd : ∀ n, Or (Eq n (add (div n 2) (div n 2)))
+///   (Eq n (succ (add (div n 2) (div n 2))))` — the decidable-parity split
+/// with a COMPUTED half (`div n 2`, substituted directly into the statement),
+/// never an existential witness.
+///
+/// This is [`declare_pow_half_split`]'s own construction, stopped one step
+/// earlier: that proof builds exactly this fact as its `e_eq_final`
+/// intermediate in each branch (`e = half+half` in the even branch, `e =
+/// succ(half+half)` in the odd one) before continuing on to compose it with
+/// `pow`. Packaging it as its own `Or`-valued theorem here, rather than
+/// duplicating the `div_mod_exec` + `Bool.rec` machinery a second time,
+/// reuses [`two_mul_eq_add_self`] and the same case split; nothing about the
+/// construction is specific to `powSq` or exponentiation.
+fn declare_even_or_odd(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.even_or_odd, 1, &|d, values| {
+        let n = values[0];
+        let zero = d.zero();
+        let one = d.num(1);
+        let two = d.num(2);
+        let half = d.div(n, two);
+        let r = d.modulo(n, two);
+        let condition = d.beq(r, zero);
+
+        let h_exec = d.lemma(p.div_mod_exec, &[one, n]);
+        let mul_two_half = d.mul(two, half);
+        let recon = d.add(mul_two_half, r);
+        let eq_ty = d.eq(n, recon);
+        let bound_ty = d.lt(r, two);
+        let eq_n_recon = and_left(d, eq_ty, bound_ty, h_exec);
+        let r_lt_two = and_right(d, eq_ty, bound_ty, h_exec);
+        let two_half_eq = two_mul_eq_add_self(d, &p, half);
+        let half_plus_half = d.add(half, half);
+        let succ_half_plus_half = d.succ(half_plus_half);
+
+        let even_disjunct = d.eq(n, half_plus_half);
+        let odd_disjunct = d.eq(n, succ_half_plus_half);
+        let target = d.const_app(p.logic.or, &[even_disjunct, odd_disjunct]);
+
+        let branch_for = |d: &mut NatDev<'_>, selector: ExprId| -> ExprId {
+            let eq_ty = d.bool_eq(condition, selector);
+            d.arrow(eq_ty, target)
+        };
+
+        let true_val = d.bool_true();
+        let false_val = d.bool_false();
+
+        let even_minor = {
+            let eq_ty = d.bool_eq(condition, true_val);
+            let eq_fv = d.fresh_fvar();
+            let eqp = d.kernel().fvar(eq_fv);
+            let r_eq_zero = d.lemma(p.eq_of_beq_eq_true, &[r, zero, eqp]);
+            let recon0 = d.add(mul_two_half, zero);
+            let recon_to_recon0 = d.congr(r, zero, r_eq_zero, &|d, x| d.add(mul_two_half, x));
+            let add_zero_eq = d.lemma(p.add_zero, &[mul_two_half]);
+            let (_, n_eq_half_plus_half) = d.chain(
+                n,
+                &[
+                    (recon, eq_n_recon),
+                    (recon0, recon_to_recon0),
+                    (mul_two_half, add_zero_eq),
+                    (half_plus_half, two_half_eq),
+                ],
+            );
+            let proof = d.const_app(
+                p.logic.or_inl,
+                &[even_disjunct, odd_disjunct, n_eq_half_plus_half],
+            );
+            d.lam_fv(eq_fv, eq_ty, proof)
+        };
+
+        let odd_minor = {
+            let eq_ty = d.bool_eq(condition, false_val);
+            let eq_fv = d.fresh_fvar();
+            let eqp = d.kernel().fvar(eq_fv);
+            let r_ne_zero = d.lemma(p.ne_of_beq_eq_false, &[r, zero, eqp]);
+            let r_eq_one = mod_two_eq_one_of_ne_zero(d, &p, r, r_lt_two, r_ne_zero);
+            let recon1 = d.add(mul_two_half, one);
+            let recon_to_recon1 = d.congr(r, one, r_eq_one, &|d, x| d.add(mul_two_half, x));
+            let add_one_eq = add_one_eq_succ(d, &p, mul_two_half);
+            let succ_mul_two_half = d.succ(mul_two_half);
+            let succ_congr = d.congr(mul_two_half, half_plus_half, two_half_eq, &|d, x| d.succ(x));
+            let (_, n_eq_succ_half_plus_half) = d.chain(
+                n,
+                &[
+                    (recon, eq_n_recon),
+                    (recon1, recon_to_recon1),
+                    (succ_mul_two_half, add_one_eq),
+                    (succ_half_plus_half, succ_congr),
+                ],
+            );
+            let proof = d.const_app(
+                p.logic.or_inr,
+                &[even_disjunct, odd_disjunct, n_eq_succ_half_plus_half],
+            );
+            d.lam_fv(eq_fv, eq_ty, proof)
+        };
+
+        let motive_bool = {
+            let selector_fv = d.fresh_fvar();
+            let selector = d.kernel().fvar(selector_fv);
+            let body = branch_for(d, selector);
+            let bool_ty = d.bool_ty();
+            d.lam_fv(selector_fv, bool_ty, body)
+        };
+        let level_zero = d.kernel().level_zero();
+        let bool_rec = d.kernel().const_(p.logic.bool_rec, vec![level_zero]);
+        let selected = d.apply(bool_rec, &[motive_bool, odd_minor, even_minor, condition]);
+        let condition_refl = d.bool_refl(condition);
+        let result = d.apply(selected, &[condition_refl]);
+        (target, result)
+    })?;
+    Ok(())
+}
+
 /// `pow_sq_aux_eq_pow : ∀ fuel b e, Le e fuel → powSqAux fuel b e = pow b e`
 /// (the sufficiency-implies-correctness statement, see the module doc), and
 /// its `fuel := e` specialization `pow_sq_eq_pow : ∀ b e, powSq b e = pow b
@@ -697,6 +812,7 @@ fn declare_powsq_equations(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Ker
 pub(super) fn declare_powsq_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     declare_powsq_defs(d, p)?;
     declare_pow_half_split(d, p)?;
+    declare_even_or_odd(d, p)?;
     declare_powsq_eq_pow(d, p)?;
     declare_powsq_equations(d, p)?;
     Ok(())
