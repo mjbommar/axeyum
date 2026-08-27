@@ -192,9 +192,74 @@
 //! currently-unbuilt argument (likely leaning on `cosFn`'s monotonicity
 //! near its zero) that the family of approximate roots itself converges to
 //! an actual `CReal`, which `ivt_approx` does not provide for free.
+//!
+//! ## 2026-08-27 update: the raw-witness wall above is GONE, and two of the
+//! three pieces past it are landed -- `weierstrassMTest` is NOT yet applied
+//! past `[0, 1]`
+//!
+//! `creal/geometric.rs` now carries a fully general RAW (non-existential)
+//! geometric Cauchy-body family (`CReal.geomCauchyBodyOfGap` and its
+//! ratio-`16/25` instance `CReal.geomCauchyOrdered16Over25` /
+//! `CReal.geomCauchyBody16Over25`) -- exactly the missing piece this
+//! section used to say would cost "~150-300 new lines". `R := 8/5 = 1.6`
+//! clears cosine's first zero (`≈ 1.5708`); its dominating ratio is
+//! `(R/2)² = 16/25`.
+//!
+//! **Landed in this slice, both confirmed by the kernel:**
+//!
+//! 1. [`declare_cos_fn_term_abs_le_wide`] (`CReal.cosFnTermAbsLeWide`) — the
+//!    pointwise domination bound for `0 ≤ x ≤ R`, ANY `R`, via
+//!    [`CRealPrelude::exp_term_abs_le_dominant`] at the doubled index
+//!    (through [`cos_term_abs_le_dom_double`], the pre-collapse bound
+//!    `cosTermAbsLeDominant`'s own proof computes internally, extracted
+//!    here rather than rebuilt) plus
+//!    [`CRealPrelude::pow_le_pow_of_base_le`] — exactly as the task brief
+//!    predicted, no new domination series. Its conclusion is `mul
+//!    (expDominant (Nat.add k k)) (pow R (Nat.add k k))`, deliberately
+//!    UNREDUCED (see point 3 below for why).
+//! 2. [`declare_cos_dominant_16_over_25`] / [`declare_cos_dominant_16_over_25_cauchy_body`]
+//!    (`CReal.cosDominant16Over25`, `:= fun k => mul two (pow (16/25) k)`,
+//!    and its raw Cauchy-body witness) — the "constant-2 scaling" piece the
+//!    brief named. [`exponential.rs`]'s/[`trig.rs`]'s own private
+//!    `mul_deshift`/`mul_ordered_half_body`/`promote_ordered_half_to_full`/
+//!    `cauchy_body_transport` (already generic in the base series' own
+//!    ordered-half proof, taken as a `&dyn Fn` parameter) finish this
+//!    UNCHANGED once widened to `pub(super)` — **confirmed exactly as
+//!    predicted**, no restructuring, only visibility (`trig.rs`'s copies
+//!    were widened rather than `exponential.rs`'s: they are byte-identical
+//!    reproductions — confirmed by diff — and `trig.rs` already wires the
+//!    ratio-`1/2` analogue, `exp_dominant_cauchy_body_concrete`, through
+//!    the identical route this file already imports).
+//!
+//! **NOT landed, and this is a real gap the brief's own framing did not
+//! fully anticipate:** `weierstrassMTest` needs its `hdom` hypothesis
+//! (`∀ j pt, …, le (abs (f j pt)) (mseq j)`) and `hcauchy` hypothesis (a
+//! raw Cauchy body for `sumRange mseq`) to name the SAME `mseq`. Point 1's
+//! bound and point 2's dominating series are both real and both raw, but
+//! they are NOT (yet) the same term: point 1 gives `mul (expDominant
+//! (Nat.add k k)) (pow R (Nat.add k k))`; point 2 gives `mul two (pow
+//! (16/25) k)`. Bridging them needs `pow a n * pow b n ≈ pow (mul a b) n`
+//! ("power distributes over a product of bases at a fixed exponent") PLUS a
+//! rational-arithmetic identity `(1/2 · 8/5)² = 16/25` in the style of
+//! `geometric.rs::ratio_16_over_25_witnesses`'s own careful `natDivSucc`
+//! bookkeeping. **Neither exists in this kernel today** — confirmed absent
+//! from the `pow_*` `CRealPrelude` field list, the same "no power
+//! distributes over a product" gap this file's own earlier
+//! ("Investigated for π") section already found for a DIFFERENT purpose
+//! and did not realize would resurface here. Both are buildable (the first
+//! by a short `Nat` induction, mirroring `power.rs::declare_pow_add`'s own
+//! proof shape; the second by more `ratio_16_over_25_witnesses`-style
+//! rational bookkeeping) but are genuinely NEW arithmetic, not the
+//! "unchanged, just widened" piece the brief predicted for step 2 — so
+//! `weierstrassMTest` is NOT applied past `[0, 1]` in this slice, and no
+//! `cosFnWide` exists yet. `cosFn` itself (`[0, 1]`) is untouched.
 
+use super::geometric::ratio_16_over_25_witnesses;
+use super::series::sum_range_cauchy_body;
 use super::trig::{
-    cabs, cadd, cle, cmul, cneg, cpow, czero, exp_dominant_cauchy_body_concrete, one_c,
+    cabs, cadd, cauchy_body_transport, cle, cmul, cneg, cpow, czero, echain, erefl,
+    exp_dominant_cauchy_body_concrete, magnitude_of, mul_ordered_half_body, one_c,
+    promote_ordered_half_to_full, sign_abs_le_one, two, two_normalize,
 };
 use super::{CRealPrelude, DERIVED_HEIGHT, creal_ty, equiv};
 use crate::KernelError;
@@ -580,4 +645,370 @@ pub(super) fn declare_cos_fn_family(
     declare_cos_fn_term_congr(d, p)?;
     declare_cos_fn_term_abs_le(d, p)?;
     declare_cos_fn(d, p)
+}
+
+// ============================================================================
+// Progress toward a wider cosine domain (Spivak ch. 15's π): the pointwise
+// domination bound past x = 1, and the raw (non-existential) Cauchy witness
+// for the ratio-16/25 dominating series. Neither is yet wired into
+// `weierstrassMTest` -- see this file's own module documentation (the
+// "2026-08-27 update" section) for exactly what remains and why.
+// ============================================================================
+
+/// `le (abs (cosTerm k)) (mul two (pow half (Nat.add k k)))` -- the TIGHT,
+/// pre-collapse bound `CReal.cosTermAbsLeDominant`'s own proof computes
+/// internally, one step before its final `exp_dominant_double_le` collapse
+/// down to `expDominant k` (see `creal/trig.rs::declare_cos_term_abs_le_dominant`,
+/// reproduced here up to but not including that last step). The collapsed
+/// `expDominant k` bound `cos_term_abs_le_dominant` exports is too loose to
+/// combine with a domain past `[0, 1]` -- see the module documentation.
+///
+/// Returns `(mul two (pow half (Nat.add k k)), proof)`.
+fn cos_term_abs_le_dom_double(d: &mut IntDev<'_>, p: CRealPrelude, k: ExprId) -> (ExprId, ExprId) {
+    let one_cc = one_c(d, p);
+    let neg_one = cneg(d, p, one_cc);
+    let sign_k = cpow(d, p, neg_one, k);
+    let sign_abs = sign_abs_le_one(d, p, k);
+
+    let double_k = d.add(k, k);
+    let exp_term_c = d.kernel().const_(p.exp_term, vec![]);
+    let e_term = d.apply(exp_term_c, &[double_k]);
+    let exp_dominant_c = d.kernel().const_(p.exp_dominant, vec![]);
+    let dom_double = d.apply(exp_dominant_c, &[double_k]);
+
+    let e_dom_bound = d.lemma(p.exp_term_abs_le_dominant, &[double_k]);
+    // e_dom_bound : le (abs e_term) dom_double
+
+    let prod_bound = d.lemma(
+        p.abs_mul_le_of_bounds,
+        &[sign_k, e_term, one_cc, dom_double, sign_abs, e_dom_bound],
+    );
+    // prod_bound : le (abs (mul sign_k e_term)) (mul one_cc dom_double)
+
+    let mul_comm_1e = d.lemma(p.mul_comm, &[one_cc, dom_double]);
+    let mul_one_e = d.lemma(p.mul_one, &[dom_double]);
+    let mul_one_cc_dom = cmul(d, p, one_cc, dom_double);
+    let mul_dom_one = cmul(d, p, dom_double, one_cc);
+    let one_dom_equiv = echain(
+        d,
+        p,
+        mul_one_cc_dom,
+        &[(mul_dom_one, mul_comm_1e), (dom_double, mul_one_e)],
+    );
+
+    let cos_term_k = cmul(d, p, sign_k, e_term);
+    let abs_cos_term_k = cabs(d, p, cos_term_k);
+    let refl_abs_cos = erefl(d, p, abs_cos_term_k);
+    let abs_cos_le_dom_double = d.lemma(
+        p.le_congr,
+        &[
+            abs_cos_term_k,
+            abs_cos_term_k,
+            mul_one_cc_dom,
+            dom_double,
+            refl_abs_cos,
+            one_dom_equiv,
+            prod_bound,
+        ],
+    );
+
+    (dom_double, abs_cos_le_dom_double)
+}
+
+/// `CReal.cosFnTermAbsLeWide : ∀ x, le zero x → ∀ R, le x R → ∀ k, le (abs
+/// (cosFnTerm k x)) (mul (expDominant (Nat.add k k)) (pow R (Nat.add k
+/// k)))`. See the module documentation's "2026-08-27 update" section: `0 ≤
+/// x ≤ R` for ANY `R` (`le zero R` derived by `le_trans` from the two
+/// hypotheses, not a separate parameter) via
+/// [`CRealPrelude::exp_term_abs_le_dominant`] at the doubled index (through
+/// [`cos_term_abs_le_dom_double`]) plus
+/// [`CRealPrelude::pow_le_pow_of_base_le`] (base monotonicity), combined by
+/// [`CRealPrelude::abs_mul_le_of_bounds`] -- no new domination series,
+/// exactly as the task brief predicted. This does NOT reduce the bound to
+/// the literal ratio `16/25` -- doing that needs `pow a n * pow b n ≈ pow
+/// (mul a b) n`, an identity this kernel does not have; see the module
+/// documentation for exactly what remains.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_cos_fn_term_abs_le_wide(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let zero_c = czero(d, p);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let hax_ty = cle(d, p, zero_c, x);
+    let hax_fv = d.fresh_fvar();
+    let hax = d.kernel().fvar(hax_fv);
+
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let hxr_ty = cle(d, p, x, r);
+    let hxr_fv = d.fresh_fvar();
+    let hxr = d.kernel().fvar(hxr_fv);
+
+    let hr0 = d.lemma(p.le_trans, &[zero_c, x, r, hax, hxr]);
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let two_k = d.add(k, k);
+    let pow_x_2k = cpow(d, p, x, two_k);
+    let pow_r_2k = cpow(d, p, r, two_k);
+
+    let (dom_double_k, abs_cos_le_dom_double) = cos_term_abs_le_dom_double(d, p, k);
+
+    // pow_x_2k <= pow_r_2k, zero <= pow_r_2k, zero <= pow_x_2k.
+    let pow_bound = d.lemma(p.pow_le_pow_of_base_le, &[x, r, hax, hxr, two_k]);
+    let pow_r_nonneg = d.lemma(p.pow_nonneg, &[r, hr0, two_k]);
+    let pow_x_nonneg = d.lemma(p.pow_nonneg, &[x, hax, two_k]);
+
+    // neg pow_x_2k <= pow_r_2k, via neg pow_x_2k <= neg zero ~ zero <= pow_r_2k.
+    let neg_pow = cneg(d, p, pow_x_2k);
+    let neg_zero = cneg(d, p, zero_c);
+    let step1 = d.lemma(p.neg_le_neg, &[zero_c, pow_x_2k, pow_x_nonneg]); // le neg_pow neg_zero
+    let nz_eq = neg_zero_equiv_here(d, p); // Equiv neg_zero zero_c
+    let refl_neg_pow = d.lemma(p.equiv_refl, &[neg_pow]);
+    let neg_pow_le_zero = d.lemma(
+        p.le_congr,
+        &[
+            neg_pow,
+            neg_pow,
+            neg_zero,
+            zero_c,
+            refl_neg_pow,
+            nz_eq,
+            step1,
+        ],
+    );
+    let neg_pow_le_r = d.lemma(
+        p.le_trans,
+        &[neg_pow, zero_c, pow_r_2k, neg_pow_le_zero, pow_r_nonneg],
+    );
+
+    let abs_pow_le_r = d.lemma(p.abs_le, &[pow_x_2k, pow_r_2k, pow_bound, neg_pow_le_r]);
+
+    // abs (mul (cosTerm k) pow_x_2k) <= mul dom_double_k pow_r_2k.
+    let cos_term_c = d.kernel().const_(p.cos_term, vec![]);
+    let cos_term_k = d.apply(cos_term_c, &[k]);
+    let mul_bound = d.lemma(
+        p.abs_mul_le_of_bounds,
+        &[
+            cos_term_k,
+            pow_x_2k,
+            dom_double_k,
+            pow_r_2k,
+            abs_cos_le_dom_double,
+            abs_pow_le_r,
+        ],
+    );
+
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, mul_bound);
+        let with_hxr = d.lam_fv(hxr_fv, hxr_ty, with_k);
+        let with_r = d.lam_fv(r_fv, carrier, with_hxr);
+        let with_hax = d.lam_fv(hax_fv, hax_ty, with_r);
+        d.lam_fv(x_fv, carrier, with_hax)
+    };
+    let ty = {
+        let cft_k_x = d.const_app(p.cos_fn_term, &[k, x]);
+        let abs_cft = cabs(d, p, cft_k_x);
+        let bound = cmul(d, p, dom_double_k, pow_r_2k);
+        let concl = cle(d, p, abs_cft, bound);
+        let with_k = d.pi_fv(k_fv, nat, concl);
+        let with_hxr = d.arrow(hxr_ty, with_k);
+        let with_r = d.pi_fv(r_fv, carrier, with_hxr);
+        let with_hax = d.arrow(hax_ty, with_r);
+        d.pi_fv(x_fv, carrier, with_hax)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.cos_fn_term_abs_le_wide,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.cosDominant16Over25 : Nat → CReal := fun k => mul two (pow
+/// (ofRat (natDivSucc 16 24)) k)` -- the dominating series for a wider
+/// cosine domain (ratio `16/25 = (4/5)²`, `R := 8/5` clears cosine's first
+/// zero; see `creal/geometric.rs::ratio_16_over_25_witnesses`'s own doc
+/// comment for the derivation).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_cos_dominant_16_over_25(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let (x, ..) = ratio_16_over_25_witnesses(d, p);
+    let two_creal = two(d, p);
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let pow_x_k = cpow(d, p, x, k);
+    let body = cmul(d, p, two_creal, pow_x_k);
+
+    let value = d.lam_fv(k_fv, nat, body);
+    let ty = d.arrow(nat, carrier);
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.cos_dominant_16_over_25,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(COS_FN_TERM_HEIGHT + 2),
+    })
+}
+
+/// `λ n, CReal.pow x n`, reproduced verbatim from `geometric.rs`'s own
+/// private `pow_fn` (Rust privacy: sibling module; `geometric.rs` is
+/// off-limits to edit this slice, so its `fn` cannot be widened).
+fn pow_fn_local(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let body = cpow(d, p, x, n);
+    d.lam_fv(n_fv, nat, body)
+}
+
+/// `((25*25)+1)+7`, reproduced verbatim from `geometric.rs`'s own private
+/// `geom_cauchy_of_lt_k_final` at `bigk := (Nat.succ n24)*(Nat.succ n24)`
+/// -- the concrete modulus `CReal.geomCauchyOrdered16Over25`'s own
+/// conclusion uses internally. Recomputed here from the SAME `Nat` builder
+/// calls (rather than imported: `geometric.rs` is off-limits to edit this
+/// slice, so its private `fn` cannot be widened), so the result is defeq to
+/// -- and, since the arena structurally hashes, almost certainly the
+/// identical `ExprId` as -- what `mul_ordered_half_body`'s own bookkeeping
+/// needs to match against.
+fn geom_16_over_25_k_final(d: &mut IntDev<'_>, n24: ExprId) -> ExprId {
+    let succ24 = d.succ(n24);
+    let bigk = NatOps::mul(d, succ24, succ24);
+    let one_nat = d.num(1);
+    let big_k1 = d.add(bigk, one_nat);
+    let seven_nat = d.num(7);
+    d.add(big_k1, seven_nat)
+}
+
+/// A CONCRETE `(K, proof : sum_range_cauchy_body (sumRange
+/// cosDominant16Over25) K)` -- the "constant-2 scaling" step named in the
+/// task brief, at ratio `16/25` instead of `1/2`. Built via
+/// [`mul_ordered_half_body`] (`c := two`, `q := two`'s own rational, `s :=
+/// pow_fn_local x`, `k_s := geom_16_over_25_k_final`) against
+/// `CReal.geomCauchyOrdered16Over25` (already raw, non-existential) as the
+/// base series' own ordered-half witness, plus
+/// [`promote_ordered_half_to_full`]'s `Nat.le_total` promotion -- verbatim
+/// in technique to `exponential.rs`/`trig.rs`'s own
+/// `exp_dominant_cauchy_body_concrete`, confirmed to finish UNCHANGED once
+/// widened to `pub(super)`, exactly as the task brief predicted.
+fn cos_dominant_16_over_25_cauchy_body_concrete(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> (ExprId, ExprId) {
+    let nat = d.nat_ty();
+    let (x, _, _, _, n24, _, _) = ratio_16_over_25_witnesses(d, p);
+    let raw_pow_x = pow_fn_local(d, p, x);
+    let s_fn = d.const_app(p.sum_range, &[raw_pow_x]);
+    let two_creal = two(d, p);
+    let (two_rat, _, _) = two_normalize(d, p);
+
+    let k_s = geom_16_over_25_k_final(d, n24);
+    let two_nat = d.num(2);
+    let ka = magnitude_of(d, p, two_creal);
+    let kg_num = NatOps::mul(d, ka, k_s);
+    let ka2 = NatOps::mul(d, ka, two_nat);
+    let k_g = d.add(kg_num, ka2);
+
+    // `G := fun n => mul two (S n)`, `S := sumRange (pow (16/25) ·)`.
+    let g_fn = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let sn = d.apply(s_fn, &[n]);
+        let prod = cmul(d, p, two_creal, sn);
+        d.lam_fv(n_fv, nat, prod)
+    };
+
+    let ordered_half = |d: &mut IntDev<'_>, a: ExprId, b: ExprId, hab: ExprId| -> ExprId {
+        let (_, proof) = mul_ordered_half_body(
+            d,
+            p,
+            two_creal,
+            two_rat,
+            s_fn,
+            k_s,
+            a,
+            b,
+            &|d, aa, bb, hh| d.lemma(p.geom_cauchy_ordered_16_over_25, &[aa, bb, hh]),
+            hab,
+        );
+        proof
+    };
+
+    // Concrete `Cauchy G` at `k_g` -- `G` itself, not yet `sumRange
+    // cosDominant16Over25` (only `Equiv`, via `CReal.mul_sumRange`).
+    let g_case_proof = promote_ordered_half_to_full(d, p, g_fn, k_g, &ordered_half);
+
+    // Transport across `mul_sumRange`'s `Equiv` onto `F := sumRange
+    // cosDominant16Over25` -- the same transport [`declare_cauchy_of_pointwise_equiv`]
+    // performs, but concrete (`cauchy_body_transport`, not wrapped in
+    // `Exists`), because `K` is needed as DATA here.
+    let cos_dominant_const = d.kernel().const_(p.cos_dominant_16_over_25, vec![]);
+    let f_fn = d.const_app(p.sum_range, &[cos_dominant_const]);
+    let heq = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let body = d.lemma(p.mul_sum_range, &[two_creal, raw_pow_x, n]);
+        d.lam_fv(n_fv, nat, body)
+    };
+
+    cauchy_body_transport(d, p, g_fn, f_fn, heq, k_g, g_case_proof)
+}
+
+/// `CReal.cosDominant16Over25CauchyBody : sum_range_cauchy_body (sumRange
+/// cosDominant16Over25) K` for the concrete `K`
+/// [`cos_dominant_16_over_25_cauchy_body_concrete`] returns -- the raw,
+/// non-existential Cauchy witness `weierstrassMTest`'s `hcauchy` parameter
+/// needs, at ratio `16/25`. See the module documentation's "2026-08-27
+/// update" section for what still separates this from an application of
+/// `weierstrassMTest` to a wider `cosFn`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_cos_dominant_16_over_25_cauchy_body(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let (k_final, proof) = cos_dominant_16_over_25_cauchy_body_concrete(d, p);
+    let cos_dominant_const = d.kernel().const_(p.cos_dominant_16_over_25, vec![]);
+    let f_fn = d.const_app(p.sum_range, &[cos_dominant_const]);
+    let ty = sum_range_cauchy_body(d, p, f_fn, k_final);
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.cos_dominant_16_over_25_cauchy_body,
+        uparams: vec![],
+        ty,
+        value: proof,
+    })
+}
+
+/// Admit the wider-cosine PROGRESS pieces: the pointwise domination bound
+/// past `[0, 1]` and the ratio-`16/25` dominating series' raw Cauchy
+/// witness. Does NOT apply `weierstrassMTest` -- see the module
+/// documentation's "2026-08-27 update" section for exactly why, and what
+/// remains.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_cos_fn_wide_progress(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_cos_fn_term_abs_le_wide(d, p)?;
+    declare_cos_dominant_16_over_25(d, p)?;
+    declare_cos_dominant_16_over_25_cauchy_body(d, p)
 }

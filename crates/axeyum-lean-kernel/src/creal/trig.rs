@@ -528,7 +528,7 @@ fn half_le_one_proof(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
 /// `Rat.normalize (Int.ofNat 2) (Nat.succ Nat.zero) h` — `2`, reproduced
 /// verbatim from `exponential.rs`'s own private `two_normalize`. Returns
 /// `(rat_term, numerator, denominator_positivity)`.
-fn two_normalize(d: &mut IntDev<'_>, _p: CRealPrelude) -> (ExprId, ExprId, ExprId) {
+pub(super) fn two_normalize(d: &mut IntDev<'_>, _p: CRealPrelude) -> (ExprId, ExprId, ExprId) {
     let np = d.prelude();
     let two_nat = d.num(2);
     let two_z = d.of_nat(two_nat);
@@ -539,7 +539,7 @@ fn two_normalize(d: &mut IntDev<'_>, _p: CRealPrelude) -> (ExprId, ExprId, ExprI
 }
 
 /// `CReal.ofRat` of [`two_normalize`] — `CReal`'s constant `2`.
-fn two(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+pub(super) fn two(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
     let (r, _, _) = two_normalize(d, p);
     embed(d, p, r)
 }
@@ -812,7 +812,7 @@ fn bound_of(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
 
 /// `CReal.bound x + 1`, reproduced verbatim from `exponential.rs`'s own
 /// private `magnitude_of` (itself reproduced from `product.rs`).
-fn magnitude_of(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+pub(super) fn magnitude_of(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
     let base = bound_of(d, p, x);
     d.succ(base)
 }
@@ -839,7 +839,7 @@ fn mul_sub_distrib(d: &mut IntDev<'_>, rat: RatPrelude, a: ExprId, b: ExprId, c:
 /// `Within (q * seq x high - q * seq x n) (natDivSucc (magnitude_of(c) * 2)
 /// n)`, reproduced verbatim from `exponential.rs`'s own private
 /// `mul_deshift`. Returns `(magnitude_of(c) * 2, proof)`.
-fn mul_deshift(
+pub(super) fn mul_deshift(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     c: ExprId,
@@ -916,7 +916,7 @@ fn mul_deshift(
 /// Reproduced verbatim from `exponential.rs`'s own private
 /// `telescope_cauchy_pad2`.
 #[allow(clippy::too_many_arguments)]
-fn telescope_cauchy_pad2(
+pub(super) fn telescope_cauchy_pad2(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     x: ExprId,
@@ -1031,7 +1031,7 @@ fn telescope_cauchy_pad2(
 /// Reproduced verbatim from `exponential.rs`'s own private
 /// `mul_ordered_half_body`.
 #[allow(clippy::too_many_arguments)]
-fn mul_ordered_half_body(
+pub(super) fn mul_ordered_half_body(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     c: ExprId,
@@ -1126,7 +1126,7 @@ fn mul_ordered_half_body(
 /// Promote an ordered-pair `Within` bound (`a ≤ b`) into the full, unordered
 /// `sum_range_cauchy_body`-shaped statement, reproduced verbatim from
 /// `exponential.rs`'s own private `promote_ordered_half_to_full`.
-fn promote_ordered_half_to_full(
+pub(super) fn promote_ordered_half_to_full(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     func: ExprId,
@@ -1183,7 +1183,7 @@ fn promote_ordered_half_to_full(
 /// Given `heq : ∀n, Equiv (G n) (F n)` and `hbody : sum_range_cauchy_body (G,
 /// k)`, build `(k+2, sum_range_cauchy_body (F, k+2))`, reproduced verbatim
 /// from `exponential.rs`'s own private `cauchy_body_transport`.
-fn cauchy_body_transport(
+pub(super) fn cauchy_body_transport(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     g: ExprId,
