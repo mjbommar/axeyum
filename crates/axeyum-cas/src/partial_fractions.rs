@@ -143,9 +143,9 @@ use crate::ratint::{divrem, solve_linear};
 /// decomposition.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PartialFractionTerm {
-    /// The irreducible (over ℚ) factor `factor` of `q`, LSB-first, degree ≥
-    /// 1. Several terms in one certificate may share the same `factor` (one
-    /// per power, for a repeated factor).
+    /// The irreducible (over ℚ) factor `factor` of `q`, LSB-first, of degree
+    /// at least one. Several terms in one certificate may share the same
+    /// `factor` (one per power, for a repeated factor).
     pub factor: Vec<Rational>,
     /// The power `j` of `factor` this term's denominator is `factor^j`.
     /// `1`-indexed: for a factor with multiplicity `e`, exactly the powers
@@ -431,6 +431,10 @@ mod tests {
         coeffs.iter().map(|&c| Rational::integer(c)).collect()
     }
 
+    fn rat(num: i128, den: i128) -> Rational {
+        Rational::checked_new(num, den).unwrap()
+    }
+
     /// The sum, over every term, of `numerator(x)/factor(x)^power` cleared of
     /// denominators against a fresh cofactor computation -- an independent
     /// evaluation-based cross-check used only inside tests (never inside the
@@ -441,6 +445,11 @@ mod tests {
     }
 
     fn decomposition_value_at(cert: &PartialFractionCertificate, x: Rational) -> Rational {
+        // p/q = whole + Sigma(N_i/f_i^power_i), with NO further `leading`
+        // factor: `leading` only relates q to the unscaled product
+        // F = prod(factor_i^mult_i) (q = leading*F), and that `leading`
+        // cancels exactly against the `leading` the checker/producer apply
+        // when clearing denominators against q rather than F.
         let whole_val = eval_ratio(&cert.whole, x);
         let mut sum = Rational::zero();
         for term in &cert.terms {
@@ -452,8 +461,7 @@ mod tests {
             let nx = eval_ratio(&term.numerator, x);
             sum = sum.checked_add(nx.checked_div(denom).unwrap()).unwrap();
         }
-        whole_val.checked_add(cert.leading.checked_mul(sum).unwrap_or(Rational::zero()))
-            .unwrap()
+        whole_val.checked_add(sum).unwrap()
     }
 
     // ---- rung 1: distinct linear factors ----
@@ -473,6 +481,23 @@ mod tests {
         let lhs = eval_ratio(&p, x).checked_div(eval_ratio(&q, x)).unwrap();
         let rhs = decomposition_value_at(&cert, x);
         assert_eq!(lhs, rhs);
+    }
+
+    /// A NON-monic denominator, so `leading != 1` -- every other producer
+    /// test above uses a monic `q`, which would leave a `leading`-handling
+    /// bug in `partial_fractions` invisible (multiplying by 1 hides an
+    /// error). `q = 2x^2 - 2 = 2(x-1)(x+1)`.
+    #[test]
+    fn non_monic_denominator() {
+        let p = poly_from(&[1]);
+        let q = poly_from(&[-2, 0, 2]); // 2x^2 - 2
+        let cert = partial_fractions(&p, &q).expect("must not decline");
+        assert_eq!(verify_partial_fraction_certificate(&cert), Some(true));
+        assert_eq!(cert.leading, Rational::integer(2));
+
+        let x = Rational::integer(5);
+        let lhs = eval_ratio(&p, x).checked_div(eval_ratio(&q, x)).unwrap();
+        assert_eq!(lhs, decomposition_value_at(&cert, x));
     }
 
     // ---- rung 2: repeated linear factor ----
@@ -608,8 +633,7 @@ mod tests {
             .terms
             .iter()
             .find(|t| t.power == 2)
-            .map(|t| t.numerator.is_empty())
-            .unwrap_or(false);
+            .is_some_and(|t| t.numerator.is_empty());
         assert!(
             power2_numerator_is_zero,
             "this fixture requires the power-2 term to carry a zero numerator"
@@ -671,6 +695,52 @@ mod tests {
             Some(false),
             "two proportional (non-coprime) factors must be rejected even \
              though they reconstruct p and q exactly"
+        );
+    }
+
+    /// A spurious CONSTANT "factor" group, with a zero numerator so it
+    /// contributes nothing to the p-reconstruction sum, and `leading` scaled
+    /// to compensate exactly in the q-reconstruction. This slips past every
+    /// guard except the "every group's factor is non-constant" one:
+    /// coprimality is vacuous against a constant (its gcd with anything is a
+    /// unit), the numerator-degree bound is vacuous for a zero numerator
+    /// against `deg_f == 0`, and both reconstructions are exact by
+    /// construction. Only rejecting non-constant-factor groups catches it.
+    #[test]
+    fn spurious_constant_factor_with_zero_numerator_is_rejected() {
+        let factor = poly_from(&[-1, 1]); // x - 1
+        let q = factor.clone();
+        let p = poly_from(&[1]); // p/q = 1/(x-1)
+
+        let cert = PartialFractionCertificate {
+            p: p.clone(),
+            q: q.clone(),
+            whole: Vec::new(),
+            leading: rat(1, 2),
+            terms: vec![
+                PartialFractionTerm {
+                    factor: factor.clone(),
+                    power: 1,
+                    numerator: poly_from(&[1]),
+                },
+                PartialFractionTerm {
+                    factor: poly_from(&[2]), // constant "factor"
+                    power: 1,
+                    numerator: Vec::new(), // 0
+                },
+            ],
+        };
+
+        // Confirm it is a genuine identity before trusting the guard.
+        let x = Rational::integer(9);
+        let lhs = eval_ratio(&p, x).checked_div(eval_ratio(&q, x)).unwrap();
+        assert_eq!(lhs, decomposition_value_at(&cert, x), "fixture must be a genuine identity");
+
+        assert_eq!(
+            verify_partial_fraction_certificate(&cert),
+            Some(false),
+            "a spurious constant factor group must be rejected even though \
+             both reconstructions and coprimality hold"
         );
     }
 
