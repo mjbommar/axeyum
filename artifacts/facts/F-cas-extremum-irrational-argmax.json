@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-extremum-irrational-argmax",
+  "title": "Extreme Value Theorem for p(x)=x^3-6x on [-3,2]: axeyum-cas names the interior argmax -sqrt(2) exactly",
+  "statement": "For the polynomial p(x) = x^3 - 6x on the closed interval [-3, 2], the classical Extreme Value Theorem asserts p attains a global maximum somewhere on the interval. axeyum-cas's extremum::polynomial_extremum route does not merely assert this: it differentiates p exactly (p' = 3x^2 - 6), isolates EVERY real root of p' via Sturm-certified root isolation, filters to the roots strictly inside (-3, 2), and compares p's exact value at those interior critical points against both endpoints -- naming the maximizer exactly. Here the maximizer is the irrational critical point c = -sqrt(2) (minimal polynomial x^2 - 2, degree 2, genuinely irrational: no rational value), with maximum value 4*sqrt(2), bracketed exactly as strictly between 5 and 6 (no floating point). extremum::verify_extremum_certificate then independently re-derives the certificate: it re-isolates p''s roots from scratch and confirms the recomputed interior candidate SET matches the certificate's critical_points in size (catching a dropped candidate, not merely a wrong one -- this is what makes the completeness claim, not just the individual comparison, falsifiable), confirms each candidate's bracket genuinely isolates one root via a fresh Sturm count, and confirms the argmax is self-consistent with the recomputed candidate values. It accepts: Some(true).",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(define-poly p (- (^ x 3) (* 6 x)))\n(assert (exists ((c Real))\n  (and (<= -3 c) (<= c 2)\n       (forall ((z Real)) (=> (and (<= -3 z) (<= z 2)) (<= (poly-eval p z) (poly-eval p c)))))))\n; the certificate additionally names c = -sqrt(2) exactly (minimal polynomial x^2 - 2)\n; as the unique interior argmax, rather than merely asserting existence.",
+    "fragment": "real-algebraic-evt",
+    "free_symbols": ["x", "c", "z"]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.exact-rational-polynomial-normal-form",
+    "cas.sturm-sequence-real-root-isolation-and-counting",
+    "cas.completeness-argument-every-real-root-of-p-prime-is-isolated-not-merely-some",
+    "cas.extremum-certificate-not-kernel-reconstructed"
+  ],
+  "evidence": [
+    {
+      "id": "cas-internal-extremum-irrational-argmax",
+      "kind": "witness-replay",
+      "supports": "the EVT certificate (differentiate p, isolate every real root of p' strictly interior to (a,b), compare against both endpoints, name the maximizer c = -sqrt(2) exactly) is independently re-derived and accepted by a checker (verify_extremum_certificate) that shares no code with the search that produced it (polynomial_extremum)",
+      "check_status": "checked",
+      "checkers": [
+        "extremum::polynomial_extremum (untrusted producer: exact differentiation, crate::algebraic::real_roots for Sturm-certified isolation of every real root of p', filtered to (a,b), then exact comparison via crate::real_algebraic::algebraic_cmp/eval_poly_at_algebraic)",
+        "extremum::verify_extremum_certificate (independent checker: re-isolates p''s roots from scratch and confirms the recomputed interior set matches critical_points in SIZE -- catching a dropped candidate, not just a wrong one -- re-derives each candidate's Sturm count, and confirms argmax self-consistency against recomputed values)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib extremum::tests::irrational_argmax -- --exact 2>/dev/null | grep -cE '^test extremum::tests::irrational_argmax \\.\\.\\. ok$'",
+      "checker_seconds": 1,
+      "artifact": "crates/axeyum-cas/src/extremum.rs",
+      "notes": "THIS EVIDENCE IS cas-internal, NOT kernel-reconstructed (ADR-0601 SS2): the checker_command only ever names the axeyum-cas package (never axeyum-lean-kernel), so scripts/validate-facts.py's classify_cas_certificate_checker classifies this fact's evidence as cas-internal. verify_extremum_certificate is independently re-derived and is itself mutation-tested in the same module (verify_rejects_corrupted_polynomial_coefficient, verify_rejects_corrupted_derivative, verify_rejects_a_swapped_critical_point, verify_rejects_a_corrupted_bracket, verify_rejects_a_dropped_candidate, verify_rejects_a_fabricated_extra_candidate, verify_rejects_a_duplicated_candidate, verify_rejects_wrong_argmax_self_consistency -- 8 dedicated adversarial fixtures), but NO Kernel::add_declaration term exists for this claim and none is claimed here. This is genuinely NOT the same theorem as crates/axeyum-lean-kernel/src/creal/extreme_value.rs (which proves EVT's ATTAINMENT is constructively UNAVAILABLE for an arbitrary uniformly continuous function -- a refutation of the general case) or crates/axeyum-lean-kernel/src/creal/fermat.rs (Fermat's interior-extremum theorem, which takes a maximizer as a HYPOTHESIS rather than producing one): those are row 1/2 kernel-side results about the GENERAL uniformly-continuous case per extremum.rs's own module doc, and this fact is row 3, the decidable POLYNOMIAL fragment. Neither kernel file reconstructs this certificate's specific claim (that THIS polynomial's maximizer on THIS interval is exactly -sqrt(2)), and no bridge between them exists. The test asserts p := x^3-6x (poly_from([0,-6,0,1])), cert := polynomial_extremum(p, -3, 2).unwrap(), verify_extremum_certificate(&cert) == Some(true), cert.argmax == Critical(0), cert.critical_points[0].rational_value() == None (irrational), cert.critical_points[0].degree() == 2, and 5 < cert.max_value < 6 via exact algebraic comparison."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-cas extremum::polynomial_extremum / extremum::verify_extremum_certificate (crates/axeyum-cas/src/extremum.rs, landed per ADR-0603 row 3)",
+    "source": "classical Extreme Value Theorem plus Fermat's interior-extremum theorem (for locating the maximizer among finitely many candidates), specialized to an exact rational polynomial with an irrational argmax; the concrete instance (p = x^3-6x, interval [-3,2]) is the existing unit test extremum::tests::irrational_argmax, read directly from crates/axeyum-cas/src/extremum.rs rather than hand-transcribed.",
+    "prior_art": [
+      {
+        "who": "Weierstrass (extreme value theorem); Fermat (interior-extremum condition)",
+        "what": "the extreme value theorem for continuous real functions on a compact interval, combined with the vanishing-derivative necessary condition at an interior extremum",
+        "year": 1860,
+        "where": "classical analysis; this instance is a routine cubic-polynomial application",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Registered per ADR-0601 SS2 and the CAS Spivak-spine table (extremum.rs). Deliberately the concrete instance already covered by an existing test (a cubic with an irrational argmax, -sqrt(2)) rather than a new derivation -- the point of this registration is the ADR-0601 classification (cas-internal, labeled as such, never read as kernel-checked), not new mathematics. No Kernel::add_declaration term exists for this claim; the kernel-side rows of the graded EVT family (row 1's computed bound, row 2's attainment refutation for the general case, row 4's labeled classical import) are separate results about a DIFFERENT (more general, less decidable) statement and do not reconstruct this fact's specific polynomial claim -- see this fact's evidence notes for why they are not interchangeable."
+}

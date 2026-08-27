@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-partial-fractions-mixed-general-case",
+  "title": "Partial-fraction decomposition of (x+1)/((x-1)^2(x^2+1)): axeyum-cas certifies all four rungs in one general construction",
+  "statement": "For p(x) = x+1 and q(x) = (x-1)^2 * (x^2+1) (a denominator combining a REPEATED linear factor with an IRREDUCIBLE QUADRATIC factor in one fraction), the classical partial-fraction decomposition theorem asserts p/q equals a sum of terms A/(x-1) + B/(x-1)^2 + (Cx+D)/(x^2+1) for unique rational A, B, C, D. axeyum-cas's partial_fractions::partial_fractions route does not merely assert this: it factors q into irreducibles over the rationals with exact multiplicities (via Berlekamp-Zassenhaus factorization), builds the square linear system of coefficient-matching equations the undetermined-coefficients method produces, and solves it exactly over the rationals -- producing 3 terms (one degree-1 numerator per power of the repeated linear factor, one degree-<2 numerator for the quadratic factor). partial_fractions::verify_partial_fraction_certificate then independently re-derives the certificate from p/q/whole/leading/terms alone: it recomputes each factor's power-set structure, reconstructs q by exact re-multiplication of leading * product(factor^power) and confirms it matches, clears denominators and confirms the resulting polynomial identity holds coefficient-by-coefficient against p - whole*q, and rejects a numerator whose degree is not strictly below its factor's degree (the condition that makes the decomposition unique in the first place). It accepts: Some(true), and a direct evaluation cross-check at x=7 (outside the roots of q) confirms p(7)/q(7) equals the decomposition's value there exactly.",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(define-poly p (+ x 1))\n(define-poly q (* (^ (- x 1) 2) (+ (^ x 2) 1)))\n(assert (exists ((A Real) (B Real) (C Real) (D Real))\n  (forall ((x Real))\n    (=> (not (= (poly-eval q x) 0))\n        (= (/ (poly-eval p x) (poly-eval q x))\n           (+ (/ A (- x 1)) (/ B (^ (- x 1) 2)) (/ (+ (* C x) D) (+ (^ x 2) 1))))))))\n; the certificate additionally names A, B, C, D as EXACT rationals, not\n; merely asserting their existence, and confirms uniqueness via the\n; square (deg(q) equations, deg(q) unknowns) linear system.",
+    "fragment": "exact-rational-partial-fractions",
+    "free_symbols": ["x", "A", "B", "C", "D"]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.exact-rational-polynomial-normal-form",
+    "cas.berlekamp-zassenhaus-factorization-over-q-with-multiplicities-not-independently-re-run-by-the-checker",
+    "cas.exact-rational-gauss-jordan-linear-solve-not-independently-re-run-by-the-checker",
+    "cas.partial-fraction-certificate-not-kernel-reconstructed"
+  ],
+  "evidence": [
+    {
+      "id": "cas-internal-partial-fractions-mixed-general-case",
+      "kind": "witness-replay",
+      "supports": "the partial-fraction certificate (polynomial part, leading scalar, per-factor-power numerator terms covering a repeated linear factor and an irreducible quadratic factor in one denominator) is independently re-derived and accepted by a checker (verify_partial_fraction_certificate) that shares no code with the search that produced it (partial_fractions, which factors q and solves the coefficient-matching linear system)",
+      "check_status": "checked",
+      "checkers": [
+        "partial_fractions::partial_fractions (untrusted producer: exact polynomial division to split off a whole part, crate::factor_univariate_over_q for irreducible factorization with multiplicities, crate::ratint::solve_linear for the exact-rational undetermined-coefficients system)",
+        "partial_fractions::verify_partial_fraction_certificate (independent checker: re-derives leading by comparing leading coefficients and confirms q is exactly reproduced by leading*product(factor^power) via exact re-multiplication; clears denominators and confirms the coefficient-matched polynomial identity p - whole*q = sum of numerator*cofactor terms holds exactly; rejects any numerator whose degree is not strictly below its factor's degree, the condition the module's own tests -- wrong_multiplicity_is_vacuous_without_the_power_set_guard, disguised_repeated_root_via_proportional_factors_is_rejected, spurious_constant_factor_with_zero_numerator_is_rejected, over_degree_numerator_compensated_by_whole_is_rejected -- mutation-test as load-bearing rather than vacuous)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib partial_fractions::tests::mixed_general_case -- --exact 2>/dev/null | grep -cE '^test partial_fractions::tests::mixed_general_case \\.\\.\\. ok$'",
+      "checker_seconds": 1,
+      "artifact": "crates/axeyum-cas/src/partial_fractions.rs",
+      "notes": "THIS EVIDENCE IS cas-internal, NOT kernel-reconstructed (ADR-0601 SS2): the checker_command only ever names the axeyum-cas package (never axeyum-lean-kernel), so scripts/validate-facts.py's classify_cas_certificate_checker classifies this fact's evidence as cas-internal. verify_partial_fraction_certificate is independently re-derived and is mutation-tested in the same module by a dedicated commit (e1a3cdfea, 'mutation-verify every partial-fraction checker guard'): that commit found three checks (deg q >= 1, leading != 0, terms nonempty) are structurally subsumed by the q-reconstruction check given the non-constant-factor guard (no fixture kills any of the three in isolation, recorded as such in the module doc rather than left as silent decoration), and added two adversarial fixtures for guards that had NO isolating fixture before it (spurious_constant_factor_with_zero_numerator_is_rejected, over_degree_numerator_compensated_by_whole_is_rejected) plus non_monic_denominator (closing a real coverage gap -- every prior producer test used a monic q). No Kernel::add_declaration term exists for this claim; no kernel-side partial-fraction route exists at all in this kernel, unlike the MVT/EVT/Taylor siblings in this batch which at least have a WEAKER kernel-side family member. Unlike crate::mvt/crate::extremum/crate::taylor, this module 'carries no analytic content at all -- no Rolle's theorem, no completeness, nothing Richardson's theorem could make undecidable' (partial_fractions.rs's own module doc): it is a single linear algebraic identity (match coefficients, solve one square exact-rational system), which makes a future kernel bridge for this specific module plausibly SHORTER than the others in this batch -- exact polynomial multiplication and an exact linear solve are both more elementary constructions than Sturm isolation -- but no such bridge exists today and none is claimed here. The test asserts p := x+1, q := (x-1)^2*(x^2+1) (built via poly::ratpoly_mul from its two factors, not hand-expanded), cert := partial_fractions(&p,&q).unwrap(), verify_partial_fraction_certificate(&cert) == Some(true), cert.terms.len() == 3 (one term per power of (x-1) plus one for the quadratic), and a direct evaluation cross-check at x=7 confirms p(7)/q(7) equals the decomposition's value there exactly (eval_ratio vs decomposition_value_at, both computed independently of the certificate's own internal bookkeeping)."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-cas partial_fractions::partial_fractions / partial_fractions::verify_partial_fraction_certificate (crates/axeyum-cas/src/partial_fractions.rs, landed per Spivak ch. 19)",
+    "source": "the classical partial-fraction decomposition theorem for rational functions over a field, specialized to an exact-rational denominator mixing a repeated linear factor and an irreducible quadratic factor; the concrete instance (p = x+1, q = (x-1)^2(x^2+1)) is the existing unit test partial_fractions::tests::mixed_general_case, read directly from crates/axeyum-cas/src/partial_fractions.rs rather than hand-transcribed.",
+    "prior_art": [
+      {
+        "who": "classical algebra (undetermined coefficients method); commonly attributed in textbooks to Johann Bernoulli's era of calculus development",
+        "what": "the partial-fraction decomposition theorem for rational functions, and its use to reduce rational-function integration to elementary antiderivatives",
+        "year": 1702,
+        "where": "classical algebra/calculus; this instance is a routine application to a mixed repeated-linear/irreducible-quadratic denominator",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Registered per ADR-0601 SS2 and the CAS Spivak-spine table (partial_fractions.rs). Deliberately the 'mixed_general_case' instance (rung 4 of the module's own four-rung ladder: distinct linear, repeated linear, irreducible quadratic, and the fully general mix) rather than one of the three simpler rungs, because it is the single test that exercises a repeated factor and an irreducible factor together in the same certificate -- the point of this registration is the ADR-0601 classification demonstrated on the module's most general shipped case, not new mathematics. No Kernel::add_declaration term exists for this claim, and none is claimed here."
+}

@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-taylor-quartic-lagrange-witness",
+  "title": "Taylor's theorem with Lagrange remainder for p(x)=x^4 at n=1: axeyum-cas names the witness xi = sqrt(2/3) exactly",
+  "statement": "For the polynomial p(x) = x^4, center a = 0, degree n = 1, and evaluation point b = 2, Taylor's theorem with Lagrange remainder asserts there exists xi strictly between 0 and 2 with p(2) - T_1(2) = p''(xi)/2! * (2-0)^2, where T_1 is the degree-1 Taylor polynomial of p about 0 (here T_1 = 0 identically, since p'(0) = 0). axeyum-cas's taylor::polynomial_taylor route does not merely assert this: it builds T_1 and p'' = 12x^2 exactly, forms the polynomial equation the generalized-Rolle argument guarantees has an interior root (12*xi^2 - 2!*Q(2) = 0 where Q is the exact quotient of the remainder by (x-0)^2), isolates every real root of that equation, and NAMES the witness exactly -- xi = sqrt(2/3), represented as a genuine AlgebraicReal (degree 2, genuinely irrational, bracketed exactly as strictly between 0 and 1) rather than approximated numerically. taylor::verify_taylor_certificate then independently re-derives the certificate from poly/a/n/b/taylor_poly/deriv_np1/xi alone: it confirms xi's bracket genuinely isolates one root of the recomputed (n+1)-th derivative equation, confirms xi is strictly interior to (0,2), and confirms the Lagrange remainder identity itself holds exactly at xi. It accepts: Some(true).",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(define-poly p (^ x 4))\n(define-poly t1 0) ; the degree-1 Taylor polynomial of p about a=0\n(assert (exists ((xi Real))\n  (and (< 0 xi) (< xi 2)\n       (= (- (poly-eval p 2) (poly-eval t1 2))\n          (/ (* (deriv2 p xi) (^ (- 2 0) 2)) (factorial 2))))))\n; the certificate additionally names xi = sqrt(2/3) exactly (minimal polynomial\n; 3x^2 - 2, degree 2) rather than merely asserting existence.",
+    "fragment": "real-algebraic-taylor-lagrange",
+    "free_symbols": ["x", "xi"]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.exact-rational-polynomial-normal-form",
+    "cas.sturm-sequence-real-root-isolation-and-counting",
+    "cas.witness-equation-derivation-via-exact-polynomial-division-not-independently-re-run-by-the-checker",
+    "cas.taylor-certificate-not-kernel-reconstructed",
+    "cas.kernel-side-taylor-route-strictly-weaker-and-does-not-cover-this-claim"
+  ],
+  "evidence": [
+    {
+      "id": "cas-internal-taylor-quartic-lagrange-witness",
+      "kind": "witness-replay",
+      "supports": "the Taylor-with-Lagrange-remainder certificate (Taylor polynomial T_1, (n+1)-th derivative p'', the witness equation's interior root, named exactly as xi = sqrt(2/3)) is independently re-derived and accepted by a checker (verify_taylor_certificate) that shares no code with the search that produced it (polynomial_taylor)",
+      "check_status": "checked",
+      "checkers": [
+        "taylor::polynomial_taylor (untrusted producer: builds T_n and p^(n+1) by exact differentiation/evaluation, forms R(x)=p(x)-T_n(x), divides exactly by (x-a)^(n+1) to get Q, forms the witness equation p^(n+1)(xi) = (n+1)!*Q(b), isolates its real roots via crate::algebraic::real_roots and filters to (a,b))",
+        "taylor::verify_taylor_certificate (independent checker: confirms xi's own bracket genuinely isolates exactly one root of the recomputed (n+1)-th-derivative equation via a fresh Sturm count, confirms xi is strictly interior to (a,b), and confirms the Lagrange remainder identity p(b)-T_n(b) = p^(n+1)(xi)/(n+1)! * (b-a)^(n+1) holds exactly by direct evaluation at xi)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib taylor::tests::quartic_irrational_witness -- --exact 2>/dev/null | grep -cE '^test taylor::tests::quartic_irrational_witness \\.\\.\\. ok$'",
+      "checker_seconds": 1,
+      "artifact": "crates/axeyum-cas/src/taylor.rs",
+      "notes": "THIS EVIDENCE IS cas-internal, NOT kernel-reconstructed (ADR-0601 SS2): the checker_command only ever names the axeyum-cas package (never axeyum-lean-kernel), so scripts/validate-facts.py's classify_cas_certificate_checker classifies this fact's evidence as cas-internal. verify_taylor_certificate is independently re-derived and is itself mutation-tested in the same module (verify_rejects_corrupted_taylor_poly, verify_rejects_a_wrong_remainder_coefficient, verify_rejects_a_wrong_witness_unrelated_to_the_equation, verify_rejects_an_exterior_root_that_satisfies_the_value_equation, verify_rejects_an_exterior_witness_in_the_degenerate_branch, verify_rejects_a_corrupted_bracket -- 6 dedicated adversarial fixtures). IMPORTANT, and stated explicitly per this task's instruction: crates/axeyum-lean-kernel/src/rat_prelude/taylor.rs's Rat.taylor_deg1 is NOT a reconstruction of this claim and is materially weaker -- it is exact but limited to degree <= 1 (n=0 only, per that file's own module doc: 'degree 1 has no square to factor'), carries NO remainder term, and produces NO witness xi at all; it establishes only the trivial identity that a degree-<=1 polynomial equals its own linear approximation. This fact's claim -- a general-degree Taylor polynomial, an exact Lagrange remainder, and a NAMED real-root witness xi -- has no kernel counterpart today, and none is claimed here. Bridging it (as ADR-0601 anticipates for the polynomial-identity slice generally) would need, at minimum, a kernel construction of exact polynomial long division with remainder and a kernel-reconstructed Sturm root count -- neither exists yet (see F:cas-ivt-sign-bracket-cbrt2-kernel-checked's own notes sizing the same two prerequisites for the IVT certificate's unreconstructed root-containment/Sturm-count items). The test asserts p := x^4 (poly_from([0,0,0,0,1])), a=0, n=1, b=2, cert := polynomial_taylor(&p,a,n,b).unwrap(), verify_taylor_certificate(&cert) == Some(true), cert.xi.rational_value() == None (irrational), cert.xi.degree() == 2, and 0 < xi < 1 via exact algebraic comparison against the lifted RealAlgebraic."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-27",
+    "established_by": "axeyum-cas taylor::polynomial_taylor / taylor::verify_taylor_certificate (crates/axeyum-cas/src/taylor.rs, landed per ADR-0603 row 3, Spivak ch. 20)",
+    "source": "classical Taylor's theorem with Lagrange remainder, proved by repeated (generalized) Rolle, specialized to an exact rational polynomial with an irrational Lagrange-remainder witness; the concrete instance (p = x^4, a=0, n=1, b=2) is the existing unit test taylor::tests::quartic_irrational_witness, read directly from crates/axeyum-cas/src/taylor.rs rather than hand-transcribed.",
+    "prior_art": [
+      {
+        "who": "Brook Taylor; Joseph-Louis Lagrange",
+        "what": "Taylor's theorem and its Lagrange (mean-value) form of the remainder",
+        "year": 1797,
+        "where": "classical analysis; this instance is a routine quartic-polynomial application at n=1",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Registered per ADR-0601 SS2 and the CAS Spivak-spine table (taylor.rs). Deliberately the concrete instance already covered by an existing test (a quartic at n=1 with an irrational Lagrange-remainder witness, sqrt(2/3)) rather than a new derivation -- the point of this registration is the ADR-0601 classification, applied to the module this task explicitly flagged as needing an honest (not overstated) call: the kernel side (Rat.taylor_deg1) covers a STRICTLY WEAKER statement (degree <= 1, no remainder, no witness) and does not reconstruct this certificate at any degree, so this fact's proof_route is cas-certificate/cas-internal throughout, with no partial kernel-reconstructed sibling claimed (unlike F:cas-ivt-cbrt2-in-1-2, which does have a kernel-reconstructed sibling fact for its sign-bracket sub-claim). No Kernel::add_declaration term exists for any part of this claim."
+}
