@@ -11304,3 +11304,866 @@ pub(super) fn declare_integral_add(d: &mut IntDev<'_>, p: CRealPrelude) -> Resul
         value,
     })
 }
+
+// --- `CReal.integral_le` -- order passes to the integral. No `Equiv`/
+// `converges_unique` bridge is needed here (unlike `integral_add`/
+// `integral_witness_independent`): `CReal.converges_le` compares two
+// Converges facts at INDEPENDENT limits directly, so the only obstruction is
+// getting BOTH sides' native Riemann-sum sequences onto a SHARED mesh depth
+// at each accuracy index `n`. `riemann_sum_cauchy` and
+// `shared_index_to_canonical` are already `F`-generic (see
+// `riemannSumDeepCauchyCross`'s own module comment: "nothing ... is specific
+// to a SINGLE witness"), and neither mentions `u`/`f` in a way that forces
+// them to agree across the two calls -- so applying `riemann_sum_cauchy` once
+// for `F` (refined by `G`'s own depth) and once for `G` (refined by `F`'s own
+// depth) reaches a single shared refinement `l(n)`, exactly the way
+// `riemannSumDeepCauchyCross` reaches one for a single function at two
+// witnesses. -----------------------------------------------------------
+
+/// `CReal.integral_le : ∀ F G a b hab uF uG, (∀ t, le a t → le t b → le (F t)
+/// (G t)) → le (CReal.integral F a b hab uF) (CReal.integral G a b hab uG)`.
+///
+/// # The construction
+///
+/// 1. `f_lambda_f`/`f_lambda_g` — `F`'s and `G`'s own NATIVE
+///    [`integral_witness`] sequences, and `conv_f_native`/`conv_g_native` —
+///    [`CRealPrelude::integral_converges`] at each.
+/// 2. At a fresh accuracy index `n`: `m1 := deep(F,uF,n)+0`, `m2 :=
+///    deep(G,uG,n)+0` (the native mesh depths at `n`, EXACTLY as
+///    [`integral_witness`] itself computes them), and `l :=`
+///    [`common_refinement`]`(m1,m2)`'s shared refinement target.
+/// 3. Two [`CRealPrelude::riemann_sum_cauchy`] calls — `(F, e:=n,
+///    n_refine:=m2, k:=0, uF)` lands directly at `l` (`m_prime =
+///    succ_mul_succ(m2,m1) = l`); `(G, e:=n, n_refine:=m1, k:=0, uG)` lands
+///    at `common_refinement`'s OTHER target `l2`, rewritten onto `l` via
+///    [`crate::rat_prelude::ops::nat_rewrite_prop`] — verbatim the
+///    `riemannSumDeepCauchyCross` recipe, `F`/`G` in place of that
+///    declaration's "same `f`, two witnesses".
+/// 4. [`CRealPrelude::shared_index_to_canonical`] at `(n,n,n)` on each,
+///    giving `Within (seq(rsum_F(l))n − seq(rsum_F(m1))n) bnd_a` and the `G`
+///    analogue `bnd_c` — the SAME single-leg shape
+///    [`riemann_sum_deep_cauchy`]'s own `bnd_a`/`bnd_c` legs have.
+/// 5. [`bnd_leg_plus_share_le`] folds each leg (plus one extra unwanted
+///    `natDivSucc(1,n)` share term that declaration's own signature always
+///    adds, dropped here via [`le_add_nonneg_right`] since — unlike
+///    `riemannSumDeepCauchyFolded`'s two-sided fold — there is no partner
+///    leg on this side to absorb it into) into a single `natDivSucc(K,n)`,
+///    then [`weaken`] widens each `Within` to that literal Cauchy-rate
+///    shape [`CRealPrelude::converges_of_close`] demands.
+/// 6. [`CRealPrelude::converges_of_close`] transports `conv_f_native`
+///    across the `F` bound to `Converges new_seq_f (integral F …)`,
+///    `new_seq_f(n) := riemannSum F a b l(n)`; the `G` analogue similarly.
+/// 7. `new_seq_f(n)` and `new_seq_g(n)` sample the SAME shared mesh `l(n)`,
+///    so [`CRealPrelude::riemann_sum_le_on`] applied there is EXACT (no
+///    epsilon slack) and supplies [`CRealPrelude::converges_le`]'s pointwise
+///    hypothesis directly.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_integral_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let f_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let uf_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let uf_fv = d.fresh_fvar();
+    let uf = d.kernel().fvar(uf_fv);
+    let ug_ty = d.const_app(p.uniformly_continuous_on, &[g, a, b]);
+    let ug_fv = d.fresh_fvar();
+    let ug = d.kernel().fvar(ug_fv);
+
+    // hfg_ty : ∀ t, le a t → le t b → le (F t) (G t) -- RESTRICTED to [a,b],
+    // the exact shape `riemann_sum_le_on` itself takes.
+    let hfg_ty = {
+        let t_fv = d.fresh_fvar();
+        let t = d.kernel().fvar(t_fv);
+        let ft = d.apply(f, &[t]);
+        let gt = d.apply(g, &[t]);
+        let concl = cle(d, p, ft, gt);
+        let t_le_b = cle(d, p, t, b);
+        let after_upper = d.arrow(t_le_b, concl);
+        let a_le_t = cle(d, p, a, t);
+        let after_lower = d.arrow(a_le_t, after_upper);
+        d.pi_fv(t_fv, carrier, after_lower)
+    };
+    let hfg_fv = d.fresh_fvar();
+    let hfg = d.kernel().fvar(hfg_fv);
+
+    // --- native integral_witness triples, and the two Converges facts
+    // `converges_of_close` will transport. ---------------------------------
+    let (f_lambda_f, _kf_native, _cauchy_f) = integral_witness(d, p, f, a, b, hab, uf);
+    let (f_lambda_g, _kg_native, _cauchy_g) = integral_witness(d, p, g, a, b, hab, ug);
+
+    let integral_f_val = d.const_app(p.integral, &[f, a, b, hab, uf]);
+    let integral_g_val = d.const_app(p.integral, &[g, a, b, hab, ug]);
+
+    let conv_f_native = d.lemma(p.integral_converges, &[f, a, b, hab, uf]);
+    let conv_g_native = d.lemma(p.integral_converges, &[g, a, b, hab, ug]);
+
+    let width = width_of(d, p, a, b);
+    let (_c, magnitude, _width_le_mag) = direct_bound_le(d, p, width);
+
+    // --- the shared refinement `l(n)` and the two cross bounds, at a
+    // symbolic accuracy index `n`. ------------------------------------------
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let deep_f_n = deep_at(d, p, f, a, b, uf, n);
+    let deep_g_n = deep_at(d, p, g, a, b, ug, n);
+    let zero1 = d.num(0);
+    let m1 = NatOps::add(d, deep_f_n, zero1); // matches f_lambda_f's own internal mesh count
+    let zero2 = d.num(0);
+    let m2 = NatOps::add(d, deep_g_n, zero2); // matches f_lambda_g's own internal mesh count
+
+    let h1 = d.lemma(p.riemann_sum_cauchy, &[f, a, b, n, m2, zero1, hab, uf]);
+    let h2_raw = d.lemma(p.riemann_sum_cauchy, &[g, a, b, n, m1, zero2, hab, ug]);
+
+    let (l, l2, l2_eq_l) = common_refinement(d, m1, m2);
+
+    let h2 = {
+        let rsum_m2_for_motive = rsum(d, p, g, a, b, m2);
+        let neg_rsum_m2_for_motive = cneg(d, p, rsum_m2_for_motive);
+        nat_rewrite_prop(d, l2, l, l2_eq_l, h2_raw, &|d, x| {
+            let rsum_x = rsum(d, p, g, a, b, x);
+            let t = cadd(d, p, rsum_x, neg_rsum_m2_for_motive);
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let seq_t_i = sample(d, p, t, i);
+            let bound_i = shared_accuracy_bound(d, p, a, b, n, m2, i);
+            let claim = within(d, p, seq_t_i, bound_i);
+            d.pi_fv(i_fv, nat, claim)
+        })
+    };
+
+    let rsum_l_f = rsum(d, p, f, a, b, l);
+    let rsum_m1 = rsum(d, p, f, a, b, m1);
+    let rsum_l_g = rsum(d, p, g, a, b, l);
+    let rsum_m2 = rsum(d, p, g, a, b, m2);
+
+    let bound1_fn = shared_accuracy_bound_fn(d, p, a, b, n, m1);
+    let bound2_fn = shared_accuracy_bound_fn(d, p, a, b, n, m2);
+
+    let app1 = d.lemma(
+        p.shared_index_to_canonical,
+        &[rsum_l_f, rsum_m1, bound1_fn, h1, n, n, n],
+    );
+    // app1 : Within (seq(rsum_l_f)n - seq(rsum_m1)n) bnd_a
+    let app2 = d.lemma(
+        p.shared_index_to_canonical,
+        &[rsum_l_g, rsum_m2, bound2_fn, h2, n, n, n],
+    );
+    // app2 : Within (seq(rsum_l_g)n - seq(rsum_m2)n) bnd_c
+
+    let shift_n = shift(d, n);
+    let m_n_sn = modulus(d, p, n, shift_n);
+    let m_sn_n = modulus(d, p, shift_n, n);
+
+    let bound1_n = d.apply(bound1_fn, &[n]);
+    let bnd_a = {
+        let inner = radd(d, m_n_sn, bound1_n);
+        radd(d, inner, m_sn_n)
+    };
+    let bound2_n = d.apply(bound2_fn, &[n]);
+    let bnd_c = {
+        let inner = radd(d, m_n_sn, bound2_n);
+        radd(d, inner, m_sn_n)
+    };
+
+    // --- fold each single leg into `natDivSucc(K,n)`, dropping the extra
+    // `+natDivSucc(1,n)` share `bnd_leg_plus_share_le` always adds (there is
+    // no partner leg here to absorb it into). `K` itself is independent of
+    // `idx`/`m`/`bound_at_idx` (only `magnitude`), so both calls return the
+    // SAME `K` -- see `riemannSumDeepCauchyFolded`'s own precedent for
+    // discarding the second call's `K` and reusing the first's. -----------
+    let (k, leg_f_extra_le) = bnd_leg_plus_share_le(d, p, a, b, n, m1, magnitude, bound1_n);
+    let (_k_g, leg_g_extra_le) = bnd_leg_plus_share_le(d, p, a, b, n, m2, magnitude, bound2_n);
+    let k_n = nds(d, p, k, n);
+
+    let one_nat_f = d.num(1);
+    let a1_n = div_succ(d, p, 1, n);
+    let a1_nonneg_f = d.lemma(p.rat.zero_le_nat_div_succ, &[one_nat_f, n]);
+    let bnd_a_le_extra = le_add_nonneg_right(d, p, bnd_a, a1_n, a1_nonneg_f);
+    let bnd_a_extra = radd(d, bnd_a, a1_n);
+    let bnd_a_le_k = d.lemma(
+        p.rat.le_trans,
+        &[bnd_a, bnd_a_extra, k_n, bnd_a_le_extra, leg_f_extra_le],
+    );
+
+    let one_nat_g = d.num(1);
+    let a1_n2 = div_succ(d, p, 1, n);
+    let a1_nonneg_g = d.lemma(p.rat.zero_le_nat_div_succ, &[one_nat_g, n]);
+    let bnd_c_le_extra = le_add_nonneg_right(d, p, bnd_c, a1_n2, a1_nonneg_g);
+    let bnd_c_extra = radd(d, bnd_c, a1_n2);
+    let bnd_c_le_k = d.lemma(
+        p.rat.le_trans,
+        &[bnd_c, bnd_c_extra, k_n, bnd_c_le_extra, leg_g_extra_le],
+    );
+
+    let seq_rsum_l_f_n = sample(d, p, rsum_l_f, n);
+    let seq_rsum_m1_n = sample(d, p, rsum_m1, n);
+    let diff_f = rsub(d, p.rat, seq_rsum_l_f_n, seq_rsum_m1_n);
+    let cross_f_at_n = weaken(d, p, diff_f, bnd_a, k_n, app1, bnd_a_le_k);
+    let seq_rsum_l_g_n = sample(d, p, rsum_l_g, n);
+    let seq_rsum_m2_n = sample(d, p, rsum_m2, n);
+    let diff_g = rsub(d, p.rat, seq_rsum_l_g_n, seq_rsum_m2_n);
+    let cross_g_at_n = weaken(d, p, diff_g, bnd_c, k_n, app2, bnd_c_le_k);
+
+    // --- bind `n`: the two cross bounds, the two shared-mesh sequences, and
+    // the exact pointwise comparison at the shared mesh. -------------------
+    let cross_f = d.lam_fv(n_fv, nat, cross_f_at_n);
+    let cross_g = d.lam_fv(n_fv, nat, cross_g_at_n);
+    let new_seq_f = d.lam_fv(n_fv, nat, rsum_l_f);
+    let new_seq_g = d.lam_fv(n_fv, nat, rsum_l_g);
+
+    let hle_body = d.lemma(p.riemann_sum_le_on, &[f, g, a, b, l, hab, hfg]);
+    // hle_body : le (riemannSum F a b l) (riemannSum G a b l) -- EXACT, both
+    // sides sampled at the SAME shared mesh `l`.
+    let hle_pointwise = d.lam_fv(n_fv, nat, hle_body);
+
+    let step_f = d.lemma(
+        p.converges_of_close,
+        &[
+            f_lambda_f,
+            new_seq_f,
+            integral_f_val,
+            k,
+            cross_f,
+            conv_f_native,
+        ],
+    );
+    // step_f : Converges new_seq_f integral_f_val
+    let step_g = d.lemma(
+        p.converges_of_close,
+        &[
+            f_lambda_g,
+            new_seq_g,
+            integral_g_val,
+            k,
+            cross_g,
+            conv_g_native,
+        ],
+    );
+    // step_g : Converges new_seq_g integral_g_val
+
+    let final_proof = d.lemma(
+        p.converges_le,
+        &[
+            new_seq_f,
+            new_seq_g,
+            integral_f_val,
+            integral_g_val,
+            step_f,
+            step_g,
+            hle_pointwise,
+        ],
+    );
+    // final_proof : le integral_f_val integral_g_val
+
+    let concl = cle(d, p, integral_f_val, integral_g_val);
+
+    // `concl` mentions `hab`/`uf`/`ug` (via `integral_f_val`/`integral_g_val`),
+    // so all three must be bound with `pi_fv`, not `d.arrow` -- the same
+    // trap `declare_integral_converges`'s own doc comment names. `hfg`
+    // itself does not appear in `concl`, so it alone uses `d.arrow`.
+    let ty = {
+        let after_hfg = d.arrow(hfg_ty, concl);
+        let after_ug = d.pi_fv(ug_fv, ug_ty, after_hfg);
+        let after_uf = d.pi_fv(uf_fv, uf_ty, after_ug);
+        let after_hab = d.pi_fv(hab_fv, hab_ty, after_uf);
+        let over_b = d.pi_fv(b_fv, carrier, after_hab);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        let over_g = d.pi_fv(g_fv, f_ty, over_a);
+        d.pi_fv(f_fv, f_ty, over_g)
+    };
+    let value = {
+        let with_hfg = d.lam_fv(hfg_fv, hfg_ty, final_proof);
+        let with_ug = d.lam_fv(ug_fv, ug_ty, with_hfg);
+        let with_uf = d.lam_fv(uf_fv, uf_ty, with_ug);
+        let with_hab = d.lam_fv(hab_fv, hab_ty, with_uf);
+        let over_b = d.lam_fv(b_fv, carrier, with_hab);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        let over_g = d.lam_fv(g_fv, f_ty, over_a);
+        d.lam_fv(f_fv, f_ty, over_g)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.integral_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+#[cfg(test)]
+mod integral_le_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// **Mandatory concrete instantiation, with a negative (swapped)
+    /// control.** `F := fun _ => zero`, `G := fun _ => one`, `a := zero`,
+    /// `b := one` — `zero != one`, so a bug that swapped the two integral
+    /// values in `integral_le`'s conclusion is visible. The SAME proof term
+    /// is checked against BOTH the true conclusion `le (integral F a b hab
+    /// uF) (integral G a b hab uG)` (must succeed) and the SWAPPED (false)
+    /// conclusion `le (integral G …) (integral F …)` (must be REFUSED) — the
+    /// same "inverted control" shape `converges_le`'s own test uses
+    /// (`convergence.rs`'s `converges_le_concrete_and_negative_control`),
+    /// since `integral_le` is built directly on `converges_le` and could
+    /// silently inherit a transposed conclusion from it.
+    #[test]
+    fn integral_le_concrete_and_negative_control() {
+        crate::on_a_deep_stack(integral_le_concrete_and_negative_control_body);
+    }
+
+    fn integral_le_concrete_and_negative_control_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+
+        let zero_c = d.kernel().const_(p.zero, vec![]);
+        let one_c = d.kernel().const_(p.one, vec![]);
+
+        let f_const_zero = {
+            let ignore_fv = d.fresh_fvar();
+            d.lam_fv(ignore_fv, carrier, zero_c)
+        };
+        let g_const_one = {
+            let ignore_fv = d.fresh_fvar();
+            d.lam_fv(ignore_fv, carrier, one_c)
+        };
+
+        let a = zero_c;
+        let b = one_c;
+        let lt01 = d.lemma(p.zero_lt_one, &[]);
+        let hab = d.lemma(p.le_of_lt, &[zero_c, one_c, lt01]);
+
+        let uf = d.lemma(p.uniformly_continuous_const, &[zero_c, a, b]);
+        let ug = d.lemma(p.uniformly_continuous_const, &[one_c, a, b]);
+
+        // hfg : forall t, le a t -> le t b -> le (f_const_zero t) (g_const_one
+        // t) -- beta-reduces to `le zero one` at every `t`, via
+        // `zero_lt_one`/`le_of_lt`, a genuine (non-vacuous) fact rather than
+        // `le_refl` at a single point.
+        let hfg = {
+            let t_fv = d.fresh_fvar();
+            let t = d.kernel().fvar(t_fv);
+            let a_le_t_ty = cle(&mut d, p, a, t);
+            let t_le_b_ty = cle(&mut d, p, t, b);
+            let lt01_inner = d.lemma(p.zero_lt_one, &[]);
+            let le01 = d.lemma(p.le_of_lt, &[zero_c, one_c, lt01_inner]);
+            let upper_fv = d.fresh_fvar();
+            let with_upper = d.lam_fv(upper_fv, t_le_b_ty, le01);
+            let lower_fv = d.fresh_fvar();
+            let with_lower = d.lam_fv(lower_fv, a_le_t_ty, with_upper);
+            d.lam_fv(t_fv, carrier, with_lower)
+        };
+
+        let proof = d.lemma(
+            p.integral_le,
+            &[f_const_zero, g_const_one, a, b, hab, uf, ug, hfg],
+        );
+
+        let integral_f_val = d.const_app(p.integral, &[f_const_zero, a, b, hab, uf]);
+        let integral_g_val = d.const_app(p.integral, &[g_const_one, a, b, hab, ug]);
+
+        let anon = d.kernel().anon();
+
+        // Positive: the TRUE conclusion must be accepted.
+        let true_ty = cle(&mut d, p, integral_f_val, integral_g_val);
+        let name_ok = d.kernel().name_str(anon, "__integralLeConcreteOk");
+        let result_ok = d.kernel().add_declaration(Declaration::Theorem {
+            name: name_ok,
+            uparams: vec![],
+            ty: true_ty,
+            value: proof,
+        });
+        assert!(
+            result_ok.is_ok(),
+            "integral_le at F := const zero, G := const one, [a,b] := [0,1] \
+             must prove `le (integral F...) (integral G...)`: {:?}",
+            result_ok.err()
+        );
+
+        // Negative control: the SAME proof term, asserted at the SWAPPED
+        // (false) conclusion, must be REFUSED.
+        let false_ty = cle(&mut d, p, integral_g_val, integral_f_val);
+        let name_bad = d.kernel().name_str(anon, "__integralLeConcreteBad");
+        let result_bad = d.kernel().add_declaration(Declaration::Theorem {
+            name: name_bad,
+            uparams: vec![],
+            ty: false_ty,
+            value: proof,
+        });
+        assert!(
+            result_bad.is_err(),
+            "the SAME proof term must be REFUSED against the swapped \
+             (false) conclusion `le (integral G...) (integral F...)`"
+        );
+    }
+}
+
+// --- `CReal.integral_scale` -- pulling a constant factor out of the
+// integral. Unlike `integral_add` (THREE witnesses, `common_refinement3`)
+// and unlike a from-scratch Lipschitz bound on `CReal.mul` (the obstruction
+// this law was originally expected to hit -- `mul_shift` depends on BOTH
+// operands' magnitudes), this needs only TWO witnesses -- `uF` for `F`,
+// `ucF` for `combined := fun t => mul c (F t)` -- landed on a shared mesh
+// via [`common_refinement`], EXACTLY [`declare_integral_le`]'s own recipe
+// with `combined` in `G`'s slot, plus ONE exact per-`m` bridge at that
+// shared mesh: [`CRealPrelude::mul_riemann_sum`]. `CReal.mul`'s own
+// index-shift complexity is never re-derived by hand: `CReal.converges_mul`
+// -- already proved -- is used as a BLACK BOX to transport `F`'s own
+// shared-mesh convergence through multiplication by the constant sequence
+// `fun _ => c` (`CReal.converges_of_const`), rather than building a fresh
+// bound on `CReal.mul` from `product::regular_between` directly. ----------
+
+/// `CReal.integral_scale : ∀ c F a b hab uF ucF, Equiv (CReal.integral (fun
+/// t => mul c (F t)) a b hab ucF) (mul c (CReal.integral F a b hab uF))`.
+///
+/// # The construction
+///
+/// 1. `combined := fun t => mul c (F t)`, EXACTLY [`declare_mul_riemann_sum`]'s
+///    own `combined` builder, so every `rsum(combined, …)` built here
+///    matches that theorem's LHS bit for bit.
+/// 2. `f_lambda_f`/`integral_f_val`/`conv_f_native` (F's own native
+///    [`integral_witness`]/[`CRealPrelude::integral_converges`]) and the
+///    `combined` analogues `f_lambda_cf`/`integral_cf_val`/`conv_cf_native`.
+/// 3. At a fresh accuracy index `n`: `m1 := deep(F,a,b,uF,n)+0`, `m2 :=
+///    deep(combined,a,b,ucF,n)+0`, `l :=` [`common_refinement`]`(m1,m2)`'s
+///    shared target -- EXACTLY [`declare_integral_le`]'s own `m1`/`m2`/`l`,
+///    `combined` standing in for that declaration's `G`.
+/// 4. Two [`CRealPrelude::riemann_sum_cauchy`] calls, the [`common_refinement`]
+///    rewrite and [`CRealPrelude::shared_index_to_canonical`], folded via
+///    [`bnd_leg_plus_share_le`] into a SHARED `natDivSucc(k,n)` -- verbatim
+///    [`declare_integral_le`]'s own `app1`/`app2`/`cross_f_at_n`/
+///    `cross_g_at_n` construction, `combined` in `G`'s slot
+///    (`cross_cf_at_n` here).
+/// 5. [`CRealPrelude::mul_riemann_sum`] applied at the SHARED `l`, then
+///    applied at `n`: `Equiv`'s own `∀ n, Within(…)` unfolding gives `Within
+///    (seq (rsum combined a b l) n − seq (mul c (rsum F a b l)) n)
+///    (natDivSucc 2 n)` directly, no epsilon slack beyond `Equiv`'s own
+///    fixed `2/(n+1)`.
+/// 6. [`chain_within2`] combines step 5 (flipped) with `cross_cf_at_n` into
+///    a single cross bound between `seq (mul c (rsum F a b l)) n` and
+///    `combined`'s native sample `seq (rsum combined a b m2) n` (== `seq
+///    (f_lambda_cf n) n` up to the beta [`integral_witness`]'s own `f_lambda`
+///    reduces by), then [`CRealPrelude::converges_of_close`] transports
+///    `conv_cf_native` across it to `Converges (fun n => mul c (rsum F a b
+///    (l n))) integral_cf_val` (`step_cf`).
+/// 7. [`CRealPrelude::converges_of_close`] ALSO transports `conv_f_native`
+///    across the F-side leg from step 4 to `Converges (fun n => rsum F a b
+///    (l n)) integral_f_val` (`step_f`, byte-identical in shape to
+///    [`declare_integral_le`]'s own `step_f`).
+/// 8. [`CRealPrelude::converges_mul`] at [`CRealPrelude::converges_of_const`]
+///    `c` and `step_f` gives `Converges (fun n => mul c (rsum F a b (l n)))
+///    (mul c integral_f_val)` -- the SAME sequence step 6 lands at, up to
+///    the beta the kernel's own defeq check performs -- so
+///    [`CRealPrelude::converges_unique`] closes `Equiv integral_cf_val (mul
+///    c integral_f_val)` directly.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_integral_scale(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let f_ty = fn_ty(d, p);
+
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    // combined := fun t => mul c (F t) -- EXACTLY `mul_riemannSum`'s own
+    // `combined` builder (`declare_mul_riemann_sum`), so every `rsum
+    // (combined, …)` built here matches that theorem's LHS bit for bit.
+    let combined = {
+        let t_fv = d.fresh_fvar();
+        let t = d.kernel().fvar(t_fv);
+        let ft = d.apply(f, &[t]);
+        let body = cmul(d, p, c, ft);
+        d.lam_fv(t_fv, carrier, body)
+    };
+
+    let uf_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let uf_fv = d.fresh_fvar();
+    let uf = d.kernel().fvar(uf_fv);
+    let ucf_ty = d.const_app(p.uniformly_continuous_on, &[combined, a, b]);
+    let ucf_fv = d.fresh_fvar();
+    let ucf = d.kernel().fvar(ucf_fv);
+
+    // --- native `integral_witness` triples. --------------------------------
+    let (f_lambda_f, _kf_native, _cauchy_f) = integral_witness(d, p, f, a, b, hab, uf);
+    let (f_lambda_cf, _kcf_native, _cauchy_cf) = integral_witness(d, p, combined, a, b, hab, ucf);
+
+    let integral_f_val = d.const_app(p.integral, &[f, a, b, hab, uf]);
+    let integral_cf_val = d.const_app(p.integral, &[combined, a, b, hab, ucf]);
+
+    let conv_f_native = d.lemma(p.integral_converges, &[f, a, b, hab, uf]);
+    let conv_cf_native = d.lemma(p.integral_converges, &[combined, a, b, hab, ucf]);
+
+    let width = width_of(d, p, a, b);
+    let (_c_bound, magnitude, _width_le_mag) = direct_bound_le(d, p, width);
+
+    // --- the shared refinement `l(n)` and the two cross bounds, at a
+    // symbolic accuracy index `n` -- verbatim `declare_integral_le`'s own
+    // recipe, `combined` in `G`'s slot. -------------------------------------
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let deep_f_n = deep_at(d, p, f, a, b, uf, n);
+    let zero1 = d.num(0);
+    let m1 = NatOps::add(d, deep_f_n, zero1);
+    let deep_cf_n = deep_at(d, p, combined, a, b, ucf, n);
+    let zero2 = d.num(0);
+    let m2 = NatOps::add(d, deep_cf_n, zero2);
+
+    let h1 = d.lemma(p.riemann_sum_cauchy, &[f, a, b, n, m2, zero1, hab, uf]);
+    let h2_raw = d.lemma(
+        p.riemann_sum_cauchy,
+        &[combined, a, b, n, m1, zero2, hab, ucf],
+    );
+
+    let (l, l2, l2_eq_l) = common_refinement(d, m1, m2);
+
+    let h2 = {
+        let rsum_m2_for_motive = rsum(d, p, combined, a, b, m2);
+        let neg_rsum_m2_for_motive = cneg(d, p, rsum_m2_for_motive);
+        nat_rewrite_prop(d, l2, l, l2_eq_l, h2_raw, &|d, x| {
+            let rsum_x = rsum(d, p, combined, a, b, x);
+            let t = cadd(d, p, rsum_x, neg_rsum_m2_for_motive);
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let seq_t_i = sample(d, p, t, i);
+            let bound_i = shared_accuracy_bound(d, p, a, b, n, m2, i);
+            let claim = within(d, p, seq_t_i, bound_i);
+            d.pi_fv(i_fv, nat, claim)
+        })
+    };
+
+    let rsum_l_f = rsum(d, p, f, a, b, l);
+    let rsum_m1 = rsum(d, p, f, a, b, m1);
+    let rsum_l_cf = rsum(d, p, combined, a, b, l);
+    let rsum_m2 = rsum(d, p, combined, a, b, m2);
+
+    let bound1_fn = shared_accuracy_bound_fn(d, p, a, b, n, m1);
+    let bound2_fn = shared_accuracy_bound_fn(d, p, a, b, n, m2);
+
+    let app1 = d.lemma(
+        p.shared_index_to_canonical,
+        &[rsum_l_f, rsum_m1, bound1_fn, h1, n, n, n],
+    );
+    let app2 = d.lemma(
+        p.shared_index_to_canonical,
+        &[rsum_l_cf, rsum_m2, bound2_fn, h2, n, n, n],
+    );
+
+    let shift_n = shift(d, n);
+    let m_n_sn = modulus(d, p, n, shift_n);
+    let m_sn_n = modulus(d, p, shift_n, n);
+
+    let bound1_n = d.apply(bound1_fn, &[n]);
+    let bnd_a = {
+        let inner = radd(d, m_n_sn, bound1_n);
+        radd(d, inner, m_sn_n)
+    };
+    let bound2_n = d.apply(bound2_fn, &[n]);
+    let bnd_c = {
+        let inner = radd(d, m_n_sn, bound2_n);
+        radd(d, inner, m_sn_n)
+    };
+
+    let (k, leg_f_extra_le) = bnd_leg_plus_share_le(d, p, a, b, n, m1, magnitude, bound1_n);
+    let (_k_cf, leg_cf_extra_le) = bnd_leg_plus_share_le(d, p, a, b, n, m2, magnitude, bound2_n);
+    let k_n = nds(d, p, k, n);
+
+    let one_nat_f = d.num(1);
+    let a1_n = div_succ(d, p, 1, n);
+    let a1_nonneg_f = d.lemma(p.rat.zero_le_nat_div_succ, &[one_nat_f, n]);
+    let bnd_a_le_extra = le_add_nonneg_right(d, p, bnd_a, a1_n, a1_nonneg_f);
+    let bnd_a_extra = radd(d, bnd_a, a1_n);
+    let bnd_a_le_k = d.lemma(
+        p.rat.le_trans,
+        &[bnd_a, bnd_a_extra, k_n, bnd_a_le_extra, leg_f_extra_le],
+    );
+
+    let one_nat_cf = d.num(1);
+    let a1_n2 = div_succ(d, p, 1, n);
+    let a1_nonneg_cf = d.lemma(p.rat.zero_le_nat_div_succ, &[one_nat_cf, n]);
+    let bnd_c_le_extra = le_add_nonneg_right(d, p, bnd_c, a1_n2, a1_nonneg_cf);
+    let bnd_c_extra = radd(d, bnd_c, a1_n2);
+    let bnd_c_le_k = d.lemma(
+        p.rat.le_trans,
+        &[bnd_c, bnd_c_extra, k_n, bnd_c_le_extra, leg_cf_extra_le],
+    );
+
+    let seq_rsum_l_f_n = sample(d, p, rsum_l_f, n);
+    let seq_rsum_m1_n = sample(d, p, rsum_m1, n);
+    let diff_f = rsub(d, p.rat, seq_rsum_l_f_n, seq_rsum_m1_n);
+    let cross_f_at_n = weaken(d, p, diff_f, bnd_a, k_n, app1, bnd_a_le_k);
+
+    let seq_rsum_l_cf_n = sample(d, p, rsum_l_cf, n);
+    let seq_rsum_m2_n = sample(d, p, rsum_m2, n);
+    let diff_cf = rsub(d, p.rat, seq_rsum_l_cf_n, seq_rsum_m2_n);
+    let cross_cf_at_n = weaken(d, p, diff_cf, bnd_c, k_n, app2, bnd_c_le_k);
+    // cross_cf_at_n : Within (seq(rsum_l_cf) n - seq(rsum_m2) n) (natDivSucc k n)
+
+    // --- step 5: `mul_riemannSum` at the SHARED `l`, applied at `n`. -------
+    let mul_eq_l = d.lemma(p.mul_riemann_sum, &[c, f, a, b, l]);
+    // mul_eq_l : Equiv (rsum combined a b l) (mul c (rsum f a b l))
+    let mul_eq_n = d.apply(mul_eq_l, &[n]);
+    // mul_eq_n : Within (seq(rsum_l_cf) n - seq(mul c rsum_l_f) n) (natDivSucc 2 n)
+
+    let mul_c_rsum_l_f = cmul(d, p, c, rsum_l_f);
+    let seq_mul_c_rsum_l_f_n = sample(d, p, mul_c_rsum_l_f, n);
+    let two_n = div_succ(d, p, 2, n);
+    let mul_eq_n_flip = within_symm(d, p, seq_rsum_l_cf_n, seq_mul_c_rsum_l_f_n, two_n, mul_eq_n);
+    // mul_eq_n_flip : Within (seq(mul c rsum_l_f) n - seq(rsum_l_cf) n) (natDivSucc 2 n)
+
+    // --- step 6: chain the flipped mul-leg with `cross_cf_at_n`, giving a
+    // cross bound between `mul c (rsum F a b l)` and `combined`'s own
+    // native mesh sample -- ready for `converges_of_close`. -----------------
+    let cross_scale_raw = chain_within2(
+        d,
+        p,
+        seq_mul_c_rsum_l_f_n,
+        seq_rsum_l_cf_n,
+        seq_rsum_m2_n,
+        two_n,
+        k_n,
+        mul_eq_n_flip,
+        cross_cf_at_n,
+    );
+    let two_lit = d.num(2);
+    let (k2, k2_eq) = fuse_nds(d, p, two_lit, k, n);
+    let k2_n = nds(d, p, k2, n);
+    let cross_scale_bound = radd(d, two_n, k_n);
+    let diff_scale = rsub(d, p.rat, seq_mul_c_rsum_l_f_n, seq_rsum_m2_n);
+    let cross_scale = rat_eq_rewrite(
+        d,
+        cross_scale_bound,
+        k2_n,
+        k2_eq,
+        cross_scale_raw,
+        &|d, t| within(d, p, diff_scale, t),
+    );
+
+    // --- step 7: transport F's own native convergence to the shared mesh
+    // (verbatim `declare_integral_le`'s own `step_f`). ----------------------
+    let new_seq_f = d.lam_fv(n_fv, nat, rsum_l_f);
+    let cross_f = d.lam_fv(n_fv, nat, cross_f_at_n);
+    let step_f = d.lemma(
+        p.converges_of_close,
+        &[
+            f_lambda_f,
+            new_seq_f,
+            integral_f_val,
+            k,
+            cross_f,
+            conv_f_native,
+        ],
+    );
+    // step_f : Converges new_seq_f integral_f_val
+
+    // --- step 6, continued: transport `combined`'s own native convergence
+    // across `cross_scale` to `Converges new_seq_cf integral_cf_val`,
+    // `new_seq_cf(n) := mul c (rsum F a b (l n))`. --------------------------
+    let new_seq_cf = d.lam_fv(n_fv, nat, mul_c_rsum_l_f);
+    let cross_scale_lam = d.lam_fv(n_fv, nat, cross_scale);
+    let step_cf = d.lemma(
+        p.converges_of_close,
+        &[
+            f_lambda_cf,
+            new_seq_cf,
+            integral_cf_val,
+            k2,
+            cross_scale_lam,
+            conv_cf_native,
+        ],
+    );
+    // step_cf : Converges new_seq_cf integral_cf_val
+
+    // --- step 8: `converges_mul` at the constant sequence, closing the gap
+    // without touching `CReal.mul`'s own index-shift complexity by hand. ---
+    let const_seq = {
+        let ignore_fv = d.fresh_fvar();
+        d.lam_fv(ignore_fv, nat, c)
+    };
+    let const_c = d.lemma(p.converges_of_const, &[c]);
+    // const_c : Converges const_seq c
+    let conv_scaled = d.lemma(
+        p.converges_mul,
+        &[const_seq, new_seq_f, c, integral_f_val, const_c, step_f],
+    );
+    // conv_scaled : Converges (fun n => mul (const_seq n) (new_seq_f n))
+    //               (mul c integral_f_val) -- the SAME sequence `new_seq_cf`
+    //               denotes, up to the two beta steps the kernel's own defeq
+    //               check performs (`const_seq n ~> c`, `new_seq_f n ~>
+    //               rsum_l_f`).
+
+    let mul_c_integral_f_val = cmul(d, p, c, integral_f_val);
+    let proof = d.lemma(
+        p.converges_unique,
+        &[
+            new_seq_cf,
+            integral_cf_val,
+            mul_c_integral_f_val,
+            step_cf,
+            conv_scaled,
+        ],
+    );
+    // proof : Equiv integral_cf_val (mul c integral_f_val)
+
+    let concl = equiv(d, p, integral_cf_val, mul_c_integral_f_val);
+
+    // `concl` mentions `hab`/`uF`/`ucF` (via `integral_f_val`/
+    // `integral_cf_val`) and `c` (via `mul_c_integral_f_val`), so all four
+    // must be bound with `pi_fv`, not `d.arrow` -- the same trap
+    // `declare_integral_add`'s own doc comment names.
+    let ty = {
+        let after_ucf = d.pi_fv(ucf_fv, ucf_ty, concl);
+        let after_uf = d.pi_fv(uf_fv, uf_ty, after_ucf);
+        let after_hab = d.pi_fv(hab_fv, hab_ty, after_uf);
+        let over_b = d.pi_fv(b_fv, carrier, after_hab);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        let over_f = d.pi_fv(f_fv, f_ty, over_a);
+        d.pi_fv(c_fv, carrier, over_f)
+    };
+    let value = {
+        let with_ucf = d.lam_fv(ucf_fv, ucf_ty, proof);
+        let with_uf = d.lam_fv(uf_fv, uf_ty, with_ucf);
+        let with_hab = d.lam_fv(hab_fv, hab_ty, with_uf);
+        let over_b = d.lam_fv(b_fv, carrier, with_hab);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        let over_f = d.lam_fv(f_fv, f_ty, over_a);
+        d.lam_fv(c_fv, carrier, over_f)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.integral_scale,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+#[cfg(test)]
+mod integral_scale_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// **Mandatory concrete instantiation, with a negative (dropped-factor)
+    /// control.** `F := fun _ => one`, `c := one + one` (`two`, so scaling is
+    /// non-trivial), `a := zero`, `b := one`. The SAME proof term is checked
+    /// against BOTH the true conclusion `Equiv (integral combined a b hab
+    /// ucF) (mul c (integral F a b hab uF))` (must succeed) and a FALSE
+    /// conclusion that drops the `c` factor entirely, `Equiv (integral
+    /// combined a b hab ucF) (integral F a b hab uF)` (must be REFUSED) --
+    /// genuinely false since `c := two != one`, not merely a vacuous swap.
+    #[test]
+    fn integral_scale_concrete_and_negative_control() {
+        crate::on_a_deep_stack(integral_scale_concrete_and_negative_control_body);
+    }
+
+    fn integral_scale_concrete_and_negative_control_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+
+        let zero_c = d.kernel().const_(p.zero, vec![]);
+        let one_c = d.kernel().const_(p.one, vec![]);
+        let two_c = cadd(&mut d, p, one_c, one_c);
+
+        let f_const_one = {
+            let ignore_fv = d.fresh_fvar();
+            d.lam_fv(ignore_fv, carrier, one_c)
+        };
+
+        let a = zero_c;
+        let b = one_c;
+        let lt01 = d.lemma(p.zero_lt_one, &[]);
+        let hab = d.lemma(p.le_of_lt, &[zero_c, one_c, lt01]);
+
+        let uf = d.lemma(p.uniformly_continuous_const, &[one_c, a, b]);
+
+        // combined_val := mul two one -- the value `combined t` reduces to
+        // for every `t`, since `f_const_one` ignores its argument.
+        let combined_val = cmul(&mut d, p, two_c, one_c);
+        let ucf = d.lemma(p.uniformly_continuous_const, &[combined_val, a, b]);
+
+        let proof = d.lemma(p.integral_scale, &[two_c, f_const_one, a, b, hab, uf, ucf]);
+
+        let combined = {
+            let ignore_fv = d.fresh_fvar();
+            d.lam_fv(ignore_fv, carrier, combined_val)
+        };
+        let integral_f_val = d.const_app(p.integral, &[f_const_one, a, b, hab, uf]);
+        let integral_cf_val = d.const_app(p.integral, &[combined, a, b, hab, ucf]);
+        let mul_c_integral_f_val = cmul(&mut d, p, two_c, integral_f_val);
+
+        let anon = d.kernel().anon();
+
+        // Positive: the TRUE conclusion must be accepted.
+        let true_ty = equiv(&mut d, p, integral_cf_val, mul_c_integral_f_val);
+        let name_ok = d.kernel().name_str(anon, "__integralScaleConcreteOk");
+        let result_ok = d.kernel().add_declaration(Declaration::Theorem {
+            name: name_ok,
+            uparams: vec![],
+            ty: true_ty,
+            value: proof,
+        });
+        assert!(
+            result_ok.is_ok(),
+            "integral_scale at c := two, F := const one, [a,b] := [0,1] must \
+             prove `Equiv (integral combined...) (mul c (integral F...))`: {:?}",
+            result_ok.err()
+        );
+
+        // Negative control: the SAME proof term, asserted against a FALSE
+        // conclusion that drops the `c` factor (`two != one`, genuinely
+        // false, not a vacuous or inverted control).
+        let false_ty = equiv(&mut d, p, integral_cf_val, integral_f_val);
+        let name_bad = d.kernel().name_str(anon, "__integralScaleConcreteBad");
+        let result_bad = d.kernel().add_declaration(Declaration::Theorem {
+            name: name_bad,
+            uparams: vec![],
+            ty: false_ty,
+            value: proof,
+        });
+        assert!(
+            result_bad.is_err(),
+            "the SAME proof term must be REFUSED against the FALSE \
+             conclusion that drops the `c` factor: `Equiv (integral \
+             combined...) (integral F...)`"
+        );
+    }
+}

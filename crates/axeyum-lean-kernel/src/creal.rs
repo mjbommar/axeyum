@@ -2233,6 +2233,66 @@ pub struct CRealPrelude {
     /// never forming `Rat.inv`, matching `bernoulli_harmonic_bound`'s own
     /// design.
     pub pow_half_le_nat_div_succ: NameId,
+    /// `CReal.pow_le_natDivSucc_of_lt : ∀ x, le zero x → lt x one →
+    /// Exists (fun (K : Nat) => ∀ m, le (pow x m) (ofRat (natDivSucc K m)))`.
+    ///
+    /// The general-base generalization of [`Self::pow_half_le_nat_div_succ`]:
+    /// geometric decay at ANY ratio `0 ≤ x < 1` (the strict bound supplied as
+    /// `CReal.lt` data, never assumed) dominates *some* harmonic-shaped rate,
+    /// entirely `CReal.inv`/`PosBound`-free. See `geometric.rs`'s
+    /// `declare_pow_le_nat_div_succ_of_lt` for the derivation: the rational
+    /// gap `q` from `lt x one` and the `Nat` witness `k` from
+    /// [`Self::pos_bound_of_lt`] applied to `ofRat q` together bound a
+    /// `CReal`-level companion to `Rat.bernoulli_harmonic_bound` (redone over
+    /// `CReal` rather than reusing the `ℚ` original, since bridging a
+    /// `Rat`-level bound back across a `CReal.pow` sample is exactly the open
+    /// gap `rat_prelude/bernoulli.rs`'s own module doc names).
+    pub pow_le_nat_div_succ_of_lt: NameId,
+    /// `CReal.ratioDecayBound : ∀ f r, le zero r → (∀ n, le (f (Nat.succ n))
+    /// (mul r (f n))) → ∀ n, le (f n) (mul (f Nat.zero) (pow r n))` — the
+    /// ratio test's decay induction: a sequence shrinking by a factor `r` at
+    /// each step (`f(n+1) ≤ r·f(n)`) stays under the geometric envelope
+    /// `f(0)·rⁿ`. The correct orientation, established by counterexample: the
+    /// reverse hypothesis `le (mul r (f n)) (f (Nat.succ n))` degenerates at
+    /// `r := 0` to `0 ≤ f(n+1)`, satisfied by any nonnegative sequence
+    /// including divergent ones (`f(n) := n+1`).
+    ///
+    /// Induction on `n`. Base case: `le (f 0) (mul (f 0) one)`, from
+    /// `le_refl (f 0)` transported across `Equiv (f 0) (mul (f 0) one)`
+    /// ([`Self::mul_one`], symmetrised) via [`Self::le_congr`] — the target
+    /// type `mul (f 0) (pow r 0)` is defeq to `mul (f 0) one` since `pow`
+    /// ι-reduces at `0`, so no further rewrite of the goal itself is needed.
+    /// Step: multiplies the inductive hypothesis `f j ≤ f 0 · rʲ` by the
+    /// nonnegative `r` on the left ([`Self::mul_le_mul_of_nonneg_left`]) to
+    /// get `r·f(j) ≤ r·(f 0·rʲ)`, chains it below the decay hypothesis at `j`
+    /// via [`Self::le_trans`], and transports the result across the
+    /// three-step commute/associate chain `r·(f0·rʲ) ~ f0·(rʲ·r)`
+    /// ([`Self::mul_assoc`]/[`Self::mul_comm`]/[`Self::mul_congr`]) via
+    /// [`Self::le_congr`] — the target `f0·pow(r,succ j)` is defeq to
+    /// `f0·(rʲ·r)` since `pow` ι-reduces its recursive factor on the right.
+    pub ratio_decay_bound: NameId,
+    /// `CReal.invLeOfPosBound : ∀ x k h, le (inv x k h) (ofNat (Nat.succ
+    /// k))` — the inverse of a `PosBound`-witnessed positive real is bounded
+    /// by a whole number computed from the very modulus that witnesses its
+    /// positivity: `PosBound x k` says `1/(k+1) ≤ x`, so `x⁻¹ ≤ k+1`.
+    ///
+    /// Built without touching `inv`'s own representative (`creal/inverse.rs`
+    /// is out of scope for this lane): from the `Rat`-level identity
+    /// `(1/(k+1))·(k+1) = 1` ([`crate::RatPrelude::mul_inv_cancel`] at
+    /// `q := natDivSucc 1 k` composed with
+    /// [`crate::RatPrelude::inv_nat_div_succ`], never
+    /// `Rat.normalize`/`Nat.gcd`), lifted to `Equiv (mul (ofRat (natDivSucc 1
+    /// k)) (ofNat (Nat.succ k))) one` via [`Self::of_rat_mul`]. Multiplying
+    /// `h : PosBound x k` (unfolds to `le (ofRat (natDivSucc 1 k)) x`) by the
+    /// nonnegative `ofNat (Nat.succ k)` on the right gives `le (mul (ofRat
+    /// (natDivSucc 1 k)) (ofNat (Nat.succ k))) (mul x (ofNat (Nat.succ
+    /// k)))`, transported by the identity above into `le one (mul x (ofNat
+    /// (Nat.succ k)))`, then into `le (mul x (inv x k h)) (mul x (ofNat
+    /// (Nat.succ k)))` via [`Self::mul_inv_cancel`] (symmetrised) and
+    /// [`Self::le_congr`], and finally cancelled by
+    /// [`Self::le_of_mul_le_mul_left`] at the SAME witness `(k, h)` `inv`
+    /// itself takes — no second modulus is invented.
+    pub inv_le_of_pos_bound: NameId,
     /// `CReal.geomHalfInvLeafBound : ∀ a, le (mul (inv (add one (neg half)) 1
     /// h) (pow half a)) (ofRat (natDivSucc 2 a))`, `h` built internally (not
     /// a parameter) — the leaf [`Self::geom_pair_within`]'s own field doc
@@ -3739,6 +3799,44 @@ pub struct CRealPrelude {
     /// technique [`Self::integral_witness_independent`] uses, one sequence
     /// wider. See `creal/integral.rs`'s `declare_integral_add`.
     pub integral_add: NameId,
+    /// `CReal.integral_le : ∀ F G a b hab uF uG, (∀ t, le a t → le t b → le
+    /// (F t) (G t)) → le (CReal.integral F a b hab uF) (CReal.integral G a b
+    /// hab uG)`.
+    ///
+    /// **Order passes to the integral.** No `converges_unique`/`Equiv`
+    /// bridge (unlike [`Self::integral_add`]/[`Self::integral_witness_independent`]):
+    /// [`Self::converges_le`] takes two Converges facts at *independent*
+    /// limits directly, so the obstruction is purely getting BOTH sides'
+    /// native Riemann-sum sequences onto a SHARED mesh depth `l(n) :=`
+    /// [`Self::riemann_sum_cauchy`]'s common refinement of `F`'s and `G`'s
+    /// own `deep`-depths at `n`, at which [`Self::riemann_sum_le_on`]'s
+    /// comparison is exact (no epsilon slack). One
+    /// [`Self::converges_of_close`] transport per side (F's native sequence
+    /// to `l(n)`, G's native sequence to `l(n)`) lands both at `l(n)`
+    /// simultaneously converging to their own original limits, then
+    /// `riemannSum_le_on` at `l(n)` supplies `converges_le`'s pointwise
+    /// hypothesis directly. See `creal/integral.rs`'s `declare_integral_le`.
+    pub integral_le: NameId,
+    /// `CReal.integral_scale : ∀ c F a b hab uF ucF, Equiv (CReal.integral
+    /// (fun t => mul c (F t)) a b hab ucF) (mul c (CReal.integral F a b hab
+    /// uF))`.
+    ///
+    /// **Pulling a constant factor out of the integral.** Needs only TWO
+    /// witnesses (`uF` for `F`, `ucF` for `combined := fun t => mul c (F
+    /// t)`), landed on a shared mesh `l(n)` exactly [`Self::integral_le`]'s
+    /// own two-witness recipe (`combined` in `G`'s slot), plus ONE exact
+    /// per-`m` bridge at that shared mesh: [`Self::mul_riemann_sum`]. Unlike
+    /// the obstruction this law was expected to hit (`CReal.mul`'s own
+    /// index-shift depending on both operands' magnitudes), no fresh
+    /// Lipschitz-style bound on `CReal.mul` is derived by hand:
+    /// [`Self::converges_mul`] — already proved — is used as a BLACK BOX to
+    /// transport `F`'s own shared-mesh convergence through multiplication by
+    /// the constant sequence `fun _ => c` ([`Self::converges_of_const`]),
+    /// and [`Self::converges_unique`] closes the gap against `combined`'s
+    /// own shared-mesh convergence (bridged to the scaled sequence via
+    /// `mul_riemann_sum` applied pointwise). See `creal/integral.rs`'s
+    /// `declare_integral_scale`.
+    pub integral_scale: NameId,
     /// `CReal.hasDerivative_integral_const : ∀ c a b (k : Nat), le (abs c)
     /// (ofRat (natDivSucc (Nat.succ k) 0)) → HasDerivativeOn (fun x =>
     /// integral (fun _ => c) a (max a (min x b)) (le_max_left a (min x b))
@@ -4097,6 +4195,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         pow_le_pow_of_base_le: kernel.name_str(creal, "pow_le_pow_of_base_le"),
         of_rat_pow: kernel.name_str(creal, "ofRat_pow"),
         pow_half_le_nat_div_succ: kernel.name_str(creal, "pow_half_le_natDivSucc"),
+        pow_le_nat_div_succ_of_lt: kernel.name_str(creal, "pow_le_natDivSucc_of_lt"),
+        ratio_decay_bound: kernel.name_str(creal, "ratioDecayBound"),
+        inv_le_of_pos_bound: kernel.name_str(creal, "invLeOfPosBound"),
         geom_half_inv_leaf_bound: kernel.name_str(creal, "geomHalfInvLeafBound"),
         geom_cauchy_ordered_half: kernel.name_str(creal, "geomCauchyOrderedHalf"),
         geom_cauchy: kernel.name_str(creal, "geomCauchy"),
@@ -4215,6 +4316,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         integral_const: kernel.name_str(creal, "integral_const"),
         integral_witness_independent: kernel.name_str(creal, "integral_witness_independent"),
         integral_add: kernel.name_str(creal, "integral_add"),
+        integral_le: kernel.name_str(creal, "integral_le"),
+        integral_scale: kernel.name_str(creal, "integral_scale"),
         has_derivative_integral_const: kernel.name_str(creal, "hasDerivative_integral_const"),
     }
 }
@@ -4597,6 +4700,26 @@ pub(crate) fn build_creal_prelude_uncached(
         // lands here to stay next to the other `integral_*` law that shares
         // its dependency shape.
         integral::declare_integral_add(&mut d, prelude)?;
+        // `integral_le` needs `integral_converges` (well above),
+        // `riemannSum_cauchy`/`sharedIndexToCanonical` (well above, the SAME
+        // two dependencies `riemannSumDeepCauchyCross` uses, applied to TWO
+        // different functions F/G instead of one function at two
+        // witnesses), `riemannSum_le_on` (`integral::declare_integral`, well
+        // above), `converges_of_close`/`converges_le` (far above). It does
+        // not need `integral_add`/`integral_witness_independent` (just
+        // above); it lands here to stay next to the other `integral_*` law
+        // that shares its dependency shape.
+        integral::declare_integral_le(&mut d, prelude)?;
+        // `integral_scale` needs `integral_converges` (well above),
+        // `riemannSum_cauchy`/`sharedIndexToCanonical` (the SAME two
+        // witnesses `integral_le` uses, `combined := fun t => mul c (F t)`
+        // in `G`'s slot), `mul_riemannSum` (`integral::declare_integral`,
+        // well above, exact per-`m`) and `converges_of_close`/
+        // `converges_mul`/`converges_of_const`/`converges_unique` (far
+        // above). It does not need `integral_add`/`integral_le` themselves;
+        // it lands here to stay next to the other `integral_*` law that
+        // shares its dependency shape.
+        integral::declare_integral_scale(&mut d, prelude)?;
         // `hasDerivative_integral_const` (Spivak Ch14 FTC-I, first evaluation
         // instance) needs `integral`/`integral_const` (just above, this
         // dispatch is why it cannot live inside `derivative::declare_derivative`,

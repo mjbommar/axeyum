@@ -171,9 +171,10 @@
 //!    `natDivSucc` shape without the harmonic bound), so it was not worth the
 //!    machinery for this slice.
 
+use super::series::exists_nat_intro;
 use super::{
-    CRealPrelude, and_intro, creal_ty, div_succ, embed, equiv, halves, modulus, sample, shift,
-    within,
+    CRealPrelude, and_intro, creal_ty, div_succ, embed, equiv, gap_elim, gap_halves, halves,
+    modulus, sample, shift, within,
 };
 use crate::BinderInfo;
 use crate::KernelError;
@@ -1074,7 +1075,10 @@ pub(super) fn declare_geometric(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(
     declare_geom_pair_within(d, p)?;
     declare_pow_le_pow_of_base_le(d, p)?;
     declare_of_rat_pow(d, p)?;
-    declare_pow_half_le_nat_div_succ(d, p)
+    declare_pow_half_le_nat_div_succ(d, p)?;
+    declare_pow_le_nat_div_succ_of_lt(d, p)?;
+    declare_ratio_decay_bound(d, p)?;
+    declare_inv_le_of_pos_bound(d, p)
 }
 
 // --- `pow_le_pow_of_base_le` -------------------------------------------------
@@ -1633,6 +1637,1386 @@ fn declare_pow_half_le_nat_div_succ(
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.pow_half_le_nat_div_succ,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// ---------------------------------------------------------------------------
+// `CReal.pow_le_natDivSucc_of_lt` -- geometric decay at ANY ratio `0 ≤ x < 1`
+// dominates some harmonic rate, entirely `CReal.inv`/`PosBound`-free. See
+// the field documentation (`CRealPrelude::pow_le_nat_div_succ_of_lt`).
+//
+// The rational-level `Rat.bernoulli_harmonic_bound` cannot be reused directly
+// here: bridging it back across a `CReal.pow` SAMPLE is exactly the gap
+// `rat_prelude/bernoulli.rs`'s own module doc names as out of reach. Instead
+// the whole Bernoulli argument is redone at the `CReal` level, with the
+// accumulator kept as `embed (l_term rat q n)` (`l_term`/`one_le_l` above,
+// RAT-level, reused verbatim) -- `l_term(q, succ j)` is `ι`-defeq to
+// `radd (l_term q j) q` regardless of `j`'s symbolic-ness, and
+// `CReal.ofRat_add` relates `embed` of that sum to `add (embed lj) (embed q)`.
+// ---------------------------------------------------------------------------
+
+/// `Equiv (embed a) (embed b)`, from `Eq Rat a b` -- congruence of `embed`
+/// along a `Rat`-level rewrite.
+fn embed_eq_to_equiv(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    heq: ExprId,
+) -> ExprId {
+    let embed_a = embed(d, p, a);
+    let refl = d.lemma(p.equiv_refl, &[embed_a]);
+    rat_eq_rewrite(d, a, b, heq, refl, &|d, t| {
+        let embed_t = embed(d, p, t);
+        equiv(d, p, embed_a, embed_t)
+    })
+}
+
+/// `le (mul a c) (mul b c)`, from `le (mul c a) (mul c b)` via `mul_comm`
+/// twice -- this prelude has `mul_le_mul_of_nonneg_left` only.
+fn mul_le_mul_of_nonneg_right(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    hc: ExprId,
+    hab: ExprId,
+) -> ExprId {
+    let raw = d.lemma(p.mul_le_mul_of_nonneg_left, &[c, a, b, hc, hab]);
+    let ca = cmul(d, p, c, a);
+    let cb = cmul(d, p, c, b);
+    let ac = cmul(d, p, a, c);
+    let bc = cmul(d, p, b, c);
+    let comm_a = d.lemma(p.mul_comm, &[c, a]);
+    let comm_b = d.lemma(p.mul_comm, &[c, b]);
+    d.lemma(p.le_congr, &[ca, ac, cb, bc, comm_a, comm_b, raw])
+}
+
+/// `Equiv (mul one x) x`.
+fn creal_one_mul(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+    let one = d.kernel().const_(p.one, vec![]);
+    let comm = d.lemma(p.mul_comm, &[one, x]);
+    let one_x = cmul(d, p, one, x);
+    let x_one = cmul(d, p, x, one);
+    let fix = d.lemma(p.mul_one, &[x]);
+    d.lemma(p.equiv_trans, &[one_x, x_one, x, comm, fix])
+}
+
+/// `Equiv (mul (add a b) c) (add (mul a c) (mul b c))` -- right
+/// distributivity, derived from `left_distrib` (the only form this prelude
+/// has as a field) via `mul_comm` on all three products.
+fn creal_right_distrib(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+) -> ExprId {
+    let ab = cadd(d, p, a, b);
+    let ab_c = cmul(d, p, ab, c);
+    let c_ab = cmul(d, p, c, ab);
+    let comm1 = d.lemma(p.mul_comm, &[ab, c]);
+    let ld = d.lemma(p.left_distrib, &[c, a, b]);
+    let ca = cmul(d, p, c, a);
+    let cb = cmul(d, p, c, b);
+    let ac = cmul(d, p, a, c);
+    let bc = cmul(d, p, b, c);
+    let comm_a = d.lemma(p.mul_comm, &[c, a]);
+    let comm_b = d.lemma(p.mul_comm, &[c, b]);
+    let congr = d.lemma(p.add_congr, &[ca, ac, cb, bc, comm_a, comm_b]);
+    let ca_cb = cadd(d, p, ca, cb);
+    let ac_bc = cadd(d, p, ac, bc);
+    let s1 = d.lemma(p.equiv_trans, &[ab_c, c_ab, ca_cb, comm1, ld]);
+    d.lemma(p.equiv_trans, &[ab_c, ca_cb, ac_bc, s1, congr])
+}
+
+/// `Eq Rat (natDivSucc (succ n) n) rone` -- mirrors
+/// `rat_pow_half_le_nat_div_succ`'s own `x0` sub-derivation above, generalized
+/// to a symbolic `n`: `nat_div_succ_scale(n, 0)` gives `natDivSucc (succ n)
+/// ((succ n)*0 + n) = natDivSucc 1 0`, and `(succ n)*0 + n` reduces to `n` via
+/// `Nat.mul_zero` + `Nat.zero_add`.
+fn nat_div_succ_succ_self_eq_one(d: &mut IntDev<'_>, p: CRealPrelude, n: ExprId) -> ExprId {
+    let rat = p.rat;
+    let zero_nat = d.num(0);
+    let succ_n = d.succ(n);
+    let raw = d.lemma(rat.nat_div_succ_scale, &[n, zero_nat]);
+    let idx1 = NatOps::mul(d, succ_n, zero_nat);
+    let mul_zero_name = d.prelude().mul_zero;
+    let mul_zero_h = d.lemma(mul_zero_name, &[succ_n]);
+    let idx1_plus_n = NatOps::add(d, idx1, n);
+    let zero_plus_n = NatOps::add(d, zero_nat, n);
+    let lhs = d.const_app(rat.nat_div_succ, &[succ_n, idx1_plus_n]);
+    let mid1 = d.const_app(rat.nat_div_succ, &[succ_n, zero_plus_n]);
+    let step1 = nat_eq_to_rat(d, idx1, zero_nat, mul_zero_h, &|d, k| {
+        let idx = NatOps::add(d, k, n);
+        d.const_app(rat.nat_div_succ, &[succ_n, idx])
+    });
+    let zero_add_name = d.prelude().zero_add;
+    let zero_add_h = d.lemma(zero_add_name, &[n]);
+    let mid2 = d.const_app(rat.nat_div_succ, &[succ_n, n]);
+    let step2 = nat_eq_to_rat(d, zero_plus_n, n, zero_add_h, &|d, k| {
+        d.const_app(rat.nat_div_succ, &[succ_n, k])
+    });
+    let one_nat = d.num(1);
+    let unit_rat = d.const_app(rat.nat_div_succ, &[one_nat, zero_nat]);
+    let unit_eq_one = d.lemma(p.rat_unit_eq_one, &[]);
+    let one_r = rone(d, rat);
+    let mid1_to_lhs = rsymm(d, lhs, mid1, step1);
+    let mid1_to_unit = rtrans(d, mid1, lhs, unit_rat, mid1_to_lhs, raw);
+    let mid1_to_one = rtrans(d, mid1, unit_rat, one_r, mid1_to_unit, unit_eq_one);
+    let mid2_to_mid1 = rsymm(d, mid1, mid2, step2);
+    rtrans(d, mid2, mid1, one_r, mid2_to_mid1, mid1_to_one)
+}
+
+/// Given an EXACT `Rat` identity `a*dd = 1` (`h_eq`) and a `CReal` bound
+/// `mul (embed a) y ≤ b` (`h_le`, `b` arbitrary), concludes `y ≤ mul (embed
+/// dd) b` -- multiplying through by the nonnegative `embed dd` and using
+/// `h_eq` (lifted via `of_rat_mul`) to collapse `embed dd * embed a` to
+/// `one`. No `CReal.inv`/`PosBound` anywhere.
+#[allow(clippy::too_many_arguments)]
+fn creal_cancel_exact(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    y: ExprId,
+    dd: ExprId,
+    b: ExprId,
+    h_eq: ExprId,
+    h_dd_nonneg: ExprId,
+    h_le: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let a_emb = embed(d, p, a);
+    let dd_emb = embed(d, p, dd);
+    let ay = cmul(d, p, a_emb, y);
+
+    let step1 = d.lemma(
+        p.mul_le_mul_of_nonneg_left,
+        &[dd_emb, ay, b, h_dd_nonneg, h_le],
+    );
+    let dd_ay = cmul(d, p, dd_emb, ay);
+    let dd_b = cmul(d, p, dd_emb, b);
+
+    let assoc = d.lemma(p.mul_assoc, &[dd_emb, a_emb, y]); // Equiv dd_a_y dd_ay
+    let dd_a = cmul(d, p, dd_emb, a_emb);
+    let dd_a_y = cmul(d, p, dd_a, y);
+    let assoc_symm = d.lemma(p.equiv_symm, &[dd_a_y, dd_ay, assoc]); // Equiv dd_ay dd_a_y
+
+    let one_r = rone(d, rat);
+    let da_rat = rmul(d, dd, a);
+    let ad_rat = rmul(d, a, dd);
+    let comm_da = d.lemma(rat.mul_comm, &[dd, a]);
+    let da_to_one = rtrans(d, da_rat, ad_rat, one_r, comm_da, h_eq);
+    let of_rat_mul_da = d.lemma(p.of_rat_mul, &[dd, a]); // Equiv dd_a (embed da_rat)
+    let dd_a_equiv_one = embed_eq_to_equiv(d, p, da_rat, one_r, da_to_one);
+    let one = d.kernel().const_(p.one, vec![]);
+    let embed_da_rat = embed(d, p, da_rat);
+    let dd_a_eq_one = d.lemma(
+        p.equiv_trans,
+        &[dd_a, embed_da_rat, one, of_rat_mul_da, dd_a_equiv_one],
+    );
+
+    let refl_y = d.lemma(p.equiv_refl, &[y]);
+    let dd_a_y_eq = d.lemma(p.mul_congr, &[dd_a, one, y, y, dd_a_eq_one, refl_y]);
+    let one_y = cmul(d, p, one, y);
+    let one_mul_y = creal_one_mul(d, p, y);
+    let dd_a_y_to_y = d.lemma(p.equiv_trans, &[dd_a_y, one_y, y, dd_a_y_eq, one_mul_y]);
+
+    let dd_ay_to_y = d.lemma(p.equiv_trans, &[dd_ay, dd_a_y, y, assoc_symm, dd_a_y_to_y]);
+    let refl_dd_b = d.lemma(p.equiv_refl, &[dd_b]);
+    d.lemma(
+        p.le_congr,
+        &[dd_ay, y, dd_b, dd_b, dd_ay_to_y, refl_dd_b, step1],
+    )
+}
+
+/// `CReal`-level mirror of `rat_prelude/bernoulli.rs::declare_bernoulli_harmonic_bound`'s
+/// proof, with the `Rat` carrier `x`/`t` replaced by `x : CReal` and `t :=
+/// embed q` for a fixed `q : Rat`, and the accumulator kept as `embed (l_term
+/// rat q n)` rather than a fresh `CReal`-level `Nat.rec`. Returns a proof of
+/// `le (mul (embed (l_term rat q n)) (pow x n)) one`, given `hx0 : le zero x`,
+/// `ht : le zero (embed q)` and `hxt : le (mul x (add one (embed q))) one`.
+#[allow(clippy::too_many_arguments)]
+fn creal_bernoulli_harmonic(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    q: ExprId,
+    hx0: ExprId,
+    ht: ExprId,
+    hxt: ExprId,
+    n: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let one = d.kernel().const_(p.one, vec![]);
+    let q_emb = embed(d, p, q);
+    let one_plus_t = cadd(d, p, one, q_emb);
+    let x_one_plus_t = cmul(d, p, x, one_plus_t);
+
+    // h_xt : le (add x (mul q_emb x)) one, from hxt : le (mul x (add one
+    // q_emb)) one, expanded via left_distrib/mul_one/mul_comm.
+    let h_xt = {
+        let dist = d.lemma(p.left_distrib, &[x, one, q_emb]); // Equiv x_one_plus_t (add x_one x_t)
+        let x_one = cmul(d, p, x, one);
+        let x_t = cmul(d, p, x, q_emb);
+        let fix1 = d.lemma(p.mul_one, &[x]); // Equiv x_one x
+        let refl_xt = d.lemma(p.equiv_refl, &[x_t]);
+        let congr1 = d.lemma(p.add_congr, &[x_one, x, x_t, x_t, fix1, refl_xt]);
+        let x_one_plus_xt = cadd(d, p, x_one, x_t);
+        let x_plus_xt = cadd(d, p, x, x_t);
+        let step1 = d.lemma(
+            p.equiv_trans,
+            &[x_one_plus_t, x_one_plus_xt, x_plus_xt, dist, congr1],
+        );
+        let fix2 = d.lemma(p.mul_comm, &[x, q_emb]); // Equiv x_t t_x
+        let t_x = cmul(d, p, q_emb, x);
+        let refl_x = d.lemma(p.equiv_refl, &[x]);
+        let congr2 = d.lemma(p.add_congr, &[x, x, x_t, t_x, refl_x, fix2]);
+        let x_plus_tx = cadd(d, p, x, t_x);
+        let step2 = d.lemma(
+            p.equiv_trans,
+            &[x_one_plus_t, x_plus_xt, x_plus_tx, step1, congr2],
+        );
+        let refl_one = d.lemma(p.equiv_refl, &[one]);
+        d.lemma(
+            p.le_congr,
+            &[x_one_plus_t, x_plus_tx, one, one, step2, refl_one, hxt],
+        )
+    };
+
+    // hx1 : le x one, from x = x*1 ≤ x*(1+t) ≤ 1.
+    let hx1 = {
+        let zero_c = czero(d, p);
+        let one_le_one = d.lemma(p.le_refl, &[one]);
+        let sum_le = d.lemma(p.add_le_add, &[one, one, zero_c, q_emb, one_le_one, ht]);
+        let one_plus_zero = cadd(d, p, one, zero_c);
+        let add_zero_eq = d.lemma(p.add_zero, &[one]);
+        let refl_opt = d.lemma(p.equiv_refl, &[one_plus_t]);
+        let one_le_one_plus_t = d.lemma(
+            p.le_congr,
+            &[
+                one_plus_zero,
+                one,
+                one_plus_t,
+                one_plus_t,
+                add_zero_eq,
+                refl_opt,
+                sum_le,
+            ],
+        );
+        let raw = d.lemma(
+            p.mul_le_mul_of_nonneg_left,
+            &[x, one, one_plus_t, hx0, one_le_one_plus_t],
+        );
+        let x_one2 = cmul(d, p, x, one);
+        let fix = d.lemma(p.mul_one, &[x]);
+        let refl_xopt = d.lemma(p.equiv_refl, &[x_one_plus_t]);
+        let step_a = d.lemma(
+            p.le_congr,
+            &[x_one2, x, x_one_plus_t, x_one_plus_t, fix, refl_xopt, raw],
+        );
+        d.lemma(p.le_trans, &[x, x_one_plus_t, one, step_a, hxt])
+    };
+
+    let motive = |d: &mut IntDev<'_>, y: ExprId| -> ExprId {
+        let ly = l_term(d, rat, q, y);
+        let ly_emb = embed(d, p, ly);
+        let py = d.const_app(p.pow, &[x, y]);
+        let prod = cmul(d, p, ly_emb, py);
+        let one_l = d.kernel().const_(p.one, vec![]);
+        cle(d, p, prod, one_l)
+    };
+    let base = |d: &mut IntDev<'_>| -> ExprId {
+        let one_one = cmul(d, p, one, one);
+        let mul_one_eq = d.lemma(p.mul_one, &[one]); // Equiv one_one one
+        let sym = d.lemma(p.equiv_symm, &[one_one, one, mul_one_eq]); // Equiv one one_one
+        let base_at_one = d.lemma(p.le_refl, &[one]);
+        let refl_one2 = d.lemma(p.equiv_refl, &[one]);
+        d.lemma(
+            p.le_congr,
+            &[one, one_one, one, one, sym, refl_one2, base_at_one],
+        )
+    };
+    let step = |d: &mut IntDev<'_>, j: ExprId, ih: ExprId| -> ExprId {
+        let lj_rat = l_term(d, rat, q, j);
+        let lj = embed(d, p, lj_rat);
+        let pj = d.const_app(p.pow, &[x, j]);
+
+        let pow_le_one_j = d.lemma(p.pow_le_one, &[x, hx0, hx1, j]);
+        let raw_hpx = mul_le_mul_of_nonneg_right(d, p, pj, one, x, hx0, pow_le_one_j);
+        let one_x = cmul(d, p, one, x);
+        let one_mul_x = creal_one_mul(d, p, x);
+        let pjx = cmul(d, p, pj, x);
+        let refl_pjx = d.lemma(p.equiv_refl, &[pjx]);
+        let hpx = d.lemma(
+            p.le_congr,
+            &[pjx, pjx, one_x, x, refl_pjx, one_mul_x, raw_hpx],
+        );
+
+        let lj_pj = cmul(d, p, lj, pj);
+        let assoc = d.lemma(p.mul_assoc, &[lj, pj, x]); // Equiv lj_pj_x lj_pjx
+        let raw_term1 = mul_le_mul_of_nonneg_right(d, p, lj_pj, one, x, hx0, ih);
+        let lj_pj_x = cmul(d, p, lj_pj, x);
+        let lj_pjx = cmul(d, p, lj, pjx);
+        let refl_one_x = d.lemma(p.equiv_refl, &[one_x]);
+        let step_assoc = d.lemma(
+            p.le_congr,
+            &[lj_pj_x, lj_pjx, one_x, one_x, assoc, refl_one_x, raw_term1],
+        );
+        let refl_lj_pjx = d.lemma(p.equiv_refl, &[lj_pjx]);
+        let term1 = d.lemma(
+            p.le_congr,
+            &[lj_pjx, lj_pjx, one_x, x, refl_lj_pjx, one_mul_x, step_assoc],
+        );
+
+        let t_pjx = cmul(d, p, q_emb, pjx);
+        let t_x = cmul(d, p, q_emb, x);
+        let term2 = d.lemma(p.mul_le_mul_of_nonneg_left, &[q_emb, pjx, x, ht, hpx]);
+
+        let sum_bound = d.lemma(p.add_le_add, &[lj_pjx, x, t_pjx, t_x, term1, term2]);
+        let lhs_sum = cadd(d, p, lj_pjx, t_pjx);
+        let rhs_sum = cadd(d, p, x, t_x);
+        let final_le = d.lemma(p.le_trans, &[lhs_sum, rhs_sum, one, sum_bound, h_xt]);
+
+        let rd = creal_right_distrib(d, p, lj, q_emb, pjx);
+        let lj_plus_t = cadd(d, p, lj, q_emb);
+        let target_lhs = cmul(d, p, lj_plus_t, pjx);
+        let rd_sym = d.lemma(p.equiv_symm, &[target_lhs, lhs_sum, rd]);
+        let refl_one_b = d.lemma(p.equiv_refl, &[one]);
+        let step_final = d.lemma(
+            p.le_congr,
+            &[lhs_sum, target_lhs, one, one, rd_sym, refl_one_b, final_le],
+        );
+
+        let add_eq = d.lemma(p.of_rat_add, &[lj_rat, q]); // Equiv lj_plus_t (embed (radd lj_rat q))
+        let l_succ_rat = radd(d, lj_rat, q);
+        let l_succ = embed(d, p, l_succ_rat);
+        let refl_pjx2 = d.lemma(p.equiv_refl, &[pjx]);
+        let l_succ_pjx = cmul(d, p, l_succ, pjx);
+        let mul_congr_ls = d.lemma(
+            p.mul_congr,
+            &[lj_plus_t, l_succ, pjx, pjx, add_eq, refl_pjx2],
+        );
+        // mul_congr_ls : Equiv target_lhs l_succ_pjx
+        let refl_one_c4 = d.lemma(p.equiv_refl, &[one]);
+        d.lemma(
+            p.le_congr,
+            &[
+                target_lhs,
+                l_succ_pjx,
+                one,
+                one,
+                mul_congr_ls,
+                refl_one_c4,
+                step_final,
+            ],
+        )
+    };
+
+    d.induct(&motive, &base, &step, n)
+}
+
+/// By induction on `m`: `le (embed (natDivSucc (succ m) 0)) (mul (embed
+/// k_rat) (embed (l_term rat q m)))`, given `h_k_ge_one : le one (embed
+/// k_rat)` and `h_kq : le one (mul (embed k_rat) (embed q))`.
+fn k_relation_creal(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    q: ExprId,
+    k_rat: ExprId,
+    h_k_ge_one: ExprId,
+    h_kq: ExprId,
+    m: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let zero_nat = d.num(0);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let k_emb = embed(d, p, k_rat);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let succ_x = d.succ(x);
+        let lhs_rat = d.const_app(rat.nat_div_succ, &[succ_x, zero_nat]);
+        let lhs = embed(d, p, lhs_rat);
+        let lx_rat = l_term(d, rat, q, x);
+        let lx = embed(d, p, lx_rat);
+        let rhs = cmul(d, p, k_emb, lx);
+        cle(d, p, lhs, rhs)
+    };
+    let base = |d: &mut IntDev<'_>| -> ExprId {
+        let one_nat = d.num(1);
+        let unit_rat = d.const_app(rat.nat_div_succ, &[one_nat, zero_nat]);
+        let one_r = rone(d, rat);
+        let unit_eq_one = d.lemma(p.rat_unit_eq_one, &[]);
+        let unit_equiv_one = embed_eq_to_equiv(d, p, unit_rat, one_r, unit_eq_one);
+        let unit_emb = embed(d, p, unit_rat);
+        let hxx = d.lemma(p.equiv_symm, &[unit_emb, one_c, unit_equiv_one]);
+        let mul_one_k = d.lemma(p.mul_one, &[k_emb]);
+        let k_one = cmul(d, p, k_emb, one_c);
+        let hyy = d.lemma(p.equiv_symm, &[k_one, k_emb, mul_one_k]);
+        d.lemma(
+            p.le_congr,
+            &[one_c, unit_emb, k_emb, k_one, hxx, hyy, h_k_ge_one],
+        )
+    };
+    let step = |d: &mut IntDev<'_>, j: ExprId, ih: ExprId| -> ExprId {
+        let succ_j = d.succ(j);
+        let a_j_rat = d.const_app(rat.nat_div_succ, &[succ_j, zero_nat]);
+        let a_j = embed(d, p, a_j_rat);
+        let lj_rat = l_term(d, rat, q, j);
+        let lj = embed(d, p, lj_rat);
+        let q_emb = embed(d, p, q);
+
+        let k_lj = cmul(d, p, k_emb, lj);
+        let k_q = cmul(d, p, k_emb, q_emb);
+        let combined = d.lemma(p.add_le_add, &[a_j, k_lj, one_c, k_q, ih, h_kq]);
+
+        let lj_plus_q = cadd(d, p, lj, q_emb);
+        let k_lj_plus_q = cmul(d, p, k_emb, lj_plus_q);
+        let k_lj_plus_k_q = cadd(d, p, k_lj, k_q);
+        let rhs_dist = d.lemma(p.left_distrib, &[k_emb, lj, q_emb]); // Equiv k_lj_plus_q k_lj_plus_k_q
+        let rhs_eq = d.lemma(p.equiv_symm, &[k_lj_plus_q, k_lj_plus_k_q, rhs_dist]);
+
+        // lhs_eq : Equiv (add a_j one_c) a_succ_j
+        let succ_succ_j = d.succ(succ_j);
+        let a_succ_j_rat = d.const_app(rat.nat_div_succ, &[succ_succ_j, zero_nat]);
+        let one_nat = d.num(1);
+        let unit_rat = d.const_app(rat.nat_div_succ, &[one_nat, zero_nat]);
+        let unit_eq_one = d.lemma(p.rat_unit_eq_one, &[]);
+        let sum_add = d.lemma(rat.nat_div_succ_add, &[succ_j, one_nat, zero_nat]);
+        let sum_unit = radd(d, a_j_rat, unit_rat);
+        let one_r = rone(d, rat);
+        let sum_one = radd(d, a_j_rat, one_r);
+        let unit_to_one = rcongr(d, unit_rat, one_r, unit_eq_one, &|d, t| radd(d, a_j_rat, t));
+        let sum_one_to_unit = rsymm(d, sum_unit, sum_one, unit_to_one);
+        let sum_one_to_a_succ_j =
+            rtrans(d, sum_one, sum_unit, a_succ_j_rat, sum_one_to_unit, sum_add);
+        let lhs_equiv_a = embed_eq_to_equiv(d, p, sum_one, a_succ_j_rat, sum_one_to_a_succ_j);
+        let embed_sum = embed(d, p, sum_one);
+        let add_eq = d.lemma(p.of_rat_add, &[a_j_rat, one_r]); // Equiv (add a_j one_c) embed_sum
+        let a_plus_one = cadd(d, p, a_j, one_c);
+        let a_succ_j = embed(d, p, a_succ_j_rat);
+        let lhs_eq = d.lemma(
+            p.equiv_trans,
+            &[a_plus_one, embed_sum, a_succ_j, add_eq, lhs_equiv_a],
+        );
+
+        let via_congr = d.lemma(
+            p.le_congr,
+            &[
+                a_plus_one,
+                a_succ_j,
+                k_lj_plus_k_q,
+                k_lj_plus_q,
+                lhs_eq,
+                rhs_eq,
+                combined,
+            ],
+        );
+
+        let add_lj_q_eq = d.lemma(p.of_rat_add, &[lj_rat, q]); // Equiv lj_plus_q (embed (radd lj_rat q))
+        let l_succ_j_rat = radd(d, lj_rat, q);
+        let l_succ_j = embed(d, p, l_succ_j_rat);
+        let target_rhs = cmul(d, p, k_emb, l_succ_j);
+        let refl_a_succ_j = d.lemma(p.equiv_refl, &[a_succ_j]);
+        let refl_k = d.lemma(p.equiv_refl, &[k_emb]);
+        let mul_congr_rhs = d.lemma(
+            p.mul_congr,
+            &[k_emb, k_emb, lj_plus_q, l_succ_j, refl_k, add_lj_q_eq],
+        );
+        d.lemma(
+            p.le_congr,
+            &[
+                a_succ_j,
+                a_succ_j,
+                k_lj_plus_q,
+                target_rhs,
+                refl_a_succ_j,
+                mul_congr_rhs,
+                via_congr,
+            ],
+        )
+    };
+
+    d.induct(&motive, &base, &step, m)
+}
+
+/// `CReal.pow_le_natDivSucc_of_lt`. See the field documentation
+/// ([`super::CRealPrelude::pow_le_nat_div_succ_of_lt`]) for the statement.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_pow_le_nat_div_succ_of_lt(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let nat = d.nat_ty();
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let zero_nat = d.num(0);
+    let zero_c = czero(d, p);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let hx0_ty = cle(d, p, zero_c, x);
+    let hx0_fv = d.fresh_fvar();
+    let hx0 = d.kernel().fvar(hx0_fv);
+
+    let hlt_ty = d.const_app(p.lt, &[x, one_c]);
+    let hlt_fv = d.fresh_fvar();
+    let hlt = d.kernel().fvar(hlt_fv);
+
+    // predicate := λK, ∀m, le (pow x m) (embed (natDivSucc K m))
+    let predicate = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let pow_xm = d.const_app(p.pow, &[x, m]);
+        let bound_rat = d.const_app(rat.nat_div_succ, &[k, m]);
+        let bound = embed(d, p, bound_rat);
+        let body = cle(d, p, pow_xm, bound);
+        let inner = d.pi_fv(m_fv, nat, body);
+        d.lam_fv(k_fv, nat, inner)
+    };
+    let target = {
+        let one_level = d.level_one();
+        let exists_name = rat.int.logic.exists_;
+        let exists_ = d.kernel().const_(exists_name, vec![one_level]);
+        d.apply(exists_, &[nat, predicate])
+    };
+
+    let minor_q = {
+        let q_fv = d.fresh_fvar();
+        let q = d.kernel().fvar(q_fv);
+        let zero_r = rzero(d, rat);
+        let positive_ty = rlt(d, rat, zero_r, q);
+        let q_emb_ty = embed(d, p, q);
+        let x_plus_q_ty = cadd(d, p, x, q_emb_ty);
+        let bounded_ty = cle(d, p, x_plus_q_ty, one_c);
+        let witness_ty = d.and(positive_ty, bounded_ty);
+        let w_fv = d.fresh_fvar();
+        let w = d.kernel().fvar(w_fv);
+
+        let body = {
+            let (hqpos, hle) = gap_halves(d, p, x, one_c, q, w);
+            let q_emb = embed(d, p, q);
+
+            // ht : le zero_c q_emb
+            let ht = {
+                let zero_r2 = rzero(d, rat);
+                let hqpos_le = d.lemma(rat.le_of_lt, &[zero_r2, q, hqpos]);
+                d.lemma(p.of_rat_le, &[zero_r2, q, hqpos_le])
+            };
+
+            // ---- pos_bound_of_lt(q_emb) -> k3, h_pb : le (embed (natDivSucc 1 k3)) q_emb ----
+            let zero_lt_q_emb = d.lemma(p.of_rat_pos, &[q, hqpos]);
+            let ex_pb = d.lemma(p.pos_bound_of_lt, &[q_emb, zero_lt_q_emb]);
+            let pb_predicate = {
+                let k2_fv = d.fresh_fvar();
+                let k2 = d.kernel().fvar(k2_fv);
+                let ty = d.const_app(p.pos_bound, &[q_emb, k2]);
+                d.lam_fv(k2_fv, nat, ty)
+            };
+
+            let minor_k = {
+                let k3_fv = d.fresh_fvar();
+                let k3 = d.kernel().fvar(k3_fv);
+                let h_pb_ty = d.const_app(p.pos_bound, &[q_emb, k3]);
+                let h_pb_fv = d.fresh_fvar();
+                let h_pb = d.kernel().fvar(h_pb_fv);
+
+                let body_k = {
+                    let big_k = d.succ(k3);
+                    let k_rat = d.const_app(rat.nat_div_succ, &[big_k, zero_nat]);
+                    let k_emb = embed(d, p, k_rat);
+
+                    // h_k_ge_one : le one_c k_emb
+                    let h_k_ge_one = {
+                        let one_nat = d.num(1);
+                        let k3_rat = d.const_app(rat.nat_div_succ, &[k3, zero_nat]);
+                        let unit_rat = d.const_app(rat.nat_div_succ, &[one_nat, zero_nat]);
+                        let sum_add = d.lemma(rat.nat_div_succ_add, &[k3, one_nat, zero_nat]);
+                        let unit_eq_one = d.lemma(p.rat_unit_eq_one, &[]);
+                        let one_r = rone(d, rat);
+                        let sum_unit = radd(d, k3_rat, unit_rat);
+                        let sum_one = radd(d, k3_rat, one_r);
+                        let unit_to_one =
+                            rcongr(d, unit_rat, one_r, unit_eq_one, &|d, t| radd(d, k3_rat, t));
+                        let sum_one_to_unit = rsymm(d, sum_unit, sum_one, unit_to_one);
+                        let sum_one_to_k =
+                            rtrans(d, sum_one, sum_unit, k_rat, sum_one_to_unit, sum_add);
+                        let k3_rat_nonneg = d.lemma(rat.zero_le_nat_div_succ, &[k3, zero_nat]);
+                        let refl_one_r = d.lemma(rat.le_refl, &[one_r]);
+                        let zero_r3 = rzero(d, rat);
+                        let sum_le = d.lemma(
+                            rat.add_le_add,
+                            &[zero_r3, k3_rat, one_r, one_r, k3_rat_nonneg, refl_one_r],
+                        );
+                        let zero_plus_one = radd(d, zero_r3, one_r);
+                        let zero_add_eq = d.lemma(rat.zero_add, &[one_r]);
+                        let sum_le_at_one = rat_eq_rewrite(
+                            d,
+                            zero_plus_one,
+                            one_r,
+                            zero_add_eq,
+                            sum_le,
+                            &|d, t| rle(d, rat, t, sum_one),
+                        );
+                        let rone_le_k_rat = rat_eq_rewrite(
+                            d,
+                            sum_one,
+                            k_rat,
+                            sum_one_to_k,
+                            sum_le_at_one,
+                            &|d, t| rle(d, rat, one_r, t),
+                        );
+                        d.lemma(p.of_rat_le, &[one_r, k_rat, rone_le_k_rat])
+                    };
+
+                    // h_kq : le one_c (mul k_emb q_emb)
+                    let h_kq = {
+                        let one_nat2 = d.num(1);
+                        let small_rat = d.const_app(rat.nat_div_succ, &[one_nat2, k3]);
+                        let small_emb = embed(d, p, small_rat);
+                        let zero_r4 = rzero(d, rat);
+                        let k_rat_nonneg = d.lemma(rat.zero_le_nat_div_succ, &[big_k, zero_nat]);
+                        let k_emb_nonneg = d.lemma(p.of_rat_le, &[zero_r4, k_rat, k_rat_nonneg]);
+                        let step1 = d.lemma(
+                            p.mul_le_mul_of_nonneg_left,
+                            &[k_emb, small_emb, q_emb, k_emb_nonneg, h_pb],
+                        );
+                        let k_small = cmul(d, p, k_emb, small_emb);
+                        let k_q = cmul(d, p, k_emb, q_emb);
+
+                        let of_rat_mul_ks = d.lemma(p.of_rat_mul, &[k_rat, small_rat]);
+                        let prod_rat = rmul(d, k_rat, small_rat);
+                        let scale_eq = d.lemma(rat.nat_div_succ_mul, &[big_k, one_nat2, k3]);
+                        let big_k_mul_one = NatOps::mul(d, big_k, one_nat2);
+                        let mid_rat = d.const_app(rat.nat_div_succ, &[big_k_mul_one, k3]);
+                        let mid2_rat = d.const_app(rat.nat_div_succ, &[big_k, k3]);
+                        let mul_one_nat_name = d.prelude().mul_one;
+                        let mul_one_nat_h = d.lemma(mul_one_nat_name, &[big_k]);
+                        let idx_step =
+                            nat_eq_to_rat(d, big_k_mul_one, big_k, mul_one_nat_h, &|d, kk| {
+                                d.const_app(rat.nat_div_succ, &[kk, k3])
+                            });
+                        let x0 = nat_div_succ_succ_self_eq_one(d, p, k3);
+                        let prod_to_mid2 =
+                            rtrans(d, prod_rat, mid_rat, mid2_rat, scale_eq, idx_step);
+                        let one_r2 = rone(d, rat);
+                        let prod_to_one = rtrans(d, prod_rat, mid2_rat, one_r2, prod_to_mid2, x0);
+                        let prod_equiv_one = embed_eq_to_equiv(d, p, prod_rat, one_r2, prod_to_one);
+                        let embed_prod = embed(d, p, prod_rat);
+                        let k_small_eq_one = d.lemma(
+                            p.equiv_trans,
+                            &[k_small, embed_prod, one_c, of_rat_mul_ks, prod_equiv_one],
+                        );
+
+                        let refl_kq = d.lemma(p.equiv_refl, &[k_q]);
+                        d.lemma(
+                            p.le_congr,
+                            &[k_small, one_c, k_q, k_q, k_small_eq_one, refl_kq, step1],
+                        )
+                    };
+
+                    // ---- hxt : le (mul x (add one_c q_emb)) one_c ----
+                    let hxt = {
+                        let neg_q_emb = cneg(d, p, q_emb);
+                        let refl_neg_q = d.lemma(p.le_refl, &[neg_q_emb]);
+                        let x_plus_q = cadd(d, p, x, q_emb);
+                        let shifted = d.lemma(
+                            p.add_le_add,
+                            &[x_plus_q, one_c, neg_q_emb, neg_q_emb, hle, refl_neg_q],
+                        );
+                        let lhs_shifted = cadd(d, p, x_plus_q, neg_q_emb);
+                        let assoc = d.lemma(p.add_assoc, &[x, q_emb, neg_q_emb]);
+                        let q_plus_negq = cadd(d, p, q_emb, neg_q_emb);
+                        let add_neg_h = d.lemma(p.add_neg, &[q_emb]);
+                        let refl_x = d.lemma(p.equiv_refl, &[x]);
+                        let congr_xz =
+                            d.lemma(p.add_congr, &[x, x, q_plus_negq, zero_c, refl_x, add_neg_h]);
+                        let x_plus_qnq = cadd(d, p, x, q_plus_negq);
+                        let x_plus_zero = cadd(d, p, x, zero_c);
+                        let step_xz = d.lemma(
+                            p.equiv_trans,
+                            &[lhs_shifted, x_plus_qnq, x_plus_zero, assoc, congr_xz],
+                        );
+                        let add_zero_x = d.lemma(p.add_zero, &[x]);
+                        let lhs_to_x = d.lemma(
+                            p.equiv_trans,
+                            &[lhs_shifted, x_plus_zero, x, step_xz, add_zero_x],
+                        );
+                        let one_minus_q = cadd(d, p, one_c, neg_q_emb);
+                        let refl_omq = d.lemma(p.equiv_refl, &[one_minus_q]);
+                        let hr_le = d.lemma(
+                            p.le_congr,
+                            &[
+                                lhs_shifted,
+                                x,
+                                one_minus_q,
+                                one_minus_q,
+                                lhs_to_x,
+                                refl_omq,
+                                shifted,
+                            ],
+                        );
+
+                        // hx_le_one : le x one_c   (x ≤ 1-q ≤ 1)
+                        let hx_le_one = {
+                            let neg_zero_c = cneg(d, p, zero_c);
+                            let h1 = d.lemma(p.neg_le_neg, &[zero_c, q_emb, ht]);
+                            let an = d.lemma(p.add_neg, &[zero_c]);
+                            let az = d.lemma(p.add_zero, &[neg_zero_c]);
+                            let zero_plus_negzero = cadd(d, p, zero_c, neg_zero_c);
+                            let negzero_plus_zero = cadd(d, p, neg_zero_c, zero_c);
+                            let comm0 = d.lemma(p.add_comm, &[zero_c, neg_zero_c]);
+                            let e1 = d.lemma(
+                                p.equiv_trans,
+                                &[zero_plus_negzero, negzero_plus_zero, neg_zero_c, comm0, az],
+                            );
+                            let e1_symm =
+                                d.lemma(p.equiv_symm, &[zero_plus_negzero, neg_zero_c, e1]);
+                            let neg_zero_eq_zero = d.lemma(
+                                p.equiv_trans,
+                                &[neg_zero_c, zero_plus_negzero, zero_c, e1_symm, an],
+                            );
+                            let refl_negq = d.lemma(p.equiv_refl, &[neg_q_emb]);
+                            let neg_q_nonpos = d.lemma(
+                                p.le_congr,
+                                &[
+                                    neg_q_emb,
+                                    neg_q_emb,
+                                    neg_zero_c,
+                                    zero_c,
+                                    refl_negq,
+                                    neg_zero_eq_zero,
+                                    h1,
+                                ],
+                            );
+                            let refl_one_c = d.lemma(p.le_refl, &[one_c]);
+                            let one_plus_zero2 = cadd(d, p, one_c, zero_c);
+                            let sum_le3 = d.lemma(
+                                p.add_le_add,
+                                &[one_c, one_c, neg_q_emb, zero_c, refl_one_c, neg_q_nonpos],
+                            );
+                            let add_zero_one = d.lemma(p.add_zero, &[one_c]);
+                            let refl_omq2 = d.lemma(p.equiv_refl, &[one_minus_q]);
+                            let omq_le_one = d.lemma(
+                                p.le_congr,
+                                &[
+                                    one_minus_q,
+                                    one_minus_q,
+                                    one_plus_zero2,
+                                    one_c,
+                                    refl_omq2,
+                                    add_zero_one,
+                                    sum_le3,
+                                ],
+                            );
+                            d.lemma(p.le_trans, &[x, one_minus_q, one_c, hr_le, omq_le_one])
+                        };
+
+                        // xq_le_q : le (mul x q_emb) q_emb
+                        let xq = cmul(d, p, x, q_emb);
+                        let xq_le_q = {
+                            let raw =
+                                mul_le_mul_of_nonneg_right(d, p, x, one_c, q_emb, ht, hx_le_one);
+                            let one_q = cmul(d, p, one_c, q_emb);
+                            let one_mul_q = creal_one_mul(d, p, q_emb);
+                            let refl_xq = d.lemma(p.equiv_refl, &[xq]);
+                            d.lemma(p.le_congr, &[xq, xq, one_q, q_emb, refl_xq, one_mul_q, raw])
+                        };
+
+                        // omq_plus_q_eq_one : Equiv (add one_minus_q q_emb) one_c
+                        let omq_plus_q = cadd(d, p, one_minus_q, q_emb);
+                        let assoc2 = d.lemma(p.add_assoc, &[one_c, neg_q_emb, q_emb]);
+                        let nq_plus_q = cadd(d, p, neg_q_emb, q_emb);
+                        let q_plus_nq = cadd(d, p, q_emb, neg_q_emb);
+                        let comm_nq = d.lemma(p.add_comm, &[neg_q_emb, q_emb]);
+                        let refl_one_c2 = d.lemma(p.equiv_refl, &[one_c]);
+                        let congr_nq = d.lemma(
+                            p.add_congr,
+                            &[one_c, one_c, nq_plus_q, q_plus_nq, refl_one_c2, comm_nq],
+                        );
+                        let addneg_q = d.lemma(p.add_neg, &[q_emb]);
+                        let congr_zero = d.lemma(
+                            p.add_congr,
+                            &[one_c, one_c, q_plus_nq, zero_c, refl_one_c2, addneg_q],
+                        );
+                        let one_plus_zero3 = cadd(d, p, one_c, zero_c);
+                        let add_zero_one2 = d.lemma(p.add_zero, &[one_c]);
+                        let one_plus_nq_plus_q = cadd(d, p, one_c, nq_plus_q);
+                        let one_plus_q_plus_nq = cadd(d, p, one_c, q_plus_nq);
+                        let step_a2 = d.lemma(
+                            p.equiv_trans,
+                            &[
+                                omq_plus_q,
+                                one_plus_nq_plus_q,
+                                one_plus_q_plus_nq,
+                                assoc2,
+                                congr_nq,
+                            ],
+                        );
+                        let step_b2 = d.lemma(
+                            p.equiv_trans,
+                            &[
+                                omq_plus_q,
+                                one_plus_q_plus_nq,
+                                one_plus_zero3,
+                                step_a2,
+                                congr_zero,
+                            ],
+                        );
+                        let omq_plus_q_eq_one = d.lemma(
+                            p.equiv_trans,
+                            &[omq_plus_q, one_plus_zero3, one_c, step_b2, add_zero_one2],
+                        );
+
+                        // final_bound : le (add one_minus_q xq) one_c
+                        let sum4lhs = cadd(d, p, one_minus_q, xq);
+                        let refl_omq3 = d.lemma(p.le_refl, &[one_minus_q]);
+                        let sum_le4 = d.lemma(
+                            p.add_le_add,
+                            &[one_minus_q, one_minus_q, xq, q_emb, refl_omq3, xq_le_q],
+                        );
+                        let refl_sum4lhs = d.lemma(p.equiv_refl, &[sum4lhs]);
+                        let final_bound = d.lemma(
+                            p.le_congr,
+                            &[
+                                sum4lhs,
+                                sum4lhs,
+                                omq_plus_q,
+                                one_c,
+                                refl_sum4lhs,
+                                omq_plus_q_eq_one,
+                                sum_le4,
+                            ],
+                        );
+
+                        // x_one_plus_t ~ (add x xq) ≤ (add one_minus_q xq) ≤ one_c
+                        let one_plus_t_outer = cadd(d, p, one_c, q_emb);
+                        let x_one_plus_t = cmul(d, p, x, one_plus_t_outer);
+                        let x_one_c = cmul(d, p, x, one_c);
+                        let dist = d.lemma(p.left_distrib, &[x, one_c, q_emb]);
+                        let mul_one_x = d.lemma(p.mul_one, &[x]);
+                        let refl_xq2 = d.lemma(p.equiv_refl, &[xq]);
+                        let congr_x =
+                            d.lemma(p.add_congr, &[x_one_c, x, xq, xq, mul_one_x, refl_xq2]);
+                        let x_plus_xq = cadd(d, p, x, xq);
+                        let x_one_c_plus_xq = cadd(d, p, x_one_c, xq);
+                        let dist2 = d.lemma(
+                            p.equiv_trans,
+                            &[x_one_plus_t, x_one_c_plus_xq, x_plus_xq, dist, congr_x],
+                        );
+
+                        let le_refl_xq = d.lemma(p.le_refl, &[xq]);
+                        let bound1 =
+                            d.lemma(p.add_le_add, &[x, one_minus_q, xq, xq, hr_le, le_refl_xq]);
+                        let chain1 = d.lemma(
+                            p.le_trans,
+                            &[x_plus_xq, sum4lhs, one_c, bound1, final_bound],
+                        );
+                        let refl_one_c3 = d.lemma(p.equiv_refl, &[one_c]);
+                        let dist2_symm = d.lemma(p.equiv_symm, &[x_one_plus_t, x_plus_xq, dist2]);
+                        d.lemma(
+                            p.le_congr,
+                            &[
+                                x_plus_xq,
+                                x_one_plus_t,
+                                one_c,
+                                one_c,
+                                dist2_symm,
+                                refl_one_c3,
+                                chain1,
+                            ],
+                        )
+                    };
+
+                    // ---- per-m decay bound, then Exists.intro over K := K1*K1 ----
+                    let m_fv = d.fresh_fvar();
+                    let m = d.kernel().fvar(m_fv);
+
+                    let l_bound_m = creal_bernoulli_harmonic(d, p, x, q, hx0, ht, hxt, m);
+                    let kr_m = k_relation_creal(d, p, q, k_rat, h_k_ge_one, h_kq, m);
+
+                    // Step A: kr_m * pow(x,m) (nonneg, right) -> le (mul (embed a_m) (pow x m)) k_emb
+                    let succ_m = d.succ(m);
+                    let a_m_rat = d.const_app(rat.nat_div_succ, &[succ_m, zero_nat]);
+                    let a_m = embed(d, p, a_m_rat);
+                    let pow_xm = d.const_app(p.pow, &[x, m]);
+                    let pow_nonneg_m = d.lemma(p.pow_nonneg, &[x, hx0, m]);
+                    let lm_rat = l_term(d, rat, q, m);
+                    let lm = embed(d, p, lm_rat);
+                    let k_lm = cmul(d, p, k_emb, lm);
+                    let step_ar =
+                        mul_le_mul_of_nonneg_right(d, p, a_m, k_lm, pow_xm, pow_nonneg_m, kr_m);
+                    // step_ar : le (mul a_m pow_xm) (mul k_lm pow_xm)
+                    let a_m_pow = cmul(d, p, a_m, pow_xm);
+                    let k_lm_pow = cmul(d, p, k_lm, pow_xm);
+
+                    let assoc3 = d.lemma(p.mul_assoc, &[k_emb, lm, pow_xm]); // Equiv k_lm_pow (mul k_emb (mul lm pow_xm))
+                    let lm_pow = cmul(d, p, lm, pow_xm);
+                    let k_lm_pow2 = cmul(d, p, k_emb, lm_pow);
+                    let k_rat_nonneg2 = d.lemma(rat.zero_le_nat_div_succ, &[big_k, zero_nat]);
+                    let zero_r5 = rzero(d, rat);
+                    let k_emb_nonneg2 = d.lemma(p.of_rat_le, &[zero_r5, k_rat, k_rat_nonneg2]);
+                    let step_scale = d.lemma(
+                        p.mul_le_mul_of_nonneg_left,
+                        &[k_emb, lm_pow, one_c, k_emb_nonneg2, l_bound_m],
+                    );
+                    // step_scale : le k_lm_pow2 (mul k_emb one_c)
+                    let k_one2 = cmul(d, p, k_emb, one_c);
+                    let mul_one_k2 = d.lemma(p.mul_one, &[k_emb]);
+                    let refl_k_lm_pow2 = d.lemma(p.equiv_refl, &[k_lm_pow2]);
+                    let step_scale2 = d.lemma(
+                        p.le_congr,
+                        &[
+                            k_lm_pow2,
+                            k_lm_pow2,
+                            k_one2,
+                            k_emb,
+                            refl_k_lm_pow2,
+                            mul_one_k2,
+                            step_scale,
+                        ],
+                    );
+                    // step_scale2 : le k_lm_pow2 k_emb
+
+                    let refl_k_emb = d.lemma(p.equiv_refl, &[k_emb]);
+                    let assoc3_symm = d.lemma(p.equiv_symm, &[k_lm_pow, k_lm_pow2, assoc3]);
+                    let step_bridge = d.lemma(
+                        p.le_congr,
+                        &[
+                            k_lm_pow2,
+                            k_lm_pow,
+                            k_emb,
+                            k_emb,
+                            assoc3_symm,
+                            refl_k_emb,
+                            step_scale2,
+                        ],
+                    );
+                    // step_bridge : le k_lm_pow k_emb
+
+                    let ay_le_k = d.lemma(
+                        p.le_trans,
+                        &[a_m_pow, k_lm_pow, k_emb, step_ar, step_bridge],
+                    );
+                    // ay_le_k : le (mul a_m pow_xm) k_emb
+
+                    // Step B: exact cancellation via natDivSucc(1,m) as a_m's exact reciprocal.
+                    let one_nat3 = d.num(1);
+                    let dd_rat = d.const_app(rat.nat_div_succ, &[one_nat3, m]);
+                    let ad_dd_eq_one = {
+                        // a_m_rat * dd_rat = 1, via nat_div_succ_mul + mul_one + the x0-style identity.
+                        let prod2 = rmul(d, a_m_rat, dd_rat);
+                        let scale_eq2 = d.lemma(rat.nat_div_succ_mul, &[succ_m, one_nat3, m]);
+                        let succ_m_mul_one = NatOps::mul(d, succ_m, one_nat3);
+                        let mid_rat2 = d.const_app(rat.nat_div_succ, &[succ_m_mul_one, m]);
+                        let mid2_rat2 = d.const_app(rat.nat_div_succ, &[succ_m, m]);
+                        let mul_one_nat_name2 = d.prelude().mul_one;
+                        let mul_one_h2 = d.lemma(mul_one_nat_name2, &[succ_m]);
+                        let idx_step2 =
+                            nat_eq_to_rat(d, succ_m_mul_one, succ_m, mul_one_h2, &|d, kk| {
+                                d.const_app(rat.nat_div_succ, &[kk, m])
+                            });
+                        let x0b = nat_div_succ_succ_self_eq_one(d, p, m);
+                        let prod_to_mid2b =
+                            rtrans(d, prod2, mid_rat2, mid2_rat2, scale_eq2, idx_step2);
+                        let one_r3 = rone(d, rat);
+                        rtrans(d, prod2, mid2_rat2, one_r3, prod_to_mid2b, x0b)
+                    };
+                    let dd_nonneg = {
+                        let dd_nat_nonneg = d.lemma(rat.zero_le_nat_div_succ, &[one_nat3, m]);
+                        let zero_r6 = rzero(d, rat);
+                        d.lemma(p.of_rat_le, &[zero_r6, dd_rat, dd_nat_nonneg])
+                    };
+                    let pow_le_kdd = creal_cancel_exact(
+                        d,
+                        p,
+                        a_m_rat,
+                        pow_xm,
+                        dd_rat,
+                        k_emb,
+                        ad_dd_eq_one,
+                        dd_nonneg,
+                        ay_le_k,
+                    );
+                    // pow_le_kdd : le pow_xm (mul (embed dd_rat) k_emb)
+
+                    // Final: embed dd_rat * k_emb ~ embed (natDivSucc (big_k*big_k) m)  [wait: need natDivSucc combining dd (1,m) and k_rat (big_k,0)]
+                    let final_rat = rmul(d, dd_rat, k_rat);
+                    let final_of_rat = d.lemma(p.of_rat_mul, &[dd_rat, k_rat]);
+                    // final_of_rat : Equiv (mul (embed dd_rat) k_emb) (embed final_rat)
+                    let scale_eq3 = d.lemma(rat.nat_div_succ_mul, &[big_k, one_nat3, m]);
+                    // scale_eq3 : Eq (rmul k_rat dd_rat) (natDivSucc (big_k*one_nat3) m)   -- note order k_rat*dd_rat
+                    let big_k_mul_one2 = NatOps::mul(d, big_k, one_nat3);
+                    let mid_rat3 = d.const_app(rat.nat_div_succ, &[big_k_mul_one2, m]);
+                    let mid2_rat3 = d.const_app(rat.nat_div_succ, &[big_k, m]);
+                    let mul_one_nat_name3 = d.prelude().mul_one;
+                    let mul_one_h3 = d.lemma(mul_one_nat_name3, &[big_k]);
+                    let idx_step3 =
+                        nat_eq_to_rat(d, big_k_mul_one2, big_k, mul_one_h3, &|d, kk| {
+                            d.const_app(rat.nat_div_succ, &[kk, m])
+                        });
+                    let kdd_rat = rmul(d, k_rat, dd_rat);
+                    let comm_dk = d.lemma(rat.mul_comm, &[dd_rat, k_rat]); // Eq final_rat kdd_rat
+                    let kdd_to_mid = rtrans(d, kdd_rat, mid_rat3, mid2_rat3, scale_eq3, idx_step3);
+                    let final_to_kdd = comm_dk;
+                    let final_to_mid2 =
+                        rtrans(d, final_rat, kdd_rat, mid2_rat3, final_to_kdd, kdd_to_mid);
+                    // final_to_mid2 : Eq final_rat (natDivSucc big_k m)
+                    let final_equiv = embed_eq_to_equiv(d, p, final_rat, mid2_rat3, final_to_mid2);
+                    let dd_rat_emb = embed(d, p, dd_rat);
+                    let dd_k = cmul(d, p, dd_rat_emb, k_emb);
+                    let embed_final_rat = embed(d, p, final_rat);
+                    let embed_mid2_rat3 = embed(d, p, mid2_rat3);
+                    let dd_k_to_target = d.lemma(
+                        p.equiv_trans,
+                        &[
+                            dd_k,
+                            embed_final_rat,
+                            embed_mid2_rat3,
+                            final_of_rat,
+                            final_equiv,
+                        ],
+                    );
+
+                    let refl_pow_xm = d.lemma(p.equiv_refl, &[pow_xm]);
+                    let per_m_proof = d.lemma(
+                        p.le_congr,
+                        &[
+                            pow_xm,
+                            pow_xm,
+                            dd_k,
+                            embed_mid2_rat3,
+                            refl_pow_xm,
+                            dd_k_to_target,
+                            pow_le_kdd,
+                        ],
+                    );
+                    // per_m_proof : le pow_xm (embed (natDivSucc big_k m))
+
+                    let per_m = d.lam_fv(m_fv, nat, per_m_proof);
+                    exists_nat_intro(d, p, predicate, big_k, per_m)
+                };
+
+                let with_h_pb = d.lam_fv(h_pb_fv, h_pb_ty, body_k);
+                d.lam_fv(k3_fv, nat, with_h_pb)
+            };
+
+            let _ = pb_predicate;
+            exists_elim(d, pb_predicate, target, ex_pb, minor_k)
+        };
+
+        let with_w = d.lam_fv(w_fv, witness_ty, body);
+        let rat_carrier_q = rat_ty(d);
+        d.lam_fv(q_fv, rat_carrier_q, with_w)
+    };
+
+    let carrier = creal_ty(d, p);
+    let value = {
+        let body = gap_elim(d, p, x, one_c, target, hlt, minor_q);
+        let with_hlt = d.lam_fv(hlt_fv, hlt_ty, body);
+        let with_hx0 = d.lam_fv(hx0_fv, hx0_ty, with_hlt);
+        d.lam_fv(x_fv, carrier, with_hx0)
+    };
+    let ty = {
+        let after_hlt = d.arrow(hlt_ty, target);
+        let after_hx0 = d.arrow(hx0_ty, after_hlt);
+        d.pi_fv(x_fv, carrier, after_hx0)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.pow_le_nat_div_succ_of_lt,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// ---------------------------------------------------------------------------
+// `CReal.ratioDecayBound` -- the ratio-test decay induction, `f(k) ≤ f(0)·rᵏ`.
+// ---------------------------------------------------------------------------
+
+/// `CReal.ratioDecayBound`. See the field documentation
+/// ([`super::CRealPrelude::ratio_decay_bound`]) for the statement and the
+/// derivation.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_ratio_decay_bound(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let fn_ty = d.arrow(nat, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+
+    let zero_c = czero(d, p);
+    let h0r_ty = cle(d, p, zero_c, r);
+    let h0r_fv = d.fresh_fvar();
+    let h0r = d.kernel().fvar(h0r_fv);
+
+    // hdec_ty := ∀ n, le (f (succ n)) (mul r (f n))
+    let hdec_ty = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let succ_n = d.succ(n);
+        let f_succ_n = d.apply(f, &[succ_n]);
+        let f_n = d.apply(f, &[n]);
+        let r_fn = cmul(d, p, r, f_n);
+        let body = cle(d, p, f_succ_n, r_fn);
+        d.pi_fv(n_fv, nat, body)
+    };
+    let hdec_fv = d.fresh_fvar();
+    let hdec = d.kernel().fvar(hdec_fv);
+
+    let zero_nat = d.num(0);
+    let f0 = d.apply(f, &[zero_nat]);
+
+    // motive(v) := le (f v) (mul f0 (pow r v))
+    let motive = |d: &mut IntDev<'_>, v: ExprId| -> ExprId {
+        let fv_ = d.apply(f, &[v]);
+        let pow_rv = d.const_app(p.pow, &[r, v]);
+        let bound = cmul(d, p, f0, pow_rv);
+        cle(d, p, fv_, bound)
+    };
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let stmt_inner = motive(d, n);
+
+    let proof_inner = d.induct(
+        &motive,
+        &|d| {
+            // base: le f0 (mul f0 one) -- target `mul f0 (pow r 0)` is defeq
+            // to `mul f0 one` since `pow` ι-reduces at 0.
+            let one_c = d.kernel().const_(p.one, vec![]);
+            let f0_one = cmul(d, p, f0, one_c);
+            let refl_f0 = d.lemma(p.equiv_refl, &[f0]);
+            let mul_one_f0 = d.lemma(p.mul_one, &[f0]); // Equiv f0_one f0
+            let hce = d.lemma(p.equiv_symm, &[f0_one, f0, mul_one_f0]); // Equiv f0 f0_one
+            let base = d.lemma(p.le_refl, &[f0]);
+            d.lemma(p.le_congr, &[f0, f0, f0, f0_one, refl_f0, hce, base])
+        },
+        &|d, j, ih| {
+            // ih : le (f j) (mul f0 (pow r j))
+            let pow_rj = d.const_app(p.pow, &[r, j]);
+            let bound_j = cmul(d, p, f0, pow_rj);
+            let f_j = d.apply(f, &[j]);
+            let f_succ_j = {
+                let sj = d.succ(j);
+                d.apply(f, &[sj])
+            };
+
+            // raw1 : le (mul r (f j)) (mul r bound_j)
+            let raw1 = d.lemma(p.mul_le_mul_of_nonneg_left, &[r, f_j, bound_j, h0r, ih]);
+            let r_fj = cmul(d, p, r, f_j);
+            let a_term = cmul(d, p, r, bound_j); // r * (f0 * pow_rj)
+
+            // hdec_j : le (f (succ j)) (mul r (f j))
+            let hdec_j = d.apply(hdec, &[j]);
+
+            let chained = d.lemma(p.le_trans, &[f_succ_j, r_fj, a_term, hdec_j, raw1]);
+
+            // Equiv chain: a_term ~ f0 * (pow_rj * r)  [(pow r (succ j)) ι's
+            // recursive factor on the RIGHT, so this is the target shape].
+            let r_f0 = cmul(d, p, r, f0);
+            let b1 = cmul(d, p, r_f0, pow_rj);
+            let assoc1 = d.lemma(p.mul_assoc, &[r, f0, pow_rj]); // Equiv b1 a_term
+            let e1 = d.lemma(p.equiv_symm, &[b1, a_term, assoc1]); // Equiv a_term b1
+
+            let f0_r = cmul(d, p, f0, r);
+            let b2 = cmul(d, p, f0_r, pow_rj);
+            let comm1 = d.lemma(p.mul_comm, &[r, f0]); // Equiv r_f0 f0_r
+            let refl_prj = d.lemma(p.equiv_refl, &[pow_rj]);
+            let e2 = d.lemma(p.mul_congr, &[r_f0, f0_r, pow_rj, pow_rj, comm1, refl_prj]); // Equiv b1 b2
+
+            let r_prj = cmul(d, p, r, pow_rj);
+            let b3 = cmul(d, p, f0, r_prj);
+            let e3 = d.lemma(p.mul_assoc, &[f0, r, pow_rj]); // Equiv b2 b3
+
+            let prj_r = cmul(d, p, pow_rj, r);
+            let b4 = cmul(d, p, f0, prj_r);
+            let comm2 = d.lemma(p.mul_comm, &[r, pow_rj]); // Equiv r_prj prj_r
+            let refl_f0b = d.lemma(p.equiv_refl, &[f0]);
+            let e4 = d.lemma(p.mul_congr, &[f0, f0, r_prj, prj_r, refl_f0b, comm2]); // Equiv b3 b4
+
+            let hce = echain(d, p, a_term, &[(b1, e1), (b2, e2), (b3, e3), (b4, e4)]);
+
+            let refl_target = d.lemma(p.equiv_refl, &[f_succ_j]);
+            d.lemma(
+                p.le_congr,
+                &[f_succ_j, f_succ_j, a_term, b4, refl_target, hce, chained],
+            )
+        },
+        n,
+    );
+
+    let ty = {
+        let inner = d.pi_fv(n_fv, nat, stmt_inner);
+        let with_hdec = d.arrow(hdec_ty, inner);
+        let with_h0r = d.arrow(h0r_ty, with_hdec);
+        let with_r = d.pi_fv(r_fv, carrier, with_h0r);
+        d.pi_fv(f_fv, fn_ty, with_r)
+    };
+    let value = {
+        let inner = d.lam_fv(n_fv, nat, proof_inner);
+        let with_hdec = d.lam_fv(hdec_fv, hdec_ty, inner);
+        let with_h0r = d.lam_fv(h0r_fv, h0r_ty, with_hdec);
+        let with_r = d.lam_fv(r_fv, carrier, with_h0r);
+        d.lam_fv(f_fv, fn_ty, with_r)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.ratio_decay_bound,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// ---------------------------------------------------------------------------
+// `CReal.invLeOfPosBound` -- a `PosBound`-witnessed inverse is bounded by a
+// whole number computed from its own modulus.
+// ---------------------------------------------------------------------------
+
+/// `CReal.invLeOfPosBound`. See the field documentation
+/// ([`super::CRealPrelude::inv_le_of_pos_bound`]) for the statement and the
+/// derivation.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_inv_le_of_pos_bound(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let rat = p.rat;
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let h_ty = pos_bound_of(d, p, x, k);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let one_nat = d.num(1);
+    let zero_nat = d.num(0);
+    let succ_k = d.succ(k);
+
+    let q_rat = d.const_app(rat.nat_div_succ, &[one_nat, k]);
+    let c_rat = d.const_app(rat.nat_div_succ, &[succ_k, zero_nat]);
+
+    let q = embed(d, p, q_rat);
+    let c_embed = embed(d, p, c_rat);
+    let c_ofnat = d.const_app(p.of_nat, &[succ_k]);
+
+    let iv = cinv(d, p, x, k, h);
+
+    // h_pos_q : Rat.lt Rat.zero (natDivSucc 1 k), from Nat.le 1 1.
+    let le11 = {
+        let np = d.prelude();
+        d.const_app(np.le_refl, &[one_nat])
+    };
+    let h_pos_q = d.lemma(rat.nat_div_succ_pos, &[one_nat, k, le11]);
+
+    // h_cancel : Eq Rat (mul q_rat (Rat.inv q_rat)) Rat.one
+    let h_cancel = d.lemma(rat.mul_inv_cancel, &[q_rat, h_pos_q]);
+    // h_inv_eq : Eq Rat (Rat.inv q_rat) c_rat
+    let h_inv_eq = d.lemma(rat.inv_nat_div_succ, &[k]);
+
+    let inv_q_rat = d.const_app(rat.inv, &[q_rat]);
+    let rone_expr = rone(d, rat);
+    // rat_prod_eq_one : Eq Rat (mul q_rat c_rat) Rat.one
+    let rat_prod_eq_one = rat_eq_rewrite(d, inv_q_rat, c_rat, h_inv_eq, h_cancel, &|d, t| {
+        let lhs = rmul(d, q_rat, t);
+        req(d, lhs, rone_expr)
+    });
+
+    let mul_qc_rat = rmul(d, q_rat, c_rat);
+    // hqc_embed : Equiv (embed mul_qc_rat) (embed rone_expr)
+    let hqc_embed = embed_eq_to_equiv(d, p, mul_qc_rat, rone_expr, rat_prod_eq_one);
+
+    // ofrm : Equiv (mul q c_embed) (embed mul_qc_rat)
+    let ofrm = d.lemma(p.of_rat_mul, &[q_rat, c_rat]);
+
+    let mul_q_c = cmul(d, p, q, c_embed);
+    let embed_mul_qc = embed(d, p, mul_qc_rat);
+    let embed_one_rat = embed(d, p, rone_expr);
+    // hqc : Equiv (mul q c_embed) (embed rone_expr)  -- defeq to `one`.
+    let hqc = d.lemma(
+        p.equiv_trans,
+        &[mul_q_c, embed_mul_qc, embed_one_rat, ofrm, hqc_embed],
+    );
+
+    // c_nonneg : le zero c_embed
+    let c_nonneg = {
+        let zero_r = rzero(d, rat);
+        let c_rat_nonneg = d.lemma(rat.zero_le_nat_div_succ, &[succ_k, zero_nat]);
+        d.lemma(p.of_rat_le, &[zero_r, c_rat, c_rat_nonneg])
+    };
+
+    // step_a : le (mul q c_embed) (mul x c_embed), from `h : PosBound x k`
+    // unfolding to `le q x` and `c_nonneg`.
+    let step_a = mul_le_mul_of_nonneg_right(d, p, q, x, c_embed, c_nonneg, h);
+
+    // h_one_le_xc : le one (mul x c_embed), transporting step_a's LHS across
+    // `hqc`.
+    let mul_x_c = cmul(d, p, x, c_embed);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let refl_mxc = d.lemma(p.equiv_refl, &[mul_x_c]);
+    let h_one_le_xc = d.lemma(
+        p.le_congr,
+        &[mul_q_c, one_c, mul_x_c, mul_x_c, hqc, refl_mxc, step_a],
+    );
+
+    // h_mul_le : le (mul x iv) (mul x c_embed), transporting h_one_le_xc's
+    // LHS across `mul_inv_cancel`, symmetrised.
+    let cancel_xk = d.lemma(p.mul_inv_cancel, &[x, k, h]); // Equiv (mul x iv) one_c
+    let mul_x_iv = cmul(d, p, x, iv);
+    let symm_cancel = d.lemma(p.equiv_symm, &[mul_x_iv, one_c, cancel_xk]); // Equiv one_c mul_x_iv
+    let refl_mxc2 = d.lemma(p.equiv_refl, &[mul_x_c]);
+    let h_mul_le = d.lemma(
+        p.le_congr,
+        &[
+            one_c,
+            mul_x_iv,
+            mul_x_c,
+            mul_x_c,
+            symm_cancel,
+            refl_mxc2,
+            h_one_le_xc,
+        ],
+    );
+
+    // final_le : le iv c_embed, cancelling x via the SAME witness (k, h)
+    // `inv` itself takes.
+    let final_le = d.lemma(p.le_of_mul_le_mul_left, &[x, iv, c_embed, k, h, h_mul_le]);
+
+    let ty = {
+        let concl = cle(d, p, iv, c_ofnat);
+        let with_h = d.pi_fv(h_fv, h_ty, concl);
+        let with_k = d.pi_fv(k_fv, nat, with_h);
+        d.pi_fv(x_fv, carrier, with_k)
+    };
+    let value = {
+        let with_h = d.lam_fv(h_fv, h_ty, final_le);
+        let with_k = d.lam_fv(k_fv, nat, with_h);
+        d.lam_fv(x_fv, carrier, with_k)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.inv_le_of_pos_bound,
         uparams: vec![],
         ty,
         value,
