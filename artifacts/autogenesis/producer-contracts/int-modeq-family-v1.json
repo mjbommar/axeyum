@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "id": "producer-contract-int-modeq-family-v1",
+  "title": "Mathlib v4.30 Int modular-congruence family, kernel-lane",
+  "route": "kernel-lane",
+  "recipe": {
+    "description": "Author an s5-side Lean statement-adapter wrapper for the target Mathlib v4.30 `Int` proposition, export it via `lake env lean` + `lean4export`, and feed the export to the existing shape-generic checker. The checker is generic over the modular-congruence relation `a ≡ b [ZMOD n]` regardless of which Mathlib lemma name carries it (`Int.ModEq.add_left`, `Int.add_modEq_left`, `Int.neg_modEq_neg`, ...): it declines by typed `UnsupportedRecursorShape`/`UnsupportedIffShape` rather than pattern-matching fixed theorem names, which is what makes one recipe cover the whole family instead of one fact.",
+    "reference": "crates/axeyum-lean-import/examples/modeq_family_operation.rs"
+  },
+  "shape": {
+    "formal_language": ["lean4-surface"],
+    "fragments": ["Int"],
+    "title_prefix": "Mathlib v4.30 source proposition ",
+    "statement_contains": "[ZMOD "
+  },
+  "non_examples": [
+    {
+      "fact_id": "F:ml430-int-fib-add-181b6a2c",
+      "reason": "Same import shape (fragment Int, lean4-surface, `Mathlib v4.30 source proposition` title) and same route family, but `Int.fib_add`'s statement is a Fibonacci recurrence identity with no `[ZMOD ` congruence notation anywhere in it -- a different family the same recipe cannot discharge."
+    },
+    {
+      "fact_id": "F:ml430-nat-modeq-add-left-e83f0700",
+      "reason": "The SAME lemma shape (`ModEq.add_left`) and the same congruence relation, but over `Nat` rather than `Int`: its statement carries `[MOD n]`, not `[ZMOD n]`, and `formal.fragment` is `Nat`, which this contract's `fragments` list excludes. Demonstrates the predicate discriminates by fragment, not merely by lemma name."
+    }
+  ],
+  "notes": "Doc docs/autogenesis/288-admission-precedes-registration.md names four of this family's facts (`F:ml430-int-modeq-add-left-6e17c69a`, `-neg-f649f6c5`, `-of-dvd-b9c41fce`, `-sub-3148f130`) as the best next candidate for a genuinely general multi-target operation; this contract's shape covers those four plus every other open Int modular-congruence proposition sharing the recipe (13 open, dependency-ready, all `nursery-v1.json` partition `train` -- none held-out, checked 2026-08-27). This contract asserts only that the shape is dischargeable via `kernel-lane`, never that any instance has been attempted or proved; admission into `artifacts/autogenesis/operations.json` still requires an independently kernel-checked proof, per ADR-0602 SS1."
+}
