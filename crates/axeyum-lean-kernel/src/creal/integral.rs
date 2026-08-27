@@ -14321,11 +14321,17 @@ pub(super) fn declare_riemann_sum_split_exact_of_uc(
     // nonnegativity, exactly `declare_riemann_sample_in_bounds`'s own lower
     // half. Needed to place BOTH child intervals inside `[a, b]`.
     let on_ac_nonneg = zero_le_of_nat(d, p, n_ac);
-    let w1_nonneg = d.lemma(p.mul_nonneg, &[on_ac, delta_ab, on_ac_nonneg, delta_ab_nonneg]);
+    let w1_nonneg = d.lemma(
+        p.mul_nonneg,
+        &[on_ac, delta_ab, on_ac_nonneg, delta_ab_nonneg],
+    );
     let hac = shift_le_of_nonneg(d, p, a, w1, w1_nonneg); // le a (add a w1) = le a c
 
     let on_cb_nonneg = zero_le_of_nat(d, p, n_cb);
-    let w2_nonneg = d.lemma(p.mul_nonneg, &[on_cb, delta_ab, on_cb_nonneg, delta_ab_nonneg]);
+    let w2_nonneg = d.lemma(
+        p.mul_nonneg,
+        &[on_cb, delta_ab, on_cb_nonneg, delta_ab_nonneg],
+    );
     let hcb = {
         let c_w2 = cadd(d, p, c, w2);
         let shifted = shift_le_of_nonneg(d, p, c, w2, w2_nonneg); // le c c_w2
@@ -14361,8 +14367,14 @@ pub(super) fn declare_riemann_sum_split_exact_of_uc(
             np.le_trans,
             &[n_ac, m_ab, succ_m_ab, n_ac_le_m_ab, m_ab_le_succ_m_ab],
         );
-        let hi_succ_mab = d.lemma(np.lt_of_lt_of_le, &[i, n_ac, succ_m_ab, hi, n_ac_le_succ_mab]);
-        let and_ab = d.lemma(p.riemann_sample_in_bounds, &[a, b, m_ab, i, hab, hi_succ_mab]);
+        let hi_succ_mab = d.lemma(
+            np.lt_of_lt_of_le,
+            &[i, n_ac, succ_m_ab, hi, n_ac_le_succ_mab],
+        );
+        let and_ab = d.lemma(
+            p.riemann_sample_in_bounds,
+            &[a, b, m_ab, i, hab, hi_succ_mab],
+        );
         let a_le_spab_ty = cle(d, p, a, sp_ab);
         let spab_le_b_ty = cle(d, p, sp_ab, b);
         let a_le_spab = d.const_app(logic.and_left, &[a_le_spab_ty, spab_le_b_ty, and_ab]);
@@ -14395,7 +14407,9 @@ pub(super) fn declare_riemann_sum_split_exact_of_uc(
         let f_spac = d.apply(f, &[sp_ac]);
         let hcong_i = d.lemma(
             p.congr_of_uniformly_continuous,
-            &[f, a, b, u, sp_ab, sp_ac, a_le_spab, spab_le_b, a_le_spac, spac_le_b, h_sp],
+            &[
+                f, a, b, u, sp_ab, sp_ac, a_le_spab, spab_le_b, a_le_spac, spac_le_b, h_sp,
+            ],
         );
         let symm_ac2 = d.lemma(p.equiv_symm, &[delta_ac, delta_ab, h_delta_ac]);
         let final_i = d.lemma(
@@ -14433,11 +14447,20 @@ pub(super) fn declare_riemann_sum_split_exact_of_uc(
         // `Nat.succ m_cb`), via `add_lt_add_left`.
         let np = d.prelude();
         let hk_full = d.lemma(np.add_lt_add_left, &[n_ac, k, n_cb, hk]);
-        let and_shift = d.lemma(p.riemann_sample_in_bounds, &[a, b, m_ab, nack, hab, hk_full]);
+        let and_shift = d.lemma(
+            p.riemann_sample_in_bounds,
+            &[a, b, m_ab, nack, hab, hk_full],
+        );
         let a_le_spshift_ty = cle(d, p, a, sp_shift);
         let spshift_le_b_ty = cle(d, p, sp_shift, b);
-        let a_le_spshift = d.const_app(logic.and_left, &[a_le_spshift_ty, spshift_le_b_ty, and_shift]);
-        let spshift_le_b = d.const_app(logic.and_right, &[a_le_spshift_ty, spshift_le_b_ty, and_shift]);
+        let a_le_spshift = d.const_app(
+            logic.and_left,
+            &[a_le_spshift_ty, spshift_le_b_ty, and_shift],
+        );
+        let spshift_le_b = d.const_app(
+            logic.and_right,
+            &[a_le_spshift_ty, spshift_le_b_ty, and_shift],
+        );
 
         // sp_cb in [a, b]: directly in [c, b] via `riemann_sample_in_bounds`
         // at the EXACT bound `k < n_cb`, then `a <= c` (`hac`) extends the

@@ -5170,8 +5170,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         riemann_sum_split_scale_invariant: kernel
             .name_str(creal, "riemannSum_split_scale_invariant"),
         congr_of_uniformly_continuous: kernel.name_str(creal, "congrOfUniformlyContinuous"),
-        riemann_sum_split_exact_of_uc: kernel
-            .name_str(creal, "riemannSum_split_exact_of_uc"),
+        riemann_sum_split_exact_of_uc: kernel.name_str(creal, "riemannSum_split_exact_of_uc"),
         has_derivative_integral_const: kernel.name_str(creal, "hasDerivative_integral_const"),
         neg_sub_swap: kernel.name_str(creal, "neg_sub_swap"),
         abs_le_of_two_sided: kernel.name_str(creal, "abs_le_of_two_sided"),

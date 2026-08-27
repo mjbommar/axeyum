@@ -161,5 +161,10 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.congr_of_uniformly_continuous,
             "theorem",
         ),
+        (
+            "CReal.riemannSum_split_exact_of_uc",
+            p.riemann_sum_split_exact_of_uc,
+            "theorem",
+        ),
     ]
 }
