@@ -574,3 +574,186 @@ declaration's statement, not a proof. `cargo check` would not distinguish the
 two, and neither does this section — the estimates in steps 2 and 3 are where a
 kernel rejection would land, and the `le_congr` direction traps this file's
 neighbours document apply throughout.
+
+---
+
+## Resolved, 2026-08-27: `CReal.ivt_exact_root` is in the kernel
+
+The route above closes, one step of it does **not** close as written, and the
+whole thing is now a kernel-checked theorem. Six declarations landed in
+`creal/ivt.rs`, all with axiom footprint `0`
+(`prelude_theorem_inventory --release --include-constructed`,
+`every_creal_declaration_is_checked_and_axiom_free`):
+
+```text
+creal  CReal.abs_diff_le_of_small_image   0
+creal  CReal.ivt_bisect_approx            0
+creal  CReal.ivt_bisect_cauchy_bound      0
+creal  CReal.cauchy_of_abs_diff_le        0
+creal  CReal.ivt_bisect_cauchy            0
+creal  CReal.ivt_exact_root               0
+```
+
+The headline:
+
+    CReal.ivt_exact_root :
+      ∀ F F' a b, HasDerivativeOn F F' a b → UniformlyContinuousOn F a b →
+      le a b → le (F a) zero → le zero (F b) →
+      ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k)) (F' z)) →
+      ∃ c, le a c ∧ (le c b ∧ Equiv (F c) zero)
+
+`Equiv (F c) zero` outright — not `|F c| ≤ ε` per accuracy. Read from the
+kernel, not from source: `shape_search --include-constructed --name-like
+ivt_exact_root` reports `arity=11 … → Exists`.
+
+**It is not vacuous, and that is checked rather than argued.**
+`creal_tests::ivt_exact_root_is_inhabited_by_the_identity_on_the_unit_interval`
+discharges every hypothesis at `F := fun r => r` on `[0,1]` with `k := 0`
+(`hasDerivative_id`, `uniformly_continuous_id`, `zero_lt_one`) and runs
+`Kernel::infer` on the closed application. Mutation-verified: swapping the two
+interval endpoints makes it a `TypeMismatch`, so the guard fires.
+
+Nothing here decides the sign of a real, and the classical IVT remains
+unavailable for the reason this file's top section gives. What unlocks the
+exact statement is the extra hypothesis — a uniformly positive derivative —
+and the reason is worth stating precisely, because "we assumed our way out"
+would be the wrong reading: **the hypothesis does not make any sign decidable,
+it makes the root unique with a modulus**, which is what turns a sequence of
+approximate roots into a *Cauchy* sequence. The approximate statement
+(`ivt_approx`) still needs no derivative and still cannot be strengthened.
+
+### The correction: step 3's lattice route does not close
+
+The section above says the Cauchy step routes through the lattice — apply
+`diff_le_of_strict_mono_magnitude` to the ordered pair
+`(min (x n) (x m), max (x n) (x m))` and close with `abs_le` — and asserts the
+resulting bound is `(2k+2)·(|F(x n)| + |F(x m)|)`. **It is not.** That lemma's
+conclusion is
+
+    le (add v (neg u)) (mul (ofNat (2k+2)) (add (abs (F u)) (abs (F v))))
+
+so instantiating at `u := min`, `v := max` puts `abs (F (min x y))` and
+`abs (F (max x y))` on the right-hand side, and the hypotheses bound
+`abs (F x)` and `abs (F y)`. Recovering the former needs a **lower** bound on
+`F (min x y)`, and every bound the interface supplies points the other way:
+`min_le_left`, `min_le_right`, and the monotonicity `strict_mono_magnitude`
+gives all bound it **above**, by `F x` and by `F y`. A lower bound would need
+an upper bound on `F'`, which `HasDerivativeOn` does not carry — *the same
+asymmetry this file already identifies one step earlier, for `F lo`*, and the
+reason it identifies it there is exactly why it should have been caught here.
+The meet-semilattice interface does not entail
+`Equiv (min x y) x ∨ Equiv (min x y) y`, which is the case split the detour
+existed to avoid, so the missing bound is not derivable from it either.
+
+**Cotransitivity supplies the case split instead**, and without deciding any
+order — the same move `ivt_step` already makes one section up. For a target
+`x − y ≤ R` and any strictly positive `q`, `lt_cotrans` at the pair
+`(zero, q)` evaluated at `x − y` gives `Or (lt zero (x−y)) (lt (x−y) q)`, and
+both disjuncts close the goal at slack `q`: the first hands back `le y x`,
+which is precisely the ordering `diff_le_of_strict_mono_magnitude` wants — at
+the pair whose right-hand side is `|F y| + |F x|`, the two terms the
+hypotheses actually bound — and the second gives the goal outright since `R`
+is nonnegative. `le_of_forall_le_add_small` then removes the slack, so no
+positivity hypothesis on the accuracy is needed anywhere. That is
+`CReal.abs_diff_le_of_small_image`, and it needs no `Apart`, which matters
+because a bisection cannot produce one.
+
+Everything else the section above says held: `ivt_bisect_lo`/`_hi` as data,
+`ivt_bisect_invariant`'s one-sided pairs, `converges_comp_eventually` in its
+eventual form, and `converges_of_cauchy`'s existential being fine here because
+the final target is a `Prop`. Every `Exists` eliminated in the finished proof
+has a `Prop` target; the wall this file records only ever blocked
+`Type`-valued elimination, and the data-valued bisection is what keeps the
+*sequence* out of that case.
+
+### The gap nobody had named: real bound → `CReal.Cauchy`
+
+The route as written jumps from "`x` is Cauchy" to `converges_of_cauchy`. It
+is one lemma short, and the missing lemma is general rather than
+IVT-specific. Every estimate here produces a **real** inequality about
+`abs (f m − f n)`; `CReal.Cauchy` is stated on the canonical rational
+**samples**, `Within (seq (f m) m − seq (f n) n) (K/(m+1) + K/(n+1))`.
+Measured before building it: `shape_search --concl CReal.Cauchy` returns nine
+theorems and not one takes a `CReal`-level pairwise bound;
+`close_within_of_within` and `close_within_of_within_indexed` run the *other*
+direction. `riemannSum_cauchy`'s own doc comment records the identical gap for
+the integral — "NOT `CReal.Cauchy` in that definition's own canonical-index
+shape … separate, unattempted work".
+
+`CReal.cauchy_of_abs_diff_le` closes it, with witness `K+2`:
+
+    ∀ (f : Nat → CReal) (K : Nat),
+      (∀ m n, le (abs (add (f m) (neg (f n))))
+                 (ofRat (natDivSucc K m + natDivSucc K n))) → Cauchy f
+
+`within_of_two_sided_le` reaches a `Within` at an arbitrary shared index;
+`sharedIndexToCanonical` moves to the two canonical ones at the cost of two
+regularity legs, leaving
+
+    ((1/(m+1) + 1/(sj+1)) + (qmn + 2/(j+1))) + (1/(sj+1) + 1/(n+1)),  sj = 2j+1
+
+with `j` free. **The choice `j := 3m+2` makes that collapse an equality, not a
+chain of widenings**: `Rat.natDivSucc_halve j` turns the two `1/(sj+1)` legs
+into exactly `1/(j+1)`, `Rat.natDivSucc_add` fuses that with the `2/(j+1)`
+slack into `3/(j+1)`, and `Rat.natDivSucc_scale 2 m` — whose index shape is
+literally `(c+1)·m + c` — turns `3/(j+1)` into exactly `1/(m+1)`. The
+seven-term bound is therefore *equal* to `(K+2)/(m+1) + (K+1)/(n+1)`, and the
+single inequality in the whole proof is `Rat.natDivSucc_le_add_left` raising
+the second numerator to the shared witness. The seven-summand rearrangement
+goes through `rsum_perm`, which panics on a non-permutation and so fails with
+a Rust message naming both lists rather than an opaque `TypeMismatch`.
+
+It is filed in `creal/ivt.rs` because the exact root is what first needed it.
+That is the "general infrastructure under its first consumer's module" hazard
+`CLAUDE.md` names, logged here deliberately: nothing in its statement or proof
+mentions the IVT, and it should be the lemma `riemannSum_cauchy` reaches for.
+
+### What `ivt_approx` was missing, and why it was one refactor not two proofs
+
+The other piece the route needed was `ivt_approx` **without the `Exists`**.
+`ivt_approx`'s witness is `ivt_iter`'s existentially-quantified bracket, so
+nothing outside that proof can name the point — and a *sequence* of such
+points cannot be formed at all, since `∀ e, ∃ x` → `Nat → CReal` is an
+`Exists` elimination into a `Type`. `CReal.ivt_bisect_approx` states the
+identical bound about the point `ivt_bisect_hi` **computes**, at the depth
+`ivt_approx`'s own schedule already chose:
+
+    X e := ivt_bisect_hi F a b (Nat.succ (Nat.mul 2 e)) K,
+    K   := (bound (b−a) + 1)·modulus(2e+1) + bound (b−a)
+
+so `fun e => X e` is an ordinary lambda. The estimate is **shared, not
+copied**: `declare_ivt_approx`'s closure body and accuracy schedule were
+extracted into `approx_endpoint_bound`/`approx_setup`, and both declarations
+call them, so the two instantiations of `ivt_bisect_invariant`'s slack cannot
+drift apart. `ivt_approx` is unchanged as a statement.
+
+### Three things a re-derivation would get wrong
+
+Kept here because each cost a rejection or nearly did, and none is guessable:
+
+1. **A non-dependent `arrow` for the `UniformlyContinuousOn` argument leaves
+   its occurrence free.** `ivt_bisect_approx`'s conclusion mentions `u` —
+   the bisection depth reads `ucModulus F a b u` — so the binder must be
+   `pi_fv`. The symptom is `UnboundFVar`, which names nothing. `ivt_approx`
+   itself gets away with `arrow` because its conclusion does not mention `u`.
+2. **A `rat_eq_rewrite` rewriting a subterm takes the SUBTERM as `from`/`to`,
+   with the surrounding sum in the motive.** Passing the whole rational while
+   the motive also wraps it duplicates the context; the kernel then reports a
+   right-hand side with one summand appearing twice, several steps away from
+   the line that is wrong.
+3. **`converges_comp_eventually` bounds `|F (X n) − F L|` and the triangle
+   step needs `|F L − F (X n)|`.** There is no `CReal.abs_neg` or
+   `abs_sub_comm`; it is `abs_le` over the two halves, each transported across
+   `neg_sub_swap` (the private `abs_diff_symm` in `creal/ivt.rs`).
+
+### What this unblocks, and what it does not
+
+π is now reachable as twice the first zero of `cosFn`, once `cosFn` is
+extended past that zero with a positive-derivative certificate on a bracketing
+interval — not attempted here. The exact **inverse function** direction that
+Chapter 12 wants is the same shape and should follow from `ivt_exact_root`
+plus `inverse_lipschitz_of_pos_deriv`.
+
+What is **not** claimed: the approximate IVT still needs no derivative
+hypothesis and is still the right statement for a general continuous `F`. This
+theorem does not weaken to it and does not supersede it.

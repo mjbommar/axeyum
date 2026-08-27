@@ -104,10 +104,15 @@
 //! projections `ivt_bisect_lo`/`ivt_bisect_hi`) — a DATA-VALUED bisection
 //! replacing `ivt_iter`'s `Exists`-wrapped bracket with one computed by
 //! `Nat.rec`, per `docs/mathematics-2026-08/diary-exact-root-obstruction.md`.
-//! This slice lands the computation and a concrete reduction check only; the
-//! invariant spec theorem (that this bracket satisfies `ivt_step`'s own
-//! six-part invariant) is a separate, not-yet-landed slice — see the
-//! "Data-valued bisection" section near the bottom of this file.
+//! The invariant spec theorem this paragraph once called not-yet-landed is
+//! [`CReal.ivt_bisect_invariant`](super::CRealPrelude::ivt_bisect_invariant),
+//! and the chain it unlocked runs to the end of the file:
+//! [`ivt_bisect_approx`](super::CRealPrelude::ivt_bisect_approx) (that
+//! invariant's estimate at a NAMED point),
+//! [`abs_diff_le_of_small_image`](super::CRealPrelude::abs_diff_le_of_small_image),
+//! [`cauchy_of_abs_diff_le`](super::CRealPrelude::cauchy_of_abs_diff_le),
+//! [`ivt_bisect_cauchy`](super::CRealPrelude::ivt_bisect_cauchy) and
+//! [`ivt_exact_root`](super::CRealPrelude::ivt_exact_root).
 //!
 //! **The bound `pow_half_le_natDivSucc` supplies is linear (`1/(N+1)`), not
 //! the tight geometric `1/2^N`** — it is a valid but looser upper bound, so
@@ -128,9 +133,17 @@
 //! hard as an exact IVT preimage — both need a computable root, which is
 //! exactly what the *approximate* statement here declines to produce. With
 //! `ivt_approx` landed, the *approximate* preimage direction that chapter
-//! needs is available; the exact direction remains genuinely unavailable for
-//! the same reason classical IVT is (see "Why the classical statement is
-//! unavailable", above).
+//! needs is available.
+//!
+//! **And the exact direction is available too, under one extra hypothesis.**
+//! [`CReal.ivt_exact_root`](super::CRealPrelude::ivt_exact_root) (this
+//! file's last section) produces a `c` with `Equiv (F c) zero` outright,
+//! given a uniformly positive derivative on `[a,b]`. That does not
+//! contradict "Why the classical statement is unavailable" above: nothing in
+//! it decides the sign of a real, and the classical statement -- for an
+//! arbitrary continuous `F` -- stays unavailable. The positive derivative
+//! makes the root unique WITH A MODULUS, which is what turns a sequence of
+//! approximate roots into a Cauchy sequence.
 
 #![allow(
     clippy::too_many_arguments,

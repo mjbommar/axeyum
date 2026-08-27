@@ -3888,10 +3888,11 @@ pub struct CRealPrelude {
     ///   [`Self::ivt_bisect_lo`]/[`Self::ivt_bisect_hi`] are exactly those
     ///   two applications, packaged as their own one-line definitions.
     ///
-    /// **Landed as the data-valued construction only** (`declare_ivt_bisect`
-    /// in `creal/ivt.rs`); the invariant spec theorem showing this bracket
-    /// satisfies the same six-part invariant `ivt_iter` proves is a
-    /// separate, not-yet-landed slice.
+    /// The invariant spec theorem this comment once called "a separate,
+    /// not-yet-landed slice" is [`Self::ivt_bisect_invariant`], landed; and
+    /// the bracket is what [`Self::ivt_exact_root`] runs on, so this
+    /// construction is now load-bearing for an EXACT root rather than a
+    /// promising shape.
     pub ivt_bisect: NameId,
     /// `CReal.ivt_bisect_lo : (CReal → CReal) → CReal → CReal → Nat → Nat →
     /// CReal := fun F P Q n k => ivt_bisect F P Q n k Bool.false` — the
@@ -3964,6 +3965,16 @@ pub struct CRealPrelude {
     /// bracket above are not nested). Both routes to an exact IVT root from
     /// this bisection are closed for general `F`; see the diary for the full
     /// derivation and both counterexamples.
+    ///
+    /// **"For general `F`" is the operative phrase, and it stays true.**
+    /// [`Self::ivt_exact_root`] does reach an exact root, from
+    /// [`Self::ivt_bisect`] (the EXTERNAL-slack construction, not this
+    /// diagonal one) and one extra hypothesis: a uniformly positive
+    /// derivative. Neither counterexample above is affected — both are
+    /// derivative-free — and neither route named here is the one that
+    /// worked: the sequence is re-instantiated at a fresh slack per accuracy
+    /// and its convergence comes from the derivative bound, never from
+    /// nesting.
     pub ivt_bisect_diag: NameId,
     /// `CReal.ivt_bisect_diag_lo : (CReal → CReal) → CReal → CReal → Nat →
     /// CReal := fun F P Q k => ivt_bisect_diag F P Q k Bool.false` — the
