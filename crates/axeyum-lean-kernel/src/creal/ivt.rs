@@ -196,7 +196,9 @@ pub(super) fn declare_ivt(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
     // The general real-bound-to-`CReal.Cauchy` bridge. Nothing about it is
     // IVT-specific; it lives here only because this is the file that first
     // needed it.
-    declare_cauchy_of_abs_diff_le(d, p)
+    declare_cauchy_of_abs_diff_le(d, p)?;
+    // ...applied to the bisection sequence, as a `Nat -> CReal` LAMBDA.
+    declare_ivt_bisect_cauchy(d, p)
 }
 
 // --- small shared idiom (private to this module, per the codebase's own
@@ -4627,6 +4629,161 @@ fn declare_cauchy_of_abs_diff_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.cauchy_of_abs_diff_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// =============================================================================
+// `CReal.ivt_bisect_cauchy` -- the bisection sequence is Cauchy, as a
+// `Nat -> CReal` LAMBDA.
+//
+// `ivt_bisect_cauchy_bound` composed with `cauchy_of_abs_diff_le`. What is
+// new here is not the estimate but the SHAPE: the sequence
+//
+//     fun e => ivt_bisect_hi F a b (Nat.succ (Nat.mul 2 e)) (K e)
+//
+// is an ordinary lambda, so it can be the argument of `Cauchy`,
+// `Converges`, `converges_of_cauchy`, `converges_lower_bound`, and
+// `converges_comp_eventually` -- none of which a sequence of `ivt_approx`
+// witnesses could ever be, because `forall e, exists x` does not eliminate
+// into a `Type`.
+// =============================================================================
+
+/// The bisection sequence as a `Nat -> CReal` lambda:
+/// `fun e => ivt_bisect_hi F a b (Nat.succ (Nat.mul 2 e)) (K e)`.
+fn bisect_sequence(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    a: ExprId,
+    b: ExprId,
+    huc: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+    let (n, bisect_n) = bisect_index_terms(d, p, f, a, b, huc, e);
+    let body = d.const_app(p.ivt_bisect_hi, &[f, a, b, n, bisect_n]);
+    d.lam_fv(e_fv, nat, body)
+}
+
+/// `CReal.ivt_bisect_cauchy` -- see
+/// [`super::CRealPrelude::ivt_bisect_cauchy`] for the statement.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_ivt_bisect_cauchy(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let func_ty = d.arrow(carrier, carrier);
+    let nat = d.nat_ty();
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let fp_fv = d.fresh_fvar();
+    let fp = d.kernel().fvar(fp_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let hf_ty = d.const_app(p.has_derivative_on, &[f, fp, a, b]);
+    let hf_fv = d.fresh_fvar();
+    let hf = d.kernel().fvar(hf_fv);
+
+    let uc_ty_ab = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let huc_fv = d.fresh_fvar();
+    let huc = d.kernel().fvar(huc_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let zero_c = czero(d, p);
+    let fa = d.apply(f, &[a]);
+    let hfa_ty = cle(d, p, fa, zero_c);
+    let hfa_fv = d.fresh_fvar();
+    let hfa = d.kernel().fvar(hfa_fv);
+    let fb = d.apply(f, &[b]);
+    let hfb_ty = cle(d, p, zero_c, fb);
+    let hfb_fv = d.fresh_fvar();
+    let hfb = d.kernel().fvar(hfb_fv);
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let hderiv_ty = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let fpz = d.apply(fp, &[z]);
+        let a_k_rat = div_succ(d, p, 1, k);
+        let a_k = embed(d, p, a_k_rat);
+        let concl = cle(d, p, a_k, fpz);
+        let z_le_b = cle(d, p, z, b);
+        let after_upper = d.arrow(z_le_b, concl);
+        let a_le_z = cle(d, p, a, z);
+        let after_lower = d.arrow(a_le_z, after_upper);
+        d.pi_fv(z_fv, carrier, after_lower)
+    };
+    let hderiv_fv = d.fresh_fvar();
+    let hderiv = d.kernel().fvar(hderiv_fv);
+
+    let seq_lam = bisect_sequence(d, p, f, a, b, huc);
+
+    let two_nat = d.num(2);
+    let doubled = NatOps::mul(d, two_nat, k);
+    let e_acc = d.succ(doubled);
+    let big_c = d.succ(e_acc);
+
+    // `fun m n => ivt_bisect_cauchy_bound … m n`. Its body's type names the
+    // bisection point directly; `seq_lam m` β-reduces to exactly that, so the
+    // kernel accepts this against `cauchy_of_abs_diff_le`'s hypothesis with
+    // no transport.
+    let hyp = {
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let body = d.lemma(
+            p.ivt_bisect_cauchy_bound,
+            &[f, fp, a, b, hf, huc, hab, hfa, hfb, k, hderiv, m, n],
+        );
+        let over_n = d.lam_fv(n_fv, nat, body);
+        d.lam_fv(m_fv, nat, over_n)
+    };
+    let proof = d.lemma(p.cauchy_of_abs_diff_le, &[seq_lam, big_c, hyp]);
+
+    let value = {
+        let over_hderiv = d.lam_fv(hderiv_fv, hderiv_ty, proof);
+        let over_k = d.lam_fv(k_fv, nat, over_hderiv);
+        let over_hfb = d.lam_fv(hfb_fv, hfb_ty, over_k);
+        let over_hfa = d.lam_fv(hfa_fv, hfa_ty, over_hfb);
+        let over_hab = d.lam_fv(hab_fv, hab_ty, over_hfa);
+        let over_huc = d.lam_fv(huc_fv, uc_ty_ab, over_hab);
+        let over_hf = d.lam_fv(hf_fv, hf_ty, over_huc);
+        let over_b = d.lam_fv(b_fv, carrier, over_hf);
+        let over_a = d.lam_fv(a_fv, carrier, over_b);
+        let over_fp = d.lam_fv(fp_fv, func_ty, over_a);
+        d.lam_fv(f_fv, func_ty, over_fp)
+    };
+    let ty = {
+        let concl = d.const_app(p.cauchy, &[seq_lam]);
+        let after_hderiv = d.arrow(hderiv_ty, concl);
+        let over_k = d.pi_fv(k_fv, nat, after_hderiv);
+        let after_hfb = d.arrow(hfb_ty, over_k);
+        let after_hfa = d.arrow(hfa_ty, after_hfb);
+        let after_hab = d.arrow(hab_ty, after_hfa);
+        let over_huc = d.pi_fv(huc_fv, uc_ty_ab, after_hab);
+        let after_hf = d.arrow(hf_ty, over_huc);
+        let over_b = d.pi_fv(b_fv, carrier, after_hf);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        let over_fp = d.pi_fv(fp_fv, func_ty, over_a);
+        d.pi_fv(f_fv, func_ty, over_fp)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.ivt_bisect_cauchy,
         uparams: vec![],
         ty,
         value,

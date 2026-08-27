@@ -4091,6 +4091,23 @@ pub struct CRealPrelude {
     /// Filed in `creal/ivt.rs` because the exact IVT root is what first
     /// needed it; nothing in the statement or the proof mentions the IVT.
     pub cauchy_of_abs_diff_le: NameId,
+    /// `CReal.ivt_bisect_cauchy : ∀ F F' a b, HasDerivativeOn F F' a b →
+    /// ∀ (u : UniformlyContinuousOn F a b), le a b → le (F a) zero →
+    /// le zero (F b) → ∀ k, (∀ z, le a z → le z b →
+    /// le (ofRat (natDivSucc 1 k)) (F' z)) →
+    /// Cauchy (fun e => ivt_bisect_hi F a b (Nat.succ (Nat.mul 2 e)) K)`
+    /// (`creal/ivt.rs`) — [`Self::ivt_bisect_cauchy_bound`] composed with
+    /// [`Self::cauchy_of_abs_diff_le`].
+    ///
+    /// **The shape is the point, not the estimate.** The sequence is an
+    /// ordinary `Nat → CReal` lambda, so it can be the argument of
+    /// [`Self::cauchy`], [`Self::converges`], [`Self::converges_of_cauchy`],
+    /// [`Self::converges_lower_bound`] and
+    /// [`Self::converges_comp_eventually`] — none of which a sequence of
+    /// [`Self::ivt_approx`] witnesses could ever be, since `∀ e, ∃ x` does
+    /// not eliminate into a `Type`. That was the first obstruction recorded
+    /// in `docs/mathematics-2026-08/diary-exact-root-obstruction.md`.
+    pub ivt_bisect_cauchy: NameId,
     /// `CReal.hasDerivative_unique : ∀ F F1 F2 a b, HasDerivativeOn F F1 a b
     /// → HasDerivativeOn F F2 a b → lt a b → ∀ z, le a z → le z b → Equiv
     /// (F1 z) (F2 z)` (`creal/deriv_unique.rs`) — the derivative of a
@@ -5768,6 +5785,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         abs_diff_le_of_small_image: kernel.name_str(creal, "abs_diff_le_of_small_image"),
         ivt_bisect_cauchy_bound: kernel.name_str(creal, "ivt_bisect_cauchy_bound"),
         cauchy_of_abs_diff_le: kernel.name_str(creal, "cauchy_of_abs_diff_le"),
+        ivt_bisect_cauchy: kernel.name_str(creal, "ivt_bisect_cauchy"),
         has_derivative_unique: kernel.name_str(creal, "hasDerivative_unique"),
         fermat_interior_extremum: kernel.name_str(creal, "fermat_interiorExtremum"),
         rolle_interior_extremum: kernel.name_str(creal, "rolle_interiorExtremum"),
@@ -9794,6 +9812,7 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.ivt_bisect_diag_lo,
             |p: CRealPrelude| p.ivt_bisect_hi,
             |p: CRealPrelude| p.ivt_bisect_approx,
+            |p: CRealPrelude| p.ivt_bisect_cauchy,
             |p: CRealPrelude| p.ivt_bisect_cauchy_bound,
             |p: CRealPrelude| p.ivt_bisect_invariant,
             |p: CRealPrelude| p.ivt_bisect_lo,
