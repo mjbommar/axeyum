@@ -27,13 +27,71 @@
 //! CReal.evtLinear v := fun t => CReal.mul t v
 //! ```
 //!
-//! — `t ↦ t·v`, on the interval `[0, 1]`. It is Lipschitz with constant
-//! `|v|`, hence uniformly continuous, and its classical supremum over
+//! — `t ↦ t·v`, on the interval `[0, 1]`. Its classical supremum over
 //! `[0, 1]` is `max(0, v)`, attained at `t = 1` when `v ≥ 0` and at `t = 0`
 //! when `v ≤ 0`. **Which endpoint attains it is precisely the sign of `v`**,
 //! and that is the whole content of the counterexample: a maximizer `c` is
 //! not merely a real number, it is a real number whose *position* answers a
-//! question about `v`.
+//! question about `v`. The two endpoint values, and the fact that their
+//! strict comparison FLIPS with the sign of `v`, are read off by kernel
+//! reduction to exact rationals in
+//! `creal_tests::evt_linear_endpoint_values_reduce_and_flip_with_the_sign_of_v`
+//! — computed, not narrated.
+//!
+//! ## LABELED GAP: `evtLinear v` is uniformly continuous, and that is
+//! ## ASSERTED here, not proved
+//!
+//! `t ↦ t·v` is Lipschitz with constant `|v|`, so it is uniformly continuous
+//! on every interval and therefore squarely inside classical EVT's hypothesis
+//! class. **No kernel declaration in this repository says so**, and this
+//! module deliberately does not pretend otherwise: an asserted claim is
+//! exactly what
+//! [`CReal.evt_attained_max_decides_sign`](super::CRealPrelude::evt_attained_max_decides_sign)
+//! exists to replace, so leaving one unlabeled here would reintroduce the
+//! defect one level down.
+//!
+//! What the gap does and does not cost. The theorem below is unaffected — it
+//! is a statement about an attained maximum of `mul t v`, proved outright.
+//! What is not yet machine-checked is the *bridge sentence* "…and such a
+//! function is one EVT applies to", which today rests on the reader knowing
+//! that an affine map is Lipschitz.
+//!
+//! The intended route is pure assembly, and every step of it exists:
+//! [`CReal.uniformly_continuous_mul`](super::CRealPrelude::uniformly_continuous_mul)
+//! at `F := fun r => r` ([`CReal.uniformly_continuous_id`](super::CRealPrelude::uniformly_continuous_id))
+//! and `G := fun _ => v` ([`CReal.uniformly_continuous_const`](super::CRealPrelude::uniformly_continuous_const)),
+//! whose beta-reduct `fun r => mul r v` is `evtLinear v`. It is blocked on
+//! that lemma's two `BoundedOn` arguments, and the blockage was measured, not
+//! guessed:
+//!
+//! - **`BoundedOn (fun _ => v) zero one k`** needs `le (abs v) (ofRat
+//!   (natDivSucc (Nat.succ k) 0))` for a `k` computed from `CReal.bound v`.
+//!   That lemma is written and proved — as
+//!   **`abs_bound_of_self`, a private `fn` in `creal/uniform_continuity.rs`**
+//!   (documented there as "`le (abs x) (mag_bound (bound x))` — unconditional,
+//!   for ANY `CReal`"). It is not a `CRealPrelude` field, so it is
+//!   unreachable from here. **Promoting it is the single cheapest unblock**,
+//!   and it makes `BoundedOn` trivial for EVERY constant function on EVERY
+//!   interval, not just this one.
+//! - **`BoundedOn (fun r => r) zero one 0`** needs `le (abs z) (ofRat
+//!   (natDivSucc 1 0))` for `z ∈ [0, 1]`. Reachable from public lemmas alone
+//!   (`max_le` on `abs`'s two branches,
+//!   [`CReal.ratUnitEqOne`](super::CRealPrelude::rat_unit_eq_one) as the
+//!   `natDivSucc 1 0`-vs-`Rat.one` bridge, and `add_le_add` against
+//!   `le_refl (neg z)` for the negative branch), roughly 60 lines. The
+//!   existing public base case
+//!   [`CReal.bounded_on_id_unit`](super::CRealPrelude::bounded_on_id_unit) is
+//!   stated on `[zero, mag_bound 0]`, not `[zero, one]`, so it does not
+//!   substitute without that same bridge.
+//!
+//! The obvious shortcut does **not** work, and this was checked rather than
+//! assumed: deriving both witnesses from
+//! [`CReal.bounded_of_uniformly_continuous`](super::CRealPrelude::bounded_of_uniformly_continuous)
+//! fails because its computed `K` is bound by a `pi_fv` over the
+//! uniform-continuity PROOF (`creal/uniform_continuity.rs`, `declare_
+//! bounded_of_uniformly_continuous`'s `ty`), so `K` mentions that witness's
+//! own modulus and cannot be written down as the explicit `k1`/`k2` argument
+//! `uniformly_continuous_mul` demands.
 //!
 //! [`CReal.evt_attained_max_decides_sign`](super::CRealPrelude::evt_attained_max_decides_sign)
 //! turns that observation into a kernel-checked implication:

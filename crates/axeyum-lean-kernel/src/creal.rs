@@ -4757,11 +4757,18 @@ pub struct CRealPrelude {
 
     // --- the Extreme Value Theorem's boundary certificate (ADR-0603 row 2) ---
     /// `CReal.evtLinear : CReal -> CReal -> CReal := fun v t => mul t v` --
-    /// the EVT counterexample family (`creal/extreme_value.rs`). Lipschitz
-    /// with constant `|v|`, so uniformly continuous on every interval;
-    /// classical supremum `max(0, v)` on `[0, 1]`, attained at `1` when
-    /// `v >= 0` and at `0` when `v <= 0`, so *which endpoint attains it* IS
-    /// the sign of `v`.
+    /// the EVT counterexample family (`creal/extreme_value.rs`). Classical
+    /// supremum `max(0, v)` on `[0, 1]`, attained at `1` when `v >= 0` and at
+    /// `0` when `v <= 0`, so *which endpoint attains it* IS the sign of `v` --
+    /// checked by kernel reduction to exact rationals, both signs, in
+    /// `creal_tests::evt_linear_endpoint_values_reduce_and_flip_with_the_sign_of_v`.
+    ///
+    /// It is also Lipschitz with constant `|v|`, hence uniformly continuous
+    /// and inside classical EVT's hypothesis class -- but that is **asserted,
+    /// not proved**: no declaration here states it. See that module's
+    /// "LABELED GAP" section for the sized route and the one private helper
+    /// (`creal/uniform_continuity.rs`'s `abs_bound_of_self`) whose promotion
+    /// unblocks it.
     pub evt_linear: NameId,
     /// `CReal.evt_attained_max_decides_sign : forall v c, le zero c ->
     /// le c one -> (forall t, le zero t -> le t one -> le (mul t v)
