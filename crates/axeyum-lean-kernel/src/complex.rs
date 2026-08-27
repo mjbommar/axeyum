@@ -97,6 +97,9 @@ mod ring;
 #[cfg(test)]
 mod complex_tests;
 
+#[cfg(test)]
+mod cas_bridge_tests;
+
 use ring::{RExpr, cadd, cchain, ceq, cmul, cneg, cone, crefl, csymm, ctrans, czero, ring_proof};
 
 /// Delta height for the leaf complex definitions: above every `CReal` one.
