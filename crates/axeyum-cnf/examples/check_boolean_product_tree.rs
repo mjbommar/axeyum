@@ -235,6 +235,10 @@ fn main() {
     } else {
         (1, PathBuf::from(first))
     };
+    #[cfg(target_arch = "wasm32")]
+    if workers != 1 {
+        fail("parallel cube-tree checking is unavailable on wasm32");
+    }
     let tree_dir = PathBuf::from(
         args.next()
             .unwrap_or_else(|| fail("usage: BASE.cnf TREE-DIR [PREFIX-INDEX PREFIX-SELECTOR...]")),
