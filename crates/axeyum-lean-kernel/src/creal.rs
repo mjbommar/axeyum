@@ -3019,6 +3019,37 @@ pub struct CRealPrelude {
     /// index `2` rather than an artifact of the formalization. See
     /// `creal/exponential.rs::declare_e_le_three`.
     pub e_le_three: NameId,
+    /// `CReal.cosTerm : Nat → CReal := fun k => mul (pow (neg one) k)
+    /// (expTerm (Nat.add k k))` — the `k`-th term of `cos 1`'s Taylor series,
+    /// `(-1)^k/(2k)!`, the doubled index written `Nat.add k k` (not `Nat.mul
+    /// 2 k`) so `CReal.pow_add` applies to it with no reduction bookkeeping.
+    /// See `creal/trig.rs`.
+    pub cos_term: NameId,
+    /// `CReal.cosSeriesPartial : Nat → CReal := CReal.sumRange CReal.cosTerm`
+    /// — the `k`-th partial sum `Σ_{n<k} (-1)^n/(2n)!`. See `creal/trig.rs`.
+    pub cos_series_partial: NameId,
+    /// `CReal.cosTermAbsLeDominant : ∀ k, le (abs (cosTerm k)) (expDominant
+    /// k)` — the domination bound closing `Cauchy (sumRange cosTerm)` against
+    /// `CReal.e`'s own `expDominant`/`expDominantCauchy` machinery, reused
+    /// unchanged rather than re-derived: no new geometric series. From a
+    /// sign bound (`abs (pow (neg one) k) ≤ one`, by induction, no parity
+    /// case split) and `CReal.exp_term_abs_le_dominant` (already built for
+    /// `e`) composed via `CReal.abs_mul_le_of_bounds`, plus a small
+    /// monotonicity argument (`expDominant (Nat.add k k) ≤ expDominant k`,
+    /// since `pow half` squares into `[0,1]`). See `creal/trig.rs`.
+    pub cos_term_abs_le_dominant: NameId,
+    /// `CReal.cosOne := CReal.mk (speedup (diagonal cosSeriesPartial) K) (…)`
+    /// — `cos 1`, the first transcendental-function-family constant in this
+    /// kernel, built via `CReal.mk` on an explicit regular sequence exactly
+    /// as `CReal.e` is (never by `Exists`-elimination). `K` and its concrete
+    /// Cauchy-body proof come from reproducing
+    /// `exponential.rs::exp_dominant_cauchy_body_concrete` (the SAME value
+    /// `CReal.e`'s own construction uses, since `cosOne`'s domination series
+    /// **is** `expDominant`, not a new one) — see `creal/trig.rs`'s module
+    /// documentation for why that reproduction, rather than an edit to that
+    /// file, is the route taken. Neither `CReal.cosOneConverges` (the
+    /// analogue of `CReal.e_converges`) nor a `[0, 1]` bound are built here.
+    pub cos_one: NameId,
     /// `CReal.sumRange_const : ∀ w m,
     /// Equiv (sumRange (fun _ => w) (Nat.succ m)) (mul (ofNat (Nat.succ m))
     /// w)` (`creal/monotone.rs`) — a constant summed `succ m` times is
@@ -4374,6 +4405,10 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         two_le_e: kernel.name_str(creal, "two_le_e"),
         e_le_four: kernel.name_str(creal, "e_le_four"),
         e_le_three: kernel.name_str(creal, "e_le_three"),
+        cos_term: kernel.name_str(creal, "cosTerm"),
+        cos_series_partial: kernel.name_str(creal, "cosSeriesPartial"),
+        cos_term_abs_le_dominant: kernel.name_str(creal, "cosTermAbsLeDominant"),
+        cos_one: kernel.name_str(creal, "cosOne"),
         sum_range_const: kernel.name_str(creal, "sumRange_const"),
         mesh_count_width: kernel.name_str(creal, "mesh_count_width"),
         subdivision_point_in_bounds: kernel.name_str(creal, "subdivisionPoint_in_bounds"),
@@ -4915,6 +4950,18 @@ pub(crate) fn build_creal_prelude_uncached(
         // just above, but shares enough of its own dependency reasoning that
         // it is placed next to it.
         exponential::declare_e_family(&mut d, prelude)?;
+        // `trig::declare_trig` (`CReal.cosOne`, the first transcendental
+        // constant) needs `expTerm`/`expDominant`/`exp_term_abs_le_dominant`
+        // (`declare_exponential`, above), `geom_cauchy_ordered_half`
+        // (`declare_geom_cauchy_family`, above),
+        // `sum_range_cauchy_dominated_ordered_normalized` (`series`, well
+        // above), `regular_of_scaled_cauchy`/`speedup` (`convergence`/
+        // `speedup`, well above) and `abs_mul_le_of_bounds`
+        // (`derivative::declare_has_derivative_pow`, well above). It reuses
+        // `expDominant`'s own concrete Cauchy witness rather than deriving a
+        // new one, so it does not depend on `declare_e_family`'s own
+        // declarations, only on the machinery both share.
+        trig::declare_trig(&mut d, prelude)?;
         // `ivt::declare_ivt` needs `CReal.lt_cotrans` (`cotransitivity`, well
         // above), `CReal.mesh_count_width` (`monotone::declare_monotone_of_nonneg_deriv_all`,
         // also above) and ordinary ring/order laws; nothing later depends on
@@ -5861,6 +5908,7 @@ mod ring_helpers;
 mod series;
 mod speedup;
 mod sqrt;
+mod trig;
 mod uniform_continuity;
 
 #[cfg(test)]

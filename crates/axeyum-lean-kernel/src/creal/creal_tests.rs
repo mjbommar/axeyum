@@ -126,7 +126,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 368] = [
+    let expected: [(&str, crate::NameId, &str); 372] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -1323,6 +1323,20 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         // `e_le_four` -- `expTerm 0 = expTerm 1 = 1` is not yet geometric).
         // See `exponential.rs::declare_e_le_three`.
         ("CReal.e_le_three", p.e_le_three, "theorem"),
+        // `CReal.cosTerm`/`CReal.cosSeriesPartial`/`CReal.cosTermAbsLeDominant`/
+        // `CReal.cosOne` -- the first transcendental-function-family constant
+        // in this kernel, `cos 1`, built via `CReal.mk` on an explicit
+        // regular sequence exactly as `CReal.e` is. The domination bound
+        // reuses `CReal.e`'s own `expDominant`/`expDominantCauchy` machinery
+        // unchanged (no new geometric series). See `creal/trig.rs`.
+        ("CReal.cosTerm", p.cos_term, "def"),
+        ("CReal.cosSeriesPartial", p.cos_series_partial, "def"),
+        (
+            "CReal.cosTermAbsLeDominant",
+            p.cos_term_abs_le_dominant,
+            "theorem",
+        ),
+        ("CReal.cosOne", p.cos_one, "def"),
         // Found by the coverage assertion above, not by anyone noticing: these
         // seven were live in the prelude and unlisted here, so this test had
         // never checked them. `lt_cotrans`/`apart_cotrans` are Ch 12's
