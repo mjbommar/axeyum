@@ -226,7 +226,7 @@ set while the original existential producer remains live. No orbit claim is cred
 ADR-0599 checker independently enumerated the complete lexicographic 5! set, permuted the
 hash-bound 404 witness, regenerated every 11,745-variable / 319,249-clause labelled radius-22
 formula, and accepted all proofs with terminal verdict `orbit-unsat-checked`. Therefore every
-valid canonical 405-point colouring has Hamming distance at least 23 from the witness under
+valid 405-point colouring has Hamming distance at least 23 from the witness under
 every palette renaming. This supersedes the earlier labelled-coordinate restriction but remains
 a local repair-neighbourhood theorem: unrestricted 405 remains open and the exact lower bound
 does not move. The proof manifest, receipt, diary, provenance, and rebuilt paper are retained;
