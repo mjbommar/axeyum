@@ -856,6 +856,46 @@ SUITES: dict[str, tuple[str, "str | Unittest | Cargo", list[tuple[str, ...]]]] =
             ),
         ],
     ),
+    # --------------------------------------------------------------------
+    # `producer-contracts` (ADR-0602) -- the falsifiability guards on the new
+    # prospective producer-contract artifact. A contract is a CAPABILITY
+    # claim, never a completion claim, and the only thing standing between
+    # that and the checker-that-cannot-fail defect this project keeps
+    # re-finding is: a non-example must be a real fact AND must actually fail
+    # the predicate (checked by EXECUTION), and a predicate that swallows
+    # every open fact in the ledger must be rejected outright.
+    # --------------------------------------------------------------------
+    "producer-contracts": (
+        "scripts/validate-producer-contracts.py",
+        "scripts.tests.test_validate_producer_contracts",
+        [
+            (
+                "non-example must resolve to a real fact",
+                "        if fact is None:",
+                "        if False:",
+            ),
+            (
+                "non-example must actually FAIL the shape predicate (checked by execution)",
+                "        if shape_matches(shape, fact):",
+                "        if False:",
+            ),
+            (
+                "the vacuous-matcher guard: a shape cannot claim every open fact",
+                "    if open_ids and matched_open_ids == open_ids:",
+                "    if False:",
+            ),
+            (
+                "a shape narrowed only by language/fragment is too coarse",
+                "    if not any(key in shape for key in SHAPE_NARROWING_KEYS):",
+                "    if False:",
+            ),
+            (
+                "non_examples must be a non-empty list",
+                "    if not isinstance(non_examples, list) or not non_examples:",
+                "    if False:",
+            ),
+        ],
+    ),
 }
 
 

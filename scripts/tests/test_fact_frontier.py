@@ -248,5 +248,196 @@ class MachineFrontierTests(unittest.TestCase):
                     frontier.FACTS = original
 
 
+def contract(**overrides) -> dict:
+    """A minimal, valid producer contract (ADR-0602) for test fixtures.
+
+    Its non_example MUST resolve against the REAL committed ledger --
+    `build_machine_frontier`'s `contracts=` argument is always validated
+    against `artifacts/facts/`, never against a caller's synthetic `facts`
+    dict (see `load_producer_contracts`'s docstring for why) -- so every
+    contract fixture here names a real fact id as its non-example.
+    """
+    built = {
+        "schema_version": 1,
+        "id": "producer-contract-test-fixture-v1",
+        "title": "Test fixture contract",
+        "route": "kernel-lane",
+        "recipe": {"description": "A test-only recipe."},
+        "shape": {
+            "formal_language": ["lean4"],
+            "fragments": ["Int"],
+            "id_prefix": "F:contract-target",
+        },
+        "non_examples": [
+            {"fact_id": "F:nat-zero-add", "reason": "different fragment (Nat, not Int)"}
+        ],
+    }
+    built.update(overrides)
+    return built
+
+
+class ProducerContractAdmissibilityTests(unittest.TestCase):
+    """ADR-0602: a producer contract is a NEW, independent admissibility path
+    alongside (never instead of) a registered operation. These exercise it in
+    isolation, with an empty operation registry, so a contract-driven
+    admission can never be confused with the receipt path doc 288 covers.
+    """
+
+    def setUp(self) -> None:
+        self.empty_registry = {
+            "schema_version": 1,
+            "kind": "axeyum-autogenesis-operation-registry",
+            "operations": [],
+        }
+        self.facts = {
+            "F:contract-target": fact(
+                "F:contract-target",
+                status="open",
+                external="proved",
+                fragment="Int",
+                depends_on=[],
+            ),
+        }
+        self.facts["F:contract-target"]["formal"]["language"] = "lean4"
+
+    def test_matched_contract_with_capable_route_is_admissible(self) -> None:
+        built = frontier.build_machine_frontier(
+            self.facts, self.empty_registry, contracts=[contract()]
+        )
+        self.assertEqual(built["selection"]["selected_fact_id"], "F:contract-target")
+        entry = next(
+            row for row in built["entries"] if row["fact_id"] == "F:contract-target"
+        )
+        self.assertEqual(
+            entry["matched_producer_contract_ids"], ["producer-contract-test-fixture-v1"]
+        )
+        self.assertEqual(entry["producer_contract_route"], "kernel-lane")
+        self.assertTrue(entry["producer_contract_route_capable"])
+        rationale = next(
+            row for row in built["selection"]["rationale"]
+            if row["fact_id"] == "F:contract-target"
+        )
+        self.assertEqual(rationale["rejected_by"], [])
+        self.assertEqual(built["diagnostics"]["admissible_via_contract_count"], 1)
+        self.assertEqual(built["diagnostics"]["admissible_via_operation_count"], 0)
+
+    def test_matched_contract_with_incapable_route_is_not_admissible(self) -> None:
+        # `cas-bridge` has no capability artifact in this tree (the sibling
+        # lane building it has not landed one) -- a shape match alone must
+        # not be enough.
+        built = frontier.build_machine_frontier(
+            self.facts,
+            self.empty_registry,
+            contracts=[contract(route="cas-bridge")],
+        )
+        self.assertIsNone(built["selection"]["selected_fact_id"])
+        entry = next(
+            row for row in built["entries"] if row["fact_id"] == "F:contract-target"
+        )
+        self.assertEqual(entry["producer_contract_route"], "cas-bridge")
+        self.assertFalse(entry["producer_contract_route_capable"])
+        rationale = next(
+            row for row in built["selection"]["rationale"]
+            if row["fact_id"] == "F:contract-target"
+        )
+        self.assertIn("producer-contract-route-unavailable", rationale["rejected_by"])
+
+    def test_ambiguous_producer_contract_match_is_not_admissible(self) -> None:
+        second = contract(id="producer-contract-test-fixture-two-v1")
+        built = frontier.build_machine_frontier(
+            self.facts, self.empty_registry, contracts=[contract(), second]
+        )
+        self.assertIsNone(built["selection"]["selected_fact_id"])
+        rationale = next(
+            row for row in built["selection"]["rationale"]
+            if row["fact_id"] == "F:contract-target"
+        )
+        self.assertIn("ambiguous-producer-contract", rationale["rejected_by"])
+
+    def test_no_route_fact_is_never_admissible_via_contract(self) -> None:
+        # `route_class` is a pure function of the ledger (ADR-0602 SS4: the
+        # 6 no-route facts are marked as such, never treated as retry
+        # candidates). A contract match and a capable route must not override
+        # a genuinely unreachable fragment.
+        facts = {
+            "F:contract-target": fact(
+                "F:contract-target",
+                status="open",
+                external="open",
+                fragment="none",
+                depends_on=[],
+            )
+        }
+        facts["F:contract-target"]["formal"]["language"] = "lean4"
+        built = frontier.build_machine_frontier(
+            facts,
+            self.empty_registry,
+            contracts=[contract(shape={
+                "formal_language": ["lean4"],
+                "fragments": ["none"],
+                "id_prefix": "F:contract-target",
+            })],
+        )
+        entry = next(
+            row for row in built["entries"] if row["fact_id"] == "F:contract-target"
+        )
+        self.assertEqual(entry["route_class"], "no-route")
+        self.assertEqual(
+            entry["matched_producer_contract_ids"], ["producer-contract-test-fixture-v1"]
+        )
+        self.assertIsNone(built["selection"]["selected_fact_id"])
+        rationale = next(
+            row for row in built["selection"]["rationale"]
+            if row["fact_id"] == "F:contract-target"
+        )
+        self.assertIn("no-supported-route", rationale["rejected_by"])
+
+    def test_contracts_default_to_none_not_auto_loaded(self) -> None:
+        # `contracts=None` must mean NO contracts, deliberately asymmetric
+        # with `registry=None` (auto-loads the real registry) -- see
+        # `build_machine_frontier`'s docstring. Confirms a real seed contract
+        # never silently appears just because a caller omitted the argument.
+        built = frontier.build_machine_frontier(self.facts, self.empty_registry)
+        entry = next(
+            row for row in built["entries"] if row["fact_id"] == "F:contract-target"
+        )
+        self.assertEqual(entry["matched_producer_contract_ids"], [])
+        self.assertIsNone(built["selection"]["selected_fact_id"])
+
+
+class RealSeedProducerContractTests(unittest.TestCase):
+    """End-to-end over the real ledger and the real committed seed contracts
+    -- this is what `fact-frontier.py --json` actually prints, and is the
+    ADR-0602 deliverable: dependency-ready x contract-matched x route-capable
+    facts become admissible without fabricating a `proved` receipt for any of
+    them.
+    """
+
+    def test_real_seed_contracts_move_admissible_off_zero(self) -> None:
+        facts = frontier.load()
+        contracts = frontier.load_producer_contracts()
+        built = frontier.build_machine_frontier(facts, contracts=contracts)
+        self.assertGreater(built["diagnostics"]["admissible_count"], 0)
+        self.assertGreater(built["diagnostics"]["admissible_via_contract_count"], 0)
+        selected = built["selection"]["selected_fact_id"]
+        self.assertIsNotNone(selected)
+        entry = next(row for row in built["entries"] if row["fact_id"] == selected)
+        self.assertEqual(len(entry["matched_producer_contract_ids"]), 1)
+        self.assertEqual(entry["producer_contract_route"], "kernel-lane")
+        self.assertTrue(entry["producer_contract_route_capable"])
+        # Not a receipt: nothing in the real ledger's `epistemic_status`
+        # changed to reach this, and the selected fact is still genuinely
+        # open.
+        self.assertEqual(entry["epistemic_status"], "open")
+
+    def test_no_route_facts_are_named_and_never_selected(self) -> None:
+        facts = frontier.load()
+        contracts = frontier.load_producer_contracts()
+        built = frontier.build_machine_frontier(facts, contracts=contracts)
+        no_route_ids = set(built["diagnostics"]["no_route_ready_fact_ids"])
+        self.assertTrue(no_route_ids)
+        self.assertTrue(no_route_ids.isdisjoint(built["selection"]["admissible_fact_ids"]))
+
+
 if __name__ == "__main__":
     unittest.main()

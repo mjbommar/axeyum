@@ -122,6 +122,7 @@ now. Nothing was deleted.
 | 2026-08-27 | (uncommitted at status-file write time) | Added `--require-declaration <name> [--require-kind <kind>]` to `crates/axeyum-lean-kernel/examples/kernel_declaration_projection.rs`: a direct, fail-on-absence presence checker for `Declaration::Definition`s (and any other kind), mutation-tested against `CReal.integral`. Upgraded `F:creal-integral`'s `kernel-CReal.integral` evidence to use it. Registered 14 new `artifacts/facts/F-creal-*.json` entries for Spivak Ch.18 (`e`) and Ch.22-23 (series convergence tests): `creal-e`, `creal-e-converges`, `creal-two-le-e`, `creal-e-le-three`, `creal-e-le-four`, `creal-expterm-le-geom`, `creal-expdominantcauchy`, `creal-cauchyofpointwiseequiv`, `creal-geomcauchy`, `creal-sumrange-comparisontest`, `creal-sumrange-cauchy-of-dominated`, `creal-sumrange-converges-of-dominated`, `creal-sumrange-cauchy-of-abs-cauchy`, `creal-sumrange-converges-of-abs-converges`. `python3 scripts/validate-facts.py` green (722 facts, 0 errors). |
 | 2026-08-27 | (uncommitted at status-file write time) | Registered 28 new `artifacts/facts/F-*.json` entries: Ch.15 cosine-at-1 construction and bounds (`creal-cosone`, `creal-costerm`, `creal-cosseriespartial`, `creal-costermabsledominant`, `creal-cosoneconverges`, `creal-cosone-le-four`, `creal-neg-four-le-cosone`); Ch.22-23 general-ratio geometric series and ratio test (`creal-geomcauchyoflt`, `creal-geomcauchyofltordered`, `creal-geomscaledcauchyoflt`, `creal-sumrangeratiotest`); Ch.14 crossing-index construction (`creal-crossingindex`, `creal-crossingupper`, `creal-crossinglower`, `creal-crossingsampleupper`, `creal-crossingsamplelower`); Ch.25-27 polynomials over `Complex` (`complex-polyeval`, `complex-polyeval-zero`, `complex-polyeval-succ`, `complex-polyadd`, `complex-polyeval-polyadd`, `complex-polyscale`, `complex-polyeval-polyscale`, `complex-polydegreelt`, `complex-polydegreelt-polyadd`, `complex-polydegreelt-polyscale`, `complex-polymul`, `complex-polyeval-polymul`). `python3 scripts/validate-facts.py` green (750 facts, 0 errors). Mutation-tested 3 representative checkers (1 definition, 2 theorems) in an isolated snapshot; all failed correctly on the mutated name while unrelated controls in the same rebuild passed. |
 | 2026-08-27 | `PENDING` | Diagnosed why `fact-frontier.py --json` reports `admissible: 0` over 132 dependency-ready facts: operation registration requires a completed, independently-checked proof (`ADMISSION_CONTRACTS` allows only `proved`), and none exists for any open fact. Added a purely additive `diagnostics.unregistered_by_route_class` split to `fact-frontier.py`; declined to fabricate an operation over unproved work. `docs/autogenesis/288-admission-precedes-registration.md`. |
+| 2026-08-27 | `PENDING` | Implemented ADR-0602: `artifacts/ontology/producer-contract.schema.json` + `scripts/validate-producer-contracts.py` (a capability claim, never a completion claim — no `proved`/`epistemic_status` field exists in the schema at all), two seed contracts (Int.ModEq congruence family, Nat.Coprime family — both checked held-out-clean against `nursery-v1.json`), and redefined `fact-frontier.py` admissibility as dependency-ready × (registered operation OR matched capable-route contract). `admissible_count` moved 0 → 27 on the real ledger; all 8 existing `test_fact_frontier.py` tests pass unmodified, 7 new added. `docs/autogenesis/289-producer-contract-admissibility.md`. |
 | 2026-08-27 | `14a6484d3` | `scripts/validate-facts.py`: classify `cas-certificate` evidence as `kernel-reconstructed` vs `cas-internal`, reject an unclassifiable checker_command on that route (ADR-0601 SS2). Mutation-tested. |
 | 2026-08-27 | `17e91d839` | `scripts/gen-import-backlog.py` (new): produce `artifacts/import-backlog.json`, the 164-row import backlog, deterministic and ordered by dependency-readiness then curriculum-DAG position (ADR-0601 SS3). `--check` wired into `scripts/check.sh` and the `justfile`. Mutation-tested. |
 | 2026-08-26 | `f1fb56564` | Compose a held-out-safe three-lemma retrieval spine and admit Mathlib's real `Nat.choose_symm_of_eq_add` axiom-free, moving natural binomial from one to two accepted siblings. |
@@ -2328,6 +2329,86 @@ only needs new s5-side Lean exports for these four targets. Separately,
 `F:fp16-add-monotone-rne` is the one open fact reachable by pure compute (no
 new proof needed) — worth a bounded, explicitly-timed attempt at the existing
 `smtcomp_cli` route.
+
+**ADR-0602 implemented (`done-for-now`, producer-contracts, 2026-08-27).**
+Doc 288 diagnosed `fact-frontier.py --json` reporting `admissible: 0` over 132
+dependency-ready facts as structural, not a registry gap: the operation
+registry's `ADMISSION_CONTRACTS` requires `epistemic_status: "proved"` on
+every arm, so it cannot represent "we could attempt this open fact" without
+fabricating a proof that does not exist. ADR-0602 decided the fix: a separate,
+prospective producer-contract artifact (a capability claim, never a
+completion claim) that `fact-frontier.py` selects against alongside the
+operation registry.
+
+**Landed:**
+- `artifacts/ontology/producer-contract.schema.json` — no `proved`/
+  `epistemic_status` field exists anywhere in the schema; the false assertion
+  is unrepresentable, not merely forbidden.
+- `scripts/validate-producer-contracts.py` — schema-valid; every non-example
+  resolves to a REAL fact and is checked to FAIL its shape predicate BY
+  EXECUTION; rejects a predicate matching every open fact (the vacuous-matcher
+  defect); rejects a shape narrowed only by language/fragment. 15 unit tests,
+  plus a 5-guard mutation-testing entry in `scripts/tests/mutation_controls.py`
+  (`producer-contracts`): 5 killed, 0 survived, 0 unmeasured.
+- Two seed contracts, both `kernel-lane`, both genuinely general, both
+  checked against `nursery-v1.json` — every match is `train`/`development`,
+  zero `held-out`:
+  - `producer-contract-int-modeq-family-v1` (Int modular-congruence facts,
+    `statement_contains "[ZMOD "` — generalizes past doc 288's four named
+    facts and past the `Int.ModEq.*` naming convention to the free-function
+    spelling too; 13 open, 6 already proved, all `train`).
+  - `producer-contract-nat-coprime-family-v1` (substituted for ADR-0602's
+    CReal/Complex example, since zero open CReal/Complex facts exist today —
+    all this week's ~30 new ones are already `proved`; `Nat.Coprime` family
+    instead, `statement_contains "Coprime"` scoped by title prefix to exclude
+    the outcome-blind mutation fixtures in the same namespace; 22 open, 1
+    already proved, mostly `development`).
+- `scripts/fact-frontier.py` — admissibility redefined as dependency-ready ×
+  (registered operation OR matched producer contract with a capable route) ×
+  no gate-review issues; `route_capability()` reports `kernel-lane` always
+  capable, `cas-bridge`/`import` gated on sibling-lane artifacts that don't
+  exist in this tree yet (absent-tolerant, never raises); the 6 no-route
+  facts are named in a new `diagnostics.no_route_ready_fact_ids` key and can
+  never become admissible via either path. All 8 existing
+  `test_fact_frontier.py` tests pass **unmodified**; 7 new tests added to the
+  same file.
+- `docs/autogenesis/289-producer-contract-admissibility.md` — full writeup,
+  including the `contracts=None` deliberate-asymmetry design decision that
+  made "8 tests unmodified" and "admissible > 0 on the real ledger"
+  simultaneously satisfiable (three of the eight tests build over the FULL
+  real ledger with only the operation registry reduced to a controlled
+  subset; auto-loading real contracts the same way the registry auto-loads
+  would leak ~27 other real admissible facts into those tests with no
+  argument to control for it).
+
+**Measured result:** `python3 scripts/fact-frontier.py --json` now reports
+`admissible_count: 27` (`admissible_via_contract_count: 27`,
+`admissible_via_operation_count: 0`), `selected_fact_id:
+F:ml430-int-add-modeq-left-ee732b5b` — genuinely still `epistemic_status:
+"open"`, no receipt fabricated. `--output`/`--verify` round-trip
+self-consistently. `check-autogenesis-holdout-isolation.py` still passes
+(`held_out=37|references=0|verdict=PASS`).
+
+**Registered in `scripts/check.sh`** (`autogenesis-producer-contracts`,
+`autogenesis-producer-contracts-tests`) and **`justfile`**
+(`autogenesis-producer-contracts` target, plus wired into
+`autogenesis-operations`'s neighbourhood and `generated-trackers`).
+
+**Did not touch:** `scripts/validate-facts.py`, `scripts/gen-import-backlog.py`,
+`artifacts/import-backlog.json` (an adr601-impl lane's), the operation
+registry's validator/instances beyond reading, `artifacts/facts/`,
+`docs/curriculum/curriculum.toml`, `crates/`, or `python/axeyum/agent/` — all
+out of scope per the brief.
+
+**Next.** 98 of the 125 `proof-route-only` ready facts still have no
+contract authored for their shape (`diagnostics.unmatched_by_route_class.
+proof-route-only`). A third seed contract over another real, general shape in
+that pool (e.g. the `gcd`/`log`/`prime`/`factorial` families visible in the
+same `ml430-*` import batch) would grow `admissible_count` further without
+touching the receipt system. Separately, `cas-bridge`/`import` route
+capability is 0 today purely because neither sibling artifact exists in this
+tree yet; once either lands, contracts declaring that route become live with
+no further `fact-frontier.py` change needed.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 

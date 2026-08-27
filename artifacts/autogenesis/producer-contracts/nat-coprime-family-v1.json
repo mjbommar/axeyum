@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "id": "producer-contract-nat-coprime-family-v1",
+  "title": "Mathlib v4.30 Nat.Coprime family, kernel-lane",
+  "route": "kernel-lane",
+  "recipe": {
+    "description": "Author an s5-side Lean statement-adapter wrapper for the target Mathlib v4.30 `Nat` proposition, export it via `lake env lean` + `lean4export`, and feed the export to a shape-generic checker over `Nat.Coprime` goals (co-primality of a computed or hypothesised pair, its symmetry/transport lemmas, and its `gcd`/`dvd`/`Prime` interactions). Every member states or negates `Nat.Coprime a b` for some `a`, `b` built from the bound variables, regardless of surface lemma name (`Nat.coprime_of_dvd'`, `Nat.Coprime.symmetric`, `Nat.not_coprime_zero_zero`, `Nat.Prime.dvd_iff_not_coprime`, ...) -- the shared goal shape is what one recipe can be written against, not the identifier text.",
+    "reference": "crates/axeyum-lean-import/examples/modeq_family_operation.rs"
+  },
+  "shape": {
+    "formal_language": ["lean4-surface"],
+    "fragments": ["Nat"],
+    "title_prefix": "Mathlib v4.30 source proposition ",
+    "statement_contains": "Coprime"
+  },
+  "non_examples": [
+    {
+      "fact_id": "F:ml430-nat-modeq-add-left-e83f0700",
+      "reason": "Same import shape (fragment Nat, lean4-surface, `Mathlib v4.30 source proposition` title) and the same route, but `Nat.ModEq.add_left`'s statement is a modular-congruence identity (`[MOD n]`) and never mentions `Coprime` -- a different family this recipe was not written for."
+    },
+    {
+      "fact_id": "F:ml430-mutation-c20db9b4c60b816ce738bdf2",
+      "reason": "The statement (`Nat.Coprime 0 0`) genuinely contains `Coprime` and is `Nat`/`lean4-surface`, but its title is `Outcome-blind mutation of Nat.not_coprime_zero_zero`, not a `Mathlib v4.30 source proposition ...` import -- this is a deliberately outcome-blind polarity-reversal mutation fixture (`nursery-v1.json`'s `mutation_of` field), not a genuine Mathlib target, and the `title_prefix` constraint excludes every mutation fixture structurally rather than by an id denylist."
+    }
+  ],
+  "notes": "24 facts in the current ledger match this shape by statement content alone (including the mutation fixture above); restricting to the `Mathlib v4.30 source proposition ` title prefix narrows that to 23, of which 22 are open, dependency-ready, and sit in `nursery-v1.json` partition `development` (one, `F:ml430-nat-fib-coprime-fib-succ-162fc738`, is `train` and already `proved`) -- none held-out, checked 2026-08-27. This is the second, independently-shaped seed contract: it shares no fact, no fragment, and no route-availability question with the Int.ModEq contract, so the two together demonstrate the schema covers more than one family rather than being fitted to a single example. As with every producer contract, this asserts dischargeability via `kernel-lane` only -- no instance is claimed attempted or proved, and admission into the operation registry still requires an independently kernel-checked proof (ADR-0602 SS1)."
+}

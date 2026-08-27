@@ -109,6 +109,13 @@ autogenesis-operations:
     python3 scripts/validate-autogenesis-operations.py
     python3 -m unittest scripts.tests.test_validate_autogenesis_operations
 
+# ADR-0602: prospective producer contracts (a capability claim, never a
+# completion claim) -- the separate artifact `fact-frontier.py` selects
+# against alongside the operation registry above.
+autogenesis-producer-contracts:
+    python3 scripts/validate-producer-contracts.py
+    python3 -m unittest scripts.tests.test_validate_producer_contracts
+
 # Validate and exactly regenerate the frozen leakage-safe population contract.
 autogenesis-nursery:
     python3 -m unittest scripts.tests.test_check_autogenesis_nursery
@@ -1093,6 +1100,8 @@ smtcomp-resume:
 generated-trackers:
     python3 scripts/validate-autogenesis-operations.py
     python3 -m unittest scripts.tests.test_validate_autogenesis_operations
+    python3 scripts/validate-producer-contracts.py
+    python3 -m unittest scripts.tests.test_validate_producer_contracts
     python3 -m unittest scripts.tests.test_fact_frontier
     python3 -m unittest scripts.tests.test_create_autogenesis_chain_catalog
     python3 -m unittest scripts.tests.test_execute_autogenesis_operation

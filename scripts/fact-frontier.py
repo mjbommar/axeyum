@@ -61,6 +61,30 @@ OPERATIONS = ROOT / "artifacts" / "autogenesis" / "operations.json"
 OPERATION_VALIDATOR = ROOT / "scripts" / "validate-autogenesis-operations.py"
 CHAIN_CATALOG = ROOT / "scripts" / "create-autogenesis-chain-catalog.py"
 
+# ADR-0602: a producer contract is a CAPABILITY CLAIM ("facts matching this
+# shape are dischargeable via route R"), never a completion claim -- unlike an
+# operation, which is a retrospective receipt requiring `epistemic_status:
+# "proved"` on every admission arm (doc 288 measured this is exactly why
+# admissible stayed 0 while ready stayed 132: nothing prospective can enter a
+# system built to certify completed work). `matching_operations` below still
+# answers "has this already been discharged and receipted"; `matching_contracts`
+# answers a different, new question: "could this be attempted, and by which
+# route". Both are read; the two must not be conflated into one count, or the
+# ADR's whole distinction collapses back into doc 262's original confusion.
+PRODUCER_CONTRACTS_DIR = ROOT / "artifacts" / "autogenesis" / "producer-contracts"
+PRODUCER_CONTRACT_VALIDATOR = ROOT / "scripts" / "validate-producer-contracts.py"
+CONTRACT_ROUTES = {"kernel-lane", "cas-bridge", "import"}
+
+# Route-capability artifacts, per ADR-0601 SS4 / ADR-0602 SS3. `kernel-lane` is
+# always capable (a proving lane always exists in principle). `cas-bridge` and
+# `import` are sibling lanes' deliverables, still in flight as of this ADR --
+# checking for the artifact rather than importing the sibling lane's module
+# keeps this file buildable independently of when either lands, and ABSENT is
+# the correct, unsurprising answer until they do. Never raise on absence: an
+# optional input that has not landed yet is not this file's error.
+CAS_BRIDGE_MANIFEST = ROOT / "artifacts" / "autogenesis" / "cas-bridge-manifest.json"
+IMPORT_BACKLOG = ROOT / "artifacts" / "import-backlog.json"
+
 # A status asserting we settled it. `axiom` counts: a dependency taken as an
 # axiom is available to build on, whatever one thinks of taking it.
 SETTLED = {"proved", "computed", "refuted", "axiom"}
@@ -163,6 +187,76 @@ def validate_operation_registry(registry: dict[str, Any]) -> None:
         module.validate_registry(registry, ROOT)
     except module.RegistryError as error:
         raise FrontierError(f"operation registry invalid: {error}") from error
+
+
+def contract_validator_module():
+    spec = importlib.util.spec_from_file_location(
+        "validate_producer_contracts_for_frontier", PRODUCER_CONTRACT_VALIDATOR
+    )
+    if spec is None or spec.loader is None:
+        raise FrontierError(f"cannot load {PRODUCER_CONTRACT_VALIDATOR}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_producer_contracts() -> list[dict[str, Any]]:
+    """Load and validate `artifacts/autogenesis/producer-contracts/*.json`.
+
+    Validated the same way the operation registry is: through the dedicated
+    validator module, never re-implemented here, and -- matching how the
+    operation validator always resolves a fact id against the real
+    `artifacts/facts/*.json` file on disk rather than whatever `facts` dict a
+    caller happens to be iterating over -- always against the REAL committed
+    fact ledger, never against a caller's `facts` argument. A contract's
+    falsifiability (does its non-example resolve and fail the predicate? does
+    the predicate avoid swallowing every open fact?) is a property of the
+    contract and the real ledger; it must not depend on which subset of facts
+    a particular `build_machine_frontier` call happens to be considering, or
+    a test exercising a synthetic 3-fact ledger would spuriously fail contract
+    validation for a real, valid, committed contract.
+
+    An empty directory is not an error -- a lane may run this before any
+    contract has landed, and "zero contracts" is a fact about the ledger's
+    current state, not a malformed input.
+    """
+    module = contract_validator_module()
+    try:
+        real_facts = module.load_facts()
+        return module.validate_contracts_dir(PRODUCER_CONTRACTS_DIR, facts=real_facts)
+    except (OSError, json.JSONDecodeError, module.ContractError) as error:
+        raise FrontierError(f"producer contract registry invalid: {error}") from error
+
+
+def validate_producer_contracts(contracts: list[dict[str, Any]]) -> None:
+    """Validate an explicitly-supplied contract list, against the REAL
+    ledger -- see `load_producer_contracts` for why."""
+    module = contract_validator_module()
+    try:
+        real_facts = module.load_facts()
+        for contract in contracts:
+            module.validate_contract(contract, real_facts)
+        ids = [contract["id"] for contract in contracts]
+        if len(ids) != len(set(ids)):
+            raise module.ContractError("duplicate producer contract id in supplied list")
+    except module.ContractError as error:
+        raise FrontierError(f"producer contract registry invalid: {error}") from error
+
+
+def route_capability() -> dict[str, bool]:
+    """Which ADR-0601 SS4 producer routes can actually be dispatched today.
+
+    `kernel-lane` always can (a proving lane always exists in principle).
+    `cas-bridge` and `import` are gated on sibling lanes' own artifacts, which
+    may not exist yet in this tree -- absence is read as "not yet capable",
+    never as an error, so this file stays buildable independently of when
+    either sibling lane lands.
+    """
+    return {
+        "kernel-lane": True,
+        "cas-bridge": CAS_BRIDGE_MANIFEST.exists(),
+        "import": IMPORT_BACKLOG.exists(),
+    }
 
 
 def load() -> dict[str, dict]:
@@ -304,20 +398,65 @@ def matching_operations(
     )
 
 
+def matching_contracts(
+    fact: dict[str, Any], contracts: list[dict[str, Any]], shape_matches
+) -> list[str]:
+    """Producer contracts whose SHAPE the fact matches (ADR-0602).
+
+    A capability claim, never a completion claim: this says the fact COULD be
+    attempted via some route, not that it has been. `shape_matches` is always
+    the validator's own function, passed in rather than re-implemented, so the
+    frontier and the validator can never silently drift apart on what a shape
+    means.
+    """
+    return sorted(
+        contract["id"] for contract in contracts if shape_matches(contract["shape"], fact)
+    )
+
+
 def build_machine_frontier(
-    facts: dict[str, dict], registry: dict[str, Any] | None = None
+    facts: dict[str, dict],
+    registry: dict[str, Any] | None = None,
+    contracts: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Build the content-addressed authoritative queue and selection refusal.
 
     This snapshot deliberately distinguishes dependency readiness, broad route
-    reachability, and an admissible registered operation. Only the last of those
-    licenses autonomous dispatch.
+    reachability, a RECEIPT (a registered operation, requiring proved work --
+    doc 288) and a CONTRACT (a producer's capability claim over open work --
+    ADR-0602). Either receipt or contract, together with route capability and a
+    clean gate review, licenses autonomous dispatch; the two are read
+    separately below and never folded into one count, because folding them is
+    exactly the conflation ADR-0602 exists to undo.
+
+    `contracts=None` means NO contracts, deliberately asymmetric with
+    `registry=None` (which auto-loads the real operation registry from disk).
+    A caller building a frontier over the full real ledger while overriding
+    the operation registry to a controlled subset -- exactly what several
+    tests in `scripts/tests/test_fact_frontier.py` do, to isolate one
+    operation's effect from the other ~30 real ones -- would otherwise see
+    every OTHER seed contract's real matches leak into `admissible_fact_ids`
+    with no way to control for it, since there is no third argument in those
+    calls to reduce. `main()` and `verify_machine_frontier` are the two call
+    sites that need the real, current contract set, and both load it
+    explicitly (`load_producer_contracts`) rather than relying on this
+    default -- so the CLI's `--json`/`--output`/`--verify` output always
+    reflects real contracts, and a caller building a controlled scenario over
+    the real ledger is never surprised by one it did not ask for.
     """
     if registry is None:
         registry = load_operation_registry()
     else:
         validate_operation_registry(registry)
     operations = registry["operations"]
+
+    contract_module = contract_validator_module()
+    if contracts is None:
+        contracts = []
+    else:
+        validate_producer_contracts(contracts)
+    capable_routes = route_capability()
+
     held = gate_holds(facts)
     decidable, demonstrated_by = decidable_fragments(facts)
     unlocks: dict[str, list[str]] = defaultdict(list)
@@ -340,6 +479,20 @@ def build_machine_frontier(
         )
         fragment = fact["formal"]["fragment"]
         registered_operation_ids = matching_operations(fact, operations)
+        matched_producer_contract_ids = matching_contracts(
+            fact, contracts, contract_module.shape_matches
+        )
+        producer_contract_route = None
+        producer_contract_route_capable = False
+        if len(matched_producer_contract_ids) == 1:
+            matched_contract = next(
+                contract for contract in contracts
+                if contract["id"] == matched_producer_contract_ids[0]
+            )
+            producer_contract_route = matched_contract["route"]
+            producer_contract_route_capable = capable_routes.get(
+                producer_contract_route, False
+            )
         matched_operations = [
             operation for operation in operations
             if operation["id"] in registered_operation_ids
@@ -383,6 +536,9 @@ def build_machine_frontier(
                 "missing_dependencies": missing,
                 "route_class": route_class(fragment, decidable),
                 "registered_operation_ids": registered_operation_ids,
+                "matched_producer_contract_ids": matched_producer_contract_ids,
+                "producer_contract_route": producer_contract_route,
+                "producer_contract_route_capable": producer_contract_route_capable,
                 "gate_mentions": sorted(gate_mentions),
                 "unreviewed_gate_mentions": sorted(
                     gate_mentions.difference(reviewed_gate_mentions)
@@ -403,23 +559,63 @@ def build_machine_frontier(
         ),
         key=lambda entry: (priority[entry["band"]], entry["fact_id"]),
     )
+    # Two independent ways for a fact to be admissible now (ADR-0602): a
+    # RECEIPT (exactly one registered operation -- doc 288's retrospective,
+    # already-proved path, unchanged) or a CONTRACT (exactly one matched
+    # producer contract whose route is actually capable -- the new prospective
+    # path). `producer_ok` is deliberately an OR, never a fold of the two into
+    # one signal, so the diagnostics below can still tell them apart. Gate
+    # review and route reachability apply to EITHER path identically: a fact
+    # that would break a gate, or has no supported route at all, is not
+    # dispatchable regardless of which producer would take it.
+    #
+    # The invariant this construction guarantees: `rejected_by` is empty if
+    # and only if the entry is admissible. Reasons are only appended inside
+    # the branch that actually blocks admission, so an entry admitted via one
+    # path never carries a leftover reason from the path it did not need.
     rationale = []
     admissible = []
+    admitted_via_operation = 0
+    admitted_via_contract = 0
     for entry in considered:
+        op_ids = entry["registered_operation_ids"]
+        contract_ids = entry["matched_producer_contract_ids"]
+        op_ok = len(op_ids) == 1
+        contract_ok = len(contract_ids) == 1 and entry["producer_contract_route_capable"]
+        producer_ok = op_ok or contract_ok
+        route_ok = entry["route_class"] != "no-route"
+        gate_ok = not entry["unreviewed_gate_mentions"] and not entry["stale_reviewed_gate_mentions"]
+        is_admissible = producer_ok and route_ok and gate_ok
+
         reasons = []
-        if entry["route_class"] == "no-route":
+        if not route_ok:
             reasons.append("no-supported-route")
-        if not entry["registered_operation_ids"]:
-            reasons.append("no-registered-operation")
-        elif len(entry["registered_operation_ids"]) != 1:
-            reasons.append("ambiguous-registered-operation")
+        if not producer_ok:
+            if not op_ids:
+                reasons.append("no-registered-operation")
+            elif len(op_ids) != 1:
+                reasons.append("ambiguous-registered-operation")
+            if not contract_ids:
+                reasons.append("no-matched-producer-contract")
+            elif len(contract_ids) != 1:
+                reasons.append("ambiguous-producer-contract")
+            elif not entry["producer_contract_route_capable"]:
+                reasons.append("producer-contract-route-unavailable")
         if entry["unreviewed_gate_mentions"]:
             reasons.append("gate-coupling-review-required")
         if entry["stale_reviewed_gate_mentions"]:
             reasons.append("stale-gate-coupling-review")
+        assert bool(reasons) != is_admissible, (
+            "rejected_by must be empty exactly when the entry is admissible"
+        )
+
         rationale.append({"fact_id": entry["fact_id"], "rejected_by": reasons})
-        if not reasons:
+        if is_admissible:
             admissible.append(entry["fact_id"])
+            if op_ok:
+                admitted_via_operation += 1
+            if contract_ok:
+                admitted_via_contract += 1
 
     # "no-registered-operation" is one rejection reason, but it hides two very
     # different situations: a fact with NO decision procedure or kernel-proof
@@ -436,6 +632,22 @@ def build_machine_frontier(
     for entry in considered:
         if not entry["registered_operation_ids"]:
             unregistered_by_route[entry["route_class"]] += 1
+
+    # Same split, on the NEW axis ADR-0602 adds: among ready facts with no
+    # MATCHED contract at all, how many are stuck on missing math capability
+    # versus simply having no contract authored for their shape yet.
+    unmatched_by_route: dict[str, int] = defaultdict(int)
+    for entry in considered:
+        if not entry["matched_producer_contract_ids"]:
+            unmatched_by_route[entry["route_class"]] += 1
+
+    # The 6 no-route facts (Collatz, CH, FLT class -- doc 288) are marked as
+    # such and never treated as retry candidates: `route_class` is a pure
+    # function of the ledger, so they report `no-supported-route` on every
+    # run rather than being picked up as if capability might have changed.
+    no_route_ready = sorted(
+        entry["fact_id"] for entry in considered if entry["route_class"] == "no-route"
+    )
 
     artifact: dict[str, Any] = {
         "schema_version": 1,
@@ -460,7 +672,22 @@ def build_machine_frontier(
             "registered_operations": sorted(
                 operation["id"] for operation in operations
             ),
+            # Still true of the RECEIPT path specifically: an operation-based
+            # admission always requires exactly one registered operation. It is
+            # no longer the ONLY way to be admissible -- see
+            # `autonomous_dispatch_requires_registered_operation_or_producer_contract`,
+            # which states the actual (ADR-0602) admissibility rule. Left in
+            # place, unrenamed, because "purely additive" is the standing rule
+            # for this artifact's keys (doc 288) and nothing reads this as
+            # meaning contracts do not exist.
             "autonomous_dispatch_requires_registered_operation": True,
+            "producer_contract_routes": sorted(CONTRACT_ROUTES),
+            "producer_contract_registry_sha256": digest(contracts),
+            "registered_producer_contracts": sorted(
+                contract["id"] for contract in contracts
+            ),
+            "producer_contract_route_capability": dict(sorted(capable_routes.items())),
+            "autonomous_dispatch_requires_registered_operation_or_producer_contract": True,
         },
         "capabilities": {
             "decidable_fragments": sorted(decidable),
@@ -487,6 +714,24 @@ def build_machine_frontier(
             # never wired up). Registering an operation can only ever help the
             # second bucket -- see the note above `unregistered_by_route`.
             "unregistered_by_route_class": dict(sorted(unregistered_by_route.items())),
+            # ADR-0602's new axis, same split, over CONTRACT matching rather
+            # than operation registration. This is what doc 288 said would
+            # actually move `admissible` off zero: `proof-route-only` facts
+            # with no contract yet authored for their shape, not a paperwork
+            # gap on an already-decidable fragment.
+            "unmatched_by_route_class": dict(sorted(unmatched_by_route.items())),
+            # How many of the currently admissible facts came from EACH path.
+            # Not mutually exclusive by construction (a fact could in
+            # principle have both a registered operation and a matching
+            # contract); summing the two can exceed `admissible_count` and
+            # that is not a bug.
+            "admissible_via_operation_count": admitted_via_operation,
+            "admissible_via_contract_count": admitted_via_contract,
+            # The 6 no-route facts (doc 288: Collatz, CH, excluded-middle,
+            # FLT, FOL validity, Gödel incompleteness, Goldbach), named so a
+            # reader never has to re-derive "why is this ready fact never
+            # selected" from `route_class` by hand.
+            "no_route_ready_fact_ids": no_route_ready,
         },
     }
     artifact["frontier_sha256"] = digest(artifact)
@@ -499,7 +744,11 @@ def verify_machine_frontier(actual: dict[str, Any], facts: dict[str, dict]) -> N
     unsigned.pop("frontier_sha256", None)
     if not isinstance(claimed, str) or digest(unsigned) != claimed:
         raise FrontierError("frontier digest is missing or invalid")
-    expected = build_machine_frontier(facts)
+    # `build_machine_frontier`'s own `contracts=None` means NO contracts (see
+    # its docstring); recomputing the CURRENT authoritative frontier for a
+    # comparison needs the real, current contract set explicitly, exactly as
+    # `main()` does when it first builds the artifact being verified.
+    expected = build_machine_frontier(facts, contracts=load_producer_contracts())
     if actual != expected:
         raise FrontierError("frontier is stale or does not match the authoritative ledger")
 
@@ -589,7 +838,10 @@ def main() -> int:
         ap.error("machine frontier modes cannot be combined with --band or --unlocks")
     if args.json or args.output or args.verify:
         try:
-            artifact = build_machine_frontier(facts)
+            # Explicit, real contracts -- see `build_machine_frontier`'s
+            # docstring on why `contracts=None` there means NONE, not
+            # auto-loaded.
+            artifact = build_machine_frontier(facts, contracts=load_producer_contracts())
             if args.verify:
                 verify_machine_frontier(json.loads(args.verify.read_text()), facts)
                 print(f"FACT_FRONTIER_OK|{artifact['frontier_sha256']}")

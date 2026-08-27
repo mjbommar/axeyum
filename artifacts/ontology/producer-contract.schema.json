@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axeyum.dev/ontology/producer-contract.schema.json",
+  "title": "Producer contract",
+  "description": "A CAPABILITY CLAIM, never a completion claim (ADR-0602). The autogenesis operation registry (`artifacts/autogenesis/operations.json`) is a retrospective RECEIPT: every admission arm requires `epistemic_status: \"proved\"`, so it cannot express 'we could attempt this open fact' without asserting a proof that does not exist. A producer contract fills that gap with a different, narrower claim: facts matching this SHAPE are dischargeable via route R using recipe X. It says nothing about whether any particular match has been attempted or has succeeded.\n\nFALSIFIABILITY IS STRUCTURAL, NOT PROSE. There is no `proved` field, no `epistemic_status` field, and no field of that shape anywhere in this schema -- `additionalProperties: false` at every level makes smuggling one in a schema violation, not a reviewable choice. A contract cannot assert completed work because completed work has nowhere to be written.\n\nTHE VACUOUS-MATCHER DEFECT IS THE ONE THIS SCHEMA EXISTS TO PREVENT. A shape predicate that matches every open fact is not a capability claim, it is a blank check, and `scripts/validate-producer-contracts.py` rejects any contract whose predicate matches every open fact in the ledger. `non_examples` is the falsifiability requirement made structural: at least one fact id the predicate is claimed NOT to match, checked by EXECUTING the predicate against the real fact (never by trusting the claim).",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "id",
+    "title",
+    "route",
+    "recipe",
+    "shape",
+    "non_examples"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+
+    "id": {
+      "type": "string",
+      "pattern": "^producer-contract-[a-z0-9]+(-[a-z0-9]+)*-v[0-9]+$",
+      "description": "Stable identifier. Versioned (`-vN`) because a shape predicate is expected to be refined as the pool of open facts it claims to cover changes."
+    },
+
+    "title": { "type": "string", "minLength": 1 },
+
+    "route": {
+      "type": "string",
+      "enum": ["kernel-lane", "cas-bridge", "import"],
+      "description": "The ADR-0601 SS4 producer route that would discharge a match: `kernel-lane` (a proving lane constructs a kernel term), `cas-bridge` (the CAS-to-kernel bridge reconstructs a CAS certificate), or `import` (the ADR-0601 SS3 backlog artifact). `kernel-lane` capability always exists; `cas-bridge` and `import` are capable only once their own artifact exists -- `fact-frontier.py` checks this, absent-tolerantly, since both are sibling deliverables under construction."
+    },
+
+    "recipe": {
+      "type": "object",
+      "required": ["description"],
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "description": "What a lane or tool actually DOES with a match: which generic checker, proposer, or bridge stage receives it. Prose, reviewed like any other claim -- never itself evidence that the recipe was run."
+        },
+        "reference": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Optional repository-relative path to the generic producer/checker code this recipe dispatches to (e.g. a `crates/axeyum-lean-import/examples/*.rs` shape-generic checker). Documentation only; not verified to exist by the validator, since a recipe may name work still in flight on a sibling lane."
+        }
+      }
+    },
+
+    "shape": {
+      "type": "object",
+      "description": "The executable predicate. Every field is a positive constraint (ANDed together): a fact must satisfy every field present to match. At least one of `title_prefix`, `statement_contains`, or `id_prefix` is REQUIRED by the validator (not expressible in JSON Schema alone) -- `formal_language`/`fragments` alone is too coarse a shape and risks becoming the vacuous matcher this schema exists to forbid.",
+      "required": ["formal_language", "fragments"],
+      "additionalProperties": false,
+      "properties": {
+        "formal_language": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1,
+          "uniqueItems": true,
+          "description": "A fact matches only if `formal.language` is one of these."
+        },
+        "fragments": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1,
+          "uniqueItems": true,
+          "description": "A fact matches only if `formal.fragment` is one of these."
+        },
+        "title_prefix": {
+          "type": "string",
+          "minLength": 1,
+          "description": "A fact matches only if `title` starts with this string."
+        },
+        "statement_contains": {
+          "type": "string",
+          "minLength": 1,
+          "description": "A fact matches only if `formal.statement` contains this substring."
+        },
+        "id_prefix": {
+          "type": "string",
+          "minLength": 1,
+          "description": "A fact matches only if `id` starts with this string."
+        }
+      }
+    },
+
+    "non_examples": {
+      "type": "array",
+      "minItems": 1,
+      "description": "At least one real fact id the shape predicate provably does NOT match -- the falsifiability requirement (ADR-0602). Checked by EXECUTING `shape` against the named fact's current ledger entry, never by trusting `reason`.",
+      "items": {
+        "type": "object",
+        "required": ["fact_id", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "fact_id": {
+            "type": "string",
+            "pattern": "^F:[a-z0-9]+(-[a-z0-9]+)*$"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Which constraint the fact fails and why -- reviewed prose, not itself checked; the executable check is the predicate re-run against the fact."
+          }
+        }
+      }
+    },
+
+    "notes": { "type": "string" }
+  }
+}
