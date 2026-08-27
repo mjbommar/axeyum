@@ -565,6 +565,33 @@ pub struct IntPrelude {
     /// `1`, via the existing positive-divisor bridge at the concrete literal
     /// `n = 1`.
     pub mod_eq_one: NameId,
+    /// `modEq_add_mul_left : ∀ n a q, ModEq n (add (mul n q) a) a` — adding
+    /// any multiple of the modulus leaves the residue unchanged, for **every**
+    /// `n : ℤ` including `n = 0` and negative `n`. Unlike
+    /// [`Self::mod_eq_iff_dvd`] and everything built on it in
+    /// `int_prelude/modeq.rs`, this needs no `0 < n` hypothesis: the
+    /// `n = 0` case is direct (`Int.emod _ 0` is the identity), the positive
+    /// case goes through the existing bridge at the concrete shape
+    /// `ofNat (succ k)`, and the negative case reduces to the positive one via
+    /// [`Self::mod_eq_neg_modulus`] — see `int_prelude/modeq_family.rs`.
+    pub mod_eq_add_mul_left: NameId,
+    /// `add_modEq_left : ∀ n a, ModEq n (add n a) a` — Mathlib's
+    /// `Int.add_modEq_left`, unconditional in `n`. [`Self::mod_eq_add_mul_left`]
+    /// at `q := 1`.
+    pub add_mod_eq_left: NameId,
+    /// `add_modEq_right : ∀ n a, ModEq n (add a n) a` — Mathlib's
+    /// `Int.add_modEq_right`, unconditional in `n`.
+    pub add_mod_eq_right: NameId,
+    /// `mod_modEq : ∀ a n, ModEq n (emod a n) a` — Mathlib's `Int.mod_modEq`
+    /// (`a % n ≡ a [ZMOD n]`), unconditional in `n`, via
+    /// [`Self::mod_eq_add_mul_left`] and [`Self::ediv_add_emod`].
+    pub mod_mod_eq: NameId,
+    /// `modulus_modEq_zero : ∀ n, ModEq n n zero` (`n ≡ 0 [ZMOD n]`),
+    /// unconditional in `n`.
+    pub modulus_mod_eq_zero: NameId,
+    /// `modEq_sub : ∀ a b, ModEq (sub a b) a b` (`a ≡ b [ZMOD a - b]`),
+    /// unconditional in `a, b`.
+    pub mod_eq_sub: NameId,
     /// `natAbs : Int → Nat` — the magnitude, `ofNat n ↦ n` and `negSucc m ↦ succ m`.
     pub nat_abs: NameId,
     /// `of_nat_nat_abs_of_nonneg : ∀ a, 0 ≤ a → ofNat (natAbs a) = a`.
@@ -1073,6 +1100,12 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         mod_eq_of_neg_modulus: child(kernel, "modEq_of_neg_modulus"),
         mod_eq_neg_modulus: child(kernel, "modEq_neg_modulus"),
         mod_eq_one: child(kernel, "modEq_one"),
+        mod_eq_add_mul_left: child(kernel, "modEq_add_mul_left"),
+        add_mod_eq_left: child(kernel, "add_modEq_left"),
+        add_mod_eq_right: child(kernel, "add_modEq_right"),
+        mod_mod_eq: child(kernel, "mod_modEq"),
+        modulus_mod_eq_zero: child(kernel, "modulus_modEq_zero"),
+        mod_eq_sub: child(kernel, "modEq_sub"),
         nat_abs: child(kernel, "natAbs"),
         of_nat_nat_abs_of_nonneg: child(kernel, "of_nat_nat_abs_of_nonneg"),
         nat_abs_neg_of_nat: child(kernel, "nat_abs_neg_of_nat"),
@@ -1243,6 +1276,12 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         modeq_family::declare_modeq_of_neg_modulus(&mut d)?;
         modeq_family::declare_modeq_neg_modulus(&mut d)?;
         modeq_family::declare_modeq_one(&mut d)?;
+        modeq_family::declare_modeq_add_mul_left(&mut d)?;
+        modeq_family::declare_add_modeq_left(&mut d)?;
+        modeq_family::declare_add_modeq_right(&mut d)?;
+        modeq_family::declare_mod_modeq(&mut d)?;
+        modeq_family::declare_modulus_modeq_zero(&mut d)?;
+        modeq_family::declare_modeq_sub(&mut d)?;
         prod::declare_prod_range(&mut d)?;
         prod::declare_prod_range_equations(&mut d)?;
         prod::declare_prod_range_shift_front(&mut d)?;

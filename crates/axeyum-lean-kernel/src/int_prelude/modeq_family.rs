@@ -288,3 +288,458 @@ pub(super) fn declare_modeq_one(d: &mut IntDev<'_>) -> Result<(), KernelError> {
     })?;
     Ok(())
 }
+
+// ---------------------------------------------------------------------------
+// The UNCONDITIONAL `ModEq` shift family: `Int.modEq_add_mul_left` and its
+// five direct corollaries.
+// ---------------------------------------------------------------------------
+//
+// `int_prelude/modeq.rs`'s whole additive/multiplicative congruence family is
+// gated at `0 < n`, because its only bridge to `Int.dvd`
+// ([`super::modeq::declare_modeq_iff_dvd`]) needs `Int.emod_lt_of_pos`, the
+// only proved bound on `emod`'s magnitude, and that bound only holds for a
+// positive divisor. But eleven Mathlib `Int.ModEq` ledger rows are
+// UNCONDITIONAL identities with no hypothesis to combine at all — the
+// producer that finds combinator shapes (refl/symm/trans/comm over an
+// existing hypothesis) declines every one of them with `TerminalNotClosed`,
+// because there is no hypothesis to find a congruence step over.
+//
+// The fix is not to weaken `modEq_iff_dvd`'s hypothesis (its positivity
+// requirement is real: `Int.emod`'s magnitude bound genuinely has no proved
+// analogue for a negative modulus). It is to observe that these eleven
+// facts do not actually NEED the positivity-gated bridge at every modulus:
+// they only need it at a modulus of KNOWN sign, and every modulus in this
+// kernel's `Int` is either `0`, or `ofNat (succ k)` (positive, `0 < n` is
+// [`crate::nat_prelude::NatOps::zero_lt_succ`] applied to `k`), or `negSucc k`
+// (negative, reducible to the positive case via the ALREADY-unconditional
+// [`declare_modeq_neg_modulus`]/[`declare_emod_neg`] pair this module already
+// proved). `Int.emod _ 0` being the identity (`division.rs`'s own zero
+// convention) handles the third leg for free, so a `case_split` on the
+// modulus alone closes all three legs without ever needing a magnitude bound
+// at a non-positive modulus.
+//
+// [`declare_modeq_add_mul_left`] is the one genuinely new piece of work:
+// `∀ n a q, ModEq n (add (mul n q) a) a` — "adding any multiple of the
+// modulus does not change the residue" — proved exactly this way. Every
+// other declaration below is a specialization of it (`q := 1`, or
+// `q := ediv a n` via [`super::division::declare_ediv_add_emod`]) plus a
+// rewrite, not new case-split work.
+
+/// `Eq Int (add a (neg (add x a))) (neg x)` — `a - (x + a) = -x`, for any
+/// `x`. Derived from [`super::modeq::cancel_common_addend`] applied to
+/// `(0+a) - (x+a) = 0 - x`, rewritten at both ends via `Int.add_comm`/
+/// `Int.add_zero`. [`declare_modeq_add_mul_left`]'s positive-modulus branch
+/// needs exactly this shape (`x := mul n q`).
+fn sub_add_self_left(d: &mut IntDev<'_>, a: ExprId, x: ExprId) -> ExprId {
+    let p = d.int();
+    let zero = d.izero();
+    let neg_x = d.ineg(x);
+
+    let za = d.iadd(zero, a);
+    let cc = super::modeq::cancel_common_addend(d, zero, x, a);
+    // cc : Eq(add(za, neg(add(x,a))), add(zero, neg_x))
+
+    let a_zero = d.iadd(a, zero);
+    let zero_add_a = {
+        let comm = d.const_app(p.add_comm, &[zero, a]);
+        let add_zero_a = d.const_app(p.add_zero, &[a]);
+        d.itrans(za, a_zero, a, comm, add_zero_a)
+    };
+
+    let target_rhs0 = d.iadd(zero, neg_x);
+    let negx_zero = d.iadd(neg_x, zero);
+    let zero_add_negx = {
+        let comm = d.const_app(p.add_comm, &[zero, neg_x]);
+        let add_zero_negx = d.const_app(p.add_zero, &[neg_x]);
+        d.itrans(target_rhs0, negx_zero, neg_x, comm, add_zero_negx)
+    };
+
+    let xa_raw = d.iadd(x, a);
+    let neg_xa = d.ineg(xa_raw);
+    let full_lhs = d.iadd(za, neg_xa);
+    let a_form = d.iadd(a, neg_xa);
+    let step1 = d.icongr(za, a, zero_add_a, &|d, t| d.iadd(t, neg_xa));
+    // step1 : Eq(full_lhs, a_form)
+    let step1_rev = d.isymm(full_lhs, a_form, step1);
+    // step1_rev : Eq(a_form, full_lhs)
+
+    let (_, chained) = d.ichain(
+        a_form,
+        &[
+            (full_lhs, step1_rev),
+            (target_rhs0, cc),
+            (neg_x, zero_add_negx),
+        ],
+    );
+    chained
+}
+
+/// `Eq Int (mul (neg m) q) (neg (mul m q))` — the mirror distributivity of
+/// [`super::super::sub` — i.e. `Int.mul_neg`] (`m * (-q) = -(m*q)`), derived
+/// from it plus `Int.mul_comm` rather than declared separately: no case
+/// split, exactly the style `int_prelude/gcd.rs`'s own private `neg_mul`
+/// helper uses.
+fn local_neg_mul(d: &mut IntDev<'_>, m: ExprId, q: ExprId) -> ExprId {
+    let p = d.int();
+    let neg_m = d.ineg(m);
+    let start = d.imul(neg_m, q);
+
+    let q_negm = d.imul(q, neg_m);
+    let comm1 = d.const_app(p.mul_comm, &[neg_m, q]);
+
+    let mq = d.imul(q, m);
+    let neg_mq = d.ineg(mq);
+    let mn = d.const_app(p.mul_neg, &[q, m]);
+
+    let mq2 = d.imul(m, q);
+    let neg_mq2 = d.ineg(mq2);
+    let comm2 = d.const_app(p.mul_comm, &[q, m]);
+    let congr2 = d.icongr(mq, mq2, comm2, &|d, x| d.ineg(x));
+
+    let (_, chained) = d.ichain(start, &[(q_negm, comm1), (neg_mq, mn), (neg_mq2, congr2)]);
+    chained
+}
+
+/// `Int.ModEq (ofNat (succ k)) (add x a) a`, given a witness `c` and a proof
+/// that `x = mul (ofNat (succ k)) c` — the positive-modulus leg
+/// [`declare_modeq_add_mul_left`]'s `case_split` needs, generalized over an
+/// arbitrary already-known multiple `x` (not just `mul m q` literally) so the
+/// `negSucc` leg can reuse it at a differently-shaped `x` too.
+///
+/// Route: [`super::modeq::declare_modeq_iff_dvd`]'s `mpr`, at
+/// `h_pos := `[`crate::nat_prelude::NatOps::zero_lt_succ`]` k` (which IS
+/// `Int.lt zero (ofNat (succ k))` up to defeq, since `Int.lt` on two `ofNat`s
+/// reduces to `Nat.lt`), with divisibility witness `neg c`:
+/// `a - (x+a) = -x = -(m*c) = m*(-c)` via [`sub_add_self_left`] and
+/// `Int.mul_neg`.
+fn modeq_shift_pos(
+    d: &mut IntDev<'_>,
+    k: ExprId,
+    a: ExprId,
+    x: ExprId,
+    c: ExprId,
+    x_eq_mc: ExprId,
+) -> ExprId {
+    let p = d.int();
+    let succ_k = d.succ(k);
+    let m = d.of_nat(succ_k);
+    let xa = d.iadd(x, a);
+    let modeq_ty = super::modeq::imodeq(d, m, xa, a);
+
+    let h_pos = d.zero_lt_succ(k);
+
+    let mc = d.imul(m, c);
+    let neg_x = d.ineg(x);
+    let neg_mc = d.ineg(mc);
+    let neg_c = d.ineg(c);
+    let m_negc = d.imul(m, neg_c);
+
+    // neg_x = neg(mul m c), via congrArg neg on x_eq_mc.
+    let step_a = d.icongr(x, mc, x_eq_mc, &|d, t| d.ineg(t));
+    // neg(mul m c) = mul m (neg c), via symm(Int.mul_neg m c).
+    let mul_neg_mc = d.const_app(p.mul_neg, &[m, c]);
+    let step_b = d.isymm(m_negc, neg_mc, mul_neg_mc);
+    let neg_x_eq_m_negc = d.itrans(neg_x, neg_mc, m_negc, step_a, step_b);
+
+    let diff_eq = sub_add_self_left(d, a, x);
+    // diff_eq : Eq(add(a, neg(xa)), neg_x)
+    let sub_am = d.isub(a, xa);
+    let witness_eq = d.itrans(sub_am, neg_x, m_negc, diff_eq, neg_x_eq_m_negc);
+
+    let dvd_ty = super::dvd::idvd(d, m, sub_am);
+    let pred = super::dvd::dvd_predicate(d, m, sub_am);
+    let int_ty = d.int_ty();
+    let one_level = d.level_one();
+    let intro_name = d.int().logic.exists_intro;
+    let intro = d.kernel().const_(intro_name, vec![one_level]);
+    let dvd_proof = d.apply(intro, &[int_ty, pred, neg_c, witness_eq]);
+
+    let iff_ma = d.const_app(p.mod_eq_iff_dvd, &[m, xa, a, h_pos]);
+    let mpr = d.const_app(p.logic.iff_mpr, &[modeq_ty, dvd_ty, iff_ma]);
+    d.apply(mpr, &[dvd_proof])
+}
+
+/// `Int.modEq_add_mul_left : ∀ n a q, ModEq n (add (mul n q) a) a`.
+///
+/// Unconditional in `n`: `case_split` on `n` alone (`a`, `q` stay symbolic
+/// throughout — only the modulus's sign matters).
+///
+/// - `n = ofNat 0`: `mul zero q = zero` (`Int.mul_comm` + `Int.mul_zero`),
+///   then `add zero a = a` (`Int.add_comm` + `Int.add_zero`) closes by
+///   `Eq.refl` after the rewrite.
+/// - `n = ofNat (succ k)`: [`modeq_shift_pos`] at `x := mul n q`, `c := q`,
+///   `x_eq_mc := Eq.refl`.
+/// - `n = negSucc k`: [`modeq_shift_pos`] for the POSITIVE modulus
+///   `m := ofNat (succ k)` at `x := mul m (neg q)`, `c := neg q` (so
+///   `x_eq_mc` is again `Eq.refl`), then [`declare_modeq_neg_modulus`] to
+///   cross to modulus `neg m` — which IS `negSucc k` up to defeq — followed
+///   by one [`super::ops::IntDev::int_eq_rewrite`] to turn `mul m (neg q)`
+///   into `mul (neg m) q` (via [`local_neg_mul`] and `Int.mul_neg`), which
+///   the case-split's own goal needs literally (`mul (negSucc k) q`, not
+///   `mul m (neg q)`).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_modeq_add_mul_left(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.mod_eq_add_mul_left, 3, &|d, v| {
+        let (n, a, q) = (v[0], v[1], v[2]);
+        let statement = |d: &mut IntDev<'_>, args: &[ExprId]| {
+            let nn = args[0];
+            let nq = d.imul(nn, q);
+            let shifted = d.iadd(nq, a);
+            super::modeq::imodeq(d, nn, shifted, a)
+        };
+        let stmt = statement(d, &[n]);
+        let proof = case_split(d, &[n], &statement, &|d, branches| {
+            let (n_shape, nm) = branches[0];
+            match n_shape {
+                Shape::OfNat => {
+                    let motive = |d: &mut IntDev<'_>, x: ExprId| {
+                        let ofnat_x = d.of_nat(x);
+                        statement(d, &[ofnat_x])
+                    };
+                    let base = |d: &mut IntDev<'_>| {
+                        let zero = d.zero();
+                        let n0 = d.of_nat(zero);
+                        let n0q = d.imul(n0, q);
+                        let izero = d.izero();
+
+                        // n0*q = izero, via Int.mul_comm then Int.mul_zero.
+                        let comm = d.const_app(p.mul_comm, &[n0, q]);
+                        let q_n0 = d.imul(q, n0);
+                        let mz = d.const_app(p.mul_zero, &[q]);
+                        let n0q_eq_zero = d.itrans(n0q, q_n0, izero, comm, mz);
+
+                        let shifted = d.iadd(n0q, a);
+                        let zero_a = d.iadd(izero, a);
+                        let step1 = d.icongr(n0q, izero, n0q_eq_zero, &|d, t| d.iadd(t, a));
+
+                        // izero + a = a, via Int.add_comm then Int.add_zero.
+                        let a_zero = d.iadd(a, izero);
+                        let comm2 = d.const_app(p.add_comm, &[izero, a]);
+                        let az = d.const_app(p.add_zero, &[a]);
+                        let step2 = d.itrans(zero_a, a_zero, a, comm2, az);
+
+                        let (_, chained) = d.ichain(shifted, &[(zero_a, step1), (a, step2)]);
+                        // chained : Eq(shifted, a) — lift into `emod(_, n0)`
+                        // directly; `Int.ModEq n0 shifted a` unfolds
+                        // (`Definition`, `ModEq n a b := emod a n = emod b n`)
+                        // to exactly `Eq(emod shifted n0, emod a n0)`, the
+                        // same idiom `declare_modeq_refl` uses.
+                        d.icongr(shifted, a, chained, &|d, t| d.iemod(t, n0))
+                    };
+                    let step = |d: &mut IntDev<'_>, k: ExprId, _ih: ExprId| {
+                        let succ_k = d.succ(k);
+                        let m = d.of_nat(succ_k);
+                        let x = d.imul(m, q);
+                        let x_eq_mc = d.irefl(x);
+                        modeq_shift_pos(d, k, a, x, q, x_eq_mc)
+                    };
+                    d.induct(&motive, &base, &step, nm)
+                }
+                Shape::NegSucc => {
+                    let k = nm;
+                    let succ_k = d.succ(k);
+                    let m = d.of_nat(succ_k);
+                    let neg_q = d.ineg(q);
+                    let x_for_m = d.imul(m, neg_q);
+                    let x_eq_mc = d.irefl(x_for_m);
+                    let pos_proof = modeq_shift_pos(d, k, a, x_for_m, neg_q, x_eq_mc);
+                    let neg_m = d.ineg(m);
+                    let xa_for_m = d.iadd(x_for_m, a);
+                    let neg_result = {
+                        let name = p.mod_eq_neg_modulus;
+                        d.const_app(name, &[m, xa_for_m, a, pos_proof])
+                    };
+                    // Rewrite `mul m (neg q)` into `mul (neg m) q` (defeq
+                    // `mul (negSucc k) q`, which is what the branch's own
+                    // goal literally names).
+                    let negm_q = d.imul(neg_m, q);
+                    let bridge = {
+                        let mul_neg_mq = d.const_app(p.mul_neg, &[m, q]);
+                        // mul m (neg q) = neg (mul m q)
+                        let mq = d.imul(m, q);
+                        let neg_mq = d.ineg(mq);
+                        let nm_step = local_neg_mul(d, m, q);
+                        // mul (neg m) q = neg (mul m q)
+                        let nm_step_rev = d.isymm(negm_q, neg_mq, nm_step);
+                        d.itrans(x_for_m, neg_mq, negm_q, mul_neg_mq, nm_step_rev)
+                    };
+                    let motive = |d: &mut IntDev<'_>, t: ExprId| {
+                        let shifted = d.iadd(t, a);
+                        super::modeq::imodeq(d, neg_m, shifted, a)
+                    };
+                    d.int_eq_rewrite(x_for_m, negm_q, bridge, neg_result, &motive)
+                }
+            }
+        });
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.add_modEq_left : ∀ n a, ModEq n (add n a) a` — Mathlib's
+/// `Int.add_modEq_left`. [`declare_modeq_add_mul_left`] at `q := 1`, rewritten
+/// `mul n 1 -> n` via `Int.mul_one`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_add_modeq_left(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.add_mod_eq_left, 2, &|d, v| {
+        let (n, a) = (v[0], v[1]);
+        let na = d.iadd(n, a);
+        let stmt = super::modeq::imodeq(d, n, na, a);
+
+        let one = d.ione();
+        let core = d.const_app(p.mod_eq_add_mul_left, &[n, a, one]);
+
+        let n1 = d.imul(n, one);
+        let n1_eq_n = d.const_app(p.mul_one, &[n]);
+        let motive = |d: &mut IntDev<'_>, t: ExprId| {
+            let shifted = d.iadd(t, a);
+            super::modeq::imodeq(d, n, shifted, a)
+        };
+        let proof = d.int_eq_rewrite(n1, n, n1_eq_n, core, &motive);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.add_modEq_right : ∀ n a, ModEq n (add a n) a` — Mathlib's
+/// `Int.add_modEq_right`. [`declare_add_modeq_left`] rewritten via
+/// `Int.add_comm`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_add_modeq_right(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.add_mod_eq_right, 2, &|d, v| {
+        let (n, a) = (v[0], v[1]);
+        let an = d.iadd(a, n);
+        let stmt = super::modeq::imodeq(d, n, an, a);
+
+        let na = d.iadd(n, a);
+        let left = d.const_app(p.add_mod_eq_left, &[n, a]);
+        let comm = d.const_app(p.add_comm, &[n, a]);
+        let motive = |d: &mut IntDev<'_>, t: ExprId| super::modeq::imodeq(d, n, t, a);
+        let proof = d.int_eq_rewrite(na, an, comm, left, &motive);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.mod_modEq : ∀ a n, ModEq n (emod a n) a` — Mathlib's `Int.mod_modEq`
+/// (`a % n ≡ a [ZMOD n]`). [`declare_modeq_add_mul_left`] at
+/// `a := emod a n`, `q := ediv a n`, rewritten via
+/// [`super::division::declare_ediv_add_emod`] and flipped with
+/// `Int.ModEq.symm`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_mod_modeq(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.mod_mod_eq, 2, &|d, v| {
+        let (a, n) = (v[0], v[1]);
+        let r = d.iemod(a, n);
+        let stmt = super::modeq::imodeq(d, n, r, a);
+
+        let q = d.iediv(a, n);
+        let core = d.const_app(p.mod_eq_add_mul_left, &[n, r, q]);
+        // core : ModEq n (add (mul n q) r) r
+
+        let nq = d.imul(n, q);
+        let sum = d.iadd(nq, r);
+        let ediv_add_emod = d.const_app(p.ediv_add_emod, &[a, n]);
+        // ediv_add_emod : Eq(sum, a)
+        let motive = |d: &mut IntDev<'_>, t: ExprId| super::modeq::imodeq(d, n, t, r);
+        let flipped = d.int_eq_rewrite(sum, a, ediv_add_emod, core, &motive);
+        // flipped : ModEq n a r
+
+        let symm_name = p.mod_eq_symm;
+        let proof = d.const_app(symm_name, &[n, a, r, flipped]);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.modulus_modEq_zero : ∀ n, ModEq n n zero` (`n ≡ 0 [ZMOD n]`).
+/// [`declare_modeq_add_mul_left`] at `a := 0`, `q := 1`, rewritten via
+/// `Int.mul_one`/`Int.add_zero`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_modulus_modeq_zero(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.modulus_mod_eq_zero, 1, &|d, v| {
+        let n = v[0];
+        let zero = d.izero();
+        let stmt = super::modeq::imodeq(d, n, n, zero);
+
+        let one = d.ione();
+        let core = d.const_app(p.mod_eq_add_mul_left, &[n, zero, one]);
+        // core : ModEq n (add (mul n one) zero) zero
+
+        let n1 = d.imul(n, one);
+        let n1_eq_n = d.const_app(p.mul_one, &[n]);
+        let shifted = d.iadd(n1, zero);
+        let n_zero = d.iadd(n, zero);
+        let step1 = d.icongr(n1, n, n1_eq_n, &|d, t| d.iadd(t, zero));
+
+        let n_zero_eq_n = d.const_app(p.add_zero, &[n]);
+        let (_, chained) = d.ichain(shifted, &[(n_zero, step1), (n, n_zero_eq_n)]);
+
+        let motive = |d: &mut IntDev<'_>, t: ExprId| super::modeq::imodeq(d, n, t, zero);
+        let proof = d.int_eq_rewrite(shifted, n, chained, core, &motive);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.modEq_sub : ∀ a b, ModEq (sub a b) a b` (`a ≡ b [ZMOD a - b]`).
+/// [`declare_modeq_add_mul_left`] at `n := sub a b`, `a := b`, `q := 1`,
+/// rewritten via `Int.mul_one` and [`super::modeq::cancel_neg_add`]
+/// (`(a-b)+b = a`).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_modeq_sub(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.mod_eq_sub, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let diff = d.isub(a, b);
+        let stmt = super::modeq::imodeq(d, diff, a, b);
+
+        let one = d.ione();
+        let core = d.const_app(p.mod_eq_add_mul_left, &[diff, b, one]);
+        // core : ModEq diff (add (mul diff one) b) b
+
+        let diff1 = d.imul(diff, one);
+        let diff1_eq_diff = d.const_app(p.mul_one, &[diff]);
+        let shifted = d.iadd(diff1, b);
+        let diff_b = d.iadd(diff, b);
+        let step1 = d.icongr(diff1, diff, diff1_eq_diff, &|d, t| d.iadd(t, b));
+
+        // (a-b)+b = a.
+        let diff_b_eq_a = super::modeq::cancel_neg_add(d, a, b);
+        let (_, chained) = d.ichain(shifted, &[(diff_b, step1), (a, diff_b_eq_a)]);
+
+        let motive = |d: &mut IntDev<'_>, t: ExprId| super::modeq::imodeq(d, diff, t, b);
+        let proof = d.int_eq_rewrite(shifted, a, chained, core, &motive);
+        (stmt, proof)
+    })?;
+    Ok(())
+}

@@ -182,7 +182,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 126] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 132] {
     [
         p.int_is_comm_ring,
         p.mul_eq_zero,
@@ -219,6 +219,12 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 126] {
         p.mod_eq_of_neg_modulus,
         p.mod_eq_neg_modulus,
         p.mod_eq_one,
+        p.mod_eq_add_mul_left,
+        p.add_mod_eq_left,
+        p.add_mod_eq_right,
+        p.mod_mod_eq,
+        p.modulus_mod_eq_zero,
+        p.mod_eq_sub,
         p.pow_zero,
         p.pow_succ,
         p.pow_add,
@@ -1783,6 +1789,31 @@ fn the_modeq_ledger_rows_are_stated_without_a_positivity_hypothesis() {
             "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int.ModEq x0 x1 x2) -> \
              Int.ModEq (Int.neg x0) x1 x2))))",
         ),
+        (
+            p.mod_eq_add_mul_left,
+            "((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> Int.ModEq x0 (Int.add (Int.mul x0 x2) \
+             x1) x1)))",
+        ),
+        (
+            p.add_mod_eq_left,
+            "((x0 : Int) -> ((x1 : Int) -> Int.ModEq x0 (Int.add x0 x1) x1))",
+        ),
+        (
+            p.add_mod_eq_right,
+            "((x0 : Int) -> ((x1 : Int) -> Int.ModEq x0 (Int.add x1 x0) x1))",
+        ),
+        (
+            p.mod_mod_eq,
+            "((x0 : Int) -> ((x1 : Int) -> Int.ModEq x1 (Int.emod x0 x1) x0))",
+        ),
+        (
+            p.modulus_mod_eq_zero,
+            "((x0 : Int) -> Int.ModEq x0 x0 Int.zero)",
+        ),
+        (
+            p.mod_eq_sub,
+            "((x0 : Int) -> ((x1 : Int) -> Int.ModEq (Int.sub x0 x1) x0 x1))",
+        ),
     ] {
         let got = rendered(&k, name);
         assert!(
@@ -1792,6 +1823,235 @@ fn the_modeq_ledger_rows_are_stated_without_a_positivity_hypothesis() {
             k.display_name(name)
         );
         assert_eq!(got, expected, "{}", k.display_name(name));
+    }
+}
+
+/// The unconditional `ModEq` shift family — [`declare_modeq_add_mul_left`]
+/// (`int_prelude/modeq_family.rs`) and its five corollaries — genuinely
+/// COMPUTES at concrete arguments, at all three regimes a modulus can be in:
+/// `n = 0` (the case that motivates unconditionality at all: `Int.emod _ 0`
+/// must genuinely reduce to its argument, not merely type-check), a positive
+/// `n`, and a NEGATIVE `n` (the leg every OTHER congruence law in
+/// `int_prelude/modeq.rs` cannot reach, since `Int.emod_lt_of_pos` has no
+/// proved analogue for a negative divisor).
+///
+/// Each case both type-checks the theorem applied to literal numerals AND
+/// confirms the two `emod` sides the `ModEq` unfolds to reduce to the SAME
+/// literal — the positive control every `def_eq` check in this module needs,
+/// per the repository's own "negative controls fail two ways" rule: two
+/// terms that are both merely STUCK would also satisfy `def_eq`.
+#[test]
+fn add_modeq_family_computes_at_concrete_values() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+
+    let emod_of = |k: &mut Kernel, x: crate::ExprId, n: crate::ExprId| {
+        let emod = k.const_(p.emod, vec![]);
+        let f = k.app(emod, x);
+        k.app(f, n)
+    };
+    let add_of = |k: &mut Kernel, x: crate::ExprId, y: crate::ExprId| {
+        let add = k.const_(p.add, vec![]);
+        let f = k.app(add, x);
+        k.app(f, y)
+    };
+
+    // (n, a) — n=0 is the degenerate identity case, n=5 is a genuine positive
+    // modulus, n=-4 is a genuine negative modulus (no positivity bound
+    // available anywhere in this development).
+    let cases = [(0i32, 3i32), (5, 3), (-4, 3)];
+
+    for (n_val, a_val) in cases {
+        // `Int.add_modEq_left n a : ModEq n (add n a) a`.
+        {
+            let n = numeral(&mut k, &p, n_val);
+            let a = numeral(&mut k, &p, a_val);
+            let theorem = k.const_(p.add_mod_eq_left, vec![]);
+            let applied = k.app(theorem, n);
+            let proof = k.app(applied, a);
+            k.infer(proof).unwrap_or_else(|e| {
+                panic!("add_modEq_left {n_val} {a_val} should type-check: {e:?}")
+            });
+
+            let n2 = numeral(&mut k, &p, n_val);
+            let a2 = numeral(&mut k, &p, a_val);
+            let n3 = numeral(&mut k, &p, n_val);
+            let na = add_of(&mut k, n2, a2);
+            let lhs = emod_of(&mut k, na, n3);
+            let a3 = numeral(&mut k, &p, a_val);
+            let n4 = numeral(&mut k, &p, n_val);
+            let rhs = emod_of(&mut k, a3, n4);
+            assert!(
+                k.def_eq(lhs, rhs),
+                "add_modEq_left {n_val} {a_val}: emod(n+a,n) must reduce to \
+                 the same value as emod(a,n)"
+            );
+            if n_val == 0 {
+                let a4 = numeral(&mut k, &p, a_val);
+                assert!(
+                    k.def_eq(rhs, a4),
+                    "add_modEq_left at n=0: emod(a,0) must genuinely reduce to a \
+                     (the zero convention this whole family relies on)"
+                );
+            }
+        }
+
+        // `Int.add_modEq_right n a : ModEq n (add a n) a`.
+        {
+            let n = numeral(&mut k, &p, n_val);
+            let a = numeral(&mut k, &p, a_val);
+            let theorem = k.const_(p.add_mod_eq_right, vec![]);
+            let applied = k.app(theorem, n);
+            let proof = k.app(applied, a);
+            k.infer(proof).unwrap_or_else(|e| {
+                panic!("add_modEq_right {n_val} {a_val} should type-check: {e:?}")
+            });
+
+            let n2 = numeral(&mut k, &p, n_val);
+            let a2 = numeral(&mut k, &p, a_val);
+            let n3 = numeral(&mut k, &p, n_val);
+            let an = add_of(&mut k, a2, n2);
+            let lhs = emod_of(&mut k, an, n3);
+            let a3 = numeral(&mut k, &p, a_val);
+            let n4 = numeral(&mut k, &p, n_val);
+            let rhs = emod_of(&mut k, a3, n4);
+            assert!(
+                k.def_eq(lhs, rhs),
+                "add_modEq_right {n_val} {a_val}: emod(a+n,n) must reduce to \
+                 the same value as emod(a,n)"
+            );
+        }
+
+        // `Int.modulus_modEq_zero n : ModEq n n zero`.
+        {
+            let n = numeral(&mut k, &p, n_val);
+            let theorem = k.const_(p.modulus_mod_eq_zero, vec![]);
+            let proof = k.app(theorem, n);
+            k.infer(proof)
+                .unwrap_or_else(|e| panic!("modulus_modEq_zero {n_val} should type-check: {e:?}"));
+
+            let n2 = numeral(&mut k, &p, n_val);
+            let zero = numeral(&mut k, &p, 0);
+            let n3 = numeral(&mut k, &p, n_val);
+            let lhs = emod_of(&mut k, n2, n3);
+            let rhs = emod_of(&mut k, zero, n3);
+            assert!(
+                k.def_eq(lhs, rhs),
+                "modulus_modEq_zero {n_val}: emod(n,n) must reduce to the \
+                 same value as emod(0,n)"
+            );
+        }
+
+        // `Int.mod_modEq a n : ModEq n (emod a n) a`, with a genuine
+        // multi-digit dividend so `Int.ediv`/`Int.emod` do real work.
+        {
+            let dividend = 17i32;
+            let a = numeral(&mut k, &p, dividend);
+            let n = numeral(&mut k, &p, n_val);
+            let theorem = k.const_(p.mod_mod_eq, vec![]);
+            let applied = k.app(theorem, a);
+            let proof = k.app(applied, n);
+            k.infer(proof).unwrap_or_else(|e| {
+                panic!("mod_modEq {dividend} {n_val} should type-check: {e:?}")
+            });
+
+            let a2 = numeral(&mut k, &p, dividend);
+            let n2 = numeral(&mut k, &p, n_val);
+            let r = emod_of(&mut k, a2, n2);
+            let n3 = numeral(&mut k, &p, n_val);
+            let lhs = emod_of(&mut k, r, n3);
+            let a3 = numeral(&mut k, &p, dividend);
+            let n4 = numeral(&mut k, &p, n_val);
+            let rhs = emod_of(&mut k, a3, n4);
+            assert!(
+                k.def_eq(lhs, rhs),
+                "mod_modEq {dividend} {n_val}: emod(emod(a,n),n) must reduce \
+                 to the same value as emod(a,n)"
+            );
+            if n_val == 0 {
+                let a4 = numeral(&mut k, &p, dividend);
+                assert!(
+                    k.def_eq(rhs, a4),
+                    "mod_modEq at n=0: emod(a,0) must genuinely reduce to a"
+                );
+            }
+        }
+    }
+
+    // `Int.modEq_sub a b : ModEq (sub a b) a b`, at a genuine pair where
+    // `a - b` is a real, non-trivial modulus (not one of the three regimes
+    // above, since here the MODULUS itself is derived from `a`/`b`, not
+    // handed in directly).
+    {
+        let a = numeral(&mut k, &p, 17);
+        let b = numeral(&mut k, &p, 5);
+        let theorem = k.const_(p.mod_eq_sub, vec![]);
+        let applied = k.app(theorem, a);
+        let proof = k.app(applied, b);
+        k.infer(proof)
+            .unwrap_or_else(|e| panic!("modEq_sub 17 5 should type-check: {e:?}"));
+
+        let a2 = numeral(&mut k, &p, 17);
+        let b2 = numeral(&mut k, &p, 5);
+        let sub = k.const_(p.sub, vec![]);
+        let sub_f = k.app(sub, a2);
+        let diff = k.app(sub_f, b2);
+        let a3 = numeral(&mut k, &p, 17);
+        let lhs = emod_of(&mut k, a3, diff);
+        let b3 = numeral(&mut k, &p, 5);
+        let diff2 = {
+            let a4 = numeral(&mut k, &p, 17);
+            let b4 = numeral(&mut k, &p, 5);
+            let sub2 = k.const_(p.sub, vec![]);
+            let sub2_f = k.app(sub2, a4);
+            k.app(sub2_f, b4)
+        };
+        let rhs = emod_of(&mut k, b3, diff2);
+        assert!(
+            k.def_eq(lhs, rhs),
+            "modEq_sub 17 5: emod(a,a-b) must reduce to the same value as \
+             emod(b,a-b)"
+        );
+    }
+
+    // `Int.modEq_add_mul_left n a q` at a genuine `q` other than `±1`, so the
+    // general multiplier is actually exercised (not just the specializations
+    // above, all of which use `q := 1`).
+    {
+        let n = numeral(&mut k, &p, 5);
+        let a = numeral(&mut k, &p, 2);
+        let q = numeral(&mut k, &p, 3);
+        let theorem = k.const_(p.mod_eq_add_mul_left, vec![]);
+        let applied = k.app(theorem, n);
+        let applied = k.app(applied, a);
+        let proof = k.app(applied, q);
+        k.infer(proof)
+            .unwrap_or_else(|e| panic!("modEq_add_mul_left 5 2 3 should type-check: {e:?}"));
+
+        let n2 = numeral(&mut k, &p, 5);
+        let a2 = numeral(&mut k, &p, 2);
+        let q2 = numeral(&mut k, &p, 3);
+        let mul = k.const_(p.mul, vec![]);
+        let mul_f = k.app(mul, n2);
+        let nq = k.app(mul_f, q2);
+        let shifted = add_of(&mut k, nq, a2);
+        let n3 = numeral(&mut k, &p, 5);
+        let lhs = emod_of(&mut k, shifted, n3);
+        let a3 = numeral(&mut k, &p, 2);
+        let n4 = numeral(&mut k, &p, 5);
+        let rhs = emod_of(&mut k, a3, n4);
+        assert!(
+            k.def_eq(lhs, rhs),
+            "modEq_add_mul_left 5 2 3: emod(n*q+a,n) must reduce to the \
+             same value as emod(a,n)"
+        );
+        // 5*3+2 = 17, 17 emod 5 = 2, and 2 emod 5 = 2 -- confirm the shared
+        // value is genuinely `2`, not two independently-stuck terms.
+        let two = numeral(&mut k, &p, 2);
+        assert!(
+            k.def_eq(rhs, two),
+            "modEq_add_mul_left 5 2 3: emod(a,n) must genuinely reduce to 2"
+        );
     }
 }
 

@@ -8,13 +8,53 @@
     "statement": "∀ {n a : ℤ}, n + a ≡ a [ZMOD n]",
     "fragment": "Int"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "statement-Int.add_modEq_left-pin",
+      "kind": "kernel-term",
+      "supports": "`Int.add_modEq_left` is admitted with EXACTLY the stated shape, no `0 < n` (or any other) positivity premise anywhere in its type -- pinned verbatim: `((x0 : Int) -> ((x1 : Int) -> Int.ModEq x0 (Int.add x0 x1) x1))`. Mutation-verified in an isolated snapshot (scripts/lane-snapshot.sh, never the shared checkout): swapping the argument order inside the pinned string (making it read as a different member of this family) kills exactly this one test, 33 passed / 1 failed, and no other.",
+      "check_status": "checked",
+      "checkers": [
+        "int_prelude_tests::the_modeq_ledger_rows_are_stated_without_a_positivity_hypothesis (asserts the KERNEL-RENDERED type verbatim with assert_eq!, and separately asserts the rendered type contains no `Int.lt Int.zero` premise)",
+        "axeyum-lean-kernel::Kernel::add_declaration (re-typechecks the proof term against the stated type on every build)"
+      ],
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib the_modeq_ledger_rows_are_stated_without_a_positivity_hypothesis 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/modeq_family.rs",
+      "notes": "The statement pin exists because the footprint check alone cannot carry this claim: a theorem stating something WEAKER (carrying the `0 < n` hypothesis every OTHER congruence lemma in modeq.rs carries) would have the same empty footprint and pass the footprint sweep unchanged."
+    },
+    {
+      "id": "footprint-Int.add_modEq_left",
+      "kind": "kernel-term",
+      "supports": "axiom_footprint: [] for `Int.add_modEq_left` and for every lemma it is built from (Int.modEq_add_mul_left, Int.mod_eq_iff_dvd, Int.mod_eq_neg_modulus, Int.emod_neg, Int.ediv_add_emod -- all already established). The `integer` prelude's trusted surface stays 0: no Axiom, no Opaque, no Quotient.",
+      "check_status": "checked",
+      "checkers": [
+        "int_prelude_tests::derived_laws_have_no_axiom_footprint (reads Kernel::axiom_footprint for each of the 132 derived laws, this name included, and requires the empty set)",
+        "int_prelude_tests::every_int_declaration_is_checked_and_axiom_free (derives coverage from kernel.environment() directly, not from the inventory list -- an `Int`-namespace declaration missing from the inventory fails this test by name)",
+        "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks each proof term against its stated type at build time)"
+      ],
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib int_prelude::int_prelude_tests::derived_laws_have_no_axiom_footprint -- --exact 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs",
+      "notes": "Counting Declaration::Axiom alone would not suffice in this kernel (Opaque has no proof body and Quotient admits Quot.sound); axiom_footprint covers all three."
+    },
+    {
+      "id": "concrete-Int.add_modEq_left",
+      "kind": "kernel-term",
+      "supports": "`Int.add_modEq_left` applied to literal numerals genuinely COMPUTES, at all three regimes a modulus can be in: n = 0 (the case that motivates unconditionality at all -- `Int.emod _ 0` must genuinely reduce to its argument, not merely type-check), a positive n (n = 5), and a NEGATIVE n (n = -4, the leg no other congruence law in int_prelude/modeq.rs can reach, since Int.emod_lt_of_pos has no proved analogue for a negative divisor). At n=0, a=3: emod(0+3,0) and emod(3,0) both genuinely reduce to the literal 3.",
+      "check_status": "checked",
+      "checkers": [
+        "int_prelude_tests::add_modeq_family_computes_at_concrete_values (applies the theorem to literal Int numerals, type-checks the result via Kernel::infer, and confirms via Kernel::def_eq that both `emod` sides of the ModEq reduce to the SAME literal -- not merely that they are both stuck)"
+      ],
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib add_modeq_family_computes_at_concrete_values 2>&1 | grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs",
+      "notes": "Mutation-verified in an isolated snapshot: replacing the expected reduced literal with a wrong one (2 -> 3 in the modEq_add_mul_left case) kills exactly this one test, 33 passed / 1 failed, confirming the check is not a vacuous type-check-only comparison."
+    }
+  ],
   "provenance": {
     "date": "2026-08-18",
-    "established_by": "not established in this ledger",
+    "established_by": "lane int-modeq-kernel (2026-08-27): the ORIGINAL flywheel batch (docs/autogenesis/292-flywheel-2-batch-contract-dispatch.md) declined this fact via producer-contract-int-modeq-family-v1 with DeclineReason::TerminalNotClosed -- the combinator-over-hypothesis producer has no congruence step for an unconditional identity. This fact was instead closed by a DIFFERENT route: a new general kernel theorem, `Int.modEq_add_mul_left : forall n a q, ModEq n (add (mul n q) a) a`, proved unconditionally in n by case-splitting on n's Int.rec shape (n=0 trivial via the emod-at-zero identity; n=ofNat(succ k) via the existing Int.modEq_iff_dvd bridge at a concrete positive modulus; n=negSucc k reduced to the positive case via the already-proved Int.modEq_neg_modulus/Int.emod_neg pair) -- never touching the producer, the import pipeline, or any decline artifact's own guard. The decline record for this fact remains valid and is amended, not deleted (docs/autogenesis/291's convention): it correctly describes what propose_modeq_family cannot do; it says nothing about what a different route can.",
     "source": "statement-only extraction of `Int.add_modEq_left` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -26,5 +66,7 @@
       }
     ]
   },
-  "notes": "2026-08-27, kernel-lane attempt via producer-contract-int-modeq-family-v1 (artifacts/autogenesis/producer-contracts/int-modeq-family-v1.json), lane flywheel-1: real s5 export succeeded cleanly (Mathlib v4.30.0 c5ea00351c28e24afc9f0f84379aa41082b1188f + lean4export 3.1.0 a3e35a584f59b390667db7269cd37fca8575e4bf; 208 declarations independently admitted, 0 axioms, target_content_sha256 3f26ee17f803fe3f9f9ff99708910a31c43981072fc4200088b6cf7ef9a2c9e7, goal_sha256 7ace82a88ff8785bea25c9f415790982d38bb119abfa3e3adbbb2fce1cbfa40a) -- the Nat.div_rec_lemma cascade documented in docs/autogenesis/241/242 is confirmed still bridged for this target. The shape-generic Eq/Iff producer (crates/axeyum-lean-import/src/producers/modeq_family.rs::propose_modeq_family) then DECLINED with DeclineReason::TerminalNotClosed: this goal has no hypothesis to run symm/trans over (it is an unconditional relation, unlike refl/symm/trans/comm which already reduce this family's four other members), and closing it needs a real modular-arithmetic identity, not a delta-unfold-then-reflexivity step -- consistent with Mathlib's own proof being `:= by simp`, not `rfl`. Separately: this is NOT already provable from this kernel's existing Int.ModEq.add_left/add_right (int_prelude/modeq.rs) -- both require an explicit `0 < n` hypothesis via modEq_iff_dvd, matching the same restriction F-ml430-int-modeq-one-01d9de39.json and F-ml430-int-modeq-neg-d6ff57b6.json already recorded for their own rows; this fact's statement is unconditional in n (true at n <= 0 too), so it is strictly stronger than what modEq_iff_dvd currently supports, and deriving it would need the same still-missing natAbs-based generalization of emod_lt_of_pos those two notes name. No fabricated admission follows from a shape match: epistemic_status stays open, no evidence attached, no operation registered. Full account: docs/autogenesis/290-int-add-modeq-left-contract-dispatch-decline.md; decline record artifacts/autogenesis/mathlib-int-add-modeq-left-decline-v1.json. Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "2026-08-27, kernel-lane attempt via producer-contract-int-modeq-family-v1 (artifacts/autogenesis/producer-contracts/int-modeq-family-v1.json), lane flywheel-1: real s5 export succeeded cleanly (Mathlib v4.30.0 c5ea00351c28e24afc9f0f84379aa41082b1188f + lean4export 3.1.0 a3e35a584f59b390667db7269cd37fca8575e4bf; 208 declarations independently admitted, 0 axioms, target_content_sha256 3f26ee17f803fe3f9f9ff99708910a31c43981072fc4200088b6cf7ef9a2c9e7, goal_sha256 7ace82a88ff8785bea25c9f415790982d38bb119abfa3e3adbbb2fce1cbfa40a) -- the Nat.div_rec_lemma cascade documented in docs/autogenesis/241/242 is confirmed still bridged for this target. The shape-generic Eq/Iff producer (crates/axeyum-lean-import/src/producers/modeq_family.rs::propose_modeq_family) then DECLINED with DeclineReason::TerminalNotClosed: this goal has no hypothesis to run symm/trans over (it is an unconditional relation, unlike refl/symm/trans/comm which already reduce this family's four other members), and closing it needs a real modular-arithmetic identity, not a delta-unfold-then-reflexivity step -- consistent with Mathlib's own proof being `:= by simp`, not `rfl`. Separately: this is NOT already provable from this kernel's existing Int.ModEq.add_left/add_right (int_prelude/modeq.rs) -- both require an explicit `0 < n` hypothesis via modEq_iff_dvd, matching the same restriction F-ml430-int-modeq-one-01d9de39.json and F-ml430-int-modeq-neg-d6ff57b6.json already recorded for their own rows; this fact's statement is unconditional in n (true at n <= 0 too), so it is strictly stronger than what modEq_iff_dvd currently supports, and deriving it would need the same still-missing natAbs-based generalization of emod_lt_of_pos those two notes name. No fabricated admission follows from a shape match: epistemic_status stays open, no evidence attached, no operation registered. Full account: docs/autogenesis/290-int-add-modeq-left-contract-dispatch-decline.md; decline record artifacts/autogenesis/mathlib-int-add-modeq-left-decline-v1.json. Closed by lane int-modeq-kernel, 2026-08-27, via `Int.add_modEq_left` (crates/axeyum-lean-kernel/src/int_prelude/modeq_family.rs), a corollary of the new unconditional `Int.modEq_add_mul_left` (`((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> Int.ModEq x0 (Int.add (Int.mul x0 x2) x1) x1)))`). Full account: docs/autogenesis/293-int-modeq-unconditional-shift-family.md; amended decline record noted there. Established in Axeyum, not merely matched against Mathlib's prior statement. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
