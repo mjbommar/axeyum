@@ -463,69 +463,181 @@ pub fn check_cube_refutation_reader_tree<R: BufRead>(
     base: &CnfFormula,
     tree: CubeRefutationReaderTree<R>,
 ) -> Result<(), CubeTreeCheckError> {
-    fn visit<R: BufRead>(
-        formula: &CnfFormula,
-        tree: CubeRefutationReaderTree<R>,
-        path: &mut Vec<usize>,
-    ) -> Result<(), CubeTreeCheckError> {
-        match tree {
-            CubeRefutationReaderTree::Leaf(proof) => {
-                match check_drat_backward_reader(formula, proof) {
-                    Ok(true) => Ok(()),
-                    Ok(false) => Err(CubeTreeCheckError::LeafIncomplete { path: path.clone() }),
-                    Err(source) => Err(CubeTreeCheckError::LeafInvalid {
-                        path: path.clone(),
-                        source,
-                    }),
-                }
+    check_cube_refutation_reader_tree_at_path(base, tree, &mut Vec::new())
+}
+
+fn check_cube_refutation_reader_tree_at_path<R: BufRead>(
+    formula: &CnfFormula,
+    tree: CubeRefutationReaderTree<R>,
+    path: &mut Vec<usize>,
+) -> Result<(), CubeTreeCheckError> {
+    match tree {
+        CubeRefutationReaderTree::Leaf(proof) => match check_drat_backward_reader(formula, proof) {
+            Ok(true) => Ok(()),
+            Ok(false) => Err(CubeTreeCheckError::LeafIncomplete { path: path.clone() }),
+            Err(source) => Err(CubeTreeCheckError::LeafInvalid {
+                path: path.clone(),
+                source,
+            }),
+        },
+        CubeRefutationReaderTree::Split {
+            cubes,
+            children,
+            covering_proof,
+        } => {
+            if cubes.is_empty() {
+                return Err(CubeTreeCheckError::EmptyCubeSet { path: path.clone() });
             }
-            CubeRefutationReaderTree::Split {
-                cubes,
-                children,
-                covering_proof,
-            } => {
-                if cubes.is_empty() {
-                    return Err(CubeTreeCheckError::EmptyCubeSet { path: path.clone() });
-                }
-                if cubes.len() != children.len() {
-                    return Err(CubeTreeCheckError::ChildCountMismatch {
-                        path: path.clone(),
-                        cubes: cubes.len(),
-                        children: children.len(),
-                    });
-                }
-                for (index, (cube, child)) in cubes.iter().zip(children).enumerate() {
-                    path.push(index);
-                    let child_formula = augmented_formula(formula, cube).map_err(|source| {
-                        CubeTreeCheckError::InvalidCube {
-                            path: path.clone(),
-                            source,
-                        }
-                    })?;
-                    visit(&child_formula, child, path)?;
-                    path.pop();
-                }
-                let covering = covering_formula(formula, &cubes).map_err(|source| {
-                    CubeTreeCheckError::CoveringFormulaInvalid {
+            if cubes.len() != children.len() {
+                return Err(CubeTreeCheckError::ChildCountMismatch {
+                    path: path.clone(),
+                    cubes: cubes.len(),
+                    children: children.len(),
+                });
+            }
+            for (index, (cube, child)) in cubes.iter().zip(children).enumerate() {
+                path.push(index);
+                let child_formula = augmented_formula(formula, cube).map_err(|source| {
+                    CubeTreeCheckError::InvalidCube {
                         path: path.clone(),
                         source,
                     }
                 })?;
-                match check_drat_backward_reader(&covering, covering_proof) {
-                    Ok(true) => Ok(()),
-                    Ok(false) => {
-                        Err(CubeTreeCheckError::CoveringProofIncomplete { path: path.clone() })
-                    }
-                    Err(source) => Err(CubeTreeCheckError::CoveringProofInvalid {
-                        path: path.clone(),
-                        source,
-                    }),
+                check_cube_refutation_reader_tree_at_path(&child_formula, child, path)?;
+                path.pop();
+            }
+            let covering = covering_formula(formula, &cubes).map_err(|source| {
+                CubeTreeCheckError::CoveringFormulaInvalid {
+                    path: path.clone(),
+                    source,
                 }
+            })?;
+            match check_drat_backward_reader(&covering, covering_proof) {
+                Ok(true) => Ok(()),
+                Ok(false) => {
+                    Err(CubeTreeCheckError::CoveringProofIncomplete { path: path.clone() })
+                }
+                Err(source) => Err(CubeTreeCheckError::CoveringProofInvalid {
+                    path: path.clone(),
+                    source,
+                }),
             }
         }
     }
+}
 
-    visit(base, tree, &mut Vec::new())
+/// Checks the root branches of a recursive cube refutation concurrently.
+///
+/// The root split's children are independent formulas, so a bounded worker
+/// pool may check them without changing proof semantics. Every worker calls
+/// the same recursive checker as [`check_cube_refutation_reader_tree`], and
+/// the root covering proof is checked only after every child succeeds. Errors
+/// are returned in root-child order, independent of thread scheduling.
+///
+/// `workers == 1` is exactly the sequential route. Larger values are capped at
+/// the root child count. Only one split is parallelized: nested trees remain
+/// sequential, bounding simultaneous formula copies and DRAT-checker memory by
+/// `workers`.
+///
+/// # Panics
+///
+/// Panics if `workers` is zero. A proof-reader panic is resumed in the caller.
+///
+/// # Errors
+///
+/// Returns the same structural and proof errors as
+/// [`check_cube_refutation_reader_tree`].
+#[cfg(not(target_arch = "wasm32"))]
+pub fn check_cube_refutation_reader_tree_parallel<R: BufRead + Send>(
+    base: &CnfFormula,
+    tree: CubeRefutationReaderTree<R>,
+    workers: usize,
+) -> Result<(), CubeTreeCheckError> {
+    assert!(workers > 0, "cube-tree worker count must be positive");
+    if workers == 1 {
+        return check_cube_refutation_reader_tree(base, tree);
+    }
+    let CubeRefutationReaderTree::Split {
+        cubes,
+        children,
+        covering_proof,
+    } = tree
+    else {
+        return check_cube_refutation_reader_tree(base, tree);
+    };
+    if cubes.is_empty() {
+        return Err(CubeTreeCheckError::EmptyCubeSet { path: Vec::new() });
+    }
+    if cubes.len() != children.len() {
+        return Err(CubeTreeCheckError::ChildCountMismatch {
+            path: Vec::new(),
+            cubes: cubes.len(),
+            children: children.len(),
+        });
+    }
+
+    let mut jobs = std::collections::VecDeque::with_capacity(children.len());
+    for (index, (cube, child)) in cubes.iter().zip(children).enumerate() {
+        let child_formula =
+            augmented_formula(base, cube).map_err(|source| CubeTreeCheckError::InvalidCube {
+                path: vec![index],
+                source,
+            })?;
+        jobs.push_back((index, child_formula, child));
+    }
+    let jobs = std::sync::Mutex::new(jobs);
+    let worker_count = workers.min(cubes.len());
+    let mut results = std::thread::scope(|scope| {
+        let mut handles = Vec::with_capacity(worker_count);
+        for _ in 0..worker_count {
+            let jobs = &jobs;
+            handles.push(scope.spawn(move || {
+                let mut local = Vec::new();
+                loop {
+                    let job = jobs
+                        .lock()
+                        .expect("cube-tree job mutex poisoned")
+                        .pop_front();
+                    let Some((index, formula, child)) = job else {
+                        break;
+                    };
+                    let mut path = vec![index];
+                    let result =
+                        check_cube_refutation_reader_tree_at_path(&formula, child, &mut path);
+                    local.push((index, result));
+                }
+                local
+            }));
+        }
+        let mut results = Vec::with_capacity(cubes.len());
+        for handle in handles {
+            results.extend(
+                handle
+                    .join()
+                    .unwrap_or_else(|panic| std::panic::resume_unwind(panic)),
+            );
+        }
+        results
+    });
+    results.sort_by_key(|(index, _)| *index);
+    for (_, result) in results {
+        result?;
+    }
+
+    let covering = covering_formula(base, &cubes).map_err(|source| {
+        CubeTreeCheckError::CoveringFormulaInvalid {
+            path: Vec::new(),
+            source,
+        }
+    })?;
+    match check_drat_backward_reader(&covering, covering_proof) {
+        Ok(true) => Ok(()),
+        Ok(false) => Err(CubeTreeCheckError::CoveringProofIncomplete { path: Vec::new() }),
+        Err(source) => Err(CubeTreeCheckError::CoveringProofInvalid {
+            path: Vec::new(),
+            source,
+        }),
+    }
 }
 
 /// Why [`boolean_product_cubes`] declined to generate a cube set.
@@ -916,6 +1028,66 @@ mod tests {
         };
         check_cube_refutation_reader_tree(&base, tree)
             .expect("recursive composition must check from the root formula");
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn parallel_recursive_checker_accepts_the_same_composition() {
+        let (base, s0, s1, _x) = selector_gated_unsat();
+        let root_cubes = boolean_product_cubes(&[s0]).unwrap();
+        let (root_outcome, _) = certify_by_cubes(&base, root_cubes, None, 10_000, 10_000);
+        let CubeCertifyOutcome::Unsat(root) = root_outcome else {
+            panic!("expected root refutation");
+        };
+        let first_formula = augmented_formula(&base, &root.cubes[0]).unwrap();
+        let nested_cubes = boolean_product_cubes(&[s1]).unwrap();
+        let (nested_outcome, _) =
+            certify_by_cubes(&first_formula, nested_cubes, None, 10_000, 10_000);
+        let CubeCertifyOutcome::Unsat(nested) = nested_outcome else {
+            panic!("expected nested refutation");
+        };
+        let nested_children = nested
+            .cube_proofs
+            .iter()
+            .map(|proof| {
+                CubeRefutationReaderTree::Leaf(Cursor::new(write_drat(proof).into_bytes()))
+            })
+            .collect();
+        let tree = CubeRefutationReaderTree::Split {
+            cubes: root.cubes.clone(),
+            children: vec![
+                CubeRefutationReaderTree::Split {
+                    cubes: nested.cubes,
+                    children: nested_children,
+                    covering_proof: Cursor::new(write_drat(&nested.covering_proof).into_bytes()),
+                },
+                CubeRefutationReaderTree::Leaf(Cursor::new(
+                    write_drat(&root.cube_proofs[1]).into_bytes(),
+                )),
+            ],
+            covering_proof: Cursor::new(write_drat(&root.covering_proof).into_bytes()),
+        };
+        check_cube_refutation_reader_tree_parallel(&base, tree, 2)
+            .expect("parallel recursive composition must check from the root formula");
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn parallel_recursive_checker_reports_the_lowest_failed_path() {
+        let (base, s0, _s1, _x) = selector_gated_unsat();
+        let cubes = boolean_product_cubes(&[s0]).unwrap();
+        let tree = CubeRefutationReaderTree::Split {
+            cubes,
+            children: vec![
+                CubeRefutationReaderTree::Leaf(Cursor::new(Vec::new())),
+                CubeRefutationReaderTree::Leaf(Cursor::new(Vec::new())),
+            ],
+            covering_proof: Cursor::new(Vec::new()),
+        };
+        assert!(matches!(
+            check_cube_refutation_reader_tree_parallel(&base, tree, 2),
+            Err(CubeTreeCheckError::LeafIncomplete { path }) if path == vec![0]
+        ));
     }
 
     #[test]

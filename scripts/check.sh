@@ -558,6 +558,7 @@ step autogenesis-result-tests python3 -m unittest scripts.tests.test_check_autog
 step autogenesis-authoritative-fact-tests python3 -m unittest scripts.tests.test_run_autogenesis_authoritative_fact
 step autogenesis-binomial-arrow-tests uv run --no-sync python -m unittest scripts.tests.test_gen_autogenesis_binomial_arrow_capability
 step autogenesis-binomial-arrow-capability uv run --no-sync python scripts/gen-autogenesis-binomial-arrow-capability.py --check
+step autogenesis-binomial-connective-ranking uv run --no-sync python scripts/gen-autogenesis-binomial-connective-ranking.py --check
 step autogenesis-binomial-arrow-measurement uv run --no-sync python scripts/check-autogenesis-binomial-arrow-measurement.py
 step autogenesis-next-reusable-family-tests python3 -m unittest scripts.tests.test_gen_autogenesis_next_reusable_family_queue
 step autogenesis-next-reusable-family python3 scripts/gen-autogenesis-next-reusable-family-queue.py --check

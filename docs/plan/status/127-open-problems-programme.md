@@ -129,6 +129,14 @@ exact driver is live at 358 and advances only after both replay routes. A post-r
 refresh through 2026-08-26 found no five-colour bound at least 357 for this equation, but that
 negative retrieval is not proof of priority.
 
+**Rado claim ledger synchronized, 2026-08-26.** The canonical claim now supersedes its stale
+350-point title and frontier row with the checked 357-point witness. The retained artifact has
+SHA-256 `545f4f7c8704fff31da07a2a2f946eb70ac1787bb3d4c49f4ac3e2d15d20ee1e`;
+the independent claim checker re-enumerated all defining triples for the 357-, 350-, and
+319-point witnesses and reported zero errors. Structural validation reports 104 claims / zero
+errors, and the generated dashboard records 268 evidence rows. The claim remains `open`: this
+is a stronger lower bound, not an UNSAT certificate for 358 or an exact Rado number.
+
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
 external-certificate replay runner for all five packages.  It validates checker and artifact
 bytes before execution, hard-kills a timed-out process session, requires an observable finding
@@ -266,6 +274,16 @@ passes at 1,454,994,044 proof bytes, one split / 32 leaves / 33 nodes, 5:04.57 w
 235,748 KiB peak RSS. Its four authority hashes are retained in the sibling package. Its
 parent remained six terminal leaves short at the same audit, so neither the parent nor any
 higher result is yet claimed.
+
+**Bounded-parallel recursive proof replay, 2026-08-26.** ADR-0590 addresses the measured
+single-core checker bottleneck without multiplying solver processes. The native API schedules
+only independent root children through an explicit worker bound, reuses the unchanged recursive
+formula reconstruction and backward-DRAT checker, orders failures by child index, and checks the
+root cover only after all children pass. Two positive/fail-closed controls and all-target Clippy
+pass. Four workers independently rechecked the retained 1,281,549,482-byte / 32-leaf sibling in
+67.53 wall seconds at 351% CPU and 713,172 KiB peak RSS. Its historical sequential 13:51.34 run
+had uncontrolled cache and contention differences, so no speedup ratio is claimed. The two live
+full-root checks were not restarted; their silence remains uncredited and `[7,8]` is unchanged.
 
 **Regression replay gate made load-stable, 2026-08-26.** The pre-push sweep failed twice on
 different corpus rows because it ran `solve_smtlib` and its direct

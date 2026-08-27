@@ -708,6 +708,7 @@ autogenesis-next-reusable-family:
 autogenesis-binomial-arrow:
     uv run --no-sync python -m unittest scripts.tests.test_gen_autogenesis_binomial_arrow_capability
     uv run --no-sync python scripts/gen-autogenesis-binomial-arrow-capability.py --check
+    uv run --no-sync python scripts/gen-autogenesis-binomial-connective-ranking.py --check
     uv run --no-sync python scripts/check-autogenesis-binomial-arrow-measurement.py
 
 autogenesis-producer-evaluation-protocol:

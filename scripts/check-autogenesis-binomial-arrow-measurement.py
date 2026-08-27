@@ -12,6 +12,12 @@ ROOT = Path(__file__).resolve().parents[1]
 RESULT = ROOT / "artifacts/autogenesis/binomial-arrow-retrieved-induction-census-v1.json"
 CAPABILITY = ROOT / "artifacts/autogenesis/binomial-arrow-export-capability-v1.json"
 NURSERY = ROOT / "artifacts/autogenesis/nursery-v1.json"
+SYMMETRY_FACT = "F:ml430-nat-choose-symm-of-eq-add-9b5f9a20"
+EXPECTED_DEPENDENCIES = [
+    "Nat.add_sub_cancel_left",
+    "Nat.choose_symm",
+    "Nat.le_add_right",
+]
 
 
 def digest(path: Path) -> str:
@@ -74,6 +80,11 @@ def check(result: dict[str, Any], capability: dict[str, Any], root: Path = ROOT)
         ranking_path.is_file() and digest(ranking_path) == ranking.get("sha256"),
         "candidate ranking is absent or changed",
     )
+    ranking_payload = json.loads(ranking_path.read_text())
+    require(
+        ranking_payload.get("kind") == "axeyum-binomial-arrow-connective-ranking",
+        "measurement is not bound to the additive connective ranking",
+    )
     require(
         source.get("nursery_sha256") == digest(root / "artifacts/autogenesis/nursery-v1.json"),
         "nursery identity changed",
@@ -100,26 +111,35 @@ def check(result: dict[str, Any], capability: dict[str, Any], root: Path = ROOT)
             f"{fact_id} capsule size changed",
         )
         require(row.get("evaluation_class") == "positive-target", f"{fact_id} class changed")
-        require(row.get("result") == "declined", f"{fact_id} was not an honest decline")
-        reason = row.get("reason_kind")
-        require(
-            reason in {"TerminalNotDefEqNoRewrite", "NotEqualityGoal"},
-            f"{fact_id} decline reason changed",
-        )
-        reasons[reason] = reasons.get(reason, 0) + 1
+        if fact_id == SYMMETRY_FACT:
+            require(row.get("result") == "accepted", "symmetry composition regressed")
+            require(row.get("axiom_footprint") == [], "accepted symmetry proof is not axiom-free")
+            require(
+                row.get("theorem_dependencies") == EXPECTED_DEPENDENCIES,
+                "accepted symmetry proof dependency spine changed",
+            )
+            require(row.get("inductions_used") == 0, "symmetry proof unexpectedly uses induction")
+        else:
+            require(row.get("result") == "declined", f"{fact_id} was not an honest decline")
+            reason = row.get("reason_kind")
+            require(
+                reason in {"TerminalNotDefEqNoRewrite", "NotEqualityGoal"},
+                f"{fact_id} decline reason changed",
+            )
+            reasons[reason] = reasons.get(reason, 0) + 1
         require(
             isinstance(row.get("candidate_transport"), list),
             f"{fact_id} has no transport observations",
         )
     require(
-        reasons == {"TerminalNotDefEqNoRewrite": 2, "NotEqualityGoal": 1},
+        reasons == {"TerminalNotDefEqNoRewrite": 1, "NotEqualityGoal": 1},
         "decline decomposition changed",
     )
 
     census = result.get("census", {})
     require(census.get("population") == 3, "census population changed")
-    require(census.get("accepted") == 0, "accepted count changed without regeneration")
-    require(census.get("declined") == 3, "declined count changed")
+    require(census.get("accepted") == 1, "accepted count changed")
+    require(census.get("declined") == 2, "declined count changed")
     require(census.get("import_rejected") == 0, "arrow imports regressed")
     require(census.get("decline_reasons") == reasons, "census reasons disagree with outcomes")
 
@@ -133,8 +153,8 @@ def main() -> int:
         print(f"BINOMIAL_ARROW_MEASUREMENT_ERROR|{error}")
         return 1
     print(
-        "BINOMIAL_ARROW_MEASUREMENT|population=3|imports=3|accepted=0|"
-        "missing_composition=2|not_equality=1"
+        "BINOMIAL_ARROW_MEASUREMENT|population=3|imports=3|accepted=1|"
+        "missing_composition=1|not_equality=1"
     )
     return 0
 

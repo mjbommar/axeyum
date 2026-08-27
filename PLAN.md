@@ -117,6 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-26 | `f1fb56564` | Compose a held-out-safe three-lemma retrieval spine and admit Mathlib's real `Nat.choose_symm_of_eq_add` axiom-free, moving natural binomial from one to two accepted siblings. |
 | 2026-08-26 | `dc1a92029` | Restore the complete producer-search checkpoint after a failed induction alternative; preserve the eight-binder contract while replacing two false budget declines with their real missing-composition obstruction. |
 | 2026-08-26 | `963977dde` | Falsify the supposed lean4export arrow ceiling with three proof-isolated binomial exports; measure all three under unchanged retrieval and feed the two binder plus one negative-terminal declines into the reusable-family queue. |
 | 2026-08-26 | `9e3f1185a` | Join ready facts, measured obstructions, semantic analogues, and operation coverage into a held-out-safe reusable-family queue; natural binomial ranks first with one accepted sibling and two needed. |
@@ -1124,14 +1125,18 @@ The family-level queue ranks natural binomial first. Its three formerly
 unreachable implication-bearing statements now export under pinned
 lean4export 3.1.0 when stdout is streamed off s5, and all three pass Axeyum's
 proof-isolated import with zero axioms and theorem proofs. The unchanged
-retrieved-induction producer declines two at missing rewrite/induction
-composition and one at a non-equality (`≠`) terminal. A backtracking repair
-proved the former were falsely reported as binder exhaustion: failed induction
-now restores its speculative budget before plain generalization without raising
-the settled eight-binder contract. All eight ready binomial siblings are
-therefore measured: one accepted, six declined, one import-rejected. Next:
-improve the two shared producer mechanisms, rerun the family, and reach two more
-accepted siblings before operation integration.
+retrieved-induction producer originally declined two at missing
+rewrite/induction composition and one at a non-equality (`≠`) terminal. A
+backtracking repair first replaced false binder exhaustion with those honest
+terminals. The next generic increment now composes proposition-valued retrieved
+results, uses local equalities bidirectionally, aligns imported surface wrappers
+one definition head at a time, and tries terminal retrieval before speculative
+induction. An additive checked-dependency projection independently selects
+`choose_symm -> add_sub_cancel_left -> le_add_right`; the real imported
+`choose_symm_of_eq_add` statement admits axiom-free with exactly those three
+dependencies and zero induction. All eight ready binomial siblings are now
+measured: two accepted, five declined, one import-rejected. Next: close one of
+the remaining shared grammar gaps and reach the three-sibling operation bar.
 
 Priority 3 also repaired the CI-observed sub-millisecond budget escape: policy
 now compares an unrounded monotonic duration while receipts retain integer
@@ -1267,6 +1272,14 @@ conclusion is now `R_5(3(x-y)=2z) > 357`; no upper bound or exact value is claim
 exact driver is live at 358 and advances only after both replay routes. A post-result literature
 refresh through 2026-08-26 found no five-colour bound at least 357 for this equation, but that
 negative retrieval is not proof of priority.
+
+**Rado claim ledger synchronized, 2026-08-26.** The canonical claim now supersedes its stale
+350-point title and frontier row with the checked 357-point witness. The retained artifact has
+SHA-256 `545f4f7c8704fff31da07a2a2f946eb70ac1787bb3d4c49f4ac3e2d15d20ee1e`;
+the independent claim checker re-enumerated all defining triples for the 357-, 350-, and
+319-point witnesses and reported zero errors. Structural validation reports 104 claims / zero
+errors, and the generated dashboard records 268 evidence rows. The claim remains `open`: this
+is a stronger lower bound, not an UNSAT certificate for 358 or an exact Rado number.
 
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
 external-certificate replay runner for all five packages.  It validates checker and artifact
@@ -1405,6 +1418,16 @@ passes at 1,454,994,044 proof bytes, one split / 32 leaves / 33 nodes, 5:04.57 w
 235,748 KiB peak RSS. Its four authority hashes are retained in the sibling package. Its
 parent remained six terminal leaves short at the same audit, so neither the parent nor any
 higher result is yet claimed.
+
+**Bounded-parallel recursive proof replay, 2026-08-26.** ADR-0590 addresses the measured
+single-core checker bottleneck without multiplying solver processes. The native API schedules
+only independent root children through an explicit worker bound, reuses the unchanged recursive
+formula reconstruction and backward-DRAT checker, orders failures by child index, and checks the
+root cover only after all children pass. Two positive/fail-closed controls and all-target Clippy
+pass. Four workers independently rechecked the retained 1,281,549,482-byte / 32-leaf sibling in
+67.53 wall seconds at 351% CPU and 713,172 KiB peak RSS. Its historical sequential 13:51.34 run
+had uncontrolled cache and contention differences, so no speedup ratio is claimed. The two live
+full-root checks were not restarted; their silence remains uncredited and `[7,8]` is unchanged.
 
 **Regression replay gate made load-stable, 2026-08-26.** The pre-push sweep failed twice on
 different corpus rows because it ran `solve_smtlib` and its direct

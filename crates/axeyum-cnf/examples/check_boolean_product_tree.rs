@@ -4,6 +4,8 @@ use std::fs::File;
 use std::io::{self, BufRead, BufReader, Read};
 use std::path::{Path, PathBuf};
 
+#[cfg(not(target_arch = "wasm32"))]
+use axeyum_cnf::cube::check_cube_refutation_reader_tree_parallel;
 use axeyum_cnf::cube::{
     CubeRefutationReaderTree, augmented_formula, boolean_product_cubes,
     check_cube_refutation_reader_tree,
@@ -217,10 +219,26 @@ fn build_tree(
 
 fn main() {
     let mut args = std::env::args_os().skip(1);
-    let base_path = PathBuf::from(
-        args.next()
-            .unwrap_or_else(|| fail("usage: BASE.cnf TREE-DIR [PREFIX-INDEX PREFIX-SELECTOR...]")),
-    );
+    let first = args.next().unwrap_or_else(|| {
+        fail("usage: [--workers=N] BASE.cnf TREE-DIR [PREFIX-INDEX PREFIX-SELECTOR...]")
+    });
+    let first_text = first.to_string_lossy();
+    let (workers, base_path) = if let Some(value) = first_text.strip_prefix("--workers=") {
+        let workers = parse_usize(value, "worker count");
+        if workers == 0 {
+            fail("worker count must be positive");
+        }
+        let base = args.next().unwrap_or_else(|| {
+            fail("usage: [--workers=N] BASE.cnf TREE-DIR [PREFIX-INDEX PREFIX-SELECTOR...]")
+        });
+        (workers, PathBuf::from(base))
+    } else {
+        (1, PathBuf::from(first))
+    };
+    #[cfg(target_arch = "wasm32")]
+    if workers != 1 {
+        fail("parallel cube-tree checking is unavailable on wasm32");
+    }
     let tree_dir = PathBuf::from(
         args.next()
             .unwrap_or_else(|| fail("usage: BASE.cnf TREE-DIR [PREFIX-INDEX PREFIX-SELECTOR...]")),
@@ -256,6 +274,14 @@ fn main() {
     };
     let mut stats = Stats::default();
     let tree = build_tree(&root, &tree_dir, 0, &mut stats);
+    #[cfg(not(target_arch = "wasm32"))]
+    if workers > 1 {
+        check_cube_refutation_reader_tree_parallel(&root, tree, workers)
+            .unwrap_or_else(|error| fail(error));
+    } else {
+        check_cube_refutation_reader_tree(&root, tree).unwrap_or_else(|error| fail(error));
+    }
+    #[cfg(target_arch = "wasm32")]
     check_cube_refutation_reader_tree(&root, tree).unwrap_or_else(|error| fail(error));
     println!("schema=axeyum.cnf-boolean-product-tree-check.v1");
     println!("base={}", base_path.display());
@@ -264,6 +290,7 @@ fn main() {
     println!("leaves={}", stats.leaves);
     println!("nodes={}", stats.nodes);
     println!("proof-bytes={}", stats.proof_bytes);
+    println!("workers={workers}");
     println!("checker=file-backed-recursive-backward-plus-covering-drat");
     println!("verdict=unsat-checked");
 }

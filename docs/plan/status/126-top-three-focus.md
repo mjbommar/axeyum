@@ -20,14 +20,18 @@ The family-level queue ranks natural binomial first. Its three formerly
 unreachable implication-bearing statements now export under pinned
 lean4export 3.1.0 when stdout is streamed off s5, and all three pass Axeyum's
 proof-isolated import with zero axioms and theorem proofs. The unchanged
-retrieved-induction producer declines two at missing rewrite/induction
-composition and one at a non-equality (`≠`) terminal. A backtracking repair
-proved the former were falsely reported as binder exhaustion: failed induction
-now restores its speculative budget before plain generalization without raising
-the settled eight-binder contract. All eight ready binomial siblings are
-therefore measured: one accepted, six declined, one import-rejected. Next:
-improve the two shared producer mechanisms, rerun the family, and reach two more
-accepted siblings before operation integration.
+retrieved-induction producer originally declined two at missing
+rewrite/induction composition and one at a non-equality (`≠`) terminal. A
+backtracking repair first replaced false binder exhaustion with those honest
+terminals. The next generic increment now composes proposition-valued retrieved
+results, uses local equalities bidirectionally, aligns imported surface wrappers
+one definition head at a time, and tries terminal retrieval before speculative
+induction. An additive checked-dependency projection independently selects
+`choose_symm -> add_sub_cancel_left -> le_add_right`; the real imported
+`choose_symm_of_eq_add` statement admits axiom-free with exactly those three
+dependencies and zero induction. All eight ready binomial siblings are now
+measured: two accepted, five declined, one import-rejected. Next: close one of
+the remaining shared grammar gaps and reach the three-sibling operation bar.
 
 Priority 3 also repaired the CI-observed sub-millisecond budget escape: policy
 now compares an unrounded monotonic duration while receipts retain integer
@@ -39,6 +43,7 @@ Detail and older landed rows moved to [`../notes/126-top-three-focus.md`](../not
 
 <!-- plan-section: landed-changes -->
 
+| 2026-08-26 | `f1fb56564` | Compose a held-out-safe three-lemma retrieval spine and admit Mathlib's real `Nat.choose_symm_of_eq_add` axiom-free, moving natural binomial from one to two accepted siblings. |
 | 2026-08-26 | `dc1a92029` | Restore the complete producer-search checkpoint after a failed induction alternative; preserve the eight-binder contract while replacing two false budget declines with their real missing-composition obstruction. |
 | 2026-08-26 | `963977dde` | Falsify the supposed lean4export arrow ceiling with three proof-isolated binomial exports; measure all three under unchanged retrieval and feed the two binder plus one negative-terminal declines into the reusable-family queue. |
 | 2026-08-26 | `9e3f1185a` | Join ready facts, measured obstructions, semantic analogues, and operation coverage into a held-out-safe reusable-family queue; natural binomial ranks first with one accepted sibling and two needed. |
