@@ -126,7 +126,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 361] = [
+    let expected: [(&str, crate::NameId, &str); 362] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -1201,6 +1201,16 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         // "one function, two witnesses"), then `riemann_sum_le_on` at that
         // shared mesh is EXACT (creal/integral.rs's `declare_integral_le`).
         ("CReal.integral_le", p.integral_le, "theorem"),
+        // Pulling a constant factor out of the integral: `Equiv (integral
+        // (fun t => mul c (F t)) a b hab ucF) (mul c (integral F a b hab
+        // uF))`. Two witnesses (`uF`, `ucF`) landed on a shared mesh exactly
+        // `integral_le`'s own recipe (`combined` in `G`'s slot), plus the
+        // EXACT per-`m` bridge `mul_riemannSum` applied pointwise at that
+        // shared mesh. `converges_mul` (already proved) is used as a black
+        // box to transport through multiplication by the constant sequence,
+        // so `CReal.mul`'s own index-shift complexity is never re-derived
+        // by hand (creal/integral.rs's `declare_integral_scale`).
+        ("CReal.integral_scale", p.integral_scale, "theorem"),
         // Spivak Ch14 FTC-I, first evaluation instance: the antiderivative
         // of a constant integrand, `G x := integral (fun _ => c) a (max a
         // (min x b)) …` (the `max`/`min` clamp is what makes `G` a genuinely

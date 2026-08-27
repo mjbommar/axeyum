@@ -3772,6 +3772,26 @@ pub struct CRealPrelude {
     /// `riemannSum_le_on` at `l(n)` supplies `converges_le`'s pointwise
     /// hypothesis directly. See `creal/integral.rs`'s `declare_integral_le`.
     pub integral_le: NameId,
+    /// `CReal.integral_scale : ∀ c F a b hab uF ucF, Equiv (CReal.integral
+    /// (fun t => mul c (F t)) a b hab ucF) (mul c (CReal.integral F a b hab
+    /// uF))`.
+    ///
+    /// **Pulling a constant factor out of the integral.** Needs only TWO
+    /// witnesses (`uF` for `F`, `ucF` for `combined := fun t => mul c (F
+    /// t)`), landed on a shared mesh `l(n)` exactly [`Self::integral_le`]'s
+    /// own two-witness recipe (`combined` in `G`'s slot), plus ONE exact
+    /// per-`m` bridge at that shared mesh: [`Self::mul_riemann_sum`]. Unlike
+    /// the obstruction this law was expected to hit (`CReal.mul`'s own
+    /// index-shift depending on both operands' magnitudes), no fresh
+    /// Lipschitz-style bound on `CReal.mul` is derived by hand:
+    /// [`Self::converges_mul`] — already proved — is used as a BLACK BOX to
+    /// transport `F`'s own shared-mesh convergence through multiplication by
+    /// the constant sequence `fun _ => c` ([`Self::converges_of_const`]),
+    /// and [`Self::converges_unique`] closes the gap against `combined`'s
+    /// own shared-mesh convergence (bridged to the scaled sequence via
+    /// `mul_riemann_sum` applied pointwise). See `creal/integral.rs`'s
+    /// `declare_integral_scale`.
+    pub integral_scale: NameId,
     /// `CReal.hasDerivative_integral_const : ∀ c a b (k : Nat), le (abs c)
     /// (ofRat (natDivSucc (Nat.succ k) 0)) → HasDerivativeOn (fun x =>
     /// integral (fun _ => c) a (max a (min x b)) (le_max_left a (min x b))
@@ -4250,6 +4270,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         integral_witness_independent: kernel.name_str(creal, "integral_witness_independent"),
         integral_add: kernel.name_str(creal, "integral_add"),
         integral_le: kernel.name_str(creal, "integral_le"),
+        integral_scale: kernel.name_str(creal, "integral_scale"),
         has_derivative_integral_const: kernel.name_str(creal, "hasDerivative_integral_const"),
     }
 }
@@ -4642,6 +4663,16 @@ pub(crate) fn build_creal_prelude_uncached(
         // above); it lands here to stay next to the other `integral_*` law
         // that shares its dependency shape.
         integral::declare_integral_le(&mut d, prelude)?;
+        // `integral_scale` needs `integral_converges` (well above),
+        // `riemannSum_cauchy`/`sharedIndexToCanonical` (the SAME two
+        // witnesses `integral_le` uses, `combined := fun t => mul c (F t)`
+        // in `G`'s slot), `mul_riemannSum` (`integral::declare_integral`,
+        // well above, exact per-`m`) and `converges_of_close`/
+        // `converges_mul`/`converges_of_const`/`converges_unique` (far
+        // above). It does not need `integral_add`/`integral_le` themselves;
+        // it lands here to stay next to the other `integral_*` law that
+        // shares its dependency shape.
+        integral::declare_integral_scale(&mut d, prelude)?;
         // `hasDerivative_integral_const` (Spivak Ch14 FTC-I, first evaluation
         // instance) needs `integral`/`integral_const` (just above, this
         // dispatch is why it cannot live inside `derivative::declare_derivative`,
