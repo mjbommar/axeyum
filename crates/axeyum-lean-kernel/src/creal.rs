@@ -4002,12 +4002,17 @@ pub struct CRealPrelude {
     pub ivt_bisect_approx: NameId,
     /// `CReal.abs_diff_le_of_small_image : ∀ F F' a b, HasDerivativeOn F F' a
     /// b → ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k)) (F' z)) →
-    /// ∀ eps x y, le a x → le x b → le a y → le y b → le (abs (F x)) eps →
-    /// le (abs (F y)) eps → le (abs (add x (neg y))) (mul (ofNat (Nat.succ
-    /// (Nat.succ (Nat.mul 2 k)))) (add eps eps))` (`creal/ivt.rs`) — **two
-    /// points of `[a,b]` whose `F`-values are both within `eps` of zero are
-    /// within `2(k+1)·2eps` of each other**, with NO hypothesis ordering them
-    /// and no [`Self::apart`] witness.
+    /// ∀ epsX epsY x y, le a x → le x b → le a y → le y b →
+    /// le (abs (F x)) epsX → le (abs (F y)) epsY →
+    /// le (abs (add x (neg y))) (mul (ofNat (Nat.succ (Nat.succ (Nat.mul 2
+    /// k)))) (add epsX epsY))` (`creal/ivt.rs`) — **two points of `[a,b]`
+    /// whose `F`-values are small are close**, with NO hypothesis ordering
+    /// them and no [`Self::apart`] witness.
+    ///
+    /// The two accuracies are kept separate rather than shared: a Cauchy
+    /// caller comparing indices `m` and `n` has `1/(m+1)` and `1/(n+1)`, and
+    /// this shape puts its conclusion one [`Self::of_rat_add`] away from the
+    /// `natDivSucc K m + natDivSucc K n` form [`Self::cauchy`] states.
     ///
     /// This is the Cauchy criterion an exact IVT root needs: the bisection
     /// brackets at two different accuracies are not nested and cannot be

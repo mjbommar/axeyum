@@ -3399,19 +3399,24 @@ struct DerivPack {
     hderiv: ExprId,
 }
 
-/// `le (add hi (neg lo)) rhs`, where `rhs := mul csucc (add eps eps)` and
+/// `le (add hi (neg lo)) rhs`, where `rhs := mul csucc eps_sum` and
 /// `csucc := ofNat (Nat.succ (Nat.succ (Nat.mul 2 k)))`.
 ///
 /// The one-sided half of [`declare_abs_diff_le_of_small_image`]; called twice,
 /// once per orientation, and the two results joined by
 /// [`super::CRealPrelude::abs_le`]. See this section's header for why the case
 /// split is a `lt_cotrans` rather than a lattice detour.
+///
+/// `widen` -- `le (add (abs (F lo)) (abs (F hi))) eps_sum` -- is supplied by
+/// the caller rather than assembled here, because the two orientations put
+/// the caller's two epsilons in opposite order and only one of them needs the
+/// `add_comm` transport.
 fn small_image_one_sided(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     dp: DerivPack,
     csucc: ExprId,
-    eps: ExprId,
+    eps_sum: ExprId,
     rhs: ExprId,
     rhs_nonneg: ExprId,
     csucc_nonneg: ExprId,
@@ -3419,14 +3424,12 @@ fn small_image_one_sided(
     hi: ExprId,
     ha_lo: ExprId,
     hhi_b: ExprId,
-    habs_lo: ExprId,
-    habs_hi: ExprId,
+    widen: ExprId,
 ) -> ExprId {
     let nat = d.nat_ty();
     let zero_c = czero(d, p);
     let neg_lo = cneg(d, p, lo);
     let diff = cadd(d, p, hi, neg_lo);
-    let eps2 = cadd(d, p, eps, eps);
 
     let f_lo = d.apply(dp.f, &[lo]);
     let f_hi = d.apply(dp.f, &[hi]);
@@ -3462,13 +3465,9 @@ fn small_image_one_sided(
                 ],
             );
             // raw : le diff scaled_sum
-            let widen = d.lemma(
-                p.add_le_add,
-                &[abs_f_lo, eps, abs_f_hi, eps, habs_lo, habs_hi],
-            );
             let scale = d.lemma(
                 p.mul_le_mul_of_nonneg_left,
-                &[csucc, sum_abs, eps2, csucc_nonneg, widen],
+                &[csucc, sum_abs, eps_sum, csucc_nonneg, widen],
             );
             let bounded = d.lemma(p.le_trans, &[diff, scaled_sum, rhs, raw, scale]);
             // rhs <= rhs + q
@@ -3561,8 +3560,17 @@ fn declare_abs_diff_le_of_small_image(
     let hderiv_fv = d.fresh_fvar();
     let hderiv = d.kernel().fvar(hderiv_fv);
 
-    let eps_fv = d.fresh_fvar();
-    let eps = d.kernel().fvar(eps_fv);
+    // TWO accuracies, not one. A single shared `eps` would force a caller
+    // comparing indices `m` and `n` to widen both bounds to a common value
+    // first, and the natural common value `1/(m+1) + 1/(n+1)` then has to be
+    // un-rearranged again downstream. Kept separate, a Cauchy caller's
+    // conclusion is `mul C (add (ofRat (1/(m+1))) (ofRat (1/(n+1))))`, one
+    // `of_rat_add` from the `natDivSucc K m + natDivSucc K n` shape
+    // `CReal.Cauchy` states.
+    let eps_x_fv = d.fresh_fvar();
+    let eps_x = d.kernel().fvar(eps_x_fv);
+    let eps_y_fv = d.fresh_fvar();
+    let eps_y = d.kernel().fvar(eps_y_fv);
 
     let x_fv = d.fresh_fvar();
     let x = d.kernel().fvar(x_fv);
@@ -3586,10 +3594,10 @@ fn declare_abs_diff_le_of_small_image(
     let fy = d.apply(f, &[y]);
     let abs_fx = cabs(d, p, fx);
     let abs_fy = cabs(d, p, fy);
-    let hfx_ty = cle(d, p, abs_fx, eps);
+    let hfx_ty = cle(d, p, abs_fx, eps_x);
     let hfx_fv = d.fresh_fvar();
     let hfx = d.kernel().fvar(hfx_fv);
-    let hfy_ty = cle(d, p, abs_fy, eps);
+    let hfy_ty = cle(d, p, abs_fy, eps_y);
     let hfy_fv = d.fresh_fvar();
     let hfy = d.kernel().fvar(hfy_fv);
 
@@ -3600,29 +3608,44 @@ fn declare_abs_diff_le_of_small_image(
     let e_acc = d.succ(doubled);
     let e_acc_succ = d.succ(e_acc);
     let csucc = d.const_app(p.of_nat, &[e_acc_succ]);
-    let eps2 = cadd(d, p, eps, eps);
-    let rhs = cmul(d, p, csucc, eps2);
+    let eps_sum = cadd(d, p, eps_x, eps_y);
+    let rhs = cmul(d, p, csucc, eps_sum);
 
     let zero_c = czero(d, p);
     let csucc_nonneg = nonneg_of_nat(d, p, e_acc_succ);
-    let eps_nonneg = {
+    let eps_x_nonneg = {
         let an = d.lemma(p.abs_nonneg, &[fx]);
-        d.lemma(p.le_trans, &[zero_c, abs_fx, eps, an, hfx])
+        d.lemma(p.le_trans, &[zero_c, abs_fx, eps_x, an, hfx])
     };
-    let eps2_nonneg = {
+    let eps_y_nonneg = {
+        let an = d.lemma(p.abs_nonneg, &[fy]);
+        d.lemma(p.le_trans, &[zero_c, abs_fy, eps_y, an, hfy])
+    };
+    let eps_sum_nonneg = {
         let step = d.lemma(
             p.add_le_add,
-            &[zero_c, eps, zero_c, eps, eps_nonneg, eps_nonneg],
+            &[zero_c, eps_x, zero_c, eps_y, eps_x_nonneg, eps_y_nonneg],
         );
         let zero_zero = cadd(d, p, zero_c, zero_c);
         let trim = d.lemma(p.add_zero, &[zero_c]);
-        let refl_eps2 = erefl(d, p, eps2);
+        let refl_eps_sum = erefl(d, p, eps_sum);
         d.lemma(
             p.le_congr,
-            &[zero_zero, zero_c, eps2, eps2, trim, refl_eps2, step],
+            &[
+                zero_zero,
+                zero_c,
+                eps_sum,
+                eps_sum,
+                trim,
+                refl_eps_sum,
+                step,
+            ],
         )
     };
-    let rhs_nonneg = d.lemma(p.mul_nonneg, &[csucc, eps2, csucc_nonneg, eps2_nonneg]);
+    let rhs_nonneg = d.lemma(
+        p.mul_nonneg,
+        &[csucc, eps_sum, csucc_nonneg, eps_sum_nonneg],
+    );
 
     let dp = DerivPack {
         f,
@@ -3634,13 +3657,29 @@ fn declare_abs_diff_le_of_small_image(
         hderiv,
     };
 
+    // `le (add (abs (F y)) (abs (F x))) eps_sum` -- the `(y, x)` orientation
+    // produces `eps_y + eps_x` and the statement fixes `eps_x + eps_y`, so
+    // this one pays an `add_comm`; the mirror below does not.
+    let widen_yx = {
+        let sum_yx = cadd(d, p, abs_fy, abs_fx);
+        let sum_eps_yx = cadd(d, p, eps_y, eps_x);
+        let raw = d.lemma(p.add_le_add, &[abs_fy, eps_y, abs_fx, eps_x, hfy, hfx]);
+        let comm = d.lemma(p.add_comm, &[eps_y, eps_x]);
+        let refl_sum = erefl(d, p, sum_yx);
+        d.lemma(
+            p.le_congr,
+            &[sum_yx, sum_yx, sum_eps_yx, eps_sum, refl_sum, comm, raw],
+        )
+    };
+    let widen_xy = d.lemma(p.add_le_add, &[abs_fx, eps_x, abs_fy, eps_y, hfx, hfy]);
+
     // `le (add x (neg y)) rhs` -- the `(lo, hi) := (y, x)` orientation.
     let part_i = small_image_one_sided(
         d,
         p,
         dp,
         csucc,
-        eps,
+        eps_sum,
         rhs,
         rhs_nonneg,
         csucc_nonneg,
@@ -3648,8 +3687,7 @@ fn declare_abs_diff_le_of_small_image(
         x,
         hay,
         hxb,
-        hfy,
-        hfx,
+        widen_yx,
     );
     // `le (add y (neg x)) rhs` -- the mirror.
     let part_ii_raw = small_image_one_sided(
@@ -3657,7 +3695,7 @@ fn declare_abs_diff_le_of_small_image(
         p,
         dp,
         csucc,
-        eps,
+        eps_sum,
         rhs,
         rhs_nonneg,
         csucc_nonneg,
@@ -3665,8 +3703,7 @@ fn declare_abs_diff_le_of_small_image(
         y,
         hax,
         hyb,
-        hfx,
-        hfy,
+        widen_xy,
     );
 
     let neg_y = cneg(d, p, y);
@@ -3703,7 +3740,8 @@ fn declare_abs_diff_le_of_small_image(
         let over_hax = d.lam_fv(hax_fv, hax_ty, over_hxb);
         let over_y = d.lam_fv(y_fv, carrier, over_hax);
         let over_x = d.lam_fv(x_fv, carrier, over_y);
-        let over_eps = d.lam_fv(eps_fv, carrier, over_x);
+        let over_eps_y = d.lam_fv(eps_y_fv, carrier, over_x);
+        let over_eps = d.lam_fv(eps_x_fv, carrier, over_eps_y);
         let over_hderiv = d.lam_fv(hderiv_fv, hderiv_ty, over_eps);
         let over_k = d.lam_fv(k_fv, nat, over_hderiv);
         let over_hf = d.lam_fv(hf_fv, hf_ty, over_k);
@@ -3722,7 +3760,8 @@ fn declare_abs_diff_le_of_small_image(
         let after_hax = d.arrow(hax_ty, after_hxb);
         let over_y = d.pi_fv(y_fv, carrier, after_hax);
         let over_x = d.pi_fv(x_fv, carrier, over_y);
-        let over_eps = d.pi_fv(eps_fv, carrier, over_x);
+        let over_eps_y = d.pi_fv(eps_y_fv, carrier, over_x);
+        let over_eps = d.pi_fv(eps_x_fv, carrier, over_eps_y);
         let after_hderiv = d.arrow(hderiv_ty, over_eps);
         let over_k = d.pi_fv(k_fv, nat, after_hderiv);
         let after_hf = d.arrow(hf_ty, over_k);
