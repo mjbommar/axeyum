@@ -4026,6 +4026,15 @@ impl Search {
                 if let Some(family) = family
                     && let Some(shape) = detect_nat_shape(kernel, family)
                 {
+                    // An induction branch is one alternative in the search,
+                    // not a permanent charge against the plain-generalization
+                    // fallback.  Keep the already-consumed outer binder, but
+                    // roll back every nested search counter and scoped datum
+                    // when the induction alternative declines.  Without this
+                    // checkpoint a failed speculative induction could consume
+                    // all eight binders and make an otherwise in-budget
+                    // fallback report `BinderBudgetExceeded`.
+                    let checkpoint = self.clone();
                     self.inductions_left -= 1;
                     self.inductions_used += 1;
                     let binder = Binder {
@@ -4037,8 +4046,7 @@ impl Search {
                     if let Ok(proof) = self.try_induction(kernel, &shape, binder, eqp, hypothesis) {
                         return Ok(proof);
                     }
-                    self.inductions_left += 1;
-                    self.inductions_used -= 1;
+                    *self = checkpoint;
                 }
             }
 
@@ -4324,6 +4332,21 @@ mod order_terminal_tests {
         let goal = kernel.pi(anon, nat, abstracted, BinderInfo::Default);
         propose_bounded_induction(&mut kernel, goal)
             .expect_err("transparent reduction must not admit forall n, n = 0");
+    }
+
+    #[test]
+    fn failed_induction_restores_budget_before_plain_generalization() {
+        let (mut kernel, p) = prelude_kernel();
+        let nat = kernel.const_(p.nat, vec![]);
+        let mut goal = kernel.const_(p.logic.false_, vec![]);
+        let anon = kernel.anon();
+        for _ in 0..MAX_BINDERS {
+            goal = kernel.pi(anon, nat, goal, BinderInfo::Default);
+        }
+
+        let decline = propose_bounded_induction(&mut kernel, goal)
+            .expect_err("forall eight naturals, False must remain unprovable");
+        assert_eq!(decline, DeclineReason::NotEqualityGoal);
     }
 
     /// Independently confirm an ADMITTED candidate the same way the real

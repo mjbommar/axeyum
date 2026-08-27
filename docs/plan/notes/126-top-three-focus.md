@@ -848,10 +848,16 @@ filter, not a live capability filter.
 The producer-ready variants additionally root-export the fixed baseline palette
 without exposing a target proof. The existing held-out-safe ranked transport +
 retrieved-induction pipeline imports all three and executes 59/60 premise
-transports. It accepts none: two terminate at `BinderBudgetExceeded`, and the
-`choose_ne_zero` goal terminates at `NotEqualityGoal`. The family queue now
+transports. It accepts none. The first run falsely classified two rows as
+`BinderBudgetExceeded`: a failed induction alternative permanently consumed
+the shared budget before the plain-generalization fallback. Search now restores
+its complete checkpoint on that backtracking edge, preserving the settled
+eight-binder contract; a synthetic eight-binder false goal proves the fallback
+reaches its real terminal. Both binomial rows now honestly terminate at
+`TerminalNotDefEqNoRewrite`, while `choose_ne_zero` terminates at
+`NotEqualityGoal`. The family queue now
 contains 32 measured ready facts overall and all eight natural-binomial rows;
 that family decomposes to one accepted, six declined, and one import-rejected.
 This moves the work from speculative exporter replacement to two concrete,
-reusable producer gaps: binder/generalization accounting and negative terminal
+reusable producer gaps: rewrite/induction composition and negative terminal
 grammar.

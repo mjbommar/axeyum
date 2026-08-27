@@ -116,16 +116,16 @@ percentage validation, and one-colour/100%-noise panic repair remain; focused te
 all-target/all-feature Clippy, and warning-denied Rustdoc pass. Both completed `not-found` runs
 carry no UNSAT or upper-bound credit; the exact proof-producing run remains live.
 
-**Rado exact lower bound advanced, 2026-08-26.** The seed-619 CaDiCaL producer completed the
-canonical 351-, 352-, 353-, and 354-point formulas SAT; the 354 run took 35:44.27. Every complete
+**Rado exact lower bound advanced, 2026-08-26.** The seed-619 CaDiCaL producer completed every
+canonical formula from 351 through 357 SAT; the 357 run took 24:46.01 at 182,572 KiB. Every complete
 assignment passed the strict SAT Competition importer, regenerated CNF evaluation, unique
 one-hot decoding, independent enumeration of the defining relation, and lifted-witness
-re-encoding. The retained strongest witness has 354 entries, uses all five colours, covers
-27,730 defining triples / 143,957 clauses, and has SHA-256
-`bdbefdab98481c995876fcf1a31b5b82b352ba50b5ac472595912b9a33c4fcba`. Therefore the checked
-conclusion is now `R_5(3(x-y)=2z) > 354`; no upper bound or exact value is claimed. A persistent
-exact driver is live at 355 and advances only after both replay routes. A post-result literature
-refresh through 2026-08-26 found no five-colour bound at least 354 for this equation, but that
+re-encoding. The retained strongest witness has 357 entries, uses all five colours, covers
+28,203 defining triples / 146,367 clauses, and has SHA-256
+`545f4f7c8704fff31da07a2a2f946eb70ac1787bb3d4c49f4ac3e2d15d20ee1e`. Therefore the checked
+conclusion is now `R_5(3(x-y)=2z) > 357`; no upper bound or exact value is claimed. A persistent
+exact driver is live at 358 and advances only after both replay routes. A post-result literature
+refresh through 2026-08-26 found no five-colour bound at least 357 for this equation, but that
 negative retrieval is not proof of priority.
 
 **Shared import boundary, 2026-08-25.** ADR-0555 adds a non-authoritative, hash-pinned
@@ -246,6 +246,25 @@ proof bytes, one split / 32 leaves / 33 nodes, 23:33.77 wall, and 192,700 KiB pe
 manifest, cover, and checker output are separately hash-bound in the sibling package. This is
 a checked subtree suitable for recursive composition, not a checked ancestor or MC=7 result;
 the interval remains `[7,8]`.
+
+**Second multi-gigabyte S-box subtree accepted, 2026-08-26.** A sibling selector-37--41
+replacement also passes the recursive checker: 1,281,549,482 proof bytes, one split / 32 leaves
+/ 33 nodes, 13:51.34 wall, and 197,944 KiB peak RSS against a reconstructed 69,839-clause root.
+Its four authority hashes are retained in the sibling package. Both accepted replacements are
+now composable into their incomplete ancestors; neither is promoted to a top-level or MC=7
+verdict.
+
+**Third multi-gigabyte S-box subtree accepted, 2026-08-26.** The next sibling replacement
+passes at 1,353,759,260 proof bytes, one split / 32 leaves / 33 nodes, 6:53.92 wall, and
+191,996 KiB peak RSS against another reconstructed 69,839-clause root. Formula, manifest,
+cover, and checker output are hash-bound in the sibling package. This remains subtree-local;
+the adjacent final replacement has completed proof production and entered independent replay.
+
+**Fourth multi-gigabyte S-box subtree accepted, 2026-08-26.** The final targeted replacement
+passes at 1,454,994,044 proof bytes, one split / 32 leaves / 33 nodes, 5:04.57 wall, and
+235,748 KiB peak RSS. Its four authority hashes are retained in the sibling package. Its
+parent remained six terminal leaves short at the same audit, so neither the parent nor any
+higher result is yet claimed.
 
 **Regression replay gate made load-stable, 2026-08-26.** The pre-push sweep failed twice on
 different corpus rows because it ran `solve_smtlib` and its direct

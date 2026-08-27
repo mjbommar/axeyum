@@ -103,7 +103,7 @@ def check(result: dict[str, Any], capability: dict[str, Any], root: Path = ROOT)
         require(row.get("result") == "declined", f"{fact_id} was not an honest decline")
         reason = row.get("reason_kind")
         require(
-            reason in {"BinderBudgetExceeded", "NotEqualityGoal"},
+            reason in {"TerminalNotDefEqNoRewrite", "NotEqualityGoal"},
             f"{fact_id} decline reason changed",
         )
         reasons[reason] = reasons.get(reason, 0) + 1
@@ -112,7 +112,7 @@ def check(result: dict[str, Any], capability: dict[str, Any], root: Path = ROOT)
             f"{fact_id} has no transport observations",
         )
     require(
-        reasons == {"BinderBudgetExceeded": 2, "NotEqualityGoal": 1},
+        reasons == {"TerminalNotDefEqNoRewrite": 2, "NotEqualityGoal": 1},
         "decline decomposition changed",
     )
 
@@ -134,7 +134,7 @@ def main() -> int:
         return 1
     print(
         "BINOMIAL_ARROW_MEASUREMENT|population=3|imports=3|accepted=0|"
-        "binder_budget=2|not_equality=1"
+        "missing_composition=2|not_equality=1"
     )
     return 0
 
