@@ -119,6 +119,7 @@ now. Nothing was deleted.
 |---|---|---|
 | 2026-08-27 | (uncommitted at status-file write time) | `CReal.sumRange_cauchy_of_abs_cauchy` / `CReal.sumRange_converges_of_abs_converges` (absolute convergence implies convergence) plus a soundness-negative control; curriculum rows 18 and 22–23 corrected. |
 | 2026-08-27 | (uncommitted at status-file write time) | Ten new `artifacts/facts/F-creal-*.json` entries for the Ch.13/14 Riemann integral construction and algebra (`riemannSum_cauchy`, `integral`, `integral_converges`, `integral_const`, `integral_add`, `integral_le`, `integral_scale`, `integral_witness_independent`, `riemannSum_integral_close`, `sharedIndexToCanonical`); `python3 scripts/validate-facts.py` green (708 facts, 0 errors). |
+| 2026-08-27 | (uncommitted at status-file write time) | Added `--require-declaration <name> [--require-kind <kind>]` to `crates/axeyum-lean-kernel/examples/kernel_declaration_projection.rs`: a direct, fail-on-absence presence checker for `Declaration::Definition`s (and any other kind), mutation-tested against `CReal.integral`. Upgraded `F:creal-integral`'s `kernel-CReal.integral` evidence to use it. Registered 14 new `artifacts/facts/F-creal-*.json` entries for Spivak Ch.18 (`e`) and Ch.22-23 (series convergence tests): `creal-e`, `creal-e-converges`, `creal-two-le-e`, `creal-e-le-three`, `creal-e-le-four`, `creal-expterm-le-geom`, `creal-expdominantcauchy`, `creal-cauchyofpointwiseequiv`, `creal-geomcauchy`, `creal-sumrange-comparisontest`, `creal-sumrange-cauchy-of-dominated`, `creal-sumrange-converges-of-dominated`, `creal-sumrange-cauchy-of-abs-cauchy`, `creal-sumrange-converges-of-abs-converges`. `python3 scripts/validate-facts.py` green (722 facts, 0 errors). |
 | 2026-08-26 | `f1fb56564` | Compose a held-out-safe three-lemma retrieval spine and admit Mathlib's real `Nat.choose_symm_of_eq_add` axiom-free, moving natural binomial from one to two accepted siblings. |
 | 2026-08-26 | `dc1a92029` | Restore the complete producer-search checkpoint after a failed induction alternative; preserve the eight-binder contract while replacing two false budget declines with their real missing-composition obstruction. |
 | 2026-08-26 | `963977dde` | Falsify the supposed lean4export arrow ceiling with three proof-isolated binomial exports; measure all three under unchanged retrieval and feed the two binder plus one negative-terminal declines into the reusable-family queue. |
@@ -1955,6 +1956,89 @@ than folded into the construction, per the task briefing.
 
 Nothing under `crates/` was touched — four lanes were live there
 (`creal/integral.rs`, `creal/geometric.rs`, `creal/trig.rs`, `complex/`).
+
+**Your lane's block (`DONE`, ledger-euler, 2026-08-27).** `CReal.e` had NO
+fact, nor did `two_le_e`, `e_le_three`, or `e_le_four` — a real negative,
+confirmed by `/usr/bin/grep -rl` across `artifacts/facts/` against a control
+that found 180 `CReal` facts. Euler's number was constructed in this kernel
+and entirely unrecorded in the product.
+
+**Task 1 — the sibling lane's claimed blocker was real, and it is now
+closed.** Eight examples do mention `Declaration::Definition`
+(`kernel_declaration_projection.rs` among them), but none took a name and
+asserted a `Definition` exists with a non-zero exit on absence —
+`theorem_dependency_inventory` / `nat_theorem_inventory` /
+`prelude_theorem_inventory` all filter to `Declaration::Theorem` by explicit,
+documented contract. Added `--require-declaration <name> [--require-kind
+<kind>]` to `kernel_declaration_projection`: it searches every constructed
+prelude's environment for an exact display-name match (of the given kind,
+when given) and exits non-zero when none is found; unfiltered invocations
+(no new flags) are byte-identical to the prior behaviour (verified: 7,278
+unfiltered rows, unchanged TSV shape — this is what
+`gen-autogenesis-kernel-dependency-projection.py` still consumes).
+
+Mutation-tested in an isolated `/data0` snapshot
+(`scripts/lane-snapshot.sh`, never the shared checkout): renamed
+`CReal.integral`'s display string to `"integral_MUTATED"` at
+`crates/axeyum-lean-kernel/src/creal.rs:4389`, rebuilt, and confirmed the
+`--require-declaration CReal.integral --require-kind definition` check
+returns count 0 / exit 1, while the SAME rebuild's check for an unrelated
+control (`CReal.e`) still returns count 1 / exit 0, and a check for the new
+name `CReal.integral_MUTATED` correctly returns count 1 / exit 0. Restored
+the source before building the real change. `F:creal-integral`'s
+`kernel-CReal.integral` evidence row was upgraded from the indirect route
+(via `CReal.integral_const`'s own admission) to this direct checker; its
+`notes` record the upgrade and the mutation test.
+
+**Task 2 — registered 14 new facts:**
+`F:creal-e` (the construction itself — via `CReal.mk` on an explicit
+`speedup`/`diagonal` regular sequence, **never** `Exists`-elimination, since
+an eliminated existential witness cannot be extracted as data for `CReal.mk`
+to consume), `F:creal-e-converges`, `F:creal-two-le-e` (the EVENTUAL-bound
+case: `expSeriesPartial 0 = 0 < 2`, so `converges_lower_bound_shift` at
+shift 2 is load-bearing), `F:creal-e-le-three` (a genuine `{0, 1, k+2}` case
+split at the mathematical kink, not an artifact), `F:creal-e-le-four` (one
+uniform bound at every `n`, deliberately registered alongside `e_le_three`
+to record the contrast the source module's own doc calls out),
+`F:creal-expterm-le-geom`, `F:creal-expdominantcauchy`,
+`F:creal-cauchyofpointwiseequiv` (the domination-bridge triple named in this
+lane's brief), `F:creal-geomcauchy` (base-1/2 geometric Cauchy — NOT the
+general-base `geomCauchyOfLt`, which lives on an unmerged sibling branch and
+is deliberately excluded), `F:creal-sumrange-comparisontest` (comparison
+test for nonnegative series), `F:creal-sumrange-cauchy-of-dominated` /
+`F:creal-sumrange-converges-of-dominated` (dominated convergence, Cauchy and
+Converges forms), and `F:creal-sumrange-cauchy-of-abs-cauchy` /
+`F:creal-sumrange-converges-of-abs-converges` (absolute convergence implies
+convergence — what makes the comparison/ratio tests usable on a signed
+series). Chapter 21 (`e` irrational) and `geomCauchyOfLt` were NOT registered,
+per this lane's scope.
+
+Canonical types were read from the kernel via a standalone probe binary
+(`axeyum-lean-kernel` path dependency, public `Kernel` API only — `environment()`,
+`display_name()`, `render_lean()`, `axiom_footprint()`, `theorem_dependencies()`
+— built in the session scratchpad, deleted after use) and every
+`formal.statement` field is programmatically constructed from that probe's
+own JSON dump rather than hand-retyped, specifically to eliminate
+transcription-error risk in these deeply nested Pi types (verified by a
+second script comparing every fact's `formal.statement` against the probe's
+raw output byte-for-byte). `depends_on` links to existing ledger facts (and
+to the other 13 facts registered in this same batch) wherever
+`theorem_dependency_inventory` names one; every unregistered prelude
+dependency is named in the fact's own `notes` rather than registered
+speculatively. `axiom_footprint: []` for all 14, confirmed via
+`nat_axiom_inventory --include-constructed --require-axiom-free creal`
+(`creal: axiom=0 opaque=0 quotient=0 total_trusted=0`).
+
+Every one of the 14 `kernel-term` checker commands was run and verified to
+print count 1 / exit 0 on this tree before being written into a fact file.
+`python3 scripts/validate-facts.py` is green: **722 facts, 0 errors**
+(708 before this batch + 14 new).
+
+Nothing under `crates/axeyum-lean-kernel/src/` was touched except the new
+`--require-declaration` flag on the EXAMPLE
+`crates/axeyum-lean-kernel/examples/kernel_declaration_projection.rs`
+(Task 1's own scope) — four lanes were live in `creal/geometric.rs`,
+`creal/exponential.rs`, `creal/trig.rs`, `creal/crossing.rs`, and `complex/`.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 

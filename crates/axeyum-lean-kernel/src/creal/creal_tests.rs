@@ -126,7 +126,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 375] = [
+    let expected: [(&str, crate::NameId, &str); 382] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -407,6 +407,16 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         ("CReal.crossingIndex", p.crossing_index, "def"),
         ("CReal.crossingUpper", p.crossing_upper, "theorem"),
         ("CReal.crossingLower", p.crossing_lower, "theorem"),
+        (
+            "CReal.crossingSampleUpper",
+            p.crossing_sample_upper,
+            "theorem",
+        ),
+        (
+            "CReal.crossingSampleLower",
+            p.crossing_sample_lower,
+            "theorem",
+        ),
         ("CReal.sampleUpperBound", p.sample_upper_bound, "theorem"),
         ("CReal.sampleLowerBound", p.sample_lower_bound, "theorem"),
         (
@@ -655,6 +665,12 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
             "theorem",
         ),
         ("CReal.geomCauchyOfLt", p.geom_cauchy_of_lt, "theorem"),
+        (
+            "CReal.geomScaledCauchyOfLt",
+            p.geom_scaled_cauchy_of_lt,
+            "theorem",
+        ),
+        ("CReal.sumRangeRatioTest", p.sum_range_ratio_test, "theorem"),
         (
             "CReal.one_le_pow_of_one_le",
             p.one_le_pow_of_one_le,
@@ -1340,6 +1356,20 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
             "theorem",
         ),
         ("CReal.cosOne", p.cos_one, "def"),
+        // `CReal.cosOneConverges` -- the `e_converges` analogue, built
+        // generically over a bound `(k, h)` (never the concrete `k_final`)
+        // exactly as `declare_converges_of_cauchy`'s own `minor` closure
+        // does, avoiding the stack-overflow trap `e`'s own construction
+        // documents. `cosOne_le_four`/`neg_four_le_cosOne` -- a LOOSE,
+        // UNIFORM `[-4, 4]` bound (no case split, unlike `e_le_three`): the
+        // triangle inequality (`abs_sumRange_le`) discards the alternation's
+        // cancellation entirely, so the REUSED (not re-derived) `e`-style
+        // domination is loose enough that one formula covers every `n`. See
+        // `creal/trig.rs::declare_cos_one_le_four`'s own doc for where the
+        // genuine kink (pairing consecutive terms) would appear instead.
+        ("CReal.cosOneConverges", p.cos_one_converges, "theorem"),
+        ("CReal.cosOne_le_four", p.cos_one_le_four, "theorem"),
+        ("CReal.neg_four_le_cosOne", p.neg_four_le_cos_one, "theorem"),
         // Found by the coverage assertion above, not by anyone noticing: these
         // seven were live in the prelude and unlisted here, so this test had
         // never checked them. `lt_cotrans`/`apart_cotrans` are Ch 12's
@@ -9471,4 +9501,281 @@ fn crossing_index_at_zero_one_seven_halves_reduces_to_three() {
         .unwrap_or_else(|error| {
             panic!("crossingIndex 0 (7/2) 1 must reduce to 3 by refl: {error:?}")
         });
+}
+
+/// **The base-`1/2` cross-check.** [`CReal::geomCauchyOfLt`] generalizes
+/// `geomCauchy`/`geomCauchyOrderedHalf`'s own base-`1/2` derivation to a
+/// symbolic ratio; this test instantiates the GENERAL theorem at `x := half`
+/// with the SAME concrete witnesses `geomCauchy`'s own route builds
+/// internally (`k := 1`, `h := geom_half_a_real_pos_bound`'s
+/// `PosBound (1 - half) 1`), and checks the resulting proof against
+/// `geomCauchy`'s OWN stored type — not a type this test reconstructs by
+/// hand, so there is no way for the two routes to agree by both sides
+/// independently making the same mistake.
+///
+/// A concrete instantiation catches what a symbolic proof alone cannot: a
+/// transposed argument, a swapped `x`/`1-x`, or a leaf-bound witness that
+/// silently does not line up with the one `geomCauchyOfLtOrdered`'s own
+/// derivation expects. If this test fails, that mismatch — not the symbolic
+/// derivation above — is the most valuable finding this file can report.
+#[test]
+fn geom_cauchy_of_lt_matches_geom_cauchy_at_half() {
+    use super::exponential::{geom_half_a_real_pos_bound, half, half_add_half_equiv_one, half_rat};
+    use crate::int_prelude::ops::IntDev;
+    use crate::rat_prelude::ops::{rlt, rzero};
+
+    let (mut kernel, p) = built();
+    let rat = p.rat;
+    let anon = kernel.anon();
+
+    // Fetch `geomCauchy`'s OWN stored type before `d` borrows `kernel`
+    // mutably -- the strongest form of this check compares against the type
+    // the base-1/2 route already proved, not a type reconstructed by hand.
+    let expected_ty = match kernel
+        .environment()
+        .get(p.geom_cauchy)
+        .expect("CReal.geomCauchy must be declared")
+    {
+        Declaration::Theorem { ty, .. } => *ty,
+        other => panic!("CReal.geomCauchy is {other:?}, not a Theorem"),
+    };
+
+    let mut d = IntDev::new(&mut kernel, rat.int);
+
+    let h = half(&mut d, p);
+    let hr = half_rat(&mut d, p);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let one_nat = d.num(1);
+
+    // hx0 : le zero half, via `Rat.zero_le_natDivSucc 1 1` and `CReal.of_rat_le`
+    // -- the same route `exponential.rs::half_nonneg_proof` uses (private
+    // there; reproduced here rather than widened, since it is one line).
+    let hx0 = {
+        let zero_rat = rzero(&mut d, rat);
+        let half_le_zero = d.lemma(rat.zero_le_nat_div_succ, &[one_nat, one_nat]);
+        d.lemma(p.of_rat_le, &[zero_rat, hr, half_le_zero])
+    };
+
+    // hlt : lt half one, via the rational gap q := half_rat -- `0 < 1/2` and
+    // `half + half <= one` (from `half_add_half_equiv_one`, widened this
+    // session).
+    let hlt = {
+        let zero_rat = rzero(&mut d, rat);
+        let one_le_one = d.lemma(rat.int.nat.le_refl, &[one_nat]);
+        let positive = d.lemma(rat.nat_div_succ_pos, &[one_nat, one_nat, one_le_one]);
+        let positive_ty = rlt(&mut d, rat, zero_rat, hr);
+
+        let hh = super::cadd(&mut d, p, h, h);
+        let hh_equiv_one = half_add_half_equiv_one(&mut d, p);
+        let bounded = d.lemma(p.le_of_equiv, &[hh, one_c, hh_equiv_one]);
+        let bounded_ty = super::cle(&mut d, p, hh, one_c);
+
+        let pair = super::and_intro(&mut d, p, positive_ty, bounded_ty, positive, bounded);
+        super::gap_intro(&mut d, p, h, one_c, hr, pair)
+    };
+
+    // (k, h) := (1, PosBound (1 - half) 1) -- `geom_half_a_real_pos_bound`
+    // builds the IDENTICAL construction `geomHalfInvLeafBound`'s own `h_pos_a_real`
+    // uses internally (its doc comment says so explicitly), so this is the
+    // same witness the base-1/2 route is built from, not a fresh one.
+    let (_a_real, h_pos_a_real) = geom_half_a_real_pos_bound(&mut d, p);
+
+    let result = d.lemma(p.geom_cauchy_of_lt, &[h, hx0, hlt, one_nat, h_pos_a_real]);
+
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.geom_cauchy_of_lt_matches_geom_cauchy_at_half");
+    let outcome = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty: expected_ty,
+        value: result,
+    });
+    assert!(
+        outcome.is_ok(),
+        "CReal.geomCauchyOfLt at x := half, with geomCauchy's own base-1/2 \
+         witnesses (k := 1, h := geom_half_a_real_pos_bound), must check \
+         against CReal.geomCauchy's OWN stored type -- a mismatch here means \
+         the general and base-1/2 routes disagree about what they are \
+         proving: {outcome:?}"
+    );
+}
+
+/// The negative control for the cross-check above: the **same script**, with
+/// `hx0`/`hlt` swapped at the `geomCauchyOfLt` call site. `hx0`'s type (`le
+/// zero half`) and `hlt`'s type (`lt half one`) are unrelated Props -- one is
+/// a `le`-application, the other an `Exists`-application over a rational gap
+/// -- so a checker that is actually reading argument TYPES, rather than
+/// merely counting positional arguments, must refuse this.
+#[test]
+fn the_half_cross_check_route_cannot_swap_hx0_and_hlt() {
+    use super::exponential::{geom_half_a_real_pos_bound, half, half_add_half_equiv_one, half_rat};
+    use crate::int_prelude::ops::IntDev;
+    use crate::rat_prelude::ops::{rlt, rzero};
+
+    let (mut kernel, p) = built();
+    let rat = p.rat;
+
+    let expected_ty = match kernel
+        .environment()
+        .get(p.geom_cauchy)
+        .expect("CReal.geomCauchy must be declared")
+    {
+        Declaration::Theorem { ty, .. } => *ty,
+        other => panic!("CReal.geomCauchy is {other:?}, not a Theorem"),
+    };
+
+    let mut d = IntDev::new(&mut kernel, rat.int);
+    let anon = d.kernel().anon();
+
+    let h = half(&mut d, p);
+    let hr = half_rat(&mut d, p);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let one_nat = d.num(1);
+
+    let hx0 = {
+        let zero_rat = rzero(&mut d, rat);
+        let half_le_zero = d.lemma(rat.zero_le_nat_div_succ, &[one_nat, one_nat]);
+        d.lemma(p.of_rat_le, &[zero_rat, hr, half_le_zero])
+    };
+
+    let hlt = {
+        let zero_rat = rzero(&mut d, rat);
+        let one_le_one = d.lemma(rat.int.nat.le_refl, &[one_nat]);
+        let positive = d.lemma(rat.nat_div_succ_pos, &[one_nat, one_nat, one_le_one]);
+        let positive_ty = rlt(&mut d, rat, zero_rat, hr);
+
+        let hh = super::cadd(&mut d, p, h, h);
+        let hh_equiv_one = half_add_half_equiv_one(&mut d, p);
+        let bounded = d.lemma(p.le_of_equiv, &[hh, one_c, hh_equiv_one]);
+        let bounded_ty = super::cle(&mut d, p, hh, one_c);
+
+        let pair = super::and_intro(&mut d, p, positive_ty, bounded_ty, positive, bounded);
+        super::gap_intro(&mut d, p, h, one_c, hr, pair)
+    };
+
+    let (_a_real, h_pos_a_real) = geom_half_a_real_pos_bound(&mut d, p);
+
+    // The one changed thing: `hlt` and `hx0` swapped at the call site.
+    let value = d.lemma(p.geom_cauchy_of_lt, &[h, hlt, hx0, one_nat, h_pos_a_real]);
+
+    let name = d
+        .kernel()
+        .name_str(anon, "__half_cross_check_hx0_hlt_swapped");
+    let outcome = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty: expected_ty,
+        value,
+    });
+    assert!(
+        outcome.is_err(),
+        "swapping hx0/hlt at the geomCauchyOfLt call site must be REFUSED by \
+         the trusted checker -- it was accepted, which means argument \
+         positions are not actually being type-checked: {outcome:?}"
+    );
+}
+
+/// `CReal.crossingSampleUpper`/`CReal.crossingSampleLower` APPLY at the SAME
+/// concrete `(a, c, delta) := (0, 5/2, 1)` worked example as
+/// `crossing_index_at_zero_one_five_halves_reduces_to_two` above (where
+/// `crossingIndex` reduces to the literal `2`), with `0 < delta`/`a ≤ c` left
+/// as FRESH free variables — mirroring `integral.rs`'s own
+/// `le_add_of_abs_sub_le_applies_at_three_two_and_one` idiom: this is a
+/// concrete-ARGUMENT check (`CReal.le` is not decidable by `refl`, so the
+/// hypothesis proofs cannot be filled in), not a claim that the inequality
+/// itself is verified numerically. It confirms the two theorems apply at
+/// real numeric arguments and that their conclusions' shapes — reconstructed
+/// here independently, using ONLY public `CRealPrelude`/`RatPrelude` fields,
+/// never `crossing.rs`'s own private helpers — match what
+/// `declare_crossing_sample_upper`/`declare_crossing_sample_lower` actually
+/// build.
+#[test]
+fn crossing_sample_upper_and_lower_apply_at_zero_five_halves_one() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let a = d.kernel().const_(p.zero, vec![]);
+    let five = d.num(5);
+    let one_idx = d.num(1);
+    let five_halves = d.const_app(p.rat.nat_div_succ, &[five, one_idx]); // 5/2
+    let c = d.const_app(p.of_rat, &[five_halves]);
+    let delta = crate::rat_prelude::ops::rone(&mut d, p.rat);
+
+    let zero_rat = crate::rat_prelude::ops::rzero(&mut d, p.rat);
+    let hpos_ty = d.const_app(p.rat.lt, &[zero_rat, delta]);
+    let hpos_fv = d.fresh_fvar();
+    let hpos = d.kernel().fvar(hpos_fv);
+    let hac_ty = d.const_app(p.le, &[a, c]);
+    let hac_fv = d.fresh_fvar();
+    let hac = d.kernel().fvar(hac_fv);
+
+    // Reconstruct the shared pieces `declare_crossing_sample_upper`/
+    // `declare_crossing_sample_lower` build internally, at these SAME
+    // concrete arguments -- deliberately left as `crossingIndex a c delta`
+    // rather than forced down to the literal `2` (a SEPARATE test above
+    // already pins that reduction); this test's own job is the SHAPE of the
+    // sample-point conclusion, not re-proving the index computation.
+    let i0 = d.const_app(p.crossing_index, &[a, c, delta]);
+    let delta_embed = d.const_app(p.of_rat, &[delta]);
+    let of_nat_i0 = d.const_app(p.of_nat, &[i0]);
+    let sample_term = d.const_app(p.mul, &[of_nat_i0, delta_embed]);
+    let sample_point = d.const_app(p.add, &[a, sample_term]);
+
+    let zero_nat_for_j = d.num(0);
+    let k1 = d.succ(zero_nat_for_j);
+    let j = NatOps::mul(&mut d, k1, k1);
+    let two_nat = d.num(2);
+    let bound2j = d.const_app(p.rat.nat_div_succ, &[two_nat, j]);
+    let embed_bound2j = d.const_app(p.of_rat, &[bound2j]);
+    let bound2j_term = d.const_app(p.mul, &[delta_embed, embed_bound2j]);
+    let slack_upper = d.const_app(p.add, &[delta_embed, bound2j_term]);
+    let target_upper = d.const_app(p.add, &[sample_point, slack_upper]);
+    let expected_upper = d.const_app(p.le, &[c, target_upper]);
+
+    let three_nat = d.num(3);
+    let bound3j = d.const_app(p.rat.nat_div_succ, &[three_nat, j]);
+    let neg_bound3j = crate::rat_prelude::ops::rneg(&mut d, bound3j);
+    let embed_neg_bound3j = d.const_app(p.of_rat, &[neg_bound3j]);
+    let slack_lower = d.const_app(p.mul, &[delta_embed, embed_neg_bound3j]);
+    let target_lower = d.const_app(p.add, &[sample_point, slack_lower]);
+    let expected_lower = d.const_app(p.le, &[target_lower, c]);
+
+    let applied_upper = d.const_app(p.crossing_sample_upper, &[a, c, delta, hpos]);
+    let applied_lower = d.const_app(p.crossing_sample_lower, &[a, c, delta, hpos, hac]);
+
+    let ty_upper = d.arrow(hpos_ty, expected_upper);
+    let value_upper = d.lam_fv(hpos_fv, hpos_ty, applied_upper);
+    let anon = d.kernel().anon();
+    let name_upper = d
+        .kernel()
+        .name_str(anon, "crossingSampleUpperZeroFiveHalvesOneSmoke");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name: name_upper,
+            uparams: vec![],
+            ty: ty_upper,
+            value: value_upper,
+        })
+        .unwrap_or_else(|error| panic!("crossingSampleUpper must apply at (0, 5/2, 1): {error:?}"));
+
+    let ty_lower = {
+        let with_hac = d.arrow(hac_ty, expected_lower);
+        d.arrow(hpos_ty, with_hac)
+    };
+    let value_lower = {
+        let with_hac = d.lam_fv(hac_fv, hac_ty, applied_lower);
+        d.lam_fv(hpos_fv, hpos_ty, with_hac)
+    };
+    let name_lower = d
+        .kernel()
+        .name_str(anon, "crossingSampleLowerZeroFiveHalvesOneSmoke");
+    d.kernel()
+        .add_declaration(Declaration::Theorem {
+            name: name_lower,
+            uparams: vec![],
+            ty: ty_lower,
+            value: value_lower,
+        })
+        .unwrap_or_else(|error| panic!("crossingSampleLower must apply at (0, 5/2, 1): {error:?}"));
 }

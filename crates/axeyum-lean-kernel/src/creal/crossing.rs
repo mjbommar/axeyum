@@ -670,6 +670,509 @@ fn declare_crossing_lower(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
     })
 }
 
+// --- `crossingSampleUpper`/`crossingSampleLower`: restating the two halves
+// above against an ORDINARY Riemann-sum sample point `a + ofNat(i)·Δ`
+// (`integral.rs`'s own `sample_point` shape, rebuilt locally since that
+// helper is private to its file and this file's own convention -- see the
+// module documentation -- is small per-module copies) rather than the raw
+// rational expression `crossingUpper`/`crossingLower` compute internally.
+// This is the piece the task briefing asked for: "a sample point of the
+// `[a,c]` mesh is within a bounded distance of SOME sample point of the
+// `[a,b]` mesh, given the crossing index" -- instantiate `c` at a sample
+// point of a DIFFERENT interval's mesh and `delta` at the `[a,b]` mesh's own
+// step to get exactly that statement; nothing here is specific to
+// `riemannSum` or to any particular `c`.
+//
+// Route: `crossingUpper`/`crossingLower` are cited as LEMMAS (their own
+// proofs are not redone), and only the ADDITIVE SHAPE of their conclusions
+// is rebuilt (recomputing `j`, `bound2j`/`bound3j`, `succ_i0_over_1`/
+// `i0_over_1` via the exact same term-construction calls `declare_crossing_upper`/
+// `declare_crossing_lower` use, so the rebuilt `ExprId`s match). The
+// conversion from there to a `sample_point`-shaped conclusion is ordinary
+// ring algebra (`of_rat_add`, `left_distrib`, `mul_comm`, `mul_one`,
+// `add_assoc`), plus ONE local restatement, [`of_nat_succ_equiv_local`],
+// needed only on the upper side (`crossingUpper`'s own bound carries a
+// `Nat.succ` the lower bound does not).
+//
+// `CReal.ofNat n := CReal.ofRat (Rat.natDivSucc n 0)` is a `Definition`, so
+// `embed (Rat.natDivSucc k 0)` and `CReal.ofNat k` are DEFEQ (same value,
+// one delta-unfold apart) without any extra proof -- the exact move
+// `scale_cancels`'s own `step_c` comment already relies on ("`(ofRat
+// rat_one)` is defeq to `p.one`"). Every place below that supplies a proof
+// stated in terms of `CReal.ofNat` where the surrounding term mentions the
+// unfolded `embed (Rat.natDivSucc _ 0)` form (and vice versa) leans on
+// exactly that established idiom, not on a fresh assumption.
+
+/// `Equiv (ofNat (Nat.succ Nat.zero)) one` — local restatement of
+/// `integral.rs`'s private `of_nat_one_equiv_local` (itself a restatement of
+/// `derivative.rs`'s private `of_nat_one_equiv`); this file cannot reach
+/// either. See the module documentation for why a third small copy is the
+/// established move here rather than exposing either.
+fn of_nat_one_equiv_local(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let rat = p.rat;
+    let one_nat = d.num(1);
+    let zero_nat = d.num(0);
+    let unit = d.const_app(rat.nat_div_succ, &[one_nat, zero_nat]);
+    let one_rat = rone(d, rat);
+    let unit_eq_one = d.lemma(p.rat_unit_eq_one, &[]);
+    let unit_embed = embed(d, p, unit);
+    let refl_start = d.lemma(p.equiv_refl, &[unit_embed]);
+    rat_eq_rewrite(d, unit, one_rat, unit_eq_one, refl_start, &|d, t| {
+        let embedded = embed(d, p, t);
+        cequiv(d, p, unit_embed, embedded)
+    })
+}
+
+/// `Equiv (ofNat (Nat.succ m)) (add (ofNat m) one)` — local restatement of
+/// `integral.rs`'s private `of_nat_succ_equiv_local`. See this section's
+/// header comment and [`of_nat_one_equiv_local`].
+fn of_nat_succ_equiv_local(d: &mut IntDev<'_>, p: CRealPrelude, m: ExprId) -> ExprId {
+    let rat = p.rat;
+    let one_nat = d.num(1);
+    let zero_nat = d.num(0);
+    let one_c = cone(d, p);
+
+    let m_rat = d.const_app(rat.nat_div_succ, &[m, zero_nat]);
+    let one_ratdiv = d.const_app(rat.nat_div_succ, &[one_nat, zero_nat]);
+    let sum_rat = radd(d, m_rat, one_ratdiv);
+    let succ_m = d.succ(m);
+    let succ_rat = d.const_app(rat.nat_div_succ, &[succ_m, zero_nat]);
+    let add_eq = d.lemma(rat.nat_div_succ_add, &[m, one_nat, zero_nat]);
+
+    let of_nat_m = d.const_app(p.of_nat, &[m]);
+    let of_nat_1 = d.const_app(p.of_nat, &[one_nat]);
+    let of_nat_succ_m = d.const_app(p.of_nat, &[succ_m]);
+    let add_of_nat_m_1 = cadd(d, p, of_nat_m, of_nat_1);
+
+    let add_step = d.lemma(p.of_rat_add, &[m_rat, one_ratdiv]);
+    let rewritten = rat_eq_rewrite(d, sum_rat, succ_rat, add_eq, add_step, &|d, t| {
+        let embedded = embed(d, p, t);
+        cequiv(d, p, add_of_nat_m_1, embedded)
+    });
+    let flipped = d.lemma(p.equiv_symm, &[add_of_nat_m_1, of_nat_succ_m, rewritten]);
+
+    let one_eq = of_nat_one_equiv_local(d, p);
+    let refl_m = d.lemma(p.equiv_refl, &[of_nat_m]);
+    let congr_step = d.lemma(
+        p.add_congr,
+        &[of_nat_m, of_nat_m, of_nat_1, one_c, refl_m, one_eq],
+    );
+    let add_of_nat_m_one = cadd(d, p, of_nat_m, one_c);
+    d.lemma(
+        p.equiv_trans,
+        &[
+            of_nat_succ_m,
+            add_of_nat_m_1,
+            add_of_nat_m_one,
+            flipped,
+            congr_step,
+        ],
+    )
+}
+
+// NOTE: the sample point built below, `add a (mul (ofNat i) delta)`, is
+// spelled out inline at each construction site rather than through a
+// separate helper, because both proofs also need its inner `mul (ofNat i)
+// delta` term on its own (as an intermediate in the ring-algebra chain) —
+// matches `integral.rs`'s private `sample_point` EXACTLY (same argument
+// order in the inner `mul`) so a future caller relating this file's output
+// to a `riemannSum` term needs no extra commuting step.
+
+/// Admit [`CRealPrelude::crossing_sample_upper`]: `∀ a c Δ, Rat.lt Rat.zero
+/// Δ → CReal.le c (add (sample_point a Δ (crossingIndex a c Δ)) (add Δ (mul
+/// Δ (ofRat (Rat.natDivSucc 2 j)))))`, `j` the same closed term
+/// `crossingUpper` itself samples at (`(succ 0)*(succ 0)`, definitionally
+/// `1`) — so the additive slack is, unreduced, `Δ + Δ·1`, i.e. exactly `2Δ`
+/// at every instance, just not folded to that literal shape here (no
+/// concrete-rational-comparison lemma is spent proving `bound2j = 1`; the
+/// unreduced term is equally usable downstream).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+#[allow(clippy::too_many_lines)]
+fn declare_crossing_sample_upper(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let rat_ty_ = crate::rat_prelude::ops::rat_ty(d);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let delta_fv = d.fresh_fvar();
+    let delta = d.kernel().fvar(delta_fv);
+    let zero_rat = rzero(d, p.rat);
+    let hpos_ty = d.const_app(p.rat.lt, &[zero_rat, delta]);
+    let hpos_fv = d.fresh_fvar();
+    let hpos = d.kernel().fvar(hpos_fv);
+
+    let scaled = build_scaled(d, p, a, c, delta);
+
+    // `j`, the SAME closed term `crossing_upper`'s own type mentions (see
+    // `setup0`); only `j` is needed here, not its sibling `q`, which is
+    // internal to `crossing_upper`'s own PROOF, not to its stated type.
+    let k1 = d.succ(scaled.zero_nat);
+    let j = NatOps::mul(d, k1, k1);
+
+    let two_nat = d.num(2);
+    let bound2j = d.const_app(p.rat.nat_div_succ, &[two_nat, j]);
+    let succ_i0 = d.succ(scaled.i0);
+    let succ_i0_over_1 = d.const_app(p.rat.nat_div_succ, &[succ_i0, scaled.zero_nat]);
+    let rhs_plus = radd(d, succ_i0_over_1, bound2j);
+    let rhs_plus_embed = embed(d, p, rhs_plus);
+    let rhs_scaled = cmul(d, p, scaled.delta_embed, rhs_plus_embed);
+    let a_rhs_scaled = cadd(d, p, a, rhs_scaled);
+
+    // `hu : CReal.le c a_rhs_scaled` — `crossing_upper` cited as a lemma.
+    let hu = d.lemma(p.crossing_upper, &[a, c, delta, hpos]);
+
+    let of_nat_i0 = d.const_app(p.of_nat, &[scaled.i0]);
+    let embed_succ_i0 = embed(d, p, succ_i0_over_1);
+    let embed_bound2j = embed(d, p, bound2j);
+    let one_c = cone(d, p);
+    let sample_term = cmul(d, p, of_nat_i0, scaled.delta_embed);
+    let bound2j_term = cmul(d, p, scaled.delta_embed, embed_bound2j);
+    let slack_upper = cadd(d, p, scaled.delta_embed, bound2j_term);
+    let sample_point = cadd(d, p, a, sample_term);
+    let target = cadd(d, p, sample_point, slack_upper);
+
+    let refl_delta = d.lemma(p.equiv_refl, &[scaled.delta_embed]);
+
+    // rhs_plus_embed ~ add embed_succ_i0 embed_bound2j (`of_rat_add`'s own
+    // direction is the reverse of this, hence the `equiv_symm`).
+    let sum_embed = cadd(d, p, embed_succ_i0, embed_bound2j);
+    let step_a_raw = d.lemma(p.of_rat_add, &[succ_i0_over_1, bound2j]);
+    let step_a = d.lemma(p.equiv_symm, &[sum_embed, rhs_plus_embed, step_a_raw]);
+
+    // rhs_scaled ~ mul delta_embed sum_embed
+    let step_b = d.lemma(
+        p.mul_congr,
+        &[
+            scaled.delta_embed,
+            scaled.delta_embed,
+            rhs_plus_embed,
+            sum_embed,
+            refl_delta,
+            step_a,
+        ],
+    );
+
+    // mul delta_embed sum_embed ~ add (mul delta_embed embed_succ_i0) bound2j_term
+    let step_c = d.lemma(
+        p.left_distrib,
+        &[scaled.delta_embed, embed_succ_i0, embed_bound2j],
+    );
+    let mul_delta_succ = cmul(d, p, scaled.delta_embed, embed_succ_i0);
+
+    // mul delta_embed embed_succ_i0 ~ mul delta_embed (add of_nat_i0 one_c)
+    // -- `embed_succ_i0` is DEFEQ `ofNat (succ i0)`, per this section's
+    // header comment.
+    let succ_eq = of_nat_succ_equiv_local(d, p, scaled.i0);
+    let add_i0_one = cadd(d, p, of_nat_i0, one_c);
+    let step_d = d.lemma(
+        p.mul_congr,
+        &[
+            scaled.delta_embed,
+            scaled.delta_embed,
+            embed_succ_i0,
+            add_i0_one,
+            refl_delta,
+            succ_eq,
+        ],
+    );
+
+    // mul delta_embed (add of_nat_i0 one_c) ~ add (mul delta_embed of_nat_i0)(mul delta_embed one_c)
+    let step_e = d.lemma(p.left_distrib, &[scaled.delta_embed, of_nat_i0, one_c]);
+    let mul_delta_i0 = cmul(d, p, scaled.delta_embed, of_nat_i0);
+    let mul_delta_one = cmul(d, p, scaled.delta_embed, one_c);
+
+    // mul delta_embed one_c ~ delta_embed
+    let step_f = d.lemma(p.mul_one, &[scaled.delta_embed]);
+    // mul delta_embed of_nat_i0 ~ sample_term (mul_comm)
+    let step_g = d.lemma(p.mul_comm, &[scaled.delta_embed, of_nat_i0]);
+
+    let step_de_combined = {
+        let refl_mdo = d.lemma(p.equiv_refl, &[mul_delta_one]);
+        d.lemma(
+            p.add_congr,
+            &[
+                mul_delta_i0,
+                sample_term,
+                mul_delta_one,
+                mul_delta_one,
+                step_g,
+                refl_mdo,
+            ],
+        )
+    };
+    let sample_plus_delta = cadd(d, p, sample_term, scaled.delta_embed);
+    let step_fg_combined = {
+        let refl_st = d.lemma(p.equiv_refl, &[sample_term]);
+        d.lemma(
+            p.add_congr,
+            &[
+                sample_term,
+                sample_term,
+                mul_delta_one,
+                scaled.delta_embed,
+                refl_st,
+                step_f,
+            ],
+        )
+    };
+    let mul_delta_i0_plus_one = cadd(d, p, mul_delta_i0, mul_delta_one);
+    let mul_delta_add_i0_one = cmul(d, p, scaled.delta_embed, add_i0_one);
+    let sample_plus_mul_delta_one = cadd(d, p, sample_term, mul_delta_one);
+
+    // mul delta_embed embed_succ_i0 ~ add sample_term delta_embed
+    let step_i0 = echain(
+        d,
+        p,
+        mul_delta_succ,
+        &[
+            (mul_delta_add_i0_one, step_d),
+            (mul_delta_i0_plus_one, step_e),
+            (sample_plus_mul_delta_one, step_de_combined),
+            (sample_plus_delta, step_fg_combined),
+        ],
+    );
+
+    let refl_bound2j_term = d.lemma(p.equiv_refl, &[bound2j_term]);
+    let step_h = d.lemma(
+        p.add_congr,
+        &[
+            mul_delta_succ,
+            sample_plus_delta,
+            bound2j_term,
+            bound2j_term,
+            step_i0,
+            refl_bound2j_term,
+        ],
+    );
+    let sum_after_c = cadd(d, p, mul_delta_succ, bound2j_term);
+    let sum_after_h = cadd(d, p, sample_plus_delta, bound2j_term);
+
+    let step_reassoc = d.lemma(
+        p.add_assoc,
+        &[sample_term, scaled.delta_embed, bound2j_term],
+    );
+    let rhs_final = cadd(d, p, sample_term, slack_upper);
+
+    let mul_delta_sum_embed_upper = cmul(d, p, scaled.delta_embed, sum_embed);
+    let rhs_chain = echain(
+        d,
+        p,
+        rhs_scaled,
+        &[
+            (mul_delta_sum_embed_upper, step_b),
+            (sum_after_c, step_c),
+            (sum_after_h, step_h),
+            (rhs_final, step_reassoc),
+        ],
+    );
+
+    let refl_a = d.lemma(p.equiv_refl, &[a]);
+    let a_plus_final = cadd(d, p, a, rhs_final);
+    let step_add_a = d.lemma(
+        p.add_congr,
+        &[a, a, rhs_scaled, rhs_final, refl_a, rhs_chain],
+    );
+    let assoc_a = d.lemma(p.add_assoc, &[a, sample_term, slack_upper]);
+    let step_reassoc_a = d.lemma(p.equiv_symm, &[target, a_plus_final, assoc_a]);
+
+    let full_chain = echain(
+        d,
+        p,
+        a_rhs_scaled,
+        &[(a_plus_final, step_add_a), (target, step_reassoc_a)],
+    );
+
+    let refl_c = d.lemma(p.equiv_refl, &[c]);
+    let final_proof = d.lemma(
+        p.le_congr,
+        &[c, c, a_rhs_scaled, target, refl_c, full_chain, hu],
+    );
+
+    let ty_body = cle(d, p, c, target);
+    let ty_with_hyp = d.arrow(hpos_ty, ty_body);
+    let ty = {
+        let with_delta = d.pi_fv(delta_fv, rat_ty_, ty_with_hyp);
+        let with_c = d.pi_fv(c_fv, carrier, with_delta);
+        d.pi_fv(a_fv, carrier, with_c)
+    };
+    let value = {
+        let with_hpos = d.lam_fv(hpos_fv, hpos_ty, final_proof);
+        let with_delta = d.lam_fv(delta_fv, rat_ty_, with_hpos);
+        let with_c = d.lam_fv(c_fv, carrier, with_delta);
+        d.lam_fv(a_fv, carrier, with_c)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.crossing_sample_upper,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Admit [`CRealPrelude::crossing_sample_lower`]: `∀ a c Δ, Rat.lt Rat.zero
+/// Δ → CReal.le a c → CReal.le (add (sample_point a Δ (crossingIndex a c Δ))
+/// (mul Δ (ofRat (Rat.neg (Rat.natDivSucc 3 j))))) c` — the mirror of
+/// [`declare_crossing_sample_upper`], simpler because `crossingLower`'s own
+/// bound carries no `Nat.succ` to split (`i0_over_1` is already `ofNat i0`,
+/// up to the same delta-unfold [`declare_crossing_sample_upper`]'s header
+/// comment names). The slack term is left as `Δ · (negative rational)`
+/// rather than rewritten to `neg (Δ · positive)` — mathematically identical,
+/// and avoids needing a `mul`-distributes-over-`neg` lemma this prelude does
+/// not have.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+#[allow(clippy::too_many_lines)]
+fn declare_crossing_sample_lower(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let rat_ty_ = crate::rat_prelude::ops::rat_ty(d);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let delta_fv = d.fresh_fvar();
+    let delta = d.kernel().fvar(delta_fv);
+    let zero_rat = rzero(d, p.rat);
+    let hpos_ty = d.const_app(p.rat.lt, &[zero_rat, delta]);
+    let hpos_fv = d.fresh_fvar();
+    let hpos = d.kernel().fvar(hpos_fv);
+
+    let scaled = build_scaled(d, p, a, c, delta);
+    let hac_ty = cle(d, p, a, c);
+    let hac_fv = d.fresh_fvar();
+    let hac = d.kernel().fvar(hac_fv);
+
+    let k1 = d.succ(scaled.zero_nat);
+    let j = NatOps::mul(d, k1, k1);
+
+    let three_nat = d.num(3);
+    let bound3j = d.const_app(p.rat.nat_div_succ, &[three_nat, j]);
+    let neg_bound3j = rneg(d, bound3j);
+    let i0_over_1 = d.const_app(p.rat.nat_div_succ, &[scaled.i0, scaled.zero_nat]);
+    let lhs_rat = radd(d, i0_over_1, neg_bound3j);
+    let lhs_embed = embed(d, p, lhs_rat);
+    let lhs_scaled = cmul(d, p, scaled.delta_embed, lhs_embed);
+    let a_lhs_scaled = cadd(d, p, a, lhs_scaled);
+
+    // `hl : CReal.le a_lhs_scaled c` — `crossing_lower` cited as a lemma.
+    let hl = d.lemma(p.crossing_lower, &[a, c, delta, hpos, hac]);
+
+    let of_nat_i0 = d.const_app(p.of_nat, &[scaled.i0]);
+    let embed_i0_over_1 = embed(d, p, i0_over_1);
+    let embed_neg_bound3j = embed(d, p, neg_bound3j);
+    let sample_term = cmul(d, p, of_nat_i0, scaled.delta_embed);
+    let slack_lower = cmul(d, p, scaled.delta_embed, embed_neg_bound3j);
+    let sample_point = cadd(d, p, a, sample_term);
+    let target = cadd(d, p, sample_point, slack_lower);
+
+    let refl_delta = d.lemma(p.equiv_refl, &[scaled.delta_embed]);
+
+    let sum_embed = cadd(d, p, embed_i0_over_1, embed_neg_bound3j);
+    let step_a_raw = d.lemma(p.of_rat_add, &[i0_over_1, neg_bound3j]);
+    let step_a = d.lemma(p.equiv_symm, &[sum_embed, lhs_embed, step_a_raw]);
+
+    let step_b = d.lemma(
+        p.mul_congr,
+        &[
+            scaled.delta_embed,
+            scaled.delta_embed,
+            lhs_embed,
+            sum_embed,
+            refl_delta,
+            step_a,
+        ],
+    );
+
+    let step_c = d.lemma(
+        p.left_distrib,
+        &[scaled.delta_embed, embed_i0_over_1, embed_neg_bound3j],
+    );
+    let mul_delta_i0raw = cmul(d, p, scaled.delta_embed, embed_i0_over_1);
+    let sum_after_c = cadd(d, p, mul_delta_i0raw, slack_lower);
+
+    // `mul_delta_i0raw` is DEFEQ `mul delta_embed of_nat_i0`, per
+    // `declare_crossing_sample_upper`'s header comment.
+    let step_g = d.lemma(p.mul_comm, &[scaled.delta_embed, of_nat_i0]);
+    let refl_slack = d.lemma(p.equiv_refl, &[slack_lower]);
+    let step_h = d.lemma(
+        p.add_congr,
+        &[
+            mul_delta_i0raw,
+            sample_term,
+            slack_lower,
+            slack_lower,
+            step_g,
+            refl_slack,
+        ],
+    );
+    let lhs_final = cadd(d, p, sample_term, slack_lower);
+
+    let mul_delta_sum_embed_lower = cmul(d, p, scaled.delta_embed, sum_embed);
+    let lhs_chain = echain(
+        d,
+        p,
+        lhs_scaled,
+        &[
+            (mul_delta_sum_embed_lower, step_b),
+            (sum_after_c, step_c),
+            (lhs_final, step_h),
+        ],
+    );
+
+    let refl_a = d.lemma(p.equiv_refl, &[a]);
+    let a_plus_final = cadd(d, p, a, lhs_final);
+    let step_add_a = d.lemma(
+        p.add_congr,
+        &[a, a, lhs_scaled, lhs_final, refl_a, lhs_chain],
+    );
+    let assoc_a = d.lemma(p.add_assoc, &[a, sample_term, slack_lower]);
+    let step_reassoc_a = d.lemma(p.equiv_symm, &[target, a_plus_final, assoc_a]);
+
+    let full_chain = echain(
+        d,
+        p,
+        a_lhs_scaled,
+        &[(a_plus_final, step_add_a), (target, step_reassoc_a)],
+    );
+
+    let refl_c = d.lemma(p.equiv_refl, &[c]);
+    let final_proof = d.lemma(
+        p.le_congr,
+        &[a_lhs_scaled, target, c, c, full_chain, refl_c, hl],
+    );
+
+    let ty_body = cle(d, p, target, c);
+    let ty_with_hac = d.arrow(hac_ty, ty_body);
+    let ty_with_hpos = d.arrow(hpos_ty, ty_with_hac);
+    let ty = {
+        let with_delta = d.pi_fv(delta_fv, rat_ty_, ty_with_hpos);
+        let with_c = d.pi_fv(c_fv, carrier, with_delta);
+        d.pi_fv(a_fv, carrier, with_c)
+    };
+    let value = {
+        let with_hac = d.lam_fv(hac_fv, hac_ty, final_proof);
+        let with_hpos = d.lam_fv(hpos_fv, hpos_ty, with_hac);
+        let with_delta = d.lam_fv(delta_fv, rat_ty_, with_hpos);
+        let with_c = d.lam_fv(c_fv, carrier, with_delta);
+        d.lam_fv(a_fv, carrier, with_c)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.crossing_sample_lower,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 /// Admit `CReal.crossingIndex`, `CReal.crossingUpper` and
 /// `CReal.crossingLower`. See the module documentation for the statements
 /// and the exact hypotheses each half needs.
@@ -681,4 +1184,23 @@ pub(super) fn declare_crossing(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<()
     declare_crossing_index(d, p)?;
     declare_crossing_upper(d, p)?;
     declare_crossing_lower(d, p)
+}
+
+/// Admit `CReal.crossingSampleUpper` and `CReal.crossingSampleLower`. Split
+/// out from [`declare_crossing`] (rather than folded into it) because these
+/// two need [`CRealPrelude::rat_unit_eq_one`] (via the local
+/// `of_nat_one_equiv_local`/`of_nat_succ_equiv_local` restatements above),
+/// which `mul_self_zero::declare_mul_self_zero` does not admit until AFTER
+/// `crossing::declare_crossing` runs — so the caller must dispatch this
+/// function later in the build sequence, once that dependency exists.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+pub(super) fn declare_crossing_sample(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_crossing_sample_upper(d, p)?;
+    declare_crossing_sample_lower(d, p)
 }

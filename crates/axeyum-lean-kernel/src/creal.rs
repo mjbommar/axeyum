@@ -1392,6 +1392,25 @@ pub struct CRealPrelude {
     /// here `(c−a)·Δ⁻¹` — which `a ≤ c` supplies via `CReal.mul_nonneg` on
     /// the two nonnegative factors. See `creal/crossing.rs`.
     pub crossing_lower: NameId,
+    /// `CReal.crossingSampleUpper : ∀ a c delta, Rat.lt Rat.zero delta →
+    /// CReal.le c (CReal.add (CReal.add a (CReal.mul (CReal.ofNat
+    /// (CReal.crossingIndex a c delta)) delta)) (CReal.add delta (CReal.mul
+    /// delta (CReal.ofRat (Rat.natDivSucc 2 j)))))` — [`Self::crossing_upper`]
+    /// restated against an ORDINARY Riemann-sum sample point `a + ofNat(i)·Δ`
+    /// (`integral.rs`'s own `sample_point` shape) rather than the raw
+    /// rational bound `crossingUpper` computes internally: `c` is within a
+    /// fixed slack (unreduced here, but equal to `2Δ`) ABOVE the coarse
+    /// mesh's `crossingIndex`-th sample point. See `creal/crossing.rs`.
+    pub crossing_sample_upper: NameId,
+    /// `CReal.crossingSampleLower : ∀ a c delta, Rat.lt Rat.zero delta →
+    /// CReal.le a c → CReal.le (CReal.add (CReal.add a (CReal.mul (CReal.ofNat
+    /// (CReal.crossingIndex a c delta)) delta)) (CReal.mul delta (CReal.ofRat
+    /// (Rat.neg (Rat.natDivSucc 3 j))))) c` — the mirror of
+    /// [`Self::crossing_sample_upper`]: `c` is no more than a fixed slack
+    /// (`1.5Δ`, left as `Δ·(negative rational)` rather than rewritten to
+    /// `neg(Δ·positive)`) BELOW the same sample point. See
+    /// `creal/crossing.rs`.
+    pub crossing_sample_lower: NameId,
     /// `CReal.sampleUpperBound : ∀ x m, CReal.le x (CReal.ofRat (Rat.add
     /// (CReal.seq x m) (Rat.natDivSucc 1 m)))` — the general
     /// self-approximation lemma every `CReal` satisfies: it never exceeds
@@ -2429,6 +2448,53 @@ pub struct CRealPrelude {
     /// (a function of `bigK`, never simplified to a literal) in place of that
     /// theorem's fixed `K := 7`.
     pub geom_cauchy_of_lt: NameId,
+    /// `CReal.geomScaledCauchyOfLt : ∀ x, le zero x → lt x one → ∀ k (h :
+    /// PosBound (add one (neg x)) k) (w : CReal), Cauchy (sumRange (fun n =>
+    /// mul w (pow x n)))` — a CONSTANT
+    /// times a geometric series stays Cauchy, at a GENERAL ratio `0 ≤ x < 1`
+    /// and a general scale `w`. This is `creal/ratio_test.rs`'s "scaled
+    /// geometric bridge", the piece Chapter 22–23's ratio test needs and
+    /// [`Self::geom_cauchy_of_lt`] alone does not supply: `sumRange (fun n =>
+    /// mul w (pow x n))` is only `Equiv` to `mul w (sumRange (pow x ·) n)`
+    /// (`CReal.mul_sumRange`, `series.rs`, already landed), not literally
+    /// equal — `CReal.mul`'s own representative resamples its factors at a
+    /// shifted index (`product.rs`), so the two sides are not the same
+    /// rational at any index.
+    ///
+    /// Mirrors `exponential.rs::declare_exp_dominant_cauchy`'s own route
+    /// verbatim, generalized from the fixed pair `(two, half)` to `(w, x)`
+    /// and from [`Self::geom_cauchy`] to [`Self::geom_cauchy_of_lt`]:
+    /// [`Self::geom_cauchy_of_lt`] gives `Cauchy (sumRange (pow x ·))`;
+    /// [`Self::converges_of_cauchy`] lifts it to `Converges (sumRange (pow x
+    /// ·)) L` for some `L` (eliminated immediately into the Prop goal, never
+    /// into data); [`Self::converges_of_const`]/[`Self::converges_mul`] give
+    /// `Converges (fun n => mul w (sumRange (pow x ·) n)) (mul w L)`;
+    /// [`Self::converges_cauchy`] turns that into `Cauchy (fun n => mul w
+    /// (sumRange (pow x ·) n))`; and [`Self::cauchy_of_pointwise_equiv`]
+    /// transports it across `CReal.mul_sumRange`'s `Equiv` onto the stated
+    /// conclusion. See `creal/ratio_test.rs::declare_geom_scaled_cauchy_of_lt`.
+    pub geom_scaled_cauchy_of_lt: NameId,
+    /// `CReal.sumRangeRatioTest : ∀ f r, le zero r → lt r one → ∀ k (h :
+    /// PosBound (add one (neg r)) k) (hdec : ∀ n, le (abs (f (Nat.succ n)))
+    /// (mul r (abs (f n)))), Cauchy (sumRange f)` — Spivak Chapter 22–23's
+    /// ratio test: a sequence whose consecutive
+    /// absolute terms shrink by a factor `r < 1` has a Cauchy (hence
+    /// convergent) partial-sum sequence, even when `f` changes sign.
+    ///
+    /// Composes three already-landed general theorems, none of them redone
+    /// here: [`Self::ratio_decay_bound`] applied to `g := fun n => abs (f
+    /// n)` gives `∀ n, le (abs (f n)) (mul (abs (f 0)) (pow r n))`;
+    /// [`Self::geom_scaled_cauchy_of_lt`] at `w := abs (f 0)` gives `Cauchy
+    /// (sumRange (fun n => mul (abs (f 0)) (pow r n)))`; and
+    /// `series.rs::sumRange_cauchy_of_dominated` combines the two directly
+    /// into `Cauchy (sumRange f)` — its domination hypothesis is stated on
+    /// `abs (f k)`, so no separate "absolute convergence ⟹ convergence"
+    /// bridge (`sumRange_cauchy_of_abs_cauchy`) is needed: that bridge is for
+    /// a hypothesis already phrased as `Cauchy (sumRange (fun k => abs (f
+    /// k)))`, and the ratio hypothesis here is a termwise BOUND, not a
+    /// pre-existing Cauchy fact about the absolute series. See
+    /// `creal/ratio_test.rs::declare_sum_range_ratio_test`.
+    pub sum_range_ratio_test: NameId,
     /// `CReal.one_le_pow_of_one_le : ∀ x, le one x → ∀ n, le one (pow x n)` —
     /// the mirror of [`Self::pow_le_one`]: powers of a base at least `1` stay
     /// at least `1`. Induction on `n`, and simpler than `pow_le_one`'s own
@@ -3081,6 +3147,32 @@ pub struct CRealPrelude {
     /// file, is the route taken. Neither `CReal.cosOneConverges` (the
     /// analogue of `CReal.e_converges`) nor a `[0, 1]` bound are built here.
     pub cos_one: NameId,
+    /// `CReal.cosOneConverges : Converges cosSeriesPartial cosOne` -- the
+    /// `e_converges` analogue, built the same way: generically over a BOUND
+    /// `(k, h)` (mirroring `declare_converges_of_cauchy`'s own `minor`
+    /// closure, never over the CONCRETE `k_final` -- see
+    /// `exponential.rs::declare_e_converges`'s own module note on why the
+    /// concrete form overflows a 1 GiB release stack), substituting the
+    /// concrete `(k_final, cosSeriesPartialBody)` only in the final
+    /// Pi-application. See `creal/trig.rs`.
+    pub cos_one_converges: NameId,
+    /// `CReal.cosOne_le_four : le cosOne (mul two two)` -- a LOOSE, UNIFORM
+    /// bound (no case split, holds at every `n` including `n = 0`), the same
+    /// shape as `CReal.e_le_four`: `abs (cosSeriesPartial n) <= sumRange
+    /// expDominant n <= four`, via `CReal.abs_sumRange_le` (the triangle
+    /// inequality) composed with `CReal.sumRange_le` at the pointwise
+    /// `CReal.cosTermAbsLeDominant`, then the SAME closed-form geometric
+    /// bound `e_le_four` derives for `sumRange expDominant n`. Deliberately
+    /// not the sharper `[0, 1]`/`[1/2, 3/5]` a genuine alternating-series
+    /// argument would give (that needs pairing consecutive terms, which is
+    /// real new machinery this slice does not build) -- see
+    /// `creal/trig.rs`'s module documentation for the tradeoff.
+    pub cos_one_le_four: NameId,
+    /// `CReal.neg_four_le_cosOne : le (neg (mul two two)) cosOne` -- the
+    /// lower half of [`Self::cos_one_le_four`]'s bound, by the same `abs
+    /// (cosSeriesPartial n) <= four` per-`n` fact read through
+    /// `neg_le_abs`/`neg_le_neg`/double-negation instead of `le_abs_self`.
+    pub neg_four_le_cos_one: NameId,
     /// `CReal.sumRange_const : ∀ w m,
     /// Equiv (sumRange (fun _ => w) (Nat.succ m)) (mul (ofNat (Nat.succ m))
     /// w)` (`creal/monotone.rs`) — a constant summed `succ m` times is
@@ -4282,6 +4374,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         crossing_index: kernel.name_str(creal, "crossingIndex"),
         crossing_upper: kernel.name_str(creal, "crossingUpper"),
         crossing_lower: kernel.name_str(creal, "crossingLower"),
+        crossing_sample_upper: kernel.name_str(creal, "crossingSampleUpper"),
+        crossing_sample_lower: kernel.name_str(creal, "crossingSampleLower"),
         sample_upper_bound: kernel.name_str(creal, "sampleUpperBound"),
         sample_lower_bound: kernel.name_str(creal, "sampleLowerBound"),
         bounded_of_uniformly_continuous: kernel.name_str(creal, "bounded_of_uniformly_continuous"),
@@ -4377,6 +4471,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         geom_cauchy: kernel.name_str(creal, "geomCauchy"),
         geom_cauchy_of_lt_ordered: kernel.name_str(creal, "geomCauchyOfLtOrdered"),
         geom_cauchy_of_lt: kernel.name_str(creal, "geomCauchyOfLt"),
+        geom_scaled_cauchy_of_lt: kernel.name_str(creal, "geomScaledCauchyOfLt"),
+        sum_range_ratio_test: kernel.name_str(creal, "sumRangeRatioTest"),
         one_le_pow_of_one_le: kernel.name_str(creal, "one_le_pow_of_one_le"),
         pow_le_pow_of_one_le: kernel.name_str(creal, "pow_le_pow_of_one_le"),
         pow_pos: kernel.name_str(creal, "pow_pos"),
@@ -4443,6 +4539,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         cos_series_partial: kernel.name_str(creal, "cosSeriesPartial"),
         cos_term_abs_le_dominant: kernel.name_str(creal, "cosTermAbsLeDominant"),
         cos_one: kernel.name_str(creal, "cosOne"),
+        cos_one_converges: kernel.name_str(creal, "cosOneConverges"),
+        cos_one_le_four: kernel.name_str(creal, "cosOne_le_four"),
+        neg_four_le_cos_one: kernel.name_str(creal, "neg_four_le_cosOne"),
         sum_range_const: kernel.name_str(creal, "sumRange_const"),
         mesh_count_width: kernel.name_str(creal, "mesh_count_width"),
         subdivision_point_in_bounds: kernel.name_str(creal, "subdivisionPoint_in_bounds"),
@@ -4631,6 +4730,14 @@ pub(crate) fn build_creal_prelude_uncached(
         // than waiting for the third `uniform_continuity` entry point below.
         uniform_continuity::declare_bounded_of_uniformly_continuous(&mut d, prelude)?;
         mul_self_zero::declare_mul_self_zero(&mut d, prelude)?;
+        // `crossing::declare_crossing_sample` (`crossingSampleUpper`/
+        // `crossingSampleLower`, restating `crossingUpper`/`crossingLower`
+        // -- `crossing::declare_crossing`, well above -- against an ordinary
+        // `sample_point`) needs `CReal.ratUnitEqOne`, just admitted by
+        // `mul_self_zero::declare_mul_self_zero` immediately above, so it
+        // cannot be folded into `declare_crossing` itself (see that
+        // function's own doc comment).
+        crossing::declare_crossing_sample(&mut d, prelude)?;
         sqrt::declare_sqrt(&mut d, prelude)?;
         speedup::declare_speedup(&mut d, prelude)?;
         // `sqrtApproxKRegular` needs `speedup.rs`'s `KRegular` predicate
@@ -4982,6 +5089,19 @@ pub(crate) fn build_creal_prelude_uncached(
         // `converges_of_cauchy` (`convergence::declare_convergence` /
         // `declare_cauchy_convergence`, both well above).
         exponential::declare_exp_convergence(&mut d, prelude)?;
+        // `geomScaledCauchyOfLt` needs `geomCauchyOfLt`
+        // (`geometric::declare_geom_cauchy_of_lt_family`, well above),
+        // `CReal.mul_sumRange` (`series::declare_series`, well above) and
+        // `CReal.converges_mul`/`converges_cauchy`/`converges_of_const`/
+        // `converges_of_cauchy`/`cauchyOfPointwiseEquiv` (the latter declared
+        // by `exponential::declare_exp_convergence`, just above — this is why
+        // this call cannot join `declare_geom_cauchy_of_lt_family` itself).
+        // `sumRangeRatioTest` composes it with `ratioDecayBound`
+        // (`geometric::declare_geometric`, well above) and
+        // `series.rs::sumRange_cauchy_of_dominated` (`series::declare_series`,
+        // well above).
+        ratio_test::declare_geom_scaled_cauchy_of_lt(&mut d, prelude)?;
+        ratio_test::declare_sum_range_ratio_test(&mut d, prelude)?;
         // `CReal.e` needs `geomCauchy_ordered_half` (just above),
         // `exp_term_abs_le_dominant`/`sum_range_cauchy_dominated_ordered_normalized`
         // (`series::declare_series`, well above) and
@@ -5946,6 +6066,7 @@ mod mul_self_zero;
 mod order_extra;
 mod power;
 mod product;
+mod ratio_test;
 mod ring_helpers;
 mod series;
 mod speedup;
