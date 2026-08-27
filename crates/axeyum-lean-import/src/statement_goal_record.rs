@@ -168,11 +168,12 @@ pub fn build_statement_goal_record(
             observed: report.axioms.clone(),
         });
     }
-    let identity = find_target_identity(&report.declaration_identities, target).ok_or_else(|| {
-        StatementGoalRecordError::TargetIdentityMissing {
-            target: target.to_owned(),
-        }
-    })?;
+    let identity =
+        find_target_identity(&report.declaration_identities, target).ok_or_else(|| {
+            StatementGoalRecordError::TargetIdentityMissing {
+                target: target.to_owned(),
+            }
+        })?;
     let goal_lean4 = completed.kernel().render_lean(completed.goal());
     let goal_sha256 = sha256_hex(goal_lean4.as_bytes());
     Ok(StatementGoalRecord {
@@ -193,7 +194,9 @@ pub fn build_statement_goal_record(
 mod tests {
     use std::io::Cursor;
 
-    use axeyum_lean_kernel::{BinderInfo, Declaration, Kernel, Lean4ExportMetadata, ReducibilityHint};
+    use axeyum_lean_kernel::{
+        BinderInfo, Declaration, Kernel, Lean4ExportMetadata, ReducibilityHint,
+    };
 
     use super::*;
     use crate::{ImportLimits, import_statement_ndjson};
@@ -208,7 +211,9 @@ mod tests {
         kernel.name_str(statement, "target")
     }
 
-    fn proposition(kernel: &mut Kernel) -> (axeyum_lean_kernel::ExprId, axeyum_lean_kernel::ExprId) {
+    fn proposition(
+        kernel: &mut Kernel,
+    ) -> (axeyum_lean_kernel::ExprId, axeyum_lean_kernel::ExprId) {
         let zero = kernel.level_zero();
         let prop = kernel.sort(zero);
         let p = kernel.bvar(0);
@@ -248,10 +253,7 @@ mod tests {
             .expect("a successfully imported target must yield a goal record");
         assert_eq!(record.target_name, TARGET);
         assert_eq!(record.goal_lean4, "((p : Prop) -> p)");
-        assert_eq!(
-            record.goal_sha256,
-            sha256_hex(record.goal_lean4.as_bytes())
-        );
+        assert_eq!(record.goal_sha256, sha256_hex(record.goal_lean4.as_bytes()));
         assert_eq!(record.admitted_declaration_count, 1);
         assert_eq!(record.target_dependency_count, 0);
         assert!(record.substituted_theorems.is_empty());
