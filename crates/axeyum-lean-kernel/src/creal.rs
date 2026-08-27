@@ -3631,6 +3631,28 @@ pub struct CRealPrelude {
     /// `ExprId` [`Self::integral`]'s own construction uses (both call
     /// `integral.rs`'s private `fold_k(magnitude)`).
     pub riemann_sum_deep_cauchy_cross_folded: NameId,
+    /// `CReal.riemannSumAddCauchyCross : ∀ F G a b, CReal.le a b → ∀ uFG :
+    /// UniformlyContinuousOn (fun t => add (F t) (G t)) a b, ∀ uF :
+    /// UniformlyContinuousOn F a b, ∀ uG : UniformlyContinuousOn G a b, ∀ n :
+    /// Nat, Within (seq (riemannSum (fun t => add (F t) (G t)) a b (deep …
+    /// uFG n)) n − add (seq (riemannSum F a b (deep F a b uF n)) n) (seq
+    /// (riemannSum G a b (deep G a b uG n)) n)) (Rat.natDivSucc K n)`.
+    ///
+    /// **The three-sequence cross-bridge `integral_add` needs**: unlike
+    /// [`Self::riemann_sum_deep_cauchy_cross`] (one function, two witnesses),
+    /// this compares THREE Riemann sums built from three generally-different
+    /// mesh counts (`F+G`'s own combo-witness mesh, `F`'s own mesh, `G`'s own
+    /// mesh) at a shared sample index. `riemannSum_add`'s exact per-`m`
+    /// identity only fires once all three meshes already agree, so this
+    /// needs `integral.rs`'s private `common_refinement3` (three counts, not
+    /// two) plus two extra `CReal.regular` self-bridges (`CReal.add` shifts
+    /// its own index, so `riemannSum_add` applied at the shared mesh lands
+    /// at `shift n`, not `n`) that `riemannSumDeepCauchyCross` never needed.
+    /// `K` depends only on `magnitude := Nat.succ (CReal.bound (width_of a
+    /// b))`. See `creal/integral.rs`'s `declare_riemann_sum_add_cauchy_cross`
+    /// for the construction; already the FOLDED single-`natDivSucc` shape
+    /// (no separate raw/Folded split, unlike the two-witness case).
+    pub riemann_sum_add_cauchy_cross: NameId,
     /// `CReal.integral : ∀ F a b, CReal.le a b → CReal.UniformlyContinuousOn
     /// F a b → CReal := CReal.mk (speedup (diagonal f) K) (regularity
     /// proof)`, `f := fun n => riemannSum F a b (deep F a b u n)` -- built
@@ -3682,6 +3704,20 @@ pub struct CRealPrelude {
     /// own convergence), so the two integral values are `Equiv`. See
     /// `creal/integral.rs`'s `declare_integral_witness_independent`.
     pub integral_witness_independent: NameId,
+    /// `CReal.integral_add : ∀ F G a b hab uFG uF uG, Equiv (CReal.integral
+    /// (fun t => add (F t) (G t)) a b hab uFG) (add (CReal.integral F a b
+    /// hab uF) (CReal.integral G a b hab uG))`.
+    ///
+    /// **The integral of a sum is the sum of the integrals.** Combines three
+    /// [`Self::integral_converges`] applications with
+    /// [`Self::converges_add`] and [`Self::riemann_sum_add_cauchy_cross`]
+    /// (the three-sequence cross-bridge between the combo-witness's own
+    /// Riemann sum and the SUM of `F`'s and `G`'s own Riemann sums, at their
+    /// own generally-different mesh depths) via
+    /// [`Self::converges_of_close`]/[`Self::converges_unique`] — the SAME
+    /// technique [`Self::integral_witness_independent`] uses, one sequence
+    /// wider. See `creal/integral.rs`'s `declare_integral_add`.
+    pub integral_add: NameId,
     /// `CReal.hasDerivative_integral_const : ∀ c a b (k : Nat), le (abs c)
     /// (ofRat (natDivSucc (Nat.succ k) 0)) → HasDerivativeOn (fun x =>
     /// integral (fun _ => c) a (max a (min x b)) (le_max_left a (min x b))
@@ -4149,10 +4185,12 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         riemann_sum_deep_cauchy_cross: kernel.name_str(creal, "riemannSumDeepCauchyCross"),
         riemann_sum_deep_cauchy_cross_folded: kernel
             .name_str(creal, "riemannSumDeepCauchyCrossFolded"),
+        riemann_sum_add_cauchy_cross: kernel.name_str(creal, "riemannSumAddCauchyCross"),
         integral: kernel.name_str(creal, "integral"),
         integral_converges: kernel.name_str(creal, "integral_converges"),
         integral_const: kernel.name_str(creal, "integral_const"),
         integral_witness_independent: kernel.name_str(creal, "integral_witness_independent"),
+        integral_add: kernel.name_str(creal, "integral_add"),
         has_derivative_integral_const: kernel.name_str(creal, "hasDerivative_integral_const"),
     }
 }
@@ -4493,6 +4531,14 @@ pub(crate) fn build_creal_prelude_uncached(
         // `riemannSumDeepCauchy`, via the same `riemannSumTotalEpsLe`/
         // `half_shift_le` pieces.
         integral::declare_riemann_sum_deep_cauchy_cross_folded(&mut d, prelude)?;
+        // `riemannSumAddCauchyCross` (the THREE-sequence cross-bridge
+        // `integral_add` needs) needs `riemannSum_cauchy`,
+        // `sharedIndexToCanonical`, `CReal.regular` (all well above, same
+        // dependencies as `riemannSumDeepCauchyCross`) plus `riemannSum_add`
+        // (`integral::declare_integral`, further above) -- nothing from
+        // `riemannSumDeepCauchyCross`/`Folded` themselves -- and lands here
+        // only to stay next to the construction it mirrors.
+        integral::declare_riemann_sum_add_cauchy_cross(&mut d, prelude)?;
         // `CReal.integral` (`declare_creal_integral` -- named to avoid
         // colliding with this file's own, unrelated, earlier
         // `integral::declare_integral`, which builds `CReal.riemannSum`)
@@ -4519,6 +4565,14 @@ pub(crate) fn build_creal_prelude_uncached(
         // `integral_const` (just above); it lands here to stay next to the
         // other `integral_*` law that shares its dependency shape.
         integral::declare_integral_witness_independent(&mut d, prelude)?;
+        // `integral_add` needs `integral_converges` (well above),
+        // `riemannSumAddCauchyCross` (just above `riemannSumDeepCauchyCross`
+        // et al.), `converges_add` (`convergence::declare_convergence`, far
+        // above) and `converges_of_close`/`converges_unique` (far above). It
+        // does not need `integral_witness_independent` (just above); it
+        // lands here to stay next to the other `integral_*` law that shares
+        // its dependency shape.
+        integral::declare_integral_add(&mut d, prelude)?;
         // `hasDerivative_integral_const` (Spivak Ch14 FTC-I, first evaluation
         // instance) needs `integral`/`integral_const` (just above, this
         // dispatch is why it cannot live inside `derivative::declare_derivative`,
