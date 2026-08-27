@@ -1,0 +1,29 @@
+//! Inventory shard for `crates/axeyum-lean-kernel/src/creal/exp_fn.rs`.
+//!
+//! Part of the per-module split of `creal_tests.rs`'s single pinned array (see
+//! `creal/inventory.rs` and `CLAUDE.md`'s pin-guidance section). Whoever adds a
+//! declaration to `crates/axeyum-lean-kernel/src/creal/exp_fn.rs` adds its
+//! entry HERE and nowhere else.
+//!
+//! No pin: this returns a plain `Vec`, not a fixed-size array. Coverage is
+//! derived from `kernel.environment()` by
+//! `creal_tests::every_creal_declaration_is_checked_and_axiom_free`, both
+//! directions.
+
+/// `(display name, interned NameId, declaration kind)` for every `CReal`
+/// declaration built by `crates/axeyum-lean-kernel/src/creal/exp_fn.rs`.
+pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameId, &'static str)> {
+    vec![
+        (
+            "CReal.expFnTermAbsLe",
+            p.exp_fn_term_abs_le,
+            "theorem",
+        ),
+        ("CReal.expFn", p.exp_fn, "def"),
+        (
+            "CReal.expFnUniformConverges",
+            p.exp_fn_uniform_converges,
+            "theorem",
+        ),
+    ]
+}
