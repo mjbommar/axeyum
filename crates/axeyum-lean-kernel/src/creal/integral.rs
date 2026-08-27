@@ -1067,6 +1067,42 @@
 //! `CRealPrelude`, has no `BuildStep`/`EXPECTED_STEP_ORDER` entry, and no
 //! inventory shard row; `creal_prelude_builds` is unaffected by this slice
 //! (doc-only change).
+//!
+//! ## `CReal.integral_split` mesh-count alignment — LANDED 2026-08-27 (a
+//! THIRTEENTH lane), the TWELFTH lane's paper resolution above is now a
+//! kernel-verified private helper, [`mesh_count_align`]
+//!
+//! The Nat.le chain + `Nat.le_dest` + `exists_elim` resolution the TWELFTH
+//! lane worked out on paper (steps 1–4 above) worked EXACTLY as designed, no
+//! adjustment needed: the four-hop `le_trans` chain
+//! (`le_add_right`/`le_add_right`+`add_comm` via [`nat_rewrite_prop`]/
+//! `le_succ`/`le_add_right`) composes cleanly, and `Nat.le_dest` +
+//! [`exists_elim`] (continuation-passing, since the witness cannot escape
+//! its own elimination scope, [`declare_of_nat_le`]'s own idiom) closes it.
+//! Kernel-verified three ways: symbolic (closed over four free `Nat`
+//! variables via a real `Theorem` declaration), a non-vacuity control
+//! (swapping `deep_ac`/`deep_cb` changes the rendered `combined`, since
+//! `succ` binds only the `deep_ac` side), and a concrete instantiation
+//! (`3,5,7,2 → combined` defeq `23`, checked via `Kernel::def_eq` — a
+//! textual `render_lean` comparison does NOT reduce `Nat.add`, and reported
+//! a false mismatch before this was noticed).
+//!
+//! [`common_refinement3`] was checked against this need and does NOT fit:
+//! it refines two mesh counts against a shared TARGET refinement multiple,
+//! not three counts against a SUM relation — a structurally different
+//! problem, so nothing here duplicates it.
+//!
+//! `mesh_count_align` is a private helper with its own `#[cfg(test)]`
+//! module, wired into no `CRealPrelude` field, no `BuildStep`, no
+//! `EXPECTED_STEP_ORDER` entry, and no inventory shard row —
+//! `creal_prelude_builds` is unaffected. **Next leg, sized precisely**: the
+//! `[a,c]` leg's bound-weakening (deliverable (b) in this lane's own brief),
+//! mirroring [`bnd_leg_plus_share_le`]'s structure exactly but consuming
+//! `total_eps_sample_le_at(a, c, e, m_ac, magnitude_ac, jj1)` in place of
+//! `total_eps_sample_le`'s shared-index call — `total_eps_sample_le_at`
+//! already exists and needs no further generalization. That leg, plus the
+//! `[c,b]` leg (symmetric) and the final three-way `abs_add_le` combine
+//! sized in the TWELFTH lane's own entry above, are what remain.
 
 use super::completeness::half_shift_le;
 use super::convergence::{
