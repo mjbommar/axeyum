@@ -618,7 +618,10 @@ fn cabs(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
 /// ([`declare_pow`]); this sits one above it, matching this development's
 /// own convention of giving a thin wrapper a height just past what it
 /// unfolds to.
-pub(super) fn declare_power_series_term(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+pub(super) fn declare_power_series_term(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
     let carrier = creal_ty(d, p);
     let nat = d.nat_ty();
     let coeff_ty = d.arrow(nat, carrier);
@@ -659,7 +662,10 @@ pub(super) fn declare_power_series_term(d: &mut IntDev<'_>, p: CRealPrelude) -> 
 /// [`CRealPrelude::mul_congr`] against `Equiv (c j) (c j)` reflexivity on
 /// the left factor. No induction: `pow_congr` already did the induction on
 /// the exponent.
-pub(super) fn declare_power_series_term_congr(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+pub(super) fn declare_power_series_term_congr(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
     let carrier = creal_ty(d, p);
     let nat = d.nat_ty();
     let coeff_ty = d.arrow(nat, carrier);
@@ -678,8 +684,13 @@ pub(super) fn declare_power_series_term_congr(d: &mut IntDev<'_>, p: CRealPrelud
 
     let cj = d.apply(c, &[j]);
     let refl_cj = d.lemma(p.equiv_refl, &[cj]);
+    let pow_pp_j = cpow(d, p, pp, j);
+    let pow_qq_j = cpow(d, p, qq, j);
     let pow_congr_proof = d.lemma(p.pow_congr, &[pp, qq, heq, j]);
-    let proof = d.lemma(p.mul_congr, &[cj, cj, pp, qq, refl_cj, pow_congr_proof]);
+    let proof = d.lemma(
+        p.mul_congr,
+        &[cj, cj, pow_pp_j, pow_qq_j, refl_cj, pow_congr_proof],
+    );
 
     let value = {
         let with_heq = d.lam_fv(heq_fv, heq_ty, proof);
@@ -788,7 +799,10 @@ pub(super) fn declare_power_series_term_abs_le(
             step1,
         ],
     );
-    let npxj_le_pow_r_j = d.lemma(p.le_trans, &[neg_pow_x_j, zero_c, pow_r_j, npxj_le_zero, h_bound_nonneg]);
+    let npxj_le_pow_r_j = d.lemma(
+        p.le_trans,
+        &[neg_pow_x_j, zero_c, pow_r_j, npxj_le_zero, h_bound_nonneg],
+    );
     let abs_pow_x_j_le_pow_r_j = d.lemma(p.abs_le, &[pow_x_j, pow_r_j, h_le, npxj_le_pow_r_j]);
 
     let concl_proof = d.lemma(

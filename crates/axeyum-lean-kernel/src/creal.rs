@@ -5129,8 +5129,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         power_series_term: kernel.name_str(creal, "powerSeriesTerm"),
         power_series_term_congr: kernel.name_str(creal, "powerSeriesTerm_congr"),
         power_series_term_abs_le: kernel.name_str(creal, "powerSeriesTerm_abs_le"),
-        power_series_uniform_converges: kernel
-            .name_str(creal, "powerSeriesUniformConvergesOn"),
+        power_series_uniform_converges: kernel.name_str(creal, "powerSeriesUniformConvergesOn"),
         sin_term: kernel.name_str(creal, "sinTerm"),
         sin_series_partial: kernel.name_str(creal, "sinSeriesPartial"),
         sin_term_abs_le_dominant: kernel.name_str(creal, "sinTermAbsLeDominant"),

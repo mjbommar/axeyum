@@ -126,7 +126,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 432] = [
+    let expected: [(&str, crate::NameId, &str); 436] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -1561,6 +1561,22 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
             "theorem",
         ),
         ("CReal.weierstrassMTest", p.weierstrass_m_test, "theorem"),
+        ("CReal.powerSeriesTerm", p.power_series_term, "def"),
+        (
+            "CReal.powerSeriesTerm_congr",
+            p.power_series_term_congr,
+            "theorem",
+        ),
+        (
+            "CReal.powerSeriesTerm_abs_le",
+            p.power_series_term_abs_le,
+            "theorem",
+        ),
+        (
+            "CReal.powerSeriesUniformConvergesOn",
+            p.power_series_uniform_converges,
+            "theorem",
+        ),
     ];
     // COVERAGE, checked against the ENVIRONMENT rather than against this list.
     //
