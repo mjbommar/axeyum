@@ -1445,6 +1445,35 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   the other side are lost** — re-derive them, and recompute the pin by
   **counting** the lists.
 
+- **A NEGATIVE CONTROL MUST DIFFER IN A *SMALL* TERM, or the control itself is
+  the pathology.** Measured 2026-08-27. A lane's control transposed two whole
+  `riemannSum`s in a conclusion and asserted `!Kernel::def_eq` for
+  non-vacuity. Both sides are then FAILING defeq checks across different
+  endpoints, which forces full unfolds of `sumRange`'s `Nat.rec` over a symbolic
+  `succ m`: **>300 s and RSS 2.0 -> 3.1 GB with no sign of stopping**, against
+  **34.9 s** for the positive check on the identical proof term. A *failing*
+  defeq is unbounded in a way a succeeding one is not -- there is no early exit.
+
+  The replacement varies only the term count in the bound (`ofNat m` vs
+  `ofNat (succ m)`), leaving the left-hand side the identical `ExprId`. Equally
+  discriminating (false at `m := 0`) and free. This pairs with the standing rule
+  that a pathological test is worth deleting rather than debugging: here the
+  pathology was in the *control*, not the subject.
+
+- **A SORT ERROR ARRIVES WEARING A `TypeMismatch`'s CLOTHES, and the tell is a
+  tiny `expected` id.** Measured 2026-08-27: a constant function built with a
+  `CReal` binder where `sumRange` needs `Nat -> CReal` reported
+  `TypeMismatch { expected: ExprId(3), got: ExprId(1503219) }` -- naming neither
+  the lambda nor `sumRange`. **A sort lives at a single-digit `ExprId`**, so an
+  `expected` in the low single digits means the kernel wanted a SORT and you
+  handed it a term (or the binder's domain is wrong), not that two elaborate
+  types disagree. Check the binder before diffing the types.
+
+- **`cargo test --lib 'filterA filterB'` RUNS ZERO TESTS AND EXITS 0.** The
+  second word is parsed as a positional the harness does not use, so nothing
+  matches. Same green-looking nothing as the feature-gated-suite trap, from a
+  quoting slip rather than a missing flag. **Confirm a NONZERO count**, always.
+
 - **Tools in this repo have lied more often than the solver has been weak.**
   In one session: a corpus gate that ran zero tests for 15 days while exiting 0;
   a pre-push hook that had never run because `core.hooksPath` was unset; a
@@ -1531,7 +1560,24 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
 
   Failing that, grep for the shape of the intermediate you need -- an index
   computation, a case split, a direction of transport -- across the whole crate,
-  not for what you would have called the finished lemma. `--include-constructed` inventories are useless
+  not for what you would have called the finished lemma.
+
+  **A STALE PREBUILT `shape_search` REPORTS A FALSE ABSENT, which is the one
+  failure this tool exists to prevent.** It indexes the declarations its own
+  binary was compiled against, so `target/release/examples/shape_search` left
+  over from an earlier build answers about an OLD environment. Measured
+  2026-08-27: a prebuilt copy in the shared checkout reported **1,845**
+  declarations against a current **1,850**, and did not know `CReal.integral_abs_le`
+  -- a declaration that had landed hours earlier. Harmless for an old lemma;
+  for a RECENT one it says ABSENT, exit 1, with a perfectly convincing
+  same-kind positive control beside it.
+
+  This is the general prebuilt-binary hazard (`target/release/examples/` takes
+  no cargo lock and is the right tool for measurement under contention) meeting
+  the one question where a wrong negative is expensive. **Before trusting an
+  ABSENT verdict, check the `declarations=` count in the coverage line against a
+  fresh build, or rebuild.** A FOUND verdict needs no such care -- a stale index
+  cannot invent a declaration. `--include-constructed` inventories are useless
   here for case 2 by construction: an inline step has no name to list.
 
   And note the asymmetry when you find one: extracting an inline step into its
