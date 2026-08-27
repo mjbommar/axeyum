@@ -403,7 +403,12 @@ fn cancel_right(d: &mut IntDev<'_>, p: CRealPrelude, q: ExprId, r: ExprId) -> Ex
         d,
         p,
         qr_negq,
-        &[(rq_negq, step1), (r_q_negq, assoc), (r_zero, step2), (r, az)],
+        &[
+            (rq_negq, step1),
+            (r_q_negq, assoc),
+            (r_zero, step2),
+            (r, az),
+        ],
     )
 }
 
@@ -441,7 +446,14 @@ fn within_real(d: &mut IntDev<'_>, p: CRealPrelude, v: ExprId, q: ExprId) -> Exp
 }
 
 /// `CReal.HasDerivativeOn F F' a b`.
-fn hd_ty(d: &mut IntDev<'_>, p: CRealPrelude, f: ExprId, fp: ExprId, a: ExprId, b: ExprId) -> ExprId {
+fn hd_ty(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    fp: ExprId,
+    a: ExprId,
+    b: ExprId,
+) -> ExprId {
     d.const_app(p.has_derivative_on, &[f, fp, a, b])
 }
 
@@ -465,7 +477,12 @@ fn nonneg_rat_bound(d: &mut IntDev<'_>, p: CRealPrelude, k: u32, idx: ExprId) ->
 
 /// `(bound, proof)` = `(mul (ofRat (natDivSucc 1 e)) (abs diff), le zero
 /// bound)`. Copied verbatim from `derivative.rs`'s own private helper.
-fn error_bound(d: &mut IntDev<'_>, p: CRealPrelude, e: ExprId, diff_yx: ExprId) -> (ExprId, ExprId) {
+fn error_bound(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    e: ExprId,
+    diff_yx: ExprId,
+) -> (ExprId, ExprId) {
     let (ofr_e, ofr_e_nonneg) = nonneg_rat_bound(d, p, 1, e);
     let abs_diff = cabs(d, p, diff_yx);
     let abs_diff_nonneg = d.lemma(p.abs_nonneg, &[diff_yx]);
@@ -554,7 +571,12 @@ fn linear_error_equiv_zero(
     let neg_x_eq_y = echain(d, p, neg_x_ty, &[(add_nega_nnb, nad), (big_y, step_y)]);
 
     // neg(mul_m_diffyx) ~ big_y
-    let step8 = echain(d, p, neg_mul_m_diffyx, &[(neg_x_ty, step4), (big_y, neg_x_eq_y)]);
+    let step8 = echain(
+        d,
+        p,
+        neg_mul_m_diffyx,
+        &[(neg_x_ty, step4), (big_y, neg_x_eq_y)],
+    );
 
     // error ~ add(big_x, big_y)
     let refl_x = erefl(d, p, big_x);
@@ -667,7 +689,14 @@ fn build_hd_linear(
 /// `∀ x : CReal, le lo x → le x hi → le (f x) (f c)` — "`f` attains a
 /// maximum at `c` over `[lo, hi]`". Copied verbatim from `rolle.rs`'s
 /// private `hmax_ty`, applied here to the auxiliary `g`.
-fn hmax_ty(d: &mut IntDev<'_>, p: CRealPrelude, f: ExprId, lo: ExprId, hi: ExprId, c: ExprId) -> ExprId {
+fn hmax_ty(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    lo: ExprId,
+    hi: ExprId,
+    c: ExprId,
+) -> ExprId {
     let carrier = creal_ty(d, p);
     let x_fv = d.fresh_fvar();
     let x = d.kernel().fvar(x_fv);
@@ -684,7 +713,14 @@ fn hmax_ty(d: &mut IntDev<'_>, p: CRealPrelude, f: ExprId, lo: ExprId, hi: ExprI
 /// `∀ x : CReal, le lo x → le x hi → le (f c) (f x)` — "`f` attains a
 /// minimum at `c` over `[lo, hi]`". Copied verbatim from `rolle.rs`'s
 /// private `hmin_ty`.
-fn hmin_ty(d: &mut IntDev<'_>, p: CRealPrelude, f: ExprId, lo: ExprId, hi: ExprId, c: ExprId) -> ExprId {
+fn hmin_ty(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    lo: ExprId,
+    hi: ExprId,
+    c: ExprId,
+) -> ExprId {
     let carrier = creal_ty(d, p);
     let x_fv = d.fresh_fvar();
     let x = d.kernel().fvar(x_fv);
@@ -858,7 +894,11 @@ fn declare_mvt_interior_extremum(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<
         d,
         p,
         m,
-        &[(neg_neg_m, dn_m_symm), (neg_neg_fpc, step_negcongr), (fp_c, dn_fpc)],
+        &[
+            (neg_neg_m, dn_m_symm),
+            (neg_neg_fpc, step_negcongr),
+            (fp_c, dn_fpc),
+        ],
     );
     let target_proof = esymm(d, p, m, fp_c, m_to_fpc); // Equiv(fp_c, m)
 
