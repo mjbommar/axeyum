@@ -439,5 +439,150 @@ class RealSeedProducerContractTests(unittest.TestCase):
         self.assertTrue(no_route_ids.isdisjoint(built["selection"]["admissible_fact_ids"]))
 
 
+def real_decline(**overrides) -> dict:
+    """A well-formed contract-driven decline (doc 291) against the REAL,
+    committed `int-modeq-family-v1` contract. `fact_id` and `contract` must
+    both resolve against the real ledger (see `load_decline_artifacts`'s
+    docstring for why), so every override here still names something real
+    unless the test is deliberately checking staleness.
+    """
+    decline = {
+        "schema_version": 1,
+        "kind": "axeyum-autogenesis-test-decline-v1",
+        "contract": "artifacts/autogenesis/producer-contracts/int-modeq-family-v1.json",
+        "contract_sha256": "0" * 64,  # overridden below with the REAL current digest
+        "fact_id": "F:ml430-int-add-modeq-right-e58108ee",
+        "producer": {
+            "tool": "crates/axeyum-lean-import/examples/modeq_family_operation.rs",
+            "result": "declined",
+            "decline_reason": "TerminalNotClosed",
+            "decline_message": "test fixture: terminal goal is not an Eq/Iff shape",
+        },
+    }
+    decline.update(overrides)
+    return decline
+
+
+class ProducerContractDeclineTests(unittest.TestCase):
+    """Doc 291: a decline is SELECTOR INPUT, not just a receipt. These
+    exercise the feedback loop end to end over the real ledger and the real
+    `int-modeq-family-v1` contract, since a decline's `fact_id` and
+    `contract` must both resolve against the real committed artifacts (see
+    `load_decline_artifacts`'s docstring).
+    """
+
+    TARGET = "F:ml430-int-add-modeq-right-e58108ee"
+    CONTRACT_ID = "producer-contract-int-modeq-family-v1"
+
+    def setUp(self) -> None:
+        self.facts = frontier.load()
+        self.contracts = frontier.load_producer_contracts()
+        self.real_contract = next(
+            c for c in self.contracts if c["id"] == self.CONTRACT_ID
+        )
+        self.real_digest = frontier.digest(self.real_contract)
+        # Sanity: the target really is shape-matched by this contract and has
+        # no dependencies blocking it, or the test proves nothing.
+        self.assertIn(
+            self.CONTRACT_ID,
+            frontier.matching_contracts(
+                self.facts[self.TARGET],
+                self.contracts,
+                frontier.contract_validator_module().shape_matches,
+            ),
+        )
+
+    def test_live_decline_removes_admissibility_and_reports_declined(self) -> None:
+        decline = real_decline(contract_sha256=self.real_digest)
+        built = frontier.build_machine_frontier(
+            self.facts, contracts=self.contracts, declines=[decline]
+        )
+        self.assertNotIn(self.TARGET, built["selection"]["admissible_fact_ids"])
+        self.assertIn(self.TARGET, built["selection"]["declined_fact_ids"])
+        entry = next(row for row in built["entries"] if row["fact_id"] == self.TARGET)
+        self.assertEqual(entry["declined_producer_contract_ids"], [self.CONTRACT_ID])
+        rationale = next(
+            row for row in built["selection"]["rationale"] if row["fact_id"] == self.TARGET
+        )
+        self.assertIn("declined-via-contract", rationale["rejected_by"])
+        self.assertEqual(built["diagnostics"]["declined_by_contract"], {self.CONTRACT_ID: 1})
+        self.assertGreaterEqual(built["diagnostics"]["declined_count"], 1)
+
+    def test_stale_decline_against_a_changed_contract_does_not_suppress(self) -> None:
+        # The re-dispatch policy (doc 291): a decline binds to the EXACT
+        # contract content that produced it. A wrong/stale `contract_sha256`
+        # must not suppress admission -- this is what makes editing a
+        # contract's recipe automatically re-open everything it declined.
+        stale = real_decline(contract_sha256="f" * 64)
+        built = frontier.build_machine_frontier(
+            self.facts, contracts=self.contracts, declines=[stale]
+        )
+        self.assertIn(self.TARGET, built["selection"]["admissible_fact_ids"])
+        self.assertNotIn(self.TARGET, built["selection"]["declined_fact_ids"])
+        entry = next(row for row in built["entries"] if row["fact_id"] == self.TARGET)
+        self.assertEqual(entry["declined_producer_contract_ids"], [])
+
+    def test_declines_default_to_none_not_auto_loaded(self) -> None:
+        # Same asymmetry as `contracts=None` (doc 291's docstring): a test
+        # overriding the contract set must not have a real, unrelated
+        # decline silently subtract from its own controlled scenario.
+        built = frontier.build_machine_frontier(self.facts, contracts=self.contracts)
+        self.assertIn(self.TARGET, built["selection"]["admissible_fact_ids"])
+
+    def test_shape_matched_count_is_unaffected_by_a_decline(self) -> None:
+        # A decline narrows ADMISSION, never the shape-match population
+        # itself -- `shape_matched_count` must be identical with and without
+        # the decline present.
+        without = frontier.build_machine_frontier(self.facts, contracts=self.contracts)
+        decline = real_decline(contract_sha256=self.real_digest)
+        with_decline = frontier.build_machine_frontier(
+            self.facts, contracts=self.contracts, declines=[decline]
+        )
+        self.assertEqual(
+            without["diagnostics"]["shape_matched_count"],
+            with_decline["diagnostics"]["shape_matched_count"],
+        )
+        # ...but admissible_count strictly drops by exactly one.
+        self.assertEqual(
+            with_decline["diagnostics"]["admissible_count"],
+            without["diagnostics"]["admissible_count"] - 1,
+        )
+
+    def test_malformed_decline_is_rejected_by_build_machine_frontier(self) -> None:
+        # `build_machine_frontier` must not silently accept a malformed
+        # decline any more than it accepts a malformed contract -- doc 291's
+        # falsifiability requirement (a free-text reason is exactly the
+        # "make the selector shut up" loophole).
+        bad = real_decline(contract_sha256=self.real_digest)
+        bad["producer"]["decline_reason"] = "we tried and it did not work"
+        with self.assertRaises(frontier.FrontierError):
+            frontier.build_machine_frontier(
+                self.facts, contracts=self.contracts, declines=[bad]
+            )
+
+
+class RealDeclineFeedbackLoopTests(unittest.TestCase):
+    """End-to-end over the real ledger, the real contracts, AND the real
+    committed decline (doc 290's `F:ml430-int-add-modeq-left-ee732b5b`) --
+    this is what `fact-frontier.py --json` actually prints. Confirms the
+    concrete symptom the task started from is fixed: the selector no longer
+    loops on a fact a producer already declined.
+    """
+
+    def test_the_declined_fact_is_no_longer_selected(self) -> None:
+        facts = frontier.load()
+        contracts = frontier.load_producer_contracts()
+        declines = frontier.load_decline_artifacts()
+        self.assertTrue(declines, "expected at least the doc-290 seed decline")
+        built = frontier.build_machine_frontier(facts, contracts=contracts, declines=declines)
+        declined_fact_id = "F:ml430-int-add-modeq-left-ee732b5b"
+        self.assertNotEqual(built["selection"]["selected_fact_id"], declined_fact_id)
+        self.assertNotIn(declined_fact_id, built["selection"]["admissible_fact_ids"])
+        self.assertIn(declined_fact_id, built["selection"]["declined_fact_ids"])
+        # Selection must still land on SOME fact -- the loop moves on, it
+        # does not just refuse.
+        self.assertIsNotNone(built["selection"]["selected_fact_id"])
+
+
 if __name__ == "__main__":
     unittest.main()

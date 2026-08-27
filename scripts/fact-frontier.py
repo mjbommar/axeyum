@@ -85,6 +85,16 @@ CONTRACT_ROUTES = {"kernel-lane", "cas-bridge", "import"}
 CAS_BRIDGE_MANIFEST = ROOT / "artifacts" / "autogenesis" / "cas-bridge-manifest.json"
 IMPORT_BACKLOG = ROOT / "artifacts" / "import-backlog.json"
 
+# Doc 291: the first real contract dispatch (doc 290) matched a contract,
+# imported cleanly, and the producer honestly DECLINED. Recorded as
+# `artifacts/autogenesis/mathlib-int-add-modeq-left-decline-v1.json`, but
+# nothing read it back -- so `admissible` kept counting a `(fact, contract)`
+# pair a producer had already tried and refused, and the selector would loop
+# on it forever. A decline is scoped to the EXACT contract version that
+# produced it (`contract_sha256`): editing the contract's recipe/shape is
+# what re-opens a fact it previously declined, never a manual clear.
+PRODUCER_CONTRACT_DECLINE_VALIDATOR = ROOT / "scripts" / "validate-producer-contract-declines.py"
+
 # A status asserting we settled it. `axiom` counts: a dependency taken as an
 # axiom is available to build on, whatever one thinks of taking it.
 SETTLED = {"proved", "computed", "refuted", "axiom"}
@@ -241,6 +251,83 @@ def validate_producer_contracts(contracts: list[dict[str, Any]]) -> None:
             raise module.ContractError("duplicate producer contract id in supplied list")
     except module.ContractError as error:
         raise FrontierError(f"producer contract registry invalid: {error}") from error
+
+
+def decline_validator_module():
+    spec = importlib.util.spec_from_file_location(
+        "validate_producer_contract_declines_for_frontier", PRODUCER_CONTRACT_DECLINE_VALIDATOR
+    )
+    if spec is None or spec.loader is None:
+        raise FrontierError(f"cannot load {PRODUCER_CONTRACT_DECLINE_VALIDATOR}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_decline_artifacts() -> list[dict[str, Any]]:
+    """Load and validate every contract-driven decline artifact under
+    `artifacts/autogenesis/` (doc 291).
+
+    Same reasoning as `load_producer_contracts`: validated through the
+    dedicated validator module, never re-implemented here, and always against
+    the REAL committed fact ledger -- a decline's falsifiability (does its
+    `fact_id` resolve? does its `contract` resolve?) is a property of the real
+    ledger, not of whatever subset of facts a particular
+    `build_machine_frontier` call happens to be considering.
+
+    An empty result is not an error -- most trees will have zero, one, or a
+    handful of contract-driven declines, and "no declines yet" is a fact
+    about the ledger's current state, not a malformed input.
+    """
+    module = decline_validator_module()
+    try:
+        real_facts = module.load_facts()
+        return module.validate_declines_dir(facts=real_facts)
+    except (OSError, json.JSONDecodeError, module.DeclineError) as error:
+        raise FrontierError(f"producer contract decline registry invalid: {error}") from error
+
+
+def validate_decline_artifacts(declines: list[dict[str, Any]]) -> None:
+    """Validate an explicitly-supplied decline list, against the REAL
+    ledger -- see `load_decline_artifacts` for why."""
+    module = decline_validator_module()
+    try:
+        real_facts = module.load_facts()
+        for decline in declines:
+            module.validate_decline(decline, real_facts)
+    except module.DeclineError as error:
+        raise FrontierError(f"producer contract decline registry invalid: {error}") from error
+
+
+def live_declined_pairs(
+    declines: list[dict[str, Any]], contracts: list[dict[str, Any]]
+) -> set[tuple[str, str]]:
+    """`(fact_id, contract_id)` pairs with a LIVE decline against them.
+
+    A decline is live only against the EXACT contract version that produced
+    it (doc 291's re-dispatch policy): `contract_sha256` must equal the
+    CURRENT digest of the contract the decline names. If the contract's
+    recipe/shape has since changed (a real capability improvement, not a
+    prose edit -- see doc 291), its digest changes and every fact it
+    previously declined becomes eligible again with no manual intervention.
+    A decline naming a contract that no longer exists at all is likewise not
+    live -- there is nothing left for it to suppress admission via.
+    """
+    contracts_by_id = {contract["id"]: contract for contract in contracts}
+    live: set[tuple[str, str]] = set()
+    for decline in declines:
+        contract_path = ROOT / decline["contract"]
+        try:
+            referenced = json.loads(contract_path.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        contract_id = referenced.get("id")
+        current = contracts_by_id.get(contract_id)
+        if current is None:
+            continue
+        if digest(current) == decline["contract_sha256"]:
+            live.add((decline["fact_id"], contract_id))
+    return live
 
 
 def route_capability() -> dict[str, bool]:
@@ -418,6 +505,7 @@ def build_machine_frontier(
     facts: dict[str, dict],
     registry: dict[str, Any] | None = None,
     contracts: list[dict[str, Any]] | None = None,
+    declines: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Build the content-addressed authoritative queue and selection refusal.
 
@@ -428,6 +516,13 @@ def build_machine_frontier(
     clean gate review, licenses autonomous dispatch; the two are read
     separately below and never folded into one count, because folding them is
     exactly the conflation ADR-0602 exists to undo.
+
+    Doc 291 adds a third signal, narrower than either: a DECLINE, a real
+    producer attempt against a specific contract that came back honestly
+    negative. A decline never widens admission (it cannot make a fact
+    admissible); it only narrows the CONTRACT path, and only for the exact
+    `(fact, contract)` pair it names while that contract's content matches
+    the decline's recorded `contract_sha256` -- see `live_declined_pairs`.
 
     `contracts=None` means NO contracts, deliberately asymmetric with
     `registry=None` (which auto-loads the real operation registry from disk).
@@ -443,6 +538,12 @@ def build_machine_frontier(
     default -- so the CLI's `--json`/`--output`/`--verify` output always
     reflects real contracts, and a caller building a controlled scenario over
     the real ledger is never surprised by one it did not ask for.
+
+    `declines=None` means NO declines, for the identical reason and by the
+    identical asymmetry with `registry=None`: a test isolating one contract's
+    effect must not have a real, unrelated decline silently subtract from its
+    `admissible_fact_ids`. `main()` and `verify_machine_frontier` load the
+    real set explicitly (`load_decline_artifacts`).
     """
     if registry is None:
         registry = load_operation_registry()
@@ -455,6 +556,11 @@ def build_machine_frontier(
         contracts = []
     else:
         validate_producer_contracts(contracts)
+    if declines is None:
+        declines = []
+    else:
+        validate_decline_artifacts(declines)
+    declined_pairs = live_declined_pairs(declines, contracts)
     capable_routes = route_capability()
 
     held = gate_holds(facts)
@@ -493,6 +599,15 @@ def build_machine_frontier(
             producer_contract_route_capable = capable_routes.get(
                 producer_contract_route, False
             )
+        # Doc 291: a matched contract with a LIVE decline against this exact
+        # fact does not license admission via that contract -- narrows the
+        # CONTRACT path only, never the receipt path, and never widens
+        # anything.
+        declined_producer_contract_ids = sorted(
+            contract_id
+            for contract_id in matched_producer_contract_ids
+            if (fact_id, contract_id) in declined_pairs
+        )
         matched_operations = [
             operation for operation in operations
             if operation["id"] in registered_operation_ids
@@ -539,6 +654,7 @@ def build_machine_frontier(
                 "matched_producer_contract_ids": matched_producer_contract_ids,
                 "producer_contract_route": producer_contract_route,
                 "producer_contract_route_capable": producer_contract_route_capable,
+                "declined_producer_contract_ids": declined_producer_contract_ids,
                 "gate_mentions": sorted(gate_mentions),
                 "unreviewed_gate_mentions": sorted(
                     gate_mentions.difference(reviewed_gate_mentions)
@@ -580,8 +696,13 @@ def build_machine_frontier(
     for entry in considered:
         op_ids = entry["registered_operation_ids"]
         contract_ids = entry["matched_producer_contract_ids"]
+        declined_contract_ids = entry["declined_producer_contract_ids"]
         op_ok = len(op_ids) == 1
-        contract_ok = len(contract_ids) == 1 and entry["producer_contract_route_capable"]
+        contract_ok = (
+            len(contract_ids) == 1
+            and entry["producer_contract_route_capable"]
+            and contract_ids[0] not in declined_contract_ids
+        )
         producer_ok = op_ok or contract_ok
         route_ok = entry["route_class"] != "no-route"
         gate_ok = not entry["unreviewed_gate_mentions"] and not entry["stale_reviewed_gate_mentions"]
@@ -601,6 +722,8 @@ def build_machine_frontier(
                 reasons.append("ambiguous-producer-contract")
             elif not entry["producer_contract_route_capable"]:
                 reasons.append("producer-contract-route-unavailable")
+            elif contract_ids[0] in declined_contract_ids:
+                reasons.append("declined-via-contract")
         if entry["unreviewed_gate_mentions"]:
             reasons.append("gate-coupling-review-required")
         if entry["stale_reviewed_gate_mentions"]:
@@ -649,6 +772,43 @@ def build_machine_frontier(
         entry["fact_id"] for entry in considered if entry["route_class"] == "no-route"
     )
 
+    # Doc 291: THREE populations over ready facts, not two. `admissible_count`
+    # used to be read as "discharge-capable", but before declines existed it
+    # measured only SHAPE-MATCH -- exactly what let the very first contract
+    # dispatch (doc 290) loop forever on a fact a producer had already
+    # honestly refused. These three are reported side by side so the gap
+    # between "matched a shape" and "would actually be attempted again" is a
+    # number, not a reading of the code.
+    #
+    #   shape-matched                  >= 1 matched producer contract
+    #   declined-via-all-matching      shape-matched AND every matched
+    #                                  contract has a LIVE decline against
+    #                                  this fact -- the population that was
+    #                                  previously invisible and silently
+    #                                  counted as admissible
+    #   admissible (matched minus declined)   the existing admissible-via-
+    #                                  contract path, now correctly excluding
+    #                                  a declined pair (computed above, via
+    #                                  `contract_ok`)
+    shape_matched_fact_ids = sorted(
+        entry["fact_id"] for entry in considered if entry["matched_producer_contract_ids"]
+    )
+    declined_fact_ids = sorted(
+        entry["fact_id"]
+        for entry in considered
+        if entry["matched_producer_contract_ids"]
+        and set(entry["matched_producer_contract_ids"])
+        <= set(entry["declined_producer_contract_ids"])
+    )
+    # Per-contract decline counts: how many LIVE `(fact, contract)` pairs
+    # currently suppress admission via each contract. Derived directly from
+    # `declined_pairs` -- the source of truth -- rather than re-filtered
+    # through `considered`, so a contract's decline count is visible even for
+    # a fact that is not (yet, or any longer) dependency-ready.
+    declined_by_contract: dict[str, int] = defaultdict(int)
+    for _fact_id, contract_id in declined_pairs:
+        declined_by_contract[contract_id] += 1
+
     artifact: dict[str, Any] = {
         "schema_version": 1,
         "kind": "axeyum-fact-frontier",
@@ -688,6 +848,16 @@ def build_machine_frontier(
             ),
             "producer_contract_route_capability": dict(sorted(capable_routes.items())),
             "autonomous_dispatch_requires_registered_operation_or_producer_contract": True,
+            # Doc 291: a decline is scoped to the exact contract content that
+            # produced it (`contract_sha256`), never to the contract's name --
+            # so editing a contract's recipe/shape is what re-opens a fact it
+            # previously declined. This digest is over the DECLINE artifacts
+            # themselves, exactly like `producer_contract_registry_sha256` is
+            # over the contracts.
+            "producer_contract_decline_registry_sha256": digest(declines),
+            "recorded_producer_contract_declines": sorted(
+                f"{decline['fact_id']}::{decline['contract']}" for decline in declines
+            ),
         },
         "capabilities": {
             "decidable_fragments": sorted(decidable),
@@ -703,10 +873,30 @@ def build_machine_frontier(
             "selected_fact_id": admissible[0] if admissible else None,
             "outcome": "selected" if admissible else "refused-no-admissible-candidate",
             "rationale": rationale,
+            # Doc 291: declined facts are NAMED, never silently dropped --
+            # the same treatment `no_route_ready_fact_ids` already gives
+            # facts with no route at all (doc 288's precedent).
+            "declined_fact_ids": declined_fact_ids,
         },
         "diagnostics": {
             "ready_count": len(considered),
+            # Doc 291: `admissible_count` now correctly excludes a fact whose
+            # only matching contract has a live decline against it -- before
+            # this, it measured shape-match plus route-capability only, which
+            # is exactly why the very first contract dispatch (doc 290)
+            # reported the just-declined fact as admissible again on the next
+            # run. See `shape_matched_count` / `declined_count` below for the
+            # populations this number used to conflate.
             "admissible_count": len(admissible),
+            # Doc 291's three populations, side by side (see the comment
+            # above their computation): shape-matched is what
+            # `admissible_count` used to measure; declined is the population
+            # that was previously invisible; admissible (via contract) is
+            # `admissible_via_contract_count` below, i.e. shape-matched minus
+            # declined for every UNAMBIGUOUS single-contract match.
+            "shape_matched_count": len(shape_matched_fact_ids),
+            "declined_count": len(declined_fact_ids),
+            "declined_by_contract": dict(sorted(declined_by_contract.items())),
             # Among READY facts with NO registered operation at all, how many
             # are stuck on missing MATH CAPABILITY (`no-route` / a kernel proof
             # not yet written, `proof-route-only`) versus stuck on missing
@@ -744,11 +934,16 @@ def verify_machine_frontier(actual: dict[str, Any], facts: dict[str, dict]) -> N
     unsigned.pop("frontier_sha256", None)
     if not isinstance(claimed, str) or digest(unsigned) != claimed:
         raise FrontierError("frontier digest is missing or invalid")
-    # `build_machine_frontier`'s own `contracts=None` means NO contracts (see
-    # its docstring); recomputing the CURRENT authoritative frontier for a
-    # comparison needs the real, current contract set explicitly, exactly as
-    # `main()` does when it first builds the artifact being verified.
-    expected = build_machine_frontier(facts, contracts=load_producer_contracts())
+    # `build_machine_frontier`'s own `contracts=None`/`declines=None` mean NO
+    # contracts/declines (see its docstring); recomputing the CURRENT
+    # authoritative frontier for a comparison needs the real, current sets
+    # explicitly, exactly as `main()` does when it first builds the artifact
+    # being verified.
+    expected = build_machine_frontier(
+        facts,
+        contracts=load_producer_contracts(),
+        declines=load_decline_artifacts(),
+    )
     if actual != expected:
         raise FrontierError("frontier is stale or does not match the authoritative ledger")
 
@@ -838,10 +1033,14 @@ def main() -> int:
         ap.error("machine frontier modes cannot be combined with --band or --unlocks")
     if args.json or args.output or args.verify:
         try:
-            # Explicit, real contracts -- see `build_machine_frontier`'s
-            # docstring on why `contracts=None` there means NONE, not
-            # auto-loaded.
-            artifact = build_machine_frontier(facts, contracts=load_producer_contracts())
+            # Explicit, real contracts and declines -- see
+            # `build_machine_frontier`'s docstring on why `contracts=None` /
+            # `declines=None` there means NONE, not auto-loaded.
+            artifact = build_machine_frontier(
+                facts,
+                contracts=load_producer_contracts(),
+                declines=load_decline_artifacts(),
+            )
             if args.verify:
                 verify_machine_frontier(json.loads(args.verify.read_text()), facts)
                 print(f"FACT_FRONTIER_OK|{artifact['frontier_sha256']}")
