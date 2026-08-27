@@ -126,7 +126,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 355] = [
+    let expected: [(&str, crate::NameId, &str); 357] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -567,6 +567,16 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         (
             "CReal.sumRange_comparisonTest",
             p.sum_range_comparison_test,
+            "theorem",
+        ),
+        (
+            "CReal.sumRange_cauchy_of_abs_cauchy",
+            p.sum_range_cauchy_of_abs_cauchy,
+            "theorem",
+        ),
+        (
+            "CReal.sumRange_converges_of_abs_converges",
+            p.sum_range_converges_of_abs_converges,
             "theorem",
         ),
         ("CReal.sumRange_seq_zero", p.sum_range_seq_zero, "theorem"),
@@ -2920,6 +2930,83 @@ fn sum_range_converges_of_dominated_and_comparison_test_close_the_zero_series() 
     assert!(
         comparison_rendered.contains("sumRange"),
         "the conclusion is not over `sumRange`: {comparison_rendered}"
+    );
+}
+
+/// Negative control for `CReal.sumRange_cauchy_of_abs_cauchy` /
+/// `CReal.sumRange_converges_of_abs_converges`: absolute convergence implies
+/// convergence, never the other way round -- classically, conditional
+/// convergence (e.g. the alternating harmonic series) is `Cauchy (sumRange
+/// f)` with `sumRange (fun k => abs (f k))` genuinely divergent, so the
+/// REVERSE implication is not merely unbuilt here, it is false. This test
+/// checks that the trusted kernel actually enforces the direction: reusing
+/// [`CRealPrelude::sum_range_cauchy_of_dominated`]'s own proof VALUE (which
+/// only ever inhabits `Cauchy (sumRange f)`, never `Cauchy (sumRange (fun k
+/// => abs (f k)))`) against a declared type with the two `Cauchy` claims
+/// SWAPPED must be REJECTED -- if it were accepted, nothing would be
+/// discriminating the hypothesis from the conclusion, i.e. the checker could
+/// not fail on a reversed claim.
+#[test]
+fn sum_range_cauchy_of_abs_cauchy_direction_is_checked_not_assumed() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+    let nat = d.nat_ty();
+    let carrier = super::creal_ty(&mut d, p);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let absf = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let fk = d.apply(f, &[k]);
+        let abs_fk = d.const_app(p.abs, &[fk]);
+        d.lam_fv(k_fv, nat, abs_fk)
+    };
+    let sum_absf = d.const_app(p.sum_range, &[absf]);
+    let sum_f = d.const_app(p.sum_range, &[f]);
+    let cauchy_absf_ty = d.const_app(p.cauchy, &[sum_absf]);
+    let cauchy_f_ty = d.const_app(p.cauchy, &[sum_f]);
+
+    let hyp1 = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let fk = d.apply(f, &[k]);
+        let abs_fk = d.const_app(p.abs, &[fk]);
+        let refl = d.lemma(p.le_refl, &[abs_fk]);
+        d.lam_fv(k_fv, nat, refl)
+    };
+    let hyp_fv = d.fresh_fvar();
+    let hyp = d.kernel().fvar(hyp_fv);
+
+    // `proof_body` genuinely only inhabits `Cauchy (sumRange f)` -- this is
+    // exactly `declare_sum_range_cauchy_of_abs_cauchy`'s own proof term.
+    let proof_body = d.lemma(p.sum_range_cauchy_of_dominated, &[f, absf, hyp1, hyp]);
+
+    // `reversed_ty` swaps hypothesis and conclusion relative to the real
+    // theorem: `∀ f, Cauchy (sumRange f) → Cauchy (sumRange (fun k => abs (f
+    // k)))` -- the false converse.
+    let reversed_ty = {
+        let after_hyp = d.arrow(cauchy_f_ty, cauchy_absf_ty);
+        d.pi_fv(f_fv, fn_ty, after_hyp)
+    };
+    let reversed_value = {
+        let with_hyp = d.lam_fv(hyp_fv, cauchy_absf_ty, proof_body);
+        d.lam_fv(f_fv, fn_ty, with_hyp)
+    };
+    let bogus_name = d.kernel().name_str(p.creal, "scratchReversedAbsCauchy");
+    let outcome = d.kernel().add_declaration(Declaration::Theorem {
+        name: bogus_name,
+        uparams: vec![],
+        ty: reversed_ty,
+        value: reversed_value,
+    });
+    assert!(
+        outcome.is_err(),
+        "the trusted checker admitted the REVERSED claim `Cauchy (sumRange f) \
+         -> Cauchy (sumRange (fun k => abs (f k)))` using the real theorem's \
+         own proof value -- absolute-convergence direction is not actually \
+         being enforced: {outcome:?}"
     );
 }
 

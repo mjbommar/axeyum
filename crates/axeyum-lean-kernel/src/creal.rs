@@ -1937,6 +1937,27 @@ pub struct CRealPrelude {
     /// pointwise hypotheses) by one more [`Self::le_trans`]. Then
     /// [`Self::sum_range_converges_of_dominated`] closes it directly.
     pub sum_range_comparison_test: NameId,
+    /// `CReal.sumRange_cauchy_of_abs_cauchy : ∀ f, Cauchy (sumRange (fun k =>
+    /// abs (f k))) → Cauchy (sumRange f)` — absolute convergence implies
+    /// convergence, `Cauchy` form. A direct corollary of
+    /// [`Self::sum_range_cauchy_of_dominated`] at `g := fun k => abs (f k)`:
+    /// the pointwise hypothesis `∀k, le (abs (f k)) (g k)` is `le_refl (abs
+    /// (f k))` after one beta reduction on `g k`, so no new real-analysis
+    /// content is needed. See `creal/series.rs::declare_sum_range_cauchy_of_abs_cauchy`.
+    pub sum_range_cauchy_of_abs_cauchy: NameId,
+    /// `CReal.sumRange_converges_of_abs_converges : ∀ f, Exists (fun M =>
+    /// Converges (sumRange (fun k => abs (f k))) M) → Exists (fun L =>
+    /// Converges (sumRange f) L)` — absolute convergence implies convergence,
+    /// `Converges` form. Composes with [`Self::sum_range_comparison_test`]'s
+    /// own output (applied at `fun k => abs (a k)`) to give the comparison
+    /// test on a SIGNED series `a`, which `sum_range_comparison_test` cannot
+    /// take directly since its first hypothesis is `∀k, 0 ≤ a k`. Eliminates
+    /// the existential witness via [`Self::converges_cauchy`] into
+    /// `Cauchy (sumRange (fun k => abs (f k)))`, then
+    /// [`Self::sum_range_cauchy_of_abs_cauchy`] and
+    /// [`Self::converges_of_cauchy`] close it directly. See
+    /// `creal/series.rs::declare_sum_range_converges_of_abs_converges`.
+    pub sum_range_converges_of_abs_converges: NameId,
     /// `CReal.sumRange_seq_zero : Eq Rat (seq (sumRange f Nat.zero) k)
     /// Rat.zero` — the base case of the sample-rate law, closing by `Eq.refl`
     /// alone (`sumRange f zero` ι-reduces to `zero := ofRat Rat.zero`, and
@@ -4016,6 +4037,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sum_range_cauchy_of_dominated: kernel.name_str(creal, "sumRange_cauchy_of_dominated"),
         sum_range_converges_of_dominated: kernel.name_str(creal, "sumRange_converges_of_dominated"),
         sum_range_comparison_test: kernel.name_str(creal, "sumRange_comparisonTest"),
+        sum_range_cauchy_of_abs_cauchy: kernel.name_str(creal, "sumRange_cauchy_of_abs_cauchy"),
+        sum_range_converges_of_abs_converges: kernel
+            .name_str(creal, "sumRange_converges_of_abs_converges"),
         sum_range_seq_zero: kernel.name_str(creal, "sumRange_seq_zero"),
         sum_range_seq_succ: kernel.name_str(creal, "sumRange_seq_succ"),
         pow: kernel.name_str(creal, "pow"),

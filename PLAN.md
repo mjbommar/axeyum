@@ -117,6 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-27 | (uncommitted at status-file write time) | `CReal.sumRange_cauchy_of_abs_cauchy` / `CReal.sumRange_converges_of_abs_converges` (absolute convergence implies convergence) plus a soundness-negative control; curriculum rows 18 and 22–23 corrected. |
 | 2026-08-26 | `f1fb56564` | Compose a held-out-safe three-lemma retrieval spine and admit Mathlib's real `Nat.choose_symm_of_eq_add` axiom-free, moving natural binomial from one to two accepted siblings. |
 | 2026-08-26 | `dc1a92029` | Restore the complete producer-search checkpoint after a failed induction alternative; preserve the eight-binder contract while replacing two false budget declines with their real missing-composition obstruction. |
 | 2026-08-26 | `963977dde` | Falsify the supposed lean4export arrow ceiling with three proof-isolated binomial exports; measure all three under unchanged retrieval and feed the two binder plus one negative-terminal declines into the reusable-family queue. |
@@ -1767,6 +1768,37 @@ concrete-instantiation tests are the workload that set the 256 MiB constant and
 the only one still unmeasured; they need their own probe mode. (c) The deferred
 headroom probe, if a caller ever needs to survive exhaustion rather than gate
 against it.
+
+**Your lane's block (`DONE`, series-tests, 2026-08-27).** Assessed the
+22–23 curriculum row against the theorem inventory before adding anything:
+comparison test, dominated convergence, telescoping, and `geomCauchy` were all
+already landed and accurately described. **Landed absolute convergence implies
+convergence** — `CReal.sumRange_cauchy_of_abs_cauchy` and
+`CReal.sumRange_converges_of_abs_converges`, both pure corollaries of the
+already-proved `sumRange_cauchy_of_dominated` at `g := abs ∘ f`, kernel-checked
+(`creal_prelude_builds`, 17.5s, healthy) and covered by
+`every_creal_declaration_is_checked_and_axiom_free`'s environment scan.
+Added a soundness-negative control confirming the trusted checker rejects the
+reversed (classically false) direction using the real theorem's own proof
+value.
+
+Found and corrected two stale curriculum claims: row 22–23's "`CReal.inv`
+contained to exactly two declarations" undercounted — the true count along
+`geomCauchy`'s dependency chain is **six** (four pre-existing in
+`geometric.rs` plus the two in `exponential.rs`); and row 18's "`2 ≤ e ≤ 3`
+open" was stale — `CReal.two_le_e`/`CReal.e_le_three`/`CReal.e_le_four` are
+already proved. Both corrected in `docs/curriculum/foundational-books/spivak.md`.
+
+Assessed and declined, with reasons sized precisely in the curriculum doc's
+new "Postscript III": the **ratio test** (needs a `PosBound`-witnessed
+multiplicative form to stay `inv`-free — new construction, not a corollary)
+and **`e` irrational** (needs an `n!·e`-integrality argument this development
+has no machinery for at all).
+
+Next open goal: build the multiplicative ratio test
+(`∀n, le (mul r (f n)) (f (succ n))) → …`, comparison against an `r`-scaled
+geometric series) as a genuinely new construction over `geom_sum_bounded`'s
+existing shape.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 

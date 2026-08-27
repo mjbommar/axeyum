@@ -449,6 +449,8 @@ pub(super) fn declare_series(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), 
     declare_sum_range_cauchy_of_dominated(d, p)?;
     declare_sum_range_converges_of_dominated(d, p)?;
     declare_sum_range_comparison_test(d, p)?;
+    declare_sum_range_cauchy_of_abs_cauchy(d, p)?;
+    declare_sum_range_converges_of_abs_converges(d, p)?;
     declare_sum_range_seq_equations(d, p)
 }
 
@@ -3682,6 +3684,180 @@ fn declare_sum_range_comparison_test(
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.sum_range_comparison_test,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.sumRange_cauchy_of_abs_cauchy : ∀ f, Cauchy (sumRange (fun k =>
+/// abs (f k))) → Cauchy (sumRange f)` — absolute convergence implies
+/// convergence, `Cauchy` form.
+///
+/// A direct corollary of [`CRealPrelude::sum_range_cauchy_of_dominated`] at
+/// `g := fun k => abs (f k)`: the pointwise domination hypothesis `∀k, le
+/// (abs (f k)) (g k)` is exactly `le_refl (abs (f k))` once `g k` is beta-
+/// reduced, so this needs no new real-analysis content — only the general
+/// comparison lemma applied to the series against ITSELF taken termwise
+/// absolute. Note this is genuinely the `abs`-of-a-`CReal`-valued-series
+/// statement, distinct from [`CRealPrelude::sum_range_comparison_test`]
+/// (which compares two DIFFERENT nonnegative series `a ≤ b`, never taking an
+/// absolute value of either).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_sum_range_cauchy_of_abs_cauchy(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+
+    // absf := λ k, abs (f k).
+    let absf = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let fk = d.apply(f, &[k]);
+        let abs_fk = cabs(d, p, fk);
+        d.lam_fv(k_fv, nat, abs_fk)
+    };
+
+    let sum_absf = d.const_app(p.sum_range, &[absf]);
+    let cauchy_absf_ty = d.const_app(p.cauchy, &[sum_absf]);
+    let hyp_fv = d.fresh_fvar();
+    let hyp = d.kernel().fvar(hyp_fv);
+
+    let sum_f = d.const_app(p.sum_range, &[f]);
+    let target = d.const_app(p.cauchy, &[sum_f]);
+
+    // hyp1 : ∀ k, le (abs (f k)) (absf k), by `le_refl` -- `absf k` beta-
+    // reduces to `abs (f k)`, so the trusted checker closes the gap.
+    let hyp1 = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let fk = d.apply(f, &[k]);
+        let abs_fk = cabs(d, p, fk);
+        let refl = d.lemma(p.le_refl, &[abs_fk]);
+        d.lam_fv(k_fv, nat, refl)
+    };
+
+    let proof_body = d.lemma(p.sum_range_cauchy_of_dominated, &[f, absf, hyp1, hyp]);
+
+    let ty = {
+        let after_hyp = d.arrow(cauchy_absf_ty, target);
+        d.pi_fv(f_fv, fn_ty, after_hyp)
+    };
+    let value = {
+        let with_hyp = d.lam_fv(hyp_fv, cauchy_absf_ty, proof_body);
+        d.lam_fv(f_fv, fn_ty, with_hyp)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sum_range_cauchy_of_abs_cauchy,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.sumRange_converges_of_abs_converges : ∀ f, Exists (fun M =>
+/// Converges (sumRange (fun k => abs (f k))) M) → Exists (fun L => Converges
+/// (sumRange f) L)` — absolute convergence implies convergence, `Converges`
+/// form.
+///
+/// This is what makes [`CRealPrelude::sum_range_comparison_test`] usable on
+/// a SIGNED series: given `∀k, le (abs (a k)) (b k)` and `Exists (Converges
+/// (sumRange b))`, `sum_range_comparison_test` applied at `(fun k => abs (a
+/// k))`/`b` (using [`CRealPrelude::abs_nonneg`] for the nonnegativity side)
+/// gives `Exists (Converges (sumRange (fun k => abs (a k))))` — convergence
+/// of the ABSOLUTE series — and this theorem turns that into `Exists
+/// (Converges (sumRange a))`, even when `a` changes sign and so is not
+/// itself eligible for `sum_range_comparison_test` directly (that theorem's
+/// first hypothesis is `∀k, 0 ≤ a k`).
+///
+/// Eliminates the `Exists … Converges (sumRange (fun k => abs (f k))) M`
+/// hypothesis into `Cauchy (sumRange (fun k => abs (f k)))` via
+/// [`CRealPrelude::converges_cauchy`] (witness `M` eliminated into a target
+/// that does not mention it — [`creal_exists_elim`], the same idiom
+/// [`declare_sum_range_comparison_test`] already uses for its own `Exists
+/// … Converges (sumRange b) M` hypothesis), then
+/// [`CRealPrelude::sum_range_cauchy_of_abs_cauchy`] and
+/// [`CRealPrelude::converges_of_cauchy`] close it directly.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_sum_range_converges_of_abs_converges(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+
+    let absf = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let fk = d.apply(f, &[k]);
+        let abs_fk = cabs(d, p, fk);
+        d.lam_fv(k_fv, nat, abs_fk)
+    };
+    let sum_absf = d.const_app(p.sum_range, &[absf]);
+
+    let pred_absf = {
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let conv_m = converges_applied(d, p, sum_absf, m);
+        d.lam_fv(m_fv, carrier, conv_m)
+    };
+    let conv_absf_ty = exists_ty(d, p, carrier, pred_absf);
+    let conv_absf_fv = d.fresh_fvar();
+    let conv_absf = d.kernel().fvar(conv_absf_fv);
+
+    let sum_f = d.const_app(p.sum_range, &[f]);
+    let pred_f = {
+        let l_fv = d.fresh_fvar();
+        let l = d.kernel().fvar(l_fv);
+        let conv_l = converges_applied(d, p, sum_f, l);
+        d.lam_fv(l_fv, carrier, conv_l)
+    };
+    let target = exists_ty(d, p, carrier, pred_f);
+
+    // minor : ∀ M, Converges (sumRange absf) M → target.
+    let minor = {
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let hp_ty = converges_applied(d, p, sum_absf, m);
+        let hp_fv = d.fresh_fvar();
+        let hp = d.kernel().fvar(hp_fv);
+
+        let cauchy_absf = d.lemma(p.converges_cauchy, &[sum_absf, m, hp]);
+        let cauchy_f = d.lemma(p.sum_range_cauchy_of_abs_cauchy, &[f, cauchy_absf]);
+        let result = d.lemma(p.converges_of_cauchy, &[sum_f, cauchy_f]);
+
+        let with_hp = d.lam_fv(hp_fv, hp_ty, result);
+        d.lam_fv(m_fv, carrier, with_hp)
+    };
+
+    let proof_body = creal_exists_elim(d, p, carrier, pred_absf, target, conv_absf, minor);
+
+    let ty = {
+        let after_conv_absf = d.arrow(conv_absf_ty, target);
+        d.pi_fv(f_fv, fn_ty, after_conv_absf)
+    };
+    let value = {
+        let with_conv_absf = d.lam_fv(conv_absf_fv, conv_absf_ty, proof_body);
+        d.lam_fv(f_fv, fn_ty, with_conv_absf)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.sum_range_converges_of_abs_converges,
         uparams: vec![],
         ty,
         value,
