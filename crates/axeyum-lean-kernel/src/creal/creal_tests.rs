@@ -126,7 +126,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 386] = [
+    let expected: [(&str, crate::NameId, &str); 396] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -1394,6 +1394,28 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
         ("CReal.limitSeq_regular", p.limit_seq_regular, "theorem"),
         ("CReal.limit", p.limit, "def"),
         ("CReal.limit_dist", p.limit_dist, "theorem"),
+        ("CReal.polyEval", p.poly_eval, "def"),
+        ("CReal.polyEval_zero", p.poly_eval_zero, "theorem"),
+        ("CReal.polyEval_succ", p.poly_eval_succ, "theorem"),
+        ("CReal.polyAdd", p.poly_add, "def"),
+        ("CReal.polyEval_polyAdd", p.poly_eval_poly_add, "theorem"),
+        ("CReal.polyScale", p.poly_scale, "def"),
+        (
+            "CReal.polyEval_polyScale",
+            p.poly_eval_poly_scale,
+            "theorem",
+        ),
+        ("CReal.polyDegreeLt", p.poly_degree_lt, "def"),
+        (
+            "CReal.polyDegreeLt_polyAdd",
+            p.poly_degree_lt_poly_add,
+            "theorem",
+        ),
+        (
+            "CReal.polyDegreeLt_polyScale",
+            p.poly_degree_lt_poly_scale,
+            "theorem",
+        ),
     ];
     // COVERAGE, checked against the ENVIRONMENT rather than against this list.
     //
