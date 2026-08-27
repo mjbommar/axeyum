@@ -4560,6 +4560,22 @@ pub struct CRealPrelude {
     /// `CReal.UniformConvergesOn` instance from such an estimate (e.g. the
     /// Weierstrass M-test) needs to reach `close_within`.
     pub close_within_of_within: NameId,
+    /// `CReal.close_within_of_within_indexed : ∀ x y i e q, Within (Rat.sub
+    /// (seq x i) (seq y e)) q → le (abs (add x (neg y))) (ofRat (Rat.add q
+    /// (Rat.add (natDivSucc 1 i) (natDivSucc 1 e))))` (`creal/integral.rs`)
+    /// — the two-INDEPENDENT-index generalization of
+    /// [`Self::close_within_of_within`]: that lemma needs `x` and `y`
+    /// sampled at the SAME index `n`, but `riemannSum_integral_close`'s own
+    /// `Within` fact compares `riemannSum`'s sample at an arbitrary `i`
+    /// against `integral`'s sample at the accuracy index `e` — two indices
+    /// never tied by a common denominator anywhere upstream. Same route
+    /// (each side's own `1/(index+1)`-slack self-approximation via
+    /// [`Self::sample_upper_bound`]/[`Self::sample_lower_bound`], read at
+    /// its OWN index), run once per direction with `(i, e)` swapped, then
+    /// unified onto one shared bound via `Rat.add_assoc`/`Rat.add_comm`
+    /// (the two directions' raw bounds differ only in associativity/
+    /// commutativity, never syntactically).
+    pub close_within_of_within_indexed: NameId,
     /// `CReal.weierstrassMTest : ∀ (f : Nat → CReal → CReal) (mseq : Nat →
     /// CReal) (a b : CReal), le a b → (∀ j p q, Equiv p q → Equiv (f j p) (f
     /// j q)) → ∀ k, (∀ j pt, le a pt → le pt b → le (abs (f j pt)) (mseq
@@ -5195,6 +5211,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         poly_degree_lt_poly_scale: kernel.name_str(creal, "polyDegreeLt_polyScale"),
         uniform_converges_add: kernel.name_str(creal, "uniform_converges_add"),
         close_within_of_within: kernel.name_str(creal, "close_within_of_within"),
+        close_within_of_within_indexed: kernel.name_str(creal, "close_within_of_within_indexed"),
         weierstrass_m_test: kernel.name_str(creal, "weierstrassMTest"),
         power_series_term: kernel.name_str(creal, "powerSeriesTerm"),
         power_series_term_congr: kernel.name_str(creal, "powerSeriesTerm_congr"),
@@ -5504,6 +5521,15 @@ pub(crate) fn build_creal_prelude_uncached(
         // dependency on `uniform_converges_add` just above, but sits beside
         // it for locality (both are `uniform_convergence.rs` bridge lemmas).
         uniform_convergence::declare_close_within_of_within(&mut d, prelude)?;
+        // `close_within_of_within_indexed` (the two-independent-index
+        // generalization) needs only `CReal.sample_upper_bound`/
+        // `sample_lower_bound` (well above) and `CReal.abs_le_of_two_sided`
+        // (also well above) -- the identical dependency shape as
+        // `close_within_of_within` just above, so it sits right beside it,
+        // even though its Rust body lives in `integral.rs` (it is the
+        // bridge `riemannSum_integral_close`, well above, needs to reach
+        // `integral_split`).
+        integral::declare_close_within_of_within_indexed(&mut d, prelude)?;
         // `weierstrassMTest` needs `close_within_of_within` (just above),
         // `series::sum_range_cauchy_dominated_ordered_normalized` and
         // `series::within_symm` (`series::declare_series`, well above),

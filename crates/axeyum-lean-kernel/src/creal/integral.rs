@@ -13125,6 +13125,377 @@ pub(super) fn declare_riemann_sum_integral_close(
     })
 }
 
+// --- `CReal.close_within_of_within_indexed` -- the `Within` -> `CReal.le
+// (abs …)` bridge at TWO INDEPENDENT sample indices --------------------------
+//
+// `uniform_convergence.rs`'s `CReal.close_within_of_within` already bridges a
+// raw rational `Within` bound to a genuine `CReal.le (abs …)` fact, but its
+// own hypothesis is `Within (sub (sample x n) (sample y n)) (natDivSucc k n)`
+// -- BOTH sides sampled at the SAME index `n`. `riemannSum_integral_close`'s
+// own conclusion compares `riemannSum`'s sample at an arbitrary `i` against
+// `integral`'s sample at the accuracy index `e`: two indices that are never
+// tied by a common denominator anywhere upstream, and cannot be forced equal
+// (`i` ranges over every mesh-refinement/crossing index the Riemann-sum side
+// needs; `e` is fixed by the caller's target accuracy). This section
+// generalizes the bridge to that shape.
+//
+// Route: identical algebra to `one_sided_via_samples`
+// (`uniform_convergence.rs`, itself private to that module -- Rust privacy,
+// sibling module), run ONCE per direction with each side's OWN
+// `1/(index+1)`-slack self-approximation
+// (`CRealPrelude::sample_upper_bound`/`sample_lower_bound`) read at ITS OWN
+// index rather than a shared one. Because the two directions apply that
+// asymmetric recipe with `(i, e)` in opposite roles, they land on
+// `Rat.add (natDivSucc 1 e) (Rat.add q (natDivSucc 1 i))` and `Rat.add
+// (natDivSucc 1 i) (Rat.add q (natDivSucc 1 e))` respectively -- equal only up
+// to `Rat.add_assoc`/`Rat.add_comm`, never syntactically -- so [`reassoc3`]
+// closes each to one shared target before `CRealPrelude::abs_le_of_two_sided`
+// can fire on them together.
+
+/// `Rat.Eq (Rat.add (Rat.sub a b) b) a` — adding back what was subtracted
+/// cancels, at `Rat`. A private copy of the technique
+/// `uniform_convergence.rs`'s own (unexported) `sub_add_cancel` uses (Rust
+/// privacy: sibling module), needed by [`one_sided_two_index`] in the same
+/// role.
+fn rat_sub_add_cancel(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
+    let rat = p.rat;
+    let neg_b = rneg(d, b);
+    let a_negb = radd(d, a, neg_b);
+    let lhs = radd(d, a_negb, b);
+    let assoc = d.lemma(rat.add_assoc, &[a, neg_b, b]);
+    // assoc : Eq lhs (add a (add neg_b b))
+    let negb_b = radd(d, neg_b, b);
+    let cancel_inner = d.lemma(rat.neg_add_cancel, &[b]); // Eq negb_b zero
+    let zero = rzero(d, rat);
+    let cancel = rcongr(d, negb_b, zero, cancel_inner, &|d, t| radd(d, a, t));
+    let a_plus_zero = radd(d, a, zero);
+    let add_zero_proof = d.lemma(rat.add_zero, &[a]); // Eq a_plus_zero a
+    let a_radd_negb_b = radd(d, a, negb_b);
+    let (_, proof) = rchain(
+        d,
+        lhs,
+        &[
+            (a_radd_negb_b, assoc),
+            (a_plus_zero, cancel),
+            (a, add_zero_proof),
+        ],
+    );
+    proof
+}
+
+/// `Rat.Eq (Rat.add a (Rat.add b c)) (Rat.add b (Rat.add c a))` — the
+/// three-atom commute-and-reassociate [`close_of_within_indexed`] needs to
+/// unify its two directions' bounds (built by the SAME asymmetric recipe with
+/// two of the three atoms swapped) onto one shared target, via
+/// `Rat.add_assoc`(symm)/`Rat.add_comm`/`Rat.add_assoc`/`Rat.add_comm` in that
+/// order — the same shape of atom-shuffle [`mesh_scale_by_succ_k`] uses
+/// (below), here on three atoms rather than four.
+///
+/// Returns `(target, proof)` where `target := Rat.add b (Rat.add c a)`.
+fn reassoc3(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+) -> (ExprId, ExprId) {
+    let rat = p.rat;
+    let bc = radd(d, b, c);
+    let source = radd(d, a, bc);
+
+    let ab = radd(d, a, b);
+    let target1 = radd(d, ab, c);
+    let assoc1 = d.lemma(rat.add_assoc, &[a, b, c]); // Eq target1 source
+    let eq1 = rsymm(d, target1, source, assoc1); // Eq source target1
+
+    let ba = radd(d, b, a);
+    let target2 = radd(d, ba, c);
+    let comm1 = d.lemma(rat.add_comm, &[a, b]); // Eq ab ba
+    let eq2 = rcongr(d, ab, ba, comm1, &|d, t| radd(d, t, c)); // Eq target1 target2
+
+    let ac = radd(d, a, c);
+    let target3 = radd(d, b, ac);
+    let eq3 = d.lemma(rat.add_assoc, &[b, a, c]); // Eq target2 target3
+
+    let ca = radd(d, c, a);
+    let target4 = radd(d, b, ca);
+    let comm2 = d.lemma(rat.add_comm, &[a, c]); // Eq ac ca
+    let eq4 = rcongr(d, ac, ca, comm2, &|d, t| radd(d, b, t)); // Eq target3 target4
+
+    let (_, proof) = rchain(
+        d,
+        source,
+        &[
+            (target1, eq1),
+            (target2, eq2),
+            (target3, eq3),
+            (target4, eq4),
+        ],
+    );
+    (target4, proof)
+}
+
+/// The two-independent-index generalization of `uniform_convergence.rs`'s
+/// own (unexported) `one_sided_via_samples`: from `upper_uv : Rat.le (rsub
+/// (sample u n_u) (sample v n_v)) bk`, derive `(bound, proof)` where `bound
+/// := Rat.add o_v (Rat.add bk o_u)` (`o_u := natDivSucc 1 n_u`, `o_v :=
+/// natDivSucc 1 n_v`) and `proof : CReal.le u (CReal.add v (CReal.ofRat
+/// bound))`.
+///
+/// Identical algebra to the shared-index original — `u`'s own
+/// `1/(n_u+1)`-slack self-approximation ([`CRealPrelude::sample_upper_bound`]
+/// at `n_u`) chains through `upper_uv` into `v`'s OWN sample at `n_v`; `v`'s
+/// sample is then rewritten as `(sample(v,n_v) - o_v) + o_v` so `v`'s own
+/// `1/(n_v+1)`-slack self-approximation ([`CRealPrelude::sample_lower_bound`]
+/// at `n_v`) applies directly — with `n_u`/`n_v` genuinely independent
+/// throughout (never assumed equal, never compared to each other).
+fn one_sided_two_index(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    u: ExprId,
+    v: ExprId,
+    n_u: ExprId,
+    n_v: ExprId,
+    bk: ExprId,
+    upper_uv: ExprId,
+) -> (ExprId, ExprId) {
+    let rat = p.rat;
+    let one_nat = d.num(1);
+    let o_u = div_succ_at(d, p, one_nat, n_u);
+    let o_v = div_succ_at(d, p, one_nat, n_v);
+
+    let au = sample(d, p, u, n_u);
+    let av = sample(d, p, v, n_v);
+
+    // au_le_avbk : Rat.le au (Rat.add av bk).
+    let au_le_avbk = d.lemma(rat.le_of_sub_le, &[au, av, bk, upper_uv]);
+
+    // step2 : Rat.le (au+o_u) ((av+bk)+o_u).
+    let o_u_refl = d.lemma(rat.le_refl, &[o_u]);
+    let av_bk = radd(d, av, bk);
+    let step2 = d.lemma(rat.add_le_add, &[au, av_bk, o_u, o_u, au_le_avbk, o_u_refl]);
+
+    // step3 : Rat.le (au+o_u) (av+(bk+o_u)).
+    let bk_ou = radd(d, bk, o_u);
+    let av_bk_ou = radd(d, av, bk_ou);
+    let assoc1 = d.lemma(rat.add_assoc, &[av, bk, o_u]);
+    let au_ou = radd(d, au, o_u);
+    let av_bk_then_ou = radd(d, av_bk, o_u);
+    let step3 = rat_eq_rewrite(d, av_bk_then_ou, av_bk_ou, assoc1, step2, &|d, t| {
+        rle(d, rat, au_ou, t)
+    });
+
+    // bridge_eq : Eq (av+bk_ou) ((av-o_v)+(o_v+bk_ou)).
+    let av_minus_ov = rsub(d, rat, av, o_v);
+    let cancel = rat_sub_add_cancel(d, p, av, o_v); // Eq (radd av_minus_ov o_v) av
+    let restored = radd(d, av_minus_ov, o_v);
+    let cancel_symm = rsymm(d, restored, av, cancel); // Eq av restored
+    let av_bko_congr = rcongr(d, av, restored, cancel_symm, &|d, t| radd(d, t, bk_ou));
+    let o_v_bk_ou = radd(d, o_v, bk_ou);
+    let assoc2 = d.lemma(rat.add_assoc, &[av_minus_ov, o_v, bk_ou]);
+    let target_shape = radd(d, av_minus_ov, o_v_bk_ou);
+    let restored_bk_ou = radd(d, restored, bk_ou);
+    let (_, bridge_eq) = rchain(
+        d,
+        av_bk_ou,
+        &[(restored_bk_ou, av_bko_congr), (target_shape, assoc2)],
+    );
+
+    // step4 : Rat.le (au+o_u) ((av-o_v)+(o_v+bk_ou)).
+    let step4 = rat_eq_rewrite(d, av_bk_ou, target_shape, bridge_eq, step3, &|d, t| {
+        rle(d, rat, au_ou, t)
+    });
+
+    // chain1 : CReal.le u (ofRat target_shape).
+    let hu_upper = d.lemma(p.sample_upper_bound, &[u, n_u]);
+    let mid = embed(d, p, au_ou);
+    let target1 = embed(d, p, target_shape);
+    let ofrat_le_1 = d.lemma(p.of_rat_le, &[au_ou, target_shape, step4]);
+    let chain1 = d.lemma(p.le_trans, &[u, mid, target1, hu_upper, ofrat_le_1]);
+
+    // chain2 : CReal.le u (add (ofRat av_minus_ov) (ofRat o_v_bk_ou)), splitting
+    // `target1` via `CReal.ofRat_add`.
+    let embed_av_minus_ov = embed(d, p, av_minus_ov);
+    let embed_o_v_bk_ou = embed(d, p, o_v_bk_ou);
+    let split = d.const_app(p.add, &[embed_av_minus_ov, embed_o_v_bk_ou]);
+    let fuse = d.lemma(p.of_rat_add, &[av_minus_ov, o_v_bk_ou]);
+    // fuse : Equiv split target1
+    let fuse_symm = d.lemma(p.equiv_symm, &[split, target1, fuse]);
+    let refl_u = d.lemma(p.equiv_refl, &[u]);
+    let chain2 = d.lemma(
+        p.le_congr,
+        &[u, u, target1, split, refl_u, fuse_symm, chain1],
+    );
+
+    // step5 : CReal.le split (add v (ofRat o_v_bk_ou)), via `sample_lower_bound`.
+    let hv_lower = d.lemma(p.sample_lower_bound, &[v, n_v]);
+    let o_v_bk_ou_refl = d.lemma(p.le_refl, &[embed_o_v_bk_ou]);
+    let step5 = d.lemma(
+        p.add_le_add,
+        &[
+            embed_av_minus_ov,
+            v,
+            embed_o_v_bk_ou,
+            embed_o_v_bk_ou,
+            hv_lower,
+            o_v_bk_ou_refl,
+        ],
+    );
+
+    let final_target = d.const_app(p.add, &[v, embed_o_v_bk_ou]);
+    let result = d.lemma(p.le_trans, &[u, split, final_target, chain2, step5]);
+    (o_v_bk_ou, result)
+}
+
+/// From `hp : Within (Rat.sub (sample x i) (sample y e)) q`, derive `(bound,
+/// proof)` where `bound := Rat.add q (Rat.add (natDivSucc 1 i) (natDivSucc 1
+/// e))` and `proof : CReal.le (CReal.abs (CReal.add x (CReal.neg y)))
+/// (CReal.ofRat bound)` — the `Within` → `CReal.le (abs …)` bridge at two
+/// INDEPENDENT sample indices. See this section's own module documentation
+/// (just above [`rat_sub_add_cancel`]) for the route and why
+/// `close_within_of_within`'s shared-index version does not cover
+/// `riemannSum_integral_close`'s own shape.
+fn close_of_within_indexed(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    i: ExprId,
+    e: ExprId,
+    q: ExprId,
+    hp: ExprId,
+) -> (ExprId, ExprId) {
+    let rat = p.rat;
+    let ax = sample(d, p, x, i);
+    let ay = sample(d, p, y, e);
+    let diff = rsub(d, rat, ax, ay);
+    let (hp_lower, hp_upper) = halves(d, p, diff, q, hp);
+
+    // hp_upper_swapped : Rat.le (sub ay ax) q.
+    let hp_upper_swapped = {
+        let neg_q = rneg(d, q);
+        let neg_diff = rneg(d, diff);
+        let bn_left = rle(d, rat, neg_q, neg_diff);
+        let bn_right = rle(d, rat, neg_diff, q);
+        let bn = d.lemma(rat.bounds_neg, &[diff, q, hp_lower, hp_upper]);
+        let raw = d.and_right(bn_left, bn_right, bn);
+        let ay_ax = rsub(d, rat, ay, ax);
+        let neg_sub_eq = d.lemma(rat.neg_sub, &[ax, ay]); // Eq neg_diff ay_ax
+        rat_eq_rewrite(d, neg_diff, ay_ax, neg_sub_eq, raw, &|d, t| {
+            rle(d, rat, t, q)
+        })
+    };
+
+    let (bound1, goal_up) = one_sided_two_index(d, p, x, y, i, e, q, hp_upper);
+    let (bound2, goal_down) = one_sided_two_index(d, p, y, x, e, i, q, hp_upper_swapped);
+
+    let one_nat = d.num(1);
+    let o_i = div_succ_at(d, p, one_nat, i);
+    let o_e = div_succ_at(d, p, one_nat, e);
+
+    // bound1 = o_e + (q + o_i); reassoc3(o_e, q, o_i) lands on q + (o_i + o_e).
+    let (target, eq_bound1_target) = reassoc3(d, p, o_e, q, o_i);
+    // bound2 = o_i + (q + o_e); reassoc3(o_i, q, o_e) lands on q + (o_e + o_i),
+    // one more `add_comm` away from `target`.
+    let (mid_target, eq_bound2_mid) = reassoc3(d, p, o_i, q, o_e);
+    let eq_bound2_target = {
+        let oi_oe = radd(d, o_i, o_e);
+        let oe_oi = radd(d, o_e, o_i);
+        let comm = d.lemma(rat.add_comm, &[o_e, o_i]); // Eq oe_oi oi_oe
+        let congr_final = rcongr(d, oe_oi, oi_oe, comm, &|d, t| radd(d, q, t));
+        // congr_final : Eq mid_target target
+        let (_, chained) = rchain(
+            d,
+            bound2,
+            &[(mid_target, eq_bound2_mid), (target, congr_final)],
+        );
+        chained
+    };
+
+    let goal_up_t = rat_eq_rewrite(d, bound1, target, eq_bound1_target, goal_up, &|d, t| {
+        let et = embed(d, p, t);
+        let rhs = cadd(d, p, y, et);
+        cle(d, p, x, rhs)
+    });
+    let goal_down_t = rat_eq_rewrite(d, bound2, target, eq_bound2_target, goal_down, &|d, t| {
+        let et = embed(d, p, t);
+        let rhs = cadd(d, p, x, et);
+        cle(d, p, y, rhs)
+    });
+
+    let proof = d.lemma(
+        p.abs_le_of_two_sided,
+        &[x, y, target, goal_up_t, goal_down_t],
+    );
+    (target, proof)
+}
+
+/// Admit `CReal.close_within_of_within_indexed`. See this section's own
+/// module documentation for the route.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// refused a proof, not that a script gave up.
+pub(super) fn declare_close_within_of_within_indexed(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let rat_carrier = rat_ty(d);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+
+    let ax = sample(d, p, x, i);
+    let ay = sample(d, p, y, e);
+    let diff = rsub(d, p.rat, ax, ay);
+    let hyp_ty = within(d, p, diff, q);
+    let hp_fv = d.fresh_fvar();
+    let hp = d.kernel().fvar(hp_fv);
+
+    let (bound, proof) = close_of_within_indexed(d, p, x, y, i, e, q, hp);
+
+    let ny = cneg(d, p, y);
+    let diff_xy = cadd(d, p, x, ny);
+    let mag = d.const_app(p.abs, &[diff_xy]);
+    let embedded_bound = embed(d, p, bound);
+    let concl_ty = cle(d, p, mag, embedded_bound);
+
+    let ty = {
+        let inner = d.arrow(hyp_ty, concl_ty);
+        let with_q = d.pi_fv(q_fv, rat_carrier, inner);
+        let with_e = d.pi_fv(e_fv, nat, with_q);
+        let with_i = d.pi_fv(i_fv, nat, with_e);
+        let with_y = d.pi_fv(y_fv, carrier, with_i);
+        d.pi_fv(x_fv, carrier, with_y)
+    };
+    let value = {
+        let with_hp = d.lam_fv(hp_fv, hyp_ty, proof);
+        let with_q = d.lam_fv(q_fv, rat_carrier, with_hp);
+        let with_e = d.lam_fv(e_fv, nat, with_q);
+        let with_i = d.lam_fv(i_fv, nat, with_e);
+        let with_y = d.lam_fv(y_fv, carrier, with_i);
+        d.lam_fv(x_fv, carrier, with_y)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.close_within_of_within_indexed,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 // --- `CReal.riemannSum_split_exact` -- the NINTH `integral_split` slice:
 // exact index-algebra interval split at a RATIONAL-PROPORTION split point.
 // See this module's own ninth `integral_split` documentation entry for the
