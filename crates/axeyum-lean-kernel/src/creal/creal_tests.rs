@@ -126,7 +126,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 375] = [
+    let expected: [(&str, crate::NameId, &str); 377] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -655,6 +655,12 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
             "theorem",
         ),
         ("CReal.geomCauchyOfLt", p.geom_cauchy_of_lt, "theorem"),
+        (
+            "CReal.geomScaledCauchyOfLt",
+            p.geom_scaled_cauchy_of_lt,
+            "theorem",
+        ),
+        ("CReal.sumRangeRatioTest", p.sum_range_ratio_test, "theorem"),
         (
             "CReal.one_le_pow_of_one_le",
             p.one_le_pow_of_one_le,
@@ -9471,4 +9477,177 @@ fn crossing_index_at_zero_one_seven_halves_reduces_to_three() {
         .unwrap_or_else(|error| {
             panic!("crossingIndex 0 (7/2) 1 must reduce to 3 by refl: {error:?}")
         });
+}
+
+/// **The base-`1/2` cross-check.** [`CReal::geomCauchyOfLt`] generalizes
+/// `geomCauchy`/`geomCauchyOrderedHalf`'s own base-`1/2` derivation to a
+/// symbolic ratio; this test instantiates the GENERAL theorem at `x := half`
+/// with the SAME concrete witnesses `geomCauchy`'s own route builds
+/// internally (`k := 1`, `h := geom_half_a_real_pos_bound`'s
+/// `PosBound (1 - half) 1`), and checks the resulting proof against
+/// `geomCauchy`'s OWN stored type — not a type this test reconstructs by
+/// hand, so there is no way for the two routes to agree by both sides
+/// independently making the same mistake.
+///
+/// A concrete instantiation catches what a symbolic proof alone cannot: a
+/// transposed argument, a swapped `x`/`1-x`, or a leaf-bound witness that
+/// silently does not line up with the one `geomCauchyOfLtOrdered`'s own
+/// derivation expects. If this test fails, that mismatch — not the symbolic
+/// derivation above — is the most valuable finding this file can report.
+#[test]
+fn geom_cauchy_of_lt_matches_geom_cauchy_at_half() {
+    use super::exponential::{geom_half_a_real_pos_bound, half, half_add_half_equiv_one, half_rat};
+    use crate::int_prelude::ops::IntDev;
+    use crate::rat_prelude::ops::{rlt, rzero};
+
+    let (mut kernel, p) = built();
+    let rat = p.rat;
+    let anon = kernel.anon();
+
+    // Fetch `geomCauchy`'s OWN stored type before `d` borrows `kernel`
+    // mutably -- the strongest form of this check compares against the type
+    // the base-1/2 route already proved, not a type reconstructed by hand.
+    let expected_ty = match kernel
+        .environment()
+        .get(p.geom_cauchy)
+        .expect("CReal.geomCauchy must be declared")
+    {
+        Declaration::Theorem { ty, .. } => *ty,
+        other => panic!("CReal.geomCauchy is {other:?}, not a Theorem"),
+    };
+
+    let mut d = IntDev::new(&mut kernel, rat.int);
+
+    let h = half(&mut d, p);
+    let hr = half_rat(&mut d, p);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let one_nat = d.num(1);
+
+    // hx0 : le zero half, via `Rat.zero_le_natDivSucc 1 1` and `CReal.of_rat_le`
+    // -- the same route `exponential.rs::half_nonneg_proof` uses (private
+    // there; reproduced here rather than widened, since it is one line).
+    let hx0 = {
+        let zero_rat = rzero(&mut d, rat);
+        let half_le_zero = d.lemma(rat.zero_le_nat_div_succ, &[one_nat, one_nat]);
+        d.lemma(p.of_rat_le, &[zero_rat, hr, half_le_zero])
+    };
+
+    // hlt : lt half one, via the rational gap q := half_rat -- `0 < 1/2` and
+    // `half + half <= one` (from `half_add_half_equiv_one`, widened this
+    // session).
+    let hlt = {
+        let zero_rat = rzero(&mut d, rat);
+        let one_le_one = d.lemma(rat.int.nat.le_refl, &[one_nat]);
+        let positive = d.lemma(rat.nat_div_succ_pos, &[one_nat, one_nat, one_le_one]);
+        let positive_ty = rlt(&mut d, rat, zero_rat, hr);
+
+        let hh = super::cadd(&mut d, p, h, h);
+        let hh_equiv_one = half_add_half_equiv_one(&mut d, p);
+        let bounded = d.lemma(p.le_of_equiv, &[hh, one_c, hh_equiv_one]);
+        let bounded_ty = super::cle(&mut d, p, hh, one_c);
+
+        let pair = super::and_intro(&mut d, p, positive_ty, bounded_ty, positive, bounded);
+        super::gap_intro(&mut d, p, h, one_c, hr, pair)
+    };
+
+    // (k, h) := (1, PosBound (1 - half) 1) -- `geom_half_a_real_pos_bound`
+    // builds the IDENTICAL construction `geomHalfInvLeafBound`'s own `h_pos_a_real`
+    // uses internally (its doc comment says so explicitly), so this is the
+    // same witness the base-1/2 route is built from, not a fresh one.
+    let (_a_real, h_pos_a_real) = geom_half_a_real_pos_bound(&mut d, p);
+
+    let result = d.lemma(p.geom_cauchy_of_lt, &[h, hx0, hlt, one_nat, h_pos_a_real]);
+
+    let name = d
+        .kernel()
+        .name_str(anon, "Check.geom_cauchy_of_lt_matches_geom_cauchy_at_half");
+    let outcome = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty: expected_ty,
+        value: result,
+    });
+    assert!(
+        outcome.is_ok(),
+        "CReal.geomCauchyOfLt at x := half, with geomCauchy's own base-1/2 \
+         witnesses (k := 1, h := geom_half_a_real_pos_bound), must check \
+         against CReal.geomCauchy's OWN stored type -- a mismatch here means \
+         the general and base-1/2 routes disagree about what they are \
+         proving: {outcome:?}"
+    );
+}
+
+/// The negative control for the cross-check above: the **same script**, with
+/// `hx0`/`hlt` swapped at the `geomCauchyOfLt` call site. `hx0`'s type (`le
+/// zero half`) and `hlt`'s type (`lt half one`) are unrelated Props -- one is
+/// a `le`-application, the other an `Exists`-application over a rational gap
+/// -- so a checker that is actually reading argument TYPES, rather than
+/// merely counting positional arguments, must refuse this.
+#[test]
+fn the_half_cross_check_route_cannot_swap_hx0_and_hlt() {
+    use super::exponential::{geom_half_a_real_pos_bound, half, half_add_half_equiv_one, half_rat};
+    use crate::int_prelude::ops::IntDev;
+    use crate::rat_prelude::ops::{rlt, rzero};
+
+    let (mut kernel, p) = built();
+    let rat = p.rat;
+
+    let expected_ty = match kernel
+        .environment()
+        .get(p.geom_cauchy)
+        .expect("CReal.geomCauchy must be declared")
+    {
+        Declaration::Theorem { ty, .. } => *ty,
+        other => panic!("CReal.geomCauchy is {other:?}, not a Theorem"),
+    };
+
+    let mut d = IntDev::new(&mut kernel, rat.int);
+    let anon = d.kernel().anon();
+
+    let h = half(&mut d, p);
+    let hr = half_rat(&mut d, p);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let one_nat = d.num(1);
+
+    let hx0 = {
+        let zero_rat = rzero(&mut d, rat);
+        let half_le_zero = d.lemma(rat.zero_le_nat_div_succ, &[one_nat, one_nat]);
+        d.lemma(p.of_rat_le, &[zero_rat, hr, half_le_zero])
+    };
+
+    let hlt = {
+        let zero_rat = rzero(&mut d, rat);
+        let one_le_one = d.lemma(rat.int.nat.le_refl, &[one_nat]);
+        let positive = d.lemma(rat.nat_div_succ_pos, &[one_nat, one_nat, one_le_one]);
+        let positive_ty = rlt(&mut d, rat, zero_rat, hr);
+
+        let hh = super::cadd(&mut d, p, h, h);
+        let hh_equiv_one = half_add_half_equiv_one(&mut d, p);
+        let bounded = d.lemma(p.le_of_equiv, &[hh, one_c, hh_equiv_one]);
+        let bounded_ty = super::cle(&mut d, p, hh, one_c);
+
+        let pair = super::and_intro(&mut d, p, positive_ty, bounded_ty, positive, bounded);
+        super::gap_intro(&mut d, p, h, one_c, hr, pair)
+    };
+
+    let (_a_real, h_pos_a_real) = geom_half_a_real_pos_bound(&mut d, p);
+
+    // The one changed thing: `hlt` and `hx0` swapped at the call site.
+    let value = d.lemma(p.geom_cauchy_of_lt, &[h, hlt, hx0, one_nat, h_pos_a_real]);
+
+    let name = d
+        .kernel()
+        .name_str(anon, "__half_cross_check_hx0_hlt_swapped");
+    let outcome = d.kernel().add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty: expected_ty,
+        value,
+    });
+    assert!(
+        outcome.is_err(),
+        "swapping hx0/hlt at the geomCauchyOfLt call site must be REFUSED by \
+         the trusted checker -- it was accepted, which means argument \
+         positions are not actually being type-checked: {outcome:?}"
+    );
 }
