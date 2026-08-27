@@ -171,10 +171,10 @@
 //!    `natDivSucc` shape without the harmonic bound), so it was not worth the
 //!    machinery for this slice.
 
-use super::series::exists_nat_intro;
+use super::series::{assoc_rev_eq, exists_nat_intro, fuse_same_index, sum_range_cauchy_body};
 use super::{
     CRealPrelude, and_intro, creal_ty, div_succ, embed, equiv, gap_elim, gap_halves, halves,
-    modulus, sample, shift, within,
+    modulus, sample, shift, weaken, within,
 };
 use crate::BinderInfo;
 use crate::KernelError;
@@ -3241,4 +3241,591 @@ fn declare_geom_y_bound(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kerne
         ty,
         value,
     })
+}
+
+// ---------------------------------------------------------------------------
+// `CReal.geomCauchyOfLt` -- geometric-series Cauchyness at a GENERAL ratio
+// `0 ≤ x < 1`, mirroring `exponential.rs::declare_geom_cauchy_ordered_half` /
+// `declare_geom_cauchy` but parametrized by [`declare_geom_y_bound`]'s general
+// `x`/`k`/`h` and its outer existential witness `bigK` (carried here as an
+// explicit universally-quantified hypothesis `hK`) in place of the concrete
+// base-`1/2` leaf bound `geomHalfInvLeafBound` and the literal `7`.
+//
+// The two theorems below are the direct generalization of
+// `geomCauchyOrderedHalf`/`geomCauchy`: every leg of the widening/fusion
+// arithmetic that came from `CReal.regular`'s own `1/(n+1)` modulus or from
+// `geom_pair_within`'s own fixed `natDivSucc 2 b` leaf is untouched (none of
+// it depends on the base), and the ONE leg that was pinned to the literal `2`
+// (`geomHalfInvLeafBound`'s own leaf bound) becomes the symbolic `bigK` this
+// file's `geomYBound` supplies. The final fused modulus is `(bigK+1)+7` on
+// BOTH sides (`bigK+1` from fusing the `a`-side leaf with the regularity
+// constant `natDivSucc 1 a`, `7` unchanged from the `b`-side, whichever is
+// smaller padded up to the sum via `Rat.natDivSucc_le_add_left` -- never via a
+// literal coincidence like `geomCauchy`'s own `3+4=7`, since `bigK` is
+// symbolic).
+// ---------------------------------------------------------------------------
+
+/// `Nat.add bigK (Nat.num 1)`, i.e. `bigK+1` -- the `a`-side fused numerator
+/// [`declare_geom_cauchy_of_lt_ordered`] builds via [`fuse_same_index`] and
+/// [`declare_geom_cauchy_of_lt`] must reconstruct externally (to state
+/// `Cauchy`'s own witness), kept as a single Rust function so both sites
+/// build the identical `ExprId`.
+fn geom_cauchy_of_lt_big_k1(d: &mut IntDev<'_>, bigk: ExprId) -> ExprId {
+    let one_nat = d.num(1);
+    d.add(bigk, one_nat)
+}
+
+/// `(bigK+1)+7` -- the single Nat modulus [`declare_geom_cauchy_of_lt_ordered`]'s
+/// bound uses on BOTH sides, as a function of `geomYBound`'s own witness
+/// `bigK`. See [`geom_cauchy_of_lt_big_k1`]'s own doc for why this is a
+/// shared Rust function rather than inlined at each call site.
+fn geom_cauchy_of_lt_k_final(d: &mut IntDev<'_>, bigk: ExprId) -> ExprId {
+    let big_k1 = geom_cauchy_of_lt_big_k1(d, bigk);
+    let seven_nat = d.num(7);
+    d.add(big_k1, seven_nat)
+}
+
+/// `CReal.geomCauchyOfLtOrdered`. See the module documentation just above for
+/// the derivation: verbatim in *shape* to
+/// `exponential.rs::declare_geom_cauchy_ordered_half`, generalized from the
+/// concrete base `1/2` (`k := 1`, leaf bound `natDivSucc 2 a`, final modulus
+/// the literal `7`) to a symbolic `x`/`k`/`h` and a symbolic leaf-bound
+/// witness `(bigK, hK)` supplied by [`declare_geom_y_bound`]'s own outer
+/// existential.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+#[allow(clippy::too_many_lines)]
+fn declare_geom_cauchy_of_lt_ordered(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let zero_c = czero(d, p);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let hx0_ty = cle(d, p, zero_c, x);
+    let hx0_fv = d.fresh_fvar();
+    let hx0 = d.kernel().fvar(hx0_fv);
+
+    let neg_x = cneg(d, p, x);
+    let a_real = cadd(d, p, one_c, neg_x); // a_real = 1 - x
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let h_ty = pos_bound_of(d, p, a_real, k);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let inv_expr = cinv(d, p, a_real, k, h);
+
+    let bigk_fv = d.fresh_fvar();
+    let bigk = d.kernel().fvar(bigk_fv);
+    let hk_ty = {
+        let a0_fv = d.fresh_fvar();
+        let a0 = d.kernel().fvar(a0_fv);
+        let pow_xa0 = d.const_app(p.pow, &[x, a0]);
+        let mul_iv_pow0 = cmul(d, p, inv_expr, pow_xa0);
+        let bound_rat0 = div_succ_var(d, p, bigk, a0);
+        let bound0 = embed(d, p, bound_rat0);
+        let body0 = cle(d, p, mul_iv_pow0, bound0);
+        d.pi_fv(a0_fv, nat, body0)
+    };
+    let hk_fv = d.fresh_fvar();
+    let hk = d.kernel().fvar(hk_fv);
+
+    let f = pow_fn(d, p, x);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let hle_ty = d.le(a, b);
+    let hle_fv = d.fresh_fvar();
+    let hle = d.kernel().fvar(hle_fv);
+
+    let raw = d.lemma(p.geom_pair_within, &[x, hx0, k, h, a, b, hle]);
+
+    // Reconstruct `diff`/`total` exactly as `geom_pair_within`'s own body
+    // builds them, so `weaken` below sees the SAME `bound` its `proof`
+    // argument (`raw`) actually carries.
+    let sum_f_b = d.const_app(p.sum_range, &[f, b]);
+    let sum_f_a = d.const_app(p.sum_range, &[f, a]);
+    let y_pt = sample(d, p, sum_f_b, b);
+    let z_pt = sample(d, p, sum_f_a, a);
+    let diff = rsub(d, rat, y_pt, z_pt);
+
+    let t = shift(d, b);
+    let t1 = div_succ(d, p, 1, t);
+    let b1 = div_succ(d, p, 1, b);
+    let a1 = div_succ(d, p, 1, a);
+    let pow_xa = d.const_app(p.pow, &[x, a]);
+    let y_a = cmul(d, p, inv_expr, pow_xa);
+    let v = sample(d, p, y_a, b);
+    let b2 = div_succ(d, p, 2, b);
+
+    let bxy = modulus(d, p, t, b);
+    let byz = radd(d, v, b2);
+    let bzw = modulus(d, p, a, t);
+    let bxy_byz = radd(d, bxy, byz);
+    let total = radd(d, bxy_byz, bzw);
+
+    // --- widen: `t1 -> b1` (twice) and `v -> vb` -------------------------
+    let one_nat = d.num(1);
+    let wt = d.lemma(rat.nat_div_succ_le_scaled, &[one_nat, one_nat, b]);
+    // wt : le t1 b1
+
+    let hv_at_a = d.apply(hk, &[a]);
+    // hv_at_a : le y_a (embed (natDivSucc bigK a))
+    let raw_v = d.apply(hv_at_a, &[b]);
+    // raw_v : (defeq) Rat.le (Rat.sub v a_k) b2
+    let a_k = div_succ_var(d, p, bigk, a);
+    let y_leaf_le = d.lemma(rat.le_of_sub_le, &[v, a_k, b2, raw_v]);
+    // y_leaf_le : le v (radd a_k b2) = le v vb
+    let vb = radd(d, a_k, b2);
+
+    let bxy_w = radd(d, b1, b1);
+    let byz_w = radd(d, vb, b2);
+    let bzw_w = radd(d, a1, b1);
+
+    let refl_b1 = d.lemma(rat.le_refl, &[b1]);
+    let refl_a1 = d.lemma(rat.le_refl, &[a1]);
+    let refl_b2 = d.lemma(rat.le_refl, &[b2]);
+
+    let step1 = d.lemma(rat.add_le_add, &[t1, b1, b1, b1, wt, refl_b1]);
+    // step1 : le bxy bxy_w
+    let step2 = d.lemma(rat.add_le_add, &[v, vb, b2, b2, y_leaf_le, refl_b2]);
+    // step2 : le byz byz_w
+    let step3 = d.lemma(rat.add_le_add, &[bxy, bxy_w, byz, byz_w, step1, step2]);
+    // step3 : le bxy_byz (radd bxy_w byz_w)
+    let step4 = d.lemma(rat.add_le_add, &[a1, a1, t1, b1, refl_a1, wt]);
+    // step4 : le bzw bzw_w
+    let bxy_byz_w = radd(d, bxy_w, byz_w);
+    let order = d.lemma(
+        rat.add_le_add,
+        &[bxy_byz, bxy_byz_w, bzw, bzw_w, step3, step4],
+    );
+    // order : le total wider
+    let wider = radd(d, bxy_byz_w, bzw_w);
+    // wider = ((b1+b1)+(vb+b2))+(a1+b1) = ((b1+b1)+((a_k+b2)+b2))+(a1+b1)
+
+    // --- reassociate + fuse: `wider` -> `natDivSucc (bigK+1) a + natDivSucc 7 b`,
+    // then pad both to the common target `(bigK+1)+7` --------------------
+    let m_right = radd(d, b2, b2); // b2+b2
+    let m = radd(d, bxy_w, m_right); // (b1+b1)+(b2+b2)
+    let a_k_plus_m_right = radd(d, a_k, m_right);
+
+    let step_r1 = d.lemma(rat.add_assoc, &[a_k, b2, b2]);
+    let s1_inner = radd(d, bxy_w, a_k_plus_m_right);
+    let s1 = radd(d, s1_inner, bzw_w);
+    let step_r1_lifted = rcongr(d, byz_w, a_k_plus_m_right, step_r1, &|d, t| {
+        let inner = radd(d, bxy_w, t);
+        radd(d, inner, bzw_w)
+    });
+
+    let bxy_w_plus_ak = radd(d, bxy_w, a_k);
+    let step_r2 = assoc_rev_eq(d, p, bxy_w, a_k, m_right);
+    let s2_inner = radd(d, bxy_w_plus_ak, m_right);
+    let s2 = radd(d, s2_inner, bzw_w);
+    let step_r2_lifted = rcongr(d, s1_inner, s2_inner, step_r2, &|d, t| radd(d, t, bzw_w));
+
+    let ak_plus_bxy_w = radd(d, a_k, bxy_w);
+    let step_r3 = d.lemma(rat.add_comm, &[bxy_w, a_k]);
+    let s3_inner = radd(d, ak_plus_bxy_w, m_right);
+    let s3 = radd(d, s3_inner, bzw_w);
+    let step_r3_lifted = rcongr(d, bxy_w_plus_ak, ak_plus_bxy_w, step_r3, &|d, t| {
+        let inner = radd(d, t, m_right);
+        radd(d, inner, bzw_w)
+    });
+
+    let step_r4 = d.lemma(rat.add_assoc, &[a_k, bxy_w, m_right]);
+    let ak_plus_m = radd(d, a_k, m);
+    let s4 = radd(d, ak_plus_m, bzw_w);
+    let step_r4_lifted = rcongr(d, s3_inner, ak_plus_m, step_r4, &|d, t| radd(d, t, bzw_w));
+
+    let step_r5 = d.lemma(rat.add_assoc, &[a_k, m, bzw_w]);
+    let m_plus_bzw_w = radd(d, m, bzw_w);
+    let s5 = radd(d, a_k, m_plus_bzw_w);
+
+    let step_r6 = assoc_rev_eq(d, p, m, a1, b1);
+    let m_plus_a1 = radd(d, m, a1);
+    let m_plus_a1_plus_b1 = radd(d, m_plus_a1, b1);
+    let s6 = radd(d, a_k, m_plus_a1_plus_b1);
+    let step_r6_lifted = rcongr(d, m_plus_bzw_w, m_plus_a1_plus_b1, step_r6, &|d, t| {
+        radd(d, a_k, t)
+    });
+
+    let step_r7 = d.lemma(rat.add_comm, &[m, a1]);
+    let a1_plus_m = radd(d, a1, m);
+    let a1_plus_m_plus_b1 = radd(d, a1_plus_m, b1);
+    let s7 = radd(d, a_k, a1_plus_m_plus_b1);
+    let step_r7_lifted = rcongr(d, m_plus_a1, a1_plus_m, step_r7, &|d, t| {
+        let inner = radd(d, t, b1);
+        radd(d, a_k, inner)
+    });
+
+    let step_r8 = d.lemma(rat.add_assoc, &[a1, m, b1]);
+    let m_plus_b1 = radd(d, m, b1);
+    let a1_plus_m_plus_b1_r = radd(d, a1, m_plus_b1);
+    let s8 = radd(d, a_k, a1_plus_m_plus_b1_r);
+    let step_r8_lifted = rcongr(
+        d,
+        a1_plus_m_plus_b1,
+        a1_plus_m_plus_b1_r,
+        step_r8,
+        &|d, t| radd(d, a_k, t),
+    );
+
+    let step_r9 = assoc_rev_eq(d, p, a_k, a1, m_plus_b1);
+    let ak_plus_a1 = radd(d, a_k, a1);
+    let s9 = radd(d, ak_plus_a1, m_plus_b1);
+
+    let (a_k1, step_r10) = fuse_same_index(d, p, bigk, one_nat, a);
+    // a_k1 = natDivSucc (bigK+1) a
+    let s10 = radd(d, a_k1, m_plus_b1);
+    let step_r10_lifted = rcongr(d, ak_plus_a1, a_k1, step_r10, &|d, t| radd(d, t, m_plus_b1));
+
+    let (bb2, step_r11) = fuse_same_index(d, p, one_nat, one_nat, b);
+    let bb2_plus_m_right = radd(d, bb2, m_right);
+    let bb2_plus_m_right_plus_b1 = radd(d, bb2_plus_m_right, b1);
+    let s11 = radd(d, a_k1, bb2_plus_m_right_plus_b1);
+    let step_r11_lifted = rcongr(d, bxy_w, bb2, step_r11, &|d, t| {
+        let inner_m = radd(d, t, m_right);
+        let inner_mb1 = radd(d, inner_m, b1);
+        radd(d, a_k1, inner_mb1)
+    });
+
+    let two_nat = d.num(2);
+    let (bb4, step_r12) = fuse_same_index(d, p, two_nat, two_nat, b);
+    let bb2_plus_bb4 = radd(d, bb2, bb4);
+    let bb2_plus_bb4_plus_b1 = radd(d, bb2_plus_bb4, b1);
+    let s12 = radd(d, a_k1, bb2_plus_bb4_plus_b1);
+    let step_r12_lifted = rcongr(d, m_right, bb4, step_r12, &|d, t| {
+        let inner_m = radd(d, bb2, t);
+        let inner_mb1 = radd(d, inner_m, b1);
+        radd(d, a_k1, inner_mb1)
+    });
+
+    let four_nat = d.num(4);
+    let (bb6, step_r13) = fuse_same_index(d, p, two_nat, four_nat, b);
+    let bb6_plus_b1 = radd(d, bb6, b1);
+    let s13 = radd(d, a_k1, bb6_plus_b1);
+    let step_r13_lifted = rcongr(d, bb2_plus_bb4, bb6, step_r13, &|d, t| {
+        let inner_mb1 = radd(d, t, b1);
+        radd(d, a_k1, inner_mb1)
+    });
+
+    let six_nat = d.num(6);
+    let (b7, step_r14) = fuse_same_index(d, p, six_nat, one_nat, b);
+    let s14 = radd(d, a_k1, b7);
+    let step_r14_lifted = rcongr(d, bb6_plus_b1, b7, step_r14, &|d, t| radd(d, a_k1, t));
+
+    let step_r15 = d.lemma(rat.add_comm, &[a_k1, b7]);
+    let s15 = radd(d, b7, a_k1);
+
+    let (_, wider_to_s15) = rchain(
+        d,
+        wider,
+        &[
+            (s1, step_r1_lifted),
+            (s2, step_r2_lifted),
+            (s3, step_r3_lifted),
+            (s4, step_r4_lifted),
+            (s5, step_r5),
+            (s6, step_r6_lifted),
+            (s7, step_r7_lifted),
+            (s8, step_r8_lifted),
+            (s9, step_r9),
+            (s10, step_r10_lifted),
+            (s11, step_r11_lifted),
+            (s12, step_r12_lifted),
+            (s13, step_r13_lifted),
+            (s14, step_r14_lifted),
+            (s15, step_r15),
+        ],
+    );
+
+    let le_wider_s15 = {
+        let refl_wider = d.lemma(rat.le_refl, &[wider]);
+        rat_eq_rewrite(d, wider, s15, wider_to_s15, refl_wider, &|d, t| {
+            rle(d, rat, wider, t)
+        })
+    };
+
+    // Pad `a_k1` and `b7` (numerators `bigK+1` and `7`) up to the common
+    // target `big_k1 + seven_nat`, unlike `geomCauchy`'s own literal `3+4=7`
+    // coincidence -- `big_k1` is symbolic, so the two orders `big_k1+seven`
+    // and `seven+big_k1` need an explicit `Nat.add_comm` bridge.
+    let seven_nat = d.num(7);
+    let big_k1 = geom_cauchy_of_lt_big_k1(d, bigk);
+    let k_final = d.add(big_k1, seven_nat);
+
+    let pad_a = d.lemma(rat.nat_div_succ_le_add_left, &[big_k1, seven_nat, a]);
+    // pad_a : le a_k1 (natDivSucc k_final a)
+
+    let seven_plus_bigk1 = d.add(seven_nat, big_k1);
+    let np = d.prelude();
+    let comm_proof = d.lemma(np.add_comm, &[seven_nat, big_k1]);
+    // comm_proof : Eq Nat seven_plus_bigk1 k_final
+    let pad_b_eq = nat_eq_to_rat(d, seven_plus_bigk1, k_final, comm_proof, &|d, t| {
+        div_succ_var(d, p, t, b)
+    });
+    let pad_b_raw = d.lemma(rat.nat_div_succ_le_add_left, &[seven_nat, big_k1, b]);
+    let nds_seven_plus_bigk1_b = div_succ_var(d, p, seven_plus_bigk1, b);
+    let nds_k_final_b = div_succ_var(d, p, k_final, b);
+    let pad_b = rat_eq_rewrite(
+        d,
+        nds_seven_plus_bigk1_b,
+        nds_k_final_b,
+        pad_b_eq,
+        pad_b_raw,
+        &|d, t| rle(d, rat, b7, t),
+    );
+    // pad_b : le b7 (natDivSucc k_final b)
+
+    let nds_k_final_a = div_succ_var(d, p, k_final, a);
+    let target_bound = radd(d, nds_k_final_b, nds_k_final_a);
+
+    let le_s15_target = d.lemma(
+        rat.add_le_add,
+        &[b7, nds_k_final_b, a_k1, nds_k_final_a, pad_b, pad_a],
+    );
+    let le_wider_target = d.lemma(
+        rat.le_trans,
+        &[wider, s15, target_bound, le_wider_s15, le_s15_target],
+    );
+    let final_order = d.lemma(
+        rat.le_trans,
+        &[total, wider, target_bound, order, le_wider_target],
+    );
+
+    let result = weaken(d, p, diff, total, target_bound, raw, final_order);
+
+    let ty = {
+        let claim = within(d, p, diff, target_bound);
+        let after_hle = d.arrow(hle_ty, claim);
+        let over_b = d.pi_fv(b_fv, nat, after_hle);
+        let over_a = d.pi_fv(a_fv, nat, over_b);
+        let with_hk = d.pi_fv(hk_fv, hk_ty, over_a);
+        let with_bigk = d.pi_fv(bigk_fv, nat, with_hk);
+        let with_h = d.pi_fv(h_fv, h_ty, with_bigk);
+        let with_k = d.pi_fv(k_fv, nat, with_h);
+        let with_hx0 = d.pi_fv(hx0_fv, hx0_ty, with_k);
+        d.pi_fv(x_fv, carrier, with_hx0)
+    };
+    let value = {
+        let with_hle = d.lam_fv(hle_fv, hle_ty, result);
+        let over_b = d.lam_fv(b_fv, nat, with_hle);
+        let over_a = d.lam_fv(a_fv, nat, over_b);
+        let with_hk = d.lam_fv(hk_fv, hk_ty, over_a);
+        let with_bigk = d.lam_fv(bigk_fv, nat, with_hk);
+        let with_h = d.lam_fv(h_fv, h_ty, with_bigk);
+        let with_k = d.lam_fv(k_fv, nat, with_h);
+        let with_hx0 = d.lam_fv(hx0_fv, hx0_ty, with_k);
+        d.lam_fv(x_fv, carrier, with_hx0)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.geom_cauchy_of_lt_ordered,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.geomCauchyOfLt`. See the module documentation above
+/// [`declare_geom_cauchy_of_lt_ordered`] for the derivation: eliminates
+/// `geomYBound`'s outer existential to obtain `(bigK, hK)`, then runs the
+/// same `Nat.le_total` case split `exponential.rs::declare_geom_cauchy` runs
+/// against `geomCauchyOrderedHalf`, here against
+/// [`declare_geom_cauchy_of_lt_ordered`], with witness `geom_cauchy_of_lt_k_final(bigK)`
+/// in place of that theorem's fixed `K := 7`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_geom_cauchy_of_lt(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let zero_c = czero(d, p);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let hx0_ty = cle(d, p, zero_c, x);
+    let hx0_fv = d.fresh_fvar();
+    let hx0 = d.kernel().fvar(hx0_fv);
+    let hlt_ty = d.const_app(p.lt, &[x, one_c]);
+    let hlt_fv = d.fresh_fvar();
+    let hlt = d.kernel().fvar(hlt_fv);
+
+    let neg_x = cneg(d, p, x);
+    let a_real = cadd(d, p, one_c, neg_x);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let h_ty = pos_bound_of(d, p, a_real, k);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let inv_expr = cinv(d, p, a_real, k, h);
+
+    let f = pow_fn(d, p, x);
+    let sum_f = d.const_app(p.sum_range, &[f]);
+    let target = d.const_app(p.cauchy, &[sum_f]);
+
+    let ex_yb = d.lemma(p.geom_y_bound, &[x, hx0, hlt, k, h]);
+
+    let predicate1 = {
+        let k1_fv = d.fresh_fvar();
+        let k1 = d.kernel().fvar(k1_fv);
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let pow_xa = d.const_app(p.pow, &[x, a]);
+        let mul_iv_pow = cmul(d, p, inv_expr, pow_xa);
+        let bound_rat = div_succ_var(d, p, k1, a);
+        let bound = embed(d, p, bound_rat);
+        let body = cle(d, p, mul_iv_pow, bound);
+        let inner = d.pi_fv(a_fv, nat, body);
+        d.lam_fv(k1_fv, nat, inner)
+    };
+
+    let minor = {
+        let bigk_fv = d.fresh_fvar();
+        let bigk = d.kernel().fvar(bigk_fv);
+        let hk_ty = {
+            let a_fv = d.fresh_fvar();
+            let a = d.kernel().fvar(a_fv);
+            let pow_xa = d.const_app(p.pow, &[x, a]);
+            let mul_iv_pow = cmul(d, p, inv_expr, pow_xa);
+            let bound_rat = div_succ_var(d, p, bigk, a);
+            let bound = embed(d, p, bound_rat);
+            let body = cle(d, p, mul_iv_pow, bound);
+            d.pi_fv(a_fv, nat, body)
+        };
+        let hk_fv = d.fresh_fvar();
+        let hk = d.kernel().fvar(hk_fv);
+
+        let k_final = geom_cauchy_of_lt_k_final(d, bigk);
+
+        let case_proof = {
+            let m_fv = d.fresh_fvar();
+            let m = d.kernel().fvar(m_fv);
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+
+            let sum_f_m = d.const_app(p.sum_range, &[f, m]);
+            let sum_f_n = d.const_app(p.sum_range, &[f, n]);
+            let y_m = sample(d, p, sum_f_m, m);
+            let z_n = sample(d, p, sum_f_n, n);
+            let diff_mn = rsub(d, rat, y_m, z_n);
+            let bm = div_succ_var(d, p, k_final, m);
+            let bn = div_succ_var(d, p, k_final, n);
+            let bound_mn = radd(d, bm, bn);
+            let claim_mn = within(d, p, diff_mn, bound_mn);
+
+            let left_ty = d.le(m, n);
+            let right_ty = d.le(n, m);
+            let total_mn = {
+                let name = d.prelude().le_total;
+                d.const_app(name, &[m, n])
+            };
+
+            let body = d.or_elim(
+                left_ty,
+                right_ty,
+                claim_mn,
+                total_mn,
+                // m <= n: `geom_cauchy_of_lt_ordered` at (a := m, b := n)
+                // gives `Within (z_n - y_m) (bn2 + bm2)`; flip the
+                // difference, then reorder the bound.
+                &|d, hmn| {
+                    let raw = d.lemma(
+                        p.geom_cauchy_of_lt_ordered,
+                        &[x, hx0, k, h, bigk, hk, m, n, hmn],
+                    );
+                    let bn2 = div_succ_var(d, p, k_final, n);
+                    let bm2 = div_succ_var(d, p, k_final, m);
+                    let bound_nm = radd(d, bn2, bm2);
+                    let flipped = within_symm(d, p, z_n, y_m, bound_nm, raw);
+                    let comm_eq = d.lemma(rat.add_comm, &[bn2, bm2]);
+                    rat_eq_rewrite(d, bound_nm, bound_mn, comm_eq, flipped, &|d, t| {
+                        within(d, p, diff_mn, t)
+                    })
+                },
+                // n <= m: `geom_cauchy_of_lt_ordered` at (a := n, b := m)
+                // lands exactly on `Within (y_m - z_n) (bm + bn)` -- no
+                // rewrite.
+                &|d, hnm| {
+                    d.lemma(
+                        p.geom_cauchy_of_lt_ordered,
+                        &[x, hx0, k, h, bigk, hk, n, m, hnm],
+                    )
+                },
+            );
+            let over_n = d.lam_fv(n_fv, nat, body);
+            d.lam_fv(m_fv, nat, over_n)
+        };
+
+        let predicate_f = {
+            let kf_fv = d.fresh_fvar();
+            let kf = d.kernel().fvar(kf_fv);
+            let body = sum_range_cauchy_body(d, p, sum_f, kf);
+            d.lam_fv(kf_fv, nat, body)
+        };
+        let target_proof = exists_nat_intro(d, p, predicate_f, k_final, case_proof);
+
+        let with_hk = d.lam_fv(hk_fv, hk_ty, target_proof);
+        d.lam_fv(bigk_fv, nat, with_hk)
+    };
+
+    let proof_body = exists_elim(d, predicate1, target, ex_yb, minor);
+
+    let ty = {
+        let inner = d.pi_fv(h_fv, h_ty, target);
+        let with_k = d.pi_fv(k_fv, nat, inner);
+        let after_hlt = d.arrow(hlt_ty, with_k);
+        let after_hx0 = d.arrow(hx0_ty, after_hlt);
+        d.pi_fv(x_fv, carrier, after_hx0)
+    };
+    let value = {
+        let inner = d.lam_fv(h_fv, h_ty, proof_body);
+        let with_k = d.lam_fv(k_fv, nat, inner);
+        let with_hlt = d.lam_fv(hlt_fv, hlt_ty, with_k);
+        let with_hx0 = d.lam_fv(hx0_fv, hx0_ty, with_hlt);
+        d.lam_fv(x_fv, carrier, with_hx0)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.geom_cauchy_of_lt,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Rat.natDivSucc k j`, with `k` a **variable** rather than a literal --
+/// [`div_succ`] only takes a `u32`, and this file's general-ratio bound needs
+/// the modulus at the symbolic witness `bigK`. Verbatim copy of
+/// `series.rs::div_succ_var` (private there).
+fn div_succ_var(d: &mut IntDev<'_>, p: CRealPrelude, k: ExprId, j: ExprId) -> ExprId {
+    d.const_app(p.rat.nat_div_succ, &[k, j])
+}
+
+/// Admit `CReal.geomCauchyOfLtOrdered` and `CReal.geomCauchyOfLt`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_geom_cauchy_of_lt_family(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_geom_cauchy_of_lt_ordered(d, p)?;
+    declare_geom_cauchy_of_lt(d, p)
 }

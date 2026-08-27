@@ -2364,6 +2364,40 @@ pub struct CRealPrelude {
     /// no rewrite needed in the `n ≤ m` branch), with the single fixed
     /// witness `K := 7` in place of that theorem's `k + 8`.
     pub geom_cauchy: NameId,
+    /// `CReal.geomCauchyOfLtOrdered : ∀ x, le zero x → ∀ k (h : PosBound (add
+    /// one (neg x)) k) (bigK : Nat) (hK : ∀ a, le (mul (inv (add one (neg
+    /// x)) k h) (pow x a)) (ofRat (natDivSucc bigK a))) a b, Nat.le a b →
+    /// Within (seq (sumRange (pow x) b) b − seq (sumRange (pow x) a) a)
+    /// (natDivSucc ((bigK+1)+7) b + natDivSucc ((bigK+1)+7) a)` — the
+    /// ordered-pair geometric Cauchy bound at a GENERAL ratio `x` and a
+    /// symbolic leaf-bound witness `bigK`, mirroring
+    /// [`Self::geom_cauchy_ordered_half`]'s derivation with
+    /// [`Self::geom_y_bound`]'s general leaf bound in place of
+    /// [`Self::geom_half_inv_leaf_bound`]'s literal `2` and the symbolic
+    /// modulus `(bigK+1)+7` in place of the literal `7`. `(bigK+1)` fuses the
+    /// `a`-side leaf with the regularity constant `natDivSucc 1 a`
+    /// (`geometric.rs`'s own `fuse_same_index`); `7` on the `b` side is
+    /// untouched from `geomCauchyOrderedHalf`'s own derivation (it never
+    /// depended on the base). Since `bigK` is symbolic, the smaller side is
+    /// padded up to the common target `(bigK+1)+7` via two
+    /// `Rat.natDivSucc_le_add_left` applications plus one `Nat.add_comm`
+    /// bridge, never via a literal coincidence like `geomCauchy`'s own
+    /// `3+4=7`.
+    pub geom_cauchy_of_lt_ordered: NameId,
+    /// `CReal.geomCauchyOfLt : ∀ x, le zero x → lt x one → ∀ k (h : PosBound
+    /// (add one (neg x)) k), Cauchy (sumRange (fun n => pow x n))` —
+    /// geometric-series Cauchyness at a GENERAL ratio `0 ≤ x < 1`, the
+    /// generalization of [`Self::geom_cauchy`] (concrete base `1/2`) needed
+    /// for Chapter 22–23's ratio test.
+    ///
+    /// Eliminates [`Self::geom_y_bound`]'s outer existential `∃ K, …` to
+    /// obtain a concrete-but-symbolic witness `(bigK, hK)`, then runs the
+    /// same `Nat.le_total` case split [`Self::geom_cauchy`] runs against
+    /// [`Self::geom_cauchy_ordered_half`] — here against
+    /// [`Self::geom_cauchy_of_lt_ordered`] — with the witness `(bigK+1)+7`
+    /// (a function of `bigK`, never simplified to a literal) in place of that
+    /// theorem's fixed `K := 7`.
+    pub geom_cauchy_of_lt: NameId,
     /// `CReal.one_le_pow_of_one_le : ∀ x, le one x → ∀ n, le one (pow x n)` —
     /// the mirror of [`Self::pow_le_one`]: powers of a base at least `1` stay
     /// at least `1`. Induction on `n`, and simpler than `pow_le_one`'s own
@@ -4276,6 +4310,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         geom_half_inv_leaf_bound: kernel.name_str(creal, "geomHalfInvLeafBound"),
         geom_cauchy_ordered_half: kernel.name_str(creal, "geomCauchyOrderedHalf"),
         geom_cauchy: kernel.name_str(creal, "geomCauchy"),
+        geom_cauchy_of_lt_ordered: kernel.name_str(creal, "geomCauchyOfLtOrdered"),
+        geom_cauchy_of_lt: kernel.name_str(creal, "geomCauchyOfLt"),
         one_le_pow_of_one_le: kernel.name_str(creal, "one_le_pow_of_one_le"),
         pow_le_pow_of_one_le: kernel.name_str(creal, "pow_le_pow_of_one_le"),
         pow_pos: kernel.name_str(creal, "pow_pos"),
@@ -4843,6 +4879,12 @@ pub(crate) fn build_creal_prelude_uncached(
         // `mul_inv_cancel` via `inverse`) — the latter already ran earlier,
         // the former just above. See `geometric.rs`'s module documentation.
         geometric::declare_geometric(&mut d, prelude)?;
+        // `geomCauchyOfLtOrdered`/`geomCauchyOfLt` need only `geometric.rs`'s
+        // own `geom_pair_within`/`geom_y_bound` (just above, well before
+        // `exponential`'s base-1/2 `geom_cauchy_ordered_half`/`geom_cauchy`
+        // family) plus ordinary ring/order laws, so this lands right after
+        // its one real dependency rather than beside its base-1/2 sibling.
+        geometric::declare_geom_cauchy_of_lt_family(&mut d, prelude)?;
         // `expTerm`/`expSeriesPartial` need `Nat.factorial` (already in
         // `nat_prelude`, consumed here through `IntDev`'s `NatOps` impl) and
         // `Rat.normalize`; nothing else in this file depends on them, so they

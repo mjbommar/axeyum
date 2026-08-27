@@ -126,7 +126,7 @@ fn every_creal_declaration_is_checked_and_axiom_free() {
 
 fn every_creal_declaration_is_checked_and_axiom_free_body() {
     let (kernel, p) = built();
-    let expected: [(&str, crate::NameId, &str); 366] = [
+    let expected: [(&str, crate::NameId, &str); 368] = [
         ("Within", p.within, "def"),
         ("Regular", p.regular_pred, "inductive-or-def"),
         ("CReal", p.creal, "inductive"),
@@ -646,6 +646,12 @@ fn every_creal_declaration_is_checked_and_axiom_free_body() {
             "theorem",
         ),
         ("CReal.geomCauchy", p.geom_cauchy, "theorem"),
+        (
+            "CReal.geomCauchyOfLtOrdered",
+            p.geom_cauchy_of_lt_ordered,
+            "theorem",
+        ),
+        ("CReal.geomCauchyOfLt", p.geom_cauchy_of_lt, "theorem"),
         (
             "CReal.one_le_pow_of_one_le",
             p.one_le_pow_of_one_le,
