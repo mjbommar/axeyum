@@ -4957,12 +4957,15 @@ mod tests {
     }
 
     /// The checking-stage counterpart of the search-side test above: a
-    /// `check_progress` sink observes `axeyum_cnf::check_drat` and
-    /// `axeyum_cnf::elaborate_drat_to_lrat` (the stage that ran for ~6 h
-    /// unbounded and unobserved on `neg-fp16-add-monotone-rne.smt2`) without
-    /// changing the exported certificate, and installing an already-expired
-    /// checking deadline yields the honest bare `Evidence::Unsat(None)` — a
-    /// timeout is not a pass.
+    /// `check_progress` sink observes the checking stage — the one that ran for
+    /// ~6 h unbounded and unobserved on `neg-fp16-add-monotone-rne.smt2` —
+    /// without changing the exported certificate.
+    ///
+    /// With no bound installed the budget admits the backward LRAT certification
+    /// route (ADR-0613), so that is the stage that reports here. It is not
+    /// step-interruptible, so it reports exactly twice: opening and closing.
+    /// `crate::proof::tests::the_reference_route_still_reports_both_of_its_sub_stages`
+    /// covers the forward route's own observability.
     #[test]
     fn check_progress_sink_fires_and_does_not_change_the_certificate() {
         let (arena, assertions) = unsat_bv_query();
@@ -4990,11 +4993,23 @@ mod tests {
             !snapshots.is_empty(),
             "an installed checking-progress sink must fire at least once (the terminal report)"
         );
+        let backward: Vec<_> = snapshots
+            .iter()
+            .filter_map(|event| match event {
+                crate::proof::CheckingProgress::BackwardLratCertify(snapshot) => Some(*snapshot),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            backward.len(),
+            2,
+            "the backward certify stage must report one opening and one closing \
+             snapshot, got {backward:?}"
+        );
+        assert!(!backward[0].finished && backward[1].finished);
         assert!(
-            snapshots
-                .iter()
-                .any(|event| matches!(event, crate::proof::CheckingProgress::DratCheck(_))),
-            "the DRAT-check sub-stage must have reported at least one snapshot"
+            backward[1].certified,
+            "this query is unsat with a RUP-only proof, so it must certify"
         );
     }
 
