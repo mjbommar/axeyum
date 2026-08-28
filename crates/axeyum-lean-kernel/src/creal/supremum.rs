@@ -3303,3 +3303,165 @@ pub(super) fn declare_mesh_max_le_add_of_step_close(
 ) -> Result<(), KernelError> {
     declare_mesh_max_le_add_of_step_close_thm(d, p)
 }
+
+// ---------------------------------------------------------------------------
+// `CReal.meshLevelCount_pow` -- bridges the additive doubling schedule
+// (`meshLevelCount`) to `Nat.pow`, needed to route `Nat.lt_pow_size`'s
+// power-of-two dominance bound back into a concrete mesh LEVEL via
+// `Nat.size`. See the module documentation's "Rung 6, the telescope" and
+// "What rung 6 still owes" sections.
+// ---------------------------------------------------------------------------
+
+/// `CReal.meshLevelCount_pow : ∀ j,
+/// Eq Nat (Nat.succ (meshLevelCount j)) (Nat.pow 2 j)` -- `meshLevelCount`'s
+/// own doc already states the informal fact (`meshLevelCount j = 2^j - 1`);
+/// this is the formal, subtraction-free restatement (`+1` on the LEFT
+/// instead), proved by induction on `j` via [`NatOps::induct`].
+///
+/// Base case: `meshLevelCount_zero` plus `Nat.pow_zero` (both give `1`
+/// directly). Step case: `meshLevelCount_succ` gives `meshLevelCount (succ
+/// j) + 1 = (mlc j + mlc j) + 2`; `Nat.succ_add`/`Nat.add_succ` re-associate
+/// that to `(mlc j + 1) + (mlc j + 1)`; the IH rewrites `mlc j + 1` to `pow 2
+/// j`; and `Nat.mul_succ`/`Nat.mul_one` fold `(pow 2 j) + (pow 2 j)` into
+/// `(pow 2 j) * 2`, which is exactly `Nat.pow_succ`'s RHS at base `2`.
+fn declare_mesh_level_count_pow_thm(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let nat_p = p.rat.int.nat;
+    let one = d.level_one();
+    let logic = p.rat.int.logic;
+
+    let two_nat = d.num(2);
+    let one_nat = d.num(1);
+
+    let motive = |d: &mut IntDev<'_>, j: ExprId| -> ExprId {
+        let mlc = d.const_app(p.mesh_level_count, &[j]);
+        let lhs = d.succ(mlc);
+        let rhs = d.const_app(nat_p.pow, &[two_nat, j]);
+        let eq = d.kernel().const_(logic.eq, vec![one]);
+        d.apply(eq, &[nat, lhs, rhs])
+    };
+
+    let base = |d: &mut IntDev<'_>| -> ExprId {
+        let zero_n = d.zero();
+        let mlc0 = d.const_app(p.mesh_level_count, &[zero_n]);
+        let succ_mlc0 = d.succ(mlc0);
+        let succ0 = d.succ(zero_n);
+        let pow2_0 = d.const_app(nat_p.pow, &[two_nat, zero_n]);
+
+        let mlc0_eq = d.lemma(p.mesh_level_count_zero, &[]); // Eq(mlc0, zero_n)
+        let congr_succ = d.congr(mlc0, zero_n, mlc0_eq, &|d, t| d.succ(t)); // Eq(succ_mlc0, succ0)
+        let pow0_eq = d.lemma(nat_p.pow_zero, &[two_nat]); // Eq(pow2_0, succ0)
+        let symm_pow0 = d.symm(pow2_0, succ0, pow0_eq); // Eq(succ0, pow2_0)
+        d.trans(succ_mlc0, succ0, pow2_0, congr_succ, symm_pow0)
+    };
+
+    let step = |d: &mut IntDev<'_>, j: ExprId, ih: ExprId| -> ExprId {
+        let sj = d.succ(j);
+        let mlc_j = d.const_app(p.mesh_level_count, &[j]);
+        let succ_mlc_j = d.succ(mlc_j);
+        let mlc_sj = d.const_app(p.mesh_level_count, &[sj]);
+        let succ_mlc_sj = d.succ(mlc_sj);
+        let pow_sj = d.const_app(nat_p.pow, &[two_nat, sj]);
+        let pow_j = d.const_app(nat_p.pow, &[two_nat, j]);
+        let doubled = d.add(mlc_j, mlc_j);
+        let succ_doubled = d.succ(doubled);
+
+        // LHS_EQ : Eq(succ_mlc_sj, add(succ_mlc_j)(succ_mlc_j))
+        let mlc_succ_eq = d.lemma(p.mesh_level_count_succ, &[j]); // Eq(mlc_sj, succ_doubled)
+        let succ_succ_eq = d.congr(mlc_sj, succ_doubled, mlc_succ_eq, &|d, t| d.succ(t));
+        // Eq(succ_mlc_sj, succ(succ_doubled))
+
+        let add_succ_eq = d.lemma(nat_p.add_succ, &[succ_mlc_j, mlc_j]);
+        // Eq(add(succ_mlc_j)(succ_mlc_j), succ(add(succ_mlc_j)(mlc_j)))
+        let succ_add_eq = d.lemma(nat_p.succ_add, &[mlc_j, mlc_j]);
+        // Eq(add(succ_mlc_j)(mlc_j), succ_doubled)
+        let inner = d.add(succ_mlc_j, mlc_j);
+        let congr_succ_add = d.congr(inner, succ_doubled, succ_add_eq, &|d, t| d.succ(t));
+        // Eq(succ(inner), succ(succ_doubled))
+        let sm_sm = d.add(succ_mlc_j, succ_mlc_j);
+        let succ_inner = d.succ(inner);
+        let succ_succ_doubled = d.succ(succ_doubled);
+        let chain_a = d.trans(
+            sm_sm,
+            succ_inner,
+            succ_succ_doubled,
+            add_succ_eq,
+            congr_succ_add,
+        );
+        // Eq(sm_sm, succ_succ_doubled)
+        let symm_chain_a = d.symm(sm_sm, succ_succ_doubled, chain_a);
+        let lhs_eq = d.trans(
+            succ_mlc_sj,
+            succ_succ_doubled,
+            sm_sm,
+            succ_succ_eq,
+            symm_chain_a,
+        );
+        // Eq(succ_mlc_sj, sm_sm)
+
+        // pow_sj_eq_smsm : Eq(pow_sj, sm_sm)
+        let mul_one_eq = d.lemma(nat_p.mul_one, &[succ_mlc_j]); // Eq(mul(succ_mlc_j)(succ zero), succ_mlc_j)
+        let mul_sm_1 = d.mul(succ_mlc_j, one_nat);
+        let mul_succ_eq = d.lemma(nat_p.mul_succ, &[succ_mlc_j, one_nat]);
+        // Eq(mul(succ_mlc_j)(succ one_nat), add(mul_sm_1)(succ_mlc_j))
+        let add_mulsm1_sm = d.add(mul_sm_1, succ_mlc_j);
+        let congr_add_mulone = d.congr(mul_sm_1, succ_mlc_j, mul_one_eq, &|d, t| {
+            d.add(t, succ_mlc_j)
+        });
+        // Eq(add_mulsm1_sm, sm_sm)
+        let two_v = d.succ(one_nat);
+        let mul_smj_2 = d.mul(succ_mlc_j, two_v);
+        let mul_succ1_prime = d.trans(
+            mul_smj_2,
+            add_mulsm1_sm,
+            sm_sm,
+            mul_succ_eq,
+            congr_add_mulone,
+        );
+        // Eq(mul_smj_2, sm_sm)
+
+        let pow_succ_eq = d.lemma(nat_p.pow_succ, &[two_nat, j]); // Eq(pow_sj, mul(pow_j)(two_nat))
+        let ih_symm = d.symm(succ_mlc_j, pow_j, ih); // Eq(pow_j, succ_mlc_j)
+        let mul_powj_2 = d.mul(pow_j, two_nat);
+        let congr_mul_ih = d.congr(pow_j, succ_mlc_j, ih_symm, &|d, t| d.mul(t, two_nat));
+        // Eq(mul_powj_2, mul(succ_mlc_j)(two_nat)) -- note two_nat and two_v must be the same ExprId
+        let pow_sj_eq_mul = d.trans(pow_sj, mul_powj_2, mul_smj_2, pow_succ_eq, congr_mul_ih);
+        // Eq(pow_sj, mul_smj_2)
+        let pow_sj_eq_smsm = d.trans(pow_sj, mul_smj_2, sm_sm, pow_sj_eq_mul, mul_succ1_prime);
+        // Eq(pow_sj, sm_sm)
+
+        let symm_pow_sj_eq_smsm = d.symm(pow_sj, sm_sm, pow_sj_eq_smsm);
+        d.trans(succ_mlc_sj, sm_sm, pow_sj, lhs_eq, symm_pow_sj_eq_smsm)
+    };
+
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let value = d.induct(&motive, &base, &step, j);
+    let ty = {
+        let body = motive(d, j);
+        d.pi_fv(j_fv, nat, body)
+    };
+    let value = d.lam_fv(j_fv, nat, value);
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mesh_level_count_pow,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Land `CReal.meshLevelCount_pow` alone (a one-declaration `BuildStep`).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_mesh_level_count_pow(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_mesh_level_count_pow_thm(d, p)
+}
