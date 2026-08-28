@@ -10201,6 +10201,7 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "exponential::declare_e_family",
     "trig::declare_trig",
     "trig::declare_sin_trig",
+    "cos_sign::declare_converges_upper_bound_shift",
     "alternating::declare_alternating",
     "trig::declare_trig_alternating_bounds",
     "trig::declare_sin_trig_alternating_bounds",
