@@ -95,3 +95,67 @@ constructive version gives up, and without the route split in the validator
 there is no way to stop CAS evidence reading as kernel evidence. Both existed
 before today; what changed today is that EVT's row 2 stopped resting on an
 assertion.
+
+## Row 3, followed up: 1 → 3 reconstructed, and 28 is a BACKLOG not a boundary
+
+A lane took the `kernel-reconstructed 1, cas-internal 28` number as its task.
+Result: **`cas-certificate: 31 total — kernel-reconstructed 3, cas-internal 28`**.
+Nothing was relabelled and no checker was weakened; the two additions are
+`F:cas-ivt-degree4-sign-bracket-kernel-checked-cost-curve` and
+`F:cas-difference-of-squares-free-x-kernel-checked`.
+
+**The question I most wanted answered has an answer: 28 is a backlog.** No
+`cas-certificate` fact poses a Richardson obligation. The only transcendental
+anywhere is the WZ rows' Gamma-quotient *specification*, and its verification
+obligation is a rational-function identity reached by the functional equation —
+which is exactly why Gosper/Zeilberger terminate. Clusters: WZ 9, NRA geometry
+10, real-algebraic 4, partial fractions 1, gf2 4, all inside the decidable
+fragment.
+
+### Three qualifications, each of which lowers the headline
+
+**1. For 19 of the 28, reconstruction RELOCATES the assumption rather than
+discharging it.** Proving `Σ hᵢgᵢ = f` does not prove that those polynomials
+mean the geometric predicates they are named after
+(`geometry.cartesian-coordinatisation-of-the-euclidean-plane`); the same holds
+for "the Gamma spec denotes this summand". The modelling axiom becomes a kernel
+*definition choice* — **better, not removed**. So the honest ceiling for the WZ
+and geometry clusters is lower than the phrase "kernel-reconstructed" suggests,
+and a future 31-of-31 would still not mean what it sounds like.
+
+**2. Neither addition was new proof work — and that is the finding.** Both were
+CAS→kernel bridge tests already authored and passing, never registered as
+facts. `F:cas-ivt-sign-bracket-cbrt2-kernel-checked`'s own notes *cited a fact
+id that did not exist*. The `cas-certificate` rows were written per
+mathematical result, and slice 1's mathematics is trivial — but **under
+ADR-0601 the unit of account for row 3 is the ROUTE, not the theorem.** Some
+part of the 28 is a registration gap rather than a proving gap.
+
+**3. My two named targets were the wrong ones, for a good reason.** I pointed
+the lane at `F:cas-ivt-cbrt2-in-1-2` and `F:cas-extremum-irrational-argmax`.
+Folding the existing sign-bracket evidence into either would make
+`classify_cas_certificate_fact` label the **whole** certificate —
+Sturm count included — as reconstructed, which `cas_ivt_bridge_tests`'s own
+module doc warns against. Declining my targets and registering honest ones was
+the better answer.
+
+### A briefing error worth recording
+
+**I scoped the lane read-only on `crates/axeyum-lean-kernel/` and asked it to
+produce kernel-reconstructed rows. That is structurally impossible.**
+`add_declaration` is reachable only through `IntDev::new`, which is
+`pub(crate)`, and `axeyum-cas` deliberately does not depend back — both
+`Cargo.toml`s say so. Registering already-existing bridges was the entire
+reachable surface under my scope. The lane worked out the constraint and said
+so; I should have seen it before writing the brief.
+
+**Next step, needing no new kernel machinery**: EVT endpoint exclusion. For
+`p = x³ − 6x` on `[−3, 2]`, shift to `q = p − p(−3)` and `r = p − p(2)`, then
+admit `0 < polyEval q 4 (ofInt −1)` and `0 < polyEval r 4 (ofInt −1)` with the
+existing `zero_lt_via_nat_le` — kernel-proving the maximum is **interior**, as
+a sibling fact.
+
+Also corrected: the cbrt2 fact records root containment as needing a polynomial
+division construction that "does not yet exist". True over `Rat`; **false over
+`Complex`** — `complex/poly.rs` already has `polyMul`, `polyEval_polyMul`,
+`factorQuotient` and `factorQuotient_degreeLt`.
