@@ -26,6 +26,7 @@
 //! `div_mod_remainder_eq_zero_iff_dvd`.
 
 use super::NatPrelude;
+use super::finite::pos_implies_succ_pred;
 use super::helpers::{
     and_left, and_right, iff_forward, iff_reverse, transport_dvd_left, transport_dvd_right,
 };
@@ -1912,6 +1913,366 @@ pub(super) fn declare_coprime_or_dvd_of_prime(
         );
 
         let proof = d.lam_fv(prime_fv, prime_ty, body);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+// ============================================================================
+// `Nat.coprime_primes : ∀ p q, prime_condition p → prime_condition q →
+// Iff (Eq (gcd p q) one) (Not (Eq p q))`.
+// ============================================================================
+
+/// `prime p → 0 < p`, mirroring `fermat.rs`'s private `prime_pos` exactly
+/// (same construction, so the `ExprId`s intern identically) since that helper
+/// is `fn`-private to its own file.
+fn prime_pos_local(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId, prime_proof: ExprId) -> ExprId {
+    let (two_le_ty, divisor_clause_ty) = prime_parts(d, p, x);
+    let two_le = and_left(d, two_le_ty, divisor_clause_ty, prime_proof);
+    let one = d.num(1);
+    let two = d.num(2);
+    let one_le_two = d.lemma(p.le_succ, &[one]);
+    d.lemma(p.le_trans, &[one, two, x, one_le_two, two_le])
+}
+
+/// `Nat.coprime_primes : ∀ p q, prime_condition p → prime_condition q →
+/// Iff (Eq (gcd p q) one) (Not (Eq p q))`.
+///
+/// See [`NatPrelude::coprime_primes`] for the route.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_coprime_primes(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.coprime_primes, 2, &|d, v| {
+        let (p_var, q_var) = (v[0], v[1]);
+        let one = d.num(1);
+
+        let prime_p_ty = prime_condition(d, &p, p_var);
+        let prime_q_ty = prime_condition(d, &p, q_var);
+
+        let gcd_pq = d.gcd(p_var, q_var);
+        let coprime_ty = d.eq(gcd_pq, one);
+        let eq_pq_ty = d.eq(p_var, q_var);
+        let ne_ty = d.const_app(p.logic.not, &[eq_pq_ty]);
+        let iff_target = d.const_app(p.logic.iff, &[coprime_ty, ne_ty]);
+        let stmt_inner = d.arrow(prime_q_ty, iff_target);
+        let stmt = d.arrow(prime_p_ty, stmt_inner);
+
+        let prime_p_fv = d.fresh_fvar();
+        let prime_p_hyp = d.kernel().fvar(prime_p_fv);
+        let prime_q_fv = d.fresh_fvar();
+        let prime_q_hyp = d.kernel().fvar(prime_q_fv);
+
+        // mp : coprime p q -> p != q
+        let mp = {
+            let cop_fv = d.fresh_fvar();
+            let cop_hyp = d.kernel().fvar(cop_fv);
+            let eq_fv = d.fresh_fvar();
+            let eq_hyp = d.kernel().fvar(eq_fv);
+
+            let dvd_p_p = d.lemma(p.dvd_refl, &[p_var]);
+            let dvd_p_q = transport_dvd_right(d, p_var, p_var, q_var, eq_hyp, dvd_p_p);
+            let iff_pf = d.lemma(p.prime_dvd_iff_not_coprime, &[p_var, q_var, prime_p_hyp]);
+            let dvd_ty = d.dvd(p_var, q_var);
+            let not_cop_ty = d.const_app(p.logic.not, &[coprime_ty]);
+            let mp_fn = iff_forward(d, dvd_ty, not_cop_ty, iff_pf);
+            let not_cop = d.apply(mp_fn, &[dvd_p_q]);
+            let false_pf = d.apply(not_cop, &[cop_hyp]);
+            let inner = d.lam_fv(eq_fv, eq_pq_ty, false_pf);
+            d.lam_fv(cop_fv, coprime_ty, inner)
+        };
+
+        // mpr : p != q -> coprime p q
+        let mpr = {
+            let ne_fv = d.fresh_fvar();
+            let ne_hyp = d.kernel().fvar(ne_fv);
+
+            let disj = d.lemma(p.coprime_or_dvd_of_prime, &[p_var, q_var, prime_p_hyp]);
+            let dvd_ty = d.dvd(p_var, q_var);
+
+            let on_coprime = {
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+                d.lam_fv(h_fv, coprime_ty, h)
+            };
+            let on_dvd = {
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+
+                let (lower_q, divisors_q) = prime_parts(d, &p, q_var);
+                let clause_q = and_right(d, lower_q, divisors_q, prime_q_hyp);
+                let disj2 = d.apply(clause_q, &[p_var, h]);
+
+                let is_one_ty = d.eq(p_var, one);
+                let is_q_ty = d.eq(p_var, q_var);
+
+                let on_one = {
+                    let h1_fv = d.fresh_fvar();
+                    let h1 = d.kernel().fvar(h1_fv);
+                    let result = refute_eq_one_against_prime_lower_bound(
+                        d,
+                        &p,
+                        p_var,
+                        prime_p_hyp,
+                        h1,
+                        coprime_ty,
+                    );
+                    d.lam_fv(h1_fv, is_one_ty, result)
+                };
+                let on_q = {
+                    let hq_fv = d.fresh_fvar();
+                    let hq = d.kernel().fvar(hq_fv);
+                    let false_pf = d.apply(ne_hyp, &[hq]);
+                    let result = absurd(d, &p, coprime_ty, false_pf);
+                    d.lam_fv(hq_fv, is_q_ty, result)
+                };
+                let case_result =
+                    or_cases(d, &p, is_one_ty, is_q_ty, coprime_ty, on_one, on_q, disj2);
+                d.lam_fv(h_fv, dvd_ty, case_result)
+            };
+            let case_result = or_cases(
+                d, &p, coprime_ty, dvd_ty, coprime_ty, on_coprime, on_dvd, disj,
+            );
+            d.lam_fv(ne_fv, ne_ty, case_result)
+        };
+
+        let iff_proof = d.const_app(p.logic.iff_intro, &[coprime_ty, ne_ty, mp, mpr]);
+        let proof_inner = d.lam_fv(prime_q_fv, prime_q_ty, iff_proof);
+        let proof = d.lam_fv(prime_p_fv, prime_p_ty, proof_inner);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+// ============================================================================
+// `Nat.not_prime_of_dvd_of_ne : ∀ m n, dvd m n → Not (Eq m one) → Not (Eq m
+// n) → Not (prime_condition n)`.
+// ============================================================================
+
+/// `Nat.not_prime_of_dvd_of_ne : ∀ m n, dvd m n → Not (Eq m one) → Not (Eq m
+/// n) → Not (prime_condition n)`.
+///
+/// See [`NatPrelude::not_prime_of_dvd_of_ne`] for the route: `n`'s own
+/// divisor clause applied to `m` gives `m = 1 ∨ m = n`, and either disjunct
+/// contradicts one of the two hypotheses directly.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_not_prime_of_dvd_of_ne(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.not_prime_of_dvd_of_ne, 2, &|d, v| {
+        let (m_var, n_var) = (v[0], v[1]);
+        let one = d.num(1);
+
+        let dvd_ty = d.dvd(m_var, n_var);
+        let eq_m_one_ty = d.eq(m_var, one);
+        let ne1_ty = d.const_app(p.logic.not, &[eq_m_one_ty]);
+        let eq_m_n_ty = d.eq(m_var, n_var);
+        let nen_ty = d.const_app(p.logic.not, &[eq_m_n_ty]);
+        let prime_n_ty = prime_condition(d, &p, n_var);
+        let concl = d.const_app(p.logic.not, &[prime_n_ty]);
+        let stmt_inner2 = d.arrow(nen_ty, concl);
+        let stmt_inner1 = d.arrow(ne1_ty, stmt_inner2);
+        let stmt = d.arrow(dvd_ty, stmt_inner1);
+
+        let dvd_fv = d.fresh_fvar();
+        let dvd_hyp = d.kernel().fvar(dvd_fv);
+        let ne1_fv = d.fresh_fvar();
+        let ne1_hyp = d.kernel().fvar(ne1_fv);
+        let nen_fv = d.fresh_fvar();
+        let nen_hyp = d.kernel().fvar(nen_fv);
+        let prime_fv = d.fresh_fvar();
+        let prime_hyp = d.kernel().fvar(prime_fv);
+
+        let (lower_n, divisors_n) = prime_parts(d, &p, n_var);
+        let clause_n = and_right(d, lower_n, divisors_n, prime_hyp);
+        let disj = d.apply(clause_n, &[m_var, dvd_hyp]);
+
+        let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+        let on_one = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let false_pf = d.apply(ne1_hyp, &[h]);
+            d.lam_fv(h_fv, eq_m_one_ty, false_pf)
+        };
+        let on_n = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let false_pf = d.apply(nen_hyp, &[h]);
+            d.lam_fv(h_fv, eq_m_n_ty, false_pf)
+        };
+        let case_result = or_cases(d, &p, eq_m_one_ty, eq_m_n_ty, false_ty, on_one, on_n, disj);
+        let body = d.lam_fv(prime_fv, prime_n_ty, case_result);
+
+        let proof_inner2 = d.lam_fv(nen_fv, nen_ty, body);
+        let proof_inner1 = d.lam_fv(ne1_fv, ne1_ty, proof_inner2);
+        let proof = d.lam_fv(dvd_fv, dvd_ty, proof_inner1);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+// ============================================================================
+// `Nat.Prime.pred_pos : ∀ p, prime_condition p → Lt zero (pred p)` and
+// `Nat.succ_pred_prime : ∀ p, prime_condition p → Eq (succ (pred p)) p`.
+// ============================================================================
+
+/// `Nat.Prime.pred_pos : ∀ p, prime_condition p → Lt zero (pred p)`.
+///
+/// See [`NatPrelude::prime_pred_pos`] for the route.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_prime_pred_pos(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.prime_pred_pos, 1, &|d, v| {
+        let p_var = v[0];
+        let one = d.num(1);
+        let zero = d.zero();
+
+        let prime_ty = prime_condition(d, &p, p_var);
+        let pred_p = d.pred(p_var);
+        let concl = d.lt(zero, pred_p);
+        let stmt = d.arrow(prime_ty, concl);
+
+        let prime_fv = d.fresh_fvar();
+        let prime_hyp = d.kernel().fvar(prime_fv);
+
+        let (lower_ty, divisors_ty) = prime_parts(d, &p, p_var);
+        let two_le_p = and_left(d, lower_ty, divisors_ty, prime_hyp);
+        let zero_lt_p = prime_pos_local(d, &p, p_var, prime_hyp);
+        let succ_pred_fn = pos_implies_succ_pred(d, &p, p_var);
+        let eq_p_succ_pred = d.apply(succ_pred_fn, &[zero_lt_p]);
+
+        let succ_pred_p = d.succ(pred_p);
+        let two = d.num(2);
+        let two_le_succ_pred = {
+            let motive = d.eq_motive(p_var, &|d, x| d.le(two, x));
+            d.transport(p_var, motive, two_le_p, succ_pred_p, eq_p_succ_pred)
+        };
+        let one_le_pred = d.lemma(p.le_of_succ_le_succ, &[one, pred_p, two_le_succ_pred]);
+
+        let proof = d.lam_fv(prime_fv, prime_ty, one_le_pred);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Nat.succ_pred_prime : ∀ p, prime_condition p → Eq (succ (pred p)) p`.
+///
+/// See [`NatPrelude::succ_pred_prime`] for the route.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_succ_pred_prime(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.succ_pred_prime, 1, &|d, v| {
+        let p_var = v[0];
+        let pred_p = d.pred(p_var);
+        let succ_pred_p = d.succ(pred_p);
+
+        let prime_ty = prime_condition(d, &p, p_var);
+        let concl = d.eq(succ_pred_p, p_var);
+        let stmt = d.arrow(prime_ty, concl);
+
+        let prime_fv = d.fresh_fvar();
+        let prime_hyp = d.kernel().fvar(prime_fv);
+
+        let zero_lt_p = prime_pos_local(d, &p, p_var, prime_hyp);
+        let succ_pred_fn = pos_implies_succ_pred(d, &p, p_var);
+        let eq_p_succ_pred = d.apply(succ_pred_fn, &[zero_lt_p]);
+        let eq_succ_pred_p = d.symm(p_var, succ_pred_p, eq_p_succ_pred);
+
+        let proof = d.lam_fv(prime_fv, prime_ty, eq_succ_pred_p);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+// ============================================================================
+// `Nat.Prime.dvd_mul_of_dvd_ne : ∀ p1 p2 n, Not (Eq p1 p2) → prime_condition
+// p1 → prime_condition p2 → dvd p1 n → dvd p2 n → dvd (mul p1 p2) n`.
+// ============================================================================
+
+/// `Nat.Prime.dvd_mul_of_dvd_ne : ∀ p1 p2 n, Not (Eq p1 p2) → prime_condition
+/// p1 → prime_condition p2 → dvd p1 n → dvd p2 n → dvd (mul p1 p2) n`.
+///
+/// See [`NatPrelude::prime_dvd_mul_of_dvd_ne`] for the route:
+/// [`coprime_primes`](NatPrelude::coprime_primes)'s `mpr` turns `p1 ≠ p2`
+/// into `Coprime p1 p2`, then `coprime_mul_dvd` (`crt.rs`) combines the two
+/// divisibility hypotheses. Declared after `declare_crt`, which is where
+/// `coprime_mul_dvd` is proved.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_prime_dvd_mul_of_dvd_ne(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.prime_dvd_mul_of_dvd_ne, 3, &|d, v| {
+        let (p1_var, p2_var, n_var) = (v[0], v[1], v[2]);
+        let one = d.num(1);
+
+        let eq_p1p2_ty = d.eq(p1_var, p2_var);
+        let ne_ty = d.const_app(p.logic.not, &[eq_p1p2_ty]);
+        let prime1_ty = prime_condition(d, &p, p1_var);
+        let prime2_ty = prime_condition(d, &p, p2_var);
+        let dvd1_ty = d.dvd(p1_var, n_var);
+        let dvd2_ty = d.dvd(p2_var, n_var);
+        let mul_p1p2 = d.mul(p1_var, p2_var);
+        let concl = d.dvd(mul_p1p2, n_var);
+        let stmt_inner4 = d.arrow(dvd2_ty, concl);
+        let stmt_inner3 = d.arrow(dvd1_ty, stmt_inner4);
+        let stmt_inner2 = d.arrow(prime2_ty, stmt_inner3);
+        let stmt_inner1 = d.arrow(prime1_ty, stmt_inner2);
+        let stmt = d.arrow(ne_ty, stmt_inner1);
+
+        let ne_fv = d.fresh_fvar();
+        let ne_hyp = d.kernel().fvar(ne_fv);
+        let prime1_fv = d.fresh_fvar();
+        let prime1_hyp = d.kernel().fvar(prime1_fv);
+        let prime2_fv = d.fresh_fvar();
+        let prime2_hyp = d.kernel().fvar(prime2_fv);
+        let dvd1_fv = d.fresh_fvar();
+        let dvd1_hyp = d.kernel().fvar(dvd1_fv);
+        let dvd2_fv = d.fresh_fvar();
+        let dvd2_hyp = d.kernel().fvar(dvd2_fv);
+
+        let iff_pf = d.lemma(p.coprime_primes, &[p1_var, p2_var, prime1_hyp, prime2_hyp]);
+        let gcd_p1p2 = d.gcd(p1_var, p2_var);
+        let coprime_ty = d.eq(gcd_p1p2, one);
+        let mpr_fn = iff_reverse(d, coprime_ty, ne_ty, iff_pf);
+        let coprime_pf = d.apply(mpr_fn, &[ne_hyp]);
+
+        let result = d.lemma(
+            p.coprime_mul_dvd,
+            &[p1_var, p2_var, n_var, coprime_pf, dvd1_hyp, dvd2_hyp],
+        );
+
+        let proof_inner4 = d.lam_fv(dvd2_fv, dvd2_ty, result);
+        let proof_inner3 = d.lam_fv(dvd1_fv, dvd1_ty, proof_inner4);
+        let proof_inner2 = d.lam_fv(prime2_fv, prime2_ty, proof_inner3);
+        let proof_inner1 = d.lam_fv(prime1_fv, prime1_ty, proof_inner2);
+        let proof = d.lam_fv(ne_fv, ne_ty, proof_inner1);
         (stmt, proof)
     })?;
     Ok(())

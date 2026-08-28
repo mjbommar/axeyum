@@ -238,11 +238,13 @@ use primes::{
     declare_coprime_add_self_left, declare_coprime_add_self_right, declare_coprime_odd_of_left,
     declare_coprime_odd_of_right, declare_coprime_of_dvd, declare_coprime_of_dvd_both,
     declare_coprime_of_lt_prime, declare_coprime_one_iff, declare_coprime_or_dvd_of_prime,
-    declare_coprime_self_add_left, declare_coprime_self_add_right, declare_coprime_symmetric,
-    declare_coprime_two_left, declare_coprime_two_right, declare_dvd_lcm_of_dvd,
-    declare_dvd_of_lcm_dvd, declare_euclid, declare_not_coprime_zero_zero,
-    declare_prime_dvd_iff_not_coprime, declare_prime_dvd_of_dvd_pow, declare_prime_even_iff,
-    declare_prime_not_dvd_mul, declare_prime_odd_of_ne_two, declare_primes,
+    declare_coprime_primes, declare_coprime_self_add_left, declare_coprime_self_add_right,
+    declare_coprime_symmetric, declare_coprime_two_left, declare_coprime_two_right,
+    declare_dvd_lcm_of_dvd, declare_dvd_of_lcm_dvd, declare_euclid, declare_not_coprime_zero_zero,
+    declare_not_prime_of_dvd_of_ne, declare_prime_dvd_iff_not_coprime,
+    declare_prime_dvd_mul_of_dvd_ne, declare_prime_dvd_of_dvd_pow, declare_prime_even_iff,
+    declare_prime_not_dvd_mul, declare_prime_odd_of_ne_two, declare_prime_pred_pos, declare_primes,
+    declare_succ_pred_prime,
 };
 use rectangle::declare_rectangle;
 use relation::{
@@ -1111,6 +1113,40 @@ pub struct NatPrelude {
     /// first branch applies the induction hypothesis, the second **is**
     /// the goal.
     pub prime_dvd_of_dvd_pow: NameId,
+    /// `Nat.coprime_primes : ∀ p q, prime_condition p → prime_condition q →
+    /// Iff (Eq (gcd p q) one) (Not (Eq p q))` — `mp` transports `dvd p p`
+    /// (`dvd_refl`) along a hypothesised `p = q` to `dvd p q`, then
+    /// [`prime_dvd_iff_not_coprime`](Self::prime_dvd_iff_not_coprime)'s `mp`
+    /// turns that into `Not (Coprime p q)`, contradicting the coprimality
+    /// hypothesis. `mpr` splits
+    /// [`coprime_or_dvd_of_prime`](Self::coprime_or_dvd_of_prime) applied at
+    /// `(p, q)`: the coprime branch is the goal directly; the `dvd p q`
+    /// branch applies `q`'s own primality clause to divisor `p`, giving
+    /// `p = 1 ∨ p = q` — `p = 1` is refuted against `p`'s `2 ≤ p` lower
+    /// bound, `p = q` contradicts the `p ≠ q` hypothesis.
+    pub coprime_primes: NameId,
+    /// `Nat.not_prime_of_dvd_of_ne : ∀ m n, dvd m n → Not (Eq m one) → Not
+    /// (Eq m n) → Not (prime_condition n)` — a prime's divisor clause
+    /// applied to `m` gives `m = 1 ∨ m = n`; either disjunct directly
+    /// contradicts one of the two hypotheses.
+    pub not_prime_of_dvd_of_ne: NameId,
+    /// `Nat.Prime.pred_pos : ∀ p, prime_condition p → Lt zero (pred p)` —
+    /// `2 ≤ p` transports along `p = succ (pred p)`
+    /// ([`pos_implies_succ_pred`], `finite.rs`) to `2 ≤ succ (pred p)`, then
+    /// `le_of_succ_le_succ` strips one `succ`, leaving `1 ≤ pred p`, defeq
+    /// to the goal.
+    pub prime_pred_pos: NameId,
+    /// `Nat.succ_pred_prime : ∀ p, prime_condition p → Eq (succ (pred p))
+    /// p` — [`pos_implies_succ_pred`] (`finite.rs`) gives `p = succ (pred
+    /// p)` from `p`'s positivity (itself from `2 ≤ p`); `Eq.symm` flips it.
+    pub succ_pred_prime: NameId,
+    /// `Nat.Prime.dvd_mul_of_dvd_ne : ∀ p1 p2 n, Not (Eq p1 p2) →
+    /// prime_condition p1 → prime_condition p2 → dvd p1 n → dvd p2 n → dvd
+    /// (mul p1 p2) n` — [`coprime_primes`](Self::coprime_primes)'s `mpr`
+    /// turns `p1 ≠ p2` (with both primality hypotheses) into `Coprime p1
+    /// p2`, then `coprime_mul_dvd` (`crt.rs`) combines the two divisibility
+    /// hypotheses.
+    pub prime_dvd_mul_of_dvd_ne: NameId,
 
     // --- binomial coefficients (`choose.rs`) --------------------------------
     /// `Nat.choose : Nat → Nat → Nat`, by structural recursion on both
@@ -2609,6 +2645,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             prime_even_iff: kernel.name_str(nat, "prime_even_iff"),
             prime_not_dvd_mul: kernel.name_str(nat, "prime_not_dvd_mul"),
             prime_dvd_of_dvd_pow: kernel.name_str(nat, "prime_dvd_of_dvd_pow"),
+            coprime_primes: kernel.name_str(nat, "coprime_primes"),
+            not_prime_of_dvd_of_ne: kernel.name_str(nat, "not_prime_of_dvd_of_ne"),
+            prime_pred_pos: kernel.name_str(nat, "prime_pred_pos"),
+            succ_pred_prime: kernel.name_str(nat, "succ_pred_prime"),
+            prime_dvd_mul_of_dvd_ne: kernel.name_str(nat, "prime_dvd_mul_of_dvd_ne"),
             choose: kernel.name_str(nat, "choose"),
             choose_zero_right: kernel.name_str(nat, "choose_zero_right"),
             choose_succ_succ: kernel.name_str(nat, "choose_succ_succ"),
@@ -2891,6 +2932,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_dvd_lcm_of_dvd(&mut d, &p)?;
         declare_dvd_of_lcm_dvd(&mut d, &p)?;
         declare_coprime_or_dvd_of_prime(&mut d, &p)?;
+        declare_coprime_primes(&mut d, &p)?;
+        declare_not_prime_of_dvd_of_ne(&mut d, &p)?;
         declare_euclid(&mut d, &p)?;
         // Needs `one_le_factorial` (just declared by `declare_euclid`), so
         // this cannot run inside `declare_divisibility` above despite
@@ -2907,6 +2950,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // proofs of `Lt zero n -> Eq n (succ (pred n))` on the fly today and
         // are being migrated to call this declared theorem instead.
         declare_succ_pred_of_pos(&mut d, &p)?;
+        declare_prime_pred_pos(&mut d, &p)?;
+        declare_succ_pred_prime(&mut d, &p)?;
         declare_fermat(&mut d, &p)?;
         declare_totient_all(&mut d, &p)?;
         declare_perfect_all(&mut d, &p)?;
@@ -2953,6 +2998,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_pigeonhole_p_all(&mut d, &p)?;
         declare_exists_prime_factorization(&mut d, &p)?;
         declare_crt(&mut d, &p)?;
+        declare_prime_dvd_mul_of_dvd_ne(&mut d, &p)?;
         declare_powsq_all(&mut d, &p)?;
         // Needs `Nat.even_or_odd`, just declared by `declare_powsq_all` above.
         declare_parity_all(&mut d, &p)?;
