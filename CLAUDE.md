@@ -1460,6 +1460,23 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   that a pathological test is worth deleting rather than debugging: here the
   pathology was in the *control*, not the subject.
 
+- **`UnboundFVar` NAMES NOTHING, AND THE FIX IS A TREE-WALK YOU CAN WRITE IN ONE
+  FUNCTION.** `pi_fv` versus `d.arrow` is a recurring trap: a hypothesis whose
+  fvar the CONCLUSION mentions must bind with `pi_fv`, because `arrow` is
+  non-dependent and leaves the variable free. The kernel then rejects with a
+  bare `UnboundFVar` that names neither the binder nor the offending hypothesis.
+
+  Measured 2026-08-27 on `integral_by_parts`: **five of seven** hypotheses were
+  wrong, each referenced by value inside the conclusion's embedded integral and
+  uniform-continuity witnesses. Rather than bisecting, the lane wrote a
+  **temporary tree-walk that scanned the built term for free-variable leaks
+  before calling `add_declaration`**, which pinpointed all five in ONE run; it
+  then removed the diagnostic and the second attempt succeeded.
+
+  Do that instead of bisecting. The scan is cheap, it is exhaustive where a
+  bisect is serial, and it turns an error that names nothing into a list of
+  exactly which binders are wrong.
+
 - **A SORT ERROR ARRIVES WEARING A `TypeMismatch`'s CLOTHES, and the tell is a
   tiny `expected` id.** Measured 2026-08-27: a constant function built with a
   `CReal` binder where `sumRange` needs `Nat -> CReal` reported
