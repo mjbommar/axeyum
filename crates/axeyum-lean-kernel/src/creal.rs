@@ -3771,6 +3771,30 @@ pub struct CRealPrelude {
     /// of order-reflection.
     pub inverse_lipschitz_of_pos_deriv: NameId,
 
+    /// `CReal.ivt_exact_root_at : ∀ F F' a b, HasDerivativeOn F F' a b →
+    /// UniformlyContinuousOn F a b → le a b → ∀ y, le (F a) y → le y (F b) →
+    /// ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k)) (F' z)) →
+    /// ∃ c, le a c ∧ (le c b ∧ Equiv (F c) y)` (`creal/inverse_fn.rs`) —
+    /// Chapter 12's EXISTENCE half: `F` has a genuine preimage for every
+    /// target `y` between `F a` and `F b`, not just for `y = zero`.
+    ///
+    /// Not a re-derivation of [`Self::ivt_exact_root`] — a wrapper applying
+    /// it to the SHIFTED function `G := fun z => add (F z) (neg y)`, whose
+    /// root is `F`'s `y`-preimage. `G`'s derivative and continuity come from
+    /// [`Self::has_derivative_sub`]/[`Self::uniformly_continuous_sub`]
+    /// composed with [`Self::has_derivative_const`]/
+    /// [`Self::uniformly_continuous_const`] at `y` — a constant shift changes
+    /// neither — and the derivative-bound hypothesis on `F'` transports to
+    /// `G'` through the ring identity `F' z ~ F' z − 0`
+    /// ([`Self::add_zero`] plus `monotone.rs`'s private `neg_zero_equiv`,
+    /// via [`Self::le_congr`]). `G a ≤ 0 ≤ G b` is
+    /// [`Self::add_le_add`]/[`Self::add_neg`] applied to `F a ≤ y ≤ F b`,
+    /// the same shift at the other two endpoints. `ivt_exact_root`'s result
+    /// `Equiv (G c) zero` reads back as `Equiv (F c) y` via `monotone.rs`'s
+    /// `equiv_of_sub_equiv_zero`, built there for an unrelated purpose and
+    /// reused here unchanged.
+    pub ivt_exact_root_at: NameId,
+
     /// `CReal.ivt_step : ∀ F P Q eps, lt zero eps → le P Q → le (F P) eps →
     /// le (neg eps) (F Q) → ∃ P' Q', le P P' ∧ le P' Q' ∧ le Q' Q ∧
     /// le (F P') eps ∧ le (neg eps) (F Q') ∧ Equiv (add Q' (neg P')) (mul
@@ -6127,6 +6151,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         strict_injective_of_pos_deriv: kernel.name_str(creal, "strict_injective_of_pos_deriv"),
         order_reflect_of_pos_deriv: kernel.name_str(creal, "order_reflect_of_pos_deriv"),
         inverse_lipschitz_of_pos_deriv: kernel.name_str(creal, "inverse_lipschitz_of_pos_deriv"),
+        ivt_exact_root_at: kernel.name_str(creal, "ivt_exact_root_at"),
         ivt_step: kernel.name_str(creal, "ivt_step"),
         constant_of_zero_deriv: kernel.name_str(creal, "constant_of_zero_deriv"),
         antitone_of_nonpos_deriv: kernel.name_str(creal, "antitone_of_nonpos_deriv"),
@@ -10493,6 +10518,30 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.ivt_step,
         ],
         run: ivt::declare_ivt,
+    },
+    BuildStep {
+        label: "inverse_fn::declare_ivt_exact_root_at",
+        requires: &[
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.has_derivative_const,
+            |p: CRealPrelude| p.has_derivative_on,
+            |p: CRealPrelude| p.has_derivative_sub,
+            |p: CRealPrelude| p.ivt_exact_root,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.uniformly_continuous_const,
+            |p: CRealPrelude| p.uniformly_continuous_on,
+            |p: CRealPrelude| p.uniformly_continuous_sub,
+            |p: CRealPrelude| p.zero,
+        ],
+        provides: &[|p: CRealPrelude| p.ivt_exact_root_at],
+        run: inverse_fn::declare_ivt_exact_root_at,
     },
     BuildStep {
         label: "polynomial::declare_polynomial",

@@ -10199,6 +10199,7 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "trig::declare_trig_alternating_bounds",
     "trig::declare_sin_trig_alternating_bounds",
     "ivt::declare_ivt",
+    "inverse_fn::declare_ivt_exact_root_at",
     "polynomial::declare_polynomial",
     "congruence::declare_congruence_extras",
     "extreme_value::declare_extreme_value",

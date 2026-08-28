@@ -27,9 +27,12 @@
 /// the declaration is the kind it claims and carries an empty axiom
 /// footprint.
 pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameId, &'static str)> {
-    vec![(
-        "CReal.order_reflect_of_pos_deriv",
-        p.order_reflect_of_pos_deriv,
-        "theorem",
-    )]
+    vec![
+        (
+            "CReal.order_reflect_of_pos_deriv",
+            p.order_reflect_of_pos_deriv,
+            "theorem",
+        ),
+        ("CReal.ivt_exact_root_at", p.ivt_exact_root_at, "theorem"),
+    ]
 }
