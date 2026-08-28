@@ -378,7 +378,7 @@ fn derived_lemmas(p: &IntPrelude) -> [crate::NameId; 28] {
 /// unlike `nat_prelude_tests.rs`, this file had no `definition_names`
 /// counterpart to `derived_laws`/`derived_lemmas` at all, so none of these
 /// twenty-two had ever had their footprint checked.
-fn definition_names(p: &IntPrelude) -> [crate::NameId; 22] {
+fn definition_names(p: &IntPrelude) -> [crate::NameId; 24] {
     [
         p.neg_of_nat,
         p.sub_nat_nat,
@@ -402,6 +402,8 @@ fn definition_names(p: &IntPrelude) -> [crate::NameId; 22] {
         p.is_comm_ring,
         p.factorial,
         p.is_quadratic_residue,
+        p.gcd_a,
+        p.gcd_b,
     ]
 }
 
@@ -2613,4 +2615,223 @@ fn euler_unit_coprime_instantiates_at_n_10_a_3_and_rejects_a_non_unit() {
         "the trusted gate accepted `Coprime 2 10` via a proof that \
          gcd(2,10)=1, which is FALSE"
     );
+}
+
+/// `Nat.gcdA` / `Nat.gcdB` **compute**, and the values they compute satisfy
+/// Bézout's identity numerically.
+///
+/// This is the `the_operations_compute_their_normal_forms` discipline applied
+/// to the extended Euclidean witnesses: a type-checked `Nat.gcd_eq_gcd_ab`
+/// would be satisfied by *some* pair of coefficients, so the identity alone
+/// does not pin the algorithm down. Here every case is evaluated to a normal
+/// form and checked against a hand-computed answer, and each is then
+/// substituted back into `gcd m n = m*A + n*B` and evaluated again — so a
+/// transposed selector or an off-by-one fuel shows up as a wrong integer, not
+/// as a proof failure.
+///
+/// Magnitudes are deliberately tiny (nothing above `6`). Every `Nat` numeral
+/// this prelude forms is unary, so the kernel's binary-literal fast path never
+/// fires and cost is superlinear in the largest magnitude formed.
+#[test]
+fn nat_gcd_ab_compute_bezout_coefficients() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+
+    // (m, n, gcd m n, gcdA m n, gcdB m n) -- hand-computed from the three
+    // definitional equations in `bezout_witnesses.rs`'s module doc.
+    for (m, n, gcd, want_a, want_b) in [
+        (0_u32, 5_u32, 5_i32, 0_i32, 1_i32),
+        (5, 0, 5, 1, 0),
+        (3, 2, 1, 1, -1),
+        (2, 3, 1, -1, 1),
+        (4, 6, 2, -1, 1),
+        (6, 4, 2, 1, -1),
+        (1, 1, 1, 0, 1),
+    ] {
+        let m_nat = numeral_nat(&mut k, &p, m);
+        let n_nat = numeral_nat(&mut k, &p, n);
+
+        // The gcd itself, so a wrong `gcd` cannot make a wrong pair look right.
+        let g = {
+            let f = k.const_(p.nat.gcd, vec![]);
+            let f = k.app(f, m_nat);
+            k.app(f, n_nat)
+        };
+        let want_gcd = numeral_nat(&mut k, &p, u32::try_from(gcd).expect("nonneg"));
+        assert!(k.def_eq(g, want_gcd), "gcd {m} {n} should be {gcd}");
+
+        for (name, want) in [(p.nat_gcd_a, want_a), (p.nat_gcd_b, want_b)] {
+            let f = k.const_(name, vec![]);
+            let f = k.app(f, m_nat);
+            let applied = k.app(f, n_nat);
+            let expected = numeral(&mut k, &p, want);
+            assert!(
+                k.def_eq(applied, expected),
+                "{} {m} {n} should be {want}",
+                k.display_name(name)
+            );
+        }
+
+        // ... and the identity itself evaluates: gcd m n = m*A + n*B.
+        let coeff_a = {
+            let f = k.const_(p.nat_gcd_a, vec![]);
+            let f = k.app(f, m_nat);
+            k.app(f, n_nat)
+        };
+        let coeff_b = {
+            let f = k.const_(p.nat_gcd_b, vec![]);
+            let f = k.app(f, m_nat);
+            k.app(f, n_nat)
+        };
+        let m_int = numeral(&mut k, &p, i32::try_from(m).expect("small"));
+        let n_int = numeral(&mut k, &p, i32::try_from(n).expect("small"));
+        let left = {
+            let f = k.const_(p.mul, vec![]);
+            let f = k.app(f, m_int);
+            k.app(f, coeff_a)
+        };
+        let right = {
+            let f = k.const_(p.mul, vec![]);
+            let f = k.app(f, n_int);
+            k.app(f, coeff_b)
+        };
+        let sum = {
+            let f = k.const_(p.add, vec![]);
+            let f = k.app(f, left);
+            k.app(f, right)
+        };
+        let want_sum = numeral(&mut k, &p, gcd);
+        assert!(
+            k.def_eq(sum, want_sum),
+            "Bezout should evaluate: gcd {m} {n} = {m}*{want_a} + {n}*{want_b} = {gcd}"
+        );
+    }
+}
+
+/// `Int.gcdA` / `Int.gcdB` compute in **all four sign branches**, and Bézout
+/// evaluates in each.
+///
+/// The sign flip is the whole content of the `Int` layer: `negSucc k` is
+/// `-(k+1)` while `natAbs (negSucc k)` is `k+1`, so the coefficient must negate
+/// to leave `x * gcdA x y` unchanged. A transposed branch would type-check
+/// against any statement that never evaluates; only this catches it.
+#[test]
+fn int_gcd_ab_compute_in_every_sign_branch() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+
+    // (x, y, gcd x y, gcdA x y, gcdB x y).
+    for (x, y, gcd, want_a, want_b) in [
+        (3_i32, 2_i32, 1_i32, 1_i32, -1_i32),
+        (-3, 2, 1, -1, -1),
+        (3, -2, 1, 1, 1),
+        (-3, -2, 1, -1, 1),
+        (0, 5, 5, 0, 1),
+        (-4, 6, 2, 1, 1),
+    ] {
+        let x_int = numeral(&mut k, &p, x);
+        let y_int = numeral(&mut k, &p, y);
+
+        for (name, want) in [(p.gcd_a, want_a), (p.gcd_b, want_b)] {
+            let f = k.const_(name, vec![]);
+            let f = k.app(f, x_int);
+            let applied = k.app(f, y_int);
+            let expected = numeral(&mut k, &p, want);
+            assert!(
+                k.def_eq(applied, expected),
+                "{} {x} {y} should be {want}",
+                k.display_name(name)
+            );
+        }
+
+        let coeff_a = {
+            let f = k.const_(p.gcd_a, vec![]);
+            let f = k.app(f, x_int);
+            k.app(f, y_int)
+        };
+        let coeff_b = {
+            let f = k.const_(p.gcd_b, vec![]);
+            let f = k.app(f, x_int);
+            k.app(f, y_int)
+        };
+        let left = {
+            let f = k.const_(p.mul, vec![]);
+            let f = k.app(f, x_int);
+            k.app(f, coeff_a)
+        };
+        let right = {
+            let f = k.const_(p.mul, vec![]);
+            let f = k.app(f, y_int);
+            k.app(f, coeff_b)
+        };
+        let sum = {
+            let f = k.const_(p.add, vec![]);
+            let f = k.app(f, left);
+            k.app(f, right)
+        };
+        let want_sum = numeral(&mut k, &p, gcd);
+        assert!(
+            k.def_eq(sum, want_sum),
+            "Bezout should evaluate at ({x}, {y}): {gcd} = {x}*{want_a} + {y}*{want_b}"
+        );
+    }
+}
+
+/// The declarations this prelude makes into the **`Nat`** namespace are checked
+/// and axiom-free.
+///
+/// `every_int_declaration_is_checked_and_axiom_free` filters on the `Int.`
+/// prefix, so it is structurally blind to them — and a prelude declaring into
+/// another prelude's namespace is not hypothetical here (`wilson.rs` puts
+/// `Nat.inverseIndex` and eight lemmas there; `bezout_witnesses.rs` puts
+/// `Nat.xgcdAux`/`Nat.gcdA`/`Nat.gcdB` there to match Mathlib's names). The
+/// list is derived from the ENVIRONMENT, not hand-maintained: every `Nat.`
+/// declaration that the *integer* prelude added and the *natural* prelude did
+/// not is checked, so a new one cannot be forgotten.
+#[test]
+fn nat_namespace_declarations_made_by_the_int_prelude_are_axiom_free() {
+    let mut nat_only = Kernel::new();
+    crate::build_nat_prelude(&mut nat_only).expect("Nat prelude must build");
+    let already: std::collections::BTreeSet<String> = nat_only
+        .environment()
+        .iter()
+        .map(|(name, _)| nat_only.display_name(*name).to_string())
+        .collect();
+
+    let mut k = Kernel::new();
+    build_int_prelude(&mut k).expect("Int prelude must build");
+    let added: Vec<crate::NameId> = k
+        .environment()
+        .iter()
+        .filter(|(name, decl)| {
+            matches!(
+                decl,
+                Declaration::Definition { .. } | Declaration::Theorem { .. }
+            ) && {
+                let shown = k.display_name(**name).to_string();
+                shown.starts_with("Nat.") && !already.contains(&shown)
+            }
+        })
+        .map(|(name, _)| *name)
+        .collect();
+
+    assert!(
+        !added.is_empty(),
+        "the Int prelude declares into the `Nat` namespace (`Nat.inverseIndex`, \
+         `Nat.xgcdAux`, ...), so an empty list means this test is aimed at \
+         nothing -- a passing run would prove no axiom-freedom at all"
+    );
+    for name in &added {
+        let footprint = k.axiom_footprint(*name);
+        assert!(
+            footprint.is_empty(),
+            "{} is declared by the Int prelude into the `Nat` namespace and \
+             rests on {:?}",
+            k.display_name(*name),
+            footprint
+                .iter()
+                .map(|a| k.display_name(*a).to_string())
+                .collect::<Vec<_>>()
+        );
+    }
 }

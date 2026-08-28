@@ -75,6 +75,7 @@ use crate::nat_prelude::{NatPrelude, build_nat_prelude};
 use crate::{Kernel, KernelError, LogicPrelude, PreludeKey, PreludeValue};
 
 mod algebra;
+mod bezout_witnesses;
 mod crt;
 mod decide;
 mod defs;
@@ -701,6 +702,46 @@ pub struct IntPrelude {
     /// identity over `ℤ` (Elements VII.2, strong form), transported from
     /// `Nat.gcd_bezout` through `natAbs`.
     pub gcd_eq_gcd_ab: NameId,
+
+    // --- Bézout at named computable witnesses (`bezout_witnesses.rs`) --------
+    /// `Nat.xgcdAux : Nat → Nat → Nat → Bool → Int` — the extended Euclidean
+    /// recursion, structural on a **fuel** argument (never `WellFounded`, which
+    /// would drag `propext`/`Quot.sound` in). The trailing `Bool` selects which
+    /// of the two coefficients to return, so one recursion carries the pair
+    /// without a product type — the same device `Nat.divModState` uses. All
+    /// three equations are definitional; see `bezout_witnesses.rs`'s module doc.
+    pub xgcd_aux: NameId,
+    /// `Nat.gcdA : Nat → Nat → Int := fun m n => xgcdAux m m n true` — the
+    /// Bézout coefficient of `m`, as a `Definition` that returns data (contrast
+    /// [`Self::gcd_eq_gcd_ab`], whose witnesses are sealed inside a `Prop`).
+    /// The fuel is `m` itself, which always suffices: see the module doc.
+    pub nat_gcd_a: NameId,
+    /// `Nat.gcdB : Nat → Nat → Int := fun m n => xgcdAux m m n false` — the
+    /// Bézout coefficient of `n`.
+    pub nat_gcd_b: NameId,
+    /// `Nat.xgcdAux_sound : ∀ f m n, Nat.le m f →
+    /// Eq Int (ofNat (Nat.gcd m n)) (ofNat m * xgcdAux f m n true +
+    /// ofNat n * xgcdAux f m n false)` — Bézout for the fuelled recursion,
+    /// by induction on the fuel with `m` and `n` generalized in the motive.
+    pub xgcd_aux_sound: NameId,
+    /// `Nat.gcd_eq_gcd_ab : ∀ m n, Eq Int (ofNat (Nat.gcd m n))
+    /// (ofNat m * Nat.gcdA m n + ofNat n * Nat.gcdB m n)` —
+    /// [`Self::xgcd_aux_sound`] at `f := m`, i.e. Bézout at the named
+    /// coefficients over `ℕ`.
+    pub nat_gcd_eq_gcd_ab: NameId,
+    /// `Int.gcdA : Int → Int → Int` — Mathlib's signed coefficient of the
+    /// first argument, a computable `Int.rec` on that argument that negates
+    /// the `Nat` coefficient under `negSucc`.
+    pub gcd_a: NameId,
+    /// `Int.gcdB : Int → Int → Int` — the coefficient of the **second**
+    /// argument, so its `Int.rec` splits on that argument instead.
+    pub gcd_b: NameId,
+    /// `gcd_eq_gcd_ab_witnesses : ∀ x y, Eq Int (ofNat (gcd x y))
+    /// (x * gcdA x y + y * gcdB x y)` — Mathlib v4.30's
+    /// `Int.gcd_eq_gcd_ab` verbatim, at the *named computable* witnesses.
+    /// [`Self::gcd_eq_gcd_ab`] keeps the older existential name because
+    /// `crt.rs` and `modinv.rs` consume that form.
+    pub gcd_eq_gcd_ab_witnesses: NameId,
     /// `Int.Coprime a b := Eq Nat (gcd a b) 1` — the converse of Bézout
     /// (Elements VII, Def. 12), stated over the `Nat`-valued `gcd`.
     pub coprime: NameId,
@@ -1189,6 +1230,14 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
             "gcd_eq_one_of_gcd_mul_right_eq_one_right",
         ),
         gcd_eq_gcd_ab: child(kernel, "gcd_eq_gcd_ab"),
+        xgcd_aux: kernel.name_str(nat_root, "xgcdAux"),
+        nat_gcd_a: kernel.name_str(nat_root, "gcdA"),
+        nat_gcd_b: kernel.name_str(nat_root, "gcdB"),
+        xgcd_aux_sound: kernel.name_str(nat_root, "xgcdAux_sound"),
+        nat_gcd_eq_gcd_ab: kernel.name_str(nat_root, "gcd_eq_gcd_ab"),
+        gcd_a: child(kernel, "gcdA"),
+        gcd_b: child(kernel, "gcdB"),
+        gcd_eq_gcd_ab_witnesses: child(kernel, "gcd_eq_gcd_ab_witnesses"),
         coprime: child(kernel, "Coprime"),
         coprime_of_bezout_one: child(kernel, "coprime_of_bezout_one"),
         gauss_lemma: child(kernel, "gauss_lemma"),
@@ -1392,6 +1441,8 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         gcd::declare_ne_zero_of_gcd(&mut d)?;
         gcd::declare_gcd_eq_one_of_gcd_mul_right_eq_one(&mut d)?;
         gcd::declare_gcd_eq_gcd_ab(&mut d)?;
+        bezout_witnesses::declare_xgcd_aux(&mut d)?;
+        bezout_witnesses::declare_int_gcd_ab(&mut d)?;
         gcd::declare_coprime(&mut d)?;
         gcd::declare_coprime_of_bezout_one(&mut d)?;
         gcd::declare_gauss_lemma(&mut d)?;
