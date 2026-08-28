@@ -255,10 +255,22 @@ checked against the declarations they name and matched).
   `crates/axeyum-lean-kernel/src/creal/extreme_value.rs`) as `CReal.evt_attained_max_decides_sign`,
   kernel-checked, registered and axiom-free: an attained maximum of
   `t ↦ t·v` on `[0, 1]` yields `∀ v, v ≤ 0 ∨ 0 ≤ v` — analytic LLPO, the
-  comparison `CReal` deliberately lacks. **This unblocks MVT row 2 by the
-  route (b) named above** ("finish EVT's row 2 first, then derive MVT's
-  unavailability from it"), which is now the cheaper of the two, since route
-  (a)'s independent MVT counterexample was assessed as no easier.
+  comparison `CReal` deliberately lacks.
+
+  **This does NOT unblock MVT row 2, and an earlier revision of this bullet
+  wrongly said it did.** Route (b) above was "finish EVT's row 2, then derive
+  MVT's unavailability from it"; EVT's row 2 is the prerequisite, and it is
+  done, but the *derivation* is the hard half and it is an open problem, not a
+  formality. Both `creal/rolle.rs` and `creal/mvt.rs` record in their module
+  docs that the unrestricted existential form does not reduce to
+  `creal/extreme_value.rs`'s obstruction by any short route either file could
+  find, and they name the reason: **scaling by `v` never moves the
+  derivative's zero location**, so `evtLinear`-shaped families transport
+  through the chord subtraction without separating anything. Three auxiliary
+  functions were tried and all three fail identically. Per ADR-0603's
+  vocabulary, MVT row 2 is **unassessed** — "several short reductions provably
+  fail to separate" — not "asserted unavailable" and not "one derivation
+  away".
   **Its one labeled gap is now CLOSED too (2026-08-28).** EVT row 2 had
   carried a single assertion — that `evtLinear v` is uniformly continuous,
   i.e. that the counterexample family is inside classical EVT's hypothesis
@@ -271,9 +283,10 @@ checked against the declarations they name and matched).
   constant function on EVERY interval) and `CReal.bounded_on_id_zero_one`.
   **So EVT's row 2 now rests on nothing asserted.**
 
-  **One caveat remains, and it is load-bearing**: the derivation of MVT's
-  unavailability FROM EVT's is itself not built. Inheriting a refutation is a
-  proof obligation, not a citation — MVT row 2 is unblocked, not done.
+  **The standing caveat**: inheriting a refutation is a proof obligation, not
+  a citation. Since Rolle and MVT are equivalent up to a chord subtraction, a
+  genuine row-2 construction for either is probably adaptable to the other —
+  so the open question is one problem, not two.
 - **MVT row 3 landed 2026-08-27, same day it was named the cheapest win**:
   `crates/axeyum-cas/src/mvt.rs`, `polynomial_mvt`/`verify_mvt_certificate`,
   18 tests. Kernel reconstruction (ADR-0601 §2) is the remaining step, not
