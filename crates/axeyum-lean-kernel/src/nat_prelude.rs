@@ -1530,6 +1530,27 @@ pub struct NatPrelude {
     /// `1` (via `gcd_dvd`, `fib_add_two`, `dvd_add_iff_right`, `dvd_gcd` and
     /// the induction hypothesis) and closes with `eq_one_of_dvd_one`.
     pub coprime_fib_succ: NameId,
+    /// `Nat.fib_add_two_strictmono : ∀ a b, Lt a b → Lt (fib (succ (succ a)))
+    /// (fib (succ (succ b)))` — the shifted-by-two Fibonacci sequence is
+    /// strictly increasing everywhere (Mathlib's `StrictMono (fun n => fib
+    /// (n+2))`, instantiated concretely rather than through an abstract
+    /// `StrictMono` combinator, matching `fib_mono`'s own style). Induction
+    /// on `b`, mirroring `perfect.rs`'s `pow_lt_pow_of_lt` exactly (base:
+    /// `Lt a zero` is impossible via `not_lt_zero`; step: split `Le a b'`
+    /// into `Lt a b'` or `Eq a b'` via `lt_or_eq_of_le`) but with NO base
+    /// hypothesis to thread, because the adjacent step here
+    /// (`fib_add_two_lt_succ`, private) holds unconditionally for every `n`
+    /// — unlike `pow`'s, which needs the base `> 1`.
+    pub fib_add_two_strictmono: NameId,
+    /// `Nat.fib_strictmonoOn : ∀ a b, Le 2 a → Le 2 b → Lt a b → Lt (fib a)
+    /// (fib b)` — Mathlib's `StrictMonoOn Nat.fib (Set.Ici 2)`, unwound to
+    /// two explicit lower-bound hypotheses. Peels two `succ`s off both `a`
+    /// and `b` (`Le 2 x` gives `Lt 0 x`, `pos_implies_succ_pred` applied
+    /// twice — the second application needs `Le 2 x` transported along the
+    /// first `x = succ x1` and stripped by `le_of_succ_le_succ` to get
+    /// `Lt 0 x1`) to land on `fib_add_two_strictmono`'s shifted form, then
+    /// transports the conclusion back along the two recovered equalities.
+    pub fib_strictmonoon: NameId,
 
     // --- relation properties bounded on `n` (`relation.rs`) -----------------
     /// `Nat.ReflexiveOn r n := ∀ i, i < n → r i i`, for `r : Nat → Nat → Prop`.
@@ -2567,6 +2588,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             sum_fib: kernel.name_str(nat, "sum_fib"),
             fib_add: kernel.name_str(nat, "fib_add"),
             coprime_fib_succ: kernel.name_str(nat, "coprime_fib_succ"),
+            fib_add_two_strictmono: kernel.name_str(nat, "fib_add_two_strictmono"),
+            fib_strictmonoon: kernel.name_str(nat, "fib_strictmonoOn"),
             reflexive_on: kernel.name_str(nat, "reflexiveOn"),
             symmetric_on: kernel.name_str(nat, "symmetricOn"),
             transitive_on: kernel.name_str(nat, "transitiveOn"),
