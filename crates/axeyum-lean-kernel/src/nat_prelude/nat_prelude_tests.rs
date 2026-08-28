@@ -673,6 +673,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.choose_le_add,
         p.choose_symm_add,
         p.choose_le_choose,
+        p.choose_mono,
         p.sum_range_add,
         p.sum_range_shift_front,
         p.sum_range_congr_lt,
@@ -6177,7 +6178,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        74 + 373,
+        74 + 374,
         "every promised definition and theorem must be rendered"
     );
 }

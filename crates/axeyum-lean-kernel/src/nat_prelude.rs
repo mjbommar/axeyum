@@ -1114,6 +1114,11 @@ pub struct NatPrelude {
     /// c) : Le (choose a c) (choose (add a d0) c)` transports along that
     /// equation to `Le (choose a c) (choose b c)`.
     pub choose_le_choose: NameId,
+    /// `Nat.choose_mono : ∀ c a a', Le a a' → Le (choose a c) (choose a' c)`
+    /// — the core unfolding of Mathlib's `Nat.choose_mono : ∀ b, Monotone
+    /// (fun a => a.choose b)`. `choose_le_choose` with its arguments
+    /// permuted so the fixed column comes first; no new induction.
+    pub choose_mono: NameId,
 
     // --- binomial theorem (`binomial.rs`) -----------------------------------
     /// `Nat.sumRange_add : ∀ f g n, sumRange (fun i => f i + g i) n = sumRange f n + sumRange g n`.
@@ -2514,6 +2519,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             choose_le_add: kernel.name_str(nat, "choose_le_add"),
             choose_symm_add: kernel.name_str(nat, "choose_symm_add"),
             choose_le_choose: kernel.name_str(nat, "choose_le_choose"),
+            choose_mono: kernel.name_str(nat, "choose_mono"),
             sum_range_add: kernel.name_str(nat, "sumRange_add"),
             sum_range_shift_front: kernel.name_str(nat, "sumRange_shiftFront"),
             sum_range_congr_lt: kernel.name_str(nat, "sumRange_congr_lt"),
