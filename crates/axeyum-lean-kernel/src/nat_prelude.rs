@@ -377,6 +377,18 @@ pub struct NatPrelude {
     /// Closes `F:ml430-nat-factorial-dvd-descfactorial-bbf6124f`. Immediate
     /// from [`Self::desc_factorial_eq_factorial_mul_choose`] plus `dvd_mul`.
     pub factorial_dvd_desc_factorial: NameId,
+    /// `descFactorial_self : ∀ n, n.descFactorial n = n.factorial`. Closes
+    /// `F:ml430-nat-descfactorial-self-899fc0e0`. Immediate from
+    /// [`Self::desc_factorial_eq_factorial_mul_choose`] at `k := n` plus
+    /// [`Self::choose_self`] (`choose n n = 1`) and `mul_one`.
+    pub desc_factorial_self: NameId,
+    /// `descFactorial_le : ∀ n {k m}, k ≤ m → k.descFactorial n ≤
+    /// m.descFactorial n` — monotone in the base for fixed exponent `n`.
+    /// Closes `F:ml430-nat-descfactorial-le-2b8cc09a`. Route: rewrite both
+    /// sides via [`Self::desc_factorial_eq_factorial_mul_choose`] to
+    /// `n! * choose k n ≤ n! * choose m n`, closed by [`Self::choose_le_choose`]
+    /// plus [`Self::mul_le_mul_left`].
+    pub desc_factorial_le: NameId,
     /// `Nat.ascFactorial : Nat → Nat → Nat`, by structural recursion on its
     /// **second** argument via [`NatOps::define_binary`], mirroring
     /// [`Self::desc_factorial`] but climbing with `Nat.add` instead of
@@ -2685,6 +2697,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             desc_factorial_eq_factorial_mul_choose: kernel
                 .name_str(nat, "descFactorial_eq_factorial_mul_choose"),
             factorial_dvd_desc_factorial: kernel.name_str(nat, "factorial_dvd_descFactorial"),
+            desc_factorial_self: kernel.name_str(nat, "descFactorial_self"),
+            desc_factorial_le: kernel.name_str(nat, "descFactorial_le"),
             asc_factorial: kernel.name_str(nat, "ascFactorial"),
             asc_factorial_zero: kernel.name_str(nat, "ascFactorial_zero"),
             asc_factorial_succ: kernel.name_str(nat, "ascFactorial_succ"),

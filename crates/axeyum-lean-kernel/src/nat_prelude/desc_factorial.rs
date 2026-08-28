@@ -617,13 +617,106 @@ pub(super) fn declare_factorial_dvd_desc_factorial(
     Ok(())
 }
 
+/// `descFactorial_self : ∀ n, n.descFactorial n = n.factorial`. Closes
+/// `F:ml430-nat-descfactorial-self-899fc0e0`. Immediate from
+/// [`declare_desc_factorial_eq_factorial_mul_choose`] at `k := n`
+/// (`descFactorial n n = n! * choose n n`), then `choose_self` (`choose n n
+/// = 1`) and `mul_one` collapse the right-hand side to `n!`.
+pub(super) fn declare_desc_factorial_self(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.desc_factorial_self, 1, &|d, v| {
+        let n = v[0];
+        let df = desc_factorial(d, &p, n, n);
+        let fact_n = d.factorial(n);
+        let stmt = d.eq(df, fact_n);
+
+        // bridge : Eq(df, mul(fact_n, choose(n, n)))
+        let bridge = d.lemma(p.desc_factorial_eq_factorial_mul_choose, &[n, n]);
+        let choose_nn = d.choose(n, n);
+        let mul_fact_choose = d.mul(fact_n, choose_nn);
+        let choose_self_eq = d.lemma(p.choose_self, &[n]); // Eq(choose_nn, 1)
+        let one = d.num(1);
+        let step1 = d.congr(choose_nn, one, choose_self_eq, &|d, x| d.mul(fact_n, x));
+        let mid = d.mul(fact_n, one);
+        let mul_one_eq = d.lemma(p.mul_one, &[fact_n]); // Eq(mid, fact_n)
+        let (_e, rhs_chain) = d.chain(mul_fact_choose, &[(mid, step1), (fact_n, mul_one_eq)]);
+        let proof = d.trans(df, mul_fact_choose, fact_n, bridge, rhs_chain);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `descFactorial_le : ∀ n {k m}, k ≤ m → k.descFactorial n ≤
+/// m.descFactorial n` — monotone in the base for fixed exponent `n`. Closes
+/// `F:ml430-nat-descfactorial-le-2b8cc09a`.
+///
+/// Route: rewrite `Le (choose k n) (choose m n)`
+/// ([`NatPrelude::choose_le_choose`], directly from the hypothesis) up to
+/// `Le (mul (factorial n) (choose k n)) (mul (factorial n) (choose m n))`
+/// ([`NatPrelude::mul_le_mul_left`]), then transport twice along
+/// [`declare_desc_factorial_eq_factorial_mul_choose`]'s bridge equations (at
+/// `(k, n)` and `(m, n)`, both reversed) to land on
+/// `Le (descFactorial k n) (descFactorial m n)`.
+pub(super) fn declare_desc_factorial_le(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.desc_factorial_le, 3, &|d, v| {
+        let (n, k, m) = (v[0], v[1], v[2]);
+        let le_ty = d.le(k, m);
+        let df_k = desc_factorial(d, &p, k, n);
+        let df_m = desc_factorial(d, &p, m, n);
+        let concl = d.le(df_k, df_m);
+        let stmt = d.arrow(le_ty, concl);
+
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        let choose_kn = d.choose(k, n);
+        let choose_mn = d.choose(m, n);
+        // Le(choose_kn, choose_mn)
+        let choose_step = d.lemma(p.choose_le_choose, &[k, m, n, h]);
+        let fact_n = d.factorial(n);
+        // Le(mul(fact_n, choose_kn), mul(fact_n, choose_mn))
+        let mul_step = d.lemma(
+            p.mul_le_mul_left,
+            &[fact_n, choose_kn, choose_mn, choose_step],
+        );
+        let mul_k = d.mul(fact_n, choose_kn);
+        let mul_m = d.mul(fact_n, choose_mn);
+
+        let bridge_k = d.lemma(p.desc_factorial_eq_factorial_mul_choose, &[k, n]); // Eq(df_k, mul_k)
+        let bridge_k_rev = d.symm(df_k, mul_k, bridge_k); // Eq(mul_k, df_k)
+        let bridge_m = d.lemma(p.desc_factorial_eq_factorial_mul_choose, &[m, n]); // Eq(df_m, mul_m)
+        let bridge_m_rev = d.symm(df_m, mul_m, bridge_m); // Eq(mul_m, df_m)
+
+        // transport Le(mul_k, mul_m) along Eq(mul_k, df_k) -> Le(df_k, mul_m)
+        let motive1 = d.eq_motive(mul_k, &|d, x| d.le(x, mul_m));
+        let step_a = d.transport(mul_k, motive1, mul_step, df_k, bridge_k_rev);
+
+        // transport Le(df_k, mul_m) along Eq(mul_m, df_m) -> Le(df_k, df_m)
+        let motive2 = d.eq_motive(mul_m, &|d, x| d.le(df_k, x));
+        let step_b = d.transport(mul_m, motive2, step_a, df_m, bridge_m_rev);
+
+        let body = d.lam_fv(h_fv, le_ty, step_b);
+        (stmt, body)
+    })?;
+    Ok(())
+}
+
 /// Declare [`declare_desc_factorial`], then [`declare_desc_factorial_one`],
 /// [`declare_desc_factorial_of_lt`], and the falling-factorial / `choose`
 /// bridge ([`declare_desc_factorial_succ_eq_succ_mul`],
 /// [`declare_desc_factorial_eq_factorial_mul_choose`],
-/// [`declare_factorial_dvd_desc_factorial`]), which need `Nat.choose` /
-/// `Nat.factorial` / `Nat.succ_mul_choose_eq` / `Nat.dvd_mul`, all declared
-/// far earlier in the prelude build.
+/// [`declare_factorial_dvd_desc_factorial`],
+/// [`declare_desc_factorial_self`], [`declare_desc_factorial_le`]), which
+/// need `Nat.choose` / `Nat.factorial` / `Nat.succ_mul_choose_eq` /
+/// `Nat.dvd_mul` / `Nat.choose_self` / `Nat.choose_le_choose` /
+/// `Nat.mul_le_mul_left`, all declared far earlier in the prelude build.
 pub(super) fn declare_desc_factorial_all(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
@@ -634,5 +727,7 @@ pub(super) fn declare_desc_factorial_all(
     declare_desc_factorial_succ_eq_succ_mul(d, p)?;
     declare_desc_factorial_eq_factorial_mul_choose(d, p)?;
     declare_factorial_dvd_desc_factorial(d, p)?;
+    declare_desc_factorial_self(d, p)?;
+    declare_desc_factorial_le(d, p)?;
     Ok(())
 }
