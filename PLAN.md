@@ -179,6 +179,8 @@ now. Nothing was deleted.
 | 2026-08-28 | nat-gcd | 9 `natural-gcd` facts closed via the divisibility characterization of `Nat.gcd`/`Nat.lcm` (0 axioms) |
 | 2026-08-28 | fib-backlog | `Nat.fib_add_two_strictmono`, `Nat.fib_strictmonoOn`, `Nat.fib_lt_fib` landed and kernel-checked (nat_prelude/fibonacci.rs); closed F:ml430-nat-fib-add-two-strictmono-c1e86d4d, F:ml430-nat-fib-strictmonoon-905810a9, F:ml430-nat-fib-lt-fib-3582b881 |
 | 2026-08-28 | fib-backlog | confirmed `Int.fib` absent from the kernel (shape_search, fresh build, declarations=2000); all 6 open integer-fibonacci facts blocked on a missing carrier, not attempted |
+| 2026-08-28 | int-bezout-witnesses | `Nat.xgcdAux`/`Nat.gcdA`/`Nat.gcdB`/`Int.gcdA`/`Int.gcdB` — extended Euclid as fuel-structural `Definition`s returning data |
+| 2026-08-28 | int-bezout-witnesses | `Int.gcd_eq_gcd_ab_witnesses` — Mathlib v4.30's Bézout at named computable witnesses, axiom-free; closes `F:ml430-int-gcd-eq-gcd-ab-63005aef` |
 | 2026-08-28 | nat-binomial | `Nat.choose_mono` via permuted `choose_le_choose`; closes `F:ml430-nat-choose-mono-a1af9c18`, kernel-lean, axiom-free; nat_prelude 447->448 |
 | 2026-08-27 | (uncommitted at status-file write time) | `CReal.sumRange_cauchy_of_abs_cauchy` / `CReal.sumRange_converges_of_abs_converges` (absolute convergence implies convergence) plus a soundness-negative control; curriculum rows 18 and 22–23 corrected. |
 | 2026-08-27 | (uncommitted at status-file write time) | Ten new `artifacts/facts/F-creal-*.json` entries for the Ch.13/14 Riemann integral construction and algebra (`riemannSum_cauchy`, `integral`, `integral_converges`, `integral_const`, `integral_add`, `integral_le`, `integral_scale`, `integral_witness_independent`, `riemannSum_integral_close`, `sharedIndexToCanonical`); `python3 scripts/validate-facts.py` green (708 facts, 0 errors). |
@@ -9333,6 +9335,74 @@ induction (pair `P(k+5) /\ P(k+6)` by ordinary induction on `k`, mirroring
 chain; `Nat.le_fib_add_one` is a two-line composition once it lands (small-`n`
 concrete check for `n<5`, `le_fib_self` plus `le_add_right` for `n>=5`). Left
 for the next lane rather than rushed.
+
+**Your lane's block (`DONE`, int-bezout-witnesses, 2026-08-28).**
+`F:ml430-int-gcd-eq-gcd-ab-63005aef` is **closed**, axiom-free, at Mathlib
+v4.30's exact statement `∀ x y : ℤ, ↑(x.gcd y) = x * x.gcdA y + y * x.gcdB y`.
+Six declarations landed in
+`crates/axeyum-lean-kernel/src/int_prelude/bezout_witnesses.rs` — three
+`Definition`s that return data (`Nat.xgcdAux`, `Nat.gcdA`/`Nat.gcdB`, plus
+`Int.gcdA`/`Int.gcdB`) and three `Theorem`s (`Nat.xgcdAux_sound`,
+`Nat.gcd_eq_gcd_ab`, `Int.gcd_eq_gcd_ab_witnesses`). Every one measures
+`axiom_footprint = 0`.
+
+**The characterization the brief carried was correct.** The pre-existing
+`Int.gcd_eq_gcd_ab` is the EXISTENTIAL form
+(`∀ a b, ∃ u v, ofNat (gcd a b) = a*u + b*v`, `int_prelude/gcd.rs:1448`), its
+magnitude witnesses come from `Nat.gcd_bezout` — a `Theorem` whose four
+naturals sit inside a `Prop` — and its sign handling is a `Prop`-typed
+`Or`-elimination. Neither is projectable, so this was a program to write, not
+a proof to rearrange. The old name is kept for the existential because
+`crt.rs` and `modinv.rs` consume it; the Mathlib-shaped statement is
+`Int.gcd_eq_gcd_ab_witnesses`.
+
+**Fuel, and why `m` suffices.** `Nat.xgcdAux` recurses structurally on a fuel
+argument (`log.rs`'s device, never `WellFounded`), with a trailing `Bool`
+selecting which coefficient to return so ONE recursion carries the pair
+without a product type. `Nat.gcdA m n := xgcdAux m m n true`. The invariant
+is `m ≤ fuel`, carried as an explicit hypothesis on `Nat.xgcdAux_sound` and
+preserved because `succ k ≤ succ f` gives `k ≤ f` while `Nat.mod_lt` gives
+`n % succ k < succ k`; at `fuel := m` it discharges to `le_refl`. The bound
+constrains the PROOF, not the definition — short of fuel the function still
+computes, it just answers for a truncated recursion.
+
+**Three things worth carrying forward.**
+
+- The orientation was chosen to match THIS prelude's `Nat.gcd`, which
+  recurses on its FIRST argument. That makes the induction's step a direct
+  appeal to `gcd_succ` rather than a re-derivation of Euclid, and it is why
+  the step is eleven `ichain` links rather than a new development.
+- `neg_neg` and `neg_mul` already existed as PRIVATE proof-term helpers inside
+  `gcd.rs` — hiding place 2, an inline step never exposed. They are
+  `pub(super)` now and `neg_mul_neg` is built from them plus the public
+  `Int.mul_neg`. Nothing was re-derived.
+- The kernel rejected exactly once, and the sign is where: the `Int` lift's
+  chain named the goal's coefficient as the `Nat`-level `base_a`/`base_b`
+  instead of `Int.gcdA x y`/`Int.gcdB x y`. Those agree on an `ofNat` branch
+  and differ by a negation on `negSucc`, so the error was invisible in half
+  the branches. `Nat.xgcdAux_sound` and `Nat.gcd_eq_gcd_ab` were accepted
+  first try; a three-step bisect over the `declare_*` calls found it, because
+  one bad declaration poisons the shared prelude build and the failure COUNT
+  says nothing.
+
+**Verification.** `cargo test -p axeyum-lean-kernel --lib int_prelude` — 38
+passed, 0 failed (35 before this lane). Three of those are new and two are
+evaluation, not type-checking: a theorem alone does not pin the algorithm
+down, since *some* pair of coefficients satisfies Bézout for any correct gcd,
+so `Nat.gcdA`/`Int.gcdA` are reduced to normal form against hand-computed
+answers at seven `Nat` and six `Int` points (all four sign branches) and the
+identity is then evaluated at each. Magnitudes are held to 6 — every `Nat`
+numeral here is unary, so the literal fast path never fires. The third test
+derives its list from the ENVIRONMENT, not by hand: every `Nat.`-namespace
+declaration the *integer* prelude adds and the *natural* prelude does not,
+with a non-vacuity assertion so an empty list fails.
+
+**Next for `integer-gcd` (7 still open, all `train`).**
+`F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e` is the obvious next one and is
+now cheap — the existential witness it asks for is `Nat.gcdA`/`Nat.gcdB`
+reduced mod `n`. `F:ml430-int-gcd-div-*` and the two
+`dvd_of_dvd_mul_*_of_gcd_one` rows want `Nat`-level cancellation rather than
+new Bézout machinery.
 
 **Your lane's block (`DONE for this dispatch`, nat-binomial, 2026-08-28).**
 Landed the one closeable fact in the `natural-binomial` open set;

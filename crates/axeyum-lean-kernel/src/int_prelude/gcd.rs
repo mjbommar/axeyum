@@ -926,7 +926,7 @@ pub(super) fn declare_gcd_eq_one_of_gcd_mul_right_eq_one(
 /// concrete literal `1`, no case split needed since neither reduction depends
 /// on a variable), and from there `neg (neg x) = (-1)*(-1)*x = 1*x = x` by
 /// `neg_one_mul`/`mul_assoc`/`one_mul` alone.
-fn neg_neg(d: &mut IntDev<'_>, x: ExprId) -> ExprId {
+pub(super) fn neg_neg(d: &mut IntDev<'_>, x: ExprId) -> ExprId {
     let p = d.int();
     let one_c = d.ione();
     let neg_one = d.ineg(one_c);
@@ -991,7 +991,7 @@ fn neg_neg(d: &mut IntDev<'_>, x: ExprId) -> ExprId {
 }
 
 /// `Eq Int ((neg a) * c) (neg (a*c))`, for any `a, c`.
-fn neg_mul(d: &mut IntDev<'_>, a: ExprId, c: ExprId) -> ExprId {
+pub(super) fn neg_mul(d: &mut IntDev<'_>, a: ExprId, c: ExprId) -> ExprId {
     let p = d.int();
     let one_c = d.ione();
     let neg_one = d.ineg(one_c);
