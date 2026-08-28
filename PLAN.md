@@ -155,6 +155,7 @@ now. Nothing was deleted.
 | 2026-08-28 | parity-coprime | `Nat.choose_le_choose` proved (`nat_prelude/choose.rs`); pinned `67+342`->`67+343` in `the_build_is_deterministic` |
 | 2026-08-28 | parity-coprime | `Nat.coprime_of_lt_prime` fact flipped to proved (already admitted pre-existing kernel declaration, no new Rust) |
 | 2026-08-28 | parity-coprime | `Nat.coprime_two_left`, `Nat.coprime_two_right`, `Nat.Coprime.odd_of_left`, `Nat.Coprime.odd_of_right` proved (`nat_prelude/primes.rs`); pinned `67+343`->`67+347` |
+| 2026-08-28 | supon-r6b | what landed, in one line |
 | 2026-08-28 | nat-numeral-accel | `NatOps::num` → `Lit::Nat`: `reduce_nat_binop` now reachable (1.6M× on `gcd 512 1875`), no proof edited, prelude-build win measured at ~zero, and 12 pins + 3 scripts + 5 fact checkers + 388 fact statements move on rendering (ADR-0613, proposed) |
 | 2026-08-28 | main-red-tests | `qfbv-proof-export` could not succeed on ANY input since `81361cdd1` made `set-logic` positional; and the `creal` prelude outgrew the 2 MiB default stack (16 MiB debug / 8 MiB release measured, pinned at 2 MiB / 128 KiB) so every constructed-reals test aborted the binary |
 | 2026-08-28 | fp16-evidence | `F:fp16-add-monotone-rne` flipped open -> proved; attached `unsat-certificate` evidence row with discriminating `checker_command` (ADR-0613 LRAT route), reproduced end-to-end twice (339s, 353s wall clock) |
@@ -184,8 +185,15 @@ now. Nothing was deleted.
 | 2026-08-28 | nat-binomial | `Nat.choose_mono` via permuted `choose_le_choose`; closes `F:ml430-nat-choose-mono-a1af9c18`, kernel-lean, axiom-free; nat_prelude 447->448 |
 | 2026-08-28 | nat-factorial-variants | `Nat.descFactorial` + `descFactorial_zero`/`_succ`/`_one`/`_of_lt`, axiom-free, `nat_prelude` sweep 105/105; 4 new `F:nat-desc-factorial-*` facts; `Nat.ascFactorial`/`Nat.multichoose` left for a future lane |
 | 2026-08-28 | nat-primes-2 | `Nat.coprime_primes`, `Nat.not_prime_of_dvd_of_ne`, `Nat.Prime.pred_pos`, `Nat.succ_pred_prime`, `Nat.Prime.dvd_mul_of_dvd_ne` — five axiom-free kernel theorems in `nat_prelude/primes.rs`, five `natural-primes` facts flipped to `proved` |
+| 2026-08-28 | int-build-time | measured: the flagged `int_prelude` regression is `cpoint_prelude_builds` caught by substring; Bézout costs +0.29 s, `CReal` prelude build went 12.2 s -> 108.4 s in two days |
+| 2026-08-28 | nat-bitwise-2 | `Nat.land`/`Nat.landAux` (structural fuel recursion, direct — not through `Nat.bitwise`) plus `land_zero_left`/`land_zero_right`/`land_one_one`/`land_three_five`, all axiom-free, all first-attempt kernel accepts; 4 new `F:nat-land-*` facts; `Nat.bitwise`/`Nat.lor`/`Nat.ldiff`/`Nat.bits` scoped out |
 | 2026-08-28 | int-gcd-2 | `Int.dvd_of_dvd_mul_right_of_gcd_one`/`Int.dvd_of_dvd_mul_left_of_gcd_one` -- `gauss_lemma` corollaries, axiom-free; closes `F:ml430-int-dvd-of-dvd-mul-right-of-gcd-one-77817ff0`/`F:ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b` |
 | 2026-08-28 | int-gcd-2 | `Int.gcd_greatest` -- the universal-property characterization of `gcd`, axiom-free; closes `F:ml430-int-gcd-greatest-5b31c5fe` |
+| 2026-08-28 | supon-r6c | `CReal.meshLevelCount_pow` landed: cherry-picked alone from the broken `worktree-agent-a8d6d5209f5a4bb3d` branch, then fixed a SECOND bug (missing `lam_fv` wrap on the induction value) beyond the symm-argument fix the brief credited; `creal_prelude_builds` green |
+| 2026-08-28 | creal-build-bisect | measured both endpoints (12.60 s at `77b71bf10`, 105.51 s at HEAD) and located the regression: `trig_fn` + `cos_sign` + `uniform_convergence`, all added 2026-08-27, are **79.0 s of 101.25 s**; the other 165 `STEPS` entries are 22.2 s combined |
+| 2026-08-28 | creal-build-bisect | diagnosed the mechanism as unary-`Nat` reduction, **not** the `Definition` unfold: the hot declarations run 40–120 `unfold_def` attempts per successful δ-unfold (healthy is 1.6–3), 98% of them on `Nat.succ`/`Nat` towers, and cost is uncorrelated with term size (864 nodes / 9.74 s vs 8,174 nodes / 1.49 s) |
+| 2026-08-28 | creal-build-bisect | A/B'd ADR-0614's literal numerals: **`CReal.cosWideNonpositive` 9.74 s → 0.12 s (81x)** and the whole build −11%, so the ADR's "measured at zero" (taken before these files landed) no longer describes this tree; the `trig_fn` family is unaffected and needs a proof change instead |
+| 2026-08-28 | creal-build-bisect | `scripts/check-creal-prelude-build-ratio.sh` + `artifacts/creal-prelude-build-budget.tsv` + controls: replaces the ungated 94–123 s band with a **load-invariant ratio** against `rat_prelude_builds` (2.02x change in absolute time moves it 0.2%; the regression moves it 7.8x), pinned at 21, self-demonstrating on every run |
 | 2026-08-27 | (uncommitted at status-file write time) | `CReal.sumRange_cauchy_of_abs_cauchy` / `CReal.sumRange_converges_of_abs_converges` (absolute convergence implies convergence) plus a soundness-negative control; curriculum rows 18 and 22–23 corrected. |
 | 2026-08-27 | (uncommitted at status-file write time) | Ten new `artifacts/facts/F-creal-*.json` entries for the Ch.13/14 Riemann integral construction and algebra (`riemannSum_cauchy`, `integral`, `integral_converges`, `integral_const`, `integral_add`, `integral_le`, `integral_scale`, `integral_witness_independent`, `riemannSum_integral_close`, `sharedIndexToCanonical`); `python3 scripts/validate-facts.py` green (708 facts, 0 errors). |
 | 2026-08-27 | (uncommitted at status-file write time) | Added `--require-declaration <name> [--require-kind <kind>]` to `crates/axeyum-lean-kernel/examples/kernel_declaration_projection.rs`: a direct, fail-on-absence presence checker for `Declaration::Definition`s (and any other kind), mutation-tested against `CReal.integral`. Upgraded `F:creal-integral`'s `kernel-CReal.integral` evidence to use it. Registered 14 new `artifacts/facts/F-creal-*.json` entries for Spivak Ch.18 (`e`) and Ch.22-23 (series convergence tests): `creal-e`, `creal-e-converges`, `creal-two-le-e`, `creal-e-le-three`, `creal-e-le-four`, `creal-expterm-le-geom`, `creal-expdominantcauchy`, `creal-cauchyofpointwiseequiv`, `creal-geomcauchy`, `creal-sumrange-comparisontest`, `creal-sumrange-cauchy-of-dominated`, `creal-sumrange-converges-of-dominated`, `creal-sumrange-cauchy-of-abs-cauchy`, `creal-sumrange-converges-of-abs-converges`. `python3 scripts/validate-facts.py` green (722 facts, 0 errors). |
@@ -8203,6 +8211,10 @@ history already tolerates this shape of duplicate (`bool_true_or_false` has
 two copies for the same reason). Said so in the commit rather than silently
 re-deriving.
 
+**Your lane's block (`WIP`, supon-r6b, 2026-08-28).** What landed, what did not,
+and what the next lane needs to know. State a negative as precisely as a
+positive — a sized negative is a complete deliverable here.
+
 **Your lane's block (`needs-decision`, nat-numeral-accel, 2026-08-28).** The
 diagnosis held and is now measured rather than read; the fix works and is sound;
 **and the benefit is not where it was expected, while the cost is somewhere
@@ -9557,6 +9569,170 @@ new panic message after the fix, not hand-incremented.
 `74 + 388 = 462` after (five new `Theorem`-kind declarations, zero new
 `Definition`s).
 
+**Your lane's block (`DONE`, int-build-time, 2026-08-28). The flagged regression
+is NOT in the Int prelude and NOT caused by `bezout_witnesses`.** The reported
+`cargo test -p axeyum-lean-kernel --lib int_prelude` going 8.65 s -> 148.28 s is
+real as a wall-clock fact about that command, and the cause is entirely outside
+`int_prelude/`.
+
+`int_prelude` is a **substring** filter, and
+`creal_point::creal_point_tests::cpoint_prelude_builds` matches it —
+`cpo` + `int_prelude` + `_builds`. That one test is the whole cost. Measured
+with `--report-time --test-threads=1` on the prebuilt
+`target/debug/deps/` binary (no cargo lock), `RUST_MIN_STACK` confirmed unset:
+
+| tree | `cpoint_prelude_builds` | all 34/37 `int_prelude::` tests |
+| --- | --- | --- |
+| `77b71bf10` (08-26, the 34-match "before" tree) | 54.70 s | ~3.0 s |
+| `e94d8d080` (parent of the first Bézout commit) | 160.08 s | 3.82 s (34 tests) |
+| HEAD (`335da8ba5` + Bézout) | 148.55 s | **4.11 s (37 tests)** |
+
+**The Bézout work costs +0.29 s.** Parent 34 tests / 3.82 s -> HEAD 37 tests /
+4.11 s, filtering `int_prelude::` (with the colons, which excludes the
+`creal_point` test). Serialized per-test: the two evaluation tests are 0.136 s
+and 0.070 s, and the new namespace-inventory test is 0.179 s. **Every one of the
+37 `int_prelude::` tests is under 0.72 s.** Nothing in `bezout_witnesses.rs`
+approaches the magnitudes that trip the unary-numeral cost documented in
+`CLAUDE.md`; the largest `Nat` formed anywhere in the two evaluation tests is 6.
+
+**Where the time actually went, bisected by prelude layer at HEAD:**
+
+- `creal::creal_tests::creal_prelude_builds` — **12.19 s (08-26) -> 108.40 s
+  (HEAD)**, an 8.9x growth in two days.
+- `cpoint_prelude_builds` is that 108 s plus ~40 s of CPoint layer. The CPoint
+  layer itself is flat (42.5 s -> 40.1 s); **all** the growth is in `CReal`.
+
+So the thing to watch is the `CReal` prelude build, which is already a tracked
+cost with its own retrospective in `CLAUDE.md` (18.7 s -> 92.6 s from one
+declaration, fixed back to 18.4 s). It is now at 108 s again, and no single
+`int_prelude` change is involved.
+
+**The evaluation tests are non-vacuous, verified by mutation.** Changing the
+`(-3, 2)` row's expected `gcdA` from `-1` to `1` in
+`int_gcd_ab_compute_in_every_sign_branch` kills **exactly one** test
+(36 passed, 1 failed) and no other. The tests were left unchanged — they cost
+0.21 s combined and are the only thing that pins the algorithm rather than the
+identity.
+
+**Method note for whoever measures next.** Use `int_prelude::` with the colons.
+The bare `int_prelude` filter silently drags in a `creal_point` test that costs
+36x the entire Int prelude suite, and the test count (35 vs 34, 38 vs 37) is the
+only visible tell.
+
+**Your lane's block (`landed`, nat-bitwise-2, 2026-08-28).**
+
+The frontier (per the prior `207-nat-bitwise` lane, which landed `Nat.bit`)
+still had `Nat.bitwise`, `Nat.land`, `Nat.lor`, `Nat.ldiff`, `Nat.bits`
+undeclared, blocking the `F:ml430-nat-bitwise-*`/`F:ml430-nat-land-*`/
+`F:ml430-nat-lor-*`/`F:ml430-nat-ldiff-*` mirror facts. Per the brief, this
+lane's target was one complete definition with boundary lemmas.
+
+**`Nat.land` landed directly, NOT through a general `Nat.bitwise`.** Mathlib
+routes `Nat.land := bitwise and`, and `Nat.bitwise` needs a `Bool -> Bool ->
+Bool` function argument threaded through mismatched-length base cases
+(`m=0`: `if f false true then n else 0`; `n=0`: `if f true false then m else
+0`) — substantially more construction than a single lane's scope. `Nat.land`
+needs none of that: each bit's AND is the `Nat` **product** of two values
+already in `{0, 1}` (`Nat.mod _ 2`), so the recursive step is pure
+arithmetic with no `Bool`/`cond` combinator at all — simpler than `Nat.bit`
+needed to be.
+
+**The fuel device WAS needed, and it is the exact shape `Nat.logAux`/
+`Nat.testBitAux`/`Nat.sizeAux` already use**: structural `Nat.rec` on a fuel
+argument, carrying `m`/`n` through and halving them (`Nat.div _ 2`) at each
+step:
+
+```
+Nat.landAux 0        m n ≡ 0
+Nat.landAux (succ f) m n ≡
+  if n = 0 then 0
+  else if m = 0 then 0
+  else 2 * landAux f (m / 2) (n / 2) + (m % 2) * (n % 2)
+Nat.land m n := Nat.landAux m m n
+```
+
+**The guard order is `n = 0` OUTERMOST**, the mirror of `log.rs`'s `b ≤ n`
+ordering and for the identical reason: only the outermost cut collapses the
+whole succ-step term with one rewrite, independent of the (possibly
+symbolic) fuel predecessor. This makes `land m 0 = 0` an easy induction on
+`m` where every step is `refl` with the induction hypothesis unused —
+`log_zero_left`'s exact shape. `land 0 n = 0` is even cheaper: fuel is `m =
+0`, so the outer `Nat.rec` is already exhausted and the theorem is `refl`
+with no induction at all.
+
+**Landed `nat_prelude/land.rs`**: `Nat.landAux`, `Nat.land`, plus four
+theorems, all admitted on the first `Kernel::add_declaration` attempt:
+- `land_zero_left : ∀ n, land 0 n = 0` — `Eq.refl` (fuel exhausted).
+- `land_zero_right : ∀ m, land m 0 = 0` — induction on `m`, both cases
+  `refl`.
+- `land_one_one : land 1 1 = 1` — concrete, one fuel step, `Eq.refl`.
+- `land_three_five : land 3 5 = 1` (`0b011 &&& 0b101 = 0b001`) — concrete,
+  two fuel steps with genuinely DIFFERING bit patterns at each position, so
+  it catches a wrong-way step (e.g. OR-shaped) that `land_one_one` alone —
+  whose one bit matches on both operands — cannot distinguish.
+
+`nat_prelude::nat_prelude_tests::land_computes_and_its_boundary_theorems_apply`
+also checks 9 concrete `(m, n) -> land m n` pairs via `Kernel::def_eq`
+(including `land 7 7 = 7`, a self-AND crossing several fuel steps), plus
+negative controls on every theorem's inferred type (a wrong RHS value must
+NOT `def_eq` the admitted statement) and on the raw computation (`land 3 5`
+must not `def_eq` 5 or 7).
+
+**Measured `axiom_footprint`**: empty. `nat_axiom_inventory
+--require-axiom-free nat` exits 0: `nat: axiom=0 opaque=0 quotient=0
+total_trusted=0` (the whole `nat` prelude, including `land`/`landAux`, over
+its full `Kernel::environment()`, not a hand list).
+`every_nat_declaration_is_checked_and_axiom_free` (environment-derived
+coverage) also passes with the new names added to `definition_names`/
+`theorem_names`.
+
+**New facts created** (none flip an `F:ml430-*` mirror by hand, per the
+standing rule — this prelude's `Nat.land` is a fresh construction, not
+Mathlib's, and none of those facts' premises are established here):
+`F:nat-land-zero-left`, `F:nat-land-zero-right`, `F:nat-land-one-one`,
+`F:nat-land-three-five`. The `F:ml430-nat-land-bit-b9ab7475` / `land-comm` /
+`land-assoc` mirror facts all additionally need `Nat.bitwise`/`Nat.bit`
+composed with `land`/commutativity, none of which this lane declares, so
+they remain `open`. `Nat.bitwise`/`Nat.lor`/`Nat.ldiff`/`Nat.bits` are
+unattempted, per scope.
+
+**Kernel rejections: none.** Every declaration in `land.rs` was admitted on
+the first attempt — the only iteration was two Rust borrow-checker errors
+(nested `f.foo(..., f.bar())` calls in the test file, per the standing
+"flatten into sequential `let`s" note), fixed before ever calling
+`cargo test`.
+
+**Held-out / mutation check:** `natural-bitwise` (this family, in
+`artifacts/autogenesis/nursery-v1.json`) is `development` partition, safe.
+`scripts/fact-frontier.py` was run before touching anything; none of the
+`F:ml430-nat-bitwise-*`/`land-*`/`lor-*` rows it lists carry a `⛔ HELD-OUT`
+or `⛔ MUTATION` marker for anything this lane could reach (the two
+`nat-clog`/`nat-sqrt`/`nat-log` HELD-OUT rows visible in that same BLOCKED
+section belong to sibling families and were not touched). No nursery entry
+was closed or flipped by this lane; all four new facts are fresh
+kernel-lean facts, not nursery propositions.
+
+**`nat_prelude` count:** before this lane (after merging `main`, which had
+already landed `Nat.bit`/`Nat.descFactorial`/Bézout witnesses/primes-2/etc
+since the earlier `207-nat-bitwise` lane's own before/after numbers),
+`the_build_is_deterministic` pinned `75 + 395 = 470` (75 definitions, 395
+theorems). After this lane: `77 + 399 = 476` (two new definitions,
+`Nat.landAux`/`Nat.land`; four new theorems). Recomputed from the test's own
+panic message (`left: 476`), never hand-incremented.
+
+**Gates run:** `rustfmt --edition 2024` on the three touched Rust files
+(clean, no diff); `cargo fmt --all --check` scoped to those files (clean);
+`cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` (clean, no
+new allowances); `cargo test -p axeyum-lean-kernel --lib nat_prelude` (110
+passed, 0 failed — confirmed nonzero); `python3 scripts/validate-facts.py`
+(1893 facts, 0 errors). `cargo check -p axeyum-lean-kernel` also run
+standalone before the test suite.
+
+**Not attempted, per scope:** `Nat.bitwise`, `Nat.lor`, `Nat.ldiff`,
+`Nat.bits` — the brief explicitly allowed landing `Nat.land` alone as a
+complete success once `Nat.bitwise` looked substantially bigger than a
+single lane's construction.
+
 **Your lane's block (`DONE`, int-gcd-2, 2026-08-28).** Closed three of the
 `integer-gcd` family's remaining open facts, all axiom-free:
 `Int.dvd_of_dvd_mul_right_of_gcd_one`, `Int.dvd_of_dvd_mul_left_of_gcd_one`
@@ -9588,6 +9764,275 @@ a static Mathlib-source census (`EXPECTED_NARROWEST`), keyed off
 lane's status note); after, **38 passed, 0 failed**, ~157s. `clippy --all-targets
 --all-features -D warnings` and `cargo fmt --check` both clean on the touched
 files. `python3 scripts/validate-facts.py`: 0 errors.
+
+**Your lane's block (`WIP`, supon-r6c, 2026-08-28).**
+
+Job 1 (salvage `CReal.meshLevelCount_pow`): **landed, and the prelude
+builds green** — but the brief's premise that it was already
+kernel-accepted was wrong. Cherry-picking `3c60b3208` alone (without the
+symm-argument-order fix that actually lived in the *next* commit,
+`ce5b0c29e`) reproduced the original `TypeMismatch`. Applying just that
+one-line fix still failed, with `UnboundFVar { id: 17535 }` — the exact
+id the previous lane attributed to `hclose_of_uc`. Root cause: in
+`declare_mesh_level_count_pow_thm` (`creal/supremum.rs`), the `value`
+returned by `d.induct(&motive, &base, &step, j)` was never re-wrapped
+with `d.lam_fv(j_fv, nat, value)` to abstract the outer induction target
+`j` into a real binder — compare `alternating.rs:383-385`, which does
+`let value = d.induct(...); ...; let value = d.lam_fv(k_fv, nat, value);`
+for the identical shape. Without that wrap, `ty` is a `Pi` but `value` is
+a bare application containing a free `FVar(j_fv)` — an ill-formed pair
+that only the kernel's own checker (not `cargo check`) catches. Adding
+the missing `lam_fv` wrap fixed it; `creal_prelude_builds` now passes.
+
+Job 2 (diagnose `hclose_of_uc`'s `UnboundFVar`): **the previous lane's
+hypothesis (a leak inside one of ~15 `le_congr`/`rat_eq_rewrite`
+composition steps in `hclose_of_uc` itself) is very likely WRONG, and
+Job 1's fix is almost certainly Job 2's answer too.** `hclose_of_uc` is
+not in this tree (never cherry-picked, out of scope per the brief) so
+this is not independently re-confirmed against the real `hclose_of_uc`
+code, but the evidence is strong: id 17535 is deterministic given the
+same preceding `BuildStep` order, and it reproduces from
+`meshLevelCount_pow` ALONE with no `hclose_of_uc` code present at all.
+`hclose_of_uc` calls `d.lemma(p.mesh_level_count_pow, &[j])` — if
+`meshLevelCount_pow`'s own `add_declaration` never actually succeeded in
+that lane's session (their commit message says "not yet confirmed to
+kernel-accept" for both), the full-prelude test would fail at
+`meshLevelCount_pow`'s step, before `hclose_of_uc`'s step ever runs —
+and `creal_prelude_builds_body` reports whichever step fails first
+without naming it, so attributing the failure to `hclose_of_uc` was an
+inference, not a measurement. The previous lane's `scan_fvars_local`
+correctly found nothing in `hclose_of_uc`'s own `ty`/`value` because the
+leak lives in a *different*, earlier declaration's stored value, not in
+the term it scanned.
+
+Recommendation for whoever picks up `hclose_of_uc` next: re-apply this
+lane's `lam_fv` fix (already on this branch), then re-attempt
+`hclose_of_uc` on top of current `main`. If `UnboundFVar` recurs with a
+*different* id, the composition-step hypothesis becomes live again; if
+it now succeeds or fails differently, this was the whole bug.
+
+Performance (both personally measured, `env -u RUST_MIN_STACK`,
+`scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib
+creal::creal_tests::creal_prelude_builds`, test-reported time only):
+- `main` (335da8ba5): 115.49s
+- this branch (job 1 landed, both bugs fixed): 112.03s
+
+No regression; the two are within normal host-contention noise.
+
+Nothing found stale in `creal/supremum.rs`'s module doc during this
+session — did not have cause to read it end to end (scope was two
+narrow bug fixes, not the module's documented design).
+
+**Your lane's block (`done`, creal-build-bisect, 2026-08-28).** The regression
+in
+[`docs/research/11-design-review/2026-08-28-the-band-is-the-regression.md`](docs/research/11-design-review/2026-08-28-the-band-is-the-regression.md)
+is real and it is **not cumulative**. Three files that landed on 2026-08-27
+carry **78% of the whole build**, and the mechanism is **not** the
+`CReal.integral` `Definition`-unfold one that `CLAUDE.md` names as the first
+suspect.
+
+## 1. Both endpoints, measured by this lane
+
+Prebuilt debug test binary run directly (no cargo flock in the number), the
+harness's own `finished in`, `RUST_MIN_STACK` confirmed absent from the
+environment, `--exact` filter, **1 test** confirmed each time.
+
+| commit | `creal_prelude_builds` | `rat_prelude_builds` | ratio |
+|---|---|---|---|
+| `77b71bf10` (2026-08-26) | **12.60 s** | 4.85 s | **2.60** |
+| HEAD (`1ec0fcec9` + merge) | **105.51 s** | 5.22 s | **20.21** |
+
+8.4x, corroborating the 12.19 → 108.40 s in the write-up. The *reference*
+prelude moved 4.85 → 5.22 s (+7.6%) over the same 370 commits, which is what
+ordinary growth looks like.
+
+## 2. Where the time is: three files, eight declarations
+
+`creal.rs`'s `STEPS` table (194 entries) is run as a loop by
+`build_creal_prelude_uncached`, so a throwaway `Instant::now()` around
+`(step.run)` gives the whole distribution in **one run** — no 370-commit
+bisect. A second throwaway patch timed `Kernel::check_declaration` per
+declaration and recorded each term's DAG size.
+
+Per-module (steps sum to 101.25 s of a 107.12 s instrumented run; the rest is
+`build_rat_prelude` plus interning, outside the loop):
+
+| module | s | % | steps |
+|---|---|---|---|
+| `trig_fn` | 59.24 | 58.5 | 14 |
+| `cos_sign` | 11.46 | 11.3 | 6 |
+| `uniform_convergence` | 8.32 | 8.2 | 9 |
+| *everything else* | 22.2 | 21.9 | **165** |
+
+`integral`, the largest family by count, is **4.82 s over 46 steps**.
+
+Per declaration, with the sub-step split and term size:
+
+| declaration | s | phase | inferVal | defeq | DAG nodes |
+|---|---|---|---|---|---|
+| `CReal.sinFnUniformConverges` | 11.65 | `trig_fn::declare_sin_fn` | 0.00 | **11.51** | 2,807 |
+| `CReal.sinFn` | 11.56 | same step | **11.13** | 0.00 | 3,076 |
+| `CReal.sinDominant16Over25CauchyBody` | 10.51 | `declare_sin_fn_dominant` | 10.39 | 0.00 | 2,349 |
+| `CReal.cosWideNonpositive` | 9.86 | `cos_sign::declare_cos_wide_nonpositive` | 9.74 | 0.00 | 864 |
+| `CReal.weierstrassMTest` | 8.17 | `uniform_convergence` | 7.64 | 0.00 | 2,038 |
+| `CReal.cosDominant16Over25CauchyBody` | 6.01 | `declare_cos_fn_wide_progress` | 5.72 | 0.00 | 2,355 |
+| `CReal.cosFnWideUniformConverges` | 5.05 | `declare_cos_fn_wide` | 0.00 | 4.80 | 2,657 |
+| `CReal.cosFnWide` | 4.90 | same step | 4.65 | 0.00 | 2,926 |
+
+**Eight declarations = 67.75 s of 94.22 s** across 1,559 declarations.
+
+All three files were **added on 2026-08-27**: `uniform_convergence.rs`
+(`edb2feb7b`, 05:06), `trig_fn.rs` (`7e0ccc952`, 12:40), `cos_sign.rs`
+(`f69c51f3a`, 23:15).
+
+## 3. It is not the `Definition`-unfold mechanism
+
+`CLAUDE.md` names one way to lose an order of magnitude here — relating a value
+produced by a `Definition` to a value you rebuilt yourself, forcing a full delta
+unfold. **Checked, and refuted**, by counting δ-unfolds and unfold *attempts*
+per declaration:
+
+| declaration | successful δ-unfolds | `unfold_def` attempts | ratio | s |
+|---|---|---|---|---|
+| `CReal.sinFn` | 2,426 | 291,261 | **120:1** | 11.13 |
+| `CReal.sinFnUniformConverges` | 3,874 | 300,129 | **77:1** | 11.51 |
+| `CReal.sinDominant16Over25CauchyBody` | 6,742 | 267,724 | **40:1** | 10.39 |
+| `CReal.cosFnWide` | 2,386 | 119,771 | **50:1** | 4.65 |
+| `CReal.weierstrassMTest` | 63,723 | 161,262 | 2.5:1 | 7.64 |
+| `CReal.sinFnLowerBoundOneToR` | 14,421 | 36,834 | 2.6:1 | 1.49 |
+| `CReal.hasDerivative_unique` | 6,945 | 10,969 | 1.6:1 | 0.52 |
+| `CReal.integral_split` | 3,515 | 10,683 | 3.0:1 | 0.58 |
+
+A healthy declaration sits at **1.6–3:1**. The regressed ones sit at
+**40–120:1** — the reducer reaches a `Const` head a hundred times for every one
+that actually unfolds. **Almost nothing is being delta-unfolded.** Broken down
+by name, 98% of `CReal.sinFn`'s attempts are `Nat.succ` (190,806) and `Nat`
+(95,345): whnf traversing **unary `Nat` constructor towers that cannot reduce
+further**.
+
+Term size does not explain any of it. `CReal.cosWideNonpositive` is 864 nodes
+and costs 9.74 s; `CReal.sinFnLowerBoundOneToR` is 8,174 nodes and costs 1.49 s
+— a 9.5x size difference in the *opposite* direction, ~60x apart in cost per
+node.
+
+**So this is the documented unary-`Nat` mechanism, not the `Definition` one.**
+It is the `CLAUDE.md` entry that ends *"keep formed magnitudes small"* — the pi
+rung-2 case that went 587 s → 113 s by choosing a bound whose largest formed
+`Nat` was 525 instead of 13,125.
+
+## 4. Two sub-mechanisms, and one of them is cheap to fix
+
+The towers are **not** in the stored terms — the deepest `Nat.succ` chain inside
+`CReal.sinFn`'s value is **25**, and `CReal.sinFnLowerBoundOneToR` carries one
+of depth **3,000** for 1.49 s. They are formed *during reduction*.
+
+An A/B separates them. Building every `NatOps::num` numeral as `Lit::Nat`
+instead of a `succ` tower (the ADR-0614 change, throwaway patch, env-gated):
+
+| declaration | unary | `Lit::Nat` | |
+|---|---|---|---|
+| `CReal.cosWideNonpositive` | 9.74 s | **0.12 s** | **81x**, attempts 99,984 → 2,268 |
+| `CReal.sinFn` | 11.13 s | 11.65 s | unchanged, attempts 291,261 → 291,181 |
+| `CReal.cosFnWide` | 4.65 s | 4.84 s | unchanged |
+| `CReal.sinDominant16Over25CauchyBody` | 10.39 s | 10.21 s | unchanged |
+| **whole build** | **105.51 s** | **93.83 s** | −11% |
+
+* **(A) `cos_sign::declare_cos_wide_nonpositive`, 9.7 s.** Entirely
+  source-numeral unary arithmetic; the literal representation removes 98% of it.
+* **(B) the `trig_fn` family, ~54 s.** Unaffected by literals. The magnitudes
+  are formed by *reduction*: `geom_16_over_25_k_final` builds
+  `((25*25)+1)+7 = 633` as `Nat.mul(succ 24, succ 24)` over unary numerals, and
+  `cos/sin_dominant_16_over_25_cauchy_body_concrete` scales it to
+  `k_g = ka*633 + ka*2` with `ka = CReal.bound(two) + 1` — a **concrete** `K`
+  threaded through the whole M-test application, so every whnf that touches it
+  re-derives the tower. This is the *concrete-witness* hazard `CLAUDE.md`
+  documents for `declare_e_converges`, arriving as a magnitude rather than a
+  stuck term. **Diagnosed, not fixed** — the fix is a proof change inside
+  `trig_fn.rs`, which is another lane's file and real work.
+
+**ADR-0614's "measured at zero" is now stale and should be re-read, not
+re-quoted.** It measured 14.91 → 14.23 s (4.6%, noise) *before these three files
+landed*. Today the same change is **−11% overall and 81x on one declaration**.
+That is still not a reason to adopt it globally — the local fix to
+`cosWideNonpositive` gets the same 9.6 s for none of ADR-0614's cost — but the
+number in the ADR no longer describes this tree.
+
+## 5. Is the framing wrong? Partly.
+
+- **"Plausibly cumulative and ordinary over 370 commits" — refuted.** Ordinary
+  growth accounts for 12.60 → ~22 s. Three files account for the other ~79 s.
+- **"Not getting back to 12 s" — right, and the honest floor is higher than it
+  looks.** Some of the ~54 s in (B) is genuinely bought: the `16/25` geometric
+  modulus is `25² + 8` *because* the ratio is `16/25`, and a concrete
+  Weierstrass M-test witness has to name it. What is *not* bought is re-deriving
+  that magnitude in unary on every whnf.
+- **"The `Definition`-unfold mechanism is the first thing to check" — checked,
+  and it is not implicated.** δ-unfold counts on the hot declarations are 2.4k
+  against 291k attempts.
+
+## 6. The band, replaced with something that can go red
+
+`scripts/check-creal-prelude-build-ratio.sh` +
+`artifacts/creal-prelude-build-budget.tsv` +
+`scripts/tests/test-creal-prelude-build-ratio.sh`.
+
+**A seconds budget is not sound here and the ratio is.** Measured on s4, same
+binary, same commit, one busy core pinned beside the test:
+
+| condition | `rat_prelude_builds` | `creal_prelude_builds` | ratio |
+|---|---|---|---|
+| idle (load ~1), run A | 5.22 s | 105.51 s | **20.21** |
+| idle (load ~0.3), run B | 5.19 s | 104.61 s | **20.16** |
+| one competing core | 10.44 s | 210.57 s | **20.17** |
+| `77b71bf10`, idle | 4.85 s | 12.60 s | **2.60** |
+
+Absolute time moves **2.02x** under contention; the ratio moves **0.25%** across
+all three HEAD readings. The regression moves it **7.8x**. Both tests are
+single-threaded kernel type-checking in the *same binary*, so contention scales
+them together and divides out — which is why a seconds gate on this 16-core box
+shared by a dozen lanes would spend its life crying wolf, and this one does not
+have to be loose to be quiet.
+
+Pinned at **21** (the measured 20.21 rounded up to the next whole unit, ~4%
+headroom, ≈20x the observed load sensitivity). `--check` re-demonstrates on
+every run that it can fail: it re-runs its own verdict against a halved budget
+and fails if that is not RED, and feeds a zero-test transcript through its own
+parser and fails if that is accepted. Green is therefore never vacuous.
+
+Controls: 9 cases, all green, driven by canned transcripts and a private pin
+file so the suite costs milliseconds and never mutates a tracked file. Each
+guard was deleted from a *copy* and the kill counts recorded in the suite's
+`--self-table`; G1 kills three (the self-check shares its parser, which is the
+coupling working), G4 kills two (a matched positive/negative pair), the rest
+kill exactly one.
+
+End-to-end against the real binary: `subject 104.61s / reference 5.19s = 20.16
+(budget 21) … GREEN`.
+
+**Not wired into `just check` / `check.sh` by this lane** — those are shared
+append points and four clobbering incidents came from lanes writing them. It
+costs ~110 s and belongs beside `check-kernel-stack-envelope.sh`. Recommended,
+deliberately not done here.
+
+## What the prelude still guarantees
+
+Unchanged. Nothing in `creal/` was edited: `git status` at the end of this lane
+shows only the three new files, and `tc.rs`, `creal.rs` and `nat_prelude/ops.rs`
+hash identical to `HEAD`. All instrumentation was throwaway, applied and
+reverted inside this worktree.
+`every_creal_declaration_is_checked_and_axiom_free` and the axiom-freedom claim
+are untouched. `cargo fmt --all --check` clean; no Rust file differs from
+`HEAD`, so there is nothing new for clippy to see.
+
+## Next
+
+1. Fix (A): `cos_sign::declare_cos_wide_nonpositive`, 9.7 s → ~0.1 s, by keeping
+   the formed `Rat`/`Nat` magnitudes small. Smallest, best-understood win.
+2. Fix (B): make the `16/25` M-test modulus a *bound* variable through the
+   application and substitute the concrete pair only in the final
+   Pi-application — `declare_converges_of_cauchy`'s pattern, the one
+   `declare_e_converges` had to be rewritten into. ~54 s at stake.
+3. Wire the ratio gate into the aggregate gate.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
