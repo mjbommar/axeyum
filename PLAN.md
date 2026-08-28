@@ -169,7 +169,14 @@ now. Nothing was deleted.
 | 2026-08-28 | `aa391cd39` | fact: close `F:ml430-nat-factorial-le-d0f4a912`. |
 | 2026-08-28 | `ddd2e0855` | fact: close `F:ml430-nat-factorial-lt-of-lt-d6c2125d`. |
 | 2026-08-28 | nat-prime | `Nat.prime_odd_of_ne_two`, `Nat.prime_even_iff`, `Nat.prime_not_dvd_mul`, `Nat.prime_dvd_of_dvd_pow` admitted into the Nat prelude; closes 4 of 7 open `Nat.Prime` import facts |
+| 2026-08-28 | nat-sqrt | `Nat.sqrt` by structural fuel recursion (accumulator fold, not the `logAux` shape) — 2 definitions, 2 theorems, all axiom-free; 2 facts closed (`F:nat-sqrt-zero`, `F:nat-sqrt-one`); 14 `F:ml430-nat-sqrt-*` mirror facts left open, sized for the next tier |
+| 2026-08-28 | nat-clog | `Nat.clog` by structural fuel recursion, transferred verbatim from `Nat.log` — 2 definitions, 4 theorems, all axiom-free; 4 facts closed (`clog_zero_left`, `clog_zero_right`, `clog_one_left`, `clog_one_right`); `clog_pos`/`log_le_clog` sized as a separate generalized-induction task |
+| 2026-08-28 | producer-widen | measured: conclusion-directed producer reaches 0 of 35 open non-held-out palette facts — 26 blocked at statement import, 9 induction-shaped |
+| 2026-08-28 | producer-widen | new gated census: 61 of 63 open non-held-out propositions have an axiom-BEARING Mathlib proof, so transport cannot close the frontier; 6 guards each mutation-verified to kill exactly one control |
+| 2026-08-28 | producer-widen | `scripts/provision-lean-import-toolchain.sh` — s4 CAN run the whole import route; pinned mathlib4 + lean4export provision in ~5 min |
 | 2026-08-28 | nat-log-tier | `Nat.logAux_le_fuel` (fuel-generalized-over-`n` induction) and `Nat.log_le_self`, both axiom-free; 2 facts closed; `log_lt_self`/`log_mono_right` sized as genuinely harder, not attempted |
+| 2026-08-28 | fib-backlog | `Nat.fib_add_two_strictmono`, `Nat.fib_strictmonoOn`, `Nat.fib_lt_fib` landed and kernel-checked (nat_prelude/fibonacci.rs); closed F:ml430-nat-fib-add-two-strictmono-c1e86d4d, F:ml430-nat-fib-strictmonoon-905810a9, F:ml430-nat-fib-lt-fib-3582b881 |
+| 2026-08-28 | fib-backlog | confirmed `Int.fib` absent from the kernel (shape_search, fresh build, declarations=2000); all 6 open integer-fibonacci facts blocked on a missing carrier, not attempted |
 | 2026-08-27 | (uncommitted at status-file write time) | `CReal.sumRange_cauchy_of_abs_cauchy` / `CReal.sumRange_converges_of_abs_converges` (absolute convergence implies convergence) plus a soundness-negative control; curriculum rows 18 and 22–23 corrected. |
 | 2026-08-27 | (uncommitted at status-file write time) | Ten new `artifacts/facts/F-creal-*.json` entries for the Ch.13/14 Riemann integral construction and algebra (`riemannSum_cauchy`, `integral`, `integral_converges`, `integral_const`, `integral_add`, `integral_le`, `integral_scale`, `integral_witness_independent`, `riemannSum_integral_close`, `sharedIndexToCanonical`); `python3 scripts/validate-facts.py` green (708 facts, 0 errors). |
 | 2026-08-27 | (uncommitted at status-file write time) | Added `--require-declaration <name> [--require-kind <kind>]` to `crates/axeyum-lean-kernel/examples/kernel_declaration_projection.rs`: a direct, fail-on-absence presence checker for `Declaration::Definition`s (and any other kind), mutation-tested against `CReal.integral`. Upgraded `F:creal-integral`'s `kernel-CReal.integral` evidence to use it. Registered 14 new `artifacts/facts/F-creal-*.json` entries for Spivak Ch.18 (`e`) and Ch.22-23 (series convergence tests): `creal-e`, `creal-e-converges`, `creal-two-le-e`, `creal-e-le-three`, `creal-e-le-four`, `creal-expterm-le-geom`, `creal-expdominantcauchy`, `creal-cauchyofpointwiseequiv`, `creal-geomcauchy`, `creal-sumrange-comparisontest`, `creal-sumrange-cauchy-of-dominated`, `creal-sumrange-converges-of-dominated`, `creal-sumrange-cauchy-of-abs-cauchy`, `creal-sumrange-converges-of-abs-converges`. `python3 scripts/validate-facts.py` green (722 facts, 0 errors). |
@@ -8798,6 +8805,274 @@ elsewhere, this new file is not).
   scoped (`F:ml430-int-gcd-eq-gcd-ab-63005aef`) -- not a proof task, a
   construction task, exactly what this lane's split is for surfacing.
 
+**Your lane's block (`landed`, nat-sqrt, 2026-08-28).**
+
+`scripts/fact-frontier.py` reported 14 open facts as `BLOCKED — statement
+names undeclared kernel definition(s): Nat.sqrt`, the largest single blocker
+on the frontier. `Nat.sqrt` now exists, with two boundary theorems
+(`sqrt_zero`, `sqrt_one`), both admitted through `Kernel::add_declaration`
+with an empty `axiom_footprint`. Two new facts (`F:nat-sqrt-zero`,
+`F:nat-sqrt-one`) are `proved`; the 14 `F:ml430-nat-sqrt-*` mirror facts stay
+`open` — see "not attempted" below.
+
+**The obstacle, and how it was cleared.** Mathlib v4.30 `Nat.sqrt` is a
+Newton's-method iteration under well-founded recursion (`iter (n guess) := let
+next := (guess + n/guess)/2; if next < guess then iter n next else guess`).
+That is not structural, and the Lean equation compiler's route to
+well-founded recursion carries `Quot.sound`/`propext` — fatal to this
+project's axiom-freedom metric, and exactly the trap `Nat.log` (landed an
+hour earlier, `docs/plan/status/199-nat-log.md`) sidestepped the same way.
+
+This file follows `log.rs`'s established pattern — **structural recursion on
+a fuel argument** — but the recursion shape itself did not transfer verbatim,
+because `Nat.sqrt` has one argument to `Nat.log`'s two and its "state" is an
+accumulator that only ever grows, not a shrinking second argument:
+
+```text
+Nat.sqrtAux n 0        ≡ 0
+Nat.sqrtAux n (succ f) ≡ let c := Nat.sqrtAux n f
+                         in if (succ c) * (succ c) <= n then succ c else c
+Nat.sqrt n             := Nat.sqrtAux n n
+```
+
+The target `n` is a captured free variable, not threaded through `Nat.rec`'s
+motive at all — the motive here is the plain `fun _ => Nat` (an accumulator
+fold), simpler than `logAux`'s `fun _ => Nat -> Nat` (which needed a
+function there because `log`'s recursive argument, `n / b`, genuinely
+changes per fuel level; `sqrt`'s target never does). `n` always suffices as
+fuel: the accumulator starts at `0` and grows by at most `1` per step, and
+the greatest `m` with `m * m <= n` is itself `<= n`.
+
+Both equations are **definitional** (β/δ/ι) — no equation lemmas, no
+`WellFounded`, no `Quot.sound`, no `propext`, no new kernel machinery.
+
+**What the kernel rejected: nothing.** All four declarations (`sqrtAux`,
+`sqrt`, `sqrt_zero`, `sqrt_one`) were accepted on the first attempt. Both
+boundary theorems are fully concrete instantiations (no free variable
+survives past the literal arguments), so both close by a single `Eq.refl` —
+no induction needed, unlike three of `Nat.log`'s four boundary theorems.
+
+**`sqrt_zero` and `sqrt_one` are simultaneously the `n ∈ {0, 1}` instances of
+the still-open Mathlib family `Nat.sqrt_eq (n) : sqrt (n * n) = n`**
+(`F:ml430-nat-sqrt-eq-79ae8eae`) — `0 * 0` and `1 * 1` reduce to `0` and `1`
+definitionally, so they land in the `sqrt_zero`/`sqrt_one` shape rather than
+being restated as `sqrt (n*n) = n` at a literal `n`. The GENERAL theorem is
+not claimed: it needs an inductive argument that the linear search never
+overshoots, which was out of scope for this pass.
+
+**Not attempted, deliberately:** the 14 `F:ml430-nat-sqrt-*` mirror facts
+(`sqrt_le`, `sqrt_lt`, `sqrt_pos`, `sqrt_eq_zero`, `sqrt_le_self`,
+`sqrt_lt_self`, `sqrt_le_sqrt`, `sqrt_eq`/`sqrt_eq'`, …) stay `open`. Our
+`Nat.sqrt` is a *different construction* from Mathlib's (linear search vs.
+Newton's method, though the same VALUE), so claiming their statements by hand
+would be the checker-that-cannot-fail defect this repository's CLAUDE.md
+names explicitly. The next tier needs real induction — generalizing
+`sqrtAux n f <= f` or similar over a free fuel argument, the same technique
+`Nat.log`'s harder lemmas need — and is sized as a follow-on, not attempted
+here.
+
+**Gate state at the time of this commit:** `cargo check -p axeyum-lean-kernel
+--lib` clean; `cargo test -p axeyum-lean-kernel --lib nat_prelude` 105
+passed, 0 failed (includes `sqrt_computes_and_its_boundary_equations_apply`,
+`the_build_is_deterministic` at `71 + 363`, and
+`every_nat_declaration_is_checked_and_axiom_free`); `cargo clippy -p
+axeyum-lean-kernel --all-targets --all-features -- -D warnings` clean;
+`python3 scripts/validate-facts.py` 0 errors over 1875 facts.
+`nat_prelude` definition+theorem count: 69 (`D`) + 361 (`T`) before this lane
+→ 71 + 363 after (2 definitions, 2 theorems).
+
+**Your lane's block (`landed`, nat-clog, 2026-08-28).**
+
+Four boundary facts (`clog_zero_left`, `clog_zero_right`, `clog_one_left`,
+`clog_one_right`) were `BLOCKED` on an undeclared kernel definition,
+`Nat.clog`. It now exists, with two definitions and four theorems, all
+admitted through `Kernel::add_declaration` with an empty `axiom_footprint`.
+
+**The 199-nat-log lane's sketch was RIGHT, and the fuel device transferred
+verbatim.** Mathlib v4.30's `Nat.clog b n = if 1 < b ∧ 1 < n then clog b ((n +
+b - 1) / b) + 1 else 0` has the same non-structural shape as `Nat.log` — the
+recursive call is at `(n + b - 1) / b`, not a constructor predecessor — so it
+gets the same treatment: structural recursion on a FUEL argument, instantiated
+at `n` itself.
+
+```text
+Nat.clogAux b 0        n ≡ 0
+Nat.clogAux b (succ f) n ≡ if 2 ≤ b then (if 2 ≤ n then succ (clogAux b f ((n + b - 1) / b)) else 0) else 0
+Nat.clog b n           := Nat.clogAux b n n
+```
+
+Both equations are definitional (β/δ/ι); nothing here appeals to an axiom.
+
+**One design point differs from `log.rs`, and it is the guard nesting order —
+the OPPOSITE of `log`'s.** `log`'s guard mixed a `b`-only cut (`2 ≤ b`) with a
+cut relating `b` and `n` (`b ≤ n`), and needed the mixed cut outermost for
+`log_of_lt`. `clog`'s guard (`2 ≤ b ∧ 2 ≤ n`) has **two single-variable cuts**,
+and the four theorems this lane proves split cleanly: `clog_zero_left`/
+`clog_one_left` fix `b` and vary `n`, so they need the `b`-only cut (`2 ≤ b`)
+outermost to collapse in one rewrite regardless of `n`; `clog_zero_right`
+never reaches the guard at all (fuel `0`, pure `refl`); `clog_one_right` fixes
+`n = 1`, so its `n`-only cut (`2 ≤ 1`) is a closed `false` no matter which
+branch of a 3-way case split on `b` it is reached from. `2 ≤ b` outermost
+serves every theorem here, so — unlike `log`, where the ordering was a real
+tradeoff against `log_of_lt` — there was no tension to resolve.
+
+**`Nat.sub`'s truncation did not bite.** The recursive step builds
+`(n + b - 1) / b`, and the subtrahend is the literal `1`; `n + b ≥ 1` for any
+reachable `n, b`, so truncation is never exercised on the branch that is
+actually selected. It also does not matter for the four boundary lemmas
+proved here: each one collapses through the guard before the recursive call
+is ever forced, so the subtraction's value on degenerate operands never
+enters any proof term.
+
+**What the kernel rejected: nothing.** All six declarations (2 definitions, 4
+theorems) were accepted on the first attempt. `every_nat_declaration_is_checked_and_axiom_free`
+(reads `kernel.environment()`, not a hand list) initially failed, correctly —
+it does not know about a declaration until it is added to `definition_names`/
+`theorem_names`, which this lane did.
+
+**Measured `axiom_footprint`:** `[]` for every one of the six declarations —
+confirmed both per-theorem (`Kernel::axiom_footprint`) and environment-wide
+(`nat_axiom_inventory --require-axiom-free nat` exits 0, `nat: axiom=0
+opaque=0 quotient=0 total_trusted=0`).
+
+**`nat_prelude` count:** before this lane, `the_build_is_deterministic` pinned
+`69 + 361` (definitions + theorems). After: `71 + 365` (2 new definitions, 4
+new theorems), recounted from the test's own render, not hand-incremented.
+101 of 929 `nat_prelude::` tests ran (828 filtered by name), all green,
+including a new `clog_computes_and_its_boundary_equations_apply` (mirrors
+`log_computes_and_its_boundary_equations_apply`, with `clog 2 7 = 3`
+deliberately checked against `log 2 7 = 2` so the test cannot pass by
+accidentally computing the floor instead of the ceiling).
+
+**Not attempted, deliberately, per the brief's scope:** `clog_pos` and
+`log_le_clog` need `clogAux b f n ≤ f` generalized in the motive (`∀ n,
+clogAux b f n ≤ f`) — a real induction, not a case split — same tier as
+`log`'s `log_le_self`/`log_mono_right`. Also not attempted: flipping the
+`F:ml430-nat-clog-*` mirror facts by hand (checker-that-cannot-fail defect;
+those are Mathlib's statements, ours is a different definition, and
+reconciling them is the autogenesis pipeline's job, not this lane's).
+
+**Gates run:** `cargo check -p axeyum-lean-kernel --lib` clean;
+`cargo test -p axeyum-lean-kernel --lib nat_prelude::` 101 passed, 0 failed;
+`cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` clean;
+`cargo fmt --edition 2024 --check` clean on all three touched files;
+`python3 scripts/validate-facts.py` 0 errors (1877 facts, up from 1873); all
+four new facts' `checker_command`s run directly and confirmed passing
+(`nat_theorem_inventory` finds each new name, `nat_axiom_inventory
+--require-axiom-free nat` exits 0).
+
+**Your lane's block (`landed`, producer-widen, 2026-08-28).** Task: widen
+`producers::conclusion_directed_application` (lane 198, which closed ten open
+`nat.modeq` facts) to a **second** family of currently-open facts.
+
+**Outcome: no operation registered, so `facts_via_multi_target` is unchanged.**
+(`operations=29`, `multi_target_operations=5`, and a read-only recomputation
+over `operations.json` x fact status gives `facts_via_multi_target=31`, one
+above the 30 the brief quotes; `gen-production-provenance-ledger.py --check`
+was already stale on `main` before this lane started and was **not**
+regenerated here, since regenerating would commit another lane's pending
+delta.)
+The lane found — and this is the deliverable — that the binding constraint is
+not the producer's grammar and not family shape. It is that **Mathlib's own
+proof is axiom-bearing for 61 of the 63 resolvable open propositions**, so no
+transport can close them, and every widening must AUTHOR an axiom-free contract
+per family. Three measurements, each re-derivable.
+
+**Holdout isolation, before and after, unchanged and PASS:**
+`held_out=37|files_scanned=1101|settled=0|references=0`. The two entirely
+held-out families (`natural-logarithm` 21 open, `natural-square-root` 16 open —
+37 facts, the whole partition) were excluded by **partition per fact**, never by
+count, and no held-out target was measured, exported, or named. **No target was
+dropped for any other reason**; nothing outside the exclusion was skipped.
+
+## 1. The producer reaches 0 of 35 open palette facts
+
+Every open, non-held-out fact with a proof-free target capsule in
+`/nas3/.../reference-packs/open-fixed-palette-v1` (35), through
+`examples/conclusion_directed_transport_probe`:
+
+| outcome | count |
+| --- | --- |
+| accepted | **0** |
+| declined at statement import (`dif_pos` 11, `Quot` 9, `Eq.subst` 3, `Nat.mod_lt` 2, `propext` 1) | **26** |
+| imported, then `NoConclusionMatch` | **9** |
+
+The 9 were run with **every theorem present in their own capsule** transported
+(24 or 47 roots, `transport_declines=0`) — not the
+`open-lemma-candidate-ranking-v1` names, 10 of whose 12 entries are
+`MissingRoot` in every capsule because the pack exports each target with one
+*target-agnostic elementary palette* and nothing family-specific. So those 9
+declines are not candidate starvation: all 9 are **induction-shaped**, and no
+application of an elementary lemma closes them.
+
+The 26 are unreachable **whatever contract is authored** — the trusted
+declaration is reached through the proposition's own definition closure, before
+any candidate is considered. `import_statement_ndjson` rejects the entire
+stream (`lib.rs:2069`), by design.
+
+## 2. Mathlib's proof is axiom-bearing for 61 of 63
+
+New, gated: `artifacts/autogenesis/open-frontier-axiom-freeness-census-v1.json`,
+`#print axioms` over every open non-held-out ledger proposition that names a
+Mathlib declaration, in the pinned environment
+(`c5ea0035…`, Lean `d024af09…`):
+
+| | |
+| --- | --- |
+| propositions | 68 |
+| resolve in Mathlib v4.30 | 63 |
+| **axiom-bearing** | **61** |
+| **axiom-free** | **2** — `Nat.self_le_factorial`, `Nat.descFactorial_le` |
+| absent at the pinned commit (`Int.fib_*`) | 5 |
+
+This bounds ONE route and must not be over-read: an axiom-bearing Mathlib proof
+does **not** mean no axiom-free proof exists — `nat.modeq` was closed
+axiom-free against lemmas that all carry `propext`. What it does mean is that
+"transport the Mathlib proof" is closed as a route, so the family-at-a-time
+authored contract is the unit of work, which is exactly why one family cost
+lane 198 a whole lane.
+
+Spot-checks that pin the two families a brief would reach for first:
+`Nat.dvd_lcm_left`, `Nat.dvd_lcm_right`, `Nat.dvd_lcm_of_dvd_left`,
+`Nat.dvd_of_lcm_left_dvd` are all `[propext, Quot.sound]`, and so is plain
+`Nat.dvd_trans` — so the `nat.dvd` lcm-transport family the queue suggests is
+**four one-application theorems whose every ingredient is axiom-bearing**, and
+any contract for it must first rebuild `Nat.gcd`'s recurrence, which lane 198
+already measured as blocked (`Nat.gcd.eq_def` carries `Quot.sound`).
+
+## 3. The Lean toolchain is now provisioned on this host
+
+`scripts/provision-lean-import-toolchain.sh` — idempotent, pinned, `--verify`
+does no network. Measured: ~5 minutes cold, all three pieces.
+
+This is the finding a brief should carry forward. `command -v lean` is empty on
+a host that has Lean, `docs/contributor-guide/fleet-hosts.md` records Mathlib as
+s5-only, and this lane spent a third of its budget establishing that **s4 can in
+fact run the whole import route**: `elan` has the pinned 4.30.0 toolchain, the
+mathlib4 olean cache is already in `~/.cache/mathlib`, a blobless clone of
+mathlib4 at `c5ea0035…` is 92 MB, and `lean4export` at `a3e35a58…` builds in
+under a minute. The tree now lives at `/data0/axeyum/lean-import-toolchain`.
+
+## What the next lane should do
+
+1. `scripts/provision-lean-import-toolchain.sh --verify` (seconds, no network).
+2. Pick a family from the **9 importable** targets, not from the 26 — the other
+   26 cannot be reached however good the contract is.
+3. Author the axiom-free contract in `scripts/lean/`, and confirm with
+   `#print axioms` **before** exporting: a candidate with a non-empty footprint
+   is rejected by `import_candidate_statement_ndjson`, not by the producer.
+4. The `natural-factorial` cluster is the best-conditioned start — `Nat.factorial`,
+   `Nat.descFactorial` and `Nat.ascFactorial` are all axiom-free *definitions*,
+   `Nat.factorial_succ`/`Nat.factorial_pos`/`Nat.mul_le_mul_left`/`Nat.le_trans`
+   are all axiom-free, and `Nat.self_le_factorial` has an axiom-free Mathlib
+   proof, which is a witness that an axiom-free route exists. Its producer is
+   `bounded_induction`, not `conclusion_directed_application`: these goals need
+   the induction hypothesis, not a bigger application.
+
+**Not attempted, and not claimed:** no fact status changed, no operation was
+registered, and `cargo fmt --all --check` / `clippy` were not run because this
+lane added no Rust.
+
 **Your lane's block (`landed`, nat-log-tier, 2026-08-28).**
 
 `log.rs`'s own module doc, written the same day `Nat.log` first landed, named
@@ -8871,6 +9146,40 @@ without a reconciliation route).
 `or_cases`); `cargo test -p axeyum-lean-kernel --lib nat_prelude::` (101
 passed, 0 failed); `python3 scripts/validate-facts.py` (1875 facts, 0
 errors, both new facts counted as `proved`/`kernel-lean`).
+
+**Your lane's block (`DONE this pass`, fib-backlog, 2026-08-28).** Closed
+three of seven open `natural-fibonacci` facts. Zero of six `integer-fibonacci`
+facts are reachable — `Int.fib : ℤ → ℤ` does not exist as a kernel
+declaration (confirmed with `shape_search`, fresh build, `declarations=2000`);
+every open Int fib fact, including the brief's stated keystone
+`F:ml430-int-fib-add-181b6a2c`, quantifies over `Int.fib m`/`Int.fib n` for
+genuinely negative `m, n : ℤ`, not `ofNat (Nat.fib n)`. `int_prelude/fibonacci.rs`
+only ever builds `ofNat (Nat.fib n)` terms (used by `Int.fib_cassini`); it
+never declares an `Int.fib` function. Building one (case-split on sign, with
+the standard `fib(-n) = (-1)^(n+1) fib(n)` extension) is a genuine new-carrier
+task, not a proof gap — the "unstatable, not unproved" case the brief
+carved out. Did not attempt it.
+
+Closed, forming one dependency chain:
+- `Nat.fib_add_two_strictmono` — `StrictMono (fun n => fib (n+2))`.
+- `Nat.fib_strictmonoOn` — `StrictMonoOn Nat.fib (Set.Ici 2)`, from the above.
+- `Nat.fib_lt_fib` — `2 <= m -> (fib m < fib n <-> m < n)`, from the above
+  plus the already-proved `Nat.fib_mono`.
+
+Not attempted: `Nat.fastfib_eq` (needs a `Nat.fastFib` fast-doubling
+definition that does not exist — same "needs a carrier" shape as the Int
+family, smaller); `Nat.le_fib_self` / `Nat.le_fib_add_one` (a second,
+independent chain — sized but not started, see below); the
+`F:ml430-mutation-*` fib fact (an outcome-blind mutation of `fib_eq_zero`
+that is FALSE as stated at `n=1`, so "closing" it means refutation, a
+different task shape than proving the other twelve).
+
+`Nat.le_fib_self : 5 <= n -> n <= fib n` is a second two-step-recursion
+induction (pair `P(k+5) /\ P(k+6)` by ordinary induction on `k`, mirroring
+`fib_add`'s device), sized at roughly the same effort as the strictmono
+chain; `Nat.le_fib_add_one` is a two-line composition once it lands (small-`n`
+concrete check for `n<5`, `le_fib_self` plus `le_add_right` for `n>=5`). Left
+for the next lane rather than rushed.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
