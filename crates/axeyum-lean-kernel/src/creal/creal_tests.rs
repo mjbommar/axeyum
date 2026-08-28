@@ -10246,6 +10246,8 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "supremum::declare_mesh_max_le_add_of_step_close",
     "cos_sign::declare_cos_wide_tail_nonneg",
     "cos_sign::declare_cos_wide_tail_antitone",
+    "cos_sign::declare_cos_wide_series_converges",
+    "cos_sign::declare_cos_wide_nonpositive",
 ];
 
 /// `STEPS` (the data-driven build order that replaced the hand-written call

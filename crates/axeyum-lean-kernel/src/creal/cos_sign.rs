@@ -60,7 +60,9 @@
 //! limit at shift `s := 2`.
 
 use super::convergence::converges_applied;
-use super::trig::{cadd, cle, cmul, cneg, cpow, czero, double_neg, echain, erefl, esymm, one_c};
+use super::trig::{
+    cabs, cadd, cle, cmul, cneg, cpow, czero, double_neg, echain, erefl, esymm, one_c,
+};
 use super::{CRealPrelude, creal_ty};
 use crate::KernelError;
 use crate::env::Declaration;
@@ -1130,6 +1132,776 @@ pub(super) fn declare_cos_wide_tail_antitone(
     let ty = d.kernel().infer(value)?;
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.cos_wide_tail_antitone,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// ---------------------------------------------------------------------------
+// pi rung 2, items 3-4 (`docs/plan/status/174-pi-rung2.md`,
+// `docs/plan/status/175-pi-r2b.md`, `docs/plan/status/176-cw-bridge.md`):
+// `CReal.cosWideSeriesConverges` (the `Converges` witness
+// `alternatingUpperBoundTail` needs) and `CReal.cosWideNonpositive` -- `le
+// (cosFnWide R) zero`, the rung's actual target.
+// ---------------------------------------------------------------------------
+
+/// `a j := mul (expTerm (add j j)) (pow R (add j j))` -- cosine's magnitude
+/// sequence at `R := 8/5`, as a standalone lambda. Built with the EXACT same
+/// calls [`declare_cos_wide_tail_nonneg`]/[`declare_cos_wide_tail_antitone`]
+/// use inline, so this file's structural-hashing convention (every builder
+/// call is interned, so identical calls give the identical `ExprId`) makes
+/// `a_wide_lam(d, p, r)` applied at a `k` beta-reduce to the SAME term those
+/// two theorems' own stated types already mention -- letting
+/// [`declare_alternating_upper_bound_tail`]'s `a` slot be instantiated at
+/// this lambda and cite both directly, with no transport.
+fn a_wide_lam(d: &mut IntDev<'_>, p: CRealPrelude, r: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let exp_term_c = d.kernel().const_(p.exp_term, vec![]);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let dbl = d.add(j, j);
+    let e = d.apply(exp_term_c, &[dbl]);
+    let pw = cpow(d, p, r, dbl);
+    let body = cmul(d, p, e, pw);
+    d.lam_fv(j_fv, nat, body)
+}
+
+/// `λ n pt, sumRange (fun j => cosFnTerm j pt) n` -- reproduced verbatim from
+/// `trig_fn.rs`'s own private `cos_fn_partial_sums_fn` (Rust privacy: each is
+/// a sibling module). Structural hashing makes this the IDENTICAL `ExprId`
+/// to what `CReal.cosFnWideUniformConverges`'s own stored type mentions as
+/// its `F` argument.
+fn cos_fn_partial_sums_fn_local(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    carrier: ExprId,
+    nat: ExprId,
+) -> ExprId {
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let pt_fv = d.fresh_fvar();
+    let pt = d.kernel().fvar(pt_fv);
+    let f_pt = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let body = d.const_app(p.cos_fn_term, &[j, pt]);
+        d.lam_fv(j_fv, nat, body)
+    };
+    let body = d.const_app(p.sum_range, &[f_pt, n]);
+    let with_pt = d.lam_fv(pt_fv, carrier, body);
+    d.lam_fv(n_fv, nat, with_pt)
+}
+
+/// `CReal.cosWideSeriesConverges : Converges (sumRange t) (cosFnWide R)` --
+/// pi rung 2 item 3. Composes `CReal.converges_of_abs_diff_le` with
+/// `CReal.cosFnWideUniformConverges`'s own `.spec` at the fixed point `x :=
+/// R` -- `docs/plan/status/176-cw-bridge.md`'s predicted route, no transport
+/// for the `close_within` shape itself -- bridged, per index, from
+/// `cosFnTerm`'s `mul (cosTerm j) (pow R (2j))` shape to `t`'s `mul (pow
+/// (neg one) j) (mul (expTerm (2j)) (pow R (2j)))` shape by exactly ONE
+/// `mul_assoc` (both `cosTerm` and `cosFnTerm` are `Definition`s, so this
+/// unfolds by delta alone, no bridging lemma needed beyond `mul_assoc`
+/// itself), lifted across the whole partial sum by `CReal.sumRange_congr`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_cos_wide_series_converges(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let r = r_wide(d, p);
+    let hr0 = hab_zero_r_wide(d, p);
+    let hrr = d.lemma(p.le_refl, &[r]);
+    let zero_c = czero(d, p);
+
+    let a_wide = a_wide_lam(d, p, r);
+    let t_lam = build_t_lam(d, p, a_wide);
+
+    let big_f = cos_fn_partial_sums_fn_local(d, p, carrier, nat);
+    let cos_fn_wide_c = d.kernel().const_(p.cos_fn_wide, vec![]);
+    let u = d.kernel().const_(p.cos_fn_wide_uniform_converges, vec![]);
+    let g_r = d.apply(cos_fn_wide_c, &[r]);
+    let neg_g_r = cneg(d, p, g_r);
+
+    let rate = d.const_app(p.uconv_rate, &[big_f, cos_fn_wide_c, zero_c, r, u]);
+    let spec = d.const_app(p.uconv_spec, &[big_f, cos_fn_wide_c, zero_c, r, u]);
+
+    let f_expr = d.const_app(p.sum_range, &[t_lam]);
+
+    let hyp_lam = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let spec_n = d.apply(spec, &[n, r, hr0, hrr]);
+
+        let cos_fn_term_at_r = {
+            let j_fv = d.fresh_fvar();
+            let j = d.kernel().fvar(j_fv);
+            let body = d.const_app(p.cos_fn_term, &[j, r]);
+            d.lam_fv(j_fv, nat, body)
+        };
+
+        // `Equiv (cosFnTerm j R) (t j)` at a symbolic `j` -- exactly one
+        // `mul_assoc`, both sides reached by delta+beta alone.
+        let per_j = {
+            let j_fv = d.fresh_fvar();
+            let j = d.kernel().fvar(j_fv);
+            let jj = d.add(j, j);
+            let one_cc = one_c(d, p);
+            let neg_one = cneg(d, p, one_cc);
+            let sign_j = cpow(d, p, neg_one, j);
+            let exp_term_c = d.kernel().const_(p.exp_term, vec![]);
+            let e_jj = d.apply(exp_term_c, &[jj]);
+            let pow_r_jj = cpow(d, p, r, jj);
+            let body = d.lemma(p.mul_assoc, &[sign_j, e_jj, pow_r_jj]);
+            d.lam_fv(j_fv, nat, body)
+        };
+
+        let heq_sum = d.lemma(p.sum_range_congr, &[cos_fn_term_at_r, t_lam, n, per_j]);
+        // heq_sum : Equiv (sumRange cos_fn_term_at_r n) (sumRange t_lam n)
+
+        let f_n_r = d.const_app(p.sum_range, &[cos_fn_term_at_r, n]);
+        let t_n = d.const_app(p.sum_range, &[t_lam, n]);
+
+        let refl_neg_g = erefl(d, p, neg_g_r);
+        let add_congr_h = d.lemma(
+            p.add_congr,
+            &[f_n_r, t_n, neg_g_r, neg_g_r, heq_sum, refl_neg_g],
+        );
+        let diff_orig = d.const_app(p.add, &[f_n_r, neg_g_r]);
+        let diff_new = d.const_app(p.add, &[t_n, neg_g_r]);
+        let abs_congr_h = d.lemma(p.abs_congr, &[diff_orig, diff_new, add_congr_h]);
+
+        let q_n = d.const_app(p.rat.nat_div_succ, &[rate, n]);
+        let target = d.const_app(p.of_rat, &[q_n]);
+        let refl_target = erefl(d, p, target);
+
+        let abs_orig = cabs(d, p, diff_orig);
+        let abs_new = cabs(d, p, diff_new);
+
+        let close_within_new = d.lemma(
+            p.le_congr,
+            &[
+                abs_orig,
+                abs_new,
+                target,
+                target,
+                abs_congr_h,
+                refl_target,
+                spec_n,
+            ],
+        );
+        d.lam_fv(n_fv, nat, close_within_new)
+    };
+
+    let value = d.lemma(p.converges_of_abs_diff_le, &[f_expr, g_r, rate, hyp_lam]);
+    let ty = d.kernel().infer(value)?;
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.cos_wide_series_converges,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Rat.normalize (Int.ofNat 1) (Nat.factorial n) (Nat.one_le_factorial n)`
+/// -- reproduced verbatim from `exponential.rs`'s own private
+/// `inv_factorial` (Rust privacy: sibling module). `CReal.expTerm n :=
+/// ofRat (inv_factorial n)` by DEFINITION, so this is the exact `Rat` value
+/// `expTerm n` unfolds to, and `Equiv.refl` alone bridges the two.
+fn inv_factorial_local(d: &mut IntDev<'_>, n: ExprId) -> ExprId {
+    let one_nat = d.num(1);
+    let one_int = d.of_nat(one_nat);
+    let denominator = d.factorial(n);
+    let np = d.prelude();
+    let positive = d.lemma(np.one_le_factorial, &[n]);
+    crate::rat_prelude::ops::normalize(d, one_int, denominator, positive)
+}
+
+/// `Rat.normalize numerator denominator _` for a literal value Rust already
+/// knows, in ALREADY-REDUCED form (`gcd(|numerator|, denominator) = 1`).
+///
+/// Every `Rat` literal this file's numeric leaf mentions is built here, and
+/// every one of them is small on purpose -- see
+/// [`declare_cos_wide_nonpositive`]'s doc comment for the measurement that
+/// makes "small" the load-bearing property rather than a stylistic one.
+fn small_rat(d: &mut IntDev<'_>, numerator: i32, denominator: u32) -> ExprId {
+    debug_assert!(denominator >= 1);
+    let mag = numerator.unsigned_abs();
+    let mag_nat = d.num(mag);
+    let n = if numerator < 0 {
+        d.neg_of_nat(mag_nat)
+    } else {
+        d.of_nat(mag_nat)
+    };
+    let den_pred = d.num(denominator - 1);
+    let den = d.succ(den_pred);
+    let positive = crate::rat_prelude::ops::one_le_succ(d, den_pred);
+    crate::rat_prelude::ops::normalize(d, n, den, positive)
+}
+
+/// `Equiv x (ofRat flat)`, given `proof_tower : Equiv x (ofRat tower)` and a
+/// literal `flat` Rust knows is the value `tower` reduces to. The closing
+/// step is `Equiv.refl` at `ofRat tower`, accepted against the stated
+/// `Equiv (ofRat tower) (ofRat flat)` by the kernel's OWN definitional
+/// check between `tower` and `flat` -- one `Rat` reduction, forced HERE and
+/// at a bounded size, rather than deferred into a larger expression where it
+/// would be forced again at a larger one.
+fn collapse(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    tower: ExprId,
+    proof_tower: ExprId,
+    flat: ExprId,
+) -> ExprId {
+    let of_tower = d.const_app(p.of_rat, &[tower]);
+    let of_flat = d.const_app(p.of_rat, &[flat]);
+    let close = erefl(d, p, of_tower);
+    echain(d, p, x, &[(of_tower, proof_tower), (of_flat, close)])
+}
+
+/// `(t_j, q_flat, proof : Equiv t_j (ofRat q_flat))` for the signed cosine
+/// term `t j = mul (pow (neg one) j) (mul (expTerm (2j)) (pow R (2j)))` at a
+/// CONCRETE `j`, evaluated **one factor of `R` at a time**.
+///
+/// `flats` gives the already-reduced `Rat` value after each step, starting
+/// with the constant `sign * 1/(2j)!` and multiplying by `R = 8/5` once per
+/// further entry; its length is therefore `2j + 1`. Each entry is collapsed
+/// to a flat literal ([`collapse`]) before the next multiplication, so the
+/// kernel never reduces a `Rat` expression more than one `Rat.mul` deep.
+///
+/// **This is the whole difference from the two reverted attempts, and it is
+/// a statement about MAGNITUDE, not about nesting.** Both of those evaluated
+/// `Rat.pow (8/5) 4 = 4096/625` and then `Rat.mul (1/24) (4096/625)`, whose
+/// `Rat.normalize` is `normalize 4096 15000` -- a `Nat.gcd`, then two
+/// `Nat.div`s, at 15,000, on UNARY numerals (`NatOps::num` builds `succ^n
+/// zero`, and the kernel's binary `Nat` acceleration needs a `Lit`, so none
+/// of it accelerates). Interleaving the `1/24` instead walks
+/// `1/24 -> 1/15 -> 8/75 -> 64/375 -> 512/1875` -- the same value by the
+/// same definition -- with **1,875** as the largest `Nat` ever formed.
+///
+/// Reassociation (`CReal.mul_assoc`, once per factor, plus one
+/// `CReal.mul_one` at the base) is what makes the interleaved order
+/// available; `CReal.pow R (2j)` is defeq to the left-nested `mul (mul (...
+/// (mul one R) ...) R) R` by iota alone, so exposing the factors is free.
+fn cos_wide_term_small(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    r: ExprId,
+    r_rat: ExprId,
+    j_nat: ExprId,
+    dbl_nat: ExprId,
+    sign_equiv: ExprId,
+    sign_target: ExprId,
+    sign_rat: ExprId,
+    flats: &[(i32, u32)],
+) -> (ExprId, ExprId, ExprId) {
+    let one_cc = one_c(d, p);
+    let neg_one = cneg(d, p, one_cc);
+    let sign_src = cpow(d, p, neg_one, j_nat);
+    let exp_term_c = d.kernel().const_(p.exp_term, vec![]);
+    let e = d.apply(exp_term_c, &[dbl_nat]);
+    let pow_r = cpow(d, p, r, dbl_nat);
+    let a_j = cmul(d, p, e, pow_r);
+    let t_j = cmul(d, p, sign_src, a_j);
+
+    // 1. `Equiv t_j (mul sign_target a_j)` -- replace `pow (neg one) j` by
+    //    the constant it equals.
+    let refl_a = erefl(d, p, a_j);
+    let step_sign = d.lemma(
+        p.mul_congr,
+        &[sign_src, sign_target, a_j, a_j, sign_equiv, refl_a],
+    );
+    let signed = cmul(d, p, sign_target, a_j);
+
+    // 2. `Equiv (mul sign_target (mul e pow_r)) (mul (mul sign_target e)
+    //    pow_r)` -- pull the sign and the reciprocal factorial together, so
+    //    the constant is IN the accumulator before any factor of `R` lands.
+    let c_term = cmul(d, p, sign_target, e);
+    let assoc_top = d.lemma(p.mul_assoc, &[sign_target, e, pow_r]);
+    let g_top = cmul(d, p, c_term, pow_r);
+    let step_assoc_top = esymm(d, p, g_top, signed, assoc_top);
+
+    // 3. The accumulator's own flat value: `sign * 1/(2j)!`.
+    let inv_fact = inv_factorial_local(d, dbl_nat);
+    let c_tower = crate::rat_prelude::ops::rmul(d, sign_rat, inv_fact);
+    let c_tower_eq = d.lemma(p.of_rat_mul, &[sign_rat, inv_fact]);
+    let (c_num, c_den) = flats[0];
+    let c_flat = small_rat(d, c_num, c_den);
+    let c_eq = collapse(d, p, c_term, c_tower, c_tower_eq, c_flat);
+
+    let one_pow = one_c(d, p);
+    let mut acc_term = cmul(d, p, c_term, one_pow);
+    let mut acc_flat = c_flat;
+    let mut acc_eq = {
+        let mul_one_h = d.lemma(p.mul_one, &[c_term]);
+        let of_c = d.const_app(p.of_rat, &[c_flat]);
+        echain(d, p, acc_term, &[(c_term, mul_one_h), (of_c, c_eq)])
+    };
+
+    // 4. One factor of `R` at a time, collapsing after each.
+    let mut pow_acc = one_pow;
+    for &(num, den) in &flats[1..] {
+        let prev_pow = pow_acc;
+        pow_acc = cmul(d, p, prev_pow, r);
+        let next_term = cmul(d, p, c_term, pow_acc);
+
+        let assoc = d.lemma(p.mul_assoc, &[c_term, prev_pow, r]);
+        let shifted = cmul(d, p, acc_term, r);
+        let step_assoc = esymm(d, p, shifted, next_term, assoc);
+
+        let of_acc = d.const_app(p.of_rat, &[acc_flat]);
+        let refl_r = erefl(d, p, r);
+        let step_congr = d.lemma(p.mul_congr, &[acc_term, of_acc, r, r, acc_eq, refl_r]);
+        let scaled = cmul(d, p, of_acc, r);
+
+        let tower = crate::rat_prelude::ops::rmul(d, acc_flat, r_rat);
+        let step_of_rat = d.lemma(p.of_rat_mul, &[acc_flat, r_rat]);
+        let of_tower = d.const_app(p.of_rat, &[tower]);
+
+        let flat = small_rat(d, num, den);
+        let of_flat = d.const_app(p.of_rat, &[flat]);
+        let close = erefl(d, p, of_tower);
+
+        acc_eq = echain(
+            d,
+            p,
+            next_term,
+            &[
+                (shifted, step_assoc),
+                (scaled, step_congr),
+                (of_tower, step_of_rat),
+                (of_flat, close),
+            ],
+        );
+        acc_term = next_term;
+        acc_flat = flat;
+    }
+
+    // 5. Splice the two halves. The accumulated power is the left-nested
+    //    `mul (... (mul one R) ...) R`, defeq to `pow R (2j)` by iota, so the
+    //    junction costs nothing.
+    let of_final = d.const_app(p.of_rat, &[acc_flat]);
+    let proof = echain(
+        d,
+        p,
+        t_j,
+        &[
+            (signed, step_sign),
+            (g_top, step_assoc_top),
+            (of_final, acc_eq),
+        ],
+    );
+    (t_j, acc_flat, proof)
+}
+
+/// `(t_j, q_bound, proof : le t_j (ofRat q_bound))` -- [`cos_wide_term_small`]
+/// for a term whose EXACT value is more expensive than the bound the caller
+/// actually needs.
+///
+/// `exact` is walked as in [`cos_wide_term_small`]: the constant
+/// `sign * 1/(2j)!` and then one factor of `R` per further entry, each
+/// collapsed to a flat literal. `bounded[0]` is then a rational the last
+/// exact value is `<=`, and each further entry is the EXACT product of the
+/// previous bound with `R`. So the remaining factors of `R` ride on a
+/// monotonicity step (`CReal.mul_le_mul_of_nonneg_left` conjugated by
+/// `mul_comm`, since there is no `_right` form) instead of on an evaluation.
+///
+/// **Where the bound is placed is the whole cost.** For `t 2 = 1/24 *
+/// (8/5)^4` the exact value is `512/1875`, and comparing THAT to `7/25`
+/// cross-multiplies to 13,125. Bounding two factors earlier -- `8/75 <=
+/// 7/64`, cross-multiplying to 525 -- and then riding `7/64 -> 7/40 -> 7/25`
+/// (which are exact, at 320 and 200) reaches the same conclusion with the
+/// largest `Nat` 25x smaller. `7/64` is forced, not chosen: it is
+/// `(7/25) / (8/5)^2`, the unique value that lands exactly on the bound the
+/// sum needs.
+#[allow(clippy::too_many_arguments)]
+fn cos_wide_term_bounded(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    r: ExprId,
+    r_rat: ExprId,
+    j_nat: ExprId,
+    dbl_nat: ExprId,
+    sign_equiv: ExprId,
+    sign_target: ExprId,
+    sign_rat: ExprId,
+    hr_nonneg: ExprId,
+    exact: &[(i32, u32)],
+    bounded: &[(i32, u32)],
+) -> (ExprId, ExprId, ExprId) {
+    let one_cc = one_c(d, p);
+    let neg_one = cneg(d, p, one_cc);
+    let sign_src = cpow(d, p, neg_one, j_nat);
+    let exp_term_c = d.kernel().const_(p.exp_term, vec![]);
+    let e = d.apply(exp_term_c, &[dbl_nat]);
+    let pow_r = cpow(d, p, r, dbl_nat);
+    let a_j = cmul(d, p, e, pow_r);
+    let t_j = cmul(d, p, sign_src, a_j);
+
+    let refl_a = erefl(d, p, a_j);
+    let step_sign = d.lemma(
+        p.mul_congr,
+        &[sign_src, sign_target, a_j, a_j, sign_equiv, refl_a],
+    );
+    let signed = cmul(d, p, sign_target, a_j);
+
+    let c_term = cmul(d, p, sign_target, e);
+    let assoc_top = d.lemma(p.mul_assoc, &[sign_target, e, pow_r]);
+    let g_top = cmul(d, p, c_term, pow_r);
+    let step_assoc_top = esymm(d, p, g_top, signed, assoc_top);
+
+    let inv_fact = inv_factorial_local(d, dbl_nat);
+    let c_tower = crate::rat_prelude::ops::rmul(d, sign_rat, inv_fact);
+    let c_tower_eq = d.lemma(p.of_rat_mul, &[sign_rat, inv_fact]);
+    let (c_num, c_den) = exact[0];
+    let c_flat = small_rat(d, c_num, c_den);
+    let c_eq = collapse(d, p, c_term, c_tower, c_tower_eq, c_flat);
+
+    let one_pow = one_c(d, p);
+    let mut acc_term = cmul(d, p, c_term, one_pow);
+    let mut acc_flat = c_flat;
+    let mut acc_eq = {
+        let mul_one_h = d.lemma(p.mul_one, &[c_term]);
+        let of_c = d.const_app(p.of_rat, &[c_flat]);
+        echain(d, p, acc_term, &[(c_term, mul_one_h), (of_c, c_eq)])
+    };
+
+    let mut pow_acc = one_pow;
+    for &(num, den) in &exact[1..] {
+        let prev_pow = pow_acc;
+        pow_acc = cmul(d, p, prev_pow, r);
+        let next_term = cmul(d, p, c_term, pow_acc);
+
+        let assoc = d.lemma(p.mul_assoc, &[c_term, prev_pow, r]);
+        let shifted = cmul(d, p, acc_term, r);
+        let step_assoc = esymm(d, p, shifted, next_term, assoc);
+
+        let of_acc = d.const_app(p.of_rat, &[acc_flat]);
+        let refl_r = erefl(d, p, r);
+        let step_congr = d.lemma(p.mul_congr, &[acc_term, of_acc, r, r, acc_eq, refl_r]);
+        let scaled = cmul(d, p, of_acc, r);
+
+        let tower = crate::rat_prelude::ops::rmul(d, acc_flat, r_rat);
+        let step_of_rat = d.lemma(p.of_rat_mul, &[acc_flat, r_rat]);
+        let of_tower = d.const_app(p.of_rat, &[tower]);
+
+        let flat = small_rat(d, num, den);
+        let of_flat = d.const_app(p.of_rat, &[flat]);
+        let close = erefl(d, p, of_tower);
+
+        acc_eq = echain(
+            d,
+            p,
+            next_term,
+            &[
+                (shifted, step_assoc),
+                (scaled, step_congr),
+                (of_tower, step_of_rat),
+                (of_flat, close),
+            ],
+        );
+        acc_term = next_term;
+        acc_flat = flat;
+    }
+
+    // Cross over from `Equiv` to `le` at the first bound. This `Rat.ble` is
+    // the largest single computation in the whole numeric leaf, which is why
+    // it happens here rather than two factors later.
+    let (b_num, b_den) = bounded[0];
+    let mut bound_flat = small_rat(d, b_num, b_den);
+    let mut of_bound = d.const_app(p.of_rat, &[bound_flat]);
+    let true_c = d.bool_true();
+    let refl_true = d.bool_refl(true_c);
+    let mut acc_le = {
+        let rat_le = d.lemma(p.rat.le_of_ble_eq_true, &[acc_flat, bound_flat, refl_true]);
+        let of_le = d.lemma(p.of_rat_le, &[acc_flat, bound_flat, rat_le]);
+        let of_acc = d.const_app(p.of_rat, &[acc_flat]);
+        let back = esymm(d, p, acc_term, of_acc, acc_eq);
+        let refl_bound = erefl(d, p, of_bound);
+        d.lemma(
+            p.le_congr,
+            &[
+                of_acc, acc_term, of_bound, of_bound, back, refl_bound, of_le,
+            ],
+        )
+    };
+
+    // Each remaining factor of `R` rides the bound instead of being evaluated.
+    for &(num, den) in &bounded[1..] {
+        let prev_pow = pow_acc;
+        pow_acc = cmul(d, p, prev_pow, r);
+        let next_term = cmul(d, p, c_term, pow_acc);
+
+        let assoc = d.lemma(p.mul_assoc, &[c_term, prev_pow, r]);
+        let shifted = cmul(d, p, acc_term, r);
+        // `assoc : Equiv shifted next_term`.
+
+        // `le (mul R acc_term) (mul R of_bound)`, conjugated to the right form.
+        let left_mono = d.lemma(
+            p.mul_le_mul_of_nonneg_left,
+            &[r, acc_term, of_bound, hr_nonneg, acc_le],
+        );
+        let r_acc = cmul(d, p, r, acc_term);
+        let r_bound = cmul(d, p, r, of_bound);
+        let comm_left = d.lemma(p.mul_comm, &[r, acc_term]);
+        let comm_right = d.lemma(p.mul_comm, &[r, of_bound]);
+        let scaled_bound = cmul(d, p, of_bound, r);
+        let right_mono = d.lemma(
+            p.le_congr,
+            &[
+                r_acc,
+                shifted,
+                r_bound,
+                scaled_bound,
+                comm_left,
+                comm_right,
+                left_mono,
+            ],
+        );
+        // `right_mono : le shifted scaled_bound`.
+
+        let tower = crate::rat_prelude::ops::rmul(d, bound_flat, r_rat);
+        let step_of_rat = d.lemma(p.of_rat_mul, &[bound_flat, r_rat]);
+        let of_tower = d.const_app(p.of_rat, &[tower]);
+        let next_bound = small_rat(d, num, den);
+        let of_next_bound = d.const_app(p.of_rat, &[next_bound]);
+        let close = erefl(d, p, of_tower);
+        let bound_eq = echain(
+            d,
+            p,
+            scaled_bound,
+            &[(of_tower, step_of_rat), (of_next_bound, close)],
+        );
+
+        acc_le = d.lemma(
+            p.le_congr,
+            &[
+                shifted,
+                next_term,
+                scaled_bound,
+                of_next_bound,
+                assoc,
+                bound_eq,
+                right_mono,
+            ],
+        );
+        acc_term = next_term;
+        bound_flat = next_bound;
+        of_bound = of_next_bound;
+    }
+
+    let chain = echain(d, p, t_j, &[(signed, step_sign), (g_top, step_assoc_top)]);
+    let back = esymm(d, p, t_j, g_top, chain);
+    let refl_bound = erefl(d, p, of_bound);
+    let proof = d.lemma(
+        p.le_congr,
+        &[g_top, t_j, of_bound, of_bound, back, refl_bound, acc_le],
+    );
+    (t_j, bound_flat, proof)
+}
+
+/// `CReal.cosWideNonpositive : le (cosFnWide R) zero`, `R := 8/5` -- pi rung
+/// 2's target. [`CRealPrelude::alternating_upper_bound_tail`] (at `a :=
+/// a_wide`, `hnn := cosWideTailNonneg`, `htail := cosWideTailAntitone`,
+/// `hconv := cosWideSeriesConverges`) gives `le (cosFnWide R) (sumRange t
+/// 3)`; what remains is the numeric leaf `sumRange t 3 = 1 - 32/25 +
+/// 512/1875 = -13/1875 <= 0`.
+///
+/// **The leaf is PROVED, not computed, and the two reverted attempts are why.**
+/// Both of them formed `-13/1875` by evaluating `Rat.add (Rat.add 1 (-32/25))
+/// (512/1875)` and then closing `le _ zero` by `Rat.ble`'s own computation.
+/// That addition cross-multiplies to the denominator `25 * 1875 = 46,875` and
+/// then needs `Nat.gcd 325 46875` plus two `Nat.div`s at that size --
+/// on unary numerals, since `NatOps::num` builds `succ^n zero` and the
+/// kernel's binary `Nat` acceleration (`reduce_nat_binop`) fires only on
+/// `Lit`s. Measured: 616 s / 5.9 GB for the first construction, 415 s / 3.7 GB
+/// for the second, against a 94-123 s band.
+///
+/// This one never forms 46,875. `512/1875` is reached by
+/// [`cos_wide_term_small`]'s interleaved walk (largest `Nat`: 1,875), and the
+/// final sum is closed by a BOUND rather than an evaluation:
+///
+/// ```text
+///   1 + (-32/25)                         = -7/25      (largest Nat: 25)
+///   512/1875 <= 7/25                                  (largest Nat: 13,125)
+///   add_le_add                          -> le (sumRange t 3) (-7/25 + 7/25)
+///   -7/25 + 7/25                         = 0/1        (largest Nat: 625)
+/// ```
+///
+/// `512/1875 <= 7/25` is `Rat.ble`'s computation on a cross-multiplication
+/// (`512 * 25 = 12800 <= 13125 = 7 * 1875`) and never divides or takes a gcd
+/// at that size; `7/25` is exactly `32/25 - 1`, so the bound is tight enough
+/// to close the sum and loose enough to skip the expensive normalization. The
+/// true value `-13/1875` is never built.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+#[allow(clippy::too_many_lines)]
+pub(super) fn declare_cos_wide_nonpositive(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let rat = p.rat;
+    let r = r_wide(d, p);
+    let r_rat = r_wide_rat(d, p);
+    let zero_c = czero(d, p);
+
+    let a_wide = a_wide_lam(d, p, r);
+    let t_lam = build_t_lam(d, p, a_wide);
+
+    let zero_nat = d.zero();
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+    let three_nat = d.num(3);
+    let four_nat = d.num(4);
+
+    let one_cc = one_c(d, p);
+    let neg_one = cneg(d, p, one_cc);
+    let rone_val = crate::rat_prelude::ops::rone(d, rat);
+    let neg_rone_val = crate::rat_prelude::ops::rneg(d, rone_val);
+
+    // sign(0) : Equiv (pow neg_one 0) one -- `negOnePowDouble` at k := 0.
+    let sign0 = d.lemma(p.neg_one_pow_double, &[zero_nat]);
+    // sign(1) : Equiv (pow neg_one 1) neg_one -- defeq to `mul one neg_one`.
+    let sign1 = one_mul_c(d, p, neg_one);
+    // sign(2) : Equiv (pow neg_one 2) one -- `negOnePowDouble` at k := 1.
+    let sign2 = d.lemma(p.neg_one_pow_double, &[one_nat]);
+
+    // t 0 = 1; t 1 = -1/2 * (8/5)^2 = -32/25; t 2 = 1/24 * (8/5)^4 = 512/1875.
+    let (t0, q0, p0) = cos_wide_term_small(
+        d,
+        p,
+        r,
+        r_rat,
+        zero_nat,
+        zero_nat,
+        sign0,
+        one_cc,
+        rone_val,
+        &[(1, 1)],
+    );
+    let (t1, q1, p1) = cos_wide_term_small(
+        d,
+        p,
+        r,
+        r_rat,
+        one_nat,
+        two_nat,
+        sign1,
+        neg_one,
+        neg_rone_val,
+        &[(-1, 2), (-4, 5), (-32, 25)],
+    );
+    let hr_nonneg = hab_zero_r_wide(d, p);
+    let (t2, _q2, t2_le_bound) = cos_wide_term_bounded(
+        d,
+        p,
+        r,
+        r_rat,
+        two_nat,
+        four_nat,
+        sign2,
+        one_cc,
+        rone_val,
+        hr_nonneg,
+        &[(1, 24), (1, 15), (8, 75)],
+        &[(7, 64), (7, 40), (7, 25)],
+    );
+
+    // s0 := add zero t0, defeq `sumRange t 1`. `Equiv s0 (ofRat 1)`.
+    let s0 = cadd(d, p, zero_c, t0);
+    let s0_to_t0 = zero_add_c(d, p, t0);
+    let of_q0 = d.const_app(p.of_rat, &[q0]);
+    let s0_eq = echain(d, p, s0, &[(t0, s0_to_t0), (of_q0, p0)]);
+
+    // s1 := add s0 t1, defeq `sumRange t 2`. `Equiv s1 (ofRat (-7/25))` --
+    // `Rat.add 1 (-32/25)` cross-multiplies at 25, nothing larger.
+    let s1 = cadd(d, p, s0, t1);
+    let of_q1 = d.const_app(p.of_rat, &[q1]);
+    let cg1 = d.lemma(p.add_congr, &[s0, of_q0, t1, of_q1, s0_eq, p1]);
+    let sum01 = cadd(d, p, of_q0, of_q1);
+    let of_rat_add1 = d.lemma(p.of_rat_add, &[q0, q1]);
+    let q01_tower = crate::rat_prelude::ops::radd(d, q0, q1);
+    let of_q01_tower = d.const_app(p.of_rat, &[q01_tower]);
+    let q01 = small_rat(d, -7, 25);
+    let of_q01 = d.const_app(p.of_rat, &[q01]);
+    let close01 = erefl(d, p, of_q01_tower);
+    let s1_eq = echain(
+        d,
+        p,
+        s1,
+        &[(sum01, cg1), (of_q01_tower, of_rat_add1), (of_q01, close01)],
+    );
+
+    // `le t2 (ofRat (7/25))`. The `Rat.ble` here cross-multiplies to 13,125
+    // and stops -- no gcd, no division at that size.
+    // `bound` is the SAME interned term `cos_wide_term_bounded` finished on
+    // (`small_rat` is structurally hashed), so `t2_le_bound` already has the
+    // shape the sum below needs.
+    let bound = small_rat(d, 7, 25);
+    let of_bound = d.const_app(p.of_rat, &[bound]);
+    let true_c = d.bool_true();
+    let refl_true = d.bool_refl(true_c);
+
+    // s2 := add s1 t2 = `sumRange t 3` (defeq). `le s2 (add s1 (ofRat 7/25))`.
+    let s2 = cadd(d, p, s1, t2);
+    let s1_le_s1 = d.lemma(p.le_refl, &[s1]);
+    let s2_le_rhs = d.lemma(p.add_le_add, &[s1, s1, t2, of_bound, s1_le_s1, t2_le_bound]);
+    let rhs = cadd(d, p, s1, of_bound);
+
+    // `Equiv rhs (ofRat (Rat.add (-7/25) (7/25)))` -- 0/1, largest Nat 625.
+    let refl_bound2 = erefl(d, p, of_bound);
+    let cg2 = d.lemma(
+        p.add_congr,
+        &[s1, of_q01, of_bound, of_bound, s1_eq, refl_bound2],
+    );
+    let sum2 = cadd(d, p, of_q01, of_bound);
+    let of_rat_add2 = d.lemma(p.of_rat_add, &[q01, bound]);
+    let q_sum = crate::rat_prelude::ops::radd(d, q01, bound);
+    let of_q_sum = d.const_app(p.of_rat, &[q_sum]);
+    let rhs_eq = echain(d, p, rhs, &[(sum2, cg2), (of_q_sum, of_rat_add2)]);
+
+    // `le (ofRat q_sum) zero` -- `q_sum` reduces to `0/1`, `ofRat Rat.zero` is
+    // defeq to `CReal.zero`.
+    let rzero_val = crate::rat_prelude::ops::rzero(d, rat);
+    let rat_zero_le = d.lemma(rat.le_of_ble_eq_true, &[q_sum, rzero_val, refl_true]);
+    let creal_zero_le = d.lemma(p.of_rat_le, &[q_sum, rzero_val, rat_zero_le]);
+
+    let refl_s2 = erefl(d, p, s2);
+    let s2_le_q_sum = d.lemma(
+        p.le_congr,
+        &[s2, s2, rhs, of_q_sum, refl_s2, rhs_eq, s2_le_rhs],
+    );
+    let final_le = d.lemma(
+        p.le_trans,
+        &[s2, of_q_sum, zero_c, s2_le_q_sum, creal_zero_le],
+    );
+
+    let hconv = d.kernel().const_(p.cos_wide_series_converges, vec![]);
+    let hnn = d.kernel().const_(p.cos_wide_tail_nonneg, vec![]);
+    let htail = d.kernel().const_(p.cos_wide_tail_antitone, vec![]);
+    let cos_fn_wide_c = d.kernel().const_(p.cos_fn_wide, vec![]);
+    let g_r = d.apply(cos_fn_wide_c, &[r]);
+    let b_term = sum_at(d, p, t_lam, three_nat);
+
+    let upper = d.lemma(
+        p.alternating_upper_bound_tail,
+        &[a_wide, hnn, htail, g_r, hconv],
+    );
+    // upper : le g_r b_term
+
+    let value = d.lemma(p.le_trans, &[g_r, b_term, zero_c, upper, final_le]);
+    let ty = cle(d, p, g_r, zero_c);
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.cos_wide_nonpositive,
         uparams: vec![],
         ty,
         value,
