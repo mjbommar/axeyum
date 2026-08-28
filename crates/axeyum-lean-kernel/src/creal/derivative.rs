@@ -8893,3 +8893,435 @@ pub(super) fn declare_abs_diff_le_of_deriv_bound(
         value,
     })
 }
+
+// =============================================================================
+// `CReal.lipschitz_of_deriv_bound` — the mean value inequality for an
+// UNORDERED pair
+// =============================================================================
+//
+// [`declare_abs_diff_le_of_deriv_bound`] states its conclusion under `le x y`,
+// because `monotone_of_nonneg_deriv` — the subdivide-and-telescope machine it
+// is built from — orders its endpoints. That is the right shape for a
+// monotonicity-flavoured consumer and the WRONG shape for a derivative
+// consumer: [`deriv_spec_body`] quantifies `x` and `y` independently over
+// `[a, b]` and never orders them, and `le x y ∨ le y x` is a decision on the
+// sign of a real, which this development does not have and will not add.
+//
+// The gap is closed WITHOUT any case split, and that is the only interesting
+// part of this declaration. Put `u := min x y`. Then `u` is a genuine point of
+// `[a, b]` (`le_min` from `a ≤ x` and `a ≤ y`; `u ≤ x ≤ b`) that is BELOW both
+// endpoints, so the ordered inequality applies to each of `(u, x)` and
+// `(u, y)` with no knowledge of which of `x`, `y` is the larger:
+//
+//   |F y − F u| ≤ M·(y − u)      |F x − F u| ≤ M·(x − u)
+//
+// and the triangle inequality through `F u` gives
+// `|F y − F x| ≤ M·((y − u) + (x − u))`.
+//
+// What makes the constant come out EXACT rather than doubled is that
+// `(y − u) + (x − u) ≤ |y − x|` is itself provable from the meet's universal
+// property alone, in three [`CRealPrelude::le_min`] applications and no lattice
+// identity — `min` is used as an order-theoretic infimum here and never
+// unfolded to its pointwise `Rat.min` representation:
+//
+//   1. `y − |y − x| ≤ min x y`   (`≤ x` is `le_abs_self`; `≤ y` is `|·| ≥ 0`)
+//   2. `x − |y − x| ≤ min x y`   (`≤ y` is `neg_le_abs` + `neg_sub_swap`;
+//                                 `≤ x` is `|·| ≥ 0`)
+//   3. `(y + (x − u)) − |y − x| ≤ min x y`, whose `≤ x` leg is (1) and whose
+//      `≤ y` leg is (2) — and which rearranges to exactly the claim.
+//
+// Every one of those legs, and each rearrangement between them, is the same
+// linear shuffle `p − q ≤ r ⟺ p − r ≤ q`; [`le_shift`] does it once through
+// [`cancel_middle`] and [`add_sub_cancel_left`], and is called seven times.
+//
+// The `le zero M` hypothesis is new relative to the ordered form and is not
+// removable: the final step multiplies `(y − u) + (x − u) ≤ |y − x|` through by
+// `M` ([`CRealPrelude::mul_le_mul_of_nonneg_left`]). It is free for every
+// caller — `M` bounds a magnitude — but deriving it HERE would need a point of
+// `[a, b]` to evaluate the bound at, i.e. `le a b`, which the ordered form does
+// not demand either.
+
+/// `Equiv (add c (add v (neg c))) v` — `c + (v − c) ~ v`.
+fn add_sub_cancel_left(d: &mut IntDev<'_>, p: CRealPrelude, c: ExprId, v: ExprId) -> ExprId {
+    let zero_c = czero(d, p);
+    let nc = cneg(d, p, c);
+    let v_nc = cadd(d, p, v, nc);
+    let start = cadd(d, p, c, v_nc);
+
+    let c_v = cadd(d, p, c, v);
+    let s1 = cadd(d, p, c_v, nc);
+    let assoc = d.lemma(p.add_assoc, &[c, v, nc]);
+    let p1 = esymm(d, p, s1, start, assoc);
+
+    let v_c = cadd(d, p, v, c);
+    let s2 = cadd(d, p, v_c, nc);
+    let comm = d.lemma(p.add_comm, &[c, v]);
+    let refl_nc = erefl(d, p, nc);
+    let p2 = d.lemma(p.add_congr, &[c_v, v_c, nc, nc, comm, refl_nc]);
+
+    let c_nc = cadd(d, p, c, nc);
+    let s3 = cadd(d, p, v, c_nc);
+    let p3 = d.lemma(p.add_assoc, &[v, c, nc]);
+
+    let s4 = cadd(d, p, v, zero_c);
+    let refl_v = erefl(d, p, v);
+    let an = d.lemma(p.add_neg, &[c]);
+    let p4 = d.lemma(p.add_congr, &[v, v, c_nc, zero_c, refl_v, an]);
+
+    let p5 = d.lemma(p.add_zero, &[v]);
+
+    echain(
+        d,
+        p,
+        start,
+        &[(s1, p1), (s2, p2), (s3, p3), (s4, p4), (v, p5)],
+    )
+}
+
+/// `Equiv (add (add v (neg c)) c) v` — `(v − c) + c ~ v`.
+fn sub_add_cancel_right(d: &mut IntDev<'_>, p: CRealPrelude, v: ExprId, c: ExprId) -> ExprId {
+    let zero_c = czero(d, p);
+    let nc = cneg(d, p, c);
+    let v_nc = cadd(d, p, v, nc);
+    let start = cadd(d, p, v_nc, c);
+
+    let nc_c = cadd(d, p, nc, c);
+    let s1 = cadd(d, p, v, nc_c);
+    let p1 = d.lemma(p.add_assoc, &[v, nc, c]);
+
+    let s2 = cadd(d, p, v, zero_c);
+    let refl_v = erefl(d, p, v);
+    let nas = neg_add_self(d, p, c);
+    let p2 = d.lemma(p.add_congr, &[v, v, nc_c, zero_c, refl_v, nas]);
+
+    let p3 = d.lemma(p.add_zero, &[v]);
+
+    echain(d, p, start, &[(s1, p1), (s2, p2), (v, p3)])
+}
+
+/// `(target, proof)` with
+/// `target := add (add a (neg c)) w` and
+/// `proof : Equiv (add (add a w) (neg c)) target` — move a trailing `− c` past
+/// a middle summand.
+fn regroup_sub(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    w: ExprId,
+    c: ExprId,
+) -> (ExprId, ExprId) {
+    let nc = cneg(d, p, c);
+    let a_w = cadd(d, p, a, w);
+    let start = cadd(d, p, a_w, nc);
+
+    let w_nc = cadd(d, p, w, nc);
+    let s1 = cadd(d, p, a, w_nc);
+    let p1 = d.lemma(p.add_assoc, &[a, w, nc]);
+
+    let nc_w = cadd(d, p, nc, w);
+    let s2 = cadd(d, p, a, nc_w);
+    let refl_a = erefl(d, p, a);
+    let comm = d.lemma(p.add_comm, &[w, nc]);
+    let p2 = d.lemma(p.add_congr, &[a, a, w_nc, nc_w, refl_a, comm]);
+
+    let a_nc = cadd(d, p, a, nc);
+    let target = cadd(d, p, a_nc, w);
+    let assoc = d.lemma(p.add_assoc, &[a, nc, w]);
+    let p3 = esymm(d, p, target, s2, assoc);
+
+    let proof = echain(d, p, start, &[(s1, p1), (s2, p2), (target, p3)]);
+    (target, proof)
+}
+
+/// From `h : le (add u1 (neg u2)) u3`, derive `le (add u1 (neg u3)) u2` — the
+/// linear shuffle `p − q ≤ r ⟺ p − r ≤ q`, through [`cancel_middle`] on the
+/// left and [`add_sub_cancel_left`] on the right. Both sides gain
+/// `+ (u2 − u3)` via [`CRealPrelude::add_le_add`] against
+/// [`CRealPrelude::le_refl`], and neither rearrangement decides any sign.
+fn le_shift(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    u1: ExprId,
+    u2: ExprId,
+    u3: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let nu2 = cneg(d, p, u2);
+    let nu3 = cneg(d, p, u3);
+    let lhs0 = cadd(d, p, u1, nu2);
+    let mid = cadd(d, p, u2, nu3);
+    let refl_mid = d.lemma(p.le_refl, &[mid]);
+    let step = d.lemma(p.add_le_add, &[lhs0, u3, mid, mid, h, refl_mid]);
+
+    let big_l = cadd(d, p, lhs0, mid);
+    let big_r = cadd(d, p, u3, mid);
+    let target_l = cadd(d, p, u1, nu3);
+    let cm = cancel_middle(d, p, u1, u2, u3);
+    let cancel_r = add_sub_cancel_left(d, p, u3, u2);
+    d.lemma(
+        p.le_congr,
+        &[big_l, target_l, big_r, u2, cm, cancel_r, step],
+    )
+}
+
+/// `le (add t (neg ad)) t` from `ad_nonneg : le zero ad` — `t − t ~ 0 ≤ ad`,
+/// shifted by [`le_shift`]. Used at both endpoints, hence a named helper.
+fn sub_nonneg_bound_self(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    t: ExprId,
+    ad: ExprId,
+    ad_nonneg: ExprId,
+) -> ExprId {
+    let zero_c = czero(d, p);
+    let nt = cneg(d, p, t);
+    let t_nt = cadd(d, p, t, nt);
+    let an = d.lemma(p.add_neg, &[t]);
+    let an_symm = esymm(d, p, t_nt, zero_c, an);
+    let refl_ad = erefl(d, p, ad);
+    let h = d.lemma(
+        p.le_congr,
+        &[zero_c, t_nt, ad, ad, an_symm, refl_ad, ad_nonneg],
+    );
+    le_shift(d, p, t, t, ad, h)
+}
+
+/// Admit `CReal.lipschitz_of_deriv_bound`. See
+/// [`CRealPrelude::lipschitz_of_deriv_bound`] for the statement and the
+/// section comment above for the argument.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from the final `Theorem`
+/// here means the kernel **refused** the proof, not that a script gave up.
+pub(super) fn declare_lipschitz_of_deriv_bound(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let func_ty = fn_ty(d, p);
+    let zero_c = czero(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let fp_fv = d.fresh_fvar();
+    let fp = d.kernel().fvar(fp_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let hf_ty = hd_ty(d, p, f, fp, a, b);
+    let hf_fv = d.fresh_fvar();
+    let hf = d.kernel().fvar(hf_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let hm0_ty = d.const_app(p.le, &[zero_c, m]);
+    let hm0_fv = d.fresh_fvar();
+    let hm0 = d.kernel().fvar(hm0_fv);
+
+    // hbnd : ∀ z, le a z → le z b → le (abs (F' z)) M — verbatim the ordered
+    // form's own hypothesis, so it is passed straight through to both legs.
+    let hbnd_ty = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let fpz = d.apply(fp, &[z]);
+        let abs_fpz = cabs(d, p, fpz);
+        let concl = d.const_app(p.le, &[abs_fpz, m]);
+        let z_le_b = d.const_app(p.le, &[z, b]);
+        let after_upper = d.arrow(z_le_b, concl);
+        let a_le_z = d.const_app(p.le, &[a, z]);
+        let after_lower = d.arrow(a_le_z, after_upper);
+        d.pi_fv(z_fv, carrier, after_lower)
+    };
+    let hbnd_fv = d.fresh_fvar();
+    let hbnd = d.kernel().fvar(hbnd_fv);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+
+    let hax_ty = d.const_app(p.le, &[a, x]);
+    let hax_fv = d.fresh_fvar();
+    let hax = d.kernel().fvar(hax_fv);
+    let hxb_ty = d.const_app(p.le, &[x, b]);
+    let hxb_fv = d.fresh_fvar();
+    let hxb = d.kernel().fvar(hxb_fv);
+    let hay_ty = d.const_app(p.le, &[a, y]);
+    let hay_fv = d.fresh_fvar();
+    let hay = d.kernel().fvar(hay_fv);
+    let hyb_ty = d.const_app(p.le, &[y, b]);
+    let hyb_fv = d.fresh_fvar();
+    let hyb = d.kernel().fvar(hyb_fv);
+
+    // --- the meet, and its three order facts ---------------------------------
+    let u = d.const_app(p.min, &[x, y]);
+    let hux = d.lemma(p.min_le_left, &[x, y]);
+    let huy = d.lemma(p.min_le_right, &[x, y]);
+    let hau = d.lemma(p.le_min, &[x, y, a, hax, hay]);
+
+    // --- the two ordered legs, at (u, y) and (u, x) --------------------------
+    let leg_y = d.const_app(
+        p.abs_diff_le_of_deriv_bound,
+        &[f, fp, a, b, hf, m, hbnd, u, y, hau, huy, hyb],
+    );
+    let leg_x = d.const_app(
+        p.abs_diff_le_of_deriv_bound,
+        &[f, fp, a, b, hf, m, hbnd, u, x, hau, hux, hxb],
+    );
+
+    let fx = d.apply(f, &[x]);
+    let fy = d.apply(f, &[y]);
+    let fu = d.apply(f, &[u]);
+    let nfu = cneg(d, p, fu);
+    let nfx = cneg(d, p, fx);
+    let py = cadd(d, p, fy, nfu);
+    let px = cadd(d, p, fx, nfu);
+    let qx = cadd(d, p, fu, nfx);
+
+    let nu = cneg(d, p, u);
+    let gy = cadd(d, p, y, nu);
+    let gx = cadd(d, p, x, nu);
+    let bnd_y = cmul(d, p, m, gy);
+    let bnd_x = cmul(d, p, m, gx);
+
+    // |F u − F x| ≤ M·(x − u), from |F x − F u| ≤ M·(x − u).
+    let npx = cneg(d, p, px);
+    let h_negpx = le_abs_neg_of_le_abs(d, p, px, bnd_x, leg_x);
+    let swap_x = d.lemma(p.neg_sub_swap, &[fx, fu]);
+    let swap_x_symm = esymm(d, p, npx, qx, swap_x);
+    let h_qx = abs_le_of_equiv(d, p, qx, npx, bnd_x, swap_x_symm, h_negpx);
+
+    // |F y − F x| ≤ |F y − F u| + |F u − F x| ≤ M·(y − u) + M·(x − u).
+    let aa = cadd(d, p, fy, nfx);
+    let py_qx = cadd(d, p, py, qx);
+    let cm = cancel_middle(d, p, fy, fu, fx);
+    let cm_symm = esymm(d, p, py_qx, aa, cm);
+    let tri = abs_add_le(d, p, py, qx);
+    let abs_py = cabs(d, p, py);
+    let abs_qx = cabs(d, p, qx);
+    let abs_sum = cadd(d, p, abs_py, abs_qx);
+    let bnd_sum = cadd(d, p, bnd_y, bnd_x);
+    let sum_le = d.lemma(p.add_le_add, &[abs_py, bnd_y, abs_qx, bnd_x, leg_y, h_qx]);
+    let abs_pyqx = cabs(d, p, py_qx);
+    let h_sum = d.lemma(p.le_trans, &[abs_pyqx, abs_sum, bnd_sum, tri, sum_le]);
+    let h_abs_aa = abs_le_of_equiv(d, p, aa, py_qx, bnd_sum, cm_symm, h_sum);
+
+    // --- (y − u) + (x − u) ≤ |y − x|, from the meet's universal property -----
+    let nx = cneg(d, p, x);
+    let diff = cadd(d, p, y, nx);
+    let ad = cabs(d, p, diff);
+    let refl_ad = erefl(d, p, ad);
+    let nad = cneg(d, p, ad);
+    let ad_nonneg = d.lemma(p.abs_nonneg, &[diff]);
+
+    let y_sub_ad_le_y = sub_nonneg_bound_self(d, p, y, ad, ad_nonneg);
+    let x_sub_ad_le_x = sub_nonneg_bound_self(d, p, x, ad, ad_nonneg);
+
+    // y − |y − x| ≤ x, from `y − x ≤ |y − x|`.
+    let le_self = d.lemma(p.le_abs_self, &[diff]);
+    let y_sub_ad_le_x = le_shift(d, p, y, x, ad, le_self);
+    let y_sub_ad = cadd(d, p, y, nad);
+    let l1 = d.lemma(p.le_min, &[x, y, y_sub_ad, y_sub_ad_le_x, y_sub_ad_le_y]);
+
+    // x − |y − x| ≤ y, from `x − y ≤ |y − x|` (`neg_le_abs` + `neg_sub_swap`).
+    let ndiff = cneg(d, p, diff);
+    let ny = cneg(d, p, y);
+    let x_ny = cadd(d, p, x, ny);
+    let neg_le = d.lemma(p.neg_le_abs, &[diff]);
+    let swap_d = d.lemma(p.neg_sub_swap, &[y, x]);
+    let h_xy = d.lemma(p.le_congr, &[ndiff, x_ny, ad, ad, swap_d, refl_ad, neg_le]);
+    let x_sub_ad_le_y = le_shift(d, p, x, y, ad, h_xy);
+    let x_sub_ad = cadd(d, p, x, nad);
+    let l2 = d.lemma(p.le_min, &[x, y, x_sub_ad, x_sub_ad_le_x, x_sub_ad_le_y]);
+    let hx = le_shift(d, p, x, ad, u, l2);
+
+    // z := (y + (x − u)) − |y − x| ≤ min x y, whose two legs are `l1` and `hx`.
+    let y_gx = cadd(d, p, y, gx);
+    let z = cadd(d, p, y_gx, nad);
+    let (reg_target, reg_proof) = regroup_sub(d, p, y, gx, ad);
+    let reg_symm = esymm(d, p, z, reg_target, reg_proof);
+
+    let refl_gx = d.lemma(p.le_refl, &[gx]);
+    let st1 = d.lemma(p.add_le_add, &[y_sub_ad, u, gx, gx, l1, refl_gx]);
+    let u_gx = cadd(d, p, u, gx);
+    let cancel_ux = add_sub_cancel_left(d, p, u, x);
+    let z_le_x = d.lemma(
+        p.le_congr,
+        &[reg_target, z, u_gx, x, reg_symm, cancel_ux, st1],
+    );
+
+    let refl_ysub = d.lemma(p.le_refl, &[y_sub_ad]);
+    let st2 = d.lemma(p.add_le_add, &[y_sub_ad, y_sub_ad, gx, ad, refl_ysub, hx]);
+    let ysub_ad = cadd(d, p, y_sub_ad, ad);
+    let cancel_yad = sub_add_cancel_right(d, p, y, ad);
+    let z_le_y = d.lemma(
+        p.le_congr,
+        &[reg_target, z, ysub_ad, y, reg_symm, cancel_yad, st2],
+    );
+
+    let l3 = d.lemma(p.le_min, &[x, y, z, z_le_x, z_le_y]);
+    let ht0 = le_shift(d, p, y_gx, ad, u, l3);
+    let (tt, reg2_proof) = regroup_sub(d, p, y, gx, u);
+    let ygx_nu = cadd(d, p, y_gx, nu);
+    let ht = d.lemma(
+        p.le_congr,
+        &[ygx_nu, tt, ad, ad, reg2_proof, refl_ad, ht0],
+    );
+
+    // --- multiply the domain bound through by M ------------------------------
+    let ld = d.lemma(p.left_distrib, &[m, gy, gx]);
+    let m_tt = cmul(d, p, m, tt);
+    let ld_symm = esymm(d, p, m_tt, bnd_sum, ld);
+    let abs_aa = cabs(d, p, aa);
+    let refl_abs_aa = erefl(d, p, abs_aa);
+    let h_abs_aa2 = d.lemma(
+        p.le_congr,
+        &[abs_aa, abs_aa, bnd_sum, m_tt, refl_abs_aa, ld_symm, h_abs_aa],
+    );
+    let m_ad = cmul(d, p, m, ad);
+    let hmul = d.lemma(p.mul_le_mul_of_nonneg_left, &[m, tt, ad, hm0, ht]);
+    let body = d.lemma(p.le_trans, &[abs_aa, m_tt, m_ad, h_abs_aa2, hmul]);
+
+    let value = {
+        let with_hyb = d.lam_fv(hyb_fv, hyb_ty, body);
+        let with_hay = d.lam_fv(hay_fv, hay_ty, with_hyb);
+        let with_hxb = d.lam_fv(hxb_fv, hxb_ty, with_hay);
+        let with_hax = d.lam_fv(hax_fv, hax_ty, with_hxb);
+        let with_y = d.lam_fv(y_fv, carrier, with_hax);
+        let with_x = d.lam_fv(x_fv, carrier, with_y);
+        let with_hbnd = d.lam_fv(hbnd_fv, hbnd_ty, with_x);
+        let with_hm0 = d.lam_fv(hm0_fv, hm0_ty, with_hbnd);
+        let with_m = d.lam_fv(m_fv, carrier, with_hm0);
+        let with_hf = d.lam_fv(hf_fv, hf_ty, with_m);
+        let with_b = d.lam_fv(b_fv, carrier, with_hf);
+        let with_a = d.lam_fv(a_fv, carrier, with_b);
+        let with_fp = d.lam_fv(fp_fv, func_ty, with_a);
+        d.lam_fv(f_fv, func_ty, with_fp)
+    };
+    let ty = {
+        let concl = d.const_app(p.le, &[abs_aa, m_ad]);
+        let after_hyb = d.arrow(hyb_ty, concl);
+        let after_hay = d.arrow(hay_ty, after_hyb);
+        let after_hxb = d.arrow(hxb_ty, after_hay);
+        let after_hax = d.arrow(hax_ty, after_hxb);
+        let over_y = d.pi_fv(y_fv, carrier, after_hax);
+        let over_x = d.pi_fv(x_fv, carrier, over_y);
+        let after_hbnd = d.arrow(hbnd_ty, over_x);
+        let after_hm0 = d.arrow(hm0_ty, after_hbnd);
+        let over_m = d.pi_fv(m_fv, carrier, after_hm0);
+        let after_hf = d.arrow(hf_ty, over_m);
+        let over_b = d.pi_fv(b_fv, carrier, after_hf);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        let over_fp = d.pi_fv(fp_fv, func_ty, over_a);
+        d.pi_fv(f_fv, func_ty, over_fp)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.lipschitz_of_deriv_bound,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}

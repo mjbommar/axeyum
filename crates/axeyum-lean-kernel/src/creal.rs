@@ -5697,6 +5697,37 @@ pub struct CRealPrelude {
     /// the tail. See `creal/derivative.rs`'s own section header for what is
     /// still missing above it.
     pub abs_diff_le_of_deriv_bound: NameId,
+    /// `CReal.lipschitz_of_deriv_bound : ∀ F F' a b, HasDerivativeOn F F' a b →
+    /// ∀ M, le zero M → (∀ z, le a z → le z b → le (abs (F' z)) M) → ∀ x y,
+    /// le a x → le x b → le a y → le y b →
+    /// le (abs (add (F y) (neg (F x)))) (mul M (abs (add y (neg x))))`
+    /// (`creal/derivative.rs`) — [`Self::abs_diff_le_of_deriv_bound`] with its
+    /// endpoints **unordered**, which is the form a derivative consumer can
+    /// actually use: `deriv_spec_body` quantifies `x` and `y` independently
+    /// over `[a, b]`, and `le x y ∨ le y x` is a decision on the sign of a real
+    /// this development does not have.
+    ///
+    /// No case split, and no lattice identity. `u := min x y` lies below BOTH
+    /// endpoints and inside `[a, b]` ([`Self::le_min`] from `a ≤ x`, `a ≤ y`),
+    /// so the ordered inequality applies to `(u, x)` and to `(u, y)`
+    /// separately and the triangle inequality through `F u` gives
+    /// `|F y − F x| ≤ M·((y − u) + (x − u))`. The constant stays EXACT because
+    /// `(y − u) + (x − u) ≤ |y − x|` follows from the meet's universal property
+    /// alone — three [`Self::le_min`] applications whose legs are
+    /// [`Self::le_abs_self`], [`Self::neg_le_abs`] + [`Self::neg_sub_swap`],
+    /// and [`Self::abs_nonneg`] — so `min` is never unfolded to its pointwise
+    /// `Rat.min` representation.
+    ///
+    /// `le zero M` is not removable: the last step multiplies the domain bound
+    /// through by `M` ([`Self::mul_le_mul_of_nonneg_left`]). It is free for
+    /// every caller, `M` being a magnitude bound, but deriving it here would
+    /// need `le a b` to have a point to evaluate at.
+    ///
+    /// This is the tail estimate a "uniform limit of derivatives" theorem
+    /// needs: `Fₖ − Fₙ` has derivative `Fₖ' − Fₙ'`, uniformly small, and the
+    /// pair `(x, y)` it must be applied at comes from `deriv_spec_body` in no
+    /// particular order.
+    pub lipschitz_of_deriv_bound: NameId,
 }
 
 impl CRealPrelude {
@@ -6279,6 +6310,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         mesh_max_step_le: kernel.name_str(creal, "meshMax_step_le"),
         mesh_max_mono: kernel.name_str(creal, "meshMax_mono"),
         abs_diff_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_le_of_deriv_bound"),
+        lipschitz_of_deriv_bound: kernel.name_str(creal, "lipschitz_of_deriv_bound"),
     }
 }
 
@@ -8538,6 +8570,48 @@ const STEPS: &[BuildStep] = &[
         ],
         provides: &[|p: CRealPrelude| p.abs_diff_le_of_deriv_bound],
         run: derivative::declare_abs_diff_le_of_deriv_bound,
+    },
+    BuildStep {
+        label: "derivative::declare_lipschitz_of_deriv_bound",
+        requires: &[
+            |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.abs_congr,
+            |p: CRealPrelude| p.abs_diff_le_of_deriv_bound,
+            |p: CRealPrelude| p.abs_le,
+            |p: CRealPrelude| p.abs_nonneg,
+            |p: CRealPrelude| p.add,
+            |p: CRealPrelude| p.add_assoc,
+            |p: CRealPrelude| p.add_comm,
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.creal,
+            |p: CRealPrelude| p.equiv,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.has_derivative_on,
+            |p: CRealPrelude| p.le,
+            |p: CRealPrelude| p.le_abs_self,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_min,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.left_distrib,
+            |p: CRealPrelude| p.min,
+            |p: CRealPrelude| p.min_le_left,
+            |p: CRealPrelude| p.min_le_right,
+            |p: CRealPrelude| p.mul,
+            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
+            |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.neg_congr,
+            |p: CRealPrelude| p.neg_le_abs,
+            |p: CRealPrelude| p.neg_sub_swap,
+            |p: CRealPrelude| p.zero,
+        ],
+        provides: &[|p: CRealPrelude| p.lipschitz_of_deriv_bound],
+        run: derivative::declare_lipschitz_of_deriv_bound,
     },
     BuildStep {
         label: "integral::declare_fine_sample_in_bounds",
