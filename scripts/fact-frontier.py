@@ -1456,11 +1456,28 @@ def main() -> int:
                            missing_by_fact.get(fact["id"])))
 
     if kernel_index is None:
+        # Say WHICH of the two reasons it is. They call for the same action but
+        # they are not the same fact, and reporting "no prebuilt binary" about a
+        # binary that is sitting right there sends the reader hunting a missing
+        # file. A stale binary is the more dangerous case anyway: believed, it
+        # reports definitions that DO exist as absent.
+        if not KERNEL_PROJECTION_BIN.exists():
+            why = f"no prebuilt binary at {KERNEL_PROJECTION_BIN.relative_to(ROOT)}"
+        elif kernel_projection_is_stale(KERNEL_PROJECTION_BIN):
+            why = (
+                f"{KERNEL_PROJECTION_BIN.relative_to(ROOT)} is STALE — a kernel "
+                "source is newer than it, so it would answer about an older tree "
+                "and report existing definitions as absent"
+            )
+        else:
+            why = (
+                f"{KERNEL_PROJECTION_BIN.relative_to(ROOT)} did not produce a "
+                "usable index (it failed, timed out, or its output did not validate)"
+            )
         print(
-            f"\nkernel declaration coverage: NOT CHECKED — no prebuilt binary at "
-            f"{KERNEL_PROJECTION_BIN.relative_to(ROOT)}. Build it (`--release`) to "
-            "distinguish 'unproved' from 'cannot be stated' among open facts: "
-            "cargo build --release -p axeyum-lean-kernel "
+            f"\nkernel declaration coverage: NOT CHECKED — {why}. Rebuild it "
+            "(`--release`) to distinguish 'unproved' from 'cannot be stated' among "
+            "open facts: cargo build --release -p axeyum-lean-kernel "
             "--example kernel_declaration_projection"
         )
     elif missing_by_fact:
