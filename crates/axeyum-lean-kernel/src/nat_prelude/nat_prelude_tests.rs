@@ -510,6 +510,8 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.land,
         p.lor_aux,
         p.lor,
+        p.ldiff_aux,
+        p.ldiff,
         p.asc_factorial,
         p.multichoose,
     ]
@@ -934,6 +936,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.lor_zero_left,
         p.lor_zero_right,
         p.lor_three_five,
+        p.ldiff_zero_left,
+        p.ldiff_zero_right,
+        p.ldiff_three_five,
+        p.ldiff_five_three,
         p.asc_factorial_zero,
         p.asc_factorial_succ,
         p.asc_factorial_one,
@@ -6222,7 +6228,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        81 + 411,
+        83 + 415,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -9487,6 +9493,182 @@ fn lor_computes_or_and_its_boundary_theorems_apply() {
     assert!(
         f.k.axiom_footprint(p.lor_aux).is_empty(),
         "Nat.lorAux must rest on zero axioms"
+    );
+}
+
+/// `Nat.ldiff` computes bitwise "AND NOT" at concrete points -- including a
+/// non-diagonal pair (`3 &~ 5 = 2`) and its swap (`5 &~ 3 = 4`), the sharpest
+/// negative control available: `ldiff`, unlike `land`/`lor`, is NOT
+/// commutative, so the same two operands in the other order must produce a
+/// DIFFERENT result -- and the zero boundary in both argument positions,
+/// where (unlike `lor`) only the LEFT side is absorbing (`ldiff 0 n = 0`,
+/// but `ldiff m 0 = m`). Its four boundary/sanity theorems land on the
+/// statement each name promises, each with a negative control this cannot
+/// pass vacuously.
+#[test]
+fn ldiff_computes_and_its_boundary_theorems_apply() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let ldiff = p.ldiff;
+
+    for (m, n, expected) in [
+        (0u32, 0u32, 0u32),
+        (0, 5, 0),
+        (5, 0, 5),
+        (1, 0, 1),
+        (0, 1, 0),
+        (1, 1, 0),
+        (3, 5, 2),
+        (5, 3, 4),
+        (6, 3, 4),
+        (7, 7, 0),
+    ] {
+        let mm = f.num(m);
+        let nn = f.num(n);
+        let lhs = f.const_app(ldiff, &[mm, nn]);
+        let rhs = f.num(expected);
+        assert!(
+            f.k.def_eq(lhs, rhs),
+            "ldiff {m} {n} must reduce to {expected}"
+        );
+    }
+
+    // Negative controls: `3 &~ 5 = 2`, not `1` (the AND-shaped wrong answer)
+    // and not `6` (`5 &~ 3`, the swapped-operand result -- the asymmetry
+    // itself is the discriminant).
+    let three = f.num(3);
+    let five = f.num(5);
+    let ldiff_three_five = f.const_app(ldiff, &[three, five]);
+    let bad_one = f.num(1);
+    assert!(
+        !f.k.def_eq(ldiff_three_five, bad_one),
+        "negative control: ldiff 3 5 is 2, not 1"
+    );
+    let bad_four = f.num(4);
+    assert!(
+        !f.k.def_eq(ldiff_three_five, bad_four),
+        "negative control: ldiff 3 5 is 2, not 4 (that is ldiff 5 3)"
+    );
+
+    // ldiff_zero_left : Eq (ldiff 0 n) 0
+    {
+        let seven = f.num(7);
+        let zero = f.num(0);
+        let applied = f.const_app(p.ldiff_zero_left, &[seven]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("ldiff_zero_left must type-check: {shown}")
+        });
+        let lhs = f.const_app(ldiff, &[zero, seven]);
+        let want = f.eq(lhs, zero);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "ldiff_zero_left must state Eq (ldiff 0 7) 0"
+        );
+        // Negative control: the statement must not claim the wrong value.
+        let bad_want = f.eq(lhs, seven);
+        assert!(
+            !f.k.def_eq(inferred, bad_want),
+            "negative control: ldiff_zero_left must not also state Eq (ldiff 0 7) 7"
+        );
+        assert!(
+            f.k.axiom_footprint(p.ldiff_zero_left).is_empty(),
+            "ldiff_zero_left must rest on zero axioms"
+        );
+    }
+
+    // ldiff_zero_right : Eq (ldiff m 0) m
+    {
+        let nine = f.num(9);
+        let zero = f.num(0);
+        let applied = f.const_app(p.ldiff_zero_right, &[nine]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("ldiff_zero_right must type-check: {shown}")
+        });
+        let lhs = f.const_app(ldiff, &[nine, zero]);
+        let want = f.eq(lhs, nine);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "ldiff_zero_right must state Eq (ldiff 9 0) 9"
+        );
+        let bad_want = f.eq(lhs, zero);
+        assert!(
+            !f.k.def_eq(inferred, bad_want),
+            "negative control: ldiff_zero_right must not also state Eq (ldiff 9 0) 0"
+        );
+        assert!(
+            f.k.axiom_footprint(p.ldiff_zero_right).is_empty(),
+            "ldiff_zero_right must rest on zero axioms"
+        );
+    }
+
+    // ldiff_three_five : Eq (ldiff 3 5) 2
+    {
+        let applied = f.const_app(p.ldiff_three_five, &[]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("ldiff_three_five must type-check: {shown}")
+        });
+        let three = f.num(3);
+        let five = f.num(5);
+        let lhs = f.const_app(ldiff, &[three, five]);
+        let two = f.num(2);
+        let want = f.eq(lhs, two);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "ldiff_three_five must state Eq (ldiff 3 5) 2"
+        );
+        let bad_want = f.eq(lhs, five);
+        assert!(
+            !f.k.def_eq(inferred, bad_want),
+            "negative control: ldiff_three_five must not also state Eq (ldiff 3 5) 5"
+        );
+        assert!(
+            f.k.axiom_footprint(p.ldiff_three_five).is_empty(),
+            "ldiff_three_five must rest on zero axioms"
+        );
+    }
+
+    // ldiff_five_three : Eq (ldiff 5 3) 4 -- the asymmetry theorem: same two
+    // operands as ldiff_three_five, swapped, and NOT the same answer.
+    {
+        let applied = f.const_app(p.ldiff_five_three, &[]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("ldiff_five_three must type-check: {shown}")
+        });
+        let three = f.num(3);
+        let five = f.num(5);
+        let lhs = f.const_app(ldiff, &[five, three]);
+        let four = f.num(4);
+        let want = f.eq(lhs, four);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "ldiff_five_three must state Eq (ldiff 5 3) 4"
+        );
+        // The sharpest negative control this definition can carry: the
+        // swapped-operand result must NOT equal ldiff_three_five's value.
+        let two = f.num(2);
+        let bad_want = f.eq(lhs, two);
+        assert!(
+            !f.k.def_eq(inferred, bad_want),
+            "negative control: ldiff_five_three must not also state Eq (ldiff 5 3) 2 \
+             (that is ldiff 3 5 -- ldiff is not commutative)"
+        );
+        assert!(
+            f.k.axiom_footprint(p.ldiff_five_three).is_empty(),
+            "ldiff_five_three must rest on zero axioms"
+        );
+    }
+
+    assert!(
+        f.k.axiom_footprint(ldiff).is_empty(),
+        "Nat.ldiff must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.ldiff_aux).is_empty(),
+        "Nat.ldiffAux must rest on zero axioms"
     );
 }
 

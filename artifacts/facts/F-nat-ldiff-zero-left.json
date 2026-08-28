@@ -1,0 +1,61 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- ldiff_zero_left 2>/dev/null | grep -Ec '^Nat\\.ldiff_zero_left[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.ldiff_zero_left",
+      "kernel_declaration": "Nat.ldiff_zero_left",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. `Nat.ldiff m n := Nat.ldiffAux m m n` (fuel `m`); at `m = 0` the outer `Nat.rec` on the fuel argument is already at its base case, which is `ldiffAux`'s constant-`0` row (the SAME shape `Nat.land` uses, not `Nat.lor`'s corrected `n`-returning row -- see `nat_prelude::ldiff`'s module doc for why: `m` is both the fuel-sized operand AND `ldiff`'s absorbing-zero operand, `ldiff 0 n = 0` for every `n`, so ignoring the leftover `n`-argument is exactly as safe as it is for `land`), so `ldiffAux 0 0 n` iota-reduces directly to `0` regardless of `n`'s shape -- the proof is `Eq.refl`, no induction and no case-split combinator. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the count is tested, so the exit status depends on what the run found. Anchored with `^Nat\\.ldiff_zero_left[[:space:]]` (verified exactly 1 row) so a future sibling name sharing the `ldiff_zero_left` prefix cannot inflate the count.",
+      "supports": "ldiff(0, n) = 0"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::ldiff_computes_and_its_boundary_theorems_apply",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "id": "compute-Nat.ldiff_zero_left",
+      "kernel_declaration": "Nat.ldiff",
+      "kind": "kernel-term",
+      "notes": "`Kernel::def_eq` reduces `ldiff 0 n` at n in {0, 5, 1} to 0 directly (definition unfolding, no boundary theorem invoked), and separately confirms `Nat.ldiff_zero_left`'s ADMITTED TYPE (via `Kernel::infer`, instantiated at n = 7) is exactly `Eq (ldiff 0 7) 0` -- with a negative control asserting the inferred type must NOT def_eq `Eq (ldiff 0 7) 7` (the pass-through wrong answer, i.e. `lor`'s shape at this same boundary), so this cannot pass on a statement claiming the wrong (OR-shaped) value.",
+      "supports": "the equation instantiates correctly and states the value 0, not an arbitrary one"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.ldiff_zero_left",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. `Nat.ldiffAux` uses the same structural fuel device (`Nat.rec` on the fuel argument) as `Nat.landAux`/`Nat.lorAux`/`Nat.logAux`/`Nat.testBitAux`/`Nat.sizeAux` rather than Mathlib's well-founded `Nat.bitwise`, so nothing here needs `WellFounded`/`Quot.sound`/`propext`; this command is what makes the axiom-freedom claim falsifiable rather than asserted. Measured with `Nat.ldiff` landed: `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0"
+    ],
+    "language": "lean4",
+    "statement": "theorem Nat.ldiff_zero_left : ((x0 : AxNat) -> Eq.{1} AxNat (AxNat.ldiff AxNat.zero x0) AxNat.zero)"
+  },
+  "id": "F:nat-ldiff-zero-left",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*) -- the `nat` prelude's trusted surface measures zero.\n\nThis statement could not be expressed in this kernel at all before this lane: `Nat.ldiff`/`Nat.ldiffAux` did not exist. `Nat.ldiff m n` is bitwise \"m AND NOT n\", landed directly rather than through the general `Nat.bitwise` Mathlib routes `Nat.ldiff` through, following `Nat.land`'s and `Nat.lor`'s precedent (`F:nat-land-zero-left`, `F:nat-lor-zero-left`). `Nat.ldiff` has an absorbing zero on exactly ONE side (`ldiff 0 n = 0`, but `ldiff m 0 = m`, NOT 0), and working that out before writing kernel terms determined every shape choice: the fuel-exhaustion base case takes `Nat.land`'s shape (constant `0`, not `Nat.lor`'s corrected `n`-returning row) because `m` -- the operand `ldiffAux m m n` sizes fuel against -- is exactly the absorbing-zero operand, so by the time the outer `Nat.rec` on fuel is exhausted the current `m`-argument is guaranteed already `0` (same invariant `land.rs`/`lor.rs` both establish), and `ldiff(0, anything) = 0` regardless. The inner succ-row guard is a genuine HYBRID of both siblings: the `n = 0` branch returns `m` unchanged (`lor`'s shape, since `ldiff m 0 = m`), the `m = 0` branch returns `0` (`land`'s shape, since `ldiff 0 n = 0`). The per-bit combinator reuses `Nat.beq`/`bool_select_nat` (already load-bearing in this same term for the zero-guards) rather than `land`'s product or `lor`'s `max` -- see `nat_prelude::ldiff`'s module doc for the full derivation.\n\nThis fact does not flip `F:ml430-nat-ldiff-bit-6be49bb8` (the Mathlib mirror fact) by hand: this prelude's `Nat.ldiff` is a fresh construction, not Mathlib's, and that mirror fact's premise (`Nat.bitwise`) is not established here. The existence of the DEFINITIONS `Nat.ldiff`/`Nat.ldiffAux` is entailed by this row rather than separately checked: the statement mentions `AxNat.ldiff`, and `Kernel::add_declaration` cannot admit a type naming a constant the environment does not contain.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane 226-nat-ldiff",
+    "source": "one of four boundary/sanity theorems `declare_ldiff_all` (`crates/axeyum-lean-kernel/src/nat_prelude/ldiff.rs`) admits alongside the `Nat.ldiff`/`Nat.ldiffAux` definitions"
+  },
+  "schema_version": 1,
+  "statement": "The bitwise AND-NOT of 0 with any natural number n is 0.",
+  "title": "ldiff(0, n) = 0"
+}

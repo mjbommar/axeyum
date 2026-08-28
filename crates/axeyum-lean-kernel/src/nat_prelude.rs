@@ -158,6 +158,7 @@ mod helpers;
 mod irrational;
 mod land;
 mod lcm;
+mod ldiff;
 mod log;
 mod lor;
 mod modular;
@@ -228,6 +229,7 @@ use lcm::{
     declare_coprime_lcm_eq_mul, declare_dvd_antisymm, declare_gauss_lemma, declare_lcm,
     declare_lcm_comm, declare_lcm_dvd,
 };
+use ldiff::declare_ldiff_all;
 use log::declare_log_all;
 use lor::declare_lor_all;
 use modular::declare_modular_congruence;
@@ -2448,6 +2450,37 @@ pub struct NatPrelude {
     /// `0b011 ||| 0b101 = 0b111`, deliberately discriminating from
     /// `land_three_five`'s `3 &&& 5 = 1`.
     pub lor_three_five: NameId,
+    /// `Nat.ldiffAux : Nat → Nat → Nat → Nat`, `ldiffAux fuel m n`: the same
+    /// fuel-recursion device as `landAux`/`lorAux`, fuel-exhaustion base
+    /// case `landAux`'s shape (constant `0`) because `m` — the fuel-sized
+    /// operand — is also `ldiff`'s absorbing-zero operand. `ldiffAux 0 m n
+    /// ≡ 0`; `ldiffAux (succ f) m n ≡ if n = 0 then m else if m = 0 then 0
+    /// else 2 * ldiffAux f (m/2) (n/2) + (if (n%2) = 0 then (m%2) else 0)`.
+    /// Not the public name; [`Self::ldiff`] supplies fuel `m` itself. See
+    /// `nat_prelude::ldiff` for the full derivation.
+    pub ldiff_aux: NameId,
+    /// `Nat.ldiff m n := Nat.ldiffAux m m n` — bitwise "AND NOT" (`Mathlib`:
+    /// `Nat.ldiff`, via the general `Nat.bitwise`). Landed directly rather
+    /// than through `Nat.bitwise`, same as `land`/`lor`.
+    pub ldiff: NameId,
+    /// `Nat.ldiff_zero_left : ∀ n, Eq (ldiff 0 n) 0` — `refl`: fuel is
+    /// `m = 0`, so the outer `Nat.rec` hits `ldiffAux`'s constant-`0` base
+    /// case immediately, regardless of `n`. Not a specific Mathlib name
+    /// (this prelude's `ldiff` is not Mathlib's).
+    pub ldiff_zero_left: NameId,
+    /// `Nat.ldiff_zero_right : ∀ m, Eq (ldiff m 0) m` — induction on `m` to
+    /// expose the fuel's constructor; each case is `refl`, no induction
+    /// hypothesis needed, because the outermost `n = 0` guard collapses the
+    /// term to `m` (unchanged) regardless of the fuel predecessor.
+    pub ldiff_zero_right: NameId,
+    /// `Nat.ldiff_three_five : Eq (ldiff 3 5) 2` — concrete sanity check,
+    /// `0b011 &~ 0b101 = 0b010`.
+    pub ldiff_three_five: NameId,
+    /// `Nat.ldiff_five_three : Eq (ldiff 5 3) 4` — the asymmetry check:
+    /// `0b101 &~ 0b011 = 0b100`, deliberately differing from
+    /// `ldiff_three_five`'s `2` since, unlike `land`/`lor`, `ldiff` is not
+    /// commutative.
+    pub ldiff_five_three: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -3006,6 +3039,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             lor_zero_left: kernel.name_str(nat, "lor_zero_left"),
             lor_zero_right: kernel.name_str(nat, "lor_zero_right"),
             lor_three_five: kernel.name_str(nat, "lor_three_five"),
+            ldiff_aux: kernel.name_str(nat, "ldiffAux"),
+            ldiff: kernel.name_str(nat, "ldiff"),
+            ldiff_zero_left: kernel.name_str(nat, "ldiff_zero_left"),
+            ldiff_zero_right: kernel.name_str(nat, "ldiff_zero_right"),
+            ldiff_three_five: kernel.name_str(nat, "ldiff_three_five"),
+            ldiff_five_three: kernel.name_str(nat, "ldiff_five_three"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -3181,6 +3220,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // (`declare_executable_division`), all far above; nothing needs
         // `Nat.lor`, so it goes last too.
         declare_lor_all(&mut d, &p)?;
+        // Needs `Nat.add`/`Nat.mul`/`Nat.beq` (`declare_arithmetic`/
+        // `declare_boolean_equality`) and `Nat.div`/`Nat.mod`
+        // (`declare_executable_division`), all far above; nothing needs
+        // `Nat.ldiff`, so it goes last too.
+        declare_ldiff_all(&mut d, &p)?;
         // Needs `Nat.add`/`Nat.mul` (`declare_arithmetic`) and `Nat.mul_one`
         // (`declare_multiplicative_theorems`), both far above; nothing needs
         // `Nat.ascFactorial`, so it goes last too.
