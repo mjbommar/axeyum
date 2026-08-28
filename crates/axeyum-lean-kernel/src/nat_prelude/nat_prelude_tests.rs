@@ -504,6 +504,7 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.sqrt,
         p.clog_aux,
         p.clog,
+        p.bit,
     ]
 }
 
@@ -890,6 +891,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.clog_one_right,
         p.log_aux_le_fuel,
         p.log_le_self,
+        p.bit_false,
+        p.bit_true,
+        p.bit_true_pos,
+        p.bit_false_le_bit_true,
     ]
 }
 
@@ -6172,7 +6177,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        73 + 369,
+        74 + 373,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -8789,6 +8794,155 @@ fn sqrt_computes_and_its_boundary_equations_apply() {
     assert!(
         f.k.axiom_footprint(p.sqrt).is_empty(),
         "Nat.sqrt must rest on zero axioms"
+    );
+}
+
+/// `Nat.bit` computes at concrete points -- `bit false n = 2*n`,
+/// `bit true n = 2*n + 1` -- and its four boundary theorems land on the
+/// statement each name promises, each with a transposed/mismatched negative
+/// control so this cannot pass vacuously.
+#[test]
+fn bit_computes_and_its_boundary_theorems_apply() {
+    let mut f = Fixture::new();
+    let bit = f.p.bit;
+    let true_ = f.bool_true();
+    let false_ = f.bool_false();
+
+    for (test, value, expected) in [
+        (false_, 0u32, 0u32),
+        (true_, 0, 1),
+        (false_, 1, 2),
+        (true_, 1, 3),
+        (false_, 6, 12),
+        (true_, 6, 13),
+    ] {
+        let n = f.num(value);
+        let lhs = f.const_app(bit, &[test, n]);
+        let rhs = f.num(expected);
+        assert!(
+            f.k.def_eq(lhs, rhs),
+            "bit _ {value} must reduce to {expected}"
+        );
+    }
+
+    // Negative control: transposing the two branches must not also def_eq.
+    let six = f.num(6);
+    let bit_false_six = f.const_app(bit, &[false_, six]);
+    let thirteen = f.num(13);
+    assert!(
+        !f.k.def_eq(bit_false_six, thirteen),
+        "negative control: bit false 6 is 12, not 13 -- def_eq must not be vacuous"
+    );
+    let bit_true_six = f.const_app(bit, &[true_, six]);
+    let twelve = f.num(12);
+    assert!(
+        !f.k.def_eq(bit_true_six, twelve),
+        "negative control: bit true 6 is 13, not 12"
+    );
+
+    let p = f.p;
+
+    // bit_false : Eq (bit false n) (mul 2 n)
+    {
+        let applied = f.const_app(p.bit_false, &[six]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("bit_false must type-check: {shown}")
+        });
+        let lhs = f.const_app(bit, &[false_, six]);
+        let two = f.num(2);
+        let rhs = f.const_app(p.mul, &[two, six]);
+        let want = f.eq(lhs, rhs);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "bit_false must state Eq (bit false 6) (mul 2 6)"
+        );
+        // Negative control: bit_false's statement must not also match bit true.
+        let bad_lhs = f.const_app(bit, &[true_, six]);
+        let bad_want = f.eq(bad_lhs, rhs);
+        assert!(
+            !f.k.def_eq(inferred, bad_want),
+            "negative control: bit_false must not also prove Eq (bit true 6) (mul 2 6)"
+        );
+        assert!(
+            f.k.axiom_footprint(p.bit_false).is_empty(),
+            "bit_false must rest on zero axioms"
+        );
+    }
+
+    // bit_true : Eq (bit true n) (add (mul 2 n) 1)
+    {
+        let applied = f.const_app(p.bit_true, &[six]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("bit_true must type-check: {shown}")
+        });
+        let lhs = f.const_app(bit, &[true_, six]);
+        let two = f.num(2);
+        let doubled = f.const_app(p.mul, &[two, six]);
+        let one = f.num(1);
+        let rhs = f.const_app(p.add, &[doubled, one]);
+        let want = f.eq(lhs, rhs);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "bit_true must state Eq (bit true 6) (add (mul 2 6) 1)"
+        );
+        assert!(
+            f.k.axiom_footprint(p.bit_true).is_empty(),
+            "bit_true must rest on zero axioms"
+        );
+    }
+
+    // bit_true_pos : Lt 0 (bit true n)
+    {
+        let applied = f.const_app(p.bit_true_pos, &[six]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("bit_true_pos must type-check: {shown}")
+        });
+        let zero = f.num(0);
+        let lhs = f.const_app(bit, &[true_, six]);
+        let want = f.lt(zero, lhs);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "bit_true_pos must state Lt 0 (bit true 6)"
+        );
+        assert!(
+            f.k.axiom_footprint(p.bit_true_pos).is_empty(),
+            "bit_true_pos must rest on zero axioms"
+        );
+    }
+
+    // bit_false_le_bit_true : Le (bit false n) (bit true n)
+    {
+        let applied = f.const_app(p.bit_false_le_bit_true, &[six]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("bit_false_le_bit_true must type-check: {shown}")
+        });
+        let lhs = f.const_app(bit, &[false_, six]);
+        let rhs = f.const_app(bit, &[true_, six]);
+        let want = f.le(lhs, rhs);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "bit_false_le_bit_true must state Le (bit false 6) (bit true 6)"
+        );
+        // Negative control: the reverse inequality is false (13 <= 12 is
+        // false), so the theorem's statement must not def_eq it either.
+        let reversed = f.le(rhs, lhs);
+        assert!(
+            !f.k.def_eq(inferred, reversed),
+            "negative control: bit_false_le_bit_true must not also state Le (bit true 6) (bit false 6)"
+        );
+        assert!(
+            f.k.axiom_footprint(p.bit_false_le_bit_true).is_empty(),
+            "bit_false_le_bit_true must rest on zero axioms"
+        );
+    }
+
+    assert!(
+        f.k.axiom_footprint(bit).is_empty(),
+        "Nat.bit must rest on zero axioms"
     );
 }
 

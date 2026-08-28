@@ -1,0 +1,61 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- bit_false 2>/dev/null | grep -Ec '^Nat\\.bit_false[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.bit_false",
+      "kernel_declaration": "Nat.bit_false",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. `Nat.bit b n` is stated `add (mul 2 n) (cond b 1 0)`; at `b = false`, `cond false 1 0` iota-reduces to `0`, and `Nat.add`'s own zero case (`add x zero ≡ x`) then collapses the sum to `mul 2 n`. The proof is `Eq.refl`; the kernel closes it by delta+iota alone, no case-split combinator and no induction. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the count is tested, so the exit status depends on what the run found. `bit_false` is a substring of `bit_false_le_bit_true` too, which is why the pattern is anchored with `^Nat\\.bit_false[[:space:]]` rather than a bare substring match -- verified 2026-08-28: the unanchored grep returns 2 rows for this query, the anchored one returns exactly 1.",
+      "supports": "bit(false, n) = 2*n"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::bit_computes_and_its_boundary_theorems_apply",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "id": "compute-Nat.bit_false",
+      "kernel_declaration": "Nat.bit",
+      "kind": "kernel-term",
+      "notes": "`Kernel::def_eq` reduces `bit false n` at n in {0, 1, 6} to {0, 2, 12} directly (definition unfolding, no boundary theorem invoked), and separately confirms `Nat.bit_false`'s ADMITTED TYPE (via `Kernel::infer`) is exactly `Eq (bit false 6) (mul 2 6)` -- with a negative control substituting `bit true 6` for `bit false 6` on the left, which must NOT def_eq the inferred type, so this cannot pass on a statement about the wrong branch.",
+      "supports": "the equation instantiates correctly and names the false branch, not the true one"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.bit_false",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. Unlike `Nat.log`/`Nat.sqrt`/`Nat.clog`, `Nat.bit` needed no fuel device at all -- it is a plain non-recursive lambda over `Nat.add`/`Nat.mul`/`Bool.rec`, so nothing here was ever at risk of needing `WellFounded`/`Quot.sound`/`propext`; this command is what makes the axiom-freedom claim falsifiable rather than asserted.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0"
+    ],
+    "language": "lean4",
+    "statement": "theorem Nat.bit_false : ((x0 : AxNat) -> Eq.{1} AxNat (AxNat.bit Bool.false x0) (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))"
+  },
+  "id": "F:nat-bit-false",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*) -- the `nat` prelude's trusted surface measures zero.\n\nThis statement could not be expressed in this kernel at all before 2026-08-28: `Nat.bit` did not exist, and `Nat.bit`/`Nat.bitwise`/`Nat.bits`/`Nat.ldiff` were all BLOCKED on the frontier as naming an undeclared kernel definition. Mathlib defines `Nat.bit b n := cond b (2*n+1) (2*n)`, a `cond`-outermost case split; `nat_prelude/bits.rs` instead states `bit b n := add (mul 2 n) (cond b 1 0)`, an `add`-outermost form that normalizes to the SAME value at every literal `b` (delta+iota) and additionally lets `Nat.bit_true_pos`/`Nat.bit_false_le_bit_true` be proved as direct defeq corollaries of already-proved generic order lemmas, with no case-split combinator.\n\nThis fact does not flip any `F:ml430-nat-bitwise-*`/`F:ml430-nat-land-bit-*`/`F:ml430-nat-lor-bit-*`/`F:ml430-nat-ldiff-bit-*` mirror fact by hand: those all additionally need `Nat.bitwise`/`Nat.land`/`Nat.lor`/`Nat.ldiff`, none of which this lane declares, so they remain open. The existence of the DEFINITION `Nat.bit` is entailed by this row rather than separately checked: the statement mentions `AxNat.bit`, and `Kernel::add_declaration` cannot admit a type naming a constant the environment does not contain.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane 207-nat-bitwise",
+    "source": "one of two definitional boundary equations `declare_bit_all` (`crates/axeyum-lean-kernel/src/nat_prelude/bits.rs`) admits alongside the `Nat.bit` definition"
+  },
+  "schema_version": 1,
+  "statement": "Appending the bit `false` to the little end of `n` equals `2 * n`.",
+  "title": "bit(false, n) = 2n"
+}
