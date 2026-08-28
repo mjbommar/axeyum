@@ -1221,13 +1221,30 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   admission "requires a toolchain this environment doesn't have" and declined to
   register. Nothing was wrong except the probe.
 
-  **The Mathlib and lean4export checkouts are a separate question, and they live
-  on s5 only** — `/home/mjbommar/lean-import-scale/{mathlib4,lean4export}`,
-  reachable by `ssh s5` with BatchMode. Measured the same day, both are at exactly
-  the commits the adapter manifests pin (`c5ea0035…`, `a3e35a58…`), and s2/s6/s7
-  have neither. So "can I compile against Mathlib here" and "is Lean installed
-  here" have different answers on the same host, and neither is answered by
-  `command -v`.
+  **The Mathlib and lean4export checkouts are a separate question from whether
+  Lean is installed**, and neither is answered by `command -v`. As of
+  2026-08-22 they existed **on s5 only** —
+  `/home/mjbommar/lean-import-scale/{mathlib4,lean4export}`, reachable by
+  `ssh s5` with BatchMode, both at exactly the commits the adapter manifests
+  pin (`c5ea0035…`, `a3e35a58…`), with s2/s6/s7 having neither.
+
+  **THAT IS NO LONGER TRUE, AND READING IT AS CURRENT COSTS A THIRD OF A
+  LANE'S BUDGET.** Measured 2026-08-28: a lane sized the Lean route as
+  impossible here on exactly this paragraph plus an empty `command -v lean`,
+  then found **s4 can run the entire import route**.
+  `scripts/provision-lean-import-toolchain.sh` provisions it in ~5 minutes —
+  pinned, idempotent, and `--verify` needs no network. A blobless mathlib4 at
+  the pinned commit is 92 MB and the olean cache is already in
+  `~/.cache/mathlib`; `lean4export` builds in under a minute. Verified by the
+  coordinator at `/data0/axeyum/lean-import-toolchain`:
+
+      LEAN_IMPORT_TOOLCHAIN|mathlib=c5ea0035…|lean4export=a3e35a58…|
+                            lean=d024af09…|verdict=PASS
+
+  So: **run `scripts/provision-lean-import-toolchain.sh --verify` before
+  concluding a host cannot do Lean work.** Host-capability prose in this file
+  is a snapshot of the day it was written, and this entry is the second one to
+  go stale in the direction that says "impossible" about something cheap.
 
 - **A BLIND EVALUATION POPULATION IS A SHARED RESOURCE WITH NO OWNER, AND
   TOUCHING ONE MEMBER SPENDS THE WHOLE FAMILY.** `artifacts/autogenesis/nursery-v1.json`
