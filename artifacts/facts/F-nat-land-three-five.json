@@ -1,0 +1,59 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- land_three_five 2>/dev/null | grep -Ec '^Nat\\.land_three_five[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.land_three_five",
+      "kernel_declaration": "Nat.land_three_five",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. `3 = 0b011`, `5 = 0b101`; `land 3 5 = landAux 3 3 5` unfolds through two real fuel steps (`3 & 5 -> 2*(1 & 2) + 1*1`, `1 & 2 -> 2*(0 & 1) + 1*0`, `0 & 1 -> 0` since `m = 0`) to `2*(2*0 + 0) + 1 = 1`, entirely by delta+iota -- the proof is `Eq.refl`. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the count is tested, so the exit status depends on what the run found. Anchored with `^Nat\\.land_three_five[[:space:]]` (verified exactly 1 row).",
+      "supports": "land(3, 5) = 1"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::land_computes_and_its_boundary_theorems_apply",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "id": "compute-Nat.land_three_five",
+      "kernel_declaration": "Nat.land",
+      "kind": "kernel-term",
+      "notes": "`Kernel::def_eq` reduces `land 3 5` to `1` directly (definition unfolding, no boundary theorem invoked), with two explicit negative controls asserting `land 3 5` must NOT def_eq `5` (the wrong-way OR-of-first-operand answer) and must NOT def_eq `7` (the OR of the two operands) -- distinguishing this from a mis-implemented step (e.g. an OR-shaped or negated bit combinator) that `land_one_one` alone, whose single bit position matches on both operands, cannot rule out. Also confirms `Nat.land_three_five`'s ADMITTED TYPE (via `Kernel::infer`) is exactly `Eq (land 3 5) 1`, with the same `5` negative control on the inferred type.",
+      "supports": "the recursive step genuinely computes bitwise AND, including at DIFFERING bit positions, not merely matching ones"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.land_three_five",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. This command is what makes the axiom-freedom claim falsifiable rather than asserted.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [],
+    "language": "lean4",
+    "statement": "theorem Nat.land_three_five : Eq.{1} AxNat (AxNat.land (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero)))))) (AxNat.succ AxNat.zero)"
+  },
+  "id": "F:nat-land-three-five",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*) -- the `nat` prelude's trusted surface measures zero.\n\nThe companion sanity check to `F:nat-land-one-one`: that fact's single set bit matches on both operands (`1 & 1`), so it cannot distinguish a correctly-computed AND from a bug that e.g. returns `1` whenever EITHER operand is odd. `0b011 &&& 0b101 = 0b001` exercises two DIFFERING bit positions (bit 1: `1` vs `0`; bit 2: `0` vs `1`) across two real fuel steps, which a wrong-way combinator would very likely get wrong. See `F:nat-land-zero-left`'s notes for why `Nat.land`/`Nat.landAux` could not be expressed before this lane and why they were built directly rather than through a general `Nat.bitwise`.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane 215-nat-bitwise-2",
+    "source": "one of four boundary/sanity theorems `declare_land_all` (`crates/axeyum-lean-kernel/src/nat_prelude/land.rs`) admits alongside the `Nat.land`/`Nat.landAux` definitions"
+  },
+  "schema_version": 1,
+  "statement": "The bitwise AND of 3 (0b011) and 5 (0b101) is 1 (0b001).",
+  "title": "land(3, 5) = 1"
+}

@@ -155,6 +155,7 @@ mod gcd;
 mod group;
 mod helpers;
 mod irrational;
+mod land;
 mod lcm;
 mod log;
 mod modular;
@@ -218,6 +219,7 @@ use finite_set::declare_finite_set_all;
 use gcd::{declare_executable_gcd, declare_gcd_semantics};
 use group::declare_group_all;
 use irrational::{declare_even_of_even_sq, declare_no_rational_sqrt_two};
+use land::declare_land_all;
 use lcm::{
     declare_coprime_lcm_eq_mul, declare_dvd_antisymm, declare_gauss_lemma, declare_lcm,
     declare_lcm_comm, declare_lcm_dvd,
@@ -2345,6 +2347,36 @@ pub struct NatPrelude {
     /// sides unfold to `mul 2 n` and `succ (mul 2 n)`, so `le_succ` at
     /// `mul 2 n` is accepted directly by defeq.
     pub bit_false_le_bit_true: NameId,
+    /// `Nat.landAux : Nat → Nat → Nat → Nat`, `landAux fuel m n`: structural
+    /// recursion on the fuel (like `logAux`/`testBitAux`/`sizeAux`), carrying
+    /// `m`/`n` through unchanged except for `div _ 2` at each step.
+    /// `landAux 0 m n ≡ 0`; `landAux (succ f) m n ≡ if n = 0 then 0 else if
+    /// m = 0 then 0 else 2 * landAux f (m/2) (n/2) + (m%2)*(n%2)`. Not the
+    /// public name; [`Self::land`] supplies fuel `m` itself. See
+    /// `nat_prelude::land` for the derivation and why the guard checks `n`
+    /// before `m`.
+    pub land_aux: NameId,
+    /// `Nat.land m n := Nat.landAux m m n` — bitwise AND (`Mathlib`:
+    /// `Nat.land`, via the general `Nat.bitwise`). Landed directly rather
+    /// than through a general `Nat.bitwise`, because each bit's AND is a
+    /// `Nat` product (`0` or `1`) and needs no `Bool`/`cond` combinator.
+    pub land: NameId,
+    /// `Nat.land_zero_left : ∀ n, Eq (land 0 n) 0` — `refl`: fuel is
+    /// `m = 0`, so the outer `Nat.rec` is already exhausted. Not a mirror of
+    /// a specific Mathlib name (this prelude's `land` is not Mathlib's).
+    pub land_zero_left: NameId,
+    /// `Nat.land_zero_right : ∀ m, Eq (land m 0) 0` — induction on `m` to
+    /// expose the fuel's constructor; each case is `refl`, no induction
+    /// hypothesis needed, because the outermost `n = 0` guard collapses the
+    /// term regardless of `m`.
+    pub land_zero_right: NameId,
+    /// `Nat.land_one_one : Eq (land 1 1) 1` — concrete sanity check, one fuel
+    /// step, both bits set.
+    pub land_one_one: NameId,
+    /// `Nat.land_three_five : Eq (land 3 5) 1` — concrete sanity check,
+    /// `0b011 &&& 0b101 = 0b001`, exercising differing bit patterns that
+    /// `land_one_one` alone cannot distinguish from a wrong-way step.
+    pub land_three_five: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -2881,6 +2913,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             bit_true: kernel.name_str(nat, "bit_true"),
             bit_true_pos: kernel.name_str(nat, "bit_true_pos"),
             bit_false_le_bit_true: kernel.name_str(nat, "bit_false_le_bit_true"),
+            land_aux: kernel.name_str(nat, "landAux"),
+            land: kernel.name_str(nat, "land"),
+            land_zero_left: kernel.name_str(nat, "land_zero_left"),
+            land_zero_right: kernel.name_str(nat, "land_zero_right"),
+            land_one_one: kernel.name_str(nat, "land_one_one"),
+            land_three_five: kernel.name_str(nat, "land_three_five"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -3040,6 +3078,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `mul_zero`, `mul_one`); nothing needs `Nat.descFactorial`, so it
         // goes last too.
         declare_desc_factorial_all(&mut d, &p)?;
+        // Needs `Nat.add`/`Nat.mul`/`Nat.beq` (`declare_arithmetic`/
+        // `declare_boolean_equality`) and `Nat.div`/`Nat.mod`
+        // (`declare_executable_division`), all far above; nothing needs
+        // `Nat.land`, so it goes last too.
+        declare_land_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {

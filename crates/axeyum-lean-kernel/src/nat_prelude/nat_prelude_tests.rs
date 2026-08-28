@@ -506,6 +506,8 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.clog_aux,
         p.clog,
         p.bit,
+        p.land_aux,
+        p.land,
     ]
 }
 
@@ -918,6 +920,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.bit_true,
         p.bit_true_pos,
         p.bit_false_le_bit_true,
+        p.land_zero_left,
+        p.land_zero_right,
+        p.land_one_one,
+        p.land_three_five,
     ]
 }
 
@@ -6200,7 +6206,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        75 + 395,
+        77 + 399,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -9045,6 +9051,172 @@ fn bit_computes_and_its_boundary_theorems_apply() {
     assert!(
         f.k.axiom_footprint(bit).is_empty(),
         "Nat.bit must rest on zero axioms"
+    );
+}
+
+/// `Nat.land` computes bitwise AND at concrete points -- including a
+/// non-diagonal pair with differing bit patterns (`3 &&& 5 = 1`) and a
+/// self-AND that exercises several fuel steps (`7 &&& 7 = 7`) -- and its
+/// four boundary/sanity theorems land on the statement each name promises,
+/// each with a negative control this cannot pass vacuously.
+#[test]
+fn land_computes_and_its_boundary_theorems_apply() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let land = p.land;
+
+    for (m, n, expected) in [
+        (0u32, 0u32, 0u32),
+        (0, 5, 0),
+        (5, 0, 0),
+        (1, 0, 0),
+        (0, 1, 0),
+        (1, 1, 1),
+        (3, 5, 1),
+        (6, 3, 2),
+        (7, 7, 7),
+    ] {
+        let mm = f.num(m);
+        let nn = f.num(n);
+        let lhs = f.const_app(land, &[mm, nn]);
+        let rhs = f.num(expected);
+        assert!(
+            f.k.def_eq(lhs, rhs),
+            "land {m} {n} must reduce to {expected}"
+        );
+    }
+
+    // Negative controls: `3 &&& 5 = 1`, not `5` (the OR-shaped/first-operand
+    // wrong answer) and not `7` (the OR of the two).
+    let three = f.num(3);
+    let five = f.num(5);
+    let land_three_five = f.const_app(land, &[three, five]);
+    let bad_five = f.num(5);
+    assert!(
+        !f.k.def_eq(land_three_five, bad_five),
+        "negative control: land 3 5 is 1, not 5"
+    );
+    let bad_seven = f.num(7);
+    assert!(
+        !f.k.def_eq(land_three_five, bad_seven),
+        "negative control: land 3 5 is 1, not 7"
+    );
+
+    // land_zero_left : Eq (land 0 n) 0
+    {
+        let seven = f.num(7);
+        let zero = f.num(0);
+        let applied = f.const_app(p.land_zero_left, &[seven]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("land_zero_left must type-check: {shown}")
+        });
+        let lhs = f.const_app(land, &[zero, seven]);
+        let want = f.eq(lhs, zero);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "land_zero_left must state Eq (land 0 7) 0"
+        );
+        // Negative control: the statement must not claim the wrong value.
+        let one = f.num(1);
+        let bad_want = f.eq(lhs, one);
+        assert!(
+            !f.k.def_eq(inferred, bad_want),
+            "negative control: land_zero_left must not also state Eq (land 0 7) 1"
+        );
+        assert!(
+            f.k.axiom_footprint(p.land_zero_left).is_empty(),
+            "land_zero_left must rest on zero axioms"
+        );
+    }
+
+    // land_zero_right : Eq (land m 0) 0
+    {
+        let nine = f.num(9);
+        let zero = f.num(0);
+        let applied = f.const_app(p.land_zero_right, &[nine]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("land_zero_right must type-check: {shown}")
+        });
+        let lhs = f.const_app(land, &[nine, zero]);
+        let want = f.eq(lhs, zero);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "land_zero_right must state Eq (land 9 0) 0"
+        );
+        let one = f.num(1);
+        let bad_want = f.eq(lhs, one);
+        assert!(
+            !f.k.def_eq(inferred, bad_want),
+            "negative control: land_zero_right must not also state Eq (land 9 0) 1"
+        );
+        assert!(
+            f.k.axiom_footprint(p.land_zero_right).is_empty(),
+            "land_zero_right must rest on zero axioms"
+        );
+    }
+
+    // land_one_one : Eq (land 1 1) 1
+    {
+        let applied = f.const_app(p.land_one_one, &[]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("land_one_one must type-check: {shown}")
+        });
+        let one = f.num(1);
+        let lhs = f.const_app(land, &[one, one]);
+        let want = f.eq(lhs, one);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "land_one_one must state Eq (land 1 1) 1"
+        );
+        let zero = f.num(0);
+        let bad_want = f.eq(lhs, zero);
+        assert!(
+            !f.k.def_eq(inferred, bad_want),
+            "negative control: land_one_one must not also state Eq (land 1 1) 0"
+        );
+        assert!(
+            f.k.axiom_footprint(p.land_one_one).is_empty(),
+            "land_one_one must rest on zero axioms"
+        );
+    }
+
+    // land_three_five : Eq (land 3 5) 1
+    {
+        let applied = f.const_app(p.land_three_five, &[]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("land_three_five must type-check: {shown}")
+        });
+        let three = f.num(3);
+        let five = f.num(5);
+        let lhs = f.const_app(land, &[three, five]);
+        let one = f.num(1);
+        let want = f.eq(lhs, one);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "land_three_five must state Eq (land 3 5) 1"
+        );
+        let bad_want = f.eq(lhs, five);
+        assert!(
+            !f.k.def_eq(inferred, bad_want),
+            "negative control: land_three_five must not also state Eq (land 3 5) 5"
+        );
+        assert!(
+            f.k.axiom_footprint(p.land_three_five).is_empty(),
+            "land_three_five must rest on zero axioms"
+        );
+    }
+
+    assert!(
+        f.k.axiom_footprint(land).is_empty(),
+        "Nat.land must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.land_aux).is_empty(),
+        "Nat.landAux must rest on zero axioms"
     );
 }
 

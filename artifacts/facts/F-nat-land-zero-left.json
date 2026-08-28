@@ -1,0 +1,61 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- land_zero_left 2>/dev/null | grep -Ec '^Nat\\.land_zero_left[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.land_zero_left",
+      "kernel_declaration": "Nat.land_zero_left",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. `Nat.land m n := Nat.landAux m m n` (fuel `m`); at `m = 0` the outer `Nat.rec` on the fuel argument is already at its base case, so `landAux 0 0 n` iota-reduces directly to `0` regardless of `n` -- the proof is `Eq.refl`, no induction and no case-split combinator. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the count is tested, so the exit status depends on what the run found. Anchored with `^Nat\\.land_zero_left[[:space:]]` (verified exactly 1 row) so a future sibling name sharing the `land_zero_left` prefix cannot inflate the count.",
+      "supports": "land(0, n) = 0"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::land_computes_and_its_boundary_theorems_apply",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "id": "compute-Nat.land_zero_left",
+      "kernel_declaration": "Nat.land",
+      "kind": "kernel-term",
+      "notes": "`Kernel::def_eq` reduces `land 0 n` at n in {0, 5} to 0 directly (definition unfolding, no boundary theorem invoked), and separately confirms `Nat.land_zero_left`'s ADMITTED TYPE (via `Kernel::infer`, instantiated at n = 7) is exactly `Eq (land 0 7) 0` -- with a negative control asserting the inferred type must NOT def_eq `Eq (land 0 7) 1`, so this cannot pass on a statement claiming the wrong value.",
+      "supports": "the equation instantiates correctly and states the value 0, not an arbitrary one"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.land_zero_left",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. `Nat.landAux` uses the structural fuel device (`Nat.rec` on the fuel argument, exactly `Nat.logAux`/`Nat.testBitAux`/`Nat.sizeAux`'s shape) rather than Mathlib's well-founded `Nat.bitwise`, so nothing here needs `WellFounded`/`Quot.sound`/`propext`; this command is what makes the axiom-freedom claim falsifiable rather than asserted.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0"
+    ],
+    "language": "lean4",
+    "statement": "theorem Nat.land_zero_left : ((x0 : AxNat) -> Eq.{1} AxNat (AxNat.land AxNat.zero x0) AxNat.zero)"
+  },
+  "id": "F:nat-land-zero-left",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*) -- the `nat` prelude's trusted surface measures zero.\n\nThis statement could not be expressed in this kernel at all before this lane: `Nat.land`/`Nat.landAux` did not exist, and `Nat.land` was among the definitions BLOCKED on the frontier. This lane lands `Nat.land` directly rather than the general `Nat.bitwise` (which Mathlib routes `Nat.land` through): `Nat.bitwise` needs a `Bool -> Bool -> Bool` function argument threaded through mismatched-length base cases, substantially more construction than a single lane's \"one definition, landed completely\" scope; `Nat.land` needs no `Bool`/`cond` combinator at all, because each bit's AND is literally the `Nat` product of two values already in `{0, 1}`.\n\nThis fact does not flip `F:ml430-nat-land-comm-7e6ad72e`/`F:ml430-nat-land-assoc-ad4775b8`/`F:ml430-nat-land-bit-b9ab7475` (the Mathlib mirror facts) by hand: this prelude's `Nat.land` is a fresh construction, not Mathlib's, and none of those mirror facts' premises (`Nat.bitwise`, `Nat.bit` composed with `Nat.land`) are established here. The existence of the DEFINITIONS `Nat.land`/`Nat.landAux` is entailed by this row rather than separately checked: the statement mentions `AxNat.land`, and `Kernel::add_declaration` cannot admit a type naming a constant the environment does not contain.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane 215-nat-bitwise-2",
+    "source": "one of four boundary/sanity theorems `declare_land_all` (`crates/axeyum-lean-kernel/src/nat_prelude/land.rs`) admits alongside the `Nat.land`/`Nat.landAux` definitions"
+  },
+  "schema_version": 1,
+  "statement": "The bitwise AND of 0 with any natural number n is 0.",
+  "title": "land(0, n) = 0"
+}

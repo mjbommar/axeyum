@@ -1,0 +1,59 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- land_one_one 2>/dev/null | grep -Ec '^Nat\\.land_one_one[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.land_one_one",
+      "kernel_declaration": "Nat.land_one_one",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. `land 1 1 = landAux 1 1 1`: one fuel step exposes the guard (`n = 0`? no; `m = 0`? no), computes `2 * landAux 0 (1/2) (1/2) + (1%2)*(1%2) = 2*0 + 1 = 1`, entirely by delta+iota -- the proof is `Eq.refl`. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the count is tested, so the exit status depends on what the run found. Anchored with `^Nat\\.land_one_one[[:space:]]` (verified exactly 1 row).",
+      "supports": "land(1, 1) = 1"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::land_computes_and_its_boundary_theorems_apply",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "id": "compute-Nat.land_one_one",
+      "kernel_declaration": "Nat.land",
+      "kind": "kernel-term",
+      "notes": "`Kernel::def_eq` reduces `land 1 1` to `1` directly (definition unfolding, no boundary theorem invoked; part of a 9-pair concrete computation table also covering `land 0 0`, `land 6 3 = 2`, and the self-AND `land 7 7 = 7`), and separately confirms `Nat.land_one_one`'s ADMITTED TYPE (via `Kernel::infer`) is exactly `Eq (land 1 1) 1` -- with a negative control asserting the inferred type must NOT def_eq `Eq (land 1 1) 0`, so this cannot pass on a statement claiming the wrong value.",
+      "supports": "the definition genuinely computes the AND of matching bits, not a constant-zero stub"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.land_one_one",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. This command is what makes the axiom-freedom claim falsifiable rather than asserted.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [],
+    "language": "lean4",
+    "statement": "theorem Nat.land_one_one : Eq.{1} AxNat (AxNat.land (AxNat.succ AxNat.zero) (AxNat.succ AxNat.zero)) (AxNat.succ AxNat.zero)"
+  },
+  "id": "F:nat-land-one-one",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*) -- the `nat` prelude's trusted surface measures zero.\n\nThis is a concrete SANITY check, deliberately kept alongside the two zero-argument boundary facts (`F:nat-land-zero-left`, `F:nat-land-zero-right`) because those two are satisfied by a definition that always returns 0 -- they say nothing about whether `Nat.landAux`'s recursive step actually computes AND rather than being a constant-zero stub with a guard. This fact and its companion `F:nat-land-three-five` are the two rows that rule that out. See `F:nat-land-zero-left`'s notes for why `Nat.land`/`Nat.landAux` could not be expressed before this lane and why they were built directly rather than through a general `Nat.bitwise`.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane 215-nat-bitwise-2",
+    "source": "one of four boundary/sanity theorems `declare_land_all` (`crates/axeyum-lean-kernel/src/nat_prelude/land.rs`) admits alongside the `Nat.land`/`Nat.landAux` definitions"
+  },
+  "schema_version": 1,
+  "statement": "The bitwise AND of 1 and 1 is 1.",
+  "title": "land(1, 1) = 1"
+}
