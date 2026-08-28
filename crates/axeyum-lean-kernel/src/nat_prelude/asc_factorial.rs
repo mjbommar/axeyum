@@ -151,7 +151,8 @@ pub(super) fn declare_zero_asc_factorial_succ(
                 });
                 let mid2 = d.mul(sum, zero);
                 let mul_zero_eq = d.lemma(p.mul_zero, &[sum]);
-                let (_e, proof) = d.chain(start, &[(mid, step1), (mid2, step2), (zero, mul_zero_eq)]);
+                let (_e, proof) =
+                    d.chain(start, &[(mid, step1), (mid2, step2), (zero, mul_zero_eq)]);
                 proof
             },
             k,

@@ -2561,8 +2561,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             desc_factorial_succ: kernel.name_str(nat, "descFactorial_succ"),
             desc_factorial_one: kernel.name_str(nat, "descFactorial_one"),
             desc_factorial_of_lt: kernel.name_str(nat, "descFactorial_of_lt"),
-            desc_factorial_succ_eq_succ_mul: kernel
-                .name_str(nat, "descFactorial_succ_eq_succ_mul"),
+            desc_factorial_succ_eq_succ_mul: kernel.name_str(nat, "descFactorial_succ_eq_succ_mul"),
             desc_factorial_eq_factorial_mul_choose: kernel
                 .name_str(nat, "descFactorial_eq_factorial_mul_choose"),
             factorial_dvd_desc_factorial: kernel.name_str(nat, "factorial_dvd_descFactorial"),

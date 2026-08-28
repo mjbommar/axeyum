@@ -412,7 +412,13 @@ pub(super) fn binom_sum(d: &mut NatDev<'_>, a: ExprId, b: ExprId, row: ExprId) -
 /// factorial ↔ `choose` bridges can reuse it instead of rebuilding a third
 /// copy — see `docs/plan/status/197` on why a private `fn` duplicated across
 /// files is a standing hazard here.
-pub(super) fn mul_left_comm(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId, y: ExprId, z: ExprId) -> ExprId {
+pub(super) fn mul_left_comm(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    x: ExprId,
+    y: ExprId,
+    z: ExprId,
+) -> ExprId {
     let p = *p;
     let yz = d.mul(y, z);
     let start = d.mul(x, yz);
