@@ -1567,13 +1567,29 @@ pub struct CRealPrelude {
     /// how [`Self::bucket_clamp_lower`] swaps [`Self::bucket_clamp_upper`]'s
     /// own `(n, j)` to `(j, n)`. See `creal/uniform_continuity.rs`.
     pub sample_lower_bound: NameId,
+    /// `CReal.bucketClose : ∀ (bnd : CReal) (m0 : Nat) (cap : Rat), Rat.le
+    /// (Rat.sub (CReal.seq bnd j) (Rat.natDivSucc 1 j)) cap → ∀ (w : CReal),
+    /// CReal.le CReal.zero w → CReal.le w bnd → CReal.le (CReal.abs
+    /// (CReal.add w (CReal.neg (CReal.ofRat (Rat.min (Rat.natDivSucc
+    /// (CReal.bucketIndex w k) k) cap))))) (CReal.ofRat (Rat.natDivSucc 1
+    /// m0))` (`k := rescale_index(3, m0) = 4*m0+3`, `j := (Nat.succ k) *
+    /// (Nat.succ k)`) — `w` is within `1/(m0+1)` of its own clamped
+    /// grid-point sample. `k` is DERIVED from `m0`, not an independent
+    /// parameter: the final widening step needs `k` to be exactly
+    /// `rescale_index(3, m0)` (`Rat.natDivSucc_scale`'s own index), not
+    /// merely large enough. Extracted from
+    /// [`Self::bounded_of_uniformly_continuous`]'s covering argument, which
+    /// used to assemble this fact inline. See
+    /// `uniform_continuity::declare_bucket_close`.
+    pub bucket_close: NameId,
     /// `CReal.bounded_of_uniformly_continuous : ∀ F a b, UniformlyContinuousOn
     /// F a b → CReal.le a b → CReal.BoundedOn F a b K` for a COMPUTED `K`
     /// (never `Exists`-elimination — `K` is one Nat expression built from
     /// `F`, `a`, `b`, `huc` alone, so it is the SAME constant for every `z`).
     /// Spivak ch.7: a function uniformly continuous on `[a,b]` is bounded
     /// there. See `creal/uniform_continuity.rs`'s own
-    /// `declare_bounded_of_uniformly_continuous` for the covering argument.
+    /// `declare_bounded_of_uniformly_continuous` for the covering argument
+    /// (now via [`Self::bucket_close`] rather than inline).
     pub bounded_of_uniformly_continuous: NameId,
     /// `CReal.ratSqLe : ∀ (u s : Rat), Rat.le (u*u) (s*s) → Rat.le Rat.zero s
     /// → Rat.le u s` — a purely rational fact (no `CReal` structure), proved
@@ -5801,6 +5817,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         crossing_sample_pairing_close: kernel.name_str(creal, "riemannSampleCrossingClose"),
         sample_upper_bound: kernel.name_str(creal, "sampleUpperBound"),
         sample_lower_bound: kernel.name_str(creal, "sampleLowerBound"),
+        bucket_close: kernel.name_str(creal, "bucketClose"),
         bounded_of_uniformly_continuous: kernel.name_str(creal, "bounded_of_uniformly_continuous"),
         rat_sq_le: kernel.name_str(creal, "ratSqLe"),
         rat_sq_sandwich: kernel.name_str(creal, "ratSqSandwich"),
@@ -7433,6 +7450,47 @@ const STEPS: &[BuildStep] = &[
         run: uniform_continuity::declare_uniform_continuity_products,
     },
     BuildStep {
+        label: "uniform_continuity::declare_bucket_close",
+        requires: &[
+            |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.abs_congr,
+            |p: CRealPrelude| p.abs_le,
+            |p: CRealPrelude| p.add,
+            |p: CRealPrelude| p.add_assoc,
+            |p: CRealPrelude| p.add_comm,
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.bucket_clamp_lower,
+            |p: CRealPrelude| p.bucket_clamp_upper,
+            |p: CRealPrelude| p.bucket_index,
+            |p: CRealPrelude| p.bucket_index_floor_lower,
+            |p: CRealPrelude| p.bucket_index_floor_upper,
+            |p: CRealPrelude| p.equiv,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.le,
+            |p: CRealPrelude| p.le_abs_self,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_of_equiv,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.neg_le_abs,
+            |p: CRealPrelude| p.neg_le_neg,
+            |p: CRealPrelude| p.of_rat,
+            |p: CRealPrelude| p.of_rat_add,
+            |p: CRealPrelude| p.of_rat_le,
+            |p: CRealPrelude| p.of_rat_sub,
+            |p: CRealPrelude| p.sample_upper_bound,
+            |p: CRealPrelude| p.zero,
+        ],
+        provides: &[|p: CRealPrelude| p.bucket_close],
+        run: uniform_continuity::declare_bucket_close,
+    },
+    BuildStep {
         label: "uniform_continuity::declare_bounded_of_uniformly_continuous",
         requires: &[
             |p: CRealPrelude| p.abs,
@@ -7450,6 +7508,7 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.bounded_on,
             |p: CRealPrelude| p.bucket_clamp_lower,
             |p: CRealPrelude| p.bucket_clamp_upper,
+            |p: CRealPrelude| p.bucket_close,
             |p: CRealPrelude| p.bucket_index,
             |p: CRealPrelude| p.bucket_index_bound,
             |p: CRealPrelude| p.bucket_index_floor_lower,

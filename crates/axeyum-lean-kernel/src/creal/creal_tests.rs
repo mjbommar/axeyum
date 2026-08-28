@@ -10100,6 +10100,7 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "rolle::declare_rolle",
     "mvt::declare_mvt",
     "uniform_continuity::declare_uniform_continuity_products",
+    "uniform_continuity::declare_bucket_close",
     "uniform_continuity::declare_bounded_of_uniformly_continuous",
     "mul_self_zero::declare_mul_self_zero",
     "crossing::declare_crossing_sample",
