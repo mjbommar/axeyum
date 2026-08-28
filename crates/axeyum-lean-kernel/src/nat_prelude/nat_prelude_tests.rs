@@ -858,6 +858,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.factorial_dvd_desc_factorial,
         p.desc_factorial_self,
         p.desc_factorial_le,
+        p.self_le_factorial,
         p.monotone_of_le_succ,
         p.le_refl_thm,
         p.le_succ,
@@ -6246,7 +6247,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        85 + 431,
+        85 + 432,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -6974,6 +6975,40 @@ fn desc_factorial_self_and_le_apply_at_concrete_instances() {
     assert!(
         f.k.infer(wrong_bound).is_err(),
         "accepted a proof of `5 <= 5` where `3 <= 5` was required"
+    );
+}
+
+/// `self_le_factorial` applies at a concrete instance: `5 <= 5! = 120`.
+/// NEGATIVE control: the inferred conclusion is `Le n (factorial n)`, not
+/// the reversed `Le (factorial n) n` (which would also happen to hold at
+/// `n := 1` but is a different, generally FALSE proposition for `n >= 2` —
+/// checked here concretely, since `def_eq` would not otherwise distinguish
+/// the two orderings of `Le` at `n := 1`).
+#[test]
+fn self_le_factorial_applies_at_a_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let five = f.num(5);
+    let one_twenty = f.num(120);
+
+    let proof = f.lemma(p.self_le_factorial, &[five]);
+    let inferred =
+        f.k.infer(proof)
+            .expect("self_le_factorial applies at n := 5");
+    let fact_five = f.factorial(five);
+    let expected = f.le(five, fact_five);
+    assert!(f.k.def_eq(inferred, expected));
+    // The conclusion is about the concrete number 120, not an opaque term.
+    assert!(f.k.def_eq(fact_five, one_twenty));
+
+    // NEGATIVE control: the reversed proposition `Le (factorial n) n` is a
+    // different type; the proof term for `self_le_factorial` must not
+    // type-check against it.
+    let reversed = f.le(fact_five, five);
+    assert!(
+        !f.k.def_eq(expected, reversed),
+        "Le n (factorial n) must NOT be def-eq to the reversed Le (factorial n) n"
     );
 }
 

@@ -708,6 +708,79 @@ pub(super) fn declare_desc_factorial_le(
     Ok(())
 }
 
+/// `self_le_factorial : ∀ n, n ≤ n.factorial`. Closes
+/// `F:ml430-nat-self-le-factorial-cfdffc69`. Independent of the
+/// `descFactorial`/`choose` bridge above — a direct induction on `n` using
+/// [`NatPrelude::one_le_factorial`] (`1 ≤ n!`), not this file's induction
+/// hypothesis, to bound the step.
+///
+/// - `n = 0`: `Le 0 (factorial 0)` is [`NatPrelude::zero_le`] directly.
+/// - `n = succ j`: `factorial (succ j) ≡ factorial j * succ j`
+///   ([`NatPrelude::factorial_succ`], defeq); scale
+///   [`NatPrelude::one_le_factorial`] at `j` (`Le 1 (factorial j)`, NOT the
+///   induction hypothesis, which only bounds `j` itself and is too weak) by
+///   `succ j` via [`NatPrelude::mul_le_mul_left`] to get
+///   `Le (succ j * 1) (succ j * factorial j)`, rewrite `succ j * 1 = succ j`
+///   ([`NatPrelude::mul_one`]) and commute the right side
+///   ([`NatPrelude::mul_comm`]) to land on `Le (succ j) (factorial j * succ
+///   j)`, then transport along `factorial_succ` (reversed) to the goal.
+pub(super) fn declare_self_le_factorial(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let motive = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
+        let fact_x = d.factorial(x);
+        d.le(x, fact_x)
+    };
+
+    d.theorem(p.self_le_factorial, 1, &|d, v| {
+        let n = v[0];
+        let stmt = motive(d, n);
+
+        let proof = d.induct(
+            &motive,
+            &|d| {
+                let zero = d.zero();
+                let fact0 = d.factorial(zero);
+                d.lemma(p.zero_le, &[fact0])
+            },
+            &|d, j, _ih| {
+                let sj = d.succ(j);
+                let one = d.num(1);
+                let fact_j = d.factorial(j);
+
+                let one_le_j = d.lemma(p.one_le_factorial, &[j]); // Le(1, fact_j)
+                // Le(mul(sj, 1), mul(sj, fact_j))
+                let mul_step = d.lemma(p.mul_le_mul_left, &[sj, one, fact_j, one_le_j]);
+
+                let sj_mul_one = d.mul(sj, one);
+                let mul_one_eq = d.lemma(p.mul_one, &[sj]); // Eq(sj_mul_one, sj)
+                let sj_fact_j = d.mul(sj, fact_j);
+                let motive_a = d.eq_motive(sj_mul_one, &|d, x| d.le(x, sj_fact_j));
+                // Le(sj, mul(sj, fact_j))
+                let step_a = d.transport(sj_mul_one, motive_a, mul_step, sj, mul_one_eq);
+
+                let mul_comm_eq = d.lemma(p.mul_comm, &[sj, fact_j]); // Eq(sj_fact_j, fact_j_sj)
+                let fact_j_sj = d.mul(fact_j, sj);
+                let motive_b = d.eq_motive(sj_fact_j, &|d, x| d.le(sj, x));
+                // Le(sj, mul(fact_j, sj))
+                let step_b = d.transport(sj_fact_j, motive_b, step_a, fact_j_sj, mul_comm_eq);
+
+                let fact_sj = d.factorial(sj);
+                let fact_succ_eq = d.lemma(p.factorial_succ, &[j]); // Eq(fact_sj, fact_j_sj)
+                let fact_succ_rev = d.symm(fact_sj, fact_j_sj, fact_succ_eq); // Eq(fact_j_sj, fact_sj)
+                let motive_c = d.eq_motive(fact_j_sj, &|d, x| d.le(sj, x));
+                // Le(sj, fact_sj)
+                d.transport(fact_j_sj, motive_c, step_b, fact_sj, fact_succ_rev)
+            },
+            n,
+        );
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 /// Declare [`declare_desc_factorial`], then [`declare_desc_factorial_one`],
 /// [`declare_desc_factorial_of_lt`], and the falling-factorial / `choose`
 /// bridge ([`declare_desc_factorial_succ_eq_succ_mul`],
@@ -729,5 +802,6 @@ pub(super) fn declare_desc_factorial_all(
     declare_factorial_dvd_desc_factorial(d, p)?;
     declare_desc_factorial_self(d, p)?;
     declare_desc_factorial_le(d, p)?;
+    declare_self_le_factorial(d, p)?;
     Ok(())
 }

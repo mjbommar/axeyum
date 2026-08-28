@@ -8,10 +8,31 @@
     "statement": "∀ (n : ℕ), n.descFactorial n = n.factorial",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- descFactorial_self 2>/dev/null | grep -Ec '^Nat\\.descFactorial_self[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.descFactorial_self",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits `Nat.descFactorial_self` through the trusted `Kernel::add_declaration` gate. Route: `Nat.descFactorial_eq_factorial_mul_choose : n.descFactorial k = k! * n.choose k`, instantiated at `k := n`, then `Nat.choose_self : choose n n = 1` and `mul_one` collapse `n! * choose n n` to `n!`. `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -c` count (tested `-ge 1`, not piped into `grep -q`) requires the admitted declaration to actually be printed.",
+      "supports": "∀ (n : ℕ), n.descFactorial n = n.factorial"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.descFactorial_self",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []. `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` additionally checks this theorem's own `Kernel::axiom_footprint` directly (not merely the environment-wide bound), by name, in-tree.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
   "provenance": {
     "date": "2026-08-18",
     "established_by": "not established in this ledger",
@@ -26,5 +47,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "Established 2026-08-28 in this ledger. The external theorem declaration is prior art for the STATEMENT, not the locally constructed proof, which is entirely independent (route: `descFactorial_eq_factorial_mul_choose` at `k := n`, `choose_self`, `mul_one`; no tactic trace was consulted). formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

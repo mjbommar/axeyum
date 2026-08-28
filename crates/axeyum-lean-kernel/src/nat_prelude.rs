@@ -389,6 +389,11 @@ pub struct NatPrelude {
     /// `n! * choose k n ≤ n! * choose m n`, closed by [`Self::choose_le_choose`]
     /// plus [`Self::mul_le_mul_left`].
     pub desc_factorial_le: NameId,
+    /// `self_le_factorial : ∀ n, n ≤ n.factorial`. Closes
+    /// `F:ml430-nat-self-le-factorial-cfdffc69`. Direct induction on `n`
+    /// using [`Self::one_le_factorial`] (`1 ≤ n!`) to bound the step, not the
+    /// `descFactorial`/`choose` bridge above.
+    pub self_le_factorial: NameId,
     /// `Nat.ascFactorial : Nat → Nat → Nat`, by structural recursion on its
     /// **second** argument via [`NatOps::define_binary`], mirroring
     /// [`Self::desc_factorial`] but climbing with `Nat.add` instead of
@@ -2699,6 +2704,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             factorial_dvd_desc_factorial: kernel.name_str(nat, "factorial_dvd_descFactorial"),
             desc_factorial_self: kernel.name_str(nat, "descFactorial_self"),
             desc_factorial_le: kernel.name_str(nat, "descFactorial_le"),
+            self_le_factorial: kernel.name_str(nat, "self_le_factorial"),
             asc_factorial: kernel.name_str(nat, "ascFactorial"),
             asc_factorial_zero: kernel.name_str(nat, "ascFactorial_zero"),
             asc_factorial_succ: kernel.name_str(nat, "ascFactorial_succ"),

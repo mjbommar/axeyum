@@ -8,10 +8,31 @@
     "statement": "∀ {n k : ℕ}, n < k → n.descFactorial k = 0",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- descFactorial_of_lt 2>/dev/null | grep -Ec '^Nat\\.descFactorial_of_lt[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.descFactorial_of_lt",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits `Nat.descFactorial_of_lt` through the trusted `Kernel::add_declaration` gate. Route (`desc_factorial.rs`, `declare_desc_factorial_of_lt`): induction on `k` with `n` held fixed; `k = 0` is `not_lt_zero`; `k = succ j` splits `n < succ j` (`le_of_lt_succ` then `lt_or_eq_of_le`) into `n < j` (the IH collapses the product via `mul_zero`) and `n = j` (transport to the diagonal `descFactorial n (succ n) = (n-n)*descFactorial n n`, collapsed via `sub_self`/`zero_mul`) -- the truncated-`Nat.sub` boundary that gives this declaration its own module doc comment (\"this definition's highest-risk seam\"). This declaration predates the current session; the source-controlled construction is what `nat_theorem_inventory` reports admitted, not new proof work. `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -c` count (tested `-ge 1`, not piped into `grep -q`) requires the admitted declaration to actually be printed.",
+      "supports": "∀ {n k : ℕ}, n < k → n.descFactorial k = 0"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.descFactorial_of_lt",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []. `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` additionally checks this theorem's own `Kernel::axiom_footprint` directly (not merely the environment-wide bound), by name, in-tree.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
   "provenance": {
     "date": "2026-08-18",
     "established_by": "not established in this ledger",
@@ -26,5 +47,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "Established 2026-08-28 in this ledger, though the kernel declaration `Nat.descFactorial_of_lt` predates this session (it was landed with `Nat.descFactorial` itself, before `descFactorial_eq_factorial_mul_choose` existed). This is a STATUS FLIP against pre-existing kernel-admitted work, not new proof work: the declared statement already matched this fact's `formal.statement` verbatim before this session began, and nothing needed to change beyond attaching evidence and flipping `epistemic_status`. The external theorem declaration is prior art for the STATEMENT only; the local proof term and tactic trace were never consulted. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
