@@ -80,7 +80,7 @@ pub(super) fn declare_monotone(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<()
 
 // --- small local term builders ----------------------------------------------
 
-fn cneg(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+pub(super) fn cneg(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
     d.const_app(p.neg, &[x])
 }
 
@@ -323,7 +323,7 @@ fn cmul(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
     d.const_app(p.mul, &[x, y])
 }
 
-fn czero(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+pub(super) fn czero(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
     d.kernel().const_(p.zero, vec![])
 }
 
@@ -337,11 +337,11 @@ fn cdiff(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
     cadd(d, p, x, ny)
 }
 
-fn erefl(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId) -> ExprId {
+pub(super) fn erefl(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId) -> ExprId {
     d.lemma(p.equiv_refl, &[a])
 }
 
-fn esymm(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
+pub(super) fn esymm(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
     d.lemma(p.equiv_symm, &[a, b, h])
 }
 
@@ -349,7 +349,7 @@ fn esymm(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId, h: ExprId) -
 /// used throughout this development; rebuilt here rather than imported since
 /// `derivative.rs`'s own copy is private to that module (a sibling of this
 /// one, not an ancestor).
-fn echain(
+pub(super) fn echain(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     start: ExprId,
@@ -366,7 +366,7 @@ fn echain(
 
 /// `Equiv (neg zero) zero` — the group identity `-0 = 0`. Duplicated from
 /// `derivative.rs`'s private helper of the same shape.
-fn neg_zero_equiv(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+pub(super) fn neg_zero_equiv(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
     let zero_c = czero(d, p);
     let nz = cneg(d, p, zero_c);
     let padded = cadd(d, p, nz, zero_c);
@@ -395,7 +395,7 @@ fn neg_add_self(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
 /// read off `(a + (−b)) + b` two ways: it is `Equiv a` (`add_assoc` +
 /// `neg_add_self` + `add_zero`) and it is `Equiv b` (`add_congr` against `h`
 /// + `add_comm` + `add_zero`).
-fn equiv_of_sub_equiv_zero(
+pub(super) fn equiv_of_sub_equiv_zero(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     a: ExprId,
