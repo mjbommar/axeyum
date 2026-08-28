@@ -847,6 +847,9 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.desc_factorial_succ,
         p.desc_factorial_one,
         p.desc_factorial_of_lt,
+        p.desc_factorial_succ_eq_succ_mul,
+        p.desc_factorial_eq_factorial_mul_choose,
+        p.factorial_dvd_desc_factorial,
         p.monotone_of_le_succ,
         p.le_refl_thm,
         p.le_succ,
@@ -937,6 +940,9 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.asc_factorial_zero,
         p.asc_factorial_succ,
         p.asc_factorial_one,
+        p.zero_asc_factorial_succ,
+        p.asc_factorial_succ_eq_factorial_mul_choose,
+        p.factorial_dvd_asc_factorial,
         p.multichoose_zero_right,
         p.multichoose_one,
         p.multichoose_one_right,
@@ -6222,7 +6228,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        81 + 411,
+        81 + 417,
         "every promised definition and theorem must be rendered"
     );
 }

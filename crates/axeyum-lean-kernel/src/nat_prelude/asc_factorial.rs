@@ -255,12 +255,14 @@ pub(super) fn declare_asc_factorial_succ_eq_factorial_mul_choose(
                 let smj_choose = d.mul(sm_plus_j, choose_mj);
                 let target3 = d.mul(fact_j, smj_choose);
 
-                // Step 4: succ_add(m, j) — sm_plus_j = succ(m_plus_j) — rewrite inside smj_choose.
+                // Step 4: succ_add(m, j) — sm_plus_j = succ(m_plus_j) — rewrite inside
+                // fact_j*(sm_plus_j*choose_mj), the FULL target3, not just its inner factor.
                 let succ_add_eq = d.lemma(p.succ_add, &[m, j]); // Eq(sm_plus_j, succ(m_plus_j))
                 let succ_mj = d.succ(m_plus_j);
                 let step4 = d.congr(sm_plus_j, succ_mj, succ_add_eq, &|d, x| {
                     let choose_mj = d.choose(m_plus_j, j);
-                    d.mul(x, choose_mj)
+                    let inner = d.mul(x, choose_mj);
+                    d.mul(fact_j, inner)
                 });
                 let succ_mj_choose = d.mul(succ_mj, choose_mj);
                 let target4 = d.mul(fact_j, succ_mj_choose);
