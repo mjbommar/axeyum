@@ -78,6 +78,94 @@ fn log(d: &mut NatDev<'_>, p: &NatPrelude, base: ExprId, value: ExprId) -> ExprI
     d.const_app(p.log, &[base, value])
 }
 
+/// `Or.rec` with a non-dependent motive: from `proof : Or left_ty right_ty`
+/// and two functions `left_ty -> goal`, `right_ty -> goal`, produce `goal`.
+///
+/// Mirrors `factorization.rs`'s private helper of the same name (itself
+/// documented as mirroring `primes.rs`'s) — this file's own local copy rather
+/// than a shared `pub(super)`, by the same convention.
+#[allow(clippy::too_many_arguments)]
+fn or_cases(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    left_ty: ExprId,
+    right_ty: ExprId,
+    goal: ExprId,
+    left_minor: ExprId,
+    right_minor: ExprId,
+    proof: ExprId,
+) -> ExprId {
+    let anon = d.anon_name();
+    let split_ty = d.const_app(p.logic.or, &[left_ty, right_ty]);
+    let motive = d.kernel().lam(anon, split_ty, goal, BinderInfo::Default);
+    let rec = d.kernel().const_(p.logic.or_rec, vec![]);
+    d.apply(
+        rec,
+        &[left_ty, right_ty, motive, left_minor, right_minor, proof],
+    )
+}
+
+/// `Le (bool_select_nat test on_true on_false) bound`, built from proofs at
+/// each *literal* branch (`proof_true : Le on_true bound`,
+/// `proof_false : Le on_false bound`).
+///
+/// The technique is [`declare_log_all`]'s `log_of_lt` `bool_transport`
+/// generalized two ways: to *both* branches of the cut (that proof only ever
+/// needed the refuted one) and to an inequality goal rather than an equation.
+/// For each branch, `bool_eq_motive` builds the dependent `Eq.rec` motive
+/// `fun (x : Bool) (_ : Eq Bool literal x) => Le (bool_select_nat x on_true
+/// on_false) bound`; at `x = literal` this motive reduces (ι, on the outer
+/// `bool_select_nat`) to `Le on_<branch> bound`, which is exactly the
+/// caller-supplied proof, and `bool_transport` carries it across to `x =
+/// test` using the branch hypothesis from [`bool_true_or_false`]'s `Or`.
+#[allow(clippy::too_many_arguments)]
+fn le_of_bool_select(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    test: ExprId,
+    on_true: ExprId,
+    on_false: ExprId,
+    bound: ExprId,
+    proof_true: ExprId,
+    proof_false: ExprId,
+) -> ExprId {
+    let true_ = d.bool_true();
+    let false_ = d.bool_false();
+
+    let is_true = d.bool_eq(test, true_);
+    let true_case = {
+        let motive_true = d.bool_eq_motive(true_, &|d, x| {
+            let selected = d.bool_select_nat(x, on_true, on_false);
+            d.le(selected, bound)
+        });
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let reversed = d.bool_symm(test, true_, h);
+        let result = d.bool_transport(true_, motive_true, proof_true, test, reversed);
+        d.lam_fv(h_fv, is_true, result)
+    };
+
+    let is_false = d.bool_eq(test, false_);
+    let false_case = {
+        let motive_false = d.bool_eq_motive(false_, &|d, x| {
+            let selected = d.bool_select_nat(x, on_true, on_false);
+            d.le(selected, bound)
+        });
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let reversed = d.bool_symm(test, false_, h);
+        let result = d.bool_transport(false_, motive_false, proof_false, test, reversed);
+        d.lam_fv(h_fv, is_false, result)
+    };
+
+    let goal = {
+        let selected = d.bool_select_nat(test, on_true, on_false);
+        d.le(selected, bound)
+    };
+    let split = super::ops::bool_true_or_false(d, p, test);
+    or_cases(d, p, is_true, is_false, goal, true_case, false_case, split)
+}
+
 /// Declare `Nat.logAux`, `Nat.log`, and the four boundary equations that fall
 /// out of the guard by ι-reduction alone.
 ///
@@ -431,6 +519,112 @@ pub(super) fn declare_log_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
         let applied = d.apply(generalized, &[hypothesis]);
         let stmt = d.arrow(hypothesis_ty, conclusion);
         let proof = d.lam_fv(hypothesis_fv, hypothesis_ty, applied);
+        (stmt, proof)
+    })?;
+
+    // logAux_le_fuel : ∀ b f n, Le (logAux b f n) f -- the fuel bounds the
+    // computed logarithm for EVERY value `n`, not merely the diagonal `f = n`
+    // that `log` instantiates.
+    //
+    // This is the genuinely harder tier: induction on `f` alone, at a fixed
+    // `n`, gives an induction hypothesis about `logAux b f n` -- but the
+    // recursive call inside `logAux b (succ f) n` is at `logAux b f (n / b)`,
+    // a DIFFERENT `n`. The hypothesis does not apply there. Generalizing `n`
+    // *inside* the motive (`∀ n, Le (logAux b f n) f`) gives a hypothesis at
+    // every argument, including `n / b` -- the same "quantify inside the
+    // motive" technique `parity.rs`'s `declare_add_self_ne_succ_add_self`
+    // uses for its double induction (see that file's `motive`/`inner_target`
+    // construction).
+    //
+    // Base (`f = 0`): `logAux b 0 n` is the constant-zero row, so the goal is
+    // `Le 0 0`, closed by `le_refl`.
+    //
+    // Step (`f = succ m`, given `ih : ∀ n, Le (logAux b m n) m`): unfold
+    // `logAux b (succ m) n` to its guard's `bool_select_nat` form exactly as
+    // `log_of_lt`'s step case does (`log_aux(d,&p,base,predecessor,quotient)`
+    // reconstructs the same normal form the kernel reaches by delta+iota), and
+    // case-split on each cut with `le_of_bool_select`:
+    //   - `b <= n` false, or `2 <= b` false: the whole term is `0`, and
+    //     `zero_le` closes `Le 0 (succ m)`.
+    //   - both true: the term is `succ (logAux b m (n / b))`, and
+    //     `le_succ_succ` applied to `ih (n / b) : Le (logAux b m (n/b)) m`
+    //     closes `Le (succ (logAux b m (n/b))) (succ m)`.
+    d.theorem(p.log_aux_le_fuel, 2, &|d, values| {
+        let (base, fuel) = (values[0], values[1]);
+        let nat = d.nat_ty();
+
+        let motive_at = move |d: &mut NatDev<'_>, candidate: ExprId| -> ExprId {
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let lhs = log_aux(d, &p, base, candidate, n);
+            let body = d.le(lhs, candidate);
+            d.pi_fv(n_fv, nat, body)
+        };
+
+        let base_case = move |d: &mut NatDev<'_>| -> ExprId {
+            let n_fv = d.fresh_fvar();
+            let zero = d.zero();
+            let proof = d.lemma(p.le_refl, &[zero]);
+            d.lam_fv(n_fv, nat, proof)
+        };
+
+        let step_case = move |d: &mut NatDev<'_>, predecessor: ExprId, ih: ExprId| -> ExprId {
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let succ_predecessor = d.succ(predecessor);
+
+            let quotient = d.div(n, base);
+            let ih_at_quotient = d.apply(ih, &[quotient]);
+            let inner_recursive = log_aux(d, &p, base, predecessor, quotient);
+            let stepped = d.succ(inner_recursive);
+            let stepped_le = d.lemma(
+                p.le_succ_succ,
+                &[inner_recursive, predecessor, ih_at_quotient],
+            );
+
+            let zero = d.zero();
+            let zero_le_succ_pred = d.lemma(p.zero_le, &[succ_predecessor]);
+
+            let two = d.num(2);
+            let base_exceeds_one = d.ble(two, base);
+            let inner_term = d.bool_select_nat(base_exceeds_one, stepped, zero);
+            let inner_proof = le_of_bool_select(
+                d,
+                &p,
+                base_exceeds_one,
+                stepped,
+                zero,
+                succ_predecessor,
+                stepped_le,
+                zero_le_succ_pred,
+            );
+
+            let base_fits = d.ble(base, n);
+            let outer_proof = le_of_bool_select(
+                d,
+                &p,
+                base_fits,
+                inner_term,
+                zero,
+                succ_predecessor,
+                inner_proof,
+                zero_le_succ_pred,
+            );
+            d.lam_fv(n_fv, nat, outer_proof)
+        };
+
+        let proof = d.induct(&motive_at, &base_case, &step_case, fuel);
+        let stmt = motive_at(d, fuel);
+        (stmt, proof)
+    })?;
+
+    // log_le_self : ∀ b n, Le (log b n) n -- `logAux_le_fuel` specialized at
+    // `f := n`, since `log b n := logAux b n n` definitionally.
+    d.theorem(p.log_le_self, 2, &|d, values| {
+        let (base, value) = (values[0], values[1]);
+        let lhs = log(d, &p, base, value);
+        let stmt = d.le(lhs, value);
+        let proof = d.lemma(p.log_aux_le_fuel, &[base, value, value]);
         (stmt, proof)
     })?;
 

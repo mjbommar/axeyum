@@ -1,0 +1,64 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-logaux-le-fuel"
+  ],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- log_le_self 2>/dev/null | grep -Ec '^Nat\\.log_le_self[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.log_le_self",
+      "kernel_declaration": "Nat.log_le_self",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. The proof is `Nat.logAux_le_fuel` (a separate fact, `F:nat-logaux-le-fuel`) applied at `f := n`: since `Nat.log b n := Nat.logAux b n n` DEFINITIONALLY, `logAux_le_fuel b n n : Le (logAux b n n) n` is already `Le (log b n) n` up to delta-unfolding `log`, so no further construction is needed beyond the one application. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the count is tested, so the exit status depends on what the run found.",
+      "supports": "For all b and n, log_b(n) <= n."
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::log_aux_le_fuel_and_log_le_self_apply_at_a_concrete_instance",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "id": "instantiation-Nat.log_le_self",
+      "kernel_declaration": "Nat.log_le_self",
+      "kind": "kernel-term",
+      "notes": "Applies `Nat.log_le_self` at `(b, n) = (2, 8)` and confirms the inferred conclusion is `Le (log 2 8) 8` exactly. `log 2 8` separately reduces to `3` by `Kernel::def_eq`, so this is a STRICT bound (3 < 8), not a vacuous reflexive instance of `Le`.",
+      "supports": "the bound is the promised statement and is strict, not vacuously reflexive, at a nontrivial argument"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.log_le_self",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. `log_le_self`'s proof is a single application of `Nat.logAux_le_fuel`, itself axiom-free, so this row stays empty.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1"
+    ],
+    "language": "lean4",
+    "statement": "theorem Nat.log_le_self : ((x0 : AxNat) -> ((x1 : AxNat) -> AxNat.le (AxNat.log x0 x1) x1))"
+  },
+  "id": "F:nat-log-le-self",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*) -- the `nat` prelude's trusted surface measures zero.\n\n`external_status: proved` reflects that this statement matches Mathlib's own `Nat.log_le_self` (tracked separately, unproved-by-us, as `F:ml430-nat-log-le-self-da387172` -- a statement-only extraction with no proof value exposed). This fact is NOT that mirror fact and does not flip it: it is this project's own independent kernel-lean construction of the same proposition, over this prelude's fuel-recursive `Nat.log` rather than Mathlib's well-founded one, and `depends_on` names only the kernel-lean fact it actually rests on.\n\nThe proof route is short precisely because the hard work is `Nat.logAux_le_fuel`: `Nat.log b n := Nat.logAux b n n` definitionally, so `log_le_self` is that lemma's `f := n` diagonal specialization, not a separate induction.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-log-tier",
+    "source": "declared by `declare_log_all` (`crates/axeyum-lean-kernel/src/nat_prelude/log.rs`), the diagonal specialization of `Nat.logAux_le_fuel`"
+  },
+  "schema_version": 1,
+  "statement": "For all b and n, log_b(n) <= n.",
+  "title": "The floor logarithm of n never exceeds n"
+}

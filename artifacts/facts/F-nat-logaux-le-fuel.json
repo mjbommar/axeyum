@@ -1,0 +1,66 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-le-refl",
+    "F:nat-zero-le",
+    "F:nat-le-succ-succ"
+  ],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- logAux_le_fuel 2>/dev/null | grep -Ec '^Nat\\.logAux_le_fuel[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.logAux_le_fuel",
+      "kernel_declaration": "Nat.logAux_le_fuel",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. This is the genuinely harder tier of `Nat.log` (identified when `Nat.log` itself landed, hours earlier the same day): proving `logAux b f n <= f` needs induction on the FUEL `f` with the VALUE `n` generalized inside the motive (`fun f => forall n, Le (logAux b f n) f`), because the recursive call inside `logAux b (succ f) n` is at `logAux b f (n / b)` -- a DIFFERENT `n` than the outer statement fixes. Fixing `n` and inducting on `f` alone gives an induction hypothesis about `logAux b f n` that does not apply at `n / b`. The technique -- quantifying a second argument inside the motive of an induction on the first -- is the one `nat_prelude/parity.rs`'s `declare_add_self_ne_succ_add_self` uses for its own double induction. The step case unfolds `logAux b (succ f) n` to its guard's `bool_select_nat` form (reconstructed exactly as `log_of_lt`'s step case does, so the kernel's delta+iota unfold matches it), then case-splits BOTH nested `Nat.ble` cuts with a new local helper (`le_of_bool_select`, generalizing `log_of_lt`'s single-branch `bool_transport` technique to both branches and to an inequality goal): when either cut is false the term is `0` and `Nat.zero_le` closes it; when both are true the term is `succ (logAux b f (n / b))` and `Nat.le_succ_succ` applied to `ih (n / b)` closes it.",
+      "supports": "For all b, f, and n, logAux b f n <= f."
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::log_aux_le_fuel_and_log_le_self_apply_at_a_concrete_instance",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "id": "instantiation-Nat.logAux_le_fuel",
+      "kernel_declaration": "Nat.logAux_le_fuel",
+      "kind": "kernel-term",
+      "notes": "Applies `Nat.logAux_le_fuel` at `(b, f, n) = (2, 8, 3)` -- a fuel that EXCEEDS what the diagonal `log` instance would ever exercise, so this is a genuine check of the general lemma rather than `log_le_self` in disguise -- and confirms the inferred conclusion is `Le (logAux 2 8 3) 8` exactly, with a swapped-operand negative control (`Le 8 (logAux 2 8 3)`) that must NOT be accepted as the same statement.",
+      "supports": "the statement is the promised inequality, in the promised direction, at a nontrivial fuel/value pair"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.logAux_le_fuel",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. `logAux_le_fuel`'s proof only ever composes `Nat.le_refl`, `Nat.zero_le`, `Nat.le_succ_succ`, `Nat.rec`, and `Bool.rec`-based case analysis on `Nat.ble`, none of them asserted, so this row stays empty.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "language": "lean4",
+    "statement": "theorem Nat.logAux_le_fuel : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> AxNat.le (AxNat.logAux x0 x1 x2) x1)))"
+  },
+  "id": "F:nat-logaux-le-fuel",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*) -- the `nat` prelude's trusted surface measures zero.\n\n`external_status` is omitted deliberately, per the schema's own guidance ('omit when nobody has looked'): `Nat.logAux` is this prelude's own fuel-recursive device with no Mathlib counterpart (Mathlib's `Nat.log` is defined by well-founded recursion directly, never through an auxiliary fuel function), so there is no external statement of this exact proposition to have a status at all -- only `Nat.log_le_self` (a separate fact) has a Mathlib analogue, and this fact does not flip an `F:ml430-*` mirror fact by hand, per this project's standing rule against claiming a Mathlib statement without a reconciliation route.\n\nThis is the lemma `log.rs`'s own module doc (written when `Nat.log` first landed) flagged as the harder tier still needed: 'logAux b f n <= f, with the argument generalized in the motive'.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-log-tier",
+    "source": "declared by `declare_log_all` (`crates/axeyum-lean-kernel/src/nat_prelude/log.rs`), the inductive tier above the `Nat.log` boundary equations"
+  },
+  "schema_version": 1,
+  "statement": "For all b, f, and n, logAux b f n <= f.",
+  "title": "The fuel is always an upper bound on the fuel-recursive floor logarithm"
+}

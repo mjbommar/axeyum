@@ -2170,6 +2170,24 @@ pub struct NatPrelude {
     /// k)` passes it and then fails the INNER cut `2 ≤ 1` (`Mathlib`:
     /// `Nat.clog_one_right`).
     pub clog_one_right: NameId,
+    /// `Nat.logAux_le_fuel : ∀ b f n, Le (logAux b f n) f` — the fuel is
+    /// always an upper bound on the fuel-recursive `logAux`, for every value
+    /// `n`, not merely the one `log b n := logAux b n n` instantiates.
+    ///
+    /// The genuinely harder tier of `Nat.log`: induction on `f` with `n`
+    /// **generalized inside the motive** (`∀ n, Le (logAux b f n) f`), because
+    /// the recursive call is at `n / b`, a *different* `n` than the one the
+    /// outer statement was stated at. Fixing `n` and inducting on `f` alone
+    /// gives an induction hypothesis about `logAux b f n`, which does not
+    /// apply at the recursive call's `logAux b f (n / b)`.
+    ///
+    /// [`log_le_self`](Self::log_le_self) is this lemma specialized at
+    /// `f := n`.
+    pub log_aux_le_fuel: NameId,
+    /// `Nat.log_le_self : ∀ b n, Le (log b n) n` (`Mathlib`: `Nat.log_le_self`)
+    /// — [`log_aux_le_fuel`](Self::log_aux_le_fuel) specialized at `f := n`,
+    /// since `log b n := logAux b n n` definitionally.
+    pub log_le_self: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -2676,6 +2694,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             clog_zero_left: kernel.name_str(nat, "clog_zero_left"),
             clog_one_left: kernel.name_str(nat, "clog_one_left"),
             clog_one_right: kernel.name_str(nat, "clog_one_right"),
+            log_aux_le_fuel: kernel.name_str(nat, "logAux_le_fuel"),
+            log_le_self: kernel.name_str(nat, "log_le_self"),
         };
 
         let mut d = NatDev::new(kernel, p);
