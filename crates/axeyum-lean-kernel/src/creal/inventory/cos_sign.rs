@@ -13,9 +13,16 @@
 /// `(display name, interned NameId, declaration kind)` for every `CReal`
 /// declaration built by `crates/axeyum-lean-kernel/src/creal/cos_sign.rs`.
 pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameId, &'static str)> {
-    vec![(
-        "CReal.converges_upper_bound_shift",
-        p.converges_upper_bound_shift,
-        "theorem",
-    )]
+    vec![
+        (
+            "CReal.converges_upper_bound_shift",
+            p.converges_upper_bound_shift,
+            "theorem",
+        ),
+        (
+            "CReal.alternatingUpperBoundTail",
+            p.alternating_upper_bound_tail,
+            "theorem",
+        ),
+    ]
 }

@@ -10203,6 +10203,7 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "trig::declare_sin_trig",
     "cos_sign::declare_converges_upper_bound_shift",
     "alternating::declare_alternating",
+    "cos_sign::declare_alternating_upper_bound_tail",
     "trig::declare_trig_alternating_bounds",
     "trig::declare_sin_trig_alternating_bounds",
     "ivt::declare_ivt",
