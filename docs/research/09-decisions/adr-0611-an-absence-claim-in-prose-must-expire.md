@@ -29,6 +29,8 @@ Five went stale in one day and two cost a full Opus lane each:
   literally true — `CReal.within_of_close_within` is still absent — but the
   *inference* readers drew from it was wrong: the forward
   `CReal.close_within_of_within` had landed and sufficed.
+  <!-- absent: CReal.within_of_close_within -- the reverse close_within -> Within bridge trig_fn.rs:63 reports missing; this paragraph goes red the day it lands -->
+
 - [`diary-exact-root-obstruction.md`](../../mathematics-2026-08/diary-exact-root-obstruction.md)
   said a transport lemma was "grepped for; absent".
   `CReal.converges_comp_eventually` existed, and *its own doc comment names

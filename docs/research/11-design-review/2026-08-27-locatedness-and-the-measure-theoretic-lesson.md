@@ -77,7 +77,7 @@ No finite prefix of the input determines the output near the tie.
 
 ## 4. The immediately actionable item
 
-**`CReal.sup` does not exist and should.** For uniformly continuous `f` on a
+**`CReal.sup` does not exist and should.** <!-- absent: CReal.sup --> For uniformly continuous `f` on a
 compact interval it is constructive — mesh maxima converge, and `CReal.max`
 with its lattice lemmas already ships. It is the honest **row 1** for the LUB
 family, which is currently the only row 1 in the graded families that is an

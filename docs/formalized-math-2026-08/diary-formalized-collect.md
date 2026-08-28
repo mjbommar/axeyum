@@ -88,6 +88,9 @@ carries a substantial one — `le_antisymm`, `le_total`, `le_dest`,
 `le_of_mul_le_mul_left`. What is true is narrower and had to be verified by
 name: `Nat.le_refl` itself is absent. One command would have told me; I wrote
 the sentence first. The note now says so.
+*(Since landed — `Nat.le_refl` exists in the kernel now; this paragraph is a
+historical record of the diary's finding at the time, not a live claim.)*
+<!-- was-absent: Nat.le_refl -- diary claim, resolved: Nat.le_refl now exists in the kernel -->
 
 And the two `Nat.not_succ_le_zero` are the same *proposition* under two
 different *statements* — ours over the kernel's own `Nat.le`, Lean's through the

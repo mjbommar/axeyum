@@ -128,6 +128,9 @@ refused.
   up and the pointwise `Rat.max a (Rat.neg a)` is what it computes; the four-way
   sign split the previous costing anticipated was never needed. The `−q ≤ r ∧
   r ≤ q` encoding remains the way bounds are written throughout.
+  *(`Rat.abs` has since landed; this bullet is a historical record of the
+  design at the time this ADR was written.)*
+  <!-- was-absent: Rat.abs -- since landed -->
 - **The costing was wrong in the cheap direction on the mathematics and right on
   the volume.** ~500 lines was the estimate; the ℚ module is 893 lines and the
   ℝ module 797, but of those ~180 lines are module documentation and the

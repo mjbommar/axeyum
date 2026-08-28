@@ -126,6 +126,9 @@ not exist yet — `int_prelude/rat.rs` has the carrier, `normalize`, `add`, `mul
 and `neg` and no order at all. The probe says so in its own module docs and
 claims only expressibility and cost. `CReal := CReal.Of Rat.Regular` is one
 definition once the order lands, and nothing above changes shape.
+*(The order has since landed — `Rat.le`, `Rat.sub` and `Rat.abs` all now exist;
+this is a historical record of the probe's starting point, not a live claim.)*
+<!-- was-absent: Rat.le, Rat.sub, Rat.abs -- ADR-0512's probe predates the Rat order; all three since landed -->
 
 **The zero is discriminating.** A footprint measurement that could only ever
 print `-` would be worthless, so the probe carries a negative control in a second

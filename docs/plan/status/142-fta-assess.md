@@ -27,7 +27,9 @@ nothing under `crates/` touched:
    - `CReal.sqrt`/`Complex.abs`/`Complex.abs_add_le`/`Complex.polyMul`(+its
      two correctness theorems)/`Complex.factorQuotient` all confirmed
      `found`; `Complex.exp`/`arg`/`fundamentalTheoremOfAlgebra` all
-     confirmed absent. So the earlier lane's "sqrt/abs no longer gate"
+     confirmed absent.
+     <!-- absent: Complex.exp, Complex.arg, Complex.fundamentalTheoremOfAlgebra -->
+     So the earlier lane's "sqrt/abs no longer gate"
      correction holds up under independent re-check.
    - Complex root isolation genuinely does not exist: the naive keyword grep
      "matches" `extremum.rs` only via a false positive

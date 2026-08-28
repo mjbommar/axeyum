@@ -36,6 +36,9 @@ promoted from three copy-pasted proofs.
 inequality (why `CPoint.distSq_triangle_sq_bound` is stated squared), the metric
 form of Ptolemy, and `CPoint.incentre` — which needs side *lengths*, not their
 squares. Three lanes on different targets converged on it.
+*(`CReal.sqrt` landed 2026-08-23; this is a historical record of the blocker
+at the time this finding was written, not a live claim.)*
+<!-- was-absent: CReal.sqrt -- landed 2026-08-23, total and axiom-free -->
 
 Step A of its regularity proof landed, and the constant survived a genuine
 refutation attempt: exact rational arithmetic at `dm = dn`, `dm = 1`, `dm ≫ dn`,

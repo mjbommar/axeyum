@@ -21,7 +21,8 @@ recorded as a type-level argument (`rate : Nat`, not `CReal -> Nat`).
 `F:creal-alternatingeleo`, `F:creal-alternatingbracket`. **NOT registered**
 (do not exist in the merged tree): `CReal.alternatingBracketUpper`,
 `CReal.alternatingLowerBound`, `CReal.alternatingUpperBound` — see Findings
-below.
+below. *(Since landed — all three now exist in the kernel; historical record.)*
+<!-- was-absent: CReal.alternatingBracketUpper, CReal.alternatingLowerBound, CReal.alternatingUpperBound -- this status note's snapshot of the merged tree; all three since landed -->
 
 **Ch.20 (`CReal` polynomials):** `F:creal-polyeval` (+`-zero`/`-succ`),
 `F:creal-polyadd`, `F:creal-polyeval-polyadd`, `F:creal-polyscale`,
@@ -108,6 +109,12 @@ Checked against local `main` @ `aee64cc17` merged into this worktree
   exactly three `declare_*` functions (`neg_one_pow_double`,
   `alternating_e_le_o`, `alternating_bracket`); no dual/upper-bound variant
   anywhere in `creal/`.
+
+*(All five names above are since landed — `CReal.uniform_converges_add`,
+`Nat.even_or_odd`, and the three `CReal.alternating*` declarations all now
+exist in the kernel. This section is a historical record of the merged-tree
+snapshot checked at the time, not a live claim.)*
+<!-- was-absent: CReal.uniform_converges_add, Nat.even_or_odd, CReal.alternatingBracketUpper, CReal.alternatingLowerBound, CReal.alternatingUpperBound -- this findings section's snapshot; all five since landed -->
 
 Per this lane's scope (`crates/` read-only; "if a declaration does not
 exist, that is a finding to report, not a thing to build"), none of the

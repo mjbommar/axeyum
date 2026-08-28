@@ -17,6 +17,8 @@ so it adds no sequence and no regularity obligation. **94 `CReal` declarations,
 trusted surface still 0**; `Rat.abs` still does not exist. Design, the measured
 mutation counts, and what is left undone with its cost:
 [`../notes/creal-lattice.md`](../notes/creal-lattice.md).
+*(`Rat.abs` has since landed; this status entry is a historical record.)*
+<!-- was-absent: Rat.abs -- since landed -->
 
 <!-- plan-section: landed-changes -->
 
