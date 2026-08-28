@@ -358,6 +358,10 @@
 //! the work — only its concluding sentence is now false.
 
 use super::convergence::{converges_predicate, div_succ_at};
+use super::derivative::{
+    abs_le_of_equiv, hd_ty, le_abs_neg_of_le_abs, mul_neg_equiv, neg_add_distrib,
+    neg_mul_equiv_left, pow_deriv_fn, pow_succ_fn,
+};
 use super::geometric::ratio_16_over_25_witnesses;
 use super::series::sum_range_cauchy_body;
 use super::trig::{
@@ -373,7 +377,7 @@ use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::{ExprId, ExprNode};
 use crate::int_prelude::ops::{IntDev, exists_elim};
 use crate::nat_prelude::NatOps;
-use crate::rat_prelude::ops::{one_le_succ, radd, rat_eq_rewrite};
+use crate::rat_prelude::ops::{normalize, one_le_succ, radd, rat_eq_rewrite, rchain};
 use crate::tc::{LocalContext, LocalDecl};
 
 /// Height for `cosFnTerm`: one past `powerSeriesTerm`'s own
@@ -2346,49 +2350,11 @@ pub(super) fn declare_cos_fn_wide_uniformly_continuous(
     let r_c = r_domain(d, p);
     let hab0 = hab_zero_r(d, p);
 
-    // --- nested induction: `pow` uniform continuity, symbolic exponent ---
-    let id_fn = {
-        let pt_fv = d.fresh_fvar();
-        let pt = d.kernel().fvar(pt_fv);
-        d.lam_fv(pt_fv, carrier, pt)
-    };
-    let huc_id = d.lemma(p.uniformly_continuous_id, &[zero_c, r_c]);
-
-    let pow_motive = |d: &mut IntDev<'_>, v: ExprId| -> ExprId {
-        let f = pow_base_fn(d, p, carrier, v);
-        d.const_app(p.uniformly_continuous_on, &[f, zero_c, r_c])
-    };
-    let pow_base = |d: &mut IntDev<'_>| -> ExprId {
-        let one_cc = one_c(d, p);
-        d.lemma(p.uniformly_continuous_const, &[one_cc, zero_c, r_c])
-    };
-    let pow_step = |d: &mut IntDev<'_>, j: ExprId, ih: ExprId| -> ExprId {
-        let pow_j_fn = pow_base_fn(d, p, carrier, j);
-        let j_id = fvar_id(d, j);
-        let ih_id = fvar_id(d, ih);
-        let ih_ty = pow_motive(d, j);
-        let (k1, hb1) = bounded_via_uc(
-            d,
-            p,
-            pow_j_fn,
-            zero_c,
-            r_c,
-            ih,
-            hab0,
-            &[(j_id, nat), (ih_id, ih_ty)],
-        );
-        let (k2, hb2) = bounded_via_uc(d, p, id_fn, zero_c, r_c, huc_id, hab0, &[]);
-        d.lemma(
-            p.uniformly_continuous_mul,
-            &[pow_j_fn, id_fn, zero_c, r_c, ih, huc_id, k1, k2, hb1, hb2],
-        )
-    };
-
-    let m_fv = d.fresh_fvar();
-    let m = d.kernel().fvar(m_fv);
-    let pow_uc_at_m = induct_ty(d, &pow_motive, &pow_base, &pow_step, m);
-    let pow_uc = d.lam_fv(m_fv, nat, pow_uc_at_m);
-    // pow_uc : ∀ m, UniformlyContinuousOn (fun pt => pow pt m) zero R.
+    // `pow_uc : ∀ m, UniformlyContinuousOn (fun pt => pow pt m) zero R` --
+    // the nested induction over `pow`'s base, shared with
+    // [`declare_sin_fn_uniformly_continuous`] and the derivative section's
+    // two Skolem bound builders rather than reproduced per call site.
+    let pow_uc = pow_uc_fn(d, p, carrier, nat, zero_c, r_c, hab0);
 
     // --- outer induction: partial-sum uniform continuity, over `n` -------
     let big_f = cos_fn_partial_sums_fn(d, p, carrier, nat);
@@ -3425,49 +3391,11 @@ pub(super) fn declare_sin_fn_uniformly_continuous(
     let r_c = r_domain(d, p);
     let hab0 = hab_zero_r(d, p);
 
-    // --- nested induction: `pow` uniform continuity, symbolic exponent ---
-    let id_fn = {
-        let pt_fv = d.fresh_fvar();
-        let pt = d.kernel().fvar(pt_fv);
-        d.lam_fv(pt_fv, carrier, pt)
-    };
-    let huc_id = d.lemma(p.uniformly_continuous_id, &[zero_c, r_c]);
-
-    let pow_motive = |d: &mut IntDev<'_>, v: ExprId| -> ExprId {
-        let f = pow_base_fn(d, p, carrier, v);
-        d.const_app(p.uniformly_continuous_on, &[f, zero_c, r_c])
-    };
-    let pow_base = |d: &mut IntDev<'_>| -> ExprId {
-        let one_cc = one_c(d, p);
-        d.lemma(p.uniformly_continuous_const, &[one_cc, zero_c, r_c])
-    };
-    let pow_step = |d: &mut IntDev<'_>, j: ExprId, ih: ExprId| -> ExprId {
-        let pow_j_fn = pow_base_fn(d, p, carrier, j);
-        let j_id = fvar_id(d, j);
-        let ih_id = fvar_id(d, ih);
-        let ih_ty = pow_motive(d, j);
-        let (k1, hb1) = bounded_via_uc(
-            d,
-            p,
-            pow_j_fn,
-            zero_c,
-            r_c,
-            ih,
-            hab0,
-            &[(j_id, nat), (ih_id, ih_ty)],
-        );
-        let (k2, hb2) = bounded_via_uc(d, p, id_fn, zero_c, r_c, huc_id, hab0, &[]);
-        d.lemma(
-            p.uniformly_continuous_mul,
-            &[pow_j_fn, id_fn, zero_c, r_c, ih, huc_id, k1, k2, hb1, hb2],
-        )
-    };
-
-    let m_fv = d.fresh_fvar();
-    let m = d.kernel().fvar(m_fv);
-    let pow_uc_at_m = induct_ty(d, &pow_motive, &pow_base, &pow_step, m);
-    let pow_uc = d.lam_fv(m_fv, nat, pow_uc_at_m);
-    // pow_uc : ∀ m, UniformlyContinuousOn (fun pt => pow pt m) zero R.
+    // `pow_uc : ∀ m, UniformlyContinuousOn (fun pt => pow pt m) zero R` --
+    // the nested induction over `pow`'s base, shared with
+    // [`declare_sin_fn_uniformly_continuous`] and the derivative section's
+    // two Skolem bound builders rather than reproduced per call site.
+    let pow_uc = pow_uc_fn(d, p, carrier, nat, zero_c, r_c, hab0);
 
     // --- outer induction: partial-sum uniform continuity, over `n` -------
     let big_f = sin_fn_partial_sums_fn(d, p, carrier, nat);
@@ -3526,4 +3454,1349 @@ pub(super) fn declare_sin_fn_uniformly_continuous(
         ty,
         value,
     })
+}
+
+// ============================================================================
+// The derivative of `cosFnWide`'s partial sums (lane 159 step 1)
+// ============================================================================
+//
+// `CReal.hasDerivative_pow` demands TWO Skolem `BoundedOn` functions -- `kb`
+// bounding `fun r => pow r n` and `kd` bounding `fun x => mul (ofNat (succ
+// n)) (pow x n)`, each at EVERY `n`. Neither is hand-derived here: this file
+// already builds `pow` uniform continuity at a symbolic exponent
+// ([`pow_uc_fn`], extracted below from the two verbatim copies
+// `declare_cos_fn_wide_uniformly_continuous` and
+// `declare_sin_fn_uniformly_continuous` each carried), and
+// `CReal.bounded_of_uniformly_continuous` turns that into a `BoundedOn` with
+// a COMPUTED index. Lambda-abstracting that index over the exponent IS the
+// Skolem function -- so the two hypotheses that looked like the obstacle
+// cost one `d.lam_fv` each.
+//
+// The crux is the index-shifted coefficient identity. `cosFnTerm k x :=
+// cosTerm k * x^(k+k)` and `sinFnTerm k x := sinTerm k * x^(2k+1)`, so
+// `d/dx cosFnTerm (j+1) = cosTerm (j+1) * (2j+2) * x^(2j+1)` and matching it
+// against `-sinFnTerm j` needs `cosTerm (j+1) * (2j+2) ~ -sinTerm j`. With
+// `cosTerm k := (-1)^k * expTerm (k+k)` and `sinTerm k := (-1)^k * expTerm
+// (2k+1)` that reduces, after one `(-1)^(j+1) = -(-1)^j` step, to
+// `(m+1) * expTerm (m+1) ~ expTerm m` at `m := 2j+1` -- i.e. `(m+1)/(m+1)! =
+// 1/m!`, which is [`declare_exp_term_succ_scale`] and is NOT expensive:
+// `Rat.normalize_mul_normalize` fuses the product into one `normalize` and
+// `Rat.normalize_congr` closes the cross-multiplication against
+// `Nat.factorial_succ`. No `Rat.inv`, no case split.
+
+/// `∀ m, UniformlyContinuousOn (fun pt => pow pt m) zero R` -- the nested
+/// induction over `pow`'s BASE at a symbolic exponent.
+///
+/// Extracted from [`declare_cos_fn_wide_uniformly_continuous`] and
+/// [`declare_sin_fn_uniformly_continuous`], which carried byte-identical
+/// copies of it, and now needed a third and fourth time by
+/// [`pow_bounded_skolem`]/[`pow_deriv_bounded_skolem`].
+fn pow_uc_fn(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    carrier: ExprId,
+    nat: ExprId,
+    zero_c: ExprId,
+    r_c: ExprId,
+    hab0: ExprId,
+) -> ExprId {
+    let id_fn = {
+        let pt_fv = d.fresh_fvar();
+        let pt = d.kernel().fvar(pt_fv);
+        d.lam_fv(pt_fv, carrier, pt)
+    };
+    let huc_id = d.lemma(p.uniformly_continuous_id, &[zero_c, r_c]);
+
+    let pow_motive = |d: &mut IntDev<'_>, v: ExprId| -> ExprId {
+        let f = pow_base_fn(d, p, carrier, v);
+        d.const_app(p.uniformly_continuous_on, &[f, zero_c, r_c])
+    };
+    let pow_base = |d: &mut IntDev<'_>| -> ExprId {
+        let one_cc = one_c(d, p);
+        d.lemma(p.uniformly_continuous_const, &[one_cc, zero_c, r_c])
+    };
+    let pow_step = |d: &mut IntDev<'_>, j: ExprId, ih: ExprId| -> ExprId {
+        let pow_j_fn = pow_base_fn(d, p, carrier, j);
+        let j_id = fvar_id(d, j);
+        let ih_id = fvar_id(d, ih);
+        let ih_ty = pow_motive(d, j);
+        let (k1, hb1) = bounded_via_uc(
+            d,
+            p,
+            pow_j_fn,
+            zero_c,
+            r_c,
+            ih,
+            hab0,
+            &[(j_id, nat), (ih_id, ih_ty)],
+        );
+        let (k2, hb2) = bounded_via_uc(d, p, id_fn, zero_c, r_c, huc_id, hab0, &[]);
+        d.lemma(
+            p.uniformly_continuous_mul,
+            &[pow_j_fn, id_fn, zero_c, r_c, ih, huc_id, k1, k2, hb1, hb2],
+        )
+    };
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let pow_uc_at_m = induct_ty(d, &pow_motive, &pow_base, &pow_step, m);
+    d.lam_fv(m_fv, nat, pow_uc_at_m)
+}
+
+/// `(kb, hkb)` with `kb : Nat → Nat` and
+/// `hkb : ∀ n, BoundedOn (fun r => pow r n) zero R (kb n)` --
+/// `CReal.hasDerivative_pow`'s first Skolem hypothesis, computed rather than
+/// hand-derived. See this section's own header.
+fn pow_bounded_skolem(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    carrier: ExprId,
+    nat: ExprId,
+    zero_c: ExprId,
+    r_c: ExprId,
+    hab0: ExprId,
+    pow_uc: ExprId,
+) -> (ExprId, ExprId) {
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let n_id = fvar_id(d, n);
+    let pow_n_fn = pow_base_fn(d, p, carrier, n);
+    let huc = d.apply(pow_uc, &[n]);
+    let (k_at_n, proof_at_n) =
+        bounded_via_uc(d, p, pow_n_fn, zero_c, r_c, huc, hab0, &[(n_id, nat)]);
+    let kb = d.lam_fv(n_fv, nat, k_at_n);
+    let hkb = d.lam_fv(n_fv, nat, proof_at_n);
+    (kb, hkb)
+}
+
+/// `(kd, hkd)` with
+/// `hkd : ∀ n, BoundedOn (fun x => mul (ofNat (succ n)) (pow x n)) zero R (kd n)`
+/// -- `CReal.hasDerivative_pow`'s second Skolem hypothesis. The uniform
+/// continuity of the product comes from `CReal.uniformly_continuous_mul` at
+/// the constant `ofNat (succ n)` and [`pow_uc_fn`] at `n`, exactly
+/// [`cos_fn_term_uc`]'s own shape one coefficient over.
+fn pow_deriv_bounded_skolem(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    carrier: ExprId,
+    nat: ExprId,
+    zero_c: ExprId,
+    r_c: ExprId,
+    hab0: ExprId,
+    pow_uc: ExprId,
+) -> (ExprId, ExprId) {
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let n_id = fvar_id(d, n);
+    let free_n = [(n_id, nat)];
+
+    let succ_n = d.succ(n);
+    let coeff = d.const_app(p.of_nat, &[succ_n]);
+    let const_fn = {
+        let pt_fv = d.fresh_fvar();
+        d.lam_fv(pt_fv, carrier, coeff)
+    };
+    let huc_const = d.lemma(p.uniformly_continuous_const, &[coeff, zero_c, r_c]);
+
+    let pow_n_fn = pow_base_fn(d, p, carrier, n);
+    let huc_pow = d.apply(pow_uc, &[n]);
+
+    let (k1, hb1) = bounded_via_uc(d, p, const_fn, zero_c, r_c, huc_const, hab0, &free_n);
+    let (k2, hb2) = bounded_via_uc(d, p, pow_n_fn, zero_c, r_c, huc_pow, hab0, &free_n);
+    let huc_prod = d.lemma(
+        p.uniformly_continuous_mul,
+        &[
+            const_fn, pow_n_fn, zero_c, r_c, huc_const, huc_pow, k1, k2, hb1, hb2,
+        ],
+    );
+
+    let deriv_fn = pow_deriv_fn(d, p, carrier, n);
+    let (k_at_n, proof_at_n) = bounded_via_uc(d, p, deriv_fn, zero_c, r_c, huc_prod, hab0, &free_n);
+    let kd = d.lam_fv(n_fv, nat, k_at_n);
+    let hkd = d.lam_fv(n_fv, nat, proof_at_n);
+    (kd, hkd)
+}
+
+/// `CReal.expTermSuccScale : ∀ m, Equiv (mul (ofNat (Nat.succ m)) (expTerm
+/// (Nat.succ m))) (expTerm m)` -- `(m+1)·(1/(m+1)!) = 1/m!`.
+///
+/// **The index-shifted coefficient identity's whole arithmetic content**, and
+/// it is one `Rat` normalisation rather than the cross-multiplication
+/// battery `creal/trig.rs::exp_term_antitone_rat` needs for the ORDER fact
+/// `1/(n+1)! ≤ 1/n!`. `CReal.ofNat n` unfolds to `ofRat (natDivSucc n 0)` =
+/// `ofRat (normalize (ofNat n) 1 _)` and `expTerm n` to `ofRat (normalize 1
+/// (factorial n) _)`, so both factors are already `Rat.normalize`s:
+/// `Rat.normalize_mul_normalize` fuses them into one, and
+/// `Rat.normalize_congr` closes `(m+1)·1·m! = 1·(1·(m+1)!)` against
+/// `Nat.factorial_succ` alone. `CReal.ofRat_mul` lifts it back.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_exp_term_succ_scale(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let rat = p.rat;
+    let np = d.prelude();
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let succ_m = d.succ(m);
+
+    // A := natDivSucc (succ m) 0, unfolded: normalize (ofNat (succ m)) (succ 0) _.
+    let n_a = d.of_nat(succ_m);
+    let zero_nat = d.zero();
+    let e_a = d.succ(zero_nat);
+    let h_a = one_le_succ(d, zero_nat);
+    let a_rat = normalize(d, n_a, e_a, h_a);
+
+    // B := expTerm (succ m), unfolded: normalize (ofNat 1) (factorial (succ m)) _.
+    let one_nat = d.num(1);
+    let one_int = d.of_nat(one_nat);
+    let fac_sm = d.factorial(succ_m);
+    let h_b = d.lemma(np.one_le_factorial, &[succ_m]);
+    let b_rat = normalize(d, one_int, fac_sm, h_b);
+
+    // step0 : Rat.mul A B = normalize ((ofNat (succ m))*1) ((succ 0)*(succ m)!) _.
+    let step0 = d.lemma(
+        rat.normalize_mul_normalize,
+        &[n_a, e_a, h_a, one_int, fac_sm, h_b],
+    );
+
+    let n1 = d.imul(n_a, one_int);
+    let d1 = NatOps::mul(d, e_a, fac_sm);
+    let h1 = d.lemma(np.one_le_mul, &[e_a, fac_sm, h_a, h_b]);
+
+    let fac_m = d.factorial(m);
+    let h_c = d.lemma(np.one_le_factorial, &[m]);
+    let c_rat = normalize(d, one_int, fac_m, h_c);
+
+    // The cross-multiplication `normalize_congr` wants, as a `Nat` identity
+    // under one shared `Int.ofNat` (`Int.mul (ofNat a) (ofNat b)` ι-reduces
+    // to `ofNat (Nat.mul a b)`, so both sides are already in that shape):
+    //   ((succ m) * 1) * m!  =  1 * (1 * (succ m)!)
+    let lhs_nat = {
+        let inner = NatOps::mul(d, succ_m, one_nat);
+        NatOps::mul(d, inner, fac_m)
+    };
+    let rhs_nat = NatOps::mul(d, one_nat, d1);
+    let goal_nat = NatOps::mul(d, succ_m, fac_m);
+
+    let hnat = {
+        // LHS -> (succ m) * m!
+        let mul_one = d.lemma(np.mul_one, &[succ_m]);
+        let sm_one = NatOps::mul(d, succ_m, one_nat);
+        let left = d.congr(sm_one, succ_m, mul_one, &|d, t| NatOps::mul(d, t, fac_m));
+        // RHS -> (succ m) * m!
+        let one_mul_outer = d.lemma(np.one_mul, &[d1]);
+        let one_mul_inner = d.lemma(np.one_mul, &[fac_sm]);
+        let fac_succ = d.lemma(np.factorial_succ, &[m]);
+        let fac_m_sm = NatOps::mul(d, fac_m, succ_m);
+        let comm = d.lemma(np.mul_comm, &[fac_m, succ_m]);
+        let (_, right) = d.chain(
+            rhs_nat,
+            &[
+                (d1, one_mul_outer),
+                (fac_sm, one_mul_inner),
+                (fac_m_sm, fac_succ),
+                (goal_nat, comm),
+            ],
+        );
+        let back = d.symm(rhs_nat, goal_nat, right);
+        d.trans(lhs_nat, goal_nat, rhs_nat, left, back)
+    };
+    let hyp = d.nat_eq_to_int(lhs_nat, rhs_nat, hnat, &|d, t| d.of_nat(t));
+
+    let step1 = d.lemma(rat.normalize_congr, &[n1, d1, h1, one_int, fac_m, h_c, hyp]);
+
+    let prod_rat = rmul_here(d, a_rat, b_rat);
+    let q1 = normalize(d, n1, d1, h1);
+    // `rchain`, NOT `d.trans`: the `NatOps` `trans`/`chain`/`symm`/`refl`
+    // family builds `Eq AxNat` and rejects `Rat` arguments as
+    // `TypeMismatch { expected: AxNat, got: Rat }` -- a real rejection this
+    // declaration hit on its first `add_declaration`.
+    let (_, rat_eq) = rchain(d, prod_rat, &[(q1, step0), (c_rat, step1)]);
+
+    // Lift to `CReal`: `mul (ofRat A) (ofRat B) ~ ofRat (A*B) ~ ofRat C`.
+    let embed_a = embed(d, p, a_rat);
+    let embed_b = embed(d, p, b_rat);
+    let lhs_creal = cmul(d, p, embed_a, embed_b);
+    let embed_prod = embed(d, p, prod_rat);
+    let embed_c = embed(d, p, c_rat);
+    let leg1 = d.lemma(p.of_rat_mul, &[a_rat, b_rat]);
+    let leg2 = embed_eq_to_equiv_here(d, p, prod_rat, c_rat, rat_eq);
+    let body = d.lemma(p.equiv_trans, &[lhs_creal, embed_prod, embed_c, leg1, leg2]);
+
+    let value = d.lam_fv(m_fv, nat, body);
+    let ty = {
+        let of_nat_sm = d.const_app(p.of_nat, &[succ_m]);
+        let exp_sm = d.const_app(p.exp_term, &[succ_m]);
+        let exp_m = d.const_app(p.exp_term, &[m]);
+        let lhs = cmul(d, p, of_nat_sm, exp_sm);
+        let stmt = equiv(d, p, lhs, exp_m);
+        d.pi_fv(m_fv, nat, stmt)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.exp_term_succ_scale,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.cosFnTermDerivCoeff : ∀ j, Equiv (mul (cosTerm (Nat.succ j))
+/// (ofNat (Nat.succ (Nat.add (Nat.add j j) 1)))) (neg (sinTerm j))` -- the
+/// index-shifted coefficient identity `cosTerm (j+1)·(2j+2) ~ −sinTerm j`.
+///
+/// Two ingredients and nothing else: [`declare_exp_term_succ_scale`] at
+/// `m := 2j+1`, and `(-1)^(j+1) ~ -(-1)^j` (which is `pow`'s own ι-reduction
+/// `pow x (succ j) ≡ mul (pow x j) x` plus `mul_neg_equiv`/`mul_one`, no
+/// parity lemma). The ONE transport is `Nat.succ_add` moving `cosTerm (succ
+/// j)`'s own exponent `Nat.add (succ j) (succ j)` to `Nat.succ (2j+1)`; the
+/// two are propositionally but not definitionally equal, since `Nat.add`
+/// recurses on the RIGHT and both sides are stuck on a symbolic `j`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_cos_fn_term_deriv_coeff(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let np = d.prelude();
+
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let succ_j = d.succ(j);
+
+    let odd = odd_index(d, j); // 2j+1, `sinFnTerm`/`sinTerm`'s own index
+    let s_idx = d.succ(odd); // 2j+2
+    let add_sj_sj = d.add(succ_j, succ_j);
+
+    // hidx : Nat.add (succ j) (succ j) = Nat.succ (2j+1). Both sides reduce
+    // one ι-step to `succ _`, and `Nat.succ_add j j` closes the residue.
+    let hidx = {
+        let succ_add = d.lemma(np.succ_add, &[j, j]);
+        let add_sj_j = d.add(succ_j, j);
+        let two_j = d.add(j, j);
+        let succ_two_j = d.succ(two_j);
+        d.congr(add_sj_j, succ_two_j, succ_add, &|d, t| d.succ(t))
+    };
+
+    let neg_one = {
+        let one_cc = one_c(d, p);
+        cneg(d, p, one_cc)
+    };
+    let q = cpow(d, p, neg_one, j); // (-1)^j
+    let p1 = cpow(d, p, neg_one, succ_j); // (-1)^(j+1)
+    let exp_s = d.const_app(p.exp_term, &[s_idx]);
+    let exp_odd = d.const_app(p.exp_term, &[odd]);
+    let coeff = d.const_app(p.of_nat, &[s_idx]);
+    let sin_term_j = {
+        let st = d.kernel().const_(p.sin_term, vec![]);
+        d.apply(st, &[j])
+    };
+    let neg_sin = cneg(d, p, sin_term_j);
+
+    // start := ((-1)^(j+1) * expTerm (2j+2)) * ofNat (2j+2)
+    let inner = cmul(d, p, p1, exp_s);
+    let start = cmul(d, p, inner, coeff);
+
+    // 1. mul_assoc.
+    let exp_s_coeff = cmul(d, p, exp_s, coeff);
+    let assoc_target = cmul(d, p, p1, exp_s_coeff);
+    let h_assoc = d.lemma(p.mul_assoc, &[p1, exp_s, coeff]);
+
+    // 2. commute, then `expTermSuccScale`.
+    let coeff_exp_s = cmul(d, p, coeff, exp_s);
+    let h_comm = d.lemma(p.mul_comm, &[exp_s, coeff]);
+    let h_scale = d.lemma(p.exp_term_succ_scale, &[odd]);
+    let refl_p1 = erefl(d, p, p1);
+    let step_comm = d.lemma(
+        p.mul_congr,
+        &[p1, p1, exp_s_coeff, coeff_exp_s, refl_p1, h_comm],
+    );
+    let p1_coeff_exp = cmul(d, p, p1, coeff_exp_s);
+    let step_scale = d.lemma(
+        p.mul_congr,
+        &[p1, p1, coeff_exp_s, exp_odd, refl_p1, h_scale],
+    );
+    let p1_exp_odd = cmul(d, p, p1, exp_odd);
+
+    // 3. (-1)^(j+1) ~ -(-1)^j, at the ι-reduced form `mul q (neg one)`.
+    let q_neg_one = cmul(d, p, q, neg_one);
+    let hqn = {
+        let one_cc = one_c(d, p);
+        let q_one = cmul(d, p, q, one_cc);
+        let neg_q_one = cneg(d, p, q_one);
+        let neg_q_inner = cneg(d, p, q);
+        let leg1 = mul_neg_equiv(d, p, q, one_cc);
+        let mo = d.lemma(p.mul_one, &[q]);
+        let leg2 = d.lemma(p.neg_congr, &[q_one, q, mo]);
+        echain(d, p, q_neg_one, &[(neg_q_one, leg1), (neg_q_inner, leg2)])
+    };
+    let neg_q = cneg(d, p, q);
+    let refl_exp_odd = erefl(d, p, exp_odd);
+    let step_sign = d.lemma(
+        p.mul_congr,
+        &[q_neg_one, neg_q, exp_odd, exp_odd, hqn, refl_exp_odd],
+    );
+    let neg_q_exp = cmul(d, p, neg_q, exp_odd);
+    let step_pull = neg_mul_equiv_left(d, p, q, exp_odd);
+
+    let proof_at_s = echain(
+        d,
+        p,
+        start,
+        &[
+            (assoc_target, h_assoc),
+            (p1_coeff_exp, step_comm),
+            (p1_exp_odd, step_scale),
+            (neg_q_exp, step_sign),
+            (neg_sin, step_pull),
+        ],
+    );
+
+    // Transport the exponent back to `cosTerm (succ j)`'s own shape.
+    let back = d.symm(add_sj_sj, s_idx, hidx);
+    let body = d.nat_rewrite(s_idx, add_sj_sj, back, proof_at_s, &|d, t| {
+        let exp_t = d.const_app(p.exp_term, &[t]);
+        let inner_t = cmul(d, p, p1, exp_t);
+        let lhs_t = cmul(d, p, inner_t, coeff);
+        equiv(d, p, lhs_t, neg_sin)
+    });
+
+    let value = d.lam_fv(j_fv, nat, body);
+    let ty = {
+        let ct = d.kernel().const_(p.cos_term, vec![]);
+        let cos_term_sj = d.apply(ct, &[succ_j]);
+        let lhs = cmul(d, p, cos_term_sj, coeff);
+        let stmt = equiv(d, p, lhs, neg_sin);
+        d.pi_fv(j_fv, nat, stmt)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.cos_fn_term_deriv_coeff,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `∀ x, le zero x → le x R → <body x>` -- the pointwise-agreement hypothesis
+/// `CReal.hasDerivative_congr` takes. The two range hypotheses are bound and
+/// discarded: every agreement proof in this section is an unconditional
+/// algebraic identity, `hasDerivative_congr` merely does not need it to be.
+fn agree_lam(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    carrier: ExprId,
+    zero_c: ExprId,
+    r_c: ExprId,
+    body: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,
+) -> ExprId {
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let hax_fv = d.fresh_fvar();
+    let hxb_fv = d.fresh_fvar();
+    let inner = body(d, x);
+    let range_ax = cle(d, p, zero_c, x);
+    let range_xb = cle(d, p, x, r_c);
+    let with_hxb = d.lam_fv(hxb_fv, range_xb, inner);
+    let with_hax = d.lam_fv(hax_fv, range_ax, with_hxb);
+    d.lam_fv(x_fv, carrier, with_hax)
+}
+
+/// `CReal.cosFnTermHasDerivative : ∀ j, HasDerivativeOn (fun x => cosFnTerm
+/// (Nat.succ j) x) (fun x => neg (sinFnTerm j x)) zero R`.
+///
+/// `hasDerivative_pow` at `n := 2j+1` (so the FUNCTION's exponent is `2j+2`,
+/// never a `Nat.sub`), then `hasDerivative_smul` at `c := cosTerm (succ j)`
+/// whose magnitude bound is read off `bounded_of_uniformly_continuous`
+/// applied to the CONSTANT function `fun _ => c` and unfolded at the single
+/// point `zero` -- no `cosTermAbsLeDominant` arithmetic is needed, since any
+/// bound at all suffices for `smul`. `hasDerivative_congr` then moves both
+/// sides into the named `cosFnTerm`/`sinFnTerm` shapes: the function side by
+/// the `Nat.succ_add` index transport, the derivative side by
+/// [`declare_cos_fn_term_deriv_coeff`].
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_cos_fn_term_has_derivative(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let np = d.prelude();
+    let zero_c = czero(d, p);
+    let r_c = r_domain(d, p);
+    let hab0 = hab_zero_r(d, p);
+
+    let pow_uc = pow_uc_fn(d, p, carrier, nat, zero_c, r_c, hab0);
+    let (kb, hkb) = pow_bounded_skolem(d, p, carrier, nat, zero_c, r_c, hab0, pow_uc);
+    let (kd, hkd) = pow_deriv_bounded_skolem(d, p, carrier, nat, zero_c, r_c, hab0, pow_uc);
+
+    let id_fn = {
+        let pt_fv = d.fresh_fvar();
+        let pt = d.kernel().fvar(pt_fv);
+        d.lam_fv(pt_fv, carrier, pt)
+    };
+    let huc_id = d.lemma(p.uniformly_continuous_id, &[zero_c, r_c]);
+    let (k1, hb_id) = bounded_via_uc(d, p, id_fn, zero_c, r_c, huc_id, hab0, &[]);
+
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let j_id = fvar_id(d, j);
+    let succ_j = d.succ(j);
+    let odd = odd_index(d, j);
+    let s_idx = d.succ(odd);
+    let add_sj_sj = d.add(succ_j, succ_j);
+
+    let hd_pow = d.const_app(
+        p.has_derivative_pow,
+        &[zero_c, r_c, k1, hb_id, kb, kd, hkb, hkd, odd],
+    );
+    let pow_fn = pow_succ_fn(d, p, carrier, odd);
+    let deriv_fn = pow_deriv_fn(d, p, carrier, odd);
+
+    let cos_term_sj = {
+        let ct = d.kernel().const_(p.cos_term, vec![]);
+        d.apply(ct, &[succ_j])
+    };
+    let const_fn = {
+        let pt_fv = d.fresh_fvar();
+        d.lam_fv(pt_fv, carrier, cos_term_sj)
+    };
+    let huc_const = d.lemma(p.uniformly_continuous_const, &[cos_term_sj, zero_c, r_c]);
+    let (kc, hbc) = bounded_via_uc(d, p, const_fn, zero_c, r_c, huc_const, hab0, &[(j_id, nat)]);
+    let hz = d.lemma(p.le_refl, &[zero_c]);
+    let hbound = d.lemma(
+        p.bounded_on_unfold,
+        &[const_fn, zero_c, r_c, kc, hbc, zero_c, hz, hab0],
+    );
+
+    let smul_fn = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let pr = cpow(d, p, r, s_idx);
+        let body = cmul(d, p, cos_term_sj, pr);
+        d.lam_fv(r_fv, carrier, body)
+    };
+    let smul_deriv_fn = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let coeff = d.const_app(p.of_nat, &[s_idx]);
+        let px = cpow(d, p, x, odd);
+        let inner = cmul(d, p, coeff, px);
+        let body = cmul(d, p, cos_term_sj, inner);
+        d.lam_fv(x_fv, carrier, body)
+    };
+    let hd_smul = d.lemma(
+        p.has_derivative_smul,
+        &[
+            cos_term_sj,
+            pow_fn,
+            deriv_fn,
+            zero_c,
+            r_c,
+            hd_pow,
+            kc,
+            hbound,
+        ],
+    );
+
+    // Target shapes.
+    let g_fn = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let body = d.const_app(p.cos_fn_term, &[succ_j, x]);
+        d.lam_fv(x_fv, carrier, body)
+    };
+    let gp_fn = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let sft = d.const_app(p.sin_fn_term, &[j, x]);
+        let body = cneg(d, p, sft);
+        d.lam_fv(x_fv, carrier, body)
+    };
+
+    // agree_g : Equiv (cosFnTerm (succ j) x) (cos_term_sj * pow x (2j+2)).
+    let hidx = {
+        let succ_add = d.lemma(np.succ_add, &[j, j]);
+        let add_sj_j = d.add(succ_j, j);
+        let two_j = d.add(j, j);
+        let succ_two_j = d.succ(two_j);
+        d.congr(add_sj_j, succ_two_j, succ_add, &|d, t| d.succ(t))
+    };
+    let back = d.symm(add_sj_sj, s_idx, hidx);
+    let agree_g = agree_lam(d, p, carrier, zero_c, r_c, &|d, x| {
+        let target = {
+            let pr = cpow(d, p, x, s_idx);
+            cmul(d, p, cos_term_sj, pr)
+        };
+        let refl = erefl(d, p, target);
+        d.nat_rewrite(s_idx, add_sj_sj, back, refl, &|d, t| {
+            let pr = cpow(d, p, x, t);
+            let lhs = cmul(d, p, cos_term_sj, pr);
+            equiv(d, p, lhs, target)
+        })
+    });
+
+    // agree_gp : Equiv (neg (sinFnTerm j x)) (cos_term_sj * (ofNat (2j+2) * pow x (2j+1))).
+    let coeff_c = d.const_app(p.of_nat, &[s_idx]);
+    let sin_term_j = {
+        let st = d.kernel().const_(p.sin_term, vec![]);
+        d.apply(st, &[j])
+    };
+    let h_coeff = d.lemma(p.cos_fn_term_deriv_coeff, &[j]);
+    let agree_gp = agree_lam(d, p, carrier, zero_c, r_c, &|d, x| {
+        let px = cpow(d, p, x, odd);
+        let inner = cmul(d, p, coeff_c, px);
+        let rhs = cmul(d, p, cos_term_sj, inner);
+        let ct_coeff = cmul(d, p, cos_term_sj, coeff_c);
+        let regrouped = cmul(d, p, ct_coeff, px);
+        let h_assoc = d.lemma(p.mul_assoc, &[cos_term_sj, coeff_c, px]);
+        let un_assoc = esymm(d, p, regrouped, rhs, h_assoc);
+        let neg_sin = cneg(d, p, sin_term_j);
+        let refl_px = erefl(d, p, px);
+        let h_sub = d.lemma(p.mul_congr, &[ct_coeff, neg_sin, px, px, h_coeff, refl_px]);
+        let neg_sin_px = cmul(d, p, neg_sin, px);
+        let h_pull = neg_mul_equiv_left(d, p, sin_term_j, px);
+        let sin_px = cmul(d, p, sin_term_j, px);
+        let neg_prod = cneg(d, p, sin_px);
+        let forward = echain(
+            d,
+            p,
+            rhs,
+            &[
+                (regrouped, un_assoc),
+                (neg_sin_px, h_sub),
+                (neg_prod, h_pull),
+            ],
+        );
+        esymm(d, p, rhs, neg_prod, forward)
+    });
+
+    let body = d.lemma(
+        p.has_derivative_congr,
+        &[
+            smul_fn,
+            smul_deriv_fn,
+            zero_c,
+            r_c,
+            hd_smul,
+            g_fn,
+            gp_fn,
+            agree_g,
+            agree_gp,
+        ],
+    );
+
+    let value = d.lam_fv(j_fv, nat, body);
+    let ty = {
+        let stmt = hd_ty(d, p, g_fn, gp_fn, zero_c, r_c);
+        d.pi_fv(j_fv, nat, stmt)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.cos_fn_term_has_derivative,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `fun x => sumRange (fun k => cosFnTerm k x) m`, at a fixed `m`.
+fn cos_partial_at(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    carrier: ExprId,
+    nat: ExprId,
+    m: ExprId,
+) -> ExprId {
+    let pt_fv = d.fresh_fvar();
+    let pt = d.kernel().fvar(pt_fv);
+    let f_pt = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let body = d.const_app(p.cos_fn_term, &[k, pt]);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let body = d.const_app(p.sum_range, &[f_pt, m]);
+    d.lam_fv(pt_fv, carrier, body)
+}
+
+/// `fun x => neg (sumRange (fun k => sinFnTerm k x) m)`, at a fixed `m`.
+fn neg_sin_partial_at(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    carrier: ExprId,
+    nat: ExprId,
+    m: ExprId,
+) -> ExprId {
+    let pt_fv = d.fresh_fvar();
+    let pt = d.kernel().fvar(pt_fv);
+    let f_pt = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let body = d.const_app(p.sin_fn_term, &[k, pt]);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let raw = d.const_app(p.sum_range, &[f_pt, m]);
+    let body = cneg(d, p, raw);
+    d.lam_fv(pt_fv, carrier, body)
+}
+
+/// `CReal.cosFnPartialHasDerivative : ∀ n, HasDerivativeOn (fun x => sumRange
+/// (fun k => cosFnTerm k x) (Nat.succ n)) (fun x => neg (sumRange (fun k =>
+/// sinFnTerm k x) n)) zero R` -- **lane 159's step 1**.
+///
+/// Induction on `n` over `CReal.hasDerivative_add`. The `succ n` on the
+/// function side against a bare `n` on the derivative side is not an accident
+/// of statement: `d/dx cosFnTerm 0` is `0`, so the first `n+1` cosine terms
+/// differentiate to the first `n` sine terms, and stating it any other way
+/// would need a `Nat.pred`.
+///
+/// Both cases close through `hasDerivative_congr` for the DERIVATIVE side
+/// only -- `sumRange`'s own ι-reduction already makes the function sides
+/// definitionally equal (`sumRange f (succ m) ≡ add (sumRange f m) (f m)`),
+/// so the function agreement is `equiv_refl` in both. The derivative residues
+/// are `Equiv (neg zero) zero` at the base and `Equiv (neg (add A B)) (add
+/// (neg A) (neg B))` at the step.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_cos_fn_partial_has_derivative(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let zero_c = czero(d, p);
+    let r_c = r_domain(d, p);
+
+    let motive = |d: &mut IntDev<'_>, v: ExprId| -> ExprId {
+        let sv = d.succ(v);
+        let f = cos_partial_at(d, p, carrier, nat, sv);
+        let fp = neg_sin_partial_at(d, p, carrier, nat, v);
+        hd_ty(d, p, f, fp, zero_c, r_c)
+    };
+
+    let base = |d: &mut IntDev<'_>| -> ExprId {
+        // `sumRange f 1 x` ι-reduces to `add zero (cosFnTerm 0 x)`, and
+        // `cosFnTerm 0 x ≡ mul (cosTerm 0) (pow x 0) ≡ mul (cosTerm 0) one`
+        // -- constant in `x`.
+        let zero_nat = d.zero();
+        let one_nat = d.num(1);
+        let cos_term_0 = {
+            let ct = d.kernel().const_(p.cos_term, vec![]);
+            d.apply(ct, &[zero_nat])
+        };
+        let one_cc = one_c(d, p);
+        let term0 = cmul(d, p, cos_term_0, one_cc);
+        let konst = cadd(d, p, zero_c, term0);
+        let const_fn = {
+            let pt_fv = d.fresh_fvar();
+            d.lam_fv(pt_fv, carrier, konst)
+        };
+        let zero_fn = {
+            let pt_fv = d.fresh_fvar();
+            d.lam_fv(pt_fv, carrier, zero_c)
+        };
+        let hf = d.const_app(p.has_derivative_const, &[konst, zero_c, r_c]);
+        let g_fn = cos_partial_at(d, p, carrier, nat, one_nat);
+        let gp_fn = neg_sin_partial_at(d, p, carrier, nat, zero_nat);
+        let agree_g = agree_lam(d, p, carrier, zero_c, r_c, &|d, _x| erefl(d, p, konst));
+        let agree_gp = agree_lam(d, p, carrier, zero_c, r_c, &|d, _x| {
+            neg_zero_equiv_here(d, p)
+        });
+        d.lemma(
+            p.has_derivative_congr,
+            &[
+                const_fn, zero_fn, zero_c, r_c, hf, g_fn, gp_fn, agree_g, agree_gp,
+            ],
+        )
+    };
+
+    let step = |d: &mut IntDev<'_>, jj: ExprId, ih: ExprId| -> ExprId {
+        let sj = d.succ(jj);
+        let ssj = d.succ(sj);
+        let f_prev = cos_partial_at(d, p, carrier, nat, sj);
+        let fp_prev = neg_sin_partial_at(d, p, carrier, nat, jj);
+        let term_fn = {
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let body = d.const_app(p.cos_fn_term, &[sj, x]);
+            d.lam_fv(x_fv, carrier, body)
+        };
+        let term_deriv_fn = {
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let sft = d.const_app(p.sin_fn_term, &[jj, x]);
+            let body = cneg(d, p, sft);
+            d.lam_fv(x_fv, carrier, body)
+        };
+        let hterm = d.lemma(p.cos_fn_term_has_derivative, &[jj]);
+        let hsum = d.lemma(
+            p.has_derivative_add,
+            &[
+                f_prev,
+                fp_prev,
+                term_fn,
+                term_deriv_fn,
+                zero_c,
+                r_c,
+                ih,
+                hterm,
+            ],
+        );
+
+        let sum_fn = {
+            let r_fv = d.fresh_fvar();
+            let r = d.kernel().fvar(r_fv);
+            let a = d.apply(f_prev, &[r]);
+            let b = d.apply(term_fn, &[r]);
+            let body = cadd(d, p, a, b);
+            d.lam_fv(r_fv, carrier, body)
+        };
+        let sum_deriv_fn = {
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let a = d.apply(fp_prev, &[x]);
+            let b = d.apply(term_deriv_fn, &[x]);
+            let body = cadd(d, p, a, b);
+            d.lam_fv(x_fv, carrier, body)
+        };
+
+        let g_fn = cos_partial_at(d, p, carrier, nat, ssj);
+        let gp_fn = neg_sin_partial_at(d, p, carrier, nat, sj);
+
+        let agree_g = agree_lam(d, p, carrier, zero_c, r_c, &|d, x| {
+            let a = d.apply(f_prev, &[x]);
+            let b = d.apply(term_fn, &[x]);
+            let target = cadd(d, p, a, b);
+            erefl(d, p, target)
+        });
+        let agree_gp = agree_lam(d, p, carrier, zero_c, r_c, &|d, x| {
+            let f_pt = {
+                let k_fv = d.fresh_fvar();
+                let k = d.kernel().fvar(k_fv);
+                let body = d.const_app(p.sin_fn_term, &[k, x]);
+                d.lam_fv(k_fv, nat, body)
+            };
+            let prev = d.const_app(p.sum_range, &[f_pt, jj]);
+            let last = d.const_app(p.sin_fn_term, &[jj, x]);
+            neg_add_distrib(d, p, prev, last)
+        });
+
+        d.lemma(
+            p.has_derivative_congr,
+            &[
+                sum_fn,
+                sum_deriv_fn,
+                zero_c,
+                r_c,
+                hsum,
+                g_fn,
+                gp_fn,
+                agree_g,
+                agree_gp,
+            ],
+        )
+    };
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let at_n = induct_ty(d, &motive, &base, &step, n);
+    let value = d.lam_fv(n_fv, nat, at_n);
+    let ty = {
+        let stmt = motive(d, n);
+        d.pi_fv(n_fv, nat, stmt)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.cos_fn_partial_has_derivative,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Admit the per-term and partial-sum derivative facts for `cosFnWide` --
+/// lane 159's step 1, plus the two coefficient lemmas underneath it.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_cos_fn_derivative(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_exp_term_succ_scale(d, p)?;
+    declare_cos_fn_term_deriv_coeff(d, p)?;
+    declare_cos_fn_term_has_derivative(d, p)?;
+    declare_cos_fn_partial_has_derivative(d, p)
+}
+
+// ============================================================================
+// From the partial sums to `cosFnWide` itself (lane 159 step 3)
+// ============================================================================
+//
+// `CReal.hasDerivative_uniform_limit` takes `F`, `F'`, `G`, `G'` with a
+// per-index `HasDerivativeOn (F n) (F' n)` and BOTH uniform convergences.
+// [`declare_cos_fn_partial_has_derivative`] supplies the per-index fact at
+// `F n := Sₙ₊₁` and `F' n := −Tₙ`, so the two convergence witnesses this
+// file already has have to be re-indexed to match:
+//
+//   * `cosFnWideUniformConverges` is about `Sₙ`, not `Sₙ₊₁`
+//     ([`declare_uniform_converges_shift`]), and
+//   * `sinFnUniformConverges` is about `Tₙ`, not `−Tₙ`
+//     ([`declare_uniform_converges_neg`]).
+//
+// **The shift is the one that costs something, and it is NOT free from
+// `rat_prelude` as it stands.** `UniformConvergesOn`'s spec bounds the error
+// at index `n` by `natDivSucc rate n`; the shifted family's error at `n` is
+// the original's at `succ n`, bounded by the strictly TIGHTER `natDivSucc
+// rate (succ n)`, and weakening that back to `natDivSucc rate n` is one-step
+// antitonicity of `natDivSucc` in its INDEX at a SYMBOLIC numerator.
+// `Rat.natDivSucc_antitone` is stated at numerator `1` only, and
+// `Rat.natDivSucc_le_scaled` reads a `(c+1)·n + c`-shaped index back to `n` —
+// `succ n` is not of that shape for any `c` that leaves a bound shrinking in
+// `n`. [`declare_nat_div_succ_step_le`] closes it without touching
+// `rat_prelude`: `Rat.natDivSucc_mul` factors `natDivSucc k j` as
+// `natDivSucc k 0 · natDivSucc 1 j`, the numerator-`1` antitonicity applies
+// to the second factor, and `Rat.mul_le_mul_of_nonneg_left` scales it back.
+
+/// `Rat.natDivSucc k j`, local to this section (mirrors
+/// `convergence::div_succ_at`, which this file already imports).
+fn ndsucc(d: &mut IntDev<'_>, p: CRealPrelude, k: ExprId, j: ExprId) -> ExprId {
+    div_succ_at(d, p, k, j)
+}
+
+/// `CReal.natDivSuccStepLe : ∀ (k n : Nat), Rat.le (Rat.natDivSucc k
+/// (Nat.succ n)) (Rat.natDivSucc k n)` — one-step antitonicity of
+/// `Rat.natDivSucc` in its INDEX, at a **symbolic numerator**.
+///
+/// `RatPrelude::nat_div_succ_antitone` is the same statement at numerator
+/// `1`, and its own doc comment records how long that one cost; this needs no
+/// new cross-multiplication at all. `RatPrelude::nat_div_succ_mul` factors
+/// `natDivSucc (k·1) j` as `natDivSucc k 0 · natDivSucc 1 j`, so the index
+/// lives entirely in the second factor, where numerator-`1` antitonicity
+/// already applies, and `Rat.mul_le_mul_of_nonneg_left` (the first factor is
+/// nonnegative by `Rat.zero_le_natDivSucc`) scales the comparison back up.
+/// `Nat.mul_one` retires the `k·1`.
+///
+/// Declared here rather than in `rat_prelude` because that module is another
+/// lane's; it belongs there, and the `CReal.` namespace is a holding pen.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_nat_div_succ_step_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let rat = p.rat;
+    let np = d.prelude();
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let succ_n = d.succ(n);
+
+    let one_nat = d.num(1);
+    let zero_nat = d.zero();
+    let k_times_one = NatOps::mul(d, k, one_nat);
+
+    let head = ndsucc(d, p, k, zero_nat); // natDivSucc k 0
+    let tail_succ = ndsucc(d, p, one_nat, succ_n); // natDivSucc 1 (succ n)
+    let tail_n = ndsucc(d, p, one_nat, n); // natDivSucc 1 n
+
+    let hle_nat = d.lemma(np.le_succ, &[n]);
+    let hant = d.lemma(rat.nat_div_succ_antitone, &[n, succ_n, hle_nat]);
+    // hant : Rat.le tail_succ tail_n
+
+    let hk_nonneg = d.lemma(rat.zero_le_nat_div_succ, &[k, zero_nat]);
+    let hscaled = d.lemma(
+        rat.mul_le_mul_of_nonneg_left,
+        &[head, tail_succ, tail_n, hk_nonneg, hant],
+    );
+    // hscaled : Rat.le (head * tail_succ) (head * tail_n)
+
+    let prod_succ = crate::rat_prelude::ops::rmul(d, head, tail_succ);
+    let prod_n = crate::rat_prelude::ops::rmul(d, head, tail_n);
+    let fused_succ = ndsucc(d, p, k_times_one, succ_n);
+    let fused_n = ndsucc(d, p, k_times_one, n);
+
+    let e1 = d.lemma(rat.nat_div_succ_mul, &[k, one_nat, succ_n]);
+    let e2 = d.lemma(rat.nat_div_succ_mul, &[k, one_nat, n]);
+
+    let after_lhs = rat_eq_rewrite(d, prod_succ, fused_succ, e1, hscaled, &|d, t| {
+        crate::rat_prelude::ops::rle(d, rat, t, prod_n)
+    });
+    let after_rhs = rat_eq_rewrite(d, prod_n, fused_n, e2, after_lhs, &|d, t| {
+        crate::rat_prelude::ops::rle(d, rat, fused_succ, t)
+    });
+    // after_rhs : Rat.le (natDivSucc (k*1) (succ n)) (natDivSucc (k*1) n)
+
+    let hmul_one = d.lemma(np.mul_one, &[k]);
+    let body = d.nat_rewrite(k_times_one, k, hmul_one, after_rhs, &|d, t| {
+        let lhs = ndsucc(d, p, t, succ_n);
+        let rhs = ndsucc(d, p, t, n);
+        crate::rat_prelude::ops::rle(d, rat, lhs, rhs)
+    });
+
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, body);
+        d.lam_fv(k_fv, nat, with_n)
+    };
+    let ty = {
+        let lhs = ndsucc(d, p, k, succ_n);
+        let rhs = ndsucc(d, p, k, n);
+        let stmt = crate::rat_prelude::ops::rle(d, rat, lhs, rhs);
+        let with_n = d.pi_fv(n_fv, nat, stmt);
+        d.pi_fv(k_fv, nat, with_n)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.nat_div_succ_step_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Nat → CReal → CReal`.
+fn seq_fn_ty_here(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let inner = d.arrow(carrier, carrier);
+    d.arrow(nat, inner)
+}
+
+/// `CReal.uniformConvergesShift : ∀ F G a b, UniformConvergesOn F G a b →
+/// UniformConvergesOn (fun n => F (Nat.succ n)) G a b`.
+///
+/// The rate is unchanged; the whole content is
+/// [`declare_nat_div_succ_step_le`] weakening the shifted family's own
+/// (tighter) bound at `succ n` back to `natDivSucc rate n`. See this
+/// section's header for why that step is not free.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_uniform_converges_shift(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let seq_ty = seq_fn_ty_here(d, p);
+    let func_ty = d.arrow(carrier, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let hu_ty = d.const_app(p.uniform_converges_on, &[f, g, a, b]);
+    let hu_fv = d.fresh_fvar();
+    let hu = d.kernel().fvar(hu_fv);
+
+    let shifted = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let sn = d.succ(n);
+        let body = d.apply(f, &[sn]);
+        d.lam_fv(n_fv, nat, body)
+    };
+
+    let rate = d.const_app(p.uconv_rate, &[f, g, a, b, hu]);
+    let huspec = d.const_app(p.uconv_spec, &[f, g, a, b, hu]);
+
+    let spec = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let hax_fv = d.fresh_fvar();
+        let hax = d.kernel().fvar(hax_fv);
+        let hxb_fv = d.fresh_fvar();
+        let hxb = d.kernel().fvar(hxb_fv);
+
+        let sn = d.succ(n);
+        let tight = d.apply(huspec, &[sn, x, hax, hxb]);
+        let fsnx = d.apply(f, &[sn, x]);
+        let gx = d.apply(g, &[x]);
+
+        let q_tight = ndsucc(d, p, rate, sn);
+        let q_loose = ndsucc(d, p, rate, n);
+        let hq = d.lemma(p.nat_div_succ_step_le, &[rate, n]);
+        let hembed = d.lemma(p.of_rat_le, &[q_tight, q_loose, hq]);
+
+        let ny = cneg(d, p, gx);
+        let diff = cadd(d, p, fsnx, ny);
+        let magnitude = cabs(d, p, diff);
+        let e_tight = embed(d, p, q_tight);
+        let e_loose = embed(d, p, q_loose);
+        let widened = d.lemma(p.le_trans, &[magnitude, e_tight, e_loose, tight, hembed]);
+
+        let range_xb = cle(d, p, x, b);
+        let range_ax = cle(d, p, a, x);
+        let with_hxb = d.lam_fv(hxb_fv, range_xb, widened);
+        let with_hax = d.lam_fv(hax_fv, range_ax, with_hxb);
+        let with_x = d.lam_fv(x_fv, carrier, with_hax);
+        d.lam_fv(n_fv, nat, with_x)
+    };
+
+    let mk_applied = d.const_app(p.uconv_mk, &[shifted, g, a, b, rate, spec]);
+
+    let value = {
+        let with_hu = d.lam_fv(hu_fv, hu_ty, mk_applied);
+        let with_b = d.lam_fv(b_fv, carrier, with_hu);
+        let with_a = d.lam_fv(a_fv, carrier, with_b);
+        let with_g = d.lam_fv(g_fv, func_ty, with_a);
+        d.lam_fv(f_fv, seq_ty, with_g)
+    };
+    let ty = {
+        let conclusion = d.const_app(p.uniform_converges_on, &[shifted, g, a, b]);
+        let after_hu = d.arrow(hu_ty, conclusion);
+        let with_b = d.pi_fv(b_fv, carrier, after_hu);
+        let with_a = d.pi_fv(a_fv, carrier, with_b);
+        let with_g = d.pi_fv(g_fv, func_ty, with_a);
+        d.pi_fv(f_fv, seq_ty, with_g)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.uniform_converges_shift,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.uniformConvergesNeg : ∀ F G a b, UniformConvergesOn F G a b →
+/// UniformConvergesOn (fun n x => neg (F n x)) (fun x => neg (G x)) a b`.
+///
+/// The rate and every bound are unchanged: `|(−u) − (−v)| = |−(u − v)|` and
+/// `le_abs_neg_of_le_abs` (`creal/derivative.rs`) bounds a negation by
+/// whatever bounds the original **without deciding a sign** — `abs` is not
+/// `Equiv`-invariant under `neg`, so this is not a congruence. The only
+/// algebra is `neg_add_distrib` moving `neg (u + (−v))` to `(−u) + (−(−v))`,
+/// the shape `close_within (neg u) (neg v)` literally is.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_uniform_converges_neg(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let seq_ty = seq_fn_ty_here(d, p);
+    let func_ty = d.arrow(carrier, carrier);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let hu_ty = d.const_app(p.uniform_converges_on, &[f, g, a, b]);
+    let hu_fv = d.fresh_fvar();
+    let hu = d.kernel().fvar(hu_fv);
+
+    let neg_seq = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let fnx = d.apply(f, &[n, x]);
+        let body = cneg(d, p, fnx);
+        let with_x = d.lam_fv(x_fv, carrier, body);
+        d.lam_fv(n_fv, nat, with_x)
+    };
+    let neg_fn = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let gx = d.apply(g, &[x]);
+        let body = cneg(d, p, gx);
+        d.lam_fv(x_fv, carrier, body)
+    };
+
+    let rate = d.const_app(p.uconv_rate, &[f, g, a, b, hu]);
+    let huspec = d.const_app(p.uconv_spec, &[f, g, a, b, hu]);
+
+    let spec = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let hax_fv = d.fresh_fvar();
+        let hax = d.kernel().fvar(hax_fv);
+        let hxb_fv = d.fresh_fvar();
+        let hxb = d.kernel().fvar(hxb_fv);
+
+        let base = d.apply(huspec, &[n, x, hax, hxb]);
+        let fnx = d.apply(f, &[n, x]);
+        let gx = d.apply(g, &[x]);
+        let q = ndsucc(d, p, rate, n);
+        let bound = embed(d, p, q);
+
+        let ngx = cneg(d, p, gx);
+        let t = cadd(d, p, fnx, ngx);
+        let neg_t = cneg(d, p, t);
+        let neg_bounded = le_abs_neg_of_le_abs(d, p, t, bound, base);
+        // neg_bounded : le (abs (neg t)) bound
+
+        let nfnx = cneg(d, p, fnx);
+        let nngx = cneg(d, p, ngx);
+        let target = cadd(d, p, nfnx, nngx);
+        let distrib = neg_add_distrib(d, p, fnx, ngx);
+        // distrib : Equiv (neg t) target
+        let flipped = esymm(d, p, neg_t, target, distrib);
+        // flipped : Equiv target (neg t)
+        let out = abs_le_of_equiv(d, p, target, neg_t, bound, flipped, neg_bounded);
+
+        let range_xb = cle(d, p, x, b);
+        let range_ax = cle(d, p, a, x);
+        let with_hxb = d.lam_fv(hxb_fv, range_xb, out);
+        let with_hax = d.lam_fv(hax_fv, range_ax, with_hxb);
+        let with_x = d.lam_fv(x_fv, carrier, with_hax);
+        d.lam_fv(n_fv, nat, with_x)
+    };
+
+    let mk_applied = d.const_app(p.uconv_mk, &[neg_seq, neg_fn, a, b, rate, spec]);
+
+    let value = {
+        let with_hu = d.lam_fv(hu_fv, hu_ty, mk_applied);
+        let with_b = d.lam_fv(b_fv, carrier, with_hu);
+        let with_a = d.lam_fv(a_fv, carrier, with_b);
+        let with_g = d.lam_fv(g_fv, func_ty, with_a);
+        d.lam_fv(f_fv, seq_ty, with_g)
+    };
+    let ty = {
+        let conclusion = d.const_app(p.uniform_converges_on, &[neg_seq, neg_fn, a, b]);
+        let after_hu = d.arrow(hu_ty, conclusion);
+        let with_b = d.pi_fv(b_fv, carrier, after_hu);
+        let with_a = d.pi_fv(a_fv, carrier, with_b);
+        let with_g = d.pi_fv(g_fv, func_ty, with_a);
+        d.pi_fv(f_fv, seq_ty, with_g)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.uniform_converges_neg,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.cosFnWideHasDerivative : HasDerivativeOn cosFnWide (fun x => neg
+/// (sinFn x)) zero (ofRat (natDivSucc 8 4))` -- **the target**: cosine
+/// differentiates to minus sine on `[0, 8/5]`.
+///
+/// `CReal.hasDerivative_uniform_limit` at `F n := Sₙ₊₁`, `F' n := −Tₙ`, with
+/// the two re-indexed convergence witnesses
+/// ([`declare_uniform_converges_shift`], [`declare_uniform_converges_neg`])
+/// and [`declare_cos_fn_partial_has_derivative`] as the per-index
+/// hypothesis. Nothing new is proved here; every part was built above.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_cos_fn_wide_has_derivative(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let zero_c = czero(d, p);
+    let r_c = r_domain(d, p);
+
+    let cos_seq = cos_fn_partial_sums_fn(d, p, carrier, nat);
+    let cos_g = d.kernel().const_(p.cos_fn_wide, vec![]);
+    let hu_cos = d.kernel().const_(p.cos_fn_wide_uniform_converges, vec![]);
+    let hu_cos_shift = d.lemma(
+        p.uniform_converges_shift,
+        &[cos_seq, cos_g, zero_c, r_c, hu_cos],
+    );
+    let shifted_seq = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let sn = d.succ(n);
+        let body = d.apply(cos_seq, &[sn]);
+        d.lam_fv(n_fv, nat, body)
+    };
+
+    let sin_seq = sin_fn_partial_sums_fn(d, p, carrier, nat);
+    let sin_g = d.kernel().const_(p.sin_fn, vec![]);
+    let hu_sin = d.kernel().const_(p.sin_fn_uniform_converges, vec![]);
+    let hu_sin_neg = d.lemma(
+        p.uniform_converges_neg,
+        &[sin_seq, sin_g, zero_c, r_c, hu_sin],
+    );
+    let neg_sin_seq = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let fnx = d.apply(sin_seq, &[n, x]);
+        let body = cneg(d, p, fnx);
+        let with_x = d.lam_fv(x_fv, carrier, body);
+        d.lam_fv(n_fv, nat, with_x)
+    };
+    let neg_sin_fn = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let gx = d.apply(sin_g, &[x]);
+        let body = cneg(d, p, gx);
+        d.lam_fv(x_fv, carrier, body)
+    };
+
+    let hd_all = d.kernel().const_(p.cos_fn_partial_has_derivative, vec![]);
+
+    let value = d.lemma(
+        p.has_derivative_uniform_limit,
+        &[
+            shifted_seq,
+            neg_sin_seq,
+            cos_g,
+            neg_sin_fn,
+            zero_c,
+            r_c,
+            hd_all,
+            hu_cos_shift,
+            hu_sin_neg,
+        ],
+    );
+    let ty = hd_ty(d, p, cos_g, neg_sin_fn, zero_c, r_c);
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.cos_fn_wide_has_derivative,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Admit the two `UniformConvergesOn` re-indexings and the target,
+/// `CReal.cosFnWideHasDerivative`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_cos_fn_wide_derivative(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_nat_div_succ_step_le(d, p)?;
+    declare_uniform_converges_shift(d, p)?;
+    declare_uniform_converges_neg(d, p)?;
+    declare_cos_fn_wide_has_derivative(d, p)
 }
