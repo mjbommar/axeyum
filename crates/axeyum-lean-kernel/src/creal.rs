@@ -5791,6 +5791,48 @@ pub struct CRealPrelude {
     /// [`Self::mono_of_le_succ`], exactly [`Self::max_range_mono`]'s own
     /// construction one level up. See `creal/supremum.rs`.
     pub mesh_max_mono: NameId,
+    /// `CReal.expOfModulus : (Nat → Nat) → Nat → Nat := fun m k => Nat.size
+    /// (m (meshLevelCount k))` — rung 5 of the `supOn` route, the
+    /// power-of-two exponent request `Nat.lt_pow_size` needs to dominate an
+    /// arbitrary modulus value `m (meshLevelCount k)` with no `Nat.div` or
+    /// search. Generic over `m` rather than tied to a specific
+    /// `UniformlyContinuousOn` witness, so it applies at `m :=
+    /// UniformlyContinuousOn.modulus F a b u` at the use site. See
+    /// `creal/supremum.rs`.
+    pub exp_of_modulus: NameId,
+    /// `CReal.trueExpOfModulus : (Nat → Nat) → Nat → Nat`, `trueExpOfModulus
+    /// m 0 := expOfModulus m 0`, `trueExpOfModulus m (succ k) :=
+    /// add (trueExpOfModulus m k) (expOfModulus m (succ k))` — the
+    /// running-sum accumulator that forces monotonicity onto
+    /// [`Self::exp_of_modulus`]'s own not-necessarily-monotone sequence.
+    /// Built with `Nat.add`, never `Nat.max`: this kernel's `Nat` prelude has
+    /// no `Nat.max`. See `creal/supremum.rs`.
+    pub true_exp_of_modulus: NameId,
+    /// `CReal.trueExpOfModulus_zero : ∀ m, Eq Nat (trueExpOfModulus m
+    /// Nat.zero) (expOfModulus m Nat.zero)`. See `creal/supremum.rs`.
+    pub true_exp_of_modulus_zero: NameId,
+    /// `CReal.trueExpOfModulus_succ : ∀ m k, Eq Nat (trueExpOfModulus m
+    /// (succ k)) (add (trueExpOfModulus m k) (expOfModulus m (succ k)))`.
+    /// See `creal/supremum.rs`.
+    pub true_exp_of_modulus_succ: NameId,
+    /// `CReal.trueExpOfModulus_step_le : ∀ m k, Nat.le (trueExpOfModulus m
+    /// k) (trueExpOfModulus m (succ k))` — the adjacent-step half of
+    /// monotonicity, via [`Self::true_exp_of_modulus_succ`]'s ι-reduction
+    /// plus `Nat.le_add_right`. See `creal/supremum.rs`.
+    pub true_exp_of_modulus_step_le: NameId,
+    /// `CReal.trueExpOfModulus_mono : ∀ m j j', Nat.le j j' → Nat.le
+    /// (trueExpOfModulus m j) (trueExpOfModulus m j')` — general
+    /// monotonicity, free from [`Self::true_exp_of_modulus_step_le`] via
+    /// `Nat.monotone_of_le_succ`, the `Nat`-level twin of
+    /// [`Self::mono_of_le_succ`]. See `creal/supremum.rs`.
+    pub true_exp_of_modulus_mono: NameId,
+    /// `CReal.expOfModulus_le_trueExpOfModulus : ∀ m k, Nat.le
+    /// (expOfModulus m k) (trueExpOfModulus m k)` — the accumulator is
+    /// always at least as fine as the single level it was built to cover,
+    /// via `Nat.le_add_right` read through `Nat.add_comm`
+    /// ([`crate::rat_prelude::ops::nat_rewrite_prop`]); needed by rung 6's
+    /// per-level gap bound. See `creal/supremum.rs`.
+    pub exp_of_modulus_le_true_exp_of_modulus: NameId,
     /// `CReal.abs_diff_le_of_deriv_bound : ∀ F F' a b, HasDerivativeOn F F'
     /// a b → ∀ M, (∀ z, le a z → le z b → le (abs (F' z)) M) → ∀ x y,
     /// le a x → le x y → le y b →
@@ -6500,6 +6542,14 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         mesh_max: kernel.name_str(creal, "meshMax"),
         mesh_max_step_le: kernel.name_str(creal, "meshMax_step_le"),
         mesh_max_mono: kernel.name_str(creal, "meshMax_mono"),
+        exp_of_modulus: kernel.name_str(creal, "expOfModulus"),
+        true_exp_of_modulus: kernel.name_str(creal, "trueExpOfModulus"),
+        true_exp_of_modulus_zero: kernel.name_str(creal, "trueExpOfModulus_zero"),
+        true_exp_of_modulus_succ: kernel.name_str(creal, "trueExpOfModulus_succ"),
+        true_exp_of_modulus_step_le: kernel.name_str(creal, "trueExpOfModulus_step_le"),
+        true_exp_of_modulus_mono: kernel.name_str(creal, "trueExpOfModulus_mono"),
+        exp_of_modulus_le_true_exp_of_modulus: kernel
+            .name_str(creal, "expOfModulus_le_trueExpOfModulus"),
         abs_diff_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_le_of_deriv_bound"),
         lipschitz_of_deriv_bound: kernel.name_str(creal, "lipschitz_of_deriv_bound"),
         abs_diff_sub_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_sub_le_of_deriv_bound"),
@@ -11542,6 +11592,51 @@ const STEPS: &[BuildStep] = &[
         ],
         provides: &[|p: CRealPrelude| p.mesh_max_mono],
         run: supremum::declare_mesh_max_mono,
+    },
+    BuildStep {
+        label: "supremum::declare_exp_of_modulus",
+        requires: &[|p: CRealPrelude| p.mesh_level_count],
+        provides: &[|p: CRealPrelude| p.exp_of_modulus],
+        run: supremum::declare_exp_of_modulus,
+    },
+    BuildStep {
+        label: "supremum::declare_true_exp_of_modulus",
+        requires: &[|p: CRealPrelude| p.exp_of_modulus],
+        provides: &[
+            |p: CRealPrelude| p.true_exp_of_modulus,
+            |p: CRealPrelude| p.true_exp_of_modulus_zero,
+            |p: CRealPrelude| p.true_exp_of_modulus_succ,
+        ],
+        run: supremum::declare_true_exp_of_modulus,
+    },
+    BuildStep {
+        label: "supremum::declare_true_exp_of_modulus_step_le",
+        requires: &[
+            |p: CRealPrelude| p.true_exp_of_modulus,
+            |p: CRealPrelude| p.true_exp_of_modulus_succ,
+        ],
+        provides: &[|p: CRealPrelude| p.true_exp_of_modulus_step_le],
+        run: supremum::declare_true_exp_of_modulus_step_le,
+    },
+    BuildStep {
+        label: "supremum::declare_true_exp_of_modulus_mono",
+        requires: &[
+            |p: CRealPrelude| p.true_exp_of_modulus,
+            |p: CRealPrelude| p.true_exp_of_modulus_step_le,
+        ],
+        provides: &[|p: CRealPrelude| p.true_exp_of_modulus_mono],
+        run: supremum::declare_true_exp_of_modulus_mono,
+    },
+    BuildStep {
+        label: "supremum::declare_exp_of_modulus_le_true_exp_of_modulus",
+        requires: &[
+            |p: CRealPrelude| p.exp_of_modulus,
+            |p: CRealPrelude| p.true_exp_of_modulus,
+            |p: CRealPrelude| p.true_exp_of_modulus_zero,
+            |p: CRealPrelude| p.true_exp_of_modulus_succ,
+        ],
+        provides: &[|p: CRealPrelude| p.exp_of_modulus_le_true_exp_of_modulus],
+        run: supremum::declare_exp_of_modulus_le_true_exp_of_modulus,
     },
 ];
 

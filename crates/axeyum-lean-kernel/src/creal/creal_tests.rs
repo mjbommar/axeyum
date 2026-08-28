@@ -10225,6 +10225,11 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "supremum::declare_mesh_max",
     "supremum::declare_mesh_max_step_le",
     "supremum::declare_mesh_max_mono",
+    "supremum::declare_exp_of_modulus",
+    "supremum::declare_true_exp_of_modulus",
+    "supremum::declare_true_exp_of_modulus_step_le",
+    "supremum::declare_true_exp_of_modulus_mono",
+    "supremum::declare_exp_of_modulus_le_true_exp_of_modulus",
 ];
 
 /// `STEPS` (the data-driven build order that replaced the hand-written call

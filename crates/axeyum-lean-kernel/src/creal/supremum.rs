@@ -1542,3 +1542,430 @@ pub(super) fn declare_mesh_max_mono(
 ) -> Result<(), KernelError> {
     declare_mesh_max_mono_thm(d, p)
 }
+
+// ---------------------------------------------------------------------------
+// `CReal.expOfModulus` / `CReal.trueExpOfModulus` -- rung 5, the
+// accuracy-selection scheme (where continuity's quantitative content, the
+// modulus, first enters). See this module's own documentation, "Rung 5, the
+// accuracy-selection scheme", for the harmonic-vs-summable finding this
+// schedule exists to fix.
+// ---------------------------------------------------------------------------
+
+/// `CReal.expOfModulus : (Nat → Nat) → Nat → Nat := fun m k => Nat.size (m
+/// (meshLevelCount k))` — the per-level accuracy request: `Nat.size` turns
+/// an arbitrary modulus value `m (meshLevelCount k)` into a power-of-two
+/// EXPONENT that dominates it via `Nat.lt_pow_size : ∀ n, Lt n (pow 2 (size
+/// n))`, with no `Nat.div`/search. Left generic over `m : Nat → Nat` rather
+/// than tied to a specific `UniformlyContinuousOn` witness — callers apply
+/// it at `m := UniformlyContinuousOn.modulus F a b u` — so this and
+/// [`declare_true_exp_of_modulus`] are pure `Nat`-level machinery, reusable
+/// beyond this file's own `F`/`a`/`b`.
+fn declare_exp_of_modulus_def(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let nat_fn = d.arrow(nat, nat);
+    let nat_p = p.rat.int.nat;
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let mlc_k = d.const_app(p.mesh_level_count, &[k]);
+    let m_at = d.apply(m, &[mlc_k]);
+    let sized = d.const_app(nat_p.size, &[m_at]);
+
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, sized);
+        d.lam_fv(m_fv, nat_fn, with_k)
+    };
+    let ty = {
+        let over_k = d.arrow(nat, nat);
+        d.arrow(nat_fn, over_k)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.exp_of_modulus,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(MAX_RANGE_HEIGHT),
+    })
+}
+
+/// Land `CReal.expOfModulus` alone (a one-declaration `BuildStep`).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_exp_of_modulus(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_exp_of_modulus_def(d, p)
+}
+
+/// `CReal.trueExpOfModulus : (Nat → Nat) → Nat → Nat`, `Nat.rec`-structured
+/// on the level and closed over `m` (mirrors [`declare_max_range_def`]'s own
+/// shape, one type down): `trueExpOfModulus m 0 := expOfModulus m 0`,
+/// `trueExpOfModulus m (succ k) := add (trueExpOfModulus m k) (expOfModulus
+/// m (succ k))` — the running-sum accumulator that forces monotonicity onto
+/// [`declare_exp_of_modulus_def`]'s own not-necessarily-monotone sequence
+/// (an arbitrary modulus need not itself be monotone). Built with
+/// `Nat.add`, never `Nat.max`: **this kernel's `Nat` prelude has no
+/// `Nat.max`**.
+fn declare_true_exp_of_modulus_def(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let nat_fn = d.arrow(nat, nat);
+    let anon = d.anon_name();
+    let one_level = d.level_one();
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let motive = d.kernel().lam(anon, nat, nat, crate::BinderInfo::Default);
+    let zero_n = d.zero();
+    let minor_zero = d.const_app(p.exp_of_modulus, &[m, zero_n]);
+    let minor_succ = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let ih_fv = d.fresh_fvar();
+        let ih = d.kernel().fvar(ih_fv);
+        let sj = d.succ(j);
+        let exp_sj = d.const_app(p.exp_of_modulus, &[m, sj]);
+        let body = NatOps::add(d, ih, exp_sj);
+        let inner = d.lam_fv(ih_fv, nat, body);
+        d.lam_fv(j_fv, nat, inner)
+    };
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let rec_name = d.prelude().rec;
+    let rec = d.kernel().const_(rec_name, vec![one_level]);
+    let body = d.apply(rec, &[motive, minor_zero, minor_succ, k]);
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, body);
+        d.lam_fv(m_fv, nat_fn, with_k)
+    };
+    let ty = {
+        let over_k = d.arrow(nat, nat);
+        d.arrow(nat_fn, over_k)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.true_exp_of_modulus,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(MAX_RANGE_HEIGHT),
+    })
+}
+
+/// `CReal.trueExpOfModulus_zero`/`CReal.trueExpOfModulus_succ`: the defining
+/// equations of [`declare_true_exp_of_modulus_def`], each closed by
+/// `Eq.refl` alone since `trueExpOfModulus`'s `Nat.rec` application
+/// ι-reduces on both minor premises (mirrors
+/// [`declare_max_range_equations`]).
+fn declare_true_exp_of_modulus_equations(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let nat_fn = d.arrow(nat, nat);
+
+    // trueExpOfModulus_zero : ∀ m,
+    //   Eq Nat (trueExpOfModulus m zero) (expOfModulus m zero).
+    {
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let zero_n = d.zero();
+        let lhs = d.const_app(p.true_exp_of_modulus, &[m, zero_n]);
+        let rhs = d.const_app(p.exp_of_modulus, &[m, zero_n]);
+        let stmt = d.eq(lhs, rhs);
+        let proof = d.refl(rhs);
+        let value = d.lam_fv(m_fv, nat_fn, proof);
+        let ty = d.pi_fv(m_fv, nat_fn, stmt);
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.true_exp_of_modulus_zero,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+
+    // trueExpOfModulus_succ : ∀ m k,
+    //   Eq Nat (trueExpOfModulus m (succ k))
+    //          (add (trueExpOfModulus m k) (expOfModulus m (succ k))).
+    {
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let sk = d.succ(k);
+        let lhs = d.const_app(p.true_exp_of_modulus, &[m, sk]);
+        let te_k = d.const_app(p.true_exp_of_modulus, &[m, k]);
+        let exp_sk = d.const_app(p.exp_of_modulus, &[m, sk]);
+        let rhs = NatOps::add(d, te_k, exp_sk);
+        let stmt = d.eq(lhs, rhs);
+        let proof = d.refl(rhs);
+        let value = {
+            let with_k = d.lam_fv(k_fv, nat, proof);
+            d.lam_fv(m_fv, nat_fn, with_k)
+        };
+        let ty = {
+            let over_k = d.pi_fv(k_fv, nat, stmt);
+            d.pi_fv(m_fv, nat_fn, over_k)
+        };
+        d.kernel().add_declaration(Declaration::Theorem {
+            name: p.true_exp_of_modulus_succ,
+            uparams: vec![],
+            ty,
+            value,
+        })?;
+    }
+    Ok(())
+}
+
+/// Land `CReal.trueExpOfModulus` and its two defining equations.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_true_exp_of_modulus(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_true_exp_of_modulus_def(d, p)?;
+    declare_true_exp_of_modulus_equations(d, p)
+}
+
+/// `CReal.trueExpOfModulus_step_le : ∀ m k, Nat.le (trueExpOfModulus m k)
+/// (trueExpOfModulus m (succ k))` — the adjacent-step half of
+/// monotonicity. `trueExpOfModulus m (succ k)` ι-reduces to `add
+/// (trueExpOfModulus m k) (expOfModulus m (succ k))`
+/// ([`declare_true_exp_of_modulus_equations`]'s own `_succ` statement, by
+/// that same ι-reduction), and `Nat.le_add_right (trueExpOfModulus m k)
+/// (expOfModulus m (succ k))` is already exactly the needed bound — no
+/// rewriting needed, only defeq (mirrors the `hbound` step in
+/// [`declare_mesh_max_step_le_thm`]).
+fn declare_true_exp_of_modulus_step_le_thm(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let nat_fn = d.arrow(nat, nat);
+    let nat_p = p.rat.int.nat;
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let te_k = d.const_app(p.true_exp_of_modulus, &[m, k]);
+    let sk = d.succ(k);
+    let exp_sk = d.const_app(p.exp_of_modulus, &[m, sk]);
+    // bound : Le te_k (add te_k exp_sk) -- defeq to Le te_k (trueExpOfModulus m (succ k)).
+    let bound = d.lemma(nat_p.le_add_right, &[te_k, exp_sk]);
+
+    let te_sk = d.const_app(p.true_exp_of_modulus, &[m, sk]);
+    let conclusion = d.le(te_k, te_sk);
+
+    let ty = {
+        let over_k = d.pi_fv(k_fv, nat, conclusion);
+        d.pi_fv(m_fv, nat_fn, over_k)
+    };
+    let value = {
+        let with_k = d.lam_fv(k_fv, nat, bound);
+        d.lam_fv(m_fv, nat_fn, with_k)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.true_exp_of_modulus_step_le,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Land `CReal.trueExpOfModulus_step_le` alone (a one-declaration
+/// `BuildStep`).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_true_exp_of_modulus_step_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_true_exp_of_modulus_step_le_thm(d, p)
+}
+
+/// `CReal.trueExpOfModulus_mono : ∀ m j j', Nat.le j j' → Nat.le
+/// (trueExpOfModulus m j) (trueExpOfModulus m j')` — general monotonicity,
+/// free from [`declare_true_exp_of_modulus_step_le`] via
+/// `Nat.monotone_of_le_succ` (the `Nat`-level twin of
+/// [`CRealPrelude::mono_of_le_succ`]) — EXACTLY
+/// [`declare_mesh_max_mono_thm`]'s own construction, one type down
+/// (`Nat`-valued rather than `CReal`-valued, so `m` is closed over instead
+/// of `F`/`a`/`b`/the continuity witness/`le a b`).
+fn declare_true_exp_of_modulus_mono_thm(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let nat_fn = d.arrow(nat, nat);
+    let nat_p = p.rat.int.nat;
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let te_f = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let body = d.const_app(p.true_exp_of_modulus, &[m, k]);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let adjacent = {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let body = d.const_app(p.true_exp_of_modulus_step_le, &[m, n]);
+        d.lam_fv(n_fv, nat, body)
+    };
+    let mono = d.lemma(nat_p.monotone_of_le_succ, &[te_f, adjacent]);
+
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let jp_fv = d.fresh_fvar();
+    let jp = d.kernel().fvar(jp_fv);
+    let hjj_fv = d.fresh_fvar();
+    let hjj = d.kernel().fvar(hjj_fv);
+    let hjj_ty = d.le(j, jp);
+    let applied = d.apply(mono, &[j, jp, hjj]);
+
+    let te_j = d.const_app(p.true_exp_of_modulus, &[m, j]);
+    let te_jp = d.const_app(p.true_exp_of_modulus, &[m, jp]);
+    let conclusion = d.le(te_j, te_jp);
+
+    let ty = {
+        let anon = d.anon_name();
+        let out = d
+            .kernel()
+            .pi(anon, hjj_ty, conclusion, crate::BinderInfo::Default);
+        let out = d.pi_fv(jp_fv, nat, out);
+        let out = d.pi_fv(j_fv, nat, out);
+        d.pi_fv(m_fv, nat_fn, out)
+    };
+    let value = {
+        let out = d.lam_fv(hjj_fv, hjj_ty, applied);
+        let out = d.lam_fv(jp_fv, nat, out);
+        let out = d.lam_fv(j_fv, nat, out);
+        d.lam_fv(m_fv, nat_fn, out)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.true_exp_of_modulus_mono,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Land `CReal.trueExpOfModulus_mono` alone (a one-declaration `BuildStep`).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_true_exp_of_modulus_mono(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_true_exp_of_modulus_mono_thm(d, p)
+}
+
+/// `CReal.expOfModulus_le_trueExpOfModulus : ∀ m k, Nat.le (expOfModulus m
+/// k) (trueExpOfModulus m k)` — the accumulator is always at least as fine
+/// as the single level it was built to cover (needed by rung 6's per-level
+/// gap bound: the modulus's own spec is stated at accuracy request
+/// `meshLevelCount k`, i.e. in terms of [`declare_exp_of_modulus_def`]
+/// alone, but the mesh actually sampled at level `k` is
+/// `meshMax F a b (trueExpOfModulus m k)`).
+///
+/// Proof by induction on `k` (via [`NatOps::induct`], mirrors
+/// [`declare_max_range_self_le`]'s own use of it one type up): the base
+/// case is `Nat.le_refl` against [`declare_true_exp_of_modulus_equations`]'s
+/// `_zero` ι-reduction (`trueExpOfModulus m 0 ≡ expOfModulus m 0`); the
+/// step case needs `Le x (add y x)` from `Nat.le_add_right : Le x (add x
+/// y)`, a genuine commute — no `Nat.le_add_left` exists in this kernel's
+/// `Nat` prelude — closed by
+/// [`crate::rat_prelude::ops::nat_rewrite_prop`] rewriting along
+/// `Nat.add_comm x y : Eq Nat (add x y) (add y x)`. The inductive
+/// hypothesis is available but unused: the bound holds at `succ k`
+/// independently of what held at `k`, since `trueExpOfModulus m (succ k)`
+/// always contains `expOfModulus m (succ k)` as an addend by construction.
+fn declare_exp_of_modulus_le_true_exp_of_modulus_thm(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let nat_fn = d.arrow(nat, nat);
+    let nat_p = p.rat.int.nat;
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let exp_x = d.const_app(p.exp_of_modulus, &[m, x]);
+        let te_x = d.const_app(p.true_exp_of_modulus, &[m, x]);
+        d.le(exp_x, te_x)
+    };
+
+    let proof = d.induct(
+        &motive,
+        &|d: &mut IntDev<'_>| -> ExprId {
+            let zero_n = d.zero();
+            let exp0 = d.const_app(p.exp_of_modulus, &[m, zero_n]);
+            d.lemma(nat_p.le_refl, &[exp0])
+        },
+        &|d: &mut IntDev<'_>, j: ExprId, _ih: ExprId| -> ExprId {
+            let sj = d.succ(j);
+            let x = d.const_app(p.exp_of_modulus, &[m, sj]);
+            let y = d.const_app(p.true_exp_of_modulus, &[m, j]);
+            let base = d.lemma(nat_p.le_add_right, &[x, y]);
+            let hcomm = d.lemma(nat_p.add_comm, &[x, y]);
+            let axy = NatOps::add(d, x, y);
+            let ayx = NatOps::add(d, y, x);
+            nat_rewrite_prop(d, axy, ayx, hcomm, base, &|d, z| d.le(x, z))
+        },
+        k,
+    );
+
+    let stmt = motive(d, k);
+    let ty = {
+        let inner = d.pi_fv(k_fv, nat, stmt);
+        d.pi_fv(m_fv, nat_fn, inner)
+    };
+    let value = {
+        let inner = d.lam_fv(k_fv, nat, proof);
+        d.lam_fv(m_fv, nat_fn, inner)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.exp_of_modulus_le_true_exp_of_modulus,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Land `CReal.expOfModulus_le_trueExpOfModulus` alone (a one-declaration
+/// `BuildStep`).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_exp_of_modulus_le_true_exp_of_modulus(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_exp_of_modulus_le_true_exp_of_modulus_thm(d, p)
+}
