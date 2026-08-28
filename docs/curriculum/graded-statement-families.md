@@ -259,13 +259,21 @@ checked against the declarations they name and matched).
   route (b) named above** ("finish EVT's row 2 first, then derive MVT's
   unavailability from it"), which is now the cheaper of the two, since route
   (a)'s independent MVT counterexample was assessed as no easier.
-  **Two caveats, both load-bearing.** (i) EVT row 2 carries ONE labeled
-  remaining gap of its own — that `evtLinear v` is uniformly continuous, i.e.
-  that the counterexample family is inside classical EVT's hypothesis class —
-  which the file marks "ASSERTED here, not proved" rather than hiding; a lane
-  is on it, and MVT row 2 should not be claimed complete while it stands.
-  (ii) The derivation of MVT's unavailability FROM EVT's is itself not built;
-  inheriting a refutation is a proof obligation, not a citation.
+  **Its one labeled gap is now CLOSED too (2026-08-28).** EVT row 2 had
+  carried a single assertion — that `evtLinear v` is uniformly continuous,
+  i.e. that the counterexample family is inside classical EVT's hypothesis
+  class — which the file marked "ASSERTED here, not proved" rather than
+  hiding. It is now `CReal.evtLinear_uniformly_continuous`, kernel-checked and
+  axiom-free, assembled from `uniformly_continuous_mul` at `id` and a
+  constant. Two supporting declarations landed with it and are reusable well
+  beyond EVT: `CReal.abs_bound_of_self` (promoted from a private `fn` in
+  `creal/uniform_continuity.rs`, which makes `BoundedOn` trivial for EVERY
+  constant function on EVERY interval) and `CReal.bounded_on_id_zero_one`.
+  **So EVT's row 2 now rests on nothing asserted.**
+
+  **One caveat remains, and it is load-bearing**: the derivation of MVT's
+  unavailability FROM EVT's is itself not built. Inheriting a refutation is a
+  proof obligation, not a citation — MVT row 2 is unblocked, not done.
 - **MVT row 3 landed 2026-08-27, same day it was named the cheapest win**:
   `crates/axeyum-cas/src/mvt.rs`, `polynomial_mvt`/`verify_mvt_certificate`,
   18 tests. Kernel reconstruction (ADR-0601 §2) is the remaining step, not
