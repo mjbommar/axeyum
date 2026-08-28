@@ -1356,7 +1356,7 @@ fn cancel_added_left(
 
 /// `le x (add s y) -> le (add x (neg s)) y` — move `s` from the right of a
 /// sum across to cancel against a matching `neg s` on the left.
-fn le_sub_of_le_add(
+pub(super) fn le_sub_of_le_add(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     x: ExprId,
@@ -1708,7 +1708,7 @@ fn le_sub_of_le_add_right(
 /// `le (add x (neg s)) y -> le x (add y s)` — the inverse of
 /// [`le_sub_of_le_add_right`]: add `s` back to recover the un-subtracted
 /// bound.
-fn le_add_of_le_sub_right(
+pub(super) fn le_add_of_le_sub_right(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     x: ExprId,

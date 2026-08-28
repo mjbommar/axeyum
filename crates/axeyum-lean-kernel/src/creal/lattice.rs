@@ -812,3 +812,460 @@ fn declare_discrimination(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
     }
     Ok(())
 }
+
+// --- monotonicity and the spread (ADR-0519; the Fundamental Theorem, rung 3) --
+//
+// A **second** entry point, dispatched after
+// `order_extra::declare_order_extra_abs` in `creal.rs`'s build order:
+// [`CRealPrelude::max_sub_min`] needs [`CRealPrelude::neg_sub_swap`], which
+// that step provides and which [`declare_lattice`] above therefore cannot use.
+//
+// ## Why these two facts, and why neither is an estimate
+//
+// `CReal.antiderivative`'s argument is the clamp `max a (min x b)`
+// (`creal/integral.rs`), so the Fundamental Theorem needs exactly two things
+// about the lattice that the six laws do not give:
+//
+// - **`clamp_mono`** — the clamp is monotone. `HasDerivativeOn`'s spec
+//   quantifies over an unordered pair `x, y` and the two antiderivative values
+//   are integrals up to `clamp x` and `clamp y`, so relating them at all needs
+//   `x ≤ y → clamp x ≤ clamp y`. Both halves are one `le_trans` against a
+//   universal property; no sample and no index appears.
+// - **`max_sub_min`** — `max x y − min x y ≈ |y − x|`. This is the step that
+//   turns the orientation-free estimate (both legs based at `min x y`) back
+//   into the `|y − x|` the spec asks for.
+//
+// ## The orientation obstruction, and why it is not here
+//
+// `max x y − min x y = |y − x|` is proved **by cases** in every classical
+// text, and `CReal.le` is undecidable, so that case split is unavailable. It
+// is also unnecessary — both inequalities are one-sided consequences of the
+// universal properties:
+//
+// - `|y − x| ≤ max − min` is [`CRealPrelude::abs_le`] against two
+//   `add_le_add`s, each pairing a projection (`le_max_left`/`le_max_right`)
+//   with `neg_le_neg` of a projection (`min_le_left`/`min_le_right`).
+// - `max − min ≤ |y − x|` is `max_le` against `x, y ≤ min x y + |y − x|`, and
+//   each of those is `le_min` against a pair whose second leg is exactly
+//   `le_abs_self`/`neg_le_abs`. The **lower** bound on the meet — the
+//   direction a meet does not hand you — is `le_min`, which is the only way to
+//   bound a meet from below and is precisely what makes the decision
+//   unnecessary.
+//
+// The three `le`-transposition steps are `creal/crossing.rs`'s own
+// `le_sub_of_le_add` / `le_add_of_le_sub_right`, made `pub(super)` there
+// rather than copied here.
+
+/// Admit the two lattice monotonicity laws, the clamp's monotonicity, and
+/// `CReal.max_sub_min`. See this section's own documentation.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_lattice_extra(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_min_mono_left(d, p)?;
+    declare_max_mono_right(d, p)?;
+    declare_clamp_mono(d, p)?;
+    declare_max_sub_min(d, p)
+}
+
+/// `CReal.neg x`.
+fn lneg(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+    d.const_app(p.neg, &[x])
+}
+
+/// `CReal.min_mono_left : ∀ x y b, le x y → le (min x b) (min y b)`.
+fn declare_min_mono_left(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let h_ty = cle(d, p, x, y);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let mxb = d.const_app(p.min, &[x, b]);
+    let myb = d.const_app(p.min, &[y, b]);
+
+    let mxb_le_x = d.lemma(p.min_le_left, &[x, b]);
+    let mxb_le_y = d.lemma(p.le_trans, &[mxb, x, y, mxb_le_x, h]);
+    let mxb_le_b = d.lemma(p.min_le_right, &[x, b]);
+    let body = d.lemma(p.le_min, &[y, b, mxb, mxb_le_y, mxb_le_b]);
+
+    let concl = cle(d, p, mxb, myb);
+    let ty = {
+        let t = d.arrow(h_ty, concl);
+        let t = d.pi_fv(b_fv, carrier, t);
+        let t = d.pi_fv(y_fv, carrier, t);
+        d.pi_fv(x_fv, carrier, t)
+    };
+    let value = {
+        let v = d.lam_fv(h_fv, h_ty, body);
+        let v = d.lam_fv(b_fv, carrier, v);
+        let v = d.lam_fv(y_fv, carrier, v);
+        d.lam_fv(x_fv, carrier, v)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.min_mono_left,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.max_mono_right : ∀ a u v, le u v → le (max a u) (max a v)`.
+fn declare_max_mono_right(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let v_fv = d.fresh_fvar();
+    let v = d.kernel().fvar(v_fv);
+
+    let h_ty = cle(d, p, u, v);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let mau = d.const_app(p.max, &[a, u]);
+    let mav = d.const_app(p.max, &[a, v]);
+
+    let a_le = d.lemma(p.le_max_left, &[a, v]);
+    let v_le = d.lemma(p.le_max_right, &[a, v]);
+    let u_le = d.lemma(p.le_trans, &[u, v, mav, h, v_le]);
+    let body = d.lemma(p.max_le, &[a, u, mav, a_le, u_le]);
+
+    let concl = cle(d, p, mau, mav);
+    let ty = {
+        let t = d.arrow(h_ty, concl);
+        let t = d.pi_fv(v_fv, carrier, t);
+        let t = d.pi_fv(u_fv, carrier, t);
+        d.pi_fv(a_fv, carrier, t)
+    };
+    let value = {
+        let w = d.lam_fv(h_fv, h_ty, body);
+        let w = d.lam_fv(v_fv, carrier, w);
+        let w = d.lam_fv(u_fv, carrier, w);
+        d.lam_fv(a_fv, carrier, w)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.max_mono_right,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.clamp_mono : ∀ a b x y, le x y →
+/// le (max a (min x b)) (max a (min y b))` — the clamp
+/// `creal/integral.rs`'s `CReal.antiderivative` is built from is monotone.
+fn declare_clamp_mono(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+
+    let h_ty = cle(d, p, x, y);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let mxb = d.const_app(p.min, &[x, b]);
+    let myb = d.const_app(p.min, &[y, b]);
+    let inner = d.lemma(p.min_mono_left, &[x, y, b, h]);
+    let body = d.lemma(p.max_mono_right, &[a, mxb, myb, inner]);
+
+    let cx = d.const_app(p.max, &[a, mxb]);
+    let cy = d.const_app(p.max, &[a, myb]);
+    let concl = cle(d, p, cx, cy);
+    let ty = {
+        let t = d.arrow(h_ty, concl);
+        let t = d.pi_fv(y_fv, carrier, t);
+        let t = d.pi_fv(x_fv, carrier, t);
+        let t = d.pi_fv(b_fv, carrier, t);
+        d.pi_fv(a_fv, carrier, t)
+    };
+    let value = {
+        let v = d.lam_fv(h_fv, h_ty, body);
+        let v = d.lam_fv(y_fv, carrier, v);
+        let v = d.lam_fv(x_fv, carrier, v);
+        let v = d.lam_fv(b_fv, carrier, v);
+        d.lam_fv(a_fv, carrier, v)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.clamp_mono,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.max_sub_min : ∀ x y,
+/// Equiv (add (max x y) (neg (min x y))) (abs (add y (neg x)))` — the spread
+/// of a pair is the magnitude of its difference, with **no case split**. See
+/// this section's own documentation for why the classical proof's decision is
+/// not needed.
+fn declare_max_sub_min(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+
+    let zero_c = d.kernel().const_(p.zero, vec![]);
+    let mx = d.const_app(p.max, &[x, y]);
+    let mn = d.const_app(p.min, &[x, y]);
+    let n_mn = lneg(d, p, mn);
+    let n_x = lneg(d, p, x);
+    let n_y = lneg(d, p, y);
+    let spread = super::cadd(d, p, mx, n_mn);
+    let diff = super::cadd(d, p, y, n_x);
+    let magnitude = d.const_app(p.abs, &[diff]);
+    let n_mag = lneg(d, p, magnitude);
+    let neg_diff = lneg(d, p, diff);
+    let x_ny = super::cadd(d, p, x, n_y);
+
+    // `Equiv (neg (y − x)) (x − y)`.
+    let swap = d.lemma(p.neg_sub_swap, &[y, x]);
+
+    // --- |y − x| ≤ max x y − min x y ---------------------------------------
+    let y_le_mx = d.lemma(p.le_max_right, &[x, y]);
+    let mn_le_x = d.lemma(p.min_le_left, &[x, y]);
+    let nx_le_nmn = d.lemma(p.neg_le_neg, &[mn, x, mn_le_x]);
+    let leg1 = d.lemma(p.add_le_add, &[y, mx, n_x, n_mn, y_le_mx, nx_le_nmn]);
+
+    let x_le_mx = d.lemma(p.le_max_left, &[x, y]);
+    let mn_le_y = d.lemma(p.min_le_right, &[x, y]);
+    let ny_le_nmn = d.lemma(p.neg_le_neg, &[mn, y, mn_le_y]);
+    let pre2 = d.lemma(p.add_le_add, &[x, mx, n_y, n_mn, x_le_mx, ny_le_nmn]);
+    let swap_symm = d.lemma(p.equiv_symm, &[neg_diff, x_ny, swap]);
+    let refl_spread = d.lemma(p.equiv_refl, &[spread]);
+    let leg2 = d.lemma(
+        p.le_congr,
+        &[x_ny, neg_diff, spread, spread, swap_symm, refl_spread, pre2],
+    );
+    let upper = d.lemma(p.abs_le, &[diff, spread, leg1, leg2]);
+
+    // --- max x y − min x y ≤ |y − x| ---------------------------------------
+    //
+    // `le (neg |y − x|) zero`, so subtracting the magnitude only decreases.
+    let mag_nonneg = d.lemma(p.abs_nonneg, &[diff]);
+    let nmag_le_nzero = d.lemma(p.neg_le_neg, &[zero_c, magnitude, mag_nonneg]);
+    let neg_zero = lneg(d, p, zero_c);
+    let nz = super::series::neg_zero_equiv(d, p);
+    let refl_nmag = d.lemma(p.equiv_refl, &[n_mag]);
+    let nmag_le_zero = d.lemma(
+        p.le_congr,
+        &[n_mag, n_mag, neg_zero, zero_c, refl_nmag, nz, nmag_le_nzero],
+    );
+
+    // `le (add w (neg |y − x|)) w`, at `w := x` and `w := y`.
+    let sub_le_self = |d: &mut IntDev<'_>, w: ExprId| -> ExprId {
+        let refl_w = d.lemma(p.le_refl, &[w]);
+        let step = d.lemma(p.add_le_add, &[w, w, n_mag, zero_c, refl_w, nmag_le_zero]);
+        let w_zero = super::cadd(d, p, w, zero_c);
+        let trim = d.lemma(p.add_zero, &[w]);
+        let shifted = super::cadd(d, p, w, n_mag);
+        let refl_shifted = d.lemma(p.equiv_refl, &[shifted]);
+        d.lemma(
+            p.le_congr,
+            &[shifted, shifted, w_zero, w, refl_shifted, trim, step],
+        )
+    };
+    let x_nmag_le_x = sub_le_self(d, x);
+    let y_nmag_le_y = sub_le_self(d, y);
+
+    // `x − y ≤ |y − x|` and `y − x ≤ |y − x|`.
+    let refl_mag = d.lemma(p.equiv_refl, &[magnitude]);
+    let negdiff_le_mag = d.lemma(p.neg_le_abs, &[diff]);
+    let xny_le_mag = d.lemma(
+        p.le_congr,
+        &[
+            neg_diff,
+            x_ny,
+            magnitude,
+            magnitude,
+            swap,
+            refl_mag,
+            negdiff_le_mag,
+        ],
+    );
+    let diff_le_mag = d.lemma(p.le_abs_self, &[diff]);
+
+    // Transpose each into `w − |y − x| ≤ (the other point)`.
+    let x_step = super::crossing::le_add_of_le_sub_right(d, p, x, y, magnitude, xny_le_mag);
+    let x_nmag_le_y = super::crossing::le_sub_of_le_add(d, p, x, magnitude, y, x_step);
+    let y_step = super::crossing::le_add_of_le_sub_right(d, p, y, x, magnitude, diff_le_mag);
+    let y_nmag_le_x = super::crossing::le_sub_of_le_add(d, p, y, magnitude, x, y_step);
+
+    // The lower bound on the meet — the only route that does not decide the
+    // order — then `max_le` and one last transposition.
+    let x_nmag = super::cadd(d, p, x, n_mag);
+    let y_nmag = super::cadd(d, p, y, n_mag);
+    let x_nmag_le_mn = d.lemma(p.le_min, &[x, y, x_nmag, x_nmag_le_x, x_nmag_le_y]);
+    let y_nmag_le_mn = d.lemma(p.le_min, &[x, y, y_nmag, y_nmag_le_x, y_nmag_le_y]);
+    let x_le = super::crossing::le_add_of_le_sub_right(d, p, x, magnitude, mn, x_nmag_le_mn);
+    let y_le = super::crossing::le_add_of_le_sub_right(d, p, y, magnitude, mn, y_nmag_le_mn);
+    let mn_mag = super::cadd(d, p, mn, magnitude);
+    let mx_le = d.lemma(p.max_le, &[x, y, mn_mag, x_le, y_le]);
+    let lower = super::crossing::le_sub_of_le_add(d, p, mx, mn, magnitude, mx_le);
+
+    let body = d.lemma(p.equiv_of_le_le, &[spread, magnitude, lower, upper]);
+
+    let concl = equiv(d, p, spread, magnitude);
+    let ty = {
+        let t = d.pi_fv(y_fv, carrier, concl);
+        d.pi_fv(x_fv, carrier, t)
+    };
+    let value = {
+        let v = d.lam_fv(y_fv, carrier, body);
+        d.lam_fv(x_fv, carrier, v)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.max_sub_min,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+#[cfg(test)]
+mod lattice_extra_tests {
+    use super::*;
+    use crate::Declaration;
+
+    /// **Mandatory concrete instantiation, two positives and two negative
+    /// controls**, at `x := 0`, `y := 1` — the one pair for which both order
+    /// facts are CLOSED terms ([`CRealPrelude::zero_lt_one`]), so nothing
+    /// about the instance is assumed.
+    ///
+    /// Each control differs in a **small** term, never by transposing two
+    /// large ones, and is checked in both directions the repository's
+    /// guidance demands: not *vacuous* (the two terms are asserted not
+    /// `def_eq`) and not *inverted* (the variant is genuinely FALSE here).
+    ///
+    /// 1. `clamp_mono` at `a := 0`, `b := 1`: `clamp 0 ≤ clamp 1`, i.e.
+    ///    `0 ≤ 1`. The control exchanges the two clamps, giving `1 ≤ 0`.
+    /// 2. `max_sub_min`: `max 0 1 − min 0 1 ≈ |1 − 0|`, i.e. `1 ≈ 1`. The
+    ///    control replaces `min 0 1` by `max 0 1` — ONE subterm — making the
+    ///    left side `1 − 1 ≈ 0` against a right side of `1`.
+    #[test]
+    fn lattice_extra_concrete_and_negative_controls() {
+        crate::on_a_deep_stack(lattice_extra_concrete_and_negative_controls_body);
+    }
+
+    fn lattice_extra_concrete_and_negative_controls_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let anon = d.kernel().anon();
+
+        let zero_c = d.kernel().const_(p.zero, vec![]);
+        let one_c = d.kernel().const_(p.one, vec![]);
+        let lt01 = d.lemma(p.zero_lt_one, &[]);
+        let le01 = d.lemma(p.le_of_lt, &[zero_c, one_c, lt01]);
+
+        // --- 1. clamp_mono -------------------------------------------------
+        let proof_clamp = d.lemma(p.clamp_mono, &[zero_c, one_c, zero_c, one_c, le01]);
+        let mn_x = d.const_app(p.min, &[zero_c, one_c]);
+        let mn_y = d.const_app(p.min, &[one_c, one_c]);
+        let clamp_x = d.const_app(p.max, &[zero_c, mn_x]);
+        let clamp_y = d.const_app(p.max, &[zero_c, mn_y]);
+        assert!(
+            !d.kernel().def_eq(clamp_x, clamp_y),
+            "negative control must not be vacuous: `clamp 0` and `clamp 1` \
+             must be different terms"
+        );
+
+        let ty_ok = cle(&mut d, p, clamp_x, clamp_y);
+        let name_ok = d.kernel().name_str(anon, "__clampMonoOk");
+        let res_ok = d.kernel().add_declaration(Declaration::Theorem {
+            name: name_ok,
+            uparams: vec![],
+            ty: ty_ok,
+            value: proof_clamp,
+        });
+        assert!(
+            res_ok.is_ok(),
+            "clamp_mono at a := 0, b := 1, x := 0, y := 1 must prove \
+             `max 0 (min 0 1) ≤ max 0 (min 1 1)`: {:?}",
+            res_ok.err()
+        );
+
+        let ty_bad = cle(&mut d, p, clamp_y, clamp_x);
+        let name_bad = d.kernel().name_str(anon, "__clampMonoBad");
+        let res_bad = d.kernel().add_declaration(Declaration::Theorem {
+            name: name_bad,
+            uparams: vec![],
+            ty: ty_bad,
+            value: proof_clamp,
+        });
+        assert!(
+            res_bad.is_err(),
+            "negative control must be REJECTED: the same proof term cannot \
+             prove the reversed `max 0 (min 1 1) ≤ max 0 (min 0 1)`, i.e. 1 ≤ 0"
+        );
+
+        // --- 2. max_sub_min ------------------------------------------------
+        let proof_spread = d.lemma(p.max_sub_min, &[zero_c, one_c]);
+        let mx = d.const_app(p.max, &[zero_c, one_c]);
+        let mn = d.const_app(p.min, &[zero_c, one_c]);
+        let n_mn = lneg(&mut d, p, mn);
+        let n_mx = lneg(&mut d, p, mx);
+        let spread = super::super::cadd(&mut d, p, mx, n_mn);
+        let spread_bad = super::super::cadd(&mut d, p, mx, n_mx);
+        let n_zero = lneg(&mut d, p, zero_c);
+        let diff = super::super::cadd(&mut d, p, one_c, n_zero);
+        let magnitude = d.const_app(p.abs, &[diff]);
+        assert!(
+            !d.kernel().def_eq(spread, spread_bad),
+            "negative control must not be vacuous: `max − min` and \
+             `max − max` must be different terms"
+        );
+
+        let ty_spread_ok = equiv(&mut d, p, spread, magnitude);
+        let name_spread_ok = d.kernel().name_str(anon, "__maxSubMinOk");
+        let res_spread_ok = d.kernel().add_declaration(Declaration::Theorem {
+            name: name_spread_ok,
+            uparams: vec![],
+            ty: ty_spread_ok,
+            value: proof_spread,
+        });
+        assert!(
+            res_spread_ok.is_ok(),
+            "max_sub_min at x := 0, y := 1 must prove \
+             `max 0 1 − min 0 1 ≈ |1 − 0|`: {:?}",
+            res_spread_ok.err()
+        );
+
+        let ty_spread_bad = equiv(&mut d, p, spread_bad, magnitude);
+        let name_spread_bad = d.kernel().name_str(anon, "__maxSubMinBad");
+        let res_spread_bad = d.kernel().add_declaration(Declaration::Theorem {
+            name: name_spread_bad,
+            uparams: vec![],
+            ty: ty_spread_bad,
+            value: proof_spread,
+        });
+        assert!(
+            res_spread_bad.is_err(),
+            "negative control must be REJECTED: `max 0 1 − max 0 1 ≈ 0`, \
+             not `|1 − 0| = 1`"
+        );
+    }
+}

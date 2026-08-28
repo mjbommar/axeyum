@@ -674,6 +674,31 @@ pub struct CRealPrelude {
     pub max_congr: NameId,
     /// `CReal.min_congr` — the same for the meet.
     pub min_congr: NameId,
+    /// `CReal.min_mono_left : ∀ x y b, le x y → le (min x b) (min y b)` —
+    /// one [`Self::le_trans`] into [`Self::le_min`]. See `creal/lattice.rs`.
+    pub min_mono_left: NameId,
+    /// `CReal.max_mono_right : ∀ a u v, le u v → le (max a u) (max a v)` —
+    /// one [`Self::le_trans`] into [`Self::max_le`]. See `creal/lattice.rs`.
+    pub max_mono_right: NameId,
+    /// `CReal.clamp_mono : ∀ a b x y, le x y →
+    /// le (max a (min x b)) (max a (min y b))`.
+    ///
+    /// The clamp [`Self::antiderivative`] is built from is **monotone** —
+    /// [`Self::min_mono_left`] then [`Self::max_mono_right`]. Needed because
+    /// [`Self::has_derivative_on`]'s spec quantifies over an unordered pair
+    /// and the two antiderivative values are integrals to the two clamps.
+    /// See `creal/lattice.rs`.
+    pub clamp_mono: NameId,
+    /// `CReal.max_sub_min : ∀ x y,
+    /// Equiv (add (max x y) (neg (min x y))) (abs (add y (neg x)))`.
+    ///
+    /// **The spread of a pair is the magnitude of its difference**, proved
+    /// with no case split: the classical argument decides `x ≤ y`, which
+    /// `CReal.le` cannot, and both inequalities are one-sided consequences of
+    /// the universal properties instead. The lower bound on the meet — the
+    /// direction a meet does not hand you — is [`Self::le_min`]. See
+    /// `creal/lattice.rs`.
+    pub max_sub_min: NameId,
     /// `CReal.abs_congr : ∀ x y, Equiv x y → Equiv (abs x) (abs y)` —
     /// [`Self::max_congr`] with [`Self::neg_congr`] in its second slot.
     pub abs_congr: NameId,
@@ -5818,6 +5843,10 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         le_min: kernel.name_str(creal, "le_min"),
         max_congr: kernel.name_str(creal, "max_congr"),
         min_congr: kernel.name_str(creal, "min_congr"),
+        min_mono_left: kernel.name_str(creal, "min_mono_left"),
+        max_mono_right: kernel.name_str(creal, "max_mono_right"),
+        clamp_mono: kernel.name_str(creal, "clamp_mono"),
+        max_sub_min: kernel.name_str(creal, "max_sub_min"),
         abs_congr: kernel.name_str(creal, "abs_congr"),
         le_abs_self: kernel.name_str(creal, "le_abs_self"),
         neg_le_abs: kernel.name_str(creal, "neg_le_abs"),
@@ -6908,6 +6937,49 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.neg_sub_swap,
         ],
         run: order_extra::declare_order_extra_abs,
+    },
+    BuildStep {
+        label: "lattice::declare_lattice_extra",
+        requires: &[
+            |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.abs_le,
+            |p: CRealPrelude| p.abs_nonneg,
+            |p: CRealPrelude| p.add,
+            |p: CRealPrelude| p.add_comm,
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.equiv_of_le_le,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.le,
+            |p: CRealPrelude| p.le_abs_self,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_max_left,
+            |p: CRealPrelude| p.le_max_right,
+            |p: CRealPrelude| p.le_min,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.max,
+            |p: CRealPrelude| p.max_le,
+            |p: CRealPrelude| p.min,
+            |p: CRealPrelude| p.min_le_left,
+            |p: CRealPrelude| p.min_le_right,
+            |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.neg_le_abs,
+            |p: CRealPrelude| p.neg_le_neg,
+            |p: CRealPrelude| p.neg_sub_swap,
+            |p: CRealPrelude| p.zero,
+        ],
+        provides: &[
+            |p: CRealPrelude| p.clamp_mono,
+            |p: CRealPrelude| p.max_mono_right,
+            |p: CRealPrelude| p.max_sub_min,
+            |p: CRealPrelude| p.min_mono_left,
+        ],
+        run: lattice::declare_lattice_extra,
     },
     BuildStep {
         label: "uniform_convergence::declare_uniform_converges_on",

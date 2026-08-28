@@ -10082,6 +10082,7 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "lattice::declare_lattice",
     "product::declare_mul_self_abs",
     "order_extra::declare_order_extra_abs",
+    "lattice::declare_lattice_extra",
     "uniform_convergence::declare_uniform_converges_on",
     "archimedean_squeeze::declare_archimedean_squeeze",
     "archimedean::declare_archimedean",
