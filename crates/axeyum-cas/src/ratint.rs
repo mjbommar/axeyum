@@ -379,7 +379,15 @@ pub(crate) fn log_terms(p_bar: &[Rational], q_bar: &[Rational]) -> Option<Vec<(R
 /// Not yet wired into `lib.rs`'s `integrate_rational` (out of this module's
 /// scope — see `docs/plan/status/163-ratint.md`); exercised directly by this
 /// module's own test suite, hence the explicit `dead_code` allow.
-#[allow(dead_code)]
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "independent checker, not yet wired into `lib.rs`'s `integrate_rational`/\
+                  `integrate_log_part` as defense-in-depth; `expect` (not `allow`) so that\
+                  wiring it errors here and forces this annotation off"
+    )
+)]
 pub(crate) fn verify_horowitz(
     numer: &[Rational],
     denom: &[Rational],
@@ -472,7 +480,15 @@ pub(crate) fn verify_horowitz(
 /// Not yet wired into `lib.rs`'s `integrate_log_part` (out of this module's
 /// scope — see `docs/plan/status/163-ratint.md`); exercised directly by this
 /// module's own test suite, hence the explicit `dead_code` allow.
-#[allow(dead_code)]
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "independent checker, not yet wired into `lib.rs`'s `integrate_rational`/\
+                  `integrate_log_part` as defense-in-depth; `expect` (not `allow`) so that\
+                  wiring it errors here and forces this annotation off"
+    )
+)]
 pub(crate) fn verify_log_terms(
     p_bar: &[Rational],
     q_bar: &[Rational],
