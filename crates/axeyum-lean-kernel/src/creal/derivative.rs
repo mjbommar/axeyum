@@ -9265,10 +9265,7 @@ pub(super) fn declare_lipschitz_of_deriv_bound(
     let ht0 = le_shift(d, p, y_gx, ad, u, l3);
     let (tt, reg2_proof) = regroup_sub(d, p, y, gx, u);
     let ygx_nu = cadd(d, p, y_gx, nu);
-    let ht = d.lemma(
-        p.le_congr,
-        &[ygx_nu, tt, ad, ad, reg2_proof, refl_ad, ht0],
-    );
+    let ht = d.lemma(p.le_congr, &[ygx_nu, tt, ad, ad, reg2_proof, refl_ad, ht0]);
 
     // --- multiply the domain bound through by M ------------------------------
     let ld = d.lemma(p.left_distrib, &[m, gy, gx]);
@@ -9278,7 +9275,15 @@ pub(super) fn declare_lipschitz_of_deriv_bound(
     let refl_abs_aa = erefl(d, p, abs_aa);
     let h_abs_aa2 = d.lemma(
         p.le_congr,
-        &[abs_aa, abs_aa, bnd_sum, m_tt, refl_abs_aa, ld_symm, h_abs_aa],
+        &[
+            abs_aa,
+            abs_aa,
+            bnd_sum,
+            m_tt,
+            refl_abs_aa,
+            ld_symm,
+            h_abs_aa,
+        ],
     );
     let m_ad = cmul(d, p, m, ad);
     let hmul = d.lemma(p.mul_le_mul_of_nonneg_left, &[m, tt, ad, hm0, ht]);
@@ -9320,6 +9325,308 @@ pub(super) fn declare_lipschitz_of_deriv_bound(
 
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.lipschitz_of_deriv_bound,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// =============================================================================
+// `CReal.abs_diff_sub_le_of_deriv_bound` — the TAIL estimate
+// =============================================================================
+//
+// The step this file's own `abs_diff_le_of_deriv_bound` section names as what a
+// "uniform limit of derivatives" theorem needs, now in the exact shape that
+// theorem's leg (A) consumes:
+//
+//   |(F y − F x) − (H y − H x)|  ≤  sup|F' − H'| · |y − x|
+//
+// For `F := Fₖ` and `H := Sₙ` that is the tail of a term-by-term
+// differentiation, bounded by the uniform gap between the two derivative
+// series and NOT by anything about the functions themselves — which is the
+// whole point, because uniform convergence of the FUNCTIONS bounds
+// `(F y − F x) − (H y − H x)` only by a CONSTANT `2δₙ`, and `deriv_spec_body`
+// spends its budget as `ε·|y − x|` over every `y` arbitrarily close to `x`.
+//
+// It is three moves and no new analysis:
+//
+//   1. `hasDerivative_sub` gives `HasDerivativeOn (F − H) (F' − H')` — and
+//      because it builds its functions as `fun r => add (F r) (neg (H r))`
+//      verbatim, every application below beta-reduces to the shape the
+//      hypothesis already has, so no transport is needed on the derivative
+//      bound at all.
+//   2. [`declare_lipschitz_of_deriv_bound`] — and it must be that one, not the
+//      ordered `abs_diff_le_of_deriv_bound`: `deriv_spec_body` hands leg (A)
+//      an `(x, y)` pair in no particular order, and `le x y ∨ le y x` is not
+//      available.
+//   3. [`swap_middle_pair`], which is the only algebra here:
+//      `(F y − H y) − (F x − H x) ~ (F y − F x) − (H y − H x)`. The Lipschitz
+//      bound is about the FIRST grouping (the difference of the difference
+//      FUNCTION at two points); the series argument needs the SECOND (the
+//      difference of two increments). Six steps through `neg_sub_swap`,
+//      `add_comm` and `ring_helpers::add4_comm`, deciding nothing.
+
+/// `Equiv (add (add u (neg v)) (neg (add w (neg t))))
+///        (add (add u (neg w)) (neg (add v (neg t))))` — `(u−v)−(w−t) ~
+/// (u−w)−(v−t)`, exchanging the two inner operands.
+///
+/// The additive group is commutative, so this is pure rearrangement; it is
+/// written as a chain rather than reached by a normalizer because this
+/// development has none. `add4_comm` swaps the SECOND and THIRD atoms of
+/// `(a+b)+(c+d)`, so each `neg`-of-a-sum is opened by
+/// [`CRealPrelude::neg_sub_swap`] into a plain sum first and the two operands
+/// are commuted into position around it.
+fn swap_middle_pair(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    u: ExprId,
+    v: ExprId,
+    w: ExprId,
+    t: ExprId,
+) -> ExprId {
+    let nv = cneg(d, p, v);
+    let nw = cneg(d, p, w);
+    let nt = cneg(d, p, t);
+
+    let u_nv = cadd(d, p, u, nv);
+    let w_nt = cadd(d, p, w, nt);
+    let n_wt = cneg(d, p, w_nt);
+    let start = cadd(d, p, u_nv, n_wt);
+    let refl_unv = erefl(d, p, u_nv);
+
+    // (u−v) + (t + (−w))
+    let t_nw = cadd(d, p, t, nw);
+    let swap1 = d.lemma(p.neg_sub_swap, &[w, t]);
+    let s1 = cadd(d, p, u_nv, t_nw);
+    let p1 = d.lemma(p.add_congr, &[u_nv, u_nv, n_wt, t_nw, refl_unv, swap1]);
+
+    // (u−v) + ((−w) + t)
+    let nw_t = cadd(d, p, nw, t);
+    let comm1 = d.lemma(p.add_comm, &[t, nw]);
+    let s2 = cadd(d, p, u_nv, nw_t);
+    let p2 = d.lemma(p.add_congr, &[u_nv, u_nv, t_nw, nw_t, refl_unv, comm1]);
+
+    // (u + (−w)) + ((−v) + t)
+    let (s3, p3) = add4_comm(d, p, u, nv, nw, t);
+
+    // (u + (−w)) + (t + (−v))
+    let u_nw = cadd(d, p, u, nw);
+    let refl_unw = erefl(d, p, u_nw);
+    let nv_t = cadd(d, p, nv, t);
+    let t_nv = cadd(d, p, t, nv);
+    let comm2 = d.lemma(p.add_comm, &[nv, t]);
+    let s4 = cadd(d, p, u_nw, t_nv);
+    let p4 = d.lemma(p.add_congr, &[u_nw, u_nw, nv_t, t_nv, refl_unw, comm2]);
+
+    // (u + (−w)) + neg (v + (−t))
+    let v_nt = cadd(d, p, v, nt);
+    let n_vt = cneg(d, p, v_nt);
+    let swap2 = d.lemma(p.neg_sub_swap, &[v, t]);
+    let swap2s = esymm(d, p, n_vt, t_nv, swap2);
+    let target = cadd(d, p, u_nw, n_vt);
+    let p5 = d.lemma(p.add_congr, &[u_nw, u_nw, t_nv, n_vt, refl_unw, swap2s]);
+
+    echain(
+        d,
+        p,
+        start,
+        &[(s1, p1), (s2, p2), (s3, p3), (s4, p4), (target, p5)],
+    )
+}
+
+/// Admit `CReal.abs_diff_sub_le_of_deriv_bound`. See
+/// [`CRealPrelude::abs_diff_sub_le_of_deriv_bound`] and the section comment
+/// above.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from the final `Theorem`
+/// here means the kernel **refused** the proof, not that a script gave up.
+pub(super) fn declare_abs_diff_sub_le_of_deriv_bound(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let func_ty = fn_ty(d, p);
+    let zero_c = czero(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let fp_fv = d.fresh_fvar();
+    let fp = d.kernel().fvar(fp_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let gp_fv = d.fresh_fvar();
+    let gp = d.kernel().fvar(gp_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let hf_ty = hd_ty(d, p, f, fp, a, b);
+    let hf_fv = d.fresh_fvar();
+    let hf = d.kernel().fvar(hf_fv);
+    let hg_ty = hd_ty(d, p, g, gp, a, b);
+    let hg_fv = d.fresh_fvar();
+    let hg = d.kernel().fvar(hg_fv);
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let hm0_ty = d.const_app(p.le, &[zero_c, m]);
+    let hm0_fv = d.fresh_fvar();
+    let hm0 = d.kernel().fvar(hm0_fv);
+
+    // hbnd : ∀ z, le a z → le z b → le (abs (add (F' z) (neg (G' z)))) M.
+    let hbnd_ty = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let fpz = d.apply(fp, &[z]);
+        let gpz = d.apply(gp, &[z]);
+        let ngpz = cneg(d, p, gpz);
+        let gap = cadd(d, p, fpz, ngpz);
+        let abs_gap = cabs(d, p, gap);
+        let concl = d.const_app(p.le, &[abs_gap, m]);
+        let z_le_b = d.const_app(p.le, &[z, b]);
+        let after_upper = d.arrow(z_le_b, concl);
+        let a_le_z = d.const_app(p.le, &[a, z]);
+        let after_lower = d.arrow(a_le_z, after_upper);
+        d.pi_fv(z_fv, carrier, after_lower)
+    };
+    let hbnd_fv = d.fresh_fvar();
+    let hbnd = d.kernel().fvar(hbnd_fv);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+
+    let hax_ty = d.const_app(p.le, &[a, x]);
+    let hax_fv = d.fresh_fvar();
+    let hax = d.kernel().fvar(hax_fv);
+    let hxb_ty = d.const_app(p.le, &[x, b]);
+    let hxb_fv = d.fresh_fvar();
+    let hxb = d.kernel().fvar(hxb_fv);
+    let hay_ty = d.const_app(p.le, &[a, y]);
+    let hay_fv = d.fresh_fvar();
+    let hay = d.kernel().fvar(hay_fv);
+    let hyb_ty = d.const_app(p.le, &[y, b]);
+    let hyb_fv = d.fresh_fvar();
+    let hyb = d.kernel().fvar(hyb_fv);
+
+    // --- the difference function, built EXACTLY as `hasDerivative_sub` does --
+    let fsub = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let fr = d.apply(f, &[r]);
+        let gr = d.apply(g, &[r]);
+        let ngr = cneg(d, p, gr);
+        let diff = cadd(d, p, fr, ngr);
+        d.lam_fv(r_fv, carrier, diff)
+    };
+    let fsub_p = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let fpz = d.apply(fp, &[z]);
+        let gpz = d.apply(gp, &[z]);
+        let ngpz = cneg(d, p, gpz);
+        let diff = cadd(d, p, fpz, ngpz);
+        d.lam_fv(z_fv, carrier, diff)
+    };
+    let hsub = d.const_app(p.has_derivative_sub, &[f, fp, g, gp, a, b, hf, hg]);
+
+    // `hbnd` already states the bound at the BETA-REDUCT of `fsub_p z`, so it
+    // is re-wrapped rather than transported.
+    let hbnd_sub = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let haz_ty = d.const_app(p.le, &[a, z]);
+        let haz_fv = d.fresh_fvar();
+        let haz = d.kernel().fvar(haz_fv);
+        let hzb_ty = d.const_app(p.le, &[z, b]);
+        let hzb_fv = d.fresh_fvar();
+        let hzb = d.kernel().fvar(hzb_fv);
+        let body = d.apply(hbnd, &[z, haz, hzb]);
+        let with_hzb = d.lam_fv(hzb_fv, hzb_ty, body);
+        let with_haz = d.lam_fv(haz_fv, haz_ty, with_hzb);
+        d.lam_fv(z_fv, carrier, with_haz)
+    };
+
+    let hlip = d.const_app(
+        p.lipschitz_of_deriv_bound,
+        &[
+            fsub, fsub_p, a, b, hsub, m, hm0, hbnd_sub, x, y, hax, hxb, hay, hyb,
+        ],
+    );
+
+    // --- regroup the difference of differences -------------------------------
+    let fx = d.apply(f, &[x]);
+    let fy = d.apply(f, &[y]);
+    let gx = d.apply(g, &[x]);
+    let gy = d.apply(g, &[y]);
+
+    let sub_y = d.apply(fsub, &[y]);
+    let sub_x = d.apply(fsub, &[x]);
+    let n_sub_x = cneg(d, p, sub_x);
+    let source = cadd(d, p, sub_y, n_sub_x);
+
+    let swap = swap_middle_pair(d, p, fy, gy, fx, gx);
+    let nfx = cneg(d, p, fx);
+    let ngx = cneg(d, p, gx);
+    let f_gap = cadd(d, p, fy, nfx);
+    let g_gap = cadd(d, p, gy, ngx);
+    let n_g_gap = cneg(d, p, g_gap);
+    let target = cadd(d, p, f_gap, n_g_gap);
+    let swap_symm = esymm(d, p, source, target, swap);
+
+    let nx = cneg(d, p, x);
+    let gap = cadd(d, p, y, nx);
+    let abs_gap = cabs(d, p, gap);
+    let bound = cmul(d, p, m, abs_gap);
+    let body = abs_le_of_equiv(d, p, target, source, bound, swap_symm, hlip);
+
+    let value = {
+        let with_hyb = d.lam_fv(hyb_fv, hyb_ty, body);
+        let with_hay = d.lam_fv(hay_fv, hay_ty, with_hyb);
+        let with_hxb = d.lam_fv(hxb_fv, hxb_ty, with_hay);
+        let with_hax = d.lam_fv(hax_fv, hax_ty, with_hxb);
+        let with_y = d.lam_fv(y_fv, carrier, with_hax);
+        let with_x = d.lam_fv(x_fv, carrier, with_y);
+        let with_hbnd = d.lam_fv(hbnd_fv, hbnd_ty, with_x);
+        let with_hm0 = d.lam_fv(hm0_fv, hm0_ty, with_hbnd);
+        let with_m = d.lam_fv(m_fv, carrier, with_hm0);
+        let with_hg = d.lam_fv(hg_fv, hg_ty, with_m);
+        let with_hf = d.lam_fv(hf_fv, hf_ty, with_hg);
+        let with_b = d.lam_fv(b_fv, carrier, with_hf);
+        let with_a = d.lam_fv(a_fv, carrier, with_b);
+        let with_gp = d.lam_fv(gp_fv, func_ty, with_a);
+        let with_g = d.lam_fv(g_fv, func_ty, with_gp);
+        let with_fp = d.lam_fv(fp_fv, func_ty, with_g);
+        d.lam_fv(f_fv, func_ty, with_fp)
+    };
+    let ty = {
+        let abs_target = cabs(d, p, target);
+        let concl = d.const_app(p.le, &[abs_target, bound]);
+        let after_hyb = d.arrow(hyb_ty, concl);
+        let after_hay = d.arrow(hay_ty, after_hyb);
+        let after_hxb = d.arrow(hxb_ty, after_hay);
+        let after_hax = d.arrow(hax_ty, after_hxb);
+        let over_y = d.pi_fv(y_fv, carrier, after_hax);
+        let over_x = d.pi_fv(x_fv, carrier, over_y);
+        let after_hbnd = d.arrow(hbnd_ty, over_x);
+        let after_hm0 = d.arrow(hm0_ty, after_hbnd);
+        let over_m = d.pi_fv(m_fv, carrier, after_hm0);
+        let after_hg = d.arrow(hg_ty, over_m);
+        let after_hf = d.arrow(hf_ty, after_hg);
+        let over_b = d.pi_fv(b_fv, carrier, after_hf);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        let over_gp = d.pi_fv(gp_fv, func_ty, over_a);
+        let over_g = d.pi_fv(g_fv, func_ty, over_gp);
+        let over_fp = d.pi_fv(fp_fv, func_ty, over_g);
+        d.pi_fv(f_fv, func_ty, over_fp)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.abs_diff_sub_le_of_deriv_bound,
         uparams: vec![],
         ty,
         value,

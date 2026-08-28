@@ -5728,6 +5728,32 @@ pub struct CRealPrelude {
     /// pair `(x, y)` it must be applied at comes from `deriv_spec_body` in no
     /// particular order.
     pub lipschitz_of_deriv_bound: NameId,
+    /// `CReal.abs_diff_sub_le_of_deriv_bound : ∀ F F' G G' a b,
+    /// HasDerivativeOn F F' a b → HasDerivativeOn G G' a b → ∀ M, le zero M →
+    /// (∀ z, le a z → le z b → le (abs (add (F' z) (neg (G' z)))) M) → ∀ x y,
+    /// le a x → le x b → le a y → le y b →
+    /// le (abs (add (add (F y) (neg (F x))) (neg (add (G y) (neg (G x))))))
+    ///    (mul M (abs (add y (neg x))))`
+    /// (`creal/derivative.rs`) — **the tail estimate** a term-by-term
+    /// differentiation needs: two increments differ by at most the uniform gap
+    /// between the derivatives times the domain gap.
+    ///
+    /// Three moves, no new analysis. [`Self::has_derivative_sub`] gives
+    /// `HasDerivativeOn (F − G) (F' − G')` — and because it builds its
+    /// functions as `fun r => add (F r) (neg (G r))` verbatim, the derivative
+    /// bound needs no transport at all, only re-wrapping. Then
+    /// [`Self::lipschitz_of_deriv_bound`] (and it must be that one, not
+    /// [`Self::abs_diff_le_of_deriv_bound`]: `deriv_spec_body` hands its
+    /// consumer an unordered `(x, y)`). Then one commutative-group
+    /// rearrangement `(F y − G y) − (F x − G x) ~ (F y − F x) − (G y − G x)` —
+    /// the Lipschitz bound is about the difference FUNCTION at two points, the
+    /// series argument needs the difference of two INCREMENTS.
+    ///
+    /// This is the bound that the uniform convergence of the FUNCTIONS cannot
+    /// supply: that route bounds the same quantity by a CONSTANT `2δₙ`, while
+    /// `deriv_spec_body`'s budget is `ε·|y − x|` over every `y` arbitrarily
+    /// close to `x`, and no `n` absorbs a constant into it.
+    pub abs_diff_sub_le_of_deriv_bound: NameId,
 }
 
 impl CRealPrelude {
@@ -6311,6 +6337,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         mesh_max_mono: kernel.name_str(creal, "meshMax_mono"),
         abs_diff_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_le_of_deriv_bound"),
         lipschitz_of_deriv_bound: kernel.name_str(creal, "lipschitz_of_deriv_bound"),
+        abs_diff_sub_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_sub_le_of_deriv_bound"),
     }
 }
 
@@ -8612,6 +8639,33 @@ const STEPS: &[BuildStep] = &[
         ],
         provides: &[|p: CRealPrelude| p.lipschitz_of_deriv_bound],
         run: derivative::declare_lipschitz_of_deriv_bound,
+    },
+    BuildStep {
+        label: "derivative::declare_abs_diff_sub_le_of_deriv_bound",
+        requires: &[
+            |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.abs_congr,
+            |p: CRealPrelude| p.add,
+            |p: CRealPrelude| p.add_assoc,
+            |p: CRealPrelude| p.add_comm,
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.creal,
+            |p: CRealPrelude| p.equiv,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.has_derivative_on,
+            |p: CRealPrelude| p.has_derivative_sub,
+            |p: CRealPrelude| p.le,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.lipschitz_of_deriv_bound,
+            |p: CRealPrelude| p.mul,
+            |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.neg_sub_swap,
+            |p: CRealPrelude| p.zero,
+        ],
+        provides: &[|p: CRealPrelude| p.abs_diff_sub_le_of_deriv_bound],
+        run: derivative::declare_abs_diff_sub_le_of_deriv_bound,
     },
     BuildStep {
         label: "integral::declare_fine_sample_in_bounds",

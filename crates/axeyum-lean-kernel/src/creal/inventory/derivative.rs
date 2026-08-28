@@ -91,5 +91,10 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.lipschitz_of_deriv_bound,
             "theorem",
         ),
+        (
+            "CReal.abs_diff_sub_le_of_deriv_bound",
+            p.abs_diff_sub_le_of_deriv_bound,
+            "theorem",
+        ),
     ]
 }
