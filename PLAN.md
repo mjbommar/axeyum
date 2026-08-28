@@ -184,6 +184,8 @@ now. Nothing was deleted.
 | 2026-08-28 | nat-binomial | `Nat.choose_mono` via permuted `choose_le_choose`; closes `F:ml430-nat-choose-mono-a1af9c18`, kernel-lean, axiom-free; nat_prelude 447->448 |
 | 2026-08-28 | nat-factorial-variants | `Nat.descFactorial` + `descFactorial_zero`/`_succ`/`_one`/`_of_lt`, axiom-free, `nat_prelude` sweep 105/105; 4 new `F:nat-desc-factorial-*` facts; `Nat.ascFactorial`/`Nat.multichoose` left for a future lane |
 | 2026-08-28 | nat-primes-2 | `Nat.coprime_primes`, `Nat.not_prime_of_dvd_of_ne`, `Nat.Prime.pred_pos`, `Nat.succ_pred_prime`, `Nat.Prime.dvd_mul_of_dvd_ne` — five axiom-free kernel theorems in `nat_prelude/primes.rs`, five `natural-primes` facts flipped to `proved` |
+| 2026-08-28 | int-gcd-2 | `Int.dvd_of_dvd_mul_right_of_gcd_one`/`Int.dvd_of_dvd_mul_left_of_gcd_one` -- `gauss_lemma` corollaries, axiom-free; closes `F:ml430-int-dvd-of-dvd-mul-right-of-gcd-one-77817ff0`/`F:ml430-int-dvd-of-dvd-mul-left-of-gcd-one-649e349b` |
+| 2026-08-28 | int-gcd-2 | `Int.gcd_greatest` -- the universal-property characterization of `gcd`, axiom-free; closes `F:ml430-int-gcd-greatest-5b31c5fe` |
 | 2026-08-27 | (uncommitted at status-file write time) | `CReal.sumRange_cauchy_of_abs_cauchy` / `CReal.sumRange_converges_of_abs_converges` (absolute convergence implies convergence) plus a soundness-negative control; curriculum rows 18 and 22–23 corrected. |
 | 2026-08-27 | (uncommitted at status-file write time) | Ten new `artifacts/facts/F-creal-*.json` entries for the Ch.13/14 Riemann integral construction and algebra (`riemannSum_cauchy`, `integral`, `integral_converges`, `integral_const`, `integral_add`, `integral_le`, `integral_scale`, `integral_witness_independent`, `riemannSum_integral_close`, `sharedIndexToCanonical`); `python3 scripts/validate-facts.py` green (708 facts, 0 errors). |
 | 2026-08-27 | (uncommitted at status-file write time) | Added `--require-declaration <name> [--require-kind <kind>]` to `crates/axeyum-lean-kernel/examples/kernel_declaration_projection.rs`: a direct, fail-on-absence presence checker for `Declaration::Definition`s (and any other kind), mutation-tested against `CReal.integral`. Upgraded `F:creal-integral`'s `kernel-CReal.integral` evidence to use it. Registered 14 new `artifacts/facts/F-creal-*.json` entries for Spivak Ch.18 (`e`) and Ch.22-23 (series convergence tests): `creal-e`, `creal-e-converges`, `creal-two-le-e`, `creal-e-le-three`, `creal-e-le-four`, `creal-expterm-le-geom`, `creal-expdominantcauchy`, `creal-cauchyofpointwiseequiv`, `creal-geomcauchy`, `creal-sumrange-comparisontest`, `creal-sumrange-cauchy-of-dominated`, `creal-sumrange-converges-of-dominated`, `creal-sumrange-cauchy-of-abs-cauchy`, `creal-sumrange-converges-of-abs-converges`. `python3 scripts/validate-facts.py` green (722 facts, 0 errors). |
@@ -9554,6 +9556,38 @@ new panic message after the fix, not hand-incremented.
 `nat_prelude` theorem/definition count: `74 + 383 = 457` before this lane,
 `74 + 388 = 462` after (five new `Theorem`-kind declarations, zero new
 `Definition`s).
+
+**Your lane's block (`DONE`, int-gcd-2, 2026-08-28).** Closed three of the
+`integer-gcd` family's remaining open facts, all axiom-free:
+`Int.dvd_of_dvd_mul_right_of_gcd_one`, `Int.dvd_of_dvd_mul_left_of_gcd_one`
+(both direct corollaries of the already-proved `Int.gauss_lemma`), and
+`Int.gcd_greatest` (from the universal property `dvd_gcd`/`gcd_dvd_left`/
+`gcd_dvd_right` plus the private `nat_dvd_antisymm` engine `gcd_comm` already
+uses). Declarations in `int_prelude/gcd.rs`, wired into `int_prelude.rs`;
+`derived_laws` in `int_prelude_tests.rs` recounted 143 -> 146.
+
+**The hand-off claim about `F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e` was
+NOT attempted this lane** -- it needs genuine `Int`/`Nat` mod-arithmetic
+bridging (reduce a Bezout coefficient mod `k` and show the residue lands in
+range), a different shape of work than the three closed here, which are all
+direct consequences of already-proved divisibility/universal-property lemmas.
+Still open, still `train`, no HELD-OUT/MUTATION marker. The remaining
+`integer-gcd` open facts (`F:ml430-int-gcd-div-5e01872f`,
+`F:ml430-int-gcd-div-gcd-div-gcd-2db608dc`, and the exists-mul-mod-eq-gcd fact
+above) are unclaimed for the next lane.
+
+`F:ml430-int-gcd-div-5e01872f` carries a ⚠ NAMED BY
+`check-autogenesis-semantic-contract-target-census.py` marker -- checked
+before starting: that script pins the fact's `fact_id` only as a label inside
+a static Mathlib-source census (`EXPECTED_NARROWEST`), keyed off
+`source_content_sha256`/`missing_dependency`/etc., never off this fact's
+`epistemic_status`. Closing the fact does not touch what that script checks.
+
+`cargo test -p axeyum-lean-kernel --lib int_prelude` (`--release` for the
+`theorem_axiom_footprint` checkers): before this lane 35 passed (per the prior
+lane's status note); after, **38 passed, 0 failed**, ~157s. `clippy --all-targets
+--all-features -D warnings` and `cargo fmt --check` both clean on the touched
+files. `python3 scripts/validate-facts.py`: 0 errors.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
