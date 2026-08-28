@@ -123,6 +123,8 @@ now. Nothing was deleted.
 | 2026-08-28 | pi-r2b | measured NEGATIVE, read not guessed: `docs/plan/status/174-pi-rung2.md`'s item 3 ("mechanical given `htail`") understates the remaining gap. Bridging `cosFnWideUniformConverges`'s `close_within`-shaped `.spec` output down to `Converges`'s own `Within`-on-rationals-at-a-shared-index shape needs (a) `close_within` -> two one-sided `le`s, (b) `CReal.within_of_two_sided_le` (the only general "real inequality -> Within" bridge in the tree) to reach a real-indexed `Within`, and (c) a `CReal.add`-index-shift regularity bridge of the same kind `CReal.converges_add`'s own doc names as its hardest step -- confirmed absent by reading `convergence.rs`, `order_extra.rs`, and every `close_within`-mentioning file in `creal/` |
 | 2026-08-28 | pi-r2b | `le (cosFnWide R) zero` itself did NOT land; items 3 and 4 remain open for the next lane, with item 3 now sized as a `converges_add`-sized bridge rather than "mechanical" |
 | 2026-08-28 | pi-r2b | measured: the kernel rejected NOTHING -- both `add_declaration` calls succeeded first attempt, no `on_a_deep_stack` needed. `creal_prelude_builds` 94.45 s (inside the 91-117 s band, no measurable slowdown); `every_creal_declaration_is_checked_and_axiom_free` green in `--release` (15.09 s), both declarations `Theorem`-kind, empty `axiom_footprint` |
+| 2026-08-28 | cw-bridge | `CReal.converges_of_abs_diff_le` — `close_within` evidence → `Converges`, axiom-free, first-attempt accept |
+| 2026-08-28 | cw-bridge | the shift bridge it was sized to need already existed: `CReal.sharedIndexToCanonical` (`integral.rs`) + `cauchy_of_abs_diff_le` (`ivt.rs`) |
 | 2026-08-28 | `68e0a48d8` | dedup: cite `CReal.abs_add_le` instead of re-deriving it, in 4 `creal/` files; fix a stale "does not exist" doc comment |
 | 2026-08-27 | (uncommitted at status-file write time) | `CReal.sumRange_cauchy_of_abs_cauchy` / `CReal.sumRange_converges_of_abs_converges` (absolute convergence implies convergence) plus a soundness-negative control; curriculum rows 18 and 22–23 corrected. |
 | 2026-08-27 | (uncommitted at status-file write time) | Ten new `artifacts/facts/F-creal-*.json` entries for the Ch.13/14 Riemann integral construction and algebra (`riemannSum_cauchy`, `integral`, `integral_converges`, `integral_const`, `integral_add`, `integral_le`, `integral_scale`, `integral_witness_independent`, `riemannSum_integral_close`, `sharedIndexToCanonical`); `python3 scripts/validate-facts.py` green (708 facts, 0 errors). |
@@ -7021,6 +7023,142 @@ calls into separate `let`s, as CLAUDE.md's kernel-facts section warns).
   creal::creal_tests::steps_table_matches_recorded_extraction` — green
   (both new `BuildStep`s wired into `creal.rs` and `EXPECTED_STEP_ORDER`).
 - Did NOT run a full `--lib creal::` sweep (per the standing rule).
+
+**Status: LANDED, axiom-free, accepted by `Kernel::add_declaration` on the
+FIRST attempt (cw-bridge, 2026-08-28).** The bridge
+`docs/plan/status/175-pi-r2b.md` named as the last structural gap under π
+rung 2 exists and is public:
+
+    CReal.converges_of_abs_diff_le :
+      ∀ (f : Nat → CReal) (L : CReal) (K : Nat),
+        (∀ n, CReal.le (CReal.abs (CReal.add (f n) (CReal.neg L)))
+                       (CReal.ofRat (Rat.natDivSucc K n)))
+        → CReal.Converges f L
+
+`crates/axeyum-lean-kernel/src/creal/uniform_convergence.rs`. Read from the
+kernel, not from source text: `shape_search --include-constructed --name
+CReal.converges_of_abs_diff_le` gives `theorem arity=4 CReal -> CReal -> Nat
+-> CReal.le -> CReal.Converges`, `consts=[CReal, CReal.Converges, CReal.abs,
+CReal.add, CReal.le, CReal.neg, CReal.ofRat, Nat, Rat.natDivSucc]`, and
+`prelude_theorem_inventory --include-constructed --release` prints
+`creal  CReal.converges_of_abs_diff_le  0` — zero axioms.
+
+## Was it genuinely absent? Yes — but the HARD half was not
+
+Verified before building, not assumed. `shape_search --concl
+CReal.Converges` returned 13 rows and not one takes a `CReal.le`-of-`abs`
+hypothesis (`converges_of_close` and `converges_of_scaled_cauchy` both start
+from a `Within`; `converges_of_equiv` wants exact `Equiv`;
+`converges_squeeze` wants two existing `Converges`). `--name-like
+close_within` returned exactly `close_within_of_within` and
+`close_within_of_within_indexed`, both concluding `CReal.le` — the OTHER
+direction. Grepped `within_of_two_sided_le`'s consumers and every
+`close_within` site in `creal/` for an inline instance (hiding place 2); the
+one that exists is `creal/ivt.rs`, and it is the Cauchy analogue, not this.
+
+**But 175-pi-r2b's sizing — "a THIRD general bridge, comparable in size to
+`converges_add`'s own construction … relating a real's sample at `n` to its
+sample at `shift n`" — over-stated the work, and the reason is worth
+recording because it is hiding place 1 again.** The `CReal.add` index-shift
+regularity bridge ALREADY EXISTS as a general, public lemma:
+
+    CReal.sharedIndexToCanonical : ∀ (X Y : CReal) (bound : Nat → Rat),
+      (∀ i, Within (seq (add X (neg Y)) i) (bound i)) → ∀ p q j : Nat,
+      Within (Rat.sub (seq X p) (seq Y q))
+             ((modulus p (shift j) + bound j) + modulus (shift j) q)
+
+filed in `creal/integral.rs` because `riemannSum_cauchy` needed it first, and
+`CReal.cauchy_of_abs_diff_le` (`creal/ivt.rs`, filed there because the exact
+IVT root needed it first) already demonstrates the exact composition —
+`le_abs_self`/`neg_le_abs` → `within_of_two_sided_le` → `sharedIndexToCanonical`
+→ rational fold — for `Cauchy`. Neither is findable by name from
+"`close_within` → `Converges`". Both were found by searching for the STEP.
+
+## The construction, and why it is SMALLER than the Cauchy sibling
+
+267 lines, one function, **zero new private helpers**
+(`declare_converges_add` is 334 lines *plus* `shift_regular_bound`,
+`telescope_le4`, `fuse_bridge_bound`, `regroup_middle_four`). Route:
+
+1. `le_abs_self`/`neg_le_abs` + `le_trans` split the hypothesis at `n` into
+   the two one-sided reals `within_of_two_sided_le` wants.
+2. `within_of_two_sided_le` gives `∀ i, Within (seq (f n − L) i) (q + 2/(i+1))`
+   at an arbitrary SHARED index, `q := natDivSucc K n`.
+3. `sharedIndexToCanonical` at `p := q := n`, `j := 3n+2`, `sj := 2j+1`:
+
+       ((1/(n+1) + 1/(sj+1)) + (q + 2/(j+1))) + (1/(sj+1) + 1/(n+1))
+
+   `Rat.natDivSucc_halve j` collapses the two `1/(sj+1)` legs to `1/(j+1)`,
+   `Rat.natDivSucc_add` fuses that with the `2/(j+1)` slack to `3/(j+1)`, and
+   `Rat.natDivSucc_scale 2 n` makes `3/(j+1)` **exactly** `1/(n+1)`.
+4. Three more `Rat.natDivSucc_add` fusions on `q + (A + (A + A))` reach
+   `natDivSucc (K+3) n`. Witness `K := Nat.add K 3`, reported raw.
+
+**The whole six-term bound is an EQUALITY.** `cauchy_of_abs_diff_le`'s two
+canonical indices `m`/`n` differ, so it ends with a
+`Rat.natDivSucc_le_add_left` widening to a shared numerator; there is exactly
+one index here, so **this proof contains no inequality anywhere**. The
+six-summand rearrangement goes through `rsum_perm` (panics on a
+non-permutation) rather than an inline `add_assoc`/`add_comm` chain.
+
+## Was the `n = 0` obligation the crux? No — and that is a real finding
+
+175/174 recorded that an "eventually" bridge would not do, because
+`Converges` constrains every index including `n = 0`, and that the
+shifted-series route was **blocked** there (re-indexed partial sums satisfy
+their identity only for `n ≥ 1`). That is true of the shifted-series route
+and **does not transfer to this one**: every step above is an identity in
+`n`, so `n = 0` is simply the instance where all four denominators are `1`
+and the bound reads `K + 3`. Nothing is chosen eventually, nothing is assumed
+about `n`, and no clamp (`Nat.pred`-style or otherwise) appears. The low-index
+obligation cost zero.
+
+## What the kernel rejected
+
+**Nothing.** `add_declaration` accepted on the first attempt — no
+`TypeMismatch`, no `UnboundFVar`, no `on_a_deep_stack` needed, no `def_eq`
+budget trouble. The only rejection in the lane was `clippy`'s
+`items_after_statements` on a nested `fn` in the new test (moved above the
+statements).
+
+## Non-vacuity: the bridge composes with `UniformConvergesOn.spec`
+
+That the declaration type-checks does not establish that its hypothesis is
+the shape a consumer HAS. New test
+`creal_tests::the_close_within_bridge_turns_uniform_convergence_into_converges_at_a_point`
+builds the composed term outright —
+
+    λ F G a b (u : UniformConvergesOn F G a b) x (hax : le a x) (hxb : le x b),
+      converges_of_abs_diff_le (fun n => F n x) (G x)
+        (UniformConvergesOn.rate F G a b u)
+        (fun n => UniformConvergesOn.spec F G a b u n x hax hxb)
+
+— and asserts `Kernel::infer` of it is EXACTLY `… → Converges (fun n => F n x)
+(G x)`, by interned id, never `def_eq`. It passes, so `.spec`'s per-index
+`close_within` **is** the hypothesis with no transport at all, and the
+family's own `rate` serves as `K` directly. Negative control differs in a
+small term (`le a x` transposed) and is asserted non-vacuous both ways.
+
+## What this unblocks
+
+π rung 2 item 3: `alternatingUpperBoundTail`'s remaining `Converges (sumRange
+t) L` hypothesis. `riemannSum_cauchy` was separately noted as wanting a lemma
+of this family — note it wants the `Cauchy` one, which already exists as
+`cauchy_of_abs_diff_le`; both halves of that pair are now public.
+
+## Verification (all foreground, all completed)
+
+- `cargo test -p axeyum-lean-kernel --lib creal::creal_tests::creal_prelude_builds`
+  — **96.39 s green**, 1 passed / 921 filtered; inside 175-pi-r2b's own
+  94–123 s band. One reading, not isolated from host load.
+- `cargo test --release … every_creal_declaration_is_checked_and_axiom_free`
+  — **green, 16.86 s**. Environment-derived, both directions.
+- `cargo test --release … steps_table_matches_recorded_extraction` — green.
+- `cargo test --release … the_close_within_bridge_turns_uniform_convergence_into_converges_at_a_point`
+  — green, 14.49 s, 1 passed / 922 filtered (nonzero, and the count moved).
+- `cargo clippy -p axeyum-lean-kernel --all-targets --all-features -- -D warnings`
+  — clean.
+- NOT run: the full `--lib creal::` sweep, and any workspace gate.
 
 **Your lane's block (`DONE`, inline-hunt, 2026-08-28).** Censused ~426
 `declare_*` functions and ranked ~333 private-fn candidates (body_len>=25)
