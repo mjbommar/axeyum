@@ -130,5 +130,10 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.has_derivative_on_restrict,
             "theorem",
         ),
+        (
+            "CReal.sinFnLowerBoundOneToR",
+            p.sin_fn_lower_bound_one_to_r,
+            "theorem",
+        ),
     ]
 }
