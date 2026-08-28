@@ -1,0 +1,59 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- bitwise_zero_left 2>/dev/null | grep -Ec '^Nat\\.bitwise_zero_left[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.bitwise_zero_left",
+      "kernel_declaration": "Nat.bitwise_zero_left",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. The statement is universally quantified over BOTH the combinator `f : Bool -> Bool -> Bool` and `n : Nat`, and holds unconditionally -- no hypothesis on `f` (in particular, no `f false false = false`) is needed, because fuel is `m = 0` at this call, so the outer `Nat.rec` hits `bitwiseAux`'s fuel-exhaustion row directly and that row IS this statement's RHS by construction: the proof is `Eq.refl`. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the count is tested, so the exit status depends on what the run found. Anchored with `^Nat\\.bitwise_zero_left[[:space:]]` (verified exactly 1 row).",
+      "supports": "forall f n, bitwise f 0 n = if f false true then n else 0"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::bitwise_computes_and_its_boundary_theorems_apply",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "id": "compute-Nat.bitwise_zero_left",
+      "kernel_declaration": "Nat.bitwise",
+      "kind": "kernel-term",
+      "notes": "Instantiates the universal theorem at two concrete `f` witnesses built inline (`and_fn`, `or_fn` -- this prelude declares no top-level `Bool.and`/`Bool.or`) and a concrete `n = 7`, confirming the ADMITTED TYPE at each instantiation `def_eq`s the expected specialization: at `and_fn` (absorbing on this side) `bitwise and_fn 0 7` reduces to `0`, at `or_fn` (identity on this side) it reduces to `7` -- with negative controls asserting each instantiation does NOT also state the other's value, so a definition that ignored `f` entirely (always returning `n`, or always `0`) cannot pass both.",
+      "supports": "the theorem specializes correctly at both an absorbing and a non-absorbing f"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.bitwise_zero_left",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. `Nat.bitwiseAux` uses the same structural fuel device as `Nat.landAux`/`Nat.lorAux`/`Nat.ldiffAux` rather than Mathlib's well-founded `Nat.bitwise`, so nothing here needs `WellFounded`/`Quot.sound`/`propext`; this command is what makes the axiom-freedom claim falsifiable rather than asserted. Measured with `Nat.bitwise` landed: `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [],
+    "language": "lean4",
+    "statement": "((x0 : ((x0 : Bool) -> ((x1 : Bool) -> Bool))) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.bitwise x0 AxNat.zero x1) (Bool.rec.{1} (fun (x2 : Bool) => AxNat) AxNat.zero x1 (x0 Bool.false Bool.true))))"
+  },
+  "id": "F:nat-bitwise-zero-left",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*) -- the `nat` prelude's trusted surface measures zero.\n\n`Nat.bitwise` is the GENERAL `f : Bool -> Bool -> Bool` combinator two earlier lanes declined to build, citing `f` threaded through mismatched-length base cases as more construction than one lane's scope. Landed here now that `Nat.land`/`Nat.lor`/`Nat.ldiff` (each a specialization Mathlib routes through `Nat.bitwise`, landed directly instead) established the fuel-recursion device and, critically, the absorbing-zero-vs-not distinction the general base case has to make PER `f` rather than at compile time. That distinction is resolved by evaluating `f` at the two boundary Bool literals (`f false true` for the `m = 0` row, `f true false` for the `n = 0` row) and gating with `bool_select_nat`, identical in shape to the zero-guards `land`/`lor`/`ldiff` already build -- no new combinator, no new primitive, no new height dependency beyond one extra bound `f` threaded through every closure. See `crates/axeyum-lean-kernel/src/nat_prelude/bitwise.rs`'s module doc for the full derivation, including what was NOT attempted (a universal `forall m n, bitwise and m n = land m n` equivalence proof, sized past this lane's scope; `F:nat-bitwise-and-eq-land-three-five` and its `lor`/`xor` siblings are the strongest available check without it).\n\nDoes not flip any `F:ml430-nat-bitwise-*` fact -- those are a separate, held-out mirror population and untouched by this lane.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-bitwise-general",
+    "source": "one of two f-general boundary theorems `declare_bitwise_all` (`crates/axeyum-lean-kernel/src/nat_prelude/bitwise.rs`) admits alongside the `Nat.bitwise`/`Nat.bitwiseAux` definitions"
+  },
+  "schema_version": 1,
+  "statement": "For every bit-combining function f and every natural n, the general bitwise combinator applied to (f, 0, n) equals n when f false true holds and 0 otherwise.",
+  "title": "bitwise f 0 n = if f false true then n else 0"
+}

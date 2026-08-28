@@ -3138,8 +3138,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             bitwise: kernel.name_str(nat, "bitwise"),
             bitwise_zero_left: kernel.name_str(nat, "bitwise_zero_left"),
             bitwise_zero_right: kernel.name_str(nat, "bitwise_zero_right"),
-            bitwise_and_eq_land_three_five: kernel
-                .name_str(nat, "bitwise_and_eq_land_three_five"),
+            bitwise_and_eq_land_three_five: kernel.name_str(nat, "bitwise_and_eq_land_three_five"),
             bitwise_or_eq_lor_three_five: kernel.name_str(nat, "bitwise_or_eq_lor_three_five"),
             bitwise_xor_three_five: kernel.name_str(nat, "bitwise_xor_three_five"),
         };

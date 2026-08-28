@@ -146,8 +146,15 @@ fn bitwise(d: &mut NatDev<'_>, p: &NatPrelude, f: ExprId, m: ExprId, n: ExprId) 
 /// on_true else on_false` at `Bool`, the `Bool`-codomain twin of
 /// [`NatOps::bool_select_nat`]. Not in `ops.rs` because no other file in
 /// this prelude needs a `Bool`-valued `if` — `land`/`lor`/`ldiff` only ever
-/// select `Nat` values.
-fn bool_select_bool(d: &mut NatDev<'_>, condition: ExprId, on_true: ExprId, on_false: ExprId) -> ExprId {
+/// select `Nat` values. Generic over `D: NatOps` (not the concrete
+/// [`NatDev`] every other helper in this file uses) so the test suite's own
+/// `Fixture` can build the same `and`/`or`/`xor` terms it checks against.
+fn bool_select_bool<D: NatOps>(
+    d: &mut D,
+    condition: ExprId,
+    on_true: ExprId,
+    on_false: ExprId,
+) -> ExprId {
     let bool_ty = d.bool_ty();
     let anon = d.anon_name();
     let motive = d.kernel().lam(anon, bool_ty, bool_ty, BinderInfo::Default);
@@ -159,8 +166,9 @@ fn bool_select_bool(d: &mut NatDev<'_>, condition: ExprId, on_true: ExprId, on_f
 
 /// `fun a b => bool_select_bool a b false` — `Bool.and`, built inline (this
 /// prelude declares no top-level `Bool.and`) purely to instantiate
-/// `bitwise`'s `f` slot for the evaluation tests below.
-fn and_fn(d: &mut NatDev<'_>) -> ExprId {
+/// `bitwise`'s `f` slot for the evaluation tests below. Generic for the
+/// same reason as [`bool_select_bool`].
+pub(super) fn and_fn<D: NatOps>(d: &mut D) -> ExprId {
     let bool_ty = d.bool_ty();
     let a_fv = d.fresh_fvar();
     let a = d.kernel().fvar(a_fv);
@@ -174,7 +182,7 @@ fn and_fn(d: &mut NatDev<'_>) -> ExprId {
 
 /// `fun a b => bool_select_bool a true b` — `Bool.or`, built inline for the
 /// same reason as [`and_fn`].
-fn or_fn(d: &mut NatDev<'_>) -> ExprId {
+pub(super) fn or_fn<D: NatOps>(d: &mut D) -> ExprId {
     let bool_ty = d.bool_ty();
     let a_fv = d.fresh_fvar();
     let a = d.kernel().fvar(a_fv);
@@ -192,7 +200,7 @@ fn or_fn(d: &mut NatDev<'_>) -> ExprId {
 /// against, so [`declare_bitwise_all`] checks this one only against a
 /// hand-computed numeral (`3 xor 5 = 6`), not against an existing prelude
 /// declaration.
-fn xor_fn(d: &mut NatDev<'_>) -> ExprId {
+pub(super) fn xor_fn<D: NatOps>(d: &mut D) -> ExprId {
     let bool_ty = d.bool_ty();
     let a_fv = d.fresh_fvar();
     let a = d.kernel().fvar(a_fv);
