@@ -9,10 +9,10 @@
   "join_rule": "A fact counts toward `registered` when proof_route == 'kernel-lean', epistemic_status in {proved, computed}, and one of three tiers names a theorem in the denominator: (1) formal.kernel_theorem, when the key is present (an explicit null means no single subject and stops here); (2) the declared name at the head of a lean4 formal.statement ('theorem <Name> :' / 'def <Name> :' / '<Name> :'); (3) the fallback dotted-theorem-name extraction from check-fact-depends-derived.py::theorem_of. See module docstring for why tier 2 is load-bearing, not optional.",
   "counts": {
     "overall": {
-      "kernel_theorems": 1469,
-      "registered": 1461,
+      "kernel_theorems": 1521,
+      "registered": 1467,
       "curated": 474,
-      "unregistered": 8
+      "unregistered": 54
     },
     "by_prelude": {
       "complex": {
@@ -30,11 +30,64 @@
         "unregistered": []
       },
       "creal": {
-        "kernel_theorems": 397,
+        "kernel_theorems": 449,
         "registered_count": 397,
         "curated_count": 132,
-        "unregistered_count": 0,
-        "unregistered": []
+        "unregistered_count": 52,
+        "unregistered": [
+          "CReal.abs_diff_le_of_deriv_bound",
+          "CReal.abs_diff_le_of_small_image",
+          "CReal.abs_diff_sub_le_of_deriv_bound",
+          "CReal.antiderivative_abs_le",
+          "CReal.bucketClose",
+          "CReal.cauchy_of_abs_diff_le",
+          "CReal.clamp_id",
+          "CReal.clamp_mono",
+          "CReal.cosDominant16Over25CauchyBody",
+          "CReal.cosFnPartialHasDerivative",
+          "CReal.cosFnTermAbsLeWide",
+          "CReal.cosFnTermDerivCoeff",
+          "CReal.cosFnTermHasDerivative",
+          "CReal.cosFnWideHasDerivative",
+          "CReal.cosFnWideUniformConverges",
+          "CReal.cosFnWideUniformlyContinuous",
+          "CReal.cosFn_one_equiv_cosOne",
+          "CReal.expFn_one_equiv_e",
+          "CReal.expOfModulus_le_trueExpOfModulus",
+          "CReal.expTermSuccScale",
+          "CReal.hasDerivative_antiderivative",
+          "CReal.hasDerivative_uniform_limit",
+          "CReal.integralEndpointClose",
+          "CReal.integralSplitAnywhere",
+          "CReal.integralSplitArbitrary",
+          "CReal.integral_abs_le_of_bound",
+          "CReal.integral_by_parts",
+          "CReal.integral_eq_antideriv_diff",
+          "CReal.integral_sub_linear_le",
+          "CReal.ivt_bisect_approx",
+          "CReal.ivt_bisect_cauchy",
+          "CReal.ivt_bisect_cauchy_bound",
+          "CReal.ivt_exact_root",
+          "CReal.ivt_exact_root_at",
+          "CReal.lipschitz_of_deriv_bound",
+          "CReal.max_mono_right",
+          "CReal.max_sub_min",
+          "CReal.min_mono_left",
+          "CReal.natDivSuccStepLe",
+          "CReal.powMulDistrib",
+          "CReal.sinDominant16Over25CauchyBody",
+          "CReal.sinFnTermAbsLeWide",
+          "CReal.sinFnTerm_congr",
+          "CReal.sinFnUniformConverges",
+          "CReal.sinFnUniformlyContinuous",
+          "CReal.splitPointApprox",
+          "CReal.trueExpOfModulus_mono",
+          "CReal.trueExpOfModulus_step_le",
+          "CReal.trueExpOfModulus_succ",
+          "CReal.trueExpOfModulus_zero",
+          "CReal.uniformConvergesNeg",
+          "CReal.uniformConvergesShift"
+        ]
       },
       "integer": {
         "kernel_theorems": 176,
@@ -45,17 +98,10 @@
       },
       "logic": {
         "kernel_theorems": 32,
-        "registered_count": 26,
+        "registered_count": 32,
         "curated_count": 24,
-        "unregistered_count": 6,
-        "unregistered": [
-          "Eq.symm",
-          "Or.resolve_right",
-          "congrFun'",
-          "demorgan_or_not_and",
-          "not_not_imp",
-          "not_not_not_intro"
-        ]
+        "unregistered_count": 0,
+        "unregistered": []
       },
       "nat": {
         "kernel_theorems": 338,
@@ -84,14 +130,60 @@
     }
   },
   "unregistered": [
-    "Eq.symm",
+    "CReal.abs_diff_le_of_deriv_bound",
+    "CReal.abs_diff_le_of_small_image",
+    "CReal.abs_diff_sub_le_of_deriv_bound",
+    "CReal.antiderivative_abs_le",
+    "CReal.bucketClose",
+    "CReal.cauchy_of_abs_diff_le",
+    "CReal.clamp_id",
+    "CReal.clamp_mono",
+    "CReal.cosDominant16Over25CauchyBody",
+    "CReal.cosFnPartialHasDerivative",
+    "CReal.cosFnTermAbsLeWide",
+    "CReal.cosFnTermDerivCoeff",
+    "CReal.cosFnTermHasDerivative",
+    "CReal.cosFnWideHasDerivative",
+    "CReal.cosFnWideUniformConverges",
+    "CReal.cosFnWideUniformlyContinuous",
+    "CReal.cosFn_one_equiv_cosOne",
+    "CReal.expFn_one_equiv_e",
+    "CReal.expOfModulus_le_trueExpOfModulus",
+    "CReal.expTermSuccScale",
+    "CReal.hasDerivative_antiderivative",
+    "CReal.hasDerivative_uniform_limit",
+    "CReal.integralEndpointClose",
+    "CReal.integralSplitAnywhere",
+    "CReal.integralSplitArbitrary",
+    "CReal.integral_abs_le_of_bound",
+    "CReal.integral_by_parts",
+    "CReal.integral_eq_antideriv_diff",
+    "CReal.integral_sub_linear_le",
+    "CReal.ivt_bisect_approx",
+    "CReal.ivt_bisect_cauchy",
+    "CReal.ivt_bisect_cauchy_bound",
+    "CReal.ivt_exact_root",
+    "CReal.ivt_exact_root_at",
+    "CReal.lipschitz_of_deriv_bound",
+    "CReal.max_mono_right",
+    "CReal.max_sub_min",
+    "CReal.min_mono_left",
+    "CReal.natDivSuccStepLe",
+    "CReal.powMulDistrib",
+    "CReal.sinDominant16Over25CauchyBody",
+    "CReal.sinFnTermAbsLeWide",
+    "CReal.sinFnTerm_congr",
+    "CReal.sinFnUniformConverges",
+    "CReal.sinFnUniformlyContinuous",
+    "CReal.splitPointApprox",
+    "CReal.trueExpOfModulus_mono",
+    "CReal.trueExpOfModulus_step_le",
+    "CReal.trueExpOfModulus_succ",
+    "CReal.trueExpOfModulus_zero",
+    "CReal.uniformConvergesNeg",
+    "CReal.uniformConvergesShift",
     "Nat.le_refl",
-    "Nat.le_succ",
-    "Or.resolve_right",
-    "congrFun'",
-    "demorgan_or_not_and",
-    "not_not_imp",
-    "not_not_not_intro"
+    "Nat.le_succ"
   ],
   "registered_kernel_theorems_not_in_denominator": [
     "CReal.Equiv",
@@ -123,9 +215,9 @@
     "Rat.normalize"
   ],
   "join": {
-    "facts_scanned": 1809,
-    "kernel_route_established_facts": 1563,
-    "resolved_via_kernel_theorem_field": 1114,
+    "facts_scanned": 1815,
+    "kernel_route_established_facts": 1569,
+    "resolved_via_kernel_theorem_field": 1120,
     "resolved_via_statement_name": 373,
     "resolved_via_checker_command_fallback": 2,
     "unresolved_fact_ids": [
@@ -205,6 +297,6 @@
       "F:wilson-theorem-over-constructed-integers"
     ],
     "curated_facts_claimed": 502,
-    "unreviewed_generated_facts": 987
+    "unreviewed_generated_facts": 993
   }
 }
