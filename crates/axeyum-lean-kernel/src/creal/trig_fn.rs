@@ -394,7 +394,7 @@ const COS_FN_TERM_HEIGHT: u16 = DERIVED_HEIGHT + 44;
 /// parsing untrusted input, it is reading back a term this same function
 /// just built. Panics if `e` is not an application, which would mean
 /// `weierstrassMTest`'s own conclusion shape changed underneath this file.
-fn unapp(d: &mut IntDev<'_>, e: ExprId) -> (ExprId, ExprId) {
+pub(super) fn unapp(d: &mut IntDev<'_>, e: ExprId) -> (ExprId, ExprId) {
     match d.kernel().expr_node(e).clone() {
         ExprNode::App(f, a) => (f, a),
         other => panic!("expected an application (UniformConvergesOn F G a b), found {other:?}"),
@@ -2488,7 +2488,7 @@ pub(super) fn declare_cos_fn_wide_uniformly_continuous(
 /// 3. `CReal.of_rat_le` lifts the `Rat` order to `CReal`; the result reads as
 ///    `le one R` because `CReal.one` is *defined* as `ofRat Rat.one`
 ///    (`creal.rs::declare_constants`), so no `Equiv` bridge is needed either.
-fn one_le_r_domain(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+pub(super) fn one_le_r_domain(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
     let rat = p.rat;
     let n3 = d.num(3);
     let n4 = d.num(4);

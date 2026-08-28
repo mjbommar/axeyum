@@ -10481,3 +10481,107 @@ fn ivt_exact_root_is_inhabited_by_the_identity_on_the_unit_interval() {
          to an `abs`-bound would look like this: {rendered}"
     );
 }
+
+/// The two `cosFnWide`-at-`1` facts and the derivative restriction, pinned
+/// against the STATEMENTS a π construction actually needs.
+///
+/// Both halves compare INTERNED TERMS this test builds itself, never a
+/// rendered string and never a `Kernel::def_eq`. That is deliberate: the
+/// natural negative control here is "`cosFnWide_one_nonneg` is not the
+/// transposed `le (cosFnWide one) zero`", and asking the kernel to *refute*
+/// that by `def_eq` would set a failing conversion loose on `cosFnWide`'s
+/// whole `weierstrassMTest` definition against `zero` -- the unbounded shape
+/// `CLAUDE.md`'s "a negative control must differ in a SMALL term" entry
+/// records. Structural inequality of two interned ids is free and decides
+/// exactly the question asked.
+///
+/// What each half would look like if it were vacuous, and why it is not:
+/// the first would pass for `le (cosFnWide one) zero` (it does not -- that is
+/// the `assert_ne!`), and the third would pass if `hasDerivativeOn_restrict`
+/// returned its input unchanged (it does not -- that is the `assert_ne!`
+/// against the ORIGINAL `[0, 8/5]` statement).
+#[test]
+fn cos_fn_wide_at_one_and_the_derivative_restriction_state_what_pi_needs() {
+    use super::trig::{cle, czero, one_c};
+    use super::trig_fn::{one_le_r_domain, unapp};
+    use crate::int_prelude::ops::IntDev;
+
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.rat.int);
+
+    let zero_c = czero(&mut d, p);
+    let one_cc = one_c(&mut d, p);
+    let wide = d.kernel().const_(p.cos_fn_wide, vec![]);
+    let wide_one = d.apply(wide, &[one_cc]);
+
+    // --- `cos 1 >= 0`, for the wide FUNCTION -------------------------------
+    let nonneg_c = d.kernel().const_(p.cos_fn_wide_one_nonneg, vec![]);
+    let nonneg_ty = d
+        .kernel()
+        .infer(nonneg_c)
+        .expect("CReal.cosFnWide_one_nonneg must infer");
+    let expected = cle(&mut d, p, zero_c, wide_one);
+    let transposed = cle(&mut d, p, wide_one, zero_c);
+    assert_eq!(
+        nonneg_ty, expected,
+        "cosFnWide_one_nonneg does not state `le zero (cosFnWide one)` -- the \
+         LEFT endpoint bound `ivt_exact_root` needs on [1, 8/5]"
+    );
+    assert_ne!(
+        nonneg_ty, transposed,
+        "cosFnWide_one_nonneg states the sign the WRONG way round"
+    );
+
+    // --- the equivalence that connects the function to `creal/trig.rs`'s
+    //     constant, without which `cosOne_nonneg` says nothing about
+    //     `cosFnWide` ------------------------------------------------------
+    let equiv_c = d.kernel().const_(p.cos_fn_wide_one_equiv_cos_one, vec![]);
+    let equiv_ty = d
+        .kernel()
+        .infer(equiv_c)
+        .expect("CReal.cosFnWide_one_equiv_cosOne must infer");
+    let cos_one_const = d.kernel().const_(p.cos_one, vec![]);
+    let want_equiv = super::equiv(&mut d, p, wide_one, cos_one_const);
+    assert_eq!(
+        equiv_ty, want_equiv,
+        "cosFnWide_one_equiv_cosOne does not relate `cosFnWide one` to `cosOne`"
+    );
+
+    // --- restricting cosine's own derivative to `[1, 8/5]` -----------------
+    let hf = d.kernel().const_(p.cos_fn_wide_has_derivative, vec![]);
+    let hf_ty = d
+        .kernel()
+        .infer(hf)
+        .expect("CReal.cosFnWideHasDerivative must infer");
+    let (inner1, b_u) = unapp(&mut d, hf_ty);
+    let (inner2, a_u) = unapp(&mut d, inner1);
+    let (inner3, fp_u) = unapp(&mut d, inner2);
+    let (_, f_u) = unapp(&mut d, inner3);
+
+    let hlo = {
+        let lt = d.lemma(p.zero_lt_one, &[]);
+        d.lemma(p.le_of_lt, &[zero_c, one_cc, lt])
+    };
+    let hmid = one_le_r_domain(&mut d, p);
+    let hhi = d.lemma(p.le_refl, &[b_u]);
+    let restricted = d.lemma(
+        p.has_derivative_on_restrict,
+        &[f_u, fp_u, a_u, b_u, one_cc, b_u, hf, hlo, hmid, hhi],
+    );
+    let restricted_ty = d.kernel().infer(restricted).unwrap_or_else(|error| {
+        panic!(
+            "hasDerivativeOn_restrict refused cosine's own derivative narrowed \
+             from [0, 8/5] to [1, 8/5] -- so the three hypotheses are not \
+             jointly inhabitable at the interval a π construction uses: {error:?}"
+        )
+    });
+    let want_restricted = d.const_app(p.has_derivative_on, &[f_u, fp_u, one_cc, b_u]);
+    assert_eq!(
+        restricted_ty, want_restricted,
+        "the restricted witness is not `HasDerivativeOn F F' one (8/5)`"
+    );
+    assert_ne!(
+        restricted_ty, hf_ty,
+        "the restriction left the interval where it found it"
+    );
+}
