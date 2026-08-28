@@ -8,10 +8,38 @@
     "statement": "∀ {n a b : ℤ} (c : ℤ), a ≡ b [ZMOD n] → c + a ≡ c + b [ZMOD n]",
     "fragment": "Int"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
   "external_status": "proved",
   "depends_on": [],
-  "evidence": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.modEq_add_left",
+      "kind": "kernel-term",
+      "supports": "The proposition declared as `Int.ModEq.add_left` in the pinned Mathlib v4.30 source.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "int_prelude_tests::every_int_declaration_is_checked_and_axiom_free",
+        "int_prelude_tests::derived_laws_have_no_axiom_footprint"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib int_prelude::",
+      "notes": "This is a GENERALIZATION, not a new proof route: `declare_modeq_add_right`/`declare_modeq_add_left` (`crates/axeyum-lean-kernel/src/int_prelude/modeq.rs`) previously carried a `0 < n` hypothesis Mathlib's own statement does not have. Re-reading `modEq_iff_dvd`'s `mp` half showed the positivity hypothesis is used only by `mpr` (which needs `ediv_emod_unique`'s `0<=r<n` bound); `mp` itself is unconditional in `n`, extracted as `modeq_to_dvd`. The converse (`dvd n (b-a) -> ModEq n a b`) is also unconditional via a different route -- `Int.modEq_add_mul_left : ModEq n (n*q+a) a` (already unconditional, `modeq_family.rs`) applied directly to the witness, extracted as `dvd_to_modeq` -- so `mpr`'s positivity was never load-bearing either, it was simply the wrong bridge. The two old declarations were REPLACED (not duplicated) with the general form; no other file in the tree called the old 5-argument signature."
+    },
+    {
+      "id": "footprint-Int.modEq_add_left",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- this theorem's trusted closure is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration (nat_axiom_inventory)"
+      ],
+      "checker_command": "test \"$(cargo run --release -q -p axeyum-lean-kernel --example int_theorem_inventory -- modEq_add_left 2>/dev/null | grep -Ec '^theorem[[:space:]]+Int\\.modEq_add_left[[:space:]]+\\(\\(')\" -ge 1",
+      "notes": "The regex requires the tab-separated footprint column to be EMPTY (whitespace runs straight into the type's opening `((`), which discriminates a real empty footprint from a nonempty one -- `Int.euclidean_decomposition`, the one still-asserted `Int` law, prints its own name in that column and fails the same regex. `int_theorem_inventory` must be run `--release`; in debug it stack-overflows building the full constructed environment (unrelated to this theorem)."
+    }
+  ],
   "provenance": {
     "date": "2026-08-18",
     "established_by": "not established in this ledger",
@@ -26,5 +54,5 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "CLOSED via `int-modeq` lane, 2026-08-28: `Int.modEq_add_left` in `int_prelude/modeq.rs`, axiom-free, matching this statement exactly (verified against `Kernel::render_lean` of the admitted type). formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof."
 }
