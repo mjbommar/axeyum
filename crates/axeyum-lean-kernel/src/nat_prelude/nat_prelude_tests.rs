@@ -493,6 +493,7 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         // `Nat.ble` (boolean `<=`) are ordinary recursive definitions that
         // simply never made it into this list.
         p.factorial,
+        p.desc_factorial,
         p.no_confusion_type,
         p.no_confusion,
         p.ble,
@@ -831,6 +832,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.pow_add,
         p.factorial_zero,
         p.factorial_succ,
+        p.desc_factorial_zero,
+        p.desc_factorial_succ,
+        p.desc_factorial_one,
+        p.desc_factorial_of_lt,
         p.monotone_of_le_succ,
         p.le_refl_thm,
         p.le_succ,
@@ -6187,7 +6192,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        74 + 383,
+        75 + 387,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -6765,6 +6770,85 @@ fn factorial_computes_and_every_positive_bound_divides_it() {
     assert!(
         f.k.infer(wrong_positivity).is_err(),
         "accepted a proof of `3 <= 5` as the positivity hypothesis `1 <= 3`"
+    );
+}
+
+/// `Nat.descFactorial` computes the right VALUES at concrete instances —
+/// complementary to the fully symbolic proofs `declare_desc_factorial_of_lt`
+/// and friends type-check against, which catch a wrong recursion scheme but
+/// not a wrong recursion *direction* that still happens to type-check.
+///
+/// `5.descFactorial 0 = 1`, `5.descFactorial 2 = 5*4 = 20`,
+/// `5.descFactorial 5 = 5! = 120`, and — the truncated-`Nat.sub` boundary —
+/// `5.descFactorial 6 = 0`, both by direct reduction and via
+/// `descFactorial_of_lt` applied at the concrete pair `(5, 6)`.
+#[test]
+fn desc_factorial_computes_and_collapses_past_its_base() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let five = f.num(5);
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+    let six = f.num(6);
+
+    let at_zero = f.const_app(p.desc_factorial, &[five, zero]);
+    assert!(
+        f.k.def_eq(at_zero, one),
+        "5.descFactorial 0 must reduce to 1"
+    );
+
+    let at_two = f.const_app(p.desc_factorial, &[five, two]);
+    let twenty = f.num(20);
+    assert!(
+        f.k.def_eq(at_two, twenty),
+        "5.descFactorial 2 must reduce to 5*4 = 20"
+    );
+
+    let at_five = f.const_app(p.desc_factorial, &[five, five]);
+    let one_twenty = f.num(120);
+    assert!(
+        f.k.def_eq(at_five, one_twenty),
+        "5.descFactorial 5 must reduce to 5! = 120"
+    );
+
+    // NEGATIVE reduction control: `def_eq` must not be vacuously true here.
+    assert!(
+        !f.k.def_eq(at_two, one_twenty),
+        "5.descFactorial 2 must NOT be def-eq to 120"
+    );
+
+    // Past the base: `k > n` truncates `Nat.sub` to zero at every remaining
+    // factor, so the product collapses.
+    let at_six = f.const_app(p.desc_factorial, &[five, six]);
+    assert!(
+        f.k.def_eq(at_six, zero),
+        "5.descFactorial 6 must reduce to 0 (6 > 5)"
+    );
+
+    // `descFactorial_of_lt` applied at the concrete pair (5, 6): `5 < 6` is
+    // `Le 6 6`, i.e. `Nat.le.refl 6`.
+    let five_lt_six = f.lemma(p.le_refl, &[six]);
+    let applied = f.lemma(p.desc_factorial_of_lt, &[five, six, five_lt_six]);
+    let inferred =
+        f.k.infer(applied)
+            .expect("5 < 6, so descFactorial_of_lt applies at (5, 6)");
+    let expected = f.eq(at_six, zero);
+    assert!(f.k.def_eq(inferred, expected));
+
+    // The hypothesis is load-bearing: swapping in a proof of `5 < 5` (not
+    // `5 < 6`) must be rejected, not silently accepted for the wrong bound.
+    let five_lt_five = f.lemma(p.le_refl, &[five]);
+    let wrong_bound = {
+        let theorem = f.k.const_(p.desc_factorial_of_lt, vec![]);
+        let at_n = f.k.app(theorem, five);
+        let at_k = f.k.app(at_n, six);
+        f.k.app(at_k, five_lt_five)
+    };
+    assert!(
+        f.k.infer(wrong_bound).is_err(),
+        "accepted a proof of `5 < 5` where `5 < 6` was required"
     );
 }
 

@@ -1,0 +1,63 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-desc-factorial-zero"
+  ],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- descFactorial_succ 2>/dev/null | grep -Ec '^Nat\\.descFactorial_succ[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.descFactorial_succ",
+      "kernel_declaration": "Nat.descFactorial_succ",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type. `Nat.descFactorial n (succ k)` iota-reduces (via `NatOps::define_binary`'s recursor application) directly to `(n - k) * descFactorial n k` -- the proof is `Eq.refl`, no rewrite. `n - k` is Lean's own `Nat.sub` (truncating), matching Mathlib's `Nat.descFactorial (n : ℕ) : ℕ → ℕ | 0 => 1 | k + 1 => (n - k) * descFactorial n k` argument order exactly. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the count is tested, so the exit status depends on what the run found.",
+      "supports": "n.descFactorial (k+1) = (n - k) * n.descFactorial k"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::desc_factorial_computes_and_collapses_past_its_base",
+      "checkers": [
+        "Kernel::def_eq"
+      ],
+      "id": "compute-Nat.descFactorial_succ",
+      "kernel_declaration": "Nat.descFactorial",
+      "kind": "kernel-term",
+      "notes": "`Kernel::def_eq` reduces `5.descFactorial 2` (two applications of the successor equation) to `20` (`5 * 4`) and `5.descFactorial 5` to `120` (`5!`), each with a negative reduction control forbidding the vacuous case, so this cannot pass without the successor equation actually unrolling the product.",
+      "supports": "the successor equation composes correctly across multiple steps, at concrete instances"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.descFactorial_succ",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. Measured 2026-08-28: `nat: axiom=0 opaque=0 quotient=0 total_trusted=0` with `Nat.descFactorial` and its four theorems declared.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1"
+    ],
+    "language": "lean4",
+    "statement": "theorem Nat.descFactorial_succ : ((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.descFactorial x0 (AxNat.succ x1)) (AxNat.mul (AxNat.sub x0 x1) (AxNat.descFactorial x0 x1))))"
+  },
+  "id": "F:nat-desc-factorial-succ",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*) -- the `nat` prelude's trusted surface measures zero.\n\nSame provenance note as `F:nat-desc-factorial-zero`: `Nat.descFactorial` is this kernel's own construction, not an import of Mathlib's proof, and this fact does not flip any `F:ml430-nat-descfactorial-*` mirror fact by hand. `Nat.sub` truncates at zero (`3 - 5 ≡ 0` rather than going negative), which is the seam `F:nat-desc-factorial-of-lt` exercises directly.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane 212-nat-factorial-variants",
+    "source": "the second of two definitional boundary equations `declare_desc_factorial` (`crates/axeyum-lean-kernel/src/nat_prelude/desc_factorial.rs`) admits alongside the `Nat.descFactorial` definition"
+  },
+  "schema_version": 1,
+  "statement": "The falling factorial of n with k+1 factors equals (n - k) times the falling factorial of n with k factors.",
+  "title": "descFactorial(n, k+1) = (n-k) * descFactorial(n, k)"
+}
