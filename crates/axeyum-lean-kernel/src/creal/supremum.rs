@@ -3326,7 +3326,10 @@ pub(super) fn declare_mesh_max_le_add_of_step_close(
 /// that to `(mlc j + 1) + (mlc j + 1)`; the IH rewrites `mlc j + 1` to `pow 2
 /// j`; and `Nat.mul_succ`/`Nat.mul_one` fold `(pow 2 j) + (pow 2 j)` into
 /// `(pow 2 j) * 2`, which is exactly `Nat.pow_succ`'s RHS at base `2`.
-fn declare_mesh_level_count_pow_thm(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+fn declare_mesh_level_count_pow_thm(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
     let nat = d.nat_ty();
     let nat_p = p.rat.int.nat;
     let one = d.level_one();
@@ -3383,10 +3386,22 @@ fn declare_mesh_level_count_pow_thm(d: &mut IntDev<'_>, p: CRealPrelude) -> Resu
         let sm_sm = d.add(succ_mlc_j, succ_mlc_j);
         let succ_inner = d.succ(inner);
         let succ_succ_doubled = d.succ(succ_doubled);
-        let chain_a = d.trans(sm_sm, succ_inner, succ_succ_doubled, add_succ_eq, congr_succ_add);
+        let chain_a = d.trans(
+            sm_sm,
+            succ_inner,
+            succ_succ_doubled,
+            add_succ_eq,
+            congr_succ_add,
+        );
         // Eq(sm_sm, succ_succ_doubled)
         let symm_chain_a = d.symm(sm_sm, succ_succ_doubled, chain_a);
-        let lhs_eq = d.trans(succ_mlc_sj, succ_succ_doubled, sm_sm, succ_succ_eq, symm_chain_a);
+        let lhs_eq = d.trans(
+            succ_mlc_sj,
+            succ_succ_doubled,
+            sm_sm,
+            succ_succ_eq,
+            symm_chain_a,
+        );
         // Eq(succ_mlc_sj, sm_sm)
 
         // pow_sj_eq_smsm : Eq(pow_sj, sm_sm)
@@ -3395,11 +3410,19 @@ fn declare_mesh_level_count_pow_thm(d: &mut IntDev<'_>, p: CRealPrelude) -> Resu
         let mul_succ_eq = d.lemma(nat_p.mul_succ, &[succ_mlc_j, one_nat]);
         // Eq(mul(succ_mlc_j)(succ one_nat), add(mul_sm_1)(succ_mlc_j))
         let add_mulsm1_sm = d.add(mul_sm_1, succ_mlc_j);
-        let congr_add_mulone = d.congr(mul_sm_1, succ_mlc_j, mul_one_eq, &|d, t| d.add(t, succ_mlc_j));
+        let congr_add_mulone = d.congr(mul_sm_1, succ_mlc_j, mul_one_eq, &|d, t| {
+            d.add(t, succ_mlc_j)
+        });
         // Eq(add_mulsm1_sm, sm_sm)
         let two_v = d.succ(one_nat);
         let mul_smj_2 = d.mul(succ_mlc_j, two_v);
-        let mul_succ1_prime = d.trans(mul_smj_2, add_mulsm1_sm, sm_sm, mul_succ_eq, congr_add_mulone);
+        let mul_succ1_prime = d.trans(
+            mul_smj_2,
+            add_mulsm1_sm,
+            sm_sm,
+            mul_succ_eq,
+            congr_add_mulone,
+        );
         // Eq(mul_smj_2, sm_sm)
 
         let pow_succ_eq = d.lemma(nat_p.pow_succ, &[two_nat, j]); // Eq(pow_sj, mul(pow_j)(two_nat))
