@@ -1922,6 +1922,205 @@ pub(super) fn declare_gauss_lemma(d: &mut IntDev<'_>) -> Result<(), KernelError>
     Ok(())
 }
 
+/// `Int.dvd_of_dvd_mul_right_of_gcd_one : ∀ a b c,
+/// a ∣ (b*c) → Eq Nat (gcd a b) 1 → a ∣ c` — Mathlib v4.30 verbatim.
+///
+/// Exactly [`declare_gauss_lemma`]'s statement with its two hypotheses
+/// reordered (dvd first, gcd-equation second, matching Mathlib's argument
+/// order): `Eq Nat (gcd a b) 1` is `Coprime a b` unfolded one `Definition`
+/// step, so it type-checks directly where [`gauss_lemma`](IntPrelude::gauss_lemma)
+/// expects a `Coprime a b` proof.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not check.
+pub(super) fn declare_dvd_of_dvd_mul_right_of_gcd_one(
+    d: &mut IntDev<'_>,
+) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.dvd_of_dvd_mul_right_of_gcd_one, 3, &|d, v| {
+        let (a, b, c) = (v[0], v[1], v[2]);
+        let bc = d.imul(b, c);
+        let hyp1_ty = idvd(d, a, bc);
+        let g_ab = igcd(d, a, b);
+        let one_nat = d.num(1);
+        let hyp2_ty = d.eq(g_ab, one_nat);
+        let goal = idvd(d, a, c);
+        let stmt = {
+            let inner = d.arrow(hyp2_ty, goal);
+            d.arrow(hyp1_ty, inner)
+        };
+
+        let h1_fv = d.fresh_fvar();
+        let h1 = d.kernel().fvar(h1_fv);
+        let h2_fv = d.fresh_fvar();
+        let h2 = d.kernel().fvar(h2_fv);
+
+        let result = d.const_app(p.gauss_lemma, &[a, b, c, h2, h1]);
+        let with_h2 = d.lam_fv(h2_fv, hyp2_ty, result);
+        let proof = d.lam_fv(h1_fv, hyp1_ty, with_h2);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.dvd_of_dvd_mul_left_of_gcd_one : ∀ a b c,
+/// a ∣ (b*c) → Eq Nat (gcd a c) 1 → a ∣ b` — Mathlib v4.30 verbatim.
+///
+/// [`declare_gauss_lemma`] applied at `(a, c, b)` needs `a ∣ (c*b)`, not the
+/// given `a ∣ (b*c)`; the two witnesses differ by `Int.mul_comm b c`, so the
+/// hypothesis is eliminated and its equation rewritten before re-introducing
+/// the divisibility, exactly the pattern [`declare_dvd_mul_left`] uses for
+/// `a ∣ (b*a)` from `a ∣ (a*b)`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not check.
+pub(super) fn declare_dvd_of_dvd_mul_left_of_gcd_one(
+    d: &mut IntDev<'_>,
+) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.dvd_of_dvd_mul_left_of_gcd_one, 3, &|d, v| {
+        let (a, b, c) = (v[0], v[1], v[2]);
+        let bc = d.imul(b, c);
+        let cb = d.imul(c, b);
+        let hyp1_ty = idvd(d, a, bc);
+        let g_ac = igcd(d, a, c);
+        let one_nat = d.num(1);
+        let hyp2_ty = d.eq(g_ac, one_nat);
+        let goal = idvd(d, a, b);
+        let stmt = {
+            let inner = d.arrow(hyp2_ty, goal);
+            d.arrow(hyp1_ty, inner)
+        };
+
+        let h1_fv = d.fresh_fvar();
+        let h1 = d.kernel().fvar(h1_fv);
+        let h2_fv = d.fresh_fvar();
+        let h2 = d.kernel().fvar(h2_fv);
+
+        let int_ty = d.int_ty();
+        let target = idvd(d, a, cb);
+        let dvd_a_cb = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let ak = d.imul(a, k);
+            let eq_ty = d.ieq(bc, ak);
+            let eq_fv = d.fresh_fvar();
+            let eq_h = d.kernel().fvar(eq_fv);
+
+            let mc = {
+                let name = d.int().mul_comm;
+                d.const_app(name, &[b, c])
+            };
+            let rev = d.isymm(bc, cb, mc);
+            let rewritten = d.itrans(cb, bc, ak, rev, eq_h);
+            let intro_proof = idvd_intro(d, a, cb, k, rewritten);
+            let with_eq = d.lam_fv(eq_fv, eq_ty, intro_proof);
+            let minor = d.lam_fv(k_fv, int_ty, with_eq);
+            idvd_elim(d, a, bc, target, h1, minor)
+        };
+
+        let result = d.const_app(p.gauss_lemma, &[a, c, b, h2, dvd_a_cb]);
+        let with_h2 = d.lam_fv(h2_fv, hyp2_ty, result);
+        let proof = d.lam_fv(h1_fv, hyp1_ty, with_h2);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.gcd_greatest : ∀ a b d, 0 ≤ d → d ∣ a → d ∣ b →
+/// (∀ e, e ∣ a → e ∣ b → e ∣ d) → Eq Int d (ofNat (gcd a b))` — Mathlib v4.30
+/// verbatim.
+///
+/// Both `Int.dvd` directions come from the universal property already proved:
+/// `d ∣ ofNat (gcd a b)` is [`declare_dvd_gcd`] fed `d`'s own two hypotheses
+/// directly (`c := d`), and `ofNat (gcd a b) ∣ d` is the fact's own universal
+/// hypothesis fed [`declare_gcd_dvd_left_right`]'s two lemmas (`e := ofNat
+/// (gcd a b)`). Mutual `Int.dvd` transports to mutual `Nat.dvd` between
+/// `natAbs d` and `gcd a b` via [`declare_nat_abs_dvd_nat_abs_of_dvd`]
+/// (`natAbs (ofNat n)` reduces to `n` by `rfl`, exactly as in
+/// [`declare_gcd_dvd_left_right`]'s own comment), [`nat_dvd_antisymm`] gives
+/// `Eq Nat (natAbs d) (gcd a b)`, and `0 ≤ d` (via
+/// [`Self::of_nat_nat_abs_of_nonneg`] — accessed through `p`, not `Self`)
+/// lifts `d = ofNat (natAbs d)` to close the chain.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not check.
+pub(super) fn declare_gcd_greatest(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.gcd_greatest, 3, &|d, v| {
+        let (a, b, dd) = (v[0], v[1], v[2]);
+        let int_ty = d.int_ty();
+        let zero = d.izero();
+        let nonneg_ty = d.ile(zero, dd);
+        let dvd_a_ty = idvd(d, dd, a);
+        let dvd_b_ty = idvd(d, dd, b);
+
+        let g = igcd(d, a, b);
+        let of_g = d.of_nat(g);
+
+        let universal_ty = {
+            let e_fv = d.fresh_fvar();
+            let e = d.kernel().fvar(e_fv);
+            let e_dvd_a = idvd(d, e, a);
+            let e_dvd_b = idvd(d, e, b);
+            let e_dvd_d = idvd(d, e, dd);
+            let inner = d.arrow(e_dvd_b, e_dvd_d);
+            let body = d.arrow(e_dvd_a, inner);
+            d.pi_fv(e_fv, int_ty, body)
+        };
+
+        let goal = d.ieq(dd, of_g);
+        let stmt = {
+            let inner3 = d.arrow(universal_ty, goal);
+            let inner2 = d.arrow(dvd_b_ty, inner3);
+            let inner1 = d.arrow(dvd_a_ty, inner2);
+            d.arrow(nonneg_ty, inner1)
+        };
+
+        let nonneg_fv = d.fresh_fvar();
+        let nonneg = d.kernel().fvar(nonneg_fv);
+        let dvd_a_fv = d.fresh_fvar();
+        let dvd_a = d.kernel().fvar(dvd_a_fv);
+        let dvd_b_fv = d.fresh_fvar();
+        let dvd_b = d.kernel().fvar(dvd_b_fv);
+        let univ_fv = d.fresh_fvar();
+        let univ = d.kernel().fvar(univ_fv);
+
+        // `d ∣ ofNat (gcd a b)`, straight from `dvd_gcd` fed `d`'s own hyps.
+        let d_dvd_g = d.const_app(p.dvd_gcd, &[dd, a, b, dvd_a, dvd_b]);
+
+        // `ofNat (gcd a b) ∣ d`, from the universal hypothesis at `e := ofNat (gcd a b)`.
+        let g_dvd_a = d.const_app(p.gcd_dvd_left, &[a, b]);
+        let g_dvd_b = d.const_app(p.gcd_dvd_right, &[a, b]);
+        let g_dvd_d = d.apply(univ, &[of_g, g_dvd_a, g_dvd_b]);
+
+        // Transport both to `Nat.dvd`: `natAbs (ofNat (gcd a b))` reduces to
+        // `gcd a b` by `rfl`, so these type-check directly at the `Nat`-level
+        // shapes `nat_dvd_antisymm` needs.
+        let natabs_d = nat_abs(d, dd);
+        let n_forward = d.const_app(p.nat_abs_dvd_nat_abs_of_dvd, &[dd, of_g, d_dvd_g]);
+        let n_backward = d.const_app(p.nat_abs_dvd_nat_abs_of_dvd, &[of_g, dd, g_dvd_d]);
+        let nat_eq = nat_dvd_antisymm(d, natabs_d, g, n_forward, n_backward);
+
+        // `d = ofNat (natAbs d)` from `0 ≤ d`, then cast the `Nat` equation up.
+        let of_natabs_d = d.of_nat(natabs_d);
+        let d_eq_ofnat_natabs = d.const_app(p.of_nat_nat_abs_of_nonneg, &[dd, nonneg]);
+        let flipped = d.isymm(of_natabs_d, dd, d_eq_ofnat_natabs);
+        let cast_up = d.nat_eq_to_int(natabs_d, g, nat_eq, &|d, x| d.of_nat(x));
+        let proof_body = d.itrans(dd, of_natabs_d, of_g, flipped, cast_up);
+
+        let with_univ = d.lam_fv(univ_fv, universal_ty, proof_body);
+        let with_dvd_b = d.lam_fv(dvd_b_fv, dvd_b_ty, with_univ);
+        let with_dvd_a = d.lam_fv(dvd_a_fv, dvd_a_ty, with_dvd_b);
+        let proof = d.lam_fv(nonneg_fv, nonneg_ty, with_dvd_a);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 /// `Int.modEq_inverse_exists :
 /// ∀ n a, 0 < n → Coprime a n → ∃ b, ModEq n (a*b) one` — the modular
 /// inverse.

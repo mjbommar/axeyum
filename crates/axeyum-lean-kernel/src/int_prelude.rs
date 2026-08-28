@@ -750,6 +750,29 @@ pub struct IntPrelude {
     /// `gauss_lemma : ∀ a b c, Coprime a b → a ∣ (b*c) → a ∣ c` — Elements
     /// VII.30's engine; `euclid_lemma` is its corollary once `a` is prime.
     pub gauss_lemma: NameId,
+    /// `dvd_of_dvd_mul_right_of_gcd_one : ∀ a b c,
+    /// a ∣ (b*c) → Eq Nat (gcd a b) 1 → a ∣ c` — Mathlib v4.30's
+    /// `Int.dvd_of_dvd_mul_right_of_gcd_one`, exactly [`Self::gauss_lemma`]
+    /// with its two hypotheses reordered (`Eq Nat (gcd a b) 1` is `Coprime a
+    /// b` unfolded).
+    pub dvd_of_dvd_mul_right_of_gcd_one: NameId,
+    /// `dvd_of_dvd_mul_left_of_gcd_one : ∀ a b c,
+    /// a ∣ (b*c) → Eq Nat (gcd a c) 1 → a ∣ b` — Mathlib v4.30's
+    /// `Int.dvd_of_dvd_mul_left_of_gcd_one`: [`Self::gauss_lemma`] applied at
+    /// `(a, c, b)`, after rewriting `a ∣ (b*c)` to `a ∣ (c*b)` by
+    /// `Int.mul_comm`.
+    pub dvd_of_dvd_mul_left_of_gcd_one: NameId,
+    /// `gcd_greatest : ∀ a b d, 0 ≤ d → d ∣ a → d ∣ b →
+    /// (∀ e, e ∣ a → e ∣ b → e ∣ d) → Eq Int d (ofNat (gcd a b))` — Mathlib
+    /// v4.30's `Int.gcd_greatest`. Both directions come from the universal
+    /// property already proved ([`Self::gcd_dvd_left`]/[`Self::gcd_dvd_right`]/
+    /// [`Self::dvd_gcd`]): `d ∣ ofNat (gcd a b)` is `dvd_gcd` fed `d`'s own
+    /// hypotheses directly, and `ofNat (gcd a b) ∣ d` is the universal
+    /// hypothesis fed `gcd_dvd_left`/`gcd_dvd_right`. Mutual `Int.dvd` plus
+    /// `0 ≤ d` closes by `natAbs`-level antisymmetry (the same private engine
+    /// `gcd_comm`/`gcd_zero_right` already use) and
+    /// [`Self::of_nat_nat_abs_of_nonneg`].
+    pub gcd_greatest: NameId,
     /// `euclid_lemma : ∀ p a b,
     /// (2 ≤ natAbs p ∧ ∀ d, d ∣ natAbs p → d = 1 ∨ d = natAbs p) →
     /// p ∣ a*b → p ∣ a ∨ p ∣ b` — Elements VII.30, transported from
@@ -1241,6 +1264,9 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         coprime: child(kernel, "Coprime"),
         coprime_of_bezout_one: child(kernel, "coprime_of_bezout_one"),
         gauss_lemma: child(kernel, "gauss_lemma"),
+        dvd_of_dvd_mul_right_of_gcd_one: child(kernel, "dvd_of_dvd_mul_right_of_gcd_one"),
+        dvd_of_dvd_mul_left_of_gcd_one: child(kernel, "dvd_of_dvd_mul_left_of_gcd_one"),
+        gcd_greatest: child(kernel, "gcd_greatest"),
         euclid_lemma: child(kernel, "euclid_lemma"),
         euclid_infinitude: child(kernel, "euclid_infinitude"),
         crt_exists: child(kernel, "crt_exists"),
@@ -1449,6 +1475,9 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         gcd::declare_coprime(&mut d)?;
         gcd::declare_coprime_of_bezout_one(&mut d)?;
         gcd::declare_gauss_lemma(&mut d)?;
+        gcd::declare_dvd_of_dvd_mul_right_of_gcd_one(&mut d)?;
+        gcd::declare_dvd_of_dvd_mul_left_of_gcd_one(&mut d)?;
+        gcd::declare_gcd_greatest(&mut d)?;
         modeq::declare_modeq_cancel(&mut d)?;
         gcd::declare_modeq_inverse_exists(&mut d)?;
         modinv::declare_modeq_inverse_unique(&mut d)?;
