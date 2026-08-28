@@ -1598,6 +1598,38 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
     `Nat.succ`). `land 3 5` is right; `land 512 1875` would cost more than the
     whole prelude.
 
+  **The specific rule the bitwise family yielded, since it decides
+  correctness rather than style.** A fuel-recursive binary definition here has
+  the shape `Aux m m n` — the `m` operand supplies **both** the fuel and the
+  value halved toward structural zero. So the fuel-exhaustion base case is
+  determined by ONE question:
+
+  > **Does the FUEL operand carry this operator's absorbing zero?**
+
+  | definition | fuel operand absorbing? | base case | why |
+  | --- | --- | --- | --- |
+  | `Nat.land` | yes (`0 AND n = 0`) | constant `0` | safe |
+  | `Nat.lor` | **no** (`0 OR n = n`) | return **`n`** | constant `0` would give `lor 0 1000000 = 0` |
+  | `Nat.ldiff` | yes (`ldiff 0 n = 0`) | constant `0` | same reason as `land`, **not by analogy** |
+  | `Nat.bit` | — non-recursive | no device at all | |
+
+  `ldiff` is the instructive one: it takes `land`'s base case but its inner
+  succ-row guard is a **hybrid** — the `n = 0` branch returns `m` (`lor`'s
+  shape, since `ldiff m 0 = m`), the `m = 0` branch returns `0` (`land`'s).
+  **One-sided absorption gives a mixed definition**, and copying either
+  template wholesale produces a wrong one that type-checks.
+
+  Per-bit combination is a separate choice with its own reasoning: `land` uses
+  the `Nat` **product** of two values in `{0,1}`, `lor` uses `max` via
+  `ble` + `bool_select_nat` (a product is wrong for OR), `ldiff` uses
+  `beq` + `bool_select_nat`. Pick it from the operator's truth table, not from
+  the neighbouring file.
+
+  **Asymmetric operators hand you the best negative control for free**:
+  `ldiff 3 5 = 2` against `ldiff 5 3 = 4`, with an explicit assertion that the
+  swapped value does NOT `def_eq`. `land`/`lor` are commutative and cannot
+  offer that, which is why they use a shared numeral pair across files instead.
+
   A theorem *about* the definition is not a substitute. It constrains the
   definition only as far as the theorem's own content reaches, which for an
   existence statement is often not at all.
