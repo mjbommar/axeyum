@@ -2036,6 +2036,21 @@ pub struct NatPrelude {
     /// `b`: `0` and `1` fail the `2 ≤ b` cut, and `succ (succ k)` passes it and
     /// then fails the `b ≤ 1` cut (`Mathlib`: `Nat.log_one_right`).
     pub log_one_right: NameId,
+    /// `Nat.ble_eq_false_of_lt : ∀ b n, Lt n b → Eq Bool (ble b n) Bool.false`.
+    /// A general [`ble`](Self::ble) fact with no `Nat.log` in it, declared in
+    /// `log.rs` under its first consumer: `ble.rs` carries the two *positive*
+    /// bridges ([`ble_eq_true_of_le`](Self::ble_eq_true_of_le),
+    /// [`le_of_ble_eq_true`](Self::le_of_ble_eq_true)) and the negated-`Prop`
+    /// form ([`not_le_of_not_ble_eq_true`](Self::not_le_of_not_ble_eq_true)),
+    /// but nothing producing `Eq Bool _ Bool.false` — which is the shape a
+    /// `Bool.rec` cut has to be rewritten with.
+    pub ble_eq_false_of_lt: NameId,
+    /// `Nat.log_of_lt : ∀ b n, Lt n b → Eq (log b n) 0` — below its own base a
+    /// number has logarithm zero (`Mathlib`: `Nat.log_of_lt`). The outermost
+    /// guard cut is the refuted one, so one `Eq.rec` over
+    /// [`ble_eq_false_of_lt`](Self::ble_eq_false_of_lt) collapses the whole
+    /// fuel step.
+    pub log_of_lt: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -2522,6 +2537,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             log_zero_left: kernel.name_str(nat, "log_zero_left"),
             log_one_left: kernel.name_str(nat, "log_one_left"),
             log_one_right: kernel.name_str(nat, "log_one_right"),
+            ble_eq_false_of_lt: kernel.name_str(nat, "ble_eq_false_of_lt"),
+            log_of_lt: kernel.name_str(nat, "log_of_lt"),
         };
 
         let mut d = NatDev::new(kernel, p);

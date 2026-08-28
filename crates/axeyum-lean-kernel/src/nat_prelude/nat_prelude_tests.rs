@@ -868,6 +868,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.log_zero_left,
         p.log_one_left,
         p.log_one_right,
+        p.ble_eq_false_of_lt,
+        p.log_of_lt,
     ]
 }
 
@@ -6150,7 +6152,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        69 + 351,
+        69 + 353,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -8467,6 +8469,71 @@ fn coprime_two_left_applies_at_a_concrete_odd_witness_and_is_axiom_free() {
         p.coprime_odd_of_left,
         p.coprime_odd_of_right,
     ] {
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "{name:?} must rest on zero axioms"
+        );
+    }
+}
+
+/// `Nat.log_of_lt` applies at a concrete `3 < 5`, and its conclusion is the
+/// statement its name promises.
+///
+/// This is the one `Nat.log` theorem with a hypothesis, so it is the one that
+/// can be admitted with a type nothing can discharge. Building the `Lt 3 5`
+/// witness by hand and feeding it in is what shows the hypothesis is the
+/// ordinary `Nat.lt` and not some shape only the proof term can produce.
+#[test]
+fn log_of_lt_applies_at_a_concrete_pair() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Le 0 1, then four `le_succ_succ` steps: Le 4 5, i.e. Lt 3 5.
+    let one = f.num(1);
+    let mut witness = f.lemma(p.zero_le, &[one]);
+    for step in 0..4u32 {
+        let lower = f.num(step);
+        let upper = f.num(step + 1);
+        witness = f.lemma(p.le_succ_succ, &[lower, upper, witness]);
+    }
+    let three = f.num(3);
+    let five = f.num(5);
+    let expected_hypothesis = f.lt(three, five);
+    let witness_ty =
+        f.k.infer(witness)
+            .expect("the hand-built order witness must type-check");
+    assert!(
+        f.k.def_eq(witness_ty, expected_hypothesis),
+        "the hand-built witness must be a proof of Lt 3 5"
+    );
+
+    let applied = f.const_app(p.log_of_lt, &[five, three]);
+    let applied = f.apply(applied, &[witness]);
+    let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+        let shown = f.explain(&e);
+        panic!("Nat.log_of_lt must apply at (b, n) = (5, 3): {shown}")
+    });
+    let log = p.log;
+    let lhs = f.const_app(log, &[five, three]);
+    let zero = f.zero();
+    let want = f.eq(lhs, zero);
+    assert!(
+        f.k.def_eq(inferred, want),
+        "Nat.log_of_lt 5 3 must state Eq (log 5 3) 0"
+    );
+
+    // And the conclusion is not vacuous: `log 5 3` really is 0 by computation,
+    // while `log 2 8` (where the hypothesis does NOT hold) is not.
+    assert!(f.k.def_eq(lhs, zero), "log 5 3 must reduce to 0");
+    let two = f.num(2);
+    let eight = f.num(8);
+    let log_two_eight = f.const_app(log, &[two, eight]);
+    assert!(
+        !f.k.def_eq(log_two_eight, zero),
+        "negative control: log 2 8 is 3, so `log_of_lt`'s hypothesis is load-bearing"
+    );
+
+    for name in [p.log_of_lt, p.ble_eq_false_of_lt] {
         assert!(
             f.k.axiom_footprint(name).is_empty(),
             "{name:?} must rest on zero axioms"
