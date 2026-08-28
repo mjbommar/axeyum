@@ -129,7 +129,63 @@ given it.
 
 ## What the kernel rejected
 
-Recorded in the landed-changes rows below.
+**Nothing.** Both declarations were accepted on their first
+`add_declaration`, and neither needed `on_a_deep_stack`. The four kernel
+facts the brief warned about were all avoided rather than survived, and it is
+worth saying which and how, because the avoidance was deliberate:
+
+- **`UnboundFVar` / `pi_fv` vs `d.arrow`.** Neither theorem's conclusion
+  mentions a *hypothesis* variable, only the value variables `s`/`f`/`L`/`b`
+  and `a`/`L`. So the two proof hypotheses bind with `d.arrow` and every value
+  binds with `d.pi_fv` — the split is forced by the statement, not guessed, and
+  no free-variable scan was needed.
+- **`neg (neg x)` is not defeq to `x`.** `converges_upper_bound_shift` hits it
+  twice (both `L` and `b` come back doubly negated) and closes each with
+  `trig.rs`'s `pub(super) double_neg` rather than hoping. Note
+  `creal/alternating.rs` carries a *second, private copy* of `double_neg`
+  beside `trig.rs`'s public one — two proofs of one fact already in the tree.
+- **Concrete vs symbolic witnesses.** Everything here is built over bound
+  variables; the only concrete `Nat`s are the numerals `0`, `1`, `2`, `3` in
+  the clamp and the shift, and each is a *literal index*, never an
+  accumulator that partially evaluates against a symbolic one.
+- **`Nat.add` recurses right.** Used deliberately, not merely respected: the
+  bracket's index arithmetic is reused verbatim from `alternating.rs`'s own
+  `direct_hyp` shape, and `add n 2 ≡ succ (succ n)` is exactly why the
+  `∀ n, le (sumRange t (add n 2)) …` hypothesis
+  `converges_upper_bound_shift` wants is defeq to the `succ (succ n)` form
+  the proof produces, with no `Nat` rewriting at all.
+
+## Verification
+
+Foreground, this worktree, `env -u RUST_MIN_STACK` not needed (no
+`RUST_MIN_STACK` was ever set in this lane's shell):
+
+- `cargo test -p axeyum-lean-kernel --lib creal::creal_tests::creal_prelude_builds`
+  — **95.38 s green** after `converges_upper_bound_shift`, **95.28 s green**
+  after `alternatingUpperBoundTail`. The second theorem costs **no measurable
+  prelude-build time**; both numbers sit inside `169-pi.md`'s own 91–117 s
+  band, so neither is evidence of a slowdown and neither is evidence against
+  one.
+- `cargo test --release … creal::creal_tests::every_creal_declaration_is_checked_and_axiom_free`
+  — **1 passed, 17.30 s**. Environment-derived, both directions: both new
+  declarations are present, `Theorem`-kind, and carry an **empty**
+  `axiom_footprint`.
+- The new statement pin,
+  `the_eventual_upper_bound_and_the_tail_leibniz_bound_state_what_pi_rung_2_needs`
+  — **1 passed (nonzero), 14.18 s** in `--release`. Interned-id equality, never
+  `def_eq`, with each negative control differing in a SMALL term (one
+  transposed `le`; `sumRange t 2` for `sumRange t 3`) and each control asserted
+  non-vacuous before use.
+- **Mutation-verified**: changing the pin's expected conclusion from
+  `sumRange t 3` to `sumRange t 4` fails that test and only that test, on the
+  `assert_eq!` that names the statement — so the pin is load-bearing rather
+  than decorative.
+- `cargo check -p axeyum-lean-kernel --lib --tests`: clean, no warnings.
+- `cargo clippy -p axeyum-lean-kernel --all-targets --all-features -- -D warnings`:
+  green.
+
+**PLAN.md was deliberately not regenerated** (the lane brief says not to touch
+it); the coordinator's regeneration will pick this file up.
 
 <!-- plan-section: landed-changes -->
 
@@ -138,4 +194,6 @@ Recorded in the landed-changes rows below.
 | 2026-08-27 | pi-rung2 | measured NEGATIVE: the shifted-series route `169-pi.md` proposed is blocked by `Converges`'s own definition, not merely unbuilt -- it is a UNIFORM-rate condition constraining index `0`, so any eventually-equal transfer has an index-`0` obligation that an arbitrary `g 0` cannot discharge. The re-indexed series' partial sums agree with the shifted originals only from `n = 1` |
 | 2026-08-27 | pi-rung2 | the route that works is a CLAMP, `a_hat k := a (succ (pred k))`: `Nat.pred` is a `Nat.rec` with step `(j, ih) -> j`, so `a_hat 0` and `a_hat (succ j)` both reduce by iota alone, `a_hat` is globally antitone by a two-case `Nat.rec` that ignores its own IH, and `a_hat`'s partial sums differ from `a`'s by ONE constant `c := a 1 - a 0` at every index `>= 1`, which cancels off both sides of the bracket |
 | 2026-08-27 | pi-rung2 | arithmetic re-verified independently: `a 1 - a 2 = 1888/1875`, margin `13/1875`; equivalently `O 1 = 1 - 32/25 + 512/1875 = -13/1875 < 0`, the same margin read off `a`'s OWN partial sums rather than a shifted limit |
+| 2026-08-27 | pi-rung2 | test: both statements pinned structurally against interned ids (never `def_eq`), each negative control differing in a SMALL term -- one transposed `le`, and `sumRange t 2` for `sumRange t 3` (the EVEN partial sum `E 1`, a LOWER bound, so the substitution is exactly the wrong-direction bug) -- and each control asserted non-vacuous before use. Mutation-verified: `sumRange t 4` for `sumRange t 3` kills that test and only that test |
+| 2026-08-27 | pi-rung2 | measured: the kernel rejected NOTHING in this lane, and no `on_a_deep_stack` was needed. `creal_prelude_builds` 95.38 s then 95.28 s -- `alternatingUpperBoundTail` costs no measurable prelude-build time; `every_creal_declaration_is_checked_and_axiom_free` green in `--release` (17.30 s), both new declarations `Theorem`-kind with an EMPTY axiom footprint |
 | 2026-08-27 | pi-rung2 | sized: rung 2's remaining blocker is ONE lemma, `htail : forall k, le (a (succ (succ k))) (a (succ k))` for `a j := expTerm (2j) * R^(2j)`. It reduces to `64 * m! <= 25 * (m+2)!` for `m = 2k+2`, false at `m = 0` and true with room from `m = 2`; needs `Nat.factorial_succ` and a symbolic `Rat` cross-multiplication. No `expTerm`-scaled antitonicity exists (`expTerm_antitone` is the unscaled one) |
