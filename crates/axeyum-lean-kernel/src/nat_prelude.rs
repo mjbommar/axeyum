@@ -1005,6 +1005,12 @@ pub struct NatPrelude {
     /// `choose_symm_of_eq_add` instantiated at `n := a+b` with its hypothesis
     /// closed by `refl`.
     pub choose_symm_add: NameId,
+    /// `Nat.choose_le_choose : ∀ a b c, Le a b → Le (choose a c) (choose b c)`.
+    /// Route: `d0 := sub b a`; `sub_add_cancel(a, b, h) : Eq (add d0 a) b`;
+    /// `add_comm(d0, a)` flips it to `Eq (add a d0) b`; `choose_le_add(a, d0,
+    /// c) : Le (choose a c) (choose (add a d0) c)` transports along that
+    /// equation to `Le (choose a c) (choose b c)`.
+    pub choose_le_choose: NameId,
 
     // --- binomial theorem (`binomial.rs`) -----------------------------------
     /// `Nat.sumRange_add : ∀ f g n, sumRange (fun i => f i + g i) n = sumRange f n + sumRange g n`.
@@ -2258,6 +2264,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             choose_symm_of_eq_add: kernel.name_str(nat, "choose_symm_of_eq_add"),
             choose_le_add: kernel.name_str(nat, "choose_le_add"),
             choose_symm_add: kernel.name_str(nat, "choose_symm_add"),
+            choose_le_choose: kernel.name_str(nat, "choose_le_choose"),
             sum_range_add: kernel.name_str(nat, "sumRange_add"),
             sum_range_shift_front: kernel.name_str(nat, "sumRange_shiftFront"),
             sum_range_congr_lt: kernel.name_str(nat, "sumRange_congr_lt"),
