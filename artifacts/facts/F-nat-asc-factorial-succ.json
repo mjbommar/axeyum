@@ -1,0 +1,63 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-asc-factorial-zero"
+  ],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- ascFactorial_succ 2>/dev/null | grep -Ec '^Nat\\.ascFactorial_succ[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.ascFactorial_succ",
+      "kernel_declaration": "Nat.ascFactorial_succ",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type. `Nat.ascFactorial n (succ k)` iota-reduces (via `NatOps::define_binary`'s recursor application) directly to `(n + k) * ascFactorial n k` -- the proof is `Eq.refl`, no rewrite. `n + k` is Lean's own `Nat.add`, matching Mathlib's `Nat.ascFactorial (n : ℕ) : ℕ → ℕ | 0 => 1 | k + 1 => (n + k) * ascFactorial n k` argument order exactly. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the count is tested, so the exit status depends on what the run found.",
+      "supports": "n.ascFactorial (k+1) = (n + k) * n.ascFactorial k"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::asc_factorial_evaluates_correctly",
+      "checkers": [
+        "Kernel::def_eq"
+      ],
+      "id": "compute-Nat.ascFactorial_succ",
+      "kernel_declaration": "Nat.ascFactorial",
+      "kind": "kernel-term",
+      "notes": "`Kernel::def_eq` reduces `3.ascFactorial 2` (two applications of the successor equation) to `12` (`3 * 4`), with negative reduction controls forbidding the vacuous case AND forbidding the DESCENDING value `3*2 = 6` at the same arguments, so this cannot pass without the successor equation actually unrolling the ASCENDING product.",
+      "supports": "the successor equation composes correctly across multiple steps, at a concrete instance"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.ascFactorial_succ",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. Measured 2026-08-28: `nat: axiom=0 opaque=0 quotient=0 total_trusted=0` with `Nat.ascFactorial` and its three theorems, and `Nat.multichoose` and its three theorems, all declared.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1"
+    ],
+    "language": "lean4",
+    "statement": "theorem Nat.ascFactorial_succ : ((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.ascFactorial x0 (AxNat.succ x1)) (AxNat.mul (AxNat.add x0 x1) (AxNat.ascFactorial x0 x1))))"
+  },
+  "id": "F:nat-asc-factorial-succ",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*) -- the `nat` prelude's trusted surface measures zero.\n\nSame provenance note as `F:nat-asc-factorial-zero`: `Nat.ascFactorial` is this kernel's own construction, not an import of Mathlib's proof, and this fact does not flip any `F:ml430-nat-*ascfactorial*` mirror fact by hand. Unlike `Nat.descFactorial`, `Nat.add` never truncates, so `Nat.ascFactorial` has no analogue of `F:nat-desc-factorial-of-lt`'s zero boundary; this module does not prove `Nat.zero_ascFactorial` (already closed separately by the autogenesis statement-reflexivity system).",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-asc-multichoose",
+    "source": "the second of two definitional boundary equations `declare_asc_factorial` (`crates/axeyum-lean-kernel/src/nat_prelude/asc_factorial.rs`) admits alongside the `Nat.ascFactorial` definition"
+  },
+  "schema_version": 1,
+  "statement": "The rising factorial of n with k+1 factors equals (n + k) times the rising factorial of n with k factors.",
+  "title": "ascFactorial(n, k+1) = (n+k) * ascFactorial(n, k)"
+}

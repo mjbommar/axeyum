@@ -129,6 +129,7 @@ use crate::build_logic_prelude;
 use crate::name::NameId;
 
 mod algebra;
+mod asc_factorial;
 mod bezout;
 mod binary;
 mod binomial;
@@ -160,6 +161,7 @@ mod lcm;
 mod log;
 mod lor;
 mod modular;
+mod multichoose;
 mod no_confusion;
 mod ops;
 mod order;
@@ -185,6 +187,7 @@ use algebra::{
     declare_additive_theorems, declare_finite_sum_theorems, declare_mul_no_zero_divisors,
     declare_multiplicative_theorems, declare_subtraction_theorems,
 };
+use asc_factorial::declare_asc_factorial_all;
 use bezout::{declare_euclid_lemma, declare_gcd_bezout, declare_prime_dvd_choose};
 use binary::{declare_binary_all, declare_size_all};
 use binomial::{
@@ -228,6 +231,7 @@ use lcm::{
 use log::declare_log_all;
 use lor::declare_lor_all;
 use modular::declare_modular_congruence;
+use multichoose::declare_multichoose_all;
 use no_confusion::declare_no_confusion;
 use order::declare_order;
 use order_extra::declare_order_extra;
@@ -347,6 +351,31 @@ pub struct NatPrelude {
     /// `descFactorial_of_lt : ∀ n k, n < k → n.descFactorial k = 0` — once
     /// `k` exceeds `n`, truncated `Nat.sub` forces a zero factor.
     pub desc_factorial_of_lt: NameId,
+    /// `Nat.ascFactorial : Nat → Nat → Nat`, by structural recursion on its
+    /// **second** argument via [`NatOps::define_binary`], mirroring
+    /// [`Self::desc_factorial`] but climbing with `Nat.add` instead of
+    /// descending with truncated `Nat.sub`: `ascFactorial n zero ≡ 1` and
+    /// `ascFactorial n (succ k) ≡ (n + k) * ascFactorial n k` hold
+    /// **definitionally** (β/δ/ι), mirroring Mathlib's `Nat.ascFactorial`.
+    /// `n * (n+1) * … * (n+k-1)`, `k` factors.
+    pub asc_factorial: NameId,
+    /// `ascFactorial_zero : ∀ n, n.ascFactorial 0 = 1`.
+    pub asc_factorial_zero: NameId,
+    /// `ascFactorial_succ : ∀ n k, n.ascFactorial (succ k) = (n + k) * n.ascFactorial k`.
+    pub asc_factorial_succ: NameId,
+    /// `ascFactorial_one : ∀ n, n.ascFactorial 1 = n`.
+    pub asc_factorial_one: NameId,
+    /// `Nat.multichoose n k` — the number of size-`k` multisets from an
+    /// `n`-element type, defined directly as `choose (pred (add n k)) k`
+    /// (i.e. `(n + k - 1).choose k`) rather than by a fresh recursion. See
+    /// `nat_prelude/multichoose.rs`.
+    pub multichoose: NameId,
+    /// `multichoose_zero_right : ∀ n, n.multichoose 0 = 1`.
+    pub multichoose_zero_right: NameId,
+    /// `multichoose_one : ∀ k, Nat.multichoose 1 k = 1`.
+    pub multichoose_one: NameId,
+    /// `multichoose_one_right : ∀ n, n.multichoose 1 = n`.
+    pub multichoose_one_right: NameId,
     /// `Nat.pred : Nat → Nat`, with `pred zero = zero`.
     pub pred: NameId,
     /// `Nat.sub : Nat → Nat → Nat`, truncated at zero and recursive in the
@@ -2491,6 +2520,14 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             desc_factorial_succ: kernel.name_str(nat, "descFactorial_succ"),
             desc_factorial_one: kernel.name_str(nat, "descFactorial_one"),
             desc_factorial_of_lt: kernel.name_str(nat, "descFactorial_of_lt"),
+            asc_factorial: kernel.name_str(nat, "ascFactorial"),
+            asc_factorial_zero: kernel.name_str(nat, "ascFactorial_zero"),
+            asc_factorial_succ: kernel.name_str(nat, "ascFactorial_succ"),
+            asc_factorial_one: kernel.name_str(nat, "ascFactorial_one"),
+            multichoose: kernel.name_str(nat, "multichoose"),
+            multichoose_zero_right: kernel.name_str(nat, "multichoose_zero_right"),
+            multichoose_one: kernel.name_str(nat, "multichoose_one"),
+            multichoose_one_right: kernel.name_str(nat, "multichoose_one_right"),
             pred: kernel.name_str(nat, "pred"),
             sub: kernel.name_str(nat, "sub"),
             no_confusion_type: kernel.name_str(nat, "noConfusionType"),
@@ -3144,6 +3181,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // (`declare_executable_division`), all far above; nothing needs
         // `Nat.lor`, so it goes last too.
         declare_lor_all(&mut d, &p)?;
+        // Needs `Nat.add`/`Nat.mul` (`declare_arithmetic`) and `Nat.mul_one`
+        // (`declare_multiplicative_theorems`), both far above; nothing needs
+        // `Nat.ascFactorial`, so it goes last too.
+        declare_asc_factorial_all(&mut d, &p)?;
+        // Needs `Nat.add`/`Nat.pred`/`Nat.choose`, all far above (`choose`'s
+        // own `choose_zero_right`/`choose_self`/`choose_one_right`, all
+        // declared by `declare_choose_all`); nothing needs `Nat.multichoose`,
+        // so it goes last too.
+        declare_multichoose_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {

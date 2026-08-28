@@ -1,0 +1,63 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-asc-factorial-succ",
+    "F:nat-asc-factorial-zero"
+  ],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- ascFactorial_one 2>/dev/null | grep -Ec '^Nat\\.ascFactorial_one[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.ascFactorial_one",
+      "kernel_declaration": "Nat.ascFactorial_one",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate. `n.ascFactorial 1` is defeq (via `ascFactorial_succ` at `k := 0`, itself definitional) to `(n + 0) * n.ascFactorial 0`, and `n + 0 ≡ n` is itself definitional (`Nat.add`'s own base case, right-recursive, holds for any `n`). So the stated goal is defeq to `n * 1 = n`, and this theorem's proof term is literally `Nat.mul_one`'s own proof, applied at `n` -- the kernel accepts it by unifying the stated type against `mul_one`'s inferred type up to full defeq, with no explicit rewrite combinator, exactly mirroring `F:nat-desc-factorial-one`. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the count is tested, so the exit status depends on what the run found.",
+      "supports": "n.ascFactorial 1 = n"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::asc_factorial_evaluates_correctly",
+      "checkers": [
+        "Kernel::def_eq"
+      ],
+      "id": "compute-Nat.ascFactorial_one",
+      "kernel_declaration": "Nat.ascFactorial",
+      "kind": "kernel-term",
+      "notes": "The companion concrete test instantiates this exact equation directly: `5.ascFactorial 1` reduces to `5`, exercising the same `ascFactorial_succ` + `mul_one` unfolding chain this theorem's proof relies on.",
+      "supports": "the equation holds at a concrete instance, not merely symbolically"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.ascFactorial_one",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. Measured 2026-08-28: `nat: axiom=0 opaque=0 quotient=0 total_trusted=0` with `Nat.ascFactorial` and its three theorems, and `Nat.multichoose` and its three theorems, all declared.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0"
+    ],
+    "language": "lean4",
+    "statement": "theorem Nat.ascFactorial_one : ((x0 : AxNat) -> Eq.{1} AxNat (AxNat.ascFactorial x0 (AxNat.succ AxNat.zero)) x0)"
+  },
+  "id": "F:nat-asc-factorial-one",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*) -- the `nat` prelude's trusted surface measures zero.\n\nSame provenance note as `F:nat-asc-factorial-zero`: `Nat.ascFactorial` is this kernel's own construction, not an import of Mathlib's proof. There is no `F:ml430-nat-ascfactorial-one` mirror fact tracked in this ledger for this shape (the corresponding closed mirror, `F:ml430-nat-one-ascfactorial-8bacb017`, states `Nat.ascFactorial 1 k = k!`, the DUAL identity with the arguments swapped, not `n.ascFactorial 1 = n`) -- so nothing here needed to avoid flipping a mirror fact by hand, but the same independent-construction discipline applies regardless.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-asc-multichoose",
+    "source": "declare_asc_factorial_one (crates/axeyum-lean-kernel/src/nat_prelude/asc_factorial.rs)"
+  },
+  "schema_version": 1,
+  "statement": "The rising factorial of n with exactly 1 factor equals n.",
+  "title": "ascFactorial(n, 1) = n"
+}

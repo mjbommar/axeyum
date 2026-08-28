@@ -197,6 +197,11 @@ now. Nothing was deleted.
 | 2026-08-28 | nat-lor | `Nat.lor`/`Nat.lorAux` (fuel recursion, `max`-via-`ble` per-bit step, `n`-returning fuel base case) + 3 boundary theorems in `nat_prelude/lor.rs`; wired into `nat_prelude.rs`; `nat_prelude_tests.rs` coverage + dedicated test + pinned render count `476->481`; 3 new `F:nat-lor-*` facts |
 | 2026-08-28 | int-fib | `Int.fib : ℤ → ℤ` landed (`int_prelude/fibonacci.rs::declare_fib`), the sign-extended Fibonacci sequence, one `Int.rec` case split, axiom-free, evaluated at six concrete indices with a sign-drop negative control |
 | 2026-08-28 | int-fib | `Int.fib_two_mul_add_one_pos` landed and kernel-checked, axiom-free; closed `F:ml430-int-fib-two-mul-add-one-pos-8977f65f` |
+| 2026-08-28 | nat-modeq-gcd | land `Nat.ModEq.gcd_eq` (gcd.rs); confirm minFac absent, isRelPrime absent |
+| 2026-08-28 | nat-modeq-gcd | land `Nat.div_dvd_div_left` (divisibility.rs) |
+| 2026-08-28 | nat-modeq-gcd | land `Nat.coprime_of_dvd'` (primes.rs), fixing a build-order UnknownConst |
+| 2026-08-28 | nat-asc-multichoose | `Nat.ascFactorial`/`Nat.multichoose` definitions + 6 boundary theorems + 6 new `F:nat-*` facts |
+| 2026-08-28 | cas-reconstruct | `cas-certificate` `kernel-reconstructed` 1 → 3: registered two already-passing, unregistered CAS → kernel bridges; mutation-verified the degree-4 kernel check; measured the remaining 28 as a backlog, not a Richardson boundary |
 | 2026-08-27 | (uncommitted at status-file write time) | `CReal.sumRange_cauchy_of_abs_cauchy` / `CReal.sumRange_converges_of_abs_converges` (absolute convergence implies convergence) plus a soundness-negative control; curriculum rows 18 and 22–23 corrected. |
 | 2026-08-27 | (uncommitted at status-file write time) | Ten new `artifacts/facts/F-creal-*.json` entries for the Ch.13/14 Riemann integral construction and algebra (`riemannSum_cauchy`, `integral`, `integral_converges`, `integral_const`, `integral_add`, `integral_le`, `integral_scale`, `integral_witness_independent`, `riemannSum_integral_close`, `sharedIndexToCanonical`); `python3 scripts/validate-facts.py` green (708 facts, 0 errors). |
 | 2026-08-27 | (uncommitted at status-file write time) | Added `--require-declaration <name> [--require-kind <kind>]` to `crates/axeyum-lean-kernel/examples/kernel_declaration_projection.rs`: a direct, fail-on-absence presence checker for `Declaration::Definition`s (and any other kind), mutation-tested against `CReal.integral`. Upgraded `F:creal-integral`'s `kernel-CReal.integral` evidence to use it. Registered 14 new `artifacts/facts/F-creal-*.json` entries for Spivak Ch.18 (`e`) and Ch.22-23 (series convergence tests): `creal-e`, `creal-e-converges`, `creal-two-le-e`, `creal-e-le-three`, `creal-e-le-four`, `creal-expterm-le-geom`, `creal-expdominantcauchy`, `creal-cauchyofpointwiseequiv`, `creal-geomcauchy`, `creal-sumrange-comparisontest`, `creal-sumrange-cauchy-of-dominated`, `creal-sumrange-converges-of-dominated`, `creal-sumrange-cauchy-of-abs-cauchy`, `creal-sumrange-converges-of-abs-converges`. `python3 scripts/validate-facts.py` green (722 facts, 0 errors). |
@@ -10189,6 +10194,316 @@ predicate pair, which does not exist in this kernel at all — only `Nat.Odd`/
 `Nat.Even` are declared), and `F:ml430-int-fib-two-mul-0e70f3dd` plus
 `F:ml430-int-fib-two-mul-add-two-0ba4a948` (both `needs first:
 F:ml430-int-fib-add-181b6a2c`, blocked on the addition formula above).
+
+**Your lane's block (`WIP`, nat-modeq-gcd, 2026-08-28).** Six open facts across
+two small families (all `development`, none HELD-OUT/MUTATION, verified against
+a fresh `scripts/fact-frontier.py` run before touching anything):
+`F:ml430-nat-coprime-iff-isrelprime-0c08eb25`,
+`F:ml430-nat-coprime-of-dvd-6f652673`,
+`F:ml430-nat-coprime-of-lt-minfac-0f79bdba`,
+`F:ml430-nat-div-dvd-div-left-b56f6f7c`,
+`F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e`,
+`F:ml430-nat-modeq-gcd-eq-5167ff4f`.
+
+Landed `Nat.ModEq.gcd_eq` (`F:ml430-nat-modeq-gcd-eq-5167ff4f`) in
+`nat_prelude/gcd.rs` as `declare_modeq_gcd_eq`, dispatched after
+`declare_dvd_antisymm` (needs `dvd_antisymm`, `gcd_dvd_left/right`, `dvd_gcd`,
+`dvd_add`, `dvd_add_iff_right`, `dvd_mul_right_of_dvd`, `add_comm`). Route:
+eliminate the balanced-witness `modEq m a b := ∃ u v, a+m*u=b+m*v` twice, show
+`gcd a m ∣ gcd b m` and the mirror image, close with `dvd_antisymm`. Kernel
+accepted first attempt; `every_nat_declaration_is_checked_and_axiom_free`
+caught the missing `theorem_names` entry (recounted, not incremented: 400).
+`nat_prelude::` sweep: 110 passed, 0 failed (was 109 before).
+
+Two of the six are judged genuinely out of scope for this lane, both because
+they need a NEW predicate/definition the whole kernel lacks, confirmed absent
+by grep across `nat_prelude.rs` and every `nat_prelude/*.rs`:
+- `F:ml430-nat-coprime-iff-isrelprime-0c08eb25` needs `IsRelPrime` (per the
+  brief; agreed after independent check).
+- `F:ml430-nat-coprime-of-lt-minfac-0f79bdba` needs `Nat.minFac` (least prime
+  factor) — **not previously flagged, newly confirmed absent this session**.
+  `exists_prime_dvd`/`least_divisor_search` give existence of *a* prime
+  factor, not a computable minFac with defining equations; building one is a
+  separate, larger task.
+
+Landed `Nat.div_dvd_div_left` (`F:ml430-nat-div-dvd-div-left-b56f6f7c`) in
+`nat_prelude/divisibility.rs` as `declare_div_dvd_div_left`, dispatched right
+after `declare_divisibility` (needs `div_mul_cancel_of_dvd`,
+`one_le_of_dvd_pos`, `mul_left_cancel_of_pos`, both declared inside
+`declare_divisibility` itself; `mul_assoc`/`mul_comm`/`zero_mul`/`zero_div`
+from earlier). Route: case-split on `m` via `d.induct` (a case split, not a
+recursion -- the induction hypothesis is ignored) to isolate `m`'s positivity.
+`m=0`: `dvd 0 k` forces `k=0`, so `k/0` and `k/n` both reduce to `0` and
+`dvd_refl` closes it (`dvd n 0` unused). `m=succ pred`: extract witnesses from
+both hypotheses, substitute to show `n ∣ k` directly (picking up `n`'s
+positivity along the way via `one_le_of_dvd_pos`), then cancel `n` from two
+expressions for `k` via `mul_left_cancel_of_pos` to land on the exact witness
+`k/n = (k/m)*q`. No positivity hypothesis on `n`/`m`/`k` needed -- both zero
+cases fall out of the case split. First kernel attempt hit six borrow-checker
+rejections (`cannot borrow *d as mutable more than once`) from nested
+`d.foo(..., d.bar())` calls -- flattened into sequential `let`s per the
+standing house rule, then the KERNEL accepted first try (no `TypeMismatch`
+etc. at all). `theorem_names` recounted: 401. `nat_prelude::` sweep: 110
+passed, 0 failed.
+
+Wrote local `dvd_elim`/`dvd_intro` helpers into `divisibility.rs` (private,
+`fn` not `pub(super)`) mirroring the existing per-file copies in `lcm.rs`
+(read-only for this lane), `irrational.rs` and `perfect.rs` -- this repo
+already duplicates this pair per-file rather than sharing one; followed the
+existing convention rather than introducing a new cross-file dependency.
+
+Landed `Nat.coprime_of_dvd'` (`F:ml430-nat-coprime-of-dvd-6f652673`) in
+`nat_prelude/primes.rs` as `declare_coprime_of_forall_prime_dvd` (named that,
+not `coprime_of_dvd`, since that name is already taken by the unrelated
+`Nat.Coprime.of_dvd`). Route: trichotomy on `g := gcd m n` via `lt_or_ge`
+twice. `g<1` (so `g=0`) forces `m=n=0` (`zero_mul` on the `dvd 0 _` witness),
+and applying the hypothesis at `k=2` (`prime_two`, already existed in this
+file) self-contradicts via `refute_dvd_one_against_prime` -- **an existing
+PRIVATE helper this file already had for exactly the `dvd p one -> False`
+shape**, reused rather than rebuilt (found by reading the file, not by
+grepping a name I didn't know). `1<=g` and `g<2` gives `g=1` directly. `1<=g`
+and `2<=g`: `exists_prime_dvd` gives a prime factor of `g`, hence of `m` and
+`n` (`dvd_trans`), so the hypothesis gives a contradiction the same way.
+
+Also reused `prime_parts`/`prime_condition`/`absurd`/`or_cases`/`prime_two`
+(all private `fn`s already in `primes.rs`) rather than rebuilding any of
+them, and added two NEW private helpers this proof needed and the file
+didn't have: `eliminate_prime_dvd` (destructuring `exists_prime_dvd`'s
+result, mirroring the inline elimination `declare_euclid` already builds
+for the same shape) and `dvd_elim` (a per-file copy matching the ones in
+`lcm.rs`/`irrational.rs`/`perfect.rs`/`divisibility.rs`).
+
+**BUILD ORDER hit on the first attempt**: `UnknownConst { name: NameId(122) }`
+= `Nat.succ_pred_of_pos`, needed transitively by `prime_two` via
+`two_divisor_dichotomy`. My first dispatch placement (right after
+`declare_coprime_of_dvd_both`, alongside the other `coprime_of_*` calls) ran
+BEFORE `declare_succ_pred_of_pos` (which itself runs much later, right before
+`declare_prime_pred_pos`, per an existing comment: "Must run before
+`declare_fermat`/`declare_totient_all`"). Diagnosed by temporarily adding a
+throwaway `#[test]` that caught the `KernelError`, scanned `NameId(115..130)`
+via `k.display_name`, and printed the name directly -- faster than guessing.
+Fixed by moving the dispatch call to right after `declare_succ_pred_of_pos`.
+Kernel accepted the proof term on the FIRST attempt after that move (zero
+`TypeMismatch`/`UnboundFVar` from the proof term itself, only the build-order
+issue). `theorem_names` recounted: 402. `nat_prelude::` sweep: 110 passed,
+0 failed. clippy -D warnings clean.
+
+All six facts named in the brief are now accounted for: three landed above,
+two out of scope (below), and `F:ml430-nat-exists-mul-mod-eq-gcd-8bf9ec7e`
+remains unstarted -- it is the one the brief already flagged as needing
+genuine `Int`/`Nat` mod-arithmetic bridging (reducing a Bézout coefficient
+mod `k` and showing the residue lands in range), confirmed still real work
+by this lane's own read of the statement; not attempted this session.
+
+Two of the six are judged genuinely out of scope for this lane (unchanged
+from above), both because they need a NEW predicate/definition the whole
+kernel lacks, confirmed absent by grep across `nat_prelude.rs` and every
+`nat_prelude/*.rs`:
+- `F:ml430-nat-coprime-iff-isrelprime-0c08eb25` needs `IsRelPrime` (per the
+  brief; agreed after independent check).
+- `F:ml430-nat-coprime-of-lt-minfac-0f79bdba` needs `Nat.minFac` (least prime
+  factor) — **not previously flagged, newly confirmed absent this session**.
+  `exists_prime_dvd`/`least_divisor_search` give existence of *a* prime
+  factor, not a computable minFac with defining equations; building one is a
+  separate, larger task.
+
+**Your lane's block (`DONE`, nat-asc-multichoose, 2026-08-28).** Both
+definitions landed with boundary lemmas, evaluation tests, and six new
+`F:nat-*` facts.
+
+`Nat.ascFactorial` mirrors `Nat.descFactorial` exactly (`NatOps::define_binary`,
+structural recursion on the second argument), climbing with `Nat.add` instead
+of descending with truncated `Nat.sub`. `ascFactorial_zero`/`_succ` hold by
+`Eq.refl` (no fuel device); `ascFactorial_one` reduces to `Nat.mul_one`'s own
+proof term, exactly like `descFactorial_one` reduces to it.
+
+`Nat.multichoose n k := choose (pred (add n k)) k` is a plain non-recursive
+abbreviation over already-declared `Nat.add`/`Nat.pred`/`Nat.choose` — not a
+fresh recursion. `multichoose_zero_right` needs no reduction at all
+(`choose_zero_right` holds for any first argument); `multichoose_one_right`
+reduces fully by ι alone (`add n 1 ≡ succ n`, `pred (succ n) ≡ n`, then
+`choose_one_right` closes it — no lemma beyond that one); `multichoose_one`
+is the one genuinely needing a `congr`/`trans` chain, because `Nat.add`
+recurses on its RIGHT argument and the literal `1` sits on the LEFT
+(`add 1 k` stuck for symbolic `k` — bridged via `succ_add`/`zero_add`).
+
+Every definition carries a concrete-instantiation evaluation test with a
+negative control catching the copy-paste class of bug the kernel's trusted
+gate cannot see (a `Definition` type-checks whatever it computes):
+`asc_factorial_evaluates_correctly` checks `3.ascFactorial 2 = 12` against a
+DESCENDING-product control (`3*2=6`, and `3.descFactorial 2`) that an
+`add`/`sub` swap would still type-check but compute; `multichoose_evaluates_correctly`
+checks `3.multichoose 2 = 6` against the `pred`-dropped value `10` a copy-paste
+omitting `- 1` would compute.
+
+Measured: `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`
+(`nat_axiom_inventory --require-axiom-free nat`) — the eight new declarations
+(2 definitions — `ascFactorial`, `multichoose` — plus 6 theorems —
+`ascFactorial_zero/_succ/_one`, `multichoose_zero_right/_one/_one_right`)
+add zero axioms. `nat_prelude::` suite: 109 passed, 0 failed (was 107 before
+this lane). `cargo fmt --check` and
+`clippy --all-targets --all-features -D warnings` both clean.
+
+Did NOT attempt `F:ml430-nat-factorial-dvd-ascfactorial-44a4e641`
+(`k! ∣ n.ascFactorial k`) — a genuinely nontrivial divisibility induction,
+out of scope for this slice per the brief ("landing ONE definition with its
+boundary lemmas is a complete success"). No target in this lane's families
+(`natural-binomial`, `natural-factorial`) carried a HELD-OUT or MUTATION
+marker.
+
+New facts (do NOT flip any `F:ml430-nat-*` mirror fact — these are our own
+independent constructions): `F:nat-asc-factorial-zero`,
+`F:nat-asc-factorial-succ`, `F:nat-asc-factorial-one`,
+`F:nat-multichoose-zero-right`, `F:nat-multichoose-one`,
+`F:nat-multichoose-one-right`. `python3 scripts/validate-facts.py`: 0 errors.
+
+Next lane: `factorial_dvd_ascFactorial` (needs a real induction over
+`Nat.dvd`/`Nat.choose` algebra), or `Nat.zero_ascFactorial` in our own
+prelude (currently only closed via the separate autogenesis statement-
+reflexivity route, not this kernel's `Nat.ascFactorial`).
+
+**Your lane's block (`DONE this pass`, cas-reconstruct, 2026-08-28).**
+
+`scripts/validate-facts.py`, before and after, run in this worktree:
+
+```
+cas-certificate: 29 total -- kernel-reconstructed 1, cas-internal 28
+cas-certificate: 31 total -- kernel-reconstructed 3, cas-internal 28
+```
+
+**Nothing was relabelled and no checker was weakened.** The two new
+`kernel-reconstructed` rows are CAS → kernel bridge tests that were authored,
+passed, and were never registered in the ledger:
+
+- `F:cas-ivt-degree4-sign-bracket-kernel-checked-cost-curve` —
+  `rat_prelude::cas_ivt_bridge_tests::tests::ivt_sign_bracket_degree_four_kernel_checked`,
+  `x^4-2` on `(1,2)`. `F:cas-ivt-sign-bracket-cbrt2-kernel-checked`'s own notes
+  already cited this fact id; the fact did not exist.
+- `F:cas-difference-of-squares-free-x-kernel-checked` —
+  `complex::cas_bridge_tests::cas_verified_difference_of_squares_true_and_false`,
+  `(x+1)(x-1) = x^2-1` at a **free** `x`, plus the CAS-refuted variant rejected
+  by the same kernel.
+
+Both were re-run here (1 passed each; 5.51 s and 123.77 s), and their
+`checker_command`s were executed **verbatim, with `/usr/bin/grep`**, each
+returning a count of `1`.
+
+**The degree-4 kernel check was mutation-verified by this lane rather than
+taken on the authoring lane's word.** Changing only the kernel-side bound from
+the exact `14` to a wrong-but-true-looking `16` — `Nat.le 1 16` is itself a
+true proposition, just not the one the reduced term inhabits — makes
+`Kernel::add_declaration` reject with
+`TypeMismatch { expected: ExprId(1577225), got: ExprId(1577239) }` and the test
+FAIL; reverted, it passes again. So the kernel term asserts *what the CAS
+computed* (`p(2) = 14`), not merely something well-typed. The mutation was made
+and reverted inside this lane's own worktree, and `git status` was confirmed
+clean afterwards.
+
+**Honest accounting, stated so the increment is not over-read.** The
+reconstructions are not new work by this lane; the ledger simply did not hold
+them. Why they were missed is itself the useful finding: the `cas-certificate`
+rows were written **per mathematical result**, and slice 1's mathematics
+(`(x+1)(x-1) = x^2-1`) is trivial — but under ADR-0601 the unit of account for
+row 3 is the **route**, not the theorem. By that measure the difference-of-
+squares row is the *strongest* kernel-reconstructed row in the ledger: it is
+universally quantified over a genuinely free fvar, so no numeral reduction is
+available to paper over a defeq gap, and it decides both directions.
+
+**Neither of the two facts the brief named was converted, and neither could
+be by this lane.** `F:cas-ivt-cbrt2-in-1-2` and `F:cas-extremum-irrational-argmax`
+both claim a **Sturm count**, and folding the existing sign-bracket evidence
+into either would make `classify_cas_certificate_fact` label the *whole*
+certificate — root containment and Sturm count included — as reconstructed.
+`cas_ivt_bridge_tests`'s own module doc says exactly this, which is why the
+sibling-fact pattern exists.
+
+## The access blocker, which is structural and is not mathematical
+
+**A lane that cannot write `crates/axeyum-lean-kernel/` cannot produce a new
+kernel-reconstructed row at all.** `Kernel::add_declaration` is reachable only
+through `IntDev::new`, which is `pub(crate)`; `complex/cas_bridge_tests.rs`'s
+module doc already states that an external crate cannot reach the development
+handle or the ring-law decision procedure. `axeyum-cas` deliberately does not
+depend back on `axeyum-lean-kernel` (both `Cargo.toml`s say so), so the bridge
+can only be written from inside the kernel crate. This lane's brief scoped that
+crate read-only, so registration of existing bridges was the whole reachable
+surface. **A future row-3 lane must be given write access to
+`crates/axeyum-lean-kernel/src/{rat_prelude,complex}/` or it cannot succeed.**
+
+## Backlog or boundary? Measured: 28 is a BACKLOG
+
+The brief asks whether the remaining 28 are structurally unreconstructable.
+**None of them is.** Richardson's theorem bites on zero-testing for expressions
+built from `exp`/`sin`/`abs` and a transcendental constant. **No
+`cas-certificate` fact in this ledger poses that obligation.** The one place a
+transcendental function appears at all is the WZ rows' Gamma-quotient
+*specification* of a hypergeometric term — and the certificate's actual
+verification obligation is a **rational-function identity**, reached by the
+Gamma functional equation, which is exactly why Gosper/Zeilberger terminate.
+Everything else is polynomial or rational over ℚ, or a bounded finite-field
+enumeration. Every one of the 28 is therefore inside the decidable fragment.
+The clusters, read from each fact's `formal.fragment` and `axiom_footprint`:
+
+| cluster | n | what the checker actually verifies | kernel machinery missing | residual assumption reconstruction CANNOT remove |
+| --- | --- | --- | --- | --- |
+| hypergeometric / WZ | 9 | a creative-telescoping certificate; clearing denominators makes it a polynomial identity in `(n,k)` | multivariate polynomial identity; a telescoping-sum lemma; a kernel definition of the summand | **YES** — `cas.gamma-functional-equation`, `cas.hyperterm-specification-denotes-the-summand` |
+| NRA geometry | 10 | a cofactor identity `Σ hᵢgᵢ = f` in `ℚ[x₁..xₙ]` (+ Rabinowitsch) | a **multivariate** ring layer — the kernel has none (`MultiPoly` appears nowhere in `axeyum-lean-kernel/src/` except the bridge's own univariate-only restriction doc) | **YES** — `geometry.cartesian-coordinatisation-of-the-euclidean-plane` |
+| real-algebraic (IVT/EVT/MVT/Taylor) | 4 | a Sturm chain plus a sign-variation count | `Rat` polynomial division with remainder → Sturm chain → Sturm's theorem itself | no |
+| partial fractions | 1 | clearing denominators: a **univariate** polynomial identity | very little beyond what the existing bridge does — factorization and the linear solve are *search*, not check | no |
+| gf2 | 4 | finite-field identities / bounded enumeration | a GF(2) carrier; 2 of the 4 also need Rabin irreducibility and lifting-the-exponent as real theorems | no |
+
+Two findings that follow, and the second is the actionable one:
+
+1. **For 19 of the 28 (WZ + geometry), reconstruction relocates rather than
+   discharges the assumption.** Proving `Σ hᵢgᵢ = f` in the kernel does not
+   prove that those polynomials mean the geometric predicates they are named
+   after; the ledger already keeps a separate coordinatisation control for
+   exactly this (`geometry_encoding_agreement`). The same holds for the WZ
+   rows' "the Gamma-quotient specification denotes the summand". So the honest
+   ceiling for those 19 is *smaller* than "kernel-reconstructed" sounds — the
+   modelling axiom becomes a kernel **definition choice**, which is better, but
+   it is not removed.
+2. **`Rat.polyEval_mul` is the single highest-leverage missing piece, and it is
+   closer than the fact notes suggest.** `rat_prelude/polynomial.rs`'s own
+   module doc (which says it "has now been wrong twice in opposite directions",
+   so it enumerates what is CHECKED) reports the ℚ reindexing machinery
+   *done* — `Rat.sumRange_split`, `sumRange_diagonal`,
+   `sumRange_rect_eq_diag_add_corner`, the two-bound rectangle steps, and the
+   antidiagonal cell collapse `declare_pow_sub_add`. What remains is a
+   four-factor ring rearrangement under `sumRange_congr_lt`, plus a decision
+   about the statement, because the corner term does **not** simplify to a
+   `polyEval` (the naive two-term identity is refuted at `n = 2`, 66 of 91).
+
+**A stale blocker, corrected.** `F:cas-ivt-sign-bracket-cbrt2-kernel-checked`'s
+notes size item 2 (root containment) as needing "a `Rat` polynomial long-
+division/remainder construction … it does not yet [exist]". That is true over
+`Rat` and **false over `Complex`**: `complex/poly.rs` already declares
+`polyMul`, `polyEval_polyMul`, `factorQuotient`, `factorQuotient_degreeLt` and
+`factorQuotient_succ_eq`, and its own module doc says "this section used to say
+`polyMul` and the factor theorem were not there". `factorQuotient` divides by a
+**linear** `(X − a)` only, so it does not cover division by an arbitrary
+minimal polynomial — but for a certificate whose root is *simple*, item 2 is
+now a short bridge over `Complex`, not a missing construction. This is the
+retrieval hazard `CLAUDE.md` keeps recording: verify a blocker still exists
+before sizing work against it.
+
+## Next lane
+
+Give it write access to `crates/axeyum-lean-kernel/`. In value order:
+
+1. **`F:cas-extremum-irrational-argmax`, endpoint exclusion** — the decisive
+   half of that certificate is pure rational arithmetic and needs *no new
+   kernel machinery at all*. For `p = x³ − 6x` on `[−3, 2]`: shift to
+   `q = p − p(−3)` (integer coefficients `[9,−6,0,1]`) and `r = p − p(2)`
+   (`[4,−6,0,1]`), then admit `0 < polyEval q 4 (ofInt −1)` and
+   `0 < polyEval r 4 (ofInt −1)` with the *existing* `zero_lt_via_nat_le`. That
+   kernel-proves `p(−1) > p(−3)` and `p(−1) > p(2)` — i.e. **the maximum is
+   interior, not at an endpoint** — as a sibling fact. The Sturm completeness
+   claim stays `cas-internal`, correctly.
+2. Add the missing swapped-statement negative control to
+   `ivt_sign_bracket_degree_four_kernel_checked` (its degree-3 sibling has one).
+3. `Rat.polyEval_mul`, as the three-term identity its own module doc argues for.
+   It is the shared prerequisite for the largest part of the backlog.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 

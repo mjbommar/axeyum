@@ -510,6 +510,8 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.land,
         p.lor_aux,
         p.lor,
+        p.asc_factorial,
+        p.multichoose,
     ]
 }
 
@@ -932,6 +934,12 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.lor_zero_left,
         p.lor_zero_right,
         p.lor_three_five,
+        p.asc_factorial_zero,
+        p.asc_factorial_succ,
+        p.asc_factorial_one,
+        p.multichoose_zero_right,
+        p.multichoose_one,
+        p.multichoose_one_right,
     ]
 }
 
@@ -6214,7 +6222,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        77 + 407,
+        81 + 411,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -6871,6 +6879,118 @@ fn desc_factorial_computes_and_collapses_past_its_base() {
     assert!(
         f.k.infer(wrong_bound).is_err(),
         "accepted a proof of `5 < 5` where `5 < 6` was required"
+    );
+}
+
+/// `Nat.ascFactorial` computes the right VALUES at concrete instances — the
+/// kernel accepts a `Definition` once it type-checks regardless of what it
+/// COMPUTES (`Nat -> Nat -> Nat` either way), so this is the only guard
+/// against a wrong recursion *direction* that still type-checks: `add`
+/// swapped for `sub`, or the two step-function arguments transposed.
+///
+/// `3.ascFactorial 0 = 1`, `3.ascFactorial 2 = 3*4 = 12`,
+/// `5.ascFactorial 1 = 5`. NEGATIVE control: `3.ascFactorial 2` must NOT be
+/// def-eq to `5.descFactorial 2 = 20` (a *descending* product at unrelated
+/// arguments) NOR to `12`'s descending twin `3*2 = 6` (the value a
+/// copy-pasted `sub`-based step would compute for `descFactorial 3 2` at the
+/// SAME arguments) — catching exactly the copy-paste this module's doc
+/// comment warns about.
+#[test]
+fn asc_factorial_evaluates_correctly() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let three = f.num(3);
+    let five = f.num(5);
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+
+    let at_zero = f.const_app(p.asc_factorial, &[three, zero]);
+    assert!(
+        f.k.def_eq(at_zero, one),
+        "3.ascFactorial 0 must reduce to 1"
+    );
+
+    let at_two = f.const_app(p.asc_factorial, &[three, two]);
+    let twelve = f.num(12);
+    assert!(
+        f.k.def_eq(at_two, twelve),
+        "3.ascFactorial 2 must reduce to 3*4 = 12"
+    );
+
+    let one_right = f.const_app(p.asc_factorial, &[five, one]);
+    assert!(
+        f.k.def_eq(one_right, five),
+        "5.ascFactorial 1 must reduce to 5"
+    );
+
+    // NEGATIVE reduction controls: `def_eq` must not be vacuously true here.
+    let six = f.num(6);
+    assert!(
+        !f.k.def_eq(at_two, six),
+        "3.ascFactorial 2 must NOT be def-eq to the DESCENDING product 3*2 = 6"
+    );
+    let descending_at_two = f.const_app(p.desc_factorial, &[three, two]);
+    assert!(
+        !f.k.def_eq(at_two, descending_at_two),
+        "3.ascFactorial 2 must NOT be def-eq to 3.descFactorial 2"
+    );
+}
+
+/// `Nat.multichoose` computes the right VALUES at concrete instances —
+/// `multichoose n k := choose (pred (add n k)) k` is a plain abbreviation,
+/// so a dropped `pred` (an off-by-one in the `-1`) would still type-check.
+///
+/// `0.multichoose 0 = choose 0 0 = 1` (the empty multiset), `3.multichoose 2
+/// = choose 4 2 = 6` (the six size-2 multisets of `{a,b,c}`: `aa, ab, ac,
+/// bb, bc, cc`), `1.multichoose 4 = choose 4 4 = 1`, `4.multichoose 1 =
+/// choose 4 1 = 4`. NEGATIVE control: `3.multichoose 2` must NOT be def-eq
+/// to `choose (add 3 2) 2 = choose 5 2 = 10` — the value a `pred`-dropping
+/// copy-paste would compute at the same arguments.
+#[test]
+fn multichoose_evaluates_correctly() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+    let four = f.num(4);
+
+    let at_zero_zero = f.const_app(p.multichoose, &[zero, zero]);
+    assert!(
+        f.k.def_eq(at_zero_zero, one),
+        "0.multichoose 0 must reduce to 1"
+    );
+
+    let at_three_two = f.const_app(p.multichoose, &[three, two]);
+    let six = f.num(6);
+    assert!(
+        f.k.def_eq(at_three_two, six),
+        "3.multichoose 2 must reduce to choose 4 2 = 6"
+    );
+
+    let at_one_four = f.const_app(p.multichoose, &[one, four]);
+    assert!(
+        f.k.def_eq(at_one_four, one),
+        "1.multichoose 4 must reduce to choose 4 4 = 1"
+    );
+
+    let at_four_one = f.const_app(p.multichoose, &[four, one]);
+    assert!(
+        f.k.def_eq(at_four_one, four),
+        "4.multichoose 1 must reduce to choose 4 1 = 4"
+    );
+
+    // NEGATIVE reduction control: dropping `pred` (an off-by-one in the
+    // `- 1`) at the same arguments gives a DIFFERENT value; `def_eq` must
+    // not be vacuously true here.
+    let ten = f.num(10);
+    assert!(
+        !f.k.def_eq(at_three_two, ten),
+        "3.multichoose 2 must NOT be def-eq to choose 5 2 = 10 (the `pred`-dropped value)"
     );
 }
 
