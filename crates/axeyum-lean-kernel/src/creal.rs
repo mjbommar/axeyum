@@ -5655,6 +5655,66 @@ pub struct CRealPrelude {
     /// `sinFnTerm`'s own odd exponent `Nat.add (Nat.add k k) 1` in place of
     /// `Nat.add k k`. See `creal/trig_fn.rs`.
     pub sin_fn_uniformly_continuous: NameId,
+    /// `CReal.expTermSuccScale : ∀ m, Equiv (mul (ofNat (Nat.succ m))
+    /// (expTerm (Nat.succ m))) (expTerm m)` — `(m+1)·(1/(m+1)!) = 1/m!`, the
+    /// whole arithmetic content of the index-shifted coefficient identity
+    /// underneath cosine's term-by-term derivative.
+    ///
+    /// Cheaper than [`Self::exp_term_antitone`] (the ORDER fact
+    /// `1/(n+1)! ≤ 1/n!`, which needs a full `Int` cross-multiplication
+    /// battery): `CReal.ofNat n` and `expTerm n` both unfold to
+    /// `ofRat (Rat.normalize …)`, so `Rat.normalize_mul_normalize` fuses the
+    /// product into ONE `normalize` and `Rat.normalize_congr` closes
+    /// `(m+1)·1·m! = 1·(1·(m+1)!)` against `Nat.factorial_succ` alone.
+    /// See `creal/trig_fn.rs`.
+    pub exp_term_succ_scale: NameId,
+    /// `CReal.cosFnTermDerivCoeff : ∀ j, Equiv (mul (cosTerm (Nat.succ j))
+    /// (ofNat (Nat.succ (Nat.add (Nat.add j j) 1)))) (neg (sinTerm j))` —
+    /// **the index-shifted coefficient identity** `cosTerm (j+1)·(2j+2) ~
+    /// −sinTerm j` that makes the derivative of cosine's series sine's
+    /// series, one index earlier.
+    ///
+    /// [`Self::exp_term_succ_scale`] at `m := 2j+1`, plus `(-1)^(j+1) ~
+    /// -(-1)^j` — which is `pow`'s own ι-reduction `pow x (succ j) ≡ mul
+    /// (pow x j) x` with `mul_neg_equiv`/`mul_one`, NOT a parity lemma. The
+    /// one transport is `Nat.succ_add`, moving `cosTerm (succ j)`'s own
+    /// exponent `Nat.add (succ j) (succ j)` to `Nat.succ (2j+1)`: `Nat.add`
+    /// recurses on the RIGHT, so the two are propositionally but not
+    /// definitionally equal at a symbolic `j`. See `creal/trig_fn.rs`.
+    pub cos_fn_term_deriv_coeff: NameId,
+    /// `CReal.cosFnTermHasDerivative : ∀ j, HasDerivativeOn (fun x =>
+    /// cosFnTerm (Nat.succ j) x) (fun x => neg (sinFnTerm j x)) zero (ofRat
+    /// (natDivSucc 8 4))` — cosine's series, differentiated one term at a
+    /// time.
+    ///
+    /// [`Self::has_derivative_pow`] at `n := 2j+1` (so the FUNCTION's
+    /// exponent is `2j+2`, never a truncating `Nat.sub`), then
+    /// [`Self::has_derivative_smul`] at `c := cosTerm (succ j)`, then
+    /// [`Self::has_derivative_congr`] onto the named shapes.
+    /// `hasDerivative_pow`'s two Skolem `BoundedOn` functions are **computed,
+    /// not extracted**: `creal/trig_fn.rs`'s own `pow` uniform continuity at
+    /// a symbolic exponent through
+    /// [`Self::bounded_of_uniformly_continuous`], lambda-abstracted over the
+    /// exponent. See `creal/trig_fn.rs`.
+    pub cos_fn_term_has_derivative: NameId,
+    /// `CReal.cosFnPartialHasDerivative : ∀ n, HasDerivativeOn (fun x =>
+    /// sumRange (fun k => cosFnTerm k x) (Nat.succ n)) (fun x => neg
+    /// (sumRange (fun k => sinFnTerm k x) n)) zero (ofRat (natDivSucc 8 4))`
+    /// — every partial sum of cosine's series differentiates to the negated
+    /// partial sum of sine's series, ONE INDEX SHORTER.
+    ///
+    /// The `succ n`/`n` mismatch is forced, not cosmetic: `d/dx cosFnTerm 0`
+    /// is `0`, so `n+1` cosine terms give `n` sine terms and any other
+    /// statement would need `Nat.pred`. Induction over
+    /// [`Self::has_derivative_add`]; `sumRange`'s own ι-reduction makes both
+    /// FUNCTION sides definitionally equal, so
+    /// [`Self::has_derivative_congr`] is needed only for the derivative
+    /// residues (`neg zero ~ zero` at the base, `neg (A+B) ~ neg A + neg B`
+    /// at the step). Together with
+    /// [`Self::has_derivative_uniform_limit`] this is what a derivative for
+    /// `cosFnWide` itself now needs — see `creal/trig_fn.rs`'s own section
+    /// header for the two `UniformConvergesOn` re-indexings still missing.
+    pub cos_fn_partial_has_derivative: NameId,
 
     // --- general `exp : CReal → CReal` (creal/exp_fn.rs) -----------------------
     /// `CReal.expFnTermAbsLe : ∀ x, le zero x → le x one → ∀ k, le (abs
@@ -6463,6 +6523,10 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sin_fn: kernel.name_str(creal, "sinFn"),
         sin_fn_uniform_converges: kernel.name_str(creal, "sinFnUniformConverges"),
         sin_fn_uniformly_continuous: kernel.name_str(creal, "sinFnUniformlyContinuous"),
+        exp_term_succ_scale: kernel.name_str(creal, "expTermSuccScale"),
+        cos_fn_term_deriv_coeff: kernel.name_str(creal, "cosFnTermDerivCoeff"),
+        cos_fn_term_has_derivative: kernel.name_str(creal, "cosFnTermHasDerivative"),
+        cos_fn_partial_has_derivative: kernel.name_str(creal, "cosFnPartialHasDerivative"),
         exp_fn_term_abs_le: kernel.name_str(creal, "expFnTermAbsLe"),
         exp_fn: kernel.name_str(creal, "expFn"),
         exp_fn_uniform_converges: kernel.name_str(creal, "expFnUniformConverges"),
@@ -11298,6 +11362,46 @@ const STEPS: &[BuildStep] = &[
         ],
         provides: &[|p: CRealPrelude| p.sin_fn_uniformly_continuous],
         run: trig_fn::declare_sin_fn_uniformly_continuous,
+    },
+    BuildStep {
+        label: "trig_fn::declare_cos_fn_derivative",
+        requires: &[
+            |p: CRealPrelude| p.bounded_of_uniformly_continuous,
+            |p: CRealPrelude| p.bounded_on_unfold,
+            |p: CRealPrelude| p.cos_fn_term,
+            |p: CRealPrelude| p.cos_term,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.exp_term,
+            |p: CRealPrelude| p.has_derivative_add,
+            |p: CRealPrelude| p.has_derivative_congr,
+            |p: CRealPrelude| p.has_derivative_const,
+            |p: CRealPrelude| p.has_derivative_on,
+            |p: CRealPrelude| p.has_derivative_pow,
+            |p: CRealPrelude| p.has_derivative_smul,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.mul_assoc,
+            |p: CRealPrelude| p.mul_congr,
+            |p: CRealPrelude| p.mul_one,
+            |p: CRealPrelude| p.neg_congr,
+            |p: CRealPrelude| p.of_nat,
+            |p: CRealPrelude| p.of_rat_mul,
+            |p: CRealPrelude| p.pow,
+            |p: CRealPrelude| p.sin_fn_term,
+            |p: CRealPrelude| p.sin_term,
+            |p: CRealPrelude| p.sum_range,
+            |p: CRealPrelude| p.uniformly_continuous_const,
+            |p: CRealPrelude| p.uniformly_continuous_id,
+            |p: CRealPrelude| p.uniformly_continuous_mul,
+            |p: CRealPrelude| p.uniformly_continuous_on,
+        ],
+        provides: &[
+            |p: CRealPrelude| p.exp_term_succ_scale,
+            |p: CRealPrelude| p.cos_fn_term_deriv_coeff,
+            |p: CRealPrelude| p.cos_fn_term_has_derivative,
+            |p: CRealPrelude| p.cos_fn_partial_has_derivative,
+        ],
+        run: trig_fn::declare_cos_fn_derivative,
     },
     BuildStep {
         label: "exp_fn::declare_exp_fn_family",

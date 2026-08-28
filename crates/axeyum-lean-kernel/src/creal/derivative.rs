@@ -712,7 +712,7 @@ pub(super) fn mul_neg_equiv(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: E
 }
 
 /// `Equiv (neg (add a b)) (add (neg a) (neg b))`.
-fn neg_add_distrib(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
+pub(super) fn neg_add_distrib(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
     let zero_c = czero(d, p);
     let na = cneg(d, p, a);
     let nb = cneg(d, p, b);
@@ -7722,7 +7722,7 @@ fn of_nat_succ_equiv(d: &mut IntDev<'_>, p: CRealPrelude, m: ExprId) -> ExprId {
 }
 
 /// `fun r => CReal.pow r (Nat.succ v)`.
-fn pow_succ_fn(d: &mut IntDev<'_>, p: CRealPrelude, carrier: ExprId, v: ExprId) -> ExprId {
+pub(super) fn pow_succ_fn(d: &mut IntDev<'_>, p: CRealPrelude, carrier: ExprId, v: ExprId) -> ExprId {
     let succ_v = d.succ(v);
     let r_fv = d.fresh_fvar();
     let r = d.kernel().fvar(r_fv);
@@ -7732,7 +7732,7 @@ fn pow_succ_fn(d: &mut IntDev<'_>, p: CRealPrelude, carrier: ExprId, v: ExprId) 
 
 /// `fun x => CReal.mul (CReal.ofNat (Nat.succ v)) (CReal.pow x v)` — the
 /// claimed derivative of `pow_succ_fn v`.
-fn pow_deriv_fn(d: &mut IntDev<'_>, p: CRealPrelude, carrier: ExprId, v: ExprId) -> ExprId {
+pub(super) fn pow_deriv_fn(d: &mut IntDev<'_>, p: CRealPrelude, carrier: ExprId, v: ExprId) -> ExprId {
     let succ_v = d.succ(v);
     let coeff = d.const_app(p.of_nat, &[succ_v]);
     let x_fv = d.fresh_fvar();

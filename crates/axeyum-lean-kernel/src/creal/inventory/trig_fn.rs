@@ -83,5 +83,21 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.sin_fn_uniformly_continuous,
             "theorem",
         ),
+        ("CReal.expTermSuccScale", p.exp_term_succ_scale, "theorem"),
+        (
+            "CReal.cosFnTermDerivCoeff",
+            p.cos_fn_term_deriv_coeff,
+            "theorem",
+        ),
+        (
+            "CReal.cosFnTermHasDerivative",
+            p.cos_fn_term_has_derivative,
+            "theorem",
+        ),
+        (
+            "CReal.cosFnPartialHasDerivative",
+            p.cos_fn_partial_has_derivative,
+            "theorem",
+        ),
     ]
 }
