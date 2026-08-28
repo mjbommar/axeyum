@@ -1,0 +1,59 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- bitwise_and_eq_land_three_five 2>/dev/null | grep -Ec '^Nat\\.bitwise_and_eq_land_three_five[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.bitwise_and_eq_land_three_five",
+      "kernel_declaration": "Nat.bitwise_and_eq_land_three_five",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. `and_fn` (`bitwise.rs`) is built inline via a local `Bool.rec`-based select (this prelude declares no top-level `Bool.and`) as `fun a b => if a then b else false`. Both `bitwise and_fn 3 5` and `land 3 5` fully compute (every argument is a concrete numeral) to `1`, from two INDEPENDENTLY constructed `Nat.rec` bodies (`bitwiseAux`'s general per-bit `bool_select_nat (f (beq _ 1) (beq _ 1)) 1 0` step vs `landAux`'s direct `mul` step), so the proof is `Eq.refl` between two terms with no shared head symbol until full reduction -- a genuine, if non-universal, check that the general definition specializes correctly at a witness where `land`'s own sanity check (`F:nat-land-three-five`) already discriminates a wrong-way per-bit step. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the count is tested, so the exit status depends on what the run found. Anchored with `^Nat\\.bitwise_and_eq_land_three_five[[:space:]]` (verified exactly 1 row).",
+      "supports": "bitwise and_fn 3 5 = land 3 5"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::bitwise_computes_and_its_boundary_theorems_apply",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "id": "compute-Nat.bitwise_and_eq_land_three_five",
+      "kernel_declaration": "Nat.bitwise",
+      "kind": "kernel-term",
+      "notes": "`Kernel::def_eq` confirms `bitwise and_fn m n` matches `land m n` exactly over a table of eight pairs including `(0,0)`, `(0,5)`, `(5,0)`, `(1,1)`, `(3,5)`, `(5,3)`, `(6,3)`, `(7,7)` -- not just the one pair this fact pins -- and separately confirms `Nat.bitwise_and_eq_land_three_five`'s ADMITTED TYPE is exactly `Eq (bitwise and_fn 3 5) (land 3 5)`, with a negative control asserting `bitwise and_fn 3 5` does not also def_eq `7` (OR's value at the same operands).",
+      "supports": "the specialization holds at (3,5) and at seven other pairs, and is not OR's value"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.bitwise_and_eq_land_three_five",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. Measured with `Nat.bitwise` landed: `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [],
+    "language": "lean4",
+    "statement": "Eq.{1} AxNat (AxNat.bitwise (fun (x0 : Bool) => fun (x1 : Bool) => Bool.rec.{1} (fun (x2 : Bool) => Bool) Bool.false x1 x0) (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero)))))) (AxNat.land (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero))))))"
+  },
+  "id": "F:nat-bitwise-and-eq-land-three-five",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat`.\n\nA full universal `forall m n, bitwise and_fn m n = land m n` equivalence proof was NOT attempted: `bitwiseAux`'s per-bit step and `landAux`'s per-bit step are different formulas that agree at every concrete `{0,1}` pair but are not definitionally equal at symbolic operands (`Nat.mul` does not reduce against an unresolved `Nat.mod` term), and closing that gap needs an induction relating two independently-built `Nat.rec` instances plus a `Nat.mod _ 2 in {0,1}` case-split lemma this prelude does not yet carry. This fact and its `lor`/`xor` siblings (`F:nat-bitwise-or-eq-lor-three-five`, `F:nat-bitwise-xor-three-five`) are the strongest available check without that induction: concrete-instance equality against the actual sibling declaration, over a numeral pair chosen (with `land_three_five`/`lor_three_five`) to discriminate a wrong-way per-bit step. See `crates/axeyum-lean-kernel/src/nat_prelude/bitwise.rs`'s module doc.\n\nDoes not flip any `F:ml430-nat-bitwise-*` fact -- those are a separate, held-out mirror population and untouched by this lane.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-bitwise-general",
+    "source": "one of three concrete specialization checks `declare_bitwise_all` (`crates/axeyum-lean-kernel/src/nat_prelude/bitwise.rs`) admits alongside the `Nat.bitwise`/`Nat.bitwiseAux` definitions"
+  },
+  "schema_version": 1,
+  "statement": "The general bitwise combinator instantiated at Bool.and, applied to 3 and 5, equals the specialized bitwise-AND of 3 and 5.",
+  "title": "bitwise and_fn 3 5 = land 3 5"
+}

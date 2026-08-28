@@ -134,6 +134,7 @@ mod bezout;
 mod binary;
 mod binomial;
 mod bits;
+mod bitwise;
 mod ble;
 mod cantor;
 mod cardinality;
@@ -196,6 +197,7 @@ use binomial::{
     declare_succ_sub_of_le,
 };
 use bits::declare_bit_all;
+use bitwise::declare_bitwise_all;
 use ble::declare_boolean_le;
 use cantor::declare_cantor_all;
 use cardinality::declare_nat_pigeonhole;
@@ -2535,6 +2537,44 @@ pub struct NatPrelude {
     /// `ldiff_three_five`'s `2` since, unlike `land`/`lor`, `ldiff` is not
     /// commutative.
     pub ldiff_five_three: NameId,
+    /// `Nat.bitwiseAux : (Bool → Bool → Bool) → Nat → Nat → Nat → Nat`,
+    /// `bitwiseAux f fuel m n`: the general form `land`/`lor`/`ldiff` were
+    /// each landed instead of. Not the public name; [`Self::bitwise`]
+    /// supplies fuel `m` itself. See `nat_prelude::bitwise` for the full
+    /// derivation, including what the general `f` costs over the three
+    /// specializations.
+    pub bitwise_aux: NameId,
+    /// `Nat.bitwise f m n := Nat.bitwiseAux f m m n` — the general
+    /// `Bool → Bool → Bool`-parameterized bitwise combinator (`Mathlib`:
+    /// `Nat.bitwise`), of which `land`/`lor`/`ldiff` are (unrelated,
+    /// independently-defined) specializations.
+    pub bitwise: NameId,
+    /// `Nat.bitwise_zero_left : ∀ f n, Eq (bitwise f 0 n) (if f false true
+    /// then n else 0)` — `refl`, for every `f`: fuel is `m = 0`, so the
+    /// outer `Nat.rec` hits `bitwiseAux`'s fuel-exhaustion row directly,
+    /// which IS this RHS by construction.
+    pub bitwise_zero_left: NameId,
+    /// `Nat.bitwise_zero_right : ∀ f m, Eq (bitwise f m 0) (if f true false
+    /// then m else 0)` — induction on `m`; every step is `refl` (the
+    /// `n = 0` guard collapses immediately, exactly `land_zero_right`'s
+    /// shape), but the base case needs one extra `Bool`-case-split lemma
+    /// (`bool_select_same` in `bitwise.rs`) that `land`/`lor`/`ldiff`'s
+    /// zero-right theorems never needed. See `nat_prelude::bitwise`.
+    pub bitwise_zero_right: NameId,
+    /// `Nat.bitwise_and_eq_land_three_five : Eq (bitwise and_fn 3 5) (land
+    /// 3 5)` — concrete specialization check (both sides reduce to `1`), in
+    /// place of the universal `∀ m n` equivalence this lane did not
+    /// attempt. `and_fn` is built inline in `bitwise.rs`; this prelude
+    /// declares no top-level `Bool.and`.
+    pub bitwise_and_eq_land_three_five: NameId,
+    /// `Nat.bitwise_or_eq_lor_three_five : Eq (bitwise or_fn 3 5) (lor 3
+    /// 5)` — the `lor` twin of [`Self::bitwise_and_eq_land_three_five`]
+    /// (both sides reduce to `7`).
+    pub bitwise_or_eq_lor_three_five: NameId,
+    /// `Nat.bitwise_xor_three_five : Eq (bitwise xor_fn 3 5) 6` — no prelude
+    /// XOR sibling exists to cross-check against, so this closes against a
+    /// hand-computed numeral (`0b011 xor 0b101 = 0b110`) instead.
+    pub bitwise_xor_three_five: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -3108,6 +3148,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             ldiff_zero_right: kernel.name_str(nat, "ldiff_zero_right"),
             ldiff_three_five: kernel.name_str(nat, "ldiff_three_five"),
             ldiff_five_three: kernel.name_str(nat, "ldiff_five_three"),
+            bitwise_aux: kernel.name_str(nat, "bitwiseAux"),
+            bitwise: kernel.name_str(nat, "bitwise"),
+            bitwise_zero_left: kernel.name_str(nat, "bitwise_zero_left"),
+            bitwise_zero_right: kernel.name_str(nat, "bitwise_zero_right"),
+            bitwise_and_eq_land_three_five: kernel.name_str(nat, "bitwise_and_eq_land_three_five"),
+            bitwise_or_eq_lor_three_five: kernel.name_str(nat, "bitwise_or_eq_lor_three_five"),
+            bitwise_xor_three_five: kernel.name_str(nat, "bitwise_xor_three_five"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -3288,6 +3335,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // (`declare_executable_division`), all far above; nothing needs
         // `Nat.ldiff`, so it goes last too.
         declare_ldiff_all(&mut d, &p)?;
+        // Needs `Nat.add`/`Nat.mul`/`Nat.beq` (`declare_arithmetic`/
+        // `declare_boolean_equality`) and `Nat.div`/`Nat.mod`
+        // (`declare_executable_division`), all far above, plus `Nat.land`
+        // and `Nat.lor` (just above) for its concrete specialization
+        // checks; nothing needs `Nat.bitwise`, so it goes last too.
+        declare_bitwise_all(&mut d, &p)?;
         // Needs `Nat.add`/`Nat.mul` (`declare_arithmetic`) and `Nat.mul_one`
         // (`declare_multiplicative_theorems`), both far above; nothing needs
         // `Nat.ascFactorial`, so it goes last too.

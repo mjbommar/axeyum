@@ -512,6 +512,8 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.lor,
         p.ldiff_aux,
         p.ldiff,
+        p.bitwise_aux,
+        p.bitwise,
         p.asc_factorial,
         p.multichoose,
     ]
@@ -944,6 +946,11 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.ldiff_zero_right,
         p.ldiff_three_five,
         p.ldiff_five_three,
+        p.bitwise_zero_left,
+        p.bitwise_zero_right,
+        p.bitwise_and_eq_land_three_five,
+        p.bitwise_or_eq_lor_three_five,
+        p.bitwise_xor_three_five,
         p.asc_factorial_zero,
         p.asc_factorial_succ,
         p.asc_factorial_one,
@@ -6235,7 +6242,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        83 + 422,
+        85 + 427,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -9676,6 +9683,319 @@ fn ldiff_computes_and_its_boundary_theorems_apply() {
     assert!(
         f.k.axiom_footprint(p.ldiff_aux).is_empty(),
         "Nat.ldiffAux must rest on zero axioms"
+    );
+}
+
+/// `Nat.bitwise` — the general `f : Bool -> Bool -> Bool` form `land`/`lor`/
+/// `ldiff` were each landed instead of. Checks: (1) each of `and_fn`/
+/// `or_fn`/`xor_fn` specializes correctly at several `(m, n)` pairs,
+/// including cross-checks against the actual `land`/`lor` declarations, not
+/// just hand-computed numerals; (2) the two `f`-general boundary theorems
+/// apply at a concrete `f` and reduce to the expected specialization; (3)
+/// every declaration here is axiom-free.
+#[test]
+fn bitwise_computes_and_its_boundary_theorems_apply() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let bitwise = p.bitwise;
+    let land = p.land;
+    let lor = p.lor;
+
+    // and_fn: Nat.bitwise and_fn m n must match Nat.land m n exactly, at
+    // every pair -- the strongest available check (both sides independently
+    // defined, both fully computed).
+    {
+        let and_ = super::bitwise::and_fn(&mut f);
+        for (m, n) in [
+            (0u32, 0u32),
+            (0, 5),
+            (5, 0),
+            (1, 1),
+            (3, 5),
+            (5, 3),
+            (6, 3),
+            (7, 7),
+        ] {
+            let mm = f.num(m);
+            let nn = f.num(n);
+            let lhs = f.const_app(bitwise, &[and_, mm, nn]);
+            let rhs = f.const_app(land, &[mm, nn]);
+            assert!(
+                f.k.def_eq(lhs, rhs),
+                "bitwise and_fn {m} {n} must match land {m} {n}"
+            );
+        }
+        // Negative control: AND at (3, 5) is 1, not 7 (that is OR's value).
+        let three = f.num(3);
+        let five = f.num(5);
+        let bad = f.num(7);
+        let lhs = f.const_app(bitwise, &[and_, three, five]);
+        assert!(
+            !f.k.def_eq(lhs, bad),
+            "negative control: bitwise and_fn 3 5 is 1, not 7 (that is OR's value)"
+        );
+    }
+
+    // or_fn: same cross-check against Nat.lor.
+    {
+        let or_ = super::bitwise::or_fn(&mut f);
+        for (m, n) in [
+            (0u32, 0u32),
+            (0, 5),
+            (5, 0),
+            (1, 1),
+            (3, 5),
+            (5, 3),
+            (6, 3),
+            (7, 7),
+        ] {
+            let mm = f.num(m);
+            let nn = f.num(n);
+            let lhs = f.const_app(bitwise, &[or_, mm, nn]);
+            let rhs = f.const_app(lor, &[mm, nn]);
+            assert!(
+                f.k.def_eq(lhs, rhs),
+                "bitwise or_fn {m} {n} must match lor {m} {n}"
+            );
+        }
+        // Negative control: OR at (3, 5) is 7, not 1 (that is AND's value).
+        let three = f.num(3);
+        let five = f.num(5);
+        let bad = f.num(1);
+        let lhs = f.const_app(bitwise, &[or_, three, five]);
+        assert!(
+            !f.k.def_eq(lhs, bad),
+            "negative control: bitwise or_fn 3 5 is 7, not 1 (that is AND's value)"
+        );
+    }
+
+    // xor_fn: no prelude sibling, so checked against hand-computed values.
+    {
+        let xor_ = super::bitwise::xor_fn(&mut f);
+        for (m, n, expected) in [
+            (0u32, 0u32, 0u32),
+            (0, 5, 5),
+            (5, 0, 5),
+            (1, 1, 0),
+            (3, 5, 6),
+            (5, 3, 6),
+            (6, 3, 5),
+            (7, 7, 0),
+        ] {
+            let mm = f.num(m);
+            let nn = f.num(n);
+            let lhs = f.const_app(bitwise, &[xor_, mm, nn]);
+            let rhs = f.num(expected);
+            assert!(
+                f.k.def_eq(lhs, rhs),
+                "bitwise xor_fn {m} {n} must reduce to {expected}"
+            );
+        }
+        // Negative control: XOR at (3, 5) is 6, not 1 or 7 (AND's / OR's
+        // values at the same operands).
+        let three = f.num(3);
+        let five = f.num(5);
+        let lhs = f.const_app(bitwise, &[xor_, three, five]);
+        let bad_one = f.num(1);
+        let bad_seven = f.num(7);
+        assert!(
+            !f.k.def_eq(lhs, bad_one),
+            "negative control: bitwise xor_fn 3 5 is 6, not 1"
+        );
+        assert!(
+            !f.k.def_eq(lhs, bad_seven),
+            "negative control: bitwise xor_fn 3 5 is 6, not 7"
+        );
+    }
+
+    // bitwise_zero_left : forall f n, Eq (bitwise f 0 n) (if f false true
+    // then n else 0) -- instantiated at f = and_fn (absorbing: reduces to
+    // 0) and f = or_fn (identity: reduces to n).
+    {
+        let and_ = super::bitwise::and_fn(&mut f);
+        let seven = f.num(7);
+        let zero = f.num(0);
+        let applied = f.const_app(p.bitwise_zero_left, &[and_, seven]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("bitwise_zero_left must type-check at and_fn: {shown}")
+        });
+        let lhs = f.const_app(bitwise, &[and_, zero, seven]);
+        let want = f.eq(lhs, zero);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "bitwise_zero_left at and_fn must state Eq (bitwise and_fn 0 7) 0"
+        );
+        let bad_want = f.eq(lhs, seven);
+        assert!(
+            !f.k.def_eq(inferred, bad_want),
+            "negative control: bitwise_zero_left at and_fn must not also state \
+             Eq (bitwise and_fn 0 7) 7"
+        );
+        assert!(
+            f.k.axiom_footprint(p.bitwise_zero_left).is_empty(),
+            "bitwise_zero_left must rest on zero axioms"
+        );
+    }
+    {
+        let or_ = super::bitwise::or_fn(&mut f);
+        let seven = f.num(7);
+        let zero = f.num(0);
+        let applied = f.const_app(p.bitwise_zero_left, &[or_, seven]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("bitwise_zero_left must type-check at or_fn: {shown}")
+        });
+        let lhs = f.const_app(bitwise, &[or_, zero, seven]);
+        let want = f.eq(lhs, seven);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "bitwise_zero_left at or_fn must state Eq (bitwise or_fn 0 7) 7"
+        );
+        let bad_want = f.eq(lhs, zero);
+        assert!(
+            !f.k.def_eq(inferred, bad_want),
+            "negative control: bitwise_zero_left at or_fn must not also state \
+             Eq (bitwise or_fn 0 7) 0"
+        );
+    }
+
+    // bitwise_zero_right : forall f m, Eq (bitwise f m 0) (if f true false
+    // then m else 0) -- instantiated at f = and_fn (absorbing: reduces to
+    // 0) and f = or_fn (identity: reduces to m).
+    {
+        let and_ = super::bitwise::and_fn(&mut f);
+        let nine = f.num(9);
+        let zero = f.num(0);
+        let applied = f.const_app(p.bitwise_zero_right, &[and_, nine]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("bitwise_zero_right must type-check at and_fn: {shown}")
+        });
+        let lhs = f.const_app(bitwise, &[and_, nine, zero]);
+        let want = f.eq(lhs, zero);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "bitwise_zero_right at and_fn must state Eq (bitwise and_fn 9 0) 0"
+        );
+        let bad_want = f.eq(lhs, nine);
+        assert!(
+            !f.k.def_eq(inferred, bad_want),
+            "negative control: bitwise_zero_right at and_fn must not also state \
+             Eq (bitwise and_fn 9 0) 9"
+        );
+        assert!(
+            f.k.axiom_footprint(p.bitwise_zero_right).is_empty(),
+            "bitwise_zero_right must rest on zero axioms"
+        );
+    }
+    {
+        let or_ = super::bitwise::or_fn(&mut f);
+        let nine = f.num(9);
+        let zero = f.num(0);
+        let applied = f.const_app(p.bitwise_zero_right, &[or_, nine]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("bitwise_zero_right must type-check at or_fn: {shown}")
+        });
+        let lhs = f.const_app(bitwise, &[or_, nine, zero]);
+        let want = f.eq(lhs, nine);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "bitwise_zero_right at or_fn must state Eq (bitwise or_fn 9 0) 9"
+        );
+        let bad_want = f.eq(lhs, zero);
+        assert!(
+            !f.k.def_eq(inferred, bad_want),
+            "negative control: bitwise_zero_right at or_fn must not also state \
+             Eq (bitwise or_fn 9 0) 0"
+        );
+    }
+
+    // The three concrete specialization theorems, each checked against its
+    // own declared statement plus a negative control, plus axiom-freedom.
+    {
+        let applied = f.const_app(p.bitwise_and_eq_land_three_five, &[]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("bitwise_and_eq_land_three_five must type-check: {shown}")
+        });
+        let and_ = super::bitwise::and_fn(&mut f);
+        let three = f.num(3);
+        let five = f.num(5);
+        let lhs = f.const_app(bitwise, &[and_, three, five]);
+        let rhs = f.const_app(land, &[three, five]);
+        let want = f.eq(lhs, rhs);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "bitwise_and_eq_land_three_five must state \
+             Eq (bitwise and_fn 3 5) (land 3 5)"
+        );
+        assert!(
+            f.k.axiom_footprint(p.bitwise_and_eq_land_three_five)
+                .is_empty(),
+            "bitwise_and_eq_land_three_five must rest on zero axioms"
+        );
+    }
+    {
+        let applied = f.const_app(p.bitwise_or_eq_lor_three_five, &[]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("bitwise_or_eq_lor_three_five must type-check: {shown}")
+        });
+        let or_ = super::bitwise::or_fn(&mut f);
+        let three = f.num(3);
+        let five = f.num(5);
+        let lhs = f.const_app(bitwise, &[or_, three, five]);
+        let rhs = f.const_app(lor, &[three, five]);
+        let want = f.eq(lhs, rhs);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "bitwise_or_eq_lor_three_five must state \
+             Eq (bitwise or_fn 3 5) (lor 3 5)"
+        );
+        assert!(
+            f.k.axiom_footprint(p.bitwise_or_eq_lor_three_five)
+                .is_empty(),
+            "bitwise_or_eq_lor_three_five must rest on zero axioms"
+        );
+    }
+    {
+        let applied = f.const_app(p.bitwise_xor_three_five, &[]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("bitwise_xor_three_five must type-check: {shown}")
+        });
+        let xor_ = super::bitwise::xor_fn(&mut f);
+        let three = f.num(3);
+        let five = f.num(5);
+        let lhs = f.const_app(bitwise, &[xor_, three, five]);
+        let six = f.num(6);
+        let want = f.eq(lhs, six);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "bitwise_xor_three_five must state Eq (bitwise xor_fn 3 5) 6"
+        );
+        let one = f.num(1);
+        let bad_want = f.eq(lhs, one);
+        assert!(
+            !f.k.def_eq(inferred, bad_want),
+            "negative control: bitwise_xor_three_five must not also state \
+             Eq (bitwise xor_fn 3 5) 1 (that is AND's value)"
+        );
+        assert!(
+            f.k.axiom_footprint(p.bitwise_xor_three_five).is_empty(),
+            "bitwise_xor_three_five must rest on zero axioms"
+        );
+    }
+
+    assert!(
+        f.k.axiom_footprint(bitwise).is_empty(),
+        "Nat.bitwise must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.bitwise_aux).is_empty(),
+        "Nat.bitwiseAux must rest on zero axioms"
     );
 }
 

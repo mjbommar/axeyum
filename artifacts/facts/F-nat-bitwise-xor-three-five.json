@@ -1,0 +1,59 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- bitwise_xor_three_five 2>/dev/null | grep -Ec '^Nat\\.bitwise_xor_three_five[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.bitwise_xor_three_five",
+      "kernel_declaration": "Nat.bitwise_xor_three_five",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. `xor_fn` (`bitwise.rs`) is built inline via a local `Bool.rec`-based select (this prelude declares no top-level `Bool.xor`, and neither `land` nor `lor` has an XOR sibling to cross-check against, unlike the `and`/`or` facts in this family) as `fun a b => if a then (not b) else b`. `3 = 0b011`, `5 = 0b101`, `3 xor 5 = 0b110 = 6`; every argument is a concrete numeral, so `bitwise xor_fn 3 5` fully computes and the proof is `Eq.refl` against the hand-computed numeral `6`. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the count is tested, so the exit status depends on what the run found. Anchored with `^Nat\\.bitwise_xor_three_five[[:space:]]` (verified exactly 1 row).",
+      "supports": "bitwise xor_fn 3 5 = 6"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::bitwise_computes_and_its_boundary_theorems_apply",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "id": "compute-Nat.bitwise_xor_three_five",
+      "kernel_declaration": "Nat.bitwise",
+      "kind": "kernel-term",
+      "notes": "`Kernel::def_eq` reduces `bitwise xor_fn m n` directly to the independently hand-computed value over a table of eight pairs including `(0,0)->0`, `(0,5)->5`, `(5,0)->5`, `(1,1)->0`, `(3,5)->6`, `(5,3)->6`, `(6,3)->5`, `(7,7)->0`, and separately confirms `Nat.bitwise_xor_three_five`'s ADMITTED TYPE is exactly `Eq (bitwise xor_fn 3 5) 6`, with negative controls that it does NOT also def_eq `1` (AND's value) or `7` (OR's value) at the same operands -- the sharpest control available for this specialization, since no prelude XOR sibling exists to cross-check against directly.",
+      "supports": "the specialization holds at (3,5) and at seven other pairs, and is not AND's or OR's value"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.bitwise_xor_three_five",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. Measured with `Nat.bitwise` landed: `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [],
+    "language": "lean4",
+    "statement": "Eq.{1} AxNat (AxNat.bitwise (fun (x0 : Bool) => fun (x1 : Bool) => Bool.rec.{1} (fun (x2 : Bool) => Bool) x1 (Bool.rec.{1} (fun (x2 : Bool) => Bool) Bool.true Bool.false x1) x0) (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero)))))) (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero))))))"
+  },
+  "id": "F:nat-bitwise-xor-three-five",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat`.\n\nUnlike its `and`/`or` siblings (`F:nat-bitwise-and-eq-land-three-five`, `F:nat-bitwise-or-eq-lor-three-five`), this specialization has no existing prelude declaration to cross-check against -- `Nat.land`/`Nat.lor`/`Nat.ldiff` cover AND/OR/AND-NOT, not XOR -- so it closes against a hand-computed numeral instead. See `crates/axeyum-lean-kernel/src/nat_prelude/bitwise.rs`'s module doc for the full derivation and why no universal proof was attempted.\n\nDoes not flip any `F:ml430-nat-bitwise-*` fact -- those are a separate, held-out mirror population and untouched by this lane.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-bitwise-general",
+    "source": "one of three concrete specialization checks `declare_bitwise_all` (`crates/axeyum-lean-kernel/src/nat_prelude/bitwise.rs`) admits alongside the `Nat.bitwise`/`Nat.bitwiseAux` definitions"
+  },
+  "schema_version": 1,
+  "statement": "The general bitwise combinator instantiated at Bool.xor, applied to 3 and 5, equals 6.",
+  "title": "bitwise xor_fn 3 5 = 6"
+}

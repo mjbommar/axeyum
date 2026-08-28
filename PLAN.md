@@ -205,6 +205,7 @@ now. Nothing was deleted.
 | 2026-08-28 | evt-endpoint | `cas-certificate` `kernel-reconstructed` 3 -> 4: EVT endpoint exclusion for x^3-6x on [-3,2] admitted through `Kernel::add_declaration`, reusing the IVT sign-bracket bridge's engine verbatim; mutation-verified; registered as `F:cas-evt-endpoint-exclusion-cubic-kernel-checked`, a sibling of `F:cas-extremum-irrational-argmax` |
 | 2026-08-28 | nat-factorial-dvd | falling/rising-factorial ↔ `choose` bridges + `factorial_dvd_descFactorial`/`factorial_dvd_ascFactorial`, closing 2 `F:ml430-nat-factorial-dvd-*` facts |
 | 2026-08-28 | nat-ldiff | `Nat.ldiff`/`Nat.ldiffAux` (fuel recursion, `land`-shaped fuel-exhaustion base case, hybrid land/lor succ-row guard, `beq`+`bool_select_nat` per-bit step) + 4 boundary theorems incl. the asymmetry pair in `nat_prelude/ldiff.rs`; wired into `nat_prelude.rs`; `nat_prelude_tests.rs` coverage + dedicated evaluation test + pinned render count `492->498`; 4 new `F:nat-ldiff-*` facts |
+| 2026-08-28 | nat-bitwise-general | landed `Nat.bitwise`, the general form `land`/`lor`/`ldiff` specialize; 5 new facts |
 | 2026-08-28 | fib-2 | `Nat.le_fib_self` (kernel-checked, axiom-free), closing `F:ml430-nat-le-fib-self-0cbccb4d`; `Nat.le_fib_add_one`/`Int.fib_add`/`Int.fib_of_odd` re-diagnosed and left open with sharper blockers |
 | 2026-08-27 | (uncommitted at status-file write time) | `CReal.sumRange_cauchy_of_abs_cauchy` / `CReal.sumRange_converges_of_abs_converges` (absolute convergence implies convergence) plus a soundness-negative control; curriculum rows 18 and 22–23 corrected. |
 | 2026-08-27 | (uncommitted at status-file write time) | Ten new `artifacts/facts/F-creal-*.json` entries for the Ch.13/14 Riemann integral construction and algebra (`riemannSum_cauchy`, `integral`, `integral_converges`, `integral_const`, `integral_add`, `integral_le`, `integral_scale`, `integral_witness_independent`, `riemannSum_integral_close`, `sharedIndexToCanonical`); `python3 scripts/validate-facts.py` green (708 facts, 0 errors). |
@@ -10800,6 +10801,71 @@ Out of scope, deliberately: `Nat.bitwise` (general two-argument form),
 ones (the `ml430-nat-ldiff-*`/`ml430-nat-testbit-ldiff-*` mirror facts) —
 `ldiff` proved simple enough that none of these were needed to land it,
 matching the brief's "complete success" bar without extending scope.
+
+**Your lane's block (`DONE`, nat-bitwise-general, 2026-08-28).** `Nat.bitwise`
+landed: `crates/axeyum-lean-kernel/src/nat_prelude/bitwise.rs` (new file),
+wired into `nat_prelude.rs` (mod/use/fields/initializers/call site) and
+`nat_prelude/nat_prelude_tests.rs`.
+
+**The two earlier declines do NOT hold anymore, and here is the precise
+reading of what "mismatched-length base cases" costs.** Both prior lanes
+declined citing "a `Bool -> Bool -> Bool` function threaded through
+mismatched-length base cases" as too big for one lane. That threading turns
+out to be small and mechanical once `land`/`lor`/`ldiff` exist: the general
+base case answers "does the fuel operand carry this operator's absorbing
+zero?" — a question with no fixed answer for a general `f` — by evaluating
+`f` at the two boundary `Bool` literals (`f false true`, `f true false`) and
+gating with the SAME `bool_select_nat` combinator `land`/`lor`/`ldiff` already
+build for their own zero-guards. No new primitive, no new height dependency.
+The per-bit step needs one genuinely new piece (`Nat.beq _ 1` to get a `Bool`
+out of each `{0,1}` bit, apply `f`, `bool_select_nat` back to `{0,1}`), also
+mechanical.
+
+**Outcome 1 landed** (of the brief's three ranked outcomes): `Nat.bitwise`
++ `Nat.bitwiseAux` (fuel-recursive, `f` threaded through every closure), two
+`f`-general boundary theorems (`bitwise_zero_left` refl, `bitwise_zero_right`
+induction — the ONE genuinely new proof-content wrinkle: the base case needs
+a small `Bool`-case-split helper, `bool_select_same`, that the three
+specializations' own zero-right theorems never needed, because their base
+cases were syntactically identical for a fixed `f`), and three concrete
+specialization checks (`bitwise and_fn 3 5 = land 3 5`, `bitwise or_fn 3 5 =
+lor 3 5`, both refl against the ACTUAL sibling declaration; `bitwise xor_fn
+3 5 = 6` against a hand-computed numeral, no XOR sibling exists).
+
+**What was NOT attempted:** a universal `forall m n, bitwise and m n =
+land m n` equivalence proof. `bitwiseAux`'s per-bit step and `landAux`'s
+differ as FORMULAS (`bool_select_nat (f (beq a 1) (beq b 1)) 1 0` vs `mul a
+b`) — they agree at every concrete `{0,1}` pair but are not definitionally
+equal at symbolic `a, b`. Closing that needs an induction relating two
+independently-built `Nat.rec` instances plus a `Nat.mod _ 2 in {0,1}`
+case-split lemma this prelude does not yet carry. Real proof engineering,
+correctly sized past one lane — the concrete specialization checks are the
+strongest available substitute.
+
+Full derivation: `bitwise.rs`'s module doc (front-loaded, not scattered).
+
+Five new facts: `F:nat-bitwise-zero-left`, `F:nat-bitwise-zero-right`,
+`F:nat-bitwise-and-eq-land-three-five`, `F:nat-bitwise-or-eq-lor-three-five`,
+`F:nat-bitwise-xor-three-five`. Did not touch any `F:ml430-nat-bitwise-*`
+mirror/held-out fact.
+
+Measured: `nat_prelude::` test count 111 after this lane's one new test
+function (all green, incl. `every_nat_declaration_is_checked_and_axiom_free`
+and `every_promised_name_is_admitted_with_the_expected_kind`); declaration
+count (`the_build_is_deterministic`'s pin, read off its own panic message,
+never hand-counted) 83+421=504 before this lane, 85+426=511 after (+2
+definitions `bitwiseAux`/`bitwise`, +5 theorems); `axiom_footprint` for every
+new declaration is `[]`; `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`
+unchanged. `cargo fmt --edition 2024` (per-file,
+not workspace-wide) and `cargo clippy -p axeyum-lean-kernel --all-targets --
+-D warnings` both clean.
+
+Kernel rejected one thing during construction: a borrow-checker error, not a
+kernel rejection (`d.zero()` called while `d` was already mutably borrowed
+inside a nested `bitwise(d, ..., d.zero())` call) — flattened into a
+sequential `let`, exactly the "flatten nested `d.foo(..., d.bar())`" gotcha.
+No `add_declaration` rejection occurred; every construction was accepted on
+the first attempt once it type-checked in Rust.
 
 **Your lane's block (`DONE for this pass`, fib-2, 2026-08-28).** Landed
 `Nat.le_fib_self`, kernel-checked and axiom-free, closing
