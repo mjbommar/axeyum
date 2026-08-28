@@ -39,9 +39,25 @@ So **zero of 125** open facts are already proved under exact-name matching. The
 kernel proves the **existential** form; Mathlib's statement names *computable*
 witnesses `gcdA`/`gcdB` and asserts the identity at them. Ours is strictly
 weaker in the sense that matters for a program: it does not hand back the
-coefficients. Closing that fact means defining `Int.gcdA`/`Int.gcdB` and
-re-deriving the identity at those witnesses — small, but real work, not a
-status flip.
+coefficients.
+
+**I sized this wrong, and a lane corrected me.** I wrote "small, but real work"
+and suggested the witnesses might be *extracted* from the existing proof. They
+cannot be. Read line-by-line, `declare_gcd_eq_gcd_ab`'s magnitude coefficients
+come from `Nat.gcd_bezout`, a `Theorem` whose existential witnesses live inside
+a `Prop` and are therefore unprojectable without choice; and the sign flip
+(`match_sign`/`sign_cases`) is a `Prop`-typed `Or`-elimination, not a
+computable branch. Closing the fact needs a **fresh computable
+extended-Euclidean `Definition`** built with `WellFounded.fix` that returns
+actual data, plus a from-scratch induction re-deriving Bezout for it — a
+multi-hundred-line construction, not an extraction.
+
+That is worth more than a sizing correction. **The distance between our
+existential form and Mathlib's is exactly the distance between a `Prop` and a
+program**, and no rearrangement of an existing proof closes it: a witness
+buried in a `Prop` is gone. Any fact whose Mathlib statement names a
+*computable* function has this shape and should be budgeted as new
+construction, never as a status flip.
 
 This is the same shape ADR-0603 already names: a classical statement and our
 constructive substitute are not the same row, and conflating them is how a

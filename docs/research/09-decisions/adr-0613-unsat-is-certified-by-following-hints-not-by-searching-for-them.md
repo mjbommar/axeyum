@@ -2,7 +2,7 @@
 
 Status: accepted
 Date: 2026-08-28
-Index-summary: The evidence path called the forward reference DRAT checker at every site, so certifying a refutation cost ~3 orders of magnitude more than deciding it (`F:fp16-add-monotone-rne`: decide 11.09 s, check ~2.4 h extrapolated, never observed to finish). The route now elaborates the proof's core to LRAT with the backward engine as an UNTRUSTED producer and has `check_lrat` — small, search-free, linear — verify the hints. The trusted base does not move: `check_drat_backward` appears only in rejecting position, and the forward reference remains the accepting authority whenever the LRAT route declines. Measured: fp8 evidence 25m46s to 5.0 s, and fp16 from never-observed-to-finish to 125 s end to end with `certified=1 recheck=ok`.
+Index-summary: The evidence path called the forward reference DRAT checker at every site, so certifying a refutation cost ~3 orders of magnitude more than deciding it (`F:fp16-add-monotone-rne`: decide 11.09 s, check ~2.4 h extrapolated, never observed to finish). The route now elaborates the proof's core to LRAT with the backward engine as an UNTRUSTED producer and has `check_lrat` — small, search-free, linear — verify the hints. The trusted base does not move: `check_drat_backward` appears only in rejecting position, and the forward reference remains the accepting authority whenever the LRAT route declines. Measured: fp8 evidence 25m46s to 5.0 s, and fp16 from never-observed-to-finish to a certified `unsat` in ~339 s wall clock (the tool's own `ms=125098` line is a sub-stage timer that excludes the consumer-side recheck -- see the correction in the body).
 Index-status: accepted
 
 ## Context
@@ -208,10 +208,31 @@ as never observed to finish — on the same host and the same pinned file:
 unsat
 ```
 
-**125.098 s end to end, of which 82.302 s is checking.** Against the measured
-`check_drat` rate on this exact proof — ~95 steps/sec, extrapolating to ~8,700 s
-for the DRAT check *alone* before elaboration even started — the checking stage
-is ~106x faster and the certificate now exists.
+**125.098 s to the `ms=` line, of which 82.302 s is checking.**
+
+**CORRECTION (2026-08-28): `ms=` is NOT end to end, and this ADR originally
+said it was.** A lane settling the fact traced the timer in
+`crates/axeyum-bench/examples/smtcomp_cli.rs`: `started.elapsed().as_millis()`
+is evaluated in `evidence_report_line`'s caller **before** `UnsatProof::recheck()`
+and the fresh-parse `arena` re-validation run. So `ms=` is a sub-stage figure
+that excludes the independent consumer-side recheck — which is precisely the
+part that makes the evidence trustworthy, so it is the wrong thing to omit.
+
+Real end-to-end wall clock, measured three times in a separate worktree with
+`/usr/bin/time -v` and a date-diff: **339 s, 353 s, and >400 s** under
+increasing host load, against `ms=` values of 136.9 s, 168.1 s and 228.9 s on
+those same runs. So the true multiplier is **2.5-2.9x the printed number.**
+
+This does not weaken the result and it does change its size. Against the
+measured `check_drat` rate on this exact proof — ~95 steps/sec, extrapolating
+to ~8,700 s for the DRAT check *alone* before elaboration even started — the
+honest claim is **roughly two orders of magnitude, not three**, and the
+certificate now exists where it previously never finished. The fact's own
+evidence notes carry the 339 s figure rather than the 125 s one.
+
+The general lesson, which is this repository's own house rule turned on itself:
+**a number printed by the thing being measured is not a measurement of the
+thing.** Time it from outside.
 
 One run on a contended host is a data point, not a benchmark; but the claim it
 supports is qualitative and does not need a benchmark. The stage went from
