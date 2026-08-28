@@ -1,0 +1,60 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- multichoose_one 2>/dev/null | grep -Ec '^Nat\\.multichoose_one[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.multichoose_one",
+      "kernel_declaration": "Nat.multichoose_one",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate. `1.multichoose k` reduces to `choose (pred (add 1 k)) k`; `Nat.add` recurses on its RIGHT argument, so the literal `1` on the LEFT leaves `add 1 k` stuck for symbolic `k` -- bridged via `Nat.succ_add (0, k) : add (succ 0) k = succ (add 0 k)` then `Nat.zero_add k : add 0 k = k`, giving `add 1 k = succ k` propositionally (a `congr`/`trans` chain, not defeq). `pred (succ k)` then reduces to `k` by ι alone once that rewrite is in hand, and `Nat.choose_self : choose k k = 1` closes it. This is the one boundary lemma of the three that genuinely needs propositional rewriting rather than pure reduction, since the literal sits on `add`'s non-recursive side. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the count is tested, so the exit status depends on what the run found.",
+      "supports": "Nat.multichoose 1 k = 1"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::multichoose_evaluates_correctly",
+      "checkers": [
+        "Kernel::def_eq"
+      ],
+      "id": "compute-Nat.multichoose_one",
+      "kernel_declaration": "Nat.multichoose",
+      "kind": "kernel-term",
+      "notes": "`Kernel::def_eq` reduces `1.multichoose 4` (through `choose 4 4`) to `1`, with a negative reduction control at a different pair (`3.multichoose 2` must NOT be def-eq to `10`, the `pred`-dropped value) so the assertion cannot pass on a vacuous `def_eq`.",
+      "supports": "the equation holds at a concrete instance, not merely symbolically"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.multichoose_one",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. Measured 2026-08-28: `nat: axiom=0 opaque=0 quotient=0 total_trusted=0` with `Nat.ascFactorial` and its three theorems, and `Nat.multichoose` and its three theorems, all declared.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0"
+    ],
+    "language": "lean4",
+    "statement": "theorem Nat.multichoose_one : ((x0 : AxNat) -> Eq.{1} AxNat (AxNat.multichoose (AxNat.succ AxNat.zero) x0) (AxNat.succ AxNat.zero))"
+  },
+  "id": "F:nat-multichoose-one",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*) -- the `nat` prelude's trusted surface measures zero.\n\nSame provenance note as `F:nat-multichoose-zero-right`: `Nat.multichoose` is this kernel's own construction, not an import of Mathlib's proof, and this fact does not flip `F:ml430-nat-multichoose-one-b210386a` (the same statement shape) by hand. `depends_on` is empty because this proof does NOT go through `Nat.multichoose_zero_right` -- it is derived independently via `Nat.choose_self`, unlike the Mathlib mirror fact's stated `depends_on` (which records Mathlib's own proof route, not ours).",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-asc-multichoose",
+    "source": "declare_multichoose_one (crates/axeyum-lean-kernel/src/nat_prelude/multichoose.rs)"
+  },
+  "schema_version": 1,
+  "statement": "The number of size-k multisets from a 1-element type is 1, for any k (there is only one multiset, all elements the same).",
+  "title": "multichoose(1, k) = 1"
+}

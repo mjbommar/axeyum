@@ -1,0 +1,60 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- multichoose_zero_right 2>/dev/null | grep -Ec '^Nat\\.multichoose_zero_right[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.multichoose_zero_right",
+      "kernel_declaration": "Nat.multichoose_zero_right",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate. `Nat.multichoose` is declared (`nat_prelude/multichoose.rs`) as the plain, non-recursive abbreviation `fun n k => choose (pred (add n k)) k`, so `n.multichoose 0` reduces by β/δ alone to `choose (pred (add n 0)) 0`, and `Nat.choose_zero_right : ∀ m, choose m 0 = 1` proves `choose _ 0 = 1` for ANY first argument -- instantiating it at `pred (add n 0)` closes the goal directly, with no need to reduce that expression further and no dependency on `Nat.multichoose_one`/`_one_right`. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the count is tested, so the exit status depends on what the run found.",
+      "supports": "n.multichoose 0 = 1"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::multichoose_evaluates_correctly",
+      "checkers": [
+        "Kernel::def_eq"
+      ],
+      "id": "compute-Nat.multichoose_zero_right",
+      "kernel_declaration": "Nat.multichoose",
+      "kind": "kernel-term",
+      "notes": "`Kernel::def_eq` reduces `0.multichoose 0` directly (definition unfolding through `choose 0 0`) and confirms it is `1` (the empty multiset), with a negative reduction control at a different pair (`3.multichoose 2` must NOT be def-eq to `10`, the value a `pred`-dropping copy-paste would compute) so the assertion cannot pass on a vacuous `def_eq`.",
+      "supports": "the abbreviation computes the right value at a concrete instance, not merely an opaque application"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.multichoose_zero_right",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. `Nat.multichoose` is not a recursion at all -- a plain abbreviation over already-declared `Nat.add`/`Nat.pred`/`Nat.choose` -- so nothing here was ever at risk of needing a fuel device or `WellFounded`. Measured 2026-08-28: `nat: axiom=0 opaque=0 quotient=0 total_trusted=0` with `Nat.ascFactorial` and its three theorems, and `Nat.multichoose` and its three theorems, all declared.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0"
+    ],
+    "language": "lean4",
+    "statement": "theorem Nat.multichoose_zero_right : ((x0 : AxNat) -> Eq.{1} AxNat (AxNat.multichoose x0 AxNat.zero) (AxNat.succ AxNat.zero))"
+  },
+  "id": "F:nat-multichoose-zero-right",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*) -- the `nat` prelude's trusted surface measures zero.\n\n`Nat.multichoose` did not exist before this lane; it was named as blocking the open facts `F:ml430-nat-multichoose-one-b210386a`, `F:ml430-nat-multichoose-zero-right-6ef827c8` and `F:ml430-nat-multichoose-one-right-7755072d`. This fact does NOT flip `F:ml430-nat-multichoose-zero-right-6ef827c8` (the same statement shape) by hand -- this kernel's `Nat.multichoose` is our own construction, defined directly as `choose (pred (add n k)) k` rather than by a fresh recursion Mathlib-style, and proved independently from `Nat.choose`'s own theorem set, not an import of Mathlib's proof. Claiming the Mathlib mirror's statement verbatim would be the checker-that-cannot-fail defect this repository explicitly guards against.\n\nThe existence of the DEFINITION `Nat.multichoose` is entailed by this row rather than separately checked: the statement mentions `AxNat.multichoose`, and `Kernel::add_declaration` cannot admit a type naming a constant the environment does not contain.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-asc-multichoose",
+    "source": "declare_multichoose_zero_right (crates/axeyum-lean-kernel/src/nat_prelude/multichoose.rs)"
+  },
+  "schema_version": 1,
+  "statement": "The number of size-0 multisets from an n-element type is 1 (the empty multiset), for any n.",
+  "title": "multichoose(n, 0) = 1"
+}
