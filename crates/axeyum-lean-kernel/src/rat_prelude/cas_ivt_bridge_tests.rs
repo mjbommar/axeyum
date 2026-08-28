@@ -105,7 +105,7 @@ use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
 use crate::{Kernel, on_a_deep_stack};
 
-fn built() -> (Kernel, RatPrelude) {
+pub(crate) fn built() -> (Kernel, RatPrelude) {
     let mut kernel = Kernel::new();
     let prelude = build_rat_prelude(&mut kernel).expect("Rat prelude must build");
     (kernel, prelude)
@@ -118,7 +118,7 @@ fn built() -> (Kernel, RatPrelude) {
 /// `axeyum_cas`/`axeyum_ir`'s `Rational` (fixed-width `i128`) -> `i128`,
 /// requiring an integer value. `None` on any genuinely fractional value —
 /// this slice does not attempt a general `Rat.ofRat` cast (see module doc).
-fn rational_to_int(r: Rational) -> Option<i128> {
+pub(crate) fn rational_to_int(r: Rational) -> Option<i128> {
     if r.is_integer() {
         Some(r.numerator())
     } else {
@@ -150,7 +150,7 @@ fn sign_bracket_to_int(cert: &IvtCertificate) -> Option<(Vec<i128>, i128, i128)>
 /// An `Int` literal for `n`: `Int.ofNat n` for `n >= 0`, else
 /// `Int.neg (Int.ofNat (-n))` (which `δι`-reduces to `Int.negOfNat`/
 /// `Int.negSucc`, `int_prelude/defs.rs`'s own table).
-fn int_lit(d: &mut IntDev<'_>, n: i128) -> ExprId {
+pub(crate) fn int_lit(d: &mut IntDev<'_>, n: i128) -> ExprId {
     if n >= 0 {
         let mag = d.num(u32::try_from(n).expect("int_lit: magnitude fits u32"));
         d.of_nat(mag)
@@ -165,7 +165,7 @@ fn int_lit(d: &mut IntDev<'_>, n: i128) -> ExprId {
 /// `rat_prelude/matrix.rs`'s own private `of_int` helper; rebuilt here rather
 /// than exposed, per this crate's convention of not widening a live file's
 /// surface for a single external caller).
-fn of_int(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId) -> ExprId {
+pub(crate) fn of_int(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId) -> ExprId {
     d.const_app(p.of_int, &[x])
 }
 
@@ -197,7 +197,7 @@ fn nat_le_lit(d: &mut IntDev<'_>, lo: u32, hi: u32) -> ExprId {
 /// unconditionally returns `Rat.zero`. Identical recipe to
 /// `complex::cas_bridge_tests::n_term_polynomial`, over `Rat` instead of
 /// `Complex`.
-fn n_term_polynomial(d: &mut IntDev<'_>, p: RatPrelude, coeffs: &[ExprId]) -> ExprId {
+pub(crate) fn n_term_polynomial(d: &mut IntDev<'_>, p: RatPrelude, coeffs: &[ExprId]) -> ExprId {
     assert!(
         !coeffs.is_empty(),
         "n_term_polynomial: at least one coefficient is required"
@@ -254,7 +254,7 @@ fn n_term_polynomial(d: &mut IntDev<'_>, p: RatPrelude, coeffs: &[ExprId]) -> Ex
 /// Returns `(total_int_expr, proof)` where `proof : Eq Rat (polyEval c n x)
 /// (ofInt total_int_expr)`. See module doc for why this needs an explicit
 /// `Eq` chain (`ofInt_add`/`ofInt_mul`) rather than a `rrefl` shortcut.
-fn poly_eval_to_of_int(
+pub(crate) fn poly_eval_to_of_int(
     d: &mut IntDev<'_>,
     p: RatPrelude,
     c: ExprId,
@@ -463,7 +463,7 @@ fn lt_zero_via_true(
 /// `total_int` reduces to a literal in `[1, hi]` (so `nat_le_lit(1, hi)`
 /// supplies the underlying `Nat.le` obligation — see [`nat_le_lit`]'s doc for
 /// why this direction is NOT unconditionally `True`).
-fn zero_lt_via_nat_le(
+pub(crate) fn zero_lt_via_nat_le(
     d: &mut IntDev<'_>,
     p: RatPrelude,
     eval_expr: ExprId,
