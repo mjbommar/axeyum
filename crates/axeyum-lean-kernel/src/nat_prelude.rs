@@ -223,8 +223,9 @@ use perfect::declare_sum_divisors_two_pow_eq_geom_sum;
 use permutation::declare_permutation_all;
 use powsq::declare_powsq_all;
 use primes::{
-    declare_coprime_add_self_right, declare_coprime_of_dvd, declare_coprime_of_lt_prime,
-    declare_euclid, declare_prime_dvd_iff_not_coprime, declare_primes,
+    declare_coprime_add_self_right, declare_coprime_of_dvd, declare_coprime_of_dvd_both,
+    declare_coprime_of_lt_prime, declare_coprime_or_dvd_of_prime, declare_coprime_self_add_right,
+    declare_coprime_symmetric, declare_euclid, declare_prime_dvd_iff_not_coprime, declare_primes,
 };
 use rectangle::declare_rectangle;
 use relation::{
@@ -923,6 +924,28 @@ pub struct NatPrelude {
     /// `g2 ∣ (n+m)` directly (no reordering needed, since that is the
     /// lemma's own argument order), and `dvd_gcd` gives `g2 ∣ g1`.
     pub coprime_add_self_right: NameId,
+    /// `Nat.Coprime.of_dvd : ∀ a1 a2 b1 b2, dvd a1 a2 → dvd b1 b2 →
+    /// Eq (gcd a2 b2) one → Eq (gcd a1 b1) one` — a two-step composition of
+    /// `coprime_of_dvd_right` (shrink `b2` to `b1`) then `coprime_of_dvd_left`
+    /// (shrink `a2` to `a1`).
+    pub coprime_of_dvd: NameId,
+    /// `Nat.coprime_self_add_right : ∀ m n, Iff (Eq (gcd m (add m n)) one)
+    /// (Eq (gcd m n) one)` — [`coprime_add_self_right`](Self::coprime_add_self_right)
+    /// with `m`/`n`'s sum reordered via `add_comm`: the only difference is
+    /// which side of `add` carries `m`.
+    pub coprime_self_add_right: NameId,
+    /// `Nat.Coprime.symmetric : ∀ a b, Eq (gcd a b) one → Eq (gcd b a) one` —
+    /// `gcd a b` and `gcd b a` divide each other (`gcd_dvd_left`/
+    /// `gcd_dvd_right` both orderings plus `dvd_gcd`), so `dvd_antisymm`
+    /// gives `gcd a b = gcd b a` and the hypothesis transports along it.
+    pub coprime_symmetric: NameId,
+    /// `Nat.coprime_or_dvd_of_prime : ∀ p, prime_condition p → ∀ i, Or
+    /// (Eq (gcd p i) one) (dvd p i)` — decides `beq (gcd p i) one`
+    /// (`Bool.rec`, fully constructive): the `true` branch gives `Coprime p i`
+    /// directly (`eq_of_beq_eq_true`), the `false` branch gives
+    /// `Not (Coprime p i)` (`ne_of_beq_eq_false`), which
+    /// `prime_dvd_iff_not_coprime` converts to `dvd p i`.
+    pub coprime_or_dvd_of_prime: NameId,
 
     // --- binomial coefficients (`choose.rs`) --------------------------------
     /// `Nat.choose : Nat → Nat → Nat`, by structural recursion on both
@@ -2173,6 +2196,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             coprime_of_dvd_right: kernel.name_str(nat, "coprime_of_dvd_right"),
             prime_dvd_iff_not_coprime: kernel.name_str(nat, "prime_dvd_iff_not_coprime"),
             coprime_add_self_right: kernel.name_str(nat, "coprime_add_self_right"),
+            coprime_of_dvd: kernel.name_str(nat, "coprime_of_dvd"),
+            coprime_self_add_right: kernel.name_str(nat, "coprime_self_add_right"),
+            coprime_symmetric: kernel.name_str(nat, "coprime_symmetric"),
+            coprime_or_dvd_of_prime: kernel.name_str(nat, "coprime_or_dvd_of_prime"),
             choose: kernel.name_str(nat, "choose"),
             choose_zero_right: kernel.name_str(nat, "choose_zero_right"),
             choose_succ_succ: kernel.name_str(nat, "choose_succ_succ"),
@@ -2406,8 +2433,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_coprime_lcm_eq_mul(&mut d, &p)?;
         declare_coprime_of_lt_prime(&mut d, &p)?;
         declare_coprime_of_dvd(&mut d, &p)?;
+        declare_coprime_of_dvd_both(&mut d, &p)?;
         declare_prime_dvd_iff_not_coprime(&mut d, &p)?;
         declare_coprime_add_self_right(&mut d, &p)?;
+        declare_coprime_self_add_right(&mut d, &p)?;
+        declare_coprime_symmetric(&mut d, &p)?;
+        declare_coprime_or_dvd_of_prime(&mut d, &p)?;
         declare_euclid(&mut d, &p)?;
         declare_choose_all(&mut d, &p)?;
         declare_binomial_theorem(&mut d, &p)?;

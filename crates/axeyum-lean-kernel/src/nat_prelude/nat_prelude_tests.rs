@@ -644,8 +644,12 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.coprime_of_lt_prime,
         p.coprime_of_dvd_left,
         p.coprime_of_dvd_right,
+        p.coprime_of_dvd,
         p.prime_dvd_iff_not_coprime,
         p.coprime_add_self_right,
+        p.coprime_self_add_right,
+        p.coprime_symmetric,
+        p.coprime_or_dvd_of_prime,
         p.choose_zero_right,
         p.choose_succ_succ,
         p.zero_choose_succ,
@@ -6128,7 +6132,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        65 + 333,
+        65 + 337,
         "every promised definition and theorem must be rendered"
     );
 }
