@@ -229,8 +229,8 @@ use primes::{
     declare_coprime_of_dvd, declare_coprime_of_dvd_both, declare_coprime_of_lt_prime,
     declare_coprime_or_dvd_of_prime, declare_coprime_self_add_right, declare_coprime_symmetric,
     declare_coprime_two_left, declare_coprime_two_right, declare_euclid,
-    declare_prime_dvd_iff_not_coprime, declare_prime_even_iff, declare_prime_not_dvd_mul,
-    declare_prime_odd_of_ne_two, declare_primes,
+    declare_prime_dvd_iff_not_coprime, declare_prime_dvd_of_dvd_pow, declare_prime_even_iff,
+    declare_prime_not_dvd_mul, declare_prime_odd_of_ne_two, declare_primes,
 };
 use rectangle::declare_rectangle;
 use relation::{
@@ -1003,6 +1003,17 @@ pub struct NatPrelude {
     /// splits into `dvd p m ∨ dvd p n`, and each branch contradicts one of
     /// the two hypotheses directly.
     pub prime_not_dvd_mul: NameId,
+    /// `Nat.prime_dvd_of_dvd_pow : ∀ p m n, prime_condition p → dvd p (pow m
+    /// n) → dvd p m` — induction on `n`. `n = 0`: `pow m 0 = 1`
+    /// (`pow_zero`), and a prime cannot divide `1` (the same
+    /// `le_of_dvd`/`le_trans`/`le_of_succ_le_succ`/`not_succ_le_zero`
+    /// refutation `prime_dvd_iff_not_coprime`'s `mp` branch already uses
+    /// against `p ≤ 1`), so the hypothesis is vacuous. `n = succ j`:
+    /// `pow m (succ j) = mul (pow m j) m` (`pow_succ`), and `euclid_lemma`
+    /// splits `dvd p (pow m j * m)` into `dvd p (pow m j) ∨ dvd p m` — the
+    /// first branch applies the induction hypothesis, the second **is**
+    /// the goal.
+    pub prime_dvd_of_dvd_pow: NameId,
 
     // --- binomial coefficients (`choose.rs`) --------------------------------
     /// `Nat.choose : Nat → Nat → Nat`, by structural recursion on both
@@ -2312,6 +2323,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             prime_odd_of_ne_two: kernel.name_str(nat, "prime_odd_of_ne_two"),
             prime_even_iff: kernel.name_str(nat, "prime_even_iff"),
             prime_not_dvd_mul: kernel.name_str(nat, "prime_not_dvd_mul"),
+            prime_dvd_of_dvd_pow: kernel.name_str(nat, "prime_dvd_of_dvd_pow"),
             choose: kernel.name_str(nat, "choose"),
             choose_zero_right: kernel.name_str(nat, "choose_zero_right"),
             choose_succ_succ: kernel.name_str(nat, "choose_succ_succ"),
@@ -2633,6 +2645,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_prime_odd_of_ne_two(&mut d, &p)?;
         declare_prime_even_iff(&mut d, &p)?;
         declare_prime_not_dvd_mul(&mut d, &p)?;
+        declare_prime_dvd_of_dvd_pow(&mut d, &p)?;
         declare_cantor_all(&mut d, &p)?;
         declare_even_of_even_sq(&mut d, &p)?;
         declare_no_rational_sqrt_two(&mut d, &p)?;

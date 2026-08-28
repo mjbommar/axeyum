@@ -2224,3 +2224,121 @@ pub(super) fn declare_prime_not_dvd_mul(
     })?;
     Ok(())
 }
+
+/// `dvd p_var one → False`, for a prime `p_var`: the same
+/// `le_of_dvd`/`le_trans`/`le_of_succ_le_succ`/`not_succ_le_zero` route
+/// [`declare_prime_dvd_iff_not_coprime`]'s `mp` branch already uses against
+/// `p ≤ 1` (there reached through `p ∣ 1`), pulled out so
+/// [`declare_prime_dvd_of_dvd_pow`]'s base case can reuse it directly.
+fn refute_dvd_one_against_prime(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    p_var: ExprId,
+    prime_hyp: ExprId,
+    dvd_p_one: ExprId,
+) -> ExprId {
+    let one = d.num(1);
+    let two = d.num(2);
+    let zero = d.zero();
+    let (lower_ty, divisors_ty) = prime_parts(d, p, p_var);
+    let two_le_p = and_left(d, lower_ty, divisors_ty, prime_hyp);
+    let one_le_one = d.lemma(p.le_refl_thm, &[one]);
+    let p_le_1 = d.lemma(p.le_of_dvd, &[p_var, one, one_le_one, dvd_p_one]);
+    let two_le_1 = d.lemma(p.le_trans, &[two, p_var, one, two_le_p, p_le_1]);
+    let one_le_zero = d.lemma(p.le_of_succ_le_succ, &[one, zero, two_le_1]);
+    d.lemma(p.not_succ_le_zero, &[zero, one_le_zero])
+}
+
+/// `Nat.prime_dvd_of_dvd_pow : ∀ p m n, prime_condition p → dvd p (pow m n)
+/// → dvd p m`.
+///
+/// See [`NatPrelude::prime_dvd_of_dvd_pow`] for the route: induction on `n`.
+/// `n = 0`: `pow m 0 = 1` (`pow_zero`), and
+/// [`refute_dvd_one_against_prime`] rules out `dvd p 1`, so the hypothesis
+/// is vacuous. `n = succ j`: `pow m (succ j) = mul (pow m j) m`
+/// (`pow_succ`), and `euclid_lemma` splits `dvd p (mul (pow m j) m)` into
+/// `dvd p (pow m j) ∨ dvd p m` — the first branch applies the induction
+/// hypothesis, the second **is** the goal.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_prime_dvd_of_dvd_pow(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.prime_dvd_of_dvd_pow, 3, &|d, v| {
+        let (p_var, m_var, n_var) = (v[0], v[1], v[2]);
+
+        let prime_ty = prime_condition(d, &p, p_var);
+        let dvd_m_ty = d.dvd(p_var, m_var);
+
+        let prime_fv = d.fresh_fvar();
+        let prime_hyp = d.kernel().fvar(prime_fv);
+
+        let claim = |d: &mut NatDev<'_>, x: ExprId| {
+            let pw = d.pow(m_var, x);
+            let dvd_pw_ty = d.dvd(p_var, pw);
+            d.arrow(dvd_pw_ty, dvd_m_ty)
+        };
+
+        let at_zero = |d: &mut NatDev<'_>| {
+            let zero = d.zero();
+            let one = d.num(1);
+            let pw0 = d.pow(m_var, zero);
+            let dvd_pw0_ty = d.dvd(p_var, pw0);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let eq_pf = d.lemma(p.pow_zero, &[m_var]);
+            let motive = d.eq_motive(pw0, &|d, x| d.dvd(p_var, x));
+            let dvd_one = d.transport(pw0, motive, h, one, eq_pf);
+            let false_pf = refute_dvd_one_against_prime(d, &p, p_var, prime_hyp, dvd_one);
+            let body = absurd(d, &p, dvd_m_ty, false_pf);
+            d.lam_fv(h_fv, dvd_pw0_ty, body)
+        };
+
+        let at_succ = |d: &mut NatDev<'_>, j: ExprId, ih: ExprId| {
+            let sj = d.succ(j);
+            let pw_sj = d.pow(m_var, sj);
+            let dvd_pw_sj_ty = d.dvd(p_var, pw_sj);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            let eq_pf = d.lemma(p.pow_succ, &[m_var, j]);
+            let pw_j = d.pow(m_var, j);
+            let prod = d.mul(pw_j, m_var);
+            let motive = d.eq_motive(pw_sj, &|d, x| d.dvd(p_var, x));
+            let dvd_prod = d.transport(pw_sj, motive, h, prod, eq_pf);
+
+            let split = d.lemma(p.euclid_lemma, &[p_var, pw_j, m_var, prime_hyp, dvd_prod]);
+            let dvd_pwj_ty = d.dvd(p_var, pw_j);
+
+            let on_pwj = {
+                let hh_fv = d.fresh_fvar();
+                let hh = d.kernel().fvar(hh_fv);
+                let result = d.apply(ih, &[hh]);
+                d.lam_fv(hh_fv, dvd_pwj_ty, result)
+            };
+            let on_m = {
+                let hm_fv = d.fresh_fvar();
+                let hm = d.kernel().fvar(hm_fv);
+                d.lam_fv(hm_fv, dvd_m_ty, hm)
+            };
+            let result = or_cases(d, &p, dvd_pwj_ty, dvd_m_ty, dvd_m_ty, on_pwj, on_m, split);
+            d.lam_fv(h_fv, dvd_pw_sj_ty, result)
+        };
+
+        let induction_proof = d.induct(&claim, &at_zero, &at_succ, n_var);
+
+        let stmt = {
+            let pw_n = d.pow(m_var, n_var);
+            let dvd_pw_n_ty = d.dvd(p_var, pw_n);
+            let inner = d.arrow(dvd_pw_n_ty, dvd_m_ty);
+            d.arrow(prime_ty, inner)
+        };
+        let proof = d.lam_fv(prime_fv, prime_ty, induction_proof);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
