@@ -126,6 +126,7 @@ now. Nothing was deleted.
 | 2026-08-28 | cw-bridge | `CReal.converges_of_abs_diff_le` — `close_within` evidence → `Converges`, axiom-free, first-attempt accept |
 | 2026-08-28 | cw-bridge | the shift bridge it was sized to need already existed: `CReal.sharedIndexToCanonical` (`integral.rs`) + `cauchy_of_abs_diff_le` (`ivt.rs`) |
 | 2026-08-28 | `68e0a48d8` | dedup: cite `CReal.abs_add_le` instead of re-deriving it, in 4 `creal/` files; fix a stale "does not exist" doc comment |
+| 2026-08-28 | rs-cauchy | no code change — `riemannSum_cauchy`/`CReal.integral` roadmap through `integral_by_parts` confirmed already landed and axiom-free; re-verified `creal_prelude_builds` (96.79s) and environment-derived coverage check (14.92s, `--release`) |
 | 2026-08-27 | (uncommitted at status-file write time) | `CReal.sumRange_cauchy_of_abs_cauchy` / `CReal.sumRange_converges_of_abs_converges` (absolute convergence implies convergence) plus a soundness-negative control; curriculum rows 18 and 22–23 corrected. |
 | 2026-08-27 | (uncommitted at status-file write time) | Ten new `artifacts/facts/F-creal-*.json` entries for the Ch.13/14 Riemann integral construction and algebra (`riemannSum_cauchy`, `integral`, `integral_converges`, `integral_const`, `integral_add`, `integral_le`, `integral_scale`, `integral_witness_independent`, `riemannSum_integral_close`, `sharedIndexToCanonical`); `python3 scripts/validate-facts.py` green (708 facts, 0 errors). |
 | 2026-08-27 | (uncommitted at status-file write time) | Added `--require-declaration <name> [--require-kind <kind>]` to `crates/axeyum-lean-kernel/examples/kernel_declaration_projection.rs`: a direct, fail-on-absence presence checker for `Declaration::Definition`s (and any other kind), mutation-tested against `CReal.integral`. Upgraded `F:creal-integral`'s `kernel-CReal.integral` evidence to use it. Registered 14 new `artifacts/facts/F-creal-*.json` entries for Spivak Ch.18 (`e`) and Ch.22-23 (series convergence tests): `creal-e`, `creal-e-converges`, `creal-two-le-e`, `creal-e-le-three`, `creal-e-le-four`, `creal-expterm-le-geom`, `creal-expdominantcauchy`, `creal-cauchyofpointwiseequiv`, `creal-geomcauchy`, `creal-sumrange-comparisontest`, `creal-sumrange-cauchy-of-dominated`, `creal-sumrange-converges-of-dominated`, `creal-sumrange-cauchy-of-abs-cauchy`, `creal-sumrange-converges-of-abs-converges`. `python3 scripts/validate-facts.py` green (722 facts, 0 errors). |
@@ -7202,6 +7203,53 @@ transcript; the remaining un-swept files are the largest ones
 (`integral.rs` 29.5k lines, `derivative.rs`, `monotone.rs`, `ivt.rs`) —
 worth another pass with fresh eyes rather than repeating my grep signals,
 which are now mostly exhausted against what remains.
+
+**Your lane's block (`DONE`, rs-cauchy, 2026-08-28).** No code changes: the
+whole task was already landed on `main` before this lane started, 35 commits
+back at `590925680` (`feat(creal): CReal.integral_by_parts`).
+
+Task brief: build `riemannSum_cauchy`, predicted to be the literal
+`CReal.Cauchy (fun m => riemannSum F a b m)` member of the family, supplied
+by `CReal.cauchy_of_abs_diff_le` (landed today in `creal/ivt.rs` for the IVT
+root). That prediction did not hold, but the underlying goal — closing the
+`riemannSum` roadmap through `CReal.integral` — is done, by a different,
+already-integrated route:
+
+- `CReal.riemannSum_cauchy` (`integral.rs`, `declare_riemann_sum_cauchy`) is
+  the **`Within`-bound**, shared-index closeness statement (roadmap step 5),
+  explicitly documented as NOT the literal `CReal.Cauchy` shape.
+- The literal-Cauchy-*rate* shape needed to build `CReal.integral` is instead
+  `CReal.riemannSumDeepCauchyFolded` (`declare_riemann_sum_deep_cauchy_folded`),
+  reached via re-indexing (`deep`) rather than via `cauchy_of_abs_diff_le` —
+  `cauchy_of_abs_diff_le` is used only in `creal/ivt.rs` (its own consumer),
+  never in `integral.rs` (confirmed by grep).
+- `CReal.integral` itself (`declare_creal_integral`) is built from
+  `regular_of_scaled_cauchy` fed that folded witness, and the whole chapter
+  continues past it — `integral_converges`, `integral_const`,
+  `integral_witness_independent`, `integral_add`, `integral_le`,
+  `integral_scale`, `integral_split` (+ split_arbitrary/split_exact/
+  split_scale_invariant/congr_of_uniformly_continuous), `integral_abs_le`,
+  `ftc_estimates`, `integral_eq_antideriv_diff`, and
+  `integral_by_parts` — all present in `EXPECTED_STEP_ORDER`
+  (`creal_tests.rs`) and all axiom-free.
+
+So: **the note that prompted this lane's brief was accurate about the
+`cauchy_of_abs_diff_le` lemma existing, but the roadmap it named a gap in had
+already been closed by the time this lane read it — by a different technique,
+not the one predicted.** This is a precisely-sized negative: nothing was
+missing to build, only stale to re-verify.
+
+Verification run (no source changes, so this is a confirmation, not a
+regression check):
+- `creal_prelude_builds`: ok, 96.79s (single test, debug).
+- `every_creal_declaration_is_checked_and_axiom_free` (`--release`): ok,
+  14.92s — confirms environment-derived coverage, not just the hand-written
+  inventory list, so this is a real check that the whole `creal` roadmap
+  including `riemannSum_cauchy` through `integral_by_parts` is axiom-free.
+
+No `expect(dead_code)` annotations touched (nothing new consumed). No files
+in scope (`creal/integral.rs`, `creal/inventory/integral.rs`, `creal.rs`,
+`creal/creal_tests.rs`) were edited.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
