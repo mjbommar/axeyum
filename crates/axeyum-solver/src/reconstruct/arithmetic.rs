@@ -405,8 +405,8 @@ impl LraReconstructCtx {
     /// # Errors
     ///
     /// As [`Self::try_new_over_constructed_reals`].
-    /// The build runs on a worker thread carrying
-    /// [`CREAL_PRELUDE_STACK_BYTES`]: the constructed-real development no
+    /// The build runs on a worker thread carrying 256 MiB of stack
+    /// (`CREAL_PRELUDE_STACK_BYTES`): the constructed-real development no
     /// longer type-checks within the 2 MiB a spawned thread gets by default,
     /// and running out aborts the whole process rather than returning an error.
     pub fn try_new_over_constructed_reals_reporting()

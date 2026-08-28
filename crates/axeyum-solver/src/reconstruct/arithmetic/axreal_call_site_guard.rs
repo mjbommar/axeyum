@@ -94,8 +94,11 @@ pub(crate) fn scan_for_axreal_constructor_calls(source: &str, file: &Path) -> Ve
             pending_cfg_test = true;
         }
 
-        let opens = code_part.matches('{').count() as i64;
-        let closes = code_part.matches('}').count() as i64;
+        // `try_from` rather than `as`: a source line cannot hold `i64::MAX`
+        // braces, but a silent wrap would make the depth counter run backwards
+        // and mis-attribute a whole span, so saturate visibly instead.
+        let opens = i64::try_from(code_part.matches('{').count()).unwrap_or(i64::MAX);
+        let closes = i64::try_from(code_part.matches('}').count()).unwrap_or(i64::MAX);
 
         if pending_cfg_test && opens > 0 {
             // The `{` that opens the cfg(test)-attributed item. Record the
@@ -279,7 +282,7 @@ pub fn shipped_helper() {
 
     /// **The real gate.** No shipped file under `src/reconstruct/` — this
     /// crate's actual, on-disk source tree, not a hand-maintained list of
-    /// files believed to be clean — constructs the AxReal signature outside a
+    /// files believed to be clean — constructs the `AxReal` signature outside a
     /// `#[cfg(test)]` span.
     ///
     /// This is a *discriminating* assertion: reintroducing

@@ -134,6 +134,11 @@ fn run() -> Result<(), String> {
 /// A wildcard would have let that happen again. With every variant named, a new
 /// `ScriptCommand` fails to compile here until someone decides which side of the
 /// line it falls on — which is the decision that was skipped last time.
+// The accepting arms are kept apart on purpose: each group states a DIFFERENT
+// reason a command leaves the flat view alone, and merging them into one arm
+// would delete exactly the reasoning that was missing when this predicate went
+// stale.
+#[allow(clippy::match_same_arms)]
 fn is_flat(command: &ScriptCommand) -> bool {
     match command {
         // Assertions and the single decision point are the flat view itself.
