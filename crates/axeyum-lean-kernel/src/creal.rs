@@ -1085,22 +1085,6 @@ pub struct CRealPrelude {
     /// [`Self::exp_term_succ_scale`] applications and `R² <= 3` (`Rat.ble`
     /// computation on `8/5 * 8/5` vs `3/1`). See `creal/cos_sign.rs`.
     pub cos_wide_tail_antitone: NameId,
-    /// `CReal.cosWideSeriesConverges : Converges (sumRange t) (cosFnWide
-    /// R)`, `t j := mul (pow (neg one) j) (mul (expTerm (add j j)) (pow R
-    /// (add j j)))`, `R := 8/5` -- π rung 2 item 3, the `Converges` witness
-    /// [`Self::alternating_upper_bound_tail`] needs at cosine. Composes
-    /// [`Self::converges_of_abs_diff_le`] with `cosFnWideUniformConverges`'s
-    /// own `.spec` at the fixed point `R`, bridged per index from
-    /// `cosFnTerm`'s shape to `t`'s by one `mul_assoc`
-    /// ([`Self::sum_range_congr`]). See `creal/cos_sign.rs`.
-    pub cos_wide_series_converges: NameId,
-    /// `CReal.cosWideNonpositive : le (cosFnWide R) zero`, `R := 8/5` -- π
-    /// rung 2's target. [`Self::alternating_upper_bound_tail`] (at
-    /// [`Self::cos_wide_tail_nonneg`]/[`Self::cos_wide_tail_antitone`]/
-    /// [`Self::cos_wide_series_converges`]) gives `le (cosFnWide R)
-    /// (sumRange t 3)`; the numeric leaf `sumRange t 3 = -13/1875 <= 0`
-    /// closes by `Rat.ble`'s own computation. See `creal/cos_sign.rs`.
-    pub cos_wide_nonpositive: NameId,
     /// `CReal.converges_le : ∀ f g L M, Converges f L → Converges g M →
     /// (∀ n, le (f n) (g n)) → le L M`.
     ///
@@ -6416,8 +6400,6 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         alternating_upper_bound_tail: kernel.name_str(creal, "alternatingUpperBoundTail"),
         cos_wide_tail_nonneg: kernel.name_str(creal, "cosWideTailNonneg"),
         cos_wide_tail_antitone: kernel.name_str(creal, "cosWideTailAntitone"),
-        cos_wide_series_converges: kernel.name_str(creal, "cosWideSeriesConverges"),
-        cos_wide_nonpositive: kernel.name_str(creal, "cosWideNonpositive"),
         converges_le: kernel.name_str(creal, "converges_le"),
         bounded: kernel.name_str(creal, "Bounded"),
         converges_bounded: kernel.name_str(creal, "converges_bounded"),
@@ -12219,55 +12201,6 @@ const STEPS: &[BuildStep] = &[
         ],
         provides: &[|p: CRealPrelude| p.cos_wide_tail_antitone],
         run: cos_sign::declare_cos_wide_tail_antitone,
-    },
-    BuildStep {
-        label: "cos_sign::declare_cos_wide_series_converges",
-        requires: &[
-            |p: CRealPrelude| p.abs_congr,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.cos_fn_term,
-            |p: CRealPrelude| p.cos_fn_wide,
-            |p: CRealPrelude| p.cos_fn_wide_uniform_converges,
-            |p: CRealPrelude| p.converges_of_abs_diff_le,
-            |p: CRealPrelude| p.exp_term,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.pow,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.sum_range_congr,
-            |p: CRealPrelude| p.uconv_rate,
-            |p: CRealPrelude| p.uconv_spec,
-        ],
-        provides: &[|p: CRealPrelude| p.cos_wide_series_converges],
-        run: cos_sign::declare_cos_wide_series_converges,
-    },
-    BuildStep {
-        label: "cos_sign::declare_cos_wide_nonpositive",
-        requires: &[
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.alternating_upper_bound_tail,
-            |p: CRealPrelude| p.cos_fn_wide,
-            |p: CRealPrelude| p.cos_wide_series_converges,
-            |p: CRealPrelude| p.cos_wide_tail_antitone,
-            |p: CRealPrelude| p.cos_wide_tail_nonneg,
-            |p: CRealPrelude| p.exp_term,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.neg_one_pow_double,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_mul,
-            |p: CRealPrelude| p.of_rat_pow,
-            |p: CRealPrelude| p.pow,
-            |p: CRealPrelude| p.sum_range,
-        ],
-        provides: &[|p: CRealPrelude| p.cos_wide_nonpositive],
-        run: cos_sign::declare_cos_wide_nonpositive,
     },
 ];
 
