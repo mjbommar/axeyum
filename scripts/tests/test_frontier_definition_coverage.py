@@ -165,6 +165,53 @@ class KernelIndexValidationGuardsTests(unittest.TestCase):
         frontier.validate_kernel_index(index)  # must not raise
 
 
+class MutationNegativeControlWarningTests(unittest.TestCase):
+    """A deliberately-perturbed proposition must never read as a target.
+
+    Found 2026-08-28: a lane was handed `F:ml430-mutation-c20db9b4c60b816ce738bdf2`
+    -- `Nat.Coprime 0 0`, a polarity reversal of `Nat.not_coprime_zero_zero` --
+    and recognised it as FALSE (`gcd 0 0 = 0`, not 1) without any help from the
+    queue, which called it "proof route only, needs a kernel proof".
+    """
+
+    def _line(self, fact_id: str, statement: str) -> str:
+        fact = {
+            "id": fact_id,
+            "statement": statement,
+            "depends_on": [],
+            "formal": {"fragment": "Nat"},
+        }
+        return frontier.describe(fact, {fact_id: fact}, set(), {}, {}, False, None)
+
+    def test_a_mutation_fact_is_warned_about_and_names_its_kind(self) -> None:
+        line = self._line(
+            "F:ml430-mutation-deadbeef",
+            "A `polarity-reversal` mutation of the pinned source proposition `X`.",
+        )
+        self.assertIn("MUTATION", line)
+        self.assertIn("polarity-reversal", line)
+
+    def test_an_ordinary_fact_is_NOT_warned_about(self) -> None:
+        """The direction that matters: warn on everything and it is noise."""
+        line = self._line(
+            "F:ml430-nat-choose-mono-a1af9c18",
+            "A perfectly ordinary `Nat` proposition.",
+        )
+        self.assertNotIn("MUTATION", line)
+
+    def test_a_mutation_with_no_backticked_kind_still_warns(self) -> None:
+        """Degrade to a warning, never to silence -- silence is the failure."""
+        line = self._line("F:ml430-mutation-deadbeef", "no marks here")
+        self.assertIn("MUTATION", line)
+        self.assertIn("unclassified", line)
+
+    def test_the_real_ledger_still_contains_mutation_rows(self) -> None:
+        """Non-vacuity: if these ever vanish, the guard is untested."""
+        import glob
+        found = glob.glob(str(ROOT / "artifacts/facts/F-ml430-mutation-*.json"))
+        self.assertGreater(len(found), 0)
+
+
 class HeldOutPartitionWarningTests(unittest.TestCase):
     """The queue must say when a fact is blind evaluation population.
 

@@ -727,6 +727,12 @@ def describe(fact: dict, facts: dict[str, dict], show_unlocks: bool,
         line += f"\n      needs first: {', '.join(unmet)}"
     if show_unlocks and unlocks.get(fact["id"]):
         line += f"\n      would unlock: {', '.join(unlocks[fact['id']])}"
+    kind = mutation_kind(fact)
+    if kind is not None:
+        line += (f"\n      \u26d4 MUTATION ({kind}) — a deliberate perturbation of a "
+                 "pinned proposition, kept as a NEGATIVE CONTROL. It is not a target "
+                 "and may well be false; proving one is a soundness alarm, not a "
+                 "result. Do NOT dispatch a lane at it.")
     if fact["id"] in held_out_fact_ids():
         line += ("\n      \u26d4 HELD-OUT — this is blind evaluation population. "
                  "Do NOT close it, and do NOT dispatch a lane at it. Closing one "
@@ -770,6 +776,31 @@ def held_out_fact_ids() -> frozenset[str]:
         )
     except (OSError, ValueError, KeyError, TypeError):
         return frozenset()
+
+
+def mutation_kind(fact: dict) -> str | None:
+    """The mutation class of a deliberately-perturbed proposition, or None.
+
+    `F:ml430-mutation-*` rows are NOT targets. Each is a named perturbation of
+    a pinned source proposition -- `polarity-reversal`, `premise-removal`,
+    `bound-strengthening` and so on -- and they exist to be **negative
+    controls for the whole system**. `Nat.Coprime 0 0` is a polarity reversal
+    of `Nat.not_coprime_zero_zero`, and it is FALSE: `gcd 0 0 = 0`, not 1.
+
+    Proving one would not be an achievement; it would be a soundness alarm.
+    Every one carries `external_status: unknown` for that reason -- the
+    literature has not settled them because they are not propositions anyone
+    asserts.
+
+    Found 2026-08-28 by a lane that was handed one as work, recognised it as
+    false, and declined -- correctly, and without any help from this queue,
+    which described it as "proof route only, needs a kernel proof".
+    """
+    if "-mutation-" not in fact.get("id", ""):
+        return None
+    text = fact.get("statement") or ""
+    marks = [seg for seg in text.split("`")[1::2] if seg]
+    return marks[0] if marks else "unclassified"
 
 
 def route_class(fragment: str, decidable: set[str]) -> str:
