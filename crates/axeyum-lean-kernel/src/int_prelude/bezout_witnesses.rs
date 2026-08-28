@@ -151,6 +151,14 @@ fn bool_select_int(
     d.apply(rec, &[motive, on_false, on_true, condition])
 }
 
+/// The base answer `(0, 1)` — `gcd 0 n = n = 0*0 + n*1` — selected by
+/// `selector`. Both the fuel-`zero` row and the `m = zero` row return it.
+fn base_pair(d: &mut IntDev<'_>, selector: ExprId) -> ExprId {
+    let zero = d.izero();
+    let one_i = d.ione();
+    bool_select_int(d, selector, zero, one_i)
+}
+
 /// `Nat.xgcdAux fuel m n selector`.
 fn xgcd_aux(d: &mut IntDev<'_>, fuel: ExprId, m: ExprId, n: ExprId, selector: ExprId) -> ExprId {
     let f = d.int().xgcd_aux;
@@ -196,13 +204,6 @@ pub(super) fn declare_xgcd_aux(d: &mut IntDev<'_>) -> Result<(), KernelError> {
     let sel_to_int = d.arrow(bool_ty, int_ty);
     let n_to_row = d.arrow(nat, sel_to_int);
     let row_ty = d.arrow(nat, n_to_row);
-
-    // Shared base answer: the pair `(0, 1)`, i.e. `gcd 0 n = n = 0*0 + n*1`.
-    fn base_pair(d: &mut IntDev<'_>, selector: ExprId) -> ExprId {
-        let zero = d.izero();
-        let one_i = d.ione();
-        bool_select_int(d, selector, zero, one_i)
-    }
 
     // fuel = zero: answer as if `m` were already zero.
     let zero_minor = {
