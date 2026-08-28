@@ -1,0 +1,63 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-bit-true"
+  ],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- bit_true_pos 2>/dev/null | grep -Ec '^Nat\\.bit_true_pos[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.bit_true_pos",
+      "kernel_declaration": "Nat.bit_true_pos",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. The proof term is `zero_lt_succ (mul 2 n)` -- the already-proved generic lemma `0 < succ m` instantiated at `m := mul 2 n` -- accepted directly by the kernel's definitional-equality check, because `bit true n` unfolds (delta on `Nat.bit`, iota on the inner `Bool.rec`, iota again on `Nat.add`'s successor case) to exactly `succ (mul 2 n)`. No case-split combinator and no induction were needed for this theorem specifically; the case split is already paid for by `Nat.bit`'s own construction. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the count is tested, so the exit status depends on what the run found.",
+      "supports": "0 < bit(true, n), for every n"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::bit_computes_and_its_boundary_theorems_apply",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "id": "instantiation-Nat.bit_true_pos",
+      "kernel_declaration": "Nat.bit_true_pos",
+      "kind": "kernel-term",
+      "notes": "Applies `Nat.bit_true_pos` at `n = 6` and confirms (via `Kernel::infer` + `Kernel::def_eq`) the inferred conclusion is exactly `Lt 0 (bit true 6)`, i.e. `Lt 0 13` after full reduction -- a positive statement at a concrete, nontrivial instance rather than a vacuous universal.",
+      "supports": "the statement instantiates to the promised strict inequality at a concrete witness"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.bit_true_pos",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. `bit_true_pos`'s proof only ever composes `Nat.zero_le`, `Nat.le_succ_succ` (via the `zero_lt_succ` term-builder), and `Nat.rec`, none of them asserted, so this row stays empty.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0"
+    ],
+    "language": "lean4",
+    "statement": "theorem Nat.bit_true_pos : ((x0 : AxNat) -> AxNat.lt AxNat.zero (AxNat.bit Bool.true x0))"
+  },
+  "id": "F:nat-bit-true-pos",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*) -- the `nat` prelude's trusted surface measures zero.\n\nThis is the payoff of choosing `nat_prelude/bits.rs`'s `add`-outermost `bit b n := add (mul 2 n) (cond b 1 0)` over Mathlib's `cond`-outermost `cond b (2n+1) (2n)`: because `bit true n` unfolds all the way to `succ (mul 2 n)` by delta+iota alone, an already-proved generic lemma about `succ` (`zero_lt_succ`) applies here with NO new case-split machinery, where the `cond`-outermost form would need one (as `log.rs`'s `le_of_bool_select` does for the analogous situation in `Nat.log`).",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane 207-nat-bitwise",
+    "source": "`declare_bit_all` (`crates/axeyum-lean-kernel/src/nat_prelude/bits.rs`), a defeq corollary of `zero_lt_succ`"
+  },
+  "schema_version": 1,
+  "statement": "Appending the bit `true` to the little end of any `n` produces a strictly positive result.",
+  "title": "0 < bit(true, n)"
+}

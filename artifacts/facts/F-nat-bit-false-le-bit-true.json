@@ -1,0 +1,64 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-bit-false",
+    "F:nat-bit-true"
+  ],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- bit_false_le_bit_true 2>/dev/null | grep -Ec '^Nat\\.bit_false_le_bit_true[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.bit_false_le_bit_true",
+      "kernel_declaration": "Nat.bit_false_le_bit_true",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. The proof term is `le_succ (mul 2 n)` -- the already-proved generic lemma `m <= succ m` instantiated at `m := mul 2 n` -- accepted directly by the kernel's definitional-equality check, because `bit false n` unfolds to `mul 2 n` and `bit true n` unfolds to `succ (mul 2 n)` (delta+iota, per `F:nat-bit-false`/`F:nat-bit-true`). No case-split combinator and no induction were needed for this theorem specifically. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the count is tested, so the exit status depends on what the run found.",
+      "supports": "bit(false, n) <= bit(true, n), for every n"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::bit_computes_and_its_boundary_theorems_apply",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "id": "instantiation-Nat.bit_false_le_bit_true",
+      "kernel_declaration": "Nat.bit_false_le_bit_true",
+      "kind": "kernel-term",
+      "notes": "Applies `Nat.bit_false_le_bit_true` at `n = 6` and confirms (via `Kernel::infer` + `Kernel::def_eq`) the inferred conclusion is exactly `Le (bit false 6) (bit true 6)`, with a REVERSED negative control (`Le (bit true 6) (bit false 6)`, i.e. `Le 13 12`) that must NOT def_eq the inferred type -- the direction is genuinely checked, not merely present.",
+      "supports": "the statement instantiates to the promised inequality, in the promised direction, at a concrete witness"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.bit_false_le_bit_true",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. `bit_false_le_bit_true`'s proof only ever composes `Nat.le_refl` and `Nat.le_step` (via the `le_succ` theorem) and `Nat.rec`, none of them asserted, so this row stays empty.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0"
+    ],
+    "language": "lean4",
+    "statement": "theorem Nat.bit_false_le_bit_true : ((x0 : AxNat) -> AxNat.le (AxNat.bit Bool.false x0) (AxNat.bit Bool.true x0))"
+  },
+  "id": "F:nat-bit-false-le-bit-true",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*) -- the `nat` prelude's trusted surface measures zero.\n\nLike `F:nat-bit-true-pos`, this is a defeq corollary bought by `nat_prelude/bits.rs`'s `add`-outermost construction: both `bit false n` and `bit true n` unfold to the SAME two terms (`mul 2 n` and `succ (mul 2 n)`) an already-proved generic order lemma (`le_succ`) already relates, so no new case-split machinery was needed. This is not itself the `F:ml430-*` Mathlib mirror family (those all name `Nat.bitwise`/`Nat.land`/`Nat.lor`/`Nat.ldiff`, none of which this lane declares); it is a genuinely new fact about this prelude's own `Nat.bit`.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane 207-nat-bitwise",
+    "source": "`declare_bit_all` (`crates/axeyum-lean-kernel/src/nat_prelude/bits.rs`), a defeq corollary of `le_succ`"
+  },
+  "schema_version": 1,
+  "statement": "For every n, appending bit `false` to n's little end is at most appending bit `true`.",
+  "title": "bit(false, n) <= bit(true, n)"
+}

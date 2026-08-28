@@ -132,6 +132,7 @@ mod algebra;
 mod bezout;
 mod binary;
 mod binomial;
+mod bits;
 mod ble;
 mod cantor;
 mod cardinality;
@@ -187,6 +188,7 @@ use binomial::{
     declare_binomial_theorem, declare_combinatorial_identities, declare_succ_mul_choose_eq,
     declare_succ_sub_of_le,
 };
+use bits::declare_bit_all;
 use ble::declare_boolean_le;
 use cantor::declare_cantor_all;
 use cardinality::declare_nat_pigeonhole;
@@ -2188,6 +2190,29 @@ pub struct NatPrelude {
     /// — [`log_aux_le_fuel`](Self::log_aux_le_fuel) specialized at `f := n`,
     /// since `log b n := logAux b n n` definitionally.
     pub log_le_self: NameId,
+    /// `Nat.bit : Bool → Nat → Nat`, `bit b n := add (mul 2 n) (cond b 1 0)`
+    /// (`Mathlib`: `Nat.bit`, `cond b (2 * n + 1) (2 * n)`). Non-recursive —
+    /// unlike `log`/`sqrt`/`clog` it needs no fuel device, since there is no
+    /// recursive call to justify. This shape (rather than Mathlib's own
+    /// `cond`-outermost form) normalizes to the same boundary values by
+    /// delta+iota alone; see `nat_prelude::bits` for the derivation.
+    pub bit: NameId,
+    /// `Nat.bit_false : ∀ n, Eq (bit false n) (mul 2 n)` (`Mathlib`:
+    /// `Nat.bit_false`) — `refl`: `cond false 1 0 ≡ 0` and `Nat.add`'s own
+    /// zero case (`add x zero ≡ x`) collapses the sum.
+    pub bit_false: NameId,
+    /// `Nat.bit_true : ∀ n, Eq (bit true n) (add (mul 2 n) 1)` (`Mathlib`:
+    /// `Nat.bit_true`) — `refl`: `cond true 1 0 ≡ 1` and both sides reduce to
+    /// the same normal form `succ (mul 2 n)`.
+    pub bit_true: NameId,
+    /// `Nat.bit_true_pos : ∀ n, Lt 0 (bit true n)` — `bit true n` unfolds
+    /// (delta+iota) to `succ (mul 2 n)`, so `zero_lt_succ` at `mul 2 n` is
+    /// accepted directly by defeq.
+    pub bit_true_pos: NameId,
+    /// `Nat.bit_false_le_bit_true : ∀ n, Le (bit false n) (bit true n)` — both
+    /// sides unfold to `mul 2 n` and `succ (mul 2 n)`, so `le_succ` at
+    /// `mul 2 n` is accepted directly by defeq.
+    pub bit_false_le_bit_true: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -2696,6 +2721,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             clog_one_right: kernel.name_str(nat, "clog_one_right"),
             log_aux_le_fuel: kernel.name_str(nat, "logAux_le_fuel"),
             log_le_self: kernel.name_str(nat, "log_le_self"),
+            bit: kernel.name_str(nat, "bit"),
+            bit_false: kernel.name_str(nat, "bit_false"),
+            bit_true: kernel.name_str(nat, "bit_true"),
+            bit_true_pos: kernel.name_str(nat, "bit_true_pos"),
+            bit_false_le_bit_true: kernel.name_str(nat, "bit_false_le_bit_true"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -2834,6 +2864,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // Needs `Nat.add`/`Nat.sub`/`Nat.div`/`Nat.ble`, all far above, and
         // nothing needs `Nat.clog`, so it goes last too.
         declare_clog_all(&mut d, &p)?;
+        // Needs `Nat.add`/`Nat.mul` (`declare_arithmetic`), `Nat.le_succ`
+        // (`order_extra`) and the `zero_lt_succ` term-builder, all far above;
+        // nothing needs `Nat.bit`, so it goes last too.
+        declare_bit_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {

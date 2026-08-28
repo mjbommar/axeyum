@@ -1,0 +1,61 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- bit_true 2>/dev/null | grep -Ec '^Nat\\.bit_true[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.bit_true",
+      "kernel_declaration": "Nat.bit_true",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. `Nat.bit b n` is stated `add (mul 2 n) (cond b 1 0)`; at `b = true`, `cond true 1 0` iota-reduces to `1 = succ zero`, and `Nat.add`'s successor case (`add x (succ j) ≡ succ (add x j)`) collapses the sum to `succ (mul 2 n)` -- the same normal form the RHS `add (mul 2 n) 1` itself reduces to. The proof is `Eq.refl`; the kernel closes it by delta+iota alone, no case-split combinator and no induction. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the count is tested, so the exit status depends on what the run found. The anchor `^Nat\\.bit_true[[:space:]]` matters here for the same reason as the sibling `bit_false` fact -- `bit_true` is not itself a prefix of another declared name in this build, but the anchor keeps the checker robust if one is added later.",
+      "supports": "bit(true, n) = 2*n + 1"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::bit_computes_and_its_boundary_theorems_apply",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "id": "compute-Nat.bit_true",
+      "kernel_declaration": "Nat.bit",
+      "kind": "kernel-term",
+      "notes": "`Kernel::def_eq` reduces `bit true n` at n in {0, 1, 6} to {1, 3, 13} directly (definition unfolding, no boundary theorem invoked), including negative controls (`bit false 6` must NOT def_eq `13`, `bit true 6` must NOT def_eq `12`), and separately confirms `Nat.bit_true`'s ADMITTED TYPE (via `Kernel::infer`) is exactly `Eq (bit true 6) (add (mul 2 6) 1)`.",
+      "supports": "the equation instantiates correctly and names the true branch's `2n+1` form"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.bit_true",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. `Nat.bit` needed no fuel device -- it is a plain non-recursive lambda over `Nat.add`/`Nat.mul`/`Bool.rec` -- so this command is what makes the axiom-freedom claim falsifiable rather than asserted.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0"
+    ],
+    "language": "lean4",
+    "statement": "theorem Nat.bit_true : ((x0 : AxNat) -> Eq.{1} AxNat (AxNat.bit Bool.true x0) (AxNat.add (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0) (AxNat.succ AxNat.zero)))"
+  },
+  "id": "F:nat-bit-true",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*) -- the `nat` prelude's trusted surface measures zero.\n\nCompanion to `F:nat-bit-false`: together the two are Mathlib's full case split on `Nat.bit`'s `Bool` argument (`cond b (2*n+1) (2*n)`), stated over this prelude's `add`-outermost construction. See `F:nat-bit-false`'s notes for why the definition did not exist before this lane, and why this does not flip any `F:ml430-*` mirror fact by hand.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane 207-nat-bitwise",
+    "source": "one of two definitional boundary equations `declare_bit_all` (`crates/axeyum-lean-kernel/src/nat_prelude/bits.rs`) admits alongside the `Nat.bit` definition"
+  },
+  "schema_version": 1,
+  "statement": "Appending the bit `true` to the little end of `n` equals `2 * n + 1`.",
+  "title": "bit(true, n) = 2n + 1"
+}
