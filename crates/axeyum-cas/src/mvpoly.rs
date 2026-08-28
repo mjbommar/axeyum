@@ -937,4 +937,90 @@ mod tests {
         let normalized = poly.gcd(&MvPoly::zero()).unwrap();
         assert_eq!(normalized, var_x().add(&MvPoly::constant(ri(1))).unwrap());
     }
+
+    // -------------------------------------------------------------------
+    // `Monomial::exponent_of` and `MvPoly::derivative_in`.
+    //
+    // Neither had a direct unit test anywhere in the crate before this: both
+    // are reachable only through several layers of higher-level machinery
+    // (the SOS Lie-derivative checker, Gosper/WZ summation, creative
+    // telescoping's ratio derivation), each of which is itself
+    // self-checking, so a bug here was not GUARANTEED to surface as a wrong
+    // verdict -- it would surface only if it happened to break one of those
+    // downstream identities rather than cancel out. These pin the power
+    // rule directly, independent of any of that machinery.
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn exponent_of_reads_the_stored_power_and_zero_for_an_absent_or_constant_variable() {
+        let mono = Monomial::from_powers(&[("x", 2), ("y", 3)]);
+        assert_eq!(mono.exponent_of("x"), 2);
+        assert_eq!(mono.exponent_of("y"), 3);
+        // A variable the monomial does not mention reads back as exponent 0,
+        // not a panic or a sentinel -- this is what lets `derivative_in`
+        // treat "does not appear" and "appears to the 0th power" the same.
+        assert_eq!(mono.exponent_of("z"), 0);
+        assert_eq!(Monomial::one().exponent_of("x"), 0);
+    }
+
+    #[test]
+    fn derivative_in_applies_the_power_rule_to_a_pure_power() {
+        // d/dx(x^3) = 3x^2.
+        let cubed = var_x().pow(3).unwrap();
+        let derivative = cubed.derivative_in("x").unwrap();
+        assert_eq!(derivative, term(3, &[("x", 2)]));
+        // A wrong coefficient (the classic off-by-one power-rule bug) must
+        // NOT be accepted as equal -- this is the negative half of the same
+        // check, not a separate decorative assertion.
+        assert_ne!(derivative, term(2, &[("x", 2)]));
+        assert_ne!(derivative, term(3, &[("x", 3)]));
+    }
+
+    #[test]
+    fn derivative_in_holds_other_variables_fixed_in_a_mixed_monomial() {
+        // d/dx(x^2 y^3) = 2x y^3;  d/dy(x^2 y^3) = 3 x^2 y^2.
+        let mixed = term(1, &[("x", 2), ("y", 3)]);
+        assert_eq!(
+            mixed.derivative_in("x").unwrap(),
+            term(2, &[("x", 1), ("y", 3)])
+        );
+        assert_eq!(
+            mixed.derivative_in("y").unwrap(),
+            term(3, &[("x", 2), ("y", 2)])
+        );
+    }
+
+    #[test]
+    fn derivative_in_drops_terms_not_containing_the_variable() {
+        // d/dx(5) = 0; d/dx(y) = 0 -- a term the variable does not appear in
+        // contributes nothing, rather than being left in place unchanged.
+        let five = MvPoly::constant(ri(5));
+        assert!(five.derivative_in("x").unwrap().is_zero());
+        assert!(var_y().derivative_in("x").unwrap().is_zero());
+    }
+
+    #[test]
+    fn derivative_in_is_linear_across_a_multi_term_polynomial() {
+        // d/dx(x^3 + x*y - y^2) = 3x^2 + y.
+        let poly = var_x()
+            .pow(3)
+            .unwrap()
+            .add(&var_x().mul(&var_y()).unwrap())
+            .unwrap()
+            .sub(&var_y().pow(2).unwrap())
+            .unwrap();
+        let derivative = poly.derivative_in("x").unwrap();
+        let expected = term(3, &[("x", 2)]).add(&var_y()).unwrap();
+        assert_eq!(derivative, expected);
+    }
+
+    #[test]
+    fn derivative_in_of_a_linear_term_is_the_coefficient_and_forgets_the_variable() {
+        // d/dx(x) = 1, and the result mentions no variable at all -- the
+        // exponent-1 branch removes `var` from the monomial rather than
+        // storing a spurious exponent 0.
+        let derivative = var_x().derivative_in("x").unwrap();
+        assert_eq!(derivative, MvPoly::constant(ri(1)));
+        assert!(derivative.variables().is_empty());
+    }
 }

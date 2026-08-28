@@ -1561,7 +1561,7 @@ mod tests {
         Condition, Constraint, DegenerateWitness, GenericWitness, GeometryCertificate,
         GeometryDecline, GeometryProblem, ProofOutcome, Pt, certify, certify_any_route,
         certify_by_linear_elimination, collinear, detect_linear_blocks, factors_into,
-        geometry_limits, licensed_blocks, midpoint, parallel, perpendicular,
+        geometry_limits, licensed_blocks, midpoint, parallel, perpendicular, same_point,
     };
     use crate::mvpoly::MvPoly;
     use axeyum_ir::Rational;
@@ -1584,6 +1584,70 @@ mod tests {
                 conclusion.id
             );
         }
+    }
+
+    // -------------------------------------------------------------------
+    // `same_point`. Before this it had no test anywhere in the crate --
+    // and it is not dead code: `axeyum-py`'s `cas.certify.geometry` module
+    // (`crates/axeyum-py/src/cas/certify/geometry.rs`) exposes it directly
+    // to Python callers, with no coverage there either. It is the "A = B"
+    // hypothesis/conclusion builder any degenerate-configuration argument
+    // needs, so a sign or component swap here would silently encode the
+    // wrong equation for every geometry theorem that states two
+    // constructed points coincide.
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn same_point_of_identical_fixed_points_is_the_zero_pair() {
+        let a = Pt::fixed(Rational::integer(2), Rational::integer(3));
+        let b = Pt::fixed(Rational::integer(2), Rational::integer(3));
+        let [dx, dy] = same_point(&a, &b).expect("no overflow");
+        assert!(dx.is_zero());
+        assert!(dy.is_zero());
+    }
+
+    #[test]
+    fn same_point_of_distinct_fixed_points_is_nonzero_in_the_differing_component() {
+        // A = (2, 3), B = (5, 3): the x-component of the pair must be the exact
+        // constant -3, and the y-component exactly zero -- not merely "nonzero
+        // somewhere", which a swapped-component bug could still satisfy.
+        let a = Pt::fixed(Rational::integer(2), Rational::integer(3));
+        let b = Pt::fixed(Rational::integer(5), Rational::integer(3));
+        let [dx, dy] = same_point(&a, &b).expect("no overflow");
+        assert_eq!(dx, MvPoly::constant(Rational::integer(-3)));
+        assert!(dy.is_zero());
+    }
+
+    #[test]
+    fn same_point_is_componentwise_subtraction_not_a_swap() {
+        // This is the negative-fixture half: a component-swap bug (returning
+        // [A.y - B.y, A.x - B.x]) would pass the identical-point test above
+        // and would even pass a same-shape asymmetric case by coincidence
+        // half the time, so the check must pin which polynomial is which.
+        let a = Pt::free("a");
+        let b = Pt::free("b");
+        let [dx, dy] = same_point(&a, &b).expect("no overflow");
+        assert_eq!(dx, a.x.sub(&b.x).expect("no overflow"));
+        assert_eq!(dy, a.y.sub(&b.y).expect("no overflow"));
+        assert_ne!(dx, dy);
+    }
+
+    #[test]
+    fn same_point_vanishes_exactly_when_the_symbolic_points_are_assigned_equal_coordinates() {
+        let a = Pt::free("a");
+        let b = Pt::free("b");
+        let [dx, dy] = same_point(&a, &b).expect("no overflow");
+
+        let equal_assignment = assign(&[("ax", 7), ("ay", -4), ("bx", 7), ("by", -4)]);
+        assert_eq!(dx.evaluate(&equal_assignment), Some(Rational::integer(0)));
+        assert_eq!(dy.evaluate(&equal_assignment), Some(Rational::integer(0)));
+
+        let unequal_assignment = assign(&[("ax", 7), ("ay", -4), ("bx", 7), ("by", 1)]);
+        assert_eq!(dx.evaluate(&unequal_assignment), Some(Rational::integer(0)));
+        assert_eq!(
+            dy.evaluate(&unequal_assignment),
+            Some(Rational::integer(-5))
+        );
     }
 
     fn assign(pairs: &[(&str, i128)]) -> BTreeMap<String, Rational> {
