@@ -1500,6 +1500,212 @@ fn cos_wide_term_small(
     (t_j, acc_flat, proof)
 }
 
+/// `(t_j, q_bound, proof : le t_j (ofRat q_bound))` -- [`cos_wide_term_small`]
+/// for a term whose EXACT value is more expensive than the bound the caller
+/// actually needs.
+///
+/// `exact` is walked as in [`cos_wide_term_small`]: the constant
+/// `sign * 1/(2j)!` and then one factor of `R` per further entry, each
+/// collapsed to a flat literal. `bounded[0]` is then a rational the last
+/// exact value is `<=`, and each further entry is the EXACT product of the
+/// previous bound with `R`. So the remaining factors of `R` ride on a
+/// monotonicity step (`CReal.mul_le_mul_of_nonneg_left` conjugated by
+/// `mul_comm`, since there is no `_right` form) instead of on an evaluation.
+///
+/// **Where the bound is placed is the whole cost.** For `t 2 = 1/24 *
+/// (8/5)^4` the exact value is `512/1875`, and comparing THAT to `7/25`
+/// cross-multiplies to 13,125. Bounding two factors earlier -- `8/75 <=
+/// 7/64`, cross-multiplying to 525 -- and then riding `7/64 -> 7/40 -> 7/25`
+/// (which are exact, at 320 and 200) reaches the same conclusion with the
+/// largest `Nat` 25x smaller. `7/64` is forced, not chosen: it is
+/// `(7/25) / (8/5)^2`, the unique value that lands exactly on the bound the
+/// sum needs.
+#[allow(clippy::too_many_arguments)]
+fn cos_wide_term_bounded(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    r: ExprId,
+    r_rat: ExprId,
+    j_nat: ExprId,
+    dbl_nat: ExprId,
+    sign_equiv: ExprId,
+    sign_target: ExprId,
+    sign_rat: ExprId,
+    hr_nonneg: ExprId,
+    exact: &[(i32, u32)],
+    bounded: &[(i32, u32)],
+) -> (ExprId, ExprId, ExprId) {
+    let one_cc = one_c(d, p);
+    let neg_one = cneg(d, p, one_cc);
+    let sign_src = cpow(d, p, neg_one, j_nat);
+    let exp_term_c = d.kernel().const_(p.exp_term, vec![]);
+    let e = d.apply(exp_term_c, &[dbl_nat]);
+    let pow_r = cpow(d, p, r, dbl_nat);
+    let a_j = cmul(d, p, e, pow_r);
+    let t_j = cmul(d, p, sign_src, a_j);
+
+    let refl_a = erefl(d, p, a_j);
+    let step_sign = d.lemma(
+        p.mul_congr,
+        &[sign_src, sign_target, a_j, a_j, sign_equiv, refl_a],
+    );
+    let signed = cmul(d, p, sign_target, a_j);
+
+    let c_term = cmul(d, p, sign_target, e);
+    let assoc_top = d.lemma(p.mul_assoc, &[sign_target, e, pow_r]);
+    let g_top = cmul(d, p, c_term, pow_r);
+    let step_assoc_top = esymm(d, p, g_top, signed, assoc_top);
+
+    let inv_fact = inv_factorial_local(d, dbl_nat);
+    let c_tower = crate::rat_prelude::ops::rmul(d, sign_rat, inv_fact);
+    let c_tower_eq = d.lemma(p.of_rat_mul, &[sign_rat, inv_fact]);
+    let (c_num, c_den) = exact[0];
+    let c_flat = small_rat(d, c_num, c_den);
+    let c_eq = collapse(d, p, c_term, c_tower, c_tower_eq, c_flat);
+
+    let one_pow = one_c(d, p);
+    let mut acc_term = cmul(d, p, c_term, one_pow);
+    let mut acc_flat = c_flat;
+    let mut acc_eq = {
+        let mul_one_h = d.lemma(p.mul_one, &[c_term]);
+        let of_c = d.const_app(p.of_rat, &[c_flat]);
+        echain(d, p, acc_term, &[(c_term, mul_one_h), (of_c, c_eq)])
+    };
+
+    let mut pow_acc = one_pow;
+    for &(num, den) in &exact[1..] {
+        let prev_pow = pow_acc;
+        pow_acc = cmul(d, p, prev_pow, r);
+        let next_term = cmul(d, p, c_term, pow_acc);
+
+        let assoc = d.lemma(p.mul_assoc, &[c_term, prev_pow, r]);
+        let shifted = cmul(d, p, acc_term, r);
+        let step_assoc = esymm(d, p, shifted, next_term, assoc);
+
+        let of_acc = d.const_app(p.of_rat, &[acc_flat]);
+        let refl_r = erefl(d, p, r);
+        let step_congr = d.lemma(p.mul_congr, &[acc_term, of_acc, r, r, acc_eq, refl_r]);
+        let scaled = cmul(d, p, of_acc, r);
+
+        let tower = crate::rat_prelude::ops::rmul(d, acc_flat, r_rat);
+        let step_of_rat = d.lemma(p.of_rat_mul, &[acc_flat, r_rat]);
+        let of_tower = d.const_app(p.of_rat, &[tower]);
+
+        let flat = small_rat(d, num, den);
+        let of_flat = d.const_app(p.of_rat, &[flat]);
+        let close = erefl(d, p, of_tower);
+
+        acc_eq = echain(
+            d,
+            p,
+            next_term,
+            &[
+                (shifted, step_assoc),
+                (scaled, step_congr),
+                (of_tower, step_of_rat),
+                (of_flat, close),
+            ],
+        );
+        acc_term = next_term;
+        acc_flat = flat;
+    }
+
+    // Cross over from `Equiv` to `le` at the first bound. This `Rat.ble` is
+    // the largest single computation in the whole numeric leaf, which is why
+    // it happens here rather than two factors later.
+    let (b_num, b_den) = bounded[0];
+    let mut bound_flat = small_rat(d, b_num, b_den);
+    let mut of_bound = d.const_app(p.of_rat, &[bound_flat]);
+    let true_c = d.bool_true();
+    let refl_true = d.bool_refl(true_c);
+    let mut acc_le = {
+        let rat_le = d.lemma(p.rat.le_of_ble_eq_true, &[acc_flat, bound_flat, refl_true]);
+        let of_le = d.lemma(p.of_rat_le, &[acc_flat, bound_flat, rat_le]);
+        let of_acc = d.const_app(p.of_rat, &[acc_flat]);
+        let back = esymm(d, p, acc_term, of_acc, acc_eq);
+        let refl_bound = erefl(d, p, of_bound);
+        d.lemma(
+            p.le_congr,
+            &[
+                of_acc, acc_term, of_bound, of_bound, back, refl_bound, of_le,
+            ],
+        )
+    };
+
+    // Each remaining factor of `R` rides the bound instead of being evaluated.
+    for &(num, den) in &bounded[1..] {
+        let prev_pow = pow_acc;
+        pow_acc = cmul(d, p, prev_pow, r);
+        let next_term = cmul(d, p, c_term, pow_acc);
+
+        let assoc = d.lemma(p.mul_assoc, &[c_term, prev_pow, r]);
+        let shifted = cmul(d, p, acc_term, r);
+        // `assoc : Equiv shifted next_term`.
+
+        // `le (mul R acc_term) (mul R of_bound)`, conjugated to the right form.
+        let left_mono = d.lemma(
+            p.mul_le_mul_of_nonneg_left,
+            &[r, acc_term, of_bound, hr_nonneg, acc_le],
+        );
+        let r_acc = cmul(d, p, r, acc_term);
+        let r_bound = cmul(d, p, r, of_bound);
+        let comm_left = d.lemma(p.mul_comm, &[r, acc_term]);
+        let comm_right = d.lemma(p.mul_comm, &[r, of_bound]);
+        let scaled_bound = cmul(d, p, of_bound, r);
+        let right_mono = d.lemma(
+            p.le_congr,
+            &[
+                r_acc,
+                shifted,
+                r_bound,
+                scaled_bound,
+                comm_left,
+                comm_right,
+                left_mono,
+            ],
+        );
+        // `right_mono : le shifted scaled_bound`.
+
+        let tower = crate::rat_prelude::ops::rmul(d, bound_flat, r_rat);
+        let step_of_rat = d.lemma(p.of_rat_mul, &[bound_flat, r_rat]);
+        let of_tower = d.const_app(p.of_rat, &[tower]);
+        let next_bound = small_rat(d, num, den);
+        let of_next_bound = d.const_app(p.of_rat, &[next_bound]);
+        let close = erefl(d, p, of_tower);
+        let bound_eq = echain(
+            d,
+            p,
+            scaled_bound,
+            &[(of_tower, step_of_rat), (of_next_bound, close)],
+        );
+
+        acc_le = d.lemma(
+            p.le_congr,
+            &[
+                shifted,
+                next_term,
+                scaled_bound,
+                of_next_bound,
+                assoc,
+                bound_eq,
+                right_mono,
+            ],
+        );
+        acc_term = next_term;
+        bound_flat = next_bound;
+        of_bound = of_next_bound;
+    }
+
+    let chain = echain(d, p, t_j, &[(signed, step_sign), (g_top, step_assoc_top)]);
+    let back = esymm(d, p, t_j, g_top, chain);
+    let refl_bound = erefl(d, p, of_bound);
+    let proof = d.lemma(
+        p.le_congr,
+        &[g_top, t_j, of_bound, of_bound, back, refl_bound, acc_le],
+    );
+    (t_j, bound_flat, proof)
+}
+
 /// `CReal.cosWideNonpositive : le (cosFnWide R) zero`, `R := 8/5` -- pi rung
 /// 2's target. [`CRealPrelude::alternating_upper_bound_tail`] (at `a :=
 /// a_wide`, `hnn := cosWideTailNonneg`, `htail := cosWideTailAntitone`,
@@ -1594,7 +1800,8 @@ pub(super) fn declare_cos_wide_nonpositive(
         neg_rone_val,
         &[(-1, 2), (-4, 5), (-32, 25)],
     );
-    let (t2, q2, p2) = cos_wide_term_small(
+    let hr_nonneg = hab_zero_r_wide(d, p);
+    let (t2, _q2, t2_le_bound) = cos_wide_term_bounded(
         d,
         p,
         r,
@@ -1604,7 +1811,9 @@ pub(super) fn declare_cos_wide_nonpositive(
         sign2,
         one_cc,
         rone_val,
-        &[(1, 24), (1, 15), (8, 75), (64, 375), (512, 1875)],
+        hr_nonneg,
+        &[(1, 24), (1, 15), (8, 75)],
+        &[(7, 64), (7, 40), (7, 25)],
     );
 
     // s0 := add zero t0, defeq `sumRange t 1`. `Equiv s0 (ofRat 1)`.
@@ -1634,27 +1843,13 @@ pub(super) fn declare_cos_wide_nonpositive(
 
     // `le t2 (ofRat (7/25))`. The `Rat.ble` here cross-multiplies to 13,125
     // and stops -- no gcd, no division at that size.
+    // `bound` is the SAME interned term `cos_wide_term_bounded` finished on
+    // (`small_rat` is structurally hashed), so `t2_le_bound` already has the
+    // shape the sum below needs.
     let bound = small_rat(d, 7, 25);
     let of_bound = d.const_app(p.of_rat, &[bound]);
     let true_c = d.bool_true();
     let refl_true = d.bool_refl(true_c);
-    let rat_bound_le = d.lemma(rat.le_of_ble_eq_true, &[q2, bound, refl_true]);
-    let of_rat_bound_le = d.lemma(p.of_rat_le, &[q2, bound, rat_bound_le]);
-    let of_q2 = d.const_app(p.of_rat, &[q2]);
-    let p2_symm = esymm(d, p, t2, of_q2, p2);
-    let refl_bound = erefl(d, p, of_bound);
-    let t2_le_bound = d.lemma(
-        p.le_congr,
-        &[
-            of_q2,
-            t2,
-            of_bound,
-            of_bound,
-            p2_symm,
-            refl_bound,
-            of_rat_bound_le,
-        ],
-    );
 
     // s2 := add s1 t2 = `sumRange t 3` (defeq). `le s2 (add s1 (ofRat 7/25))`.
     let s2 = cadd(d, p, s1, t2);
