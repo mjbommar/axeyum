@@ -1,0 +1,60 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- log_zero_left 2>/dev/null | grep -Ec '^Nat\\.log_zero_left[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.log_zero_left",
+      "kernel_declaration": "Nat.log_zero_left",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. The guard's first cut is `Nat.ble 2 b`, and `ble (succ (succ zero)) zero` reduces to `Bool.false`, so the whole term collapses to `0` in both fuel cases. The induction on `n` exposes the fuel's constructor and nothing more -- the induction hypothesis is never used, and both minor premises are `Eq.refl`. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the count is tested, so the exit status depends on what the run found. Controls run 2026-08-28: the four real names exit 0 and `log_zero_rightXX` exits 1.",
+      "supports": "For every n, log_0(n) = 0."
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::log_computes_and_its_boundary_equations_apply",
+      "checkers": [
+        "Kernel::def_eq"
+      ],
+      "id": "compute-Nat.log_zero_left",
+      "kernel_declaration": "Nat.log",
+      "kind": "kernel-term",
+      "notes": "A fuel-based definition is only correct if the fuel always suffices, and an EXHAUSTED fuel returns `0` -- which is exactly what a wrong answer looks like for a logarithm. So the computation test is the fuel-sufficiency check: `Kernel::def_eq` reduces `log 2 8` to `3`, `log 2 7` to `2` and `log 3 9` to `2`, with two negative controls differing by ONE successor (`log 2 8 = 4` and `log 3 9 = 1` must both be rejected) so that `def_eq` cannot pass vacuously.",
+      "supports": "the fuel recursion terminates with the right value, not with an exhausted fuel"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.log_zero_left",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. This matters more than usual here: Mathlib's `Nat.log` is defined by WELL-FOUNDED recursion on `n / b`, and the Lean equation compiler's route to that carries `Quot.sound`/`propext`. The fuel-based structural definition in `nat_prelude/log.rs` was chosen so that this row stays empty, and this command is what makes the claim falsifiable rather than asserted.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0"
+    ],
+    "language": "lean4",
+    "statement": "theorem Nat.log_zero_left : ((x0 : AxNat) -> Eq.{1} AxNat (AxNat.log AxNat.zero x0) AxNat.zero)"
+  },
+  "id": "F:nat-log-zero-left",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*) -- the `nat` prelude's trusted surface measures zero.\n\nThis statement could not be expressed in this kernel at all before 2026-08-28: `Nat.log` did not exist, and neither did `Nat.clog`. Mathlib defines `Nat.log b n = if 1 < b and b <= n then log b (n / b) + 1 else 0`, whose recursive call is at `n / b` -- not a constructor predecessor, so not structural. `nat_prelude/log.rs` recurses structurally on a FUEL argument instead, instantiated at `n` itself (the same device this prelude already uses for `Nat.div`/`Nat.mod`), which keeps the construction axiom-free.\n\nThe existence of the DEFINITION `Nat.log` is entailed by this row rather than separately checked: the statement mentions `AxNat.log`, and `Kernel::add_declaration` cannot admit a type naming a constant the environment does not contain. A theorem inventory lists theorems only and would return zero rows for the definition itself, so it is deliberately not used as the discriminator for the construction.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane 199-nat-log",
+    "source": "one of the four boundary equations `declare_log_all` (`crates/axeyum-lean-kernel/src/nat_prelude/log.rs`) admits alongside the `Nat.logAux`/`Nat.log` definitions"
+  },
+  "schema_version": 1,
+  "statement": "For every n, log_0(n) = 0.",
+  "title": "The floor logarithm in base zero is zero"
+}

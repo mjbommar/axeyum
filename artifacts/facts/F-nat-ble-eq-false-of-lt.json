@@ -1,0 +1,50 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- ble_eq_false_of_lt 2>/dev/null | grep -Ec '^Nat\\.ble_eq_false_of_lt[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.ble_eq_false_of_lt",
+      "kernel_declaration": "Nat.ble_eq_false_of_lt",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. The NEGATIVE half of the `Nat.ble`/`Nat.le` bridge, which the prelude did not have: `ble.rs` carries the two positive directions (`ble_eq_true_of_le`, `le_of_ble_eq_true`) and the negated-`Prop` form (`not_le_of_not_ble_eq_true`), but nothing producing `Eq Bool _ Bool.false` -- which is the only shape that can rewrite a `Bool.rec` cut. Proved by `Bool` excluded middle on `ble b n` (`bool_true_or_false`): the `true` branch gives `b <= n` by `le_of_ble_eq_true`, which with `n < b` gives `n < n` through `lt_of_lt_of_le` and is refuted by `lt_irrefl`; the `false` branch is the goal already. Declared in `log.rs` under its first consumer, which is the retrieval hazard this repository keeps paying for -- it is recorded here so the next lane needing it can find it. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the count is tested, so the exit status depends on what the run found.",
+      "supports": "For all b and n, if n < b then the boolean test `ble b n` is false."
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.ble_eq_false_of_lt",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. This matters more than usual here: Mathlib's `Nat.log` is defined by WELL-FOUNDED recursion on `n / b`, and the Lean equation compiler's route to that carries `Quot.sound`/`propext`. The fuel-based structural definition in `nat_prelude/log.rs` was chosen so that this row stays empty, and this command is what makes the claim falsifiable rather than asserted.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "language": "lean4",
+    "statement": "theorem Nat.ble_eq_false_of_lt : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.lt x1 x0) -> Eq.{1} Bool (AxNat.ble x0 x1) Bool.false)))"
+  },
+  "id": "F:nat-ble-eq-false-of-lt",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*) -- the `nat` prelude's trusted surface measures zero.\n\n`Nat.log` did not exist in this kernel before 2026-08-28, and neither did `Nat.clog`. Mathlib defines `Nat.log b n = if 1 < b and b <= n then log b (n / b) + 1 else 0`, whose recursive call is at `n / b` -- not a constructor predecessor, so not structural. `nat_prelude/log.rs` recurses structurally on a FUEL argument instead, instantiated at `n` itself (the same device this prelude already uses for `Nat.div`/`Nat.mod`), which keeps the construction axiom-free.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane 199-nat-log",
+    "source": "declared by `declare_log_all` (`crates/axeyum-lean-kernel/src/nat_prelude/log.rs`) alongside the `Nat.logAux`/`Nat.log` definitions"
+  },
+  "schema_version": 1,
+  "statement": "For all b and n, if n < b then the boolean test `ble b n` is false.",
+  "title": "The boolean order test is false above its bound"
+}

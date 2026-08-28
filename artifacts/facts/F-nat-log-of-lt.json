@@ -1,0 +1,65 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-ble-eq-false-of-lt"
+  ],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- log_of_lt 2>/dev/null | grep -Ec '^Nat\\.log_of_lt[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.log_of_lt",
+      "kernel_declaration": "Nat.log_of_lt",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. The first theorem about `Nat.log` that carries a HYPOTHESIS, and the one that fixed the shape of the definition. `Nat.logAux`'s guard is two nested `Nat.ble` cuts, and the two cuts commute semantically but not for proof cost: only the OUTERMOST cut collapses the whole term with a single rewrite. `n < b` refutes `b <= n`, so that cut was put outermost and this proof is one `Eq.rec` over `Nat.ble_eq_false_of_lt`; with the cuts the other way round it would have needed a second case analysis on `2 <= b` as well. Nothing was given up for it -- `ble zero y` reduces to `Bool.true` unconditionally, so the outer cut never blocks the base-0 and base-1 equations, which stay pure `refl`. The induction on `n` carries the hypothesis in its motive (`fun m => Lt m b -> Eq (log b m) 0`) because `n` is both the fuel and the argument; the induction hypothesis is never used. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the count is tested, so the exit status depends on what the run found.",
+      "supports": "For all b and n, if n < b then log_b(n) = 0."
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::log_of_lt_applies_at_a_concrete_pair",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "id": "instantiation-Nat.log_of_lt",
+      "kernel_declaration": "Nat.log_of_lt",
+      "kind": "kernel-term",
+      "notes": "A theorem with a hypothesis can be admitted with a type nothing can discharge, so this is the check that matters for this row: the test builds a `Lt 3 5` witness BY HAND out of `Nat.zero_le` and four `Nat.le_succ_succ` steps, confirms by `Kernel::infer` that it really is a `Lt 3 5`, applies `Nat.log_of_lt` to it, and checks the inferred conclusion against `Eq (log 5 3) 0`. The negative control is `log 2 8`, where the hypothesis does NOT hold and the value is 3, so the conclusion cannot be true of every argument pair.",
+      "supports": "the hypothesis is the ordinary `Nat.lt` and the conclusion is not vacuous"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.log_of_lt",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. This matters more than usual here: Mathlib's `Nat.log` is defined by WELL-FOUNDED recursion on `n / b`, and the Lean equation compiler's route to that carries `Quot.sound`/`propext`. The fuel-based structural definition in `nat_prelude/log.rs` was chosen so that this row stays empty, and this command is what makes the claim falsifiable rather than asserted.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "language": "lean4",
+    "statement": "theorem Nat.log_of_lt : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.lt x1 x0) -> Eq.{1} AxNat (AxNat.log x0 x1) AxNat.zero)))"
+  },
+  "id": "F:nat-log-of-lt",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*) -- the `nat` prelude's trusted surface measures zero.\n\n`Nat.log` did not exist in this kernel before 2026-08-28, and neither did `Nat.clog`. Mathlib defines `Nat.log b n = if 1 < b and b <= n then log b (n / b) + 1 else 0`, whose recursive call is at `n / b` -- not a constructor predecessor, so not structural. `nat_prelude/log.rs` recurses structurally on a FUEL argument instead, instantiated at `n` itself (the same device this prelude already uses for `Nat.div`/`Nat.mod`), which keeps the construction axiom-free.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane 199-nat-log",
+    "source": "declared by `declare_log_all` (`crates/axeyum-lean-kernel/src/nat_prelude/log.rs`) alongside the `Nat.logAux`/`Nat.log` definitions"
+  },
+  "schema_version": 1,
+  "statement": "For all b and n, if n < b then log_b(n) = 0.",
+  "title": "Below its own base, a number has floor logarithm zero"
+}

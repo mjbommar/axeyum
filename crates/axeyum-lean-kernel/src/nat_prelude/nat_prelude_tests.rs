@@ -498,6 +498,8 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.ble,
         p.even,
         p.odd,
+        p.log_aux,
+        p.log,
     ]
 }
 
@@ -866,6 +868,12 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.prime_even_iff,
         p.prime_not_dvd_mul,
         p.prime_dvd_of_dvd_pow,
+        p.log_zero_right,
+        p.log_zero_left,
+        p.log_one_left,
+        p.log_one_right,
+        p.ble_eq_false_of_lt,
+        p.log_of_lt,
     ]
 }
 
@@ -6148,7 +6156,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        67 + 351,
+        69 + 357,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -8465,6 +8473,161 @@ fn coprime_two_left_applies_at_a_concrete_odd_witness_and_is_axiom_free() {
         p.coprime_odd_of_left,
         p.coprime_odd_of_right,
     ] {
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "{name:?} must rest on zero axioms"
+        );
+    }
+}
+
+/// `Nat.log_of_lt` applies at a concrete `3 < 5`, and its conclusion is the
+/// statement its name promises.
+///
+/// This is the one `Nat.log` theorem with a hypothesis, so it is the one that
+/// can be admitted with a type nothing can discharge. Building the `Lt 3 5`
+/// witness by hand and feeding it in is what shows the hypothesis is the
+/// ordinary `Nat.lt` and not some shape only the proof term can produce.
+#[test]
+fn log_of_lt_applies_at_a_concrete_pair() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Le 0 1, then four `le_succ_succ` steps: Le 4 5, i.e. Lt 3 5.
+    let one = f.num(1);
+    let mut witness = f.lemma(p.zero_le, &[one]);
+    for step in 0..4u32 {
+        let lower = f.num(step);
+        let upper = f.num(step + 1);
+        witness = f.lemma(p.le_succ_succ, &[lower, upper, witness]);
+    }
+    let three = f.num(3);
+    let five = f.num(5);
+    let expected_hypothesis = f.lt(three, five);
+    let witness_ty =
+        f.k.infer(witness)
+            .expect("the hand-built order witness must type-check");
+    assert!(
+        f.k.def_eq(witness_ty, expected_hypothesis),
+        "the hand-built witness must be a proof of Lt 3 5"
+    );
+
+    let applied = f.const_app(p.log_of_lt, &[five, three]);
+    let applied = f.apply(applied, &[witness]);
+    let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+        let shown = f.explain(&e);
+        panic!("Nat.log_of_lt must apply at (b, n) = (5, 3): {shown}")
+    });
+    let log = p.log;
+    let lhs = f.const_app(log, &[five, three]);
+    let zero = f.zero();
+    let want = f.eq(lhs, zero);
+    assert!(
+        f.k.def_eq(inferred, want),
+        "Nat.log_of_lt 5 3 must state Eq (log 5 3) 0"
+    );
+
+    // And the conclusion is not vacuous: `log 5 3` really is 0 by computation,
+    // while `log 2 8` (where the hypothesis does NOT hold) is not.
+    assert!(f.k.def_eq(lhs, zero), "log 5 3 must reduce to 0");
+    let two = f.num(2);
+    let eight = f.num(8);
+    let log_two_eight = f.const_app(log, &[two, eight]);
+    assert!(
+        !f.k.def_eq(log_two_eight, zero),
+        "negative control: log 2 8 is 3, so `log_of_lt`'s hypothesis is load-bearing"
+    );
+
+    for name in [p.log_of_lt, p.ble_eq_false_of_lt] {
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "{name:?} must rest on zero axioms"
+        );
+    }
+}
+
+/// `Nat.log` COMPUTES, and its four boundary theorems apply at concrete
+/// arguments.
+///
+/// The definition is the point of interest, not the theorems: `Nat.log`
+/// recurses on `n / b`, which is not a constructor predecessor, so it is built
+/// by structural recursion on a **fuel** argument instantiated at `n` itself
+/// (`log.rs`). That is only correct if the fuel always suffices, and the
+/// cheapest evidence for it is that closed applications actually reduce to the
+/// right numeral rather than getting stuck on an exhausted fuel -- an exhausted
+/// fuel returns `0`, which is exactly what a *wrong* answer looks like here, so
+/// every positive case below is also a fuel-sufficiency check.
+///
+/// Both negative controls differ from the truth by ONE successor, deliberately:
+/// a control that differs wildly can be discriminated by a cheap size check and
+/// so tests less than it appears to.
+#[test]
+fn log_computes_and_its_boundary_equations_apply() {
+    let mut f = Fixture::new();
+    let log = f.p.log;
+
+    for (base, value, expected) in [
+        (2u32, 8u32, 3u32),
+        (2, 7, 2),
+        (2, 1, 0),
+        (3, 9, 2),
+        (5, 4, 0),
+        (0, 6, 0),
+        (1, 6, 0),
+        (7, 0, 0),
+    ] {
+        let b = f.num(base);
+        let n = f.num(value);
+        let lhs = f.const_app(log, &[b, n]);
+        let rhs = f.num(expected);
+        assert!(
+            f.k.def_eq(lhs, rhs),
+            "log {base} {value} must reduce to {expected}"
+        );
+    }
+
+    let two = f.num(2);
+    let eight = f.num(8);
+    let log_two_eight = f.const_app(log, &[two, eight]);
+    let four = f.num(4);
+    assert!(
+        !f.k.def_eq(log_two_eight, four),
+        "negative control: log 2 8 is 3, not 4 -- def_eq must not be vacuous"
+    );
+    let three = f.num(3);
+    let nine = f.num(9);
+    let log_three_nine = f.const_app(log, &[three, nine]);
+    let one = f.num(1);
+    assert!(
+        !f.k.def_eq(log_three_nine, one),
+        "negative control: log 3 9 is 2, not 1"
+    );
+
+    // The boundary equations apply, and each lands on the statement its name
+    // promises rather than on some vacuously true instance.
+    let p = f.p;
+    let zero = f.zero();
+    let seven = f.num(7);
+    for (name, expected_lhs) in [
+        (p.log_zero_right, (7u32, 0u32)),
+        (p.log_zero_left, (0, 7)),
+        (p.log_one_left, (1, 7)),
+        (p.log_one_right, (7, 1)),
+    ] {
+        let applied = f.const_app(name, &[seven]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("{name:?} must apply at a concrete argument: {shown}")
+        });
+        let b = f.num(expected_lhs.0);
+        let n = f.num(expected_lhs.1);
+        let lhs = f.const_app(log, &[b, n]);
+        let want = f.eq(lhs, zero);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "{name:?} at 7 must state Eq (log {} {}) 0",
+            expected_lhs.0,
+            expected_lhs.1
+        );
         assert!(
             f.k.axiom_footprint(name).is_empty(),
             "{name:?} must rest on zero axioms"
