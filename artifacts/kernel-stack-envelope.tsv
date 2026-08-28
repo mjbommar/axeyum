@@ -9,15 +9,43 @@
 # build aborts with SIGABRT (exit 134), and `--check` re-demonstrates that on
 # every run so a green result is never vacuous.
 #
-# Measured 2026-08-26 on s4 (rustc via the repo's default toolchain).
+# Measured 2026-08-26 on s4 (rustc via the repo's default toolchain);
+# the two `creal` rows re-measured 2026-08-28, same host.
 #
 # ## What these numbers say
 #
-# * `creal` in a DEBUG build needs 2,097,152 bytes -- EXACTLY the default stack
-#   Rust gives a spawned thread, which is what a `#[test]` runs on. There was no
-#   margin at all. `CReal.e` landing is what pushed it over, and the symptom was
-#   `every_creal_declaration_is_checked_and_axiom_free` -- the guard behind this
-#   project's axiom-freedom claim -- silently aborting instead of running.
+# * `creal` DEBUG 2,097,152 -> 16,777,216 and RELEASE 131,072 -> 8,388,608,
+#   RAISED 2026-08-28 (8x and 64x). Re-measured twice, independently, by
+#   `--measure` in both profiles after a lane reported the release row red.
+#
+#   What grew: two days of `CReal` development -- EVT row 2 and the closure of
+#   its labeled gap, supOn rungs 1-6 including the multi-level nearest-point
+#   lemma, pi rungs 2-3, and the integral family. No single declaration did it;
+#   the prelude simply got much bigger.
+#
+#   The symptom was NOT a kernel bug and NOT a non-terminating term. It was
+#   `reconstruct::arithmetic::monomial_bound` aborting with SIGABRT, because
+#   `LraReconstructCtx::try_new_over_constructed_reals_reporting` builds the
+#   `CReal` prelude on the CALLING thread -- and a `#[test]` thread gets 2 MiB.
+#   An overflow aborts the process, so only the FIRST constructed-reals test to
+#   run gets named; `zero_product`, `product_positivstellensatz`,
+#   `signature_tests` and `reconstruct::tests` were affected too and reported
+#   nothing. That constructor now builds on a 256 MiB worker thread.
+#
+#   READ THIS BEFORE APPLYING THE `--release` DISCRIMINATOR. CLAUDE.md's rule
+#   is that a stack overflow surviving `--release` means runaway recursion
+#   rather than a margin overrun. This case FAILED in release and was still a
+#   finite, bounded requirement -- it had simply grown past the default in BOTH
+#   profiles. The rule separates a debug-only margin problem from everything
+#   else; it does not separate a grown requirement from a divergent term. Only
+#   `--measure` does: a real requirement bisects to a passing power of two.
+#
+#   PRIOR NOTE, kept because the mechanism recurs: `creal` DEBUG used to need
+#   exactly 2,097,152 -- precisely the default a spawned thread gets, so there
+#   was no margin at all. `CReal.e` landing is what pushed it over then, and the
+#   symptom was `every_creal_declaration_is_checked_and_axiom_free` -- the guard
+#   behind this project's axiom-freedom claim -- silently aborting rather than
+#   running.
 #
 # * `cpoint` in a DEBUG build needs 33,554,432 bytes. The `on_a_deep_stack`
 #   copies that covered it used 64 MiB, so the real headroom was 2x, not the
@@ -45,13 +73,13 @@ debug	nat	262144
 debug	integer	262144
 debug	axreal	131072
 debug	rat	1048576
-debug	creal	2097152
+debug	creal	16777216
 debug	cpoint	33554432
 debug	complex	4194304
 debug	string	131072
 release	nat	65536
 release	integer	65536
 release	rat	131072
-release	creal	131072
+release	creal	8388608
 release	cpoint	1048576
 release	complex	262144

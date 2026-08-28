@@ -1365,11 +1365,42 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   worse than no wrapper**, and it is the checker-that-cannot-fail defect arriving
   by a route none of the existing guards cover.
 
-  The discriminating test is one command and costs nothing: **run it in
-  `--release`.** Debug frames cost up to 32x release frames, so a genuine
-  margin overrun disappears in release; runaway recursion does not. Do that
-  BEFORE characterising any stack overflow, and bisect against the parent commit
-  rather than reasoning about which explanation fits.
+  The first test is one command and costs nothing: **run it in `--release`.**
+  Debug frames cost up to 32x release frames, so a debug-only margin overrun
+  disappears in release. Do that BEFORE characterising any stack overflow, and
+  bisect against the parent commit rather than reasoning about which
+  explanation fits.
+
+  **BUT `--release` IS NOT SUFFICIENT, AND THIS FILE USED TO SAY IT WAS.**
+  Measured 2026-08-28: `reconstruct::arithmetic::monomial_bound` aborted with
+  SIGABRT **in release**, and it was NOT runaway recursion — it was a finite,
+  bounded requirement that had simply grown past the default in **both**
+  profiles. `creal` went debug 2,097,152 -> 16,777,216 and release 131,072 ->
+  8,388,608 in two days of ordinary development.
+
+  So the rule separates *a debug-only margin problem* from *everything else*.
+  It does **not** separate a grown requirement from a divergent term, and
+  treating "fails in release" as proof of non-termination sends you hunting a
+  bug that does not exist. (I made exactly that call and reported it as fact.)
+
+  **The command that actually decides it is `--measure`:**
+
+      scripts/check-kernel-stack-envelope.sh --measure --profile release --prelude <p>
+
+  A real requirement bisects to a passing power of two and prints it. A
+  divergent term never finds one. Then raise the row in
+  `artifacts/kernel-stack-envelope.tsv` and say what grew — and note that
+  `--check` was **RED on `main` and nobody had run it**, so it will not tell
+  you on its own.
+
+  Two second-order traps this incident exposed:
+  - **An overflow aborts the process, so only the FIRST affected test is
+    named.** Four more suites were failing for the same reason and reported
+    nothing. Do not scope the fix to the test that appeared in the log.
+  - **A prelude built on the CALLING thread inherits a `#[test]`'s 2 MiB.**
+    The fix belongs in the constructor (one 256 MiB worker thread covering
+    every call site), not in a wrapper around each test — otherwise a
+    *consumer's* process aborts at the front door.
 
 - **`Nat.add` RECURSES ON ITS RIGHT ARGUMENT, so `Nat.add(literal, k)` IS STUCK
   FOR SYMBOLIC `k` — and it fails by not reducing, not by erroring.** Measured
