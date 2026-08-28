@@ -346,7 +346,9 @@ pub(crate) fn log_terms(p_bar: &[Rational], q_bar: &[Rational]) -> Option<Vec<(R
 /// small and independent in the sense the architecture wants.
 ///
 /// Checks, in order:
-/// 1. `D2` and `D1` are genuine (nonzero) polynomials.
+/// 1. `D` (`denom`) is a genuine non-constant polynomial — a rational
+///    function's denominator can't be a nonzero constant or zero (the
+///    producer's own [`horowitz`] declines a constant `D` via `eqn == 0`).
 /// 2. Properness: `deg B < deg D2` and `deg C < deg D1`. Without this bound
 ///    the identity below is satisfiable by infinitely many wrong `(B, C)`
 ///    pairs — see `wrong_degree_b_is_vacuous_without_the_properness_guard`
@@ -363,6 +365,12 @@ pub(crate) fn log_terms(p_bar: &[Rational], q_bar: &[Rational]) -> Option<Vec<(R
 ///    `d/dx(B/D2) + C/D1 == numer/denom` as rational functions, so checking
 ///    it here *is* differentiating the candidate antiderivative and
 ///    comparing to the integrand, exactly, in poly-space.
+///
+/// There is deliberately no separate "`D2`, `D1` nonzero" guard: given guard
+/// 1, both are always caught downstream — `D2 == 0` makes guard 4's exact
+/// division fail unconditionally (it requires a nonzero divisor, independent
+/// of `denom`), and `D1 == 0` makes guard 3 fail because `D2 * 0` trims to
+/// the zero polynomial while `D` has degree ≥ 1 by guard 1. Mutation-tested.
 ///
 /// Returns `Some(false)` on any violation, `Some(true)` only when every
 /// guard passes, and `None` only on internal arithmetic overflow (treated by
@@ -387,13 +395,13 @@ pub(crate) fn verify_horowitz(
     let c = poly::rat_trim(c.to_vec());
     let d1 = poly::rat_trim(d1.to_vec());
 
-    // Guard 1: D2, D1 must be genuine (nonzero) polynomials.
-    let Some(deg_d2) = poly::rat_degree(&d2) else {
-        return Some(false);
-    };
-    let Some(deg_d1) = poly::rat_degree(&d1) else {
-        return Some(false);
-    };
+    // Guard 1: D must be a genuine non-constant denominator.
+    match poly::rat_degree(&denom) {
+        Some(deg) if deg >= 1 => {}
+        _ => return Some(false),
+    }
+    let deg_d2 = poly::rat_degree(&d2).unwrap_or(0);
+    let deg_d1 = poly::rat_degree(&d1).unwrap_or(0);
 
     // Guard 2: properness.
     if let Some(deg_b) = poly::rat_degree(&b)
@@ -813,6 +821,24 @@ mod tests {
         assert_eq!(
             verify_horowitz(&a, &d, &[], &[], &poly_from(&[1]), &d),
             Some(false)
+        );
+    }
+
+    /// Isolates guard 1 (`D` non-constant): the fully degenerate all-zero
+    /// certificate `numer=denom=B=C=D1=0, D2` any nonzero constant. Every
+    /// OTHER guard is vacuous against it -- properness is skipped for a
+    /// zero `B`/`C` (no degree to compare), guard 3's `D2*D1==D` holds
+    /// trivially (`D2*0 == 0`), guard 4's exact division of `0` by `D2`
+    /// succeeds trivially, and guard 5's identity is `0 == 0`. Only
+    /// rejecting a zero/constant `denom` up front catches it.
+    #[test]
+    fn degenerate_zero_denominator_certificate_is_rejected() {
+        let empty: Vec<Rational> = Vec::new();
+        let d2 = poly_from(&[1]); // any nonzero constant
+        assert_eq!(
+            verify_horowitz(&empty, &empty, &empty, &d2, &empty, &empty),
+            Some(false),
+            "a zero denom must be rejected even though every other guard is vacuous"
         );
     }
 
