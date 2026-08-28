@@ -1567,15 +1567,17 @@ pub struct CRealPrelude {
     /// how [`Self::bucket_clamp_lower`] swaps [`Self::bucket_clamp_upper`]'s
     /// own `(n, j)` to `(j, n)`. See `creal/uniform_continuity.rs`.
     pub sample_lower_bound: NameId,
-    /// `CReal.bucketClose : ∀ (bnd : CReal) (k : Nat) (cap : Rat), Rat.le
+    /// `CReal.bucketClose : ∀ (bnd : CReal) (m0 : Nat) (cap : Rat), Rat.le
     /// (Rat.sub (CReal.seq bnd j) (Rat.natDivSucc 1 j)) cap → ∀ (w : CReal),
-    /// CReal.le CReal.zero w → CReal.le w bnd → ∀ (m0 : Nat), CReal.le
-    /// (CReal.abs (CReal.add w (CReal.neg (CReal.ofRat (Rat.min
-    /// (Rat.natDivSucc (CReal.bucketIndex w k) k) cap))))) (CReal.ofRat
-    /// (Rat.natDivSucc 1 m0))` (`j := (Nat.succ k) * (Nat.succ k)`) — `w` is
-    /// within `1/(m0+1)` of its own clamped grid-point sample, for ANY
-    /// target accuracy `m0`; nothing here is specific to a
-    /// uniformly-continuous function. Extracted from
+    /// CReal.le CReal.zero w → CReal.le w bnd → CReal.le (CReal.abs
+    /// (CReal.add w (CReal.neg (CReal.ofRat (Rat.min (Rat.natDivSucc
+    /// (CReal.bucketIndex w k) k) cap))))) (CReal.ofRat (Rat.natDivSucc 1
+    /// m0))` (`k := rescale_index(3, m0) = 4*m0+3`, `j := (Nat.succ k) *
+    /// (Nat.succ k)`) — `w` is within `1/(m0+1)` of its own clamped
+    /// grid-point sample. `k` is DERIVED from `m0`, not an independent
+    /// parameter: the final widening step needs `k` to be exactly
+    /// `rescale_index(3, m0)` (`Rat.natDivSucc_scale`'s own index), not
+    /// merely large enough. Extracted from
     /// [`Self::bounded_of_uniformly_continuous`]'s covering argument, which
     /// used to assemble this fact inline. See
     /// `uniform_continuity::declare_bucket_close`.

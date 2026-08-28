@@ -5064,25 +5064,37 @@ fn triangle_step(
     d.lemma(p.le_trans, &[abs_cur, target, sum_bound, step1, combine])
 }
 
-/// `CReal.bucketClose : ∀ (bnd : CReal) (k : Nat) (cap : Rat), Rat.le
+/// `CReal.bucketClose : ∀ (bnd : CReal) (m0 : Nat) (cap : Rat), Rat.le
 /// (Rat.sub (CReal.seq bnd j) (Rat.natDivSucc 1 j)) cap → ∀ (w : CReal),
-/// CReal.le CReal.zero w → CReal.le w bnd → ∀ (m0 : Nat), CReal.le
-/// (CReal.abs (CReal.add w (CReal.neg (CReal.ofRat (Rat.min (Rat.natDivSucc
-/// (CReal.bucketIndex w k) k) cap))))) (CReal.ofRat (Rat.natDivSucc 1 m0))`
-/// -- `j := (Nat.succ k) * (Nat.succ k)`.
+/// CReal.le CReal.zero w → CReal.le w bnd → CReal.le (CReal.abs (CReal.add w
+/// (CReal.neg (CReal.ofRat (Rat.min (Rat.natDivSucc (CReal.bucketIndex w k)
+/// k) cap))))) (CReal.ofRat (Rat.natDivSucc 1 m0))` -- `k :=
+/// rescale_index(3, m0) = 4*m0+3`, `j := (Nat.succ k) * (Nat.succ k)`.
 ///
-/// The "`w` is close to its own clamped grid-point sample" fact from
-/// Spivak ch.7's covering argument (see
+/// The "`w` is close to its own clamped grid-point sample, at target
+/// accuracy `m0`" fact from Spivak ch.7's covering argument (see
 /// [`declare_bounded_of_uniformly_continuous`]'s own doc comment for the
 /// whole argument this is one piece of): `w`'s clamped grid point
 /// `GP(bucketIndex(w,k)) := min(natDivSucc(bucketIndex(w,k), k), cap)`
-/// lands within `1/(m0+1)` of `w`, for ANY target accuracy `m0` -- nothing
-/// here is specific to a uniformly-continuous function or its interval;
-/// `m0` is supplied by the caller (in the covering argument, `uc_modulus`
-/// read at accuracy 0) purely as an opaque `Nat`. `cap` is any clamp bound
-/// satisfying the two hypotheses above (`bounded_of_uniformly_continuous`
-/// instantiates it at `max(seq bnd j - natDivSucc 1 j, 0)`, but nothing
-/// below depends on that choice).
+/// lands within `1/(m0+1)` of `w`. `m0` is supplied by the caller (in the
+/// covering argument, `uc_modulus` read at accuracy 0) as an opaque `Nat`;
+/// `cap` is any clamp bound satisfying the hypothesis above
+/// (`bounded_of_uniformly_continuous` instantiates it at
+/// `max(seq bnd j - natDivSucc 1 j, 0)`, but nothing below depends on that
+/// particular choice). Nothing here is specific to a uniformly-continuous
+/// function or its interval -- `bnd`, `cap`, `w` are all arbitrary.
+///
+/// `k` is `rescale_index(3, m0)`, NOT an independent `Nat` parameter, even
+/// though nothing else in this statement forces that relationship: the
+/// widening from `e_expr` down to `natDivSucc 1 m0` goes through
+/// `Rat.natDivSucc_scale`, whose conclusion is stated at EXACTLY
+/// `rescale_index(3, m0)`, not merely at some index `>= ` it. An earlier
+/// version of this extraction took `k` as its own free `Nat` parameter; the
+/// kernel correctly REJECTED it with a `TypeMismatch` between `natDivSucc 4
+/// k` (a bare fvar) and `natDivSucc 4 (rescale_index 3 m0)` (what
+/// `nat_div_succ_scale` actually proves) -- the two are related only once
+/// `k` is pinned to that exact value, which is why `k` is derived here
+/// rather than bound.
 ///
 /// Extracted from `declare_bounded_of_uniformly_continuous`, which used to
 /// assemble exactly this fact INLINE, behind five private helpers
@@ -5103,10 +5115,24 @@ pub(super) fn declare_bucket_close(d: &mut IntDev<'_>, p: CRealPrelude) -> Resul
     let one_nat = d.num(1);
     let two_nat = d.num(2);
 
+    // `k` is NOT independent of `m0` -- it is derived as
+    // `rescale_index(3, m0)` (matching `declare_bounded_of_uniformly_continuous`'s
+    // own construction), because the widening from `e_expr` down to
+    // `natDivSucc 1 m0` at the end of this proof goes through
+    // `Rat.natDivSucc_scale`, whose conclusion is stated at EXACTLY
+    // `rescale_index(3, m0)`, not at an arbitrary index merely `>=` it. An
+    // earlier version of this extraction took `k` as its own free `Nat`
+    // parameter, unrelated to `m0`; the kernel correctly REJECTED it with a
+    // `TypeMismatch` between `natDivSucc 4 k` (a bare fvar) and `natDivSucc 4
+    // (rescale_index(3, m0))` (what `nat_div_succ_scale` actually proves) --
+    // the two are propositionally related only once `k` is pinned to that
+    // exact value.
     let bnd_fv = d.fresh_fvar();
     let bnd = d.kernel().fvar(bnd_fv);
-    let k_fv = d.fresh_fvar();
-    let k = d.kernel().fvar(k_fv);
+    let m0_fv = d.fresh_fvar();
+    let m0 = d.kernel().fvar(m0_fv);
+    let three_nat = d.num(3);
+    let k = rescale_index(d, three_nat, m0);
     let cap_fv = d.fresh_fvar();
     let cap = d.kernel().fvar(cap_fv);
 
@@ -5130,9 +5156,6 @@ pub(super) fn declare_bucket_close(d: &mut IntDev<'_>, p: CRealPrelude) -> Resul
     let hle_ty = d.const_app(p.le, &[w, bnd]);
     let hle_fv = d.fresh_fvar();
     let hle = d.kernel().fvar(hle_fv);
-
-    let m0_fv = d.fresh_fvar();
-    let m0 = d.kernel().fvar(m0_fv);
 
     let m = d.const_app(p.bucket_index, &[w, k]);
     let deltauc = div_succ(d, p, 1, m0);
@@ -5298,8 +5321,7 @@ pub(super) fn declare_bucket_close(d: &mut IntDev<'_>, p: CRealPrelude) -> Resul
             let o_bndj_nds1j = d.const_app(p.of_rat, &[bndj_nds1j]);
             let w_le_bnd = d.lemma(p.le_trans, &[w, bnd, o_bndj_nds1j, hle, sample_ub]);
             // seq(bnd,j) <= radd(nds1j,cap)
-            let seq_le_cap_nds1j =
-                d.lemma(rat.le_of_sub_le, &[bnd_j, nds1j, cap, cap_le_raw_side]);
+            let seq_le_cap_nds1j = d.lemma(rat.le_of_sub_le, &[bnd_j, nds1j, cap, cap_le_raw_side]);
             let refl_nds1j = d.lemma(rat.le_refl, &[nds1j]);
             let nds1j_cap = radd(d, nds1j, cap);
             let widen0 = d.lemma(
@@ -5399,24 +5421,22 @@ pub(super) fn declare_bucket_close(d: &mut IntDev<'_>, p: CRealPrelude) -> Resul
 
     let ty = {
         let concl = close_of_bounds_ty(d, p, w, ogpm, odeltauc);
-        let with_m0 = d.pi_fv(m0_fv, nat, concl);
-        let with_hle = d.pi_fv(hle_fv, hle_ty, with_m0);
+        let with_hle = d.pi_fv(hle_fv, hle_ty, concl);
         let with_h0w = d.pi_fv(h0w_fv, h0w_ty, with_hle);
         let with_w = d.pi_fv(w_fv, carrier, with_h0w);
         let with_cap_le = d.pi_fv(cap_le_raw_side_fv, cap_le_raw_side_ty, with_w);
         let with_cap = d.pi_fv(cap_fv, rat_ty_top, with_cap_le);
-        let with_k = d.pi_fv(k_fv, nat, with_cap);
-        d.pi_fv(bnd_fv, carrier, with_k)
+        let with_m0 = d.pi_fv(m0_fv, nat, with_cap);
+        d.pi_fv(bnd_fv, carrier, with_m0)
     };
     let value = {
-        let with_m0 = d.lam_fv(m0_fv, nat, close_w_gpm);
-        let with_hle = d.lam_fv(hle_fv, hle_ty, with_m0);
+        let with_hle = d.lam_fv(hle_fv, hle_ty, close_w_gpm);
         let with_h0w = d.lam_fv(h0w_fv, h0w_ty, with_hle);
         let with_w = d.lam_fv(w_fv, carrier, with_h0w);
         let with_cap_le = d.lam_fv(cap_le_raw_side_fv, cap_le_raw_side_ty, with_w);
         let with_cap = d.lam_fv(cap_fv, rat_ty_top, with_cap_le);
-        let with_k = d.lam_fv(k_fv, nat, with_cap);
-        d.lam_fv(bnd_fv, carrier, with_k)
+        let with_m0 = d.lam_fv(m0_fv, nat, with_cap);
+        d.lam_fv(bnd_fv, carrier, with_m0)
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.bucket_close,
@@ -5811,7 +5831,7 @@ pub(super) fn declare_bounded_of_uniformly_continuous(
         // --- `z` close to `GP(m)`. --------------------------------------
         let close_w_gpm = d.lemma(
             p.bucket_close,
-            &[bnd, k, cap, cap_le_raw_side, w, h0w, hle, m0],
+            &[bnd, m0, cap, cap_le_raw_side, w, h0w, hle],
         );
         // close_w_gpm : close_within w (ofRat (gp_rat k cap m)) odeltauc
 
