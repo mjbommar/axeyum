@@ -1433,6 +1433,60 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
     the rule it supports: after touching any `declare_*`, run the whole
     `<prelude>::` sweep and confirm a NONZERO count, never a filtered subset.
 
+- **EVERY `Nat` NUMERAL THIS PRELUDE BUILDS IS UNARY, SO THE KERNEL'S BINARY
+  LITERAL FAST PATH NEVER FIRES — AND THAT, NOT NESTING DEPTH, IS WHY LARGE
+  CONSTANTS BLOW THE BUILD BUDGET.** Found 2026-08-27 by a lane chasing a
+  587 s prelude build, verified independently by reading the three sites:
+
+  - `NatOps::num` (`nat_prelude/ops.rs`) is `let mut e = self.zero(); for _ in
+    0..n { e = self.succ(e); } e`. `13125` is 13,125 nested `succ`
+    applications.
+  - `Kernel::reduce_nat_succ` (`tc.rs`) whnfs its argument and requires
+    `ExprNode::Lit(Lit::Nat(_))`. **`Nat.zero` is a `Const` with no
+    definition, so it never whnfs to `Lit::Nat(0)`** — `reduce_nat_succ`
+    returns `None` on `succ (Const Nat.zero)` and the tower never collapses
+    bottom-up.
+  - `Kernel::reduce_nat_binop` — the accelerated `add`/`sub`/`mul`/`div`/`mod`/
+    `gcd`/`pow`/`beq`/`ble` — needs **both** arguments to whnf to `Lit::Nat`.
+    They never do.
+
+  So every `gcd` and division inside `Rat.normalize`, and all index arithmetic
+  in `creal`, runs by unary recursion, and cost is superlinear in the largest
+  magnitude **formed** — not in the depth of the expression and not in the
+  operand count.
+
+  The A/B that isolates it on one variable: bounding an intermediate at
+  `8/75 <= 7/64` (largest `Nat` **525**) instead of the exact
+  `512/1875 <= 7/25` (largest `Nat` **13,125**) took a prelude build from
+  **587.02 s to 113.46 s**.
+
+  **Two earlier attributions for the same symptom were WRONG and were
+  propagated in briefs before this was measured** — operand *size* alone (a
+  60,000 threshold that does not exist; the real run's max operand was 46,875
+  and was fine) and *nesting depth* (refuted by a flat construction that
+  failed identically). Do not reach for either.
+
+  What to do about it, in order:
+  - **Keep formed magnitudes small.** Choose intermediate bounds that land on
+    the value the next step needs rather than the exact quotient. In the case
+    above `7/64` is *forced* — it is `(7/25)/(8/5)^2` — and the remaining
+    factors ride `mul_le_mul_of_nonneg_left` instead of an evaluation.
+  - **Do not reach for `Rat.ble`'s computational close on large operands.**
+    Closing `le` by `Eq.refl` at `Bool.true` is a SMALL-NUMBERS tool. It
+    settles `64/25 <= 3` cheaply and does not reach `-13/1875`; two
+    independent constructions both blew the budget through it.
+  - Note the kernel's binary literal machinery EXISTS and is tested
+    (`nat_literal_semantics`, `nat_literal_arithmetic`, `nat_literal_bignum`,
+    `nat_literal_to_constructor`, `NatOffset`). It is simply not what the
+    prelude constructs.
+
+- **`scripts/cargo-serialized.sh` TAKES A HOST-WIDE FLOCK, so a TIMING run
+  under lane contention measures the QUEUE.** A lane lost a 600 s run to the
+  wall this way with nothing to show. Read the test harness's own
+  `finished in Xs` rather than wall-clock, or run the prebuilt binary under
+  `target/debug/deps/` directly, which takes no lock. Use the wrapper for
+  CORRECTNESS, the prebuilt binary for MEASUREMENT.
+
 - **A PRELUDE CAN DECLARE INTO ANOTHER PRELUDE'S NAMESPACE, SO "IS THIS NAME
   TAKEN?" IS NOT ANSWERED BY READING THE MODULE IT BELONGS IN.** Measured
   2026-08-25: a lane built an explicit inverse for a bijection on `[0,n)` and
