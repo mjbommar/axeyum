@@ -3011,3 +3011,256 @@ pub(super) fn declare_max_range_le_add_of_exists(
 ) -> Result<(), KernelError> {
     declare_max_range_le_add_of_exists_thm(d, p)
 }
+
+/// `CReal.meshMax_le_add_of_step_close : ∀ F a b j d eps, le a b →
+/// (∀ x y, le a x → le x b → le a y → le y b → le x y →
+///         le y (add x (meshDelta a b (meshLevelCount j))) →
+///         le (F y) (add (F x) eps)) →
+/// le (meshMax F a b (Nat.add j d)) (add (meshMax F a b j) eps)`
+///
+/// **Rung 6's gap bound, with the accuracy schedule factored out.** This is
+/// the statement the telescope consumes, and it holds at ARBITRARY refinement
+/// depth `d` -- not just one doubling. Everything geometric is discharged
+/// here; what remains for a `supOn` assembly is purely to instantiate
+/// `hclose` from [`CRealPrelude::uc_spec`] at the accuracy
+/// [`CRealPrelude::exp_of_modulus`] selects, which is arithmetic about the
+/// modulus and involves no mesh geometry at all.
+///
+/// Note what the hypothesis is NOT: it is not two-sided, and it is not about
+/// `abs`. `hclose` only bounds how much `F` can RISE across a rightward step
+/// of at most one level-`j` cell, which is all a MAXIMUM needs -- the other
+/// direction is [`CRealPrelude::mesh_max_mono`], already landed and free.
+///
+/// Route: [`CRealPrelude::mesh_point_near_coarse`] supplies, for each fine
+/// index, a coarse index whose sample point sits just below the fine one and
+/// within one coarse width of it (conjunct (B) is stated with the FINE width
+/// on the left, so `shift_le_of_nonneg_local` plus `le_trans` turns it into
+/// the plain `le y (add x (D j))` that `hclose` wants);
+/// [`CRealPrelude::riemann_sample_in_bounds`] places both points in `[a, b]`;
+/// and [`CRealPrelude::max_range_le_add_of_exists`] lifts the pointwise
+/// estimate to the two mesh maxima. `meshMax` unfolds to `maxRange` on the
+/// sampler by delta, exactly as in [`declare_mesh_max_step_le_thm`].
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_mesh_max_le_add_of_step_close_thm(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let func_ty = d.arrow(carrier, carrier);
+    let nat_p = p.rat.int.nat;
+    let logic = p.rat.int.logic;
+    let one_level = d.level_one();
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let dd_fv = d.fresh_fvar();
+    let dd = d.kernel().fvar(dd_fv);
+    let eps_fv = d.fresh_fvar();
+    let eps = d.kernel().fvar(eps_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let level = NatOps::add(d, j, dd);
+    let mlc_j = d.const_app(p.mesh_level_count, &[j]);
+    let mlc_l = d.const_app(p.mesh_level_count, &[level]);
+    let dj = level_delta(d, p, a, b, j);
+
+    // hclose : ∀ x y, le a x → le x b → le a y → le y b → le x y →
+    //          le y (add x (D j)) → le (F y) (add (F x) eps).
+    let hclose_ty = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let hax = cle(d, p, a, x);
+        let hxb = cle(d, p, x, b);
+        let hay = cle(d, p, a, y);
+        let hyb = cle(d, p, y, b);
+        let hxy = cle(d, p, x, y);
+        let shifted = cadd(d, p, x, dj);
+        let hstep = cle(d, p, y, shifted);
+        let fx = d.apply(f, &[x]);
+        let fy = d.apply(f, &[y]);
+        let padded = cadd(d, p, fx, eps);
+        let concl = cle(d, p, fy, padded);
+        let out = d.arrow(hstep, concl);
+        let out = d.arrow(hxy, out);
+        let out = d.arrow(hyb, out);
+        let out = d.arrow(hay, out);
+        let out = d.arrow(hxb, out);
+        let out = d.arrow(hax, out);
+        let over_y = d.pi_fv(y_fv, carrier, out);
+        d.pi_fv(x_fv, carrier, over_y)
+    };
+    let hclose_fv = d.fresh_fvar();
+    let hclose = d.kernel().fvar(hclose_fv);
+
+    let fine_sampler = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let sp = level_point(d, p, a, b, level, i);
+        let fx = d.apply(f, &[sp]);
+        d.lam_fv(i_fv, nat, fx)
+    };
+    let coarse_sampler = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let sp = level_point(d, p, a, b, j, i);
+        let fx = d.apply(f, &[sp]);
+        d.lam_fv(i_fv, nat, fx)
+    };
+
+    // hyp : ∀ i, Nat.le i (mlc level) →
+    //       ∃ i', Nat.le i' (mlc j) ∧ le (F (P level i)) (add (F (P j i')) eps).
+    let hyp = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let hi_fv = d.fresh_fvar();
+        let hi = d.kernel().fvar(hi_fv);
+        let hi_ty = d.le(i, mlc_l);
+
+        let y = level_point(d, p, a, b, level, i);
+        let fy = d.apply(f, &[y]);
+
+        // The target `Exists` in the shape `max_range_le_add_of_exists` wants.
+        let goal_pred = {
+            let ip_fv = d.fresh_fvar();
+            let ip = d.kernel().fvar(ip_fv);
+            let bound = d.le(ip, mlc_j);
+            let x = level_point(d, p, a, b, j, ip);
+            let fx = d.apply(f, &[x]);
+            let padded = cadd(d, p, fx, eps);
+            let est = cle(d, p, fy, padded);
+            let body = d.and(bound, est);
+            d.lam_fv(ip_fv, nat, body)
+        };
+        let exists_const = d.kernel().const_(logic.exists_, vec![one_level]);
+        let goal = d.apply(exists_const, &[nat, goal_pred]);
+
+        let near = d.const_app(p.mesh_point_near_coarse, &[a, b, j, hab, dd, i, hi]);
+        let near_pred = near_coarse_pred(d, p, a, b, j, level, i);
+
+        let minor = {
+            let ip_fv = d.fresh_fvar();
+            let ip = d.kernel().fvar(ip_fv);
+            let hp_fv = d.fresh_fvar();
+            let hp = d.kernel().fvar(hp_fv);
+            let hp_ty = near_coarse_body(d, p, a, b, j, level, i, ip);
+
+            let bound_ty = d.le(ip, mlc_j);
+            let x = level_point(d, p, a, b, j, ip);
+            let dl = level_delta(d, p, a, b, level);
+            let lower_ty = cle(d, p, x, y);
+            let sum_l = cadd(d, p, y, dl);
+            let sum_j = cadd(d, p, x, dj);
+            let upper_ty = cle(d, p, sum_l, sum_j);
+            let inner_ty = d.and(lower_ty, upper_ty);
+            let hi_bound = d.and_left(bound_ty, inner_ty, hp);
+            let rest = d.and_right(bound_ty, inner_ty, hp);
+            let h_lower = d.and_left(lower_ty, upper_ty, rest);
+            let h_upper = d.and_right(lower_ty, upper_ty, rest);
+
+            // Both sample points lie in [a, b].
+            let hlt_ip = d.lemma(nat_p.lt_succ_of_le, &[ip, mlc_j, hi_bound]);
+            let and_x = d.const_app(p.riemann_sample_in_bounds, &[a, b, mlc_j, ip, hab, hlt_ip]);
+            let a_le_x = cle(d, p, a, x);
+            let x_le_b = cle(d, p, x, b);
+            let hax = d.const_app(logic.and_left, &[a_le_x, x_le_b, and_x]);
+            let hxb = d.const_app(logic.and_right, &[a_le_x, x_le_b, and_x]);
+
+            let hlt_i = d.lemma(nat_p.lt_succ_of_le, &[i, mlc_l, hi]);
+            let and_y = d.const_app(p.riemann_sample_in_bounds, &[a, b, mlc_l, i, hab, hlt_i]);
+            let a_le_y = cle(d, p, a, y);
+            let y_le_b = cle(d, p, y, b);
+            let hay = d.const_app(logic.and_left, &[a_le_y, y_le_b, and_y]);
+            let hyb = d.const_app(logic.and_right, &[a_le_y, y_le_b, and_y]);
+
+            // `le y (add x (D j))`, dropping the fine width the invariant carries.
+            let mlc_l_term = d.const_app(p.mesh_level_count, &[level]);
+            let dl_nonneg = mesh_delta_nonneg(d, p, a, b, mlc_l_term, hab);
+            let y_grown = shift_le_of_nonneg_local(d, p, y, dl, dl_nonneg);
+            let hstep = d.lemma(p.le_trans, &[y, sum_l, sum_j, y_grown, h_upper]);
+
+            let est = d.apply(hclose, &[x, y, hax, hxb, hay, hyb, h_lower, hstep]);
+            let whole = {
+                let fx = d.apply(f, &[x]);
+                let padded = cadd(d, p, fx, eps);
+                let est_ty = cle(d, p, fy, padded);
+                and_intro(d, p, bound_ty, est_ty, hi_bound, est)
+            };
+            let intro = d.kernel().const_(logic.exists_intro, vec![one_level]);
+            let witnessed = d.apply(intro, &[nat, goal_pred, ip, whole]);
+            let inner = d.lam_fv(hp_fv, hp_ty, witnessed);
+            d.lam_fv(ip_fv, nat, inner)
+        };
+
+        let elim = exists_elim(d, near_pred, goal, near, minor);
+        let inner = d.lam_fv(hi_fv, hi_ty, elim);
+        d.lam_fv(i_fv, nat, inner)
+    };
+
+    let applied = d.const_app(
+        p.max_range_le_add_of_exists,
+        &[fine_sampler, coarse_sampler, mlc_l, mlc_j, eps, hyp],
+    );
+
+    let mesh_l = d.const_app(p.mesh_max, &[f, a, b, level]);
+    let mesh_j = d.const_app(p.mesh_max, &[f, a, b, j]);
+    let rhs = cadd(d, p, mesh_j, eps);
+    let conclusion = cle(d, p, mesh_l, rhs);
+
+    let ty = {
+        let out = d.arrow(hclose_ty, conclusion);
+        let out = d.arrow(hab_ty, out);
+        let out = d.pi_fv(eps_fv, carrier, out);
+        let out = d.pi_fv(dd_fv, nat, out);
+        let out = d.pi_fv(j_fv, nat, out);
+        let out = d.pi_fv(b_fv, carrier, out);
+        let out = d.pi_fv(a_fv, carrier, out);
+        d.pi_fv(f_fv, func_ty, out)
+    };
+    let value = {
+        let out = d.lam_fv(hclose_fv, hclose_ty, applied);
+        let out = d.lam_fv(hab_fv, hab_ty, out);
+        let out = d.lam_fv(eps_fv, carrier, out);
+        let out = d.lam_fv(dd_fv, nat, out);
+        let out = d.lam_fv(j_fv, nat, out);
+        let out = d.lam_fv(b_fv, carrier, out);
+        let out = d.lam_fv(a_fv, carrier, out);
+        d.lam_fv(f_fv, func_ty, out)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mesh_max_le_add_of_step_close,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Land `CReal.meshMax_le_add_of_step_close` alone (a one-declaration
+/// `BuildStep`).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_mesh_max_le_add_of_step_close(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_mesh_max_le_add_of_step_close_thm(d, p)
+}

@@ -72,5 +72,10 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.max_range_le_add_of_exists,
             "theorem",
         ),
+        (
+            "CReal.meshMax_le_add_of_step_close",
+            p.mesh_max_le_add_of_step_close,
+            "theorem",
+        ),
     ]
 }
