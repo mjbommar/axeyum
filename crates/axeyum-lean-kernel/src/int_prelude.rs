@@ -1077,6 +1077,17 @@ pub struct IntPrelude {
     /// (no parity case-split) rather than a computed exponent. See
     /// `fibonacci.rs`'s module doc for the hand check and the proof's algebra.
     pub fib_cassini: NameId,
+    /// `fib : Int → Int` — the sign-extended Fibonacci sequence: `fib (ofNat
+    /// n) := ofNat (Nat.fib n)`, `fib (negSucc m) := pow (neg one) m * ofNat
+    /// (Nat.fib (succ m))` (the standard extension `fib(-n) = (-1)^(n+1)
+    /// fib(n)`, shifted to use the natural exponent `m` directly). One
+    /// `Int.rec` case split, no new recursion device — see `fibonacci.rs`'s
+    /// module doc for the hand check.
+    pub fib: NameId,
+    /// `fib_two_mul_add_one_pos : ∀ n, Lt zero (fib (2*n+1))` — the Fibonacci
+    /// sequence is strictly positive at every ODD index, in either direction
+    /// of `ℤ`. See `fibonacci.rs`'s module doc for the proof.
+    pub fib_two_mul_add_one_pos: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -1317,6 +1328,8 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         euler_unit_coprime: child(kernel, "euler_unit_coprime"),
         euler_unit_injective: child(kernel, "euler_unit_injective"),
         fib_cassini: child(kernel, "fib_cassini"),
+        fib: child(kernel, "fib"),
+        fib_two_mul_add_one_pos: child(kernel, "fib_two_mul_add_one_pos"),
     }
 }
 
@@ -1512,6 +1525,8 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         crt::declare_crt_exists(&mut d)?;
         crt::declare_crt_unique(&mut d)?;
         fibonacci::declare_fib_cassini_all(&mut d)?;
+        fibonacci::declare_fib(&mut d)?;
+        fibonacci::declare_fib_two_mul_add_one_pos(&mut d)?;
         rat::declare_rat(&mut d)?;
         rat::declare_normalize(&mut d)?;
         rat::declare_arithmetic(&mut d)?;

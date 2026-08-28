@@ -182,12 +182,13 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 146] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 147] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.int_is_comm_ring,
         p.mul_eq_zero,
         p.fib_cassini,
+        p.fib_two_mul_add_one_pos,
         p.is_quadratic_residue_one,
         p.is_quadratic_residue_mul,
         p.euler_criterion_pm_one,
@@ -382,8 +383,9 @@ fn derived_lemmas(p: &IntPrelude) -> [crate::NameId; 28] {
 /// unlike `nat_prelude_tests.rs`, this file had no `definition_names`
 /// counterpart to `derived_laws`/`derived_lemmas` at all, so none of these
 /// twenty-two had ever had their footprint checked.
-fn definition_names(p: &IntPrelude) -> [crate::NameId; 24] {
+fn definition_names(p: &IntPrelude) -> [crate::NameId; 25] {
     [
+        p.fib,
         p.neg_of_nat,
         p.sub_nat_nat,
         p.add,
@@ -1431,6 +1433,106 @@ fn nat_abs_computes_and_round_trips() {
         k.axiom_footprint(p.of_nat_nat_abs_of_nonneg).is_empty(),
         "the round-trip lemma rests on a trusted declaration"
     );
+}
+
+/// `Int.fib` computes the sign-extended sequence — a theorem alone does not
+/// pin down an algorithm (a `TypeMismatch`-free but wrong sign flip would
+/// still kernel-check `fib_two_mul_add_one_pos` at a symbolic argument), so
+/// this evaluates the DEFINITION at concrete indices and compares against the
+/// hand-computed sequence `…, -3, 2, -1, 1, [0], 1, 1, 2, 3, 5, …` for
+/// `fib(-4), fib(-3), fib(-2), fib(-1), fib(0), fib(1), fib(2), fib(3)`.
+#[test]
+fn fib_computes_the_sign_extended_sequence() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+
+    let nat_num = |k: &mut Kernel, n: u32| -> ExprId {
+        let mut e = k.const_(p.nat.zero, vec![]);
+        for _ in 0..n {
+            let succ = k.const_(p.nat.succ, vec![]);
+            e = k.app(succ, e);
+        }
+        e
+    };
+    let of_nat = |k: &mut Kernel, n: ExprId| -> ExprId {
+        let ctor = k.const_(p.of_nat, vec![]);
+        k.app(ctor, n)
+    };
+    let neg_succ = |k: &mut Kernel, n: ExprId| -> ExprId {
+        let ctor = k.const_(p.neg_succ, vec![]);
+        k.app(ctor, n)
+    };
+    let fib_at_of_nat = |k: &mut Kernel, n: u32| -> ExprId {
+        let fib = k.const_(p.fib, vec![]);
+        let arg_nat = nat_num(k, n);
+        let arg = of_nat(k, arg_nat);
+        k.app(fib, arg)
+    };
+    let fib_at_neg_succ = |k: &mut Kernel, m: u32| -> ExprId {
+        let fib = k.const_(p.fib, vec![]);
+        let arg_nat = nat_num(k, m);
+        let arg = neg_succ(k, arg_nat);
+        k.app(fib, arg)
+    };
+
+    // fib(3) = 2, fib(2) = 1 -- the ordinary `ofNat` branch, unchanged from
+    // `Nat.fib`.
+    {
+        let applied = fib_at_of_nat(&mut k, 3);
+        let two = nat_num(&mut k, 2);
+        let expected = of_nat(&mut k, two);
+        assert!(k.def_eq(applied, expected), "fib(3) must compute to 2");
+    }
+    {
+        let applied = fib_at_of_nat(&mut k, 2);
+        let one = nat_num(&mut k, 1);
+        let expected = of_nat(&mut k, one);
+        assert!(k.def_eq(applied, expected), "fib(2) must compute to 1");
+    }
+
+    // fib(-1) = fib(negSucc 0) = 1.
+    {
+        let applied = fib_at_neg_succ(&mut k, 0);
+        let one = nat_num(&mut k, 1);
+        let expected = of_nat(&mut k, one);
+        assert!(k.def_eq(applied, expected), "fib(-1) must compute to 1");
+    }
+
+    // fib(-2) = fib(negSucc 1) = -1 = negSucc 0.
+    {
+        let applied = fib_at_neg_succ(&mut k, 1);
+        let zero = nat_num(&mut k, 0);
+        let expected = neg_succ(&mut k, zero);
+        assert!(k.def_eq(applied, expected), "fib(-2) must compute to -1");
+
+        // Negative control: guard against a vacuous check that would pass
+        // even if the sign never actually flipped (fib(-2)'s MAGNITUDE, 1,
+        // is the same numeral as fib(-1)'s VALUE -- so a definition that
+        // dropped the sign entirely would still satisfy the positive check
+        // above at `fib(-1)` and only be caught here).
+        let one = nat_num(&mut k, 1);
+        let wrong = of_nat(&mut k, one);
+        assert!(
+            !k.def_eq(applied, wrong),
+            "fib(-2) must NOT compute to 1 -- the sign must actually flip"
+        );
+    }
+
+    // fib(-3) = fib(negSucc 2) = 2.
+    {
+        let applied = fib_at_neg_succ(&mut k, 2);
+        let two = nat_num(&mut k, 2);
+        let expected = of_nat(&mut k, two);
+        assert!(k.def_eq(applied, expected), "fib(-3) must compute to 2");
+    }
+
+    // fib(-4) = fib(negSucc 3) = -3 = negSucc 2.
+    {
+        let applied = fib_at_neg_succ(&mut k, 3);
+        let two = nat_num(&mut k, 2);
+        let expected = neg_succ(&mut k, two);
+        assert!(k.def_eq(applied, expected), "fib(-4) must compute to -3");
+    }
 }
 
 /// A concrete rational is constructible, and a non-normalised one is not.
