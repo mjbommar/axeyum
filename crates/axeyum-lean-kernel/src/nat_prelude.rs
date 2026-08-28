@@ -141,6 +141,7 @@ mod choose;
 mod clog;
 mod crt;
 mod defs;
+mod desc_factorial;
 mod diagonal;
 mod divisibility;
 mod division;
@@ -200,6 +201,7 @@ use defs::{
     declare_arithmetic, declare_boolean_equality, declare_defining_equations,
     declare_executable_division, declare_finite_ranges, declare_subtraction,
 };
+use desc_factorial::declare_desc_factorial_all;
 use diagonal::declare_diagonal;
 use divisibility::declare_divisibility;
 use divisibility::declare_factorial_order;
@@ -321,6 +323,24 @@ pub struct NatPrelude {
     /// that every `d` with `1 ≤ d ≤ n` divides. See
     /// [`dvd_factorial_of_le`](Self::dvd_factorial_of_le).
     pub factorial: NameId,
+    /// `Nat.descFactorial : Nat → Nat → Nat`, by structural recursion on its
+    /// **second** argument via [`NatOps::define_binary`]:
+    /// `descFactorial n zero ≡ 1` and
+    /// `descFactorial n (succ k) ≡ (n - k) * descFactorial n k` hold
+    /// **definitionally** (β/δ/ι), mirroring Mathlib's `Nat.descFactorial`.
+    /// `n * (n-1) * … * (n-k+1)`, `k` factors of truncated `Nat.sub`. See
+    /// [`desc_factorial_of_lt`](Self::desc_factorial_of_lt) for the
+    /// truncation boundary.
+    pub desc_factorial: NameId,
+    /// `descFactorial_zero : ∀ n, n.descFactorial 0 = 1`.
+    pub desc_factorial_zero: NameId,
+    /// `descFactorial_succ : ∀ n k, n.descFactorial (succ k) = (n - k) * n.descFactorial k`.
+    pub desc_factorial_succ: NameId,
+    /// `descFactorial_one : ∀ n, n.descFactorial 1 = n`.
+    pub desc_factorial_one: NameId,
+    /// `descFactorial_of_lt : ∀ n k, n < k → n.descFactorial k = 0` — once
+    /// `k` exceeds `n`, truncated `Nat.sub` forces a zero factor.
+    pub desc_factorial_of_lt: NameId,
     /// `Nat.pred : Nat → Nat`, with `pred zero = zero`.
     pub pred: NameId,
     /// `Nat.sub : Nat → Nat → Nat`, truncated at zero and recursive in the
@@ -2356,6 +2376,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             gcd: kernel.name_str(nat, "gcd"),
             sum_range: kernel.name_str(nat, "sumRange"),
             factorial: kernel.name_str(nat, "factorial"),
+            desc_factorial: kernel.name_str(nat, "descFactorial"),
+            desc_factorial_zero: kernel.name_str(nat, "descFactorial_zero"),
+            desc_factorial_succ: kernel.name_str(nat, "descFactorial_succ"),
+            desc_factorial_one: kernel.name_str(nat, "descFactorial_one"),
+            desc_factorial_of_lt: kernel.name_str(nat, "descFactorial_of_lt"),
             pred: kernel.name_str(nat, "pred"),
             sub: kernel.name_str(nat, "sub"),
             no_confusion_type: kernel.name_str(nat, "noConfusionType"),
@@ -2963,6 +2988,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // (`order_extra`) and the `zero_lt_succ` term-builder, all far above;
         // nothing needs `Nat.bit`, so it goes last too.
         declare_bit_all(&mut d, &p)?;
+        // Needs `Nat.sub`/`Nat.mul` (`declare_arithmetic`/`declare_subtraction`,
+        // both far above) and the order/algebra theorems (`not_lt_zero`,
+        // `le_of_lt_succ`, `lt_or_eq_of_le`, `sub_self`, `zero_mul`,
+        // `mul_zero`, `mul_one`); nothing needs `Nat.descFactorial`, so it
+        // goes last too.
+        declare_desc_factorial_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {

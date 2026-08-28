@@ -1,0 +1,63 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-desc-factorial-succ",
+    "F:nat-desc-factorial-zero"
+  ],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- descFactorial_one 2>/dev/null | grep -Ec '^Nat\\.descFactorial_one[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.descFactorial_one",
+      "kernel_declaration": "Nat.descFactorial_one",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate. `n.descFactorial 1` is defeq (via `descFactorial_succ` at `k := 0`, itself definitional) to `(n - 0) * n.descFactorial 0`, and `n - 0 ≡ n` is itself definitional (`Nat.sub`'s own base case). So the stated goal is defeq to `n * 1 = n`, and this theorem's proof term is literally `Nat.mul_one`'s own proof, applied at `n` -- the kernel accepts it by unifying the stated type against `mul_one`'s inferred type up to full defeq, with no explicit rewrite combinator. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the count is tested, so the exit status depends on what the run found.",
+      "supports": "n.descFactorial 1 = n"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::desc_factorial_computes_and_collapses_past_its_base",
+      "checkers": [
+        "Kernel::def_eq"
+      ],
+      "id": "compute-Nat.descFactorial_one",
+      "kernel_declaration": "Nat.descFactorial",
+      "kind": "kernel-term",
+      "notes": "The companion concrete test does not instantiate this exact equation (its concrete instances are 0, 2, 5, 6), but it independently exercises the SAME `descFactorial_succ` unfolding chain this theorem's proof relies on, at `5.descFactorial 5 = 120` and `5.descFactorial 2 = 20`, both with negative reduction controls.",
+      "supports": "the successor-equation unfolding the proof term relies on is exercised at concrete instances elsewhere in the same suite"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.descFactorial_one",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. Measured 2026-08-28: `nat: axiom=0 opaque=0 quotient=0 total_trusted=0` with `Nat.descFactorial` and its four theorems declared.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0"
+    ],
+    "language": "lean4",
+    "statement": "theorem Nat.descFactorial_one : ((x0 : AxNat) -> Eq.{1} AxNat (AxNat.descFactorial x0 (AxNat.succ AxNat.zero)) x0)"
+  },
+  "id": "F:nat-desc-factorial-one",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*) -- the `nat` prelude's trusted surface measures zero.\n\nThis fact does NOT flip `F:ml430-nat-descfactorial-one-d4856d4a`, the Mathlib mirror of the same statement shape: that fact is already `proved`, but through a SEPARATE, unrelated producer -- the Lean/Mathlib import route (evidence id `autogenesis-operation-13843f88b89e9a23`, importing Mathlib's own `Nat.descFactorial` and its own proof of `Nat.descFactorial_one`). This fact is this kernel's INDEPENDENT construction: our own `Nat.descFactorial` (declared fresh by this lane), proved by our own kernel from our own `Nat.mul_one`, with no dependency on the import route or on Mathlib's proof term. Two independent derivations of the same true statement, over two independently-constructed carriers, is stronger than either alone -- it is not a duplicate.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane 212-nat-factorial-variants",
+    "source": "declare_desc_factorial_one (crates/axeyum-lean-kernel/src/nat_prelude/desc_factorial.rs)"
+  },
+  "schema_version": 1,
+  "statement": "The falling factorial of n with exactly 1 factor equals n.",
+  "title": "descFactorial(n, 1) = n"
+}

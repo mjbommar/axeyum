@@ -1,0 +1,65 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-desc-factorial-succ"
+  ],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- descFactorial_of_lt 2>/dev/null | grep -Ec '^Nat\\.descFactorial_of_lt[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.descFactorial_of_lt",
+      "kernel_declaration": "Nat.descFactorial_of_lt",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type. Proved by induction on `k` (with `n` held fixed, no generalization needed inside the motive): `k = 0` is vacuous (`n < 0` is impossible, `Nat.not_lt_zero`); `k = succ j` splits `n < succ j` (via `le_of_lt_succ`) into `n < j` or `n = j` (via `lt_or_eq_of_le`) -- the first case chains the induction hypothesis through `mul_zero`, the second substitutes `j := n` (`Eq.rec`) into a goal computed once via `sub_self` then `zero_mul`. This is the definition's highest-risk seam: `Nat.sub` truncates rather than going negative, so a wrong argument order in the recursion step would still type-check and would only show up as a wrong VALUE, never a kernel rejection -- this theorem proves the truncation boundary rather than merely asserting it. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the count is tested, so the exit status depends on what the run found.",
+      "supports": "n < k -> n.descFactorial k = 0"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::desc_factorial_computes_and_collapses_past_its_base",
+      "checkers": [
+        "Kernel::def_eq",
+        "Kernel::infer"
+      ],
+      "id": "compute-Nat.descFactorial_of_lt",
+      "kernel_declaration": "Nat.descFactorial_of_lt",
+      "kind": "kernel-term",
+      "notes": "Applies this theorem at the concrete pair `(5, 6)` (`5 < 6` built from `Nat.le.refl 6`) and confirms (via `Kernel::infer` plus `Kernel::def_eq` against an independently-built expected type) that the admitted conclusion is exactly `5.descFactorial 6 = 0`, which also matches DIRECT reduction of `5.descFactorial 6` (checked separately in the same test, with a negative reduction control). A second negative control substitutes a proof of `5 < 5` for the required `5 < 6` hypothesis and confirms `Kernel::infer` REJECTS it -- so the hypothesis is load-bearing, not merely present.",
+      "supports": "the theorem applies correctly at a concrete instance and its hypothesis is load-bearing"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.descFactorial_of_lt",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. The induction is over the constructed `Nat.rec` (`Prop`-valued motive, `level_zero`), no `WellFounded`/`Quot.sound`/`propext` needed. Measured 2026-08-28: `nat: axiom=0 opaque=0 quotient=0 total_trusted=0` with `Nat.descFactorial` and its four theorems declared.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "language": "lean4",
+    "statement": "theorem Nat.descFactorial_of_lt : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.lt x0 x1) -> Eq.{1} AxNat (AxNat.descFactorial x0 x1) AxNat.zero)))"
+  },
+  "id": "F:nat-desc-factorial-of-lt",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*) -- the `nat` prelude's trusted surface measures zero.\n\nThis is NOT a mirror of `F:ml430-nat-descfactorial-of-lt-fbcf5d26`, which states the same PROPOSITION about Mathlib's own `Nat.descFactorial` and remains `open`, proved through a wholly separate, unimported producer. This fact is this kernel's independent construction and this lane does not flip that mirror fact by hand -- see `F:nat-desc-factorial-zero`'s provenance note for the general policy.\n\nThis boundary lemma exists because Mathlib's `Nat.descFactorial` (and this kernel's copy) is defined with truncated `Nat.sub`, so the totality convention outside the \"intended\" domain (`k > n`) is a genuine mathematical fact about the construction, not an incidental artifact -- the brief that requested this definition flagged `Nat.sub`'s truncation as the definition's highest-risk seam and asked for the `k > n` case to be checked explicitly rather than merely assumed.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane 212-nat-factorial-variants",
+    "source": "declare_desc_factorial_of_lt (crates/axeyum-lean-kernel/src/nat_prelude/desc_factorial.rs)"
+  },
+  "schema_version": 1,
+  "statement": "If n is less than k, the falling factorial of n with k factors equals 0.",
+  "title": "n < k implies descFactorial(n, k) = 0"
+}

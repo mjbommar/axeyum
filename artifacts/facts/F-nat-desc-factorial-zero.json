@@ -1,0 +1,60 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- descFactorial_zero 2>/dev/null | grep -Ec '^Nat\\.descFactorial_zero[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.descFactorial_zero",
+      "kernel_declaration": "Nat.descFactorial_zero",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. `Nat.descFactorial` is declared by structural recursion on its SECOND argument via `NatOps::define_binary` (`nat_prelude/desc_factorial.rs`), so `descFactorial n zero` iota-reduces to the base case, `1`, directly -- the proof is `Eq.refl`, no induction or case split. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the count is tested, so the exit status depends on what the run found.",
+      "supports": "n.descFactorial 0 = 1"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::desc_factorial_computes_and_collapses_past_its_base",
+      "checkers": [
+        "Kernel::def_eq"
+      ],
+      "id": "compute-Nat.descFactorial_zero",
+      "kernel_declaration": "Nat.descFactorial",
+      "kind": "kernel-term",
+      "notes": "`Kernel::def_eq` reduces `5.descFactorial 0` directly (definition unfolding, no boundary theorem invoked) and confirms it is `1`, with a negative reduction control (`5.descFactorial 2` must NOT be def-eq to `120`) so the assertion cannot pass on a vacuous `def_eq`.",
+      "supports": "the base case computes the right value at a concrete instance, not merely an opaque application"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.descFactorial_zero",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. `Nat.descFactorial` needed no fuel device: it is structural recursion on its second argument, exactly like `Nat.factorial`/`Nat.mul`/`Nat.sub`, so nothing here was ever at risk of needing `WellFounded`/`Quot.sound`/`propext`. Measured 2026-08-28: `nat: axiom=0 opaque=0 quotient=0 total_trusted=0` with `Nat.descFactorial` and its four theorems declared.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0"
+    ],
+    "language": "lean4",
+    "statement": "theorem Nat.descFactorial_zero : ((x0 : AxNat) -> Eq.{1} AxNat (AxNat.descFactorial x0 AxNat.zero) (AxNat.succ AxNat.zero))"
+  },
+  "id": "F:nat-desc-factorial-zero",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*) -- the `nat` prelude's trusted surface measures zero.\n\n`Nat.descFactorial` did not exist before this lane; it was one of three definitions (`Nat.ascFactorial`, `Nat.descFactorial`, `Nat.multichoose`) named as blocking five open `F:ml430-nat-*` facts. This fact does NOT flip any `F:ml430-nat-descfactorial-*` mirror fact by hand -- this kernel's `Nat.descFactorial` is our own construction (structural recursion via `define_binary`, mirroring Mathlib's own equations exactly, but proved independently), not an import of Mathlib's proof, so claiming their statements verbatim would be the checker-that-cannot-fail defect this repository explicitly guards against. Those mirror facts (`F:ml430-nat-descfactorial-le-2b8cc09a`, `-of-lt-fbcf5d26`, `-one-d4856d4a`, `-self-899fc0e0`, `-zero-966b01df`, `F:ml430-nat-factorial-dvd-descfactorial-bbf6124f`) remain untouched by this lane; `F:ml430-nat-descfactorial-one-d4856d4a` happens to already be `proved` through a wholly separate producer (the Lean/Mathlib import route, evidence id `autogenesis-operation-13843f88b89e9a23`), unrelated to this kernel construction.\n\nThe existence of the DEFINITION `Nat.descFactorial` is entailed by this row rather than separately checked: the statement mentions `AxNat.descFactorial`, and `Kernel::add_declaration` cannot admit a type naming a constant the environment does not contain.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane 212-nat-factorial-variants",
+    "source": "one of two definitional boundary equations `declare_desc_factorial` (`crates/axeyum-lean-kernel/src/nat_prelude/desc_factorial.rs`) admits alongside the `Nat.descFactorial` definition"
+  },
+  "schema_version": 1,
+  "statement": "The falling (descending) factorial of n with 0 factors equals 1.",
+  "title": "descFactorial(n, 0) = 1"
+}
