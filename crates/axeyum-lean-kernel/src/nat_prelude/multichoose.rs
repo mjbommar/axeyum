@@ -163,8 +163,7 @@ pub(super) fn declare_multichoose_one(
         let choose_kk = d.choose(k, k);
         let h_choose = d.congr(pred_add1k, k, pred_add1k_eq_k, &|d, x| d.choose(x, k));
         let choose_self_k = d.lemma(p.choose_self, &[k]);
-        let (_last2, proof) =
-            d.chain(lhs_choose, &[(choose_kk, h_choose), (one, choose_self_k)]);
+        let (_last2, proof) = d.chain(lhs_choose, &[(choose_kk, h_choose), (one, choose_self_k)]);
 
         let lhs = multichoose(d, &p, one, k);
         (d.eq(lhs, one), proof)
