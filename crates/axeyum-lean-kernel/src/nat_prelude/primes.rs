@@ -1924,7 +1924,7 @@ pub(super) fn declare_coprime_or_dvd_of_prime(
 // ============================================================================
 
 /// `prime p → 0 < p`, mirroring `fermat.rs`'s private `prime_pos` exactly
-/// (same construction, so the ExprIds intern identically) since that helper
+/// (same construction, so the `ExprId`s intern identically) since that helper
 /// is `fn`-private to its own file.
 fn prime_pos_local(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId, prime_proof: ExprId) -> ExprId {
     let (two_le_ty, divisor_clause_ty) = prime_parts(d, p, x);
@@ -2014,8 +2014,14 @@ pub(super) fn declare_coprime_primes(
                 let on_one = {
                     let h1_fv = d.fresh_fvar();
                     let h1 = d.kernel().fvar(h1_fv);
-                    let result =
-                        refute_eq_one_against_prime_lower_bound(d, &p, p_var, prime_p_hyp, h1, coprime_ty);
+                    let result = refute_eq_one_against_prime_lower_bound(
+                        d,
+                        &p,
+                        p_var,
+                        prime_p_hyp,
+                        h1,
+                        coprime_ty,
+                    );
                     d.lam_fv(h1_fv, is_one_ty, result)
                 };
                 let on_q = {
@@ -2025,10 +2031,13 @@ pub(super) fn declare_coprime_primes(
                     let result = absurd(d, &p, coprime_ty, false_pf);
                     d.lam_fv(hq_fv, is_q_ty, result)
                 };
-                let case_result = or_cases(d, &p, is_one_ty, is_q_ty, coprime_ty, on_one, on_q, disj2);
+                let case_result =
+                    or_cases(d, &p, is_one_ty, is_q_ty, coprime_ty, on_one, on_q, disj2);
                 d.lam_fv(h_fv, dvd_ty, case_result)
             };
-            let case_result = or_cases(d, &p, coprime_ty, dvd_ty, coprime_ty, on_coprime, on_dvd, disj);
+            let case_result = or_cases(
+                d, &p, coprime_ty, dvd_ty, coprime_ty, on_coprime, on_dvd, disj,
+            );
             d.lam_fv(ne_fv, ne_ty, case_result)
         };
 
@@ -2248,10 +2257,7 @@ pub(super) fn declare_prime_dvd_mul_of_dvd_ne(
         let dvd2_fv = d.fresh_fvar();
         let dvd2_hyp = d.kernel().fvar(dvd2_fv);
 
-        let iff_pf = d.lemma(
-            p.coprime_primes,
-            &[p1_var, p2_var, prime1_hyp, prime2_hyp],
-        );
+        let iff_pf = d.lemma(p.coprime_primes, &[p1_var, p2_var, prime1_hyp, prime2_hyp]);
         let gcd_p1p2 = d.gcd(p1_var, p2_var);
         let coprime_ty = d.eq(gcd_p1p2, one);
         let mpr_fn = iff_reverse(d, coprime_ty, ne_ty, iff_pf);

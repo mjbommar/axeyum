@@ -241,8 +241,8 @@ use primes::{
     declare_dvd_lcm_of_dvd, declare_dvd_of_lcm_dvd, declare_euclid, declare_not_coprime_zero_zero,
     declare_not_prime_of_dvd_of_ne, declare_prime_dvd_iff_not_coprime,
     declare_prime_dvd_mul_of_dvd_ne, declare_prime_dvd_of_dvd_pow, declare_prime_even_iff,
-    declare_prime_not_dvd_mul, declare_prime_odd_of_ne_two, declare_prime_pred_pos,
-    declare_primes, declare_succ_pred_prime,
+    declare_prime_not_dvd_mul, declare_prime_odd_of_ne_two, declare_prime_pred_pos, declare_primes,
+    declare_succ_pred_prime,
 };
 use rectangle::declare_rectangle;
 use relation::{
