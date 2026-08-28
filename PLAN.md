@@ -205,6 +205,7 @@ now. Nothing was deleted.
 | 2026-08-28 | evt-endpoint | `cas-certificate` `kernel-reconstructed` 3 -> 4: EVT endpoint exclusion for x^3-6x on [-3,2] admitted through `Kernel::add_declaration`, reusing the IVT sign-bracket bridge's engine verbatim; mutation-verified; registered as `F:cas-evt-endpoint-exclusion-cubic-kernel-checked`, a sibling of `F:cas-extremum-irrational-argmax` |
 | 2026-08-28 | nat-factorial-dvd | falling/rising-factorial ↔ `choose` bridges + `factorial_dvd_descFactorial`/`factorial_dvd_ascFactorial`, closing 2 `F:ml430-nat-factorial-dvd-*` facts |
 | 2026-08-28 | nat-ldiff | `Nat.ldiff`/`Nat.ldiffAux` (fuel recursion, `land`-shaped fuel-exhaustion base case, hybrid land/lor succ-row guard, `beq`+`bool_select_nat` per-bit step) + 4 boundary theorems incl. the asymmetry pair in `nat_prelude/ldiff.rs`; wired into `nat_prelude.rs`; `nat_prelude_tests.rs` coverage + dedicated evaluation test + pinned render count `492->498`; 4 new `F:nat-ldiff-*` facts |
+| 2026-08-28 | fib-2 | `Nat.le_fib_self` (kernel-checked, axiom-free), closing `F:ml430-nat-le-fib-self-0cbccb4d`; `Nat.le_fib_add_one`/`Int.fib_add`/`Int.fib_of_odd` re-diagnosed and left open with sharper blockers |
 | 2026-08-27 | (uncommitted at status-file write time) | `CReal.sumRange_cauchy_of_abs_cauchy` / `CReal.sumRange_converges_of_abs_converges` (absolute convergence implies convergence) plus a soundness-negative control; curriculum rows 18 and 22–23 corrected. |
 | 2026-08-27 | (uncommitted at status-file write time) | Ten new `artifacts/facts/F-creal-*.json` entries for the Ch.13/14 Riemann integral construction and algebra (`riemannSum_cauchy`, `integral`, `integral_converges`, `integral_const`, `integral_add`, `integral_le`, `integral_scale`, `integral_witness_independent`, `riemannSum_integral_close`, `sharedIndexToCanonical`); `python3 scripts/validate-facts.py` green (708 facts, 0 errors). |
 | 2026-08-27 | (uncommitted at status-file write time) | Added `--require-declaration <name> [--require-kind <kind>]` to `crates/axeyum-lean-kernel/examples/kernel_declaration_projection.rs`: a direct, fail-on-absence presence checker for `Declaration::Definition`s (and any other kind), mutation-tested against `CReal.integral`. Upgraded `F:creal-integral`'s `kernel-CReal.integral` evidence to use it. Registered 14 new `artifacts/facts/F-creal-*.json` entries for Spivak Ch.18 (`e`) and Ch.22-23 (series convergence tests): `creal-e`, `creal-e-converges`, `creal-two-le-e`, `creal-e-le-three`, `creal-e-le-four`, `creal-expterm-le-geom`, `creal-expdominantcauchy`, `creal-cauchyofpointwiseequiv`, `creal-geomcauchy`, `creal-sumrange-comparisontest`, `creal-sumrange-cauchy-of-dominated`, `creal-sumrange-converges-of-dominated`, `creal-sumrange-cauchy-of-abs-cauchy`, `creal-sumrange-converges-of-abs-converges`. `python3 scripts/validate-facts.py` green (722 facts, 0 errors). |
@@ -10799,6 +10800,60 @@ Out of scope, deliberately: `Nat.bitwise` (general two-argument form),
 ones (the `ml430-nat-ldiff-*`/`ml430-nat-testbit-ldiff-*` mirror facts) —
 `ldiff` proved simple enough that none of these were needed to land it,
 matching the brief's "complete success" bar without extending scope.
+
+**Your lane's block (`DONE for this pass`, fib-2, 2026-08-28).** Landed
+`Nat.le_fib_self`, kernel-checked and axiom-free, closing
+`F:ml430-nat-le-fib-self-0cbccb4d`. This satisfies the brief's "land either
+`Int.fib_add` or the `Nat.le_fib_*` chain is a complete success" bar.
+
+What did NOT land, and why (each blocker re-verified against the tree
+before being reported, per the brief's "a lane refuted another lane's
+hand-off yesterday" warning):
+
+- `Nat.le_fib_add_one` (needs `le_fib_self`, now available). The
+  unconditional statement `n <= fib(n)+1` is TIGHT at `n=2,3,4` (equality),
+  so a bare two-step pair-induction from `k=0` provably cannot close the
+  step for small `k` (checked algebraically: the step needs `k>=2` for the
+  slack to work out, whatever margin `M` in `n<=fib(n)+M` you pick — the
+  threshold moves but never reaches 0). The real proof needs `Le 5 n ∨ Lt n
+  5` and, in the `Lt n 5` branch, a genuine 5-way case split down to
+  concrete `n∈{0,1,2,3,4}` (no `cases_up_to`/`by_cases`-style helper exists
+  in `nat_prelude/ops.rs` — checked). Building that eliminator is a real
+  slice of work, not a one-line finish; left open rather than rushed.
+- `Int.fib_add` — confirmed still blocked: `int_prelude/fibonacci.rs` and
+  `int_prelude/ops.rs` have no two-sided (`ofNat`/`negSucc`-covering)
+  induction combinator (checked, none exists). The general addition formula
+  needs a real case analysis across both arguments' signs plus the `m-1`
+  shift Mathlib's statement carries; this is comparable-or-more effort than
+  `le_fib_self` turned out to be, not less.
+- `Int.fib_of_odd` — confirmed still blocked, but NOT for the reason
+  previously guessed. Checking `int_prelude.rs`: there is no `Odd`/`Even`
+  predicate over `Int` at all (`Nat.Even`/`Nat.Odd` exist,
+  `nat_prelude/parity.rs`; nothing analogous for `Int`). Hand-derivation
+  confirms the theorem IS cheaper via `natAbs` once `Int.Odd` exists: for
+  `n = ofNat k` the statement holds unconditionally (`Int.fib(ofNat k) =
+  Nat.fib k = natAbs(ofNat k)`'s `Nat.fib`, no oddness needed); for `n =
+  negSucc m`, `Odd n` reduces to `m` (a **Nat**) being even, i.e. exactly
+  `Nat.Even m` — no `Int`-level parity reasoning is needed for the proof
+  ITSELF, only to STATE the theorem (`Odd n` for `n : ℤ` must exist as a
+  predicate before the theorem can even be written down). So the blocker is
+  real but narrower than stated: defining `Int.Odd`/`Int.Even` (a small
+  slice) unblocks a genuinely cheap proof.
+- `Nat.fastfib_eq`, the two `Int.fib_two_mul*` facts — untouched, blocked on
+  `Nat.fastFib` / `Int.fib_add` respectively as the brief described; not
+  re-investigated this pass.
+
+No target carried a `⛔ HELD-OUT` or `⛔ MUTATION` marker
+(`scripts/fact-frontier.py`, checked before starting).
+
+Prelude counts: `nat_prelude_tests.rs` `D + T` moved **83 + 421 -> 83 +
+422** (recounted from the test's own run, not incremented by hand).
+`int_prelude_tests.rs` untouched this pass (no `Int` declaration landed).
+
+Verified: `cargo test -p axeyum-lean-kernel --lib nat_prelude::` — 110
+passed, 0 failed. `cargo fmt --edition 2024` on touched files.
+`cargo clippy -p axeyum-lean-kernel --all-targets --all-features -- -D
+warnings` — clean. `python3 scripts/validate-facts.py` — 0 errors.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
