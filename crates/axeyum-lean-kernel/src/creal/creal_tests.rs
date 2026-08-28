@@ -10191,6 +10191,7 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "geometric::declare_geometric",
     "power::declare_power_series_term_abs_le",
     "uniform_convergence::declare_power_series_uniform_converges",
+    "uniform_convergence::declare_converges_of_abs_diff_le",
     "uniform_convergence::declare_uniform_converges_geom",
     "geometric::declare_geom_cauchy_of_lt_family",
     "exponential::declare_exponential",

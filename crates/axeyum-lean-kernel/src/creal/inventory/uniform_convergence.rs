@@ -73,5 +73,10 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.has_derivative_uniform_limit,
             "theorem",
         ),
+        (
+            "CReal.converges_of_abs_diff_le",
+            p.converges_of_abs_diff_le,
+            "theorem",
+        ),
     ]
 }
