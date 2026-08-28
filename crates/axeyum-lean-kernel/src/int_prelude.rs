@@ -491,10 +491,36 @@ pub struct IntPrelude {
     /// hypothesis is threaded through to `modEq_iff_dvd`, which needs it for
     /// the same reason every congruence in this module does.
     pub mod_eq_of_nat_mod_eq: NameId,
-    /// `ModEq.add_right : ∀ n a b c, 0 < n → ModEq n a b → ModEq n (a+c) (b+c)`.
+    /// `ModEq.add_right : ∀ n a b c, ModEq n a b → ModEq n (a+c) (b+c)`,
+    /// UNCONDITIONAL in `n` (Mathlib's own statement carries no positivity
+    /// hypothesis; the earlier `0 < n`-scoped proof here was a proof-route
+    /// artifact of going through the positive-only half of
+    /// [`Self::mod_eq_iff_dvd`], not a mathematical necessity — see
+    /// `int_prelude/modeq.rs`'s `modeq_to_dvd`/`dvd_to_modeq`).
     pub mod_eq_add_right: NameId,
-    /// `ModEq.add_left : ∀ n a b c, 0 < n → ModEq n a b → ModEq n (c+a) (c+b)`.
+    /// `ModEq.add_left : ∀ n a b c, ModEq n a b → ModEq n (c+a) (c+b)`,
+    /// UNCONDITIONAL in `n` — see [`Self::mod_eq_add_right`].
     pub mod_eq_add_left: NameId,
+    /// `ModEq.add_left_cancel' : ∀ n a b c, ModEq n (c+a) (c+b) → ModEq n a b`,
+    /// UNCONDITIONAL in `n`. Shift both sides by `-c` via
+    /// [`Self::mod_eq_add_left`] and simplify.
+    pub mod_eq_add_left_cancel: NameId,
+    /// `ModEq.neg : ∀ n a b, ModEq n a b → ModEq n (-a) (-b)`, UNCONDITIONAL
+    /// in `n`.
+    pub mod_eq_neg: NameId,
+    /// `neg_modEq_neg : ∀ n a b, ModEq n (-a) (-b) ↔ ModEq n a b`,
+    /// UNCONDITIONAL in `n`.
+    pub neg_mod_eq_neg: NameId,
+    /// `ModEq.of_dvd : ∀ m n a b, dvd m n → ModEq n a b → ModEq m a b`,
+    /// UNCONDITIONAL in both `m` and `n`.
+    pub mod_eq_of_dvd: NameId,
+    /// `ModEq.dvd_iff : ∀ n a b, ModEq n a b → (dvd n a ↔ dvd n b)`,
+    /// UNCONDITIONAL in `n`.
+    pub mod_eq_dvd_iff: NameId,
+    /// `ModEq.of_mul_left : ∀ n a b m, ModEq (m*n) a b → ModEq n a b` — the
+    /// special case of [`Self::mod_eq_of_dvd`] at `dvd n (m*n)`
+    /// (`Int.dvd_mul_left`).
+    pub mod_eq_of_mul_left: NameId,
     /// `ModEq.mul_left : ∀ n a b c, 0 < n → ModEq n a b → ModEq n (c*a) (c*b)`
     /// — the primitive multiplicative congruence.
     pub mod_eq_mul_left: NameId,
@@ -1087,6 +1113,12 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         mod_eq_of_nat_mod_eq: child(kernel, "modEq_of_nat_modEq"),
         mod_eq_add_right: child(kernel, "modEq_add_right"),
         mod_eq_add_left: child(kernel, "modEq_add_left"),
+        mod_eq_add_left_cancel: child(kernel, "modEq_add_left_cancel"),
+        mod_eq_neg: child(kernel, "modEq_neg"),
+        neg_mod_eq_neg: child(kernel, "neg_modEq_neg"),
+        mod_eq_of_dvd: child(kernel, "modEq_of_dvd"),
+        mod_eq_dvd_iff: child(kernel, "modEq_dvd_iff"),
+        mod_eq_of_mul_left: child(kernel, "modEq_of_mul_left"),
         mod_eq_mul_left: child(kernel, "modEq_mul_left"),
         mod_eq_mul_right: child(kernel, "modEq_mul_right"),
         mod_eq_mul: child(kernel, "modEq_mul"),
@@ -1265,18 +1297,31 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         modeq::declare_modeq_symm(&mut d)?;
         modeq::declare_modeq_trans(&mut d)?;
         modeq::declare_modeq_iff_dvd(&mut d)?;
+        // Moved ahead of the rest of `modeq_family`'s block (their original
+        // position, after `modeq::declare_modeq_pow`): `modeq_to_dvd`'s
+        // converse `dvd_to_modeq` (used by `declare_modeq_add_right` and
+        // every generalized law below it) is built on
+        // `modEq_add_mul_left`, which itself needs `emod_neg`/
+        // `modEq_neg_modulus`. `declare_modeq_of_neg_modulus` does not gate
+        // anything below and stays in its original spot.
+        modeq_family::declare_emod_neg(&mut d)?;
+        modeq_family::declare_modeq_neg_modulus(&mut d)?;
+        modeq_family::declare_modeq_add_mul_left(&mut d)?;
         modeq::declare_modeq_of_nat_modeq(&mut d)?;
         modeq::declare_modeq_add_right(&mut d)?;
         modeq::declare_modeq_add_left(&mut d)?;
+        modeq::declare_modeq_add_left_cancel(&mut d)?;
+        modeq::declare_modeq_neg(&mut d)?;
+        modeq::declare_neg_modeq_neg(&mut d)?;
+        modeq::declare_modeq_of_dvd(&mut d)?;
+        modeq::declare_modeq_dvd_iff(&mut d)?;
+        modeq::declare_modeq_of_mul_left(&mut d)?;
         modeq::declare_modeq_mul_left(&mut d)?;
         modeq::declare_modeq_mul_right(&mut d)?;
         modeq::declare_modeq_mul(&mut d)?;
         modeq::declare_modeq_pow(&mut d)?;
-        modeq_family::declare_emod_neg(&mut d)?;
         modeq_family::declare_modeq_of_neg_modulus(&mut d)?;
-        modeq_family::declare_modeq_neg_modulus(&mut d)?;
         modeq_family::declare_modeq_one(&mut d)?;
-        modeq_family::declare_modeq_add_mul_left(&mut d)?;
         modeq_family::declare_add_modeq_left(&mut d)?;
         modeq_family::declare_add_modeq_right(&mut d)?;
         modeq_family::declare_mod_modeq(&mut d)?;

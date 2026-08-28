@@ -8,10 +8,38 @@
     "statement": "∀ {n a b : ℤ}, a ≡ b [ZMOD n] → -a ≡ -b [ZMOD n]",
     "fragment": "Int"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
   "external_status": "proved",
   "depends_on": [],
-  "evidence": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.modEq_neg",
+      "kind": "kernel-term",
+      "supports": "The proposition declared as `Int.ModEq.neg` in the pinned Mathlib v4.30 source.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "int_prelude_tests::every_int_declaration_is_checked_and_axiom_free",
+        "int_prelude_tests::derived_laws_have_no_axiom_footprint"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib int_prelude::",
+      "notes": "`declare_modeq_neg` (`crates/axeyum-lean-kernel/src/int_prelude/modeq.rs`), unconditional in `n`, no `dvd` route needed: decompose `a=n*qa+ra`, `b=n*qb+ra` (`h` aligns the residues), so `-a=n*(-qa)+(-ra)` and `-b=n*(-qb)+(-ra)` (`ineg_add`, `Int.mul_neg`), and `Int.modEq_add_mul_left`'s `ModEq n (n*c+x) x` (unconditional) gives `ModEq n (-a) (-ra)` and `ModEq n (-b) (-ra)` directly; `trans`+`symm` close the gap."
+    },
+    {
+      "id": "footprint-Int.modEq_neg",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- this theorem's trusted closure is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration (nat_axiom_inventory)"
+      ],
+      "checker_command": "test \"$(cargo run --release -q -p axeyum-lean-kernel --example int_theorem_inventory -- modEq_neg 2>/dev/null | grep -Ec '^theorem[[:space:]]+Int\\.modEq_neg[[:space:]]+\\(\\(')\" -ge 1",
+      "notes": "The regex requires the tab-separated footprint column to be EMPTY. `int_theorem_inventory` must be run `--release`; in debug it stack-overflows building the full constructed environment (unrelated to this theorem)."
+    }
+  ],
   "provenance": {
     "date": "2026-08-18",
     "established_by": "not established in this ledger",
@@ -26,5 +54,5 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "CLOSED via `int-modeq` lane, 2026-08-28: `Int.modEq_neg` in `int_prelude/modeq.rs`, axiom-free, matching this statement exactly. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof."
 }
