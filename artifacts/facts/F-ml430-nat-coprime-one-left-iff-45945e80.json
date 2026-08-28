@@ -4,18 +4,46 @@
   "title": "Mathlib v4.30 source proposition Nat.coprime_one_left_iff",
   "statement": "The proposition declared as `Nat.coprime_one_left_iff` in the pinned Mathlib v4.30 source.",
   "formal": {
-    "language": "lean4-surface",
-    "statement": "∀ (n : ℕ), Nat.Coprime 1 n ↔ True",
-    "fragment": "Nat"
+    "language": "lean4",
+    "statement": "theorem Nat.coprime_one_left_iff : ((x0 : AxNat) -> Iff (Eq.{1} AxNat (AxNat.gcd (AxNat.succ AxNat.zero) x0) (AxNat.succ AxNat.zero)) True)",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0"
+    ],
+    "kernel_theorem": "Nat.coprime_one_left_iff"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": [
+    "F:nat-gcd-dvd-left",
+    "F:nat-eq-one-of-dvd-one"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-Nat.coprime_one_left_iff",
+      "kind": "kernel-term",
+      "supports": "Nat.Coprime 1 n iff True",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- coprime_one_left_iff 2>/dev/null | grep -Ec '^Nat\\.coprime_one_left_iff[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the constructed proof term against the stated type: `gcd 1 n` divides `1` directly (`gcd_dvd_left`), so `eq_one_of_dvd_one` gives `gcd 1 n = 1` unconditionally; the `Iff` with `True` is immediate (`True.intro` forward, the equation itself backward). `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -c` requires the admitted declaration to be printed."
+    },
+    {
+      "id": "footprint-Nat.coprime_one_left_iff",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []."
+    }
+  ],
   "provenance": {
-    "date": "2026-08-18",
-    "established_by": "not established in this ledger",
-    "source": "statement-only extraction of `Nat.coprime_one_left_iff` from Mathlib v4.30.0; no proof value was exposed",
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-gcd",
+    "source": "statement-only extraction of the Mathlib proposition from Mathlib v4.30.0 (see prior_art), independently proved here as `Nat.coprime_one_left_iff` and admitted through `Kernel::add_declaration`",
     "prior_art": [
       {
         "who": "the Mathlib contributors",
@@ -26,5 +54,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "`Nat.Coprime` has no separate name in this kernel's Nat prelude (matching `Nat.coprime_of_lt_prime`'s established convention); it is spelled inline as `gcd _ _ = 1`, so `formal.statement` is the actual kernel-core `render_lean` output for `Nat.coprime_one_left_iff`, not the Mathlib surface form named in `title`. `depends_on` restricts to entries that already carry a fact ledger entry.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

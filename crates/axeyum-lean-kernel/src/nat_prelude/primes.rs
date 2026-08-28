@@ -1492,6 +1492,349 @@ pub(super) fn declare_coprime_symmetric(
 }
 
 // ============================================================================
+// `Nat.not_coprime_zero_zero : Not (Eq (gcd zero zero) one)`.
+// ============================================================================
+
+/// See [`NatPrelude::not_coprime_zero_zero`] for the route: `gcd 0 0 = 0`
+/// (`gcd_zero_left`), so a hypothesis `gcd 0 0 = 1` chains to `0 = 1`
+/// (`d.chain`), whose `symm` is `Eq (succ zero) zero` — refuted directly by
+/// `succ_ne_zero`.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_not_coprime_zero_zero(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.not_coprime_zero_zero, 0, &|d, _v| {
+        let zero = d.zero();
+        let one = d.num(1);
+        let gcd00 = d.gcd(zero, zero);
+        let cop_ty = d.eq(gcd00, one);
+        let not_cop_ty = d.const_app(p.logic.not, &[cop_ty]);
+
+        let gcd_eq = d.lemma(p.gcd_zero_left, &[zero]); // Eq gcd00 zero
+        let symm_gcd = d.symm(gcd00, zero, gcd_eq); // Eq zero gcd00
+
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv); // h : Eq gcd00 one
+        let (_, zero_eq_one) = d.chain(zero, &[(gcd00, symm_gcd), (one, h)]);
+        let one_eq_zero = d.symm(zero, one, zero_eq_one); // Eq one zero = Eq (succ zero) zero
+        let false_pf = d.lemma(p.succ_ne_zero, &[zero, one_eq_zero]);
+        let mp = d.lam_fv(h_fv, cop_ty, false_pf);
+        (not_cop_ty, mp)
+    })?;
+    Ok(())
+}
+
+// ============================================================================
+// `Nat.coprime_one_left_iff : ∀ n, Iff (Eq (gcd one n) one) True` and
+// `Nat.coprime_one_right_iff : ∀ n, Iff (Eq (gcd n one) one) True`.
+// ============================================================================
+
+/// See [`NatPrelude::coprime_one_left_iff`] and
+/// [`NatPrelude::coprime_one_right_iff`] for the route: `gcd 1 n` (resp.
+/// `gcd n 1`) divides `1` directly (`gcd_dvd_left`/`gcd_dvd_right`), so
+/// `eq_one_of_dvd_one` gives the equation unconditionally and the `Iff` with
+/// `True` is immediate (`True.intro` forward, the equation itself backward).
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_coprime_one_iff(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+
+    d.theorem(p.coprime_one_left_iff, 1, &|d, v| {
+        let n = v[0];
+        let one = d.num(1);
+        let gcd1n = d.gcd(one, n);
+        let cop_ty = d.eq(gcd1n, one);
+        let true_ty = d.kernel().const_(p.logic.true_, vec![]);
+
+        let dvd_one = d.lemma(p.gcd_dvd_left, &[one, n]); // dvd gcd1n one
+        let eq_one = d.lemma(p.eq_one_of_dvd_one, &[gcd1n, dvd_one]);
+
+        let mp = {
+            let h_fv = d.fresh_fvar();
+            let true_intro = d.kernel().const_(p.logic.true_intro, vec![]);
+            d.lam_fv(h_fv, cop_ty, true_intro)
+        };
+        let mpr = {
+            let h_fv = d.fresh_fvar();
+            d.lam_fv(h_fv, true_ty, eq_one)
+        };
+        let stmt = d.const_app(p.logic.iff, &[cop_ty, true_ty]);
+        let proof = d.const_app(p.logic.iff_intro, &[cop_ty, true_ty, mp, mpr]);
+        (stmt, proof)
+    })?;
+
+    d.theorem(p.coprime_one_right_iff, 1, &|d, v| {
+        let n = v[0];
+        let one = d.num(1);
+        let gcdn1 = d.gcd(n, one);
+        let cop_ty = d.eq(gcdn1, one);
+        let true_ty = d.kernel().const_(p.logic.true_, vec![]);
+
+        let dvd_one = d.lemma(p.gcd_dvd_right, &[n, one]); // dvd gcdn1 one
+        let eq_one = d.lemma(p.eq_one_of_dvd_one, &[gcdn1, dvd_one]);
+
+        let mp = {
+            let h_fv = d.fresh_fvar();
+            let true_intro = d.kernel().const_(p.logic.true_intro, vec![]);
+            d.lam_fv(h_fv, cop_ty, true_intro)
+        };
+        let mpr = {
+            let h_fv = d.fresh_fvar();
+            d.lam_fv(h_fv, true_ty, eq_one)
+        };
+        let stmt = d.const_app(p.logic.iff, &[cop_ty, true_ty]);
+        let proof = d.const_app(p.logic.iff_intro, &[cop_ty, true_ty, mp, mpr]);
+        (stmt, proof)
+    })?;
+
+    Ok(())
+}
+
+// ============================================================================
+// `Nat.coprime_add_self_left : ∀ m n, Iff (Eq (gcd (add m n) n) one) (Eq (gcd
+// m n) one)`.
+// ============================================================================
+
+/// See [`NatPrelude::coprime_add_self_left`] for the route: swap both sides
+/// of [`declare_coprime_add_self_right`]'s `Iff (gcd n (m+n) = 1) (gcd n m =
+/// 1)` (instantiated at `(n, m)`) through [`declare_coprime_symmetric`] on
+/// each end — `gcd (m+n) n` swaps to `gcd n (m+n)`, and `gcd n m` swaps to
+/// `gcd m n`.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_coprime_add_self_left(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.coprime_add_self_left, 2, &|d, v| {
+        let (m, n) = (v[0], v[1]);
+        let one = d.num(1);
+        let sum_mn = d.add(m, n); // m + n
+        let g1 = d.gcd(sum_mn, n); // gcd (m+n) n         <- goal LHS
+        let g2 = d.gcd(m, n); // gcd m n                  <- goal RHS
+        let gn_sum = d.gcd(n, sum_mn); // gcd n (m+n)
+        let gn_m = d.gcd(n, m); // gcd n m
+
+        // Iff (Eq (gcd n (add m n)) one) (Eq (gcd n m) one)
+        let existing = d.lemma(p.coprime_add_self_right, &[n, m]);
+
+        let cop1_ty = d.eq(g1, one);
+        let cop2_ty = d.eq(g2, one);
+        let mid_a_ty = d.eq(gn_sum, one);
+        let mid_b_ty = d.eq(gn_m, one);
+
+        let mp = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let step1 = d.lemma(p.coprime_symmetric, &[sum_mn, n, h]); // gn_sum = 1
+            let step2_fn = iff_forward(d, mid_a_ty, mid_b_ty, existing);
+            let step2 = d.apply(step2_fn, &[step1]); // gn_m = 1
+            let step3 = d.lemma(p.coprime_symmetric, &[n, m, step2]); // g2 = 1
+            d.lam_fv(h_fv, cop1_ty, step3)
+        };
+        let mpr = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let step1 = d.lemma(p.coprime_symmetric, &[m, n, h]); // gn_m = 1
+            let step2_fn = iff_reverse(d, mid_a_ty, mid_b_ty, existing);
+            let step2 = d.apply(step2_fn, &[step1]); // gn_sum = 1
+            let step3 = d.lemma(p.coprime_symmetric, &[n, sum_mn, step2]); // g1 = 1
+            d.lam_fv(h_fv, cop2_ty, step3)
+        };
+
+        let stmt = d.const_app(p.logic.iff, &[cop1_ty, cop2_ty]);
+        let proof = d.const_app(p.logic.iff_intro, &[cop1_ty, cop2_ty, mp, mpr]);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+// ============================================================================
+// `Nat.coprime_self_add_left : ∀ m n, Iff (Eq (gcd (add m n) m) one) (Eq (gcd
+// n m) one)`.
+// ============================================================================
+
+/// See [`NatPrelude::coprime_self_add_left`] for the route: instantiate
+/// [`declare_coprime_add_self_left`]'s `Iff (gcd (n+m) m = 1) (gcd n m = 1)`
+/// at `(n, m)` and transport its left side along `add_comm m n : m+n = n+m`
+/// to reach `gcd (m+n) m = 1` instead — the same congruence-transport shape
+/// [`declare_coprime_self_add_right`] uses over
+/// [`declare_coprime_add_self_right`].
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_coprime_self_add_left(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.coprime_self_add_left, 2, &|d, v| {
+        let (m, n) = (v[0], v[1]);
+        let one = d.num(1);
+
+        let sum_mn = d.add(m, n); // m + n
+        let sum_nm = d.add(n, m); // n + m
+        let g_mn = d.gcd(sum_mn, m); // gcd (m+n) m      <- goal LHS
+        let g_nm = d.gcd(sum_nm, m); // gcd (n+m) m
+        let g_n = d.gcd(n, m); // gcd n m                <- goal RHS
+
+        // gcd (m+n) m = gcd (n+m) m, via `add_comm` congr'd through `gcd _ m`.
+        let comm = d.lemma(p.add_comm, &[m, n]); // Eq (add m n) (add n m)
+        let congr_g = d.congr(sum_mn, sum_nm, comm, &|d, x| d.gcd(x, m));
+
+        // Iff (Eq (gcd (add n m) m) one) (Eq (gcd n m) one)
+        let existing = d.lemma(p.coprime_add_self_left, &[n, m]);
+
+        let a_ty = d.eq(g_mn, one);
+        let b_ty = d.eq(g_nm, one);
+        let c_ty = d.eq(g_n, one);
+
+        let mp = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let motive_b = d.eq_motive(g_mn, &|d, x| d.eq(x, one));
+            let b_from_a = d.transport(g_mn, motive_b, h, g_nm, congr_g);
+            let existing_mp = iff_forward(d, b_ty, c_ty, existing);
+            let c_from_b = d.apply(existing_mp, &[b_from_a]);
+            d.lam_fv(h_fv, a_ty, c_from_b)
+        };
+        let mpr = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let existing_mpr = iff_reverse(d, b_ty, c_ty, existing);
+            let b_from_c = d.apply(existing_mpr, &[h]);
+            let sym_congr = d.symm(g_mn, g_nm, congr_g);
+            let motive_a = d.eq_motive(g_nm, &|d, x| d.eq(x, one));
+            let a_from_b = d.transport(g_nm, motive_a, b_from_c, g_mn, sym_congr);
+            d.lam_fv(h_fv, c_ty, a_from_b)
+        };
+
+        let iff_proof = d.const_app(p.logic.iff_intro, &[a_ty, c_ty, mp, mpr]);
+        let stmt = d.const_app(p.logic.iff, &[a_ty, c_ty]);
+        (stmt, iff_proof)
+    })?;
+    Ok(())
+}
+
+// ============================================================================
+// `Nat.dvd_lcm_of_dvd_left : ∀ a b c, dvd a b → dvd a (lcm b c)` and
+// `Nat.dvd_lcm_of_dvd_right : ∀ a b c, dvd a b → dvd a (lcm c b)`.
+// ============================================================================
+
+/// See [`NatPrelude::dvd_lcm_of_dvd_left`] and
+/// [`NatPrelude::dvd_lcm_of_dvd_right`] for the route: `dvd_trans` through
+/// `dvd_lcm_left`/`dvd_lcm_right` (declared in `nat_prelude/lcm.rs`, read
+/// here through the shared `NatPrelude` fields, not edited).
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_dvd_lcm_of_dvd(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+
+    d.theorem(p.dvd_lcm_of_dvd_left, 3, &|d, v| {
+        let (a, b, c) = (v[0], v[1], v[2]);
+        let dvd_ab_ty = d.dvd(a, b);
+        let lcm_bc = d.const_app(p.lcm, &[b, c]);
+        let concl_ty = d.dvd(a, lcm_bc);
+
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let dvd_b_lcm = d.lemma(p.dvd_lcm_left, &[b, c]); // dvd b (lcm b c)
+        let proof_body = d.lemma(p.dvd_trans, &[a, b, lcm_bc, h, dvd_b_lcm]);
+        let proof = d.lam_fv(h_fv, dvd_ab_ty, proof_body);
+        let stmt = d.arrow(dvd_ab_ty, concl_ty);
+        (stmt, proof)
+    })?;
+
+    d.theorem(p.dvd_lcm_of_dvd_right, 3, &|d, v| {
+        let (a, b, c) = (v[0], v[1], v[2]);
+        let dvd_ab_ty = d.dvd(a, b);
+        let lcm_cb = d.const_app(p.lcm, &[c, b]);
+        let concl_ty = d.dvd(a, lcm_cb);
+
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let dvd_b_lcm = d.lemma(p.dvd_lcm_right, &[c, b]); // dvd b (lcm c b)
+        let proof_body = d.lemma(p.dvd_trans, &[a, b, lcm_cb, h, dvd_b_lcm]);
+        let proof = d.lam_fv(h_fv, dvd_ab_ty, proof_body);
+        let stmt = d.arrow(dvd_ab_ty, concl_ty);
+        (stmt, proof)
+    })?;
+
+    Ok(())
+}
+
+// ============================================================================
+// `Nat.dvd_of_lcm_left_dvd : ∀ a b c, dvd (lcm a b) c → dvd b c` and
+// `Nat.dvd_of_lcm_right_dvd : ∀ a b c, dvd (lcm a b) c → dvd a c`.
+// ============================================================================
+
+/// See [`NatPrelude::dvd_of_lcm_left_dvd`] and
+/// [`NatPrelude::dvd_of_lcm_right_dvd`] for the route: `dvd_trans` through
+/// `dvd_lcm_right`/`dvd_lcm_left` (`b ∣ lcm a b`, resp. `a ∣ lcm a b`),
+/// composed with the hypothesis `lcm a b ∣ c`.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_dvd_of_lcm_dvd(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+
+    d.theorem(p.dvd_of_lcm_left_dvd, 3, &|d, v| {
+        let (a, b, c) = (v[0], v[1], v[2]);
+        let lcm_ab = d.const_app(p.lcm, &[a, b]);
+        let hyp_ty = d.dvd(lcm_ab, c);
+        let concl_ty = d.dvd(b, c);
+
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let dvd_b_lcm = d.lemma(p.dvd_lcm_right, &[a, b]); // dvd b (lcm a b)
+        let proof_body = d.lemma(p.dvd_trans, &[b, lcm_ab, c, dvd_b_lcm, h]);
+        let proof = d.lam_fv(h_fv, hyp_ty, proof_body);
+        let stmt = d.arrow(hyp_ty, concl_ty);
+        (stmt, proof)
+    })?;
+
+    d.theorem(p.dvd_of_lcm_right_dvd, 3, &|d, v| {
+        let (a, b, c) = (v[0], v[1], v[2]);
+        let lcm_ab = d.const_app(p.lcm, &[a, b]);
+        let hyp_ty = d.dvd(lcm_ab, c);
+        let concl_ty = d.dvd(a, c);
+
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let dvd_a_lcm = d.lemma(p.dvd_lcm_left, &[a, b]); // dvd a (lcm a b)
+        let proof_body = d.lemma(p.dvd_trans, &[a, lcm_ab, c, dvd_a_lcm, h]);
+        let proof = d.lam_fv(h_fv, hyp_ty, proof_body);
+        let stmt = d.arrow(hyp_ty, concl_ty);
+        (stmt, proof)
+    })?;
+
+    Ok(())
+}
+
+// ============================================================================
 // `Nat.coprime_or_dvd_of_prime : ∀ p, prime_condition p → ∀ i, Or (Eq (gcd p
 // i) one) (dvd p i)`.
 // ============================================================================

@@ -231,10 +231,12 @@ use perfect::declare_sum_divisors_two_pow_eq_geom_sum;
 use permutation::declare_permutation_all;
 use powsq::declare_powsq_all;
 use primes::{
-    declare_coprime_add_self_right, declare_coprime_odd_of_left, declare_coprime_odd_of_right,
-    declare_coprime_of_dvd, declare_coprime_of_dvd_both, declare_coprime_of_lt_prime,
-    declare_coprime_or_dvd_of_prime, declare_coprime_self_add_right, declare_coprime_symmetric,
-    declare_coprime_two_left, declare_coprime_two_right, declare_euclid,
+    declare_coprime_add_self_left, declare_coprime_add_self_right, declare_coprime_odd_of_left,
+    declare_coprime_odd_of_right, declare_coprime_of_dvd, declare_coprime_of_dvd_both,
+    declare_coprime_of_lt_prime, declare_coprime_one_iff, declare_coprime_or_dvd_of_prime,
+    declare_coprime_self_add_left, declare_coprime_self_add_right, declare_coprime_symmetric,
+    declare_coprime_two_left, declare_coprime_two_right, declare_dvd_lcm_of_dvd,
+    declare_dvd_of_lcm_dvd, declare_euclid, declare_not_coprime_zero_zero,
     declare_prime_dvd_iff_not_coprime, declare_prime_dvd_of_dvd_pow, declare_prime_even_iff,
     declare_prime_not_dvd_mul, declare_prime_odd_of_ne_two, declare_primes,
 };
@@ -700,6 +702,20 @@ pub struct NatPrelude {
     /// `b = succ j` closes via `le_of_dvd` in both directions plus
     /// `le_antisymm`.
     pub dvd_antisymm: NameId,
+    /// `Nat.dvd_lcm_of_dvd_left : ∀ a b c, dvd a b → dvd a (lcm b c)` —
+    /// `dvd_trans` through `dvd_lcm_left`.
+    pub dvd_lcm_of_dvd_left: NameId,
+    /// `Nat.dvd_lcm_of_dvd_right : ∀ a b c, dvd a b → dvd a (lcm c b)` —
+    /// `dvd_trans` through `dvd_lcm_right`.
+    pub dvd_lcm_of_dvd_right: NameId,
+    /// `Nat.dvd_of_lcm_left_dvd : ∀ a b c, dvd (lcm a b) c → dvd b c` —
+    /// `dvd_trans` through `dvd_lcm_right` (`b ∣ lcm a b`) composed with the
+    /// hypothesis.
+    pub dvd_of_lcm_left_dvd: NameId,
+    /// `Nat.dvd_of_lcm_right_dvd : ∀ a b c, dvd (lcm a b) c → dvd a c` —
+    /// `dvd_trans` through `dvd_lcm_left` (`a ∣ lcm a b`) composed with the
+    /// hypothesis.
+    pub dvd_of_lcm_right_dvd: NameId,
 
     // --- Catalan numbers (`catalan.rs`) --------------------------------------
     /// `Nat.catalan n := choose (n+n) n − choose (n+n) (n+1)` — the closed
@@ -979,6 +995,30 @@ pub struct NatPrelude {
     /// `gcd_dvd_right` both orderings plus `dvd_gcd`), so `dvd_antisymm`
     /// gives `gcd a b = gcd b a` and the hypothesis transports along it.
     pub coprime_symmetric: NameId,
+    /// `Nat.not_coprime_zero_zero : Not (Eq (gcd zero zero) one)`. `gcd 0 0 =
+    /// 0` (`gcd_zero_left`), so `gcd 0 0 = 1` would give `0 = 1`, refuted by
+    /// `succ_ne_zero`.
+    pub not_coprime_zero_zero: NameId,
+    /// `Nat.coprime_one_left_iff : ∀ n, Iff (Eq (gcd one n) one) True`. `gcd 1
+    /// n` divides `1` (`gcd_dvd_left`), so `eq_one_of_dvd_one` closes it
+    /// unconditionally.
+    pub coprime_one_left_iff: NameId,
+    /// `Nat.coprime_one_right_iff : ∀ n, Iff (Eq (gcd n one) one) True` —
+    /// the right-hand mirror of
+    /// [`coprime_one_left_iff`](Self::coprime_one_left_iff) via
+    /// `gcd_dvd_right`.
+    pub coprime_one_right_iff: NameId,
+    /// `Nat.coprime_add_self_left : ∀ m n, Iff (Eq (gcd (add m n) n) one) (Eq
+    /// (gcd m n) one)` — [`coprime_add_self_right`](Self::coprime_add_self_right)
+    /// instantiated at `(n, m)`, with both sides of the `Iff` swapped through
+    /// [`coprime_symmetric`](Self::coprime_symmetric).
+    pub coprime_add_self_left: NameId,
+    /// `Nat.coprime_self_add_left : ∀ m n, Iff (Eq (gcd (add m n) m) one) (Eq
+    /// (gcd n m) one)` — [`coprime_add_self_left`](Self::coprime_add_self_left)
+    /// with `m`/`n`'s sum reordered via `add_comm`, the same
+    /// congruence-transport shape
+    /// [`coprime_self_add_right`](Self::coprime_self_add_right) uses.
+    pub coprime_self_add_left: NameId,
     /// `Nat.coprime_or_dvd_of_prime : ∀ p, prime_condition p → ∀ i, Or
     /// (Eq (gcd p i) one) (dvd p i)` — decides `beq (gcd p i) one`
     /// (`Bool.rec`, fully constructive): the `true` branch gives `Coprime p i`
@@ -2397,6 +2437,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             gauss_lemma: kernel.name_str(nat, "gauss_lemma"),
             lcm_dvd: kernel.name_str(nat, "lcm_dvd"),
             dvd_antisymm: kernel.name_str(nat, "dvd_antisymm"),
+            dvd_lcm_of_dvd_left: kernel.name_str(nat, "dvd_lcm_of_dvd_left"),
+            dvd_lcm_of_dvd_right: kernel.name_str(nat, "dvd_lcm_of_dvd_right"),
+            dvd_of_lcm_left_dvd: kernel.name_str(nat, "dvd_of_lcm_left_dvd"),
+            dvd_of_lcm_right_dvd: kernel.name_str(nat, "dvd_of_lcm_right_dvd"),
             catalan: kernel.name_str(nat, "catalan"),
             catalan_mul_succ: kernel.name_str(nat, "catalan_mul_succ"),
             lcm_comm: kernel.name_str(nat, "lcm_comm"),
@@ -2465,6 +2509,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             coprime_of_dvd: kernel.name_str(nat, "coprime_of_dvd"),
             coprime_self_add_right: kernel.name_str(nat, "coprime_self_add_right"),
             coprime_symmetric: kernel.name_str(nat, "coprime_symmetric"),
+            not_coprime_zero_zero: kernel.name_str(nat, "not_coprime_zero_zero"),
+            coprime_one_left_iff: kernel.name_str(nat, "coprime_one_left_iff"),
+            coprime_one_right_iff: kernel.name_str(nat, "coprime_one_right_iff"),
+            coprime_add_self_left: kernel.name_str(nat, "coprime_add_self_left"),
+            coprime_self_add_left: kernel.name_str(nat, "coprime_self_add_left"),
             coprime_or_dvd_of_prime: kernel.name_str(nat, "coprime_or_dvd_of_prime"),
             coprime_two_left: kernel.name_str(nat, "coprime_two_left"),
             coprime_two_right: kernel.name_str(nat, "coprime_two_right"),
@@ -2740,6 +2789,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_coprime_add_self_right(&mut d, &p)?;
         declare_coprime_self_add_right(&mut d, &p)?;
         declare_coprime_symmetric(&mut d, &p)?;
+        declare_not_coprime_zero_zero(&mut d, &p)?;
+        declare_coprime_one_iff(&mut d, &p)?;
+        declare_coprime_add_self_left(&mut d, &p)?;
+        declare_coprime_self_add_left(&mut d, &p)?;
+        declare_dvd_lcm_of_dvd(&mut d, &p)?;
+        declare_dvd_of_lcm_dvd(&mut d, &p)?;
         declare_coprime_or_dvd_of_prime(&mut d, &p)?;
         declare_euclid(&mut d, &p)?;
         // Needs `one_le_factorial` (just declared by `declare_euclid`), so
