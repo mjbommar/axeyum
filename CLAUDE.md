@@ -1466,6 +1466,29 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   and was fine) and *nesting depth* (refuted by a flat construction that
   failed identically). Do not reach for either.
 
+  **MEASURED 2026-08-28, AND THE SCOPE IS NARROWER THAN THIS ENTRY FIRST
+  IMPLIED.** `examples/nat_numeral_whnf_probe` times the same term built both
+  ways and classifies the reduct, so a run that reduced nothing cannot look
+  fast:
+
+      mul 25 21     2,304 us  ->    11 us      210x
+      mul 125 105  52,399 us  ->    10 us    5,240x
+      gcd 512 1875  25.6 s    ->    16 us  1,600,000x
+      div 13125 25  STACK OVERFLOW ->10 us      --
+
+  So the mechanism is real and catastrophic **when a declaration forms a large
+  magnitude**. But converting EVERY prelude numeral to `Lit::Nat` moves the
+  `creal` prelude build only 14.91 s -> 14.23 s (4.6%, with a contended re-run
+  putting the unary side *faster*) — **noise exceeds effect.** The prelude
+  build as a whole was never spending its time here.
+
+  Two consequences. First, do not reach for a global numeral change to relieve
+  a slow build; it is measured at zero (ADR-0614, proposed and NOT adopted —
+  the cost is 388 fact `formal.statement` strings whose rendering would drift
+  silently). Second, the remedy is local and it is the one the pi rung-2 case
+  proved: **keep formed magnitudes small**, which took one declaration from
+  587 s to 113 s.
+
   What to do about it, in order:
   - **Keep formed magnitudes small.** Choose intermediate bounds that land on
     the value the next step needs rather than the exact quotient. In the case
