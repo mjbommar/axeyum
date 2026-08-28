@@ -196,6 +196,7 @@ use defs::{
 };
 use diagonal::declare_diagonal;
 use divisibility::declare_divisibility;
+use divisibility::declare_factorial_order;
 use division::declare_euclidean_division;
 use euler::declare_mod_eq_cancel;
 use factorization::{declare_exists_prime_factorization, declare_prod_range};
@@ -844,6 +845,34 @@ pub struct NatPrelude {
     /// `m ≥ 2` has a prime divisor", is
     /// [`exists_prime_dvd`](Self::exists_prime_dvd).
     pub dvd_factorial_of_le: NameId,
+    /// `Nat.factorial_dvd_factorial : ∀ m n, Le m n → dvd (factorial m) (factorial n)`.
+    ///
+    /// Induction on `n` with the order hypothesis inside the motive, mirroring
+    /// [`dvd_factorial_of_le`](Self::dvd_factorial_of_le)'s `at_succ` case
+    /// verbatim (it never used the divisor-positivity fact). The `n = 0` base
+    /// case differs: without a fixed `1 ≤ m` to contradict `m ≤ 0`, it
+    /// case-splits on `m` itself (`m = 0` via [`dvd_refl`](Self::dvd_refl),
+    /// `m = succ _` refuted by [`not_succ_le_zero`](Self::not_succ_le_zero)).
+    pub factorial_dvd_factorial: NameId,
+    /// `Nat.factorial_le : ∀ m n, Le m n → Le (factorial m) (factorial n)`, via
+    /// [`factorial_dvd_factorial`](Self::factorial_dvd_factorial) and
+    /// [`le_of_dvd`](Self::le_of_dvd) against the positivity of `factorial n`
+    /// ([`one_le_factorial`](Self::one_le_factorial)).
+    pub factorial_le: NameId,
+    /// `Nat.factorial_lt_of_lt : ∀ m n, Lt zero n → Lt n m → Lt (factorial n) (factorial m)`.
+    ///
+    /// `n! < (succ n)! ≤ m!`: the first step needs `factorial n * n ≥ 1`
+    /// ([`one_le_mul`](Self::one_le_mul) against `0 < n`) to make the
+    /// `mul_succ` expansion of `(succ n)!` strictly exceed `factorial n`
+    /// ([`add_lt_add_left`](Self::add_lt_add_left)), the second is
+    /// [`factorial_le`](Self::factorial_le) at `succ n ≤ m`, and
+    /// [`lt_of_lt_of_le`](Self::lt_of_lt_of_le) chains them.
+    pub factorial_lt_of_lt: NameId,
+    /// `Nat.factorial_ne_zero : ∀ n, Not (Eq (factorial n) zero)`, via
+    /// [`one_le_factorial`](Self::one_le_factorial) transported along a
+    /// hypothetical `factorial n = zero` into `Le 1 zero`, refuted by
+    /// [`not_succ_le_zero`](Self::not_succ_le_zero).
+    pub factorial_ne_zero: NameId,
     /// `Nat.not_dvd_one_add_mul_of_two_le : ∀ a t, Le two a → Not (dvd a (one+a*t))`.
     pub not_dvd_one_add_mul_of_two_le: NameId,
     /// `Nat.valuation_at_two_mul_sq : ∀ a u, Le two a → Not (dvd a u) → valuationAt a ((a*a)*u) two`.
@@ -2265,6 +2294,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             one_le_mul: kernel.name_str(nat, "one_le_mul"),
             mul_eq_zero: kernel.name_str(nat, "mul_eq_zero"),
             dvd_factorial_of_le: kernel.name_str(nat, "dvd_factorial_of_le"),
+            factorial_dvd_factorial: kernel.name_str(nat, "factorial_dvd_factorial"),
+            factorial_le: kernel.name_str(nat, "factorial_le"),
+            factorial_lt_of_lt: kernel.name_str(nat, "factorial_lt_of_lt"),
+            factorial_ne_zero: kernel.name_str(nat, "factorial_ne_zero"),
             not_dvd_one_add_mul_of_two_le: kernel.name_str(nat, "not_dvd_one_add_mul_of_two_le"),
             valuation_at_two_mul_sq: kernel.name_str(nat, "valuation_at_two_mul_sq"),
             le_of_dvd: kernel.name_str(nat, "le_of_dvd"),
@@ -2532,6 +2565,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_coprime_symmetric(&mut d, &p)?;
         declare_coprime_or_dvd_of_prime(&mut d, &p)?;
         declare_euclid(&mut d, &p)?;
+        // Needs `one_le_factorial` (just declared by `declare_euclid`), so
+        // this cannot run inside `declare_divisibility` above despite
+        // conceptually belonging there — see `declare_factorial_order`'s doc
+        // comment.
+        declare_factorial_order(&mut d, &p)?;
         declare_choose_all(&mut d, &p)?;
         declare_binomial_theorem(&mut d, &p)?;
         declare_combinatorial_identities(&mut d, &p)?;
