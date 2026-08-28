@@ -175,7 +175,11 @@ now. Nothing was deleted.
 | 2026-08-28 | producer-widen | new gated census: 61 of 63 open non-held-out propositions have an axiom-BEARING Mathlib proof, so transport cannot close the frontier; 6 guards each mutation-verified to kill exactly one control |
 | 2026-08-28 | producer-widen | `scripts/provision-lean-import-toolchain.sh` — s4 CAN run the whole import route; pinned mathlib4 + lean4export provision in ~5 min |
 | 2026-08-28 | nat-log-tier | `Nat.logAux_le_fuel` (fuel-generalized-over-`n` induction) and `Nat.log_le_self`, both axiom-free; 2 facts closed; `log_lt_self`/`log_mono_right` sized as genuinely harder, not attempted |
+| 2026-08-28 | nat-bitwise | `Nat.bit` (non-recursive, no fuel needed) plus `bit_false`/`bit_true`/`bit_true_pos`/`bit_false_le_bit_true`, all axiom-free, all first-attempt kernel accepts; 4 new `F:nat-bit-*` facts; `Nat.bitwise`/`Nat.bits`/`Nat.ldiff` scoped out |
 | 2026-08-28 | nat-gcd | 9 `natural-gcd` facts closed via the divisibility characterization of `Nat.gcd`/`Nat.lcm` (0 axioms) |
+| 2026-08-28 | fib-backlog | `Nat.fib_add_two_strictmono`, `Nat.fib_strictmonoOn`, `Nat.fib_lt_fib` landed and kernel-checked (nat_prelude/fibonacci.rs); closed F:ml430-nat-fib-add-two-strictmono-c1e86d4d, F:ml430-nat-fib-strictmonoon-905810a9, F:ml430-nat-fib-lt-fib-3582b881 |
+| 2026-08-28 | fib-backlog | confirmed `Int.fib` absent from the kernel (shape_search, fresh build, declarations=2000); all 6 open integer-fibonacci facts blocked on a missing carrier, not attempted |
+| 2026-08-28 | nat-binomial | `Nat.choose_mono` via permuted `choose_le_choose`; closes `F:ml430-nat-choose-mono-a1af9c18`, kernel-lean, axiom-free; nat_prelude 447->448 |
 | 2026-08-27 | (uncommitted at status-file write time) | `CReal.sumRange_cauchy_of_abs_cauchy` / `CReal.sumRange_converges_of_abs_converges` (absolute convergence implies convergence) plus a soundness-negative control; curriculum rows 18 and 22–23 corrected. |
 | 2026-08-27 | (uncommitted at status-file write time) | Ten new `artifacts/facts/F-creal-*.json` entries for the Ch.13/14 Riemann integral construction and algebra (`riemannSum_cauchy`, `integral`, `integral_converges`, `integral_const`, `integral_add`, `integral_le`, `integral_scale`, `integral_witness_independent`, `riemannSum_integral_close`, `sharedIndexToCanonical`); `python3 scripts/validate-facts.py` green (708 facts, 0 errors). |
 | 2026-08-27 | (uncommitted at status-file write time) | Added `--require-declaration <name> [--require-kind <kind>]` to `crates/axeyum-lean-kernel/examples/kernel_declaration_projection.rs`: a direct, fail-on-absence presence checker for `Declaration::Definition`s (and any other kind), mutation-tested against `CReal.integral`. Upgraded `F:creal-integral`'s `kernel-CReal.integral` evidence to use it. Registered 14 new `artifacts/facts/F-creal-*.json` entries for Spivak Ch.18 (`e`) and Ch.22-23 (series convergence tests): `creal-e`, `creal-e-converges`, `creal-two-le-e`, `creal-e-le-three`, `creal-e-le-four`, `creal-expterm-le-geom`, `creal-expdominantcauchy`, `creal-cauchyofpointwiseequiv`, `creal-geomcauchy`, `creal-sumrange-comparisontest`, `creal-sumrange-cauchy-of-dominated`, `creal-sumrange-converges-of-dominated`, `creal-sumrange-cauchy-of-abs-cauchy`, `creal-sumrange-converges-of-abs-converges`. `python3 scripts/validate-facts.py` green (722 facts, 0 errors). |
@@ -9146,6 +9150,87 @@ without a reconciliation route).
 passed, 0 failed); `python3 scripts/validate-facts.py` (1875 facts, 0
 errors, both new facts counted as `proved`/`kernel-lean`).
 
+**Your lane's block (`landed`, nat-bitwise, 2026-08-28).**
+
+The frontier reported `Nat.bit`, `Nat.bitwise`, `Nat.bits`, `Nat.ldiff` as
+BLOCKED — undeclared kernel definitions, so the `F:ml430-nat-bitwise-*` /
+`F:ml430-nat-land-bit-*` / `F:ml430-nat-lor-bit-*` / `F:ml430-nat-ldiff-bit-*`
+mirror facts could not even be *stated*. Per the brief, only `Nat.bit` was
+attempted — it is the cheapest of the four and unblocks the most — and
+landing it plus real boundary lemmas was the target for a complete success.
+
+**`Nat.bit` landed, and it needed no fuel device at all.** Mathlib defines
+`bit b n := cond b (2*n+1) (2*n)` — a plain case split on the `Bool`
+argument, no recursive call anywhere. Unlike `Nat.log`/`Nat.sqrt`/`Nat.clog`
+(all landed earlier the same day, all non-structural and requiring the fuel
+device this prelude uses for `Nat.div`/`Nat.mod`), `Nat.bit` is declared as
+an ordinary non-recursive lambda: `bit b n := add (mul 2 n) (cond b 1 0)`.
+
+**The `add`-outermost form (rather than Mathlib's `cond`-outermost one) was
+a deliberate choice, not an accident of translation.** Both normalize to the
+same value at every literal `b` — `add x zero ≡ x` collapses the false
+branch to `2n`, `add x (succ zero) ≡ succ (add x zero) ≡ succ x` collapses
+the true branch to `succ (2n) = 2n+1` — but the `add`-outermost form buys
+something Mathlib's shape does not: `bit true n` unfolds all the way to
+`succ (mul 2 n)` by delta+iota alone, so a lemma about `succ` in general
+(`zero_lt_succ`, `le_succ`) applies to it **directly by defeq, with no
+case-split combinator**. `log.rs`'s `le_of_bool_select` had to build that
+combinator by hand for the analogous situation in `Nat.log`; `bits.rs` never
+needed to.
+
+**Four theorems landed, all on the first `Kernel::add_declaration` attempt —
+nothing was rejected:**
+- `bit_false : ∀ n, bit false n = mul 2 n` — `Eq.refl`.
+- `bit_true : ∀ n, bit true n = add (mul 2 n) 1` — `Eq.refl`.
+- `bit_true_pos : ∀ n, 0 < bit true n` — `zero_lt_succ (mul 2 n)`, accepted
+  by defeq against the unfolded statement.
+- `bit_false_le_bit_true : ∀ n, bit false n <= bit true n` — `le_succ
+  (mul 2 n)`, accepted by defeq the same way.
+
+**Measured `axiom_footprint`: empty**, both per-declaration
+(`nat_axiom_inventory --require-axiom-free nat` exits 0, `nat: axiom=0
+opaque=0 quotient=0 total_trusted=0`) and via
+`every_nat_declaration_is_checked_and_axiom_free` (environment-derived
+coverage, not a hand list — it failed once, naming exactly the five new
+`Nat.bit*` names, before `definition_names`/`theorem_names` were updated).
+
+**New facts created** (none flip an `F:ml430-*` mirror by hand, per the
+standing rule): `F:nat-bit-false`, `F:nat-bit-true`, `F:nat-bit-true-pos`,
+`F:nat-bit-false-le-bit-true`. The `F:ml430-nat-bitwise-bit-4c4b28a8` /
+`land-bit` / `lor-bit` / `ldiff-bit` / `bitwise-comm` / `bitwise-swap`
+mirror facts all also need `Nat.bitwise`/`Nat.land`/`Nat.lor`/`Nat.ldiff`,
+none of which this lane declares, so they remain `open` — scoped out per
+the brief, not a shortfall.
+
+**Held-out check:** `natural-bitwise` (the `nat-bit`/`nat-bitwise`/`nat-bits`/
+`nat-ldiff` family in `artifacts/autogenesis/nursery-v1.json`) is entirely
+`development` partition, 19/19 entries verified by script before touching
+anything. No held-out member was touched; none of the four new facts here
+are nursery entries at all (they are new kernel-lean facts this lane
+created, not existing nursery propositions).
+
+**`nat_prelude` count:** before this lane, `the_build_is_deterministic`
+pinned `73 + 369 = 442` (73 definitions, 369 theorems). After: `74 + 373 =
+447` (one new definition, `Nat.bit`; four new theorems). Recomputed from the
+test's own panic message (`left: 447`), never hand-incremented.
+
+**Gates run:** `rustfmt --edition 2024 --check` on the three touched Rust
+files (clean); `cargo clippy -p axeyum-lean-kernel --all-targets --
+-D warnings` (clean, no new lint allowances needed); `cargo test
+-p axeyum-lean-kernel --lib nat_prelude` (108 passed, 0 failed — up from 106
+passed / 1 failed before the coverage-list update, plus one new concrete-
+instantiation test with negative controls on every boundary theorem);
+`python3 scripts/validate-facts.py` (1885 facts, 0 errors). `cargo check
+-p axeyum-lean-kernel` also run standalone before the test suite.
+
+**Not attempted, per scope:** `Nat.bitwise`, `Nat.bits`, `Nat.ldiff` — the
+brief was explicit that landing `Nat.bit` alone is a complete success and
+not to attempt all four. `Nat.bitwise` in particular needs a
+`Bool -> Bool -> Bool` function argument threaded through a genuinely
+structural-on-neither-argument recursion (fuel on both `m` and `n`
+simultaneously, or a joint fuel), which is a substantially bigger
+construction than anything in this lane.
+
 **Your lane's block (`DONE`, nat-gcd, 2026-08-28).** Closed 9 of the 12 open
 `natural-gcd` facts (all `development`, none `held-out` — verified against
 `nursery-v1.json` before starting). All 9 proofs go through the
@@ -9214,6 +9299,79 @@ formatted). `python3 scripts/validate-facts.py`: 0 errors. Each of the 9
 new `checker_command`s independently re-run and confirmed to depend on the
 finding (exits nonzero against a bogus name, per
 `nat_theorem_inventory`'s own fail-on-absence design).
+
+**Your lane's block (`DONE this pass`, fib-backlog, 2026-08-28).** Closed
+three of seven open `natural-fibonacci` facts. Zero of six `integer-fibonacci`
+facts are reachable — `Int.fib : ℤ → ℤ` does not exist as a kernel
+declaration (confirmed with `shape_search`, fresh build, `declarations=2000`);
+every open Int fib fact, including the brief's stated keystone
+`F:ml430-int-fib-add-181b6a2c`, quantifies over `Int.fib m`/`Int.fib n` for
+genuinely negative `m, n : ℤ`, not `ofNat (Nat.fib n)`. `int_prelude/fibonacci.rs`
+only ever builds `ofNat (Nat.fib n)` terms (used by `Int.fib_cassini`); it
+never declares an `Int.fib` function. Building one (case-split on sign, with
+the standard `fib(-n) = (-1)^(n+1) fib(n)` extension) is a genuine new-carrier
+task, not a proof gap — the "unstatable, not unproved" case the brief
+carved out. Did not attempt it.
+
+Closed, forming one dependency chain:
+- `Nat.fib_add_two_strictmono` — `StrictMono (fun n => fib (n+2))`.
+- `Nat.fib_strictmonoOn` — `StrictMonoOn Nat.fib (Set.Ici 2)`, from the above.
+- `Nat.fib_lt_fib` — `2 <= m -> (fib m < fib n <-> m < n)`, from the above
+  plus the already-proved `Nat.fib_mono`.
+
+Not attempted: `Nat.fastfib_eq` (needs a `Nat.fastFib` fast-doubling
+definition that does not exist — same "needs a carrier" shape as the Int
+family, smaller); `Nat.le_fib_self` / `Nat.le_fib_add_one` (a second,
+independent chain — sized but not started, see below); the
+`F:ml430-mutation-*` fib fact (an outcome-blind mutation of `fib_eq_zero`
+that is FALSE as stated at `n=1`, so "closing" it means refutation, a
+different task shape than proving the other twelve).
+
+`Nat.le_fib_self : 5 <= n -> n <= fib n` is a second two-step-recursion
+induction (pair `P(k+5) /\ P(k+6)` by ordinary induction on `k`, mirroring
+`fib_add`'s device), sized at roughly the same effort as the strictmono
+chain; `Nat.le_fib_add_one` is a two-line composition once it lands (small-`n`
+concrete check for `n<5`, `le_fib_self` plus `le_add_right` for `n>=5`). Left
+for the next lane rather than rushed.
+
+**Your lane's block (`DONE for this dispatch`, nat-binomial, 2026-08-28).**
+Landed the one closeable fact in the `natural-binomial` open set;
+the other six open facts in the family are genuinely blocked, not missed.
+
+Of the seven open `natural-binomial` facts (verified all 20 family entries
+are `development`, none `held-out`, per `nursery-v1.json`):
+
+- **Closed:** `F:ml430-nat-choose-mono-a1af9c18` (`Nat.choose_mono`,
+  `Monotone (fun a => a.choose b)`). Its Monotone unfolding is exactly
+  `Nat.choose_le_choose` with arguments `(a, a', c)` permuted so the fixed
+  column `c` is outermost — no new induction, just a permuted application.
+  `crates/axeyum-lean-kernel/src/nat_prelude/choose.rs::declare_choose_mono`.
+  kernel-lean, axiom-free (verified via `theorem_axiom_footprint`).
+- **Not actionable, skipped, both definitions confirmed absent from a
+  FRESH build (2,006 declarations indexed, `shape_search --include-constructed`,
+  exit 1 = ABSENT on both):**
+  - `F:ml430-nat-factorial-dvd-ascfactorial-44a4e641` — needs `Nat.ascFactorial`
+  - `F:ml430-nat-factorial-dvd-descfactorial-bbf6124f` — needs `Nat.descFactorial`
+  - `F:ml430-nat-multichoose-one-b210386a` — needs `Nat.multichoose`
+  - `F:ml430-nat-multichoose-one-right-7755072d` — needs `Nat.multichoose`
+  - `F:ml430-nat-multichoose-zero-right-6ef827c8` — needs `Nat.multichoose`
+
+  Defining `ascFactorial`/`descFactorial`/`multichoose` is a separate task
+  (a new `Nat` definition + equation lemmas), out of scope for this dispatch.
+- **Not touched, by design:** `F:ml430-mutation-edb05acf07d9ef3f9f8232fc` is
+  an outcome-blind mutation fixture (`n.choose n = 0`, deliberately false —
+  the real `choose_self` proves `= 1`). It is `open` by construction and has
+  no expected truth value; it is not a theorem to close.
+
+`nat_prelude` count: **74 defs + 373 theorems = 447 -> 74 defs + 374 theorems
+= 448** (recounted from `theorem_names`/`definition_names`, not hand-incremented).
+`the_build_is_deterministic` and `every_nat_declaration_is_checked_and_axiom_free`
+both green; full `nat_prelude` sweep 108 passed / 0 failed.
+
+**Next lane:** the five blocked facts need `Nat.ascFactorial`, `Nat.descFactorial`,
+and `Nat.multichoose` defined (with their equation lemmas) before they are
+reachable at all — that is real new-definition work, not a re-derivation of
+something already in the tree.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 

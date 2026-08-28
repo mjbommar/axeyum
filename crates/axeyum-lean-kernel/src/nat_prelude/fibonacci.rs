@@ -105,7 +105,7 @@
 //! already use) to unfold `gcd` at each step. That descent is its own slice.
 
 use super::NatPrelude;
-use super::finite::pos_implies_succ_pred;
+use super::finite::{pos_implies_succ_pred, zero_lt_via_c};
 use super::helpers::{and_left, and_right, iff_reverse};
 use super::ops::{NatDev, NatOps};
 use crate::BinderInfo;
@@ -922,6 +922,436 @@ fn declare_coprime_fib_succ(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Ke
     Ok(())
 }
 
+// ============================================================================
+// `fib_add_two_strictmono` and `fib_strictmonoOn`.
+// ============================================================================
+
+/// `Lt (fib (succ (succ n))) (fib (succ (succ (succ n))))` — the
+/// shifted-by-two Fibonacci sequence's adjacent-step strict inequality,
+/// unconditional in `n`. `fib_add_two` at `succ n` gives `fib(n+3) =
+/// fib(n+2) + fib(n+1)`; `fib_pos_of_pos` at `succ n` (fed by
+/// `d.zero_lt_succ(n) : Lt 0 (succ n)`) gives `fib(n+1) > 0`;
+/// `add_lt_add_left` at the gap `Lt 0 (fib(n+1))` plus `add_zero` gives
+/// `fib(n+2) < fib(n+2) + fib(n+1)`, and substituting the first equation
+/// (reversed) lands on the goal.
+fn fib_add_two_lt_succ(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId) -> ExprId {
+    let p = *p;
+    let sn = d.succ(n);
+    let ssn = d.succ(sn);
+    let sssn = d.succ(ssn);
+
+    let fib_ssn = d.const_app(p.fib, &[ssn]); // fib(n+2)
+    let fib_sssn = d.const_app(p.fib, &[sssn]); // fib(n+3)
+    let fib_sn = d.const_app(p.fib, &[sn]); // fib(n+1)
+
+    // h_add2 : fib(n+3) = fib(n+2) + fib(n+1)
+    let h_add2 = d.lemma(p.fib_add_two, &[sn]);
+    let fib_ssn_plus_fibsn = d.add(fib_ssn, fib_sn);
+
+    // h_pos : Lt zero fib(n+1)
+    let h_zlt = d.zero_lt_succ(n); // Lt zero (succ n)
+    let h_pos = d.lemma(p.fib_pos_of_pos, &[sn, h_zlt]); // Lt zero fib_sn
+
+    // h_add_lt : Lt (fib_ssn + zero) (fib_ssn + fib_sn)
+    let zero = d.zero();
+    let h_add_lt = d.lemma(p.add_lt_add_left, &[fib_ssn, zero, fib_sn, h_pos]);
+    let fib_ssn_plus_zero = d.add(fib_ssn, zero);
+
+    // h_add_zero : fib_ssn + zero = fib_ssn
+    let h_add_zero = d.lemma(p.add_zero, &[fib_ssn]);
+
+    let motive1 = d.eq_motive(fib_ssn_plus_zero, &|d, x| d.lt(x, fib_ssn_plus_fibsn));
+    let result1 = d.transport(fib_ssn_plus_zero, motive1, h_add_lt, fib_ssn, h_add_zero);
+    // result1 : Lt fib_ssn fib_ssn_plus_fibsn
+
+    let h_add2_rev = d.symm(fib_sssn, fib_ssn_plus_fibsn, h_add2); // fib_ssn_plus_fibsn = fib_sssn
+    let motive2 = d.eq_motive(fib_ssn_plus_fibsn, &|d, x| d.lt(fib_ssn, x));
+    d.transport(fib_ssn_plus_fibsn, motive2, result1, fib_sssn, h_add2_rev)
+    // : Lt fib_ssn fib_sssn
+}
+
+/// `Nat.fib_add_two_strictmono : ∀ a b, Lt a b → Lt (fib (succ (succ a)))
+/// (fib (succ (succ b)))`. Induction on `b` (fixing `a`), mirroring
+/// `perfect.rs`'s `pow_lt_pow_of_lt` exactly but with no base-positivity
+/// hypothesis to thread, since [`fib_add_two_lt_succ`] holds unconditionally.
+///
+/// Base (`b = zero`): `Lt a zero` is impossible (`not_lt_zero`); `False.rec`
+/// closes it vacuously. Step (`b = succ b'`, `ih : Lt a b' → …`): `h : Lt a
+/// (succ b')` (defeq `Le (succ a) (succ b')`) strips to `Le a b'` via
+/// `le_of_succ_le_succ`, then `lt_or_eq_of_le` splits:
+/// - `Lt a b'`: `ih` gives the result at `b'`; [`fib_add_two_lt_succ`] at
+///   `b'` gives the adjacent step, weakened `Lt` to `Le` (`le_succ` +
+///   `le_trans`, since `Lt` IS `Le (succ ·) ·`) and composed via
+///   `lt_of_lt_of_le`.
+/// - `Eq a b'`: [`fib_add_two_lt_succ`] at `a` gives `Lt (fib(a+2))
+///   (fib(a+3))` directly; transport along `congr succ` of the equality
+///   lands on the goal.
+fn declare_fib_add_two_strictmono(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.fib_add_two_strictmono, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let sa_ = d.succ(a);
+        let ssa = d.succ(sa_);
+        let fib_a2 = d.const_app(p.fib, &[ssa]);
+
+        let motive = |d: &mut NatDev<'_>, bb: ExprId| -> ExprId {
+            let hyp = d.lt(a, bb);
+            let sbb_ = d.succ(bb);
+            let ssbb = d.succ(sbb_);
+            let fib_b2 = d.const_app(p.fib, &[ssbb]);
+            let concl = d.lt(fib_a2, fib_b2);
+            d.arrow(hyp, concl)
+        };
+
+        let base = |d: &mut NatDev<'_>| -> ExprId {
+            let zero = d.zero();
+            let hyp_ty = d.lt(a, zero);
+            let hyp_fv = d.fresh_fvar();
+            let hyp = d.kernel().fvar(hyp_fv);
+
+            let not_lt = d.lemma(p.not_lt_zero, &[a]); // Not (Lt a zero)
+            let contradiction = d.apply(not_lt, &[hyp]); // False
+
+            let s_zero_ = d.succ(zero);
+            let ss_zero = d.succ(s_zero_);
+            let fib_zero2 = d.const_app(p.fib, &[ss_zero]);
+            let target = d.lt(fib_a2, fib_zero2);
+            let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+            let motive_false = {
+                let anon = d.anon_name();
+                d.kernel().lam(anon, false_ty, target, BinderInfo::Default)
+            };
+            let level_zero = d.kernel().level_zero();
+            let false_rec = d.kernel().const_(p.logic.false_rec, vec![level_zero]);
+            let body = d.apply(false_rec, &[motive_false, contradiction]);
+            d.lam_fv(hyp_fv, hyp_ty, body)
+        };
+
+        let step = |d: &mut NatDev<'_>, bp: ExprId, ih: ExprId| -> ExprId {
+            let sbp = d.succ(bp);
+            let hyp_ty = d.lt(a, sbp); // defeq Le (succ a) (succ bp)
+            let hyp_fv = d.fresh_fvar();
+            let hyp = d.kernel().fvar(hyp_fv);
+
+            let le_a_bp = d.lemma(p.le_of_succ_le_succ, &[a, bp, hyp]); // Le a bp
+            let split = d.lemma(p.lt_or_eq_of_le, &[a, bp, le_a_bp]); // Lt a bp ∨ Eq a bp
+
+            let sbp_ = d.succ(bp);
+            let ssbp = d.succ(sbp_);
+            let fib_bp2 = d.const_app(p.fib, &[ssbp]);
+            let ssbp_ = d.succ(sbp);
+            let ssbp2 = d.succ(ssbp_);
+            let fib_sbp2 = d.const_app(p.fib, &[ssbp2]);
+            let goal = d.lt(fib_a2, fib_sbp2);
+            let lt_ty = d.lt(a, bp);
+            let eq_ty = d.eq(a, bp);
+
+            let lt_branch = {
+                let lt_fv = d.fresh_fvar();
+                let lt_a_bp = d.kernel().fvar(lt_fv);
+                let ih_result = d.apply(ih, &[lt_a_bp]); // Lt fib_a2 fib_bp2
+
+                let step_lt = fib_add_two_lt_succ(d, &p, bp); // Lt fib_bp2 fib_sbp2
+                let succ_fib_bp2 = d.succ(fib_bp2);
+                let le_fib_bp2_self_succ = d.lemma(p.le_succ, &[fib_bp2]); // Le fib_bp2 (succ fib_bp2)
+                let le_fib_bp2_sbp2 = d.lemma(
+                    p.le_trans,
+                    &[
+                        fib_bp2,
+                        succ_fib_bp2,
+                        fib_sbp2,
+                        le_fib_bp2_self_succ,
+                        step_lt,
+                    ],
+                ); // Le fib_bp2 fib_sbp2
+
+                let result = d.lemma(
+                    p.lt_of_lt_of_le,
+                    &[fib_a2, fib_bp2, fib_sbp2, ih_result, le_fib_bp2_sbp2],
+                );
+                d.lam_fv(lt_fv, lt_ty, result)
+            };
+
+            let eq_branch = {
+                let eq_fv = d.fresh_fvar();
+                let eq_a_bp = d.kernel().fvar(eq_fv);
+
+                let step_a = fib_add_two_lt_succ(d, &p, a); // Lt fib_a2 (fib (succ (succ (succ a))))
+                let sa__ = d.succ(a);
+                let ssa__ = d.succ(sa__);
+                let sssa = d.succ(ssa__);
+                let fib_succ_a2 = d.const_app(p.fib, &[sssa]);
+                let congr_eq = d.congr(a, bp, eq_a_bp, &|d, x| {
+                    let sx_ = d.succ(x);
+                    let ssx_ = d.succ(sx_);
+                    let ssx = d.succ(ssx_);
+                    d.const_app(p.fib, &[ssx])
+                }); // Eq fib_succ_a2 fib_sbp2
+                let motive_t = d.eq_motive(fib_succ_a2, &|d, x| d.lt(fib_a2, x));
+                let result = d.transport(fib_succ_a2, motive_t, step_a, fib_sbp2, congr_eq);
+                d.lam_fv(eq_fv, eq_ty, result)
+            };
+
+            let anon = d.anon_name();
+            let logic = d.prelude().logic;
+            let or_ty = d.const_app(logic.or, &[lt_ty, eq_ty]);
+            let motive_or = d.kernel().lam(anon, or_ty, goal, BinderInfo::Default);
+            let or_rec = d.kernel().const_(logic.or_rec, vec![]);
+            let case_result = d.apply(
+                or_rec,
+                &[lt_ty, eq_ty, motive_or, lt_branch, eq_branch, split],
+            );
+            d.lam_fv(hyp_fv, hyp_ty, case_result)
+        };
+
+        let proof = d.induct(&motive, &base, &step, b);
+        let stmt = motive(d, b);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Nat.fib_strictmonoOn : ∀ a b, Le 2 a → Le 2 b → Lt a b → Lt (fib a) (fib
+/// b)` — Mathlib's `StrictMonoOn Nat.fib (Set.Ici 2)`, unwound to two
+/// explicit lower-bound hypotheses (matching `fib_mono`'s own style of
+/// instantiating the abstract order-theory combinator concretely).
+///
+/// `Le 2 x` peeled to `x = succ (succ x2)` by two applications of
+/// `pos_implies_succ_pred`: the first needs `Lt 0 x`, read directly off `Le
+/// 2 x` (which IS `Lt 1 x` up to how `2`/`succ 1` are built — both are
+/// `succ(succ zero)`); the second needs `Lt 0 (pred x)`, obtained by
+/// transporting `Le 2 x` along the first equation to `Le 2 (succ (pred x))`
+/// and stripping one `succ` via `le_of_succ_le_succ`. Composing the two
+/// equations gives `x = succ (succ x2)`; doing this for both `a` and `b`,
+/// stripping the double `succ` off the transported hypothesis `Lt a b` the
+/// same way, and applying [`declare_fib_add_two_strictmono`] lands on `Lt
+/// (fib (succ (succ a2))) (fib (succ (succ b2)))`, which transports back
+/// along the two (reversed) equations to the goal.
+fn declare_fib_strictmonoon(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+
+    // `peel(x, hx : Le 2 x) -> (x2, eq_x : Eq x (succ (succ x2)))`.
+    let peel = |d: &mut NatDev<'_>, x: ExprId, hx: ExprId| -> (ExprId, ExprId) {
+        // hx : Le 2 x, read directly as Lt 1 x (2 ≡ succ 1 by construction).
+        let one = d.num(1);
+        let eq1 = pos_implies_succ_pred(d, &p, x); // fn : Lt 0 x -> Eq x (succ (pred x))
+        // Lt 0 x from hx read as Lt 1 x, via zero_lt_via_c (works for ANY c).
+        let h0x = zero_lt_via_c(d, &p, one, x, hx); // Lt 0 x
+        let eq_x1 = d.apply(eq1, &[h0x]); // x = succ (pred x)
+        let x1 = d.pred(x);
+        let sx1 = d.succ(x1);
+
+        // Transport hx : Le 2 x along eq_x1 to get Le 2 (succ x1).
+        let motive_h = d.eq_motive(x, &|d, y| {
+            let two = d.num(2);
+            d.le(two, y)
+        });
+        let hx_at_sx1 = d.transport(x, motive_h, hx, sx1, eq_x1); // Le 2 (succ x1)
+        let h_x1 = d.lemma(p.le_of_succ_le_succ, &[one, x1, hx_at_sx1]); // Le 1 x1 = Lt 0 x1
+
+        let eq2 = pos_implies_succ_pred(d, &p, x1);
+        let eq_x1_x2 = d.apply(eq2, &[h_x1]); // x1 = succ (pred x1)
+        let x2 = d.pred(x1);
+        let sx2 = d.succ(x2);
+        let ssx2 = d.succ(sx2);
+
+        // eq_x1_ssx2 : succ x1 = succ (succ x2)
+        let eq_sx1_ssx2 = d.congr(x1, sx2, eq_x1_x2, &|d, y| d.succ(y));
+        // eq_x_ssx2 : x = succ (succ x2), by trans(eq_x1, eq_sx1_ssx2)
+        let eq_x_ssx2 = d.trans(x, sx1, ssx2, eq_x1, eq_sx1_ssx2);
+        (x2, eq_x_ssx2)
+    };
+
+    d.theorem(p.fib_strictmonoon, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let two = d.num(2);
+        let ha_ty = d.le(two, a);
+        let ha_fv = d.fresh_fvar();
+        let ha = d.kernel().fvar(ha_fv);
+        let hb_ty = d.le(two, b);
+        let hb_fv = d.fresh_fvar();
+        let hb = d.kernel().fvar(hb_fv);
+        let hab_ty = d.lt(a, b);
+        let hab_fv = d.fresh_fvar();
+        let hab = d.kernel().fvar(hab_fv);
+
+        let (a2, eq_a) = peel(d, a, ha); // a = succ (succ a2)
+        let (b2, eq_b) = peel(d, b, hb); // b = succ (succ b2)
+
+        // Transport hab : Lt a b along eq_a, eq_b to Lt (succ (succ a2)) (succ (succ b2)).
+        let sa2_ = d.succ(a2);
+        let ssa2 = d.succ(sa2_);
+        let sb2_ = d.succ(b2);
+        let ssb2 = d.succ(sb2_);
+        let motive_ab1 = d.eq_motive(a, &|d, x| d.lt(x, b));
+        let hab1 = d.transport(a, motive_ab1, hab, ssa2, eq_a); // Lt ssa2 b
+        let motive_ab2 = d.eq_motive(b, &|d, y| d.lt(ssa2, y));
+        let hab2 = d.transport(b, motive_ab2, hab1, ssb2, eq_b); // Lt ssa2 ssb2
+
+        // Strip the double succ from `hab2 : Lt ssa2 ssb2` (defeq `Le (succ
+        // ssa2) ssb2`, i.e. `Le (succ (succ (succ a2))) (succ (succ b2))`) by
+        // two applications of `le_of_succ_le_succ`, landing on `Lt a2 b2`.
+        let sa2 = d.succ(a2);
+        let sb2 = d.succ(b2);
+        let h1 = d.lemma(p.le_of_succ_le_succ, &[ssa2, sb2, hab2]); // Le ssa2 sb2 = Lt sa2 sb2...
+        let h2 = d.lemma(p.le_of_succ_le_succ, &[sa2, b2, h1]); // Le sa2 b2 = Lt a2 b2
+        let hab_final = h2; // Lt a2 b2
+
+        let strictmono = d.lemma(p.fib_add_two_strictmono, &[a2, b2, hab_final]);
+        // strictmono : Lt (fib (succ (succ a2))) (fib (succ (succ b2))) = Lt (fib ssa2) (fib ssb2)
+
+        // Transport back along symm(eq_a), symm(eq_b).
+        let eq_a_rev = d.symm(a, ssa2, eq_a); // ssa2 = a
+        let eq_b_rev = d.symm(b, ssb2, eq_b); // ssb2 = b
+        let motive_back1 = d.eq_motive(ssa2, &|d, x| {
+            let fib_x = d.const_app(p.fib, &[x]);
+            let fib_ssb2 = d.const_app(p.fib, &[ssb2]);
+            d.lt(fib_x, fib_ssb2)
+        });
+        let back1 = d.transport(ssa2, motive_back1, strictmono, a, eq_a_rev); // Lt (fib a) (fib ssb2)
+        let motive_back2 = d.eq_motive(ssb2, &|d, y| {
+            let fib_a = d.const_app(p.fib, &[a]);
+            let fib_y = d.const_app(p.fib, &[y]);
+            d.lt(fib_a, fib_y)
+        });
+        let back2 = d.transport(ssb2, motive_back2, back1, b, eq_b_rev); // Lt (fib a) (fib b)
+
+        let fib_a = d.const_app(p.fib, &[a]);
+        let fib_b = d.const_app(p.fib, &[b]);
+        let concl = d.lt(fib_a, fib_b);
+        let stmt = {
+            let inner = d.arrow(hab_ty, concl);
+            let with_hb = d.arrow(hb_ty, inner);
+            d.arrow(ha_ty, with_hb)
+        };
+        let value = {
+            let inner = d.lam_fv(hab_fv, hab_ty, back2);
+            let with_hb = d.lam_fv(hb_fv, hb_ty, inner);
+            d.lam_fv(ha_fv, ha_ty, with_hb)
+        };
+        (stmt, value)
+    })?;
+    Ok(())
+}
+
+// ============================================================================
+// `fib_lt_fib`.
+// ============================================================================
+
+/// Non-dependent `Or.rec` (private copy; `irrational.rs`, `choose.rs` and
+/// `primes.rs` each already carry their own, so this follows the existing
+/// per-file pattern rather than introducing a new one).
+#[allow(clippy::too_many_arguments)]
+fn or_elim(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    left_ty: ExprId,
+    right_ty: ExprId,
+    goal: ExprId,
+    left_case: ExprId,
+    right_case: ExprId,
+    or_proof: ExprId,
+) -> ExprId {
+    let anon = d.anon_name();
+    let or_ty = d.const_app(p.logic.or, &[left_ty, right_ty]);
+    let motive = d.kernel().lam(anon, or_ty, goal, BinderInfo::Default);
+    let or_rec = d.kernel().const_(p.logic.or_rec, vec![]);
+    d.apply(
+        or_rec,
+        &[left_ty, right_ty, motive, left_case, right_case, or_proof],
+    )
+}
+
+/// `False.rec` into `goal` from a proof of `False` (private copy, see
+/// [`or_elim`]'s doc comment for why).
+fn absurd(d: &mut NatDev<'_>, p: &NatPrelude, goal: ExprId, contradiction: ExprId) -> ExprId {
+    let anon = d.anon_name();
+    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+    let motive = d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
+    let zero = d.kernel().level_zero();
+    let rec = d.kernel().const_(p.logic.false_rec, vec![zero]);
+    d.apply(rec, &[motive, contradiction])
+}
+
+/// `Nat.fib_lt_fib : ∀ m n, Le 2 m → Iff (Lt (fib m) (fib n)) (Lt m n)` —
+/// Mathlib's `fib_lt_fib_iff`. See the field doc comment in `nat_prelude.rs`
+/// for the proof route.
+fn declare_fib_lt_fib(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.fib_lt_fib, 2, &|d, v| {
+        let (m, n) = (v[0], v[1]);
+        let two = d.num(2);
+        let hm_ty = d.le(two, m);
+        let hm_fv = d.fresh_fvar();
+        let hm = d.kernel().fvar(hm_fv);
+
+        let fib_m = d.const_app(p.fib, &[m]);
+        let fib_n = d.const_app(p.fib, &[n]);
+        let lt_fn_ty = d.lt(fib_m, fib_n);
+        let lt_mn_ty = d.lt(m, n);
+
+        // Forward: Lt fib_m fib_n -> Lt m n, by contrapositive on lt_or_ge.
+        let forward = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            let dichotomy = d.lemma(p.lt_or_ge, &[m, n]); // Or (Lt m n) (Le n m)
+            let ge_ty = d.le(n, m);
+
+            let left_branch = {
+                let h2_fv = d.fresh_fvar();
+                let h2 = d.kernel().fvar(h2_fv);
+                d.lam_fv(h2_fv, lt_mn_ty, h2)
+            };
+            let right_branch = {
+                let h2_fv = d.fresh_fvar();
+                let h2 = d.kernel().fvar(h2_fv);
+
+                let mono = d.lemma(p.fib_mono, &[n, m, h2]); // Le fib_n fib_m
+                let contra = d.lemma(p.lt_of_lt_of_le, &[fib_m, fib_n, fib_m, h, mono]); // Lt fib_m fib_m
+                let irrefl = d.lemma(p.lt_irrefl, &[fib_m]); // Not (Lt fib_m fib_m)
+                let false_proof = d.apply(irrefl, &[contra]);
+                let result = absurd(d, &p, lt_mn_ty, false_proof);
+                d.lam_fv(h2_fv, ge_ty, result)
+            };
+
+            let case_result = or_elim(
+                d,
+                &p,
+                lt_mn_ty,
+                ge_ty,
+                lt_mn_ty,
+                left_branch,
+                right_branch,
+                dichotomy,
+            );
+            d.lam_fv(h_fv, lt_fn_ty, case_result)
+        };
+
+        // Reverse: Lt m n -> Lt fib_m fib_n, via fib_strictmonoOn (needs Le 2 n too).
+        let reverse = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv); // Lt m n
+
+            let sm = d.succ(m);
+            let le_m_sm = d.lemma(p.le_succ, &[m]); // Le m (succ m)
+            let le_m_n = d.lemma(p.le_trans, &[m, sm, n, le_m_sm, h]); // Le m n
+            let le_2_n = d.lemma(p.le_trans, &[two, m, n, hm, le_m_n]); // Le 2 n
+
+            let result = d.lemma(p.fib_strictmonoon, &[m, n, hm, le_2_n, h]); // Lt fib_m fib_n
+            d.lam_fv(h_fv, lt_mn_ty, result)
+        };
+
+        let iff_stmt = d.const_app(p.logic.iff, &[lt_fn_ty, lt_mn_ty]);
+        let iff_proof = d.const_app(p.logic.iff_intro, &[lt_fn_ty, lt_mn_ty, forward, reverse]);
+
+        let stmt = d.arrow(hm_ty, iff_stmt);
+        let value = d.lam_fv(hm_fv, hm_ty, iff_proof);
+        (stmt, value)
+    })?;
+    Ok(())
+}
+
 /// Declare every theorem in this module.
 pub(super) fn declare_fib_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     declare_fib_defs(d, p)?;
@@ -932,5 +1362,8 @@ pub(super) fn declare_fib_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
     declare_sum_fib(d, p)?;
     declare_fib_add(d, p)?;
     declare_coprime_fib_succ(d, p)?;
+    declare_fib_add_two_strictmono(d, p)?;
+    declare_fib_strictmonoon(d, p)?;
+    declare_fib_lt_fib(d, p)?;
     Ok(())
 }
