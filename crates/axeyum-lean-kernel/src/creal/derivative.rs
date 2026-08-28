@@ -661,8 +661,14 @@ fn double_neg(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
     esymm(d, p, x, nnx, nu)
 }
 
-/// `Equiv (mul x (neg y)) (neg (mul x y))`.
-fn mul_neg_equiv(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
+/// `Equiv (mul x (neg y)) (neg (mul x y))` — the RIGHT-factor negation move.
+///
+/// `pub(super)` because `creal/integral.rs`'s Fundamental-Theorem assembly
+/// needs exactly this and `integral.rs`'s own `neg_mul_left_local` is the
+/// LEFT-factor form; sharing it beats a sixth private copy (the same
+/// statement is privately re-derived in `fermat.rs`, `deriv_unique.rs`,
+/// `uniform_continuity.rs` and `mvt.rs`).
+pub(super) fn mul_neg_equiv(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
     let zero_c = czero(d, p);
     let ny = cneg(d, p, y);
     let xy = cmul(d, p, x, y);
