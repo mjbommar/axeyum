@@ -12681,8 +12681,31 @@ pub(crate) fn build_creal_prelude_uncached(
         // this replaced (pinned by
         // `creal_tests::steps_table_matches_recorded_extraction`), so
         // this calls the exact same functions in the exact same order.
-        for step in STEPS {
-            (step.run)(&mut d, prelude)?;
+        for (index, step) in STEPS.iter().enumerate() {
+            // Name the step BEFORE propagating. A `KernelError` carries no
+            // step identity, and the two errors this build produces most often
+            // -- `UnboundFVar` and `TypeMismatch` -- name neither the
+            // declaration nor the binder. A lane that has just added a
+            // declaration will therefore attribute the failure to its own
+            // work, which is the natural inference and was wrong:
+            // `UnboundFVar { id: 17535 }` was blamed on `hclose_of_uc` for a
+            // whole session when it came from `meshLevelCount_pow`, an
+            // EARLIER step, whose `d.induct(..)` result was handed to
+            // `add_declaration` without a `lam_fv` re-wrap. The lane's
+            // free-variable tree-walk found nothing precisely because it
+            // scanned the term it had written rather than the one that failed.
+            //
+            // `validate_step_order` immediately above already does this for
+            // phase-order bugs; this is the same courtesy for proof failures.
+            if let Err(error) = (step.run)(&mut d, prelude) {
+                eprintln!(
+                    "creal prelude build FAILED at step {index} ('{}') -- the \
+                     error below belongs to THAT step, not to whichever \
+                     declaration you last edited.",
+                    step.label,
+                );
+                return Err(error);
+            }
         }
         Ok(())
     })();
