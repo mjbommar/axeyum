@@ -3,11 +3,21 @@
 //!
 //! [`export_qf_bv_unsat_proof`] bit-blasts a `QF_BV` query to CNF, runs the
 //! proof-producing SAT core, and — on `unsat` — returns the CNF in **DIMACS**
-//! and the refutation in standard **DRAT**, both as text. The DRAT is
-//! self-verified by the in-tree [`axeyum_cnf::check_drat`] before it is
-//! returned, and the same `(dimacs, drat)` pair is accepted by external checkers
-//! such as `drat-trim`. This makes the trusted clausal core of an `unsat` an
-//! auditable artifact a consumer can save and re-check.
+//! and the refutation in standard **DRAT**, both as text, normally beside an
+//! **LRAT** with explicit antecedent hints. The refutation is self-verified
+//! before it is returned, and the same `(dimacs, drat)` pair is accepted by
+//! external checkers such as `drat-trim`. This makes the trusted clausal core of
+//! an `unsat` an auditable artifact a consumer can save and re-check.
+//!
+//! *Which* checker discharges that verification is ADR-0613: normally the core
+//! is elaborated to LRAT by the backward engine (untrusted, fast) and the hints
+//! are verified by [`axeyum_cnf::check_lrat`] (trusted, search-free, linear);
+//! when that route declines — a RAT lemma, or a checking budget too small for a
+//! stage that cannot be interrupted — the forward reference
+//! [`axeyum_cnf::check_drat`] runs instead, exactly as before. Either way the
+//! accepting authority is a checker small enough to audit by reading; the
+//! difference is only whether it has to *search* for the refutation or is handed
+//! it.
 //!
 //! Scope: this certifies the **clausal layer** (CNF `unsat`). Certifying the
 //! bit-blasting reduction itself (term → AIG → CNF) is the future "SMT-level"
@@ -21,8 +31,9 @@ use web_time::Instant;
 
 use axeyum_bv::{first_unsupported_op, first_unsupported_sort, lower_terms};
 use axeyum_cnf::{
-    ProofSolveOutcome, check_drat, check_lrat, parse_dimacs, parse_drat, parse_lrat,
-    solve_with_drat_proof_within, tseitin_encode, write_drat, write_lrat,
+    LratCertifyOutcome, ProofSolveOutcome, certify_unsat_via_lrat, check_drat, check_drat_backward,
+    check_lrat, parse_dimacs, parse_drat, parse_lrat, solve_with_drat_proof_within, tseitin_encode,
+    write_drat, write_lrat,
 };
 use axeyum_ir::{Sort, TermArena, TermId};
 use axeyum_rewrite::{
@@ -38,7 +49,16 @@ use crate::error::SolverError;
 pub struct UnsatProof {
     /// The bit-blasted CNF in DIMACS format.
     pub dimacs: String,
-    /// The DRAT refutation (verified by `check_drat`, accepted by `drat-trim`).
+    /// The DRAT refutation, self-verified before this certificate was returned
+    /// and accepted by external `drat-trim`.
+    ///
+    /// *Which* in-tree checker verified it depends on the route taken
+    /// (ADR-0613): normally the backward core-first engine, whose emitted hints
+    /// `check_lrat` then confirmed; on the fallback route, the forward reference
+    /// `check_drat`. The two agree on every proof the reference accepts
+    /// (ADR-0382); the backward route additionally tolerates unjustified dead
+    /// weight *outside* the refutation's core, which is `drat-trim`'s own
+    /// contract, so a certificate from either route is externally checkable.
     pub drat: String,
     /// The **LRAT** refutation: the same proof in the stronger clausal format with
     /// explicit antecedent hints, so it re-checks in *linear* time (follow the
@@ -63,6 +83,27 @@ impl UnsatProof {
     ///
     /// Returns [`SolverError::Backend`] if the stored DIMACS or DRAT text cannot
     /// be parsed (a malformed certificate).
+    ///
+    /// # Which checker decides, and why it is not the fast one (ADR-0613)
+    ///
+    /// When an LRAT certificate is present it is the **accepting authority**:
+    /// [`axeyum_cnf::check_lrat`] follows its hints against the stored DIMACS with
+    /// no search at all, in time linear in the proof. The DRAT text is then
+    /// re-checked too — with [`axeyum_cnf::check_drat_backward`], which is
+    /// ~66x faster than the forward reference (ADR-0382) — but that check appears
+    /// **only in conjunctive position**. It can turn an accept into a reject and
+    /// never the reverse, so however wrong the backward engine might be, it cannot
+    /// make this method accept a certificate `check_lrat` did not accept. That is
+    /// what lets the cost come out of the re-check without any trust going into
+    /// the machinery that made it cheap.
+    ///
+    /// The conjunct is not decoration: it is what catches a certificate whose
+    /// LRAT is intact and whose published DRAT — the artifact an external
+    /// `drat-trim` would read — has been tampered with.
+    ///
+    /// With no LRAT present (a RAT proof, which this workspace's own core does
+    /// not emit) there is nothing to follow hints for, and the forward reference
+    /// checker [`axeyum_cnf::check_drat`] decides, exactly as before.
     pub fn recheck(&self) -> Result<bool, SolverError> {
         let formula = parse_dimacs(&self.dimacs).map_err(|error| {
             SolverError::Backend(format!("certificate DIMACS unparseable: {error}"))
@@ -70,12 +111,9 @@ impl UnsatProof {
         let proof = parse_drat(&self.drat).map_err(|error| {
             SolverError::Backend(format!("certificate DRAT unparseable: {error}"))
         })?;
-        let drat_ok = check_drat(&formula, &proof).map_err(|error| {
-            SolverError::Backend(format!("certificate failed to check: {error}"))
-        })?;
-        // When an LRAT certificate is also present, it must independently confirm
-        // the same refutation; a present-but-failing LRAT is a tampered certificate,
-        // so the whole certificate is rejected (never silently trusted to the DRAT).
+        // When an LRAT certificate is present, it must independently confirm the
+        // refutation; a present-but-failing LRAT is a tampered certificate, so the
+        // whole certificate is rejected (never silently trusted to the DRAT).
         if let Some(lrat_text) = &self.lrat {
             let lrat = parse_lrat(lrat_text).map_err(|error| {
                 SolverError::Backend(format!("certificate LRAT unparseable: {error}"))
@@ -83,9 +121,13 @@ impl UnsatProof {
             let lrat_ok = check_lrat(&formula, &lrat).map_err(|error| {
                 SolverError::Backend(format!("certificate LRAT failed to check: {error}"))
             })?;
-            return Ok(drat_ok && lrat_ok);
+            let drat_ok = check_drat_backward(&formula, &proof).map_err(|error| {
+                SolverError::Backend(format!("certificate failed to check: {error}"))
+            })?;
+            return Ok(lrat_ok && drat_ok);
         }
-        Ok(drat_ok)
+        check_drat(&formula, &proof)
+            .map_err(|error| SolverError::Backend(format!("certificate failed to check: {error}")))
     }
 
     /// Rechecks the proof and confirms its DIMACS input is exactly the
@@ -354,6 +396,33 @@ pub enum CheckingProgress {
     /// A snapshot from the [`axeyum_cnf::elaborate_drat_to_lrat`]-equivalent
     /// pass, which only runs when the DRAT check above already verified.
     LratElaborate(axeyum_cnf::LratElaborateProgress),
+    /// A snapshot from the backward LRAT certification stage
+    /// ([`axeyum_cnf::certify_unsat_via_lrat`], ADR-0613) — the route that runs
+    /// *instead of* the two above whenever the checking budget admits it.
+    BackwardLratCertify(BackwardCertifyProgress),
+}
+
+/// A snapshot from the backward LRAT certification stage (ADR-0613).
+///
+/// The backward engine walks the proof in reverse and is not step-interruptible,
+/// so unlike the two forward sub-stages this reports exactly **twice**: once as
+/// the stage opens and once as it closes. Two samples is not a progress bar, and
+/// it is still the whole difference between "which stage is running" and
+/// silence — the question the 2026-08 `neg-fp16-add-monotone-rne` incident could
+/// not answer, where a 24 s search was followed by hours of unattributed
+/// checking.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BackwardCertifyProgress {
+    /// DRAT steps handed to the stage.
+    pub steps_total: usize,
+    /// Wall-clock elapsed inside this stage so far.
+    pub elapsed: std::time::Duration,
+    /// `false` on the opening snapshot, `true` on the closing one.
+    pub finished: bool,
+    /// Whether the stage certified the refutation. Meaningless until
+    /// `finished`; `false` on a decline, which is **not** a statement that the
+    /// proof is bad (see [`axeyum_cnf::LratCertifyOutcome`]).
+    pub certified: bool,
 }
 
 /// Bounds and observability for the checking stage that follows a
@@ -408,10 +477,27 @@ impl Default for CheckBudget<'_> {
 /// including the LRAT elaboration and the DRAT self-check — the shared tail
 /// of every `export_qf_bv_unsat_proof*` variant, so this soundness-critical
 /// logic exists exactly once regardless of which SAT-search entry point (with
-/// or without a progress sink) produced `outcome`. The checking stage
-/// ([`axeyum_cnf::check_drat`] then, if that verifies,
-/// [`axeyum_cnf::elaborate_drat_to_lrat`]) is bounded and observed per
-/// `check_budget` (see [`CheckBudget`] / [`CheckingProgress`]).
+/// or without a progress sink) produced `outcome`.
+///
+/// # Two checking routes, one trusted base (ADR-0613)
+///
+/// The **fast route** runs first whenever `check_budget` admits it
+/// ([`budget_admits_backward_certify`]): [`axeyum_cnf::certify_unsat_via_lrat`]
+/// elaborates the proof's core with the backward engine and has
+/// [`axeyum_cnf::check_lrat`] verify the resulting hints. A `Certified` there is
+/// discharged by `check_lrat` — small, search-free, linear — so `Proved` on this
+/// route rests on no more trust than `Proved` on the old one, and considerably
+/// less machinery than the forward RUP search it replaces.
+///
+/// The **reference route** — [`axeyum_cnf::check_drat`] then, if that verifies,
+/// [`axeyum_cnf::elaborate_drat_to_lrat`] — is unchanged and runs whenever the
+/// fast route was refused by the budget or declined (a RAT core lemma, or hints
+/// `check_lrat` would not accept). It is bounded and observed per `check_budget`
+/// (see [`CheckBudget`] / [`CheckingProgress`]).
+///
+/// A decline is not a verdict, so falling through is not "trying again until one
+/// of them says yes": the fast route has *no opinion* when it declines, and the
+/// reference route is then the only route that has spoken.
 ///
 /// [`CheckBudget::default`] reproduces the previous unbounded, unobserved
 /// behaviour exactly — "checking never declines to finish, however long that
@@ -426,6 +512,80 @@ impl Default for CheckBudget<'_> {
 /// snapshots), and collapsing the two here means every existing match on
 /// [`UnsatProofOutcome`] stays exhaustive without a new variant to update at
 /// each of its call sites.
+/// Whether `budget` admits the backward LRAT certification stage (ADR-0613) for
+/// a proof of `steps` DRAT steps.
+///
+/// That stage walks the proof in reverse and cannot be interrupted part-way, so
+/// it may only be entered when the budget can accommodate it **whole**:
+///
+/// - an already-expired `deadline` refuses it, which is what keeps
+///   "a timeout is not a pass" true — an expired budget still reaches the
+///   bounded forward route and reports [`UnsatProofOutcome::Inconclusive`];
+/// - a `max_steps` smaller than the proof refuses it, because the stage cannot
+///   stop at `max_steps` and report partial progress the way the forward
+///   checkers can.
+///
+/// A live deadline admits it, and the stage is then not itself
+/// deadline-interruptible — so a caller's deadline can be overshot by at most
+/// this stage's cost. That is a strict improvement on the route it replaces,
+/// which is the same kind of uninterruptible and measured at ~66x the work
+/// (ADR-0382); and an overshoot that certifies is a real verification, never a
+/// timeout promoted to a pass.
+fn budget_admits_backward_certify(budget: &CheckBudget<'_>, steps: usize) -> bool {
+    if budget
+        .deadline
+        .is_some_and(|deadline| Instant::now() >= deadline)
+    {
+        return false;
+    }
+    budget.max_steps.is_none_or(|max| max >= steps)
+}
+
+/// Runs the backward LRAT certification stage (ADR-0613) over `proof`, reporting
+/// its opening and closing snapshots to `check_budget`'s sink.
+///
+/// `Some(certificate)` means [`axeyum_cnf::check_lrat`] followed the emitted
+/// hints against `formula` and reached the empty clause — `formula` is
+/// unsatisfiable, on the authority of that checker alone. `None` means the route
+/// **declined**, which says nothing whatever about `proof`: the caller must fall
+/// back to the forward reference route rather than treat it as a failure.
+///
+/// The caller checks [`budget_admits_backward_certify`] first; this function
+/// does not, because the stage is uninterruptible and there is nothing useful it
+/// could do with a budget half way through.
+fn backward_lrat_certificate(
+    formula: &axeyum_cnf::CnfFormula,
+    proof: &[axeyum_cnf::DratStep],
+    check_budget: &mut CheckBudget<'_>,
+) -> Option<UnsatProof> {
+    let started = Instant::now();
+    let steps_total = proof.len();
+    let mut report = |elapsed, finished, certified| {
+        if let Some(sink) = check_budget.progress.as_mut() {
+            sink(&CheckingProgress::BackwardLratCertify(
+                BackwardCertifyProgress {
+                    steps_total,
+                    elapsed,
+                    finished,
+                    certified,
+                },
+            ));
+        }
+    };
+    report(std::time::Duration::ZERO, false, false);
+    let outcome = certify_unsat_via_lrat(formula, proof);
+    let certified = matches!(outcome, LratCertifyOutcome::Certified(_));
+    report(started.elapsed(), true, certified);
+    match outcome {
+        LratCertifyOutcome::Certified(steps) => Some(UnsatProof {
+            dimacs: formula.to_dimacs(),
+            drat: write_drat(proof),
+            lrat: Some(write_lrat(&steps)),
+        }),
+        LratCertifyOutcome::Declined(_) => None,
+    }
+}
+
 #[allow(clippy::similar_names)] // drat_sink_fn/lrat_sink_fn mirror the two checking sub-stages
 fn finish_unsat_proof_outcome_with_check_budget(
     formula: &axeyum_cnf::CnfFormula,
@@ -438,6 +598,23 @@ fn finish_unsat_proof_outcome_with_check_budget(
             Ok(UnsatProofOutcome::Inconclusive)
         }
         ProofSolveOutcome::Unsat(proof) => {
+            // FAST ROUTE (ADR-0613), tried first whenever the budget admits it.
+            //
+            // `certify_unsat_via_lrat` elaborates the proof's CORE to LRAT with
+            // the backward engine (untrusted) and has `check_lrat` (trusted,
+            // search-free) verify the hints. A `Certified` here is discharged by
+            // `check_lrat` alone, so this is a change of SPEED, not of trusted
+            // base — see that function's own doc for the argument.
+            //
+            // A `Declined` says nothing about `proof`, so it falls through to
+            // the forward reference route below rather than reporting a failure.
+            if budget_admits_backward_certify(&check_budget, proof.len())
+                && let Some(certificate) =
+                    backward_lrat_certificate(formula, &proof, &mut check_budget)
+            {
+                return Ok(UnsatProofOutcome::Proved(certificate));
+            }
+
             let want_progress = check_budget.progress.is_some();
             let mut drat_sink_fn = |snapshot: &axeyum_cnf::DratCheckProgress| {
                 if let Some(sink) = check_budget.progress.as_mut() {
@@ -750,6 +927,91 @@ mod tests {
         }
     }
 
+    /// The certificate's LRAT is the accepting authority, and the DRAT re-check
+    /// is a rejecting-only conjunct (ADR-0613). This pins the conjunct: an
+    /// intact LRAT beside a DRAT whose refutation has been removed must be
+    /// REJECTED, even though `check_lrat` alone would accept.
+    ///
+    /// Without the conjunct a consumer would be told the certificate holds while
+    /// the artifact an external `drat-trim` reads does not check — the one
+    /// disagreement between our answer and an outside checker's that this
+    /// project cannot afford.
+    #[test]
+    fn an_intact_lrat_does_not_rescue_a_gutted_drat() {
+        let (arena, assertions) = contradictory_bv_assertions();
+        let UnsatProofOutcome::Proved(proof) =
+            export_qf_bv_unsat_proof(&arena, &assertions).unwrap()
+        else {
+            panic!("x=0 ∧ x=1 must be unsat with a proof");
+        };
+        assert!(
+            proof.recheck().unwrap(),
+            "positive control: intact certificate"
+        );
+        assert_eq!(
+            proof.recheck_lrat().unwrap(),
+            Some(true),
+            "the fixture needs an LRAT that verifies on its own"
+        );
+
+        // Strip every empty-clause line from the DRAT. The LRAT is untouched, so
+        // `check_lrat` still says `Ok(true)`; only the conjunct can catch this.
+        let mut gutted = proof.clone();
+        gutted.drat = gutted
+            .drat
+            .lines()
+            .filter(|line| line.trim() != "0")
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert_ne!(
+            gutted.drat, proof.drat,
+            "the fixture must have changed the DRAT"
+        );
+        assert_eq!(
+            gutted.recheck_lrat().unwrap(),
+            Some(true),
+            "the LRAT half must still pass — otherwise this test is not \
+             exercising the DRAT conjunct at all"
+        );
+        assert!(
+            !matches!(gutted.recheck(), Ok(true)),
+            "a certificate whose published DRAT no longer refutes must be \
+             rejected, however good its LRAT is"
+        );
+    }
+
+    /// The reverse pairing: a DRAT that still checks beside an LRAT whose hints
+    /// have been forged must also be rejected. `check_lrat` is the accepting
+    /// authority, so nothing may accept around it.
+    #[test]
+    fn a_valid_drat_does_not_rescue_a_forged_lrat() {
+        let (arena, assertions) = contradictory_bv_assertions();
+        let UnsatProofOutcome::Proved(proof) =
+            export_qf_bv_unsat_proof(&arena, &assertions).unwrap()
+        else {
+            panic!("x=0 ∧ x=1 must be unsat with a proof");
+        };
+        let lrat_text = proof.lrat.clone().expect("the exporter attaches LRAT");
+        // Rewrite every hint id to one that cannot exist. The DRAT is untouched.
+        let forged: String = lrat_text
+            .lines()
+            .map(|line| {
+                let Some((head, _hints)) = line.rsplit_once(" 0 ") else {
+                    return line.to_owned();
+                };
+                format!("{head} 0 999999 0")
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        let mut tampered = proof.clone();
+        tampered.lrat = Some(forged);
+        assert!(
+            !matches!(tampered.recheck(), Ok(true)),
+            "forged LRAT hints must be rejected — the trusted checker follows \
+             hints, so an unfollowable hint is a rejected certificate"
+        );
+    }
+
     // --- checking-stage progress / bounding (`CheckBudget`) -----------------
 
     fn contradictory_bv_assertions() -> (TermArena, Vec<TermId>) {
@@ -845,18 +1107,93 @@ mod tests {
             plain, outcome,
             "installing a checking-progress sink must not change the outcome"
         );
+        // With no bound installed the budget admits the backward route
+        // (ADR-0613), so the observability comes from that stage. It reports
+        // exactly twice — opening and closing — and the closing snapshot must
+        // say it certified, since this query is unsat with a RUP-only proof.
+        let backward: Vec<_> = events
+            .iter()
+            .filter_map(|event| match event {
+                CheckingProgress::BackwardLratCertify(snapshot) => Some(*snapshot),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            backward.len(),
+            2,
+            "the backward certify stage must report exactly one opening and one \
+             closing snapshot, got {backward:?}"
+        );
+        assert!(!backward[0].finished, "the first snapshot opens the stage");
+        assert!(backward[1].finished, "the second snapshot closes it");
+        assert!(
+            backward[1].certified,
+            "an unsat query with a RUP-only proof must certify through LRAT"
+        );
+        assert_eq!(
+            backward[0].steps_total, backward[1].steps_total,
+            "both snapshots describe the same proof"
+        );
+    }
+
+    /// The reference (forward) route keeps its own observability: install a step
+    /// budget too small for the non-interruptible backward stage but large
+    /// enough for the bounded forward one, and both forward sub-stages must
+    /// still report.
+    ///
+    /// Without this the `CheckingProgress::DratCheck` / `LratElaborate` arms
+    /// would have no live test at all once the backward route became the
+    /// default, and a regression in the fallback's observability — the exact
+    /// thing the 2026-08 fp16 incident cost — would go unnoticed.
+    #[test]
+    fn the_reference_route_still_reports_both_of_its_sub_stages() {
+        let (arena, assertions) = contradictory_bv_assertions();
+        let UnsatProofOutcome::Proved(reference) =
+            export_qf_bv_unsat_proof(&arena, &assertions).unwrap()
+        else {
+            panic!("x=0 ∧ x=1 must be unsat with a proof");
+        };
+        let steps = parse_drat(&reference.drat).expect("the exported DRAT parses");
+        assert!(!steps.is_empty(), "the proof must have steps to bound");
+
+        let mut events: Vec<CheckingProgress> = Vec::new();
+        let mut record = |event: &CheckingProgress| events.push(*event);
+        let outcome = export_qf_bv_unsat_proof_within_with_check_budget(
+            &arena,
+            &assertions,
+            None,
+            CheckBudget {
+                // One step short of the proof: refuses the whole-or-nothing
+                // backward stage, admits the step-bounded forward one.
+                max_steps: Some(steps.len() - 1),
+                progress_interval: 1,
+                progress: Some(&mut record),
+                ..CheckBudget::default()
+            },
+        )
+        .unwrap();
+        assert!(
+            !events
+                .iter()
+                .any(|event| matches!(event, CheckingProgress::BackwardLratCertify(_))),
+            "a step budget smaller than the proof must refuse the backward stage"
+        );
         assert!(
             events
                 .iter()
                 .any(|event| matches!(event, CheckingProgress::DratCheck(_))),
             "the DRAT-check sub-stage must have reported at least one snapshot"
         );
-        assert!(
-            events
-                .iter()
-                .any(|event| matches!(event, CheckingProgress::LratElaborate(_))),
-            "the elaboration sub-stage must have reported at least one snapshot \
-             (the DRAT check verified, so elaboration must have run)"
-        );
+        // Whether elaboration also runs depends on whether the bounded DRAT
+        // check verified inside its budget; when it did, elaboration must have
+        // reported too.
+        if outcome != UnsatProofOutcome::Inconclusive {
+            assert!(
+                events
+                    .iter()
+                    .any(|event| matches!(event, CheckingProgress::LratElaborate(_))),
+                "the DRAT check verified, so elaboration must have run and reported"
+            );
+        }
     }
 }

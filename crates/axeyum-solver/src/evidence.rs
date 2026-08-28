@@ -16,8 +16,11 @@
 //!   [`axeyum_cnf::check_alethe`] kernel, which re-derives the bit-blast itself
 //!   (no trusted reduction). This is the stronger upgrade over plain DRAT.
 //! - other larger `QF_BV` `unsat` carries an optional [`UnsatProof`] (DIMACS +
-//!   DRAT); `check` re-parses and re-runs the trusted [`axeyum_cnf::check_drat`]
-//!   kernel. A `None` proof means the result came from the (lower-assurance)
+//!   DRAT, and normally LRAT); `check` re-parses and delegates to
+//!   [`UnsatProof::recheck`], whose accepting authority is the trusted
+//!   search-free [`axeyum_cnf::check_lrat`] when hints are present and the
+//!   trusted forward [`axeyum_cnf::check_drat`] when they are not (ADR-0613).
+//!   A `None` proof means the result came from the (lower-assurance)
 //!   adapter without a DRAT certificate, and is documented as such — and it
 //!   **does not pass the check**, see below.
 //! - `QF_LRA` `unsat` carries a [`FarkasCertificate`]; `check` re-runs the
@@ -54,7 +57,7 @@
 use std::collections::BTreeSet;
 use std::time::{Duration, Instant};
 
-use axeyum_cnf::{AletheCommand, check_alethe, check_drat, parse_dimacs, parse_drat};
+use axeyum_cnf::{AletheCommand, check_alethe};
 use axeyum_ir::{Op, Sort, SymbolId, TermArena, TermId, TermNode, TermStats};
 
 use crate::abv::{
@@ -1096,17 +1099,18 @@ impl Evidence {
     ) -> Result<bool, SolverError> {
         match self {
             Evidence::Sat(model) => crate::check_model(arena, assertions, model),
-            Evidence::Unsat(Some(proof)) => {
-                let formula = parse_dimacs(&proof.dimacs).map_err(|error| {
-                    SolverError::Backend(format!("unsat evidence DIMACS re-parse failed: {error}"))
-                })?;
-                let steps = parse_drat(&proof.drat).map_err(|error| {
-                    SolverError::Backend(format!("unsat evidence DRAT re-parse failed: {error}"))
-                })?;
-                check_drat(&formula, &steps).map_err(|error| {
-                    SolverError::Backend(format!("unsat evidence DRAT re-check failed: {error}"))
-                })
-            }
+            // Delegated to `UnsatProof::recheck` rather than re-implemented, so
+            // the certificate is re-validated by exactly one piece of code
+            // (ADR-0613). That routes an LRAT-carrying certificate through the
+            // trusted, search-free `check_lrat` with the backward DRAT check as a
+            // rejecting-only conjunct, and an LRAT-free one through the forward
+            // reference `check_drat` — see that method for the trust argument.
+            //
+            // Before this delegation existed the two sites re-parsed the same
+            // text and ran the forward checker independently, which is how the
+            // consumer path silently kept the superlinear checker after the
+            // producer stopped using it.
+            Evidence::Unsat(Some(proof)) => proof.recheck(),
             Evidence::UnsatTermLevel { max_total_bits, .. } => {
                 // Re-run the reduction-free enumeration; it must again find no
                 // satisfying assignment.
@@ -4953,12 +4957,15 @@ mod tests {
     }
 
     /// The checking-stage counterpart of the search-side test above: a
-    /// `check_progress` sink observes `axeyum_cnf::check_drat` and
-    /// `axeyum_cnf::elaborate_drat_to_lrat` (the stage that ran for ~6 h
-    /// unbounded and unobserved on `neg-fp16-add-monotone-rne.smt2`) without
-    /// changing the exported certificate, and installing an already-expired
-    /// checking deadline yields the honest bare `Evidence::Unsat(None)` — a
-    /// timeout is not a pass.
+    /// `check_progress` sink observes the checking stage — the one that ran for
+    /// ~6 h unbounded and unobserved on `neg-fp16-add-monotone-rne.smt2` —
+    /// without changing the exported certificate.
+    ///
+    /// With no bound installed the budget admits the backward LRAT certification
+    /// route (ADR-0613), so that is the stage that reports here. It is not
+    /// step-interruptible, so it reports exactly twice: opening and closing.
+    /// `crate::proof::tests::the_reference_route_still_reports_both_of_its_sub_stages`
+    /// covers the forward route's own observability.
     #[test]
     fn check_progress_sink_fires_and_does_not_change_the_certificate() {
         let (arena, assertions) = unsat_bv_query();
@@ -4986,11 +4993,23 @@ mod tests {
             !snapshots.is_empty(),
             "an installed checking-progress sink must fire at least once (the terminal report)"
         );
+        let backward: Vec<_> = snapshots
+            .iter()
+            .filter_map(|event| match event {
+                crate::proof::CheckingProgress::BackwardLratCertify(snapshot) => Some(*snapshot),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            backward.len(),
+            2,
+            "the backward certify stage must report one opening and one closing \
+             snapshot, got {backward:?}"
+        );
+        assert!(!backward[0].finished && backward[1].finished);
         assert!(
-            snapshots
-                .iter()
-                .any(|event| matches!(event, crate::proof::CheckingProgress::DratCheck(_))),
-            "the DRAT-check sub-stage must have reported at least one snapshot"
+            backward[1].certified,
+            "this query is unsat with a RUP-only proof, so it must certify"
         );
     }
 
