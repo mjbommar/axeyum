@@ -180,7 +180,12 @@
 //!   `meshLevelCount k` on the KNOWN, closed-form displacement between a
 //!   fine point and its immediate coarse neighbour (no bucket search — the
 //!   doubling nesting makes that displacement exact, not merely bounded).
-//! - **Rung 6, the telescope.** Sum the per-level gaps via
+//!   **This "immediate coarse neighbour" framing is only exact for a
+//!   SINGLE doubling (`j → j+1`); `trueExponent(k) → trueExponent(k+1)` is
+//!   not, in general, one doubling — see the "Rung 6 re-verified" section
+//!   below, which corrects this.**
+//! - **Rung 6, the telescope (ORIGINAL sketch — see the correction below
+//!   before acting on this).** Sum the per-level gaps via
 //!   [`CReal.sumRange_cauchy_of_dominated`](super::CRealPrelude::sum_range_cauchy_of_dominated)
 //!   (`creal/series.rs`) against a CONCRETE ratio-`1/2` geometric dominator —
 //!   **`creal/geometric.rs` already proves `Cauchy (sumRange (fun n => pow x
@@ -199,6 +204,99 @@
 //!   h)` shape (kernel fact 1 respected: `f_lambda`/`K` stay concrete data
 //!   throughout, never pulled from an `Exists`).
 //!
+//! ### Rung 6 re-verified against the kernel API (2026-08-27) — the sketch
+//! above UNDERSOLD what remains, and this is a correction, not a restatement
+//!
+//! The "constant-multiple corollary" the rungs-1–5 sketch names as the one
+//! open piece is **not** the bottleneck — it already exists in substance.
+//! [`geometric.rs::declare_geom_cauchy`]'s own construction (and
+//! `exponential.rs::exp_dominant_cauchy_body_concrete`/
+//! `trig.rs`'s `pub(super)` copies `mul_ordered_half_body` +
+//! `promote_ordered_half_to_full` + `telescope_cauchy_pad2`) already scale a
+//! ratio-`1/2` ordered-half Cauchy bound by a fixed positive `CReal`
+//! constant and promote it past `Nat.le_total` — reusable machinery, not
+//! missing machinery. Likewise
+//! [`CReal.cauchy_of_abs_diff_le`](super::CRealPrelude::cauchy_of_abs_diff_le)
+//! (`creal/ivt.rs`) is the exact general REAL-valued-bound-to-canonical-
+//! sample bridge a telescoped estimate needs, and its own body (before the
+//! final `cexists_intro`) already produces the RAW `(K, per-pair proof)`
+//! pair [`CReal.regular_of_scaled_cauchy`](super::CRealPrelude::regular_of_scaled_cauchy)
+//! needs as DATA (kernel fact 2) — reproducible here the way this
+//! development always reproduces a sibling's private helper rather than
+//! widening its visibility for one caller.
+//!
+//! **What actually blocks rung 6 is the per-level GAP BOUND itself — a real
+//! quantitative estimate this file has never built, not yet even attempted
+//! against the kernel — and it is harder than "sum the gaps" suggests,
+//! because `f_lambda`'s consecutive terms are NOT adjacent mesh levels.**
+//! `f_lambda(k) := meshMax F a b (trueExpOfModulus m k)`, and
+//! `trueExpOfModulus`'s own defining recursion
+//! (`trueExpOfModulus m (succ k) := add (trueExpOfModulus m k) (expOfModulus
+//! m (succ k))`) can jump the mesh level by an ARBITRARILY large number of
+//! doublings between `f_lambda(k)` and `f_lambda(k+1)` — `expOfModulus m
+//! (succ k) := Nat.size (m (meshLevelCount (succ k)))` depends on the
+//! continuity modulus `m`, which this file is generic over and which can
+//! grow arbitrarily fast. So the needed bound is not "adjacent mesh levels
+//! differ by `≤ 1/2^k`" (a single doubling, which [`mesh_sample_transport`]
+//! and [`mesh_delta_halve`] do make cheap via the EVEN-index exact
+//! coincidence) — it is "level `trueExpOfModulus(k)` and level
+//! `trueExpOfModulus(k+1)` differ by `≤ 1/2^k`, however many doublings apart
+//! they are," and EVERY fine-level sample point that is not an exact
+//! even-index descendant of a coarse point needs to be related to SOME
+//! nearby coarse point — a genuine index/"nearest point" fact, at ANY
+//! refinement depth, not just depth 1.
+//!
+//! That is precisely the shape of problem [`creal/uniform_continuity.rs`]'s
+//! `bucketIndex`/`crossingClose`/`crossingSampleUpper`/`crossingSampleLower`
+//! family exists to solve (this file's own §"Why supOn did not land"
+//! already names this as "route 1", rejected as too costly to adapt) — and
+//! re-reading that family's OWN field documentation this session
+//! (`CReal.crossing_close`, `creal.rs`) shows it is not a free reuse even on
+//! its own terms: `crossingClose`'s domain-membership side condition
+//! (`samplePt ≤ b`) is recorded there as **still open**, independently
+//! discovered and refuted-by-worked-example across five of `integral.rs`'s
+//! own 2026-08-27 module-doc entries. Reusing route 1 here would import an
+//! open gap, not a finished lemma.
+//!
+//! So route 2, as characterized above, does **not** actually avoid an
+//! index/bucket-style argument for the full construction — it only avoids
+//! one for a SINGLE adjacent doubling. Two ways forward, neither attempted
+//! this session, both larger than "a short derivation":
+//!
+//! 1. **Bound the whole multi-level jump with ONE continuity application at
+//!    the COARSE level**, using that binary-doubling refinement never
+//!    leaves its parent cell: every point sampled at ANY level `j' ≥ j`
+//!    lies within one full coarse cell width `Δⱼ` of that cell's LEFT
+//!    endpoint (no "nearest" comparison needed — always the left one), so
+//!    ONE application of [`CRealPrelude::uc_spec`] at accuracy request
+//!    tied to `meshLevelCount k` bounds the ENTIRE jump regardless of how
+//!    many doublings `expOfModulus m (succ k)` represents. This still needs
+//!    a genuine (if bounded) index computation — "which coarse cell
+//!    contains fine index `i'`" — that [`mesh_sample_transport`]'s exact
+//!    doubling identity does not supply once more than one doubling is
+//!    involved.
+//! 2. **A double telescope**: bound each SINGLE adjacent-level step (the
+//!    one case this file's existing machinery already makes cheap) by a
+//!    per-step accuracy that itself decreases geometrically across the
+//!    (unboundedly many) intermediate levels within one `k`-to-`k+1` block,
+//!    then sum that inner geometric series (bounded by twice its first
+//!    term, [`geom_tail_within`]-style) to get the block bound, then sum
+//!    the outer series across `k` as originally planned. This needs an
+//!    intermediate accuracy SCHEDULE finer-grained than `expOfModulus`
+//!    supplies today (one number per outer `k`, not per intermediate mesh
+//!    level within a block).
+//!
+//! Neither is "a short derivation." Both are comparable in scope to a
+//! rung of their own. This correction does not change the earlier,
+//! carefully-hedged claim about the ACCURACY SCHEDULE itself: `expOfModulus`
+//! at `meshLevelCount k` genuinely does fix the naive harmonic-series trap
+//! **in the sense that the requested accuracy is summable** (`1/2^k`, via
+//! [`declare_exp_of_modulus_le_true_exp_of_modulus_thm`] plus
+//! `Nat.lt_pow_size`) — what is still unverified against the kernel is
+//! whether that requested accuracy is actually ACHIEVED by
+//! `meshMax`'s value at the corresponding level, which is exactly the gap
+//! bound above.
+//!
 //! This plan was grounded against the kernel's actual API, and rungs 1–5
 //! have now all built cleanly on the first attempt by mirroring
 //! `declare_max_range`'s and `integral.rs`'s existing shapes exactly rather
@@ -215,16 +313,13 @@
 //! builds the schedule and its two structural facts (monotone, `≥` the
 //! single level requested), not the per-level gap bound itself, so nothing
 //! has yet forced the kernel to check that requesting `meshLevelCount k`
-//! rather than `k` actually produces a summable tail. **Rung 6, the
-//! telescope, is the next concrete task** — feed the per-level gap (built
-//! from [`declare_exp_of_modulus_le_true_exp_of_modulus_thm`] plus
-//! `Nat.lt_pow_size`) to
-//! [`CReal.sumRange_cauchy_of_dominated`](super::CRealPrelude::sum_range_cauchy_of_dominated)
-//! against a concrete ratio-`1/2` geometric dominator. The one piece not
-//! yet confirmed to exist by name: a constant-multiple corollary scaling a
-//! Cauchy bound by a fixed positive `CReal` constant, to combine
-//! `geometric.rs`'s own ratio-`1/2` tail bound with this rung's `1/2^k`
-//! gap.
+//! rather than `k` actually produces a summable tail. **The next concrete
+//! task is the per-level GAP BOUND itself** (the "Rung 6 re-verified"
+//! section above, added this session, supersedes this paragraph's earlier
+//! framing of rung 6 as "sum the gaps" — the summing machinery is ready and
+//! waiting; the gap bound it would sum is not built yet, and is the actual
+//! remaining mathematics). Not attempted against the kernel this session —
+//! see that section for the two candidate routes and why neither is small.
 
 #![allow(clippy::doc_markdown, clippy::too_many_arguments)]
 
