@@ -5800,6 +5800,48 @@ fn eq_to_equiv(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId, h: Exp
     creal_transport(d, p, a, motive, refl_a, b, h)
 }
 
+/// `λ k, mul (pow (neg one) k) (a_fn k)` -- reproduced (Rust privacy) from
+/// `creal/alternating.rs`'s own private `build_t_lam`. MUST match its
+/// construction exactly (same shape, same `a_fn`) so that, by structural
+/// interning, this function's output is the IDENTICAL `ExprId`
+/// `alternatingLowerBound` builds internally.
+fn build_t_lam_here(d: &mut IntDev<'_>, p: CRealPrelude, a_fn: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let one_cc = one_c(d, p);
+    let neg_one = cneg(d, p, one_cc);
+    let sign_k = cpow(d, p, neg_one, k);
+    let a_k = d.apply(a_fn, &[k]);
+    let body = cmul(d, p, sign_k, a_k);
+    d.lam_fv(k_fv, nat, body)
+}
+
+/// `Equiv (t_lam k) (sinFnTerm k z)` for the `a_fn` [`sin_lb_magnitude_lam`]
+/// returns, via ONE `mul_assoc` step: `sinFnTerm k z` is LEFT-associated
+/// `(sign·coeff)·pow` (`sinTerm k := mul (pow (neg one) k) (expTerm (odd_index
+/// k))`, `sinFnTerm k z := mul (sinTerm k) (pow z (odd_index k))`); `t_lam k`
+/// is RIGHT-associated `sign·(coeff·pow)`. Equiv, never defeq -- this is the
+/// bridge `alternatingLowerBound`'s internally-built `t_lam` needs to relate
+/// to the pre-existing `CReal.sinFnTerm`.
+fn t_lam_eq_sinfnterm(d: &mut IntDev<'_>, p: CRealPrelude, z: ExprId, k: ExprId) -> ExprId {
+    let one_cc = one_c(d, p);
+    let neg_one = cneg(d, p, one_cc);
+    let sign_k = cpow(d, p, neg_one, k);
+    let odd_k = odd_index(d, k);
+    let exp_term_c = d.kernel().const_(p.exp_term, vec![]);
+    let coeff = d.apply(exp_term_c, &[odd_k]);
+    let pow_z_k = cpow(d, p, z, odd_k);
+    let sign_coeff = cmul(d, p, sign_k, coeff);
+    let coeff_pow = cmul(d, p, coeff, pow_z_k);
+    let assoc = d.lemma(p.mul_assoc, &[sign_k, coeff, pow_z_k]);
+    // assoc : Equiv (mul sign_coeff pow_z_k) (mul sign_k coeff_pow)
+    //       = Equiv (sinFnTerm k z) (t_lam k), up to defeq.
+    let sin_fn_term_kz = cmul(d, p, sign_coeff, pow_z_k);
+    let t_lam_kz = cmul(d, p, sign_k, coeff_pow);
+    esymm(d, p, sin_fn_term_kz, t_lam_kz, assoc)
+}
+
 /// `Equiv (pow R 3) (embed (natDivSucc 512 124))`, `R := ofRat (natDivSucc 8
 /// 4) = 8/5` -- `pow R 3` is ι-defeq `mul (pow R 2) R`, rewritten through
 /// [`r_squared_eq_64_over_25`] then collapsed with ONE more
@@ -6496,19 +6538,59 @@ pub(super) fn declare_sin_fn_lower_bound(
         }
     }
 
-    // Domination -> Exists (L, Converges (sumRange (fun j => sinFnTerm j z)) L).
-    let inner_term = {
+    // Domination -> Exists (L, Converges (sumRange t_lam) L), `t_lam` --
+    // NOT `sinFnTerm` directly -- because `alternatingLowerBound`'s `hconv`
+    // parameter is stated in terms of its OWN internally-built `t_lam :=
+    // build_t_lam a_fn`, which is Equiv but not defeq to `sinFnTerm` (see
+    // [`t_lam_eq_sinfnterm`]).
+    let inner_term = build_t_lam_here(d, p, a_fn);
+    let sinfnterm_lambda = {
         let j_fv = d.fresh_fvar();
         let j = d.kernel().fvar(j_fv);
         let body = d.const_app(p.sin_fn_term, &[j, z]);
         d.lam_fv(j_fv, nat, body)
     };
     let sum_range_f_z = d.const_app(p.sum_range, &[inner_term]);
-    let dom_hyp = sin_fn_term_dom_at(d, p, z, hz0, hzr)?;
+    let sum_range_sinfnterm = d.const_app(p.sum_range, &[sinfnterm_lambda]);
+    let mseq0 = d.kernel().const_(p.sin_dominant_16_over_25, vec![]);
+
+    // dom_hyp : ∀j, le (abs (t_lam j)) (sinDominant16Over25 j) -- bridged
+    // from `sin_fn_term_dom_at`'s own sinFnTerm-based bound via
+    // `t_lam_eq_sinfnterm` (one `abs_congr` + `le_congr` per j).
+    let dom_hyp_sinfnterm = sin_fn_term_dom_at(d, p, z, hz0, hzr)?;
+    let dom_hyp = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let raw = d.apply(dom_hyp_sinfnterm, &[j]);
+        // raw : le (abs (sinFnTerm j z)) (sinDominant16Over25 j)
+        let bridge_j = t_lam_eq_sinfnterm(d, p, z, j);
+        // bridge_j : Equiv (t_lam j) (sinFnTerm j z)
+        let t_lam_j = d.apply(inner_term, &[j]);
+        let sinfnterm_j = d.const_app(p.sin_fn_term, &[j, z]);
+        let abs_tlam_j = cabs(d, p, t_lam_j);
+        let abs_sinfnterm_j = cabs(d, p, sinfnterm_j);
+        let abs_bridge = d.lemma(p.abs_congr, &[t_lam_j, sinfnterm_j, bridge_j]);
+        // abs_bridge : Equiv (abs t_lam_j) (abs sinfnterm_j)
+        let abs_bridge_symm = esymm(d, p, abs_tlam_j, abs_sinfnterm_j, abs_bridge);
+        let mseq0_j = d.apply(mseq0, &[j]);
+        let refl_mseq0_j = erefl(d, p, mseq0_j);
+        let transported = d.lemma(
+            p.le_congr,
+            &[
+                abs_sinfnterm_j,
+                abs_tlam_j,
+                mseq0_j,
+                mseq0_j,
+                abs_bridge_symm,
+                refl_mseq0_j,
+                raw,
+            ],
+        );
+        d.lam_fv(j_fv, nat, transported)
+    };
     eprintln!("[checkpoint] dom_hyp built");
     let cauchy_g = sin_fn_cauchy_g(d, p);
     eprintln!("[checkpoint] cauchy_g built");
-    let mseq0 = d.kernel().const_(p.sin_dominant_16_over_25, vec![]);
 
     let ex_conv = d.lemma(
         p.sum_range_converges_of_dominated,
@@ -6604,9 +6686,56 @@ pub(super) fn declare_sin_fn_lower_bound(
             let proof1_symm = close_within_symm(d, p, f_z_n, l, q1_embed, proof1);
 
             let spec_at_n = d.apply(uconv_spec_val, &[n, z, hz0, hzr]);
+            // spec_at_n : le (abs (add (F n z) (neg sin_z))) (ofRat (natDivSucc rate2 n)),
+            // and `F n z` beta-reduces to `sumRange sinfnterm_lambda n`, NOT
+            // `f_z_n = sumRange inner_term(=t_lam) n` -- bridge via
+            // `sum_range_congr` (per-n, EXACT equiv, no asymptotic concern)
+            // plus one `add_congr`/`abs_congr`/`le_congr` chain, mirroring
+            // `dom_hyp`'s own bridge.
             let rate2 = uconv_rate_val;
             let q2_rat = div_succ_at(d, p, rate2, n);
             let q2_embed = embed(d, p, q2_rat);
+
+            let f_n_z = d.apply(sum_range_sinfnterm, &[n]);
+            let per_k_bridge = {
+                let kb_fv = d.fresh_fvar();
+                let kb = d.kernel().fvar(kb_fv);
+                let body = t_lam_eq_sinfnterm(d, p, z, kb);
+                d.lam_fv(kb_fv, nat, body)
+            };
+            let bridge_n = d.lemma(
+                p.sum_range_congr,
+                &[inner_term, sinfnterm_lambda, n, per_k_bridge],
+            );
+            // bridge_n : Equiv f_z_n f_n_z
+            let neg_sin_z_here = cneg(d, p, sin_z);
+            let add_fzn_negsinz = cadd(d, p, f_z_n, neg_sin_z_here);
+            let add_fnz_negsinz = cadd(d, p, f_n_z, neg_sin_z_here);
+            let refl_neg_sinz = erefl(d, p, neg_sin_z_here);
+            let add_bridge = d.lemma(
+                p.add_congr,
+                &[f_z_n, f_n_z, neg_sin_z_here, neg_sin_z_here, bridge_n, refl_neg_sinz],
+            );
+            // add_bridge : Equiv add_fzn_negsinz add_fnz_negsinz
+            let abs_add_fzn = cabs(d, p, add_fzn_negsinz);
+            let abs_add_fnz = cabs(d, p, add_fnz_negsinz);
+            let abs_bridge2 = d.lemma(p.abs_congr, &[add_fzn_negsinz, add_fnz_negsinz, add_bridge]);
+            // abs_bridge2 : Equiv abs_add_fzn abs_add_fnz
+            let abs_bridge2_symm = esymm(d, p, abs_add_fzn, abs_add_fnz, abs_bridge2);
+            let refl_q2 = erefl(d, p, q2_embed);
+            let spec_at_n_tlam = d.lemma(
+                p.le_congr,
+                &[
+                    abs_add_fnz,
+                    abs_add_fzn,
+                    q2_embed,
+                    q2_embed,
+                    abs_bridge2_symm,
+                    refl_q2,
+                    spec_at_n,
+                ],
+            );
+            // spec_at_n_tlam : le (abs (add f_z_n (neg sin_z))) q2_embed
 
             let combined = combine_two_legs(
                 d,
@@ -6617,7 +6746,7 @@ pub(super) fn declare_sin_fn_lower_bound(
                 q1_embed,
                 q2_embed,
                 proof1_symm,
-                spec_at_n,
+                spec_at_n_tlam,
             );
             // combined : le (abs (add l (neg sin_z))) (add q1_embed q2_embed)
 
