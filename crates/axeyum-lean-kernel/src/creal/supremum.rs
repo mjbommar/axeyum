@@ -324,11 +324,11 @@
 #![allow(clippy::doc_markdown, clippy::too_many_arguments)]
 
 use super::ring_helpers::right_distrib;
-use super::{CRealPrelude, cadd, cle, creal_ty, embed};
+use super::{CRealPrelude, and_intro, cadd, cle, creal_ty, embed};
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
-use crate::int_prelude::ops::IntDev;
+use crate::int_prelude::ops::{IntDev, exists_elim};
 use crate::nat_prelude::NatOps;
 use crate::rat_prelude::ops::{nat_rewrite_prop, radd, rat_eq_rewrite, req, rtrans};
 
@@ -2085,4 +2085,729 @@ pub(super) fn declare_exp_of_modulus_le_true_exp_of_modulus(
     p: CRealPrelude,
 ) -> Result<(), KernelError> {
     declare_exp_of_modulus_le_true_exp_of_modulus_thm(d, p)
+}
+
+// ---------------------------------------------------------------------------
+// Rung 6, step 1: the MULTI-LEVEL nearest-mesh-point lemma.
+//
+// `CReal.meshPoint_near_coarse` -- every level-`(j+d)` mesh point, at ANY
+// refinement depth `d`, sits inside one level-`j` cell. See the module
+// documentation's "Rung 6 re-verified" section for why this, and not the
+// constant-multiple corollary, is what blocks `supOn`.
+// ---------------------------------------------------------------------------
+
+/// `CReal.zero`.
+fn czero_local(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    d.kernel().const_(p.zero, vec![])
+}
+
+/// `meshDelta a b (meshLevelCount level)` -- the level-`level` mesh width.
+fn level_delta(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    level: ExprId,
+) -> ExprId {
+    let m = d.const_app(p.mesh_level_count, &[level]);
+    mesh_delta(d, p, a, b, m)
+}
+
+/// `meshSamplePoint a (meshDelta a b (meshLevelCount level)) i`.
+fn level_point(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    level: ExprId,
+    i: ExprId,
+) -> ExprId {
+    let delta = level_delta(d, p, a, b, level);
+    mesh_sample_point(d, p, a, delta, i)
+}
+
+/// `Equiv (ofNat (Nat.succ Nat.zero)) one` -- duplicated from `integral.rs`'s
+/// and `monotone.rs`'s private `of_nat_one_equiv_local`, per this
+/// development's re-derive-rather-than-widen convention.
+fn of_nat_one_equiv(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let rat = p.rat;
+    let one_nat = d.num(1);
+    let zero_nat = d.num(0);
+    let unit = d.const_app(rat.nat_div_succ, &[one_nat, zero_nat]);
+    let one_rat = d.kernel().const_(rat.one, vec![]);
+    let unit_eq_one = d.lemma(p.rat_unit_eq_one, &[]);
+    let unit_embed = embed(d, p, unit);
+    let refl_start = d.lemma(p.equiv_refl, &[unit_embed]);
+    rat_eq_rewrite(d, unit, one_rat, unit_eq_one, refl_start, &|d, t| {
+        let embedded = embed(d, p, t);
+        cequiv(d, p, unit_embed, embedded)
+    })
+}
+
+/// `Equiv (ofNat (Nat.succ m)) (add (ofNat m) one)` -- duplicated from
+/// `integral.rs`'s / `monotone.rs`'s private `of_nat_succ_equiv_local`.
+fn of_nat_succ_equiv(d: &mut IntDev<'_>, p: CRealPrelude, m: ExprId) -> ExprId {
+    let rat = p.rat;
+    let one_nat = d.num(1);
+    let zero_nat = d.num(0);
+    let one_c = d.kernel().const_(p.one, vec![]);
+
+    let m_rat = d.const_app(rat.nat_div_succ, &[m, zero_nat]);
+    let one_ratdiv = d.const_app(rat.nat_div_succ, &[one_nat, zero_nat]);
+    let sum_rat = radd(d, m_rat, one_ratdiv);
+    let succ_m = d.succ(m);
+    let succ_rat = d.const_app(rat.nat_div_succ, &[succ_m, zero_nat]);
+    let add_eq = d.lemma(rat.nat_div_succ_add, &[m, one_nat, zero_nat]);
+
+    let of_nat_m = d.const_app(p.of_nat, &[m]);
+    let of_nat_1 = d.const_app(p.of_nat, &[one_nat]);
+    let of_nat_succ_m = d.const_app(p.of_nat, &[succ_m]);
+    let add_of_nat_m_1 = cadd(d, p, of_nat_m, of_nat_1);
+
+    let add_step = d.lemma(p.of_rat_add, &[m_rat, one_ratdiv]);
+    let rewritten = rat_eq_rewrite(d, sum_rat, succ_rat, add_eq, add_step, &|d, t| {
+        let embedded = embed(d, p, t);
+        cequiv(d, p, add_of_nat_m_1, embedded)
+    });
+    let flipped = d.lemma(p.equiv_symm, &[add_of_nat_m_1, of_nat_succ_m, rewritten]);
+
+    let one_eq = of_nat_one_equiv(d, p);
+    let refl_m = d.lemma(p.equiv_refl, &[of_nat_m]);
+    let congr_step = d.lemma(
+        p.add_congr,
+        &[of_nat_m, of_nat_m, of_nat_1, one_c, refl_m, one_eq],
+    );
+    let add_of_nat_m_one = cadd(d, p, of_nat_m, one_c);
+    d.lemma(
+        p.equiv_trans,
+        &[
+            of_nat_succ_m,
+            add_of_nat_m_1,
+            add_of_nat_m_one,
+            flipped,
+            congr_step,
+        ],
+    )
+}
+
+/// `Equiv (mul one x) x` -- `mul_comm` then `mul_one`.
+fn one_mul_equiv(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let lhs = cmul(d, p, one_c, x);
+    let swapped = cmul(d, p, x, one_c);
+    let comm = d.lemma(p.mul_comm, &[one_c, x]);
+    let trim = d.lemma(p.mul_one, &[x]);
+    d.lemma(p.equiv_trans, &[lhs, swapped, x, comm, trim])
+}
+
+/// `Equiv (meshSamplePoint a delta (Nat.succ n)) (add (meshSamplePoint a delta
+/// n) delta)` -- the mesh advances by exactly one width per index step. Route:
+/// [`of_nat_succ_equiv`], [`right_distrib`], [`one_mul_equiv`], then
+/// `add_assoc` (reversed) to re-associate the shared `a +`.
+fn sample_succ_equiv(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    delta: ExprId,
+    n: ExprId,
+) -> ExprId {
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let of_nat_n = d.const_app(p.of_nat, &[n]);
+    let sn = d.succ(n);
+    let of_nat_sn = d.const_app(p.of_nat, &[sn]);
+    let sum_on = cadd(d, p, of_nat_n, one_c);
+
+    let s1 = of_nat_succ_equiv(d, p, n);
+    let refl_delta = d.lemma(p.equiv_refl, &[delta]);
+    let lhs_mul = cmul(d, p, of_nat_sn, delta);
+    let mid_mul = cmul(d, p, sum_on, delta);
+    let m1 = d.lemma(
+        p.mul_congr,
+        &[of_nat_sn, sum_on, delta, delta, s1, refl_delta],
+    );
+    // m1 : Equiv (mul (ofNat (succ n)) delta) (mul (add (ofNat n) one) delta)
+
+    let m2 = right_distrib(d, p, of_nat_n, one_c, delta);
+    let on_delta = cmul(d, p, of_nat_n, delta);
+    let one_delta = cmul(d, p, one_c, delta);
+    let split = cadd(d, p, on_delta, one_delta);
+    // m2 : Equiv mid_mul split
+
+    let m3 = one_mul_equiv(d, p, delta);
+    let refl_on_delta = d.lemma(p.equiv_refl, &[on_delta]);
+    let m4 = d.lemma(
+        p.add_congr,
+        &[on_delta, on_delta, one_delta, delta, refl_on_delta, m3],
+    );
+    let trimmed = cadd(d, p, on_delta, delta);
+    // m4 : Equiv split trimmed
+
+    let chain1 = d.lemma(p.equiv_trans, &[lhs_mul, mid_mul, split, m1, m2]);
+    let chain2 = d.lemma(p.equiv_trans, &[lhs_mul, split, trimmed, chain1, m4]);
+    // chain2 : Equiv (mul (ofNat (succ n)) delta) (add (mul (ofNat n) delta) delta)
+
+    let refl_a = d.lemma(p.equiv_refl, &[a]);
+    let lifted = d.lemma(p.add_congr, &[a, a, lhs_mul, trimmed, refl_a, chain2]);
+    let sp_succ = cadd(d, p, a, lhs_mul);
+    let nested = cadd(d, p, a, trimmed);
+    // lifted : Equiv sp_succ nested
+
+    let assoc = d.lemma(p.add_assoc, &[a, on_delta, delta]);
+    let sp_n = cadd(d, p, a, on_delta);
+    let flat = cadd(d, p, sp_n, delta);
+    let assoc_symm = d.lemma(p.equiv_symm, &[flat, nested, assoc]);
+    // assoc_symm : Equiv nested flat
+
+    d.lemma(p.equiv_trans, &[sp_succ, nested, flat, lifted, assoc_symm])
+}
+
+/// `le x (add x w)` given `hw : le zero w` -- duplicated from `integral.rs`'s
+/// private `shift_le_of_nonneg`.
+fn shift_le_of_nonneg_local(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    w: ExprId,
+    hw: ExprId,
+) -> ExprId {
+    let zero_c = czero_local(d, p);
+    let refl_x = d.lemma(p.le_refl, &[x]);
+    let grown = d.lemma(p.add_le_add, &[x, x, zero_c, w, refl_x, hw]);
+    let padded = cadd(d, p, x, zero_c);
+    let target = cadd(d, p, x, w);
+    let trim = d.lemma(p.add_zero, &[x]);
+    let refl_target = d.lemma(p.equiv_refl, &[target]);
+    d.lemma(
+        p.le_congr,
+        &[padded, x, target, target, trim, refl_target, grown],
+    )
+}
+
+/// `le zero (meshDelta a b m)`, given `hab : le a b` -- duplicated from
+/// `integral.rs`'s private `delta_nonneg_of` (returns just the proof; the
+/// delta itself is rebuilt by [`mesh_delta`] at each call site).
+fn mesh_delta_nonneg(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    m: ExprId,
+    hab: ExprId,
+) -> ExprId {
+    let na = cneg(d, p, a);
+    let width = cadd(d, p, b, na);
+    let one_nat = d.num(1);
+    let frac = d.const_app(p.rat.nat_div_succ, &[one_nat, m]);
+    let frac_real = embed(d, p, frac);
+    let zero_c = czero_local(d, p);
+
+    let refl_na = d.lemma(p.le_refl, &[na]);
+    let a_na = cadd(d, p, a, na);
+    let shifted = d.lemma(p.add_le_add, &[a, b, na, na, hab, refl_na]);
+    let hn = d.lemma(p.add_neg, &[a]);
+    let refl_width = d.lemma(p.equiv_refl, &[width]);
+    let width_nonneg = d.lemma(
+        p.le_congr,
+        &[a_na, zero_c, width, width, hn, refl_width, shifted],
+    );
+
+    let rzero = d.kernel().const_(p.rat.zero, vec![]);
+    let rle = d.lemma(p.rat.zero_le_nat_div_succ, &[one_nat, m]);
+    let frac_nonneg = d.lemma(p.of_rat_le, &[rzero, frac, rle]);
+
+    d.lemma(p.mul_nonneg, &[width, frac_real, width_nonneg, frac_nonneg])
+}
+
+/// From `h : Nat.le (add q q) (Nat.succ (add m m))`, derive `Nat.le q m`.
+///
+/// `Nat.lt_or_ge m q` splits; the `Le q m` side is the answer, and the
+/// `Lt m q` side doubles `succ m <= q` on both sides
+/// (`add_le_add_right`/`add_le_add_left` plus `le_trans`) to reach
+/// `Le (succ (succ (add m m))) (succ (add m m))`, refuted by
+/// `Nat.not_succ_le_self`. The one non-defeq step is `Nat.succ_add`, since
+/// `add (succ m) (succ m)` reduces to `succ (add (succ m) m)` -- `Nat.add`
+/// recurses on its RIGHT argument -- and not to `succ (succ (add m m))`.
+fn nat_double_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    q: ExprId,
+    m: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let nat_p = p.rat.int.nat;
+    let target = d.le(q, m);
+    let lt_ty = d.lt(m, q);
+    let le_ty = d.le(q, m);
+    let disj = d.lemma(nat_p.lt_or_ge, &[m, q]);
+    d.or_elim(
+        lt_ty,
+        le_ty,
+        target,
+        disj,
+        &|d: &mut IntDev<'_>, hlt: ExprId| -> ExprId {
+            let sm = d.succ(m);
+            let s1 = d.lemma(nat_p.add_le_add_right, &[sm, sm, q, hlt]);
+            let s2 = d.lemma(nat_p.add_le_add_left, &[q, sm, q, hlt]);
+            let ss = NatOps::add(d, sm, sm);
+            let qs = NatOps::add(d, q, sm);
+            let qq = NatOps::add(d, q, q);
+            let t1 = d.lemma(nat_p.le_trans, &[ss, qs, qq, s1, s2]);
+            let mm = NatOps::add(d, m, m);
+            let smm = d.succ(mm);
+            let t2 = d.lemma(nat_p.le_trans, &[ss, qq, smm, t1, h]);
+            // t2 : Le (add (succ m) (succ m)) (succ (add m m))
+            //    == Le (succ (add (succ m) m)) (succ (add m m))  (defeq)
+            let succ_add_eq = d.lemma(nat_p.succ_add, &[m, m]);
+            let add_sm_m = NatOps::add(d, sm, m);
+            let rewritten = nat_rewrite_prop(d, add_sm_m, smm, succ_add_eq, t2, &|d, t| {
+                let st = d.succ(t);
+                d.le(st, smm)
+            });
+            // rewritten : Le (succ (succ (add m m))) (succ (add m m))
+            let contra = d.lemma(nat_p.not_succ_le_self, &[smm]);
+            let falsity = d.apply(contra, &[rewritten]);
+            d.absurd(target, falsity)
+        },
+        &|_d: &mut IntDev<'_>, hle: ExprId| -> ExprId { hle },
+    )
+}
+
+/// The body of [`near_coarse_pred`] at an explicit coarse index:
+/// `And (Nat.le i (meshLevelCount j))
+///      (And (le (P j i) (P level i'))
+///           (le (add (P level i') (D level)) (add (P j i) (D j))))`.
+///
+/// The second conjunct is deliberately stated with `D level` on the LEFT
+/// rather than as a bare `le (P level i') (add (P j i) (D j))`: carrying the
+/// fine width makes the induction below EXACT (the accumulated displacement
+/// telescopes to `D j - D level`), where the weaker form loses a summand at
+/// every doubling and does not close.
+fn near_coarse_body(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    j: ExprId,
+    level: ExprId,
+    fine: ExprId,
+    coarse: ExprId,
+) -> ExprId {
+    let mlc_j = d.const_app(p.mesh_level_count, &[j]);
+    let bound = d.le(coarse, mlc_j);
+    let pj = level_point(d, p, a, b, j, coarse);
+    let pl = level_point(d, p, a, b, level, fine);
+    let lower = cle(d, p, pj, pl);
+    let dl = level_delta(d, p, a, b, level);
+    let dj = level_delta(d, p, a, b, j);
+    let lhs = cadd(d, p, pl, dl);
+    let rhs = cadd(d, p, pj, dj);
+    let upper = cle(d, p, lhs, rhs);
+    let inner = d.and(lower, upper);
+    d.and(bound, inner)
+}
+
+/// `fun i => near_coarse_body ...` -- the `Exists` predicate.
+fn near_coarse_pred(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    j: ExprId,
+    level: ExprId,
+    fine: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let body = near_coarse_body(d, p, a, b, j, level, fine, i);
+    d.lam_fv(i_fv, nat, body)
+}
+
+/// `Exists.{1} Nat (near_coarse_pred ...)`.
+fn near_coarse_stmt(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    j: ExprId,
+    level: ExprId,
+    fine: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let one = d.level_one();
+    let pred = near_coarse_pred(d, p, a, b, j, level, fine);
+    let exists_name = p.rat.int.logic.exists_;
+    let exists_const = d.kernel().const_(exists_name, vec![one]);
+    d.apply(exists_const, &[nat, pred])
+}
+
+/// `Exists.intro.{1}` at [`near_coarse_pred`].
+fn near_coarse_intro(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    j: ExprId,
+    level: ExprId,
+    fine: ExprId,
+    witness: ExprId,
+    proof: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let one = d.level_one();
+    let pred = near_coarse_pred(d, p, a, b, j, level, fine);
+    let intro_name = p.rat.int.logic.exists_intro;
+    let intro = d.kernel().const_(intro_name, vec![one]);
+    d.apply(intro, &[nat, pred, witness, proof])
+}
+
+/// One parity branch of [`declare_mesh_point_near_coarse_thm`]'s induction
+/// step, at fine level `Nat.succ ll`.
+///
+/// `heq` is `Eq ip (add q q)` (`odd = false`) or `Eq ip (succ (add q q))`
+/// (`odd = true`), `h : Nat.le ip (meshLevelCount (succ ll))`, and `ih` is the
+/// induction hypothesis at level `ll`. Produces the `Exists` statement about
+/// `ip` itself: the whole argument runs at the parity-normalized index and is
+/// transported back along `heq` at the very end.
+fn near_coarse_step_case(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    j: ExprId,
+    hab: ExprId,
+    ll: ExprId,
+    ih: ExprId,
+    ip: ExprId,
+    h: ExprId,
+    q: ExprId,
+    odd: bool,
+    heq: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let nat_p = p.rat.int.nat;
+    let sll = d.succ(ll);
+    let mm = d.const_app(p.mesh_level_count, &[ll]);
+    let mmm = NatOps::add(d, mm, mm);
+    let smmm = d.succ(mmm);
+    let qq = NatOps::add(d, q, q);
+    let sqq = d.succ(qq);
+    let fine = if odd { sqq } else { qq };
+
+    // hqq : Nat.le (add q q) (succ (add mm mm)), in both parities.
+    let hqq = if odd {
+        let shifted = nat_rewrite_prop(d, ip, sqq, heq, h, &|d, t| d.le(t, smmm));
+        let peeled = d.lemma(nat_p.le_of_succ_le_succ, &[qq, mmm, shifted]);
+        d.lemma(nat_p.le_succ_of_le, &[qq, mmm, peeled])
+    } else {
+        nat_rewrite_prop(d, ip, qq, heq, h, &|d, t| d.le(t, smmm))
+    };
+    let hq = nat_double_le(d, p, q, mm, hqq);
+
+    let ihq = d.apply(ih, &[q, hq]);
+    let pred_ll = near_coarse_pred(d, p, a, b, j, ll, q);
+    let target_fine = near_coarse_stmt(d, p, a, b, j, sll, fine);
+
+    let minor = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let hp_fv = d.fresh_fvar();
+        let hp = d.kernel().fvar(hp_fv);
+        let hp_ty = near_coarse_body(d, p, a, b, j, ll, q, i);
+
+        // Destructure the induction hypothesis's conjunction.
+        let mlc_j = d.const_app(p.mesh_level_count, &[j]);
+        let bound_ty = d.le(i, mlc_j);
+        let pj = level_point(d, p, a, b, j, i);
+        let pll = level_point(d, p, a, b, ll, q);
+        let dll = level_delta(d, p, a, b, ll);
+        let dj = level_delta(d, p, a, b, j);
+        let lower_ty = cle(d, p, pj, pll);
+        let sum_ll = cadd(d, p, pll, dll);
+        let sum_j = cadd(d, p, pj, dj);
+        let upper_ty = cle(d, p, sum_ll, sum_j);
+        let inner_ty = d.and(lower_ty, upper_ty);
+        let hi = d.and_left(bound_ty, inner_ty, hp);
+        let rest = d.and_right(bound_ty, inner_ty, hp);
+        let h1 = d.and_left(lower_ty, upper_ty, rest);
+        let h2 = d.and_right(lower_ty, upper_ty, rest);
+
+        // Shared geometry: the fine width, its nonnegativity, the exact
+        // even-index coincidence, and the halving identity.
+        let dsll = level_delta(d, p, a, b, sll);
+        let mlc_sll = d.const_app(p.mesh_level_count, &[sll]);
+        let dsll_nonneg = mesh_delta_nonneg(d, p, a, b, mlc_sll, hab);
+        let tr = mesh_sample_transport(d, p, a, b, ll, q);
+        let psll_qq = level_point(d, p, a, b, sll, qq);
+        let halve = mesh_delta_halve(d, p, a, b, ll);
+
+        // dsll <= dll, from `dsll + dsll ~ dll` and `dsll >= 0`.
+        let grown = shift_le_of_nonneg_local(d, p, dsll, dsll, dsll_nonneg);
+        let sum_dsll = cadd(d, p, dsll, dsll);
+        let refl_dsll = d.lemma(p.equiv_refl, &[dsll]);
+        let dsll_le_dll = d.lemma(
+            p.le_congr,
+            &[dsll, dsll, sum_dsll, dll, refl_dsll, halve, grown],
+        );
+
+        let (lower_new, upper_new, p_fine) = if odd {
+            let podd = level_point(d, p, a, b, sll, sqq);
+            let e1 = sample_succ_equiv(d, p, a, dsll, qq);
+            let psll_qq_plus = cadd(d, p, psll_qq, dsll);
+            let tr_symm = d.lemma(p.equiv_symm, &[pll, psll_qq, tr]);
+            let refl_d1 = d.lemma(p.equiv_refl, &[dsll]);
+            let e2 = d.lemma(
+                p.add_congr,
+                &[psll_qq, pll, dsll, dsll, tr_symm, refl_d1],
+            );
+            let pll_plus = cadd(d, p, pll, dsll);
+            let eodd = d.lemma(
+                p.equiv_trans,
+                &[podd, psll_qq_plus, pll_plus, e1, e2],
+            );
+
+            // (A) le pj podd.
+            let grow = shift_le_of_nonneg_local(d, p, pll, dsll, dsll_nonneg);
+            let chain_a = d.lemma(p.le_trans, &[pj, pll, pll_plus, h1, grow]);
+            let eodd_symm = d.lemma(p.equiv_symm, &[podd, pll_plus, eodd]);
+            let refl_pj = d.lemma(p.equiv_refl, &[pj]);
+            let lower_new = d.lemma(
+                p.le_congr,
+                &[pj, pj, pll_plus, podd, refl_pj, eodd_symm, chain_a],
+            );
+
+            // (B) le (add podd dsll) (add pj dj).
+            let refl_d2 = d.lemma(p.equiv_refl, &[dsll]);
+            let c1 = d.lemma(
+                p.add_congr,
+                &[podd, pll_plus, dsll, dsll, eodd, refl_d2],
+            );
+            let lhs_b = cadd(d, p, podd, dsll);
+            let mid_b1 = cadd(d, p, pll_plus, dsll);
+            let c2 = d.lemma(p.add_assoc, &[pll, dsll, dsll]);
+            let mid_b2 = cadd(d, p, pll, sum_dsll);
+            let refl_pll = d.lemma(p.equiv_refl, &[pll]);
+            let c3 = d.lemma(
+                p.add_congr,
+                &[pll, pll, sum_dsll, dll, refl_pll, halve],
+            );
+            let k1 = d.lemma(p.equiv_trans, &[lhs_b, mid_b1, mid_b2, c1, c2]);
+            let cfull = d.lemma(p.equiv_trans, &[lhs_b, mid_b2, sum_ll, k1, c3]);
+            let cfull_symm = d.lemma(p.equiv_symm, &[lhs_b, sum_ll, cfull]);
+            let refl_rhs = d.lemma(p.equiv_refl, &[sum_j]);
+            let upper_new = d.lemma(
+                p.le_congr,
+                &[sum_ll, lhs_b, sum_j, sum_j, cfull_symm, refl_rhs, h2],
+            );
+            (lower_new, upper_new, podd)
+        } else {
+            // (A) le pj (P sll (add q q)).
+            let refl_pj = d.lemma(p.equiv_refl, &[pj]);
+            let lower_new = d.lemma(
+                p.le_congr,
+                &[pj, pj, pll, psll_qq, refl_pj, tr, h1],
+            );
+
+            // (B) le (add (P sll (add q q)) dsll) (add pj dj).
+            let tr_symm = d.lemma(p.equiv_symm, &[pll, psll_qq, tr]);
+            let le_pq = d.lemma(p.le_of_equiv, &[psll_qq, pll, tr_symm]);
+            let step_b = d.lemma(
+                p.add_le_add,
+                &[psll_qq, pll, dsll, dll, le_pq, dsll_le_dll],
+            );
+            let lhs_b = cadd(d, p, psll_qq, dsll);
+            let upper_new = d.lemma(p.le_trans, &[lhs_b, sum_ll, sum_j, step_b, h2]);
+            (lower_new, upper_new, psll_qq)
+        };
+
+        let lower_ty_new = cle(d, p, pj, p_fine);
+        let lhs_new = cadd(d, p, p_fine, dsll);
+        let upper_ty_new = cle(d, p, lhs_new, sum_j);
+        let inner_new = and_intro(d, p, lower_ty_new, upper_ty_new, lower_new, upper_new);
+        let inner_ty_new = d.and(lower_ty_new, upper_ty_new);
+        let whole = and_intro(d, p, bound_ty, inner_ty_new, hi, inner_new);
+        let witnessed = near_coarse_intro(d, p, a, b, j, sll, fine, i, whole);
+
+        let inner_lam = d.lam_fv(hp_fv, hp_ty, witnessed);
+        d.lam_fv(i_fv, nat, inner_lam)
+    };
+
+    let at_fine = exists_elim(d, pred_ll, target_fine, ihq, minor);
+    let heq_symm = NatOps::symm(d, ip, fine, heq);
+    nat_rewrite_prop(d, fine, ip, heq_symm, at_fine, &|d, t| {
+        near_coarse_stmt(d, p, a, b, j, sll, t)
+    })
+}
+
+/// `CReal.meshPoint_near_coarse : ∀ a b j, le a b → ∀ d i',
+/// Nat.le i' (meshLevelCount (Nat.add j d)) →
+/// ∃ i, Nat.le i (meshLevelCount j) ∧
+///      le (P j i) (P (add j d) i') ∧
+///      le (add (P (add j d) i') (D (add j d))) (add (P j i) (D j))`
+///
+/// where `P L i := meshSamplePoint a (meshDelta a b (meshLevelCount L)) i` and
+/// `D L := meshDelta a b (meshLevelCount L)` -- **the multi-level
+/// nearest-mesh-point lemma**, and the piece rung 6's gap bound needs that
+/// nothing in the tree had. At refinement depth 1 this is
+/// [`mesh_sample_transport`]'s exact even-index coincidence; at ARBITRARY
+/// depth it is a genuine "which coarse cell contains this fine point"
+/// statement, which the module documentation's "Rung 6 re-verified" section
+/// identifies as the real obstruction.
+///
+/// **It needs no `Nat` division function, and that is the point.** The
+/// obvious route computes the coarse index as `i' / 2^d` and instantiates
+/// [`CRealPrelude::max_range_transport`]; this one never names the index at
+/// all. The conclusion is `Prop`-valued, so `Exists.rec` applies (kernel fact
+/// 2 constrains only `Type`-valued conclusions), and the witness may therefore
+/// be produced by an existential that the induction step re-eliminates. The
+/// step's own parity split is [`NatPrelude::even_or_odd`]'s COMPUTED half
+/// `Nat.div i' 2` -- a projection, never a search.
+///
+/// The induction is on the depth `d`, with `a`, `b`, `j` and `hab` fixed, and
+/// the invariant carries the FINE width on the left of the upper bound (see
+/// [`near_coarse_body`]): that makes each step exact rather than
+/// slack-accumulating. Even step: the fine point IS the coarse point
+/// ([`mesh_sample_transport`]) and `D (succ ll) <= D ll` closes the upper
+/// half. Odd step: the fine point is the even one plus exactly one fine width
+/// ([`sample_succ_equiv`]), and the two fine widths fuse back to one coarse
+/// width by [`mesh_delta_halve`] -- the upper bound is then EQUALITY, not an
+/// estimate.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_mesh_point_near_coarse_thm(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let nat_p = p.rat.int.nat;
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+    let dd_fv = d.fresh_fvar();
+    let dd = d.kernel().fvar(dd_fv);
+
+    let motive = |d: &mut IntDev<'_>, k: ExprId| -> ExprId {
+        let level = NatOps::add(d, j, k);
+        let mlc = d.const_app(p.mesh_level_count, &[level]);
+        let ip_fv = d.fresh_fvar();
+        let ip = d.kernel().fvar(ip_fv);
+        let h_ty = d.le(ip, mlc);
+        let concl = near_coarse_stmt(d, p, a, b, j, level, ip);
+        let inner = d.arrow(h_ty, concl);
+        d.pi_fv(ip_fv, nat, inner)
+    };
+
+    let base = |d: &mut IntDev<'_>| -> ExprId {
+        let zero_n = d.zero();
+        let level = NatOps::add(d, j, zero_n);
+        let mlc = d.const_app(p.mesh_level_count, &[level]);
+        let ip_fv = d.fresh_fvar();
+        let ip = d.kernel().fvar(ip_fv);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let h_ty = d.le(ip, mlc);
+
+        let mlc_j = d.const_app(p.mesh_level_count, &[j]);
+        let bound_ty = d.le(ip, mlc_j);
+        let pj = level_point(d, p, a, b, j, ip);
+        let pl = level_point(d, p, a, b, level, ip);
+        let dj = level_delta(d, p, a, b, j);
+        let dl = level_delta(d, p, a, b, level);
+        let lower_ty = cle(d, p, pj, pl);
+        let lhs = cadd(d, p, pl, dl);
+        let rhs = cadd(d, p, pj, dj);
+        let upper_ty = cle(d, p, lhs, rhs);
+        let lower = d.lemma(p.le_refl, &[pj]);
+        let upper = d.lemma(p.le_refl, &[rhs]);
+        let inner = and_intro(d, p, lower_ty, upper_ty, lower, upper);
+        let inner_ty = d.and(lower_ty, upper_ty);
+        let whole = and_intro(d, p, bound_ty, inner_ty, h, inner);
+        let witnessed = near_coarse_intro(d, p, a, b, j, level, ip, ip, whole);
+        let inner_lam = d.lam_fv(h_fv, h_ty, witnessed);
+        d.lam_fv(ip_fv, nat, inner_lam)
+    };
+
+    let step = |d: &mut IntDev<'_>, k: ExprId, ih: ExprId| -> ExprId {
+        let ll = NatOps::add(d, j, k);
+        let sll = d.succ(ll);
+        let mlc_sll = d.const_app(p.mesh_level_count, &[sll]);
+        let ip_fv = d.fresh_fvar();
+        let ip = d.kernel().fvar(ip_fv);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let h_ty = d.le(ip, mlc_sll);
+
+        let two = d.num(2);
+        let q = NatOps::div(d, ip, two);
+        let qq = NatOps::add(d, q, q);
+        let sqq = d.succ(qq);
+        let even_ty = d.eq(ip, qq);
+        let odd_ty = d.eq(ip, sqq);
+        let target = near_coarse_stmt(d, p, a, b, j, sll, ip);
+        let par = d.lemma(nat_p.even_or_odd, &[ip]);
+
+        let body = d.or_elim(
+            even_ty,
+            odd_ty,
+            target,
+            par,
+            &|d: &mut IntDev<'_>, heven: ExprId| -> ExprId {
+                near_coarse_step_case(d, p, a, b, j, hab, ll, ih, ip, h, q, false, heven)
+            },
+            &|d: &mut IntDev<'_>, hodd: ExprId| -> ExprId {
+                near_coarse_step_case(d, p, a, b, j, hab, ll, ih, ip, h, q, true, hodd)
+            },
+        );
+        let inner_lam = d.lam_fv(h_fv, h_ty, body);
+        d.lam_fv(ip_fv, nat, inner_lam)
+    };
+
+    let proof = d.induct(&motive, &base, &step, dd);
+    let concl = motive(d, dd);
+
+    let ty = {
+        let over_dd = d.pi_fv(dd_fv, nat, concl);
+        let after_hab = d.arrow(hab_ty, over_dd);
+        let over_j = d.pi_fv(j_fv, nat, after_hab);
+        let over_b = d.pi_fv(b_fv, carrier, over_j);
+        d.pi_fv(a_fv, carrier, over_b)
+    };
+    let value = {
+        let over_dd = d.lam_fv(dd_fv, nat, proof);
+        let after_hab = d.lam_fv(hab_fv, hab_ty, over_dd);
+        let over_j = d.lam_fv(j_fv, nat, after_hab);
+        let over_b = d.lam_fv(b_fv, carrier, over_j);
+        d.lam_fv(a_fv, carrier, over_b)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.mesh_point_near_coarse,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Land `CReal.meshPoint_near_coarse` alone (a one-declaration `BuildStep`).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_mesh_point_near_coarse(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_mesh_point_near_coarse_thm(d, p)
 }

@@ -62,5 +62,10 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.exp_of_modulus_le_true_exp_of_modulus,
             "theorem",
         ),
+        (
+            "CReal.meshPoint_near_coarse",
+            p.mesh_point_near_coarse,
+            "theorem",
+        ),
     ]
 }

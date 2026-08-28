@@ -6105,6 +6105,22 @@ pub struct CRealPrelude {
     /// ([`crate::rat_prelude::ops::nat_rewrite_prop`]); needed by rung 6's
     /// per-level gap bound. See `creal/supremum.rs`.
     pub exp_of_modulus_le_true_exp_of_modulus: NameId,
+    /// `CReal.meshPoint_near_coarse : forall a b j, le a b -> forall d i',
+    /// Nat.le i' (meshLevelCount (Nat.add j d)) ->
+    /// exists i, Nat.le i (meshLevelCount j) /\ le (P j i) (P (add j d) i') /\
+    /// le (add (P (add j d) i') (D (add j d))) (add (P j i) (D j))`, where
+    /// `P L i := meshSamplePoint a (meshDelta a b (meshLevelCount L)) i` and
+    /// `D L := meshDelta a b (meshLevelCount L)` -- the MULTI-LEVEL
+    /// nearest-mesh-point lemma: every level-`(j+d)` mesh point, at any
+    /// refinement depth, lies in one level-`j` cell, between that cell's left
+    /// endpoint and one coarse width above it. Rung 6's missing piece (see
+    /// `creal/supremum.rs`'s module documentation): the depth-1 case is
+    /// [`Self::mesh_max_step_le`]'s exact even-index coincidence, and this is
+    /// the arbitrary-depth statement it does not give. Needs no `Nat`
+    /// division -- the conclusion is `Prop`, so the coarse index is an
+    /// `Exists` witness the induction step re-eliminates, and the parity split
+    /// is `Nat.even_or_odd`'s computed half.
+    pub mesh_point_near_coarse: NameId,
     /// `CReal.abs_diff_le_of_deriv_bound : ∀ F F' a b, HasDerivativeOn F F'
     /// a b → ∀ M, (∀ z, le a z → le z b → le (abs (F' z)) M) → ∀ x y,
     /// le a x → le x y → le y b →
@@ -6840,6 +6856,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         true_exp_of_modulus_mono: kernel.name_str(creal, "trueExpOfModulus_mono"),
         exp_of_modulus_le_true_exp_of_modulus: kernel
             .name_str(creal, "expOfModulus_le_trueExpOfModulus"),
+        mesh_point_near_coarse: kernel.name_str(creal, "meshPoint_near_coarse"),
         abs_diff_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_le_of_deriv_bound"),
         lipschitz_of_deriv_bound: kernel.name_str(creal, "lipschitz_of_deriv_bound"),
         abs_diff_sub_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_sub_le_of_deriv_bound"),
@@ -12248,6 +12265,36 @@ const STEPS: &[BuildStep] = &[
         ],
         provides: &[|p: CRealPrelude| p.exp_of_modulus_le_true_exp_of_modulus],
         run: supremum::declare_exp_of_modulus_le_true_exp_of_modulus,
+    },
+    BuildStep {
+        label: "supremum::declare_mesh_point_near_coarse",
+        requires: &[
+            |p: CRealPrelude| p.add_assoc,
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_of_equiv,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.left_distrib,
+            |p: CRealPrelude| p.mesh_level_count,
+            |p: CRealPrelude| p.mul_comm,
+            |p: CRealPrelude| p.mul_congr,
+            |p: CRealPrelude| p.mul_nonneg,
+            |p: CRealPrelude| p.mul_one,
+            |p: CRealPrelude| p.of_nat,
+            |p: CRealPrelude| p.of_nat_add,
+            |p: CRealPrelude| p.of_rat_add,
+            |p: CRealPrelude| p.of_rat_le,
+            |p: CRealPrelude| p.rat_unit_eq_one,
+        ],
+        provides: &[|p: CRealPrelude| p.mesh_point_near_coarse],
+        run: supremum::declare_mesh_point_near_coarse,
     },
     BuildStep {
         label: "cos_sign::declare_cos_wide_tail_nonneg",
