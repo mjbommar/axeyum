@@ -153,6 +153,7 @@ mod group;
 mod helpers;
 mod irrational;
 mod lcm;
+mod log;
 mod modular;
 mod no_confusion;
 mod ops;
@@ -213,6 +214,7 @@ use lcm::{
     declare_coprime_lcm_eq_mul, declare_dvd_antisymm, declare_gauss_lemma, declare_lcm,
     declare_lcm_comm, declare_lcm_dvd,
 };
+use log::declare_log_all;
 use modular::declare_modular_congruence;
 use no_confusion::declare_no_confusion;
 use order::declare_order;
@@ -2006,6 +2008,34 @@ pub struct NatPrelude {
     /// directions are direct `congrArg succ`/`succ_injective` on the
     /// existential witness — `parity_ne` is not needed here.
     pub even_iff_odd_succ: NameId,
+
+    // --- the floor logarithm (`log.rs`) -------------------------------------
+    /// `Nat.logAux : Nat → Nat → Nat → Nat` — `logAux b f n`, the floor base-`b`
+    /// logarithm of `n` computed with **fuel** `f`, by structural recursion on
+    /// `f`. `logAux b zero n ≡ 0` and `logAux b (succ f) n ≡ if 2 ≤ b then (if
+    /// b ≤ n then succ (logAux b f (div n b)) else 0) else 0`, both
+    /// definitionally. Mathlib's `Nat.log` recurses on `n / b`, which is not a
+    /// constructor predecessor; fuel is how this prelude already expresses
+    /// `Nat.div`/`Nat.mod`, and it keeps the construction axiom-free (a
+    /// `WellFounded.fix` route would pull in `Quot.sound`/`propext`).
+    pub log_aux: NameId,
+    /// `Nat.log : Nat → Nat → Nat` — `log b n := logAux b n n`. The fuel is `n`
+    /// itself, which always suffices: the guard forces `2 ≤ b ≤ n`, so each
+    /// step replaces `n` by `div n b ≤ div n 2 < n`.
+    pub log: NameId,
+    /// `Nat.log_zero_right : ∀ b, Eq (log b 0) 0` — `refl`: the fuel is `0`, so
+    /// `logAux` is already at its base case.
+    pub log_zero_right: NameId,
+    /// `Nat.log_zero_left : ∀ n, Eq (log 0 n) 0` — `ble 2 0` is `false`, so the
+    /// outer cut collapses in both fuel cases (`Mathlib`: `Nat.log_zero_left`).
+    pub log_zero_left: NameId,
+    /// `Nat.log_one_left : ∀ n, Eq (log 1 n) 0` — `ble 2 1` reduces to `ble 1
+    /// 0`, i.e. `false` (`Mathlib`: `Nat.log_one_left`).
+    pub log_one_left: NameId,
+    /// `Nat.log_one_right : ∀ b, Eq (log b 1) 0` — a three-way case analysis on
+    /// `b`: `0` and `1` fail the `2 ≤ b` cut, and `succ (succ k)` passes it and
+    /// then fails the `b ≤ 1` cut (`Mathlib`: `Nat.log_one_right`).
+    pub log_one_right: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -2486,6 +2516,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             even_not_odd: kernel.name_str(nat, "even_not_odd"),
             odd_not_even: kernel.name_str(nat, "odd_not_even"),
             even_iff_odd_succ: kernel.name_str(nat, "even_iff_odd_succ"),
+            log_aux: kernel.name_str(nat, "logAux"),
+            log: kernel.name_str(nat, "log"),
+            log_zero_right: kernel.name_str(nat, "log_zero_right"),
+            log_zero_left: kernel.name_str(nat, "log_zero_left"),
+            log_one_left: kernel.name_str(nat, "log_one_left"),
+            log_one_right: kernel.name_str(nat, "log_one_right"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -2602,6 +2638,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_cantor_all(&mut d, &p)?;
         declare_even_of_even_sq(&mut d, &p)?;
         declare_no_rational_sqrt_two(&mut d, &p)?;
+        // Needs `Nat.div` (`declare_executable_division`) and `Nat.ble`
+        // (`declare_boolean_le`), both far above; nothing needs `Nat.log`, so
+        // it goes last.
+        declare_log_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
