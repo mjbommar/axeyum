@@ -197,6 +197,7 @@ now. Nothing was deleted.
 | 2026-08-28 | nat-lor | `Nat.lor`/`Nat.lorAux` (fuel recursion, `max`-via-`ble` per-bit step, `n`-returning fuel base case) + 3 boundary theorems in `nat_prelude/lor.rs`; wired into `nat_prelude.rs`; `nat_prelude_tests.rs` coverage + dedicated test + pinned render count `476->481`; 3 new `F:nat-lor-*` facts |
 | 2026-08-28 | int-fib | `Int.fib : ℤ → ℤ` landed (`int_prelude/fibonacci.rs::declare_fib`), the sign-extended Fibonacci sequence, one `Int.rec` case split, axiom-free, evaluated at six concrete indices with a sign-drop negative control |
 | 2026-08-28 | int-fib | `Int.fib_two_mul_add_one_pos` landed and kernel-checked, axiom-free; closed `F:ml430-int-fib-two-mul-add-one-pos-8977f65f` |
+| 2026-08-28 | nat-asc-multichoose | `Nat.ascFactorial`/`Nat.multichoose` definitions + 6 boundary theorems + 6 new `F:nat-*` facts |
 | 2026-08-27 | (uncommitted at status-file write time) | `CReal.sumRange_cauchy_of_abs_cauchy` / `CReal.sumRange_converges_of_abs_converges` (absolute convergence implies convergence) plus a soundness-negative control; curriculum rows 18 and 22–23 corrected. |
 | 2026-08-27 | (uncommitted at status-file write time) | Ten new `artifacts/facts/F-creal-*.json` entries for the Ch.13/14 Riemann integral construction and algebra (`riemannSum_cauchy`, `integral`, `integral_converges`, `integral_const`, `integral_add`, `integral_le`, `integral_scale`, `integral_witness_independent`, `riemannSum_integral_close`, `sharedIndexToCanonical`); `python3 scripts/validate-facts.py` green (708 facts, 0 errors). |
 | 2026-08-27 | (uncommitted at status-file write time) | Added `--require-declaration <name> [--require-kind <kind>]` to `crates/axeyum-lean-kernel/examples/kernel_declaration_projection.rs`: a direct, fail-on-absence presence checker for `Declaration::Definition`s (and any other kind), mutation-tested against `CReal.integral`. Upgraded `F:creal-integral`'s `kernel-CReal.integral` evidence to use it. Registered 14 new `artifacts/facts/F-creal-*.json` entries for Spivak Ch.18 (`e`) and Ch.22-23 (series convergence tests): `creal-e`, `creal-e-converges`, `creal-two-le-e`, `creal-e-le-three`, `creal-e-le-four`, `creal-expterm-le-geom`, `creal-expdominantcauchy`, `creal-cauchyofpointwiseequiv`, `creal-geomcauchy`, `creal-sumrange-comparisontest`, `creal-sumrange-cauchy-of-dominated`, `creal-sumrange-converges-of-dominated`, `creal-sumrange-cauchy-of-abs-cauchy`, `creal-sumrange-converges-of-abs-converges`. `python3 scripts/validate-facts.py` green (722 facts, 0 errors). |
@@ -10189,6 +10190,61 @@ predicate pair, which does not exist in this kernel at all — only `Nat.Odd`/
 `Nat.Even` are declared), and `F:ml430-int-fib-two-mul-0e70f3dd` plus
 `F:ml430-int-fib-two-mul-add-two-0ba4a948` (both `needs first:
 F:ml430-int-fib-add-181b6a2c`, blocked on the addition formula above).
+
+**Your lane's block (`DONE`, nat-asc-multichoose, 2026-08-28).** Both
+definitions landed with boundary lemmas, evaluation tests, and six new
+`F:nat-*` facts.
+
+`Nat.ascFactorial` mirrors `Nat.descFactorial` exactly (`NatOps::define_binary`,
+structural recursion on the second argument), climbing with `Nat.add` instead
+of descending with truncated `Nat.sub`. `ascFactorial_zero`/`_succ` hold by
+`Eq.refl` (no fuel device); `ascFactorial_one` reduces to `Nat.mul_one`'s own
+proof term, exactly like `descFactorial_one` reduces to it.
+
+`Nat.multichoose n k := choose (pred (add n k)) k` is a plain non-recursive
+abbreviation over already-declared `Nat.add`/`Nat.pred`/`Nat.choose` — not a
+fresh recursion. `multichoose_zero_right` needs no reduction at all
+(`choose_zero_right` holds for any first argument); `multichoose_one_right`
+reduces fully by ι alone (`add n 1 ≡ succ n`, `pred (succ n) ≡ n`, then
+`choose_one_right` closes it — no lemma beyond that one); `multichoose_one`
+is the one genuinely needing a `congr`/`trans` chain, because `Nat.add`
+recurses on its RIGHT argument and the literal `1` sits on the LEFT
+(`add 1 k` stuck for symbolic `k` — bridged via `succ_add`/`zero_add`).
+
+Every definition carries a concrete-instantiation evaluation test with a
+negative control catching the copy-paste class of bug the kernel's trusted
+gate cannot see (a `Definition` type-checks whatever it computes):
+`asc_factorial_evaluates_correctly` checks `3.ascFactorial 2 = 12` against a
+DESCENDING-product control (`3*2=6`, and `3.descFactorial 2`) that an
+`add`/`sub` swap would still type-check but compute; `multichoose_evaluates_correctly`
+checks `3.multichoose 2 = 6` against the `pred`-dropped value `10` a copy-paste
+omitting `- 1` would compute.
+
+Measured: `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`
+(`nat_axiom_inventory --require-axiom-free nat`) — the eight new declarations
+(2 definitions — `ascFactorial`, `multichoose` — plus 6 theorems —
+`ascFactorial_zero/_succ/_one`, `multichoose_zero_right/_one/_one_right`)
+add zero axioms. `nat_prelude::` suite: 109 passed, 0 failed (was 107 before
+this lane). `cargo fmt --check` and
+`clippy --all-targets --all-features -D warnings` both clean.
+
+Did NOT attempt `F:ml430-nat-factorial-dvd-ascfactorial-44a4e641`
+(`k! ∣ n.ascFactorial k`) — a genuinely nontrivial divisibility induction,
+out of scope for this slice per the brief ("landing ONE definition with its
+boundary lemmas is a complete success"). No target in this lane's families
+(`natural-binomial`, `natural-factorial`) carried a HELD-OUT or MUTATION
+marker.
+
+New facts (do NOT flip any `F:ml430-nat-*` mirror fact — these are our own
+independent constructions): `F:nat-asc-factorial-zero`,
+`F:nat-asc-factorial-succ`, `F:nat-asc-factorial-one`,
+`F:nat-multichoose-zero-right`, `F:nat-multichoose-one`,
+`F:nat-multichoose-one-right`. `python3 scripts/validate-facts.py`: 0 errors.
+
+Next lane: `factorial_dvd_ascFactorial` (needs a real induction over
+`Nat.dvd`/`Nat.choose` algebra), or `Nat.zero_ascFactorial` in our own
+prelude (currently only closed via the separate autogenesis statement-
+reflexivity route, not this kernel's `Nat.ascFactorial`).
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
