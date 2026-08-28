@@ -107,7 +107,7 @@
 use super::NatPrelude;
 use super::finite::{pos_implies_succ_pred, zero_lt_via_c};
 use super::helpers::{and_left, and_right, iff_reverse};
-use super::ops::{NatDev, NatOps};
+use super::ops::{NatDev, NatOps, cases_lt_bound, cases_lt_or_ge};
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::Declaration;
@@ -1560,6 +1560,70 @@ fn declare_le_fib_self(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelE
     Ok(())
 }
 
+// ============================================================================
+// `le_fib_add_one`.
+// ============================================================================
+
+/// `Nat.le_fib_add_one : ∀ n, Le n (add (fib n) 1)` — unconditional (Mathlib's
+/// `n ≤ fib n + 1`).
+///
+/// Split at `Nat.lt_or_ge n 5`
+/// ([`cases_lt_or_ge`](super::ops::cases_lt_or_ge)):
+/// - `Le 5 n`: [`le_fib_self`](NatPrelude::le_fib_self) gives `Le n (fib n)`;
+///   `le_add_right (fib n) 1` gives `Le (fib n) (add (fib n) 1)`; chain with
+///   `le_trans`.
+/// - `Lt n 5`: [`cases_lt_bound`](super::ops::cases_lt_bound) reduces this to
+///   five concrete branches `n ∈ {0,1,2,3,4}`, each closed by `le_add_right`
+///   (or `zero_le` at `n = 0`, which needs no reduction at all) at a hand-
+///   picked slack `k` such that `Le i (add i k)` is defeq to `Le i (add (fib
+///   i) 1)` — `fib i` unfolds for a literal `i` this small (`δ`/`ι`, no
+///   theorem needed), exactly the device `le_fib_self`'s own base case uses
+///   (`fib_ge_shifted_gen`'s `a_proof`/`b_proof` above). The margin is TIGHT
+///   (`k = 0`, i.e. plain `le_refl`-shaped) at `i = 2, 3, 4`, which is the
+///   algebraic fact that rules out a bare pair-induction for this theorem
+///   (`docs/plan/status/228-fib-2.md`).
+fn declare_le_fib_add_one(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let one = d.num(1);
+
+    let motive = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
+        let fib_x = d.const_app(p.fib, &[x]);
+        let sum = d.add(fib_x, one);
+        d.le(x, sum)
+    };
+
+    d.theorem(p.le_fib_add_one, 1, &|d, v| {
+        let n = v[0];
+        let five = d.num(5);
+
+        let small = |d: &mut NatDev<'_>, n: ExprId, lt_n_5: ExprId| -> ExprId {
+            // Slack `k` at each `i` so `add i k` numerically equals `fib
+            // i + 1`: fib(0..4) = 0,1,1,2,3, so k = 1,1,0,0,0.
+            let ks = [1u32, 1, 0, 0, 0];
+            let mut branches: Vec<ExprId> = Vec::with_capacity(5);
+            for i in 0..5u32 {
+                let i_lit = d.num(i);
+                let k_lit = d.num(ks[i as usize]);
+                branches.push(d.lemma(p.le_add_right, &[i_lit, k_lit]));
+            }
+            cases_lt_bound(d, &p, n, 5, lt_n_5, &motive, &branches)
+        };
+        let big = |d: &mut NatDev<'_>, n: ExprId, le_5_n: ExprId| -> ExprId {
+            let le_fib = d.lemma(p.le_fib_self, &[n, le_5_n]); // Le n (fib n)
+            let fib_n = d.const_app(p.fib, &[n]);
+            let one = d.num(1);
+            let le_add = d.lemma(p.le_add_right, &[fib_n, one]); // Le (fib n) (add (fib n) 1)
+            let sum = d.add(fib_n, one);
+            d.lemma(p.le_trans, &[n, fib_n, sum, le_fib, le_add])
+        };
+
+        let body = cases_lt_or_ge(d, &p, n, five, &motive, &small, &big);
+        let concl = motive(d, n);
+        (concl, body)
+    })?;
+    Ok(())
+}
+
 /// Declare every theorem in this module.
 pub(super) fn declare_fib_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     declare_fib_defs(d, p)?;
@@ -1574,5 +1638,6 @@ pub(super) fn declare_fib_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
     declare_fib_strictmonoon(d, p)?;
     declare_fib_lt_fib(d, p)?;
     declare_le_fib_self(d, p)?;
+    declare_le_fib_add_one(d, p)?;
     Ok(())
 }

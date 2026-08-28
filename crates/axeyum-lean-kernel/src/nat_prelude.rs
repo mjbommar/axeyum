@@ -253,10 +253,11 @@ use primes::{
     declare_coprime_or_dvd_of_prime, declare_coprime_primes, declare_coprime_self_add_left,
     declare_coprime_self_add_right, declare_coprime_symmetric, declare_coprime_two_left,
     declare_coprime_two_right, declare_dvd_lcm_of_dvd, declare_dvd_of_lcm_dvd, declare_euclid,
-    declare_not_coprime_zero_zero, declare_not_prime_of_dvd_of_ne,
-    declare_prime_dvd_iff_not_coprime, declare_prime_dvd_mul_of_dvd_ne,
-    declare_prime_dvd_of_dvd_pow, declare_prime_even_iff, declare_prime_not_dvd_mul,
-    declare_prime_odd_of_ne_two, declare_prime_pred_pos, declare_primes, declare_succ_pred_prime,
+    declare_five_le_of_ne_two_of_ne_three, declare_not_coprime_zero_zero,
+    declare_not_prime_of_dvd_of_ne, declare_prime_dvd_iff_not_coprime,
+    declare_prime_dvd_mul_of_dvd_ne, declare_prime_dvd_of_dvd_pow, declare_prime_even_iff,
+    declare_prime_not_dvd_mul, declare_prime_odd_of_ne_two, declare_prime_pred_pos, declare_primes,
+    declare_succ_pred_prime,
 };
 use rectangle::declare_rectangle;
 use relation::{
@@ -1218,6 +1219,23 @@ pub struct NatPrelude {
     /// applied to `m` gives `m = 1 ∨ m = n`; either disjunct directly
     /// contradicts one of the two hypotheses.
     pub not_prime_of_dvd_of_ne: NameId,
+    /// `Nat.Prime.five_le_of_ne_two_of_ne_three : ∀ p, prime_condition p →
+    /// Not (Eq p two) → Not (Eq p three) → Le five p` — Mathlib's
+    /// `Nat.Prime.five_le_of_ne_two_of_ne_three`. Split at `Nat.lt_or_ge p
+    /// 5` ([`ops::cases_lt_or_ge`](super::ops::cases_lt_or_ge)): the `Le 5
+    /// p` side is the hypothesis itself. The `Lt p 5` side is a genuine
+    /// 5-way case split to concrete `p ∈ {0,1,2,3,4}`
+    /// ([`ops::cases_lt_bound_absurd`](super::ops::cases_lt_bound_absurd), a
+    /// second new finite-cases eliminator whose branches discharge a FIXED
+    /// goal by contradiction rather than each proving a static fact): `p =
+    /// 0` and `p = 1` both contradict the primality hypothesis's own lower
+    /// bound `2 ≤ p`; `p = 2` and `p = 3` contradict the two `Not`
+    /// hypotheses directly; `p = 4` is refuted by
+    /// [`not_prime_of_dvd_of_ne`](Self::not_prime_of_dvd_of_ne) at `(2, 4)`
+    /// (`dvd_mul 2 2` defeq `dvd 2 4`, plus `2 ≠ 1` and `2 ≠ 4` from
+    /// `finite::ne_of_lt`), applied to the primality hypothesis transported
+    /// to `p = 4`.
+    pub five_le_of_ne_two_of_ne_three: NameId,
     /// `Nat.Prime.pred_pos : ∀ p, prime_condition p → Lt zero (pred p)` —
     /// `2 ≤ p` transports along `p = succ (pred p)`
     /// ([`pos_implies_succ_pred`], `finite.rs`) to `2 ≤ succ (pred p)`, then
@@ -1765,6 +1783,22 @@ pub struct NatPrelude {
     /// witness (`le_dest` gives `k` with `5+k=n`; `Exists.rec` transports the
     /// shifted fact along that equation to land on the goal at `n`).
     pub le_fib_self: NameId,
+    /// `Nat.le_fib_add_one : ∀ n, Le n (add (fib n) 1)` — Mathlib's
+    /// `Nat.le_fib_add_one` (`n ≤ fib n + 1`), unconditional (unlike
+    /// [`le_fib_self`](Self::le_fib_self), whose `5 ≤ n` hypothesis this one
+    /// has no room for: the bound is TIGHT — equality — at `n = 2, 3, 4`, so
+    /// no bare induction from `n = 0` can close the step for small `n`; any
+    /// slack margin needs `n` past the threshold where `le_fib_self` already
+    /// applies). Split at `Nat.lt_or_ge n 5`
+    /// ([`ops::cases_lt_or_ge`](super::ops::cases_lt_or_ge)): the `Le 5 n`
+    /// side chains `le_fib_self` with `le_add_right (fib n) 1`; the `Lt n 5`
+    /// side is a genuine 5-way case split down to concrete `n ∈ {0,1,2,3,4}`
+    /// ([`ops::cases_lt_bound`](super::ops::cases_lt_bound)), each branch
+    /// closed the same way [`le_fib_self`](Self::le_fib_self)'s own base
+    /// case is — `Le i (add i k)` (`le_add_right`, or `zero_le` for `i = 0`)
+    /// defeq to `Le i (add (fib i) 1)` by pure `δ`/`ι` unfolding of `fib` at
+    /// the tiny literal `i`.
+    pub le_fib_add_one: NameId,
 
     // --- relation properties bounded on `n` (`relation.rs`) -----------------
     /// `Nat.ReflexiveOn r n := ∀ i, i < n → r i i`, for `r : Nat → Nat → Prop`.
@@ -2896,6 +2930,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             prime_dvd_of_dvd_pow: kernel.name_str(nat, "prime_dvd_of_dvd_pow"),
             coprime_primes: kernel.name_str(nat, "coprime_primes"),
             not_prime_of_dvd_of_ne: kernel.name_str(nat, "not_prime_of_dvd_of_ne"),
+            five_le_of_ne_two_of_ne_three: kernel.name_str(nat, "five_le_of_ne_two_of_ne_three"),
             prime_pred_pos: kernel.name_str(nat, "prime_pred_pos"),
             succ_pred_prime: kernel.name_str(nat, "succ_pred_prime"),
             prime_dvd_mul_of_dvd_ne: kernel.name_str(nat, "prime_dvd_mul_of_dvd_ne"),
@@ -2997,6 +3032,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             fib_strictmonoon: kernel.name_str(nat, "fib_strictmonoOn"),
             fib_lt_fib: kernel.name_str(nat, "fib_lt_fib"),
             le_fib_self: kernel.name_str(nat, "le_fib_self"),
+            le_fib_add_one: kernel.name_str(nat, "le_fib_add_one"),
             reflexive_on: kernel.name_str(nat, "reflexiveOn"),
             symmetric_on: kernel.name_str(nat, "symmetricOn"),
             transitive_on: kernel.name_str(nat, "transitiveOn"),
@@ -3210,6 +3246,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_coprime_or_dvd_of_prime(&mut d, &p)?;
         declare_coprime_primes(&mut d, &p)?;
         declare_not_prime_of_dvd_of_ne(&mut d, &p)?;
+        declare_five_le_of_ne_two_of_ne_three(&mut d, &p)?;
         declare_euclid(&mut d, &p)?;
         // Needs `one_le_factorial` (just declared by `declare_euclid`), so
         // this cannot run inside `declare_divisibility` above despite

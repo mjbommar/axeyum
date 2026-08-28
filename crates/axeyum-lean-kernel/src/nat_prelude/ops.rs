@@ -1124,3 +1124,247 @@ pub(super) fn bool_true_or_false(d: &mut NatDev<'_>, p: &NatPrelude, b: ExprId) 
     let bool_rec = d.kernel().const_(p.logic.bool_rec, vec![level_zero]);
     d.apply(bool_rec, &[motive, case_false, case_true, b])
 }
+
+/// A finite-cases eliminator: given `Lt n bound` (`bound` a small numeral)
+/// and, for every `i` in `0..bound`, a proof of `motive` at the concrete
+/// numeral `i` (`branches[i] : motive(numeral i)`), produce a proof of
+/// `motive n`.
+///
+/// Two lanes independently hit the absence of this (`docs/plan/status/
+/// 228-fib-2.md`'s `Nat.le_fib_add_one` analysis, and
+/// `F:ml430-nat-prime-five-le-of-ne-two-of-ne-three`), and the first proved
+/// algebraically that no bare pair-induction can substitute for it — the
+/// tight (equality) cases at small `n` need a genuine case split down to
+/// concrete numerals, not an inductive step with slack.
+///
+/// Built by peeling one numeral off the bound at a time — `le_of_lt_succ`
+/// turns `Lt n (succ m)` into `Le n m`, then `lt_or_eq_of_le` splits that
+/// into `Lt n m ∨ Eq n m`, the same two lemmas [`two_divisor_dichotomy`]
+/// above uses for its own 2-way version of exactly this shape. The
+/// recursion bottoms out at `bound == 1` via `zero_le` + `le_antisymm`
+/// rather than ever deriving `Lt n 0` and discharging it as impossible,
+/// which needs one fewer lemma and avoids `False.rec` entirely.
+///
+/// `bound` must stay small: each level is one `Or`-elimination over
+/// concrete unary numerals, so this is exactly the shape the workspace's
+/// "keep magnitudes small" rule is about (`docs/plan/status/
+/// 230-nat-bounded-cases.md`) — a 5-way split (`bound = 5`) is the intended
+/// size, not a general-purpose bound.
+///
+/// # Panics
+///
+/// Panics if `bound == 0` or `branches.len() != bound as usize` — both
+/// programmer errors at the call site, never a kernel rejection.
+#[allow(clippy::too_many_arguments)]
+pub(super) fn cases_lt_bound(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    n: ExprId,
+    bound: u32,
+    lt_n_bound: ExprId,
+    motive: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId,
+    branches: &[ExprId],
+) -> ExprId {
+    assert!(bound >= 1, "cases_lt_bound: bound must be at least 1");
+    assert_eq!(
+        branches.len(),
+        bound as usize,
+        "cases_lt_bound: need exactly `bound` branches, one per case below it"
+    );
+    let p = *p;
+    let m = bound - 1;
+    let m_lit = d.num(m);
+    let le_n_m = d.lemma(p.le_of_lt_succ, &[n, m_lit, lt_n_bound]);
+
+    if m == 0 {
+        // `bound == 1`: `Le n 0` (`le_n_m`) combined with `zero_le n : Le 0
+        // n` gives `n = 0` directly, no `Or`-split needed.
+        let zero = d.zero();
+        let le_0_n = d.lemma(p.zero_le, &[n]);
+        let n_eq_zero = d.lemma(p.le_antisymm, &[n, zero, le_n_m, le_0_n]);
+        let zero_eq_n = d.symm(n, zero, n_eq_zero);
+        let motive_at_zero = d.eq_motive(zero, motive);
+        return d.transport(zero, motive_at_zero, branches[0], n, zero_eq_n);
+    }
+
+    let disjunction = d.lemma(p.lt_or_eq_of_le, &[n, m_lit, le_n_m]); // Or (Lt n m) (Eq n m)
+    let lt_ty = d.lt(n, m_lit);
+    let eq_ty = d.eq(n, m_lit);
+    let goal = motive(d, n);
+
+    let left_branch = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let sub_branches = &branches[0..m as usize];
+        let recursed = cases_lt_bound(d, &p, n, m, h, motive, sub_branches);
+        d.lam_fv(h_fv, lt_ty, recursed)
+    };
+    let right_branch = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv); // Eq n m
+        let m_eq_n = d.symm(n, m_lit, h);
+        let motive_at_m = d.eq_motive(m_lit, motive);
+        let transported = d.transport(m_lit, motive_at_m, branches[m as usize], n, m_eq_n);
+        d.lam_fv(h_fv, eq_ty, transported)
+    };
+
+    let anon = d.anon_name();
+    let or_ty = d.const_app(p.logic.or, &[lt_ty, eq_ty]);
+    let or_motive = d.kernel().lam(anon, or_ty, goal, BinderInfo::Default);
+    let or_rec = d.kernel().const_(p.logic.or_rec, vec![]);
+    d.apply(
+        or_rec,
+        &[
+            lt_ty,
+            eq_ty,
+            or_motive,
+            left_branch,
+            right_branch,
+            disjunction,
+        ],
+    )
+}
+
+/// Split a goal at a threshold `b`: given handlers for the two sides of
+/// `Nat.lt_or_ge n b` — `small` from `Lt n b`, `big` from `Le b n` — combine
+/// into a proof of `motive n` for the specific `n` given.
+///
+/// The finite-cases half of the shape two callers need
+/// (`Nat.le_fib_add_one`, `F:ml430-nat-prime-five-le-of-ne-two-of-ne-three`)
+/// is [`cases_lt_bound`]; this is the companion "which regime am I in"
+/// split, so the two compose as `cases_lt_or_ge(..., |d, n, h| /* Lt n b,
+/// hand off to cases_lt_bound */, |d, n, h| /* Le b n, the easy tail case
+/// */)`.
+#[allow(clippy::too_many_arguments)]
+pub(super) fn cases_lt_or_ge(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    n: ExprId,
+    b: ExprId,
+    motive: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId,
+    small: &dyn Fn(&mut NatDev<'_>, ExprId, ExprId) -> ExprId,
+    big: &dyn Fn(&mut NatDev<'_>, ExprId, ExprId) -> ExprId,
+) -> ExprId {
+    let p = *p;
+    let disjunction = d.lemma(p.lt_or_ge, &[n, b]); // Or (Lt n b) (Le b n)
+    let lt_ty = d.lt(n, b);
+    let le_ty = d.le(b, n);
+    let goal = motive(d, n);
+
+    let left_branch = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let result = small(d, n, h);
+        d.lam_fv(h_fv, lt_ty, result)
+    };
+    let right_branch = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let result = big(d, n, h);
+        d.lam_fv(h_fv, le_ty, result)
+    };
+
+    let anon = d.anon_name();
+    let or_ty = d.const_app(p.logic.or, &[lt_ty, le_ty]);
+    let or_motive = d.kernel().lam(anon, or_ty, goal, BinderInfo::Default);
+    let or_rec = d.kernel().const_(p.logic.or_rec, vec![]);
+    d.apply(
+        or_rec,
+        &[
+            lt_ty,
+            le_ty,
+            or_motive,
+            left_branch,
+            right_branch,
+            disjunction,
+        ],
+    )
+}
+
+/// Peel `Lt n bound` down to `n = 0, 1, …, bound-1`, handing each branch
+/// closure the witnessing equality `Eq n i` and asking it to produce a proof
+/// of a FIXED `goal` — unlike [`cases_lt_bound`], whose branches each prove a
+/// STATIC fact at the literal `i` for a goal that *varies* with `n`. This is
+/// the shape a "rule out these finitely many cases by contradiction" proof
+/// needs: the goal a wrong case discharges into is the caller's real
+/// conclusion (which does not mention the case index at all), typically
+/// reached by transporting an outer hypothesis about `n` along the case's
+/// own equality and deriving `False`.
+///
+/// `F:ml430-nat-prime-five-le-of-ne-two-of-ne-three` is the motivating
+/// caller: `Le 5 p` does not vary across the `p ∈ {0,1,2,3,4}` branches, and
+/// each is discharged by contradiction from `Prime p` (or a hypothesis
+/// `p ≠ 2` / `p ≠ 3`) instantiated at the literal via the branch's own
+/// equality.
+///
+/// # Panics
+///
+/// Panics if `bound == 0` or `branches.len() != bound as usize` — both
+/// programmer errors at the call site, never a kernel rejection.
+#[allow(clippy::too_many_arguments)]
+pub(super) fn cases_lt_bound_absurd(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    n: ExprId,
+    bound: u32,
+    lt_n_bound: ExprId,
+    goal: ExprId,
+    branches: &[&dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId],
+) -> ExprId {
+    assert!(
+        bound >= 1,
+        "cases_lt_bound_absurd: bound must be at least 1"
+    );
+    assert_eq!(
+        branches.len(),
+        bound as usize,
+        "cases_lt_bound_absurd: need exactly `bound` branches, one per case below it"
+    );
+    let p = *p;
+    let m = bound - 1;
+    let m_lit = d.num(m);
+    let le_n_m = d.lemma(p.le_of_lt_succ, &[n, m_lit, lt_n_bound]);
+
+    if m == 0 {
+        // `bound == 1`: `Le n 0` (`le_n_m`) combined with `zero_le n : Le 0
+        // n` gives `n = 0` directly, no `Or`-split needed.
+        let zero = d.zero();
+        let le_0_n = d.lemma(p.zero_le, &[n]);
+        let n_eq_zero = d.lemma(p.le_antisymm, &[n, zero, le_n_m, le_0_n]);
+        return branches[0](d, n_eq_zero);
+    }
+
+    let disjunction = d.lemma(p.lt_or_eq_of_le, &[n, m_lit, le_n_m]); // Or (Lt n m) (Eq n m)
+    let lt_ty = d.lt(n, m_lit);
+    let eq_ty = d.eq(n, m_lit);
+
+    let left_branch = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let sub_branches = &branches[0..m as usize];
+        let recursed = cases_lt_bound_absurd(d, &p, n, m, h, goal, sub_branches);
+        d.lam_fv(h_fv, lt_ty, recursed)
+    };
+    let right_branch = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv); // Eq n m
+        let result = branches[m as usize](d, h);
+        d.lam_fv(h_fv, eq_ty, result)
+    };
+
+    let anon = d.anon_name();
+    let or_ty = d.const_app(p.logic.or, &[lt_ty, eq_ty]);
+    let or_motive = d.kernel().lam(anon, or_ty, goal, BinderInfo::Default);
+    let or_rec = d.kernel().const_(p.logic.or_rec, vec![]);
+    d.apply(
+        or_rec,
+        &[
+            lt_ty,
+            eq_ty,
+            or_motive,
+            left_branch,
+            right_branch,
+            disjunction,
+        ],
+    )
+}

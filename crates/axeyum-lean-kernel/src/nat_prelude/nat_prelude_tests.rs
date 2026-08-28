@@ -637,6 +637,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.fib_strictmonoon,
         p.fib_lt_fib,
         p.le_fib_self,
+        p.le_fib_add_one,
         p.mod_eq_refl,
         p.mod_eq_symm,
         p.mod_eq_trans,
@@ -914,6 +915,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.prime_dvd_of_dvd_pow,
         p.coprime_primes,
         p.not_prime_of_dvd_of_ne,
+        p.five_le_of_ne_two_of_ne_three,
         p.prime_pred_pos,
         p.succ_pred_prime,
         p.prime_dvd_mul_of_dvd_ne,
@@ -6242,7 +6244,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        85 + 427,
+        85 + 429,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -10080,4 +10082,117 @@ fn clog_computes_and_its_boundary_equations_apply() {
             "{name:?} must rest on zero axioms"
         );
     }
+}
+
+/// `Nat.le_fib_add_one` (`n <= fib n + 1`) applies at every one of the five
+/// concrete `Lt n 5` case-split branches (`n = 0..4`, where the bound is
+/// TIGHT -- equality -- at `n = 2, 3, 4`) and at `n = 6`, past the `Le 5 n`
+/// threshold where `le_fib_self` takes over. `fib(0..4) = 0,1,1,2,3` and
+/// `fib(6) = 8`, so the residues checked are `0<=1`, `1<=2`, `2<=2`,
+/// `3<=3`, `4<=4`, `6<=9` -- the theorem itself never needed those numbers
+/// evaluated (it is symbolic in `n`), but the application here confirms the
+/// admitted statement means what the doc comment claims.
+#[test]
+fn le_fib_add_one_applies_at_every_case_split_branch_and_past_the_threshold() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let declaration =
+        f.k.environment()
+            .get(p.le_fib_add_one)
+            .expect("Nat.le_fib_add_one must be declared");
+    assert!(
+        matches!(declaration, Declaration::Theorem { .. }),
+        "le_fib_add_one must be a Theorem"
+    );
+    assert!(
+        f.k.axiom_footprint(p.le_fib_add_one).is_empty(),
+        "le_fib_add_one must rest on zero axioms"
+    );
+
+    for n_val in [0u32, 1, 2, 3, 4, 6] {
+        let n = f.num(n_val);
+        let applied = f.const_app(p.le_fib_add_one, &[n]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("le_fib_add_one at {n_val} must apply: {shown}")
+        });
+        let fib_n = f.const_app(p.fib, &[n]);
+        let one = f.num(1);
+        let sum = f.add(fib_n, one);
+        let want = f.le(n, sum);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "le_fib_add_one at {n_val} must state Le {n_val} (add (fib {n_val}) 1)"
+        );
+    }
+
+    // Negative control: `le_fib_add_one` at `n = 5` does NOT state `Le 5
+    // (add (fib 4) 1)` -- a mismatched index is a genuinely different,
+    // false-shaped statement, not just a relabelling.
+    let five = f.num(5);
+    let four = f.num(4);
+    let applied = f.const_app(p.le_fib_add_one, &[five]);
+    let inferred = f.k.infer(applied).expect("must apply at 5");
+    let fib_four = f.const_app(p.fib, &[four]);
+    let one = f.num(1);
+    let mismatched_sum = f.add(fib_four, one);
+    let mismatched = f.le(five, mismatched_sum);
+    assert!(
+        !f.k.def_eq(inferred, mismatched),
+        "negative control: le_fib_add_one at 5 must NOT state Le 5 (add (fib 4) 1)"
+    );
+}
+
+/// `Nat.Prime.five_le_of_ne_two_of_ne_three` applies at a concrete `p = 7`:
+/// instantiating just the leading `Nat` argument produces the expected
+/// residual `Pi` type `prime_condition 7 -> Not (p = 2) -> Not (p = 3) -> Le
+/// 5 7`, and the theorem rests on zero axioms. (Constructing an actual
+/// `prime_condition 7` witness needs the full divisor-search route this
+/// file exercises elsewhere for small primes -- `every_number_at_least_two_
+/// has_a_prime_divisor` and friends -- so this test checks the admitted
+/// TYPE the same way `eq_one_of_dvd_one_is_derived_and_applies` and the
+/// `clog` boundary-equation test above do, rather than building a full
+/// discharge.)
+#[test]
+fn five_le_of_ne_two_of_ne_three_applies_at_a_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let declaration =
+        f.k.environment()
+            .get(p.five_le_of_ne_two_of_ne_three)
+            .expect("Nat.Prime.five_le_of_ne_two_of_ne_three must be declared");
+    assert!(
+        matches!(declaration, Declaration::Theorem { .. }),
+        "five_le_of_ne_two_of_ne_three must be a Theorem"
+    );
+    assert!(
+        f.k.axiom_footprint(p.five_le_of_ne_two_of_ne_three)
+            .is_empty(),
+        "five_le_of_ne_two_of_ne_three must rest on zero axioms"
+    );
+
+    let seven = f.num(7);
+    let applied = f.const_app(p.five_le_of_ne_two_of_ne_three, &[seven]);
+    let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+        let shown = f.explain(&e);
+        panic!("five_le_of_ne_two_of_ne_three at 7 must apply: {shown}")
+    });
+    let rendered = f.k.render_lean(inferred);
+    assert!(
+        rendered.contains("And") && rendered.contains("Not") && rendered.contains("le"),
+        "unexpected residue type: {rendered}"
+    );
+
+    // Negative control: the SAME construction at p = 2 must NOT be
+    // def_eq to a residue promising `Le 5 2` -- the conclusion really does
+    // vary with the instantiated argument, not a vacuous constant.
+    let two = f.num(2);
+    let applied_at_two = f.const_app(p.five_le_of_ne_two_of_ne_three, &[two]);
+    let inferred_at_two = f.k.infer(applied_at_two).expect("must apply at 2 as well");
+    assert!(
+        !f.k.def_eq(inferred, inferred_at_two),
+        "negative control: the residue type must depend on the instantiated argument"
+    );
 }
