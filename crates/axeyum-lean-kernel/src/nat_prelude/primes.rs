@@ -1592,7 +1592,14 @@ pub(super) fn declare_coprime_or_dvd_of_prime(
         let or_rec = d.kernel().const_(p.logic.or_rec, vec![]);
         let body = d.apply(
             or_rec,
-            &[true_ty, false_ty, motive_or, true_branch, false_branch, cases],
+            &[
+                true_ty,
+                false_ty,
+                motive_or,
+                true_branch,
+                false_branch,
+                cases,
+            ],
         );
 
         let proof = d.lam_fv(prime_fv, prime_ty, body);
@@ -1789,7 +1796,14 @@ fn prime_two(d: &mut NatDev<'_>, p: &NatPrelude) -> ExprId {
         };
 
         let disjunction_proof = or_cases(
-            d, &p, left_ty, right_ty, goal, left_branch, right_branch, dichotomy,
+            d,
+            &p,
+            left_ty,
+            right_ty,
+            goal,
+            left_branch,
+            right_branch,
+            dichotomy,
         );
 
         let clause_body = d.lam_fv(hyp_fv, dvd_c2, disjunction_proof);
@@ -1823,7 +1837,10 @@ fn prime_two(d: &mut NatDev<'_>, p: &NatPrelude) -> ExprId {
 /// # Errors
 ///
 /// Returns the trusted kernel gate's typed rejection.
-pub(super) fn declare_coprime_two_left(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+pub(super) fn declare_coprime_two_left(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
     let p = *p;
     d.theorem(p.coprime_two_left, 1, &|d, v| {
         let n = v[0];

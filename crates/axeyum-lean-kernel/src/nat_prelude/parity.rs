@@ -176,7 +176,14 @@ fn declare_even_or_odd_exists(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
         let or_rec = d.kernel().const_(p.logic.or_rec, vec![]);
         let proof = d.apply(
             or_rec,
-            &[even_disjunct, odd_disjunct, motive, even_minor, odd_minor, h],
+            &[
+                even_disjunct,
+                odd_disjunct,
+                motive,
+                even_minor,
+                odd_minor,
+                h,
+            ],
         );
         (target, proof)
     })?;
@@ -199,7 +206,10 @@ fn succ_double_eq(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId) -> ExprId {
     let congr_succ = d.congr(inner, succ_mm, succ_add_eq, &|d, x| d.succ(x));
     let succ_succ_mm = d.succ(succ_mm);
 
-    let (_, result) = d.chain(lhs, &[(succ_inner, add_succ_eq), (succ_succ_mm, congr_succ)]);
+    let (_, result) = d.chain(
+        lhs,
+        &[(succ_inner, add_succ_eq), (succ_succ_mm, congr_succ)],
+    );
     result
 }
 
@@ -214,7 +224,10 @@ fn succ_double_eq(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId) -> ExprId {
 /// `order.rs`'s `le_total`/`total_a`/`total_b` construction; the theorem's
 /// own two parameters (`k`, `j`) are only plugged in via a final `d.apply`
 /// at the very end, exactly as that construction does.
-fn declare_add_self_ne_succ_add_self(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+fn declare_add_self_ne_succ_add_self(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
     let p = *p;
     let nat = d.nat_ty();
 
@@ -302,8 +315,7 @@ fn declare_add_self_ne_succ_add_self(d: &mut NatDev<'_>, p: &NatPrelude) -> Resu
                 let h = d.kernel().fvar(h_fv);
                 let lhs_flip = d.symm(lhs, succ_succ_mm, lhs_eq);
                 let step1 = d.trans(succ_succ_mm, lhs, succ_jj, lhs_flip, h);
-                let combined =
-                    d.trans(succ_succ_mm, succ_jj, succ_succ_succ_pp, step1, succ_jj_eq);
+                let combined = d.trans(succ_succ_mm, succ_jj, succ_succ_succ_pp, step1, succ_jj_eq);
                 let stripped1 = d.lemma(p.succ_injective, &[succ_mm, succ_succ_pp, combined]);
                 let stripped2 = d.lemma(p.succ_injective, &[mm, succ_pp, stripped1]);
                 let ih_at_pj = d.apply(ih, &[pj]);
@@ -462,7 +474,8 @@ fn declare_even_iff_odd_succ(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
             let minor = d.lam_fv(k_fv, nat, minor);
             let motive = {
                 let anon = d.anon_name();
-                d.kernel().lam(anon, even_n_ty, odd_succ_n_ty, BinderInfo::Default)
+                d.kernel()
+                    .lam(anon, even_n_ty, odd_succ_n_ty, BinderInfo::Default)
             };
             let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
             let body = d.apply(rec, &[nat, even_n_pred, motive, minor, h]);
@@ -488,7 +501,8 @@ fn declare_even_iff_odd_succ(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
             let minor = d.lam_fv(k_fv, nat, minor);
             let motive = {
                 let anon = d.anon_name();
-                d.kernel().lam(anon, odd_succ_n_ty, even_n_ty, BinderInfo::Default)
+                d.kernel()
+                    .lam(anon, odd_succ_n_ty, even_n_ty, BinderInfo::Default)
             };
             let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
             let body = d.apply(rec, &[nat, odd_succ_n_pred, motive, minor, h]);

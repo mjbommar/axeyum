@@ -1571,7 +1571,8 @@ mod tests {
             (Vec::new(), CubeTreeObligationKind::Covering),
         ];
         assert_eq!(events.len(), expected.len() * 2);
-        for (index, ((path, kind), pair)) in expected.iter().zip(events.as_chunks::<2>().0).enumerate()
+        for (index, ((path, kind), pair)) in
+            expected.iter().zip(events.as_chunks::<2>().0).enumerate()
         {
             assert_eq!(pair[0].index, index);
             assert_eq!(pair[0].total, expected.len());

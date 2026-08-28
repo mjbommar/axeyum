@@ -343,7 +343,13 @@ pub(super) fn cancel_common_addend(d: &mut IntDev<'_>, x: ExprId, y: ExprId, r: 
 /// Never — this builds a term, it does not check one; a malformed result is
 /// caught by the trusted gate wherever the caller ultimately calls
 /// `add_declaration`.
-pub(super) fn modeq_to_dvd(d: &mut IntDev<'_>, n: ExprId, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
+pub(super) fn modeq_to_dvd(
+    d: &mut IntDev<'_>,
+    n: ExprId,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+) -> ExprId {
     let p = d.int();
     let int_ty = d.int_ty();
     let one_level = d.level_one();
@@ -433,7 +439,13 @@ pub(super) fn modeq_to_dvd(d: &mut IntDev<'_>, n: ExprId, a: ExprId, b: ExprId, 
 /// # Panics
 ///
 /// Never — see [`modeq_to_dvd`].
-pub(super) fn dvd_to_modeq(d: &mut IntDev<'_>, n: ExprId, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
+pub(super) fn dvd_to_modeq(
+    d: &mut IntDev<'_>,
+    n: ExprId,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+) -> ExprId {
     let p = d.int();
     let int_ty = d.int_ty();
     let one_level = d.level_one();
@@ -932,10 +944,7 @@ fn cancel_neg_add_left(d: &mut IntDev<'_>, c: ExprId, x: ExprId) -> ExprId {
     let az = d.const_app(p.add_zero, &[x]);
     let zero_x_eq_x = d.itrans(zero_x, x_zero, x, comm2, az);
 
-    let (_, chained) = d.ichain(
-        start,
-        &[(mid, step1), (zero_x, step2), (x, zero_x_eq_x)],
-    );
+    let (_, chained) = d.ichain(start, &[(mid, step1), (zero_x, step2), (x, zero_x_eq_x)]);
     chained
 }
 
@@ -986,7 +995,14 @@ pub(super) fn declare_modeq_add_left_cancel(d: &mut IntDev<'_>) -> Result<(), Ke
 /// Given `heq : Eq Int x (add (mul n q) r)`, derive
 /// `Eq Int (neg x) (add (mul n (neg q)) (neg r))` — "negate a
 /// `n*q+r` decomposition", via [`ineg_add`] and `Int.mul_neg`.
-fn neg_shift(d: &mut IntDev<'_>, n: ExprId, q: ExprId, r: ExprId, x: ExprId, heq: ExprId) -> ExprId {
+fn neg_shift(
+    d: &mut IntDev<'_>,
+    n: ExprId,
+    q: ExprId,
+    r: ExprId,
+    x: ExprId,
+    heq: ExprId,
+) -> ExprId {
     let p = d.int();
     let nq = d.imul(n, q);
     let sum = d.iadd(nq, r);
@@ -1077,14 +1093,19 @@ pub(super) fn declare_modeq_neg(d: &mut IntDev<'_>) -> Result<(), KernelError> {
 
         let neg_a_eq_rev = d.isymm(neg_a, mn_negqa_negra, neg_a_eq);
         let motive_a = |d: &mut IntDev<'_>, t: ExprId| imodeq(d, n, t, neg_ra);
-        let modeq_nega_negra = d.int_eq_rewrite(mn_negqa_negra, neg_a, neg_a_eq_rev, core_a, &motive_a);
+        let modeq_nega_negra =
+            d.int_eq_rewrite(mn_negqa_negra, neg_a, neg_a_eq_rev, core_a, &motive_a);
 
         let neg_b_eq_rev = d.isymm(neg_b, mn_negqb_negra, neg_b_eq);
         let motive_b = |d: &mut IntDev<'_>, t: ExprId| imodeq(d, n, t, neg_ra);
-        let modeq_negb_negra = d.int_eq_rewrite(mn_negqb_negra, neg_b, neg_b_eq_rev, core_b, &motive_b);
+        let modeq_negb_negra =
+            d.int_eq_rewrite(mn_negqb_negra, neg_b, neg_b_eq_rev, core_b, &motive_b);
 
         let modeq_negra_negb = d.const_app(p.mod_eq_symm, &[n, neg_b, neg_ra, modeq_negb_negra]);
-        let proof_body = d.const_app(p.mod_eq_trans, &[n, neg_a, neg_ra, neg_b, modeq_nega_negra, modeq_negra_negb]);
+        let proof_body = d.const_app(
+            p.mod_eq_trans,
+            &[n, neg_a, neg_ra, neg_b, modeq_nega_negra, modeq_negra_negb],
+        );
 
         let proof = d.lam_fv(h_fv, modeq_ab, proof_body);
         (stmt, proof)
