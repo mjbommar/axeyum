@@ -1,5 +1,6 @@
 {
   "schema_version": 1,
+  "axiom_footprint": [],
   "id": "F:ml430-nat-coprime-of-lt-prime-1978a919",
   "title": "Mathlib v4.30 source proposition Nat.coprime_of_lt_prime",
   "statement": "The proposition declared as `Nat.coprime_of_lt_prime` in the pinned Mathlib v4.30 source.",
@@ -8,15 +9,36 @@
     "statement": "∀ {n p : ℕ}, n ≠ 0 → n < p → Nat.Prime p → p.Coprime n",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [
     "F:ml430-nat-coprime-or-dvd-of-prime-65f47114"
   ],
-  "evidence": [],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- coprime_of_lt_prime 2>/dev/null | grep -Ec '^Nat\\.coprime_of_lt_prime[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.coprime_of_lt_prime",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits `Nat.coprime_of_lt_prime` through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -c` count (tested `-ge 1`, not piped into `grep -q`) requires the admitted declaration to actually be printed. This declaration (`declare_coprime_of_lt_prime`, `nat_prelude/primes.rs`) already existed in the kernel before this lane started (landed in an earlier commit, `de2e39eee`), proving `∀ p a, prime_condition p → 0 < a → a < p → gcd a p = 1` directly from primality's divisor clause plus `gcd_dvd_right`/`gcd_dvd_left`/`le_of_dvd`/`lt_irrefl` -- a route that does NOT go through `coprime_or_dvd_of_prime` despite that being this fact's recorded `depends_on` edge (the dependency listing predates the direct proof and was not revisited). `Nat.Coprime p n` and `gcd n p = 1` are the same proposition up to argument order and Coprime's standard unfolding; this prelude spells coprimality directly as a `gcd = 1` equation, matching `coprime_of_bezout_one`'s convention noted in the declaration's own doc comment.",
+      "supports": "∀ {n p : ℕ}, n ≠ 0 → n < p → Nat.Prime p → p.Coprime n"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.coprime_of_lt_prime",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by [].",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
   "provenance": {
     "date": "2026-08-18",
-    "established_by": "not established in this ledger",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane parity-coprime",
     "source": "statement-only extraction of `Nat.coprime_of_lt_prime` from Mathlib v4.30.0; no proof value was exposed",
     "prior_art": [
       {
@@ -28,5 +50,6 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "proof_route": "kernel-lean",
+  "notes": "Proved in Axeyum via `declare_coprime_of_lt_prime` (`nat_prelude/primes.rs`), landed prior to this lane: `g := gcd a p` divides `p` (`gcd_dvd_right`), so primality's divisor clause forces `g = 1 ∨ g = p`; the `g = p` branch transports `g ∣ a` along `g = p` into `p ∣ a`, which with `0 < a` gives `p ≤ a` via `le_of_dvd`, contradicting `a < p`. This lane found the theorem already admitted and axiom-free and flipped this fact's status rather than re-deriving it -- see the kernel-term evidence note for why the recorded `depends_on` edge (`coprime_or_dvd_of_prime`) does not describe the actual proof route. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
 }
