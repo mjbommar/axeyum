@@ -23,7 +23,7 @@
 //!   factorizer does not stop at square-free decomposition — it goes all the
 //!   way to irreducibles.
 //! - `crate::ratint::solve_linear` — the exact-rational Gauss–Jordan solver
-//!   [`crate::ratint::horowitz`] already uses for its own undetermined-
+//!   `crate::ratint::horowitz` already uses for its own undetermined-
 //!   coefficients system (rational integration's `B`/`C` unknowns). The
 //!   column-per-unknown, row-per-coefficient construction here is the same
 //!   shape, applied to the classical partial-fraction unknowns instead.
@@ -46,7 +46,7 @@
 //! 3. Recover the scalar `leading` with `q = leading · ∏ᵢ fᵢ^eᵢ` by comparing
 //!    leading coefficients (the factorizer's own documented contract), then
 //!    confirm the product **exactly** reproduces `q` — a defensive re-check
-//!    the producer performs on itself, mirroring [`crate::factor_int`]'s own
+//!    the producer performs on itself, mirroring `crate::factor_int`'s own
 //!    "the answer is cheaply certified by re-multiplying" stance.
 //! 4. For every `(fᵢ, eᵢ)` and every power `j = 1, …, eᵢ`, an unknown
 //!    numerator `Nᵢⱼ` of degree `< deg fᵢ` contributes

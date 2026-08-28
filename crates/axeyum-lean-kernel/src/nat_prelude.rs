@@ -979,7 +979,7 @@ pub struct NatPrelude {
     /// rule.
     pub choose_eq_zero_of_lt: NameId,
     /// `Nat.choose_ne_zero : ∀ n k, Le k n → choose n k ≠ 0` — via the
-    /// private helper [`choose::choose_pos_all`], `0 < choose n k`, and
+    /// private helper `choose::choose_pos_all`, `0 < choose n k`, and
     /// `lt_irrefl` after transporting along a hypothetical `choose n k = 0`.
     pub choose_ne_zero: NameId,
     /// `Nat.choose_le_succ : ∀ a c, choose a c ≤ choose (succ a) c`. By

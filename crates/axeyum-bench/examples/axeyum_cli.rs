@@ -8,7 +8,7 @@
 //! Single-Query entrant. That is a real constraint, not a preference.
 //!
 //! The consequence, measured 2026-08-21 and recorded as gap #3 of
-//! [`docs/plan/gap-analysis-smt-solvers-2026-08-21.md`]: on a perfectly ordinary
+//! `docs/plan/gap-analysis-smt-solvers-2026-08-21.md`: on a perfectly ordinary
 //! script the shipped CLI answered **`unknown`** where `z3` answered three
 //! verdicts.
 //!
@@ -19,7 +19,7 @@
 //!   axeyum:  unknown
 //! ```
 //!
-//! Nothing was missing from the solver. [`solve_smtlib_incremental`] already
+//! Nothing was missing from the solver. `solve_smtlib_incremental` already
 //! decided exactly this, and nothing user-facing reached it.
 //!
 //! # Interface

@@ -651,7 +651,7 @@ pub struct ComplexPrelude {
     /// Equiv (div (add z z') w k h) (add (div z w k h) (div z' w k h))` —
     /// division distributes over addition of the numerator.
     ///
-    /// Proved directly by the [`CExpr`] ring calculus **treating `inv w k h`
+    /// Proved directly by the `CExpr` ring calculus **treating `inv w k h`
     /// as an opaque atom**: `CExpr::var` only needs an `ExprId` to compute a
     /// real and imaginary projection from, and nothing about those
     /// projections requires the term to be a bare free variable. So `(z + z')
@@ -665,7 +665,7 @@ pub struct ComplexPrelude {
     /// Equiv (div (neg z) w k h) (neg (div z w k h))` — negation passes
     /// through division.
     ///
-    /// The companion linearity law to [`Self::add_div`], by the same [`CExpr`]
+    /// The companion linearity law to [`Self::add_div`], by the same `CExpr`
     /// ring-calculus technique: `(−z)·u ~ −(z·u)` is a pure ring identity with
     /// `u := inv w k h` opaque.
     pub neg_div: NameId,
@@ -1356,7 +1356,7 @@ pub struct ComplexPrelude {
     /// is `add a (neg b)`, the same convention [`Self::conj_sub`] uses).
     ///
     /// Proof: `b + (a + (-b))` is `a` by the plain ring laws
-    /// ([`declare_ring_laws`]'s calculus, the same one `complex_law`/
+    /// (`declare_ring_laws`'s calculus, the same one `complex_law`/
     /// `ring_law_proof` decide automatically), so [`Self::abs_congr`] gives
     /// `abs (add b (add a (neg b))) ~ abs a`; [`Self::abs_add_le`] at
     /// `(b, add a (neg b))` bounds that same left side by `add (abs b) (abs

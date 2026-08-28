@@ -1606,7 +1606,7 @@ pub struct CRealPrelude {
     /// `clampedPt`/`slackUpper`/`slackLower` are [`Self::crossing_close_clamped`]'s
     /// own terms at `c := ptI`, `delta := deltaAc`.
     ///
-    /// [`integral.rs`]'s SEVENTH 2026-08-27 module doc entry's proposed
+    /// `integral.rs`'s SEVENTH 2026-08-27 module doc entry's proposed
     /// term-pairing lemma — literally [`Self::crossing_close_clamped`]
     /// specialized at `c := ptI` — **restricted to the one case that
     /// type-checks against this file's existing machinery**: `crossingIndex`
@@ -5276,7 +5276,7 @@ pub struct CRealPrelude {
     /// for an arbitrary uniformly continuous `F`, `G := fun x => integral F
     /// a (clamp x) …`). That needs two pieces this prelude does not yet
     /// have: additivity of `integral` over a split point (`integral F a y ~
-    /// integral F a x + integral F x y`) — [`super::integral`]'s own module
+    /// integral F a x + integral F x y`) — `super::integral`'s own module
     /// documentation flags the `riemannSum` analogue as "**Not attempted**,
     /// which is false for a FIXED subinterval count" — and a genuine
     /// Riemann-sum-vs-`F(x)·(y−x)` estimate through `F`'s own modulus of
@@ -6133,7 +6133,7 @@ pub struct CRealPrelude {
     /// (expOfModulus m k) (trueExpOfModulus m k)` — the accumulator is
     /// always at least as fine as the single level it was built to cover,
     /// via `Nat.le_add_right` read through `Nat.add_comm`
-    /// ([`crate::rat_prelude::ops::nat_rewrite_prop`]); needed by rung 6's
+    /// (`crate::rat_prelude::ops::nat_rewrite_prop`); needed by rung 6's
     /// per-level gap bound. See `creal/supremum.rs`.
     pub exp_of_modulus_le_true_exp_of_modulus: NameId,
     /// `CReal.meshPoint_near_coarse : forall a b j, le a b -> forall d i',

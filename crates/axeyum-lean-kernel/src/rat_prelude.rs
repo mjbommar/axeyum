@@ -1063,7 +1063,7 @@ pub struct RatPrelude {
     /// `Rat.sq_sub_sq : ∀ x a, sub (mul x x) (mul a a) = mul (sub x a) (add x
     /// a)` — the difference-of-squares factor theorem, `x² − a²
     /// factors through (x−a)`. The reusable algebraic core of the factor
-    /// theorem at degree 2: [`Self::taylor_deg2`] (if built) and any future
+    /// theorem at degree 2: `Self::taylor_deg2` (if built) and any future
     /// even-degree rung reach for this rather than re-deriving it. Proved
     /// via `mul_sub_mul` + `mul_comm` + `left_distrib`, no induction.
     pub sq_sub_sq: NameId,
@@ -1085,7 +1085,7 @@ pub struct RatPrelude {
     /// and for every `x`, `a` — not an approximation, and no remainder term
     /// (a degree-≤1 polynomial's own Taylor polynomial of degree 1 is
     /// itself). Reduces, at `n = 0`, to the ordinary Mean Value Theorem's
-    /// polynomial case handled instead by [`crate::mvt`] over `CReal`; this
+    /// polynomial case handled instead by `crate::mvt` over `CReal`; this
     /// is the same headline identity, over `ℚ`, algebraically, with the
     /// factor `c1` — the formal derivative's only nonzero coefficient — read
     /// off directly rather than searched for. Proved via

@@ -73,7 +73,7 @@
 /// The stack size every kernel routine that builds a constructed environment
 /// runs on: **256 MiB**.
 ///
-/// See the [module docs](self) for the measurement this is headroom over, and
+/// See the module docs for the measurement this is headroom over, and
 /// `scripts/check-kernel-stack-envelope.sh` for the gate that re-derives it.
 pub const DEEP_STACK_BYTES: usize = 256 * 1024 * 1024;
 
