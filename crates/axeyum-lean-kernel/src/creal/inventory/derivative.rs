@@ -81,5 +81,10 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.has_derivative_integral_const,
             "theorem",
         ),
+        (
+            "CReal.abs_diff_le_of_deriv_bound",
+            p.abs_diff_le_of_deriv_bound,
+            "theorem",
+        ),
     ]
 }

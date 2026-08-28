@@ -5666,6 +5666,37 @@ pub struct CRealPrelude {
     /// [`Self::mono_of_le_succ`], exactly [`Self::max_range_mono`]'s own
     /// construction one level up. See `creal/supremum.rs`.
     pub mesh_max_mono: NameId,
+    /// `CReal.abs_diff_le_of_deriv_bound : ∀ F F' a b, HasDerivativeOn F F'
+    /// a b → ∀ M, (∀ z, le a z → le z b → le (abs (F' z)) M) → ∀ x y,
+    /// le a x → le x y → le y b →
+    /// le (abs (add (F y) (neg (F x)))) (mul M (add y (neg x)))`
+    /// (`creal/derivative.rs`) — **the mean value INEQUALITY**: a derivative
+    /// bounded in magnitude by `M` on `[a,b]` makes `F` Lipschitz there with
+    /// constant `M`.
+    ///
+    /// No new analysis. It is [`Self::monotone_of_nonneg_deriv`] — which
+    /// already owns the subdivide-and-telescope construction — applied TWICE,
+    /// to `r ↦ M·r − F(r)` and `r ↦ M·r + F(r)`, whose derivatives are
+    /// `M ∓ F'` and are nonnegative exactly when `|F'| ≤ M`; the two
+    /// conclusions are the two branches [`Self::abs_le`] consumes. The linear
+    /// map's derivative witness is `creal/mvt.rs`'s own `build_hd_linear`
+    /// (no magnitude bound on `M` needed, unlike
+    /// [`Self::has_derivative_smul`]), and everything else is the ring algebra
+    /// already private to `creal/derivative.rs`.
+    ///
+    /// Stated with `le x y` (not `Apart`, not `abs` on the right): the
+    /// hypotheses already order the pair, matching
+    /// [`Self::diff_le_of_strict_mono_magnitude`]'s house shape one direction
+    /// over — that lemma bounds the DOMAIN gap from a derivative floor, this
+    /// one bounds the IMAGE gap from a derivative ceiling.
+    ///
+    /// This is the step a "uniform limit of derivatives" theorem needs and
+    /// this development does not have: term-by-term differentiation of a
+    /// power series bounds `(Fₖ − Fₙ)(y) − (Fₖ − Fₙ)(x)` by
+    /// `sup|Fₖ' − Fₙ'|·|y − x|`, which is exactly this inequality applied to
+    /// the tail. See `creal/derivative.rs`'s own section header for what is
+    /// still missing above it.
+    pub abs_diff_le_of_deriv_bound: NameId,
 }
 
 impl CRealPrelude {
@@ -6247,6 +6278,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         mesh_max: kernel.name_str(creal, "meshMax"),
         mesh_max_step_le: kernel.name_str(creal, "meshMax_step_le"),
         mesh_max_mono: kernel.name_str(creal, "meshMax_mono"),
+        abs_diff_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_le_of_deriv_bound"),
     }
 }
 
@@ -8459,6 +8491,53 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.sum_range_const,
         ],
         run: monotone::declare_monotone_of_nonneg_deriv_all,
+    },
+    BuildStep {
+        label: "derivative::declare_abs_diff_le_of_deriv_bound",
+        requires: &[
+            |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.abs_le,
+            |p: CRealPrelude| p.abs_nonneg,
+            |p: CRealPrelude| p.add,
+            |p: CRealPrelude| p.add_assoc,
+            |p: CRealPrelude| p.add_comm,
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.creal,
+            |p: CRealPrelude| p.equiv,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.equiv_zero_of_small,
+            |p: CRealPrelude| p.has_derivative_add,
+            |p: CRealPrelude| p.has_derivative_on,
+            |p: CRealPrelude| p.has_derivative_sub,
+            |p: CRealPrelude| p.hd_mk,
+            |p: CRealPrelude| p.le,
+            |p: CRealPrelude| p.le_abs_self,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_of_equiv,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.left_distrib,
+            |p: CRealPrelude| p.lt,
+            |p: CRealPrelude| p.monotone_of_nonneg_deriv,
+            |p: CRealPrelude| p.mul,
+            |p: CRealPrelude| p.mul_comm,
+            |p: CRealPrelude| p.mul_congr,
+            |p: CRealPrelude| p.mul_nonneg,
+            |p: CRealPrelude| p.mul_zero,
+            |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.neg_congr,
+            |p: CRealPrelude| p.neg_le_abs,
+            |p: CRealPrelude| p.of_rat,
+            |p: CRealPrelude| p.of_rat_le,
+            |p: CRealPrelude| p.zero,
+        ],
+        provides: &[|p: CRealPrelude| p.abs_diff_le_of_deriv_bound],
+        run: derivative::declare_abs_diff_le_of_deriv_bound,
     },
     BuildStep {
         label: "integral::declare_fine_sample_in_bounds",

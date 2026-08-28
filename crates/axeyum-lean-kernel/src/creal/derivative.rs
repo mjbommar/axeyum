@@ -289,6 +289,7 @@
     clippy::too_many_lines
 )]
 
+use super::mvt::build_hd_linear;
 use super::ring_helpers::{add4_comm, right_distrib};
 use super::series::neg_zero_equiv;
 use super::{CRealPrelude, DERIVED_HEIGHT, creal_ty};
@@ -8508,6 +8509,385 @@ pub(super) fn declare_has_derivative_integral_const(
 
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.has_derivative_integral_const,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// =============================================================================
+// `CReal.abs_diff_le_of_deriv_bound` — the mean value INEQUALITY
+// =============================================================================
+//
+// The step a "uniform limit of derivatives" theorem needs, and the reason it
+// is cheap here: the whole subdivide-and-telescope machine already exists, in
+// `creal/monotone.rs`, as `CReal.monotone_of_nonneg_deriv`. A two-sided
+// Lipschitz bound is that theorem applied TWICE, to the auxiliary maps
+// `r ↦ M·r − F(r)` and `r ↦ M·r + F(r)`, whose derivatives are `M ∓ F'` and
+// are nonnegative exactly when `|F'| ≤ M`. Nothing analytic is redone here;
+// everything below the two applications is ring algebra already in this file
+// (`sub_nonneg_of_le`, `le_of_nonneg_sub`, `plus_nonneg_of_neg_le`,
+// `neg_add_distrib`, `double_neg`, `mul_neg_equiv`) plus
+// `ring_helpers::add4_comm`.
+//
+// The linear map's derivative witness is `mvt.rs`'s own `build_hd_linear`
+// (`HasDerivativeOn (fun r => mul m r) (fun _ => m) lo hi`), reused rather than
+// rebuilt — it is deliberately NOT `hasDerivative_smul` ∘ `hasDerivative_id`,
+// which would drag in a magnitude bound on `M` this statement does not need.
+//
+// ## What is still missing above this, measured 2026-08-27
+//
+// Nothing in this development concludes `HasDerivativeOn` from
+// `UniformConvergesOn`: `shape_search --include-constructed --concl
+// CReal.HasDerivativeOn --hyp CReal.UniformConvergesOn` is ABSENT, and the
+// sixteen declarations that DO conclude `HasDerivativeOn` are all pointwise
+// combinators (const/id/sq/neg/add/sub/smul/mul/pow/cube/chain/congr/…). The
+// only theorem in the tree that transports any property through a uniform
+// limit is `uniform_limit_uniformly_continuous`.
+//
+// **A finite-partial-sum route does NOT avoid that gap**, and it is worth
+// recording exactly why, because the shape of `deriv_spec_body` is what
+// decides it. Writing `Sₙ` for a partial sum and `F` for its uniform limit,
+//
+//   |(F y − F x) − F'(x)(y−x)|
+//     ≤ |(F y − F x) − (Sₙ y − Sₙ x)|          (A)
+//     + |(Sₙ y − Sₙ x) − Sₙ'(x)(y−x)|          (B)
+//     + |Sₙ'(x) − F'(x)|·|y−x|                 (C)
+//
+// (B) is each partial sum's own `spec` and (C) is uniform convergence of the
+// DERIVATIVE series — both available. (A) is not: uniform convergence of the
+// FUNCTIONS bounds it only by the constant `2δₙ`, while the spec's budget is
+// `(1/(e+1))·|y − x|` and `y` ranges over everything within `1/(m e + 1)` of
+// `x`, including points arbitrarily close to it. No choice of `n` absorbs a
+// constant into an `ε·|y − x|` budget, so the interchange is genuinely
+// required rather than an artefact of how the limit is taken.
+//
+// The classical fix routes (A) through a mean value estimate on the TAIL —
+// `Sₖ − Sₙ` has derivative `Sₖ' − Sₙ'`, uniformly small, so
+// [`declare_abs_diff_le_of_deriv_bound`] bounds `(Sₖ − Sₙ)(y) − (Sₖ − Sₙ)(x)`
+// by `ε·|y − x|`, and `le_of_forall_le_add_small` removes the residual slack
+// as `k → ∞`. That is what this declaration exists to supply; the remaining
+// work is the accuracy bookkeeping (a three-way `1/(3e+3)` split of the same
+// shape [`declare_has_derivative_mul`] already performs) plus a per-series
+// `∀ n, HasDerivativeOn Sₙ Sₙ' a b`, which for cosine is an induction over
+// `hasDerivative_add`/`hasDerivative_pow`/`hasDerivative_smul` together with
+// the INDEX-SHIFTED coefficient identity `cosTerm (j+1) · (2j+2) ~ −sinTerm j`.
+
+/// Admit `CReal.abs_diff_le_of_deriv_bound`. See
+/// [`CRealPrelude::abs_diff_le_of_deriv_bound`] for the statement and the
+/// argument.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from the final `Theorem`
+/// here means the kernel **refused** the proof, not that a script gave up.
+pub(super) fn declare_abs_diff_le_of_deriv_bound(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let func_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let fp_fv = d.fresh_fvar();
+    let fp = d.kernel().fvar(fp_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let hf_ty = hd_ty(d, p, f, fp, a, b);
+    let hf_fv = d.fresh_fvar();
+    let hf = d.kernel().fvar(hf_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    // hbnd : ∀ z, le a z → le z b → le (abs (F' z)) M.
+    let hbnd_ty = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let fpz = d.apply(fp, &[z]);
+        let abs_fpz = cabs(d, p, fpz);
+        let concl = d.const_app(p.le, &[abs_fpz, m]);
+        let z_le_b = d.const_app(p.le, &[z, b]);
+        let after_upper = d.arrow(z_le_b, concl);
+        let a_le_z = d.const_app(p.le, &[a, z]);
+        let after_lower = d.arrow(a_le_z, after_upper);
+        d.pi_fv(z_fv, carrier, after_lower)
+    };
+    let hbnd_fv = d.fresh_fvar();
+    let hbnd = d.kernel().fvar(hbnd_fv);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+
+    let hax_ty = d.const_app(p.le, &[a, x]);
+    let hax_fv = d.fresh_fvar();
+    let hax = d.kernel().fvar(hax_fv);
+    let hxy_ty = d.const_app(p.le, &[x, y]);
+    let hxy_fv = d.fresh_fvar();
+    let hxy = d.kernel().fvar(hxy_fv);
+    let hyb_ty = d.const_app(p.le, &[y, b]);
+    let hyb_fv = d.fresh_fvar();
+    let hyb = d.kernel().fvar(hyb_fv);
+
+    // --- shared terms --------------------------------------------------------
+    let zero_c = czero(d, p);
+    let refl_zero = erefl(d, p, zero_c);
+    let fx = d.apply(f, &[x]);
+    let fy = d.apply(f, &[y]);
+    let nfx = cneg(d, p, fx);
+    let nfy = cneg(d, p, fy);
+    let mx = cmul(d, p, m, x);
+    let my = cmul(d, p, m, y);
+    let nmx = cneg(d, p, mx);
+    let nx = cneg(d, p, x);
+    let gap = cadd(d, p, y, nx);
+    let bb = cmul(d, p, m, gap); // M·(y − x), the conclusion's bound
+    let aa = cadd(d, p, fy, nfx); // F y − F x
+    let na = cneg(d, p, aa);
+    let bprime = cadd(d, p, my, nmx); // M·y − M·x
+
+    // b_eq_bprime : Equiv (mul M (add y (neg x))) (add (mul M y) (neg (mul M x))).
+    let m_nx = cmul(d, p, m, nx);
+    let mid_b = cadd(d, p, my, m_nx);
+    let ld = d.lemma(p.left_distrib, &[m, y, nx]);
+    let mn = mul_neg_equiv(d, p, m, x);
+    let refl_my = erefl(d, p, my);
+    let cg_b = d.lemma(p.add_congr, &[my, my, m_nx, nmx, refl_my, mn]);
+    let b_eq_bprime = echain(d, p, bb, &[(mid_b, ld), (bprime, cg_b)]);
+    let bprime_eq_b = esymm(d, p, bb, bprime, b_eq_bprime);
+
+    // `double_neg` at `F x`, reused by both directions.
+    let nnfx = cneg(d, p, nfx);
+    let dn_fx = double_neg(d, p, fx);
+
+    // --- the linear map r ↦ M·r, and its from-scratch derivative witness ------
+    let (lin_fn, lin_dp, hd_lin) = build_hd_linear(d, p, m, a, b);
+
+    // --- upper direction: G := (fun r => M·r − F r), G' := (fun z => M − F' z)
+    let gsub = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let lr = d.apply(lin_fn, &[r]);
+        let fr = d.apply(f, &[r]);
+        let nfr = cneg(d, p, fr);
+        let s = cadd(d, p, lr, nfr);
+        d.lam_fv(r_fv, carrier, s)
+    };
+    let gsub_p = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let lz = d.apply(lin_dp, &[z]);
+        let fpz = d.apply(fp, &[z]);
+        let nfpz = cneg(d, p, fpz);
+        let s = cadd(d, p, lz, nfpz);
+        d.lam_fv(z_fv, carrier, s)
+    };
+    let hd_sub = d.const_app(
+        p.has_derivative_sub,
+        &[lin_fn, lin_dp, f, fp, a, b, hd_lin, hf],
+    );
+
+    let hnn_sub = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let haz_ty = d.const_app(p.le, &[a, z]);
+        let haz_fv = d.fresh_fvar();
+        let haz = d.kernel().fvar(haz_fv);
+        let hzb_ty = d.const_app(p.le, &[z, b]);
+        let hzb_fv = d.fresh_fvar();
+        let hzb = d.kernel().fvar(hzb_fv);
+
+        let fpz = d.apply(fp, &[z]);
+        let abs_fpz = cabs(d, p, fpz);
+        let hb = d.apply(hbnd, &[z, haz, hzb]);
+        let le_self = d.lemma(p.le_abs_self, &[fpz]);
+        let h_le = d.lemma(p.le_trans, &[fpz, abs_fpz, m, le_self, hb]);
+        let body = sub_nonneg_of_le(d, p, fpz, m, h_le);
+        let with_hzb = d.lam_fv(hzb_fv, hzb_ty, body);
+        let with_haz = d.lam_fv(haz_fv, haz_ty, with_hzb);
+        d.lam_fv(z_fv, carrier, with_haz)
+    };
+
+    let mono_sub = d.const_app(
+        p.monotone_of_nonneg_deriv,
+        &[gsub, gsub_p, a, b, hd_sub, hnn_sub, x, y, hax, hxy, hyb],
+    );
+
+    let lx = cadd(d, p, mx, nfx);
+    let ly = cadd(d, p, my, nfy);
+    let gx = d.apply(gsub, &[x]);
+    let gy = d.apply(gsub, &[y]);
+    let refl_lx = erefl(d, p, lx);
+    let refl_ly = erefl(d, p, ly);
+    let up0 = d.lemma(p.le_congr, &[gx, lx, gy, ly, refl_lx, refl_ly, mono_sub]);
+    let up_nonneg = sub_nonneg_of_le(d, p, lx, ly, up0);
+
+    // neg lx ~ (−M·x) + F x.
+    let nlx = cneg(d, p, lx);
+    let nad_lx = neg_add_distrib(d, p, mx, nfx);
+    let mid_lx = cadd(d, p, nmx, nnfx);
+    let refl_nmx = erefl(d, p, nmx);
+    let cg_lx = d.lemma(p.add_congr, &[nmx, nmx, nnfx, fx, refl_nmx, dn_fx]);
+    let nxt_up = cadd(d, p, nmx, fx);
+    let nlx_eq = echain(d, p, nlx, &[(mid_lx, nad_lx), (nxt_up, cg_lx)]);
+
+    // neg A ~ (−F y) + F x; its symm closes the re-associated telescope.
+    let mid_na = cadd(d, p, nfy, nnfx);
+    let nad_a = neg_add_distrib(d, p, fy, nfx);
+    let refl_nfy = erefl(d, p, nfy);
+    let cg_na = d.lemma(p.add_congr, &[nfy, nfy, nnfx, fx, refl_nfy, dn_fx]);
+    let tail_up = cadd(d, p, nfy, fx);
+    let na_eq = echain(d, p, na, &[(mid_na, nad_a), (tail_up, cg_na)]);
+    let tail_eq_na = esymm(d, p, na, tail_up, na_eq);
+
+    let start_up = cadd(d, p, ly, nlx);
+    let refl_ly2 = erefl(d, p, ly);
+    let step_up = d.lemma(p.add_congr, &[ly, ly, nlx, nxt_up, refl_ly2, nlx_eq]);
+    let s1_up = cadd(d, p, ly, nxt_up);
+    let (s2_up, h4_up) = add4_comm(d, p, my, nfy, nmx, fx);
+    let cg_final_up = d.lemma(
+        p.add_congr,
+        &[bprime, bb, tail_up, na, bprime_eq_b, tail_eq_na],
+    );
+    let target_up = cadd(d, p, bb, na);
+    let eq_up = echain(
+        d,
+        p,
+        start_up,
+        &[(s1_up, step_up), (s2_up, h4_up), (target_up, cg_final_up)],
+    );
+    let up_nonneg2 = d.lemma(
+        p.le_congr,
+        &[
+            zero_c, zero_c, start_up, target_up, refl_zero, eq_up, up_nonneg,
+        ],
+    );
+    let upper = le_of_nonneg_sub(d, p, aa, bb, up_nonneg2);
+
+    // --- lower direction: H := (fun r => M·r + F r), H' := (fun z => M + F' z)
+    let hsum = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let lr = d.apply(lin_fn, &[r]);
+        let fr = d.apply(f, &[r]);
+        let s = cadd(d, p, lr, fr);
+        d.lam_fv(r_fv, carrier, s)
+    };
+    let hsum_p = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let lz = d.apply(lin_dp, &[z]);
+        let fpz = d.apply(fp, &[z]);
+        let s = cadd(d, p, lz, fpz);
+        d.lam_fv(z_fv, carrier, s)
+    };
+    let hd_sum = d.const_app(
+        p.has_derivative_add,
+        &[lin_fn, lin_dp, f, fp, a, b, hd_lin, hf],
+    );
+
+    let hnn_sum = {
+        let z_fv = d.fresh_fvar();
+        let z = d.kernel().fvar(z_fv);
+        let haz_ty = d.const_app(p.le, &[a, z]);
+        let haz_fv = d.fresh_fvar();
+        let haz = d.kernel().fvar(haz_fv);
+        let hzb_ty = d.const_app(p.le, &[z, b]);
+        let hzb_fv = d.fresh_fvar();
+        let hzb = d.kernel().fvar(hzb_fv);
+
+        let fpz = d.apply(fp, &[z]);
+        let abs_fpz = cabs(d, p, fpz);
+        let nfpz = cneg(d, p, fpz);
+        let hb = d.apply(hbnd, &[z, haz, hzb]);
+        let neg_le = d.lemma(p.neg_le_abs, &[fpz]);
+        let h_le = d.lemma(p.le_trans, &[nfpz, abs_fpz, m, neg_le, hb]);
+        let body = plus_nonneg_of_neg_le(d, p, fpz, m, h_le);
+        let with_hzb = d.lam_fv(hzb_fv, hzb_ty, body);
+        let with_haz = d.lam_fv(haz_fv, haz_ty, with_hzb);
+        d.lam_fv(z_fv, carrier, with_haz)
+    };
+
+    let mono_sum = d.const_app(
+        p.monotone_of_nonneg_deriv,
+        &[hsum, hsum_p, a, b, hd_sum, hnn_sum, x, y, hax, hxy, hyb],
+    );
+
+    let hx = cadd(d, p, mx, fx);
+    let hy = cadd(d, p, my, fy);
+    let sx = d.apply(hsum, &[x]);
+    let sy = d.apply(hsum, &[y]);
+    let refl_hx = erefl(d, p, hx);
+    let refl_hy = erefl(d, p, hy);
+    let lo0 = d.lemma(p.le_congr, &[sx, hx, sy, hy, refl_hx, refl_hy, mono_sum]);
+    let lo_nonneg = sub_nonneg_of_le(d, p, hx, hy, lo0);
+
+    let nhx = cneg(d, p, hx);
+    let nad_hx = neg_add_distrib(d, p, mx, fx);
+    let nxt_lo = cadd(d, p, nmx, nfx);
+    let start_lo = cadd(d, p, hy, nhx);
+    let refl_hy2 = erefl(d, p, hy);
+    let step_lo = d.lemma(p.add_congr, &[hy, hy, nhx, nxt_lo, refl_hy2, nad_hx]);
+    let s1_lo = cadd(d, p, hy, nxt_lo);
+    let (s2_lo, h4_lo) = add4_comm(d, p, my, fy, nmx, nfx);
+    let nna = cneg(d, p, na);
+    let dn_a = double_neg(d, p, aa);
+    let a_eq_nna = esymm(d, p, nna, aa, dn_a);
+    let cg_final_lo = d.lemma(p.add_congr, &[bprime, bb, aa, nna, bprime_eq_b, a_eq_nna]);
+    let target_lo = cadd(d, p, bb, nna);
+    let eq_lo = echain(
+        d,
+        p,
+        start_lo,
+        &[(s1_lo, step_lo), (s2_lo, h4_lo), (target_lo, cg_final_lo)],
+    );
+    let lo_nonneg2 = d.lemma(
+        p.le_congr,
+        &[
+            zero_c, zero_c, start_lo, target_lo, refl_zero, eq_lo, lo_nonneg,
+        ],
+    );
+    let lower = le_of_nonneg_sub(d, p, na, bb, lo_nonneg2);
+
+    let body = d.lemma(p.abs_le, &[aa, bb, upper, lower]);
+
+    let value = {
+        let with_hyb = d.lam_fv(hyb_fv, hyb_ty, body);
+        let with_hxy = d.lam_fv(hxy_fv, hxy_ty, with_hyb);
+        let with_hax = d.lam_fv(hax_fv, hax_ty, with_hxy);
+        let with_y = d.lam_fv(y_fv, carrier, with_hax);
+        let with_x = d.lam_fv(x_fv, carrier, with_y);
+        let with_hbnd = d.lam_fv(hbnd_fv, hbnd_ty, with_x);
+        let with_m = d.lam_fv(m_fv, carrier, with_hbnd);
+        let with_hf = d.lam_fv(hf_fv, hf_ty, with_m);
+        let with_b = d.lam_fv(b_fv, carrier, with_hf);
+        let with_a = d.lam_fv(a_fv, carrier, with_b);
+        let with_fp = d.lam_fv(fp_fv, func_ty, with_a);
+        d.lam_fv(f_fv, func_ty, with_fp)
+    };
+    let ty = {
+        let abs_aa = cabs(d, p, aa);
+        let concl = d.const_app(p.le, &[abs_aa, bb]);
+        let after_hyb = d.arrow(hyb_ty, concl);
+        let after_hxy = d.arrow(hxy_ty, after_hyb);
+        let after_hax = d.arrow(hax_ty, after_hxy);
+        let over_y = d.pi_fv(y_fv, carrier, after_hax);
+        let over_x = d.pi_fv(x_fv, carrier, over_y);
+        let after_hbnd = d.arrow(hbnd_ty, over_x);
+        let over_m = d.pi_fv(m_fv, carrier, after_hbnd);
+        let after_hf = d.arrow(hf_ty, over_m);
+        let over_b = d.pi_fv(b_fv, carrier, after_hf);
+        let over_a = d.pi_fv(a_fv, carrier, over_b);
+        let over_fp = d.pi_fv(fp_fv, func_ty, over_a);
+        d.pi_fv(f_fv, func_ty, over_fp)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.abs_diff_le_of_deriv_bound,
         uparams: vec![],
         ty,
         value,

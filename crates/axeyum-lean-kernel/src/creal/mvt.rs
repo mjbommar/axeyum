@@ -602,7 +602,7 @@ fn linear_error_equiv_zero(
 /// type mentions, for the caller to reuse structurally (matching the
 /// convention every `hasDerivative_*` combinator in `derivative.rs` already
 /// follows).
-fn build_hd_linear(
+pub(super) fn build_hd_linear(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     m: ExprId,

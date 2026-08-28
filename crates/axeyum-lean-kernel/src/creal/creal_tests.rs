@@ -10137,6 +10137,7 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "uniform_convergence::declare_weierstrass_m_test",
     "integral::declare_of_nat_hom",
     "monotone::declare_monotone_of_nonneg_deriv_all",
+    "derivative::declare_abs_diff_le_of_deriv_bound",
     "integral::declare_fine_sample_in_bounds",
     "integral::declare_fine_sample_close",
     "integral::declare_fine_block_sum_close",
