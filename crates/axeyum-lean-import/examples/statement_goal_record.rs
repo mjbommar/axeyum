@@ -8,7 +8,7 @@
 //! field the crate did not itself compute from the checked kernel.
 //!
 //! Usage:
-//!   statement_goal_record <export.ndjson> <target-definition> \
+//!   `statement_goal_record <export.ndjson> <target-definition>` \
 //!     [--mathlib-commit=<sha>] [--lean4export-commit=<sha>] \
 //!     [--fragment=<name>] [--fact-id=<F:id>] [--title=<title>]
 //!
@@ -55,11 +55,14 @@ fn parse_args() -> Result<Args, String> {
         } else if let Some(value) = arg.strip_prefix("--lean4export-commit=") {
             lean4export_commit = Some(value.to_owned());
         } else if let Some(value) = arg.strip_prefix("--fragment=") {
-            fragment = value.to_owned();
+            fragment.clear();
+            fragment.push_str(value);
         } else if let Some(value) = arg.strip_prefix("--fact-id=") {
-            fact_id = value.to_owned();
+            fact_id.clear();
+            fact_id.push_str(value);
         } else if let Some(value) = arg.strip_prefix("--title=") {
-            title = value.to_owned();
+            title.clear();
+            title.push_str(value);
         } else {
             positional.push(arg);
         }

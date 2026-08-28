@@ -128,7 +128,8 @@ fn sha256_hex(bytes: &[u8]) -> String {
     let digest = Sha256::digest(bytes);
     let mut out = String::with_capacity(digest.len() * 2);
     for byte in digest {
-        out.push_str(&format!("{byte:02x}"));
+        use core::fmt::Write as _;
+        let _ = write!(out, "{byte:02x}");
     }
     out
 }

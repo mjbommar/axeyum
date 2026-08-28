@@ -42,6 +42,10 @@ fn main() {
     }
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "a linear CLI driver: parse args, run the probe, print the record. Splitting it would scatter one readable sequence across helpers that each have exactly one caller."
+)]
 fn run() -> Result<(), String> {
     let mut arguments = std::env::args_os().skip(1);
     let target_path = arguments.next().map(PathBuf::from).ok_or(USAGE)?;
