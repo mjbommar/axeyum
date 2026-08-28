@@ -162,6 +162,11 @@ now. Nothing was deleted.
 | 2026-08-28 | nat-helper-dedup | promoted `two_divisor_dichotomy` (3→1), `two_mul_eq_add_self` (2→1), `bool_true_or_false` (3→1, found a 3rd copy in `perfect.rs` beyond the brief's two) to `nat_prelude/ops.rs`; re-pointed 15 call sites across `irrational.rs`/`perfect.rs`/`primes.rs`/`powsq.rs`/`totient.rs`; census unchanged at 10/10 (tool is blind to private-fn duplication by construction) |
 | 2026-08-28 | modeq-producer | conclusion-directed producer + axiom-free Lean contract close 10 open `nat.modeq` facts; `via_multi_target` 19 -> 30 |
 | 2026-08-28 | modeq-producer | `Int.modEq_of_mul_right` closes the last open `integer-modular-equivalence` train fact, widening the Int shift family 5 -> 6 |
+| 2026-08-28 | `b67d472dc` | `Nat.factorial_dvd_factorial`/`factorial_le`/`factorial_lt_of_lt`/`factorial_ne_zero` admitted, axiom-free. |
+| 2026-08-28 | `822c77a97` | fact: close `F:ml430-nat-factorial-ne-zero-5fc0b0a1`. |
+| 2026-08-28 | `e0ca4c407` | fact: close `F:ml430-nat-factorial-dvd-factorial-e9d14845`. |
+| 2026-08-28 | `aa391cd39` | fact: close `F:ml430-nat-factorial-le-d0f4a912`. |
+| 2026-08-28 | `ddd2e0855` | fact: close `F:ml430-nat-factorial-lt-of-lt-d6c2125d`. |
 | 2026-08-27 | (uncommitted at status-file write time) | `CReal.sumRange_cauchy_of_abs_cauchy` / `CReal.sumRange_converges_of_abs_converges` (absolute convergence implies convergence) plus a soundness-negative control; curriculum rows 18 and 22–23 corrected. |
 | 2026-08-27 | (uncommitted at status-file write time) | Ten new `artifacts/facts/F-creal-*.json` entries for the Ch.13/14 Riemann integral construction and algebra (`riemannSum_cauchy`, `integral`, `integral_converges`, `integral_const`, `integral_add`, `integral_le`, `integral_scale`, `integral_witness_independent`, `riemannSum_integral_close`, `sharedIndexToCanonical`); `python3 scripts/validate-facts.py` green (708 facts, 0 errors). |
 | 2026-08-27 | (uncommitted at status-file write time) | Added `--require-declaration <name> [--require-kind <kind>]` to `crates/axeyum-lean-kernel/examples/kernel_declaration_projection.rs`: a direct, fail-on-absence presence checker for `Declaration::Definition`s (and any other kind), mutation-tested against `CReal.integral`. Upgraded `F:creal-integral`'s `kernel-CReal.integral` evidence to use it. Registered 14 new `artifacts/facts/F-creal-*.json` entries for Spivak Ch.18 (`e`) and Ch.22-23 (series convergence tests): `creal-e`, `creal-e-converges`, `creal-two-le-e`, `creal-e-le-three`, `creal-e-le-four`, `creal-expterm-le-geom`, `creal-expdominantcauchy`, `creal-cauchyofpointwiseequiv`, `creal-geomcauchy`, `creal-sumrange-comparisontest`, `creal-sumrange-cauchy-of-dominated`, `creal-sumrange-converges-of-dominated`, `creal-sumrange-cauchy-of-abs-cauchy`, `creal-sumrange-converges-of-abs-converges`. `python3 scripts/validate-facts.py` green (722 facts, 0 errors). |
@@ -8537,6 +8542,37 @@ on partition grounds.
 operation with no train reference); it still is. `clippy -D warnings` on
 `axeyum-lean-import` is red on `statement_goal_record.rs:131`
 (`format_push_string`), untouched by this lane.
+
+**Your lane's block (`DONE`, nat-factorial, 2026-08-28).** Landed four of the
+six assigned facts: `Nat.factorial_dvd_factorial`, `Nat.factorial_le`,
+`Nat.factorial_lt_of_lt`, `Nat.factorial_ne_zero`, all `kernel-lean`,
+axiom-free (`nat` trusted surface still 0). `factorial_le`/`factorial_lt_of_lt`/
+`factorial_ne_zero` had to move OUT of `declare_divisibility` into a new
+`declare_factorial_order` (`divisibility.rs`) called after `declare_euclid` in
+`build_nat_prelude`'s dispatcher — all three need `one_le_factorial`, which
+`declare_euclid` (`primes.rs`) declares, and `declare_euclid` runs after
+`declare_divisibility`. Same shape as the documented `declare_dvd_antisymm`
+precedent in `lcm.rs`; `UnknownConst { name: NameId(306) }` was the tell, not
+`TypeMismatch`.
+
+The remaining two — `F:ml430-nat-factorial-dvd-ascfactorial-44a4e641` and
+`F:ml430-nat-factorial-dvd-descfactorial-bbf6124f` — are left **open**.
+`Nat.ascFactorial`/`Nat.descFactorial` do not exist in this kernel: no field on
+`NatPrelude`, and `asc_factorial`/`desc_factorial`/`ascFactorial`/
+`descFactorial` all grep to zero hits anywhere in
+`crates/axeyum-lean-kernel/src/`. The prelude struct field list is the
+authoritative registry here (every field is declared exactly once, at
+construction), so this is a confirmed absence, not an unfound search — matches
+the brief's expectation. Building the two ascending/descending factorial
+definitions plus their base-case facts (`F-ml430-nat-ascfactorial-zero-…`,
+`F-ml430-nat-descfactorial-zero-…`, etc. — eight open facts already sit in the
+ledger for this family) is out of scope for an import-backlog lane and is the
+next lane's task if picked up.
+
+`cargo test -p axeyum-lean-kernel --lib nat_prelude::` — 98 passed, 0 failed
+(347 → 351 theorems; `the_build_is_deterministic`'s pin recounted by reading
+its own panic message, not incremented by hand).
+`cargo clippy -p axeyum-lean-kernel --lib -- -D warnings` — clean.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
