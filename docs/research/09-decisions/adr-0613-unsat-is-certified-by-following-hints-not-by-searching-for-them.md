@@ -2,7 +2,7 @@
 
 Status: accepted
 Date: 2026-08-28
-Index-summary: The evidence path called the forward reference DRAT checker at every site, so certifying a refutation cost ~3 orders of magnitude more than deciding it (`F:fp16-add-monotone-rne`: decide 11.09 s, check ~2.4 h extrapolated, never observed to finish). The route now elaborates the proof's core to LRAT with the backward engine as an UNTRUSTED producer and has `check_lrat` — small, search-free, linear — verify the hints. The trusted base does not move: `check_drat_backward` appears only in rejecting position, and the forward reference remains the accepting authority whenever the LRAT route declines. Measured on the fp8 sibling: 25m46s to 5.0 s end to end.
+Index-summary: The evidence path called the forward reference DRAT checker at every site, so certifying a refutation cost ~3 orders of magnitude more than deciding it (`F:fp16-add-monotone-rne`: decide 11.09 s, check ~2.4 h extrapolated, never observed to finish). The route now elaborates the proof's core to LRAT with the backward engine as an UNTRUSTED producer and has `check_lrat` — small, search-free, linear — verify the hints. The trusted base does not move: `check_drat_backward` appears only in rejecting position, and the forward reference remains the accepting authority whenever the LRAT route declines. Measured: fp8 evidence 25m46s to 5.0 s, and fp16 from never-observed-to-finish to 125 s end to end with `certified=1 recheck=ok`.
 Index-status: accepted
 
 ## Context
@@ -197,10 +197,31 @@ the same query at **25m46s with evidence** before this change: roughly 300x on
 the certificate stage. `recheck=ok` on the same line is the consumer-side
 re-validation, which also now runs through the new route.
 
-The binary16 measurement this ADR was written for is recorded in
-`docs/plan/status/187-drat-evidence-route.md` and in
-`artifacts/facts/F-fp16-add-monotone-rne.json` rather than here, because a
-single run on a contended host is a data point and not a benchmark.
+And the binary16 query this ADR was written for — the one the ledger recorded
+as never observed to finish — on the same host and the same pinned file:
+
+```
+; progress conflicts=424601 ... proof_steps=827048 proof_bytes=193214020 elapsed_ms=27748
+; checking stage=backward_lrat_certify steps=0      total=827048 finished=false certified=false elapsed_ms=0
+; checking stage=backward_lrat_certify steps=827048 total=827048 finished=true  certified=true  elapsed_ms=82302 steps_per_sec=10048.8
+; evidence kind=unsat-drat certified=1 recheck=ok arena=ok ms=125098
+unsat
+```
+
+**125.098 s end to end, of which 82.302 s is checking.** Against the measured
+`check_drat` rate on this exact proof — ~95 steps/sec, extrapolating to ~8,700 s
+for the DRAT check *alone* before elaboration even started — the checking stage
+is ~106x faster and the certificate now exists.
+
+One run on a contended host is a data point, not a benchmark; but the claim it
+supports is qualitative and does not need a benchmark. The stage went from
+"never observed to terminate" to "terminates in under ninety seconds", and
+`certified=1 recheck=ok` says the trusted checker accepted it.
+
+Note the shape of the numbers, which is the general lesson: the search is
+*unchanged* (27.7 s, the same 424,601 conflicts and 827,048 steps as every
+previous run), and the whole difference is in the stage that reads the proof
+back. The inversion this ADR fixes was never about the solver.
 
 ## Alternatives
 
@@ -229,9 +250,13 @@ single run on a contended host is a data point and not a benchmark.
 ## Consequences
 
 - A refutation that could be produced but not checked can now be certified.
-  The fp8 sibling moves from 25m46s to 5.0 s; whether binary16 comes into
-  reach is a measurement, and it is recorded where the measurement lives, not
-  asserted here.
+  fp8 moves from 25m46s to 5.0 s; **fp16 moves from never-observed-to-finish to
+  125 s**, which closes the measured obstruction on
+  `F:fp16-add-monotone-rne`. That fact is nonetheless still recorded `open`,
+  because `epistemic_status` is a claim about what this ledger can *show* and
+  showing it needs an evidence row with a `checker_command` that fails when the
+  claim is false. The obstruction being gone and the evidence existing are
+  different claims; only the first is established.
 - **The published DRAT is now normally verified by the backward engine rather
   than the forward one.** These agree on every proof the reference accepts;
   the backward one additionally tolerates unjustified dead weight *outside*

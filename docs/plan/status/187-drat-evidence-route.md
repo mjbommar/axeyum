@@ -43,16 +43,25 @@ a stage that cannot be interrupted).
 | query | before | after |
 | --- | --- | --- |
 | `neg-fp8-add-monotone-rne.smt2` | 25m46s (ledger figure) | **5.028 s end to end**, of which 2.555 s checking; `certified=1 recheck=ok` |
-| `neg-fp16-add-monotone-rne.smt2` | decide 11.09 s; check ~95 steps/s -> ~2.4 h extrapolated, never observed to finish | **not completed in this lane's bounded run** — see below |
+| `neg-fp16-add-monotone-rne.smt2` | decide 11.09 s; check ~95 steps/s -> ~2.4 h extrapolated, **never observed to finish** | **125.098 s end to end**, of which 82.302 s checking (10,048.8 steps/s over 827,048 steps); `certified=1 recheck=ok` |
 
-**The fp16 number DID NOT RUN to completion here.** The run was started with a
-540 s internal budget and the lane's shell moved it to the background at 120 s;
-the lane does not report a background result as a measurement. Treat fp16 as
-**unmeasured after this change** until someone runs it in the foreground and
-records the number. `F:fp16-add-monotone-rne` is deliberately left `open` — its
-measured obstruction is worth more than an overclaim, and flipping it requires a
-checking route that actually completes with a `checker_command` that fails when
-the claim is false.
+**fp16 now certifies.** The search is *unchanged* — 424,601 conflicts, 27.748 s,
+the same 827,048 steps and 193,214,020 bytes as every previous run — and the
+whole difference is the stage that reads the proof back: ~106x on the checking
+rate, from a stage that had never been observed to terminate to one that takes
+under ninety seconds.
+
+**`F:fp16-add-monotone-rne` is still recorded `open`, deliberately.** The
+measurement is written into its `notes` and the stale "certifying costs multiple
+hours" text there is now explicitly marked as history — leaving that in place
+would be exactly the stale-obstacle failure `CLAUDE.md` documents. But
+`epistemic_status` is a claim about what the ledger can *show*, and showing it
+needs an `evidence` row with a `checker_command` whose exit status depends on the
+finding, plus a verified negative control. That row does not exist; this lane was
+scoped to notes on that file and did not write it. **The obstruction being gone
+and the evidence existing are different claims, and only the first is
+established.** Writing that evidence row is the obvious next task and is now
+unblocked.
 
 **Soundness discipline.** The load-bearing fixture is over **satisfiable**
 formulas, because on an unsatisfiable one every accepted proof is sound
@@ -97,4 +106,4 @@ saying so is more useful than a number that looks tidier.
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-28 | drat-evidence-route | `certify_unsat_via_lrat`: the backward engine emits LRAT hints (untrusted), `check_lrat` verifies them (trusted, search-free) — fp8 evidence 25m46s -> 5.0 s with no move of the trusted base (ADR-0613) |
+| 2026-08-28 | drat-evidence-route | `certify_unsat_via_lrat`: the backward engine emits LRAT hints (untrusted), `check_lrat` verifies them (trusted, search-free) — fp8 evidence 25m46s -> 5.0 s and fp16 never-finished -> 125 s, with no move of the trusted base (ADR-0613) |
