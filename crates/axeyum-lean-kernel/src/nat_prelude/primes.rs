@@ -1919,3 +1919,308 @@ pub(super) fn declare_coprime_odd_of_right(
     })?;
     Ok(())
 }
+
+// ============================================================================
+// `Nat.prime_odd_of_ne_two` / `Nat.prime_even_iff` / `Nat.prime_not_dvd_mul` —
+// Mathlib v4.30's `Nat.Prime.odd_of_ne_two`, `Nat.Prime.even_iff`,
+// `Nat.Prime.not_dvd_mul`.
+// ============================================================================
+
+/// Shared case split for both `prime_odd_of_ne_two` and `prime_even_iff`:
+/// `prime_condition p_var → Or (Eq (gcd p_var two) one) (dvd p_var two)`,
+/// via [`declare_coprime_or_dvd_of_prime`] applied at `(p_var, two)`.
+fn prime_vs_two_split(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    p_var: ExprId,
+    prime_hyp: ExprId,
+) -> ExprId {
+    let two = d.num(2);
+    d.lemma(p.coprime_or_dvd_of_prime, &[p_var, two, prime_hyp])
+}
+
+/// The `dvd p_var two` branch shared by both theorems below: `2`'s own
+/// primality ([`prime_two`]) applied to `p_var` as a divisor gives
+/// `p_var = 1 ∨ p_var = 2`.
+fn dvd_two_disjunction(d: &mut NatDev<'_>, p: &NatPrelude, p_var: ExprId, hd: ExprId) -> ExprId {
+    let two = d.num(2);
+    let prime2 = prime_two(d, p);
+    let (two_le_two, divisors_two) = prime_parts(d, p, two);
+    let divisors_two_proof = and_right(d, two_le_two, divisors_two, prime2);
+    d.apply(divisors_two_proof, &[p_var, hd])
+}
+
+/// The `p_var = 1` sub-branch shared by both theorems below: contradicts
+/// `prime_hyp`'s own lower bound `2 ≤ p_var` (`le_of_succ_le_succ` +
+/// `not_succ_le_zero`, mirroring [`declare_prime_dvd_iff_not_coprime`]'s
+/// `mp` branch), refuting into `goal`.
+fn refute_eq_one_against_prime_lower_bound(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    p_var: ExprId,
+    prime_hyp: ExprId,
+    h1: ExprId,
+    goal: ExprId,
+) -> ExprId {
+    let one = d.num(1);
+    let zero = d.zero();
+    let (lower_ty, divisors_ty) = prime_parts(d, p, p_var);
+    let two_le_p = and_left(d, lower_ty, divisors_ty, prime_hyp);
+    let motive = d.eq_motive(p_var, &|d, x| {
+        let two = d.num(2);
+        d.le(two, x)
+    });
+    let two_le_one = d.transport(p_var, motive, two_le_p, one, h1);
+    let one_le_zero = d.lemma(p.le_of_succ_le_succ, &[one, zero, two_le_one]);
+    let false_pf = d.lemma(p.not_succ_le_zero, &[zero, one_le_zero]);
+    absurd(d, p, goal, false_pf)
+}
+
+/// `Nat.prime_odd_of_ne_two : ∀ p, prime_condition p → Not (Eq p two) →
+/// Odd p`.
+///
+/// See [`NatPrelude::prime_odd_of_ne_two`] for the route: split on
+/// [`prime_vs_two_split`]. `gcd p two = 1` gives `Odd p` directly via
+/// [`declare_coprime_symmetric`] + [`declare_coprime_odd_of_left`].
+/// `dvd p two` gives `p = 1 ∨ p = 2` via [`dvd_two_disjunction`]; `p = 1`
+/// is refuted by [`refute_eq_one_against_prime_lower_bound`], and `p = 2`
+/// contradicts the `Not (Eq p two)` hypothesis directly.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_prime_odd_of_ne_two(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.prime_odd_of_ne_two, 1, &|d, v| {
+        let p_var = v[0];
+        let two = d.num(2);
+        let one = d.num(1);
+
+        let prime_ty = prime_condition(d, &p, p_var);
+        let ne_ty = {
+            let eq_ty = d.eq(p_var, two);
+            d.const_app(p.logic.not, &[eq_ty])
+        };
+        let odd_ty = d.lemma(p.odd, &[p_var]);
+        let stmt = {
+            let inner = d.arrow(ne_ty, odd_ty);
+            d.arrow(prime_ty, inner)
+        };
+
+        let prime_fv = d.fresh_fvar();
+        let prime_hyp = d.kernel().fvar(prime_fv);
+        let ne_fv = d.fresh_fvar();
+        let ne_hyp = d.kernel().fvar(ne_fv);
+
+        let split = prime_vs_two_split(d, &p, p_var, prime_hyp);
+        let gcd_p2 = d.gcd(p_var, two);
+        let cop_ty = d.eq(gcd_p2, one);
+        let dvd_ty = d.dvd(p_var, two);
+
+        let on_cop = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let flipped = d.lemma(p.coprime_symmetric, &[p_var, two, h]);
+            let odd_pf = d.lemma(p.coprime_odd_of_left, &[p_var, flipped]);
+            d.lam_fv(h_fv, cop_ty, odd_pf)
+        };
+        let on_dvd = {
+            let hd_fv = d.fresh_fvar();
+            let hd = d.kernel().fvar(hd_fv);
+            let disj2 = dvd_two_disjunction(d, &p, p_var, hd);
+            let is_one_ty = d.eq(p_var, one);
+            let is_two_ty = d.eq(p_var, two);
+            let on_one = {
+                let h1_fv = d.fresh_fvar();
+                let h1 = d.kernel().fvar(h1_fv);
+                let body =
+                    refute_eq_one_against_prime_lower_bound(d, &p, p_var, prime_hyp, h1, odd_ty);
+                d.lam_fv(h1_fv, is_one_ty, body)
+            };
+            let on_two = {
+                let h2_fv = d.fresh_fvar();
+                let h2 = d.kernel().fvar(h2_fv);
+                let false_pf = d.apply(ne_hyp, &[h2]);
+                let body = absurd(d, &p, odd_ty, false_pf);
+                d.lam_fv(h2_fv, is_two_ty, body)
+            };
+            let result = or_cases(d, &p, is_one_ty, is_two_ty, odd_ty, on_one, on_two, disj2);
+            d.lam_fv(hd_fv, dvd_ty, result)
+        };
+        let body = or_cases(d, &p, cop_ty, dvd_ty, odd_ty, on_cop, on_dvd, split);
+        let with_ne = d.lam_fv(ne_fv, ne_ty, body);
+        let proof = d.lam_fv(prime_fv, prime_ty, with_ne);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Nat.prime_even_iff : ∀ p, prime_condition p → Iff (Even p) (Eq p two)`.
+///
+/// See [`NatPrelude::prime_even_iff`]. `mp` reuses
+/// [`declare_prime_odd_of_ne_two`]'s exact case split: the
+/// `gcd p two = 1` branch now derives `Odd p` and contradicts the
+/// `Even p` hypothesis via [`NatPrelude::even_not_odd`] instead of closing
+/// the goal directly; the `dvd p two` branch is unchanged except that its
+/// `p = 2` sub-branch **is** the goal, not a contradiction. `mpr`
+/// transports [`even_of_dvd_two`] applied to `2`'s self-divisibility
+/// (`dvd_refl`) along the hypothesised `p = 2`.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_prime_even_iff(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.prime_even_iff, 1, &|d, v| {
+        let p_var = v[0];
+        let two = d.num(2);
+        let one = d.num(1);
+
+        let prime_ty = prime_condition(d, &p, p_var);
+        let even_ty = d.lemma(p.even, &[p_var]);
+        let is_two_ty = d.eq(p_var, two);
+        let iff_target = d.const_app(p.logic.iff, &[even_ty, is_two_ty]);
+        let stmt = d.arrow(prime_ty, iff_target);
+
+        let prime_fv = d.fresh_fvar();
+        let prime_hyp = d.kernel().fvar(prime_fv);
+
+        // mp : Even p -> p = 2
+        let mp = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            let split = prime_vs_two_split(d, &p, p_var, prime_hyp);
+            let gcd_p2 = d.gcd(p_var, two);
+            let cop_ty = d.eq(gcd_p2, one);
+            let dvd_ty = d.dvd(p_var, two);
+
+            let on_cop = {
+                let hc_fv = d.fresh_fvar();
+                let hc = d.kernel().fvar(hc_fv);
+                let flipped = d.lemma(p.coprime_symmetric, &[p_var, two, hc]);
+                let odd_pf = d.lemma(p.coprime_odd_of_left, &[p_var, flipped]);
+                let not_odd_fn = d.lemma(p.even_not_odd, &[p_var]);
+                let not_odd = d.apply(not_odd_fn, &[h]);
+                let false_pf = d.apply(not_odd, &[odd_pf]);
+                let body = absurd(d, &p, is_two_ty, false_pf);
+                d.lam_fv(hc_fv, cop_ty, body)
+            };
+            let on_dvd = {
+                let hd_fv = d.fresh_fvar();
+                let hd = d.kernel().fvar(hd_fv);
+                let disj2 = dvd_two_disjunction(d, &p, p_var, hd);
+                let is_one_ty = d.eq(p_var, one);
+                let on_one = {
+                    let h1_fv = d.fresh_fvar();
+                    let h1 = d.kernel().fvar(h1_fv);
+                    let body = refute_eq_one_against_prime_lower_bound(
+                        d, &p, p_var, prime_hyp, h1, is_two_ty,
+                    );
+                    d.lam_fv(h1_fv, is_one_ty, body)
+                };
+                let on_two = {
+                    let h2_fv = d.fresh_fvar();
+                    let h2 = d.kernel().fvar(h2_fv);
+                    d.lam_fv(h2_fv, is_two_ty, h2)
+                };
+                let result = or_cases(
+                    d, &p, is_one_ty, is_two_ty, is_two_ty, on_one, on_two, disj2,
+                );
+                d.lam_fv(hd_fv, dvd_ty, result)
+            };
+            let body = or_cases(d, &p, cop_ty, dvd_ty, is_two_ty, on_cop, on_dvd, split);
+            d.lam_fv(h_fv, even_ty, body)
+        };
+
+        // mpr : p = 2 -> Even p
+        let mpr = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let dvd2_self = d.lemma(p.dvd_refl, &[two]);
+            let even2 = even_of_dvd_two(d, &p, two, dvd2_self);
+            let h_sym = d.symm(p_var, two, h);
+            let motive = d.eq_motive(two, &|d, x| d.lemma(p.even, &[x]));
+            let result = d.transport(two, motive, even2, p_var, h_sym);
+            d.lam_fv(h_fv, is_two_ty, result)
+        };
+
+        let iff_proof = d.const_app(p.logic.iff_intro, &[even_ty, is_two_ty, mp, mpr]);
+        let proof = d.lam_fv(prime_fv, prime_ty, iff_proof);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Nat.prime_not_dvd_mul : ∀ p m n, prime_condition p → Not (dvd p m) →
+/// Not (dvd p n) → Not (dvd p (mul m n))`.
+///
+/// The contrapositive of `euclid_lemma` (`bezout.rs`): assume
+/// `dvd p (mul m n)`; `euclid_lemma` splits it into `dvd p m ∨ dvd p n`,
+/// and each branch applies directly to one of the two `Not` hypotheses.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_prime_not_dvd_mul(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.prime_not_dvd_mul, 3, &|d, v| {
+        let (p_var, m_var, n_var) = (v[0], v[1], v[2]);
+
+        let prime_ty = prime_condition(d, &p, p_var);
+        let dvd_m_ty = d.dvd(p_var, m_var);
+        let dvd_n_ty = d.dvd(p_var, n_var);
+        let not_dvd_m_ty = d.const_app(p.logic.not, &[dvd_m_ty]);
+        let not_dvd_n_ty = d.const_app(p.logic.not, &[dvd_n_ty]);
+        let mn = d.mul(m_var, n_var);
+        let dvd_mn_ty = d.dvd(p_var, mn);
+        let not_dvd_mn_ty = d.const_app(p.logic.not, &[dvd_mn_ty]);
+
+        let stmt = {
+            let inner2 = d.arrow(not_dvd_n_ty, not_dvd_mn_ty);
+            let inner1 = d.arrow(not_dvd_m_ty, inner2);
+            d.arrow(prime_ty, inner1)
+        };
+
+        let prime_fv = d.fresh_fvar();
+        let prime_hyp = d.kernel().fvar(prime_fv);
+        let nm_fv = d.fresh_fvar();
+        let nm = d.kernel().fvar(nm_fv);
+        let nn_fv = d.fresh_fvar();
+        let nn = d.kernel().fvar(nn_fv);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        let split = d.lemma(p.euclid_lemma, &[p_var, m_var, n_var, prime_hyp, h]);
+        let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+
+        let on_m = {
+            let hm_fv = d.fresh_fvar();
+            let hm = d.kernel().fvar(hm_fv);
+            let false_pf = d.apply(nm, &[hm]);
+            d.lam_fv(hm_fv, dvd_m_ty, false_pf)
+        };
+        let on_n = {
+            let hn_fv = d.fresh_fvar();
+            let hn = d.kernel().fvar(hn_fv);
+            let false_pf = d.apply(nn, &[hn]);
+            d.lam_fv(hn_fv, dvd_n_ty, false_pf)
+        };
+        let cases_result = or_cases(d, &p, dvd_m_ty, dvd_n_ty, false_ty, on_m, on_n, split);
+        let not_dvd_mn = d.lam_fv(h_fv, dvd_mn_ty, cases_result);
+        let with_nn = d.lam_fv(nn_fv, not_dvd_n_ty, not_dvd_mn);
+        let with_nm = d.lam_fv(nm_fv, not_dvd_m_ty, with_nn);
+        let proof = d.lam_fv(prime_fv, prime_ty, with_nm);
+        (stmt, proof)
+    })?;
+    Ok(())
+}

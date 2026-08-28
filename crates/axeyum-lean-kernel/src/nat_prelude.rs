@@ -229,7 +229,8 @@ use primes::{
     declare_coprime_of_dvd, declare_coprime_of_dvd_both, declare_coprime_of_lt_prime,
     declare_coprime_or_dvd_of_prime, declare_coprime_self_add_right, declare_coprime_symmetric,
     declare_coprime_two_left, declare_coprime_two_right, declare_euclid,
-    declare_prime_dvd_iff_not_coprime, declare_primes,
+    declare_prime_dvd_iff_not_coprime, declare_prime_even_iff, declare_prime_not_dvd_mul,
+    declare_prime_odd_of_ne_two, declare_primes,
 };
 use rectangle::declare_rectangle;
 use relation::{
@@ -978,6 +979,30 @@ pub struct NatPrelude {
     /// `mp` direction of [`coprime_two_right`](Self::coprime_two_right)
     /// alone.
     pub coprime_odd_of_right: NameId,
+    /// `Nat.prime_odd_of_ne_two : ∀ p, prime_condition p → Not (Eq p two) →
+    /// Odd p` — [`coprime_or_dvd_of_prime`](Self::coprime_or_dvd_of_prime)
+    /// applied at `(p, two)` splits into `gcd p two = 1 ∨ dvd p two`: the
+    /// first branch gives `Odd p` via
+    /// [`coprime_symmetric`](Self::coprime_symmetric) +
+    /// [`coprime_odd_of_left`](Self::coprime_odd_of_left); the second
+    /// branch applies `2`'s own primality (`prime_two`) to `p` as a
+    /// divisor, giving `p = 1 ∨ p = 2` — `p = 1` contradicts `p`'s lower
+    /// bound `2 ≤ p`, `p = 2` contradicts the hypothesis directly.
+    pub prime_odd_of_ne_two: NameId,
+    /// `Nat.prime_even_iff : ∀ p, prime_condition p → Iff (Even p) (Eq p
+    /// two)` — same case split as
+    /// [`prime_odd_of_ne_two`](Self::prime_odd_of_ne_two) for `mp` (the
+    /// `gcd p two = 1` branch now contradicts `Even p` via
+    /// [`even_not_odd`](Self::even_not_odd) instead of closing the goal);
+    /// `mpr` transports the private `even_of_dvd_two two dvd_refl` witness
+    /// along the hypothesised `p = 2`.
+    pub prime_even_iff: NameId,
+    /// `Nat.prime_not_dvd_mul : ∀ p m n, prime_condition p → Not (dvd p m) →
+    /// Not (dvd p n) → Not (dvd p (mul m n))` — the contrapositive of
+    /// `euclid_lemma` (`bezout.rs`): assuming `dvd p (m*n)`, `euclid_lemma`
+    /// splits into `dvd p m ∨ dvd p n`, and each branch contradicts one of
+    /// the two hypotheses directly.
+    pub prime_not_dvd_mul: NameId,
 
     // --- binomial coefficients (`choose.rs`) --------------------------------
     /// `Nat.choose : Nat → Nat → Nat`, by structural recursion on both
@@ -2284,6 +2309,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             coprime_two_right: kernel.name_str(nat, "coprime_two_right"),
             coprime_odd_of_left: kernel.name_str(nat, "coprime_odd_of_left"),
             coprime_odd_of_right: kernel.name_str(nat, "coprime_odd_of_right"),
+            prime_odd_of_ne_two: kernel.name_str(nat, "prime_odd_of_ne_two"),
+            prime_even_iff: kernel.name_str(nat, "prime_even_iff"),
+            prime_not_dvd_mul: kernel.name_str(nat, "prime_not_dvd_mul"),
             choose: kernel.name_str(nat, "choose"),
             choose_zero_right: kernel.name_str(nat, "choose_zero_right"),
             choose_succ_succ: kernel.name_str(nat, "choose_succ_succ"),
@@ -2599,6 +2627,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_coprime_two_right(&mut d, &p)?;
         declare_coprime_odd_of_left(&mut d, &p)?;
         declare_coprime_odd_of_right(&mut d, &p)?;
+        // Also needs `Nat.Odd`/`even_not_odd`/`coprime_two_left`'s bridges,
+        // just declared above, plus `euclid_lemma` (declared much earlier by
+        // `declare_euclid_lemma`).
+        declare_prime_odd_of_ne_two(&mut d, &p)?;
+        declare_prime_even_iff(&mut d, &p)?;
+        declare_prime_not_dvd_mul(&mut d, &p)?;
         declare_cantor_all(&mut d, &p)?;
         declare_even_of_even_sq(&mut d, &p)?;
         declare_no_rational_sqrt_two(&mut d, &p)?;
