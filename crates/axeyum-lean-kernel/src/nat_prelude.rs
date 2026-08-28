@@ -894,6 +894,34 @@ pub struct NatPrelude {
     pub choose_self: NameId,
     /// `Nat.choose_symm : ∀ n k, Le k n → choose n k = choose n (sub n k)`.
     pub choose_symm: NameId,
+    /// `Nat.choose_one_right : ∀ n, choose n 1 = n`. By induction on `n`: the
+    /// base case is `zero_choose_succ` at `k := 0` (`succ 0 ≡ 1`), and the
+    /// successor case expands `choose (succ n) 1` via Pascal's rule into
+    /// `choose n 0 + choose n 1`, closed by `choose_zero_right` and the
+    /// induction hypothesis.
+    pub choose_one_right: NameId,
+    /// `Nat.choose_eq_zero_of_lt : ∀ n k, Lt n k → choose n k = 0`. By
+    /// induction on `n` with an inner case split on `k`: `n = 0` needs `k`'s
+    /// shape (`lt_irrefl`/`zero_choose_succ`); `n = succ m` strips one `succ`
+    /// off both sides of the hypothesis (`le_of_succ_le_succ`) to reach two
+    /// instances of the outer induction hypothesis, combined via Pascal's
+    /// rule.
+    pub choose_eq_zero_of_lt: NameId,
+    /// `Nat.choose_ne_zero : ∀ n k, Le k n → choose n k ≠ 0` — via the
+    /// private helper [`choose::choose_pos_all`], `0 < choose n k`, and
+    /// `lt_irrefl` after transporting along a hypothetical `choose n k = 0`.
+    pub choose_ne_zero: NameId,
+    /// `Nat.choose_le_succ : ∀ a c, choose a c ≤ choose (succ a) c`. By
+    /// induction on `c`: `c = 0` has both sides defeq `1`
+    /// (`le_refl`); `c = succ c'` expands the successor side via Pascal's
+    /// rule into `choose a c' + choose a c`, which dominates `choose a c` by
+    /// `le_add_right` plus `add_comm`.
+    pub choose_le_succ: NameId,
+    /// `Nat.choose_symm_of_eq_add : ∀ n a b, n = a + b → choose n a = choose n b`
+    /// — `choose_symm` restated at the additive witness: `a ≤ a+b`
+    /// (`le_add_right`) supplies `choose_symm`'s hypothesis, and
+    /// `add_sub_cancel_left` rewrites its `n - a` conclusion to `b`.
+    pub choose_symm_of_eq_add: NameId,
 
     // --- binomial theorem (`binomial.rs`) -----------------------------------
     /// `Nat.sumRange_add : ∀ f g n, sumRange (fun i => f i + g i) n = sumRange f n + sumRange g n`.
@@ -2090,6 +2118,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             choose_succ_self_eq_zero: kernel.name_str(nat, "choose_succ_self_eq_zero"),
             choose_self: kernel.name_str(nat, "choose_self"),
             choose_symm: kernel.name_str(nat, "choose_symm"),
+            choose_one_right: kernel.name_str(nat, "choose_one_right"),
+            choose_eq_zero_of_lt: kernel.name_str(nat, "choose_eq_zero_of_lt"),
+            choose_ne_zero: kernel.name_str(nat, "choose_ne_zero"),
+            choose_le_succ: kernel.name_str(nat, "choose_le_succ"),
+            choose_symm_of_eq_add: kernel.name_str(nat, "choose_symm_of_eq_add"),
             sum_range_add: kernel.name_str(nat, "sumRange_add"),
             sum_range_shift_front: kernel.name_str(nat, "sumRange_shiftFront"),
             sum_range_congr_lt: kernel.name_str(nat, "sumRange_congr_lt"),

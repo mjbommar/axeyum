@@ -695,11 +695,483 @@ pub(super) fn declare_choose_symm(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<
     Ok(())
 }
 
+/// `False.rec` into `goal` from a proof of `False`.
+fn absurd(d: &mut NatDev<'_>, p: &NatPrelude, goal: ExprId, contradiction: ExprId) -> ExprId {
+    let anon = d.anon_name();
+    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+    let motive = d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
+    let zero = d.kernel().level_zero();
+    let rec = d.kernel().const_(p.logic.false_rec, vec![zero]);
+    d.apply(rec, &[motive, contradiction])
+}
+
+/// `choose_one_right : ∀ n, choose n 1 = n`, by induction on `n`: the base
+/// case is `zero_choose_succ` at `k := 0` (`succ 0 ≡ 1`), and the successor
+/// case expands `choose (succ n) 1` via Pascal's rule into `choose n 0 +
+/// choose n 1`, closed by `choose_zero_right` and the induction hypothesis
+/// plus `add_comm` (the induction hypothesis lands on the right of the sum,
+/// where `add`'s right-recursion needs it to collapse `1 + n` to `succ n`).
+pub(super) fn declare_choose_one_right(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.choose_one_right, 1, &|d, v| {
+        let n = v[0];
+        let motive = |d: &mut NatDev<'_>, x: ExprId| {
+            let one = d.num(1);
+            let lhs = d.choose(x, one);
+            d.eq(lhs, x)
+        };
+        let stmt = motive(d, n);
+        let proof = d.induct(
+            &motive,
+            &|d| {
+                let zero = d.zero();
+                d.lemma(p.zero_choose_succ, &[zero])
+            },
+            &|d, j, ih| {
+                let sj = d.succ(j);
+                let zero = d.zero();
+                let one = d.num(1);
+                let pascal = d.lemma(p.choose_succ_succ, &[j, zero]);
+                let cj0 = d.choose(j, zero);
+                let cj1 = d.choose(j, one);
+                let sum = d.add(cj0, cj1);
+                let h_czr = d.lemma(p.choose_zero_right, &[j]);
+                let mid = d.add(one, cj1);
+                let h1 = d.congr(cj0, one, h_czr, &|d, x| d.add(x, cj1));
+                let mid2 = d.add(one, j);
+                let h2 = d.congr(cj1, j, ih, &|d, x| d.add(one, x));
+                let comm = d.lemma(p.add_comm, &[one, j]);
+                let jm1 = d.add(j, one);
+                let (_e, sum_to_jm1) = d.chain(sum, &[(mid, h1), (mid2, h2), (jm1, comm)]);
+                let target = d.choose(sj, one);
+                let step1 = d.trans(target, sum, jm1, pascal, sum_to_jm1);
+                let refl_jm1 = d.refl(jm1);
+                // `add j one` reduces definitionally to `succ j`, so the
+                // stated target `sj` is accepted by defeq without a lemma.
+                d.trans(target, jm1, sj, step1, refl_jm1)
+            },
+            n,
+        );
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `choose_eq_zero_of_lt : ∀ n k, Lt n k → choose n k = 0`, by induction on
+/// `n` with an inner case split on `k` (mirroring [`declare_choose_symm`]'s
+/// shape): `n = 0` needs `k`'s shape (`lt_irrefl` refutes `k = 0`;
+/// `zero_choose_succ` closes `k = succ k'` directly); `n = succ m` strips one
+/// `succ` off both sides of the hypothesis (`le_of_succ_le_succ`,
+/// `le_succ_of_le`) to reach two instances of the outer induction hypothesis,
+/// combined via [`combine_zero_sum`] and Pascal's rule.
+pub(super) fn declare_choose_eq_zero_of_lt(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+
+    let stmt_at = |d: &mut NatDev<'_>, n: ExprId| -> ExprId {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hyp = d.lt(n, k);
+        let lhs = d.choose(n, k);
+        let zero = d.zero();
+        let eqn = d.eq(lhs, zero);
+        let body = d.arrow(hyp, eqn);
+        d.pi_fv(k_fv, nat, body)
+    };
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let stmt_n = stmt_at(d, n);
+
+    let proof = d.induct(
+        &stmt_at,
+        &|d| {
+            // n = 0: fun k (h : Lt 0 k) => choose 0 k = 0
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let inner_motive = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
+                let zero = d.zero();
+                let hyp = d.lt(zero, x);
+                let lhs = d.choose(zero, x);
+                let zero2 = d.zero();
+                let eqn = d.eq(lhs, zero2);
+                d.arrow(hyp, eqn)
+            };
+            let k_cases = d.induct(
+                &inner_motive,
+                &|d| {
+                    // fun (h : Lt 0 0) => choose 0 0 = 0 -- vacuous.
+                    let zero = d.zero();
+                    let hyp_ty = d.lt(zero, zero);
+                    let h_fv = d.fresh_fvar();
+                    let h = d.kernel().fvar(h_fv);
+                    let irrefl = d.lemma(p.lt_irrefl, &[zero]);
+                    let false_proof = d.apply(irrefl, &[h]);
+                    let goal = {
+                        let lhs = d.choose(zero, zero);
+                        let zero2 = d.zero();
+                        d.eq(lhs, zero2)
+                    };
+                    let body = absurd(d, &p, goal, false_proof);
+                    d.lam_fv(h_fv, hyp_ty, body)
+                },
+                &|d, k_prime, _inner_ih| {
+                    // fun (_ : Lt 0 (succ k')) => choose 0 (succ k') = 0
+                    let sk = d.succ(k_prime);
+                    let zero = d.zero();
+                    let hyp_ty = d.lt(zero, sk);
+                    let h_fv = d.fresh_fvar();
+                    let body = d.lemma(p.zero_choose_succ, &[k_prime]);
+                    d.lam_fv(h_fv, hyp_ty, body)
+                },
+                k,
+            );
+            d.lam_fv(k_fv, nat, k_cases)
+        },
+        &|d, m, ih| {
+            // n = succ m: fun k (h : Lt (succ m) k) => choose (succ m) k = 0
+            let sm = d.succ(m);
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let inner_motive = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
+                let hyp = d.lt(sm, x);
+                let lhs = d.choose(sm, x);
+                let zero = d.zero();
+                let eqn = d.eq(lhs, zero);
+                d.arrow(hyp, eqn)
+            };
+            let k_cases = d.induct(
+                &inner_motive,
+                &|d| {
+                    // fun (h : Lt (succ m) 0) => choose (succ m) 0 = 0 -- vacuous.
+                    let zero = d.zero();
+                    let hyp_ty = d.lt(sm, zero);
+                    let h_fv = d.fresh_fvar();
+                    let h = d.kernel().fvar(h_fv);
+                    let not_le = d.lemma(p.not_succ_le_zero, &[sm]);
+                    let false_proof = d.apply(not_le, &[h]);
+                    let goal = {
+                        let lhs = d.choose(sm, zero);
+                        let zero2 = d.zero();
+                        d.eq(lhs, zero2)
+                    };
+                    let body = absurd(d, &p, goal, false_proof);
+                    d.lam_fv(h_fv, hyp_ty, body)
+                },
+                &|d, k_prime, _inner_ih| {
+                    // fun (h : Lt (succ m)(succ k')) => choose (succ m)(succ k') = 0
+                    let sk = d.succ(k_prime);
+                    let hyp_ty = d.lt(sm, sk);
+                    let h_fv = d.fresh_fvar();
+                    let h = d.kernel().fvar(h_fv);
+                    // h : Le (succ (succ m)) (succ k')  ≡defeq≡  Lt (succ m) (succ k')
+                    let h2 = d.lemma(p.le_of_succ_le_succ, &[sm, k_prime, h]);
+                    let ih_k = d.apply(ih, &[k_prime, h2]);
+                    let h3 = d.lemma(p.le_succ_of_le, &[sm, k_prime, h2]);
+                    let ih_sk = d.apply(ih, &[sk, h3]);
+                    let choose_m_kprime = d.choose(m, k_prime);
+                    let choose_m_sk = d.choose(m, sk);
+                    let combined = combine_zero_sum(d, choose_m_kprime, choose_m_sk, ih_k, ih_sk);
+                    let pascal = d.lemma(p.choose_succ_succ, &[m, k_prime]);
+                    let target = d.choose(sm, sk);
+                    let sum = d.add(choose_m_kprime, choose_m_sk);
+                    let zero = d.zero();
+                    let final_ = d.trans(target, sum, zero, pascal, combined);
+                    d.lam_fv(h_fv, hyp_ty, final_)
+                },
+                k,
+            );
+            d.lam_fv(k_fv, nat, k_cases)
+        },
+        n,
+    );
+
+    let ty = d.pi_fv(n_fv, nat, stmt_n);
+    let value = d.lam_fv(n_fv, nat, proof);
+    d.declare_theorem(p.choose_eq_zero_of_lt, ty, value)?;
+    Ok(())
+}
+
+/// `∀ n k, Le k n → Lt zero (choose n k)`, by induction on `n` with the
+/// column `k` case-split (the same shape as
+/// [`declare_choose_eq_zero_of_lt`]), used only inside
+/// [`declare_choose_ne_zero`] and not exposed as a prelude lemma.
+fn choose_pos_all(d: &mut NatDev<'_>, p: &NatPrelude) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+
+    let stmt_at = |d: &mut NatDev<'_>, n: ExprId| -> ExprId {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hyp = d.le(k, n);
+        let zero = d.zero();
+        let lhs = d.choose(n, k);
+        let lt_ty = d.lt(zero, lhs);
+        let body = d.arrow(hyp, lt_ty);
+        d.pi_fv(k_fv, nat, body)
+    };
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let proof = d.induct(
+        &stmt_at,
+        &|d| {
+            // n = 0
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let inner_motive = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
+                let zero = d.zero();
+                let hyp = d.le(x, zero);
+                let lhs = d.choose(zero, x);
+                let zero2 = d.zero();
+                let lt_ty = d.lt(zero2, lhs);
+                d.arrow(hyp, lt_ty)
+            };
+            let k_cases = d.induct(
+                &inner_motive,
+                &|d| {
+                    let zero = d.zero();
+                    let hyp_ty = d.le(zero, zero);
+                    let h_fv = d.fresh_fvar();
+                    let body = d.lemma(p.zero_lt_succ, &[zero]);
+                    d.lam_fv(h_fv, hyp_ty, body)
+                },
+                &|d, k_prime, _inner_ih| {
+                    let sk = d.succ(k_prime);
+                    let zero = d.zero();
+                    let hyp_ty = d.le(sk, zero);
+                    let h_fv = d.fresh_fvar();
+                    let h = d.kernel().fvar(h_fv);
+                    let not_le = d.lemma(p.not_succ_le_zero, &[k_prime]);
+                    let false_proof = d.apply(not_le, &[h]);
+                    let goal = {
+                        let lhs = d.choose(zero, sk);
+                        let zero2 = d.zero();
+                        d.lt(zero2, lhs)
+                    };
+                    let body = absurd(d, &p, goal, false_proof);
+                    d.lam_fv(h_fv, hyp_ty, body)
+                },
+                k,
+            );
+            d.lam_fv(k_fv, nat, k_cases)
+        },
+        &|d, m, ih| {
+            // n = succ m
+            let sm = d.succ(m);
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let inner_motive = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
+                let hyp = d.le(x, sm);
+                let lhs = d.choose(sm, x);
+                let zero = d.zero();
+                let lt_ty = d.lt(zero, lhs);
+                d.arrow(hyp, lt_ty)
+            };
+            let k_cases = d.induct(
+                &inner_motive,
+                &|d| {
+                    let zero = d.zero();
+                    let hyp_ty = d.le(zero, sm);
+                    let h_fv = d.fresh_fvar();
+                    let body = d.lemma(p.zero_lt_succ, &[zero]);
+                    d.lam_fv(h_fv, hyp_ty, body)
+                },
+                &|d, k_prime, _inner_ih| {
+                    let sk = d.succ(k_prime);
+                    let hyp_ty = d.le(sk, sm);
+                    let h_fv = d.fresh_fvar();
+                    let h = d.kernel().fvar(h_fv);
+                    let h2 = d.lemma(p.le_of_succ_le_succ, &[k_prime, m, h]);
+                    let pos_left = d.apply(ih, &[k_prime, h2]);
+                    let choose_m_kprime = d.choose(m, k_prime);
+                    let choose_m_sk = d.choose(m, sk);
+                    let base_le = d.lemma(p.le_add_right, &[choose_m_kprime, choose_m_sk]);
+                    let zero = d.zero();
+                    let sum = d.add(choose_m_kprime, choose_m_sk);
+                    let body = d.lemma(
+                        p.lt_of_lt_of_le,
+                        &[zero, choose_m_kprime, sum, pos_left, base_le],
+                    );
+                    d.lam_fv(h_fv, hyp_ty, body)
+                },
+                k,
+            );
+            d.lam_fv(k_fv, nat, k_cases)
+        },
+        n,
+    );
+
+    d.lam_fv(n_fv, nat, proof)
+}
+
+/// `choose_ne_zero : ∀ n k, Le k n → choose n k ≠ 0`, via [`choose_pos_all`]
+/// (`0 < choose n k`) transported along a hypothetical `choose n k = 0` into
+/// `0 < 0`, refuted by `lt_irrefl`.
+pub(super) fn declare_choose_ne_zero(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let pos_all = choose_pos_all(d, &p);
+    d.theorem(p.choose_ne_zero, 2, &|d, v| {
+        let (n, k) = (v[0], v[1]);
+        let hyp = d.le(k, n);
+        let cnk = d.choose(n, k);
+        let zero = d.zero();
+        let eqn = d.eq(cnk, zero);
+        let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+        let ne_ty = d.arrow(eqn, false_ty);
+        let stmt = d.arrow(hyp, ne_ty);
+
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv);
+
+        let pos = d.apply(pos_all, &[n, k, h]);
+        let motive_lt = d.eq_motive(cnk, &|d, x| {
+            let zero = d.zero();
+            d.lt(zero, x)
+        });
+        let lt_zero_zero = d.transport(cnk, motive_lt, pos, zero, heq);
+        let irrefl = d.lemma(p.lt_irrefl, &[zero]);
+        let contradiction = d.apply(irrefl, &[lt_zero_zero]);
+
+        let inner = d.lam_fv(heq_fv, eqn, contradiction);
+        let outer = d.lam_fv(h_fv, hyp, inner);
+        (stmt, outer)
+    })?;
+    Ok(())
+}
+
+/// `choose_le_succ : ∀ a c, choose a c ≤ choose (succ a) c`, by induction on
+/// `c`: `c = 0` has both sides defeq `1` (`le_refl`); `c = succ c'` expands
+/// the successor side via Pascal's rule into `choose a c' + choose a c`,
+/// which dominates `choose a c` by `le_add_right` plus `add_comm` (Pascal's
+/// natural order puts `choose a c` second in the sum).
+pub(super) fn declare_choose_le_succ(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.choose_le_succ, 2, &|d, v| {
+        let (a, c) = (v[0], v[1]);
+        let motive = |d: &mut NatDev<'_>, x: ExprId| {
+            let ca = d.choose(a, x);
+            let sa = d.succ(a);
+            let csa = d.choose(sa, x);
+            d.le(ca, csa)
+        };
+        let stmt = motive(d, c);
+        let proof = d.induct(
+            &motive,
+            &|d| {
+                // `choose a 0` is stuck on symbolic `a` (the outer recursor
+                // needs a constructor-shaped first argument), so this needs
+                // `choose_zero_right`, not defeq -- unlike `choose (succ a) 0`,
+                // which reduces to `1` regardless of `a`.
+                let zero = d.zero();
+                let ca0 = d.choose(a, zero);
+                let one = d.num(1);
+                let h_czr = d.lemma(p.choose_zero_right, &[a]);
+                let base = d.lemma(p.le_refl, &[one]);
+                let motive2 = d.eq_motive(one, &|d, x| d.le(x, one));
+                let sym = d.symm(ca0, one, h_czr);
+                d.transport(one, motive2, base, ca0, sym)
+            },
+            &|d, cprime, _ih| {
+                let ca_cprime = d.choose(a, cprime);
+                let sc = d.succ(cprime);
+                let ca_c = d.choose(a, sc);
+                let base = d.lemma(p.le_add_right, &[ca_c, ca_cprime]);
+                let comm = d.lemma(p.add_comm, &[ca_c, ca_cprime]);
+                let sum1 = d.add(ca_c, ca_cprime);
+                let sum2 = d.add(ca_cprime, ca_c);
+                let motive2 = d.eq_motive(sum1, &|d, x| d.le(ca_c, x));
+                d.transport(sum1, motive2, base, sum2, comm)
+            },
+            c,
+        );
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `choose_symm_of_eq_add : ∀ n a b, n = a + b → choose n a = choose n b` —
+/// [`declare_choose_symm`] restated at the additive witness: `a ≤ a+b`
+/// (`le_add_right`) supplies `choose_symm`'s hypothesis (transported along
+/// `n = a+b`), and `add_sub_cancel_left` rewrites its `n - a` conclusion to
+/// `b`.
+pub(super) fn declare_choose_symm_of_eq_add(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.choose_symm_of_eq_add, 3, &|d, v| {
+        let (n, a, b) = (v[0], v[1], v[2]);
+        let sum_ab = d.add(a, b);
+        let heq_ty = d.eq(n, sum_ab);
+        let choose_na = d.choose(n, a);
+        let choose_nb = d.choose(n, b);
+        let concl = d.eq(choose_na, choose_nb);
+        let stmt = d.arrow(heq_ty, concl);
+
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv);
+
+        // Le a n, from `le_add_right a b : Le a (add a b)` transported along
+        // `n = a+b`.
+        let base_le = d.lemma(p.le_add_right, &[a, b]);
+        let motive_le = d.eq_motive(sum_ab, &|d, x| d.le(a, x));
+        let sym_heq = d.symm(n, sum_ab, heq);
+        let h_le = d.transport(sum_ab, motive_le, base_le, n, sym_heq);
+
+        // choose n a = choose n (n - a), via choose_symm.
+        let symm_step = d.lemma(p.choose_symm, &[n, a, h_le]);
+        let sub_na = d.sub(n, a);
+        let choose_n_sub_na = d.choose(n, sub_na);
+
+        // n - a = b: rewrite `n` to `a+b` inside `sub(_, a)`, then
+        // `add_sub_cancel_left`.
+        let cancel = d.lemma(p.add_sub_cancel_left, &[a, b]);
+        let sub_sum_ab = d.sub(sum_ab, a);
+        let h_congr_sub = d.congr(n, sum_ab, heq, &|d, x| d.sub(x, a));
+        let sub_na_eq_b = d.trans(sub_na, sub_sum_ab, b, h_congr_sub, cancel);
+
+        // choose n (n-a) = choose n b.
+        let h_congr_choose = d.congr(sub_na, b, sub_na_eq_b, &|d, x| d.choose(n, x));
+
+        let final_ = d.trans(
+            choose_na,
+            choose_n_sub_na,
+            choose_nb,
+            symm_step,
+            h_congr_choose,
+        );
+        let body = d.lam_fv(heq_fv, heq_ty, final_);
+        (stmt, body)
+    })?;
+    Ok(())
+}
+
 /// Declare `choose` and every theorem in this module, in dependency order.
 pub(super) fn declare_choose_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     declare_choose(d, p)?;
     declare_choose_equations(d, p)?;
     declare_choose_self(d, p)?;
     declare_choose_symm(d, p)?;
+    declare_choose_one_right(d, p)?;
+    declare_choose_eq_zero_of_lt(d, p)?;
+    declare_choose_ne_zero(d, p)?;
+    declare_choose_le_succ(d, p)?;
+    declare_choose_symm_of_eq_add(d, p)?;
     Ok(())
 }
