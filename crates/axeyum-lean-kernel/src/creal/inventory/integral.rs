@@ -189,5 +189,21 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.riemann_sum_split_exact_of_uc,
             "theorem",
         ),
+        (
+            "CReal.integral_abs_le_of_bound",
+            p.integral_abs_le_of_bound,
+            "theorem",
+        ),
+        (
+            "CReal.integral_sub_linear_le",
+            p.integral_sub_linear_le,
+            "theorem",
+        ),
+        ("CReal.antiderivative", p.antiderivative, "def"),
+        (
+            "CReal.antiderivative_abs_le",
+            p.antiderivative_abs_le,
+            "theorem",
+        ),
     ]
 }

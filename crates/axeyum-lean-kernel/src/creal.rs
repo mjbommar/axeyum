@@ -4784,6 +4784,86 @@ pub struct CRealPrelude {
     /// Theorem directly for the antiderivative's own continuity. See
     /// `creal/integral.rs`'s `declare_integral_abs_le`.
     pub integral_abs_le: NameId,
+    /// `CReal.integral_abs_le_of_bound : ∀ (F : CReal → CReal) (a b M : CReal)
+    /// (hab : le a b) (u : UniformlyContinuousOn F a b),
+    /// (∀ t, le a t → le t b → le (abs (F t)) M) →
+    /// le (abs (integral F a b hab u)) (mul M (add b (neg a)))`.
+    ///
+    /// [`Self::integral_abs_le`] with its bound generalized from the
+    /// `Nat`-derived `mag_bound k` (which is `k + 1`, hence never smaller
+    /// than one) to an **arbitrary `CReal`**, and its `BoundedOn` witness
+    /// replaced by the pointwise hypothesis that witness was only used to
+    /// produce. The Fundamental Theorem needs a bound that SHRINKS
+    /// (`1/(e+1)`), which no `mag_bound k` can be, so this generalization is
+    /// mandatory rather than cosmetic. The proof is
+    /// [`Self::integral_abs_le`]'s own, term for term
+    /// ([`Self::integral_le`] + [`Self::integral_const`] against the two
+    /// constant functions `±M`); no new estimate, no Riemann sum, no
+    /// modulus. See `creal/integral.rs`'s `declare_integral_abs_le_of_bound`.
+    pub integral_abs_le_of_bound: NameId,
+    /// `CReal.integral_sub_linear_le : ∀ (F : CReal → CReal) (x y z B : CReal)
+    /// (hxy : le x y) (u : UniformlyContinuousOn F x y),
+    /// (∀ t, le x t → le t y → le (abs (add (F t) (neg (F z)))) B) →
+    /// le (abs (add (integral F x y hxy u) (neg (mul (F z) (add y (neg x))))))
+    ///    (mul B (add y (neg x)))` —
+    /// **`|∫ₓ^y F − F(z)·(y − x)| ≤ B·(y − x)`**.
+    ///
+    /// The base point `z` is a parameter INDEPENDENT of the interval's left
+    /// endpoint, because nothing in the proof uses `z = x` and the
+    /// Fundamental Theorem needs exactly the case where they differ: its
+    /// orientation-free decomposition reads this theorem over `[min x y, y]`
+    /// and `[min x y, x]` with the base point `x` in both (see
+    /// `creal/integral.rs`'s module documentation).
+    ///
+    /// The SECOND of the two facts
+    /// [`Self::has_derivative_integral_const`] names as missing for the
+    /// general Fundamental Theorem; the first is
+    /// [`Self::integral_split_arbitrary`], already landed. Four named facts
+    /// and no new estimate: [`Self::integral_add`] splits the integrand
+    /// `t ↦ F t − F x`, [`Self::integral_const`] evaluates the constant leg
+    /// EXACTLY (so no [`Self::integral_scale`] is needed — the `−F(x)` leg
+    /// is a constant FUNCTION, not a scalar multiple), `integral.rs`'s own
+    /// `neg_mul_left_local` moves the negation out, and
+    /// [`Self::integral_abs_le_of_bound`] bounds the combined integrand. The
+    /// uniform-continuity witness for `t ↦ F t − F x` is derived inside from
+    /// [`Self::uniformly_continuous_sub`] against
+    /// [`Self::uniformly_continuous_const`], so the caller supplies nothing
+    /// beyond `u`. See `creal/integral.rs`'s
+    /// `declare_integral_sub_linear_le`.
+    pub integral_sub_linear_le: NameId,
+    /// `CReal.antiderivative : ∀ (F : CReal → CReal) (a b : CReal), le a b →
+    /// UniformlyContinuousOn F a b → CReal → CReal := fun F a b hab u x =>
+    /// integral F a (max a (min x b)) _ _` — the antiderivative `G(x) :=
+    /// ∫ₐˣ F` of Spivak Ch. 14, as a genuinely **total** `CReal → CReal`.
+    ///
+    /// `HasDerivativeOn`'s carrier must be total, but [`Self::integral`]'s
+    /// second and third arguments are PROOFS that exist only for an endpoint
+    /// actually in `[a, b]`. Clamping supplies both unconditionally:
+    /// [`Self::le_max_left`] needs no hypothesis, and `max a (min x b) ≤ b`
+    /// is [`Self::max_le`] at `hab`/[`Self::min_le_right`]. **The per-`x`
+    /// uniform-continuity witness is not rebuilt per `x`**: the single `u`
+    /// on `[a, b]` is restricted to `[a, clamp x]` by
+    /// [`Self::uniformly_continuous_on_restrict`], modulus unchanged. See
+    /// `creal/integral.rs`'s `declare_antiderivative`.
+    pub antiderivative: NameId,
+    /// `CReal.antiderivative_abs_le : ∀ (F : CReal → CReal) (a b M : CReal)
+    /// (hab : le a b) (u : UniformlyContinuousOn F a b),
+    /// (∀ t, le a t → le t b → le (abs (F t)) M) → ∀ x,
+    /// le (abs (antiderivative F a b hab u x))
+    ///    (mul M (add (max a (min x b)) (neg a)))` — the antiderivative's
+    /// **growth bound**, `|G(x)| ≤ M·(x − a)` at the clamped `x`.
+    ///
+    /// [`Self::integral_abs_le_of_bound`] read at `[a, clamp x]`, with the
+    /// pointwise hypothesis transported from `[a, b]` by one
+    /// [`Self::le_trans`]. This is NOT the Lipschitz estimate `|G(y) − G(x)|
+    /// ≤ M·|y − x|`: that needs `G(y) − G(x) ~ ∫ₓ^y F`, i.e.
+    /// [`Self::integral_split_arbitrary`], whose `PosBound` on the outer
+    /// width and `le` between the split points are both unavailable for the
+    /// unordered pair in `HasDerivativeOn`'s spec — see `creal/integral.rs`'s
+    /// module documentation for the orientation-free route that removes the
+    /// ordering half. See `creal/integral.rs`'s
+    /// `declare_antiderivative_abs_le`.
+    pub antiderivative_abs_le: NameId,
     /// `CReal.integral_scale : ∀ c F a b hab uF ucF, Equiv (CReal.integral
     /// (fun t => mul c (F t)) a b hab ucF) (mul c (CReal.integral F a b hab
     /// uF))`.
@@ -6072,6 +6152,10 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         integral_endpoint_close: kernel.name_str(creal, "integralEndpointClose"),
         integral_split_arbitrary: kernel.name_str(creal, "integralSplitArbitrary"),
         integral_abs_le: kernel.name_str(creal, "integral_abs_le"),
+        integral_abs_le_of_bound: kernel.name_str(creal, "integral_abs_le_of_bound"),
+        integral_sub_linear_le: kernel.name_str(creal, "integral_sub_linear_le"),
+        antiderivative: kernel.name_str(creal, "antiderivative"),
+        antiderivative_abs_le: kernel.name_str(creal, "antiderivative_abs_le"),
         integral_scale: kernel.name_str(creal, "integral_scale"),
         riemann_sum_integral_close: kernel.name_str(creal, "riemannSum_integral_close"),
         riemann_sum_split_exact: kernel.name_str(creal, "riemannSum_split_exact"),
@@ -9307,6 +9391,53 @@ const STEPS: &[BuildStep] = &[
         ],
         provides: &[|p: CRealPrelude| p.integral_abs_le],
         run: integral::declare_integral_abs_le,
+    },
+    BuildStep {
+        label: "integral::declare_ftc_estimates",
+        requires: &[
+            |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.abs_congr,
+            |p: CRealPrelude| p.abs_le,
+            |p: CRealPrelude| p.add,
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.integral,
+            |p: CRealPrelude| p.integral_add,
+            |p: CRealPrelude| p.integral_const,
+            |p: CRealPrelude| p.integral_le,
+            |p: CRealPrelude| p.le,
+            |p: CRealPrelude| p.le_abs_self,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_max_left,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.max,
+            |p: CRealPrelude| p.max_le,
+            |p: CRealPrelude| p.min,
+            |p: CRealPrelude| p.min_le_right,
+            |p: CRealPrelude| p.mul,
+            |p: CRealPrelude| p.mul_comm,
+            |p: CRealPrelude| p.mul_congr,
+            |p: CRealPrelude| p.mul_zero,
+            |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.neg_congr,
+            |p: CRealPrelude| p.neg_le_abs,
+            |p: CRealPrelude| p.neg_le_neg,
+            |p: CRealPrelude| p.uniformly_continuous_const,
+            |p: CRealPrelude| p.uniformly_continuous_on,
+            |p: CRealPrelude| p.uniformly_continuous_on_restrict,
+            |p: CRealPrelude| p.uniformly_continuous_sub,
+        ],
+        provides: &[
+            |p: CRealPrelude| p.integral_abs_le_of_bound,
+            |p: CRealPrelude| p.integral_sub_linear_le,
+            |p: CRealPrelude| p.antiderivative,
+            |p: CRealPrelude| p.antiderivative_abs_le,
+        ],
+        run: integral::declare_ftc_estimates,
     },
     BuildStep {
         label: "derivative::declare_has_derivative_integral_const",
