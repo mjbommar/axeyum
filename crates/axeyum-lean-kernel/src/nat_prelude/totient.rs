@@ -74,7 +74,7 @@
 
 use super::NatPrelude;
 use super::helpers::and_left;
-use super::ops::{NatDev, NatOps};
+use super::ops::{NatDev, NatOps, bool_true_or_false};
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::Declaration;
@@ -566,40 +566,6 @@ pub(super) fn declare_totient(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
 // `Nat.beq_eq_false_of_ne` — the converse of `ne_of_beq_eq_false`.
 // ============================================================================
 
-/// `Or (Eq Bool b true) (Eq Bool b false)`, for an arbitrary `b : Bool` — a
-/// direct `Bool.rec` deciding `b`, fully constructive (two constructors, not
-/// excluded middle).
-fn bool_true_or_false(d: &mut NatDev<'_>, p: &NatPrelude, b: ExprId) -> ExprId {
-    let bool_ty = d.bool_ty();
-    let true_ = d.bool_true();
-    let false_ = d.bool_false();
-    let motive = {
-        let x_fv = d.fresh_fvar();
-        let x = d.kernel().fvar(x_fv);
-        let true_inner = d.bool_true();
-        let false_inner = d.bool_false();
-        let is_true = d.bool_eq(x, true_inner);
-        let is_false = d.bool_eq(x, false_inner);
-        let body = d.const_app(p.logic.or, &[is_true, is_false]);
-        d.lam_fv(x_fv, bool_ty, body)
-    };
-    let case_true = {
-        let is_true = d.bool_eq(true_, true_);
-        let is_false = d.bool_eq(true_, false_);
-        let refl_true = d.bool_refl(true_);
-        d.const_app(p.logic.or_inl, &[is_true, is_false, refl_true])
-    };
-    let case_false = {
-        let is_true = d.bool_eq(false_, true_);
-        let is_false = d.bool_eq(false_, false_);
-        let refl_false = d.bool_refl(false_);
-        d.const_app(p.logic.or_inr, &[is_true, is_false, refl_false])
-    };
-    let level_zero = d.kernel().level_zero();
-    let bool_rec = d.kernel().const_(p.logic.bool_rec, vec![level_zero]);
-    d.apply(bool_rec, &[motive, case_false, case_true, b])
-}
-
 /// `h : Eq Nat a b ⊢ Eq Bool (f a) (f b)`, for `f : Nat → Bool` — the
 /// Bool-codomain analogue of [`NatOps::congr`] (which is hardcoded to a
 /// `Nat`-codomain `f`).
@@ -643,7 +609,7 @@ where
 
 /// `Nat.beq_eq_false_of_ne : ∀ a b, Not (Eq a b) → Eq Bool (beq a b) false`.
 ///
-/// Decides `beq a b` itself via [`bool_true_or_false`]: the `true` branch is
+/// Decides `beq a b` itself via [`bool_true_or_false`](super::ops::bool_true_or_false): the `true` branch is
 /// refuted by `eq_of_beq_eq_true` against the hypothesis (`False.rec` into the
 /// goal); the `false` branch is the goal directly.
 pub(super) fn declare_beq_eq_false_of_ne(

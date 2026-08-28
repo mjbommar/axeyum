@@ -47,7 +47,7 @@
 
 use super::NatPrelude;
 use super::helpers::{and_left, and_right, iff_forward};
-use super::ops::{NatDev, NatOps};
+use super::ops::{NatDev, NatOps, two_mul_eq_add_self};
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::Declaration;
@@ -87,29 +87,6 @@ fn n_lt_mul_two(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId, pos: ExprId) -> E
     let rev_eq = d.symm(mul_succ_one_n, add_n_n, mul_two_n_eq_add_n_n);
     let motive2 = d.eq_motive(add_n_n, &|d, x| d.lt(n, x));
     d.transport(add_n_n, motive2, n_lt_add_n_n, mul_succ_one_n, rev_eq)
-}
-
-/// `Eq (mul two half) (add half half)`, via `succ_mul` (`two = succ one`)
-/// then `one_mul`.
-fn two_mul_eq_add_self(d: &mut NatDev<'_>, p: &NatPrelude, half: ExprId) -> ExprId {
-    let p = *p;
-    let one = d.num(1);
-    let succ_one = d.succ(one);
-    let mul_succ_one_half = d.mul(succ_one, half);
-    let mul_one_half = d.mul(one, half);
-    let add_mul_one_half_half = d.add(mul_one_half, half);
-    let succ_mul_eq = d.lemma(p.succ_mul, &[one, half]);
-    let one_mul_eq = d.lemma(p.one_mul, &[half]);
-    let congr_step = d.congr(mul_one_half, half, one_mul_eq, &|d, x| d.add(x, half));
-    let half_plus_half = d.add(half, half);
-    let (_, result) = d.chain(
-        mul_succ_one_half,
-        &[
-            (add_mul_one_half_half, succ_mul_eq),
-            (half_plus_half, congr_step),
-        ],
-    );
-    result
 }
 
 /// `Eq (add x one) (succ x)`, via `add_succ` then `add_zero`.

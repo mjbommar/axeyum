@@ -8307,9 +8307,8 @@ fn parity_predicates_apply_at_concrete_witnesses_and_are_axiom_free() {
         let intro = f.k.const_(p.logic.exists_intro, vec![one]);
         f.apply(intro, &[nat, pred, two, proof])
     };
-    f.k.infer(even4).unwrap_or_else(|e| {
-        panic!("Even 4 (witness 2) should type-check: {}", f.explain(&e))
-    });
+    f.k.infer(even4)
+        .unwrap_or_else(|e| panic!("Even 4 (witness 2) should type-check: {}", f.explain(&e)));
 
     // Odd 5, witnessed by 2 (5 = succ(2+2)).
     let odd5 = {
@@ -8323,9 +8322,9 @@ fn parity_predicates_apply_at_concrete_witnesses_and_are_axiom_free() {
         let intro = f.k.const_(p.logic.exists_intro, vec![one]);
         f.apply(intro, &[nat, pred, two, proof])
     };
-    let odd5_ty = f.k.infer(odd5).unwrap_or_else(|e| {
-        panic!("Odd 5 (witness 2) should type-check: {}", f.explain(&e))
-    });
+    let odd5_ty =
+        f.k.infer(odd5)
+            .unwrap_or_else(|e| panic!("Odd 5 (witness 2) should type-check: {}", f.explain(&e)));
 
     // even_not_odd(4) applied to even4 : Not (Odd 4).
     let even_not_odd_at_4 = f.lemma(p.even_not_odd, &[four]);
@@ -8464,8 +8463,7 @@ fn coprime_two_left_applies_at_a_concrete_odd_witness_and_is_axiom_free() {
     ] {
         assert!(
             f.k.axiom_footprint(name).is_empty(),
-            "{:?} must rest on zero axioms",
-            name
+            "{name:?} must rest on zero axioms"
         );
     }
 }

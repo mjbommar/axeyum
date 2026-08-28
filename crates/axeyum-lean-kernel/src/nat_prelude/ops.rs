@@ -973,3 +973,154 @@ impl NatOps for NatDev<'_> {
         &mut self.state
     }
 }
+
+// ============================================================================
+// Small proof-term combinators shared across sibling `nat_prelude` modules.
+//
+// Each of these existed as three (or two) byte-for-byte identical private
+// `fn`s in different files before 2026-08-28 (docs/plan/status/197): a
+// private `fn` cannot be found by any cross-file search, so it gets rebuilt
+// instead of reused. Promoted here — the file `NatState`/`NatOps`/`NatDev`
+// already live in — rather than into `helpers.rs`, so callers keep their
+// existing `use super::ops::{NatDev, NatOps}` import and just add the name.
+// ============================================================================
+
+/// `∀ c, dvd c 2 → Or (Eq c 1) (Eq c 2)`, instantiated at the given `c` and a
+/// proof `dvd_c2 : dvd c 2` — the only divisors of the literal `2` are `1`
+/// and `2`. `1 ≤ c ≤ 2` from `le_of_dvd`/`one_le_of_dvd_pos`, `c = succ (pred
+/// c)` from `succ_pred_of_pos`, then `two_le_succ_or_eq_one` on `pred c`
+/// resolves the two cases.
+///
+/// Was three independent copies of this exact term: `irrational.rs`'s
+/// `two_divisor_dichotomy` (used by `Nat.even_of_even_sq`), `perfect.rs`'s
+/// `divisors_of_two` (used twice by the `sumDivisors (2^k)` route), and
+/// inlined a third time inside `primes.rs`'s `Nat.prime_two` construction.
+pub(super) fn two_divisor_dichotomy(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    c: ExprId,
+    dvd_c2: ExprId,
+) -> ExprId {
+    let p = *p;
+    let two = d.num(2);
+    let one = d.num(1);
+    let one_le_two = d.lemma(p.le_succ, &[one]);
+    let one_le_c = d.lemma(p.one_le_of_dvd_pos, &[c, two, one_le_two, dvd_c2]);
+    let c_le_two = d.lemma(p.le_of_dvd, &[c, two, one_le_two, dvd_c2]);
+
+    let succ_pred = d.lemma(p.succ_pred_of_pos, &[c, one_le_c]);
+    let e = d.pred(c);
+    let se = d.succ(e);
+
+    let se_le_two = {
+        let motive = d.eq_motive(c, &|d, x| d.le(x, two));
+        d.transport(c, motive, c_le_two, se, succ_pred)
+    };
+
+    let dichotomy = d.lemma(p.two_le_succ_or_eq_one, &[e]);
+    let left_ty = d.le(two, se);
+    let right_ty = d.eq(se, one);
+
+    let goal_one = d.eq(c, one);
+    let goal_two = d.eq(c, two);
+    let logic = d.prelude().logic;
+    let goal = d.const_app(logic.or, &[goal_one, goal_two]);
+
+    let left_branch = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let se_eq_two = d.lemma(p.le_antisymm, &[se, two, se_le_two, h]);
+        let (_e2, c_eq_two) = d.chain(c, &[(se, succ_pred), (two, se_eq_two)]);
+        let proof = d.const_app(logic.or_inr, &[goal_one, goal_two, c_eq_two]);
+        d.lam_fv(h_fv, left_ty, proof)
+    };
+    let right_branch = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let (_e2, c_eq_one) = d.chain(c, &[(se, succ_pred), (one, h)]);
+        let proof = d.const_app(logic.or_inl, &[goal_one, goal_two, c_eq_one]);
+        d.lam_fv(h_fv, right_ty, proof)
+    };
+
+    let anon = d.anon_name();
+    let or_ty = d.const_app(logic.or, &[left_ty, right_ty]);
+    let motive = d.kernel().lam(anon, or_ty, goal, BinderInfo::Default);
+    let or_rec = d.kernel().const_(logic.or_rec, vec![]);
+    d.apply(
+        or_rec,
+        &[
+            left_ty,
+            right_ty,
+            motive,
+            left_branch,
+            right_branch,
+            dichotomy,
+        ],
+    )
+}
+
+/// `Eq (mul two k) (add k k)` — doubling by multiplication equals doubling by
+/// self-addition, via `succ_mul`/`one_mul` and one congruence step.
+///
+/// Was two independent copies of this exact term: `powsq.rs`'s
+/// `two_mul_eq_add_self` (bridging `Nat.powSq`'s squaring step) and
+/// `primes.rs`'s `two_mul_eq_add_local` (bridging `dvd 2 n` and `Even n`).
+pub(super) fn two_mul_eq_add_self(d: &mut NatDev<'_>, p: &NatPrelude, k: ExprId) -> ExprId {
+    let p = *p;
+    let one = d.num(1);
+    let succ_one = d.succ(one);
+    let mul_succ_one_k = d.mul(succ_one, k);
+    let mul_one_k = d.mul(one, k);
+    let add_mul_one_k_k = d.add(mul_one_k, k);
+    let succ_mul_eq = d.lemma(p.succ_mul, &[one, k]);
+    let one_mul_eq = d.lemma(p.one_mul, &[k]);
+    let congr_step = d.congr(mul_one_k, k, one_mul_eq, &|d, x| d.add(x, k));
+    let k_plus_k = d.add(k, k);
+    let (_, result) = d.chain(
+        mul_succ_one_k,
+        &[(add_mul_one_k_k, succ_mul_eq), (k_plus_k, congr_step)],
+    );
+    result
+}
+
+/// `Or (bool_eq b true) (bool_eq b false)` at the given `b` — a direct
+/// `Bool.rec` deciding `b`, fully constructive (two constructors, not
+/// excluded middle).
+///
+/// Was THREE independent copies of this exact term: `totient.rs`'s
+/// `bool_true_or_false` (used by `Nat.totient`'s counting route),
+/// `primes.rs`'s copy of the same name (used by
+/// `Nat.coprime_or_dvd_of_prime`), and `perfect.rs`'s copy (used at five
+/// call sites across the `sumDivisors`/`Perfect` route, and itself
+/// doc-commented as "local copy of `totient.rs`'s `bool_true_or_false`" —
+/// documented duplication is still duplication).
+pub(super) fn bool_true_or_false(d: &mut NatDev<'_>, p: &NatPrelude, b: ExprId) -> ExprId {
+    let bool_ty = d.bool_ty();
+    let true_ = d.bool_true();
+    let false_ = d.bool_false();
+    let motive = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let true_inner = d.bool_true();
+        let false_inner = d.bool_false();
+        let is_true = d.bool_eq(x, true_inner);
+        let is_false = d.bool_eq(x, false_inner);
+        let body = d.const_app(p.logic.or, &[is_true, is_false]);
+        d.lam_fv(x_fv, bool_ty, body)
+    };
+    let case_true = {
+        let is_true = d.bool_eq(true_, true_);
+        let is_false = d.bool_eq(true_, false_);
+        let refl_true = d.bool_refl(true_);
+        d.const_app(p.logic.or_inl, &[is_true, is_false, refl_true])
+    };
+    let case_false = {
+        let is_true = d.bool_eq(false_, true_);
+        let is_false = d.bool_eq(false_, false_);
+        let refl_false = d.bool_refl(false_);
+        d.const_app(p.logic.or_inr, &[is_true, is_false, refl_false])
+    };
+    let level_zero = d.kernel().level_zero();
+    let bool_rec = d.kernel().const_(p.logic.bool_rec, vec![level_zero]);
+    d.apply(bool_rec, &[motive, case_false, case_true, b])
+}
