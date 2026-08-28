@@ -207,6 +207,7 @@ now. Nothing was deleted.
 | 2026-08-28 | nat-ldiff | `Nat.ldiff`/`Nat.ldiffAux` (fuel recursion, `land`-shaped fuel-exhaustion base case, hybrid land/lor succ-row guard, `beq`+`bool_select_nat` per-bit step) + 4 boundary theorems incl. the asymmetry pair in `nat_prelude/ldiff.rs`; wired into `nat_prelude.rs`; `nat_prelude_tests.rs` coverage + dedicated evaluation test + pinned render count `492->498`; 4 new `F:nat-ldiff-*` facts |
 | 2026-08-28 | nat-bitwise-general | landed `Nat.bitwise`, the general form `land`/`lor`/`ldiff` specialize; 5 new facts |
 | 2026-08-28 | fib-2 | `Nat.le_fib_self` (kernel-checked, axiom-free), closing `F:ml430-nat-le-fib-self-0cbccb4d`; `Nat.le_fib_add_one`/`Int.fib_add`/`Int.fib_of_odd` re-diagnosed and left open with sharper blockers |
+| 2026-08-28 | int-parity | `Int.Even`/`Int.Odd` via `natAbs`, two bridge theorems, `Int.fib_of_odd`, all axiom-free; `F:ml430-int-fib-of-odd-66560495` proved |
 | 2026-08-27 | (uncommitted at status-file write time) | `CReal.sumRange_cauchy_of_abs_cauchy` / `CReal.sumRange_converges_of_abs_converges` (absolute convergence implies convergence) plus a soundness-negative control; curriculum rows 18 and 22–23 corrected. |
 | 2026-08-27 | (uncommitted at status-file write time) | Ten new `artifacts/facts/F-creal-*.json` entries for the Ch.13/14 Riemann integral construction and algebra (`riemannSum_cauchy`, `integral`, `integral_converges`, `integral_const`, `integral_add`, `integral_le`, `integral_scale`, `integral_witness_independent`, `riemannSum_integral_close`, `sharedIndexToCanonical`); `python3 scripts/validate-facts.py` green (708 facts, 0 errors). |
 | 2026-08-27 | (uncommitted at status-file write time) | Added `--require-declaration <name> [--require-kind <kind>]` to `crates/axeyum-lean-kernel/examples/kernel_declaration_projection.rs`: a direct, fail-on-absence presence checker for `Declaration::Definition`s (and any other kind), mutation-tested against `CReal.integral`. Upgraded `F:creal-integral`'s `kernel-CReal.integral` evidence to use it. Registered 14 new `artifacts/facts/F-creal-*.json` entries for Spivak Ch.18 (`e`) and Ch.22-23 (series convergence tests): `creal-e`, `creal-e-converges`, `creal-two-le-e`, `creal-e-le-three`, `creal-e-le-four`, `creal-expterm-le-geom`, `creal-expdominantcauchy`, `creal-cauchyofpointwiseequiv`, `creal-geomcauchy`, `creal-sumrange-comparisontest`, `creal-sumrange-cauchy-of-dominated`, `creal-sumrange-converges-of-dominated`, `creal-sumrange-cauchy-of-abs-cauchy`, `creal-sumrange-converges-of-abs-converges`. `python3 scripts/validate-facts.py` green (722 facts, 0 errors). |
@@ -10920,6 +10921,42 @@ Verified: `cargo test -p axeyum-lean-kernel --lib nat_prelude::` — 110
 passed, 0 failed. `cargo fmt --edition 2024` on touched files.
 `cargo clippy -p axeyum-lean-kernel --all-targets --all-features -- -D
 warnings` — clean. `python3 scripts/validate-facts.py` — 0 errors.
+
+**Your lane's block (DONE, int-parity, 2026-08-28).** Landed `Int.Even`/`Int.Odd`
+(`int_prelude/parity.rs`, new module), defined as `Nat.Even`/`Nat.Odd (natAbs n)`
+rather than a fresh `Int`-level existential — magnitude alone decides parity,
+and this composes for FREE with `natAbs`'s pure reduction on both `Int.rec`
+constructors (confirms the earlier lane's prediction exactly). Two bridge
+theorems (`odd_iff_nat_abs_odd`, `even_iff_nat_abs_even`, both near-tautological
+`fun h => h` proofs) and `Int.fib_of_odd` (`int_prelude/fibonacci.rs`) all landed
+and are kernel-checked with empty axiom footprints. `Int.fib_of_odd`'s ofNat
+branch is free (unused hypothesis, both sides reduce to the same term); the
+negSucc branch needed one new induction, `pow_neg_one_add_self` (same technique
+as the file's existing `pow_neg_one_two_mul`, over the `k+k` witness shape
+`Nat.Even` uses instead of `mul 2 k`, since `add(succ k)(succ k)` does not
+reduce purely the way `mul two (succ k)` does — bridges via an explicit
+`succ_double_eq_nat` equation lifted to `Int`). No new `Int`-level parity lemma
+was needed for the proof itself, exactly as predicted.
+
+Concrete instantiation tests with genuine positive AND negative witnesses at
+BOTH signs (`Int.Odd 3`/`-3` inhabited, `Not (Int.Odd 4)`/`-4` proved) —
+`int_odd_applies_at_concrete_values_of_both_signs`,
+`fib_of_odd_applies_at_a_concrete_odd_index_of_each_sign`
+(`int_prelude_tests.rs`). `int_prelude::` test count: 38 -> 40 (all pass).
+`derived_laws` 147 -> 150, `definition_names` 25 -> 27 (pinned arrays,
+recounted not incremented). `cargo fmt --all --check` and
+`cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` both clean.
+`python3 scripts/validate-facts.py`: 0 errors, 1913 facts.
+
+New facts: `F:int-even`, `F:int-odd` (the two definitions), `F:int-odd-iff-nat-abs-odd`,
+`F:int-even-iff-nat-abs-even` (the bridge theorems). `F:ml430-int-fib-of-odd-66560495`
+flipped `open` -> `proved` with a real kernel-checked proof (not a mirrored
+transcription of Mathlib's tactic proof, which was never consulted).
+
+Next lane: nothing else in this task's scope is open. `Int.Even`'s own bridge
+theorem (`even_iff_nat_abs_even`) has no consumer yet — it was built for a
+symmetric, discoverable API pair per the brief, not because anything currently
+needs it.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 

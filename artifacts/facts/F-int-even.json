@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "id": "F:int-even",
+  "title": "Int.Even n := Nat.Even (natAbs n) -- magnitude alone decides parity",
+  "statement": "Int.Even n : Prop is defined as Nat.Even (Int.natAbs n), not as a fresh Int-level existential (Mathlib's Even n := exists r, n = r + r generalized to Int). Negation does not change parity, so magnitude alone decides it, and this form is free at both Int.rec constructors because natAbs itself reduces purely on each: Even (ofNat a) reduces to Nat.Even a, and Even (negSucc m) reduces to Nat.Even (succ m). See F:int-odd for the Odd counterpart, which this task actually needed (F:ml430-int-fib-of-odd-66560495's hypothesis); Even was built alongside it for a symmetric, discoverable pair rather than left half-finished.",
+  "formal": {
+    "language": "lean4",
+    "statement": "def Int.Even : ((x0 : Int) -> Prop)",
+    "fragment": "Int",
+    "free_symbols": [
+      "x0"
+    ],
+    "kernel_theorem": "Int.Even"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.Even",
+      "kind": "kernel-term",
+      "supports": "Int.Even is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "kernel_declaration_projection --require-declaration (DIRECT, fail-on-absence)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration Int.Even --require-kind definition 2>/dev/null | grep -cE '^found[[:space:]]integer[[:space:]]definition[[:space:]]Int\\.Even[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "Int.Even is a Declaration::Definition, so int_theorem_inventory/nat_theorem_inventory/prelude_theorem_inventory (all filtered to Declaration::Theorem) would report zero rows for it. Uses the DIRECT 'kernel_declaration_projection --require-declaration' checker instead, anchored on the native 'integer' prelude row. Verified on this tree: exactly one 'found\\tinteger\\tdefinition\\tInt.Even\\t...' line. --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-Int.Even",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the integer prelude's trusted surface is empty, which bounds Int.Even",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free integer",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: integer trusted surface = 0. That bounds every declaration in the integer environment, including Int.Even. --release is MANDATORY here."
+    },
+    {
+      "id": "footprint-Int.Even-iff-nat-abs-even",
+      "kind": "kernel-term",
+      "supports": "F:int-even-iff-nat-abs-even's own bridge theorem, which type-checks only if Int.Even reduces to Nat.Even (natAbs n) exactly as this definition states, is itself checked (see that fact) -- a second, independent confirmation of the definition's shape beyond the raw declared type.",
+      "check_status": "checked",
+      "checkers": [
+        "cargo test int_prelude::int_prelude_tests::derived_laws_have_no_axiom_footprint"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib int_prelude::int_prelude_tests::derived_laws_have_no_axiom_footprint 2>&1 | grep -c '^test result: ok\\. 1 passed'",
+      "checker_seconds": 15,
+      "notes": "even_iff_nat_abs_even's proof body is `fun h => h` in both directions of the Iff, which type-checks ONLY because Int.Even n and Nat.Even (natAbs n) are definitionally equal -- an accidental Even that disagreed with natAbs's own reduction would make this Iff proof fail to type-check, so this is a real (if indirect) evaluation of Even's shape, not merely of the bridge theorem."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_int_prelude (crates/axeyum-lean-kernel/src/int_prelude/parity.rs, declare_even_odd_defs)",
+    "source": "canonical type read via kernel_declaration_projection's own UNFILTERED emit mode (cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection, no --require-declaration flag). That output was grepped for the exact row under this declaration's native prelude label and copied verbatim into formal.statement. No new probe binary was written; crates/ source was touched only to add the declaration itself."
+  },
+  "notes": "Definitional task, not a mirrored Mathlib proposition, filed as F:int-even rather than an ml430 mirror for the same reason as F:int-odd. Unlike Odd, no open ml430 fact currently needs Even directly; it was built for a symmetric, discoverable API pair (the brief this task came from asked for exactly this: 'Landing Int.Even/Int.Odd plus one bridge lemma to the Nat versions is a complete success')."
+}
