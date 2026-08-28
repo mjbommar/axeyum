@@ -1761,5 +1761,270 @@ pub(super) fn declare_divisibility(d: &mut NatDev<'_>, p: &NatPrelude) -> Result
         (stmt, proof)
     })?;
 
+    // factorial_dvd_factorial : ∀ m n, Le m n → dvd (factorial m) (factorial n)
+    //
+    // Induction on `n`, with the order hypothesis inside the motive (same
+    // shape as `dvd_factorial_of_le` above). The `at_succ` branch is IDENTICAL
+    // to that theorem's — it never touched the divisor's positivity, only the
+    // order hypothesis — so it is repeated verbatim with `divisor` renamed to
+    // `m`. The `at_zero` branch differs: there is no fixed `1 ≤ m` here to
+    // contradict `m ≤ 0` outright, since `m = 0` is a real case (`0! ∣ 0!` by
+    // `dvd_refl`). So it case-splits on `m` itself via a NESTED induction:
+    // `m = 0` closes by `dvd_refl`, and `m = succ j` makes `Le (succ j) 0`
+    // refutable by `not_succ_le_zero`, exactly as the divisor-positivity
+    // branch above does for a different hypothesis.
+    d.theorem(p.factorial_dvd_factorial, 2, &|d, values| {
+        let (m, n) = (values[0], values[1]);
+        let stmt = {
+            let hyp = d.le(m, n);
+            let mfact = d.factorial(m);
+            let nfact = d.factorial(n);
+            let concl = d.dvd(mfact, nfact);
+            d.arrow(hyp, concl)
+        };
+
+        let claim = |d: &mut NatDev<'_>, x: ExprId| {
+            let hypothesis = d.le(m, x);
+            let mfact = d.factorial(m);
+            let factorial = d.factorial(x);
+            let target = d.dvd(mfact, factorial);
+            d.arrow(hypothesis, target)
+        };
+
+        let at_zero = |d: &mut NatDev<'_>| {
+            // Inner induction on `m`, proving `Le x zero -> dvd(factorial x, factorial zero)`.
+            let inner_claim = |d: &mut NatDev<'_>, x: ExprId| {
+                let zero = d.zero();
+                let hypothesis = d.le(x, zero);
+                let xfact = d.factorial(x);
+                let zfact = d.factorial(zero);
+                let target = d.dvd(xfact, zfact);
+                d.arrow(hypothesis, target)
+            };
+            let inner_at_zero = |d: &mut NatDev<'_>| {
+                let h_fv = d.fresh_fvar();
+                let zero = d.zero();
+                let hypothesis_ty = d.le(zero, zero);
+                let zfact = d.factorial(zero);
+                let refl = d.lemma(p.dvd_refl, &[zfact]);
+                d.lam_fv(h_fv, hypothesis_ty, refl)
+            };
+            let inner_at_succ = |d: &mut NatDev<'_>, j: ExprId, _ih: ExprId| {
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+                let zero = d.zero();
+                let successor = d.succ(j);
+                let hypothesis_ty = d.le(successor, zero);
+                let contradiction = d.lemma(p.not_succ_le_zero, &[j, h]);
+                let goal = {
+                    let sfact = d.factorial(successor);
+                    let zfact = d.factorial(zero);
+                    d.dvd(sfact, zfact)
+                };
+                let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+                let level = d.kernel().level_zero();
+                let rec = d.kernel().const_(p.logic.false_rec, vec![level]);
+                let anon = d.anon_name();
+                let motive = d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
+                let body = d.apply(rec, &[motive, contradiction]);
+                d.lam_fv(h_fv, hypothesis_ty, body)
+            };
+            d.induct(&inner_claim, &inner_at_zero, &inner_at_succ, m)
+        };
+
+        let at_succ = |d: &mut NatDev<'_>, j: ExprId, ih: ExprId| {
+            let successor = d.succ(j);
+            let hypothesis_ty = d.le(m, successor);
+            let target = {
+                let mfact = d.factorial(m);
+                let factorial = d.factorial(successor);
+                d.dvd(mfact, factorial)
+            };
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            let strict_ty = d.lt(m, successor);
+            let equal_ty = d.eq(m, successor);
+            let split_ty = d.const_app(p.logic.or, &[strict_ty, equal_ty]);
+            let split = d.lemma(p.lt_or_eq_of_le, &[m, successor, h]);
+            let anon = d.anon_name();
+            let split_motive = d.kernel().lam(anon, split_ty, target, BinderInfo::Default);
+
+            // `m < succ j` unfolds to `succ m ≤ succ j`, so the bound drops to `j`.
+            // NOTE: unlike `dvd_factorial_of_le`, the thing dividing is
+            // `factorial m`, not `m` itself — `dvd_mul_right_of_dvd`'s first
+            // argument must be `factorial m`.
+            let strict_minor = {
+                let strict_fv = d.fresh_fvar();
+                let strict = d.kernel().fvar(strict_fv);
+                let smaller = d.lemma(p.le_of_succ_le_succ, &[m, j, strict]);
+                let inherited = d.apply(ih, &[smaller]);
+                let mfact = d.factorial(m);
+                let prior = d.factorial(j);
+                let body = d.lemma(
+                    p.dvd_mul_right_of_dvd,
+                    &[mfact, prior, successor, inherited],
+                );
+                d.lam_fv(strict_fv, strict_ty, body)
+            };
+
+            // `m = succ j`: `factorial m = factorial (succ j)` by congruence on
+            // `equal`, and `dvd_refl (factorial (succ j))` transported along its
+            // reverse gives `dvd (factorial m) (factorial (succ j))`.
+            let equal_minor = {
+                let equal_fv = d.fresh_fvar();
+                let equal = d.kernel().fvar(equal_fv);
+                let mfact = d.factorial(m);
+                let sfact = d.factorial(successor);
+                let fact_eq = d.congr(m, successor, equal, &|d, x| d.factorial(x));
+                let fact_reverse = d.symm(mfact, sfact, fact_eq);
+                let refl_s = d.lemma(p.dvd_refl, &[sfact]);
+                let motive = d.eq_motive(sfact, &|d, x| {
+                    let sfact = d.factorial(successor);
+                    d.dvd(x, sfact)
+                });
+                let body = d.transport(sfact, motive, refl_s, mfact, fact_reverse);
+                d.lam_fv(equal_fv, equal_ty, body)
+            };
+
+            let or_rec = d.kernel().const_(p.logic.or_rec, vec![]);
+            let body = d.apply(
+                or_rec,
+                &[
+                    strict_ty,
+                    equal_ty,
+                    split_motive,
+                    strict_minor,
+                    equal_minor,
+                    split,
+                ],
+            );
+            d.lam_fv(h_fv, hypothesis_ty, body)
+        };
+
+        let selected = d.induct(&claim, &at_zero, &at_succ, n);
+        (stmt, selected)
+    })?;
+
+    Ok(())
+}
+
+/// `Nat.factorial_le`, `Nat.factorial_lt_of_lt`, and `Nat.factorial_ne_zero`.
+///
+/// Split out from [`declare_divisibility`] and called LATER in the build
+/// order (after `declare_euclid`, mirroring `declare_dvd_antisymm`'s
+/// precedent in `lcm.rs`): all three need `one_le_factorial`, which
+/// `declare_euclid` (`primes.rs`) declares, and `declare_euclid` itself runs
+/// after `declare_divisibility`.
+pub(super) fn declare_factorial_order(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    // factorial_le : ∀ m n, Le m n → Le (factorial m) (factorial n), via
+    // `factorial_dvd_factorial` and `le_of_dvd` against the positivity of
+    // `factorial n` (`one_le_factorial`).
+    d.theorem(p.factorial_le, 2, &|d, values| {
+        let (m, n) = (values[0], values[1]);
+        let mfact = d.factorial(m);
+        let nfact = d.factorial(n);
+        let stmt = {
+            let hyp = d.le(m, n);
+            let concl = d.le(mfact, nfact);
+            d.arrow(hyp, concl)
+        };
+
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let hyp_ty = d.le(m, n);
+
+        let divides = d.lemma(p.factorial_dvd_factorial, &[m, n, h]);
+        let positive = d.lemma(p.one_le_factorial, &[n]);
+        let le = d.lemma(p.le_of_dvd, &[mfact, nfact, positive, divides]);
+
+        (stmt, d.lam_fv(h_fv, hyp_ty, le))
+    })?;
+
+    // factorial_lt_of_lt : ∀ m n, Lt zero n → Lt n m → Lt (factorial n) (factorial m)
+    //
+    // `n! < (succ n)! ≤ m!`. The strict step expands `(succ n)!` (defeq
+    // `factorial n * succ n`, defeq `add (factorial n * n) (factorial n)` by
+    // `mul`'s recursion on its right argument) and shows `factorial n * n ≥ 1`
+    // (`one_le_mul` against `0 < n`), so adding `factorial n` on the left
+    // strictly grows past `factorial n` (`add_lt_add_left`, then `add_comm` to
+    // land on the `mul`-recursion shape). The non-strict step is `factorial_le`
+    // at `succ n ≤ m`; `lt_of_lt_of_le` chains them.
+    d.theorem(p.factorial_lt_of_lt, 2, &|d, values| {
+        let (m, n) = (values[0], values[1]);
+        let zero = d.zero();
+        let nfact = d.factorial(n);
+        let mfact = d.factorial(m);
+        let hyp1_ty = d.lt(zero, n);
+        let hyp2_ty = d.lt(n, m);
+        let stmt = {
+            let concl = d.lt(nfact, mfact);
+            let inner = d.arrow(hyp2_ty, concl);
+            d.arrow(hyp1_ty, inner)
+        };
+
+        let h1_fv = d.fresh_fvar();
+        let h1 = d.kernel().fvar(h1_fv);
+        let h2_fv = d.fresh_fvar();
+        let h2 = d.kernel().fvar(h2_fv);
+
+        let successor = d.succ(n);
+        // (succ n)! ≤ m!
+        let step_le = d.lemma(p.factorial_le, &[successor, m, h2]);
+
+        // n! < (succ n)!
+        let prod = d.mul(nfact, n);
+        let positive_fact = d.lemma(p.one_le_factorial, &[n]);
+        let mul_pos = d.lemma(p.one_le_mul, &[nfact, n, positive_fact, h1]);
+        let strict_step = d.lemma(p.add_lt_add_left, &[nfact, zero, prod, mul_pos]);
+        let add_n_prod = d.add(nfact, prod);
+        let add_prod_n = d.add(prod, nfact);
+        let commute = d.lemma(p.add_comm, &[nfact, prod]);
+        let motive = d.eq_motive(add_n_prod, &|d, x| {
+            let nfact = d.factorial(n);
+            d.lt(nfact, x)
+        });
+        let step_lt = d.transport(add_n_prod, motive, strict_step, add_prod_n, commute);
+
+        let succ_n_fact = d.factorial(successor);
+        let chained = d.lemma(
+            p.lt_of_lt_of_le,
+            &[nfact, succ_n_fact, mfact, step_lt, step_le],
+        );
+
+        let inner = d.lam_fv(h2_fv, hyp2_ty, chained);
+        let proof = d.lam_fv(h1_fv, hyp1_ty, inner);
+        (stmt, proof)
+    })?;
+
+    // factorial_ne_zero : ∀ n, Not (Eq (factorial n) zero), via
+    // `one_le_factorial` transported along a hypothetical `factorial n = zero`
+    // into `Le 1 zero`, refuted by `not_succ_le_zero`.
+    d.theorem(p.factorial_ne_zero, 1, &|d, values| {
+        let n = values[0];
+        let value = d.factorial(n);
+        let zero = d.zero();
+        let eqn = d.eq(value, zero);
+        let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+        let stmt = d.arrow(eqn, false_ty);
+
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv);
+
+        let positive = d.lemma(p.one_le_factorial, &[n]);
+        let motive = d.eq_motive(value, &|d, x| {
+            let unit = d.num(1);
+            d.le(unit, x)
+        });
+        let le_unit_zero = d.transport(value, motive, positive, zero, heq);
+        let contradiction = d.lemma(p.not_succ_le_zero, &[zero, le_unit_zero]);
+
+        let proof = d.lam_fv(heq_fv, eqn, contradiction);
+        (stmt, proof)
+    })?;
+
     Ok(())
 }
