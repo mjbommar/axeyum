@@ -100,30 +100,36 @@ fn main() {
         ("mod", 13125, 25),
     ];
 
-    for &(op, a, b) in cases {
+    for &(op, lhs_value, rhs_value) in cases {
         for shape in ["unary", "literal"] {
-            let mut k = Kernel::new();
-            let p = build_nat_prelude(&mut k).expect("nat prelude must build");
-            let (x, y) = if shape == "unary" {
-                (unary(&mut k, &p, a), unary(&mut k, &p, b))
+            let mut kernel = Kernel::new();
+            let prelude = build_nat_prelude(&mut kernel).expect("nat prelude must build");
+            let (lhs, rhs) = if shape == "unary" {
+                (
+                    unary(&mut kernel, &prelude, lhs_value),
+                    unary(&mut kernel, &prelude, rhs_value),
+                )
             } else {
-                (literal(&mut k, a), literal(&mut k, b))
+                (
+                    literal(&mut kernel, lhs_value),
+                    literal(&mut kernel, rhs_value),
+                )
             };
-            let f = match op {
-                "mul" => p.mul,
-                "gcd" => p.gcd,
-                "div" => p.div,
-                _ => p.mod_,
+            let operation = match op {
+                "mul" => prelude.mul,
+                "gcd" => prelude.gcd,
+                "div" => prelude.div,
+                _ => prelude.mod_,
             };
-            let head = k.const_(f, vec![]);
-            let applied0 = k.app(head, x);
-            let applied = k.app(applied0, y);
+            let head = kernel.const_(operation, vec![]);
+            let applied0 = kernel.app(head, lhs);
+            let applied = kernel.app(applied0, rhs);
 
             let start = Instant::now();
-            let reduced = k.whnf(applied);
+            let reduced = kernel.whnf(applied);
             let micros = start.elapsed().as_micros();
-            let result = classify(&mut k, &p, reduced);
-            println!("{shape}\t{op}\t{a}\t{b}\t{micros}\t{result}");
+            let result = classify(&mut kernel, &prelude, reduced);
+            println!("{shape}\t{op}\t{lhs_value}\t{rhs_value}\t{micros}\t{result}");
         }
     }
 }
