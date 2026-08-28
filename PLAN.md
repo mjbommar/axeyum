@@ -162,6 +162,7 @@ now. Nothing was deleted.
 | 2026-08-27 | `b47deeb93` | `run-python-controls.py` + `control-optout.tsv`: 169 suites / 1193 tests now run; 9 pytest-dialect suites unwrapped from collecting zero tests. |
 | 2026-08-27 | `a94a19480` | Open the lane; record the starting measurement. |
 | 2026-08-27 | (pending commit) | Triage the 12 red drift detectors from `docs/plan/status/154-inert-controls.md`: 1 test-mock bug fixed (`test_check_autogenesis_nat_fib_gcd_surface_plan`, mutation-verified), 11 root-caused and left excluded with precise reasons in `control-optout.tsv` (stale pins after legitimate refactors/doc changes, one over-broad Cargo.lock pin, one `git safe.directory` false negative, one genuine "target fact got proved" happy drift, one genuine shared-artifact drift). `OPTOUT_CEILING` 19 -> 18. Also repaired `scripts/check-shell-antipatterns.sh` (red on `main`): fixed the in-scope `grep -q` in `scripts/tests/test-lane-commit.sh`, baselined the out-of-scope one in `render/check.sh`. |
+| 2026-08-27 | ftc | `integral_abs_le_of_bound`, `integral_sub_linear_le`, `antiderivative`, `antiderivative_abs_le` — all first-attempt, axiom-free; rung 3 characterised as three lemmas, none an estimate |
 | 2026-08-27 | `14a6484d3` | `scripts/validate-facts.py`: classify `cas-certificate` evidence as `kernel-reconstructed` vs `cas-internal`, reject an unclassifiable checker_command on that route (ADR-0601 SS2). Mutation-tested. |
 | 2026-08-27 | `17e91d839` | `scripts/gen-import-backlog.py` (new): produce `artifacts/import-backlog.json`, the 164-row import backlog, deterministic and ordered by dependency-readiness then curriculum-DAG position (ADR-0601 SS3). `--check` wired into `scripts/check.sh` and the `justfile`. Mutation-tested. |
 | 2026-08-27 | `de853af65` | Level-1 fix: `STEPS` (135 entries) + `validate_step_order` structural preflight for `creal.rs`, replacing the hand-written `declare_*` sequence in `build_creal_prelude_uncached` with `for step in STEPS { (step.run)(&mut d, prelude)?; }`. 0 violations across 2,264 edges against the existing order. `cargo check -p axeyum-lean-kernel --lib` clean, 0 warnings. |
@@ -5127,6 +5128,54 @@ Not fixed here: per the brief, this lane merges LOCAL `main` only, never
 `origin/main`; the coordinator's own merge/push flow will resolve the
 ancestry before this reaches `origin`. Re-check after that integration rather
 than "fixing" a live git-ancestry assertion.
+
+**Your lane's block (`WIP`, ftc, 2026-08-27).** Four declarations landed, every
+one accepted by `Kernel::add_declaration` on the first attempt and axiom-free:
+`integral_abs_le_of_bound`, `integral_sub_linear_le`, `antiderivative`,
+`antiderivative_abs_le`. Rung 3 (`HasDerivativeOn G F a b`) is characterised
+with a route and **three named lemmas, none of them an estimate**.
+
+**The sizing was right in shape and wrong in two of three citations, both in the
+cheaper direction.** `integral_abs_le` CANNOT supply the bound: its right-hand
+side is `mag_bound k = k+1`, never smaller than one, while FTC needs
+`1/(e+1)`. The composition is with that lemma's ROUTE (`integral_le` +
+`integral_const` against `±M`), not its statement — which is why
+`integral_abs_le_of_bound` had to be declared at all. And `integral_scale` is
+not needed anywhere: the `−F(z)` leg is a constant FUNCTION, so `integral_const`
+evaluates it exactly.
+
+**Where the cheap route was found: one level DOWN, not up.** Asking "which
+algebraic operation is this?" gives scaling by −1 and reaches for
+`integral_scale`. Asking "which integrand is this?" gives a constant, and the
+dependency disappears. The standing lesson has been "ask at several levels of
+abstraction"; this refines it — the useful direction was toward the concrete.
+
+**The undecidable-order obstruction is removable without a case split.** With
+`m := min x y` as a common base point, both legs are `integral_sub_linear_le` at
+base `x`, and `A − B = G(y) − G(x) − F(x)(y−x)` with
+`|A−B| ≤ ε·(max x y − m) = ε·|y−x|`. No decidable comparison is needed.
+
+**What rung 3 still needs, none of it an estimate:**
+
+1. `integral_split_arbitrary` **without** its `PosBound` — FTC applies it at
+   `[a, clamp y]`, whose width is zero at `y = a`. The route is `lt_cotrans`
+   against a shrinking `δ`, degenerate branch discharged by `integral_abs_le` on
+   all three legs, both branches feeding one `equiv_zero_of_small`. This is the
+   route `integral_abs_le`'s own doc names and nobody has run.
+2. Clamp monotonicity: `le p q → le (max a (min p b)) (max a (min q b))`.
+   Absent from `creal/`.
+3. `Equiv (add (max x y) (neg (min x y))) (abs (add y (neg x)))` — `max − min`
+   is the absolute difference. `max_congr`, `min_congr`, `min_le_left`,
+   `le_min`, `max_le` and `abs_add_le` all exist; no `max_sub_min` does.
+
+**The per-`x` witness is threaded, not rebuilt.** The clamp `max a (min x b)`
+gives `le a (clamp x)` unconditionally and `le (clamp x) b` from `hab`, so the
+single `u` on `[a,b]` is restricted by `uniformlyContinuousOn_restrict` with the
+**modulus unchanged**. One shared helper serves both the `Definition` and the
+theorem so they cannot drift.
+
+The kernel rejected nothing. The only rejection was Rust's borrow checker on a
+nested `d.lemma(..., &[..., { d.lemma(...) }, ...])`.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
