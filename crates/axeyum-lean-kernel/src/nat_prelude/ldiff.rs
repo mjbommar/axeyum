@@ -12,8 +12,8 @@
 //!
 //! **`Nat.ldiff` has an absorbing zero on exactly ONE side, and working out
 //! which side drives every choice below.** `ldiff 0 n = 0` (`0` has no bits
-//! to keep, so ANDing with anything clears everything) but `ldiff m 0 = m`
-//! (`NOT 0` is all-ones, so ANDing with it changes nothing) — the absorbing
+//! to keep, so `ANDing` with anything clears everything) but `ldiff m 0 = m`
+//! (`NOT 0` is all-ones, so `ANDing` with it changes nothing) — the absorbing
 //! zero is on the **left**, the `m` side, not the right. That matters
 //! because `land`/`lor` both size their fuel as `landAux/lorAux m m n`: the
 //! **same** operand (`m`) supplies both the fuel budget and the value that
