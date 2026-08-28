@@ -1,0 +1,59 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- ldiff_three_five 2>/dev/null | grep -Ec '^Nat\\.ldiff_three_five[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.ldiff_three_five",
+      "kernel_declaration": "Nat.ldiff_three_five",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. `3 = 0b011`, `5 = 0b101`, `3 &~ 5 = 0b010 = 2` (keep m's bits where n's are clear: bit 0 of m is cleared by bit 0 of n, bit 1 of m survives since bit 1 of n is clear); every numeral is concrete, so the fuel recursion, the div/mod halving, and the per-bit `if (n%2)=0 then (m%2) else 0` (via `Nat.beq` + `bool_select_nat`) all reduce fully and the proof is `Eq.refl`. Deliberately discriminating against `F:nat-land-three-five`'s `3 &&& 5 = 1` (a wrong-way per-bit step reusing the AND/product combinator cannot pass both facts' checkers at once), and paired with `F:nat-ldiff-five-three`'s `5 &~ 3 = 4` -- the same two operands swapped, producing a DIFFERENT answer, since `ldiff` is not commutative. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the count is tested, so the exit status depends on what the run found. Anchored with `^Nat\\.ldiff_three_five[[:space:]]` (verified exactly 1 row).",
+      "supports": "ldiff(3, 5) = 2"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::ldiff_computes_and_its_boundary_theorems_apply",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "id": "compute-Nat.ldiff_three_five",
+      "kernel_declaration": "Nat.ldiff",
+      "kind": "kernel-term",
+      "notes": "`Kernel::def_eq` reduces `ldiff 3 5` directly to `2` (definition unfolding, no boundary theorem invoked), over a small table of concrete pairs including `(3, 5) -> 2`, `(5, 3) -> 4` and `(6, 3) -> 4`, and separately confirms `Nat.ldiff_three_five`'s ADMITTED TYPE is exactly `Eq (ldiff 3 5) 2` -- with a negative control asserting the inferred type must NOT def_eq `Eq (ldiff 3 5) 1` (the AND-shaped wrong answer), so this cannot pass on a statement claiming a wrong value from that failure family.",
+      "supports": "the theorem states the value 2, not an arbitrary or AND-shaped one"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.ldiff_three_five",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. `Nat.ldiffAux` uses the same structural fuel device as `Nat.landAux`/`Nat.lorAux` rather than Mathlib's well-founded `Nat.bitwise`, so nothing here needs `WellFounded`/`Quot.sound`/`propext`; this command is what makes the axiom-freedom claim falsifiable rather than asserted. Measured with `Nat.ldiff` landed: `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [],
+    "language": "lean4",
+    "statement": "theorem Nat.ldiff_three_five : Eq.{1} AxNat (AxNat.ldiff (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero)))))) (AxNat.succ (AxNat.succ AxNat.zero))"
+  },
+  "id": "F:nat-ldiff-three-five",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*) -- the `nat` prelude's trusted surface measures zero.\n\nSmall numerals deliberately (per the standing kernel-cost rule: keep formed magnitudes small, `whnf` walks unary `Nat.succ` towers). This is one of two SANITY CHECK boundary lemmas for `Nat.ldiff` that together form the sharpest negative control this definition can carry: `ldiff(3, 5) = 2` here and `ldiff(5, 3) = 4` in `F:nat-ldiff-five-three` -- the same two operands, swapped, producing a DIFFERENT answer. `Nat.land`/`Nat.lor` cannot express this control at all, since both are commutative; `Nat.ldiff` is not.\n\nSee `F:nat-ldiff-zero-left`'s notes for why `Nat.ldiff` was built directly rather than through a general `Nat.bitwise`, the fuel/base-case derivation, and why this does not flip `F:ml430-nat-ldiff-bit-6be49bb8` by hand.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane 226-nat-ldiff",
+    "source": "one of four boundary/sanity theorems `declare_ldiff_all` (`crates/axeyum-lean-kernel/src/nat_prelude/ldiff.rs`) admits alongside the `Nat.ldiff`/`Nat.ldiffAux` definitions"
+  },
+  "schema_version": 1,
+  "statement": "The bitwise AND-NOT of 3 and 5 is 2.",
+  "title": "ldiff(3, 5) = 2"
+}
