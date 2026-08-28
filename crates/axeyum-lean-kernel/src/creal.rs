@@ -5642,6 +5642,21 @@ pub struct CRealPrelude {
     /// constructs `CReal.pi` or asserts that a root exists. See
     /// `creal/trig_fn.rs`.
     pub cos_fn_wide_one_nonneg: NameId,
+    /// `CReal.hasDerivativeOn_restrict : ∀ F F' a b a' b',
+    /// HasDerivativeOn F F' a b → le a a' → le a' b' → le b' b →
+    /// HasDerivativeOn F F' a' b'` — the sub-interval restriction of a
+    /// DERIVATIVE witness, exactly
+    /// [`Self::uniformly_continuous_on_restrict`]'s construction one
+    /// parameter over: `HasDerivativeOn`'s `spec` takes the same four range
+    /// hypotheses, so `a ≤ a' ≤ x` and `y ≤ b' ≤ b` compose through
+    /// [`Self::le_trans`] and the original `spec` is reused at every
+    /// `(e, x, y)` with the `modulus` field carried over unchanged.
+    ///
+    /// **Belongs in `creal/derivative.rs`**; declared from
+    /// `creal/trig_fn.rs` only because that file is another lane's — the same
+    /// parking [`Self::nat_div_succ_step_le`] already documents. General in
+    /// `F`, `F'` and both interval pairs, not tied to cosine.
+    pub has_derivative_on_restrict: NameId,
 
     // --- general `sin : CReal → CReal` (creal/trig_fn.rs) ---------------------
     /// `CReal.sinFnTerm : Nat → CReal → CReal := fun k x => mul (sinTerm k)
@@ -6650,6 +6665,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         cos_fn_wide_uniformly_continuous: kernel.name_str(creal, "cosFnWideUniformlyContinuous"),
         cos_fn_wide_one_equiv_cos_one: kernel.name_str(creal, "cosFnWide_one_equiv_cosOne"),
         cos_fn_wide_one_nonneg: kernel.name_str(creal, "cosFnWide_one_nonneg"),
+        has_derivative_on_restrict: kernel.name_str(creal, "hasDerivativeOn_restrict"),
         sin_fn_term: kernel.name_str(creal, "sinFnTerm"),
         sin_fn_term_congr: kernel.name_str(creal, "sinFnTerm_congr"),
         sin_fn_term_abs_le_wide: kernel.name_str(creal, "sinFnTermAbsLeWide"),
@@ -11516,6 +11532,23 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.cos_fn_wide_one_nonneg,
         ],
         run: trig_fn::declare_cos_fn_wide_at_one,
+    },
+    BuildStep {
+        label: "trig_fn::declare_has_derivative_on_restrict",
+        requires: &[
+            |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.add,
+            |p: CRealPrelude| p.has_derivative_on,
+            |p: CRealPrelude| p.hd_mk,
+            |p: CRealPrelude| p.hd_modulus,
+            |p: CRealPrelude| p.hd_spec,
+            |p: CRealPrelude| p.le,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.of_rat,
+        ],
+        provides: &[|p: CRealPrelude| p.has_derivative_on_restrict],
+        run: trig_fn::declare_has_derivative_on_restrict,
     },
     BuildStep {
         label: "trig_fn::declare_sin_fn_term_family",

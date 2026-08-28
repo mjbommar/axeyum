@@ -2607,6 +2607,160 @@ fn declare_cos_fn_wide_one_nonneg(d: &mut IntDev<'_>, p: CRealPrelude) -> Result
     })
 }
 
+/// `CReal.hasDerivativeOn_restrict : ∀ F F' a b a' b', HasDerivativeOn F F' a
+/// b → le a a' → le a' b' → le b' b → HasDerivativeOn F F' a' b'` -- the
+/// sub-interval restriction of a derivative witness.
+///
+/// **Exactly `CReal.uniformlyContinuousOn_restrict`'s construction, one
+/// parameter over.** `HasDerivativeOn`'s `spec` takes the four range
+/// hypotheses `le a x`, `le x b`, `le a y`, `le y b` (verbatim
+/// `UniformlyContinuousOn`'s own, per `creal.rs`'s field doc), so `a ≤ a' ≤
+/// x` and `y ≤ b' ≤ b` compose through `CReal.le_trans` to the original
+/// witness's hypotheses and its `spec` is reused at every `(e, x, y)`. The
+/// `modulus` field is carried over unchanged, so no estimate is re-derived
+/// and no rate moves. The signature deliberately mirrors the uniform-
+/// continuity restriction's, including its `le a' b'` argument, so the two
+/// are callable side by side on one interval pair.
+///
+/// **Why it is declared from `creal/trig_fn.rs`.** It belongs in
+/// `creal/derivative.rs` beside `hasDerivative_neg`, which is another lane's
+/// file -- the same parking `CReal.natDivSuccStepLe` already documents. It is
+/// general in `F`, `F'` and both interval pairs, not tied to cosine.
+///
+/// A π construction needs it because `CReal.cosFnWideHasDerivative` is stated
+/// on `[0, 8/5]` while `CReal.ivt_exact_root` has to be applied on a
+/// sub-interval bounded away from `0` (`sin 0 = 0`, so the uniformly positive
+/// derivative bound is unavailable at the left end of the full domain).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_has_derivative_on_restrict(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let func_ty = d.arrow(carrier, carrier);
+    let nat = d.nat_ty();
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let fp_fv = d.fresh_fvar();
+    let fp = d.kernel().fvar(fp_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let a2_fv = d.fresh_fvar();
+    let a2 = d.kernel().fvar(a2_fv);
+    let b2_fv = d.fresh_fvar();
+    let b2 = d.kernel().fvar(b2_fv);
+
+    let hf_ty = hd_ty(d, p, f, fp, a, b);
+    let hf_fv = d.fresh_fvar();
+    let hf = d.kernel().fvar(hf_fv);
+    let hlo_ty = cle(d, p, a, a2);
+    let hlo_fv = d.fresh_fvar();
+    let hlo = d.kernel().fvar(hlo_fv);
+    let hmid_ty = cle(d, p, a2, b2);
+    let hmid_fv = d.fresh_fvar();
+    let hhi_ty = cle(d, p, b2, b);
+    let hhi_fv = d.fresh_fvar();
+    let hhi = d.kernel().fvar(hhi_fv);
+
+    // The restricted witness carries the ORIGINAL modulus, unchanged.
+    let modulus = d.const_app(p.hd_modulus, &[f, fp, a, b, hf]);
+
+    let spec = {
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+
+        let range_ax = cle(d, p, a2, x);
+        let range_xb = cle(d, p, x, b2);
+        let range_ay = cle(d, p, a2, y);
+        let range_yb = cle(d, p, y, b2);
+        let hax_fv = d.fresh_fvar();
+        let hax = d.kernel().fvar(hax_fv);
+        let hxb_fv = d.fresh_fvar();
+        let hxb = d.kernel().fvar(hxb_fv);
+        let hay_fv = d.fresh_fvar();
+        let hay = d.kernel().fvar(hay_fv);
+        let hyb_fv = d.fresh_fvar();
+        let hyb = d.kernel().fvar(hyb_fv);
+
+        // `|y - x| <= 1/(modulus e + 1)` -- the SAME closeness hypothesis the
+        // original witness's own `spec` takes, since the modulus is the same.
+        let neg_x = cneg(d, p, x);
+        let diff_yx = cadd(d, p, y, neg_x);
+        let abs_diff = cabs(d, p, diff_yx);
+        let mod_e = d.apply(modulus, &[e]);
+        let one_nat = d.num(1);
+        let in_bound = ndsucc(d, p, one_nat, mod_e);
+        let ofr_in = embed(d, p, in_bound);
+        let hyp = cle(d, p, abs_diff, ofr_in);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        let wide_ax = d.lemma(p.le_trans, &[a, a2, x, hlo, hax]);
+        let wide_xb = d.lemma(p.le_trans, &[x, b2, b, hxb, hhi]);
+        let wide_ay = d.lemma(p.le_trans, &[a, a2, y, hlo, hay]);
+        let wide_yb = d.lemma(p.le_trans, &[y, b2, b, hyb, hhi]);
+        let conclusion = d.lemma(
+            p.hd_spec,
+            &[
+                f, fp, a, b, hf, e, x, y, wide_ax, wide_xb, wide_ay, wide_yb, h,
+            ],
+        );
+
+        let with_h = d.lam_fv(h_fv, hyp, conclusion);
+        let with_hyb = d.lam_fv(hyb_fv, range_yb, with_h);
+        let with_hay = d.lam_fv(hay_fv, range_ay, with_hyb);
+        let with_hxb = d.lam_fv(hxb_fv, range_xb, with_hay);
+        let with_hax = d.lam_fv(hax_fv, range_ax, with_hxb);
+        let with_y = d.lam_fv(y_fv, carrier, with_hax);
+        let with_x = d.lam_fv(x_fv, carrier, with_y);
+        d.lam_fv(e_fv, nat, with_x)
+    };
+
+    let mk_applied = d.const_app(p.hd_mk, &[f, fp, a2, b2, modulus, spec]);
+    let value = {
+        let with_hhi = d.lam_fv(hhi_fv, hhi_ty, mk_applied);
+        let with_hmid = d.lam_fv(hmid_fv, hmid_ty, with_hhi);
+        let with_hlo = d.lam_fv(hlo_fv, hlo_ty, with_hmid);
+        let with_hf = d.lam_fv(hf_fv, hf_ty, with_hlo);
+        let with_b2 = d.lam_fv(b2_fv, carrier, with_hf);
+        let with_a2 = d.lam_fv(a2_fv, carrier, with_b2);
+        let with_b = d.lam_fv(b_fv, carrier, with_a2);
+        let with_a = d.lam_fv(a_fv, carrier, with_b);
+        let with_fp = d.lam_fv(fp_fv, func_ty, with_a);
+        d.lam_fv(f_fv, func_ty, with_fp)
+    };
+    let ty = {
+        let applied = hd_ty(d, p, f, fp, a2, b2);
+        let with_hhi = d.arrow(hhi_ty, applied);
+        let with_hmid = d.arrow(hmid_ty, with_hhi);
+        let with_hlo = d.arrow(hlo_ty, with_hmid);
+        let with_hf = d.arrow(hf_ty, with_hlo);
+        let with_b2 = d.pi_fv(b2_fv, carrier, with_hf);
+        let with_a2 = d.pi_fv(a2_fv, carrier, with_b2);
+        let with_b = d.pi_fv(b_fv, carrier, with_a2);
+        let with_a = d.pi_fv(a_fv, carrier, with_b);
+        let with_fp = d.pi_fv(fp_fv, func_ty, with_a);
+        d.pi_fv(f_fv, func_ty, with_fp)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.has_derivative_on_restrict,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 // ============================================================================
 // `CReal.sinFn` — general sine on `[0, 8/5]`, MECHANICALLY PARALLEL to
 // `CReal.cosFnWide` above, per this task's own brief. Every step below is

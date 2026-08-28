@@ -125,5 +125,10 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.cos_fn_wide_one_nonneg,
             "theorem",
         ),
+        (
+            "CReal.hasDerivativeOn_restrict",
+            p.has_derivative_on_restrict,
+            "theorem",
+        ),
     ]
 }
