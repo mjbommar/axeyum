@@ -194,6 +194,9 @@ now. Nothing was deleted.
 | 2026-08-28 | creal-build-bisect | diagnosed the mechanism as unary-`Nat` reduction, **not** the `Definition` unfold: the hot declarations run 40–120 `unfold_def` attempts per successful δ-unfold (healthy is 1.6–3), 98% of them on `Nat.succ`/`Nat` towers, and cost is uncorrelated with term size (864 nodes / 9.74 s vs 8,174 nodes / 1.49 s) |
 | 2026-08-28 | creal-build-bisect | A/B'd ADR-0614's literal numerals: **`CReal.cosWideNonpositive` 9.74 s → 0.12 s (81x)** and the whole build −11%, so the ADR's "measured at zero" (taken before these files landed) no longer describes this tree; the `trig_fn` family is unaffected and needs a proof change instead |
 | 2026-08-28 | creal-build-bisect | `scripts/check-creal-prelude-build-ratio.sh` + `artifacts/creal-prelude-build-budget.tsv` + controls: replaces the ungated 94–123 s band with a **load-invariant ratio** against `rat_prelude_builds` (2.02x change in absolute time moves it 0.2%; the regression moves it 7.8x), pinned at 21, self-demonstrating on every run |
+| 2026-08-28 | nat-lor | `Nat.lor`/`Nat.lorAux` (fuel recursion, `max`-via-`ble` per-bit step, `n`-returning fuel base case) + 3 boundary theorems in `nat_prelude/lor.rs`; wired into `nat_prelude.rs`; `nat_prelude_tests.rs` coverage + dedicated test + pinned render count `476->481`; 3 new `F:nat-lor-*` facts |
+| 2026-08-28 | int-fib | `Int.fib : ℤ → ℤ` landed (`int_prelude/fibonacci.rs::declare_fib`), the sign-extended Fibonacci sequence, one `Int.rec` case split, axiom-free, evaluated at six concrete indices with a sign-drop negative control |
+| 2026-08-28 | int-fib | `Int.fib_two_mul_add_one_pos` landed and kernel-checked, axiom-free; closed `F:ml430-int-fib-two-mul-add-one-pos-8977f65f` |
 | 2026-08-27 | (uncommitted at status-file write time) | `CReal.sumRange_cauchy_of_abs_cauchy` / `CReal.sumRange_converges_of_abs_converges` (absolute convergence implies convergence) plus a soundness-negative control; curriculum rows 18 and 22–23 corrected. |
 | 2026-08-27 | (uncommitted at status-file write time) | Ten new `artifacts/facts/F-creal-*.json` entries for the Ch.13/14 Riemann integral construction and algebra (`riemannSum_cauchy`, `integral`, `integral_converges`, `integral_const`, `integral_add`, `integral_le`, `integral_scale`, `integral_witness_independent`, `riemannSum_integral_close`, `sharedIndexToCanonical`); `python3 scripts/validate-facts.py` green (708 facts, 0 errors). |
 | 2026-08-27 | (uncommitted at status-file write time) | Added `--require-declaration <name> [--require-kind <kind>]` to `crates/axeyum-lean-kernel/examples/kernel_declaration_projection.rs`: a direct, fail-on-absence presence checker for `Declaration::Definition`s (and any other kind), mutation-tested against `CReal.integral`. Upgraded `F:creal-integral`'s `kernel-CReal.integral` evidence to use it. Registered 14 new `artifacts/facts/F-creal-*.json` entries for Spivak Ch.18 (`e`) and Ch.22-23 (series convergence tests): `creal-e`, `creal-e-converges`, `creal-two-le-e`, `creal-e-le-three`, `creal-e-le-four`, `creal-expterm-le-geom`, `creal-expdominantcauchy`, `creal-cauchyofpointwiseequiv`, `creal-geomcauchy`, `creal-sumrange-comparisontest`, `creal-sumrange-cauchy-of-dominated`, `creal-sumrange-converges-of-dominated`, `creal-sumrange-cauchy-of-abs-cauchy`, `creal-sumrange-converges-of-abs-converges`. `python3 scripts/validate-facts.py` green (722 facts, 0 errors). |
@@ -10033,6 +10036,159 @@ are untouched. `cargo fmt --all --check` clean; no Rust file differs from
    Pi-application — `declare_converges_of_cauchy`'s pattern, the one
    `declare_e_converges` had to be rewritten into. ~54 s at stake.
 3. Wire the ratio gate into the aggregate gate.
+
+**Your lane's block (`DONE`, nat-lor, 2026-08-28).** Landed `Nat.lor`/
+`Nat.lorAux` in `nat_prelude/lor.rs`, following `land.rs`'s structural fuel
+recursion (`Nat.rec` on the fuel argument), with two design deviations that do
+not transfer unchanged from `Nat.land`:
+
+- **Per-bit combinator**: `max (m%2) (n%2)` via the existing `Nat.ble` +
+  `bool_select_nat`, not `a + b - a*b` (avoids a `Nat.sub` height dependency
+  and its silent-truncation risk, even though truncation cannot actually
+  trigger on bit-restricted inputs) and not a bespoke `Bool.rec` cut (more
+  construction for the same result). OR of two `{0,1}` values is not their
+  product, so `land`'s `mul` shortcut does not transfer at all.
+- **Fuel-exhaustion base case**: `lorAux`'s `fuel = 0` row returns `n`, not
+  the constant `0` `landAux` uses. Fuel stays `= m` (unchanged from `land`),
+  which stays sound because whenever the outer `Nat.rec` on fuel truly
+  reaches `0`, the repeatedly-halved `m`-argument is already `0` too (`m`
+  always exceeds the `⌊log₂ m⌋ + 1` halvings needed to exhaust it) — but OR
+  has no absorbing zero the way AND does, so the base case must return the
+  other operand (`n`), not `0`. This is the part of "the shortcut does not
+  transfer" that needed actually working out, not just the per-bit formula.
+- **Guard order transferred unchanged**: `n = 0` checked OUTERMOST in
+  `lorAux`'s succ case (mirrors `landAux`), and it is load-bearing for the
+  same reason: `lor_zero_right`'s induction on `m` closes by `Eq.refl` at
+  every step (no induction hypothesis forced), because the outermost
+  `bool_select_nat` on `n_is_zero` selects the "return `m`" branch without
+  forcing the untaken branch where the real recursive step lives.
+
+Landed 3 boundary/sanity theorems (`lor_zero_left`, `lor_zero_right`,
+`lor_three_five`), matching the "two or three boundary lemmas is a complete
+success" scope. `lor_three_five = 7` is deliberately the same numeral pair as
+`land_three_five = 1`, so the two proof terms differ only in the per-bit
+combinator and their results are maximally distinguishing.
+
+**Measured `axiom_footprint`**: empty for every new declaration (`Nat.lor`,
+`Nat.lorAux`, and all three theorems), confirmed both by
+`Kernel::axiom_footprint` in the dedicated test and by
+`nat_axiom_inventory --require-axiom-free nat`, which after this lane still
+reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`.
+
+**Kernel rejected nothing in the final version.** The design reasoning above
+(fuel-exhaustion base case, guard-branch returns) was worked out on paper
+before construction, specifically because a naive fuel-`= m`-only translation
+of `land`'s constant-`0` base case would have been WRONG for OR (would drop
+all of `n`'s bits whenever `m = 0`) — this was caught by tracing the
+recursion by hand before writing any kernel term, not by a kernel rejection.
+Only friction during construction was Rust's borrow checker on nested
+`d.foo(..., d.bar())` calls, flattened into sequential `let`s (the same
+friction `land.rs`'s module doc reports for `Nat.land`).
+
+**No HELD-OUT or MUTATION marker on any target.** Checked
+`scripts/fact-frontier.py` for `F:ml430-nat-lor-assoc-82c4d0fd`,
+`F:ml430-nat-lor-comm-2666d7ef`, `F:ml430-nat-lor-bit-a2f98c7c` (the Mathlib
+mirror facts near this family) — none carry either marker. These mirror facts
+were NOT flipped: this prelude's `Nat.lor` is a fresh construction, not
+Mathlib's `bitwise and`-derived one, and their premises (general
+`Nat.bitwise`) are not established here.
+
+**`nat_prelude` test count**: 110 passed before this lane's edits (baseline,
+same run as the merged-in `land`/bitwise work), 111 passed after (added
+`lor_computes_or_and_its_boundary_theorems_apply`). `definition_names` +
+`theorem_names` rendered count (`the_build_is_deterministic`'s pin, read off
+its own panic message per the standing rule, never hand-counted): `476 -> 481`
+(`77+399 -> 79+402`; +2 definitions `lorAux`/`lor`, +3 theorems
+`lor_zero_left`/`lor_zero_right`/`lor_three_five`).
+
+**Gates run**: `cargo check -p axeyum-lean-kernel --lib` clean;
+`cargo test -p axeyum-lean-kernel --lib nat_prelude` 111 passed, 0 failed
+(includes `every_nat_declaration_is_checked_and_axiom_free`, the
+environment-derived coverage assertion, and `the_build_is_deterministic`);
+`cargo fmt --all --check` clean; `cargo clippy -p axeyum-lean-kernel
+--all-targets -- -D warnings` clean. Did not run the full workspace
+`--features full` sweep or the aggregate `just check`/`check.sh` gate (out of
+this lane's scope per the brief; the crate-scoped gates above are what the
+brief asked for).
+
+Out of scope, deliberately: `Nat.bitwise` (general two-argument form),
+`Nat.ldiff`, `Nat.bits`/`Nat.lor` correctness theorems (commutativity,
+associativity, the mirror `ml430-nat-lor-*` facts) — `lor` proved simple
+enough that none of these were needed to land it, matching the brief's
+"complete success" bar without extending scope.
+
+**Your lane's block (`DONE this pass`, int-fib, 2026-08-28).** Confirmed
+yesterday's `fib-backlog` finding with a fresh positive control (own
+`int_theorem_inventory`/`shape_search`-style read of the tree, not a stale
+binary): `Int.fib : ℤ → ℤ` genuinely did not exist — `int_prelude/fibonacci.rs`
+only ever built `ofNat (Nat.fib n)` terms for `Int.fib_cassini`, never a
+function taking a real `Int` argument.
+
+Built `Int.fib` (`int_prelude/fibonacci.rs::declare_fib`): the standard sign
+extension `fib(-n) = (-1)^(n+1) fib(n)`, as ONE `Int.rec` case split with no
+new recursion device — closer to `Nat.bit` than to `Nat.log`'s fuel device,
+exactly as the brief predicted, confirmed rather than assumed (`Int.pow` is
+already total/structural on its `Nat` exponent, so no parity case-split is
+needed inside the definition itself):
+
+- `fib (ofNat n)   := ofNat (Nat.fib n)`
+- `fib (negSucc m) := pow (neg one) m * ofNat (Nat.fib (succ m))`
+
+Closed one fact: `F:ml430-int-fib-two-mul-add-one-pos-8977f65f`
+(`∀ n : ℤ, 0 < Int.fib (2*n+1)`), landed as
+`Int.fib_two_mul_add_one_pos` — positivity at every ODD index in EITHER
+direction of `ℤ`. Case split on `n`; in both branches `2*n+1` reduces PURELY
+(no named lemma for the arithmetic itself — `Int.mul`/`Int.add` on
+`ofNat`/`ofNat` and `ofNat`/`negSucc` pairs, and `Int.subNatNat`'s own
+`Nat.sub`-based case split, are all structural, `defs.rs`'s own module doc)
+down to a clean `Nat`-side shape. The `ofNat` branch closes directly from
+`Nat.fib_pos_of_pos` + `Nat.zero_lt_succ` via the kernel's own defeq (`Int.lt`
+on `ofNat`/`ofNat` reduces to `Nat.lt`, already documented elsewhere in this
+codebase). The `negSucc j` branch needed exactly one non-structural fact,
+`(-1)^(2j) = 1` (new private helper `pow_neg_one_two_mul`, induction on `j`
+reusing `pow_neg_one_succ` + `neg_neg` — both already built for
+`fib_cassini`), then an `Int`-level `itransport` moves the resulting
+`Nat`-side positivity fact across `Eq Int (fib (negSucc (2j))) (ofNat
+(Nat.fib (2j+1)))`.
+
+**`Int.fib` is independently checked by evaluation, not only by this
+theorem's type-check** — `fib_computes_the_sign_extended_sequence`
+(`int_prelude_tests.rs`) reduces `fib` at six concrete indices (both signs:
+`fib(3)=2, fib(2)=1, fib(-1)=1, fib(-2)=-1, fib(-3)=2, fib(-4)=-3`) against
+the hand-computed sequence, with a negative control at `fib(-2)` (`fib(-2)`
+must NOT compute to `1`) guarding against a definition that silently dropped
+the sign.
+
+Measured `axiom_footprint`: **empty** for both `Int.fib` and
+`Int.fib_two_mul_add_one_pos` (`theorem_axiom_footprint`, `integer` row: `610
+theorems, 610 axiom-free`, environment carries 0 trusted declarations in the
+`integer` prelude). `int_prelude::` full sweep: **37 -> 38 tests, all green**
+(added `fib_computes_the_sign_extended_sequence`); no test removed, no
+regression. `cargo fmt --check` and `cargo clippy --all-targets -D warnings`
+both clean on the touched files.
+
+**No target carried a HELD-OUT or MUTATION marker.** Checked
+`scripts/fact-frontier.py` directly: the sixth "open `integer-fibonacci`"
+fact, `F:ml430-mutation-aabb80b1f89f0c5847364692`, carries
+`⛔ MUTATION (boundary-widening-biconditional)` — skipped, not attempted, as
+instructed.
+
+**Kernel rejected nothing on the landed declarations** — both `declare_fib`
+and `declare_fib_two_mul_add_one_pos` kernel-checked on the first attempt
+after compiling. (Two ordinary `cargo check` compile-error rounds first, both
+missing imports — `BinderInfo`/`Declaration`/`ReducibilityHint`/`Shape`/
+`case_split` — fixed before any kernel run.)
+
+**Not attempted** (left for the next lane): the other three open
+`integer-fibonacci` facts —
+`F:ml430-int-fib-add-181b6a2c` (`Int.fib_add`, the general addition formula
+`fib(m+n) = fib(m-1)fib(n) + fib(m)fib(n+1)` for arbitrary `m, n : ℤ` — needs
+genuine two-sided induction over `ℤ`, substantially larger than this lane's
+scope), `F:ml430-int-fib-of-odd-66560495` (needs an `Int.Odd`/`Int.Even`
+predicate pair, which does not exist in this kernel at all — only `Nat.Odd`/
+`Nat.Even` are declared), and `F:ml430-int-fib-two-mul-0e70f3dd` plus
+`F:ml430-int-fib-two-mul-add-two-0ba4a948` (both `needs first:
+F:ml430-int-fib-add-181b6a2c`, blocked on the addition formula above).
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
