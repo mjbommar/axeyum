@@ -1,30 +1,65 @@
 {
-  "schema_version": 1,
-  "id": "F:ml430-nat-modeq-add-right-8e2ca0cc",
-  "title": "Mathlib v4.30 source proposition Nat.ModEq.add_right",
-  "statement": "The proposition declared as `Nat.ModEq.add_right` in the pinned Mathlib v4.30 source.",
-  "formal": {
-    "language": "lean4-surface",
-    "statement": "∀ {n a b : ℕ} (c : ℕ), a ≡ b [MOD n] → a + c ≡ b + c [MOD n]",
-    "fragment": "Nat"
-  },
-  "epistemic_status": "open",
-  "external_status": "proved",
+  "axiom_footprint": [],
   "depends_on": [],
-  "evidence": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "artifact": "artifacts/autogenesis/nat-modeq-congruence-contract-v1.json",
+      "check_status": "checked",
+      "checker_command": "test \"$(python3 scripts/check-autogenesis-nat-modeq-congruence-family.py 2>&1 | grep -Ec '^NAT_MODEQ_CONGRUENCE\\|PASS$')\" -ge 1",
+      "checker_operation": {
+        "admitted_declarations": 245,
+        "declarations_tried": 4,
+        "goal_binders": 5,
+        "goal_sha256": "07f0ab69598d6cfe7ecaa12f84545cb0c1dff1f9aef989ba1c8ec2308d384848",
+        "holes": 5,
+        "holes_matched": 4,
+        "id": "authoritative-mathlib-nat-modeq-congruence-family-v1",
+        "proof_sha256": "c1a82f897e5dadfa2d5e5f5af403085a11d71dbf6e9711cf61be3c27a9f2a976",
+        "receipt_manifest": "artifacts/autogenesis/nat-modeq-congruence-contract-v1.json",
+        "retained_answer_dependencies": [
+          "Axeyum.Autogenesis.Candidate.NatModEqCongruence.addRight"
+        ],
+        "target_content_sha256": "0be9f20f588df1ed722ad17ddf5ddb4093620bdfda0849a7258e95d93fa13709",
+        "target_definition": "Axeyum.Autogenesis.Statement.NatModEqCongruence.addRight",
+        "target_fact_id": "F:ml430-nat-modeq-add-right-8e2ca0cc",
+        "theorem_dependencies": 1
+      },
+      "checkers": [
+        "axeyum-lean-import/conclusion-directed-transport-v1 (rebuilds the proof and re-admits it through Kernel::add_declaration in a proof-isolated import of the target statement)",
+        "axeyum_lean_import::producers::conclusion_directed_application (matching only chooses arguments; the completed application is accepted only when Kernel::infer_in and Kernel::def_eq agree its type is the goal)",
+        "Kernel::declaration_dependency_closure / Kernel::axiom_footprint / Kernel::theorem_dependencies (the mechanical circularity and footprint audit, never a doc comment or a head-symbol match)"
+      ],
+      "id": "conclusion-directed-addRight",
+      "kind": "kernel-term",
+      "notes": "The checker_command's exit status depends on what the run FOUND: the script replays all ten targets against the pinned external exports and fails on any changed digest, a nonempty axiom footprint, a new theorem dependency, a target self-citation, a ledger row that disagrees, and on the probe accepting a nonexistent input. `[[:space:]]`-free by construction — the grep matches a whole literal line. Per ADR-0601 the cited candidate is a producer behind the one trust anchor, not a Mathlib proof import: no Mathlib proof value for this theorem was exposed.",
+      "supports": "The proposition declared as `Nat.ModEq.add_right` in the pinned Mathlib v4.30 source, admitted here by `Kernel::add_declaration` over a proof term the conclusion-directed producer built and the same kernel re-checked: axiom footprint empty, `target_dependency` false, and exactly one cited theorem dependency, `Axeyum.Autogenesis.Candidate.NatModEqCongruence.addRight`, whose own Lean proof is authored in the tracked contract source and is itself axiom-free."
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "language": "lean4-surface",
+    "statement": "∀ {n a b : ℕ} (c : ℕ), a ≡ b [MOD n] → a + c ≡ b + c [MOD n]"
+  },
+  "id": "F:ml430-nat-modeq-add-right-8e2ca0cc",
+  "notes": "CLOSED BY AXEYUM AUTOGENESIS. Registered multi-target operation `authoritative-mathlib-nat-modeq-congruence-family-v1` names all ten remaining `natural-modular-equivalence` targets, not this one alone. `producers::bounded_application` DECLINES eight of the ten with `NoTypedApplication` — its forward product closure exhausts its 128-term budget at application depth 4 and every hypothesis-carrying member needs a five-argument application — so this fact is closed by `producers::conclusion_directed_application`, which matches the candidate conclusion against the goal terminal and backtracks over the goal's own binders for the holes the conclusion does not determine.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+  "proof_route": "kernel-lean",
   "provenance": {
     "date": "2026-08-18",
-    "established_by": "not established in this ledger",
-    "source": "statement-only extraction of `Nat.ModEq.add_right` from Mathlib v4.30.0; no proof value was exposed",
+    "established_by": "lane modeq-producer (2026-08-28): the conclusion-directed transport of one axiom-free Lean candidate contract (scripts/lean/autogenesis_nat_modeq_congruence_contract_v1.lean) into a proof-isolated import of this statement. Every public Lean 4.30 `Nat` remainder lemma carries `propext` (measured: Nat.mod_zero, Nat.mod_eq_of_lt, Nat.add_mod, Nat.mod_mod_of_dvd, Nat.mod_self), so the contract rebuilds the `Nat.mod` recurrence over Nat.modCore/Nat.modCore.go and derives every congruence law from it by structural fuel induction.",
     "prior_art": [
       {
-        "who": "the Mathlib contributors",
+        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted",
         "what": "the theorem declaration `Nat.ModEq.add_right`",
         "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
-        "year": 2026,
-        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted"
+        "who": "the Mathlib contributors",
+        "year": 2026
       }
-    ]
+    ],
+    "source": "statement-only extraction of `Nat.ModEq.add_right` from Mathlib v4.30.0; no proof value was exposed"
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "schema_version": 1,
+  "statement": "The proposition declared as `Nat.ModEq.add_right` in the pinned Mathlib v4.30 source.",
+  "title": "Mathlib v4.30 source proposition Nat.ModEq.add_right"
 }

@@ -744,8 +744,9 @@ pub(super) fn declare_modeq_sub(d: &mut IntDev<'_>) -> Result<(), KernelError> {
     Ok(())
 }
 
-/// `Int.ModEq.of_mul_right : ∀ n a b m, ModEq (n*m) a b → ModEq n a b`,
-/// UNCONDITIONAL in `n` and `m`.
+/// `Int.modEq_of_mul_right : ∀ n a b m, ModEq (n*m) a b → ModEq n a b`
+/// (`Int.ModEq.of_mul_right` in Mathlib's surface spelling), UNCONDITIONAL
+/// in `n` and `m`.
 ///
 /// The mirror of [`super::modeq::declare_modeq_of_mul_left`] at the other
 /// divisibility witness: `Int.dvd_mul_right n m : dvd n (n*m)` instead of

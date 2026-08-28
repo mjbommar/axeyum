@@ -1538,7 +1538,8 @@
           "F:ml430-int-add-modeq-right-e58108ee",
           "F:ml430-int-mod-modeq-6bec7847",
           "F:ml430-int-modulus-modeq-zero-5b57a898",
-          "F:ml430-int-modeq-sub-3148f130"
+          "F:ml430-int-modeq-sub-3148f130",
+          "F:ml430-int-modeq-of-mul-right-c92b7bf0"
         ],
         "formal_languages": [
           "lean4-surface"
@@ -1567,7 +1568,8 @@
           "F:ml430-int-add-modeq-right-e58108ee",
           "F:ml430-int-mod-modeq-6bec7847",
           "F:ml430-int-modulus-modeq-zero-5b57a898",
-          "F:ml430-int-modeq-sub-3148f130"
+          "F:ml430-int-modeq-sub-3148f130",
+          "F:ml430-int-modeq-of-mul-right-c92b7bf0"
         ],
         "declaration_source": "crates/axeyum-lean-kernel/src/int_prelude/modeq_family.rs",
         "test_path": "crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs",
@@ -1597,10 +1599,136 @@
           {
             "fact_id": "F:ml430-int-modeq-sub-3148f130",
             "declaration": "Int.modEq_sub"
+          },
+          {
+            "fact_id": "F:ml430-int-modeq-of-mul-right-c92b7bf0",
+            "declaration": "Int.modEq_of_mul_right"
           }
         ],
         "timeout_seconds": 120,
         "expected_evidence_label": "kernel-term-authored-declaration-axiom-free"
+      },
+      "admission": {
+        "epistemic_status": "proved",
+        "proof_route": "kernel-lean",
+        "evidence_kind": "kernel-term",
+        "axiom_footprint_policy": "must-be-empty",
+        "axiom_footprint": []
+      }
+    },
+    {
+      "id": "authoritative-mathlib-nat-modeq-congruence-family-v1",
+      "scope": "authoritative",
+      "reviewed_gate_mentions": [
+        "check-autogenesis-nat-modeq-congruence-family.py",
+        "validate-autogenesis-operations.py",
+        "check-autogenesis-holdout-isolation.py",
+        "check-development-partition.py",
+        "gen-production-provenance-ledger.py"
+      ],
+      "applicability": {
+        "fact_ids": [
+          "F:ml430-nat-mod-modeq-436e4c10",
+          "F:ml430-nat-modeq-one-516d46e8",
+          "F:ml430-nat-modeq-add-left-e83f0700",
+          "F:ml430-nat-modeq-add-right-8e2ca0cc",
+          "F:ml430-nat-modeq-add-left-cancel-e5287cf6",
+          "F:ml430-nat-modeq-add-right-cancel-e871facf",
+          "F:ml430-nat-modeq-of-dvd-d75cc374",
+          "F:ml430-nat-modeq-of-mul-left-88d20bca",
+          "F:ml430-nat-modeq-of-mul-right-43078e1c",
+          "F:ml430-nat-modeq-dvd-iff-8f130450"
+        ],
+        "formal_languages": [
+          "lean4-surface"
+        ],
+        "fragments": [
+          "Nat"
+        ]
+      },
+      "producer": {
+        "operation": "conclusion-directed-application-v1",
+        "implementation": "crates/axeyum-lean-import/src/producers/conclusion_directed_application.rs",
+        "input_kind": "axeyum-imported-candidate-family-goal",
+        "output_kind": "axeyum-conclusion-directed-candidate"
+      },
+      "checker": {
+        "operation": "axeyum-lean-import/conclusion-directed-transport-v1",
+        "implementation": "crates/axeyum-lean-import/examples/conclusion_directed_transport_probe.rs",
+        "input_kind": "axeyum-conclusion-directed-candidate",
+        "output_kind": "axeyum-source-bound-kernel-evidence-v1"
+      },
+      "executor": {
+        "driver": "axeyum-lean-import/conclusion-directed-family-multi-target-v1",
+        "implementation": "scripts/execute-autogenesis-operation.py",
+        "input_fact_id": "F:ml430-nat-mod-modeq-436e4c10",
+        "additional_fact_ids": [
+          "F:ml430-nat-modeq-one-516d46e8",
+          "F:ml430-nat-modeq-add-left-e83f0700",
+          "F:ml430-nat-modeq-add-right-8e2ca0cc",
+          "F:ml430-nat-modeq-add-left-cancel-e5287cf6",
+          "F:ml430-nat-modeq-add-right-cancel-e871facf",
+          "F:ml430-nat-modeq-of-dvd-d75cc374",
+          "F:ml430-nat-modeq-of-mul-left-88d20bca",
+          "F:ml430-nat-modeq-of-mul-right-43078e1c",
+          "F:ml430-nat-modeq-dvd-iff-8f130450"
+        ],
+        "receipt_manifest": "artifacts/autogenesis/nat-modeq-congruence-contract-v1.json",
+        "generalization_train_fact_ids": [
+          "F:ml430-int-mod-modeq-6bec7847",
+          "F:ml430-int-modeq-one-01d9de39",
+          "F:ml430-int-modeq-add-left-6e17c69a",
+          "F:ml430-int-modeq-add-left-cancel-062ad5fe",
+          "F:ml430-int-modeq-of-dvd-b9c41fce",
+          "F:ml430-int-modeq-of-mul-left-c4ccd51e",
+          "F:ml430-int-modeq-of-mul-right-c92b7bf0"
+        ],
+        "targets": [
+          {
+            "fact_id": "F:ml430-nat-mod-modeq-436e4c10",
+            "target_definition": "Axeyum.Autogenesis.Statement.NatModEqCongruence.modModEq"
+          },
+          {
+            "fact_id": "F:ml430-nat-modeq-one-516d46e8",
+            "target_definition": "Axeyum.Autogenesis.Statement.NatModEqCongruence.modEqOne"
+          },
+          {
+            "fact_id": "F:ml430-nat-modeq-add-left-e83f0700",
+            "target_definition": "Axeyum.Autogenesis.Statement.NatModEqCongruence.addLeft"
+          },
+          {
+            "fact_id": "F:ml430-nat-modeq-add-right-8e2ca0cc",
+            "target_definition": "Axeyum.Autogenesis.Statement.NatModEqCongruence.addRight"
+          },
+          {
+            "fact_id": "F:ml430-nat-modeq-add-left-cancel-e5287cf6",
+            "target_definition": "Axeyum.Autogenesis.Statement.NatModEqCongruence.addLeftCancel"
+          },
+          {
+            "fact_id": "F:ml430-nat-modeq-add-right-cancel-e871facf",
+            "target_definition": "Axeyum.Autogenesis.Statement.NatModEqCongruence.addRightCancel"
+          },
+          {
+            "fact_id": "F:ml430-nat-modeq-of-dvd-d75cc374",
+            "target_definition": "Axeyum.Autogenesis.Statement.NatModEqCongruence.ofDvd"
+          },
+          {
+            "fact_id": "F:ml430-nat-modeq-of-mul-left-88d20bca",
+            "target_definition": "Axeyum.Autogenesis.Statement.NatModEqCongruence.ofMulLeft"
+          },
+          {
+            "fact_id": "F:ml430-nat-modeq-of-mul-right-43078e1c",
+            "target_definition": "Axeyum.Autogenesis.Statement.NatModEqCongruence.ofMulRight"
+          },
+          {
+            "fact_id": "F:ml430-nat-modeq-dvd-iff-8f130450",
+            "target_definition": "Axeyum.Autogenesis.Statement.NatModEqCongruence.dvdIff"
+          }
+        ],
+        "max_goal_binders": 12,
+        "max_holes": 16,
+        "timeout_seconds": 600,
+        "expected_evidence_label": "conclusion-directed-nat-modeq-congruence-v1"
       },
       "admission": {
         "epistemic_status": "proved",

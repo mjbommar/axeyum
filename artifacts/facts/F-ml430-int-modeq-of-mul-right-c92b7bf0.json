@@ -1,32 +1,52 @@
 {
-  "schema_version": 1,
-  "id": "F:ml430-int-modeq-of-mul-right-c92b7bf0",
-  "title": "Mathlib v4.30 source proposition Int.ModEq.of_mul_right",
-  "statement": "The proposition declared as `Int.ModEq.of_mul_right` in the pinned Mathlib v4.30 source.",
-  "formal": {
-    "language": "lean4-surface",
-    "statement": "∀ {n a b : ℤ} (m : ℤ), a ≡ b [ZMOD n * m] → a ≡ b [ZMOD n]",
-    "fragment": "Int"
-  },
-  "epistemic_status": "open",
-  "external_status": "proved",
+  "axiom_footprint": [],
   "depends_on": [
     "F:ml430-int-modeq-of-mul-left-c4ccd51e"
   ],
-  "evidence": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/modeq_family.rs",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run --release -q -p axeyum-lean-kernel --example int_theorem_inventory -- modEq_of_mul_right 2>/dev/null | grep -Ec '^theorem[[:space:]]+Int\\.modEq_of_mul_right[[:space:]]+\\(\\(')\" -ge 1",
+      "checker_operation": {
+        "id": "authoritative-kernel-int-modeq-shift-family-v1"
+      },
+      "checkers": [
+        "int_prelude_tests::every_int_declaration_is_checked_and_axiom_free (derives coverage from kernel.environment() directly, not from an inventory list — it failed by name on the first run of this declaration, which is exactly what it is for)",
+        "int_prelude_tests::derived_laws_have_no_axiom_footprint (reads Kernel::axiom_footprint for each derived law and requires the empty set)",
+        "axeyum-lean-kernel::Kernel::add_declaration (the trusted gate re-checks the proof term against its stated type at build time)"
+      ],
+      "id": "kernel-term-authored-declaration-axiom-free-Int.modEq_of_mul_right",
+      "kind": "kernel-term",
+      "notes": "The regex requires the tab-separated axiom-footprint column to be EMPTY, so the command fails if the theorem gains an axiom as well as if it disappears; verified discriminating by running it against a name that does not exist (exit 1) alongside the real one (exit 0). `int_theorem_inventory` must be run `--release`; in debug it stack-overflows building the full constructed environment, unrelated to this theorem. checker_operation.id is the join key gen-production-provenance-ledger.py reads; this operation now names six Int.ModEq facts, not this one alone.",
+      "supports": "`Int.modEq_of_mul_right : forall n a b m, ModEq (n*m) a b -> ModEq n a b`, UNCONDITIONAL in `n` and `m`, authored directly as a kernel declaration in crates/axeyum-lean-kernel/src/int_prelude/modeq_family.rs and admitted by Kernel::add_declaration with an empty axiom footprint. It is the mirror of the already-established `Int.modEq_of_mul_left` at the other divisibility witness: `Int.dvd_mul_right n m : dvd n (n*m)` instead of `Int.dvd_mul_left n m : dvd n (m*n)`, both special cases of the already-unconditional `Int.modEq_of_dvd`."
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Int",
+    "language": "lean4-surface",
+    "statement": "∀ {n a b : ℤ} (m : ℤ), a ≡ b [ZMOD n * m] → a ≡ b [ZMOD n]"
+  },
+  "id": "F:ml430-int-modeq-of-mul-right-c92b7bf0",
+  "notes": "CLOSED BY AXEYUM AUTOGENESIS. Registered multi-target operation `authoritative-kernel-int-modeq-shift-family-v1` (widened from five targets to six) names every Int.ModEq shift-family fact it closes, not this one alone.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+  "proof_route": "kernel-lean",
   "provenance": {
     "date": "2026-08-18",
-    "established_by": "not established in this ledger",
-    "source": "statement-only extraction of `Int.ModEq.of_mul_right` from Mathlib v4.30.0; no proof value was exposed",
+    "established_by": "lane modeq-producer (2026-08-28): the one still-open TRAIN member of the integer-modular-equivalence family, closed as a twenty-line mirror of declare_modeq_of_mul_left in the same operation's own producer file. It is the train demonstration that authoritative-mathlib-nat-modeq-congruence-family-v1's Nat contract transports: the import route cannot reach any Int target, because every Lean 4.30 Int lemma measured — including Int.add_comm and Int.sub_self — carries propext, and that route requires an empty axiom footprint.",
     "prior_art": [
       {
-        "who": "the Mathlib contributors",
+        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted",
         "what": "the theorem declaration `Int.ModEq.of_mul_right`",
         "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
-        "year": 2026,
-        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted"
+        "who": "the Mathlib contributors",
+        "year": 2026
       }
-    ]
+    ],
+    "source": "statement-only extraction of `Int.ModEq.of_mul_right` from Mathlib v4.30.0; no proof value was exposed"
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "schema_version": 1,
+  "statement": "The proposition declared as `Int.ModEq.of_mul_right` in the pinned Mathlib v4.30 source.",
+  "title": "Mathlib v4.30 source proposition Int.ModEq.of_mul_right"
 }

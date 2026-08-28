@@ -23,11 +23,11 @@
 //! unambiguous entry points are re-exported below.
 
 pub mod bounded_application;
-pub mod conclusion_directed_application;
 pub mod bounded_induction;
+pub mod conclusion_directed_application;
 pub mod modeq_family;
 
 pub use bounded_application::propose_bounded_application;
-pub use conclusion_directed_application::propose_conclusion_directed_application;
 pub use bounded_induction::{propose_bounded_induction, propose_bounded_induction_with_rewrites};
+pub use conclusion_directed_application::propose_conclusion_directed_application;
 pub use modeq_family::{CircularityAudit, audit_circularity, propose_modeq_family};

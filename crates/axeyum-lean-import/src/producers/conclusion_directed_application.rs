@@ -244,12 +244,11 @@ fn match_pattern(
     if let ExprNode::FVar(id) = kernel.expr_node(pattern)
         && let Some(slot) = state.hole_slot(*id)
     {
-        return match state.assignment[slot] {
-            Some(existing) => kernel.def_eq(existing, target),
-            None => {
-                state.assignment[slot] = Some(target);
-                true
-            }
+        return if let Some(existing) = state.assignment[slot] {
+            kernel.def_eq(existing, target)
+        } else {
+            state.assignment[slot] = Some(target);
+            true
         };
     }
     if !mentions_hole(kernel, pattern, state.holes, &mut state.hole_memo) {
