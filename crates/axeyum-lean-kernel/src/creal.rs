@@ -4787,6 +4787,28 @@ pub struct CRealPrelude {
     /// approximating point and [`Self::equiv_zero_of_small`] closes. See
     /// `creal/integral.rs`.
     pub integral_split_arbitrary: NameId,
+    /// `CReal.integralSplitAnywhere : ∀ (F : CReal → CReal) (a b c : CReal)
+    /// (hab : le a b) (u : UniformlyContinuousOn F a b) (kb : Nat),
+    /// BoundedOn F a b kb → ∀ (hac : le a c) (hcb : le c b)
+    /// (uac : UniformlyContinuousOn F a c)
+    /// (ucb : UniformlyContinuousOn F c b),
+    /// Equiv (integral F a b hab u)
+    ///       (add (integral F a c hac uac) (integral F c b hcb ucb))`.
+    ///
+    /// [`Self::integral_split_arbitrary`] **with its `PosBound` removed** —
+    /// the form the Fundamental Theorem needs, since it splits at
+    /// `[a, clamp y]`, whose width is zero exactly at `y = a`.
+    ///
+    /// The conclusion never mentions `k`, so the hypothesis is only ever
+    /// used *inside* the proof: [`Self::equiv_zero_of_small`] reduces the
+    /// goal to a per-accuracy bound, [`Self::lt_cotrans`] splits `0 < δ`
+    /// against the width, the positive branch feeds
+    /// [`Self::pos_bound_of_lt`] (whose `Exists` is eliminable because the
+    /// goal is a `Prop`) and closes outright, and the degenerate branch
+    /// bounds all three integrals by `M·δ` through
+    /// [`Self::integral_abs_le_of_bound`]. **`inv_index_irrelevant` is not
+    /// needed** — `CReal.integral` takes no `k`. See `creal/integral.rs`.
+    pub integral_split_anywhere: NameId,
     /// `CReal.integral_abs_le : ∀ F a b (k : Nat) (hab : le a b)
     /// (u : UniformlyContinuousOn F a b), BoundedOn F a b k →
     /// le (abs (integral F a b hab u))
@@ -6180,6 +6202,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         split_point_approx: kernel.name_str(creal, "splitPointApprox"),
         integral_endpoint_close: kernel.name_str(creal, "integralEndpointClose"),
         integral_split_arbitrary: kernel.name_str(creal, "integralSplitArbitrary"),
+        integral_split_anywhere: kernel.name_str(creal, "integralSplitAnywhere"),
         integral_abs_le: kernel.name_str(creal, "integral_abs_le"),
         integral_abs_le_of_bound: kernel.name_str(creal, "integral_abs_le_of_bound"),
         integral_sub_linear_le: kernel.name_str(creal, "integral_sub_linear_le"),
@@ -9468,24 +9491,37 @@ const STEPS: &[BuildStep] = &[
         label: "integral::declare_ftc_estimates",
         requires: &[
             |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.abs_add_le,
             |p: CRealPrelude| p.abs_congr,
             |p: CRealPrelude| p.abs_le,
             |p: CRealPrelude| p.add,
+            |p: CRealPrelude| p.add_comm,
             |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.add_le_add,
             |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.bounded_on,
+            |p: CRealPrelude| p.bounded_on_unfold,
+            |p: CRealPrelude| p.equiv_of_le_le,
             |p: CRealPrelude| p.equiv_refl,
             |p: CRealPrelude| p.equiv_symm,
             |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.equiv_zero_of_small,
             |p: CRealPrelude| p.integral,
             |p: CRealPrelude| p.integral_add,
             |p: CRealPrelude| p.integral_const,
             |p: CRealPrelude| p.integral_le,
+            |p: CRealPrelude| p.integral_split_arbitrary,
             |p: CRealPrelude| p.le,
             |p: CRealPrelude| p.le_abs_self,
             |p: CRealPrelude| p.le_congr,
             |p: CRealPrelude| p.le_max_left,
+            |p: CRealPrelude| p.le_of_equiv,
+            |p: CRealPrelude| p.le_of_lt,
             |p: CRealPrelude| p.le_refl,
             |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.lt,
+            |p: CRealPrelude| p.lt_cotrans,
             |p: CRealPrelude| p.max,
             |p: CRealPrelude| p.max_le,
             |p: CRealPrelude| p.min,
@@ -9493,21 +9529,32 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.mul,
             |p: CRealPrelude| p.mul_comm,
             |p: CRealPrelude| p.mul_congr,
+            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
             |p: CRealPrelude| p.mul_zero,
             |p: CRealPrelude| p.neg,
             |p: CRealPrelude| p.neg_congr,
             |p: CRealPrelude| p.neg_le_abs,
             |p: CRealPrelude| p.neg_le_neg,
+            |p: CRealPrelude| p.neg_sub_swap,
+            |p: CRealPrelude| p.of_rat,
+            |p: CRealPrelude| p.of_rat_add,
+            |p: CRealPrelude| p.of_rat_le,
+            |p: CRealPrelude| p.of_rat_mul,
+            |p: CRealPrelude| p.of_rat_pos,
+            |p: CRealPrelude| p.pos_bound,
+            |p: CRealPrelude| p.pos_bound_of_lt,
             |p: CRealPrelude| p.uniformly_continuous_const,
             |p: CRealPrelude| p.uniformly_continuous_on,
             |p: CRealPrelude| p.uniformly_continuous_on_restrict,
             |p: CRealPrelude| p.uniformly_continuous_sub,
+            |p: CRealPrelude| p.zero,
         ],
         provides: &[
             |p: CRealPrelude| p.integral_abs_le_of_bound,
             |p: CRealPrelude| p.integral_sub_linear_le,
             |p: CRealPrelude| p.antiderivative,
             |p: CRealPrelude| p.antiderivative_abs_le,
+            |p: CRealPrelude| p.integral_split_anywhere,
         ],
         run: integral::declare_ftc_estimates,
     },

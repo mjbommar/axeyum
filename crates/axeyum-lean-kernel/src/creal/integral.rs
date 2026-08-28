@@ -2148,19 +2148,32 @@
 //! `−1`, both already landed, and one uniform-continuity bound on
 //! `F(z) − F(x)` over `[x,y]`. That is a composition, not a new estimate.
 //!
-//! ### The `PosBound` removal was NOT attempted, and here is the cost
+//! ### The `PosBound` removal — DONE, 2026-08-27, and this section's own cost estimate was wrong
 //!
-//! The per-accuracy `lt_cotrans` split does work in principle — `b−a <
-//! 1/(e+1)` closes by [`CRealPrelude::integral_abs_le`] and `b−a >
-//! 1/(2e+2)` feeds [`CRealPrelude::pos_bound_of_lt`] — and it is sound only
-//! because the target is a `Prop`, so `pos_bound_of_lt`'s `Exists` may be
-//! eliminated. But it has to be run at EVERY accuracy, so the
-//! `PosBound`-hypothesised theorem is applied inside the split with a `k`
-//! that changes per accuracy, and `integral`'s own value must then be shown
-//! independent of that choice. [`CRealPrelude::inv_index_irrelevant`] is the
-//! lemma that makes that possible and it is not yet wired anywhere near
-//! here. That is the next rung, and it is now the ONLY thing standing between
-//! this theorem and an unconditional one.
+//! [`CRealPrelude::integral_split_anywhere`] is
+//! `integral_split_arbitrary` with the `PosBound` and its `k` removed. The
+//! route is the `lt_cotrans` one predicted here — `b−a < δ` closes by three
+//! [`declare_integral_abs_le_of_bound`] applications and `0 < b−a` feeds
+//! [`CRealPrelude::pos_bound_of_lt`] — and it is indeed sound only because
+//! the target is a `Prop`, so `pos_bound_of_lt`'s `Exists` may be
+//! eliminated.
+//!
+//! **What this section got wrong**, in the direction that made the work look
+//! larger than it was: it said the split "has to be run at EVERY accuracy,
+//! so the `PosBound`-hypothesised theorem is applied inside the split with a
+//! `k` that changes per accuracy, and `integral`'s own value must then be
+//! shown independent of that choice", naming
+//! [`CRealPrelude::inv_index_irrelevant`] as the missing piece and "the ONLY
+//! thing standing between this theorem and an unconditional one".
+//!
+//! `CReal.integral` takes no `k` — only the *proof* does. So the conclusion
+//! mentions neither `k` nor the witness, the positive branch yields the
+//! WHOLE `Equiv` rather than a per-accuracy fragment, and the accuracy loop
+//! ends there. `inv_index_irrelevant` is not used and is not needed. The
+//! generalizable form: **before pricing a hypothesis-removal, check whether
+//! the hypothesis appears in the CONCLUSION.** If it does not, one branch of
+//! the split discharges the whole statement and no per-accuracy coherence
+//! obligation exists.
 //!
 //! ## FTC-I — checked 2026-08-27: rungs 1 and 2 landed, rung 3 characterized
 //! with a named route and three named missing lemmas
@@ -25510,7 +25523,6 @@ fn integral_split_arbitrary_proof(
 ) -> ExprId {
     let nat = d.nat_ty();
     let rat = p.rat;
-    let zero_c = czero(d, p);
     let zero_nat = d.num(0);
     let one_nat = d.num(1);
     let two_nat = d.num(2);
@@ -25886,32 +25898,57 @@ fn integral_split_arbitrary_proof(
     // --- close ------------------------------------------------------------
     let per = d.lam_fv(big_e_fv, nat, final_le);
     let vzero = d.lemma(p.equiv_zero_of_small, &[vdiff, per]);
+    equiv_of_diff_zero(d, p, i_ab, rhs, vzero)
+}
+
+/// `Equiv x y` from `hzero : Equiv (add x (neg y)) zero` — a vanishing
+/// difference IS an equivalence.
+///
+/// The closing move of every `equiv_zero_of_small` route in this file, and
+/// the one place it is written: both directions of
+/// [`CRealPrelude::equiv_of_le_le`] through
+/// [`le_add_of_sub_le_real`], with [`CRealPrelude::neg_sub_swap`] reversing
+/// the difference for the second. Extracted from
+/// [`integral_split_arbitrary_proof`]'s own tail when
+/// [`declare_integral_split_anywhere`] needed the identical step, rather
+/// than re-derived beside it.
+fn equiv_of_diff_zero(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    hzero: ExprId,
+) -> ExprId {
+    let zero_c = czero(d, p);
+    let ny = cneg(d, p, y);
+    let vdiff = cadd(d, p, x, ny);
+
     let up = {
-        let hle = d.lemma(p.le_of_equiv, &[vdiff, zero_c, vzero]);
-        let raw = le_add_of_sub_le_real(d, p, i_ab, rhs, zero_c, hle);
-        let rhs_zero = cadd(d, p, rhs, zero_c);
-        let drop = d.lemma(p.add_zero, &[rhs]);
-        let refl_i = d.lemma(p.equiv_refl, &[i_ab]);
-        d.lemma(p.le_congr, &[i_ab, i_ab, rhs_zero, rhs, refl_i, drop, raw])
+        let hle = d.lemma(p.le_of_equiv, &[vdiff, zero_c, hzero]);
+        let raw = le_add_of_sub_le_real(d, p, x, y, zero_c, hle);
+        let y_zero = cadd(d, p, y, zero_c);
+        let drop = d.lemma(p.add_zero, &[y]);
+        let refl_x = d.lemma(p.equiv_refl, &[x]);
+        d.lemma(p.le_congr, &[x, x, y_zero, y, refl_x, drop, raw])
     };
     let down = {
-        let back = d.lemma(p.equiv_symm, &[vdiff, zero_c, vzero]);
+        let back = d.lemma(p.equiv_symm, &[vdiff, zero_c, hzero]);
         let h0 = d.lemma(p.le_of_equiv, &[zero_c, vdiff, back]);
         let nonpos = neg_nonpos_real(d, p, vdiff, h0);
         // nonpos : le (neg vdiff) zero
         let nv = cneg(d, p, vdiff);
-        let ni_ab = cneg(d, p, i_ab);
-        let rev = cadd(d, p, rhs, ni_ab);
-        let swap = d.lemma(p.neg_sub_swap, &[i_ab, rhs]);
+        let nx = cneg(d, p, x);
+        let rev = cadd(d, p, y, nx);
+        let swap = d.lemma(p.neg_sub_swap, &[x, y]);
         let refl_z = d.lemma(p.equiv_refl, &[zero_c]);
         let moved = d.lemma(p.le_congr, &[nv, rev, zero_c, zero_c, swap, refl_z, nonpos]);
-        let raw = le_add_of_sub_le_real(d, p, rhs, i_ab, zero_c, moved);
-        let i_zero = cadd(d, p, i_ab, zero_c);
-        let drop = d.lemma(p.add_zero, &[i_ab]);
-        let refl_r = d.lemma(p.equiv_refl, &[rhs]);
-        d.lemma(p.le_congr, &[rhs, rhs, i_zero, i_ab, refl_r, drop, raw])
+        let raw = le_add_of_sub_le_real(d, p, y, x, zero_c, moved);
+        let x_zero = cadd(d, p, x, zero_c);
+        let drop = d.lemma(p.add_zero, &[x]);
+        let refl_y = d.lemma(p.equiv_refl, &[y]);
+        d.lemma(p.le_congr, &[y, y, x_zero, x, refl_y, drop, raw])
     };
-    d.lemma(p.equiv_of_le_le, &[i_ab, rhs, up, down])
+    d.lemma(p.equiv_of_le_le, &[x, y, up, down])
 }
 
 #[cfg(test)]
@@ -26981,6 +27018,501 @@ pub(super) fn declare_antiderivative_abs_le(
     })
 }
 
+// --- additivity at an arbitrary split, with NO positivity hypothesis --------
+//
+// [`CRealPrelude::integral_split_arbitrary`] carries a `PosBound (b − a) k`,
+// because [`CRealPrelude::split_point_approx`] divides by the width. The
+// Fundamental Theorem applies additivity on `[a, clamp y]`, whose width is
+// **zero when `y = a`**, so the positivity hypothesis fails exactly where the
+// theorem needs it. This section removes it.
+//
+// ## The route, and why it is sound
+//
+// The conclusion `Equiv (∫ₐᵇ F) (∫ₐᶜ F + ∫ᶜᵇ F)` mentions neither `k` nor the
+// `PosBound` witness — the hypothesis is used only *inside* the proof. So it
+// is enough to produce, at each accuracy `E`, a bound on the difference:
+//
+//   `equiv_zero_of_small` reduces the goal to `∀ E, |v| ≤ 1/(E+1)`, where
+//   `v := ∫ₐᵇ F − (∫ₐᶜ F + ∫ᶜᵇ F)`. At each `E` pick a `δ` and run
+//   [`CRealPrelude::lt_cotrans`] on `0 < δ` against the width:
+//
+//   - `0 < b − a` feeds [`CRealPrelude::pos_bound_of_lt`], whose `Exists` is
+//     eliminated into the goal — legal because the goal is a `Prop` — and
+//     `integral_split_arbitrary` then gives the `Equiv` **outright**, so `v`
+//     is `Equiv`-zero and every accuracy is met at once.
+//   - `b − a < δ` makes all three intervals narrower than `δ`, so all three
+//     integrals are bounded by `M·δ` through
+//     [`declare_integral_abs_le_of_bound`], and `|v| ≤ 3·M·δ` by the triangle
+//     inequality twice.
+//
+// `δ := 1/(j+1)` with `j` chosen by [`depth_for`] so that `3M/(j+1)` is at
+// most `1/(E+1)`; `M := mag_bound kb` is the `BoundedOn` witness's own bound,
+// so `3M`'s numerator is a closed `Nat` expression in `kb` and the choice
+// needs no new estimate.
+//
+// **What this route does NOT need, against the sizing.** This file's own
+// earlier note said the split "has to be run at EVERY accuracy, so the
+// `PosBound`-hypothesised theorem is applied inside the split with a `k` that
+// changes per accuracy, and `integral`'s own value must then be shown
+// independent of that choice", naming
+// [`CRealPrelude::inv_index_irrelevant`] as the missing piece. That is not
+// so: `CReal.integral` does not take `k` at all — only the *proof* does — so
+// the positive branch yields the whole `Equiv` and the accuracy loop ends
+// there. `inv_index_irrelevant` is not used, and no per-accuracy `k` ever
+// reaches the statement.
+
+/// `Equiv (add x (neg y)) zero`-shaped goal for the difference this section
+/// bounds: `∫ₐᵇ F − (∫ₐᶜ F + ∫ᶜᵇ F)`.
+struct SplitPieces {
+    i_ab: ExprId,
+    rhs: ExprId,
+    vdiff: ExprId,
+    abs_v: ExprId,
+}
+
+/// The three integrals, their combination and its magnitude — built once so
+/// the `lt_cotrans` branches and the closing step cannot drift apart.
+#[allow(clippy::too_many_arguments)]
+fn split_pieces(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    hab: ExprId,
+    u: ExprId,
+    hac: ExprId,
+    hcb: ExprId,
+    uac: ExprId,
+    ucb: ExprId,
+) -> SplitPieces {
+    let i_ab = d.const_app(p.integral, &[f, a, b, hab, u]);
+    let i_ac = d.const_app(p.integral, &[f, a, c, hac, uac]);
+    let i_cb = d.const_app(p.integral, &[f, c, b, hcb, ucb]);
+    let rhs = cadd(d, p, i_ac, i_cb);
+    let nrhs = cneg(d, p, rhs);
+    let vdiff = cadd(d, p, i_ab, nrhs);
+    let abs_v = d.const_app(p.abs, &[vdiff]);
+    SplitPieces {
+        i_ab,
+        rhs,
+        vdiff,
+        abs_v,
+    }
+}
+
+/// `CReal.integralSplitAnywhere : ∀ (F : CReal → CReal) (a b c : CReal)
+/// (hab : le a b) (u : UniformlyContinuousOn F a b) (kb : Nat),
+/// BoundedOn F a b kb → ∀ (hac : le a c) (hcb : le c b)
+/// (uac : UniformlyContinuousOn F a c) (ucb : UniformlyContinuousOn F c b),
+/// Equiv (integral F a b hab u)
+///       (add (integral F a c hac uac) (integral F c b hcb ucb))`
+///
+/// [`CRealPrelude::integral_split_arbitrary`] **without its `PosBound`** —
+/// the form the Fundamental Theorem needs, since it splits at `[a, clamp y]`
+/// whose width is zero at `y = a`. See this section's own documentation for
+/// the `lt_cotrans` route and for why `inv_index_irrelevant` is not needed.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_integral_split_anywhere(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let f_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let kb_fv = d.fresh_fvar();
+    let kb = d.kernel().fvar(kb_fv);
+    let hbnd_ty = d.const_app(p.bounded_on, &[f, a, b, kb]);
+    let hbnd_fv = d.fresh_fvar();
+    let hbnd = d.kernel().fvar(hbnd_fv);
+    let hac_ty = cle(d, p, a, c);
+    let hac_fv = d.fresh_fvar();
+    let hac = d.kernel().fvar(hac_fv);
+    let hcb_ty = cle(d, p, c, b);
+    let hcb_fv = d.fresh_fvar();
+    let hcb = d.kernel().fvar(hcb_fv);
+    let uac_ty = d.const_app(p.uniformly_continuous_on, &[f, a, c]);
+    let uac_fv = d.fresh_fvar();
+    let uac = d.kernel().fvar(uac_fv);
+    let ucb_ty = d.const_app(p.uniformly_continuous_on, &[f, c, b]);
+    let ucb_fv = d.fresh_fvar();
+    let ucb = d.kernel().fvar(ucb_fv);
+
+    let proof =
+        integral_split_anywhere_proof(d, p, f, a, b, c, hab, u, kb, hbnd, hac, hcb, uac, ucb);
+
+    let pieces = split_pieces(d, p, f, a, b, c, hab, u, hac, hcb, uac, ucb);
+    let concl = equiv(d, p, pieces.i_ab, pieces.rhs);
+
+    let ty = {
+        let t = d.pi_fv(ucb_fv, ucb_ty, concl);
+        let t = d.pi_fv(uac_fv, uac_ty, t);
+        let t = d.pi_fv(hcb_fv, hcb_ty, t);
+        let t = d.pi_fv(hac_fv, hac_ty, t);
+        let t = d.arrow(hbnd_ty, t);
+        let t = d.pi_fv(kb_fv, nat, t);
+        let t = d.pi_fv(u_fv, u_ty, t);
+        let t = d.pi_fv(hab_fv, hab_ty, t);
+        let t = d.pi_fv(c_fv, carrier, t);
+        let t = d.pi_fv(b_fv, carrier, t);
+        let t = d.pi_fv(a_fv, carrier, t);
+        d.pi_fv(f_fv, f_ty, t)
+    };
+    let value = {
+        let v = d.lam_fv(ucb_fv, ucb_ty, proof);
+        let v = d.lam_fv(uac_fv, uac_ty, v);
+        let v = d.lam_fv(hcb_fv, hcb_ty, v);
+        let v = d.lam_fv(hac_fv, hac_ty, v);
+        let v = d.lam_fv(hbnd_fv, hbnd_ty, v);
+        let v = d.lam_fv(kb_fv, nat, v);
+        let v = d.lam_fv(u_fv, u_ty, v);
+        let v = d.lam_fv(hab_fv, hab_ty, v);
+        let v = d.lam_fv(c_fv, carrier, v);
+        let v = d.lam_fv(b_fv, carrier, v);
+        let v = d.lam_fv(a_fv, carrier, v);
+        d.lam_fv(f_fv, f_ty, v)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.integral_split_anywhere,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// The proof term of [`declare_integral_split_anywhere`].
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
+fn integral_split_anywhere_proof(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    hab: ExprId,
+    u: ExprId,
+    kb: ExprId,
+    hbnd: ExprId,
+    hac: ExprId,
+    hcb: ExprId,
+    uac: ExprId,
+    ucb: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let zero_c = czero(d, p);
+    let zero_nat = d.num(0);
+    let one_nat = d.num(1);
+
+    let pieces = split_pieces(d, p, f, a, b, c, hab, u, hac, hcb, uac, ucb);
+    let i_ab = pieces.i_ab;
+    let rhs = pieces.rhs;
+    let vdiff = pieces.vdiff;
+    let abs_v = pieces.abs_v;
+    let nrhs = cneg(d, p, rhs);
+    let nv = cneg(d, p, vdiff);
+    let i_ac = d.const_app(p.integral, &[f, a, c, hac, uac]);
+    let i_cb = d.const_app(p.integral, &[f, c, b, hcb, ucb]);
+
+    // --- the bound `M := mag_bound kb`, and the three interval estimates ---
+    let skb = d.succ(kb);
+    let m_rat = d.const_app(rat.nat_div_succ, &[skb, zero_nat]);
+    let mbound = embed(d, p, m_rat);
+    let m_nonneg = {
+        let rz = rzero(d, rat);
+        let h = d.lemma(rat.zero_le_nat_div_succ, &[skb, zero_nat]);
+        d.lemma(p.of_rat_le, &[rz, m_rat, h])
+    };
+
+    // `hp_ab : ∀ t, le a t → le t b → le (abs (F t)) M`.
+    let hp_ab = d.lemma(p.bounded_on_unfold, &[f, a, b, kb, hbnd]);
+    let hp_ac = {
+        let t_fv = d.fresh_fvar();
+        let t = d.kernel().fvar(t_fv);
+        let h1_fv = d.fresh_fvar();
+        let h1 = d.kernel().fvar(h1_fv);
+        let h1_ty = cle(d, p, a, t);
+        let h2_fv = d.fresh_fvar();
+        let h2 = d.kernel().fvar(h2_fv);
+        let h2_ty = cle(d, p, t, c);
+        let t_le_b = d.lemma(p.le_trans, &[t, c, b, h2, hcb]);
+        let applied = d.apply(hp_ab, &[t, h1, t_le_b]);
+        let after2 = d.lam_fv(h2_fv, h2_ty, applied);
+        let after1 = d.lam_fv(h1_fv, h1_ty, after2);
+        d.lam_fv(t_fv, carrier, after1)
+    };
+    let hp_cb = {
+        let t_fv = d.fresh_fvar();
+        let t = d.kernel().fvar(t_fv);
+        let h1_fv = d.fresh_fvar();
+        let h1 = d.kernel().fvar(h1_fv);
+        let h1_ty = cle(d, p, c, t);
+        let h2_fv = d.fresh_fvar();
+        let h2 = d.kernel().fvar(h2_fv);
+        let h2_ty = cle(d, p, t, b);
+        let a_le_t = d.lemma(p.le_trans, &[a, c, t, hac, h1]);
+        let applied = d.apply(hp_ab, &[t, a_le_t, h2]);
+        let after2 = d.lam_fv(h2_fv, h2_ty, applied);
+        let after1 = d.lam_fv(h1_fv, h1_ty, after2);
+        d.lam_fv(t_fv, carrier, after1)
+    };
+
+    let bnd_ab = d.lemma(
+        p.integral_abs_le_of_bound,
+        &[f, a, b, mbound, hab, u, hp_ab],
+    );
+    let bnd_ac = d.lemma(
+        p.integral_abs_le_of_bound,
+        &[f, a, c, mbound, hac, uac, hp_ac],
+    );
+    let bnd_cb = d.lemma(
+        p.integral_abs_le_of_bound,
+        &[f, c, b, mbound, hcb, ucb, hp_cb],
+    );
+
+    // --- the two sub-widths are at most the whole width -------------------
+    let w = width_of(d, p, a, b);
+    let w_ac = width_of(d, p, a, c);
+    let w_cb = width_of(d, p, c, b);
+    let na = cneg(d, p, a);
+    let nc = cneg(d, p, c);
+    let refl_na = d.lemma(p.le_refl, &[na]);
+    let wac_le_w = d.lemma(p.add_le_add, &[c, b, na, na, hcb, refl_na]);
+    let refl_b = d.lemma(p.le_refl, &[b]);
+    let nn = d.lemma(p.neg_le_neg, &[a, c, hac]);
+    let wcb_le_w = d.lemma(p.add_le_add, &[b, b, nc, na, refl_b, nn]);
+
+    // --- the per-accuracy bound -------------------------------------------
+    let big_e_fv = d.fresh_fvar();
+    let big_e = d.kernel().fvar(big_e_fv);
+
+    // `N := (kb+1)·1` — `embed_mul_fuse`'s own numerator for `M·δ`; `3N` is
+    // what `depth_for` must shrink below `1/(E+1)`.
+    let n1 = NatOps::mul(d, skb, one_nat);
+    let n2 = NatOps::add(d, n1, n1);
+    let n3 = NatOps::add(d, n1, n2);
+    let (j, _j_pred, pf_small) = depth_for(d, p, n3, big_e);
+
+    let delta_rat = d.const_app(rat.nat_div_succ, &[one_nat, j]);
+    let delta = embed(d, p, delta_rat);
+    let bound_rat = d.const_app(rat.nat_div_succ, &[one_nat, big_e]);
+    let bound_e = embed(d, p, bound_rat);
+    let zero_le_bound = {
+        let rz = rzero(d, rat);
+        let h = d.lemma(rat.zero_le_nat_div_succ, &[one_nat, big_e]);
+        d.lemma(p.of_rat_le, &[rz, bound_rat, h])
+    };
+    let target = cle(d, p, abs_v, bound_e);
+
+    let delta_pos = {
+        let unit_le = d.lemma(p.rat.int.nat.le_refl, &[one_nat]);
+        let rat_pos = d.lemma(rat.nat_div_succ_pos, &[one_nat, j, unit_le]);
+        d.lemma(p.of_rat_pos, &[delta_rat, rat_pos])
+    };
+    let cot = d.lemma(p.lt_cotrans, &[zero_c, delta, delta_pos, w]);
+    let lt_zero_w = d.const_app(p.lt, &[zero_c, w]);
+    let lt_w_delta = d.const_app(p.lt, &[w, delta]);
+
+    // `Q := ofRat (N/(j+1))`, the common bound on each of the three
+    // integrals in the degenerate branch, and `3Q` fused to one rational.
+    let q_rat = d.const_app(rat.nat_div_succ, &[n1, j]);
+    let q = embed(d, p, q_rat);
+    let qq = cadd(d, p, q, q);
+    let bigb = cadd(d, p, q, qq);
+    let m_delta_eq = embed_mul_fuse(d, p, skb, one_nat, j);
+    let bigb_eq = {
+        let sum2_rat = radd(d, q_rat, q_rat);
+        let n2_rat = d.const_app(rat.nat_div_succ, &[n2, j]);
+        let o_n2 = embed(d, p, n2_rat);
+        let fold2 = d.lemma(p.of_rat_add, &[q_rat, q_rat]);
+        let fuse2 = d.lemma(rat.nat_div_succ_add, &[n1, n1, j]);
+        let eq_qq = rat_eq_rewrite(d, sum2_rat, n2_rat, fuse2, fold2, &|d, t| {
+            let ot = embed(d, p, t);
+            equiv(d, p, qq, ot)
+        });
+        let refl_q = d.lemma(p.equiv_refl, &[q]);
+        let step1 = d.lemma(p.add_congr, &[q, q, qq, o_n2, refl_q, eq_qq]);
+        let staged = cadd(d, p, q, o_n2);
+        let sum3_rat = radd(d, q_rat, n2_rat);
+        let n3_rat = d.const_app(rat.nat_div_succ, &[n3, j]);
+        let fold3 = d.lemma(p.of_rat_add, &[q_rat, n2_rat]);
+        let fuse3 = d.lemma(rat.nat_div_succ_add, &[n1, n2, j]);
+        let eq_staged = rat_eq_rewrite(d, sum3_rat, n3_rat, fuse3, fold3, &|d, t| {
+            let ot = embed(d, p, t);
+            equiv(d, p, staged, ot)
+        });
+        let o_n3 = embed(d, p, n3_rat);
+        echain(d, p, bigb, &[(staged, step1), (o_n3, eq_staged)])
+    };
+    let n3_rat = d.const_app(rat.nat_div_succ, &[n3, j]);
+    let o_n3 = embed(d, p, n3_rat);
+    let o_n3_le_bound = d.lemma(p.of_rat_le, &[n3_rat, bound_rat, pf_small]);
+
+    let branch_positive = |d: &mut IntDev<'_>, hpos: ExprId| -> ExprId {
+        let ex = d.lemma(p.pos_bound_of_lt, &[w, hpos]);
+        let predicate = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let body = d.const_app(p.pos_bound, &[w, k]);
+            d.lam_fv(k_fv, nat, body)
+        };
+        let minor = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let pb_ty = d.const_app(p.pos_bound, &[w, k]);
+            let pb_fv = d.fresh_fvar();
+            let pb = d.kernel().fvar(pb_fv);
+            let eqv = d.lemma(
+                p.integral_split_arbitrary,
+                &[f, a, b, c, k, pb, hab, u, kb, hbnd, hac, hcb, uac, ucb],
+            );
+            let refl_nrhs = d.lemma(p.equiv_refl, &[nrhs]);
+            let step = d.lemma(p.add_congr, &[i_ab, rhs, nrhs, nrhs, eqv, refl_nrhs]);
+            let rhs_nrhs = cadd(d, p, rhs, nrhs);
+            let cancel = d.lemma(p.add_neg, &[rhs]);
+            let vzero = echain(d, p, vdiff, &[(rhs_nrhs, step), (zero_c, cancel)]);
+
+            let le_v_zero = d.lemma(p.le_of_equiv, &[vdiff, zero_c, vzero]);
+            let le_v_bound = d.lemma(
+                p.le_trans,
+                &[vdiff, zero_c, bound_e, le_v_zero, zero_le_bound],
+            );
+            let nv_eq = d.lemma(p.neg_congr, &[vdiff, zero_c, vzero]);
+            let neg_zero = cneg(d, p, zero_c);
+            let le_nv_nzero = d.lemma(p.le_of_equiv, &[nv, neg_zero, nv_eq]);
+            let nz = super::series::neg_zero_equiv(d, p);
+            let refl_nv = d.lemma(p.equiv_refl, &[nv]);
+            let le_nv_zero = d.lemma(
+                p.le_congr,
+                &[nv, nv, neg_zero, zero_c, refl_nv, nz, le_nv_nzero],
+            );
+            let le_nv_bound = d.lemma(
+                p.le_trans,
+                &[nv, zero_c, bound_e, le_nv_zero, zero_le_bound],
+            );
+            let body = d.lemma(p.abs_le, &[vdiff, bound_e, le_v_bound, le_nv_bound]);
+            let with_pb = d.lam_fv(pb_fv, pb_ty, body);
+            d.lam_fv(k_fv, nat, with_pb)
+        };
+        crate::int_prelude::ops::exists_elim(d, predicate, target, ex, minor)
+    };
+
+    let branch_degenerate = |d: &mut IntDev<'_>, hlt: ExprId| -> ExprId {
+        let hwd = d.lemma(p.le_of_lt, &[w, delta, hlt]);
+        let hac_d = d.lemma(p.le_trans, &[w_ac, w, delta, wac_le_w, hwd]);
+        let hcb_d = d.lemma(p.le_trans, &[w_cb, w, delta, wcb_le_w, hwd]);
+
+        // `le (abs I) Q` for each of the three, through `M·width ≤ M·δ ≈ Q`.
+        let m_delta = cmul(d, p, mbound, delta);
+        let to_q = |d: &mut IntDev<'_>,
+                    interval: ExprId,
+                    width: ExprId,
+                    hwidth: ExprId,
+                    hbound: ExprId|
+         -> ExprId {
+            let scaled = d.lemma(
+                p.mul_le_mul_of_nonneg_left,
+                &[mbound, width, delta, m_nonneg, hwidth],
+            );
+            let m_width = cmul(d, p, mbound, width);
+            let refl_mw = d.lemma(p.equiv_refl, &[m_width]);
+            let moved = d.lemma(
+                p.le_congr,
+                &[m_width, m_width, m_delta, q, refl_mw, m_delta_eq, scaled],
+            );
+            let abs_i = d.const_app(p.abs, &[interval]);
+            d.lemma(p.le_trans, &[abs_i, m_width, q, hbound, moved])
+        };
+        let abs_ab_le = to_q(d, i_ab, w, hwd, bnd_ab);
+        let abs_ac_le = to_q(d, i_ac, w_ac, hac_d, bnd_ac);
+        let abs_cb_le = to_q(d, i_cb, w_cb, hcb_d, bnd_cb);
+
+        let abs_ac = d.const_app(p.abs, &[i_ac]);
+        let abs_cb = d.const_app(p.abs, &[i_cb]);
+        let abs_ab = d.const_app(p.abs, &[i_ab]);
+        let abs_rhs = d.const_app(p.abs, &[rhs]);
+        let tri = d.lemma(p.abs_add_le, &[i_ac, i_cb]);
+        let pair = d.lemma(p.add_le_add, &[abs_ac, q, abs_cb, q, abs_ac_le, abs_cb_le]);
+        let abs_sum = cadd(d, p, abs_ac, abs_cb);
+        let abs_rhs_le = d.lemma(p.le_trans, &[abs_rhs, abs_sum, qq, tri, pair]);
+
+        let rhs_le = {
+            let self_le = d.lemma(p.le_abs_self, &[rhs]);
+            d.lemma(p.le_trans, &[rhs, abs_rhs, qq, self_le, abs_rhs_le])
+        };
+        let nrhs_le = {
+            let neg_le = d.lemma(p.neg_le_abs, &[rhs]);
+            d.lemma(p.le_trans, &[nrhs, abs_rhs, qq, neg_le, abs_rhs_le])
+        };
+        let iab_le = {
+            let self_le = d.lemma(p.le_abs_self, &[i_ab]);
+            d.lemma(p.le_trans, &[i_ab, abs_ab, q, self_le, abs_ab_le])
+        };
+        let niab = cneg(d, p, i_ab);
+        let niab_le = {
+            let neg_le = d.lemma(p.neg_le_abs, &[i_ab]);
+            d.lemma(p.le_trans, &[niab, abs_ab, q, neg_le, abs_ab_le])
+        };
+
+        let leg1 = d.lemma(p.add_le_add, &[i_ab, q, nrhs, qq, iab_le, nrhs_le]);
+        let pre2 = d.lemma(p.add_le_add, &[niab, q, rhs, qq, niab_le, rhs_le]);
+        let rev = cadd(d, p, rhs, niab);
+        let flipped = cadd(d, p, niab, rhs);
+        let swap = d.lemma(p.neg_sub_swap, &[i_ab, rhs]);
+        let comm = d.lemma(p.add_comm, &[rhs, niab]);
+        let chain = echain(d, p, nv, &[(rev, swap), (flipped, comm)]);
+        let chain_symm = d.lemma(p.equiv_symm, &[nv, flipped, chain]);
+        let refl_bigb = d.lemma(p.equiv_refl, &[bigb]);
+        let leg2 = d.lemma(
+            p.le_congr,
+            &[flipped, nv, bigb, bigb, chain_symm, refl_bigb, pre2],
+        );
+        let habs = d.lemma(p.abs_le, &[vdiff, bigb, leg1, leg2]);
+
+        let refl_absv = d.lemma(p.equiv_refl, &[abs_v]);
+        let folded = d.lemma(
+            p.le_congr,
+            &[abs_v, abs_v, bigb, o_n3, refl_absv, bigb_eq, habs],
+        );
+        d.lemma(p.le_trans, &[abs_v, o_n3, bound_e, folded, o_n3_le_bound])
+    };
+
+    let at_accuracy = d.or_elim(
+        lt_zero_w,
+        lt_w_delta,
+        target,
+        cot,
+        &branch_positive,
+        &branch_degenerate,
+    );
+    let per = d.lam_fv(big_e_fv, nat, at_accuracy);
+    let vzero = d.lemma(p.equiv_zero_of_small, &[vdiff, per]);
+    equiv_of_diff_zero(d, p, i_ab, rhs, vzero)
+}
+
 /// Admit the Fundamental-Theorem slice: the generalized integral bound, the
 /// `|∫ₓ^y F − F(x)·(y − x)|` estimate, the antiderivative `G` and its growth
 /// bound. One `BuildStep`, four declarations, in dependency order.
@@ -26997,7 +27529,8 @@ pub(super) fn declare_ftc_estimates(
     declare_integral_abs_le_of_bound(d, p)?;
     declare_integral_sub_linear_le(d, p)?;
     declare_antiderivative(d, p)?;
-    declare_antiderivative_abs_le(d, p)
+    declare_antiderivative_abs_le(d, p)?;
+    declare_integral_split_anywhere(d, p)
 }
 
 #[cfg(test)]
@@ -27040,6 +27573,101 @@ mod ftc_tests {
     #[test]
     fn ftc_estimates_concrete_and_negative_controls() {
         crate::on_a_deep_stack(ftc_estimates_concrete_and_negative_controls_body);
+    }
+
+    /// **The instantiation `integral_split_arbitrary` cannot have**: the
+    /// DEGENERATE interval `a = b = c`, where the width is zero and no
+    /// `PosBound` exists.
+    ///
+    /// This is the whole point of [`declare_integral_split_anywhere`] — the
+    /// Fundamental Theorem splits at `[a, clamp y]`, whose width is zero at
+    /// `y = a` — so the discriminating check is that the theorem APPLIES
+    /// there. Everything but the point is symbolic (`F`, the point `x`, the
+    /// uniform-continuity witness, the bound index and its `BoundedOn`
+    /// witness are all universally quantified), so nothing about the
+    /// instance is special-cased; only the three intervals are collapsed.
+    ///
+    /// The conclusion it forces is `Equiv I (add I I)`, i.e. `∫ₓˣ F ≈ 0` —
+    /// true, and not vacuous: the two sides are distinct hash-consed terms,
+    /// asserted below.
+    ///
+    /// **No kernel negative control, deliberately**, for the reason
+    /// `integral_split_arbitrary_equiv_tests` records: both sides are
+    /// `CReal.integral` applications and a FAILING `def_eq` between two
+    /// `Definition`-heavy terms has no stopping rule (measured elsewhere in
+    /// this file at >300 s and 3.1 GB). The discriminating controls live one
+    /// level down, on the estimates this proof composes.
+    #[test]
+    fn integral_split_anywhere_applies_at_a_degenerate_interval() {
+        crate::on_a_deep_stack(integral_split_anywhere_degenerate_body);
+    }
+
+    fn integral_split_anywhere_degenerate_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+        let nat = d.nat_ty();
+        let f_ty = fn_ty(&mut d, p);
+
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let u_ty = d.const_app(p.uniformly_continuous_on, &[f, x, x]);
+        let u_fv = d.fresh_fvar();
+        let u = d.kernel().fvar(u_fv);
+        let kb_fv = d.fresh_fvar();
+        let kb = d.kernel().fvar(kb_fv);
+        let hb_ty = d.const_app(p.bounded_on, &[f, x, x, kb]);
+        let hb_fv = d.fresh_fvar();
+        let hb = d.kernel().fvar(hb_fv);
+
+        let hxx = d.lemma(p.le_refl, &[x]);
+        let proof = d.lemma(
+            p.integral_split_anywhere,
+            &[f, x, x, x, hxx, u, kb, hb, hxx, hxx, u, u],
+        );
+
+        let integral_xx = d.const_app(p.integral, &[f, x, x, hxx, u]);
+        let doubled = cadd(&mut d, p, integral_xx, integral_xx);
+        assert_ne!(
+            integral_xx, doubled,
+            "non-vacuity: `∫ₓˣ F` and `∫ₓˣ F + ∫ₓˣ F` must be distinct terms, \
+             so the conclusion is not `Equiv X X`"
+        );
+        let concl = equiv(&mut d, p, integral_xx, doubled);
+
+        let ty = {
+            let t = d.arrow(hb_ty, concl);
+            let t = d.pi_fv(kb_fv, nat, t);
+            let t = d.pi_fv(u_fv, u_ty, t);
+            let t = d.pi_fv(x_fv, carrier, t);
+            d.pi_fv(f_fv, f_ty, t)
+        };
+        let value = {
+            let v = d.lam_fv(hb_fv, hb_ty, proof);
+            let v = d.lam_fv(kb_fv, nat, v);
+            let v = d.lam_fv(u_fv, u_ty, v);
+            let v = d.lam_fv(x_fv, carrier, v);
+            d.lam_fv(f_fv, f_ty, v)
+        };
+        let anon = d.kernel().anon();
+        let name = d
+            .kernel()
+            .name_str(anon, "__integralSplitAnywhereDegenerate");
+        let res = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(
+            res.is_ok(),
+            "integral_split_anywhere must apply at a = b = c, where no \
+             `PosBound` on the width exists: {:?}",
+            res.err()
+        );
     }
 
     #[expect(
