@@ -155,9 +155,13 @@ now. Nothing was deleted.
 | 2026-08-28 | parity-coprime | `Nat.choose_le_choose` proved (`nat_prelude/choose.rs`); pinned `67+342`->`67+343` in `the_build_is_deterministic` |
 | 2026-08-28 | parity-coprime | `Nat.coprime_of_lt_prime` fact flipped to proved (already admitted pre-existing kernel declaration, no new Rust) |
 | 2026-08-28 | parity-coprime | `Nat.coprime_two_left`, `Nat.coprime_two_right`, `Nat.Coprime.odd_of_left`, `Nat.Coprime.odd_of_right` proved (`nat_prelude/primes.rs`); pinned `67+343`->`67+347` |
+| 2026-08-28 | nat-numeral-accel | `NatOps::num` → `Lit::Nat`: `reduce_nat_binop` now reachable (1.6M× on `gcd 512 1875`), no proof edited, prelude-build win measured at ~zero, and 12 pins + 3 scripts + 5 fact checkers + 388 fact statements move on rendering (ADR-0613, proposed) |
+| 2026-08-28 | main-red-tests | `qfbv-proof-export` could not succeed on ANY input since `81361cdd1` made `set-logic` positional; and the `creal` prelude outgrew the 2 MiB default stack (16 MiB debug / 8 MiB release measured, pinned at 2 MiB / 128 KiB) so every constructed-reals test aborted the binary |
 | 2026-08-28 | fp16-evidence | `F:fp16-add-monotone-rne` flipped open -> proved; attached `unsat-certificate` evidence row with discriminating `checker_command` (ADR-0613 LRAT route), reproduced end-to-end twice (339s, 353s wall clock) |
 | 2026-08-28 | int-gcd | `Int.ne_zero_of_gcd` + `Int.gcd_eq_one_of_gcd_mul_right_eq_one_left`/`_right` landed as new kernel declarations in `int_prelude/gcd.rs`; three ml430 facts flipped `open`→`proved`, axiom-free; `Int.gcd_eq_gcd_ab` (existential Bézout) confirmed NOT the same fact as Mathlib's computable `gcd_eq_gcd_ab` and left open with a sized reason; `gcd_div`/`gcd_div_gcd_div_gcd`/`gcd_greatest` not attempted |
 | 2026-08-28 | nat-helper-dedup | promoted `two_divisor_dichotomy` (3→1), `two_mul_eq_add_self` (2→1), `bool_true_or_false` (3→1, found a 3rd copy in `perfect.rs` beyond the brief's two) to `nat_prelude/ops.rs`; re-pointed 15 call sites across `irrational.rs`/`perfect.rs`/`primes.rs`/`powsq.rs`/`totient.rs`; census unchanged at 10/10 (tool is blind to private-fn duplication by construction) |
+| 2026-08-28 | modeq-producer | conclusion-directed producer + axiom-free Lean contract close 10 open `nat.modeq` facts; `via_multi_target` 19 -> 30 |
+| 2026-08-28 | modeq-producer | `Int.modEq_of_mul_right` closes the last open `integer-modular-equivalence` train fact, widening the Int shift family 5 -> 6 |
 | 2026-08-27 | (uncommitted at status-file write time) | `CReal.sumRange_cauchy_of_abs_cauchy` / `CReal.sumRange_converges_of_abs_converges` (absolute convergence implies convergence) plus a soundness-negative control; curriculum rows 18 and 22–23 corrected. |
 | 2026-08-27 | (uncommitted at status-file write time) | Ten new `artifacts/facts/F-creal-*.json` entries for the Ch.13/14 Riemann integral construction and algebra (`riemannSum_cauchy`, `integral`, `integral_converges`, `integral_const`, `integral_add`, `integral_le`, `integral_scale`, `integral_witness_independent`, `riemannSum_integral_close`, `sharedIndexToCanonical`); `python3 scripts/validate-facts.py` green (708 facts, 0 errors). |
 | 2026-08-27 | (uncommitted at status-file write time) | Added `--require-declaration <name> [--require-kind <kind>]` to `crates/axeyum-lean-kernel/examples/kernel_declaration_projection.rs`: a direct, fail-on-absence presence checker for `Declaration::Definition`s (and any other kind), mutation-tested against `CReal.integral`. Upgraded `F:creal-integral`'s `kernel-CReal.integral` evidence to use it. Registered 14 new `artifacts/facts/F-creal-*.json` entries for Spivak Ch.18 (`e`) and Ch.22-23 (series convergence tests): `creal-e`, `creal-e-converges`, `creal-two-le-e`, `creal-e-le-three`, `creal-e-le-four`, `creal-expterm-le-geom`, `creal-expdominantcauchy`, `creal-cauchyofpointwiseequiv`, `creal-geomcauchy`, `creal-sumrange-comparisontest`, `creal-sumrange-cauchy-of-dominated`, `creal-sumrange-converges-of-dominated`, `creal-sumrange-cauchy-of-abs-cauchy`, `creal-sumrange-converges-of-abs-converges`. `python3 scripts/validate-facts.py` green (722 facts, 0 errors). |
@@ -8175,6 +8179,146 @@ history already tolerates this shape of duplicate (`bool_true_or_false` has
 two copies for the same reason). Said so in the commit rather than silently
 re-deriving.
 
+**Your lane's block (`needs-decision`, nat-numeral-accel, 2026-08-28).** The
+diagnosis held and is now measured rather than read; the fix works and is sound;
+**and the benefit is not where it was expected, while the cost is somewhere
+nobody looked.** All three parts matter and only the set of them is honest.
+
+**The mechanism (confirmed, mine).** `NatOps::num` built `succ^n Nat.zero`.
+`Kernel::reduce_nat_binop` fires only when both arguments whnf to `Lit::Nat`,
+and `Nat.zero` is a constructor with no definition, so a unary tower never does
+— ~2,280 numeral call sites across `nat`/`int`/`rat`/`creal`/`complex` were all
+on the slow side of a fast path built, tested by four suites, and trusted since
+the Lean import work. `examples/nat_numeral_whnf_probe` prices it: `Nat.mul 125
+105` 52,399 µs → 10 µs; `Nat.gcd 512 1875` **25.6 s → 16 µs** (1.6 million×);
+`Nat.div 13125 25` **stack-overflows** unary, at exactly the magnitude
+`Rat.normalize` forms.
+
+**The fix (landed on this branch, ADR-0613).** `num` emits `Lit::Nat(n)`;
+`num_unary` keeps the constructor spine. All seven preludes still build, so
+every proof term written against the unary form re-passes
+`Kernel::add_declaration` — **no proof edited, blast radius zero on proofs**.
+Guard: `tests/nat_prelude_numerals_are_literals.rs`, five assertions, each
+mutation-verified. Reverting `num` to unary kills exactly the two shape tests
+and leaves both defeq tests green, which is the point.
+
+**The benefit is ~zero on today's tree.** Interleaved A/B, same binary from the
+two `num` bodies, `AXEYUM_PRELUDE_CACHE=0`: `creal` **14.91 s → 14.23 s**
+(4.6%, and a second round under load 6.2 put the *unary* side at 23.4 s — noise
+larger than the effect); `nat` 193.5 → 191.2 ms; `rat` 762.6 → 784.4 ms.
+**Treat `creal_prelude_builds` as unchanged.** The committed preludes do not
+spend meaningful time reducing closed `Nat` at large magnitudes; the 587 s →
+113.5 s incident was one declaration forming a 13,125-magnitude `Nat`. What the
+change buys is that the shape stops being a landmine, not that today is faster.
+
+Do not quote the brief's 94.85 s `creal_prelude_builds` figure. Measured here on
+`main` at `f3ecf4004`, release, cache off: **15.54 s / 15.35 s** via
+`prelude_build_timing` — a different harness from the test, but nothing near 94 s
+either way.
+
+**The cost is a ledger-wide RENDERING change, and this is the decision to
+make.** `lean_pp` prints `Lit::Nat(n)` as `n` where it printed `AxNat.zero` /
+`AxNat.succ AxNat.zero`. `AxNat.succ x0` is unchanged — a successor of a
+*variable* is built by `succ`, not `num` — which is what confirms only numerals
+moved. Measured:
+
+| surface | count |
+| --- | ---: |
+| `cargo test -p axeyum-lean-kernel --lib` | **913 passed, 12 failed** — every failure a pinned rendered statement |
+| pinned statements | 6 `rat_prelude_tests.rs`, 3 `int_prelude_tests.rs`, 1 `nat_prelude_tests.rs`, 2 `creal_tests.rs` |
+| autogenesis scripts matching the old rendering | 3 (two are gates) |
+| fact `evidence` / `checker_command` | **5** |
+| fact `formal.statement` | **388** — documentation, so these drift *silently* rather than going red |
+
+**The 12 pins were deliberately NOT repinned.** A drift pin rewritten
+mechanically is how a real drift gets masked, and `AxNat.zero` also renders from
+a direct `zero()` call `num` never touched, so a textual rewrite is unsound —
+each needs the string the kernel actually renders. And the 388 silently-drifting
+statements are a ledger question with `artifacts/` outside this lane's scope.
+
+**Recommended alternative, unmeasured, zero rendering blast radius:** make
+`Nat.zero` reduce to `Lit::Nat(0)` so unary towers collapse bottom-up in `whnf`
+and `reduce_nat_binop` fires, leaving every stored and rendered term as it is.
+Two caveats the ADR states and this lane did not test: the `div 13125 25` stack
+overflow probably **survives** (the tower is still walked at depth 13,125), and
+a new eager probe on `whnf`'s hot path is not free — ADR-0536 records the binary
+acceleration alone taking a build 8.7 s → 33.0 s.
+
+**One consequence to know before narrowing anything in `tc.rs`.**
+`Kernel::nat_offset`'s `Lit::Nat` arm is now load-bearing for
+`build_nat_prelude` itself: deleting it makes the nat prelude fail to admit
+(`TypeMismatch`), where before it was invisible to the prelude. That is the one
+prediction this lane got wrong — it was expected to kill one test and killed all
+five.
+
+**Not run:** `cargo test --workspace --lib` (did not run — the kernel sweep is
+667 s and consumed the budget). `cargo doc`, `clippy` did not run.
+
+**Your lane's block (`DONE`, main-red-tests, 2026-08-28).** Both failures were
+pre-existing on `main`, both reproduced, both diagnosed to a named cause, both
+fixed. `cargo test -p axeyum-solver --lib --features full` is **1438 passed, 0
+failed** with `RUST_MIN_STACK` unset, and `-p axeyum-bench --test
+qfbv_proof_export` is 2/2.
+
+## 1. `monomial_bound` (and three more modules) — the `creal` prelude outgrew the default stack
+
+**It reproduces in `--release`**, so the brief's discriminator fires — but the
+requirement is **finite and bounded in both profiles**, which the "fails in
+release ⇒ runaway recursion" heuristic does not distinguish. Measured two
+independent ways:
+
+| what | debug | release |
+| --- | --- | --- |
+| `--measure --prelude creal` (smallest power of two) | 16,777,216 | 8,388,608 |
+| pinned in `artifacts/kernel-stack-envelope.tsv` (2026-08-26) | 2,097,152 | 131,072 |
+| fine bisection of the release test binary | — | aborts at 4,456,448, completes at 4,587,520 |
+
+So the cause is not a false assertion and not a non-terminating term: the
+`CReal` development's stack requirement grew **8x in debug and 64x in release
+in two days**, past the 2 MiB a `#[test]` thread gets by default.
+`scripts/check-kernel-stack-envelope.sh --check --prelude creal` — the gate that
+exists precisely to convert this symptom into an explained failure — is **red on
+`main`**, and nobody ran it.
+
+The blast radius is wider than the two tests the reporting lane named, because a
+stack overflow aborts the whole process and kills the rest of the run. Every
+test that builds the constructed reals was affected:
+`reconstruct::arithmetic::{monomial_bound, zero_product, product_positivstellensatz,
+signature::signature_tests}` and `reconstruct::tests`. Only the first to run
+reported.
+
+Fixed at the one place they all funnel through:
+`LraReconstructCtx::try_new_over_constructed_reals_reporting` now builds on a
+256 MiB worker (16x the measured debug requirement, the workspace's
+`DEEP_STACK_BYTES` figure), which also covers the front-door
+`try_new_over_constructed_reals` path where an overflow would have aborted a
+consumer's process. The one direct `build_creal_prelude` outside that
+constructor, in `signature_tests::creal_signature`, uses the same helper.
+
+**Still owed, and outside this lane's scope (`artifacts/` was not mine to
+touch):** raise `artifacts/kernel-stack-envelope.tsv`'s two `creal` rows to
+`debug 16777216` / `release 8388608`. Until that lands the envelope gate stays
+red — correctly.
+
+## 2. `qfbv_proof_export` — the exporter could not succeed on any input
+
+`crates/axeyum-bench/src/bin/qfbv-proof-export.rs` refused every script
+containing a `ScriptCommand` other than `Assert` or `CheckSat`. Commit
+`81361cdd1` (2026-08-21, "a command is answered or says `unsupported` — never
+dropped") made `set-logic` and `set-option` **positional** `ScriptCommand`s; the
+exporter landed 2026-07-19 (`ba9ff7c6c`), before that. From `81361cdd1` onward
+the binary *required* `(set-logic QF_BV)` ten lines above and then refused the
+script for containing a `set-logic` command — no input could pass.
+
+Replaced the two-variant allowlist with an **exhaustive match carrying no
+wildcard arm**, so the next `ScriptCommand` variant is a compile error here
+rather than a silent refusal, and the refusal now names the offending command
+instead of listing four it might have been.
+
+Also fixed the three pre-existing `clippy -D warnings` errors in
+`reconstruct/arithmetic/axreal_call_site_guard.rs` (two `usize as i64` casts, one
+missing backtick) — same scope, and they blocked the gate.
+
 **Your lane's block (`DONE`, fp16-evidence, 2026-08-28).** `F:fp16-add-monotone-rne`
 is now `epistemic_status: proved`. Rebuilt `smtcomp_cli --release` from
 scratch in this worktree and ran it end to end against the fact's own pinned
@@ -8335,6 +8479,64 @@ Nothing the kernel rejected — every consolidation was a pure refactor
 (move + rename + re-point call sites), the proof-term construction for each
 promoted function is byte-identical to (one of) its former copies, and the
 theorem statements it discharges are unchanged.
+
+**Your lane's block (`landed`, modeq-producer, 2026-08-28).** The task was to
+move the *multi-target operation* counter, not the theorem count.
+
+**Measured, `gen-production-provenance-ledger.py`:**
+`via_multi_target` **19 -> 30**, `multi_target_operations` **4 -> 5**,
+`operations` 28 -> 29. Eleven facts that were `open` at lane start are now
+`proved`, every one of them through an operation that names more than one
+target.
+
+**Holdout isolation, before and after, unchanged and PASS:**
+`held_out=37|settled=0|references=0`. All eleven open `nat.modeq` targets are
+in the **development** partition and the eleventh open sibling this lane also
+closed is **train**; nothing held-out was referenced, so no target was dropped
+on partition grounds.
+
+**What was actually built.**
+
+- `producers::conclusion_directed_application` (new). The existing
+  `bounded_application` grows a forward product closure and its 128-term
+  budget is exhausted at application depth 4; **eight of the ten `Nat.ModEq`
+  targets need a five-argument application and all eight declined with
+  `NoTypedApplication`.** The new producer peels the goal's binders, peels each
+  candidate into holes, first-order-matches the candidate's conclusion against
+  the goal terminal, and discharges the remaining holes from the goal's own
+  binders with bounded backtracking. 10 of 10 accepted, `axioms=0`,
+  `target_dependency=false`.
+- `scripts/lean/autogenesis_nat_modeq_congruence_contract_v1.lean` — ten
+  axiom-free Lean candidates. Every public Lean 4.30 `Nat` remainder lemma
+  carries `propext` (measured: `mod_zero`, `mod_eq_of_lt`, `add_mod`,
+  `mod_mod_of_dvd`, `mod_self`), so the `Nat.mod` recurrence is rebuilt over
+  `Nat.modCore`/`Nat.modCore.go` and every law derived from it by structural
+  fuel induction.
+- `Int.modEq_of_mul_right` in `int_prelude/modeq_family.rs` — the one still-open
+  **train** member of `integer-modular-equivalence`, a twenty-line mirror of
+  `declare_modeq_of_mul_left` at `Int.dvd_mul_right`.
+
+**Two findings worth carrying.**
+
+1. **The entire Lean 4.30 `Int` API is `propext`-dependent** — `Int.add_comm`
+   and `Int.sub_self` included, not just the `emod` lemmas. The
+   empty-axiom-footprint import route therefore cannot reach ANY `Int` target
+   without rebuilding `Int` arithmetic from constructors, which is why the Int
+   `ModEq` family was closed by the kernel-authored route and why this lane
+   closed its train member the same way.
+2. **`Nat.ModEq.gcd_eq` (`F:ml430-nat-modeq-gcd-eq-5167ff4f`) is the one
+   sibling this route cannot reach**, and the reason is measured, not guessed:
+   `Nat.gcd.eq_def` carries `Quot.sound` (`Nat.gcd_zero_left`, `Nat.gcd_succ`
+   likewise), so no axiom-free candidate can unfold `Nat.gcd`. The mathematics
+   is easy — `gcd a m = gcd (a % m) m = gcd (b % m) m = gcd b m` — and the
+   blocker is entirely `Nat.gcd`'s well-founded recursion.
+
+**Pre-existing red this lane did NOT cause, and did not fix:**
+`check-development-partition.py` was already failing on `main` for
+`authoritative-mathlib-nat-modeq-remainder-family-v1` (a development-only
+operation with no train reference); it still is. `clippy -D warnings` on
+`axeyum-lean-import` is red on `statement_goal_record.rs:131`
+(`format_push_string`), untouched by this lane.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 

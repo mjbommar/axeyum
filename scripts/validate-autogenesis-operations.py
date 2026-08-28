@@ -29,6 +29,7 @@ EXECUTION_DRIVERS = {
     "axeyum-lean-import/bounded-induction-multi-target-v1",
     "axeyum-lean-import/modeq-family-multi-target-v1",
     "axeyum-lean-import/imported-candidate-family-multi-target-v1",
+    "axeyum-lean-import/conclusion-directed-family-multi-target-v1",
     "axeyum-lean-import/checked-theorem-receipt-v1",
     "axeyum-lean-import/dependency-theorem-receipt-v1",
     "axeyum-lean-import/sealed-kernel-capsule-v1",
@@ -289,6 +290,107 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
             "receipt_manifest",
             "max_binders",
         }
+    elif driver == "axeyum-lean-import/conclusion-directed-family-multi-target-v1":
+        expected = common | {
+            "additional_fact_ids",
+            "targets",
+            "receipt_manifest",
+            "generalization_train_fact_ids",
+            "max_goal_binders",
+            "max_holes",
+        }
+    elif driver == "axeyum-lean-import/conclusion-directed-family-multi-target-v1":
+        additional = nonempty_strings(
+            value["additional_fact_ids"], f"{label}.additional_fact_ids"
+        )
+        all_fact_ids = [value["input_fact_id"], *additional]
+        if len(all_fact_ids) != len(set(all_fact_ids)) or any(
+            not FACT_ID_RE.fullmatch(fid) for fid in all_fact_ids
+        ):
+            raise RegistryError(f"{label} has duplicate or invalid fact ids")
+        manifest_path = repository_file(
+            value["receipt_manifest"], f"{label}.receipt_manifest", root
+        )
+        if manifest_path.parent != (root / "artifacts/autogenesis").resolve():
+            raise RegistryError(f"{label}.receipt_manifest must be canonical")
+        manifest = json.loads(manifest_path.read_text())
+        if (
+            manifest.get("schema_version") != 1
+            or manifest.get("kind") != "axeyum-autogenesis-nat-modeq-congruence-contract"
+            or (manifest.get("contract_source") or {}).get("lean_axiom_footprint") != []
+            or (manifest.get("producer") or {}).get("max_goal_binders")
+            != value["max_goal_binders"]
+            or (manifest.get("producer") or {}).get("max_holes") != value["max_holes"]
+        ):
+            raise RegistryError(f"{label}.receipt_manifest is not operation-eligible")
+        # The train facts this contract's shapes were established on FIRST.
+        # `check-development-partition.py` requires an operation that closes a
+        # development fact to reference a train fact, because a producer whose
+        # whole applicability was authored against the evaluation set no longer
+        # measures generalization. This field is that reference, and it is
+        # enforced rather than declared: every id must be in the `train`
+        # partition of the nursery AND already `proved`, so it cannot be
+        # satisfied by naming an open or development fact.
+        train_ids = nonempty_strings(
+            value["generalization_train_fact_ids"],
+            f"{label}.generalization_train_fact_ids",
+        )
+        nursery = json.loads(
+            (root / "artifacts/autogenesis/nursery-v1.json").read_text()
+        )
+        partitions = {
+            entry.get("fact_id"): entry.get("partition")
+            for entry in nursery.get("entries", [])
+        }
+        for train_id in train_ids:
+            if partitions.get(train_id) != "train":
+                raise RegistryError(
+                    f"{label}.generalization_train_fact_ids names {train_id!r}, "
+                    "which is not in the nursery's train partition"
+                )
+            train_path = root / "artifacts/facts" / (
+                train_id.replace("F:", "F-") + ".json"
+            )
+            if not train_path.is_file():
+                raise RegistryError(f"{label} train fact does not exist: {train_id}")
+            train_fact = json.loads(train_path.read_text())
+            if train_fact.get("epistemic_status") not in {"proved", "computed"}:
+                raise RegistryError(
+                    f"{label}.generalization_train_fact_ids names {train_id!r}, "
+                    "which is not established — a generalization source must be "
+                    "settled before the development targets are claimed"
+                )
+        outcomes = {row.get("fact_id"): row for row in manifest.get("outcomes", [])}
+        targets = value["targets"]
+        if not isinstance(targets, list) or len(targets) != len(all_fact_ids):
+            raise RegistryError(
+                f"{label}.targets must bind every named fact exactly once"
+            )
+        target_fact_ids = []
+        for index, target in enumerate(targets):
+            t_label = f"{label}.targets[{index}]"
+            if not isinstance(target, dict):
+                raise RegistryError(f"{t_label} must be an object")
+            exact_keys(target, {"fact_id", "target_definition"}, t_label)
+            fid = target["fact_id"]
+            target_fact_ids.append(fid)
+            outcome = outcomes.get(fid)
+            fact_path = root / "artifacts/facts" / (fid.replace("F:", "F-") + ".json")
+            if not fact_path.is_file() or not isinstance(outcome, dict):
+                raise RegistryError(f"{t_label} has no fact or receipt outcome")
+            if (
+                outcome.get("target_definition") != target["target_definition"]
+                or outcome.get("axiom_footprint") != []
+                or outcome.get("theorem_dependencies") != 1
+                or outcome.get("target_dependency") is not False
+                or outcome.get("independently_admitted") is not True
+            ):
+                raise RegistryError(f"{t_label} receipt contract disagrees")
+        if target_fact_ids != all_fact_ids:
+            raise RegistryError(
+                f"{label}.targets fact_id order must match input_fact_id "
+                "followed by additional_fact_ids"
+            )
     elif driver == "axeyum-lean-import/checked-theorem-receipt-v1":
         expected = common | {
             "receipt_manifest",
@@ -722,6 +824,98 @@ def validate_executor(value: Any, label: str, root: pathlib.Path) -> None:
                 or not isinstance(statement, str)
                 or hashlib.sha256(statement.encode()).hexdigest()
                 != outcome.get("formal_statement_sha256")
+            ):
+                raise RegistryError(f"{t_label} receipt contract disagrees")
+        if target_fact_ids != all_fact_ids:
+            raise RegistryError(
+                f"{label}.targets fact_id order must match input_fact_id "
+                "followed by additional_fact_ids"
+            )
+    elif driver == "axeyum-lean-import/conclusion-directed-family-multi-target-v1":
+        additional = nonempty_strings(
+            value["additional_fact_ids"], f"{label}.additional_fact_ids"
+        )
+        all_fact_ids = [value["input_fact_id"], *additional]
+        if len(all_fact_ids) != len(set(all_fact_ids)) or any(
+            not FACT_ID_RE.fullmatch(fid) for fid in all_fact_ids
+        ):
+            raise RegistryError(f"{label} has duplicate or invalid fact ids")
+        manifest_path = repository_file(
+            value["receipt_manifest"], f"{label}.receipt_manifest", root
+        )
+        if manifest_path.parent != (root / "artifacts/autogenesis").resolve():
+            raise RegistryError(f"{label}.receipt_manifest must be canonical")
+        manifest = json.loads(manifest_path.read_text())
+        if (
+            manifest.get("schema_version") != 1
+            or manifest.get("kind") != "axeyum-autogenesis-nat-modeq-congruence-contract"
+            or (manifest.get("contract_source") or {}).get("lean_axiom_footprint") != []
+            or (manifest.get("producer") or {}).get("max_goal_binders")
+            != value["max_goal_binders"]
+            or (manifest.get("producer") or {}).get("max_holes") != value["max_holes"]
+        ):
+            raise RegistryError(f"{label}.receipt_manifest is not operation-eligible")
+        # The train facts this contract's shapes were established on FIRST.
+        # `check-development-partition.py` requires an operation that closes a
+        # development fact to reference a train fact, because a producer whose
+        # whole applicability was authored against the evaluation set no longer
+        # measures generalization. This field is that reference, and it is
+        # enforced rather than declared: every id must be in the `train`
+        # partition of the nursery AND already `proved`, so it cannot be
+        # satisfied by naming an open or development fact.
+        train_ids = nonempty_strings(
+            value["generalization_train_fact_ids"],
+            f"{label}.generalization_train_fact_ids",
+        )
+        nursery = json.loads(
+            (root / "artifacts/autogenesis/nursery-v1.json").read_text()
+        )
+        partitions = {
+            entry.get("fact_id"): entry.get("partition")
+            for entry in nursery.get("entries", [])
+        }
+        for train_id in train_ids:
+            if partitions.get(train_id) != "train":
+                raise RegistryError(
+                    f"{label}.generalization_train_fact_ids names {train_id!r}, "
+                    "which is not in the nursery's train partition"
+                )
+            train_path = root / "artifacts/facts" / (
+                train_id.replace("F:", "F-") + ".json"
+            )
+            if not train_path.is_file():
+                raise RegistryError(f"{label} train fact does not exist: {train_id}")
+            train_fact = json.loads(train_path.read_text())
+            if train_fact.get("epistemic_status") not in {"proved", "computed"}:
+                raise RegistryError(
+                    f"{label}.generalization_train_fact_ids names {train_id!r}, "
+                    "which is not established — a generalization source must be "
+                    "settled before the development targets are claimed"
+                )
+        outcomes = {row.get("fact_id"): row for row in manifest.get("outcomes", [])}
+        targets = value["targets"]
+        if not isinstance(targets, list) or len(targets) != len(all_fact_ids):
+            raise RegistryError(
+                f"{label}.targets must bind every named fact exactly once"
+            )
+        target_fact_ids = []
+        for index, target in enumerate(targets):
+            t_label = f"{label}.targets[{index}]"
+            if not isinstance(target, dict):
+                raise RegistryError(f"{t_label} must be an object")
+            exact_keys(target, {"fact_id", "target_definition"}, t_label)
+            fid = target["fact_id"]
+            target_fact_ids.append(fid)
+            outcome = outcomes.get(fid)
+            fact_path = root / "artifacts/facts" / (fid.replace("F:", "F-") + ".json")
+            if not fact_path.is_file() or not isinstance(outcome, dict):
+                raise RegistryError(f"{t_label} has no fact or receipt outcome")
+            if (
+                outcome.get("target_definition") != target["target_definition"]
+                or outcome.get("axiom_footprint") != []
+                or outcome.get("theorem_dependencies") != 1
+                or outcome.get("target_dependency") is not False
+                or outcome.get("independently_admitted") is not True
             ):
                 raise RegistryError(f"{t_label} receipt contract disagrees")
         if target_fact_ids != all_fact_ids:
@@ -1201,6 +1395,7 @@ def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
                 "axeyum-lean-import/bounded-induction-multi-target-v1",
                 "axeyum-lean-import/modeq-family-multi-target-v1",
                 "axeyum-lean-import/imported-candidate-family-multi-target-v1",
+                "axeyum-lean-import/conclusion-directed-family-multi-target-v1",
             }:
                 all_ids = [
                     executor["input_fact_id"],
@@ -1285,6 +1480,27 @@ def validate_registry(registry: Any, root: pathlib.Path = ROOT) -> None:
                         f"{label}.executor driver is inconsistent with applicability/admission"
                     )
             elif executor["driver"] == "axeyum-lean-import/imported-candidate-family-multi-target-v1":
+                if (
+                    applicability["formal_languages"] != ["lean4-surface"]
+                    or applicability["fragments"] != ["Nat"]
+                    or admission["proof_route"] != "kernel-lean"
+                    or admission["evidence_kind"] != "kernel-term"
+                    or admission["axiom_footprint"] != []
+                ):
+                    raise RegistryError(
+                        f"{label}.executor driver is inconsistent with applicability/admission"
+                    )
+            elif executor["driver"] == "axeyum-lean-import/conclusion-directed-family-multi-target-v1":
+                # The producer is theory-agnostic (it never names a carrier, a
+                # relation, or a target; see
+                # producers::conclusion_directed_application), but the LEAN
+                # CANDIDATE CONTRACT it transports is not, and the transport
+                # route requires an empty axiom footprint. Measured 2026-08-28,
+                # every Lean 4.30 `Int` lemma probed carries `propext` --
+                # including `Int.add_comm` and `Int.sub_self` -- so no `Int`
+                # target is reachable this way and `Nat` is the only fragment
+                # this driver can legitimately claim today. Widen this only
+                # against a measurement, not against an intention.
                 if (
                     applicability["formal_languages"] != ["lean4-surface"]
                     or applicability["fragments"] != ["Nat"]

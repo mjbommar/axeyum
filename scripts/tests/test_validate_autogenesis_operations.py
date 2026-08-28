@@ -475,8 +475,13 @@ class OperationRegistryTests(unittest.TestCase):
         self.assertEqual(
             operation["executor"]["driver"], "axeyum-lean-kernel/authored-declaration-v1"
         )
-        self.assertEqual(len(operation["applicability"]["fact_ids"]), 5)
-        self.assertEqual(len(operation["executor"]["targets"]), 5)
+        # Six, not the original five: `Int.modEq_of_mul_right` was added on
+        # 2026-08-28 (lane modeq-producer), closing the last open
+        # `integer-modular-equivalence` TRAIN fact. Widening is the direction
+        # this repository ratchets in; narrowing it back is the regression this
+        # pin exists to catch.
+        self.assertEqual(len(operation["applicability"]["fact_ids"]), 6)
+        self.assertEqual(len(operation["executor"]["targets"]), 6)
         registry_module.validate_registry(self.registry, ROOT)
 
     def test_authored_declaration_driver_rejects_a_declaration_absent_from_its_source(
@@ -620,7 +625,7 @@ class OperationRegistryTests(unittest.TestCase):
         widths, scopes = ledger_module.operation_widths()
         index = self._authored_declaration_operation_index()
         operation_id = self.registry["operations"][index]["id"]
-        self.assertEqual(widths[operation_id], 5)
+        self.assertEqual(widths[operation_id], 6)
         self.assertEqual(scopes[operation_id], "authoritative")
 
 

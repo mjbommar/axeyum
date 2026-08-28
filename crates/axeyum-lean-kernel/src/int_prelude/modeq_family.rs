@@ -743,3 +743,39 @@ pub(super) fn declare_modeq_sub(d: &mut IntDev<'_>) -> Result<(), KernelError> {
     })?;
     Ok(())
 }
+
+/// `Int.modEq_of_mul_right : ∀ n a b m, ModEq (n*m) a b → ModEq n a b`
+/// (`Int.ModEq.of_mul_right` in Mathlib's surface spelling), UNCONDITIONAL
+/// in `n` and `m`.
+///
+/// The mirror of [`super::modeq::declare_modeq_of_mul_left`] at the other
+/// divisibility witness: `Int.dvd_mul_right n m : dvd n (n*m)` instead of
+/// `Int.dvd_mul_left n m : dvd n (m*n)`. Both are the same special case of
+/// [`super::modeq::declare_modeq_of_dvd`], which is already unconditional, so
+/// neither needs the `natAbs` bound this module's header explains is absent.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_modeq_of_mul_right(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.mod_eq_of_mul_right, 4, &|d, v| {
+        let (n, a, b, m) = (v[0], v[1], v[2], v[3]);
+        let nm = d.imul(n, m);
+        let modeq_nm = super::modeq::imodeq(d, nm, a, b);
+        let modeq_n = super::modeq::imodeq(d, n, a, b);
+        let stmt = d.arrow(modeq_nm, modeq_n);
+
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        let dvd_n_nm = d.const_app(p.dvd_mul_right, &[n, m]); // dvd n (n*m)
+        let of_dvd = d.const_app(p.mod_eq_of_dvd, &[n, nm, a, b, dvd_n_nm]);
+        let body = d.apply(of_dvd, &[h]);
+
+        let proof = d.lam_fv(h_fv, modeq_nm, body);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
