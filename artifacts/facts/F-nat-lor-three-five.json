@@ -1,0 +1,59 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- lor_three_five 2>/dev/null | grep -Ec '^Nat\\.lor_three_five[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.lor_three_five",
+      "kernel_declaration": "Nat.lor_three_five",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. `3 = 0b011`, `5 = 0b101`, `3 ||| 5 = 0b111 = 7`; every numeral is concrete, so the fuel recursion, the div/mod halving, and the per-bit `max` (via `Nat.ble` + `bool_select_nat`) all reduce fully and the proof is `Eq.refl`. Deliberately discriminating against `F:nat-land-three-five`'s `3 &&& 5 = 1` (a wrong-way `bit_or` reusing the AND step, or an AND/OR combinator swap, cannot pass both facts' checkers at once). `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the count is tested, so the exit status depends on what the run found. Anchored with `^Nat\\.lor_three_five[[:space:]]` (verified exactly 1 row).",
+      "supports": "lor(3, 5) = 7"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::lor_computes_or_and_its_boundary_theorems_apply",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "id": "compute-Nat.lor_three_five",
+      "kernel_declaration": "Nat.lor",
+      "kind": "kernel-term",
+      "notes": "`Kernel::def_eq` reduces `lor 3 5` directly to `7` (definition unfolding, no boundary theorem invoked), over a small table of concrete pairs including `(3, 5) -> 7` and `(6, 3) -> 7`, and separately confirms `Nat.lor_three_five`'s ADMITTED TYPE is exactly `Eq (lor 3 5) 7` -- with negative controls asserting the inferred type must NOT def_eq `Eq (lor 3 5) 1` (the AND-shaped wrong answer) or `Eq (lor 3 5) 5` (the first-operand-only wrong answer), so this cannot pass on a statement claiming a wrong value from either failure family.",
+      "supports": "the theorem states the value 7, not an arbitrary or AND-shaped one"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.lor_three_five",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. `Nat.lorAux` uses the same structural fuel device as `Nat.landAux` rather than Mathlib's well-founded `Nat.bitwise`, so nothing here needs `WellFounded`/`Quot.sound`/`propext`; this command is what makes the axiom-freedom claim falsifiable rather than asserted. Measured with `Nat.lor` landed: `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [],
+    "language": "lean4",
+    "statement": "theorem Nat.lor_three_five : Eq.{1} AxNat (AxNat.lor (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero)))))) (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero)))))))"
+  },
+  "id": "F:nat-lor-three-five",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*) -- the `nat` prelude's trusted surface measures zero.\n\nSmall numerals deliberately (per the standing kernel-cost rule: keep formed magnitudes small, `whnf` walks unary `Nat.succ` towers). This is the SANITY CHECK boundary lemma for `Nat.lor`, exercising differing bit patterns across several fuel steps -- `land_three_five`'s exact numeral pair, so the two theorems' proof terms differ only in the per-bit combinator (`mul` vs. `max` via `ble`+`bool_select_nat`) and their results (`1` vs `7`) are maximally distinguishing.\n\nSee `F:nat-lor-zero-left`'s notes for why `Nat.lor` was built directly rather than through a general `Nat.bitwise`, why the fuel-exhaustion base case had to change from `land`'s constant `0` to `n`, and why this does not flip any `F:ml430-nat-lor-*` mirror fact by hand.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane 219-nat-lor",
+    "source": "one of three boundary/sanity theorems `declare_lor_all` (`crates/axeyum-lean-kernel/src/nat_prelude/lor.rs`) admits alongside the `Nat.lor`/`Nat.lorAux` definitions"
+  },
+  "schema_version": 1,
+  "statement": "The bitwise OR of 3 and 5 is 7.",
+  "title": "lor(3, 5) = 7"
+}
