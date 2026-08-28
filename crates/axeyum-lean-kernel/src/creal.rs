@@ -1071,6 +1071,20 @@ pub struct CRealPrelude {
     /// [`Self::converges_upper_bound_shift`] at shift `2`. See
     /// `creal/cos_sign.rs`.
     pub alternating_upper_bound_tail: NameId,
+    /// `CReal.cosWideTailNonneg : ∀ k, le zero (mul (expTerm (add k k)) (pow
+    /// R (add k k)))`, `R := ofRat (natDivSucc 8 4) = 8/5` -- π rung 2's
+    /// `hnn` premise for [`Self::alternating_upper_bound_tail`] instantiated
+    /// at cosine's magnitude sequence at `R`. See `creal/cos_sign.rs`.
+    pub cos_wide_tail_nonneg: NameId,
+    /// `CReal.cosWideTailAntitone : ∀ k, le (mul (expTerm (add (succ (succ
+    /// k)) (succ (succ k)))) (pow R (add (succ (succ k)) (succ (succ k)))))
+    /// (mul (expTerm (add (succ k) (succ k))) (pow R (add (succ k) (succ
+    /// k))))`, `R := 8/5` -- π rung 2's `htail` premise (the sized blocker
+    /// `docs/plan/status/174-pi-rung2.md` names). Reduces to `R² <=
+    /// (m+1)(m+2)` at `m := add (succ k) (succ k) >= 2`, via two
+    /// [`Self::exp_term_succ_scale`] applications and `R² <= 3` (`Rat.ble`
+    /// computation on `8/5 * 8/5` vs `3/1`). See `creal/cos_sign.rs`.
+    pub cos_wide_tail_antitone: NameId,
     /// `CReal.converges_le : ∀ f g L M, Converges f L → Converges g M →
     /// (∀ n, le (f n) (g n)) → le L M`.
     ///
@@ -6351,6 +6365,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         converges_upper_bound: kernel.name_str(creal, "converges_upper_bound"),
         converges_upper_bound_shift: kernel.name_str(creal, "converges_upper_bound_shift"),
         alternating_upper_bound_tail: kernel.name_str(creal, "alternatingUpperBoundTail"),
+        cos_wide_tail_nonneg: kernel.name_str(creal, "cosWideTailNonneg"),
+        cos_wide_tail_antitone: kernel.name_str(creal, "cosWideTailAntitone"),
         converges_le: kernel.name_str(creal, "converges_le"),
         bounded: kernel.name_str(creal, "Bounded"),
         converges_bounded: kernel.name_str(creal, "converges_bounded"),
@@ -12092,6 +12108,45 @@ const STEPS: &[BuildStep] = &[
         ],
         provides: &[|p: CRealPrelude| p.exp_of_modulus_le_true_exp_of_modulus],
         run: supremum::declare_exp_of_modulus_le_true_exp_of_modulus,
+    },
+    BuildStep {
+        label: "cos_sign::declare_cos_wide_tail_nonneg",
+        requires: &[
+            |p: CRealPrelude| p.exp_term,
+            |p: CRealPrelude| p.exp_term_nonneg,
+            |p: CRealPrelude| p.mul_nonneg,
+            |p: CRealPrelude| p.of_rat_le,
+            |p: CRealPrelude| p.of_rat,
+            |p: CRealPrelude| p.pow,
+            |p: CRealPrelude| p.pow_nonneg,
+        ],
+        provides: &[|p: CRealPrelude| p.cos_wide_tail_nonneg],
+        run: cos_sign::declare_cos_wide_tail_nonneg,
+    },
+    BuildStep {
+        label: "cos_sign::declare_cos_wide_tail_antitone",
+        requires: &[
+            |p: CRealPrelude| p.exp_term,
+            |p: CRealPrelude| p.exp_term_nonneg,
+            |p: CRealPrelude| p.exp_term_succ_scale,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.mul_assoc,
+            |p: CRealPrelude| p.mul_comm,
+            |p: CRealPrelude| p.mul_congr,
+            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
+            |p: CRealPrelude| p.of_nat,
+            |p: CRealPrelude| p.of_nat_le,
+            |p: CRealPrelude| p.of_nat_mul,
+            |p: CRealPrelude| p.of_rat,
+            |p: CRealPrelude| p.of_rat_le,
+            |p: CRealPrelude| p.of_rat_mul,
+            |p: CRealPrelude| p.pow,
+            |p: CRealPrelude| p.pow_add,
+            |p: CRealPrelude| p.pow_nonneg,
+        ],
+        provides: &[|p: CRealPrelude| p.cos_wide_tail_antitone],
+        run: cos_sign::declare_cos_wide_tail_antitone,
     },
 ];
 

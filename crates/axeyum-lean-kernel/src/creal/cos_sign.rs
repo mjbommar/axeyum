@@ -695,3 +695,443 @@ pub(super) fn declare_alternating_upper_bound_tail(
         value,
     })
 }
+
+// ---------------------------------------------------------------------------
+// π rung 2, items 1-2 of `docs/plan/status/174-pi-rung2.md`'s four-item
+// list: `CReal.cosWideTailNonneg` and `CReal.cosWideTailAntitone`, the
+// `hnn`/`htail` premises [`declare_alternating_upper_bound_tail`]'s
+// `CReal.alternatingUpperBoundTail` needs when instantiated at cosine's
+// magnitude sequence `a j := mul (expTerm (add j j)) (pow R (add j j))`,
+// `R := ofRat (natDivSucc 8 4) = 8/5`.
+//
+// Items 3-4 (the `Converges` witness at `cosFnWide R` and the final numeric
+// evaluation) are NOT built here. See `docs/plan/status/174-pi-rung2.md` for
+// why: bridging `cosFnWideUniformConverges`'s `UniformConvergesOn`-shaped
+// `close_within` output down to `Converges`'s own `Within`-on-rationals
+// shape has no existing lemma anywhere in this tree (confirmed by reading
+// `CReal.within_of_two_sided_le`, the one general "real inequality -> Within
+// at a chosen index" bridge that exists, plus `CReal.add`'s own Bishop index
+// shift) and is a separate, substantial undertaking on the order of
+// `CReal.converges_add`'s own construction.
+// ---------------------------------------------------------------------------
+
+/// `Rat.natDivSucc 8 4 = 8/5` -- reproduced verbatim from
+/// `trig_fn.rs`'s own private `r_domain_rat` (Rust privacy: sibling module).
+fn r_wide_rat(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let n8 = d.num(8);
+    let n4 = d.num(4);
+    d.const_app(p.rat.nat_div_succ, &[n8, n4])
+}
+
+/// `CReal.ofRat (Rat.natDivSucc 8 4)` -- `R := 8/5` as a `CReal`.
+fn r_wide(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let rr = r_wide_rat(d, p);
+    d.const_app(p.of_rat, &[rr])
+}
+
+/// `le zero R` -- reproduced verbatim from `trig_fn.rs::declare_cos_fn_wide`'s
+/// own private `hab0`/`hab_zero_r` (Rust privacy: sibling module).
+fn hab_zero_r_wide(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let rat = p.rat;
+    let zero_r = crate::rat_prelude::ops::rzero(d, rat);
+    let r_rat = r_wide_rat(d, p);
+    let n8 = d.num(8);
+    let n4 = d.num(4);
+    let nn = d.lemma(rat.zero_le_nat_div_succ, &[n8, n4]);
+    d.lemma(p.of_rat_le, &[zero_r, r_rat, nn])
+}
+
+/// `le (pow R 2) (ofNat 3)`, `R := r_wide`: `R = 8/5`, `(8/5)^2 = 64/25 <=
+/// 3`. `pow R 2` is DEFEQ to `mul (mul one R) R` (`pow_succ`/`pow_zero`
+/// close by `Eq.refl` alone), so the numeric content reduces to `mul R R <=
+/// ofNat 3`, closed by `Rat.ble`'s own COMPUTATION on these small literals
+/// (`Rat.ble (8/5 * 8/5) (3/1)` reduces to `Bool.true` by iota alone) rather
+/// than a hand-rolled `Rat.normalize_cross` battery.
+fn pow_r2_le_3(d: &mut IntDev<'_>, p: CRealPrelude, r: ExprId) -> ExprId {
+    let rat = p.rat;
+    let q = r_wide_rat(d, p);
+    let three_nat = d.num(3);
+    let zero_nat = d.zero();
+    let three_rat = d.const_app(rat.nat_div_succ, &[three_nat, zero_nat]);
+
+    let qq = crate::rat_prelude::ops::rmul(d, q, q);
+    let true_c = d.bool_true();
+    let ble_val = d.const_app(rat.ble, &[qq, three_rat]);
+    let _ = ble_val; // documents the fact being decided; the proof below is `Eq.refl true`
+    let refl_true = d.bool_refl(true_c);
+    let rat_le = d.lemma(rat.le_of_ble_eq_true, &[qq, three_rat, refl_true]);
+    let creal_le = d.lemma(p.of_rat_le, &[qq, three_rat, rat_le]);
+    // creal_le : le (ofRat qq) (ofRat three_rat), ofRat three_rat defeq ofNat 3
+
+    let of_rat_mul_eq = d.lemma(p.of_rat_mul, &[q, q]);
+    // of_rat_mul_eq : Equiv (mul (ofRat q) (ofRat q)) (ofRat qq) = Equiv rr (ofRat qq)
+    let rr = cmul(d, p, r, r);
+    let of_rat_qq = d.const_app(p.of_rat, &[qq]);
+    let of_rat3 = d.const_app(p.of_rat, &[three_rat]);
+    let ha = esymm(d, p, rr, of_rat_qq, of_rat_mul_eq); // Equiv (ofRat qq) rr
+    let hb = erefl(d, p, of_rat3);
+    let le_rr_3 = d.lemma(
+        p.le_congr,
+        &[of_rat_qq, rr, of_rat3, of_rat3, ha, hb, creal_le],
+    );
+    // le_rr_3 : le rr (ofRat three_rat)
+
+    let one_cc = one_c(d, p);
+    let one_r = cmul(d, p, one_cc, r);
+    let rr_alt = cmul(d, p, one_r, r); // defeq (pow R 2)
+    let om = one_mul_c(d, p, r); // Equiv one_r r
+    let refl_r = erefl(d, p, r);
+    let congr1 = d.lemma(p.mul_congr, &[one_r, r, r, r, om, refl_r]); // Equiv rr_alt rr
+    let ha2 = esymm(d, p, rr_alt, rr, congr1); // Equiv rr rr_alt
+    let hb2 = erefl(d, p, of_rat3);
+    d.lemma(
+        p.le_congr,
+        &[rr, rr_alt, of_rat3, of_rat3, ha2, hb2, le_rr_3],
+    )
+    // : le rr_alt (ofRat three_rat), rr_alt defeq (pow R 2)
+}
+
+/// `(target, proof)` with `target = mul b (mul a c)` and
+/// `proof : Equiv (mul a (mul b c)) target` -- moves a factor `a` past `b`
+/// in a three-factor product. Mirrors [`add_right_comm_c`]'s additive shape
+/// verbatim, substituting `mul_comm`/`mul_assoc`/`mul_congr` for their
+/// additive counterparts.
+fn mul_left_comm_c(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+) -> (ExprId, ExprId) {
+    let bc = cmul(d, p, b, c);
+    let start = cmul(d, p, a, bc);
+    let ab = cmul(d, p, a, b);
+    let mid1 = cmul(d, p, ab, c);
+    let assoc1_fwd = d.lemma(p.mul_assoc, &[a, b, c]); // Equiv mid1 start
+    let assoc1 = esymm(d, p, mid1, start, assoc1_fwd); // Equiv start mid1
+    let ba = cmul(d, p, b, a);
+    let mid2 = cmul(d, p, ba, c);
+    let comm = d.lemma(p.mul_comm, &[a, b]); // Equiv ab ba
+    let refl_c = erefl(d, p, c);
+    let cg = d.lemma(p.mul_congr, &[ab, ba, c, c, comm, refl_c]); // Equiv mid1 mid2
+    let ac = cmul(d, p, a, c);
+    let target = cmul(d, p, b, ac);
+    let assoc2 = d.lemma(p.mul_assoc, &[b, a, c]); // Equiv mid2 target
+    let proof = echain(d, p, start, &[(mid1, assoc1), (mid2, cg), (target, assoc2)]);
+    (target, proof)
+}
+
+/// `Eq Nat (succ (succ (add n n))) (add (succ n) (succ n))` -- reproduced
+/// from `trig.rs::cos_magnitude_dec`'s own private bridge (Rust privacy:
+/// sibling module), generalized from its hardcoded `k` to an arbitrary `n`
+/// so this file can instantiate it at `n := succ k` too.
+fn dbl_succ_bridge(d: &mut IntDev<'_>, np: NatPrelude, n: ExprId) -> ExprId {
+    let sn = d.succ(n);
+    let nn = d.add(n, n);
+    let snn = d.succ(nn);
+    let ssnn = d.succ(snn);
+    let sn_n = d.add(sn, n);
+    let bridge = d.lemma(np.succ_add, &[n, n]); // Eq sn_n snn
+    let bridge_succ = d.congr(sn_n, snn, bridge, &|d, x| d.succ(x)); // Eq (succ sn_n) ssnn
+    let succ_sn_n = d.succ(sn_n);
+    d.symm(succ_sn_n, ssnn, bridge_succ) // Eq ssnn (succ sn_n), defeq (add (succ n)(succ n))
+}
+
+/// `Nat.le 2 (add (succ n) (succ n))` -- the tail bound's Nat-side fact:
+/// `idx1 := add (succ n)(succ n)` is `2n+2`, always `>= 2`. One `succ` is
+/// free (`Nat.add`'s own iota on its right argument); the second needs
+/// `Nat.add_comm` to see the LEFT `succ`, since `Nat.add` cannot peel a
+/// `succ` off its left argument by iota alone.
+fn two_le_double_succ(d: &mut IntDev<'_>, np: NatPrelude, n: ExprId) -> ExprId {
+    let sn = d.succ(n);
+    let nn = d.add(n, n);
+    let one_nat = d.num(1);
+    let h1 = crate::rat_prelude::ops::one_le_succ(d, nn); // Nat.le 1 (succ nn)
+    let n_sn = d.add(n, sn);
+    let sn_n = d.add(sn, n);
+    let comm = d.lemma(np.add_comm, &[sn, n]); // Eq sn_n n_sn
+    let comm_rev = d.symm(sn_n, n_sn, comm); // Eq n_sn sn_n
+    let motive = d.eq_motive(n_sn, &|d, x| {
+        let one_nat = d.num(1);
+        NatOps::le(d, one_nat, x)
+    });
+    let h1_sn_n = d.transport(n_sn, motive, h1, sn_n, comm_rev); // Nat.le 1 sn_n
+    d.lemma(np.succ_le_succ, &[one_nat, sn_n, h1_sn_n]) // Nat.le 2 (succ sn_n), defeq idx1
+}
+
+/// Given `h2m : Nat.le 2 m`, returns a proof of
+/// `le (mul (expTerm (succ (succ m))) (pow R (succ (succ m))))
+///     (mul (expTerm m) (pow R m))`
+/// -- the core numeric/algebraic content of
+/// [`declare_cos_wide_tail_antitone`], generic in the Nat `m` that file
+/// always instantiates at `m := add (succ k) (succ k)`. Reduces (via two
+/// [`CRealPrelude::exp_term_succ_scale`] applications) to `R² <=
+/// (m+1)(m+2)`, closed from `m >= 2` by `(m+1) >= 3`, `(m+2) >= 1` and
+/// `R² <= 3` ([`pow_r2_le_3`]).
+#[allow(clippy::too_many_lines)]
+fn exp_pow_ratio_le(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    r: ExprId,
+    hr0: ExprId,
+    m: ExprId,
+    h2m: ExprId,
+) -> ExprId {
+    let np = p.rat.int.nat;
+    let exp_term_c = d.kernel().const_(p.exp_term, vec![]);
+    let sm = d.succ(m);
+    let ssm = d.succ(sm);
+    let two_nat = d.num(2);
+    let three_nat = d.num(3);
+    let one_nat = d.num(1);
+
+    // --- Nat side: 3 <= sm, 1 <= ssm, 3 <= K := sm*ssm.
+    let h3sm = d.lemma(np.succ_le_succ, &[two_nat, m, h2m]); // Nat.le 3 sm
+    let h1ssm = crate::rat_prelude::ops::one_le_succ(d, sm); // Nat.le 1 ssm
+    let k_nat = d.mul(sm, ssm);
+    let sm1 = d.mul(sm, one_nat);
+    let scaled = d.lemma(np.mul_le_mul_left, &[sm, one_nat, ssm, h1ssm]); // Le sm1 k_nat
+    let mul_one_eq = d.lemma(np.mul_one, &[sm]); // Eq sm1 sm
+    let motive_a = d.eq_motive(sm1, &|d, x| NatOps::le(d, x, k_nat));
+    let h_sm_le_k = d.transport(sm1, motive_a, scaled, sm, mul_one_eq); // Nat.le sm k_nat
+    let h3k = d.lemma(np.le_trans, &[three_nat, sm, k_nat, h3sm, h_sm_le_k]); // Nat.le 3 k_nat
+
+    // --- cast to CReal, chain with R^2 <= 3.
+    let of_nat3 = d.const_app(p.of_nat, &[three_nat]);
+    let of_nat_k = d.const_app(p.of_nat, &[k_nat]);
+    let h3k_creal = d.lemma(p.of_nat_le, &[three_nat, k_nat, h3k]); // le (ofNat 3) (ofNat k_nat)
+    let pow2 = cpow(d, p, r, two_nat);
+    let pow_r2_3 = pow_r2_le_3(d, p, r); // le pow2 of_nat3
+    let pow_r2_k = d.lemma(p.le_trans, &[pow2, of_nat3, of_nat_k, pow_r2_3, h3k_creal]);
+    // pow_r2_k : le pow2 of_nat_k
+
+    // --- CORE: le (mul e_ssm pow2) (expTerm m).
+    let e_ssm = d.apply(exp_term_c, &[ssm]);
+    let e_sm = d.apply(exp_term_c, &[sm]);
+    let e_m = d.apply(exp_term_c, &[m]);
+    let e_ssm_nn = d.lemma(p.exp_term_nonneg, &[ssm]);
+    let h_scaled = d.lemma(
+        p.mul_le_mul_of_nonneg_left,
+        &[e_ssm, pow2, of_nat_k, e_ssm_nn, pow_r2_k],
+    );
+    // h_scaled : le (mul e_ssm pow2) (mul e_ssm of_nat_k)
+
+    // equality chain: mul e_ssm of_nat_k ~ expTerm m.
+    let start = cmul(d, p, e_ssm, of_nat_k);
+    let commute1 = d.lemma(p.mul_comm, &[e_ssm, of_nat_k]); // Equiv start (mul of_nat_k e_ssm)
+    let s1 = cmul(d, p, of_nat_k, e_ssm);
+
+    let of_nat_mul_eq = d.lemma(p.of_nat_mul, &[sm, ssm]); // Equiv of_nat_k (mul (ofNat sm) (ofNat ssm))
+    let of_nat_sm = d.const_app(p.of_nat, &[sm]);
+    let of_nat_ssm = d.const_app(p.of_nat, &[ssm]);
+    let sm_ssm = cmul(d, p, of_nat_sm, of_nat_ssm);
+    let refl_essm = erefl(d, p, e_ssm);
+    let leg2 = d.lemma(
+        p.mul_congr,
+        &[of_nat_k, sm_ssm, e_ssm, e_ssm, of_nat_mul_eq, refl_essm],
+    );
+    // leg2 : Equiv s1 (mul sm_ssm e_ssm)
+    let s2 = cmul(d, p, sm_ssm, e_ssm);
+
+    let assoc = d.lemma(p.mul_assoc, &[of_nat_sm, of_nat_ssm, e_ssm]);
+    // assoc : Equiv s2 (mul of_nat_sm (mul of_nat_ssm e_ssm))
+    let ssm_essm = cmul(d, p, of_nat_ssm, e_ssm);
+    let s3 = cmul(d, p, of_nat_sm, ssm_essm);
+
+    let e_scale_1 = d.lemma(p.exp_term_succ_scale, &[sm]); // Equiv ssm_essm e_sm
+    let refl_ofnatsm = erefl(d, p, of_nat_sm);
+    let leg4 = d.lemma(
+        p.mul_congr,
+        &[
+            of_nat_sm,
+            of_nat_sm,
+            ssm_essm,
+            e_sm,
+            refl_ofnatsm,
+            e_scale_1,
+        ],
+    );
+    // leg4 : Equiv s3 (mul of_nat_sm e_sm)
+    let s4 = cmul(d, p, of_nat_sm, e_sm);
+
+    let e_scale_2 = d.lemma(p.exp_term_succ_scale, &[m]); // Equiv s4 e_m
+
+    let chain_equiv = echain(
+        d,
+        p,
+        start,
+        &[
+            (s1, commute1),
+            (s2, leg2),
+            (s3, assoc),
+            (s4, leg4),
+            (e_m, e_scale_2),
+        ],
+    );
+    // chain_equiv : Equiv start e_m
+
+    let essm_pow2 = cmul(d, p, e_ssm, pow2);
+    let refl_lhs = erefl(d, p, essm_pow2);
+    let core = d.lemma(
+        p.le_congr,
+        &[
+            essm_pow2,
+            essm_pow2,
+            start,
+            e_m,
+            refl_lhs,
+            chain_equiv,
+            h_scaled,
+        ],
+    );
+    // core : le essm_pow2 e_m
+
+    // --- scale by pow R m on the left, then repack the LHS/RHS shapes.
+    let pow_m = cpow(d, p, r, m);
+    let pow_m_nn = d.lemma(p.pow_nonneg, &[r, hr0, m]);
+    let scaled_core = d.lemma(
+        p.mul_le_mul_of_nonneg_left,
+        &[pow_m, essm_pow2, e_m, pow_m_nn, core],
+    );
+    // scaled_core : le (mul pow_m essm_pow2) (mul pow_m e_m)
+
+    let (comm_target, comm_proof) = mul_left_comm_c(d, p, pow_m, e_ssm, pow2);
+    // comm_proof : Equiv (mul pow_m essm_pow2) comm_target
+    let mul_pow_m_pow2 = cmul(d, p, pow_m, pow2);
+    let pow_add_eq = d.lemma(p.pow_add, &[r, m, two_nat]);
+    // pow_add_eq : Equiv (pow R (add m 2)) mul_pow_m_pow2, defeq Equiv (pow R ssm) mul_pow_m_pow2
+    let pow_r_ssm = cpow(d, p, r, ssm);
+    let pow_add_rev = esymm(d, p, pow_r_ssm, mul_pow_m_pow2, pow_add_eq);
+    // pow_add_rev : Equiv mul_pow_m_pow2 pow_r_ssm
+    let refl_essm2 = erefl(d, p, e_ssm);
+    let leg_b = d.lemma(
+        p.mul_congr,
+        &[
+            e_ssm,
+            e_ssm,
+            mul_pow_m_pow2,
+            pow_r_ssm,
+            refl_essm2,
+            pow_add_rev,
+        ],
+    );
+    // leg_b : Equiv comm_target target_lhs
+    let target_lhs = cmul(d, p, e_ssm, pow_r_ssm);
+    let mul_pow_m_essm_pow2 = cmul(d, p, pow_m, essm_pow2);
+    let lhs_equiv = echain(
+        d,
+        p,
+        mul_pow_m_essm_pow2,
+        &[(comm_target, comm_proof), (target_lhs, leg_b)],
+    );
+    // lhs_equiv : Equiv mul_pow_m_essm_pow2 target_lhs
+
+    let rhs_equiv = d.lemma(p.mul_comm, &[pow_m, e_m]); // Equiv (mul pow_m e_m) (mul e_m pow_m)
+    let target_rhs = cmul(d, p, e_m, pow_m);
+    let mul_pow_m_em = cmul(d, p, pow_m, e_m);
+
+    d.lemma(
+        p.le_congr,
+        &[
+            mul_pow_m_essm_pow2,
+            target_lhs,
+            mul_pow_m_em,
+            target_rhs,
+            lhs_equiv,
+            rhs_equiv,
+            scaled_core,
+        ],
+    )
+    // : le target_lhs target_rhs = le (mul e_ssm (pow R ssm)) (mul e_m pow_m)
+}
+
+/// `CReal.cosWideTailNonneg` -- π rung 2's `hnn` premise:
+/// `∀ k, le zero (mul (expTerm (add k k)) (pow R (add k k)))`,
+/// `R := ofRat (natDivSucc 8 4) = 8/5`. Direct: [`CRealPrelude::mul_nonneg`]
+/// against [`CRealPrelude::exp_term_nonneg`] and [`CRealPrelude::pow_nonneg`].
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_cos_wide_tail_nonneg(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let r = r_wide(d, p);
+    let hr0 = hab_zero_r_wide(d, p);
+    let exp_term_c = d.kernel().const_(p.exp_term, vec![]);
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let dbl = d.add(k, k);
+    let x = d.apply(exp_term_c, &[dbl]);
+    let y = cpow(d, p, r, dbl);
+    let e_nn = d.lemma(p.exp_term_nonneg, &[dbl]);
+    let pow_nn = d.lemma(p.pow_nonneg, &[r, hr0, dbl]);
+    let body = d.lemma(p.mul_nonneg, &[x, y, e_nn, pow_nn]);
+    let value = d.lam_fv(k_fv, nat, body);
+    let ty = d.kernel().infer(value)?;
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.cos_wide_tail_nonneg,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.cosWideTailAntitone` -- π rung 2's `htail` premise:
+/// `∀ k, le (a (succ (succ k))) (a (succ k))` for `a j := mul (expTerm (add j
+/// j)) (pow R (add j j))`, `R := 8/5`. See this file's own module
+/// documentation and [`exp_pow_ratio_le`] for the route: reduces to `R² <=
+/// (m+1)(m+2)` at `m := add (succ k) (succ k) >= 2`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_cos_wide_tail_antitone(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let np = p.rat.int.nat;
+    let r = r_wide(d, p);
+    let hr0 = hab_zero_r_wide(d, p);
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let sk = d.succ(k);
+    let idx1 = d.add(sk, sk);
+    let h2_idx1 = two_le_double_succ(d, np, k);
+    let goal_prime = exp_pow_ratio_le(d, p, r, hr0, idx1, h2_idx1);
+
+    let bridge = dbl_succ_bridge(d, np, sk); // Eq (succ (succ idx1)) idx2
+    let s_idx1 = d.succ(idx1);
+    let ss_idx1 = d.succ(s_idx1);
+    let ssk = d.succ(sk);
+    let idx2 = d.add(ssk, ssk);
+
+    let exp_term_c = d.kernel().const_(p.exp_term, vec![]);
+    let e_idx1 = d.apply(exp_term_c, &[idx1]);
+    let p_idx1 = cpow(d, p, r, idx1);
+    let rhs_fixed = cmul(d, p, e_idx1, p_idx1);
+    let motive = d.eq_motive(ss_idx1, &|d, x| {
+        let e = d.kernel().const_(p.exp_term, vec![]);
+        let ex = d.apply(e, &[x]);
+        let px = cpow(d, p, r, x);
+        let lhs = cmul(d, p, ex, px);
+        cle(d, p, lhs, rhs_fixed)
+    });
+    let result = d.transport(ss_idx1, motive, goal_prime, idx2, bridge);
+
+    let value = d.lam_fv(k_fv, nat, result);
+    let ty = d.kernel().infer(value)?;
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.cos_wide_tail_antitone,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
