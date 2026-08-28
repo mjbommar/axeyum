@@ -10213,6 +10213,7 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "trig_fn::declare_cos_fn_wide_progress",
     "trig_fn::declare_cos_fn_wide",
     "trig_fn::declare_cos_fn_wide_uniformly_continuous",
+    "trig_fn::declare_cos_fn_wide_at_one",
     "trig_fn::declare_sin_fn_term_family",
     "trig_fn::declare_sin_fn_dominant",
     "trig_fn::declare_sin_fn",

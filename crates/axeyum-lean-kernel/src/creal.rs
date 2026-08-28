@@ -5617,6 +5617,31 @@ pub struct CRealPrelude {
     /// `CReal.bounded_of_uniformly_continuous`, never hand-derived). See
     /// `creal/trig_fn.rs`.
     pub cos_fn_wide_uniformly_continuous: NameId,
+    /// `CReal.cosFnWide_one_equiv_cosOne : Equiv (cosFnWide one) cosOne` —
+    /// the WIDE cosine function evaluated at `1` is `creal/trig.rs`'s single
+    /// constant `cosOne`. Same body as [`Self::cos_fn_one_equiv_cos_one`]
+    /// (`creal/trig_fn.rs::cos_limit_at_one_equiv_cos_one`, factored out for
+    /// exactly this), differing only in the two range hypotheses: `[0, 8/5]`
+    /// needs `le one R` where `[0, 1]` needed `le_refl one`.
+    ///
+    /// **Not implied by [`Self::cos_fn_one_equiv_cos_one`].** `cosFn` and
+    /// `cosFnWide` are separate `weierstrassMTest` limits on separate
+    /// intervals (`creal/trig_fn.rs`'s module doc says so explicitly), and
+    /// nothing in this development relates two uniform limits pointwise
+    /// without an argument like this one. See `creal/trig_fn.rs`.
+    pub cos_fn_wide_one_equiv_cos_one: NameId,
+    /// `CReal.cosFnWide_one_nonneg : le zero (cosFnWide one)` — `cos 1 ≥ 0`
+    /// for the wide cosine FUNCTION, [`Self::cos_one_nonneg`] transported
+    /// across [`Self::cos_fn_wide_one_equiv_cos_one`] by `le_congr`.
+    ///
+    /// This is the first of the three numeric obligations a π-via-
+    /// `CReal.ivt_exact_root` construction carries (the left endpoint of
+    /// `[1, 8/5]`). The other two — `cos (8/5) < 0`, and a uniform positive
+    /// lower bound on `sinFn` over `[1, 8/5]` — are **not** proved anywhere
+    /// in this tree; `docs/plan/status/169-pi.md` sizes both. Nothing here
+    /// constructs `CReal.pi` or asserts that a root exists. See
+    /// `creal/trig_fn.rs`.
+    pub cos_fn_wide_one_nonneg: NameId,
 
     // --- general `sin : CReal → CReal` (creal/trig_fn.rs) ---------------------
     /// `CReal.sinFnTerm : Nat → CReal → CReal := fun k x => mul (sinTerm k)
@@ -6623,6 +6648,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         cos_fn_wide_uniform_converges: kernel.name_str(creal, "cosFnWideUniformConverges"),
         cos_fn_one_equiv_cos_one: kernel.name_str(creal, "cosFn_one_equiv_cosOne"),
         cos_fn_wide_uniformly_continuous: kernel.name_str(creal, "cosFnWideUniformlyContinuous"),
+        cos_fn_wide_one_equiv_cos_one: kernel.name_str(creal, "cosFnWide_one_equiv_cosOne"),
+        cos_fn_wide_one_nonneg: kernel.name_str(creal, "cosFnWide_one_nonneg"),
         sin_fn_term: kernel.name_str(creal, "sinFnTerm"),
         sin_fn_term_congr: kernel.name_str(creal, "sinFnTerm_congr"),
         sin_fn_term_abs_le_wide: kernel.name_str(creal, "sinFnTermAbsLeWide"),
@@ -11432,6 +11459,63 @@ const STEPS: &[BuildStep] = &[
         ],
         provides: &[|p: CRealPrelude| p.cos_fn_wide_uniformly_continuous],
         run: trig_fn::declare_cos_fn_wide_uniformly_continuous,
+    },
+    BuildStep {
+        label: "trig_fn::declare_cos_fn_wide_at_one",
+        requires: &[
+            |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.abs_add_le,
+            |p: CRealPrelude| p.abs_congr,
+            |p: CRealPrelude| p.abs_le,
+            |p: CRealPrelude| p.abs_le_of_two_sided,
+            |p: CRealPrelude| p.add,
+            |p: CRealPrelude| p.add_assoc,
+            |p: CRealPrelude| p.add_comm,
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.close_within_of_within,
+            |p: CRealPrelude| p.cos_fn_term,
+            |p: CRealPrelude| p.cos_fn_wide,
+            |p: CRealPrelude| p.cos_fn_wide_uniform_converges,
+            |p: CRealPrelude| p.cos_one,
+            |p: CRealPrelude| p.cos_one_converges,
+            |p: CRealPrelude| p.cos_one_nonneg,
+            |p: CRealPrelude| p.cos_series_partial,
+            |p: CRealPrelude| p.cos_term,
+            |p: CRealPrelude| p.equiv,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.equiv_zero_of_rate,
+            |p: CRealPrelude| p.le,
+            |p: CRealPrelude| p.le_abs_self,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_of_lt,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.mul_congr,
+            |p: CRealPrelude| p.mul_one,
+            |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.neg_le_abs,
+            |p: CRealPrelude| p.neg_sub_swap,
+            |p: CRealPrelude| p.of_rat,
+            |p: CRealPrelude| p.of_rat_add,
+            |p: CRealPrelude| p.of_rat_le,
+            |p: CRealPrelude| p.one,
+            |p: CRealPrelude| p.sample_lower_bound,
+            |p: CRealPrelude| p.sample_upper_bound,
+            |p: CRealPrelude| p.sum_range_congr,
+            |p: CRealPrelude| p.uconv_rate,
+            |p: CRealPrelude| p.uconv_spec,
+            |p: CRealPrelude| p.zero,
+            |p: CRealPrelude| p.zero_lt_one,
+        ],
+        provides: &[
+            |p: CRealPrelude| p.cos_fn_wide_one_equiv_cos_one,
+            |p: CRealPrelude| p.cos_fn_wide_one_nonneg,
+        ],
+        run: trig_fn::declare_cos_fn_wide_at_one,
     },
     BuildStep {
         label: "trig_fn::declare_sin_fn_term_family",

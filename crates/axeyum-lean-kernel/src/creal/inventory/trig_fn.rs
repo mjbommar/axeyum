@@ -115,5 +115,15 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.cos_fn_wide_has_derivative,
             "theorem",
         ),
+        (
+            "CReal.cosFnWide_one_equiv_cosOne",
+            p.cos_fn_wide_one_equiv_cos_one,
+            "theorem",
+        ),
+        (
+            "CReal.cosFnWide_one_nonneg",
+            p.cos_fn_wide_one_nonneg,
+            "theorem",
+        ),
     ]
 }

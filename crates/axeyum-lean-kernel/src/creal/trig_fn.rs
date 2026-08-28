@@ -377,7 +377,7 @@ use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::{ExprId, ExprNode};
 use crate::int_prelude::ops::{IntDev, exists_elim};
 use crate::nat_prelude::NatOps;
-use crate::rat_prelude::ops::{normalize, one_le_succ, radd, rat_eq_rewrite, rchain};
+use crate::rat_prelude::ops::{normalize, one_le_succ, radd, rat_eq_rewrite, rchain, rtrans};
 use crate::tc::{LocalContext, LocalDecl};
 
 /// Height for `cosFnTerm`: one past `powerSeriesTerm`'s own
@@ -1059,34 +1059,45 @@ fn cos_fn_term_one_equiv(d: &mut IntDev<'_>, p: CRealPrelude, j: ExprId) -> Expr
     )
 }
 
-/// Admit `CReal.cosFn_one_equiv_cosOne : Equiv (cosFn one) cosOne`. Mirrors
-/// `creal/exp_fn.rs::declare_exp_fn_equiv_e` step for step: eliminate
+/// `(statement, proof)` for `Equiv (G one) cosOne`, where `G` is the uniform
+/// limit named by `u_conv : UniformConvergesOn F G a b` and `one` lies in
+/// `[a, b]` by `hab_lo : le a one` / `hab_hi : le one b`.
+///
+/// Mirrors `creal/exp_fn.rs::declare_exp_fn_equiv_e` step for step: eliminate
 /// `CReal.cosOneConverges`'s `Exists` witness into a per-`n` `Within` fact,
 /// bridge it to `close_within` via [`close_within_of_within_at`] (leg 1),
-/// transport `CReal.cosFnUniformConverges`'s own `.spec` at `x := one` from
-/// `cosFnTerm j one` to `cosTerm j` via [`cos_fn_term_one_equiv`] +
-/// `CReal.sumRange_congr` (leg 2), combine the two legs by the triangle
-/// inequality ([`combine_two_legs`]), and close with
-/// `CReal.equiv_zero_of_rate` + [`equiv_of_sub_equiv_zero`].
+/// transport `u_conv`'s own `.spec` at `x := one` from `cosFnTerm j one` to
+/// `cosTerm j` via [`cos_fn_term_one_equiv`] + `CReal.sumRange_congr`
+/// (leg 2), combine the two legs by the triangle inequality
+/// ([`combine_two_legs`]), and close with `CReal.equiv_zero_of_rate` +
+/// [`equiv_of_sub_equiv_zero`].
+///
+/// **Nothing here mentions the interval**: both legs bound the SAME partial
+/// sums, so the only place `[a, b]` enters is the two range hypotheses fed to
+/// `.spec`. That is why one body serves both `CReal.cosFn` (on `[0, 1]`) and
+/// `CReal.cosFnWide` (on `[0, 8/5]`) — see [`declare_cos_fn_equiv_cos_one`]
+/// and [`declare_cos_fn_wide_at_one`].
 ///
 /// # Errors
 ///
 /// Returns the trusted gate's rejection. An `Err` here means the kernel
 /// **refused** a proof, not that a script gave up.
-pub(super) fn declare_cos_fn_equiv_cos_one(
+fn cos_limit_at_one_equiv_cos_one(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
-) -> Result<(), KernelError> {
+    u_conv: ExprId,
+    hab_lo: ExprId,
+    hab_hi: ExprId,
+) -> Result<(ExprId, ExprId), KernelError> {
     let nat = d.nat_ty();
     let one_cc = one_c(d, p);
     let cos_one_const = d.kernel().const_(p.cos_one, vec![]);
     let cos_term_c = d.kernel().const_(p.cos_term, vec![]);
     let cos_series_partial_c = d.kernel().const_(p.cos_series_partial, vec![]);
 
-    // Peel `F`/`G`/`a`/`b` off `cosFnUniformConverges`'s own INFERRED type,
-    // rather than reconstructing `big_f` by hand — guarantees an exact match
-    // with the declared theorem's actual ascribed type.
-    let u_conv = d.kernel().const_(p.cos_fn_uniform_converges, vec![]);
+    // Peel `F`/`G`/`a`/`b` off the witness's own INFERRED type, rather than
+    // reconstructing `big_f` by hand — guarantees an exact match with the
+    // declared theorem's actual ascribed type.
     let ty_u = d.kernel().infer(u_conv)?;
     let (inner1, b_u) = unapp(d, ty_u);
     let (inner2, a_u) = unapp(d, inner1);
@@ -1095,10 +1106,7 @@ pub(super) fn declare_cos_fn_equiv_cos_one(
     let uconv_rate_val = d.const_app(p.uconv_rate, &[f_u, g_u, a_u, b_u, u_conv]);
     let uconv_spec_val = d.const_app(p.uconv_spec, &[f_u, g_u, a_u, b_u, u_conv]);
 
-    let hab_lo = zero_le_one(d, p);
-    let hab_hi = d.lemma(p.le_refl, &[one_cc]);
-
-    let g_one = d.apply(g_u, &[one_cc]); // cosFn one
+    let g_one = d.apply(g_u, &[one_cc]); // (cosFn | cosFnWide) one
     let target = equiv(d, p, g_one, cos_one_const);
 
     let predicate = converges_predicate(d, p, cos_series_partial_c, cos_one_const);
@@ -1222,10 +1230,31 @@ pub(super) fn declare_cos_fn_equiv_cos_one(
 
     let value = exists_elim(d, predicate, target, cos_one_converges_c, minor);
 
+    Ok((target, value))
+}
+
+/// Admit `CReal.cosFn_one_equiv_cosOne : Equiv (cosFn one) cosOne` --
+/// [`cos_limit_at_one_equiv_cos_one`] at `CReal.cosFnUniformConverges`, whose
+/// interval is `[0, 1]`, so the upper range hypothesis is `le_refl one`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_cos_fn_equiv_cos_one(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let u_conv = d.kernel().const_(p.cos_fn_uniform_converges, vec![]);
+    let hab_lo = zero_le_one(d, p);
+    let one_cc = one_c(d, p);
+    let hab_hi = d.lemma(p.le_refl, &[one_cc]);
+    let (ty, value) = cos_limit_at_one_equiv_cos_one(d, p, u_conv, hab_lo, hab_hi)?;
+
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.cos_fn_one_equiv_cos_one,
         uparams: vec![],
-        ty: target,
+        ty,
         value,
     })
 }
@@ -2409,6 +2438,169 @@ pub(super) fn declare_cos_fn_wide_uniformly_continuous(
 
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.cos_fn_wide_uniformly_continuous,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// ============================================================================
+// `CReal.cosFnWide` AT `x = 1` — the left endpoint of the sub-interval a π
+// construction has to run `CReal.ivt_exact_root` over.
+//
+// `ivt_exact_root` wants a derivative bounded strictly BELOW by a positive
+// constant. Cosine decreases, so the function to feed it is `fun x => neg
+// (cosFnWide x)`, whose derivative is `sinFn` -- and `sin 0 = 0`, so the
+// positive lower bound is unavailable on `[0, 8/5]` and the interval has to
+// start away from `0`. `[1, 8/5]` is the choice that still encloses cosine's
+// first zero (`≈ 1.5708`), and its left endpoint needs `0 ≤ cos 1`.
+//
+// **`CReal.cosOne_nonneg` is NOT that fact**, and the gap is the whole point
+// of this section: `cosOne` is `creal/trig.rs`'s single CONSTANT (the limit
+// of `sumRange cosTerm`), while `cosFnWide` is a FUNCTION obtained as
+// `weierstrassMTest`'s uniform limit `G`. Nothing relates them until
+// something proves `Equiv (cosFnWide one) cosOne`, and
+// `CReal.cosFn_one_equiv_cosOne` proves it only for the NARROW `cosFn` on
+// `[0, 1]`, a different declaration.
+// ============================================================================
+
+/// `le one R`, `R := ofRat (Rat.natDivSucc 8 4) = 8/5` -- the upper range
+/// hypothesis `cosFnWideUniformConverges`'s `.spec` needs at `x := one`, and
+/// [`hab_zero_r`]'s companion at the other end.
+///
+/// Route, and it costs nothing beyond one `Rat.normalize_congr` (the CHEAP
+/// kind of `Rat` fact -- an `Eq` between two `normalize`s, per
+/// `docs/plan/status/166-cos-deriv2.md`'s pricing note):
+///
+/// 1. `Rat.natDivSucc_le_add_left 5 3 4 : Rat.le (natDivSucc 5 4)
+///    (natDivSucc (Nat.add 5 3) 4)`. `Nat.add 5 3` is literally the unary
+///    numeral `8`, so this IS `5/5 ≤ 8/5` at the target's own denominator --
+///    no index arithmetic, no cross-multiplication battery.
+/// 2. `natDivSucc 5 4` is `Rat.one`. Proved WITHOUT touching `Nat.gcd` (which
+///    does not unfold by ι even on literals), by exactly the route
+///    `creal/trig.rs::exp_term_lit_eq_one` already uses for `expTerm 0 = 1`:
+///    `Rat.self_normalize` at `q := Rat.one` names `Rat.one` as a
+///    `normalize (num one) (den one) _`, `num`/`den` of a `Rat.mk`-built
+///    value ι-reduce to `ofNat 1`/`1`, and `Rat.normalize_congr` bridges
+///    `normalize (ofNat 5) 5 _` to it on the cross-multiplication
+///    `5 · 1 = 1 · 5`, whose two sides are the SAME `Int.ofNat 5` after
+///    `Nat.mul` computes -- so `Eq.refl` closes it.
+/// 3. `CReal.of_rat_le` lifts the `Rat` order to `CReal`; the result reads as
+///    `le one R` because `CReal.one` is *defined* as `ofRat Rat.one`
+///    (`creal.rs::declare_constants`), so no `Equiv` bridge is needed either.
+fn one_le_r_domain(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+    let rat = p.rat;
+    let n3 = d.num(3);
+    let n4 = d.num(4);
+    let n5 = d.num(5);
+
+    // `Rat.natDivSucc 5 4`, spelled the way its own definition unfolds.
+    let five_int = d.of_nat(n5);
+    let den5 = d.succ(n4);
+    let h5 = one_le_succ(d, n4);
+    let five_fifths = normalize(d, five_int, den5, h5);
+
+    // `Rat.one`, spelled the way `self_normalize`'s own conclusion does.
+    let rat_one_c = d.kernel().const_(rat.one, vec![]);
+    let num_one = crate::rat_prelude::ops::num(d, rat_one_c);
+    let den_one = crate::rat_prelude::ops::den(d, rat_one_c);
+    let pos_one = crate::rat_prelude::ops::den_pos(d, rat_one_c);
+    let renorm_one = normalize(d, num_one, den_one, pos_one);
+
+    // `Eq Int (5 · ofNat (den one)) (num one · ofNat 5)` -- both sides reduce
+    // to `Int.ofNat 5`, so reflexivity at the left one type-checks against it.
+    let of_den_one = d.of_nat(den_one);
+    let cross_left = d.imul(five_int, of_den_one);
+    let cross = d.irefl(cross_left);
+    let congr = d.lemma(
+        rat.normalize_congr,
+        &[five_int, den5, h5, num_one, den_one, pos_one, cross],
+    );
+    let self_norm = d.lemma(rat.self_normalize, &[rat_one_c]);
+    let five_eq_one = rtrans(d, five_fifths, renorm_one, rat_one_c, congr, self_norm);
+
+    let widened = d.lemma(rat.nat_div_succ_le_add_left, &[n5, n3, n4]);
+    let r_rat = r_domain_rat(d, p);
+    let one_le_r_rat = rat_eq_rewrite(d, five_fifths, rat_one_c, five_eq_one, widened, &|d, t| {
+        crate::rat_prelude::ops::rle(d, rat, t, r_rat)
+    });
+    d.lemma(p.of_rat_le, &[rat_one_c, r_rat, one_le_r_rat])
+}
+
+/// `CReal.cosFnWide_one_equiv_cosOne : Equiv (cosFnWide one) cosOne` and
+/// `CReal.cosFnWide_one_nonneg : le zero (cosFnWide one)`.
+///
+/// The first is [`cos_limit_at_one_equiv_cos_one`] at
+/// `CReal.cosFnWideUniformConverges` -- the SAME body
+/// [`declare_cos_fn_equiv_cos_one`] runs, differing only in the two range
+/// hypotheses `[0, 8/5]` demands ([`zero_le_one`] and [`one_le_r_domain`]
+/// where the narrow one uses `zero_le_one` and `le_refl one`). The second is
+/// `CReal.cosOne_nonneg` transported across it by `le_congr`.
+///
+/// **What this is and is not.** `cos 1 ≈ 0.5403 > 0` is the FIRST of the
+/// three numeric obligations a π-via-`ivt_exact_root` construction carries;
+/// the other two -- `cos (8/5) < 0` and a uniform positive lower bound on
+/// `sinFn` over `[1, 8/5]` -- are NOT proved here or anywhere in this tree,
+/// and `docs/plan/status/169-pi.md` sizes both. Nothing in this section
+/// constructs `CReal.pi`, and nothing here asserts a root exists.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_cos_fn_wide_at_one(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let u_conv = d.kernel().const_(p.cos_fn_wide_uniform_converges, vec![]);
+    let hab_lo = zero_le_one(d, p);
+    let hab_hi = one_le_r_domain(d, p);
+    let (ty, value) = cos_limit_at_one_equiv_cos_one(d, p, u_conv, hab_lo, hab_hi)?;
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.cos_fn_wide_one_equiv_cos_one,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+
+    declare_cos_fn_wide_one_nonneg(d, p)
+}
+
+/// `CReal.cosFnWide_one_nonneg : le zero (cosFnWide one)`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_cos_fn_wide_one_nonneg(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let zero_c = czero(d, p);
+    let one_cc = one_c(d, p);
+    let cos_one_const = d.kernel().const_(p.cos_one, vec![]);
+    let wide = d.kernel().const_(p.cos_fn_wide, vec![]);
+    let wide_one = d.apply(wide, &[one_cc]);
+
+    // `Equiv (cosFnWide one) cosOne`, so the `le_congr` slot -- which rewrites
+    // LEFT to RIGHT -- needs it the other way round.
+    let equiv_fwd = d.kernel().const_(p.cos_fn_wide_one_equiv_cos_one, vec![]);
+    let equiv_back = d.lemma(p.equiv_symm, &[wide_one, cos_one_const, equiv_fwd]);
+    let refl_zero = erefl(d, p, zero_c);
+    let base = d.lemma(p.cos_one_nonneg, &[]);
+    let value = d.lemma(
+        p.le_congr,
+        &[
+            zero_c,
+            zero_c,
+            cos_one_const,
+            wide_one,
+            refl_zero,
+            equiv_back,
+            base,
+        ],
+    );
+    let ty = cle(d, p, zero_c, wide_one);
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.cos_fn_wide_one_nonneg,
         uparams: vec![],
         ty,
         value,
