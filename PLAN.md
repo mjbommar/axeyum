@@ -134,10 +134,16 @@ now. Nothing was deleted.
 | 2026-08-28 | pi-r2d | measured (hand-traced, not kernel-timed): the reverted attempt's own final numeric check never needs a `Nat` value above `25*1875=46,875` if combined in `sumRange`'s forced left-nested order — under the documented `60,000`-feasible line — which is evidence the 616s/5.9GB blowup was driven by NESTING DEPTH of un-reduced `Rat` towers rather than by final operand magnitude alone. Offered as a hypothesis, not a confirmed measurement; no isolated A/B was run to separate the two causes |
 | 2026-08-28 | pi-r2d | negative, precise: the brief's "rescale every term to an explicit denominator-1875 `Rat` value" is impossible as literally stated — `Rat`'s `reduced` field (`gcd(|num|,den)=1`) rules out constructing `1875/1875` or `-2400/1875` as `Rat.mk` terms at all. Implemented instead: each term collapses to its own naturally-reduced flat value, combined via ordinary `Rat.add` at bounded (~46,875) scale |
 | 2026-08-28 | pi-r2d | item 4 REVERTED twice; two independent constructions both exceed the build band, so the `Rat.ble` route does not reach `-13/1875` |
+| 2026-08-28 | supon-r6 | `supOn` rung 6: the multi-level nearest-mesh-point lemma, the `eps`/existential transport combinator, and the arbitrary-depth gap bound — three first-attempt kernel accepts, axiom-free |
 | 2026-08-28 | choose-backlog | 5 Nat.choose theorems (one_right, eq_zero_of_lt, ne_zero, le_succ, symm_of_eq_add) + 5 facts flipped to proved; fixed a false defeq assumption in choose_le_succ's base case |
 | 2026-08-28 | coprime-backlog | 4/5 `Nat.Coprime` import-backlog facts proved axiom-free (`coprime_of_dvd_left/right`, `prime_dvd_iff_not_coprime`, `coprime_add_self_right`); `coprime_two_left` deferred, needs a fresh `Odd` construction |
 | 2026-08-28 | decidable-frontier | confirmed F:rado-r4-a5-b3 and F:rado-r4-a5-b4 already settled, no edit made; added a corroborating 2026-08-28 re-measurement to F:fp16-add-monotone-rne's notes (drat_check throughput ~95 steps/s, ~2.4h extrapolated), fact stays `open` |
 | 2026-08-28 | evt-r2-gap | Closed EVT row-2's labeled gap: promoted `abs_bound_of_self`, added `bounded_on_id_zero_one` and `evtLinear_uniformly_continuous` (all kernel-checked) |
+| 2026-08-28 | nat-cascade | `Nat.choose_le_add`, `Nat.choose_symm_add` proved (`nat_prelude/choose.rs`); pinned `65+331`->`65+333` in `the_build_is_deterministic` |
+| 2026-08-28 | nat-cascade | `Nat.coprime_of_dvd`, `Nat.coprime_self_add_right`, `Nat.coprime_symmetric`, `Nat.coprime_or_dvd_of_prime` proved (`nat_prelude/primes.rs`); pinned `65+333`->`65+337` |
+| 2026-08-28 | `de8d37ef5` | `Nat.Even`/`Nat.Odd` + `even_or_odd_exists`, `add_self_ne_succ_add_self`, `even_not_odd`, `odd_not_even`, `even_iff_odd_succ` (new `nat_prelude/parity.rs`) |
+| 2026-08-28 | `acc299135` | register the 7 new declarations in `every_nat_declaration_is_checked_and_axiom_free`'s inventory; recount `the_build_is_deterministic`'s pin (65+331 -> 67+336) |
+| 2026-08-28 | `4cf8aa9ec` | concrete-witness cross-check (`Even 4`, `Odd 5` hand-built) catching an `mp`/`mpr` swap that type-shape alone would not |
 | 2026-08-27 | (uncommitted at status-file write time) | `CReal.sumRange_cauchy_of_abs_cauchy` / `CReal.sumRange_converges_of_abs_converges` (absolute convergence implies convergence) plus a soundness-negative control; curriculum rows 18 and 22–23 corrected. |
 | 2026-08-27 | (uncommitted at status-file write time) | Ten new `artifacts/facts/F-creal-*.json` entries for the Ch.13/14 Riemann integral construction and algebra (`riemannSum_cauchy`, `integral`, `integral_converges`, `integral_const`, `integral_add`, `integral_le`, `integral_scale`, `integral_witness_independent`, `riemannSum_integral_close`, `sharedIndexToCanonical`); `python3 scripts/validate-facts.py` green (708 facts, 0 errors). |
 | 2026-08-27 | (uncommitted at status-file write time) | Added `--require-declaration <name> [--require-kind <kind>]` to `crates/axeyum-lean-kernel/examples/kernel_declaration_projection.rs`: a direct, fail-on-absence presence checker for `Declaration::Definition`s (and any other kind), mutation-tested against `CReal.integral`. Upgraded `F:creal-integral`'s `kernel-CReal.integral` evidence to use it. Registered 14 new `artifacts/facts/F-creal-*.json` entries for Spivak Ch.18 (`e`) and Ch.22-23 (series convergence tests): `creal-e`, `creal-e-converges`, `creal-two-le-e`, `creal-e-le-three`, `creal-e-le-four`, `creal-expterm-le-geom`, `creal-expdominantcauchy`, `creal-cauchyofpointwiseequiv`, `creal-geomcauchy`, `creal-sumrange-comparisontest`, `creal-sumrange-cauchy-of-dominated`, `creal-sumrange-converges-of-dominated`, `creal-sumrange-cauchy-of-abs-cauchy`, `creal-sumrange-converges-of-abs-converges`. `python3 scripts/validate-facts.py` green (722 facts, 0 errors). |
@@ -7494,6 +7500,64 @@ diagnostic step is bisecting WITHIN item 4 — comment out
 isolated "baseline + item 3" reading, then re-enable to get "+ item 4",
 which is exactly the bisection this lane did not get to complete.
 
+**Rung 6's gap bound LANDED (supon-r6, 2026-08-28).** Three declarations,
+each a first-attempt kernel accept, all axiom-free and covered by
+`creal_tests::every_creal_declaration_is_checked_and_axiom_free` (which reads
+the environment, not a list):
+
+- `CReal.meshPoint_near_coarse` — the **multi-level nearest-mesh-point
+  lemma**, the piece nothing in the tree had. Every level-`(j+d)` mesh point,
+  at *any* refinement depth `d`, sits in one level-`j` cell: between that
+  cell's left endpoint and one coarse width above it.
+- `CReal.maxRange_le_add_of_exists` — `maxRange_transport` restated to take an
+  `eps`-estimate instead of an `Equiv`, and an `Exists` **witness** instead of
+  a supplied index function `e : Nat -> Nat`.
+- `CReal.meshMax_le_add_of_step_close` — **the gap bound**:
+  `le (meshMax F a b (Nat.add j d)) (add (meshMax F a b j) eps)` at arbitrary
+  depth, from a one-sided pointwise hypothesis on `F`.
+
+**The `creal/supremum.rs` module doc's "Rung 6 re-verified (2026-08-27)"
+section was right about WHAT blocks rung 6 and wrong about why it is
+expensive.** Its diagnosis held up exactly: the blocker is the per-level gap
+bound; `trueExpOfModulus` really can jump the mesh level by arbitrarily many
+doublings; a nearest-coarse-point fact at *any* depth really is what that
+needs. But it prices both candidate routes as "comparable in scope to a rung
+of their own" because it assumes the coarse index must be **computed** — route
+1 needs an index computation, route 2 needs a finer accuracy schedule.
+
+Neither is true. The gap bound's conclusion is `Prop`, so the coarse index can
+be an `Exists` witness that the induction step re-eliminates. Kernel fact 2
+(`Exists.rec` is `Prop`-only) constrains rung 7's `CReal.mk`, where `K` and
+`f_lambda` are DATA; it says nothing about a `le`-valued estimate. Once the
+index is existential, "which coarse cell contains fine index `i'`" never has
+to be answered: induct on depth and split the fine index's parity with
+`Nat.even_or_odd`. No quotient/remainder algebra, no `bucketIndex`, no
+schedule refinement — and `uniform_continuity.rs`'s still-open `crossingClose`
+side condition is never touched, so nothing here imports that gap.
+
+**The real difficulty is a statement choice, not a technique.** The obvious
+invariant — "every fine point is within one coarse width of some coarse
+point", `le (P L i') (add (P j i) (D j))` — does *not* close the induction:
+each odd step adds a fine width, and that statement cannot see that the widths
+halve. Carrying the **fine width on the left** instead,
+`le (add (P L i') (D L)) (add (P j i) (D j))`, makes every step exact.
+
+**What rung 6 still owes, precisely.** `meshMax_le_add_of_step_close` takes
+`hclose : forall x y, x,y in [a,b] -> le x y -> le y (add x (D j)) ->
+le (F y) (add (F x) eps)` as a hypothesis. Instantiating it from `uc_spec` at
+the accuracy `expOfModulus` selects is arithmetic about the modulus with **no
+mesh geometry left in it**: it compares `D j` (an arbitrary `CReal` width over
+`2^j`) against `1/(m k + 1)`, which is where `Nat.lt_pow_size` and an
+Archimedean bound on `b - a` enter. Rungs 6b (telescope) and 7
+(`regular_of_scaled_cauchy`) are unchanged.
+
+**Not verified by this lane** (they were never exercised, and remain as the
+module doc left them): the "constant-multiple corollary already exists in
+substance" claim, and the `cauchy_of_abs_diff_le` raw-`(K, proof)`-pair claim.
+
+`creal_prelude_builds`, same box, minutes apart: **103.66 s on `main`**
+(snapshot) vs **104.51 s here** — +0.8%, noise, inside the 94–123 band.
+
 **Your lane's block (`DONE`, choose-backlog, 2026-08-28).** All five targeted
 facts landed as axiom-free kernel-lean proofs in
 `crates/axeyum-lean-kernel/src/nat_prelude/choose.rs`:
@@ -7661,6 +7725,70 @@ checking whether an existing sibling theorem can just be reused.
 **Not attempted / out of scope:** no change to `evt_attained_max_decides_sign`
 itself (it never needed continuity as a hypothesis — the gap was purely the
 bridge sentence connecting `evtLinear` to classical EVT's hypothesis class).
+
+**Your lane's block (`DONE`, nat-cascade, 2026-08-28).** All six targeted
+facts landed, all kernel-checked and axiom-free (`nat` trusted surface = 0
+throughout). `nat_prelude::` went 95 -> 96 passed, 0 failed.
+
+Two of the six turned out to be thin corollaries once mirrored against the
+just-landed prerequisites, exactly as the brief predicted: `choose_symm_add`
+(one call to `choose_symm_of_eq_add` with `n := a+b` and `refl` for the
+hypothesis) and `coprime_of_dvd` (two-step composition of
+`coprime_of_dvd_right` then `coprime_of_dvd_left`, no new algebra). The other
+four needed real construction:
+- `choose_le_add` — induction on `b`, chaining `choose_le_succ` through
+  `le_trans` (both cases defeq via `add`'s definitional zero/succ equations).
+- `coprime_self_add_right` — `coprime_add_self_right` transported along
+  `add_comm` to swap which side of the sum carries `m`.
+- `coprime_symmetric` — **no `gcd_comm` lemma existed in the prelude** (the
+  brief's "check whether a `gcd_comm` already closes this" came back
+  negative); built directly via mutual `gcd_dvd_left`/`gcd_dvd_right` +
+  `dvd_gcd` + `dvd_antisymm`.
+- `coprime_or_dvd_of_prime` — decided constructively via a local `Bool.rec`
+  case split on `beq (gcd p i) one` (mirrored from `totient.rs`'s private
+  `bool_true_or_false` helper, duplicated since it is module-private) plus
+  `prime_dvd_iff_not_coprime`'s reverse direction. **Not Bezout**, matching
+  the brief's warning about the earlier coprime lane.
+
+Kernel rejected nothing on the first accepted attempt for any of the six —
+every proof term type-checked once written, so no bisection was needed.
+
+Newly unblocked but out of scope for this lane: `F:ml430-nat-choose-le-choose-907b5042`
+(needs `choose_le_add`, now available) and `F:ml430-nat-coprime-of-lt-prime-1978a919`
+(needs `coprime_or_dvd_of_prime`, now available).
+
+**Your lane's block (`DONE`, nat-parity, 2026-08-28).** Landed `Nat.Even n :=
+Exists (fun k => Eq n (add k k))` and `Nat.Odd n := Exists (fun k => Eq n
+(succ (add k k)))` — the `k+k`/`succ(k+k)` form (not `2*k`/`2*k+1`), chosen
+because `Nat.even_or_odd` (`powsq.rs`) already produces exactly that shape as
+its own branch equations, so `even_or_odd_exists` hands them straight to
+`Exists.intro` at witness `div n 2` with no conversion. All three requested
+items (1–3) landed with real kernel-checked proofs, plus all of the "bonus"
+item 4: `even_not_odd`, `odd_not_even` (via a new
+`add_self_ne_succ_add_self : ∀ k j, Not (Eq (add k k) (succ (add j j)))`,
+proved by induction on `k` with an inner case split on `j`), and
+`even_iff_odd_succ` (direct `congrArg succ`/`succ_injective`, no induction
+needed). All seven declarations rest on zero axioms (kernel-verified, not
+asserted). New module: `crates/axeyum-lean-kernel/src/nat_prelude/parity.rs`.
+
+`powsq.rs`'s inline even/odd split (`declare_even_or_odd`, the
+`Or (Eq n (add half half)) (Eq n (succ (add half half)))` disjunction) was
+**not** re-derived — `even_or_odd_exists` calls the existing theorem
+`Nat.even_or_odd` as a lemma and repackages its two branches via
+`Exists.intro`, with zero new case-analysis machinery. Nothing else this
+brief expected to find already-existing (`Nat.Even`/`Nat.Odd` under any
+spelling) was present — the grep-with-positive-control the brief specified
+came back empty both times, and it stayed empty.
+
+`nat_prelude::` sweep: 95 passed before this lane, 97 passed after (95 + the
+previously-failing coverage-inventory assertion, now fixed, + one new
+concrete-witness cross-check test). 0 failed throughout. No fact-ledger entry
+was created — these are infrastructure declarations with no formal-statement
+consumer yet; a downstream lane building `Coprime 2 n ↔ Odd n` or similar
+should register the fact then, not here.
+
+Not attempted (explicitly out of scope per the brief): `Coprime 2 n ↔ Odd n`
+and any other downstream cascade.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
