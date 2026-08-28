@@ -40,7 +40,7 @@
 
 use super::NatPrelude;
 use super::helpers::transport_dvd_left;
-use super::ops::{NatDev, NatOps};
+use super::ops::{NatDev, NatOps, two_divisor_dichotomy};
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
@@ -137,69 +137,9 @@ fn absurd(d: &mut NatDev<'_>, p: &NatPrelude, goal: ExprId, contradiction: ExprI
 // `Nat.even_of_even_sq : ∀ n, dvd 2 (mul n n) → dvd 2 n`.
 // ============================================================================
 
-/// `∀ c, dvd c 2 → Or (Eq c 1) (Eq c 2)` — the only divisors of the literal
-/// `2` are `1` and `2`. Same content as `perfect.rs`'s private
-/// `divisors_of_two` (`1 ≤ c ≤ 2` from `le_of_dvd`/`one_le_of_dvd_pos`,
-/// `c = succ (pred c)` from `succ_pred_of_pos`, `two_le_succ_or_eq_one` on
-/// `pred c` resolves the two cases), spelled out again here rather than
-/// shared because that helper is `fn`-private to its own file.
-fn two_divisor_dichotomy(d: &mut NatDev<'_>, p: &NatPrelude, c: ExprId, dvd_c2: ExprId) -> ExprId {
-    let p = *p;
-    let two = d.num(2);
-    let one = d.num(1);
-    let one_le_two = d.lemma(p.le_succ, &[one]);
-    let one_le_c = d.lemma(p.one_le_of_dvd_pos, &[c, two, one_le_two, dvd_c2]);
-    let c_le_two = d.lemma(p.le_of_dvd, &[c, two, one_le_two, dvd_c2]);
-
-    let succ_pred = d.lemma(p.succ_pred_of_pos, &[c, one_le_c]);
-    let e = d.pred(c);
-    let se = d.succ(e);
-
-    let se_le_two = {
-        let motive = d.eq_motive(c, &|d, x| d.le(x, two));
-        d.transport(c, motive, c_le_two, se, succ_pred)
-    };
-
-    let dichotomy = d.lemma(p.two_le_succ_or_eq_one, &[e]);
-    let left_ty = d.le(two, se);
-    let right_ty = d.eq(se, one);
-
-    let goal_one = d.eq(c, one);
-    let goal_two = d.eq(c, two);
-    let logic = d.prelude().logic;
-    let goal = d.const_app(logic.or, &[goal_one, goal_two]);
-
-    let left_branch = {
-        let h_fv = d.fresh_fvar();
-        let h = d.kernel().fvar(h_fv);
-        let se_eq_two = d.lemma(p.le_antisymm, &[se, two, se_le_two, h]);
-        let (_e2, c_eq_two) = d.chain(c, &[(se, succ_pred), (two, se_eq_two)]);
-        let proof = d.const_app(logic.or_inr, &[goal_one, goal_two, c_eq_two]);
-        d.lam_fv(h_fv, left_ty, proof)
-    };
-    let right_branch = {
-        let h_fv = d.fresh_fvar();
-        let h = d.kernel().fvar(h_fv);
-        let (_e2, c_eq_one) = d.chain(c, &[(se, succ_pred), (one, h)]);
-        let proof = d.const_app(logic.or_inl, &[goal_one, goal_two, c_eq_one]);
-        d.lam_fv(h_fv, right_ty, proof)
-    };
-
-    or_elim(
-        d,
-        &p,
-        left_ty,
-        right_ty,
-        goal,
-        left_branch,
-        right_branch,
-        dichotomy,
-    )
-}
-
 /// `Nat.even_of_even_sq : ∀ n, dvd 2 (mul n n) → dvd 2 n`.
 ///
-/// Case on `gcd(2,n) ∈ {1,2}` (`two_divisor_dichotomy` applied to
+/// Case on `gcd(2,n) ∈ {1,2}` ([`two_divisor_dichotomy`](super::ops::two_divisor_dichotomy) applied to
 /// `gcd_dvd_left 2 n : dvd (gcd 2 n) 2`): if `gcd(2,n)=1`, `gauss_lemma 2 n n`
 /// cancels the coprime factor `n` from `2 ∣ n·n` directly, giving `2 ∣ n`; if
 /// `gcd(2,n)=2`, `2 ∣ n` is `gcd_dvd_right 2 n` after substituting.

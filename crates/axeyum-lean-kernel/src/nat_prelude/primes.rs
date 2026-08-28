@@ -29,7 +29,7 @@ use super::NatPrelude;
 use super::helpers::{
     and_left, and_right, iff_forward, iff_reverse, transport_dvd_left, transport_dvd_right,
 };
-use super::ops::{NatDev, NatOps};
+use super::ops::{NatDev, NatOps, bool_true_or_false, two_divisor_dichotomy, two_mul_eq_add_self};
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
@@ -1496,42 +1496,8 @@ pub(super) fn declare_coprime_symmetric(
 // i) one) (dvd p i)`.
 // ============================================================================
 
-/// `Or (Eq Bool b true) (Eq Bool b false)`, for an arbitrary `b : Bool` — a
-/// direct `Bool.rec` deciding `b`, fully constructive (two constructors, not
-/// excluded middle). Mirrors `totient.rs`'s private helper of the same name.
-fn bool_true_or_false(d: &mut NatDev<'_>, p: &NatPrelude, b: ExprId) -> ExprId {
-    let bool_ty = d.bool_ty();
-    let true_ = d.bool_true();
-    let false_ = d.bool_false();
-    let motive = {
-        let x_fv = d.fresh_fvar();
-        let x = d.kernel().fvar(x_fv);
-        let true_inner = d.bool_true();
-        let false_inner = d.bool_false();
-        let is_true = d.bool_eq(x, true_inner);
-        let is_false = d.bool_eq(x, false_inner);
-        let body = d.const_app(p.logic.or, &[is_true, is_false]);
-        d.lam_fv(x_fv, bool_ty, body)
-    };
-    let case_true = {
-        let is_true = d.bool_eq(true_, true_);
-        let is_false = d.bool_eq(true_, false_);
-        let refl_true = d.bool_refl(true_);
-        d.const_app(p.logic.or_inl, &[is_true, is_false, refl_true])
-    };
-    let case_false = {
-        let is_true = d.bool_eq(false_, true_);
-        let is_false = d.bool_eq(false_, false_);
-        let refl_false = d.bool_refl(false_);
-        d.const_app(p.logic.or_inr, &[is_true, is_false, refl_false])
-    };
-    let level_zero = d.kernel().level_zero();
-    let bool_rec = d.kernel().const_(p.logic.bool_rec, vec![level_zero]);
-    d.apply(bool_rec, &[motive, case_false, case_true, b])
-}
-
 /// See [`NatPrelude::coprime_or_dvd_of_prime`] for the route: decide
-/// `beq (gcd p i) one` via [`bool_true_or_false`] — the `true` branch gives
+/// `beq (gcd p i) one` via [`bool_true_or_false`](super::ops::bool_true_or_false) — the `true` branch gives
 /// `Coprime p i` directly (`eq_of_beq_eq_true`); the `false` branch gives
 /// `Not (Coprime p i)` (`ne_of_beq_eq_false`), which `prime_dvd_iff_not_coprime`
 /// converts to `dvd p i`.
@@ -1628,29 +1594,9 @@ fn even_predicate_local(d: &mut NatDev<'_>, n: ExprId) -> ExprId {
     d.lam_fv(k_fv, nat, body)
 }
 
-/// `Eq (mul two k) (add k k)` — rebuilt to match `powsq.rs`'s private
-/// `two_mul_eq_add_self` (also `fn`-private to its file; same technique).
-fn two_mul_eq_add_local(d: &mut NatDev<'_>, p: &NatPrelude, k: ExprId) -> ExprId {
-    let p = *p;
-    let one = d.num(1);
-    let succ_one = d.succ(one);
-    let mul_succ_one_k = d.mul(succ_one, k);
-    let mul_one_k = d.mul(one, k);
-    let add_mul_one_k_k = d.add(mul_one_k, k);
-    let succ_mul_eq = d.lemma(p.succ_mul, &[one, k]);
-    let one_mul_eq = d.lemma(p.one_mul, &[k]);
-    let congr_step = d.congr(mul_one_k, k, one_mul_eq, &|d, x| d.add(x, k));
-    let k_plus_k = d.add(k, k);
-    let (_, result) = d.chain(
-        mul_succ_one_k,
-        &[(add_mul_one_k_k, succ_mul_eq), (k_plus_k, congr_step)],
-    );
-    result
-}
-
 /// `dvd 2 n -> Even n`: eliminate the divisor witness `q` (`n = mul 2 q`,
 /// `dvd_predicate`'s own witness shape) into the doubling witness `Even`
-/// wants (`n = add q q`), bridged by [`two_mul_eq_add_local`].
+/// wants (`n = add q q`), bridged by [`two_mul_eq_add_self`](super::ops::two_mul_eq_add_self).
 fn even_of_dvd_two(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId, hdvd: ExprId) -> ExprId {
     let p = *p;
     let nat = d.nat_ty();
@@ -1671,7 +1617,7 @@ fn even_of_dvd_two(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId, hdvd: ExprId) 
         let mul_two_q = d.mul(two, q);
         let hq_ty = d.eq(n, mul_two_q);
 
-        let mul_eq_add = two_mul_eq_add_local(d, &p, q);
+        let mul_eq_add = two_mul_eq_add_self(d, &p, q);
         let qq = d.add(q, q);
         let n_eq_qq = d.trans(n, mul_two_q, qq, hq, mul_eq_add);
 
@@ -1687,7 +1633,7 @@ fn even_of_dvd_two(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId, hdvd: ExprId) 
 
 /// `Even n -> dvd 2 n`: eliminate the doubling witness `k` (`n = add k k`)
 /// into the divisor witness `dvd`'s predicate wants (`n = mul 2 k`), bridged
-/// by [`two_mul_eq_add_local`].
+/// by [`two_mul_eq_add_self`](super::ops::two_mul_eq_add_self).
 fn dvd_two_of_even(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId, heven: ExprId) -> ExprId {
     let p = *p;
     let nat = d.nat_ty();
@@ -1708,7 +1654,7 @@ fn dvd_two_of_even(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId, heven: ExprId)
         let kk = d.add(k, k);
         let hk_ty = d.eq(n, kk);
 
-        let mul_eq_add = two_mul_eq_add_local(d, &p, k);
+        let mul_eq_add = two_mul_eq_add_self(d, &p, k);
         let mul_two_k = d.mul(two, k);
         let add_eq_mul = d.symm(mul_two_k, kk, mul_eq_add);
         let n_eq_mul = d.trans(n, kk, mul_two_k, hk, add_eq_mul);
@@ -1758,53 +1704,7 @@ fn prime_two(d: &mut NatDev<'_>, p: &NatPrelude) -> ExprId {
         let hyp = d.kernel().fvar(hyp_fv);
         let dvd_c2 = d.dvd(c, two);
 
-        let one_le_two = d.lemma(p.le_succ, &[one]);
-        let one_le_c = d.lemma(p.one_le_of_dvd_pos, &[c, two, one_le_two, hyp]);
-        let c_le_two = d.lemma(p.le_of_dvd, &[c, two, one_le_two, hyp]);
-
-        let succ_pred = d.lemma(p.succ_pred_of_pos, &[c, one_le_c]);
-        let e = d.pred(c);
-        let se = d.succ(e);
-
-        let se_le_two = {
-            let motive = d.eq_motive(c, &|d, x| d.le(x, two));
-            d.transport(c, motive, c_le_two, se, succ_pred)
-        };
-
-        let dichotomy = d.lemma(p.two_le_succ_or_eq_one, &[e]);
-        let left_ty = d.le(two, se);
-        let right_ty = d.eq(se, one);
-
-        let goal_one = d.eq(c, one);
-        let goal_two = d.eq(c, two);
-        let goal = d.const_app(p.logic.or, &[goal_one, goal_two]);
-
-        let left_branch = {
-            let hh_fv = d.fresh_fvar();
-            let hh = d.kernel().fvar(hh_fv);
-            let se_eq_two = d.lemma(p.le_antisymm, &[se, two, se_le_two, hh]);
-            let (_e2, c_eq_two) = d.chain(c, &[(se, succ_pred), (two, se_eq_two)]);
-            let proof = d.const_app(p.logic.or_inr, &[goal_one, goal_two, c_eq_two]);
-            d.lam_fv(hh_fv, left_ty, proof)
-        };
-        let right_branch = {
-            let hh_fv = d.fresh_fvar();
-            let hh = d.kernel().fvar(hh_fv);
-            let (_e2, c_eq_one) = d.chain(c, &[(se, succ_pred), (one, hh)]);
-            let proof = d.const_app(p.logic.or_inl, &[goal_one, goal_two, c_eq_one]);
-            d.lam_fv(hh_fv, right_ty, proof)
-        };
-
-        let disjunction_proof = or_cases(
-            d,
-            &p,
-            left_ty,
-            right_ty,
-            goal,
-            left_branch,
-            right_branch,
-            dichotomy,
-        );
+        let disjunction_proof = two_divisor_dichotomy(d, &p, c, hyp);
 
         let clause_body = d.lam_fv(hyp_fv, dvd_c2, disjunction_proof);
         d.lam_fv(c_fv, nat, clause_body)

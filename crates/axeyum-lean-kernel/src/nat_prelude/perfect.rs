@@ -54,7 +54,7 @@
 use super::NatPrelude;
 use super::helpers::and_right;
 use super::helpers::{and_left, iff_forward, iff_reverse, transport_dvd_left, transport_dvd_right};
-use super::ops::{NatDev, NatOps};
+use super::ops::{NatDev, NatOps, bool_true_or_false, two_divisor_dichotomy};
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::Declaration;
@@ -276,39 +276,6 @@ fn nat_congr_bool(
     });
     let refl_case = d.bool_refl(fa);
     d.transport(a, motive, refl_case, b, h)
-}
-
-/// `Or (Eq Bool b true) (Eq Bool b false)`, for an arbitrary `b : Bool` —
-/// local copy of `totient.rs`'s `bool_true_or_false`.
-fn bool_true_or_false(d: &mut NatDev<'_>, p: &NatPrelude, b: ExprId) -> ExprId {
-    let bool_ty = d.bool_ty();
-    let true_ = d.bool_true();
-    let false_ = d.bool_false();
-    let motive = {
-        let x_fv = d.fresh_fvar();
-        let x = d.kernel().fvar(x_fv);
-        let true_inner = d.bool_true();
-        let false_inner = d.bool_false();
-        let is_true = d.bool_eq(x, true_inner);
-        let is_false = d.bool_eq(x, false_inner);
-        let body = d.const_app(p.logic.or, &[is_true, is_false]);
-        d.lam_fv(x_fv, bool_ty, body)
-    };
-    let case_true = {
-        let is_true = d.bool_eq(true_, true_);
-        let is_false = d.bool_eq(true_, false_);
-        let refl_true = d.bool_refl(true_);
-        d.const_app(p.logic.or_inl, &[is_true, is_false, refl_true])
-    };
-    let case_false = {
-        let is_true = d.bool_eq(false_, true_);
-        let is_false = d.bool_eq(false_, false_);
-        let refl_false = d.bool_refl(false_);
-        d.const_app(p.logic.or_inr, &[is_true, is_false, refl_false])
-    };
-    let level_zero = d.kernel().level_zero();
-    let bool_rec = d.kernel().const_(p.logic.bool_rec, vec![level_zero]);
-    d.apply(bool_rec, &[motive, case_false, case_true, b])
 }
 
 /// `fun k => f (succ k)` — local copy of `binomial.rs`'s private
@@ -982,8 +949,8 @@ pub(super) fn declare_pow2_geom_sum(d: &mut NatDev<'_>, p: &NatPrelude) -> Resul
 // or `d = 2^i·q` (`i ≤ k`), via unique factorization on the single prime `2`.
 // The proof is ONE induction on `k` (not two, as the task brief anticipated
 // for a separate `dvd_pow2`): at each step, split on `gcd(dd, 2) ∈ {1, 2}`
-// (proved inline by [`divisors_of_two`] — literally "`2` is prime", spelled
-// out once for this single use rather than as a general `Nat.prime_two`).
+// (via the shared `two_divisor_dichotomy` (super::ops::two_divisor_dichotomy)
+// — literally "`2` is prime", used here rather than a general `Nat.prime_two`).
 // `gcd = 2` peels a factor of `2` off `dd` and recurses via the induction
 // hypothesis (applied to the fresh quotient `dd/2`); `gcd = 1` is coprime to
 // `2`, so `gauss_lemma` cancels the `2` directly from `dd ∣ 2·(2^m·q)` and the
@@ -1047,72 +1014,6 @@ fn dvd_intro(
     let intro_name = d.prelude().logic.exists_intro;
     let intro = d.kernel().const_(intro_name, vec![one]);
     d.apply(intro, &[nat, predicate, witness, eq_proof])
-}
-
-/// `∀ c, dvd c 2 → Or (Eq c 1) (Eq c 2)` — the only divisors of the literal
-/// `2` are `1` and `2` (i.e. `2` is prime), spelled out inline for this one
-/// use (classifying `gcd dd 2`) rather than as a general `Nat.prime_two`.
-/// `1 ≤ c ≤ 2` from `le_of_dvd`/`one_le_of_dvd_pos`, `c = succ (pred c)`
-/// from `succ_pred_of_pos`, then `two_le_succ_or_eq_one` on `pred c`
-/// resolves the two cases (mirroring `two_le_succ_or_eq_one`'s own use in
-/// `primes.rs`).
-fn divisors_of_two(d: &mut NatDev<'_>, p: &NatPrelude, c: ExprId, dvd_c2: ExprId) -> ExprId {
-    let p = *p;
-    let two = d.num(2);
-    let one = d.num(1);
-    let one_le_two = d.lemma(p.le_succ, &[one]);
-    let one_le_c = d.lemma(p.one_le_of_dvd_pos, &[c, two, one_le_two, dvd_c2]);
-    let c_le_two = d.lemma(p.le_of_dvd, &[c, two, one_le_two, dvd_c2]);
-
-    let succ_pred = d.lemma(p.succ_pred_of_pos, &[c, one_le_c]);
-    let e = d.pred(c);
-    let se = d.succ(e);
-
-    let se_le_two = {
-        let motive = d.eq_motive(c, &|d, x| d.le(x, two));
-        d.transport(c, motive, c_le_two, se, succ_pred)
-    };
-
-    let dichotomy = d.lemma(p.two_le_succ_or_eq_one, &[e]);
-    let left_ty = d.le(two, se);
-    let right_ty = d.eq(se, one);
-
-    let goal_one = d.eq(c, one);
-    let goal_two = d.eq(c, two);
-    let logic = d.prelude().logic;
-    let goal = d.const_app(logic.or, &[goal_one, goal_two]);
-
-    let left_branch = {
-        let h_fv = d.fresh_fvar();
-        let h = d.kernel().fvar(h_fv);
-        let se_eq_two = d.lemma(p.le_antisymm, &[se, two, se_le_two, h]);
-        let (_e2, c_eq_two) = d.chain(c, &[(se, succ_pred), (two, se_eq_two)]);
-        let proof = d.const_app(logic.or_inr, &[goal_one, goal_two, c_eq_two]);
-        d.lam_fv(h_fv, left_ty, proof)
-    };
-    let right_branch = {
-        let h_fv = d.fresh_fvar();
-        let h = d.kernel().fvar(h_fv);
-        let (_e2, c_eq_one) = d.chain(c, &[(se, succ_pred), (one, h)]);
-        let proof = d.const_app(logic.or_inl, &[goal_one, goal_two, c_eq_one]);
-        d.lam_fv(h_fv, right_ty, proof)
-    };
-
-    let anon = d.anon_name();
-    let or_ty = d.const_app(logic.or, &[left_ty, right_ty]);
-    let motive = d.kernel().lam(anon, or_ty, goal, BinderInfo::Default);
-    let or_rec = d.kernel().const_(logic.or_rec, vec![]);
-    d.apply(
-        or_rec,
-        &[
-            left_ty,
-            right_ty,
-            motive,
-            left_branch,
-            right_branch,
-            dichotomy,
-        ],
-    )
 }
 
 /// `fun i => Le i bound ∧ Eq target (pow 2 i [* extra])` — shared by
@@ -1541,7 +1442,7 @@ pub(super) fn declare_dvd_two_pow_mul_classify(
 
             let gcd_dd2 = d.gcd(dd, two);
             let gcd_dvd_2 = d.lemma(p.gcd_dvd_right, &[dd, two]);
-            let two_cases = divisors_of_two(d, &p, gcd_dd2, gcd_dvd_2);
+            let two_cases = two_divisor_dichotomy(d, &p, gcd_dd2, gcd_dvd_2);
 
             let left_ty = d.eq(gcd_dd2, one);
             let right_ty = d.eq(gcd_dd2, two);
@@ -1680,7 +1581,7 @@ pub(super) fn declare_dvd_two_pow_mul_classify(
 // The proof reuses [`pow_eq_predicate`]/[`pow_eq_exists`]/[`pow_eq_intro`]/
 // [`pow_eq_elim`] verbatim with `extra = None` — those four are already
 // generic in the optional cofactor — so this is the SAME single induction on
-// `k`, splitting on `gcd(dd, 2) ∈ {1, 2}` via [`divisors_of_two`], with the
+// `k`, splitting on `gcd(dd, 2) ∈ {1, 2}` via [`two_divisor_dichotomy`](super::ops::two_divisor_dichotomy), with the
 // `Or`-of-two-shapes machinery ([`classify_goal`]/[`classify_inl`]/
 // [`classify_inr`]/[`classify_widen`]) dropped since there is only one shape
 // to land in. [`widen_pow_eq`] and [`even_step_result`] below are the
@@ -1826,7 +1727,7 @@ pub(super) fn declare_dvd_two_pow_classify(
 
             let gcd_dd2 = d.gcd(dd, two);
             let gcd_dvd_2 = d.lemma(p.gcd_dvd_right, &[dd, two]);
-            let two_cases = divisors_of_two(d, &p, gcd_dd2, gcd_dvd_2);
+            let two_cases = two_divisor_dichotomy(d, &p, gcd_dd2, gcd_dvd_2);
 
             let left_ty = d.eq(gcd_dd2, one);
             let right_ty = d.eq(gcd_dd2, two);

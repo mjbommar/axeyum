@@ -8463,8 +8463,7 @@ fn coprime_two_left_applies_at_a_concrete_odd_witness_and_is_axiom_free() {
     ] {
         assert!(
             f.k.axiom_footprint(name).is_empty(),
-            "{:?} must rest on zero axioms",
-            name
+            "{name:?} must rest on zero axioms"
         );
     }
 }
