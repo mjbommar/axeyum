@@ -6136,6 +6136,46 @@ pub struct CRealPrelude {
     /// ([`crate::rat_prelude::ops::nat_rewrite_prop`]); needed by rung 6's
     /// per-level gap bound. See `creal/supremum.rs`.
     pub exp_of_modulus_le_true_exp_of_modulus: NameId,
+    /// `CReal.meshPoint_near_coarse : forall a b j, le a b -> forall d i',
+    /// Nat.le i' (meshLevelCount (Nat.add j d)) ->
+    /// exists i, Nat.le i (meshLevelCount j) /\ le (P j i) (P (add j d) i') /\
+    /// le (add (P (add j d) i') (D (add j d))) (add (P j i) (D j))`, where
+    /// `P L i := meshSamplePoint a (meshDelta a b (meshLevelCount L)) i` and
+    /// `D L := meshDelta a b (meshLevelCount L)` -- the MULTI-LEVEL
+    /// nearest-mesh-point lemma: every level-`(j+d)` mesh point, at any
+    /// refinement depth, lies in one level-`j` cell, between that cell's left
+    /// endpoint and one coarse width above it. Rung 6's missing piece (see
+    /// `creal/supremum.rs`'s module documentation): the depth-1 case is
+    /// [`Self::mesh_max_step_le`]'s exact even-index coincidence, and this is
+    /// the arbitrary-depth statement it does not give. Needs no `Nat`
+    /// division -- the conclusion is `Prop`, so the coarse index is an
+    /// `Exists` witness the induction step re-eliminates, and the parity split
+    /// is `Nat.even_or_odd`'s computed half.
+    pub mesh_point_near_coarse: NameId,
+    /// `CReal.maxRange_le_add_of_exists : forall f g n n' eps,
+    /// (forall i, Nat.le i n -> exists i', Nat.le i' n' /\ le (f i) (add (g i') eps))
+    /// -> le (maxRange f n) (add (maxRange g n') eps)` -- the APPROXIMATE,
+    /// existential-witnessed form of [`Self::max_range_transport`]: the
+    /// per-index relation is a `le ... + eps` estimate rather than an `Equiv`,
+    /// and the coarse index arrives as an `Exists` witness rather than as a
+    /// supplied `e : Nat -> Nat`. The second is what lets
+    /// [`Self::mesh_point_near_coarse`] plug in directly, with no `Nat`
+    /// quotient/remainder algebra: the conclusion is `Prop`, so `Exists.rec`
+    /// applies. See `creal/supremum.rs`.
+    pub max_range_le_add_of_exists: NameId,
+    /// `CReal.meshMax_le_add_of_step_close : forall F a b j d eps, le a b ->
+    /// (forall x y, le a x -> le x b -> le a y -> le y b -> le x y ->
+    ///  le y (add x (meshDelta a b (meshLevelCount j))) ->
+    ///  le (F y) (add (F x) eps)) ->
+    /// le (meshMax F a b (Nat.add j d)) (add (meshMax F a b j) eps)` -- rung
+    /// 6's GAP BOUND at arbitrary refinement depth, with the accuracy schedule
+    /// factored out. All the mesh geometry is discharged here; what a `supOn`
+    /// assembly still owes is only the instantiation of `hclose` from
+    /// [`Self::uc_spec`] at the accuracy [`Self::exp_of_modulus`] selects. The
+    /// hypothesis is deliberately ONE-SIDED (how far `F` may RISE across a
+    /// rightward step of at most one level-`j` cell): the other direction is
+    /// [`Self::mesh_max_mono`]. See `creal/supremum.rs`.
+    pub mesh_max_le_add_of_step_close: NameId,
     /// `CReal.abs_diff_le_of_deriv_bound : ∀ F F' a b, HasDerivativeOn F F'
     /// a b → ∀ M, (∀ z, le a z → le z b → le (abs (F' z)) M) → ∀ x y,
     /// le a x → le x y → le y b →
@@ -6874,6 +6914,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         true_exp_of_modulus_mono: kernel.name_str(creal, "trueExpOfModulus_mono"),
         exp_of_modulus_le_true_exp_of_modulus: kernel
             .name_str(creal, "expOfModulus_le_trueExpOfModulus"),
+        mesh_point_near_coarse: kernel.name_str(creal, "meshPoint_near_coarse"),
+        max_range_le_add_of_exists: kernel.name_str(creal, "maxRange_le_add_of_exists"),
+        mesh_max_le_add_of_step_close: kernel.name_str(creal, "meshMax_le_add_of_step_close"),
         abs_diff_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_le_of_deriv_bound"),
         lipschitz_of_deriv_bound: kernel.name_str(creal, "lipschitz_of_deriv_bound"),
         abs_diff_sub_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_sub_le_of_deriv_bound"),
@@ -12359,6 +12402,70 @@ const STEPS: &[BuildStep] = &[
         ],
         provides: &[|p: CRealPrelude| p.exp_of_modulus_le_true_exp_of_modulus],
         run: supremum::declare_exp_of_modulus_le_true_exp_of_modulus,
+    },
+    BuildStep {
+        label: "supremum::declare_mesh_point_near_coarse",
+        requires: &[
+            |p: CRealPrelude| p.add_assoc,
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_of_equiv,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.left_distrib,
+            |p: CRealPrelude| p.mesh_level_count,
+            |p: CRealPrelude| p.mul_comm,
+            |p: CRealPrelude| p.mul_congr,
+            |p: CRealPrelude| p.mul_nonneg,
+            |p: CRealPrelude| p.mul_one,
+            |p: CRealPrelude| p.of_nat,
+            |p: CRealPrelude| p.of_nat_add,
+            |p: CRealPrelude| p.of_rat_add,
+            |p: CRealPrelude| p.of_rat_le,
+            |p: CRealPrelude| p.rat_unit_eq_one,
+        ],
+        provides: &[|p: CRealPrelude| p.mesh_point_near_coarse],
+        run: supremum::declare_mesh_point_near_coarse,
+    },
+    BuildStep {
+        label: "supremum::declare_max_range_le_add_of_exists",
+        requires: &[
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.max_le,
+            |p: CRealPrelude| p.max_range,
+            |p: CRealPrelude| p.max_range_ub,
+        ],
+        provides: &[|p: CRealPrelude| p.max_range_le_add_of_exists],
+        run: supremum::declare_max_range_le_add_of_exists,
+    },
+    BuildStep {
+        label: "supremum::declare_mesh_max_le_add_of_step_close",
+        requires: &[
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.max_range_le_add_of_exists,
+            |p: CRealPrelude| p.mesh_level_count,
+            |p: CRealPrelude| p.mesh_max,
+            |p: CRealPrelude| p.mesh_point_near_coarse,
+            |p: CRealPrelude| p.mul_nonneg,
+            |p: CRealPrelude| p.of_rat_le,
+            |p: CRealPrelude| p.riemann_sample_in_bounds,
+        ],
+        provides: &[|p: CRealPrelude| p.mesh_max_le_add_of_step_close],
+        run: supremum::declare_mesh_max_le_add_of_step_close,
     },
     BuildStep {
         label: "cos_sign::declare_cos_wide_tail_nonneg",

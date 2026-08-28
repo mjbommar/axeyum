@@ -62,5 +62,20 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.exp_of_modulus_le_true_exp_of_modulus,
             "theorem",
         ),
+        (
+            "CReal.meshPoint_near_coarse",
+            p.mesh_point_near_coarse,
+            "theorem",
+        ),
+        (
+            "CReal.maxRange_le_add_of_exists",
+            p.max_range_le_add_of_exists,
+            "theorem",
+        ),
+        (
+            "CReal.meshMax_le_add_of_step_close",
+            p.mesh_max_le_add_of_step_close,
+            "theorem",
+        ),
     ]
 }
