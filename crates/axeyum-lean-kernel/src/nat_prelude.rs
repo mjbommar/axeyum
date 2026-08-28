@@ -158,6 +158,7 @@ mod irrational;
 mod land;
 mod lcm;
 mod log;
+mod lor;
 mod modular;
 mod no_confusion;
 mod ops;
@@ -225,6 +226,7 @@ use lcm::{
     declare_lcm_comm, declare_lcm_dvd,
 };
 use log::declare_log_all;
+use lor::declare_lor_all;
 use modular::declare_modular_congruence;
 use no_confusion::declare_no_confusion;
 use order::declare_order;
@@ -2377,6 +2379,36 @@ pub struct NatPrelude {
     /// `0b011 &&& 0b101 = 0b001`, exercising differing bit patterns that
     /// `land_one_one` alone cannot distinguish from a wrong-way step.
     pub land_three_five: NameId,
+    /// `Nat.lorAux : Nat → Nat → Nat → Nat`, `lorAux fuel m n`: the same
+    /// fuel-recursion device as `landAux`, but with the fuel-exhaustion base
+    /// case returning `n` (not the constant `0`) and each per-step guard
+    /// returning the OTHER operand — required because OR has no absorbing
+    /// zero the way AND does. `lorAux 0 m n ≡ n`; `lorAux (succ f) m n ≡ if
+    /// n = 0 then m else if m = 0 then n else 2 * lorAux f (m/2) (n/2) +
+    /// max (m%2) (n%2)`. Not the public name; [`Self::lor`] supplies fuel
+    /// `m` itself. See `nat_prelude::lor` for why fuel `= m` alone is still
+    /// sound for OR and why the guard checks `n` before `m`.
+    pub lor_aux: NameId,
+    /// `Nat.lor m n := Nat.lorAux m m n` — bitwise OR (`Mathlib`: `Nat.lor`,
+    /// via the general `Nat.bitwise`). Landed directly rather than through a
+    /// general `Nat.bitwise`, and the per-bit step is `max` (via `Nat.ble` +
+    /// `bool_select_nat`) rather than `land`'s product, because OR of two
+    /// `{0, 1}` values is not their product.
+    pub lor: NameId,
+    /// `Nat.lor_zero_left : ∀ n, Eq (lor 0 n) n` — `refl`: fuel is `m = 0`,
+    /// so the outer `Nat.rec` hits `lorAux`'s corrected `n`-returning base
+    /// case directly. Not a mirror of a specific Mathlib name (this
+    /// prelude's `lor` is not Mathlib's).
+    pub lor_zero_left: NameId,
+    /// `Nat.lor_zero_right : ∀ m, Eq (lor m 0) m` — induction on `m` to
+    /// expose the fuel's constructor; each case is `refl`, no induction
+    /// hypothesis needed, because the outermost `n = 0` guard collapses the
+    /// term to `m` regardless of the fuel predecessor.
+    pub lor_zero_right: NameId,
+    /// `Nat.lor_three_five : Eq (lor 3 5) 7` — concrete sanity check,
+    /// `0b011 ||| 0b101 = 0b111`, deliberately discriminating from
+    /// `land_three_five`'s `3 &&& 5 = 1`.
+    pub lor_three_five: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -2919,6 +2951,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             land_zero_right: kernel.name_str(nat, "land_zero_right"),
             land_one_one: kernel.name_str(nat, "land_one_one"),
             land_three_five: kernel.name_str(nat, "land_three_five"),
+            lor_aux: kernel.name_str(nat, "lorAux"),
+            lor: kernel.name_str(nat, "lor"),
+            lor_zero_left: kernel.name_str(nat, "lor_zero_left"),
+            lor_zero_right: kernel.name_str(nat, "lor_zero_right"),
+            lor_three_five: kernel.name_str(nat, "lor_three_five"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -3083,6 +3120,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // (`declare_executable_division`), all far above; nothing needs
         // `Nat.land`, so it goes last too.
         declare_land_all(&mut d, &p)?;
+        // Needs `Nat.add`/`Nat.mul`/`Nat.beq`/`Nat.ble`
+        // (`declare_arithmetic`/`declare_boolean_equality`/
+        // `declare_boolean_le`) and `Nat.div`/`Nat.mod`
+        // (`declare_executable_division`), all far above; nothing needs
+        // `Nat.lor`, so it goes last too.
+        declare_lor_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {

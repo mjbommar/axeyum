@@ -508,6 +508,8 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.bit,
         p.land_aux,
         p.land,
+        p.lor_aux,
+        p.lor,
     ]
 }
 
@@ -924,6 +926,9 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.land_zero_right,
         p.land_one_one,
         p.land_three_five,
+        p.lor_zero_left,
+        p.lor_zero_right,
+        p.lor_three_five,
     ]
 }
 
@@ -6206,7 +6211,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        77 + 399,
+        79 + 402,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -9217,6 +9222,148 @@ fn land_computes_and_its_boundary_theorems_apply() {
     assert!(
         f.k.axiom_footprint(p.land_aux).is_empty(),
         "Nat.landAux must rest on zero axioms"
+    );
+}
+
+/// `Nat.lor` computes bitwise OR at concrete points -- including a
+/// non-diagonal pair with differing bit patterns (`3 ||| 5 = 7`, the
+/// discriminant against `land_three_five`'s `3 &&& 5 = 1`) and the zero
+/// boundary in both argument positions, where OR (unlike AND) returns the
+/// OTHER operand rather than zero -- and its three boundary/sanity theorems
+/// land on the statement each name promises, each with a negative control
+/// this cannot pass vacuously.
+#[test]
+fn lor_computes_or_and_its_boundary_theorems_apply() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let lor = p.lor;
+
+    for (m, n, expected) in [
+        (0u32, 0u32, 0u32),
+        (0, 5, 5),
+        (5, 0, 5),
+        (1, 0, 1),
+        (0, 1, 1),
+        (1, 1, 1),
+        (3, 5, 7),
+        (6, 3, 7),
+        (7, 7, 7),
+    ] {
+        let mm = f.num(m);
+        let nn = f.num(n);
+        let lhs = f.const_app(lor, &[mm, nn]);
+        let rhs = f.num(expected);
+        assert!(
+            f.k.def_eq(lhs, rhs),
+            "lor {m} {n} must reduce to {expected}"
+        );
+    }
+
+    // Negative controls: `3 ||| 5 = 7`, not `1` (the AND-shaped wrong
+    // answer) and not `5` (the first operand only).
+    let three = f.num(3);
+    let five = f.num(5);
+    let lor_three_five = f.const_app(lor, &[three, five]);
+    let bad_one = f.num(1);
+    assert!(
+        !f.k.def_eq(lor_three_five, bad_one),
+        "negative control: lor 3 5 is 7, not 1"
+    );
+    let bad_five = f.num(5);
+    assert!(
+        !f.k.def_eq(lor_three_five, bad_five),
+        "negative control: lor 3 5 is 7, not 5"
+    );
+
+    // lor_zero_left : Eq (lor 0 n) n
+    {
+        let seven = f.num(7);
+        let zero = f.num(0);
+        let applied = f.const_app(p.lor_zero_left, &[seven]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("lor_zero_left must type-check: {shown}")
+        });
+        let lhs = f.const_app(lor, &[zero, seven]);
+        let want = f.eq(lhs, seven);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "lor_zero_left must state Eq (lor 0 7) 7"
+        );
+        // Negative control: the statement must not claim the wrong value.
+        let zero_val = f.num(0);
+        let bad_want = f.eq(lhs, zero_val);
+        assert!(
+            !f.k.def_eq(inferred, bad_want),
+            "negative control: lor_zero_left must not also state Eq (lor 0 7) 0"
+        );
+        assert!(
+            f.k.axiom_footprint(p.lor_zero_left).is_empty(),
+            "lor_zero_left must rest on zero axioms"
+        );
+    }
+
+    // lor_zero_right : Eq (lor m 0) m
+    {
+        let nine = f.num(9);
+        let zero = f.num(0);
+        let applied = f.const_app(p.lor_zero_right, &[nine]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("lor_zero_right must type-check: {shown}")
+        });
+        let lhs = f.const_app(lor, &[nine, zero]);
+        let want = f.eq(lhs, nine);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "lor_zero_right must state Eq (lor 9 0) 9"
+        );
+        let zero_val = f.num(0);
+        let bad_want = f.eq(lhs, zero_val);
+        assert!(
+            !f.k.def_eq(inferred, bad_want),
+            "negative control: lor_zero_right must not also state Eq (lor 9 0) 0"
+        );
+        assert!(
+            f.k.axiom_footprint(p.lor_zero_right).is_empty(),
+            "lor_zero_right must rest on zero axioms"
+        );
+    }
+
+    // lor_three_five : Eq (lor 3 5) 7
+    {
+        let applied = f.const_app(p.lor_three_five, &[]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("lor_three_five must type-check: {shown}")
+        });
+        let three = f.num(3);
+        let five = f.num(5);
+        let lhs = f.const_app(lor, &[three, five]);
+        let seven = f.num(7);
+        let want = f.eq(lhs, seven);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "lor_three_five must state Eq (lor 3 5) 7"
+        );
+        let bad_want = f.eq(lhs, five);
+        assert!(
+            !f.k.def_eq(inferred, bad_want),
+            "negative control: lor_three_five must not also state Eq (lor 3 5) 5"
+        );
+        assert!(
+            f.k.axiom_footprint(p.lor_three_five).is_empty(),
+            "lor_three_five must rest on zero axioms"
+        );
+    }
+
+    assert!(
+        f.k.axiom_footprint(lor).is_empty(),
+        "Nat.lor must rest on zero axioms"
+    );
+    assert!(
+        f.k.axiom_footprint(p.lor_aux).is_empty(),
+        "Nat.lorAux must rest on zero axioms"
     );
 }
 

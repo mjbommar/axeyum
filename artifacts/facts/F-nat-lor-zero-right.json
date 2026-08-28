@@ -1,0 +1,63 @@
+{
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-lor-zero-left"
+  ],
+  "epistemic_status": "proved",
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- lor_zero_right 2>/dev/null | grep -Ec '^Nat\\.lor_zero_right[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.lor_zero_right",
+      "kernel_declaration": "Nat.lor_zero_right",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so producing this row at all is a machine-checked proof. Unlike `lor_zero_left`, `lor m 0 = m` is not `refl` at symbolic `m` -- the outer `Nat.rec` on the fuel (which is `m` itself) is stuck until `m`'s constructor shape is exposed -- so the proof is by induction on `m`. Both the base and step case close by `Eq.refl`, with the induction hypothesis unused in the step: the `n = 0` guard is tested OUTERMOST in `lorAux`'s succ case (unchanged from `landAux`'s guard order -- see `nat_prelude::lor`'s module doc), so `beq n 0` reduces to `true` by delta+iota alone and the outer `bool_select_nat` selects the \"return `m`\" branch immediately, collapsing the whole term to `m` regardless of the (possibly symbolic) fuel predecessor, without forcing the untaken branch where the real recursive step lives. `nat_theorem_inventory` exits non-zero for a name that does not exist, and `grep -Ec` consumes the pipe and the count is tested, so the exit status depends on what the run found. Anchored with `^Nat\\.lor_zero_right[[:space:]]` (verified exactly 1 row).",
+      "supports": "lor(m, 0) = m"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::lor_computes_or_and_its_boundary_theorems_apply",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "id": "compute-Nat.lor_zero_right",
+      "kernel_declaration": "Nat.lor",
+      "kind": "kernel-term",
+      "notes": "`Kernel::def_eq` reduces `lor m 0` at m in {5, 1} to m directly (definition unfolding, no boundary theorem invoked), and separately confirms `Nat.lor_zero_right`'s ADMITTED TYPE (via `Kernel::infer`, instantiated at m = 9) is exactly `Eq (lor 9 0) 9` -- with a negative control asserting the inferred type must NOT def_eq `Eq (lor 9 0) 0`, so this cannot pass on a statement claiming the wrong (AND-shaped) value.",
+      "supports": "the equation instantiates correctly and states the value m, not an arbitrary one"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.lor_zero_right",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. The induction used here is ordinary `Nat.rec` over `Prop`, the same combinator every other induction in this prelude uses; this command is what makes the axiom-freedom claim falsifiable rather than asserted. Measured with `Nat.lor` landed: `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
+  "external_status": "proved",
+  "formal": {
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0"
+    ],
+    "language": "lean4",
+    "statement": "theorem Nat.lor_zero_right : ((x0 : AxNat) -> Eq.{1} AxNat (AxNat.lor x0 AxNat.zero) x0)"
+  },
+  "id": "F:nat-lor-zero-right",
+  "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*) -- the `nat` prelude's trusted surface measures zero.\n\n`depends_on` names `F:nat-lor-zero-left` because the two are the companion boundary equations of `Nat.lor`'s zero argument on each side, proved by different techniques (refl vs. induction) for exactly the reason explained in `Nat.lor_zero_left`'s notes -- this is curriculum/leakage metadata only and grants no dispatch, proof, or admission authority.\n\nSee `F:nat-lor-zero-left`'s notes for why this statement could not be expressed before this lane, why `Nat.lor` was built directly rather than through a general `Nat.bitwise`, why the fuel-exhaustion base case had to change from `land`'s constant `0` to `n`, and why this does not flip any `F:ml430-nat-lor-*` mirror fact by hand.",
+  "proof_route": "kernel-lean",
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane 219-nat-lor",
+    "source": "one of three boundary/sanity theorems `declare_lor_all` (`crates/axeyum-lean-kernel/src/nat_prelude/lor.rs`) admits alongside the `Nat.lor`/`Nat.lorAux` definitions"
+  },
+  "schema_version": 1,
+  "statement": "The bitwise OR of any natural number m with 0 is m.",
+  "title": "lor(m, 0) = m"
+}
