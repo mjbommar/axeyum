@@ -117,6 +117,9 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-28 | pi-rung3 | `CReal.sinFnLowerBoundOneToR` -- pi rung 3: a uniform lower bound `sin z >= 1/4` on `[1, 8/5]`, kernel-accepted (`existing_step_order_is_topologically_valid`, ~97-99s). Five kernel rejections fixed: an empty-context `infer` on an open term, two `Int`/`Nat` argument mixups in `normalize_mul_normalize` calls, a `rat_eq_rewrite` anchor typed wrong, `NatOps`'s `Nat`-hardcoded transport misused on a `CReal` value (new `creal_transport`/`creal_eq_motive` fix it), and a ι-defeq assumption between a succ-chain exponent and `Nat.succ_add`'s own target that does not hold without the propositional bridge |
+| 2026-08-28 | pi-rung3 | measured: `alternatingLowerBound`'s internal `t_lam` (RIGHT-associated `sign*(coeff*pow)`) is Equiv but never defeq to `CReal.sinFnTerm` (LEFT-associated `(sign*coeff)*pow`) -- the largest of the five rejections. Fixed by building the whole domination/Converges/squeeze chain around `t_lam` directly (`build_t_lam_here`, interning-identical to `alternating.rs`'s own private `build_t_lam`) and bridging to `sinFnTerm` only at the two points that need it (`dom_hyp`, and the squeeze's `sinFnUniformConverges`-derived leg), the second via a per-fixed-`n` `sum_range_congr` equiv rather than any uniform-in-`n` `Converges` transport |
+| 2026-08-28 | pi-rung3 | verified before building: 169-pi.md's own arithmetic (`119/375 >= 1/4` via `119*4=476>=375`, antitonicity `z^2<=64/25<=6<=(2k+2)(2k+3)`, `k:=3`) checks out exactly; largest cross-product actually needed (`64*8=512`, sum-check denominator `3000`) stayed comfortably under the 10^3 estimate |
 | 2026-08-28 | pi-r2b | `CReal.cosWideTailNonneg` -- `forall k, le zero (mul (expTerm (add k k)) (pow R (add k k)))`, `R := 8/5`. Direct from `mul_nonneg`/`exp_term_nonneg`/`pow_nonneg`. Accepted first try |
 | 2026-08-28 | pi-r2b | `CReal.cosWideTailAntitone` -- the sized `htail` blocker, `forall k, le (a (succ (succ k))) (a (succ k))` for cosine's magnitude sequence at `R := 8/5`. Reduces to `R^2 <= (m+1)(m+2)` at `m := add(succ k)(succ k) >= 2`, closed via TWO applications of the already-landed `CReal.expTermSuccScale` plus a small `Rat.ble`-computed numeric fact (`64/25 <= 3`) rather than hand-rolled cross-multiplication. Accepted first try, axiom-free |
 | 2026-08-28 | pi-r2b | technique: a SMALL concrete `Rat.le` fact (`R^2 <= 3` here) is cheaper via `Rat.ble`'s own computation (`Eq.refl` at `Bool.true` after the kernel reduces `Rat.ble a b` on small literal numerals) than a hand-rolled `Rat.normalize_cross`/`int_le_of_mul_le_mul_right` battery -- reusable for item 4's numeric leaf |
@@ -6716,6 +6719,152 @@ this pass.** Rungs 1–5 (all prior sessions' work) are untouched.
   changes this pass, so this is expected, not new evidence).
 - Clippy `-p axeyum-lean-kernel --lib --all-targets -D warnings`: clean.
 - Did NOT run a full `--lib creal::` sweep, per the brief.
+
+**Status: LANDED and kernel-accepted (`DONE`, pi-rung3, 2026-08-28).**
+
+`CReal.sinFnLowerBoundOneToR : ∀ z, le one z → le z (ofRat (natDivSucc 8 4))
+→ le (ofRat (natDivSucc 1 3)) (sinFn z)` — pi rung 3
+(`docs/plan/status/169-pi.md`'s own sizing): a uniform lower bound
+`sin z ≥ 1/4` on `[1, 8/5]`. Confirmed by
+`existing_step_order_is_topologically_valid` (~97–99 s across three runs,
+`test result: ok`), which builds the FULL prelude through
+`Kernel::add_declaration` — the trusted gate, not a syntactic check.
+
+**The 169-pi.md arithmetic checked out exactly as sized**, verified before
+building anything: `119·4 = 476 ≥ 375·1 = 375` (`119/375 ≥ 1/4`); the
+antitonicity chain `z² ≤ 64/25 ≤ 6 ≤ (2k+2)(2k+3)` for every `k ≥ 0`
+(minimum of the RHS is `2·3 = 6` at `k = 0`); `k := 3` is the correct
+constant (`natDivSucc 1 3 = 1/4`). No shift is needed, unlike cosine's own
+`8/5` bound (rung 2) — sine's magnitude sequence is globally antitone on
+this domain.
+
+**Largest cross-product actually needed: 512·... / a fixed 3,000-denominator
+sum**, comfortably under the 10³ estimate in the brief and far under the
+10⁵ danger zone: `64·8 = 512` (R³ = (8/5)³ = 512/125), and the fixed
+`1/4 + 512/750` check normalizes to denominator `4·750 = 3,000` (numerator
+cross-terms `1·750 = 750`, `512·4 = 2,048`). No step approached the
+60,000-product SIGABRT threshold this repo's own pricing note warns about.
+
+## What the kernel rejected, and what each rejection actually was
+
+Five distinct rejections, found by bisecting with `Kernel::infer_in` +
+`Kernel::def_eq` + `Kernel::render_lean` diagnostics (temporarily inserted,
+removed once each fix was confirmed) rather than by re-deriving from the
+opaque top-level `TypeMismatch`/`UnboundFVar` each time:
+
+1. **`UnboundFVar`** — `Kernel::infer` on `sum_range_converges_of_dominated`'s
+   application used the fresh, EMPTY context; the application mentions `z`/
+   `hz1`/`hzr`, still open at that point in construction (only abstracted at
+   the very end via `pi_fv`/`lam_fv`). Fixed with `infer_in` + a
+   `LocalContext` registering the three, mirroring this file's own
+   `bounded_via_uc` convention.
+2. **`Int` vs `Nat` argument mixup** (×2, same bug in two places) —
+   `Rat.normalize_mul_normalize`'s numerator parameters are `Int`; passed a
+   bare `Nat` literal (`d.num(64)`, `d.num(1)`) instead of `d.of_nat(...)` in
+   the R³ computation and the `1/4 + 512/750` sum.
+3. **`rat_eq_rewrite`'s anchor mistyped** — passed the raw `Nat`
+   numerator/denominator as the rewrite anchor instead of the `Rat` VALUE
+   built from them (`rat_eq_rewrite`'s `p`/`q` must be `Rat`-typed, matching
+   the `Eq` the rewrite is over).
+4. **`NatOps` transport used on a `CReal` value** — `eq_to_equiv` (converting
+   `CReal.expTerm_one_eq_one`'s `Eq` into an `Equiv`) used `d.eq_motive`/
+   `d.transport`, which HARDCODE `Nat` as the carrier
+   (`nat_prelude/ops.rs`'s own `transport`: `let nat = self.nat_ty(); …`).
+   This repository's own CLAUDE.md already names this trap ("the `NatOps`
+   family is `Nat`-only") and it still cost a full bisection round to find.
+   Fixed by writing `creal_transport`/`creal_eq_motive` (mirroring
+   `rat_prelude::ops`'s `rtransport`/`req_motive` pattern, substituting
+   `creal_ty` for `rat_ty`).
+5. **A ι-defeq assumption that does not hold** — `sin_lb_magnitude_dec`'s
+   antitonicity proof builds its LHS at the succ-chain exponent `ssskk :=
+   succ (succ (succ (add k k)))` (needed for `exp_term_succ_scale`/`pow_add`'s
+   own ι-reductions to fire), then asserted without proof that this is defeq
+   to `odd_index (succ k) = add (add (succ k) (succ k)) 1` (what
+   `alternatingLowerBound`'s `hdec` parameter actually names, via `a_fn
+   (succ k)`'s own beta-reduction). It is NOT: `add (succ k) (succ k)`
+   recurses on its symbolic RIGHT argument and gets stuck one step short of
+   `succ (succ (add k k))` — only the PROPOSITIONAL `Nat.succ_add` closes the
+   gap. Fixed by transporting the already-computed (previously unused)
+   `bridge_rev` proof at the very end, rather than assuming raw ι sufficed.
+6. **`t_lam` vs `sinFnTerm` associativity** — the largest of the five.
+   `alternatingLowerBound`'s `hconv` parameter is stated over its OWN
+   internally-built `t_lam := build_t_lam a_fn` (RIGHT-associated:
+   `sign·(coeff·pow)`), never over `CReal.sinFnTerm` (LEFT-associated:
+   `(sign·coeff)·pow`) — Equiv via one `mul_assoc` step, never defeq. Passing
+   a domination-built `Converges` fact about `sinFnTerm`-sums where
+   `alternatingLowerBound` expects one about `t_lam`-sums produced a
+   `TypeMismatch` naming neither term shape; only `infer_in` bisection down
+   to the individual `hconv`/`dom_hyp` arguments localized it. Fixed by
+   building the WHOLE "domination → `Exists(L, Converges)` → squeeze" chain
+   around `t_lam` from the start (`build_t_lam_here`, reproduced to match
+   `alternating.rs`'s private `build_t_lam` exactly so structural interning
+   gives the IDENTICAL `ExprId`), bridging to `sinFnTerm` only where
+   something else genuinely needs it: `dom_hyp` via one `mul_assoc`-based
+   `abs_congr`/`le_congr` step per `j`, and the squeeze's second leg (which
+   is necessarily `sinFnTerm`-based — that is what `sinFnUniformConverges`
+   itself proves) via `sum_range_congr` at the FIXED, universally-quantified
+   `n` already in scope inside that leg's own construction — an EXACT
+   per-`n` equiv, so no uniform-in-`n` modulus was ever needed, unlike the
+   `converges_of_close`-based route considered and rejected first.
+
+**Nothing else was rejected.** Every other declaration and lemma application
+in this proof was accepted on inspection once the five above were fixed; no
+further kernel rejections occurred in the runs that produced the final
+passing state.
+
+## Verification run
+
+- `existing_step_order_is_topologically_valid` (builds the FULL `CReal`
+  prelude, foreground, default 2 MiB stack): **ok, ~97–99 s**, three
+  consecutive runs (one before final cleanup, two after — timing stable,
+  confirming the debug-scaffolding removal changed nothing observable).
+- `creal_prelude_builds`: **ok, 92.87 s** (within the 91–119 s band this
+  lane's own status doc already recorded for this stage of the prelude).
+- `every_creal_declaration_is_checked_and_axiom_free` (`--release`): **ok,
+  17.49 s** — confirms the new declaration is present, `Theorem`-kind, and
+  `axiom_footprint` **0**, read from `kernel.environment()` directly (both
+  directions), not from a hand-maintained list.
+- `steps_table_matches_recorded_extraction`: **ok**.
+- `cargo clippy -p axeyum-lean-kernel --all-targets --all-features -- -D
+  warnings`: **green** (one `used_underscore_binding` trip from a debug-code
+  rename, fixed in a follow-up commit).
+- `rustfmt --edition 2024` applied to the touched file.
+- Did **not** run a full `--lib creal::` sweep (per this task's own
+  instruction).
+
+## What is new, reusable infrastructure for later lanes
+
+- `CReal.sinFnLowerBoundOneToR` itself, and everything it composes:
+  `sin_lb_magnitude_lam`/`_nonneg`/`_dec` (sine's alternating-series
+  magnitude sequence and its GLOBAL antitonicity on `[0, 8/5]`, no shift),
+  `z_squared_le_prod`/`six_le_two_three_shift`/`nat_mul_le_mul` (the
+  `z² ≤ (2k+2)(2k+3)` chain), `r_squared_eq_64_over_25`/
+  `r_cubed_eq_512_over_125` (`(8/5)²`, `(8/5)³` as exact rationals),
+  `sin_fn_term_dom_at`/`sin_fn_cauchy_g` (domination-based Cauchy witness
+  for `sinFnTerm`-sums), `nat_div_succ_self_eq_one` (`(n+1)/(n+1) = 1`, a
+  drop-in generalization of `one_le_r_domain`'s own `n := 4` instance),
+  `add_sub_cancel_right`, `one_mul_eq`, `build_t_lam_here` /
+  `t_lam_eq_sinfnterm` (the `t_lam`↔`sinFnTerm` associativity bridge —
+  directly reusable by rung 2's own shifted-series construction, which needs
+  the identical bridge for cosine's magnitude sequence).
+- `creal_transport`/`creal_eq_motive`: the CReal-typed analogues of
+  `NatOps::transport`/`eq_motive` this file was missing. Any future
+  `Eq CReal a b → Equiv a b` conversion in `creal/trig_fn.rs` should use
+  these, not the `Nat`-hardcoded `NatOps` family.
+
+## What is NOT done
+
+- Rung 2 (`cos (8/5) < 0`, the shifted-series alternating bound) remains
+  unbuilt — `docs/plan/status/169-pi.md` already sizes its own remaining gap
+  (the `Converges` witness for the shifted series) and nothing here closes
+  it, though `t_lam_eq_sinfnterm`'s bridging TECHNIQUE (build the whole
+  chain around the internally-needed `t_lam`/shifted form, bridge to the
+  pre-existing declaration only at the two points that need it) transfers
+  directly.
+- `CReal.pi` itself is not constructed; no root is asserted to exist. Rungs
+  1–3 are the three numeric ingredients `ivt_exact_root` needs
+  (`cos 1 ≥ 0`, `cos(8/5) < 0`, a uniform positive lower bound on `sinFn`
+  over `[1, 8/5]`) — rung 3 is now landed, rung 2 is not.
 
 **Status: THE BOUND DID NOT LAND. Two general theorems that rung 2 needs, and
 that nothing in the tree had, DID — and the route `169-pi.md` proposed is
