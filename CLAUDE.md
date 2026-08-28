@@ -1558,6 +1558,50 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   `target/debug/deps/` directly, which takes no lock. Use the wrapper for
   CORRECTNESS, the prebuilt binary for MEASUREMENT.
 
+- **THE TRUSTED GATE CANNOT TELL YOU A `Definition` IS WRONG. ONLY EVALUATION
+  CAN.** `Kernel::add_declaration` type-checks a proof term against its stated
+  type. A `Definition` has no proof body — it is admitted once it is
+  well-typed, and a function that computes the WRONG VALUE still has the right
+  type. `Nat → Nat → Nat` is `Nat → Nat → Nat` whatever it returns.
+
+  So for a definition, "the kernel accepted it" means *well-formed*, not
+  *correct*. Every guard this repository leans on — `axiom_footprint`,
+  `every_*_declaration_is_checked_and_axiom_free`, the prelude build — is blind
+  to a definition that means something other than what you intended.
+
+  Three instances in one day, each caught by a lane *reasoning*, not by the
+  kernel:
+
+  - **`Nat.lor`.** `Nat.land`'s `fuel = m` shortcut is sound only because AND
+    has an **absorbing zero** (`m = 0` ⇒ result 0 regardless of `n`). OR has no
+    absorbing element, so the same base case would **silently drop every bit of
+    `n` whenever `m = 0`** — `lor 0 1000000 = 0`. Type-correct, admitted, wrong.
+    Fixed by returning `n` at fuel exhaustion, which is sound because `m` is
+    fully halved to 0 well within `m` steps.
+  - **Bézout witnesses.** `↑(gcd x y) = x·gcdA + y·gcdB` is satisfied by *some*
+    pair for **any** correct gcd, so type-checking the identity pins down
+    nothing about what `gcdA` returns. The lane added evaluation at 13 points
+    across all four sign branches, and it caught its own wrong hand-computation
+    at `(1,1)`.
+  - **`Nat.descFactorial`.** Concrete instantiation is where `Nat.sub`'s silent
+    truncation actually bites, and only evaluation past the base exercises it.
+
+  **So: every new `Definition` needs an evaluation test** — reduce it to normal
+  form at concrete arguments and compare against independently computed values.
+  Two rules that make the test worth having:
+
+  - **Pick arguments that DISCRIMINATE.** `land 3 5 = 1` and `lor 3 5 = 7` use
+    the same numeral pair deliberately, so a copy-paste between the two files
+    fails loudly instead of passing.
+  - **Keep the magnitudes small** — unary numerals mean `whnf` walks towers
+    (one declaration: 2,426 unfolds against **291,261 attempts**, 98% of them
+    `Nat.succ`). `land 3 5` is right; `land 512 1875` would cost more than the
+    whole prelude.
+
+  A theorem *about* the definition is not a substitute. It constrains the
+  definition only as far as the theorem's own content reaches, which for an
+  existence statement is often not at all.
+
 - **A PRELUDE CAN DECLARE INTO ANOTHER PRELUDE'S NAMESPACE, SO "IS THIS NAME
   TAKEN?" IS NOT ANSWERED BY READING THE MODULE IT BELONGS IN.** Measured
   2026-08-25: a lane built an explicit inverse for a bijection on `[0,n)` and
