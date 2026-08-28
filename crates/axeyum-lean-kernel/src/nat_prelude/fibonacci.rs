@@ -105,7 +105,7 @@
 //! already use) to unfold `gcd` at each step. That descent is its own slice.
 
 use super::NatPrelude;
-use super::finite::pos_implies_succ_pred;
+use super::finite::{pos_implies_succ_pred, zero_lt_via_c};
 use super::helpers::{and_left, and_right, iff_reverse};
 use super::ops::{NatDev, NatOps};
 use crate::BinderInfo;
@@ -1129,10 +1129,8 @@ fn declare_fib_strictmonoon(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Ke
         // hx : Le 2 x, read directly as Lt 1 x (2 ≡ succ 1 by construction).
         let one = d.num(1);
         let eq1 = pos_implies_succ_pred(d, &p, x); // fn : Lt 0 x -> Eq x (succ (pred x))
-        // Lt 0 x from Lt 1 x via zero_lt_via_c-style: reuse le_trans manually.
-        let zero = d.zero();
-        let h01 = d.zero_lt_succ(zero); // Lt 0 (succ 0) = Lt 0 1
-        let h0x = d.lemma(p.lt_of_lt_of_le, &[zero, one, x, h01, hx]); // Lt 0 x
+        // Lt 0 x from hx read as Lt 1 x, via zero_lt_via_c (works for ANY c).
+        let h0x = zero_lt_via_c(d, &p, one, x, hx); // Lt 0 x
         let eq_x1 = d.apply(eq1, &[h0x]); // x = succ (pred x)
         let x1 = d.pred(x);
         let sx1 = d.succ(x1);
@@ -1207,7 +1205,8 @@ fn declare_fib_strictmonoon(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Ke
         let back1 = d.transport(ssa2, motive_back1, strictmono, a, eq_a_rev); // Lt (fib a) (fib ssb2)
         let motive_back2 = d.eq_motive(ssb2, &|d, y| {
             let fib_a = d.const_app(p.fib, &[a]);
-            d.lt(fib_a, y)
+            let fib_y = d.const_app(p.fib, &[y]);
+            d.lt(fib_a, fib_y)
         });
         let back2 = d.transport(ssb2, motive_back2, back1, b, eq_b_rev); // Lt (fib a) (fib b)
 
