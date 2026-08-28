@@ -1551,6 +1551,16 @@ pub struct NatPrelude {
     /// `Lt 0 x1`) to land on `fib_add_two_strictmono`'s shifted form, then
     /// transports the conclusion back along the two recovered equalities.
     pub fib_strictmonoon: NameId,
+    /// `Nat.fib_lt_fib : ∀ m n, Le 2 m → Iff (Lt (fib m) (fib n)) (Lt m n)` —
+    /// Mathlib's `Nat.fib_lt_fib_iff` (`2 ≤ m → (fib m < fib n ↔ m < n)`).
+    /// Reverse direction is `fib_strictmonoOn` at `(m, n)`, needing `Le 2 n`
+    /// derived from `Le 2 m` and `Lt m n` (weakened to `Le m n`) by
+    /// transitivity. Forward direction is the contrapositive: case on
+    /// `lt_or_ge m n` (private `or_elim`/`absurd`, mirroring
+    /// `irrational.rs`'s copies); the `Le n m` branch feeds `fib_mono` to get
+    /// `Le (fib n) (fib m)`, which contradicts the hypothesis `Lt (fib m)
+    /// (fib n)` via `lt_of_lt_of_le` + `lt_irrefl`.
+    pub fib_lt_fib: NameId,
 
     // --- relation properties bounded on `n` (`relation.rs`) -----------------
     /// `Nat.ReflexiveOn r n := ∀ i, i < n → r i i`, for `r : Nat → Nat → Prop`.
@@ -2590,6 +2600,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             coprime_fib_succ: kernel.name_str(nat, "coprime_fib_succ"),
             fib_add_two_strictmono: kernel.name_str(nat, "fib_add_two_strictmono"),
             fib_strictmonoon: kernel.name_str(nat, "fib_strictmonoOn"),
+            fib_lt_fib: kernel.name_str(nat, "fib_lt_fib"),
             reflexive_on: kernel.name_str(nat, "reflexiveOn"),
             symmetric_on: kernel.name_str(nat, "symmetricOn"),
             transitive_on: kernel.name_str(nat, "transitiveOn"),

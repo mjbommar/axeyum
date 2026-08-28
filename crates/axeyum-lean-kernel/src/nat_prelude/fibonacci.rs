@@ -1229,6 +1229,117 @@ fn declare_fib_strictmonoon(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Ke
 }
 
 /// Declare every theorem in this module.
+// ============================================================================
+// `fib_lt_fib`.
+// ============================================================================
+
+/// Non-dependent `Or.rec` (private copy; `irrational.rs`, `choose.rs` and
+/// `primes.rs` each already carry their own, so this follows the existing
+/// per-file pattern rather than introducing a new one).
+#[allow(clippy::too_many_arguments)]
+fn or_elim(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    left_ty: ExprId,
+    right_ty: ExprId,
+    goal: ExprId,
+    left_case: ExprId,
+    right_case: ExprId,
+    or_proof: ExprId,
+) -> ExprId {
+    let anon = d.anon_name();
+    let or_ty = d.const_app(p.logic.or, &[left_ty, right_ty]);
+    let motive = d.kernel().lam(anon, or_ty, goal, BinderInfo::Default);
+    let or_rec = d.kernel().const_(p.logic.or_rec, vec![]);
+    d.apply(
+        or_rec,
+        &[left_ty, right_ty, motive, left_case, right_case, or_proof],
+    )
+}
+
+/// `False.rec` into `goal` from a proof of `False` (private copy, see
+/// [`or_elim`]'s doc comment for why).
+fn absurd(d: &mut NatDev<'_>, p: &NatPrelude, goal: ExprId, contradiction: ExprId) -> ExprId {
+    let anon = d.anon_name();
+    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+    let motive = d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
+    let zero = d.kernel().level_zero();
+    let rec = d.kernel().const_(p.logic.false_rec, vec![zero]);
+    d.apply(rec, &[motive, contradiction])
+}
+
+/// `Nat.fib_lt_fib : ∀ m n, Le 2 m → Iff (Lt (fib m) (fib n)) (Lt m n)` —
+/// Mathlib's `fib_lt_fib_iff`. See the field doc comment in `nat_prelude.rs`
+/// for the proof route.
+fn declare_fib_lt_fib(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.fib_lt_fib, 2, &|d, v| {
+        let (m, n) = (v[0], v[1]);
+        let two = d.num(2);
+        let hm_ty = d.le(two, m);
+        let hm_fv = d.fresh_fvar();
+        let hm = d.kernel().fvar(hm_fv);
+
+        let fib_m = d.const_app(p.fib, &[m]);
+        let fib_n = d.const_app(p.fib, &[n]);
+        let lt_fn_ty = d.lt(fib_m, fib_n);
+        let lt_mn_ty = d.lt(m, n);
+
+        // Forward: Lt fib_m fib_n -> Lt m n, by contrapositive on lt_or_ge.
+        let forward = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            let dichotomy = d.lemma(p.lt_or_ge, &[m, n]); // Or (Lt m n) (Le n m)
+            let ge_ty = d.le(n, m);
+
+            let left_branch = {
+                let h2_fv = d.fresh_fvar();
+                let h2 = d.kernel().fvar(h2_fv);
+                d.lam_fv(h2_fv, lt_mn_ty, h2)
+            };
+            let right_branch = {
+                let h2_fv = d.fresh_fvar();
+                let h2 = d.kernel().fvar(h2_fv);
+
+                let mono = d.lemma(p.fib_mono, &[n, m, h2]); // Le fib_n fib_m
+                let contra = d.lemma(p.lt_of_lt_of_le, &[fib_m, fib_n, fib_m, h, mono]); // Lt fib_m fib_m
+                let irrefl = d.lemma(p.lt_irrefl, &[fib_m]); // Not (Lt fib_m fib_m)
+                let false_proof = d.apply(irrefl, &[contra]);
+                let result = absurd(d, &p, lt_mn_ty, false_proof);
+                d.lam_fv(h2_fv, ge_ty, result)
+            };
+
+            let case_result = or_elim(
+                d, &p, lt_mn_ty, ge_ty, lt_mn_ty, left_branch, right_branch, dichotomy,
+            );
+            d.lam_fv(h_fv, lt_fn_ty, case_result)
+        };
+
+        // Reverse: Lt m n -> Lt fib_m fib_n, via fib_strictmonoOn (needs Le 2 n too).
+        let reverse = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv); // Lt m n
+
+            let sm = d.succ(m);
+            let le_m_sm = d.lemma(p.le_succ, &[m]); // Le m (succ m)
+            let le_m_n = d.lemma(p.le_trans, &[m, sm, n, le_m_sm, h]); // Le m n
+            let le_2_n = d.lemma(p.le_trans, &[two, m, n, hm, le_m_n]); // Le 2 n
+
+            let result = d.lemma(p.fib_strictmonoon, &[m, n, hm, le_2_n, h]); // Lt fib_m fib_n
+            d.lam_fv(h_fv, lt_mn_ty, result)
+        };
+
+        let iff_stmt = d.const_app(p.logic.iff, &[lt_fn_ty, lt_mn_ty]);
+        let iff_proof = d.const_app(p.logic.iff_intro, &[lt_fn_ty, lt_mn_ty, forward, reverse]);
+
+        let stmt = d.arrow(hm_ty, iff_stmt);
+        let value = d.lam_fv(hm_fv, hm_ty, iff_proof);
+        (stmt, value)
+    })?;
+    Ok(())
+}
+
 pub(super) fn declare_fib_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     declare_fib_defs(d, p)?;
     declare_fib_add_two(d, p)?;
@@ -1240,5 +1351,6 @@ pub(super) fn declare_fib_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
     declare_coprime_fib_succ(d, p)?;
     declare_fib_add_two_strictmono(d, p)?;
     declare_fib_strictmonoon(d, p)?;
+    declare_fib_lt_fib(d, p)?;
     Ok(())
 }
