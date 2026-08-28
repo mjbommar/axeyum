@@ -4,27 +4,68 @@
   "title": "Mathlib v4.30 source proposition Nat.coprime_add_self_right",
   "statement": "The proposition declared as `Nat.coprime_add_self_right` in the pinned Mathlib v4.30 source.",
   "formal": {
-    "language": "lean4-surface",
-    "statement": "∀ {m n : ℕ}, m.Coprime (n + m) ↔ m.Coprime n",
-    "fragment": "Nat"
+    "language": "lean4",
+    "statement": "theorem Nat.coprime_add_self_right : ((x0 : AxNat) -> ((x1 : AxNat) -> Iff (Eq.{1} AxNat (AxNat.gcd x0 (AxNat.add x1 x0)) (AxNat.succ AxNat.zero)) (Eq.{1} AxNat (AxNat.gcd x0 x1) (AxNat.succ AxNat.zero))))",
+    "fragment": "Nat",
+    "free_symbols": ["x0", "x1"],
+    "kernel_theorem": "Nat.coprime_add_self_right"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-add-comm",
+    "F:nat-dvd-add",
+    "F:nat-dvd-add-iff-right",
+    "F:nat-dvd-antisymm",
+    "F:nat-dvd-gcd",
+    "F:nat-gcd-dvd-left",
+    "F:nat-gcd-dvd-right"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.coprime_add_self_right",
+      "kind": "kernel-term",
+      "supports": "gcd m (n+m) = 1 iff gcd m n = 1",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- coprime_add_self_right 2>/dev/null | grep -Ec '^Nat\\.coprime_add_self_right[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate. Route: `g1 := gcd m (n+m)` divides `m` and `n+m` (`gcd_dvd_left`/`_right`); `dvd_add_iff_right` (after `add_comm` to match its `m+n` argument order) cancels the shared `m` factor to give `g1 | n`, so `dvd_gcd` gives `g1 | gcd m n =: g2`. Conversely `g2` divides `m` and `n`, so `dvd_add` gives `g2 | (n+m)` directly (already the lemma's own argument order, no reordering needed), and `dvd_gcd` gives `g2 | g1`. `dvd_antisymm` on those two divisibilities gives `g1 = g2`, from which the `Iff` on `= 1` follows by substitution. `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -c` requires the admitted declaration to be printed."
+    },
+    {
+      "id": "footprint-Nat.coprime_add_self_right",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:greatest-common-divisor",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
   "provenance": {
-    "date": "2026-08-18",
-    "established_by": "not established in this ledger",
-    "source": "statement-only extraction of `Nat.coprime_add_self_right` from Mathlib v4.30.0; no proof value was exposed",
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane coprime-backlog",
+    "source": "statement-only extraction of `Nat.coprime_add_self_right` from Mathlib v4.30.0 (see prior_art), independently proved here as `Nat.coprime_add_self_right` and admitted through `Kernel::add_declaration`",
     "prior_art": [
       {
         "who": "the Mathlib contributors",
         "what": "the theorem declaration `Nat.coprime_add_self_right`",
         "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
         "year": 2026,
-        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted"
+        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted, and this project's proof is independently constructed"
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "`Nat.Coprime` has no separate name in this kernel's Nat prelude (matching `Nat.coprime_of_lt_prime`'s established convention); it is spelled inline as `gcd _ _ = 1`, so `formal.statement` is the actual kernel-core `render_lean` output for `Nat.coprime_add_self_right`, not the Mathlib surface form named in `title`. `depends_on` is `theorem_dependency_inventory`'s reported direct theorem dependencies, restricted to the ones that already carry a fact ledger entry (all seven do here)."
 }

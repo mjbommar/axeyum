@@ -134,6 +134,7 @@ now. Nothing was deleted.
 | 2026-08-28 | pi-r2d | measured (hand-traced, not kernel-timed): the reverted attempt's own final numeric check never needs a `Nat` value above `25*1875=46,875` if combined in `sumRange`'s forced left-nested order — under the documented `60,000`-feasible line — which is evidence the 616s/5.9GB blowup was driven by NESTING DEPTH of un-reduced `Rat` towers rather than by final operand magnitude alone. Offered as a hypothesis, not a confirmed measurement; no isolated A/B was run to separate the two causes |
 | 2026-08-28 | pi-r2d | negative, precise: the brief's "rescale every term to an explicit denominator-1875 `Rat` value" is impossible as literally stated — `Rat`'s `reduced` field (`gcd(|num|,den)=1`) rules out constructing `1875/1875` or `-2400/1875` as `Rat.mk` terms at all. Implemented instead: each term collapses to its own naturally-reduced flat value, combined via ordinary `Rat.add` at bounded (~46,875) scale |
 | 2026-08-28 | pi-r2d | item 4 REVERTED twice; two independent constructions both exceed the build band, so the `Rat.ble` route does not reach `-13/1875` |
+| 2026-08-28 | coprime-backlog | 4/5 `Nat.Coprime` import-backlog facts proved axiom-free (`coprime_of_dvd_left/right`, `prime_dvd_iff_not_coprime`, `coprime_add_self_right`); `coprime_two_left` deferred, needs a fresh `Odd` construction |
 | 2026-08-27 | (uncommitted at status-file write time) | `CReal.sumRange_cauchy_of_abs_cauchy` / `CReal.sumRange_converges_of_abs_converges` (absolute convergence implies convergence) plus a soundness-negative control; curriculum rows 18 and 22–23 corrected. |
 | 2026-08-27 | (uncommitted at status-file write time) | Ten new `artifacts/facts/F-creal-*.json` entries for the Ch.13/14 Riemann integral construction and algebra (`riemannSum_cauchy`, `integral`, `integral_converges`, `integral_const`, `integral_add`, `integral_le`, `integral_scale`, `integral_witness_independent`, `riemannSum_integral_close`, `sharedIndexToCanonical`); `python3 scripts/validate-facts.py` green (708 facts, 0 errors). |
 | 2026-08-27 | (uncommitted at status-file write time) | Added `--require-declaration <name> [--require-kind <kind>]` to `crates/axeyum-lean-kernel/examples/kernel_declaration_projection.rs`: a direct, fail-on-absence presence checker for `Declaration::Definition`s (and any other kind), mutation-tested against `CReal.integral`. Upgraded `F:creal-integral`'s `kernel-CReal.integral` evidence to use it. Registered 14 new `artifacts/facts/F-creal-*.json` entries for Spivak Ch.18 (`e`) and Ch.22-23 (series convergence tests): `creal-e`, `creal-e-converges`, `creal-two-le-e`, `creal-e-le-three`, `creal-e-le-four`, `creal-expterm-le-geom`, `creal-expdominantcauchy`, `creal-cauchyofpointwiseequiv`, `creal-geomcauchy`, `creal-sumrange-comparisontest`, `creal-sumrange-cauchy-of-dominated`, `creal-sumrange-converges-of-dominated`, `creal-sumrange-cauchy-of-abs-cauchy`, `creal-sumrange-converges-of-abs-converges`. `python3 scripts/validate-facts.py` green (722 facts, 0 errors). |
@@ -7489,6 +7490,63 @@ diagnostic step is bisecting WITHIN item 4 — comment out
 (leaving item 3's `declare_cos_wide_series_converges` step active) to get an
 isolated "baseline + item 3" reading, then re-enable to get "+ item 4",
 which is exactly the bisection this lane did not get to complete.
+
+**Your lane's block (`DONE`, coprime-backlog, 2026-08-28).** Landed four of
+the five targeted facts with real, axiom-free kernel proofs (the brief's bar
+was three). The fifth, `coprime_two_left` (`Coprime 2 n ↔ Odd n`), was not
+attempted: `Odd` has no existing predicate anywhere in this prelude (grepped;
+`Nat.even_or_odd` in `powsq.rs` is the closest primitive, giving a computed
+half but no named `Odd`), so it needs a fresh `∃ k, n = 2*k+1` construction
+plus a local `two_divisor_dichotomy`-style case split before the coprimality
+argument even starts — sizeable enough on its own that it was not worth
+risking the other four for. A future lane can lift `two_divisor_dichotomy`
+straight from `irrational.rs` (already a local copy there, `perfect.rs`'s own
+copy being `fn`-private) and build the `Odd` existential the same way `dvd`'s
+own witness predicate is built (`NatOps::dvd_predicate`).
+
+Landed, each a separate declaration in `crates/axeyum-lean-kernel/src/
+nat_prelude/primes.rs` (new fields + build-order wiring in `nat_prelude.rs`,
+registered in `nat_prelude_tests.rs`'s environment-derived `theorem_names`
+so `every_nat_declaration_is_checked_and_axiom_free` covers them):
+
+- `Nat.coprime_of_dvd_left : dvd a1 a2 → gcd a2 b = 1 → gcd a1 b = 1`
+- `Nat.coprime_of_dvd_right : dvd b1 b2 → gcd a b2 = 1 → gcd a b1 = 1`
+- `Nat.prime_dvd_iff_not_coprime : prime p → (dvd p n ↔ ¬(gcd p n = 1))`
+- `Nat.coprime_add_self_right : gcd m (n+m) = 1 ↔ gcd m n = 1`
+
+All four route through `Kernel::add_declaration` (real proof terms, not
+assumed), rest on zero axioms (`nat_axiom_inventory --require-axiom-free
+nat`: axiom=0 opaque=0 quotient=0), and are wired into
+`fact-ledger F:ml430-nat-coprime-of-dvd-left-b0e2aa94`,
+`F:ml430-nat-coprime-of-dvd-right-a640bd56`,
+`F:ml430-nat-prime-dvd-iff-not-coprime-77854741`,
+`F:ml430-nat-coprime-add-self-right-c3ed0f45` (now `proved`, `proof_route:
+kernel-lean`, `formal.language: lean4` = actual `render_lean` output, not
+the Mathlib surface text -- `Coprime`/`Prime` have no separate name in this
+prelude, matching `coprime_of_lt_prime`'s established convention).
+
+Bézout was **not** the engine here (contrary to the brief's guess) --
+`Coprime.of_dvd_{left,right}` and `prime_dvd_iff_not_coprime` all went
+through plain divisibility algebra (`gcd_dvd_left/right`, `dvd_trans`,
+`dvd_gcd`, `eq_one_of_dvd_one`, and for the prime fact the same
+`le_of_dvd`/`le_of_succ_le_succ`/`not_succ_le_zero` numeral-contradiction
+shape `coprime_of_lt_prime` already uses); `coprime_add_self_right` went
+through `dvd_antisymm` (`dvd_add`, `dvd_add_iff_right`, `add_comm`). Bézout
+machinery (`bezout.rs`) was read but not needed for any of the four.
+
+Nothing was already built for these four -- checked `bezout.rs`, `crt.rs`,
+`primes.rs`, `lcm.rs`, `irrational.rs`, `perfect.rs` first (per the brief);
+none had `dvd_trans`-based coprimality descent or the `gcd`-`Iff`-`add_comm`
+shape `coprime_add_self_right` needed, though all the LEMMAS consumed
+(`dvd_trans`, `dvd_gcd`, `eq_one_of_dvd_one`, `dvd_add_iff_right`, `dvd_add`,
+`dvd_antisymm`) already existed and were simply composed.
+
+`cargo test -p axeyum-lean-kernel --lib nat_prelude::`: **94 -> 96** passed,
+0 failed (added one concrete-numeral application test covering all four
+theorems, plus fixed the two environment-derived coverage/determinism tests
+that failed once the new theorems went live). `cargo clippy -p
+axeyum-lean-kernel --lib -- -D warnings`: clean. `python3
+scripts/validate-facts.py`: 1867 facts, 0 errors.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 

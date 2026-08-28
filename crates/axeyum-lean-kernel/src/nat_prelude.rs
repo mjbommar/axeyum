@@ -222,7 +222,10 @@ use perfect::declare_sum_divisors_two_pow;
 use perfect::declare_sum_divisors_two_pow_eq_geom_sum;
 use permutation::declare_permutation_all;
 use powsq::declare_powsq_all;
-use primes::{declare_coprime_of_lt_prime, declare_euclid, declare_primes};
+use primes::{
+    declare_coprime_add_self_right, declare_coprime_of_dvd, declare_coprime_of_lt_prime,
+    declare_euclid, declare_prime_dvd_iff_not_coprime, declare_primes,
+};
 use rectangle::declare_rectangle;
 use relation::{
     declare_bijective_of_injective_on, declare_bijective_on, declare_comp,
@@ -875,6 +878,51 @@ pub struct NatPrelude {
     /// rules out `p` (`le_of_dvd` would force `p ≤ a`, contradicting `a < p`
     /// via `lt_of_le_of_lt`/`lt_irrefl`), so it is `1`.
     pub coprime_of_lt_prime: NameId,
+    /// `Nat.coprime_of_dvd_left : ∀ a1 a2 b, dvd a1 a2 → Eq (gcd a2 b) one →
+    /// Eq (gcd a1 b) one`.
+    ///
+    /// Coprimality descends along a left divisor. `gcd a1 b` divides `a1`
+    /// (`gcd_dvd_left`), which divides `a2` (`dvd_trans` with the
+    /// hypothesis), and it divides `b` (`gcd_dvd_right`); `dvd_gcd` combines
+    /// those two into `gcd a1 b ∣ gcd a2 b`, which is `1` by hypothesis, so
+    /// `gcd a1 b ∣ 1` and `eq_one_of_dvd_one` closes it. Mirrors
+    /// `Nat.Coprime.of_dvd_left`; `Coprime` has no separate name here,
+    /// matching `coprime_of_lt_prime`'s convention.
+    pub coprime_of_dvd_left: NameId,
+    /// `Nat.coprime_of_dvd_right : ∀ a b1 b2, dvd b1 b2 → Eq (gcd a b2) one →
+    /// Eq (gcd a b1) one` — the right-hand mirror of
+    /// [`coprime_of_dvd_left`](Self::coprime_of_dvd_left), same route with
+    /// `a` fixed and the divisor chain run on the second argument of `gcd`.
+    pub coprime_of_dvd_right: NameId,
+    /// `Nat.prime_dvd_iff_not_coprime : ∀ p n, (Le two p ∧ ∀ d, dvd d p → Or
+    /// (Eq d one) (Eq d p)) → Iff (dvd p n) (Not (Eq (gcd p n) one))`.
+    ///
+    /// Forward: `dvd p n` plus `dvd p p` (`dvd_refl`) give `dvd p (gcd p n)`
+    /// (`dvd_gcd`); if `gcd p n = 1` that transports to `dvd p 1`, forcing
+    /// `p ≤ 1` (`le_of_dvd`) against the primality hypothesis's `2 ≤ p` —
+    /// contradiction via `le_trans`/`lt_of_le_of_lt`/`lt_irrefl`, so
+    /// `gcd p n ≠ 1`.
+    /// Reverse: `gcd p n` divides `p` (`gcd_dvd_left`), so primality's
+    /// divisor clause forces `gcd p n = 1 ∨ gcd p n = p`; the hypothesis
+    /// rules out `= 1` (`absurd`), leaving `gcd p n = p`, and `dvd p n`
+    /// follows from `gcd_dvd_right` transported along that equation. Mirrors
+    /// `Nat.Prime.dvd_iff_not_coprime`; `Prime` is spelled inline as
+    /// `prime_condition`, matching this file's own convention.
+    pub prime_dvd_iff_not_coprime: NameId,
+    /// `Nat.coprime_add_self_right : ∀ m n, Iff (Eq (gcd m (add n m)) one)
+    /// (Eq (gcd m n) one)`.
+    ///
+    /// `gcd m (n+m) = gcd m n` (interned as the shared value both `Eq`s
+    /// substitute against, so the `Iff` follows by `d.chain` once that one
+    /// equation is in hand), proved by antisymmetry of divisibility
+    /// (`dvd_antisymm`): `g1 := gcd m (n+m)` divides `m` and `n+m`
+    /// (`gcd_dvd_left`/`_right`); `dvd_add_iff_right` (after `add_comm` to
+    /// match its `m+n` order) cancels the shared `m` factor to give
+    /// `g1 ∣ n`, so `dvd_gcd` gives `g1 ∣ gcd m n`. Conversely
+    /// `g2 := gcd m n` divides `m` and `n`, so `dvd_add` gives
+    /// `g2 ∣ (n+m)` directly (no reordering needed, since that is the
+    /// lemma's own argument order), and `dvd_gcd` gives `g2 ∣ g1`.
+    pub coprime_add_self_right: NameId,
 
     // --- binomial coefficients (`choose.rs`) --------------------------------
     /// `Nat.choose : Nat → Nat → Nat`, by structural recursion on both
@@ -2111,6 +2159,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             least_divisor_search: kernel.name_str(nat, "least_divisor_search"),
             exists_prime_dvd: kernel.name_str(nat, "exists_prime_dvd"),
             coprime_of_lt_prime: kernel.name_str(nat, "coprime_of_lt_prime"),
+            coprime_of_dvd_left: kernel.name_str(nat, "coprime_of_dvd_left"),
+            coprime_of_dvd_right: kernel.name_str(nat, "coprime_of_dvd_right"),
+            prime_dvd_iff_not_coprime: kernel.name_str(nat, "prime_dvd_iff_not_coprime"),
+            coprime_add_self_right: kernel.name_str(nat, "coprime_add_self_right"),
             choose: kernel.name_str(nat, "choose"),
             choose_zero_right: kernel.name_str(nat, "choose_zero_right"),
             choose_succ_succ: kernel.name_str(nat, "choose_succ_succ"),
@@ -2341,6 +2393,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_lcm_comm(&mut d, &p)?;
         declare_coprime_lcm_eq_mul(&mut d, &p)?;
         declare_coprime_of_lt_prime(&mut d, &p)?;
+        declare_coprime_of_dvd(&mut d, &p)?;
+        declare_prime_dvd_iff_not_coprime(&mut d, &p)?;
+        declare_coprime_add_self_right(&mut d, &p)?;
         declare_euclid(&mut d, &p)?;
         declare_choose_all(&mut d, &p)?;
         declare_binomial_theorem(&mut d, &p)?;
