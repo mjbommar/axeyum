@@ -1269,6 +1269,46 @@ pub(super) fn declare_choose_le_choose(
     Ok(())
 }
 
+/// `choose_mono : ∀ c a a', Le a a' → Le (choose a c) (choose a' c)` — the
+/// core-rendered unfolding of Mathlib's `Nat.choose_mono : ∀ b, Monotone (fun
+/// a => a.choose b)`. `Monotone f` unfolds to `∀ x y, x ≤ y → f x ≤ f y`, so
+/// with `f := fun a => choose a c` this is exactly [`declare_choose_le_choose`]
+/// with its arguments permuted so the fixed column `c` comes first: apply
+/// `choose_le_choose(a, a', c, h)` directly, no new induction needed.
+pub(super) fn declare_choose_mono(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.choose_mono, 1, &|d, v| {
+        let c = v[0];
+
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let ap_fv = d.fresh_fvar();
+        let ap = d.kernel().fvar(ap_fv);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        let nat = d.nat_ty();
+        let le_ty = d.le(a, ap);
+        let ca = d.choose(a, c);
+        let cap = d.choose(ap, c);
+        let concl = d.le(ca, cap);
+        let inner_ty = d.arrow(le_ty, concl);
+        let stmt = {
+            let out = d.pi_fv(ap_fv, nat, inner_ty);
+            d.pi_fv(a_fv, nat, out)
+        };
+
+        let body = d.lemma(p.choose_le_choose, &[a, ap, c, h]);
+        let inner_proof = d.lam_fv(h_fv, le_ty, body);
+        let proof = {
+            let out = d.lam_fv(ap_fv, nat, inner_proof);
+            d.lam_fv(a_fv, nat, out)
+        };
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 /// Declare `choose` and every theorem in this module, in dependency order.
 pub(super) fn declare_choose_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     declare_choose(d, p)?;
@@ -1283,5 +1323,6 @@ pub(super) fn declare_choose_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(
     declare_choose_le_add(d, p)?;
     declare_choose_symm_add(d, p)?;
     declare_choose_le_choose(d, p)?;
+    declare_choose_mono(d, p)?;
     Ok(())
 }
