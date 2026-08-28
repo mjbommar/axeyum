@@ -129,3 +129,47 @@ Method note, again: the check that works is `declare_` function count **plus a
 positive control from a family known to exist**. Grepping a family name across
 a module directory returned 40 files for `log` — almost all of them the word
 "log" in prose.
+
+## Correction: 35 of those 30-odd "highest-leverage" facts ARE the holdout
+
+The addendum above called the three absent definitions "the highest-leverage
+work on the frontier" and three lanes were dispatched at them. That framing was
+wrong in a way worth recording, because the error was invisible from where it
+was made.
+
+Measured afterwards against `artifacts/autogenesis/nursery-v1.json`:
+
+| family | rows | partition |
+| --- | ---: | --- |
+| `natural-logarithm` | 21 | **held-out, in full** |
+| `natural-square-root` | 16 | **held-out, in full** |
+
+Those two families **are** the held-out partition — 37 rows total, 35 of them
+`nat.log` / `nat.sqrt` / `nat.clog` mirrors. Held-out rows are blind evaluation
+population, keyed `<family>:<statement-shape>` precisely because a proof route
+for one member is evidence about its siblings, so closing one spends the
+family. A capsule registered against a single held-out row once cost 19 of 76
+propositions — 25% of the partition — for one theorem.
+
+**Nothing was spent.** `check-autogenesis-holdout-isolation.py` reads
+`held_out=37 settled=0 references=0 PASS`. Each lane independently declined to
+flip the `ml430` mirrors, because our definition is not Mathlib's. The briefs
+did forbid it — for that reason, not because the rows were evaluation
+population, which the coordinator did not know. The outcome was right and the
+reasoning that produced it was not, so it would not have held reliably.
+
+**The queue was silent.** `fact-frontier.py` already printed `NAMED BY <gate
+script>` when a fact was load-bearing for a control, and a grep for
+`held.out|nursery|partition` returned **0**. The single annotation that would
+have caught this was the one absent. It now prints a `HELD-OUT` marker on all
+37, with four controls — including the two that matter, that a *non*-held-out
+fact is not warned about, and that the population is non-empty — and the guard
+is mutation-verified to kill exactly one named test.
+
+**What stays true from the addendum**: the three definitions genuinely did not
+exist, building them was legitimate, and all three landed axiom-free with their
+own new `F:nat-{log,sqrt,clog}-*` facts. What changes is the conclusion drawn
+from the count. **A large block of open facts in one family is as likely to be
+a preregistered evaluation set as a neglected opportunity**, and the frontier's
+own row count cannot tell them apart. Check the partition before sizing the
+prize.
