@@ -1352,6 +1352,217 @@ fn declare_fib_lt_fib(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelEr
     Ok(())
 }
 
+// ============================================================================
+// `le_fib_self`.
+// ============================================================================
+
+/// `∀ k, Le (add 5 k) (fib (add 5 k))` — the index-shifted growth fact
+/// `le_fib_self` specializes. Never exposed as a prelude name (mirrors
+/// `fib_aux_add_two_gen`'s own module-doc rationale).
+///
+/// Pair-induction on `k`, mirroring `declare_fib_add`'s `stmt_at k / stmt_at
+/// (succ k)` device exactly: everything below is built from a SINGLE base
+/// term `k5 := add 5 k` and its `succ`/`succ succ` shifts, never from a
+/// second independently-built `add` term — the same discipline `fib_add`
+/// uses (its own `mk = add m k`) to keep every shift a bare `succ`
+/// application, which is what makes `add 5 (succ k)` unfold (one `ι` step,
+/// regardless of `k`) to `succ (add 5 k)` for free.
+///
+/// Base (`k=0`): `P(0) = Le 5 (fib 5)`, defeq `Le 5 5` (`le_refl`); `P(1) =
+/// Le 6 (fib 6)`, defeq `Le 6 8` (`le_add_right 6 2`) — both magnitudes tiny,
+/// pure `δ`/`ι` unfolding.
+///
+/// Step (`k=j → succ j`, `ih : P(j) ∧ P(succ j)`): writing `K := add 5 j`,
+/// `sK := succ K`, `ssK := succ sK`, the new second half needs `Le ssK (fib
+/// ssK)`.
+/// 1. Sum the two induction hypotheses: `Le (add K sK) (add (fib K) (fib
+///    sK))`, via `add_le_add_right`/`add_le_add_left` + `le_trans`.
+/// 2. The sum carries `+1` of slack over `ssK`: since `Le 1 K` (`K ≥ 5`,
+///    chained through `le_add_right`), `lt_add_one` at `sK` plus
+///    `add_le_add_left` gives `Lt sK (add sK K)`, i.e. (by `add_comm`) `Lt sK
+///    (add K sK)` — which unfolds (by `Lt`'s own definition) to `Le ssK (add
+///    K sK)`.
+/// 3. Chain 1 and 2 (`le_trans`) to `Le ssK (add (fib K) (fib sK))`, then
+///    `add_comm` and `fib_add_two` (reversed) rewrite the right side to `fib
+///    ssK`.
+fn fib_ge_shifted_gen(d: &mut NatDev<'_>, p: &NatPrelude) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let five = d.num(5);
+
+    let stmt_at = |d: &mut NatDev<'_>, k: ExprId| -> ExprId {
+        let idx = d.add(five, k);
+        let fib_idx = d.const_app(p.fib, &[idx]);
+        d.le(idx, fib_idx)
+    };
+
+    let pair_motive = |d: &mut NatDev<'_>, k: ExprId| -> ExprId {
+        let a = stmt_at(d, k);
+        let sk = d.succ(k);
+        let b = stmt_at(d, sk);
+        d.const_app(p.logic.and, &[a, b])
+    };
+
+    let base = |d: &mut NatDev<'_>| -> ExprId {
+        let zero = d.zero();
+        let one = d.num(1);
+        let a_ty = stmt_at(d, zero);
+        let b_ty = stmt_at(d, one);
+
+        let a_proof = {
+            let five2 = d.num(5);
+            d.lemma(p.le_refl, &[five2]) // Le 5 5, defeq Le 5 (fib 5)
+        };
+        let b_proof = {
+            let six = d.num(6);
+            let two = d.num(2);
+            d.lemma(p.le_add_right, &[six, two]) // Le 6 (add 6 2), defeq Le 6 (fib 6)
+        };
+        d.const_app(p.logic.and_intro, &[a_ty, b_ty, a_proof, b_proof])
+    };
+
+    let step = |d: &mut NatDev<'_>, j: ExprId, ih: ExprId| -> ExprId {
+        let a_ty = stmt_at(d, j);
+        let sj = d.succ(j);
+        let b_ty = stmt_at(d, sj);
+        let ih_a = and_left(d, a_ty, b_ty, ih); // Le K (fib K)
+        let ih_b = and_right(d, a_ty, b_ty, ih); // Le sK (fib sK), up to defeq
+
+        let k = d.add(five, j); // K
+        let sk = d.succ(k); // sK
+        let ssk = d.succ(sk); // ssK
+
+        let fib_k = d.const_app(p.fib, &[k]);
+        let fib_sk = d.const_app(p.fib, &[sk]);
+        let fib_ssk = d.const_app(p.fib, &[ssk]);
+
+        // Sum the two lower bounds: Le (K+sK) (fib_K+fib_sK).
+        let h1 = d.lemma(p.add_le_add_right, &[sk, k, fib_k, ih_a]); // Le (K+sK) (fib_K+sK)
+        let h2 = d.lemma(p.add_le_add_left, &[fib_k, sk, fib_sk, ih_b]); // Le (fib_K+sK) (fib_K+fib_sK)
+        let k_sk = d.add(k, sk);
+        let fibk_sk = d.add(fib_k, sk);
+        let fibk_fibsk = d.add(fib_k, fib_sk);
+        let h3 = d.lemma(p.le_trans, &[k_sk, fibk_sk, fibk_fibsk, h1, h2]);
+
+        // Slack: Le 1 K (K = 5+j >= 5 >= 1).
+        let one = d.num(1);
+        let four = d.num(4);
+        let five_lit = d.num(5);
+        let h_1_le_5 = d.lemma(p.le_add_right, &[one, four]); // Le 1 (1+4), defeq Le 1 5
+        let h_5_le_k = d.lemma(p.le_add_right, &[five_lit, j]); // Le 5 (5+j) = Le 5 K
+        let h_1_le_k = d.lemma(p.le_trans, &[one, five_lit, k, h_1_le_5, h_5_le_k]); // Le 1 K
+
+        // Lt sK (sK+K), then Lt sK (K+sK) via add_comm — defeq Le ssK (K+sK).
+        let sk_1 = d.add(sk, one);
+        let h_lt1 = d.lemma(p.lt_add_one, &[sk]); // Lt sK (sK+1)
+        let sk_k = d.add(sk, k);
+        let h_le1 = d.lemma(p.add_le_add_left, &[sk, one, k, h_1_le_k]); // Le (sK+1) (sK+K)
+        let h_lt2 = d.lemma(p.lt_of_lt_of_le, &[sk, sk_1, sk_k, h_lt1, h_le1]); // Lt sK (sK+K)
+
+        let h_comm1 = d.lemma(p.add_comm, &[sk, k]); // Eq (sK+K) (K+sK)
+        let motive_c1 = d.eq_motive(sk_k, &|d, x| d.lt(sk, x));
+        let h_lt3 = d.transport(sk_k, motive_c1, h_lt2, k_sk, h_comm1); // Lt sK (K+sK) = Le ssK (K+sK)
+
+        // Chain: Le ssK (K+sK), Le (K+sK) (fib_K+fib_sK) -> Le ssK (fib_K+fib_sK).
+        let h6 = d.lemma(p.le_trans, &[ssk, k_sk, fibk_fibsk, h_lt3, h3]);
+
+        // Reorder to fib_sK+fib_K, then fold via fib_add_two (reversed).
+        let h_comm2 = d.lemma(p.add_comm, &[fib_k, fib_sk]); // Eq (fib_K+fib_sK)(fib_sK+fib_K)
+        let motive_c2 = d.eq_motive(fibk_fibsk, &|d, x| d.le(ssk, x));
+        let fibsk_fibk = d.add(fib_sk, fib_k);
+        let h7 = d.transport(fibk_fibsk, motive_c2, h6, fibsk_fibk, h_comm2); // Le ssK (fib_sK+fib_K)
+
+        let h_add2 = d.lemma(p.fib_add_two, &[k]); // Eq fib_ssK (fib_sK+fib_K)
+        let rev2 = d.symm(fib_ssk, fibsk_fibk, h_add2); // Eq (fib_sK+fib_K) fib_ssK
+        let motive_c3 = d.eq_motive(fibsk_fibk, &|d, x| d.le(ssk, x));
+        let new_second = d.transport(fibsk_fibk, motive_c3, h7, fib_ssk, rev2); // Le ssK fib_ssK
+
+        let new_a_ty = stmt_at(d, sj);
+        let ssj = d.succ(sj);
+        let new_b_ty = stmt_at(d, ssj);
+        d.const_app(
+            p.logic.and_intro,
+            &[new_a_ty, new_b_ty, ih_b, new_second],
+        )
+    };
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let pair_proof = d.induct(&pair_motive, &base, &step, n);
+    let a_ty = stmt_at(d, n);
+    let sn = d.succ(n);
+    let b_ty = stmt_at(d, sn);
+    let shifted = and_left(d, a_ty, b_ty, pair_proof); // Le (5+n) (fib (5+n))
+    d.lam_fv(n_fv, nat, shifted)
+}
+
+/// `Nat.le_fib_self : ∀ n, Le 5 n → Le n (fib n)`. `le_dest` reads the
+/// hypothesis as a witness `k` with `add 5 k = n`; `Exists.rec` transports
+/// [`fib_ge_shifted_gen`] applied at `k` along that equation to land on the
+/// goal at `n`.
+fn declare_le_fib_self(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let general = fib_ge_shifted_gen(d, &p);
+    let nat = d.nat_ty();
+    let anon = d.anon_name();
+
+    d.theorem(p.le_fib_self, 1, &|d, v| {
+        let n_var = v[0];
+        let five_lit = d.num(5);
+        let hyp_ty = d.le(five_lit, n_var);
+        let hyp_fv = d.fresh_fvar();
+        let hyp = d.kernel().fvar(hyp_fv);
+
+        let represented = d.lemma(p.le_dest, &[five_lit, n_var, hyp]); // Exists k, 5+k=n_var
+
+        let pred = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let sum = d.add(five_lit, k);
+            let body = d.eq(sum, n_var);
+            d.lam_fv(k_fv, nat, body)
+        };
+        let fib_n = d.const_app(p.fib, &[n_var]);
+        let concl = d.le(n_var, fib_n);
+
+        let represented_ty = {
+            let one = d.level_one();
+            let exists_ = d.kernel().const_(p.logic.exists_, vec![one]);
+            d.apply(exists_, &[nat, pred])
+        };
+        let motive = d
+            .kernel()
+            .lam(anon, represented_ty, concl, BinderInfo::Default);
+
+        let minor = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let sum = d.add(five_lit, k);
+            let e_ty = d.eq(sum, n_var);
+            let e_fv = d.fresh_fvar();
+            let e = d.kernel().fvar(e_fv);
+
+            let at_k = d.apply(general, &[k]); // Le (5+k) (fib (5+k))
+            let motive_e = d.eq_motive(sum, &|d, x| {
+                let fx = d.const_app(p.fib, &[x]);
+                d.le(x, fx)
+            });
+            let transported = d.transport(sum, motive_e, at_k, n_var, e); // Le n_var (fib n_var)
+            let with_e = d.lam_fv(e_fv, e_ty, transported);
+            d.lam_fv(k_fv, nat, with_e)
+        };
+
+        let one_lvl = d.level_one();
+        let rec = d.kernel().const_(p.logic.exists_rec, vec![one_lvl]);
+        let body = d.apply(rec, &[nat, pred, motive, minor, represented]);
+
+        let stmt = d.arrow(hyp_ty, concl);
+        let value = d.lam_fv(hyp_fv, hyp_ty, body);
+        (stmt, value)
+    })?;
+    Ok(())
+}
+
 /// Declare every theorem in this module.
 pub(super) fn declare_fib_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     declare_fib_defs(d, p)?;
@@ -1365,5 +1576,6 @@ pub(super) fn declare_fib_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
     declare_fib_add_two_strictmono(d, p)?;
     declare_fib_strictmonoon(d, p)?;
     declare_fib_lt_fib(d, p)?;
+    declare_le_fib_self(d, p)?;
     Ok(())
 }

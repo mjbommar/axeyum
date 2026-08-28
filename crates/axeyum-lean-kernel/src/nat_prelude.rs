@@ -1750,6 +1750,19 @@ pub struct NatPrelude {
     /// `Le (fib n) (fib m)`, which contradicts the hypothesis `Lt (fib m)
     /// (fib n)` via `lt_of_lt_of_le` + `lt_irrefl`.
     pub fib_lt_fib: NameId,
+    /// `Nat.le_fib_self : ∀ n, Le 5 n → Le n (fib n)` — Mathlib's
+    /// `Nat.le_fib_self` (`5 ≤ n → n ≤ fib n`). Proved from an unexposed,
+    /// index-shifted helper `∀ k, Le (5+k) (fib (5+k))` (pair-induction on
+    /// `k`, mirroring `fib_add`'s own `stmt_at k / stmt_at (succ k)` device:
+    /// the step sums the two induction-hypothesis inequalities via
+    /// `add_le_add_left`/`add_le_add_right` + `le_trans`, then absorbs the
+    /// `+1` slack the sum carries — `(5+k)+(6+k) > 6+k` since `5+k ≥ 1` —
+    /// through `lt_add_one` + `add_le_add_left` + `lt_of_lt_of_le`, and
+    /// converts `fib(5+k)+fib(6+k)` to `fib(7+k)` via `add_comm` and
+    /// `fib_add_two` (reversed)), then instantiated at the hypothesis's own
+    /// witness (`le_dest` gives `k` with `5+k=n`; `Exists.rec` transports the
+    /// shifted fact along that equation to land on the goal at `n`).
+    pub le_fib_self: NameId,
 
     // --- relation properties bounded on `n` (`relation.rs`) -----------------
     /// `Nat.ReflexiveOn r n := ∀ i, i < n → r i i`, for `r : Nat → Nat → Prop`.
@@ -2943,6 +2956,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             fib_add_two_strictmono: kernel.name_str(nat, "fib_add_two_strictmono"),
             fib_strictmonoon: kernel.name_str(nat, "fib_strictmonoOn"),
             fib_lt_fib: kernel.name_str(nat, "fib_lt_fib"),
+            le_fib_self: kernel.name_str(nat, "le_fib_self"),
             reflexive_on: kernel.name_str(nat, "reflexiveOn"),
             symmetric_on: kernel.name_str(nat, "symmetricOn"),
             transitive_on: kernel.name_str(nat, "transitiveOn"),
