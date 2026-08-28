@@ -689,6 +689,16 @@ pub struct CRealPrelude {
     /// and the two antiderivative values are integrals to the two clamps.
     /// See `creal/lattice.rs`.
     pub clamp_mono: NameId,
+    /// `CReal.clamp_id : ∀ a b x, le a x → le x b →
+    /// Equiv (max a (min x b)) x` — **the clamp is the identity on its own
+    /// interval**.
+    ///
+    /// [`Self::has_derivative_on`]'s spec quantifies over `x` with
+    /// `a ≤ x ≤ b`, and [`Self::antiderivative`]'s value there is an
+    /// integral up to `max a (min x b)`; every algebraic step that must see
+    /// the raw `x` needs this. Two [`Self::equiv_of_le_le`]s against the
+    /// universal properties. See `creal/lattice.rs`.
+    pub clamp_id: NameId,
     /// `CReal.max_sub_min : ∀ x y,
     /// Equiv (add (max x y) (neg (min x y))) (abs (add y (neg x)))`.
     ///
@@ -5868,6 +5878,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         min_mono_left: kernel.name_str(creal, "min_mono_left"),
         max_mono_right: kernel.name_str(creal, "max_mono_right"),
         clamp_mono: kernel.name_str(creal, "clamp_mono"),
+        clamp_id: kernel.name_str(creal, "clamp_id"),
         max_sub_min: kernel.name_str(creal, "max_sub_min"),
         abs_congr: kernel.name_str(creal, "abs_congr"),
         le_abs_self: kernel.name_str(creal, "le_abs_self"),
@@ -6986,6 +6997,7 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.le_refl,
             |p: CRealPrelude| p.le_trans,
             |p: CRealPrelude| p.max,
+            |p: CRealPrelude| p.max_congr,
             |p: CRealPrelude| p.max_le,
             |p: CRealPrelude| p.min,
             |p: CRealPrelude| p.min_le_left,
@@ -6997,6 +7009,7 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.zero,
         ],
         provides: &[
+            |p: CRealPrelude| p.clamp_id,
             |p: CRealPrelude| p.clamp_mono,
             |p: CRealPrelude| p.max_mono_right,
             |p: CRealPrelude| p.max_sub_min,

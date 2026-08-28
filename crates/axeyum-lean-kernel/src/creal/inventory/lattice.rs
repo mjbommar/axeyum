@@ -57,6 +57,7 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
         ("CReal.min_mono_left", p.min_mono_left, "theorem"),
         ("CReal.max_mono_right", p.max_mono_right, "theorem"),
         ("CReal.clamp_mono", p.clamp_mono, "theorem"),
+        ("CReal.clamp_id", p.clamp_id, "theorem"),
         ("CReal.max_sub_min", p.max_sub_min, "theorem"),
     ]
 }

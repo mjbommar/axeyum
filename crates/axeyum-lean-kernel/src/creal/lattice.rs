@@ -870,7 +870,80 @@ pub(super) fn declare_lattice_extra(
     declare_min_mono_left(d, p)?;
     declare_max_mono_right(d, p)?;
     declare_clamp_mono(d, p)?;
+    declare_clamp_id(d, p)?;
     declare_max_sub_min(d, p)
+}
+
+/// `CReal.clamp_id : ∀ a b x, le a x → le x b →
+/// Equiv (max a (min x b)) x` — **the clamp is the identity on its own
+/// interval**.
+///
+/// The Fundamental Theorem's spec quantifies over `x` with `a ≤ x ≤ b`, and
+/// `CReal.antiderivative`'s value at `x` is an integral up to `max a (min x
+/// b)`. Every algebraic step that has to see the raw `x` — the error term
+/// `F(x)·(y − x)` and the bound `|y − x|` — needs this.
+///
+/// Both halves are [`CRealPrelude::equiv_of_le_le`] against the universal
+/// properties: `min x b ≈ x` from `min_le_left` and `le_min` at `hxb`, and
+/// `max a x ≈ x` from `max_le` at `hax` and `le_max_right`. No case split
+/// and no sample.
+fn declare_clamp_id(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+
+    let hax_ty = cle(d, p, a, x);
+    let hax_fv = d.fresh_fvar();
+    let hax = d.kernel().fvar(hax_fv);
+    let hxb_ty = cle(d, p, x, b);
+    let hxb_fv = d.fresh_fvar();
+    let hxb = d.kernel().fvar(hxb_fv);
+
+    let mn = d.const_app(p.min, &[x, b]);
+    let clamp = d.const_app(p.max, &[a, mn]);
+    let max_ax = d.const_app(p.max, &[a, x]);
+
+    let refl_x = d.lemma(p.le_refl, &[x]);
+    let mn_le_x = d.lemma(p.min_le_left, &[x, b]);
+    let x_le_mn = d.lemma(p.le_min, &[x, b, x, refl_x, hxb]);
+    let mn_eq = d.lemma(p.equiv_of_le_le, &[mn, x, mn_le_x, x_le_mn]);
+
+    let refl_a = d.lemma(p.equiv_refl, &[a]);
+    let outer = d.lemma(p.max_congr, &[a, a, mn, x, refl_a, mn_eq]);
+
+    let refl_x2 = d.lemma(p.le_refl, &[x]);
+    let max_le_x = d.lemma(p.max_le, &[a, x, x, hax, refl_x2]);
+    let x_le_max = d.lemma(p.le_max_right, &[a, x]);
+    let max_eq = d.lemma(p.equiv_of_le_le, &[max_ax, x, max_le_x, x_le_max]);
+
+    let body = d.lemma(p.equiv_trans, &[clamp, max_ax, x, outer, max_eq]);
+
+    let concl = equiv(d, p, clamp, x);
+    let ty = {
+        let t = d.arrow(hxb_ty, concl);
+        let t = d.arrow(hax_ty, t);
+        let t = d.pi_fv(x_fv, carrier, t);
+        let t = d.pi_fv(b_fv, carrier, t);
+        d.pi_fv(a_fv, carrier, t)
+    };
+    let value = {
+        let v = d.lam_fv(hxb_fv, hxb_ty, body);
+        let v = d.lam_fv(hax_fv, hax_ty, v);
+        let v = d.lam_fv(x_fv, carrier, v);
+        let v = d.lam_fv(b_fv, carrier, v);
+        d.lam_fv(a_fv, carrier, v)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.clamp_id,
+        uparams: vec![],
+        ty,
+        value,
+    })
 }
 
 /// `CReal.neg x`.
@@ -1150,10 +1223,10 @@ mod lattice_extra_tests {
     use super::*;
     use crate::Declaration;
 
-    /// **Mandatory concrete instantiation, two positives and two negative
-    /// controls**, at `x := 0`, `y := 1` — the one pair for which both order
-    /// facts are CLOSED terms ([`CRealPrelude::zero_lt_one`]), so nothing
-    /// about the instance is assumed.
+    /// **Mandatory concrete instantiation, three positives and three
+    /// negative controls**, at `x := 0`, `y := 1` — the one pair for which
+    /// both order facts are CLOSED terms ([`CRealPrelude::zero_lt_one`]), so
+    /// nothing about the instance is assumed.
     ///
     /// Each control differs in a **small** term, never by transposing two
     /// large ones, and is checked in both directions the repository's
@@ -1162,7 +1235,10 @@ mod lattice_extra_tests {
     ///
     /// 1. `clamp_mono` at `a := 0`, `b := 1`: `clamp 0 ≤ clamp 1`, i.e.
     ///    `0 ≤ 1`. The control exchanges the two clamps, giving `1 ≤ 0`.
-    /// 2. `max_sub_min`: `max 0 1 − min 0 1 ≈ |1 − 0|`, i.e. `1 ≈ 1`. The
+    /// 2. `clamp_id` at `a := 0`, `b := 1`, `x := 1`: `max 0 (min 1 1) ≈ 1`.
+    ///    The control points the same proof term at `max 0 (min 0 1) ≈ 1`,
+    ///    i.e. `0 ≈ 1`.
+    /// 3. `max_sub_min`: the spread is the magnitude. The
     ///    control replaces `min 0 1` by `max 0 1` — ONE subterm — making the
     ///    left side `1 − 1 ≈ 0` against a right side of `1`.
     #[test]
@@ -1222,7 +1298,43 @@ mod lattice_extra_tests {
              prove the reversed `max 0 (min 1 1) ≤ max 0 (min 0 1)`, i.e. 1 ≤ 0"
         );
 
-        // --- 2. max_sub_min ------------------------------------------------
+        // --- 2. clamp_id ---------------------------------------------------
+        //
+        // At `a := 0`, `b := 1`, `x := 1`: `max 0 (min 1 1) ≈ 1`. The
+        // control keeps the same proof term against `max 0 (min 0 1) ≈ 1`,
+        // i.e. `0 ≈ 1` — ONE subterm changed, and the two clamp terms were
+        // already asserted distinct above.
+        let refl_one = d.lemma(p.le_refl, &[one_c]);
+        let proof_id = d.lemma(p.clamp_id, &[zero_c, one_c, one_c, le01, refl_one]);
+        let ty_id_ok = equiv(&mut d, p, clamp_y, one_c);
+        let name_id_ok = d.kernel().name_str(anon, "__clampIdOk");
+        let res_id_ok = d.kernel().add_declaration(Declaration::Theorem {
+            name: name_id_ok,
+            uparams: vec![],
+            ty: ty_id_ok,
+            value: proof_id,
+        });
+        assert!(
+            res_id_ok.is_ok(),
+            "clamp_id at a := 0, b := 1, x := 1 must prove \
+             `max 0 (min 1 1) ≈ 1`: {:?}",
+            res_id_ok.err()
+        );
+        let ty_id_bad = equiv(&mut d, p, clamp_x, one_c);
+        let name_id_bad = d.kernel().name_str(anon, "__clampIdBad");
+        let res_id_bad = d.kernel().add_declaration(Declaration::Theorem {
+            name: name_id_bad,
+            uparams: vec![],
+            ty: ty_id_bad,
+            value: proof_id,
+        });
+        assert!(
+            res_id_bad.is_err(),
+            "negative control must be REJECTED: `max 0 (min 0 1)` is 0, \
+             not 1"
+        );
+
+        // --- 3. max_sub_min ------------------------------------------------
         let proof_spread = d.lemma(p.max_sub_min, &[zero_c, one_c]);
         let mx = d.const_app(p.max, &[zero_c, one_c]);
         let mn = d.const_app(p.min, &[zero_c, one_c]);
