@@ -20,6 +20,7 @@ the clause under test can flip the result.
 from __future__ import annotations
 
 import importlib.util
+import os
 import pathlib
 import tempfile
 import unittest
@@ -170,6 +171,55 @@ class LoadKernelIndexCrashSafetyTests(unittest.TestCase):
     def test_missing_captured_file_degrades_to_none(self) -> None:
         result = frontier.load_kernel_index(path=ROOT / "does" / "not" / "exist.tsv")
         self.assertIsNone(result)
+
+    def test_a_stale_projection_binary_is_treated_as_no_answer(self) -> None:
+        """A binary older than a kernel source must NOT be believed.
+
+        This is the defect that motivated the guard: `Nat.sqrt` landed, and a
+        projection binary compiled three source files earlier still reported
+        14 facts BLOCKED on it -- a FALSE ABSENCE, which tells a lane to build
+        something that already exists. The binary was not broken; it was
+        answering about the tree it was compiled against.
+
+        Both directions are asserted, because a guard that always says "stale"
+        would suppress the whole classification and look safe while doing
+        nothing.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            src = root / "crates" / "axeyum-lean-kernel" / "src"
+            src.mkdir(parents=True)
+            binary = root / "projection"
+            binary.write_text("#!/bin/sh\ntrue\n")
+
+            source = src / "thing.rs"
+            source.write_text("// newer than the binary\n")
+            os.utime(binary, (1_000_000, 1_000_000))
+            os.utime(source, (2_000_000, 2_000_000))
+
+            original_root = frontier.ROOT
+            try:
+                frontier.ROOT = root
+                self.assertTrue(
+                    frontier.kernel_projection_is_stale(binary),
+                    "a source newer than the binary must read as stale",
+                )
+                os.utime(source, (500_000, 500_000))
+                self.assertFalse(
+                    frontier.kernel_projection_is_stale(binary),
+                    "a source older than the binary must read as fresh -- "
+                    "otherwise the guard suppresses every classification",
+                )
+            finally:
+                frontier.ROOT = original_root
+
+    def test_an_unreadable_projection_binary_is_treated_as_stale(self) -> None:
+        """Cannot-tell degrades to no-answer, never to a confident absence."""
+        self.assertTrue(
+            frontier.kernel_projection_is_stale(
+                pathlib.Path("/does/not/exist/projection")
+            )
+        )
 
     def test_malformed_captured_file_degrades_to_none(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

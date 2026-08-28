@@ -323,6 +323,34 @@ def validate_kernel_index(index: KernelIndex) -> None:
         )
 
 
+def kernel_projection_is_stale(binary: Path) -> bool:
+    """True when a kernel source file is newer than the prebuilt projection.
+
+    A STALE binary answers about an OLD kernel, and the answer it gives is
+    "this definition is absent" -- a FALSE BLOCKED, which tells a lane to
+    build something that already exists. That is the precise waste this
+    classification was added to prevent, so it must never be reported from a
+    stale index.
+
+    Measured 2026-08-28: `Nat.sqrt` landed, and this binary -- three source
+    files older -- still reported 14 facts BLOCKED on it while correctly
+    knowing `Nat.log`, which had landed earlier. Both directions of that
+    observation matter: the binary is not broken, it is simply answering
+    about the tree it was compiled against.
+
+    Returns True (stale) on any OSError, because "cannot tell" must degrade
+    to no-answer rather than to a confident absence.
+    """
+    try:
+        cutoff = binary.stat().st_mtime
+        for source in (ROOT / "crates/axeyum-lean-kernel/src").rglob("*.rs"):
+            if source.stat().st_mtime > cutoff:
+                return True
+    except OSError:
+        return True
+    return False
+
+
 def load_kernel_index(path: Path | None = None, timeout: float = 90.0) -> KernelIndex | None:
     """Load a `KernelIndex`, or `None` if unavailable -- this must never crash
     `just next`.
@@ -338,6 +366,8 @@ def load_kernel_index(path: Path | None = None, timeout: float = 90.0) -> Kernel
             text = path.read_text()
         else:
             if not KERNEL_PROJECTION_BIN.exists():
+                return None
+            if kernel_projection_is_stale(KERNEL_PROJECTION_BIN):
                 return None
             completed = subprocess.run(  # noqa: S603
                 [str(KERNEL_PROJECTION_BIN)], cwd=ROOT, capture_output=True,
