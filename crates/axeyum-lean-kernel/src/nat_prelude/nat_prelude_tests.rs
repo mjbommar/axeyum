@@ -6162,7 +6162,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        69 + 361,
+        69 + 363,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -8544,6 +8544,72 @@ fn log_of_lt_applies_at_a_concrete_pair() {
     );
 
     for name in [p.log_of_lt, p.ble_eq_false_of_lt] {
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "{name:?} must rest on zero axioms"
+        );
+    }
+}
+
+/// `Nat.log_aux_le_fuel` and `Nat.log_le_self` apply at a concrete instance,
+/// each landing on the exact statement its name promises rather than on some
+/// swapped-operand `Le` that would type-check just as easily.
+///
+/// This is the fuel-generalized-over-`n` induction: `logAux_le_fuel` bounds
+/// `logAux b f n` by the fuel `f` for *every* `n`, not merely the diagonal
+/// `f = n` that `log b n := logAux b n n` instantiates — `log_le_self` is
+/// exactly that diagonal specialization.
+#[test]
+fn log_aux_le_fuel_and_log_le_self_apply_at_a_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // logAux_le_fuel 2 8 3 : Le (logAux 2 8 3) 8 -- fuel EXCEEDS what a
+    // diagonal `n = f` instance would ever exercise, so this is not merely
+    // `log_le_self` in disguise.
+    let two = f.num(2);
+    let eight = f.num(8);
+    let three = f.num(3);
+    let applied = f.const_app(p.log_aux_le_fuel, &[two, eight, three]);
+    let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+        let shown = f.explain(&e);
+        panic!("Nat.logAux_le_fuel must apply at (b, f, n) = (2, 8, 3): {shown}")
+    });
+    let lhs = f.const_app(p.log_aux, &[two, eight, three]);
+    let want = f.le(lhs, eight);
+    assert!(
+        f.k.def_eq(inferred, want),
+        "Nat.logAux_le_fuel 2 8 3 must state Le (logAux 2 8 3) 8"
+    );
+    // Negative control: the swapped-operand statement is a different `Le`
+    // entirely, so a checker that could not tell the difference would still
+    // accept the application above.
+    let swapped = f.le(eight, lhs);
+    assert!(
+        !f.k.def_eq(inferred, swapped),
+        "negative control: Le (logAux 2 8 3) 8 must not be confused with its swap"
+    );
+
+    // log_le_self 2 8 : Le (log 2 8) 8, and log 2 8 = 3 < 8 -- a strict, not
+    // merely reflexive, instance.
+    let log = p.log;
+    let applied = f.const_app(p.log_le_self, &[two, eight]);
+    let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+        let shown = f.explain(&e);
+        panic!("Nat.log_le_self must apply at (b, n) = (2, 8): {shown}")
+    });
+    let log_two_eight = f.const_app(log, &[two, eight]);
+    let want = f.le(log_two_eight, eight);
+    assert!(
+        f.k.def_eq(inferred, want),
+        "Nat.log_le_self 2 8 must state Le (log 2 8) 8"
+    );
+    assert!(
+        f.k.def_eq(log_two_eight, three),
+        "log 2 8 must reduce to 3, so this bound is strict, not vacuous reflexivity"
+    );
+
+    for name in [p.log_aux_le_fuel, p.log_le_self] {
         assert!(
             f.k.axiom_footprint(name).is_empty(),
             "{name:?} must rest on zero axioms"

@@ -118,6 +118,7 @@ fn or_cases(
 /// `bool_select_nat`) to `Le on_<branch> bound`, which is exactly the
 /// caller-supplied proof, and `bool_transport` carries it across to `x =
 /// test` using the branch hypothesis from [`bool_true_or_false`]'s `Or`.
+#[allow(clippy::too_many_arguments)]
 fn le_of_bool_select(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
