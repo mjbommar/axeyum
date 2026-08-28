@@ -4467,22 +4467,6 @@ fn declare_nat_div_succ_step_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(
     })
 }
 
-/// `le (abs (add x (neg y))) (ofRat q)` -- `close_within x y q`, this file's
-/// own copy (each sibling module carries one; Rust privacy).
-fn close_within_here(
-    d: &mut IntDev<'_>,
-    p: CRealPrelude,
-    x: ExprId,
-    y: ExprId,
-    q: ExprId,
-) -> ExprId {
-    let ny = cneg(d, p, y);
-    let diff = cadd(d, p, x, ny);
-    let magnitude = cabs(d, p, diff);
-    let target = embed(d, p, q);
-    cle(d, p, magnitude, target)
-}
-
 /// `Nat → CReal → CReal`.
 fn seq_fn_ty_here(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
     let nat = d.nat_ty();
