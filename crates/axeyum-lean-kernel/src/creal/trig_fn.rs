@@ -6089,7 +6089,6 @@ fn sin_fn_lb_numeric(
     };
     let t0_eq_af0 = one_mul_eq(d, p, a_fn0);
     let t0_eq_z = d.lemma(p.equiv_trans, &[t0, a_fn0, z, t0_eq_af0, af0_eq_z]);
-    eprintln!("[num-checkpoint] t0_eq_z built");
 
     // --- t1_raw : Equiv t1_raw (neg a_fn1), a_fn1 := mul embed_one_sixth pow_z_3. ---
     let n1 = d.num(1);
@@ -6172,7 +6171,6 @@ fn sin_fn_lb_numeric(
     let a_pow = d.lemma(p.pow_le_pow_of_base_le, &[z, r_c2, hz0, hzr, three_nat]);
     // a_pow : le pow_z_3 pow_r_3
     let cube_eq = r_cubed_eq_512_over_125(d, p)?;
-    eprintln!("[num-checkpoint] cube_eq built");
     let n512 = d.num(512);
     let n124 = d.num(124);
     let nat_div_succ_512_124 = d.const_app(rat.nat_div_succ, &[n512, n124]);
@@ -6220,7 +6218,6 @@ fn sin_fn_lb_numeric(
         &[of_n1, succ_n5, h_b2, of_n512b, succ124, h_a2],
     );
     let (prod2_raw, q_512_750) = req_sides(d, step_mul2)?;
-    eprintln!("[num-checkpoint] prod2_raw/q_512_750 built");
     let of_rat_mul_step2 = d.lemma(p.of_rat_mul, &[nat_div_succ_1_5, nat_div_succ_512_124]);
     let mul_16_512125 = cmul(d, p, embed_one_sixth, embed_512_125);
     let embed_prod2_raw = embed(d, p, prod2_raw);
@@ -6251,27 +6248,6 @@ fn sin_fn_lb_numeric(
     );
     // h_af1_bound : le a_fn1 embed_q_512_750 (= embed (natDivSucc 512 749), up to defeq)
     let _ = n749;
-    {
-        fn fvar_id(d: &mut IntDev<'_>, e: ExprId) -> u64 {
-            match d.kernel().expr_node(e) {
-                ExprNode::FVar(id) => *id,
-                other => panic!("expected FVar, found {other:?}"),
-            }
-        }
-        let z_id = fvar_id(d, z);
-        let hz1_id = fvar_id(d, hz1);
-        let hzr_id = fvar_id(d, hzr);
-        let anon6 = d.anon_name();
-        let carrier6 = creal_ty(d, p);
-        let mut ctx6 = LocalContext::new();
-        ctx6.push(LocalDecl { fvar: z_id, name: anon6, ty: carrier6, info: BinderInfo::Default });
-        ctx6.push(LocalDecl { fvar: hz1_id, name: anon6, ty: cle(d, p, one_cc, z), info: BinderInfo::Default });
-        ctx6.push(LocalDecl { fvar: hzr_id, name: anon6, ty: cle(d, p, z, r_c), info: BinderInfo::Default });
-        match d.kernel().infer_in(h_af1_bound, &mut ctx6) {
-            Ok(_) => eprintln!("[num-diag] h_af1_bound infers cleanly"),
-            Err(e) => eprintln!("[num-diag] h_af1_bound infer FAILED: {e:?}"),
-        }
-    }
 
     // --- target_val + af1_bound <= 1. ---
     let target_rat = d.const_app(rat.nat_div_succ, &[n1, three_nat]);
@@ -6293,7 +6269,6 @@ fn sin_fn_lb_numeric(
         &[of_n1c, succ3, h_tgt, of_n512c, succ749, h_bound],
     );
     let (_sum_lhs_check, sum_prod_raw) = req_sides(d, step_sum)?;
-    eprintln!("[num-checkpoint] sum_prod_raw built");
 
     let nat_div_succ_512_749 = d.const_app(rat.nat_div_succ, &[n512, n749]);
     let of_rat_add_step = d.lemma(p.of_rat_add, &[target_rat, nat_div_succ_512_749]);
@@ -6330,9 +6305,14 @@ fn sin_fn_lb_numeric(
     // `natDivSucc sum_2798_202 n2999` -- rewrite THAT Rat value, not the raw
     // Nat numerator/denominator (`rat_eq_rewrite`'s `p`/`q` must be Rat-typed).
     let nat_div_succ_sum_2999 = d.const_app(rat.nat_div_succ, &[sum_2798_202, n2999]);
-    let sum_le_one_rat = rat_eq_rewrite(d, nat_div_succ_sum_2999, rat_one_c, one_eq, widened_sum, &|dd, t| {
-        crate::rat_prelude::ops::rle(dd, rat, nat_div_succ_2798_2999, t)
-    });
+    let sum_le_one_rat = rat_eq_rewrite(
+        d,
+        nat_div_succ_sum_2999,
+        rat_one_c,
+        one_eq,
+        widened_sum,
+        &|dd, t| crate::rat_prelude::ops::rle(dd, rat, nat_div_succ_2798_2999, t),
+    );
     // sum_le_one_rat : Rat.le (natDivSucc 2798 2999) Rat.one
 
     let h_fixed_raw = d.lemma(
@@ -6355,16 +6335,6 @@ fn sin_fn_lb_numeric(
         ],
     );
     // h_fixed : le sum_val one_cc
-    match d.kernel().infer(h_fixed) {
-        Ok(_) => eprintln!("[num-diag] h_fixed infers cleanly"),
-        Err(e) => {
-            eprintln!("[num-diag] h_fixed infer FAILED: {e:?}");
-            if let crate::KernelError::TypeMismatch { expected, got } = e {
-                eprintln!("[num-diag] expected: {}", d.kernel().render_lean(expected));
-                eprintln!("[num-diag] got: {}", d.kernel().render_lean(got));
-            }
-        }
-    }
 
     // --- assemble: target_val + af1 <= target_val + af1_bound <= 1 <= z,
     // so target_val + af1 <= z, so (via additive cancellation)
@@ -6430,52 +6400,6 @@ fn sin_fn_lb_numeric(
     );
     // result : le target_val e_1
 
-    {
-        fn fvar_id2(d: &mut IntDev<'_>, e: ExprId) -> u64 {
-            match d.kernel().expr_node(e) {
-                ExprNode::FVar(id) => *id,
-                other => panic!("expected FVar, found {other:?}"),
-            }
-        }
-        let z_id2 = fvar_id2(d, z);
-        let hz1_id2 = fvar_id2(d, hz1);
-        let hzr_id2 = fvar_id2(d, hzr);
-        let anon7 = d.anon_name();
-        let carrier7 = creal_ty(d, p);
-        let mut mkctx = |d: &mut IntDev<'_>| {
-            let mut ctx = LocalContext::new();
-            ctx.push(LocalDecl { fvar: z_id2, name: anon7, ty: carrier7, info: BinderInfo::Default });
-            ctx.push(LocalDecl { fvar: hz1_id2, name: anon7, ty: cle(d, p, one_cc, z), info: BinderInfo::Default });
-            ctx.push(LocalDecl { fvar: hzr_id2, name: anon7, ty: cle(d, p, z, r_c), info: BinderInfo::Default });
-            ctx
-        };
-        for (label, term) in [
-            ("h_combined", h_combined),
-            ("h_step1", h_step1),
-            ("h_step2", h_step2),
-            ("h_step3", h_step3),
-            ("cancel", cancel),
-            ("h_final_le", h_final_le),
-            ("e_1", e_1),
-            ("e1_eq_final", e1_eq_final),
-            ("e1_eq_final_symm", e1_eq_final_symm),
-            ("result", result),
-        ] {
-            let mut ctx = mkctx(d);
-            match d.kernel().infer_in(term, &mut ctx) {
-                Ok(_) => eprintln!("[num-diag2] {label} infers cleanly"),
-                Err(e) => {
-                    eprintln!("[num-diag2] {label} infer FAILED: {e:?}");
-                    if let crate::KernelError::TypeMismatch { expected, got } = e {
-                        eprintln!("[num-diag2] expected: {}", d.kernel().render_lean(expected));
-                        eprintln!("[num-diag2] got: {}", d.kernel().render_lean(got));
-                    }
-                }
-            }
-        }
-    }
-
-    eprintln!("[num-checkpoint] final result built, returning");
     Ok((e_1, result))
 }
 
@@ -6508,35 +6432,9 @@ pub(super) fn declare_sin_fn_lower_bound(
     let hz0 = d.lemma(p.le_trans, &[zero_c, one_cc, z, h_zero_le_one, hz1]);
 
     // Magnitude sequence.
-    eprintln!("[checkpoint] before sin_lb_magnitude_lam");
     let a_fn = sin_lb_magnitude_lam(d, p, z);
-    eprintln!("[checkpoint] a_fn built");
     let hnn = sin_lb_magnitude_nonneg(d, p, z, hz0);
-    eprintln!("[checkpoint] hnn built");
-    {
-        let anon4 = d.anon_name();
-        let mut ctx_hnn = LocalContext::new();
-        ctx_hnn.push(LocalDecl { fvar: z_fv, name: anon4, ty: carrier, info: BinderInfo::Default });
-        ctx_hnn.push(LocalDecl { fvar: hz1_fv, name: anon4, ty: cle(d, p, one_cc, z), info: BinderInfo::Default });
-        ctx_hnn.push(LocalDecl { fvar: hzr_fv, name: anon4, ty: cle(d, p, z, r_c), info: BinderInfo::Default });
-        match d.kernel().infer_in(hnn, &mut ctx_hnn) {
-            Ok(_) => eprintln!("[diag] hnn infers cleanly"),
-            Err(e) => eprintln!("[diag] hnn infer FAILED: {e:?}"),
-        }
-    }
     let hdec = sin_lb_magnitude_dec(d, p, z, hz0, hzr)?;
-    eprintln!("[checkpoint] hdec built");
-    {
-        let anon5 = d.anon_name();
-        let mut ctx_hdec = LocalContext::new();
-        ctx_hdec.push(LocalDecl { fvar: z_fv, name: anon5, ty: carrier, info: BinderInfo::Default });
-        ctx_hdec.push(LocalDecl { fvar: hz1_fv, name: anon5, ty: cle(d, p, one_cc, z), info: BinderInfo::Default });
-        ctx_hdec.push(LocalDecl { fvar: hzr_fv, name: anon5, ty: cle(d, p, z, r_c), info: BinderInfo::Default });
-        match d.kernel().infer_in(hdec, &mut ctx_hdec) {
-            Ok(_) => eprintln!("[diag] hdec infers cleanly"),
-            Err(e) => eprintln!("[diag] hdec infer FAILED: {e:?}"),
-        }
-    }
 
     // Domination -> Exists (L, Converges (sumRange t_lam) L), `t_lam` --
     // NOT `sinFnTerm` directly -- because `alternatingLowerBound`'s `hconv`
@@ -6588,9 +6486,7 @@ pub(super) fn declare_sin_fn_lower_bound(
         );
         d.lam_fv(j_fv, nat, transported)
     };
-    eprintln!("[checkpoint] dom_hyp built");
     let cauchy_g = sin_fn_cauchy_g(d, p);
-    eprintln!("[checkpoint] cauchy_g built");
 
     let ex_conv = d.lemma(
         p.sum_range_converges_of_dominated,
@@ -6627,7 +6523,6 @@ pub(super) fn declare_sin_fn_lower_bound(
         d.kernel().infer_in(ex_conv, &mut ctx)?
     };
     let (_inner_ex, predicate) = unapp(d, ty_ex);
-    eprintln!("[checkpoint] ty_ex extracted, predicate = {predicate:?}");
 
     // `sinFnUniformConverges`'s own `rate`/`spec`, extracted once.
     let u_conv = d.kernel().const_(p.sin_fn_uniform_converges, vec![]);
@@ -6662,7 +6557,6 @@ pub(super) fn declare_sin_fn_lower_bound(
             &[a_fn, hnn, hdec, l, hconv, one_nat_m],
         );
         // alb : le E_1 l, E_1 := sumRange (build_t_lam a_fn) (add 1 1).
-        eprintln!("[checkpoint] alb built = {alb:?}");
 
         // Squeeze: Equiv l sin_z, from `hconv`'s own `Within` witness combined
         // with `sinFnUniformConverges`'s `.spec` via the triangle inequality.
@@ -6714,7 +6608,14 @@ pub(super) fn declare_sin_fn_lower_bound(
             let refl_neg_sinz = erefl(d, p, neg_sin_z_here);
             let add_bridge = d.lemma(
                 p.add_congr,
-                &[f_z_n, f_n_z, neg_sin_z_here, neg_sin_z_here, bridge_n, refl_neg_sinz],
+                &[
+                    f_z_n,
+                    f_n_z,
+                    neg_sin_z_here,
+                    neg_sin_z_here,
+                    bridge_n,
+                    refl_neg_sinz,
+                ],
             );
             // add_bridge : Equiv add_fzn_negsinz add_fnz_negsinz
             let abs_add_fzn = cabs(d, p, add_fzn_negsinz);
@@ -6785,22 +6686,9 @@ pub(super) fn declare_sin_fn_lower_bound(
             d.lam_fv(k2_fv, nat, with_hk2)
         };
         let equiv_l_sinz_final = exists_elim(d, conv_pred, squeeze_target, hconv, squeeze_minor);
-        eprintln!("[checkpoint] squeeze done, equiv_l_sinz_final = {equiv_l_sinz_final:?}");
 
         // Numeric: le target_val e_1, e_1 defeq-identical to `alb`'s own LHS.
         let (e1_from_numeric, num_bound) = sin_fn_lb_numeric(d, p, z, hz0, hz1, hzr)?;
-        eprintln!("[checkpoint] numeric done, e1_from_numeric = {e1_from_numeric:?}, num_bound = {num_bound:?}");
-        {
-            let anon3 = d.anon_name();
-            let mut ctx_nb = LocalContext::new();
-            ctx_nb.push(LocalDecl { fvar: z_fv, name: anon3, ty: carrier, info: BinderInfo::Default });
-            ctx_nb.push(LocalDecl { fvar: hz1_fv, name: anon3, ty: cle(d, p, one_cc, z), info: BinderInfo::Default });
-            ctx_nb.push(LocalDecl { fvar: hzr_fv, name: anon3, ty: cle(d, p, z, r_c), info: BinderInfo::Default });
-            match d.kernel().infer_in(num_bound, &mut ctx_nb) {
-                Ok(_) => eprintln!("[diag] num_bound infers cleanly"),
-                Err(e) => eprintln!("[diag] num_bound infer FAILED: {e:?}"),
-            }
-        }
         let step_le_l = d.lemma(
             p.le_trans,
             &[target_val, e1_from_numeric, l, num_bound, alb],
@@ -6826,9 +6714,7 @@ pub(super) fn declare_sin_fn_lower_bound(
         d.lam_fv(l_fv, carrier, with_hconv)
     };
 
-    eprintln!("[checkpoint] minor fully built, about to build value_at_z");
     let value_at_z = creal_exists_elim(d, p, carrier, predicate, final_goal, ex_conv, minor);
-    eprintln!("[checkpoint] value_at_z built = {value_at_z:?}");
 
     let hzr_ty = cle(d, p, z, r_c);
     let hz1_ty = cle(d, p, one_cc, z);
@@ -6843,67 +6729,10 @@ pub(super) fn declare_sin_fn_lower_bound(
         d.lam_fv(z_fv, carrier, with_hz1)
     };
 
-    debug_scan_free_fvars(d, value, "sin_fn_lower_bound.value");
-    debug_scan_free_fvars(d, ty, "sin_fn_lower_bound.ty");
-    eprintln!("[checkpoint] about to add_declaration");
-
-    match d.kernel().infer(value) {
-        Ok(inferred) => {
-            let matches_ty = d.kernel().def_eq(inferred, ty);
-            eprintln!("[diag] infer(value) succeeded; def_eq(inferred, ty) = {matches_ty}");
-            if !matches_ty {
-                eprintln!("[diag] inferred: {}", d.kernel().render_lean(inferred));
-                eprintln!("[diag] declared ty: {}", d.kernel().render_lean(ty));
-            }
-        }
-        Err(e) => {
-            eprintln!("[diag] infer(value) FAILED: {e:?}");
-            if let crate::KernelError::TypeMismatch { expected, got } = e {
-                eprintln!("[diag] expected node: {:?}", d.kernel().expr_node(expected));
-                eprintln!("[diag] expected rendered: {}", d.kernel().render_lean(expected));
-                eprintln!("[diag] got node: {:?}", d.kernel().expr_node(got));
-                eprintln!("[diag] got rendered: {}", d.kernel().render_lean(got));
-            }
-        }
-    }
-
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.sin_fn_lower_bound_one_to_r,
         uparams: vec![],
         ty,
         value,
     })
-}
-
-/// TEMPORARY diagnostic: walk `e` and print any raw `FVar` node found,
-/// tagged with `label`. A closed term must have none; any hit names the
-/// leak this repository's `UnboundFVar` error otherwise gives no context
-/// for.
-fn debug_scan_free_fvars(d: &mut IntDev<'_>, e: ExprId, label: &str) {
-    fn walk(d: &mut IntDev<'_>, e: ExprId, depth: u32, label: &str, seen: &mut std::collections::HashSet<u32>) {
-        if depth > 4000 || !seen.insert(e.0) {
-            return;
-        }
-        let node = d.kernel().expr_node(e).clone();
-        match node {
-            ExprNode::FVar(id) => eprintln!("[fvar-scan] {label}: FVar({id}) at expr {e:?}"),
-            ExprNode::App(f, a) => {
-                walk(d, f, depth + 1, label, seen);
-                walk(d, a, depth + 1, label, seen);
-            }
-            ExprNode::Lam(_, ty, body, _) | ExprNode::Pi(_, ty, body, _) => {
-                walk(d, ty, depth + 1, label, seen);
-                walk(d, body, depth + 1, label, seen);
-            }
-            ExprNode::Let(_, ty, val, body) => {
-                walk(d, ty, depth + 1, label, seen);
-                walk(d, val, depth + 1, label, seen);
-                walk(d, body, depth + 1, label, seen);
-            }
-            ExprNode::Proj(_, _, inner) => walk(d, inner, depth + 1, label, seen),
-            ExprNode::BVar(_) | ExprNode::Sort(_) | ExprNode::Const(_, _) | ExprNode::Lit(_) => {}
-        }
-    }
-    let mut seen = std::collections::HashSet::new();
-    walk(d, e, 0, label, &mut seen);
 }
