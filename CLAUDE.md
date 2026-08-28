@@ -1391,6 +1391,48 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   and the error surfaces far from the arithmetic, check the operand order before
   anything else.
 
+- **A RECURSOR APPLIED TO A BARE FREE VARIABLE IS STUCK — AND FOR A
+  TWO-ARGUMENT DEFINITION YOU MUST KNOW *WHICH* ARGUMENT IT RECURSES ON.**
+  The `Nat.add` entry above is one instance of a general rule: a free variable
+  is not a constructor, so any `Nat.rec` on it simply does not reduce.
+
+  Measured 2026-08-28 on `Nat.choose`, which is a **two-argument** structural
+  recursion — outer `Nat.rec` on the FIRST argument, inner on the second
+  (`nat_prelude/choose.rs`, the `outer_motive` / `row` construction). So
+  `choose(succ a, k)` reduces and `choose(a, k)` does not, for any `k`
+  whatsoever. A lane's `choose_le_succ` base case assumed `choose(a, 0)` was
+  defeq to `1` for symbolic `a`; it is not, and the fix was to route through
+  the equation lemma `choose_zero_right(a)` rather than rely on reduction.
+
+  The rule: **before assuming a defeq, check which argument the definition
+  recurses on, and confirm that argument is constructor-shaped in your goal.**
+  An equation lemma exists for exactly this case — reach for it rather than
+  hoping the term reduces.
+
+- **ONE BAD DECLARATION POISONS THE SHARED PRELUDE BUILD, SO THE FAILURE COUNT
+  TELLS YOU NOTHING ABOUT HOW MANY THINGS ARE BROKEN — AND A NARROW FILTER CAN
+  MISS IT ENTIRELY.** Measured 2026-08-28: one wrong `choose_le_succ` base case
+  produced `TypeMismatch` across **all 95** `nat_prelude::` tests, because every
+  one of them builds the same prelude. Nothing in that output distinguishes "95
+  broken theorems" from "one broken theorem"; the same shape has been seen at
+  230 failures from a single name collision.
+
+  Two consequences:
+
+  - **Bisect by toggling declarations, not by reading failures.** The lane found
+    it by commenting out each of the five `declare_choose_*` calls in
+    `declare_choose_all` one at a time against a single fast test. Serial, cheap,
+    and it names the culprit exactly; reading 95 identical `TypeMismatch`es does
+    not.
+  - **A single-test filter is not a gate for a prelude change.** The same lane
+    ran `--lib <that one theorem>` and it PASSED, then the full `nat_prelude::`
+    sweep failed. **The mechanism for that is NOT established** — `prelude_cache`
+    is process-wide and in-memory (ADR-0464), so it cannot carry state between
+    two `cargo test` invocations, and the lane's cache explanation does not hold
+    up. Do not propagate it as fact. What IS established is the observation, and
+    the rule it supports: after touching any `declare_*`, run the whole
+    `<prelude>::` sweep and confirm a NONZERO count, never a filtered subset.
+
 - **A PRELUDE CAN DECLARE INTO ANOTHER PRELUDE'S NAMESPACE, SO "IS THIS NAME
   TAKEN?" IS NOT ANSWERED BY READING THE MODULE IT BELONGS IN.** Measured
   2026-08-25: a lane built an explicit inverse for a bijection on `[0,n)` and
