@@ -6121,6 +6121,17 @@ pub struct CRealPrelude {
     /// `Exists` witness the induction step re-eliminates, and the parity split
     /// is `Nat.even_or_odd`'s computed half.
     pub mesh_point_near_coarse: NameId,
+    /// `CReal.maxRange_le_add_of_exists : forall f g n n' eps,
+    /// (forall i, Nat.le i n -> exists i', Nat.le i' n' /\ le (f i) (add (g i') eps))
+    /// -> le (maxRange f n) (add (maxRange g n') eps)` -- the APPROXIMATE,
+    /// existential-witnessed form of [`Self::max_range_transport`]: the
+    /// per-index relation is a `le ... + eps` estimate rather than an `Equiv`,
+    /// and the coarse index arrives as an `Exists` witness rather than as a
+    /// supplied `e : Nat -> Nat`. The second is what lets
+    /// [`Self::mesh_point_near_coarse`] plug in directly, with no `Nat`
+    /// quotient/remainder algebra: the conclusion is `Prop`, so `Exists.rec`
+    /// applies. See `creal/supremum.rs`.
+    pub max_range_le_add_of_exists: NameId,
     /// `CReal.abs_diff_le_of_deriv_bound : ∀ F F' a b, HasDerivativeOn F F'
     /// a b → ∀ M, (∀ z, le a z → le z b → le (abs (F' z)) M) → ∀ x y,
     /// le a x → le x y → le y b →
@@ -6857,6 +6868,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         exp_of_modulus_le_true_exp_of_modulus: kernel
             .name_str(creal, "expOfModulus_le_trueExpOfModulus"),
         mesh_point_near_coarse: kernel.name_str(creal, "meshPoint_near_coarse"),
+        max_range_le_add_of_exists: kernel.name_str(creal, "maxRange_le_add_of_exists"),
         abs_diff_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_le_of_deriv_bound"),
         lipschitz_of_deriv_bound: kernel.name_str(creal, "lipschitz_of_deriv_bound"),
         abs_diff_sub_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_sub_le_of_deriv_bound"),
@@ -12295,6 +12307,19 @@ const STEPS: &[BuildStep] = &[
         ],
         provides: &[|p: CRealPrelude| p.mesh_point_near_coarse],
         run: supremum::declare_mesh_point_near_coarse,
+    },
+    BuildStep {
+        label: "supremum::declare_max_range_le_add_of_exists",
+        requires: &[
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.max_le,
+            |p: CRealPrelude| p.max_range,
+            |p: CRealPrelude| p.max_range_ub,
+        ],
+        provides: &[|p: CRealPrelude| p.max_range_le_add_of_exists],
+        run: supremum::declare_max_range_le_add_of_exists,
     },
     BuildStep {
         label: "cos_sign::declare_cos_wide_tail_nonneg",

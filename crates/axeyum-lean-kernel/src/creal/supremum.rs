@@ -2811,3 +2811,203 @@ pub(super) fn declare_mesh_point_near_coarse(
 ) -> Result<(), KernelError> {
     declare_mesh_point_near_coarse_thm(d, p)
 }
+
+/// `CReal.maxRange_le_add_of_exists : ∀ f g n n' eps,
+/// (∀ i, Nat.le i n → ∃ i', Nat.le i' n' ∧ le (f i) (add (g i') eps)) →
+/// le (maxRange f n) (add (maxRange g n') eps)` -- the APPROXIMATE,
+/// EXISTENTIAL-witnessed form of [`CRealPrelude::max_range_transport`].
+///
+/// Two changes from `maxRange_transport`, and both matter for rung 6:
+///
+/// - the per-index relation is `le (f i) (add (g (e i)) eps)` rather than
+///   `Equiv (f i) (g (e i))`, so it survives a bound that is not exact; and
+/// - the coarse index is an `Exists` WITNESS rather than a supplied function
+///   `e : Nat → Nat`.
+///
+/// The second is what removes the need for a `Nat` division function. Bounding
+/// a fine mesh maximum by a coarse one wants `e i := i / 2^d`, and this kernel
+/// does have `Nat.div` -- but the conclusion here is `Prop`, so `Exists.rec`
+/// applies (kernel fact 2 constrains only `Type`-valued conclusions) and
+/// [`CRealPrelude::mesh_point_near_coarse`]'s existential plugs straight in
+/// with no quotient/remainder algebra at all.
+///
+/// Same auxiliary induction as `maxRange_transport` (motive `fun k => Nat.le k
+/// n → le (maxRange f k) (add (maxRange g n') eps)`, discharged at `k := n`
+/// with `Nat.le_refl n`); each case eliminates the existential and closes with
+/// [`CRealPrelude::max_range_ub`] padded by `eps` through
+/// [`CRealPrelude::add_le_add`].
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+fn declare_max_range_le_add_of_exists_thm(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = creal_ty(d, p);
+    let fn_ty = d.arrow(nat, carrier);
+    let nat_p = p.rat.int.nat;
+    let logic = p.rat.int.logic;
+    let one_level = d.level_one();
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let np_fv = d.fresh_fvar();
+    let np = d.kernel().fvar(np_fv);
+    let eps_fv = d.fresh_fvar();
+    let eps = d.kernel().fvar(eps_fv);
+
+    // `fun i' => And (Nat.le i' n') (le (f i) (add (g i') eps))`.
+    let witness_pred = |d: &mut IntDev<'_>, i: ExprId| -> ExprId {
+        let ip_fv = d.fresh_fvar();
+        let ip = d.kernel().fvar(ip_fv);
+        let bound = d.le(ip, np);
+        let gi = d.apply(g, &[ip]);
+        let padded = cadd(d, p, gi, eps);
+        let fi = d.apply(f, &[i]);
+        let est = cle(d, p, fi, padded);
+        let body = d.and(bound, est);
+        d.lam_fv(ip_fv, nat, body)
+    };
+
+    let hyp_ty = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let hi_ty = d.le(i, n);
+        let pred = witness_pred(d, i);
+        let exists_const = d.kernel().const_(logic.exists_, vec![one_level]);
+        let stmt = d.apply(exists_const, &[nat, pred]);
+        let inner = d.arrow(hi_ty, stmt);
+        d.pi_fv(i_fv, nat, inner)
+    };
+    let hyp_fv = d.fresh_fvar();
+    let hyp = d.kernel().fvar(hyp_fv);
+
+    // `le (f i) (add (maxRange g n') eps)`, given `i` and `hi : Nat.le i n`.
+    let pointwise = |d: &mut IntDev<'_>, i: ExprId, hi: ExprId, target: ExprId| -> ExprId {
+        let pred = witness_pred(d, i);
+        let ex = d.apply(hyp, &[i, hi]);
+        let minor = {
+            let ip_fv = d.fresh_fvar();
+            let ip = d.kernel().fvar(ip_fv);
+            let hp_fv = d.fresh_fvar();
+            let hp = d.kernel().fvar(hp_fv);
+            let bound_ty = d.le(ip, np);
+            let gi = d.apply(g, &[ip]);
+            let padded = cadd(d, p, gi, eps);
+            let fi = d.apply(f, &[i]);
+            let est_ty = cle(d, p, fi, padded);
+            let hp_ty = d.and(bound_ty, est_ty);
+            let hb = d.and_left(bound_ty, est_ty, hp);
+            let hle = d.and_right(bound_ty, est_ty, hp);
+
+            let ub = d.lemma(p.max_range_ub, &[g, np, ip, hb]);
+            let mr = d.const_app(p.max_range, &[g, np]);
+            let refl_eps = d.lemma(p.le_refl, &[eps]);
+            let grown = d.lemma(p.add_le_add, &[gi, mr, eps, eps, ub, refl_eps]);
+            let goal_rhs = cadd(d, p, mr, eps);
+            let chained = d.lemma(p.le_trans, &[fi, padded, goal_rhs, hle, grown]);
+            let inner = d.lam_fv(hp_fv, hp_ty, chained);
+            d.lam_fv(ip_fv, nat, inner)
+        };
+        exists_elim(d, pred, target, ex, minor)
+    };
+
+    let motive = |d: &mut IntDev<'_>, k: ExprId| -> ExprId {
+        let h_ty = d.le(k, n);
+        let mrk = d.const_app(p.max_range, &[f, k]);
+        let mr = d.const_app(p.max_range, &[g, np]);
+        let rhs = cadd(d, p, mr, eps);
+        let concl = cle(d, p, mrk, rhs);
+        d.arrow(h_ty, concl)
+    };
+
+    let proof = d.induct(
+        &motive,
+        &|d: &mut IntDev<'_>| -> ExprId {
+            let zero_n = d.zero();
+            let h0_fv = d.fresh_fvar();
+            let h0 = d.kernel().fvar(h0_fv);
+            let h0_ty = d.le(zero_n, n);
+            let mr0 = d.const_app(p.max_range, &[f, zero_n]);
+            let mr = d.const_app(p.max_range, &[g, np]);
+            let rhs = cadd(d, p, mr, eps);
+            let target = cle(d, p, mr0, rhs);
+            let result = pointwise(d, zero_n, h0, target);
+            d.lam_fv(h0_fv, h0_ty, result)
+        },
+        &|d: &mut IntDev<'_>, jj: ExprId, ih: ExprId| -> ExprId {
+            let sj = d.succ(jj);
+            let hsj_fv = d.fresh_fvar();
+            let hsj = d.kernel().fvar(hsj_fv);
+            let hsj_ty = d.le(sj, n);
+
+            let le_succ_j = d.lemma(nat_p.le_succ, &[jj]);
+            let hj = d.lemma(nat_p.le_trans, &[jj, sj, n, le_succ_j, hsj]);
+            let ih_hj = d.apply(ih, &[hj]);
+
+            let mr = d.const_app(p.max_range, &[g, np]);
+            let rhs = cadd(d, p, mr, eps);
+            let fsj = d.apply(f, &[sj]);
+            let target = cle(d, p, fsj, rhs);
+            let head = pointwise(d, sj, hsj, target);
+
+            let mrj = d.const_app(p.max_range, &[f, jj]);
+            let combine = d.lemma(p.max_le, &[mrj, fsj, rhs, ih_hj, head]);
+            d.lam_fv(hsj_fv, hsj_ty, combine)
+        },
+        n,
+    );
+
+    let le_refl_n = d.lemma(nat_p.le_refl, &[n]);
+    let value_body = d.apply(proof, &[le_refl_n]);
+
+    let mrn = d.const_app(p.max_range, &[f, n]);
+    let mr_final = d.const_app(p.max_range, &[g, np]);
+    let rhs_final = cadd(d, p, mr_final, eps);
+    let conclusion = cle(d, p, mrn, rhs_final);
+
+    let ty = {
+        let out = d.arrow(hyp_ty, conclusion);
+        let out = d.pi_fv(eps_fv, carrier, out);
+        let out = d.pi_fv(np_fv, nat, out);
+        let out = d.pi_fv(n_fv, nat, out);
+        let out = d.pi_fv(g_fv, fn_ty, out);
+        d.pi_fv(f_fv, fn_ty, out)
+    };
+    let value = {
+        let out = d.lam_fv(hyp_fv, hyp_ty, value_body);
+        let out = d.lam_fv(eps_fv, carrier, out);
+        let out = d.lam_fv(np_fv, nat, out);
+        let out = d.lam_fv(n_fv, nat, out);
+        let out = d.lam_fv(g_fv, fn_ty, out);
+        d.lam_fv(f_fv, fn_ty, out)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.max_range_le_add_of_exists,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Land `CReal.maxRange_le_add_of_exists` alone (a one-declaration
+/// `BuildStep`).
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+pub(super) fn declare_max_range_le_add_of_exists(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    declare_max_range_le_add_of_exists_thm(d, p)
+}

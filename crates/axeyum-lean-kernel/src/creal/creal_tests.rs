@@ -10240,6 +10240,7 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "supremum::declare_true_exp_of_modulus_mono",
     "supremum::declare_exp_of_modulus_le_true_exp_of_modulus",
     "supremum::declare_mesh_point_near_coarse",
+    "supremum::declare_max_range_le_add_of_exists",
     "cos_sign::declare_cos_wide_tail_nonneg",
     "cos_sign::declare_cos_wide_tail_antitone",
 ];

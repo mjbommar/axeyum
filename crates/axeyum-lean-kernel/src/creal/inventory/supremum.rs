@@ -67,5 +67,10 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.mesh_point_near_coarse,
             "theorem",
         ),
+        (
+            "CReal.maxRange_le_add_of_exists",
+            p.max_range_le_add_of_exists,
+            "theorem",
+        ),
     ]
 }
