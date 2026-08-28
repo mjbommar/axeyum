@@ -1763,6 +1763,22 @@ pub struct NatPrelude {
     /// witness (`le_dest` gives `k` with `5+k=n`; `Exists.rec` transports the
     /// shifted fact along that equation to land on the goal at `n`).
     pub le_fib_self: NameId,
+    /// `Nat.le_fib_add_one : ∀ n, Le n (add (fib n) 1)` — Mathlib's
+    /// `Nat.le_fib_add_one` (`n ≤ fib n + 1`), unconditional (unlike
+    /// [`le_fib_self`](Self::le_fib_self), whose `5 ≤ n` hypothesis this one
+    /// has no room for: the bound is TIGHT — equality — at `n = 2, 3, 4`, so
+    /// no bare induction from `n = 0` can close the step for small `n`; any
+    /// slack margin needs `n` past the threshold where `le_fib_self` already
+    /// applies). Split at `Nat.lt_or_ge n 5`
+    /// ([`ops::cases_lt_or_ge`](super::ops::cases_lt_or_ge)): the `Le 5 n`
+    /// side chains `le_fib_self` with `le_add_right (fib n) 1`; the `Lt n 5`
+    /// side is a genuine 5-way case split down to concrete `n ∈ {0,1,2,3,4}`
+    /// ([`ops::cases_lt_bound`](super::ops::cases_lt_bound)), each branch
+    /// closed the same way [`le_fib_self`](Self::le_fib_self)'s own base
+    /// case is — `Le i (add i k)` (`le_add_right`, or `zero_le` for `i = 0`)
+    /// defeq to `Le i (add (fib i) 1)` by pure `δ`/`ι` unfolding of `fib` at
+    /// the tiny literal `i`.
+    pub le_fib_add_one: NameId,
 
     // --- relation properties bounded on `n` (`relation.rs`) -----------------
     /// `Nat.ReflexiveOn r n := ∀ i, i < n → r i i`, for `r : Nat → Nat → Prop`.
@@ -2957,6 +2973,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             fib_strictmonoon: kernel.name_str(nat, "fib_strictmonoOn"),
             fib_lt_fib: kernel.name_str(nat, "fib_lt_fib"),
             le_fib_self: kernel.name_str(nat, "le_fib_self"),
+            le_fib_add_one: kernel.name_str(nat, "le_fib_add_one"),
             reflexive_on: kernel.name_str(nat, "reflexiveOn"),
             symmetric_on: kernel.name_str(nat, "symmetricOn"),
             transitive_on: kernel.name_str(nat, "transitiveOn"),

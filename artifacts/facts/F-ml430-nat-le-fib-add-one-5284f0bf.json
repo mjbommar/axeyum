@@ -8,12 +8,31 @@
     "statement": "∀ (n : ℕ), n ≤ Nat.fib n + 1",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [
     "F:ml430-nat-le-fib-self-0cbccb4d"
   ],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.le_fib_add_one",
+      "kind": "kernel-term",
+      "supports": "n <= Nat.fib n + 1",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --release --example nat_theorem_inventory -- le_fib_add_one 2>/dev/null | grep -xFc 'Nat.le_fib_add_one\t1\t((x0 : AxNat) -> AxNat.le x0 (AxNat.add (AxNat.fib x0) (AxNat.succ AxNat.zero)))')\" -ge 1",
+      "notes": "The kernel re-infers the theorem type from the constructed term, matching Mathlib's unconditional `n <= fib n + 1`. Proved by splitting at `Nat.lt_or_ge n 5` (ops::cases_lt_or_ge): the `Le 5 n` side chains le_fib_self with le_add_right + le_trans; the `Lt n 5` side is a genuine 5-way case split to concrete n in {0,1,2,3,4} (ops::cases_lt_bound, a new finite-cases eliminator), each branch closed by le_add_right (or zero_le at n=0) at a hand-picked slack defeq to fib(n)+1 for that tiny literal n. The bound is TIGHT (equality) at n=2,3,4, which is why a bare pair-induction cannot prove this (docs/plan/status/228-fib-2.md's algebraic analysis)."
+    },
+    {
+      "id": "footprint-Nat.le_fib_add_one",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: []",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --release --example theorem_axiom_footprint -- Nat.le_fib_add_one 2>/dev/null | grep -xFc $'nat\\tNat.le_fib_add_one\\t0\\t')\" -ge 1",
+      "notes": "The theorem-specific footprint command reports zero dependencies on axioms in the constructed Nat environment."
+    }
+  ],
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
   "provenance": {
     "date": "2026-08-18",
     "established_by": "not established in this ledger",
@@ -28,5 +47,5 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "CLOSED 2026-08-28 by a native, axiom-free kernel construction (crates/axeyum-lean-kernel/src/nat_prelude/fibonacci.rs, declare_le_fib_add_one), using a new general-purpose finite-cases eliminator (ops::cases_lt_bound) and threshold split (ops::cases_lt_or_ge) that also close the fib-2 lane's own deferred analysis of this fact (docs/plan/status/228-fib-2.md). This is a hand-written reference construction, not autonomous production; the external Mathlib theorem remains prior art and its proof term/tactic trace were not consulted."
 }
