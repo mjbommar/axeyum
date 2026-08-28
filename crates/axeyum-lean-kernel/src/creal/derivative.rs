@@ -349,23 +349,23 @@ fn nat_fn_ty(d: &mut IntDev<'_>) -> ExprId {
     d.arrow(nat, nat)
 }
 
-fn cadd(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
+pub(super) fn cadd(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
     d.const_app(p.add, &[x, y])
 }
 
-fn cneg(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+pub(super) fn cneg(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
     d.const_app(p.neg, &[x])
 }
 
-fn cmul(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
+pub(super) fn cmul(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId) -> ExprId {
     d.const_app(p.mul, &[x, y])
 }
 
-fn cabs(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+pub(super) fn cabs(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
     d.const_app(p.abs, &[x])
 }
 
-fn czero(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
+pub(super) fn czero(d: &mut IntDev<'_>, p: CRealPrelude) -> ExprId {
     d.kernel().const_(p.zero, vec![])
 }
 
@@ -400,7 +400,7 @@ fn within_real(d: &mut IntDev<'_>, p: CRealPrelude, v: ExprId, q: ExprId) -> Exp
 }
 
 /// `CReal.HasDerivativeOn F F' a b`.
-fn hd_ty(
+pub(super) fn hd_ty(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     f: ExprId,
@@ -415,7 +415,7 @@ fn hd_ty(
 /// used throughout this development (private to each module that needs it;
 /// see `series.rs`'s own copy for why it is rebuilt here rather than
 /// imported).
-fn echain(
+pub(super) fn echain(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     start: ExprId,
@@ -498,7 +498,7 @@ fn close_zero_error(
 ///   le (abs (add y (neg x))) (ofRat (natDivSucc 1 (modulus e))) →
 ///   le (abs (add (add (F y) (neg (F x))) (neg (mul (F' x) (add y (neg
 ///   x)))))) (mul (ofRat (natDivSucc 1 e)) (abs (add y (neg x))))`.
-fn deriv_spec_body(
+pub(super) fn deriv_spec_body(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     f: ExprId,
@@ -562,12 +562,18 @@ fn deriv_spec_body(
 // already in [`CRealPrelude`], and used twice.
 
 /// `Equiv a a`.
-fn erefl(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId) -> ExprId {
+pub(super) fn erefl(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId) -> ExprId {
     d.lemma(p.equiv_refl, &[a])
 }
 
 /// From `h : Equiv a b`, `Equiv b a`.
-fn esymm(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
+pub(super) fn esymm(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+) -> ExprId {
     d.lemma(p.equiv_symm, &[a, b, h])
 }
 
@@ -766,7 +772,13 @@ fn neg_add_distrib(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) ->
 
 /// `Equiv (add (add x (neg y)) (add y (neg z))) (add x (neg z))` — cancelling
 /// a middle `+y −y` pair.
-fn cancel_middle(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, y: ExprId, z: ExprId) -> ExprId {
+pub(super) fn cancel_middle(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    x: ExprId,
+    y: ExprId,
+    z: ExprId,
+) -> ExprId {
     let zero_c = czero(d, p);
     let ny = cneg(d, p, y);
     let nz = cneg(d, p, z);
@@ -1041,7 +1053,12 @@ fn sq_le_abs_sq(d: &mut IntDev<'_>, p: CRealPrelude, t: ExprId) -> ExprId {
 /// `Equiv (mul (neg a) b) (neg (mul a b))` — the mirror of [`mul_neg_equiv`]
 /// (which negates the *second* factor), built the same way: commute, apply
 /// [`mul_neg_equiv`], commute back under `neg_congr`.
-fn neg_mul_equiv_left(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
+pub(super) fn neg_mul_equiv_left(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+) -> ExprId {
     let na = cneg(d, p, a);
     let lhs = cmul(d, p, na, b);
     let b_na = cmul(d, p, b, na);
@@ -1106,7 +1123,7 @@ fn abs_add_le(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId) -> Expr
 /// the general "the bound transports along an `Equiv` on the value" step
 /// every witness in this file that reduces its own error term to a simpler
 /// shape needs at least once.
-fn abs_le_of_equiv(
+pub(super) fn abs_le_of_equiv(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     v: ExprId,
@@ -9376,7 +9393,7 @@ pub(super) fn declare_lipschitz_of_deriv_bound(
 /// `(a+b)+(c+d)`, so each `neg`-of-a-sum is opened by
 /// [`CRealPrelude::neg_sub_swap`] into a plain sum first and the two operands
 /// are commuted into position around it.
-fn swap_middle_pair(
+pub(super) fn swap_middle_pair(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
     u: ExprId,

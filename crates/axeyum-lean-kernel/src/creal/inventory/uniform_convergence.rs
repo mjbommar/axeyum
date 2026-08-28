@@ -68,5 +68,10 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.power_series_uniform_converges,
             "theorem",
         ),
+        (
+            "CReal.hasDerivative_uniform_limit",
+            p.has_derivative_uniform_limit,
+            "theorem",
+        ),
     ]
 }
