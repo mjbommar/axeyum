@@ -80,6 +80,11 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
         ),
         ("CReal.bounded_on_id_unit", p.bounded_on_id_unit, "theorem"),
         (
+            "CReal.bounded_on_id_zero_one",
+            p.bounded_on_id_zero_one,
+            "theorem",
+        ),
+        (
             "CReal.uniformly_continuous_poly_example",
             p.uniformly_continuous_poly_example,
             "theorem",
@@ -106,6 +111,7 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
         ("CReal.sampleUpperBound", p.sample_upper_bound, "theorem"),
         ("CReal.sampleLowerBound", p.sample_lower_bound, "theorem"),
         ("CReal.bucketClose", p.bucket_close, "theorem"),
+        ("CReal.abs_bound_of_self", p.abs_bound_of_self, "theorem"),
         (
             "CReal.bounded_of_uniformly_continuous",
             p.bounded_of_uniformly_continuous,

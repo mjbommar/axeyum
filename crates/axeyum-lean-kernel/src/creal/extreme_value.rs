@@ -38,51 +38,46 @@
 //! `creal_tests::evt_linear_endpoint_values_reduce_and_flip_with_the_sign_of_v`
 //! — computed, not narrated.
 //!
-//! ## LABELED GAP: `evtLinear v` is uniformly continuous, and that is
-//! ## ASSERTED here, not proved
+//! ## CLOSED: `evtLinear v` is uniformly continuous, and that is now PROVED,
+//! ## not asserted
 //!
 //! `t ↦ t·v` is Lipschitz with constant `|v|`, so it is uniformly continuous
 //! on every interval and therefore squarely inside classical EVT's hypothesis
-//! class. **No kernel declaration in this repository says so**, and this
-//! module deliberately does not pretend otherwise: an asserted claim is
-//! exactly what
+//! class. This used to be a labeled gap here — no kernel declaration said
+//! so, and an asserted claim is exactly what
 //! [`CReal.evt_attained_max_decides_sign`](super::CRealPrelude::evt_attained_max_decides_sign)
-//! exists to replace, so leaving one unlabeled here would reintroduce the
+//! exists to replace, so leaving one unlabeled would have reintroduced the
 //! defect one level down.
 //!
-//! What the gap does and does not cost. The theorem below is unaffected — it
-//! is a statement about an attained maximum of `mul t v`, proved outright.
-//! What is not yet machine-checked is the *bridge sentence* "…and such a
-//! function is one EVT applies to", which today rests on the reader knowing
-//! that an affine map is Lipschitz.
-//!
-//! The intended route is pure assembly, and every step of it exists:
+//! [`CReal.evtLinear_uniformly_continuous`](super::CRealPrelude::evt_linear_uniformly_continuous)
+//! closes it: `∀ v, UniformlyContinuousOn (evtLinear v) zero one`, pure
+//! assembly, exactly the route this section used to plan rather than walk:
 //! [`CReal.uniformly_continuous_mul`](super::CRealPrelude::uniformly_continuous_mul)
 //! at `F := fun r => r` ([`CReal.uniformly_continuous_id`](super::CRealPrelude::uniformly_continuous_id))
 //! and `G := fun _ => v` ([`CReal.uniformly_continuous_const`](super::CRealPrelude::uniformly_continuous_const)),
-//! whose beta-reduct `fun r => mul r v` is `evtLinear v`. It is blocked on
-//! that lemma's two `BoundedOn` arguments, and the blockage was measured, not
-//! guessed:
+//! whose beta-reduct `fun r => mul r v` is `evtLinear v`. Its two `BoundedOn`
+//! arguments:
 //!
-//! - **`BoundedOn (fun _ => v) zero one k`** needs `le (abs v) (ofRat
-//!   (natDivSucc (Nat.succ k) 0))` for a `k` computed from `CReal.bound v`.
-//!   That lemma is written and proved — as
-//!   **`abs_bound_of_self`, a private `fn` in `creal/uniform_continuity.rs`**
-//!   (documented there as "`le (abs x) (mag_bound (bound x))` — unconditional,
-//!   for ANY `CReal`"). It is not a `CRealPrelude` field, so it is
-//!   unreachable from here. **Promoting it is the single cheapest unblock**,
-//!   and it makes `BoundedOn` trivial for EVERY constant function on EVERY
-//!   interval, not just this one.
-//! - **`BoundedOn (fun r => r) zero one 0`** needs `le (abs z) (ofRat
-//!   (natDivSucc 1 0))` for `z ∈ [0, 1]`. Reachable from public lemmas alone
-//!   (`max_le` on `abs`'s two branches,
-//!   [`CReal.ratUnitEqOne`](super::CRealPrelude::rat_unit_eq_one) as the
-//!   `natDivSucc 1 0`-vs-`Rat.one` bridge, and `add_le_add` against
-//!   `le_refl (neg z)` for the negative branch), roughly 60 lines. The
-//!   existing public base case
-//!   [`CReal.bounded_on_id_unit`](super::CRealPrelude::bounded_on_id_unit) is
-//!   stated on `[zero, mag_bound 0]`, not `[zero, one]`, so it does not
-//!   substitute without that same bridge.
+//! - **`BoundedOn (fun _ => v) zero one (CReal.bound v)`** — discharged by
+//!   [`CReal.absBoundOfSelf`](super::CRealPrelude::abs_bound_of_self) applied
+//!   at `v` directly. That lemma used to be a private `fn` in
+//!   `creal/uniform_continuity.rs`, unreachable from any other file;
+//!   promoted here to a `CRealPrelude` field (universally quantified, closed
+//!   over a fresh `fvar`, its sole prior call site rewired to
+//!   `d.lemma(p.abs_bound_of_self, &[x])` rather than rebuilding the proof
+//!   inline), it now makes `BoundedOn` trivial for EVERY constant function on
+//!   EVERY interval, not just this one.
+//! - **`BoundedOn (fun r => r) zero one 0`** — discharged by
+//!   [`CReal.boundedOnIdZeroOne`](super::CRealPrelude::bounded_on_id_zero_one),
+//!   which bridges `one` to `mag_bound 0` via
+//!   [`CReal.ratUnitEqOne`](super::CRealPrelude::rat_unit_eq_one) (`Eq Rat
+//!   (natDivSucc 1 0) Rat.one`, lifted across `ofRat` by the same
+//!   `rat_eq_rewrite`-with-an-`Equiv`-motive idiom
+//!   [`CReal.boundedOnIdUnit`](super::CRealPrelude::bounded_on_id_unit) uses
+//!   for `neg zero ~ zero`) and then applies
+//!   [`CReal.boundedOnIdUnit`](super::CRealPrelude::bounded_on_id_unit)
+//!   DIRECTLY at the transported hypothesis, rather than re-deriving its own
+//!   `neg z ≤ mag_bound 0` argument a second time.
 //!
 //! The obvious shortcut does **not** work, and this was checked rather than
 //! assumed: deriving both witnesses from
@@ -91,7 +86,8 @@
 //! uniform-continuity PROOF (`creal/uniform_continuity.rs`, `declare_
 //! bounded_of_uniformly_continuous`'s `ty`), so `K` mentions that witness's
 //! own modulus and cannot be written down as the explicit `k1`/`k2` argument
-//! `uniformly_continuous_mul` demands.
+//! `uniformly_continuous_mul` demands. Neither `BoundedOn` argument above
+//! goes through it.
 //!
 //! [`CReal.evt_attained_max_decides_sign`](super::CRealPrelude::evt_attained_max_decides_sign)
 //! turns that observation into a kernel-checked implication:
@@ -191,7 +187,8 @@ pub(super) fn declare_extreme_value(
     p: CRealPrelude,
 ) -> Result<(), KernelError> {
     declare_evt_linear(d, p)?;
-    declare_evt_attained_max_decides_sign(d, p)
+    declare_evt_attained_max_decides_sign(d, p)?;
+    declare_evt_linear_uniformly_continuous(d, p)
 }
 
 // --- local term helpers -----------------------------------------------------
@@ -590,6 +587,113 @@ fn declare_evt_attained_max_decides_sign(
 
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.evt_attained_max_decides_sign,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// --- `CReal.evtLinear_uniformly_continuous` ---------------------------------
+//
+// Closes this module's own "LABELED GAP" section: `evtLinear v` is uniformly
+// continuous on `[0, 1]`, machine-checked rather than asserted. Pure
+// assembly, as the module doc promised -- `uniformly_continuous_mul` at
+// `F := id`, `G := fun _ => v`, with both `BoundedOn` arguments discharged
+// by existing lemmas (`bounded_on_id_zero_one` for `F`, `abs_bound_of_self`
+// applied at `v` for `G`), no new algebra.
+
+/// `CReal.bound x`. Local copy of `uniform_continuity.rs`'s private
+/// `ubound_of` (private there, and that module is out of scope for this
+/// file -- see this crate's convention of duplicating small term builders
+/// rather than widening a private helper's visibility for one caller).
+fn ubound_of(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
+    d.const_app(p.bound, &[x])
+}
+
+/// `CReal.UniformlyContinuousOn F a b`.
+fn uc_ty(d: &mut IntDev<'_>, p: CRealPrelude, f: ExprId, a: ExprId, b: ExprId) -> ExprId {
+    d.const_app(p.uniformly_continuous_on, &[f, a, b])
+}
+
+/// `CReal.evtLinear_uniformly_continuous : ∀ v, UniformlyContinuousOn
+/// (evtLinear v) zero one` -- this module's own documentation has the
+/// route.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_evt_linear_uniformly_continuous(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let zero = d.kernel().const_(p.zero, vec![]);
+    let one = d.kernel().const_(p.one, vec![]);
+
+    let v_fv = d.fresh_fvar();
+    let v = d.kernel().fvar(v_fv);
+
+    // `F := id`, `G := fun _ => v` -- `uniformly_continuous_mul`'s own
+    // conclusion is stated over these two names, and `mul (id r) ((fun _ =>
+    // v) r)` is exactly `evtLinear v`'s own unfold up to beta.
+    let identity = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+    let constv = {
+        let r_fv = d.fresh_fvar();
+        d.lam_fv(r_fv, carrier, v)
+    };
+
+    let huc_f = d.lemma(p.uniformly_continuous_id, &[zero, one]);
+    let huc_g = d.lemma(p.uniformly_continuous_const, &[v, zero, one]);
+
+    // `BoundedOn id zero one 0` -- reused directly, not re-derived.
+    let k1 = d.num(0);
+    let hb_f = d.kernel().const_(p.bounded_on_id_zero_one, vec![]);
+
+    // `BoundedOn (fun _ => v) zero one (bound v)` -- a constant function's
+    // `BoundedOn` obligation, once the two range hypotheses are dropped, IS
+    // `abs_bound_of_self` applied at `v`.
+    let k2 = ubound_of(d, p, v);
+    let hb_g = {
+        let z_fv = d.fresh_fvar();
+        let haz_fv = d.fresh_fvar();
+        let hzb_fv = d.fresh_fvar();
+
+        let z = d.kernel().fvar(z_fv);
+        let range_az = cle(d, p, zero, z);
+        let range_zb = cle(d, p, z, one);
+
+        let body = d.lemma(p.abs_bound_of_self, &[v]);
+        // body : le (abs v) (mag_bound (bound v)) -- doesn't reference
+        // z/haz/hzb, which is exactly right for a constant function.
+
+        let with_hzb = d.lam_fv(hzb_fv, range_zb, body);
+        let with_haz = d.lam_fv(haz_fv, range_az, with_hzb);
+        d.lam_fv(z_fv, carrier, with_haz)
+    };
+
+    let value_at_v = d.lemma(
+        p.uniformly_continuous_mul,
+        &[
+            identity, constv, zero, one, huc_f, huc_g, k1, k2, hb_f, hb_g,
+        ],
+    );
+    // value_at_v : UniformlyContinuousOn (fun r => mul (identity r) (constv
+    // r)) zero one -- defeq, by beta on both `identity r` and `constv r`,
+    // to UniformlyContinuousOn (evtLinear v) zero one.
+
+    let value = d.lam_fv(v_fv, carrier, value_at_v);
+    let ty = {
+        let evt_linear_v = d.const_app(p.evt_linear, &[v]);
+        let concl = uc_ty(d, p, evt_linear_v, zero, one);
+        d.pi_fv(v_fv, carrier, concl)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.evt_linear_uniformly_continuous,
         uparams: vec![],
         ty,
         value,

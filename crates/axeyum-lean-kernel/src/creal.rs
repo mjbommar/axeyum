@@ -1291,6 +1291,15 @@ pub struct CRealPrelude {
     /// the proof needs no separate `CReal.one`-vs-`mag_bound` bridge lemma).
     /// See `creal/uniform_continuity.rs`.
     pub bounded_on_id_unit: NameId,
+    /// `CReal.bounded_on_id_zero_one : BoundedOn (fun r => r) zero one 0` --
+    /// `id` bounded by `1` on `[0, 1]` (the ordinary unit interval, unlike
+    /// [`Self::bounded_on_id_unit`]'s `[0, mag_bound 0]`). Built via the
+    /// `CReal.one`-vs-`mag_bound 0` bridge
+    /// ([`Self::rat_unit_eq_one`]) transporting a range hypothesis `le z
+    /// one` into `le z (mag_bound 0)`, then applying
+    /// [`Self::bounded_on_id_unit`] directly -- no re-derivation of its own
+    /// magnitude argument. See `creal/uniform_continuity.rs`.
+    pub bounded_on_id_zero_one: NameId,
     /// `CReal.uniformly_continuous_poly_example : UniformlyContinuousOn (fun
     /// r => add (add (mul r r) r) one) zero (mag_bound 0)` -- `x -> x^2 + x +
     /// 1` uniformly continuous on `[0,1]`, assembled from
@@ -1662,6 +1671,17 @@ pub struct CRealPrelude {
     /// used to assemble this fact inline. See
     /// `uniform_continuity::declare_bucket_close`.
     pub bucket_close: NameId,
+    /// `CReal.abs_bound_of_self : ∀ x, le (abs x) (ofRat (natDivSucc
+    /// (Nat.succ (CReal.bound x)) 0))` — `|x| ≤ mag_bound (bound x)`,
+    /// unconditional for ANY `CReal`. Promoted from a private `fn` in
+    /// `creal/uniform_continuity.rs` (it was inline scaffolding for
+    /// [`Self::bounded_of_uniformly_continuous`]'s own covering argument
+    /// and unreachable from any other file) to a `CRealPrelude` field, so
+    /// `BoundedOn` is trivial to discharge for EVERY constant function on
+    /// EVERY interval: `BoundedOn (fun _ => c) a b (CReal.bound c)`'s only
+    /// content, after the range hypotheses are dropped, is this lemma
+    /// applied at `c`. See `creal/uniform_continuity.rs`.
+    pub abs_bound_of_self: NameId,
     /// `CReal.bounded_of_uniformly_continuous : ∀ F a b, UniformlyContinuousOn
     /// F a b → CReal.le a b → CReal.BoundedOn F a b K` for a COMPUTED `K`
     /// (never `Exists`-elimination — `K` is one Nat expression built from
@@ -5569,11 +5589,8 @@ pub struct CRealPrelude {
     /// `creal_tests::evt_linear_endpoint_values_reduce_and_flip_with_the_sign_of_v`.
     ///
     /// It is also Lipschitz with constant `|v|`, hence uniformly continuous
-    /// and inside classical EVT's hypothesis class -- but that is **asserted,
-    /// not proved**: no declaration here states it. See that module's
-    /// "LABELED GAP" section for the sized route and the one private helper
-    /// (`creal/uniform_continuity.rs`'s `abs_bound_of_self`) whose promotion
-    /// unblocks it.
+    /// and inside classical EVT's hypothesis class -- **now proved, not
+    /// asserted**: see [`Self::evt_linear_uniformly_continuous`].
     pub evt_linear: NameId,
     /// `CReal.evt_attained_max_decides_sign : forall v c, le zero c ->
     /// le c one -> (forall t, le zero t -> le t one -> le (mul t v)
@@ -5601,6 +5618,20 @@ pub struct CRealPrelude {
     /// kernel does not have, NOT that the principle is false (it is
     /// consistent, hence unprovable here rather than refutable).
     pub evt_attained_max_decides_sign: NameId,
+    /// `CReal.evtLinear_uniformly_continuous : forall v,
+    /// UniformlyContinuousOn (evtLinear v) zero one` -- the bridge sentence
+    /// [`Self::evt_linear`]'s own doc comment used to call asserted, now
+    /// proved: `evtLinear v` is `fun t => mul t v`, so this is
+    /// [`Self::uniformly_continuous_mul`] applied at `F := id`
+    /// ([`Self::uniformly_continuous_id`]) and `G := fun _ => v`
+    /// ([`Self::uniformly_continuous_const`]), with `F`'s `BoundedOn`
+    /// argument discharged by [`Self::bounded_on_id_zero_one`] and `G`'s by
+    /// [`Self::abs_bound_of_self`] applied at `v` directly (a constant
+    /// function's `BoundedOn` obligation, once the two range hypotheses are
+    /// dropped, IS that lemma). With this, the EVT counterexample family is
+    /// machine-checked to lie inside classical EVT's hypothesis class, not
+    /// merely asserted to. See `creal/extreme_value.rs`.
+    pub evt_linear_uniformly_continuous: NameId,
 
     // --- general `cos : CReal → CReal` (creal/trig_fn.rs) ---------------------
     /// `CReal.cosFnTerm : Nat → CReal → CReal := fun k x => mul (cosTerm k)
@@ -6444,6 +6475,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         uniformly_continuous_mul: kernel.name_str(creal, "uniformly_continuous_mul"),
         uniformly_continuous_sq: kernel.name_str(creal, "uniformly_continuous_sq"),
         bounded_on_id_unit: kernel.name_str(creal, "bounded_on_id_unit"),
+        bounded_on_id_zero_one: kernel.name_str(creal, "bounded_on_id_zero_one"),
         uniformly_continuous_poly_example: kernel
             .name_str(creal, "uniformly_continuous_poly_example"),
         mag_bound_le_sum_range_of_lt: kernel.name_str(creal, "mag_bound_le_sumRange_of_lt"),
@@ -6465,6 +6497,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         sample_upper_bound: kernel.name_str(creal, "sampleUpperBound"),
         sample_lower_bound: kernel.name_str(creal, "sampleLowerBound"),
         bucket_close: kernel.name_str(creal, "bucketClose"),
+        abs_bound_of_self: kernel.name_str(creal, "abs_bound_of_self"),
         bounded_of_uniformly_continuous: kernel.name_str(creal, "bounded_of_uniformly_continuous"),
         rat_sq_le: kernel.name_str(creal, "ratSqLe"),
         rat_sq_sandwich: kernel.name_str(creal, "ratSqSandwich"),
@@ -6780,6 +6813,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         mul_pow_congr: kernel.name_str(creal, "mulPowCongr"),
         evt_linear: kernel.name_str(creal, "evtLinear"),
         evt_attained_max_decides_sign: kernel.name_str(creal, "evt_attained_max_decides_sign"),
+        evt_linear_uniformly_continuous: kernel.name_str(creal, "evtLinear_uniformly_continuous"),
         cos_fn_term: kernel.name_str(creal, "cosFnTerm"),
         cos_fn_term_abs_le: kernel.name_str(creal, "cosFnTermAbsLe"),
         cos_fn_term_congr: kernel.name_str(creal, "cosFnTerm_congr"),
@@ -8217,9 +8251,59 @@ const STEPS: &[BuildStep] = &[
         run: uniform_continuity::declare_bucket_close,
     },
     BuildStep {
+        label: "uniform_continuity::declare_abs_bound_of_self",
+        requires: &[
+            |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.abs_congr,
+            |p: CRealPrelude| p.abs_le,
+            |p: CRealPrelude| p.add,
+            |p: CRealPrelude| p.add_assoc,
+            |p: CRealPrelude| p.add_comm,
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.bound,
+            |p: CRealPrelude| p.bound_within,
+            |p: CRealPrelude| p.bucket_clamp_lower,
+            |p: CRealPrelude| p.bucket_clamp_upper,
+            |p: CRealPrelude| p.bucket_close,
+            |p: CRealPrelude| p.bucket_index,
+            |p: CRealPrelude| p.bucket_index_bound,
+            |p: CRealPrelude| p.bucket_index_floor_lower,
+            |p: CRealPrelude| p.bucket_index_floor_upper,
+            |p: CRealPrelude| p.equiv,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.le,
+            |p: CRealPrelude| p.le_abs_self,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_of_equiv,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.neg_le_abs,
+            |p: CRealPrelude| p.neg_le_neg,
+            |p: CRealPrelude| p.of_rat,
+            |p: CRealPrelude| p.of_rat_add,
+            |p: CRealPrelude| p.of_rat_le,
+            |p: CRealPrelude| p.of_rat_sub,
+            |p: CRealPrelude| p.sample_lower_bound,
+            |p: CRealPrelude| p.sample_upper_bound,
+            |p: CRealPrelude| p.uc_modulus,
+            |p: CRealPrelude| p.uc_spec,
+            |p: CRealPrelude| p.uniformly_continuous_on,
+            |p: CRealPrelude| p.zero,
+        ],
+        provides: &[|p: CRealPrelude| p.abs_bound_of_self],
+        run: uniform_continuity::declare_abs_bound_of_self,
+    },
+    BuildStep {
         label: "uniform_continuity::declare_bounded_of_uniformly_continuous",
         requires: &[
             |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.abs_bound_of_self,
             |p: CRealPrelude| p.abs_congr,
             |p: CRealPrelude| p.abs_le,
             |p: CRealPrelude| p.add,
@@ -11496,8 +11580,27 @@ const STEPS: &[BuildStep] = &[
         run: congruence::declare_congruence_extras,
     },
     BuildStep {
+        label: "uniform_continuity::declare_bounded_on_id_zero_one",
+        requires: &[
+            |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.bounded_on_id_unit,
+            |p: CRealPrelude| p.equiv,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.le,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.of_rat,
+            |p: CRealPrelude| p.one,
+            |p: CRealPrelude| p.rat_unit_eq_one,
+            |p: CRealPrelude| p.zero,
+        ],
+        provides: &[|p: CRealPrelude| p.bounded_on_id_zero_one],
+        run: uniform_continuity::declare_bounded_on_id_zero_one,
+    },
+    BuildStep {
         label: "extreme_value::declare_extreme_value",
         requires: &[
+            |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.abs_bound_of_self,
             |p: CRealPrelude| p.add,
             |p: CRealPrelude| p.add_assoc,
             |p: CRealPrelude| p.add_comm,
@@ -11506,6 +11609,8 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.add_lt_add_of_le_of_lt,
             |p: CRealPrelude| p.add_neg,
             |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.bound,
+            |p: CRealPrelude| p.bounded_on_id_zero_one,
             |p: CRealPrelude| p.creal,
             |p: CRealPrelude| p.equiv,
             |p: CRealPrelude| p.equiv_refl,
@@ -11526,15 +11631,21 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.mul_one,
             |p: CRealPrelude| p.mul_zero,
             |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.of_rat,
             |p: CRealPrelude| p.one,
             |p: CRealPrelude| p.pos_bound,
             |p: CRealPrelude| p.pos_bound_of_lt,
+            |p: CRealPrelude| p.uniformly_continuous_const,
+            |p: CRealPrelude| p.uniformly_continuous_id,
+            |p: CRealPrelude| p.uniformly_continuous_mul,
+            |p: CRealPrelude| p.uniformly_continuous_on,
             |p: CRealPrelude| p.zero,
             |p: CRealPrelude| p.zero_lt_one,
         ],
         provides: &[
             |p: CRealPrelude| p.evt_attained_max_decides_sign,
             |p: CRealPrelude| p.evt_linear,
+            |p: CRealPrelude| p.evt_linear_uniformly_continuous,
         ],
         run: extreme_value::declare_extreme_value,
     },

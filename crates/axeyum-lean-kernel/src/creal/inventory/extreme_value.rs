@@ -20,5 +20,10 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.evt_attained_max_decides_sign,
             "theorem",
         ),
+        (
+            "CReal.evtLinear_uniformly_continuous",
+            p.evt_linear_uniformly_continuous,
+            "theorem",
+        ),
     ]
 }

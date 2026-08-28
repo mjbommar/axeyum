@@ -136,7 +136,7 @@
 )]
 
 use super::ring_helpers::add4_comm;
-use super::{CRealPrelude, cle, creal_ty, embed, halves, sample};
+use super::{CRealPrelude, cle, creal_ty, embed, equiv, halves, sample};
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
@@ -3834,6 +3834,106 @@ fn declare_bounded_on_id_unit(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(),
     })
 }
 
+/// Admit [`CRealPrelude::bounded_on_id_zero_one`] — `BoundedOn (fun r => r)
+/// zero one 0`, i.e. `∀ z, le zero z → le z one → le (abs z) (mag_bound
+/// 0)`. `id` bounded by `1` on the ORDINARY unit interval `[0, 1]`, unlike
+/// [`declare_bounded_on_id_unit`]'s `[0, mag_bound 0]` (`mag_bound 0` is
+/// the kernel's own representation of `1`, chosen there so that proof needs
+/// no bridge lemma). This is the bridge lemma
+/// [`declare_bounded_on_id_unit`]'s own doc comment says is unneeded for
+/// ITS interval and IS needed for `[0, 1]`: `Equiv one (mag_bound 0)`, via
+/// [`CRealPrelude::rat_unit_eq_one`] (`Eq Rat (natDivSucc 1 0) Rat.one`)
+/// lifted across `CReal.ofRat` — the same `rat_eq_rewrite`-with-an-`Equiv`-
+/// motive idiom [`declare_bounded_on_id_unit`] already uses for `neg zero ~
+/// zero`.
+///
+/// Once `hzb : le z one` is transported to `le z (mag_bound 0)`, this
+/// applies [`CRealPrelude::bounded_on_id_unit`] DIRECTLY at `(z, haz,
+/// hzb')` rather than re-deriving `neg z ≤ mag_bound 0` a second time — the
+/// "promote, don't duplicate" the private helper
+/// [`crate::CRealPrelude::abs_bound_of_self`] above illustrates on a wider
+/// scale, applied here to a single sibling theorem instead of a whole
+/// prelude field.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+pub(super) fn declare_bounded_on_id_zero_one(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let zero_c = czero(d, p);
+    let one_c = d.kernel().const_(p.one, vec![]);
+    let zero_idx = d.num(0);
+    let mag0 = mag_bound(d, p, zero_idx);
+
+    // Bridge: `Equiv one mag0`, via `rat_unit_eq_one : Eq Rat (natDivSucc 1
+    // 0) Rat.one` lifted across `ofRat`. `unit_rat` is built by the same
+    // two calls `mag_bound` uses internally, so it interns to the exact
+    // `ExprId` `mag_bound`'s own `ofRat` argument does.
+    let succ_zero = d.succ(zero_idx);
+    let unit_rat = div_succ_at(d, p, succ_zero, zero_idx); // natDivSucc 1 0
+    let one_rat = crate::rat_prelude::ops::rone(d, p.rat);
+    let unit_eq_one = d.lemma(p.rat_unit_eq_one, &[]); // Eq Rat unit_rat one_rat
+    let refl_mag0 = erefl(d, p, mag0);
+    let one_equiv_mag0 = rat_eq_rewrite(d, unit_rat, one_rat, unit_eq_one, refl_mag0, &|d, t| {
+        let embedded = embed(d, p, t);
+        equiv(d, p, embedded, mag0)
+    });
+    // one_equiv_mag0 : Equiv (ofRat one_rat) mag0 -- defeq Equiv one mag0.
+
+    let z_fv = d.fresh_fvar();
+    let z = d.kernel().fvar(z_fv);
+    let haz_fv = d.fresh_fvar();
+    let haz = d.kernel().fvar(haz_fv);
+    let hzb_fv = d.fresh_fvar();
+    let hzb = d.kernel().fvar(hzb_fv);
+
+    let range_az = cle(d, p, zero_c, z);
+    let range_zb = cle(d, p, z, one_c);
+
+    let refl_z = erefl(d, p, z);
+    let hzb_mag0 = d.lemma(
+        p.le_congr,
+        &[z, z, one_c, mag0, refl_z, one_equiv_mag0, hzb],
+    );
+    // hzb_mag0 : le z mag0
+
+    // Reuse `bounded_on_id_unit` directly rather than re-deriving `neg z <=
+    // mag0`.
+    let bou = d.kernel().const_(p.bounded_on_id_unit, vec![]);
+    let body = d.apply(bou, &[z, haz, hzb_mag0]);
+
+    let identity = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        d.lam_fv(r_fv, carrier, r)
+    };
+
+    let value = {
+        let with_hzb = d.lam_fv(hzb_fv, range_zb, body);
+        let with_haz = d.lam_fv(haz_fv, range_az, with_hzb);
+        d.lam_fv(z_fv, carrier, with_haz)
+    };
+    let ty = {
+        let concl = {
+            let iz = d.apply(identity, &[z]);
+            let abs_iz = cabs(d, p, iz);
+            d.const_app(p.le, &[abs_iz, mag0])
+        };
+        let with_zb = d.arrow(range_zb, concl);
+        let with_az = d.arrow(range_az, with_zb);
+        d.pi_fv(z_fv, carrier, with_az)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.bounded_on_id_zero_one,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 /// `CReal.uniformly_continuous_poly_example : UniformlyContinuousOn (fun r
 /// => add (add (mul r r) r) one) zero (mag_bound 0)` -- the concrete payoff:
 /// `x -> x^2 + x + 1` uniformly continuous on `[0,1]` (`mag_bound 0` IS the
@@ -4726,6 +4826,41 @@ fn abs_bound_of_self(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId) -> ExprId {
         &[neg_x, neg_x, nn_mbx, mbx, refl_negx, dn, step1],
     );
     d.lemma(p.abs_le, &[x, mbx, le_upper_full, h2])
+}
+
+/// Admit [`CRealPrelude::abs_bound_of_self`] — `∀ x, le (abs x) (mag_bound
+/// (bound x))`. Promotes the private [`abs_bound_of_self`] helper (which
+/// already builds this proof at an arbitrary `x`, including a free
+/// variable) to a universally-quantified `CRealPrelude` field, by running it
+/// once at a fresh `fvar` and `pi_fv`/`lam_fv`-closing the result — the same
+/// "prove at an fvar, then bind" idiom every other lemma in this module
+/// uses.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+pub(super) fn declare_abs_bound_of_self(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let body = abs_bound_of_self(d, p, x);
+    let bx = ubound_of(d, p, x);
+    let mbx = mag_bound(d, p, bx);
+    let abs_x = cabs(d, p, x);
+    let value = d.lam_fv(x_fv, carrier, body);
+    let ty = {
+        let concl = d.const_app(p.le, &[abs_x, mbx]);
+        d.pi_fv(x_fv, carrier, concl)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.abs_bound_of_self,
+        uparams: vec![],
+        ty,
+        value,
+    })
 }
 
 /// `gp(i) := Rat.min (natDivSucc i k) cap`.
@@ -5710,7 +5845,7 @@ pub(super) fn declare_bounded_of_uniformly_continuous(
         let fgp0 = d.apply(f, &[gp0_full]);
         let mb0 = mag_bound(d, p, zero_nat);
         let close_fgp0_fa = close_within_symm(d, p, f_a, fgp0, mb0, close_fa_fgp0);
-        let hprev = abs_bound_of_self(d, p, f_a);
+        let hprev = d.lemma(p.abs_bound_of_self, &[f_a]);
         let mbk = mag_bound(d, p, k_bound);
         let step = triangle_step(d, p, f_a, fgp0, mbk, mb0, hprev, close_fgp0_fa);
         let fuse = mag_bound_fuse_succ(d, p, k_bound);
