@@ -8,12 +8,38 @@
     "statement": "∀ {a b c : ℤ}, a ∣ b * c → a.gcd c = 1 → a ∣ b",
     "fragment": "Int"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [
     "F:ml430-int-gcd-eq-gcd-ab-63005aef"
   ],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.dvd_of_dvd_mul_left_of_gcd_one",
+      "kind": "kernel-term",
+      "supports": "The proposition declared as `Int.dvd_of_dvd_mul_left_of_gcd_one` in the pinned Mathlib v4.30 source.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "int_prelude_tests::every_int_declaration_is_checked_and_axiom_free",
+        "int_prelude_tests::derived_laws_have_no_axiom_footprint"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib int_prelude::",
+      "notes": "`declare_dvd_of_dvd_mul_left_of_gcd_one` (`crates/axeyum-lean-kernel/src/int_prelude/gcd.rs`): `Int.gauss_lemma` applied at `(a, c, b)` needs `a ∣ (c*b)`, not the given `a ∣ (b*c)`; the two witnesses differ by `Int.mul_comm b c`, so the hypothesis is eliminated, its equation rewritten, and the divisibility re-introduced before feeding `gauss_lemma` (same pattern `declare_dvd_mul_left` uses for `a ∣ (b*a)` from `a ∣ (a*b)`)."
+    },
+    {
+      "id": "footprint-Int.dvd_of_dvd_mul_left_of_gcd_one",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- this theorem's trusted closure is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration (theorem_axiom_footprint)"
+      ],
+      "checker_command": "test \"$(cargo run --release -q -p axeyum-lean-kernel --example theorem_axiom_footprint -- Int.dvd_of_dvd_mul_left_of_gcd_one 2>/dev/null | grep -Ec 'integer[[:space:]]Int\\.dvd_of_dvd_mul_left_of_gcd_one[[:space:]]0[[:space:]]*$')\" -ge 1",
+      "notes": "The matched row's trailing footprint column is EMPTY, so a nonzero footprint or an absent declaration both give a count of 0 and fail. Run `--release`: in debug, building the full constructed environment stack-overflows, which is a resource limit and not a fact about this theorem."
+    }
+  ],
   "provenance": {
     "date": "2026-08-18",
     "established_by": "not established in this ledger",
@@ -28,5 +54,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "CLOSED via the `int-gcd-2` lane, 2026-08-28, as `Int.dvd_of_dvd_mul_left_of_gcd_one` in `int_prelude/gcd.rs` -- axiom-free, statement identical to Mathlib's.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

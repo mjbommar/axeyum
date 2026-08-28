@@ -8,10 +8,36 @@
     "statement": "∀ {a b d : ℤ}, 0 ≤ d → d ∣ a → d ∣ b → (∀ (e : ℤ), e ∣ a → e ∣ b → e ∣ d) → d = ↑(a.gcd b)",
     "fragment": "Int"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.gcd_greatest",
+      "kind": "kernel-term",
+      "supports": "The proposition declared as `Int.gcd_greatest` in the pinned Mathlib v4.30 source.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "int_prelude_tests::every_int_declaration_is_checked_and_axiom_free",
+        "int_prelude_tests::derived_laws_have_no_axiom_footprint"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib int_prelude::",
+      "notes": "`declare_gcd_greatest` (`crates/axeyum-lean-kernel/src/int_prelude/gcd.rs`): both `Int.dvd` directions come from the universal property already proved -- `d ∣ ofNat (gcd a b)` is `Int.dvd_gcd` fed `d`'s own two hypotheses directly (`c := d`), and `ofNat (gcd a b) ∣ d` is the fact's own universal hypothesis applied at `e := ofNat (gcd a b)` fed `Int.gcd_dvd_left`/`Int.gcd_dvd_right`. Mutual `Int.dvd` transports to mutual `Nat.dvd` between `natAbs d` and `gcd a b` via `Int.nat_abs_dvd_nat_abs_of_dvd` (`natAbs (ofNat n)` reduces to `n` by `rfl`), closed by the private `nat_dvd_antisymm` engine `gcd_comm`/`gcd_zero_right` already use, and `0 ≤ d` lifts the resulting `Eq Nat (natAbs d) (gcd a b)` back up to `Eq Int d (ofNat (gcd a b))` via `Int.of_nat_nat_abs_of_nonneg`."
+    },
+    {
+      "id": "footprint-Int.gcd_greatest",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- this theorem's trusted closure is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration (theorem_axiom_footprint)"
+      ],
+      "checker_command": "test \"$(cargo run --release -q -p axeyum-lean-kernel --example theorem_axiom_footprint -- Int.gcd_greatest 2>/dev/null | grep -Ec 'integer[[:space:]]Int\\.gcd_greatest[[:space:]]0[[:space:]]*$')\" -ge 1",
+      "notes": "The matched row's trailing footprint column is EMPTY, so a nonzero footprint or an absent declaration both give a count of 0 and fail. Run `--release`: in debug, building the full constructed environment stack-overflows, which is a resource limit and not a fact about this theorem."
+    }
+  ],
   "provenance": {
     "date": "2026-08-18",
     "established_by": "not established in this ledger",
@@ -26,5 +52,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority."
+  "notes": "CLOSED via the `int-gcd-2` lane, 2026-08-28, as `Int.gcd_greatest` in `int_prelude/gcd.rs` -- axiom-free, statement identical to Mathlib's.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is Lean surface syntax accepted as a proposition by the proof-free generated axiom module; it is not kernel-core render_lean output. depends_on projects only direct upstream theorem uses whose endpoints both survived review. Those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
