@@ -648,6 +648,11 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.choose_succ_self_eq_zero,
         p.choose_self,
         p.choose_symm,
+        p.choose_one_right,
+        p.choose_eq_zero_of_lt,
+        p.choose_ne_zero,
+        p.choose_le_succ,
+        p.choose_symm_of_eq_add,
         p.sum_range_add,
         p.sum_range_shift_front,
         p.sum_range_congr_lt,
@@ -2426,6 +2431,11 @@ fn choose_computes_and_symm_holds_at_a_concrete_point() {
         p.choose_succ_self_eq_zero,
         p.choose_self,
         p.choose_symm,
+        p.choose_one_right,
+        p.choose_eq_zero_of_lt,
+        p.choose_ne_zero,
+        p.choose_le_succ,
+        p.choose_symm_of_eq_add,
     ] {
         assert!(
             f.k.axiom_footprint(name).is_empty(),
@@ -6112,7 +6122,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        65 + 322,
+        65 + 327,
         "every promised definition and theorem must be rendered"
     );
 }

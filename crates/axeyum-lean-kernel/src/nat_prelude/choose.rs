@@ -1074,9 +1074,18 @@ pub(super) fn declare_choose_le_succ(
         let proof = d.induct(
             &motive,
             &|d| {
+                // `choose a 0` is stuck on symbolic `a` (the outer recursor
+                // needs a constructor-shaped first argument), so this needs
+                // `choose_zero_right`, not defeq -- unlike `choose (succ a) 0`,
+                // which reduces to `1` regardless of `a`.
                 let zero = d.zero();
                 let ca0 = d.choose(a, zero);
-                d.lemma(p.le_refl, &[ca0])
+                let one = d.num(1);
+                let h_czr = d.lemma(p.choose_zero_right, &[a]);
+                let base = d.lemma(p.le_refl, &[one]);
+                let motive2 = d.eq_motive(one, &|d, x| d.le(x, one));
+                let sym = d.symm(ca0, one, h_czr);
+                d.transport(one, motive2, base, ca0, sym)
             },
             &|d, cprime, _ih| {
                 let ca_cprime = d.choose(a, cprime);
