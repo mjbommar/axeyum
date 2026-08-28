@@ -970,6 +970,16 @@ pub struct NatPrelude {
     /// (`le_add_right`) supplies `choose_symm`'s hypothesis, and
     /// `add_sub_cancel_left` rewrites its `n - a` conclusion to `b`.
     pub choose_symm_of_eq_add: NameId,
+    /// `Nat.choose_le_add : ∀ a b c, choose a c ≤ choose (a + b) c`. By
+    /// induction on `b`: `b = 0` is defeq `choose a c ≤ choose a c`
+    /// (`add a zero ≡ a`); `b = succ b'` chains the induction hypothesis with
+    /// `choose_le_succ (a+b') c` via `le_trans` (`add a (succ b') ≡ succ (add
+    /// a b')`).
+    pub choose_le_add: NameId,
+    /// `Nat.choose_symm_add : ∀ a b, choose (a+b) a = choose (a+b) b` —
+    /// `choose_symm_of_eq_add` instantiated at `n := a+b` with its hypothesis
+    /// closed by `refl`.
+    pub choose_symm_add: NameId,
 
     // --- binomial theorem (`binomial.rs`) -----------------------------------
     /// `Nat.sumRange_add : ∀ f g n, sumRange (fun i => f i + g i) n = sumRange f n + sumRange g n`.
@@ -2175,6 +2185,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             choose_ne_zero: kernel.name_str(nat, "choose_ne_zero"),
             choose_le_succ: kernel.name_str(nat, "choose_le_succ"),
             choose_symm_of_eq_add: kernel.name_str(nat, "choose_symm_of_eq_add"),
+            choose_le_add: kernel.name_str(nat, "choose_le_add"),
+            choose_symm_add: kernel.name_str(nat, "choose_symm_add"),
             sum_range_add: kernel.name_str(nat, "sumRange_add"),
             sum_range_shift_front: kernel.name_str(nat, "sumRange_shiftFront"),
             sum_range_congr_lt: kernel.name_str(nat, "sumRange_congr_lt"),

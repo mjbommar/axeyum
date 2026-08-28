@@ -1162,6 +1162,66 @@ pub(super) fn declare_choose_symm_of_eq_add(
     Ok(())
 }
 
+/// `choose_le_add : ∀ a b c, choose a c ≤ choose (a + b) c`, by induction on
+/// `b`: `b = 0` has `add a zero ≡ a` definitionally, so both sides are the
+/// same `choose a c` (`le_refl`); `b = succ b'` has `add a (succ b') ≡ succ
+/// (add a b')` definitionally, so the goal is `Le (choose a c) (choose (succ
+/// (add a b')) c)`, closed by chaining the induction hypothesis with
+/// `choose_le_succ (add a b') c` through `le_trans`.
+pub(super) fn declare_choose_le_add(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.choose_le_add, 3, &|d, v| {
+        let (a, b, c) = (v[0], v[1], v[2]);
+        let motive = |d: &mut NatDev<'_>, x: ExprId| {
+            let ca = d.choose(a, c);
+            let ax = d.add(a, x);
+            let cax = d.choose(ax, c);
+            d.le(ca, cax)
+        };
+        let stmt = motive(d, b);
+        let proof = d.induct(
+            &motive,
+            &|d| {
+                let ca = d.choose(a, c);
+                d.const_app(p.le_refl, &[ca])
+            },
+            &|d, bprime, ih| {
+                let ca = d.choose(a, c);
+                let ab = d.add(a, bprime);
+                let choose_ab_c = d.choose(ab, c);
+                let succ_ab = d.succ(ab);
+                let choose_succ_ab_c = d.choose(succ_ab, c);
+                let step = d.lemma(p.choose_le_succ, &[ab, c]);
+                d.lemma(p.le_trans, &[ca, choose_ab_c, choose_succ_ab_c, ih, step])
+            },
+            b,
+        );
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `choose_symm_add : ∀ a b, choose (a + b) a = choose (a + b) b` —
+/// [`declare_choose_symm_of_eq_add`] instantiated at `n := a + b` with its
+/// hypothesis closed by `refl`, since `n = a + b` is then the identity.
+pub(super) fn declare_choose_symm_add(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.choose_symm_add, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let n = d.add(a, b);
+        let refl_n = d.refl(n);
+        let proof = d.lemma(p.choose_symm_of_eq_add, &[n, a, b, refl_n]);
+        let choose_na = d.choose(n, a);
+        let choose_nb = d.choose(n, b);
+        let stmt = d.eq(choose_na, choose_nb);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 /// Declare `choose` and every theorem in this module, in dependency order.
 pub(super) fn declare_choose_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     declare_choose(d, p)?;
@@ -1173,5 +1233,7 @@ pub(super) fn declare_choose_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(
     declare_choose_ne_zero(d, p)?;
     declare_choose_le_succ(d, p)?;
     declare_choose_symm_of_eq_add(d, p)?;
+    declare_choose_le_add(d, p)?;
+    declare_choose_symm_add(d, p)?;
     Ok(())
 }
