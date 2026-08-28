@@ -1222,6 +1222,53 @@ pub(super) fn declare_choose_symm_add(
     Ok(())
 }
 
+/// `choose_le_choose : ∀ a b c, Le a b → Le (choose a c) (choose b c)`.
+///
+/// Route: `d0 := sub b a`; `sub_add_cancel(a, b, h) : Eq (add d0 a) b`;
+/// flip the addend order with `add_comm(d0, a)` (via `symm`/`trans`) to get
+/// `Eq (add a d0) b`; `choose_le_add(a, d0, c) : Le (choose a c) (choose
+/// (add a d0) c)` then transports along that equation to the goal.
+pub(super) fn declare_choose_le_choose(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.choose_le_choose, 3, &|d, v| {
+        let (a, b, c) = (v[0], v[1], v[2]);
+        let le_ty = d.le(a, b);
+        let stmt = {
+            let ca = d.choose(a, c);
+            let cb = d.choose(b, c);
+            let concl = d.le(ca, cb);
+            d.arrow(le_ty, concl)
+        };
+
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        let d0 = d.sub(b, a);
+        let add_d0_a = d.add(d0, a);
+        let add_a_d0 = d.add(a, d0);
+        let cancel = d.lemma(p.sub_add_cancel, &[a, b, h]);
+        let comm = d.lemma(p.add_comm, &[d0, a]);
+        let comm_flip = d.symm(add_d0_a, add_a_d0, comm);
+        let combined = d.trans(add_a_d0, add_d0_a, b, comm_flip, cancel);
+
+        let step = d.lemma(p.choose_le_add, &[a, d0, c]);
+
+        let ca = d.choose(a, c);
+        let motive = d.eq_motive(add_a_d0, &|d, x| {
+            let cx = d.choose(x, c);
+            d.le(ca, cx)
+        });
+        let result = d.transport(add_a_d0, motive, step, b, combined);
+
+        let body = d.lam_fv(h_fv, le_ty, result);
+        (stmt, body)
+    })?;
+    Ok(())
+}
+
 /// Declare `choose` and every theorem in this module, in dependency order.
 pub(super) fn declare_choose_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     declare_choose(d, p)?;
@@ -1235,5 +1282,6 @@ pub(super) fn declare_choose_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(
     declare_choose_symm_of_eq_add(d, p)?;
     declare_choose_le_add(d, p)?;
     declare_choose_symm_add(d, p)?;
+    declare_choose_le_choose(d, p)?;
     Ok(())
 }
