@@ -4887,6 +4887,34 @@ pub struct CRealPrelude {
     /// `add_assoc`/`add_comm`/`add_neg`/`add_zero` algebra. See
     /// `creal/integral.rs`.
     pub integral_eq_antideriv_diff: NameId,
+    /// `CReal.integral_by_parts : ∀ u u' v v' a b (hab : le a b),
+    /// HasDerivativeOn u u' a b → HasDerivativeOn v v' a b →
+    /// UniformlyContinuousOn u a b → UniformlyContinuousOn u' a b →
+    /// UniformlyContinuousOn v a b → UniformlyContinuousOn v' a b →
+    /// Equiv (integral (fun r => mul (u' r) (v r)) a b hab ‹u'v witness›)
+    ///       (add (add (mul (u b) (v b)) (neg (mul (u a) (v a))))
+    ///            (neg (integral (fun r => mul (u r) (v' r)) a b hab
+    ///                  ‹uv' witness›)))`.
+    ///
+    /// **Integration by parts.** [`Self::has_derivative_mul`] gives `(uv)' =
+    /// u'v + uv'` (its own explicit `UniformlyContinuousOn u` plus three
+    /// magnitude-bound hypotheses, discharged here via
+    /// [`Self::bounded_of_uniformly_continuous`] against the four
+    /// caller-supplied `UniformlyContinuousOn` witnesses — one per `u`, `u'`,
+    /// `v`, `v'` — rather than taken as independent hypotheses the way
+    /// [`Self::has_derivative_cube`] does, since here they are all cheaply
+    /// available). [`Self::integral_eq_antideriv_diff`] (FTC-II) applied to
+    /// `u*v` gives `∫(u'v+uv') = u(b)v(b) − u(a)v(a)`; [`Self::integral_add`]
+    /// splits the left side into `∫u'v + ∫uv'`; the final rearrangement `I1 +
+    /// I2 ~ D ⟹ I1 ~ D − I2` reuses `integral.rs`'s own private
+    /// `add_cancel_right` (already built for FTC-II's closing step). Every
+    /// gap between a hand-built lambda (`u'v`, `uv'`, `u'v+uv'`, `u*v`) and
+    /// the shape a combinator's own conclusion produces is a pure beta
+    /// redex, bridged by the kernel's defeq check the same way
+    /// [`Self::integral_eq_antideriv_diff`]'s own `h_dab` bridge works — no
+    /// extra congruence lemma. See `creal/integral.rs`'s
+    /// `declare_integral_by_parts`.
+    pub integral_by_parts: NameId,
     /// `CReal.integral_abs_le : ∀ F a b (k : Nat) (hab : le a b)
     /// (u : UniformlyContinuousOn F a b), BoundedOn F a b k →
     /// le (abs (integral F a b hab u))
@@ -6553,6 +6581,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         integral_split_anywhere: kernel.name_str(creal, "integralSplitAnywhere"),
         has_derivative_antiderivative: kernel.name_str(creal, "hasDerivative_antiderivative"),
         integral_eq_antideriv_diff: kernel.name_str(creal, "integral_eq_antideriv_diff"),
+        integral_by_parts: kernel.name_str(creal, "integral_by_parts"),
         integral_abs_le: kernel.name_str(creal, "integral_abs_le"),
         integral_abs_le_of_bound: kernel.name_str(creal, "integral_abs_le_of_bound"),
         integral_sub_linear_le: kernel.name_str(creal, "integral_sub_linear_le"),
@@ -10155,6 +10184,35 @@ const STEPS: &[BuildStep] = &[
         ],
         provides: &[|p: CRealPrelude| p.integral_eq_antideriv_diff],
         run: integral::declare_integral_eq_antideriv_diff,
+    },
+    BuildStep {
+        label: "integral::declare_integral_by_parts",
+        requires: &[
+            |p: CRealPrelude| p.add,
+            |p: CRealPrelude| p.add_congr,
+            |p: CRealPrelude| p.add_assoc,
+            |p: CRealPrelude| p.add_comm,
+            |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.bounded_of_uniformly_continuous,
+            |p: CRealPrelude| p.bounded_on,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.has_derivative_mul,
+            |p: CRealPrelude| p.has_derivative_on,
+            |p: CRealPrelude| p.integral,
+            |p: CRealPrelude| p.integral_add,
+            |p: CRealPrelude| p.integral_eq_antideriv_diff,
+            |p: CRealPrelude| p.le,
+            |p: CRealPrelude| p.mul,
+            |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.uniformly_continuous_add,
+            |p: CRealPrelude| p.uniformly_continuous_mul,
+            |p: CRealPrelude| p.uniformly_continuous_on,
+        ],
+        provides: &[|p: CRealPrelude| p.integral_by_parts],
+        run: integral::declare_integral_by_parts,
     },
     BuildStep {
         label: "derivative::declare_has_derivative_integral_const",

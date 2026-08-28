@@ -220,5 +220,6 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
             p.integral_eq_antideriv_diff,
             "theorem",
         ),
+        ("CReal.integral_by_parts", p.integral_by_parts, "theorem"),
     ]
 }

@@ -2346,9 +2346,10 @@ use super::{
     CRealPrelude, DERIVED_HEIGHT, and_intro, cadd, creal_ty, div_succ, embed, equiv, halves,
     modulus, sample, shift, weaken, within,
 };
+use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
-use crate::expr::ExprId;
+use crate::expr::{ExprId, ExprNode};
 use crate::int_prelude::ops::{IntDev, exists_elim};
 use crate::nat_prelude::NatOps;
 use crate::rat_prelude::group::rsub;
@@ -2356,6 +2357,7 @@ use crate::rat_prelude::ops::{
     nat_eq_to_rat, nat_rewrite_prop, normalize, one_le_succ, radd, rat_eq_rewrite, rat_ty, rchain,
     rcongr, req, rle, rmul, rneg, rone, rsymm, rtrans, rzero,
 };
+use crate::tc::{LocalContext, LocalDecl};
 
 /// Delta height for `CReal.riemannSum`: above `CReal.sumRange`
 /// (`DERIVED_HEIGHT + 41`) and `CReal.ofNat` (`DERIVED_HEIGHT + 14`), the two
@@ -28742,6 +28744,358 @@ pub(super) fn declare_integral_eq_antideriv_diff(
 
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.integral_eq_antideriv_diff,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// Peel one `App` node off `e`, returning `(function, argument)` — used only
+/// to read the computed `K` back off a `BoundedOn F a b K` application this
+/// same call just built (mirroring `trig_fn.rs`'s own `unapp`; each file
+/// keeps its own copy rather than sharing one — see that file for why).
+/// Panics if `e` is not an application, which would mean `BoundedOn`'s own
+/// shape changed underneath this file.
+fn unapp(d: &mut IntDev<'_>, e: ExprId) -> (ExprId, ExprId) {
+    match d.kernel().expr_node(e).clone() {
+        ExprNode::App(f, a) => (f, a),
+        other => panic!("expected an application (BoundedOn F a b K), found {other:?}"),
+    }
+}
+
+/// `CReal.bounded_of_uniformly_continuous` applied at `f, a, b, huc, hab`,
+/// with its computed `K` read back via [`unapp`] rather than hand-derived —
+/// this file's own copy of `trig_fn.rs`'s `bounded_via_uc`. Every universally
+/// quantified binder of `declare_integral_by_parts`'s own theorem
+/// (`u, u', v, v', a, b, hab, ...`) is still an OPEN free variable at the
+/// point this runs (nothing is bound into a `LocalContext` until the final
+/// `lam_fv` wrapping at the very end), so `Kernel::infer`'s fresh empty
+/// context rejects it with `UnboundFVar` — `free_vars` lists every
+/// `(fvar id, type)` pair in scope, registered into a scratch
+/// [`LocalContext`] for `Kernel::infer_in`, exactly as `trig_fn.rs`'s own
+/// `bounded_via_uc` does for an enclosing induction's open `j`/`ih`.
+/// Returns `(K, proof)`, `proof : BoundedOn f a b K`.
+fn bounded_via_uc(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    a: ExprId,
+    b: ExprId,
+    huc: ExprId,
+    hab: ExprId,
+    free_vars: &[(u64, ExprId)],
+) -> (ExprId, ExprId) {
+    let proof = d.lemma(p.bounded_of_uniformly_continuous, &[f, a, b, huc, hab]);
+    let anon = d.anon_name();
+    let mut ctx = LocalContext::new();
+    for &(fvar, ty) in free_vars {
+        ctx.push(LocalDecl {
+            fvar,
+            name: anon,
+            ty,
+            info: BinderInfo::Default,
+        });
+    }
+    let ty = d
+        .kernel()
+        .infer_in(proof, &mut ctx)
+        .expect("bounded_of_uniformly_continuous application must infer a type");
+    let (_inner, k) = unapp(d, ty);
+    (k, proof)
+}
+
+/// Peel one `App`-built [`ExprId`] back to its raw free-variable id — used
+/// only to build [`bounded_via_uc`]'s `free_vars` list from the `ExprId`s
+/// this file's own `d.fresh_fvar()`/`d.kernel().fvar(..)` calls minted
+/// (never parsed from anything untrusted). Mirrors `trig_fn.rs`'s own
+/// `fvar_id`.
+fn fvar_id(d: &mut IntDev<'_>, e: ExprId) -> u64 {
+    match d.kernel().expr_node(e).clone() {
+        ExprNode::FVar(id) => id,
+        other => panic!("expected a free variable, found {other:?}"),
+    }
+}
+
+/// `CReal.integral_by_parts : ∀ u u' v v' a b (hab : le a b),
+/// HasDerivativeOn u u' a b → HasDerivativeOn v v' a b →
+/// UniformlyContinuousOn u a b → UniformlyContinuousOn u' a b →
+/// UniformlyContinuousOn v a b → UniformlyContinuousOn v' a b →
+/// Equiv (integral (fun r => mul (u' r) (v r)) a b hab uc_u'v)
+///       (add (add (mul (u b) (v b)) (neg (mul (u a) (v a))))
+///            (neg (integral (fun r => mul (u r) (v' r)) a b hab uc_uv')))`
+///
+/// **Integration by parts.** See this file's module documentation / this
+/// declaration's own `CRealPrelude::integral_by_parts` doc comment for the
+/// route: [`CRealPrelude::has_derivative_mul`] for `(uv)' = u'v + uv'`,
+/// [`CRealPrelude::integral_eq_antideriv_diff`] (FTC-II) applied to `u*v`,
+/// [`CRealPrelude::integral_add`] to split the combined integral, and
+/// [`add_cancel_right`] (already built for FTC-II's own closing step) for
+/// the final rearrangement.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` here means the kernel
+/// **refused** a proof, not that a script gave up.
+#[allow(clippy::too_many_lines)]
+pub(super) fn declare_integral_by_parts(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let f_ty = fn_ty(d, p);
+
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let up_fv = d.fresh_fvar();
+    let up = d.kernel().fvar(up_fv);
+    let v_fv = d.fresh_fvar();
+    let v = d.kernel().fvar(v_fv);
+    let vp_fv = d.fresh_fvar();
+    let vp = d.kernel().fvar(vp_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+
+    let hu_ty = d.const_app(p.has_derivative_on, &[u, up, a, b]);
+    let hu_fv = d.fresh_fvar();
+    let hu = d.kernel().fvar(hu_fv);
+    let hv_ty = d.const_app(p.has_derivative_on, &[v, vp, a, b]);
+    let hv_fv = d.fresh_fvar();
+    let hv = d.kernel().fvar(hv_fv);
+
+    let huc_u_ty = d.const_app(p.uniformly_continuous_on, &[u, a, b]);
+    let huc_u_fv = d.fresh_fvar();
+    let huc_u = d.kernel().fvar(huc_u_fv);
+    let huc_up_ty = d.const_app(p.uniformly_continuous_on, &[up, a, b]);
+    let huc_up_fv = d.fresh_fvar();
+    let huc_up = d.kernel().fvar(huc_up_fv);
+    let huc_v_ty = d.const_app(p.uniformly_continuous_on, &[v, a, b]);
+    let huc_v_fv = d.fresh_fvar();
+    let huc_v = d.kernel().fvar(huc_v_fv);
+    let huc_vp_ty = d.const_app(p.uniformly_continuous_on, &[vp, a, b]);
+    let huc_vp_fv = d.fresh_fvar();
+    let huc_vp = d.kernel().fvar(huc_vp_fv);
+
+    // --- every outer Pi binder is still an OPEN free variable here (nothing
+    // is bound into a `LocalContext` until the final `lam_fv` wrapping at the
+    // very end), so every `bounded_via_uc` call below needs the full list —
+    // see that function's own doc comment.
+    let free_vars: Vec<(u64, ExprId)> = vec![
+        (fvar_id(d, u), f_ty),
+        (fvar_id(d, up), f_ty),
+        (fvar_id(d, v), f_ty),
+        (fvar_id(d, vp), f_ty),
+        (fvar_id(d, a), carrier),
+        (fvar_id(d, b), carrier),
+        (fvar_id(d, hab), hab_ty),
+        (fvar_id(d, hu), hu_ty),
+        (fvar_id(d, hv), hv_ty),
+        (fvar_id(d, huc_u), huc_u_ty),
+        (fvar_id(d, huc_up), huc_up_ty),
+        (fvar_id(d, huc_v), huc_v_ty),
+        (fvar_id(d, huc_vp), huc_vp_ty),
+    ];
+
+    // --- BoundedOn witnesses for u, u', v, v', all from the UC hypotheses --
+    let (k_u, hb_u) = bounded_via_uc(d, p, u, a, b, huc_u, hab, &free_vars);
+    let (k_up, hb_up) = bounded_via_uc(d, p, up, a, b, huc_up, hab, &free_vars);
+    let (k_v, hb_v) = bounded_via_uc(d, p, v, a, b, huc_v, hab, &free_vars);
+    let (k_vp, hb_vp) = bounded_via_uc(d, p, vp, a, b, huc_vp, hab, &free_vars);
+
+    // --- product rule: HasDerivativeOn (u*v) (u'v + uv') a b ---------------
+    let hd_uv = d.const_app(
+        p.has_derivative_mul,
+        &[
+            u, up, v, vp, a, b, hu, hv, huc_u, k_u, k_v, k_vp, hb_u, hb_v, hb_vp,
+        ],
+    );
+
+    // --- hand-built copies of the SAME shapes `has_derivative_mul` builds
+    // internally (`declare_has_derivative_mul`'s own `fmul`/`fmul_p`), so
+    // the beta-redex gap between them is the only bridging this proof needs.
+    let uv_lambda = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let ur = d.apply(u, &[r]);
+        let vr = d.apply(v, &[r]);
+        let prod = cmul(d, p, ur, vr);
+        d.lam_fv(r_fv, carrier, prod)
+    };
+    let upv_lambda = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let upr = d.apply(up, &[r]);
+        let vr = d.apply(v, &[r]);
+        let prod = cmul(d, p, upr, vr);
+        d.lam_fv(r_fv, carrier, prod)
+    };
+    let uvp_lambda = {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let ur = d.apply(u, &[r]);
+        let vpr = d.apply(vp, &[r]);
+        let prod = cmul(d, p, ur, vpr);
+        d.lam_fv(r_fv, carrier, prod)
+    };
+    let deriv_lambda = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let upx = d.apply(up, &[x]);
+        let vx = d.apply(v, &[x]);
+        let ux = d.apply(u, &[x]);
+        let vpx = d.apply(vp, &[x]);
+        let t1 = cmul(d, p, upx, vx);
+        let t2 = cmul(d, p, ux, vpx);
+        let sum = cadd(d, p, t1, t2);
+        d.lam_fv(x_fv, carrier, sum)
+    };
+
+    // --- uniform continuity of u'v, uv', and their sum ----------------------
+    let uc_upv = d.lemma(
+        p.uniformly_continuous_mul,
+        &[up, v, a, b, huc_up, huc_v, k_up, k_v, hb_up, hb_v],
+    );
+    let uc_uvp = d.lemma(
+        p.uniformly_continuous_mul,
+        &[u, vp, a, b, huc_u, huc_vp, k_u, k_vp, hb_u, hb_vp],
+    );
+    let uc_deriv = d.lemma(
+        p.uniformly_continuous_add,
+        &[upv_lambda, uvp_lambda, a, b, uc_upv, uc_uvp],
+    );
+    // uc_deriv : UniformlyContinuousOn (fun r => add (upv_lambda r) (uvp_lambda r)) a b
+    //   ~beta~ UniformlyContinuousOn deriv_lambda a b
+
+    let (kb_deriv, hbnd_deriv) =
+        bounded_via_uc(d, p, deriv_lambda, a, b, uc_deriv, hab, &free_vars);
+
+    // --- FTC-II applied to derivative (u'v+uv'), antiderivative (u*v) ------
+    let h_ftc2 = d.const_app(
+        p.integral_eq_antideriv_diff,
+        &[
+            deriv_lambda,
+            uv_lambda,
+            a,
+            b,
+            hab,
+            uc_deriv,
+            kb_deriv,
+            hbnd_deriv,
+            hd_uv,
+        ],
+    );
+    // h_ftc2 : Equiv (integral deriv_lambda a b hab uc_deriv)
+    //                (add (apply uv_lambda b) (neg (apply uv_lambda a)))  [unreduced]
+
+    // --- integral_add: split integral(u'v+uv') into integral(u'v)+integral(uv') ---
+    let h_split = d.const_app(
+        p.integral_add,
+        &[upv_lambda, uvp_lambda, a, b, hab, uc_deriv, uc_upv, uc_uvp],
+    );
+    // h_split : Equiv (integral (fun t => add (upv_lambda t) (uvp_lambda t)) a b hab uc_deriv)
+    //                 (add (integral upv_lambda a b hab uc_upv) (integral uvp_lambda a b hab uc_uvp))
+    //   ~beta~ LHS is `integral deriv_lambda a b hab uc_deriv`
+
+    let i_deriv = d.const_app(p.integral, &[deriv_lambda, a, b, hab, uc_deriv]);
+    let i1 = d.const_app(p.integral, &[upv_lambda, a, b, hab, uc_upv]);
+    let i2 = d.const_app(p.integral, &[uvp_lambda, a, b, hab, uc_uvp]);
+    let sum_i1_i2 = cadd(d, p, i1, i2);
+
+    let h_split_bridged = echain(d, p, i_deriv, &[(sum_i1_i2, h_split)]);
+    // h_split_bridged : Equiv i_deriv sum_i1_i2
+
+    // --- bridge FTC-II's unreduced RHS to the reduced `u(b)v(b) - u(a)v(a)` ---
+    let ub = d.apply(u, &[b]);
+    let vb = d.apply(v, &[b]);
+    let ua = d.apply(u, &[a]);
+    let va = d.apply(v, &[a]);
+    let ubvb = cmul(d, p, ub, vb);
+    let uava = cmul(d, p, ua, va);
+    let n_uava = cneg(d, p, uava);
+    let rhs_reduced = cadd(d, p, ubvb, n_uava);
+
+    let h_ftc2_bridged = echain(d, p, i_deriv, &[(rhs_reduced, h_ftc2)]);
+    // h_ftc2_bridged : Equiv i_deriv rhs_reduced
+
+    // --- assemble: sum_i1_i2 ~ rhs_reduced, then I1 ~ rhs_reduced - I2 ------
+    let h_split_symm = d.lemma(p.equiv_symm, &[i_deriv, sum_i1_i2, h_split_bridged]);
+    // h_split_symm : Equiv sum_i1_i2 i_deriv
+    let h3 = d.lemma(
+        p.equiv_trans,
+        &[
+            sum_i1_i2,
+            i_deriv,
+            rhs_reduced,
+            h_split_symm,
+            h_ftc2_bridged,
+        ],
+    );
+    // h3 : Equiv sum_i1_i2 rhs_reduced, i.e. Equiv (add i1 i2) rhs_reduced
+
+    let n_i2 = cneg(d, p, i2);
+    let sum_minus_i2 = cadd(d, p, sum_i1_i2, n_i2); // (i1+i2) - i2
+    let cancel = add_cancel_right(d, p, i1, i2); // Equiv sum_minus_i2 i1
+    let cancel_symm = d.lemma(p.equiv_symm, &[sum_minus_i2, i1, cancel]); // Equiv i1 sum_minus_i2
+
+    let refl_ni2 = d.lemma(p.equiv_refl, &[n_i2]);
+    let h4 = d.lemma(
+        p.add_congr,
+        &[sum_i1_i2, rhs_reduced, n_i2, n_i2, h3, refl_ni2],
+    );
+    // h4 : Equiv sum_minus_i2 (add rhs_reduced n_i2)
+
+    let final_rhs = cadd(d, p, rhs_reduced, n_i2); // rhs_reduced - I2
+    let final_eq = echain(d, p, i1, &[(sum_minus_i2, cancel_symm), (final_rhs, h4)]);
+    // final_eq : Equiv i1 final_rhs, i.e. Equiv (integral u'v) (add rhs_reduced (neg (integral uv')))
+
+    let concl = equiv(d, p, i1, final_rhs);
+
+    let ty = {
+        // `hab`, `huc_u`, `huc_up`, `huc_v`, `huc_vp` are all referenced BY
+        // VALUE later in `concl` (embedded in `i1`/`i2`/`uc_upv`/`uc_uvp`),
+        // so they need `pi_fv` (which abstracts every occurrence), not
+        // `arrow` (a plain non-dependent Pi that leaves them free) --
+        // exactly `integral_eq_antideriv_diff`'s own `pi_fv(hab_fv, ...)`
+        // for the same reason. `hu`/`hv` are used only inside the PROOF
+        // (never inside `concl`), so `arrow` is correct for them, matching
+        // that same theorem's `hg`/`hbnd`.
+        let t = d.pi_fv(huc_vp_fv, huc_vp_ty, concl);
+        let t = d.pi_fv(huc_v_fv, huc_v_ty, t);
+        let t = d.pi_fv(huc_up_fv, huc_up_ty, t);
+        let t = d.pi_fv(huc_u_fv, huc_u_ty, t);
+        let t = d.arrow(hv_ty, t);
+        let t = d.arrow(hu_ty, t);
+        let t = d.pi_fv(hab_fv, hab_ty, t);
+        let t = d.pi_fv(b_fv, carrier, t);
+        let t = d.pi_fv(a_fv, carrier, t);
+        let t = d.pi_fv(vp_fv, f_ty, t);
+        let t = d.pi_fv(v_fv, f_ty, t);
+        let t = d.pi_fv(up_fv, f_ty, t);
+        d.pi_fv(u_fv, f_ty, t)
+    };
+    let value = {
+        let val = d.lam_fv(huc_vp_fv, huc_vp_ty, final_eq);
+        let val = d.lam_fv(huc_v_fv, huc_v_ty, val);
+        let val = d.lam_fv(huc_up_fv, huc_up_ty, val);
+        let val = d.lam_fv(huc_u_fv, huc_u_ty, val);
+        let val = d.lam_fv(hv_fv, hv_ty, val);
+        let val = d.lam_fv(hu_fv, hu_ty, val);
+        let val = d.lam_fv(hab_fv, hab_ty, val);
+        let val = d.lam_fv(b_fv, carrier, val);
+        let val = d.lam_fv(a_fv, carrier, val);
+        let val = d.lam_fv(vp_fv, f_ty, val);
+        let val = d.lam_fv(v_fv, f_ty, val);
+        let val = d.lam_fv(up_fv, f_ty, val);
+        d.lam_fv(u_fv, f_ty, val)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.integral_by_parts,
         uparams: vec![],
         ty,
         value,
