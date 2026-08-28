@@ -6268,12 +6268,11 @@ fn sin_fn_lb_numeric(
         rat.normalize_add_normalize,
         &[of_n1c, succ3, h_tgt, of_n512c, succ749, h_bound],
     );
-    let (_sum_lhs_check, sum_prod_raw) = req_sides(d, step_sum)?;
+    let (sum_lhs_check, sum_prod_raw) = req_sides(d, step_sum)?;
 
     let nat_div_succ_512_749 = d.const_app(rat.nat_div_succ, &[n512, n749]);
     let of_rat_add_step = d.lemma(p.of_rat_add, &[target_rat, nat_div_succ_512_749]);
     let sum_val = cadd(d, p, target_val, af1_bound_embed);
-    let sum_lhs_check = _sum_lhs_check;
     let embed_sum_lhs = embed(d, p, sum_lhs_check);
     let embed_sum_prod_raw = embed(d, p, sum_prod_raw);
     let sum_eq_step2 = embed_eq_to_equiv_here(d, p, sum_lhs_check, sum_prod_raw, step_sum);
