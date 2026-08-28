@@ -1056,7 +1056,13 @@ fn declare_fib_add_two_strictmono(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<
                 let le_fib_bp2_self_succ = d.lemma(p.le_succ, &[fib_bp2]); // Le fib_bp2 (succ fib_bp2)
                 let le_fib_bp2_sbp2 = d.lemma(
                     p.le_trans,
-                    &[fib_bp2, succ_fib_bp2, fib_sbp2, le_fib_bp2_self_succ, step_lt],
+                    &[
+                        fib_bp2,
+                        succ_fib_bp2,
+                        fib_sbp2,
+                        le_fib_bp2_self_succ,
+                        step_lt,
+                    ],
                 ); // Le fib_bp2 fib_sbp2
 
                 let result = d.lemma(
@@ -1228,7 +1234,6 @@ fn declare_fib_strictmonoon(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Ke
     Ok(())
 }
 
-/// Declare every theorem in this module.
 // ============================================================================
 // `fib_lt_fib`.
 // ============================================================================
@@ -1311,7 +1316,14 @@ fn declare_fib_lt_fib(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelEr
             };
 
             let case_result = or_elim(
-                d, &p, lt_mn_ty, ge_ty, lt_mn_ty, left_branch, right_branch, dichotomy,
+                d,
+                &p,
+                lt_mn_ty,
+                ge_ty,
+                lt_mn_ty,
+                left_branch,
+                right_branch,
+                dichotomy,
             );
             d.lam_fv(h_fv, lt_fn_ty, case_result)
         };
@@ -1340,6 +1352,7 @@ fn declare_fib_lt_fib(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelEr
     Ok(())
 }
 
+/// Declare every theorem in this module.
 pub(super) fn declare_fib_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     declare_fib_defs(d, p)?;
     declare_fib_add_two(d, p)?;
