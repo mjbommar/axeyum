@@ -49,8 +49,10 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import re
+import subprocess
 import sys
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 import pathlib
 from pathlib import Path
 from typing import Any
@@ -159,6 +161,232 @@ NOT_A_FRAGMENT = {"none", "None", "unknown", "", None}
 #             Goldbach lives here and will not be closed by it.
 PROOF_ROUTE = {"Nat", "Int", "Real"}
 # Anything else, `none` included, has no route at all today.
+
+# --------------------------------------------------------------------------
+# Kernel declaration coverage.
+#
+# `route_class`/`PROOF_ROUTE` above answer "does a PROCEDURE exist for this
+# fragment" -- they say nothing about whether the fact's STATEMENT can even
+# be written in this kernel. Measured 2026-08-28 (docs/research/
+# 11-design-review/2026-08-28-is-the-open-frontier-stale.md): at least 30 of
+# 128 open facts name a function -- `Nat.log`, `Nat.sqrt`, `Nat.clog`, and
+# others this file's own check goes on to find -- that this kernel has never
+# declared under any name. Every one of those was reported by `describe()`
+# as "proof route only -- needs a kernel proof", true of an
+# UNPROVED-BUT-STATABLE fact and false of one that cannot be stated at all:
+# no kernel proof closes a fact whose statement does not type-check.
+#
+# The check below is DERIVED, never authored: it reads the kernel's own
+# declaration environment (via `kernel_declaration_projection`'s unfiltered
+# emit, built `--release` -- CLAUDE.md's `prelude_theorem_inventory` gotcha
+# about a debug stack overflow applies to this binary too) and every SETTLED
+# fact's own `formal.statement` (this ledger, not a side list). A candidate
+# identifier is reported MISSING only when (a) its namespace is one this
+# kernel implements at all, (b) no declaration carries that exact name, AND
+# (c) no already-proved fact's statement used it either.
+#
+# (c) exists because a name absent from the environment does not always mean
+# the CAPABILITY is absent: `Nat.Prime`/`Nat.Coprime` are used constantly in
+# Mathlib-derived statements and are genuinely not declared names in this
+# kernel -- primality and coprimality are built INLINE, per CLAUDE.md's
+# "hiding place 2" (a step built inside a larger declaration and never
+# named) -- yet many `nat.prime`/`nat.coprime` facts naming them are already
+# PROVED. Without (c), every prime/coprime fact would be misreported as
+# unstatable, which is false and would have been the exact "checker that
+# cannot fail" shape this file was written to avoid, just inverted -- crying
+# wolf instead of staying silent.
+#
+# What this CANNOT see, stated so the count is not overread:
+#
+#   - A dot-call receiver that is not a single bound identifier, e.g.
+#     `(n * n).sqrt`, is invisible -- only `n.sqrt` where `n`'s binder type
+#     was found by `binder_types` resolves. Measured: 2 of `nat.sqrt`'s 10
+#     open facts use a compound receiver and are NOT flagged, though
+#     `Nat.sqrt` is equally absent for them. This under-reports, in the safe
+#     direction (a fact never flagged as blocked when it should not have
+#     been is impossible here -- the failure mode is a missed positive, not
+#     a false one).
+#   - (c) is a corroborating signal read from the ledger, not proof a name
+#     IS reachable -- it can only ever suppress a false positive this check
+#     would otherwise raise, never invent a false negative.
+#   - Only two Lean spellings are parsed: an explicit namespace path
+#     (`Nat.log b n`) and Lean's own dot-notation sugar (`n.sqrt`). A name
+#     written any other way in `formal.statement` is invisible to this.
+#   - This inspects `formal.statement` text alone. It says nothing about
+#     whether a PROOF ROUTE exists for a statable fact -- that question is
+#     `route_class`'s, unchanged by any of this.
+# --------------------------------------------------------------------------
+
+# The prebuilt, `--release` binary is used DIRECTLY (no `cargo run`, no cargo
+# lock) -- CLAUDE.md's own guidance for measurement under lane contention,
+# and the only way this check can run inside `just next` without adding a
+# cargo build to a command every lane calls constantly. If it was never
+# built here, coverage degrades to "not checked", reported explicitly by
+# `main()` -- never silently folded into "proof route only".
+KERNEL_PROJECTION_BIN = ROOT / "target" / "release" / "examples" / "kernel_declaration_projection"
+
+# Lean carrier symbols this project has a fixed namespace for. A binder typed
+# anything else (a function type, a generic, `List ℕ`, ...) is silently
+# skipped by `binder_types` -- a coverage gap in the SAFE direction, since it
+# only means a receiver goes unresolved, never that a wrong namespace is
+# guessed.
+TYPE_TO_NAMESPACE = {"ℕ": "Nat", "ℤ": "Int", "ℚ": "Rat", "ℝ": "CReal", "ℂ": "Complex"}
+
+_QUALIFIED_IDENT_RE = re.compile(r"\b[A-Z][A-Za-z0-9]*(?:\.[A-Za-z_][A-Za-z0-9_']*)+\b")
+_DOT_CHAIN_RE = re.compile(r"\b([a-z_][A-Za-z0-9_']*)((?:\.[A-Za-z_][A-Za-z0-9_']*)+)\b")
+_BINDER_TYPE_RE = re.compile(r"[({]\s*([A-Za-z_][A-Za-z0-9_' ]*?)\s*:\s*([^()}{]+?)\s*[)}]")
+
+# `label \t kind \t name \t footprint \t type_deps \t decl_deps \t theorem_deps \t type`
+# -- `kernel_declaration_projection`'s own row shape (examples/
+# kernel_declaration_projection.rs, function `emit`). Only column 2 (name) is
+# read here.
+KERNEL_PROJECTION_NAME_COLUMN = 2
+
+# Spans more than one prelude on purpose: a partial or truncated run (a
+# debug-build SIGABRT, a timeout mid-emit) must not silently read as "these
+# declarations don't exist". See CLAUDE.md: "an empty answer from a tool
+# that was never pointed at your subject is indistinguishable from a strong
+# negative result."
+KERNEL_INDEX_POSITIVE_CONTROLS = ("Nat.add", "Nat.choose", "Int.gcd")
+
+KernelIndex = namedtuple("KernelIndex", ["names", "namespaces", "row_count"])
+
+
+class KernelIndexError(RuntimeError):
+    """The kernel declaration projection could not be trusted."""
+
+
+def binder_types(statement: str) -> dict[str, str]:
+    """`(m n : ℕ)` -> `{'m': 'Nat', 'n': 'Nat'}`, for namespaces this file knows."""
+    out: dict[str, str] = {}
+    for names_part, raw_type in _BINDER_TYPE_RE.findall(statement):
+        namespace = TYPE_TO_NAMESPACE.get(raw_type.strip())
+        if namespace is None:
+            continue
+        for name in names_part.split():
+            out[name] = namespace
+    return out
+
+
+def candidate_identifiers(statement: str) -> set[str]:
+    """Every qualified-name candidate `statement` could be read as naming.
+
+    Two Lean spellings, both handled: `Nat.log b n` (an explicit namespace
+    path -- the whole dotted run is one candidate) and `n.sqrt` (dot-notation
+    sugar for `Nat.sqrt n` -- resolved only when `n`'s binder type was found,
+    one candidate per segment in the chain, since each segment is a separate
+    application: `n.succ.sqrt` is `Nat.sqrt (Nat.succ n)`, candidates
+    `{Nat.succ, Nat.sqrt}`).
+    """
+    candidates = set(_QUALIFIED_IDENT_RE.findall(statement))
+    binders = binder_types(statement)
+    for match in _DOT_CHAIN_RE.finditer(statement):
+        receiver, chain = match.group(1), match.group(2)
+        namespace = binders.get(receiver)
+        if namespace is None:
+            continue
+        for segment in chain.split(".")[1:]:
+            candidates.add(f"{namespace}.{segment}")
+    return candidates
+
+
+def parse_kernel_projection(tsv_text: str) -> KernelIndex:
+    """Parse `kernel_declaration_projection`'s unfiltered TSV emit."""
+    names: set[str] = set()
+    for line in tsv_text.splitlines():
+        fields = line.split("\t")
+        if len(fields) <= KERNEL_PROJECTION_NAME_COLUMN:
+            continue
+        names.add(fields[KERNEL_PROJECTION_NAME_COLUMN])
+    namespaces = {name.split(".", 1)[0] for name in names if "." in name}
+    return KernelIndex(names=frozenset(names), namespaces=frozenset(namespaces),
+                       row_count=len(names))
+
+
+def validate_kernel_index(index: KernelIndex) -> None:
+    """Raise if `index` cannot be trusted -- fail loudly, not silently missing.
+
+    Every downstream check reads absence-from-`names` as "this kernel cannot
+    state this fact", so a broken index (empty, or missing a declaration a
+    healthy build always has) must not quietly pass through as a real
+    negative.
+    """
+    if index.row_count == 0:
+        raise KernelIndexError("kernel declaration projection produced zero rows")
+    missing_controls = [
+        name for name in KERNEL_INDEX_POSITIVE_CONTROLS if name not in index.names
+    ]
+    if missing_controls:
+        raise KernelIndexError(
+            "kernel declaration projection is missing positive-control "
+            f"declaration(s) {missing_controls!r}"
+        )
+
+
+def load_kernel_index(path: Path | None = None, timeout: float = 90.0) -> KernelIndex | None:
+    """Load a `KernelIndex`, or `None` if unavailable -- this must never crash
+    `just next`.
+
+    Reads a captured TSV at `path` if given (tests, `--kernel-projection`),
+    else runs the prebuilt `kernel_declaration_projection` binary directly.
+    If that binary was never built here, this degrades to `None`, reported
+    explicitly by the caller -- never silently folded into "proof route
+    only".
+    """
+    try:
+        if path is not None:
+            text = path.read_text()
+        else:
+            if not KERNEL_PROJECTION_BIN.exists():
+                return None
+            completed = subprocess.run(  # noqa: S603
+                [str(KERNEL_PROJECTION_BIN)], cwd=ROOT, capture_output=True,
+                text=True, timeout=timeout, check=False,
+            )
+            if completed.returncode != 0:
+                return None
+            text = completed.stdout
+        index = parse_kernel_projection(text)
+        validate_kernel_index(index)
+        return index
+    except (OSError, subprocess.TimeoutExpired, KernelIndexError):
+        return None
+
+
+def proven_identifier_names(facts: dict[str, dict]) -> set[str]:
+    """Every candidate identifier appearing in a SETTLED fact's statement.
+
+    Read from the ledger, not authored: a name this kernel encodes
+    structurally rather than as its own declaration (`Nat.Prime`,
+    `Nat.Coprime`) surfaces here the moment any fact using it is proved --
+    the corroborating signal that keeps those from being misread as absent.
+    """
+    proven: set[str] = set()
+    for fact in facts.values():
+        if not settled(fact):
+            continue
+        proven |= candidate_identifiers(fact["formal"]["statement"])
+    return proven
+
+
+def missing_declarations(
+    statement: str, kernel_index: KernelIndex, proven: set[str]
+) -> list[str]:
+    """Candidate identifiers `statement` needs that this kernel has never
+    declared under that name and that no proved fact has used either.
+
+    Empty means: nothing this check looked for is missing -- never a
+    positive proof the statement IS fully statable (see the module note
+    above on what this cannot see).
+    """
+    return sorted(
+        candidate
+        for candidate in candidate_identifiers(statement)
+        if candidate.split(".", 1)[0] in kernel_index.namespaces
+        and candidate not in kernel_index.names
+        and candidate not in proven
+    )
+
 
 class FrontierError(RuntimeError):
     """A machine frontier artifact is stale, malformed, or unsafe to use."""
@@ -442,9 +670,22 @@ def gate_holds(facts: dict[str, dict]) -> dict[str, list[str]]:
 
 def describe(fact: dict, facts: dict[str, dict], show_unlocks: bool,
              unlocks: dict[str, list[str]], decidable: set[str],
-             held: dict[str, list[str]] | None = None) -> str:
+             held: dict[str, list[str]] | None = None,
+             missing_defs: list[str] | None = None) -> str:
     frag = fact["formal"]["fragment"]
-    if frag in decidable:
+    if missing_defs:
+        # Checked BEFORE decidable/proof-route/no-route: if the statement
+        # names an undeclared kernel definition, no route -- procedure or
+        # proof -- can possibly close it, whatever `frag` says. This is the
+        # split CLAUDE.md asked for: "needs a kernel proof" is true only of
+        # a fact that can be STATED; a fact that cannot is a different task
+        # (build the definition) with a different size.
+        reach = (
+            "BLOCKED — statement names undeclared kernel definition(s): "
+            f"{', '.join(missing_defs)} (build these first; this is not a "
+            "proof task)"
+        )
+    elif frag in decidable:
         reach = "DECIDABLE — dispatch it"
     elif frag in PROOF_ROUTE:
         reach = "proof route only — needs a kernel proof, no search will close it"
@@ -1019,6 +1260,9 @@ def main() -> int:
                          help="verify a saved machine frontier against the ledger")
     machine.add_argument("--chains", action="store_true",
                          help="enumerate settled B -> A pairs whose dependency is DERIVABLE")
+    ap.add_argument("--kernel-projection", type=Path,
+                    help="a captured `kernel_declaration_projection` TSV emit, in place of "
+                    "running the prebuilt binary at target/release/examples/. For tests.")
     args = ap.parse_args()
 
     if not FACTS.is_dir():
@@ -1058,6 +1302,21 @@ def main() -> int:
             return 1
     held = gate_holds(facts)
 
+    # Kernel declaration coverage (see the module note above `KernelIndex`):
+    # distinguishes "unproved but statable" from "cannot be stated at all"
+    # among open facts. Degrades to `None` -- reported, never hidden -- if
+    # the prebuilt projection binary was never built here.
+    kernel_index = load_kernel_index(args.kernel_projection)
+    missing_by_fact: dict[str, list[str]] = {}
+    if kernel_index is not None:
+        proven = proven_identifier_names(facts)
+        for fact_id, fact in facts.items():
+            if fact["epistemic_status"] not in {"open", "conjectured", "empirical"}:
+                continue
+            missing = missing_declarations(fact["formal"]["statement"], kernel_index, proven)
+            if missing:
+                missing_by_fact[fact_id] = missing
+
     if args.chains:
         try:
             return print_chains(facts)
@@ -1094,16 +1353,36 @@ def main() -> int:
             print("  (none)")
             continue
         for fact in rows:
-            print(describe(fact, facts, args.unlocks, unlocks, decidable_set, held))
+            print(describe(fact, facts, args.unlocks, unlocks, decidable_set, held,
+                           missing_by_fact.get(fact["id"])))
+
+    if kernel_index is None:
+        print(
+            f"\nkernel declaration coverage: NOT CHECKED — no prebuilt binary at "
+            f"{KERNEL_PROJECTION_BIN.relative_to(ROOT)}. Build it (`--release`) to "
+            "distinguish 'unproved' from 'cannot be stated' among open facts: "
+            "cargo build --release -p axeyum-lean-kernel "
+            "--example kernel_declaration_projection"
+        )
+    elif missing_by_fact:
+        blocked_names = sorted({name for names in missing_by_fact.values() for name in names})
+        print(
+            f"\n{len(missing_by_fact)} open fact(s) cannot be STATED yet — they name a "
+            "kernel definition that does not exist under any name, and no proof "
+            "closes a statement that does not type-check:"
+        )
+        print("  missing: " + ", ".join(blocked_names))
 
     if not args.band:
         research = bands.get("research", [])
-        decidable = [f for f in research if f["formal"]["fragment"] in decidable_set]
-        proofish = [f for f in research if f["formal"]["fragment"] in PROOF_ROUTE]
+        statable_research = [f for f in research if f["id"] not in missing_by_fact]
+        decidable = [f for f in statable_research if f["formal"]["fragment"] in decidable_set]
+        proofish = [f for f in statable_research if f["formal"]["fragment"] in PROOF_ROUTE]
+        unstatable = [f for f in research if f["id"] in missing_by_fact]
         print(f"\n{len(facts)} facts. Research frontier {len(research)}: "
               f"{len(decidable)} decidable by dispatch, {len(proofish)} needing a "
-              f"kernel proof, {len(research) - len(decidable) - len(proofish)} with "
-              f"no route.")
+              f"kernel proof, {len(statable_research) - len(decidable) - len(proofish)} "
+              f"with no route, {len(unstatable)} not yet statable.")
         if decidable:
             print("Dispatch next: " + ", ".join(f["id"] for f in sorted(
                 decidable, key=lambda f: f["id"])))
