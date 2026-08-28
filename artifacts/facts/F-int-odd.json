@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "id": "F:int-odd",
+  "title": "Int.Odd n := Nat.Odd (natAbs n) -- magnitude alone decides parity",
+  "statement": "Int.Odd n : Prop is defined as Nat.Odd (Int.natAbs n), not as a fresh Int-level existential (Mathlib's Odd n := exists k, n = 2*k + 1 generalized to Int). Negation does not change parity, so magnitude alone decides it, and this form is free at both Int.rec constructors because natAbs itself reduces purely on each: Odd (ofNat a) reduces to Nat.Odd a, and Odd (negSucc m) reduces to Nat.Odd (succ m). A fresh Int-witnessed existential would instead need a sign argument at every use site to relate it back to the already-built Nat.Even/Nat.Odd.",
+  "formal": {
+    "language": "lean4",
+    "statement": "def Int.Odd : ((x0 : Int) -> Prop)",
+    "fragment": "Int",
+    "free_symbols": [
+      "x0"
+    ],
+    "kernel_theorem": "Int.Odd"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.Odd",
+      "kind": "kernel-term",
+      "supports": "Int.Odd is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "kernel_declaration_projection --require-declaration (DIRECT, fail-on-absence)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration Int.Odd --require-kind definition 2>/dev/null | grep -cE '^found[[:space:]]integer[[:space:]]definition[[:space:]]Int\\.Odd[[:space:]]'",
+      "checker_seconds": 10,
+      "notes": "Int.Odd is a Declaration::Definition, so int_theorem_inventory/nat_theorem_inventory/prelude_theorem_inventory (all filtered to Declaration::Theorem) would report zero rows for it -- the CLAUDE.md gotcha this repository documents. Uses the DIRECT 'kernel_declaration_projection --require-declaration' checker instead, anchored on the native 'integer' prelude row (Int.Odd also shows up, separately, under every downstream prelude that rebuilds Int from scratch as its own Kernel instance -- characterization/rat/creal/complex/cpoint). Verified on this tree: exactly one 'found\\tinteger\\tdefinition\\tInt.Odd\\t...' line. --release is MANDATORY: this tool also builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-Int.Odd",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the integer prelude's trusted surface is empty, which bounds Int.Odd",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free integer",
+      "checker_seconds": 12,
+      "notes": "Re-measured on this tree: integer trusted surface = 0 (all downstream preludes -- string/creal/complex/cpoint -- print total_trusted=0 too). That bounds every declaration in the integer environment, including Int.Odd, since a declaration cannot depend on a trusted declaration the environment does not contain. --require-axiom-free <name> errors for a prelude never built by this run rather than silently passing on zero rows. --release is MANDATORY here."
+    },
+    {
+      "id": "evaluation-Int.Odd-concrete-both-signs",
+      "kind": "unit-test",
+      "supports": "The TRUSTED GATE only checks that Int.Odd : Int -> Prop is WELL-TYPED, not that it means the right thing (CLAUDE.md's documented gotcha for exactly this class of defect, with Nat.lor as the sharpest instance -- a predicate accidentally true of the wrong parity would type-check identically). This test instantiates it at concrete values of BOTH signs with a genuine positive AND negative witness, never an absence-of-proof argument: Odd (ofNat 3) is inhabited by the Nat.Odd 3 witness (3 = succ(1+1)); Not (Odd (ofNat 4)) is inhabited by even_not_odd(4) applied to a hand-built Even 4 (4 = 2+2); Odd (negSucc 2) [-3] and Not (Odd (negSucc 3)) [-4] reuse the SAME two witnesses respectively, confirming natAbs (negSucc m) reducing to succ m is what makes sign handling free, as the definition's own design claims.",
+      "check_status": "checked",
+      "checkers": [
+        "cargo test (Kernel::infer + Kernel::def_eq, discriminating: fails if either sign's witness lands on the wrong predicate)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib int_prelude::int_prelude_tests::int_odd_applies_at_concrete_values_of_both_signs 2>&1 | grep -c '^test result: ok\\. 1 passed'",
+      "checker_seconds": 15,
+      "notes": "crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs. The suite must be run with an explicit test-name filter and a NONZERO pass count confirmed -- `cargo test --lib int_prelude::` (bare form) substring-matches into an unrelated ~148s creal_point suite per this repository's own documented gotcha."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-28",
+    "established_by": "axeyum-lean-kernel build_int_prelude (crates/axeyum-lean-kernel/src/int_prelude/parity.rs, declare_even_odd_defs)",
+    "source": "canonical type read via kernel_declaration_projection's own UNFILTERED emit mode (cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection, no --require-declaration flag), which prints, per constructed prelude, one TSV row per declaration whose last field is kernel.render_lean(declaration.ty()). That output was grepped for the exact row under this declaration's native prelude label and copied verbatim into formal.statement (a Definition's declared TYPE says nothing about which predicate it computes -- see the evaluation evidence entry above for what actually pins the meaning down). No new probe binary was written; crates/ source was touched only to add the declaration itself and its test."
+  },
+  "notes": "This is a definitional task, not a mirrored Mathlib proposition: no ml430 source theorem states Int.Odd's own definition (Mathlib's Even/Odd are generic algebraic instances, not a bespoke Int predicate), so this fact is filed as F:int-odd rather than an ml430 mirror, per this repository's standing rule that only a lane that actually proves an ml430 statement may flip that fact's status. Unblocks F:ml430-int-fib-of-odd-66560495, which could not even be STATED without this predicate existing. See F:int-even for the Even counterpart and F:int-odd-iff-nat-abs-odd for the named bridge lemma to Nat.Odd."
+}

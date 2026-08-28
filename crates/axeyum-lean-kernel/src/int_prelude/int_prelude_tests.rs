@@ -24,6 +24,7 @@
 
 use crate::ExprId;
 use crate::env::Declaration;
+use crate::nat_prelude::NatOps;
 use crate::{BinderInfo, IntPrelude, Kernel, build_int_prelude};
 
 /// A fixture: a kernel with the integer prelude plus an abstract point `x : Z`;
@@ -182,13 +183,16 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 147] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 150] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.int_is_comm_ring,
         p.mul_eq_zero,
         p.fib_cassini,
         p.fib_two_mul_add_one_pos,
+        p.odd_iff_nat_abs_odd,
+        p.even_iff_nat_abs_even,
+        p.fib_of_odd,
         p.is_quadratic_residue_one,
         p.is_quadratic_residue_mul,
         p.euler_criterion_pm_one,
@@ -383,9 +387,11 @@ fn derived_lemmas(p: &IntPrelude) -> [crate::NameId; 28] {
 /// unlike `nat_prelude_tests.rs`, this file had no `definition_names`
 /// counterpart to `derived_laws`/`derived_lemmas` at all, so none of these
 /// twenty-two had ever had their footprint checked.
-fn definition_names(p: &IntPrelude) -> [crate::NameId; 25] {
+fn definition_names(p: &IntPrelude) -> [crate::NameId; 27] {
     [
         p.fib,
+        p.even,
+        p.odd,
         p.neg_of_nat,
         p.sub_nat_nat,
         p.add,
@@ -2940,4 +2946,212 @@ fn nat_namespace_declarations_made_by_the_int_prelude_are_axiom_free() {
                 .collect::<Vec<_>>()
         );
     }
+}
+
+/// `Int.Odd`/`Int.Even` apply at concrete values of BOTH signs — the whole
+/// point of an `Int`-level (rather than `Nat`-level) parity predicate.
+///
+/// A predicate that is accidentally true of the wrong parity type-checks
+/// exactly as well as a correct one (`CLAUDE.md`'s guard for this task), so
+/// each case below builds a genuine kernel-checked witness — never an
+/// absence-of-proof argument — and confirms it lands on the `Int` predicate
+/// via `Kernel::def_eq`, the same technique
+/// `parity_predicates_apply_at_concrete_witnesses_and_are_axiom_free`
+/// (`nat_prelude_tests.rs`) uses for the `Nat` version.
+///
+/// - `Odd (ofNat 3)`: witnessed directly by `Nat.Odd 3` (`3 = succ(1+1)`).
+/// - `Not (Odd (ofNat 4))`: `even_not_odd` applied to a hand-built `Even 4`
+///   (`4 = 2+2`) — a genuine proof of refutability, not merely an absent one.
+/// - `Odd (negSucc 2)` (i.e. `Odd (-3)`): the SAME `Nat.Odd 3` witness,
+///   because `natAbs (negSucc 2) ≡ succ 2 ≡ 3` — confirming sign handling is
+///   free, exactly as the module doc claims.
+/// - `Not (Odd (negSucc 3))` (i.e. `Not (Odd (-4))`): the SAME `Not (Nat.Odd
+///   4)` witness, since `natAbs (negSucc 3) ≡ succ 3 ≡ 4`.
+#[test]
+fn int_odd_applies_at_concrete_values_of_both_signs() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let mut d = super::ops::IntDev::new(&mut k, p);
+
+    let nat = d.nat_ty();
+    let one = d.level_one();
+
+    let three = d.num(3);
+    let four = d.num(4);
+    let one_nat = d.num(1);
+    let two_nat = d.num(2);
+
+    // Nat.Odd 3, witnessed by 1 (3 = succ(1+1)).
+    let odd3_nat = {
+        let k_fv = d.fresh_fvar();
+        let kv = d.kernel().fvar(k_fv);
+        let kk = d.add(kv, kv);
+        let skk = d.succ(kk);
+        let body = d.eq(three, skk);
+        let pred = d.lam_fv(k_fv, nat, body);
+        let proof = d.refl(three);
+        let intro = d.kernel().const_(p.logic.exists_intro, vec![one]);
+        d.apply(intro, &[nat, pred, one_nat, proof])
+    };
+
+    // Nat.Even 4, witnessed by 2 (4 = 2+2).
+    let even4_nat = {
+        let k_fv = d.fresh_fvar();
+        let kv = d.kernel().fvar(k_fv);
+        let kk = d.add(kv, kv);
+        let body = d.eq(four, kk);
+        let pred = d.lam_fv(k_fv, nat, body);
+        let proof = d.refl(four);
+        let intro = d.kernel().const_(p.logic.exists_intro, vec![one]);
+        d.apply(intro, &[nat, pred, two_nat, proof])
+    };
+    // Not (Nat.Odd 4), via even_not_odd(4) applied to even4_nat.
+    let not_odd4_nat = {
+        let even_not_odd_at_4 = d.lemma(p.nat.even_not_odd, &[four]);
+        d.apply(even_not_odd_at_4, &[even4_nat])
+    };
+
+    // -- ofNat 3 : Odd (ofNat 3) --------------------------------------------
+    let ofnat3 = d.of_nat(three);
+    let odd_ofnat3_ty = d.const_app(p.odd, &[ofnat3]);
+    let odd3_nat_ty = d
+        .kernel()
+        .infer(odd3_nat)
+        .unwrap_or_else(|e| panic!("Nat.Odd 3 (witness 1) should type-check: {e:?}"));
+    assert!(
+        d.kernel().def_eq(odd3_nat_ty, odd_ofnat3_ty),
+        "the Nat.Odd 3 witness must also land on Int.Odd (ofNat 3)"
+    );
+
+    // -- ofNat 4 : Not (Odd (ofNat 4)) ---------------------------------------
+    let ofnat4 = d.of_nat(four);
+    let not_odd_ofnat4_ty = {
+        let odd_ofnat4_ty = d.const_app(p.odd, &[ofnat4]);
+        d.not(odd_ofnat4_ty)
+    };
+    let not_odd4_nat_ty = d
+        .kernel()
+        .infer(not_odd4_nat)
+        .unwrap_or_else(|e| panic!("Not (Nat.Odd 4) should type-check: {e:?}"));
+    assert!(
+        d.kernel().def_eq(not_odd4_nat_ty, not_odd_ofnat4_ty),
+        "even_not_odd(4) applied to Even 4 must also land on Not (Int.Odd (ofNat 4))"
+    );
+
+    // -- negSucc 2 (i.e. -3) : Odd (negSucc 2) -------------------------------
+    let neg_succ_2 = d.neg_succ(two_nat);
+    let odd_neg3_ty = d.const_app(p.odd, &[neg_succ_2]);
+    assert!(
+        d.kernel().def_eq(odd3_nat_ty, odd_neg3_ty),
+        "the SAME Nat.Odd 3 witness must also land on Int.Odd (negSucc 2) = \
+         Int.Odd (-3), since natAbs (negSucc 2) reduces to 3"
+    );
+
+    // -- negSucc 3 (i.e. -4) : Not (Odd (negSucc 3)) -------------------------
+    let three_nat_for_neg = d.num(3);
+    let neg_succ_3 = d.neg_succ(three_nat_for_neg);
+    let not_odd_neg4_ty = {
+        let odd_neg4_ty = d.const_app(p.odd, &[neg_succ_3]);
+        d.not(odd_neg4_ty)
+    };
+    assert!(
+        d.kernel().def_eq(not_odd4_nat_ty, not_odd_neg4_ty),
+        "the SAME Not (Nat.Odd 4) witness must also land on Not (Int.Odd \
+         (negSucc 3)) = Not (Int.Odd (-4)), since natAbs (negSucc 3) reduces \
+         to 4"
+    );
+
+    assert!(
+        d.kernel().axiom_footprint(p.odd).is_empty(),
+        "Int.Odd must rest on zero axioms"
+    );
+    assert!(
+        d.kernel().axiom_footprint(p.even).is_empty(),
+        "Int.Even must rest on zero axioms"
+    );
+    assert!(
+        d.kernel().axiom_footprint(p.odd_iff_nat_abs_odd).is_empty(),
+        "Int.odd_iff_nat_abs_odd must rest on zero axioms"
+    );
+    assert!(
+        d.kernel()
+            .axiom_footprint(p.even_iff_nat_abs_even)
+            .is_empty(),
+        "Int.even_iff_nat_abs_even must rest on zero axioms"
+    );
+}
+
+/// `Int.fib_of_odd` at a concrete odd index of EACH sign: `fib 3 = 2` and
+/// `fib (-3) = fib (negSucc 2) = 2` (`natAbs (-3) = 3`, and `Nat.fib 3 = 2`).
+/// Uses the same `Nat.Odd 3` witness [`int_odd_applies_at_concrete_values_of_both_signs`]
+/// builds, ascribed at each sign via `Kernel::def_eq`.
+#[test]
+fn fib_of_odd_applies_at_a_concrete_odd_index_of_each_sign() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let mut d = super::ops::IntDev::new(&mut k, p);
+
+    let nat = d.nat_ty();
+    let one = d.level_one();
+    let three = d.num(3);
+    let two_nat = d.num(2);
+    let one_nat = d.num(1);
+
+    // Nat.Odd 3, witnessed by 1 (3 = succ(1+1)) -- same construction as above.
+    let odd3_nat = {
+        let k_fv = d.fresh_fvar();
+        let kv = d.kernel().fvar(k_fv);
+        let kk = d.add(kv, kv);
+        let skk = d.succ(kk);
+        let body = d.eq(three, skk);
+        let pred = d.lam_fv(k_fv, nat, body);
+        let proof = d.refl(three);
+        let intro = d.kernel().const_(p.logic.exists_intro, vec![one]);
+        d.apply(intro, &[nat, pred, one_nat, proof])
+    };
+
+    let ofnat3 = d.of_nat(three);
+    // The raw witness's natural type is `Nat.Odd 3`; passing it where
+    // `fib_of_odd`'s hypothesis wants `Int.Odd (ofNat 3)` relies on the
+    // kernel's own defeq check at `add_declaration`/`apply`-time — exactly
+    // what `fib_of_odd`'s ofNat branch itself relies on.
+    let fib_at_pos = d.lemma(p.fib_of_odd, &[ofnat3]);
+    let fib3_pos = d.apply(fib_at_pos, &[odd3_nat]);
+    let fib3_pos_ty = d
+        .kernel()
+        .infer(fib3_pos)
+        .unwrap_or_else(|e| panic!("fib_of_odd (ofNat 3) (Odd 3) should type-check: {e:?}"));
+    let expected_pos_ty = {
+        let fib3 = d.const_app(p.fib, &[ofnat3]);
+        let two = d.num(2);
+        let rhs = d.of_nat(two);
+        d.ieq(fib3, rhs)
+    };
+    assert!(
+        d.kernel().def_eq(fib3_pos_ty, expected_pos_ty),
+        "fib_of_odd (ofNat 3) (Odd 3) must land on Eq Int (fib 3) (ofNat 2)"
+    );
+
+    let neg_succ_2 = d.neg_succ(two_nat);
+    let fib_at_neg = d.lemma(p.fib_of_odd, &[neg_succ_2]);
+    let fib3_neg = d.apply(fib_at_neg, &[odd3_nat]);
+    let fib3_neg_ty = d
+        .kernel()
+        .infer(fib3_neg)
+        .unwrap_or_else(|e| panic!("fib_of_odd (negSucc 2) (Odd (-3)) should type-check: {e:?}"));
+    let expected_neg_ty = {
+        let fib_neg3 = d.const_app(p.fib, &[neg_succ_2]);
+        let two = d.num(2);
+        let rhs = d.of_nat(two);
+        d.ieq(fib_neg3, rhs)
+    };
+    assert!(
+        d.kernel().def_eq(fib3_neg_ty, expected_neg_ty),
+        "fib_of_odd (negSucc 2) (Odd (-3)) must land on Eq Int (fib (-3)) (ofNat 2)"
+    );
+
+    assert!(
+        d.kernel().axiom_footprint(p.fib_of_odd).is_empty(),
+        "Int.fib_of_odd must rest on zero axioms"
+    );
 }

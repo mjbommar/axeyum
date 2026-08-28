@@ -1154,9 +1154,8 @@ pub(super) fn declare_fib_of_odd(d: &mut IntDev<'_>) -> Result<(), KernelError> 
                         let rhs = d.of_nat(rhs_nat);
                         let br = d.irefl(lhs);
                         let one_mul_pf = d.lemma(p.nat.one_mul, &[fib_sm]);
-                        let cast = d.nat_eq_to_int(rhs_nat, fib_sm, one_mul_pf, &|d, t| {
-                            d.of_nat(t)
-                        });
+                        let cast =
+                            d.nat_eq_to_int(rhs_nat, fib_sm, one_mul_pf, &|d, t| d.of_nat(t));
                         d.itrans(lhs, rhs, ofnat_fib_sm, br, cast)
                     };
 
