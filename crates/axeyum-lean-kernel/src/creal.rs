@@ -4785,12 +4785,19 @@ pub struct CRealPrelude {
     /// constant functions `±M`); no new estimate, no Riemann sum, no
     /// modulus. See `creal/integral.rs`'s `declare_integral_abs_le_of_bound`.
     pub integral_abs_le_of_bound: NameId,
-    /// `CReal.integral_sub_linear_le : ∀ (F : CReal → CReal) (x y B : CReal)
+    /// `CReal.integral_sub_linear_le : ∀ (F : CReal → CReal) (x y z B : CReal)
     /// (hxy : le x y) (u : UniformlyContinuousOn F x y),
-    /// (∀ t, le x t → le t y → le (abs (add (F t) (neg (F x)))) B) →
-    /// le (abs (add (integral F x y hxy u) (neg (mul (F x) (add y (neg x))))))
+    /// (∀ t, le x t → le t y → le (abs (add (F t) (neg (F z)))) B) →
+    /// le (abs (add (integral F x y hxy u) (neg (mul (F z) (add y (neg x))))))
     ///    (mul B (add y (neg x)))` —
-    /// **`|∫ₓ^y F − F(x)·(y − x)| ≤ B·(y − x)`**.
+    /// **`|∫ₓ^y F − F(z)·(y − x)| ≤ B·(y − x)`**.
+    ///
+    /// The base point `z` is a parameter INDEPENDENT of the interval's left
+    /// endpoint, because nothing in the proof uses `z = x` and the
+    /// Fundamental Theorem needs exactly the case where they differ: its
+    /// orientation-free decomposition reads this theorem over `[min x y, y]`
+    /// and `[min x y, x]` with the base point `x` in both (see
+    /// `creal/integral.rs`'s module documentation).
     ///
     /// The SECOND of the two facts
     /// [`Self::has_derivative_integral_const`] names as missing for the
