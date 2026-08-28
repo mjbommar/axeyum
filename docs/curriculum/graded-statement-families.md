@@ -51,13 +51,12 @@ were simply never propagated.
 | **3. Exact form on the decidable fragment** | **Landed, same day as this row was last marked "reachable, not built."** `crates/axeyum-cas/src/mvt.rs`: `polynomial_mvt`/`verify_mvt_certificate`, confirmed present this session (`cargo test -p axeyum-cas --lib mvt::` — **18 passed, 0 failed**, re-run fresh, not read from the lane's own report). For a polynomial `p` with rational coefficients on `[a,b]`, it forms the Rolle reduction `g(x) := p(x) − p(a) − m(x−a)` (`m` the exact secant slope), reuses `extremum::polynomial_extremum` on `g` (and `−g` on a tie) to locate an interior critical point when `deg(p) ≥ 2`, and handles `deg(p) ≤ 1` as its own degenerate branch (`g' ≡ 0` identically, every interior point a witness) — `c` is produced as a **named** `AlgebraicReal`, not merely asserted. `verify_mvt_certificate` independently re-derives the slope, `g`/`g'`, the bracket's Sturm recount, strict interiority, and the conclusion `p'(c) = m`, all from `poly`/`a`/`b` alone. The adversarial case worth naming: `p = x³ − 4x²` on `[0,4]` has `m = 0` and `p'(x) = x(3x−8)`, whose roots are `x = 0` (the **left endpoint itself**) and `x = 8/3` (genuinely interior) — both satisfy the slope equation, so a checker that skipped the strict-interiority re-check would wrongly accept the endpoint (`verify_rejects_an_endpoint_witness` confirms this). **Cost is not simply inherited from `extremum.rs`**: reusing EVT's cheap all-rational degree-5 case (`3x⁵−5x³` on `[−2,2]`) gives a nonzero secant slope, which destroys the factorization that made the *original* derivative cheap to isolate — `g'` becomes an irreducible quartic that declines soundly at ~2–4s instead of resolving cleanly. Measured cost curve (debug build): degree 2 ~2ms, degree 3 (√3 witness) ~5ms, degree 5 (degree-4 algebraic witness) ~27ms. Kernel reconstruction (ADR-0601 §2) is not attempted — this is a CAS-internal-only row 3 until that lands. |
 | **4. Labeled import** | Not attempted. `AxReal`'s 30-axiom package (`crates/axeyum-lean-kernel/src/arith_model.rs:1-13`) axiomatizes only "a commutative ring with 1, compatibly ordered" — no `inv`, no `div`, no completeness/supremum axiom, no Archimedean axiom, no MVT. There is no axiomatized carrier in this repository a classical MVT import would even attach to; building row 4 means adding new axioms first. |
 
-**Verdict (updated 2026-08-27, same day as the `cas-mvt` lane's landing)**:
+**Verdict (updated 2026-08-28: EVT row 2 has since landed — see the
+recommendations below, which now supersede this row's "unfinished EVT"
+reasoning)**:
 MVT's family is 1 real row (constructive substitutes, unregistered as facts),
-1 half-row (row 2 is an inherited assertion resting on an unfinished EVT
-row 2 — **re-confirmed still "in progress" this session**, `extremum.rs`'s
-module doc unchanged; a separate lane is actively building the kernel-side
-EVT refutation in `creal/extreme_value.rs`, not yet landed, outcome not
-guessed here — not a dedicated refutation), **1 landed row (row 3,
+1 half-row (row 2 is an inherited assertion — not a dedicated refutation),
+**1 landed row (row 3,
 `polynomial_mvt`/`verify_mvt_certificate`, CAS-internal only pending kernel
 reconstruction)**, 1 not-applicable-yet row (row 4, no axiomatized target
 exists).
@@ -252,11 +251,21 @@ checked against the declarations they name and matched).
   version of the Pareto argument (row 1 optimal *because* row 2 is refuted,
   per ADR-0603's own stated purpose for row 2), these two are the ones that
   need a genuine counterexample construction, not documentation.
-- EVT's own row 2 (`extremum.rs`'s "in progress" note) should be finished
-  before leaning on it to justify MVT's inherited unavailability. **As of
-  this update a lane is actively building that refutation in
-  `creal/extreme_value.rs`; it had not landed on `main` at merge time, and
-  this note does not guess its outcome.**
+- **EVT's row 2 LANDED 2026-08-27** (`cf77a1912`,
+  `crates/axeyum-lean-kernel/src/creal/extreme_value.rs`) as `CReal.evt_attained_max_decides_sign`,
+  kernel-checked, registered and axiom-free: an attained maximum of
+  `t ↦ t·v` on `[0, 1]` yields `∀ v, v ≤ 0 ∨ 0 ≤ v` — analytic LLPO, the
+  comparison `CReal` deliberately lacks. **This unblocks MVT row 2 by the
+  route (b) named above** ("finish EVT's row 2 first, then derive MVT's
+  unavailability from it"), which is now the cheaper of the two, since route
+  (a)'s independent MVT counterexample was assessed as no easier.
+  **Two caveats, both load-bearing.** (i) EVT row 2 carries ONE labeled
+  remaining gap of its own — that `evtLinear v` is uniformly continuous, i.e.
+  that the counterexample family is inside classical EVT's hypothesis class —
+  which the file marks "ASSERTED here, not proved" rather than hiding; a lane
+  is on it, and MVT row 2 should not be claimed complete while it stands.
+  (ii) The derivation of MVT's unavailability FROM EVT's is itself not built;
+  inheriting a refutation is a proof obligation, not a citation.
 - **MVT row 3 landed 2026-08-27, same day it was named the cheapest win**:
   `crates/axeyum-cas/src/mvt.rs`, `polynomial_mvt`/`verify_mvt_certificate`,
   18 tests. Kernel reconstruction (ADR-0601 §2) is the remaining step, not

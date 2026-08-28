@@ -8,11 +8,20 @@
 //! 1. **Row 1** (`CReal.bounded_of_uniformly_continuous`, kernel side): a
 //!    *computed* bound on an arbitrary uniformly continuous `F`, never
 //!    `∃ K`.
-//! 2. **Row 2** (kernel side, in progress): attainment is refuted as
+//! 2. **Row 2** (kernel side, **LANDED** 2026-08-27 as
+//!    `CReal.evt_attained_max_decides_sign`,
+//!    [`creal/extreme_value.rs`](../../../axeyum-lean-kernel/src/creal/extreme_value.rs),
+//!    commit `cf77a1912`): attainment is refuted as
 //!    constructively unavailable for arbitrary uniformly continuous `F` —
 //!    finding *where* the max occurs needs deciding real comparisons, exactly
 //!    what [`creal/ivt.rs`](../../../axeyum-lean-kernel/src/creal/ivt.rs)
-//!    refutes for roots (there is no `lt_total` on `CReal.lt`).
+//!    refutes for roots (there is no `lt_total` on `CReal.lt`). Concretely:
+//!    an attained maximum of `t ↦ t·v` on `[0, 1]` yields
+//!    `∀ v, v ≤ 0 ∨ 0 ≤ v` — analytic LLPO, the comparison the order
+//!    deliberately lacks. One bridge remains **labeled** rather than proved
+//!    there (that `evtLinear v` is uniformly continuous, i.e. inside
+//!    classical EVT's hypothesis class); see that file's own
+//!    "ASSERTED here, not proved" section. The refutation itself is proved.
 //! 3. **Row 3 (this file)**: for a **polynomial** `p` with rational
 //!    coefficients on a closed rational interval `[a, b]`, zero-testing is
 //!    decidable, so the maximum is attained at a **nameable algebraic
