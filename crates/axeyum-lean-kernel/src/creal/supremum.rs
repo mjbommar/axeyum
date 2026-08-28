@@ -399,9 +399,7 @@ use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::{IntDev, exists_elim};
 use crate::nat_prelude::NatOps;
-use crate::rat_prelude::ops::{
-    nat_eq_to_rat, nat_rewrite_prop, radd, rat_eq_rewrite, rchain, req, rle, rmul, rtrans, rzero,
-};
+use crate::rat_prelude::ops::{nat_rewrite_prop, radd, rat_eq_rewrite, req, rtrans};
 
 /// Reducibility height for [`declare_max_range`]'s `Definition`. Deliberately
 /// far above [`super::DERIVED_HEIGHT`] plus every other derived-operation
@@ -3435,7 +3433,7 @@ fn declare_mesh_level_count_pow_thm(
         let pow_sj_eq_smsm = d.trans(pow_sj, mul_smj_2, sm_sm, pow_sj_eq_mul, mul_succ1_prime);
         // Eq(pow_sj, sm_sm)
 
-        let symm_pow_sj_eq_smsm = d.symm(sm_sm, pow_sj, pow_sj_eq_smsm);
+        let symm_pow_sj_eq_smsm = d.symm(pow_sj, sm_sm, pow_sj_eq_smsm);
         d.trans(succ_mlc_sj, sm_sm, pow_sj, lhs_eq, symm_pow_sj_eq_smsm)
     };
 
@@ -3446,6 +3444,7 @@ fn declare_mesh_level_count_pow_thm(
         let body = motive(d, j);
         d.pi_fv(j_fv, nat, body)
     };
+    let value = d.lam_fv(j_fv, nat, value);
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.mesh_level_count_pow,
         uparams: vec![],
