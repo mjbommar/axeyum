@@ -727,11 +727,49 @@ def describe(fact: dict, facts: dict[str, dict], show_unlocks: bool,
         line += f"\n      needs first: {', '.join(unmet)}"
     if show_unlocks and unlocks.get(fact["id"]):
         line += f"\n      would unlock: {', '.join(unlocks[fact['id']])}"
+    if fact["id"] in held_out_fact_ids():
+        line += ("\n      \u26d4 HELD-OUT — this is blind evaluation population. "
+                 "Do NOT close it, and do NOT dispatch a lane at it. Closing one "
+                 "member spends its whole family (the split key is "
+                 "<family>:<statement-shape>); one capsule once cost 25% of the "
+                 "partition for a single theorem.")
     for gate in (held or {}).get(fact["id"], []):
         line += (f"\n      ⚠ NAMED BY {gate} — check that script before closing this. "
                  "It may be load-bearing there (a gate's negative control), or merely "
                  "quoted as an example.")
     return line
+
+
+def held_out_fact_ids() -> frozenset[str]:
+    """Fact ids in the nursery's blind HELD-OUT partition.
+
+    These must never be closed by us. `artifacts/autogenesis/nursery-v1.json`
+    preregisters propositions into train / development / held-out, keyed by
+    `<family>:<statement-shape>` because a proof route for one member is
+    evidence about its siblings -- so closing ONE spends the whole family.
+    A capsule registered against a single held-out row once cost 19 of 76
+    held-out propositions, 25% of the partition, for one theorem.
+
+    Measured 2026-08-28, which is why this exists: all 35 of the
+    `nat.log` / `nat.sqrt` / `nat.clog` mirror facts are held-out -- 35 of
+    the 37 rows. That is exactly the set a coordinator identified as "the
+    highest-leverage work on the frontier" and dispatched three lanes at.
+    Nothing was spent, because each lane independently declined to flip the
+    mirrors, but the queue said nothing either way.
+
+    Degrades to an EMPTY set on any error: this annotates, it must never
+    crash `just next`, and a missing warning is recoverable where a crashed
+    queue is not.
+    """
+    try:
+        raw = json.loads((ROOT / "artifacts/autogenesis/nursery-v1.json").read_text())
+        return frozenset(
+            entry["fact_id"]
+            for entry in raw.get("entries", [])
+            if entry.get("partition") == "held-out"
+        )
+    except (OSError, ValueError, KeyError, TypeError):
+        return frozenset()
 
 
 def route_class(fragment: str, decidable: set[str]) -> str:

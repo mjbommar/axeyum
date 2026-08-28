@@ -165,6 +165,50 @@ class KernelIndexValidationGuardsTests(unittest.TestCase):
         frontier.validate_kernel_index(index)  # must not raise
 
 
+class HeldOutPartitionWarningTests(unittest.TestCase):
+    """The queue must say when a fact is blind evaluation population.
+
+    Motivating measurement (2026-08-28): all 35 `nat.log`/`nat.sqrt`/`nat.clog`
+    mirror facts are held-out -- 35 of the 37 rows -- and that is precisely the
+    set identified as "the highest-leverage work on the frontier". Three lanes
+    were dispatched at those families. Nothing was spent only because each lane
+    independently declined to flip the mirrors; the queue said nothing.
+    """
+
+    def test_the_real_ledger_has_held_out_rows(self) -> None:
+        """Non-vacuity: if this is empty, every other assertion is hollow."""
+        self.assertGreater(len(frontier.held_out_fact_ids()), 0)
+
+    def test_a_held_out_fact_is_warned_about(self) -> None:
+        held_out = sorted(frontier.held_out_fact_ids())
+        self.assertTrue(held_out, "fixture requires a held-out row")
+        fact = {"id": held_out[0], "depends_on": [], "formal": {"fragment": "Nat"}}
+        line = frontier.describe(fact, {fact["id"]: fact}, set(), {}, {}, False, None)
+        self.assertIn("HELD-OUT", line)
+
+    def test_a_non_held_out_fact_is_NOT_warned_about(self) -> None:
+        """The direction that matters: warn on everything and it is noise."""
+        fact = {
+            "id": "F:definitely-not-in-the-nursery",
+            "depends_on": [],
+            "formal": {"fragment": "Nat"},
+        }
+        line = frontier.describe(fact, {fact["id"]: fact}, set(), {}, {}, False, None)
+        self.assertNotIn("HELD-OUT", line)
+
+    def test_a_missing_nursery_degrades_to_no_warning(self) -> None:
+        """Annotation must never crash `just next`."""
+        original = frontier.ROOT
+        try:
+            frontier.ROOT = pathlib.Path("/does/not/exist")
+            frontier.held_out_fact_ids.__wrapped__ if hasattr(
+                frontier.held_out_fact_ids, "__wrapped__"
+            ) else None
+            self.assertEqual(frontier.held_out_fact_ids(), frozenset())
+        finally:
+            frontier.ROOT = original
+
+
 class LoadKernelIndexCrashSafetyTests(unittest.TestCase):
     """`load_kernel_index` backs `just next`; it must never raise."""
 
