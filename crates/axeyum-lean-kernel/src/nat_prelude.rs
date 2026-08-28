@@ -204,8 +204,8 @@ use defs::{
 };
 use desc_factorial::declare_desc_factorial_all;
 use diagonal::declare_diagonal;
-use divisibility::declare_divisibility;
 use divisibility::declare_factorial_order;
+use divisibility::{declare_div_dvd_div_left, declare_divisibility};
 use division::declare_euclidean_division;
 use euler::declare_mod_eq_cancel;
 use factorization::{declare_exists_prime_factorization, declare_prod_range};
@@ -873,6 +873,9 @@ pub struct NatPrelude {
     /// `Nat.div_mul_cancel_of_dvd : ∀ g n, 1 ≤ g → dvd g n → g * (n / g) = n` —
     /// exact division recovers its dividend.
     pub div_mul_cancel_of_dvd: NameId,
+    /// `Nat.div_dvd_div_left : ∀ n m k, dvd m k → dvd n m → dvd (k/m) (k/n)`.
+    /// Closes ledger fact `F:ml430-nat-div-dvd-div-left`.
+    pub div_dvd_div_left: NameId,
     /// `Nat.one_le_right_of_mul : ∀ g q, 1 ≤ g * q → 1 ≤ q`.
     pub one_le_right_of_mul: NameId,
     /// `Nat.one_le_left_of_mul : ∀ g q, 1 ≤ g * q → 1 ≤ g`.
@@ -2643,6 +2646,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             bezout_of_scaled: kernel.name_str(nat, "bezout_of_scaled"),
             gcd_cofactors_coprime: kernel.name_str(nat, "gcd_cofactors_coprime"),
             div_mul_cancel_of_dvd: kernel.name_str(nat, "div_mul_cancel_of_dvd"),
+            div_dvd_div_left: kernel.name_str(nat, "div_dvd_div_left"),
             one_le_right_of_mul: kernel.name_str(nat, "one_le_right_of_mul"),
             one_le_left_of_mul: kernel.name_str(nat, "one_le_left_of_mul"),
             one_le_of_dvd_pos: kernel.name_str(nat, "one_le_of_dvd_pos"),
@@ -2944,6 +2948,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_boolean_le(&mut d, &p)?;
         declare_euclidean_division(&mut d, &p)?;
         declare_divisibility(&mut d, &p)?;
+        declare_div_dvd_div_left(&mut d, &p)?;
         declare_executable_gcd(&mut d, &p)?;
         declare_gcd_semantics(&mut d, &p)?;
         declare_lcm(&mut d, &p)?;
