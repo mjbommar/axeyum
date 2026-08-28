@@ -81,8 +81,6 @@ the worktree-isolation guard).
 
 <!-- plan-section: landed-changes -->
 
-| date | change | notes |
-| --- | --- | --- |
-| 2026-08-27 | `CReal.abs_diff_le_of_deriv_bound` | mean value inequality; `monotone_of_nonneg_deriv` applied twice, to `r ↦ M·r ∓ F(r)`; axiom-free |
+| 2026-08-27 | cos-deriv | `CReal.abs_diff_le_of_deriv_bound` -- mean value inequality; `monotone_of_nonneg_deriv` applied twice, to `r ↦ M·r ∓ F(r)`; axiom-free |
 | 2026-08-27 | `creal/mvt.rs::build_hd_linear` → `pub(super)` | reused rather than copied; `hasDerivative_smul ∘ hasDerivative_id` would need a magnitude bound on `M` |
 | 2026-08-27 | measured: uniform-limit-of-derivatives is ABSENT | `shape_search` at `declarations=1889`; 16 `HasDerivativeOn` conclusions, all pointwise |
