@@ -1600,3 +1600,405 @@ pub(super) fn declare_coprime_or_dvd_of_prime(
     })?;
     Ok(())
 }
+
+// ============================================================================
+// `Nat.coprime_two_left`/`Nat.coprime_two_right`/`Nat.Coprime.odd_of_left`/
+// `Nat.Coprime.odd_of_right` — coprimality with `2` is exactly oddness.
+// ============================================================================
+
+/// `fun k : Nat => Eq n (add k k)` — rebuilt to match `parity.rs`'s private
+/// `even_predicate` exactly (that helper is `fn`-private to its own file, so
+/// `Even n`'s witness proofs here are built against an independently
+/// constructed but structurally identical predicate; the same technique this
+/// file already uses for `prime_condition`'s inner clause, e.g. in
+/// [`declare_coprime_of_lt_prime`] and [`declare_prime_dvd_iff_not_coprime`]).
+fn even_predicate_local(d: &mut NatDev<'_>, n: ExprId) -> ExprId {
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let kk = d.add(k, k);
+    let body = d.eq(n, kk);
+    let nat = d.nat_ty();
+    d.lam_fv(k_fv, nat, body)
+}
+
+/// `Eq (mul two k) (add k k)` — rebuilt to match `powsq.rs`'s private
+/// `two_mul_eq_add_self` (also `fn`-private to its file; same technique).
+fn two_mul_eq_add_local(d: &mut NatDev<'_>, p: &NatPrelude, k: ExprId) -> ExprId {
+    let p = *p;
+    let one = d.num(1);
+    let succ_one = d.succ(one);
+    let mul_succ_one_k = d.mul(succ_one, k);
+    let mul_one_k = d.mul(one, k);
+    let add_mul_one_k_k = d.add(mul_one_k, k);
+    let succ_mul_eq = d.lemma(p.succ_mul, &[one, k]);
+    let one_mul_eq = d.lemma(p.one_mul, &[k]);
+    let congr_step = d.congr(mul_one_k, k, one_mul_eq, &|d, x| d.add(x, k));
+    let k_plus_k = d.add(k, k);
+    let (_, result) = d.chain(
+        mul_succ_one_k,
+        &[(add_mul_one_k_k, succ_mul_eq), (k_plus_k, congr_step)],
+    );
+    result
+}
+
+/// `dvd 2 n -> Even n`: eliminate the divisor witness `q` (`n = mul 2 q`,
+/// `dvd_predicate`'s own witness shape) into the doubling witness `Even`
+/// wants (`n = add q q`), bridged by [`two_mul_eq_add_local`].
+fn even_of_dvd_two(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId, hdvd: ExprId) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let anon = d.anon_name();
+    let one = d.level_one();
+    let two = d.num(2);
+
+    let dvd_pred = d.dvd_predicate(two, n);
+    let even_pred = even_predicate_local(d, n);
+    let even_ty = d.lemma(p.even, &[n]);
+    let dvd_ty = d.dvd(two, n);
+
+    let minor = {
+        let q_fv = d.fresh_fvar();
+        let q = d.kernel().fvar(q_fv);
+        let hq_fv = d.fresh_fvar();
+        let hq = d.kernel().fvar(hq_fv);
+        let mul_two_q = d.mul(two, q);
+        let hq_ty = d.eq(n, mul_two_q);
+
+        let mul_eq_add = two_mul_eq_add_local(d, &p, q);
+        let qq = d.add(q, q);
+        let n_eq_qq = d.trans(n, mul_two_q, qq, hq, mul_eq_add);
+
+        let intro = d.kernel().const_(p.logic.exists_intro, vec![one]);
+        let ev_proof = d.apply(intro, &[nat, even_pred, q, n_eq_qq]);
+        let inner = d.lam_fv(hq_fv, hq_ty, ev_proof);
+        d.lam_fv(q_fv, nat, inner)
+    };
+    let motive = d.kernel().lam(anon, dvd_ty, even_ty, BinderInfo::Default);
+    let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+    d.apply(rec, &[nat, dvd_pred, motive, minor, hdvd])
+}
+
+/// `Even n -> dvd 2 n`: eliminate the doubling witness `k` (`n = add k k`)
+/// into the divisor witness `dvd`'s predicate wants (`n = mul 2 k`), bridged
+/// by [`two_mul_eq_add_local`].
+fn dvd_two_of_even(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId, heven: ExprId) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let anon = d.anon_name();
+    let one = d.level_one();
+    let two = d.num(2);
+
+    let even_pred = even_predicate_local(d, n);
+    let dvd_pred = d.dvd_predicate(two, n);
+    let even_ty = d.lemma(p.even, &[n]);
+    let dvd_ty = d.dvd(two, n);
+
+    let minor = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hk_fv = d.fresh_fvar();
+        let hk = d.kernel().fvar(hk_fv);
+        let kk = d.add(k, k);
+        let hk_ty = d.eq(n, kk);
+
+        let mul_eq_add = two_mul_eq_add_local(d, &p, k);
+        let mul_two_k = d.mul(two, k);
+        let add_eq_mul = d.symm(mul_two_k, kk, mul_eq_add);
+        let n_eq_mul = d.trans(n, kk, mul_two_k, hk, add_eq_mul);
+
+        let intro = d.kernel().const_(p.logic.exists_intro, vec![one]);
+        let dv_proof = d.apply(intro, &[nat, dvd_pred, k, n_eq_mul]);
+        let inner = d.lam_fv(hk_fv, hk_ty, dv_proof);
+        d.lam_fv(k_fv, nat, inner)
+    };
+    let motive = d.kernel().lam(anon, even_ty, dvd_ty, BinderInfo::Default);
+    let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+    d.apply(rec, &[nat, even_pred, motive, minor, heven])
+}
+
+/// `prime_condition(2)`: `2 ≤ 2` by `le_refl`, and its only divisors are `1`
+/// and `2` — mirrors `irrational.rs`'s private `two_divisor_dichotomy` /
+/// `perfect.rs`'s private `divisors_of_two`, a third copy since both are
+/// `fn`-private to their own files. The divisor clause is rebuilt separately
+/// (fresh `x_fv`, matching [`declare_coprime_of_lt_prime`]'s own "rebuilt to
+/// match `prime_condition`'s inner shape exactly" clause) so the value's own
+/// binder choice cannot matter — the kernel checks the value against this
+/// type up to alpha-equivalence.
+fn prime_two(d: &mut NatDev<'_>, p: &NatPrelude) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let two = d.num(2);
+    let one = d.num(1);
+
+    let lower_ty = d.le(two, two);
+    let divisors_ty = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let hyp = d.dvd(x, two);
+        let is_one = d.eq(x, one);
+        let is_two = d.eq(x, two);
+        let disjunction = d.const_app(p.logic.or, &[is_one, is_two]);
+        let inner = d.arrow(hyp, disjunction);
+        d.pi_fv(x_fv, nat, inner)
+    };
+
+    let lower = d.const_app(p.le_refl, &[two]);
+
+    let clause = {
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let hyp_fv = d.fresh_fvar();
+        let hyp = d.kernel().fvar(hyp_fv);
+        let dvd_c2 = d.dvd(c, two);
+
+        let one_le_two = d.lemma(p.le_succ, &[one]);
+        let one_le_c = d.lemma(p.one_le_of_dvd_pos, &[c, two, one_le_two, hyp]);
+        let c_le_two = d.lemma(p.le_of_dvd, &[c, two, one_le_two, hyp]);
+
+        let succ_pred = d.lemma(p.succ_pred_of_pos, &[c, one_le_c]);
+        let e = d.pred(c);
+        let se = d.succ(e);
+
+        let se_le_two = {
+            let motive = d.eq_motive(c, &|d, x| d.le(x, two));
+            d.transport(c, motive, c_le_two, se, succ_pred)
+        };
+
+        let dichotomy = d.lemma(p.two_le_succ_or_eq_one, &[e]);
+        let left_ty = d.le(two, se);
+        let right_ty = d.eq(se, one);
+
+        let goal_one = d.eq(c, one);
+        let goal_two = d.eq(c, two);
+        let goal = d.const_app(p.logic.or, &[goal_one, goal_two]);
+
+        let left_branch = {
+            let hh_fv = d.fresh_fvar();
+            let hh = d.kernel().fvar(hh_fv);
+            let se_eq_two = d.lemma(p.le_antisymm, &[se, two, se_le_two, hh]);
+            let (_e2, c_eq_two) = d.chain(c, &[(se, succ_pred), (two, se_eq_two)]);
+            let proof = d.const_app(p.logic.or_inr, &[goal_one, goal_two, c_eq_two]);
+            d.lam_fv(hh_fv, left_ty, proof)
+        };
+        let right_branch = {
+            let hh_fv = d.fresh_fvar();
+            let hh = d.kernel().fvar(hh_fv);
+            let (_e2, c_eq_one) = d.chain(c, &[(se, succ_pred), (one, hh)]);
+            let proof = d.const_app(p.logic.or_inl, &[goal_one, goal_two, c_eq_one]);
+            d.lam_fv(hh_fv, right_ty, proof)
+        };
+
+        let disjunction_proof = or_cases(
+            d, &p, left_ty, right_ty, goal, left_branch, right_branch, dichotomy,
+        );
+
+        let clause_body = d.lam_fv(hyp_fv, dvd_c2, disjunction_proof);
+        d.lam_fv(c_fv, nat, clause_body)
+    };
+
+    d.const_app(p.logic.and_intro, &[lower_ty, divisors_ty, lower, clause])
+}
+
+/// `Nat.coprime_two_left : ∀ n, Iff (Eq (gcd two n) one) (Odd n)`.
+///
+/// `2` is prime ([`prime_two`]), so
+/// [`NatPrelude::coprime_or_dvd_of_prime`] splits `gcd 2 n = 1 ∨ dvd 2 n`,
+/// and [`NatPrelude::prime_dvd_iff_not_coprime`] relates `dvd 2 n` to
+/// `Not (gcd 2 n = 1)`. [`even_of_dvd_two`]/[`dvd_two_of_even`] bridge
+/// `dvd 2 n` and `Even n`, and [`NatPrelude::even_or_odd_exists`]/
+/// [`NatPrelude::even_not_odd`] finish each direction by ruling out the even
+/// case.
+///
+/// mp: given `h : gcd 2 n = 1`, case on `even_or_odd_exists n`. The `Odd n`
+/// branch is the goal directly. The `Even n` branch builds `dvd 2 n`
+/// ([`dvd_two_of_even`]), transports it through `prime_dvd_iff_not_coprime`'s
+/// forward direction into `Not (gcd 2 n = 1)`, and applies that to `h` for
+/// `False`.
+///
+/// mpr: given `ho : Odd n`, case on `coprime_or_dvd_of_prime 2 n prime_two`.
+/// The `gcd 2 n = 1` branch is the goal directly. The `dvd 2 n` branch
+/// builds `Even n` ([`even_of_dvd_two`]) and applies `even_not_odd n` to it
+/// and `ho` for `False`.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_coprime_two_left(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.coprime_two_left, 1, &|d, v| {
+        let n = v[0];
+        let one = d.num(1);
+        let two = d.num(2);
+        let gcd_2n = d.gcd(two, n);
+        let cop_ty = d.eq(gcd_2n, one);
+        let odd_ty = d.lemma(p.odd, &[n]);
+        let stmt = d.const_app(p.logic.iff, &[cop_ty, odd_ty]);
+
+        let prime2 = prime_two(d, &p);
+
+        // mp : gcd 2 n = 1 -> Odd n
+        let mp = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            let split = d.lemma(p.even_or_odd_exists, &[n]);
+            let even_ty = d.lemma(p.even, &[n]);
+            let dvd_ty = d.dvd(two, n);
+
+            let on_even = {
+                let he_fv = d.fresh_fvar();
+                let he = d.kernel().fvar(he_fv);
+                let dvd2n = dvd_two_of_even(d, &p, n, he);
+                let iff_dvd_notcop = d.lemma(p.prime_dvd_iff_not_coprime, &[two, n, prime2]);
+                let not_cop_ty = d.const_app(p.logic.not, &[cop_ty]);
+                let mp_fn = iff_forward(d, dvd_ty, not_cop_ty, iff_dvd_notcop);
+                let not_cop = d.apply(mp_fn, &[dvd2n]);
+                let false_pf = d.apply(not_cop, &[h]);
+                let body = absurd(d, &p, odd_ty, false_pf);
+                d.lam_fv(he_fv, even_ty, body)
+            };
+            let on_odd = {
+                let ho_fv = d.fresh_fvar();
+                let ho = d.kernel().fvar(ho_fv);
+                d.lam_fv(ho_fv, odd_ty, ho)
+            };
+            let result = or_cases(d, &p, even_ty, odd_ty, odd_ty, on_even, on_odd, split);
+            d.lam_fv(h_fv, cop_ty, result)
+        };
+
+        // mpr : Odd n -> gcd 2 n = 1
+        let mpr = {
+            let ho_fv = d.fresh_fvar();
+            let ho = d.kernel().fvar(ho_fv);
+
+            let split = d.lemma(p.coprime_or_dvd_of_prime, &[two, n, prime2]);
+            let dvd_ty = d.dvd(two, n);
+
+            let on_cop = {
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+                d.lam_fv(h_fv, cop_ty, h)
+            };
+            let on_dvd = {
+                let hd_fv = d.fresh_fvar();
+                let hd = d.kernel().fvar(hd_fv);
+                let even_n = even_of_dvd_two(d, &p, n, hd);
+                let not_odd_fn = d.lemma(p.even_not_odd, &[n]);
+                let not_odd = d.apply(not_odd_fn, &[even_n]);
+                let false_pf = d.apply(not_odd, &[ho]);
+                let body = absurd(d, &p, cop_ty, false_pf);
+                d.lam_fv(hd_fv, dvd_ty, body)
+            };
+            let result = or_cases(d, &p, cop_ty, dvd_ty, cop_ty, on_cop, on_dvd, split);
+            d.lam_fv(ho_fv, odd_ty, result)
+        };
+
+        let proof = d.const_app(p.logic.iff_intro, &[cop_ty, odd_ty, mp, mpr]);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Nat.coprime_two_right : ∀ n, Iff (Eq (gcd n two) one) (Odd n)` —
+/// [`declare_coprime_two_left`] composed with [`NatPrelude::coprime_symmetric`]
+/// on both sides of the `Iff` to swap `gcd`'s argument order.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_coprime_two_right(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.coprime_two_right, 1, &|d, v| {
+        let n = v[0];
+        let one = d.num(1);
+        let two = d.num(2);
+        let gcd_n2 = d.gcd(n, two);
+        let gcd_2n = d.gcd(two, n);
+        let cop_n2_ty = d.eq(gcd_n2, one);
+        let cop_2n_ty = d.eq(gcd_2n, one);
+        let odd_ty = d.lemma(p.odd, &[n]);
+        let stmt = d.const_app(p.logic.iff, &[cop_n2_ty, odd_ty]);
+
+        let left_iff = d.lemma(p.coprime_two_left, &[n]);
+
+        // mp : gcd n 2 = 1 -> Odd n
+        let mp = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let flipped = d.lemma(p.coprime_symmetric, &[n, two, h]);
+            let mp_fn = iff_forward(d, cop_2n_ty, odd_ty, left_iff);
+            let result = d.apply(mp_fn, &[flipped]);
+            d.lam_fv(h_fv, cop_n2_ty, result)
+        };
+        // mpr : Odd n -> gcd n 2 = 1
+        let mpr = {
+            let ho_fv = d.fresh_fvar();
+            let ho = d.kernel().fvar(ho_fv);
+            let mpr_fn = iff_reverse(d, cop_2n_ty, odd_ty, left_iff);
+            let cop_2n = d.apply(mpr_fn, &[ho]);
+            let flipped = d.lemma(p.coprime_symmetric, &[two, n, cop_2n]);
+            d.lam_fv(ho_fv, odd_ty, flipped)
+        };
+
+        let proof = d.const_app(p.logic.iff_intro, &[cop_n2_ty, odd_ty, mp, mpr]);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Nat.Coprime.odd_of_left : ∀ n, Eq (gcd two n) one → Odd n` — the `mp`
+/// direction of [`declare_coprime_two_left`] alone.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_coprime_odd_of_left(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.coprime_odd_of_left, 1, &|d, v| {
+        let n = v[0];
+        let one = d.num(1);
+        let two = d.num(2);
+        let gcd_2n = d.gcd(two, n);
+        let cop_ty = d.eq(gcd_2n, one);
+        let odd_ty = d.lemma(p.odd, &[n]);
+        let stmt = d.arrow(cop_ty, odd_ty);
+
+        let iff_pf = d.lemma(p.coprime_two_left, &[n]);
+        let proof = iff_forward(d, cop_ty, odd_ty, iff_pf);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Nat.Coprime.odd_of_right : ∀ n, Eq (gcd n two) one → Odd n` — the `mp`
+/// direction of [`declare_coprime_two_right`] alone.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's typed rejection.
+pub(super) fn declare_coprime_odd_of_right(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.coprime_odd_of_right, 1, &|d, v| {
+        let n = v[0];
+        let one = d.num(1);
+        let two = d.num(2);
+        let gcd_n2 = d.gcd(n, two);
+        let cop_ty = d.eq(gcd_n2, one);
+        let odd_ty = d.lemma(p.odd, &[n]);
+        let stmt = d.arrow(cop_ty, odd_ty);
+
+        let iff_pf = d.lemma(p.coprime_two_right, &[n]);
+        let proof = iff_forward(d, cop_ty, odd_ty, iff_pf);
+        (stmt, proof)
+    })?;
+    Ok(())
+}

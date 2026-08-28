@@ -225,9 +225,11 @@ use perfect::declare_sum_divisors_two_pow_eq_geom_sum;
 use permutation::declare_permutation_all;
 use powsq::declare_powsq_all;
 use primes::{
-    declare_coprime_add_self_right, declare_coprime_of_dvd, declare_coprime_of_dvd_both,
-    declare_coprime_of_lt_prime, declare_coprime_or_dvd_of_prime, declare_coprime_self_add_right,
-    declare_coprime_symmetric, declare_euclid, declare_prime_dvd_iff_not_coprime, declare_primes,
+    declare_coprime_add_self_right, declare_coprime_odd_of_left, declare_coprime_odd_of_right,
+    declare_coprime_of_dvd, declare_coprime_of_dvd_both, declare_coprime_of_lt_prime,
+    declare_coprime_or_dvd_of_prime, declare_coprime_self_add_right, declare_coprime_symmetric,
+    declare_coprime_two_left, declare_coprime_two_right, declare_euclid,
+    declare_prime_dvd_iff_not_coprime, declare_primes,
 };
 use rectangle::declare_rectangle;
 use relation::{
@@ -948,6 +950,34 @@ pub struct NatPrelude {
     /// `Not (Coprime p i)` (`ne_of_beq_eq_false`), which
     /// `prime_dvd_iff_not_coprime` converts to `dvd p i`.
     pub coprime_or_dvd_of_prime: NameId,
+    /// `Nat.coprime_two_left : ∀ n, Iff (Eq (gcd two n) one) (Odd n)`.
+    ///
+    /// `2` is prime (`prime_two`, a private helper rebuilding
+    /// `prime_condition(2)` the way `irrational.rs`'s private
+    /// `two_divisor_dichotomy` / `perfect.rs`'s private `divisors_of_two`
+    /// already bound a divisor of `2` to `1` or `2`), so
+    /// [`coprime_or_dvd_of_prime`](Self::coprime_or_dvd_of_prime) splits into
+    /// `gcd 2 n = 1 ∨ dvd 2 n`, and
+    /// [`prime_dvd_iff_not_coprime`](Self::prime_dvd_iff_not_coprime) relates
+    /// `dvd 2 n` to `Not (gcd 2 n = 1)`. A private bridge (`even_of_dvd_two`/
+    /// `dvd_two_of_even`, via the `2 * k = k + k` identity rebuilt the same
+    /// way) connects `dvd 2 n` and `Even n`, and
+    /// [`even_or_odd_exists`](Self::even_or_odd_exists)/
+    /// [`even_not_odd`](Self::even_not_odd) rule out the even case in each
+    /// direction.
+    pub coprime_two_left: NameId,
+    /// `Nat.coprime_two_right : ∀ n, Iff (Eq (gcd n two) one) (Odd n)` —
+    /// [`coprime_two_left`](Self::coprime_two_left) composed with
+    /// [`coprime_symmetric`](Self::coprime_symmetric) on both sides of the
+    /// `Iff` to swap `gcd`'s argument order.
+    pub coprime_two_right: NameId,
+    /// `Nat.Coprime.odd_of_left : ∀ n, Eq (gcd two n) one → Odd n` — the `mp`
+    /// direction of [`coprime_two_left`](Self::coprime_two_left) alone.
+    pub coprime_odd_of_left: NameId,
+    /// `Nat.Coprime.odd_of_right : ∀ n, Eq (gcd n two) one → Odd n` — the
+    /// `mp` direction of [`coprime_two_right`](Self::coprime_two_right)
+    /// alone.
+    pub coprime_odd_of_right: NameId,
 
     // --- binomial coefficients (`choose.rs`) --------------------------------
     /// `Nat.choose : Nat → Nat → Nat`, by structural recursion on both
@@ -2250,6 +2280,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             coprime_self_add_right: kernel.name_str(nat, "coprime_self_add_right"),
             coprime_symmetric: kernel.name_str(nat, "coprime_symmetric"),
             coprime_or_dvd_of_prime: kernel.name_str(nat, "coprime_or_dvd_of_prime"),
+            coprime_two_left: kernel.name_str(nat, "coprime_two_left"),
+            coprime_two_right: kernel.name_str(nat, "coprime_two_right"),
+            coprime_odd_of_left: kernel.name_str(nat, "coprime_odd_of_left"),
+            coprime_odd_of_right: kernel.name_str(nat, "coprime_odd_of_right"),
             choose: kernel.name_str(nat, "choose"),
             choose_zero_right: kernel.name_str(nat, "choose_zero_right"),
             choose_succ_succ: kernel.name_str(nat, "choose_succ_succ"),
@@ -2557,6 +2591,14 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_powsq_all(&mut d, &p)?;
         // Needs `Nat.even_or_odd`, just declared by `declare_powsq_all` above.
         declare_parity_all(&mut d, &p)?;
+        // Needs `Nat.Even`/`Nat.Odd`/`even_or_odd_exists`/`even_not_odd`, just
+        // declared by `declare_parity_all` above -- cannot run alongside the
+        // other `coprime_*` declarations near `declare_primes` since parity
+        // does not exist yet at that point in the build.
+        declare_coprime_two_left(&mut d, &p)?;
+        declare_coprime_two_right(&mut d, &p)?;
+        declare_coprime_odd_of_left(&mut d, &p)?;
+        declare_coprime_odd_of_right(&mut d, &p)?;
         declare_cantor_all(&mut d, &p)?;
         declare_even_of_even_sq(&mut d, &p)?;
         declare_no_rational_sqrt_two(&mut d, &p)?;

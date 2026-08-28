@@ -858,6 +858,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.even_not_odd,
         p.odd_not_even,
         p.even_iff_odd_succ,
+        p.coprime_two_left,
+        p.coprime_two_right,
+        p.coprime_odd_of_left,
+        p.coprime_odd_of_right,
     ]
 }
 
@@ -6140,7 +6144,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        67 + 343,
+        67 + 347,
         "every promised definition and theorem must be rendered"
     );
 }
@@ -8382,4 +8386,86 @@ fn parity_predicates_apply_at_concrete_witnesses_and_are_axiom_free() {
         f.k.axiom_footprint(p.add_self_ne_succ_add_self).is_empty(),
         "add_self_ne_succ_add_self must rest on zero axioms"
     );
+}
+
+/// `coprime_two_left(5).mpr` applied to a hand-built `Odd 5` produces a term
+/// whose inferred type is `Eq (gcd 2 5) 1`, and round-tripping that result
+/// back through `coprime_two_left(5).mp` lands on a type defeq to `Odd 5`
+/// again. This is the same swap-detecting technique as
+/// `parity_predicates_apply_at_concrete_witnesses_and_are_axiom_free`: if
+/// `mp`/`mpr` had been passed to `iff_intro` in the wrong order, the `mp`
+/// leg of the round trip would receive an argument of the wrong type
+/// (`Eq (gcd 2 5) 1` where an `Odd n`-shaped value is expected) and
+/// `Kernel::infer` would reject it, so this only passes if both directions
+/// are wired correctly. All four new declarations are also checked
+/// axiom-free directly.
+#[test]
+fn coprime_two_left_applies_at_a_concrete_odd_witness_and_is_axiom_free() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let one_lvl = f.level_one();
+
+    let five = f.num(5);
+    let two_wit = f.num(2);
+
+    // Odd 5, witnessed by 2 (5 = succ(2+2)).
+    let odd5 = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let kk = f.add(k, k);
+        let skk = f.succ(kk);
+        let body = f.eq(five, skk);
+        let pred = f.lam_fv(k_fv, nat, body);
+        let proof = f.refl(five);
+        let intro = f.k.const_(p.logic.exists_intro, vec![one_lvl]);
+        f.apply(intro, &[nat, pred, two_wit, proof])
+    };
+
+    let two = f.num(2);
+    let gcd_two_five = f.gcd(two, five);
+    let one = f.num(1);
+    let cop_ty = f.eq(gcd_two_five, one);
+    let odd_ty = f.lemma(p.odd, &[five]);
+
+    let iff_at_5 = f.lemma(p.coprime_two_left, &[five]);
+    let mpr_fn = f.const_app(p.logic.iff_mpr, &[cop_ty, odd_ty, iff_at_5]);
+    let cop_from_odd5 = f.apply(mpr_fn, &[odd5]);
+    let cop_from_odd5_ty = f.k.infer(cop_from_odd5).unwrap_or_else(|e| {
+        panic!(
+            "coprime_two_left(5).mpr applied to Odd 5 should type-check: {}",
+            f.explain(&e)
+        )
+    });
+    assert!(
+        f.k.def_eq(cop_from_odd5_ty, cop_ty),
+        "coprime_two_left(5).mpr(Odd 5) must land on Eq (gcd 2 5) 1"
+    );
+
+    let mp_fn = f.const_app(p.logic.iff_mp, &[cop_ty, odd_ty, iff_at_5]);
+    let odd5_roundtrip = f.apply(mp_fn, &[cop_from_odd5]);
+    let odd5_roundtrip_ty = f.k.infer(odd5_roundtrip).unwrap_or_else(|e| {
+        panic!(
+            "coprime_two_left(5).mp applied to the mpr result should \
+             type-check (this fails if mp/mpr were swapped): {}",
+            f.explain(&e)
+        )
+    });
+    assert!(
+        f.k.def_eq(odd5_roundtrip_ty, odd_ty),
+        "the mp/mpr round trip on Odd 5 must land back on Odd 5"
+    );
+
+    for name in [
+        p.coprime_two_left,
+        p.coprime_two_right,
+        p.coprime_odd_of_left,
+        p.coprime_odd_of_right,
+    ] {
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "{:?} must rest on zero axioms",
+            name
+        );
+    }
 }
