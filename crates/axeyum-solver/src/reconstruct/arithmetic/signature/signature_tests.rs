@@ -319,10 +319,17 @@ fn creal_signature() -> (Kernel, RingSignature, EqualitySlot) {
     // 2026-08-18, one `build_creal_prelude` costs ~45 s in a debug test binary,
     // and this file wants eight of them.
     static TEMPLATE: std::sync::OnceLock<(Kernel, CRealPrelude)> = std::sync::OnceLock::new();
+    // On a sized worker for the same measured reason as
+    // `LraReconstructCtx::try_new_over_constructed_reals_reporting`: the
+    // constructed-real development needs 16,777,216 bytes of stack in debug
+    // (measured 2026-08-28) and a `#[test]` thread gets 2 MiB, so building it
+    // here aborts the whole test binary rather than failing this one test.
     let (template, c) = TEMPLATE.get_or_init(|| {
-        let mut kernel = Kernel::new();
-        let c = build_creal_prelude(&mut kernel).expect("the CReal development builds");
-        (kernel, c)
+        crate::reconstruct::arithmetic::on_a_deep_stack(|| {
+            let mut kernel = Kernel::new();
+            let c = build_creal_prelude(&mut kernel).expect("the CReal development builds");
+            (kernel, c)
+        })
     });
     let kernel = template.clone();
     let c = *c;
