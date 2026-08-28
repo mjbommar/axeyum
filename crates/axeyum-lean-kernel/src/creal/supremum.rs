@@ -52,12 +52,22 @@
 //!
 //! **Also landed this session: `CReal.meshMax_step_le` and
 //! `CReal.meshMax_mono`** (rungs 3 and 4 below), both first-attempt kernel
-//! accepts. **Still not landed: `CReal.supOn` itself**, and therefore none of
-//! deliverables (a)/(b)/(c) the assignment names in fully assembled form.
-//! This is not a hedge — it is the honest outcome of a real attempt at the
-//! full route, and the remaining obstruction is now characterized much more
-//! precisely than at the start of this session (below), which is the point
-//! of recording it here rather than leaving a silent gap.
+//! accepts. **Also landed, a later session: `CReal.expOfModulus` and
+//! `CReal.trueExpOfModulus`** (rung 5, the accuracy-selection schedule)
+//! plus `trueExpOfModulus`'s two defining equations,
+//! `trueExpOfModulus_step_le`/`_mono` (adjacent-step and general
+//! monotonicity, mirroring `meshMax_step_le`/`_mono` one type down), and
+//! `expOfModulus_le_trueExpOfModulus` (the accumulator is always at least
+//! as fine as the single level it covers) — five declarations, every one a
+//! first-attempt kernel accept. Left generic over a modulus `m : Nat → Nat`
+//! rather than tied to a specific `UniformlyContinuousOn` witness; callers
+//! apply it at `m := UniformlyContinuousOn.modulus F a b u`. **Still not
+//! landed: `CReal.supOn` itself**, and therefore none of deliverables
+//! (a)/(b)/(c) the assignment names in fully assembled form. This is not a
+//! hedge — it is the honest outcome of a real attempt at the full route,
+//! and the remaining obstruction is now characterized much more precisely
+//! than at the start of this session (below), which is the point of
+//! recording it here rather than leaving a silent gap.
 //!
 //! ### Why `supOn` did not land, precisely — and the now-concrete plan for it
 //!
@@ -189,8 +199,8 @@
 //!   h)` shape (kernel fact 1 respected: `f_lambda`/`K` stay concrete data
 //!   throughout, never pulled from an `Exists`).
 //!
-//! This plan was grounded against the kernel's actual API, and rungs 1–4 have
-//! now all built cleanly on the first attempt by mirroring
+//! This plan was grounded against the kernel's actual API, and rungs 1–5
+//! have now all built cleanly on the first attempt by mirroring
 //! `declare_max_range`'s and `integral.rs`'s existing shapes exactly rather
 //! than composing primitives from scratch — the same held for rung 3's own
 //! sub-lemmas ([`mesh_delta_halve`], [`mesh_sample_transport`]), each of
@@ -198,11 +208,23 @@
 //! inline at rung 3: additive doubling and `natDivSucc_add`/`_halve` in
 //! place of the originally planned multiplicative route, and an added
 //! `UniformlyContinuousOn`/`le a b` hypothesis the original statement
-//! omitted). **Rung 5, the accuracy-selection scheme, is the next concrete
-//! task** — the first rung where continuity's actual QUANTITATIVE content
-//! (the modulus, not just `Equiv`-respecting) is used, and the harmonic-vs.
-//! summable trap it documents above is real and unverified against the
-//! kernel until that rung is built.
+//! omitted). **Rung 5 landed exactly as planned above** — `expOfModulus`
+//! and `trueExpOfModulus`, no correction needed against the original
+//! sketch — but the harmonic-vs.-summable trap the rung exists to fix is
+//! still UNVERIFIED against the kernel in the sense that matters: rung 5
+//! builds the schedule and its two structural facts (monotone, `≥` the
+//! single level requested), not the per-level gap bound itself, so nothing
+//! has yet forced the kernel to check that requesting `meshLevelCount k`
+//! rather than `k` actually produces a summable tail. **Rung 6, the
+//! telescope, is the next concrete task** — feed the per-level gap (built
+//! from [`declare_exp_of_modulus_le_true_exp_of_modulus_thm`] plus
+//! `Nat.lt_pow_size`) to
+//! [`CReal.sumRange_cauchy_of_dominated`](super::CRealPrelude::sum_range_cauchy_of_dominated)
+//! against a concrete ratio-`1/2` geometric dominator. The one piece not
+//! yet confirmed to exist by name: a constant-multiple corollary scaling a
+//! Cauchy bound by a fixed positive `CReal` constant, to combine
+//! `geometric.rs`'s own ratio-`1/2` tail bound with this rung's `1/2^k`
+//! gap.
 
 #![allow(clippy::doc_markdown, clippy::too_many_arguments)]
 
