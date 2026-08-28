@@ -5589,11 +5589,8 @@ pub struct CRealPrelude {
     /// `creal_tests::evt_linear_endpoint_values_reduce_and_flip_with_the_sign_of_v`.
     ///
     /// It is also Lipschitz with constant `|v|`, hence uniformly continuous
-    /// and inside classical EVT's hypothesis class -- but that is **asserted,
-    /// not proved**: no declaration here states it. See that module's
-    /// "LABELED GAP" section for the sized route and the one private helper
-    /// (`creal/uniform_continuity.rs`'s `abs_bound_of_self`) whose promotion
-    /// unblocks it.
+    /// and inside classical EVT's hypothesis class -- **now proved, not
+    /// asserted**: see [`Self::evt_linear_uniformly_continuous`].
     pub evt_linear: NameId,
     /// `CReal.evt_attained_max_decides_sign : forall v c, le zero c ->
     /// le c one -> (forall t, le zero t -> le t one -> le (mul t v)
@@ -5621,6 +5618,20 @@ pub struct CRealPrelude {
     /// kernel does not have, NOT that the principle is false (it is
     /// consistent, hence unprovable here rather than refutable).
     pub evt_attained_max_decides_sign: NameId,
+    /// `CReal.evtLinear_uniformly_continuous : forall v,
+    /// UniformlyContinuousOn (evtLinear v) zero one` -- the bridge sentence
+    /// [`Self::evt_linear`]'s own doc comment used to call asserted, now
+    /// proved: `evtLinear v` is `fun t => mul t v`, so this is
+    /// [`Self::uniformly_continuous_mul`] applied at `F := id`
+    /// ([`Self::uniformly_continuous_id`]) and `G := fun _ => v`
+    /// ([`Self::uniformly_continuous_const`]), with `F`'s `BoundedOn`
+    /// argument discharged by [`Self::bounded_on_id_zero_one`] and `G`'s by
+    /// [`Self::abs_bound_of_self`] applied at `v` directly (a constant
+    /// function's `BoundedOn` obligation, once the two range hypotheses are
+    /// dropped, IS that lemma). With this, the EVT counterexample family is
+    /// machine-checked to lie inside classical EVT's hypothesis class, not
+    /// merely asserted to. See `creal/extreme_value.rs`.
+    pub evt_linear_uniformly_continuous: NameId,
 
     // --- general `cos : CReal → CReal` (creal/trig_fn.rs) ---------------------
     /// `CReal.cosFnTerm : Nat → CReal → CReal := fun k x => mul (cosTerm k)
@@ -6802,6 +6813,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         mul_pow_congr: kernel.name_str(creal, "mulPowCongr"),
         evt_linear: kernel.name_str(creal, "evtLinear"),
         evt_attained_max_decides_sign: kernel.name_str(creal, "evt_attained_max_decides_sign"),
+        evt_linear_uniformly_continuous: kernel.name_str(creal, "evtLinear_uniformly_continuous"),
         cos_fn_term: kernel.name_str(creal, "cosFnTerm"),
         cos_fn_term_abs_le: kernel.name_str(creal, "cosFnTermAbsLe"),
         cos_fn_term_congr: kernel.name_str(creal, "cosFnTerm_congr"),
@@ -11587,6 +11599,8 @@ const STEPS: &[BuildStep] = &[
     BuildStep {
         label: "extreme_value::declare_extreme_value",
         requires: &[
+            |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.abs_bound_of_self,
             |p: CRealPrelude| p.add,
             |p: CRealPrelude| p.add_assoc,
             |p: CRealPrelude| p.add_comm,
@@ -11595,6 +11609,8 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.add_lt_add_of_le_of_lt,
             |p: CRealPrelude| p.add_neg,
             |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.bound,
+            |p: CRealPrelude| p.bounded_on_id_zero_one,
             |p: CRealPrelude| p.creal,
             |p: CRealPrelude| p.equiv,
             |p: CRealPrelude| p.equiv_refl,
@@ -11615,15 +11631,21 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.mul_one,
             |p: CRealPrelude| p.mul_zero,
             |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.of_rat,
             |p: CRealPrelude| p.one,
             |p: CRealPrelude| p.pos_bound,
             |p: CRealPrelude| p.pos_bound_of_lt,
+            |p: CRealPrelude| p.uniformly_continuous_const,
+            |p: CRealPrelude| p.uniformly_continuous_id,
+            |p: CRealPrelude| p.uniformly_continuous_mul,
+            |p: CRealPrelude| p.uniformly_continuous_on,
             |p: CRealPrelude| p.zero,
             |p: CRealPrelude| p.zero_lt_one,
         ],
         provides: &[
             |p: CRealPrelude| p.evt_attained_max_decides_sign,
             |p: CRealPrelude| p.evt_linear,
+            |p: CRealPrelude| p.evt_linear_uniformly_continuous,
         ],
         run: extreme_value::declare_extreme_value,
     },
