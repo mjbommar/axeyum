@@ -2292,6 +2292,40 @@
 //! attempted at the term level, because the decomposition that needs them was
 //! settled only after the four declarations above had landed.
 //!
+//! ### Rung 3 — LANDED, 2026-08-27, and the sizing above missed a FOURTH lemma
+//!
+//! [`CRealPrelude::has_derivative_antiderivative`] is
+//! `HasDerivativeOn (antiderivative F a b hab u) F a b`, admitted axiom-free
+//! on the first attempt. The `min x y` common-base-point route above worked
+//! **exactly as characterised**, with one correction and one omission:
+//!
+//! - **Correction to the accuracy.** `|A − B| ≤ ε·((y−m) + (x−m))` is bounded
+//!   by `2ε·(Mx − m)`, NOT by `ε·(Mx − m)`: turning the sum of the two widths
+//!   into `Mx − m` needs `max x y + min x y ≈ x + y`, which does not exist
+//!   here either. Bounding each width by `Mx − m` separately is free and
+//!   costs only the factor of two, so `ε := 1/(2E+2)` and the modulus is
+//!   `λ E ↦ modulus F a b u (2E+1)` — the two halves fuse by
+//!   [`RatPrelude::nat_div_succ_halve`], which is what the shift is for.
+//! - **A FOURTH lemma, unnamed above: [`CRealPrelude::clamp_id`]**, `le a x →
+//!   le x b → Equiv (max a (min x b)) x`. The spec's error term is
+//!   `F(x)·(y − x)` in the RAW `x` and `y`, while `G`'s arguments are clamps,
+//!   so the clamp must be shown to be the identity on `[a, b]`. It existed
+//!   as `derivative.rs`'s private `clamp_into_equiv_on_interval` — a Rust
+//!   helper, never a declaration, so nothing could cite it.
+//!
+//! The three named lemmas landed as [`CRealPrelude::integral_split_anywhere`],
+//! [`CRealPrelude::clamp_mono`] and [`CRealPrelude::max_sub_min`]. No endpoint
+//! congruence of `integral` was needed — a real risk this route avoids, since
+//! `clamp_id` is used only in the ALGEBRA (`cy − cx ≈ y − x`) and never to
+//! move an integration endpoint.
+//!
+//! Everything else was already in this file: `neg_add_local`,
+//! `neg_neg_equiv_local` and `add4_swap_middle` carry the whole four-term
+//! regrouping (`add4_swap_middle` was reachable but unconsumed until this
+//! rung), and `bounded_of_uniformly_continuous` was not
+//! needed at all because `CReal.BoundedOn` is a transparent `Definition` and
+//! restricting it to a sub-interval is one lambda.
+//!
 //! Matched A/B on one tree, `creal_prelude_builds`: **55.90 s** without the
 //! four declarations (load 1.99) against **58.71 s** with them (load 3.41).
 //! `+5%`, consistent with the load difference and not with a construction
@@ -27513,6 +27547,665 @@ fn integral_split_anywhere_proof(
     equiv_of_diff_zero(d, p, i_ab, rhs, vzero)
 }
 
+// --- FTC-I, rung 3: `HasDerivativeOn (antiderivative F a b hab u) F a b` ----
+//
+// ## The orientation obstruction, and the common base point that removes it
+//
+// `HasDerivativeOn`'s spec quantifies over an UNORDERED pair `x, y` in
+// `[a, b]`, and `CReal.le` is undecidable, so neither `x ≤ y` nor `y ≤ x` is
+// available. Splitting `G(y) − G(x)` as a single integral `∫ₓ^y F` therefore
+// cannot be done directly.
+//
+// It does not have to be. With `m := min x y` as a COMMON base point, both
+// legs are [`declare_integral_sub_linear_le`] at base `x`:
+//
+// ```text
+// A := ∫ₘ^y F − F(x)·(y − m)        |A| ≤ ε·(y − m)
+// B := ∫ₘ^x F − F(x)·(x − m)        |B| ≤ ε·(x − m)
+// A − B  =  G(y) − G(x) − F(x)·(y − x)
+// ```
+//
+// and each of `y − m`, `x − m` is at most `max x y − m`, which is `|y − x|`
+// exactly ([`CRealPrelude::max_sub_min`]). Two halves of `ε` sum to the
+// accuracy the spec asks for, so `ε := 1/(2E+2)` and the modulus is
+// `λ E ↦ UniformlyContinuousOn.modulus F a b u (2E+1)`.
+//
+// ## Four facts this needs that the six lattice laws do not give
+//
+// - [`CRealPrelude::clamp_mono`] — `G`'s argument is the clamp
+//   `max a (min · b)`, and `m ≤ x`, `m ≤ y` must carry to `clamp m ≤ clamp
+//   x`, `clamp m ≤ clamp y` so the two splits are legal.
+// - [`CRealPrelude::clamp_id`] — every algebraic step that must see the RAW
+//   `x` (the error term `F(x)·(y − x)`, the bound `|y − x|`) needs the clamp
+//   to be the identity on `[a, b]`.
+// - [`CRealPrelude::max_sub_min`] — turns the orientation-free `max x y −
+//   min x y` back into the `|y − x|` the spec states.
+// - [`CRealPrelude::integral_split_anywhere`] — the split is at
+//   `[a, clamp y]`, whose width is ZERO at `y = a`, so
+//   `integral_split_arbitrary`'s `PosBound` fails exactly here.
+//
+// Nothing else is new. The `BoundedOn` witnesses on the two sub-intervals
+// are the outer one restricted — `CReal.BoundedOn` is a transparent
+// `Definition`, so that is one lambda apiece — and the uniform-continuity
+// witnesses are [`CRealPrelude::uniformly_continuous_on_restrict`] at the
+// SAME modulus.
+
+/// The clamp data `declare_has_derivative_antiderivative` needs at one
+/// point: `(clamp, le a clamp, le clamp b, UC F a clamp, ∫ₐ^clamp F)`.
+///
+/// A thin alias for [`antiderivative_at`], which builds `CReal.antiderivative`'s
+/// own body — called rather than re-derived precisely so the spec's
+/// `G y` (a `Definition` application) and this proof's `∫ₐ^{clamp y} F`
+/// are one delta step apart and nothing can drift.
+#[allow(clippy::too_many_arguments)]
+fn clamp_data(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    a: ExprId,
+    b: ExprId,
+    hab: ExprId,
+    u: ExprId,
+    x: ExprId,
+) -> (ExprId, ExprId, ExprId, ExprId, ExprId) {
+    antiderivative_at(d, p, f, a, b, hab, u, x)
+}
+
+/// `CReal.hasDerivative_antiderivative : ∀ (F : CReal → CReal) (a b : CReal)
+/// (hab : le a b) (u : UniformlyContinuousOn F a b) (kb : Nat),
+/// BoundedOn F a b kb →
+/// HasDerivativeOn (antiderivative F a b hab u) F a b`
+///
+/// **The Fundamental Theorem of Calculus, part I.** See this section's own
+/// documentation for the common-base-point route and the four facts it
+/// rests on.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_has_derivative_antiderivative(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let f_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let kb_fv = d.fresh_fvar();
+    let kb = d.kernel().fvar(kb_fv);
+    let hbnd_ty = d.const_app(p.bounded_on, &[f, a, b, kb]);
+    let hbnd_fv = d.fresh_fvar();
+    let hbnd = d.kernel().fvar(hbnd_fv);
+
+    let g = d.const_app(p.antiderivative, &[f, a, b, hab, u]);
+    let modulus = {
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+        let mod_fn = d.const_app(p.uc_modulus, &[f, a, b, u]);
+        let se = shift(d, e);
+        let body = d.apply(mod_fn, &[se]);
+        d.lam_fv(e_fv, nat, body)
+    };
+    let spec = antiderivative_spec(d, p, f, a, b, hab, u, kb, hbnd, g, modulus);
+    let body = d.const_app(p.hd_mk, &[g, f, a, b, modulus, spec]);
+    let concl = d.const_app(p.has_derivative_on, &[g, f, a, b]);
+
+    let ty = {
+        let t = d.arrow(hbnd_ty, concl);
+        let t = d.pi_fv(kb_fv, nat, t);
+        let t = d.pi_fv(u_fv, u_ty, t);
+        let t = d.pi_fv(hab_fv, hab_ty, t);
+        let t = d.pi_fv(b_fv, carrier, t);
+        let t = d.pi_fv(a_fv, carrier, t);
+        d.pi_fv(f_fv, f_ty, t)
+    };
+    let value = {
+        let v = d.lam_fv(hbnd_fv, hbnd_ty, body);
+        let v = d.lam_fv(kb_fv, nat, v);
+        let v = d.lam_fv(u_fv, u_ty, v);
+        let v = d.lam_fv(hab_fv, hab_ty, v);
+        let v = d.lam_fv(b_fv, carrier, v);
+        let v = d.lam_fv(a_fv, carrier, v);
+        d.lam_fv(f_fv, f_ty, v)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.has_derivative_antiderivative,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `HasDerivativeOn`'s `spec` field for
+/// [`declare_has_derivative_antiderivative`] — the whole estimate.
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
+fn antiderivative_spec(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    f: ExprId,
+    a: ExprId,
+    b: ExprId,
+    hab: ExprId,
+    u: ExprId,
+    kb: ExprId,
+    hbnd: ExprId,
+    g: ExprId,
+    modulus: ExprId,
+) -> ExprId {
+    let rat = p.rat;
+    let carrier = creal_ty(d, p);
+    let nat = d.nat_ty();
+    let zero_c = czero(d, p);
+    let one_nat = d.num(1);
+
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y_fv = d.fresh_fvar();
+    let y = d.kernel().fvar(y_fv);
+
+    let hax_ty = cle(d, p, a, x);
+    let hax_fv = d.fresh_fvar();
+    let hax = d.kernel().fvar(hax_fv);
+    let hxb_ty = cle(d, p, x, b);
+    let hxb_fv = d.fresh_fvar();
+    let hxb = d.kernel().fvar(hxb_fv);
+    let hay_ty = cle(d, p, a, y);
+    let hay_fv = d.fresh_fvar();
+    let hay = d.kernel().fvar(hay_fv);
+    let hyb_ty = cle(d, p, y, b);
+    let hyb_fv = d.fresh_fvar();
+    let hyb = d.kernel().fvar(hyb_fv);
+
+    let nx = cneg(d, p, x);
+    let dyx = cadd(d, p, y, nx);
+    let abs_dyx = d.const_app(p.abs, &[dyx]);
+    let mod_e = d.apply(modulus, &[e]);
+    let in_bound_rat = div_succ(d, p, 1, mod_e);
+    let in_bound = embed(d, p, in_bound_rat);
+    let hclose_ty = cle(d, p, abs_dyx, in_bound);
+    let hclose_fv = d.fresh_fvar();
+    let hclose = d.kernel().fvar(hclose_fv);
+
+    // --- the common base point and the three clamps -----------------------
+    let m = d.const_app(p.min, &[x, y]);
+    let mx = d.const_app(p.max, &[x, y]);
+    let h_m_x = d.lemma(p.min_le_left, &[x, y]);
+    let h_m_y = d.lemma(p.min_le_right, &[x, y]);
+    let h_x_mx = d.lemma(p.le_max_left, &[x, y]);
+    let h_y_mx = d.lemma(p.le_max_right, &[x, y]);
+    let ham = d.lemma(p.le_min, &[x, y, a, hax, hay]);
+    let hmb = d.lemma(p.le_trans, &[m, x, b, h_m_x, hxb]);
+
+    let (cm, h_a_cm, _h_cm_b, u_a_cm, p_int) = clamp_data(d, p, f, a, b, hab, u, m);
+    let (cx, h_a_cx, h_cx_b, u_a_cx, _gx_alt) = clamp_data(d, p, f, a, b, hab, u, x);
+    let (cy, h_a_cy, h_cy_b, u_a_cy, _gy_alt) = clamp_data(d, p, f, a, b, hab, u, y);
+
+    let e_cm = d.lemma(p.clamp_id, &[a, b, m, ham, hmb]);
+    let e_cx = d.lemma(p.clamp_id, &[a, b, x, hax, hxb]);
+    let e_cy = d.lemma(p.clamp_id, &[a, b, y, hay, hyb]);
+
+    let h_cm_cx = d.lemma(p.clamp_mono, &[a, b, m, x, h_m_x]);
+    let h_cm_cy = d.lemma(p.clamp_mono, &[a, b, m, y, h_m_y]);
+
+    let u_cm_cx = d.lemma(
+        p.uniformly_continuous_on_restrict,
+        &[f, a, b, cm, cx, u, h_a_cm, h_cm_cx, h_cx_b],
+    );
+    let u_cm_cy = d.lemma(
+        p.uniformly_continuous_on_restrict,
+        &[f, a, b, cm, cy, u, h_a_cm, h_cm_cy, h_cy_b],
+    );
+
+    // --- `BoundedOn` on `[a, clamp x]` and `[a, clamp y]` -----------------
+    //
+    // `CReal.BoundedOn` is a transparent `Definition`, so a restriction is
+    // one lambda: compose the upper hypothesis with `clamp ≤ b`.
+    let hp = d.lemma(p.bounded_on_unfold, &[f, a, b, kb, hbnd]);
+    let restrict_bounded = |d: &mut IntDev<'_>, hi: ExprId, h_hi_b: ExprId| -> ExprId {
+        let t_fv = d.fresh_fvar();
+        let t = d.kernel().fvar(t_fv);
+        let h1_fv = d.fresh_fvar();
+        let h1 = d.kernel().fvar(h1_fv);
+        let h1_ty = cle(d, p, a, t);
+        let h2_fv = d.fresh_fvar();
+        let h2 = d.kernel().fvar(h2_fv);
+        let h2_ty = cle(d, p, t, hi);
+        let t_le_b = d.lemma(p.le_trans, &[t, hi, b, h2, h_hi_b]);
+        let applied = d.apply(hp, &[t, h1, t_le_b]);
+        let after2 = d.lam_fv(h2_fv, h2_ty, applied);
+        let after1 = d.lam_fv(h1_fv, h1_ty, after2);
+        d.lam_fv(t_fv, carrier, after1)
+    };
+    let bnd_a_cx = restrict_bounded(d, cx, h_cx_b);
+    let bnd_a_cy = restrict_bounded(d, cy, h_cy_b);
+
+    // --- the two splits, both at the common base point --------------------
+    let s_x = d.lemma(
+        p.integral_split_anywhere,
+        &[
+            f, a, cx, cm, h_a_cx, u_a_cx, kb, bnd_a_cx, h_a_cm, h_cm_cx, u_a_cm, u_cm_cx,
+        ],
+    );
+    let s_y = d.lemma(
+        p.integral_split_anywhere,
+        &[
+            f, a, cy, cm, h_a_cy, u_a_cy, kb, bnd_a_cy, h_a_cm, h_cm_cy, u_a_cm, u_cm_cy,
+        ],
+    );
+    let x_int = d.const_app(p.integral, &[f, cm, cx, h_cm_cx, u_cm_cx]);
+    let y_int = d.const_app(p.integral, &[f, cm, cy, h_cm_cy, u_cm_cy]);
+    let gx_term = d.apply(g, &[x]);
+    let gy_term = d.apply(g, &[y]);
+
+    // --- the per-leg accuracy and the uniform-continuity hypothesis -------
+    let se = shift(d, e);
+    let bq_rat = div_succ(d, p, 1, se);
+    let bq = embed(d, p, bq_rat);
+    let bq_nonneg = {
+        let rz = rzero(d, rat);
+        let h = d.lemma(rat.zero_le_nat_div_succ, &[one_nat, se]);
+        d.lemma(p.of_rat_le, &[rz, bq_rat, h])
+    };
+
+    let ncm = cneg(d, p, cm);
+    let nm = cneg(d, p, m);
+    let e_cm_symm = d.lemma(p.equiv_symm, &[cm, m, e_cm]);
+    let h_m_cm = d.lemma(p.le_of_equiv, &[m, cm, e_cm_symm]);
+    let h_cx_x = d.lemma(p.le_of_equiv, &[cx, x, e_cx]);
+    let h_cy_y = d.lemma(p.le_of_equiv, &[cy, y, e_cy]);
+    let h_cx_mx = d.lemma(p.le_trans, &[cx, x, mx, h_cx_x, h_x_mx]);
+    let h_cy_mx = d.lemma(p.le_trans, &[cy, y, mx, h_cy_y, h_y_mx]);
+    let spread = cadd(d, p, mx, nm);
+    let spread_eq = d.lemma(p.max_sub_min, &[x, y]);
+
+    // `∀ t, le cm t → le t hi → le (abs (F t + neg (F x))) bq`, where `hi`
+    // is one of the two clamps and `h_hi_mx : le hi (max x y)`.
+    let leg_hypothesis =
+        |d: &mut IntDev<'_>, hi: ExprId, h_hi_b: ExprId, h_hi_mx: ExprId| -> ExprId {
+            let t_fv = d.fresh_fvar();
+            let t = d.kernel().fvar(t_fv);
+            let h1_fv = d.fresh_fvar();
+            let h1 = d.kernel().fvar(h1_fv);
+            let h1_ty = cle(d, p, cm, t);
+            let h2_fv = d.fresh_fvar();
+            let h2 = d.kernel().fvar(h2_fv);
+            let h2_ty = cle(d, p, t, hi);
+
+            let hat = d.lemma(p.le_trans, &[a, cm, t, h_a_cm, h1]);
+            let htb = d.lemma(p.le_trans, &[t, hi, b, h2, h_hi_b]);
+            let hmt = d.lemma(p.le_trans, &[m, cm, t, h_m_cm, h1]);
+            let h_t_mx = d.lemma(p.le_trans, &[t, hi, mx, h2, h_hi_mx]);
+
+            let nt = cneg(d, p, t);
+            let t_nx = cadd(d, p, t, nx);
+            let x_nt = cadd(d, p, x, nt);
+            let nx_le_nm = d.lemma(p.neg_le_neg, &[m, x, h_m_x]);
+            let leg1 = d.lemma(p.add_le_add, &[t, mx, nx, nm, h_t_mx, nx_le_nm]);
+            let nt_le_nm = d.lemma(p.neg_le_neg, &[m, t, hmt]);
+            let pre = d.lemma(p.add_le_add, &[x, mx, nt, nm, h_x_mx, nt_le_nm]);
+            let neg_tnx = cneg(d, p, t_nx);
+            let swap = d.lemma(p.neg_sub_swap, &[t, x]);
+            let swap_symm = d.lemma(p.equiv_symm, &[neg_tnx, x_nt, swap]);
+            let refl_spread = d.lemma(p.equiv_refl, &[spread]);
+            let leg2 = d.lemma(
+                p.le_congr,
+                &[x_nt, neg_tnx, spread, spread, swap_symm, refl_spread, pre],
+            );
+            let habs = d.lemma(p.abs_le, &[t_nx, spread, leg1, leg2]);
+            let abs_tnx = d.const_app(p.abs, &[t_nx]);
+            let refl_abs = d.lemma(p.equiv_refl, &[abs_tnx]);
+            let widened = d.lemma(
+                p.le_congr,
+                &[abs_tnx, abs_tnx, spread, abs_dyx, refl_abs, spread_eq, habs],
+            );
+            let hclose_t = d.lemma(p.le_trans, &[abs_tnx, abs_dyx, in_bound, widened, hclose]);
+            let spec_out = d.lemma(
+                p.uc_spec,
+                &[f, a, b, u, se, t, x, hat, htb, hax, hxb, hclose_t],
+            );
+            let after2 = d.lam_fv(h2_fv, h2_ty, spec_out);
+            let after1 = d.lam_fv(h1_fv, h1_ty, after2);
+            d.lam_fv(t_fv, carrier, after1)
+        };
+    let hyp_x = leg_hypothesis(d, cx, h_cx_b, h_cx_mx);
+    let hyp_y = leg_hypothesis(d, cy, h_cy_b, h_cy_mx);
+
+    let est_x = d.lemma(
+        p.integral_sub_linear_le,
+        &[f, cm, cx, x, bq, h_cm_cx, u_cm_cx, hyp_x],
+    );
+    let est_y = d.lemma(
+        p.integral_sub_linear_le,
+        &[f, cm, cy, x, bq, h_cm_cy, u_cm_cy, hyp_y],
+    );
+
+    // --- the algebra: `error ≈ A − B` -------------------------------------
+    let c = d.apply(f, &[x]);
+    let wx = cadd(d, p, cx, ncm);
+    let wy = cadd(d, p, cy, ncm);
+    let cwx = cmul(d, p, c, wx);
+    let cwy = cmul(d, p, c, wy);
+    let ncwx = cneg(d, p, cwx);
+    let ncwy = cneg(d, p, cwy);
+    let leg_a = cadd(d, p, y_int, ncwy);
+    let leg_b = cadd(d, p, x_int, ncwx);
+
+    let ng_x = cneg(d, p, gx_term);
+    let gy_gx = cadd(d, p, gy_term, ng_x);
+    let deriv_term = cmul(d, p, c, dyx);
+    let n_deriv = cneg(d, p, deriv_term);
+    let error = cadd(d, p, gy_gx, n_deriv);
+
+    let np_int = cneg(d, p, p_int);
+    let nx_int = cneg(d, p, x_int);
+    let ynx_int = cadd(d, p, y_int, nx_int);
+
+    // `Equiv (G y − G x) (∫ₘ^y F − ∫ₘ^x F)` — the shared piece cancels.
+    let eq_pieces = {
+        let sum_y = cadd(d, p, p_int, y_int);
+        let sum_x = cadd(d, p, p_int, x_int);
+        let n_sum_x = cneg(d, p, sum_x);
+        let neg_s_x = d.lemma(p.neg_congr, &[gx_term, sum_x, s_x]);
+        let st1 = d.lemma(p.add_congr, &[gy_term, sum_y, ng_x, n_sum_x, s_y, neg_s_x]);
+        let t1 = cadd(d, p, sum_y, n_sum_x);
+        let hneg = neg_add_local(d, p, p_int, x_int);
+        let split = cadd(d, p, np_int, nx_int);
+        let refl_sum_y = d.lemma(p.equiv_refl, &[sum_y]);
+        let st2 = d.lemma(
+            p.add_congr,
+            &[sum_y, sum_y, n_sum_x, split, refl_sum_y, hneg],
+        );
+        let t2 = cadd(d, p, sum_y, split);
+        let sw = add4_swap_middle(d, p, p_int, y_int, np_int, nx_int);
+        let p_np = cadd(d, p, p_int, np_int);
+        let t3 = cadd(d, p, p_np, ynx_int);
+        let an = d.lemma(p.add_neg, &[p_int]);
+        let refl_ynx = d.lemma(p.equiv_refl, &[ynx_int]);
+        let st3 = d.lemma(p.add_congr, &[p_np, zero_c, ynx_int, ynx_int, an, refl_ynx]);
+        let t4 = cadd(d, p, zero_c, ynx_int);
+        let comm = d.lemma(p.add_comm, &[zero_c, ynx_int]);
+        let t5 = cadd(d, p, ynx_int, zero_c);
+        let az = d.lemma(p.add_zero, &[ynx_int]);
+        echain(
+            d,
+            p,
+            gy_gx,
+            &[
+                (t1, st1),
+                (t2, st2),
+                (t3, sw),
+                (t4, st3),
+                (t5, comm),
+                (ynx_int, az),
+            ],
+        )
+    };
+
+    // `Equiv (F(x)·(y − x)) (F(x)·wy − F(x)·wx)`.
+    let eq_deriv = {
+        let nwx = cneg(d, p, wx);
+        let start = cadd(d, p, wy, nwx);
+        let ncx = cneg(d, p, cx);
+        let nncm = cneg(d, p, ncm);
+        let hneg2 = neg_add_local(d, p, cx, ncm);
+        let split2 = cadd(d, p, ncx, nncm);
+        let refl_wy = d.lemma(p.equiv_refl, &[wy]);
+        let s2a = d.lemma(p.add_congr, &[wy, wy, nwx, split2, refl_wy, hneg2]);
+        let u2 = cadd(d, p, wy, split2);
+        let sw2 = add4_swap_middle(d, p, cy, ncm, ncx, nncm);
+        let cy_ncx = cadd(d, p, cy, ncx);
+        let ncm_nncm = cadd(d, p, ncm, nncm);
+        let u3 = cadd(d, p, cy_ncx, ncm_nncm);
+        let an2 = d.lemma(p.add_neg, &[ncm]);
+        let refl_cyncx = d.lemma(p.equiv_refl, &[cy_ncx]);
+        let s2b = d.lemma(
+            p.add_congr,
+            &[cy_ncx, cy_ncx, ncm_nncm, zero_c, refl_cyncx, an2],
+        );
+        let u4 = cadd(d, p, cy_ncx, zero_c);
+        let az2 = d.lemma(p.add_zero, &[cy_ncx]);
+        let ncx_eq = d.lemma(p.neg_congr, &[cx, x, e_cx]);
+        let s2c = d.lemma(p.add_congr, &[cy, y, ncx, nx, e_cy, ncx_eq]);
+        let to_dyx = echain(
+            d,
+            p,
+            start,
+            &[(u2, s2a), (u3, sw2), (u4, s2b), (cy_ncx, az2), (dyx, s2c)],
+        );
+        let back = d.lemma(p.equiv_symm, &[start, dyx, to_dyx]);
+        let refl_c = d.lemma(p.equiv_refl, &[c]);
+        let m1 = d.lemma(p.mul_congr, &[c, c, dyx, start, refl_c, back]);
+        let c_start = cmul(d, p, c, start);
+        let ld = d.lemma(p.left_distrib, &[c, wy, nwx]);
+        let c_nwx = cmul(d, p, c, nwx);
+        let sum_raw = cadd(d, p, cwy, c_nwx);
+        let mn_r = super::derivative::mul_neg_equiv(d, p, c, wx);
+        let refl_cwy = d.lemma(p.equiv_refl, &[cwy]);
+        let m2 = d.lemma(p.add_congr, &[cwy, cwy, c_nwx, ncwx, refl_cwy, mn_r]);
+        let target = cadd(d, p, cwy, ncwx);
+        echain(
+            d,
+            p,
+            deriv_term,
+            &[(c_start, m1), (sum_raw, ld), (target, m2)],
+        )
+    };
+
+    // Both `error` and `A − B` reduce to `(∫ₘ^y − ∫ₘ^x) + (−F(x)·wy +
+    // F(x)·wx)`; chain through that common form.
+    let nncwx = cneg(d, p, ncwx);
+    let mid_pair = cadd(d, p, ncwy, cwx);
+    let common = cadd(d, p, ynx_int, mid_pair);
+    let nn = neg_neg_equiv_local(d, p, cwx);
+    let refl_ynx2 = d.lemma(p.equiv_refl, &[ynx_int]);
+    let refl_ncwy = d.lemma(p.equiv_refl, &[ncwy]);
+
+    let eq_error = {
+        let cwy_ncwx = cadd(d, p, cwy, ncwx);
+        let neg_eq = d.lemma(p.neg_congr, &[deriv_term, cwy_ncwx, eq_deriv]);
+        let n_cwy_ncwx = cneg(d, p, cwy_ncwx);
+        let st1 = d.lemma(
+            p.add_congr,
+            &[gy_gx, ynx_int, n_deriv, n_cwy_ncwx, eq_pieces, neg_eq],
+        );
+        let v1 = cadd(d, p, ynx_int, n_cwy_ncwx);
+        let hneg3 = neg_add_local(d, p, cwy, ncwx);
+        let split3 = cadd(d, p, ncwy, nncwx);
+        let st2 = d.lemma(
+            p.add_congr,
+            &[ynx_int, ynx_int, n_cwy_ncwx, split3, refl_ynx2, hneg3],
+        );
+        let v2 = cadd(d, p, ynx_int, split3);
+        let inner = d.lemma(p.add_congr, &[ncwy, ncwy, nncwx, cwx, refl_ncwy, nn]);
+        let st3 = d.lemma(
+            p.add_congr,
+            &[ynx_int, ynx_int, split3, mid_pair, refl_ynx2, inner],
+        );
+        echain(d, p, error, &[(v1, st1), (v2, st2), (common, st3)])
+    };
+
+    let n_leg_b = cneg(d, p, leg_b);
+    let pair_diff = cadd(d, p, leg_a, n_leg_b);
+    let eq_pair = {
+        let hneg4 = neg_add_local(d, p, x_int, ncwx);
+        let split4 = cadd(d, p, nx_int, nncwx);
+        let refl_leg_a = d.lemma(p.equiv_refl, &[leg_a]);
+        let sb1 = d.lemma(
+            p.add_congr,
+            &[leg_a, leg_a, n_leg_b, split4, refl_leg_a, hneg4],
+        );
+        let z1 = cadd(d, p, leg_a, split4);
+        let refl_nx_int = d.lemma(p.equiv_refl, &[nx_int]);
+        let inner = d.lemma(p.add_congr, &[nx_int, nx_int, nncwx, cwx, refl_nx_int, nn]);
+        let pair2 = cadd(d, p, nx_int, cwx);
+        let sb2 = d.lemma(
+            p.add_congr,
+            &[leg_a, leg_a, split4, pair2, refl_leg_a, inner],
+        );
+        let z2 = cadd(d, p, leg_a, pair2);
+        let sw3 = add4_swap_middle(d, p, y_int, ncwy, nx_int, cwx);
+        echain(d, p, pair_diff, &[(z1, sb1), (z2, sb2), (common, sw3)])
+    };
+    let eq_pair_back = d.lemma(p.equiv_symm, &[pair_diff, common, eq_pair]);
+    let eq_final = d.lemma(
+        p.equiv_trans,
+        &[error, common, pair_diff, eq_error, eq_pair_back],
+    );
+
+    // --- the bound ---------------------------------------------------------
+    let abs_a = d.const_app(p.abs, &[leg_a]);
+    let abs_b = d.const_app(p.abs, &[leg_b]);
+    let bq_wy = cmul(d, p, bq, wy);
+    let bq_wx = cmul(d, p, bq, wx);
+    let total = cadd(d, p, bq_wy, bq_wx);
+    let n_leg_a = cneg(d, p, leg_a);
+
+    let a_le = {
+        let self_le = d.lemma(p.le_abs_self, &[leg_a]);
+        d.lemma(p.le_trans, &[leg_a, abs_a, bq_wy, self_le, est_y])
+    };
+    let na_le = {
+        let neg_le = d.lemma(p.neg_le_abs, &[leg_a]);
+        d.lemma(p.le_trans, &[n_leg_a, abs_a, bq_wy, neg_le, est_y])
+    };
+    let b_le = {
+        let self_le = d.lemma(p.le_abs_self, &[leg_b]);
+        d.lemma(p.le_trans, &[leg_b, abs_b, bq_wx, self_le, est_x])
+    };
+    let nb_le = {
+        let neg_le = d.lemma(p.neg_le_abs, &[leg_b]);
+        d.lemma(p.le_trans, &[n_leg_b, abs_b, bq_wx, neg_le, est_x])
+    };
+    let leg1 = d.lemma(p.add_le_add, &[leg_a, bq_wy, n_leg_b, bq_wx, a_le, nb_le]);
+    let pre2 = d.lemma(p.add_le_add, &[n_leg_a, bq_wy, leg_b, bq_wx, na_le, b_le]);
+    let n_pair = cneg(d, p, pair_diff);
+    let rev = cadd(d, p, leg_b, n_leg_a);
+    let flipped = cadd(d, p, n_leg_a, leg_b);
+    let swap_pair = d.lemma(p.neg_sub_swap, &[leg_a, leg_b]);
+    let comm_pair = d.lemma(p.add_comm, &[leg_b, n_leg_a]);
+    let chain_pair = echain(d, p, n_pair, &[(rev, swap_pair), (flipped, comm_pair)]);
+    let chain_pair_back = d.lemma(p.equiv_symm, &[n_pair, flipped, chain_pair]);
+    let refl_total = d.lemma(p.equiv_refl, &[total]);
+    let leg2 = d.lemma(
+        p.le_congr,
+        &[
+            flipped,
+            n_pair,
+            total,
+            total,
+            chain_pair_back,
+            refl_total,
+            pre2,
+        ],
+    );
+    let abs_pair_le = d.lemma(p.abs_le, &[pair_diff, total, leg1, leg2]);
+
+    // `total ≤ (1/(E+1))·|y − x|`.
+    let ncm_eq = d.lemma(p.neg_congr, &[cm, m, e_cm]);
+    let h_ncm_nm = d.lemma(p.le_of_equiv, &[ncm, nm, ncm_eq]);
+    let h_wy_spread = d.lemma(p.add_le_add, &[cy, mx, ncm, nm, h_cy_mx, h_ncm_nm]);
+    let h_wx_spread = d.lemma(p.add_le_add, &[cx, mx, ncm, nm, h_cx_mx, h_ncm_nm]);
+    let bq_spread = cmul(d, p, bq, spread);
+    let s1 = d.lemma(
+        p.mul_le_mul_of_nonneg_left,
+        &[bq, wy, spread, bq_nonneg, h_wy_spread],
+    );
+    let s2 = d.lemma(
+        p.mul_le_mul_of_nonneg_left,
+        &[bq, wx, spread, bq_nonneg, h_wx_spread],
+    );
+    let doubled = cadd(d, p, bq_spread, bq_spread);
+    let total_le = d.lemma(p.add_le_add, &[bq_wy, bq_spread, bq_wx, bq_spread, s1, s2]);
+
+    let out_rat = div_succ(d, p, 1, e);
+    let out = embed(d, p, out_rat);
+    let bq_bq = cadd(d, p, bq, bq);
+    let rd = right_distrib(d, p, bq, bq, spread);
+    let bqbq_spread = cmul(d, p, bq_bq, spread);
+    let rd_back = d.lemma(p.equiv_symm, &[bqbq_spread, doubled, rd]);
+    let bqbq_eq = {
+        let fold = d.lemma(p.of_rat_add, &[bq_rat, bq_rat]);
+        let sum_rat = radd(d, bq_rat, bq_rat);
+        let two_se = div_succ(d, p, 2, se);
+        let fuse = d.lemma(rat.nat_div_succ_add, &[one_nat, one_nat, se]);
+        let halve = d.lemma(rat.nat_div_succ_halve, &[e]);
+        let (_, chained) = rchain(d, sum_rat, &[(two_se, fuse), (out_rat, halve)]);
+        rat_eq_rewrite(d, sum_rat, out_rat, chained, fold, &|d, t| {
+            let ot = embed(d, p, t);
+            equiv(d, p, bq_bq, ot)
+        })
+    };
+    let target_bound = cmul(d, p, out, abs_dyx);
+    let mfin = d.lemma(
+        p.mul_congr,
+        &[bq_bq, out, spread, abs_dyx, bqbq_eq, spread_eq],
+    );
+    let bound_chain = echain(
+        d,
+        p,
+        doubled,
+        &[(bqbq_spread, rd_back), (target_bound, mfin)],
+    );
+    let bound_le = d.lemma(
+        p.le_congr,
+        &[
+            total,
+            total,
+            doubled,
+            target_bound,
+            refl_total,
+            bound_chain,
+            total_le,
+        ],
+    );
+
+    let abs_error = d.const_app(p.abs, &[error]);
+    let abs_pair = d.const_app(p.abs, &[pair_diff]);
+    let habs_eq = d.lemma(p.abs_congr, &[error, pair_diff, eq_final]);
+    let habs_back = d.lemma(p.equiv_symm, &[abs_error, abs_pair, habs_eq]);
+    let err_le_total = d.lemma(
+        p.le_congr,
+        &[
+            abs_pair,
+            abs_error,
+            total,
+            total,
+            habs_back,
+            refl_total,
+            abs_pair_le,
+        ],
+    );
+    let body = d.lemma(
+        p.le_trans,
+        &[abs_error, total, target_bound, err_le_total, bound_le],
+    );
+
+    let with_hclose = d.lam_fv(hclose_fv, hclose_ty, body);
+    let with_hyb = d.lam_fv(hyb_fv, hyb_ty, with_hclose);
+    let with_hay = d.lam_fv(hay_fv, hay_ty, with_hyb);
+    let with_hxb = d.lam_fv(hxb_fv, hxb_ty, with_hay);
+    let with_hax = d.lam_fv(hax_fv, hax_ty, with_hxb);
+    let with_y = d.lam_fv(y_fv, carrier, with_hax);
+    let with_x = d.lam_fv(x_fv, carrier, with_y);
+    d.lam_fv(e_fv, nat, with_x)
+}
+
 /// Admit the Fundamental-Theorem slice: the generalized integral bound, the
 /// `|∫ₓ^y F − F(x)·(y − x)|` estimate, the antiderivative `G` and its growth
 /// bound. One `BuildStep`, four declarations, in dependency order.
@@ -27530,7 +28223,8 @@ pub(super) fn declare_ftc_estimates(
     declare_integral_sub_linear_le(d, p)?;
     declare_antiderivative(d, p)?;
     declare_antiderivative_abs_le(d, p)?;
-    declare_integral_split_anywhere(d, p)
+    declare_integral_split_anywhere(d, p)?;
+    declare_has_derivative_antiderivative(d, p)
 }
 
 #[cfg(test)]
@@ -27884,6 +28578,123 @@ mod ftc_tests {
             res_c_bad.is_err(),
             "negative control must be REJECTED: a nonnegative `abs` is not \
              bounded by `1·(0−1) = −1`"
+        );
+    }
+
+    /// **The Fundamental Theorem, checked two ways.**
+    ///
+    /// 1. The statement is EXACTLY
+    ///    `∀ F a b (hab : le a b) (u : UC F a b) (kb : Nat),
+    ///     BoundedOn F a b kb → HasDerivativeOn (antiderivative F a b hab u)
+    ///     F a b` — asserted by re-declaring it, symbolic in everything, from
+    ///    the published theorem. A wrong statement fails here even though the
+    ///    proof term was already checked when the prelude built.
+    /// 2. The witness's **modulus** is `λ E ↦ modulus F a b u (2E+1)`, not
+    ///    `λ E ↦ modulus F a b u E`. That factor of two is the whole reason
+    ///    two half-`ε` legs sum to the accuracy the spec asks for, and it is
+    ///    the one number a transposition could silently get wrong. Checked
+    ///    positively (`def_eq` against the intended lambda, through one
+    ///    `HasDerivativeOn.rec` iota step) and negatively (NOT `def_eq`
+    ///    against the unshifted one) — both terms tiny, differing in a single
+    ///    subterm, so neither `def_eq` can run away.
+    #[test]
+    fn ftc_statement_and_modulus() {
+        crate::on_a_deep_stack(ftc_statement_and_modulus_body);
+    }
+
+    fn ftc_statement_and_modulus_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+        let nat = d.nat_ty();
+        let f_ty = fn_ty(&mut d, p);
+
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let hab_ty = cle(&mut d, p, a, b);
+        let hab_fv = d.fresh_fvar();
+        let hab = d.kernel().fvar(hab_fv);
+        let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+        let u_fv = d.fresh_fvar();
+        let u = d.kernel().fvar(u_fv);
+        let kb_fv = d.fresh_fvar();
+        let kb = d.kernel().fvar(kb_fv);
+        let hb_ty = d.const_app(p.bounded_on, &[f, a, b, kb]);
+        let hb_fv = d.fresh_fvar();
+        let hb = d.kernel().fvar(hb_fv);
+
+        let witness = d.lemma(p.has_derivative_antiderivative, &[f, a, b, hab, u, kb, hb]);
+        let g = d.const_app(p.antiderivative, &[f, a, b, hab, u]);
+        let concl = d.const_app(p.has_derivative_on, &[g, f, a, b]);
+
+        let ty = {
+            let t = d.arrow(hb_ty, concl);
+            let t = d.pi_fv(kb_fv, nat, t);
+            let t = d.pi_fv(u_fv, u_ty, t);
+            let t = d.pi_fv(hab_fv, hab_ty, t);
+            let t = d.pi_fv(b_fv, carrier, t);
+            let t = d.pi_fv(a_fv, carrier, t);
+            d.pi_fv(f_fv, f_ty, t)
+        };
+        let value = {
+            let v = d.lam_fv(hb_fv, hb_ty, witness);
+            let v = d.lam_fv(kb_fv, nat, v);
+            let v = d.lam_fv(u_fv, u_ty, v);
+            let v = d.lam_fv(hab_fv, hab_ty, v);
+            let v = d.lam_fv(b_fv, carrier, v);
+            let v = d.lam_fv(a_fv, carrier, v);
+            d.lam_fv(f_fv, f_ty, v)
+        };
+        let anon = d.kernel().anon();
+        let name = d.kernel().name_str(anon, "__ftcStatement");
+        let res = d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        });
+        assert!(
+            res.is_ok(),
+            "the Fundamental Theorem must state `HasDerivativeOn \
+             (antiderivative F a b hab u) F a b`: {:?}",
+            res.err()
+        );
+
+        // --- the modulus, positively and negatively --------------------
+        let projected = d.const_app(p.hd_modulus, &[g, f, a, b, witness]);
+        let mod_fn = d.const_app(p.uc_modulus, &[f, a, b, u]);
+        let shifted = {
+            let e_fv = d.fresh_fvar();
+            let e = d.kernel().fvar(e_fv);
+            let se = shift(&mut d, e);
+            let body = d.apply(mod_fn, &[se]);
+            d.lam_fv(e_fv, nat, body)
+        };
+        let unshifted = {
+            let e_fv = d.fresh_fvar();
+            let e = d.kernel().fvar(e_fv);
+            let body = d.apply(mod_fn, &[e]);
+            d.lam_fv(e_fv, nat, body)
+        };
+        assert!(
+            !d.kernel().def_eq(shifted, unshifted),
+            "non-vacuity: `λ E ↦ modulus (2E+1)` and `λ E ↦ modulus E` must \
+             be different terms"
+        );
+        assert!(
+            d.kernel().def_eq(projected, shifted),
+            "the witness's modulus must be `λ E ↦ modulus F a b u (2E+1)` — \
+             the factor of two is what lets two half-ε legs sum to 1/(E+1)"
+        );
+        assert!(
+            !d.kernel().def_eq(projected, unshifted),
+            "negative control: the witness's modulus must NOT be the \
+             unshifted `λ E ↦ modulus F a b u E`"
         );
     }
 }

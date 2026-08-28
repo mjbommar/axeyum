@@ -4819,6 +4819,31 @@ pub struct CRealPrelude {
     /// [`Self::integral_abs_le_of_bound`]. **`inv_index_irrelevant` is not
     /// needed** — `CReal.integral` takes no `k`. See `creal/integral.rs`.
     pub integral_split_anywhere: NameId,
+    /// `CReal.hasDerivative_antiderivative : ∀ (F : CReal → CReal)
+    /// (a b : CReal) (hab : le a b) (u : UniformlyContinuousOn F a b)
+    /// (kb : Nat), BoundedOn F a b kb →
+    /// HasDerivativeOn (antiderivative F a b hab u) F a b`.
+    ///
+    /// **The Fundamental Theorem of Calculus, part I** — the antiderivative
+    /// of a uniformly continuous `F` on `[a, b]` has derivative `F` there.
+    ///
+    /// `HasDerivativeOn`'s spec quantifies over an UNORDERED pair and
+    /// `CReal.le` is undecidable, so `G(y) − G(x)` cannot be written as one
+    /// integral `∫ₓ^y F`. With `m := min x y` as a COMMON base point both
+    /// legs are [`Self::integral_sub_linear_le`] at base `x`, and their
+    /// difference is exactly `G(y) − G(x) − F(x)·(y − x)`; each leg's width
+    /// is at most `max x y − min x y`, which [`Self::max_sub_min`] identifies
+    /// with `|y − x|`. Modulus `λ E ↦ modulus F a b u (2E+1)`, so two halves
+    /// of `1/(2E+2)` sum to the `1/(E+1)` the spec asks for.
+    ///
+    /// Four facts make it go through, none an estimate:
+    /// [`Self::clamp_mono`] (the two splits are legal),
+    /// [`Self::clamp_id`] (the raw `x`, `y` reappear in the error term),
+    /// [`Self::max_sub_min`], and [`Self::integral_split_anywhere`] — the
+    /// split is at `[a, clamp y]`, whose width is zero at `y = a`, so
+    /// `integral_split_arbitrary`'s `PosBound` fails precisely here.
+    /// See `creal/integral.rs`.
+    pub has_derivative_antiderivative: NameId,
     /// `CReal.integral_abs_le : ∀ F a b (k : Nat) (hab : le a b)
     /// (u : UniformlyContinuousOn F a b), BoundedOn F a b k →
     /// le (abs (integral F a b hab u))
@@ -6214,6 +6239,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         integral_endpoint_close: kernel.name_str(creal, "integralEndpointClose"),
         integral_split_arbitrary: kernel.name_str(creal, "integralSplitArbitrary"),
         integral_split_anywhere: kernel.name_str(creal, "integralSplitAnywhere"),
+        has_derivative_antiderivative: kernel.name_str(creal, "hasDerivative_antiderivative"),
         integral_abs_le: kernel.name_str(creal, "integral_abs_le"),
         integral_abs_le_of_bound: kernel.name_str(creal, "integral_abs_le_of_bound"),
         integral_sub_linear_le: kernel.name_str(creal, "integral_sub_linear_le"),
@@ -9520,6 +9546,17 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.equiv_symm,
             |p: CRealPrelude| p.equiv_trans,
             |p: CRealPrelude| p.equiv_zero_of_small,
+            |p: CRealPrelude| p.clamp_id,
+            |p: CRealPrelude| p.clamp_mono,
+            |p: CRealPrelude| p.hd_mk,
+            |p: CRealPrelude| p.has_derivative_on,
+            |p: CRealPrelude| p.le_min,
+            |p: CRealPrelude| p.left_distrib,
+            |p: CRealPrelude| p.max_sub_min,
+            |p: CRealPrelude| p.min_le_left,
+            |p: CRealPrelude| p.mul_one,
+            |p: CRealPrelude| p.uc_modulus,
+            |p: CRealPrelude| p.uc_spec,
             |p: CRealPrelude| p.integral,
             |p: CRealPrelude| p.integral_add,
             |p: CRealPrelude| p.integral_const,
@@ -9568,6 +9605,7 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.antiderivative,
             |p: CRealPrelude| p.antiderivative_abs_le,
             |p: CRealPrelude| p.integral_split_anywhere,
+            |p: CRealPrelude| p.has_derivative_antiderivative,
         ],
         run: integral::declare_ftc_estimates,
     },
