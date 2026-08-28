@@ -170,6 +170,7 @@ now. Nothing was deleted.
 | 2026-08-27 | (pending commit) | Absence-claim marker coverage: 4/145 -> 18/147 checkable sites (70 `docs/`-owned BARE candidates examined by hand, 15 marked, 55 rejected as not genuine kernel-absence claims). 7 stale "does not exist" claims found and corrected to `was-absent:` with a historical-record note (`Nat.le_refl`, `CReal.sqrt`, `CReal.alternatingBracketUpper`/`alternatingLowerBound`/`alternatingUpperBound`, `CReal.uniform_converges_add`, `Nat.even_or_odd`, `Rat.abs` x3 independently across three documents, `Rat.le`, `Rat.sub`). 8 new live `absent:` markers on currently-true claims (`Complex.exp`/`arg`/`fundamentalTheoremOfAlgebra` x3 sites, `Complex.le`/`lt`, `CReal.within_of_close_within`, `CReal.sup`, `Nat.div_add_mod`). Gate green throughout; `crates/` findings reported, not edited. |
 | 2026-08-27 | `7d08d970f` | `CReal.ivt_exact_root_at` — Ch12 inverse existence via shifted IVT, wrapping `ivt_exact_root` around `F − y`. |
 | 2026-08-27 | `adbfdee31` | rustfmt the above commit's touched files. |
+| 2026-08-27 | ftc2 | `CReal.integral_eq_antideriv_diff` — **FTC-II** (the evaluation rule, `∫ₐᵇ F = G(b) − G(a)` for ANY antiderivative `G`), axiom-free, first attempt — via `constant_of_zero_deriv` on `G − antiderivative F a b hab u`, two applications of a new shared `integral_zero_of_width_zero` (degenerate-interval integral is `Equiv`-zero, closed through `mul_self_abs`/`eq_zero_of_mul_self_zero` rather than the rational `equiv_zero_of_small` route), and one general rearrangement lemma `eq_sub_comm` |
 | 2026-08-27 | `14a6484d3` | `scripts/validate-facts.py`: classify `cas-certificate` evidence as `kernel-reconstructed` vs `cas-internal`, reject an unclassifiable checker_command on that route (ADR-0601 SS2). Mutation-tested. |
 | 2026-08-27 | `17e91d839` | `scripts/gen-import-backlog.py` (new): produce `artifacts/import-backlog.json`, the 164-row import backlog, deterministic and ordered by dependency-readiness then curriculum-DAG position (ADR-0601 SS3). `--check` wired into `scripts/check.sh` and the `justfile`. Mutation-tested. |
 | 2026-08-27 | `de853af65` | Level-1 fix: `STEPS` (135 entries) + `validate_step_order` structural preflight for `creal.rs`, replacing the hand-written `declare_*` sequence in `build_creal_prelude_uncached` with `for step in STEPS { (step.run)(&mut d, prelude)?; }`. 0 violations across 2,264 edges against the existing order. `cargo check -p axeyum-lean-kernel --lib` clean, 0 warnings. |
@@ -5607,6 +5608,113 @@ documented 55–111s-and-growing range for this point in the chapter).
   "F is an order isomorphism `[a,b] → [F a, F b]`" statement, if a downstream
   consumer wants one. Not built this session — no consumer asked for it yet,
   and the three pieces are individually usable as-is.
+
+**Your lane's block (`DONE`, ftc2, 2026-08-27). FTC-II is landed.**
+`CReal.integral_eq_antideriv_diff : ∀ F G a b (hab : le a b)
+(u : UniformlyContinuousOn F a b) (kb : Nat), BoundedOn F a b kb →
+HasDerivativeOn G F a b →
+Equiv (integral F a b hab u) (add (G b) (neg (G a)))` — accepted by
+`Kernel::add_declaration` on the **first attempt**, axiom-free, together with
+every helper it needed. The kernel rejected nothing in this lane.
+
+**The route, as characterised in the brief, held exactly.** `A :=
+antiderivative F a b hab u` (FTC-I's own construction) is ALSO an
+antiderivative of `F` (`has_derivative_antiderivative`), so `D := fun r =>
+G r − A r` has derivative `zero` everywhere on `[a, b]`
+(`hasDerivative_sub` composed with `add_neg`), and `constant_of_zero_deriv`
+gives `D a ~ D b`, i.e. `G a − A a ~ G b − A b`.
+
+**`constant_of_zero_deriv`'s hypotheses matched the classical route
+exactly**, no adjustment needed: `∀ F F' a b, HasDerivativeOn F F' a b →
+(∀ z, le a z → le z b → Equiv (F' z) zero) → ∀ x y, le a x → le x y → le y
+b → Equiv (F x) (F y)`. Applied at `x := a, y := b` (via `le_refl a`, `hab`,
+`le_refl b`), it gives `D a ~ D b` directly.
+
+**`∫ₐᵃ F ~ 0` DID need its own step, and it is the same step twice.**
+`A a` is `integral F a (clamp a) …` where `clamp a := max a (min a b)`;
+`clamp_id` gives `Equiv clamp_a a` (exact, not merely epsilon-close), so the
+interval's width is `Equiv`-zero and `integral_abs_le` bounds `|A a| ≤ M·0
+~ 0`. Symmetrically, `A b`'s relationship to `integral F a b hab u` needed
+`integral_split_anywhere` at the split point `clamp b` (`clamp_id` again
+gives `clamp b ~ b`), leaving a leading piece that IS `A b` and a trailing
+piece `[clamp b, b]` that is degenerate by the SAME argument. Both
+degenerate-interval facts are one shared helper,
+`integral_zero_of_width_zero` — built once, called twice (leading and
+trailing sides).
+
+**That helper does NOT use `equiv_zero_of_small` / the rational
+`natDivSucc` route, and that was a deliberate simplification over the
+sizing.** The width bound here is EXACT (`Equiv … zero`, not merely
+arbitrarily small), so `|v| ≤ M·0 ~ 0` combined with `abs_nonneg` gives
+`Equiv (abs v) zero` via `equiv_of_le_le` directly, and `Equiv (abs v) zero
+⟹ Equiv v zero` closes through `mul_self_abs` + `eq_zero_of_mul_self_zero`
+(`v·v ~ |v|·|v| ~ 0·0 ~ 0`, then `eq_zero_of_mul_self_zero`). No rational
+arithmetic, no per-`E` accuracy loop, needed anywhere in this lane.
+
+**The closing rearrangement `G a ~ G b − I ⟹ I ~ G b − G a` is one general
+lemma, `eq_sub_comm`, applied once.** Built from nothing but
+`add_assoc`/`add_comm`/`add_neg`/`add_zero`, reusing `add_sub_cancel`
+(already in `integral.rs`) for one leg rather than re-deriving it. Two
+small helpers feed it: `add_cancel_right` (`(z+x)−x ~ z`) and
+`sub_add_cancel` (`(y−z)+z ~ y`, itself `add_sub_cancel` plus one
+`add_comm`).
+
+**Defeq bridging, not extra lemmas, connects `constant_of_zero_deriv`'s
+UNREDUCED conclusion to the algebra.** Instantiating `constant_of_zero_deriv`
+at a CONCRETE lambda `D` (rather than an abstract fvar, which is how every
+existing caller of a derivative theorem in this codebase uses it) produces
+`Equiv (apply D a) (apply D b)` as an unreduced beta-redex. Rather than
+building an explicit reduction proof, a single `echain(reduced_form, [(other
+reduced_form, h_dab)])` call relies on the kernel's own defeq check (beta,
+here) to accept `h_dab`'s unreduced type where the reduced forms are
+expected — the SAME technique `derivative.rs`'s `abs_diff_le_of_deriv_bound`
+already uses via `le_congr` + `erefl`-shaped bridges, just collapsed to one
+step since only ONE defeq gap (not two) needed bridging here.
+
+**What was reused vs. built.** Reused verbatim: `add_sub_cancel`,
+`echain`, `antiderivative_at` (called twice, at `x := a` and `x := b`, per
+the FTC-I lane's own `clamp_data` discipline — never re-derived), `series::
+neg_zero_equiv` (imported, not copied). Built new, all private to
+`integral.rs`: `integral_zero_of_width_zero`, `restrict_bounded_hi`,
+`restrict_bounded_lo` (BoundedOn-restriction, mirroring `antiderivative_
+spec`'s inline `restrict_bounded` closure and `integral_split_anywhere_
+proof`'s `hp_cb` pattern respectively — no `BoundedOn`-restriction helper
+of either shape was already exposed as a standalone function), `add_cancel_
+right`, `sub_add_cancel`, `eq_sub_comm`.
+
+**Wiring: all three places** (per the brief's point 10, generalised here
+since `integral.rs` is not `creal/`-shard-per-declaration for BuildSteps):
+a new `CRealPrelude::integral_eq_antideriv_diff` field + name registration
+in `creal.rs`, a new `BuildStep` (`"integral::declare_integral_eq_antideriv_
+diff"`, after `integral::declare_ftc_estimates` — it needs BOTH `has_
+derivative_antiderivative` from that step AND `constant_of_zero_deriv` from
+the earlier `monotone::declare_monotone_of_nonneg_deriv_all` step) in
+`creal.rs`'s `STEPS` table, the matching label in `creal_tests.rs`'s
+`EXPECTED_STEP_ORDER`, and an inventory entry in `creal/inventory/
+integral.rs`.
+
+**Timings** (foreground, `env -u RUST_MIN_STACK`, load not isolated):
+`creal_prelude_builds` **92.75 s** (baseline from the FTC-I lane a few
+hours earlier: 89.0–107.4 s across several checkpoints) — no multiple, so
+none of this file's documented concrete-witness/lazy-delta traps apply.
+`every_creal_declaration_is_checked_and_axiom_free` (`--release`) **14.33
+s**, green: the new declaration is in `kernel.environment()`, of kind
+`Theorem`, with an empty axiom footprint. `creal_tests::steps_table_
+matches_recorded_extraction` and `creal_tests::existing_step_order_is_
+topologically_valid` (the `STEPS`/`EXPECTED_STEP_ORDER` pin and the
+topological-order validator) both green — the new `BuildStep`'s `requires`
+list is satisfied by strictly earlier steps.
+`cargo clippy -p axeyum-lean-kernel --all-targets --all-features -D
+warnings` green. `cargo check -p axeyum-lean-kernel` green (one `unused_
+imports` warning from an `erefl` import that turned out unneeded — removed
+before the clippy run, since the single-hop `echain` bridge sufficed).
+
+**What the kernel REJECTED: nothing.** One declaration, one first-attempt
+accept. The only build friction was Rust-level: an unused `use super::
+monotone::erefl;` import (removed) and getting the fully-qualified test
+names right for `cargo test --lib` filters (`creal::creal_tests::…`, not
+`creal::…` — the module nesting is easy to get wrong and silently matches
+zero tests, confirmed nonzero counts throughout).
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
