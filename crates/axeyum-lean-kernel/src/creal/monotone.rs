@@ -341,7 +341,13 @@ pub(super) fn erefl(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId) -> ExprId {
     d.lemma(p.equiv_refl, &[a])
 }
 
-pub(super) fn esymm(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
+pub(super) fn esymm(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+) -> ExprId {
     d.lemma(p.equiv_symm, &[a, b, h])
 }
 

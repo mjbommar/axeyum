@@ -486,7 +486,9 @@ pub(super) fn declare_ivt_exact_root_at(
 
     let hex = d.const_app(
         p.ivt_exact_root,
-        &[g_expr, gp_expr, a, b, hd_g, huc_g, hab, hga, hgb, k, hderiv_g],
+        &[
+            g_expr, gp_expr, a, b, hd_g, huc_g, hab, hga, hgb, k, hderiv_g,
+        ],
     );
 
     // `g_root_pred := fun c => le a c ∧ (le c b ∧ Equiv (G c) zero)` -- the
