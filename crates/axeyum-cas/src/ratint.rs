@@ -447,13 +447,16 @@ pub(crate) fn verify_horowitz(
 /// `Σ cᵢ·vᵢ'·(q_bar/vᵢ) == p_bar`, checked by exact division (rejecting if any
 /// `vᵢ` does not divide `q_bar`) and exact polynomial equality.
 ///
-/// Additionally requires **completeness** — `∏ vᵢ == monic(q_bar)` — and that
-/// no `vᵢ` repeats. The producer (`log_terms`) can decline early on an
-/// incomplete resultant factorization, but nothing stops a malformed
-/// certificate from omitting a root's contribution while still solving the
-/// identity for the roots it *did* keep (in general it will not, but the
-/// completeness guard makes that independent of the identity guard rather
-/// than an accident of one example — see the tests).
+/// Additionally requires **completeness** — `∏ vᵢ == monic(q_bar)`. The
+/// producer (`log_terms`) can decline early on an incomplete resultant
+/// factorization, but nothing stops a malformed certificate from omitting a
+/// root's contribution while still solving the identity for the roots it
+/// *did* keep (in general it will not, but the completeness guard makes that
+/// independent of the identity guard rather than an accident of one example
+/// — see the tests). There is deliberately no separate "no duplicate `vᵢ`"
+/// guard: mutation-tested and found always subsumed by completeness — a
+/// repeated `vᵢ` (degree ≥ 1 by guard 1) strictly inflates `∏ vᵢ`'s degree
+/// past `deg(monic(q_bar))`, so the two polynomials can never compare equal.
 ///
 /// Returns `Some(false)` on any violation, `Some(true)` only when every
 /// guard passes, `None` only on internal overflow (never accepted).
@@ -489,16 +492,9 @@ pub(crate) fn verify_log_terms(
         }
     }
 
-    // Guard 2: no two terms share the same vᵢ (one coefficient per factor).
-    for i in 0..terms.len() {
-        for j in (i + 1)..terms.len() {
-            if poly::rat_trim(terms[i].1.clone()) == poly::rat_trim(terms[j].1.clone()) {
-                return Some(false);
-            }
-        }
-    }
-
-    // Guard 3: completeness -- prod(vᵢ) == monic(q_bar).
+    // Guard 2: completeness -- prod(vᵢ) == monic(q_bar). (There is no
+    // separate "no duplicate vᵢ" guard -- see the module doc: a repeat is
+    // always caught here, on degree alone.)
     let mut product = vec![Rational::integer(1)];
     for (_, v) in terms {
         product = poly::ratpoly_mul(&product, v)?;
@@ -508,7 +504,7 @@ pub(crate) fn verify_log_terms(
         return Some(false);
     }
 
-    // Guard 4: Σ cᵢ vᵢ' (q_bar/vᵢ) == p_bar.
+    // Guard 3: Σ cᵢ vᵢ' (q_bar/vᵢ) == p_bar.
     let mut acc: Vec<Rational> = Vec::new();
     for (coeff, v) in terms {
         let v_deriv = poly::rat_derivative(v)?;
@@ -895,16 +891,18 @@ mod tests {
         );
     }
 
-    /// Isolates the "no duplicate `vᵢ`" guard: split one term's coefficient
-    /// across two entries with the SAME `v`. The identity sum is unaffected
-    /// (splitting one coefficient into two that add to the same value leaves
+    /// A duplicate `vᵢ`: split one term's coefficient across two entries
+    /// with the SAME `v`. The identity sum is unaffected (splitting one
+    /// coefficient into two that add to the same value leaves
     /// `Σ cᵢ vᵢ'(Q/vᵢ)` unchanged), but the completeness product now
-    /// double-counts that factor, so -- as with the partial-fractions
-    /// lane's power-set guard -- this is caught by completeness rather than
-    /// being independent of it; recorded here as a measured finding, not
-    /// assumed.
+    /// double-counts that factor's degree, so completeness alone rejects it.
+    /// There is no separate duplicate-`vᵢ` guard in `verify_log_terms` --
+    /// mutation testing found one subsumed here on every input (a repeat
+    /// necessarily inflates `∏ vᵢ`'s degree past `deg(monic(q_bar))`), so it
+    /// was removed rather than kept as decoration, mirroring the
+    /// partial-fractions lane's power-set-guard finding.
     #[test]
-    fn duplicate_v_is_caught_by_completeness_not_independently() {
+    fn duplicate_v_is_caught_by_completeness() {
         let q = poly_from(&[2, -3, 1]); // (x-1)(x-2)
         let p = poly_from(&[1]);
         let terms = log_terms(&p, &q).unwrap();
