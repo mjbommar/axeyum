@@ -155,7 +155,9 @@ now. Nothing was deleted.
 | 2026-08-28 | parity-coprime | `Nat.choose_le_choose` proved (`nat_prelude/choose.rs`); pinned `67+342`->`67+343` in `the_build_is_deterministic` |
 | 2026-08-28 | parity-coprime | `Nat.coprime_of_lt_prime` fact flipped to proved (already admitted pre-existing kernel declaration, no new Rust) |
 | 2026-08-28 | parity-coprime | `Nat.coprime_two_left`, `Nat.coprime_two_right`, `Nat.Coprime.odd_of_left`, `Nat.Coprime.odd_of_right` proved (`nat_prelude/primes.rs`); pinned `67+343`->`67+347` |
+| 2026-08-28 | fp16-evidence | `F:fp16-add-monotone-rne` flipped open -> proved; attached `unsat-certificate` evidence row with discriminating `checker_command` (ADR-0613 LRAT route), reproduced end-to-end twice (339s, 353s wall clock) |
 | 2026-08-28 | int-gcd | `Int.ne_zero_of_gcd` + `Int.gcd_eq_one_of_gcd_mul_right_eq_one_left`/`_right` landed as new kernel declarations in `int_prelude/gcd.rs`; three ml430 facts flipped `open`→`proved`, axiom-free; `Int.gcd_eq_gcd_ab` (existential Bézout) confirmed NOT the same fact as Mathlib's computable `gcd_eq_gcd_ab` and left open with a sized reason; `gcd_div`/`gcd_div_gcd_div_gcd`/`gcd_greatest` not attempted |
+| 2026-08-28 | nat-helper-dedup | promoted `two_divisor_dichotomy` (3→1), `two_mul_eq_add_self` (2→1), `bool_true_or_false` (3→1, found a 3rd copy in `perfect.rs` beyond the brief's two) to `nat_prelude/ops.rs`; re-pointed 15 call sites across `irrational.rs`/`perfect.rs`/`primes.rs`/`powsq.rs`/`totient.rs`; census unchanged at 10/10 (tool is blind to private-fn duplication by construction) |
 | 2026-08-27 | (uncommitted at status-file write time) | `CReal.sumRange_cauchy_of_abs_cauchy` / `CReal.sumRange_converges_of_abs_converges` (absolute convergence implies convergence) plus a soundness-negative control; curriculum rows 18 and 22–23 corrected. |
 | 2026-08-27 | (uncommitted at status-file write time) | Ten new `artifacts/facts/F-creal-*.json` entries for the Ch.13/14 Riemann integral construction and algebra (`riemannSum_cauchy`, `integral`, `integral_converges`, `integral_const`, `integral_add`, `integral_le`, `integral_scale`, `integral_witness_independent`, `riemannSum_integral_close`, `sharedIndexToCanonical`); `python3 scripts/validate-facts.py` green (708 facts, 0 errors). |
 | 2026-08-27 | (uncommitted at status-file write time) | Added `--require-declaration <name> [--require-kind <kind>]` to `crates/axeyum-lean-kernel/examples/kernel_declaration_projection.rs`: a direct, fail-on-absence presence checker for `Declaration::Definition`s (and any other kind), mutation-tested against `CReal.integral`. Upgraded `F:creal-integral`'s `kernel-CReal.integral` evidence to use it. Registered 14 new `artifacts/facts/F-creal-*.json` entries for Spivak Ch.18 (`e`) and Ch.22-23 (series convergence tests): `creal-e`, `creal-e-converges`, `creal-two-le-e`, `creal-e-le-three`, `creal-e-le-four`, `creal-expterm-le-geom`, `creal-expdominantcauchy`, `creal-cauchyofpointwiseequiv`, `creal-geomcauchy`, `creal-sumrange-comparisontest`, `creal-sumrange-cauchy-of-dominated`, `creal-sumrange-converges-of-dominated`, `creal-sumrange-cauchy-of-abs-cauchy`, `creal-sumrange-converges-of-abs-converges`. `python3 scripts/validate-facts.py` green (722 facts, 0 errors). |
@@ -8173,6 +8175,25 @@ history already tolerates this shape of duplicate (`bool_true_or_false` has
 two copies for the same reason). Said so in the commit rather than silently
 re-deriving.
 
+**Your lane's block (`DONE`, fp16-evidence, 2026-08-28).** `F:fp16-add-monotone-rne`
+is now `epistemic_status: proved`. Rebuilt `smtcomp_cli --release` from
+scratch in this worktree and ran it end to end against the fact's own pinned
+negation file TWICE: both `unsat`/`certified=1`/`recheck=ok`/`arena=ok`.
+Wall clock 339.01s (load ~2.8/16) and 353s (load ~20.7/16) -- **not** the
+~125s ADR-0613's prose calls "end to end": that figure is a sub-stage timer
+captured before `UnsatProof::recheck()` and the `arena` fresh-parse check
+run (both inside `evidence_report_line`, after the timer stops). Wrote one
+`unsat-certificate` evidence row whose `checker_command` greps the real
+process output for three independently-tested, discriminating substrings
+(`^unsat$`, `certified=1 `, `recheck=ok`) via `test`-chained `&&`, verified
+against both a captured real positive transcript and two synthetic
+negative-control transcripts before being written. `checker_seconds: 400`
+(budget 800s under the replay gate's 2x rule) to absorb contention.
+`validate-facts.py` passes: 0 errors, `smt-clausal=10` (was 9), `open=155`
+(was 156). No exhaustive enumeration exists or was attempted at this width
+(2^48 triples); this fact rests on the symbolic CNF/DRAT/LRAT route alone,
+unlike its fp8 sibling which has two independent routes.
+
 **Your lane's block (`DONE for the three landed; one fact deliberately
 deferred with a sized reason`, int-gcd, 2026-08-28).** Closed
 `F:ml430-int-ne-zero-of-gcd-f71f00df`,
@@ -8239,6 +8260,81 @@ errors (1867 facts checked).
 Did not run: `just check` / `./scripts/check.sh` (out of scope for a
 single-crate change and multi-lane host contention; the coordinator's merge
 gate re-verifies).
+
+**Your lane's block (`DONE`, nat-helper-dedup, 2026-08-28).** Promoted the
+three genuine duplicate groups the brief named, all confirmed byte-for-byte
+identical before consolidation:
+
+- `two_divisor_dichotomy` (`d ∣ 2 → d = 1 ∨ d = 2`) — three copies:
+  `irrational.rs`'s `two_divisor_dichotomy`, `perfect.rs`'s `divisors_of_two`,
+  and a third inlined directly inside `primes.rs`'s `Nat.prime_two`
+  construction (not its own `fn`, but the identical term-building sequence).
+  Promoted to `nat_prelude/ops.rs` as `pub(super) fn two_divisor_dichotomy`,
+  self-contained (uses an inline `or_rec` application rather than depending
+  on `or_elim`/`or_cases`, since those remain private per-file combinators
+  used extensively elsewhere in `irrational.rs` and `primes.rs`). 4 call
+  sites re-pointed (1 in `irrational.rs`, 2 in `perfect.rs`, 1 inlined
+  construction in `primes.rs`'s `prime_two` replaced with a direct call).
+- `two_mul_eq_add_self` (`Eq (mul two k) (add k k)`) — two copies:
+  `powsq.rs`'s `two_mul_eq_add_self` and `primes.rs`'s
+  `two_mul_eq_add_local`. Promoted to `ops.rs` under the more descriptive
+  original name. 4 call sites re-pointed (2 in `powsq.rs`, 2 in `primes.rs`).
+- `bool_true_or_false` (`Or (beq b true) (beq b false)`, `Bool.rec`) — the
+  brief named two copies (`totient.rs`, `primes.rs`); a third turned up while
+  re-pointing call sites: `perfect.rs` had its own copy too, used at **5**
+  internal call sites, byte-identical and even self-documented as "local
+  copy of `totient.rs`'s `bool_true_or_false`" — so the duplication was
+  already known and recorded, just never acted on. All three promoted to
+  `ops.rs`. 7 call sites re-pointed total (1 `totient.rs`, 1 `primes.rs`, 5
+  `perfect.rs`).
+
+Placed in `nat_prelude/ops.rs` rather than `helpers.rs`: the brief named
+`ops.rs` as the shared-machinery location, `ops.rs` is in this lane's scope
+and `helpers.rs` is not, and every one of the five touched files already
+`use super::ops::{NatDev, NatOps}`, so promoting into that same module means
+callers just widen an existing import rather than adding a new one.
+
+**A fourth latent duplicate was found and deliberately left alone**:
+`irrational.rs`'s `or_elim` and `primes.rs`'s `or_cases` are an identical
+generic `Or`-elimination combinator (build a motive, apply `Or.rec`), and the
+same shape recurs dozens more times inline across `order.rs`, `division.rs`,
+`bezout.rs`, `crt.rs`, `parity.rs`, `perfect.rs` and others — none of which
+are in this lane's scope. Consolidating `or_elim`/`or_cases` themselves would
+touch files this lane does not own and is a separable, much larger task (the
+`or_rec` idiom appears at ~60+ call sites project-wide). Left as-is; noted
+here rather than silently expanded.
+
+Verified: `cargo check -p axeyum-lean-kernel` clean; `clippy --all-targets
+--all-features -D warnings` clean (also fixed one pre-existing
+`uninlined_format_args` clippy violation in `nat_prelude_tests.rs` at
+`coprime_two_left`'s axiom-footprint assertion, unrelated to this lane's
+diff but blocking the gate); `RUSTDOCFLAGS="-D warnings" cargo doc -p
+axeyum-lean-kernel --no-deps` clean; `cargo test -p axeyum-lean-kernel --lib
+nat_prelude::` — **98 passed, 0 failed** before and after (identical count:
+promoting a private `fn` to a shared `pub(super) fn` does not change the
+kernel environment, since none of these helpers were ever
+`declare_*`d/registered as kernel declarations — they are Rust-level
+proof-term builders consumed by declarations, not declarations themselves).
+`the_build_is_deterministic`'s pinned `67 + 347` and
+`every_nat_declaration_is_checked_and_axiom_free`'s environment-derived
+coverage assertion both pass unchanged.
+
+`scripts/check-shape-duplicates.py`: **10 groups before, 10 groups after
+(re-measured with a fresh `--release` `shape_search` build after landing the
+`perfect.rs` fix too), both all-allowlisted.** Unchanged, as predicted —
+that script's `--duplicates` census walks `kernel.environment()` for
+declarations that share an admitted *type shape*, and none of the
+consolidated helpers were ever kernel declarations (no
+`.theorem(...)`/`.definition(...)` call names them), so the tool cannot see
+them and never could. This is exactly the retrieval blind spot the task
+named: a private Rust `fn` is invisible to any index over the kernel
+environment, which is why it gets rebuilt (or, as with `bool_true_or_false`,
+rebuilt with a comment admitting it) instead of found and reused.
+
+Nothing the kernel rejected — every consolidation was a pure refactor
+(move + rename + re-point call sites), the proof-term construction for each
+promoted function is byte-identical to (one of) its former copies, and the
+theorem statements it discharges are unchanged.
 
 **WIP (autogenesis-knowledge-overlay, 2026-08-24).** A backward-compatible version-1 sidecar joins existing facts and operations to reusable capabilities and pinned read-only `math-education` concepts or techniques.
 
